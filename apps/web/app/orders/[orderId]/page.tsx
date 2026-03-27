@@ -1,14 +1,16 @@
 'use client';
 
+import { use } from 'react';
 import { useState } from 'react';
 
-export default function OrderDetailPage({ params }: { params: { orderId: string } }) {
+export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
+  const { orderId } = use(params);
   const [refundApplied, setRefundApplied] = useState(false);
 
   return (
     <main className="tp-container tp-order-detail-page">
       <a className="tp-link" href="/orders">← 返回訂單列表</a>
-      <h1>訂單 #{params.orderId}</h1>
+      <h1>訂單 #{orderId}</h1>
       <p className="tp-status tp-status-upcoming">已確認</p>
 
       <section className="tp-step-card">
