@@ -6,5 +6,8 @@
   "scripts": {
     "dev": "echo 'Scaffold ready. Install Next.js before running app.'",
     "test": "node --test tests/**/*.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.53.0"
   }
 }

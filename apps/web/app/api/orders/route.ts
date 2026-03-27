@@ -1,10 +1,10 @@
 import { fail, ok } from '../../../src/lib/api';
-import { createOrder } from '../../../src/lib/services.mjs';
+import { createOrderDb } from '../../../src/lib/db.mjs';
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   try {
-    const order = createOrder(body);
+    const order = await createOrderDb(body);
     return Response.json(ok(order));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

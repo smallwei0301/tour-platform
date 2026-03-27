@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { listExperiences } from '../../src/lib/services.mjs';
+import { listExperiencesDb } from '../../src/lib/db.mjs';
 
-test('listExperiences returns at least one fixture', () => {
-  const list = listExperiences();
+test('listExperiencesDb returns fallback fixture when supabase env missing', async () => {
+  const list = await listExperiencesDb();
   assert.ok(Array.isArray(list));
   assert.ok(list.length >= 1);
   assert.equal(list[0].slug, 'chaishan-cave-tour');
