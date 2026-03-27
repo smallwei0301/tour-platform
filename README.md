@@ -168,8 +168,9 @@ tour-platform/
 - [`01-project-plan/14-operations-tracking-spec.md`](./01-project-plan/14-operations-tracking-spec.md)
 
 ### Andy Lee（李衍錫） 上線必讀
-- [`01-project-plan/15-andy-wu-mvp-launch-checklist.md`](./01-project-plan/15-andy-wu-mvp-launch-checklist.md)
-- [`01-project-plan/16-andy-wu-content-pack.md`](./01-project-plan/16-andy-wu-content-pack.md)
+- [`01-project-plan/15-andy-lee-mvp-launch-checklist.md`](./01-project-plan/15-andy-lee-mvp-launch-checklist.md)
+- [`01-project-plan/16-andy-lee-content-pack.md`](./01-project-plan/16-andy-lee-content-pack.md)
+- [`04-tech-architecture/07-andy-lee-mvp-content.json`](./04-tech-architecture/07-andy-lee-mvp-content.json)
 
 ---
 
