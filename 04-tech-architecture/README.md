@@ -1,5 +1,10 @@
 # 04. 技術棧架構
 
+> Seed / frontend fixture / CMS 匯入可直接參考：
+> - [`07-andy-lee-mvp-content.json`](./07-andy-lee-mvp-content.json)
+> - [`06-seed-data-spec.md`](./06-seed-data-spec.md)
+> - [`02-database-schema.md`](./02-database-schema.md)
+
 ## 4.1 技術選型總覽
 
 ```

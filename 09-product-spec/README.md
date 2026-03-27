@@ -2,6 +2,11 @@
 
 > 更新日期：2026-03-25
 > 主要更新：根據競品痛點，新增信任系統、退款追蹤、緊急聯繫、導遊後台等核心功能
+>
+> Tracy 開發時，請先讀：
+> - [`09-tracy-product-spec.md`](./09-tracy-product-spec.md)
+> - [`06-mvp-business-rules.md`](./06-mvp-business-rules.md)
+> - [`07-mvp-user-flows.md`](./07-mvp-user-flows.md)
 
 ---
 

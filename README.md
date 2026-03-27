@@ -101,10 +101,12 @@ tour-platform/
 
 ### Tracy / 工程開發必讀
 - [`01-project-plan/06-tracy-handoff-brief.md`](./01-project-plan/06-tracy-handoff-brief.md)
+- [`09-product-spec/09-tracy-product-spec.md`](./09-product-spec/09-tracy-product-spec.md)
 - [`03-dev-timeline/05-tracy-week1-kickoff.md`](./03-dev-timeline/05-tracy-week1-kickoff.md)
 - [`03-dev-timeline/06-page-api-db-mapping.md`](./03-dev-timeline/06-page-api-db-mapping.md)
 - [`04-tech-architecture/02-database-schema.md`](./04-tech-architecture/02-database-schema.md)
 - [`04-tech-architecture/03-api-spec.md`](./04-tech-architecture/03-api-spec.md)
+- [`04-tech-architecture/07-andy-lee-mvp-content.json`](./04-tech-architecture/07-andy-lee-mvp-content.json)
 
 ### 產品 / 營運必讀
 - [`09-product-spec/06-mvp-business-rules.md`](./09-product-spec/06-mvp-business-rules.md)
