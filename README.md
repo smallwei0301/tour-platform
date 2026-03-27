@@ -39,6 +39,8 @@
 - 品牌頁 `/why-choose-us`、`/about`
 - 內容與法規頁 `/blog`、`/blog/[slug]`、`/contact`、`/legal/*`
 
+> 註：以上頁面目前為 **MVP UI 骨架 + 可互動流程**，並非全部都已達到最終版 UI/UX 精緻度與設計一致性。
+
 #### D. CI / 部署
 - GitHub Actions CI 已啟用
 - Vercel 已部署成功（Production）：
