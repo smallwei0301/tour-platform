@@ -10,10 +10,16 @@ npm run dev -w @tour/web
 
 Open http://localhost:3000
 
+## 一鍵 Smoke
+
+```bash
+bash ../../scripts/demo-smoke.sh
+```
+
 ## Demo flow
 1. `GET /api/experiences`
 2. `POST /api/orders` with `{ "experienceSlug": "chaishan-cave-tour" }`
-3. `POST /api/payments/ecpay/callback` with `{ "orderId": "ord_0001" }` (fallback mode)
+3. `POST /api/payments/ecpay/callback` with `{ "orderId": "<from step2>" }`
 4. `GET /api/admin/orders`
 
 ## Notes
