@@ -164,7 +164,7 @@
 | guide_id | uuid | Y | FK -> guide_profiles.id |
 | activity_id | uuid | Y | FK -> activities.id |
 | schedule_id | uuid | Y | FK -> activity_schedules.id |
-| status | text | Y | `pending_payment` / `paid` / `confirmed` / `rejected` / `cancelled_by_user` / `cancelled_by_guide` / `completed` / `refund_pending` / `refunded` |
+| status | text | Y | `pending_payment` / `paid` / `confirmed` / `cancelled_by_user` / `cancelled_by_guide` / `completed` / `refund_pending` / `refunded` |
 | participants | integer | Y | 人數 |
 | unit_price | integer | Y | 單價快照 |
 | subtotal_amount | integer | Y | 小計 |

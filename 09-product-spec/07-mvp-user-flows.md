@@ -44,45 +44,43 @@
 
 ---
 
-## Flow 2：導遊接受 / 拒絕訂單
+## Flow 2：導遊先開場次 → 旅客選日期 → 付款成功後即時占位
 
 ### 目標
-讓導遊能在付款後接單，平台保有基本控單能力。
+讓旅客只能預約導遊已開放的日期，並在付款成功後即時反映名額。
 
 ### 角色
 - 導遊
+- 旅客
 - 系統
 - Admin
 
-### 主流程（接受）
-1. 導遊登入後台
-2. 導遊看到新訂單（狀態 `paid`）
-3. 導遊檢查日期、人數、備註
-4. 導遊點擊「接受」
-5. 系統將訂單改為 `confirmed`
-6. 系統寄送確認通知給旅客
-
-### 主流程（拒絕）
-1. 導遊登入後台
-2. 導遊點擊「拒絕」並填寫原因
-3. 系統將訂單改為 `rejected`
-4. 系統通知 Admin 處理退款
-5. Admin 將退款流程往下推進
+### 主流程
+1. 導遊在後台建立活動
+2. 導遊先建立可預約場次，例如 4/1、4/3
+3. 每個場次設定容量，例如 10 人
+4. 前台活動頁只顯示已開放且未滿額的日期
+5. 旅客選擇 4/1 並完成付款
+6. 系統建立訂單並將該場次 `booked_count` 即時增加
+7. 前台顯示名額從 `0/10` 變成 `1/10`
+8. 若場次滿額，系統自動將該場次標記為 `full` 或停止預約
 
 ### 例外情況
-- 導遊 24 小時未回應 → Admin 介入
-- 導遊重複拒單 → 標記風險
+- 名額不足 → 不可進入付款
+- 付款失敗 → 不占用名額
+- 導遊臨時調整場次 → Admin / 導遊人工處理
+- 超賣或改期 → Admin 人工介入修正
 
 ### 涉及頁面
-- `/guide/dashboard/orders`
+- `/guide/dashboard/activities`
+- `/guide/dashboard/schedules`
+- `/activities/[id]`
+- `/booking/[activityId]`
 - `/admin/orders`
 
 ### 涉及狀態
-- `paid`
-- `confirmed`
-- `rejected`
-- `refund_pending`
-- `refunded`
+- 場次：`open` / `full` / `cancelled`
+- 訂單：`pending_payment` / `paid` / `confirmed` / `refund_pending` / `refunded`
 
 ---
 

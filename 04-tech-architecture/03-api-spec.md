@@ -355,27 +355,26 @@
 - `status`
 - `page`
 
-### 5.8 Accept Order
-`POST /api/guide/orders/:orderId/accept`
+### 5.8 Update Schedule Capacity / Status
+`PATCH /api/guide/schedules/:scheduleId`
+
+#### Auth
+- 場次擁有導遊
 
 #### Behavior
-- 僅 `paid` 可接受
-- 更新訂單為 `confirmed`
-- 發送通知
+- 可手動調整 `capacity`
+- 可手動關閉或重開場次
+- 若 `booked_count >= capacity`，系統需阻止設成小於已售名額的非法值，或要求 admin 介入
 
-### 5.9 Reject Order
-`POST /api/guide/orders/:orderId/reject`
+### 5.9 Manual Order Note / Exception Flag
+`PATCH /api/guide/orders/:orderId`
 
-#### Request
-```json
-{
-  "reason": "該日期無法帶團"
-}
-```
+#### Auth
+- 訂單擁有導遊或 admin
 
 #### Behavior
-- 更新訂單為 `rejected`
-- 通知 admin 處理退款
+- 僅允許補充備註、標記例外，不允許任意改付款狀態
+- 供 MVP 人工營運使用
 
 ---
 
