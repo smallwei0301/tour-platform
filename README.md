@@ -15,7 +15,7 @@
 - Tracy handoff 與 kickoff 文件
 - CEO decision pack
 - Admin 後台與營運追蹤需求
-- Andy Wu 第一位導遊的內容與上線清單
+- Andy Lee（李衍錫） 第一位導遊的內容與上線清單
 
 => **結論：目前已具備進入 MVP 開發階段的規格基礎。**
 
@@ -32,7 +32,7 @@
 - 容易形成內容傳播與品牌辨識
 
 ### 2. 第一位導遊
-**先只做 1 位導遊：Andy Wu**
+**先只做 1 位導遊：Andy Lee（李衍錫）**
 
 MVP 階段不追求導遊數量，而是先把單一導遊模型跑順：
 - 導遊個人頁
@@ -42,7 +42,7 @@ MVP 階段不追求導遊數量，而是先把單一導遊模型跑順：
 - 退款與營運追蹤
 
 ### 3. 第一批旅客來源
-**由 Andy Wu 既有旅客預約需求導入**
+**由 Andy Lee（李衍錫） 既有旅客預約需求導入**
 
 這代表：
 - MVP 初期先驗證真實 booking / payment / schedule / refund 流程
@@ -112,7 +112,7 @@ tour-platform/
 - [`09-product-spec/05-admin-panel-spec.md`](./09-product-spec/05-admin-panel-spec.md)
 - [`01-project-plan/14-operations-tracking-spec.md`](./01-project-plan/14-operations-tracking-spec.md)
 
-### Andy Wu 上線必讀
+### Andy Lee（李衍錫） 上線必讀
 - [`01-project-plan/15-andy-wu-mvp-launch-checklist.md`](./01-project-plan/15-andy-wu-mvp-launch-checklist.md)
 - [`01-project-plan/16-andy-wu-content-pack.md`](./01-project-plan/16-andy-wu-content-pack.md)
 
@@ -121,7 +121,7 @@ tour-platform/
 ## 当前 MVP 成功定義
 
 MVP 的成功，不是頁面做完，而是：
-- Andy Wu 可以成功上架第一個主打活動
+- Andy Lee（李衍錫） 可以成功上架第一個主打活動
 - 旅客可以看到可預約日期並完成付款
 - 付款後名額會即時更新
 - Admin 可以在後台處理退款與營運追蹤
@@ -133,10 +133,10 @@ MVP 的成功，不是頁面做完，而是：
 
 目前最重要的執行順序：
 
-1. 補齊 Andy Wu 真實素材
+1. 補齊 Andy Lee（李衍錫） 真實素材
 2. 完成導遊 / 活動 / 場次 / 訂單主流程開發
 3. 完成 admin 後台營運追蹤模組
-4. 導入 Andy Wu 第一批真實預約
+4. 導入 Andy Lee（李衍錫） 第一批真實預約
 5. 追蹤單位經濟，據此調整營運策略
 
 ---

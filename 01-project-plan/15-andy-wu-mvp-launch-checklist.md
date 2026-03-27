@@ -1,13 +1,13 @@
-# Andy Wu MVP Launch Checklist
+# Andy Lee（李衍錫） MVP Launch Checklist
 
-> 目標：把 Andy Wu 做成 Tour Platform 第一個可交易、可追蹤、可複製的導遊模板。
+> 目標：把 Andy Lee（李衍錫） 做成 Tour Platform 第一個可交易、可追蹤、可複製的導遊模板。
 > 更新日期：2026-03-27
 
 ---
 
 ## 1. 導遊資料
 
-- [ ] 導遊顯示名稱：Andy Wu
+- [ ] 導遊顯示名稱：Andy Lee（李衍錫）
 - [ ] 導遊頭像
 - [ ] 導遊自我介紹
 - [ ] 導遊服務地區
@@ -58,8 +58,8 @@
 
 ## 5. 營運與後台
 
-- [ ] Admin 可看到 Andy Wu 訂單
-- [ ] Admin 可看到 Andy Wu 場次
+- [ ] Admin 可看到 Andy Lee（李衍錫） 訂單
+- [ ] Admin 可看到 Andy Lee（李衍錫） 場次
 - [ ] Admin 可手動調整場次容量
 - [ ] Admin 可手動處理退款
 - [ ] Admin 可填營運追蹤資料
@@ -89,7 +89,7 @@
 
 ## 8. 成功定義
 
-Andy Wu MVP 成功，不是頁面上線而已，而是：
+Andy Lee（李衍錫） MVP 成功，不是頁面上線而已，而是：
 - 有真實旅客完成預約
 - 有真實訂單可追蹤
 - 有真實營運資料可回顧
