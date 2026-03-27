@@ -231,3 +231,13 @@ a { color: inherit; text-decoration: none; }
   .tp-compare-table { grid-template-columns: 1fr; }
   .tp-compare-table > div { border-right: 0; }
 }
+
+
+.tp-blog-featured { border: 1px solid var(--tp-border); border-radius: 12px; padding: 12px; margin-bottom: 14px; background: #fff; }
+.tp-blog-featured h2 { margin: 6px 0; }
+.tp-blog-layout { display: grid; grid-template-columns: minmax(0,1fr) 300px; gap: 16px; }
+.tp-blog-detail { padding-bottom: 48px; }
+
+@media (max-width: 1024px) {
+  .tp-blog-layout { grid-template-columns: 1fr; }
+}
