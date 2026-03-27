@@ -133,3 +133,20 @@ a { color: inherit; text-decoration: none; }
   .tp-detail-layout { grid-template-columns: 1fr; }
   .tp-booking-side { position: static; }
 }
+
+
+.tp-guides-page { padding-bottom: 40px; }
+.tp-guide-photo { width: 100%; aspect-ratio: 3/4; border-radius: 10px; background: linear-gradient(140deg,#e7f0e6,#e2e2e2); margin-bottom: 10px; }
+.tp-guide-badge { display: inline-block; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--tp-border); font-size: 12px; margin: 0 0 8px; }
+
+.tp-guide-detail { padding-bottom: 48px; }
+.tp-guide-cover { width: 100%; height: 220px; border-radius: 14px; background: linear-gradient(140deg,#dbe9f8,#f8ecd9); margin-bottom: 14px; }
+.tp-guide-layout { display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 18px; }
+.tp-guide-head-card { display: flex; gap: 14px; align-items: center; border: 1px solid var(--tp-border); border-radius: 12px; padding: 12px; }
+.tp-guide-head-card h1 { margin: 0 0 6px; }
+.tp-guide-head-card p { margin: 0; color: var(--tp-muted); }
+.tp-guide-avatar { width: 96px; height: 96px; border-radius: 999px; background: #e6e6e6; border: 2px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+
+@media (max-width: 1024px) {
+  .tp-guide-layout { grid-template-columns: 1fr; }
+}
