@@ -1,2 +1,6 @@
 import { ok } from '../../../src/lib/api';
-export async function GET() { return Response.json(ok([{ slug: 'chaishan-cave-tour' }])); }
+import { listExperiences } from '../../../src/lib/services.mjs';
+
+export async function GET() {
+  return Response.json(ok(listExperiences()));
+}
