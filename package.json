@@ -1,0 +1,10 @@
+{
+  "name": "tour-platform",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "npm run dev -w @tour/web",
+    "test": "npm run test -w @tour/web"
+  }
+}

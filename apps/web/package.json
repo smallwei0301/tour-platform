@@ -1,0 +1,10 @@
+{
+  "name": "@tour/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Scaffold ready. Install Next.js before running app.'",
+    "test": "node --test tests/**/*.test.mjs"
+  }
+}
