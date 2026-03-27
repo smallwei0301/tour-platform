@@ -1,11 +1,19 @@
-import Link from 'next/link';
+import { Navbar } from '../src/components/layout/Navbar';
+import { Footer } from '../src/components/layout/Footer';
+import { HeroSection } from '../src/components/home/HeroSection';
+import { FeaturedTours } from '../src/components/home/FeaturedTours';
+import { ThemeCtas } from '../src/components/home/ThemeCtas';
+import { FaqSection } from '../src/components/home/FaqSection';
 
 export default function HomePage() {
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Tour Platform MVP</h1>
-      <p>先從單一可交易行程起跑。</p>
-      <Link href="/experiences/chaishan-cave-tour">查看柴山探洞體驗</Link>
-    </main>
+    <>
+      <Navbar />
+      <HeroSection />
+      <FeaturedTours />
+      <ThemeCtas />
+      <FaqSection />
+      <Footer />
+    </>
   );
 }
