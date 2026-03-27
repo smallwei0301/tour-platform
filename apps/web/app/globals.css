@@ -162,3 +162,25 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 1024px) {
   .tp-feature-3col { grid-template-columns: 1fr; }
 }
+
+
+.tp-booking-page { padding-bottom: 48px; }
+.tp-stepper { display: flex; gap: 10px; margin: 14px 0; flex-wrap: wrap; }
+.tp-stepper span { border: 1px solid var(--tp-border); border-radius: 999px; padding: 6px 12px; font-size: 14px; color: var(--tp-muted); }
+.tp-stepper span.active { border-color: var(--tp-primary); color: var(--tp-primary); background: #eef7f2; }
+.tp-step-card { border: 1px solid var(--tp-border); border-radius: 12px; padding: 16px; background: #fff; display: grid; gap: 10px; }
+.tp-step-card h1 { margin: 0 0 4px; font-size: 24px; }
+.tp-step-card label { display: grid; gap: 6px; font-size: 14px; }
+.tp-step-card input { border: 1px solid var(--tp-border); border-radius: 10px; padding: 9px 10px; }
+.tp-step-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 6px; }
+.tp-checkline { display: flex !important; align-items: center; gap: 8px; }
+.tp-checkline input { width: auto; }
+.tp-inline-2 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.tp-payment-note { font-size: 13px; color: var(--tp-muted); }
+.tp-price-lines p, .tp-price-lines strong { margin: 0; }
+
+@media (max-width: 768px) {
+  .tp-step-actions { justify-content: stretch; flex-direction: column; }
+  .tp-step-actions .tp-btn { width: 100%; text-align: center; }
+  .tp-inline-2 { grid-template-columns: 1fr; }
+}
