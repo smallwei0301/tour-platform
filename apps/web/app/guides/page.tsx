@@ -1,14 +1,9 @@
 import Link from 'next/link';
-
-const guides = [
-  { slug: 'chen-jian-zhi', name: '陳建志', rating: '5.0（47）', city: '台北市', langs: '中文、英語', tags: '文化歷史 · 美食', badge: '✅ 已驗證' },
-  { slug: 'lin-a-ming', name: '林阿明', rating: '5.0（14）', city: '花蓮縣', langs: '中文、英語', tags: '戶外冒險 · 溯溪', badge: '🏆 精選導遊' },
-  { slug: 'huang-zhi-xiong', name: '黃志雄', rating: '5.0（6）', city: '高雄市', langs: '中文', tags: '柴山探洞 · 生態', badge: '✅ 已驗證' }
-];
+import { guides, getActivitiesByGuide, getReviewsByGuide } from '../../src/fixtures/data';
 
 export default function GuidesPage() {
   return (
-    <main className="tp-container tp-guides-page">
+    <main className="tp-container tp-guides-page" style={{ paddingBottom: 40 }}>
       <div className="tp-breadcrumb">首頁 &gt; 全部導遊</div>
       <section className="tp-activities-layout">
         <aside className="tp-filter">
@@ -18,25 +13,34 @@ export default function GuidesPage() {
           </div>
           <details open>
             <summary>縣市</summary>
-            <label><input type="checkbox"/> 台北市（18）</label>
-            <label><input type="checkbox"/> 花蓮縣（9）</label>
-            <label><input type="checkbox"/> 高雄市（15）</label>
+            <label><input type="checkbox" /> 台北市（1）</label>
+            <label><input type="checkbox" /> 高雄市（1）</label>
+            <label><input type="checkbox" /> 花蓮縣（1）</label>
           </details>
           <details open>
             <summary>語言</summary>
-            <label><input type="checkbox"/> 英語導覽（24）</label>
-            <label><input type="checkbox"/> 日語導覽（8）</label>
+            <label><input type="checkbox" /> 英語導覽</label>
+            <label><input type="checkbox" /> 日語導覽</label>
+            <label><input type="checkbox" /> 德語導覽</label>
+          </details>
+          <details open>
+            <summary>主題專長</summary>
+            <label><input type="checkbox" /> 文化歷史</label>
+            <label><input type="checkbox" /> 美食體驗</label>
+            <label><input type="checkbox" /> 戶外冒險</label>
+            <label><input type="checkbox" /> 柴山探洞 🔦</label>
+            <label><input type="checkbox" /> 溯溪 🌊</label>
           </details>
           <details>
             <summary>特殊認證</summary>
-            <label><input type="checkbox"/> ✅ KYC 已驗證</label>
-            <label><input type="checkbox"/> 🏆 精選導遊</label>
+            <label><input type="checkbox" /> ✅ KYC 已驗證</label>
+            <label><input type="checkbox" /> 🏆 精選導遊</label>
           </details>
         </aside>
 
         <section>
           <div className="tp-result-head">
-            <h2>全台灣導遊</h2>
+            <h2>全台灣 {guides.length} 位在地導遊</h2>
             <select>
               <option>推薦排序</option>
               <option>評分高到低</option>
@@ -45,18 +49,33 @@ export default function GuidesPage() {
           </div>
 
           <div className="tp-card-grid tp-card-grid-activities">
-            {guides.map((g) => (
-              <article className="tp-card" key={g.slug}>
-                <div className="tp-guide-photo" />
-                <p className="tp-guide-badge">{g.badge}</p>
-                <h3>{g.name}</h3>
-                <p>⭐ {g.rating}</p>
-                <p>📍 {g.city}</p>
-                <p>🌍 {g.langs}</p>
-                <p>{g.tags}</p>
-                <Link className="tp-link" href={`/guides/${g.slug}`}>查看導遊簡介 →</Link>
-              </article>
-            ))}
+            {guides.map((g) => {
+              const actCount = getActivitiesByGuide(g.slug).length;
+              const revCount = getReviewsByGuide(g.slug).length;
+              return (
+                <article className="tp-card" key={g.slug}>
+                  <div style={{ position: 'relative' }}>
+                    <img
+                      src={g.avatarUrl}
+                      alt={g.displayName}
+                      style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 10 }}
+                      loading="lazy"
+                    />
+                    <span style={{ position: 'absolute', top: 8, right: 8, background: '#27ae60', color: '#fff', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>✅ 已驗證</span>
+                  </div>
+                  <h3 style={{ marginTop: 10 }}>{g.displayName}</h3>
+                  <p>⭐ {g.rating}（{revCount} 則評價）</p>
+                  <p>📍 {g.region}</p>
+                  <p>🌍 {g.languages.slice(0, 3).join('、')}</p>
+                  <p style={{ fontSize: 13 }}>{g.specialties.slice(0, 3).join(' · ')}</p>
+                  <p style={{ fontSize: 13, color: 'var(--tp-muted)', fontStyle: 'italic', margin: '6px 0' }}>
+                    「{g.headline.slice(0, 40)}...」
+                  </p>
+                  <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{actCount} 個行程</p>
+                  <Link className="tp-link" href={`/guides/${g.slug}`}>查看導遊簡介 →</Link>
+                </article>
+              );
+            })}
           </div>
         </section>
       </section>

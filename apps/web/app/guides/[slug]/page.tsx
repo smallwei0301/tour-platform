@@ -1,70 +1,117 @@
 import Link from 'next/link';
+import { guides, getActivitiesByGuide, getReviewsByGuide } from '../../../src/fixtures/data';
+import { notFound } from 'next/navigation';
 
 export default async function GuideProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
+  const guide = guides.find((g) => g.slug === slug);
+  if (!guide) return notFound();
+
+  const guideActivities = getActivitiesByGuide(slug);
+  const guideReviews = getReviewsByGuide(slug);
 
   return (
-    <main className="tp-container tp-guide-detail">
-      <div className="tp-guide-cover" />
+    <main className="tp-container tp-guide-detail" style={{ paddingBottom: 40 }}>
+      {/* Hero cover */}
+      <div style={{
+        width: '100%', height: 300, borderRadius: 14, overflow: 'hidden', marginTop: 18,
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${guide.heroImageUrl})`,
+        backgroundSize: 'cover', backgroundPosition: 'center',
+      }} />
 
-      <section className="tp-guide-layout">
+      <section style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, marginTop: 20 }}>
+        {/* Main content */}
         <article>
-          <div className="tp-guide-head-card">
-            <div className="tp-guide-avatar" />
+          {/* Head card */}
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24 }}>
+            <img src={guide.avatarUrl} alt={guide.displayName} style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--tp-primary)' }} />
             <div>
-              <h1>陳建志</h1>
-              <p>✅ 已驗證 · ⭐ 5.0（47 則評價） · 📍 台北市 · 🌍 中文、英語</p>
+              <h1 style={{ margin: 0 }}>{guide.displayName}</h1>
+              <p style={{ margin: '4px 0', color: 'var(--tp-muted)' }}>
+                ✅ 已驗證 · ⭐ {guide.rating}（{guideReviews.length} 則評價，{guide.serviceCount} 次服務） · 📍 {guide.region} · 🌍 {guide.languages.slice(0, 4).join('、')}
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                {guide.specialties.map((s) => (
+                  <span key={s} style={{ background: '#e6f4ed', color: 'var(--tp-primary)', padding: '3px 10px', borderRadius: 10, fontSize: 12 }}>{s}</span>
+                ))}
+              </div>
             </div>
           </div>
 
-          <section className="tp-detail-block">
+          {/* About */}
+          <section className="tp-detail-block" style={{ marginBottom: 28 }}>
             <h2>關於我</h2>
-            <p>
-              我在大稻埕長大，從小就在迪化街布行區穿梭。跟著我走，你看到的不是景點清單，
-              而是這個街區如何活過百年、如何在現代城市裡保留生活溫度。
-            </p>
+            <p style={{ lineHeight: 1.8, whiteSpace: 'pre-line' }}>{guide.longBio}</p>
           </section>
 
-          <section className="tp-detail-block">
-            <h2>我的行程</h2>
-            <div className="tp-card-grid tp-card-grid-activities">
-              <article className="tp-card">
-                <div className="tp-card-img" />
-                <h3>大稻埕百年老街深度漫步</h3>
-                <p>🕐 3小時 · 👥 1~8</p>
-                <Link className="tp-link" href="/activities/taipei/dadadaocheng-walk">查看行程 →</Link>
-              </article>
-              <article className="tp-card">
-                <div className="tp-card-img" />
-                <h3>台北夜市文化探索</h3>
-                <p>🕐 4小時 · 👥 1~6</p>
-                <Link className="tp-link" href="/activities/taipei/night-market">查看行程 →</Link>
-              </article>
+          {/* Verification badges */}
+          <section className="tp-detail-block" style={{ marginBottom: 28 }}>
+            <h2>認證與資歷</h2>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {guide.verificationBadges.map((b) => (
+                <span key={b} style={{ background: '#e6f4ed', color: 'var(--tp-primary)', padding: '6px 14px', borderRadius: 10, fontSize: 13 }}>✅ {b}</span>
+              ))}
             </div>
           </section>
 
+          {/* Gallery */}
+          {guide.galleryUrls.length > 0 && (
+            <section className="tp-detail-block" style={{ marginBottom: 28 }}>
+              <h2>照片集</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {guide.galleryUrls.map((url, i) => (
+                  <img key={i} src={url} alt={`${guide.displayName} 照片 ${i + 1}`} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 10 }} loading="lazy" />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Activities */}
+          <section className="tp-detail-block" style={{ marginBottom: 28 }}>
+            <h2>我的行程</h2>
+            <div className="tp-card-grid tp-card-grid-activities">
+              {guideActivities.map((a) => (
+                <article className="tp-card" key={a.slug}>
+                  <img src={a.imageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
+                  <h3>{a.title}</h3>
+                  <p>🕐 {a.durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants}</p>
+                  <strong style={{ color: 'var(--tp-primary)' }}>起價 {a.priceLabel}</strong>
+                  <Link className="tp-link" href={`/activities/${a.regionSlug}/${a.slug}`}>查看行程 →</Link>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          {/* Reviews */}
           <section className="tp-detail-block">
-            <h2>認證與資歷</h2>
-            <ul>
-              <li>✅ 實名 KYC 驗證完成</li>
-              <li>🏆 精選導遊（評分 5.0）</li>
-              <li>🗣️ 外語接待（英語）</li>
-            </ul>
+            <h2>旅客評價</h2>
+            <p style={{ marginBottom: 14 }}>⭐ {guide.rating} · 共 {guideReviews.length} 則評價</p>
+            <div style={{ display: 'grid', gap: 12 }}>
+              {guideReviews.map((r) => (
+                <div key={r.id} style={{ background: 'var(--tp-bg-soft)', border: '1px solid var(--tp-border)', borderRadius: 10, padding: 14 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <strong>{r.author}（{r.city}）</strong>
+                    <span style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{r.date}</span>
+                  </div>
+                  <p style={{ color: '#f5a623', margin: '0 0 6px' }}>{'★'.repeat(r.rating)}</p>
+                  <p style={{ margin: 0, lineHeight: 1.6 }}>{r.text}</p>
+                </div>
+              ))}
+            </div>
           </section>
         </article>
 
-        <aside className="tp-booking-side">
-          <div className="tp-booking-card">
-            <div className="tp-guide-avatar" style={{ width: 80, height: 80 }} />
-            <p className="tp-price" style={{ fontSize: 20, marginTop: 8 }}>陳建志</p>
-            <p>⭐ 5.0（47 則）</p>
-            <button className="tp-btn tp-btn-primary tp-full">傳訊息給導遊</button>
-            <Link className="tp-btn tp-btn-ghost tp-full" href="/activities">查看行程</Link>
+        {/* Sidebar */}
+        <aside style={{ position: 'sticky', top: 80, height: 'fit-content' }}>
+          <div className="tp-booking-card" style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
+            <img src={guide.avatarUrl} alt={guide.displayName} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} />
+            <p style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>{guide.displayName}</p>
+            <p style={{ color: 'var(--tp-muted)' }}>⭐ {guide.rating}（{guideReviews.length} 則）</p>
+            <button className="tp-btn tp-btn-primary" style={{ width: '100%', marginTop: 12 }}>傳訊息給導遊</button>
+            <Link className="tp-btn tp-btn-ghost" href="/activities" style={{ width: '100%', display: 'block', marginTop: 8 }}>查看行程</Link>
           </div>
         </aside>
       </section>
-
-      <p className="tp-breadcrumb" style={{ marginTop: 12 }}>Profile: {decodeURIComponent(slug)}</p>
     </main>
   );
 }

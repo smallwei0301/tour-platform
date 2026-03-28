@@ -1,27 +1,35 @@
 import Link from 'next/link';
-
-const tours = [
-  { slug: 'chaishan-cave-tour', title: '高雄柴山自然公園探洞半日遊', meta: '🕐 4小時 · 🚶 步行 · 👥 1~6人', price: '起價 NT$1,800' },
-  { slug: 'dadadaocheng-walk', title: '大稻埕百年老街深度漫步', meta: '🕐 3小時 · 🚶 步行 · 👥 1~8人', price: '起價 NT$1,500' },
-  { slug: 'hualien-river', title: '花蓮秀姑巒溪溯溪全日冒險', meta: '🕐 全天 · 🚐 包車 · 👥 1~8人', price: '起價 NT$3,200' }
-];
+import { activities } from '../../fixtures/data';
 
 export function FeaturedTours() {
+  const featured = activities.slice(0, 4);
+
   return (
     <section className="tp-section">
       <div className="tp-container">
         <div className="tp-section-head">
-          <h2>精選在地導遊行程</h2>
-          <Link href="/activities">查看全部</Link>
+          <h2>精選行程</h2>
+          <Link href="/activities" className="tp-link">查看全部 →</Link>
         </div>
         <div className="tp-card-grid">
-          {tours.map((tour) => (
-            <article key={tour.slug} className="tp-card">
-              <div className="tp-card-img" />
-              <h3>{tour.title}</h3>
-              <p>{tour.meta}</p>
-              <strong>{tour.price}</strong>
-              <Link className="tp-link" href={`/experiences/${tour.slug}`}>查看行程 →</Link>
+          {featured.map((a) => (
+            <article className="tp-card" key={a.slug}>
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={a.imageUrl}
+                  alt={a.title}
+                  className="tp-card-img"
+                  style={{ background: 'none' }}
+                  loading="lazy"
+                />
+                <button className="tp-fav-btn" aria-label="收藏">❤️</button>
+              </div>
+              <h3>{a.title}</h3>
+              <p>⭐ {activities.find(x => x.slug === a.slug) ? '5.0' : '—'}</p>
+              <p>🕐 {a.durationDisplay} · {a.transportMode} · 👥 {a.minParticipants}~{a.maxParticipants} 人</p>
+              <p>📍 {a.region}</p>
+              <strong style={{ color: 'var(--tp-primary)' }}>起價 {a.priceLabel}</strong>
+              <Link className="tp-link" href={`/activities/${a.regionSlug}/${a.slug}`}>查看行程 →</Link>
             </article>
           ))}
         </div>
