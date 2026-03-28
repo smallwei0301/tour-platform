@@ -19,11 +19,11 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
         backgroundSize: 'cover', backgroundPosition: 'center',
       }} />
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, marginTop: 20 }}>
+      <section className="tp-guide-profile-layout" style={{ display: 'grid', gap: 24, marginTop: 20 }}>
         {/* Main content */}
         <article>
           {/* Head card */}
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24 }}>
+          <div className="tp-guide-profile-head" style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24 }}>
             <img src={guide.avatarUrl} alt={guide.displayName} style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--tp-primary)' }} />
             <div>
               <h1 style={{ margin: 0 }}>{guide.displayName}</h1>
@@ -58,7 +58,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
           {guide.galleryUrls.length > 0 && (
             <section className="tp-detail-block" style={{ marginBottom: 28 }}>
               <h2>照片集</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+              <div className="tp-guide-profile-gallery" style={{ display: 'grid', gap: 8 }}>
                 {guide.galleryUrls.map((url, i) => (
                   <img key={i} src={url} alt={`${guide.displayName} 照片 ${i + 1}`} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 10 }} loading="lazy" />
                 ))}
@@ -89,7 +89,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
             <div style={{ display: 'grid', gap: 12 }}>
               {guideReviews.map((r) => (
                 <div key={r.id} style={{ background: 'var(--tp-bg-soft)', border: '1px solid var(--tp-border)', borderRadius: 10, padding: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <div className="tp-guide-review-head" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
                     <strong>{r.author}（{r.city}）</strong>
                     <span style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{r.date}</span>
                   </div>
@@ -102,7 +102,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
         </article>
 
         {/* Sidebar */}
-        <aside style={{ position: 'sticky', top: 80, height: 'fit-content' }}>
+        <aside className="tp-guide-profile-side" style={{ position: 'sticky', top: 80, height: 'fit-content' }}>
           <div className="tp-booking-card" style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
             <img src={guide.avatarUrl} alt={guide.displayName} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} />
             <p style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>{guide.displayName}</p>

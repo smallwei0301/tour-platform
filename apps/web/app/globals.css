@@ -354,3 +354,18 @@ img { max-width: 100%; height: auto; }
   .tp-activity-two-col { grid-template-columns: 1fr; }
   .tp-activity-guide-block { flex-direction: column; align-items: flex-start !important; }
 }
+
+/* Guide profile mobile fixes */
+.tp-guide-profile-layout { grid-template-columns: minmax(0, 1fr) 340px; }
+.tp-guide-profile-gallery { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+@media (max-width: 1024px) {
+  .tp-guide-profile-layout { grid-template-columns: 1fr; }
+  .tp-guide-profile-side { position: static !important; }
+}
+
+@media (max-width: 768px) {
+  .tp-guide-profile-head { flex-direction: column; align-items: flex-start !important; }
+  .tp-guide-profile-gallery { grid-template-columns: 1fr; }
+  .tp-guide-review-head { flex-direction: column; align-items: flex-start; gap: 4px; }
+}
