@@ -4,6 +4,18 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 type Preset = 'today' | '7d' | '30d' | 'custom';
+type TrendMetric = 'orders' | 'refunds' | 'guides';
+
+function cardStyle(active = false): React.CSSProperties {
+  return {
+    border: active ? '1px solid #1B6B4A' : '1px solid #e5e7eb',
+    borderRadius: 10,
+    padding: 12,
+    display: 'block',
+    background: active ? '#f2fbf6' : '#fff',
+    transition: 'all 0.15s ease'
+  };
+}
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
@@ -11,6 +23,7 @@ export default function AdminDashboardPage() {
   const [preset, setPreset] = useState<Preset>('7d');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
+  const [trendMetric, setTrendMetric] = useState<TrendMetric>('orders');
 
   const query = useMemo(() => {
     const p = new URLSearchParams();
@@ -31,20 +44,46 @@ export default function AdminDashboardPage() {
       .finally(() => setLoading(false));
   }, [query]);
 
-  if (loading) return <main style={{ padding: 24 }}>載入中…</main>;
-  if (!data) return <main style={{ padding: 24 }}>無法載入 dashboard</main>;
+  if (loading) {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>Admin Dashboard</h1>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginTop: 12 }}>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} style={{ height: 78, borderRadius: 10, background: 'linear-gradient(90deg,#f3f4f6,#e5e7eb,#f3f4f6)' }} />
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  if (!data) {
+    return (
+      <main style={{ padding: 24 }}>
+        <h1>Admin Dashboard</h1>
+        <p style={{ color: '#b42318' }}>無法載入 dashboard，請稍後再試。</p>
+      </main>
+    );
+  }
 
   const kpi = data.kpi || {};
   const trends = Array.isArray(data.trends) ? data.trends : [];
-  const maxOrders = Math.max(1, ...trends.map((t: any) => Number(t.orders || 0)));
+  const maxValue = Math.max(1, ...trends.map((t: any) => Number(t[trendMetric] || 0)));
+
+  const badgeLabel = preset === 'today' ? '今天' : preset === '7d' ? '近 7 日' : preset === '30d' ? '近 30 日' : '自訂';
 
   return (
     <main style={{ padding: 24 }}>
-      <h1>Admin Dashboard</h1>
-      <p style={{ color: '#666' }}>Orders / Refunds / Guides / Operations 一頁整合</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+        <div>
+          <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
+          <p style={{ color: '#666', margin: '6px 0 0' }}>Orders / Refunds / Guides / Operations 一頁整合</p>
+        </div>
+        <span style={{ fontSize: 12, color: '#1B6B4A', background: '#e9f8ef', padding: '4px 10px', borderRadius: 999 }}>範圍：{badgeLabel}</span>
+      </div>
 
       {/* quick filter */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', margin: '10px 0 16px' }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', margin: '12px 0 16px' }}>
         <strong>時間範圍：</strong>
         {(['today', '7d', '30d'] as Preset[]).map((p) => (
           <button
@@ -82,34 +121,46 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* KPI cards with drill-down */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12, margin: '12px 0 18px' }}>
-        <Link href="/admin/orders?status=pending_payment" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>總訂單<br /><strong>{kpi.totalOrders || 0}</strong></Link>
-        <Link href="/admin/orders?status=paid" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>待處理訂單<br /><strong>{kpi.pendingOrders || 0}</strong></Link>
-        <Link href="/admin/refunds" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>待處理退款<br /><strong>{kpi.pendingRefunds || 0}</strong></Link>
-        <Link href="/admin/guides?status=pending" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>待審核導遊<br /><strong>{kpi.pendingGuideApps || 0}</strong></Link>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 12, margin: '12px 0 18px' }}>
+        <Link href="/admin/orders" style={cardStyle()}><div>總訂單</div><strong>{kpi.totalOrders || 0}</strong></Link>
+        <Link href="/admin/orders?status=paid" style={cardStyle()}><div>待處理訂單</div><strong>{kpi.pendingOrders || 0}</strong></Link>
+        <Link href="/admin/refunds" style={cardStyle()}><div>待處理退款</div><strong>{kpi.pendingRefunds || 0}</strong></Link>
+        <Link href="/admin/guides?status=pending" style={cardStyle()}><div>待審核導遊</div><strong>{kpi.pendingGuideApps || 0}</strong></Link>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
-        <Link href="/admin/operations-tracking" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>總 GMV<br /><strong>NT${Number(kpi.totalGmv || 0).toLocaleString()}</strong></Link>
-        <Link href="/admin/operations-tracking" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>平台收入<br /><strong>NT${Number(kpi.totalCommissionTwd || 0).toLocaleString()}</strong></Link>
-        <Link href="/admin/operations-tracking" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>健康訂單率<br /><strong>{kpi.healthyOrderRate || 0}%</strong></Link>
-        <Link href="/admin/operations-tracking" style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, display: 'block' }}>例外事件率<br /><strong>{kpi.exceptionRate || 0}%</strong></Link>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 12, marginBottom: 18 }}>
+        <Link href="/admin/operations-tracking" style={cardStyle()}><div>總 GMV</div><strong>NT${Number(kpi.totalGmv || 0).toLocaleString()}</strong></Link>
+        <Link href="/admin/operations-tracking" style={cardStyle()}><div>平台收入</div><strong>NT${Number(kpi.totalCommissionTwd || 0).toLocaleString()}</strong></Link>
+        <Link href="/admin/operations-tracking" style={cardStyle()}><div>健康訂單率</div><strong>{kpi.healthyOrderRate || 0}%</strong></Link>
+        <Link href="/admin/operations-tracking" style={cardStyle()}><div>例外事件率</div><strong>{kpi.exceptionRate || 0}%</strong></Link>
       </div>
 
       {/* mini trend chart */}
       <section style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12, marginBottom: 18 }}>
-        <h3 style={{ marginTop: 0 }}>近 7 日趨勢（訂單數）</h3>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <h3 style={{ margin: 0 }}>近 7 日趨勢</h3>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['orders', 'refunds', 'guides'] as TrendMetric[]).map((m) => (
+              <button key={m} onClick={() => setTrendMetric(m)} style={{ border: '1px solid #d0d7de', borderRadius: 8, padding: '4px 8px', background: trendMetric === m ? '#e8f4ee' : '#fff' }}>
+                {m === 'orders' ? '訂單' : m === 'refunds' ? '退款' : '導遊申請'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {trends.length === 0 ? (
           <p style={{ color: '#666' }}>無資料</p>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${trends.length}, minmax(0,1fr))`, gap: 8, alignItems: 'end', minHeight: 140 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${trends.length}, minmax(0,1fr))`, gap: 8, alignItems: 'end', minHeight: 140, marginTop: 10 }}>
             {trends.map((t: any) => {
-              const h = Math.max(8, Math.round((Number(t.orders || 0) / maxOrders) * 100));
+              const value = Number(t[trendMetric] || 0);
+              const h = Math.max(8, Math.round((value / maxValue) * 100));
+              const color = trendMetric === 'orders' ? '#1B6B4A' : trendMetric === 'refunds' ? '#E8834D' : '#4C78A8';
               return (
                 <div key={t.date} style={{ textAlign: 'center' }}>
-                  <div title={`${t.date} orders=${t.orders}`} style={{ height: `${h}px`, background: '#1B6B4A', borderRadius: '6px 6px 0 0' }} />
+                  <div title={`${t.date} ${trendMetric}=${value}`} style={{ height: `${h}px`, background: color, borderRadius: '6px 6px 0 0' }} />
                   <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{t.date.slice(5)}</div>
-                  <div style={{ fontSize: 12 }}>{t.orders}</div>
+                  <div style={{ fontSize: 12 }}>{value}</div>
                 </div>
               );
             })}
@@ -117,10 +168,10 @@ export default function AdminDashboardPage() {
         )}
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 14 }}>
         <section style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
           <h3 style={{ marginTop: 0 }}>待處理訂單</h3>
-          {(data.queues?.orders || []).length === 0 ? <p style={{ color: '#666' }}>無</p> : (
+          {(data.queues?.orders || []).length === 0 ? <p style={{ color: '#666' }}>🎉 目前無待處理訂單</p> : (
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {data.queues.orders.map((o: any) => <li key={o.id}>{o.id} · {o.status}</li>)}
             </ul>
@@ -130,7 +181,7 @@ export default function AdminDashboardPage() {
 
         <section style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
           <h3 style={{ marginTop: 0 }}>待處理退款</h3>
-          {(data.queues?.refunds || []).length === 0 ? <p style={{ color: '#666' }}>無</p> : (
+          {(data.queues?.refunds || []).length === 0 ? <p style={{ color: '#666' }}>🎉 目前無待處理退款</p> : (
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {data.queues.refunds.map((r: any) => <li key={r.id}>{r.orderId} · {r.status}</li>)}
             </ul>
@@ -140,7 +191,7 @@ export default function AdminDashboardPage() {
 
         <section style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12 }}>
           <h3 style={{ marginTop: 0 }}>待審核導遊</h3>
-          {(data.queues?.guides || []).length === 0 ? <p style={{ color: '#666' }}>無</p> : (
+          {(data.queues?.guides || []).length === 0 ? <p style={{ color: '#666' }}>🎉 目前無待審核導遊</p> : (
             <ul style={{ margin: 0, paddingLeft: 18 }}>
               {data.queues.guides.map((g: any) => <li key={g.id}>{g.fullName} · {g.city}</li>)}
             </ul>
