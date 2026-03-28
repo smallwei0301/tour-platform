@@ -31,7 +31,7 @@ export default function BookingPage() {
       </div>
 
       {/* Progress bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500 }}>
+      <div className="tp-booking-progress" style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500 }}>
         {['行程確認', '旅客資訊', '付款'].map((label, i) => (
           <div key={i} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
             <div style={{
@@ -49,7 +49,7 @@ export default function BookingPage() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: 24 }}>
+      <div className="tp-booking-layout" style={{ display: 'grid', gap: 24 }}>
         <div>
           {step === 1 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>

@@ -14,7 +14,7 @@ export function Footer() {
       {/* Region links */}
       <div className="tp-container" style={{ padding: '28px 0 0' }}>
         <h4 style={{ color: '#fff', marginBottom: 12, fontSize: 14, letterSpacing: 1 }}>依地區探索行程</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, paddingBottom: 20, borderBottom: '1px solid #2f2f2f' }}>
+        <div className="tp-footer-regions" style={{ display: 'grid', gap: 12, paddingBottom: 20, borderBottom: '1px solid #2f2f2f' }}>
           {Object.entries(regions).map(([label, cities]) => (
             <div key={label}>
               <p style={{ color: 'var(--tp-accent)', fontWeight: 700, marginBottom: 6, fontSize: 13 }}>【{label}】</p>

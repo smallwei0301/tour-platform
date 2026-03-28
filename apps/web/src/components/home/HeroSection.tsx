@@ -19,7 +19,7 @@ export function HeroSection() {
           不跟團、不趕路。預約在地導遊，用你的節奏認識這座島嶼。<br />
           柴山探洞、大稻埕老街、花蓮溯溪⋯⋯ 你選行程，我們找最懂的人帶路。
         </p>
-        <div className="tp-trust-grid" style={{ gridTemplateColumns: 'repeat(4, auto)', gap: '16px', maxWidth: 600 }}>
+        <div className="tp-trust-grid tp-trust-grid-home" style={{ gap: '16px', maxWidth: 600 }}>
           <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '10px 14px', borderRadius: 10, textAlign: 'center', fontSize: 14 }}>✅ 實名認證導遊</div>
           <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '10px 14px', borderRadius: 10, textAlign: 'center', fontSize: 14 }}>💰 透明定價</div>
           <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '10px 14px', borderRadius: 10, textAlign: 'center', fontSize: 14 }}>🔒 安全付款</div>

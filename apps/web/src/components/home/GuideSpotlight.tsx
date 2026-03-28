@@ -12,7 +12,7 @@ export function GuideSpotlight() {
         <div className="tp-section-head">
           <h2>🔦 焦點導遊</h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 24, alignItems: 'start' }}>
+        <div className="tp-guide-spotlight-layout" style={{ display: 'grid', gap: 24, alignItems: 'start' }}>
           <div style={{ textAlign: 'center' }}>
             <img
               src={andy.avatarUrl}
@@ -41,7 +41,7 @@ export function GuideSpotlight() {
             <h4 style={{ marginBottom: 8 }}>Andy 的行程</h4>
             <div className="tp-card-grid" style={{ gridTemplateColumns: '1fr' }}>
               {andyActivities.map((a) => (
-                <article className="tp-card" key={a.slug} style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 14, padding: 12 }}>
+                <article className="tp-card tp-guide-spotlight-activity" key={a.slug} style={{ display: 'grid', gap: 14, padding: 12 }}>
                   <img src={a.imageUrl} alt={a.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 10 }} loading="lazy" />
                   <div>
                     <h3 style={{ fontSize: 16, margin: '0 0 6px' }}>{a.title}</h3>

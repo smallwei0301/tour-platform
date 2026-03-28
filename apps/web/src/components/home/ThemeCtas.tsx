@@ -5,7 +5,7 @@ export function ThemeCtas() {
     <section className="tp-section">
       <div className="tp-container">
         <div className="tp-section-head"><h2>🏷️ 特色主題</h2></div>
-        <div className="tp-theme-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="tp-theme-stack tp-theme-stack-home" style={{ display: 'grid', gap: 16 }}>
           <div className="tp-theme" style={{
             backgroundImage: 'linear-gradient(rgba(74,92,58,0.75), rgba(74,92,58,0.85)), url(https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=800&q=80)',
             backgroundSize: 'cover', backgroundPosition: 'center', minHeight: 220, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
