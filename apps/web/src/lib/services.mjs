@@ -1,4 +1,4 @@
-import { experiences, orders, payments, refundRequests } from './store.mjs';
+import { experiences, orders, payments, refundRequests, guideApplications } from './store.mjs';
 
 function normalizeSlug(slug) {
   return String(slug || '').trim();
@@ -161,6 +161,66 @@ export function listRefundRequests(input = {}) {
   return refundRequests
     .filter((r) => (orderId ? r.orderId === orderId : true))
     .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+}
+
+export function createGuideApplication(input = {}) {
+  const fullName = normalizeSlug(input?.fullName);
+  const phone = normalizeSlug(input?.phone);
+  const email = normalizeSlug(input?.email);
+  const city = normalizeSlug(input?.city);
+  const bio = normalizeSlug(input?.bio);
+
+  if (!fullName) throw new Error('fullName is required');
+  if (!phone) throw new Error('phone is required');
+  if (!email) throw new Error('email is required');
+  if (!city) throw new Error('city is required');
+  if (!bio) throw new Error('bio is required');
+
+  const existing = guideApplications.find((a) => a.email === email && ['pending', 'approved'].includes(a.status));
+  if (existing) throw new Error('application already exists');
+
+  const row = {
+    id: `ga_${String(guideApplications.length + 1).padStart(6, '0')}`,
+    fullName,
+    phone,
+    email,
+    city,
+    bio,
+    status: 'pending',
+    adminNote: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: null
+  };
+
+  guideApplications.push(row);
+  return row;
+}
+
+export function listGuideApplications(input = {}) {
+  const status = normalizeSlug(input?.status);
+  return guideApplications
+    .filter((a) => (status ? a.status === status : true))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function updateGuideApplicationStatus(input = {}) {
+  const applicationId = normalizeSlug(input?.applicationId);
+  const action = normalizeSlug(input?.action);
+  const adminNote = normalizeSlug(input?.adminNote) || null;
+
+  if (!applicationId) throw new Error('applicationId is required');
+  if (!['approve', 'reject', 'suspend'].includes(action)) throw new Error('invalid guide action');
+
+  const row = guideApplications.find((a) => a.id === applicationId);
+  if (!row) throw new Error('application not found');
+
+  if (action === 'approve') row.status = 'approved';
+  if (action === 'reject') row.status = 'rejected';
+  if (action === 'suspend') row.status = 'suspended';
+
+  row.adminNote = adminNote;
+  row.updatedAt = new Date().toISOString();
+  return row;
 }
 
 export function processPaymentCallback(input) {

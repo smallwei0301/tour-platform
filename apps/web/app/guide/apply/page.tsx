@@ -4,6 +4,34 @@ import { useState } from 'react';
 
 export default function GuideApplyPage() {
   const [step, setStep] = useState(1);
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [city, setCity] = useState('');
+  const [bio, setBio] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [doneId, setDoneId] = useState('');
+  const [error, setError] = useState('');
+
+  async function submitApplication() {
+    try {
+      setSubmitting(true);
+      setError('');
+      const res = await fetch('/api/guide-applications', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fullName, phone, email, city, bio })
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json?.error?.message || '申請失敗');
+      setDoneId(json.data.id || '');
+      setStep(4);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '申請失敗');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <main className="tp-container tp-apply-page">
@@ -18,11 +46,11 @@ export default function GuideApplyPage() {
 
       {step === 1 && (
         <section className="tp-step-card">
-          <label>姓名*<input /></label>
-          <label>電話*<input /></label>
-          <label>電子信箱*<input type="email" /></label>
-          <label>所在縣市*<input placeholder="例如：高雄市" /></label>
-          <label>自我介紹*<textarea rows={4} /></label>
+          <label>姓名*<input value={fullName} onChange={(e) => setFullName(e.target.value)} /></label>
+          <label>電話*<input value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+          <label>電子信箱*<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+          <label>所在縣市*<input placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} /></label>
+          <label>自我介紹*<textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} /></label>
           <div className="tp-step-actions">
             <button className="tp-btn tp-btn-primary" onClick={() => setStep(2)}>下一步：上傳證件</button>
           </div>
@@ -42,12 +70,23 @@ export default function GuideApplyPage() {
 
       {step === 3 && (
         <section className="tp-step-card">
-          <h2>申請資料已完成</h2>
-          <p>送出後 1-3 個工作天內會由審核團隊與你聯繫。</p>
+          <h2>申請資料確認</h2>
+          <p>姓名：{fullName || '—'}</p>
+          <p>Email：{email || '—'}</p>
+          <p>城市：{city || '—'}</p>
+          {error && <p style={{ color: '#b42318' }}>⚠️ {error}</p>}
           <div className="tp-step-actions">
             <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>返回修改</button>
-            <button className="tp-btn tp-btn-primary">送出申請</button>
+            <button className="tp-btn tp-btn-primary" disabled={submitting} onClick={submitApplication}>{submitting ? '送出中…' : '送出申請'}</button>
           </div>
+        </section>
+      )}
+
+      {step === 4 && (
+        <section className="tp-step-card">
+          <h2>申請已送出 ✅</h2>
+          <p>申請編號：{doneId || '—'}</p>
+          <p>審核結果將以 Email 通知。</p>
         </section>
       )}
     </main>

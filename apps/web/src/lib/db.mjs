@@ -5,6 +5,9 @@ import {
   getMyOrderDetail as getMyOrderDetailInMemory,
   createRefundRequest as createRefundRequestInMemory,
   listRefundRequests as listRefundRequestsInMemory,
+  createGuideApplication as createGuideApplicationInMemory,
+  listGuideApplications as listGuideApplicationsInMemory,
+  updateGuideApplicationStatus as updateGuideApplicationStatusInMemory,
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
 import {
@@ -380,6 +383,121 @@ export async function updateAdminRefundStatusDb(input = {}) {
     status: nextStatus,
     orderStatus,
     adminNote
+  };
+}
+
+export async function createGuideApplicationDb(input = {}) {
+  if (!hasSupabaseEnv()) return createGuideApplicationInMemory(input);
+
+  const fullName = String(input?.fullName || '').trim();
+  const phone = String(input?.phone || '').trim();
+  const email = String(input?.email || '').trim();
+  const city = String(input?.city || '').trim();
+  const bio = String(input?.bio || '').trim();
+
+  if (!fullName) throw new Error('fullName is required');
+  if (!phone) throw new Error('phone is required');
+  if (!email) throw new Error('email is required');
+  if (!city) throw new Error('city is required');
+  if (!bio) throw new Error('bio is required');
+
+  const supabase = await getSupabase();
+
+  const payload = {
+    id: crypto.randomUUID(),
+    full_name: fullName,
+    phone,
+    email,
+    city,
+    bio,
+    status: 'pending'
+  };
+
+  const { data, error } = await supabase
+    .from('guide_applications')
+    .insert(payload)
+    .select('id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at')
+    .single();
+
+  if (error || !data) throw new Error(error?.message || 'guide application create failed');
+
+  return {
+    id: data.id,
+    fullName: data.full_name,
+    phone: data.phone,
+    email: data.email,
+    city: data.city,
+    bio: data.bio,
+    status: data.status,
+    adminNote: data.admin_note,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  };
+}
+
+export async function listGuideApplicationsDb(input = {}) {
+  if (!hasSupabaseEnv()) return listGuideApplicationsInMemory(input);
+
+  const status = String(input?.status || '').trim();
+  const supabase = await getSupabase();
+
+  let query = supabase
+    .from('guide_applications')
+    .select('id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at')
+    .order('created_at', { ascending: false });
+
+  if (status) query = query.eq('status', status);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    fullName: r.full_name,
+    phone: r.phone,
+    email: r.email,
+    city: r.city,
+    bio: r.bio,
+    status: r.status,
+    adminNote: r.admin_note,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at
+  }));
+}
+
+export async function updateGuideApplicationStatusDb(input = {}) {
+  if (!hasSupabaseEnv()) return updateGuideApplicationStatusInMemory(input);
+
+  const applicationId = String(input?.applicationId || '').trim();
+  const action = String(input?.action || '').trim();
+  const adminNote = String(input?.adminNote || '').trim() || null;
+
+  if (!applicationId) throw new Error('applicationId is required');
+  if (!['approve', 'reject', 'suspend'].includes(action)) throw new Error('invalid guide action');
+
+  const nextStatus = action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'suspended';
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_applications')
+    .update({ status: nextStatus, admin_note: adminNote, updated_at: new Date().toISOString() })
+    .eq('id', applicationId)
+    .select('id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at')
+    .single();
+
+  if (error || !data) throw new Error(error?.message || 'guide application update failed');
+
+  return {
+    id: data.id,
+    fullName: data.full_name,
+    phone: data.phone,
+    email: data.email,
+    city: data.city,
+    bio: data.bio,
+    status: data.status,
+    adminNote: data.admin_note,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
   };
 }
 
