@@ -5,7 +5,7 @@ const caveTours = [
     title: '高雄柴山自然公園探洞半日遊',
     slug: 'kaohsiung-chaishan-cave-experience',
     meta: '🕐 3-4小時 · 👥 4~12人 · NT$2,000',
-    imageUrl: 'https://images.pexels.com/photos/1072824/pexels-photo-1072824.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/activities/chaishan/main.jpg',
   },
   {
     title: '柴山石灰岩洞穴地質探索',

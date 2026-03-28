@@ -189,9 +189,9 @@ export const activities: Activity[] = [
     ],
     socialProofQuotes: ['大人小人都開心😍', '奇幻的探洞之旅', '謝謝 Andy 的導覽，會想再參加一次', '很棒、下次再去'],
     trustPoints: ['多元客群：親子、教師、外國遊客、研究生', '有實際帶團與環境教育背景', '具壽山巡守與保育志工信任背書'],
-    imageUrl: 'https://images.pexels.com/photos/1072824/pexels-photo-1072824.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/activities/chaishan/main.jpg',
     galleryUrls: [
-      'https://images.pexels.com/photos/1072824/pexels-photo-1072824.jpeg?auto=compress&cs=tinysrgb&w=1200',
+      '/images/activities/chaishan/main.jpg',
       'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
       'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80',
       'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
