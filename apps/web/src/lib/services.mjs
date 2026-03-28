@@ -1,4 +1,4 @@
-import { experiences, orders, payments } from './store.mjs';
+import { experiences, orders, payments, refundRequests } from './store.mjs';
 
 function normalizeSlug(slug) {
   return String(slug || '').trim();
@@ -88,11 +88,15 @@ export function listMyOrders(input = {}) {
     .map((o) => {
       const exp = experiences.find((e) => e.id === o.experienceId);
       const schedule = exp?.schedules?.find((s) => s.id === o.scheduleId);
+      const refund = refundRequests
+        .filter((r) => r.orderId === o.id)
+        .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime())[0] || null;
       return {
         ...o,
         title: exp?.title || o.experienceSlug,
         guideSlug: exp?.guideSlug || null,
-        schedule: schedule || null
+        schedule: schedule || null,
+        refund
       };
     })
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -108,6 +112,55 @@ export function getMyOrderDetail(input = {}) {
   const target = rows.find((o) => o.id === orderId);
   if (!target) throw new Error('order not found');
   return target;
+}
+
+export function createRefundRequest(input = {}) {
+  const orderId = normalizeSlug(input?.orderId);
+  const reason = normalizeSlug(input?.reason) || 'user_request';
+  const note = normalizeSlug(input?.note) || '';
+  const contactEmail = normalizeSlug(input?.contactEmail) || '';
+
+  if (!orderId) throw new Error('orderId is required');
+
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) throw new Error('order not found');
+
+  if (contactEmail && order.contactEmail && order.contactEmail !== contactEmail) {
+    throw new Error('order not found');
+  }
+
+  if (['cancelled_by_user', 'cancelled_by_guide', 'refunded'].includes(order.status)) {
+    throw new Error('order cannot request refund in current status');
+  }
+
+  const existing = refundRequests.find((r) => r.orderId === orderId && !['rejected', 'refunded'].includes(r.status));
+  if (existing) throw new Error('refund already requested');
+
+  const request = {
+    id: `ref_${String(refundRequests.length + 1).padStart(6, '0')}`,
+    orderId,
+    reason,
+    note,
+    status: 'requested',
+    requestedAt: new Date().toISOString(),
+    approvedAt: null,
+    refundedAt: null
+  };
+
+  refundRequests.push(request);
+  order.status = 'refund_pending';
+
+  return {
+    ...request,
+    orderStatus: order.status
+  };
+}
+
+export function listRefundRequests(input = {}) {
+  const orderId = normalizeSlug(input?.orderId);
+  return refundRequests
+    .filter((r) => (orderId ? r.orderId === orderId : true))
+    .sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
 }
 
 export function processPaymentCallback(input) {

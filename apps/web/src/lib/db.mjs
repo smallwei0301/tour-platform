@@ -3,6 +3,8 @@ import {
   createOrder as createOrderInMemory,
   listMyOrders as listMyOrdersInMemory,
   getMyOrderDetail as getMyOrderDetailInMemory,
+  createRefundRequest as createRefundRequestInMemory,
+  listRefundRequests as listRefundRequestsInMemory,
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
 
@@ -170,6 +172,105 @@ export async function getMyOrderDetailDb(input = {}) {
   const target = rows.find((o) => o.id === orderId);
   if (!target) throw new Error('order not found');
   return target;
+}
+
+export async function createRefundRequestDb(input = {}) {
+  if (!hasSupabaseEnv()) return createRefundRequestInMemory(input);
+
+  const orderId = String(input?.orderId || '').trim();
+  const reason = String(input?.reason || '').trim() || 'user_request';
+  const note = String(input?.note || '').trim() || null;
+  const contactEmail = String(input?.contactEmail || '').trim();
+
+  if (!orderId) throw new Error('orderId is required');
+
+  const supabase = await getSupabase();
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, status, contact_email')
+    .eq('id', orderId)
+    .single();
+
+  if (orderError || !order) throw new Error('order not found');
+  if (contactEmail && order.contact_email && contactEmail !== order.contact_email) {
+    throw new Error('order not found');
+  }
+
+  if (['cancelled_by_user', 'cancelled_by_guide', 'refunded'].includes(order.status)) {
+    throw new Error('order cannot request refund in current status');
+  }
+
+  const { data: existing } = await supabase
+    .from('refund_requests')
+    .select('id, status')
+    .eq('order_id', orderId)
+    .in('status', ['requested', 'reviewing', 'approved', 'processing'])
+    .limit(1);
+
+  if (existing && existing.length > 0) throw new Error('refund already requested');
+
+  const payload = {
+    id: crypto.randomUUID(),
+    order_id: orderId,
+    reason,
+    note,
+    status: 'requested',
+    requested_at: new Date().toISOString()
+  };
+
+  const { data: inserted, error: insertError } = await supabase
+    .from('refund_requests')
+    .insert(payload)
+    .select('id, order_id, reason, note, status, requested_at')
+    .single();
+
+  if (insertError || !inserted) throw new Error(insertError?.message || 'refund create failed');
+
+  const { error: updateOrderError } = await supabase
+    .from('orders')
+    .update({ status: 'refund_pending' })
+    .eq('id', orderId);
+
+  if (updateOrderError) throw new Error(updateOrderError.message);
+
+  return {
+    id: inserted.id,
+    orderId: inserted.order_id,
+    reason: inserted.reason,
+    note: inserted.note,
+    status: inserted.status,
+    requestedAt: inserted.requested_at,
+    orderStatus: 'refund_pending'
+  };
+}
+
+export async function listRefundRequestsDb(input = {}) {
+  if (!hasSupabaseEnv()) return listRefundRequestsInMemory(input);
+
+  const orderId = String(input?.orderId || '').trim();
+  const supabase = await getSupabase();
+
+  let query = supabase
+    .from('refund_requests')
+    .select('id, order_id, reason, note, status, requested_at, approved_at, refunded_at')
+    .order('requested_at', { ascending: false });
+
+  if (orderId) query = query.eq('order_id', orderId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    orderId: r.order_id,
+    reason: r.reason,
+    note: r.note,
+    status: r.status,
+    requestedAt: r.requested_at,
+    approvedAt: r.approved_at,
+    refundedAt: r.refunded_at
+  }));
 }
 
 export async function processPaymentCallbackDb(input) {
