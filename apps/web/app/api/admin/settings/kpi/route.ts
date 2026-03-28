@@ -13,7 +13,7 @@ export async function GET() {
 export async function PATCH(request: Request) {
   const body = await request.json().catch(() => ({}));
   try {
-    return Response.json(ok(await updateKpiConfigDb(body)));
+    return Response.json(ok(await updateKpiConfigDb({ ...body, actor: body?.actor || 'admin', note: body?.note || '' })));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     return Response.json(fail('INVALID_REQUEST', message), { status: 400 });

@@ -22,6 +22,8 @@ import {
   operationsTrackingCsvFallback,
   getKpiConfigFallback,
   updateKpiConfigFallback,
+  listKpiConfigHistoryFallback,
+  revertKpiConfigFallback,
   listAdminRefundRequestsFallback,
   updateAdminRefundStatusFallback
 } from './admin.mjs';
@@ -644,6 +646,9 @@ export async function getKpiConfigDb() {
 export async function updateKpiConfigDb(input = {}) {
   if (!hasSupabaseEnv()) return updateKpiConfigFallback(input);
 
+  const actor = String(input?.actor || 'admin');
+  const note = String(input?.note || '');
+
   const current = await getKpiConfigDb();
   const commissionRate = input.commissionRate == null ? current.commissionRate : Number(input.commissionRate);
   const paymentFeeRate = input.paymentFeeRate == null ? current.paymentFeeRate : Number(input.paymentFeeRate);
@@ -666,7 +671,83 @@ export async function updateKpiConfigDb(input = {}) {
   const { error } = await supabase.from('kpi_settings').upsert(payload);
   if (error) throw new Error(error.message);
 
-  return getKpiConfigDb();
+  const updated = await getKpiConfigDb();
+
+  await supabase.from('kpi_settings_history').insert({
+    version_id: crypto.randomUUID(),
+    actor,
+    action: 'update',
+    note,
+    before_payload: current,
+    config_payload: updated,
+    source_version_id: null,
+    created_at: new Date().toISOString()
+  });
+
+  return updated;
+}
+
+export async function listKpiConfigHistoryDb() {
+  if (!hasSupabaseEnv()) return listKpiConfigHistoryFallback();
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('kpi_settings_history')
+    .select('version_id, actor, action, note, before_payload, config_payload, source_version_id, created_at')
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    versionId: r.version_id,
+    actor: r.actor,
+    action: r.action,
+    note: r.note,
+    before: r.before_payload,
+    config: r.config_payload,
+    sourceVersionId: r.source_version_id,
+    createdAt: r.created_at
+  }));
+}
+
+export async function revertKpiConfigDb(input = {}) {
+  if (!hasSupabaseEnv()) return revertKpiConfigFallback(input);
+
+  const versionId = String(input?.versionId || '').trim();
+  if (!versionId) throw new Error('versionId is required');
+
+  const supabase = await getSupabase();
+
+  const { data: target, error: targetErr } = await supabase
+    .from('kpi_settings_history')
+    .select('version_id, config_payload')
+    .eq('version_id', versionId)
+    .single();
+
+  if (targetErr || !target) throw new Error('kpi config version not found');
+
+  const cfg = target.config_payload || {};
+  const updated = await updateKpiConfigDb({
+    commissionRate: cfg.commissionRate,
+    paymentFeeRate: cfg.paymentFeeRate,
+    healthyMinContributionTwd: cfg.healthyMinContributionTwd,
+    healthyAllowException: cfg.healthyAllowException
+  });
+
+  // record revert op
+  await supabase.from('kpi_settings_history').insert({
+    version_id: crypto.randomUUID(),
+    actor: String(input.actor || 'admin'),
+    action: 'revert',
+    note: `revert to ${versionId}`,
+    before_payload: null,
+    config_payload: updated,
+    source_version_id: versionId,
+    created_at: new Date().toISOString()
+  });
+
+  return updated;
 }
 
 export async function listOperationsTrackingDb() {

@@ -1,4 +1,4 @@
-import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig } from './store.mjs';
+import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory } from './store.mjs';
 
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
@@ -259,6 +259,8 @@ export function updateKpiConfigFallback(input = {}) {
     return Number.isFinite(n) ? n : fallback;
   };
 
+  const before = { ...kpiConfig };
+
   if (input.commissionRate != null) kpiConfig.commissionRate = toNum(input.commissionRate, kpiConfig.commissionRate);
   if (input.paymentFeeRate != null) kpiConfig.paymentFeeRate = toNum(input.paymentFeeRate, kpiConfig.paymentFeeRate);
   if (input.healthyMinContributionTwd != null) kpiConfig.healthyMinContributionTwd = toNum(input.healthyMinContributionTwd, kpiConfig.healthyMinContributionTwd);
@@ -268,6 +270,51 @@ export function updateKpiConfigFallback(input = {}) {
   if (kpiConfig.paymentFeeRate < 0 || kpiConfig.paymentFeeRate > 1) throw new Error('paymentFeeRate must be between 0 and 1');
 
   kpiConfig.updatedAt = new Date().toISOString();
+
+  kpiConfigHistory.push({
+    versionId: `kpi_v_${String(kpiConfigHistory.length + 1).padStart(6, '0')}`,
+    actor: String(input.actor || 'admin'),
+    action: 'update',
+    note: String(input.note || ''),
+    before,
+    config: { ...kpiConfig },
+    createdAt: kpiConfig.updatedAt
+  });
+
+  return { ...kpiConfig };
+}
+
+export function listKpiConfigHistoryFallback() {
+  return [...kpiConfigHistory].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function revertKpiConfigFallback(input = {}) {
+  const versionId = String(input?.versionId || '').trim();
+  if (!versionId) throw new Error('versionId is required');
+
+  const target = kpiConfigHistory.find((h) => h.versionId === versionId);
+  if (!target) throw new Error('kpi config version not found');
+
+  const before = { ...kpiConfig };
+  const cfg = target.config || {};
+
+  kpiConfig.commissionRate = Number(cfg.commissionRate ?? kpiConfig.commissionRate);
+  kpiConfig.paymentFeeRate = Number(cfg.paymentFeeRate ?? kpiConfig.paymentFeeRate);
+  kpiConfig.healthyMinContributionTwd = Number(cfg.healthyMinContributionTwd ?? kpiConfig.healthyMinContributionTwd);
+  kpiConfig.healthyAllowException = Boolean(cfg.healthyAllowException ?? kpiConfig.healthyAllowException);
+  kpiConfig.updatedAt = new Date().toISOString();
+
+  kpiConfigHistory.push({
+    versionId: `kpi_v_${String(kpiConfigHistory.length + 1).padStart(6, '0')}`,
+    actor: String(input.actor || 'admin'),
+    action: 'revert',
+    note: `revert to ${versionId}`,
+    before,
+    config: { ...kpiConfig },
+    sourceVersionId: versionId,
+    createdAt: kpiConfig.updatedAt
+  });
+
   return { ...kpiConfig };
 }
 

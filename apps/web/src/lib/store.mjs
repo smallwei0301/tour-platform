@@ -72,3 +72,14 @@ export const kpiConfig = {
   healthyAllowException: false,
   updatedAt: nowIso
 };
+
+export const kpiConfigHistory = [
+  {
+    versionId: 'kpi_v_000001',
+    actor: 'system',
+    action: 'init',
+    note: 'initial defaults',
+    config: { ...kpiConfig },
+    createdAt: nowIso
+  }
+];
