@@ -27,6 +27,10 @@ export function middleware(req: NextRequest) {
 
   if (!isAdminPage && !isAdminApi) return NextResponse.next();
 
+  const isPublicAdminPage = pathname === '/admin/login' || pathname === '/admin/unauthorized';
+  const isPublicAdminApi = pathname === '/api/admin/auth/session';
+  if (isPublicAdminPage || isPublicAdminApi) return NextResponse.next();
+
   const result = isAdminAuthorized({
     token: pickToken(req),
     email: pickEmail(req),
