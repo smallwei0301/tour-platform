@@ -65,3 +65,10 @@ export const refundRequests = [];
 export const guideApplications = [];
 export const auditLogs = [];
 export const operationsTracking = [];
+export const kpiConfig = {
+  commissionRate: 0.15,
+  paymentFeeRate: 0.035,
+  healthyMinContributionTwd: 1,
+  healthyAllowException: false,
+  updatedAt: nowIso
+};

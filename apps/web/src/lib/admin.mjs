@@ -1,4 +1,4 @@
-import { orders, refundRequests, experiences, auditLogs, operationsTracking } from './store.mjs';
+import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig } from './store.mjs';
 
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
@@ -249,6 +249,28 @@ export function updateAdminRefundStatusFallback(input = {}) {
   };
 }
 
+export function getKpiConfigFallback() {
+  return { ...kpiConfig };
+}
+
+export function updateKpiConfigFallback(input = {}) {
+  const toNum = (v, fallback) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  if (input.commissionRate != null) kpiConfig.commissionRate = toNum(input.commissionRate, kpiConfig.commissionRate);
+  if (input.paymentFeeRate != null) kpiConfig.paymentFeeRate = toNum(input.paymentFeeRate, kpiConfig.paymentFeeRate);
+  if (input.healthyMinContributionTwd != null) kpiConfig.healthyMinContributionTwd = toNum(input.healthyMinContributionTwd, kpiConfig.healthyMinContributionTwd);
+  if (input.healthyAllowException != null) kpiConfig.healthyAllowException = Boolean(input.healthyAllowException);
+
+  if (kpiConfig.commissionRate < 0 || kpiConfig.commissionRate > 1) throw new Error('commissionRate must be between 0 and 1');
+  if (kpiConfig.paymentFeeRate < 0 || kpiConfig.paymentFeeRate > 1) throw new Error('paymentFeeRate must be between 0 and 1');
+
+  kpiConfig.updatedAt = new Date().toISOString();
+  return { ...kpiConfig };
+}
+
 function findOrCreateOpsRow(order) {
   let row = operationsTracking.find((r) => r.orderId === order.id);
   if (!row) {
@@ -272,9 +294,10 @@ function findOrCreateOpsRow(order) {
 }
 
 function buildOpsContribution(order, ops) {
+  const cfg = getKpiConfigFallback();
   const gmv = Number(order.totalTwd || 0);
-  const commissionTwd = Math.round(gmv * 0.15);
-  const paymentFeeTwd = Math.round(gmv * 0.035);
+  const commissionTwd = Math.round(gmv * cfg.commissionRate);
+  const paymentFeeTwd = Math.round(gmv * cfg.paymentFeeRate);
   const manualCostTwd = Number(ops.manualCostTwd || 0);
   const refundAmountTwd = Number(ops.refundAmountTwd || 0);
   const subsidyTwd = Number(ops.subsidyTwd || 0);
@@ -286,7 +309,9 @@ function buildOpsContribution(order, ops) {
     ops.hasGuideAdjustment ||
     ops.hasOversellIssue
   );
-  const isHealthyOrder = finalContributionTwd > 0 && !hasException;
+  const isHealthyOrder = cfg.healthyAllowException
+    ? finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0)
+    : finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0) && !hasException;
 
   return {
     gmv,
@@ -373,6 +398,7 @@ export function updateOperationsTrackingFallback(input = {}) {
 
 export function operationsTrackingSummaryFallback() {
   const rows = listOperationsTrackingFallback();
+  const cfg = getKpiConfigFallback();
   const n = rows.length || 1;
 
   const sum = (k) => rows.reduce((acc, r) => acc + Number(r[k] || 0), 0);
@@ -387,7 +413,8 @@ export function operationsTrackingSummaryFallback() {
     refundRate: Number(((rows.filter((r) => r.refundAmountTwd > 0).length / n) * 100).toFixed(1)),
     exceptionRate: Number(((rows.filter((r) => r.hasException).length / n) * 100).toFixed(1)),
     avgFinalContributionTwd: Math.round(sum('finalContributionTwd') / n),
-    healthyOrderRate: Number(((rows.filter((r) => r.isHealthyOrder).length / n) * 100).toFixed(1))
+    healthyOrderRate: Number(((rows.filter((r) => r.isHealthyOrder).length / n) * 100).toFixed(1)),
+    kpiConfig: cfg
   };
 }
 

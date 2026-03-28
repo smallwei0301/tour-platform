@@ -20,6 +20,8 @@ import {
   updateOperationsTrackingFallback,
   operationsTrackingSummaryFallback,
   operationsTrackingCsvFallback,
+  getKpiConfigFallback,
+  updateKpiConfigFallback,
   listAdminRefundRequestsFallback,
   updateAdminRefundStatusFallback
 } from './admin.mjs';
@@ -608,6 +610,65 @@ export async function updateAdminRefundStatusDb(input = {}) {
   };
 }
 
+export async function getKpiConfigDb() {
+  if (!hasSupabaseEnv()) return getKpiConfigFallback();
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('kpi_settings')
+    .select('commission_rate, payment_fee_rate, healthy_min_contribution_twd, healthy_allow_exception, updated_at')
+    .limit(1)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+
+  if (!data) {
+    return {
+      commissionRate: 0.15,
+      paymentFeeRate: 0.035,
+      healthyMinContributionTwd: 1,
+      healthyAllowException: false,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  return {
+    commissionRate: Number(data.commission_rate ?? 0.15),
+    paymentFeeRate: Number(data.payment_fee_rate ?? 0.035),
+    healthyMinContributionTwd: Number(data.healthy_min_contribution_twd ?? 1),
+    healthyAllowException: !!data.healthy_allow_exception,
+    updatedAt: data.updated_at
+  };
+}
+
+export async function updateKpiConfigDb(input = {}) {
+  if (!hasSupabaseEnv()) return updateKpiConfigFallback(input);
+
+  const current = await getKpiConfigDb();
+  const commissionRate = input.commissionRate == null ? current.commissionRate : Number(input.commissionRate);
+  const paymentFeeRate = input.paymentFeeRate == null ? current.paymentFeeRate : Number(input.paymentFeeRate);
+  const healthyMinContributionTwd = input.healthyMinContributionTwd == null ? current.healthyMinContributionTwd : Number(input.healthyMinContributionTwd);
+  const healthyAllowException = input.healthyAllowException == null ? current.healthyAllowException : !!input.healthyAllowException;
+
+  if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 1) throw new Error('commissionRate must be between 0 and 1');
+  if (!Number.isFinite(paymentFeeRate) || paymentFeeRate < 0 || paymentFeeRate > 1) throw new Error('paymentFeeRate must be between 0 and 1');
+
+  const supabase = await getSupabase();
+  const payload = {
+    id: 'default',
+    commission_rate: commissionRate,
+    payment_fee_rate: paymentFeeRate,
+    healthy_min_contribution_twd: healthyMinContributionTwd,
+    healthy_allow_exception: healthyAllowException,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await supabase.from('kpi_settings').upsert(payload);
+  if (error) throw new Error(error.message);
+
+  return getKpiConfigDb();
+}
+
 export async function listOperationsTrackingDb() {
   if (!hasSupabaseEnv()) return listOperationsTrackingFallback();
 
@@ -621,17 +682,20 @@ export async function listOperationsTrackingDb() {
 
   const orderRows = await listAdminOrdersDb({});
   const orderMap = new Map(orderRows.map((o) => [o.id, o]));
+  const cfg = await getKpiConfigDb();
 
   const calc = (o, ops) => {
     const gmv = Number(o?.totalTwd || 0);
-    const commissionTwd = Math.round(gmv * 0.15);
-    const paymentFeeTwd = Math.round(gmv * 0.035);
+    const commissionTwd = Math.round(gmv * cfg.commissionRate);
+    const paymentFeeTwd = Math.round(gmv * cfg.paymentFeeRate);
     const manualCostTwd = Number(ops.manual_cost_twd || 0);
     const refundAmountTwd = Number(ops.refund_amount_twd || 0);
     const subsidyTwd = Number(ops.subsidy_twd || 0);
     const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - refundAmountTwd - subsidyTwd;
     const hasException = Boolean(refundAmountTwd > 0 || ops.is_rescheduled || ops.has_complaint || ops.has_guide_adjustment || ops.has_oversell_issue);
-    const isHealthyOrder = finalContributionTwd > 0 && !hasException;
+    const isHealthyOrder = cfg.healthyAllowException
+      ? finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0)
+      : finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0) && !hasException;
     return { gmv, commissionTwd, paymentFeeTwd, finalContributionTwd, hasException, isHealthyOrder };
   };
 
@@ -700,7 +764,7 @@ export async function updateOperationsTrackingDb(input = {}) {
 
 export async function operationsTrackingSummaryDb() {
   if (!hasSupabaseEnv()) return operationsTrackingSummaryFallback();
-  const rows = await listOperationsTrackingDb();
+  const [rows, cfg] = await Promise.all([listOperationsTrackingDb(), getKpiConfigDb()]);
   const n = rows.length || 1;
   const sum = (k) => rows.reduce((acc, r) => acc + Number(r[k] || 0), 0);
   return {
@@ -713,7 +777,8 @@ export async function operationsTrackingSummaryDb() {
     refundRate: Number(((rows.filter((r) => r.refundAmountTwd > 0).length / n) * 100).toFixed(1)),
     exceptionRate: Number(((rows.filter((r) => r.hasException).length / n) * 100).toFixed(1)),
     avgFinalContributionTwd: Math.round(sum('finalContributionTwd') / n),
-    healthyOrderRate: Number(((rows.filter((r) => r.isHealthyOrder).length / n) * 100).toFixed(1))
+    healthyOrderRate: Number(((rows.filter((r) => r.isHealthyOrder).length / n) * 100).toFixed(1)),
+    kpiConfig: cfg
   };
 }
 
@@ -850,11 +915,12 @@ export async function adminDashboardSummaryDb(input = {}) {
   const from = String(input?.from || '').trim();
   const to = String(input?.to || '').trim();
 
-  const [ordersRaw, refundsRaw, guidesRaw, opsRowsRaw] = await Promise.all([
+  const [ordersRaw, refundsRaw, guidesRaw, opsRowsRaw, cfg] = await Promise.all([
     listAdminOrdersDb({}),
     listAdminRefundRequestsDb(),
     listGuideApplicationsDb({}),
-    listOperationsTrackingDb()
+    listOperationsTrackingDb(),
+    getKpiConfigDb()
   ]);
 
   let rangeFrom = from ? new Date(from) : null;
@@ -895,7 +961,7 @@ export async function adminDashboardSummaryDb(input = {}) {
 
   const totalOrders = orders.length;
   const totalGmv = orders.reduce((acc, o) => acc + Number(o.totalTwd || 0), 0);
-  const totalCommissionTwd = Math.round(totalGmv * 0.15);
+  const totalCommissionTwd = Math.round(totalGmv * Number(cfg.commissionRate || 0.15));
 
   const countRefundOrders = opsRows.filter((r) => Number(r.refundAmountTwd || 0) > 0).length;
   const countExceptionOrders = opsRows.filter((r) => !!r.hasException).length;
@@ -942,7 +1008,9 @@ export async function adminDashboardSummaryDb(input = {}) {
     },
     definitions: {
       totalGmv: 'sum(orders.totalTwd) within selected range',
-      totalCommissionTwd: 'round(totalGmv * 0.15)',
+      totalCommissionTwd: `round(totalGmv * commissionRate) ; commissionRate=${Number(cfg.commissionRate || 0.15)}`,
+      paymentFeeRate: `paymentFeeRate=${Number(cfg.paymentFeeRate || 0.035)}`,
+      healthyRule: `healthyMinContributionTwd=${Number(cfg.healthyMinContributionTwd || 0)}, healthyAllowException=${!!cfg.healthyAllowException}`,
       refundRate: 'orders with refundAmountTwd > 0 / totalOrders * 100',
       exceptionRate: 'orders with hasException = true / totalOrders * 100',
       healthyOrderRate: 'orders with isHealthyOrder = true / totalOrders * 100',
@@ -950,6 +1018,7 @@ export async function adminDashboardSummaryDb(input = {}) {
       pendingRefunds: 'refund status in [requested, approved, processing]',
       pendingGuideApps: 'guide application status = pending'
     },
+    config: cfg,
     kpi: {
       totalOrders,
       pendingOrders: pendingOrders.length,

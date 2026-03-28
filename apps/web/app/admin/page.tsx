@@ -120,6 +120,10 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
+      <div style={{ marginBottom: 8 }}>
+        <Link href="/admin/settings/kpi" style={{ color: '#1B6B4A', textDecoration: 'underline' }}>前往 KPI 計算設定 →</Link>
+      </div>
+
       {/* KPI definitions */}
       <details style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 10, marginBottom: 14, background: '#fafafa' }}>
         <summary style={{ cursor: 'pointer', fontWeight: 700 }}>KPI 口徑說明（點我展開）</summary>
