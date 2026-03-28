@@ -1,6 +1,8 @@
 import {
   listExperiences as listInMemory,
   createOrder as createOrderInMemory,
+  listMyOrders as listMyOrdersInMemory,
+  getMyOrderDetail as getMyOrderDetailInMemory,
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
 
@@ -112,6 +114,62 @@ export async function createOrderDb(input) {
     createdAt: inserted.created_at,
     paidAt: null
   };
+}
+
+export async function listMyOrdersDb(input = {}) {
+  if (!hasSupabaseEnv()) return listMyOrdersInMemory(input);
+
+  const contactEmail = String(input?.contactEmail || '').trim();
+  const supabase = await getSupabase();
+
+  let query = supabase
+    .from('orders')
+    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at')
+    .order('created_at', { ascending: false });
+
+  if (contactEmail) query = query.eq('contact_email', contactEmail);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const activityIds = [...new Set((data || []).map((r) => r.activity_id).filter(Boolean))];
+  let activityMap = new Map();
+  if (activityIds.length > 0) {
+    const { data: acts } = await supabase
+      .from('activities')
+      .select('id, title, slug, guide_slug')
+      .in('id', activityIds);
+    activityMap = new Map((acts || []).map((a) => [a.id, a]));
+  }
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    status: r.status,
+    totalTwd: r.total_twd,
+    experienceId: r.activity_id,
+    experienceSlug: activityMap.get(r.activity_id)?.slug || null,
+    title: activityMap.get(r.activity_id)?.title || null,
+    guideSlug: activityMap.get(r.activity_id)?.guide_slug || null,
+    scheduleId: r.schedule_id,
+    peopleCount: r.people_count,
+    contactName: r.contact_name,
+    contactPhone: r.contact_phone,
+    contactEmail: r.contact_email,
+    createdAt: r.created_at,
+    paidAt: r.paid_at
+  }));
+}
+
+export async function getMyOrderDetailDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  if (!hasSupabaseEnv()) return getMyOrderDetailInMemory(input);
+
+  const rows = await listMyOrdersDb(input);
+  const target = rows.find((o) => o.id === orderId);
+  if (!target) throw new Error('order not found');
+  return target;
 }
 
 export async function processPaymentCallbackDb(input) {

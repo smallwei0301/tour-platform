@@ -23,6 +23,22 @@ export async function createOrder(payload: {
   return json.data;
 }
 
+export async function fetchMyOrders(contactEmail = '') {
+  const q = contactEmail ? `?contactEmail=${encodeURIComponent(contactEmail)}` : '';
+  const res = await fetch(`/api/me/orders${q}`, { cache: 'no-store' });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json?.error?.message || 'failed to load my orders');
+  return json.data;
+}
+
+export async function fetchMyOrderDetail(orderId: string, contactEmail = '') {
+  const q = contactEmail ? `?contactEmail=${encodeURIComponent(contactEmail)}` : '';
+  const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}${q}`, { cache: 'no-store' });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json?.error?.message || 'failed to load order detail');
+  return json.data;
+}
+
 export async function submitEcpayCallback(payload: { orderId: string; tradeNo?: string }) {
   const form = new URLSearchParams();
   form.set('orderId', payload.orderId);

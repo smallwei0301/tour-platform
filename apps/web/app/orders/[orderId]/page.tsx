@@ -1,37 +1,56 @@
 'use client';
 
-import { use } from 'react';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { fetchMyOrderDetail } from '../../../src/lib/client-api';
 
-export default function OrderDetailPage({ params }: { params: Promise<{ orderId: string }> }) {
-  const { orderId } = use(params);
+export default function OrderDetailPage() {
+  const params = useParams();
+  const orderId = params.orderId as string;
+  const [order, setOrder] = useState<any>(null);
   const [refundApplied, setRefundApplied] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchMyOrderDetail(orderId)
+      .then((data) => setOrder(data))
+      .finally(() => setLoading(false));
+  }, [orderId]);
+
+  if (loading) {
+    return <main className="tp-container tp-order-detail-page"><p>載入中…</p></main>;
+  }
+
+  if (!order) {
+    return <main className="tp-container tp-order-detail-page"><p>找不到訂單。</p></main>;
+  }
+
+  const scheduleText = order.scheduleStartAt ? new Date(order.scheduleStartAt).toLocaleString('zh-TW') : '—';
 
   return (
     <main className="tp-container tp-order-detail-page">
-      <a className="tp-link" href="/orders">← 返回訂單列表</a>
-      <h1>訂單 #{orderId}</h1>
-      <p className="tp-status tp-status-upcoming">已確認</p>
+      <Link className="tp-link" href="/orders">← 返回訂單列表</Link>
+      <h1>訂單 #{order.id}</h1>
+      <p className="tp-status tp-status-upcoming">{order.status}</p>
 
       <section className="tp-step-card">
         <h2>行程資訊</h2>
-        <p>大稻埕百年老街深度漫步</p>
-        <p>📅 2026/04/01（三）  ⏰ 09:00 ~ 12:00</p>
-        <p>📍 集合：捷運大橋頭站 2 號出口</p>
-        <p>👤 導遊：陳建志</p>
+        <p>{order.title || order.experienceSlug}</p>
+        <p>📅 {scheduleText}</p>
+        <p>👥 人數：{order.peopleCount || 1}</p>
+        <p>👤 聯絡人：{order.contactName || '—'}（{order.contactPhone || '—'}）</p>
       </section>
 
       <section className="tp-step-card">
         <h2>費用明細</h2>
-        <p>成人 × 2：NT$3,000</p>
-        <p>兒童 × 1：NT$800</p>
-        <strong>總計：NT$3,800</strong>
-        <p>付款方式：信用卡（****1234）</p>
+        <strong>總計：NT${Number(order.totalTwd || 0).toLocaleString()}</strong>
+        <p>付款狀態：{order.status}</p>
       </section>
 
       <section className="tp-step-card">
         <h2>取消 / 退款</h2>
-        <p>取消期限：2026/03/30 09:00 前（全額退款）</p>
+        <p>取消與退款依行程規則辦理。</p>
         <button className="tp-btn tp-btn-ghost" onClick={() => setRefundApplied(true)}>申請取消</button>
 
         {refundApplied && (
@@ -43,7 +62,7 @@ export default function OrderDetailPage({ params }: { params: Promise<{ orderId:
               <span>退款處理</span>
               <span>到帳</span>
             </div>
-            <p>已於 2026/03/29 14:00 提交，預計 3 個工作天內完成。</p>
+            <p>已提交，預計 3 個工作天內完成。</p>
           </div>
         )}
       </section>

@@ -80,6 +80,36 @@ export function createOrder(input) {
   return order;
 }
 
+export function listMyOrders(input = {}) {
+  const contactEmail = String(input?.contactEmail || '').trim();
+
+  const rows = orders
+    .filter((o) => (contactEmail ? o.contactEmail === contactEmail : true))
+    .map((o) => {
+      const exp = experiences.find((e) => e.id === o.experienceId);
+      const schedule = exp?.schedules?.find((s) => s.id === o.scheduleId);
+      return {
+        ...o,
+        title: exp?.title || o.experienceSlug,
+        guideSlug: exp?.guideSlug || null,
+        schedule: schedule || null
+      };
+    })
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return rows;
+}
+
+export function getMyOrderDetail(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  const rows = listMyOrders({ contactEmail: input?.contactEmail || '' });
+  const target = rows.find((o) => o.id === orderId);
+  if (!target) throw new Error('order not found');
+  return target;
+}
+
 export function processPaymentCallback(input) {
   const orderId = normalizeSlug(input?.orderId);
   if (!orderId) throw new Error('orderId is required');
