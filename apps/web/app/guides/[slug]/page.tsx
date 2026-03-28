@@ -13,11 +13,15 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
   return (
     <main className="tp-container tp-guide-detail" style={{ paddingBottom: 40 }}>
       {/* Hero cover */}
-      <div style={{
-        width: '100%', height: 300, borderRadius: 14, overflow: 'hidden', marginTop: 18,
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0.35)), url(${guide.heroImageUrl})`,
-        backgroundSize: 'cover', backgroundPosition: 'center',
-      }} />
+      <div style={{ width: '100%', height: 300, borderRadius: 14, overflow: 'hidden', marginTop: 18, position: 'relative' }}>
+        <img
+          src={guide.heroImageUrl}
+          alt={`${guide.displayName} 導覽封面`}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          loading="eager"
+        />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.35))' }} />
+      </div>
 
       <section className="tp-guide-profile-layout" style={{ display: 'grid', gap: 24, marginTop: 20 }}>
         {/* Main content */}
