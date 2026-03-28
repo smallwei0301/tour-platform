@@ -7,6 +7,10 @@ import {
   listRefundRequests as listRefundRequestsInMemory,
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
+import {
+  listAdminRefundRequestsFallback,
+  updateAdminRefundStatusFallback
+} from './admin.mjs';
 
 function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -271,6 +275,112 @@ export async function listRefundRequestsDb(input = {}) {
     approvedAt: r.approved_at,
     refundedAt: r.refunded_at
   }));
+}
+
+export async function listAdminRefundRequestsDb() {
+  if (!hasSupabaseEnv()) return listAdminRefundRequestsFallback();
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('refund_requests')
+    .select('id, order_id, reason, note, status, requested_at, approved_at, refunded_at, admin_note')
+    .order('requested_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const orderIds = [...new Set((data || []).map((r) => r.order_id).filter(Boolean))];
+  let orderMap = new Map();
+  if (orderIds.length > 0) {
+    const { data: orderRows } = await supabase
+      .from('orders')
+      .select('id, status, total_twd, contact_name, contact_email')
+      .in('id', orderIds);
+    orderMap = new Map((orderRows || []).map((o) => [o.id, o]));
+  }
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    orderId: r.order_id,
+    reason: r.reason,
+    note: r.note,
+    status: r.status,
+    requestedAt: r.requested_at,
+    approvedAt: r.approved_at,
+    refundedAt: r.refunded_at,
+    adminNote: r.admin_note,
+    orderStatus: orderMap.get(r.order_id)?.status || null,
+    totalTwd: orderMap.get(r.order_id)?.total_twd || 0,
+    contactName: orderMap.get(r.order_id)?.contact_name || null,
+    contactEmail: orderMap.get(r.order_id)?.contact_email || null
+  }));
+}
+
+export async function updateAdminRefundStatusDb(input = {}) {
+  if (!hasSupabaseEnv()) return updateAdminRefundStatusFallback(input);
+
+  const refundRequestId = String(input?.refundRequestId || '').trim();
+  const action = String(input?.action || '').trim();
+  const adminNote = String(input?.adminNote || '').trim() || null;
+
+  if (!refundRequestId) throw new Error('refundRequestId is required');
+  if (!['approve', 'reject', 'process', 'complete'].includes(action)) {
+    throw new Error('invalid refund action');
+  }
+
+  const supabase = await getSupabase();
+
+  const { data: req, error: reqError } = await supabase
+    .from('refund_requests')
+    .select('id, order_id, status')
+    .eq('id', refundRequestId)
+    .single();
+
+  if (reqError || !req) throw new Error('refund request not found');
+
+  const now = new Date().toISOString();
+  let nextStatus = req.status;
+  let orderStatus = 'refund_pending';
+  let patch = { admin_note: adminNote, updated_at: now };
+
+  if (action === 'approve') {
+    nextStatus = 'approved';
+    patch = { ...patch, status: 'approved', approved_at: now };
+    orderStatus = 'refund_pending';
+  } else if (action === 'reject') {
+    nextStatus = 'rejected';
+    patch = { ...patch, status: 'rejected' };
+    orderStatus = 'paid';
+  } else if (action === 'process') {
+    nextStatus = 'processing';
+    patch = { ...patch, status: 'processing' };
+    orderStatus = 'refund_pending';
+  } else if (action === 'complete') {
+    nextStatus = 'refunded';
+    patch = { ...patch, status: 'refunded', refunded_at: now };
+    orderStatus = 'refunded';
+  }
+
+  const { error: reqUpdateError } = await supabase
+    .from('refund_requests')
+    .update(patch)
+    .eq('id', refundRequestId);
+
+  if (reqUpdateError) throw new Error(reqUpdateError.message);
+
+  const { error: orderUpdateError } = await supabase
+    .from('orders')
+    .update({ status: orderStatus })
+    .eq('id', req.order_id);
+
+  if (orderUpdateError) throw new Error(orderUpdateError.message);
+
+  return {
+    id: req.id,
+    orderId: req.order_id,
+    status: nextStatus,
+    orderStatus,
+    adminNote
+  };
 }
 
 export async function processPaymentCallbackDb(input) {
