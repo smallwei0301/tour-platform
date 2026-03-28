@@ -1,16 +1,79 @@
-import { orders, refundRequests } from './store.mjs';
+import { orders, refundRequests, experiences } from './store.mjs';
 
-export function listAdminOrdersFallback() {
-  return orders.map((o) => {
-    const costTwd = Math.round(o.totalTwd * 0.65);
-    return {
-      id: o.id,
-      status: o.status,
-      totalTwd: o.totalTwd,
-      costTwd,
-      marginTwd: o.totalTwd - costTwd
-    };
-  });
+export function listAdminOrdersFallback(input = {}) {
+  const status = String(input?.status || '').trim();
+  const contactEmail = String(input?.contactEmail || '').trim();
+
+  return orders
+    .filter((o) => (status ? o.status === status : true))
+    .filter((o) => (contactEmail ? o.contactEmail === contactEmail : true))
+    .map((o) => {
+      const costTwd = Math.round(o.totalTwd * 0.65);
+      const exp = experiences.find((e) => e.id === o.experienceId);
+      return {
+        id: o.id,
+        status: o.status,
+        totalTwd: o.totalTwd,
+        costTwd,
+        marginTwd: o.totalTwd - costTwd,
+        title: exp?.title || o.experienceSlug || null,
+        experienceSlug: o.experienceSlug,
+        peopleCount: o.peopleCount || 1,
+        scheduleStartAt: o.scheduleStartAt || null,
+        contactName: o.contactName || null,
+        contactPhone: o.contactPhone || null,
+        contactEmail: o.contactEmail || null,
+        adminNote: o.adminNote || null,
+        createdAt: o.createdAt || null,
+        paidAt: o.paidAt || null,
+        updatedAt: o.updatedAt || null
+      };
+    })
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+}
+
+export function getAdminOrderDetailFallback(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  const row = listAdminOrdersFallback().find((o) => o.id === orderId);
+  if (!row) throw new Error('order not found');
+  return row;
+}
+
+export function updateAdminOrderFallback(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  const status = String(input?.status || '').trim();
+  const adminNote = String(input?.adminNote || '').trim();
+
+  if (!orderId) throw new Error('orderId is required');
+
+  const validStatuses = [
+    'pending_payment',
+    'paid',
+    'confirmed',
+    'rejected',
+    'cancelled_by_user',
+    'cancelled_by_guide',
+    'completed',
+    'refund_pending',
+    'refunded'
+  ];
+
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) throw new Error('order not found');
+
+  if (status) {
+    if (!validStatuses.includes(status)) throw new Error('invalid order status');
+    order.status = status;
+  }
+
+  if (adminNote || adminNote === '') {
+    order.adminNote = adminNote || null;
+  }
+
+  order.updatedAt = new Date().toISOString();
+  return getAdminOrderDetailFallback({ orderId });
 }
 
 export function listAdminRefundRequestsFallback() {

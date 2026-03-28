@@ -11,6 +11,9 @@ import {
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
 import {
+  listAdminOrdersFallback,
+  getAdminOrderDetailFallback,
+  updateAdminOrderFallback,
   listAdminRefundRequestsFallback,
   updateAdminRefundStatusFallback
 } from './admin.mjs';
@@ -278,6 +281,96 @@ export async function listRefundRequestsDb(input = {}) {
     approvedAt: r.approved_at,
     refundedAt: r.refunded_at
   }));
+}
+
+export async function listAdminOrdersDb(input = {}) {
+  if (!hasSupabaseEnv()) return listAdminOrdersFallback(input);
+
+  const status = String(input?.status || '').trim();
+  const contactEmail = String(input?.contactEmail || '').trim();
+  const supabase = await getSupabase();
+
+  let query = supabase
+    .from('orders')
+    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at')
+    .order('created_at', { ascending: false });
+
+  if (status) query = query.eq('status', status);
+  if (contactEmail) query = query.eq('contact_email', contactEmail);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const activityIds = [...new Set((data || []).map((r) => r.activity_id).filter(Boolean))];
+  let activityMap = new Map();
+  if (activityIds.length > 0) {
+    const { data: acts } = await supabase
+      .from('activities')
+      .select('id, title, slug')
+      .in('id', activityIds);
+    activityMap = new Map((acts || []).map((a) => [a.id, a]));
+  }
+
+  return (data || []).map((r) => {
+    const costTwd = Math.round(r.total_twd * 0.65);
+    return {
+      id: r.id,
+      status: r.status,
+      totalTwd: r.total_twd,
+      costTwd,
+      marginTwd: r.total_twd - costTwd,
+      title: activityMap.get(r.activity_id)?.title || null,
+      experienceSlug: activityMap.get(r.activity_id)?.slug || null,
+      peopleCount: r.people_count,
+      scheduleId: r.schedule_id,
+      contactName: r.contact_name,
+      contactPhone: r.contact_phone,
+      contactEmail: r.contact_email,
+      createdAt: r.created_at,
+      paidAt: r.paid_at,
+      adminNote: r.admin_note,
+      updatedAt: r.updated_at
+    };
+  });
+}
+
+export async function getAdminOrderDetailDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  if (!hasSupabaseEnv()) return getAdminOrderDetailFallback({ orderId });
+
+  const rows = await listAdminOrdersDb({});
+  const row = rows.find((r) => r.id === orderId);
+  if (!row) throw new Error('order not found');
+  return row;
+}
+
+export async function updateAdminOrderDb(input = {}) {
+  if (!hasSupabaseEnv()) return updateAdminOrderFallback(input);
+
+  const orderId = String(input?.orderId || '').trim();
+  const status = String(input?.status || '').trim();
+  const adminNote = input?.adminNote == null ? null : String(input?.adminNote).trim();
+
+  if (!orderId) throw new Error('orderId is required');
+
+  const validStatuses = [
+    'pending_payment', 'paid', 'confirmed', 'rejected', 'cancelled_by_user', 'cancelled_by_guide', 'completed', 'refund_pending', 'refunded'
+  ];
+
+  const patch = { updated_at: new Date().toISOString() };
+  if (status) {
+    if (!validStatuses.includes(status)) throw new Error('invalid order status');
+    patch.status = status;
+  }
+  if (adminNote !== null) patch.admin_note = adminNote;
+
+  const supabase = await getSupabase();
+  const { error } = await supabase.from('orders').update(patch).eq('id', orderId);
+  if (error) throw new Error(error.message);
+
+  return getAdminOrderDetailDb({ orderId });
 }
 
 export async function listAdminRefundRequestsDb() {

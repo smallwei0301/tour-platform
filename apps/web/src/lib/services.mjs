@@ -73,7 +73,9 @@ export function createOrder(input) {
     contactPhone,
     contactEmail,
     createdAt: new Date().toISOString(),
-    paidAt: null
+    paidAt: null,
+    adminNote: null,
+    updatedAt: null
   };
 
   orders.push(order);
