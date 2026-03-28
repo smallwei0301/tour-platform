@@ -1,9 +1,24 @@
 import Link from 'next/link';
 
 const caveTours = [
-  { title: '高雄柴山自然公園探洞半日遊', slug: 'chaishan-cave-tour', meta: '🕐 4小時 · 👥 1~6人 · NT$1,800' },
-  { title: '柴山石灰岩洞穴地質探索', slug: 'chaishan-geology', meta: '🕐 3小時 · 👥 1~4人 · NT$2,200' },
-  { title: '柴山親子安全探洞體驗', slug: 'chaishan-family', meta: '🕐 2.5小時 · 👥 1~5人 · NT$1,600' }
+  {
+    title: '高雄柴山自然公園探洞半日遊',
+    slug: 'kaohsiung-chaishan-cave-experience',
+    meta: '🕐 3-4小時 · 👥 4~12人 · NT$2,000',
+    imageUrl: 'https://images.pexels.com/photos/1072824/pexels-photo-1072824.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    title: '柴山石灰岩洞穴地質探索',
+    slug: 'kaohsiung-chaishan-cave-experience',
+    meta: '🕐 3小時 · 👥 4~10人 · NT$2,200',
+    imageUrl: 'https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    title: '柴山親子安全探洞體驗',
+    slug: 'kaohsiung-chaishan-cave-experience',
+    meta: '🕐 2.5小時 · 👥 4~8人 · NT$1,800',
+    imageUrl: 'https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
 ];
 
 export default function CaveExplorationPage() {
@@ -30,11 +45,11 @@ export default function CaveExplorationPage() {
           <h2>柴山探洞精選行程</h2>
           <div className="tp-card-grid tp-card-grid-activities">
             {caveTours.map((t) => (
-              <article className="tp-card" key={t.slug}>
-                <div className="tp-card-img" />
+              <article className="tp-card" key={t.slug + t.title}>
+                <img src={t.imageUrl} alt={t.title} className="tp-card-img" loading="lazy" />
                 <h3>{t.title}</h3>
                 <p>{t.meta}</p>
-                <Link className="tp-link" href={`/experiences/${t.slug}`}>查看行程 →</Link>
+                <Link className="tp-link" href={`/activities/kaohsiung/${t.slug}`}>查看行程 →</Link>
               </article>
             ))}
           </div>

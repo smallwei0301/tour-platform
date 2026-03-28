@@ -16,11 +16,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         首頁 &gt; <Link href="/activities">全部行程</Link> &gt; {activity.region} &gt; {activity.title}
       </div>
 
-      <section style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, marginTop: 12 }}>
+      <section className="tp-activity-detail-layout" style={{ display: 'grid', gap: 24, marginTop: 12 }}>
         {/* Main */}
         <article>
           {/* Gallery */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}>
+          <div className="tp-activity-gallery-layout" style={{ display: 'grid', gap: 8 }}>
             <img src={activity.galleryUrls[0] || activity.imageUrl} alt={activity.title} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 12 }} />
             <div style={{ display: 'grid', gap: 8 }}>
               {activity.galleryUrls.slice(1, 4).map((url, i) => (
@@ -48,7 +48,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           {/* Inclusions / Exclusions */}
           <section className="tp-detail-block" style={{ marginBottom: 24 }}>
             <h2>行程包含 / 不含</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="tp-activity-two-col" style={{ display: 'grid', gap: 16 }}>
               <div>
                 <h4 style={{ color: 'var(--tp-primary)' }}>✅ 行程包含</h4>
                 <ul style={{ paddingLeft: 18, lineHeight: 2 }}>
@@ -75,7 +75,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           {/* Suitability */}
           <section className="tp-detail-block" style={{ marginBottom: 24 }}>
             <h2>適合對象</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="tp-activity-two-col" style={{ display: 'grid', gap: 16 }}>
               <div>
                 <h4>👍 適合</h4>
                 <ul style={{ paddingLeft: 18, lineHeight: 2 }}>
@@ -95,7 +95,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           {guide && (
             <section className="tp-detail-block" style={{ marginBottom: 24 }}>
               <h2>關於你的導遊</h2>
-              <div style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+              <div className="tp-activity-guide-block" style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
                 <img src={guide.avatarUrl} alt={guide.displayName} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover' }} />
                 <div>
                   <strong>{guide.displayName}</strong> · ✅ 實名已驗證
@@ -158,7 +158,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </article>
 
         {/* Booking sidebar */}
-        <aside style={{ position: 'sticky', top: 80, height: 'fit-content' }}>
+        <aside className="tp-activity-booking-side" style={{ position: 'sticky', top: 80, height: 'fit-content' }}>
           <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
             <p style={{ fontSize: 22, fontWeight: 700, margin: '0 0 4px' }}>起價 {activity.priceLabel}</p>
 

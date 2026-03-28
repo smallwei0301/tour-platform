@@ -337,3 +337,20 @@ img { max-width: 100%; height: auto; }
   .tp-booking-progress { overflow-x: auto; max-width: 100% !important; padding-bottom: 6px; }
   .tp-booking-progress > div { min-width: 180px; }
 }
+
+/* Activity detail responsive fixes */
+.tp-activity-detail-layout { grid-template-columns: minmax(0, 1fr) 340px; }
+.tp-activity-gallery-layout { grid-template-columns: 2fr 1fr; }
+.tp-activity-two-col { grid-template-columns: 1fr 1fr; }
+.tp-activity-guide-block { align-items: center; }
+
+@media (max-width: 1024px) {
+  .tp-activity-detail-layout { grid-template-columns: 1fr; }
+  .tp-activity-booking-side { position: static !important; }
+}
+
+@media (max-width: 768px) {
+  .tp-activity-gallery-layout { grid-template-columns: 1fr; }
+  .tp-activity-two-col { grid-template-columns: 1fr; }
+  .tp-activity-guide-block { flex-direction: column; align-items: flex-start !important; }
+}

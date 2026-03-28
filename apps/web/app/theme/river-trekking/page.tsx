@@ -1,9 +1,24 @@
 import Link from 'next/link';
 
 const riverTours = [
-  { title: '花蓮秀姑巒溪溯溪全日冒險', slug: 'hualien-river', meta: '🌊 Level 2 · 👥 1~8人 · NT$3,200' },
-  { title: '南澳野溪溯溪入門路線', slug: 'nanao-river', meta: '🌊 Level 1 · 👥 1~6人 · NT$2,400' },
-  { title: '台東山谷溪降挑戰', slug: 'taitung-river', meta: '🌊 Level 3 · 👥 1~5人 · NT$4,200' }
+  {
+    title: '花蓮秀姑巒溪溯溪全日冒險',
+    slug: 'hualien-river-trekking',
+    meta: '🌊 Level 2 · 👥 4~8人 · NT$3,200',
+    imageUrl: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    title: '南澳野溪溯溪入門路線',
+    slug: 'hualien-river-trekking',
+    meta: '🌊 Level 1 · 👥 4~8人 · NT$2,400',
+    imageUrl: 'https://images.pexels.com/photos/210186/pexels-photo-210186.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
+  {
+    title: '台東山谷溪降挑戰',
+    slug: 'hualien-river-trekking',
+    meta: '🌊 Level 3 · 👥 4~6人 · NT$4,200',
+    imageUrl: 'https://images.pexels.com/photos/125510/pexels-photo-125510.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  },
 ];
 
 export default function RiverTrekkingPage() {
@@ -30,11 +45,11 @@ export default function RiverTrekkingPage() {
           <h2>野外溯溪精選行程</h2>
           <div className="tp-card-grid tp-card-grid-activities">
             {riverTours.map((t) => (
-              <article className="tp-card" key={t.slug}>
-                <div className="tp-card-img" />
+              <article className="tp-card" key={t.slug + t.title}>
+                <img src={t.imageUrl} alt={t.title} className="tp-card-img" loading="lazy" />
                 <h3>{t.title}</h3>
                 <p>{t.meta}</p>
-                <Link className="tp-link" href={`/experiences/${t.slug}`}>查看行程 →</Link>
+                <Link className="tp-link" href={`/activities/hualien/${t.slug}`}>查看行程 →</Link>
               </article>
             ))}
           </div>
