@@ -120,8 +120,9 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      <div style={{ marginBottom: 8 }}>
+      <div style={{ marginBottom: 8, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <Link href="/admin/settings/kpi" style={{ color: '#1B6B4A', textDecoration: 'underline' }}>前往 KPI 計算設定 →</Link>
+        <Link href="/admin/settings/security" style={{ color: '#1B6B4A', textDecoration: 'underline' }}>前往 Admin 安全設定 →</Link>
       </div>
 
       {/* KPI definitions */}

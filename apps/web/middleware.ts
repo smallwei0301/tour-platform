@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
+import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
 
 function pickToken(req: NextRequest): string {
   return (
@@ -31,11 +32,15 @@ export function middleware(req: NextRequest) {
   const isPublicAdminApi = pathname === '/api/admin/auth/session';
   if (isPublicAdminPage || isPublicAdminApi) return NextResponse.next();
 
+  const security = getAdminSecurityState();
+
   const result = isAdminAuthorized({
     token: pickToken(req),
     email: pickEmail(req),
-    requiredToken: process.env.ADMIN_ACCESS_TOKEN,
-    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST
+    requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
+    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
+    expectedSessionVersion: security.sessionVersion,
+    sessionVersion: req.cookies.get('admin_session_version')?.value || req.nextUrl.searchParams.get('admin_session_version') || 0
   });
 
   if (result.ok) return NextResponse.next();
