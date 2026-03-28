@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { activities, guides } from '../../../src/fixtures/data';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createOrder, submitEcpayCallback } from '../../../src/lib/client-api';
+import { createOrder, fetchExperiences, submitEcpayCallback } from '../../../src/lib/client-api';
 
 export default function BookingPage() {
   const params = useParams();
@@ -22,6 +22,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdOrderId, setCreatedOrderId] = useState('');
+  const [runtimeSchedules, setRuntimeSchedules] = useState<any[]>([]);
 
   if (!activity) {
     return (
@@ -35,10 +36,33 @@ export default function BookingPage() {
   const guide = guides.find((g) => g.slug === activity.guideSlug);
   const total = activity.price * guests;
 
-  const openSchedules = useMemo(
-    () => activity.schedules.filter((s) => s.status === 'open' && s.bookedCount < s.capacity),
-    [activity.schedules]
-  );
+  useEffect(() => {
+    let mounted = true;
+    fetchExperiences()
+      .then((list: any[]) => {
+        if (!mounted) return;
+        const exp = (list || []).find((e: any) => e.slug === activity.slug || (Array.isArray(e.aliases) && e.aliases.includes(activity.slug)));
+        const schedules = Array.isArray(exp?.schedules) ? exp.schedules : [];
+        setRuntimeSchedules(schedules);
+      })
+      .catch(() => {
+        if (mounted) setRuntimeSchedules([]);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [activity.slug]);
+
+  const openSchedules = useMemo(() => {
+    const source = runtimeSchedules.length > 0 ? runtimeSchedules : activity.schedules;
+    return source.filter((s: any) => {
+      const capacity = Number(s.capacity || 0);
+      const bookedCount = Number(s.bookedCount ?? s.booked_count ?? 0);
+      const status = s.status || (bookedCount >= capacity ? 'full' : 'open');
+      return status === 'open' && bookedCount < capacity;
+    });
+  }, [runtimeSchedules, activity.schedules]);
 
   const scheduleOptions = useMemo(() => {
     const chaishanMap: Record<string, string> = {
@@ -50,15 +74,27 @@ export default function BookingPage() {
       '2026-04-02T09:00:00+08:00': 'sch_dadaocheng_0402'
     };
 
-    return openSchedules.map((s, idx) => {
-      let scheduleId = '';
-      if (activity.slug === 'kaohsiung-chaishan-cave-experience') {
-        scheduleId = chaishanMap[s.startAt] || '';
-      } else if (activity.slug === 'dadadaocheng-walk') {
-        scheduleId = dadaochengMap[s.startAt] || '';
-      }
-      return { ...s, scheduleId, localKey: `${s.startAt}-${idx}` };
-    }).filter((s) => !!s.scheduleId);
+    return openSchedules
+      .map((s: any, idx: number) => {
+        const startAt = s.startAt || s.start_at;
+        const explicitId = s.id || s.scheduleId || '';
+        let scheduleId = explicitId;
+
+        if (!scheduleId && activity.slug === 'kaohsiung-chaishan-cave-experience') {
+          scheduleId = chaishanMap[startAt] || '';
+        } else if (!scheduleId && activity.slug === 'dadadaocheng-walk') {
+          scheduleId = dadaochengMap[startAt] || '';
+        }
+
+        return {
+          ...s,
+          startAt,
+          bookedCount: Number(s.bookedCount ?? s.booked_count ?? 0),
+          scheduleId,
+          localKey: `${startAt}-${idx}`
+        };
+      })
+      .filter((s: any) => !!s.scheduleId);
   }, [activity.slug, openSchedules]);
 
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && selectedScheduleId);

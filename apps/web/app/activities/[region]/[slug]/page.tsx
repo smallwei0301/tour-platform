@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { activities, guides, getReviewsByActivity } from '../../../../src/fixtures/data';
 import { notFound } from 'next/navigation';
+import { listExperiencesDb } from '../../../../src/lib/db.mjs';
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
@@ -9,6 +10,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   const guide = guides.find((g) => g.slug === activity.guideSlug);
   const actReviews = getReviewsByActivity(slug);
+
+  const experienceList = await listExperiencesDb().catch(() => []);
+  const expMatch = (experienceList || []).find((e: any) => e.slug === activity.slug || (Array.isArray(e.aliases) && e.aliases.includes(activity.slug)));
+  const runtimeSchedules = Array.isArray(expMatch?.schedules) ? expMatch.schedules : [];
+  const displayedSchedules = runtimeSchedules.length > 0 ? runtimeSchedules : activity.schedules;
 
   return (
     <main className="tp-container tp-detail" style={{ paddingBottom: 40 }}>
@@ -170,14 +176,18 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {/* Available schedules */}
             <div style={{ marginTop: 12 }}>
               <p style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>近期可預約場次：</p>
-              {activity.schedules.map((s, i) => {
-                const d = new Date(s.startAt);
+              {displayedSchedules.map((s: any, i: number) => {
+                const startAt = s.startAt || s.start_at;
+                const capacity = Number(s.capacity || 0);
+                const bookedCount = Number(s.bookedCount ?? s.booked_count ?? 0);
+                const status = s.status || (bookedCount >= capacity ? 'full' : 'open');
+                const d = new Date(startAt);
                 const dateStr = `${d.getMonth() + 1}/${d.getDate()}`;
-                const remaining = s.capacity - s.bookedCount;
+                const remaining = capacity - bookedCount;
                 return (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
+                  <div key={s.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f0f0f0' }}>
                     <span>{dateStr}（{['日','一','二','三','四','五','六'][d.getDay()]}）</span>
-                    {s.status === 'full'
+                    {status === 'full'
                       ? <span style={{ color: '#e53e3e', fontWeight: 700 }}>已額滿</span>
                       : <span style={{ color: 'var(--tp-primary)' }}>剩 {remaining} 位</span>
                     }
