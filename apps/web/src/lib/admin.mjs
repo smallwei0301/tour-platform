@@ -1,4 +1,4 @@
-import { orders, refundRequests, experiences } from './store.mjs';
+import { orders, refundRequests, experiences, auditLogs } from './store.mjs';
 
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
@@ -74,6 +74,108 @@ export function updateAdminOrderFallback(input = {}) {
 
   order.updatedAt = new Date().toISOString();
   return getAdminOrderDetailFallback({ orderId });
+}
+
+export function listOrderAuditLogsFallback(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  return auditLogs
+    .filter((l) => (orderId ? l.orderId === orderId : true))
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export function applyAdminOrderExceptionFallback(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  const action = String(input?.action || '').trim();
+  const adminNote = String(input?.adminNote || '').trim() || null;
+
+  if (!orderId) throw new Error('orderId is required');
+  if (!['reschedule', 'adjust_capacity', 'oversell_fix'].includes(action)) {
+    throw new Error('invalid exception action');
+  }
+
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) throw new Error('order not found');
+
+  const exp = experiences.find((e) => e.id === order.experienceId);
+  if (!exp) throw new Error('experience not found');
+
+  const currentSchedule = exp.schedules.find((s) => s.id === order.scheduleId);
+  const now = new Date().toISOString();
+
+  if (action === 'reschedule') {
+    const targetScheduleId = String(input?.targetScheduleId || '').trim();
+    const target = exp.schedules.find((s) => s.id === targetScheduleId);
+    if (!target) throw new Error('target schedule not found');
+
+    if (currentSchedule && currentSchedule.id !== target.id && currentSchedule.bookedCount >= order.peopleCount) {
+      currentSchedule.bookedCount -= order.peopleCount;
+      if (currentSchedule.status === 'full' && currentSchedule.bookedCount < currentSchedule.capacity) {
+        currentSchedule.status = 'open';
+      }
+    }
+
+    const remaining = target.capacity - target.bookedCount;
+    if (remaining < order.peopleCount) throw new Error('target schedule not enough seats');
+
+    target.bookedCount += order.peopleCount;
+    if (target.bookedCount >= target.capacity) target.status = 'full';
+
+    order.scheduleId = target.id;
+    order.scheduleStartAt = target.startAt;
+    order.scheduleEndAt = target.endAt;
+    order.updatedAt = now;
+  }
+
+  if (action === 'adjust_capacity') {
+    const targetScheduleId = String(input?.targetScheduleId || '').trim() || order.scheduleId;
+    const newCapacity = Number(input?.newCapacity || 0);
+    if (!Number.isInteger(newCapacity) || newCapacity < 1) throw new Error('newCapacity must be positive integer');
+
+    const target = exp.schedules.find((s) => s.id === targetScheduleId);
+    if (!target) throw new Error('target schedule not found');
+
+    if (newCapacity < target.bookedCount) throw new Error('newCapacity cannot be less than bookedCount');
+    target.capacity = newCapacity;
+    target.status = target.bookedCount >= target.capacity ? 'full' : 'open';
+    order.updatedAt = now;
+  }
+
+  if (action === 'oversell_fix') {
+    const targetScheduleId = String(input?.targetScheduleId || '').trim() || order.scheduleId;
+    const target = exp.schedules.find((s) => s.id === targetScheduleId);
+    if (!target) throw new Error('target schedule not found');
+
+    if (target.bookedCount > target.capacity) {
+      target.bookedCount = target.capacity;
+      target.status = 'full';
+    }
+    order.updatedAt = now;
+  }
+
+  const log = {
+    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
+    orderId: order.id,
+    actor: 'admin',
+    action,
+    metadata: {
+      targetScheduleId: input?.targetScheduleId || null,
+      newCapacity: input?.newCapacity ?? null,
+      adminNote
+    },
+    createdAt: now
+  };
+  auditLogs.push(log);
+
+  if (adminNote) order.adminNote = adminNote;
+
+  return {
+    orderId: order.id,
+    action,
+    orderStatus: order.status,
+    scheduleId: order.scheduleId,
+    adminNote,
+    auditLogId: log.id
+  };
 }
 
 export function listAdminRefundRequestsFallback() {

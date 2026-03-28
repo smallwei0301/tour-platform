@@ -14,6 +14,8 @@ import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
   updateAdminOrderFallback,
+  listOrderAuditLogsFallback,
+  applyAdminOrderExceptionFallback,
   listAdminRefundRequestsFallback,
   updateAdminRefundStatusFallback
 } from './admin.mjs';
@@ -371,6 +373,129 @@ export async function updateAdminOrderDb(input = {}) {
   if (error) throw new Error(error.message);
 
   return getAdminOrderDetailDb({ orderId });
+}
+
+export async function listOrderAuditLogsDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  if (!hasSupabaseEnv()) return listOrderAuditLogsFallback({ orderId });
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('audit_logs')
+    .select('id, order_id, actor, action, metadata, created_at')
+    .eq('order_id', orderId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    id: r.id,
+    orderId: r.order_id,
+    actor: r.actor,
+    action: r.action,
+    metadata: r.metadata,
+    createdAt: r.created_at
+  }));
+}
+
+export async function applyAdminOrderExceptionDb(input = {}) {
+  if (!hasSupabaseEnv()) return applyAdminOrderExceptionFallback(input);
+
+  const orderId = String(input?.orderId || '').trim();
+  const action = String(input?.action || '').trim();
+  const targetScheduleId = String(input?.targetScheduleId || '').trim();
+  const newCapacity = input?.newCapacity == null ? null : Number(input?.newCapacity);
+  const adminNote = String(input?.adminNote || '').trim() || null;
+
+  if (!orderId) throw new Error('orderId is required');
+  if (!['reschedule', 'adjust_capacity', 'oversell_fix'].includes(action)) throw new Error('invalid exception action');
+
+  const supabase = await getSupabase();
+
+  const { data: order, error: orderError } = await supabase
+    .from('orders')
+    .select('id, status, people_count, schedule_id, activity_id')
+    .eq('id', orderId)
+    .single();
+  if (orderError || !order) throw new Error('order not found');
+
+  const { data: schedules, error: schErr } = await supabase
+    .from('activity_schedules')
+    .select('id, activity_id, start_at, end_at, capacity, booked_count, status')
+    .eq('activity_id', order.activity_id);
+  if (schErr) throw new Error(schErr.message);
+
+  const current = (schedules || []).find((s) => s.id === order.schedule_id);
+  const target = targetScheduleId ? (schedules || []).find((s) => s.id === targetScheduleId) : current;
+  if (!target) throw new Error('target schedule not found');
+
+  if (action === 'reschedule') {
+    if (!targetScheduleId) throw new Error('targetScheduleId is required');
+    if (current && current.id !== target.id && current.booked_count >= order.people_count) {
+      const newBooked = current.booked_count - order.people_count;
+      await supabase.from('activity_schedules').update({
+        booked_count: newBooked,
+        status: newBooked >= current.capacity ? 'full' : 'open'
+      }).eq('id', current.id);
+    }
+
+    const remaining = target.capacity - target.booked_count;
+    if (remaining < order.people_count) throw new Error('target schedule not enough seats');
+
+    const targetBooked = target.booked_count + order.people_count;
+    await supabase.from('activity_schedules').update({
+      booked_count: targetBooked,
+      status: targetBooked >= target.capacity ? 'full' : 'open'
+    }).eq('id', target.id);
+
+    await supabase.from('orders').update({
+      schedule_id: target.id,
+      updated_at: new Date().toISOString(),
+      admin_note: adminNote
+    }).eq('id', order.id);
+  }
+
+  if (action === 'adjust_capacity') {
+    if (!Number.isInteger(newCapacity) || newCapacity < 1) throw new Error('newCapacity must be positive integer');
+    if (newCapacity < target.booked_count) throw new Error('newCapacity cannot be less than bookedCount');
+
+    await supabase.from('activity_schedules').update({
+      capacity: newCapacity,
+      status: target.booked_count >= newCapacity ? 'full' : 'open'
+    }).eq('id', target.id);
+
+    await supabase.from('orders').update({ updated_at: new Date().toISOString(), admin_note: adminNote }).eq('id', order.id);
+  }
+
+  if (action === 'oversell_fix') {
+    if (target.booked_count > target.capacity) {
+      await supabase.from('activity_schedules').update({
+        booked_count: target.capacity,
+        status: 'full'
+      }).eq('id', target.id);
+    }
+    await supabase.from('orders').update({ updated_at: new Date().toISOString(), admin_note: adminNote }).eq('id', order.id);
+  }
+
+  const logId = crypto.randomUUID();
+  await supabase.from('audit_logs').insert({
+    id: logId,
+    order_id: order.id,
+    actor: 'admin',
+    action,
+    metadata: { targetScheduleId: targetScheduleId || null, newCapacity: newCapacity ?? null, adminNote },
+    created_at: new Date().toISOString()
+  });
+
+  return {
+    orderId: order.id,
+    action,
+    scheduleId: target.id,
+    adminNote,
+    auditLogId: logId
+  };
 }
 
 export async function listAdminRefundRequestsDb() {

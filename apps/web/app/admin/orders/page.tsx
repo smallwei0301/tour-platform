@@ -37,6 +37,11 @@ export default function AdminOrdersPageV2() {
   const [editStatus, setEditStatus] = useState('');
   const [editNote, setEditNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [exceptionAction, setExceptionAction] = useState<'reschedule' | 'adjust_capacity' | 'oversell_fix'>('reschedule');
+  const [targetScheduleId, setTargetScheduleId] = useState('');
+  const [newCapacity, setNewCapacity] = useState('');
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [exceptionBusy, setExceptionBusy] = useState(false);
 
   async function load() {
     const q = status ? `?status=${encodeURIComponent(status)}` : '';
@@ -62,9 +67,43 @@ export default function AdminOrdersPageV2() {
         setEditNote(j.data?.adminNote || '');
       })
       .catch(() => setDetail(null));
+
+    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((j) => setAuditLogs(j.data || []))
+      .catch(() => setAuditLogs([]));
   }, [selectedId]);
 
   const filtered = useMemo(() => rows, [rows]);
+
+  async function applyException() {
+    if (!selectedId) return;
+    try {
+      setExceptionBusy(true);
+      await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/exceptions`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          action: exceptionAction,
+          targetScheduleId: targetScheduleId || undefined,
+          newCapacity: newCapacity ? Number(newCapacity) : undefined,
+          adminNote: editNote
+        })
+      });
+
+      await load();
+      const [detailRes, logsRes] = await Promise.all([
+        fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' }),
+        fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
+      ]);
+      const d = await detailRes.json();
+      const l = await logsRes.json();
+      setDetail(d.data || null);
+      setAuditLogs(l.data || []);
+    } finally {
+      setExceptionBusy(false);
+    }
+  }
 
   async function saveDetail() {
     if (!selectedId) return;
@@ -148,9 +187,47 @@ export default function AdminOrdersPageV2() {
                 <textarea value={editNote} onChange={(e) => setEditNote(e.target.value)} rows={4} style={{ width: '100%', marginTop: 4 }} />
               </label>
 
+              <div style={{ marginTop: 12, borderTop: '1px dashed #ddd', paddingTop: 10 }}>
+                <h4 style={{ margin: '0 0 8px' }}>例外處理（Sprint 2.2）</h4>
+                <label style={{ display: 'block', marginBottom: 8 }}>
+                  Action
+                  <select value={exceptionAction} onChange={(e) => setExceptionAction(e.target.value as any)} style={{ width: '100%', marginTop: 4 }}>
+                    <option value="reschedule">reschedule（手動改期）</option>
+                    <option value="adjust_capacity">adjust_capacity（名額修正）</option>
+                    <option value="oversell_fix">oversell_fix（超賣修正）</option>
+                  </select>
+                </label>
+                <label style={{ display: 'block', marginBottom: 8 }}>
+                  targetScheduleId（可選）
+                  <input value={targetScheduleId} onChange={(e) => setTargetScheduleId(e.target.value)} style={{ width: '100%', marginTop: 4 }} placeholder="例如 sch_chaishan_0401" />
+                </label>
+                <label style={{ display: 'block', marginBottom: 8 }}>
+                  newCapacity（adjust_capacity 時使用）
+                  <input value={newCapacity} onChange={(e) => setNewCapacity(e.target.value)} style={{ width: '100%', marginTop: 4 }} placeholder="例如 12" />
+                </label>
+                <button onClick={applyException} disabled={exceptionBusy}>
+                  {exceptionBusy ? '套用中…' : '套用例外處理'}
+                </button>
+              </div>
+
               <button onClick={saveDetail} disabled={saving} style={{ marginTop: 10 }}>
                 {saving ? '儲存中…' : '儲存變更'}
               </button>
+
+              <div style={{ marginTop: 12, borderTop: '1px dashed #ddd', paddingTop: 10 }}>
+                <h4 style={{ margin: '0 0 8px' }}>Audit Logs</h4>
+                {auditLogs.length === 0 ? (
+                  <p style={{ color: '#666', margin: 0 }}>目前無紀錄</p>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {auditLogs.map((l: any) => (
+                      <li key={l.id} style={{ marginBottom: 6 }}>
+                        <strong>{l.action}</strong> · {l.createdAt ? new Date(l.createdAt).toLocaleString('zh-TW') : '-'}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             </>
           )}
         </div>
