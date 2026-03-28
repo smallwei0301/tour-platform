@@ -89,7 +89,7 @@ export const guides: GuideProfile[] = [
     languages: ['中文', '德語', '粵語', '荷蘭語', '日語', '韓語'],
     specialties: ['柴山探洞', '高雄在地', '戶外特色導覽', '地形探索', '小團體驗'],
     verificationBadges: ['壽山國家自然公園巡守員', '環境教育講師', '保育志工證書 21 本', '颱風災後復原感謝狀 x2'],
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80',
+    avatarUrl: '/images/guides/andy-lee/avatar.jpg',
     heroImageUrl: 'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=1600&q=80',
     galleryUrls: [
       'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=800&q=80',
