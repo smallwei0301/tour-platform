@@ -6,5 +6,6 @@ test('listExperiencesDb returns fallback fixture when supabase env missing', asy
   const list = await listExperiencesDb();
   assert.ok(Array.isArray(list));
   assert.ok(list.length >= 1);
-  assert.equal(list[0].slug, 'chaishan-cave-tour');
+  assert.equal(list[0].slug, 'kaohsiung-chaishan-cave-experience');
+  assert.ok(Array.isArray(list[0].schedules));
 });

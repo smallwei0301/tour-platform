@@ -4,7 +4,14 @@ import { createOrderDb } from '../../src/lib/db.mjs';
 import { listAdminOrdersFallback } from '../../src/lib/admin.mjs';
 
 test('admin orders includes margin fields', async () => {
-  await createOrderDb({ experienceSlug: 'chaishan-cave-tour' });
+  await createOrderDb({
+    experienceSlug: 'kaohsiung-chaishan-cave-experience',
+    scheduleId: 'sch_chaishan_0410',
+    peopleCount: 1,
+    contactName: 'Wei',
+    contactPhone: '0912345678',
+    contactEmail: 'wei@example.com'
+  });
   const rows = listAdminOrdersFallback();
   assert.ok(rows.length >= 1);
   assert.equal(typeof rows[0].marginTwd, 'number');
