@@ -29,4 +29,6 @@ test('admin dashboard summary aggregates queues and KPI', async () => {
   assert.ok(Array.isArray(summary.queues.guides));
   assert.ok(Array.isArray(summary.trends));
   assert.equal(summary.trends.length, 7);
+  assert.equal(typeof summary.definitions.totalGmv, 'string');
+  assert.equal(typeof summary.definitions.healthyOrderRate, 'string');
 });

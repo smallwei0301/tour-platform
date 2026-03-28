@@ -120,6 +120,16 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
+      {/* KPI definitions */}
+      <details style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 10, marginBottom: 14, background: '#fafafa' }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700 }}>KPI 口徑說明（點我展開）</summary>
+        <div style={{ marginTop: 8, fontSize: 13, color: '#444', lineHeight: 1.7 }}>
+          {Object.entries(data.definitions || {}).map(([k, v]) => (
+            <div key={k}><strong>{k}</strong>: {String(v)}</div>
+          ))}
+        </div>
+      </details>
+
       {/* KPI cards with drill-down */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 12, margin: '12px 0 18px' }}>
         <Link href="/admin/orders" style={cardStyle()}><div>總訂單</div><strong>{kpi.totalOrders || 0}</strong></Link>

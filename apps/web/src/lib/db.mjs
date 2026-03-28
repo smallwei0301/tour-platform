@@ -850,11 +850,11 @@ export async function adminDashboardSummaryDb(input = {}) {
   const from = String(input?.from || '').trim();
   const to = String(input?.to || '').trim();
 
-  const [ordersRaw, refundsRaw, guidesRaw, opsSummary] = await Promise.all([
+  const [ordersRaw, refundsRaw, guidesRaw, opsRowsRaw] = await Promise.all([
     listAdminOrdersDb({}),
     listAdminRefundRequestsDb(),
     listGuideApplicationsDb({}),
-    operationsTrackingSummaryDb()
+    listOperationsTrackingDb()
   ]);
 
   let rangeFrom = from ? new Date(from) : null;
@@ -886,9 +886,25 @@ export async function adminDashboardSummaryDb(input = {}) {
   const refunds = refundsRaw.filter((r) => inRange(r.requestedAt));
   const guides = guidesRaw.filter((g) => inRange(g.createdAt));
 
+  const orderIdSet = new Set(orders.map((o) => o.id));
+  const opsRows = opsRowsRaw.filter((r) => orderIdSet.has(r.orderId));
+
   const pendingOrders = orders.filter((o) => ['pending_payment', 'paid', 'confirmed', 'refund_pending'].includes(o.status));
   const pendingRefunds = refunds.filter((r) => ['requested', 'approved', 'processing'].includes(r.status));
   const pendingGuideApps = guides.filter((g) => g.status === 'pending');
+
+  const totalOrders = orders.length;
+  const totalGmv = orders.reduce((acc, o) => acc + Number(o.totalTwd || 0), 0);
+  const totalCommissionTwd = Math.round(totalGmv * 0.15);
+
+  const countRefundOrders = opsRows.filter((r) => Number(r.refundAmountTwd || 0) > 0).length;
+  const countExceptionOrders = opsRows.filter((r) => !!r.hasException).length;
+  const countHealthyOrders = opsRows.filter((r) => !!r.isHealthyOrder).length;
+
+  const rateBase = totalOrders || 1;
+  const refundRate = Number(((countRefundOrders / rateBase) * 100).toFixed(1));
+  const exceptionRate = Number(((countExceptionOrders / rateBase) * 100).toFixed(1));
+  const healthyOrderRate = Number(((countHealthyOrders / rateBase) * 100).toFixed(1));
 
   const trendMap = new Map();
   const now = new Date();
@@ -924,16 +940,26 @@ export async function adminDashboardSummaryDb(input = {}) {
       from: rangeFrom ? rangeFrom.toISOString() : null,
       to: rangeTo ? rangeTo.toISOString() : null
     },
+    definitions: {
+      totalGmv: 'sum(orders.totalTwd) within selected range',
+      totalCommissionTwd: 'round(totalGmv * 0.15)',
+      refundRate: 'orders with refundAmountTwd > 0 / totalOrders * 100',
+      exceptionRate: 'orders with hasException = true / totalOrders * 100',
+      healthyOrderRate: 'orders with isHealthyOrder = true / totalOrders * 100',
+      pendingOrders: 'status in [pending_payment, paid, confirmed, refund_pending]',
+      pendingRefunds: 'refund status in [requested, approved, processing]',
+      pendingGuideApps: 'guide application status = pending'
+    },
     kpi: {
-      totalOrders: orders.length,
+      totalOrders,
       pendingOrders: pendingOrders.length,
       pendingRefunds: pendingRefunds.length,
       pendingGuideApps: pendingGuideApps.length,
-      totalGmv: orders.reduce((acc, o) => acc + Number(o.totalTwd || 0), 0),
-      totalCommissionTwd: Number(opsSummary.totalCommissionTwd || 0),
-      healthyOrderRate: Number(opsSummary.healthyOrderRate || 0),
-      refundRate: Number(opsSummary.refundRate || 0),
-      exceptionRate: Number(opsSummary.exceptionRate || 0)
+      totalGmv,
+      totalCommissionTwd,
+      healthyOrderRate,
+      refundRate,
+      exceptionRate
     },
     trends: Array.from(trendMap.values()),
     queues: {
