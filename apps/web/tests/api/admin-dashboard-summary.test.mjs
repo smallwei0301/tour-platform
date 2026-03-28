@@ -20,11 +20,13 @@ test('admin dashboard summary aggregates queues and KPI', async () => {
     bio: '導覽經驗 5 年'
   });
 
-  const summary = await adminDashboardSummaryDb();
+  const summary = await adminDashboardSummaryDb({ preset: '7d' });
   assert.ok(summary.kpi.totalOrders >= 1);
   assert.ok(summary.kpi.pendingRefunds >= 1);
   assert.ok(summary.kpi.pendingGuideApps >= 1);
   assert.ok(Array.isArray(summary.queues.orders));
   assert.ok(Array.isArray(summary.queues.refunds));
   assert.ok(Array.isArray(summary.queues.guides));
+  assert.ok(Array.isArray(summary.trends));
+  assert.equal(summary.trends.length, 7);
 });

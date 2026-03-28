@@ -845,30 +845,97 @@ export async function updateGuideApplicationStatusDb(input = {}) {
   };
 }
 
-export async function adminDashboardSummaryDb() {
-  const [orders, refunds, guides, opsSummary] = await Promise.all([
+export async function adminDashboardSummaryDb(input = {}) {
+  const preset = String(input?.preset || '').trim();
+  const from = String(input?.from || '').trim();
+  const to = String(input?.to || '').trim();
+
+  const [ordersRaw, refundsRaw, guidesRaw, opsSummary] = await Promise.all([
     listAdminOrdersDb({}),
     listAdminRefundRequestsDb(),
     listGuideApplicationsDb({}),
     operationsTrackingSummaryDb()
   ]);
 
+  let rangeFrom = from ? new Date(from) : null;
+  let rangeTo = to ? new Date(to) : null;
+
+  if (!rangeFrom && !rangeTo && preset) {
+    const now = new Date();
+    if (preset === 'today') {
+      rangeFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      rangeTo = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    } else if (preset === '7d') {
+      rangeFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+      rangeTo = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    } else if (preset === '30d') {
+      rangeFrom = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29);
+      rangeTo = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    }
+  }
+
+  const inRange = (iso) => {
+    if (!iso) return true;
+    const d = new Date(iso);
+    if (rangeFrom && d < rangeFrom) return false;
+    if (rangeTo && d >= rangeTo) return false;
+    return true;
+  };
+
+  const orders = ordersRaw.filter((o) => inRange(o.createdAt));
+  const refunds = refundsRaw.filter((r) => inRange(r.requestedAt));
+  const guides = guidesRaw.filter((g) => inRange(g.createdAt));
+
   const pendingOrders = orders.filter((o) => ['pending_payment', 'paid', 'confirmed', 'refund_pending'].includes(o.status));
   const pendingRefunds = refunds.filter((r) => ['requested', 'approved', 'processing'].includes(r.status));
   const pendingGuideApps = guides.filter((g) => g.status === 'pending');
 
+  const trendMap = new Map();
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    trendMap.set(key, { date: key, orders: 0, refunds: 0, guides: 0, gmv: 0 });
+  }
+
+  for (const o of ordersRaw) {
+    if (!o.createdAt) continue;
+    const key = new Date(o.createdAt).toISOString().slice(0, 10);
+    if (trendMap.has(key)) {
+      const row = trendMap.get(key);
+      row.orders += 1;
+      row.gmv += Number(o.totalTwd || 0);
+    }
+  }
+  for (const r of refundsRaw) {
+    if (!r.requestedAt) continue;
+    const key = new Date(r.requestedAt).toISOString().slice(0, 10);
+    if (trendMap.has(key)) trendMap.get(key).refunds += 1;
+  }
+  for (const g of guidesRaw) {
+    if (!g.createdAt) continue;
+    const key = new Date(g.createdAt).toISOString().slice(0, 10);
+    if (trendMap.has(key)) trendMap.get(key).guides += 1;
+  }
+
   return {
+    filters: {
+      preset: preset || null,
+      from: rangeFrom ? rangeFrom.toISOString() : null,
+      to: rangeTo ? rangeTo.toISOString() : null
+    },
     kpi: {
       totalOrders: orders.length,
       pendingOrders: pendingOrders.length,
       pendingRefunds: pendingRefunds.length,
       pendingGuideApps: pendingGuideApps.length,
-      totalGmv: Number(opsSummary.totalGmv || 0),
+      totalGmv: orders.reduce((acc, o) => acc + Number(o.totalTwd || 0), 0),
       totalCommissionTwd: Number(opsSummary.totalCommissionTwd || 0),
       healthyOrderRate: Number(opsSummary.healthyOrderRate || 0),
       refundRate: Number(opsSummary.refundRate || 0),
       exceptionRate: Number(opsSummary.exceptionRate || 0)
     },
+    trends: Array.from(trendMap.values()),
     queues: {
       orders: pendingOrders.slice(0, 10),
       refunds: pendingRefunds.slice(0, 10),
