@@ -90,10 +90,8 @@ export const guides: GuideProfile[] = [
     specialties: ['柴山探洞', '高雄在地', '戶外特色導覽', '地形探索', '小團體驗'],
     verificationBadges: ['壽山國家自然公園巡守員', '環境教育講師', '保育志工證書 21 本', '颱風災後復原感謝狀 x2'],
     avatarUrl: '/images/guides/andy-lee/avatar.jpg',
-    heroImageUrl: '/images/guides/andy-lee/hero-v2.jpg',
+    heroImageUrl: '/images/activities/chaishan/main.jpg',
     galleryUrls: [
-      '/images/guides/andy-lee/gallery-01-v2.jpg',
-      '/images/activities/chaishan/main.jpg',
       'https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200',
       'https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200',
       'https://images.pexels.com/photos/1072824/pexels-photo-1072824.jpeg?auto=compress&cs=tinysrgb&w=1200',
