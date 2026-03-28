@@ -16,6 +16,10 @@ import {
   updateAdminOrderFallback,
   listOrderAuditLogsFallback,
   applyAdminOrderExceptionFallback,
+  listOperationsTrackingFallback,
+  updateOperationsTrackingFallback,
+  operationsTrackingSummaryFallback,
+  operationsTrackingCsvFallback,
   listAdminRefundRequestsFallback,
   updateAdminRefundStatusFallback
 } from './admin.mjs';
@@ -602,6 +606,128 @@ export async function updateAdminRefundStatusDb(input = {}) {
     orderStatus,
     adminNote
   };
+}
+
+export async function listOperationsTrackingDb() {
+  if (!hasSupabaseEnv()) return listOperationsTrackingFallback();
+
+  const supabase = await getSupabase();
+  const { data: rows, error } = await supabase
+    .from('operations_tracking')
+    .select('id, order_id, manual_minutes, manual_cost_twd, refund_amount_twd, subsidy_twd, is_rescheduled, has_complaint, has_guide_adjustment, has_oversell_issue, note, updated_at')
+    .order('updated_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const orderRows = await listAdminOrdersDb({});
+  const orderMap = new Map(orderRows.map((o) => [o.id, o]));
+
+  const calc = (o, ops) => {
+    const gmv = Number(o?.totalTwd || 0);
+    const commissionTwd = Math.round(gmv * 0.15);
+    const paymentFeeTwd = Math.round(gmv * 0.035);
+    const manualCostTwd = Number(ops.manual_cost_twd || 0);
+    const refundAmountTwd = Number(ops.refund_amount_twd || 0);
+    const subsidyTwd = Number(ops.subsidy_twd || 0);
+    const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - refundAmountTwd - subsidyTwd;
+    const hasException = Boolean(refundAmountTwd > 0 || ops.is_rescheduled || ops.has_complaint || ops.has_guide_adjustment || ops.has_oversell_issue);
+    const isHealthyOrder = finalContributionTwd > 0 && !hasException;
+    return { gmv, commissionTwd, paymentFeeTwd, finalContributionTwd, hasException, isHealthyOrder };
+  };
+
+  return (rows || []).map((r) => {
+    const order = orderMap.get(r.order_id) || {};
+    return {
+      orderId: r.order_id,
+      orderDate: order.createdAt || null,
+      guideName: order.experienceSlug || null,
+      activityName: order.title || null,
+      scheduleDate: order.scheduleStartAt || null,
+      travelers: order.peopleCount || 1,
+      status: order.status || null,
+      manualMinutes: r.manual_minutes || 0,
+      manualCostTwd: r.manual_cost_twd || 0,
+      refundAmountTwd: r.refund_amount_twd || 0,
+      subsidyTwd: r.subsidy_twd || 0,
+      isRescheduled: !!r.is_rescheduled,
+      hasComplaint: !!r.has_complaint,
+      hasGuideAdjustment: !!r.has_guide_adjustment,
+      hasOversellIssue: !!r.has_oversell_issue,
+      note: r.note || null,
+      updatedAt: r.updated_at,
+      ...calc(order, r)
+    };
+  });
+}
+
+export async function updateOperationsTrackingDb(input = {}) {
+  if (!hasSupabaseEnv()) return updateOperationsTrackingFallback(input);
+
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  const supabase = await getSupabase();
+
+  const { data: existing } = await supabase
+    .from('operations_tracking')
+    .select('id')
+    .eq('order_id', orderId)
+    .limit(1);
+
+  const payload = {
+    manual_minutes: input?.manualMinutes == null ? 0 : Number(input.manualMinutes),
+    manual_cost_twd: input?.manualCostTwd == null ? 0 : Number(input.manualCostTwd),
+    refund_amount_twd: input?.refundAmountTwd == null ? 0 : Number(input.refundAmountTwd),
+    subsidy_twd: input?.subsidyTwd == null ? 0 : Number(input.subsidyTwd),
+    is_rescheduled: !!input?.isRescheduled,
+    has_complaint: !!input?.hasComplaint,
+    has_guide_adjustment: !!input?.hasGuideAdjustment,
+    has_oversell_issue: !!input?.hasOversellIssue,
+    note: input?.note ? String(input.note) : null,
+    updated_at: new Date().toISOString()
+  };
+
+  if (existing && existing.length > 0) {
+    const { error } = await supabase.from('operations_tracking').update(payload).eq('order_id', orderId);
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from('operations_tracking').insert({ id: crypto.randomUUID(), order_id: orderId, ...payload });
+    if (error) throw new Error(error.message);
+  }
+
+  return (await listOperationsTrackingDb()).find((r) => r.orderId === orderId) || null;
+}
+
+export async function operationsTrackingSummaryDb() {
+  if (!hasSupabaseEnv()) return operationsTrackingSummaryFallback();
+  const rows = await listOperationsTrackingDb();
+  const n = rows.length || 1;
+  const sum = (k) => rows.reduce((acc, r) => acc + Number(r[k] || 0), 0);
+  return {
+    totalOrders: rows.length,
+    totalGmv: sum('gmv'),
+    totalCommissionTwd: sum('commissionTwd'),
+    avgCommissionTwd: Math.round(sum('commissionTwd') / n),
+    avgManualMinutes: Number((sum('manualMinutes') / n).toFixed(1)),
+    avgManualCostTwd: Math.round(sum('manualCostTwd') / n),
+    refundRate: Number(((rows.filter((r) => r.refundAmountTwd > 0).length / n) * 100).toFixed(1)),
+    exceptionRate: Number(((rows.filter((r) => r.hasException).length / n) * 100).toFixed(1)),
+    avgFinalContributionTwd: Math.round(sum('finalContributionTwd') / n),
+    healthyOrderRate: Number(((rows.filter((r) => r.isHealthyOrder).length / n) * 100).toFixed(1))
+  };
+}
+
+export async function operationsTrackingCsvDb() {
+  if (!hasSupabaseEnv()) return operationsTrackingCsvFallback();
+  const rows = await listOperationsTrackingDb();
+  const header = [
+    'orderId','orderDate','guideName','activityName','scheduleDate','travelers','status','gmv','commissionTwd','paymentFeeTwd','manualMinutes','manualCostTwd','refundAmountTwd','subsidyTwd','hasException','finalContributionTwd','isHealthyOrder','note'
+  ];
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [header.join(','), ...rows.map((r) => header.map((h) => esc(r[h])).join(','))].join('\n');
 }
 
 export async function createGuideApplicationDb(input = {}) {

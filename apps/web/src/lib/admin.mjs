@@ -1,4 +1,4 @@
-import { orders, refundRequests, experiences, auditLogs } from './store.mjs';
+import { orders, refundRequests, experiences, auditLogs, operationsTracking } from './store.mjs';
 
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
@@ -247,4 +247,161 @@ export function updateAdminRefundStatusFallback(input = {}) {
     orderStatus: order.status,
     adminNote: req.adminNote
   };
+}
+
+function findOrCreateOpsRow(order) {
+  let row = operationsTracking.find((r) => r.orderId === order.id);
+  if (!row) {
+    row = {
+      id: `ops_${String(operationsTracking.length + 1).padStart(6, '0')}`,
+      orderId: order.id,
+      manualMinutes: 0,
+      manualCostTwd: 0,
+      refundAmountTwd: 0,
+      subsidyTwd: 0,
+      isRescheduled: false,
+      hasComplaint: false,
+      hasGuideAdjustment: false,
+      hasOversellIssue: false,
+      note: null,
+      updatedAt: new Date().toISOString()
+    };
+    operationsTracking.push(row);
+  }
+  return row;
+}
+
+function buildOpsContribution(order, ops) {
+  const gmv = Number(order.totalTwd || 0);
+  const commissionTwd = Math.round(gmv * 0.15);
+  const paymentFeeTwd = Math.round(gmv * 0.035);
+  const manualCostTwd = Number(ops.manualCostTwd || 0);
+  const refundAmountTwd = Number(ops.refundAmountTwd || 0);
+  const subsidyTwd = Number(ops.subsidyTwd || 0);
+  const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - refundAmountTwd - subsidyTwd;
+  const hasException = Boolean(
+    refundAmountTwd > 0 ||
+    ops.isRescheduled ||
+    ops.hasComplaint ||
+    ops.hasGuideAdjustment ||
+    ops.hasOversellIssue
+  );
+  const isHealthyOrder = finalContributionTwd > 0 && !hasException;
+
+  return {
+    gmv,
+    commissionTwd,
+    paymentFeeTwd,
+    manualMinutes: Number(ops.manualMinutes || 0),
+    manualCostTwd,
+    refundAmountTwd,
+    subsidyTwd,
+    hasException,
+    finalContributionTwd,
+    isHealthyOrder
+  };
+}
+
+export function listOperationsTrackingFallback() {
+  return orders
+    .map((o) => {
+      const exp = experiences.find((e) => e.id === o.experienceId);
+      const ops = findOrCreateOpsRow(o);
+      const calc = buildOpsContribution(o, ops);
+      return {
+        orderId: o.id,
+        orderDate: o.createdAt,
+        guideName: exp?.guideSlug || null,
+        activityName: exp?.title || o.experienceSlug,
+        scheduleDate: o.scheduleStartAt || null,
+        travelers: o.peopleCount || 1,
+        status: o.status,
+        ...calc,
+        ...ops
+      };
+    })
+    .sort((a, b) => new Date(b.orderDate || 0).getTime() - new Date(a.orderDate || 0).getTime());
+}
+
+export function updateOperationsTrackingFallback(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  const order = orders.find((o) => o.id === orderId);
+  if (!order) throw new Error('order not found');
+
+  const ops = findOrCreateOpsRow(order);
+
+  const assignNumber = (k) => {
+    if (input[k] != null && input[k] !== '') ops[k] = Number(input[k]);
+  };
+  assignNumber('manualMinutes');
+  assignNumber('manualCostTwd');
+  assignNumber('refundAmountTwd');
+  assignNumber('subsidyTwd');
+
+  if (input.isRescheduled != null) ops.isRescheduled = Boolean(input.isRescheduled);
+  if (input.hasComplaint != null) ops.hasComplaint = Boolean(input.hasComplaint);
+  if (input.hasGuideAdjustment != null) ops.hasGuideAdjustment = Boolean(input.hasGuideAdjustment);
+  if (input.hasOversellIssue != null) ops.hasOversellIssue = Boolean(input.hasOversellIssue);
+  if (input.note != null) ops.note = String(input.note || '').trim() || null;
+
+  ops.updatedAt = new Date().toISOString();
+
+  const log = {
+    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
+    orderId: order.id,
+    actor: 'admin',
+    action: 'operations_tracking_update',
+    metadata: {
+      manualMinutes: ops.manualMinutes,
+      manualCostTwd: ops.manualCostTwd,
+      refundAmountTwd: ops.refundAmountTwd,
+      subsidyTwd: ops.subsidyTwd,
+      isRescheduled: ops.isRescheduled,
+      hasComplaint: ops.hasComplaint,
+      hasGuideAdjustment: ops.hasGuideAdjustment,
+      hasOversellIssue: ops.hasOversellIssue,
+      note: ops.note
+    },
+    createdAt: ops.updatedAt
+  };
+  auditLogs.push(log);
+
+  return listOperationsTrackingFallback().find((r) => r.orderId === orderId);
+}
+
+export function operationsTrackingSummaryFallback() {
+  const rows = listOperationsTrackingFallback();
+  const n = rows.length || 1;
+
+  const sum = (k) => rows.reduce((acc, r) => acc + Number(r[k] || 0), 0);
+
+  return {
+    totalOrders: rows.length,
+    totalGmv: sum('gmv'),
+    totalCommissionTwd: sum('commissionTwd'),
+    avgCommissionTwd: Math.round(sum('commissionTwd') / n),
+    avgManualMinutes: Number((sum('manualMinutes') / n).toFixed(1)),
+    avgManualCostTwd: Math.round(sum('manualCostTwd') / n),
+    refundRate: Number(((rows.filter((r) => r.refundAmountTwd > 0).length / n) * 100).toFixed(1)),
+    exceptionRate: Number(((rows.filter((r) => r.hasException).length / n) * 100).toFixed(1)),
+    avgFinalContributionTwd: Math.round(sum('finalContributionTwd') / n),
+    healthyOrderRate: Number(((rows.filter((r) => r.isHealthyOrder).length / n) * 100).toFixed(1))
+  };
+}
+
+export function operationsTrackingCsvFallback() {
+  const rows = listOperationsTrackingFallback();
+  const header = [
+    'orderId','orderDate','guideName','activityName','scheduleDate','travelers','status','gmv','commissionTwd','paymentFeeTwd','manualMinutes','manualCostTwd','refundAmountTwd','subsidyTwd','hasException','finalContributionTwd','isHealthyOrder','note'
+  ];
+
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const lines = rows.map((r) => header.map((h) => esc(r[h])).join(','));
+  return [header.join(','), ...lines].join('\n');
 }
