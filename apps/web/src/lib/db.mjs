@@ -845,6 +845,38 @@ export async function updateGuideApplicationStatusDb(input = {}) {
   };
 }
 
+export async function adminDashboardSummaryDb() {
+  const [orders, refunds, guides, opsSummary] = await Promise.all([
+    listAdminOrdersDb({}),
+    listAdminRefundRequestsDb(),
+    listGuideApplicationsDb({}),
+    operationsTrackingSummaryDb()
+  ]);
+
+  const pendingOrders = orders.filter((o) => ['pending_payment', 'paid', 'confirmed', 'refund_pending'].includes(o.status));
+  const pendingRefunds = refunds.filter((r) => ['requested', 'approved', 'processing'].includes(r.status));
+  const pendingGuideApps = guides.filter((g) => g.status === 'pending');
+
+  return {
+    kpi: {
+      totalOrders: orders.length,
+      pendingOrders: pendingOrders.length,
+      pendingRefunds: pendingRefunds.length,
+      pendingGuideApps: pendingGuideApps.length,
+      totalGmv: Number(opsSummary.totalGmv || 0),
+      totalCommissionTwd: Number(opsSummary.totalCommissionTwd || 0),
+      healthyOrderRate: Number(opsSummary.healthyOrderRate || 0),
+      refundRate: Number(opsSummary.refundRate || 0),
+      exceptionRate: Number(opsSummary.exceptionRate || 0)
+    },
+    queues: {
+      orders: pendingOrders.slice(0, 10),
+      refunds: pendingRefunds.slice(0, 10),
+      guides: pendingGuideApps.slice(0, 10)
+    }
+  };
+}
+
 export async function processPaymentCallbackDb(input) {
   if (!hasSupabaseEnv()) return processPaymentCallbackInMemory(input);
 
