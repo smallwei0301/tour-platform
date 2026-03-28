@@ -2,15 +2,26 @@
 
 import Link from 'next/link';
 import { activities, guides } from '../../../src/fixtures/data';
-import { useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { createOrder, submitEcpayCallback } from '../../../src/lib/client-api';
 
 export default function BookingPage() {
   const params = useParams();
+  const router = useRouter();
   const activityId = params.activityId as string;
   const activity = activities.find((a) => a.slug === activityId);
   const [step, setStep] = useState(1);
   const [guests, setGuests] = useState(2);
+  const [selectedScheduleId, setSelectedScheduleId] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [note, setNote] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [createdOrderId, setCreatedOrderId] = useState('');
 
   if (!activity) {
     return (
@@ -24,13 +35,93 @@ export default function BookingPage() {
   const guide = guides.find((g) => g.slug === activity.guideSlug);
   const total = activity.price * guests;
 
+  const openSchedules = useMemo(
+    () => activity.schedules.filter((s) => s.status === 'open' && s.bookedCount < s.capacity),
+    [activity.schedules]
+  );
+
+  const scheduleOptions = useMemo(() => {
+    const chaishanMap: Record<string, string> = {
+      '2026-04-01T09:00:00+08:00': 'sch_chaishan_0401',
+      '2026-04-03T09:00:00+08:00': 'sch_chaishan_0403',
+      '2026-04-10T09:00:00+08:00': 'sch_chaishan_0410'
+    };
+    const dadaochengMap: Record<string, string> = {
+      '2026-04-02T09:00:00+08:00': 'sch_dadaocheng_0402'
+    };
+
+    return openSchedules.map((s, idx) => {
+      let scheduleId = '';
+      if (activity.slug === 'kaohsiung-chaishan-cave-experience') {
+        scheduleId = chaishanMap[s.startAt] || '';
+      } else if (activity.slug === 'dadadaocheng-walk') {
+        scheduleId = dadaochengMap[s.startAt] || '';
+      }
+      return { ...s, scheduleId, localKey: `${s.startAt}-${idx}` };
+    }).filter((s) => !!s.scheduleId);
+  }, [activity.slug, openSchedules]);
+
+  const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && selectedScheduleId);
+
+  async function handleCreateOrderAndGoPayment() {
+    if (!canGoStep3) {
+      setErrorMessage('請先填完整聯絡資訊、選擇可預約場次，並同意條款。');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMessage('');
+
+      const order = await createOrder({
+        experienceSlug: activity.slug,
+        scheduleId: selectedScheduleId,
+        peopleCount: guests,
+        contactName,
+        contactPhone,
+        contactEmail
+      });
+
+      setCreatedOrderId(order.id);
+      setStep(3);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '建立訂單失敗';
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleMockPaymentSuccess() {
+    if (!createdOrderId) {
+      setErrorMessage('尚未建立訂單，請回上一步先建立訂單。');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMessage('');
+
+      await submitEcpayCallback({
+        orderId: createdOrderId,
+        tradeNo: `MOCK-${Date.now()}`
+      });
+
+      router.push(`/order/success?orderId=${encodeURIComponent(createdOrderId)}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '付款回調失敗';
+      setErrorMessage(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/activities">全部行程</Link> &gt; {activity.title} &gt; 預約
       </div>
 
-      {/* Progress bar */}
       <div className="tp-booking-progress" style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500 }}>
         {['行程確認', '旅客資訊', '付款'].map((label, i) => (
           <div key={i} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
@@ -49,6 +140,12 @@ export default function BookingPage() {
         ))}
       </div>
 
+      {errorMessage && (
+        <div style={{ marginBottom: 16, background: '#fff4f4', border: '1px solid #f5c2c2', color: '#b42318', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>
+          ⚠️ {errorMessage}
+        </div>
+      )}
+
       <div className="tp-booking-layout" style={{ display: 'grid', gap: 24 }}>
         <div>
           {step === 1 && (
@@ -62,8 +159,26 @@ export default function BookingPage() {
               </div>
 
               <label style={{ display: 'block', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>📅 選擇日期</span>
-                <input type="date" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+                <span style={{ fontWeight: 700, fontSize: 14 }}>📅 選擇可預約場次</span>
+                <select
+                  value={selectedScheduleId}
+                  onChange={(e) => setSelectedScheduleId(e.target.value)}
+                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }}
+                >
+                  <option value="">請選擇場次</option>
+                  {scheduleOptions.map((s) => {
+                    const d = new Date(s.startAt);
+                    const remaining = s.capacity - s.bookedCount;
+                    return (
+                      <option key={s.localKey} value={s.scheduleId}>
+                        {d.toLocaleDateString('zh-TW')} {d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}（剩 {remaining} 位）
+                      </option>
+                    );
+                  })}
+                </select>
+                {scheduleOptions.length === 0 && (
+                  <p style={{ marginTop: 6, fontSize: 13, color: '#b42318' }}>目前沒有可預約場次，請稍後再試。</p>
+                )}
               </label>
 
               <label style={{ display: 'block', marginBottom: 16 }}>
@@ -106,31 +221,36 @@ export default function BookingPage() {
               <h3>聯絡人資訊</h3>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
-                <input type="text" placeholder="請輸入真實姓名" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+                <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
-                <input type="tel" placeholder="0912-345-678" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
-                <input type="email" placeholder="you@example.com" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+                <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
                 給導遊的備註（選填）
-                <textarea placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
               </label>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 16 }}>
-                <input type="checkbox" />
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
               </label>
 
               <div style={{ display: 'flex', gap: 12 }}>
-                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>← 上一步</button>
-                <button className="tp-btn tp-btn-primary" style={{ flex: 1, padding: '14px 0', fontSize: 16 }} onClick={() => setStep(3)}>
-                  下一步：付款 →
+                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)} disabled={loading}>← 上一步</button>
+                <button
+                  className="tp-btn tp-btn-primary"
+                  style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
+                  onClick={handleCreateOrderAndGoPayment}
+                  disabled={loading}
+                >
+                  {loading ? '建立訂單中…' : '建立訂單並前往付款 →'}
                 </button>
               </div>
             </div>
@@ -153,18 +273,23 @@ export default function BookingPage() {
 
               <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
+              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdOrderId || '尚未建立'}</p>
 
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>← 上一步</button>
-                <Link href="/order/success" className="tp-btn tp-btn-primary" style={{ flex: 1, padding: '14px 0', fontSize: 16, textAlign: 'center' }}>
-                  確認付款 NT${total.toLocaleString()}
-                </Link>
+                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)} disabled={loading}>← 上一步</button>
+                <button
+                  className="tp-btn tp-btn-primary"
+                  style={{ flex: 1, padding: '14px 0', fontSize: 16, textAlign: 'center', opacity: loading ? 0.7 : 1 }}
+                  onClick={handleMockPaymentSuccess}
+                  disabled={loading}
+                >
+                  {loading ? '付款處理中…' : `確認付款 NT$${total.toLocaleString()}`}
+                </button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Side summary */}
         <div style={{ position: 'sticky', top: 80, height: 'fit-content', border: '1px solid var(--tp-border)', borderRadius: 12, padding: 16 }}>
           <img src={activity.imageUrl} alt={activity.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} />
           <h4 style={{ margin: '0 0 4px' }}>{activity.title}</h4>
