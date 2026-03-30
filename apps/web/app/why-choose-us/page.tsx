@@ -16,7 +16,9 @@ export default function WhyChooseUsPage() {
       </section>
 
       {/* 4 Promises */}
-      <section style={{ marginTop: 36, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <section style={{ marginTop: 36, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}
+        className="why-promises">
+        <style>{`@media (min-width: 640px) { .why-promises { grid-template-columns: repeat(4, 1fr) !important; } }`}</style>
         {[
           { icon: '✅', title: '實名認證', desc: '每位導遊都經過 KYC 身分驗證與審核' },
           { icon: '💰', title: '退款保障', desc: '明確退款政策，依規定時間內全額退款' },
@@ -67,7 +69,9 @@ export default function WhyChooseUsPage() {
       {/* Testimonials */}
       <section style={{ marginTop: 40 }}>
         <h2 style={{ marginBottom: 16 }}>旅客怎麼說</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(1, 1fr)', gap: 16 }}
+          className="why-testimonials">
+          <style>{`@media (min-width: 640px) { .why-testimonials { grid-template-columns: repeat(3, 1fr) !important; } }`}</style>
           {[
             { author: '小美（台北）', text: '大人小人都開心😍 Andy 很有耐心，路線比想像中刺激但又很安全！', activity: '柴山探洞' },
             { author: 'Vivian C.（台北）', text: '本來以為只是一般古蹟導覽，沒想到建志帶我們走進了老屋廚房。比任何旅遊書都精彩！', activity: '大稻埕老街' },

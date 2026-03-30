@@ -38,7 +38,7 @@ const articles: Record<string, { title: string; category: string; date: string; 
     category: '戶外冒險',
     date: '2026-03-15',
     readTime: '7 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=1200&q=80',
+    imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80',
     content: `高雄柴山（壽山）隱藏著數十個石灰岩洞穴，是台灣少數可以在城市邊緣就體驗探洞的地方。這篇文章整理了第一次探洞需要知道的所有資訊。
 
 ## 基本裝備

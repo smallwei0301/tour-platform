@@ -5,7 +5,13 @@ export default function ContactPage() {
     <main className="tp-container" style={{ paddingBottom: 40 }}>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>首頁 &gt; 聯絡我們</div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginTop: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 32, marginTop: 20 }}
+        className="contact-grid">
+        <style>{`
+          @media (min-width: 640px) {
+            .contact-grid { grid-template-columns: 1fr 1fr !important; }
+          }
+        `}</style>
         <div>
           <h1>聯絡我們</h1>
           <p style={{ color: 'var(--tp-muted)', lineHeight: 1.8, marginBottom: 24 }}>
@@ -41,7 +47,7 @@ export default function ContactPage() {
           </form>
         </div>
 
-        <div style={{ paddingTop: 60 }}>
+        <div style={{ paddingTop: 0 }}>
           <div style={{ background: 'var(--tp-bg-soft)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
             <h3 style={{ marginTop: 0 }}>📧 Email</h3>
             <p style={{ color: 'var(--tp-muted)' }}>hello@tourplatform.tw</p>
