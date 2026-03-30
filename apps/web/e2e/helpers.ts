@@ -17,11 +17,15 @@ async function adminLogin(page: Page) {
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 
-/** Fixture: authenticated page */
-const test = base.extend<{ authedPage: Page }>({
+/** Fixture: authenticated page + isMobile flag */
+const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
     await adminLogin(page);
     await use(page);
+  },
+  isMobile: async ({ viewport }, use) => {
+    const mobile = (viewport?.width ?? 1280) < 768;
+    await use(mobile);
   },
 });
 
