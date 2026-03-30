@@ -8,7 +8,9 @@ export function listAdminOrdersFallback(input = {}) {
     .filter((o) => (status ? o.status === status : true))
     .filter((o) => (contactEmail ? o.contactEmail === contactEmail : true))
     .map((o) => {
-      const costTwd = Math.round(o.totalTwd * 0.65);
+      const cfg = getKpiConfigFallback();
+      const guidePayoutRate = Number(cfg.guidePayoutRate ?? 0.65);
+      const costTwd = Math.round(o.totalTwd * guidePayoutRate);
       const exp = experiences.find((e) => e.id === o.experienceId);
       return {
         id: o.id,
@@ -270,11 +272,13 @@ export function updateKpiConfigFallback(input = {}) {
 
   if (input.commissionRate != null) kpiConfig.commissionRate = toNum(input.commissionRate, kpiConfig.commissionRate);
   if (input.paymentFeeRate != null) kpiConfig.paymentFeeRate = toNum(input.paymentFeeRate, kpiConfig.paymentFeeRate);
+  if (input.guidePayoutRate != null) kpiConfig.guidePayoutRate = toNum(input.guidePayoutRate, kpiConfig.guidePayoutRate);
   if (input.healthyMinContributionTwd != null) kpiConfig.healthyMinContributionTwd = toNum(input.healthyMinContributionTwd, kpiConfig.healthyMinContributionTwd);
   if (input.healthyAllowException != null) kpiConfig.healthyAllowException = Boolean(input.healthyAllowException);
 
   if (kpiConfig.commissionRate < 0 || kpiConfig.commissionRate > 1) throw new Error('commissionRate must be between 0 and 1');
   if (kpiConfig.paymentFeeRate < 0 || kpiConfig.paymentFeeRate > 1) throw new Error('paymentFeeRate must be between 0 and 1');
+  if (kpiConfig.guidePayoutRate < 0 || kpiConfig.guidePayoutRate > 1) throw new Error('guidePayoutRate must be between 0 and 1');
 
   kpiConfig.updatedAt = new Date().toISOString();
 
@@ -307,6 +311,7 @@ export function revertKpiConfigFallback(input = {}) {
 
   kpiConfig.commissionRate = Number(cfg.commissionRate ?? kpiConfig.commissionRate);
   kpiConfig.paymentFeeRate = Number(cfg.paymentFeeRate ?? kpiConfig.paymentFeeRate);
+  kpiConfig.guidePayoutRate = Number(cfg.guidePayoutRate ?? kpiConfig.guidePayoutRate);
   kpiConfig.healthyMinContributionTwd = Number(cfg.healthyMinContributionTwd ?? kpiConfig.healthyMinContributionTwd);
   kpiConfig.healthyAllowException = Boolean(cfg.healthyAllowException ?? kpiConfig.healthyAllowException);
   kpiConfig.updatedAt = new Date().toISOString();

@@ -67,6 +67,11 @@ export default function AdminKpiSettingsPage() {
           <input type="number" step="0.001" value={cfg.paymentFeeRate ?? 0.035}
             onChange={e => setCfg({...cfg, paymentFeeRate: Number(e.target.value)})} style={inputStyle} />
 
+          <label style={labelStyle}>導遊分潤率 guidePayoutRate（0~1）</label>
+          <input type="number" step="0.001" value={(cfg as any).guidePayoutRate ?? 0.65}
+            onChange={e => setCfg({...cfg, guidePayoutRate: Number(e.target.value)} as any)} style={inputStyle} />
+          <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>用於訂單管理「導遊成本」欄位計算（GMV × 導遊分潤率）</p>
+
           <label style={labelStyle}>健康訂單最低貢獻 healthyMinContributionTwd</label>
           <input type="number" step="1" value={cfg.healthyMinContributionTwd ?? 1}
             onChange={e => setCfg({...cfg, healthyMinContributionTwd: Number(e.target.value)})} style={inputStyle} />

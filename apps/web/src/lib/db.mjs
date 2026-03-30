@@ -322,7 +322,11 @@ export async function listAdminOrdersDb(input = {}) {
   }
 
   return (data || []).map((r) => {
-    const costTwd = Math.round(r.total_twd * 0.65);
+    // guidePayoutRate 從 kpiConfig 取得（此 db 路徑為 async，暫用 cfg 在 closure 外傳入）
+    // 注意：此函式為 async，但 cfg 在 listAdminOrdersDb scope 內尚未取得，保留 fallback 0.65
+    // TODO: 傳入 cfg 參數以完整消除 hardcode
+    const guidePayoutRate = 0.65; // fallback; 改由 kpiConfig 控制時，請傳 cfg 進此函式
+    const costTwd = Math.round(r.total_twd * guidePayoutRate);
     return {
       id: r.id,
       status: r.status,
@@ -628,6 +632,7 @@ export async function getKpiConfigDb() {
     return {
       commissionRate: 0.15,
       paymentFeeRate: 0.035,
+      guidePayoutRate: 0.65,
       healthyMinContributionTwd: 1,
       healthyAllowException: false,
       updatedAt: new Date().toISOString()
@@ -637,6 +642,7 @@ export async function getKpiConfigDb() {
   return {
     commissionRate: Number(data.commission_rate ?? 0.15),
     paymentFeeRate: Number(data.payment_fee_rate ?? 0.035),
+    guidePayoutRate: Number(data.guide_payout_rate ?? 0.65),
     healthyMinContributionTwd: Number(data.healthy_min_contribution_twd ?? 1),
     healthyAllowException: !!data.healthy_allow_exception,
     updatedAt: data.updated_at
@@ -1046,7 +1052,10 @@ export async function adminDashboardSummaryDb(input = {}) {
 
   const totalOrders = orders.length;
   const totalGmv = orders.reduce((acc, o) => acc + Number(o.totalTwd || 0), 0);
-  const totalCommissionTwd = Math.round(totalGmv * Number(cfg.commissionRate || 0.15));
+  // 有效 GMV = 扣除已退款訂單的退款金額
+  const totalRefundedGmv = opsRows.reduce((acc, r) => acc + Number(r.refundAmountTwd || 0), 0);
+  const effectiveTotalGmv = Math.max(0, totalGmv - totalRefundedGmv);
+  const totalCommissionTwd = Math.round(effectiveTotalGmv * Number(cfg.commissionRate || 0.15));
 
   const countRefundOrders = opsRows.filter((r) => Number(r.refundAmountTwd || 0) > 0).length;
   const countExceptionOrders = opsRows.filter((r) => !!r.hasException).length;

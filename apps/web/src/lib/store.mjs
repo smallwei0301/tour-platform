@@ -155,7 +155,6 @@ export const refundRequests = [
     orderId: 'ord_mock_003',
     reason: '行程日期無法參加',
     note: '旅客提前 7 天申請退款',
-    status: 'pending',
     requestedAt: new Date(Date.now() - 3600000 * 10).toISOString(),
   },
 ];
@@ -202,14 +201,15 @@ export const auditLogs = [
 ];
 
 export const operationsTracking = [
-  { orderId: 'ord_mock_001', orderDate: new Date(Date.now() - 3600000 * 2).toISOString(), guideName: 'Andy Lee', activityName: '高雄柴山探洞體驗', scheduleDate: '2026-04-01', travelers: 2, status: 'paid', gmv: 4000, manualMinutes: 15, manualCostTwd: 75, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
-  { orderId: 'ord_mock_002', orderDate: new Date(Date.now() - 3600000 * 24).toISOString(), guideName: '陳建志', activityName: '大稻埕百年老街深度漫步', scheduleDate: '2026-04-02', travelers: 1, status: 'confirmed', gmv: 1500, manualMinutes: 10, manualCostTwd: 50, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
-  { orderId: 'ord_mock_003', orderDate: new Date(Date.now() - 3600000 * 48).toISOString(), guideName: 'Andy Lee', activityName: '高雄柴山探洞體驗', scheduleDate: '2026-04-03', travelers: 3, status: 'refund_pending', gmv: 6000, manualMinutes: 45, manualCostTwd: 225, refundAmountTwd: 6000, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: '退款處理中' },
-  { orderId: 'ord_mock_005', orderDate: new Date(Date.now() - 3600000 * 72).toISOString(), guideName: '陳建志', activityName: '大稻埕百年老街深度漫步', scheduleDate: '2026-04-02', travelers: 2, status: 'completed', gmv: 3000, manualMinutes: 0, manualCostTwd: 0, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
+  { orderId: 'ord_mock_001', manualMinutes: 15, manualCostTwd: 75, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
+  { orderId: 'ord_mock_002', manualMinutes: 10, manualCostTwd: 50, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
+  { orderId: 'ord_mock_003', manualMinutes: 45, manualCostTwd: 225, refundAmountTwd: 6000, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: '退款處理中' },
+  { orderId: 'ord_mock_005', manualMinutes: 0, manualCostTwd: 0, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
 ];
 export const kpiConfig = {
   commissionRate: 0.15,
   paymentFeeRate: 0.035,
+  guidePayoutRate: 0.65,
   healthyMinContributionTwd: 1,
   healthyAllowException: false,
   updatedAt: nowIso
