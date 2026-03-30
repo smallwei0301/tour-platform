@@ -11,6 +11,18 @@ type Row = {
 
 const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancelled_by_user','cancelled_by_guide','completed','refund_pending','refunded'];
 
+const STATUS_LABELS: Record<string, string> = {
+  pending_payment: '待付款',
+  paid: '已付款',
+  confirmed: '已確認',
+  rejected: '已拒絕',
+  cancelled_by_user: '用戶取消',
+  cancelled_by_guide: '導遊取消',
+  completed: '已完成',
+  refund_pending: '退款中',
+  refunded: '已退款',
+};
+
 export default function AdminOrdersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +110,7 @@ export default function AdminOrdersPage() {
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>篩選狀態</span>
           <Select value={status} onChange={setStatus} style={{ minWidth: 160 }}>
             <option value="">全部狀態</option>
-            {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+            {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
           </Select>
           <span style={{ fontSize: 13, color: '#9ca3af', marginLeft: 'auto' }}>共 {filtered.length} 筆</span>
         </Card>
@@ -152,7 +164,7 @@ export default function AdminOrdersPage() {
 
                 <label style={labelStyle}>狀態</label>
                 <Select value={editStatus} onChange={setEditStatus}>
-                  {ORDER_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                  {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
                 </Select>
 
                 <label style={labelStyle}>Admin Note</label>

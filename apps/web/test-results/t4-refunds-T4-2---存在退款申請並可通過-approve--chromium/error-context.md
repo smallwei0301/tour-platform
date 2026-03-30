@@ -1,0 +1,244 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Tour Platform" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - generic "搜尋" [ref=e5]:
+        - textbox "要去哪裡？台北、花蓮、高雄⋯" [ref=e6]
+        - button "🔍" [ref=e7]
+      - navigation "主要導覽" [ref=e8]:
+        - link "探索行程" [ref=e9] [cursor=pointer]:
+          - /url: /activities
+        - link "認識導遊" [ref=e10] [cursor=pointer]:
+          - /url: /guides
+        - link "成為導遊" [ref=e11] [cursor=pointer]:
+          - /url: /guide/apply
+        - link "旅遊指南" [ref=e12] [cursor=pointer]:
+          - /url: /blog
+        - link "登入" [ref=e13] [cursor=pointer]:
+          - /url: /auth/sign-in
+  - generic [ref=e14]:
+    - complementary [ref=e15]:
+      - generic [ref=e17]:
+        - generic [ref=e18]: 🌿 Tour Platform
+        - generic [ref=e19]: Admin Console
+      - navigation [ref=e20]:
+        - link "📊 Dashboard" [ref=e21] [cursor=pointer]:
+          - /url: /admin
+          - generic [ref=e22]: 📊
+          - text: Dashboard
+        - link "🧾 訂單管理" [ref=e23] [cursor=pointer]:
+          - /url: /admin/orders
+          - generic [ref=e24]: 🧾
+          - text: 訂單管理
+        - link "↩️ 退款管理" [ref=e25] [cursor=pointer]:
+          - /url: /admin/refunds
+          - generic [ref=e26]: ↩️
+          - text: 退款管理
+        - link "🧭 導遊審核" [ref=e27] [cursor=pointer]:
+          - /url: /admin/guides
+          - generic [ref=e28]: 🧭
+          - text: 導遊審核
+        - link "📈 操作追蹤" [ref=e29] [cursor=pointer]:
+          - /url: /admin/operations-tracking
+          - generic [ref=e30]: 📈
+          - text: 操作追蹤
+        - link "⚙️ 設定" [ref=e31] [cursor=pointer]:
+          - /url: /admin/settings/kpi
+          - generic [ref=e32]: ⚙️
+          - text: 設定
+      - button "🚪 登出" [ref=e34] [cursor=pointer]:
+        - generic [ref=e35]: 🚪
+        - text: 登出
+    - generic [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]: Admin 已登入：smallwei0301@gmail.com · Session 6 天後到期
+        - button "登出" [ref=e39]
+      - main [ref=e40]:
+        - generic [ref=e41]:
+          - generic [ref=e43]:
+            - heading "退款管理" [level=1] [ref=e44]
+            - paragraph [ref=e45]: 審核退款申請、追蹤退款進度
+          - table [ref=e49]:
+            - rowgroup [ref=e50]:
+              - row "Refund ID 訂單 狀態 原因 金額 聯絡人 申請時間 操作" [ref=e51]:
+                - columnheader "Refund ID" [ref=e52]
+                - columnheader "訂單" [ref=e53]
+                - columnheader "狀態" [ref=e54]
+                - columnheader "原因" [ref=e55]
+                - columnheader "金額" [ref=e56]
+                - columnheader "聯絡人" [ref=e57]
+                - columnheader "申請時間" [ref=e58]
+                - columnheader "操作" [ref=e59]
+            - rowgroup [ref=e60]:
+              - row "ref_mock_0… ord_mock_0… 退款待審 待處理 行程日期無法參加 旅客提前 7 天申請退款 NT$6,000 林大志 lin@example.com 2026/3/30 通過 拒絕 處理中 完成" [ref=e61]:
+                - cell "ref_mock_0…" [ref=e62]:
+                  - generic [ref=e63]: ref_mock_0…
+                - cell "ord_mock_0… 退款待審" [ref=e64]:
+                  - generic [ref=e65]: ord_mock_0…
+                  - generic [ref=e67]: 退款待審
+                - cell "待處理" [ref=e68]:
+                  - generic [ref=e69]: 待處理
+                - cell "行程日期無法參加 旅客提前 7 天申請退款" [ref=e70]:
+                  - text: 行程日期無法參加
+                  - generic [ref=e71]: 旅客提前 7 天申請退款
+                - cell "NT$6,000" [ref=e72]:
+                  - strong [ref=e73]: NT$6,000
+                - cell "林大志 lin@example.com" [ref=e74]:
+                  - text: 林大志
+                  - generic [ref=e75]: lin@example.com
+                - cell "2026/3/30" [ref=e76]
+                - cell "通過 拒絕 處理中 完成" [ref=e77]:
+                  - generic [ref=e78]:
+                    - button "通過" [ref=e79] [cursor=pointer]
+                    - button "拒絕" [ref=e80] [cursor=pointer]
+                    - button "處理中" [ref=e81] [cursor=pointer]
+                    - button "完成" [ref=e82] [cursor=pointer]
+  - contentinfo [ref=e83]:
+    - generic [ref=e84]:
+      - heading "依地區探索行程" [level=4] [ref=e85]
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - paragraph [ref=e88]: 【北部】
+          - paragraph [ref=e89]:
+            - generic [ref=e90]:
+              - link "台北市" [ref=e91] [cursor=pointer]:
+                - /url: /activities?region=%E5%8F%B0%E5%8C%97%E5%B8%82
+              - text: ·
+            - generic [ref=e92]:
+              - link "新北市" [ref=e93] [cursor=pointer]:
+                - /url: /activities?region=%E6%96%B0%E5%8C%97%E5%B8%82
+              - text: ·
+            - generic [ref=e94]:
+              - link "基隆市" [ref=e95] [cursor=pointer]:
+                - /url: /activities?region=%E5%9F%BA%E9%9A%86%E5%B8%82
+              - text: ·
+            - generic [ref=e96]:
+              - link "桃園市" [ref=e97] [cursor=pointer]:
+                - /url: /activities?region=%E6%A1%83%E5%9C%92%E5%B8%82
+              - text: ·
+            - generic [ref=e98]:
+              - link "新竹市" [ref=e99] [cursor=pointer]:
+                - /url: /activities?region=%E6%96%B0%E7%AB%B9%E5%B8%82
+              - text: ·
+            - link "新竹縣" [ref=e101] [cursor=pointer]:
+              - /url: /activities?region=%E6%96%B0%E7%AB%B9%E7%B8%A3
+        - generic [ref=e102]:
+          - paragraph [ref=e103]: 【中部】
+          - paragraph [ref=e104]:
+            - generic [ref=e105]:
+              - link "苗栗縣" [ref=e106] [cursor=pointer]:
+                - /url: /activities?region=%E8%8B%97%E6%A0%97%E7%B8%A3
+              - text: ·
+            - generic [ref=e107]:
+              - link "台中市" [ref=e108] [cursor=pointer]:
+                - /url: /activities?region=%E5%8F%B0%E4%B8%AD%E5%B8%82
+              - text: ·
+            - generic [ref=e109]:
+              - link "南投縣" [ref=e110] [cursor=pointer]:
+                - /url: /activities?region=%E5%8D%97%E6%8A%95%E7%B8%A3
+              - text: ·
+            - generic [ref=e111]:
+              - link "彰化縣" [ref=e112] [cursor=pointer]:
+                - /url: /activities?region=%E5%BD%B0%E5%8C%96%E7%B8%A3
+              - text: ·
+            - link "雲林縣" [ref=e114] [cursor=pointer]:
+              - /url: /activities?region=%E9%9B%B2%E6%9E%97%E7%B8%A3
+        - generic [ref=e115]:
+          - paragraph [ref=e116]: 【南部】
+          - paragraph [ref=e117]:
+            - generic [ref=e118]:
+              - link "嘉義市" [ref=e119] [cursor=pointer]:
+                - /url: /activities?region=%E5%98%89%E7%BE%A9%E5%B8%82
+              - text: ·
+            - generic [ref=e120]:
+              - link "嘉義縣" [ref=e121] [cursor=pointer]:
+                - /url: /activities?region=%E5%98%89%E7%BE%A9%E7%B8%A3
+              - text: ·
+            - generic [ref=e122]:
+              - link "台南市" [ref=e123] [cursor=pointer]:
+                - /url: /activities?region=%E5%8F%B0%E5%8D%97%E5%B8%82
+              - text: ·
+            - generic [ref=e124]:
+              - link "高雄市" [ref=e125] [cursor=pointer]:
+                - /url: /activities?region=%E9%AB%98%E9%9B%84%E5%B8%82
+              - text: ·
+            - link "屏東縣" [ref=e127] [cursor=pointer]:
+              - /url: /activities?region=%E5%B1%8F%E6%9D%B1%E7%B8%A3
+        - generic [ref=e128]:
+          - paragraph [ref=e129]: 【東部】
+          - paragraph [ref=e130]:
+            - generic [ref=e131]:
+              - link "宜蘭縣" [ref=e132] [cursor=pointer]:
+                - /url: /activities?region=%E5%AE%9C%E8%98%AD%E7%B8%A3
+              - text: ·
+            - generic [ref=e133]:
+              - link "花蓮縣" [ref=e134] [cursor=pointer]:
+                - /url: /activities?region=%E8%8A%B1%E8%93%AE%E7%B8%A3
+              - text: ·
+            - link "台東縣" [ref=e136] [cursor=pointer]:
+              - /url: /activities?region=%E5%8F%B0%E6%9D%B1%E7%B8%A3
+        - generic [ref=e137]:
+          - paragraph [ref=e138]: 【離島】
+          - paragraph [ref=e139]:
+            - generic [ref=e140]:
+              - link "澎湖縣" [ref=e141] [cursor=pointer]:
+                - /url: /activities?region=%E6%BE%8E%E6%B9%96%E7%B8%A3
+              - text: ·
+            - generic [ref=e142]:
+              - link "金門縣" [ref=e143] [cursor=pointer]:
+                - /url: /activities?region=%E9%87%91%E9%96%80%E7%B8%A3
+              - text: ·
+            - link "連江縣（馬祖）" [ref=e145] [cursor=pointer]:
+              - /url: /activities?region=%E9%80%A3%E6%B1%9F%E7%B8%A3%EF%BC%88%E9%A6%AC%E7%A5%96%EF%BC%89
+    - generic [ref=e146]:
+      - generic [ref=e147]:
+        - heading "Tour Platform" [level=4] [ref=e148]
+        - paragraph [ref=e149]:
+          - text: 台灣在地導遊交易平台
+          - text: 找到懂路的人，帶你走進台灣最有故事的地方。
+      - generic [ref=e150]:
+        - heading "平台" [level=4] [ref=e151]
+        - list [ref=e152]:
+          - listitem [ref=e153]:
+            - link "關於我們" [ref=e154] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=e155]:
+            - link "旅遊指南" [ref=e156] [cursor=pointer]:
+              - /url: /blog
+          - listitem [ref=e157]:
+            - link "為什麼選擇我們" [ref=e158] [cursor=pointer]:
+              - /url: /why-choose-us
+          - listitem [ref=e159]:
+            - link "聯絡我們" [ref=e160] [cursor=pointer]:
+              - /url: /contact
+          - listitem [ref=e161]:
+            - link "常見問題" [ref=e162] [cursor=pointer]:
+              - /url: /faq
+      - generic [ref=e163]:
+        - heading "導遊" [level=4] [ref=e164]
+        - list [ref=e165]:
+          - listitem [ref=e166]:
+            - link "成為導遊" [ref=e167] [cursor=pointer]:
+              - /url: /guide/apply
+          - listitem [ref=e168]:
+            - link "全部導遊" [ref=e169] [cursor=pointer]:
+              - /url: /guides
+      - generic [ref=e170]:
+        - heading "法律" [level=4] [ref=e171]
+        - list [ref=e172]:
+          - listitem [ref=e173]:
+            - link "隱私政策" [ref=e174] [cursor=pointer]:
+              - /url: /legal/privacy
+          - listitem [ref=e175]:
+            - link "服務條款" [ref=e176] [cursor=pointer]:
+              - /url: /legal/terms
+          - listitem [ref=e177]:
+            - link "退款政策" [ref=e178] [cursor=pointer]:
+              - /url: /legal/refund
+    - generic [ref=e179]: © 2026 Tour Platform · 台灣 · 保留一切權利
+  - alert [ref=e180]
+```

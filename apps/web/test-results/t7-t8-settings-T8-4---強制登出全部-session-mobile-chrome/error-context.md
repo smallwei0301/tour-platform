@@ -1,0 +1,173 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - link "Tour Platform" [ref=e4] [cursor=pointer]:
+      - /url: /
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - button "開啟選單" [ref=e8] [cursor=pointer]: ☰
+      - generic [ref=e9]: 🌿 Tour Platform Admin
+    - generic [ref=e10]:
+      - generic [ref=e11]: Admin 已登入：smallwei0301@gmail.com · Session 6 天後到期
+      - button "登出" [ref=e12]
+    - main [ref=e13]:
+      - main [ref=e14]:
+        - heading "Admin Access Denied" [level=1] [ref=e15]
+        - paragraph [ref=e16]: 你沒有 admin 權限，無法存取此頁面。
+        - paragraph [ref=e17]:
+          - text: 請先前往
+          - link "/admin/login" [ref=e18] [cursor=pointer]:
+            - /url: /admin/login
+          - text: 登入，或在請求中帶上：
+          - code [ref=e19]: x-admin-token
+          - text: ，且（若有設定）
+          - code [ref=e20]: x-admin-email
+          - text: 必須在 allowlist 內。
+        - generic [ref=e21]: "# .env 建議設定 ADMIN_ACCESS_TOKEN=your-strong-token ADMIN_EMAIL_ALLOWLIST=owner@example.com,ops@example.com # API 呼叫範例 x-admin-token: your-strong-token x-admin-email: owner@example.com"
+  - contentinfo [ref=e22]:
+    - generic [ref=e23]:
+      - heading "依地區探索行程" [level=4] [ref=e24]
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - paragraph [ref=e27]: 【北部】
+          - paragraph [ref=e28]:
+            - generic [ref=e29]:
+              - link "台北市" [ref=e30] [cursor=pointer]:
+                - /url: /activities?region=%E5%8F%B0%E5%8C%97%E5%B8%82
+              - text: ·
+            - generic [ref=e31]:
+              - link "新北市" [ref=e32] [cursor=pointer]:
+                - /url: /activities?region=%E6%96%B0%E5%8C%97%E5%B8%82
+              - text: ·
+            - generic [ref=e33]:
+              - link "基隆市" [ref=e34] [cursor=pointer]:
+                - /url: /activities?region=%E5%9F%BA%E9%9A%86%E5%B8%82
+              - text: ·
+            - generic [ref=e35]:
+              - link "桃園市" [ref=e36] [cursor=pointer]:
+                - /url: /activities?region=%E6%A1%83%E5%9C%92%E5%B8%82
+              - text: ·
+            - generic [ref=e37]:
+              - link "新竹市" [ref=e38] [cursor=pointer]:
+                - /url: /activities?region=%E6%96%B0%E7%AB%B9%E5%B8%82
+              - text: ·
+            - link "新竹縣" [ref=e40] [cursor=pointer]:
+              - /url: /activities?region=%E6%96%B0%E7%AB%B9%E7%B8%A3
+        - generic [ref=e41]:
+          - paragraph [ref=e42]: 【中部】
+          - paragraph [ref=e43]:
+            - generic [ref=e44]:
+              - link "苗栗縣" [ref=e45] [cursor=pointer]:
+                - /url: /activities?region=%E8%8B%97%E6%A0%97%E7%B8%A3
+              - text: ·
+            - generic [ref=e46]:
+              - link "台中市" [ref=e47] [cursor=pointer]:
+                - /url: /activities?region=%E5%8F%B0%E4%B8%AD%E5%B8%82
+              - text: ·
+            - generic [ref=e48]:
+              - link "南投縣" [ref=e49] [cursor=pointer]:
+                - /url: /activities?region=%E5%8D%97%E6%8A%95%E7%B8%A3
+              - text: ·
+            - generic [ref=e50]:
+              - link "彰化縣" [ref=e51] [cursor=pointer]:
+                - /url: /activities?region=%E5%BD%B0%E5%8C%96%E7%B8%A3
+              - text: ·
+            - link "雲林縣" [ref=e53] [cursor=pointer]:
+              - /url: /activities?region=%E9%9B%B2%E6%9E%97%E7%B8%A3
+        - generic [ref=e54]:
+          - paragraph [ref=e55]: 【南部】
+          - paragraph [ref=e56]:
+            - generic [ref=e57]:
+              - link "嘉義市" [ref=e58] [cursor=pointer]:
+                - /url: /activities?region=%E5%98%89%E7%BE%A9%E5%B8%82
+              - text: ·
+            - generic [ref=e59]:
+              - link "嘉義縣" [ref=e60] [cursor=pointer]:
+                - /url: /activities?region=%E5%98%89%E7%BE%A9%E7%B8%A3
+              - text: ·
+            - generic [ref=e61]:
+              - link "台南市" [ref=e62] [cursor=pointer]:
+                - /url: /activities?region=%E5%8F%B0%E5%8D%97%E5%B8%82
+              - text: ·
+            - generic [ref=e63]:
+              - link "高雄市" [ref=e64] [cursor=pointer]:
+                - /url: /activities?region=%E9%AB%98%E9%9B%84%E5%B8%82
+              - text: ·
+            - link "屏東縣" [ref=e66] [cursor=pointer]:
+              - /url: /activities?region=%E5%B1%8F%E6%9D%B1%E7%B8%A3
+        - generic [ref=e67]:
+          - paragraph [ref=e68]: 【東部】
+          - paragraph [ref=e69]:
+            - generic [ref=e70]:
+              - link "宜蘭縣" [ref=e71] [cursor=pointer]:
+                - /url: /activities?region=%E5%AE%9C%E8%98%AD%E7%B8%A3
+              - text: ·
+            - generic [ref=e72]:
+              - link "花蓮縣" [ref=e73] [cursor=pointer]:
+                - /url: /activities?region=%E8%8A%B1%E8%93%AE%E7%B8%A3
+              - text: ·
+            - link "台東縣" [ref=e75] [cursor=pointer]:
+              - /url: /activities?region=%E5%8F%B0%E6%9D%B1%E7%B8%A3
+        - generic [ref=e76]:
+          - paragraph [ref=e77]: 【離島】
+          - paragraph [ref=e78]:
+            - generic [ref=e79]:
+              - link "澎湖縣" [ref=e80] [cursor=pointer]:
+                - /url: /activities?region=%E6%BE%8E%E6%B9%96%E7%B8%A3
+              - text: ·
+            - generic [ref=e81]:
+              - link "金門縣" [ref=e82] [cursor=pointer]:
+                - /url: /activities?region=%E9%87%91%E9%96%80%E7%B8%A3
+              - text: ·
+            - link "連江縣（馬祖）" [ref=e84] [cursor=pointer]:
+              - /url: /activities?region=%E9%80%A3%E6%B1%9F%E7%B8%A3%EF%BC%88%E9%A6%AC%E7%A5%96%EF%BC%89
+    - generic [ref=e85]:
+      - generic [ref=e86]:
+        - heading "Tour Platform" [level=4] [ref=e87]
+        - paragraph [ref=e88]:
+          - text: 台灣在地導遊交易平台
+          - text: 找到懂路的人，帶你走進台灣最有故事的地方。
+      - generic [ref=e89]:
+        - heading "平台" [level=4] [ref=e90]
+        - list [ref=e91]:
+          - listitem [ref=e92]:
+            - link "關於我們" [ref=e93] [cursor=pointer]:
+              - /url: /about
+          - listitem [ref=e94]:
+            - link "旅遊指南" [ref=e95] [cursor=pointer]:
+              - /url: /blog
+          - listitem [ref=e96]:
+            - link "為什麼選擇我們" [ref=e97] [cursor=pointer]:
+              - /url: /why-choose-us
+          - listitem [ref=e98]:
+            - link "聯絡我們" [ref=e99] [cursor=pointer]:
+              - /url: /contact
+          - listitem [ref=e100]:
+            - link "常見問題" [ref=e101] [cursor=pointer]:
+              - /url: /faq
+      - generic [ref=e102]:
+        - heading "導遊" [level=4] [ref=e103]
+        - list [ref=e104]:
+          - listitem [ref=e105]:
+            - link "成為導遊" [ref=e106] [cursor=pointer]:
+              - /url: /guide/apply
+          - listitem [ref=e107]:
+            - link "全部導遊" [ref=e108] [cursor=pointer]:
+              - /url: /guides
+      - generic [ref=e109]:
+        - heading "法律" [level=4] [ref=e110]
+        - list [ref=e111]:
+          - listitem [ref=e112]:
+            - link "隱私政策" [ref=e113] [cursor=pointer]:
+              - /url: /legal/privacy
+          - listitem [ref=e114]:
+            - link "服務條款" [ref=e115] [cursor=pointer]:
+              - /url: /legal/terms
+          - listitem [ref=e116]:
+            - link "退款政策" [ref=e117] [cursor=pointer]:
+              - /url: /legal/refund
+    - generic [ref=e118]: © 2026 Tour Platform · 台灣 · 保留一切權利
+  - alert [ref=e119]
+```

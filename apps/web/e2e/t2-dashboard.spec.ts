@@ -5,14 +5,16 @@ import { test, expect } from './helpers';
 
 test('T2.1 - Dashboard 載入顯示 KPI 數值', async ({ authedPage: page }) => {
   await page.goto('/admin');
-  // KPI cards should be visible (non-empty)
-  await expect(page.locator('text=/訂單|GMV|導遊|退款/i').first()).toBeVisible({ timeout: 8000 });
+  // KPI cards contain numbers/NT$
+  await expect(page.locator('text=/總訂單|總 GMV|待處理/i').first()).toBeVisible({ timeout: 8000 });
 });
 
 test('T2.2 - 時間篩選器可切換', async ({ authedPage: page }) => {
   await page.goto('/admin');
-  await page.waitForSelector('select, button:has-text("7天"), button:has-text("30天")', { timeout: 5000 }).catch(() => {});
-  // At minimum the page loads without error
-  await expect(page.locator('body')).not.toContainText('500');
+  await page.waitForTimeout(1500);
+  // Not an error page
   await expect(page.locator('body')).not.toContainText('Internal Server Error');
+  // Has time filter buttons
+  const hasFilter = await page.locator('button:has-text("近 7 日"), button:has-text("今天"), button:has-text("近 30 日")').count();
+  expect(hasFilter).toBeGreaterThan(0);
 });
