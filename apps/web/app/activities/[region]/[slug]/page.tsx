@@ -1,7 +1,25 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { activities, guides, getReviewsByActivity } from '../../../../src/fixtures/data';
 import { notFound } from 'next/navigation';
 import { listExperiencesDb } from '../../../../src/lib/db.mjs';
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ region: string; slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const activity = activities.find((a) => a.slug === slug);
+  if (!activity) return { title: '行程不存在 | Tour Platform' };
+  return {
+    title: `${activity.title} | Tour Platform`,
+    description: activity.shortDescription || activity.tagline,
+    openGraph: {
+      title: activity.title,
+      description: activity.shortDescription || activity.tagline,
+      images: [{ url: activity.imageUrl }],
+    },
+  };
+}
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;

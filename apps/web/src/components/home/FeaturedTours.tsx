@@ -1,79 +1,9 @@
 import Link from 'next/link';
-import { createClient } from '@supabase/supabase-js';
+import { activities, guides } from '../../fixtures/data';
 
-type FeaturedExperience = {
-  id?: string;
-  slug: string;
-  title: string;
-  imageUrl?: string | null;
-  region?: string | null;
-  regionSlug?: string | null;
-  priceLabel?: string | null;
-  priceTwd?: number | null;
-  durationDisplay?: string | null;
-  durationMinutes?: number | null;
-  minParticipants?: number | null;
-  maxParticipants?: number | null;
-  transportMode?: string | null;
-};
-
-async function fetchFeaturedExperiences(): Promise<{ data: FeaturedExperience[]; error?: string }> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_KEY;
-
-  if (!supabaseUrl || !supabaseKey) return { data: [] };
-
-  const supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: false }
-  });
-
-  const mapRows = (rows: any[]) =>
-    (rows || []).map((row) => ({
-      id: row.id,
-      slug: row.slug,
-      title: row.title,
-      imageUrl: row.image_url ?? row.imageUrl ?? null,
-      region: row.region ?? null,
-      regionSlug: row.region_slug ?? row.regionSlug ?? null,
-      priceLabel: row.price_label ?? row.priceLabel ?? null,
-      priceTwd: row.price_twd ?? row.priceTwd ?? null,
-      durationDisplay: row.duration_display ?? row.durationDisplay ?? null,
-      durationMinutes: row.duration_minutes ?? row.durationMinutes ?? null,
-      minParticipants: row.min_participants ?? row.minParticipants ?? null,
-      maxParticipants: row.max_participants ?? row.maxParticipants ?? null,
-      transportMode: row.transport_mode ?? row.transportMode ?? null
-    }));
-
-  const runQuery = async (query) => {
-    let result = await query.order('created_at', { ascending: false }).limit(4);
-    if (result.error) {
-      result = await query.order('id', { ascending: false }).limit(4);
-    }
-    return result;
-  };
-
-  const runFeatured = async (column: string) =>
-    runQuery(supabase.from('experiences').select('*').eq(column, true));
-
-  let result = await runFeatured('is_featured');
-  if (result.error) {
-    result = await runFeatured('featured');
-  }
-
-  if (!result.error && (result.data || []).length === 0) {
-    result = await runQuery(supabase.from('experiences').select('*'));
-  }
-
-  if (result.error) {
-    return { data: [], error: result.error.message };
-  }
-
-  return { data: mapRows(result.data || []) };
-}
-
-export async function FeaturedTours() {
-  const { data: featured, error } = await fetchFeaturedExperiences();
-  const hasData = featured.length > 0;
+export function FeaturedTours() {
+  // 取前 6 筆 mock 活動作為精選
+  const featured = activities.slice(0, 6);
 
   return (
     <section className="tp-section">
@@ -82,39 +12,46 @@ export async function FeaturedTours() {
           <h2>精選行程</h2>
           <Link href="/activities" className="tp-link">查看全部 →</Link>
         </div>
-        <div className="tp-card-grid">
-          {!hasData ? (
-            <div style={{ gridColumn: '1 / -1', color: 'var(--tp-muted)' }}>
-              {error ? '精選行程暫時無法載入，請稍後再試。' : '目前沒有精選行程，先看看最新行程吧。'}
-            </div>
-          ) : (
-            featured.map((a) => {
-              const priceLabel = a.priceLabel || (a.priceTwd ? `NT$${Number(a.priceTwd).toLocaleString('en-US')} / 人` : '價格待定');
-              const durationLabel = a.durationDisplay || (a.durationMinutes ? `${Math.round(Number(a.durationMinutes) / 60)} 小時` : '—');
-              const regionSlug = a.regionSlug || 'all';
-
-              return (
-                <article className="tp-card" key={a.id || a.slug}>
-                  <div style={{ position: 'relative' }}>
-                    <img
-                      src={a.imageUrl || ''}
-                      alt={a.title}
-                      className="tp-card-img"
-                      style={{ background: 'none' }}
-                      loading="lazy"
-                    />
-                    <button className="tp-fav-btn" aria-label="收藏">❤️</button>
+        <div className="tp-card-grid tp-card-grid-featured">
+          {featured.map((a) => {
+            const guide = guides.find((g) => g.slug === a.guideSlug);
+            return (
+              <article className="tp-card" key={a.slug}>
+                <div style={{ position: 'relative' }}>
+                  <img
+                    src={a.imageUrl}
+                    alt={a.title}
+                    className="tp-card-img"
+                    style={{ background: 'none' }}
+                    loading="lazy"
+                  />
+                  <button className="tp-fav-btn" aria-label="收藏">❤️</button>
+                  <span style={{
+                    position: 'absolute', top: 10, left: 10,
+                    background: 'var(--tp-accent)', color: '#fff',
+                    fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
+                  }}>{a.category}</span>
+                </div>
+                {guide && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 4px' }}>
+                    <img src={guide.avatarUrl} alt={guide.displayName}
+                      style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover' }} />
+                    <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{guide.displayName} ✅</span>
                   </div>
-                  <h3>{a.title}</h3>
-                  <p>⭐ 5.0</p>
-                  <p>🕐 {durationLabel} · {a.transportMode || '—'} · 👥 {a.minParticipants ?? '—'}~{a.maxParticipants ?? '—'} 人</p>
-                  <p>📍 {a.region || '—'}</p>
-                  <strong style={{ color: 'var(--tp-primary)' }}>起價 {priceLabel}</strong>
-                  <Link className="tp-link" href={`/activities/${regionSlug}/${a.slug}`}>查看行程 →</Link>
-                </article>
-              );
-            })
-          )}
+                )}
+                <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
+                <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--tp-muted)' }}>⭐ 5.0 · 📍 {a.region}</p>
+                <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>🕐 {a.durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
+                  <strong style={{ color: 'var(--tp-primary)', fontSize: 15 }}>{a.priceLabel}</strong>
+                  <Link className="tp-btn tp-btn-primary" href={`/activities/${a.regionSlug}/${a.slug}`}
+                    style={{ fontSize: 13, padding: '6px 14px' }}>
+                    查看行程
+                  </Link>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </div>
     </section>
