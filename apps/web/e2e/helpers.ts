@@ -17,6 +17,14 @@ async function adminLogin(page: Page) {
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
 }
 
+/** Helper: ensure logged in (re-login if session expired) */
+async function ensureLoggedIn(page: Page) {
+  const body = await page.locator('body').textContent().catch(() => '');
+  if (body?.includes('Access Denied') || body?.includes('login') || body?.includes('登入')) {
+    await adminLogin(page);
+  }
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -29,4 +37,5 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin };
+export { test, expect, adminLogin, ensureLoggedIn };
+

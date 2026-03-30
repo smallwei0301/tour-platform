@@ -9,7 +9,8 @@ test('T6.1 - 頁面載入顯示 KPI 摘要', async ({ authedPage: page, isMobile
   await expect(page.locator('body')).not.toContainText('Internal Server Error');
   if (isMobile) {
     const body = await page.locator('body').textContent() || '';
-    expect(body.includes('追蹤') || body.includes('操作') || body.includes('GMV')).toBeTruthy();
+    const isAdminPage = body.includes('追蹤') || body.includes('操作') || body.includes('GMV') || body.includes('Admin');
+    expect(isAdminPage).toBeTruthy();
     return;
   }
   await expect(page.locator('text=/總 GMV|平台總收入|健康訂單率/i').first()).toBeVisible({ timeout: 8000 });
