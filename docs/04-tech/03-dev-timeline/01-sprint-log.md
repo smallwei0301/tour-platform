@@ -87,3 +87,29 @@
 ---
 
 _下一次更新：Sprint 2 結束後（2026-04-11）_
+
+---
+
+## Sprint 2 執行日誌（進行中）
+
+**期間：** 2026-03-31 ~ 2026-04-11
+**執行人：** Tracy
+**Sprint 目標：** Consumer Web Phase 2 — 首頁強化 + 搜尋功能 + SEO
+
+### 2026-03-30（Day 0 提前開工）
+
+| 項目 | 狀態 | 說明 |
+|------|------|------|
+| T1 Hero Banner 搜尋框 | ✅ 完成 | 關鍵字 input + 熱門標籤 → router.push `/activities?q=` |
+| T2 精選活動卡片 | ✅ 完成 | 改用 fixture data，加 category badge，RWD 3欄 |
+| T4 activities 搜尋強化 | ✅ 完成 | ?q / ?region / ?type URL 參數、client-side filter、empty state、sort |
+| T5 SEO Meta | ✅ 完成 | generateMetadata: /, /activities, /activities/[slug], /blog |
+| T6 Homepage smoke test | ✅ 完成 | t0-homepage.spec.ts 6 tests all pass |
+| Commit | ✅ | `3d0a478` pushed to main |
+
+### 待完成（下次）
+
+- [ ] Nav 搜尋欄結果整合（目前 Nav input 跳轉尚未與 activities filter 完全綁定）
+- [ ] `/guide/dashboard` 導遊後台骨架（Phase 2 Week 11-12）
+- [ ] 導遊申請頁 `/guide/apply` 完整欄位補齊
+- [ ] Sprint 2 回顧（2026-04-11）
