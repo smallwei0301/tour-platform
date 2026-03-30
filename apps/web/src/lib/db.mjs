@@ -767,17 +767,21 @@ export async function listOperationsTrackingDb() {
 
   const calc = (o, ops) => {
     const gmv = Number(o?.totalTwd || 0);
-    const commissionTwd = Math.round(gmv * cfg.commissionRate);
+    const refundAmountTwd = Number(ops.refund_amount_twd || 0);
+    // 有效 GMV：扣除退款後的實收金額
+    const effectiveGmv = Math.max(0, gmv - refundAmountTwd);
+    // 平台抽成只對有效 GMV 計算
+    const commissionTwd = Math.round(effectiveGmv * cfg.commissionRate);
+    // 金流費以原始 GMV 計算（通常不退）
     const paymentFeeTwd = Math.round(gmv * cfg.paymentFeeRate);
     const manualCostTwd = Number(ops.manual_cost_twd || 0);
-    const refundAmountTwd = Number(ops.refund_amount_twd || 0);
     const subsidyTwd = Number(ops.subsidy_twd || 0);
-    const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - refundAmountTwd - subsidyTwd;
+    const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd;
     const hasException = Boolean(refundAmountTwd > 0 || ops.is_rescheduled || ops.has_complaint || ops.has_guide_adjustment || ops.has_oversell_issue);
     const isHealthyOrder = cfg.healthyAllowException
       ? finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0)
       : finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0) && !hasException;
-    return { gmv, commissionTwd, paymentFeeTwd, finalContributionTwd, hasException, isHealthyOrder };
+    return { gmv, effectiveGmv, commissionTwd, paymentFeeTwd, finalContributionTwd, hasException, isHealthyOrder };
   };
 
   return (rows || []).map((r) => {

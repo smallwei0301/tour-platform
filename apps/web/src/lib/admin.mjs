@@ -393,6 +393,8 @@ export function listOperationsTrackingFallback() {
       const exp = experiences.find((e) => e.id === o.experienceId);
       const ops = findOrCreateOpsRow(o);
       const calc = buildOpsContribution(o, ops);
+      // calc 最後展開，確保計算欄位不被 ops 的舊快取值覆蓋
+      const { finalContributionTwd: _a, commissionTwd: _b, paymentFeeTwd: _c, effectiveGmv: _d, isHealthyOrder: _e, hasException: _f, gmv: _g, ...opsRest } = ops;
       return {
         orderId: o.id,
         orderDate: o.createdAt,
@@ -401,8 +403,8 @@ export function listOperationsTrackingFallback() {
         scheduleDate: o.scheduleStartAt || null,
         travelers: o.peopleCount || 1,
         status: o.status,
+        ...opsRest,
         ...calc,
-        ...ops
       };
     })
     .sort((a, b) => new Date(b.orderDate || 0).getTime() - new Date(a.orderDate || 0).getTime());
