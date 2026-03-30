@@ -7,6 +7,13 @@ import { Card, PageHeader, StatusBadge, Badge, Select, LoadingSkeleton, EmptySta
 type Preset = 'today' | '7d' | '30d' | 'custom';
 type TrendMetric = 'orders' | 'refunds' | 'guides';
 
+const STATUS_LABELS: Record<string, string> = {
+  pending_payment: '待付款', paid: '已付款', confirmed: '已確認',
+  rejected: '已拒絕', cancelled_by_user: '用戶取消', cancelled_by_guide: '導遊取消',
+  completed: '已完成', refund_pending: '退款中', refunded: '已退款',
+  pending: '待審核', approved: '已通過',
+};
+
 export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -182,8 +189,8 @@ export default function AdminDashboardPage() {
         {/* Queues */}
         <div data-guide="pending-orders" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16 }}>
           {[
-            { title: '待處理訂單', items: data?.queues?.orders || [], href: '/admin/orders', renderItem: (o: any) => `${o.id} · ${o.status}`, empty: '🎉 無待處理訂單' },
-            { title: '待處理退款', items: data?.queues?.refunds || [], href: '/admin/refunds', renderItem: (r: any) => `${r.orderId} · ${r.status}`, empty: '🎉 無待處理退款' },
+            { title: '待處理訂單', items: data?.queues?.orders || [], href: '/admin/orders', renderItem: (o: any) => `${o.id} · ${STATUS_LABELS[o.status] ?? o.status}`, empty: '🎉 無待處理訂單' },
+            { title: '待處理退款', items: data?.queues?.refunds || [], href: '/admin/refunds', renderItem: (r: any) => `${r.orderId} · ${STATUS_LABELS[r.status] ?? r.status}`, empty: '🎉 無待處理退款' },
             { title: '待審核導遊', items: data?.queues?.guides || [], href: '/admin/guides', renderItem: (g: any) => `${g.fullName} · ${g.city}`, empty: '🎉 無待審核導遊' },
           ].map((section) => (
             <Card key={section.title}>
