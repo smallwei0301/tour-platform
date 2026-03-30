@@ -233,6 +233,13 @@ export function updateAdminRefundStatusFallback(input = {}) {
     req.status = 'refunded';
     req.refundedAt = now;
     order.status = 'refunded';
+    // 退款完成 → 自動掛鉤 ops tracking，將退款金額寫入 refundAmountTwd
+    const opsRow = findOrCreateOpsRow(order);
+    const refundAmt = Number(req.totalTwd || order.totalTwd || 0);
+    if (opsRow.refundAmountTwd !== refundAmt) {
+      opsRow.refundAmountTwd = refundAmt;
+      opsRow.updatedAt = now;
+    }
   }
 
   req.adminNote = adminNote;
@@ -343,12 +350,17 @@ function findOrCreateOpsRow(order) {
 function buildOpsContribution(order, ops) {
   const cfg = getKpiConfigFallback();
   const gmv = Number(order.totalTwd || 0);
-  const commissionTwd = Math.round(gmv * cfg.commissionRate);
+  const refundAmountTwd = Number(ops.refundAmountTwd || 0);
+  // 有效 GMV：扣除退款金額後的實收金額
+  const effectiveGmv = Math.max(0, gmv - refundAmountTwd);
+  // 平台收入：只對有效 GMV 收抽成
+  const commissionTwd = Math.round(effectiveGmv * cfg.commissionRate);
+  // 金流費：依各支付商協議，通常不退；以原始 GMV 計算
   const paymentFeeTwd = Math.round(gmv * cfg.paymentFeeRate);
   const manualCostTwd = Number(ops.manualCostTwd || 0);
-  const refundAmountTwd = Number(ops.refundAmountTwd || 0);
   const subsidyTwd = Number(ops.subsidyTwd || 0);
-  const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - refundAmountTwd - subsidyTwd;
+  // 最終貢獻 = 平台收入 - 不可回收成本
+  const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd;
   const hasException = Boolean(
     refundAmountTwd > 0 ||
     ops.isRescheduled ||
@@ -362,6 +374,7 @@ function buildOpsContribution(order, ops) {
 
   return {
     gmv,
+    effectiveGmv,
     commissionTwd,
     paymentFeeTwd,
     manualMinutes: Number(ops.manualMinutes || 0),

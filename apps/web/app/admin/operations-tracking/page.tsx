@@ -1,11 +1,31 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+
+// 前端即時試算（與後端公式一致）
+function calcContribution(row: Row, kpiConfig?: { commissionRate?: number; paymentFeeRate?: number }) {
+  const commissionRate = kpiConfig?.commissionRate ?? 0.15;
+  const paymentFeeRate = kpiConfig?.paymentFeeRate ?? 0.035;
+  const gmv = Number(row.gmv || 0);
+  const refundAmountTwd = Number(row.refundAmountTwd || 0);
+  const effectiveGmv = Math.max(0, gmv - refundAmountTwd);
+  const commissionTwd = Math.round(effectiveGmv * commissionRate);
+  const paymentFeeTwd = Math.round(gmv * paymentFeeRate);
+  const manualCostTwd = Number(row.manualCostTwd || 0);
+  const subsidyTwd = Number(row.subsidyTwd || 0);
+  return {
+    effectiveGmv,
+    commissionTwd,
+    paymentFeeTwd,
+    finalContributionTwd: commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd,
+  };
+}
 import { Card, PageHeader, StatusBadge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
 
 type Row = {
   orderId: string; orderDate: string; guideName: string; activityName: string;
   scheduleDate: string; travelers: number; status: string; gmv: number;
+  effectiveGmv?: number;
   commissionTwd: number; paymentFeeTwd: number; manualMinutes: number;
   manualCostTwd: number; refundAmountTwd: number; subsidyTwd: number;
   hasException: boolean; finalContributionTwd: number; isHealthyOrder: boolean;
@@ -40,6 +60,9 @@ export default function OperationsTrackingPage() {
   useEffect(() => { load().catch(() => { setRows([]); setSummary(null); }); }, []);
 
   const totals = useMemo(() => summary || { totalGmv: 0, totalCommissionTwd: 0, avgFinalContributionTwd: 0, healthyOrderRate: 0 }, [summary]);
+
+  // 即時試算（使用 summary 中的 kpiConfig）
+  const preview = useMemo(() => selected ? calcContribution(selected, summary?.kpiConfig) : null, [selected, summary]);
 
   async function saveSelected() {
     if (!selected) return;
@@ -156,6 +179,25 @@ export default function OperationsTrackingPage() {
                 <label style={labelStyle}>備註</label>
                 <textarea value={selected.note||''} onChange={e => setSelected({...selected, note: e.target.value})} rows={3}
                   style={{ ...inputStyle, resize: 'vertical' }} />
+
+                {/* 即時試算預覽 */}
+                {preview && (
+                  <div style={{ marginTop: 16, padding: '12px 14px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>📊 即時試算（未儲存）</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, fontSize: 12 }}>
+                      <span style={{ color: '#6b7280' }}>有效 GMV</span>
+                      <span style={{ fontWeight: 600, textAlign: 'right' }}>NT${preview.effectiveGmv.toLocaleString()}</span>
+                      <span style={{ color: '#6b7280' }}>平台抽成</span>
+                      <span style={{ fontWeight: 600, textAlign: 'right' }}>NT${preview.commissionTwd.toLocaleString()}</span>
+                      <span style={{ color: '#6b7280' }}>金流費（不退）</span>
+                      <span style={{ fontWeight: 600, textAlign: 'right', color: '#dc2626' }}>-NT${preview.paymentFeeTwd.toLocaleString()}</span>
+                      <span style={{ color: '#374151', fontWeight: 700, borderTop: '1px solid #bbf7d0', paddingTop: 6, marginTop: 2 }}>最終貢獻</span>
+                      <span style={{ fontWeight: 800, textAlign: 'right', fontSize: 14, borderTop: '1px solid #bbf7d0', paddingTop: 6, marginTop: 2, color: preview.finalContributionTwd >= 0 ? '#15803d' : '#dc2626' }}>
+                        NT${preview.finalContributionTwd.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <button onClick={saveSelected} disabled={saving}
                   style={{ marginTop: 16, width: '100%', padding: '9px 0', borderRadius: 8, border: 'none', background: 'var(--tp-primary)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
