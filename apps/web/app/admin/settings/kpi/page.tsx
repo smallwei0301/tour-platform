@@ -53,7 +53,8 @@ export default function AdminKpiSettingsPage() {
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="KPI 計算設定" subtitle="抽成率、金流費率、健康訂單判準（含版本回滾）" />
 
-      <div style={{ padding: '20px 28px', display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 20, alignItems: 'start' }}>
+      <div className="admin-kpi-split" style={{ padding: '20px 28px', display: 'grid', gridTemplateColumns: '1fr', gap: 20, alignItems: 'start' }}>
+        <style>{`@media (min-width: 768px) { .admin-kpi-split { grid-template-columns: 1fr 1.5fr !important; } }`}</style>
         {/* Settings Form */}
         <Card data-guide="kpi-form" style={{ padding: 24 }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#111' }}>目前設定</h3>

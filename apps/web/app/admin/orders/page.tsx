@@ -115,7 +115,8 @@ export default function AdminOrdersPage() {
           <span style={{ fontSize: 13, color: '#9ca3af', marginLeft: 'auto' }}>共 {filtered.length} 筆</span>
         </Card>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div className="admin-split-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, alignItems: 'start' }}>
+          <style>{`@media (min-width: 768px) { .admin-split-grid { grid-template-columns: 1.3fr 1fr !important; } }`}</style>
           {/* Table */}
           <Card data-guide="order-table">
             {loading ? <LoadingSkeleton rows={8} /> : filtered.length === 0 ? <EmptyState message="沒有訂單資料" /> : (

@@ -106,7 +106,8 @@ export default function OperationsTrackingPage() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, alignItems: 'start' }}>
+        <div className="admin-ops-split" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, alignItems: 'start' }}>
+          <style>{`@media (min-width: 768px) { .admin-ops-split { grid-template-columns: 1.4fr 1fr !important; } }`}</style>
           {/* Table */}
           <Card data-guide="ops-table">
             {loading ? <LoadingSkeleton rows={8} /> : rows.length === 0 ? <EmptyState message="無操作追蹤資料" /> : (

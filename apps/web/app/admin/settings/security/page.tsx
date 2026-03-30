@@ -51,7 +51,8 @@ export default function AdminSecuritySettingsPage() {
         {/* Status */}
         <Card data-guide="security-version" style={{ padding: 20 }}>
           <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#111' }}>目前安全狀態</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div className="admin-sec-status" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+            <style>{`@media (min-width: 480px) { .admin-sec-status { grid-template-columns: 1fr 1fr !important; } @media (min-width: 768px) { .admin-sec-status { grid-template-columns: 1fr 1fr 1fr !important; } } }`}</style>
             {[
               { label: 'Session Version', value: state?.sessionVersion ?? '-' },
               { label: 'Rotated At', value: state?.rotatedAt ? new Date(state.rotatedAt).toLocaleDateString('zh-TW') : '-' },
