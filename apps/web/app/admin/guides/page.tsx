@@ -39,7 +39,7 @@ export default function AdminGuidesPage() {
 
       <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Filter */}
-        <Card style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Card data-guide="guide-filter" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>篩選狀態</span>
           <Select value={status} onChange={setStatus} style={{ minWidth: 160 }}>
             <option value="">全部狀態</option>
@@ -53,7 +53,7 @@ export default function AdminGuidesPage() {
 
         {/* Grid */}
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }} data-guide="guide-cards">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={{ height: 180, borderRadius: 12, background: 'linear-gradient(90deg,#f3f4f6,#e5e7eb,#f3f4f6)' }} />
             ))}
@@ -91,11 +91,11 @@ export default function AdminGuidesPage() {
                 <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                   <button onClick={() => action(r.id, 'approve')}
                     style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', background: 'var(--tp-primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    ✓ 通過
+                    <span data-guide="guide-approve">✓ 通過</span>
                   </button>
                   <button onClick={() => action(r.id, 'reject')}
                     style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-                    ✕ 拒絕
+                    <span data-guide="guide-reject">✕ 拒絕</span>
                   </button>
                   <button onClick={() => action(r.id, 'suspend')}
                     style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #fed7aa', background: '#fff', color: '#d97706', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>

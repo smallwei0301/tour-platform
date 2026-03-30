@@ -59,7 +59,7 @@ export default function OperationsTrackingPage() {
         title="操作追蹤"
         subtitle="每單貢獻、人工成本、健康訂單標記"
         actions={
-          <a href="/api/admin/operations-tracking/csv"
+          <a data-guide="ops-csv" href="/api/admin/operations-tracking/csv"
             style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid var(--tp-primary)', color: 'var(--tp-primary)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
             ↓ 匯出 CSV
           </a>
@@ -68,7 +68,7 @@ export default function OperationsTrackingPage() {
 
       <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Summary KPI */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 12 }}>
+        <div data-guide="ops-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 12 }}>
           {[
             { label: '總 GMV', value: `NT$${Number(totals.totalGmv||0).toLocaleString()}`, icon: '💰' },
             { label: '平台總收入', value: `NT$${Number(totals.totalCommissionTwd||0).toLocaleString()}`, icon: '📊' },
@@ -85,7 +85,7 @@ export default function OperationsTrackingPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, alignItems: 'start' }}>
           {/* Table */}
-          <Card>
+          <Card data-guide="ops-table">
             {loading ? <LoadingSkeleton rows={8} /> : rows.length === 0 ? <EmptyState message="無操作追蹤資料" /> : (
               <TableWrapper>
                 <thead>
@@ -114,7 +114,7 @@ export default function OperationsTrackingPage() {
           </Card>
 
           {/* Edit Panel */}
-          <Card style={{ padding: 20 }}>
+          <Card data-guide="ops-edit" style={{ padding: 20 }}>
             {!selected ? (
               <div style={{ padding: '32px 0', textAlign: 'center', color: '#9ca3af' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>👆</div>

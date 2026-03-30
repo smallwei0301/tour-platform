@@ -55,7 +55,7 @@ export default function AdminKpiSettingsPage() {
 
       <div style={{ padding: '20px 28px', display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 20, alignItems: 'start' }}>
         {/* Settings Form */}
-        <Card style={{ padding: 24 }}>
+        <Card data-guide="kpi-form" style={{ padding: 24 }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#111' }}>目前設定</h3>
           <p style={{ margin: '0 0 16px', fontSize: 12, color: '#9ca3af' }}>最後更新：{cfg.updatedAt || '-'}</p>
 
@@ -88,7 +88,7 @@ export default function AdminKpiSettingsPage() {
         </Card>
 
         {/* History */}
-        <Card>
+        <Card data-guide="kpi-history">
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>版本歷史</h3>
           </div>

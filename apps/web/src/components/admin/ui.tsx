@@ -42,9 +42,9 @@ export function StatusBadge({ status }: { status: string }) {
   return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
 }
 
-export function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+export function Card({ children, style, ...rest }: { children: React.ReactNode; style?: React.CSSProperties; [key: string]: any }) {
   return (
-    <div style={{
+    <div {...rest} style={{
       background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb',
       boxShadow: '0 1px 3px rgba(0,0,0,0.06)', ...style,
     }}>
@@ -77,12 +77,12 @@ export function BtnPrimary({ children, onClick, style }: { children: React.React
   );
 }
 
-export function Select({ value, onChange, children, style }: {
+export function Select({ value, onChange, children, style, ...rest }: {
   value: string; onChange: (v: string) => void;
-  children: React.ReactNode; style?: React.CSSProperties;
+  children: React.ReactNode; style?: React.CSSProperties; [key: string]: any;
 }) {
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
+    <select {...rest} value={value} onChange={(e) => onChange(e.target.value)}
       style={{
         border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px',
         fontSize: 14, background: '#fff', color: '#374151',

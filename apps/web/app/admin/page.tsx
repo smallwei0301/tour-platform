@@ -64,7 +64,7 @@ export default function AdminDashboardPage() {
       <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Time Filter */}
-        <Card style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Card data-guide="time-filter" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>時間範圍</span>
           {(['today', '7d', '30d'] as Preset[]).map((p) => (
             <button key={p} onClick={() => setPreset(p)} style={{
@@ -106,7 +106,7 @@ export default function AdminDashboardPage() {
             ))}
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          <div data-guide="kpi-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
             {KPI_CARDS.map((c) => (
               <Link key={c.label} href={c.href} style={{ textDecoration: 'none' }}>
                 <Card style={{
@@ -129,7 +129,7 @@ export default function AdminDashboardPage() {
 
         {/* KPI Definitions */}
         {data?.definitions && (
-          <details style={{ borderRadius: 12, border: '1px solid #e5e7eb', background: '#fff', overflow: 'hidden' }}>
+          <details data-guide="kpi-explanation" style={{ borderRadius: 12, border: '1px solid #e5e7eb', background: '#fff', overflow: 'hidden' }}>
             <summary style={{ padding: '12px 20px', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#374151', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
               📋 KPI 口徑說明
             </summary>
@@ -142,7 +142,7 @@ export default function AdminDashboardPage() {
         )}
 
         {/* Trend Chart */}
-        <Card>
+        <Card data-guide="trend-chart">
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>趨勢圖</h3>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Queues */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16 }}>
+        <div data-guide="pending-orders" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16 }}>
           {[
             { title: '待處理訂單', items: data?.queues?.orders || [], href: '/admin/orders', renderItem: (o: any) => `${o.id} · ${o.status}`, empty: '🎉 無待處理訂單' },
             { title: '待處理退款', items: data?.queues?.refunds || [], href: '/admin/refunds', renderItem: (r: any) => `${r.orderId} · ${r.status}`, empty: '🎉 無待處理退款' },

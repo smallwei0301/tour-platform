@@ -55,7 +55,7 @@ export default function AdminRefundsPage() {
       <PageHeader title="退款管理" subtitle="審核退款申請、追蹤退款進度" />
 
       <div style={{ padding: '20px 28px' }}>
-        <Card>
+        <Card data-guide="refund-list">
           {loading ? <LoadingSkeleton rows={6} /> : rows.length === 0 ? <EmptyState message="目前沒有退款申請 🎉" /> : (
             <TableWrapper>
               <thead>
@@ -85,8 +85,8 @@ export default function AdminRefundsPage() {
                     <Td><span style={{ fontSize: 12, color: '#6b7280' }}>{r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('zh-TW') : '-'}</span></Td>
                     <Td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {actionBtn(r.id, 'approve', '通過', '#1B6B4A')}
-                        {actionBtn(r.id, 'reject', '拒絕', '#dc2626')}
+                        <span data-guide="refund-approve">{actionBtn(r.id, 'approve', '通過', '#1B6B4A')}</span>
+                        <span data-guide="refund-reject">{actionBtn(r.id, 'reject', '拒絕', '#dc2626')}</span>
                         {actionBtn(r.id, 'process', '處理中', '#d97706')}
                         {actionBtn(r.id, 'complete', '完成', '#6b7280')}
                       </div>

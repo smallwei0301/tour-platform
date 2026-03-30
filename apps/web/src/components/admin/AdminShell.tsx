@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminSessionBar } from './AdminSessionBar';
+import { AdminGuide } from './AdminGuide';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
@@ -150,6 +151,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <main style={{ flex: 1, overflow: 'auto' }}>
           {children}
         </main>
+        <AdminGuide pathname={pathname} />
       </div>
     </div>
   );

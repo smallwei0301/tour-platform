@@ -49,7 +49,7 @@ export default function AdminSecuritySettingsPage() {
 
       <div style={{ padding: '20px 28px', maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Status */}
-        <Card style={{ padding: 20 }}>
+        <Card data-guide="security-version" style={{ padding: 20 }}>
           <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#111' }}>目前安全狀態</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             {[
@@ -66,7 +66,7 @@ export default function AdminSecuritySettingsPage() {
         </Card>
 
         {/* Token Rotation */}
-        <Card style={{ padding: 20 }}>
+        <Card data-guide="security-rotate" style={{ padding: 20 }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#111' }}>旋轉 Admin Token</h3>
           <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9ca3af' }}>旋轉後，所有舊 session 立即失效。</p>
 
@@ -83,7 +83,7 @@ export default function AdminSecuritySettingsPage() {
         </Card>
 
         {/* Force Logout */}
-        <Card style={{ padding: 20, borderColor: '#fecaca' }}>
+        <Card data-guide="security-force-logout" style={{ padding: 20, borderColor: '#fecaca' }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#111' }}>強制登出所有 Session</h3>
           <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9ca3af' }}>提升 sessionVersion，讓所有既有 cookie 立即失效。</p>
 

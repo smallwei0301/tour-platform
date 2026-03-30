@@ -108,7 +108,7 @@ export default function AdminOrdersPage() {
         {/* Filter */}
         <Card style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>篩選狀態</span>
-          <Select value={status} onChange={setStatus} style={{ minWidth: 160 }}>
+          <Select data-guide="order-filter" value={status} onChange={setStatus} style={{ minWidth: 160 }}>
             <option value="">全部狀態</option>
             {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
           </Select>
@@ -117,7 +117,7 @@ export default function AdminOrdersPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16, alignItems: 'start' }}>
           {/* Table */}
-          <Card>
+          <Card data-guide="order-table">
             {loading ? <LoadingSkeleton rows={8} /> : filtered.length === 0 ? <EmptyState message="沒有訂單資料" /> : (
               <TableWrapper>
                 <thead>
@@ -139,7 +139,7 @@ export default function AdminOrdersPage() {
           </Card>
 
           {/* Detail Panel */}
-          <Card style={{ padding: 20 }}>
+          <Card data-guide="order-detail" style={{ padding: 20 }}>
             {!detail ? (
               <div style={{ padding: '32px 0', textAlign: 'center', color: '#9ca3af' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>👆</div>
@@ -171,7 +171,7 @@ export default function AdminOrdersPage() {
                 <textarea value={editNote} onChange={e => setEditNote(e.target.value)} rows={3}
                   style={{ ...inputStyle, resize: 'vertical' }} />
 
-                <details style={{ marginTop: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                <details data-guide="exception-panel" style={{ marginTop: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
                   <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151' }}>🔧 例外處理</summary>
                   <div style={{ padding: '10px 14px', borderTop: '1px solid #f0f0f0' }}>
                     <label style={labelStyle}>Action</label>
@@ -195,7 +195,7 @@ export default function AdminOrdersPage() {
                 </button>
 
                 {auditLogs.length > 0 && (
-                  <details style={{ marginTop: 14, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                  <details data-guide="audit-logs" style={{ marginTop: 14, border: '1px solid #e5e7eb', borderRadius: 8 }}>
                     <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>📋 Audit Logs ({auditLogs.length})</summary>
                     <ul style={{ margin: 0, padding: '8px 14px 12px', listStyle: 'none' }}>
                       {auditLogs.map((l: any) => (
