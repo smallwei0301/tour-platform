@@ -14,21 +14,34 @@ interface Schedule {
   id?: string;
 }
 
+interface PlanConfig {
+  id: string;
+  label: string;
+  duration: string;
+  priceMultiplier: number;
+  highlights: string[];
+  detailsLinkText?: string;
+  bookingBtnText?: string;
+}
+
 interface Activity {
   slug: string;
   price?: number;
   priceTwd?: number;
   refundRules: string[];
   notices?: string[];
+  plans?: PlanConfig[] | null;
 }
 
-const PLANS = [
+const DEFAULT_PLANS: PlanConfig[] = [
   {
     id: 'half-day',
     label: 'A. 半日行程',
     duration: '約 4 小時',
     priceMultiplier: 1,
     highlights: ['最早出發前 1 天可預訂', '免費取消（72 小時前）', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
+    detailsLinkText: '查看方案詳情 ›',
+    bookingBtnText: '立即預約',
   },
   {
     id: 'full-day',
@@ -36,6 +49,8 @@ const PLANS = [
     duration: '約 8 小時',
     priceMultiplier: 1.6,
     highlights: ['午餐含餐（在地餐廳）', '免費取消（72 小時前）', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
+    detailsLinkText: '查看方案詳情 ›',
+    bookingBtnText: '立即預約',
   },
 ];
 
@@ -90,6 +105,9 @@ interface DatePlanSectionProps {
 export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  // Use DB plans if available, otherwise fall back to defaults
+  const PLANS = (activity.plans && activity.plans.length > 0) ? activity.plans : DEFAULT_PLANS;
 
   return (
     <div>
@@ -155,7 +173,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                 style={{ display: 'inline-block', marginBottom: 14 }}
                 onClick={e => e.preventDefault()}
               >
-                查看方案詳情 ›
+                {plan.detailsLinkText || '查看方案詳情 ›'}
               </a>
 
               <div className="kkd-plan-footer">
@@ -169,7 +187,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                   className="tp-btn tp-btn-primary kkd-plan-select-btn"
                   onClick={e => { setSelectedPlan(plan.id); }}
                 >
-                  立即預約
+                  {plan.bookingBtnText || '立即預約'}
                 </Link>
               </div>
             </div>

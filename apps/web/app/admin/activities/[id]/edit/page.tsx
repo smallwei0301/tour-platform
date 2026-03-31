@@ -4,6 +4,237 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 
+// ── 方案型別 ──────────────────────────────────────────────
+interface PlanConfig {
+  id: string;
+  label: string;
+  duration: string;
+  priceMultiplier: number;
+  highlights: string[];
+  detailsLinkText: string;
+  bookingBtnText: string;
+}
+
+const DEFAULT_PLANS: PlanConfig[] = [
+  {
+    id: 'half-day',
+    label: 'A. 半日行程',
+    duration: '約 4 小時',
+    priceMultiplier: 1,
+    highlights: ['最早出發前 1 天可預訂', '免費取消（72 小時前）', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
+    detailsLinkText: '查看方案詳情 ›',
+    bookingBtnText: '立即預約',
+  },
+  {
+    id: 'full-day',
+    label: 'B. 全日行程',
+    duration: '約 8 小時',
+    priceMultiplier: 1.6,
+    highlights: ['午餐含餐（在地餐廳）', '免費取消（72 小時前）', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
+    detailsLinkText: '查看方案詳情 ›',
+    bookingBtnText: '立即預約',
+  },
+];
+
+// ── 單一方案編輯 ──────────────────────────────────────────
+function PlanEditor({
+  plan,
+  index,
+  onChange,
+  onRemove,
+}: {
+  plan: PlanConfig;
+  index: number;
+  onChange: (updated: PlanConfig) => void;
+  onRemove: () => void;
+}) {
+  const update = (patch: Partial<PlanConfig>) => onChange({ ...plan, ...patch });
+
+  return (
+    <div style={{
+      border: '1px solid #e5e7eb', borderRadius: 10, padding: 20, marginBottom: 16,
+      background: '#fafafa',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <span style={{ fontWeight: 700, fontSize: 15 }}>方案 {index + 1}</span>
+        <button
+          type="button"
+          onClick={onRemove}
+          style={{
+            background: '#fee2e2', color: '#991b1b', border: 'none',
+            padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          刪除方案
+        </button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <label style={labelStyle}>
+          方案 ID（唯一識別，英文）
+          <input
+            type="text" value={plan.id}
+            onChange={e => update({ id: e.target.value })}
+            style={fieldStyle} placeholder="half-day"
+          />
+        </label>
+        <label style={labelStyle}>
+          方案名稱
+          <input
+            type="text" value={plan.label}
+            onChange={e => update({ label: e.target.value })}
+            style={fieldStyle} placeholder="A. 半日行程"
+          />
+        </label>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <label style={labelStyle}>
+          時長文字
+          <input
+            type="text" value={plan.duration}
+            onChange={e => update({ duration: e.target.value })}
+            style={fieldStyle} placeholder="約 4 小時"
+          />
+        </label>
+        <label style={labelStyle}>
+          價格倍數（相對基礎價格）
+          <input
+            type="number" value={plan.priceMultiplier}
+            onChange={e => update({ priceMultiplier: parseFloat(e.target.value) || 1 })}
+            min={0.1} step={0.1} style={fieldStyle}
+          />
+        </label>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <label style={labelStyle}>
+          「查看詳情」連結文字
+          <input
+            type="text" value={plan.detailsLinkText}
+            onChange={e => update({ detailsLinkText: e.target.value })}
+            style={fieldStyle} placeholder="查看方案詳情 ›"
+          />
+        </label>
+        <label style={labelStyle}>
+          預約按鈕文字
+          <input
+            type="text" value={plan.bookingBtnText}
+            onChange={e => update({ bookingBtnText: e.target.value })}
+            style={fieldStyle} placeholder="立即預約"
+          />
+        </label>
+      </div>
+
+      <label style={labelStyle}>
+        亮點列表（每行一項）
+        <textarea
+          value={plan.highlights.join('\n')}
+          onChange={e => update({ highlights: e.target.value.split('\n') })}
+          rows={5} style={fieldStyle}
+          placeholder={'最早出發前 1 天可預訂\n免費取消（72 小時前）\n實名認證導遊帶領'}
+        />
+      </label>
+    </div>
+  );
+}
+
+// ── 方案管理 Section ──────────────────────────────────────
+function PlansSection({
+  plans,
+  onChange,
+}: {
+  plans: PlanConfig[];
+  onChange: (plans: PlanConfig[]) => void;
+}) {
+  function addPlan() {
+    onChange([...plans, {
+      id: `plan-${Date.now()}`,
+      label: '',
+      duration: '',
+      priceMultiplier: 1,
+      highlights: [],
+      detailsLinkText: '查看方案詳情 ›',
+      bookingBtnText: '立即預約',
+    }]);
+  }
+
+  function updatePlan(index: number, updated: PlanConfig) {
+    const next = [...plans];
+    next[index] = updated;
+    onChange(next);
+  }
+
+  function removePlan(index: number) {
+    onChange(plans.filter((_, i) => i !== index));
+  }
+
+  function resetToDefault() {
+    if (confirm('確定要重置為預設方案嗎？這會覆蓋目前的設定。')) {
+      onChange(DEFAULT_PLANS);
+    }
+  }
+
+  return (
+    <Card style={{ padding: 28, marginTop: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>
+            📋 方案管理
+            <span style={{ fontSize: 13, fontWeight: 400, color: '#6b7280', marginLeft: 8 }}>
+              {plans.length} 個方案
+            </span>
+          </h3>
+          <p style={{ fontSize: 12, color: '#9ca3af', margin: '4px 0 0' }}>
+            管理 Activities 頁面中的「選擇方案」區塊文案
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            onClick={resetToDefault}
+            style={{
+              background: '#f3f4f6', color: '#374151', border: 'none',
+              padding: '8px 14px', borderRadius: 8, fontWeight: 600, fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            重置預設
+          </button>
+          <button
+            type="button"
+            onClick={addPlan}
+            style={{
+              background: 'var(--tp-primary, #16a34a)', color: '#fff', border: 'none',
+              padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer',
+            }}
+          >
+            + 新增方案
+          </button>
+        </div>
+      </div>
+
+      {plans.length === 0 ? (
+        <div style={{
+          textAlign: 'center', color: '#9ca3af', padding: 32,
+          border: '2px dashed #e5e7eb', borderRadius: 8,
+        }}>
+          目前無方案設定，點擊「+ 新增方案」或「重置預設」。
+        </div>
+      ) : (
+        plans.map((plan, i) => (
+          <PlanEditor
+            key={plan.id + i}
+            plan={plan}
+            index={i}
+            onChange={updated => updatePlan(i, updated)}
+            onRemove={() => removePlan(i)}
+          />
+        ))
+      )}
+    </Card>
+  );
+}
+
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市', '台中市', '南投縣', '宜蘭縣', '屏東縣'];
 const CATEGORIES = [
   { value: 'outdoor', label: '戶外冒險' },
@@ -368,6 +599,7 @@ export default function AdminActivityEditPage() {
   const [notices,            setNotices]            = useState('');
   const [refundRules,        setRefundRules]        = useState('');
   const [status,             setStatus]             = useState('draft');
+  const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
 
   useEffect(() => {
     if (!activityId) return;
@@ -396,6 +628,12 @@ export default function AdminActivityEditPage() {
         setNotices((d.notices || []).join('\n'));
         setRefundRules((d.refundRules || []).join('\n'));
         setStatus(d.status || 'draft');
+        // plans: use DB value if exists, otherwise default
+        if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
+          setPlans(d.plans);
+        } else {
+          setPlans(DEFAULT_PLANS);
+        }
         setLoading(false);
       })
       .catch(() => { setError('載入失敗'); setLoading(false); });
@@ -420,6 +658,7 @@ export default function AdminActivityEditPage() {
           description, shortDescription, tagline,
           inclusions: toArray(inclusions), exclusions: toArray(exclusions),
           notices: toArray(notices), refundRules: toArray(refundRules),
+          plans,
         }),
       });
       const json = await res.json();
@@ -609,6 +848,9 @@ export default function AdminActivityEditPage() {
             </div>
           </form>
         </Card>
+
+        {/* ── 方案管理 ── */}
+        <PlansSection plans={plans} onChange={setPlans} />
 
         {/* ── 場次管理 ── */}
         <ScheduleSection activityId={activityId} />
