@@ -108,7 +108,7 @@ export default function AdminActivitiesPage() {
           {loading ? (
             <LoadingSkeleton />
           ) : activities.length === 0 ? (
-            <EmptyState text={statusFilter ? `沒有${STATUS_BADGE[statusFilter]?.label || ''}行程` : '尚無行程'} />
+            <EmptyState message={statusFilter ? `沒有${STATUS_BADGE[statusFilter]?.label || ''}行程` : '尚無行程'} />
           ) : (
             <TableWrapper>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>

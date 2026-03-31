@@ -1,0 +1,148 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - link "Tour Platform" [ref=e4] [cursor=pointer]:
+        - /url: /
+      - form "搜尋" [ref=e5]:
+        - textbox "搜尋行程、地區、導遊⋯" [ref=e6]
+        - button "搜尋 🔍" [active] [ref=e7]
+      - navigation "主要導覽" [ref=e8]:
+        - link "探索行程" [ref=e9] [cursor=pointer]:
+          - /url: /activities
+        - link "認識導遊" [ref=e10] [cursor=pointer]:
+          - /url: /guides
+        - link "成為導遊" [ref=e11] [cursor=pointer]:
+          - /url: /guide/apply
+        - link "旅遊指南" [ref=e12] [cursor=pointer]:
+          - /url: /blog
+        - link "登入" [ref=e13] [cursor=pointer]:
+          - /url: /auth/sign-in
+  - generic [ref=e14]: 載入中⋯
+  - contentinfo [ref=e15]:
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - heading "Tour Platform" [level=3] [ref=e19]
+          - paragraph [ref=e20]:
+            - text: 台灣在地導遊交易平台
+            - text: 找到懂路的人，帶你走進台灣最有故事的地方。
+          - generic [ref=e21]:
+            - link "App Store" [ref=e22] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e23]: 🍎
+              - generic [ref=e24]:
+                - generic [ref=e25]: Download on the
+                - strong [ref=e26]: App Store
+            - link "Google Play" [ref=e27] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e28]: ▶
+              - generic [ref=e29]:
+                - generic [ref=e30]: GET IT ON
+                - strong [ref=e31]: Google Play
+          - generic [ref=e32]:
+            - link "Facebook" [ref=e33] [cursor=pointer]:
+              - /url: "#"
+              - text: FB
+            - link "Instagram" [ref=e34] [cursor=pointer]:
+              - /url: "#"
+              - text: IG
+            - link "Line" [ref=e35] [cursor=pointer]:
+              - /url: "#"
+              - text: LINE
+        - generic [ref=e36]:
+          - heading "探索行程" [level=4] [ref=e37]
+          - list [ref=e38]:
+            - listitem [ref=e39]:
+              - link "全部行程" [ref=e40] [cursor=pointer]:
+                - /url: /activities
+            - listitem [ref=e41]:
+              - link "柴山探洞" [ref=e42] [cursor=pointer]:
+                - /url: /theme/cave-exploration
+            - listitem [ref=e43]:
+              - link "野外溯溪" [ref=e44] [cursor=pointer]:
+                - /url: /theme/river-trekking
+            - listitem [ref=e45]:
+              - link "美食導覽" [ref=e46] [cursor=pointer]:
+                - /url: /activities?category=food
+            - listitem [ref=e47]:
+              - link "登山健行" [ref=e48] [cursor=pointer]:
+                - /url: /activities?category=hiking
+        - generic [ref=e49]:
+          - heading "平台資訊" [level=4] [ref=e50]
+          - list [ref=e51]:
+            - listitem [ref=e52]:
+              - link "關於我們" [ref=e53] [cursor=pointer]:
+                - /url: /about
+            - listitem [ref=e54]:
+              - link "認識導遊" [ref=e55] [cursor=pointer]:
+                - /url: /guides
+            - listitem [ref=e56]:
+              - link "成為導遊" [ref=e57] [cursor=pointer]:
+                - /url: /guide/apply
+            - listitem [ref=e58]:
+              - link "旅遊指南" [ref=e59] [cursor=pointer]:
+                - /url: /blog
+            - listitem [ref=e60]:
+              - link "為什麼選擇我們" [ref=e61] [cursor=pointer]:
+                - /url: /why-choose-us
+            - listitem [ref=e62]:
+              - link "聯絡我們" [ref=e63] [cursor=pointer]:
+                - /url: /contact
+        - generic [ref=e64]:
+          - heading "客戶支援" [level=4] [ref=e65]
+          - list [ref=e66]:
+            - listitem [ref=e67]:
+              - link "常見問題" [ref=e68] [cursor=pointer]:
+                - /url: /faq
+            - listitem [ref=e69]:
+              - link "訂單查詢" [ref=e70] [cursor=pointer]:
+                - /url: /orders
+            - listitem [ref=e71]:
+              - link "客服聯絡" [ref=e72] [cursor=pointer]:
+                - /url: /contact
+          - heading "法律" [level=4] [ref=e73]
+          - list [ref=e74]:
+            - listitem [ref=e75]:
+              - link "隱私政策" [ref=e76] [cursor=pointer]:
+                - /url: /legal/privacy
+            - listitem [ref=e77]:
+              - link "服務條款" [ref=e78] [cursor=pointer]:
+                - /url: /legal/terms
+            - listitem [ref=e79]:
+              - link "退款政策" [ref=e80] [cursor=pointer]:
+                - /url: /legal/refund
+      - generic [ref=e81]:
+        - paragraph [ref=e82]: 依地區探索
+        - generic [ref=e83]:
+          - link "台北" [ref=e84] [cursor=pointer]:
+            - /url: /activities?region=%E5%8F%B0%E5%8C%97
+          - link "新北" [ref=e85] [cursor=pointer]:
+            - /url: /activities?region=%E6%96%B0%E5%8C%97
+          - link "桃園" [ref=e86] [cursor=pointer]:
+            - /url: /activities?region=%E6%A1%83%E5%9C%92
+          - link "台中" [ref=e87] [cursor=pointer]:
+            - /url: /activities?region=%E5%8F%B0%E4%B8%AD
+          - link "台南" [ref=e88] [cursor=pointer]:
+            - /url: /activities?region=%E5%8F%B0%E5%8D%97
+          - link "高雄" [ref=e89] [cursor=pointer]:
+            - /url: /activities?region=%E9%AB%98%E9%9B%84
+          - link "花蓮" [ref=e90] [cursor=pointer]:
+            - /url: /activities?region=%E8%8A%B1%E8%93%AE
+          - link "台東" [ref=e91] [cursor=pointer]:
+            - /url: /activities?region=%E5%8F%B0%E6%9D%B1
+          - link "宜蘭" [ref=e92] [cursor=pointer]:
+            - /url: /activities?region=%E5%AE%9C%E8%98%AD
+          - link "屏東" [ref=e93] [cursor=pointer]:
+            - /url: /activities?region=%E5%B1%8F%E6%9D%B1
+          - link "澎湖" [ref=e94] [cursor=pointer]:
+            - /url: /activities?region=%E6%BE%8E%E6%B9%96
+          - link "金門" [ref=e95] [cursor=pointer]:
+            - /url: /activities?region=%E9%87%91%E9%96%80
+    - generic [ref=e96]: © 2026 Tour Platform · 台灣 · 保留一切權利
+  - button "Open Next.js Dev Tools" [ref=e102] [cursor=pointer]:
+    - img [ref=e103]
+  - alert [ref=e106]: 探索行程 | Tour Platform
+```
