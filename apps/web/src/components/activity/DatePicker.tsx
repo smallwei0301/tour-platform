@@ -68,7 +68,7 @@ function buildMonthDays(year: number, month: number, availMap: Map<string, { ava
   return cells;
 }
 
-// Generate next-30-days pill dates
+// Generate next-30-days pill dates — show ALL days, unavailable if no schedule
 function buildNext30Days(availMap: Map<string, { available: boolean; remaining: number }>) {
   const pills = [];
   const today = new Date();
@@ -85,9 +85,10 @@ function buildNext30Days(availMap: Map<string, { available: boolean; remaining: 
       available: !!info?.available,
       remaining: info?.remaining ?? 0,
       hasSchedule: !!info,
+      isFull: info && !info.available,
     });
   }
-  return pills.filter(p => p.hasSchedule || p.available);
+  return pills; // show all 30 days
 }
 
 // CalendarModal
@@ -212,17 +213,26 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
       <div className="tp-date-picker-scroll">
         {pills.map((p) => {
           const isSelected = selectedDate === p.dateKey;
+          const isFull = p.hasSchedule && !p.available;
+          const noSchedule = !p.hasSchedule;
+          const disabled = isFull || noSchedule;
           return (
             <button
               key={p.dateKey}
-              onClick={() => p.available && onSelect(p.dateKey)}
-              disabled={!p.available}
-              className={`tp-date-pill${isSelected ? ' selected' : ''}${!p.available ? ' disabled' : ''}`}
-              title={!p.available ? '此日期無可預約場次' : `剩餘 ${p.remaining} 位`}
+              onClick={() => !disabled && onSelect(p.dateKey)}
+              disabled={disabled}
+              className={[
+                'tp-date-pill',
+                isSelected ? 'selected' : '',
+                disabled ? 'disabled' : '',
+                isFull ? 'full' : '',
+              ].filter(Boolean).join(' ')}
+              title={isFull ? '此日期已額滿' : noSchedule ? '此日期無場次' : `剩餘 ${p.remaining} 位`}
             >
-              <span className="tp-date-pill-month">{p.month}月{p.day}日</span>
-              <span className="tp-date-pill-week">（週{p.weekDay}）</span>
-              {!p.available && <span className="tp-date-pill-full">額滿</span>}
+              <span className="tp-date-pill-month">{p.month}/{p.day}</span>
+              <span className="tp-date-pill-week">週{p.weekDay}</span>
+              {isFull && <span className="tp-date-pill-full">額滿</span>}
+              {noSchedule && <span className="tp-date-pill-na">—</span>}
             </button>
           );
         })}
