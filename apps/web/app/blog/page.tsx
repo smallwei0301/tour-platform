@@ -1,4 +1,14 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: '旅遊指南 | Tour Platform',
+  description: '台灣各地旅遊攻略、導遊推薦、活動體驗分享。從柴山探洞到花蓮溯溪，讓我們帶你深度認識台灣。',
+  openGraph: {
+    title: '旅遊指南 | Tour Platform',
+    description: '台灣各地旅遊攻略與在地體驗分享。',
+  },
+};
 
 const posts = [
   {

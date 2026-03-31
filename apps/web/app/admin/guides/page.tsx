@@ -1,17 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Card, PageHeader, StatusBadge, Select, Badge, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
 
 type GuideApp = {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  city: string;
-  status: string;
-  bio: string;
-  createdAt: string;
-  adminNote?: string | null;
+  id: string; fullName: string; email: string; phone: string;
+  city: string; status: string; bio: string; createdAt: string; adminNote?: string | null;
 };
 
 export default function AdminGuidesPage() {
@@ -26,74 +20,93 @@ export default function AdminGuidesPage() {
       const res = await fetch(`/api/admin/guide-applications${q}`, { cache: 'no-store' });
       const json = await res.json();
       setRows(json?.data || []);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }
 
-  useEffect(() => {
-    load();
-  }, [status]);
+  useEffect(() => { load(); }, [status]);
 
   async function action(id: string, kind: 'approve' | 'reject' | 'suspend') {
-    const url = kind === 'suspend' ? `/api/admin/guides/${id}/suspend` : `/api/admin/guide-applications/${id}/${kind}`;
+    const url = kind === 'suspend'
+      ? `/api/admin/guides/${id}/suspend`
+      : `/api/admin/guide-applications/${id}/${kind}`;
     await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ adminNote: `admin ${kind}` }) });
     await load();
   }
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Admin Guide Applications</h1>
-      <div style={{ margin: '8px 0 12px' }}>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="">全部狀態</option>
-          <option value="pending">pending</option>
-          <option value="approved">approved</option>
-          <option value="rejected">rejected</option>
-          <option value="suspended">suspended</option>
-        </select>
-      </div>
+    <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
+      <PageHeader title="導遊審核" subtitle="審核導遊申請、管理帳號狀態" />
 
-      {loading ? (
-        <p>載入中…</p>
-      ) : rows.length === 0 ? (
-        <p>沒有申請資料。</p>
-      ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table cellPadding={8} style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #ddd' }}>
-                <th align="left">ID</th>
-                <th align="left">姓名</th>
-                <th align="left">聯絡</th>
-                <th align="left">城市</th>
-                <th align="left">狀態</th>
-                <th align="left">建立時間</th>
-                <th align="left">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                  <td>{r.id}</td>
-                  <td><strong>{r.fullName}</strong><br /><small style={{ color: '#666' }}>{r.bio?.slice(0, 40) || ''}</small></td>
-                  <td>{r.email}<br />{r.phone}</td>
-                  <td>{r.city}</td>
-                  <td>{r.status}</td>
-                  <td>{r.createdAt ? new Date(r.createdAt).toLocaleString('zh-TW') : '-'}</td>
-                  <td>
-                    <div style={{ display: 'grid', gap: 6 }}>
-                      <button onClick={() => action(r.id, 'approve')}>Approve</button>
-                      <button onClick={() => action(r.id, 'reject')}>Reject</button>
-                      <button onClick={() => action(r.id, 'suspend')}>Suspend</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </main>
+      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Filter */}
+        <Card data-guide="guide-filter" style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>篩選狀態</span>
+          <Select value={status} onChange={setStatus} style={{ minWidth: 160 }}>
+            <option value="">全部狀態</option>
+            <option value="pending">待審核</option>
+            <option value="approved">已通過</option>
+            <option value="rejected">已拒絕</option>
+            <option value="suspended">已停權</option>
+          </Select>
+          <span style={{ fontSize: 13, color: '#9ca3af', marginLeft: 'auto' }}>共 {rows.length} 筆</span>
+        </Card>
+
+        {/* Grid */}
+        {loading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }} data-guide="guide-cards">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} style={{ height: 180, borderRadius: 12, background: 'linear-gradient(90deg,#f3f4f6,#e5e7eb,#f3f4f6)' }} />
+            ))}
+          </div>
+        ) : rows.length === 0 ? (
+          <Card><EmptyState message="沒有符合條件的導遊申請" /></Card>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+            {rows.map(r => (
+              <Card key={r.id} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: '#111' }}>{r.fullName}</div>
+                    <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>📍 {r.city}</div>
+                  </div>
+                  <StatusBadge status={r.status} />
+                </div>
+
+                {/* Bio */}
+                {r.bio && (
+                  <p style={{ margin: 0, fontSize: 13, color: '#6b7280', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+                    {r.bio}
+                  </p>
+                )}
+
+                {/* Contact */}
+                <div style={{ fontSize: 12, color: '#9ca3af', borderTop: '1px solid #f3f4f6', paddingTop: 8 }}>
+                  <div>✉️ {r.email}</div>
+                  <div>📞 {r.phone}</div>
+                  <div>🗓️ {r.createdAt ? new Date(r.createdAt).toLocaleDateString('zh-TW') : '-'}</div>
+                </div>
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                  <button onClick={() => action(r.id, 'approve')}
+                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: 'none', background: 'var(--tp-primary)', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <span data-guide="guide-approve">✓ 通過</span>
+                  </button>
+                  <button onClick={() => action(r.id, 'reject')}
+                    style={{ flex: 1, padding: '7px 0', borderRadius: 8, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    <span data-guide="guide-reject">✕ 拒絕</span>
+                  </button>
+                  <button onClick={() => action(r.id, 'suspend')}
+                    style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #fed7aa', background: '#fff', color: '#d97706', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    停權
+                  </button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
