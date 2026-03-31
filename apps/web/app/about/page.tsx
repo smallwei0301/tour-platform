@@ -31,7 +31,9 @@ export default function AboutPage() {
       </section>
 
       {/* Numbers */}
-      <section style={{ marginTop: 40, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+      <section style={{ marginTop: 40, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}
+        className="about-numbers">
+        <style>{`@media (min-width: 640px) { .about-numbers { grid-template-columns: repeat(4, 1fr) !important; } }`}</style>
         {[
           { num: '3+', label: '合作導遊' },
           { num: '4+', label: '精選行程' },

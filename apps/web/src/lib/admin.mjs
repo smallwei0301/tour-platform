@@ -8,7 +8,9 @@ export function listAdminOrdersFallback(input = {}) {
     .filter((o) => (status ? o.status === status : true))
     .filter((o) => (contactEmail ? o.contactEmail === contactEmail : true))
     .map((o) => {
-      const costTwd = Math.round(o.totalTwd * 0.65);
+      const cfg = getKpiConfigFallback();
+      const guidePayoutRate = Number(cfg.guidePayoutRate ?? 0.65);
+      const costTwd = Math.round(o.totalTwd * guidePayoutRate);
       const exp = experiences.find((e) => e.id === o.experienceId);
       return {
         id: o.id,
@@ -233,6 +235,13 @@ export function updateAdminRefundStatusFallback(input = {}) {
     req.status = 'refunded';
     req.refundedAt = now;
     order.status = 'refunded';
+    // 退款完成 → 自動掛鉤 ops tracking，將退款金額寫入 refundAmountTwd
+    const opsRow = findOrCreateOpsRow(order);
+    const refundAmt = Number(req.totalTwd || order.totalTwd || 0);
+    if (opsRow.refundAmountTwd !== refundAmt) {
+      opsRow.refundAmountTwd = refundAmt;
+      opsRow.updatedAt = now;
+    }
   }
 
   req.adminNote = adminNote;
@@ -263,11 +272,13 @@ export function updateKpiConfigFallback(input = {}) {
 
   if (input.commissionRate != null) kpiConfig.commissionRate = toNum(input.commissionRate, kpiConfig.commissionRate);
   if (input.paymentFeeRate != null) kpiConfig.paymentFeeRate = toNum(input.paymentFeeRate, kpiConfig.paymentFeeRate);
+  if (input.guidePayoutRate != null) kpiConfig.guidePayoutRate = toNum(input.guidePayoutRate, kpiConfig.guidePayoutRate);
   if (input.healthyMinContributionTwd != null) kpiConfig.healthyMinContributionTwd = toNum(input.healthyMinContributionTwd, kpiConfig.healthyMinContributionTwd);
   if (input.healthyAllowException != null) kpiConfig.healthyAllowException = Boolean(input.healthyAllowException);
 
   if (kpiConfig.commissionRate < 0 || kpiConfig.commissionRate > 1) throw new Error('commissionRate must be between 0 and 1');
   if (kpiConfig.paymentFeeRate < 0 || kpiConfig.paymentFeeRate > 1) throw new Error('paymentFeeRate must be between 0 and 1');
+  if (kpiConfig.guidePayoutRate < 0 || kpiConfig.guidePayoutRate > 1) throw new Error('guidePayoutRate must be between 0 and 1');
 
   kpiConfig.updatedAt = new Date().toISOString();
 
@@ -300,6 +311,7 @@ export function revertKpiConfigFallback(input = {}) {
 
   kpiConfig.commissionRate = Number(cfg.commissionRate ?? kpiConfig.commissionRate);
   kpiConfig.paymentFeeRate = Number(cfg.paymentFeeRate ?? kpiConfig.paymentFeeRate);
+  kpiConfig.guidePayoutRate = Number(cfg.guidePayoutRate ?? kpiConfig.guidePayoutRate);
   kpiConfig.healthyMinContributionTwd = Number(cfg.healthyMinContributionTwd ?? kpiConfig.healthyMinContributionTwd);
   kpiConfig.healthyAllowException = Boolean(cfg.healthyAllowException ?? kpiConfig.healthyAllowException);
   kpiConfig.updatedAt = new Date().toISOString();
@@ -343,12 +355,17 @@ function findOrCreateOpsRow(order) {
 function buildOpsContribution(order, ops) {
   const cfg = getKpiConfigFallback();
   const gmv = Number(order.totalTwd || 0);
-  const commissionTwd = Math.round(gmv * cfg.commissionRate);
+  const refundAmountTwd = Number(ops.refundAmountTwd || 0);
+  // 有效 GMV：扣除退款金額後的實收金額
+  const effectiveGmv = Math.max(0, gmv - refundAmountTwd);
+  // 平台收入：只對有效 GMV 收抽成
+  const commissionTwd = Math.round(effectiveGmv * cfg.commissionRate);
+  // 金流費：依各支付商協議，通常不退；以原始 GMV 計算
   const paymentFeeTwd = Math.round(gmv * cfg.paymentFeeRate);
   const manualCostTwd = Number(ops.manualCostTwd || 0);
-  const refundAmountTwd = Number(ops.refundAmountTwd || 0);
   const subsidyTwd = Number(ops.subsidyTwd || 0);
-  const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - refundAmountTwd - subsidyTwd;
+  // 最終貢獻 = 平台收入 - 不可回收成本
+  const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd;
   const hasException = Boolean(
     refundAmountTwd > 0 ||
     ops.isRescheduled ||
@@ -362,6 +379,7 @@ function buildOpsContribution(order, ops) {
 
   return {
     gmv,
+    effectiveGmv,
     commissionTwd,
     paymentFeeTwd,
     manualMinutes: Number(ops.manualMinutes || 0),
@@ -380,6 +398,8 @@ export function listOperationsTrackingFallback() {
       const exp = experiences.find((e) => e.id === o.experienceId);
       const ops = findOrCreateOpsRow(o);
       const calc = buildOpsContribution(o, ops);
+      // calc 最後展開，確保計算欄位不被 ops 的舊快取值覆蓋
+      const { finalContributionTwd: _a, commissionTwd: _b, paymentFeeTwd: _c, effectiveGmv: _d, isHealthyOrder: _e, hasException: _f, gmv: _g, ...opsRest } = ops;
       return {
         orderId: o.id,
         orderDate: o.createdAt,
@@ -388,8 +408,8 @@ export function listOperationsTrackingFallback() {
         scheduleDate: o.scheduleStartAt || null,
         travelers: o.peopleCount || 1,
         status: o.status,
+        ...opsRest,
         ...calc,
-        ...ops
       };
     })
     .sort((a, b) => new Date(b.orderDate || 0).getTime() - new Date(a.orderDate || 0).getTime());
