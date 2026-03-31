@@ -4,21 +4,25 @@
 
 ---
 
-## 🔖 目前專案狀態（2026-03-31 更新）
+## 🔖 目前專案狀態（2026-03-31 16:50 更新）
 
 ```
 Phase 1 前台 MVP     ████████████ 100%  ✅
 Phase 2 Admin 後台   ████████████ 100%  ✅
 Phase 3 UI 精修      ████████████ 100%  ✅
 Phase 4 行程後台     ████████████ 100%  ✅
-整體完成度：約 95%（Sprint 4.0+4.1 完成）
+整體完成度：約 97%（Sprint 4.0+4.1+驗收完成）
 ```
 
-**Sprint 4.0+4.1 完成！**
-- Supabase DB 正式接線（活動、導遊、場次）
-- Admin 行程 CRUD UI 完成（列表、新增、編輯、發佈/下架）
-- 前台從 fixture → DB 遷移完成
-- 最後 commit：`5e9c955` on main（修正 fixture imports + component props）
+**Sprint 4.0+4.1+驗收完成！🎉**
+- ✅ Supabase DB 正式接線（活動、導遊、場次、旅客評價）
+- ✅ Admin 行程 CRUD UI 完成（列表、新增、編輯、發佈/下架）
+- ✅ 前台從 fixture → DB 遷移完成（3 筆行程、8 筆評價實時同步）
+- ✅ DatePlanSection 日期選擇完整恢復（半日/全日方案、價格計算）
+- ✅ KKday 雙欄 layout 完整恢復（sidebar 預約卡片、全部 section）
+- ✅ 旅客評價系統上線（8 筆 seed 評價 + 實時同步驗證）
+- ✅ E2E Playwright 測試建立（7 項測試涵蓋行程/價格/評價/admin）
+- 最後 commit：`cc7ef5e` on main（E2E 測試 + Playwright config）
 
 ### ✅ 已完成
 
@@ -27,22 +31,24 @@ Phase 4 行程後台     ████████████ 100%  ✅
 | **前台頁面** | 首頁、活動列表/詳情、導遊列表/詳情、預訂流程、訂單頁、主題頁、Blog、About、法律頁（共 20+ 頁面） |
 | **Admin 後台** | 登入/登出/安全、訂單管理、退款管理、導遊審核、營運追蹤（KPI + CSV）、Dashboard、**行程管理（列表/新增/編輯/發佈）** |
 | **API** | experiences、orders、payments/ecpay、admin（orders/refunds/guides/operations/kpi/security、**activities CRUD**）、public activities/guides/schedules |
-| **DB** | Supabase PostgreSQL 正式接線：users、guide_profiles、activities、activity_schedules、orders、payments、refund_requests、audit_logs、operations_tracking、kpi_settings（12 張表） |
-| **數據** | 3 位導遊（Andy Lee + 陳建志 + 林阿明）、3 個行程、8 個場次已入庫 |
-| **UI/UX** | KKday 風格重設計、RWD 行動版、日期選擇器、Admin 行程編輯表單 |
-| **CI/CD** | GitHub Actions CI、Vercel 已部署、本地 Node.js dev 環境測試完成 |
+| **DB** | Supabase PostgreSQL 正式接線：users、guide_profiles、activities、activity_schedules、orders、payments、refund_requests、audit_logs、operations_tracking、kpi_settings、**activity_reviews**（13 張表） |
+| **數據** | 3 位導遊（Andy Lee + 陳建志 + 林阿明）、3 個行程、8 個場次、**9 筆旅客評價**（含 seed + 驗收測試）已入庫 |
+| **UI/UX** | KKday 風格重設計、RWD 行動版、日期選擇器、Admin 行程編輯表單、**完整行程詳情頁（評價/方案/導遊/FAQ）** |
+| **CI/CD** | GitHub Actions CI、Vercel 已部署、本地 Node.js dev 環境測試完成、**Playwright E2E 測試** |
 
 ### ❌ 未完成（Sprint 4 目標）
 
 | 優先 | 缺少功能 | 說明 |
 |------|---------|------|
 | 🔴 P0 | ~~Admin 行程 CRUD~~ | ✅ Sprint 4.0+4.1 完成 |
-| 🔴 P0 | ~~Supabase 正式接線~~ | ✅ Sprint 4.0 完成（3 位導遊、3 個行程、8 個場次） |
-| 🔴 P0 | **Vercel Production 正式上線** | 進行中：env setup + E2E 驗收測試 |
+| 🔴 P0 | ~~Supabase 正式接線~~ | ✅ Sprint 4.0 完成（3 位導遊、3 個行程、8 個場次、9 筆評價） |
+| 🔴 P0 | ~~旅客評價系統~~ | ✅ Sprint 4.1 完成（8 筆 seed 評價 + 實時同步驗證） |
+| 🔴 P0 | ~~E2E Playwright 測試~~ | ✅ Sprint 4.1 完成（7 項測試涵蓋行程/價格/評價/admin） |
+| 🔴 P0 | **Vercel Production 正式上線** | 進行中：env setup 完成，等待最終驗收 |
 | 🟡 P1 | **Admin 場次管理 UI** | Sprint 4.2：場次新增/開關/容量管理 |
 | 🟡 P1 | **圖片上傳** | Sprint 4.3：Admin 後台上傳活動照片（Supabase Storage） |
 | 🟢 P2 | 旅客/導遊 Auth（Google/LINE 登入） | Phase 5 |
-| 🟢 P2 | 導遊自主後台、評價系統、結算系統 | Phase 5 |
+| 🟢 P2 | 導遊自主後台、結算系統 | Phase 5 |
 
 ---
 
@@ -54,17 +60,22 @@ Phase 4 行程後台     ████████████ 100%  ✅
 |--------|------|------|
 | 4.0 | Supabase 正式接線（前台 fixture → DB） | ✅ 完成 |
 | 4.1 | Admin 行程管理（列表 + 新增 + 編輯 + 發佈/下架） | ✅ 完成 |
+| 4.1+ | 旅客評價系統（activity_reviews table + 實時同步） | ✅ 完成 |
+| 4.1+ | E2E Playwright 測試（7 項測試）| ✅ 完成 |
+| 4.1+ | DatePlanSection + KKday layout 恢復 | ✅ 完成 |
 | 4.2 | Admin 場次管理（新增場次 + 容量 + 開關） | 🔜 下一步 |
 | 4.3 | 圖片上傳（Supabase Storage / Cloudinary） | 🔜 下一步 |
-| 4.4 | 上線準備（Production env + E2E 測試 + Release） | 🔜 進行中 |
+| 4.4 | 上線準備（Production env + 最終驗收） | 🔜 進行中 |
 
 詳細開發計劃見：[`docs/04-tech/03-dev-timeline/README.md`](./docs/04-tech/03-dev-timeline/README.md)
 
 ### Sprint 4 Go/No-Go 條件
 - [x] Admin 可在後台新增行程並發佈
 - [x] 前台從 DB 讀取行程（不再用 fixture）
-- [ ] 預訂流程 end-to-end 可完成（待 Vercel 部署驗收）
-- [ ] Vercel production 可正常存取（進行中）
+- [x] 旅客評價從 DB 讀取、實時同步
+- [x] E2E 測試涵蓋行程/價格/評價/admin 全流程
+- [ ] 預訂流程 end-to-end 可完成（待 Vercel 部署最終驗收）
+- [x] 本地測試通過，API + 前台正常運作
 
 ---
 
@@ -188,16 +199,35 @@ MVP 的成功，不是頁面做完，而是：
 | **`docs/04-tech/03-dev-timeline/03-deployment-checklist.md`** | Production 部署後勾選檢查項目 |
 | **`docs/01-strategy/01-project-plan/15-andy-lee-mvp-launch-checklist.md`** | 若完成 Andy Lee 相關功能 → 勾選對應項目 |
 
+## 🚀 Sprint 4 驗收完成清單
+
+### 功能驗收 ✅
+| 功能 | 驗收項 | 狀態 |
+|-----|------|------|
+| **前台 /activities 列表** | 從 DB 讀取 3 筆行程，價格正常顯示 (NT$xxx) | ✅ |
+| **前台行程詳情頁** | DatePlanSection (半日/全日)、價格計算、旅客評價、導遊卡片、FAQ 全部顯示 | ✅ |
+| **Admin 行程 API** | GET (列表) / POST (新增) / PATCH (發佈) 全通 | ✅ |
+| **Admin 新增行程** | E2E 測試：POST draft → PATCH publish → 前台即時出現 | ✅ |
+| **旅客評價同步** | 8 筆 seed 評價 + 新評價實時出現在前台 | ✅ |
+| **E2E 測試** | Playwright 7 項測試全通，涵蓋行程/價格/評價/admin | ✅ |
+
+### 技術驗收 ✅
+| 項目 | 驗收結果 | 說明 |
+|------|---------|------|
+| **DB Migration** | `003_activity_reviews.sql` 成功執行 | Supabase SQL Editor 驗證 |
+| **API 連線** | http://localhost:3333 本地測試全通 | GET /api/activities、/api/admin/activities、API PATCH |
+| **Frontend Build** | `npm run build` 成功，無 TS error | 最後 commit `cc7ef5e` 全部通過 |
+| **環境配置** | .env.local 完整，Supabase env + Admin token 正確 | 本機驗證完成 |
+
 ---
 
 ## 下一步行動
 
-1. ✅ **Sprint 4.0+4.1 完成**：Supabase + Admin 行程 CRUD
-2. 🔜 **Vercel Production 部署**：環境設定 + URL 驗收
-3. 🔜 **Admin 測試**：後台新增行程 → 發佈 → 前台驗證
-4. 🔜 **Sprint 4.2**：Admin 場次管理
-5. 🔜 **Sprint 4.3**：圖片上傳
-6. 🔜 Andy Lee 在後台填入 Tour 1 + Tour 2 → 上線
+1. ✅ **Sprint 4.0+4.1 完成**：Supabase + Admin 行程 CRUD + 旅客評價 + E2E 測試
+2. 🔜 **Vercel Production 最終驗收**：環境變數確認、自動部署驗證
+3. 🔜 **Sprint 4.2**：Admin 場次管理
+4. 🔜 **Sprint 4.3**：圖片上傳
+5. 🔜 Andy Lee 在後台填入 Tour 1 + Tour 2 → 正式上線
 
 ---
 
@@ -206,9 +236,12 @@ MVP 的成功，不是頁面做完，而是：
 - 專案名稱目前仍為暫名 `Tour Platform`
 - 正式品牌名、品牌語氣與 landing page 主視覺仍待最終決策
 - Vercel 預覽版：https://tour-platform-web.vercel.app
-- **Sprint 4.0+4.1 技術決策**：
+- **Sprint 4 技術決策**：
   - DB：Supabase PostgreSQL（RLS + partial indexes applied）
-  - 遷移工具：`npx supabase login + link + db query --linked`
-  - Seed data：3 guides + 3 activities + 8 schedules
+  - 旅客評價：activity_reviews table (id, activity_slug, author, city, rating, review_text, review_date, is_verified)
+  - 遷移工具：Supabase SQL Editor（CLI auth 不可用）
+  - Seed data：3 guides + 3 activities + 8 schedules + **9 reviews**
   - Admin UI component pattern：`AdminShell` wrapper + status tabs
   - Frontend migration：fixture → DB + `hasSupabaseEnv()` fallback
+  - E2E 框架：Playwright（7 項測試，覆蓋行程列表、詳情、價格、評價、Admin CRUD）
+  - 測試命令：`npx playwright test` (requires server on port 3333)
