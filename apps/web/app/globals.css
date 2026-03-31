@@ -1321,6 +1321,18 @@ img { max-width: 100%; height: auto; }
   white-space: nowrap !important;
   flex-shrink: 0;
 }
+/* Mobile: stack price + button vertically */
+@media (max-width: 480px) {
+  .kkd-plan-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kkd-plan-select-btn {
+    text-align: center !important;
+    width: 100% !important;
+    padding: 12px 0 !important;
+  }
+}
 
 /* Reviews */
 .kkd-reviews-summary {
