@@ -50,17 +50,62 @@ MVP 階段先不做複雜 RBAC，僅保留一種 Admin 角色。
 - 記錄退款金額
 - 記錄 admin note
 
-### D. 場次管理
+### D. 行程管理（Sprint 4 新增，P0 必做）
+用途：Admin 在後台直接新增/編輯/發佈行程，不需動 code。
+
+> ⚠️ Sprint 3.3 前缺少此功能，前台行程資料硬編碼在 `fixtures/andy-lee.ts`。
+> Sprint 4 必須完成此模組，將行程資料移至 Supabase。
+
+功能：
+- 行程列表（`/admin/activities`）— 顯示所有行程 + 狀態篩選（draft / published / archived）
+- 新增行程（`/admin/activities/new`）— 完整表單
+- 編輯行程（`/admin/activities/[id]/edit`）— 同新增表單，預填現有資料
+- 發佈 / 下架 / 封存 — 狀態切換按鈕
+- 行程圖片上傳 — 封面圖 + gallery（Supabase Storage 或 Cloudinary）
+
+表單欄位（對應 `activities` DB schema）：
+- 標題（title）
+- URL slug（自動生成 + 可手動修改）
+- 描述（description）— rich text 或 markdown
+- 地區（region）
+- 類別（category）
+- 費用方案（可多組：名稱 + 價格 + 時長 + 說明）
+- 最低 / 最高人數（min_participants / max_participants）
+- 集合地點（meeting_point）+ 地圖連結（meeting_point_map_url）
+- 集合時間
+- 開放月份 / 季節限制
+- 包含項目（jsonb）
+- 不包含項目（jsonb）
+- 注意事項（jsonb）
+- 退款規則（refund_policy_type + 自訂說明）
+- 封面圖（cover_image_url）
+- 圖片清單（image_urls）
+
+API：
+- `GET /api/admin/activities` — 列表（含分頁 + 篩選）
+- `POST /api/admin/activities` — 新增
+- `GET /api/admin/activities/[id]` — 詳情
+- `PUT /api/admin/activities/[id]` — 編輯
+- `PATCH /api/admin/activities/[id]/status` — 狀態切換
+
+### E. 場次管理
 用途：人工處理場次與容量問題。
 
 功能：
-- 查看所有活動場次
+- 場次列表（`/admin/activities/[id]/slots`）
+- 新增場次（日期 + 時間 + 容量）
 - 調整容量
 - 關閉 / 重開場次
 - 顯示 booked_count / capacity
 - 查看是否額滿
 
-### E. 營運追蹤（新增，MVP 必做）
+API：
+- `GET /api/admin/activities/[id]/schedules` — 場次列表
+- `POST /api/admin/activities/[id]/schedules` — 新增場次
+- `PUT /api/admin/activities/[id]/schedules/[scheduleId]` — 編輯場次
+- `PATCH /api/admin/activities/[id]/schedules/[scheduleId]/status` — 開關場次
+
+### F. 營運追蹤（已完成）
 用途：追蹤每筆訂單是否健康、是否賺錢、是否需要調整營運策略。
 
 ---
