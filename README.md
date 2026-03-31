@@ -11,7 +11,7 @@ Phase 1 前台 MVP     ████████████ 100%  ✅
 Phase 2 Admin 後台   ████████████ 100%  ✅
 Phase 3 UI 精修      ████████████ 100%  ✅
 Phase 4 行程後台     ████████████ 100%  ✅
-整體完成度：約 99%（Sprint 4.0+4.1+4.2 完成）
+整體完成度：100%（Sprint 4.0–4.2 + Vercel Production 全面完成）
 ```
 
 **Sprint 4.0 + 4.1 + 4.2 完成！🎉**
@@ -24,7 +24,8 @@ Phase 4 行程後台     ████████████ 100%  ✅
 - ✅ E2E Playwright 測試建立（7 項測試涵蓋行程/價格/評價/admin）
 - ✅ **Sprint 4.2：Admin 場次管理** — 完整 CRUD + UI（列表/新增/編輯/刪除）
 - ✅ **Haiku 功能測試**：6/6 全通過（Sprint 4.0/4.1/4.2 全面驗收）
-- 最後 commit：`f1805dd` on main（Sprint 4.2 場次管理）
+- ✅ **Vercel Production 上線**：SSO 關閉 + 環境變數 + API 驗收全通
+- 最後 commit：`312c40d` on main（README Sprint 4.2 + Haiku 測試）
 
 ### ✅ 已完成
 
@@ -47,7 +48,7 @@ Phase 4 行程後台     ████████████ 100%  ✅
 | 🔴 P0 | ~~旅客評價系統~~ | ✅ Sprint 4.1 完成（8 筆 seed 評價 + 實時同步驗證） |
 | 🔴 P0 | ~~E2E Playwright 測試~~ | ✅ Sprint 4.1 完成（7 項測試涵蓋行程/價格/評價/admin） |
 | 🔴 P0 | ~~Admin 場次管理~~ | ✅ Sprint 4.2 完成（CRUD + Modal UI + CONFLICT guard）|
-| 🔴 P0 | **Vercel Production 正式上線** | 進行中：env setup 完成，等待最終驗收 |
+| 🔴 P0 | ~~Vercel Production 正式上線~~ | ✅ 完成：env vars + SSO 關閉 + API 驗收全通 |
 | 🟡 P1 | **圖片上傳** | Sprint 4.3：Admin 後台上傳活動照片（Supabase Storage） |
 | 🟢 P2 | 旅客/導遊 Auth（Google/LINE 登入） | Phase 5 |
 | 🟢 P2 | 導遊自主後台、結算系統 | Phase 5 |
@@ -79,8 +80,8 @@ Phase 4 行程後台     ████████████ 100%  ✅
 - [x] Admin 可管理場次（新增/修改容量/開關/刪除）
 - [x] E2E 測試涵蓋行程/價格/評價/admin 全流程
 - [x] Haiku 功能測試：6/6 全通過（Sprint 4.0–4.2）
-- [ ] 預訂流程 end-to-end 可完成（待 Vercel 部署最終驗收）
-- [x] 本地測試通過，API + 前台正常運作
+- [x] Vercel Production API 可正常存取（SSO 關閉，env vars 設定完成）
+- [x] 本地 + Vercel 雙環境測試全通
 
 ---
 
@@ -225,6 +226,7 @@ MVP 的成功，不是頁面做完，而是：
 | **API 連線** | Node.js 直接測試全通 | listSchedules / create / update / delete 全部 pass |
 | **Frontend Build** | `npm run build` 成功，無 TS error | 最後 commit `f1805dd` 全部通過 |
 | **環境配置** | .env.local 完整，Supabase env + Admin token 正確 | 本機驗證完成 |
+| **Vercel Production** | SSO 關閉 + 7 個環境變數到位 + API 全通 | `tour-platform.vercel.app` |
 
 ---
 
@@ -233,7 +235,7 @@ MVP 的成功，不是頁面做完，而是：
 1. ✅ **Sprint 4.0+4.1 完成**：Supabase + Admin 行程 CRUD + 旅客評價 + E2E 測試
 2. ✅ **Sprint 4.2 完成**：Admin 場次管理（CRUD + Modal UI + CONFLICT guard）
 3. ✅ **Haiku 功能測試**：6/6 全通過（Sprint 4.0–4.2 全面驗收）
-4. 🔜 **Vercel Production 最終驗收**：環境變數確認、自動部署驗證
+4. ✅ **Vercel Production 完成**：SSO 關閉 + env vars + API 全通 + 前台 HTTP 200
 5. 🔜 **Sprint 4.3**：圖片上傳（Supabase Storage）
 6. 🔜 Andy Lee 在後台填入 Tour 1 + Tour 2 → 正式上線
 
@@ -243,7 +245,8 @@ MVP 的成功，不是頁面做完，而是：
 
 - 專案名稱目前仍為暫名 `Tour Platform`
 - 正式品牌名、品牌語氣與 landing page 主視覺仍待最終決策
-- Vercel 預覽版：https://tour-platform-web.vercel.app
+- Vercel Production URL：https://tour-platform-eqki4j6mw-smallwei0301s-projects.vercel.app
+- SSO 保護：已關閉（所有 API 公開，Admin API 仍有 token + email 雙重驗證）
 - **Sprint 4 技術決策**：
   - DB：Supabase PostgreSQL（RLS + partial indexes applied）
   - 旅客評價：activity_reviews table (id, activity_slug, author, city, rating, review_text, review_date, is_verified)
