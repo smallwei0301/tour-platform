@@ -1566,6 +1566,7 @@ export async function getAdminActivityByIdDb(id) {
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, safety_notice, faq,
       good_for, not_good_for, transport_mode, seo_title, seo_description,
+      plans,
       status, published_at, created_at, updated_at,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(id, slug, display_name)
@@ -1594,6 +1595,7 @@ export async function getAdminActivityByIdDb(id) {
     safetyNotice: data.safety_notice, faq: data.faq || [],
     goodFor: data.good_for || [], notGoodFor: data.not_good_for || [],
     transportMode: data.transport_mode, seoTitle: data.seo_title, seoDescription: data.seo_description,
+    plans: data.plans || null,
     status: data.status, publishedAt: data.published_at,
     createdAt: data.created_at, updatedAt: data.updated_at,
     guideId: data.guide_id, guideSlug: data.guide_slug,
@@ -1707,6 +1709,7 @@ export async function updateActivityDb(id, input = {}) {
     if (input[k] !== undefined) patch[col] = toJsonbArray(input[k]);
   }
   if (input.imageUrls !== undefined) patch.image_urls = input.imageUrls;
+  if (input.plans !== undefined) patch.plans = input.plans;
 
   // Re-resolve guide_id if guideSlug changed
   if (input.guideSlug) {
