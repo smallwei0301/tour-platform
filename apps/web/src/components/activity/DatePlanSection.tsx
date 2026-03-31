@@ -16,7 +16,8 @@ interface Schedule {
 
 interface Activity {
   slug: string;
-  price: number;
+  price?: number;
+  priceTwd?: number;
   refundRules: string[];
   notices?: string[];
 }
@@ -101,7 +102,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
           schedules={schedules}
           selectedDate={selectedDate}
           onSelect={setSelectedDate}
-          price={activity.price}
+          price={activity.priceTwd ?? activity.price ?? 0}
         />
       </div>
 
@@ -112,7 +113,8 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
 
       <div className="kkd-plans-list">
         {PLANS.map((plan) => {
-          const planPrice = Math.round(activity.price * plan.priceMultiplier);
+          const basePrice = activity.priceTwd ?? activity.price ?? 0;
+          const planPrice = Math.round(basePrice * plan.priceMultiplier);
           const origPrice = Math.round(planPrice * 1.25);
           const isSelected = selectedPlan === plan.id;
 
