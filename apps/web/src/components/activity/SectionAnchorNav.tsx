@@ -2,15 +2,21 @@
 
 import { useEffect, useState } from 'react';
 
-const SECTIONS = [
+interface Section {
+  id: string;
+  label: string;
+}
+
+const DEFAULT_SECTIONS: Section[] = [
   { id: 'section-plan', label: '方案' },
   { id: 'section-reviews', label: '評價' },
   { id: 'section-details', label: '商品說明' },
   { id: 'section-policy', label: '購買須知' },
 ];
 
-export function SectionAnchorNav() {
-  const [active, setActive] = useState('section-plan');
+export function SectionAnchorNav({ sections }: { sections?: Section[] }) {
+  const SECTIONS = sections || DEFAULT_SECTIONS;
+  const [active, setActive] = useState(SECTIONS[0]?.id || 'section-plan');
 
   useEffect(() => {
     const observer = new IntersectionObserver(
