@@ -1737,6 +1737,97 @@ export async function updateActivityStatusDb(id, status) {
   return getAdminActivityByIdDb(id);
 }
 
+// ─────────────────────────────────────────────
+// Sprint 4.2 — Activity Schedule CRUD
+// ─────────────────────────────────────────────
+
+export async function listSchedulesByActivityDb(activityId) {
+  if (!hasSupabaseEnv()) return [];
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activity_schedules')
+    .select('id, activity_id, start_at, end_at, capacity, booked_count, status, created_at, updated_at')
+    .eq('activity_id', activityId)
+    .order('start_at');
+  if (error) throw new Error(error.message);
+  return (data || []).map(s => ({
+    id: s.id,
+    activityId: s.activity_id,
+    startAt: s.start_at,
+    endAt: s.end_at,
+    capacity: s.capacity,
+    bookedCount: s.booked_count,
+    status: s.status,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+  }));
+}
+
+export async function createScheduleDb(input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const { activityId, startAt, endAt, capacity = 10, status = 'open' } = input;
+  if (!activityId) throw new Error('activityId is required');
+  if (!startAt)    throw new Error('startAt is required');
+  if (!endAt)      throw new Error('endAt is required');
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activity_schedules')
+    .insert({ activity_id: activityId, start_at: startAt, end_at: endAt, capacity: Number(capacity), booked_count: 0, status })
+    .select('id, activity_id, start_at, end_at, capacity, booked_count, status')
+    .single();
+  if (error) throw new Error(error.message);
+  return {
+    id: data.id, activityId: data.activity_id,
+    startAt: data.start_at, endAt: data.end_at,
+    capacity: data.capacity, bookedCount: data.booked_count, status: data.status,
+  };
+}
+
+export async function updateScheduleDb(id, input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+
+  const patch = {};
+  if (input.startAt    !== undefined) patch.start_at    = input.startAt;
+  if (input.endAt      !== undefined) patch.end_at      = input.endAt;
+  if (input.capacity   !== undefined) patch.capacity    = Number(input.capacity);
+  if (input.status     !== undefined) patch.status      = input.status;
+  patch.updated_at = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from('activity_schedules')
+    .update(patch)
+    .eq('id', id)
+    .select('id, activity_id, start_at, end_at, capacity, booked_count, status')
+    .single();
+  if (error) throw new Error(error.message);
+  if (!data) throw new Error('schedule not found');
+  return {
+    id: data.id, activityId: data.activity_id,
+    startAt: data.start_at, endAt: data.end_at,
+    capacity: data.capacity, bookedCount: data.booked_count, status: data.status,
+  };
+}
+
+export async function deleteScheduleDb(id) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+
+  // 有訂單禁止刪除
+  const { data: existing } = await supabase
+    .from('activity_schedules')
+    .select('id, booked_count')
+    .eq('id', id)
+    .single();
+  if (!existing) throw new Error('schedule not found');
+  if (existing.booked_count > 0) throw new Error(`CONFLICT: 此場次已有 ${existing.booked_count} 筆訂單，無法刪除`);
+
+  const { error } = await supabase.from('activity_schedules').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+  return { deleted: true, id };
+}
+
 export async function listGuideProfilesDb() {
   if (!hasSupabaseEnv()) {
     const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
