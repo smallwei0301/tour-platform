@@ -90,7 +90,7 @@ export const guides: GuideProfile[] = [
     specialties: ['柴山探洞', '高雄在地', '戶外特色導覽', '地形探索', '小團體驗'],
     verificationBadges: ['壽山國家自然公園巡守員', '環境教育講師', '保育志工證書 21 本', '颱風災後復原感謝狀 x2'],
     avatarUrl: '/images/guides/andy-lee/avatar.jpg',
-    heroImageUrl: '/images/activities/chaishan/main.jpg',
+    heroImageUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=1200&q=80',
     galleryUrls: [
       'https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200',
       'https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200',
@@ -187,9 +187,9 @@ export const activities: Activity[] = [
     ],
     socialProofQuotes: ['大人小人都開心😍', '奇幻的探洞之旅', '謝謝 Andy 的導覽，會想再參加一次', '很棒、下次再去'],
     trustPoints: ['多元客群：親子、教師、外國遊客、研究生', '有實際帶團與環境教育背景', '具壽山巡守與保育志工信任背書'],
-    imageUrl: '/images/activities/chaishan/main.jpg',
+    imageUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
     galleryUrls: [
-      '/images/activities/chaishan/main.jpg',
+      'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
       'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
       'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80',
       'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
