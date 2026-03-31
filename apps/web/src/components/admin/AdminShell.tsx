@@ -8,6 +8,7 @@ import { AdminGuide } from './AdminGuide';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
+  { href: '/admin/activities', label: '行程管理', icon: '🗺️' },
   { href: '/admin/orders', label: '訂單管理', icon: '🧾' },
   { href: '/admin/refunds', label: '退款管理', icon: '↩️' },
   { href: '/admin/guides', label: '導遊審核', icon: '🧭' },

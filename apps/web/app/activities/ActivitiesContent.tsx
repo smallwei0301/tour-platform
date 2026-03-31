@@ -2,10 +2,31 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { activities, guides } from '../../src/fixtures/data';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
 const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
+
+interface Activity {
+  id: string;
+  slug: string;
+  title: string;
+  tagline?: string;
+  shortDescription?: string;
+  region: string;
+  regionSlug?: string;
+  category: string;
+  priceTwd: number;
+  durationMinutes?: number;
+  minParticipants?: number;
+  maxParticipants?: number;
+  coverImageUrl?: string;
+  status: string;
+  guideName?: string;
+  guideSlug?: string;
+  guideAvatarUrl?: string;
+  ratingAvg?: number;
+  reviewCount?: number;
+}
 
 export default function ActivitiesContent() {
   const searchParams = useSearchParams();
@@ -19,6 +40,8 @@ export default function ActivitiesContent() {
     searchParams.get('type') ? [searchParams.get('type')!] : []
   );
   const [sort, setSort] = useState('recommended');
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Sync URL → state on mount
   useEffect(() => {
@@ -28,6 +51,20 @@ export default function ActivitiesContent() {
     const t = searchParams.get('type');
     if (t) setSelectedTypes([t]);
   }, [searchParams]);
+
+  // Fetch from API
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (query) params.set('q', query);
+    fetch(`/api/activities${params.toString() ? '?' + params.toString() : ''}`)
+      .then(r => r.json())
+      .then(json => {
+        if (json.ok) setActivities(json.data || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [query]);
 
   function toggleRegion(r: string) {
     setSelectedRegions((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]);
@@ -44,16 +81,6 @@ export default function ActivitiesContent() {
 
   const filtered = useMemo(() => {
     let result = [...activities];
-    const q = query.trim().toLowerCase();
-    if (q) {
-      result = result.filter((a) =>
-        a.title.toLowerCase().includes(q) ||
-        a.region.toLowerCase().includes(q) ||
-        a.tagline?.toLowerCase().includes(q) ||
-        a.shortDescription?.toLowerCase().includes(q) ||
-        a.category?.toLowerCase().includes(q)
-      );
-    }
     if (selectedRegions.length > 0) {
       result = result.filter((a) => selectedRegions.includes(a.region));
     }
@@ -62,10 +89,10 @@ export default function ActivitiesContent() {
         selectedTypes.some((t) => a.category?.includes(t.replace(' 🔦', '').replace(' 🌊', '')))
       );
     }
-    if (sort === 'price-asc') result.sort((a, b) => a.price - b.price);
-    if (sort === 'price-desc') result.sort((a, b) => b.price - a.price);
+    if (sort === 'price-asc') result.sort((a, b) => a.priceTwd - b.priceTwd);
+    if (sort === 'price-desc') result.sort((a, b) => b.priceTwd - a.priceTwd);
     return result;
-  }, [query, selectedRegions, selectedTypes, sort]);
+  }, [activities, selectedRegions, selectedTypes, sort]);
 
   const hasFilters = query || selectedRegions.length > 0 || selectedTypes.length > 0;
   const resultLabel = query
@@ -139,7 +166,11 @@ export default function ActivitiesContent() {
             </select>
           </div>
 
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
+              <p style={{ fontSize: 14 }}>載入中⋯</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
               <p style={{ fontSize: 40, marginBottom: 12 }}>🔍</p>
               <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的行程</p>
@@ -149,11 +180,22 @@ export default function ActivitiesContent() {
           ) : (
             <div className="tp-card-grid tp-card-grid-activities">
               {filtered.map((a) => {
-                const guide = guides.find((g) => g.slug === a.guideSlug);
+                const regionSlug = a.regionSlug || a.region?.toLowerCase().replace(/[^\w]/g, '-') || 'taiwan';
+                const durationDisplay = a.durationMinutes
+                  ? a.durationMinutes >= 60
+                    ? `${Math.floor(a.durationMinutes / 60)}${a.durationMinutes % 60 ? ` 小時 ${a.durationMinutes % 60} 分` : ' 小時'}`
+                    : `${a.durationMinutes} 分鐘`
+                  : '';
                 return (
                   <article className="tp-card" key={a.slug}>
                     <div style={{ position: 'relative' }}>
-                      <img src={a.imageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
+                      <img
+                        src={a.coverImageUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'}
+                        alt={a.title}
+                        className="tp-card-img"
+                        style={{ background: 'none' }}
+                        loading="lazy"
+                      />
                       <button className="tp-fav-btn" aria-label="收藏">❤️</button>
                       <span style={{
                         position: 'absolute', top: 10, left: 10,
@@ -161,18 +203,26 @@ export default function ActivitiesContent() {
                         fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
                       }}>{a.category}</span>
                     </div>
-                    {guide && (
+                    {a.guideName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px' }}>
-                        <img src={guide.avatarUrl} alt={guide.displayName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
-                        <span style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{guide.displayName} ✅</span>
+                        {a.guideAvatarUrl && (
+                          <img src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                        )}
+                        <span style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{a.guideName} ✅</span>
                       </div>
                     )}
                     <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
-                    <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--tp-muted)' }}>⭐ 5.0 · 📍 {a.region}</p>
-                    <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>🕐 {a.durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人</p>
+                    <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--tp-muted)' }}>
+                      ⭐ {a.ratingAvg?.toFixed(1) || '5.0'} · 📍 {a.region}
+                    </p>
+                    {durationDisplay && (
+                      <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
+                        🕐 {durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人
+                      </p>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--tp-primary)' }}>{a.priceLabel}</strong>
-                      <Link className="tp-btn tp-btn-primary" href={`/activities/${a.regionSlug}/${a.slug}`}
+                      <strong style={{ color: 'var(--tp-primary)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
+                      <Link className="tp-btn tp-btn-primary" href={`/activities/${regionSlug}/${a.slug}`}
                         style={{ fontSize: 13, padding: '6px 14px' }}>查看行程</Link>
                     </div>
                   </article>

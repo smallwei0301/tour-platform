@@ -1218,3 +1218,513 @@ export async function processPaymentCallbackDb(input) {
     }
   };
 }
+
+// =============================================================
+// Sprint 4.0+4.1 — Activities DB functions
+// =============================================================
+
+// ---------------------------------------------------------------
+// Frontend (public) — published activities only
+// ---------------------------------------------------------------
+
+export async function listPublishedActivitiesDb(filters = {}) {
+  if (!hasSupabaseEnv()) {
+    // fallback: return fixtures data shaped like DB rows
+    const { activities, guides } = await import('../fixtures/data.js').catch(() => ({ activities: [], guides: [] }));
+    let result = activities || [];
+    if (filters.region) result = result.filter(a => a.region === filters.region);
+    if (filters.category) result = result.filter(a => a.category === filters.category);
+    if (filters.q) {
+      const q = filters.q.toLowerCase();
+      result = result.filter(a =>
+        a.title?.toLowerCase().includes(q) ||
+        a.region?.toLowerCase().includes(q) ||
+        a.shortDescription?.toLowerCase().includes(q)
+      );
+    }
+    return result.map(a => {
+      const guide = (guides || []).find(g => g.slug === a.guideSlug);
+      return {
+        id: a.slug, slug: a.slug, title: a.title, tagline: a.tagline,
+        shortDescription: a.shortDescription, region: a.region, regionSlug: a.regionSlug,
+        category: a.category, priceTwd: a.price, durationMinutes: a.durationMinutes,
+        durationDisplay: a.durationDisplay, minParticipants: a.minParticipants,
+        maxParticipants: a.maxParticipants, coverImageUrl: a.imageUrl,
+        status: 'published', guideName: guide?.displayName || '',
+        guideSlug: a.guideSlug, guideAvatarUrl: guide?.avatarUrl || '',
+        ratingAvg: guide?.rating || 5.0, reviewCount: guide?.reviewCount || 0
+      };
+    });
+  }
+
+  const supabase = await getSupabase();
+  let query = supabase
+    .from('activities')
+    .select(`
+      id, slug, title, tagline, short_description, region, region_slug, category,
+      price_twd, duration_minutes, min_participants, max_participants,
+      cover_image_url, status, published_at,
+      guide_id, guide_slug,
+      guide_profiles!activities_guide_id_fkey(display_name, profile_photo_url, rating_avg, review_count, slug)
+    `)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false });
+
+  if (filters.region) query = query.eq('region', filters.region);
+  if (filters.category) query = query.eq('category', filters.category);
+  if (filters.q) query = query.ilike('title', `%${filters.q}%`);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  return (data || []).map(r => ({
+    id: r.id, slug: r.slug, title: r.title, tagline: r.tagline,
+    shortDescription: r.short_description, region: r.region, regionSlug: r.region_slug,
+    category: r.category, priceTwd: r.price_twd, durationMinutes: r.duration_minutes,
+    minParticipants: r.min_participants, maxParticipants: r.max_participants,
+    coverImageUrl: r.cover_image_url, status: r.status,
+    guideName: r.guide_profiles?.display_name || '',
+    guideSlug: r.guide_slug || r.guide_profiles?.slug || '',
+    guideAvatarUrl: r.guide_profiles?.profile_photo_url || '',
+    ratingAvg: r.guide_profiles?.rating_avg || 5.0,
+    reviewCount: r.guide_profiles?.review_count || 0
+  }));
+}
+
+export async function getActivityBySlugDb(slug) {
+  if (!hasSupabaseEnv()) {
+    const { activities, guides, getReviewsByActivity } = await import('../fixtures/data.js').catch(() => ({}));
+    const a = (activities || []).find(x => x.slug === slug);
+    if (!a) return null;
+    const guide = (guides || []).find(g => g.slug === a.guideSlug);
+    const reviews = getReviewsByActivity ? getReviewsByActivity(slug) : [];
+    return {
+      id: a.slug, slug: a.slug, title: a.title, tagline: a.tagline,
+      shortDescription: a.shortDescription, description: a.longDescription,
+      region: a.region, regionSlug: a.regionSlug, category: a.category,
+      priceTwd: a.price, priceLabel: a.priceLabel,
+      durationMinutes: a.durationMinutes, durationDisplay: a.durationDisplay,
+      minParticipants: a.minParticipants, maxParticipants: a.maxParticipants,
+      meetingPoint: a.meetingPoint, meetingPointMapUrl: a.meetingPointMapUrl,
+      coverImageUrl: a.imageUrl, imageUrls: a.galleryUrls || [],
+      inclusions: a.inclusions || [], exclusions: a.exclusions || [],
+      notices: a.notices || [], refundRules: a.refundRules || [],
+      safetyNotice: a.safetyNotice, faq: a.faq || [],
+      status: 'published',
+      guide: guide ? {
+        id: guide.slug, slug: guide.slug, displayName: guide.displayName,
+        headline: guide.headline, bio: guide.shortBio, region: guide.region,
+        languages: guide.languages || [], specialties: guide.specialties || [],
+        profilePhotoUrl: guide.avatarUrl, ratingAvg: guide.rating,
+        reviewCount: guide.reviewCount, verificationBadges: guide.verificationBadges || []
+      } : null,
+      schedules: (a.schedules || []).map((s, i) => ({
+        id: `${slug}-schedule-${i}`, startAt: s.startAt, endAt: s.endAt,
+        capacity: s.capacity, bookedCount: s.bookedCount, status: s.status
+      })),
+      reviews: reviews.map(r => ({
+        id: r.id, author: r.author, city: r.city, rating: r.rating,
+        comment: r.text, date: r.date
+      }))
+    };
+  }
+
+  const supabase = await getSupabase();
+  const { data: act, error } = await supabase
+    .from('activities')
+    .select(`
+      id, slug, title, tagline, short_description, description, region, region_slug, category,
+      price_twd, duration_minutes, min_participants, max_participants,
+      meeting_point, meeting_point_map_url, cover_image_url, image_urls,
+      inclusions, exclusions, notices, refund_rules, refund_policy_type,
+      safety_notice, faq, good_for, not_good_for, status, published_at,
+      guide_id, guide_slug,
+      guide_profiles!activities_guide_id_fkey(
+        id, slug, display_name, headline, bio, region, languages, specialties,
+        profile_photo_url, rating_avg, review_count, gallery_urls
+      )
+    `)
+    .eq('slug', slug)
+    .single();
+
+  if (error || !act) return null;
+
+  const { data: schedules } = await supabase
+    .from('activity_schedules')
+    .select('id, start_at, end_at, capacity, booked_count, status')
+    .eq('activity_id', act.id)
+    .in('status', ['open', 'full'])
+    .order('start_at', { ascending: true });
+
+  const gp = act.guide_profiles || {};
+  return {
+    id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
+    shortDescription: act.short_description, description: act.description,
+    region: act.region, regionSlug: act.region_slug, category: act.category,
+    priceTwd: act.price_twd, priceLabel: `NT$${act.price_twd?.toLocaleString()} / 人`,
+    durationMinutes: act.duration_minutes,
+    durationDisplay: act.duration_minutes ? `${Math.floor(act.duration_minutes/60)} 小時` : '',
+    minParticipants: act.min_participants, maxParticipants: act.max_participants,
+    meetingPoint: act.meeting_point, meetingPointMapUrl: act.meeting_point_map_url,
+    coverImageUrl: act.cover_image_url, imageUrls: act.image_urls || [],
+    inclusions: act.inclusions || [], exclusions: act.exclusions || [],
+    notices: act.notices || [], refundRules: act.refund_rules || [],
+    safetyNotice: act.safety_notice, faq: act.faq || [],
+    goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
+    status: act.status,
+    guide: {
+      id: gp.id, slug: gp.slug, displayName: gp.display_name,
+      headline: gp.headline, bio: gp.bio, region: gp.region,
+      languages: gp.languages || [], specialties: gp.specialties || [],
+      profilePhotoUrl: gp.profile_photo_url,
+      ratingAvg: gp.rating_avg, reviewCount: gp.review_count,
+      galleryUrls: gp.gallery_urls || []
+    },
+    schedules: (schedules || []).map(s => ({
+      id: s.id, startAt: s.start_at, endAt: s.end_at,
+      capacity: s.capacity, bookedCount: s.booked_count, status: s.status
+    })),
+    reviews: []
+  };
+}
+
+export async function listPublishedGuidesDb() {
+  if (!hasSupabaseEnv()) {
+    const { guides } = await import('../fixtures/data.js').catch(() => ({ guides: [] }));
+    return (guides || []).map(g => ({
+      id: g.slug, slug: g.slug, displayName: g.displayName,
+      headline: g.headline, shortBio: g.shortBio, region: g.region,
+      languages: g.languages || [], specialties: g.specialties || [],
+      profilePhotoUrl: g.avatarUrl, heroImageUrl: g.heroImageUrl,
+      galleryUrls: g.galleryUrls || [],
+      ratingAvg: g.rating, reviewCount: g.reviewCount, serviceCount: g.serviceCount,
+      verificationStatus: 'approved'
+    }));
+  }
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_profiles')
+    .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
+    .eq('verification_status', 'approved')
+    .order('display_name');
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(g => ({
+    id: g.id, slug: g.slug, displayName: g.display_name,
+    headline: g.headline, shortBio: g.bio, region: g.region,
+    languages: g.languages || [], specialties: g.specialties || [],
+    profilePhotoUrl: g.profile_photo_url, heroImageUrl: g.hero_image_url,
+    galleryUrls: g.gallery_urls || [],
+    ratingAvg: g.rating_avg, reviewCount: g.review_count, serviceCount: g.service_count,
+    verificationStatus: g.verification_status
+  }));
+}
+
+export async function getGuideBySlugDb(slug) {
+  if (!hasSupabaseEnv()) {
+    const { guides, getActivitiesByGuide, getReviewsByGuide } = await import('../fixtures/data.js').catch(() => ({}));
+    const g = (guides || []).find(x => x.slug === slug);
+    if (!g) return null;
+    const acts = getActivitiesByGuide ? getActivitiesByGuide(slug) : [];
+    const reviews = getReviewsByGuide ? getReviewsByGuide(slug) : [];
+    return {
+      id: g.slug, slug: g.slug, displayName: g.displayName,
+      headline: g.headline, bio: g.longBio, region: g.region,
+      languages: g.languages || [], specialties: g.specialties || [],
+      verificationBadges: g.verificationBadges || [],
+      profilePhotoUrl: g.avatarUrl, heroImageUrl: g.heroImageUrl,
+      galleryUrls: g.galleryUrls || [],
+      ratingAvg: g.rating, reviewCount: g.reviewCount, serviceCount: g.serviceCount,
+      verificationStatus: 'approved',
+      activities: acts.map(a => ({
+        id: a.slug, slug: a.slug, title: a.title, category: a.category,
+        region: a.region, priceTwd: a.price, coverImageUrl: a.imageUrl,
+        status: 'published'
+      })),
+      reviews: reviews.map(r => ({
+        id: r.id, author: r.author, city: r.city, rating: r.rating,
+        comment: r.text, date: r.date
+      }))
+    };
+  }
+
+  const supabase = await getSupabase();
+  const { data: gp, error } = await supabase
+    .from('guide_profiles')
+    .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
+    .eq('slug', slug)
+    .single();
+
+  if (error || !gp) return null;
+
+  const { data: acts } = await supabase
+    .from('activities')
+    .select('id, slug, title, category, region, price_twd, cover_image_url, status')
+    .eq('guide_slug', slug)
+    .eq('status', 'published');
+
+  return {
+    id: gp.id, slug: gp.slug, displayName: gp.display_name,
+    headline: gp.headline, bio: gp.bio, region: gp.region,
+    languages: gp.languages || [], specialties: gp.specialties || [],
+    verificationBadges: [],
+    profilePhotoUrl: gp.profile_photo_url, heroImageUrl: gp.hero_image_url,
+    galleryUrls: gp.gallery_urls || [],
+    ratingAvg: gp.rating_avg, reviewCount: gp.review_count,
+    serviceCount: gp.service_count, verificationStatus: gp.verification_status,
+    activities: (acts || []).map(a => ({
+      id: a.id, slug: a.slug, title: a.title, category: a.category,
+      region: a.region, priceTwd: a.price_twd, coverImageUrl: a.cover_image_url,
+      status: a.status
+    })),
+    reviews: []
+  };
+}
+
+// ---------------------------------------------------------------
+// Admin — activities CRUD
+// ---------------------------------------------------------------
+
+export async function listAdminActivitiesDb(filters = {}) {
+  if (!hasSupabaseEnv()) {
+    return [];
+  }
+
+  const supabase = await getSupabase();
+  let query = supabase
+    .from('activities')
+    .select(`
+      id, slug, title, region, category, price_twd, status, published_at,
+      created_at, updated_at, guide_slug, min_participants, max_participants,
+      guide_profiles!activities_guide_id_fkey(display_name)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (filters.status) query = query.eq('status', filters.status);
+
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+
+  // Count schedules per activity
+  const actIds = (data || []).map(r => r.id);
+  let scheduleCountMap = {};
+  if (actIds.length > 0) {
+    const { data: sched } = await supabase
+      .from('activity_schedules')
+      .select('activity_id, status')
+      .in('activity_id', actIds);
+    for (const s of (sched || [])) {
+      scheduleCountMap[s.activity_id] = (scheduleCountMap[s.activity_id] || 0) + 1;
+    }
+  }
+
+  return (data || []).map(r => ({
+    id: r.id, slug: r.slug, title: r.title, region: r.region,
+    category: r.category, priceTwd: r.price_twd, status: r.status,
+    publishedAt: r.published_at, createdAt: r.created_at, updatedAt: r.updated_at,
+    guideSlug: r.guide_slug,
+    guideName: r.guide_profiles?.display_name || r.guide_slug || '',
+    minParticipants: r.min_participants, maxParticipants: r.max_participants,
+    scheduleCount: scheduleCountMap[r.id] || 0
+  }));
+}
+
+export async function getAdminActivityByIdDb(id) {
+  if (!hasSupabaseEnv()) return null;
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activities')
+    .select(`
+      id, slug, title, tagline, short_description, description, region, region_slug, category,
+      price_twd, duration_minutes, min_participants, max_participants,
+      meeting_point, meeting_point_map_url, cover_image_url, image_urls,
+      inclusions, exclusions, notices, refund_rules, safety_notice, faq,
+      good_for, not_good_for, transport_mode, seo_title, seo_description,
+      status, published_at, created_at, updated_at,
+      guide_id, guide_slug,
+      guide_profiles!activities_guide_id_fkey(id, slug, display_name)
+    `)
+    .eq('id', id)
+    .single();
+
+  if (error || !data) return null;
+
+  const { data: schedules } = await supabase
+    .from('activity_schedules')
+    .select('id, start_at, end_at, capacity, booked_count, status')
+    .eq('activity_id', id)
+    .order('start_at');
+
+  return {
+    id: data.id, slug: data.slug, title: data.title, tagline: data.tagline,
+    shortDescription: data.short_description, description: data.description,
+    region: data.region, regionSlug: data.region_slug, category: data.category,
+    priceTwd: data.price_twd, durationMinutes: data.duration_minutes,
+    minParticipants: data.min_participants, maxParticipants: data.max_participants,
+    meetingPoint: data.meeting_point, meetingPointMapUrl: data.meeting_point_map_url,
+    coverImageUrl: data.cover_image_url, imageUrls: data.image_urls || [],
+    inclusions: data.inclusions || [], exclusions: data.exclusions || [],
+    notices: data.notices || [], refundRules: data.refund_rules || [],
+    safetyNotice: data.safety_notice, faq: data.faq || [],
+    goodFor: data.good_for || [], notGoodFor: data.not_good_for || [],
+    transportMode: data.transport_mode, seoTitle: data.seo_title, seoDescription: data.seo_description,
+    status: data.status, publishedAt: data.published_at,
+    createdAt: data.created_at, updatedAt: data.updated_at,
+    guideId: data.guide_id, guideSlug: data.guide_slug,
+    guideName: data.guide_profiles?.display_name || '',
+    schedules: (schedules || []).map(s => ({
+      id: s.id, startAt: s.start_at, endAt: s.end_at,
+      capacity: s.capacity, bookedCount: s.booked_count, status: s.status
+    }))
+  };
+}
+
+export async function createActivityDb(input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+
+  const supabase = await getSupabase();
+
+  // Look up guide_id from guide_slug
+  let guideId = input.guideId || null;
+  if (!guideId && input.guideSlug) {
+    const { data: gp } = await supabase
+      .from('guide_profiles')
+      .select('id')
+      .eq('slug', input.guideSlug)
+      .single();
+    if (gp) guideId = gp.id;
+  }
+
+  const toJsonbArray = (v) => {
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    return String(v).split('\n').map(x => x.trim()).filter(Boolean);
+  };
+
+  const slug = input.slug || String(input.title || '').toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff]+/g, '-')
+    .replace(/^-|-$/g, '')
+    + '-' + Date.now();
+
+  const payload = {
+    id: crypto.randomUUID(),
+    guide_id: guideId,
+    guide_slug: input.guideSlug || null,
+    title: String(input.title || '').trim(),
+    slug,
+    tagline: input.tagline || null,
+    short_description: input.shortDescription || null,
+    description: input.description || null,
+    region: input.region || null,
+    region_slug: input.regionSlug || null,
+    category: input.category || null,
+    price_twd: Number(input.priceTwd || 0),
+    duration_minutes: input.durationMinutes ? Number(input.durationMinutes) : null,
+    min_participants: Number(input.minParticipants || 1),
+    max_participants: Number(input.maxParticipants || 10),
+    meeting_point: input.meetingPoint || null,
+    meeting_point_map_url: input.meetingPointMapUrl || null,
+    cover_image_url: input.coverImageUrl || null,
+    image_urls: input.imageUrls || [],
+    inclusions: toJsonbArray(input.inclusions),
+    exclusions: toJsonbArray(input.exclusions),
+    notices: toJsonbArray(input.notices),
+    refund_rules: toJsonbArray(input.refundRules),
+    safety_notice: input.safetyNotice || null,
+    transport_mode: input.transportMode || null,
+    seo_title: input.seoTitle || null,
+    seo_description: input.seoDescription || null,
+    status: 'draft',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const { data, error } = await supabase
+    .from('activities')
+    .insert(payload)
+    .select('id, slug, title, status, created_at')
+    .single();
+
+  if (error || !data) throw new Error(error?.message || 'create activity failed');
+  return data;
+}
+
+export async function updateActivityDb(id, input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+
+  const supabase = await getSupabase();
+
+  const toJsonbArray = (v) => {
+    if (!v) return undefined;
+    if (Array.isArray(v)) return v;
+    return String(v).split('\n').map(x => x.trim()).filter(Boolean);
+  };
+
+  const patch = { updated_at: new Date().toISOString() };
+  const fields = [
+    ['title', 'title'], ['tagline', 'tagline'], ['shortDescription', 'short_description'],
+    ['description', 'description'], ['region', 'region'], ['regionSlug', 'region_slug'],
+    ['category', 'category'], ['priceTwd', 'price_twd'], ['durationMinutes', 'duration_minutes'],
+    ['minParticipants', 'min_participants'], ['maxParticipants', 'max_participants'],
+    ['meetingPoint', 'meeting_point'], ['meetingPointMapUrl', 'meeting_point_map_url'],
+    ['coverImageUrl', 'cover_image_url'], ['safetyNotice', 'safety_notice'],
+    ['transportMode', 'transport_mode'], ['seoTitle', 'seo_title'], ['seoDescription', 'seo_description'],
+    ['guideSlug', 'guide_slug']
+  ];
+  for (const [k, col] of fields) {
+    if (input[k] !== undefined) patch[col] = input[k];
+  }
+  for (const [k, col] of [
+    ['inclusions', 'inclusions'], ['exclusions', 'exclusions'],
+    ['notices', 'notices'], ['refundRules', 'refund_rules']
+  ]) {
+    if (input[k] !== undefined) patch[col] = toJsonbArray(input[k]);
+  }
+  if (input.imageUrls !== undefined) patch.image_urls = input.imageUrls;
+
+  // Re-resolve guide_id if guideSlug changed
+  if (input.guideSlug) {
+    const { data: gp } = await supabase
+      .from('guide_profiles').select('id').eq('slug', input.guideSlug).single();
+    if (gp) patch.guide_id = gp.id;
+  }
+
+  const { error } = await supabase.from('activities').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+
+  return getAdminActivityByIdDb(id);
+}
+
+export async function updateActivityStatusDb(id, status) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+
+  const validStatuses = ['draft', 'published', 'archived'];
+  if (!validStatuses.includes(status)) throw new Error('invalid status');
+
+  const supabase = await getSupabase();
+  const patch = { status, updated_at: new Date().toISOString() };
+  if (status === 'published') patch.published_at = new Date().toISOString();
+
+  const { error } = await supabase.from('activities').update(patch).eq('id', id);
+  if (error) throw new Error(error.message);
+
+  return getAdminActivityByIdDb(id);
+}
+
+export async function listGuideProfilesDb() {
+  if (!hasSupabaseEnv()) {
+    const { guides } = await import('../fixtures/data.js').catch(() => ({ guides: [] }));
+    return (guides || []).map(g => ({ id: g.slug, slug: g.slug, displayName: g.displayName }));
+  }
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_profiles')
+    .select('id, slug, display_name')
+    .order('display_name');
+
+  if (error) throw new Error(error.message);
+  return (data || []).map(g => ({ id: g.id, slug: g.slug, displayName: g.display_name }));
+}
