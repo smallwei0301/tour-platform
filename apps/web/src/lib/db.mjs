@@ -1384,7 +1384,17 @@ export async function getActivityBySlugDb(slug) {
       id: s.id, startAt: s.start_at, endAt: s.end_at,
       capacity: s.capacity, bookedCount: s.booked_count, status: s.status
     })),
-    reviews: []
+    // Reviews: no reviews table in DB yet, fallback to fixture data
+    reviews: await (async () => {
+      try {
+        const { getReviewsByActivity } = await import('../fixtures/data');
+        const fixtureReviews = getReviewsByActivity ? getReviewsByActivity(act.slug) : [];
+        return (fixtureReviews || []).map(r => ({
+          id: r.id, author: r.author, city: r.city, rating: r.rating,
+          text: r.text, date: r.date
+        }));
+      } catch { return []; }
+    })()
   };
 }
 
