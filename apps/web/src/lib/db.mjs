@@ -1230,7 +1230,7 @@ export async function processPaymentCallbackDb(input) {
 export async function listPublishedActivitiesDb(filters = {}) {
   if (!hasSupabaseEnv()) {
     // fallback: return fixtures data shaped like DB rows
-    const { activities, guides } = await import('../fixtures/data.js').catch(() => ({ activities: [], guides: [] }));
+    const { activities, guides } = await import('../fixtures/data').catch(() => ({ activities: [], guides: [] }));
     let result = activities || [];
     if (filters.region) result = result.filter(a => a.region === filters.region);
     if (filters.category) result = result.filter(a => a.category === filters.category);
@@ -1293,7 +1293,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
 
 export async function getActivityBySlugDb(slug) {
   if (!hasSupabaseEnv()) {
-    const { activities, guides, getReviewsByActivity } = await import('../fixtures/data.js').catch(() => ({}));
+    const { activities, guides, getReviewsByActivity } = await import('../fixtures/data').catch(() => ({}));
     const a = (activities || []).find(x => x.slug === slug);
     if (!a) return null;
     const guide = (guides || []).find(g => g.slug === a.guideSlug);
@@ -1390,7 +1390,7 @@ export async function getActivityBySlugDb(slug) {
 
 export async function listPublishedGuidesDb() {
   if (!hasSupabaseEnv()) {
-    const { guides } = await import('../fixtures/data.js').catch(() => ({ guides: [] }));
+    const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
     return (guides || []).map(g => ({
       id: g.slug, slug: g.slug, displayName: g.displayName,
       headline: g.headline, shortBio: g.shortBio, region: g.region,
@@ -1423,7 +1423,7 @@ export async function listPublishedGuidesDb() {
 
 export async function getGuideBySlugDb(slug) {
   if (!hasSupabaseEnv()) {
-    const { guides, getActivitiesByGuide, getReviewsByGuide } = await import('../fixtures/data.js').catch(() => ({}));
+    const { guides, getActivitiesByGuide, getReviewsByGuide } = await import('../fixtures/data').catch(() => ({}));
     const g = (guides || []).find(x => x.slug === slug);
     if (!g) return null;
     const acts = getActivitiesByGuide ? getActivitiesByGuide(slug) : [];
@@ -1715,7 +1715,7 @@ export async function updateActivityStatusDb(id, status) {
 
 export async function listGuideProfilesDb() {
   if (!hasSupabaseEnv()) {
-    const { guides } = await import('../fixtures/data.js').catch(() => ({ guides: [] }));
+    const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
     return (guides || []).map(g => ({ id: g.slug, slug: g.slug, displayName: g.displayName }));
   }
 
