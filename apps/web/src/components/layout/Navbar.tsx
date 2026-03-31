@@ -15,7 +15,7 @@ export function Navbar() {
 
   return (
     <header className="tp-navbar">
-      <div className="tp-container tp-navbar-inner">
+      <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
         <Link href="/" className="tp-logo">Tour Platform</Link>
 
