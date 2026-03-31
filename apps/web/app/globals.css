@@ -955,3 +955,847 @@ img { max-width: 100%; height: auto; }
   .tp-theme-grid { grid-template-columns: 1fr; }
   .tp-footer-main-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ============================================================
+   KKday Typography Refresh + Navbar Hamburger + Scroll Layout
+   ============================================================ */
+
+/* --- Hamburger Navbar --- */
+.tp-hamburger {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.tp-hamburger:hover { background: var(--tp-bg-soft); }
+.tp-hamburger-icon {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 24px;
+}
+.tp-hamburger-icon span {
+  display: block;
+  height: 2px;
+  background: var(--tp-text);
+  border-radius: 2px;
+  transition: transform 0.2s;
+}
+.tp-nav-search-desktop { display: flex; }
+.tp-mobile-menu {
+  border-top: 1px solid var(--tp-border);
+  background: #fff;
+  padding: 12px 0 20px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.tp-mobile-search {
+  display: flex;
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.tp-mobile-menu-item {
+  display: block;
+  padding: 12px 0;
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom: 1px solid var(--tp-border);
+  color: var(--tp-text);
+}
+.tp-mobile-menu-item:last-child { border-bottom: none; }
+.tp-mobile-menu-item:hover { color: var(--tp-primary); }
+
+@media (max-width: 1024px) {
+  .tp-hamburger { display: flex; align-items: center; justify-content: center; }
+  .tp-nav-links { display: none !important; }
+  .tp-nav-search-desktop { display: none; }
+  .tp-navbar-inner { grid-template-columns: auto 1fr auto !important; }
+}
+
+/* --- KKday-style Activity Detail Page --- */
+.kkd-detail-page { padding-top: 0; }
+
+/* Gallery */
+.kkd-gallery {
+  display: grid;
+  grid-template-columns: 3fr 1fr;
+  gap: 6px;
+  border-radius: 14px;
+  overflow: hidden;
+  max-height: 400px;
+  margin: 12px 0 0;
+}
+.kkd-gallery-main {
+  width: 100%;
+  height: 100%;
+  max-height: 400px;
+  object-fit: cover;
+  display: block;
+}
+.kkd-gallery-grid {
+  display: grid;
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px;
+}
+.kkd-gallery-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Title block */
+.kkd-title-block { padding: 20px 0 0; }
+.kkd-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.kkd-badge {
+  font-size: 12px;
+  color: var(--tp-primary);
+  background: #eef7f2;
+  border: 1px solid #c6e6d4;
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-weight: 500;
+}
+.kkd-title {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0 0 10px;
+  color: var(--tp-text);
+}
+.kkd-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.kkd-rating { color: #f5a623; font-weight: 700; font-size: 14px; }
+.kkd-review-count { color: var(--tp-muted); font-weight: 400; font-size: 13px; margin-left: 3px; }
+.kkd-dot { color: var(--tp-muted); }
+.kkd-location { color: var(--tp-muted); font-size: 14px; }
+.kkd-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.kkd-orig-price {
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 13px;
+}
+.kkd-price {
+  color: var(--tp-primary);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.kkd-price-unit { color: var(--tp-muted); font-size: 13px; }
+.kkd-policy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.kkd-policy-item {
+  font-size: 12px;
+  color: var(--tp-muted);
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+.kkd-short-desc {
+  font-size: 14px;
+  line-height: 1.85;
+  color: #555;
+  margin: 0 0 4px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+/* Anchor nav */
+.kkd-anchor-wrap {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  background: #fff;
+  border-bottom: 1px solid var(--tp-border);
+}
+.kkd-anchor-nav {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.kkd-anchor-nav::-webkit-scrollbar { display: none; }
+.kkd-anchor-btn {
+  flex: 0 0 auto;
+  padding: 13px 20px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tp-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.kkd-anchor-btn.active {
+  color: var(--tp-primary);
+  border-bottom-color: var(--tp-primary);
+  font-weight: 700;
+}
+.kkd-anchor-btn:hover:not(.active) { color: var(--tp-text); }
+
+/* Scroll layout */
+.kkd-scroll-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 32px;
+  padding-top: 0;
+}
+.kkd-scroll-main { min-width: 0; }
+.kkd-scroll-section {
+  padding: 28px 0;
+  border-bottom: 1px solid var(--tp-border);
+}
+.kkd-scroll-section:last-child { border-bottom: none; }
+.kkd-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tp-text);
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--tp-primary);
+  display: inline-block;
+}
+
+/* Section label rows */
+.kkd-section-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.kkd-section-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tp-text);
+}
+.kkd-link-sm {
+  font-size: 13px;
+  color: var(--tp-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+.kkd-link-sm:hover { text-decoration: underline; }
+
+/* Plan card */
+.kkd-plan-card {
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 18px;
+  background: #fff;
+  margin-top: 4px;
+}
+.kkd-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.kkd-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+.kkd-plan-date-tag {
+  background: #eef7f2;
+  color: var(--tp-primary);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.kkd-plan-checklist {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.kkd-plan-checklist li {
+  font-size: 13px;
+  color: var(--tp-muted);
+  line-height: 1.6;
+}
+.kkd-plan-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--tp-border);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+.kkd-plan-price-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.kkd-plan-orig-price {
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 13px;
+}
+.kkd-plan-price {
+  color: var(--tp-primary);
+  font-size: 22px;
+  font-weight: 800;
+}
+.kkd-plan-per { color: var(--tp-muted); font-size: 12px; }
+.kkd-plan-select-btn {
+  padding: 11px 28px !important;
+  font-size: 14px !important;
+}
+
+/* Reviews */
+.kkd-reviews-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.kkd-reviews-score {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f5a623;
+}
+.kkd-reviews-total {
+  color: var(--tp-muted);
+  font-size: 14px;
+}
+.kkd-quote-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.kkd-quote-chip {
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--tp-muted);
+}
+.kkd-review-list { display: grid; gap: 12px; }
+.kkd-review-card {
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.kkd-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.kkd-reviewer { font-size: 14px; }
+.kkd-review-date { color: var(--tp-muted); font-size: 12px; }
+.kkd-stars { color: #f5a623; margin-bottom: 6px; font-size: 14px; }
+.kkd-review-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: #444;
+  margin: 0;
+}
+
+/* Detail blocks */
+.kkd-detail-block { margin-bottom: 20px; }
+.kkd-detail-subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--tp-text);
+}
+.kkd-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.kkd-checklist li {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.6;
+}
+.kkd-check { flex-shrink: 0; }
+.kkd-notice-list {
+  padding-left: 18px;
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+.kkd-notice-list li {
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.7;
+}
+.kkd-notice-text {
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.8;
+  margin: 0;
+}
+
+/* Guide card */
+.kkd-guide-card {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.kkd-guide-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.kkd-guide-info { flex: 1; min-width: 0; }
+.kkd-guide-name {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 3px;
+}
+.kkd-guide-verified {
+  font-size: 12px;
+  color: var(--tp-primary);
+  display: block;
+  margin-bottom: 6px;
+}
+.kkd-guide-meta {
+  font-size: 13px;
+  color: var(--tp-muted);
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+.kkd-guide-headline {
+  font-size: 13px;
+  color: var(--tp-muted);
+  font-style: italic;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+/* FAQ */
+.kkd-faq-list { display: grid; gap: 8px; }
+.kkd-faq-item {
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: #fff;
+}
+.kkd-faq-q {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tp-text);
+  line-height: 1.5;
+  list-style: none;
+}
+.kkd-faq-q::-webkit-details-marker { display: none; }
+.kkd-faq-q::before { content: '+ '; color: var(--tp-primary); font-weight: 700; }
+details[open] .kkd-faq-q::before { content: '- '; }
+.kkd-faq-a {
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.8;
+  margin: 10px 0 0;
+}
+
+/* Booking sidebar */
+.kkd-booking-side {
+  position: sticky;
+  top: 116px;
+  height: fit-content;
+}
+.kkd-booking-card {
+  border: 1px solid var(--tp-border);
+  border-radius: 14px;
+  padding: 20px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.kkd-booking-price-block {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--tp-border);
+  padding-bottom: 14px;
+}
+.kkd-booking-orig {
+  display: block;
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+.kkd-booking-price {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--tp-primary);
+}
+.kkd-booking-schedules { margin-bottom: 4px; }
+.kkd-booking-schedule-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.kkd-booking-schedule-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 5px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+.kkd-full-label { color: #e53e3e; font-weight: 600; font-size: 12px; }
+.kkd-avail-label { color: var(--tp-primary); font-size: 12px; }
+.kkd-booking-trust {
+  margin-top: 14px;
+  border-top: 1px solid var(--tp-border);
+  padding-top: 12px;
+}
+.kkd-booking-trust p {
+  font-size: 12px;
+  color: var(--tp-muted);
+  margin: 0 0 5px;
+  line-height: 1.5;
+}
+
+/* Responsive: activity detail */
+@media (max-width: 1024px) {
+  .kkd-scroll-layout { grid-template-columns: 1fr; }
+  .kkd-booking-side { display: none; }
+}
+@media (max-width: 768px) {
+  .kkd-gallery { grid-template-columns: 1fr; max-height: 240px; }
+  .kkd-gallery-grid { display: none; }
+  .kkd-title { font-size: 18px; }
+  .kkd-price { font-size: 22px; }
+  .kkd-anchor-wrap { top: 56px; }
+  .kkd-scroll-section { padding: 22px 0; }
+}
+
+
+/* ============================================================
+   Patch 5: Calendar Modal + Plans + Policy Icons + Layout Fix
+   ============================================================ */
+
+/* --- "更多日期" button --- */
+.kkd-more-dates-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1.5px solid var(--tp-border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--tp-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.kkd-more-dates-btn:hover {
+  border-color: var(--tp-primary);
+  background: #eef7f2;
+}
+
+/* --- Calendar overlay + modal --- */
+.kkd-cal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.kkd-cal-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  width: min(400px, 100%);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+}
+.kkd-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  position: relative;
+}
+.kkd-cal-title {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+  text-align: center;
+}
+.kkd-cal-nav {
+  background: none;
+  border: 1px solid var(--tp-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tp-text);
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.kkd-cal-nav:hover { background: var(--tp-bg-soft); }
+.kkd-cal-close {
+  position: absolute;
+  right: 0;
+  top: -4px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--tp-muted);
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+.kkd-cal-close:hover { background: #f5f5f5; }
+.kkd-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.kkd-cal-weekday {
+  font-size: 12px;
+  color: var(--tp-muted);
+  font-weight: 600;
+  padding: 4px 0;
+}
+.kkd-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.kkd-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background .15s;
+}
+.kkd-cal-day.available:hover {
+  background: #eef7f2;
+}
+.kkd-cal-day.unavailable {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.kkd-cal-day.selected {
+  background: var(--tp-primary);
+  color: #fff;
+}
+.kkd-cal-day.sun .kkd-cal-day-num { color: #e53e3e; }
+.kkd-cal-day.sat .kkd-cal-day-num { color: #3182ce; }
+.kkd-cal-day.selected .kkd-cal-day-num,
+.kkd-cal-day.selected .kkd-cal-day-price { color: #fff !important; }
+.kkd-cal-day-num {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+.kkd-cal-day-price {
+  font-size: 10px;
+  color: var(--tp-primary);
+  margin-top: 2px;
+}
+.kkd-cal-day-full {
+  font-size: 9px;
+  color: #e53e3e;
+  margin-top: 2px;
+}
+.kkd-cal-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tp-border);
+  justify-content: center;
+}
+.kkd-cal-legend-item {
+  font-size: 12px;
+  color: var(--tp-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.kkd-cal-legend-item.available { color: var(--tp-primary); }
+.kkd-cal-legend-item.unavailable { color: #ccc; }
+.kkd-cal-selected-summary {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tp-primary);
+  background: #eef7f2;
+  border-radius: 8px;
+  padding: 8px 0;
+}
+
+/* --- Plans list (半日/全日) --- */
+.kkd-plans-list {
+  display: grid;
+  gap: 14px;
+}
+.kkd-plan-card {
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 18px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.kkd-plan-card:hover {
+  border-color: var(--tp-primary);
+}
+.kkd-plan-card.selected {
+  border-color: var(--tp-primary);
+  box-shadow: 0 0 0 3px rgba(27,107,74,0.1);
+}
+.kkd-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.kkd-plan-name {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+}
+.kkd-plan-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tp-muted);
+}
+.kkd-plan-date-tag {
+  background: #eef7f2;
+  color: var(--tp-primary);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Plan notice list: transparent bg, pure black icon+text */
+.kkd-plan-notice-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+.kkd-plan-notice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #1a1a1a;
+  background: transparent;
+}
+.kkd-plan-notice-icon {
+  flex-shrink: 0;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+}
+
+/* --- Policy row: transparent, black icon + text --- */
+.kkd-policy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.kkd-policy-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #1a1a1a;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+}
+.kkd-policy-item svg { flex-shrink: 0; }
+
+/* --- Container centering fix --- */
+.tp-container { box-sizing: border-box; }
+.kkd-detail-page .tp-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+/* Gallery centering */
+.kkd-gallery { margin: 12px 0 0; }
+
+/* Title block: ensure full width left-align on mobile */
+.kkd-title-block { padding: 20px 0 0; box-sizing: border-box; }
+
+/* Fix: Hamburger viewport — ensure hamburger shows at <= 1024 */
+@media (max-width: 1024px) {
+  .tp-hamburger { display: flex !important; }
+}
+/* Fix: search bar centering on mobile hero */
+@media (max-width: 768px) {
+  .tp-hero-search-widget { width: 100%; }
+  .tp-hero { text-align: left; }
+}
+
+/* Fix: activities page card images — ensure real images show */
+.tp-card-img[src] { background: none; }
+
+/* Booking sidebar: scroll text centering */
+.kkd-booking-card { text-align: left; }
+
