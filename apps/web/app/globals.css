@@ -15,7 +15,7 @@
 body { margin: 0; color: var(--tp-text); background: var(--tp-bg); font-family: 'Noto Sans TC', Inter, system-ui, -apple-system, sans-serif; }
 a { color: inherit; text-decoration: none; }
 
-.tp-container { width: min(1200px, 92%); margin: 0 auto; }
+.tp-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
 .tp-section { padding: 56px 0; }
 
 .tp-navbar { position: sticky; top: 0; z-index: 40; background: #fff; border-bottom: 1px solid var(--tp-border); }
@@ -314,7 +314,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Mobile alignment fixes */
-body { overflow-x: hidden; }
+html, body { overflow-x: hidden; max-width: 100vw; }
 img { max-width: 100%; height: auto; }
 
 .tp-trust-grid-home { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -715,10 +715,15 @@ img { max-width: 100%; height: auto; }
   display: flex;
   gap: 8px;
   overflow-x: auto;
+  overflow-y: visible;
   padding-bottom: 8px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
+/* Prevent date pills from causing page-level horizontal scroll */
+.kkd-date-plan-section,
+.kkd-section-date { overflow: hidden; }
 .tp-date-picker-scroll::-webkit-scrollbar { display: none; }
 .tp-date-pill {
   flex: 0 0 auto;
@@ -1249,6 +1254,8 @@ img { max-width: 100%; height: auto; }
   padding: 18px;
   background: #fff;
   margin-top: 4px;
+  max-width: 100%;
+  overflow: hidden;
 }
 .kkd-plan-header {
   display: flex;
@@ -1801,7 +1808,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* --- Container centering fix --- */
 .tp-container { box-sizing: border-box; }
-.kkd-detail-page .tp-container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+.kkd-detail-page .tp-container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
 
 /* Gallery centering */
 .kkd-gallery { margin: 12px 0 0; }

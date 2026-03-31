@@ -209,7 +209,7 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
   }
 
   return (
-    <div>
+    <div style={{ overflow: 'hidden', width: '100%' }}>
       <div className="tp-date-picker-scroll">
         {pills.map((p) => {
           const isSelected = selectedDate === p.dateKey;
