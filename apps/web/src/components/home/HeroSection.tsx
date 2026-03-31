@@ -16,7 +16,7 @@ export function HeroSection() {
         alignItems: 'center',
       }}
     >
-      <div className="tp-container" style={{ width: '100%' }}>
+      <div className="tp-container" style={{ width: '100%', maxWidth: 1200, margin: '0 auto', padding: '0 24px' }}>
         <p className="tp-kicker" style={{ color: '#E8834D', fontSize: 15 }}>
           🗺️ 台灣在地導遊平台
         </p>
@@ -25,6 +25,7 @@ export function HeroSection() {
             color: '#fff',
             textShadow: '0 2px 8px rgba(0,0,0,0.3)',
             marginBottom: 28,
+            maxWidth: 720,
           }}
         >
           找到懂路的人，
@@ -67,12 +68,14 @@ export function HeroSection() {
 
         {/* Hot tags */}
         <div
+          className="tp-hero-tags"
           style={{
             marginTop: 14,
             display: 'flex',
             gap: 8,
             flexWrap: 'wrap',
             alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
