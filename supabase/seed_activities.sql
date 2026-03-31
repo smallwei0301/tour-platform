@@ -1,0 +1,188 @@
+-- =============================================================
+-- seed_activities.sql
+-- Sprint 4.0 — Andy Lee + 2 other guides + activities + schedules
+-- Run after 002_activities_admin.sql
+-- =============================================================
+
+-- ---------------------------------------------------------------
+-- 1. Users (placeholder rows for guides)
+-- ---------------------------------------------------------------
+INSERT INTO users (id, role, created_at) VALUES
+  ('00000000-0000-0000-0000-000000000001', 'guide', now()),
+  ('00000000-0000-0000-0000-000000000002', 'guide', now()),
+  ('00000000-0000-0000-0000-000000000003', 'guide', now())
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------
+-- 2. Guide Profiles
+-- ---------------------------------------------------------------
+INSERT INTO guide_profiles (
+  id, user_id, slug, display_name, headline, bio,
+  region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls,
+  verification_status, id_verified, guide_license_verified,
+  rating_avg, review_count, service_count, created_at, updated_at
+) VALUES
+(
+  'gp-00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
+  'andy-lee',
+  'Andy Lee（李衍錫）',
+  '帶你進入高雄柴山真正的地形秘境，不是觀光打卡，是懂路的人帶路。',
+  '我是 Andy Lee（李衍錫），長期帶領高雄柴山探洞與戶外地形體驗。比起走觀光客會去的地方，我更在意的是帶你安全地走進真正有故事、有地形特色、也有挑戰性的在地路線。',
+  '高雄',
+  '["中文", "德語", "粵語", "荷蘭語", "日語", "韓語"]',
+  '["柴山探洞", "高雄在地", "戶外特色導覽", "地形探索", "小團體驗"]',
+  '/images/guides/andy-lee/avatar.jpg',
+  '/images/activities/chaishan/main.jpg',
+  '[
+    "https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    "https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    "https://images.pexels.com/photos/1072824/pexels-photo-1072824.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    "https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200"
+  ]',
+  'approved', true, true,
+  5.00, 23, 47, now(), now()
+),
+(
+  'gp-00000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000002',
+  'chen-jian-zhi',
+  '陳建志',
+  '帶你走進大稻埕百年街區，看到不在旅遊書上的台北故事。',
+  '我在大稻埕長大，從小就在迪化街的布行裡穿梭。跟著我走，你看到的不是景點清單，而是這個街區如何活過百年。',
+  '台北',
+  '["中文", "英語"]',
+  '["文化歷史", "美食體驗", "夜市導覽", "老街故事"]',
+  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80',
+  'https://images.unsplash.com/photo-1470004914212-05527e49370b?w=1600&q=80',
+  '[
+    "https://images.unsplash.com/photo-1470004914212-05527e49370b?w=800&q=80",
+    "https://images.unsplash.com/photo-1576633587382-13ddf37b1fc1?w=800&q=80",
+    "https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=800&q=80"
+  ]',
+  'approved', true, false,
+  5.00, 12, 47, now(), now()
+),
+(
+  'gp-00000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000003',
+  'lin-a-ming',
+  '林阿明',
+  '花蓮的山和溪，是我最好的朋友，也是你最棒的冒險。',
+  '我是林阿明，花蓮在地人，溯溪與戶外冒險嚮導資歷超過十年。花蓮最美的風景不在公路旁，而是在那些需要有人帶路才能到達的溪谷裡。',
+  '花蓮',
+  '["中文", "英語"]',
+  '["溯溪", "戶外冒險", "自然生態", "原住民文化"]',
+  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80',
+  'https://images.unsplash.com/photo-1504858700536-882c978a3464?w=1600&q=80',
+  '[
+    "https://images.unsplash.com/photo-1504858700536-882c978a3464?w=800&q=80",
+    "https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=800&q=80",
+    "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80"
+  ]',
+  'approved', true, true,
+  5.00, 14, 32, now(), now()
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------
+-- 3. Activities
+-- ---------------------------------------------------------------
+INSERT INTO activities (
+  id, guide_id, guide_slug, title, slug,
+  description, region, region_slug, category,
+  price_twd, min_participants, max_participants, duration_minutes,
+  meeting_point, meeting_point_map_url,
+  cover_image_url, image_urls,
+  inclusions, exclusions, notices, refund_rules,
+  tagline, short_description, transport_mode,
+  seo_title, seo_description,
+  status, published_at, created_at, updated_at
+) VALUES
+(
+  'act-00000000-0000-0000-0000-000000000001',
+  'gp-00000000-0000-0000-0000-000000000001',
+  'andy-lee',
+  '高雄柴山探洞體驗｜跟著 Andy Lee 走進城市邊緣的地形秘境',
+  'kaohsiung-chaishan-cave-experience',
+  '這不是一條普通的散步行程，也不是制式化的觀光路線。Andy Lee 會帶你走進高雄柴山具有地形特色的探洞體驗路線，讓你從不同角度認識這座城市邊緣最有層次、也最容易被忽略的自然地貌。',
+  '高雄市', 'kaohsiung', 'outdoor',
+  2000, 4, 12, 240,
+  '壽山國家自然公園遊客中心停車場',
+  'https://maps.google.com/?q=%E5%A3%BD%E5%B1%B1%E5%9C%8B%E5%AE%B6%E8%87%AA%E7%84%B6%E5%85%AC%E5%9C%92%E9%81%8A%E5%AE%A2%E4%B8%AD%E5%BF%83',
+  '/images/activities/chaishan/main.jpg',
+  '["/images/activities/chaishan/main.jpg","https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80","https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80","https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80"]',
+  '["Andy Lee 導覽帶領","路線說明與安全提醒","活動過程中的在地地形介紹","基本裝備（頭燈、手套、安全帽）","活動紀錄照"]',
+  '["個人保險","個人交通費","個人飲水與補給","其他未明列私人支出"]',
+  '["請穿著適合活動的服裝與鞋子","請依現場導遊指示行動","若遇天候或安全因素，活動安排可能調整"]',
+  '["活動 7 天前取消：100% 退款","活動 3–7 天前取消：70% 退款","活動 24–72 小時前取消：50% 退款","活動 24 小時內取消：不退款","若因導遊因素取消：全額退款"]',
+  '不是一般健行路線，而是由熟悉地形的人帶你走進平常不會自己到達的柴山探洞路線。',
+  '如果你想看的不是一般觀光景點，而是高雄更有記憶點的一面，Andy Lee 的柴山探洞體驗，會帶你用安全、有節奏、有人帶的方式，進入城市邊緣最有特色的地形路線。',
+  '步行',
+  '高雄柴山洞穴探險｜壽山環境教育導覽｜Andy Lee',
+  '跟著 Andy Lee 體驗高雄柴山探洞路線，探索城市邊緣最有記憶點的地形秘境。',
+  'published', now(), now(), now()
+),
+(
+  'act-00000000-0000-0000-0000-000000000002',
+  'gp-00000000-0000-0000-0000-000000000002',
+  'chen-jian-zhi',
+  '大稻埕百年老街深度漫步',
+  'dadadaocheng-walk',
+  '跟著在地導遊陳建志走進大稻埕街區，從迪化街布行、霞海城隍廟到永樂市場，不是打卡式走馬看花，而是把街區背後的人物與歷史串成真正可感受的故事。',
+  '台北市', 'taipei', 'culture',
+  1500, 1, 8, 180,
+  '捷運大橋頭站 2 號出口',
+  'https://maps.google.com/?q=大橋頭站',
+  'https://images.unsplash.com/photo-1470004914212-05527e49370b?w=800&q=80',
+  '["https://images.unsplash.com/photo-1470004914212-05527e49370b?w=800&q=80","https://images.unsplash.com/photo-1576633587382-13ddf37b1fc1?w=800&q=80","https://images.unsplash.com/photo-1582719471384-894fbb16e074?w=800&q=80"]',
+  '["專業在地導遊全程陪同","路線導覽與文化解說","行程說明材料"]',
+  '["交通費（捷運/計程車）","餐飲費用","個人消費"]',
+  '["請穿舒適步行鞋","導覽全程約 3 公里步行"]',
+  '["活動 48 小時前取消：全額退款","活動 24–48 小時前取消：50% 退款","活動 24 小時內取消：不退款"]',
+  '不是走馬看花，而是真正認識一個活了百年的街區。',
+  '跟著在地人陳建志走進大稻埕，從迪化街布行、霞海城隍廟到永樂市場，聽這個街區如何從清朝活到現在。',
+  '步行',
+  '大稻埕老街導覽｜台北深度文化體驗｜陳建志',
+  '跟著在地人走進大稻埕百年街區，聽迪化街布行與霞海城隍廟的真實故事。',
+  'published', now(), now(), now()
+),
+(
+  'act-00000000-0000-0000-0000-000000000003',
+  'gp-00000000-0000-0000-0000-000000000003',
+  'lin-a-ming',
+  '花蓮秀姑巒溪溯溪全日冒險',
+  'hualien-river-trekking',
+  '花蓮最美的風景不在公路旁，而是在那些需要有人帶路才能到達的溪谷裡。林阿明會帶你穿過巨石、涉過清澈的溪水、在瀑布下感受大自然的震撼。',
+  '花蓮縣', 'hualien', 'outdoor',
+  3200, 4, 8, 480,
+  '花蓮火車站前廣場',
+  'https://maps.google.com/?q=花蓮火車站',
+  'https://images.unsplash.com/photo-1504858700536-882c978a3464?w=800&q=80',
+  '["https://images.unsplash.com/photo-1504858700536-882c978a3464?w=800&q=80","https://images.unsplash.com/photo-1505118380757-91f5f5632de0?w=800&q=80","https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80"]',
+  '["專業嚮導全程帶領","全套溯溪裝備（防寒衣、安全帽、救生衣、溯溪鞋）","接駁交通","簡易午餐","活動保險"]',
+  '["個人物品防水袋","額外餐飲"]',
+  '["請穿可濕的衣物","攜帶換洗衣物","遵守嚮導安全指示"]',
+  '["活動 7 天前取消：全額退款","活動 3 天前取消：50% 退款","活動當天取消：不退款","天候因素取消：全額退款"]',
+  '走進台灣最純淨的野溪，用雙腳感受花蓮的力量。',
+  '由專業嚮導林阿明帶領，深入花蓮秀姑巒溪進行溯溪冒險。全套裝備、安全保障，讓你安心探索台灣最美的溪谷。',
+  '包車',
+  '花蓮溯溪體驗｜秀姑巒溪全日冒險｜林阿明',
+  '由專業嚮導帶領深入花蓮秀姑巒溪，全套裝備、安全保障的溯溪冒險。',
+  'published', now(), now(), now()
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- ---------------------------------------------------------------
+-- 4. Activity Schedules
+-- ---------------------------------------------------------------
+INSERT INTO activity_schedules (id, activity_id, start_at, end_at, capacity, booked_count, status) VALUES
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000001', '2026-04-01T09:00:00+08:00', '2026-04-01T13:00:00+08:00', 12, 1, 'open'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000001', '2026-04-03T09:00:00+08:00', '2026-04-03T13:00:00+08:00', 12, 12, 'full'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000001', '2026-04-10T09:00:00+08:00', '2026-04-10T13:00:00+08:00', 12, 0, 'open'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000001', '2026-04-15T09:00:00+08:00', '2026-04-15T13:00:00+08:00', 12, 4, 'open'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000002', '2026-04-02T09:00:00+08:00', '2026-04-02T12:00:00+08:00', 8, 3, 'open'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000002', '2026-04-05T14:00:00+08:00', '2026-04-05T17:00:00+08:00', 8, 8, 'full'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000003', '2026-04-06T07:00:00+08:00', '2026-04-06T15:00:00+08:00', 8, 5, 'open'),
+  (gen_random_uuid(), 'act-00000000-0000-0000-0000-000000000003', '2026-04-12T07:00:00+08:00', '2026-04-12T15:00:00+08:00', 8, 0, 'open')
+ON CONFLICT DO NOTHING;
