@@ -292,7 +292,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       )}
 
       {/* ── Bottom CTA Bar ── */}
-      <ActivityBottomBar activity={activity} />
+      <ActivityBottomBar 
+        activitySlug={activity.slug} 
+        priceLabel={`NT$${activity.priceTwd?.toLocaleString()} / 人`} 
+        price={activity.priceTwd || 0} 
+      />
     </main>
   );
 }
