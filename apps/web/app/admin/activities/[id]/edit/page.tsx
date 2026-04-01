@@ -12,9 +12,24 @@ interface PlanConfig {
   label: string;
   duration: string;
   priceMultiplier: number;
+  price?: number;
   highlights: string[];
   detailsLinkText: string;
   bookingBtnText: string;
+  // 方案詳情
+  language?: string;
+  earliestDeparture?: string;
+  confirmByDays?: number;
+  freeCancelDays?: number;
+  planInclusions?: string[];
+  planExclusions?: string[];
+  planItinerary?: Array<{ text: string; imageUrl?: string }>;
+  meetingPointName?: string;
+  meetingAddress?: string;
+  experiencePointName?: string;
+  experienceAddress?: string;
+  planNotices?: string[];
+  planRefundRules?: string[];
 }
 
 const DEFAULT_PLANS: PlanConfig[] = [
@@ -133,10 +148,119 @@ function PlanEditor({
         <textarea
           value={plan.highlights.join('\n')}
           onChange={e => update({ highlights: e.target.value.split('\n') })}
-          rows={5} style={fieldStyle}
+          rows={4} style={fieldStyle}
           placeholder={'最早出發前 1 天可預訂\n免費取消（72 小時前）\n實名認證導遊帶領'}
         />
       </label>
+
+      {/* ── 方案詳情欄位 ── */}
+      <details style={{ marginTop: 12 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#2563eb', marginBottom: 8 }}>
+          ▸ 方案詳情內容（點擊展開）
+        </summary>
+        <div style={{ paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <label style={labelStyle}>
+              語言導覽
+              <input type="text" value={plan.language ?? ''} onChange={e => update({ language: e.target.value })}
+                style={fieldStyle} placeholder="English / 中文 導覽" />
+            </label>
+            <label style={labelStyle}>
+              方案固定售價（NT$，留空用倍數計算）
+              <input type="number" value={plan.price ?? ''} onChange={e => update({ price: e.target.value ? Number(e.target.value) : undefined })}
+                style={fieldStyle} placeholder="1500" min={0} />
+            </label>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+            <label style={labelStyle}>
+              最早可出發日
+              <input type="date" value={plan.earliestDeparture ?? ''} onChange={e => update({ earliestDeparture: e.target.value })}
+                style={fieldStyle} />
+            </label>
+            <label style={labelStyle}>
+              最晚N天前回覆
+              <input type="number" value={plan.confirmByDays ?? ''} onChange={e => update({ confirmByDays: e.target.value ? Number(e.target.value) : undefined })}
+                style={fieldStyle} placeholder="2" min={0} />
+            </label>
+            <label style={labelStyle}>
+              N天前可免費取消
+              <input type="number" value={plan.freeCancelDays ?? ''} onChange={e => update({ freeCancelDays: e.target.value ? Number(e.target.value) : undefined })}
+                style={fieldStyle} placeholder="6" min={0} />
+            </label>
+          </div>
+
+          <label style={labelStyle}>
+            費用包含（每行一項）
+            <textarea value={(plan.planInclusions ?? []).join('\n')} rows={3}
+              onChange={e => update({ planInclusions: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
+              style={fieldStyle} placeholder={'保險\n頭盔\n照明頭燈\n手套\n專業講師'} />
+          </label>
+
+          <label style={labelStyle}>
+            費用不包含（每行一項）
+            <textarea value={(plan.planExclusions ?? []).join('\n')} rows={2}
+              onChange={e => update({ planExclusions: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
+              style={fieldStyle} placeholder="個人消費" />
+          </label>
+
+          {/* 行程介紹（含圖片） */}
+          <div>
+            <span style={{ ...labelStyle as any, display: 'block', marginBottom: 6 }}>行程介紹（可含圖片）</span>
+            {(plan.planItinerary ?? []).map((item, i) => (
+              <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, marginBottom: 8, background: '#fff' }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                  <textarea value={item.text} rows={2}
+                    onChange={e => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], text: e.target.value }; update({ planItinerary: arr }); }}
+                    style={{ ...fieldStyle, flex: 1 }} placeholder="帶您來場地心探險" />
+                  <button type="button" onClick={() => update({ planItinerary: (plan.planItinerary ?? []).filter((_,j) => j !== i) })}
+                    style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontWeight: 700, alignSelf: 'flex-start' }}>✕</button>
+                </div>
+                <input type="url" value={item.imageUrl ?? ''} placeholder="圖片 URL（選填）"
+                  onChange={e => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: e.target.value || undefined }; update({ planItinerary: arr }); }}
+                  style={{ ...fieldStyle, fontSize: 12, padding: '6px 10px' }} />
+              </div>
+            ))}
+            <button type="button" onClick={() => update({ planItinerary: [...(plan.planItinerary ?? []), { text: '', imageUrl: undefined }] })}
+              style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 13, width: '100%' }}>
+              + 新增行程項目
+            </button>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <span style={{ ...labelStyle as any, display: 'block', marginBottom: 4 }}>集合地點</span>
+              <input type="text" value={plan.meetingPointName ?? ''} onChange={e => update({ meetingPointName: e.target.value })}
+                style={{ ...fieldStyle, marginBottom: 6 }} placeholder="地點名稱" />
+              <input type="text" value={plan.meetingAddress ?? ''} onChange={e => update({ meetingAddress: e.target.value })}
+                style={fieldStyle} placeholder="完整地址" />
+            </div>
+            <div>
+              <span style={{ ...labelStyle as any, display: 'block', marginBottom: 4 }}>體驗地點</span>
+              <input type="text" value={plan.experiencePointName ?? ''} onChange={e => update({ experiencePointName: e.target.value })}
+                style={{ ...fieldStyle, marginBottom: 6 }} placeholder="地點名稱" />
+              <input type="text" value={plan.experienceAddress ?? ''} onChange={e => update({ experienceAddress: e.target.value })}
+                style={fieldStyle} placeholder="完整地址" />
+            </div>
+          </div>
+
+          <label style={labelStyle}>
+            購買須知（每行一項）
+            <textarea value={(plan.planNotices ?? []).join('\n')} rows={3}
+              onChange={e => update({ planNotices: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
+              style={fieldStyle} placeholder={'建議 7~65 歲旅客報名\n訂購時務必提供姓名、身分證號'} />
+          </label>
+
+          <label style={labelStyle}>
+            取消政策（每行一條）
+            <textarea value={(plan.planRefundRules ?? []).join('\n')} rows={3}
+              onChange={e => update({ planRefundRules: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
+              style={fieldStyle} placeholder={'6天前可免費取消\n4~5天取消收50%手續費\n0~3天不可取消'} />
+          </label>
+
+        </div>
+      </details>
     </div>
   );
 }
