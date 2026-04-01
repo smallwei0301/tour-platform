@@ -1890,3 +1890,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* Booking sidebar: scroll text centering */
 .kkd-booking-card { text-align: left; }
 
+
+/* Tagline: 行程副標題 */
+.kkd-tagline {
+  font-size: 14px;
+  color: #4b5563;
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
