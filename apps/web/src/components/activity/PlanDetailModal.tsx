@@ -56,9 +56,12 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
 
       {/* Modal panel */}
       <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: '#fff', borderRadius: '16px 16px 0 0',
-        zIndex: 1001, maxHeight: '90dvh', display: 'flex', flexDirection: 'column',
+        position: 'fixed', top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: '#fff', borderRadius: 16,
+        zIndex: 1001, width: '90vw', maxWidth: 560, maxHeight: '85dvh',
+        display: 'flex', flexDirection: 'column',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
       }}>
         {/* Header */}
         <div style={{
