@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
@@ -53,17 +53,79 @@ const DEFAULT_PLANS: PlanConfig[] = [
   },
 ];
 
+// ── 行程項目圖片上傳（輕量版，不需拖放） ────────────────
+function ItineraryImageUpload({ activityId, activitySlug, onUploaded }: {
+  activityId: string; activitySlug: string; onUploaded: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(file: File) {
+    if (!file) return;
+    setUploading(true); setErr('');
+    try {
+      // 壓縮
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve(); img.onerror = reject; img.src = objectUrl;
+      });
+      URL.revokeObjectURL(objectUrl);
+      const MAX = 1200;
+      let { width, height } = img;
+      if (width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>(res => canvas.toBlob(res, 'image/webp', 0.85));
+      if (!blob) throw new Error('壓縮失敗');
+      const compressed = new File([blob], 'itinerary.webp', { type: 'image/webp' });
+
+      const fd = new FormData();
+      fd.append('file', compressed);
+      fd.append('slug', activitySlug || activityId);
+      fd.append('type', 'gallery');
+      const res = await fetch(`/api/admin/activities/${activityId}/upload-image`, { method: 'POST', body: fd });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message || '上傳失敗');
+      onUploaded(json.data.url);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '上傳失敗');
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 6 }}>
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }}
+        onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
+      <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading}
+        style={{ fontSize: 12, padding: '5px 12px', borderRadius: 6, background: '#eff6ff', color: '#2563eb',
+          border: '1px dashed #93c5fd', cursor: uploading ? 'not-allowed' : 'pointer' }}>
+        {uploading ? '上傳中⋯' : '📷 上傳圖片（選填）'}
+      </button>
+      {err && <span style={{ fontSize: 12, color: '#dc2626', marginLeft: 8 }}>{err}</span>}
+    </div>
+  );
+}
+
 // ── 單一方案編輯 ──────────────────────────────────────────
 function PlanEditor({
   plan,
   index,
   onChange,
   onRemove,
+  activityId,
+  activitySlug,
 }: {
   plan: PlanConfig;
   index: number;
   onChange: (updated: PlanConfig) => void;
   onRemove: () => void;
+  activityId: string;
+  activitySlug: string;
 }) {
   const update = (patch: Partial<PlanConfig>) => onChange({ ...plan, ...patch });
 
@@ -217,9 +279,23 @@ function PlanEditor({
                   <button type="button" onClick={() => update({ planItinerary: (plan.planItinerary ?? []).filter((_,j) => j !== i) })}
                     style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontWeight: 700, alignSelf: 'flex-start' }}>✕</button>
                 </div>
-                <input type="url" value={item.imageUrl ?? ''} placeholder="圖片 URL（選填）"
-                  onChange={e => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: e.target.value || undefined }; update({ planItinerary: arr }); }}
-                  style={{ ...fieldStyle, fontSize: 12, padding: '6px 10px' }} />
+                {/* 圖片上傳 or 預覽 */}
+                {item.imageUrl ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                    <img src={item.imageUrl} alt="" style={{ width: 80, height: 54, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                    <button type="button"
+                      onClick={() => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: undefined }; update({ planItinerary: arr }); }}
+                      style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fee2e2', color: '#dc2626', border: 'none', cursor: 'pointer' }}>
+                      移除圖片
+                    </button>
+                  </div>
+                ) : (
+                  <ItineraryImageUpload
+                    activityId={activityId}
+                    activitySlug={activitySlug}
+                    onUploaded={url => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: url }; update({ planItinerary: arr }); }}
+                  />
+                )}
               </div>
             ))}
             <button type="button" onClick={() => update({ planItinerary: [...(plan.planItinerary ?? []), { text: '', imageUrl: undefined }] })}
@@ -269,10 +345,12 @@ function PlanEditor({
 function PlansSection({
   plans,
   activityId,
+  activitySlug,
   onChange,
 }: {
   plans: PlanConfig[];
   activityId: string;
+  activitySlug: string;
   onChange: (plans: PlanConfig[]) => void;
 }) {
   const [saving, setSaving] = useState(false);
@@ -373,6 +451,8 @@ function PlansSection({
             index={i}
             onChange={updated => updatePlan(i, updated)}
             onRemove={() => removePlan(i)}
+            activityId={activityId}
+            activitySlug={activitySlug}
           />
         ))
       )}
@@ -910,6 +990,7 @@ export default function AdminActivityEditPage() {
   const [itinerary,          setItinerary]          = useState<Array<{step:number;title:string;description:string;duration:string;icon:string}>>([]);
   const [status,             setStatus]             = useState('draft');
   const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
+  const [activitySlug,       setActivitySlug]       = useState('');
 
   useEffect(() => {
     if (!activityId) return;
@@ -920,6 +1001,7 @@ export default function AdminActivityEditPage() {
         const d = json.data;
         if (!d) { setError('行程不存在'); setLoading(false); return; }
         setTitle(d.title || '');
+        setActivitySlug(d.slug || activityId);
         setGuideSlug(d.guideSlug || '');
         setRegion(d.region || '');
         setCategory(d.category || '');
@@ -1205,7 +1287,7 @@ export default function AdminActivityEditPage() {
         </Card>
 
         {/* ── 方案管理 ── */}
-        <PlansSection plans={plans} activityId={activityId} onChange={setPlans} />
+        <PlansSection plans={plans} activityId={activityId} activitySlug={activitySlug || activityId} onChange={setPlans} />
 
         {/* ── 行程時間表 Editor ── */}
         <Card style={{ marginTop: 24 }}>
