@@ -1721,8 +1721,8 @@ export async function updateActivityDb(id, input = {}) {
   if (input.imageUrls !== undefined) patch.image_urls = input.imageUrls;
   if (input.plans !== undefined) patch.plans = input.plans;
   if (input.safetyNotice !== undefined) patch.safety_notice = input.safetyNotice || null;
-  if (input.faq !== undefined) patch.faq = JSON.stringify(input.faq);
-  if (input.itinerary !== undefined) patch.itinerary = JSON.stringify(input.itinerary);
+  if (input.faq !== undefined) patch.faq = Array.isArray(input.faq) ? input.faq : [];
+  if (input.itinerary !== undefined) patch.itinerary = Array.isArray(input.itinerary) ? input.itinerary : [];
   if (input.socialProofQuotes !== undefined) patch.social_proof_quotes = toJsonbArray(input.socialProofQuotes);
 
   // Re-resolve guide_id if guideSlug changed
