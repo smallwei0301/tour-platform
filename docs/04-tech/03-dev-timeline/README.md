@@ -10,7 +10,7 @@
 | Phase 1 | Sprint 1.0–1.9 | 前台 MVP（UI + 預約 + 金流 API） | ✅ 完成 |
 | Phase 2 | Sprint 2.0–2.9 | Admin 後台深化（訂單、退款、導遊、營運追蹤、KPI） | ✅ 完成 |
 | Phase 3 | Sprint 3.0–3.3 | Admin 安全 + UI 精修（RBAC、KKday 重設計） | ✅ 完成 |
-| **Phase 4** | Sprint 4.0–4.x | **行程後台 CRUD + Supabase 接線 + 正式上線** | 🔄 **規劃中** |
+| **Phase 4** | Sprint 4.0–4.2 | **行程後台 CRUD + Supabase 接線 + 正式上線** | ✅ **已完成** |
 | Phase 5 | 未排期 | 導遊自主後台 + 評價系統 + 通知 + 結算 | 🔜 待開始 |
 | Phase 6 | 未排期 | 成長功能（LINE Pay、SEO、搜尋、促銷） | 🔜 待開始 |
 
@@ -75,7 +75,7 @@
 
 ---
 
-## 🔄 Phase 4 — 行程後台 CRUD + 正式上線（Sprint 4，當前階段）
+## ✅ Phase 4 — 行程後台 CRUD + 正式上線（Sprint 4.0–4.2，已完成）
 
 > **核心目標：** 讓 Admin 可在後台直接管理行程，前台從 DB 讀取真實資料，不需動 code 即可上線新行程。
 
