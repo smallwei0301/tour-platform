@@ -153,6 +153,7 @@ export function GuideSearch({ value, onChange, style }: GuideSearchProps) {
           {!loading && options.map(g => (
             <div
               key={g.id}
+              onMouseDown={e => e.preventDefault()}
               onClick={() => handleSelect(g)}
               style={{
                 padding: '10px 16px', cursor: 'pointer', display: 'flex',
