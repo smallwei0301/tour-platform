@@ -1338,6 +1338,7 @@ export async function getActivityBySlugDb(slug) {
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, refund_policy_type,
       safety_notice, faq, good_for, not_good_for, plans, status, published_at,
+      itinerary, social_proof_quotes,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(
         id, slug, display_name, headline, bio, region, languages, specialties,
@@ -1371,6 +1372,7 @@ export async function getActivityBySlugDb(slug) {
     notices: act.notices || [], refundRules: act.refund_rules || [],
     safetyNotice: act.safety_notice, faq: act.faq || [],
     goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
+    itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
     plans: act.plans || null,
     status: act.status,
     guide: {
@@ -1569,6 +1571,7 @@ export async function getAdminActivityByIdDb(id) {
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, safety_notice, faq,
       good_for, not_good_for, transport_mode, seo_title, seo_description,
+      itinerary, social_proof_quotes,
       plans,
       status, published_at, created_at, updated_at,
       guide_id, guide_slug,
@@ -1597,6 +1600,7 @@ export async function getAdminActivityByIdDb(id) {
     notices: data.notices || [], refundRules: data.refund_rules || [],
     safetyNotice: data.safety_notice, faq: data.faq || [],
     goodFor: data.good_for || [], notGoodFor: data.not_good_for || [],
+    itinerary: data.itinerary || [], socialProofQuotes: data.social_proof_quotes || [],
     transportMode: data.transport_mode, seoTitle: data.seo_title, seoDescription: data.seo_description,
     plans: data.plans || null,
     status: data.status, publishedAt: data.published_at,
@@ -1709,12 +1713,17 @@ export async function updateActivityDb(id, input = {}) {
   }
   for (const [k, col] of [
     ['inclusions', 'inclusions'], ['exclusions', 'exclusions'],
-    ['notices', 'notices'], ['refundRules', 'refund_rules']
+    ['notices', 'notices'], ['refundRules', 'refund_rules'],
+    ['goodFor', 'good_for'], ['notGoodFor', 'not_good_for'],
   ]) {
     if (input[k] !== undefined) patch[col] = toJsonbArray(input[k]);
   }
   if (input.imageUrls !== undefined) patch.image_urls = input.imageUrls;
   if (input.plans !== undefined) patch.plans = input.plans;
+  if (input.safetyNotice !== undefined) patch.safety_notice = input.safetyNotice || null;
+  if (input.faq !== undefined) patch.faq = JSON.stringify(input.faq);
+  if (input.itinerary !== undefined) patch.itinerary = JSON.stringify(input.itinerary);
+  if (input.socialProofQuotes !== undefined) patch.social_proof_quotes = toJsonbArray(input.socialProofQuotes);
 
   // Re-resolve guide_id if guideSlug changed
   if (input.guideSlug) {
