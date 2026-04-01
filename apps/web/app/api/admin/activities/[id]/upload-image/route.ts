@@ -10,7 +10,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const slug = (formData.get('slug') as string) || id;
+    const rawSlug = (formData.get('slug') as string) || id;
+    // sanitize: 只保留英數字、連字號、底線；其餘字元（含中文）轉連字號
+    const slug = rawSlug
+      .replace(/[^\w-]/g, '-')   // 非英數字/底線/連字號 → -
+      .replace(/-{2,}/g, '-')    // 連續連字號 → 單一
+      .replace(/^-|-$/g, '')     // 去頭尾連字號
+      || id;                     // 萬一全空就用 id
     const type = (formData.get('type') as string) || 'cover'; // 'cover' | 'gallery'
 
     if (!file) return Response.json(fail('INVALID_REQUEST', 'file is required'), { status: 400 });
