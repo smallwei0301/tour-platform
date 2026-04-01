@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { DatePicker } from './DatePicker';
+import { PlanDetailModal } from './PlanDetailModal';
 
 interface Schedule {
   startAt?: string;
@@ -23,9 +24,24 @@ interface PlanConfig {
   label: string;
   duration: string;
   priceMultiplier: number;
+  price?: number;
   highlights: string[];
   detailsLinkText?: string;
   bookingBtnText?: string;
+  // 方案詳情欄位
+  language?: string;
+  earliestDeparture?: string;
+  confirmByDays?: number;
+  freeCancelDays?: number;
+  planInclusions?: string[];
+  planExclusions?: string[];
+  planItinerary?: Array<{ text: string; imageUrl?: string }>;
+  meetingPointName?: string;
+  meetingAddress?: string;
+  experiencePointName?: string;
+  experienceAddress?: string;
+  planNotices?: string[];
+  planRefundRules?: string[];
 }
 
 interface Activity {
@@ -137,12 +153,14 @@ interface DatePlanSectionProps {
 
 export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
 
   // Use DB plans if available, otherwise fall back to defaults
   const PLANS = (activity.plans && activity.plans.length > 0) ? activity.plans : DEFAULT_PLANS;
 
   return (
+  <>
     <div>
       {/* Date picker */}
       <div style={{ marginBottom: 28 }}>
@@ -237,14 +255,14 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                 ))}
               </ul>
 
-              <a
-                href="#"
+              <button
+                type="button"
                 className="kkd-link-sm"
-                style={{ display: 'inline-block', marginBottom: 14 }}
-                onClick={e => e.preventDefault()}
+                style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', color: 'inherit' }}
+                onClick={() => setModalPlan(plan)}
               >
                 {plan.detailsLinkText || '查看方案詳情 ›'}
-              </a>
+              </button>
 
               <div className="kkd-plan-footer">
                 <div className="kkd-plan-price-block">
@@ -281,5 +299,15 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
         })}
       </div>
     </div>
+
+    {/* ── 方案詳情 Modal ── */}
+    {modalPlan && (
+      <PlanDetailModal
+        plan={modalPlan}
+        basePrice={activity.priceTwd ?? activity.price ?? 0}
+        onClose={() => setModalPlan(null)}
+      />
+    )}
+  </>
   );
 }
