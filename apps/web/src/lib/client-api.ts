@@ -72,3 +72,10 @@ export async function submitEcpayCallback(payload: { orderId: string; tradeNo?: 
   if (!json.ok) throw new Error(json?.error?.message || 'failed to process payment callback');
   return json.data;
 }
+
+export async function fetchActivityBySlug(slug: string) {
+  const res = await fetch(`/api/activities/${encodeURIComponent(slug)}`, { cache: 'no-store' });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json?.error?.message || 'activity not found');
+  return json.data;
+}

@@ -1141,6 +1141,7 @@ export async function processPaymentCallbackDb(input) {
 
   const supabase = await getSupabase();
 
+  // ── Step 1: 取得訂單資訊 ──
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .select('id, status, total_twd, people_count, schedule_id')
@@ -1149,33 +1150,30 @@ export async function processPaymentCallbackDb(input) {
 
   if (orderError || !order) throw new Error('order not found');
 
+  // 冪等處理：已付款直接回傳
   if (['paid', 'confirmed', 'completed'].includes(order.status)) {
     return { order: { id: order.id, status: order.status, totalTwd: order.total_twd }, scheduleUpdated: false };
   }
 
-  const { data: schedule, error: scheduleError } = await supabase
-    .from('activity_schedules')
-    .select('id, capacity, booked_count, status')
-    .eq('id', order.schedule_id)
-    .single();
+  // ── Step 2: 原子扣位 — 使用 fn_book_schedule RPC (SELECT FOR UPDATE 鎖) ──
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
+    p_schedule_id: order.schedule_id,
+    p_count: order.people_count
+  });
 
-  if (scheduleError || !schedule) throw new Error('schedule not found for order');
+  if (rpcError) throw new Error(`booking RPC error: ${rpcError.message}`);
 
-  const remaining = schedule.capacity - schedule.booked_count;
-  if (order.people_count > remaining) {
-    throw new Error('schedule seats exhausted before payment confirmation');
+  const rpc = rpcResult ?? {};
+  if (!rpc.ok) {
+    const code = rpc.error || 'booking_failed';
+    const remaining = rpc.remaining ?? 0;
+    const err = new Error(`booking_failed: ${code} (remaining=${remaining})`);
+    err.code = code;
+    err.remaining = remaining;
+    throw err;
   }
 
-  const nextBooked = schedule.booked_count + order.people_count;
-  const nextStatus = nextBooked >= schedule.capacity ? 'full' : schedule.status;
-
-  const { error: scheduleUpdateError } = await supabase
-    .from('activity_schedules')
-    .update({ booked_count: nextBooked, status: nextStatus })
-    .eq('id', schedule.id);
-
-  if (scheduleUpdateError) throw new Error(scheduleUpdateError.message);
-
+  // ── Step 3: 更新訂單狀態為 paid ──
   const paidAt = new Date().toISOString();
 
   const { data: updatedOrder, error: updateOrderError } = await supabase
@@ -1187,6 +1185,7 @@ export async function processPaymentCallbackDb(input) {
 
   if (updateOrderError || !updatedOrder) throw new Error(updateOrderError?.message || 'order update failed');
 
+  // ── Step 4: 寫入 payments 記錄 ──
   const { error: paymentInsertError } = await supabase
     .from('payments')
     .insert({
@@ -1202,6 +1201,13 @@ export async function processPaymentCallbackDb(input) {
 
   if (paymentInsertError) throw new Error(paymentInsertError.message);
 
+  // ── Step 5: 回讀最新 schedule 狀態（trigger 可能已把 status 改為 full）──
+  const { data: updatedSchedule } = await supabase
+    .from('activity_schedules')
+    .select('id, capacity, booked_count, status')
+    .eq('id', order.schedule_id)
+    .single();
+
   return {
     order: {
       id: updatedOrder.id,
@@ -1210,12 +1216,12 @@ export async function processPaymentCallbackDb(input) {
       paidAt: updatedOrder.paid_at
     },
     scheduleUpdated: true,
-    schedule: {
-      id: schedule.id,
-      bookedCount: nextBooked,
-      capacity: schedule.capacity,
-      status: nextStatus
-    }
+    schedule: updatedSchedule ? {
+      id: updatedSchedule.id,
+      bookedCount: updatedSchedule.booked_count,
+      capacity: updatedSchedule.capacity,
+      status: updatedSchedule.status
+    } : null
   };
 }
 

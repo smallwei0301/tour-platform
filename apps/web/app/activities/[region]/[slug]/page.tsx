@@ -7,6 +7,9 @@ import { ActivityBottomBar } from '../../../../src/components/activity/ActivityB
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 
+// ISR：最多 60 秒快取，確保 booked_count 能即時反映
+export const revalidate = 60;
+
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {

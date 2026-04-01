@@ -34,6 +34,16 @@ function mapTradeNo(payload: any) {
   return payload?.tradeNo || payload?.TradeNo || null;
 }
 
+function httpStatusFromError(err: unknown): number {
+  const message = err instanceof Error ? err.message : '';
+  const code = (err as any)?.code ?? '';
+  if (message.includes('not found')) return 404;
+  // schedule_not_open or insufficient_capacity → 409 Conflict
+  if (code === 'schedule_not_open' || code === 'insufficient_capacity') return 409;
+  if (message.includes('booking_failed')) return 409;
+  return 400;
+}
+
 export async function POST(request: Request) {
   const raw = await request.text().catch(() => '');
   const payload = normalizePayload(request.headers, raw);
@@ -61,7 +71,8 @@ export async function POST(request: Request) {
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
-    const status = message.includes('not found') ? 404 : 400;
-    return Response.json(fail('INVALID_REQUEST', message), { status });
+    const status = httpStatusFromError(err);
+    const errorCode = status === 409 ? 'BOOKING_CONFLICT' : status === 404 ? 'NOT_FOUND' : 'INVALID_REQUEST';
+    return Response.json(fail(errorCode, message), { status });
   }
 }
