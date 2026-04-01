@@ -1337,7 +1337,7 @@ export async function getActivityBySlugDb(slug) {
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, refund_policy_type,
-      safety_notice, faq, good_for, not_good_for, status, published_at,
+      safety_notice, faq, good_for, not_good_for, plans, status, published_at,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(
         id, slug, display_name, headline, bio, region, languages, specialties,
@@ -1351,7 +1351,7 @@ export async function getActivityBySlugDb(slug) {
 
   const { data: schedules } = await supabase
     .from('activity_schedules')
-    .select('id, start_at, end_at, capacity, booked_count, status')
+    .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants')
     .eq('activity_id', act.id)
     .in('status', ['open', 'full'])
     .order('start_at', { ascending: true });
@@ -1371,6 +1371,7 @@ export async function getActivityBySlugDb(slug) {
     notices: act.notices || [], refundRules: act.refund_rules || [],
     safetyNotice: act.safety_notice, faq: act.faq || [],
     goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
+    plans: act.plans || null,
     status: act.status,
     guide: {
       id: gp.id, slug: gp.slug, displayName: gp.display_name,
@@ -1382,7 +1383,9 @@ export async function getActivityBySlugDb(slug) {
     },
     schedules: (schedules || []).map(s => ({
       id: s.id, startAt: s.start_at, endAt: s.end_at,
-      capacity: s.capacity, bookedCount: s.booked_count, status: s.status
+      capacity: s.capacity, bookedCount: s.booked_count, status: s.status,
+      planId: s.plan_id || null, minParticipants: s.min_participants || 1,
+      guideNote: s.guide_note || null,
     })),
     // Reviews: query from activity_reviews table (migration 003), fallback to fixtures
     reviews: await (async () => {
@@ -1578,7 +1581,7 @@ export async function getAdminActivityByIdDb(id) {
 
   const { data: schedules } = await supabase
     .from('activity_schedules')
-    .select('id, start_at, end_at, capacity, booked_count, status')
+    .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
     .eq('activity_id', id)
     .order('start_at');
 
@@ -1602,7 +1605,9 @@ export async function getAdminActivityByIdDb(id) {
     guideName: data.guide_profiles?.display_name || '',
     schedules: (schedules || []).map(s => ({
       id: s.id, startAt: s.start_at, endAt: s.end_at,
-      capacity: s.capacity, bookedCount: s.booked_count, status: s.status
+      capacity: s.capacity, bookedCount: s.booked_count, status: s.status,
+      planId: s.plan_id || null, minParticipants: s.min_participants || 1,
+      guideNote: s.guide_note || null,
     }))
   };
 }
@@ -1749,7 +1754,7 @@ export async function listSchedulesByActivityDb(activityId) {
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from('activity_schedules')
-    .select('id, activity_id, start_at, end_at, capacity, booked_count, status, created_at, updated_at')
+    .select('id, activity_id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note, created_at, updated_at')
     .eq('activity_id', activityId)
     .order('start_at');
   if (error) throw new Error(error.message);
@@ -1761,6 +1766,9 @@ export async function listSchedulesByActivityDb(activityId) {
     capacity: s.capacity,
     bookedCount: s.booked_count,
     status: s.status,
+    planId: s.plan_id || null,
+    minParticipants: s.min_participants || 1,
+    guideNote: s.guide_note || null,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
   }));
@@ -1768,22 +1776,30 @@ export async function listSchedulesByActivityDb(activityId) {
 
 export async function createScheduleDb(input = {}) {
   if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
-  const { activityId, startAt, endAt, capacity = 10, status = 'open' } = input;
+  const { activityId, startAt, endAt, capacity = 10, status = 'open', planId = null, minParticipants = 1, guideNote = null } = input;
   if (!activityId) throw new Error('activityId is required');
   if (!startAt)    throw new Error('startAt is required');
   if (!endAt)      throw new Error('endAt is required');
 
   const supabase = await getSupabase();
+  const row = {
+    activity_id: activityId, start_at: startAt, end_at: endAt,
+    capacity: Number(capacity), booked_count: 0, status,
+    plan_id: planId || null, min_participants: Number(minParticipants) || 1,
+    guide_note: guideNote || null,
+  };
   const { data, error } = await supabase
     .from('activity_schedules')
-    .insert({ activity_id: activityId, start_at: startAt, end_at: endAt, capacity: Number(capacity), booked_count: 0, status })
-    .select('id, activity_id, start_at, end_at, capacity, booked_count, status')
+    .insert(row)
+    .select('id, activity_id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
     .single();
   if (error) throw new Error(error.message);
   return {
     id: data.id, activityId: data.activity_id,
     startAt: data.start_at, endAt: data.end_at,
     capacity: data.capacity, bookedCount: data.booked_count, status: data.status,
+    planId: data.plan_id || null, minParticipants: data.min_participants || 1,
+    guideNote: data.guide_note || null,
   };
 }
 
@@ -1792,10 +1808,13 @@ export async function updateScheduleDb(id, input = {}) {
   const supabase = await getSupabase();
 
   const patch = {};
-  if (input.startAt    !== undefined) patch.start_at    = input.startAt;
-  if (input.endAt      !== undefined) patch.end_at      = input.endAt;
-  if (input.capacity   !== undefined) patch.capacity    = Number(input.capacity);
-  if (input.status     !== undefined) patch.status      = input.status;
+  if (input.startAt         !== undefined) patch.start_at        = input.startAt;
+  if (input.endAt           !== undefined) patch.end_at          = input.endAt;
+  if (input.capacity        !== undefined) patch.capacity        = Number(input.capacity);
+  if (input.status          !== undefined) patch.status          = input.status;
+  if (input.planId          !== undefined) patch.plan_id         = input.planId || null;
+  if (input.minParticipants !== undefined) patch.min_participants = Number(input.minParticipants) || 1;
+  if (input.guideNote       !== undefined) patch.guide_note      = input.guideNote || null;
   patch.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase
