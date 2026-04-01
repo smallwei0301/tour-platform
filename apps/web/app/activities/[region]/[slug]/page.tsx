@@ -58,6 +58,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       <div className="tp-container">
         <div className="kkd-title-block">
           <h1 className="kkd-title">{activity.title}</h1>
+          {activity.tagline && (
+            <p className="kkd-tagline">{activity.tagline}</p>
+          )}
 
           <div className="kkd-meta-row">
             <span className="kkd-rating">
