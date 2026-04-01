@@ -220,6 +220,9 @@ function PlanEditor({
         <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#2563eb', marginBottom: 8 }}>
           ▸ 方案詳情內容（點擊展開）
         </summary>
+        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+          這一區就是 JSON `plans[]` 裡的詳細欄位：語言 / 固定售價 / 出發日 / 費用資訊 / 方案行程圖片 / 集合地點 / 體驗地點 / 購買須知 / 取消政策
+        </div>
         <div style={{ paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -1172,7 +1175,49 @@ export default function AdminActivityEditPage() {
       socialProofQuotes: ['超好玩'],
       faq: [{ q: '適合新手嗎？', a: '可以' }],
       itinerary: [{ step: 1, title: '集合', description: '報到', duration: '30 分', icon: '📍' }],
-      plans: DEFAULT_PLANS,
+      plans: [{
+        id: 'half-day',
+        label: 'A. 半日行程',
+        duration: '約 4 小時',
+        priceMultiplier: 1,
+        price: 1500,
+        highlights: ['最早出發前 1 天可預訂', '免費取消（72 小時前）', '實名認證導遊帶領'],
+        detailsLinkText: '查看方案詳情 ›',
+        bookingBtnText: '立即預約',
+        language: '中文 / English 導覽',
+        earliestDeparture: '2026-04-10',
+        confirmByDays: 2,
+        freeCancelDays: 6,
+        planInclusions: ['保險', '頭燈', '手套'],
+        planExclusions: ['交通'],
+        planItinerary: [{ text: '帶您來場地心探險', imageUrl: 'https://example.com/plan-1.webp' }],
+        meetingPointName: '集合地點',
+        meetingAddress: '804 高雄市鼓山區內惟路73號',
+        experiencePointName: '體驗地點',
+        experienceAddress: '高雄市鼓山區柴山',
+        planNotices: ['請穿著止滑鞋'],
+        planRefundRules: ['6 天前可免費取消']
+      }],
+      _instructions: {
+        note: '此檔可直接匯入；_instructions 只做說明，不會寫入資料庫。',
+        title: '行程名稱',
+        guideSlug: '導遊 slug，例如 andy-lee',
+        region: '中文地區名，例如 高雄市',
+        category: '類別：outdoor/culture/food/nature',
+        coverImageUrl: '封面圖 URL',
+        imageUrls: '活動照片 URL 陣列，每個元素是一張圖',
+        faq: '常見問題陣列 [{q,a}]',
+        itinerary: '詳細行程時間表陣列 [{step,title,description,duration,icon}]',
+        plans: '方案管理陣列；對應「📋 方案管理」區塊',
+        plans_fields: {
+          id: '方案唯一 ID', label: '方案名稱', duration: '時長文字', priceMultiplier: '價格倍數', price: '固定售價（選填）',
+          highlights: '亮點列表', language: '導覽語言', earliestDeparture: '最早可出發日 YYYY-MM-DD',
+          confirmByDays: '最晚幾天前回覆', freeCancelDays: '幾天前可免費取消', planInclusions: '方案包含',
+          planExclusions: '方案不包含', planItinerary: '方案介紹（可含 imageUrl）', meetingPointName: '集合點名稱',
+          meetingAddress: '集合點地址', experiencePointName: '體驗地點名稱', experienceAddress: '體驗地點地址',
+          planNotices: '購買須知', planRefundRules: '取消政策'
+        }
+      }
     };
     const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
