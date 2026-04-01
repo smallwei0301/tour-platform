@@ -1005,6 +1005,8 @@ export default function AdminActivityEditPage() {
   const [status,             setStatus]             = useState('draft');
   const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
   const [activitySlug,       setActivitySlug]       = useState('');
+  const [importErrors,       setImportErrors]       = useState<string[]>([]);
+  const [importDiff,         setImportDiff]         = useState<Array<{field:string;before:string;after:string}>>([]);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1052,6 +1054,47 @@ export default function AdminActivityEditPage() {
       .catch(() => { setError('載入失敗'); setLoading(false); });
   }, [activityId]);
 
+  function summarize(v: any) {
+    if (Array.isArray(v)) return `${v.length} 項`;
+    if (v == null || v === '') return '（空）';
+    return String(v).slice(0, 50);
+  }
+
+  function validateImport(d: any) {
+    const errors: string[] = [];
+    if (!d || typeof d !== 'object' || Array.isArray(d)) errors.push('根層必須是 JSON 物件');
+    if (!d.title || typeof d.title !== 'string') errors.push('title 必填，且必須是字串');
+    if (!d.region || typeof d.region !== 'string') errors.push('region 必填，且必須是字串');
+    if (!d.category || typeof d.category !== 'string') errors.push('category 必填，且必須是字串');
+    if (d.priceTwd == null || Number.isNaN(Number(d.priceTwd))) errors.push('priceTwd 必填，且必須是數字');
+    if (d.guideSlug != null && typeof d.guideSlug !== 'string') errors.push('guideSlug 必須是字串');
+    for (const key of ['imageUrls','inclusions','exclusions','notices','refundRules','goodFor','socialProofQuotes']) {
+      if (d[key] != null && !Array.isArray(d[key])) errors.push(`${key} 必須是陣列`);
+    }
+    if (d.faq != null && !Array.isArray(d.faq)) errors.push('faq 必須是陣列');
+    if (d.itinerary != null && !Array.isArray(d.itinerary)) errors.push('itinerary 必須是陣列');
+    if (d.plans != null && !Array.isArray(d.plans)) errors.push('plans 必須是陣列');
+    return errors;
+  }
+
+  function buildImportDiff(d: any) {
+    return [
+      ['title', title, d.title || ''],
+      ['guideSlug', guideSlug, d.guideSlug || ''],
+      ['region', region, d.region || ''],
+      ['category', category, d.category || ''],
+      ['priceTwd', priceTwd, String(d.priceTwd || '')],
+      ['tagline', tagline, d.tagline || ''],
+      ['shortDescription', shortDescription, d.shortDescription || ''],
+      ['coverImageUrl', coverImageUrl, d.coverImageUrl || ''],
+      ['imageUrls', imageUrls, Array.isArray(d.imageUrls) ? d.imageUrls : []],
+      ['plans', plans, Array.isArray(d.plans) ? d.plans : []],
+      ['faq', faq, Array.isArray(d.faq) ? d.faq : []],
+      ['itinerary', itinerary, Array.isArray(d.itinerary) ? d.itinerary : []],
+    ].filter(([, before, after]) => JSON.stringify(before) !== JSON.stringify(after))
+     .map(([field, before, after]) => ({ field: String(field), before: summarize(before), after: summarize(after) }));
+  }
+
   function applyImportedActivity(d: any) {
     setTitle(d.title || '');
     setGuideSlug(d.guideSlug || '');
@@ -1086,8 +1129,17 @@ export default function AdminActivityEditPage() {
     reader.onload = () => {
       try {
         const json = JSON.parse(String(reader.result || '{}'));
+        const errors = validateImport(json);
+        setImportErrors(errors);
+        setImportDiff(errors.length ? [] : buildImportDiff(json));
+        if (errors.length) {
+          setError('匯入失敗：JSON 欄位格式不正確');
+          return;
+        }
         applyImportedActivity(json);
       } catch {
+        setImportErrors(['檔案不是有效 JSON，請重新檢查逗號、括號與引號']);
+        setImportDiff([]);
         setError('匯入失敗：請上傳有效的 JSON 樣板');
       }
     };
@@ -1251,6 +1303,28 @@ export default function AdminActivityEditPage() {
                 ⬇️ 下載 JSON 樣板
               </button>
             </div>
+            {importErrors.length > 0 && (
+              <div style={{ background: '#fff7ed', color: '#9a3412', border: '1px solid #fdba74', padding: '12px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
+                <div style={{ fontWeight: 700, marginBottom: 6 }}>JSON 驗證錯誤</div>
+                <ul style={{ margin: 0, paddingLeft: 18 }}>
+                  {importErrors.map((x, i) => <li key={i}>{x}</li>)}
+                </ul>
+              </div>
+            )}
+            {importDiff.length > 0 && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', padding: '12px 14px', borderRadius: 8, marginBottom: 14, fontSize: 13 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>匯入預覽 diff</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {importDiff.map((row, i) => (
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: 8 }}>
+                      <div style={{ fontWeight: 600 }}>{row.field}</div>
+                      <div style={{ color: '#6b7280' }}>原：{row.before}</div>
+                      <div style={{ color: '#166534' }}>新：{row.after}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <h3 style={sectionTitle}>📝 基本資訊</h3>
 
             <label style={labelStyle}>
@@ -1365,6 +1439,17 @@ export default function AdminActivityEditPage() {
                 style={{ ...fieldStyle, fontSize: 13 }}
                 placeholder={'https://example.com/a.webp\nhttps://example.com/b.webp'}
               />
+              {imageUrls.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+                  {imageUrls.map((url, i) => (
+                    <div key={url + i} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, background: '#fff' }}>
+                      <img src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} />
+                      <div style={{ flex: 1, fontSize: 12, color: '#4b5563', wordBreak: 'break-all' }}>{url}</div>
+                      <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>移除</button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <h3 style={sectionTitle}>📋 行程詳情</h3>
