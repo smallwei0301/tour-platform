@@ -101,13 +101,9 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           {/* ── 方案亮點 ── */}
           {activeTab === 'highlights' && (
             <div>
-              <div style={{
-                display: 'inline-block', background: '#2563eb', color: '#fff',
-                fontSize: 22, fontWeight: 800, padding: '6px 14px',
-                borderRadius: 6, marginBottom: 20,
-              }}>
-                NT${planPrice.toLocaleString()}
-              </div>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#111827', marginBottom: 20 }}>
+                NT$ {planPrice.toLocaleString()}
+              </p>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {plan.language && (
