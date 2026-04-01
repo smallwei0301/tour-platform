@@ -290,11 +290,20 @@ function PlanEditor({
                     </button>
                   </div>
                 ) : (
-                  <ItineraryImageUpload
-                    activityId={activityId}
-                    activitySlug={activitySlug}
-                    onUploaded={url => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: url }; update({ planItinerary: arr }); }}
-                  />
+                  <>
+                    <ItineraryImageUpload
+                      activityId={activityId}
+                      activitySlug={activitySlug}
+                      onUploaded={url => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: url }; update({ planItinerary: arr }); }}
+                    />
+                    <input
+                      type="url"
+                      value={item.imageUrl ?? ''}
+                      placeholder="或直接貼上圖片 URL"
+                      onChange={e => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: e.target.value || undefined }; update({ planItinerary: arr }); }}
+                      style={{ ...fieldStyle, fontSize: 12, padding: '6px 10px', marginTop: 6 }}
+                    />
+                  </>
                 )}
               </div>
             ))}
@@ -996,6 +1005,7 @@ export default function AdminActivityEditPage() {
   const [status,             setStatus]             = useState('draft');
   const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
   const [activitySlug,       setActivitySlug]       = useState('');
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!activityId) return;
@@ -1041,6 +1051,83 @@ export default function AdminActivityEditPage() {
       })
       .catch(() => { setError('載入失敗'); setLoading(false); });
   }, [activityId]);
+
+  function applyImportedActivity(d: any) {
+    setTitle(d.title || '');
+    setGuideSlug(d.guideSlug || '');
+    setRegion(d.region || '');
+    setCategory(d.category || '');
+    setPriceTwd(String(d.priceTwd || ''));
+    setDurationMinutes(String(d.durationMinutes || ''));
+    setMinParticipants(String(d.minParticipants || 1));
+    setMaxParticipants(String(d.maxParticipants || 10));
+    setMeetingPoint(d.meetingPoint || '');
+    setMeetingPointMapUrl(d.meetingPointMapUrl || '');
+    setCoverImageUrl(d.coverImageUrl || '');
+    setImageUrls(Array.isArray(d.imageUrls) ? d.imageUrls : []);
+    setDescription(d.description || '');
+    setShortDescription(d.shortDescription || '');
+    setTagline(d.tagline || '');
+    setInclusions((d.inclusions || []).join('\n'));
+    setExclusions((d.exclusions || []).join('\n'));
+    setNotices((d.notices || []).join('\n'));
+    setRefundRules((d.refundRules || []).join('\n'));
+    setSafetyNotice(d.safetyNotice || '');
+    setGoodFor((d.goodFor || []).join('\n'));
+    setSocialProofQuotes((d.socialProofQuotes || []).join('\n'));
+    setFaq(Array.isArray(d.faq) ? d.faq : []);
+    setItinerary(Array.isArray(d.itinerary) ? d.itinerary : []);
+    setPlans(Array.isArray(d.plans) && d.plans.length ? d.plans : DEFAULT_PLANS);
+    setSuccess('✅ 已從 JSON 樣板匯入內容，請確認後再儲存');
+  }
+
+  function handleImportFile(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(String(reader.result || '{}'));
+        applyImportedActivity(json);
+      } catch {
+        setError('匯入失敗：請上傳有效的 JSON 樣板');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function downloadTemplate() {
+    const template = {
+      title: '高雄柴山探洞體驗',
+      guideSlug: 'andy-lee',
+      region: '高雄市',
+      category: 'outdoor',
+      priceTwd: 1500,
+      durationMinutes: 420,
+      minParticipants: 6,
+      maxParticipants: 12,
+      meetingPoint: '集合地點',
+      meetingPointMapUrl: 'https://maps.google.com/...',
+      coverImageUrl: 'https://example.com/cover.webp',
+      imageUrls: ['https://example.com/1.webp'],
+      tagline: '帶你探索柴山地形秘境',
+      shortDescription: '半日探洞與登高體驗',
+      description: '完整行程說明',
+      inclusions: ['保險', '頭盔'],
+      exclusions: ['交通'],
+      notices: ['請穿運動鞋'],
+      refundRules: ['出發 6 天前可免費取消'],
+      safetyNotice: '有輕度攀爬',
+      goodFor: ['7-65 歲'],
+      socialProofQuotes: ['超好玩'],
+      faq: [{ q: '適合新手嗎？', a: '可以' }],
+      itinerary: [{ step: 1, title: '集合', description: '報到', duration: '30 分', icon: '📍' }],
+      plans: DEFAULT_PLANS,
+    };
+    const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'activity-template.json'; a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -1149,6 +1236,21 @@ export default function AdminActivityEditPage() {
         {/* ── 基本資料表單 ── */}
         <Card style={{ padding: 28 }}>
           <form onSubmit={handleSave}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept="application/json,.json"
+                style={{ display: 'none' }}
+                onChange={e => e.target.files?.[0] && handleImportFile(e.target.files[0])}
+              />
+              <button type="button" onClick={() => importInputRef.current?.click()} style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+                ⬆️ 匯入 JSON 建立內容
+              </button>
+              <button type="button" onClick={downloadTemplate} style={{ background: '#f9fafb', color: '#374151', border: '1px solid #d1d5db', padding: '8px 14px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+                ⬇️ 下載 JSON 樣板
+              </button>
+            </div>
             <h3 style={sectionTitle}>📝 基本資訊</h3>
 
             <label style={labelStyle}>
@@ -1254,6 +1356,16 @@ export default function AdminActivityEditPage() {
               onUpload={() => {}}
               onGalleryUpdate={setImageUrls}
             />
+            <div style={{ marginTop: 12, marginBottom: 16 }}>
+              <label style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上活動照片 URL（每行一張）</label>
+              <textarea
+                value={imageUrls.join('\n')}
+                onChange={e => setImageUrls(e.target.value.split('\n').map(x => x.trim()).filter(Boolean))}
+                rows={3}
+                style={{ ...fieldStyle, fontSize: 13 }}
+                placeholder={'https://example.com/a.webp\nhttps://example.com/b.webp'}
+              />
+            </div>
 
             <h3 style={sectionTitle}>📋 行程詳情</h3>
             <label style={labelStyle}>
