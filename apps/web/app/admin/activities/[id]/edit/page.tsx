@@ -933,14 +933,14 @@ export default function AdminActivityEditPage() {
               <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required />
             </label>
 
-            <label style={labelStyle}>
-              導遊
+            <div style={labelStyle}>
+              <span style={{ display: 'block', marginBottom: 4, fontWeight: 500, fontSize: 14 }}>導遊</span>
               <GuideSearch
                 value={guideSlug}
                 onChange={(slug) => setGuideSlug(slug)}
-                style={{ marginTop: 4 }}
+                style={{ marginTop: 0 }}
               />
-            </label>
+            </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
               <label style={labelStyle}>
