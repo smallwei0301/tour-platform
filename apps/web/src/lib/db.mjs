@@ -1638,10 +1638,14 @@ export async function createActivityDb(input = {}) {
     return String(v).split('\n').map(x => x.trim()).filter(Boolean);
   };
 
-  const slug = input.slug || String(input.title || '').toLowerCase()
-    .replace(/[^\w\u4e00-\u9fff]+/g, '-')
-    .replace(/^-|-$/g, '')
-    + '-' + Date.now();
+  // slug 只允許英數字與連字號（Storage key 不能含中文）
+  const slugBase = String(input.slug || input.title || '')
+    .toLowerCase()
+    .replace(/[\u4e00-\u9fff\u3400-\u4dbf]+/g, '')  // 移除中文字元
+    .replace(/[^\w]+/g, '-')                          // 非英數字 → -
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '');
+  const slug = (slugBase || 'activity') + '-' + Date.now();
 
   const payload = {
     id: crypto.randomUUID(),
