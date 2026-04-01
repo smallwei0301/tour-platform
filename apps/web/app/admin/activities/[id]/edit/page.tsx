@@ -482,6 +482,11 @@ function PlansSection({
 }
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市', '台中市', '南投縣', '宜蘭縣', '屏東縣'];
+const REGION_SLUG_MAP: Record<string, string> = {
+  '台北市': 'taipei', '高雄市': 'kaohsiung', '花蓮縣': 'hualien',
+  '台南市': 'tainan', '台中市': 'taichung', '南投縣': 'nantou',
+  '宜蘭縣': 'yilan',  '屏東縣': 'pingtung',
+};
 const CATEGORIES = [
   { value: 'outdoor', label: '戶外冒險' },
   { value: 'culture', label: '文化歷史' },
@@ -1047,7 +1052,9 @@ export default function AdminActivityEditPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: title.trim(), guideSlug: guideSlug || undefined,
-          region, category,
+          region,
+          regionSlug: REGION_SLUG_MAP[region] || region.toLowerCase().replace(/[^\w]+/g, '-') || undefined,
+          category,
           priceTwd: Number(priceTwd),
           durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
           minParticipants: Number(minParticipants) || 1,
@@ -1103,6 +1110,16 @@ export default function AdminActivityEditPage() {
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Badge variant={badge.variant}>{badge.label}</Badge>
+            {status === 'published' && activitySlug && REGION_SLUG_MAP[region] && (
+              <a
+                href={`/activities/${REGION_SLUG_MAP[region]}/${activitySlug}`}
+                target="_blank"
+                rel="noreferrer"
+                style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
+              >
+                🔗 查看前台
+              </a>
+            )}
             {status === 'draft' && (
               <button onClick={() => handleStatusChange('published')} disabled={statusBusy}
                 style={{ background: '#dcfce7', color: '#166534', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
