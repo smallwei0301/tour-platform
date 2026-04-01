@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
+import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
+import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 
 // ── 方案型別 ──────────────────────────────────────────────
 interface PlanConfig {
@@ -142,11 +144,30 @@ function PlanEditor({
 // ── 方案管理 Section ──────────────────────────────────────
 function PlansSection({
   plans,
+  activityId,
   onChange,
 }: {
   plans: PlanConfig[];
+  activityId: string;
   onChange: (plans: PlanConfig[]) => void;
 }) {
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+
+  async function savePlans() {
+    setSaving(true); setSaveMsg('');
+    try {
+      const res = await fetch(`/api/admin/activities/${activityId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plans }),
+      });
+      const json = await res.json();
+      if (json.ok) { setSaveMsg('✅ 方案已儲存'); setTimeout(() => setSaveMsg(''), 3000); }
+      else setSaveMsg('❌ ' + (json.error?.message || '儲存失敗'));
+    } catch { setSaveMsg('❌ 網路錯誤'); }
+    finally { setSaving(false); }
+  }
   function addPlan() {
     onChange([...plans, {
       id: `plan-${Date.now()}`,
@@ -231,6 +252,27 @@ function PlansSection({
           />
         ))
       )}
+
+      {/* 儲存方案 */}
+      <div style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          type="button"
+          onClick={savePlans}
+          disabled={saving}
+          style={{
+            background: '#1e40af', color: '#fff', border: 'none',
+            padding: '10px 24px', borderRadius: 8, fontWeight: 700, fontSize: 14,
+            cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? '儲存中⋯' : '💾 儲存方案設定'}
+        </button>
+        {saveMsg && (
+          <span style={{ fontSize: 13, color: saveMsg.startsWith('✅') ? '#166534' : '#991b1b' }}>
+            {saveMsg}
+          </span>
+        )}
+      </div>
     </Card>
   );
 }
@@ -283,39 +325,77 @@ interface Schedule {
 function AddScheduleModal({
   onClose, onAdded, activityId, availablePlans,
 }: { onClose: () => void; onAdded: () => void; activityId: string; availablePlans: PlanConfig[] }) {
-  const [date,            setDate]            = useState('');
+  const [selectedDates,   setSelectedDates]   = useState<string[]>([]);
   const [startHH,         setStartHH]         = useState('09:00');
   const [endHH,           setEndHH]           = useState('13:00');
   const [capacity,        setCapacity]        = useState('10');
   const [minParticipants, setMinParticipants] = useState('1');
   const [planId,          setPlanId]          = useState('');  // '' = 全部方案
   const [saving,          setSaving]          = useState(false);
+  const [progress,        setProgress]        = useState('');
   const [err,             setErr]             = useState('');
+
+  const today = new Date().toISOString().split('T')[0];
+
+  function toggleDate(date: string) {
+    setSelectedDates(prev =>
+      prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date].sort()
+    );
+  }
+
+  // Generate next 60 days as grid
+  function buildDateGrid() {
+    const days = [];
+    const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+    for (let i = 0; i < 60; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      const key = d.toISOString().split('T')[0];
+      const mm = d.getMonth() + 1;
+      const dd = d.getDate();
+      const wd = WEEKDAYS[d.getDay()];
+      const isSun = d.getDay() === 0;
+      const isSat = d.getDay() === 6;
+      days.push({ key, mm, dd, wd, isSun, isSat });
+    }
+    return days;
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!date) return setErr('請選擇日期');
-    setSaving(true); setErr('');
-    try {
-      const startAt = `${date}T${startHH}:00+08:00`;
-      const endAt   = `${date}T${endHH}:00+08:00`;
-      const res = await fetch(`/api/admin/activities/${activityId}/schedules`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          startAt, endAt,
-          capacity: Number(capacity),
-          minParticipants: Number(minParticipants) || 1,
-          planId: planId || null,
-          status: 'open',
-        }),
-      });
-      const json = await res.json();
-      if (json.ok) { onAdded(); onClose(); }
-      else setErr(json.error?.message || '新增失敗');
-    } catch { setErr('網路錯誤'); }
-    finally { setSaving(false); }
+    if (selectedDates.length === 0) return setErr('請選擇至少一個日期');
+    setSaving(true); setErr(''); setProgress('');
+
+    let ok = 0; let fail = 0;
+    for (let i = 0; i < selectedDates.length; i++) {
+      const date = selectedDates[i];
+      setProgress(`新增中 ${i + 1}/${selectedDates.length}⋯`);
+      try {
+        const startAt = `${date}T${startHH}:00+08:00`;
+        const endAt   = `${date}T${endHH}:00+08:00`;
+        const res = await fetch(`/api/admin/activities/${activityId}/schedules`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            startAt, endAt,
+            capacity: Number(capacity),
+            minParticipants: Number(minParticipants) || 1,
+            planId: planId || null,
+            status: 'open',
+          }),
+        });
+        const json = await res.json();
+        if (json.ok) ok++; else fail++;
+      } catch { fail++; }
+    }
+
+    setSaving(false); setProgress('');
+    if (fail > 0) setErr(`⚠️ ${ok} 筆成功，${fail} 筆失敗（可能重複）`);
+    onAdded();
+    if (fail === 0) onClose();
   }
+
+  const days = buildDateGrid();
 
   return (
     <div style={{
@@ -323,25 +403,84 @@ function AddScheduleModal({
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 12, padding: 28, width: 480,
+        background: '#fff', borderRadius: 12, padding: 28, width: 560,
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+        maxHeight: '90vh', overflowY: 'auto',
       }}>
-        <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>📅 新增場次</h3>
+        <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>📅 批次新增場次</h3>
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+          可同時選擇多個日期，一次建立多筆場次
+        </p>
+
         {err && (
           <div style={{ background: '#fee2e2', color: '#991b1b', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
-            ❌ {err}
+            {err}
           </div>
         )}
-        <form onSubmit={handleSubmit}>
-          <label style={labelStyle}>
-            日期 *
-            <input
-              type="date" value={date} onChange={e => setDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
-              style={fieldStyle} required
-            />
-          </label>
 
+        <form onSubmit={handleSubmit}>
+          {/* 日期批次選擇 */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontWeight: 600, fontSize: 14 }}>
+                選擇日期
+                {selectedDates.length > 0 && (
+                  <span style={{ marginLeft: 8, background: '#16a34a', color: '#fff', padding: '1px 8px', borderRadius: 12, fontSize: 12, fontWeight: 700 }}>
+                    已選 {selectedDates.length} 天
+                  </span>
+                )}
+              </span>
+              {selectedDates.length > 0 && (
+                <button type="button" onClick={() => setSelectedDates([])}
+                  style={{ fontSize: 12, color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
+                  清除全部
+                </button>
+              )}
+            </div>
+
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 3,
+              border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, maxHeight: 260, overflowY: 'auto',
+            }}>
+              {/* Week header */}
+              {['日','一','二','三','四','五','六'].map(w => (
+                <div key={w} style={{ textAlign: 'center', fontSize: 11, color: '#9ca3af', padding: '2px 0', fontWeight: 600 }}>{w}</div>
+              ))}
+              {/* Empty cells for first week offset */}
+              {(() => {
+                const firstDay = new Date(days[0].key).getDay();
+                return Array(firstDay).fill(null).map((_, i) => <div key={`empty-${i}`} />);
+              })()}
+              {days.map(d => {
+                const isSelected = selectedDates.includes(d.key);
+                return (
+                  <button
+                    key={d.key}
+                    type="button"
+                    onClick={() => toggleDate(d.key)}
+                    style={{
+                      padding: '4px 2px', borderRadius: 5, border: 'none',
+                      background: isSelected ? '#16a34a' : 'transparent',
+                      color: isSelected ? '#fff' : d.isSun ? '#ef4444' : d.isSat ? '#3b82f6' : '#374151',
+                      cursor: 'pointer', fontSize: 12, fontWeight: isSelected ? 700 : 400,
+                      outline: 'none',
+                    }}
+                  >
+                    <div>{d.mm}/{d.dd}</div>
+                    <div style={{ fontSize: 10, opacity: 0.7 }}>週{d.wd}</div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {selectedDates.length > 0 && (
+              <div style={{ marginTop: 6, fontSize: 12, color: '#374151', lineHeight: 1.8 }}>
+                已選：{selectedDates.map(d => d.slice(5).replace('-', '/')).join('、')}
+              </div>
+            )}
+          </div>
+
+          {/* 方案選擇 */}
           <label style={labelStyle}>
             適用方案
             <select value={planId} onChange={e => setPlanId(e.target.value)} style={fieldStyle}>
@@ -380,19 +519,21 @@ function AddScheduleModal({
             </label>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end', alignItems: 'center' }}>
+            {progress && <span style={{ fontSize: 13, color: '#16a34a' }}>{progress}</span>}
             <button type="button" onClick={onClose}
               style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 14 }}>
               取消
             </button>
-            <button type="submit" disabled={saving}
+            <button type="submit" disabled={saving || selectedDates.length === 0}
               style={{
                 padding: '9px 20px', borderRadius: 8, border: 'none',
                 background: 'var(--tp-primary, #16a34a)', color: '#fff',
-                fontWeight: 700, fontSize: 14, cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.6 : 1,
+                fontWeight: 700, fontSize: 14,
+                cursor: (saving || selectedDates.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (saving || selectedDates.length === 0) ? 0.6 : 1,
               }}>
-              {saving ? '新增中⋯' : '確認新增'}
+              {saving ? progress || '新增中⋯' : `確認新增 ${selectedDates.length > 0 ? `(${selectedDates.length} 天)` : ''}`}
             </button>
           </div>
         </form>
@@ -630,6 +771,7 @@ export default function AdminActivityEditPage() {
   const [meetingPoint,       setMeetingPoint]       = useState('');
   const [meetingPointMapUrl, setMeetingPointMapUrl] = useState('');
   const [coverImageUrl,      setCoverImageUrl]      = useState('');
+  const [imageUrls,          setImageUrls]          = useState<string[]>([]);
   const [description,        setDescription]        = useState('');
   const [shortDescription,   setShortDescription]   = useState('');
   const [tagline,            setTagline]            = useState('');
@@ -659,6 +801,7 @@ export default function AdminActivityEditPage() {
         setMeetingPoint(d.meetingPoint || '');
         setMeetingPointMapUrl(d.meetingPointMapUrl || '');
         setCoverImageUrl(d.coverImageUrl || '');
+        setImageUrls(d.imageUrls || []);
         setDescription(d.description || '');
         setShortDescription(d.shortDescription || '');
         setTagline(d.tagline || '');
@@ -697,7 +840,7 @@ export default function AdminActivityEditPage() {
           description, shortDescription, tagline,
           inclusions: toArray(inclusions), exclusions: toArray(exclusions),
           notices: toArray(notices), refundRules: toArray(refundRules),
-          plans,
+          plans, imageUrls,
         }),
       });
       const json = await res.json();
@@ -777,8 +920,12 @@ export default function AdminActivityEditPage() {
             </label>
 
             <label style={labelStyle}>
-              導遊 slug
-              <input type="text" value={guideSlug} onChange={e => setGuideSlug(e.target.value)} style={fieldStyle} />
+              導遊
+              <GuideSearch
+                value={guideSlug}
+                onChange={(slug) => setGuideSlug(slug)}
+                style={{ marginTop: 4 }}
+              />
             </label>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -842,15 +989,34 @@ export default function AdminActivityEditPage() {
             </label>
 
             <h3 style={sectionTitle}>🖼️ 圖片</h3>
-            <label style={labelStyle}>
-              封面圖 URL
-              <input type="url" value={coverImageUrl} onChange={e => setCoverImageUrl(e.target.value)} style={fieldStyle} />
-            </label>
-            {coverImageUrl && (
-              <div style={{ marginBottom: 16 }}>
-                <img src={coverImageUrl} alt="預覽" style={{ maxWidth: 300, borderRadius: 8, border: '1px solid #e5e7eb' }} />
-              </div>
-            )}
+            <label style={{ ...labelStyle, marginBottom: 8 }}>封面圖</label>
+            <ImageUpload
+              activityId={activityId}
+              activitySlug={title.toLowerCase().replace(/\s+/g, '-') || activityId}
+              type="cover"
+              currentUrl={coverImageUrl}
+              onUpload={setCoverImageUrl}
+            />
+            <div style={{ marginTop: 12, marginBottom: 16 }}>
+              <label style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上封面圖 URL</label>
+              <input
+                type="url"
+                value={coverImageUrl}
+                onChange={e => setCoverImageUrl(e.target.value)}
+                style={{ ...fieldStyle, fontSize: 13 }}
+                placeholder="https://..."
+              />
+            </div>
+
+            <label style={{ ...labelStyle, marginBottom: 8 }}>活動照片（Gallery）</label>
+            <ImageUpload
+              activityId={activityId}
+              activitySlug={title.toLowerCase().replace(/\s+/g, '-') || activityId}
+              type="gallery"
+              currentUrls={imageUrls}
+              onUpload={() => {}}
+              onGalleryUpdate={setImageUrls}
+            />
 
             <h3 style={sectionTitle}>📋 行程詳情</h3>
             <label style={labelStyle}>
@@ -889,7 +1055,7 @@ export default function AdminActivityEditPage() {
         </Card>
 
         {/* ── 方案管理 ── */}
-        <PlansSection plans={plans} onChange={setPlans} />
+        <PlansSection plans={plans} activityId={activityId} onChange={setPlans} />
 
         {/* ── 場次管理 ── */}
         <ScheduleSection activityId={activityId} availablePlans={plans} />
