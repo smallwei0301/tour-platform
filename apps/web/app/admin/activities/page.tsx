@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
 
 type Activity = {
@@ -33,10 +34,14 @@ const STATUS_BADGE: Record<string, { variant: 'success' | 'warning' | 'danger' |
 };
 
 export default function AdminActivitiesPage() {
+  const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -51,6 +56,28 @@ export default function AdminActivitiesPage() {
 
   useEffect(() => { load(); }, [statusFilter]);
 
+  // ── 直接建立並跳轉 edit ──
+  async function handleCreate() {
+    setCreating(true);
+    try {
+      const res = await fetch('/api/admin/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: '新行程', priceTwd: 0 }),
+      });
+      const json = await res.json();
+      if (json.ok && json.data?.id) {
+        router.push(`/admin/activities/${json.data.id}/edit`);
+      } else {
+        alert('建立失敗：' + (json.error?.message || '未知錯誤'));
+        setCreating(false);
+      }
+    } catch {
+      alert('網路錯誤，請重試');
+      setCreating(false);
+    }
+  }
+
   async function handleStatusChange(id: string, newStatus: string) {
     setBusy(id);
     try {
@@ -63,23 +90,44 @@ export default function AdminActivitiesPage() {
     } finally { setBusy(null); }
   }
 
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/admin/activities/${deleteTarget.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.ok) {
+        setDeleteTarget(null);
+        await load();
+      } else {
+        alert('刪除失敗：' + (json.error?.message || '未知錯誤'));
+      }
+    } catch {
+      alert('網路錯誤，請重試');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="行程管理"
         subtitle={`共 ${activities.length} 個行程`}
         actions={
-          <Link
-            href="/admin/activities/new"
+          <button
+            onClick={handleCreate}
+            disabled={creating}
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               background: 'var(--tp-primary, #16a34a)', color: '#fff',
               padding: '10px 20px', borderRadius: 8, fontWeight: 700,
-              textDecoration: 'none', fontSize: 14,
+              border: 'none', cursor: creating ? 'not-allowed' : 'pointer',
+              fontSize: 14, opacity: creating ? 0.7 : 1,
             }}
           >
-            ＋ 新增行程
-          </Link>
+            {creating ? '建立中⋯' : '＋ 新增行程'}
+          </button>
         }
       />
 
@@ -141,7 +189,7 @@ export default function AdminActivitiesPage() {
                         <Td>{a.scheduleCount ?? 0}</Td>
                         <Td><Badge variant={badge.variant}>{badge.label}</Badge></Td>
                         <Td>
-                          <div style={{ display: 'flex', gap: 6 }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                             <Link
                               href={`/admin/activities/${a.id}/edit`}
                               style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#f0f0f0', textDecoration: 'none', color: '#333' }}
@@ -161,7 +209,7 @@ export default function AdminActivitiesPage() {
                               <button
                                 onClick={() => handleStatusChange(a.id, 'archived')}
                                 disabled={busy === a.id}
-                                style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fee2e2', color: '#991b1b', border: 'none', cursor: 'pointer' }}
+                                style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fef9c3', color: '#854d0e', border: 'none', cursor: 'pointer' }}
                               >
                                 下架
                               </button>
@@ -175,6 +223,13 @@ export default function AdminActivitiesPage() {
                                 重新編輯
                               </button>
                             )}
+                            <button
+                              onClick={() => setDeleteTarget(a)}
+                              disabled={busy === a.id}
+                              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fee2e2', color: '#991b1b', border: 'none', cursor: 'pointer' }}
+                            >
+                              刪除
+                            </button>
                           </div>
                         </Td>
                       </tr>
@@ -186,6 +241,49 @@ export default function AdminActivitiesPage() {
           )}
         </Card>
       </div>
+
+      {/* ── 刪除確認 Dialog ── */}
+      {deleteTarget && (
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000 }}
+            onClick={() => !deleting && setDeleteTarget(null)}
+          />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: '#fff', borderRadius: 12, padding: 28,
+            zIndex: 1001, width: 380, maxWidth: '90vw',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
+          }}>
+            <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px', color: '#111' }}>
+              🗑️ 確認刪除行程
+            </h3>
+            <p style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>
+              即將刪除：<strong>{deleteTarget.title}</strong>
+            </p>
+            <p style={{ fontSize: 13, color: '#dc2626', background: '#fee2e2', padding: '10px 14px', borderRadius: 8, marginBottom: 20 }}>
+              ⚠️ 此操作不可復原。行程資料及所有已上傳的圖片都將永久刪除。
+            </p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleting}
+                style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{ padding: '9px 20px', borderRadius: 8, background: '#dc2626', color: '#fff', border: 'none', cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: deleting ? 0.7 : 1 }}
+              >
+                {deleting ? '刪除中⋯' : '確認刪除'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

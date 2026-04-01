@@ -1904,3 +1904,58 @@ export async function searchGuidesDb(query = '') {
     verificationStatus: g.verification_status, profilePhotoUrl: g.profile_photo_url,
   }));
 }
+
+export async function deleteActivityDb(id) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabaseServiceRole();
+
+  // 1. 取得行程資料（slug + 圖片 URLs）
+  const { data: act } = await supabase
+    .from('activities')
+    .select('id, slug, cover_image_url, image_urls')
+    .eq('id', id)
+    .single();
+
+  if (!act) throw new Error('Activity not found');
+
+  // 2. 收集所有 Supabase Storage 圖片路徑
+  const BUCKET = 'activity-images';
+  const storageBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
+  const pathsToDelete = [];
+
+  const collectPath = (url) => {
+    if (url && typeof url === 'string' && url.startsWith(storageBase)) {
+      pathsToDelete.push(url.replace(storageBase, ''));
+    }
+  };
+
+  collectPath(act.cover_image_url);
+  (act.image_urls || []).forEach(collectPath);
+
+  // 3. 刪除 Storage 圖片
+  if (pathsToDelete.length > 0) {
+    const { error: storageErr } = await supabase.storage.from(BUCKET).remove(pathsToDelete);
+    if (storageErr) console.warn('[deleteActivityDb] storage remove error:', storageErr.message);
+  }
+
+  // 4. 刪除相關 schedules（cascade 沒設的話手動刪）
+  await supabase.from('activity_schedules').delete().eq('activity_id', id);
+
+  // 5. 刪除行程本體
+  const { error } = await supabase.from('activities').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+
+  return { deleted: true, id, imagesDeleted: pathsToDelete.length };
+}
+
+async function getSupabaseServiceRole() {
+  // 嘗試用 service role key；不存在則 fallback 一般 client
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceKey) {
+    const { createClient } = await import('@supabase/supabase-js');
+    return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return getSupabase();
+}
