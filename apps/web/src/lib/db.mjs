@@ -1141,6 +1141,7 @@ export async function processPaymentCallbackDb(input) {
 
   const supabase = await getSupabase();
 
+  // ── Step 1: 取得訂單資訊 ──
   const { data: order, error: orderError } = await supabase
     .from('orders')
     .select('id, status, total_twd, people_count, schedule_id')
@@ -1149,33 +1150,30 @@ export async function processPaymentCallbackDb(input) {
 
   if (orderError || !order) throw new Error('order not found');
 
+  // 冪等處理：已付款直接回傳
   if (['paid', 'confirmed', 'completed'].includes(order.status)) {
     return { order: { id: order.id, status: order.status, totalTwd: order.total_twd }, scheduleUpdated: false };
   }
 
-  const { data: schedule, error: scheduleError } = await supabase
-    .from('activity_schedules')
-    .select('id, capacity, booked_count, status')
-    .eq('id', order.schedule_id)
-    .single();
+  // ── Step 2: 原子扣位 — 使用 fn_book_schedule RPC (SELECT FOR UPDATE 鎖) ──
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
+    p_schedule_id: order.schedule_id,
+    p_count: order.people_count
+  });
 
-  if (scheduleError || !schedule) throw new Error('schedule not found for order');
+  if (rpcError) throw new Error(`booking RPC error: ${rpcError.message}`);
 
-  const remaining = schedule.capacity - schedule.booked_count;
-  if (order.people_count > remaining) {
-    throw new Error('schedule seats exhausted before payment confirmation');
+  const rpc = rpcResult ?? {};
+  if (!rpc.ok) {
+    const code = rpc.error || 'booking_failed';
+    const remaining = rpc.remaining ?? 0;
+    const err = new Error(`booking_failed: ${code} (remaining=${remaining})`);
+    err.code = code;
+    err.remaining = remaining;
+    throw err;
   }
 
-  const nextBooked = schedule.booked_count + order.people_count;
-  const nextStatus = nextBooked >= schedule.capacity ? 'full' : schedule.status;
-
-  const { error: scheduleUpdateError } = await supabase
-    .from('activity_schedules')
-    .update({ booked_count: nextBooked, status: nextStatus })
-    .eq('id', schedule.id);
-
-  if (scheduleUpdateError) throw new Error(scheduleUpdateError.message);
-
+  // ── Step 3: 更新訂單狀態為 paid ──
   const paidAt = new Date().toISOString();
 
   const { data: updatedOrder, error: updateOrderError } = await supabase
@@ -1187,6 +1185,7 @@ export async function processPaymentCallbackDb(input) {
 
   if (updateOrderError || !updatedOrder) throw new Error(updateOrderError?.message || 'order update failed');
 
+  // ── Step 4: 寫入 payments 記錄 ──
   const { error: paymentInsertError } = await supabase
     .from('payments')
     .insert({
@@ -1202,6 +1201,13 @@ export async function processPaymentCallbackDb(input) {
 
   if (paymentInsertError) throw new Error(paymentInsertError.message);
 
+  // ── Step 5: 回讀最新 schedule 狀態（trigger 可能已把 status 改為 full）──
+  const { data: updatedSchedule } = await supabase
+    .from('activity_schedules')
+    .select('id, capacity, booked_count, status')
+    .eq('id', order.schedule_id)
+    .single();
+
   return {
     order: {
       id: updatedOrder.id,
@@ -1210,12 +1216,12 @@ export async function processPaymentCallbackDb(input) {
       paidAt: updatedOrder.paid_at
     },
     scheduleUpdated: true,
-    schedule: {
-      id: schedule.id,
-      bookedCount: nextBooked,
-      capacity: schedule.capacity,
-      status: nextStatus
-    }
+    schedule: updatedSchedule ? {
+      id: updatedSchedule.id,
+      bookedCount: updatedSchedule.booked_count,
+      capacity: updatedSchedule.capacity,
+      status: updatedSchedule.status
+    } : null
   };
 }
 
@@ -1338,6 +1344,7 @@ export async function getActivityBySlugDb(slug) {
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, refund_policy_type,
       safety_notice, faq, good_for, not_good_for, plans, status, published_at,
+      itinerary, social_proof_quotes,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(
         id, slug, display_name, headline, bio, region, languages, specialties,
@@ -1371,6 +1378,7 @@ export async function getActivityBySlugDb(slug) {
     notices: act.notices || [], refundRules: act.refund_rules || [],
     safetyNotice: act.safety_notice, faq: act.faq || [],
     goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
+    itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
     plans: act.plans || null,
     status: act.status,
     guide: {
@@ -1569,6 +1577,7 @@ export async function getAdminActivityByIdDb(id) {
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, safety_notice, faq,
       good_for, not_good_for, transport_mode, seo_title, seo_description,
+      itinerary, social_proof_quotes,
       plans,
       status, published_at, created_at, updated_at,
       guide_id, guide_slug,
@@ -1597,6 +1606,7 @@ export async function getAdminActivityByIdDb(id) {
     notices: data.notices || [], refundRules: data.refund_rules || [],
     safetyNotice: data.safety_notice, faq: data.faq || [],
     goodFor: data.good_for || [], notGoodFor: data.not_good_for || [],
+    itinerary: data.itinerary || [], socialProofQuotes: data.social_proof_quotes || [],
     transportMode: data.transport_mode, seoTitle: data.seo_title, seoDescription: data.seo_description,
     plans: data.plans || null,
     status: data.status, publishedAt: data.published_at,
@@ -1634,10 +1644,14 @@ export async function createActivityDb(input = {}) {
     return String(v).split('\n').map(x => x.trim()).filter(Boolean);
   };
 
-  const slug = input.slug || String(input.title || '').toLowerCase()
-    .replace(/[^\w\u4e00-\u9fff]+/g, '-')
-    .replace(/^-|-$/g, '')
-    + '-' + Date.now();
+  // slug 只允許英數字與連字號（Storage key 不能含中文）
+  const slugBase = String(input.slug || input.title || '')
+    .toLowerCase()
+    .replace(/[\u4e00-\u9fff\u3400-\u4dbf]+/g, '')  // 移除中文字元
+    .replace(/[^\w]+/g, '-')                          // 非英數字 → -
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '');
+  const slug = (slugBase || 'activity') + '-' + Date.now();
 
   const payload = {
     id: crypto.randomUUID(),
@@ -1709,12 +1723,17 @@ export async function updateActivityDb(id, input = {}) {
   }
   for (const [k, col] of [
     ['inclusions', 'inclusions'], ['exclusions', 'exclusions'],
-    ['notices', 'notices'], ['refundRules', 'refund_rules']
+    ['notices', 'notices'], ['refundRules', 'refund_rules'],
+    ['goodFor', 'good_for'], ['notGoodFor', 'not_good_for'],
   ]) {
     if (input[k] !== undefined) patch[col] = toJsonbArray(input[k]);
   }
   if (input.imageUrls !== undefined) patch.image_urls = input.imageUrls;
   if (input.plans !== undefined) patch.plans = input.plans;
+  if (input.safetyNotice !== undefined) patch.safety_notice = input.safetyNotice || null;
+  if (input.faq !== undefined) patch.faq = Array.isArray(input.faq) ? input.faq : [];
+  if (input.itinerary !== undefined) patch.itinerary = Array.isArray(input.itinerary) ? input.itinerary : [];
+  if (input.socialProofQuotes !== undefined) patch.social_proof_quotes = toJsonbArray(input.socialProofQuotes);
 
   // Re-resolve guide_id if guideSlug changed
   if (input.guideSlug) {
@@ -1864,4 +1883,89 @@ export async function listGuideProfilesDb() {
 
   if (error) throw new Error(error.message);
   return (data || []).map(g => ({ id: g.id, slug: g.slug, displayName: g.display_name }));
+}
+
+export async function searchGuidesDb(query = '') {
+  if (!hasSupabaseEnv()) {
+    const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
+    const q = query.toLowerCase();
+    return (guides || [])
+      .filter(g => !q || g.displayName?.toLowerCase().includes(q) || g.slug?.includes(q))
+      .slice(0, 10)
+      .map(g => ({ id: g.slug, slug: g.slug, displayName: g.displayName, verificationStatus: 'approved' }));
+  }
+
+  const supabase = await getSupabase();
+  let qb = supabase
+    .from('guide_profiles')
+    .select('id, slug, display_name, verification_status, profile_photo_url')
+    .not('slug', 'is', null)
+    .order('display_name')
+    .limit(15);
+
+  if (query.trim()) {
+    qb = qb.or(`display_name.ilike.%${query}%,slug.ilike.%${query}%`);
+  }
+
+  const { data, error } = await qb;
+  if (error) throw new Error(error.message);
+  return (data || []).map(g => ({
+    id: g.id, slug: g.slug, displayName: g.display_name,
+    verificationStatus: g.verification_status, profilePhotoUrl: g.profile_photo_url,
+  }));
+}
+
+export async function deleteActivityDb(id) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabaseServiceRole();
+
+  // 1. 取得行程資料（slug + 圖片 URLs）
+  const { data: act } = await supabase
+    .from('activities')
+    .select('id, slug, cover_image_url, image_urls')
+    .eq('id', id)
+    .single();
+
+  if (!act) throw new Error('Activity not found');
+
+  // 2. 收集所有 Supabase Storage 圖片路徑
+  const BUCKET = 'activity-images';
+  const storageBase = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/`;
+  const pathsToDelete = [];
+
+  const collectPath = (url) => {
+    if (url && typeof url === 'string' && url.startsWith(storageBase)) {
+      pathsToDelete.push(url.replace(storageBase, ''));
+    }
+  };
+
+  collectPath(act.cover_image_url);
+  (act.image_urls || []).forEach(collectPath);
+
+  // 3. 刪除 Storage 圖片
+  if (pathsToDelete.length > 0) {
+    const { error: storageErr } = await supabase.storage.from(BUCKET).remove(pathsToDelete);
+    if (storageErr) console.warn('[deleteActivityDb] storage remove error:', storageErr.message);
+  }
+
+  // 4. 刪除相關 schedules（cascade 沒設的話手動刪）
+  await supabase.from('activity_schedules').delete().eq('activity_id', id);
+
+  // 5. 刪除行程本體
+  const { error } = await supabase.from('activities').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+
+  return { deleted: true, id, imagesDeleted: pathsToDelete.length };
+}
+
+async function getSupabaseServiceRole() {
+  // 嘗試用 service role key；不存在則 fallback 一般 client
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceKey) {
+    const { createClient } = await import('@supabase/supabase-js');
+    return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, serviceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+  return getSupabase();
 }
