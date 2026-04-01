@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;800&display=swap" rel="stylesheet" />
   <style>
-    /* ── CSS Variables（完全比照真站） ── */
     :root {
       --tp-primary: #1b6b4a;
       --tp-primary-dark: #145238;
@@ -20,261 +19,189 @@
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { overflow-x: hidden; scroll-behavior: smooth; }
-    body {
-      font-family: 'Noto Sans TC', Inter, system-ui, sans-serif;
-      color: var(--tp-text);
-      background: var(--tp-bg);
-      overflow-x: hidden;
-    }
+    body { font-family: 'Noto Sans TC', Inter, system-ui, sans-serif; color: var(--tp-text); background: var(--tp-bg); overflow-x: hidden; }
     a { color: inherit; text-decoration: none; }
     img { max-width: 100%; display: block; }
-
-    /* ── Container ── */
-    .tp-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+    .tp-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 20px; }
 
     /* ── Buttons ── */
     .tp-btn {
       border-radius: 999px; padding: 10px 20px;
-      border: 1.5px solid transparent; display: inline-block;
+      border: 1.5px solid transparent;
       font-weight: 700; font-size: 14px; cursor: pointer;
-      transition: all .15s ease; text-align: center;
+      transition: background .15s, border-color .15s;
+      display: inline-block; text-align: center; font-family: inherit;
+      position: relative; /* for runaway effect */
     }
     .tp-btn-primary { background: var(--tp-primary); color: #fff; border-color: var(--tp-primary); }
     .tp-btn-primary:hover { background: var(--tp-primary-dark); }
     .tp-btn-ghost { background: transparent; border-color: var(--tp-primary); color: var(--tp-primary); }
+    .tp-btn-ghost:hover { background: #eef7f2; }
     .tp-btn-ghost-white { background: transparent; border-color: rgba(255,255,255,.7); color: #fff; }
     .tp-btn-ghost-white:hover { background: rgba(255,255,255,.12); }
+    .tp-btn-sm { padding: 6px 14px; font-size: 13px; }
+    .tp-btn-md { padding: 13px 28px; font-size: 16px; }
 
     /* ── Navbar ── */
-    .tp-navbar {
-      position: sticky; top: 0; z-index: 40;
-      background: #fff; border-bottom: 1px solid var(--tp-border);
-    }
-    .tp-navbar-inner {
-      min-height: 64px; display: flex; align-items: center;
-      justify-content: space-between; gap: 16px;
-    }
-    .tp-logo { font-weight: 800; font-size: 20px; color: var(--tp-primary); }
-    .tp-logo span { color: var(--tp-accent); }
-    .tp-search-shell {
-      flex: 1; max-width: 400px;
-      display: flex; border: 1.5px solid #d1d5db; border-radius: 24px; overflow: hidden;
-    }
-    .tp-search-input {
-      flex: 1; padding: 9px 14px; font-size: 14px;
-      border: 0; outline: none; font-family: inherit;
-    }
-    .tp-search-btn {
-      padding: 9px 16px; background: var(--tp-primary); color: #fff;
-      border: 0; cursor: pointer; font-weight: 700; font-size: 14px;
-    }
-    .tp-nav-links { display: flex; gap: 16px; font-size: 14px; color: var(--tp-muted); }
-    .tp-nav-links a:hover { color: var(--tp-primary); }
-    .tp-nav-actions { display: flex; gap: 8px; }
+    .tp-navbar { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid var(--tp-border); }
+    .tp-navbar-inner { min-height: 64px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .tp-logo { font-weight: 800; font-size: 20px; color: var(--tp-primary); white-space: nowrap; flex-shrink: 0; }
+    .tp-logo-dot { color: var(--tp-accent); }
+    .tp-search-shell { flex: 1; max-width: 420px; display: flex; border: 1.5px solid #d1d5db; border-radius: 24px; overflow: hidden; }
+    .tp-search-input { flex: 1; padding: 9px 16px; font-size: 14px; border: 0; outline: none; font-family: inherit; color: var(--tp-text); }
+    .tp-search-btn { padding: 9px 18px; background: var(--tp-primary); color: #fff; border: 0; cursor: pointer; font-weight: 700; font-size: 14px; white-space: nowrap; font-family: inherit; }
+    .tp-nav-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    @media (max-width: 680px) { .tp-search-shell { max-width: 180px; } }
 
     /* ── Hero ── */
     .tp-hero {
       padding: 80px 0 64px;
-      background-image: linear-gradient(rgba(0,0,0,.45), rgba(0,0,0,.58)),
-        url('https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80');
+      background-image: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.58)), url('https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80');
       background-size: cover; background-position: center;
       min-height: 560px; display: flex; align-items: center;
     }
-    .tp-kicker { color: #e8834d; letter-spacing: 2px; font-weight: 700; margin-bottom: 10px; font-size: 13px; }
-    .tp-hero h1 {
-      color: #fff; font-size: clamp(26px, 4.5vw, 46px);
-      line-height: 1.3; text-shadow: 0 2px 10px rgba(0,0,0,.35);
-      margin-bottom: 14px; max-width: 640px;
-    }
+    .tp-kicker { color: #e8834d; letter-spacing: 2px; font-weight: 700; font-size: 13px; margin-bottom: 10px; }
+    .tp-hero h1 { color: #fff; font-size: clamp(26px, 4.5vw, 46px); line-height: 1.3; text-shadow: 0 2px 10px rgba(0,0,0,.35); margin-bottom: 14px; max-width: 640px; }
     .tp-hero-sub { color: rgba(255,255,255,.9); max-width: 540px; line-height: 1.8; font-size: 15px; margin-bottom: 24px; }
     .tp-hero-search {
       display: flex; max-width: 540px;
       background: #fff; border-radius: 12px; overflow: hidden;
       box-shadow: 0 4px 20px rgba(0,0,0,.25); margin-bottom: 20px;
     }
-    .tp-hero-search input {
-      flex: 1; padding: 14px 18px; font-size: 14px;
-      border: 0; outline: none; font-family: inherit; color: #222;
-    }
-    .tp-hero-search button {
-      padding: 14px 22px; background: var(--tp-primary); color: #fff;
-      border: 0; cursor: pointer; font-weight: 700; font-size: 14px; white-space: nowrap;
-    }
-    .tp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
-    .tp-tag {
-      background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
-      border: 1px solid rgba(255,255,255,.3); color: #fff;
-      padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer;
-      transition: background .15s;
-    }
+    .tp-hero-search input { flex: 1; padding: 14px 18px; font-size: 14px; border: 0; outline: none; font-family: inherit; color: var(--tp-text); }
+    .tp-hero-search button { padding: 14px 22px; background: var(--tp-primary); color: #fff; border: 0; cursor: pointer; font-weight: 700; font-size: 14px; white-space: nowrap; font-family: inherit; }
+    .tp-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+    .tp-tag { background: rgba(255,255,255,.18); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.3); color: #fff; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; font-family: inherit; }
     .tp-tag:hover { background: rgba(255,255,255,.28); }
-    .tp-trust-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 540px; margin-bottom: 24px;
-    }
-    .tp-trust-item {
-      background: rgba(255,255,255,.15); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,.2); color: #fff;
-      padding: 10px 12px; border-radius: 10px; text-align: center; font-size: 12px;
-    }
+    .tp-trust-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; max-width: 540px; margin-bottom: 24px; }
+    .tp-trust-item { background: rgba(255,255,255,.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,.2); color: #fff; padding: 10px 12px; border-radius: 10px; text-align: center; font-size: 12px; }
     .tp-cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    @media (max-width: 560px) { .tp-trust-grid { grid-template-columns: repeat(2,1fr); } }
+
+    /* ── Squirrel Banner ── */
+    .tp-squirrel-banner {
+      background: linear-gradient(90deg, #e8834d, #d4692b);
+      color: #fff; padding: 12px 20px;
+      display: flex; align-items: center; justify-content: center;
+      flex-wrap: wrap; gap: 12px; font-size: 14px;
+    }
+    .tp-squirrel-banner strong { font-weight: 700; }
+    .tp-squirrel-banner .sq-btn {
+      background: rgba(255,255,255,.25); border: 1px solid rgba(255,255,255,.5);
+      color: #fff; padding: 5px 14px; border-radius: 20px; font-size: 13px;
+      cursor: pointer; font-weight: 700; font-family: inherit;
+    }
+    .tp-squirrel-banner .sq-btn:hover { background: rgba(255,255,255,.4); }
 
     /* ── Sections ── */
-    .tp-section { padding: 64px 0; }
-    .tp-section-alt { padding: 64px 0; background: var(--tp-bg-soft); }
-    .tp-section-head {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px;
-    }
+    .tp-section { padding: 60px 0; }
+    .tp-section-soft { padding: 60px 0; background: var(--tp-bg-soft); }
+    .tp-section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
     .tp-section-head h2 { font-size: 24px; font-weight: 800; }
-    .tp-link { color: var(--tp-primary); font-size: 14px; font-weight: 700; }
+    .tp-link { color: var(--tp-primary); font-size: 14px; font-weight: 700; cursor: pointer; }
+
+    /* ── Destinations ── */
+    .tp-dest-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+    @media (max-width: 900px) { .tp-dest-grid { grid-template-columns: repeat(4,1fr); } }
+    @media (max-width: 640px) { .tp-dest-grid { grid-template-columns: repeat(2,1fr); } }
+    .tp-dest-card { border-radius: 14px; overflow: hidden; position: relative; aspect-ratio: 3/4; cursor: pointer; transition: transform .2s; }
+    .tp-dest-card:hover { transform: scale(1.03); }
+    .tp-dest-card img { width: 100%; height: 100%; object-fit: cover; }
+    .tp-dest-overlay { position: absolute; inset: 0; background: linear-gradient(transparent 50%, rgba(0,0,0,.7)); display: flex; flex-direction: column; justify-content: flex-end; padding: 14px; }
+    .tp-dest-name { color: #fff; font-weight: 800; font-size: 17px; }
+    .tp-dest-count { color: rgba(255,255,255,.8); font-size: 12px; margin-top: 2px; }
 
     /* ── Card Grid ── */
-    .tp-card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    @media (max-width: 900px) { .tp-card-grid { grid-template-columns: repeat(2, 1fr); } }
+    .tp-card-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+    @media (max-width: 900px) { .tp-card-grid { grid-template-columns: repeat(2,1fr); } }
     @media (max-width: 560px) { .tp-card-grid { grid-template-columns: 1fr; } }
-
-    .tp-card {
-      border: 1px solid var(--tp-border); border-radius: 14px; overflow: hidden;
-      display: flex; flex-direction: column;
-      transition: box-shadow .2s, transform .2s;
-    }
+    .tp-card { border: 1px solid var(--tp-border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; background: #fff; transition: box-shadow .2s, transform .2s; }
     .tp-card:hover { box-shadow: 0 8px 28px rgba(0,0,0,.1); transform: translateY(-2px); }
-    .tp-card-img-wrap { position: relative; }
-    .tp-card-img { width: 100%; height: 200px; object-fit: cover; }
-    .tp-card-badge {
-      position: absolute; top: 10px; left: 10px;
-      background: var(--tp-accent); color: #fff;
-      font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px;
-    }
-    .tp-fav-btn {
-      position: absolute; top: 10px; right: 10px;
-      background: rgba(255,255,255,.85); border: 0; border-radius: 50%;
-      width: 32px; height: 32px; cursor: pointer; font-size: 15px;
-    }
-    .tp-card-body { padding: 14px; display: flex; flex-direction: column; flex: 1; }
-    .tp-guide-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .tp-card-img-wrap { position: relative; overflow: hidden; }
+    .tp-card-img { width: 100%; height: 200px; object-fit: cover; display: block; }
+    .tp-card-badge { position: absolute; top: 10px; left: 10px; background: var(--tp-accent); color: #fff; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
+    .tp-fav-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,.88); border: 0; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; }
+    .tp-card-body { padding: 14px 16px; display: flex; flex-direction: column; flex: 1; gap: 4px; }
+    .tp-guide-row { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
     .tp-guide-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; }
     .tp-guide-name { font-size: 12px; color: var(--tp-muted); }
-    .tp-card-title { font-size: 15px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
-    .tp-card-meta { font-size: 13px; color: var(--tp-muted); margin-bottom: 3px; }
+    .tp-card-title { font-size: 15px; font-weight: 700; line-height: 1.4; }
+    .tp-card-meta { font-size: 13px; color: var(--tp-muted); }
     .tp-card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 10px; }
     .tp-price { color: var(--tp-primary); font-weight: 800; font-size: 15px; }
 
-    /* ── Destinations ── */
-    .tp-dest-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-    @media (max-width: 800px) { .tp-dest-grid { grid-template-columns: repeat(2, 1fr); } }
-    .tp-dest-card {
-      border-radius: 14px; overflow: hidden; position: relative;
-      aspect-ratio: 3/4; cursor: pointer;
-      transition: transform .2s;
-    }
-    .tp-dest-card:hover { transform: scale(1.02); }
-    .tp-dest-card img { width: 100%; height: 100%; object-fit: cover; }
-    .tp-dest-overlay {
-      position: absolute; inset: 0;
-      background: linear-gradient(transparent 40%, rgba(0,0,0,.65));
-      display: flex; flex-direction: column; justify-content: flex-end; padding: 14px;
-    }
-    .tp-dest-name { color: #fff; font-weight: 800; font-size: 18px; }
-    .tp-dest-count { color: rgba(255,255,255,.8); font-size: 12px; margin-top: 2px; }
-
     /* ── Guide Spotlight ── */
-    .tp-guide-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-    @media (max-width: 800px) { .tp-guide-grid { grid-template-columns: 1fr 1fr; } }
-    .tp-guide-card {
-      border: 1px solid var(--tp-border); border-radius: 14px; padding: 20px;
-      text-align: center; transition: box-shadow .2s;
-    }
-    .tp-guide-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.08); }
-    .tp-guide-big-avatar {
-      width: 80px; height: 80px; border-radius: 50%; object-fit: cover;
-      margin: 0 auto 12px; border: 3px solid var(--tp-primary);
-    }
-    .tp-guide-card h3 { font-size: 16px; margin-bottom: 4px; }
-    .tp-guide-card .sub { font-size: 13px; color: var(--tp-muted); margin-bottom: 8px; }
-    .tp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 12px; }
-    .tp-tag-sm {
-      font-size: 11px; background: #eef7f2; color: var(--tp-primary);
-      padding: 3px 10px; border-radius: 20px; font-weight: 600;
-    }
-
-    /* ── FAQ ── */
-    .tp-faq-item { border-bottom: 1px solid var(--tp-border); padding: 16px 0; }
-    .tp-faq-q {
-      font-weight: 700; font-size: 15px; cursor: pointer;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .tp-faq-a { font-size: 14px; color: var(--tp-muted); line-height: 1.8; margin-top: 10px; display: none; }
-    .tp-faq-item.open .tp-faq-a { display: block; }
-    .tp-faq-chevron { transition: transform .2s; }
-    .tp-faq-item.open .tp-faq-chevron { transform: rotate(180deg); }
+    .tp-spotlight-grid { display: grid; grid-template-columns: 1fr 1.4fr; gap: 40px; align-items: start; }
+    @media (max-width: 700px) { .tp-spotlight-grid { grid-template-columns: 1fr; } }
+    .tp-spotlight-left { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .tp-spotlight-avatar { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--tp-primary); margin-bottom: 14px; }
+    .tp-spotlight-name { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+    .tp-spotlight-sub { font-size: 14px; color: var(--tp-muted); margin-bottom: 12px; }
+    .tp-spotlight-rating { font-size: 15px; color: var(--tp-accent); margin-bottom: 12px; }
+    .tp-tag-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 14px; }
+    .tp-tag-sm { font-size: 12px; background: #eef7f2; color: var(--tp-primary); padding: 4px 12px; border-radius: 20px; font-weight: 600; }
+    .tp-spotlight-bio { font-size: 14px; color: var(--tp-muted); line-height: 1.8; font-style: italic; }
+    .tp-spotlight-tours { display: flex; flex-direction: column; gap: 14px; }
+    .tp-mini-card { border: 1px solid var(--tp-border); border-radius: 12px; overflow: hidden; display: flex; cursor: pointer; transition: box-shadow .2s; }
+    .tp-mini-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+    .tp-mini-img { width: 110px; height: 80px; object-fit: cover; flex-shrink: 0; }
+    .tp-mini-body { padding: 10px 12px; }
+    .tp-mini-title { font-size: 13px; font-weight: 700; margin-bottom: 4px; line-height: 1.4; }
+    .tp-mini-meta { font-size: 12px; color: var(--tp-muted); }
+    .tp-mini-price { font-size: 13px; font-weight: 700; color: var(--tp-primary); margin-top: 4px; }
 
     /* ── Footer ── */
-    .tp-footer { background: #1a1a1a; color: rgba(255,255,255,.7); padding: 48px 0 24px; font-size: 13px; }
+    .tp-footer { background: #1b6b4a; color: rgba(255,255,255,.75); padding: 48px 0 24px; font-size: 13px; }
     .tp-footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 32px; }
     @media (max-width: 700px) { .tp-footer-grid { grid-template-columns: 1fr 1fr; } }
-    .tp-footer-logo { color: #fff; font-weight: 800; font-size: 18px; margin-bottom: 10px; }
-    .tp-footer-desc { line-height: 1.7; }
+    .tp-footer-logo { color: #fff; font-weight: 800; font-size: 20px; margin-bottom: 10px; }
+    .tp-footer-desc { line-height: 1.7; max-width: 280px; }
     .tp-footer-col h4 { color: #fff; font-size: 14px; margin-bottom: 12px; }
     .tp-footer-col ul { list-style: none; }
-    .tp-footer-col li { margin-bottom: 8px; }
-    .tp-footer-col a:hover { color: #fff; }
-    .tp-footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding-top: 20px; text-align: center; }
+    .tp-footer-col li { margin-bottom: 8px; cursor: pointer; }
+    .tp-footer-col li:hover { color: #fff; }
+    .tp-footer-bottom { border-top: 1px solid rgba(255,255,255,.15); padding-top: 20px; text-align: center; color: rgba(255,255,255,.5); }
 
-    /* ── Theme CTA ── */
-    .tp-theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 600px) { .tp-theme-grid { grid-template-columns: 1fr; } }
-    .tp-theme-card {
-      border-radius: 16px; overflow: hidden; position: relative;
-      min-height: 200px; display: flex; align-items: flex-end; cursor: pointer;
-    }
-    .tp-theme-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .tp-theme-overlay {
-      position: relative; z-index: 1;
-      background: linear-gradient(transparent, rgba(0,0,0,.7));
-      width: 100%; padding: 24px 20px;
-    }
-    .tp-theme-label { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: rgba(255,255,255,.8); margin-bottom: 6px; }
-    .tp-theme-title { font-size: 22px; font-weight: 800; color: #fff; margin-bottom: 10px; }
-
-    /* ── Modal（愚人節彈窗） ── */
-    .af-overlay {
-      display: none; position: fixed; inset: 0; z-index: 9999;
-      background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
-      align-items: center; justify-content: center;
-    }
+    /* ── AF Modal ── */
+    .af-overlay { display: none; position: fixed; inset: 0; z-index: 9000; background: rgba(0,0,0,.55); backdrop-filter: blur(4px); align-items: center; justify-content: center; }
     .af-overlay.show { display: flex; }
-    .af-modal {
-      background: #fff; border-radius: 20px; padding: 40px 36px;
-      max-width: 440px; width: 90%; text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,.25);
-      animation: af-pop .25s cubic-bezier(.34,1.56,.64,1);
-    }
-    @keyframes af-pop {
-      from { transform: scale(.7); opacity: 0; }
-      to   { transform: scale(1);  opacity: 1; }
-    }
-    .af-emoji { font-size: 56px; margin-bottom: 12px; }
-    .af-title { font-size: 26px; font-weight: 800; color: var(--tp-primary); margin-bottom: 10px; }
-    .af-sub { font-size: 15px; color: var(--tp-muted); line-height: 1.7; margin-bottom: 24px; }
-    .af-close {
-      background: var(--tp-primary); color: #fff; border: 0;
-      padding: 12px 32px; border-radius: 999px; font-size: 15px;
-      font-weight: 700; cursor: pointer; font-family: inherit;
-      transition: background .15s;
-    }
-    .af-close:hover { background: var(--tp-primary-dark); }
-    .af-badge {
-      display: inline-block; background: #fff3cd; color: #856404;
-      font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px;
-      margin-top: 14px; border: 1px solid #ffc107;
-    }
+    .af-modal { background: #fff; border-radius: 20px; padding: 44px 40px; max-width: 460px; width: 90%; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.25); animation: af-pop .28s cubic-bezier(.34,1.56,.64,1); }
+    @keyframes af-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .af-emoji { font-size: 60px; line-height: 1; margin-bottom: 14px; }
+    .af-title { font-size: 28px; font-weight: 800; color: var(--tp-primary); margin-bottom: 12px; }
+    .af-sub { font-size: 15px; color: var(--tp-muted); line-height: 1.8; margin-bottom: 24px; }
+    .af-close-btn { background: var(--tp-primary); color: #fff; border: 0; padding: 13px 36px; border-radius: 999px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: inherit; transition: background .15s; }
+    .af-close-btn:hover { background: var(--tp-primary-dark); }
+    .af-badge { display: inline-block; background: #fff3cd; color: #856404; font-size: 12px; font-weight: 700; padding: 4px 14px; border-radius: 20px; margin-top: 14px; border: 1px solid #ffc107; }
 
-    /* ── Navbar mobile ── */
-    @media (max-width: 700px) {
-      .tp-nav-links, .tp-nav-actions .tp-btn-ghost { display: none; }
-      .tp-search-shell { max-width: 200px; }
-      .tp-trust-grid { grid-template-columns: repeat(2, 1fr); }
+    /* ── Chicken Widget ── */
+    .af-chicken {
+      display: none; position: fixed; bottom: 24px; right: 24px; z-index: 8000;
+      background: #fff; border-radius: 20px; padding: 16px 20px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.2); max-width: 260px;
+      animation: chicken-in .35s cubic-bezier(.34,1.56,.64,1);
     }
+    .af-chicken.show { display: block; }
+    @keyframes chicken-in { from { transform: translateY(120px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .af-chicken-emoji { font-size: 44px; text-align: center; margin-bottom: 8px; }
+    .af-chicken-text { font-size: 14px; font-weight: 700; color: var(--tp-text); line-height: 1.5; text-align: center; margin-bottom: 10px; }
+    .af-chicken-close { position: absolute; top: 8px; right: 12px; background: none; border: 0; font-size: 18px; color: var(--tp-muted); cursor: pointer; line-height: 1; }
+    .af-chicken-cluck { background: var(--tp-accent); color: #fff; border: 0; padding: 7px 16px; border-radius: 999px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; width: 100%; }
+
+    /* ── Chicken Toast ── */
+    .af-toast {
+      display: none; position: fixed; bottom: 24px; right: 24px; z-index: 8500;
+      background: var(--tp-accent); color: #fff; border-radius: 14px;
+      padding: 14px 22px; font-size: 14px; font-weight: 700;
+      box-shadow: 0 6px 24px rgba(0,0,0,.2);
+      animation: toast-in .3s ease;
+    }
+    .af-toast.show { display: block; }
+    @keyframes toast-in { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* ── Runaway wrapper ── */
+    .runaway-wrap { position: relative; display: inline-block; }
+    .runaway-wrap .tp-btn { transition: transform .2s cubic-bezier(.34,1.56,.64,1), background .15s; }
   </style>
 </head>
 <body>
@@ -283,19 +210,14 @@
 <nav class="tp-navbar">
   <div class="tp-container">
     <div class="tp-navbar-inner">
-      <div class="tp-logo">Tour<span>●</span>Platform</div>
+      <div class="tp-logo">Tour<span class="tp-logo-dot">●</span>Platform</div>
       <div class="tp-search-shell">
-        <input class="tp-search-input" type="text" placeholder="搜尋導遊、行程⋯" />
-        <button class="tp-search-btn" onclick="showModal()">🔍</button>
+        <input class="tp-search-input" type="text" placeholder="搜尋行程、地區、導遊⋯" />
+        <button class="tp-search-btn runaway-btn" onclick="showModal()">搜尋 🔍</button>
       </div>
-      <nav class="tp-nav-links">
-        <a href="#" onclick="showModal(); return false;">探索行程</a>
-        <a href="#" onclick="showModal(); return false;">認識導遊</a>
-        <a href="#" onclick="showModal(); return false;">成為導遊</a>
-      </nav>
       <div class="tp-nav-actions">
-        <button class="tp-btn tp-btn-ghost" onclick="showModal()">登入</button>
-        <button class="tp-btn tp-btn-primary" onclick="showModal()">註冊</button>
+        <button class="tp-btn tp-btn-ghost" onclick="showModal()">成為導遊</button>
+        <button class="tp-btn tp-btn-primary runaway-btn" onclick="showModal()">登入</button>
       </div>
     </div>
   </div>
@@ -307,329 +229,290 @@
     <p class="tp-kicker">台灣在地導遊平台</p>
     <h1>找到懂路的人，<br />帶你走進台灣最有故事的地方</h1>
     <p class="tp-hero-sub">不跟團、不趕路。預約在地導遊，用你的節奏認識這座島嶼。</p>
-
     <div class="tp-hero-search">
       <input type="text" placeholder="搜尋行程、地區、導遊⋯ 例如：柴山、溯溪、台北" />
-      <button onclick="showModal()">搜尋 🔍</button>
+      <button class="runaway-btn" onclick="showModal()">搜尋 🔍</button>
     </div>
-
     <div class="tp-tags">
       <button class="tp-tag" onclick="showModal()">🔍 柴山探洞</button>
       <button class="tp-tag" onclick="showModal()">🔍 花蓮溯溪</button>
       <button class="tp-tag" onclick="showModal()">🔍 大稻埕</button>
       <button class="tp-tag" onclick="showModal()">🔍 夜市美食</button>
     </div>
-
     <div class="tp-trust-grid">
       <div class="tp-trust-item">✅ 實名認證導遊</div>
       <div class="tp-trust-item">💰 透明定價</div>
       <div class="tp-trust-item">🔒 安全付款</div>
       <div class="tp-trust-item">📞 即時客服</div>
     </div>
-
     <div class="tp-cta-row">
-      <button class="tp-btn tp-btn-primary" style="font-size:16px;padding:13px 28px" onclick="showModal()">探索全部行程</button>
-      <button class="tp-btn tp-btn-ghost-white" style="font-size:16px;padding:13px 28px" onclick="showModal()">認識導遊</button>
+      <div class="runaway-wrap">
+        <button class="tp-btn tp-btn-primary tp-btn-md runaway-btn" onclick="showModal()">探索全部行程</button>
+      </div>
+      <button class="tp-btn tp-btn-ghost-white tp-btn-md" onclick="showModal()">認識導遊</button>
     </div>
   </div>
 </section>
+
+<!-- ── 🐿️ 松鼠熱力圖橫幅 ── -->
+<div class="tp-squirrel-banner">
+  <strong>🐿️ 今日柴山松鼠目擊指數：</strong>
+  <span>██████░░░░ 62%（中高）｜建議 10:00–12:00 出發</span>
+  <button class="sq-btn" onclick="showModal()">查看即時地圖</button>
+</div>
 
 <!-- ── Destinations ── -->
 <section class="tp-section">
   <div class="tp-container">
     <div class="tp-section-head">
-      <h2>探索目的地</h2>
-      <a href="#" class="tp-link" onclick="showModal(); return false;">查看全部 →</a>
+      <h2>探索台灣各地</h2>
+      <span class="tp-link" onclick="showModal()">查看全部 →</span>
     </div>
     <div class="tp-dest-grid">
       <div class="tp-dest-card" onclick="showModal()">
-        <img src="https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&q=80" alt="高雄" loading="lazy" />
-        <div class="tp-dest-overlay">
-          <div class="tp-dest-name">高雄市</div>
-          <div class="tp-dest-count">3 個行程</div>
-        </div>
+        <img src="https://images.unsplash.com/photo-1470004914212-05527e49370b?w=400&q=80" alt="台北" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">台北</div><div class="tp-dest-count">120+ 行程</div></div>
       </div>
       <div class="tp-dest-card" onclick="showModal()">
-        <img src="https://images.unsplash.com/photo-1492571350019-22de08371fd3?w=400&q=80" alt="台北" loading="lazy" />
-        <div class="tp-dest-overlay">
-          <div class="tp-dest-name">台北市</div>
-          <div class="tp-dest-count">5 個行程</div>
-        </div>
+        <img src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=400&q=80" alt="花蓮" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">花蓮</div><div class="tp-dest-count">85+ 行程</div></div>
       </div>
       <div class="tp-dest-card" onclick="showModal()">
-        <img src="https://images.unsplash.com/photo-1596422846543-75c6fc197f11?w=400&q=80" alt="花蓮" loading="lazy" />
-        <div class="tp-dest-overlay">
-          <div class="tp-dest-name">花蓮縣</div>
-          <div class="tp-dest-count">4 個行程</div>
-        </div>
+        <img src="https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=400&q=80" alt="高雄" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">高雄</div><div class="tp-dest-count">72+ 行程</div></div>
       </div>
       <div class="tp-dest-card" onclick="showModal()">
-        <img src="https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&q=80" alt="台南" loading="lazy" />
-        <div class="tp-dest-overlay">
-          <div class="tp-dest-name">台南市</div>
-          <div class="tp-dest-count">2 個行程</div>
-        </div>
+        <img src="https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&q=80" alt="台南" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">台南</div><div class="tp-dest-count">96+ 行程</div></div>
+      </div>
+      <div class="tp-dest-card" onclick="showModal()">
+        <img src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=400&q=80" alt="墾丁" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">墾丁</div><div class="tp-dest-count">44+ 行程</div></div>
+      </div>
+      <div class="tp-dest-card" onclick="showModal()">
+        <img src="https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?w=400&q=80" alt="台中" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">台中</div><div class="tp-dest-count">58+ 行程</div></div>
+      </div>
+      <div class="tp-dest-card" onclick="showModal()">
+        <img src="https://images.unsplash.com/photo-1504652517000-ae1068478c59?w=400&q=80" alt="宜蘭" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">宜蘭</div><div class="tp-dest-count">37+ 行程</div></div>
+      </div>
+      <div class="tp-dest-card" onclick="showModal()">
+        <img src="https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?w=400&q=80" alt="澎湖" loading="lazy" />
+        <div class="tp-dest-overlay"><div class="tp-dest-name">澎湖</div><div class="tp-dest-count">29+ 行程</div></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── Featured Tours（愚人節搞笑版） ── -->
-<section class="tp-section-alt">
+<!-- ── Featured Tours ── -->
+<section class="tp-section-soft">
   <div class="tp-container">
     <div class="tp-section-head">
       <h2>精選行程</h2>
-      <a href="#" class="tp-link" onclick="showModal(); return false;">查看全部 →</a>
+      <span class="tp-link" onclick="showModal()">查看全部 →</span>
     </div>
     <div class="tp-card-grid">
 
-      <!-- Card 1 -->
+      <!-- 1 -->
       <article class="tp-card">
         <div class="tp-card-img-wrap">
-          <img class="tp-card-img" src="https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=600&q=80" alt="松鼠特訓班" loading="lazy" />
+          <img class="tp-card-img" src="https://images.unsplash.com/photo-1528164344705-47542687000d?w=600&q=80" alt="" loading="lazy" />
+          <span class="tp-card-badge">戶外體驗</span>
           <button class="tp-fav-btn" onclick="showModal()">❤️</button>
-          <span class="tp-card-badge">大自然</span>
         </div>
         <div class="tp-card-body">
           <div class="tp-guide-row">
-            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80" alt="Andy" />
+            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" alt="Andy Lee" />
             <span class="tp-guide-name">Andy Lee ✅</span>
           </div>
-          <h3 class="tp-card-title">柴山松鼠特訓班 — 學習搶食、跑酷、假裝路過</h3>
+          <h3 class="tp-card-title">柴山松鼠餵食特訓班</h3>
           <p class="tp-card-meta">⭐ 5.0 · 📍 高雄市</p>
-          <p class="tp-card-meta">🕐 半日 · 👥 1~12 人</p>
+          <p class="tp-card-meta">🕐 4 小時 · 👥 2~12 人</p>
           <div class="tp-card-foot">
-            <span class="tp-price">NT$999 / 人</span>
-            <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:6px 14px" onclick="showModal()">查看行程</button>
+            <span class="tp-price">NT$980 / 人</span>
+            <div class="runaway-wrap">
+              <button class="tp-btn tp-btn-primary tp-btn-sm runaway-btn" onclick="showModal()">查看行程</button>
+            </div>
           </div>
         </div>
       </article>
 
-      <!-- Card 2 -->
+      <!-- 2 -->
       <article class="tp-card">
         <div class="tp-card-img-wrap">
-          <img class="tp-card-img" src="https://images.unsplash.com/photo-1531746790731-6c087fecd65a?w=600&q=80" alt="睡覺體驗" loading="lazy" />
+          <img class="tp-card-img" src="https://images.unsplash.com/photo-1470004914212-05527e49370b?w=600&q=80" alt="" loading="lazy" />
+          <span class="tp-card-badge">文化體驗</span>
           <button class="tp-fav-btn" onclick="showModal()">❤️</button>
-          <span class="tp-card-badge">深度體驗</span>
         </div>
         <div class="tp-card-body">
           <div class="tp-guide-row">
-            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&q=80" alt="Andy" />
-            <span class="tp-guide-name">Andy Lee ✅</span>
-          </div>
-          <h3 class="tp-card-title">Andy 的睡覺體驗行程 — 躺平就對了，導遊也在睡</h3>
-          <p class="tp-card-meta">⭐ 5.0 · 📍 高雄市</p>
-          <p class="tp-card-meta">🕐 全日 · 👥 1~8 人</p>
-          <div class="tp-card-foot">
-            <span class="tp-price">NT$3,600 / 人</span>
-            <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:6px 14px" onclick="showModal()">查看行程</button>
-          </div>
-        </div>
-      </article>
-
-      <!-- Card 3 -->
-      <article class="tp-card">
-        <div class="tp-card-img-wrap">
-          <img class="tp-card-img" src="https://images.unsplash.com/photo-1515623040232-7f0e83bb4be6?w=600&q=80" alt="雨天發呆" loading="lazy" />
-          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
-          <span class="tp-card-badge">療癒系</span>
-        </div>
-        <div class="tp-card-body">
-          <div class="tp-guide-row">
-            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&q=80" alt="陳建志" />
+            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" alt="陳建志" />
             <span class="tp-guide-name">陳建志 ✅</span>
           </div>
-          <h3 class="tp-card-title">雨天發呆導覽 — 什麼都不做，就是看著窗外發呆</h3>
+          <h3 class="tp-card-title">雨天發呆高級導覽</h3>
           <p class="tp-card-meta">⭐ 5.0 · 📍 台北市</p>
-          <p class="tp-card-meta">🕐 2 小時 · 👥 1~20 人</p>
-          <div class="tp-card-foot">
-            <span class="tp-price">NT$0 / 人</span>
-            <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:6px 14px" onclick="showModal()">查看行程</button>
-          </div>
-        </div>
-      </article>
-
-      <!-- Card 4 -->
-      <article class="tp-card">
-        <div class="tp-card-img-wrap">
-          <img class="tp-card-img" src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=600&q=80" alt="迷路體驗" loading="lazy" />
-          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
-          <span class="tp-card-badge">冒險</span>
-        </div>
-        <div class="tp-card-body">
-          <div class="tp-guide-row">
-            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80" alt="林阿明" />
-            <span class="tp-guide-name">林阿明 ✅</span>
-          </div>
-          <h3 class="tp-card-title">迷路體驗深度遊 — 導遊保證帶你迷路，絕對找不到回家的路</h3>
-          <p class="tp-card-meta">⭐ 5.0 · 📍 花蓮縣</p>
-          <p class="tp-card-meta">🕐 全日（可能更久）· 👥 2~6 人</p>
-          <div class="tp-card-foot">
-            <span class="tp-price">NT$2,400 / 人</span>
-            <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:6px 14px" onclick="showModal()">查看行程</button>
-          </div>
-        </div>
-      </article>
-
-      <!-- Card 5 -->
-      <article class="tp-card">
-        <div class="tp-card-img-wrap">
-          <img class="tp-card-img" src="https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=600&q=80" alt="吃到飽" loading="lazy" />
-          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
-          <span class="tp-card-badge">美食</span>
-        </div>
-        <div class="tp-card-body">
-          <div class="tp-guide-row">
-            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&q=80" alt="陳建志" />
-            <span class="tp-guide-name">陳建志 ✅</span>
-          </div>
-          <h3 class="tp-card-title">台南吃到飽不負責任美食導覽 — 導遊只帶路，吃壞肚子自行負責</h3>
-          <p class="tp-card-meta">⭐ 5.0 · 📍 台南市</p>
-          <p class="tp-card-meta">🕐 全日 · 👥 4~15 人</p>
-          <div class="tp-card-foot">
-            <span class="tp-price">NT$1,800 / 人</span>
-            <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:6px 14px" onclick="showModal()">查看行程</button>
-          </div>
-        </div>
-      </article>
-
-      <!-- Card 6 -->
-      <article class="tp-card">
-        <div class="tp-card-img-wrap">
-          <img class="tp-card-img" src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80" alt="雲霧行程" loading="lazy" />
-          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
-          <span class="tp-card-badge">玄學</span>
-        </div>
-        <div class="tp-card-body">
-          <div class="tp-guide-row">
-            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&q=80" alt="林阿明" />
-            <span class="tp-guide-name">林阿明 ✅</span>
-          </div>
-          <h3 class="tp-card-title">花蓮雲霧繚繞體驗 — 導遊本人也不知道自己在哪裡</h3>
-          <p class="tp-card-meta">⭐ 5.0 · 📍 花蓮縣</p>
-          <p class="tp-card-meta">🕐 「大概」半日 · 👥 1~10 人</p>
+          <p class="tp-card-meta">🕐 6 小時 · 👥 1~20 人</p>
           <div class="tp-card-foot">
             <span class="tp-price">NT$1,200 / 人</span>
-            <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:6px 14px" onclick="showModal()">查看行程</button>
+            <div class="runaway-wrap">
+              <button class="tp-btn tp-btn-primary tp-btn-sm runaway-btn" onclick="showModal()">查看行程</button>
+            </div>
           </div>
         </div>
       </article>
 
-    </div>
-  </div>
-</section>
+      <!-- 3 -->
+      <article class="tp-card">
+        <div class="tp-card-img-wrap">
+          <img class="tp-card-img" src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=600&q=80" alt="" loading="lazy" />
+          <span class="tp-card-badge">特殊體驗</span>
+          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
+        </div>
+        <div class="tp-card-body">
+          <div class="tp-guide-row">
+            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" alt="Andy Lee" />
+            <span class="tp-guide-name">Andy Lee ✅</span>
+          </div>
+          <h3 class="tp-card-title">Andy 睡覺體驗行程（純看 Andy 睡）</h3>
+          <p class="tp-card-meta">⭐ 5.0 · 📍 高雄市</p>
+          <p class="tp-card-meta">🕐 8 小時 · 👥 1~8 人</p>
+          <div class="tp-card-foot">
+            <span class="tp-price">NT$2,800 / 人</span>
+            <div class="runaway-wrap">
+              <button class="tp-btn tp-btn-primary tp-btn-sm runaway-btn" onclick="showModal()">查看行程</button>
+            </div>
+          </div>
+        </div>
+      </article>
 
-<!-- ── Theme CTAs ── -->
-<section class="tp-section">
-  <div class="tp-container">
-    <div class="tp-section-head">
-      <h2>探索主題體驗</h2>
-    </div>
-    <div class="tp-theme-grid">
-      <div class="tp-theme-card" onclick="showModal()">
-        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=800&q=80" alt="極限" />
-        <div class="tp-theme-overlay">
-          <div class="tp-theme-label">EXTREME</div>
-          <div class="tp-theme-title">超極限刺激體驗</div>
-          <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:8px 18px" onclick="showModal()">探索 →</button>
+      <!-- 4 -->
+      <article class="tp-card">
+        <div class="tp-card-img-wrap">
+          <img class="tp-card-img" src="https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80" alt="" loading="lazy" />
+          <span class="tp-card-badge">冒險</span>
+          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
         </div>
-      </div>
-      <div class="tp-theme-card" onclick="showModal()">
-        <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80" alt="輕鬆" />
-        <div class="tp-theme-overlay">
-          <div class="tp-theme-label">RELAXING</div>
-          <div class="tp-theme-title">躺平系輕旅行</div>
-          <button class="tp-btn tp-btn-primary" style="font-size:13px;padding:8px 18px" onclick="showModal()">探索 →</button>
+        <div class="tp-card-body">
+          <div class="tp-guide-row">
+            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80" alt="林阿明" />
+            <span class="tp-guide-name">林阿明 ✅</span>
+          </div>
+          <h3 class="tp-card-title">迷路深度遊：保證找不到路</h3>
+          <p class="tp-card-meta">⭐ 5.0 · 📍 花蓮縣</p>
+          <p class="tp-card-meta">🕐 全天 · 👥 2~6 人</p>
+          <div class="tp-card-foot">
+            <span class="tp-price">NT$1,500 / 人</span>
+            <div class="runaway-wrap">
+              <button class="tp-btn tp-btn-primary tp-btn-sm runaway-btn" onclick="showModal()">查看行程</button>
+            </div>
+          </div>
         </div>
-      </div>
+      </article>
+
+      <!-- 5 -->
+      <article class="tp-card">
+        <div class="tp-card-img-wrap">
+          <img class="tp-card-img" src="https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=600&q=80" alt="" loading="lazy" />
+          <span class="tp-card-badge">生態</span>
+          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
+        </div>
+        <div class="tp-card-body">
+          <div class="tp-guide-row">
+            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" alt="Andy Lee" />
+            <span class="tp-guide-name">Andy Lee ✅</span>
+          </div>
+          <h3 class="tp-card-title">柴山獼猴社交禮儀速成班</h3>
+          <p class="tp-card-meta">⭐ 5.0 · 📍 高雄市</p>
+          <p class="tp-card-meta">🕐 3 小時 · 👥 2~10 人</p>
+          <div class="tp-card-foot">
+            <span class="tp-price">NT$880 / 人</span>
+            <div class="runaway-wrap">
+              <button class="tp-btn tp-btn-primary tp-btn-sm runaway-btn" onclick="showModal()">查看行程</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 6 -->
+      <article class="tp-card">
+        <div class="tp-card-img-wrap">
+          <img class="tp-card-img" src="https://images.unsplash.com/photo-1523731407965-2430cd12f5e4?w=600&q=80" alt="" loading="lazy" />
+          <span class="tp-card-badge">療癒</span>
+          <button class="tp-fav-btn" onclick="showModal()">❤️</button>
+        </div>
+        <div class="tp-card-body">
+          <div class="tp-guide-row">
+            <img class="tp-guide-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80" alt="林阿明" />
+            <span class="tp-guide-name">林阿明 ✅</span>
+          </div>
+          <h3 class="tp-card-title">台南什麼都不做慢活體驗</h3>
+          <p class="tp-card-meta">⭐ 5.0 · 📍 台南市</p>
+          <p class="tp-card-meta">🕐 2天1夜 · 👥 1~6 人</p>
+          <div class="tp-card-foot">
+            <span class="tp-price">NT$3,200 / 人</span>
+            <div class="runaway-wrap">
+              <button class="tp-btn tp-btn-primary tp-btn-sm runaway-btn" onclick="showModal()">查看行程</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
     </div>
   </div>
 </section>
 
 <!-- ── Guide Spotlight ── -->
-<section class="tp-section-alt">
+<section class="tp-section">
   <div class="tp-container">
     <div class="tp-section-head">
-      <h2>認識我們的導遊</h2>
-      <a href="#" class="tp-link" onclick="showModal(); return false;">查看全部 →</a>
+      <h2>焦點導遊</h2>
+      <span class="tp-link" onclick="showModal()">認識全部導遊 →</span>
     </div>
-    <div class="tp-guide-grid">
-      <div class="tp-guide-card">
-        <img class="tp-guide-big-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&q=80" alt="Andy Lee" />
-        <h3>Andy Lee</h3>
-        <p class="sub">高雄 · 中文 / 英文</p>
+    <div class="tp-spotlight-grid">
+      <div class="tp-spotlight-left">
+        <img class="tp-spotlight-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&q=80" alt="Andy Lee" />
+        <div class="tp-spotlight-name">Andy Lee</div>
+        <div class="tp-spotlight-sub">高雄 · 中文 / 英文</div>
+        <div class="tp-spotlight-rating">⭐ 5.0（42 則評價）</div>
         <div class="tp-tag-list">
           <span class="tp-tag-sm">柴山探洞</span>
-          <span class="tp-tag-sm">松鼠特訓</span>
-          <span class="tp-tag-sm">睡覺體驗</span>
+          <span class="tp-tag-sm">松鼠溝通</span>
+          <span class="tp-tag-sm">午睡優化</span>
+          <span class="tp-tag-sm">迷路學</span>
         </div>
-        <button class="tp-btn tp-btn-ghost" style="font-size:13px;padding:7px 18px" onclick="showModal()">查看簡介</button>
-      </div>
-      <div class="tp-guide-card">
-        <img class="tp-guide-big-avatar" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80" alt="陳建志" />
-        <h3>陳建志</h3>
-        <p class="sub">台北 / 台南 · 中文</p>
-        <div class="tp-tag-list">
-          <span class="tp-tag-sm">雨天發呆</span>
-          <span class="tp-tag-sm">吃到飽</span>
-          <span class="tp-tag-sm">什麼都不做</span>
+        <p class="tp-spotlight-bio">「我在柴山帶路 8 年，帶過的旅客沒有一個知道自己在哪裡，但每個人都說這是他們最難忘的旅程。」</p>
+        <br />
+        <div class="runaway-wrap" style="margin-top:8px">
+          <button class="tp-btn tp-btn-ghost runaway-btn" onclick="showModal()">查看 Andy 全部行程</button>
         </div>
-        <button class="tp-btn tp-btn-ghost" style="font-size:13px;padding:7px 18px" onclick="showModal()">查看簡介</button>
       </div>
-      <div class="tp-guide-card">
-        <img class="tp-guide-big-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&q=80" alt="林阿明" />
-        <h3>林阿明</h3>
-        <p class="sub">花蓮 · 中文 / 日文</p>
-        <div class="tp-tag-list">
-          <span class="tp-tag-sm">迷路體驗</span>
-          <span class="tp-tag-sm">雲霧繚繞</span>
-          <span class="tp-tag-sm">不知道在哪</span>
+      <div class="tp-spotlight-tours">
+        <div class="tp-mini-card" onclick="showModal()">
+          <img class="tp-mini-img" src="https://images.unsplash.com/photo-1528164344705-47542687000d?w=300&q=80" alt="" loading="lazy" />
+          <div class="tp-mini-body">
+            <div class="tp-mini-title">柴山松鼠餵食特訓班</div>
+            <div class="tp-mini-meta">⭐ 5.0 · 📍 高雄 · 🕐 4 小時</div>
+            <div class="tp-mini-price">NT$980 / 人</div>
+          </div>
         </div>
-        <button class="tp-btn tp-btn-ghost" style="font-size:13px;padding:7px 18px" onclick="showModal()">查看簡介</button>
+        <div class="tp-mini-card" onclick="showModal()">
+          <img class="tp-mini-img" src="https://images.unsplash.com/photo-1501854140801-50d01698950b?w=300&q=80" alt="" loading="lazy" />
+          <div class="tp-mini-body">
+            <div class="tp-mini-title">Andy 睡覺體驗行程（純看 Andy 睡）</div>
+            <div class="tp-mini-meta">⭐ 5.0 · 📍 高雄 · 🕐 8 小時</div>
+            <div class="tp-mini-price">NT$2,800 / 人</div>
+          </div>
+        </div>
+        <div class="tp-mini-card" onclick="showModal()">
+          <img class="tp-mini-img" src="https://images.unsplash.com/photo-1567899378494-47b22a2ae96a?w=300&q=80" alt="" loading="lazy" />
+          <div class="tp-mini-body">
+            <div class="tp-mini-title">柴山獼猴社交禮儀速成班</div>
+            <div class="tp-mini-meta">⭐ 5.0 · 📍 高雄 · 🕐 3 小時</div>
+            <div class="tp-mini-price">NT$880 / 人</div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</section>
-
-<!-- ── FAQ ── -->
-<section class="tp-section">
-  <div class="tp-container" style="max-width: 720px">
-    <div class="tp-section-head"><h2>常見問題</h2></div>
-
-    <div class="tp-faq-item">
-      <div class="tp-faq-q" onclick="toggleFaq(this)">
-        <span>松鼠特訓班真的有松鼠嗎？</span>
-        <span class="tp-faq-chevron">▾</span>
-      </div>
-      <div class="tp-faq-a">有喔！但牠們不在意你，你需要主動討好牠們。帶花生去比較保險。</div>
-    </div>
-    <div class="tp-faq-item">
-      <div class="tp-faq-q" onclick="toggleFaq(this)">
-        <span>「迷路體驗」有辦法找到回家的路嗎？</span>
-        <span class="tp-faq-chevron">▾</span>
-      </div>
-      <div class="tp-faq-a">不保證。請自備手機電力 100% 和計程車錢。導遊只負責帶你迷路，回程 DIY。</div>
-    </div>
-    <div class="tp-faq-item">
-      <div class="tp-faq-q" onclick="toggleFaq(this)">
-        <span>Andy 的「睡覺體驗行程」我需要帶什麼？</span>
-        <span class="tp-faq-chevron">▾</span>
-      </div>
-      <div class="tp-faq-a">枕頭、眼罩、睡袋（可選）。行程包含「叫不醒服務」，如需被叫醒需加購 NT$500。</div>
-    </div>
-    <div class="tp-faq-item">
-      <div class="tp-faq-q" onclick="toggleFaq(this)">
-        <span>「雨天發呆導覽」如果當天放晴怎麼辦？</span>
-        <span class="tp-faq-chevron">▾</span>
-      </div>
-      <div class="tp-faq-a">本行程不退費，晴天照樣發呆，保持精神。建議戴墨鏡搭配呆滯表情達到完整體驗。</div>
-    </div>
-    <div class="tp-faq-item">
-      <div class="tp-faq-q" onclick="toggleFaq(this)">
-        <span>取消政策是什麼？</span>
-        <span class="tp-faq-chevron">▾</span>
-      </div>
-      <div class="tp-faq-a">不管什麼理由，按了按鈕你就知道了。</div>
     </div>
   </div>
 </section>
@@ -640,78 +523,126 @@
     <div class="tp-footer-grid">
       <div>
         <div class="tp-footer-logo">Tour<span style="color:var(--tp-accent)">●</span>Platform</div>
-        <p class="tp-footer-desc">找到懂路的人，帶你走進台灣最有故事的地方。<br />（或者完全迷路，也是一種故事。）</p>
+        <p class="tp-footer-desc">找到懂路的人，帶你走進台灣最有故事的地方。（或帶你迷路，也是一種故事。）</p>
       </div>
       <div class="tp-footer-col">
         <h4>探索</h4>
         <ul>
-          <li><a href="#" onclick="showModal(); return false;">所有行程</a></li>
-          <li><a href="#" onclick="showModal(); return false;">認識導遊</a></li>
-          <li><a href="#" onclick="showModal(); return false;">主題體驗</a></li>
+          <li onclick="showModal()">所有行程</li>
+          <li onclick="showModal()">認識導遊</li>
+          <li onclick="showModal()">主題體驗</li>
         </ul>
       </div>
       <div class="tp-footer-col">
         <h4>導遊專區</h4>
         <ul>
-          <li><a href="#" onclick="showModal(); return false;">成為導遊</a></li>
-          <li><a href="#" onclick="showModal(); return false;">導遊後台</a></li>
+          <li onclick="showModal()">成為導遊</li>
+          <li onclick="showModal()">導遊後台</li>
+          <li onclick="showModal()">結算規則</li>
         </ul>
       </div>
       <div class="tp-footer-col">
         <h4>關於</h4>
         <ul>
-          <li><a href="#" onclick="showModal(); return false;">關於我們</a></li>
-          <li><a href="#" onclick="showModal(); return false;">服務條款</a></li>
-          <li><a href="#" onclick="showModal(); return false;">隱私政策</a></li>
+          <li onclick="showModal()">關於我們</li>
+          <li onclick="showModal()">服務條款</li>
+          <li onclick="showModal()">隱私政策</li>
+          <li onclick="showModal()">聯絡我們</li>
         </ul>
       </div>
     </div>
-    <div class="tp-footer-bottom">
-      © 2026 Tour Platform · 愚人節快樂 🎉
-    </div>
+    <div class="tp-footer-bottom">© 2026 Tour Platform · All rights reserved · 愚人節快樂 🎉</div>
   </div>
 </footer>
 
-<!-- ── 愚人節 Modal ── -->
-<div class="af-overlay" id="afOverlay" onclick="closeModalOutside(event)">
+<!-- ── AF Modal ── -->
+<div class="af-overlay" id="afOverlay" onclick="overlayClick(event)">
   <div class="af-modal" id="afModal">
     <div class="af-emoji">🎉</div>
     <div class="af-title">愚人節快樂！</div>
-    <p class="af-sub">
-      你以為真的有這個行程嗎？😂<br />
-      「柴山松鼠特訓班」「Andy 的睡覺體驗」「迷路深度遊」⋯⋯<br />
-      都是假的啦！不過如果你真的想去柴山，<br />
-      <strong style="color:var(--tp-primary)">Tour Platform 真實版</strong>等著你喔！
-    </p>
-    <button class="af-close" onclick="closeModal()">哈哈，我中計了 😂</button>
-    <div><span class="af-badge">🗓️ 2026-04-01 愚人節特別版</span></div>
+    <p class="af-sub">哈哈你中計了！這是 Tour Platform 的愚人節特別版。<br /><br />真正的網站一樣超好用，歡迎來預約真實行程 😏</p>
+    <button class="af-close-btn" onclick="closeModal()">好啦我知道了 😂</button>
+    <div><span class="af-badge">🗓️ 2026-04-01 愚人節限定版</span></div>
   </div>
 </div>
 
+<!-- ── 🐔 Chicken Widget ── -->
+<div class="af-chicken" id="chickenWidget">
+  <button class="af-chicken-close" onclick="closeChicken()">✕</button>
+  <div class="af-chicken-emoji">🐔</div>
+  <div class="af-chicken-text">你還在看嗎？<br />你再不訂就沒了！</div>
+  <button class="af-chicken-cluck" onclick="cluck()">🔔 立即預約（趁還有位子）</button>
+</div>
+
+<!-- ── Toast ── -->
+<div class="af-toast" id="cluckToast">🐔 咕咕咕！！快點訂啊！！</div>
+
 <script>
-  // 愚人節 Modal
+  /* ──────────────────────────────────────
+     功能一：30 秒後雞跑出，每 15 秒 toast
+  ────────────────────────────────────── */
+  var chickenTimer = setTimeout(function() {
+    document.getElementById('chickenWidget').classList.add('show');
+    startClucking();
+  }, 30000);
+
+  var cluckInterval = null;
+  function startClucking() {
+    cluckInterval = setInterval(function() {
+      var toast = document.getElementById('cluckToast');
+      toast.classList.add('show');
+      setTimeout(function() { toast.classList.remove('show'); }, 2800);
+    }, 15000);
+  }
+  function closeChicken() {
+    document.getElementById('chickenWidget').classList.remove('show');
+    if (cluckInterval) clearInterval(cluckInterval);
+  }
+  function cluck() {
+    closeChicken();
+    showModal();
+  }
+
+  /* ──────────────────────────────────────
+     功能二：跑跑按鈕
+     hover 移動最多 3 次，第 4 次才靜止
+  ────────────────────────────────────── */
+  var runCounts = new WeakMap();
+
+  document.querySelectorAll('.runaway-btn').forEach(function(btn) {
+    runCounts.set(btn, 0);
+    btn.addEventListener('mouseenter', function() {
+      var count = runCounts.get(btn);
+      if (count >= 3) return; // 第 4 次不跑了
+
+      var dx = (Math.random() > 0.5 ? 1 : -1) * (60 + Math.random() * 60);
+      var dy = (Math.random() > 0.5 ? 1 : -1) * (30 + Math.random() * 50);
+      btn.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+      runCounts.set(btn, count + 1);
+    });
+  });
+
+  /* ──────────────────────────────────────
+     功能三：愚人節 Modal
+  ────────────────────────────────────── */
   function showModal() {
     document.getElementById('afOverlay').classList.add('show');
   }
   function closeModal() {
     document.getElementById('afOverlay').classList.remove('show');
   }
-  function closeModalOutside(e) {
+  function overlayClick(e) {
     if (e.target === document.getElementById('afOverlay')) closeModal();
   }
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeModal();
   });
 
-  // FAQ toggle
-  function toggleFaq(el) {
-    const item = el.parentElement;
-    item.classList.toggle('open');
-  }
-
-  // 攔截所有 <a href="#"> 的預設行為
-  document.querySelectorAll('a[href="#"]').forEach(function(a) {
-    a.addEventListener('click', function(e) { e.preventDefault(); });
+  /* ── 攔截 Enter 鍵搜尋 ── */
+  document.querySelectorAll('input[type=text]').forEach(function(inp) {
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); showModal(); }
+    });
   });
 </script>
 </body>
