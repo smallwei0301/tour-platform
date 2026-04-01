@@ -1053,15 +1053,43 @@ img { max-width: 100%; height: auto; }
 /* --- KKday-style Activity Detail Page --- */
 .kkd-detail-page { padding-top: 0; }
 
-/* Gallery */
-.kkd-gallery {
-  display: grid;
-  grid-template-columns: 3fr 1fr;
-  gap: 6px;
+/* ── Image Carousel (mobile swipeable + desktop grid) ── */
+.kkd-carousel-wrap { position: relative; width: 100%; }
+
+/* Mobile: swipeable track */
+.kkd-carousel-track {
+  display: flex;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
   border-radius: 14px;
-  overflow: hidden;
-  max-height: 400px;
   margin: 12px 0 0;
+}
+.kkd-carousel-track::-webkit-scrollbar { display: none; }
+.kkd-carousel-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  height: 280px;
+}
+.kkd-carousel-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kkd-carousel-dots { display: flex; justify-content: center; gap: 6px; padding: 8px 0 4px; }
+.kkd-carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: #d1d5db; transition: background 0.2s; }
+.kkd-carousel-dot.active { background: #6b7280; width: 16px; border-radius: 3px; }
+
+/* Desktop: show original 3:1 grid, hide mobile carousel */
+.kkd-gallery-desktop { display: none; }
+@media (min-width: 768px) {
+  .kkd-carousel-track, .kkd-carousel-dots { display: none; }
+  .kkd-gallery-desktop {
+    display: grid;
+    grid-template-columns: 3fr 1fr;
+    gap: 6px;
+    border-radius: 14px;
+    overflow: hidden;
+    max-height: 400px;
+    margin: 12px 0 0;
+  }
 }
 .kkd-gallery-main {
   width: 100%;
@@ -1081,6 +1109,17 @@ img { max-width: 100%; height: auto; }
   object-fit: cover;
   display: block;
 }
+
+/* ── Itinerary Timeline ── */
+.kkd-itinerary { display: flex; flex-direction: column; }
+.kkd-itinerary-step { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; position: relative; }
+.kkd-itinerary-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #f3f4f6; border-radius: 50%; flex-shrink: 0; z-index: 1; }
+.kkd-itinerary-content { padding: 8px 0 20px; }
+.kkd-itinerary-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kkd-itinerary-title { font-size: 15px; font-weight: 600; }
+.kkd-itinerary-duration { font-size: 12px; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 10px; }
+.kkd-itinerary-desc { font-size: 14px; color: #6b7280; margin-top: 4px; line-height: 1.6; }
+.kkd-itinerary-connector { position: absolute; left: 21px; top: 44px; width: 2px; height: calc(100% - 4px); background: #e5e7eb; }
 
 /* Title block */
 .kkd-title-block { padding: 24px 0 0; }
@@ -1568,8 +1607,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .kkd-booking-side { display: none; }
 }
 @media (max-width: 768px) {
-  .kkd-gallery { grid-template-columns: 1fr; max-height: 240px; }
-  .kkd-gallery-grid { display: none; }
+  /* Mobile gallery handled by carousel — hide desktop grid rules */
+  .kkd-gallery-desktop { display: none; }
   .kkd-title { font-size: 18px; }
   .kkd-price { font-size: 22px; }
   .kkd-anchor-wrap { top: 56px; }
@@ -1851,3 +1890,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* Booking sidebar: scroll text centering */
 .kkd-booking-card { text-align: left; }
 
+
+/* Tagline: 行程副標題 */
+.kkd-tagline {
+  font-size: 14px;
+  color: #4b5563;
+  margin: 6px 0 0;
+  line-height: 1.5;
+}

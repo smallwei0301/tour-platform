@@ -1,0 +1,385 @@
+{
+  "_instructions": {
+    "version": "B - 說明版 JSON 樣板（Version 2 - 內容豐富版）",
+    "note": "此檔保留 _instructions 說明欄位，適合人工閱讀與填寫。匯入時系統會忽略 _instructions，不會寫入資料庫。",
+    "how_to_use": [
+      "1. 複製這份檔案後修改內容",
+      "2. 保留欄位名稱不變，只改值",
+      "3. 圖片欄位可填真實 URL，也可留空後改用後台上傳",
+      "4. plans[] 對應後台『📋 方案管理』，其中展開『▸ 方案詳情內容』即可編輯",
+      "5. planItinerary[].imageUrl 是方案介紹步驟的圖片，可填 URL 或後台上傳",
+      "6. 匯入後請檢查 diff 預覽，確認後再按儲存"
+    ],
+    "title": "行程名稱。對應後台『行程名稱』。",
+    "guideSlug": "導遊 slug。對應後台『導遊』，例如 andy-lee。",
+    "region": "中文地區名稱。對應後台『地區』，例如 高雄市。",
+    "category": "類別代碼：outdoor / culture / food / nature。",
+    "priceTwd": "基礎售價（每人 TWD）。對應後台『價格/人』。",
+    "durationMinutes": "整體活動分鐘數。對應後台『行程時長（分鐘）』。",
+    "minParticipants": "最少成團人數。",
+    "maxParticipants": "最多可報名人數。",
+    "meetingPoint": "集合地點文字。",
+    "meetingPointMapUrl": "Google Maps 或其他地圖 URL。",
+    "coverImageUrl": "封面圖片 URL。也可改用後台上傳。",
+    "imageUrls": "活動照片 URL 陣列。每個元素一張圖，對應 Gallery，可改用後台上傳。",
+    "tagline": "一句話副標。",
+    "shortDescription": "短描述。",
+    "description": "完整描述。",
+    "inclusions": "包含項目陣列。",
+    "exclusions": "不包含項目陣列。",
+    "notices": "注意事項陣列。",
+    "refundRules": "退款規則陣列。",
+    "safetyNotice": "安全說明。",
+    "goodFor": "適合對象陣列。",
+    "socialProofQuotes": "社群口碑語錄陣列。",
+    "faq": "FAQ 陣列，格式 [{ q, a }]。",
+    "itinerary": "詳細行程時間表陣列，格式 [{ step, title, description, duration, icon }]。",
+    "plans": "方案管理陣列；對應後台『📋 方案管理』。",
+    "plans_fields": {
+      "id": "方案唯一 ID，例如 half-day。",
+      "label": "方案名稱。",
+      "duration": "方案顯示時長文字。",
+      "priceMultiplier": "相對基礎價格倍數。",
+      "price": "方案固定售價（選填，若填寫則優先顯示）。",
+      "highlights": "方案亮點陣列。",
+      "detailsLinkText": "查看詳情連結文字。",
+      "bookingBtnText": "預約按鈕文字。",
+      "language": "導覽語言。",
+      "earliestDeparture": "最早可出發日 YYYY-MM-DD。",
+      "confirmByDays": "最晚幾天前回覆訂單結果。",
+      "freeCancelDays": "幾天前可免費取消。",
+      "planInclusions": "方案費用包含項目。",
+      "planExclusions": "方案費用不包含項目。",
+      "planItinerary": "方案介紹陣列，格式 [{ text, imageUrl? }]，每一步可附圖片 URL 或後台上傳。",
+      "meetingPointName": "集合地點名稱。",
+      "meetingAddress": "集合地點地址。",
+      "experiencePointName": "體驗地點名稱。",
+      "experienceAddress": "體驗地點地址。",
+      "planNotices": "方案購買須知陣列。",
+      "planRefundRules": "方案取消政策陣列。"
+    }
+  },
+
+  "title": "柴山秘境之旅｜龍谷、小錐麓、金瓜洞全探索",
+  "guideSlug": "andy-lee",
+  "region": "高雄市",
+  "category": "outdoor",
+  "priceTwd": 1800,
+  "durationMinutes": 270,
+  "minParticipants": 4,
+  "maxParticipants": 10,
+  "meetingPoint": "柴山壽山動物園停車場旁（龍門亭入口）",
+  "meetingPointMapUrl": "https://www.google.com/maps/search/?api=1&query=%E9%AB%98%E9%9B%84%E5%B8%82%E9%BC%93%E5%B1%B1%E5%8D%80%E8%BF%B4%E9%BE%8D%E8%B7%AF+%E6%9F%B4%E5%B1%B1",
+  "coverImageUrl": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80",
+  "imageUrls": [
+    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=80",
+    "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80"
+  ],
+  "tagline": "市區旁的秘境冒險，攀岩穿石、走懸崖古道、鑽洞穴，跟著 Andy Lee 探索高雄的地形秘境",
+  "shortDescription": "高雄柴山是臺灣唯一的市區國家自然公園，珊瑚礁石灰岩地形造就了龍谷大峽谷、小錐麓懸崖古道與金瓜洞等絕景。這趟秘境之旅由認證嚮導帶領，親身穿越一般人不知道的路線。",
+  "description": "柴山，高雄人的後山，也是臺灣唯一位於都會區中的國家自然公園。這裡的地質由高位珊瑚礁石灰岩組成，億萬年前的海底世界被抬升成陸地，歷經風化侵蝕後形成嶙峋石壁、峽谷與神秘洞穴。\n\n本行程由擁有豐富山野經驗的 Andy Lee 導覽，帶領你穿越龍谷大峽谷深邃的 U 字型地形，挑戰高度刺激的小錐麓懸崖古道（全長 30 公尺，路寬僅 30 公分，架設在峭壁上，宛如花蓮錐麓古道的縮小版），並進入罕見對外開放的石灰岩溶洞探索鐘乳石與石筍奇景。\n\n沿途不只地形壯觀，還有機會近距離觀察柴山獼猴群落、熱帶植被生態，以及遠眺高雄港與西子灣的絕美海港天際線。這是一段讓你在城市邊緣感受真實探險的旅程。",
+  "inclusions": [
+    "認證嚮導全程帶領",
+    "專業頭燈（洞穴探索用）",
+    "安全帽",
+    "手套",
+    "洞穴探索保險",
+    "行前安全說明與裝備指導",
+    "電子行程確認憑證"
+  ],
+  "exclusions": [
+    "個人交通（請自行抵達集合點）",
+    "個人餐飲",
+    "個人意外險升級（建議自行投保）"
+  ],
+  "notices": [
+    "請穿著止滑運動鞋或登山鞋，禁止穿涼鞋或拖鞋",
+    "請自備至少 1 公升飲水",
+    "行程含輕度攀岩與鑽洞，需彎腰匍匐前進",
+    "小錐麓路段需走懸崖岩壁，有懼高症者請事先告知",
+    "雨天或土石潮濕時可能調整或取消路線，以安全為優先",
+    "柴山洞穴探索需持合法申請許可，本行程已代辦申請"
+  ],
+  "refundRules": [
+    "出發 6 天（含）以前取消：100% 退款",
+    "出發 4-5 天前取消：退款 50%",
+    "出發 3 天以內或當天取消：不退款",
+    "因惡劣天氣或安全因素由主辦取消：全額退款或改期"
+  ],
+  "safetyNotice": "部分路段地形陡峭濕滑，全程請依嚮導指示行進，禁止脫隊。洞穴內光線昏暗，請確保頭燈電量充足。心臟病、嚴重膝傷、孕婦請勿參加。",
+  "goodFor": [
+    "7-65 歲，有基本體能者",
+    "喜愛地形探索與地質奇景",
+    "想在城市近郊體驗真實探險",
+    "攝影愛好者（石灰岩地形光影極具特色）",
+    "熱愛自然生態觀察者"
+  ],
+  "socialProofQuotes": [
+    "走小錐麓那段腿真的有點軟，但景色無敵！",
+    "從沒想過高雄市區旁邊藏著這種峽谷地形，太衝擊了",
+    "Andy 很懂柴山的每一塊石頭，解說超有深度",
+    "鑽洞穴那段是整個行程的高潮，大人小孩都瘋了",
+    "這種體驗 KKday 找不到，真的是隱藏版路線",
+    "早上出發中午回來，CP 值超高，值得再來一次"
+  ],
+  "faq": [
+    {
+      "q": "完全沒有登山經驗的人可以參加嗎？",
+      "a": "可以，但需要有基本體能。行程有部分攀岩路段（難度低，有輔助繩），以及需要彎腰鑽過岩縫的路段。建議有基本步行能力、膝蓋健康的旅客參加，報名時如有疑慮請先告知嚮導。"
+    },
+    {
+      "q": "小朋友可以參加嗎？",
+      "a": "建議 10 歲以上、體重 30 公斤以上的孩童參加。部分洞穴路段空間較窄，小朋友通過反而更輕鬆！請家長陪同並全程配合嚮導指示。"
+    },
+    {
+      "q": "怕高或幽閉恐懼症可以參加嗎？",
+      "a": "小錐麓路段走在岩壁峭道上，有輕微懼高症者建議先告知嚮導，可依現場狀況評估跳過。洞穴路段空間寬敞，一般幽閉恐懼不會有太大影響，但嚴重者建議事先告知。"
+    },
+    {
+      "q": "柴山洞穴探索需要申請許可嗎？",
+      "a": "是的，依據壽山國家自然公園規定，進入洞穴探勘需事先申請許可。本行程已代辦所有申請手續，旅客只需跟隨嚮導，不需自行辦理。"
+    },
+    {
+      "q": "行程會遇到猴子嗎？",
+      "a": "柴山台灣獼猴族群數量龐大，沿途幾乎必定遇到！嚮導會說明如何與猴子和平共處。請勿餵食、勿直視、背包拉緊，猴子通常不會主動靠近。"
+    },
+    {
+      "q": "如果下雨或天氣不好還能出發嗎？",
+      "a": "一般下雨仍可出發（石灰岩濕潤後風化紋路更美），但大雨或颱風警報時將取消。地形濕滑時嚮導會調整路線。出發前 24 小時內會再次確認天氣狀況。"
+    }
+  ],
+  "itinerary": [
+    {
+      "step": 1,
+      "title": "集合 & 裝備確認",
+      "description": "在壽山動物園停車場旁的龍門亭入口集合，嚮導進行裝備分發與安全說明，說明柴山地質生態背景知識，並確認每位旅客的體能與禁忌狀況。",
+      "duration": "20 分",
+      "icon": "📍"
+    },
+    {
+      "step": 2,
+      "title": "珊瑚礁岩步道入口",
+      "description": "進入柴山林道，踏上由億萬年前海底珊瑚礁抬升形成的石灰岩步道。嚮導沿途解說地質構造與柴山獼猴生態，第一個轉角通常就能見到猴群出沒。",
+      "duration": "30 分",
+      "icon": "🌿"
+    },
+    {
+      "step": 3,
+      "title": "龍谷大峽谷",
+      "description": "抵達柴山最壯觀的地形奇景「龍谷大峽谷」。兩側高聳的珊瑚礁岩壁形成深邃 U 字型峽谷，站在谷底往上看天光穿透岩縫，光影效果震撼。嚮導講解水蝕與溶蝕作用如何塑造這片地形。",
+      "duration": "30 分",
+      "icon": "🪨"
+    },
+    {
+      "step": 4,
+      "title": "小錐麓懸崖古道",
+      "description": "本行程最刺激的路段！小錐麓是龍谷末端一段建造在岩壁上的古道，全長僅 30 公尺，路寬不到 30 公分，一側是峭壁，一側是深谷。如同縮小版的花蓮錐麓古道，考驗膽量的同時也能俯瞰整個峽谷。",
+      "duration": "20 分",
+      "icon": "🧗"
+    },
+    {
+      "step": 5,
+      "title": "金瓜洞石灰岩溶洞",
+      "description": "穿越岩縫進入柴山著名的「金瓜洞」秘境。洞內由碳酸鈣長期沉澱形成的鐘乳石與石筍造型奇特，頭燈照射下金光閃閃，是柴山最神秘也最少人知道的地點。本行程已取得合法探洞許可。",
+      "duration": "35 分",
+      "icon": "🔦"
+    },
+    {
+      "step": 6,
+      "title": "山頂稜線 & 高雄港景觀台",
+      "description": "從洞穴出口沿稜線步道登上柴山頂，眺望高雄港、西子灣、旗津半島，以及晴天下延伸至台灣海峽的壯闊天際線。嚮導分享高雄城市地理與港口歷史。",
+      "duration": "30 分",
+      "icon": "🌄"
+    },
+    {
+      "step": 7,
+      "title": "木棧道回程 & 生態觀察",
+      "description": "沿著柴山木棧道緩步下山，嚮導帶領觀察熱帶海岸林植被、石灰岩地貌細節，以及再次與獼猴群落近距離觀察。行程在龍門亭解散，交通方便。",
+      "duration": "25 分",
+      "icon": "🐒"
+    }
+  ],
+
+  "plans": [
+    {
+      "id": "half-day-morning",
+      "label": "A. 早鳥半日探秘",
+      "duration": "約 4.5 小時（08:00–12:30）",
+      "priceMultiplier": 1,
+      "price": 1800,
+      "highlights": [
+        "晨光穿透峽谷，光影最美時段",
+        "猴群活動最頻繁，最容易近距離觀察",
+        "涼爽舒適，無日曬困擾",
+        "最早出發前 1 天可預訂",
+        "免費取消（出發 72 小時前）",
+        "每場最多 10 人小團，品質有保障"
+      ],
+      "detailsLinkText": "查看方案詳情 ›",
+      "bookingBtnText": "立即預約",
+      "language": "中文主導 / English available",
+      "earliestDeparture": "2026-04-10",
+      "confirmByDays": 2,
+      "freeCancelDays": 3,
+      "planInclusions": [
+        "認證嚮導全程帶領",
+        "頭燈（洞穴探索用）",
+        "安全帽",
+        "手套",
+        "洞穴探索保險",
+        "電子憑證"
+      ],
+      "planExclusions": [
+        "個人交通",
+        "餐飲",
+        "個人意外險升級"
+      ],
+      "planItinerary": [
+        {
+          "text": "🔆 08:00 龍門亭入口集合，裝備分發與安全說明。嚮導介紹柴山地質歷史，解說億萬年前珊瑚礁抬升成陸地的故事。",
+          "imageUrl": "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🌿 08:20 進入珊瑚礁岩步道，首段林道嚮導帶領觀察熱帶植被與石灰岩地貌，幾乎必定遇到獼猴群落（請背好包包）。",
+          "imageUrl": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🪨 08:50 龍谷大峽谷。兩側十公尺高珊瑚礁岩壁夾出 U 字型深谷，晨光穿透岩縫形成絕美光柱。這是柴山最壯觀的地形秘境。",
+          "imageUrl": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🧗 09:20 小錐麓懸崖古道挑戰！全長 30 公尺、路寬 30 公分的岩壁棧道，一側峭壁一側深谷，是本行程膽量挑戰最高的路段。嚮導全程陪同保護。",
+          "imageUrl": "https://images.unsplash.com/photo-1522163182402-834f871fd851?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🔦 09:40 進入金瓜洞石灰岩溶洞！穿越岩縫，頭燈照亮洞內億年鐘乳石與石筍奇景。本行程已取得合法探洞申請許可，帶你看一般遊客進不去的秘境。",
+          "imageUrl": "https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🌄 10:15 登上稜線展望台，遠眺高雄港、西子灣與旗津全景。天氣晴朗時甚至能看到台灣海峽。嚮導說明高雄地理與港口歷史。",
+          "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🐒 10:45 沿木棧道緩步下山，沿途再觀察柴山獼猴生態與植被，嚮導分享保育知識。12:30 抵達龍門亭，行程結束，各自散去。",
+          "imageUrl": "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=1200&q=80"
+        }
+      ],
+      "meetingPointName": "龍門亭入口（壽山動物園停車場旁）",
+      "meetingAddress": "804 高雄市鼓山區萬壽路 350 號旁",
+      "experiencePointName": "柴山龍谷、小錐麓、金瓜洞",
+      "experienceAddress": "高雄市鼓山區柴山（壽山國家自然公園）",
+      "planNotices": [
+        "請穿著止滑運動鞋或登山鞋，禁止穿涼鞋",
+        "請自備至少 1 公升飲水",
+        "行程含輕度攀岩與鑽洞，需彎腰匍匐前進",
+        "請勿餵食或挑釁柴山獼猴",
+        "小錐麓有輕微高度，嚴重懼高症者請事先告知"
+      ],
+      "planRefundRules": [
+        "出發 3 天（含）以前取消：全額退款",
+        "出發 2 天前取消：退款 50%",
+        "出發當天或 1 天前取消：不退款",
+        "因天氣或安全取消：全額退款或免費改期"
+      ]
+    },
+
+    {
+      "id": "full-day-complete",
+      "label": "B. 全日深度探秘（含午餐）",
+      "duration": "約 7 小時（08:00–15:00）",
+      "priceMultiplier": 1.7,
+      "price": 3000,
+      "highlights": [
+        "半日行程 + 下午延伸至北峰古砲台與隱谷秘境",
+        "探訪日治時期砲台遺址與神秘地下空間",
+        "含嚮導帶領的在地午餐（前金鴨肉飯）",
+        "行程最完整，適合想深度探索柴山者",
+        "每場最多 8 人精緻小團",
+        "贈送個人行程紀念照片 5 張"
+      ],
+      "detailsLinkText": "查看方案詳情 ›",
+      "bookingBtnText": "立即預約",
+      "language": "中文主導 / English available",
+      "earliestDeparture": "2026-04-10",
+      "confirmByDays": 2,
+      "freeCancelDays": 6,
+      "planInclusions": [
+        "認證嚮導全程帶領",
+        "頭燈（洞穴探索用）",
+        "安全帽",
+        "手套",
+        "洞穴探索保險",
+        "在地午餐（鴨肉飯 + 湯品）",
+        "嚮導拍攝紀念照片 5 張",
+        "電子憑證"
+      ],
+      "planExclusions": [
+        "個人交通",
+        "個人額外飲品",
+        "個人意外險升級"
+      ],
+      "planItinerary": [
+        {
+          "text": "🔆 08:00 龍門亭入口集合，裝備分發與安全說明。嚮導深入介紹柴山地質歷史，並帶領暖身活動。",
+          "imageUrl": "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🌿 08:20 珊瑚礁岩步道，首段觀察獼猴群落與熱帶海岸林生態，嚮導解說保育現況。",
+          "imageUrl": "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🪨 08:50 龍谷大峽谷。兩側十公尺高的珊瑚礁岩壁，U 字型峽谷空間感震撼，嚮導解說溶蝕與水蝕地形作用機制。",
+          "imageUrl": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🧗 09:20 小錐麓懸崖古道挑戰。30公尺窄道俯瞰深谷，嚮導全程保護，完成後拍下大合照紀念。",
+          "imageUrl": "https://images.unsplash.com/photo-1522163182402-834f871fd851?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🔦 09:45 金瓜洞石灰岩溶洞探索，合法取得許可入洞，頭燈照射下鐘乳石與石筍閃閃發亮，嚮導講解碳酸鈣沉澱機制。",
+          "imageUrl": "https://images.unsplash.com/photo-1520116468816-95b69f847357?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🌄 10:30 登上柴山主稜線展望台，眺望高雄港、西子灣、旗津、海峽全景，嚮導介紹高雄城市地理發展。",
+          "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🍖 12:00 下山享用嚮導精選在地午餐：前金市場鴨肉飯 + 冬瓜湯，是柴山登山者的傳統補給，也是在地味道的最佳代表。",
+          "imageUrl": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🏰 13:15 午餐後驅車前往柴山北峰，探訪日治時期遺留的砲台遺址，嚮導講解二戰防禦工事歷史背景。砲台石拱門與地下彈藥庫都保存完整。",
+          "imageUrl": "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "🔦 14:00 北峰隱谷秘境，另一處鮮為人知的岩縫通道與小型溶洞，是早鳥行程不包含的獨家路線，全程嚮導帶領。",
+          "imageUrl": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "✅ 15:00 回到集合點，嚮導分享行程紀念照片，留下聯絡方式以便後續分享照片，行程圓滿結束。",
+          "imageUrl": "https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=1200&q=80"
+        }
+      ],
+      "meetingPointName": "龍門亭入口（壽山動物園停車場旁）",
+      "meetingAddress": "804 高雄市鼓山區萬壽路 350 號旁",
+      "experiencePointName": "柴山龍谷、小錐麓、金瓜洞、北峰砲台、隱谷秘境",
+      "experienceAddress": "高雄市鼓山區柴山（壽山國家自然公園）",
+      "planNotices": [
+        "請穿著止滑運動鞋或登山鞋，禁止穿涼鞋",
+        "請自備至少 1.5 公升飲水",
+        "午餐有葷食（鴨肉），素食者請報名時告知，可安排替代餐食",
+        "行程含攀岩、鑽洞與下午北峰路線，體力需求高於半日",
+        "請確認整日行程時間，下午路線需搭便車（嚮導安排）前往北峰"
+      ],
+      "planRefundRules": [
+        "出發 6 天（含）以前取消：全額退款",
+        "出發 4-5 天前取消：退款 50%",
+        "出發 3 天以內或當天取消：不退款",
+        "因天氣或安全取消：全額退款或免費改期"
+      ]
+    }
+  ]
+}

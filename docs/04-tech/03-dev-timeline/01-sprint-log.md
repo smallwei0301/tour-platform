@@ -1,7 +1,7 @@
 # Sprint 執行日誌
 
-> 最後更新：2026-03-31
-> 當前進度：Sprint 3.3 完成，進入 Sprint 4 規劃
+> 最後更新：2026-04-01
+> 當前進度：Sprint 4.5 完成（付款閉環 + 行程後台全面翻新）
 
 ---
 
@@ -58,71 +58,103 @@
 - 日期選擇器 30 天捲軸、月曆 modal header 修正
 - Activity badges / policy row 優化
 
+### Sprint 4.0 — Supabase 正式接線
+- Admin 行程 CRUD UI（列表、新增、編輯、發佈/下架）
+- 前台從 fixture → DB 遷移完成（3 筆行程、9 筆評價實時同步）
+- DatePlanSection 日期選擇（半日/全日方案、價格計算）
+- KKday 雙欄 layout 恢復（sidebar 預約卡片、全部 section）
+- 旅客評價系統（8 筆 seed 評價 + 實時同步驗證）
+- E2E Playwright 測試（7 項測試涵蓋行程/價格/評價/admin）
+
+### Sprint 4.2 — Admin 場次管理
+- Admin 場次 CRUD（新增/編輯/刪除 + CONFLICT guard 409）
+- Haiku 功能測試：6/6 全通過（Sprint 4.0–4.2 全面驗收）
+- Vercel Production 上線：SSO 關閉 + env vars + API 全通
+
+### Sprint 4.3 — 行程後台全面翻新（2026-04-01）
+
+**核心目標：Activities 頁面所有欄位可由後台編輯，並建立方案管理系統**
+
+| 功能 | commit | 說明 |
+|------|--------|------|
+| migration 004：`plans` JSONB 欄位 | `c1c3cb8d` | activities table 新增 plans 欄位 |
+| migration 005：schedule plan_id | `c1c3cb8d` | 場次綁定方案 + fn_book_schedule + trg_auto_full_status |
+| migration 006：itinerary + social_proof | `c1c3cb8d` | 新增 JSONB 欄位 |
+| Admin GuideSearch（導遊搜尋） | `5698fb8` | 搜尋導遊並綁定行程 |
+| Admin ImageUpload（圖片上傳） | `c1c3cb8d` | Supabase Storage，Canvas WebP 壓縮 |
+| Admin savePlans（方案獨立儲存） | `c1c3cb8d` | 方案管理區塊 |
+| Admin 批次排程（月曆 + 方案下拉） | `c1c3cb8d` | 批次開放日期場次 |
+| GuideSearch click bug 修復 | `5698fb8` | label/onMouseDown 問題修復 |
+| tagline 前台顯示修復 | `907a7b0` | h1 下方加 tagline |
+| PlanDetailModal（7 tabs） | `91e8f98` | 方案詳情完整 Modal |
+| PlanConfig 擴充（15+ 欄位） | `91e8f98` | language/price/itinerary/地點/須知/退款 |
+| 新增行程直接建 DB 記錄 | `d4a0df4` | 移除雙步驟表單 |
+| 刪除行程功能 | `d4a0df4` | 含 Storage 圖片清理 |
+| Storage slug 亂碼修復 | `4bd2fd7` | 非 ASCII 字元過濾 |
+| Itinerary 圖片上傳 | `ec41773` | 方案行程項目可傳圖 |
+| Frontend 404 修復（region_slug） | `b495a50` | 8 地區 slug map |
+| PlanDetailModal 置中 | `6ca8dd0` | 改為 transform: translate(-50%, -50%) |
+| 方案卡片摺疊（顯示 2 個 + 展開） | `6ca8dd0` | showAllPlans 狀態 |
+| JSON 匯入/匯出 | `6ca8dd0` + `991f89c` | 含驗證 + diff 預覽 |
+| Gallery URL 縮圖預覽 | `991f89c` | 96×64 縮圖 + 移除按鈕 |
+| 樣本 JSON 完整版 | `f52d10d` + `6aa6d80` | 柴山秘境之旅豐富版 |
+| 後台下載 JSON 改為豐富版 | `a795158` | downloadTemplate() 同步更新 |
+
+### Sprint 4.4 — ImageCarousel + 行程頁改版（2026-04-01）
+
+| 功能 | commit | 說明 |
+|------|--------|------|
+| ImageCarousel（手機 swipe） | `3b1f290`內 | scroll-snap + Intersection Observer |
+| itinerary timeline section | 同上 | 行程時間軸前台顯示 |
+| db.mjs JSON.stringify 雙重編碼修復 | `3057c84` | faq/itinerary JSONB 欄位 |
+
+### Sprint 4.5 — 付款閉環（2026-04-01）
+
+| 功能 | commit | 說明 |
+|------|--------|------|
+| processPaymentCallbackDb 改用 fn_book_schedule RPC | `9761b4f` | SELECT FOR UPDATE 原子扣位 |
+| 付款冪等處理 | `9761b4f` | 重複 callback 不重複扣位 |
+| 付款回調 API HTTP status 修正 | `9761b4f` | 409/404 正確對應 |
+| fetchActivityBySlug client API | `9761b4f` | booking page 從 DB 讀取行程 |
+| Booking page 讀 DB（移除 fixtures） | `9761b4f` | 移除 hardcoded chaishanMap |
+| Booking page 讀 URL query params | `9761b4f` | scheduleId/plan/date from DatePlanSection |
+| Activity page ISR 60s revalidate | `9761b4f` | booked_count 60 秒內反映 |
+| router.refresh() after payment | `9761b4f` | 付款後強制 revalidate |
+
 ---
 
-## 🔖 當前狀態標記（更新：2026-03-31）
+## 🔖 當前狀態標記（更新：2026-04-01）
 
-**最後 commit：** `5da524c` — fix: improve title block spacing and typography
-**Sprint 編號：** Sprint 4.2 完成
-**整體完成度：** ~95%
+**最後 commit：** `9761b4f` — feat: 付款→訂位扣量流程完整實作
+**Branch：** `feat/guide-pages-step2`
+**整體完成度：** ~90%
 
-### Sprint 4 執行摘要
-- ✅ Sprint 4.0 — Admin 行程 CRUD 完成（新增/編輯/發佈/下架）
-- ✅ Sprint 4.1 — Supabase activities table 接線（前台已由 DB 提供資料，非 fixture）
-- ✅ Sprint 4.2 — Admin 場次管理 UI 完成（`/admin/activities/[id]/slots`）
-
-### ✅ 已完成功能
+### ✅ 已完成功能（截至 2026-04-01）
 - 前台所有頁面（含行動版）
 - Admin 後台：登入/登出/安全、訂單管理、退款管理、導遊審核、營運追蹤、KPI 設定
-- ECPay 金流串接（callback）
-- API 層（experiences、orders、admin）
-- Vercel 部署設定
-- Admin 行程 CRUD（新增/編輯/發佈/下架）
-- Supabase activities table 正式接線（前台已連 DB）
-- Admin 場次管理 UI (`/admin/activities/[id]/slots`)
+- Admin 行程 CRUD（含圖片上傳、方案管理、JSON 匯入匯出）
+- ECPay 付款閉環（原子扣位 + 冪等 + trigger 額滿）
+- Booking page 讀 DB（非 fixtures）
+- DatePlanSection × 方案 × 剩餘名額即時顯示
+- ISR 60 秒快取（行程頁）
+- Supabase Storage（activity-images bucket）
+- 6 次 DB migration（001–006）
 
-### 已解決（原列於「尚未完成」）
-- Admin **行程 CRUD** — ✅ 已完成（見 Admin 行程管理）
-- Supabase 正式接線 — ✅ 已於 Sprint 4.1 完成
-- Admin 場次管理 UI — ✅ 已於 Sprint 4.2 完成
-- Vercel Production 正式上線 — 排定為近階段驗證（小幅設定調整後立即上線）
-
----
-
-## Sprint 4 — 行程後台 + 上線（規劃中）
-
-> 目標：讓 Admin 可以在後台直接管理行程，上線後不需要工程師改 code。
-> 決策背景：行程內容（Andy Lee Tour 1 / Tour 2）後填，先把後台做好，讓非技術人員自行更新。
-
-### P0 — 必做（無法上線）
-
-| 任務 | 說明 |
-|------|------|
-| `feat: Admin 行程管理列表頁` | `/admin/activities` — 顯示所有行程、狀態（草稿/已發佈）、快速操作 |
-| `feat: Admin 行程新增/編輯頁` | `/admin/activities/new` + `/admin/activities/[id]/edit` — 完整欄位表單：標題、描述、費用、時長、人數、地點、包含項目、注意事項、取消政策等 |
-| `feat: Admin 行程發佈/下架控制` | published / draft 狀態切換，下架不刪資料 |
-| `feat: Supabase activities table 接線` | 前台從 fixture 切換到 DB，admin 修改即時反映 |
-
-### P1 — 高優先
-
-| 任務 | 說明 |
-|------|------|
-| `feat: Admin 場次管理頁` | `/admin/activities/[id]/slots` — 新增場次、設定容量、開關梯次 |
-| `feat: Vercel Production 部署` | 正式域名上線，設定 env variables |
-| `feat: 行程圖片上傳` | Admin 後台支援上傳活動照片（Supabase Storage 或 Cloudinary） |
-
-### P2 — 有空再做
-
-| 任務 | 說明 |
-|------|------|
-| 行程 SEO meta 設定 | Admin 後台可填 og:title / og:description |
-| 多語言欄位支援 | 中文 / 英文版本切換 |
-| Andy Lee 真實照片整合 | 待 Andy 提供照片後由 Admin 後台上傳 |
+### 🔜 下一步
+1. **導遊儀表板** — 導遊可登入並自主管理場次開關
+2. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽
+3. **旅客 Auth** — Google / LINE 登入
+4. **Storage RLS** — 補 public SELECT policy
+5. **E2E 測試更新** — 覆蓋付款閉環新流程
 
 ---
 
-## 下一步行動
+## 技術債清單
 
-1. **Tracy 接手 Sprint 4 P0 任務**，從 Admin 行程管理頁開始
-2. Supabase `activities` table schema 確認（參考 `04-tech-architecture/02-database-schema.md`）
-3. P0 完成後 → Vercel production 部署 → Andy 行程在後台填寫 → 上線
+| 編號 | 描述 | 優先 | 狀態 |
+|------|------|------|------|
+| TD-01 | Storage RLS 政策未設（靠 service role 繞過） | P1 | 🔴 未處理 |
+| TD-02 | fn_book_schedule 缺乏超賣壓力測試 | P1 | 🔴 未處理 |
+| TD-03 | E2E 測試未覆蓋付款閉環新流程 | P2 | 🟡 待更新 |
+| TD-04 | 部分 DB 欄位 region_slug 仍為 null（台北無「市」後綴） | P2 | 🟡 已知問題 |
+| TD-05 | Booking page 的 note 欄位未傳入 createOrder | P3 | 🟢 低優先 |
