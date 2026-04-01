@@ -779,6 +779,11 @@ export default function AdminActivityEditPage() {
   const [exclusions,         setExclusions]         = useState('');
   const [notices,            setNotices]            = useState('');
   const [refundRules,        setRefundRules]        = useState('');
+  const [safetyNotice,       setSafetyNotice]       = useState('');
+  const [goodFor,            setGoodFor]            = useState('');
+  const [socialProofQuotes,  setSocialProofQuotes]  = useState('');
+  const [faq,                setFaq]                = useState<Array<{q:string;a:string}>>([]);
+  const [itinerary,          setItinerary]          = useState<Array<{step:number;title:string;description:string;duration:string;icon:string}>>([]);
   const [status,             setStatus]             = useState('draft');
   const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
 
@@ -809,6 +814,11 @@ export default function AdminActivityEditPage() {
         setExclusions((d.exclusions || []).join('\n'));
         setNotices((d.notices || []).join('\n'));
         setRefundRules((d.refundRules || []).join('\n'));
+        setSafetyNotice(d.safetyNotice || '');
+        setGoodFor((d.goodFor || []).join('\n'));
+        setSocialProofQuotes((d.socialProofQuotes || []).join('\n'));
+        setFaq(d.faq || []);
+        setItinerary(d.itinerary || []);
         setStatus(d.status || 'draft');
         // plans: use DB value if exists, otherwise default
         if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
@@ -840,6 +850,10 @@ export default function AdminActivityEditPage() {
           description, shortDescription, tagline,
           inclusions: toArray(inclusions), exclusions: toArray(exclusions),
           notices: toArray(notices), refundRules: toArray(refundRules),
+          safetyNotice: safetyNotice.trim() || undefined,
+          goodFor: toArray(goodFor),
+          socialProofQuotes: toArray(socialProofQuotes),
+          faq, itinerary,
           plans, imageUrls,
         }),
       });
@@ -1033,7 +1047,19 @@ export default function AdminActivityEditPage() {
             </label>
             <label style={labelStyle}>
               退款規則（每行一項）
-              <textarea value={refundRules} onChange={e => setRefundRules(e.target.value)} rows={4} style={fieldStyle} />
+              <textarea value={refundRules} onChange={e => setRefundRules(e.target.value)} rows={3} style={fieldStyle} placeholder={'出發72小時前免費取消\n出發24小時內不退款'} />
+            </label>
+            <label style={labelStyle}>
+              安全說明
+              <textarea value={safetyNotice} onChange={e => setSafetyNotice(e.target.value)} rows={2} style={fieldStyle} placeholder="請確保攜帶個人藥品，行程含輕度步行" />
+            </label>
+            <label style={labelStyle}>
+              適合對象（每行一項）
+              <textarea value={goodFor} onChange={e => setGoodFor(e.target.value)} rows={3} style={fieldStyle} placeholder={'喜愛歷史文化\n家庭親子旅遊\n銀髮族友善'} />
+            </label>
+            <label style={labelStyle}>
+              社群口碑語錄（每行一句）
+              <textarea value={socialProofQuotes} onChange={e => setSocialProofQuotes(e.target.value)} rows={3} style={fieldStyle} placeholder={'超值行程，CP值超高！\n導遊非常專業親切'} />
             </label>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
@@ -1056,6 +1082,78 @@ export default function AdminActivityEditPage() {
 
         {/* ── 方案管理 ── */}
         <PlansSection plans={plans} activityId={activityId} onChange={setPlans} />
+
+        {/* ── 行程時間表 Editor ── */}
+        <Card style={{ marginTop: 24 }}>
+          <h3 style={sectionTitle}>🗺 詳細行程時間表</h3>
+          {itinerary.map((step, i) => (
+            <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#f9fafb' }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                <input value={step.icon} onChange={e => { const s=[...itinerary]; s[i]={...s[i],icon:e.target.value}; setItinerary(s); }}
+                  style={{ width: 48, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20 }} placeholder="📍" />
+                <input value={step.title} onChange={e => { const s=[...itinerary]; s[i]={...s[i],title:e.target.value}; setItinerary(s); }}
+                  style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="地點名稱" />
+                <input value={step.duration} onChange={e => { const s=[...itinerary]; s[i]={...s[i],duration:e.target.value}; setItinerary(s); }}
+                  style={{ width: 90, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px' }} placeholder="60分鐘" />
+                <button type="button" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
+                  style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
+              </div>
+              <textarea value={step.description} onChange={e => { const s=[...itinerary]; s[i]={...s[i],description:e.target.value}; setItinerary(s); }}
+                rows={2} style={{ ...fieldStyle, width: '100%' }} placeholder="景點描述（選填）" />
+            </div>
+          ))}
+          <button type="button" onClick={() => setItinerary([...itinerary, { step: itinerary.length+1, title:'', description:'', duration:'', icon:'📍' }])}
+            style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%', marginBottom: 16 }}>
+            + 新增行程點
+          </button>
+          {itinerary.length > 0 && (
+            <button type="button" onClick={async () => {
+              const res = await fetch(`/api/admin/activities/${activityId}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ itinerary }),
+              });
+              const json = await res.json();
+              if (json.ok) alert('✅ 行程時間表已儲存');
+              else alert('❌ 儲存失敗');
+            }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+              💾 儲存行程時間表
+            </button>
+          )}
+        </Card>
+
+        {/* ── FAQ Editor ── */}
+        <Card style={{ marginTop: 24 }}>
+          <h3 style={sectionTitle}>❓ 常見問題</h3>
+          {faq.map((item, i) => (
+            <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#f9fafb' }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input value={item.q} onChange={e => { const f=[...faq]; f[i]={...f[i],q:e.target.value}; setFaq(f); }}
+                  style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="問題" />
+                <button type="button" onClick={() => setFaq(faq.filter((_,j)=>j!==i))}
+                  style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
+              </div>
+              <textarea value={item.a} onChange={e => { const f=[...faq]; f[i]={...f[i],a:e.target.value}; setFaq(f); }}
+                rows={2} style={{ ...fieldStyle, width: '100%' }} placeholder="回答" />
+            </div>
+          ))}
+          <button type="button" onClick={() => setFaq([...faq, { q:'', a:'' }])}
+            style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%', marginBottom: 16 }}>
+            + 新增 FAQ
+          </button>
+          {faq.length > 0 && (
+            <button type="button" onClick={async () => {
+              const res = await fetch(`/api/admin/activities/${activityId}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ faq }),
+              });
+              const json = await res.json();
+              if (json.ok) alert('✅ FAQ 已儲存');
+              else alert('❌ 儲存失敗');
+            }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+              💾 儲存 FAQ
+            </button>
+          )}
+        </Card>
 
         {/* ── 場次管理 ── */}
         <ScheduleSection activityId={activityId} availablePlans={plans} />

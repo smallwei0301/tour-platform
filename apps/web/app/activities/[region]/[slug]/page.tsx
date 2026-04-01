@@ -5,6 +5,7 @@ import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
+import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
@@ -46,19 +47,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      {/* ── Gallery (KKday 3fr:1fr layout) ── */}
+      {/* ── Gallery ── */}
       {imageUrls.length > 0 && (
         <div className="tp-container">
-          <div className="kkd-gallery">
-            <img src={imageUrls[0]} alt={activity.title} className="kkd-gallery-main" />
-            {imageUrls.length > 1 && (
-              <div className="kkd-gallery-grid">
-                {imageUrls.slice(1, 4).map((url, i) => (
-                  <img key={i} src={url} alt={`${activity.title} ${i + 2}`} className="kkd-gallery-thumb" loading="lazy" />
-                ))}
-              </div>
-            )}
-          </div>
+          <ImageCarousel images={imageUrls} alt={activity.title} />
         </div>
       )}
 
@@ -127,6 +119,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         <div className="tp-container">
           <SectionAnchorNav sections={[
             { id: 'section-plan', label: '方案' },
+            { id: 'section-itinerary', label: '行程' },
             { id: 'section-reviews', label: '評價' },
             { id: 'section-details', label: '商品說明' },
             { id: 'section-policy', label: '購買須知' },
@@ -146,6 +139,28 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <h2 className="kkd-section-title">🗓 選擇方案</h2>
               <DatePlanSection activity={activity} schedules={displayedSchedules} />
             </section>
+
+            {/* SECTION 1.5: 詳細行程時間表 */}
+            {activity.itinerary && activity.itinerary.length > 0 && (
+              <section id="section-itinerary" className="kkd-scroll-section">
+                <h2 className="kkd-section-title">🗺 詳細行程</h2>
+                <div className="kkd-itinerary">
+                  {activity.itinerary.map((step: any, i: number) => (
+                    <div key={i} className="kkd-itinerary-step">
+                      <div className="kkd-itinerary-icon">{step.icon || '📍'}</div>
+                      <div className="kkd-itinerary-content">
+                        <div className="kkd-itinerary-header">
+                          <strong className="kkd-itinerary-title">{step.title}</strong>
+                          {step.duration && <span className="kkd-itinerary-duration">{step.duration}</span>}
+                        </div>
+                        {step.description && <p className="kkd-itinerary-desc">{step.description}</p>}
+                      </div>
+                      {i < activity.itinerary.length - 1 && <div className="kkd-itinerary-connector" />}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* SECTION 2: 旅客評價 */}
             <section id="section-reviews" className="kkd-scroll-section">
