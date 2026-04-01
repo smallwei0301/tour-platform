@@ -1,6 +1,14 @@
 {
   "_instructions": {
-    "note": "此檔可直接匯入。_instructions 只做欄位說明，不會寫入資料庫。",
+    "version": "B - 說明版 JSON 樣板",
+    "note": "此檔保留 _instructions 說明欄位，適合人工閱讀與填寫。匯入時系統會忽略 _instructions，不會寫入資料庫。",
+    "how_to_use": [
+      "1. 複製這份檔案後修改內容",
+      "2. 保留欄位名稱不變，只改值",
+      "3. 圖片欄位可填真實 URL，也可留空後改用後台上傳",
+      "4. plans[] 對應後台『📋 方案管理』，其中 planItinerary[].imageUrl 可填圖片 URL",
+      "5. 匯入後請檢查 diff 預覽，再按儲存"
+    ],
     "title": "行程名稱。對應後台『行程名稱』。",
     "guideSlug": "導遊 slug。對應後台『導遊』，例如 andy-lee。",
     "region": "中文地區名稱。對應後台『地區』，例如 高雄市。",
@@ -68,21 +76,67 @@
   "tagline": "跟著 Andy Lee 探索柴山洞穴、稜線與海港視野",
   "shortDescription": "半日到全日皆可安排的柴山秘境踏查體驗，結合洞穴地形、生態與高雄港景。",
   "description": "這是一趟深入柴山秘境的導覽體驗，包含洞穴探索、稜線步道與城市邊境地形觀察。",
-  "inclusions": ["導覽服務", "保險", "頭燈", "基礎安全裝備"],
-  "exclusions": ["個人交通", "個人餐飲"],
-  "notices": ["請穿著止滑運動鞋", "請自備飲水", "有輕度攀爬路段"],
-  "refundRules": ["出發 6 天前可免費取消", "出發 4-5 天取消收 50%", "出發 0-3 天不退款"],
+  "inclusions": [
+    "導覽服務",
+    "保險",
+    "頭燈",
+    "基礎安全裝備"
+  ],
+  "exclusions": [
+    "個人交通",
+    "個人餐飲"
+  ],
+  "notices": [
+    "請穿著止滑運動鞋",
+    "請自備飲水",
+    "有輕度攀爬路段"
+  ],
+  "refundRules": [
+    "出發 6 天前可免費取消",
+    "出發 4-5 天取消收 50%",
+    "出發 0-3 天不退款"
+  ],
   "safetyNotice": "部分地形濕滑，請依導遊指示行進。",
-  "goodFor": ["7-65 歲", "喜歡戶外與地形探索者"],
-  "socialProofQuotes": ["城市旁邊居然藏著這種秘境", "洞穴段真的很震撼"],
+  "goodFor": [
+    "7-65 歲",
+    "喜歡戶外與地形探索者"
+  ],
+  "socialProofQuotes": [
+    "城市旁邊居然藏著這種秘境",
+    "洞穴段真的很震撼"
+  ],
   "faq": [
-    { "q": "新手可以參加嗎？", "a": "可以，會依體能調整路線。" },
-    { "q": "需要攜帶什麼？", "a": "建議攜帶飲水、止滑鞋、毛巾。" }
+    {
+      "q": "新手可以參加嗎？",
+      "a": "可以，會依體能調整路線。"
+    },
+    {
+      "q": "需要攜帶什麼？",
+      "a": "建議攜帶飲水、止滑鞋、毛巾。"
+    }
   ],
   "itinerary": [
-    { "step": 1, "title": "集合報到", "description": "於柴山自然公園入口集合，進行裝備確認與安全說明。", "duration": "30 分", "icon": "📍" },
-    { "step": 2, "title": "秘境洞穴探索", "description": "進入柴山特色洞穴地形，認識石灰岩與自然形成構造。", "duration": "120 分", "icon": "🪨" },
-    { "step": 3, "title": "稜線與港景步道", "description": "沿稜線前進，眺望高雄港與城市景觀。", "duration": "90 分", "icon": "🌄" }
+    {
+      "step": 1,
+      "title": "集合報到",
+      "description": "於柴山自然公園入口集合，進行裝備確認與安全說明。",
+      "duration": "30 分",
+      "icon": "📍"
+    },
+    {
+      "step": 2,
+      "title": "秘境洞穴探索",
+      "description": "進入柴山特色洞穴地形，認識石灰岩與自然形成構造。",
+      "duration": "120 分",
+      "icon": "🪨"
+    },
+    {
+      "step": 3,
+      "title": "稜線與港景步道",
+      "description": "沿稜線前進，眺望高雄港與城市景觀。",
+      "duration": "90 分",
+      "icon": "🌄"
+    }
   ],
   "plans": [
     {
@@ -91,25 +145,49 @@
       "duration": "約 4 小時",
       "priceMultiplier": 1,
       "price": 1800,
-      "highlights": ["最早出發前 1 天可預訂", "免費取消（72 小時前）", "實名認證導遊帶領"],
+      "highlights": [
+        "最早出發前 1 天可預訂",
+        "免費取消（72 小時前）",
+        "實名認證導遊帶領"
+      ],
       "detailsLinkText": "查看方案詳情 ›",
       "bookingBtnText": "立即預約",
       "language": "中文 / English 導覽",
       "earliestDeparture": "2026-04-10",
       "confirmByDays": 2,
       "freeCancelDays": 6,
-      "planInclusions": ["保險", "頭燈", "安全帽", "導覽服務"],
-      "planExclusions": ["個人交通", "餐飲"],
+      "planInclusions": [
+        "保險",
+        "頭燈",
+        "安全帽",
+        "導覽服務"
+      ],
+      "planExclusions": [
+        "個人交通",
+        "餐飲"
+      ],
       "planItinerary": [
-        { "text": "帶您進入柴山洞穴與秘境地形", "imageUrl": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80" },
-        { "text": "沿稜線步道觀看高雄海港與城市景觀" }
+        {
+          "text": "帶您進入柴山洞穴與秘境地形",
+          "imageUrl": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "沿稜線步道觀看高雄海港與城市景觀"
+        }
       ],
       "meetingPointName": "柴山自然公園入口",
       "meetingAddress": "804 高雄市鼓山區龍子路 1 號",
       "experiencePointName": "柴山地質公園",
       "experienceAddress": "高雄市鼓山區柴山",
-      "planNotices": ["請穿著止滑鞋", "活動前請先暖身"],
-      "planRefundRules": ["6天前可免費取消", "4~5天取消收 50%", "0~3天不可取消"]
+      "planNotices": [
+        "請穿著止滑鞋",
+        "活動前請先暖身"
+      ],
+      "planRefundRules": [
+        "6天前可免費取消",
+        "4~5天取消收 50%",
+        "0~3天不可取消"
+      ]
     },
     {
       "id": "full-day",
@@ -117,25 +195,49 @@
       "duration": "約 7 小時",
       "priceMultiplier": 1.5,
       "price": 2600,
-      "highlights": ["午餐含餐", "免費取消（72 小時前）", "導遊深度解說"],
+      "highlights": [
+        "午餐含餐",
+        "免費取消（72 小時前）",
+        "導遊深度解說"
+      ],
       "detailsLinkText": "查看方案詳情 ›",
       "bookingBtnText": "立即預約",
       "language": "中文 / English 導覽",
       "earliestDeparture": "2026-04-10",
       "confirmByDays": 2,
       "freeCancelDays": 6,
-      "planInclusions": ["保險", "頭燈", "安全帽", "導覽服務", "午餐"],
-      "planExclusions": ["個人交通"],
+      "planInclusions": [
+        "保險",
+        "頭燈",
+        "安全帽",
+        "導覽服務",
+        "午餐"
+      ],
+      "planExclusions": [
+        "個人交通"
+      ],
       "planItinerary": [
-        { "text": "上午進行洞穴探索", "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80" },
-        { "text": "下午沿稜線與海景步道深度踏查" }
+        {
+          "text": "上午進行洞穴探索",
+          "imageUrl": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80"
+        },
+        {
+          "text": "下午沿稜線與海景步道深度踏查"
+        }
       ],
       "meetingPointName": "柴山自然公園入口",
       "meetingAddress": "804 高雄市鼓山區龍子路 1 號",
       "experiencePointName": "柴山地質公園",
       "experienceAddress": "高雄市鼓山區柴山",
-      "planNotices": ["請穿著止滑鞋", "全程較耗體力"],
-      "planRefundRules": ["6天前可免費取消", "4~5天取消收 50%", "0~3天不可取消"]
+      "planNotices": [
+        "請穿著止滑鞋",
+        "全程較耗體力"
+      ],
+      "planRefundRules": [
+        "6天前可免費取消",
+        "4~5天取消收 50%",
+        "0~3天不可取消"
+      ]
     }
   ]
 }
