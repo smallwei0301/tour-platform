@@ -274,18 +274,23 @@ interface Schedule {
   capacity: number;
   bookedCount: number;
   status: string;
+  planId?: string | null;
+  minParticipants?: number;
+  guideNote?: string | null;
 }
 
 // ── 新增場次 Modal ──────────────────────────────────────
 function AddScheduleModal({
-  onClose, onAdded, activityId,
-}: { onClose: () => void; onAdded: () => void; activityId: string }) {
-  const [date,     setDate]     = useState('');
-  const [startHH,  setStartHH]  = useState('09:00');
-  const [endHH,    setEndHH]    = useState('13:00');
-  const [capacity, setCapacity] = useState('10');
-  const [saving,   setSaving]   = useState(false);
-  const [err,      setErr]      = useState('');
+  onClose, onAdded, activityId, availablePlans,
+}: { onClose: () => void; onAdded: () => void; activityId: string; availablePlans: PlanConfig[] }) {
+  const [date,            setDate]            = useState('');
+  const [startHH,         setStartHH]         = useState('09:00');
+  const [endHH,           setEndHH]           = useState('13:00');
+  const [capacity,        setCapacity]        = useState('10');
+  const [minParticipants, setMinParticipants] = useState('1');
+  const [planId,          setPlanId]          = useState('');  // '' = 全部方案
+  const [saving,          setSaving]          = useState(false);
+  const [err,             setErr]             = useState('');
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -297,7 +302,13 @@ function AddScheduleModal({
       const res = await fetch(`/api/admin/activities/${activityId}/schedules`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ startAt, endAt, capacity: Number(capacity), status: 'open' }),
+        body: JSON.stringify({
+          startAt, endAt,
+          capacity: Number(capacity),
+          minParticipants: Number(minParticipants) || 1,
+          planId: planId || null,
+          status: 'open',
+        }),
       });
       const json = await res.json();
       if (json.ok) { onAdded(); onClose(); }
@@ -312,7 +323,7 @@ function AddScheduleModal({
       display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
     }}>
       <div style={{
-        background: '#fff', borderRadius: 12, padding: 28, width: 440,
+        background: '#fff', borderRadius: 12, padding: 28, width: 480,
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
       }}>
         <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 20 }}>📅 新增場次</h3>
@@ -330,6 +341,17 @@ function AddScheduleModal({
               style={fieldStyle} required
             />
           </label>
+
+          <label style={labelStyle}>
+            適用方案
+            <select value={planId} onChange={e => setPlanId(e.target.value)} style={fieldStyle}>
+              <option value="">全部方案</option>
+              {availablePlans.map(p => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={labelStyle}>
               開始時間
@@ -340,13 +362,24 @@ function AddScheduleModal({
               <input type="time" value={endHH} onChange={e => setEndHH(e.target.value)} style={fieldStyle} />
             </label>
           </div>
-          <label style={labelStyle}>
-            容量（人數）
-            <input
-              type="number" value={capacity} onChange={e => setCapacity(e.target.value)}
-              min={1} max={100} style={fieldStyle}
-            />
-          </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <label style={labelStyle}>
+              最大容量（人數）
+              <input
+                type="number" value={capacity} onChange={e => setCapacity(e.target.value)}
+                min={1} max={100} style={fieldStyle}
+              />
+            </label>
+            <label style={labelStyle}>
+              最低成團人數
+              <input
+                type="number" value={minParticipants} onChange={e => setMinParticipants(e.target.value)}
+                min={1} max={50} style={fieldStyle}
+              />
+            </label>
+          </div>
+
           <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
             <button type="button" onClick={onClose}
               style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 14 }}>
@@ -369,7 +402,7 @@ function AddScheduleModal({
 }
 
 // ── 場次管理 Section ─────────────────────────────────────
-function ScheduleSection({ activityId }: { activityId: string }) {
+function ScheduleSection({ activityId, availablePlans }: { activityId: string; availablePlans: PlanConfig[] }) {
   const [schedules, setSchedules]       = useState<Schedule[]>([]);
   const [loading,   setLoading]         = useState(true);
   const [showModal, setShowModal]       = useState(false);
@@ -469,7 +502,7 @@ function ScheduleSection({ activityId }: { activityId: string }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
-                {['日期', '時段', '容量', '已訂 / 剩餘', '狀態', '操作'].map(h => (
+                {['方案', '日期', '時段', '容量', '已訂 / 剩餘', '狀態', '操作'].map(h => (
                   <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
@@ -481,6 +514,11 @@ function ScheduleSection({ activityId }: { activityId: string }) {
                 const remaining = s.capacity - s.bookedCount;
                 return (
                   <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '12px', whiteSpace: 'nowrap', fontSize: 13 }}>
+                      {s.planId
+                        ? (availablePlans.find(p => p.id === s.planId)?.label || s.planId)
+                        : <span style={{ color: '#9ca3af' }}>全部</span>}
+                    </td>
                     <td style={{ padding: '12px', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(s.startAt)}</td>
                     <td style={{ padding: '12px', whiteSpace: 'nowrap', color: '#6b7280' }}>
                       {fmtTime(s.startAt)} – {fmtTime(s.endAt)}
@@ -559,6 +597,7 @@ function ScheduleSection({ activityId }: { activityId: string }) {
       {showModal && (
         <AddScheduleModal
           activityId={activityId}
+          availablePlans={availablePlans}
           onClose={() => setShowModal(false)}
           onAdded={() => { load(); setSchedOk('✅ 場次新增成功'); }}
         />
@@ -853,7 +892,7 @@ export default function AdminActivityEditPage() {
         <PlansSection plans={plans} onChange={setPlans} />
 
         {/* ── 場次管理 ── */}
-        <ScheduleSection activityId={activityId} />
+        <ScheduleSection activityId={activityId} availablePlans={plans} />
       </div>
     </>
   );

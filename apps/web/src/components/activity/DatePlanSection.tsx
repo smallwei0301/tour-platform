@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { DatePicker } from './DatePicker';
 
@@ -12,6 +12,10 @@ interface Schedule {
   booked_count?: number;
   status?: string;
   id?: string;
+  planId?: string | null;
+  plan_id?: string | null;
+  minParticipants?: number;
+  min_participants?: number;
 }
 
 interface PlanConfig {
@@ -53,6 +57,35 @@ const DEFAULT_PLANS: PlanConfig[] = [
     bookingBtnText: '立即預約',
   },
 ];
+
+// ── 工具函數：取得某日期 + 某方案的場次資訊 ──
+function getPlanScheduleForDate(
+  schedules: Schedule[],
+  date: string | null,
+  planId: string,
+): { schedule: Schedule | null; remaining: number; isFull: boolean; isOpen: boolean } {
+  if (!date) return { schedule: null, remaining: 0, isFull: false, isOpen: false };
+  for (const s of schedules) {
+    const startAt = s.startAt || s.start_at || '';
+    const sPlanId = s.planId ?? s.plan_id ?? null;
+    const dateKey = new Date(startAt).toISOString().slice(0, 10);
+    // 匹配日期 + 方案（plan_id=null 表示適用所有方案）
+    if (dateKey === date && (sPlanId === planId || sPlanId === null)) {
+      const capacity = Number(s.capacity || 0);
+      const bookedCount = Number(s.bookedCount ?? s.booked_count ?? 0);
+      const remaining = capacity - bookedCount;
+      const status = s.status || (remaining <= 0 ? 'full' : 'open');
+      return {
+        schedule: s,
+        remaining: Math.max(0, remaining),
+        isFull: status === 'full' || remaining <= 0,
+        isOpen: status === 'open' && remaining > 0,
+      };
+    }
+  }
+  // 該日期 + 方案沒有場次 → 未開放
+  return { schedule: null, remaining: 0, isFull: false, isOpen: false };
+}
 
 // 簡單 SVG 圖示（純黑線條，無填色）
 const ICONS = {
@@ -136,11 +169,23 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
           const origPrice = Math.round(planPrice * 1.25);
           const isSelected = selectedPlan === plan.id;
 
+          // 取得該方案在選中日期的可用性
+          const planAvail = getPlanScheduleForDate(schedules, selectedDate, plan.id);
+          const showFull = selectedDate && planAvail.isFull;
+          const showNotOpen = selectedDate && !planAvail.schedule;
+          const canBook = !selectedDate || planAvail.isOpen;
+
           return (
             <div
               key={plan.id}
-              className={`kkd-plan-card${isSelected ? ' selected' : ''}`}
-              onClick={() => setSelectedPlan(plan.id)}
+              className={[
+                'kkd-plan-card',
+                isSelected ? 'selected' : '',
+                showFull ? 'full' : '',
+                showNotOpen ? 'not-open' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => canBook && setSelectedPlan(plan.id)}
+              style={(!canBook && selectedDate) ? { opacity: 0.55, pointerEvents: 'none' as const } : undefined}
             >
               <div className="kkd-plan-header">
                 <div>
@@ -150,11 +195,36 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                     {plan.duration}
                   </span>
                 </div>
-                {selectedDate && (
-                  <span className="kkd-plan-date-tag">
-                    {selectedDate.slice(5).replace('-', '/')}
-                  </span>
-                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {/* 額滿 / 未開放 badge */}
+                  {showFull && (
+                    <span style={{
+                      background: '#fee2e2', color: '#991b1b', padding: '2px 10px',
+                      borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    }}>額滿</span>
+                  )}
+                  {showNotOpen && (
+                    <span style={{
+                      background: '#f3f4f6', color: '#6b7280', padding: '2px 10px',
+                      borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    }}>未開放</span>
+                  )}
+                  {/* 剩餘名額 */}
+                  {selectedDate && planAvail.isOpen && (
+                    <span style={{
+                      background: planAvail.remaining <= 3 ? '#fef9c3' : '#dcfce7',
+                      color: planAvail.remaining <= 3 ? '#854d0e' : '#166534',
+                      padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                    }}>
+                      剩 {planAvail.remaining} 位
+                    </span>
+                  )}
+                  {selectedDate && (
+                    <span className="kkd-plan-date-tag">
+                      {selectedDate.slice(5).replace('-', '/')}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Highlights: transparent bg, black icon + text */}
@@ -182,13 +252,29 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                   <strong className="kkd-plan-price">NT${planPrice.toLocaleString()}</strong>
                   <span className="kkd-plan-per"> 起 / 人</span>
                 </div>
-                <Link
-                  href={`/booking/${activity.slug}?plan=${plan.id}${selectedDate ? `&date=${selectedDate}` : ''}`}
-                  className="tp-btn tp-btn-primary kkd-plan-select-btn"
-                  onClick={e => { setSelectedPlan(plan.id); }}
-                >
-                  {plan.bookingBtnText || '立即預約'}
-                </Link>
+                {showFull ? (
+                  <span
+                    className="tp-btn kkd-plan-select-btn"
+                    style={{ background: '#d1d5db', color: '#6b7280', cursor: 'not-allowed', pointerEvents: 'auto' }}
+                  >
+                    已額滿
+                  </span>
+                ) : showNotOpen ? (
+                  <span
+                    className="tp-btn kkd-plan-select-btn"
+                    style={{ background: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed', pointerEvents: 'auto' }}
+                  >
+                    未開放
+                  </span>
+                ) : (
+                  <Link
+                    href={`/booking/${activity.slug}?plan=${plan.id}${selectedDate ? `&date=${selectedDate}` : ''}${planAvail.schedule?.id ? `&scheduleId=${planAvail.schedule.id}` : ''}`}
+                    className="tp-btn tp-btn-primary kkd-plan-select-btn"
+                    onClick={() => { setSelectedPlan(plan.id); }}
+                  >
+                    {plan.bookingBtnText || '立即預約'}
+                  </Link>
+                )}
               </div>
             </div>
           );
