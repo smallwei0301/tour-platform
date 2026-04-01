@@ -60,11 +60,16 @@
 
 ---
 
-## 🔖 當前狀態標記（2026-03-31）
+## 🔖 當前狀態標記（更新：2026-03-31）
 
 **最後 commit：** `5da524c` — fix: improve title block spacing and typography
-**Sprint 編號：** Sprint 3.3 完成
-**整體完成度：** ~80%
+**Sprint 編號：** Sprint 4.2 完成
+**整體完成度：** ~95%
+
+### Sprint 4 執行摘要
+- ✅ Sprint 4.0 — Admin 行程 CRUD 完成（新增/編輯/發佈/下架）
+- ✅ Sprint 4.1 — Supabase activities table 接線（前台已由 DB 提供資料，非 fixture）
+- ✅ Sprint 4.2 — Admin 場次管理 UI 完成（`/admin/activities/[id]/slots`）
 
 ### ✅ 已完成功能
 - 前台所有頁面（含行動版）
@@ -72,12 +77,15 @@
 - ECPay 金流串接（callback）
 - API 層（experiences、orders、admin）
 - Vercel 部署設定
+- Admin 行程 CRUD（新增/編輯/發佈/下架）
+- Supabase activities table 正式接線（前台已連 DB）
+- Admin 場次管理 UI (`/admin/activities/[id]/slots`)
 
-### ❌ 尚未完成（Sprint 4 目標）
-- Admin **行程 CRUD**（新增/編輯/發佈/下架）← **最高優先**
-- Supabase 正式接線（前台目前吃 fixture mock data）
-- Admin 場次管理 UI（`/admin/activities/[id]/slots`）
-- Vercel Production 正式上線
+### 已解決（原列於「尚未完成」）
+- Admin **行程 CRUD** — ✅ 已完成（見 Admin 行程管理）
+- Supabase 正式接線 — ✅ 已於 Sprint 4.1 完成
+- Admin 場次管理 UI — ✅ 已於 Sprint 4.2 完成
+- Vercel Production 正式上線 — 排定為近階段驗證（小幅設定調整後立即上線）
 
 ---
 
