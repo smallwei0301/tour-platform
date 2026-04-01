@@ -1865,3 +1865,33 @@ export async function listGuideProfilesDb() {
   if (error) throw new Error(error.message);
   return (data || []).map(g => ({ id: g.id, slug: g.slug, displayName: g.display_name }));
 }
+
+export async function searchGuidesDb(query = '') {
+  if (!hasSupabaseEnv()) {
+    const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
+    const q = query.toLowerCase();
+    return (guides || [])
+      .filter(g => !q || g.displayName?.toLowerCase().includes(q) || g.slug?.includes(q))
+      .slice(0, 10)
+      .map(g => ({ id: g.slug, slug: g.slug, displayName: g.displayName, verificationStatus: 'approved' }));
+  }
+
+  const supabase = await getSupabase();
+  let qb = supabase
+    .from('guide_profiles')
+    .select('id, slug, display_name, verification_status, profile_photo_url')
+    .not('slug', 'is', null)
+    .order('display_name')
+    .limit(15);
+
+  if (query.trim()) {
+    qb = qb.or(`display_name.ilike.%${query}%,slug.ilike.%${query}%`);
+  }
+
+  const { data, error } = await qb;
+  if (error) throw new Error(error.message);
+  return (data || []).map(g => ({
+    id: g.id, slug: g.slug, displayName: g.display_name,
+    verificationStatus: g.verification_status, profilePhotoUrl: g.profile_photo_url,
+  }));
+}
