@@ -1,0 +1,270 @@
+{
+  "meta": {
+    "schema_version": "2026-03-27",
+    "entity": "guide_launch_pack",
+    "guide_slug": "andy-lee",
+    "status": "mvp-ready-with-mock-data",
+    "notes": [
+      "Fields marked with is_mock=true or text containing [MOCK] require final confirmation before public launch.",
+      "This JSON is intended for Tracy frontend seed data, CMS import, and API fixture mapping."
+    ]
+  },
+  "guide_profile": {
+    "display_name": "Andy Lee（李衍錫）",
+    "slug": "andy-lee",
+    "headline": "帶你進入高雄柴山真正的地形秘境，不是觀光打卡，是懂路的人帶路。",
+    "short_bio": "我是 Andy Lee（李衍錫），長期帶領高雄柴山探洞與戶外地形體驗。比起走觀光客會去的地方，我更在意的是帶你安全地走進真正有故事、有地形特色、也有挑戰性的在地路線。",
+    "long_bio": "我是 Andy Lee（李衍錫），主要專注在高雄柴山一帶的戶外特色導覽與探洞體驗。對我來說，好的導覽不是把人帶到一個景點拍照，而是讓參與者真正理解一個地方的地形、環境、節奏與魅力。柴山最吸引人的地方，不只是自然景觀，而是它隱藏在城市邊緣、卻又像另一個世界的地貌層次。很多人來高雄，只會想到港邊、夜市或市區景點，但其實只要有人帶路，你會看到完全不同的高雄。我希望帶給旅客的，不是制式化行程，而是一種更貼近現場、更有記憶點、也更安全可靠的探索體驗。",
+    "region": "高雄",
+    "languages": [
+      "zh-TW",
+      "de",
+      "yue",
+      "nl",
+      "ja",
+      "ko"
+    ],
+    "specialties": [
+      "柴山探洞",
+      "高雄在地",
+      "戶外特色導覽",
+      "地形探索",
+      "小團體驗"
+    ],
+    "verification": {
+      "verification_status": "approved_demo",
+      "id_verified": true,
+      "guide_license_verified": false,
+      "public_trust_signals": [
+        "壽山國家自然公園巡守員",
+        "環境教育講師",
+        "保育志工證書 21 本",
+        "颱風災後復原感謝狀 x2"
+      ]
+    },
+    "media": {
+      "avatar_url": "/images/guides/andy-lee/avatar.jpg",
+      "hero_image_url": "/images/guides/andy-lee/hero-cave.jpg",
+      "gallery_urls": [
+        "/images/guides/andy-lee/gallery-01.jpg",
+        "/images/guides/andy-lee/gallery-02.jpg",
+        "/images/guides/andy-lee/gallery-03.jpg",
+        "/images/guides/andy-lee/gallery-04.jpg",
+        "/images/guides/andy-lee/gallery-05.jpg",
+        "/images/guides/andy-lee/gallery-06.jpg"
+      ],
+      "all_media_are_placeholders": true
+    }
+  },
+  "activities": [
+    {
+      "title": "高雄柴山探洞體驗｜跟著 Andy Lee（李衍錫）走進城市邊緣的地形秘境",
+      "slug": "kaohsiung-chaishan-cave-experience",
+      "category": "outdoor",
+      "region": "高雄",
+      "tagline": "不是一般健行路線，而是由熟悉地形的人帶你走進平常不會自己到達的柴山探洞路線。",
+      "short_description": "如果你想看的不是一般觀光景點，而是高雄更有記憶點的一面，Andy Lee（李衍錫）的柴山探洞體驗，會帶你用安全、有節奏、有人帶的方式，進入城市邊緣最有特色的地形路線。",
+      "long_description": "這不是一條普通的散步行程，也不是制式化的觀光路線。Andy Lee（李衍錫）會帶你走進高雄柴山具有地形特色的探洞體驗路線，讓你從不同角度認識這座城市邊緣最有層次、也最容易被忽略的自然地貌。整個體驗重點不在趕景點，而在於讓你真正感受到路線的變化、環境的細節，以及有人帶領時才能安全進入的探索感。對第一次接觸這類型戶外體驗的人來說，這是一種既新鮮、又具有故事感的高雄打開方式；對已經玩過一般市區景點的人來說，這會是完全不同等級的記憶點。這個體驗適合想嘗試高雄更深度路線、喜歡自然與地形感、也願意跟著熟悉路線的人一起探索的人。",
+      "price": {
+        "currency": "TWD",
+        "amount": 2000,
+        "pricing_model": "per_person",
+        "is_mock": true,
+        "label": "NT$2,000 / 人 [MOCK]"
+      },
+      "duration": {
+        "minutes": 240,
+        "display": "3-4 小時 [MOCK]",
+        "is_mock": true
+      },
+      "participants": {
+        "min": 4,
+        "max": 12,
+        "display": "4-12 人 [MOCK]",
+        "is_mock": true
+      },
+      "meeting_point": {
+        "text": "壽山國家自然公園遊客中心停車場 [MOCK]",
+        "map_url": "https://maps.google.com/?q=%E5%A3%BD%E5%B1%B1%E5%9C%8B%E5%AE%B6%E8%87%AA%E7%84%B6%E5%85%AC%E5%9C%92%E9%81%8A%E5%AE%A2%E4%B8%AD%E5%BF%83",
+        "is_mock": true
+      },
+      "inclusions": [
+        "Andy Lee（李衍錫）導覽帶領 [MOCK]",
+        "路線說明與安全提醒 [MOCK]",
+        "活動過程中的在地地形介紹 [MOCK]",
+        "基本裝備 [MOCK]",
+        "活動紀錄照 [MOCK]"
+      ],
+      "exclusions": [
+        "個人保險 [MOCK]",
+        "個人交通費 [MOCK]",
+        "個人飲水與補給 [MOCK]",
+        "其他未明列私人支出 [MOCK]"
+      ],
+      "suitability": {
+        "good_for": [
+          "想體驗高雄不同面貌的旅客",
+          "喜歡戶外探索與小團活動者",
+          "不想參加制式化觀光行程的人"
+        ],
+        "not_good_for": [
+          "行動不便者",
+          "對較特殊地形環境高度不適者",
+          "無法配合現場安全指示者"
+        ]
+      },
+      "notices": [
+        "請穿著適合活動的服裝與鞋子 [MOCK]",
+        "請依現場導遊指示行動 [MOCK]",
+        "若遇天候或安全因素，活動安排可能調整 [MOCK]"
+      ],
+      "refund_policy": {
+        "policy_type": "standard_mvp",
+        "rules": [
+          "活動 7 天前取消：100% [MOCK]",
+          "活動 3–7 天前取消：70% [MOCK]",
+          "活動 24–72 小時前取消：50% [MOCK]",
+          "活動 24 小時內取消：0% [MOCK]",
+          "若因導遊因素取消：全額退款 [MOCK]"
+        ],
+        "is_mock": true
+      },
+      "safety_notice": {
+        "text": "本活動屬戶外特色體驗，參與者需配合導遊現場指示與安全安排。保險責任與活動帶領責任依導遊與平台公告內容辦理，平台不提供住宿、交通或套裝旅遊服務。 [MOCK]",
+        "is_mock": true
+      },
+      "faq": [
+        {
+          "question": "這個行程適合什麼樣的人？",
+          "answer": "本行程適合喜歡自然探索、戶外體驗、洞穴地景與在地生態導覽的旅客。親子、朋友同行、小型團體皆可參加。※ 實際適合年齡與身體條件為 [MOCK]，正式上線前會再確認。"
+        },
+        {
+          "question": "沒有探洞經驗也可以參加嗎？",
+          "answer": "可以。此活動預設為初階到中階體驗，由導遊帶領進行，會先做路線與安全說明。※ 實際難度與體能需求為 [MOCK]。"
+        },
+        {
+          "question": "活動大約多久？",
+          "answer": "目前規劃約 3-4 小時 [MOCK]，實際時間將依路線、天候與團體狀況調整。"
+        },
+        {
+          "question": "一團幾個人？",
+          "answer": "目前規劃最少 4 人、最多 12 人 [MOCK]。若為包團或教育單位，可再另行安排。"
+        },
+        {
+          "question": "費用是多少？",
+          "answer": "目前 MVP 版本暫定為 NT$2,000 / 人 [MOCK]。正式售價將依最終內容、裝備、保險與團體方案調整。"
+        },
+        {
+          "question": "費用包含什麼？",
+          "answer": "目前規劃包含：導覽服務、安全說明、基本裝備、活動紀錄照。※ 細項為 [MOCK]，正式版會再確認。"
+        },
+        {
+          "question": "費用不包含什麼？",
+          "answer": "目前規劃不包含：交通接駁、個人保險、餐食與其他個人消費。※ 細項為 [MOCK]。"
+        },
+        {
+          "question": "需要準備什麼裝備？",
+          "answer": "建議穿著方便活動的衣物、運動鞋或止滑鞋，並自備飲水、防蚊用品與個人物品。※ 正式裝備清單為 [MOCK]，後續會補齊。"
+        },
+        {
+          "question": "下雨天還會出團嗎？",
+          "answer": "若遇天候不佳、路線安全疑慮或主管機關公告限制，活動可能延期或調整。※ 實際改期與取消規則目前為 [MOCK]。"
+        },
+        {
+          "question": "有保險嗎？",
+          "answer": "目前保險安排仍在確認中，MVP 階段先以 [MOCK] 標示，正式上線前需確認是否由主辦方投保、代保或請旅客自理。"
+        },
+        {
+          "question": "安全嗎？",
+          "answer": "活動將以導遊帶隊、安全說明與現場判斷為基本原則，並依當日狀況調整路線。※ 實際安全設備、風險揭露與 SOP 目前為 [MOCK]，正式上線前必補。"
+        },
+        {
+          "question": "可以包團或客製化嗎？",
+          "answer": "可以，親子團、學校團、企業團與外國旅客團體皆可洽詢客製安排。實際價格與內容依需求另報。"
+        }
+      ],
+      "social_proof": {
+        "quotes": [
+          "大人小人都開心😍",
+          "奇幻的探洞之旅",
+          "謝謝 Andy 的導覽，會想再參加一次",
+          "很棒、下次再去"
+        ],
+        "trust_points": [
+          "多元客群：親子、教師、外國遊客、研究生",
+          "有實際帶團與環境教育背景",
+          "具壽山巡守與保育志工信任背書"
+        ]
+      },
+      "seo": {
+        "title": "高雄柴山洞穴探險｜壽山環境教育導覽｜Andy Lee [MOCK]",
+        "description": "跟著 Andy Lee 體驗高雄柴山探洞路線，探索城市邊緣最有記憶點的地形秘境。價格、時長與集合資訊目前為 [MOCK]。"
+      },
+      "status": "published_demo",
+      "is_mock_heavy": true,
+      "schedules": [
+        {
+          "start_at": "2026-04-01T09:00:00+08:00",
+          "end_at": "2026-04-01T13:00:00+08:00",
+          "capacity": 12,
+          "booked_count": 1,
+          "status": "open",
+          "is_mock": true
+        },
+        {
+          "start_at": "2026-04-03T09:00:00+08:00",
+          "end_at": "2026-04-03T13:00:00+08:00",
+          "capacity": 12,
+          "booked_count": 12,
+          "status": "full",
+          "is_mock": true
+        },
+        {
+          "start_at": "2026-04-10T09:00:00+08:00",
+          "end_at": "2026-04-10T13:00:00+08:00",
+          "capacity": 12,
+          "booked_count": 0,
+          "status": "open",
+          "is_mock": true
+        }
+      ]
+    }
+  ],
+  "cms_field_mapping": {
+    "guide_profile": [
+      "display_name",
+      "slug",
+      "headline",
+      "short_bio",
+      "long_bio",
+      "region",
+      "languages",
+      "specialties",
+      "verification",
+      "media"
+    ],
+    "activity": [
+      "title",
+      "slug",
+      "category",
+      "region",
+      "tagline",
+      "short_description",
+      "long_description",
+      "price",
+      "duration",
+      "participants",
+      "meeting_point",
+      "inclusions",
+      "exclusions",
+      "suitability",
+      "notices",
+      "refund_policy",
+      "safety_notice",
+      "faq",
+      "social_proof",
+      "seo",
+      "schedules"
+    ]
+  }
+}
