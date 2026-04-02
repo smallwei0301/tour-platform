@@ -287,76 +287,116 @@
 
 ---
 
-## 5. Guide Dashboard APIs
+## 5. Guide Auth APIs（2026-04-02 實作完成）
 
-### 5.1 Get Guide Dashboard Summary
+### 5.0 Guide Session
+`GET /api/guide/auth/session` — 確認目前 session 狀態
+`POST /api/guide/auth/session` — 登入（邀請碼首次設密碼 / 一般密碼登入）
+`DELETE /api/guide/auth/session` — 登出
+
+#### POST Request（首次設密碼）
+```json
+{ "token": "uuid-invite-token", "password": "min6chars" }
+```
+
+#### POST Request（一般登入）
+```json
+{ "guideId": "uuid", "password": "password" }
+```
+
+#### Auth Notes
+- Session cookie: `guide_token` (HttpOnly, SameSite=Lax, 7天, production 加 Secure)
+- Token 格式: `guideId:sessionVersion:hmacSig`（HMAC-SHA256）
+- 首次登入後 invite_token 立即清除，不可重複使用
+
+---
+
+## 6. Guide Dashboard APIs（2026-04-02 實作完成）
+
+> **Auth：** 所有路由需帶 `guide_token` HttpOnly cookie（middleware 保護）
+
+### 6.1 Get Dashboard Summary
 `GET /api/guide/dashboard`
 
+#### Response
+```json
+{
+  "ok": true,
+  "data": {
+    "monthlyBookings": 12,
+    "pendingBookings": [
+      { "id": "uuid", "guestName": "王小明", "partySize": 2, "status": "confirmed",
+        "createdAt": "2026-04-01T10:00:00Z", "tourTitle": "柴山探洞半日遊" }
+    ],
+    "upcomingSchedules": [
+      { "id": "uuid", "tourTitle": "...", "date": "2026-04-05T09:00:00Z",
+        "planId": "half-day", "bookedCount": 4, "maxCapacity": 8, "status": "open" }
+    ]
+  }
+}
+```
+
+### 6.2 List Guide Schedules
+`GET /api/guide/schedules`
+
+回傳導遊所有行程的場次列表（含 planName、bookedCount、capacity、status）
+
+### 6.3 Update Schedule
+`PATCH /api/guide/schedules/:scheduleId`
+
 #### Auth
-- `role=guide`
+- 必須是該場次行程的 guide_id（ownership 驗證，否則 403）
+
+#### Request（可組合使用）
+```json
+{
+  "isActive": false,          // toggle 開啟/關閉
+  "maxCapacity": 10,          // 修改容量（不得低於 bookedCount）
+  "guideNote": "當天有特別活動"  // 備註
+}
+```
+
+### 6.4 List Guide Bookings
+`GET /api/guide/bookings`
+
+回傳導遊行程的所有訂單。**Email 已 masking**（j\*\*\*@gmail.com），電話不顯示。
+
+### 6.5 Get Booking Detail
+`GET /api/guide/bookings/:bookingId`
+
+#### Auth
+- 必須是該訂單行程的 guide_id（ownership 驗證，否則 403）
 
 #### Response
-回傳：
-- 待處理訂單數
-- 即將到來場次
-- 本月訂單數
-- 累積收益摘要
+包含**完整電話號碼**（僅此 API 顯示，讓導遊可聯絡旅客）
 
-### 5.2 Create Activity
-`POST /api/guide/activities`
+---
 
-#### Auth
-- `role=guide`
+## 7. Admin Guide Invite API（2026-04-02）
 
-#### Request
-```json
-{
-  "title": "大稻埕百年老街深度漫步",
-  "description": "...",
-  "region": "taipei",
-  "category": "culture",
-  "pricePerPerson": 1500,
-  "minParticipants": 1,
-  "maxParticipants": 8,
-  "durationMinutes": 180,
-  "meetingPoint": "捷運大橋頭站 2 號出口",
-  "refundPolicyType": "standard"
-}
-```
-
-### 5.3 Update Activity
-`PATCH /api/guide/activities/:activityId`
+### 7.1 Generate Invite Token
+`POST /api/admin/guides/:guideId/invite`
 
 #### Auth
-- 活動擁有導遊
+- Admin session
 
-### 5.4 List My Activities
-`GET /api/guide/activities`
+#### Notes
+- 僅對 `verification_status = 'approved'` 的導遊有效
+- Token 有效期 24 小時
+- 每次呼叫會覆蓋舊 token
 
-### 5.5 Create Activity Schedule
-`POST /api/guide/activities/:activityId/schedules`
-
-#### Request
+#### Response
 ```json
 {
-  "startAt": "2026-04-05T09:00:00+08:00",
-  "endAt": "2026-04-05T12:00:00+08:00",
-  "capacity": 8
+  "ok": true,
+  "data": {
+    "inviteUrl": "/guide/login?token=xxxx-xxxx-xxxx",
+    "token": "uuid",
+    "expiresAt": "2026-04-03T05:00:00Z",
+    "guideName": "Andy Lee"
+  }
 }
 ```
-
-### 5.6 Update Activity Schedule
-`PATCH /api/guide/schedules/:scheduleId`
-
-### 5.7 List My Orders
-`GET /api/guide/orders`
-
-#### Query Params
-- `status`
-- `page`
-
-### 5.8 Update Schedule Capacity / Status
-`PATCH /api/guide/schedules/:scheduleId`
 
 #### Auth
 - 場次擁有導遊

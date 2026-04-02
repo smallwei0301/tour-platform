@@ -121,31 +121,46 @@
 | Activity page ISR 60s revalidate | `9761b4f` | booked_count 60 秒內反映 |
 | router.refresh() after payment | `9761b4f` | 付款後強制 revalidate |
 
+### Sprint 6 — 導遊儀表板（2026-04-02）
+
+| 功能 | commit | 說明 |
+|------|--------|------|
+| migration 007：guide auth 欄位 | `29261c0` | invite_token / guide_password_hash / guide_session_version |
+| guide-auth.ts（auth library） | `29261c0` | UUID invite token / SHA-256 password / HMAC session cookie |
+| Admin 邀請碼 API + UI | `29261c0` | POST /api/admin/guides/[id]/invite + 管理頁按鈕 |
+| Guide 登入頁 + session API | `29261c0` | 首次設密碼 / 一般密碼登入 / 登出 |
+| middleware 路由保護 | `29261c0` | /guide/* 未登入 redirect，/guide/apply 白名單 |
+| Guide Layout + Navbar | `29261c0` | 儀表板/場次/訂單 nav + 登出 |
+| Dashboard + API | `29261c0` | 本月訂單 / 近期訂單 / 本週場次 |
+| 場次管理 + API | `29261c0` | toggle 開啟/關閉 + 容量修改（含 ownership check） |
+| 訂單查看 + API | `29261c0` | 列表 + 詳情 Modal + email masking + 電話顯示 |
+| build error 修復 | `9e2ffb7` | workspace binary + TS hoist + SSR document.cookie fix |
+| Judy code review 修正 | `078fd04` | /guide/apply 白名單 + Secure cookie + signature check |
+
 ---
 
-## 🔖 當前狀態標記（更新：2026-04-01）
+## 🔖 當前狀態標記（更新：2026-04-02）
 
-**最後 commit：** `9761b4f` — feat: 付款→訂位扣量流程完整實作
-**Branch：** `feat/guide-pages-step2`
-**整體完成度：** ~90%
+**最後 commit：** `078fd04` — fix(guide-auth): address Judy code review suggestions
+**Branch：** `feat/guide-dashboard`
+**整體完成度：** ~95%
 
-### ✅ 已完成功能（截至 2026-04-01）
+### ✅ 已完成功能（截至 2026-04-02）
 - 前台所有頁面（含行動版）
-- Admin 後台：登入/登出/安全、訂單管理、退款管理、導遊審核、營運追蹤、KPI 設定
+- Admin 後台：登入/登出/安全、訂單管理、退款管理、導遊審核（含邀請碼）、營運追蹤、KPI 設定
 - Admin 行程 CRUD（含圖片上傳、方案管理、JSON 匯入匯出）
 - ECPay 付款閉環（原子扣位 + 冪等 + trigger 額滿）
+- **導遊後台完整：** 登入/登出、儀表板、場次管理、訂單查看、資料隔離
 - Booking page 讀 DB（非 fixtures）
-- DatePlanSection × 方案 × 剩餘名額即時顯示
 - ISR 60 秒快取（行程頁）
 - Supabase Storage（activity-images bucket）
-- 6 次 DB migration（001–006）
+- 7 次 DB migration（001–007）
 
 ### 🔜 下一步
-1. **導遊儀表板** — 導遊可登入並自主管理場次開關
-2. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽
-3. **旅客 Auth** — Google / LINE 登入
-4. **Storage RLS** — 補 public SELECT policy
-5. **E2E 測試更新** — 覆蓋付款閉環新流程
+1. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽
+2. **旅客 Auth** — Google / LINE 登入
+3. **Storage RLS** — 補 public SELECT policy
+4. **Supabase Auth 整合（Phase 8）** — Guide 改用 Supabase Auth，廢除自製 session
 
 ---
 
