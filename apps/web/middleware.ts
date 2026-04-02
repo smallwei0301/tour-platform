@@ -21,14 +21,23 @@ function pickEmail(req: NextRequest): string {
   );
 }
 
+/**
+ * Lightweight guide session check for edge middleware.
+ * Verifies format + guideId match. Full HMAC verification happens in API
+ * routes via verifyGuideSession() (Node.js crypto, not available in edge).
+ * Worst-case attack: forged cookie gets page shell HTML — all API calls
+ * will still fail 401 because API routes do HMAC verification.
+ */
 function verifyGuideSessionMiddleware(req: NextRequest): boolean {
   const rawToken = req.cookies.get('guide_token')?.value || '';
   const guideId = req.cookies.get('guide_id')?.value || '';
   if (!rawToken || !guideId) return false;
+  // Expected format: guideId:sessionVersion:hmacSignature
   const parts = rawToken.split(':');
   if (parts.length !== 3) return false;
-  const [tokenGuideId] = parts;
-  return tokenGuideId === guideId;
+  const [tokenGuideId, sessionVersion, signature] = parts;
+  // Verify guideId matches AND signature is non-empty (basic sanity)
+  return tokenGuideId === guideId && !!sessionVersion && signature.length === 64;
 }
 
 export function middleware(req: NextRequest) {
@@ -39,7 +48,12 @@ export function middleware(req: NextRequest) {
   const isGuideApi = pathname.startsWith('/api/guide');
 
   if (isGuidePage || isGuideApi) {
-    const isPublic = pathname === '/guide/login' || pathname === '/api/guide/auth/session';
+    // Public guide routes (no auth required)
+    const isPublic =
+      pathname === '/guide/login' ||
+      pathname === '/guide/apply' ||        // public guide application form
+      pathname.startsWith('/guide/apply/') ||
+      pathname === '/api/guide/auth/session';
     if (isPublic) return NextResponse.next();
 
     if (!verifyGuideSessionMiddleware(req)) {

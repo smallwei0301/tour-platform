@@ -81,27 +81,33 @@ export function createGuideSessionCookies(
   const sig = signToken(guideId, sessionVersion);
   const token = `${guideId}:${sessionVersion}:${sig}`;
   const maxAge = SESSION_MAX_AGE_SECONDS;
-  const cookieBase = `; Path=/guide; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
+  // Add Secure flag in production (HTTPS only)
+  const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const cookieBase = `; Path=/guide; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
+  // guide_id/guide_name are read by client JS for UI display only (not security-sensitive)
+  const publicBase = `; Path=/guide; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
 
   const cookies = [
     `guide_token=${encodeURIComponent(token)}${cookieBase}`,
-    `guide_id=${encodeURIComponent(guideId)}; Path=/guide; SameSite=Lax; Max-Age=${maxAge}`,
-    `guide_name=${encodeURIComponent(guideName)}; Path=/guide; SameSite=Lax; Max-Age=${maxAge}`,
+    `guide_id=${encodeURIComponent(guideId)}${publicBase}`,
+    `guide_name=${encodeURIComponent(guideName)}${publicBase}`,
   ];
   if (isNew) {
-    cookies.push(`guide_is_new=1; Path=/guide; SameSite=Lax; Max-Age=${maxAge}`);
+    cookies.push(`guide_is_new=1${publicBase}`);
   }
   return cookies;
 }
 
 /** Clear all guide session cookies */
 export function clearGuideSessionCookies(): string[] {
-  const expire = `; Path=/guide; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const expire = `; Path=/guide; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${securePart}`;
+  const pubExpire = `; Path=/guide; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${securePart}`;
   return [
     `guide_token=''${expire}`,
-    `guide_id=''${expire}`,
-    `guide_name=''${expire}`,
-    `guide_is_new=''${expire}`,
+    `guide_id=''${pubExpire}`,
+    `guide_name=''${pubExpire}`,
+    `guide_is_new=''${pubExpire}`,
   ];
 }
 
