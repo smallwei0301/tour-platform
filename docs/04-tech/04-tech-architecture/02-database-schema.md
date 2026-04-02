@@ -39,7 +39,7 @@
 ---
 
 ### 2.2 guide_profiles
-導遊公開資料。
+導遊公開資料。（含 migration 007 新增的 self-service auth 欄位）
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
@@ -58,11 +58,16 @@
 | review_count | integer | Y | 評價數 |
 | created_at | timestamptz | Y | 建立時間 |
 | updated_at | timestamptz | Y | 更新時間 |
+| **invite_token** | text | N | UUID 邀請碼（一次性，24 小時有效）migration 007 |
+| **invite_token_expires_at** | timestamptz | N | 邀請碼到期時間 migration 007 |
+| **guide_password_hash** | text | N | SHA-256 + salt 密碼雜湊 migration 007 |
+| **guide_session_version** | integer | Y | Session 版本號（預設 1，登出全部裝置時 +1）migration 007 |
 
 **索引**
 - unique(user_id)
 - index(region)
 - index(verification_status)
+- index(invite_token) WHERE invite_token IS NOT NULL（migration 007）
 
 ---
 

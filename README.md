@@ -197,6 +197,10 @@ tour-platform/
 ├── supabase/
 │   └── migrations/              004/005/006 新欄位 + RPC + trigger
 ├── docs/                        策略、產品、技術、商業文件
+│   ├── 02-product/09-product-spec/
+│   │   └── 10-guide-dashboard-manual.md  導遊後台操作手冊（v1.0.0）
+│   └── 04-tech/03-dev-timeline/
+│       └── e2e-test-report-2026-04-02.md Phase 6 E2E 測試報告
 └── README.md                    本文件
 ```
 
@@ -208,15 +212,21 @@ tour-platform/
 | 文件 | 用途 |
 |------|------|
 | [`docs/04-tech/03-dev-timeline/01-sprint-log.md`](./docs/04-tech/03-dev-timeline/01-sprint-log.md) | Sprint 歷史 + 當前狀態 |
-| [`docs/04-tech/04-tech-architecture/02-database-schema.md`](./docs/04-tech/04-tech-architecture/02-database-schema.md) | DB schema |
-| [`docs/04-tech/04-tech-architecture/03-api-spec.md`](./docs/04-tech/04-tech-architecture/03-api-spec.md) | API 規格 |
+| [`docs/04-tech/04-tech-architecture/02-database-schema.md`](./docs/04-tech/04-tech-architecture/02-database-schema.md) | DB schema（含 migration 007） |
+| [`docs/04-tech/04-tech-architecture/03-api-spec.md`](./docs/04-tech/04-tech-architecture/03-api-spec.md) | API 規格（含 Guide Auth / Dashboard） |
+| [`docs/04-tech/03-dev-timeline/e2e-test-report-2026-04-02.md`](./docs/04-tech/03-dev-timeline/e2e-test-report-2026-04-02.md) | **Phase 6 E2E 測試報告（10/10 PASS）** |
+
+### 導遊操作
+| 文件 | 用途 |
+|------|------|
+| **[`docs/02-product/09-product-spec/10-guide-dashboard-manual.md`](./docs/02-product/09-product-spec/10-guide-dashboard-manual.md)** | **📖 導遊後台操作手冊（v1.0.0）** |
 
 ### CEO / 方向判斷
 | 文件 | 用途 |
 |------|------|
 | [`docs/01-strategy/01-project-plan/02-milestone-tracker.md`](./docs/01-strategy/01-project-plan/02-milestone-tracker.md) | 里程碑追蹤 |
 | [`docs/05-business/02-investor-deck/01-executive-summary.md`](./docs/05-business/02-investor-deck/01-executive-summary.md) | 投資人摘要 |
-| **`docs/05-business/02-investor-deck/05-progress-report-2026-04.md`** | **📊 最新進度報告（2026-04-01）** |
+| **`docs/05-business/02-investor-deck/05-progress-report-2026-04.md`** | **📊 最新進度報告（2026-04-02）** |
 
 ---
 
