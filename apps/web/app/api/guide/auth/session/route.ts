@@ -73,7 +73,36 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
   }
 
-  // ── Regular password login ─────────────────────────────────────────────────
+  // ── Regular password login (email + password) ─────────────────────────────
+  const loginEmail = (body.email as string | undefined)?.toLowerCase().trim();
+  if (loginEmail && password) {
+    const { data: guide, error } = await supabase
+      .from('guide_profiles')
+      .select('id, display_name, guide_password_hash, guide_session_version, verification_status')
+      .eq('guide_email', loginEmail)
+      .single();
+
+    if (error || !guide) {
+      return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
+    }
+
+    if (guide.verification_status !== 'approved') {
+      return Response.json(fail('ACCOUNT_SUSPENDED', '帳號已停用'), { status: 403 });
+    }
+
+    if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+      return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
+    }
+
+    const sessionVersion = guide.guide_session_version ?? 1;
+    const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
+    const headers = new Headers({ 'content-type': 'application/json' });
+    cookies.forEach((c) => headers.append('set-cookie', c));
+
+    return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+  }
+
+  // ── Legacy: guideId + password (backward compat) ───────────────────────────
   if (loginGuideId && password) {
     const { data: guide, error } = await supabase
       .from('guide_profiles')
@@ -101,7 +130,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
   }
 
-  return Response.json(fail('BAD_REQUEST', '請提供 token 或 guideId + password'), { status: 400 });
+  return Response.json(fail('BAD_REQUEST', '請提供登入憑證'), { status: 400 });
 }
 
 /** DELETE — logout */

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 type Schedule = {
-  id: string; tourTitle: string; planName: string; date: string;
+  id: string; activityId: string; tourTitle: string; planName: string; date: string;
   capacity: number; bookedCount: number; status: string; guideNote: string | null;
 };
 
@@ -110,7 +110,17 @@ export default function GuideSchedulesPage() {
             <tbody>
               {filtered.map((s) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>{s.tourTitle}</td>
+                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>
+                    <div>{s.tourTitle}</div>
+                    <a
+                      href={`/admin/activities/${s.activityId}/edit`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: 11, color: '#7c3aed', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 3, marginTop: 3 }}
+                    >
+                      🔗 Admin 編輯
+                    </a>
+                  </td>
                   <td style={{ color: '#6b7280' }}>{s.planName}</td>
                   <td style={{ fontSize: 13 }}>
                     {new Date(s.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}

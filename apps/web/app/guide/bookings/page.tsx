@@ -168,6 +168,17 @@ export default function GuideBookingsPage() {
                   <InfoRow label="訂單狀態" value={STATUS_LABELS[selected.status] || selected.status} />
                   <InfoRow label="付款狀態" value={selected.paymentStatus === 'paid' ? `✅ 已付款（${new Date(selected.paidAt!).toLocaleString('zh-TW')}）` : '⏳ 未付款'} />
                   {selected.adminNote && <InfoRow label="管理員備註" value={selected.adminNote} />}
+                  {/* Admin link */}
+                  <div style={{ marginTop: 8, paddingTop: 12, borderTop: '1px solid #f3f4f6' }}>
+                    <a
+                      href={`/admin/orders?orderId=${selected.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 8, background: '#f5f3ff', color: '#7c3aed', fontSize: 13, fontWeight: 600, textDecoration: 'none', border: '1px solid #ddd6fe' }}
+                    >
+                      🔗 在 Admin 後台查看此訂單
+                    </a>
+                  </div>
                 </div>
               </>
             )}
