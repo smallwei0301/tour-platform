@@ -25,8 +25,12 @@ export async function GET(req: Request) {
 
   if (activityIds.length === 0) return Response.json(ok([]));
 
+  // Optional: filter by scheduleId
+  const url = new URL(req.url);
+  const filterScheduleId = url.searchParams.get('scheduleId');
+
   // Get orders with schedule info
-  const { data: orders, error } = await supabase
+  let query = supabase
     .from('orders')
     .select(`
       id, contact_name, contact_email, contact_phone,
@@ -38,13 +42,21 @@ export async function GET(req: Request) {
     .order('created_at', { ascending: false })
     .limit(100);
 
+  if (filterScheduleId) {
+    query = query.eq('schedule_id', filterScheduleId);
+  }
+
+  const { data: orders, error } = await query;
+
   if (error) return Response.json(fail('SERVER_ERROR', error.message), { status: 500 });
 
   const result = (orders || []).map((o: any) => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
     return {
       id: o.id,
+      scheduleId: o.schedule_id,
       guestName: o.contact_name || '未知',
+      guestPhone: filterScheduleId ? (o.contact_phone || '') : '',  // show phone only when filtering by schedule
       maskedEmail: o.contact_email ? maskEmail(o.contact_email) : '',
       scheduleDate: schedule?.start_at || null,
       planId: schedule?.plan_id || null,
