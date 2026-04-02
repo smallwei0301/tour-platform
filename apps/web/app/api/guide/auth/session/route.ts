@@ -1,0 +1,112 @@
+import { ok, fail } from '../../../../../src/lib/api';
+import {
+  verifyGuideSession,
+  hashPassword,
+  verifyPassword,
+  isInviteTokenExpired,
+  createGuideSessionCookies,
+  clearGuideSessionCookies,
+} from '../../../../../src/lib/guide-auth';
+
+async function getSupabase() {
+  const { createClient } = await import('@supabase/supabase-js');
+  return createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+}
+
+/** GET — check current guide session */
+export async function GET(req: Request) {
+  const session = verifyGuideSession(req);
+  if (!session) return Response.json(ok({ authorized: false }));
+  return Response.json(ok({ authorized: true, guideId: session.guideId, guideName: session.guideName }));
+}
+
+/** POST — login (first-time via invite token, or password login) */
+export async function POST(req: Request) {
+  const body = await req.json().catch(() => ({}));
+  const { token, password, guideId: loginGuideId } = body as Record<string, string>;
+
+  if (!process.env.SUPABASE_URL) {
+    return Response.json(fail('NOT_AVAILABLE', 'Auth not configured'), { status: 503 });
+  }
+
+  const supabase = await getSupabase();
+
+  // ── First-time login via invite token ──────────────────────────────────────
+  if (token) {
+    if (!password || password.length < 6) {
+      return Response.json(fail('INVALID_PASSWORD', '密碼至少 6 個字元'), { status: 400 });
+    }
+
+    const { data: guide, error } = await supabase
+      .from('guide_profiles')
+      .select('id, display_name, invite_token, invite_token_expires_at, guide_session_version')
+      .eq('invite_token', token)
+      .single();
+
+    if (error || !guide) {
+      return Response.json(fail('INVALID_TOKEN', '邀請碼無效或已使用'), { status: 401 });
+    }
+
+    if (!guide.invite_token_expires_at || isInviteTokenExpired(guide.invite_token_expires_at)) {
+      return Response.json(fail('TOKEN_EXPIRED', '邀請碼已過期，請聯絡管理員重新產生'), { status: 401 });
+    }
+
+    const passwordHash = hashPassword(password);
+
+    await supabase
+      .from('guide_profiles')
+      .update({
+        guide_password_hash: passwordHash,
+        invite_token: null,
+        invite_token_expires_at: null,
+      })
+      .eq('id', guide.id);
+
+    const sessionVersion = guide.guide_session_version ?? 1;
+    const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, true);
+    const headers = new Headers({ 'content-type': 'application/json' });
+    cookies.forEach((c) => headers.append('set-cookie', c));
+
+    return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+  }
+
+  // ── Regular password login ─────────────────────────────────────────────────
+  if (loginGuideId && password) {
+    const { data: guide, error } = await supabase
+      .from('guide_profiles')
+      .select('id, display_name, guide_password_hash, guide_session_version, verification_status')
+      .eq('id', loginGuideId)
+      .single();
+
+    if (error || !guide) {
+      return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
+    }
+
+    if (guide.verification_status !== 'approved') {
+      return Response.json(fail('ACCOUNT_SUSPENDED', '帳號已停用'), { status: 403 });
+    }
+
+    if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+      return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
+    }
+
+    const sessionVersion = guide.guide_session_version ?? 1;
+    const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
+    const headers = new Headers({ 'content-type': 'application/json' });
+    cookies.forEach((c) => headers.append('set-cookie', c));
+
+    return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+  }
+
+  return Response.json(fail('BAD_REQUEST', '請提供 token 或 guideId + password'), { status: 400 });
+}
+
+/** DELETE — logout */
+export async function DELETE() {
+  const headers = new Headers({ 'content-type': 'application/json' });
+  clearGuideSessionCookies().forEach((c) => headers.append('set-cookie', c));
+  return new Response(JSON.stringify(ok({ deleted: true })), { status: 200, headers });
+}
