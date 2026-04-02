@@ -119,28 +119,48 @@ export default function GuideSchedulesPage() {
                       {new Date(s.date).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </td>
-                  <td>
-                    <span style={{ fontWeight: 600 }}>{s.bookedCount}</span>
-                    <span style={{ color: '#9ca3af' }}>/</span>
+                  <td style={{ minWidth: 120 }}>
                     {editingCap === s.id ? (
-                      <span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ fontWeight: 600, color: '#374151' }}>{s.bookedCount}/</span>
                         <input
                           value={capValue}
                           onChange={(e) => setCapValue(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && updateCapacity(s.id)}
-                          onBlur={() => setEditingCap(null)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') updateCapacity(s.id); if (e.key === 'Escape') setEditingCap(null); }}
                           autoFocus
-                          style={{ width: 50, padding: '2px 6px', borderRadius: 4, border: '1px solid #7c3aed', fontSize: 14, textAlign: 'center' }}
+                          type="number"
+                          min={s.bookedCount}
+                          style={{ width: 56, padding: '4px 6px', borderRadius: 6, border: '1.5px solid #7c3aed', fontSize: 14, textAlign: 'center' }}
                         />
-                      </span>
+                        <button
+                          onClick={() => updateCapacity(s.id)}
+                          title="儲存"
+                          style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingCap(null)}
+                          title="取消"
+                          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
                     ) : (
-                      <span
-                        onClick={() => { setEditingCap(s.id); setCapValue(String(s.capacity)); }}
-                        style={{ cursor: 'pointer', borderBottom: '1px dashed #9ca3af' }}
-                        title="點擊修改容量"
-                      >
-                        {s.capacity}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span>
+                          <span style={{ fontWeight: 600 }}>{s.bookedCount}</span>
+                          <span style={{ color: '#9ca3af' }}>/{s.capacity}</span>
+                        </span>
+                        <button
+                          onClick={() => { setEditingCap(s.id); setCapValue(String(s.capacity)); }}
+                          title="修改上限人數"
+                          style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          ✏️ 改
+                        </button>
+                      </div>
                     )}
                   </td>
                   <td>
