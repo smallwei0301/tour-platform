@@ -39,13 +39,17 @@ export default function GuideDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const [guideName, setGuideName] = useState('導遊');
+
+  useEffect(() => {
+    const raw = document.cookie.split(';').map(c => c.trim())
+      .find(c => c.startsWith('guide_name='))?.split('=')[1] || '導遊';
+    setGuideName(decodeURIComponent(raw));
+  }, []);
+
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>;
   }
-
-  const guideName = decodeURIComponent(
-    document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('guide_name='))?.split('=')[1] || '導遊'
-  );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
