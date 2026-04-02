@@ -1,0 +1,42 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { createOrderDb, createRefundRequestDb, listAdminRefundRequestsDb, updateAdminRefundStatusDb, getMyOrderDetailDb } from '../../src/lib/db.mjs';
+
+test('admin refund list returns rows', async () => {
+  const order = await createOrderDb({
+    experienceSlug: 'kaohsiung-chaishan-cave-experience',
+    scheduleId: 'sch_chaishan_0410',
+    peopleCount: 1,
+    contactName: 'Admin Demo',
+    contactPhone: '0900000000',
+    contactEmail: 'admin-demo@example.com'
+  });
+  const ref = await createRefundRequestDb({ orderId: order.id, reason: 'user_request' });
+
+  const rows = await listAdminRefundRequestsDb();
+  assert.ok(rows.some((r) => r.id === ref.id));
+});
+
+test('admin refund actions update refund and order status', async () => {
+  const order = await createOrderDb({
+    experienceSlug: 'dadadaocheng-walk',
+    scheduleId: 'sch_dadaocheng_0402',
+    peopleCount: 1,
+    contactName: 'Refund Flow',
+    contactPhone: '0900000001',
+    contactEmail: 'refund-flow@example.com'
+  });
+  const ref = await createRefundRequestDb({ orderId: order.id, reason: 'user_request' });
+
+  const approved = await updateAdminRefundStatusDb({ refundRequestId: ref.id, action: 'approve' });
+  assert.equal(approved.status, 'approved');
+
+  const processing = await updateAdminRefundStatusDb({ refundRequestId: ref.id, action: 'process' });
+  assert.equal(processing.status, 'processing');
+
+  const completed = await updateAdminRefundStatusDb({ refundRequestId: ref.id, action: 'complete' });
+  assert.equal(completed.status, 'refunded');
+
+  const detail = await getMyOrderDetailDb({ orderId: order.id });
+  assert.equal(detail.status, 'refunded');
+});
