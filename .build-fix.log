@@ -1,0 +1,119 @@
+   ▲ Next.js 15.5.14
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 18.9s
+   Skipping validation of types
+   Skipping linting
+   Collecting page data ...
+   Generating static pages (0/63) ...
+   Generating static pages (15/63) 
+   Generating static pages (31/63) 
+   Generating static pages (47/63) 
+ ✓ Generating static pages (63/63)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                   Size  First Load JS
+┌ ○ /                                                      1.84 kB         107 kB
+├ ○ /_not-found                                              990 B         103 kB
+├ ○ /about                                                   195 B         106 kB
+├ ○ /activities                                            2.84 kB         108 kB
+├ ƒ /activities/[region]/[slug]                            6.92 kB         112 kB
+├ ○ /admin                                                 4.17 kB         110 kB
+├ ○ /admin/activities                                      3.78 kB         109 kB
+├ ƒ /admin/activities/[id]/edit                            22.8 kB         125 kB
+├ ○ /admin/activities/new                                    265 B         102 kB
+├ ○ /admin/guides                                          4.75 kB         107 kB
+├ ○ /admin/login                                           1.53 kB         104 kB
+├ ○ /admin/operations-tracking                             4.17 kB         106 kB
+├ ○ /admin/ops/orders                                        488 B         103 kB
+├ ○ /admin/orders                                          4.21 kB         106 kB
+├ ○ /admin/refunds                                         2.72 kB         105 kB
+├ ○ /admin/settings/kpi                                    3.37 kB         106 kB
+├ ○ /admin/settings/security                               3.11 kB         105 kB
+├ ○ /admin/unauthorized                                      265 B         102 kB
+├ ƒ /api/activities                                          265 B         102 kB
+├ ƒ /api/activities/[slug]                                   265 B         102 kB
+├ ƒ /api/admin/activities                                    265 B         102 kB
+├ ƒ /api/admin/activities/[id]                               265 B         102 kB
+├ ƒ /api/admin/activities/[id]/schedules                     265 B         102 kB
+├ ƒ /api/admin/activities/[id]/status                        265 B         102 kB
+├ ƒ /api/admin/activities/[id]/upload-image                  265 B         102 kB
+├ ƒ /api/admin/auth/force-logout-all                         265 B         102 kB
+├ ƒ /api/admin/auth/security                                 265 B         102 kB
+├ ƒ /api/admin/auth/session                                  265 B         102 kB
+├ ƒ /api/admin/dashboard/summary                             265 B         102 kB
+├ ƒ /api/admin/guide-applications                            265 B         102 kB
+├ ƒ /api/admin/guide-applications/[applicationId]/approve    265 B         102 kB
+├ ƒ /api/admin/guide-applications/[applicationId]/reject     265 B         102 kB
+├ ƒ /api/admin/guides/[guideId]                              265 B         102 kB
+├ ƒ /api/admin/guides/[guideId]/invite                       265 B         102 kB
+├ ƒ /api/admin/guides/[guideId]/suspend                      265 B         102 kB
+├ ƒ /api/admin/guides/approved                               265 B         102 kB
+├ ƒ /api/admin/guides/search                                 265 B         102 kB
+├ ƒ /api/admin/operations-tracking                           265 B         102 kB
+├ ƒ /api/admin/operations-tracking/csv                       265 B         102 kB
+├ ƒ /api/admin/operations-tracking/summary                   265 B         102 kB
+├ ƒ /api/admin/orders                                        265 B         102 kB
+├ ƒ /api/admin/orders/[orderId]                              265 B         102 kB
+├ ƒ /api/admin/orders/[orderId]/audit-logs                   265 B         102 kB
+├ ƒ /api/admin/orders/[orderId]/exceptions                   265 B         102 kB
+├ ƒ /api/admin/refund-requests                               265 B         102 kB
+├ ƒ /api/admin/refund-requests/[refundRequestId]/approve     265 B         102 kB
+├ ƒ /api/admin/refund-requests/[refundRequestId]/complete    265 B         102 kB
+├ ƒ /api/admin/refund-requests/[refundRequestId]/process     265 B         102 kB
+├ ƒ /api/admin/refund-requests/[refundRequestId]/reject      265 B         102 kB
+├ ƒ /api/admin/schedules/[scheduleId]                        265 B         102 kB
+├ ƒ /api/admin/settings/kpi                                  265 B         102 kB
+├ ƒ /api/admin/settings/kpi/history                          265 B         102 kB
+├ ƒ /api/admin/settings/kpi/revert                           265 B         102 kB
+├ ƒ /api/experiences                                         265 B         102 kB
+├ ƒ /api/guide-applications                                  265 B         102 kB
+├ ƒ /api/guide/auth/session                                  265 B         102 kB
+├ ƒ /api/guide/bookings                                      265 B         102 kB
+├ ƒ /api/guide/bookings/[bookingId]                          265 B         102 kB
+├ ƒ /api/guide/dashboard                                     265 B         102 kB
+├ ƒ /api/guide/schedules                                     265 B         102 kB
+├ ƒ /api/guide/schedules/[scheduleId]                        265 B         102 kB
+├ ƒ /api/guides                                              265 B         102 kB
+├ ƒ /api/guides/[slug]                                       265 B         102 kB
+├ ƒ /api/me/orders                                           265 B         102 kB
+├ ƒ /api/me/orders/[orderId]                                 265 B         102 kB
+├ ƒ /api/me/orders/[orderId]/refund-requests                 265 B         102 kB
+├ ƒ /api/orders                                              265 B         102 kB
+├ ƒ /api/payments/ecpay/callback                             265 B         102 kB
+├ ○ /blog                                                    195 B         106 kB
+├ ƒ /blog/[slug]                                             195 B         106 kB
+├ ƒ /booking/[activityId]                                  4.42 kB         110 kB
+├ ○ /checkout                                              1.43 kB         104 kB
+├ ○ /contact                                                 265 B         102 kB
+├ ƒ /experiences/[slug]                                      195 B         106 kB
+├ ○ /faq                                                     195 B         106 kB
+├ ○ /guide/apply                                           2.24 kB         104 kB
+├ ○ /guide/bookings                                        2.31 kB         105 kB
+├ ○ /guide/dashboard                                       2.21 kB         104 kB
+├ ○ /guide/login                                           2.09 kB         104 kB
+├ ○ /guide/schedules                                       2.16 kB         104 kB
+├ ○ /guides                                                  195 B         106 kB
+├ ƒ /guides/[slug]                                           195 B         106 kB
+├ ○ /legal/privacy                                           265 B         102 kB
+├ ○ /legal/refund                                            265 B         102 kB
+├ ○ /legal/terms                                             265 B         102 kB
+├ ○ /order/success                                           591 B         106 kB
+├ ○ /orders                                                 1.8 kB         107 kB
+├ ƒ /orders/[orderId]                                      2.19 kB         108 kB
+├ ○ /theme/cave-exploration                                  195 B         106 kB
+├ ○ /theme/river-trekking                                    195 B         106 kB
+└ ○ /why-choose-us                                           195 B         106 kB
++ First Load JS shared by all                               102 kB
+  ├ chunks/18-90b700ea37b686a2.js                            46 kB
+  ├ chunks/87c73c54-24122e7b92478d00.js                    54.2 kB
+  └ other shared chunks (total)                            1.93 kB
+
+
+ƒ Middleware                                               34.8 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
