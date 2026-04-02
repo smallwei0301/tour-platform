@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createHash } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 
 function hashPassword(password: string): string {
-  const salt = process.env.GUIDE_SESSION_SECRET || 'guide-dev-secret-change-in-prod';
-  return createHash('sha256').update(password + salt).digest('hex');
+  const salt = randomBytes(16).toString('hex');
+  const hash = createHash('sha256').update(salt + password).digest('hex');
+  return `${salt}:${hash}`;
 }
 
 /**
