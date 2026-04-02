@@ -1,44 +1,11 @@
 import { NextResponse } from 'next/server';
-import { isAdminAuthorized } from '../../../../../src/lib/admin-auth.mjs';
-import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../src/lib/admin-session.mjs';
 
-function pickCookieVal(cookieHeader: string, key: string): string {
-  return cookieHeader.match(new RegExp(`(?:^|;\\s*)${key}=([^;]+)`))?.[1]?.trim() || '';
-}
-
-function pickToken(req: Request): string {
-  const cookie = req.headers.get('cookie') || '';
-  return req.headers.get('x-admin-token') || pickCookieVal(cookie, 'admin_token');
-}
-
-function pickEmail(req: Request): string {
-  const cookie = req.headers.get('cookie') || '';
-  return req.headers.get('x-admin-email') || decodeURIComponent(pickCookieVal(cookie, 'admin_email'));
-}
-
-function pickSessionVersion(req: Request): string {
-  const cookie = req.headers.get('cookie') || '';
-  return pickCookieVal(cookie, 'admin_session_version') || '0';
-}
-
-export async function GET(req: Request) {
-  const security = await getAdminSecurityState();
-  const result = isAdminAuthorized({
-    token: pickToken(req),
-    email: pickEmail(req),
-    requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
-    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
-    expectedSessionVersion: security.sessionVersion,
-    sessionVersion: pickSessionVersion(req),
-  });
-
-  if (!result.ok) {
-    return NextResponse.json(
-      { ok: false, error: { code: 'UNAUTHORIZED', message: result.reason } },
-      { status: 401 }
-    );
-  }
-
+/**
+ * GET /api/admin/guides/approved
+ * Returns all approved guide_profiles. Auth is handled by middleware
+ * (same pattern as all other /api/admin/* routes).
+ */
+export async function GET() {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
