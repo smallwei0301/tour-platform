@@ -83,9 +83,9 @@ export function createGuideSessionCookies(
   const maxAge = SESSION_MAX_AGE_SECONDS;
   // Add Secure flag in production (HTTPS only)
   const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  const cookieBase = `; Path=/guide; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
+  const cookieBase = `; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
   // guide_id/guide_name are read by client JS for UI display only (not security-sensitive)
-  const publicBase = `; Path=/guide; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
+  const publicBase = `; Path=/; SameSite=Lax; Max-Age=${maxAge}${securePart}`;
 
   const cookies = [
     `guide_token=${encodeURIComponent(token)}${cookieBase}`,
@@ -101,8 +101,8 @@ export function createGuideSessionCookies(
 /** Clear all guide session cookies */
 export function clearGuideSessionCookies(): string[] {
   const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  const expire = `; Path=/guide; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${securePart}`;
-  const pubExpire = `; Path=/guide; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${securePart}`;
+  const expire = `; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${securePart}`;
+  const pubExpire = `; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${securePart}`;
   return [
     `guide_token=''${expire}`,
     `guide_id=''${pubExpire}`,
