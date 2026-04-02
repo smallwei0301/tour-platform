@@ -8,10 +8,26 @@ type GuideApp = {
   city: string; status: string; bio: string; createdAt: string; adminNote?: string | null;
 };
 
+type InviteResult = { inviteUrl: string; expiresAt: string; guideName: string } | null;
+
 export default function AdminGuidesPage() {
   const [rows, setRows] = useState<GuideApp[]>([]);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
+  const [inviteResult, setInviteResult] = useState<InviteResult>(null);
+  const [inviteLoading, setInviteLoading] = useState<string | null>(null);
+
+  async function generateInvite(guideId: string) {
+    setInviteLoading(guideId);
+    try {
+      const res = await fetch(`/api/admin/guides/${guideId}/invite`, { method: 'POST' });
+      const json = await res.json();
+      if (json?.data) setInviteResult(json.data);
+      else alert(json?.error?.message || '產生失敗');
+    } finally {
+      setInviteLoading(null);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -36,6 +52,36 @@ export default function AdminGuidesPage() {
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="導遊審核" subtitle="審核導遊申請、管理帳號狀態" />
+
+      {/* Invite Result Modal */}
+      {inviteResult && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700 }}>🔑 登入碼已產生</h3>
+            <p style={{ margin: '0 0 16px', color: '#6b7280', fontSize: 14 }}>
+              請將以下連結傳給 <strong>{inviteResult.guideName}</strong>，有效期至{' '}
+              {new Date(inviteResult.expiresAt).toLocaleString('zh-TW')}
+            </p>
+            <div style={{ background: '#f3f4f6', borderRadius: 8, padding: '10px 14px', fontSize: 13, fontFamily: 'monospace', wordBreak: 'break-all', marginBottom: 12 }}>
+              {typeof window !== 'undefined' ? window.location.origin : ''}{inviteResult.inviteUrl}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => { navigator.clipboard.writeText((typeof window !== 'undefined' ? window.location.origin : '') + inviteResult.inviteUrl); }}
+                style={{ flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
+              >
+                📋 複製連結
+              </button>
+              <button
+                onClick={() => setInviteResult(null)}
+                style={{ padding: '9px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 14 }}
+              >
+                關閉
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Filter */}
@@ -101,6 +147,15 @@ export default function AdminGuidesPage() {
                     style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #fed7aa', background: '#fff', color: '#d97706', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     停權
                   </button>
+                  {r.status === 'approved' && (
+                    <button
+                      onClick={() => generateInvite(r.id)}
+                      disabled={inviteLoading === r.id}
+                      style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #a855f7', background: '#faf5ff', color: '#7c3aed', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                    >
+                      {inviteLoading === r.id ? '產生中…' : '🔑 產生登入碼'}
+                    </button>
+                  )}
                 </div>
               </Card>
             ))}

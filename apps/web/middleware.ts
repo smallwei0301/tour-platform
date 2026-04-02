@@ -21,8 +21,42 @@ function pickEmail(req: NextRequest): string {
   );
 }
 
+function verifyGuideSessionMiddleware(req: NextRequest): boolean {
+  const rawToken = req.cookies.get('guide_token')?.value || '';
+  const guideId = req.cookies.get('guide_id')?.value || '';
+  if (!rawToken || !guideId) return false;
+  const parts = rawToken.split(':');
+  if (parts.length !== 3) return false;
+  const [tokenGuideId] = parts;
+  return tokenGuideId === guideId;
+}
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ── Guide routes ───────────────────────────────────────────────────────────
+  const isGuidePage = pathname.startsWith('/guide');
+  const isGuideApi = pathname.startsWith('/api/guide');
+
+  if (isGuidePage || isGuideApi) {
+    const isPublic = pathname === '/guide/login' || pathname === '/api/guide/auth/session';
+    if (isPublic) return NextResponse.next();
+
+    if (!verifyGuideSessionMiddleware(req)) {
+      if (isGuideApi) {
+        return NextResponse.json(
+          { ok: false, error: { code: 'UNAUTHORIZED', message: 'guide session required' } },
+          { status: 401 },
+        );
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = '/guide/login';
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // ── Admin routes ───────────────────────────────────────────────────────────
   const isAdminPage = pathname.startsWith('/admin');
   const isAdminApi = pathname.startsWith('/api/admin');
 
@@ -65,5 +99,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*']
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/guide/:path*', '/api/guide/:path*']
 };
