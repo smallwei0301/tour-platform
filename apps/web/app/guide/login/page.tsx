@@ -9,7 +9,7 @@ function GuideLoginForm() {
   const params = useSearchParams();
   const token = params.get('token') || '';
 
-  const [guideId, setGuideId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,7 +32,7 @@ function GuideLoginForm() {
 
     setLoading(true);
     try {
-      const body = isFirstTime ? { token, password } : { guideId, password };
+      const body = isFirstTime ? { token, password } : { email: email.trim().toLowerCase(), password };
       const res = await fetch('/api/guide/auth/session', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -79,14 +79,15 @@ function GuideLoginForm() {
           {!isFirstTime && (
             <div>
               <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                導遊 ID
+                電子信箱
               </label>
               <input
-                type="text"
-                value={guideId}
-                onChange={(e) => setGuideId(e.target.value)}
-                placeholder="輸入你的導遊 ID"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
                 required
+                autoComplete="email"
                 style={{ width: '100%', boxSizing: 'border-box', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e5e7eb', fontSize: 14, outline: 'none' }}
               />
             </div>

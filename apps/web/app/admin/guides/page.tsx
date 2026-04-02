@@ -11,6 +11,18 @@ type GuideApp = {
 type GuideProfile = {
   id: string; display_name: string; slug: string; verification_status: string;
   headline?: string | null; region?: string | null; rating_avg?: number | null;
+  guide_email?: string | null;
+};
+
+type EditState = {
+  guideId: string;
+  guideName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  loading: boolean;
+  error: string;
+  success: string;
 };
 
 type InviteResult = { inviteUrl: string; expiresAt: string; guideName: string } | null;
@@ -29,6 +41,7 @@ export default function AdminGuidesPage() {
   const [tab, setTab] = useState<'applications' | 'profiles'>('applications');
   const [inviteResult, setInviteResult] = useState<InviteResult>(null);
   const [inviteLoading, setInviteLoading] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState | null>(null);
 
   async function generateInvite(guideId: string) {
     setInviteLoading(guideId);
@@ -59,6 +72,39 @@ export default function AdminGuidesPage() {
       const json = await res.json();
       setProfiles(json?.data || []);
     } finally { setProfilesLoading(false); }
+  }
+
+  async function handleEditSave() {
+    if (!editState) return;
+    if (editState.password && editState.password !== editState.confirmPassword) {
+      setEditState(s => s ? { ...s, error: '兩次密碼不一致' } : null);
+      return;
+    }
+    if (editState.password && editState.password.length < 6) {
+      setEditState(s => s ? { ...s, error: '密碼至少 6 個字元' } : null);
+      return;
+    }
+    if (!editState.email && !editState.password) {
+      setEditState(s => s ? { ...s, error: '請填寫 Email 或密碼' } : null);
+      return;
+    }
+    setEditState(s => s ? { ...s, loading: true, error: '' } : null);
+    const body: Record<string, string> = {};
+    if (editState.email) body.email = editState.email;
+    if (editState.password) body.password = editState.password;
+    const res = await fetch(`/api/admin/guides/${editState.guideId}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json();
+    if (json.ok) {
+      setEditState(s => s ? { ...s, loading: false, password: '', confirmPassword: '', success: '✅ 已更新成功' } : null);
+      loadProfiles();
+    } else {
+      const msg = json?.error?.code === 'EMAIL_TAKEN' ? '此 Email 已被其他導遊使用' : (json?.error?.message || '更新失敗');
+      setEditState(s => s ? { ...s, loading: false, error: msg } : null);
+    }
   }
 
   useEffect(() => { loadApplications(); }, [status]);
@@ -107,6 +153,72 @@ export default function AdminGuidesPage() {
               >
                 關閉
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Guide Account Modal */}
+      {editState && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 440, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>✏️ 編輯導遊帳號</h3>
+            <p style={{ margin: '0 0 20px', color: '#6b7280', fontSize: 13 }}>{editState.guideName}</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>電子信箱（登入用）</label>
+                <input
+                  type="email"
+                  value={editState.email}
+                  onChange={e => setEditState(s => s ? { ...s, email: e.target.value, success: '' } : null)}
+                  placeholder="guide@example.com"
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>新密碼（留空則不修改）</label>
+                <input
+                  type="password"
+                  value={editState.password}
+                  onChange={e => setEditState(s => s ? { ...s, password: e.target.value, success: '' } : null)}
+                  placeholder="至少 6 個字元"
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14 }}
+                />
+              </div>
+              {editState.password && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>確認新密碼</label>
+                  <input
+                    type="password"
+                    value={editState.confirmPassword}
+                    onChange={e => setEditState(s => s ? { ...s, confirmPassword: e.target.value, success: '' } : null)}
+                    placeholder="再輸入一次"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14 }}
+                  />
+                </div>
+              )}
+              {editState.error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>⚠️ {editState.error}</div>
+              )}
+              {editState.success && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', color: '#16a34a', fontSize: 13 }}>{editState.success}</div>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <button
+                  onClick={handleEditSave}
+                  disabled={editState.loading}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: editState.loading ? '#a78bfa' : '#7c3aed', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
+                >
+                  {editState.loading ? '儲存中…' : '💾 儲存'}
+                </button>
+                <button
+                  onClick={() => setEditState(null)}
+                  style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 14 }}
+                >
+                  取消
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -234,16 +346,27 @@ export default function AdminGuidesPage() {
                     {p.region && (
                       <div style={{ fontSize: 13, color: '#6b7280' }}>📍 {p.region}</div>
                     )}
-                    <div style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace', background: '#f9fafb', padding: '4px 8px', borderRadius: 6 }}>
-                      ID: {p.id}
+                    {/* Email display */}
+                    <div style={{ fontSize: 13, color: '#374151', display: 'flex', alignItems: 'center', gap: 6, background: '#f9fafb', padding: '6px 10px', borderRadius: 8 }}>
+                      <span>✉️</span>
+                      <span style={{ fontFamily: 'monospace' }}>{p.guide_email || <span style={{ color: '#9ca3af' }}>尚未設定 Email</span>}</span>
                     </div>
-                    <button
-                      onClick={() => generateInvite(p.id)}
-                      disabled={inviteLoading === p.id}
-                      style={{ width: '100%', padding: '9px 0', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      {inviteLoading === p.id ? '產生中…' : '🔑 產生登入碼'}
-                    </button>
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => generateInvite(p.id)}
+                        disabled={inviteLoading === p.id}
+                        style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        {inviteLoading === p.id ? '產生中…' : '🔑 邀請碼'}
+                      </button>
+                      <button
+                        onClick={() => setEditState({ guideId: p.id, guideName: p.display_name, email: p.guide_email || '', password: '', confirmPassword: '', loading: false, error: '', success: '' })}
+                        style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        ✏️ 編輯帳號
+                      </button>
+                    </div>
                   </Card>
                 ))}
               </div>
