@@ -21,8 +21,56 @@ function pickEmail(req: NextRequest): string {
   );
 }
 
+/**
+ * Lightweight guide session check for edge middleware.
+ * Verifies format + guideId match. Full HMAC verification happens in API
+ * routes via verifyGuideSession() (Node.js crypto, not available in edge).
+ * Worst-case attack: forged cookie gets page shell HTML — all API calls
+ * will still fail 401 because API routes do HMAC verification.
+ */
+function verifyGuideSessionMiddleware(req: NextRequest): boolean {
+  const rawToken = req.cookies.get('guide_token')?.value || '';
+  const guideId = req.cookies.get('guide_id')?.value || '';
+  if (!rawToken || !guideId) return false;
+  // Expected format: guideId:sessionVersion:hmacSignature
+  const parts = rawToken.split(':');
+  if (parts.length !== 3) return false;
+  const [tokenGuideId, sessionVersion, signature] = parts;
+  // Verify guideId matches AND signature is non-empty (basic sanity)
+  return tokenGuideId === guideId && !!sessionVersion && signature.length === 64;
+}
+
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ── Guide routes ───────────────────────────────────────────────────────────
+  const isGuidePage = pathname.startsWith('/guide');
+  const isGuideApi = pathname.startsWith('/api/guide');
+
+  if (isGuidePage || isGuideApi) {
+    // Public guide routes (no auth required)
+    const isPublic =
+      pathname === '/guide/login' ||
+      pathname === '/guide/apply' ||        // public guide application form
+      pathname.startsWith('/guide/apply/') ||
+      pathname === '/api/guide/auth/session';
+    if (isPublic) return NextResponse.next();
+
+    if (!verifyGuideSessionMiddleware(req)) {
+      if (isGuideApi) {
+        return NextResponse.json(
+          { ok: false, error: { code: 'UNAUTHORIZED', message: 'guide session required' } },
+          { status: 401 },
+        );
+      }
+      const url = req.nextUrl.clone();
+      url.pathname = '/guide/login';
+      return NextResponse.redirect(url);
+    }
+    return NextResponse.next();
+  }
+
+  // ── Admin routes ───────────────────────────────────────────────────────────
   const isAdminPage = pathname.startsWith('/admin');
   const isAdminApi = pathname.startsWith('/api/admin');
 
@@ -65,5 +113,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*']
+  matcher: ['/admin/:path*', '/api/admin/:path*', '/guide/:path*', '/api/guide/:path*']
 };
