@@ -23,7 +23,7 @@ export default function CheckoutPage() {
         contactPhone: '0912345678',
         contactEmail: 'guest@example.com'
       });
-      router.push(`/order/success?orderId=${order.id}`);
+      router.push(`/order/pay?orderId=${order.id}&email=guest@example.com`);
     } catch (e) {
       setErr(e instanceof Error ? e.message : '建立訂單失敗');
     } finally {
