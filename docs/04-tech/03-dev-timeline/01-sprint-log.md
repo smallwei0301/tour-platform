@@ -173,3 +173,51 @@
 | TD-03 | E2E 測試未覆蓋付款閉環新流程 | P2 | 🟡 待更新 |
 | TD-04 | 部分 DB 欄位 region_slug 仍為 null（台北無「市」後綴） | P2 | 🟡 已知問題 |
 | TD-05 | Booking page 的 note 欄位未傳入 createOrder | P3 | 🟢 低優先 |
+
+### Sprint 7 — 前台訂單流程完整化（2026-04-03）
+
+| 功能 | commit | 說明 |
+|------|--------|------|
+| `/order/pay` 付款頁（mock） | `9298932` | 顯示訂單摘要 + 模擬 callback 付款 |
+| `/order/success` 更新 | `9298932` | 顯示訂單狀態 badge + 跳轉我的訂單連結 |
+| `/me/orders` 訂單列表頁 | `9298932` | Email 查詢訂單、狀態 badge 顏色分類 |
+| `/me/orders/[orderId]` 詳情頁 | `9298932` | 完整訂單資訊 + 各狀態說明文字 |
+| 取消訂單 UI + API | `9298932` | Dialog 確認 + PATCH /api/me/orders/:id |
+| 申請退款 UI | `9298932` | textarea 填理由 + POST refund-requests |
+| `cancelOrderDb` | `9298932` | email 所有權驗證 + 釋放 booked_count |
+| Navbar「我的訂單」連結 | `9298932` | /me/orders 前台入口 |
+| checkout 動態查詢排期 UUID | `ae09304` | 修復 hardcode 假 ID 導致 schedule not found |
+| feat/guide-dashboard merge | `2073ea6` | Phase 6 導遊後台正式合入 main |
+| feat/frontend-order-flow rebase | `ae09304` | 基於最新 main 建立，無衝突 |
+
+**驗收（Judy E2E 手動測試 8/8 PASS）：**
+- ✅ 下單 → 付款 → success 完整流程
+- ✅ Email 查訂單列表
+- ✅ 訂單詳情（各狀態說明文字）
+- ✅ 取消訂單（pending_payment → cancelled_by_user + 席位釋放）
+- ✅ 申請退款（paid → refund_pending）
+- ✅ 後台狀態與前台一致
+
+---
+
+## 🔖 當前狀態標記（更新：2026-04-03）
+
+**最後 commit：** `ae09304` — fix(checkout): 動態查詢真實 schedule UUID  
+**Branch：** `feat/frontend-order-flow`（準備 merge to main）  
+**整體完成度：** ~97%
+
+### ✅ 已完成功能（截至 2026-04-03）
+- 前台所有頁面（含行動版）
+- **前台訂單完整流程：** 付款頁 / 我的訂單列表 / 詳情頁 / 取消 / 退款申請
+- Admin 後台：登入/安全/訂單/退款/導遊審核/行程 CRUD/營運追蹤
+- 導遊後台：登入/儀表板/場次管理/訂單查看
+- ECPay mock 付款閉環（原子扣位 + 冪等）
+- 7 次 DB migration（001–007）
+
+### 🔜 下一步（Phase 8+）
+1. **旅客 Google OAuth** — 取代 Email query 身份驗證
+2. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽
+3. **Storage RLS** — 補 public SELECT policy（Tech Debt TD-01）
+4. **評價系統** — 行程完成後留評閉環
+5. **Supabase Auth for Guides** — 廢除自製 session，改 Supabase Auth
+
