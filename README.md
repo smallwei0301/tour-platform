@@ -4,7 +4,7 @@
 
 ---
 
-## 🔖 目前專案狀態（2026-04-02 更新）
+## 🔖 目前專案狀態（2026-04-03 更新）
 
 ```
 Phase 1 前台 MVP         ████████████ 100%  ✅
@@ -12,21 +12,22 @@ Phase 2 Admin 後台核心   ████████████ 100%  ✅
 Phase 3 UI 精修          ████████████ 100%  ✅
 Phase 4 行程後台         ████████████ 100%  ✅
 Phase 5 付款扣位完整閉環 ████████████ 100%  ✅ 2026-04-01 完成
-Phase 6 導遊儀表板       ████████████ 100%  ✅ 2026-04-02 完成
-整體完成度：~95%（核心交易閉環 + 導遊後台完整，待正式金流串接）
+Phase 6 導遊儀表板       ████████████ 100%  ✅ 2026-04-03 merge to main
+Phase 7 前台訂單流程完整 ████████████ 100%  ✅ 2026-04-03 完成
+Phase 8 旅客 Auth        ░░░░░░░░░░░░   0%  🔜 下一步（Google OAuth）
+Phase 9 正式金流         ░░░░░░░░░░░░   0%  🔜 待開始（ECPay 真實串接）
+整體完成度：~97%（核心交易閉環 + 前台訂單流程完整）
 ```
 
-**最新里程碑（2026-04-02）🎉**
+**最新里程碑（2026-04-03）🎉**
+- ✅ **前台訂單流程完整化**：付款頁 / 我的訂單列表 / 詳情頁 / 取消 / 退款申請，Judy 8/8 PASS
+- ✅ **checkout 修復**：動態查詢真實 schedule UUID，不再 hardcode 假 ID
+- ✅ **feat/guide-dashboard merge to main**：Phase 6 導遊後台正式合入主幹
+
+**前一里程碑（2026-04-02）**
 - ✅ **導遊後台完整實作**：登入（邀請碼 + 密碼設定）、儀表板、場次管理、訂單查看
 - ✅ **Admin 產生登入碼**：管理員可對已審核導遊一鍵產生 24 小時邀請連結
 - ✅ **資料隔離**：場次/訂單 API 均有 `guide_id` ownership 驗證，403 防護
-- ✅ **Email 隱碼保護**：旅客 Email 在導遊端自動 masking（j\*\*\*@gmail.com）
-- ✅ **Production Secure cookie**：session cookie 在正式環境自動加 `Secure` 旗標
-- ✅ **Judy Code Review 通過**：14/14 unit tests PASS + build 成功（詳見 Phase 6 report）
-
-**前一週里程碑（2026-04-01）**
-- ✅ 付款 → 訂位扣量完整閉環：`fn_book_schedule` 原子 RPC + booking page 讀 DB + ISR 即時更新
-- ✅ E2E 測試 8/8 ALL PASS（見 `docs/04-tech/03-dev-timeline/e2e-test-report-2026-04-01.md`）
 
 ---
 
@@ -47,7 +48,11 @@ Phase 6 導遊儀表板       ████████████ 100%  ✅ 202
 | 導遊列表 / 個人頁 | ✅ |
 | 3-step 預訂流程（選場次 → 填資料 → 付款） | ✅ |
 | 預訂頁讀取 DB 資料（非 hardcode fixtures） | ✅ 2026-04-01 |
-| 訂單詳情 / 退款申請 | ✅ |
+| **付款頁（mock `/order/pay`）** | ✅ 2026-04-03 |
+| **我的訂單列表（`/me/orders`，Email 查詢）** | ✅ 2026-04-03 |
+| **訂單詳情頁（`/me/orders/:id`）** | ✅ 2026-04-03 |
+| **取消訂單（pending_payment 自助取消 + 席位釋放）** | ✅ 2026-04-03 |
+| 退款申請（前台 + 後台審核） | ✅ 2026-04-03 |
 | 主題 landing page（Cave / River） | ✅ |
 | Blog、About、Contact、法律頁（共 20+ 頁面） | ✅ |
 | 行動版 RWD | ✅ |
@@ -129,7 +134,29 @@ Phase 6 導遊儀表板       ████████████ 100%  ✅ 202
 | 導遊訂單查看 | 自己場次的報名狀況，含旅客聯絡資訊 | ✅ |
 | 資料隔離 + 路由保護 | ownership check + middleware | ✅ |
 
-### Phase 7：正式金流
+### Phase 7：前台訂單流程完整化 ✅ 完成（2026-04-03）
+
+| 任務 | 說明 | 狀態 |
+|------|------|------|
+| 付款頁 `/order/pay` | 訂單摘要 + 模擬付款 callback | ✅ |
+| 我的訂單列表 `/me/orders` | Email 查詢 + 狀態 badge 顏色分類 | ✅ |
+| 訂單詳情 `/me/orders/:id` | 完整資訊 + 各狀態說明 + 操作按鈕 | ✅ |
+| 取消訂單 | PATCH API + cancelOrderDb（email 驗證 + 席位釋放） | ✅ |
+| 退款申請前台 | textarea 理由 + POST refund-requests | ✅ |
+| checkout 動態排期 | 動態查詢真實 schedule UUID，不再 hardcode | ✅ |
+| Navbar 我的訂單 | 頂部導覽連結 `/me/orders` | ✅ |
+
+### Phase 8：旅客 Auth 🔜 下一步
+
+| 任務 | 說明 | 優先 |
+|------|------|------|
+| **Google OAuth 登入** | Supabase Auth + Google Provider | **P0** |
+| OAuth session 整合 | `/me/orders` 改用 session，移除 email query | P0 |
+| LINE 登入 | 台灣旅客首選行動登入 | P1 |
+| 旅客個人頁 | 訂單歷史 + 偏好設定 | P1 |
+| 付款後留評 | 行程完成後評價閉環 | P2 |
+
+### Phase 9：正式金流 🔜 待開始
 
 | 任務 | 說明 | 優先 |
 |------|------|------|
@@ -138,23 +165,15 @@ Phase 6 導遊儀表板       ████████████ 100%  ✅ 202
 | ATM 虛擬帳號 | 備用付款方式 | P2 |
 | 導遊分潤撥款 | 抽成後自動撥款給導遊 | P1 |
 
-### Phase 8：旅客 / 導遊 Auth
+### 技術債 / 優化
 
 | 任務 | 說明 | 優先 |
 |------|------|------|
-| Google 登入 | 旅客 OAuth | P0 |
-| LINE 登入 | 台灣旅客首選 | P0 |
-| 旅客個人頁 | 訂單歷史 + 偏好 | P1 |
-| 評價系統 | 付款後可留評 | P1 |
-
-### 技術債 / 優化
-
-| 任務 | 說明 |
-|------|------|
-| Storage RLS 政策 | 目前靠 service role 繞過，需補 public SELECT policy |
-| 超賣壓力測試 | concurrent 場景測試 fn_book_schedule 鎖定機制 |
-| E2E 測試更新 | 覆蓋付款閉環新流程 |
-| SEO meta 優化 | 行程詳情頁 og:image + structured data |
+| Storage RLS 政策 | 目前靠 service role 繞過，需補 public SELECT policy | P1 |
+| 超賣壓力測試 | concurrent 場景測試 fn_book_schedule 鎖定機制 | P1 |
+| E2E 測試更新 | 補足前台訂單流程 E2E | P2 |
+| SEO meta 優化 | 行程詳情頁 og:image + structured data | P2 |
+| Supabase Auth for Guides | 廢除自製 session，改 Supabase Auth | P2 |
 
 ---
 
