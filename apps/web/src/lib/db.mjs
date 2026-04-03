@@ -194,6 +194,66 @@ export async function getMyOrderDetailDb(input = {}) {
   return target;
 }
 
+export async function cancelOrderDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  const contactEmail = String(input?.contactEmail || '').trim();
+
+  if (!orderId) throw new Error('orderId is required');
+  if (!contactEmail) throw new Error('contactEmail is required');
+
+  if (!hasSupabaseEnv()) {
+    // in-memory fallback
+    const order = _orders.find((o) => o.id === orderId && o.contact_email === contactEmail);
+    if (!order) throw new Error('order not found');
+    if (order.status !== 'pending_payment') throw new Error('only pending_payment orders can be cancelled by user');
+    order.status = 'cancelled_by_user';
+    return { id: order.id, status: order.status };
+  }
+
+  const supabase = await getSupabase();
+
+  // fetch order and validate ownership
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('id, status, schedule_id, people_count, contact_email')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchErr || !order) throw new Error('order not found');
+  if (order.contact_email !== contactEmail) throw new Error('order not found');
+  if (order.status !== 'pending_payment') throw new Error('only pending_payment orders can be cancelled by user');
+
+  // cancel order
+  const { error: updateErr } = await supabase
+    .from('orders')
+    .update({ status: 'cancelled_by_user', updated_at: new Date().toISOString() })
+    .eq('id', orderId);
+
+  if (updateErr) throw new Error(updateErr.message);
+
+  // release booked seats on schedule
+  if (order.schedule_id && order.people_count) {
+    const { data: schedule } = await supabase
+      .from('schedules')
+      .select('id, booked_count, capacity')
+      .eq('id', order.schedule_id)
+      .single();
+
+    if (schedule) {
+      const newBooked = Math.max(0, (schedule.booked_count || 0) - order.people_count);
+      await supabase
+        .from('schedules')
+        .update({
+          booked_count: newBooked,
+          status: newBooked < schedule.capacity ? 'open' : 'full',
+        })
+        .eq('id', order.schedule_id);
+    }
+  }
+
+  return { id: orderId, status: 'cancelled_by_user' };
+}
+
 export async function createRefundRequestDb(input = {}) {
   if (!hasSupabaseEnv()) return createRefundRequestInMemory(input);
 
