@@ -9,6 +9,7 @@ const NAV_LINKS = [
   { label: '認識導遊', href: '/guides' },
   { label: '成為導遊', href: '/guide/apply' },
   { label: '旅遊指南', href: '/blog' },
+  { label: '我的訂單', href: '/me/orders' },
 ];
 
 export function Navbar() {
