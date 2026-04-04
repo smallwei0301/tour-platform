@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     const ip_hash = rawIp ? hashIp(rawIp) : null;
 
     // User-Agent（截短）
-    const ua = (req.headers.get('user-agent') ?? '').slice(0, 120) || null;
+    const ua = ((req.headers.get('user-agent') ?? '').slice(0, 120)) || null;
 
     // UTM：優先從 top-level 欄位讀，fallback 從 properties 讀（checkout 舊版寫在 properties 內）
     const props = (properties ?? {}) as Record<string, unknown>;
