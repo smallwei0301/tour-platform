@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
+import { trackServer } from '../../../../../src/lib/track';
 
 function normalizePayload(headers: Headers, rawText: string) {
   const contentType = headers.get('content-type') || '';
@@ -53,12 +54,40 @@ export async function POST(request: Request) {
     return Response.json(fail('INVALID_REQUEST', 'orderId is required'), { status: 400 });
   }
 
+  // 事件：收到付款 callback
+  void trackServer(
+    {
+      event_name: 'payment_callback_received',
+      properties: {
+        order_id: orderId,
+        trade_no: mapTradeNo(payload) ?? '',
+        raw_result_code: payload?.RtnCode ?? payload?.resultCode ?? '',
+      },
+      order_id: orderId,
+    },
+    request
+  );
+
   try {
     const result = await processPaymentCallbackDb({
       ...payload,
       orderId,
       tradeNo: mapTradeNo(payload)
     });
+
+    // 事件：付款成功
+    void trackServer(
+      {
+        event_name: 'payment_succeeded',
+        properties: {
+          order_id: orderId,
+          amount: result.order?.total_twd ?? 0,
+          payment_provider: 'ecpay',
+        },
+        order_id: orderId,
+      },
+      request
+    );
 
     return Response.json(
       ok({
@@ -73,6 +102,21 @@ export async function POST(request: Request) {
     const message = err instanceof Error ? err.message : 'unknown error';
     const status = httpStatusFromError(err);
     const errorCode = status === 409 ? 'BOOKING_CONFLICT' : status === 404 ? 'NOT_FOUND' : 'INVALID_REQUEST';
+
+    // 事件：付款錯誤
+    void trackServer(
+      {
+        event_name: 'error',
+        properties: {
+          message,
+          context: 'payment_callback',
+        },
+        error_code: errorCode,
+        order_id: orderId,
+      },
+      request
+    );
+
     return Response.json(fail(errorCode, message), { status });
   }
 }
