@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createOrder } from '../../src/lib/client-api';
+import { track } from '../../src/lib/track';
+import { captureUtm, getStoredUtm } from '../../src/lib/utm';
 
 type Schedule = {
   id: string;
@@ -14,6 +16,7 @@ type Schedule = {
 };
 
 type ActivityInfo = {
+  id?: string;
   title: string;
   priceTwd: number;
   schedules: Schedule[];
@@ -29,6 +32,11 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  // 擷取並快取 UTM（首次帶 UTM landing 時保留歸因）
+  useEffect(() => {
+    captureUtm();
+  }, []);
 
   // 動態取得行程資料與可用排期
   useEffect(() => {
@@ -47,10 +55,57 @@ export default function CheckoutPage() {
       .finally(() => setFetching(false));
   }, [slug]);
 
+  // 行程資料載入完成後，發送 begin_checkout 事件
+  useEffect(() => {
+    if (!activity || !selectedScheduleId) return;
+    const utm = getStoredUtm();
+    track({
+      event_name: 'begin_checkout',
+      properties: {
+        item_id: activity.id ?? slug,
+        item_name: activity.title,
+        schedule_id: selectedScheduleId,
+        price: activity.priceTwd,
+      },
+      schedule_id: selectedScheduleId,
+      page_path: '/checkout',
+      // UTM top-level 欄位（API route 直接存 DB 欄位）
+      utm_source:   utm?.utm_source,
+      utm_medium:   utm?.utm_medium,
+      utm_campaign: utm?.utm_campaign,
+      utm_content:  utm?.utm_content,
+      utm_term:     utm?.utm_term,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activity?.id, selectedScheduleId]);
+
   const onSubmit = async () => {
     if (!selectedScheduleId) { setErr('請選擇排期'); return; }
     setLoading(true);
     setErr(null);
+
+    // 取出已快取的 UTM
+    const utm = getStoredUtm();
+
+    // 事件：purchase_intent（使用者按下「建立訂單」）
+    track({
+      event_name: 'purchase_intent',
+      properties: {
+        item_id: activity?.id ?? slug,
+        item_name: activity?.title,
+        schedule_id: selectedScheduleId,
+        amount: activity?.priceTwd ?? 0,
+      },
+      schedule_id: selectedScheduleId,
+      page_path: '/checkout',
+      // UTM top-level 欄位
+      utm_source:   utm?.utm_source,
+      utm_medium:   utm?.utm_medium,
+      utm_campaign: utm?.utm_campaign,
+      utm_content:  utm?.utm_content,
+      utm_term:     utm?.utm_term,
+    });
+
     try {
       const order = await createOrder({
         experienceSlug: slug,
@@ -62,6 +117,15 @@ export default function CheckoutPage() {
       });
       router.push(`/order/pay?orderId=${order.id}&email=guest@example.com`);
     } catch (e) {
+      // 事件：error
+      track({
+        event_name: 'error',
+        properties: {
+          message: e instanceof Error ? e.message : '建立訂單失敗',
+          context: 'checkout_submit',
+        },
+        page_path: `/checkout`,
+      });
       setErr(e instanceof Error ? e.message : '建立訂單失敗');
     } finally {
       setLoading(false);
