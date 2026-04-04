@@ -131,12 +131,13 @@ export default function OrderSuccessPage() {
           </div>
         </>
       ) : (
-        <p style={{ color: '#9ca3af', marginTop: 16 }}>訂單編號：{orderId || 'N/A'}</p>
+        <p data-testid="order-id" style={{ color: '#9ca3af', marginTop: 16 }}>訂單編號：{orderId || 'N/A'}</p>
       )}
 
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Link
           href={`/me/orders?email=${encodeURIComponent(email)}`}
+          data-testid="view-orders-btn"
           style={{
             display: 'block',
             padding: '13px 0',

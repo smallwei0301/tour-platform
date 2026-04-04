@@ -89,6 +89,7 @@ export default function CheckoutPage() {
             選擇排期
           </label>
           <select
+            data-testid="checkout-schedule-select"
             value={selectedScheduleId}
             onChange={e => setSelectedScheduleId(e.target.value)}
             style={{
@@ -113,6 +114,7 @@ export default function CheckoutPage() {
       )}
 
       <button
+        data-testid="create-order-btn"
         onClick={onSubmit}
         disabled={loading || !selectedScheduleId || openSchedules.length === 0}
         style={{

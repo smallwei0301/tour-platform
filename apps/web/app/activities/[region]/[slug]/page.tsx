@@ -60,7 +60,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       {/* ── Title block ── */}
       <div className="tp-container">
         <div className="kkd-title-block">
-          <h1 className="kkd-title">{activity.title}</h1>
+          <h1 className="kkd-title" data-testid="activity-detail-title">{activity.title}</h1>
           {activity.tagline && (
             <p className="kkd-tagline">{activity.tagline}</p>
           )}
@@ -364,8 +364,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               )}
 
               <Link
-                href={`/booking/${activity.slug}`}
+                href={`/checkout?slug=${activity.slug}`}
                 className="tp-btn tp-btn-primary"
+                data-testid="begin-checkout-btn"
                 style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px 0', fontSize: 16, marginTop: 16 }}
               >
                 立即預約

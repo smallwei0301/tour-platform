@@ -89,10 +89,10 @@ export function HeroSection() {
         </div>
 
         <div className="tp-cta-row" style={{ marginTop: 24 }}>
-          <Link href="/activities" className="tp-btn tp-btn-primary" style={{ fontSize: 16, padding: '13px 28px' }}>
+          <Link href="/activities" data-testid="home-cta-explore" className="tp-btn tp-btn-primary" style={{ fontSize: 16, padding: '13px 28px' }}>
             探索全部行程
           </Link>
-          <Link href="/guides" className="tp-btn tp-btn-ghost" style={{ fontSize: 16, padding: '13px 28px', borderColor: '#fff', color: '#fff' }}>
+          <Link href="/guides" data-testid="home-cta-guides" className="tp-btn tp-btn-ghost" style={{ fontSize: 16, padding: '13px 28px', borderColor: '#fff', color: '#fff' }}>
             認識導遊
           </Link>
         </div>
