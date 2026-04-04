@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import type { EventInsert, EventName } from '@/lib/events';
+import type { UtmParams } from '@/lib/utm';
 
 const VALID_EVENTS: EventName[] = [
   'page_view',
@@ -48,7 +49,8 @@ export async function POST(req: NextRequest) {
 
     const { event_name, properties, session_id, contact_email,
             order_id, activity_id, schedule_id, page_path,
-            referrer, error_code } = body;
+            referrer, error_code,
+            utm_source, utm_medium, utm_campaign, utm_content, utm_term } = body;
 
     // 驗證 event_name
     if (!VALID_EVENTS.includes(event_name)) {
@@ -64,6 +66,16 @@ export async function POST(req: NextRequest) {
     // User-Agent（截短）
     const ua = (req.headers.get('user-agent') ?? '').slice(0, 120) || null;
 
+    // UTM：優先從 top-level 欄位讀，fallback 從 properties 讀（checkout 舊版寫在 properties 內）
+    const props = (properties ?? {}) as Record<string, unknown>;
+    const resolvedUtm: UtmParams = {
+      utm_source:   (utm_source   ?? props.utm_source   ?? null) as string | undefined,
+      utm_medium:   (utm_medium   ?? props.utm_medium   ?? null) as string | undefined,
+      utm_campaign: (utm_campaign ?? props.utm_campaign ?? null) as string | undefined,
+      utm_content:  (utm_content  ?? props.utm_content  ?? null) as string | undefined,
+      utm_term:     (utm_term     ?? props.utm_term     ?? null) as string | undefined,
+    };
+
     const row: EventInsert = {
       event_name,
       session_id: session_id || null,
@@ -71,12 +83,18 @@ export async function POST(req: NextRequest) {
       order_id: order_id || null,
       activity_id: activity_id || null,
       schedule_id: schedule_id || null,
-      properties: properties ?? {},
+      properties: props,
       error_code: error_code || null,
       page_path: page_path || null,
       referrer: referrer || null,
       user_agent: ua,
       ip_hash,
+      // UTM 欄位（009_events_utm migration 新增）
+      utm_source:   resolvedUtm.utm_source   || null,
+      utm_medium:   resolvedUtm.utm_medium   || null,
+      utm_campaign: resolvedUtm.utm_campaign || null,
+      utm_content:  resolvedUtm.utm_content  || null,
+      utm_term:     resolvedUtm.utm_term     || null,
     };
 
     const supabase = getSupabaseAdmin();

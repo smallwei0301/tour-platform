@@ -84,11 +84,24 @@ Cherry-pick（來自 feat/event-tracking）：
 
 ---
 
+## 二-B、P1 補完項目（TP-004-P1，2026-04-04）
+
+| 項目 | 狀態 | 說明 |
+|------|------|------|
+| `checkout/page.tsx` 呼叫 `captureUtm()` | ✅ | useEffect on mount，快取 URL UTM |
+| `begin_checkout` 事件帶 UTM | ✅ | top-level utm_source/medium/campaign/content/term |
+| `purchase_intent` 事件帶 UTM | ✅ | onSubmit 時呼叫 `getStoredUtm()` 帶入 |
+| `error` 事件（submit 失敗） | ✅ | catch 時發送 error 事件 |
+| `TrackRequest` 型別加 UTM 欄位 | ✅ | `events.ts` 同步更新 |
+| `EventInsert` 型別加 UTM 欄位 | ✅ | `events.ts` 同步更新 |
+| `/api/events` route 讀取並存 UTM | ✅ | 優先 top-level，fallback properties 內讀取 |
+
+---
+
 ## 三、暫未完成（Blocker 說明）
 
 | 項目 | Blocker | 建議下一步 |
 |------|---------|-----------|
-| UTM 寫入 events（checkout submit 時） | checkout/page.tsx 目前未呼叫 `getStoredUtm()` | 在 `onSubmit` 中呼叫 `getStoredUtm()` 並帶入 track() |
 | E2E 測試實際執行 | 需要 DB 有活動資料 + 可用排期 | 補 seed 資料或用 `TEST_ACTIVITY_SLUG` env 指定 |
 | Vercel Analytics Dashboard | 需要部署到 Vercel 後才能看到資料 | merge 後部署即啟用 |
 | events table 008/009 migration | 需人工在 Supabase Dashboard 執行 | 見下方驗收步驟 |

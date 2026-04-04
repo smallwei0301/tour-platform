@@ -95,6 +95,12 @@ export interface TrackRequest extends TrackEventPayload {
   schedule_id?: string;
   page_path?: string;
   referrer?: string;
+  // UTM（從 getStoredUtm() 帶入）
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
 }
 
 // ── DB insert row type ───────────────────────────────────────────────────────
@@ -112,4 +118,10 @@ export interface EventInsert {
   referrer?: string | null;
   user_agent?: string | null;
   ip_hash?: string | null;
+  // UTM 欄位（009_events_utm migration）
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  utm_content?: string | null;
+  utm_term?: string | null;
 }
