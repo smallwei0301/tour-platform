@@ -1,6 +1,8 @@
 import './globals.css';
 import { Navbar } from '../src/components/layout/Navbar';
 import { Footer } from '../src/components/layout/Footer';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 export const metadata = {
   title: 'Tour Platform — 台灣在地導遊平台',
@@ -19,6 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         {children}
         <Footer />
+        {/* Vercel Analytics + Speed Insights — zero-config, GDPR-friendly */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

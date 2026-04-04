@@ -143,6 +143,7 @@ export default function MyOrdersPage() {
 
       <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
         <input
+          data-testid="orders-email-input"
           type="email"
           required
           placeholder="your@email.com"
@@ -169,6 +170,9 @@ export default function MyOrdersPage() {
       {orders.map(order => (
         <div
           key={order.id}
+          data-testid="order-list-item"
+          data-order-id={order.id}
+          data-order-status={order.status}
           style={cardStyle}
           onClick={() => router.push(`/me/orders/${order.id}?email=${encodeURIComponent(submittedEmail)}`)}
           onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)')}

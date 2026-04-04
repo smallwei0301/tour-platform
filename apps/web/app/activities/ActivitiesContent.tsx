@@ -187,7 +187,7 @@ export default function ActivitiesContent() {
                     : `${a.durationMinutes} 分鐘`
                   : '';
                 return (
-                  <article className="tp-card" key={a.slug}>
+                  <article className="tp-card" key={a.slug} data-testid="activity-card" data-activity-slug={a.slug}>
                     <div style={{ position: 'relative' }}>
                       <img
                         src={a.coverImageUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'}
@@ -223,6 +223,7 @@ export default function ActivitiesContent() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ color: 'var(--tp-primary)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
                       <Link className="tp-btn tp-btn-primary" href={`/activities/${regionSlug}/${a.slug}`}
+                        data-testid="activity-card-link"
                         style={{ fontSize: 13, padding: '6px 14px' }}>查看行程</Link>
                     </div>
                   </article>
