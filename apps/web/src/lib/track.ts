@@ -39,7 +39,7 @@ export function track(payload: TrackRequest): void {
     ...payload,
     session_id: payload.session_id ?? getSessionId(),
     page_path: payload.page_path ?? window.location.pathname,
-    referrer: payload.referrer ?? document.referrer || undefined,
+    referrer: payload.referrer ?? (document.referrer || undefined),
   };
 
   // fire-and-forget
