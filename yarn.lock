@@ -115,11 +115,11 @@
   dependencies:
     tslib "^2.8.0"
 
-"@tour/ui@file:/tmp/tour-platform/packages/ui":
+"@tour/ui@file:/root/.openclaw/workspace-tracy/tour-platform/packages/ui":
   version "0.1.0"
   resolved "file:packages/ui"
 
-"@tour/web@file:/tmp/tour-platform/apps/web":
+"@tour/web@file:/root/.openclaw/workspace-tracy/tour-platform/apps/web":
   version "0.1.0"
   resolved "file:apps/web"
   dependencies:
@@ -135,24 +135,22 @@
   dependencies:
     undici-types "~7.18.0"
 
-"@types/react-dom@^19.2.3":
-  version "19.2.3"
-  resolved "https://registry.npmjs.org/@types/react-dom/-/react-dom-19.2.3.tgz"
-  integrity sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==
-
-"@types/react@^19.2.0", "@types/react@19.2.14":
-  version "19.2.14"
-  resolved "https://registry.npmjs.org/@types/react/-/react-19.2.14.tgz"
-  integrity sha512-ilcTH/UniCkMdtexkoCN0bI7pMcJDvmQFPvuPvmEaYA/NSfFTAgdUSLAoVjaRJm7+6PvcM+q1zYOwS4wTYMF9w==
-  dependencies:
-    csstype "^3.2.2"
-
 "@types/ws@^8.18.1":
   version "8.18.1"
   resolved "https://registry.npmjs.org/@types/ws/-/ws-8.18.1.tgz"
   integrity sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==
   dependencies:
     "@types/node" "*"
+
+"@vercel/analytics@^2.0.1":
+  version "2.0.1"
+  resolved "https://registry.npmjs.org/@vercel/analytics/-/analytics-2.0.1.tgz"
+  integrity sha512-MTQG6V9qQrt1tsDeF+2Uoo5aPjqbVPys1xvnIftXSJYG2SrwXRHnqEvVoYID7BTruDz4lCd2Z7rM1BdkUehk2g==
+
+"@vercel/speed-insights@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.npmjs.org/@vercel/speed-insights/-/speed-insights-2.0.0.tgz"
+  integrity sha512-jwkNcrTeafWxjmWq4AHBaptSqZiJkYU5adLC9QBSqeim0GcqDMgN5Ievh8OG1rJ6W3A4l1oiP7qr9CWxGuzu3w==
 
 caniuse-lite@^1.0.30001579:
   version "1.0.30001781"
@@ -163,11 +161,6 @@ client-only@0.0.1:
   version "0.0.1"
   resolved "https://registry.npmjs.org/client-only/-/client-only-0.0.1.tgz"
   integrity sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==
-
-csstype@^3.2.2:
-  version "3.2.3"
-  resolved "https://registry.npmjs.org/csstype/-/csstype-3.2.3.tgz"
-  integrity sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==
 
 detect-libc@^2.1.2:
   version "2.1.2"
@@ -184,7 +177,7 @@ nanoid@^3.3.6:
   resolved "https://registry.npmjs.org/nanoid/-/nanoid-3.3.11.tgz"
   integrity sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==
 
-next@^15.3.1:
+next@^15.3.1, "next@>= 13":
   version "15.5.14"
   resolved "https://registry.npmjs.org/next/-/next-15.5.14.tgz"
   integrity sha512-M6S+4JyRjmKic2Ssm7jHUPkE6YUJ6lv4507jprsSZLulubz0ihO2E+S4zmQK3JZ2ov81JrugukKU4Tz0ivgqqQ==
@@ -240,7 +233,7 @@ postcss@8.4.31:
   dependencies:
     scheduler "^0.27.0"
 
-"react@^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", react@^19.0.0, react@^19.2.4, "react@>= 16.8.0 || 17.x.x || ^18.0.0-0 || ^19.0.0-0":
+"react@^18 || ^19 || ^19.0.0-rc", "react@^18.2.0 || 19.0.0-rc-de68d2f4-20241204 || ^19.0.0", react@^19.0.0, react@^19.2.4, "react@>= 16.8.0 || 17.x.x || ^18.0.0-0 || ^19.0.0-0":
   version "19.2.4"
   resolved "https://registry.npmjs.org/react/-/react-19.2.4.tgz"
   integrity sha512-9nfp2hYpCwOjAN+8TZFGhtWEwgvWHXqESH8qT89AT/lWklpLON22Lc8pEtnpsZz7VmawabSU0gCjnj8aC0euHQ==
@@ -305,11 +298,6 @@ tslib@^2.8.0, tslib@2.8.1:
   version "2.8.1"
   resolved "https://registry.npmjs.org/tslib/-/tslib-2.8.1.tgz"
   integrity sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==
-
-typescript@^5.9.3, typescript@5.9.3:
-  version "5.9.3"
-  resolved "https://registry.npmjs.org/typescript/-/typescript-5.9.3.tgz"
-  integrity sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==
 
 undici-types@~7.18.0:
   version "7.18.2"
