@@ -1,7 +1,7 @@
 # Sprint 執行日誌
 
-> 最後更新：2026-04-01
-> 當前進度：Sprint 4.5 完成（付款閉環 + 行程後台全面翻新）
+> 最後更新：2026-04-06
+> 當前進度：Sprint 8 完成（量測地基 + E2E 漏斗測試 + ECPay 金流 API）
 
 ---
 
@@ -198,25 +198,62 @@
 - ✅ 申請退款（paid → refund_pending）
 - ✅ 後台狀態與前台一致
 
+### Sprint 8 — 量測地基 + E2E 漏斗測試（2026-04-06）
+
+| 功能 | commit | 說明 |
+|------|--------|------|
+| migration 008：events 表 | `239c6f1` | 記錄用戶漏斗事件 |
+| migration 009：utm_params | `239c6f1` | UTM 參數追蹤 |
+| track.ts（事件追蹤庫） | `703f908` | `trackEvent()` 函數封裝 |
+| utm.ts（UTM 參數解析） | `703f908` | `getStoredUtm()` / `storeUtm()` |
+| events.ts（完整事件定義） | `703f908` | view_activity / add_to_cart / begin_checkout / purchase_intent / purchase |
+| /api/events route | `239c6f1` | 接收漏斗事件並存入 DB |
+| Checkout 頁 UTM 捕獲 | `295ea4a` | getStoredUtm() + onSubmit 帶入 |
+| E2E 漏斗測試骨架 | `703f908` | funnel-booking-payment.spec.ts（253 行，10 個 TC） |
+| home-cta-explore testid | `703f908` | 首頁探索行程 CTA |
+| activity-card testid | `703f908` | 行程卡片 |
+| activity-detail-title testid | `703f908` | 詳情頁標題 |
+| begin-checkout-btn testid | `703f908` | 開始預訂按鈕 |
+| checkout-schedule-select testid | `703f908` | 預訂頁日期/方案選擇 |
+| create-order-btn testid | `703f908` | 建立訂單按鈕 |
+| view-orders-btn testid | `703f908` | 我的訂單頁跳轉 |
+| orders-email-input testid | `703f908` | 訂單查詢 email 欄位 |
+| order-list-item testid | `703f908` | 訂單列表項 |
+| **order-id testid** | `03f6167` | **訂單編號（快修 2026-04-06 01:01）** |
+| ECPay 回調 API（/api/payments/ecpay/callback） | `239c6f1` | 已就位待真實串接 |
+| TP-004 PR 合入 main | `dca4eaf` | 2026-04-06 01:03，commit dca4eaf |
+
+**驗收（Judy E2E 手動測試 10/10 PASS）：**
+- ✅ 首頁 CTA → 行程卡片（testid: home-cta-explore / activity-card）
+- ✅ 行程詳情 → 標題 + 詳情 Modal（testid: activity-detail-title）
+- ✅ 開始預訂 → checkout 日期選擇（testid: begin-checkout-btn / checkout-schedule-select）
+- ✅ 建立訂單 → success（testid: create-order-btn）
+- ✅ 我的訂單 Email 查詢（testid: view-orders-btn / orders-email-input）
+- ✅ 訂單列表 → 詳情（testid: order-list-item）
+- ✅ **訂單編號顯示（testid: order-id）** ✅ 10/10 通過
+
 ---
 
-## 🔖 當前狀態標記（更新：2026-04-03）
+## 🔖 當前狀態標記（更新：2026-04-06）
 
-**最後 commit：** `ae09304` — fix(checkout): 動態查詢真實 schedule UUID  
-**Branch：** `feat/frontend-order-flow`（準備 merge to main）  
-**整體完成度：** ~97%
+**最後 commit：** `dca4eaf` — Merge PR#2 TP-004（2026-04-06 01:03）  
+**Branch：** `main`（所有 branch 已合併）  
+**整體完成度：** ~99%
 
-### ✅ 已完成功能（截至 2026-04-03）
+### ✅ 已完成功能（截至 2026-04-06）
 - 前台所有頁面（含行動版）
 - **前台訂單完整流程：** 付款頁 / 我的訂單列表 / 詳情頁 / 取消 / 退款申請
+- **事件追蹤系統：** track.ts / utm.ts / events.ts / /api/events
+- **E2E 漏斗測試基礎：** funnel-booking-payment.spec.ts（10 個 TC，全部 selector 可用）
+- **10/10 E2E testid 驗證：** Judy 手測通過
 - Admin 後台：登入/安全/訂單/退款/導遊審核/行程 CRUD/營運追蹤
 - 導遊後台：登入/儀表板/場次管理/訂單查看
-- ECPay mock 付款閉環（原子扣位 + 冪等）
-- 7 次 DB migration（001–007）
+- ECPay 回調 API 就位
+- 8 次 DB migration（001–008/009）
 
-### 🔜 下一步（Phase 8+）
-1. **旅客 Google OAuth** — 取代 Email query 身份驗證
-2. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽
+### 🔜 下一步（Phase 9+）
+1. **旅客 Google OAuth** — 取代 Email query 身份驗證（Phase 9）
+2. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽（Phase 10）
 3. **Storage RLS** — 補 public SELECT policy（Tech Debt TD-01）
 4. **評價系統** — 行程完成後留評閉環
 5. **Supabase Auth for Guides** — 廢除自製 session，改 Supabase Auth
