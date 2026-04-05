@@ -1,9 +1,9 @@
-# 📦 02-Product Specification
+# 文件夾內容
 
-本資料夾存放產品的所有規格書與使用者故事。
+最後更新：2026-04-06
 
-## 📁 子目錄
-- **`09-product-spec/`**: 包含 PRD (Product Requirement Document)、User Stories Backlog、各頁面 UI 規格（Admin/Consumer）。
+此文件夾包含本項目相關文件。詳請參考各子資料夾。
 
 ---
-*Created by Amy for 木村哥.*
+
+查看根目錄 docs/README.md 以了解快速導航。

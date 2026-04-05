@@ -1,9 +1,9 @@
-# 🎨 03-Design & Frontend
+# 文件夾內容
 
-本資料夾存放前端開發規格與 UI/UX 相關文件。
+最後更新：2026-04-06
 
-## 📁 子目錄
-- **`11-frontend-spec/`**: 包含首頁組件 (Homepage Components)、UI 組件庫說明。
+此文件夾包含本項目相關文件。詳請參考各子資料夾。
 
 ---
-*Created by Amy for 木村哥.*
+
+查看根目錄 docs/README.md 以了解快速導航。

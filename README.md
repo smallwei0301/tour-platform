@@ -4,7 +4,7 @@
 
 ---
 
-## 🔖 目前專案狀態（2026-04-03 更新）
+## 🔖 目前專案狀態（2026-04-06 更新）
 
 ```
 Phase 1 前台 MVP         ████████████ 100%  ✅
@@ -14,20 +14,23 @@ Phase 4 行程後台         ████████████ 100%  ✅
 Phase 5 付款扣位完整閉環 ████████████ 100%  ✅ 2026-04-01 完成
 Phase 6 導遊儀表板       ████████████ 100%  ✅ 2026-04-03 merge to main
 Phase 7 前台訂單流程完整 ████████████ 100%  ✅ 2026-04-03 完成
-Phase 8 旅客 Auth        ░░░░░░░░░░░░   0%  🔜 下一步（Google OAuth）
-Phase 9 正式金流         ░░░░░░░░░░░░   0%  🔜 待開始（ECPay 真實串接）
-整體完成度：~97%（核心交易閉環 + 前台訂單流程完整）
+Phase 8 量測地基 + E2E   ████████████ 100%  ✅ 2026-04-06 完成（TP-004）
+Phase 9 旅客 Auth        ░░░░░░░░░░░░   0%  🔜 下一步（Google OAuth）
+Phase 10 正式金流        ░░░░░░░░░░░░   0%  🔜 待開始（ECPay 真實串接）
+整體完成度：~99%（核心交易完整 + 事件追蹤 + E2E 測試基礎）
 ```
 
-**最新里程碑（2026-04-03）🎉**
+**最新里程碑（2026-04-06）🎉 TP-004 完成：量測地基 + E2E 漏斗測試**
+- ✅ **事件追蹤系統上線**：track.ts + utm.ts + events.ts，涵蓋完整漏斗（展示 → 加購 → 付款 → 訂單）
+- ✅ **E2E 漏斗測試骨架**：funnel-booking-payment.spec.ts（253 行，涵蓋首頁 → 詳情 → 預訂 → 付款 → 訂單 → 取消）
+- ✅ **ECPay 金流回調 API**：/api/payments/ecpay/callback 已就位
+- ✅ **10/10 testid PASS**：Judy 手測驗證全部 selector 可用
+- ✅ **PR#2 合入 main**：commit dca4eaf（2026-04-06 01:03）
+
+**前一里程碑（2026-04-03）**
 - ✅ **前台訂單流程完整化**：付款頁 / 我的訂單列表 / 詳情頁 / 取消 / 退款申請，Judy 8/8 PASS
 - ✅ **checkout 修復**：動態查詢真實 schedule UUID，不再 hardcode 假 ID
 - ✅ **feat/guide-dashboard merge to main**：Phase 6 導遊後台正式合入主幹
-
-**前一里程碑（2026-04-02）**
-- ✅ **導遊後台完整實作**：登入（邀請碼 + 密碼設定）、儀表板、場次管理、訂單查看
-- ✅ **Admin 產生登入碼**：管理員可對已審核導遊一鍵產生 24 小時邀請連結
-- ✅ **資料隔離**：場次/訂單 API 均有 `guide_id` ownership 驗證，403 防護
 
 ---
 
@@ -146,7 +149,20 @@ Phase 9 正式金流         ░░░░░░░░░░░░   0%  🔜 待
 | checkout 動態排期 | 動態查詢真實 schedule UUID，不再 hardcode | ✅ |
 | Navbar 我的訂單 | 頂部導覽連結 `/me/orders` | ✅ |
 
-### Phase 8：旅客 Auth 🔜 下一步
+### Phase 8：量測地基 + E2E 漏斗測試 ✅ 完成（2026-04-06）
+
+| 任務 | 說明 | 狀態 |
+|------|------|------|
+| **事件追蹤系統** | track.ts + utm.ts + events.ts + /api/events route | ✅ |
+| **UTM 參數捕獲** | Checkout 頁面讀取 query params（utm_source / utm_medium / utm_campaign） | ✅ |
+| **漏斗事件打點** | view_activity / add_to_cart / begin_checkout / purchase_intent / purchase | ✅ |
+| **E2E 測試骨架** | funnel-booking-payment.spec.ts（253 行，10 個 TC）| ✅ |
+| **10/10 testid PASS** | Judy 手測驗證：home-cta-explore / activity-card / ... / order-id | ✅ |
+| **ECPay 回調 API** | /api/payments/ecpay/callback 已就位 | ✅ |
+| **資料庫遷移** | 008_events.sql + 009_events_utm.sql（events 表 + utm 追蹤） | ✅ |
+| **TP-004 合入主幹** | PR#2 merge：commit dca4eaf（2026-04-06 01:03） | ✅ |
+
+### Phase 9：旅客 Auth 🔜 下一步
 
 | 任務 | 說明 | 優先 |
 |------|------|------|
@@ -156,7 +172,7 @@ Phase 9 正式金流         ░░░░░░░░░░░░   0%  🔜 待
 | 旅客個人頁 | 訂單歷史 + 偏好設定 | P1 |
 | 付款後留評 | 行程完成後評價閉環 | P2 |
 
-### Phase 9：正式金流 🔜 待開始
+### Phase 10：正式金流 🔜 待開始
 
 | 任務 | 說明 | 優先 |
 |------|------|------|
@@ -277,7 +293,7 @@ MVP 的成功，不是頁面做完，而是：
 
 ## 目前 Vercel 部署資訊
 
-- **Branch（最新）：** `feat/guide-dashboard`
-- **Latest commit：** `078fd04`
+- **Branch（最新）：** `main`（已合入 TP-004）
+- **Latest commit：** `dca4eaf` Merge PR#2（2026-04-06 01:03）
 - **Admin 測試帳號：** `smallwei0301@gmail.com`
 - **Supabase project：** `pyoderxmpeyqjwkeliiu`
