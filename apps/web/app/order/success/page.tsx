@@ -112,7 +112,7 @@ export default function OrderSuccessPage() {
           <div style={cardStyle}>
             <div style={rowStyle}>
               <span style={{ color: '#6b7280' }}>訂單編號</span>
-              <span style={{ fontWeight: 600, fontSize: 12, wordBreak: 'break-all' }}>{order.id}</span>
+              <span data-testid="order-id" style={{ fontWeight: 600, fontSize: 12, wordBreak: 'break-all' }}>{order.id}</span>
             </div>
             <div style={rowStyle}>
               <span style={{ color: '#6b7280' }}>行程</span>
