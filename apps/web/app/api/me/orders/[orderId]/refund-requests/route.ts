@@ -1,5 +1,7 @@
 import { ok, fail } from '../../../../../../src/lib/api';
-import { createRefundRequestDb, listRefundRequestsDb } from '../../../../../../src/lib/db.mjs';
+import { createRefundRequestDb, listRefundRequestsDb, getMyOrderDetailDb } from '../../../../../../src/lib/db.mjs';
+import { createClient } from '../../../../../../src/lib/supabase/server';
+import { sendRefundRequested } from '../../../../../../src/lib/email';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -18,12 +20,37 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
   const body = await request.json().catch(() => ({}));
 
   try {
+    // 從 session 取得 email（不再依賴 body.contactEmail）
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+      return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
+    }
+
     const created = await createRefundRequestDb({
       orderId,
       reason: body?.reason,
       note: body?.note,
-      contactEmail: body?.contactEmail
+      contactEmail: user.email, // 以 session email 為準
     });
+
+    // 🔔 Fire-and-forget: 退款申請收到 email
+    try {
+      const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
+      if (order) {
+        sendRefundRequested({
+          orderId,
+          activityTitle: order.title || '行程',
+          scheduleDate: null,
+          peopleCount: order.peopleCount,
+          totalTwd: order.totalTwd,
+          contactName: order.contactName || undefined,
+          contactEmail: user.email,
+        }).catch(() => {});
+      }
+    } catch { /* email 失敗不影響主流程 */ }
+
     return Response.json(ok(created));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

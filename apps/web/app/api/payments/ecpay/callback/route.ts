@@ -1,6 +1,7 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
 import { trackServer } from '../../../../../src/lib/track';
+import { sendPaymentSuccess } from '../../../../../src/lib/email';
 
 function normalizePayload(headers: Headers, rawText: string) {
   const contentType = headers.get('content-type') || '';
@@ -88,6 +89,22 @@ export async function POST(request: Request) {
       },
       request
     );
+
+    // 🔔 Fire-and-forget: 付款成功 email
+    const order = result.order;
+    if (order?.contact_email) {
+      sendPaymentSuccess({
+        orderId,
+        activityTitle: order.activity_title || '行程',
+        scheduleDate: order.schedule_start_at
+          ? new Date(order.schedule_start_at).toLocaleDateString('zh-TW')
+          : null,
+        peopleCount: order.people_count,
+        totalTwd: order.total_twd,
+        contactName: order.contact_name,
+        contactEmail: order.contact_email,
+      }).catch(() => {}); // 絕對不阻塞 response
+    }
 
     return Response.json(
       ok({
