@@ -14,6 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import type { EventInsert, EventName } from '@/lib/events';
 import type { UtmParams } from '@/lib/utm';
+import { eventsLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 
 const VALID_EVENTS: EventName[] = [
   'page_view',
@@ -40,6 +41,12 @@ function getSupabaseAdmin() {
 }
 
 export async function POST(req: NextRequest) {
+  // Rate limiting: 50 requests/min per IP
+  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown';
+  const rlResult = eventsLimiter.check(ip);
+  const rlResponse = createRateLimitResponse(rlResult);
+  if (rlResponse) return rlResponse;
+
   // 永遠回 200 — 追蹤失敗不能影響主流程
   try {
     const body = await req.json().catch(() => null);

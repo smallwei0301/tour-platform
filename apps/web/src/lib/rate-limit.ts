@@ -105,6 +105,12 @@ export const limiters = {
   events: new RateLimiter(50, 60 * 1000),
 };
 
+// Named exports for convenience
+export const ordersLimiter = limiters.orders;
+export const ecpayCallbackLimiter = limiters.ecpayCallback;
+export const myOrdersLimiter = limiters.userOrders;
+export const eventsLimiter = limiters.events;
+
 /**
  * Middleware helper: Returns 429 if limit exceeded
  */

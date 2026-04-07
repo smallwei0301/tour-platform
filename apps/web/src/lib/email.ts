@@ -1,6 +1,7 @@
 /**
  * Email notification service via Resend
  * Phase 9 — Tour Platform
+ * Phase 10-4 — Added delivery logging with messageId
  *
  * All functions are fire-and-forget (async, non-blocking).
  * API failures are logged but do NOT throw — they must never affect API response.
@@ -9,6 +10,31 @@
  */
 
 import { Resend } from 'resend';
+
+// ── Delivery logger ────────────────────────────────────────────────────────────
+
+interface EmailLogEntry {
+  fn: string;
+  to: string;
+  subject: string;
+  orderId?: string;
+  messageId?: string;
+  status: 'sent' | 'failed' | 'skipped';
+  error?: string;
+  ts: string;
+}
+
+function logEmail(entry: EmailLogEntry): void {
+  const icon = entry.status === 'sent' ? '✉️' : entry.status === 'skipped' ? '⏭️' : '❌';
+  const base = `[email] ${icon} ${entry.fn} → ${entry.to} | subject="${entry.subject}"`;
+  if (entry.status === 'sent') {
+    console.log(`${base} | messageId=${entry.messageId} | orderId=${entry.orderId ?? '-'}`);
+  } else if (entry.status === 'skipped') {
+    console.log(`${base} | reason=no_api_key`);
+  } else {
+    console.error(`${base} | error=${entry.error}`);
+  }
+}
 
 const FROM = process.env.EMAIL_FROM || 'Tour Platform <noreply@resend.dev>';
 
@@ -123,15 +149,17 @@ export async function sendOrderConfirmation(data: OrderEmailData): Promise<void>
     </a>
   `);
 
+  const resend = getResend();
+  if (!resend) {
+    logEmail({ fn: 'sendOrderConfirmation', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
+    return;
+  }
   try {
-    await getResend()?.emails.send({
-      from: FROM,
-      to: data.contactEmail,
-      subject,
-      html,
-    });
+    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
+    logEmail({ fn: 'sendOrderConfirmation', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
   } catch (err) {
-    console.error('[email] sendOrderConfirmation failed:', err);
+    const error = err instanceof Error ? err.message : String(err);
+    logEmail({ fn: 'sendOrderConfirmation', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
   }
 }
 
@@ -154,15 +182,17 @@ export async function sendPaymentSuccess(data: OrderEmailData): Promise<void> {
     </div>
   `);
 
+  const resend = getResend();
+  if (!resend) {
+    logEmail({ fn: 'sendPaymentSuccess', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
+    return;
+  }
   try {
-    await getResend()?.emails.send({
-      from: FROM,
-      to: data.contactEmail,
-      subject,
-      html,
-    });
+    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
+    logEmail({ fn: 'sendPaymentSuccess', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
   } catch (err) {
-    console.error('[email] sendPaymentSuccess failed:', err);
+    const error = err instanceof Error ? err.message : String(err);
+    logEmail({ fn: 'sendPaymentSuccess', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
   }
 }
 
@@ -184,15 +214,17 @@ export async function sendOrderCancellation(data: OrderEmailData): Promise<void>
     </a>
   `);
 
+  const resend = getResend();
+  if (!resend) {
+    logEmail({ fn: 'sendOrderCancellation', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
+    return;
+  }
   try {
-    await getResend()?.emails.send({
-      from: FROM,
-      to: data.contactEmail,
-      subject,
-      html,
-    });
+    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
+    logEmail({ fn: 'sendOrderCancellation', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
   } catch (err) {
-    console.error('[email] sendOrderCancellation failed:', err);
+    const error = err instanceof Error ? err.message : String(err);
+    logEmail({ fn: 'sendOrderCancellation', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
   }
 }
 
@@ -214,14 +246,16 @@ export async function sendRefundRequested(data: OrderEmailData): Promise<void> {
     </div>
   `);
 
+  const resend = getResend();
+  if (!resend) {
+    logEmail({ fn: 'sendRefundRequested', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
+    return;
+  }
   try {
-    await getResend()?.emails.send({
-      from: FROM,
-      to: data.contactEmail,
-      subject,
-      html,
-    });
+    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
+    logEmail({ fn: 'sendRefundRequested', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
   } catch (err) {
-    console.error('[email] sendRefundRequested failed:', err);
+    const error = err instanceof Error ? err.message : String(err);
+    logEmail({ fn: 'sendRefundRequested', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
   }
 }
