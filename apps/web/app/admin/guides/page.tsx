@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/components/admin/ui';
+import { AvatarUpload } from '../../../src/components/admin/AvatarUpload';
 
 type GuideApp = {
   id: string; fullName: string; email: string; phone: string;
@@ -12,11 +13,13 @@ type GuideProfile = {
   id: string; display_name: string; slug: string; verification_status: string;
   headline?: string | null; region?: string | null; rating_avg?: number | null;
   guide_email?: string | null;
+  profile_photo_url?: string | null;
 };
 
 type EditState = {
   guideId: string; guideName: string; email: string; password: string;
   confirmPassword: string; loading: boolean; error: string; success: string;
+  profilePhotoUrl?: string;
 };
 
 type InviteResult = { inviteUrl: string; expiresAt: string; guideName: string } | null;
@@ -189,10 +192,22 @@ export default function AdminGuidesPage() {
       {/* ── Edit Guide Account Modal ── */}
       {editState && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 440, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 440, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
             <h3 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>✏️ 編輯導遊帳號</h3>
             <p style={{ margin: '0 0 20px', color: '#6b7280', fontSize: 13 }}>{editState.guideName}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Avatar Upload */}
+              <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, borderBottom: '1px solid #f3f4f6' }}>
+                <AvatarUpload
+                  guideId={editState.guideId}
+                  currentUrl={editState.profilePhotoUrl}
+                  onUpload={(url) => {
+                    setEditState(s => s ? { ...s, profilePhotoUrl: url, success: '✅ 頭像已更新' } : null);
+                    loadProfiles();
+                  }}
+                  size={100}
+                />
+              </div>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>電子信箱（登入用）</label>
                 <input type="email" value={editState.email}
@@ -357,7 +372,7 @@ export default function AdminGuidesPage() {
                           </button>
                         )}
                         <button
-                          onClick={() => setEditState({ guideId: p.id, guideName: p.display_name, email: p.guide_email || '', password: '', confirmPassword: '', loading: false, error: '', success: '' })}
+                          onClick={() => setEditState({ guideId: p.id, guideName: p.display_name, email: p.guide_email || '', password: '', confirmPassword: '', loading: false, error: '', success: '', profilePhotoUrl: p.profile_photo_url || '' })}
                           style={{ flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
                         >
                           ✏️ 編輯帳號
