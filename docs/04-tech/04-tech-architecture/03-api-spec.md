@@ -508,7 +508,52 @@
 
 ---
 
-## 8. MVP 不做的 API
+## 8. 旅客 Auth（Phase 9）
+
+### 8.1 OAuth Callback
+`GET /auth/callback?code=<code>&next=<path>`
+
+處理 Google OAuth redirect。交換 code 為 session，成功跳轉 `next`，失敗跳 `/login?error=auth_callback_failed`。
+
+### 8.2 我的訂單列表
+`GET /api/me/orders`
+
+**改動（Phase 9）：** 不再接受 `contactEmail` query param，從 Supabase Auth session 取得 email。  
+**未登入：** 401 `{ ok: false, error: { code: "UNAUTHORIZED" } }`
+
+### 8.3 訂單詳情
+`GET /api/me/orders/:orderId`
+
+**改動（Phase 9）：** 同上，從 session 取 email 驗證所有權。
+
+### 8.4 取消訂單
+`PATCH /api/me/orders/:orderId`
+
+**改動（Phase 9）：** Body 不再需要 `contactEmail`，從 session 取得。取消成功後發 email 通知。
+
+### 8.5 退款申請
+`POST /api/me/orders/:orderId/refund-requests`
+
+**改動（Phase 9）：** 從 session 取 email。成功後發退款申請確認 email。
+
+---
+
+## 9. Email 通知（Phase 9）
+
+Provider: **Resend**（lazy init，無 API key 不 crash）
+
+| 觸發點 | 函數 | Email 標題 |
+|--------|------|------------|
+| `POST /api/orders` 成功 | `sendOrderConfirmation()` | 您的預訂已建立 — {活動名稱} |
+| `/api/payments/ecpay/callback` 成功 | `sendPaymentSuccess()` | 付款成功！預訂確認 — {活動名稱} |
+| `PATCH /api/me/orders/:id` cancel | `sendOrderCancellation()` | 預訂已取消 — {活動名稱} |
+| `POST /api/me/orders/:id/refund-requests` | `sendRefundRequested()` | 退款申請已收到 — 訂單 #{id} |
+
+**所有 email 都是 fire-and-forget，不阻塞 API response。**
+
+---
+
+## 10. MVP 不做的 API
 
 以下不進 MVP：
 - 站內聊天 API

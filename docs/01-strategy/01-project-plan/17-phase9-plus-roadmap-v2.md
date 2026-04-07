@@ -17,7 +17,7 @@
 | A3 | **ECPay 串接指南是空的** | `01-ecpay-integration-guide.md` 全部「待編寫」 | 沒有沙箱測試計畫、沒有驗簽邏輯文件 |
 | A4 | **API 無 Rate Limiting** | 所有 API route 裸奔 | 任何人可以無限打 `/api/orders`、`/api/events` |
 | A5 | **無錯誤監控** | 沒有 Sentry 或同等方案 | 真實用戶遇到 500 error 你不會知道 |
-| A6 | **Storage RLS 未設** | TD-01 未處理，靠 service_role 繞過 | 圖片 URL 可被猜測存取（低風險但需修） |
+| A6 | ~~Storage RLS 未設~~ | ✅ Phase 9 已修（migration 011） | public read policy 已加 |
 
 ### B. 上線前強烈建議（影響信任度 & 營運效率）
 
@@ -90,7 +90,7 @@
 | **Sentry 錯誤監控** | Next.js + Sentry SDK，接 Telegram alert | **P0** | 0.5d |
 | ECPay 沙箱串接 | 測試環境真實信用卡流程 | **P0** | 2d |
 | ECPay 正式串接 | 真實刷卡 + webhook 驗簽 + CheckMacValue | **P0** | 1d |
-| Storage RLS 政策 | 補 public SELECT policy | P1 | 0.5d |
+| ~~Storage RLS 政策~~ | ~~補 public SELECT policy~~ | ~~P1~~ | ✅ Phase 9 已修 |
 | LINE Pay 串接 | 台灣主流行動支付 | P1 | 1.5d |
 | 導遊分潤撥款機制 | 抽成後撥款（先手動，後自動） | P1 | 1d |
 | **超賣壓力測試** | concurrent 場景驗證 fn_book_schedule | P1 | 0.5d |

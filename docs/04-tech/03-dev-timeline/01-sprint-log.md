@@ -1,7 +1,7 @@
 # Sprint 執行日誌
 
-> 最後更新：2026-04-06
-> 當前進度：Sprint 8 完成（量測地基 + E2E 漏斗測試 + ECPay 金流 API）
+> 最後更新：2026-04-07
+> 當前進度：Sprint 9 完成（旅客 Auth + Email 通知 + Login 頁面設計）
 
 ---
 
@@ -234,27 +234,73 @@
 
 ---
 
-## 🔖 當前狀態標記（更新：2026-04-06）
+### Sprint 9 — 旅客 Auth + Email 通知（2026-04-07）
 
-**最後 commit：** `dca4eaf` — Merge PR#2 TP-004（2026-04-06 01:03）  
-**Branch：** `main`（所有 branch 已合併）  
-**整體完成度：** ~99%
+| 功能 | commit | 說明 |
+|------|--------|------|
+| migration 008：events 表 | `6640c53` | 事件追蹤表（Supabase 執行） |
+| migration 009：utm_params | `6640c53` | UTM 欄位 5 個 |
+| migration 010：orders.user_id | `6640c53` | UUID，FK → auth.users |
+| migration 011：Storage RLS | `6640c53` | activity-images public read |
+| @supabase/ssr + resend 安裝 | `6640c53` | 替代 auth-helpers-nextjs |
+| src/lib/supabase/client.ts | `6640c53` | Browser Supabase client |
+| src/lib/supabase/server.ts | `6640c53` | Server Supabase client（SSR） |
+| /auth/callback/route.ts | `6640c53` | OAuth redirect 處理 |
+| /login 頁面 | `6be23da` | 品牌綠 + 飛機 SVG + 山景設計 |
+| Navbar 登入/登出狀態 | `6640c53` | 顯示名稱 + 頭像 + 登出按鈕 |
+| middleware.ts 加 Supabase refresh | `6640c53` | session cookies 自動更新 |
+| /api/me/orders session-based | `6640c53` | 從 Supabase session 取 email |
+| /me/orders 移除 email input | `6640c53` | 未登入 → redirect /login |
+| /me/orders/[id] session-based | `6640c53` | 取消/退款用 session email |
+| src/lib/email.ts | `6640c53` | Resend lazy-init，4 種 email |
+| 訂單建立 email（/api/orders） | `6640c53` | fire-and-forget |
+| 付款成功 email（/api/payments/ecpay/callback） | `6640c53` | fire-and-forget |
+| 取消 email（/api/me/orders/[id]） | `6640c53` | fire-and-forget |
+| 退款 email（/api/me/orders/[id]/refund-requests） | `6640c53` | fire-and-forget |
+| 登入頁背景改 Unsplash 山景圖 | `b5ac4a2` | Unsplash 免費圖庫 |
+| Supabase Auth URL 設定 | 手動 | site_url + uri_allow_list |
+| Google OAuth env（Vercel） | API | GOOGLE_CLIENT_ID / SECRET |
+| Resend env（Vercel） | API | RESEND_API_KEY / EMAIL_FROM |
 
-### ✅ 已完成功能（截至 2026-04-06）
+**驗收（手動測試 10/10 PASS）：**
+- ✅ /login 頁面正確渲染（Google 按鈕 + 品牌設計）
+- ✅ Navbar 未登入顯示「登入/註冊」
+- ✅ /me/orders 未登入 → client redirect to /login
+- ✅ /api/me/orders 未登入 → 401 UNAUTHORIZED
+- ✅ /api/me/orders/:id CANCEL 未登入 → 401
+- ✅ /api/me/orders/:id/refund-requests 未登入 → 401
+- ✅ /auth/callback route 存在（307）
+- ✅ DB events 表含 utm 5 欄位
+- ✅ DB orders 表含 user_id UUID
+- ✅ Email lazy-init 不 crash（無 API key 也能 build）
+
+---
+
+## 🔖 當前狀態標記（更新：2026-04-07）
+
+**最後 commit：** `b5ac4a2` — login page Unsplash mountain（2026-04-07）  
+**Branch：** `feat/phase9-auth-notification` → merge to `main`  
+**整體完成度：** Phase 9 100% ✅
+
+### ✅ 已完成功能（截至 2026-04-07）
 - 前台所有頁面（含行動版）
+- **旅客 Google OAuth 登入 / 登出**（Supabase Auth）
+- **登入頁全新設計**（品牌綠 + Unsplash 翠綠山景背景）
 - **前台訂單完整流程：** 付款頁 / 我的訂單列表 / 詳情頁 / 取消 / 退款申請
+- **Session-based 訂單查詢**（取代 email query，未登入自動跳 /login）
+- **Email 通知系統**（Resend：訂單建立 / 付款成功 / 取消 / 退款）
 - **事件追蹤系統：** track.ts / utm.ts / events.ts / /api/events
-- **E2E 漏斗測試基礎：** funnel-booking-payment.spec.ts（10 個 TC，全部 selector 可用）
-- **10/10 E2E testid 驗證：** Judy 手測通過
+- **E2E 漏斗測試基礎：** funnel-booking-payment.spec.ts（10 個 TC）
 - Admin 後台：登入/安全/訂單/退款/導遊審核/行程 CRUD/營運追蹤
 - 導遊後台：登入/儀表板/場次管理/訂單查看
 - ECPay 回調 API 就位
-- 8 次 DB migration（001–008/009）
+- 11 次 DB migration（001–011）
+- Storage RLS public read（activity-images）
 
-### 🔜 下一步（Phase 9+）
-1. **旅客 Google OAuth** — 取代 Email query 身份驗證（Phase 9）
-2. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽（Phase 10）
-3. **Storage RLS** — 補 public SELECT policy（Tech Debt TD-01）
-4. **評價系統** — 行程完成後留評閉環
-5. **Supabase Auth for Guides** — 廢除自製 session，改 Supabase Auth
+### 🔜 下一步（Phase 10）
+1. **安全性 Checklist** — OWASP Top 10 + input validation（Phase 10）
+2. **API Rate Limiting** — 所有 API route 加速率限制
+3. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽（Phase 10）
+4. **評價系統** — 行程完成後留評閉環（Phase 12）
+5. **Supabase Auth for Guides** — 廢除自製 session，改 Supabase Auth（Phase 12）
 
