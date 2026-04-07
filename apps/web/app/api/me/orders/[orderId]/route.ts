@@ -1,13 +1,20 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { getMyOrderDetailDb, cancelOrderDb } from '../../../../../src/lib/db.mjs';
+import { createClient } from '../../../../../src/lib/supabase/server';
+import { sendOrderCancellation } from '../../../../../src/lib/email';
 
-export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
+export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
-  const url = new URL(request.url);
-  const contactEmail = url.searchParams.get('contactEmail') || '';
 
   try {
-    const row = await getMyOrderDetailDb({ orderId, contactEmail });
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+      return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
+    }
+
+    const row = await getMyOrderDetailDb({ orderId, contactEmail: user.email });
     return Response.json(ok(row));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
@@ -20,17 +27,37 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
   const { orderId } = await context.params;
   const body = await request.json().catch(() => null);
   const action = body?.action || '';
-  const contactEmail = body?.contactEmail || '';
-
-  if (!contactEmail) {
-    return Response.json(fail('INVALID_REQUEST', 'contactEmail is required'), { status: 400 });
-  }
 
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+      return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
+    }
+
     if (action === 'cancel') {
-      const result = await cancelOrderDb({ orderId, contactEmail });
+      // 先查訂單詳情（取 email 通知用）
+      const orderBefore = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
+
+      const result = await cancelOrderDb({ orderId, contactEmail: user.email });
+
+      // 🔔 Fire-and-forget: 訂單取消 email
+      if (orderBefore) {
+        sendOrderCancellation({
+          orderId,
+          activityTitle: orderBefore.title || '行程',
+          scheduleDate: null,
+          peopleCount: orderBefore.peopleCount,
+          totalTwd: orderBefore.totalTwd,
+          contactName: orderBefore.contactName || undefined,
+          contactEmail: user.email,
+        }).catch(() => {}); // 絕對不阻塞 response
+      }
+
       return Response.json(ok(result));
     }
+
     return Response.json(fail('INVALID_REQUEST', `unknown action: ${action}`), { status: 400 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

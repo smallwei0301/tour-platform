@@ -189,9 +189,12 @@
 | created_at | timestamptz | Y | 建立時間 |
 | updated_at | timestamptz | Y | 更新時間 |
 
+| user_id | uuid | N | FK -> auth.users.id（Phase 9，Supabase Auth 用戶，NULL = 舊訂單） |
+
 **索引**
 - unique(order_no)
 - index(traveler_id)
+- index(user_id) WHERE user_id IS NOT NULL
 - index(guide_id)
 - index(activity_id)
 - index(schedule_id)
@@ -313,6 +316,45 @@
 - index(target_type, target_id)
 - index(actor_user_id)
 - index(created_at)
+
+---
+
+### 2.12 events（Phase 8–9，migration 008+009）
+事件追蹤表，用於漏斗分析。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | bigserial | Y | PK |
+| event_name | text | Y | page_view / view_item / begin_checkout / purchase_intent / payment_succeeded / error |
+| session_id | text | N | Client anonymous session UUID |
+| contact_email | text | N | 聯絡 email |
+| order_id | uuid | N | FK -> orders.id |
+| activity_id | uuid | N | FK -> activities.id |
+| schedule_id | uuid | N | FK -> activity_schedules.id |
+| properties | jsonb | Y | Event-specific payload |
+| error_code | text | N | 錯誤碼 |
+| page_path | text | N | 頁面路徑 |
+| referrer | text | N | 來源頁 |
+| user_agent | text | N | User agent |
+| ip_hash | text | N | SHA-256 of IP |
+| utm_source | text | N | UTM source |
+| utm_medium | text | N | UTM medium |
+| utm_campaign | text | N | UTM campaign |
+| utm_content | text | N | UTM content variant |
+| utm_term | text | N | UTM keyword |
+| created_at | timestamptz | Y | 建立時間 |
+
+**索引**
+- index(event_name)
+- index(session_id)
+- index(order_id)
+- index(activity_id)
+- index(created_at DESC)
+- index(utm_source) WHERE NOT NULL
+- index(utm_campaign) WHERE NOT NULL
+
+**RLS**
+- RLS enabled，只有 service_role 可讀寫（前端透過 /api/events API route）
 
 ---
 
