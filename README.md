@@ -4,33 +4,77 @@
 
 ---
 
-## 🔖 目前專案狀態（2026-04-06 更新）
+## 🔖 目前專案狀態（2026-04-07 更新）
 
 ```
-Phase 1 前台 MVP         ████████████ 100%  ✅
-Phase 2 Admin 後台核心   ████████████ 100%  ✅
-Phase 3 UI 精修          ████████████ 100%  ✅
-Phase 4 行程後台         ████████████ 100%  ✅
-Phase 5 付款扣位完整閉環 ████████████ 100%  ✅ 2026-04-01 完成
-Phase 6 導遊儀表板       ████████████ 100%  ✅ 2026-04-03 merge to main
-Phase 7 前台訂單流程完整 ████████████ 100%  ✅ 2026-04-03 完成
-Phase 8 量測地基 + E2E   ████████████ 100%  ✅ 2026-04-06 完成（TP-004）
-Phase 9 旅客 Auth        ░░░░░░░░░░░░   0%  🔜 下一步（Google OAuth）
-Phase 10 正式金流        ░░░░░░░░░░░░   0%  🔜 待開始（ECPay 真實串接）
-整體完成度：~99%（核心交易完整 + 事件追蹤 + E2E 測試基礎）
+Phase 1  前台 MVP             ████████████ 100%  ✅
+Phase 2  Admin 後台核心       ████████████ 100%  ✅
+Phase 3  UI 精修              ████████████ 100%  ✅
+Phase 4  行程後台             ████████████ 100%  ✅
+Phase 5  付款扣位完整閉環     ████████████ 100%  ✅ 2026-04-01
+Phase 6  導遊儀表板           ████████████ 100%  ✅ 2026-04-03
+Phase 7  前台訂單流程完整     ████████████ 100%  ✅ 2026-04-03
+Phase 8  量測地基 + E2E       ████████████ 100%  ✅ 2026-04-06
+Phase 9  旅客 Auth + 通知     ██░░░░░░░░░░  10%  🚧 進行中（本週重點）
+Phase 10 正式金流 + 安全加固  ░░░░░░░░░░░░   0%  🔜 下一步
+Phase 11 Andy Lee Go-Live     ░░░░░░░░░░░░   0%  🔜 4 月底目標
+Phase 12 成長基礎             ░░░░░░░░░░░░   0%  🔜 5 月持續
 ```
 
-**最新里程碑（2026-04-06）🎉 TP-004 完成：量測地基 + E2E 漏斗測試**
-- ✅ **事件追蹤系統上線**：track.ts + utm.ts + events.ts，涵蓋完整漏斗（展示 → 加購 → 付款 → 訂單）
-- ✅ **E2E 漏斗測試骨架**：funnel-booking-payment.spec.ts（253 行，涵蓋首頁 → 詳情 → 預訂 → 付款 → 訂單 → 取消）
-- ✅ **ECPay 金流回調 API**：/api/payments/ecpay/callback 已就位
-- ✅ **10/10 testid PASS**：Judy 手測驗證全部 selector 可用
-- ✅ **PR#2 合入 main**：commit dca4eaf（2026-04-06 01:03）
+**🎯 目標：4 月底前 Andy Lee 行程正式可收真錢。**
 
-**前一里程碑（2026-04-03）**
-- ✅ **前台訂單流程完整化**：付款頁 / 我的訂單列表 / 詳情頁 / 取消 / 退款申請，Judy 8/8 PASS
-- ✅ **checkout 修復**：動態查詢真實 schedule UUID，不再 hardcode 假 ID
-- ✅ **feat/guide-dashboard merge to main**：Phase 6 導遊後台正式合入主幹
+---
+
+## 📅 本週計畫（2026-04-07 ~ 04-12）
+
+### 🔴 立即處理（04/07-08）
+
+| # | 任務 | 負責 | 狀態 |
+|---|------|------|------|
+| 1 | 執行 DB Migration 008 + 009（events 表 + utm） | Tracy | ⬜ |
+| 2 | 統一 Phase 編號（milestone-tracker 對齊 README） | Emily | ⬜ |
+| 3 | 更新 Andy Lee checklist（勾選 Sprint 4-8 已完成項） | Emily | ⬜ |
+| 4 | 更新 tech-debt-log（反映 Phase 6-8 已還債務） | Emily | ⬜ |
+| 5 | 催 Andy Lee 提供真實活動照片（設 4/15 deadline） | Emily → Andy | ⬜ |
+
+### 🟡 Phase 9 開發（04/08-12）
+
+| # | 任務 | 負責 | 預估 | 狀態 |
+|---|------|------|------|------|
+| 6 | Google OAuth 登入（Supabase Auth + Google Provider） | Tracy | 1d | ⬜ |
+| 7 | `/me/orders` 改用 OAuth session（移除 email query） | Tracy | 0.5d | ⬜ |
+| 8 | Email 通知系統骨架（訂單確認 / 付款成功） | Tracy | 1d | ⬜ |
+| 9 | Judy E2E 驗收 Auth + 通知流程 | Judy | 0.5d | ⬜ |
+
+### 🟢 文件 & 營運（穿插處理）
+
+| # | 任務 | 負責 | 狀態 |
+|---|------|------|------|
+| 10 | 補寫退款政策細則 | Emily | ⬜ |
+| 11 | 補寫結算規則文件 | Emily | ⬜ |
+| 12 | ECPay 商家帳號申請（越早越好） | Emily | ⬜ |
+
+### 本週預期產出
+- ✅ Google OAuth 登入可用
+- ✅ `/me/orders` 用 session 身份識別
+- ✅ 付款成功後旅客收到確認 email
+- ✅ events 表在 Supabase 正式上線
+- ✅ 所有過期文件同步更新
+
+---
+
+## 最近里程碑
+
+**2026-04-06 🎉 Phase 8 完成：量測地基 + E2E 漏斗測試**
+- ✅ 事件追蹤系統：track.ts + utm.ts + events.ts，涵蓋完整漏斗
+- ✅ E2E 漏斗測試骨架：funnel-booking-payment.spec.ts（253 行，10 個 TC）
+- ✅ 10/10 testid PASS（Judy 手測驗證）
+- ✅ ECPay 金流回調 API 就位
+- ✅ PR#2 合入 main：commit dca4eaf
+
+**2026-04-03 — Phase 6+7 完成**
+- ✅ 導遊儀表板 merge to main
+- ✅ 前台訂單流程完整化（付款 / 訂單列表 / 取消 / 退款），Judy 8/8 PASS
 
 ---
 
@@ -126,70 +170,94 @@ Phase 10 正式金流        ░░░░░░░░░░░░   0%  🔜 待
 
 ---
 
-## 🔜 後續開發計劃（Phase 6+）
+## 🔜 後續開發計劃（2026-04-07 CEO Review 更新）
 
-### ✅ Phase 6 完成：導遊儀表板（2026-04-02）
+> 完整缺漏分析：[`docs/01-strategy/01-project-plan/17-phase9-plus-roadmap-v2.md`](./docs/01-strategy/01-project-plan/17-phase9-plus-roadmap-v2.md)
 
-| 任務 | 說明 | 狀態 |
-|------|------|------|
-| 導遊登入（邀請碼 + 密碼設定） | 管理員發邀請碼，導遊首次登入設密碼 | ✅ |
-| 導遊場次管理 | toggle 開啟/關閉 + 容量調整 | ✅ |
-| 導遊訂單查看 | 自己場次的報名狀況，含旅客聯絡資訊 | ✅ |
-| 資料隔離 + 路由保護 | ownership check + middleware | ✅ |
+### Phase 9：旅客 Auth + 通知基礎 🚧 進行中
 
-### Phase 7：前台訂單流程完整化 ✅ 完成（2026-04-03）
+**核心觀點：** Auth 和通知是同一個「旅客身份」問題，合併處理。
 
-| 任務 | 說明 | 狀態 |
-|------|------|------|
-| 付款頁 `/order/pay` | 訂單摘要 + 模擬付款 callback | ✅ |
-| 我的訂單列表 `/me/orders` | Email 查詢 + 狀態 badge 顏色分類 | ✅ |
-| 訂單詳情 `/me/orders/:id` | 完整資訊 + 各狀態說明 + 操作按鈕 | ✅ |
-| 取消訂單 | PATCH API + cancelOrderDb（email 驗證 + 席位釋放） | ✅ |
-| 退款申請前台 | textarea 理由 + POST refund-requests | ✅ |
-| checkout 動態排期 | 動態查詢真實 schedule UUID，不再 hardcode | ✅ |
-| Navbar 我的訂單 | 頂部導覽連結 `/me/orders` | ✅ |
+| 任務 | 說明 | 優先 | 預估 | 狀態 |
+|------|------|------|------|------|
+| Google OAuth 登入 | Supabase Auth + Google Provider | **P0** | 1d | ⬜ |
+| `/me/orders` 改用 session | 移除 email query，用 OAuth session | **P0** | 0.5d | ⬜ |
+| **Email 通知系統** | 訂單確認 / 付款成功 / 取消 / 退款通知 | **P0** | 1.5d | ⬜ |
+| LINE 登入 | 台灣旅客首選行動登入 | P1 | 1d | ⬜ |
+| 旅客個人頁 | 訂單歷史 + 偏好設定 | P1 | 1d | ⬜ |
+| **導遊訂單通知** | 新訂單 Email/LINE 通知導遊 | P1 | 0.5d | ⬜ |
 
-### Phase 8：量測地基 + E2E 漏斗測試 ✅ 完成（2026-04-06）
+**Go/No-Go：** OAuth 登入 ✅ → session 取代 email ✅ → 旅客收到確認 email ✅ → 導遊收到通知 ✅
 
-| 任務 | 說明 | 狀態 |
-|------|------|------|
-| **事件追蹤系統** | track.ts + utm.ts + events.ts + /api/events route | ✅ |
-| **UTM 參數捕獲** | Checkout 頁面讀取 query params（utm_source / utm_medium / utm_campaign） | ✅ |
-| **漏斗事件打點** | view_activity / add_to_cart / begin_checkout / purchase_intent / purchase | ✅ |
-| **E2E 測試骨架** | funnel-booking-payment.spec.ts（253 行，10 個 TC）| ✅ |
-| **10/10 testid PASS** | Judy 手測驗證：home-cta-explore / activity-card / ... / order-id | ✅ |
-| **ECPay 回調 API** | /api/payments/ecpay/callback 已就位 | ✅ |
-| **資料庫遷移** | 008_events.sql + 009_events_utm.sql（events 表 + utm 追蹤） | ✅ |
-| **TP-004 合入主幹** | PR#2 merge：commit dca4eaf（2026-04-06 01:03） | ✅ |
+### Phase 10：正式金流 + 安全加固 🔜 待開始
 
-### Phase 9：旅客 Auth 🔜 下一步
+**關鍵：安全性檢查必須在真實信用卡之前完成。**
 
-| 任務 | 說明 | 優先 |
-|------|------|------|
-| **Google OAuth 登入** | Supabase Auth + Google Provider | **P0** |
-| OAuth session 整合 | `/me/orders` 改用 session，移除 email query | P0 |
-| LINE 登入 | 台灣旅客首選行動登入 | P1 |
-| 旅客個人頁 | 訂單歷史 + 偏好設定 | P1 |
-| 付款後留評 | 行程完成後評價閉環 | P2 |
+| 任務 | 說明 | 優先 | 預估 |
+|------|------|------|------|
+| **安全性 Checklist** | OWASP Top 10 + input validation 全面檢查 | **P0** | 1d |
+| **API Rate Limiting** | 所有 API route 加速率限制 | **P0** | 0.5d |
+| **Sentry 錯誤監控** | Next.js + Sentry SDK → Telegram alert | **P0** | 0.5d |
+| ECPay 沙箱串接 | 測試環境真實信用卡流程 | **P0** | 2d |
+| ECPay 正式串接 | 真實刷卡 + webhook 驗簽 + CheckMacValue | **P0** | 1d |
+| Storage RLS 政策 | 補 public SELECT policy（TD-01） | P1 | 0.5d |
+| LINE Pay 串接 | 台灣主流行動支付 | P1 | 1.5d |
+| 導遊分潤撥款 | 抽成計算 + 撥款（先手動後自動） | P1 | 1d |
+| 超賣壓力測試 | concurrent 驗證 fn_book_schedule（TD-02） | P1 | 0.5d |
 
-### Phase 10：正式金流 🔜 待開始
+### Phase 11：Andy Lee Go-Live 🔜 4 月底目標
+
+**這才是真正「上線」— 功能完成 ≠ 可以收錢。**
 
 | 任務 | 說明 | 優先 |
 |------|------|------|
-| ECPay 真實串接 | 真實信用卡刷卡 + webhook 驗簽 | P0 |
-| LINE Pay 串接 | 台灣主流行動支付 | P1 |
-| ATM 虛擬帳號 | 備用付款方式 | P2 |
-| 導遊分潤撥款 | 抽成後自動撥款給導遊 | P1 |
+| Andy Lee 真實照片上傳 | 頭像 + 封面 + Gallery 5+ 張 | **P0** |
+| Andy Lee checklist 全勾 | 場次 / 交易 / 營運追蹤 | **P0** |
+| 退款政策細則 | 各情境退款比例 + 爭議處理 | **P0** |
+| 結算規則文件 | T+7 / 抽成算法 / 提款流程 | **P0** |
+| 客服 SOP | 分層處理 + 標準話術 | P1 |
+| Full E2E 真實場景走一次 | 下單→刷卡→確認→取消→退款 | **P0** |
+| SEO meta 優化 | og:image + LocalBusiness structured data | P1 |
 
-### 技術債 / 優化
+### Phase 12：成長基礎（Go-Live 後 2-4 週）
 
 | 任務 | 說明 | 優先 |
 |------|------|------|
-| Storage RLS 政策 | 目前靠 service role 繞過，需補 public SELECT policy | P1 |
-| 超賣壓力測試 | concurrent 場景測試 fn_book_schedule 鎖定機制 | P1 |
-| E2E 測試更新 | 補足前台訂單流程 E2E | P2 |
-| SEO meta 優化 | 行程詳情頁 og:image + structured data | P2 |
-| Supabase Auth for Guides | 廢除自製 session，改 Supabase Auth | P2 |
+| Admin 漏斗分析 Dashboard | 從 events 表拉轉換率 | P1 |
+| 評價系統 | 行程完成後留評閉環 | P1 |
+| CI/CD E2E 自動化 | GitHub Actions 跑 Playwright | P1 |
+| Supabase Auth for Guides | 廢除自製 session | P2 |
+| 第二位導遊 onboarding | 驗證 guide-onboarding-sop | P1 |
+| i18n（英文版） | 外語旅客基本可用 | P2 |
+
+### 🕳️ 已知文件負債（上線前必須補齊）
+
+| 文件 | 現況 | 優先 |
+|------|------|------|
+| `04-tech/04-tech-architecture/05-security-checklist.md` | 空殼 | **P0**（Phase 10 前） |
+| `05-business/06-payment-plan/01-ecpay-integration-guide.md` | 空殼 | **P0**（Phase 10 前） |
+| `05-business/06-payment-plan/03-settlement-rules.md` | 空殼 | P0（Phase 11 前） |
+| `05-business/06-payment-plan/04-refund-policy-detail.md` | 空殼 | P0（Phase 11 前） |
+| `05-business/07-operations-plan/01-guide-onboarding-sop.md` | 空殼 | P1 |
+| `05-business/07-operations-plan/02-customer-service-sop.md` | 空殼 | P1 |
+| `06-legal/08-legal-compliance/04-legal-todo.md` | 空殼 | P1 |
+
+### 📊 時程總覽
+
+| Phase | 預估工時 | 預計完成 |
+|-------|---------|---------|
+| Phase 9（Auth + 通知） | ~5.5d | 2026-04-14 |
+| Phase 10（金流 + 安全） | ~8d | 2026-04-25 |
+| Phase 11（Go-Live） | ~4d | 2026-04-30 |
+| Phase 12（成長基礎） | 持續 | 2026-05 ongoing |
+
+### ⚠️ 風險
+
+| 風險 | 對策 |
+|------|------|
+| Andy Lee 照片遲遲不到 | 設 4/15 deadline，備案 AI 示意圖 |
+| ECPay 商家帳號審核慢 | 立刻申請，先用沙箱 |
+| 法規風險（旅行業執照） | 已有 legal-decision-memo：不碰住宿交通 |
 
 ---
 
