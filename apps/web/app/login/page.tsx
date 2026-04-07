@@ -28,23 +28,26 @@ function LoginContent() {
       position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* 背景裝飾 */}
+      {/* 背景山景照片 */}
       <div style={{
         position: 'absolute',
         top: 0,
         left: 0,
         right: 0,
-        height: '45%',
-        background: 'linear-gradient(150deg, #1b6b4a 0%, #145238 60%, #0d3d2a 100%)',
+        height: '48%',
+        backgroundImage: 'url(https://images.unsplash.com/photo-1501854140801-50d01698950b?w=1200&q=80&fit=crop&crop=center)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center 60%',
         borderRadius: '0 0 40% 40% / 0 0 60px 60px',
         zIndex: 0,
-      }} />
-
-      {/* 背景山脈裝飾 SVG */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1, opacity: 0.15 }}>
-        <svg viewBox="0 0 400 160" width="100%" preserveAspectRatio="none">
-          <polygon points="0,160 80,60 160,110 240,40 320,90 400,30 400,160" fill="#fff" />
-        </svg>
+        overflow: 'hidden',
+      }}>
+        {/* 深綠色蒙版 — 保持品牌色調 + 文字可讀 */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(160deg, rgba(27,107,74,0.72) 0%, rgba(13,61,42,0.85) 100%)',
+        }} />
       </div>
 
       {/* 主內容 */}
