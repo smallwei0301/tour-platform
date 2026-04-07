@@ -1,6 +1,7 @@
 import { fail, ok } from '../../../src/lib/api';
 import { createOrderDb } from '../../../src/lib/db.mjs';
 import { sendOrderConfirmation } from '../../../src/lib/email';
+import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 
 function statusFromErrorMessage(message: string) {
   if (message.includes('not enough seats') || message.includes('schedule is full')) return 409;
@@ -10,6 +11,15 @@ function statusFromErrorMessage(message: string) {
 }
 
 export async function POST(request: Request) {
+  // 🟡 P10-2: Rate Limiting
+  const clientIp = RateLimiter.getClientIp(request);
+  const result = limiters.orders.check(clientIp);
+
+  const rateLimitResponse = createRateLimitResponse(result);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const body = await request.json().catch(() => null);
 
   try {

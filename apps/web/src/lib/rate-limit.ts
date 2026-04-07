@@ -1,0 +1,136 @@
+/**
+ * Memory-based Rate Limiter
+ * Phase 10 — Tour Platform
+ *
+ * Uses in-memory Map (suitable for serverless).
+ * Each limiter has its own window and reset logic.
+ */
+
+interface RateLimitEntry {
+  count: number;
+  resetAt: number;
+}
+
+export class RateLimiter {
+  private store = new Map<string, RateLimitEntry>();
+  private readonly maxRequests: number;
+  private readonly windowMs: number;
+
+  constructor(maxRequests: number, windowMs: number = 60 * 1000) {
+    this.maxRequests = maxRequests;
+    this.windowMs = windowMs;
+  }
+
+  private getClientKey(identifier: string): string {
+    return identifier;
+  }
+
+  /**
+   * Check if request is allowed
+   * @returns { allowed: boolean, remaining: number, resetAt: number }
+   */
+  check(identifier: string): {
+    allowed: boolean;
+    remaining: number;
+    resetAt: number;
+  } {
+    const key = this.getClientKey(identifier);
+    const now = Date.now();
+
+    let entry = this.store.get(key);
+
+    // Expired or doesn't exist → reset
+    if (!entry || entry.resetAt <= now) {
+      entry = {
+        count: 1,
+        resetAt: now + this.windowMs,
+      };
+      this.store.set(key, entry);
+      return {
+        allowed: true,
+        remaining: this.maxRequests - 1,
+        resetAt: entry.resetAt,
+      };
+    }
+
+    // Increment
+    entry.count++;
+
+    const allowed = entry.count <= this.maxRequests;
+    const remaining = Math.max(0, this.maxRequests - entry.count);
+
+    return {
+      allowed,
+      remaining,
+      resetAt: entry.resetAt,
+    };
+  }
+
+  /**
+   * Get client IP from request
+   */
+  static getClientIp(request: Request): string {
+    const forwarded = request.headers.get('x-forwarded-for');
+    if (forwarded) {
+      return forwarded.split(',')[0].trim();
+    }
+
+    const realIp = request.headers.get('x-real-ip');
+    if (realIp) {
+      return realIp;
+    }
+
+    // Fallback: use request IP (Vercel provides cf-connecting-ip)
+    const cfIp = request.headers.get('cf-connecting-ip');
+    if (cfIp) {
+      return cfIp;
+    }
+
+    return '127.0.0.1';
+  }
+}
+
+// Pre-configured limiters for common routes
+export const limiters = {
+  // /api/orders — 10 requests per minute
+  orders: new RateLimiter(10, 60 * 1000),
+
+  // /api/payments/ecpay/callback — 30 requests per minute
+  ecpayCallback: new RateLimiter(30, 60 * 1000),
+
+  // /api/me/orders — 20 requests per minute
+  userOrders: new RateLimiter(20, 60 * 1000),
+
+  // /api/events — 50 requests per minute
+  events: new RateLimiter(50, 60 * 1000),
+};
+
+/**
+ * Middleware helper: Returns 429 if limit exceeded
+ */
+export function createRateLimitResponse(
+  result: ReturnType<RateLimiter['check']>
+): Response | null {
+  if (result.allowed) {
+    return null; // Allowed, continue
+  }
+
+  const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+
+  return new Response(
+    JSON.stringify({
+      error: 'TOO_MANY_REQUESTS',
+      message: 'Rate limit exceeded',
+      retryAfter,
+    }),
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(retryAfter),
+        'X-RateLimit-Limit': '10',
+        'X-RateLimit-Remaining': String(result.remaining),
+        'X-RateLimit-Reset': String(result.resetAt),
+      },
+    }
+  );
+}

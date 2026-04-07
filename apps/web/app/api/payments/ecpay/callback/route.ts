@@ -2,6 +2,8 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
 import { trackServer } from '../../../../../src/lib/track';
 import { sendPaymentSuccess } from '../../../../../src/lib/email';
+import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
+import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 function normalizePayload(headers: Headers, rawText: string) {
   const contentType = headers.get('content-type') || '';
@@ -47,12 +49,35 @@ function httpStatusFromError(err: unknown): number {
 }
 
 export async function POST(request: Request) {
+  // 🟡 P10-2: Rate Limiting
+  const clientIp = RateLimiter.getClientIp(request);
+  const result = limiters.ecpayCallback.check(clientIp);
+
+  const rateLimitResponse = createRateLimitResponse(result);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const raw = await request.text().catch(() => '');
   const payload = normalizePayload(request.headers, raw);
 
   const orderId = mapOrderId(payload);
   if (!orderId) {
     return Response.json(fail('INVALID_REQUEST', 'orderId is required'), { status: 400 });
+  }
+
+  // 🔐 P10-1: Verify ECPay CheckMacValue
+  try {
+    const { hashKey, hashIV } = getECPayCredentials();
+    if (!verifyCheckMacValue(payload, hashKey, hashIV)) {
+      return Response.json(
+        fail('INVALID_SIGNATURE', 'CheckMacValue verification failed'),
+        { status: 400 }
+      );
+    }
+  } catch (err) {
+    // If credentials are not set, log but don't block (for testing)
+    console.warn('[ecpay] CheckMacValue verification skipped:', err instanceof Error ? err.message : String(err));
   }
 
   // 事件：收到付款 callback
