@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams, useParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
+import { createClient } from '../../../../src/lib/supabase/client';
 
 type OrderDetail = {
   id: string;
@@ -55,14 +56,13 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 
 export default function OrderDetailPage() {
   const params = useParams();
-  const searchParams = useSearchParams();
   const router = useRouter();
 
   const orderId = typeof params.orderId === 'string' ? params.orderId : '';
-  const email = searchParams.get('email') || '';
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
 
   // Cancel state
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -76,10 +76,26 @@ export default function OrderDetailPage() {
   const [refundErr, setRefundErr] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState(false);
 
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace(`/login?next=${encodeURIComponent(`/me/orders/${orderId}`)}`);
+        return;
+      }
+      setAuthChecking(false);
+      loadOrder();
+    });
+  }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const loadOrder = async () => {
     if (!orderId) { setLoading(false); return; }
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}?contactEmail=${encodeURIComponent(email)}`, { cache: 'no-store' });
+      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+      if (res.status === 401) {
+        router.replace(`/login?next=${encodeURIComponent(`/me/orders/${orderId}`)}`);
+        return;
+      }
       const j = await res.json();
       setOrder(j.data || null);
     } catch {
@@ -89,8 +105,6 @@ export default function OrderDetailPage() {
     }
   };
 
-  useEffect(() => { loadOrder(); }, [orderId, email]);
-
   const handleCancel = async () => {
     setCancelling(true);
     setCancelErr(null);
@@ -98,7 +112,7 @@ export default function OrderDetailPage() {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'cancel', contactEmail: email }),
+        body: JSON.stringify({ action: 'cancel' }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '取消失敗');
@@ -120,7 +134,7 @@ export default function OrderDetailPage() {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/refund-requests`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ reason: refundReason, contactEmail: email }),
+        body: JSON.stringify({ reason: refundReason }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '退款申請失敗');
@@ -144,15 +158,20 @@ export default function OrderDetailPage() {
   const btnSecondary: React.CSSProperties = { padding: '11px 20px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' };
   const btnDanger: React.CSSProperties = { padding: '11px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
 
-  if (loading) return <div style={containerStyle}><p style={{ color: '#9ca3af', textAlign: 'center', marginTop: 60 }}>載入中…</p></div>;
-  if (!order) return (
-    <div style={containerStyle}>
-      <p style={{ color: '#ef4444', textAlign: 'center', marginTop: 60 }}>找不到訂單，請確認 Email 是否正確。</p>
-      <div style={{ textAlign: 'center', marginTop: 16 }}>
-        <button onClick={() => router.push(`/me/orders?email=${encodeURIComponent(email)}`)} style={btnSecondary}>返回訂單列表</button>
+  if (authChecking || loading) {
+    return <div style={containerStyle}><p style={{ color: '#9ca3af', textAlign: 'center', marginTop: 60 }}>載入中…</p></div>;
+  }
+
+  if (!order) {
+    return (
+      <div style={containerStyle}>
+        <p style={{ color: '#ef4444', textAlign: 'center', marginTop: 60 }}>找不到訂單或您沒有權限查看此訂單。</p>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <button onClick={() => router.push('/me/orders')} style={btnSecondary}>返回訂單列表</button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   const status = order.status;
   const statusColor = STATUS_COLORS[status] || '#6b7280';
@@ -166,7 +185,7 @@ export default function OrderDetailPage() {
   return (
     <div style={containerStyle}>
       {/* Back */}
-      <button onClick={() => router.push(`/me/orders?email=${encodeURIComponent(email)}`)} style={{ ...btnSecondary, marginBottom: 20, fontSize: 13, padding: '8px 14px' }}>
+      <button onClick={() => router.push('/me/orders')} style={{ ...btnSecondary, marginBottom: 20, fontSize: 13, padding: '8px 14px' }}>
         ← 返回訂單列表
       </button>
 
@@ -239,25 +258,20 @@ export default function OrderDetailPage() {
       {/* Actions */}
       {!isTerminal && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {/* Pay again if still pending */}
           {status === 'pending_payment' && (
-            <button onClick={() => router.push(`/order/pay?orderId=${order.id}&email=${encodeURIComponent(email)}`)} style={btnPrimary}>
+            <button onClick={() => router.push(`/order/pay?orderId=${order.id}`)} style={btnPrimary}>
               前往付款
             </button>
           )}
 
-          {/* Refund */}
           {canRefund && !refundSuccess && !showRefundForm && (
-            <button onClick={() => setShowRefundForm(true)} style={btnSecondary}>
-              申請退款
-            </button>
+            <button onClick={() => setShowRefundForm(true)} style={btnSecondary}>申請退款</button>
           )}
 
           {refundSuccess && (
             <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center' }}>✅ 退款申請已送出，等待審核中</p>
           )}
 
-          {/* Refund form */}
           {showRefundForm && (
             <form onSubmit={handleRefund} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
               <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>退款原因</label>
@@ -279,7 +293,6 @@ export default function OrderDetailPage() {
             </form>
           )}
 
-          {/* Cancel */}
           {canCancel && (
             <button onClick={() => setShowCancelDialog(true)} style={{ ...btnSecondary, color: '#ef4444', marginTop: 4 }}>
               取消訂單

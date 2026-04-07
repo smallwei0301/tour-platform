@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { createClient } from '../../../src/lib/supabase/client';
 
 type Order = {
   id: string;
@@ -57,24 +58,38 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function MyOrdersPage() {
-  const params = useSearchParams();
   const router = useRouter();
-  const initialEmail = params.get('email') || '';
-
-  const [email, setEmail] = useState(initialEmail);
-  const [submittedEmail, setSubmittedEmail] = useState(initialEmail);
   const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string>('');
 
-  const fetchOrders = async (emailVal: string) => {
-    if (!emailVal.trim()) return;
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) {
+        // 未登入 → 導向登入頁
+        router.replace(`/login?next=${encodeURIComponent('/me/orders')}`);
+        return;
+      }
+      setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
+      setAuthChecking(false);
+      fetchOrders();
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchOrders = async () => {
     setLoading(true);
     setErr(null);
-    setSearched(true);
     try {
-      const res = await fetch(`/api/me/orders?contactEmail=${encodeURIComponent(emailVal.trim())}`, { cache: 'no-store' });
+      const res = await fetch('/api/me/orders', { cache: 'no-store' });
+      if (res.status === 401) {
+        router.replace(`/login?next=${encodeURIComponent('/me/orders')}`);
+        return;
+      }
       const j = await res.json();
       setOrders(j.data || []);
     } catch {
@@ -83,17 +98,6 @@ export default function MyOrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    if (initialEmail) fetchOrders(initialEmail);
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmittedEmail(email);
-    router.replace(`/me/orders?email=${encodeURIComponent(email)}`);
-    fetchOrders(email);
   };
 
   const containerStyle: React.CSSProperties = {
@@ -114,56 +118,50 @@ export default function MyOrdersPage() {
     transition: 'box-shadow 0.15s',
   };
 
-  const inputStyle: React.CSSProperties = {
-    flex: 1,
-    border: '1px solid #d1d5db',
-    borderRadius: 10,
-    padding: '10px 14px',
-    fontSize: 14,
-    outline: 'none',
-    boxSizing: 'border-box',
-  };
-
-  const btnStyle: React.CSSProperties = {
-    padding: '10px 20px',
-    background: '#ec4899',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 10,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  };
+  // 驗證中 — 避免閃爍
+  if (authChecking) {
+    return (
+      <div style={{ ...containerStyle, textAlign: 'center', paddingTop: 80 }}>
+        <p style={{ color: '#9ca3af' }}>驗證登入中…</p>
+      </div>
+    );
+  }
 
   return (
     <div style={containerStyle}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 6 }}>我的訂單</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>輸入訂購時使用的 Email 查詢訂單</p>
-
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
-        <input
-          data-testid="orders-email-input"
-          type="email"
-          required
-          placeholder="your@email.com"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          style={inputStyle}
-        />
-        <button type="submit" style={btnStyle} disabled={loading}>
-          {loading ? '查詢中…' : '查詢'}
-        </button>
-      </form>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 4 }} data-testid="my-orders-title">
+        我的訂單
+      </h1>
+      {userName && (
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>
+          歡迎回來，{userName} 👋
+        </p>
+      )}
 
       {err && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>{err}</p>}
 
-      {loading && <p style={{ color: '#9ca3af', textAlign: 'center' }}>載入中…</p>}
+      {loading && <p style={{ color: '#9ca3af', textAlign: 'center' }}>載入訂單中…</p>}
 
-      {!loading && searched && orders.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }}>
+      {!loading && orders.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }} data-testid="orders-empty">
           <div style={{ fontSize: 40, marginBottom: 8 }}>📭</div>
-          <p style={{ fontSize: 14 }}>找不到訂單，請確認 Email 是否正確</p>
+          <p style={{ fontSize: 14 }}>目前還沒有訂單</p>
+          <button
+            onClick={() => router.push('/activities')}
+            style={{
+              marginTop: 16,
+              padding: '10px 24px',
+              background: '#ec4899',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            探索行程
+          </button>
         </div>
       )}
 
@@ -174,7 +172,7 @@ export default function MyOrdersPage() {
           data-order-id={order.id}
           data-order-status={order.status}
           style={cardStyle}
-          onClick={() => router.push(`/me/orders/${order.id}?email=${encodeURIComponent(submittedEmail)}`)}
+          onClick={() => router.push(`/me/orders/${order.id}`)}
           onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)')}
           onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}
         >

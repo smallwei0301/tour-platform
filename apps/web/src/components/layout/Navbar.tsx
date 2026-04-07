@@ -2,20 +2,47 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createClient } from '../../lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 const NAV_LINKS = [
   { label: '探索行程', href: '/activities' },
   { label: '認識導遊', href: '/guides' },
   { label: '成為導遊', href: '/guide/apply' },
   { label: '旅遊指南', href: '/blog' },
-  { label: '我的訂單', href: '/me/orders' },
 ];
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Get initial session
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      setLoadingUser(false);
+    });
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
+    router.refresh();
+  }
 
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -23,6 +50,8 @@ export function Navbar() {
     router.push(q ? `/activities?q=${encodeURIComponent(q)}` : '/activities');
     setMenuOpen(false);
   }
+
+  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
   return (
     <header className="tp-navbar">
@@ -54,18 +83,67 @@ export function Navbar() {
               {l.label}
             </Link>
           ))}
-          <Link
-            href="/auth/sign-in"
-            className="tp-btn"
-            style={{
-              border: '1.5px solid var(--tp-primary)',
-              color: 'var(--tp-primary)',
-              padding: '6px 16px',
-              fontSize: 14,
-            }}
-          >
-            登入 / 註冊
-          </Link>
+
+          {!loadingUser && (
+            user ? (
+              <>
+                <Link
+                  href="/me/orders"
+                  style={{ fontSize: 14, color: '#374151' }}
+                  data-testid="nav-my-orders"
+                >
+                  我的訂單
+                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {user.user_metadata?.avatar_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={user.user_metadata.avatar_url}
+                      alt={displayName}
+                      width={28}
+                      height={28}
+                      style={{ borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                  )}
+                  <span
+                    style={{ fontSize: 14, color: '#374151', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    data-testid="nav-user-name"
+                  >
+                    {displayName}
+                  </span>
+                  <button
+                    onClick={handleSignOut}
+                    data-testid="nav-sign-out-btn"
+                    className="tp-btn"
+                    style={{
+                      border: '1.5px solid #d1d5db',
+                      color: '#6b7280',
+                      padding: '6px 14px',
+                      fontSize: 13,
+                      background: 'transparent',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    登出
+                  </button>
+                </div>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                data-testid="nav-login-btn"
+                className="tp-btn"
+                style={{
+                  border: '1.5px solid var(--tp-primary)',
+                  color: 'var(--tp-primary)',
+                  padding: '6px 16px',
+                  fontSize: 14,
+                }}
+              >
+                登入 / 註冊
+              </Link>
+            )
+          )}
         </nav>
 
         {/* Hamburger (mobile only) */}
@@ -102,7 +180,7 @@ export function Navbar() {
                 🔍
               </button>
             </form>
-            {[...NAV_LINKS, { label: '登入 / 註冊', href: '/auth/sign-in' }].map((l) => (
+            {NAV_LINKS.map((l) => (
               <Link
                 key={l.href}
                 href={l.href}
@@ -112,6 +190,28 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
+            {user ? (
+              <>
+                <Link href="/me/orders" className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
+                  我的訂單
+                </Link>
+                <button
+                  onClick={() => { handleSignOut(); setMenuOpen(false); }}
+                  className="tp-mobile-menu-item"
+                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: '#6b7280' }}
+                >
+                  登出（{displayName}）
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="tp-mobile-menu-item"
+                onClick={() => setMenuOpen(false)}
+              >
+                登入 / 註冊
+              </Link>
+            )}
           </div>
         </nav>
       )}

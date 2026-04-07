@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
 
@@ -40,7 +41,7 @@ function verifyGuideSessionMiddleware(req: NextRequest): boolean {
   return tokenGuideId === guideId && !!sessionVersion && signature.length === 64;
 }
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ── Guide routes ───────────────────────────────────────────────────────────
@@ -74,44 +75,80 @@ export function middleware(req: NextRequest) {
   const isAdminPage = pathname.startsWith('/admin');
   const isAdminApi = pathname.startsWith('/api/admin');
 
-  if (!isAdminPage && !isAdminApi) return NextResponse.next();
+  if (isAdminPage || isAdminApi) {
+    const isPublicAdminPage = pathname === '/admin/login' || pathname === '/admin/unauthorized';
+    const isPublicAdminApi = pathname === '/api/admin/auth/session';
+    if (isPublicAdminPage || isPublicAdminApi) return NextResponse.next();
 
-  const isPublicAdminPage = pathname === '/admin/login' || pathname === '/admin/unauthorized';
-  const isPublicAdminApi = pathname === '/api/admin/auth/session';
-  if (isPublicAdminPage || isPublicAdminApi) return NextResponse.next();
+    const security = getAdminSecurityState();
 
-  const security = getAdminSecurityState();
+    const result = isAdminAuthorized({
+      token: pickToken(req),
+      email: pickEmail(req),
+      requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
+      allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
+      expectedSessionVersion: security.sessionVersion,
+      sessionVersion: req.cookies.get('admin_session_version')?.value || req.nextUrl.searchParams.get('admin_session_version') || 0
+    });
 
-  const result = isAdminAuthorized({
-    token: pickToken(req),
-    email: pickEmail(req),
-    requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
-    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
-    expectedSessionVersion: security.sessionVersion,
-    sessionVersion: req.cookies.get('admin_session_version')?.value || req.nextUrl.searchParams.get('admin_session_version') || 0
-  });
+    if (result.ok) return NextResponse.next();
 
-  if (result.ok) return NextResponse.next();
+    if (isAdminApi) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: result.reason || 'admin authorization failed'
+          }
+        },
+        { status: 401 }
+      );
+    }
 
-  if (isAdminApi) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: 'UNAUTHORIZED',
-          message: result.reason || 'admin authorization failed'
-        }
-      },
-      { status: 401 }
-    );
+    const url = req.nextUrl.clone();
+    url.pathname = '/admin/unauthorized';
+    url.searchParams.set('reason', result.reason || 'forbidden');
+    return NextResponse.rewrite(url);
   }
 
-  const url = req.nextUrl.clone();
-  url.pathname = '/admin/unauthorized';
-  url.searchParams.set('reason', result.reason || 'forbidden');
-  return NextResponse.rewrite(url);
+  // ── Supabase Auth Session Refresh (旅客 Auth) ──────────────────────────────
+  // Refresh session cookies so they don't expire during user's visit.
+  // Only applies to non-admin, non-guide routes.
+  let supabaseResponse = NextResponse.next({ request: req });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request: req });
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          );
+        },
+      },
+    }
+  );
+
+  // Refresh session — required for Server Components to read auth state
+  await supabase.auth.getUser();
+
+  return supabaseResponse;
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*', '/guide/:path*', '/api/guide/:path*']
+  matcher: [
+    '/admin/:path*',
+    '/api/admin/:path*',
+    '/guide/:path*',
+    '/api/guide/:path*',
+    // Include all other pages for Supabase session refresh (exclude static files)
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };
