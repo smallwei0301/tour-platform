@@ -297,7 +297,7 @@
 - 11 次 DB migration（001–011）
 - Storage RLS public read（activity-images）
 
-### 🔜 下一步（Phase 10）
+### ✅ 已完成（Phase 10）
 1. **安全性 Checklist** — OWASP Top 10 + input validation（Phase 10）
 2. **API Rate Limiting** — 所有 API route 加速率限制
 3. **ECPay 真實串接** — 真實刷卡 + webhook 驗簽（Phase 10）
