@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
+import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
+import { ActivityHero } from '../../../src/components/shared/ActivityHero';
+import { GalleryImage } from '../../../src/components/shared/GalleryImage';
 
 export default async function GuideProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -12,27 +15,26 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
 
   return (
     <main className="tp-container tp-guide-detail" style={{ paddingBottom: 40 }}>
-      {/* Hero cover */}
-      {guide.heroImageUrl && (
-        <div style={{ width: '100%', height: 300, borderRadius: 14, overflow: 'hidden', marginTop: 18, position: 'relative' }}>
-          <img
-            src={guide.heroImageUrl}
-            alt={`${guide.displayName} 導覽封面`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-            loading="eager"
-          />
-          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(0,0,0,0.2), rgba(0,0,0,0.35))' }} />
-        </div>
-      )}
+      {/* Hero cover with placeholder fallback */}
+      <div style={{ marginTop: 18 }}>
+        <ActivityHero
+          imageUrl={guide.heroImageUrl}
+          title={guide.displayName}
+          height={300}
+        />
+      </div>
 
       <section className="tp-guide-profile-layout" style={{ display: 'grid', gap: 24, marginTop: 20 }}>
         {/* Main content */}
         <article>
           {/* Head card */}
           <div className="tp-guide-profile-head" style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 24 }}>
-            {guide.profilePhotoUrl && (
-              <img src={guide.profilePhotoUrl} alt={guide.displayName} style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--tp-primary)' }} />
-            )}
+            <GuideAvatar
+              photoUrl={guide.profilePhotoUrl}
+              name={guide.displayName}
+              size={96}
+              showBorder={true}
+            />
             <div>
               <h1 style={{ margin: 0 }}>{guide.displayName}</h1>
               <p style={{ margin: '4px 0', color: 'var(--tp-muted)' }}>
@@ -68,16 +70,28 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
           )}
 
           {/* Gallery */}
-          {guide.galleryUrls?.length > 0 && (
-            <section className="tp-detail-block" style={{ marginBottom: 28 }}>
-              <h2>照片集</h2>
+          <section className="tp-detail-block" style={{ marginBottom: 28 }}>
+            <h2>照片集</h2>
+            {guide.galleryUrls?.length > 0 ? (
               <div className="tp-guide-profile-gallery" style={{ display: 'grid', gap: 8 }}>
                 {guide.galleryUrls.map((url: string, i: number) => (
-                  <img key={i} src={url} alt={`${guide.displayName} 照片 ${i + 1}`} style={{ width: '100%', aspectRatio: '4/3', objectFit: 'cover', borderRadius: 10 }} loading="lazy" />
+                  <GalleryImage key={i} url={url} alt={`${guide.displayName} 照片 ${i + 1}`} />
                 ))}
               </div>
-            </section>
-          )}
+            ) : (
+              <div style={{
+                background: '#f9fafb',
+                border: '1px dashed #d1d5db',
+                borderRadius: 12,
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: '#9ca3af',
+              }}>
+                <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>📷</span>
+                <span style={{ fontSize: 14 }}>暫無照片</span>
+              </div>
+            )}
+          </section>
 
           {/* Activities */}
           {guideActivities.length > 0 && (
@@ -123,9 +137,14 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
         {/* Sidebar */}
         <aside className="tp-guide-profile-side" style={{ position: 'sticky', top: 80, height: 'fit-content' }}>
           <div className="tp-booking-card" style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20, textAlign: 'center' }}>
-            {guide.profilePhotoUrl && (
-              <img src={guide.profilePhotoUrl} alt={guide.displayName} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover' }} />
-            )}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <GuideAvatar
+                photoUrl={guide.profilePhotoUrl}
+                name={guide.displayName}
+                size={80}
+                showBorder={false}
+              />
+            </div>
             <p style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>{guide.displayName}</p>
             <p style={{ color: 'var(--tp-muted)' }}>⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則）</p>
             <button className="tp-btn tp-btn-primary" style={{ width: '100%', marginTop: 12 }}>傳訊息給導遊</button>

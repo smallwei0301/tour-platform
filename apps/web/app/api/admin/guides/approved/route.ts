@@ -15,8 +15,8 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('guide_profiles')
-      .select('id, display_name, slug, verification_status, headline, region, rating_avg, review_count, guide_email')
-      .eq('verification_status', 'approved')
+      .select('id, display_name, slug, verification_status, headline, region, rating_avg, review_count, guide_email, profile_photo_url')
+      .in('verification_status', ['approved', 'suspended'])
       .order('display_name');
 
     if (error) throw error;
