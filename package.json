@@ -13,7 +13,10 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
+    "dotenv": "^17.4.1",
+    "pg": "^8.20.0",
     "playwright": "^1.58.2",
+    "supabase": "^2.87.2",
     "typescript": "^5.9.3"
   }
 }

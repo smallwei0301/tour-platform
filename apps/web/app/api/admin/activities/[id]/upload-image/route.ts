@@ -5,11 +5,81 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const BUCKET = 'activity-images';
 
 /**
+ * Image dimension validation
+ */
+async function validateImageDimensions(
+  file: File,
+  type: 'cover' | 'gallery'
+): Promise<{ valid: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const { width, height } = img;
+        const aspectRatio = width / height;
+
+        if (type === 'cover') {
+          // Hero: 16:9 aspect ratio (tolerance ±10%)
+          const target = 16 / 9;
+          const tolerance = 0.1;
+          const minRatio = target * (1 - tolerance);
+          const maxRatio = target * (1 + tolerance);
+
+          if (aspectRatio < minRatio || aspectRatio > maxRatio) {
+            resolve({
+              valid: false,
+              error: `Hero 圖比例應為 16:9，目前為 ${(aspectRatio).toFixed(2)}:1`,
+            });
+          } else if (width < 1280 || height < 720) {
+            resolve({
+              valid: false,
+              error: `Hero 圖最小尺寸為 1280×720，目前為 ${width}×${height}`,
+            });
+          } else {
+            resolve({ valid: true });
+          }
+        } else {
+          // Gallery: 3:2 aspect ratio (tolerance ±15%)
+          const target = 3 / 2;
+          const tolerance = 0.15;
+          const minRatio = target * (1 - tolerance);
+          const maxRatio = target * (1 + tolerance);
+
+          if (aspectRatio < minRatio || aspectRatio > maxRatio) {
+            resolve({
+              valid: false,
+              error: `照片比例應為 3:2，目前為 ${(aspectRatio).toFixed(2)}:1`,
+            });
+          } else if (width < 800 || height < 533) {
+            resolve({
+              valid: false,
+              error: `照片最小尺寸為 800×533，目前為 ${width}×${height}`,
+            });
+          } else {
+            resolve({ valid: true });
+          }
+        }
+      };
+      img.onerror = () => {
+        resolve({ valid: false, error: '無法讀取圖片' });
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
  * POST /api/admin/activities/:id/upload-image
  * Upload activity cover (hero) or gallery images
- * - type: 'cover' for hero image (16:9, 1920x1080)
- * - type: 'gallery' for gallery images (3:2, 1200x800)
+ * - type: 'cover' for hero image (16:9, min 1280x720)
+ * - type: 'gallery' for gallery images (3:2, min 800x533)
  * - Accepts: image/jpeg, image/png, image/webp (WebP preferred from frontend compression)
+ *
+ * Frontend should pre-compress and crop before upload:
+ * - cover → 1920×1080 WebP (16:9)
+ * - gallery → 1200×800 WebP (3:2)
  */
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -34,6 +104,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (file.size > maxSize) {
       const maxMB = maxSize / 1024 / 1024;
       return Response.json(fail('FILE_TOO_LARGE', `檔案大小不能超過 ${maxMB}MB`), { status: 400 });
+    }
+
+    // Validate image dimensions and aspect ratio
+    const validation = await validateImageDimensions(file, type as 'cover' | 'gallery');
+    if (!validation.valid) {
+      return Response.json(fail('INVALID_DIMENSIONS', validation.error), { status: 400 });
     }
 
     // Sanitize slug: keep alphanumeric, hyphen, underscore only

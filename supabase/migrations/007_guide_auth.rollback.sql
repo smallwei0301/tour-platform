@@ -1,4 +1,6 @@
 -- Rollback: 007_guide_auth
+-- Safe to drop: only removing columns, no table drops, no FK issues
+
 DROP INDEX IF EXISTS guide_profiles_invite_token_idx;
 
 ALTER TABLE guide_profiles
