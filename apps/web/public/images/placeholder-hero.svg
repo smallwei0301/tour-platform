@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="grad-hero" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#dbeafe;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#bfdbfe;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#grad-hero)"/>
+  <circle cx="1920" cy="1080" r="600" fill="#93c5fd" opacity="0.3"/>
+  <circle cx="0" cy="0" r="400" fill="#93c5fd" opacity="0.2"/>
+  <text x="960" y="500" text-anchor="middle" font-size="48" fill="#64748b" font-weight="600">行程封面</text>
+  <text x="960" y="600" text-anchor="middle" font-size="24" fill="#94a3b8">選擇一張 16:9 的風景照片</text>
+</svg>
