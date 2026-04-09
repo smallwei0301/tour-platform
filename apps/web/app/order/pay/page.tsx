@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 type OrderDetail = {
@@ -12,6 +12,11 @@ type OrderDetail = {
   contactName?: string | null;
   contactEmail?: string | null;
   scheduleId?: string | null;
+};
+
+type ECPayFormData = {
+  endpoint: string;
+  params: Record<string, string>;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -36,6 +41,8 @@ export default function OrderPayPage() {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [ecpayData, setEcpayData] = useState<ECPayFormData | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!orderId) { setLoading(false); return; }
@@ -46,7 +53,44 @@ export default function OrderPayPage() {
       .finally(() => setLoading(false));
   }, [orderId, email]);
 
+  // 當收到 ECPay 表單資料時自動提交
+  useEffect(() => {
+    if (ecpayData && formRef.current) {
+      formRef.current.submit();
+    }
+  }, [ecpayData]);
+
   const handlePay = async () => {
+    if (!orderId) return;
+    setPaying(true);
+    setErr(null);
+
+    try {
+      // 呼叫 ECPay 付款建立 API
+      const res = await fetch('/api/payments/ecpay/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ orderId }),
+      });
+      const j = await res.json();
+
+      if (!res.ok || j.error) {
+        throw new Error(j.error?.message || '建立付款失敗');
+      }
+
+      // 設置 ECPay 表單資料，觸發自動提交
+      setEcpayData({
+        endpoint: j.data.endpoint,
+        params: j.data.params,
+      });
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : '付款失敗，請重試');
+      setPaying(false);
+    }
+  };
+
+  // 模擬付款（開發/測試用）
+  const handleMockPay = async () => {
     if (!orderId) return;
     setPaying(true);
     setErr(null);
@@ -106,6 +150,12 @@ export default function OrderPayPage() {
     letterSpacing: '0.02em',
   };
 
+  const secondaryBtnStyle: React.CSSProperties = {
+    ...btnStyle,
+    background: paying ? '#e5e7eb' : '#6b7280',
+    marginTop: 12,
+  };
+
   if (loading) {
     return <div style={containerStyle}><p style={{ color: '#9ca3af', textAlign: 'center' }}>載入中…</p></div>;
   }
@@ -126,7 +176,7 @@ export default function OrderPayPage() {
           <p style={{ color: '#6b7280', fontSize: 14 }}>
             目前狀態：<strong>{STATUS_LABELS[order.status] || order.status}</strong>
           </p>
-          <button onClick={() => router.push(`/me/orders?email=${encodeURIComponent(email)}`)} style={{ ...btnStyle, marginTop: 16, background: '#6b7280' }}>
+          <button onClick={() => router.push(`/me/orders`)} style={{ ...btnStyle, marginTop: 16, background: '#6b7280' }}>
             查看我的訂單
           </button>
         </div>
@@ -169,13 +219,33 @@ export default function OrderPayPage() {
         <p style={{ color: '#ef4444', fontSize: 13, marginTop: 12, textAlign: 'center' }}>{err}</p>
       )}
 
-      <button onClick={handlePay} disabled={paying} style={btnStyle}>
-        {paying ? '付款處理中…' : '✓ 確認付款（模擬）'}
+      {/* ECPay 正式付款 */}
+      <button onClick={handlePay} disabled={paying} style={btnStyle} data-testid="ecpay-pay-btn">
+        {paying ? '付款處理中…' : '前往 ECPay 付款'}
+      </button>
+
+      {/* 模擬付款（開發用） */}
+      <button onClick={handleMockPay} disabled={paying} style={secondaryBtnStyle} data-testid="mock-pay-btn">
+        {paying ? '處理中…' : '模擬付款（測試用）'}
       </button>
 
       <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 12 }}>
-        此為模擬付款，不會實際扣款
+        點擊「前往 ECPay 付款」將跳轉至綠界金流安全付款頁面
       </p>
+
+      {/* ECPay 隱藏表單（用於跳轉） */}
+      {ecpayData && (
+        <form
+          ref={formRef}
+          method="POST"
+          action={ecpayData.endpoint}
+          style={{ display: 'none' }}
+        >
+          {Object.entries(ecpayData.params).map(([key, value]) => (
+            <input key={key} type="hidden" name={key} value={value} />
+          ))}
+        </form>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
 import { trackServer } from '../../../../../src/lib/track';
 import { sendPaymentSuccess } from '../../../../../src/lib/email';
+import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
@@ -31,7 +32,10 @@ function normalizePayload(headers: Headers, rawText: string) {
 }
 
 function mapOrderId(payload: any) {
-  return payload?.orderId || payload?.MerchantTradeNo || payload?.merchantTradeNo || null;
+  // 優先使用 CustomField1（我們存放 orderId 的地方）
+  // 然後是直接傳入的 orderId（模擬付款用）
+  // 最後才是 MerchantTradeNo（需要解析）
+  return payload?.CustomField1 || payload?.orderId || payload?.MerchantTradeNo || payload?.merchantTradeNo || null;
 }
 
 function mapTradeNo(payload: any) {
@@ -94,6 +98,33 @@ export async function POST(request: Request) {
     request
   );
 
+  // 🔐 P10-3: 檢查 ECPay 付款結果代碼
+  // RtnCode = "1" 表示付款成功，其他代碼表示失敗
+  const rtnCode = payload?.RtnCode;
+  const isECPayCallback = request.headers.get('content-type')?.includes('application/x-www-form-urlencoded');
+
+  if (isECPayCallback && rtnCode !== '1' && rtnCode !== 1) {
+    // ECPay 回報付款失敗
+    void trackServer(
+      {
+        event_name: 'error',
+        properties: {
+          message: `ECPay payment failed: RtnCode=${rtnCode}, RtnMsg=${payload?.RtnMsg || 'unknown'}`,
+          context: 'payment_callback',
+        },
+        error_code: 'PAYMENT_FAILED',
+        order_id: orderId,
+      },
+      request
+    );
+
+    // ECPay 期望收到 "1|OK" 回應，即使付款失敗
+    return new Response('1|OK', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
   try {
     const result = await processPaymentCallbackDb({
       ...payload,
@@ -115,20 +146,36 @@ export async function POST(request: Request) {
       request
     );
 
-    // 🔔 Fire-and-forget: 付款成功 email
+    // 🔔 Fire-and-forget: 付款成功 email + LINE 通知
     const order = result.order;
+    const notifyData = {
+      orderId,
+      activityTitle: order?.activity_title || '行程',
+      scheduleDate: order?.schedule_start_at
+        ? new Date(order.schedule_start_at).toLocaleDateString('zh-TW')
+        : null,
+      peopleCount: order?.people_count,
+      totalTwd: order?.total_twd,
+      contactName: order?.contact_name,
+      contactEmail: order?.contact_email,
+    };
+
     if (order?.contact_email) {
-      sendPaymentSuccess({
-        orderId,
-        activityTitle: order.activity_title || '行程',
-        scheduleDate: order.schedule_start_at
-          ? new Date(order.schedule_start_at).toLocaleDateString('zh-TW')
-          : null,
-        peopleCount: order.people_count,
-        totalTwd: order.total_twd,
-        contactName: order.contact_name,
-        contactEmail: order.contact_email,
-      }).catch(() => {}); // 絕對不阻塞 response
+      sendPaymentSuccess(notifyData).catch(() => {}); // 絕對不阻塞 response
+    }
+
+    // LINE Notify 通知管理員/導遊
+    notifyPaymentReceived(notifyData).catch(() => {});
+
+    // ECPay 正式回調期望回覆 "1|OK" 格式
+    // 模擬付款（JSON 請求）則回覆 JSON 格式以便前端處理
+    const isECPayCallback = request.headers.get('content-type')?.includes('application/x-www-form-urlencoded');
+
+    if (isECPayCallback) {
+      return new Response('1|OK', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      });
     }
 
     return Response.json(

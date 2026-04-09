@@ -100,10 +100,14 @@ export async function createOrderDb(input) {
   const remaining = schedule.capacity - schedule.booked_count;
   if (peopleCount > remaining) throw new Error('not enough seats');
 
+  // 🔐 Phase 9: 支持 user_id 綁定（可選）
+  const userId = input?.userId || null;
+
   const payload = {
     id: crypto.randomUUID(),
     activity_id: activity.id,
     schedule_id: schedule.id,
+    user_id: userId,
     people_count: peopleCount,
     contact_name: contactName,
     contact_phone: contactPhone,
@@ -142,14 +146,21 @@ export async function listMyOrdersDb(input = {}) {
   if (!hasSupabaseEnv()) return listMyOrdersInMemory(input);
 
   const contactEmail = String(input?.contactEmail || '').trim();
+  const userId = input?.userId || null;
   const supabase = await getSupabase();
 
   let query = supabase
     .from('orders')
-    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at')
+    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, user_id')
     .order('created_at', { ascending: false });
 
-  if (contactEmail) query = query.eq('contact_email', contactEmail);
+  // 🔐 Phase 9: 優先使用 user_id 查詢，fallback 到 contactEmail（向後相容舊訂單）
+  if (userId) {
+    // 查詢此用戶的所有訂單（包括 user_id 綁定的 + email 相符的舊訂單）
+    query = query.or(`user_id.eq.${userId},contact_email.eq.${contactEmail}`);
+  } else if (contactEmail) {
+    query = query.eq('contact_email', contactEmail);
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
@@ -192,6 +203,65 @@ export async function getMyOrderDetailDb(input = {}) {
   const target = rows.find((o) => o.id === orderId);
   if (!target) throw new Error('order not found');
   return target;
+}
+
+/**
+ * 取得訂單詳情（用於付款建立）
+ * Phase 10 — ECPay 正式串接
+ */
+export async function getOrderDetailForPayment(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  if (!hasSupabaseEnv()) {
+    const order = _orders.find((o) => o.id === orderId);
+    if (!order) return null;
+    return {
+      id: order.id,
+      status: order.status,
+      totalTwd: order.total_twd,
+      title: order.activity_title || null,
+      contactName: order.contact_name,
+      contactEmail: order.contact_email,
+    };
+  }
+
+  const supabase = await getSupabase();
+
+  const { data: order, error } = await supabase
+    .from('orders')
+    .select(`
+      id,
+      status,
+      total_twd,
+      contact_name,
+      contact_email,
+      activity_id
+    `)
+    .eq('id', orderId)
+    .single();
+
+  if (error || !order) return null;
+
+  // 取得行程標題
+  let title = null;
+  if (order.activity_id) {
+    const { data: activity } = await supabase
+      .from('activities')
+      .select('title')
+      .eq('id', order.activity_id)
+      .single();
+    title = activity?.title || null;
+  }
+
+  return {
+    id: order.id,
+    status: order.status,
+    totalTwd: order.total_twd,
+    title,
+    contactName: order.contact_name,
+    contactEmail: order.contact_email,
+  };
 }
 
 export async function cancelOrderDb(input = {}) {

@@ -2,6 +2,7 @@ import { ok, fail } from '../../../../../../src/lib/api';
 import { createRefundRequestDb, listRefundRequestsDb, getMyOrderDetailDb } from '../../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { sendRefundRequested } from '../../../../../../src/lib/email';
+import { notifyRefundRequest } from '../../../../../../src/lib/line-notify';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -35,11 +36,11 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
       contactEmail: user.email, // 以 session email 為準
     });
 
-    // 🔔 Fire-and-forget: 退款申請收到 email
+    // 🔔 Fire-and-forget: 退款申請收到 email + LINE 通知
     try {
       const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
       if (order) {
-        sendRefundRequested({
+        const notifyData = {
           orderId,
           activityTitle: order.title || '行程',
           scheduleDate: null,
@@ -47,7 +48,11 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
           totalTwd: order.totalTwd,
           contactName: order.contactName || undefined,
           contactEmail: user.email,
-        }).catch(() => {});
+          reason: body?.reason,
+          note: body?.note,
+        };
+        sendRefundRequested(notifyData).catch(() => {});
+        notifyRefundRequest(notifyData).catch(() => {});
       }
     } catch { /* email 失敗不影響主流程 */ }
 
