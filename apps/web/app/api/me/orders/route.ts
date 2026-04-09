@@ -19,8 +19,8 @@ export async function GET(request: Request) {
       return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
     }
 
-    // 用 email 查詢訂單（相容舊訂單 + 新 user_id 綁定訂單）
-    const rows = await listMyOrdersDb({ contactEmail: user.email });
+    // 🔐 Phase 9: 用 user_id + email 查詢訂單（相容舊訂單 + 新 user_id 綁定訂單）
+    const rows = await listMyOrdersDb({ userId: user.id, contactEmail: user.email });
     return Response.json(ok(rows));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

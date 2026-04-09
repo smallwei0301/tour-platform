@@ -1,7 +1,9 @@
 import { fail, ok } from '../../../src/lib/api';
 import { createOrderDb } from '../../../src/lib/db.mjs';
 import { sendOrderConfirmation } from '../../../src/lib/email';
+import { notifyNewOrder } from '../../../src/lib/line-notify';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
+import { createClient } from '../../../src/lib/supabase/server';
 
 function statusFromErrorMessage(message: string) {
   if (message.includes('not enough seats') || message.includes('schedule is full')) return 409;
@@ -22,23 +24,39 @@ export async function POST(request: Request) {
 
   const body = await request.json().catch(() => null);
 
+  // 🔐 Phase 9: 嘗試獲取已登入用戶的 user_id（非必須，允許訪客下單）
+  let userId: string | null = null;
   try {
-    const order = await createOrderDb(body);
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    userId = user?.id ?? null;
+  } catch {
+    // 未登入或 session 過期，允許繼續以訪客身份下單
+  }
 
-    // 🔔 Fire-and-forget: 訂單建立確認 email
+  try {
+    const order = await createOrderDb({ ...body, userId });
+
+    // 🔔 Fire-and-forget: 訂單建立確認 email + LINE 通知
+    const notifyData = {
+      orderId: order.id,
+      activityTitle: order.title || body?.experienceSlug || '行程',
+      scheduleDate: order.scheduleStartAt
+        ? new Date(order.scheduleStartAt).toLocaleDateString('zh-TW')
+        : null,
+      peopleCount: order.peopleCount,
+      totalTwd: order.totalTwd,
+      contactName: order.contactName,
+      contactEmail: order.contactEmail,
+      contactPhone: order.contactPhone,
+    };
+
     if (order.contactEmail) {
-      sendOrderConfirmation({
-        orderId: order.id,
-        activityTitle: order.title || body?.experienceSlug || '行程',
-        scheduleDate: order.scheduleStartAt
-          ? new Date(order.scheduleStartAt).toLocaleDateString('zh-TW')
-          : null,
-        peopleCount: order.peopleCount,
-        totalTwd: order.totalTwd,
-        contactName: order.contactName,
-        contactEmail: order.contactEmail,
-      }).catch(() => {}); // 絕對不阻塞 response
+      sendOrderConfirmation(notifyData).catch(() => {}); // 絕對不阻塞 response
     }
+
+    // LINE Notify 通知管理員/導遊
+    notifyNewOrder(notifyData).catch(() => {});
 
     return Response.json(ok(order));
   } catch (err) {

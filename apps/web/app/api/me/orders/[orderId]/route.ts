@@ -2,6 +2,7 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { getMyOrderDetailDb, cancelOrderDb } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { sendOrderCancellation } from '../../../../../src/lib/email';
+import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -42,9 +43,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
 
       const result = await cancelOrderDb({ orderId, contactEmail: user.email });
 
-      // 🔔 Fire-and-forget: 訂單取消 email
+      // 🔔 Fire-and-forget: 訂單取消 email + LINE 通知
       if (orderBefore) {
-        sendOrderCancellation({
+        const notifyData = {
           orderId,
           activityTitle: orderBefore.title || '行程',
           scheduleDate: null,
@@ -52,7 +53,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           totalTwd: orderBefore.totalTwd,
           contactName: orderBefore.contactName || undefined,
           contactEmail: user.email,
-        }).catch(() => {}); // 絕對不阻塞 response
+        };
+        sendOrderCancellation(notifyData).catch(() => {}); // 絕對不阻塞 response
+        notifyOrderCancelled(notifyData).catch(() => {});
       }
 
       return Response.json(ok(result));
