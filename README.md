@@ -399,3 +399,6 @@ MVP 的成功，不是頁面做完，而是：
 - **Supabase project：** `pyoderxmpeyqjwkeliiu`
 - **Auth provider：** Google OAuth（Supabase Auth）
 - **Email provider：** Resend（`re_HNva1erb_...`，100封/天 free tier）
+-e 
+## 🚀 Marketing & Optimization
+- [Tour Platform Optimization V2](./docs/marketing/optimization-v2.md)
