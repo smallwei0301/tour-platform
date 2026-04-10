@@ -378,6 +378,13 @@ export default function AdminGuidesPage() {
                           ✏️ 編輯帳號
                         </button>
                       </div>
+                      {/* Row 1.5: availability */}
+                      <a
+                        href={`/admin/guides/${p.id}/availability`}
+                        style={{ display: 'block', padding: '8px 0', borderRadius: 8, border: '1px solid #10b981', background: '#ecfdf5', color: '#059669', fontSize: 13, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
+                      >
+                        📅 時間管理
+                      </a>
                       {/* Row 2: suspend / reactivate */}
                       <button
                         onClick={() => suspendGuide(p.id, !isSuspended)}
