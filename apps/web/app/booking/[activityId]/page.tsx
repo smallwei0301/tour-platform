@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api'";
+import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
 
 // ── 型別 ──────────────────────────────────────────────────────
 interface Schedule {

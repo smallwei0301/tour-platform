@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getGuideBySlugDb } from '../../../src/lib/db.mjs'";
+import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
 import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../src/components/shared/ActivityHero';
 import { GalleryImage } from '../../../src/components/shared/GalleryImage';

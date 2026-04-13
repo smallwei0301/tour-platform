@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { listPublishedGuidesDb } from '../../src/lib/db.mjs'";
+import { listPublishedGuidesDb } from '../../src/lib/db.mjs';
 
 export default async function GuidesPage() {
   const guides = await listPublishedGuidesDb().catch(() => []);

@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../../src/lib/api'";
-import { updateScheduleDb, deleteScheduleDb } from '../../../../../src/lib/db.mjs'";
+import { ok, fail } from '../../../../../src/lib/api';
+import { updateScheduleDb, deleteScheduleDb } from '../../../../../src/lib/db.mjs';
 
 export async function PUT(request: Request, context: { params: Promise<{ scheduleId: string }> }) {
   const { scheduleId } = await context.params;

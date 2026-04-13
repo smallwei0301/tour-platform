@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchMyOrders } from '../../src/lib/client-api'";
+import { fetchMyOrders } from '../../src/lib/client-api';
 
 function toLabel(status: string) {
   if (status === 'paid' || status === 'confirmed') return '即將出發';

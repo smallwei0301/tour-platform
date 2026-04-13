@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../../src/lib/api'";
-import { forceLogoutAllSessions, getAdminSecurityState } from '../../../../../src/lib/admin-session.mjs'";
+import { ok, fail } from '../../../../../src/lib/api';
+import { forceLogoutAllSessions, getAdminSecurityState } from '../../../../../src/lib/admin-session.mjs';
 
 export async function POST() {
   try {

@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../src/lib/api'";
-import { createGuideApplicationDb, listGuideApplicationsDb } from '../../../src/lib/db.mjs'";
+import { ok, fail } from '../../../src/lib/api';
+import { createGuideApplicationDb, listGuideApplicationsDb } from '../../../src/lib/db.mjs';
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
