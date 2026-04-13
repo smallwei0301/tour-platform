@@ -1348,9 +1348,9 @@ dotenv@^16.3.1:
   integrity sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==
 
 dotenv@^17.4.1:
-  version "17.4.1"
-  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-17.4.1.tgz#d8e2179fe287365ef3aecb9459668454168eda88"
-  integrity sha512-k8DaKGP6r1G30Lx8V4+pCsLzKr8vLmV2paqEj1Y55GdAgJuIqpRp5FfajGF8KtwMxCz9qJc6wUIJnm053d/WCw==
+  version "17.4.2"
+  resolved "https://registry.yarnpkg.com/dotenv/-/dotenv-17.4.2.tgz#c07e54a746e11eba021dd9e1047ced5afdc1c034"
+  integrity sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==
 
 electron-to-chromium@^1.5.328:
   version "1.5.332"
@@ -1921,9 +1921,9 @@ styled-jsx@5.1.6:
     client-only "0.0.1"
 
 supabase@^2.87.2:
-  version "2.87.2"
-  resolved "https://registry.yarnpkg.com/supabase/-/supabase-2.87.2.tgz#0abadea0d3ad8ce7cd57737e2504e72b98560799"
-  integrity sha512-bd2RpMFQ+U9xy/D6V2q/U98Ta9Is0Q/Id6UpsZAWGeuadZNLxW80GhZCu07w4uWZsLiRa4Eq1LS9cfzLEo3Z3g==
+  version "2.89.1"
+  resolved "https://registry.yarnpkg.com/supabase/-/supabase-2.89.1.tgz#0d233be41b4069f508af91b2d07c1c6247b05132"
+  integrity sha512-OsT1kIC2YutgSj4iy+CD0jRkfxlULB5K48uCxGTMNXcnX4IEQ9gVrQ05QQDuBkX1uVEH6E6itrs3HjQs5u/uVw==
   dependencies:
     bin-links "^6.0.0"
     https-proxy-agent "^9.0.0"
