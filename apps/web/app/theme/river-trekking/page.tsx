@@ -49,7 +49,7 @@ export default function RiverTrekkingPage() {
                 <img src={t.imageUrl} alt={t.title} className="tp-card-img" loading="lazy" />
                 <h3>{t.title}</h3>
                 <p>{t.meta}</p>
-                <Link className="tp-link" href={`/activities/hualien/${t.slug}`}>查看行程 →</Link>
+                <Link className="tp-link" href={`/checkout?slug=${encodeURIComponent(t.slug)}`}>查看行程 →</Link>
               </article>
             ))}
           </div>
