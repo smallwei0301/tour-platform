@@ -7,8 +7,8 @@
  */
 
 import { NextRequest } from 'next/server';
-import { ok, fail } from '../../../../src/lib/api'";
-import { verifyGuideSession } from '../../../../src/lib/guide-auth'";
+import { ok, fail } from '../../../../src/lib/api';
+import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');

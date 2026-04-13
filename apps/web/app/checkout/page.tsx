@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createOrder } from '../../src/lib/client-api'";
-import { track } from '../../src/lib/track'";
-import { captureUtm, getStoredUtm } from '../../src/lib/utm'";
+import { createOrder } from '../../src/lib/client-api';
+import { track } from '../../src/lib/track';
+import { captureUtm, getStoredUtm } from '../../src/lib/utm';
 
 type Schedule = {
   id: string;

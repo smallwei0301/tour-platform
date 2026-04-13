@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../../src/lib/api'";
-import { getAdminActivityByIdDb, updateActivityDb, deleteActivityDb } from '../../../../../src/lib/db.mjs'";
+import { ok, fail } from '../../../../../src/lib/api';
+import { getAdminActivityByIdDb, updateActivityDb, deleteActivityDb } from '../../../../../src/lib/db.mjs';
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;

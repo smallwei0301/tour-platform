@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { createClient } from '../../../../src/lib/supabase/client'";
+import { createClient } from '../../../../src/lib/supabase/client';
 
 type OrderDetail = {
   id: string;

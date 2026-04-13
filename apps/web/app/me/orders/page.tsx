@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../../src/lib/supabase/client'";
+import { createClient } from '../../../src/lib/supabase/client';
 
 type Order = {
   id: string;

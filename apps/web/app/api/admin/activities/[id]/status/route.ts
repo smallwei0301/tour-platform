@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../../../src/lib/api'";
-import { updateActivityStatusDb } from '../../../../../../src/lib/db.mjs'";
+import { ok, fail } from '../../../../../../src/lib/api';
+import { updateActivityStatusDb } from '../../../../../../src/lib/db.mjs';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
