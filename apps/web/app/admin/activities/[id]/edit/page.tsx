@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
-import { normalizeRegionSlug } from '../../../../../src/lib/activity-url';
+import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 
 // ── 方案型別 ──────────────────────────────────────────────
 interface PlanConfig {
@@ -1427,7 +1427,7 @@ export default function AdminActivityEditPage() {
             </a>
             {status === 'published' && activitySlug && REGION_SLUG_MAP[region] && (
               <a
-                href={`/activities/${REGION_SLUG_MAP[region]}/${activitySlug}`}
+                href={buildActivityHref({ slug: activitySlug, region, regionSlug: REGION_SLUG_MAP[region] })}
                 target="_blank"
                 rel="noreferrer"
                 style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '8px 14px', borderRadius: 8, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
