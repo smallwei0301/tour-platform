@@ -1418,6 +1418,12 @@ export default function AdminActivityEditPage() {
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Badge variant={badge.variant}>{badge.label}</Badge>
+            <a
+              href={`/admin/activities/${activityId}/plans`}
+              style={{ background: '#ecfdf5', color: '#059669', border: '1px solid #10b981', padding: '8px 14px', borderRadius: 8, fontWeight: 600, fontSize: 13, textDecoration: 'none' }}
+            >
+              📋 方案管理
+            </a>
             {status === 'published' && activitySlug && REGION_SLUG_MAP[region] && (
               <a
                 href={`/activities/${REGION_SLUG_MAP[region]}/${activitySlug}`}

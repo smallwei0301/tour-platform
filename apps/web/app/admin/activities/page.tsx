@@ -196,6 +196,12 @@ export default function AdminActivitiesPage() {
                             >
                               編輯
                             </Link>
+                            <Link
+                              href={`/admin/activities/${a.id}/plans`}
+                              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#ecfdf5', textDecoration: 'none', color: '#059669' }}
+                            >
+                              方案
+                            </Link>
                             {a.status === 'draft' && (
                               <button
                                 onClick={() => handleStatusChange(a.id, 'published')}
