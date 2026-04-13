@@ -13,9 +13,9 @@ function hashPassword(password: string): string {
  */
 export async function PATCH(
   req: Request,
-  context: { params: { guideId: string } }
+  context: { params: Promise<{ guideId: string }> }
 ) {
-  const { guideId } = context.params;
+  const { guideId } = await context.params;
   if (!guideId) {
     return NextResponse.json({ ok: false, error: { code: 'BAD_REQUEST' } }, { status: 400 });
   }

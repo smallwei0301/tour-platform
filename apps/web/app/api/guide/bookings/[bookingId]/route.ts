@@ -8,12 +8,12 @@ async function getSupabase() {
 
 export async function GET(
   req: Request,
-  context: { params: { bookingId: string } },
+  context: { params: Promise<{ bookingId: string }> },
 ) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
-  const { bookingId } = context.params;
+  const { bookingId } = await context.params;
   if (!bookingId) return Response.json(fail('BAD_REQUEST', 'bookingId required'), { status: 400 });
 
   const supabase = await getSupabase();

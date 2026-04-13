@@ -8,9 +8,9 @@ import { NextResponse } from 'next/server';
  */
 export async function PATCH(
   req: Request,
-  context: { params: { guideId: string } }
+  context: { params: Promise<{ guideId: string }> }
 ) {
-  const { guideId } = context.params;
+  const { guideId } = await context.params;
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   const suspend = !!body.suspend;
 
