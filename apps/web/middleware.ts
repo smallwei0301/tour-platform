@@ -137,7 +137,15 @@ export async function middleware(req: NextRequest) {
   );
 
   // Refresh session — required for Server Components to read auth state
-  await supabase.auth.getUser();
+  // HOTFIX: avoid hanging the entire request when upstream auth refresh stalls.
+  try {
+    await Promise.race([
+      supabase.auth.getUser(),
+      new Promise((resolve) => setTimeout(resolve, 1200)),
+    ]);
+  } catch {
+    // Fail-open for page availability; APIs still enforce their own auth checks.
+  }
 
   return supabaseResponse;
 }
