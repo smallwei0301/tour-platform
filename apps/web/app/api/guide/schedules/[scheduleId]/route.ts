@@ -8,12 +8,12 @@ async function getSupabase() {
 
 export async function PATCH(
   req: Request,
-  context: { params: { scheduleId: string } },
+  context: { params: Promise<{ scheduleId: string }> },
 ) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
-  const { scheduleId } = context.params;
+  const { scheduleId } = await context.params;
   if (!scheduleId) return Response.json(fail('BAD_REQUEST', 'scheduleId required'), { status: 400 });
 
   const body = await req.json().catch(() => ({}));
