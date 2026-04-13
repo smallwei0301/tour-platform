@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Activity } from '../../fixtures/data';
+import { buildActivityHref } from '../../lib/activity-url';
 
 interface ActivityCardProps {
   activity: Activity;
@@ -69,7 +70,7 @@ export function ActivityCard({
         </div>
         {/* Overlay link covers the whole card */}
         <Link
-          href={`/activities/${activity.regionSlug}/${activity.slug}`}
+          href={buildActivityHref({ slug: activity.slug, region: activity.region, regionSlug: activity.regionSlug })}
           className="tp-card-link-overlay"
           aria-label={activity.title}
         />

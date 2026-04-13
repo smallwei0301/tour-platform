@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
+import { normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 
 // ── 方案型別 ──────────────────────────────────────────────
 interface PlanConfig {
@@ -1361,7 +1362,7 @@ export default function AdminActivityEditPage() {
         body: JSON.stringify({
           title: title.trim(), guideSlug: guideSlug || undefined,
           region,
-          regionSlug: REGION_SLUG_MAP[region] || region.toLowerCase().replace(/[^\w]+/g, '-') || undefined,
+          regionSlug: normalizeRegionSlug(region, REGION_SLUG_MAP[region]),
           category,
           priceTwd: Number(priceTwd),
           durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
