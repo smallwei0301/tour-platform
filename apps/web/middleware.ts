@@ -116,7 +116,7 @@ export async function middleware(req: NextRequest) {
   // HOTFIX: temporarily skip Supabase session refresh in middleware.
   // Root cause under investigation: refresh occasionally stalls and blocks
   // dynamic page responses in production.
-  return NextResponse.next({ request: req });
+  return NextResponse.next();
 }
 
 export const config = {
