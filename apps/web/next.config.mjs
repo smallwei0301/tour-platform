@@ -20,7 +20,7 @@ const nextConfig = {
 export default withSentryConfig(nextConfig, {
   // Sentry organization and project (optional: set via env SENTRY_ORG / SENTRY_PROJECT)
   silent: true,
-  disableLogger: true,
+  webpack: { treeshake: { removeDebugLogging: true } },
 
   // Only upload source maps in production CI
   sourcemaps: {
