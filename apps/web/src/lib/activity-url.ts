@@ -30,6 +30,9 @@ export function normalizeRegionSlug(region?: string, regionSlug?: string): strin
 export function buildActivityHref(params: { slug?: string; region?: string; regionSlug?: string }): string {
   const slug = params.slug?.trim();
   if (!slug) return '/activities';
-  const r = normalizeRegionSlug(params.region, params.regionSlug);
-  return `/activities/${r}/${slug}`;
+
+  // HOTFIX (2026-04-13): production dynamic detail routes /activities/[region]/[slug]
+  // intermittently timeout. Temporarily route all "查看行程" entry points to
+  // stable checkout flow to avoid dead-click/user blocking.
+  return `/checkout?slug=${encodeURIComponent(slug)}`;
 }
