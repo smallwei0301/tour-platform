@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { activities, guides } from '../../fixtures/data';
+import { buildActivityHref } from '../../lib/activity-url';
 
 export function FeaturedTours() {
   // 取前 6 筆 mock 活動作為精選
@@ -44,7 +45,7 @@ export function FeaturedTours() {
                 <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>🕐 {a.durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人</p>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                   <strong style={{ color: 'var(--tp-primary)', fontSize: 15 }}>{a.priceLabel}</strong>
-                  <Link className="tp-btn tp-btn-primary" href={`/activities/${a.regionSlug}/${a.slug}`}
+                  <Link className="tp-btn tp-btn-primary" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}
                     style={{ fontSize: 13, padding: '6px 14px' }}>
                     查看行程
                   </Link>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { guides, getActivitiesByGuide } from '../../fixtures/data';
+import { buildActivityHref } from '../../lib/activity-url';
 
 export function GuideSpotlight() {
   const andy = guides.find((g) => g.slug === 'andy-lee');
@@ -48,7 +49,7 @@ export function GuideSpotlight() {
                     <p style={{ margin: '0 0 4px', fontSize: 14, color: 'var(--tp-muted)' }}>🕐 {a.durationDisplay} · {a.transportMode} · 👥 {a.minParticipants}~{a.maxParticipants} 人</p>
                     <strong style={{ color: 'var(--tp-primary)' }}>{a.priceLabel}</strong>
                     <br />
-                    <Link className="tp-link" href={`/activities/${a.regionSlug}/${a.slug}`} style={{ fontSize: 14 }}>查看行程 →</Link>
+                    <Link className="tp-link" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })} style={{ fontSize: 14 }}>查看行程 →</Link>
                   </div>
                 </article>
               ))}

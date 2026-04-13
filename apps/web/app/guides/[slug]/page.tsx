@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
+import { buildActivityHref } from '../../../src/lib/activity-url';
 import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../src/components/shared/ActivityHero';
 import { GalleryImage } from '../../../src/components/shared/GalleryImage';
@@ -106,7 +107,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
                     <h3>{a.title}</h3>
                     <p>📍 {a.region}</p>
                     <strong style={{ color: 'var(--tp-primary)' }}>起價 NT${a.priceTwd?.toLocaleString()} / 人</strong>
-                    <Link className="tp-link" href={`/activities/${a.region?.toLowerCase().replace(/[^\w]/g, '-') || 'taiwan'}/${a.slug}`}>查看行程 →</Link>
+                    <Link className="tp-link" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}>查看行程 →</Link>
                   </article>
                 ))}
               </div>

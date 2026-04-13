@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { buildActivityHref } from '../../src/lib/activity-url';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
 const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
@@ -180,7 +181,7 @@ export default function ActivitiesContent() {
           ) : (
             <div className="tp-card-grid tp-card-grid-activities">
               {filtered.map((a) => {
-                const regionSlug = a.regionSlug || a.region?.toLowerCase().replace(/[^\w]/g, '-') || 'taiwan';
+                const href = buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug });
                 const durationDisplay = a.durationMinutes
                   ? a.durationMinutes >= 60
                     ? `${Math.floor(a.durationMinutes / 60)}${a.durationMinutes % 60 ? ` 小時 ${a.durationMinutes % 60} 分` : ' 小時'}`
@@ -222,7 +223,7 @@ export default function ActivitiesContent() {
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ color: 'var(--tp-primary)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
-                      <Link className="tp-btn tp-btn-primary" href={`/activities/${regionSlug}/${a.slug}`}
+                      <Link className="tp-btn tp-btn-primary" href={href}
                         data-testid="activity-card-link"
                         style={{ fontSize: 13, padding: '6px 14px' }}>查看行程</Link>
                     </div>
