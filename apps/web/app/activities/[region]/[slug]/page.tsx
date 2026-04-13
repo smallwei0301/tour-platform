@@ -14,16 +14,9 @@ export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {
   const { slug } = await params;
-  const activity = await getActivityBySlugDb(slug).catch(() => null);
-  if (!activity) return { title: '行程不存在 | Tour Platform' };
   return {
-    title: `${activity.title} | Tour Platform`,
-    description: activity.shortDescription || activity.tagline,
-    openGraph: {
-      title: activity.title,
-      description: activity.shortDescription || activity.tagline,
-      images: activity.coverImageUrl ? [{ url: activity.coverImageUrl }] : [],
-    },
+    title: `${slug} | Tour Platform`,
+    description: '探索台灣在地導遊行程',
   };
 }
 
