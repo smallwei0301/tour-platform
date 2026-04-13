@@ -11,9 +11,9 @@ async function getSupabase() {
 
 export async function POST(
   _req: Request,
-  context: { params: { guideId: string } },
+  context: { params: Promise<{ guideId: string }> },
 ) {
-  const { guideId } = context.params;
+  const { guideId } = await context.params;
   if (!guideId) return Response.json(fail('BAD_REQUEST', 'guideId required'), { status: 400 });
 
   if (!process.env.SUPABASE_URL) {
