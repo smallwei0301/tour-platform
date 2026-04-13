@@ -126,7 +126,5 @@ export const config = {
     '/api/admin/:path*',
     '/guide/:path*',
     '/api/guide/:path*',
-    // Include all other pages for Supabase session refresh (exclude static files)
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
