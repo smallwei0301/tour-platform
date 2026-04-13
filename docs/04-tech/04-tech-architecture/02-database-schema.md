@@ -1,7 +1,7 @@
 # Tour Platform MVP Database Schema
 
 > 目的：定義 MVP 階段足夠支撐交易流程的資料結構。
-> 更新日期：2026-03-27
+> 更新日期：2026-04-13 (Incorporating Phase 12 Booking Engine & POS Lite)
 
 ---
 
@@ -58,10 +58,10 @@
 | review_count | integer | Y | 評價數 |
 | created_at | timestamptz | Y | 建立時間 |
 | updated_at | timestamptz | Y | 更新時間 |
-| **invite_token** | text | N | UUID 邀請碼（一次性，24 小時有效）migration 007 |
-| **invite_token_expires_at** | timestamptz | N | 邀請碼到期時間 migration 007 |
-| **guide_password_hash** | text | N | SHA-256 + salt 密碼雜湊 migration 007 |
-| **guide_session_version** | integer | Y | Session 版本號（預設 1，登出全部裝置時 +1）migration 007 |
+| invite_token | text | N | UUID 邀請碼（一次性，24 小時有效）migration 007 |
+| invite_token_expires_at | timestamptz | N | 邀請碼到期時間 migration 007 |
+| guide_password_hash | text | N | SHA-256 + salt 密碼雜湊 migration 007 |
+| guide_session_version | integer | Y | Session 版本號（預設 1，登出全部裝置時 +1）migration 007 |
 
 **索引**
 - unique(user_id)
@@ -136,7 +136,26 @@
 
 ---
 
-### 2.5 activity_schedules
+### 2.5 activity_plans (New - Migration 014)
+支援多方案架構，讓每個活動可設定多個販售方案（例如：早鳥、標準、VIP）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| activity_id | uuid | Y | FK -> activities.id |
+| plan_date | date | Y | 活動日期 |
+| start_time | time | Y | 開始時間 |
+| end_time | time | Y | 結束時間 |
+| max_participants | integer | Y | 最大名額 |
+| current_participants | integer | N | 已預訂人數 |
+| guide_id | uuid | N | FK -> guide_profiles.id |
+| status | text | Y | `scheduled` / `confirmed` / `cancelled` / `completed` |
+| price_override | decimal | N | 價格覆蓋 |
+| created_at | timestamptz | Y | 建立時間 |
+
+---
+
+### 2.6 activity_schedules
 活動場次。
 
 | 欄位 | 型別 | 必填 | 說明 |
@@ -158,7 +177,79 @@
 
 ---
 
-### 2.6 orders
+### 2.7 guide_availability_rules (New - Migration 015)
+導遊可設定週期性可接案時段（Recurring Weekly Availability）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| guide_id | uuid | Y | FK -> guide_profiles.id |
+| activity_plan_id | uuid | N | FK -> activity_plans.id (NULL = 適用所有方案) |
+| weekday | integer | Y | 0=Sun, 1=Mon, ..., 6=Sat |
+| start_time_local | time | Y | 開始時間 |
+| end_time_local | time | Y | 結束時間 |
+| timezone | text | Y | 預設 'Asia/Taipei' |
+| slot_interval_minutes | integer | Y | 時段間隔 (例如 30 分鐘一個 Slot) |
+| buffer_before_minutes | integer | Y | 預留前置時間 |
+| buffer_after_minutes | integer | Y | 預留後置時間 |
+| effective_from | date | N | 生效日期 |
+| effective_to | date | N | 到期日期 |
+| is_active | boolean | Y | 是否啟用 |
+
+---
+
+### 2.8 guide_blackout_dates (New - Migration 016)
+導遊黑名單日期（請假、私人事務等不可預訂時段）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| guide_id | uuid | Y | FK -> guide_profiles.id |
+| starts_at | timestamptz | Y | 開始時間 |
+| ends_at | timestamptz | Y | 結束時間 |
+| reason | text | N | 原因 |
+| source | text | Y | `manual` / `system` |
+
+---
+
+### 2.9 bookings (New - Migration 017)
+核心預訂實體，將預訂生命週期與付款分離。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| booking_number | text | Y | 顯示用單號，unique |
+| customer_id | uuid | Y | FK -> customers.id |
+| activity_plan_id | uuid | N | FK -> activity_plans.id |
+| booking_date | timestamptz | Y | 預訂日期 |
+| status | text | Y | `pending` / `confirmed` / `cancelled` / `completed` / `no_show` |
+| number_of_participants | integer | Y | 人數 |
+| total_amount | decimal | Y | 總額 |
+| deposit_amount | decimal | N | 定金 |
+| paid_amount | decimal | N | 已付金額 |
+| payment_status | text | Y | `unpaid` / `partial` / `paid` / `refunded` |
+| payment_method | text | N | 付款方式 |
+| created_at | timestamptz | Y | 建立時間 |
+| updated_at | timestamptz | Y | 更新時間 |
+
+---
+
+### 2.10 booking_status_logs (New - Migration 017/019)
+預訂狀態變更追蹤（Audit Trail）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| booking_id | uuid | Y | FK -> bookings.id |
+| from_status | text | N | 變更前狀態 |
+| to_status | text | Y | 變更後狀態 |
+| actor_user_id | uuid | N | 操作者 ID |
+| actor_role | text | Y | `traveler` / `guide` / `admin` / `system` |
+| created_at | timestamptz | Y | 建立時間 |
+
+---
+
+### 2.11 orders (Upgraded - Migration 019)
 訂單主表。
 
 | 欄位 | 型別 | 必填 | 說明 |
@@ -168,94 +259,69 @@
 | traveler_id | uuid | Y | FK -> users.id |
 | guide_id | uuid | Y | FK -> guide_profiles.id |
 | activity_id | uuid | Y | FK -> activities.id |
-| schedule_id | uuid | Y | FK -> activity_schedules.id |
-| status | text | Y | `pending_payment` / `paid` / `confirmed` / `cancelled_by_user` / `cancelled_by_guide` / `completed` / `refund_pending` / `refunded` |
+| status | text | Y | `pending_payment` / `paid` / `confirmed` / `cancelled` ... |
 | participants | integer | Y | 人數 |
-| unit_price | integer | Y | 單價快照 |
 | subtotal_amount | integer | Y | 小計 |
-| platform_fee_amount | integer | Y | 平台抽成 |
-| guide_payout_amount | integer | Y | 導遊可得 |
 | currency | text | Y | `TWD` |
-| contact_name | text | Y | 聯絡人 |
-| contact_phone | text | Y | 聯絡電話 |
-| contact_email | text | Y | 聯絡 Email |
-| note | text | N | 備註 |
-| agreed_refund_policy_at | timestamptz | Y | 同意退款政策時間 |
-| agreed_terms_at | timestamptz | Y | 同意條款時間 |
-| paid_at | timestamptz | N | 付款成功時間 |
-| confirmed_at | timestamptz | N | 導遊確認時間 |
-| completed_at | timestamptz | N | 完成時間 |
-| cancelled_at | timestamptz | N | 取消時間 |
 | created_at | timestamptz | Y | 建立時間 |
-| updated_at | timestamptz | Y | 更新時間 |
-
-| user_id | uuid | N | FK -> auth.users.id（Phase 9，Supabase Auth 用戶，NULL = 舊訂單） |
-
-**索引**
-- unique(order_no)
-- index(traveler_id)
-- index(user_id) WHERE user_id IS NOT NULL
-- index(guide_id)
-- index(activity_id)
-- index(schedule_id)
-- index(status)
-- index(created_at)
 
 ---
 
-### 2.7 payments
-付款記錄。
+### 2.12 payments (Upgraded - Migration 020)
+付款記錄與金流追蹤。
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | id | uuid | Y | PK |
-| order_id | uuid | Y | FK -> orders.id |
-| provider | text | Y | `ecpay` |
-| provider_trade_no | text | Y | 平台送給金流的單號 |
-| provider_txn_id | text | N | 金流回傳交易編號 |
-| amount | integer | Y | 金額 |
-| status | text | Y | `created` / `paid` / `failed` / `cancelled` |
-| raw_callback_payload | jsonb | N | callback raw data |
-| paid_at | timestamptz | N | 成功付款時間 |
+| booking_id | uuid | Y | FK -> bookings.id |
+| amount | decimal | Y | 金額 |
+| status | text | Y | `pending` / `processing` / `completed` / `failed` ... |
+| method | text | N | `credit_card` / `atm` / `cvs` / `ecpay` |
+| merchant_trade_no | text | Y | ECPay 商家交易單號 (Unique) |
+| trade_no | text | N | ECPay 交易單號 |
+| payment_date | timestamptz | N | 付款成功時間 |
 | created_at | timestamptz | Y | 建立時間 |
-| updated_at | timestamptz | Y | 更新時間 |
-
-**索引**
-- unique(provider_trade_no)
-- index(order_id)
-- index(status)
 
 ---
 
-### 2.8 refund_requests
-退款申請。
+### 2.13 payment_logs (New - Migration 020)
+付款事件日誌。
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | id | uuid | Y | PK |
-| order_id | uuid | Y | FK -> orders.id |
-| requester_id | uuid | Y | FK -> users.id |
-| reason | text | Y | 退款原因 |
-| detail | text | N | 補充說明 |
-| requested_amount | integer | Y | 申請金額 |
-| approved_amount | integer | N | 核准金額 |
-| status | text | Y | `requested` / `reviewing` / `approved` / `processing` / `refunded` / `rejected` |
-| admin_note | text | N | admin 備註 |
-| requested_at | timestamptz | Y | 申請時間 |
-| approved_at | timestamptz | N | 核准時間 |
-| refunded_at | timestamptz | N | 完成時間 |
-| handled_by | uuid | N | admin user id |
+| payment_id | uuid | Y | FK -> payments.id |
+| log_type | text | Y | 事件類型 |
+| log_message | text | N | 訊息 |
 | created_at | timestamptz | Y | 建立時間 |
-| updated_at | timestamptz | Y | 更新時間 |
-
-**索引**
-- index(order_id)
-- index(status)
-- index(requester_id)
 
 ---
 
-### 2.9 reviews
+### 2.14 activity_packages (New - Migration 018)
+活動方案包 (例如：一日遊套裝)。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| package_name | text | Y | 套裝名稱 |
+| package_price | decimal | Y | 方案價格 |
+| is_active | boolean | Y | 是否啟用 |
+
+---
+
+### 2.15 package_activities (New - Migration 018)
+套裝與活動的關聯表 (Many-to-Many)。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| package_id | uuid | Y | FK -> activity_packages.id |
+| activity_id | uuid | Y | FK -> activities.id |
+| sequence_order | integer | Y | 排序順序 |
+
+---
+
+### 2.16 reviews
 訂單完成後評價。
 
 | 欄位 | 型別 | 必填 | 說明 |
@@ -267,119 +333,74 @@
 | traveler_id | uuid | Y | FK -> users.id |
 | rating | integer | Y | 1~5 |
 | comment | text | N | 評論 |
-| is_verified_order | boolean | Y | 固定 true |
 | created_at | timestamptz | Y | 建立時間 |
-| updated_at | timestamptz | Y | 更新時間 |
-
-**索引**
-- unique(order_id)
-- index(activity_id)
-- index(guide_id)
-- index(traveler_id)
 
 ---
 
-### 2.10 notifications
-通知發送記錄（MVP 先做 Email）。
+### 2.17 notifications
+通知發送記錄。
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | id | uuid | Y | PK |
 | user_id | uuid | Y | FK -> users.id |
 | channel | text | Y | `email` |
-| template_key | text | Y | 如 `order_paid` |
-| related_type | text | N | `order` / `refund` / `guide_application` |
-| related_id | uuid | N | 關聯主體 id |
 | status | text | Y | `queued` / `sent` / `failed` |
-| payload | jsonb | N | 送出內容快照 |
-| sent_at | timestamptz | N | 發送時間 |
 | created_at | timestamptz | Y | 建立時間 |
 
 ---
 
-### 2.11 audit_logs
+### 2.18 audit_logs
 關鍵狀態變更記錄。
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | id | uuid | Y | PK |
-| actor_user_id | uuid | N | 操作者 |
-| actor_role | text | N | `traveler` / `guide` / `admin` / `system` |
 | target_type | text | Y | `order` / `refund_request` / `guide_application` / `activity` |
 | target_id | uuid | Y | 關聯實體 id |
 | action | text | Y | 如 `order.confirmed` |
-| before_data | jsonb | N | 變更前 |
-| after_data | jsonb | N | 變更後 |
 | created_at | timestamptz | Y | 建立時間 |
-
-**索引**
-- index(target_type, target_id)
-- index(actor_user_id)
-- index(created_at)
 
 ---
 
-### 2.12 events（Phase 8–9，migration 008+009）
-事件追蹤表，用於漏斗分析。
+### 2.19 events
+事件追蹤表（漏斗分析）。
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | id | bigserial | Y | PK |
-| event_name | text | Y | page_view / view_item / begin_checkout / purchase_intent / payment_succeeded / error |
+| event_name | text | Y | `page_view` / `purchase_intent` ... |
 | session_id | text | N | Client anonymous session UUID |
-| contact_email | text | N | 聯絡 email |
-| order_id | uuid | N | FK -> orders.id |
-| activity_id | uuid | N | FK -> activities.id |
-| schedule_id | uuid | N | FK -> activity_schedules.id |
-| properties | jsonb | Y | Event-specific payload |
-| error_code | text | N | 錯誤碼 |
-| page_path | text | N | 頁面路徑 |
-| referrer | text | N | 來源頁 |
-| user_agent | text | N | User agent |
-| ip_hash | text | N | SHA-256 of IP |
-| utm_source | text | N | UTM source |
-| utm_medium | text | N | UTM medium |
-| utm_campaign | text | N | UTM campaign |
-| utm_content | text | N | UTM content variant |
-| utm_term | text | N | UTM keyword |
 | created_at | timestamptz | Y | 建立時間 |
-
-**索引**
-- index(event_name)
-- index(session_id)
-- index(order_id)
-- index(activity_id)
-- index(created_at DESC)
-- index(utm_source) WHERE NOT NULL
-- index(utm_campaign) WHERE NOT NULL
-
-**RLS**
-- RLS enabled，只有 service_role 可讀寫（前端透過 /api/events API route）
 
 ---
 
 ## 3. 關聯摘要（ERD 文字版）
 
 - `users` 1:1 `guide_profiles`
-- `users` 1:N `orders`（作為 traveler）
+- `users` 1:N `bookings`（作為 traveler）
 - `guide_profiles` 1:N `activities`
-- `activities` 1:N `activity_schedules`
-- `activity_schedules` 1:N `orders`
-- `orders` 1:N `payments`（MVP 實際多半 1:1）
-- `orders` 1:0..1 `refund_requests`
-- `orders` 1:0..1 `reviews`
+- `guide_profiles` 1:N `guide_availability_rules`
+- `guide_profiles` 1:N `guide_blackout_dates`
+- `activities` 1:N `activity_plans`
+- `activity_plans` 1:N `activity_schedules`
+- `activity_plans` 1:N `guide_availability_rules`
+- `activity_schedules` 1:N `bookings`
+- `bookings` 1:1 `orders`
+- `bookings` 1:N `booking_status_logs`
+- `orders` 1:N `payments`
+- `activity_packages` 1:N `package_activities` $\rightarrow$ `activities`
 
 ---
 
 ## 4. RLS 建議
 
 ### traveler
-- 只能讀自己的 orders / refund_requests / reviews
+- 只能讀自己的 bookings / orders / refund_requests / reviews
 - 不能讀 guide_application private docs
 
 ### guide
-- 只能讀自己的 activities / schedules / related orders
-- 不能讀其他 guide 的後台資料
+- 只能讀自己的 activities / schedules / availability_rules / blackout_dates / related bookings
 
 ### admin
 - 全部可讀寫
@@ -389,22 +410,9 @@
 
 ---
 
-## 5. MVP 後續可擴充但先不做
+## 5. 實作注意事項
 
-- coupons
-- conversations / messages
-- payouts / withdrawals
-- saved_items / wishlist
-- emergency_incidents
-- multilingual_content
-- search_index / ranking_signals
-
----
-
-## 6. 實作注意事項
-
-- 金額欄位全專案必須統一單位
-- `order_no` 與 `provider_trade_no` 要可追蹤且不可重複
-- KYC 文件路徑放資料庫，檔案本體放 private storage
-- 評分平均可先同步寫入 `guide_profiles`，後續再改 materialized view
-- 退款與訂單狀態變更必須寫 `audit_logs`
+- **Booking-Order 分離**：預訂 (`bookings`) 負責履約週期，訂單 (`orders`) 負責金流週期。
+- **Availability Driven**：所有預訂必須基於 `guide_availability_rules` 與 `guide_blackout_dates` 計算可用 Slot。
+- **金流追蹤**：`payments` 表必須記錄 ECPay 的 `merchant_trade_no` 以便對帳。
+- **狀態追蹤**：所有 `bookings` 的狀態變更必須寫入 `booking_status_logs`。
