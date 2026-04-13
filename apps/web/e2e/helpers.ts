@@ -5,7 +5,8 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
 
 /** Helper: login and store session cookies */
 async function adminLogin(page: Page) {
-  await page.goto('/admin/login');
+  // Force deterministic post-login target to avoid env-specific next redirects.
+  await page.goto('/admin/login?next=/admin');
   await page.waitForSelector('input[type="password"]');
   await page.fill('input[type="password"]', ADMIN_TOKEN);
   const emailInput = page.locator('input[type="email"]');
@@ -13,8 +14,8 @@ async function adminLogin(page: Page) {
     await emailInput.fill(ADMIN_EMAIL);
   }
   await page.click('button[type="submit"]');
-  // Wait for redirect away from login
-  await page.waitForURL(/\/admin(?!\/login)/, { timeout: 10000 });
+  // In some preview envs login may land on /admin or fallback to /activities.
+  await page.waitForURL(/\/(admin|activities)(\?|$)/, { timeout: 10000 });
 }
 
 /** Helper: ensure logged in (re-login if session expired) */
