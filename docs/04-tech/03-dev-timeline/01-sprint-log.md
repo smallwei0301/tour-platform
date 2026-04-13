@@ -304,3 +304,48 @@
 4. **評價系統** — 行程完成後留評閉環（Phase 12）
 5. **Supabase Auth for Guides** — 廢除自製 session，改 Supabase Auth（Phase 12）
 
+---
+
+### Phase 12 — Booking Engine V2 + POS Lite（2026-04-10）
+
+| 任務編號 | 功能 | 狀態 | 說明 |
+|---------|------|------|------|
+| TP-BP-001 | Schema Migration Foundation | ✅ 完成 | 7 新表 + orders 擴欄（activity_plans, bookings, order_items 等） |
+| TP-BP-002 | Backfill Script | ✅ 完成 | 回填現有資料到 V2 結構 |
+| TP-BP-003 | Slot Generator Engine | 🔜 待做 | Cal.com 風格的 availability slot 產生器 |
+| TP-BP-004 | API v2 Booking | 🔜 待做 | POST /api/v2/bookings |
+| TP-BP-005 | API v2 Slots | 🔜 待做 | GET /api/v2/activities/:id/slots |
+
+#### TP-BP-001: Schema Migration Foundation（2026-04-09）
+- migration: `20260409000000_v2_booking_pos_foundation.sql`
+- 新增 7 張表：
+  - `activity_plans` — 可售方案（per_person/per_group）
+  - `guide_availability_rules` — Cal.com 風格每週可用時間
+  - `guide_blackout_dates` — 導遊不可用日期
+  - `bookings` — 預訂實體（與 orders 分離）
+  - `booking_status_logs` — 預訂狀態審計軌跡
+  - `order_items` — ERPNext 風格訂單行項目
+  - `payment_events` — 付款生命週期事件
+- 擴充 `orders` 表：booking_id, source_channel, handled_by, discount_amount, payment_status
+- V1 相容：所有變更為增量式，舊流程可繼續運行
+
+#### TP-BP-002: Backfill Script（2026-04-10）
+- migration: `20260410000000_v2_backfill_booking_pos.sql`
+- rollback: `20260410000000_v2_backfill_booking_pos.rollback.sql`
+- dry-run report: `supabase/scripts/v2_backfill_dry_run.sql`
+- 回填內容：
+  - B1: activities → activity_plans（每個 activity 建立 default plan）
+  - B2: orders + activity_schedules → bookings（狀態映射）
+  - B3: orders → order_items（activity_booking 類型）
+  - B4: payments → payment_events（initiated + paid/failed）
+- 狀態映射：
+  - pending_payment → draft
+  - paid → pending_confirmation
+  - confirmed → confirmed
+  - completed → completed
+  - cancelled_* / refund_* → cancelled
+- 資料完整性：
+  - 冪等設計（可重複執行）
+  - booking_status_logs 審計記錄
+  - 詳細驗證報告
+
