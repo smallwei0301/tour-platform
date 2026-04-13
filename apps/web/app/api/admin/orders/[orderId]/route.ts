@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../../src/lib/api';
-import { getAdminOrderDetailDb, updateAdminOrderDb } from '../../../../../src/lib/db.mjs';
+import { ok, fail } from '../../../../../src/lib/api'";
+import { getAdminOrderDetailDb, updateAdminOrderDb } from '../../../../../src/lib/db.mjs'";
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;

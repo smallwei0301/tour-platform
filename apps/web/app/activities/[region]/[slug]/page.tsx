@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
+import { getActivityBySlugDb } from '../../../../src/lib/db.mjs'";
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
