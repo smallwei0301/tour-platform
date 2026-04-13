@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../../../src/lib/api';
-import { updateGuideApplicationStatusDb } from '../../../../../../src/lib/db.mjs';
+import { ok, fail } from '../../../../../../src/lib/api'";
+import { updateGuideApplicationStatusDb } from '../../../../../../src/lib/db.mjs'";
 
 export async function POST(request: Request, context: { params: Promise<{ applicationId: string }> }) {
   const { applicationId } = await context.params;

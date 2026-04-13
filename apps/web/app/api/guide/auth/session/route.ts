@@ -1,4 +1,4 @@
-import { ok, fail } from '../../../../../src/lib/api';
+import { ok, fail } from '../../../../../src/lib/api'";
 import {
   verifyGuideSession,
   hashPassword,

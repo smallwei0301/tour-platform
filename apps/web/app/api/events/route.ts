@@ -14,7 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import type { EventInsert, EventName } from '@/lib/events';
 import type { UtmParams } from '@/lib/utm';
-import { eventsLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
+import { eventsLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit'";
 
 const VALID_EVENTS: EventName[] = [
   'page_view',

@@ -4,8 +4,8 @@
  */
 
 import { NextRequest } from 'next/server';
-import { successV2, errorV2 } from '../../../../../../../src/lib/api';
-import { createClient } from '../../../../../../../src/lib/supabase/server';
+import { successV2, errorV2 } from '../../../../../../../src/lib/api'";
+import { createClient } from '../../../../../../../src/lib/supabase/server'";
 import {
   generateAvailableSlots,
   type AvailabilityRule,

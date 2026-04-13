@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { ok, fail } from '../../../../../../src/lib/api';
+import { ok, fail } from '../../../../../../src/lib/api'";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;

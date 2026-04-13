@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { generateInviteToken } from '../../../../../src/lib/guide-auth';
+import { generateInviteToken } from '../../../../../src/lib/guide-auth'";
 
 /**
  * POST /api/admin/guides/promote

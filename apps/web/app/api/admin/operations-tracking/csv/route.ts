@@ -1,4 +1,4 @@
-import { operationsTrackingCsvDb } from '../../../../../src/lib/db.mjs';
+import { operationsTrackingCsvDb } from '../../../../../src/lib/db.mjs'";
 
 export async function GET() {
   const csv = await operationsTrackingCsvDb();

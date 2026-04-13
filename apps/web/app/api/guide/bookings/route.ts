@@ -1,5 +1,5 @@
-import { ok, fail } from '../../../../src/lib/api';
-import { verifyGuideSession, maskEmail } from '../../../../src/lib/guide-auth';
+import { ok, fail } from '../../../../src/lib/api'";
+import { verifyGuideSession, maskEmail } from '../../../../src/lib/guide-auth'";
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
