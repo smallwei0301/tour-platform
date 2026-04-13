@@ -44,6 +44,35 @@ function verifyGuideSessionMiddleware(req: NextRequest): boolean {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // ── Global production timeout mitigation for dynamic slug pages ───────────
+  // Keep site responsive while root cause is being isolated.
+  const activityMatch = pathname.match(/^\/activities\/[^/]+\/([^/]+)$/);
+  if (activityMatch) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/checkout';
+    url.searchParams.set('slug', decodeURIComponent(activityMatch[1] || ''));
+    return NextResponse.redirect(url);
+  }
+
+  const bookingMatch = pathname.match(/^\/booking\/([^/]+)$/);
+  if (bookingMatch) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/checkout';
+    url.searchParams.set('slug', decodeURIComponent(bookingMatch[1] || ''));
+    return NextResponse.redirect(url);
+  }
+
+  if (/^\/blog\/[^/]+$/.test(pathname)) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/blog';
+    return NextResponse.redirect(url);
+  }
+
+  if (/^\/experiences\/[^/]+$/.test(pathname)) {
+    const url = req.nextUrl.clone();
+    url.pathname = '/activities';
+    return NextResponse.redirect(url);
+  }
 
   // ── Guide routes ───────────────────────────────────────────────────────────
   const isGuidePage = pathname.startsWith('/guide');
@@ -126,5 +155,6 @@ export const config = {
     '/api/admin/:path*',
     '/guide/:path*',
     '/api/guide/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
