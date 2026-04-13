@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+
 import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
 
@@ -112,42 +112,11 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
-  // ── Supabase Auth Session Refresh (旅客 Auth) ──────────────────────────────
-  // Refresh session cookies so they don't expire during user's visit.
-  // Only applies to non-admin, non-guide routes.
-  let supabaseResponse = NextResponse.next({ request: req });
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => req.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({ request: req });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  // Refresh session — required for Server Components to read auth state
-  // HOTFIX: avoid hanging the entire request when upstream auth refresh stalls.
-  try {
-    await Promise.race([
-      supabase.auth.getUser(),
-      new Promise((resolve) => setTimeout(resolve, 1200)),
-    ]);
-  } catch {
-    // Fail-open for page availability; APIs still enforce their own auth checks.
-  }
-
-  return supabaseResponse;
+  // ── Traveler routes ───────────────────────────────────────────────────────
+  // HOTFIX: temporarily skip Supabase session refresh in middleware.
+  // Root cause under investigation: refresh occasionally stalls and blocks
+  // dynamic page responses in production.
+  return NextResponse.next({ request: req });
 }
 
 export const config = {
