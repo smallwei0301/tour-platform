@@ -5,6 +5,7 @@ import { useState } from 'react';
 
 const NAV_ITEMS = [
   { href: '/guide/dashboard', label: '儀表板', icon: '📊' },
+  { href: '/guide/availability', label: '時間管理', icon: '🕐' },
   { href: '/guide/schedules', label: '場次管理', icon: '📅' },
   { href: '/guide/bookings', label: '訂單查看', icon: '📋' },
 ];

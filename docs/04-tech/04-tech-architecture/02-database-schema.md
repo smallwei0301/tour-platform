@@ -416,3 +416,285 @@
 - **Availability Driven**：所有預訂必須基於 `guide_availability_rules` 與 `guide_blackout_dates` 計算可用 Slot。
 - **金流追蹤**：`payments` 表必須記錄 ECPay 的 `merchant_trade_no` 以便對帳。
 - **狀態追蹤**：所有 `bookings` 的狀態變更必須寫入 `booking_status_logs`。
+
+**未來擴展方向 (Future Scope):**
+- coupons
+- conversations / messages
+- payouts / withdrawals
+- saved_items / wishlist
+- emergency_incidents
+- multilingual_content
+- search_index / ranking_signals
+
+---
+
+## 6. 實作注意事項
+
+- 金額欄位全專案必須統一單位
+- `order_no` 與 `provider_trade_no` 要可追蹤且不可重複
+- KYC 文件路徑放資料庫，檔案本體放 private storage
+- 評分平均可先同步寫入 `guide_profiles`，後續再改 materialized view
+- 退款與訂單狀態變更必須寫 `audit_logs`
+
+---
+
+## 7. V2 Booking Engine + POS 新增資料表
+
+> Migration: `20260409000000_v2_booking_pos_foundation.sql`
+> 新增日期：2026-04-10
+
+### 設計原則
+
+**三層狀態分離**：
+- **BookingStatus**：履約狀態（draft → confirmed → completed）
+- **OrderStatus**：商業狀態（pending_payment → paid → refunded）
+- **PaymentStatus**：收款狀態（pending → paid → failed）
+
+**V1 相容**：
+- 所有改動皆為增量，不破壞現有 `activity_schedules` 流程
+- `orders.schedule_id` 保留，舊流程可繼續運作
+
+---
+
+### 7.1 activity_plans
+
+把活動拆成可銷售方案（半日遊 / 一日遊 / 私人包團）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| activity_id | uuid | Y | FK -> activities.id |
+| name | text | Y | 方案名稱（如 Half Day / Full Day） |
+| slug | text | Y | 方案代碼 |
+| duration_minutes | integer | Y | 行程時長 |
+| price_type | text | Y | `per_person` / `per_group` |
+| base_price | integer | Y | 基礎售價（TWD） |
+| min_participants | integer | Y | 最低人數 |
+| max_participants | integer | Y | 最高人數 |
+| booking_type | text | Y | `scheduled` / `request` / `instant` |
+| status | text | Y | `active` / `inactive` |
+| created_at | timestamptz | Y | 建立時間 |
+| updated_at | timestamptz | Y | 更新時間 |
+
+**索引**
+- index(activity_id)
+- index(status)
+- unique(activity_id, slug)
+
+---
+
+### 7.2 guide_availability_rules
+
+Cal.com 風格的導遊可用時間規則。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| guide_id | uuid | Y | FK -> guide_profiles.id |
+| activity_plan_id | uuid | N | FK -> activity_plans.id（NULL = 全方案通用） |
+| weekday | integer | Y | 0-6（0=週日） |
+| start_time_local | time | Y | 當地開始時間 |
+| end_time_local | time | Y | 當地結束時間 |
+| timezone | text | Y | 如 `Asia/Taipei` |
+| slot_interval_minutes | integer | Y | slot 間隔（預設 30） |
+| buffer_before_minutes | integer | Y | 前置緩衝 |
+| buffer_after_minutes | integer | Y | 後置緩衝 |
+| effective_from | date | N | 生效起始日 |
+| effective_to | date | N | 生效結束日 |
+| is_active | boolean | Y | 是否啟用 |
+| created_at | timestamptz | Y | 建立時間 |
+| updated_at | timestamptz | Y | 更新時間 |
+
+**索引**
+- index(guide_id)
+- index(activity_plan_id)
+- index(is_active)
+
+**約束**
+- end_time_local > start_time_local
+- effective_to >= effective_from (when both non-null)
+
+---
+
+### 7.3 guide_blackout_dates
+
+導遊不可接單的時段。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| guide_id | uuid | Y | FK -> guide_profiles.id |
+| starts_at | timestamptz | Y | 開始時間 |
+| ends_at | timestamptz | Y | 結束時間 |
+| reason | text | N | 原因（休假 / 私事 / 已接案） |
+| source | text | Y | `manual` / `system` |
+| created_at | timestamptz | Y | 建立時間 |
+
+**索引**
+- index(guide_id)
+- index(starts_at)
+
+**約束**
+- ends_at > starts_at
+
+---
+
+### 7.4 bookings
+
+預約實體（從 orders 分離）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| booking_no | text | Y | 顯示用編號（unique，自動生成） |
+| traveler_id | uuid | N | FK -> users.id |
+| guide_id | uuid | Y | FK -> guide_profiles.id |
+| activity_id | uuid | Y | FK -> activities.id |
+| activity_plan_id | uuid | N | FK -> activity_plans.id |
+| source_channel | text | Y | `web` / `line` / `admin_pos` |
+| start_at | timestamptz | Y | 預約開始時間 |
+| end_at | timestamptz | Y | 預約結束時間 |
+| timezone | text | Y | 預約時區 |
+| participants | integer | Y | 人數 |
+| status | text | Y | 見下方狀態機 |
+| order_id | uuid | N | FK -> orders.id |
+| customer_note | text | N | 客戶備註 |
+| internal_note | text | N | 內部備註 |
+| confirmed_at | timestamptz | N | 確認時間 |
+| completed_at | timestamptz | N | 完成時間 |
+| cancelled_at | timestamptz | N | 取消時間 |
+| created_at | timestamptz | Y | 建立時間 |
+| updated_at | timestamptz | Y | 更新時間 |
+
+**BookingStatus 狀態機**
+```
+draft → pending_confirmation → confirmed → completed
+                            ↘ cancelled
+              confirmed → cancelled / no_show / reschedule_requested
+              reschedule_requested → confirmed / cancelled
+```
+
+**索引**
+- unique(booking_no)
+- index(traveler_id)
+- index(guide_id)
+- index(activity_id)
+- index(activity_plan_id)
+- index(status)
+- index(start_at)
+- partial index: (guide_id, start_at) WHERE status IN ('draft', 'pending_confirmation', 'confirmed', 'reschedule_requested')
+
+---
+
+### 7.5 booking_status_logs
+
+預約狀態變更的審計日誌。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| booking_id | uuid | Y | FK -> bookings.id |
+| from_status | text | N | 原狀態 |
+| to_status | text | Y | 新狀態 |
+| actor_user_id | uuid | N | FK -> users.id |
+| actor_role | text | Y | `traveler` / `guide` / `admin` / `system` |
+| reason | text | N | 變更原因 |
+| metadata | jsonb | N | 附加資料 |
+| created_at | timestamptz | Y | 建立時間 |
+
+**索引**
+- index(booking_id)
+- index(created_at DESC)
+
+---
+
+### 7.6 order_items
+
+訂單明細項目（ERPNext 風格）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| order_id | uuid | Y | FK -> orders.id |
+| item_type | text | Y | `activity_booking` / `adjustment` / `fee` / `discount` |
+| ref_id | uuid | N | 關聯 ID（如 booking_id） |
+| title | text | Y | 顯示名稱 |
+| quantity | integer | Y | 數量 |
+| unit_price | integer | Y | 單價 |
+| subtotal_amount | integer | Y | 小計 |
+| metadata | jsonb | N | 附加資料 |
+| created_at | timestamptz | Y | 建立時間 |
+
+**索引**
+- index(order_id)
+- index(item_type)
+
+---
+
+### 7.7 payment_events
+
+付款生命週期事件日誌。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| id | uuid | Y | PK |
+| payment_id | uuid | Y | FK -> payments.id |
+| event_type | text | Y | `initiated` / `callback_received` / `authorized` / `paid` / `failed` / `refunded` / `cancelled` |
+| payload | jsonb | N | 原始資料 |
+| created_at | timestamptz | Y | 建立時間 |
+
+**索引**
+- index(payment_id)
+- index(created_at DESC)
+
+---
+
+### 7.8 orders 擴充欄位
+
+V2 新增欄位（皆為可選，維持 V1 相容）。
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| booking_id | uuid | N | FK -> bookings.id |
+| source_channel | text | N | `web` / `line` / `admin_pos` |
+| handled_by | uuid | N | FK -> users.id（POS 操作員） |
+| discount_amount | integer | N | 折扣金額 |
+| payment_status | text | N | `pending` / `partially_paid` / `paid` / `failed` / `refunded` / `partially_refunded` |
+
+**新增索引**
+- index(booking_id)
+- index(source_channel)
+- index(payment_status)
+
+---
+
+### 7.9 V2 關聯摘要
+
+```
+activities 1:N activity_plans
+guide_profiles 1:N guide_availability_rules
+guide_profiles 1:N guide_blackout_dates
+activity_plans 1:N guide_availability_rules (optional)
+activity_plans 1:N bookings
+bookings 1:N booking_status_logs
+bookings 1:1 orders (optional)
+orders 1:N order_items
+payments 1:N payment_events
+```
+
+---
+
+### 7.10 V2 RLS 規則
+
+| 表 | traveler | guide | admin |
+|-----|----------|-------|-------|
+| activity_plans | 讀取 active | 讀取自己活動的 | 全部 |
+| guide_availability_rules | - | 讀寫自己的 | 全部 |
+| guide_blackout_dates | - | 讀寫自己的 | 全部 |
+| bookings | 讀取自己的 | 讀取自己的 | 全部 |
+| booking_status_logs | 讀取自己 booking 的 | 讀取自己 booking 的 | 全部 |
+| order_items | 讀取自己 order 的 | 讀取自己 order 的 | 全部 |
+| payment_events | - | - | 全部 |
+
+> 目前所有表皆設為 service_role full access，待實作細部權限時再調整。
+
