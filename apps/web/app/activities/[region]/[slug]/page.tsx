@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
@@ -9,6 +10,14 @@ import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel
 
 // ISR：最多 60 秒快取，確保 booked_count 能即時反映
 export const revalidate = 60;
+
+// 快取行程詳情查詢，減少重複打 DB 導致的首屏等待時間。
+// 不改 UI，只優化資料取得路徑。
+const getActivityBySlugCached = unstable_cache(
+  async (slug: string) => getActivityBySlugDb(slug),
+  ['activity-detail-by-slug-v1'],
+  { revalidate }
+);
 
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
@@ -22,7 +31,7 @@ export async function generateMetadata(
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getActivityBySlugDb(slug).catch(() => null);
+  const activity = await getActivityBySlugCached(slug).catch(() => null);
   if (!activity) return notFound();
 
   const guide = activity.guide;
