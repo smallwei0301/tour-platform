@@ -32,9 +32,12 @@ function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+let supabaseClient = null;
 async function getSupabase() {
+  if (supabaseClient) return supabaseClient;
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return supabaseClient;
 }
 
 export async function listExperiencesDb() {
@@ -1427,6 +1430,30 @@ export async function listPublishedActivitiesDb(filters = {}) {
   }));
 }
 
+async function fetchReviews(supabase, slug) {
+  try {
+    const { data: dbReviews, error: reviewErr } = await supabase
+      .from('activity_reviews')
+      .select('id, author, city, rating, review_text, review_date, is_verified')
+      .eq('activity_slug', slug)
+      .order('review_date', { ascending: false });
+    if (!reviewErr && dbReviews && dbReviews.length > 0) {
+      return dbReviews.map(r => ({
+        id: r.id, author: r.author, city: r.city, rating: r.rating,
+        text: r.review_text, date: r.review_date, isVerified: r.is_verified
+      }));
+    }
+  } catch {}
+  try {
+    const { getReviewsByActivity } = await import('../fixtures/data');
+    const fixtureReviews = getReviewsByActivity ? getReviewsByActivity(slug) : [];
+    return (fixtureReviews || []).map(r => ({
+      id: r.id, author: r.author, city: r.city, rating: r.rating,
+      text: r.text, date: r.date
+    }));
+  } catch { return []; }
+}
+
 export async function getActivityBySlugDb(slug) {
   if (!hasSupabaseEnv()) {
     const { activities, guides, getReviewsByActivity } = await import('../fixtures/data').catch(() => ({}));
@@ -1486,12 +1513,17 @@ export async function getActivityBySlugDb(slug) {
 
   if (error || !act) return null;
 
-  const { data: schedules } = await supabase
-    .from('activity_schedules')
-    .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants')
-    .eq('activity_id', act.id)
-    .in('status', ['open', 'full'])
-    .order('start_at', { ascending: true });
+  // Parallel Fetch: Schedules and Reviews
+  const [schedules, reviews] = await Promise.all([
+    supabase
+      .from('activity_schedules')
+      .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
+      .eq('activity_id', act.id)
+      .in('status', ['open', 'full'])
+      .order('start_at', { ascending: true })
+      .then(res => res.data || []),
+    fetchReviews(supabase, slug)
+  ]);
 
   const gp = act.guide_profiles || {};
   return {
@@ -1519,37 +1551,13 @@ export async function getActivityBySlugDb(slug) {
       ratingAvg: gp.rating_avg, reviewCount: gp.review_count,
       galleryUrls: gp.gallery_urls || []
     },
-    schedules: (schedules || []).map(s => ({
+    schedules: schedules.map(s => ({
       id: s.id, startAt: s.start_at, endAt: s.end_at,
       capacity: s.capacity, bookedCount: s.booked_count, status: s.status,
       planId: s.plan_id || null, minParticipants: s.min_participants || 1,
       guideNote: s.guide_note || null,
     })),
-    // Reviews: query from activity_reviews table (migration 003), fallback to fixtures
-    reviews: await (async () => {
-      try {
-        const { data: dbReviews, error: reviewErr } = await supabase
-          .from('activity_reviews')
-          .select('id, author, city, rating, review_text, review_date, is_verified')
-          .eq('activity_slug', act.slug)
-          .order('review_date', { ascending: false });
-        if (!reviewErr && dbReviews && dbReviews.length > 0) {
-          return dbReviews.map(r => ({
-            id: r.id, author: r.author, city: r.city, rating: r.rating,
-            text: r.review_text, date: r.review_date, isVerified: r.is_verified
-          }));
-        }
-      } catch {}
-      // Fallback: fixture data (before migration 003 is run)
-      try {
-        const { getReviewsByActivity } = await import('../fixtures/data');
-        const fixtureReviews = getReviewsByActivity ? getReviewsByActivity(act.slug) : [];
-        return (fixtureReviews || []).map(r => ({
-          id: r.id, author: r.author, city: r.city, rating: r.rating,
-          text: r.text, date: r.date
-        }));
-      } catch { return []; }
-    })()
+    reviews
   };
 }
 
