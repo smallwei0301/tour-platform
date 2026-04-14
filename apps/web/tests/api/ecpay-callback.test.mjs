@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import { createOrderDb, processPaymentCallbackDb } from '../../src/lib/db.mjs';
 import { experiences } from '../../src/lib/store.mjs';
 
-test('ecpay callback marks order paid and occupies schedule seats', async () => {
+test('createOrderDb reserves schedule seats immediately and callback does not double-book', async () => {
+  const exp = experiences.find((e) => e.id === 'exp_chaishan_001');
+  const schedule = exp.schedules.find((s) => s.id === 'sch_chaishan_0410');
+  const before = schedule.bookedCount;
+
   const order = await createOrderDb({
     experienceSlug: 'kaohsiung-chaishan-cave-experience',
     scheduleId: 'sch_chaishan_0410',
@@ -13,9 +17,7 @@ test('ecpay callback marks order paid and occupies schedule seats', async () => 
     contactEmail: 'wei@example.com'
   });
 
-  const exp = experiences.find((e) => e.id === order.experienceId);
-  const schedule = exp.schedules.find((s) => s.id === order.scheduleId);
-  const before = schedule.bookedCount;
+  assert.equal(schedule.bookedCount, before + 2);
 
   const result = await processPaymentCallbackDb({ orderId: order.id, tradeNo: 'MOCK123' });
 

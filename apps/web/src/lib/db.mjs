@@ -97,8 +97,20 @@ export async function createOrderDb(input) {
   if (scheduleError || !schedule) throw new Error('schedule not found');
   if (schedule.status !== 'open') throw new Error('schedule is not open');
 
-  const remaining = schedule.capacity - schedule.booked_count;
-  if (peopleCount > remaining) throw new Error('not enough seats');
+  const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
+    p_schedule_id: schedule.id,
+    p_count: peopleCount
+  });
+
+  if (rpcError) throw new Error(`booking RPC error: ${rpcError.message}`);
+
+  const rpc = rpcResult ?? {};
+  if (!rpc.ok) {
+    if (rpc.error === 'schedule_not_found') throw new Error('schedule not found');
+    if (rpc.error === 'schedule_not_open') throw new Error('schedule is not open');
+    if (rpc.error === 'insufficient_capacity') throw new Error('not enough seats');
+    throw new Error(`booking_failed: ${rpc.error || 'unknown'}`);
+  }
 
   // 🔐 Phase 9: 支持 user_id 綁定（可選）
   const userId = input?.userId || null;
@@ -122,7 +134,13 @@ export async function createOrderDb(input) {
     .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at')
     .single();
 
-  if (orderError || !inserted) throw new Error(orderError?.message || 'order create failed');
+  if (orderError || !inserted) {
+    await supabase.rpc('fn_cancel_booking', {
+      p_schedule_id: schedule.id,
+      p_count: peopleCount
+    }).catch(() => {});
+    throw new Error(orderError?.message || 'order create failed');
+  }
 
   return {
     id: inserted.id,
@@ -1291,23 +1309,7 @@ export async function processPaymentCallbackDb(input) {
     return { order: { id: order.id, status: order.status, totalTwd: order.total_twd }, scheduleUpdated: false };
   }
 
-  // ── Step 2: 原子扣位 — 使用 fn_book_schedule RPC (SELECT FOR UPDATE 鎖) ──
-  const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
-    p_schedule_id: order.schedule_id,
-    p_count: order.people_count
-  });
-
-  if (rpcError) throw new Error(`booking RPC error: ${rpcError.message}`);
-
-  const rpc = rpcResult ?? {};
-  if (!rpc.ok) {
-    const code = rpc.error || 'booking_failed';
-    const remaining = rpc.remaining ?? 0;
-    const err = new Error(`booking_failed: ${code} (remaining=${remaining})`);
-    err.code = code;
-    err.remaining = remaining;
-    throw err;
-  }
+  // ── Step 2: 建單時已先保留席位；付款 callback 僅更新付款狀態（避免重複扣位） ──
 
   // ── Step 3: 更新訂單狀態為 paid ──
   const paidAt = new Date().toISOString();

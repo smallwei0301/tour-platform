@@ -59,6 +59,11 @@ export function createOrder(input) {
     throw new Error('not enough seats');
   }
 
+  schedule.bookedCount += peopleCount;
+  if (schedule.bookedCount >= schedule.capacity) {
+    schedule.status = 'full';
+  }
+
   const order = {
     id: `ord_${String(orders.length + 1).padStart(6, '0')}`,
     experienceId: exp.id,
@@ -241,16 +246,6 @@ export function processPaymentCallback(input) {
   if (!exp) throw new Error('experience not found for order');
   const schedule = exp.schedules.find((s) => s.id === order.scheduleId);
   if (!schedule) throw new Error('schedule not found for order');
-
-  const remaining = schedule.capacity - schedule.bookedCount;
-  if (order.peopleCount > remaining) {
-    throw new Error('schedule seats exhausted before payment confirmation');
-  }
-
-  schedule.bookedCount += order.peopleCount;
-  if (schedule.bookedCount >= schedule.capacity) {
-    schedule.status = 'full';
-  }
 
   order.status = 'paid';
   order.paidAt = new Date().toISOString();
