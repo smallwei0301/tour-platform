@@ -441,6 +441,12 @@ export async function listAdminOrdersDb(input = {}) {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
+  const cfg = await getKpiConfigDb().catch(() => ({ guidePayoutRate: 0.65 }));
+  const guidePayoutRate = Number(cfg?.guidePayoutRate);
+  const safeGuidePayoutRate = Number.isFinite(guidePayoutRate) && guidePayoutRate >= 0 && guidePayoutRate <= 1
+    ? guidePayoutRate
+    : 0.65;
+
   const activityIds = [...new Set((data || []).map((r) => r.activity_id).filter(Boolean))];
   let activityMap = new Map();
   if (activityIds.length > 0) {
@@ -452,11 +458,7 @@ export async function listAdminOrdersDb(input = {}) {
   }
 
   return (data || []).map((r) => {
-    // guidePayoutRate 從 kpiConfig 取得（此 db 路徑為 async，暫用 cfg 在 closure 外傳入）
-    // 注意：此函式為 async，但 cfg 在 listAdminOrdersDb scope 內尚未取得，保留 fallback 0.65
-    // TODO: 傳入 cfg 參數以完整消除 hardcode
-    const guidePayoutRate = 0.65; // fallback; 改由 kpiConfig 控制時，請傳 cfg 進此函式
-    const costTwd = Math.round(r.total_twd * guidePayoutRate);
+    const costTwd = Math.round(r.total_twd * safeGuidePayoutRate);
     return {
       id: r.id,
       status: r.status,
@@ -752,7 +754,7 @@ export async function getKpiConfigDb() {
   const supabase = await getSupabase();
   const { data, error } = await supabase
     .from('kpi_settings')
-    .select('commission_rate, payment_fee_rate, healthy_min_contribution_twd, healthy_allow_exception, updated_at')
+    .select('commission_rate, payment_fee_rate, guide_payout_rate, healthy_min_contribution_twd, healthy_allow_exception, updated_at')
     .limit(1)
     .maybeSingle();
 
