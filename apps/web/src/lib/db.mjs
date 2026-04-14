@@ -103,6 +103,30 @@ export async function createOrderDb(input) {
   // 🔐 Phase 9: 支持 user_id 綁定（可選）
   const userId = input?.userId || null;
 
+  // 優化防超賣：在建立訂單前先向 Postgres RPC 要求原子扣位（fn_book_schedule），
+  // 若 RPC 成功則代表已原子更新 booked_count，避免之後的付款流程產生競爭條件。
+  // 若 RPC 不可用（舊 DB），fallback 到原先的檢查流程。
+  let bookedViaRpc = false;
+  try {
+    const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
+      p_schedule_id: schedule.id,
+      p_count: peopleCount
+    });
+    if (rpcError) throw rpcError;
+    const rpc = rpcResult ?? {};
+    if (!rpc.ok) {
+      const code = rpc.error || 'booking_failed';
+      const remainingAfter = rpc.remaining ?? 0;
+      const err = new Error(`booking_failed: ${code} (remaining=${remainingAfter})`);
+      err.code = code;
+      err.remaining = remainingAfter;
+      throw err;
+    }
+    bookedViaRpc = true;
+  } catch (e) {
+    console.warn('[createOrderDb] booking RPC failed or missing, falling back to pre-check only:', e?.message || e);
+  }
+
   const payload = {
     id: crypto.randomUUID(),
     activity_id: activity.id,
@@ -122,7 +146,17 @@ export async function createOrderDb(input) {
     .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at')
     .single();
 
-  if (orderError || !inserted) throw new Error(orderError?.message || 'order create failed');
+  if (orderError || !inserted) {
+    // 如果插入訂單失敗且先前已透過 RPC 扣位，嘗試回滾扣位（記錄但不阻塞）
+    if (bookedViaRpc) {
+      try {
+        await supabase.rpc('fn_release_schedule', { p_schedule_id: schedule.id, p_count: peopleCount });
+      } catch (releaseErr) {
+        console.warn('[createOrderDb] failed to release rpc hold after order insert failure:', releaseErr?.message || releaseErr);
+      }
+    }
+    throw new Error(orderError?.message || 'order create failed');
+  }
 
   return {
     id: inserted.id,
@@ -304,7 +338,7 @@ export async function cancelOrderDb(input = {}) {
   // release booked seats on schedule
   if (order.schedule_id && order.people_count) {
     const { data: schedule } = await supabase
-      .from('schedules')
+      .from('activity_schedules')
       .select('id, booked_count, capacity')
       .eq('id', order.schedule_id)
       .single();
@@ -312,7 +346,7 @@ export async function cancelOrderDb(input = {}) {
     if (schedule) {
       const newBooked = Math.max(0, (schedule.booked_count || 0) - order.people_count);
       await supabase
-        .from('schedules')
+        .from('activity_schedules')
         .update({
           booked_count: newBooked,
           status: newBooked < schedule.capacity ? 'open' : 'full',
