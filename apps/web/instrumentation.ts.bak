@@ -1,0 +1,10 @@
+export async function register() {
+  // Avoid running Sentry init in edge runtime to prevent eval-in-function-string limitations
+  // in environments where middleware relies on edge runtime constraints.
+  if (process.env.NEXT_RUNTIME === 'edge') {
+    return;
+  }
+
+  // Node runtime init remains compatible with Sentry config files.
+  await import('./sentry.server.config');
+}
