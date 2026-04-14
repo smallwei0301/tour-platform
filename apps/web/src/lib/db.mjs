@@ -790,17 +790,20 @@ export async function updateKpiConfigDb(input = {}) {
   const current = await getKpiConfigDb();
   const commissionRate = input.commissionRate == null ? current.commissionRate : Number(input.commissionRate);
   const paymentFeeRate = input.paymentFeeRate == null ? current.paymentFeeRate : Number(input.paymentFeeRate);
+  const guidePayoutRate = input.guidePayoutRate == null ? current.guidePayoutRate : Number(input.guidePayoutRate);
   const healthyMinContributionTwd = input.healthyMinContributionTwd == null ? current.healthyMinContributionTwd : Number(input.healthyMinContributionTwd);
   const healthyAllowException = input.healthyAllowException == null ? current.healthyAllowException : !!input.healthyAllowException;
 
   if (!Number.isFinite(commissionRate) || commissionRate < 0 || commissionRate > 1) throw new Error('commissionRate must be between 0 and 1');
   if (!Number.isFinite(paymentFeeRate) || paymentFeeRate < 0 || paymentFeeRate > 1) throw new Error('paymentFeeRate must be between 0 and 1');
+  if (!Number.isFinite(guidePayoutRate) || guidePayoutRate < 0 || guidePayoutRate > 1) throw new Error('guidePayoutRate must be between 0 and 1');
 
   const supabase = await getSupabase();
   const payload = {
     id: 'default',
     commission_rate: commissionRate,
     payment_fee_rate: paymentFeeRate,
+    guide_payout_rate: guidePayoutRate,
     healthy_min_contribution_twd: healthyMinContributionTwd,
     healthy_allow_exception: healthyAllowException,
     updated_at: new Date().toISOString()
@@ -869,6 +872,7 @@ export async function revertKpiConfigDb(input = {}) {
   const updated = await updateKpiConfigDb({
     commissionRate: cfg.commissionRate,
     paymentFeeRate: cfg.paymentFeeRate,
+    guidePayoutRate: cfg.guidePayoutRate,
     healthyMinContributionTwd: cfg.healthyMinContributionTwd,
     healthyAllowException: cfg.healthyAllowException
   });
