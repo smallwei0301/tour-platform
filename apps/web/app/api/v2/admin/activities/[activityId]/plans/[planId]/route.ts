@@ -193,11 +193,19 @@ export async function DELETE(
       return Response.json(errorV2('NOT_FOUND', 'Plan not found'), { status: 404 });
     }
 
-    // Soft delete by setting status to archived
-    const { error } = await supabase
+    // Soft delete by setting status to archived.
+    // Legacy schema may only allow active/inactive, so fallback to inactive.
+    let { error } = await supabase
       .from('activity_plans')
       .update({ status: 'archived', updated_at: new Date().toISOString() })
       .eq('id', planId);
+
+    if (error && /status/i.test(String(error.message || ''))) {
+      ({ error } = await supabase
+        .from('activity_plans')
+        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .eq('id', planId));
+    }
 
     if (error) {
       console.error('Error archiving activity plan:', error);
