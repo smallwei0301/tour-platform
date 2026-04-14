@@ -6,21 +6,13 @@ import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
 
 function pickToken(req: NextRequest): string {
-  return (
-    req.headers.get('x-admin-token') ||
-    req.cookies.get('admin_token')?.value ||
-    req.nextUrl.searchParams.get('admin_token') ||
-    ''
-  );
+  // Security: never read admin credentials from URL query params.
+  return req.headers.get('x-admin-token') || req.cookies.get('admin_token')?.value || '';
 }
 
 function pickEmail(req: NextRequest): string {
-  return (
-    req.headers.get('x-admin-email') ||
-    req.cookies.get('admin_email')?.value ||
-    req.nextUrl.searchParams.get('admin_email') ||
-    ''
-  );
+  // Security: never read admin credentials from URL query params.
+  return req.headers.get('x-admin-email') || req.cookies.get('admin_email')?.value || '';
 }
 
 /**
