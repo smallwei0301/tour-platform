@@ -42,13 +42,26 @@ export default function OrderPayPage() {
   const [paying, setPaying] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ecpayData, setEcpayData] = useState<ECPayFormData | null>(null);
+  const [authRequired, setAuthRequired] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     if (!orderId) { setLoading(false); return; }
     fetch(`/api/me/orders/${encodeURIComponent(orderId)}?contactEmail=${encodeURIComponent(email)}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then(j => setOrder(j.data || null))
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j?.error) {
+          if (r.status === 401 || j?.error?.code === 'UNAUTHORIZED') {
+            setAuthRequired(true);
+            setErr('請先登入後再查看此訂單付款資訊。');
+            setOrder(null);
+            return;
+          }
+          setOrder(null);
+          return;
+        }
+        setOrder(j.data || null);
+      })
       .catch(() => setOrder(null))
       .finally(() => setLoading(false));
   }, [orderId, email]);
@@ -161,6 +174,23 @@ export default function OrderPayPage() {
   }
 
   if (!orderId || !order) {
+    if (authRequired) {
+      return (
+        <div style={containerStyle}>
+          <div style={cardStyle}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 12 }}>需要先登入</h2>
+            <p style={{ color: '#6b7280', fontSize: 14 }}>此訂單需要登入後才能查看與付款。</p>
+            <button
+              onClick={() => router.push(`/login?redirectTo=${encodeURIComponent(`/order/pay?orderId=${orderId}${email ? `&email=${encodeURIComponent(email)}` : ''}`)}`)}
+              style={{ ...btnStyle, marginTop: 16 }}
+            >
+              前往登入
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={containerStyle}>
         <p style={{ color: '#ef4444', textAlign: 'center' }}>訂單不存在或無法取得訂單資訊。</p>
