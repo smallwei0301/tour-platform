@@ -193,7 +193,7 @@ export default function OrderPayPage() {
 
     return (
       <div style={containerStyle}>
-        <p style={{ color: '#ef4444', textAlign: 'center' }}>訂單不存在或無法取得訂單資訊。</p>
+        <p style={{ color: '#ef4444', textAlign: 'center' }}>找不到此訂單，或此帳號沒有查看權限（可能與下單 Email 不一致）。</p>
       </div>
     );
   }
