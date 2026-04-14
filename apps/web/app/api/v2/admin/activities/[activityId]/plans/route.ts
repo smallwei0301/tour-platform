@@ -146,11 +146,24 @@ export async function POST(
       status: body.status || 'active',
     };
 
-    const { data, error } = await supabase
+    let data: any = null;
+    let error: any = null;
+
+    // New schema supports `description`; old schema may not have it yet.
+    ({ data, error } = await supabase
       .from('activity_plans')
       .insert(insertData)
       .select()
-      .single();
+      .single());
+
+    if (error && /description/i.test(String(error.message || ''))) {
+      const { description: _omitDescription, ...fallbackInsertData } = insertData as any;
+      ({ data, error } = await supabase
+        .from('activity_plans')
+        .insert(fallbackInsertData)
+        .select()
+        .single());
+    }
 
     if (error) {
       console.error('Error creating activity plan:', error);
