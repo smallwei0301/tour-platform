@@ -335,23 +335,40 @@ export async function cancelOrderDb(input = {}) {
 
   if (updateErr) throw new Error(updateErr.message);
 
-  // release booked seats on schedule
+  // release booked seats on schedule (race-safe path)
   if (order.schedule_id && order.people_count) {
-    const { data: schedule } = await supabase
-      .from('activity_schedules')
-      .select('id, booked_count, capacity')
-      .eq('id', order.schedule_id)
-      .single();
+    let releasedByRpc = false;
 
-    if (schedule) {
-      const newBooked = Math.max(0, (schedule.booked_count || 0) - order.people_count);
-      await supabase
+    // Prefer DB-side atomic release to avoid lost updates under concurrent cancellations.
+    try {
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_cancel_booking', {
+        p_schedule_id: order.schedule_id,
+        p_count: order.people_count,
+      });
+      if (rpcError) throw rpcError;
+      if (rpcResult?.ok) releasedByRpc = true;
+    } catch (e) {
+      console.warn('[cancelOrderDb] cancel RPC failed, falling back to legacy release:', e?.message || e);
+    }
+
+    // Fallback for environments without RPC function.
+    if (!releasedByRpc) {
+      const { data: schedule } = await supabase
         .from('activity_schedules')
-        .update({
-          booked_count: newBooked,
-          status: newBooked < schedule.capacity ? 'open' : 'full',
-        })
-        .eq('id', order.schedule_id);
+        .select('id, booked_count, capacity')
+        .eq('id', order.schedule_id)
+        .single();
+
+      if (schedule) {
+        const newBooked = Math.max(0, (schedule.booked_count || 0) - order.people_count);
+        await supabase
+          .from('activity_schedules')
+          .update({
+            booked_count: newBooked,
+            status: newBooked < schedule.capacity ? 'open' : 'full',
+          })
+          .eq('id', order.schedule_id);
+      }
     }
   }
 
