@@ -1,3 +1,4 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -39,6 +40,41 @@ function verifyGuideSessionMiddleware(req: NextRequest): boolean {
   const [tokenGuideId, sessionVersion, signature] = parts;
   // Verify guideId matches AND signature is non-empty (basic sanity)
   return tokenGuideId === guideId && !!sessionVersion && signature.length === 64;
+}
+
+async function refreshTravelerSession(req: NextRequest): Promise<NextResponse> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return NextResponse.next();
+
+  const response = NextResponse.next();
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll().map(({ name, value }) => ({ name, value }));
+      },
+      setAll(cookiesToSet) {
+        for (const { name, value, options } of cookiesToSet) {
+          response.cookies.set(name, value, options);
+        }
+      },
+    },
+  });
+
+  const timeoutMs = Number(process.env.SUPABASE_MIDDLEWARE_REFRESH_TIMEOUT_MS || 1200);
+  try {
+    await Promise.race([
+      supabase.auth.getUser(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('supabase refresh timeout')), timeoutMs)
+      ),
+    ]);
+    return response;
+  } catch {
+    // Fallback: do not block traveler requests if refresh stalls/fails.
+    return NextResponse.next();
+  }
 }
 
 export async function middleware(req: NextRequest) {
@@ -143,10 +179,8 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Traveler routes ───────────────────────────────────────────────────────
-  // HOTFIX: temporarily skip Supabase session refresh in middleware.
-  // Root cause under investigation: refresh occasionally stalls and blocks
-  // dynamic page responses in production.
-  return NextResponse.next();
+  // Restore session refresh with bounded timeout and non-blocking fallback.
+  return refreshTravelerSession(req);
 }
 
 export const config = {
