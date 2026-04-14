@@ -1,3 +1,4 @@
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
@@ -26,34 +27,74 @@ function pickEmail(req: NextRequest): string {
  * Lightweight guide session check for edge middleware.
  * Verifies format + guideId match. Full HMAC verification happens in API
  * routes via verifyGuideSession() (Node.js crypto, not available in edge).
- * Worst-case attack: forged cookie gets page shell HTML — all API calls
- * will still fail 401 because API routes do HMAC verification.
  */
 function verifyGuideSessionMiddleware(req: NextRequest): boolean {
   const rawToken = req.cookies.get('guide_token')?.value || '';
   const guideId = req.cookies.get('guide_id')?.value || '';
   if (!rawToken || !guideId) return false;
-  // Expected format: guideId:sessionVersion:hmacSignature
   const parts = rawToken.split(':');
   if (parts.length !== 3) return false;
   const [tokenGuideId, sessionVersion, signature] = parts;
-  // Verify guideId matches AND signature is non-empty (basic sanity)
   return tokenGuideId === guideId && !!sessionVersion && signature.length === 64;
+}
+
+function resolveRefreshTimeoutMs(): number {
+  const raw = Number(process.env.SUPABASE_MIDDLEWARE_REFRESH_TIMEOUT_MS || 1200);
+  if (!Number.isFinite(raw)) return 1200;
+  // guardrail: avoid too short/noisy and too long/blocking values
+  return Math.max(300, Math.min(3000, Math.floor(raw)));
+}
+
+async function refreshTravelerSession(req: NextRequest): Promise<NextResponse> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return NextResponse.next();
+
+  const response = NextResponse.next();
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll().map(({ name, value }) => ({ name, value }));
+      },
+      setAll(cookiesToSet) {
+        for (const { name, value, options } of cookiesToSet) {
+          response.cookies.set(name, value, options);
+        }
+      },
+    },
+  });
+
+  const timeoutMs = resolveRefreshTimeoutMs();
+  try {
+    await Promise.race([
+      supabase.auth.getUser(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`supabase refresh timeout (${timeoutMs}ms)`)), timeoutMs)
+      ),
+    ]);
+    return response;
+  } catch (error) {
+    // Telemetry: keep request non-blocking but leave a breadcrumb in logs.
+    console.warn('[middleware] traveler session refresh fallback', {
+      reason: error instanceof Error ? error.message : 'unknown',
+      path: req.nextUrl.pathname,
+      timeoutMs,
+    });
+    return NextResponse.next();
+  }
 }
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-
 
   // ── Guide routes ───────────────────────────────────────────────────────────
   const isGuidePage = pathname.startsWith('/guide');
   const isGuideApi = pathname.startsWith('/api/guide');
 
   if (isGuidePage || isGuideApi) {
-    // Public guide routes (no auth required)
     const isPublic =
       pathname === '/guide/login' ||
-      pathname === '/guide/apply' ||        // public guide application form
+      pathname === '/guide/apply' ||
       pathname.startsWith('/guide/apply/') ||
       pathname === '/api/guide/auth/session';
     if (isPublic) return NextResponse.next();
@@ -114,10 +155,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Traveler routes ───────────────────────────────────────────────────────
-  // HOTFIX: temporarily skip Supabase session refresh in middleware.
-  // Root cause under investigation: refresh occasionally stalls and blocks
-  // dynamic page responses in production.
-  return NextResponse.next();
+  return refreshTravelerSession(req);
 }
 
 export const config = {
