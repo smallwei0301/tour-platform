@@ -46,7 +46,8 @@ const STATUS_CONFIG: Record<string, { variant: 'success' | 'warning' | 'default'
 export default function ActivityPlansPage() {
   const params = useParams();
   const router = useRouter();
-  const activityId = params.activityId as string;
+  // Route is /admin/activities/[id]/plans
+  const activityId = (params.id || params.activityId) as string;
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [plans, setPlans] = useState<ActivityPlan[]>([]);
