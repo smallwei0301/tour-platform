@@ -1,0 +1,126 @@
+name: prod-smoke-probe
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_url:
+        description: "Target base URL"
+        required: false
+        default: "https://tour-platform-nine.vercel.app"
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TARGET_URL: ${{ github.event.inputs.target_url || 'https://tour-platform-nine.vercel.app' }}
+      ADMIN_EMAIL: ${{ secrets.PROD_SMOKE_ADMIN_EMAIL }}
+      ADMIN_TOKEN: ${{ secrets.PROD_SMOKE_ADMIN_TOKEN }}
+    steps:
+      - name: Run small-step probes (health/login/session)
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, time, urllib.request, urllib.error, os, statistics
+
+          base = os.environ.get('TARGET_URL', 'https://tour-platform-nine.vercel.app').rstrip('/')
+          admin_email = os.environ.get('ADMIN_EMAIL') or 'probe@example.com'
+          admin_token = os.environ.get('ADMIN_TOKEN') or 'invalid-token'
+
+          probes = [
+            ('root', 'GET', '/', None),
+            ('health', 'GET', '/api/health', None),
+            ('login', 'POST', '/api/admin/auth/session', {
+              'token': admin_token,
+              'email': admin_email,
+            }),
+            ('session', 'GET', '/api/admin/auth/session', None),
+          ]
+
+          def one(method, path, body=None, timeout=30):
+            url = base + path
+            data = None
+            headers = {}
+            if body is not None:
+              data = json.dumps(body).encode('utf-8')
+              headers['content-type'] = 'application/json'
+            req = urllib.request.Request(url, data=data, headers=headers, method=method)
+            t0 = time.time()
+            try:
+              with urllib.request.urlopen(req, timeout=timeout) as r:
+                raw = r.read().decode('utf-8', 'replace')
+                code = r.getcode()
+              return {
+                'ok': True,
+                'status': code,
+                'latencyMs': int((time.time() - t0) * 1000),
+                'err': None,
+                'raw': raw[:120],
+              }
+            except urllib.error.HTTPError as e:
+              raw = e.read().decode('utf-8', 'replace')
+              return {
+                'ok': False,
+                'status': e.code,
+                'latencyMs': int((time.time() - t0) * 1000),
+                'err': f'HTTP {e.code}',
+                'raw': raw[:120],
+              }
+            except Exception as e:
+              return {
+                'ok': False,
+                'status': 0,
+                'latencyMs': int((time.time() - t0) * 1000),
+                'err': str(e),
+                'raw': '',
+              }
+
+          out = {
+            'source': 'github-actions',
+            'target': base,
+            'timestamp': time.strftime('%Y-%m-%dT%H:%M:%S%z'),
+            'results': {},
+          }
+
+          for name, method, path, body in probes:
+            attempts = []
+            backoffs = [1, 2, 4, 8]
+            for i in range(5):
+              r = one(method, path, body=body, timeout=30)
+              r['attempt'] = i + 1
+              attempts.append(r)
+              if r['status'] in (200, 201):
+                break
+              if i < 4:
+                time.sleep(backoffs[min(i, len(backoffs)-1)])
+
+            lats = [a['latencyMs'] for a in attempts]
+            p50 = statistics.median(lats)
+            p95 = sorted(lats)[max(0, int(len(lats) * 0.95) - 1)]
+            success = any(a['status'] in (200, 201) for a in attempts)
+            out['results'][name] = {
+              'attempts': attempts,
+              'p50': p50,
+              'p95': p95,
+              'success': success,
+            }
+
+            # circuit breaker: if login never succeeds, stop to avoid write-path contamination
+            if name == 'login' and not success:
+              out['circuitBreaker'] = {
+                'opened': True,
+                'reason': 'login failed all retries',
+              }
+              break
+
+          with open('prod-smoke-probe.json', 'w', encoding='utf-8') as f:
+            json.dump(out, f, ensure_ascii=False, indent=2)
+
+          print(json.dumps(out, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload probe artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-smoke-probe
+          path: prod-smoke-probe.json
