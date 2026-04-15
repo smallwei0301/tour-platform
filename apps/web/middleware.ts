@@ -148,6 +148,13 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // ── API routes (non-admin/guide) ─────────────────────────────────────────
+  // Avoid traveler session refresh on generic API endpoints.
+  // Reason: middleware-side auth refresh can block API responses under network latency.
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   // ── Traveler routes ───────────────────────────────────────────────────────
   return refreshTravelerSession(req);
 }
