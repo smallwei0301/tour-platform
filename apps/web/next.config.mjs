@@ -10,26 +10,30 @@ const nextConfig = {
     ],
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   eslint: {
     ignoreDuringBuilds: true,
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  // Sentry organization and project (optional: set via env SENTRY_ORG / SENTRY_PROJECT)
-  silent: true,
-  webpack: { treeshake: { removeDebugLogging: true } },
+// Allow bypassing Sentry build wrapping via DISABLE_SENTRY_BUILD=1
+const disableSentryBuild = process.env.DISABLE_SENTRY_BUILD === '1';
 
-  // Only upload source maps in production CI
-  sourcemaps: {
-    disable: process.env.NODE_ENV !== 'production' || !process.env.SENTRY_AUTH_TOKEN,
-  },
+export default disableSentryBuild
+  ? nextConfig
+  : withSentryConfig(nextConfig, {
+      // Sentry organization and project (optional: set via env SENTRY_ORG / SENTRY_PROJECT)
+      silent: true,
 
-  // Tunnel to avoid ad-blockers
-  tunnelRoute: '/monitoring',
+      // Only upload source maps in production CI
+      sourcemaps: {
+        disable: process.env.NODE_ENV !== 'production' || !process.env.SENTRY_AUTH_TOKEN,
+      },
 
-  // Suppress build warnings when DSN is not set
-  hideSourceMaps: true,
-});
+      // Tunnel to avoid ad-blockers
+      tunnelRoute: '/monitoring',
+
+      // Suppress build warnings when DSN is not set
+      hideSourceMaps: true,
+    });

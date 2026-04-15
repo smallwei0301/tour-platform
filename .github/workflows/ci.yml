@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DISABLE_SENTRY_BUILD: '1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,6 +24,9 @@ jobs:
 
       - name: Web tests
         run: npm run test -w @tour/web
+
+      - name: Web build
+        run: npm run build -w @tour/web
 
       - name: Preflight
         run: bash scripts/preflight-check.sh
