@@ -4,23 +4,33 @@ import { createClient } from '../../../../../src/lib/supabase/server';
 import { sendOrderCancellation } from '../../../../../src/lib/email';
 import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
 
+const API_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, ms = API_TIMEOUT_MS): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error('API timeout')), ms)),
+  ]);
+}
+
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
 
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await withTimeout(createClient());
+    const { data: { user } } = await withTimeout(supabase.auth.getUser());
 
     if (!user?.email) {
       return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
     }
 
-    const row = await getMyOrderDetailDb({ orderId, contactEmail: user.email });
+    const row = await withTimeout(getMyOrderDetailDb({ orderId, contactEmail: user.email }));
     return Response.json(ok(row));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
-    const status = message.includes('not found') ? 404 : 400;
-    return Response.json(fail('INVALID_REQUEST', message), { status });
+    const status = message.toLowerCase().includes('timeout') ? 504 : (message.includes('not found') ? 404 : 400);
+    const code = status === 504 ? 'UPSTREAM_TIMEOUT' : 'INVALID_REQUEST';
+    return Response.json(fail(code, message), { status });
   }
 }
 
@@ -30,8 +40,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
   const action = body?.action || '';
 
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const supabase = await withTimeout(createClient());
+    const { data: { user } } = await withTimeout(supabase.auth.getUser());
 
     if (!user?.email) {
       return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
@@ -39,9 +49,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
 
     if (action === 'cancel') {
       // 先查訂單詳情（取 email 通知用）
-      const orderBefore = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
+      const orderBefore: any = await withTimeout(getMyOrderDetailDb({ orderId, contactEmail: user.email })).catch(() => null);
 
-      const result = await cancelOrderDb({ orderId, contactEmail: user.email });
+      const result = await withTimeout(cancelOrderDb({ orderId, contactEmail: user.email }));
 
       // 🔔 Fire-and-forget: 訂單取消 email + LINE 通知
       if (orderBefore) {
@@ -64,7 +74,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
     return Response.json(fail('INVALID_REQUEST', `unknown action: ${action}`), { status: 400 });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
-    const status = message.includes('not found') ? 404 : 400;
-    return Response.json(fail('INVALID_REQUEST', message), { status });
+    const status = message.toLowerCase().includes('timeout') ? 504 : (message.includes('not found') ? 404 : 400);
+    const code = status === 504 ? 'UPSTREAM_TIMEOUT' : 'INVALID_REQUEST';
+    return Response.json(fail(code, message), { status });
   }
 }
