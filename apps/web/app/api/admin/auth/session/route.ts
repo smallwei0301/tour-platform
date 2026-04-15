@@ -9,7 +9,16 @@ function parseCookie(req: Request, key: string) {
   return hit ? decodeURIComponent(hit.slice(key.length + 1)) : '';
 }
 
+function logAdminAuthSessionProbe(method: 'GET' | 'POST') {
+  console.info('[admin-auth/session] request start', {
+    method,
+    ts: new Date().toISOString(),
+  });
+}
+
 export async function GET(request: Request) {
+  logAdminAuthSessionProbe('GET');
+
   const token = parseCookie(request, 'admin_token');
   const email = parseCookie(request, 'admin_email');
   const expiresAt = parseCookie(request, 'admin_session_expires_at');
@@ -38,6 +47,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  logAdminAuthSessionProbe('POST');
+
   const body = await request.json().catch(() => ({}));
   const token = String(body?.token || '');
   const email = String(body?.email || '');
