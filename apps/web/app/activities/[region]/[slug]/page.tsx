@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
@@ -20,9 +21,17 @@ export async function generateMetadata(
   };
 }
 
+async function getCachedActivityBySlug(slug: string) {
+  return unstable_cache(
+    async () => getActivityBySlugDb(slug, { preferFixtureFirst: true }),
+    ['activity-detail', slug],
+    { revalidate: 60, tags: [`activity:${slug}`] }
+  )();
+}
+
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getActivityBySlugDb(slug, { preferFixtureFirst: true }).catch(() => null);
+  const activity = await getCachedActivityBySlug(slug).catch(() => null);
   if (!activity) return notFound();
 
   const guide = activity.guide;
