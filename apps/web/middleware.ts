@@ -159,6 +159,18 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Traveler routes ───────────────────────────────────────────────────────
+  const isTravelerPublicPath =
+    pathname.startsWith('/activities') ||
+    pathname.startsWith('/booking') ||
+    pathname.startsWith('/checkout') ||
+    pathname.startsWith('/order/success') ||
+    pathname.startsWith('/api/activities') ||
+    pathname.startsWith('/api/orders') ||
+    pathname === '/';
+
+  // Public pages use only static content / no-auth DB reads.
+  if (isTravelerPublicPath) return NextResponse.next();
+
   if (!hasTravelerAuthCookie(req)) return NextResponse.next();
   return refreshTravelerSession(req);
 }
