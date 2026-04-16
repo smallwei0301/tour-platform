@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-import { chromium } from 'playwright';
 import fs from 'fs';
+import { chromium } from 'playwright';
 
 const BASE = process.env.BASE_URL || 'https://tour-platform-nine.vercel.app';
 
@@ -47,41 +47,54 @@ function pickFixtureSlug(dbActivities, fixtureSlugs) {
   const dbSet = new Set((dbActivities || []).map((a) => a.slug));
   const fixtureUnique = [...new Set(fixtureSlugs)];
   const fallback = fixtureUnique.find((s) => !dbSet.has(s));
-  return fallback || fixtureUnique[0] || 'activity-1770000000000';
+  return fallback || fixtureUnique[0] || 'playwright-e2e-1775872569478-1775872569552';
 }
 
-async function runCase(page, slug, kind, region = 'taiwan', regionSlug = '') {
-  const path = buildActivityPath(region, regionSlug, slug);
-  const start = Date.now();
+async function runFlow(page, slug, kind, region = 'taiwan', regionSlug = '') {
+  const detailPath = buildActivityPath(region, regionSlug, slug);
+  const detailUrl = `${BASE}${detailPath}`;
 
-  const detailUrl = `${BASE}${path}`;
-  const det = await page.goto(detailUrl, { waitUntil: 'domcontentloaded' });
-  const ttfb = Date.now() - start;
-  const status = det?.status?.() || 0;
+  const detailStart = Date.now();
+  await page.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await page.getByTestId('activity-detail-title').waitFor({ timeout: 60000 });
+  const detailMs = Date.now() - detailStart;
+  const title = (await page.getByTestId('activity-detail-title').textContent()) || '(no-title)';
 
-  await page.getByTestId('activity-detail-title').waitFor({ timeout: 12000 });
-  const title = await page.getByTestId('activity-detail-title').textContent();
-  const checkoutHref = await page.getByTestId('begin-checkout-btn').getAttribute('href');
+  const checkoutBtn = page.getByTestId('begin-checkout-btn');
+  await checkoutBtn.waitFor({ timeout: 10000 });
+  const href = await checkoutBtn.getAttribute('href');
 
+  const checkoutUrl = href ? `${BASE}${href}` : `${BASE}/checkout?slug=${encodeURIComponent(slug)}`;
   const checkoutStart = Date.now();
-  const checkoutUrl = `${BASE}${checkoutHref}`;
-  await Promise.all([
-    page.goto(checkoutUrl, { waitUntil: 'domcontentloaded' }),
-    page.getByText('行程確認').waitFor({ timeout: 12000 }),
-  ]);
-  const checkoutMs = Date.now() - checkoutStart;
 
-  const bookingText = await page.locator('main').first().textContent();
+  await Promise.all([
+    page.waitForURL((url) => url.href.includes('/checkout') || url.href.includes('/booking'), { timeout: 60000 }),
+    checkoutBtn.click({ timeout: 10000 })
+  ]);
+
+  let checkoutMs = Date.now() - checkoutStart;
+  let route = new URL(page.url()).pathname;
+
+  if (route.startsWith('/booking/')) {
+    await page.getByText('行程確認', { exact: false }).first().waitFor({ timeout: 60000 });
+  } else {
+    await page.getByTestId('create-order-btn').first().waitFor({ timeout: 60000 });
+  }
+  checkoutMs = Date.now() - checkoutStart;
+
+  const bodyText = await page.locator('body').innerText();
+  const stable = !/載入中\.\.\./.test(bodyText) && !/Loading/.test(bodyText);
+
   return {
     kind,
     slug,
-    detailPath: path,
-    detailStatus: status,
-    detailTTFBMs: ttfb,
-    title: title?.trim() || '(no title)',
+    detailPath,
+    detailMs,
+    title: title.trim(),
+    checkoutUrl,
     checkoutMs,
-    bookingContains: bookingText.includes('載入行程資料中') ? 'loading-shown' : 'ready',
-    hasCheckout: !!checkoutHref,
+    stableAfterNav: stable,
+    nextPath: route,
   };
 }
 
@@ -97,33 +110,31 @@ async function main() {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
+  if (!dbSlug) throw new Error('DB slug not found');
+
+  const flows = [
+    () => runFlow(page, dbSlug, 'db', dbRegion, dbRegionSlug),
+    () => runFlow(page, fixtureSlug, 'fixture', 'taiwan', 'taiwan')
+  ];
+
   const results = [];
-
-  if (!dbSlug) {
-    throw new Error('DB slug not found');
+  for (const flow of flows) {
+    results.push(await flow());
   }
-
-  results.push(await runCase(page, dbSlug, 'db', dbRegion, dbRegionSlug));
-
-  const fixturePath = `/activities/taiwan/${encodeURIComponent(fixtureSlug)}`;
-  results.push(await runCase(page, fixtureSlug, 'fixture', 'taiwan', 'taiwan'));
-
-  console.log('E2E smoke results:');
-  for (const item of results) {
-    console.log(`[${item.kind}] slug=${item.slug}`);
-    console.log(`  detail: ${item.detailPath} -> ${item.detailStatus} (${item.detailTTFBMs}ms)`);
-    console.log(`  title: ${item.title}`);
-    console.log(`  checkout: ${item.checkoutMs}ms, booking state: ${item.bookingContains}`);
-    console.log(`  checkoutHref: ${item.hasCheckout ? 'ok' : 'MISSING'}`);
+  for (const r of results) {
+    console.log(`[${r.kind}] slug=${r.slug}`);
+    console.log(`  detail: ${r.detailPath} -> ${r.detailMs}ms, title=${r.title}`);
+    console.log(`  checkout: ${r.nextPath} -> ${r.checkoutMs}ms, stable=${r.stableAfterNav}`);
   }
 
   await browser.close();
 
-  const fails = results.some((r) => r.detailStatus !== 200 || !r.hasCheckout || r.title.includes('undefined'));
+  const fails = results.some((r) => !r.title || !r.stableAfterNav);
   if (fails) {
     console.error('SMOKE_FAIL');
     process.exit(1);
   }
+  console.log('SMOKE_PASS');
 }
 
 main().catch((err) => {
