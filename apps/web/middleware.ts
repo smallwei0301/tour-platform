@@ -15,6 +15,18 @@ function pickEmail(req: NextRequest): string {
   return req.headers.get('x-admin-email') || req.cookies.get('admin_email')?.value || '';
 }
 
+function hasTravelerAuthCookie(req: NextRequest): boolean {
+  const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : '';
+  const suffix = supabaseHost ? `-${supabaseHost.split('.')[0]}-auth-token` : '-auth-token';
+
+  return req.cookies.getAll().some(({ name }) => {
+    if (!name) return false;
+    if (name === 'sb-access-token' || name === 'sb-refresh-token') return true;
+    if (name === 'sb-token' || name === 'sb-auth-token') return true;
+    return name.includes(suffix) || name.endsWith('-auth-token') || /^(?:sb-|sb-auth-)/.test(name);
+  });
+}
+
 /**
  * Lightweight guide session check for edge middleware.
  * Verifies format + guideId match. Full HMAC verification happens in API
@@ -147,6 +159,7 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Traveler routes ───────────────────────────────────────────────────────
+  if (!hasTravelerAuthCookie(req)) return NextResponse.next();
   return refreshTravelerSession(req);
 }
 
