@@ -181,6 +181,10 @@ export const config = {
     '/api/admin/:path*',
     '/guide/:path*',
     '/api/guide/:path*',
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Traveler auth/session refresh only where needed; keep public marketing + activity pages fully cacheable.
+    '/me/:path*',
+    '/orders/:path*',
+    '/api/me/:path*',
+    '/api/orders/:path*',
   ],
 };
