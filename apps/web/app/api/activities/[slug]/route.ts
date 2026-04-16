@@ -1,6 +1,8 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 
+export const revalidate = 60;
+
 export async function GET(_request: Request, context: { params: Promise<{ slug: string }> }) {
   const { slug } = await context.params;
   try {
