@@ -1621,14 +1621,47 @@ export async function getActivityBySlugDb(slug) {
     return null;
   }
 
-  const { data: schedules } = await supabase
-    .from('activity_schedules')
-    .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants')
-    .eq('activity_id', act.id)
-    .in('status', ['open', 'full'])
-    .order('start_at', { ascending: true });
-
   const gp = act.guide_profiles || {};
+
+  const [scheduleRes, reviewsRes] = await Promise.all([
+    supabase
+      .from('activity_schedules')
+      .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants')
+      .eq('activity_id', act.id)
+      .in('status', ['open', 'full'])
+      .order('start_at', { ascending: true }),
+    (async () => {
+      try {
+        const { data: dbReviews, error: reviewErr } = await supabase
+          .from('activity_reviews')
+          .select('id, author, city, rating, review_text, review_date, is_verified')
+          .eq('activity_slug', act.slug)
+          .order('review_date', { ascending: false })
+          .limit(20);
+        if (!reviewErr && dbReviews && dbReviews.length > 0) {
+          return dbReviews.map(r => ({
+            id: r.id, author: r.author, city: r.city, rating: r.rating,
+            text: r.review_text, date: r.review_date, isVerified: r.is_verified
+          }));
+        }
+      } catch {}
+      try {
+        const { getReviewsByActivity } = await import('../fixtures/data');
+        const fixtureReviews = getReviewsByActivity ? getReviewsByActivity(act.slug) : [];
+        return (fixtureReviews || []).slice(0, 20).map(r => ({
+          id: r.id, author: r.author, city: r.city, rating: r.rating,
+          text: r.text, date: r.date
+        }));
+      } catch {
+        return [];
+      }
+    })()
+  ]);
+
+  const schedules = scheduleRes.data || [];
+
+  const reviews = reviewsRes || [];
+
   return {
     id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
     shortDescription: act.short_description, description: act.description,
@@ -1661,30 +1694,7 @@ export async function getActivityBySlugDb(slug) {
       guideNote: s.guide_note || null,
     })),
     // Reviews: query from activity_reviews table (migration 003), fallback to fixtures
-    reviews: await (async () => {
-      try {
-        const { data: dbReviews, error: reviewErr } = await supabase
-          .from('activity_reviews')
-          .select('id, author, city, rating, review_text, review_date, is_verified')
-          .eq('activity_slug', act.slug)
-          .order('review_date', { ascending: false });
-        if (!reviewErr && dbReviews && dbReviews.length > 0) {
-          return dbReviews.map(r => ({
-            id: r.id, author: r.author, city: r.city, rating: r.rating,
-            text: r.review_text, date: r.review_date, isVerified: r.is_verified
-          }));
-        }
-      } catch {}
-      // Fallback: fixture data (before migration 003 is run)
-      try {
-        const { getReviewsByActivity } = await import('../fixtures/data');
-        const fixtureReviews = getReviewsByActivity ? getReviewsByActivity(act.slug) : [];
-        return (fixtureReviews || []).map(r => ({
-          id: r.id, author: r.author, city: r.city, rating: r.rating,
-          text: r.text, date: r.date
-        }));
-      } catch { return []; }
-    })()
+    reviews,
   };
 }
 
