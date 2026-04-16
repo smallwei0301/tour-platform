@@ -8,7 +8,8 @@ import { ActivityBottomBar } from '../../../../src/components/activity/ActivityB
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 
-// ISR：最多 60 秒快取，確保 booked_count 能即時反映
+// 根治版（低風險）：將頁面主體固定為 ISR 靜態輸出，避免每次請求都走 dynamic no-store。
+export const dynamic = 'force-static';
 export const revalidate = 60;
 
 export async function generateMetadata(
