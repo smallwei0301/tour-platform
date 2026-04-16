@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
@@ -156,6 +156,31 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showAllPlans, setShowAllPlans] = useState(false);
+  const [liveSchedules, setLiveSchedules] = useState<Schedule[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLiveAvailability() {
+      try {
+        const res = await fetch(`/api/activities/${encodeURIComponent(activity.slug)}/availability?t=${Date.now()}`, {
+          cache: 'no-store',
+        });
+        const json = await res.json().catch(() => null);
+        if (cancelled || !res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) return;
+        setLiveSchedules(json.data.schedules as Schedule[]);
+      } catch {
+        // ignore: fallback to SSR schedules
+      }
+    }
+
+    loadLiveAvailability();
+    return () => {
+      cancelled = true;
+    };
+  }, [activity.slug]);
+
+  const effectiveSchedules = liveSchedules && liveSchedules.length > 0 ? liveSchedules : schedules;
 
   // Use DB plans if available, otherwise fall back to defaults
   const PLANS = (activity.plans && activity.plans.length > 0) ? activity.plans : DEFAULT_PLANS;
@@ -170,7 +195,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
           <span className="kkd-section-label">出發日期</span>
         </div>
         <DatePicker
-          schedules={schedules}
+          schedules={effectiveSchedules}
           selectedDate={selectedDate}
           onSelect={setSelectedDate}
           price={activity.priceTwd ?? activity.price ?? 0}
@@ -190,7 +215,7 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
           const isSelected = selectedPlan === plan.id;
 
           // 取得該方案在選中日期的可用性
-          const planAvail = getPlanScheduleForDate(schedules, selectedDate, plan.id);
+          const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id);
           const showFull = selectedDate && planAvail.isFull;
           const showNotOpen = selectedDate && !planAvail.schedule;
           const canBook = !selectedDate || planAvail.isOpen;
