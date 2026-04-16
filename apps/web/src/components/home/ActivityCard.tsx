@@ -71,6 +71,7 @@ export function ActivityCard({
         {/* Overlay link covers the whole card */}
         <Link
           href={buildActivityHref({ slug: activity.slug, region: activity.region, regionSlug: activity.regionSlug })}
+          prefetch
           className="tp-card-link-overlay"
           aria-label={activity.title}
         />

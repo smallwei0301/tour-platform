@@ -223,9 +223,16 @@ export default function ActivitiesContent() {
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <strong style={{ color: 'var(--tp-primary)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
-                      <Link className="tp-btn tp-btn-primary" href={href}
+                      <Link
+                        className="tp-btn tp-btn-primary"
+                        href={href}
+                        prefetch
+                        onMouseEnter={() => router.prefetch(href)}
                         data-testid="activity-card-link"
-                        style={{ fontSize: 13, padding: '6px 14px' }}>查看行程</Link>
+                        style={{ fontSize: 13, padding: '6px 14px' }}
+                      >
+                        查看行程
+                      </Link>
                     </div>
                   </article>
                 );
