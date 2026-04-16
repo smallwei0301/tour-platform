@@ -22,7 +22,7 @@ export async function generateMetadata(
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getActivityBySlugDb(slug).catch(() => null);
+  const activity = await getActivityBySlugDb(slug, { preferFixtureFirst: true }).catch(() => null);
   if (!activity) return notFound();
 
   const guide = activity.guide;
