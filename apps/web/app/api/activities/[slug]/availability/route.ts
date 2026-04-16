@@ -45,7 +45,8 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
 
     return Response.json(ok({ schedules, fetchedAt: new Date().toISOString() }), {
       headers: {
-        'cache-control': 'no-store, no-cache, must-revalidate, max-age=0',
+        // 短快取：平衡速度與即時性（最多約 5 秒延遲）
+        'cache-control': 'public, s-maxage=5, stale-while-revalidate=10',
       },
     });
   } catch (error) {
