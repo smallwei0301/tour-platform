@@ -398,10 +398,200 @@ function BookingInnerLegacy() {
   );
 }
 
+interface V2Slot {
+  startAt: string;
+  endAt: string;
+  capacityLeft: number;
+  bookingType: 'scheduled' | 'request' | 'instant';
+  isAvailable: boolean;
+}
+
 function BookingInnerV2FlagShell() {
-  // Phase B2-PR1 skeleton: route-level switch only, legacy flow still powers behavior.
-  // We keep this branch explicit so B2-PR2 can swap in real V2 flow with minimal diff.
-  return <BookingInnerLegacy />;
+  const params = useParams();
+  const searchParams = useSearchParams();
+
+  const activitySlug = params.activityId as string;
+  const urlPlanId = searchParams.get('plan') || '';
+  const timezone = searchParams.get('timezone') || 'Asia/Taipei';
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [activity, setActivity] = useState<Activity | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slots, setSlots] = useState<V2Slot[]>([]);
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
+  const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
+  const [guests, setGuests] = useState(2);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [note, setNote] = useState('');
+  const [agreed, setAgreed] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    fetchActivityBySlug(activitySlug)
+      .then((data: Activity) => {
+        if (!mounted) return;
+        setActivity(data);
+      })
+      .catch((err: Error) => {
+        if (!mounted) return;
+        setLoadError(err.message || '找不到此行程');
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [activitySlug]);
+
+  useEffect(() => {
+    async function fetchSlots() {
+      if (!activity?.id || !urlPlanId || !selectedDate) return;
+      try {
+        setSlotsLoading(true);
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=${guests}`;
+        const res = await fetch(url, { cache: 'no-store' });
+        const json = await res.json();
+        if (!res.ok || !json?.success) {
+          setSlots([]);
+          return;
+        }
+        const nextSlots = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
+        setSlots(nextSlots);
+        if (!nextSlots.find((s: V2Slot) => s.startAt === selectedSlotStartAt)) {
+          setSelectedSlotStartAt(nextSlots[0]?.startAt || '');
+        }
+      } catch {
+        setSlots([]);
+      } finally {
+        setSlotsLoading(false);
+      }
+    }
+    fetchSlots();
+  }, [activity?.id, urlPlanId, selectedDate, timezone, guests]);
+
+  async function handleV2Checkout() {
+    if (!activity?.id || !urlPlanId || !selectedSlotStartAt || !agreed) return;
+    try {
+      setLoading(true);
+      setLoadError('');
+
+      const draftRes = await fetch('/api/v2/bookings/draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          activityId: activity.id,
+          planId: urlPlanId,
+          startAt: selectedSlotStartAt,
+          timezone,
+          participants: guests,
+          sourceChannel: 'web',
+          contactName,
+          contactPhone,
+          contactEmail,
+          customerNote: note || undefined,
+        }),
+      });
+      const draftJson = await draftRes.json();
+      if (!draftRes.ok || !draftJson?.success || !draftJson?.data?.bookingId) {
+        throw new Error(draftJson?.error?.message || '建立預約草稿失敗');
+      }
+
+      const checkoutRes = await fetch(`/api/v2/bookings/${draftJson.data.bookingId}/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider: 'ecpay' }),
+      });
+      const checkoutJson = await checkoutRes.json();
+      if (!checkoutRes.ok || !checkoutJson?.success) {
+        throw new Error(checkoutJson?.error?.message || '建立付款失敗');
+      }
+
+      const paymentFormHtml = checkoutJson?.data?.paymentFormHtml;
+      if (!paymentFormHtml) throw new Error('付款表單不存在');
+
+      const container = document.createElement('div');
+      container.style.display = 'none';
+      container.innerHTML = paymentFormHtml;
+      document.body.appendChild(container);
+      const form = container.querySelector('form') as HTMLFormElement | null;
+      if (!form) throw new Error('付款表單格式錯誤');
+      form.submit();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '處理失敗';
+      setLoadError(msg);
+      setLoading(false);
+    }
+  }
+
+  if (!urlPlanId) {
+    return (
+      <main className="tp-container" style={{ padding: '40px 0' }}>
+        <p style={{ color: 'var(--tp-danger)' }}>缺少方案參數（plan），請從行程頁重新選擇方案。</p>
+        <BookingInnerLegacy />
+      </main>
+    );
+  }
+
+  if (!activity) {
+    return (
+      <main className="tp-container" style={{ padding: '40px 0' }}>
+        <p style={{ color: 'var(--tp-muted)' }}>{loadError || '載入行程中…'}</p>
+      </main>
+    );
+  }
+
+  const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
+  const total = activity.priceTwd * guests;
+
+  return (
+    <main className="tp-container" style={{ padding: '24px 0 40px' }}>
+      <h1 style={{ marginBottom: 8 }}>{activity.title}（V2 預約流程）</h1>
+      <p style={{ color: 'var(--tp-muted)', marginBottom: 16 }}>此流程透過 available-slots → draft → checkout 串接。</p>
+      {loadError && <p style={{ color: 'var(--tp-danger)' }}>⚠️ {loadError}</p>}
+
+      <div style={{ display: 'grid', gap: 12, maxWidth: 760 }}>
+        <label>
+          預約日期
+          <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="tp-input" />
+        </label>
+
+        <label>
+          人數
+          <input type="number" min={1} value={guests} onChange={(e) => setGuests(Math.max(1, Number(e.target.value) || 1))} className="tp-input" />
+        </label>
+
+        <label>
+          可預約時段
+          <select className="tp-input" value={selectedSlotStartAt} onChange={(e) => setSelectedSlotStartAt(e.target.value)} disabled={slotsLoading || slots.length === 0}>
+            {slotsLoading && <option>載入中…</option>}
+            {!slotsLoading && slots.length === 0 && <option value="">無可預約時段</option>}
+            {!slotsLoading && slots.map((slot) => (
+              <option key={slot.startAt} value={slot.startAt}>{new Date(slot.startAt).toLocaleString('zh-TW')}（剩餘 {slot.capacityLeft}）</option>
+            ))}
+          </select>
+        </label>
+
+        <label>聯絡人姓名<input className="tp-input" value={contactName} onChange={(e) => setContactName(e.target.value)} /></label>
+        <label>電話<input className="tp-input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></label>
+        <label>Email<input className="tp-input" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></label>
+        <label>備註（選填）<textarea className="tp-input" value={note} onChange={(e) => setNote(e.target.value)} /></label>
+
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+          我已閱讀並同意取消與退款條款
+        </label>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <strong>總計：NT${total.toLocaleString()}</strong>
+          <button className="tp-btn tp-btn-primary" disabled={!canSubmit} onClick={handleV2Checkout}>
+            {loading ? '處理中…' : '建立草稿並前往付款'}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
 }
 
 // ── 外層包 Suspense（useSearchParams 需要）───────────────────
