@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
+import { isBookingV2Enabled } from '../../../src/config/feature-flags.mjs';
 
 // ── 型別 ──────────────────────────────────────────────────────
 interface Schedule {
@@ -33,7 +34,7 @@ interface Activity {
 }
 
 // ── 內部元件（useSearchParams 必須在 Suspense 內）────────────
-function BookingInner() {
+function BookingInnerLegacy() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -397,15 +398,23 @@ function BookingInner() {
   );
 }
 
+function BookingInnerV2FlagShell() {
+  // Phase B2-PR1 skeleton: route-level switch only, legacy flow still powers behavior.
+  // We keep this branch explicit so B2-PR2 can swap in real V2 flow with minimal diff.
+  return <BookingInnerLegacy />;
+}
+
 // ── 外層包 Suspense（useSearchParams 需要）───────────────────
 export default function BookingPage() {
+  const useV2 = isBookingV2Enabled();
+
   return (
     <Suspense fallback={
       <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center' }}>
         <p style={{ color: 'var(--tp-muted)' }}>載入中…</p>
       </main>
     }>
-      <BookingInner />
+      {useV2 ? <BookingInnerV2FlagShell /> : <BookingInnerLegacy />}
     </Suspense>
   );
 }
