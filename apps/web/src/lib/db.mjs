@@ -28,11 +28,11 @@ import {
   updateAdminRefundStatusFallback
 } from './admin.mjs';
 
-function hasSupabaseEnv() {
+export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-async function getSupabase() {
+export async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
