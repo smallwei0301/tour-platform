@@ -19,6 +19,15 @@ Related: #103, #104, #105
 | `payment_succeeded` | events | Payment success confirmed |
 | `booking_v2_fallback_clicked` | events | User explicitly switched from V2 to legacy fallback |
 
+### Counting semantics (v1 baseline)
+- v1 dashboard default uses **raw event count** (no dedupe).
+- If dedupe views are added later, they must be explicitly named, e.g.:
+  - `unique_begin_checkout_sessions`
+  - `unique_purchase_intent_orders`
+- Entity identity contract for payment events:
+  - `payment_callback_received` and `payment_succeeded` should carry `order_id` (or `payment_id`) when available.
+  - raw count != unique order count; report must not mix them silently.
+
 ## 1.2 Error metrics (required)
 | Metric | Source | Definition |
 |---|---|---|
@@ -41,6 +50,13 @@ Related: #103, #104, #105
 | `bookings.completed` | bookings | completed bookings count |
 | `bookings.cancelled` | bookings | cancelled bookings count |
 
+### Time-window semantics (explicit)
+- Funnel events: evaluated by **event timestamp** (`events.created_at`).
+- Outcome metrics (`orders.*`, `bookings.*`): evaluated by **status transition time**.
+  - Preferred field: dedicated status transition timestamp.
+  - Fallback field (if dedicated transition timestamp unavailable): `updated_at`.
+- Report must print window semantics so cross-day callback/paid transitions are interpretable.
+
 ---
 
 ## 2) Rollout Dimensions (minimum)
@@ -60,6 +76,13 @@ Recommended next dimensions (v1.1):
 - `booking_page_view` must always carry `rollout_variant`.
 - `booking_v2_fallback_clicked` must always carry `rollout_variant='v2'`.
 - If a metric lacks `rollout_variant`, it is counted in `unknown` bucket and cannot be used for rollout decisions.
+
+## Minimum event property contract (required)
+- `booking_page_view`: `rollout_variant`, `activity_slug?`, `plan_id?`
+- `booking_v2_fallback_clicked`: `rollout_variant='v2'`, `reason`
+- `begin_checkout`: `rollout_variant?`, `schedule_id?`, `item_id?`
+- `purchase_intent`: `rollout_variant?`, `order_id?`, `schedule_id?`
+- `events.error`: `rollout_variant?`, `error_code?`, `context?`
 
 ---
 
@@ -90,16 +113,25 @@ Recommended next dimensions (v1.1):
 
 ## Data quality checks (required)
 - If `booking_page_view_v2 = 0`, fallback rate must be reported as `N/A` (not forced 0)
-- If latency sample `< 10`, mark latency confidence as low
+- If latency metric exists but sample `< 10`, mark latency confidence as `low_confidence`
+- If latency metric is absent/uninstrumented, mark as `missing_metric`
 - If unknown rollout bucket > 5%, output warning flag in report
 
 ---
 
 ## 4) Decision Signals (GO / HOLD / ROLLBACK WATCH)
 
+## Threshold ownership (minimum contract)
+- Threshold owner: #96 rollout owner (release owner).
+- Thresholds must be configurable (not hardcoded in report logic), at least:
+  - `fallback_rate_warn_threshold`
+  - `payment_success_drop_threshold_pp`
+  - `api_5xx_warn_threshold`
+- If threshold is unset, report must emit `UNSET_THRESHOLD` warning and decision defaults to HOLD.
+
 ## GO
 - Payment success rate stable vs baseline (no material degradation)
-- Fallback rate in acceptable range (team-defined threshold)
+- Fallback rate in acceptable range (threshold-configured)
 - No callback/oversell invariant breach
 - No sustained API 5xx anomalies in booking flow
 
