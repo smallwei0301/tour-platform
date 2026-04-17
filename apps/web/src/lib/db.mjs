@@ -32,9 +32,13 @@ export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+let supabaseClient = null;
+
 export async function getSupabase() {
+  if (supabaseClient) return supabaseClient;
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return supabaseClient;
 }
 
 export async function listExperiencesDb() {
@@ -1711,7 +1715,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
   const [scheduleRes, reviewsRes] = await Promise.all([
     supabase
       .from('activity_schedules')
-      .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants')
+      .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
       .eq('activity_id', act.id)
       .in('status', ['open', 'full'])
       .order('start_at', { ascending: true }),
