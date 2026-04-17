@@ -12,8 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
-import type { EventInsert, EventName } from '@/lib/events';
-import type { UtmParams } from '@/lib/utm';
+import type { EventInsert, EventName } from '../../../src/lib/events';
+import type { UtmParams } from '../../../src/lib/utm';
 import { eventsLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 
 const VALID_EVENTS: EventName[] = [
