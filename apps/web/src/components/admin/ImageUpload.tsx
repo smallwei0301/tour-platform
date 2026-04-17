@@ -6,7 +6,12 @@ interface ImageUploadProps {
   activityId: string;
   activitySlug: string;
   type: 'cover' | 'gallery';
-  onUploaded: (url: string) => void;
+  onUploaded?: (url: string) => void;
+  // backward-compatible props used by admin activity edit page
+  onUpload?: (url: string) => void;
+  onGalleryUpdate?: (urls: string[]) => void;
+  currentUrl?: string;
+  currentUrls?: string[];
 }
 
 /**
@@ -81,6 +86,10 @@ export function ImageUpload({
   activitySlug,
   type,
   onUploaded,
+  onUpload,
+  onGalleryUpdate,
+  currentUrl,
+  currentUrls,
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState('');
@@ -120,7 +129,21 @@ export function ImageUpload({
         if (!json.ok) throw new Error(json.error?.message || '上傳失敗');
 
         setProgress('');
-        onUploaded(json.data.url);
+        const uploadedUrl = json.data.url as string;
+
+        // cover: single image callback
+        if (type === 'cover') {
+          onUploaded?.(uploadedUrl);
+          onUpload?.(uploadedUrl);
+        } else {
+          // gallery: append into current list when callback is provided
+          if (onGalleryUpdate) {
+            const nextUrls = [...(currentUrls || []), uploadedUrl];
+            onGalleryUpdate(nextUrls);
+          }
+          onUploaded?.(uploadedUrl);
+          onUpload?.(uploadedUrl);
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : '上傳失敗');
         setProgress('');
@@ -129,7 +152,7 @@ export function ImageUpload({
         setUploading(false);
       }
     },
-    [activityId, activitySlug, type, onUploaded]
+    [activityId, activitySlug, type, onUploaded, onUpload, onGalleryUpdate, currentUrls]
   );
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -151,7 +174,7 @@ export function ImageUpload({
     uploadFile(file);
   }
 
-  const displayUrl = previewUrl;
+  const displayUrl = previewUrl || (type === 'cover' ? currentUrl || null : null);
   const label =
     type === 'cover'
       ? '📷 上傳 Hero 圖（16:9）'
