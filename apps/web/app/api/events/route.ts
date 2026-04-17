@@ -25,6 +25,8 @@ const VALID_EVENTS: EventName[] = [
   'purchase_intent',
   'payment_callback_received',
   'payment_succeeded',
+  'booking_page_view',
+  'booking_v2_fallback_clicked',
   'error',
 ];
 

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
 import { isBookingV2Enabled } from '../../../src/config/feature-flags.mjs';
+import { track } from '../../../src/lib/track';
 
 // ── 型別 ──────────────────────────────────────────────────────
 interface Schedule {
@@ -59,6 +60,19 @@ function BookingInnerLegacy() {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [createdOrderId, setCreatedOrderId] = useState('');
+
+  useEffect(() => {
+    track({
+      event_name: 'booking_page_view',
+      properties: {
+        activity_slug: activitySlug,
+        plan_id: urlPlanId || undefined,
+        date: urlDate || undefined,
+        rollout_variant: 'legacy',
+      },
+      page_path: `/booking/${activitySlug}`,
+    });
+  }, [activitySlug, urlPlanId, urlDate]);
 
   // ── 從 DB 讀取行程資料 ────────────────────────────────────
   useEffect(() => {
@@ -432,6 +446,19 @@ function BookingInnerV2FlagShell() {
   const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
+    track({
+      event_name: 'booking_page_view',
+      properties: {
+        activity_slug: activitySlug,
+        plan_id: urlPlanId || undefined,
+        date: selectedDate || undefined,
+        rollout_variant: 'v2',
+      },
+      page_path: `/booking/${activitySlug}`,
+    });
+  }, [activitySlug, urlPlanId, selectedDate]);
+
+  useEffect(() => {
     let mounted = true;
     fetchActivityBySlug(activitySlug)
       .then((data: Activity) => {
@@ -535,7 +562,18 @@ function BookingInnerV2FlagShell() {
     return (
       <main className="tp-container" style={{ padding: '40px 0' }}>
         <p style={{ color: 'var(--tp-danger)' }}>缺少方案參數（plan），請從行程頁重新選擇方案。</p>
-        <button className="tp-btn tp-btn-ghost" data-testid="booking-v2-fallback-btn" onClick={() => setUseLegacyFallback(true)}>
+        <button
+          className="tp-btn tp-btn-ghost"
+          data-testid="booking-v2-fallback-btn"
+          onClick={() => {
+            track({
+              event_name: 'booking_v2_fallback_clicked',
+              properties: { reason: 'missing_plan', rollout_variant: 'v2' },
+              page_path: `/booking/${activitySlug}`,
+            });
+            setUseLegacyFallback(true);
+          }}
+        >
           改用舊版預約流程
         </button>
       </main>
@@ -578,7 +616,18 @@ function BookingInnerV2FlagShell() {
         >
           <p style={{ color: 'var(--tp-danger)', margin: 0 }}>⚠️ {v2Error}</p>
           <div>
-            <button className="tp-btn tp-btn-ghost" data-testid="booking-v2-fallback-btn" onClick={() => setUseLegacyFallback(true)}>
+            <button
+              className="tp-btn tp-btn-ghost"
+              data-testid="booking-v2-fallback-btn"
+              onClick={() => {
+                track({
+                  event_name: 'booking_v2_fallback_clicked',
+                  properties: { reason: 'v2_error', rollout_variant: 'v2' },
+                  page_path: `/booking/${activitySlug}`,
+                });
+                setUseLegacyFallback(true);
+              }}
+            >
               改用舊版預約流程
             </button>
           </div>
