@@ -205,11 +205,12 @@ export class BookingStateService {
       // 2. Validate transition
       const validation = validateTransition(fromStatus, toStatus);
       if (!validation.valid) {
+        const invalid = validation as { valid: false; code: string; message: string };
         return {
           success: false,
           error: {
-            code: validation.code,
-            message: validation.message,
+            code: invalid.code,
+            message: invalid.message,
           },
         };
       }

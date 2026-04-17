@@ -49,9 +49,11 @@ export interface BeginCheckoutProperties {
 }
 
 export interface PurchaseIntentProperties {
-  order_id: string;
+  order_id?: string;
   amount: number;
   schedule_id?: string;
+  item_id?: string;
+  item_name?: string;
 }
 
 export interface PaymentCallbackReceivedProperties {
@@ -87,7 +89,7 @@ export type TrackEventPayload =
 
 // ── API request body ─────────────────────────────────────────────────────────
 
-export interface TrackRequest extends TrackEventPayload {
+export type TrackRequest = TrackEventPayload & {
   session_id?: string;
   contact_email?: string;
   order_id?: string;
@@ -101,7 +103,7 @@ export interface TrackRequest extends TrackEventPayload {
   utm_campaign?: string;
   utm_content?: string;
   utm_term?: string;
-}
+};
 
 // ── DB insert row type ───────────────────────────────────────────────────────
 
