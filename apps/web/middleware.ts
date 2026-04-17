@@ -172,6 +172,7 @@ export async function middleware(req: NextRequest) {
   if (isTravelerPublicPath) return NextResponse.next();
 
   if (!hasTravelerAuthCookie(req)) return NextResponse.next();
+
   return refreshTravelerSession(req);
 }
 
