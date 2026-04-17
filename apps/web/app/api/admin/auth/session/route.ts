@@ -57,14 +57,14 @@ export async function POST(request: Request) {
   }
 
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const payload = ok({ created: true, expiresAt, sessionVersion: security.sessionVersion, mode: 'minimal-cookie' });
 
-  const headers = new Headers({ 'content-type': 'application/json' });
-  headers.append('set-cookie', `admin_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`);
-  headers.append('set-cookie', `admin_email=${encodeURIComponent(email)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`);
-  headers.append('set-cookie', `admin_session_expires_at=${encodeURIComponent(expiresAt)}; Path=/; SameSite=Lax; Max-Age=604800`);
-  headers.append('set-cookie', `admin_session_version=${security.sessionVersion}; Path=/; SameSite=Lax; Max-Age=604800`);
-
-  return new Response(JSON.stringify(ok({ created: true, expiresAt, sessionVersion: security.sessionVersion })), { status: 200, headers });
+  const response = Response.json(payload, { status: 200 });
+  response.headers.append(
+    'set-cookie',
+    `admin_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`
+  );
+  return response;
 }
 
 export async function DELETE() {
