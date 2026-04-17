@@ -417,8 +417,10 @@ function BookingInnerV2FlagShell() {
 
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loadError, setLoadError] = useState('');
+  const [v2Error, setV2Error] = useState('');
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [useLegacyFallback, setUseLegacyFallback] = useState(false);
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
@@ -447,14 +449,16 @@ function BookingInnerV2FlagShell() {
 
   useEffect(() => {
     async function fetchSlots() {
-      if (!activity?.id || !urlPlanId || !selectedDate) return;
+      if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
       try {
         setSlotsLoading(true);
+        setV2Error('');
         const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=${guests}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = await res.json();
         if (!res.ok || !json?.success) {
           setSlots([]);
+          setV2Error(json?.error?.message || '目前無法載入可預約時段，請稍後再試。');
           return;
         }
         const nextSlots = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
@@ -464,18 +468,20 @@ function BookingInnerV2FlagShell() {
         }
       } catch {
         setSlots([]);
+        setV2Error('目前無法載入可預約時段，請稍後再試。');
       } finally {
         setSlotsLoading(false);
       }
     }
     fetchSlots();
-  }, [activity?.id, urlPlanId, selectedDate, timezone, guests]);
+  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt]);
 
   async function handleV2Checkout() {
     if (!activity?.id || !urlPlanId || !selectedSlotStartAt || !agreed) return;
     try {
       setLoading(true);
       setLoadError('');
+      setV2Error('');
 
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
@@ -520,7 +526,7 @@ function BookingInnerV2FlagShell() {
       form.submit();
     } catch (err) {
       const msg = err instanceof Error ? err.message : '處理失敗';
-      setLoadError(msg);
+      setV2Error(msg || '目前無法建立付款流程，請稍後再試。');
       setLoading(false);
     }
   }
@@ -529,9 +535,15 @@ function BookingInnerV2FlagShell() {
     return (
       <main className="tp-container" style={{ padding: '40px 0' }}>
         <p style={{ color: 'var(--tp-danger)' }}>缺少方案參數（plan），請從行程頁重新選擇方案。</p>
-        <BookingInnerLegacy />
+        <button className="tp-btn tp-btn-ghost" data-testid="booking-v2-fallback-btn" onClick={() => setUseLegacyFallback(true)}>
+          改用舊版預約流程
+        </button>
       </main>
     );
+  }
+
+  if (useLegacyFallback) {
+    return <BookingInnerLegacy />;
   }
 
   if (!activity) {
@@ -550,6 +562,28 @@ function BookingInnerV2FlagShell() {
       <h1 style={{ marginBottom: 8 }}>{activity.title}（V2 預約流程）</h1>
       <p style={{ color: 'var(--tp-muted)', marginBottom: 16 }}>此流程透過 available-slots → draft → checkout 串接。</p>
       {loadError && <p style={{ color: 'var(--tp-danger)' }}>⚠️ {loadError}</p>}
+      {v2Error && (
+        <div
+          data-testid="booking-v2-error"
+          style={{
+            border: '1px solid var(--tp-danger)',
+            background: 'rgba(255, 71, 87, 0.08)',
+            borderRadius: 10,
+            padding: 12,
+            marginBottom: 14,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 10,
+          }}
+        >
+          <p style={{ color: 'var(--tp-danger)', margin: 0 }}>⚠️ {v2Error}</p>
+          <div>
+            <button className="tp-btn tp-btn-ghost" data-testid="booking-v2-fallback-btn" onClick={() => setUseLegacyFallback(true)}>
+              改用舊版預約流程
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gap: 12, maxWidth: 760 }}>
         <label>
