@@ -106,6 +106,21 @@ async function countBookingsStatus(status) {
   ]);
 }
 
+async function countEventByVariant(eventName, variant) {
+  const rows = await selectRows(
+    'events',
+    'properties',
+    [
+      `event_name=eq.${encodeURIComponent(eventName)}`,
+      `created_at=gte.${iso(START_AT)}`,
+      `created_at=lte.${iso(END_AT)}`,
+    ],
+    5000,
+  );
+
+  return (rows || []).filter((r) => r?.properties?.rollout_variant === variant).length;
+}
+
 async function avgLatencyFromEvents(eventName) {
   const rows = await selectRows(
     'events',
@@ -132,10 +147,13 @@ async function avgLatencyFromEvents(eventName) {
 async function main() {
   const [
     bookingPageView,
+    bookingPageViewLegacy,
+    bookingPageViewV2,
     beginCheckout,
     purchaseIntent,
     callbackReceived,
     paymentSucceeded,
+    fallbackClicked,
     eventError,
     paidOrders,
     failedOrders,
@@ -145,11 +163,14 @@ async function main() {
     draftLatency,
     checkoutLatency,
   ] = await Promise.all([
-    countEvents('view_item'), // proxy as booking entry signal
+    countEvents('booking_page_view'),
+    countEventByVariant('booking_page_view', 'legacy'),
+    countEventByVariant('booking_page_view', 'v2'),
     countEvents('begin_checkout'),
     countEvents('purchase_intent'),
     countEvents('payment_callback_received'),
     countEvents('payment_succeeded'),
+    countEvents('booking_v2_fallback_clicked'),
     countEvents('error'),
     countOrdersByPaymentStatus('paid'),
     countOrdersByPaymentStatus('failed'),
@@ -165,13 +186,17 @@ async function main() {
     window: { hours: HOURS, startAt: START_AT.toISOString(), endAt: END_AT.toISOString() },
     funnel: {
       bookingPageView,
+      bookingPageViewLegacy,
+      bookingPageViewV2,
       beginCheckout,
       purchaseIntent,
       paymentCallbackReceived: callbackReceived,
       paymentSucceeded,
+      fallbackClicked,
       beginCheckoutRatePct: pct(beginCheckout, bookingPageView),
       purchaseIntentRatePct: pct(purchaseIntent, beginCheckout),
       paymentSuccessRatePct: pct(paymentSucceeded, callbackReceived),
+      fallbackRateVsV2PageViewPct: pct(fallbackClicked, bookingPageViewV2),
     },
     orders: { paid: paidOrders, failed: failedOrders },
     bookings: { completed: completedBookings, cancelled: cancelledBookings },
@@ -185,9 +210,9 @@ async function main() {
       checkoutInit: checkoutLatency,
     },
     notes: [
-      'booking_page_view uses event_name=view_item as first-version proxy; consider adding explicit booking_page_view event.',
+      'booking_page_view and booking_v2_fallback_clicked are now first-class events.',
+      'rollout_variant=legacy|v2 is read from events.properties.rollout_variant.',
       'latency metrics require event.properties.latency_ms instrumentation to be present.',
-      'fallback_click_rate not yet available by default; add dedicated event in next iteration.',
     ],
   };
 
@@ -195,11 +220,14 @@ async function main() {
 `Generated: ${report.generatedAt}\n` +
 `Window: last ${HOURS}h (${report.window.startAt} ~ ${report.window.endAt})\n\n` +
 `## Funnel\n` +
-`- booking_page_view(proxy=view_item): ${report.funnel.bookingPageView}\n` +
+`- booking_page_view: ${report.funnel.bookingPageView}\n` +
+`  - legacy: ${report.funnel.bookingPageViewLegacy}\n` +
+`  - v2: ${report.funnel.bookingPageViewV2}\n` +
 `- begin_checkout: ${report.funnel.beginCheckout} (${report.funnel.beginCheckoutRatePct}%)\n` +
 `- purchase_intent: ${report.funnel.purchaseIntent} (${report.funnel.purchaseIntentRatePct}%)\n` +
 `- payment_callback_received: ${report.funnel.paymentCallbackReceived}\n` +
-`- payment_succeeded: ${report.funnel.paymentSucceeded} (${report.funnel.paymentSuccessRatePct}%)\n\n` +
+`- payment_succeeded: ${report.funnel.paymentSucceeded} (${report.funnel.paymentSuccessRatePct}%)\n` +
+`- booking_v2_fallback_clicked: ${report.funnel.fallbackClicked} (${report.funnel.fallbackRateVsV2PageViewPct}% of v2 page views)\n\n` +
 `## Orders / Bookings\n` +
 `- orders.paid: ${report.orders.paid}\n` +
 `- orders.failed: ${report.orders.failed}\n` +

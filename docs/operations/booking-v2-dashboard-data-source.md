@@ -25,7 +25,9 @@
 ## 第一版指標（v1）
 
 ### Funnel
-- booking_page_view（以 `events.event_name = view_item` 暫代）
+- booking_page_view（已改為獨立事件）
+  - 可依 `properties.rollout_variant` 分為 `legacy` / `v2`
+- booking_v2_fallback_clicked（已新增獨立事件）
 - begin_checkout
 - purchase_intent
 - payment_callback_received
@@ -45,11 +47,11 @@
 - checkout_initiated
 
 ## 已知限制（後續迭代）
-1. booking_page_view 目前用 `view_item` proxy，建議補獨立事件名。
-2. fallback_click_rate 尚未有標準事件，建議新增 `booking_v2_fallback_clicked`。
-3. 目前未做 flag-on / flag-off 分群（需在事件 properties 記錄 variant）。
+1. begin_checkout / purchase_intent 目前尚未全面帶 rollout_variant（若需完整 funnel 分群，建議補齊）。
+2. fallback 事件目前僅來自 booking v2 頁 fallback CTA，未覆蓋所有可能 fallback path。
+3. latency 指標依賴 `properties.latency_ms`，目前樣本可能偏少。
 
 ## 建議下一步（Issue #103 子任務）
-1. 在 `/api/events` 或前端 track 增加 rollout 維度：`rollout_variant` (`legacy`/`v2`)。
-2. 補 fallback 事件。
-3. 將本腳本接入每日排程（銜接 #105）。
+1. 在 checkout / order 相關事件也補 `rollout_variant`。
+2. 將本腳本接入每日排程（銜接 #105）。
+3. 加上門檻判定（GO/HOLD/ROLLBACK WATCH）欄位。

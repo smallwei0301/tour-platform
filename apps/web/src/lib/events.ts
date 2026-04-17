@@ -14,13 +14,18 @@ export type EventName =
   | 'purchase_intent'
   | 'payment_callback_received'
   | 'payment_succeeded'
+  | 'booking_page_view'
+  | 'booking_v2_fallback_clicked'
   | 'error';
 
 // ── 各事件 properties ────────────────────────────────────────────────────────
 
+export type RolloutVariant = 'legacy' | 'v2';
+
 export interface PageViewProperties {
   title?: string;
   path: string;
+  rollout_variant?: RolloutVariant;
 }
 
 export interface ViewItemListProperties {
@@ -46,6 +51,7 @@ export interface BeginCheckoutProperties {
   item_name?: string;
   schedule_id: string;
   price?: number;
+  rollout_variant?: RolloutVariant;
 }
 
 export interface PurchaseIntentProperties {
@@ -54,6 +60,7 @@ export interface PurchaseIntentProperties {
   schedule_id?: string;
   item_id?: string;
   item_name?: string;
+  rollout_variant?: RolloutVariant;
 }
 
 export interface PaymentCallbackReceivedProperties {
@@ -68,10 +75,23 @@ export interface PaymentSucceededProperties {
   payment_provider?: string;
 }
 
+export interface BookingPageViewProperties {
+  activity_slug?: string;
+  plan_id?: string;
+  date?: string;
+  rollout_variant: RolloutVariant;
+}
+
+export interface BookingV2FallbackClickedProperties {
+  reason: 'missing_plan' | 'v2_error';
+  rollout_variant: 'v2';
+}
+
 export interface ErrorProperties {
   message: string;
   stack_summary?: string;
   context?: string; // 發生在哪個操作
+  rollout_variant?: RolloutVariant;
 }
 
 // ── Event union type ─────────────────────────────────────────────────────────
@@ -85,6 +105,8 @@ export type TrackEventPayload =
   | { event_name: 'purchase_intent'; properties: PurchaseIntentProperties }
   | { event_name: 'payment_callback_received'; properties: PaymentCallbackReceivedProperties }
   | { event_name: 'payment_succeeded'; properties: PaymentSucceededProperties }
+  | { event_name: 'booking_page_view'; properties: BookingPageViewProperties }
+  | { event_name: 'booking_v2_fallback_clicked'; properties: BookingV2FallbackClickedProperties }
   | { event_name: 'error'; properties: ErrorProperties; error_code?: string };
 
 // ── API request body ─────────────────────────────────────────────────────────
