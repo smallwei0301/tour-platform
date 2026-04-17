@@ -1,17 +1,13 @@
 /**
- * Next.js Instrumentation — Sentry server/edge init
- * Phase 10-3 — Tour Platform
+ * Next.js Instrumentation
+ *
+ * For local/preview E2E stability, keep this file side-effect free.
+ * Edge/runtime instrumentation previously triggered:
+ * `EvalError: Code generation from strings disallowed for this context`.
  */
-import * as Sentry from '@sentry/nextjs';
 
-export const onRequestError = Sentry.captureRequestError;
+export const onRequestError = () => undefined;
 
 export async function register() {
-  if (process.env.NEXT_RUNTIME === 'nodejs') {
-    await import('./sentry.server.config');
-  }
-
-  if (process.env.NEXT_RUNTIME === 'edge') {
-    await import('./sentry.edge.config');
-  }
+  // Intentionally no-op.
 }

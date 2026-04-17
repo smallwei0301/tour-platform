@@ -17,8 +17,11 @@ const nextConfig = {
   },
 };
 
-// Allow bypassing Sentry build wrapping via DISABLE_SENTRY_BUILD=1
-const disableSentryBuild = process.env.DISABLE_SENTRY_BUILD === '1';
+// Disable Sentry build wrapping for local dev / preview E2E stability.
+const disableSentryBuild =
+  process.env.DISABLE_SENTRY_BUILD === '1' ||
+  process.env.VERCEL_ENV === 'preview' ||
+  process.env.NODE_ENV !== 'production';
 
 export default disableSentryBuild
   ? nextConfig

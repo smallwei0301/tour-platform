@@ -10,7 +10,15 @@ const state = {
 const ADMIN_SECURITY_ROW_ID = 'default';
 let hydrateStarted = false;
 
+function isPreviewMode() {
+  return String(process.env.VERCEL_ENV || '').toLowerCase() === 'preview';
+}
+
 function getAdminSecurityClient() {
+  // Avoid blocking preview admin session hydration when preview DB credentials
+  // are incomplete or network-restricted.
+  if (isPreviewMode()) return null;
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRoleKey) return null;

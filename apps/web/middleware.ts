@@ -153,9 +153,10 @@ export async function middleware(req: NextRequest) {
     }
 
     const url = req.nextUrl.clone();
-    url.pathname = '/admin/unauthorized';
-    url.searchParams.set('reason', result.reason || 'forbidden');
-    return NextResponse.rewrite(url);
+    url.pathname = '/admin/login';
+    url.searchParams.set('next', `${pathname}${req.nextUrl.search || ''}`);
+    if (result.reason) url.searchParams.set('reason', result.reason);
+    return NextResponse.redirect(url);
   }
 
   // ── Traveler routes ───────────────────────────────────────────────────────

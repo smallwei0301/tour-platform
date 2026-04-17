@@ -28,7 +28,14 @@ import {
   updateAdminRefundStatusFallback
 } from './admin.mjs';
 
+function isPreviewDataMode() {
+  return String(process.env.VERCEL_ENV || '').toLowerCase() === 'preview';
+}
+
 export function hasSupabaseEnv() {
+  // In preview, avoid hard dependency on remote DB to keep E2E/admin smoke deterministic.
+  // Preview deployments are often used for PR validation where full dataset/credentials vary.
+  if (isPreviewDataMode()) return false;
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
