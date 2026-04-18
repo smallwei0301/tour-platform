@@ -33,13 +33,21 @@ Trigger rollback immediately if any of these occur:
 
 ### Step A — Execute rollback
 - [ ] Set `NEXT_PUBLIC_BOOKING_V2_ENABLED=false`
-- [ ] Trigger deployment / config apply
+- [ ] Apply via **single source of action**:
+  - Vercel Project Settings -> Environment Variables -> Production -> `NEXT_PUBLIC_BOOKING_V2_ENABLED=false`
+  - Redeploy latest production deployment (or trigger production redeploy pipeline)
 - [ ] Record rollback start timestamp
+- [ ] Record rollback action proof (at least one):
+  - Vercel deployment ID
+  - config change screenshot
+  - command/deploy transcript
 
 ### Step B — Verify rollback effect
 - [ ] Booking page resolves to legacy behavior contract
 - [ ] No persistent loading/error loop in booking flow
 - [ ] Record rollback complete timestamp
+- [ ] **Deadline rule**: verification must complete within 5 minutes after rollback apply
+- [ ] If deadline missed, keep state at `ROLLBACK WATCH` and escalate immediately
 
 ### Step C — Post-rollback verification (must pass)
 - [ ] Order creation still works
@@ -55,11 +63,19 @@ Trigger rollback immediately if any of these occur:
 ## 4) Verification Checklist (required)
 
 1. Booking UI path returns to legacy
+   - Minimum executable check:
+     - Open `/booking/[activityId]?plan=...` with production flag-off state
+     - confirm V2 marker is absent and legacy CTA/path is present
 2. Order creation path healthy
 3. Callback writeback healthy
 4. Invariant checks clean
 
 If any check fails, escalate immediately and keep rollout state at HOLD/ROLLBACK WATCH.
+
+## 4.1 Escalation owner
+- Primary escalation: Rollout Owner (#96)
+- Secondary escalation: On-call backend owner
+- If operator lacks env/deploy permission, escalate to Release Owner immediately (no waiting)
 
 ---
 

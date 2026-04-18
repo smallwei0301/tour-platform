@@ -23,12 +23,14 @@
 - Local fallback used? (Y/N)
 - Rollback start:
 - Rollback complete:
+- Action proof attached? (deploy id / config screenshot / command transcript):
 
 ## 4) Verification (must fill)
 - [ ] Booking UI path returned to legacy
 - [ ] Order creation works
 - [ ] Callback writeback works
 - [ ] No callback/oversell invariant regression
+- Verification SLA target met? (<= 5 minutes after rollback apply):
 
 Verification notes:
 
@@ -38,7 +40,12 @@ Verification notes:
 - Test evidence:
 - PR/commit reference:
 
-## 6) Preliminary RCA
+## 6) Escalation
+- Primary owner (rollout owner):
+- Secondary owner (on-call backend):
+- Escalation timestamp:
+
+## 7) Preliminary RCA
 - What happened:
 - Suspected cause:
 - Immediate mitigation:

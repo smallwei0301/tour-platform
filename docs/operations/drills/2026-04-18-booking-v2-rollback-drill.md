@@ -13,6 +13,8 @@ Validate that rollback procedure can deterministically return booking flow to le
 - Start: 2026-04-18 01:33
 - Rollback applied: 2026-04-18 01:35
 - Verification completed: 2026-04-18 01:40
+- Verification SLA target: <= 5 minutes after rollback apply
+- SLA result: PASS (5 minutes)
 
 ---
 
@@ -26,6 +28,11 @@ Validate that rollback procedure can deterministically return booking flow to le
 - Applied global rollback override model:
   - `NEXT_PUBLIC_BOOKING_V2_ENABLED=false`
 - Restarted runtime under rollback state
+
+### 2.1 Rollback action proof
+- Local drill command trace: env override + process restart captured in shell transcript
+- Production-equivalent proof requirement (for real run):
+  - deploy ID or config-change screenshot must be attached
 
 ### 3) Verification evidence
 - Legacy path indicator check (rollback state):
