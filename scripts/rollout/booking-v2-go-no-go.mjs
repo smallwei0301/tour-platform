@@ -12,36 +12,70 @@ if (!existsSync(inputPath)) {
   process.exit(1);
 }
 
+function parseNumberEnv(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === '') return { value: fallback, ok: true, source: 'default' };
+  const n = Number(raw);
+  return { value: n, ok: Number.isFinite(n), source: 'env' };
+}
+
+function hasOwn(obj, key) {
+  return Object.prototype.hasOwnProperty.call(obj || {}, key);
+}
+
 const cfg = {
-  minPageView: Number(process.env.GO_NOGO_MIN_PAGE_VIEW || 20),
-  minCallback: Number(process.env.GO_NOGO_MIN_PAYMENT_CALLBACK || 5),
-  paymentSuccessMinPct: Number(process.env.GO_NOGO_PAYMENT_SUCCESS_MIN_PCT || 95),
-  fallbackWarnPct: Number(process.env.GO_NOGO_FALLBACK_WARN_PCT || 10),
-  errorWarnPct: Number(process.env.GO_NOGO_ERROR_WARN_PCT || 5),
+  minPageView: parseNumberEnv('GO_NOGO_MIN_PAGE_VIEW', 20),
+  minCallback: parseNumberEnv('GO_NOGO_MIN_PAYMENT_CALLBACK', 5),
+  paymentSuccessMinPct: parseNumberEnv('GO_NOGO_PAYMENT_SUCCESS_MIN_PCT', 95),
+  fallbackWarnPct: parseNumberEnv('GO_NOGO_FALLBACK_WARN_PCT', 10),
+  errorWarnPct: parseNumberEnv('GO_NOGO_ERROR_WARN_PCT', 5),
 };
 
 const j = JSON.parse(readFileSync(inputPath, 'utf8'));
 const f = j.funnel || {};
 const e = j.errors || {};
 
-const pv = Number(f.bookingPageView || 0);
-const cb = Number(f.paymentCallbackReceived || 0);
-const payPct = Number(f.paymentSuccessRatePct || 0);
-const fallbackPct = Number(f.fallbackRateVsV2PageViewPct || 0);
-const errorPct = Number(e.errorRateVsPageViewPct || 0);
+const requiredMetrics = [
+  ['funnel', 'bookingPageView'],
+  ['funnel', 'paymentCallbackReceived'],
+  ['funnel', 'paymentSuccessRatePct'],
+  ['funnel', 'fallbackRateVsV2PageViewPct'],
+  ['errors', 'errorRateVsPageViewPct'],
+];
+
+const missingMetrics = requiredMetrics.filter(([scope, key]) => {
+  if (scope === 'funnel') return !hasOwn(f, key);
+  if (scope === 'errors') return !hasOwn(e, key);
+  return true;
+});
+
+const pv = Number(f.bookingPageView);
+const cb = Number(f.paymentCallbackReceived);
+const payPct = Number(f.paymentSuccessRatePct);
+const fallbackPct = Number(f.fallbackRateVsV2PageViewPct);
+const errorPct = Number(e.errorRateVsPageViewPct);
 
 const rollbackReasons = [];
 const holdReasons = [];
 
-if (!Number.isFinite(payPct) || !Number.isFinite(fallbackPct) || !Number.isFinite(errorPct)) {
-  holdReasons.push('UNSET_THRESHOLD_OR_INVALID_METRIC');
+for (const [scope, key] of missingMetrics) {
+  holdReasons.push(`MISSING_REQUIRED_METRIC(${scope}.${key})`);
 }
-if (pv < cfg.minPageView) holdReasons.push(`LOW_SAMPLE_PAGE_VIEW(${pv}<${cfg.minPageView})`);
-if (cb < cfg.minCallback) holdReasons.push(`LOW_SAMPLE_CALLBACK(${cb}<${cfg.minCallback})`);
 
-if (payPct < cfg.paymentSuccessMinPct) rollbackReasons.push(`PAYMENT_SUCCESS_LOW(${payPct}%<${cfg.paymentSuccessMinPct}%)`);
-if (fallbackPct > cfg.fallbackWarnPct) rollbackReasons.push(`FALLBACK_RATE_HIGH(${fallbackPct}%>${cfg.fallbackWarnPct}%)`);
-if (errorPct > cfg.errorWarnPct) rollbackReasons.push(`ERROR_RATE_HIGH(${errorPct}%>${cfg.errorWarnPct}%)`);
+if (!cfg.minPageView.ok || !cfg.minCallback.ok || !cfg.paymentSuccessMinPct.ok || !cfg.fallbackWarnPct.ok || !cfg.errorWarnPct.ok) {
+  holdReasons.push('INVALID_THRESHOLD_CONFIG');
+}
+
+if (!Number.isFinite(payPct) || !Number.isFinite(fallbackPct) || !Number.isFinite(errorPct) || !Number.isFinite(pv) || !Number.isFinite(cb)) {
+  holdReasons.push('INVALID_METRIC_VALUE');
+}
+
+if (Number.isFinite(pv) && pv < cfg.minPageView.value) holdReasons.push(`LOW_SAMPLE_PAGE_VIEW(${pv}<${cfg.minPageView.value})`);
+if (Number.isFinite(cb) && cb < cfg.minCallback.value) holdReasons.push(`LOW_SAMPLE_CALLBACK(${cb}<${cfg.minCallback.value})`);
+
+if (Number.isFinite(payPct) && payPct < cfg.paymentSuccessMinPct.value) rollbackReasons.push(`PAYMENT_SUCCESS_LOW(${payPct}%<${cfg.paymentSuccessMinPct.value}%)`);
+if (Number.isFinite(fallbackPct) && fallbackPct > cfg.fallbackWarnPct.value) rollbackReasons.push(`FALLBACK_RATE_HIGH(${fallbackPct}%>${cfg.fallbackWarnPct.value}%)`);
+if (Number.isFinite(errorPct) && errorPct > cfg.errorWarnPct.value) rollbackReasons.push(`ERROR_RATE_HIGH(${errorPct}%>${cfg.errorWarnPct.value}%)`);
 
 let decision = 'GO';
 if (rollbackReasons.length) decision = 'ROLLBACK WATCH';
@@ -61,11 +95,11 @@ const lines = [
   `- error_rate_vs_page_view: ${errorPct}%`,
   '',
   '## Threshold Config',
-  `- min_page_view: ${cfg.minPageView}`,
-  `- min_callback: ${cfg.minCallback}`,
-  `- payment_success_min_pct: ${cfg.paymentSuccessMinPct}`,
-  `- fallback_warn_pct: ${cfg.fallbackWarnPct}`,
-  `- error_warn_pct: ${cfg.errorWarnPct}`,
+  `- min_page_view: ${cfg.minPageView.value} (${cfg.minPageView.source})`,
+  `- min_callback: ${cfg.minCallback.value} (${cfg.minCallback.source})`,
+  `- payment_success_min_pct: ${cfg.paymentSuccessMinPct.value} (${cfg.paymentSuccessMinPct.source})`,
+  `- fallback_warn_pct: ${cfg.fallbackWarnPct.value} (${cfg.fallbackWarnPct.source})`,
+  `- error_warn_pct: ${cfg.errorWarnPct.value} (${cfg.errorWarnPct.source})`,
   '',
   '## Decision Reasons',
   `- rollback_reasons: ${rollbackReasons.length ? rollbackReasons.join('; ') : 'none'}`,
