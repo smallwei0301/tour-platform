@@ -7,6 +7,7 @@
 
 import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../../src/lib/api';
+import { validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -20,6 +21,9 @@ export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ blackoutId: string }> }
 ) {
+  const csrfError = validateCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = verifyGuideSession(request);
   if (!session) {
     return Response.json(fail('UNAUTHORIZED', 'Guide session required'), { status: 401 });
