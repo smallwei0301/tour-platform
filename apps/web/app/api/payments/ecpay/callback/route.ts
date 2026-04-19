@@ -34,8 +34,12 @@ function normalizePayload(headers: Headers, rawText: string) {
 function mapOrderId(payload: any) {
   // 優先使用 CustomField1（我們存放 orderId 的地方）
   // 然後是直接傳入的 orderId（模擬付款用）
-  // 最後才是 MerchantTradeNo（需要解析）
-  return payload?.CustomField1 || payload?.orderId || payload?.MerchantTradeNo || payload?.merchantTradeNo || null;
+  // 不再接受 MerchantTradeNo 當作 orderId，避免 callback 指向錯誤訂單
+  return payload?.CustomField1 || payload?.orderId || null;
+}
+
+function mapOwnerEmail(payload: any) {
+  return payload?.CustomField2 || payload?.contactEmail || payload?.ContactEmail || null;
 }
 
 function mapTradeNo(payload: any) {
@@ -70,6 +74,14 @@ export async function POST(request: Request) {
     return Response.json(fail('INVALID_REQUEST', 'orderId is required'), { status: 400 });
   }
 
+  const isECPayCallback = request.headers.get('content-type')?.includes('application/x-www-form-urlencoded');
+  if (isECPayCallback && !payload?.CustomField1) {
+    return new Response('1|OK', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
   // 🔐 P10-1: Verify ECPay CheckMacValue
   try {
     const { hashKey, hashIV } = getECPayCredentials();
@@ -101,7 +113,6 @@ export async function POST(request: Request) {
   // 🔐 P10-3: 檢查 ECPay 付款結果代碼
   // RtnCode = "1" 表示付款成功，其他代碼表示失敗
   const rtnCode = payload?.RtnCode;
-  const isECPayCallback = request.headers.get('content-type')?.includes('application/x-www-form-urlencoded');
 
   if (isECPayCallback && rtnCode !== '1' && rtnCode !== 1) {
     // ECPay 回報付款失敗
@@ -129,6 +140,7 @@ export async function POST(request: Request) {
     const result = await processPaymentCallbackDb({
       ...payload,
       orderId,
+      ownerEmail: mapOwnerEmail(payload),
       tradeNo: mapTradeNo(payload)
     });
 
