@@ -39,3 +39,20 @@ test('ecpay callback is idempotent for paid order', async () => {
   assert.equal(result.scheduleUpdated, false);
   assert.equal(result.order.status, 'paid');
 });
+
+test('ecpay callback rejects owner email mismatch', async () => {
+  const order = await createOrderDb({
+    experienceSlug: 'kaohsiung-chaishan-cave-experience',
+    scheduleId: 'sch_chaishan_0401',
+    peopleCount: 1,
+    contactName: 'Wei',
+    contactPhone: '0912345678',
+    contactEmail: 'owner@example.com'
+  });
+
+  await assert.rejects(
+    () => processPaymentCallbackDb({ orderId: order.id, ownerEmail: 'attacker@example.com', tradeNo: 'MOCK125' }),
+    /ownership validation failed/
+  );
+});
+
