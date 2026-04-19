@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "npm run dev -w @tour/web",
     "build": "cd apps/web && /tmp/tour-platform/node_modules/.bin/next build",
-    "test": "npm run test -w @tour/web"
+    "test": "npm run test -w @tour/web",
+    "security:scan-secrets": "node scripts/scan-secrets.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
