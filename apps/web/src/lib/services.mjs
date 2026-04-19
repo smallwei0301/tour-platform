@@ -232,6 +232,12 @@ export function processPaymentCallback(input) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw new Error('order not found');
 
+  const ownerEmail = normalizeSlug(input?.ownerEmail).toLowerCase();
+  const contactEmail = normalizeSlug(order.contactEmail).toLowerCase();
+  if (ownerEmail && contactEmail && ownerEmail !== contactEmail) {
+    throw new Error('order ownership validation failed');
+  }
+
   // idempotent: if already paid, return without double seat booking
   if (order.status === 'paid' || order.status === 'confirmed' || order.status === 'completed') {
     return { order, scheduleUpdated: false };

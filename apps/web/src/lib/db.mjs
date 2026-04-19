@@ -1335,11 +1335,17 @@ export async function processPaymentCallbackDb(input) {
   // ── Step 1: 取得訂單資訊 ──
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id, status, total_twd, people_count, schedule_id')
+    .select('id, status, total_twd, people_count, schedule_id, contact_email')
     .eq('id', orderId)
     .single();
 
   if (orderError || !order) throw new Error('order not found');
+
+  const ownerEmail = String(input?.ownerEmail || '').trim().toLowerCase();
+  const contactEmail = String(order.contact_email || '').trim().toLowerCase();
+  if (ownerEmail && contactEmail && ownerEmail !== contactEmail) {
+    throw new Error('order ownership validation failed');
+  }
 
   // 冪等處理：已付款直接回傳
   if (['paid', 'confirmed', 'completed'].includes(order.status)) {
