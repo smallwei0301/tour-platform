@@ -7,7 +7,6 @@ const EXCLUDES = [
   /^apps\/web\/\.env\.local$/,
   /^apps\/web\/app\/admin\/unauthorized\/page\.tsx$/,
   /^apps\/web\/e2e\//,
-  /^.*\.md$/,
   /^.*\/fixtures\//,
   /^.*\/__snapshots__\//,
 ];
@@ -20,11 +19,11 @@ const PATTERNS = [
   { name: 'Private key header', re: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g },
   {
     name: 'Hardcoded service role key assignment',
-    re: /SUPABASE_SERVICE_ROLE_KEY\s*=\s*(?!\s*(?:process\.env|['\"]?your[-_]|['\"]?\*{3}))["'`]?[^\s"'`]{16,}/g,
+    re: /SUPABASE_SERVICE_ROLE_KEY\s*=\s*(?!\s*(?:process\.env|['\"]?your[-_]|['\"]?\*{3}|<))["'`]?[^\s"'`]{16,}/g,
   },
   {
     name: 'Hardcoded admin access token assignment',
-    re: /ADMIN_ACCESS_TOKEN\s*=\s*(?!\s*(?:process\.env|['\"]?your[-_]|['\"]?test-token-123|['\"]?\*{3}))["'`]?[^\s"'`]{16,}/g,
+    re: /ADMIN_ACCESS_TOKEN\s*=\s*(?!\s*(?:process\.env|['\"]?your[-_]|['\"]?test-token-123|['\"]?\*{3}|<))["'`]?[^\s"'`]{16,}/g,
   },
 ];
 
