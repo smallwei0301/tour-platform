@@ -100,7 +100,8 @@ export async function middleware(req: NextRequest) {
       pathname === '/guide/login' ||
       pathname === '/guide/apply' ||
       pathname.startsWith('/guide/apply/') ||
-      pathname === '/api/guide/auth/session';
+      pathname === '/api/guide/auth/session' ||
+      pathname === '/api/guide/auth/csrf';
     if (isPublic) return NextResponse.next();
 
     if (!verifyGuideSessionMiddleware(req)) {

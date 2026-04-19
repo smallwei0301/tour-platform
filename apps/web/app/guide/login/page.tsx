@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 function GuideLoginForm() {
   const router = useRouter();
@@ -32,10 +33,12 @@ function GuideLoginForm() {
 
     setLoading(true);
     try {
+      await fetch('/api/guide/auth/csrf', { cache: 'no-store' });
+
       const body = isFirstTime ? { token, password } : { email: email.trim().toLowerCase(), password };
       const res = await fetch('/api/guide/auth/session', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify(body),
       });
       const json = await res.json();

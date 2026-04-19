@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -109,6 +110,7 @@ export default function GuideAvailabilityPage() {
   }, [previewDateFrom, previewDateTo]);
 
   useEffect(() => {
+    void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
     loadData();
     loadPreview();
   }, [loadData, loadPreview]);
@@ -155,7 +157,7 @@ export default function GuideAvailabilityPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(ruleForm),
       });
       const json = await res.json();
@@ -174,7 +176,10 @@ export default function GuideAvailabilityPage() {
 
   const deleteRule = async (ruleId: string) => {
     if (!confirm('確定要刪除此時段規則嗎？')) return;
-    await fetch(`/api/guide/availability-rules/${ruleId}`, { method: 'DELETE' });
+    await fetch(`/api/guide/availability-rules/${ruleId}`, {
+      method: 'DELETE',
+      headers: csrfHeaders(),
+    });
     await loadData();
     await loadPreview();
   };
@@ -198,7 +203,7 @@ export default function GuideAvailabilityPage() {
     try {
       const res = await fetch('/api/guide/blackout-dates', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           starts_at: new Date(blackoutForm.starts_at).toISOString(),
           ends_at: new Date(blackoutForm.ends_at).toISOString(),
@@ -222,7 +227,10 @@ export default function GuideAvailabilityPage() {
 
   const deleteBlackout = async (blackoutId: string) => {
     if (!confirm('確定要刪除此休假時段嗎？')) return;
-    await fetch(`/api/guide/blackout-dates/${blackoutId}`, { method: 'DELETE' });
+    await fetch(`/api/guide/blackout-dates/${blackoutId}`, {
+      method: 'DELETE',
+      headers: csrfHeaders(),
+    });
     await loadData();
     await loadPreview();
   };

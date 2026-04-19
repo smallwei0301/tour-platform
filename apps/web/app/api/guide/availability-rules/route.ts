@@ -8,6 +8,7 @@
 
 import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../src/lib/api';
+import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 
 async function getSupabase() {
@@ -95,6 +96,9 @@ interface CreateRuleBody {
 }
 
 export async function POST(request: NextRequest) {
+  const csrfError = validateCsrf(request);
+  if (csrfError) return csrfError;
+
   const session = verifyGuideSession(request);
   if (!session) {
     return Response.json(fail('UNAUTHORIZED', 'Guide session required'), { status: 401 });
