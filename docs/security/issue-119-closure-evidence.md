@@ -37,11 +37,13 @@ Current status: **PARTIAL (platform env update requires manual console access)**
   - `git filter-branch --index-filter 'git rm --cached --ignore-unmatch apps/web/.env.local' --prune-empty --tag-name-filter cat -- --all`
   - cleanup refs + gc
 
-### Local runtime result (this workspace)
-- Rewrite attempt in working repo blocked by unstaged changes.
-- Action taken: prepared formal playbook + recovery instructions to execute in clean mirror clone.
+### Execution result (2026-04-19, Asia/Taipei)
+- Rewrote history in clean clone: `/tmp/tp-rewrite`
+- Force-pushed rewritten `main` to origin
+- Remote `main` now points to: `f027e5d14a116fe605f52566966b73bc8daa0309`
+- Verification: `git log --all -- apps/web/.env.local` => 0 entries in rewritten clone
 
-Current status: **BLOCKED_MANUAL (needs clean mirror clone + force-push permissions)**
+Current status: **DONE (history rewrite + force-push completed)**
 
 ## D) Post-Rewrite / Post-Cutover Validation
 
