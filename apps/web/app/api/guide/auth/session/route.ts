@@ -7,6 +7,7 @@ import {
   createGuideSessionCookies,
   clearGuideSessionCookies,
 } from '../../../../../src/lib/guide-auth';
+import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -19,12 +20,25 @@ async function getSupabase() {
 /** GET — check current guide session */
 export async function GET(req: Request) {
   const session = verifyGuideSession(req);
-  if (!session) return Response.json(ok({ authorized: false }));
-  return Response.json(ok({ authorized: true, guideId: session.guideId, guideName: session.guideName }));
+  const token = createCsrfToken();
+  const headers = new Headers({ 'content-type': 'application/json' });
+  headers.append('set-cookie', createCsrfCookie(token));
+
+  if (!session) {
+    return new Response(JSON.stringify(ok({ authorized: false })), { status: 200, headers });
+  }
+
+  return new Response(
+    JSON.stringify(ok({ authorized: true, guideId: session.guideId, guideName: session.guideName })),
+    { status: 200, headers }
+  );
 }
 
 /** POST — login (first-time via invite token, or password login) */
 export async function POST(req: Request) {
+  const csrfError = validateCsrf(req);
+  if (csrfError) return csrfError;
+
   const body = await req.json().catch(() => ({}));
   const { token, password, guideId: loginGuideId } = body as Record<string, string>;
 
@@ -69,6 +83,7 @@ export async function POST(req: Request) {
     const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, true);
     const headers = new Headers({ 'content-type': 'application/json' });
     cookies.forEach((c) => headers.append('set-cookie', c));
+    headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
 
     return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
   }
@@ -98,6 +113,7 @@ export async function POST(req: Request) {
     const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
     const headers = new Headers({ 'content-type': 'application/json' });
     cookies.forEach((c) => headers.append('set-cookie', c));
+    headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
 
     return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
   }
@@ -126,6 +142,7 @@ export async function POST(req: Request) {
     const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
     const headers = new Headers({ 'content-type': 'application/json' });
     cookies.forEach((c) => headers.append('set-cookie', c));
+    headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
 
     return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
   }
@@ -134,8 +151,12 @@ export async function POST(req: Request) {
 }
 
 /** DELETE — logout */
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  const csrfError = validateCsrf(request);
+  if (csrfError) return csrfError;
+
   const headers = new Headers({ 'content-type': 'application/json' });
   clearGuideSessionCookies().forEach((c) => headers.append('set-cookie', c));
+  headers.append('set-cookie', `${CSRF_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
   return new Response(JSON.stringify(ok({ deleted: true })), { status: 200, headers });
 }

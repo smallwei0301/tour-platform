@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { csrfHeaders } from '../../src/lib/csrf-client';
 
 const NAV_ITEMS = [
   { href: '/guide/dashboard', label: '儀表板', icon: '📊' },
@@ -18,8 +19,15 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
   // Don't show nav on login page
   if (pathname === '/guide/login') return <>{children}</>;
 
+  useEffect(() => {
+    void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
+  }, []);
+
   async function handleLogout() {
-    await fetch('/api/guide/auth/session', { method: 'DELETE' });
+    await fetch('/api/guide/auth/session', {
+      method: 'DELETE',
+      headers: csrfHeaders(),
+    });
     router.push('/guide/login');
   }
 
