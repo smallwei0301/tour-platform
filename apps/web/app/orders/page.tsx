@@ -1,7 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import EmptyState from '../../src/components/guards/EmptyState';
+import InlineErrorState from '../../src/components/guards/InlineErrorState';
+import PageSkeleton from '../../src/components/guards/PageSkeleton';
 import { fetchMyOrders } from '../../src/lib/client-api';
 
 function toLabel(status: string) {
@@ -15,12 +18,25 @@ export default function OrdersPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [tab, setTab] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await fetchMyOrders();
+      setRows(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setRows([]);
+      setError(err instanceof Error ? err.message : '無法取得訂單資料');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    fetchMyOrders()
-      .then((data) => setRows(Array.isArray(data) ? data : []))
-      .finally(() => setLoading(false));
-  }, []);
+    void loadOrders();
+  }, [loadOrders]);
 
   const filtered = useMemo(() => {
     if (tab === 'all') return rows;
@@ -41,12 +57,11 @@ export default function OrdersPage() {
       </div>
 
       {loading ? (
-        <p style={{ color: 'var(--tp-muted)' }}>載入中…</p>
+        <PageSkeleton title="載入訂單中" lines={4} />
+      ) : error ? (
+        <InlineErrorState title="訂單載入失敗" message={error} onRetry={() => void loadOrders()} />
       ) : filtered.length === 0 ? (
-        <div className="tp-step-card">
-          <p>目前沒有訂單。</p>
-          <Link href="/activities" className="tp-btn tp-btn-primary">去看看行程</Link>
-        </div>
+        <EmptyState title="目前沒有訂單" description="先挑一個喜歡的行程開始吧。" ctaHref="/activities" ctaLabel="去看看行程" />
       ) : (
         <section className="tp-order-section">
           {filtered.map((o) => {

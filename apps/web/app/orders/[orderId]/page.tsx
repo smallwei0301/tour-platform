@@ -1,8 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import EmptyState from '../../../src/components/guards/EmptyState';
+import InlineErrorState from '../../../src/components/guards/InlineErrorState';
+import PageSkeleton from '../../../src/components/guards/PageSkeleton';
 import { createRefundRequest, fetchMyOrderDetail, fetchRefundRequests } from '../../../src/lib/client-api';
 
 export default function OrderDetailPage() {
@@ -13,21 +16,36 @@ export default function OrderDetailPage() {
   const [refundApplied, setRefundApplied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submittingRefund, setSubmittingRefund] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const loadOrder = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [detail, refundRows] = await Promise.all([
+        fetchMyOrderDetail(orderId),
+        fetchRefundRequests(orderId).catch(() => [])
+      ]);
+      setOrder(detail || null);
+      setRefunds(Array.isArray(refundRows) ? refundRows : []);
+    } catch (err) {
+      setOrder(null);
+      setRefunds([]);
+      setError(err instanceof Error ? err.message : '無法取得訂單詳情');
+    } finally {
+      setLoading(false);
+    }
+  }, [orderId]);
 
   useEffect(() => {
-    Promise.all([fetchMyOrderDetail(orderId), fetchRefundRequests(orderId).catch(() => [])])
-      .then(([detail, refundRows]) => {
-        setOrder(detail);
-        setRefunds(Array.isArray(refundRows) ? refundRows : []);
-      })
-      .finally(() => setLoading(false));
-  }, [orderId]);
+    if (!orderId) return;
+    void loadOrder();
+  }, [orderId, loadOrder]);
 
   async function handleApplyRefund() {
     try {
       setSubmittingRefund(true);
-      setError('');
+      setError(null);
       const created = await createRefundRequest({
         orderId,
         reason: 'user_request',
@@ -44,11 +62,32 @@ export default function OrderDetailPage() {
   }
 
   if (loading) {
-    return <main className="tp-container tp-order-detail-page"><p>載入中…</p></main>;
+    return (
+      <main className="tp-container tp-order-detail-page">
+        <PageSkeleton title="載入訂單詳情中" lines={5} />
+      </main>
+    );
+  }
+
+  if (error) {
+    return (
+      <main className="tp-container tp-order-detail-page">
+        <InlineErrorState title="訂單詳情載入失敗" message={error} onRetry={() => void loadOrder()} />
+      </main>
+    );
   }
 
   if (!order) {
-    return <main className="tp-container tp-order-detail-page"><p>找不到訂單。</p></main>;
+    return (
+      <main className="tp-container tp-order-detail-page">
+        <EmptyState
+          title="找不到這筆訂單"
+          description="可能已刪除或你暫時沒有存取權限。"
+          ctaHref="/orders"
+          ctaLabel="回訂單列表"
+        />
+      </main>
+    );
   }
 
   const scheduleText = order.scheduleStartAt ? new Date(order.scheduleStartAt).toLocaleString('zh-TW') : '—';
@@ -80,8 +119,6 @@ export default function OrderDetailPage() {
         <button className="tp-btn tp-btn-ghost" onClick={handleApplyRefund} disabled={submittingRefund || !!latestRefund}>
           {latestRefund ? '已送出退款申請' : submittingRefund ? '送出中…' : '申請取消'}
         </button>
-
-        {error && <p style={{ color: '#b42318', fontSize: 14 }}>⚠️ {error}</p>}
 
         {(refundApplied || latestRefund) && (
           <div className="tp-refund-track">
