@@ -1,77 +1,95 @@
-# Tour Platform 完整文件
+# Tour Platform 文件總覽
 
-> 最後更新：2026-04-09  
-> 當前進度：**Phase 12 規劃中** — Booking Engine + POS Lite + LINE / LIFF 架構設計已補齊
+> 最後更新：2026-04-20  
+> 當前主線：**Booking V2 rollout / Booking Engine V2 / 安全與 CI 穩定化**
 
-## 快速導航
-
-### 📊 策略 & 計劃
-- `01-strategy/01-project-plan/02-milestone-tracker.md` — 里程碑追蹤
-- `01-strategy/01-project-plan/07-ceo-decision-pack-v1.md` — CEO 決策包
-
-### 📱 產品 & 設計
-- `02-product/09-product-spec/10-guide-dashboard-manual.md` — 導遊後台操作手冊
-- `02-product/09-product-spec/07-mvp-user-flows.md` — MVP 用戶流程
-
-### 🔧 技術
-- `04-tech/03-dev-timeline/01-sprint-log.md` — **Sprint 執行記錄（最重要）**
-- `04-tech/03-dev-timeline/07-tracy-implementation-task-list-v1.md` — **Tracy 工程任務拆分版（Booking + POS）**
-- `04-tech/04-tech-architecture/02-database-schema.md` — DB Schema
-- `04-tech/04-tech-architecture/03-api-spec.md` — API 規格（v1）
-- `04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md` — **Booking + POS 改造總方案**
-- `04-tech/04-tech-architecture/09-booking-pos-migration-plan.md` — **Migration 設計**
-- `04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md` — **API Spec V2**
-- `06-analytics/01-event-tracking-design.md` — 事件追蹤設計
-- `06-analytics/02-tp004-engineering-report.md` — TP-004 工程報告
-
-### 💰 商業
-- `05-business/02-investor-deck/05-progress-report-2026-04.md` — 投資人進度報告
-
-## 最新進度摘要（2026-04-09）
-
-✅ **Phase 9 / 10 已完成**
-- Google OAuth 登入
-- Email 通知基礎
-- ECPay 沙箱與安全加固
-
-✅ **Booking Engine + POS Lite 規劃文件已補齊**
-- `08-booking-pos-improvement-plan.md`
-- `09-booking-pos-migration-plan.md`
-- `10-api-spec-v2-booking-pos.md`
-- `07-tracy-implementation-task-list-v1.md`
-
-🔜 **下一步（Phase 12 規劃）**
-- Availability-driven booking engine
-- Admin POS Lite
-- LINE / LIFF booking flow
-- Web booking v2 切流
-
-## 技術棧
-
-- Next.js 15（App Router）
-- Supabase PostgreSQL + Storage + Auth
-- Playwright E2E 測試
-- Vercel 部署
-
-## 關鍵成就
-
-| 項目 | 狀態 |
-|------|------|
-| 前台 MVP | ✅ 100% |
-| Admin 後台 | ✅ 100% |
-| 導遊儀表板 | ✅ 100% |
-| 訂單流程 | ✅ 100% |
-| 量測地基 | ✅ 100% |
-| E2E 測試 | ✅ 10/10 PASS |
-| 旅客 Auth | 🔜 下一步 |
-| 真實金流 | 🔜 待開始 |
-
-## 部署
-
-- **平台：** Vercel
-- **Branch：** main
-- **Latest：** dca4eaf（2026-04-06）
+本目錄的目的不是保存所有歷史，而是讓人快速找到：
+1. 現在專案在做什麼
+2. 哪些文件是當前主線
+3. 哪些文件是歷史背景 / 補充資料
 
 ---
 
-更詳細的文件結構請參考本目錄下各個子資料夾。
+## 先看這些（最高優先）
+
+### 專案總覽
+- `../README.md` — repo 根總覽
+
+### 當前主線：Booking V2 / rollout
+- `implementation/issue-96-rollout-contract.md`
+- `operations/booking-v2-b3-rollout.md`
+- `operations/booking-v2-daily-go-no-go.md`
+- `qa/booking-v2-rollout-manual-checklist.md`
+- `qa/reports/2026-04-17-booking-v2-manual-test-report.md`
+- `implementation/issue-103-metrics-dashboard-contract.md`
+- `operations/booking-v2-dashboard-data-source.md`
+
+### 技術設計
+- `04-tech/04-tech-architecture/02-database-schema.md`
+- `04-tech/04-tech-architecture/03-api-spec.md`
+- `04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md`
+- `04-tech/04-tech-architecture/09-booking-pos-migration-plan.md`
+- `04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md`
+
+### 安全 / 收斂
+- `security/issue-119-evidence-2026-04-20.md`
+- `security/issue-119-history-rewrite-runbook.md`
+- `security/issue-56-secret-rotation-checklist.md`
+- `security/issue-56-blocker-followup-status.md`
+
+---
+
+## 目前 docs 分層建議
+
+### A. 當前有效主線文件
+這些文件與當前 open issues / rollout / main branch 狀態直接相關：
+- `implementation/*`
+- `operations/*`
+- `qa/*`
+- `security/*`
+- `04-tech/04-tech-architecture/08~10*`
+
+### B. 歷史背景 / 早期規劃
+以下多數是早期 Phase 1~10 的背景資料，仍可參考，但不應被誤認為「當前執行主線」：
+- `01-strategy/**`
+- `02-product/**`
+- `03-design/**`
+- `05-business/**`
+- `06-legal/**`
+- `04-tech/03-dev-timeline/**`
+
+### C. 需要後續持續整理的區塊
+- `04-tech/03-dev-timeline/`：歷史很多，應逐步轉為「索引 + 關鍵里程碑」
+- `01-strategy/01-project-plan/`：部分 roadmap 與目前 issue reality 已不完全一致
+- `05-business/06-payment-plan/` / `07-operations-plan/`：部分文件仍偏空殼或待補
+
+---
+
+## 目前 open issue 對應文件主線
+- **#96** — `implementation/issue-96-rollout-contract.md`, `operations/booking-v2-b3-rollout.md`
+- **#105** — `operations/booking-v2-daily-go-no-go.md`, `operations/reports/samples/booking-v2-go-no-go-sample.md`
+- **#117** — 目前偏 issue / code 主線，文件索引較少，後續可補 `security/` 或 `implementation/`
+- **PR #128** — trusted client IP / rate limiting 修正，完成後應補回技術或安全文件
+
+---
+
+## 今天（2026-04-20）文件清理重點
+- 已更新根 README，改成較精簡的「當前狀態 + 索引」
+- 已把 docs 主線明確切成：
+  - 當前有效主線
+  - 歷史背景
+  - 待整理區塊
+- 已確認 issue #103 / #104 / #119 對應文件落地 main
+- 已確認 #96 應保留 open，文件已存在但主題尚未完結
+- 已確認 CI env guard 問題由 PR #127 修復，最新 main CI PASS
+
+---
+
+## 文件維護原則
+1. 根 README 不再維護過長歷史流水帳
+2. `docs/README.md` 只負責導航與優先級，不複製全部內容
+3. issue 關閉時：更新對應文件與索引，不一定要改所有歷史檔
+4. 若主線改變，先更新：
+   - `../README.md`
+   - 本檔
+   - 對應 implementation / operations / security 文件

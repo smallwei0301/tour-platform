@@ -1,49 +1,55 @@
-# Tour Platform — Web App（前台 + Admin 後台 + Guide 後台）
+# Tour Platform — Web App
 
-> 整合前台旅客介面、Admin 管理後台、導遊儀表板
+> 前台旅客介面 + Admin 後台 + Guide 後台 + API routes
 
-## 當前狀態（2026-04-06）
+## 當前狀態（2026-04-20）
 
-✅ **Phase 8 完成** — 量測地基 + E2E 漏斗測試（10/10 testid PASS）
+### 已完成的核心能力
+- 前台活動頁 / 預訂流程 / 訂單流程
+- Admin 後台（訂單、退款、導遊審核、行程 CRUD、營運追蹤）
+- Guide Dashboard（登入、場次管理、訂單查看）
+- Google OAuth / 我的訂單 / Email 通知基礎
+- 安全加固第一輪（含 default secret block / secret scan guard）
 
-### 最新成就
-- ✅ 事件追蹤系統上線：track.ts / utm.ts / /api/events
-- ✅ E2E 漏斗測試基礎就位：funnel-booking-payment.spec.ts
-- ✅ ECPay 回調 API 準備好
-- ✅ 所有前台頁面 + 訂單流程 + 導遊後台 完整
+### 目前主線
+- Booking V2 rollout
+- Booking Engine / POS Lite 後續演進
+- 安全與 CI 穩定化
+
+### 最新收斂（2026-04-20）
+- PR #121：加上 production secret guard
+- PR #127：補 GitHub Actions CI env，修復 `GUIDE_SESSION_SECRET` blocker
+- 最新 main CI：PASS
 
 ## 技術棧
+- Next.js 15 (App Router)
+- React
+- Supabase PostgreSQL / Auth / Storage
+- Playwright
+- Vercel
 
-- **Framework：** Next.js 15 (App Router)
-- **UI：** React + CSS-in-JS
-- **DB：** Supabase PostgreSQL + RLS
-- **Storage：** Supabase Storage（WebP，Canvas 壓縮）
-- **Auth：** 導遊自製 session + UUID invite token
-- **支付：** ECPay（目前 mock，真實串接待開始）
-- **Testing：** Playwright E2E
-
-## 文件
-
-- `/app` — Next.js App Router 路由
-- `/src/lib` — 共用邏輯（DB、API、track）
-- `/src/components` — React 元件庫
-- `/e2e` — Playwright 測試用例
+## 目錄
+- `/app` — App Router routes
+- `/src/lib` — 共用邏輯（db、auth、email、tracking、security）
+- `/src/components` — UI components
+- `/e2e` — Playwright tests
 - `/public` — 靜態資源
 
 ## 開發
-
 ```bash
 npm install
-npm run dev          # localhost:3000
+npm run dev
 npm run build
-npm test             # Playwright
+npm test
 ```
 
-## 部署（Vercel）
+## 注意事項
+- build / CI 現在依賴合格的 `GUIDE_SESSION_SECRET` 與 `ADMIN_ACCESS_TOKEN`
+- 不要用弱預設值繞過 production security guard
+- 若 CI 因 security env block 失敗，優先檢查 `.github/workflows/ci.yml`
 
-```bash
-vercel
-```
-
-**主要部署分支：** `main`  
-**最新 commit：** `dca4eaf` Merge PR#2（2026-04-06 01:03）
+## 相關文件
+- `../../README.md`
+- `../../docs/README.md`
+- `../../docs/implementation/issue-96-rollout-contract.md`
+- `../../docs/security/issue-119-evidence-2026-04-20.md`

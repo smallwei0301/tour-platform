@@ -4,401 +4,122 @@
 
 ---
 
-## 🔖 目前專案狀態（2026-04-07 更新）
+## 🔖 目前專案狀態（2026-04-20 更新）
 
+```text
+Phase 1  前台 MVP                     ████████████ 100% ✅
+Phase 2  Admin 後台核心               ████████████ 100% ✅
+Phase 3  UI 精修                      ████████████ 100% ✅
+Phase 4  行程後台                     ████████████ 100% ✅
+Phase 5  付款扣位完整閉環             ████████████ 100% ✅
+Phase 6  導遊儀表板                   ████████████ 100% ✅
+Phase 7  前台訂單流程完整             ████████████ 100% ✅
+Phase 8  量測地基 + E2E               ████████████ 100% ✅
+Phase 9  旅客 Auth + 通知             ████████████ 100% ✅
+Phase 10 正式金流 + 安全加固          ████████████ 100% ✅
+Phase 11 Andy Lee Go-Live             ░░░░░░░░░░░░   0% 🔜
+Phase 12 Booking Engine + POS Lite    █░░░░░░░░░░░  10% 🛠️ 文件與基礎規劃已落地
+Phase 13 成長基礎                     ░░░░░░░░░░░░   0% 🔜
 ```
-Phase 1  前台 MVP             ████████████ 100%  ✅
-Phase 2  Admin 後台核心       ████████████ 100%  ✅
-Phase 3  UI 精修              ████████████ 100%  ✅
-Phase 4  行程後台             ████████████ 100%  ✅
-Phase 5  付款扣位完整閉環     ████████████ 100%  ✅ 2026-04-01
-Phase 6  導遊儀表板           ████████████ 100%  ✅ 2026-04-03
-Phase 7  前台訂單流程完整     ████████████ 100%  ✅ 2026-04-03
-Phase 8  量測地基 + E2E       ████████████ 100%  ✅ 2026-04-06
-Phase 9  旅客 Auth + 通知     ████████████ 100%  ✅ 2026-04-07
-Phase 10 正式金流 + 安全加固  ████████████ 100%  ✅ 已完成
-Phase 11 Andy Lee Go-Live     ░░░░░░░░░░░░   0%  🔜 4 月底目標
-Phase 12 Booking Engine + POS ░░░░░░░░░░░░   5%  📝 規劃完成，待 Tracy 開發
-Phase 13 成長基礎             ░░░░░░░░░░░░   0%  🔜 5 月持續
-```
 
-**🎯 目標：4 月底前 Andy Lee 行程正式可收真錢。**
+**目前主線：** Booking Engine V2 / Booking V2 rollout / 安全與 CI 穩定化。  
+**最新狀態：** 今日已完成多張 PR merge、舊衝突 PR 重開整理、Issue 收斂、CI 修復並重新轉綠。
 
 ---
 
-## 📅 本週計畫（2026-04-07 ~ 04-12）
+## 📌 今日收斂結果（2026-04-20）
 
-### ✅ Phase 9 完成（04/07）
+### 已 merge 的重點 PR
+- **#120** — issue #119 closure / evidence package
+- **#121** — block default guide session secret in production
+- **#122** — docs(issue-103): metrics dashboard contract
+- **#123** — docs(issue-96): rollout phase contract + acceptance matrix
+- **#124** — docs(qa): Booking V2 rollout manual checklist + test report
+- **#125** — docs(issue-104): rollback runbook + rollback drill evidence
+- **#126** — re-land secret scan guard and sanitized env template
+- **#127** — fix(ci): provide strong `GUIDE_SESSION_SECRET` for production build guard
 
-| # | 任務 | 負責 | 狀態 |
-|---|------|------|------|
-| 1 | DB Migration 008 + 009（events 表 + utm）執行到 Supabase | Tracy | ✅ |
-| 2 | DB Migration 010（orders.user_id）| Tracy | ✅ |
-| 3 | DB Migration 011（Storage RLS）| Tracy | ✅ |
-| 4 | Google OAuth 登入（Supabase Auth + @supabase/ssr） | Tracy | ✅ |
-| 5 | `/me/orders` 改用 OAuth session（移除 email query） | Tracy | ✅ |
-| 6 | Email 通知系統（Resend，4 種觸發）| Tracy | ✅ |
-| 7 | 登入頁設計重製（品牌綠 + 山景背景）| Tracy | ✅ |
-| 8 | Supabase Auth redirect URL 設定 | Tracy | ✅ |
+### 今日已關閉的 issue
+- **#56** — Security Vulnerability: Exposed Secrets in Version Control
+- **#57** — Default Cryptographic Secret in Production
+- **#103** — Metrics dashboard contract artifact
+- **#104** — Rollback runbook / drill evidence
+- **#119** — Security follow-up closure issue
 
-### ✅ 已完成（Phase 10，04/07）
+### 目前保留 open 的主線 issue
+- **#96** — Booking page V2 rewrite evaluation and phased rollout
+- **#105** — Daily Go/No-Go automation
+- **#117** — CSRF Phase 2 follow-up
+- **#128 (open PR)** — trusted client IP resolver for rate-limited routes
 
-| # | 任務 | 負責 | 優先 |
-|---|------|------|------|
-| 1 | ECPay 商家帳號申請 | Emily | P0 |
-| 2 | 安全性 Checklist（OWASP Top 10） | Tracy | P0 |
-| 3 | API Rate Limiting | Tracy | P0 |
-| 4 | Sentry 錯誤監控 | Tracy | P0 |
-| 5 | ECPay 沙箱串接 | Tracy | P0 |
-
-### Phase 9 產出
-- ✅ Google OAuth 登入正式可用（Supabase Auth）
-- ✅ `/me/orders` 用 session 識別，未登入自動跳 `/login`
-- ✅ 付款成功 / 建立訂單 / 取消 / 退款 — 4 種 Email 通知
-- ✅ events 表 + UTM 欄位在 Supabase 正式上線
-- ✅ orders 表新增 user_id（向後相容）
-- ✅ Storage RLS public read（activity-images bucket）
-- ✅ 登入頁全新設計（品牌綠 + 翠綠山景背景圖）
+### CI 狀態
+- 今日 merge 後曾出現 main CI failure
+- 根因不是 docs merge regression，而是 **#121 安全 guard 生效後，GitHub Actions workflow 缺少合格的 `GUIDE_SESSION_SECRET` / `ADMIN_ACCESS_TOKEN`**
+- 已由 **PR #127** 修復
+- 最新 main CI：**PASS**
 
 ---
 
-## 最近里程碑
+## 🚀 現在建議先看哪些文件
 
-**2026-04-07 🎉 Phase 9 完成：旅客 Auth + Email 通知**
-- ✅ Google OAuth 登入（Supabase Auth + @supabase/ssr）
-- ✅ `/login` 頁面全新設計（品牌綠 + Unsplash 山景圖）
-- ✅ `/me/orders` session-based（移除 email query，未登入 → redirect `/login`）
-- ✅ Email 通知系統（Resend）：訂單建立 / 付款成功 / 取消 / 退款
-- ✅ DB Migration 010：orders.user_id（UUID，向後相容）
-- ✅ DB Migration 011：Storage RLS public read（activity-images）
-- ✅ Supabase Auth URL allow list 設定完成
-- ✅ branch `feat/phase9-auth-notification` → PR merge to main
+### 1. 專案總覽 / 文件索引
+- [`docs/README.md`](./docs/README.md)
 
-**2026-04-06 🎉 Phase 8 完成：量測地基 + E2E 漏斗測試**
-- ✅ 事件追蹤系統：track.ts + utm.ts + events.ts，涵蓋完整漏斗
-- ✅ E2E 漏斗測試骨架：funnel-booking-payment.spec.ts（253 行，10 個 TC）
-- ✅ 10/10 testid PASS（Judy 手測驗證）
-- ✅ ECPay 金流回調 API 就位
-- ✅ PR#2 合入 main：commit dca4eaf
+### 2. 當前主線（Booking V2 / rollout）
+- [`docs/implementation/issue-96-rollout-contract.md`](./docs/implementation/issue-96-rollout-contract.md)
+- [`docs/operations/booking-v2-b3-rollout.md`](./docs/operations/booking-v2-b3-rollout.md)
+- [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
+- [`docs/qa/booking-v2-rollout-manual-checklist.md`](./docs/qa/booking-v2-rollout-manual-checklist.md)
 
-**2026-04-03 — Phase 6+7 完成**
-- ✅ 導遊儀表板 merge to main
-- ✅ 前台訂單流程完整化（付款 / 訂單列表 / 取消 / 退款），Judy 8/8 PASS
+### 3. 技術核心文件
+- [`docs/04-tech/04-tech-architecture/02-database-schema.md`](./docs/04-tech/04-tech-architecture/02-database-schema.md)
+- [`docs/04-tech/04-tech-architecture/03-api-spec.md`](./docs/04-tech/04-tech-architecture/03-api-spec.md)
+- [`docs/04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md`](./docs/04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md)
+- [`docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md`](./docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md)
 
----
-
-## ✅ 完整功能清單
-
-### 前台（旅客端）
-
-| 功能 | 狀態 |
-|------|------|
-| 首頁（Hero、精選行程、導遊 Spotlight、FAQ） | ✅ |
-| 行程列表頁（篩選、排序、地區分類） | ✅ |
-| 行程詳情頁（KKday 風格雙欄 layout） | ✅ |
-| 圖片 Carousel（手機 swipe / 桌機 grid） | ✅ |
-| 方案選擇（DatePlanSection：日期 × 方案 × 剩餘名額） | ✅ |
-| 方案詳情 Modal（7 tabs，含地圖連結） | ✅ |
-| 行程時間軸（itinerary timeline） | ✅ |
-| 旅客評價顯示 | ✅ |
-| 導遊列表 / 個人頁 | ✅ |
-| 3-step 預訂流程（選場次 → 填資料 → 付款） | ✅ |
-| 預訂頁讀取 DB 資料（非 hardcode fixtures） | ✅ 2026-04-01 |
-| **付款頁（mock `/order/pay`）** | ✅ 2026-04-03 |
-| **旅客 Google OAuth 登入 / 登出** | ✅ 2026-04-07 |
-| **`/login` 頁面（品牌設計）** | ✅ 2026-04-07 |
-| **Navbar 登入狀態（顯示用戶名稱 + 頭像 + 登出）** | ✅ 2026-04-07 |
-| **我的訂單列表（`/me/orders`，session-based，未登入 redirect）** | ✅ 2026-04-07 |
-| **訂單詳情頁（`/me/orders/:id`）** | ✅ 2026-04-03 |
-| **取消訂單（pending_payment 自助取消 + 席位釋放）** | ✅ 2026-04-03 |
-| 退款申請（前台 + 後台審核） | ✅ 2026-04-03 |
-| 主題 landing page（Cave / River） | ✅ |
-| Blog、About、Contact、法律頁（共 20+ 頁面） | ✅ |
-| 行動版 RWD | ✅ |
-
-### Admin 後台（管理端）
-
-| 功能 | 狀態 |
-|------|------|
-| 登入 / 登出 / Session 管理 | ✅ |
-| Token 輪替 + 強制登出所有 Session | ✅ |
-| 訂單管理（列表 + 詳情 + 備註 + 例外 + audit log） | ✅ |
-| 退款管理 | ✅ |
-| 導遊審核 | ✅ |
-| **導遊產生邀請碼（一鍵生成 24h 邀請連結）** | ✅ 2026-04-02 |
-| 營運追蹤（contribution margin + CSV） | ✅ |
-| KPI 可配置設定（版本控制 + rollback） | ✅ |
-| 行程列表 + 新增 + 刪除 | ✅ |
-| 行程編輯（所有欄位可後台編輯） | ✅ |
-| 導遊搜尋（GuideSearch） | ✅ |
-| 圖片上傳（封面 + Gallery，Supabase Storage） | ✅ |
-| 方案管理（PlanEditor，含完整方案詳情欄位） | ✅ |
-| 排程管理（批次日期 × 方案開關 + 容量） | ✅ |
-| JSON 行程匯入（含驗證 + diff 預覽） | ✅ |
-| JSON 樣板下載（豐富版柴山秘境範例） | ✅ |
-| 查看前台連結（後台直達行程前台） | ✅ |
-
-### 導遊後台（Guide Dashboard）
-
-| 功能 | 狀態 |
-|------|------|
-| 導遊登入（邀請碼首次設密碼 / 一般密碼登入） | ✅ 2026-04-02 |
-| 導遊登出 + Session 管理（7 天 cookie） | ✅ 2026-04-02 |
-| 儀表板（本月訂單數 / 近期訂單 / 本週場次） | ✅ 2026-04-02 |
-| 場次管理（開啟/關閉 toggle + 容量調整） | ✅ 2026-04-02 |
-| 訂單查看（列表 + 詳情 Modal + 狀態篩選） | ✅ 2026-04-02 |
-| 旅客 Email 隱碼保護（j\*\*\*@gmail.com） | ✅ 2026-04-02 |
-| 旅客電話顯示（完整號碼，僅導遊可見） | ✅ 2026-04-02 |
-| 資料隔離（guide_id ownership 驗證，403 防護） | ✅ 2026-04-02 |
-| 路由保護（middleware 攔截未登入存取） | ✅ 2026-04-02 |
-
-### 付款與訂位
-
-| 功能 | 狀態 |
-|------|------|
-| 建立訂單（POST /api/orders） | ✅ |
-| 付款 callback（ECPay 模擬） | ✅ |
-| 原子扣位（`fn_book_schedule` RPC，SELECT FOR UPDATE） | ✅ 2026-04-01 |
-| 冪等付款處理（重複 callback 不重複扣位） | ✅ 2026-04-01 |
-| Trigger 自動標記額滿（`trg_auto_full_status`） | ✅ |
-| 付款失敗 409 Conflict 保護 | ✅ 2026-04-01 |
-| ISR 60 秒快取（行程頁 booked_count 即時反映） | ✅ 2026-04-01 |
-| **E2E 測試驗證（8/8 PASS）** | ✅ 2026-04-01 |
-
-### DB（Supabase PostgreSQL）
-
-| Table / 功能 | 狀態 |
-|------|------|
-| users, guide_profiles, activities, activity_schedules | ✅ |
-| orders, payments, refund_requests, audit_logs | ✅ |
-| operations_tracking, kpi_settings, activity_reviews | ✅ |
-| `plans` JSONB 欄位（migration 004） | ✅ |
-| `plan_id`, `min_participants`, `guide_note`（migration 005） | ✅ |
-| `itinerary`, `social_proof_quotes` JSONB（migration 006） | ✅ |
-| `guide_password_hash`, `invite_token`, `guide_session_version`（migration 007） | ✅ 2026-04-02 |
-| `fn_book_schedule` / `fn_cancel_booking` atomic RPC | ✅ |
-| `trg_auto_full_status` trigger | ✅ |
-| Supabase Storage bucket `activity-images` | ✅ |
-| `events` 表（event tracking + UTM，migration 008+009）| ✅ 2026-04-07 |
-| `orders.user_id`（UUID，FK → auth.users，migration 010）| ✅ 2026-04-07 |
-| Storage RLS public read（activity-images，migration 011）| ✅ 2026-04-07 |
+### 4. 安全 / 收斂文件
+- [`docs/security/issue-119-evidence-2026-04-20.md`](./docs/security/issue-119-evidence-2026-04-20.md)
+- [`docs/security/issue-56-secret-rotation-checklist.md`](./docs/security/issue-56-secret-rotation-checklist.md)
+- [`docs/security/issue-56-blocker-followup-status.md`](./docs/security/issue-56-blocker-followup-status.md)
 
 ---
 
-## 🔜 後續開發計劃（2026-04-07 CEO Review 更新）
+## ✅ 功能狀態（精簡版）
 
-> 完整缺漏分析：[`docs/01-strategy/01-project-plan/17-phase9-plus-roadmap-v2.md`](./docs/01-strategy/01-project-plan/17-phase9-plus-roadmap-v2.md)
+### 已完成
+- 前台 MVP + 活動頁 + 預訂流程
+- Admin 後台（訂單、退款、導遊審核、行程 CRUD、營運追蹤）
+- 導遊儀表板（登入、場次管理、訂單查看）
+- 付款扣位閉環 + callback + 冪等保護
+- Google OAuth / 旅客登入 / 我的訂單
+- Email 通知基礎
+- 事件追蹤 / 基本 E2E 測試地基
+- 安全加固第一輪（issue #56 / #57 / #119 收斂）
+- secret-scan guard + CI env 修復
 
-### Phase 9：旅客 Auth + 通知基礎 ✅ 完成（2026-04-07）
-
-| 任務 | 說明 | 優先 | 狀態 |
-|------|------|------|------|
-| Google OAuth 登入 | Supabase Auth + @supabase/ssr | **P0** | ✅ |
-| `/me/orders` 改用 session | 移除 email query，用 OAuth session | **P0** | ✅ |
-| **Email 通知系統** | 訂單確認 / 付款成功 / 取消 / 退款（Resend）| **P0** | ✅ |
-| `/login` 頁設計 | 品牌綠 + 山景背景 + Google 按鈕 | P1 | ✅ |
-| DB Migration 010 | orders.user_id（auth.users 外鍵）| P1 | ✅ |
-| DB Migration 011 | Storage RLS public read | P1 | ✅ |
-| LINE 登入 | 台灣旅客首選行動登入 | P1 | 🔜 Phase 12 |
-| 旅客個人頁 | 訂單歷史 + 偏好設定 | P1 | 🔜 Phase 12 |
-| **導遊訂單通知** | 新訂單 Email/LINE 通知導遊 | P1 | 🔜 Phase 10 |
-
-### Phase 10：正式金流 + 安全加固 ✅ 100%
-
-**關鍵：安全性檢查必須在真實信用卡之前完成。**
-
-| 任務 | 說明 | 優先 | 預估 |
-|------|------|------|------|
-| **安全性 Checklist** | OWASP Top 10 + input validation 全面檢查 | **P0** | 1d |
-| **API Rate Limiting** | 所有 API route 加速率限制 | **P0** | 0.5d |
-| **Sentry 錯誤監控** | Next.js + Sentry SDK → Telegram alert | **P0** | 0.5d |
-| ECPay 沙箱串接 | 測試環境真實信用卡流程 | **P0** | 2d |
-| ECPay 正式串接 | 真實刷卡 + webhook 驗簽 + CheckMacValue | **P0** | 1d |
-| ~~Storage RLS 政策~~ | ~~補 public SELECT policy（TD-01）~~ | ~~P1~~ | ✅ Phase 9 已修 |
-| LINE Pay 串接 | 台灣主流行動支付 | P1 | 1.5d |
-| 導遊分潤撥款 | 抽成計算 + 撥款（先手動後自動） | P1 | 1d |
-| 超賣壓力測試 | concurrent 驗證 fn_book_schedule（TD-02） | P1 | 0.5d |
-
-### Phase 11：Andy Lee Go-Live 🔜 4 月底目標
-
-**這才是真正「上線」— 功能完成 ≠ 可以收錢。**
-
-| 任務 | 說明 | 優先 |
-|------|------|------|
-| Andy Lee 真實照片上傳 | 頭像 + 封面 + Gallery 5+ 張 | **P0** |
-| Andy Lee checklist 全勾 | 場次 / 交易 / 營運追蹤 | **P0** |
-| 退款政策細則 | 各情境退款比例 + 爭議處理 | **P0** |
-| 結算規則文件 | T+7 / 抽成算法 / 提款流程 | **P0** |
-| 客服 SOP | 分層處理 + 標準話術 | P1 |
-| Full E2E 真實場景走一次 | 下單→刷卡→確認→取消→退款 | **P0** |
-| SEO meta 優化 | og:image + LocalBusiness structured data | P1 |
-
-### Phase 12：Booking Engine + POS Lite（新規劃）
-
-| 任務 | 說明 | 優先 |
-|------|------|------|
-| Availability-driven booking engine | 以 availability rules + slot generator 取代靜態 schedule 思維 | **P0** |
-| Booking / Order / Payment 分層 | 拆出 `bookings`、`order_items`、`payment_events` | **P0** |
-| API Spec V2 | `/api/v2/bookings/*`、`available-slots`、Guide availability | **P0** |
-| Admin POS Lite | 客服 / 櫃台快速建單與人工收款 | P1 |
-| LINE / LIFF booking flow | 行動端入口與通知渠道 | P1 |
-| Web Booking V2 切流 | 前台改接 booking engine | P1 |
-
-### Phase 13：成長基礎（Go-Live 後 2-4 週）
-
-| 任務 | 說明 | 優先 |
-|------|------|------|
-| Admin 漏斗分析 Dashboard | 從 events 表拉轉換率 | P1 |
-| 評價系統 | 行程完成後留評閉環 | P1 |
-| CI/CD E2E 自動化 | GitHub Actions 跑 Playwright | P1 |
-| Supabase Auth for Guides | 廢除自製 session | P2 |
-| 第二位導遊 onboarding | 驗證 guide-onboarding-sop | P1 |
-| i18n（英文版） | 外語旅客基本可用 | P2 |
-
-### 🕳️ 已知文件負債（上線前必須補齊）
-
-| 文件 | 現況 | 優先 |
-|------|------|------|
-| `04-tech/04-tech-architecture/05-security-checklist.md` | 空殼 | **P0**（Phase 10 前） |
-| `05-business/06-payment-plan/01-ecpay-integration-guide.md` | 空殼 | **P0**（Phase 10 前） |
-| `05-business/06-payment-plan/03-settlement-rules.md` | 空殼 | P0（Phase 11 前） |
-| `05-business/06-payment-plan/04-refund-policy-detail.md` | 空殼 | P0（Phase 11 前） |
-| `05-business/07-operations-plan/01-guide-onboarding-sop.md` | 空殼 | P1 |
-| `05-business/07-operations-plan/02-customer-service-sop.md` | 空殼 | P1 |
-| `06-legal/08-legal-compliance/04-legal-todo.md` | 空殼 | P1 |
-
-### 📊 時程總覽
-
-| Phase | 預估工時 | 預計完成 |
-|-------|---------|---------|
-| Phase 9（Auth + 通知） | ~5.5d | 2026-04-14 |
-| Phase 10（金流 + 安全） | ~8d | 2026-04-25 |
-| Phase 11（Go-Live） | ~4d | 2026-04-30 |
-| Phase 12（成長基礎） | 持續 | 2026-05 ongoing |
-
-### ⚠️ 風險
-
-| 風險 | 對策 |
-|------|------|
-| Andy Lee 照片遲遲不到 | 設 4/15 deadline，備案 AI 示意圖 |
-| ECPay 商家帳號審核慢 | 立刻申請，先用沙箱 |
-| 法規風險（旅行業執照） | 已有 legal-decision-memo：不碰住宿交通 |
+### 進行中
+- Booking Engine V2 / Booking page V2 rollout
+- Availability / slots / POS Lite
+- rollout 監控與 go/no-go automation
 
 ---
 
-## 已拍板策略
-
-| 決策 | 內容 |
-|------|------|
-| Beachhead Market | 高雄柴山探洞 / 戶外特色導覽 |
-| 第一位導遊 | Andy Lee（李衍錫）— 先跑順單一導遊模型 |
-| 平台抽成 | 15% |
-| 定價模式 | per person |
-| 場次規則 | 導遊開放日期 × 方案 → 旅客付款占位 → 滿額停售 |
-| 原子扣位策略 | fn_book_schedule RPC（FOR UPDATE 鎖），防止超賣 |
-| 圖片儲存 | Supabase Storage（免費，CDN backed，WebP 壓縮） |
-| 法規原則 | 聚焦在地導覽/體驗、不碰住宿交通打包、保險由導遊負責 |
-
----
-
-## Repo 結構
+## 🧭 Repo 結構
 
 ```text
 tour-platform/
-├── apps/web/                    Next.js MVP Web（前台、API、Admin 後台）
-│   ├── app/
-│   │   ├── activities/          前台行程頁
-│   │   ├── booking/             預訂頁（讀 DB + URL query params）
-│   │   ├── admin/               Admin 後台
-│   │   └── api/                 API routes
-│   ├── src/
-│   │   ├── lib/db.mjs           DB 查詢層（含 fn_book_schedule RPC）
-│   │   ├── lib/client-api.ts    前端 API 呼叫層
-│   │   ├── lib/email.ts         Email 通知（Resend，4 種觸發）
-│   │   ├── lib/supabase/client.ts  Supabase browser client
-│   │   ├── lib/supabase/server.ts  Supabase server client（SSR）
-│   │   └── components/
-│   │       ├── activity/        行程相關元件
-│   │       │   ├── DatePlanSection.tsx
-│   │       │   ├── ImageCarousel.tsx
-│   │       │   └── PlanDetailModal.tsx
-│   │       └── admin/           Admin 元件
-│   └── public/
-│       └── activity-chaishan-sample.json  行程匯入樣本
-├── supabase/
-│   └── migrations/              004–011（新欄位 + RPC + trigger + events + auth）
-├── docs/                        策略、產品、技術、商業文件
-│   ├── 02-product/09-product-spec/
-│   │   └── 10-guide-dashboard-manual.md  導遊後台操作手冊（v1.0.0）
-│   └── 04-tech/03-dev-timeline/
-│       └── e2e-test-report-2026-04-02.md Phase 6 E2E 測試報告
-└── README.md                    本文件
+├── apps/web/            Next.js Web（前台 / API / Admin / Guide）
+├── supabase/            migrations / scripts
+├── docs/                策略 / 產品 / 技術 / 商業 / 法務 / 營運文件
+└── README.md            專案總覽（本文件）
 ```
 
 ---
 
-## 🔑 重要文件索引
-
-### 開發者必讀
-| 文件 | 用途 |
-|------|------|
-| [`docs/04-tech/03-dev-timeline/01-sprint-log.md`](./docs/04-tech/03-dev-timeline/01-sprint-log.md) | Sprint 歷史 + 當前狀態 |
-| [`docs/04-tech/03-dev-timeline/07-tracy-implementation-task-list-v1.md`](./docs/04-tech/03-dev-timeline/07-tracy-implementation-task-list-v1.md) | **Tracy 工程任務拆分版（最新執行清單）** |
-| [`docs/04-tech/04-tech-architecture/02-database-schema.md`](./docs/04-tech/04-tech-architecture/02-database-schema.md) | DB schema（v1 現況） |
-| [`docs/04-tech/04-tech-architecture/03-api-spec.md`](./docs/04-tech/04-tech-architecture/03-api-spec.md) | API 規格（v1 現況） |
-| [`docs/04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md`](./docs/04-tech/04-tech-architecture/08-booking-pos-improvement-plan.md) | **Booking + POS 改造總方案** |
-| [`docs/04-tech/04-tech-architecture/09-booking-pos-migration-plan.md`](./docs/04-tech/04-tech-architecture/09-booking-pos-migration-plan.md) | **Migration 設計** |
-| [`docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md`](./docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md) | **API Spec V2** |
-| [`docs/04-tech/03-dev-timeline/e2e-test-report-2026-04-02.md`](./docs/04-tech/03-dev-timeline/e2e-test-report-2026-04-02.md) | **Phase 6 E2E 測試報告（10/10 PASS）** |
-
-### 導遊操作
-| 文件 | 用途 |
-|------|------|
-| **[`docs/02-product/09-product-spec/10-guide-dashboard-manual.md`](./docs/02-product/09-product-spec/10-guide-dashboard-manual.md)** | **📖 導遊後台操作手冊（v1.0.0）** |
-
-### CEO / 方向判斷
-| 文件 | 用途 |
-|------|------|
-| [`docs/01-strategy/01-project-plan/02-milestone-tracker.md`](./docs/01-strategy/01-project-plan/02-milestone-tracker.md) | 里程碑追蹤 |
-| [`docs/05-business/02-investor-deck/01-executive-summary.md`](./docs/05-business/02-investor-deck/01-executive-summary.md) | 投資人摘要 |
-| **`docs/05-business/02-investor-deck/05-progress-report-2026-04.md`** | **📊 最新進度報告（2026-04-02）** |
-
----
-
-## MVP 成功定義
-
-MVP 的成功，不是頁面做完，而是：
-- ✅ Andy Lee 可以成功上架活動（在 Admin 後台操作）
-- ✅ 旅客可以看到可預約日期並完成付款
-- ✅ 付款後名額即時更新（原子扣位）
-- ✅ Admin 可在後台處理退款與營運追蹤
-- 🔜 團隊能用真實訂單數據回頭修正營運與抽成模型
-
----
-
-## 技術決策記錄
-
-| 決策 | 選擇 | 原因 |
-|------|------|------|
-| DB | Supabase PostgreSQL | 免費 starter、RLS、即時訂閱 |
-| 圖片儲存 | Supabase Storage | 已整合、免費、CDN backed |
-| 原子扣位 | PostgreSQL RPC + FOR UPDATE | 防止 concurrent 超賣 |
-| 圖片壓縮 | Canvas-based WebP（瀏覽器端） | 無 server overhead，最大 1200px |
-| 行程匯入格式 | JSON（非 MD） | 結構化欄位、支援巢狀、可程式驗證 |
-| Booking page | 讀 DB（非 fixtures） | 2026-04-01 遷移完成 |
-| ISR 策略 | 60 秒 revalidate | 兼顧即時性與效能 |
-| 場次鎖定 | fn_book_schedule（FOR UPDATE） | 同時多人下單不超賣 |
-
----
-
-## 目前 Vercel 部署資訊
-
-- **Branch（最新）：** `main`（Phase 9 已合入）
-- **Latest commit：** Phase 9 — Auth + Email + Login redesign（2026-04-07）
-- **Admin 測試帳號：** `smallwei0301@gmail.com`
-- **Supabase project：** `pyoderxmpeyqjwkeliiu`
-- **Auth provider：** Google OAuth（Supabase Auth）
-- **Email provider：** Resend（`re_HNva1erb_...`，100封/天 free tier）
--e 
-## 🚀 Marketing & Optimization
-- [Tour Platform Optimization V2](./docs/marketing/optimization-v2.md)
+## 📝 文件維護原則
+- `README.md` 只放：當前狀態、主線、最重要索引
+- 細節進度請看 `docs/`，不要把所有歷史都堆回根 README
+- 若 issue / PR / CI 狀態有重大變化，優先更新：
+  1. `README.md`
+  2. `docs/README.md`
+  3. 對應主線文件或安全文件
