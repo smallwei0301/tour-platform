@@ -23,7 +23,6 @@ function resolveGuideSessionSecret(): string {
   return randomBytes(32).toString('hex');
 }
 
-const GUIDE_SESSION_SECRET = resolveGuideSessionSecret();
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 // ─── Invite Token ────────────────────────────────────────────────────────────
@@ -76,7 +75,7 @@ export function verifyPassword(plain: string, stored: string): boolean {
 
 function signToken(guideId: string, sessionVersion: number): string {
   const payload = `${guideId}:${sessionVersion}`;
-  return createHmac('sha256', GUIDE_SESSION_SECRET).update(payload).digest('hex');
+  return createHmac('sha256', resolveGuideSessionSecret()).update(payload).digest('hex');
 }
 
 export interface GuideSessionPayload {

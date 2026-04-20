@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev -w @tour/web",
-    "build": "cd apps/web && /tmp/tour-platform/node_modules/.bin/next build",
+    "build": "npm run build -w @tour/web",
     "test": "npm run test -w @tour/web",
     "dashboard:booking-v2": "node scripts/rollout/booking-v2-dashboard.mjs",
     "report:booking-v2-go-no-go": "node scripts/rollout/booking-v2-go-no-go.mjs"
