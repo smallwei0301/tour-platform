@@ -1,3 +1,12 @@
 node_modules/
 .next/
 .vercel
+
+# Local environment files (never commit secrets)
+.env
+.env.*
+!.env.example
+!.env.sample
+apps/web/.env
+apps/web/.env.*
+!apps/web/.env.example
