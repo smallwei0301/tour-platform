@@ -243,6 +243,11 @@ export function processPaymentCallback(input) {
     return { order, scheduleUpdated: false };
   }
 
+  // legal one-way transition guard for callback path
+  if (order.status !== 'pending_payment') {
+    throw new Error(`illegal order status transition in callback: ${order.status} -> paid`);
+  }
+
   const exp = experiences.find((e) => e.id === order.experienceId);
   if (!exp) throw new Error('experience not found for order');
   const schedule = exp.schedules.find((s) => s.id === order.scheduleId);
