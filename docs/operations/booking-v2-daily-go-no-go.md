@@ -10,6 +10,11 @@ Generate a daily decision packet from #103 dashboard snapshot data, aligned with
 - `docs/operations/reports/booking-v2-go-no-go-YYYY-MM-DD.md`
 - `docs/operations/reports/booking-v2-go-no-go-latest.md`
 
+## Trigger / Scheduler
+- GitHub Actions workflow: `.github/workflows/booking-v2-daily-go-no-go.yml`
+- Daily schedule: 09:30 Asia/Taipei (cron `30 1 * * *`)
+- Manual re-run supported via `workflow_dispatch` input `date` (`YYYY-MM-DD`)
+
 ## Decision Model (rule-based)
 
 ### ROLLBACK WATCH
@@ -57,3 +62,14 @@ If required metrics are missing, decision must become `HOLD` with explicit missi
 
 ## Retention
 Keep latest 7 daily reports in `docs/operations/reports/`.
+
+## Local Commands
+- Generate current day packet:
+  - `npm run rollout:booking-v2-daily`
+- Re-generate specific day packet:
+  - `npm run rollout:booking-v2-daily -- --date=2026-04-20`
+  - or `GO_NOGO_DATE=2026-04-20 npm run report:booking-v2-go-no-go`
+
+## Failure Handling
+- Workflow uploads markdown reports as artifacts even when job fails (`if: always()`).
+- Runner exits non-zero on any dashboard/go-no-go step failure (non-silent failure).
