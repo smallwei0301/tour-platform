@@ -11,7 +11,7 @@ npx playwright install chromium  # 安裝 browser
 ## 環境變數
 
 ```bash
-export ADMIN_ACCESS_TOKEN="your-admin-token"
+export ADMIN_ACCESS_TOKEN="<ADMIN_ACCESS_TOKEN_FROM_SECRET_STORE>"
 export ADMIN_EMAIL="admin@tour-platform.com"
 
 # 測試 Vercel Preview 時

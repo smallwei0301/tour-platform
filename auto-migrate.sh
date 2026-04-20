@@ -7,9 +7,14 @@
 
 set -e
 
-SUPABASE_URL="https://pyoderxmpeyqjwkeliiu.supabase.co"
-PROJECT_REF="pyoderxmpeyqjwkeliiu"
-SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5b2RlcnhtcGV5cWp3a2VsaWl1Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDkzNDQ3MCwiZXhwIjoyMDkwNTEwNDcwfQ.DO0fwNkKCEOvOXERzM9GylmcnorB7RgF7Tt4qo645w4"
+SUPABASE_URL="${SUPABASE_URL:-${NEXT_PUBLIC_SUPABASE_URL:-}}"
+PROJECT_REF="${SUPABASE_PROJECT_REF:-pyoderxmpeyqjwkeliiu}"
+SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-}"
+
+if [ -z "$SUPABASE_URL" ] || [ -z "$SERVICE_ROLE_KEY" ]; then
+  echo "❌ Missing required env: SUPABASE_URL (or NEXT_PUBLIC_SUPABASE_URL) and SUPABASE_SERVICE_ROLE_KEY"
+  exit 1
+fi
 
 MIGRATIONS=(
   "012_guides_storage_bucket.sql"

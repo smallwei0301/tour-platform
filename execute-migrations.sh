@@ -5,11 +5,16 @@
 
 set -e
 
-DB_HOST="db.pyoderxmpeyqjwkeliiu.supabase.co"
-DB_PORT="5432"
-DB_NAME="postgres"
-DB_USER="postgres"
-DB_PASSWORD="tour-platform-prod-2025"
+DB_HOST="${SUPABASE_DB_HOST:-}"
+DB_PORT="${SUPABASE_DB_PORT:-5432}"
+DB_NAME="${SUPABASE_DB_NAME:-postgres}"
+DB_USER="${SUPABASE_DB_USER:-postgres}"
+DB_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
+
+if [ -z "$DB_HOST" ] || [ -z "$DB_PASSWORD" ]; then
+  echo "❌ Missing required env: SUPABASE_DB_HOST and SUPABASE_DB_PASSWORD"
+  exit 1
+fi
 
 export PGPASSWORD="$DB_PASSWORD"
 

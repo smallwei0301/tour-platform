@@ -11,7 +11,7 @@
 **狀態**：已驗證有效！`--yes` flag 成功跳過交互確認
 
 ```bash
-export SUPABASE_ACCESS_TOKEN="sbp_3a2e0a097aa506d92bccef5a461a17274c3ab13a"
+export SUPABASE_ACCESS_TOKEN="<ROTATED_SUPABASE_ACCESS_TOKEN>"
 cd /root/tour-platform
 npx supabase db push --yes
 ```
@@ -116,7 +116,7 @@ DROP TABLE IF EXISTS orders CASCADE;
 
 ```bash
 cd /root/tour-platform
-export SUPABASE_ACCESS_TOKEN="sbp_3a2e0a097aa506d92bccef5a461a17274c3ab13a"
+export SUPABASE_ACCESS_TOKEN="<ROTATED_SUPABASE_ACCESS_TOKEN>"
 npx supabase db push --yes
 ```
 

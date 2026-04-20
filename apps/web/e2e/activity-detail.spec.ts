@@ -72,7 +72,7 @@ test.describe('Activity Detail - DatePlanSection', () => {
 });
 
 test.describe('Admin CRUD → 前台驗證', () => {
-  const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || '@Wei3362499';
+  const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || '';
   const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'smallwei0301@gmail.com';
   const SESSION_V = '1';
   const headers = {
