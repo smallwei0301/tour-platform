@@ -73,3 +73,25 @@ Open PR：`0`
 
 - 本輪測試結論：**PASS with known limitations**
 - 上線建議：**GO（需附帶 QA 對 /activities 載入穩定性的補測）**
+
+
+---
+
+## #96 Unified Rollout Gate (2026-04-20)
+
+This document follows the same decision gate for #96 switch-over:
+
+- **GO**
+  - booking V2 happy path pass (slots -> draft -> checkout)
+  - no regression on payment callback / oversell protections
+  - smoke + manual evidence complete and reproducible
+- **HOLD**
+  - evidence incomplete, or KPI/QA data inconclusive
+  - non-blocking defects exist without rollback trigger
+- **ROLLBACK**
+  - checkout/payment critical failure, or oversell/integrity risk
+  - security/compliance blocker impacting booking conversion path
+- **Legacy cleanup preconditions**
+  - GO decision sustained for at least one full observation window
+  - rollback runbook drill + go/no-go packet confirmed
+  - legacy path removal has explicit owner + rollback fallback

@@ -130,3 +130,25 @@
 1. 新增 booking v2 rollout metrics dashboard（按 flag 分段）
 2. 加入 callback correlation id 追蹤（draft → order → payment）
 3. 建立每階段自動化 go/no-go 報表（每天固定時間輸出）
+
+
+---
+
+## #96 Unified Rollout Gate (2026-04-20)
+
+This document follows the same decision gate for #96 switch-over:
+
+- **GO**
+  - booking V2 happy path pass (slots -> draft -> checkout)
+  - no regression on payment callback / oversell protections
+  - smoke + manual evidence complete and reproducible
+- **HOLD**
+  - evidence incomplete, or KPI/QA data inconclusive
+  - non-blocking defects exist without rollback trigger
+- **ROLLBACK**
+  - checkout/payment critical failure, or oversell/integrity risk
+  - security/compliance blocker impacting booking conversion path
+- **Legacy cleanup preconditions**
+  - GO decision sustained for at least one full observation window
+  - rollback runbook drill + go/no-go packet confirmed
+  - legacy path removal has explicit owner + rollback fallback
