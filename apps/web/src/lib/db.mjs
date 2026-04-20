@@ -496,11 +496,11 @@ export async function listAdminOrdersDb(input = {}) {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  const cfg = await getKpiConfigDb().catch(() => ({ guidePayoutRate: 0.65 }));
+  const cfg = await getKpiConfigDb().catch(() => ({ guidePayoutRate: 0.85 }));
   const guidePayoutRate = Number(cfg?.guidePayoutRate);
   const safeGuidePayoutRate = Number.isFinite(guidePayoutRate) && guidePayoutRate >= 0 && guidePayoutRate <= 1
     ? guidePayoutRate
-    : 0.65;
+    : 0.85;
 
   const activityIds = [...new Set((data || []).map((r) => r.activity_id).filter(Boolean))];
   let activityMap = new Map();
@@ -819,7 +819,7 @@ export async function getKpiConfigDb() {
     return {
       commissionRate: 0.15,
       paymentFeeRate: 0.035,
-      guidePayoutRate: 0.65,
+      guidePayoutRate: 0.85,
       healthyMinContributionTwd: 1,
       healthyAllowException: false,
       updatedAt: new Date().toISOString()
@@ -829,7 +829,7 @@ export async function getKpiConfigDb() {
   return {
     commissionRate: Number(data.commission_rate ?? 0.15),
     paymentFeeRate: Number(data.payment_fee_rate ?? 0.035),
-    guidePayoutRate: Number(data.guide_payout_rate ?? 0.65),
+    guidePayoutRate: Number(data.guide_payout_rate ?? 0.85),
     healthyMinContributionTwd: Number(data.healthy_min_contribution_twd ?? 1),
     healthyAllowException: !!data.healthy_allow_exception,
     updatedAt: data.updated_at

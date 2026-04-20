@@ -26,7 +26,7 @@ test.describe('KPI guidePayoutRate persist + revert regression', () => {
     expect(typeof revertVersionId).toBe('string');
 
     const originalRate = Number(original.guidePayoutRate);
-    const mutatedRate = originalRate === 0.65 ? 0.7 : 0.65;
+    const mutatedRate = originalRate === 0.85 ? 0.8 : 0.85;
 
     // 2) Save new guidePayoutRate
     const patchRes = await request.patch('/api/admin/settings/kpi', {

@@ -209,7 +209,7 @@ export const operationsTracking = [
 export const kpiConfig = {
   commissionRate: 0.15,
   paymentFeeRate: 0.035,
-  guidePayoutRate: 0.65,
+  guidePayoutRate: 0.85,
   healthyMinContributionTwd: 1,
   healthyAllowException: false,
   updatedAt: nowIso
