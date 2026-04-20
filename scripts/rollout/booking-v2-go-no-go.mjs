@@ -138,7 +138,19 @@ let decision = 'GO';
 if (rollbackReasons.length) decision = 'ROLLBACK WATCH';
 else if (holdReasons.length) decision = 'HOLD';
 
-const today = new Date().toISOString().slice(0, 10);
+function parseDateArg(argv) {
+  const byFlag = argv.find((a) => a.startsWith('--date='));
+  const byEnv = process.env.GO_NOGO_DATE;
+  const raw = (byFlag ? byFlag.slice('--date='.length) : byEnv || '').trim();
+  if (!raw) return new Date().toISOString().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    console.error('Invalid --date / GO_NOGO_DATE, expected YYYY-MM-DD, got:', raw);
+    process.exit(1);
+  }
+  return raw;
+}
+
+const today = parseDateArg(process.argv.slice(2));
 const lines = [
   `# Booking V2 Daily Decision — ${today}`,
   '',
