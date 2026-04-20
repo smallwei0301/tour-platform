@@ -132,10 +132,11 @@ export async function middleware(req: NextRequest) {
     const result = isAdminAuthorized({
       token: pickToken(req),
       email: pickEmail(req),
+      expiresAt: req.cookies.get('admin_session_expires_at')?.value || '',
       requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
       allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
       expectedSessionVersion: security.sessionVersion,
-      sessionVersion: req.cookies.get('admin_session_version')?.value || req.nextUrl.searchParams.get('admin_session_version') || 0
+      sessionVersion: req.cookies.get('admin_session_version')?.value || 0
     });
 
     if (result.ok) return NextResponse.next();
