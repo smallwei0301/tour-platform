@@ -7,8 +7,12 @@ import { createHmac, randomBytes, createHash } from 'crypto';
 
 function resolveGuideSessionSecret(): string {
   const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isNextBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
 
-  if (process.env.NODE_ENV === 'production') {
+  // Allow Next.js production build phase to proceed (preview/vercel checks),
+  // while keeping strict enforcement at actual production runtime.
+  if (isProduction && !isNextBuildPhase) {
     if (!configured || configured.length < 32) {
       throw new Error(
         '[SECURITY_ENV_BLOCK] GUIDE_SESSION_SECRET missing/weak in production; set a strong secret (>=32 chars).'

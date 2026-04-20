@@ -193,6 +193,10 @@ async function main() {
       paymentCallbackReceived: callbackReceived,
       paymentSucceeded,
       fallbackClicked,
+      // producer/consumer compatibility for go-no-go daily packet (#105)
+      checkoutInitiated: beginCheckout,
+      checkoutInitSucceeded: purchaseIntent,
+      checkoutInitSuccessRatePct: pct(purchaseIntent, beginCheckout),
       beginCheckoutRatePct: pct(beginCheckout, bookingPageView),
       purchaseIntentRatePct: pct(purchaseIntent, beginCheckout),
       paymentSuccessRatePct: pct(paymentSucceeded, callbackReceived),
@@ -225,6 +229,7 @@ async function main() {
 `  - v2: ${report.funnel.bookingPageViewV2}\n` +
 `- begin_checkout: ${report.funnel.beginCheckout} (${report.funnel.beginCheckoutRatePct}%)\n` +
 `- purchase_intent: ${report.funnel.purchaseIntent} (${report.funnel.purchaseIntentRatePct}%)\n` +
+`- checkout_init_success_rate: ${report.funnel.checkoutInitSuccessRatePct}%\n` +
 `- payment_callback_received: ${report.funnel.paymentCallbackReceived}\n` +
 `- payment_succeeded: ${report.funnel.paymentSucceeded} (${report.funnel.paymentSuccessRatePct}%)\n` +
 `- booking_v2_fallback_clicked: ${report.funnel.fallbackClicked} (${report.funnel.fallbackRateVsV2PageViewPct}% of v2 page views)\n\n` +
