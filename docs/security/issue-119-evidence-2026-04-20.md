@@ -2,51 +2,133 @@
 
 > Evidence collected for incident closure tracks. No secret values included.
 
-## 1) Provider rotation/revoke evidence (current status)
+## 1) Provider rotation/revoke evidence
 
-### Supabase Management Token (suspect token still active)
-- Check time: 2026-04-20T00:38:44Z
-- Method: `GET https://api.supabase.com/v1/projects/pyoderxmpeyqjwkeliiu` with existing management token
-- Result: **HTTP 200 / project metadata returned**
-- Evidence meaning: previously exposed management token is still valid; rotation/revocation is still required and not yet closed.
+### Supabase (partial complete)
 
-### Resend API Key (scope-limited, still valid credential class)
-- Check time: 2026-04-20T00:39Z
-- Method: `GET https://api.resend.com/domains` with existing key
-- Result: **HTTP 401** with message: key restricted to send-only
-- Evidence meaning: key class is active but permission-limited; revoke/rotate still required per incident policy.
+**Operations performed**
+- Platform: Supabase Management API
+- Time window: 2026-04-20T00:44:13Z ~ 00:47:38Z
+- Actions:
+  1. Created new API keys
+     - `rot119_publishable_20260420004413` (publishable)
+     - `rot119_secret_20260420004413` (secret)
+  2. Revoked old default keys
+     - old default publishable key id: `fbc03ce9-877e-4e4f-a404-2c53485acf6f` (deleted)
+     - old default secret key id: `2cef1ad2-a7cc-44b0-a0b0-ea50b06ee83d` (deleted)
 
-### GitHub (Actions Secret API audit access)
-- Method: `gh api repos/smallwei0301/tour-platform/actions/secrets`
-- Result: **HTTP 403 Resource not accessible by personal access token**
-- Additional context: environment names are visible (`Preview`, `Production`), but secrets metadata cannot be read with current token scope.
-- Evidence meaning: cutover verification needs owner/admin token scope or dashboard evidence attachment.
+**Proof of new value active / old invalid baseline**
+- New publishable key can access `GET /auth/v1/settings` (HTTP 200)
+- Invalid key returns HTTP 401 (`Invalid API key`)
+- Current key inventory at 00:47:38Z shows only:
+  - legacy `anon` / `service_role`
+  - new `rot119_*` publishable/secret keys
+  - old default keys absent
 
-## 2) Runtime / deploy / CI cutover evidence (current status)
-
-- GitHub Actions secrets metadata verification is blocked by token scope (403).
-- Therefore, no audit-proof evidence yet that CI/deploy/runtime has switched to rotated values.
-- Closure requires owner/admin execution evidence in `issue-119-evidence-log-template.md`.
-
-## 3) History rewrite / post-scan / team reset evidence (current status)
-
-### Current repository scan findings (before rewrite)
-- Command pattern check originally found exposed token pattern in `AUTO-MIGRATE-ANALYSIS.md`.
-- This PR now sanitizes that file in HEAD, but historical exposure still exists by definition.
-
-### Rewrite status
-- History rewrite **not executed yet** in this step.
-- Execution instructions are documented in:
-  - `docs/security/issue-119-history-rewrite-runbook.md`
-
-### Team reset status
-- Team re-clone/reset notice not yet published (pending rewrite execution window).
+**Remaining blocker**
+- Legacy `anon` and `service_role` keys remain in project (not rotated in this step).
+- Incident policy still requires explicit legacy key rotation/revocation decision + evidence.
 
 ---
 
-## Immediate next actions
+### Resend (blocked by permission)
 
-1. Execute provider rotation/revoke and fill evidence table.
-2. Complete env cutover on GitHub/deploy/runtime and attach screenshots/audit IDs.
-3. Run history rewrite + force push + publish team reset message.
-4. Re-run secret scan and attach PASS output to #119.
+**Attempted operations**
+- Platform: Resend API
+- Time: ~2026-04-20T00:47Z
+- `GET /api-keys` -> HTTP 401 (`restricted_api_key`)
+- `POST /api-keys` -> HTTP 401 (`restricted_api_key`)
+
+**Blocker**
+- Current key is send-only and cannot manage key lifecycle.
+
+**Next step**
+- Use Resend owner/admin key from dashboard to rotate/revoke and attach audit evidence.
+
+---
+
+### GitHub (blocked by token scope)
+
+**Attempted operations**
+- Platform: GitHub Actions Secrets API / `gh secret set`
+- Time: ~2026-04-20T00:39Z ~ 00:40Z
+- List repo secrets -> HTTP 403 (`Resource not accessible by personal access token`)
+- Set repo secret -> HTTP 403 (public key endpoint inaccessible)
+
+**Blocker**
+- Current PAT lacks required Actions secrets admin scope.
+
+**Next step**
+- Use owner PAT/app token with actions secrets write scope, then export secrets metadata timestamps.
+
+---
+
+### Google OAuth
+
+**Blocker**
+- No Google Cloud credential with secret-manager / OAuth client admin scope available in this session.
+
+**Next step**
+- Rotate OAuth client secret via Google Cloud Console/API and record:
+  - rotatedAt
+  - actor
+  - new secret rollout target (Vercel/GitHub/runtime)
+
+---
+
+## 2) Runtime / deploy / CI env cutover evidence
+
+### Deploy platform (Vercel) — completed for selected keys
+
+**Operations performed**
+- Platform: Vercel Project Env API + CLI
+- Project: `tour-platform` (`prj_KrrA4UrpyZtEfsQZeSHUJ5zaw4Re`)
+- Time window: 2026-04-20T00:45:54Z ~ 00:46:56Z
+
+**Cutover executed**
+1. `ADMIN_ACCESS_TOKEN`
+   - updated in production/development
+   - added for preview (explicit target)
+2. `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - updated in production/development
+   - added for preview (explicit target)
+
+**Proof (env metadata)**
+- API query `GET /v10/projects/{projectId}/env` shows updatedAt timestamps:
+  - `ADMIN_ACCESS_TOKEN`
+    - production: 2026-04-20T00:45:54.590Z
+    - development: 2026-04-20T00:45:58.407Z
+    - preview: 2026-04-20T00:46:56.290Z
+  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+    - production: 2026-04-20T00:46:08.217Z
+    - development: 2026-04-20T00:46:12.362Z
+    - preview: 2026-04-20T00:46:56.863Z
+
+**Remaining blocker**
+- GitHub Actions secrets cutover cannot be verified with current token scope (403).
+
+---
+
+## 3) History rewrite / post-rewrite scan / force-push evidence
+
+### Current state
+- Runbook exists: `docs/security/issue-119-history-rewrite-runbook.md`
+- Historical exposure still requires destructive rewrite on remote default history.
+
+### Blockers
+1. `git-filter-repo` is not installed in current environment.
+2. Force-push rewrite requires maintenance window + repo owner approval and team broadcast coordination.
+
+### Next executable step
+- Install `git-filter-repo`, perform mirror rewrite in maintenance window, then:
+  1. force-push rewritten refs
+  2. publish team re-clone/reset notice
+  3. rerun secret scan and attach PASS evidence
+
+---
+
+## Immediate next actions (ordered)
+
+1. Complete remaining provider rotations (Google/Resend/GitHub secrets scope owner token).
+2. Rotate legacy Supabase anon/service_role path (or explicitly deprecate with replacement plan) and attach evidence.
+3. Execute history rewrite window and publish post-rewrite evidence pack.
