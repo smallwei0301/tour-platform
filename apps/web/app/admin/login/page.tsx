@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 function LoginForm() {
   const router = useRouter();
@@ -17,8 +18,9 @@ function LoginForm() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
+      await fetch('/api/admin/auth/csrf', { cache: 'no-store' });
       const res = await fetch('/api/admin/auth/session', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
+        method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ token, email }),
       });
       const json = await res.json();

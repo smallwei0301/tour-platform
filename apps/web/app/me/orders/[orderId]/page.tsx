@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '../../../../src/lib/supabase/client';
 
@@ -84,6 +85,7 @@ export default function OrderDetailPage() {
         return;
       }
       setAuthChecking(false);
+      void fetch('/api/me/csrf', { cache: 'no-store' });
       loadOrder();
     });
   }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -111,7 +113,7 @@ export default function OrderDetailPage() {
     try {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}`, {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ action: 'cancel' }),
       });
       const j = await res.json();
@@ -133,7 +135,7 @@ export default function OrderDetailPage() {
     try {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/refund-requests`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ reason: refundReason }),
       });
       const j = await res.json();

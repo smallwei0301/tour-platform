@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
+import { csrfHeaders } from '../../lib/csrf-client';
 
 export function AdminSessionBar() {
   const pathname = usePathname();
@@ -32,7 +33,7 @@ export function AdminSessionBar() {
   }, [session]);
 
   async function logout() {
-    await fetch('/api/admin/auth/session', { method: 'DELETE' });
+    await fetch('/api/admin/auth/session', { method: 'DELETE', headers: csrfHeaders() });
     router.push('/admin/login');
   }
 
