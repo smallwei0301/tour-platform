@@ -14,7 +14,7 @@ import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import type { EventInsert, EventName } from '../../../src/lib/events';
 import type { UtmParams } from '../../../src/lib/utm';
-import { eventsLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
+import { eventsLimiter, createRateLimitResponse, RateLimiter } from '../../../src/lib/rate-limit';
 
 const VALID_EVENTS: EventName[] = [
   'page_view',
@@ -44,8 +44,8 @@ function getSupabaseAdmin() {
 
 export async function POST(req: NextRequest) {
   // Rate limiting: 50 requests/min per IP
-  const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'unknown';
-  const rlResult = eventsLimiter.check(ip);
+  const clientIp = RateLimiter.getClientIp(req);
+  const rlResult = eventsLimiter.check(clientIp);
   const rlResponse = createRateLimitResponse(rlResult);
   if (rlResponse) return rlResponse;
 
@@ -67,10 +67,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 取得 IP（匿名化）
-    const rawIp =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-      req.headers.get('x-real-ip') ?? '';
-    const ip_hash = rawIp ? hashIp(rawIp) : null;
+    const ip_hash = clientIp ? hashIp(clientIp) : null;
 
     // User-Agent（截短）
     const ua = ((req.headers.get('user-agent') ?? '').slice(0, 120)) || null;
