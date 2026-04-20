@@ -5,8 +5,25 @@
  */
 import { createHmac, randomBytes, createHash } from 'crypto';
 
-const GUIDE_SESSION_SECRET =
-  process.env.GUIDE_SESSION_SECRET || 'guide-dev-secret-change-in-prod';
+function resolveGuideSessionSecret(): string {
+  const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
+
+  if (process.env.NODE_ENV === 'production') {
+    if (!configured || configured.length < 32) {
+      throw new Error(
+        '[SECURITY_ENV_BLOCK] GUIDE_SESSION_SECRET missing/weak in production; set a strong secret (>=32 chars).'
+      );
+    }
+    return configured;
+  }
+
+  if (configured) return configured;
+
+  // Non-production fallback must never be a predictable hardcoded value.
+  return randomBytes(32).toString('hex');
+}
+
+const GUIDE_SESSION_SECRET = resolveGuideSessionSecret();
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 // ─── Invite Token ────────────────────────────────────────────────────────────
