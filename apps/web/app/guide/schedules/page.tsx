@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Schedule = {
   id: string; activityId: string; tourTitle: string; planName: string; date: string;
@@ -25,7 +26,10 @@ export default function GuideSchedulesPage() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
+    load();
+  }, []);
 
   const now = new Date();
   const filtered = schedules.filter((s) => {
@@ -42,7 +46,7 @@ export default function GuideSchedulesPage() {
     );
     const res = await fetch(`/api/guide/schedules/${id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: csrfHeaders({ 'content-type': 'application/json' }),
       body: JSON.stringify({ isActive }),
     });
     if (!res.ok) {
@@ -57,7 +61,7 @@ export default function GuideSchedulesPage() {
     if (isNaN(newCap) || newCap < 1) { alert('請輸入有效數字'); return; }
     const res = await fetch(`/api/guide/schedules/${id}`, {
       method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
+      headers: csrfHeaders({ 'content-type': 'application/json' }),
       body: JSON.stringify({ maxCapacity: newCap }),
     });
     const json = await res.json();

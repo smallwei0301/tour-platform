@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminSessionBar } from './AdminSessionBar';
 import { AdminGuide } from './AdminGuide';
+import { csrfHeaders, readCsrfTokenFromCookie } from '../../lib/csrf-client';
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
@@ -32,6 +33,32 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   // Close mobile drawer on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
+  // Prime CSRF cookie and auto-attach x-csrf-token for admin mutation APIs.
+  useEffect(() => {
+    void fetch('/api/admin/auth/csrf', { cache: 'no-store' });
+
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+      const method = (init?.method || 'GET').toUpperCase();
+      const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+      const isAdminApi = url.startsWith('/api/admin/');
+
+      if (isMutation && isAdminApi) {
+        const token = readCsrfTokenFromCookie();
+        const headers = new Headers(init?.headers || {});
+        if (token && !headers.get('x-csrf-token')) headers.set('x-csrf-token', token);
+        return originalFetch(input, { ...init, headers });
+      }
+
+      return originalFetch(input, init);
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
+
   const isSkipShell = pathname === '/admin/login' || pathname === '/admin/unauthorized';
   if (isSkipShell) return <>{children}</>;
 
@@ -41,7 +68,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await fetch('/api/admin/auth/session', { method: 'DELETE' });
+    await fetch('/api/admin/auth/session', { method: 'DELETE', headers: csrfHeaders() });
     router.push('/admin/login');
   }
 

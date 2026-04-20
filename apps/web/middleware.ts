@@ -1,6 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server.js';
+import type { NextRequest } from 'next/server.js';
 
 import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
@@ -14,6 +14,9 @@ function pickEmail(req: NextRequest): string {
   // Security: never read admin credentials from URL query params.
   return req.headers.get('x-admin-email') || req.cookies.get('admin_email')?.value || '';
 }
+
+const CSRF_COOKIE_NAME = 'tp_csrf';
+const CSRF_HEADER_NAME = 'x-csrf-token';
 
 function hasTravelerAuthCookie(req: NextRequest): boolean {
   const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : '';
@@ -40,6 +43,38 @@ function verifyGuideSessionMiddleware(req: NextRequest): boolean {
   if (parts.length !== 3) return false;
   const [tokenGuideId, sessionVersion, signature] = parts;
   return tokenGuideId === guideId && !!sessionVersion && signature.length === 64;
+}
+
+function hasValidCsrf(req: NextRequest): boolean {
+  const cookieToken = req.cookies.get(CSRF_COOKIE_NAME)?.value || '';
+  const headerToken = req.headers.get(CSRF_HEADER_NAME) || '';
+  return !!cookieToken && !!headerToken && cookieToken === headerToken;
+}
+
+function shouldRequireCsrf(req: NextRequest): boolean {
+  const { pathname } = req.nextUrl;
+  const method = req.method.toUpperCase();
+  const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+  if (!isMutation) return false;
+
+  if (!(pathname.startsWith('/api/admin/') || pathname.startsWith('/api/guide/') || pathname.startsWith('/api/me/'))) {
+    return false;
+  }
+
+  // CSRF token issuance endpoints and non-session login are exempt.
+  if (pathname === '/api/guide/auth/csrf' || pathname === '/api/admin/auth/csrf' || pathname === '/api/me/csrf') {
+    return false;
+  }
+  if (pathname === '/api/admin/auth/session' && method === 'POST') {
+    return false;
+  }
+
+  // Apply only to cookie/session-authenticated mutation requests.
+  if (pathname.startsWith('/api/admin/')) return !!req.cookies.get('admin_token')?.value;
+  if (pathname.startsWith('/api/guide/')) return !!req.cookies.get('guide_token')?.value;
+  if (pathname.startsWith('/api/me/')) return hasTravelerAuthCookie(req);
+
+  return false;
 }
 
 function resolveRefreshTimeoutMs(): number {
@@ -90,6 +125,19 @@ async function refreshTravelerSession(req: NextRequest): Promise<NextResponse> {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (shouldRequireCsrf(req) && !hasValidCsrf(req)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: 'CSRF_REQUIRED',
+          message: 'CSRF token required',
+        },
+      },
+      { status: 403 }
+    );
+  }
 
   // ── Guide routes ───────────────────────────────────────────────────────────
   const isGuidePage = pathname.startsWith('/guide');
