@@ -9,7 +9,7 @@ export function listAdminOrdersFallback(input = {}) {
     .filter((o) => (contactEmail ? o.contactEmail === contactEmail : true))
     .map((o) => {
       const cfg = getKpiConfigFallback();
-      const guidePayoutRate = Number(cfg.guidePayoutRate ?? 0.65);
+      const guidePayoutRate = Number(cfg.guidePayoutRate ?? 0.85);
       const costTwd = Math.round(o.totalTwd * guidePayoutRate);
       const exp = experiences.find((e) => e.id === o.experienceId);
       return {
