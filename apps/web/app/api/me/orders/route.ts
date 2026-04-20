@@ -1,11 +1,11 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { listMyOrdersDb } from '../../../../src/lib/db.mjs';
 import { createClient } from '../../../../src/lib/supabase/server';
-import { myOrdersLimiter, createRateLimitResponse } from '../../../../src/lib/rate-limit';
+import { myOrdersLimiter, createRateLimitResponse, RateLimiter } from '../../../../src/lib/rate-limit';
 
 export async function GET(request: Request) {
   // Rate limiting: 20 requests/min per IP
-  const ip = request.headers.get('x-forwarded-for') ?? 'unknown';
+  const ip = RateLimiter.getClientIp(request);
   const rlResult = myOrdersLimiter.check(ip);
   const rlResponse = createRateLimitResponse(rlResult);
   if (rlResponse) return rlResponse;
