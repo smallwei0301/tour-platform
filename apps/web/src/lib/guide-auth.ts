@@ -7,8 +7,12 @@ import { createHmac, randomBytes, createHash } from 'crypto';
 
 function resolveGuideSessionSecret(): string {
   const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isNextBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
 
-  if (process.env.NODE_ENV === 'production') {
+  // Allow Next.js build phase to proceed (for preview/build checks),
+  // but enforce strict secret policy at production runtime.
+  if (isProduction && !isNextBuildPhase) {
     if (!configured || configured.length < 32) {
       throw new Error(
         '[SECURITY_ENV_BLOCK] GUIDE_SESSION_SECRET missing/weak in production; set a strong secret (>=32 chars).'
@@ -23,6 +27,7 @@ function resolveGuideSessionSecret(): string {
   return randomBytes(32).toString('hex');
 }
 
+const GUIDE_SESSION_SECRET = resolveGuideSessionSecret();
 const SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 7 days
 
 // ─── Invite Token ────────────────────────────────────────────────────────────
@@ -75,7 +80,7 @@ export function verifyPassword(plain: string, stored: string): boolean {
 
 function signToken(guideId: string, sessionVersion: number): string {
   const payload = `${guideId}:${sessionVersion}`;
-  return createHmac('sha256', resolveGuideSessionSecret()).update(payload).digest('hex');
+  return createHmac('sha256', GUIDE_SESSION_SECRET).update(payload).digest('hex');
 }
 
 export interface GuideSessionPayload {
