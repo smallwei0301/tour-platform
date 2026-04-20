@@ -22,12 +22,23 @@ const migration013 = fs.readFileSync(
 );
 
 // PostgreSQL connection using Supabase
+const DB_HOST = process.env.SUPABASE_DB_HOST || '';
+const DB_PORT = Number(process.env.SUPABASE_DB_PORT || 5432);
+const DB_NAME = process.env.SUPABASE_DB_NAME || 'postgres';
+const DB_USER = process.env.SUPABASE_DB_USER || 'postgres';
+const DB_PASSWORD = process.env.SUPABASE_DB_PASSWORD || '';
+
+if (!DB_HOST || !DB_PASSWORD) {
+  console.error('❌ Missing required env: SUPABASE_DB_HOST and SUPABASE_DB_PASSWORD');
+  process.exit(1);
+}
+
 const client = new Client({
-  host: 'db.pyoderxmpeyqjwkeliiu.supabase.co',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'tour-platform-prod-2025',  // ⚠️ Should use env var in production
+  host: DB_HOST,
+  port: DB_PORT,
+  database: DB_NAME,
+  user: DB_USER,
+  password: DB_PASSWORD,
   ssl: { rejectUnauthorized: false },
 });
 
