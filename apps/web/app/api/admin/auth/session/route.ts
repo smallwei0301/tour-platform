@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   const auth = isAdminAuthorized({
     token,
     email,
+    expiresAt,
     requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
     allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
     expectedSessionVersion: security.sessionVersion,
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
   const auth = isAdminAuthorized({
     token,
     email,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
     allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
     expectedSessionVersion: security.sessionVersion,
