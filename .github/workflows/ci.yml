@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       DISABLE_SENTRY_BUILD: '1'
+      # CI build runs with NODE_ENV=production; provide strong non-default test secrets
+      GUIDE_SESSION_SECRET: ci-guide-session-secret-0123456789abcdef
+      ADMIN_ACCESS_TOKEN: ci-admin-token-0123456789abcdef
     steps:
       - name: Checkout
         uses: actions/checkout@v4
