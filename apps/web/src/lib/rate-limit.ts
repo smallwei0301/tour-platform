@@ -6,6 +6,8 @@
  * Each limiter has its own window and reset logic.
  */
 
+import { resolveTrustedClientIp } from './trusted-ip.mjs';
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
@@ -70,28 +72,7 @@ export class RateLimiter {
    * Get client IP from request
    */
   static getClientIp(request: Request): string {
-    // 1. Priority: Platform-verified IP (Cloudflare/Vercel)
-    const cfIp = request.headers.get('cf-connecting-ip');
-    if (cfIp) {
-      return cfIp;
-    }
-
-    // 2. Next: Real-IP (often set by trusted Nginx/Load Balancers)
-    const realIp = request.headers.get('x-real-ip');
-    if (realIp) {
-      return realIp;
-    }
-
-    // 3. Last resort: X-Forwarded-For
-    // To prevent spoofing, we take the last IP in the list, 
-    // as it is typically appended by the trusted edge proxy.
-    const forwarded = request.headers.get('x-forwarded-for');
-    if (forwarded) {
-      const ips = forwarded.split(',').map(ip => ip.trim());
-      return ips[ips.length - 1];
-    }
-
-    return '127.0.0.1';
+    return resolveTrustedClientIp(request).ip;
   }
 }
 
