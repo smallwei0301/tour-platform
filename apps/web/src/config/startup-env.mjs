@@ -31,8 +31,6 @@ function requiredRules(profile) {
     return [
       { key: 'GUIDE_SESSION_SECRET', check: (v) => hasValue(v) && String(v).trim().length >= 32, reason: 'must be >=32 chars', envScope: 'required in production runtime' },
       { key: 'ADMIN_ACCESS_TOKEN', check: (v) => hasValue(v) && String(v).trim().length >= 16, reason: 'must be >=16 chars', envScope: 'required in production runtime' },
-      { key: 'SUPABASE_URL', check: (v) => hasValue(v) && isValidUrl(v), reason: 'must be a valid http(s) URL', envScope: 'required in production runtime' },
-      { key: 'SUPABASE_SERVICE_ROLE_KEY', check: (v) => hasValue(v), reason: 'cannot be empty', envScope: 'required in production runtime' },
     ];
   }
 

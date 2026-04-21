@@ -23,9 +23,18 @@ test('startup env passes with valid required production values', () => {
     NODE_ENV: 'production',
     GUIDE_SESSION_SECRET: '12345678901234567890123456789012',
     ADMIN_ACCESS_TOKEN: '1234567890abcdef',
-    SUPABASE_URL: 'https://example.supabase.co',
-    SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
     NEXT_PUBLIC_APP_URL: 'http://localhost:3000',
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.profile, 'production');
+});
+
+test('startup env allows missing SUPABASE vars in production startup check', () => {
+  const result = validateStartupEnv({
+    NODE_ENV: 'production',
+    GUIDE_SESSION_SECRET: '12345678901234567890123456789012',
+    ADMIN_ACCESS_TOKEN: '1234567890abcdef',
   });
 
   assert.equal(result.ok, true);
