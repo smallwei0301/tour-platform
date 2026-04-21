@@ -23,7 +23,6 @@ function runMiddleware({ url, method = 'PATCH', cookie = '', csrfHeader = '' }) 
   `;
 
   return spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', script], {
-    cwd: '/tmp/tour-platform-issue117',
     env: { ...process.env, ADMIN_ACCESS_TOKEN: 'test-token' },
     encoding: 'utf8',
   });
