@@ -31,3 +31,15 @@ test('startup env passes with valid required production values', () => {
   assert.equal(result.ok, true);
   assert.equal(result.profile, 'production');
 });
+
+test('startup env allows missing SUPABASE runtime vars in preview profile', () => {
+  const result = validateStartupEnv({
+    NODE_ENV: 'production',
+    VERCEL_ENV: 'preview',
+    GUIDE_SESSION_SECRET: '12345678901234567890123456789012',
+    ADMIN_ACCESS_TOKEN: '1234567890abcdef',
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.profile, 'preview');
+});
