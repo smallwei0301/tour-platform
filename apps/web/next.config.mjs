@@ -1,4 +1,8 @@
 import { withSentryConfig } from '@sentry/nextjs';
+import { assertStartupEnv } from './src/config/startup-env.mjs';
+
+// Single authority startup ENV validation (issue #60)
+assertStartupEnv(process.env);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
