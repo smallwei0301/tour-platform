@@ -35,10 +35,9 @@ function requiredRules(profile) {
   }
 
   if (profile === 'preview') {
-    return [
-      { key: 'GUIDE_SESSION_SECRET', check: (v) => hasValue(v) && String(v).trim().length >= 32, reason: 'must be >=32 chars', envScope: 'required in preview runtime' },
-      { key: 'ADMIN_ACCESS_TOKEN', check: (v) => hasValue(v) && String(v).trim().length >= 16, reason: 'must be >=16 chars', envScope: 'required in preview runtime' },
-    ];
+    // Preview deployments should not hard-fail on runtime secrets at build/startup.
+    // Keep preview boot permissive and rely on runtime route-level guards where needed.
+    return [];
   }
 
   return [];

@@ -41,12 +41,10 @@ test('startup env allows missing SUPABASE vars in production startup check', () 
   assert.equal(result.profile, 'production');
 });
 
-test('startup env allows missing SUPABASE runtime vars in preview profile', () => {
+test('startup env allows missing runtime secrets in preview profile', () => {
   const result = validateStartupEnv({
     NODE_ENV: 'production',
     VERCEL_ENV: 'preview',
-    GUIDE_SESSION_SECRET: '12345678901234567890123456789012',
-    ADMIN_ACCESS_TOKEN: '1234567890abcdef',
   });
 
   assert.equal(result.ok, true);
