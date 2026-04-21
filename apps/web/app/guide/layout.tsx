@@ -16,12 +16,12 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Don't show nav on login page
-  if (pathname === '/guide/login') return <>{children}</>;
-
   useEffect(() => {
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
   }, []);
+
+  // Don't show nav on login page
+  if (pathname === '/guide/login') return <>{children}</>;
 
   async function handleLogout() {
     await fetch('/api/guide/auth/session', {

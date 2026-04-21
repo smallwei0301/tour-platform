@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState } from 'react';
 import type { Activity, Review } from '../../fixtures/data';
 import { DatePicker } from './DatePicker';
@@ -53,7 +54,7 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
             <div className="tp-tab-section">
               <div className="tp-tab-section-head">
                 <h3>出發日期</h3>
-                <a href="/activities" className="tp-link" style={{ fontSize: 13 }}>更多日期 &gt;</a>
+                <Link href="/activities" className="tp-link" style={{ fontSize: 13 }}>更多日期 &gt;</Link>
               </div>
               <DatePicker
                 schedules={schedules}
