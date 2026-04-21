@@ -41,6 +41,24 @@ export async function getSupabase() {
   return supabaseClient;
 }
 
+async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
+  if (!hasSupabaseEnv()) return;
+  try {
+    const supabase = await getSupabase();
+    const { data: order } = await supabase
+      .from('orders')
+      .select('activity_id')
+      .eq('id', orderId)
+      .maybeSingle();
+    if (!order?.activity_id) return;
+    await supabase.rpc('fn_refresh_activity_availability_daily', {
+      p_activity_id: order.activity_id,
+    });
+  } catch (e) {
+    console.warn('[availability-snapshot] refresh by order failed:', e?.message || e);
+  }
+}
+
 export async function listExperiencesDb() {
   if (!hasSupabaseEnv()) return listInMemory();
 
@@ -161,6 +179,8 @@ export async function createOrderDb(input) {
     }
     throw new Error(orderError?.message || 'order create failed');
   }
+
+  await tryRefreshAvailabilitySnapshotByOrderId(inserted.id);
 
   return {
     id: inserted.id,
@@ -376,6 +396,7 @@ export async function cancelOrderDb(input = {}) {
     }
   }
 
+  await tryRefreshAvailabilitySnapshotByOrderId(orderId);
   return { id: orderId, status: 'cancelled_by_user' };
 }
 
@@ -621,6 +642,7 @@ export async function updateAdminOrderDb(input = {}) {
   const { error } = await supabase.from('orders').update(patch).eq('id', orderId);
   if (error) throw new Error(error.message);
 
+  await tryRefreshAvailabilitySnapshotByOrderId(orderId);
   return getAdminOrderDetailDb({ orderId });
 }
 
@@ -738,6 +760,8 @@ export async function applyAdminOrderExceptionDb(input = {}) {
     created_at: new Date().toISOString()
   });
 
+  await tryRefreshAvailabilitySnapshotByOrderId(order.id);
+
   return {
     orderId: order.id,
     action,
@@ -843,6 +867,8 @@ export async function updateAdminRefundStatusDb(input = {}) {
     .eq('id', req.order_id);
 
   if (orderUpdateError) throw new Error(orderUpdateError.message);
+
+  await tryRefreshAvailabilitySnapshotByOrderId(req.order_id);
 
   return {
     id: req.id,
@@ -1398,6 +1424,8 @@ export async function processPaymentCallbackDb(input) {
 
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) throw new Error('payment callback processing returned empty result');
+
+  await tryRefreshAvailabilitySnapshotByOrderId(orderId);
 
   return {
     order: {
