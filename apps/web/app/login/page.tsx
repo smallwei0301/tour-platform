@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { createClient } from '../../src/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
@@ -199,7 +200,7 @@ function LoginContent() {
           </div>
 
           {/* 探索行程 CTA */}
-          <a
+          <Link
             href="/activities"
             style={{
               display: 'flex',
@@ -218,7 +219,7 @@ function LoginContent() {
             }}
           >
             🗺️ 探索台灣在地行程
-          </a>
+          </Link>
 
           <p style={{
             marginTop: 20,
