@@ -52,7 +52,15 @@ export async function POST(request: Request) {
     };
 
     if (order.contactEmail) {
-      sendOrderConfirmation(notifyData).catch(() => {}); // 絕對不阻塞 response
+      void sendOrderConfirmation(notifyData).then((emailResult) => {
+        if (!emailResult.ok) {
+          console.warn('[orders][email] non-blocking failure', {
+            orderId: order.id,
+            code: emailResult.errorCode,
+            message: emailResult.errorMessage,
+          });
+        }
+      });
     }
 
     // LINE Notify 通知管理員/導遊
