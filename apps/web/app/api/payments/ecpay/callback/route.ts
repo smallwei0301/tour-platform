@@ -50,9 +50,9 @@ function httpStatusFromError(err: unknown): number {
   const message = err instanceof Error ? err.message : '';
   const code = (err as any)?.code ?? '';
   if (message.includes('not found')) return 404;
-  // schedule_not_open or insufficient_capacity → 409 Conflict
-  if (code === 'schedule_not_open' || code === 'insufficient_capacity') return 409;
-  if (message.includes('booking_failed')) return 409;
+  // Conflict class: capacity race / invalid transition / serialization
+  if (code === 'schedule_not_open' || code === 'insufficient_capacity' || code === '40001' || code === '22000') return 409;
+  if (message.includes('booking_failed') || message.includes('illegal order status transition')) return 409;
   return 400;
 }
 

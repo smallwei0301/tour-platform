@@ -1332,93 +1332,37 @@ export async function processPaymentCallbackDb(input) {
 
   const supabase = await getSupabase();
 
-  // ── Step 1: 取得訂單資訊 ──
-  const { data: order, error: orderError } = await supabase
-    .from('orders')
-    .select('id, status, total_twd, people_count, schedule_id, contact_email')
-    .eq('id', orderId)
-    .single();
-
-  if (orderError || !order) throw new Error('order not found');
-
-  const ownerEmail = String(input?.ownerEmail || '').trim().toLowerCase();
-  const contactEmail = String(order.contact_email || '').trim().toLowerCase();
-  if (ownerEmail && contactEmail && ownerEmail !== contactEmail) {
-    throw new Error('order ownership validation failed');
-  }
-
-  // 冪等處理：已付款直接回傳
-  if (['paid', 'confirmed', 'completed'].includes(order.status)) {
-    return { order: { id: order.id, status: order.status, totalTwd: order.total_twd }, scheduleUpdated: false };
-  }
-
-  // ── Step 2: 原子扣位 — 使用 fn_book_schedule RPC (SELECT FOR UPDATE 鎖) ──
-  const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
-    p_schedule_id: order.schedule_id,
-    p_count: order.people_count
+  const { data, error } = await supabase.rpc('fn_process_payment_callback_atomic', {
+    p_order_id: orderId,
+    p_trade_no: String(input?.tradeNo || '').trim() || null,
+    p_owner_email: String(input?.ownerEmail || '').trim() || null,
+    p_raw_payload: input || null,
   });
 
-  if (rpcError) throw new Error(`booking RPC error: ${rpcError.message}`);
-
-  const rpc = rpcResult ?? {};
-  if (!rpc.ok) {
-    const code = rpc.error || 'booking_failed';
-    const remaining = rpc.remaining ?? 0;
-    const err = new Error(`booking_failed: ${code} (remaining=${remaining})`);
-    err.code = code;
-    err.remaining = remaining;
+  if (error) {
+    const err = new Error(error.message || 'payment callback processing failed');
+    // Bubble specific code for API error mapping / observability.
+    err.code = error.code;
     throw err;
   }
 
-  // ── Step 3: 更新訂單狀態為 paid ──
-  const paidAt = new Date().toISOString();
-
-  const { data: updatedOrder, error: updateOrderError } = await supabase
-    .from('orders')
-    .update({ status: 'paid', paid_at: paidAt })
-    .eq('id', order.id)
-    .select('id, status, total_twd, paid_at')
-    .single();
-
-  if (updateOrderError || !updatedOrder) throw new Error(updateOrderError?.message || 'order update failed');
-
-  // ── Step 4: 寫入 payments 記錄 ──
-  const { error: paymentInsertError } = await supabase
-    .from('payments')
-    .insert({
-      id: crypto.randomUUID(),
-      order_id: order.id,
-      provider: 'ecpay',
-      trade_no: String(input?.tradeNo || '').trim() || null,
-      amount_twd: order.total_twd,
-      status: 'paid',
-      paid_at: paidAt,
-      raw_payload: input || null
-    });
-
-  if (paymentInsertError) throw new Error(paymentInsertError.message);
-
-  // ── Step 5: 回讀最新 schedule 狀態（trigger 可能已把 status 改為 full）──
-  const { data: updatedSchedule } = await supabase
-    .from('activity_schedules')
-    .select('id, capacity, booked_count, status')
-    .eq('id', order.schedule_id)
-    .single();
+  const row = Array.isArray(data) ? data[0] : null;
+  if (!row) throw new Error('payment callback processing returned empty result');
 
   return {
     order: {
-      id: updatedOrder.id,
-      status: updatedOrder.status,
-      totalTwd: updatedOrder.total_twd,
-      paidAt: updatedOrder.paid_at
+      id: row.order_id,
+      status: row.order_status,
+      totalTwd: row.total_twd,
+      paidAt: row.paid_at,
     },
-    scheduleUpdated: true,
-    schedule: updatedSchedule ? {
-      id: updatedSchedule.id,
-      bookedCount: updatedSchedule.booked_count,
-      capacity: updatedSchedule.capacity,
-      status: updatedSchedule.status
-    } : null
+    scheduleUpdated: !!row.schedule_updated,
+    schedule: row.schedule_id ? {
+      id: row.schedule_id,
+      bookedCount: row.schedule_booked_count,
+      capacity: row.schedule_capacity,
+      status: row.schedule_status,
+    } : null,
   };
 }
 
