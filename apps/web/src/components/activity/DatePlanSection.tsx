@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
@@ -157,28 +157,24 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showAllPlans, setShowAllPlans] = useState(false);
   const [liveSchedules, setLiveSchedules] = useState<Schedule[] | null>(null);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadLiveAvailability() {
-      try {
-        const res = await fetch(`/api/activities/${encodeURIComponent(activity.slug)}/availability?t=${Date.now()}`, {
-          cache: 'no-store',
-        });
-        const json = await res.json().catch(() => null);
-        if (cancelled || !res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) return;
-        setLiveSchedules(json.data.schedules as Schedule[]);
-      } catch {
-        // ignore: fallback to SSR schedules
+  async function ensureLiveAvailability() {
+    if (availabilityLoaded) return;
+    setAvailabilityLoaded(true);
+    try {
+      const res = await fetch(`/api/activities/${encodeURIComponent(activity.slug)}/availability`);
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) {
+        setAvailabilityLoaded(false);
+        return;
       }
+      setLiveSchedules(json.data.schedules as Schedule[]);
+    } catch {
+      setAvailabilityLoaded(false);
+      // ignore: keep SSR schedules as fallback
     }
-
-    loadLiveAvailability();
-    return () => {
-      cancelled = true;
-    };
-  }, [activity.slug]);
+  }
 
   const effectiveSchedules = liveSchedules && liveSchedules.length > 0 ? liveSchedules : schedules;
 
@@ -197,7 +193,10 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
         <DatePicker
           schedules={effectiveSchedules}
           selectedDate={selectedDate}
-          onSelect={setSelectedDate}
+          onSelect={(date) => {
+            void ensureLiveAvailability();
+            setSelectedDate(date);
+          }}
           price={activity.priceTwd ?? activity.price ?? 0}
         />
       </div>
@@ -229,7 +228,11 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                 showFull ? 'full' : '',
                 showNotOpen ? 'not-open' : '',
               ].filter(Boolean).join(' ')}
-              onClick={() => canBook && setSelectedPlan(plan.id)}
+              onClick={() => {
+                if (!canBook) return;
+                void ensureLiveAvailability();
+                setSelectedPlan(plan.id);
+              }}
               style={(!canBook && selectedDate) ? { opacity: 0.55, pointerEvents: 'none' as const } : undefined}
             >
               <div className="kkd-plan-header">
@@ -315,7 +318,10 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                   <Link
                     href={`/booking/${activity.slug}?plan=${plan.id}${selectedDate ? `&date=${selectedDate}` : ''}${planAvail.schedule?.id ? `&scheduleId=${planAvail.schedule.id}` : ''}`}
                     className="tp-btn tp-btn-primary kkd-plan-select-btn"
-                    onClick={() => { setSelectedPlan(plan.id); }}
+                    onClick={() => {
+                      void ensureLiveAvailability();
+                      setSelectedPlan(plan.id);
+                    }}
                   >
                     {plan.bookingBtnText || '立即預約'}
                   </Link>
