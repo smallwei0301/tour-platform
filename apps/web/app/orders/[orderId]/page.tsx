@@ -48,6 +48,7 @@ export default function OrderDetailPage() {
       setError(null);
       const created = await createRefundRequest({
         orderId,
+        requestId: crypto.randomUUID(),
         reason: 'user_request',
         note: '由旅客發起取消申請'
       });

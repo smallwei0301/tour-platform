@@ -11,7 +11,7 @@ test('admin refund list returns rows', async () => {
     contactPhone: '0900000000',
     contactEmail: 'admin-demo@example.com'
   });
-  const ref = await createRefundRequestDb({ orderId: order.id, reason: 'user_request' });
+  const ref = await createRefundRequestDb({ orderId: order.id, requestId: 'req-admin-refund-list-1', reason: 'user_request' });
 
   const rows = await listAdminRefundRequestsDb();
   assert.ok(rows.some((r) => r.id === ref.id));
@@ -26,7 +26,7 @@ test('admin refund actions update refund and order status', async () => {
     contactPhone: '0900000001',
     contactEmail: 'refund-flow@example.com'
   });
-  const ref = await createRefundRequestDb({ orderId: order.id, reason: 'user_request' });
+  const ref = await createRefundRequestDb({ orderId: order.id, requestId: 'req-admin-refund-flow-1', reason: 'user_request' });
 
   const approved = await updateAdminRefundStatusDb({ refundRequestId: ref.id, action: 'approve' });
   assert.equal(approved.status, 'approved');

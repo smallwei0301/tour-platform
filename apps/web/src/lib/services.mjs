@@ -121,8 +121,10 @@ export function createRefundRequest(input = {}) {
   const reason = normalizeSlug(input?.reason) || 'user_request';
   const note = normalizeSlug(input?.note) || '';
   const contactEmail = normalizeSlug(input?.contactEmail) || '';
+  const requestId = normalizeSlug(input?.requestId);
 
   if (!orderId) throw new Error('orderId is required');
+  if (!requestId) throw new Error('requestId is required');
 
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw new Error('order not found');
@@ -135,6 +137,15 @@ export function createRefundRequest(input = {}) {
     throw new Error('order cannot request refund in current status');
   }
 
+  const existingByRequest = refundRequests.find((r) => r.orderId === orderId && r.requestId === requestId);
+  if (existingByRequest) {
+    return {
+      ...existingByRequest,
+      orderStatus: order.status,
+      idempotentReplay: true,
+    };
+  }
+
   const existing = refundRequests.find((r) => r.orderId === orderId && !['rejected', 'refunded'].includes(r.status));
   if (existing) throw new Error('refund already requested');
 
@@ -143,6 +154,7 @@ export function createRefundRequest(input = {}) {
     orderId,
     reason,
     note,
+    requestId,
     status: 'requested',
     requestedAt: new Date().toISOString(),
     approvedAt: null,
