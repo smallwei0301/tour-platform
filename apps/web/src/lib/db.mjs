@@ -386,8 +386,10 @@ export async function createRefundRequestDb(input = {}) {
   const reason = String(input?.reason || '').trim() || 'user_request';
   const note = String(input?.note || '').trim() || null;
   const contactEmail = String(input?.contactEmail || '').trim();
+  const requestId = String(input?.requestId || '').trim();
 
   if (!orderId) throw new Error('orderId is required');
+  if (!requestId) throw new Error('requestId is required');
 
   const supabase = await getSupabase();
 
@@ -406,6 +408,27 @@ export async function createRefundRequestDb(input = {}) {
     throw new Error('order cannot request refund in current status');
   }
 
+  const { data: existingByRequest } = await supabase
+    .from('refund_requests')
+    .select('id, order_id, reason, note, status, requested_at')
+    .eq('order_id', orderId)
+    .eq('request_id', requestId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existingByRequest) {
+    return {
+      id: existingByRequest.id,
+      orderId: existingByRequest.order_id,
+      reason: existingByRequest.reason,
+      note: existingByRequest.note,
+      status: existingByRequest.status,
+      requestedAt: existingByRequest.requested_at,
+      orderStatus: order.status,
+      idempotentReplay: true,
+    };
+  }
+
   const { data: existing } = await supabase
     .from('refund_requests')
     .select('id, status')
@@ -418,6 +441,7 @@ export async function createRefundRequestDb(input = {}) {
   const payload = {
     id: crypto.randomUUID(),
     order_id: orderId,
+    request_id: requestId,
     reason,
     note,
     status: 'requested',
@@ -430,7 +454,33 @@ export async function createRefundRequestDb(input = {}) {
     .select('id, order_id, reason, note, status, requested_at')
     .single();
 
-  if (insertError || !inserted) throw new Error(insertError?.message || 'refund create failed');
+  if (insertError) {
+    // Concurrent same requestId race: return stable existing response.
+    if (insertError.code === '23505') {
+      const { data: collided } = await supabase
+        .from('refund_requests')
+        .select('id, order_id, reason, note, status, requested_at')
+        .eq('order_id', orderId)
+        .eq('request_id', requestId)
+        .limit(1)
+        .maybeSingle();
+      if (collided) {
+        return {
+          id: collided.id,
+          orderId: collided.order_id,
+          reason: collided.reason,
+          note: collided.note,
+          status: collided.status,
+          requestedAt: collided.requested_at,
+          orderStatus: order.status,
+          idempotentReplay: true,
+        };
+      }
+    }
+    throw new Error(insertError.message || 'refund create failed');
+  }
+
+  if (!inserted) throw new Error('refund create failed');
 
   const { error: updateOrderError } = await supabase
     .from('orders')

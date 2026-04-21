@@ -46,11 +46,11 @@ export async function fetchRefundRequests(orderId: string) {
   return json.data;
 }
 
-export async function createRefundRequest(payload: { orderId: string; reason?: string; note?: string; contactEmail?: string }) {
+export async function createRefundRequest(payload: { orderId: string; requestId: string; reason?: string; note?: string; contactEmail?: string }) {
   const res = await fetch(`/api/me/orders/${encodeURIComponent(payload.orderId)}/refund-requests`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ reason: payload.reason, note: payload.note, contactEmail: payload.contactEmail })
+    body: JSON.stringify({ requestId: payload.requestId, reason: payload.reason, note: payload.note, contactEmail: payload.contactEmail })
   });
   const json = await res.json();
   if (!json.ok) throw new Error(json?.error?.message || 'failed to create refund request');

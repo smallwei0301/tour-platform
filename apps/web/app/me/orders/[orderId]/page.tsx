@@ -136,7 +136,7 @@ export default function OrderDetailPage() {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/refund-requests`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ reason: refundReason }),
+        body: JSON.stringify({ requestId: crypto.randomUUID(), reason: refundReason }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '退款申請失敗');

@@ -29,8 +29,14 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
       return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
     }
 
+    const requestId = String(body?.requestId || '').trim();
+    if (!requestId) {
+      return Response.json(fail('INVALID_REQUEST', 'requestId is required'), { status: 400 });
+    }
+
     const created = await createRefundRequestDb({
       orderId,
+      requestId,
       reason: body?.reason,
       note: body?.note,
       contactEmail: user.email, // 以 session email 為準
