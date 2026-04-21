@@ -11,7 +11,7 @@ test('admin dashboard summary aggregates queues and KPI', async () => {
     contactPhone: '0900333444',
     contactEmail: 'dash@example.com'
   });
-  await createRefundRequestDb({ orderId: order.id, reason: 'user_request' });
+  await createRefundRequestDb({ orderId: order.id, requestId: 'req-admin-summary-1', reason: 'user_request' });
   await createGuideApplicationDb({
     fullName: 'Guide Pending',
     phone: '0911000222',
