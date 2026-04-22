@@ -1,5 +1,17 @@
 import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory } from './store.mjs';
 
+function appendAuditLog({ orderId = null, actor = 'admin', action, metadata = {} }) {
+  if (!action) return;
+  auditLogs.push({
+    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
+    orderId: orderId || null,
+    actor,
+    action,
+    metadata,
+    createdAt: new Date().toISOString()
+  });
+}
+
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
   const contactEmail = String(input?.contactEmail || '').trim();
@@ -220,6 +232,7 @@ export function updateAdminRefundStatusFallback(input = {}) {
   if (!order) throw new Error('order not found');
 
   const now = new Date().toISOString();
+  const previousRefundStatus = req.status;
 
   if (action === 'approve') {
     req.status = 'approved';
@@ -247,6 +260,19 @@ export function updateAdminRefundStatusFallback(input = {}) {
   req.adminNote = adminNote;
   req.updatedAt = now;
 
+  appendAuditLog({
+    orderId: req.orderId,
+    actor: 'admin',
+    action: `refund_${action}`,
+    metadata: {
+      refundRequestId: req.id,
+      previousRefundStatus,
+      refundStatus: req.status,
+      orderStatus: order.status,
+      adminNote: req.adminNote
+    }
+  });
+
   return {
     id: req.id,
     orderId: req.orderId,
@@ -269,6 +295,9 @@ export function updateKpiConfigFallback(input = {}) {
   };
 
   const before = { ...kpiConfig };
+  const actor = String(input.actor || 'admin');
+  const note = String(input.note || '');
+  const skipAuditLog = input?.skipAuditLog === true;
 
   if (input.commissionRate != null) kpiConfig.commissionRate = toNum(input.commissionRate, kpiConfig.commissionRate);
   if (input.paymentFeeRate != null) kpiConfig.paymentFeeRate = toNum(input.paymentFeeRate, kpiConfig.paymentFeeRate);
@@ -284,13 +313,25 @@ export function updateKpiConfigFallback(input = {}) {
 
   kpiConfigHistory.push({
     versionId: `kpi_v_${String(kpiConfigHistory.length + 1).padStart(6, '0')}`,
-    actor: String(input.actor || 'admin'),
+    actor,
     action: 'update',
-    note: String(input.note || ''),
+    note,
     before,
     config: { ...kpiConfig },
     createdAt: kpiConfig.updatedAt
   });
+
+  if (!skipAuditLog) {
+    appendAuditLog({
+      actor,
+      action: 'kpi_config_update',
+      metadata: {
+        note,
+        before,
+        after: { ...kpiConfig }
+      }
+    });
+  }
 
   return { ...kpiConfig };
 }
@@ -306,28 +347,41 @@ export function revertKpiConfigFallback(input = {}) {
   const target = kpiConfigHistory.find((h) => h.versionId === versionId);
   if (!target) throw new Error('kpi config version not found');
 
-  const before = { ...kpiConfig };
+  const actor = String(input.actor || 'admin');
   const cfg = target.config || {};
 
-  kpiConfig.commissionRate = Number(cfg.commissionRate ?? kpiConfig.commissionRate);
-  kpiConfig.paymentFeeRate = Number(cfg.paymentFeeRate ?? kpiConfig.paymentFeeRate);
-  kpiConfig.guidePayoutRate = Number(cfg.guidePayoutRate ?? kpiConfig.guidePayoutRate);
-  kpiConfig.healthyMinContributionTwd = Number(cfg.healthyMinContributionTwd ?? kpiConfig.healthyMinContributionTwd);
-  kpiConfig.healthyAllowException = Boolean(cfg.healthyAllowException ?? kpiConfig.healthyAllowException);
-  kpiConfig.updatedAt = new Date().toISOString();
+  const updated = updateKpiConfigFallback({
+    commissionRate: cfg.commissionRate,
+    paymentFeeRate: cfg.paymentFeeRate,
+    guidePayoutRate: cfg.guidePayoutRate,
+    healthyMinContributionTwd: cfg.healthyMinContributionTwd,
+    healthyAllowException: cfg.healthyAllowException,
+    actor,
+    note: `revert to ${versionId}`,
+    skipAuditLog: true
+  });
 
   kpiConfigHistory.push({
     versionId: `kpi_v_${String(kpiConfigHistory.length + 1).padStart(6, '0')}`,
-    actor: String(input.actor || 'admin'),
+    actor,
     action: 'revert',
     note: `revert to ${versionId}`,
-    before,
+    before: null,
     config: { ...kpiConfig },
     sourceVersionId: versionId,
     createdAt: kpiConfig.updatedAt
   });
 
-  return { ...kpiConfig };
+  appendAuditLog({
+    actor,
+    action: 'kpi_config_revert',
+    metadata: {
+      sourceVersionId: versionId,
+      revertedConfig: { ...updated }
+    }
+  });
+
+  return { ...updated };
 }
 
 function findOrCreateOpsRow(order) {
