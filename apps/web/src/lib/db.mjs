@@ -59,6 +59,20 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
   }
 }
 
+async function insertAuditLogDb(supabase, { orderId = null, actor = 'admin', action, metadata = {} }) {
+  if (!action) return;
+  const payload = {
+    id: crypto.randomUUID(),
+    order_id: orderId || null,
+    actor,
+    action,
+    metadata,
+    created_at: new Date().toISOString()
+  };
+  const { error } = await supabase.from('audit_logs').insert(payload);
+  if (error) throw new Error(error.message);
+}
+
 export async function listExperiencesDb() {
   if (!hasSupabaseEnv()) return listInMemory();
 
@@ -868,6 +882,19 @@ export async function updateAdminRefundStatusDb(input = {}) {
 
   if (orderUpdateError) throw new Error(orderUpdateError.message);
 
+  await insertAuditLogDb(supabase, {
+    orderId: req.order_id,
+    actor: 'admin',
+    action: `refund_${action}`,
+    metadata: {
+      refundRequestId: req.id,
+      previousRefundStatus: req.status,
+      refundStatus: nextStatus,
+      orderStatus,
+      adminNote
+    }
+  });
+
   await tryRefreshAvailabilitySnapshotByOrderId(req.order_id);
 
   return {
@@ -917,6 +944,7 @@ export async function updateKpiConfigDb(input = {}) {
 
   const actor = String(input?.actor || 'admin');
   const note = String(input?.note || '');
+  const skipAuditLog = input?.skipAuditLog === true;
 
   const current = await getKpiConfigDb();
   const commissionRate = input.commissionRate == null ? current.commissionRate : Number(input.commissionRate);
@@ -955,6 +983,18 @@ export async function updateKpiConfigDb(input = {}) {
     source_version_id: null,
     created_at: new Date().toISOString()
   });
+
+  if (!skipAuditLog) {
+    await insertAuditLogDb(supabase, {
+      actor,
+      action: 'kpi_config_update',
+      metadata: {
+        note,
+        before: current,
+        after: updated
+      }
+    });
+  }
 
   return updated;
 }
@@ -1000,24 +1040,37 @@ export async function revertKpiConfigDb(input = {}) {
   if (targetErr || !target) throw new Error('kpi config version not found');
 
   const cfg = target.config_payload || {};
+  const actor = String(input.actor || 'admin');
   const updated = await updateKpiConfigDb({
     commissionRate: cfg.commissionRate,
     paymentFeeRate: cfg.paymentFeeRate,
     guidePayoutRate: cfg.guidePayoutRate,
     healthyMinContributionTwd: cfg.healthyMinContributionTwd,
-    healthyAllowException: cfg.healthyAllowException
+    healthyAllowException: cfg.healthyAllowException,
+    actor,
+    note: `revert to ${versionId}`,
+    skipAuditLog: true
   });
 
   // record revert op
   await supabase.from('kpi_settings_history').insert({
     version_id: crypto.randomUUID(),
-    actor: String(input.actor || 'admin'),
+    actor,
     action: 'revert',
     note: `revert to ${versionId}`,
     before_payload: null,
     config_payload: updated,
     source_version_id: versionId,
     created_at: new Date().toISOString()
+  });
+
+  await insertAuditLogDb(supabase, {
+    actor,
+    action: 'kpi_config_revert',
+    metadata: {
+      sourceVersionId: versionId,
+      revertedConfig: updated
+    }
   });
 
   return updated;
