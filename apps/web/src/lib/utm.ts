@@ -20,6 +20,48 @@ export interface UtmParams {
 }
 
 const UTM_SESSION_KEY = 'tp_utm';
+const UTM_MAX_LENGTH = 80;
+const UTM_KEYS: (keyof UtmParams)[] = [
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+];
+
+function sanitizeUtmValue(input: string): string | null {
+  if (!input) return null;
+
+  const normalized = input.normalize('NFKC').trim();
+  if (!normalized) return null;
+
+  // Reject protocol-like attack payloads.
+  if (/^(javascript|vbscript|data):/i.test(normalized)) return null;
+  // Reject obvious HTML/script payload patterns.
+  if (/[<>]/.test(normalized)) return null;
+
+  const cleaned = normalized
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\p{L}\p{N}._\-:/@+\s]/gu, '')
+    .replace(/\s+/g, '_')
+    .toLowerCase();
+
+  if (!cleaned) return null;
+  if (cleaned.length > UTM_MAX_LENGTH) return cleaned.slice(0, UTM_MAX_LENGTH);
+  return cleaned;
+}
+
+function sanitizeUtmObject(raw: unknown): UtmParams | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const source = raw as Record<string, unknown>;
+  const out: UtmParams = {};
+
+  for (const key of UTM_KEYS) {
+    const value = source[key];
+    if (typeof value !== 'string') continue;
+    const sanitized = sanitizeUtmValue(value);
+    if (sanitized) out[key] = sanitized;
+  }
+
+  return Object.keys(out).length > 0 ? out : null;
+}
 
 /** 從 URL 搜尋參數讀取 UTM，若有則存入 sessionStorage（首次優先原則） */
 export function captureUtm(search?: string): UtmParams | null {
@@ -28,17 +70,14 @@ export function captureUtm(search?: string): UtmParams | null {
   const params = new URLSearchParams(search ?? window.location.search);
   const utm: UtmParams = {};
 
-  const keys: (keyof UtmParams)[] = [
-    'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
-  ];
-
-  let hasUtm = false;
-  for (const key of keys) {
+  for (const key of UTM_KEYS) {
     const val = params.get(key);
-    if (val) { utm[key] = val; hasUtm = true; }
+    if (!val) continue;
+    const sanitized = sanitizeUtmValue(val);
+    if (sanitized) utm[key] = sanitized;
   }
 
-  if (!hasUtm) return null;
+  if (Object.keys(utm).length === 0) return null;
 
   // 首次優先：若已有快取，不覆蓋（保留歸因來源）
   try {
@@ -58,7 +97,13 @@ export function getStoredUtm(): UtmParams | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = sessionStorage.getItem(UTM_SESSION_KEY);
-    return raw ? (JSON.parse(raw) as UtmParams) : null;
+    if (!raw) return null;
+    const sanitized = sanitizeUtmObject(JSON.parse(raw));
+    if (!sanitized) {
+      sessionStorage.removeItem(UTM_SESSION_KEY);
+      return null;
+    }
+    return sanitized;
   } catch {
     return null;
   }
