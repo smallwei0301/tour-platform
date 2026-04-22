@@ -403,4 +403,104 @@ test('errorV2 response format matches API spec', () => {
   assert.equal(response.error.message, 'planId is required');
 });
 
+// ============================================================================
+// Blackout Regression Pack (Issue #149)
+// ============================================================================
+
+function rangesOverlap(start1, end1, start2, end2) {
+  return start1 < end2 && end1 > start2;
+}
+
+function applyBlackoutAndBookingFilters(candidates, blackouts, bookings) {
+  return candidates.filter((slot) => {
+    const slotStart = new Date(slot.startAt);
+    const slotEnd = new Date(slot.endAt);
+
+    const blackoutConflict = blackouts.some((blackout) =>
+      rangesOverlap(slotStart, slotEnd, new Date(blackout.starts_at), new Date(blackout.ends_at))
+    );
+
+    if (blackoutConflict) return false;
+
+    const bookingConflict = bookings.some((booking) =>
+      rangesOverlap(slotStart, slotEnd, new Date(booking.start_at), new Date(booking.end_at))
+    );
+
+    return !bookingConflict;
+  });
+}
+
+function makeAvailabilityFixtures() {
+  return {
+    candidates: [
+      {
+        startAt: '2026-05-01T09:00:00+08:00',
+        endAt: '2026-05-01T10:00:00+08:00',
+      },
+      {
+        startAt: '2026-05-01T10:00:00+08:00',
+        endAt: '2026-05-01T11:00:00+08:00',
+      },
+      {
+        startAt: '2026-05-01T11:00:00+08:00',
+        endAt: '2026-05-01T12:00:00+08:00',
+      },
+    ],
+    blackouts: [
+      {
+        starts_at: '2026-05-01T10:00:00+08:00',
+        ends_at: '2026-05-01T11:00:00+08:00',
+      },
+    ],
+    bookings: [
+      {
+        start_at: '2026-05-01T11:00:00+08:00',
+        end_at: '2026-05-01T12:00:00+08:00',
+      },
+    ],
+  };
+}
+
+test('blackout protection removes unavailable slots from available-slots payload', () => {
+  const { candidates, blackouts } = makeAvailabilityFixtures();
+
+  const filtered = applyBlackoutAndBookingFilters(candidates, blackouts, []);
+  const remainingStartTimes = filtered.map((slot) => slot.startAt);
+
+  assert.deepEqual(remainingStartTimes, [
+    '2026-05-01T09:00:00+08:00',
+    '2026-05-01T11:00:00+08:00',
+  ]);
+});
+
+test('booking and blackout coexist: booking conflict does not weaken blackout enforcement', () => {
+  const { candidates, blackouts, bookings } = makeAvailabilityFixtures();
+
+  const filtered = applyBlackoutAndBookingFilters(candidates, blackouts, bookings);
+  const remainingStartTimes = filtered.map((slot) => slot.startAt);
+
+  // 10:00 slot removed by blackout, 11:00 slot removed by booking.
+  assert.deepEqual(remainingStartTimes, ['2026-05-01T09:00:00+08:00']);
+});
+
+test('availability updates (new candidate slots) still keep blackout protection intact', () => {
+  const { candidates, blackouts } = makeAvailabilityFixtures();
+
+  // Simulate availability rule update that adds more candidate slots
+  const updatedCandidates = [
+    ...candidates,
+    {
+      startAt: '2026-05-01T12:00:00+08:00',
+      endAt: '2026-05-01T13:00:00+08:00',
+    },
+  ];
+
+  const filtered = applyBlackoutAndBookingFilters(updatedCandidates, blackouts, []);
+
+  // Blackout-protected 10:00 slot remains blocked after availability updates.
+  assert.equal(filtered.some((slot) => slot.startAt === '2026-05-01T10:00:00+08:00'), false);
+  // New non-overlapping slot should still be available.
+  assert.equal(filtered.some((slot) => slot.startAt === '2026-05-01T12:00:00+08:00'), true);
+});
+
 console.log('All Available Slots API tests completed!');

@@ -625,4 +625,106 @@ test('generateMerchantTradeNo creates valid trade number', () => {
   assert.equal(tradeNo.slice(0, 12), '550e8400e29b');
 });
 
+// ============================================================================
+// Blackout Regression Pack (Issue #149)
+// ============================================================================
+
+function rangesOverlap(start1, end1, start2, end2) {
+  return start1 < end2 && end1 > start2;
+}
+
+function validateDraftSlot({ startAt, endAt, guideId, blackouts, bookings }) {
+  const slotStart = new Date(startAt);
+  const slotEnd = new Date(endAt);
+
+  if (
+    blackouts
+      .filter((blackout) => blackout.guide_id === guideId)
+      .some((blackout) =>
+        rangesOverlap(slotStart, slotEnd, new Date(blackout.starts_at), new Date(blackout.ends_at))
+      )
+  ) {
+    return { available: false, reason: 'BLACKOUT_CONFLICT' };
+  }
+
+  if (
+    bookings
+      .filter((booking) => booking.guide_id === guideId)
+      .some((booking) =>
+        rangesOverlap(slotStart, slotEnd, new Date(booking.start_at), new Date(booking.end_at))
+      )
+  ) {
+    return { available: false, reason: 'BOOKING_CONFLICT' };
+  }
+
+  return { available: true };
+}
+
+function makeDraftFixtures() {
+  return {
+    guideId: 'guide_149',
+    blackouts: [
+      {
+        guide_id: 'guide_149',
+        starts_at: '2026-05-02T09:00:00+08:00',
+        ends_at: '2026-05-02T10:00:00+08:00',
+      },
+    ],
+    bookings: [
+      {
+        guide_id: 'guide_149',
+        start_at: '2026-05-02T10:00:00+08:00',
+        end_at: '2026-05-02T11:00:00+08:00',
+      },
+    ],
+  };
+}
+
+test('booking-draft blackout protection rejects slot in blackout window', () => {
+  const fixtures = makeDraftFixtures();
+
+  const result = validateDraftSlot({
+    startAt: '2026-05-02T09:15:00+08:00',
+    endAt: '2026-05-02T09:45:00+08:00',
+    guideId: fixtures.guideId,
+    blackouts: fixtures.blackouts,
+    bookings: fixtures.bookings,
+  });
+
+  assert.equal(result.available, false);
+  assert.equal(result.reason, 'BLACKOUT_CONFLICT');
+});
+
+test('booking + blackout coexistence keeps blackout enforcement in draft validation', () => {
+  const fixtures = makeDraftFixtures();
+
+  const blackoutResult = validateDraftSlot({
+    startAt: '2026-05-02T09:30:00+08:00',
+    endAt: '2026-05-02T10:00:00+08:00',
+    guideId: fixtures.guideId,
+    blackouts: fixtures.blackouts,
+    bookings: fixtures.bookings,
+  });
+
+  const bookingResult = validateDraftSlot({
+    startAt: '2026-05-02T10:15:00+08:00',
+    endAt: '2026-05-02T10:45:00+08:00',
+    guideId: fixtures.guideId,
+    blackouts: fixtures.blackouts,
+    bookings: fixtures.bookings,
+  });
+
+  assert.deepEqual(blackoutResult, { available: false, reason: 'BLACKOUT_CONFLICT' });
+  assert.deepEqual(bookingResult, { available: false, reason: 'BOOKING_CONFLICT' });
+});
+
+test('isolated fixtures are repeatable across runs (no cross-test mutation)', () => {
+  const runA = makeDraftFixtures();
+  const runB = makeDraftFixtures();
+
+  runA.blackouts[0].starts_at = '2026-05-02T08:00:00+08:00';
+
+  assert.equal(runB.blackouts[0].starts_at, '2026-05-02T09:00:00+08:00');
+});
+
 console.log('All Booking Draft + Checkout API tests completed!');
