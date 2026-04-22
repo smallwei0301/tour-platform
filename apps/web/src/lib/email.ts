@@ -1,12 +1,10 @@
 /**
  * Email notification service via Resend
- * Phase 9 — Tour Platform
- * Phase 10-4 — Added delivery logging with messageId
  *
- * All functions are fire-and-forget (async, non-blocking).
- * API failures are logged but do NOT throw — they must never affect API response.
- *
- * Setup: set RESEND_API_KEY and EMAIL_FROM in .env.local
+ * Single failure contract:
+ * - never throw from send* functions
+ * - always return EmailDeliveryResult
+ * - call sites can keep main flow success while explicitly surfacing email failures
  */
 
 import { Resend } from 'resend';
@@ -24,6 +22,21 @@ interface EmailLogEntry {
   ts: string;
 }
 
+export type EmailFailureCode = 'EMAIL_PROVIDER_NOT_CONFIGURED' | 'EMAIL_SEND_FAILED';
+
+export interface EmailDeliveryResult {
+  ok: boolean;
+  fn: string;
+  to: string;
+  subject: string;
+  orderId?: string;
+  status: 'sent' | 'failed' | 'skipped';
+  messageId?: string;
+  errorCode?: EmailFailureCode;
+  errorMessage?: string;
+  retriable?: boolean;
+}
+
 function logEmail(entry: EmailLogEntry): void {
   const icon = entry.status === 'sent' ? '✉️' : entry.status === 'skipped' ? '⏭️' : '❌';
   const base = `[email] ${icon} ${entry.fn} → ${entry.to} | subject="${entry.subject}"`;
@@ -38,11 +51,70 @@ function logEmail(entry: EmailLogEntry): void {
 
 const FROM = process.env.EMAIL_FROM || 'Tour Platform <noreply@resend.dev>';
 
+type EmailClient = { emails: { send: (args: any) => Promise<{ data?: { id?: string } }> } };
 let _resend: Resend | null = null;
-function getResend(): Resend | null {
+let _emailClientOverride: EmailClient | null = null;
+
+function getResend(): EmailClient | null {
+  if (_emailClientOverride) return _emailClientOverride;
   if (!process.env.RESEND_API_KEY) return null;
   if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
   return _resend;
+}
+
+// test hook
+export function __setEmailClientForTest(client: EmailClient | null): void {
+  _emailClientOverride = client;
+}
+
+async function sendEmailWithContract(input: {
+  fn: string;
+  to: string;
+  subject: string;
+  html: string;
+  orderId?: string;
+}): Promise<EmailDeliveryResult> {
+  const resend = getResend();
+  const base = {
+    fn: input.fn,
+    to: input.to,
+    subject: input.subject,
+    orderId: input.orderId,
+  };
+
+  if (!resend) {
+    logEmail({ ...base, status: 'skipped', ts: new Date().toISOString() });
+    return {
+      ...base,
+      ok: false,
+      status: 'skipped',
+      errorCode: 'EMAIL_PROVIDER_NOT_CONFIGURED',
+      errorMessage: 'RESEND_API_KEY is not configured',
+      retriable: false,
+    };
+  }
+
+  try {
+    const result = await resend.emails.send({ from: FROM, to: input.to, subject: input.subject, html: input.html });
+    logEmail({ ...base, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
+    return {
+      ...base,
+      ok: true,
+      status: 'sent',
+      messageId: result.data?.id,
+    };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logEmail({ ...base, status: 'failed', error: errorMessage, ts: new Date().toISOString() });
+    return {
+      ...base,
+      ok: false,
+      status: 'failed',
+      errorCode: 'EMAIL_SEND_FAILED',
+      errorMessage,
+      retriable: true,
+    };
+  }
 }
 
 export interface OrderEmailData {
@@ -134,7 +206,7 @@ function orderInfoBlock(data: OrderEmailData): string {
 /**
  * 訂單建立確認 email
  */
-export async function sendOrderConfirmation(data: OrderEmailData): Promise<void> {
+export async function sendOrderConfirmation(data: OrderEmailData): Promise<EmailDeliveryResult> {
   const subject = `您的預訂已建立 — ${data.activityTitle}`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">預訂建立成功 🎉</h1>
@@ -149,24 +221,19 @@ export async function sendOrderConfirmation(data: OrderEmailData): Promise<void>
     </a>
   `);
 
-  const resend = getResend();
-  if (!resend) {
-    logEmail({ fn: 'sendOrderConfirmation', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-    return;
-  }
-  try {
-    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
-    logEmail({ fn: 'sendOrderConfirmation', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logEmail({ fn: 'sendOrderConfirmation', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  return sendEmailWithContract({
+    fn: 'sendOrderConfirmation',
+    to: data.contactEmail,
+    subject,
+    html,
+    orderId: data.orderId,
+  });
 }
 
 /**
  * 付款成功 email
  */
-export async function sendPaymentSuccess(data: OrderEmailData): Promise<void> {
+export async function sendPaymentSuccess(data: OrderEmailData): Promise<EmailDeliveryResult> {
   const subject = `付款成功！預訂確認 — ${data.activityTitle}`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">付款成功 ✅</h1>
@@ -182,24 +249,19 @@ export async function sendPaymentSuccess(data: OrderEmailData): Promise<void> {
     </div>
   `);
 
-  const resend = getResend();
-  if (!resend) {
-    logEmail({ fn: 'sendPaymentSuccess', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-    return;
-  }
-  try {
-    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
-    logEmail({ fn: 'sendPaymentSuccess', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logEmail({ fn: 'sendPaymentSuccess', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  return sendEmailWithContract({
+    fn: 'sendPaymentSuccess',
+    to: data.contactEmail,
+    subject,
+    html,
+    orderId: data.orderId,
+  });
 }
 
 /**
  * 訂單取消 email
  */
-export async function sendOrderCancellation(data: OrderEmailData): Promise<void> {
+export async function sendOrderCancellation(data: OrderEmailData): Promise<EmailDeliveryResult> {
   const subject = `預訂已取消 — ${data.activityTitle}`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">訂單已取消</h1>
@@ -214,24 +276,19 @@ export async function sendOrderCancellation(data: OrderEmailData): Promise<void>
     </a>
   `);
 
-  const resend = getResend();
-  if (!resend) {
-    logEmail({ fn: 'sendOrderCancellation', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-    return;
-  }
-  try {
-    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
-    logEmail({ fn: 'sendOrderCancellation', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logEmail({ fn: 'sendOrderCancellation', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  return sendEmailWithContract({
+    fn: 'sendOrderCancellation',
+    to: data.contactEmail,
+    subject,
+    html,
+    orderId: data.orderId,
+  });
 }
 
 /**
  * 退款申請收到 email
  */
-export async function sendRefundRequested(data: OrderEmailData): Promise<void> {
+export async function sendRefundRequested(data: OrderEmailData): Promise<EmailDeliveryResult> {
   const subject = `退款申請已收到 — 訂單 #${data.orderId.slice(0, 8).toUpperCase()}`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">退款申請已收到 🔄</h1>
@@ -246,16 +303,11 @@ export async function sendRefundRequested(data: OrderEmailData): Promise<void> {
     </div>
   `);
 
-  const resend = getResend();
-  if (!resend) {
-    logEmail({ fn: 'sendRefundRequested', to: data.contactEmail, subject, orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-    return;
-  }
-  try {
-    const result = await resend.emails.send({ from: FROM, to: data.contactEmail, subject, html });
-    logEmail({ fn: 'sendRefundRequested', to: data.contactEmail, subject, orderId: data.orderId, messageId: result.data?.id, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logEmail({ fn: 'sendRefundRequested', to: data.contactEmail, subject, orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  return sendEmailWithContract({
+    fn: 'sendRefundRequested',
+    to: data.contactEmail,
+    subject,
+    html,
+    orderId: data.orderId,
+  });
 }

@@ -173,7 +173,27 @@ export async function POST(request: Request) {
     };
 
     if (order?.contact_email) {
-      sendPaymentSuccess(notifyData).catch(() => {}); // 絕對不阻塞 response
+      void sendPaymentSuccess(notifyData).then((emailResult) => {
+        if (!emailResult.ok) {
+          console.warn('[payment-callback][email] non-blocking failure', {
+            orderId,
+            code: emailResult.errorCode,
+            message: emailResult.errorMessage,
+          });
+          void trackServer(
+            {
+              event_name: 'error',
+              properties: {
+                message: `email delivery failed (${emailResult.errorCode || 'unknown'})`,
+                context: 'payment_success_email',
+              },
+              error_code: 'EMAIL_SEND_FAILED',
+              order_id: orderId,
+            },
+            request
+          );
+        }
+      });
     }
 
     // LINE Notify 通知管理員/導遊

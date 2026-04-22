@@ -43,24 +43,30 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
     });
 
     // 🔔 Fire-and-forget: 退款申請收到 email + LINE 通知
-    try {
-      const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
-      if (order) {
-        const notifyData = {
-          orderId,
-          activityTitle: order.title || '行程',
-          scheduleDate: null,
-          peopleCount: order.peopleCount,
-          totalTwd: order.totalTwd,
-          contactName: order.contactName || undefined,
-          contactEmail: user.email,
-          reason: body?.reason,
-          note: body?.note,
-        };
-        sendRefundRequested(notifyData).catch(() => {});
-        notifyRefundRequest(notifyData).catch(() => {});
-      }
-    } catch { /* email 失敗不影響主流程 */ }
+    const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
+    if (order) {
+      const notifyData = {
+        orderId,
+        activityTitle: order.title || '行程',
+        scheduleDate: null,
+        peopleCount: order.peopleCount,
+        totalTwd: order.totalTwd,
+        contactName: order.contactName || undefined,
+        contactEmail: user.email,
+        reason: body?.reason,
+        note: body?.note,
+      };
+      void sendRefundRequested(notifyData).then((emailResult) => {
+        if (!emailResult.ok) {
+          console.warn('[refund-request][email] non-blocking failure', {
+            orderId,
+            code: emailResult.errorCode,
+            message: emailResult.errorMessage,
+          });
+        }
+      });
+      notifyRefundRequest(notifyData).catch(() => {});
+    }
 
     return Response.json(ok(created));
   } catch (err) {

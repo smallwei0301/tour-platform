@@ -54,7 +54,15 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           contactName: orderBefore.contactName || undefined,
           contactEmail: user.email,
         };
-        sendOrderCancellation(notifyData).catch(() => {}); // 絕對不阻塞 response
+        void sendOrderCancellation(notifyData).then((emailResult) => {
+          if (!emailResult.ok) {
+            console.warn('[me-order-cancel][email] non-blocking failure', {
+              orderId,
+              code: emailResult.errorCode,
+              message: emailResult.errorMessage,
+            });
+          }
+        });
         notifyOrderCancelled(notifyData).catch(() => {});
       }
 
