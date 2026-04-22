@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed",
+    "test:smoke:v2-core": "node --test tests/api/v2-available-slots.test.mjs tests/api/v2-booking-draft-checkout.test.mjs tests/api/booking-state.test.mjs tests/api/ecpay-callback.test.mjs tests/api/v2-route-contract-smoke.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
