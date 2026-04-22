@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateInviteToken } from '../../../../../src/lib/guide-auth';
+import { errorV2 } from '../../../../../src/lib/api';
 
 /**
  * POST /api/admin/guides/promote
@@ -11,7 +12,7 @@ export async function POST(req: Request) {
   const { applicationId } = body;
 
   if (!applicationId) {
-    return NextResponse.json({ ok: false, error: { code: 'BAD_REQUEST', message: 'applicationId required' } }, { status: 400 });
+    return NextResponse.json(errorV2('BAD_REQUEST', 'applicationId required'), { status: 400 });
   }
 
   const { createClient } = await import('@supabase/supabase-js');
@@ -28,11 +29,11 @@ export async function POST(req: Request) {
     .single();
 
   if (appErr || !app) {
-    return NextResponse.json({ ok: false, error: { code: 'NOT_FOUND', message: '申請資料不存在' } }, { status: 404 });
+    return NextResponse.json(errorV2('NOT_FOUND', '申請資料不存在'), { status: 404 });
   }
 
   if (app.status !== 'approved') {
-    return NextResponse.json({ ok: false, error: { code: 'INVALID_STATUS', message: '只有已通過審核的申請才能上線' } }, { status: 400 });
+    return NextResponse.json(errorV2('INVALID_STATUS', '只有已通過審核的申請才能上線'), { status: 400 });
   }
 
   // Check if guide_profiles already exists for this application (by slug)
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
       .single();
 
     if (insertErr || !newProfile) {
-      return NextResponse.json({ ok: false, error: { code: 'SERVER_ERROR', message: insertErr?.message || '建立導遊資料失敗' } }, { status: 500 });
+      return NextResponse.json(errorV2('SERVER_ERROR', insertErr?.message || '建立導遊資料失敗'), { status: 500 });
     }
     guideId = newProfile.id;
   }

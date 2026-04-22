@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { errorV2 } from '../../../../../src/lib/api';
 
 /**
  * GET /api/admin/guides/approved
@@ -25,6 +26,6 @@ export async function GET() {
   } catch (err: unknown) {
     console.error('[admin/guides/approved] error:', err);
     const msg = err instanceof Error ? err.message : 'SERVER_ERROR';
-    return NextResponse.json({ ok: false, error: { code: 'SERVER_ERROR', message: msg } }, { status: 500 });
+    return NextResponse.json(errorV2('SERVER_ERROR', msg), { status: 500 });
   }
 }
