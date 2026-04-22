@@ -49,6 +49,7 @@ export default function GuideAvailabilityPage() {
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showBlackoutModal, setShowBlackoutModal] = useState(false);
   const [editingRule, setEditingRule] = useState<AvailabilityRule | null>(null);
+  const [editingBlackout, setEditingBlackout] = useState<BlackoutDate | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -185,14 +186,24 @@ export default function GuideAvailabilityPage() {
   };
 
   // ── Blackout handlers ──
-  const openBlackoutModal = () => {
-    const now = new Date();
-    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    setBlackoutForm({
-      starts_at: now.toISOString().slice(0, 16),
-      ends_at: tomorrow.toISOString().slice(0, 16),
-      reason: '',
-    });
+  const openBlackoutModal = (blackout?: BlackoutDate) => {
+    if (blackout) {
+      setEditingBlackout(blackout);
+      setBlackoutForm({
+        starts_at: new Date(blackout.starts_at).toISOString().slice(0, 16),
+        ends_at: new Date(blackout.ends_at).toISOString().slice(0, 16),
+        reason: blackout.reason || '',
+      });
+    } else {
+      setEditingBlackout(null);
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      setBlackoutForm({
+        starts_at: now.toISOString().slice(0, 16),
+        ends_at: tomorrow.toISOString().slice(0, 16),
+        reason: '',
+      });
+    }
     setError('');
     setShowBlackoutModal(true);
   };
@@ -201,8 +212,13 @@ export default function GuideAvailabilityPage() {
     setSaving(true);
     setError('');
     try {
-      const res = await fetch('/api/guide/blackout-dates', {
-        method: 'POST',
+      const url = editingBlackout
+        ? `/api/guide/blackout-dates/${editingBlackout.id}`
+        : '/api/guide/blackout-dates';
+      const method = editingBlackout ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           starts_at: new Date(blackoutForm.starts_at).toISOString(),
@@ -408,7 +424,7 @@ export default function GuideAvailabilityPage() {
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>新增休假時段</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingBlackout ? '編輯休假時段' : '新增休假時段'}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
@@ -445,7 +461,7 @@ export default function GuideAvailabilityPage() {
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                 <button onClick={saveBlackout} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
-                  {saving ? '儲存中...' : '儲存'}
+                  {saving ? '儲存中...' : (editingBlackout ? '更新' : '儲存')}
                 </button>
                 <button onClick={() => setShowBlackoutModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
                   取消
@@ -527,7 +543,7 @@ export default function GuideAvailabilityPage() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>休假/不可預約時段</h2>
                   <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定特定日期的休假或不可接單時間</p>
                 </div>
-                <button onClick={openBlackoutModal} style={btn('#dc2626', '#fff')}>
+                <button onClick={() => openBlackoutModal()} style={btn('#dc2626', '#fff')}>
                   + 新增休假
                 </button>
               </div>
@@ -559,9 +575,14 @@ export default function GuideAvailabilityPage() {
                             {b.source === 'manual' ? '手動設定' : '系統設定'}
                           </span>
                         </div>
-                        <button onClick={() => deleteBlackout(b.id)} style={smallBtn('#fff', '#dc2626')}>
-                          刪除
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => openBlackoutModal(b)} style={smallBtn('#fff', '#7c3aed')}>
+                            編輯
+                          </button>
+                          <button onClick={() => deleteBlackout(b.id)} style={smallBtn('#fff', '#dc2626')}>
+                            刪除
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
