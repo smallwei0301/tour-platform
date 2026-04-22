@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
+import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
 
 interface Schedule {
   startAt?: string;
@@ -149,9 +150,10 @@ function getIconForHighlight(text: string) {
 interface DatePlanSectionProps {
   activity: Activity;
   schedules: Schedule[];
+  useBookingV2: boolean;
 }
 
-export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
+export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanSectionProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -316,7 +318,13 @@ export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
                   </span>
                 ) : (
                   <Link
-                    href={`/booking/${activity.slug}?plan=${plan.id}${selectedDate ? `&date=${selectedDate}` : ''}${planAvail.schedule?.id ? `&scheduleId=${planAvail.schedule.id}` : ''}`}
+                    href={resolvePlanBookingHref({
+                      activitySlug: activity.slug,
+                      planId: plan.id,
+                      date: selectedDate || undefined,
+                      scheduleId: planAvail.schedule?.id || undefined,
+                      useBookingV2,
+                    })}
                     className="tp-btn tp-btn-primary kkd-plan-select-btn"
                     onClick={() => {
                       void ensureLiveAvailability();
