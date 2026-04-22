@@ -5,6 +5,7 @@ import {
   getMyOrderDetail as getMyOrderDetailInMemory,
   createRefundRequest as createRefundRequestInMemory,
   listRefundRequests as listRefundRequestsInMemory,
+  cancelOrder as cancelOrderInMemory,
   createGuideApplication as createGuideApplicationInMemory,
   listGuideApplications as listGuideApplicationsInMemory,
   updateGuideApplicationStatus as updateGuideApplicationStatusInMemory,
@@ -194,6 +195,18 @@ export async function createOrderDb(input) {
     throw new Error(orderError?.message || 'order create failed');
   }
 
+  await insertAuditLogDb(supabase, {
+    orderId: inserted.id,
+    actor: 'user',
+    action: 'order_created',
+    metadata: {
+      experienceSlug: activity.slug,
+      scheduleId: inserted.schedule_id,
+      peopleCount: inserted.people_count,
+      status: inserted.status,
+    }
+  });
+
   await tryRefreshAvailabilitySnapshotByOrderId(inserted.id);
 
   return {
@@ -344,12 +357,7 @@ export async function cancelOrderDb(input = {}) {
   if (!contactEmail) throw new Error('contactEmail is required');
 
   if (!hasSupabaseEnv()) {
-    // in-memory fallback
-    const order = _orders.find((o) => o.id === orderId && o.contact_email === contactEmail);
-    if (!order) throw new Error('order not found');
-    if (order.status !== 'pending_payment') throw new Error('only pending_payment orders can be cancelled by user');
-    order.status = 'cancelled_by_user';
-    return { id: order.id, status: order.status };
+    return cancelOrderInMemory({ orderId, contactEmail });
   }
 
   const supabase = await getSupabase();
@@ -409,6 +417,16 @@ export async function cancelOrderDb(input = {}) {
       }
     }
   }
+
+  await insertAuditLogDb(supabase, {
+    orderId,
+    actor: 'user',
+    action: 'order_cancelled_by_user',
+    metadata: {
+      previousStatus: 'pending_payment',
+      status: 'cancelled_by_user'
+    }
+  });
 
   await tryRefreshAvailabilitySnapshotByOrderId(orderId);
   return { id: orderId, status: 'cancelled_by_user' };
@@ -523,6 +541,19 @@ export async function createRefundRequestDb(input = {}) {
     .eq('id', orderId);
 
   if (updateOrderError) throw new Error(updateOrderError.message);
+
+  await insertAuditLogDb(supabase, {
+    orderId,
+    actor: 'user',
+    action: 'refund_requested',
+    metadata: {
+      refundRequestId: inserted.id,
+      requestId,
+      reason: inserted.reason,
+      previousOrderStatus: order.status,
+      orderStatus: 'refund_pending'
+    }
+  });
 
   return {
     id: inserted.id,
