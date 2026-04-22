@@ -10,9 +10,9 @@ import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { resolveBookingEntryHref } from '../../../../src/lib/booking-entry.mjs';
 
-// 根治版（低風險）：將頁面主體固定為 ISR 靜態輸出，避免每次請求都走 dynamic no-store。
+// Issue #84 strategy: page shell/content stay on ISR; volatile availability moves to client intent fetch.
 export const dynamic = 'force-static';
-export const revalidate = 60;
+export const revalidate = 300;
 
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }

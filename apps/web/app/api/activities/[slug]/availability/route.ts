@@ -2,6 +2,34 @@ import { ok, fail } from '../../../../../src/lib/api';
 
 export const dynamic = 'force-dynamic';
 
+type AvailabilitySchedule = {
+  id: string | null;
+  startAt: string;
+  capacity: number;
+  bookedCount: number;
+  status: string;
+  planId: string | null;
+};
+
+function resolveCacheTierSeconds(schedules: AvailabilitySchedule[]): 15 | 30 | 60 {
+  if (schedules.length === 0) return 60;
+
+  const now = Date.now();
+  let minDaysUntilStart = Number.POSITIVE_INFINITY;
+
+  for (const s of schedules) {
+    const ms = new Date(s.startAt).getTime();
+    if (!Number.isFinite(ms)) continue;
+    const days = (ms - now) / (1000 * 60 * 60 * 24);
+    if (days < minDaysUntilStart) minDaysUntilStart = days;
+  }
+
+  // 15s: very near-term inventory (0-3 days), 30s: short-term (4-14 days), 60s: longer horizon.
+  if (minDaysUntilStart <= 3) return 15;
+  if (minDaysUntilStart <= 14) return 30;
+  return 60;
+}
+
 async function getSupabaseAdmin() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -41,7 +69,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
 
     if (snapshotError) throw new Error(snapshotError.message);
 
-    let schedules = [] as any[];
+    let schedules: AvailabilitySchedule[] = [];
 
     if (snapshotRows && snapshotRows.length > 0) {
       const hasPlanSpecificByDate = new Set(
@@ -57,14 +85,10 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
       schedules = normalized.map((r: any) => ({
         id: null,
         startAt: `${r.date}T00:00:00+08:00`,
-        endAt: null,
-        capacity: r.total_capacity,
-        bookedCount: r.total_booked,
+        capacity: Number(r.total_capacity ?? 0),
+        bookedCount: Number(r.total_booked ?? 0),
         status: r.is_open ? 'open' : 'full',
         planId: r.plan_id ?? null,
-        minParticipants: 1,
-        remaining: r.remaining,
-        source: 'snapshot',
       }));
     } else {
       // Fallback to raw schedules if snapshot not ready.
@@ -79,23 +103,27 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         return Response.json(fail('NOT_FOUND', 'activity not found or no schedules'), { status: 404 });
       }
 
-      schedules = data.map((s: any) => ({
-        id: s.id,
-        startAt: s.start_at,
-        endAt: s.end_at,
-        capacity: s.capacity,
-        bookedCount: s.booked_count,
-        status: s.status,
-        planId: s.plan_id ?? null,
-        minParticipants: s.min_participants ?? 1,
-        source: 'schedule',
-      }));
+      schedules = data.map((s: any) => {
+        const capacity = Number(s.capacity ?? 0);
+        const bookedCount = Number(s.booked_count ?? 0);
+        return {
+          id: s.id,
+          startAt: s.start_at,
+          capacity,
+          bookedCount,
+          status: s.status || (bookedCount >= capacity ? 'full' : 'open'),
+          planId: s.plan_id ?? null,
+        };
+      });
     }
 
-    return Response.json(ok({ schedules, fetchedAt: new Date().toISOString() }), {
+    const sMaxAge = resolveCacheTierSeconds(schedules);
+
+    return Response.json(ok({ schedules }), {
       headers: {
-        // 短快取：平衡速度與即時性（最多約 5 秒延遲）
-        'cache-control': 'public, s-maxage=5, stale-while-revalidate=10',
+        // Tiered cache window: 15/30/60 seconds by nearest upcoming departure.
+        'cache-control': `public, s-maxage=${sMaxAge}, stale-while-revalidate=${Math.max(30, sMaxAge * 2)}`,
+        'x-availability-cache-tier': String(sMaxAge),
       },
     });
   } catch (error) {
