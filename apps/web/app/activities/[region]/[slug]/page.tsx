@@ -7,6 +7,8 @@ import { DatePlanSection } from '../../../../src/components/activity/DatePlanSec
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
+import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
+import { resolveBookingEntryHref } from '../../../../src/lib/booking-entry.mjs';
 
 // 根治版（低風險）：將頁面主體固定為 ISR 靜態輸出，避免每次請求都走 dynamic no-store。
 export const dynamic = 'force-static';
@@ -38,6 +40,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const guide = activity.guide;
   const actReviews = activity.reviews || [];
   const displayedSchedules = activity.schedules || [];
+  const useBookingV2 = isBookingV2Enabled();
 
   const imageUrls: string[] = activity.imageUrls?.length ? activity.imageUrls : (activity.coverImageUrl ? [activity.coverImageUrl] : []);
   const originalPrice = Math.round(activity.priceTwd * 1.25);
@@ -146,7 +149,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {/* SECTION 1: 方案 (DatePlanSection) */}
             <section id="section-plan" className="kkd-scroll-section">
               <h2 className="kkd-section-title">🗓 選擇方案</h2>
-              <DatePlanSection activity={activity} schedules={displayedSchedules} />
+              <DatePlanSection activity={activity} schedules={displayedSchedules} useBookingV2={useBookingV2} />
             </section>
 
             {/* SECTION 1.5: 詳細行程時間表 */}
@@ -367,7 +370,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               )}
 
               <Link
-                href={`/checkout?slug=${activity.slug}`}
+                href={resolveBookingEntryHref({ activitySlug: activity.slug, useBookingV2 })}
                 className="tp-btn tp-btn-primary"
                 data-testid="begin-checkout-btn"
                 style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px 0', fontSize: 16, marginTop: 16 }}
@@ -395,6 +398,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         activitySlug={activity.slug}
         priceLabel={`NT$${activity.priceTwd?.toLocaleString()} / 人`}
         price={activity.priceTwd || 0}
+        useBookingV2={useBookingV2}
       />
     </main>
   );

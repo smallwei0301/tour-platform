@@ -2,17 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { resolveBookingEntryHref } from '../../lib/booking-entry.mjs';
 
 interface ActivityBottomBarProps {
   activitySlug: string;
   priceLabel: string;
   price: number;
+  useBookingV2: boolean;
 }
 
 export function ActivityBottomBar({
   activitySlug,
   priceLabel,
   price,
+  useBookingV2,
 }: ActivityBottomBarProps) {
   const [wishlisted, setWishlisted] = useState(false);
 
@@ -32,7 +35,7 @@ export function ActivityBottomBar({
             {wishlisted ? '❤️' : '🤍'}
           </button>
           <Link
-            href={`/booking/${activitySlug}`}
+            href={resolveBookingEntryHref({ activitySlug, useBookingV2 })}
             className="tp-btn tp-btn-primary tp-bottom-bar-cta"
           >
             選擇方案
