@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createOrderDb, processPaymentCallbackDb } from '../../src/lib/db.mjs';
-import { experiences, orders } from '../../src/lib/store.mjs';
+import { experiences, orders, auditLogs } from '../../src/lib/store.mjs';
 
 test('ecpay callback marks order paid and occupies schedule seats', async () => {
   const order = await createOrderDb({
@@ -17,10 +17,18 @@ test('ecpay callback marks order paid and occupies schedule seats', async () => 
   const schedule = exp.schedules.find((s) => s.id === order.scheduleId);
   const before = schedule.bookedCount;
 
+  const beforeSuccessAudit = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_succeeded').length;
+
   const result = await processPaymentCallbackDb({ orderId: order.id, tradeNo: 'MOCK123' });
 
   assert.equal(result.order.status, 'paid');
   assert.equal(schedule.bookedCount, before + 2);
+
+  const successLogs = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_succeeded');
+  assert.equal(successLogs.length, beforeSuccessAudit + 1);
+  assert.equal(successLogs.at(-1)?.metadata?.source, 'payment/ecpay_callback');
+  assert.equal(successLogs.at(-1)?.metadata?.event_type, 'payment_callback_succeeded');
+  assert.equal(successLogs.at(-1)?.metadata?.trade_no, 'MOCK123');
 });
 
 test('ecpay callback is idempotent for paid order', async () => {
@@ -34,10 +42,47 @@ test('ecpay callback is idempotent for paid order', async () => {
   });
 
   await processPaymentCallbackDb({ orderId: order.id, tradeNo: 'MOCK124' });
+
+  const successCountAfterFirst = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_succeeded').length;
+  const replayCountBefore = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_replay_noop').length;
+
   const result = await processPaymentCallbackDb({ orderId: order.id, tradeNo: 'MOCK124' });
 
   assert.equal(result.scheduleUpdated, false);
   assert.equal(result.order.status, 'paid');
+
+  const successCountAfterReplay = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_succeeded').length;
+  const replayLogs = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_replay_noop');
+
+  assert.equal(successCountAfterReplay, successCountAfterFirst);
+  assert.equal(replayLogs.length, replayCountBefore + 1);
+  assert.equal(replayLogs.at(-1)?.metadata?.event_type, 'payment_callback_replay_noop');
+  assert.equal(replayLogs.at(-1)?.metadata?.source, 'payment/ecpay_callback');
+});
+
+test('ecpay callback replay on confirmed order is noop with explicit replay audit', async () => {
+  const order = await createOrderDb({
+    experienceSlug: 'kaohsiung-chaishan-cave-experience',
+    scheduleId: 'sch_chaishan_0410',
+    peopleCount: 1,
+    contactName: 'Replay Confirmed',
+    contactPhone: '0912345678',
+    contactEmail: 'replay-confirmed@example.com'
+  });
+
+  await processPaymentCallbackDb({ orderId: order.id, tradeNo: 'MOCK126' });
+
+  const row = orders.find((o) => o.id === order.id);
+  row.status = 'confirmed';
+
+  const result = await processPaymentCallbackDb({ orderId: order.id, tradeNo: 'MOCK126' });
+
+  assert.equal(result.scheduleUpdated, false);
+  assert.equal(result.order.status, 'confirmed');
+
+  const replayLogs = auditLogs.filter((log) => log.orderId === order.id && log.action === 'payment_callback_replay_noop');
+  assert.ok(replayLogs.length >= 1);
+  assert.equal(replayLogs.at(-1)?.metadata?.order_status, 'confirmed');
 });
 
 test('ecpay callback rejects owner email mismatch', async () => {

@@ -317,6 +317,21 @@ export function processPaymentCallback(input) {
 
   // idempotent: if already paid, return without double seat booking
   if (order.status === 'paid' || order.status === 'confirmed' || order.status === 'completed') {
+    appendAuditLog({
+      orderId: order.id,
+      actor: 'system',
+      action: 'payment_callback_replay_noop',
+      metadata: {
+        event_type: 'payment_callback_replay_noop',
+        source: 'payment/ecpay_callback',
+        provider: 'ecpay',
+        order_id: order.id,
+        trade_no: normalizeSlug(input?.tradeNo) || null,
+        order_status: order.status,
+        callback_received_at: new Date().toISOString(),
+      },
+    });
+
     return { order, scheduleUpdated: false };
   }
 
@@ -343,15 +358,32 @@ export function processPaymentCallback(input) {
   order.status = 'paid';
   order.paidAt = new Date().toISOString();
 
+  const tradeNo = normalizeSlug(input?.tradeNo) || null;
   payments.push({
     id: `pay_${String(payments.length + 1).padStart(6, '0')}`,
     orderId: order.id,
     provider: 'ecpay',
-    tradeNo: normalizeSlug(input?.tradeNo) || null,
+    tradeNo,
     amountTwd: order.totalTwd,
     status: 'paid',
     paidAt: order.paidAt,
     raw: input || null
+  });
+
+  appendAuditLog({
+    orderId: order.id,
+    actor: 'system',
+    action: 'payment_callback_succeeded',
+    metadata: {
+      event_type: 'payment_callback_succeeded',
+      source: 'payment/ecpay_callback',
+      provider: 'ecpay',
+      order_id: order.id,
+      trade_no: tradeNo,
+      order_status_before: 'pending_payment',
+      order_status_after: 'paid',
+      callback_received_at: order.paidAt,
+    },
   });
 
   return { order, scheduleUpdated: true, schedule };
