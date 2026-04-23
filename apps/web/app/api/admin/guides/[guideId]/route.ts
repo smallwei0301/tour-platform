@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { randomBytes, createHash } from 'crypto';
-import { errorV2 } from '../../../../../src/lib/api';
+import { errorV2 } from '../../../../../../src/lib/api';
 
 function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
