@@ -1,4 +1,16 @@
-import { experiences, orders, payments, refundRequests, guideApplications } from './store.mjs';
+import { experiences, orders, payments, refundRequests, guideApplications, auditLogs } from './store.mjs';
+
+function appendAuditLog({ orderId = null, actor = 'system', action, metadata = {} }) {
+  if (!action) return;
+  auditLogs.push({
+    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
+    orderId: orderId || null,
+    actor,
+    action,
+    metadata,
+    createdAt: new Date().toISOString(),
+  });
+}
 
 function normalizeSlug(slug) {
   return String(slug || '').trim();
@@ -79,7 +91,47 @@ export function createOrder(input) {
   };
 
   orders.push(order);
+
+  appendAuditLog({
+    orderId: order.id,
+    actor: 'user',
+    action: 'order_created',
+    metadata: {
+      experienceSlug: order.experienceSlug,
+      scheduleId: order.scheduleId,
+      peopleCount: order.peopleCount,
+      status: order.status,
+    },
+  });
+
   return order;
+}
+
+export function cancelOrder(input = {}) {
+  const orderId = normalizeSlug(input?.orderId);
+  const contactEmail = normalizeSlug(input?.contactEmail);
+
+  if (!orderId) throw new Error('orderId is required');
+  if (!contactEmail) throw new Error('contactEmail is required');
+
+  const order = orders.find((o) => o.id === orderId && o.contactEmail === contactEmail);
+  if (!order) throw new Error('order not found');
+  if (order.status !== 'pending_payment') throw new Error('only pending_payment orders can be cancelled by user');
+
+  order.status = 'cancelled_by_user';
+  order.updatedAt = new Date().toISOString();
+
+  appendAuditLog({
+    orderId: order.id,
+    actor: 'user',
+    action: 'order_cancelled_by_user',
+    metadata: {
+      previousStatus: 'pending_payment',
+      status: order.status,
+    },
+  });
+
+  return { id: order.id, status: order.status };
 }
 
 export function listMyOrders(input = {}) {
@@ -163,6 +215,19 @@ export function createRefundRequest(input = {}) {
 
   refundRequests.push(request);
   order.status = 'refund_pending';
+
+  appendAuditLog({
+    orderId: order.id,
+    actor: 'user',
+    action: 'refund_requested',
+    metadata: {
+      refundRequestId: request.id,
+      requestId,
+      reason,
+      previousOrderStatus: 'pending_payment',
+      orderStatus: order.status,
+    },
+  });
 
   return {
     ...request,
