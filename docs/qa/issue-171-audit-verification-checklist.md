@@ -126,3 +126,32 @@
 
 ### STOP
 - 關鍵流程落在 `no` 或無法證明可追溯（缺 actor/action/target/source/timestamp）
+
+## I. Fix-round assessment (Round 2, branch-scope check)
+
+### I-1) 可否在本分支立即消除 Judy blockers？
+
+**結論：不可在本分支（文件收斂分支）內一次性消除；屬於跨層實作/環境證據缺口。**
+
+### I-2) Grounded blocker evidence（repo/code）
+
+1. **`refund_complete -> payment_events.refunded` 目前無落點（P0）**
+   - `apps/web/src/lib/db.mjs` 的 `updateAdminRefundStatusDb()`（`action === 'complete'`）僅更新：
+     - `refund_requests.status='refunded'`
+     - `orders.status='refunded'`
+     - `audit_logs(action='refund_complete')`
+   - 該函式中**未寫入** `payment_events(event_type='refunded')`。
+   - 這代表缺口是「程式行為缺失」，不是僅靠文件可消除。
+
+2. **checkout/callback 的 query-based evidence 仍缺（P0）**
+   - 本分支可提供 route/test 佐證，但 Judy blocker 要求的是可重現 query/sample row（真實鏈路）。
+   - 這需要執行環境（DB 寫入後查詢）證據，不是單純編修 checklist 可完成。
+
+3. **`no` 類流程（POS create / LIFF mapping / notification）屬範圍外**
+   - 已在 matrix/checklist 維持 `no`，不宣稱已完成。
+   - 這些項目需另開 implementation issue，避免在 #171（readiness 文件收斂）內混入 scope creep。
+
+### I-3) 對 merge policy 的影響
+
+- 依 `merge-ready-only` + `qa_gate=required`，目前判定仍為 **HOLD / BLOCKED**。
+- #171 可保留為「readiness artifact 完整」，但不可宣稱「P0 已清」。
