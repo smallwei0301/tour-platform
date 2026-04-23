@@ -30,6 +30,12 @@ function isValidUuid(str: string): boolean {
 const VALID_PROVIDERS = ['ecpay'] as const;
 type PaymentProvider = (typeof VALID_PROVIDERS)[number];
 
+type CheckoutBooking = {
+  activities: { title: string } | null;
+  activity_plans: { name: string } | null;
+  [key: string]: unknown;
+};
+
 // ECPay configuration
 const ECPAY_ENDPOINTS = {
   sandbox: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5',
@@ -204,8 +210,9 @@ export async function POST(
     });
 
     // 7. Build ECPay payment form parameters
-    const activities = booking.activities as unknown as { title: string } | null;
-    const plans = booking.activity_plans as unknown as { name: string } | null;
+    const checkoutBooking = booking as unknown as CheckoutBooking;
+    const activities = checkoutBooking.activities;
+    const plans = checkoutBooking.activity_plans;
     const activityTitle = activities?.title || '行程預訂';
     const planName = plans?.name || '';
     const itemName = planName ? `${activityTitle} - ${planName}` : activityTitle;
