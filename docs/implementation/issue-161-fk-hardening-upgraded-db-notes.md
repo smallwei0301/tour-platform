@@ -4,9 +4,10 @@
 
 This slice intentionally ships only:
 1. `bookings.order_id -> orders(id)` explicit FK via idempotent migration-safe DDL.
-2. `payments.booking_id` additive nullable column + FK to `bookings(id)`.
-3. Deterministic-only backfill from `payments.order_id` to `payments.booking_id` where `bookings.order_id` is uniquely mapped.
-4. Verification SQL for FK/column existence and upgraded-path consistency evidence.
+2. `payments.booking_id` additive nullable column + semantic FK normalization to exactly one `payments.booking_id -> bookings(id)` FK.
+3. Final `payments.booking_id` FK delete rule normalized to `ON DELETE SET NULL` (legacy CASCADE semantics removed).
+4. Deterministic-only backfill from `payments.order_id` to `payments.booking_id` where `bookings.order_id` is uniquely mapped.
+5. Verification SQL for FK/column existence, duplicate semantic FK absence, and final delete-rule evidence.
 
 Out of scope in this slice:
 - `order_items.ref_id` redesign
@@ -15,7 +16,8 @@ Out of scope in this slice:
 
 ## Files
 
-- Migration: `supabase/migrations/20260423153000_issue161_fk_hardening_slice.sql`
+- Canonical migration: `supabase/migrations/20260423142000_issue_161_fk_hardening.sql`
+- Follow-up slice: `supabase/migrations/20260423153000_issue161_fk_hardening_slice.sql` (intentional no-op to avoid duplicate rollout logic)
 - Verification: `supabase/scripts/verify_issue161_fk_hardening.sql`
 
 ## Deterministic backfill rule

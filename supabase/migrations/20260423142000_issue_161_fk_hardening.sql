@@ -1,7 +1,9 @@
 -- issue #161: bounded FK hardening for upgraded DBs
--- Scope (bounded):
--- 1) enforce bookings.order_id -> orders(id) FK with idempotent/migration-safe DDL
--- 2) add payments.booking_id + FK wiring to bookings(id)
+-- Canonical migration path for #161 on top of #172 baseline.
+-- Goals:
+-- 1) enforce bookings.order_id -> orders(id) FK with idempotent DDL
+-- 2) normalize payments.booking_id wiring to exactly one semantic FK -> bookings(id)
+--    with final ON DELETE SET NULL semantics (remove legacy CASCADE variants)
 -- 3) deterministic-only backfill from payments.order_id -> bookings.order_id
 --    (only when one-and-only-one booking matches the order_id)
 
@@ -85,8 +87,12 @@ FROM deterministic_mapping m
 WHERE p.id = m.payment_id
   AND p.booking_id IS NULL;
 
--- 4) payments.booking_id FK wiring (idempotent)
+-- 4) payments.booking_id FK normalization (semantic + idempotent)
+-- Remove all semantic FKs on payments.booking_id -> bookings.id first,
+-- then enforce one canonical named FK with ON DELETE SET NULL.
 DO $$
+DECLARE
+  legacy_fk RECORD;
 BEGIN
   IF EXISTS (
     SELECT 1
@@ -110,17 +116,45 @@ BEGIN
       AND a.attname = 'booking_id'
       AND a.attnum > 0
       AND NOT a.attisdropped
-  )
-  AND NOT EXISTS (
-    SELECT 1
-    FROM pg_constraint c
-    JOIN pg_class t ON t.oid = c.conrelid
-    JOIN pg_namespace n ON n.oid = t.relnamespace
-    WHERE c.contype = 'f'
-      AND n.nspname = 'public'
-      AND t.relname = 'payments'
-      AND c.conname = 'fk_payments_booking_id'
   ) THEN
+    FOR legacy_fk IN
+      SELECT c.conname
+      FROM pg_constraint c
+      JOIN pg_class src ON src.oid = c.conrelid
+      JOIN pg_namespace src_n ON src_n.oid = src.relnamespace
+      JOIN pg_class tgt ON tgt.oid = c.confrelid
+      JOIN pg_namespace tgt_n ON tgt_n.oid = tgt.relnamespace
+      WHERE c.contype = 'f'
+        AND src_n.nspname = 'public'
+        AND src.relname = 'payments'
+        AND tgt_n.nspname = 'public'
+        AND tgt.relname = 'bookings'
+        AND c.conkey = ARRAY(
+          SELECT a.attnum
+          FROM pg_attribute a
+          JOIN pg_class t ON t.oid = a.attrelid
+          JOIN pg_namespace n ON n.oid = t.relnamespace
+          WHERE n.nspname = 'public'
+            AND t.relname = 'payments'
+            AND a.attname = 'booking_id'
+            AND a.attnum > 0
+            AND NOT a.attisdropped
+        )
+        AND c.confkey = ARRAY(
+          SELECT a.attnum
+          FROM pg_attribute a
+          JOIN pg_class t ON t.oid = a.attrelid
+          JOIN pg_namespace n ON n.oid = t.relnamespace
+          WHERE n.nspname = 'public'
+            AND t.relname = 'bookings'
+            AND a.attname = 'id'
+            AND a.attnum > 0
+            AND NOT a.attisdropped
+        )
+    LOOP
+      EXECUTE format('ALTER TABLE public.payments DROP CONSTRAINT %I', legacy_fk.conname);
+    END LOOP;
+
     ALTER TABLE public.payments
       ADD CONSTRAINT fk_payments_booking_id
       FOREIGN KEY (booking_id)

@@ -1,9 +1,11 @@
--- Verification SQL for Issue #161 bounded FK hardening (upgraded DB path)
+-- Verification SQL for Issue #161 FK hardening (upgraded DB path)
 -- Covers:
--- 1) FK presence
--- 2) payments.booking_id column presence
--- 3) deterministic backfill outcome (resolved/ambiguous)
--- 4) residual mismatch/orphan counts
+-- 1) Named FK presence
+-- 2) Semantic uniqueness: exactly one payments.booking_id -> bookings.id FK
+-- 3) Final ON DELETE semantics for payments.booking_id FK = SET NULL
+-- 4) payments.booking_id column presence
+-- 5) deterministic backfill outcome (resolved/ambiguous)
+-- 6) residual mismatch/orphan counts
 
 -- A) FK presence (explicit names)
 SELECT
@@ -28,7 +30,52 @@ SELECT
       AND c.conname = 'fk_payments_booking_id'
   ) AS has_fk_payments_booking_id;
 
--- B) Column presence
+-- B) Semantic FK uniqueness + final delete-rule check for payments.booking_id -> bookings.id
+WITH semantic_fks AS (
+  SELECT
+    c.conname,
+    c.confdeltype
+  FROM pg_constraint c
+  JOIN pg_class src ON src.oid = c.conrelid
+  JOIN pg_namespace src_n ON src_n.oid = src.relnamespace
+  JOIN pg_class tgt ON tgt.oid = c.confrelid
+  JOIN pg_namespace tgt_n ON tgt_n.oid = tgt.relnamespace
+  WHERE c.contype = 'f'
+    AND src_n.nspname = 'public'
+    AND src.relname = 'payments'
+    AND tgt_n.nspname = 'public'
+    AND tgt.relname = 'bookings'
+    AND c.conkey = ARRAY(
+      SELECT a.attnum
+      FROM pg_attribute a
+      JOIN pg_class t ON t.oid = a.attrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      WHERE n.nspname = 'public'
+        AND t.relname = 'payments'
+        AND a.attname = 'booking_id'
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    )
+    AND c.confkey = ARRAY(
+      SELECT a.attnum
+      FROM pg_attribute a
+      JOIN pg_class t ON t.oid = a.attrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      WHERE n.nspname = 'public'
+        AND t.relname = 'bookings'
+        AND a.attname = 'id'
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+    )
+)
+SELECT
+  COUNT(*) AS semantic_fk_count,
+  BOOL_AND(conname = 'fk_payments_booking_id') AS all_semantic_fk_named_canonical,
+  BOOL_AND(confdeltype = 'n') AS all_semantic_fk_on_delete_set_null,
+  ARRAY_AGG(conname ORDER BY conname) AS semantic_fk_names
+FROM semantic_fks;
+
+-- C) Column presence
 SELECT
   EXISTS (
     SELECT 1
@@ -38,7 +85,7 @@ SELECT
       AND column_name = 'booking_id'
   ) AS has_payments_booking_id_column;
 
--- C) Backfill determinism accounting
+-- D) Backfill determinism accounting
 WITH booking_map AS (
   SELECT order_id, COUNT(*) AS booking_count, MIN(id) AS singleton_booking_id
   FROM public.bookings
@@ -63,7 +110,7 @@ SELECT
   ) AS unique_mapping_wrong_booking_id
 FROM payment_order_rows;
 
--- D) Residual relational mismatch checks
+-- E) Residual relational mismatch checks
 SELECT
   COUNT(*) AS payments_booking_id_orphan_count
 FROM public.payments p
