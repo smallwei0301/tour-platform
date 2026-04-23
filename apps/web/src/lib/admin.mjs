@@ -127,7 +127,11 @@ export function listOrderAuditLogsFallback(input = {}) {
   const orderId = String(input?.orderId || '').trim();
   return auditLogs
     .filter((l) => (orderId ? l.orderId === orderId : true))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    .sort((a, b) => {
+      const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return String(b.id).localeCompare(String(a.id));
+    });
 }
 
 export function applyAdminOrderExceptionFallback(input = {}) {

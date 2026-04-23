@@ -743,7 +743,8 @@ export async function listOrderAuditLogsDb(input = {}) {
     .from('audit_logs')
     .select('id, order_id, actor, action, metadata, created_at')
     .eq('order_id', orderId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false });
 
   if (error) throw new Error(error.message);
 
