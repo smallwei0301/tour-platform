@@ -23,31 +23,61 @@
 
 > 參考 matrix 的 Evidence IDs（E1..E7）
 
+### C0. Expected audit contract（critical write flows 必備欄位）
+
+每個 critical write flow 的審計事件至少應可查到以下欄位：
+
+- `actor_type`（system/admin/traveler）
+- `actor_id`（可為 null，但需有 actor_type + source）
+- `action`（例：`booking_status_changed` / `refund_complete`）
+- `target_type`（booking/order/payment/refund_request）
+- `target_id`
+- `source`（api/admin/line/liff/worker）
+- `timestamp`（事件時間，ISO 或 DB 時間戳）
+- `correlation_id`（order_id/payment_id/refund_request_id 其一，供跨表追蹤）
+- `metadata`（至少含該 flow 的業務鍵值，如 `from_status`、`to_status`、`adminNote`）
+
 ### Booking
 - [ ] Draft created → status: `yes`（E3）
+  - expected metadata: `booking_id`, `source_channel`, `draft=true`
 - [ ] Checkout initiated → status: `verify`（E4）
+  - expected metadata: `booking_id`, `order_id`, `checkout_session_id`
 - [ ] Cancelled/confirmed/completed/no_show/reschedule → status: `verify`（E5）
+  - expected metadata: `booking_id`, `from_status`, `to_status`, `reason|note`
 
 ### Payment
 - [ ] Payment initialized → status: `verify`（E4）
+  - expected metadata: `payment_id`, `order_id`, `amount`, `currency`, `provider`
 - [ ] Callback received/paid/failed → status: `verify`（E6）
+  - expected metadata: `payment_id`, `provider_event_id`, `callback_status`, `signature_verified`
 - [ ] Manual payment add (POS future) → status: `no`
+  - expected metadata: `order_id`, `payment_method`, `operator_id`, `amount`
 
 ### Refund
 - [ ] Traveler refund request create → status: `yes`（E7）
+  - expected metadata: `refund_request_id`, `booking_id`, `reason`, `requested_amount`
 - [ ] Admin approve/reject/process/complete audit → status: `yes`（E1）
+  - expected metadata: `refund_request_id`, `admin_id`, `adminNote`, `decision`
 - [ ] Complete + money movement (`payment_events.refunded`) → status: `partial`（E1 + gap note）
+  - expected metadata: `refund_request_id`, `payment_id`, `refunded_amount`, `provider_refund_id`
 
 ### POS manual
 - [ ] Admin update order status → status: `yes`（E2）
+  - expected metadata: `order_id`, `from_status`, `to_status`, `admin_id`
 - [ ] Exception actions（reschedule/adjust_capacity/oversell_fix）→ status: `yes`（E2）
+  - expected metadata: `order_id|booking_id`, `exception_type`, `before`, `after`, `operator_id`
 - [ ] POS create order/booking draft → status: `no`
+  - expected metadata: `order_id`, `booking_id`, `pos_terminal_id`, `operator_id`
 
 ### LINE / LIFF
 - [ ] Draft booking with `source_channel=line` → status: `yes`（E3）
+  - expected metadata: `booking_id`, `line_user_id`, `source_channel=line`
 - [ ] Checkout context retention → status: `verify`（E4）
+  - expected metadata: `booking_id`, `context_token`, `expires_at`
 - [ ] LIFF auth mapping audit → status: `no`
+  - expected metadata: `line_user_id`, `member_id`, `mapping_result`
 - [ ] Notification send/fail tracking → status: `no`
+  - expected metadata: `notification_id`, `channel`, `template_id`, `delivery_status`, `error_code?`
 
 ## D. Grounded verification example (required)
 
