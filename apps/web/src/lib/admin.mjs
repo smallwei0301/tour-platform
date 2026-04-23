@@ -58,7 +58,10 @@ export function getAdminOrderDetailFallback(input = {}) {
 export function updateAdminOrderFallback(input = {}) {
   const orderId = String(input?.orderId || '').trim();
   const status = String(input?.status || '').trim();
-  const adminNote = String(input?.adminNote || '').trim();
+  const adminNoteProvided = input?.adminNote != null;
+  const adminNote = adminNoteProvided ? String(input?.adminNote).trim() : null;
+  const actor = String(input?.actor || 'admin').trim() || 'admin';
+  const sourceChannel = String(input?.sourceChannel || 'admin_pos').trim() || 'admin_pos';
 
   if (!orderId) throw new Error('orderId is required');
 
@@ -77,16 +80,46 @@ export function updateAdminOrderFallback(input = {}) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw new Error('order not found');
 
+  const previousStatus = order.status;
+  const previousAdminNote = order.adminNote || null;
+
   if (status) {
     if (!validStatuses.includes(status)) throw new Error('invalid order status');
     order.status = status;
   }
 
-  if (adminNote || adminNote === '') {
+  if (adminNoteProvided) {
     order.adminNote = adminNote || null;
   }
 
   order.updatedAt = new Date().toISOString();
+
+  const statusChanged = !!status && previousStatus !== order.status;
+  const noteChanged = adminNoteProvided && previousAdminNote !== (order.adminNote || null);
+  if (statusChanged || noteChanged) {
+    appendAuditLog({
+      orderId: order.id,
+      actor,
+      action: statusChanged ? 'order_status_update' : 'order_admin_note_update',
+      metadata: {
+        actor,
+        actorRole: 'admin',
+        sourceChannel,
+        targetOrderId: order.id,
+        bookingId: null,
+        paymentId: null,
+        before: {
+          status: previousStatus,
+          adminNote: previousAdminNote
+        },
+        after: {
+          status: order.status,
+          adminNote: order.adminNote || null
+        }
+      }
+    });
+  }
+
   return getAdminOrderDetailFallback({ orderId });
 }
 

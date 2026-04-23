@@ -668,7 +668,12 @@ export async function updateAdminOrderDb(input = {}) {
 
   const orderId = String(input?.orderId || '').trim();
   const status = String(input?.status || '').trim();
-  const adminNote = input?.adminNote == null ? null : String(input?.adminNote).trim();
+  const adminNoteProvided = input?.adminNote != null;
+  const adminNote = adminNoteProvided ? String(input?.adminNote).trim() : null;
+  const actor = String(input?.actor || 'admin').trim() || 'admin';
+  const sourceChannel = String(input?.sourceChannel || 'admin_pos').trim() || 'admin_pos';
+  const bookingId = input?.bookingId || null;
+  const paymentId = input?.paymentId || null;
 
   if (!orderId) throw new Error('orderId is required');
 
@@ -681,11 +686,47 @@ export async function updateAdminOrderDb(input = {}) {
     if (!validStatuses.includes(status)) throw new Error('invalid order status');
     patch.status = status;
   }
-  if (adminNote !== null) patch.admin_note = adminNote;
+  if (adminNoteProvided) patch.admin_note = adminNote;
 
   const supabase = await getSupabase();
+  const { data: beforeOrder, error: beforeError } = await supabase
+    .from('orders')
+    .select('id, status, admin_note')
+    .eq('id', orderId)
+    .single();
+  if (beforeError || !beforeOrder) throw new Error(beforeError?.message || 'order not found');
+
   const { error } = await supabase.from('orders').update(patch).eq('id', orderId);
   if (error) throw new Error(error.message);
+
+  const afterStatus = patch.status ?? beforeOrder.status;
+  const afterAdminNote = adminNoteProvided ? (patch.admin_note || null) : (beforeOrder.admin_note || null);
+  const statusChanged = !!status && beforeOrder.status !== afterStatus;
+  const noteChanged = adminNoteProvided && (beforeOrder.admin_note || null) !== afterAdminNote;
+
+  if (statusChanged || noteChanged) {
+    await insertAuditLogDb(supabase, {
+      orderId,
+      actor,
+      action: statusChanged ? 'order_status_update' : 'order_admin_note_update',
+      metadata: {
+        actor,
+        actorRole: 'admin',
+        sourceChannel,
+        targetOrderId: orderId,
+        bookingId,
+        paymentId,
+        before: {
+          status: beforeOrder.status,
+          adminNote: beforeOrder.admin_note || null
+        },
+        after: {
+          status: afterStatus,
+          adminNote: afterAdminNote
+        }
+      }
+    });
+  }
 
   await tryRefreshAvailabilitySnapshotByOrderId(orderId);
   return getAdminOrderDetailDb({ orderId });

@@ -23,6 +23,39 @@ test('admin can read and update order detail (fallback)', async () => {
 
   assert.equal(updated.status, 'confirmed');
   assert.equal(updated.adminNote, '人工確認：已電話聯繫旅客');
+
+  const logs = await listOrderAuditLogsDb({ orderId: created.id });
+  const statusLog = logs.find((l) => l.action === 'order_status_update');
+  assert.ok(statusLog, 'missing order_status_update audit log');
+  assert.equal(statusLog.actor, 'admin');
+  assert.equal(statusLog.metadata?.sourceChannel, 'admin_pos');
+  assert.equal(statusLog.metadata?.targetOrderId, created.id);
+  assert.equal(statusLog.metadata?.before?.status, 'pending_payment');
+  assert.equal(statusLog.metadata?.after?.status, 'confirmed');
+  assert.equal(statusLog.metadata?.after?.adminNote, '人工確認：已電話聯繫旅客');
+});
+
+test('admin note-only update writes audit log (fallback)', async () => {
+  const created = await createOrderDb({
+    experienceSlug: 'kaohsiung-chaishan-cave-experience',
+    scheduleId: 'sch_chaishan_0410',
+    peopleCount: 1,
+    contactName: 'Ops Note',
+    contactPhone: '0912777777',
+    contactEmail: 'ops-note@example.com'
+  });
+
+  await updateAdminOrderDb({
+    orderId: created.id,
+    adminNote: '僅補充備註'
+  });
+
+  const logs = await listOrderAuditLogsDb({ orderId: created.id });
+  const noteLog = logs.find((l) => l.action === 'order_admin_note_update');
+  assert.ok(noteLog, 'missing order_admin_note_update audit log');
+  assert.equal(noteLog.metadata?.before?.status, 'pending_payment');
+  assert.equal(noteLog.metadata?.after?.status, 'pending_payment');
+  assert.equal(noteLog.metadata?.after?.adminNote, '僅補充備註');
 });
 
 test('admin exception action writes audit log (fallback)', async () => {
