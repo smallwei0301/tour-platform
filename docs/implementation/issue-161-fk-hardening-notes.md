@@ -1,29 +1,22 @@
-# Issue #161 — Bounded FK hardening (upgraded DB path)
+# Issue #161 Notes (Superseded for precheck by Issue #164)
 
-## Scope completed
+This note remains for historical migration traceability only.
 
-1. Added idempotent upgrade migration to ensure `bookings.order_id -> orders(id)` FK (`fk_bookings_order_id`).
-2. Added `payments.booking_id` as nullable additive column (if missing), then normalized semantic FK wiring so only one canonical FK remains on `payments.booking_id -> bookings(id)` (`fk_payments_booking_id`).
-3. Added deterministic backfill from `payments.order_id` to `payments.booking_id` via `bookings.order_id`:
-   - backfills only when exactly one booking matches (`HAVING COUNT(b.id) = 1`)
-   - keeps ambiguous rows `NULL` by design.
+## Current production schema contract (authoritative for precheck)
+- `bookings.order_id -> orders.id`
+- `orders.booking_id -> bookings.id`
+- `payments.order_id -> orders.id`
+- `payments.booking_id` is **not** part of the current production precheck contract.
 
-## Why migration-safe
+## What changed in Issue #164 alignment
+- Precheck/verification logic no longer validates `payments.booking_id`.
+- Referential checks now target only the three canonical links above.
 
-- Uses `ADD COLUMN IF NOT EXISTS` for additive schema change.
-- Uses guarded/idempotent DDL and semantic FK normalization for `payments.booking_id` (drops legacy equivalent FK variants before adding canonical named FK).
-- Keeps `payments.booking_id` nullable (`DROP NOT NULL`) to avoid upgrade failures on historical rows.
-- Normalizes final `payments.booking_id` delete behavior to `ON DELETE SET NULL` (removes legacy CASCADE drift).
-- Backfill is deterministic-only and idempotent (`WHERE p.booking_id IS NULL`).
+## Use this for validation
+- `supabase/scripts/precheck_issue164_schema_alignment.sql`
+- `supabase/scripts/verify_issue161_fk_hardening.sql` (legacy filename, updated logic)
 
-## Verification
-
-Use:
-- `docs/implementation/issue-161-fk-hardening-verification.sql`
-
-Expected outcomes:
-- FK list includes both `fk_bookings_order_id` and `fk_payments_booking_id`.
-- `payments.booking_id` column exists and is nullable.
-- `unresolved_non_ambiguous_should_be_zero` = `0`.
-- `unresolved_due_to_ambiguous_mapping` may be `> 0` and is acceptable by design.
-- `payment_booking_fk_mismatch` = `0`.
+## Out of scope for #164
+- Rewriting historical migrations.
+- Reconstructing historical booking/payment linkage models.
+- App/payment flow refactor.
