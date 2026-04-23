@@ -35,6 +35,34 @@ test('admin can read and update order detail (fallback)', async () => {
   assert.equal(statusLog.metadata?.after?.adminNote, '人工確認：已電話聯繫旅客');
 });
 
+test('admin paid status update aligns payment fields + audit metadata (fallback)', async () => {
+  const created = await createOrderDb({
+    experienceSlug: 'kaohsiung-chaishan-cave-experience',
+    scheduleId: 'sch_chaishan_0410',
+    peopleCount: 1,
+    contactName: 'Ops Paid',
+    contactPhone: '0912000000',
+    contactEmail: 'ops-paid@example.com'
+  });
+
+  const updated = await updateAdminOrderDb({
+    orderId: created.id,
+    status: 'paid',
+    adminNote: 'POS 現金收款'
+  });
+
+  assert.equal(updated.status, 'paid');
+  assert.equal(updated.paymentStatus, 'paid');
+  assert.ok(updated.paidAt, 'paidAt should be populated');
+
+  const logs = await listOrderAuditLogsDb({ orderId: created.id });
+  const statusLog = logs.find((l) => l.action === 'order_status_update');
+  assert.ok(statusLog, 'missing order_status_update audit log');
+  assert.equal(statusLog.metadata?.before?.paymentStatus, null);
+  assert.equal(statusLog.metadata?.after?.paymentStatus, 'paid');
+  assert.ok(statusLog.metadata?.after?.paidAt);
+});
+
 test('admin note-only update writes audit log (fallback)', async () => {
   const created = await createOrderDb({
     experienceSlug: 'kaohsiung-chaishan-cave-experience',

@@ -685,13 +685,23 @@ export async function updateAdminOrderDb(input = {}) {
   if (status) {
     if (!validStatuses.includes(status)) throw new Error('invalid order status');
     patch.status = status;
+
+    // Keep payment state aligned on explicit paid/pending transitions for admin POS flow.
+    if (status === 'paid') {
+      patch.payment_status = 'paid';
+      patch.paid_at = new Date().toISOString();
+    }
+    if (status === 'pending_payment') {
+      patch.payment_status = 'pending';
+      patch.paid_at = null;
+    }
   }
   if (adminNoteProvided) patch.admin_note = adminNote;
 
   const supabase = await getSupabase();
   const { data: beforeOrder, error: beforeError } = await supabase
     .from('orders')
-    .select('id, status, admin_note')
+    .select('id, status, payment_status, paid_at, admin_note')
     .eq('id', orderId)
     .single();
   if (beforeError || !beforeOrder) throw new Error(beforeError?.message || 'order not found');
@@ -718,10 +728,14 @@ export async function updateAdminOrderDb(input = {}) {
         paymentId,
         before: {
           status: beforeOrder.status,
+          paymentStatus: beforeOrder.payment_status || null,
+          paidAt: beforeOrder.paid_at || null,
           adminNote: beforeOrder.admin_note || null
         },
         after: {
           status: afterStatus,
+          paymentStatus: patch.payment_status ?? beforeOrder.payment_status ?? null,
+          paidAt: patch.paid_at ?? beforeOrder.paid_at ?? null,
           adminNote: afterAdminNote
         }
       }
