@@ -12,10 +12,12 @@
     "lint": "npm run lint -w @tour/web",
     "typecheck": "npm run typecheck -w @tour/web",
     "test": "npm run test -w @tour/web",
+    "test:smoke:booking-core": "npm run test:smoke:booking-core -w @tour/web",
     "dashboard:booking-v2": "node scripts/rollout/booking-v2-dashboard.mjs",
     "report:booking-v2-go-no-go": "node scripts/rollout/booking-v2-go-no-go.mjs",
     "rollout:booking-v2-daily": "node scripts/rollout/booking-v2-daily-trigger.mjs",
-    "snapshot:availability:backfill": "node scripts/rollout/backfill-availability-snapshot.mjs"
+    "snapshot:availability:backfill": "node scripts/rollout/backfill-availability-snapshot.mjs",
+    "regression:issue-169": "bash scripts/phase12/run-issue-169-regression-pack.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
