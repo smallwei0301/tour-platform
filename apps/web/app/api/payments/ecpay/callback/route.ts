@@ -71,11 +71,6 @@ function mapTradeNo(payload: any) {
   return payload?.tradeNo || payload?.TradeNo || null;
 }
 
-export const __testables = {
-  mapOrderId,
-  mapOwnerEmail,
-};
-
 function httpStatusFromError(err: unknown): number {
   const message = err instanceof Error ? err.message : '';
   const code = (err as any)?.code ?? '';
