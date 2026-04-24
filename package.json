@@ -17,7 +17,8 @@
     "report:booking-v2-go-no-go": "node scripts/rollout/booking-v2-go-no-go.mjs",
     "rollout:booking-v2-daily": "node scripts/rollout/booking-v2-daily-trigger.mjs",
     "snapshot:availability:backfill": "node scripts/rollout/backfill-availability-snapshot.mjs",
-    "regression:issue-169": "bash scripts/phase12/run-issue-169-regression-pack.sh"
+    "regression:issue-169": "bash scripts/phase12/run-issue-169-regression-pack.sh",
+    "regression:issue-210:booking-cancel": "bash scripts/phase12/run-issue-210-booking-cancel-verification-pack.sh"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
