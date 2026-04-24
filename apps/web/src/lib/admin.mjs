@@ -39,6 +39,7 @@ export function listAdminOrdersFallback(input = {}) {
         contactEmail: o.contactEmail || null,
         adminNote: o.adminNote || null,
         createdAt: o.createdAt || null,
+        paymentStatus: o.paymentStatus || null,
         paidAt: o.paidAt || null,
         updatedAt: o.updatedAt || null
       };
@@ -81,11 +82,22 @@ export function updateAdminOrderFallback(input = {}) {
   if (!order) throw new Error('order not found');
 
   const previousStatus = order.status;
+  const previousPaymentStatus = order.paymentStatus || null;
+  const previousPaidAt = order.paidAt || null;
   const previousAdminNote = order.adminNote || null;
 
   if (status) {
     if (!validStatuses.includes(status)) throw new Error('invalid order status');
     order.status = status;
+
+    if (status === 'paid') {
+      order.paymentStatus = 'paid';
+      order.paidAt = new Date().toISOString();
+    }
+    if (status === 'pending_payment') {
+      order.paymentStatus = 'pending';
+      order.paidAt = null;
+    }
   }
 
   if (adminNoteProvided) {
@@ -110,10 +122,14 @@ export function updateAdminOrderFallback(input = {}) {
         paymentId: null,
         before: {
           status: previousStatus,
+          paymentStatus: previousPaymentStatus,
+          paidAt: previousPaidAt,
           adminNote: previousAdminNote
         },
         after: {
           status: order.status,
+          paymentStatus: order.paymentStatus || null,
+          paidAt: order.paidAt || null,
           adminNote: order.adminNote || null
         }
       }
