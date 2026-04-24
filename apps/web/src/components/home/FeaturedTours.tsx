@@ -2,51 +2,74 @@ import Link from 'next/link';
 import { activities, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
 
+const recommendationNotes: Record<string, string> = {
+  'kaohsiung-chaishan-cave-experience': '在地導遊最常推薦給第一次來高雄的旅客。',
+  'dadadaocheng-walk': '節奏輕鬆，適合半天走讀與拍照。',
+  'hualien-river-trekking': '偏戶外體驗，適合想避開一般觀光路線。',
+};
+
 export function FeaturedTours() {
-  // 取前 6 筆 mock 活動作為精選
-  const featured = activities.slice(0, 6);
+  const featured = activities.slice(0, 3);
 
   return (
     <section className="tp-section">
       <div className="tp-container">
         <div className="tp-section-head">
-          <h2>精選行程</h2>
+          <div>
+            <h2 style={{ marginBottom: 4 }}>本週精選行程</h2>
+            <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
+              先從首頁精選的三條在地路線開始，快速看看目前平台主打的體驗方向。
+            </p>
+          </div>
           <Link href="/activities" className="tp-link">查看全部 →</Link>
         </div>
-        <div className="tp-card-grid tp-card-grid-featured">
+
+        <div className="tp-card-grid tp-card-grid-featured" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
           {featured.map((a) => {
             const guide = guides.find((g) => g.slug === a.guideSlug);
             return (
               <article className="tp-card" key={a.slug}>
-                <div style={{ position: 'relative' }}>
-                  <img
-                    src={a.imageUrl}
-                    alt={a.title}
-                    className="tp-card-img"
-                    style={{ background: 'none' }}
-                    loading="lazy"
-                  />
-                  <button className="tp-fav-btn" aria-label="收藏">❤️</button>
+                <img
+                  src={a.imageUrl}
+                  alt={a.title}
+                  className="tp-card-img"
+                  style={{ background: 'none' }}
+                  loading="lazy"
+                />
+
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{
-                    position: 'absolute', top: 10, left: 10,
-                    background: 'var(--tp-accent)', color: '#fff',
-                    fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
-                  }}>{a.category}</span>
+                    background: 'rgba(255, 109, 180, 0.12)',
+                    color: '#b12871',
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: '4px 10px',
+                    borderRadius: 999,
+                  }}>
+                    {a.category}
+                  </span>
+                  <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{a.region}</span>
                 </div>
+
+                <h3 style={{ fontSize: 18, margin: '10px 0 8px', lineHeight: 1.4 }}>{a.title}</h3>
+
                 {guide && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '10px 0 4px' }}>
-                    <img src={guide.avatarUrl} alt={guide.displayName}
-                      style={{ width: 26, height: 26, borderRadius: '50%', objectFit: 'cover' }} />
-                    <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{guide.displayName} ✅</span>
-                  </div>
+                  <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
+                    由 {guide.displayName} 帶路 · 導遊評價 {guide.rating.toFixed(1)} ★ / {guide.reviewCount} 則
+                  </p>
                 )}
-                <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
-                <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--tp-muted)' }}>⭐ 5.0 · 📍 {a.region}</p>
-                <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>🕐 {a.durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人</p>
+
+                <p style={{ margin: '0 0 14px', fontSize: 14, lineHeight: 1.6, color: '#2f2f2f' }}>
+                  {recommendationNotes[a.slug] ?? '適合想用在地視角重新認識台灣的人。'}
+                </p>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
                   <strong style={{ color: 'var(--tp-primary)', fontSize: 15 }}>{a.priceLabel}</strong>
-                  <Link className="tp-btn tp-btn-primary" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}
-                    style={{ fontSize: 13, padding: '6px 14px' }}>
+                  <Link
+                    className="tp-btn tp-btn-primary"
+                    href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}
+                    style={{ fontSize: 13, padding: '6px 14px' }}
+                  >
                     查看行程
                   </Link>
                 </div>

@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { HeroSection } from '../src/components/home/HeroSection';
 import { FeaturedTours } from '../src/components/home/FeaturedTours';
+import { StoryProofSection } from '../src/components/home/StoryProofSection';
 import { DestinationsSection } from '../src/components/home/DestinationsSection';
-import { GuideSpotlight } from '../src/components/home/GuideSpotlight';
 import { ThemeCtas } from '../src/components/home/ThemeCtas';
+import { GuideSpotlight } from '../src/components/home/GuideSpotlight';
 import { FaqSection } from '../src/components/home/FaqSection';
 
 export const metadata: Metadata = {
@@ -20,8 +21,9 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <DestinationsSection />
       <FeaturedTours />
+      <StoryProofSection />
+      <DestinationsSection />
       <ThemeCtas />
       <GuideSpotlight />
       <FaqSection />
