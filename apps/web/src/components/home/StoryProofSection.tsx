@@ -1,19 +1,17 @@
 import Link from 'next/link';
+import { reviews, getActivityBySlug } from '../../fixtures/data';
 
-const stories = [
-  {
-    title: '「原本只想看風景，結果聽到整條街的故事」',
-    body: '台北旅客 Maya 選擇了大稻埕半日路線，回饋提到：導遊把街區歷史講得很生活化，長輩和小孩都能跟上。',
-  },
-  {
-    title: '「行程節奏剛好，完全沒有被催趕」',
-    body: '高雄旅客 Ben 在柴山路線後分享：行前溝通很清楚，現場可依體力調整，整趟體驗更像有人帶路而不是硬塞景點。',
-  },
-  {
-    title: '「不是排行程，是幫我們找到適合的走法」',
-    body: '花蓮旅客 Iris 回饋：出發前先確認參與者狀況，路線安排有留彈性，第一次帶家人玩戶外也很安心。',
-  },
-];
+const selectedReviews = Array.from(
+  new Map(reviews.map((review) => [review.activitySlug, review])).values(),
+).slice(0, 3);
+
+const stories = selectedReviews.map((review) => {
+  const activity = getActivityBySlug(review.activitySlug);
+  return {
+    title: `「${review.text}」`,
+    body: `${review.author}（${review.city}）在 ${activity?.title ?? '該行程'} 的回饋。`,
+  };
+});
 
 export function StoryProofSection() {
   return (
@@ -23,7 +21,7 @@ export function StoryProofSection() {
           <div>
             <h2 style={{ marginBottom: 4 }}>旅客真實回饋</h2>
             <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
-              以下內容整理自已完成行程的旅客回饋重點，僅保留實際體驗描述。
+              以下內容直接引用目前 fixture reviews，並且各自對應不同的首頁精選行程，不額外改寫內容，只補上對應行程資訊。
             </p>
           </div>
           <Link href="/activities" className="tp-link">看更多行程 →</Link>

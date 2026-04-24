@@ -4,7 +4,7 @@ import { buildActivityHref } from '../../lib/activity-url';
 
 const recommendationNotes: Record<string, string> = {
   'kaohsiung-chaishan-cave-experience': '在地導遊最常推薦給第一次來高雄的旅客。',
-  'dadadaocheng-walk': '節奏輕鬆，適合半天走讀與拍照。',
+  dadadaocheng-walk: '節奏輕鬆，適合半天走讀與拍照。',
   'hualien-river-trekking': '偏戶外體驗，適合想避開一般觀光路線。',
 };
 
@@ -18,7 +18,7 @@ export function FeaturedTours() {
           <div>
             <h2 style={{ marginBottom: 4 }}>本週精選行程</h2>
             <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
-              由平台依「導遊在地經驗 × 行程完成度」挑出的推薦路線。
+              先從首頁精選的三條在地路線開始，快速看看目前平台主打的體驗方向。
             </p>
           </div>
           <Link href="/activities" className="tp-link">查看全部 →</Link>
@@ -55,7 +55,7 @@ export function FeaturedTours() {
 
                 {guide && (
                   <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                    由 {guide.displayName} 帶路
+                    由 {guide.displayName} 帶路 · 導遊評價 {guide.rating.toFixed(1)} ★ / {guide.reviewCount} 則
                   </p>
                 )}
 
