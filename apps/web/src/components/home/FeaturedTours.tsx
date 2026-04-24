@@ -4,7 +4,7 @@ import { buildActivityHref } from '../../lib/activity-url';
 
 const recommendationNotes: Record<string, string> = {
   'kaohsiung-chaishan-cave-experience': '在地導遊最常推薦給第一次來高雄的旅客。',
-  dadadaocheng-walk: '節奏輕鬆，適合半天走讀與拍照。',
+  'dadadaocheng-walk': '節奏輕鬆，適合半天走讀與拍照。',
   'hualien-river-trekking': '偏戶外體驗，適合想避開一般觀光路線。',
 };
 
