@@ -31,15 +31,40 @@ function normalizePayload(headers: Headers, rawText: string) {
   }
 }
 
+function isUuidLike(value: unknown): boolean {
+  if (typeof value !== 'string') return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value.trim()
+  );
+}
+
 function mapOrderId(payload: any) {
-  // 優先使用 CustomField1（我們存放 orderId 的地方）
-  // 然後是直接傳入的 orderId（模擬付款用）
-  // 不再接受 MerchantTradeNo 當作 orderId，避免 callback 指向錯誤訂單
-  return payload?.CustomField1 || payload?.orderId || null;
+  // V2 canonical: CustomField2 = orderId
+  const customField2 = payload?.CustomField2;
+  if (isUuidLike(customField2)) return String(customField2).trim();
+
+  // Legacy fallback: CustomField1 = orderId（舊流程）
+  const customField1 = payload?.CustomField1;
+  if (isUuidLike(customField1)) return String(customField1).trim();
+
+  // 模擬付款 / 測試 fallback
+  if (isUuidLike(payload?.orderId)) return String(payload.orderId).trim();
+
+  // 不接受 MerchantTradeNo 當作 orderId，避免 callback 指向錯誤訂單
+  return null;
 }
 
 function mapOwnerEmail(payload: any) {
-  return payload?.CustomField2 || payload?.contactEmail || payload?.ContactEmail || null;
+  // V2 checkout puts contact email in CustomField4
+  const candidate = payload?.CustomField4 || payload?.contactEmail || payload?.ContactEmail;
+  if (typeof candidate === 'string' && candidate.includes('@')) return candidate;
+
+  // Legacy fallback: 舊流程把 email 放在 CustomField2
+  if (typeof payload?.CustomField2 === 'string' && payload.CustomField2.includes('@')) {
+    return payload.CustomField2;
+  }
+
+  return null;
 }
 
 function mapTradeNo(payload: any) {
@@ -75,7 +100,7 @@ export async function POST(request: Request) {
   }
 
   const isECPayCallback = request.headers.get('content-type')?.includes('application/x-www-form-urlencoded');
-  if (isECPayCallback && !payload?.CustomField1) {
+  if (isECPayCallback && !payload?.CustomField1 && !payload?.CustomField2) {
     return new Response('1|OK', {
       status: 200,
       headers: { 'Content-Type': 'text/plain' },
