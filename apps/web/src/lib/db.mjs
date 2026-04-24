@@ -962,12 +962,91 @@ export async function updateAdminRefundStatusDb(input = {}) {
 
   if (reqUpdateError) throw new Error(reqUpdateError.message);
 
+  const orderPatch = action === 'complete'
+    ? { status: orderStatus, payment_status: 'refunded', updated_at: now }
+    : { status: orderStatus, updated_at: now };
+
   const { error: orderUpdateError } = await supabase
     .from('orders')
-    .update({ status: orderStatus })
+    .update(orderPatch)
     .eq('id', req.order_id);
 
   if (orderUpdateError) throw new Error(orderUpdateError.message);
+
+  if (action === 'complete') {
+    const { data: orderRow, error: orderRowError } = await supabase
+      .from('orders')
+      .select('id, total_twd, paid_at')
+      .eq('id', req.order_id)
+      .single();
+
+    if (orderRowError || !orderRow) throw new Error(orderRowError?.message || 'order not found');
+
+    let { data: paymentRow, error: paymentSelectError } = await supabase
+      .from('payments')
+      .select('id, status')
+      .eq('order_id', req.order_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (paymentSelectError) throw new Error(paymentSelectError.message);
+
+    if (!paymentRow) {
+      const { data: insertedPayment, error: insertPaymentError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: req.order_id,
+          provider: 'ecpay',
+          amount_twd: Number(orderRow.total_twd || 0),
+          status: 'refunded',
+          paid_at: orderRow.paid_at || now,
+          updated_at: now,
+        })
+        .select('id, status')
+        .single();
+
+      if (insertPaymentError || !insertedPayment) {
+        throw new Error(insertPaymentError?.message || 'failed to create payment row for refund event');
+      }
+      paymentRow = insertedPayment;
+    } else if (paymentRow.status !== 'refunded') {
+      const { error: paymentUpdateError } = await supabase
+        .from('payments')
+        .update({ status: 'refunded', updated_at: now })
+        .eq('id', paymentRow.id);
+
+      if (paymentUpdateError) throw new Error(paymentUpdateError.message);
+    }
+
+    const { data: refundedEventRow, error: eventSelectError } = await supabase
+      .from('payment_events')
+      .select('id')
+      .eq('payment_id', paymentRow.id)
+      .eq('event_type', 'refunded')
+      .limit(1)
+      .maybeSingle();
+
+    if (eventSelectError) throw new Error(eventSelectError.message);
+
+    if (!refundedEventRow) {
+      const { error: insertEventError } = await supabase
+        .from('payment_events')
+        .insert({
+          payment_id: paymentRow.id,
+          event_type: 'refunded',
+          payload: {
+            source: 'updateAdminRefundStatusDb',
+            action: 'refund_complete',
+            refundRequestId: req.id,
+            orderId: req.order_id,
+            adminNote,
+          },
+        });
+
+      if (insertEventError) throw new Error(insertEventError.message);
+    }
+  }
 
   await insertAuditLogDb(supabase, {
     orderId: req.order_id,

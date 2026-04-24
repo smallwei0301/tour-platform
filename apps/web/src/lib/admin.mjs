@@ -1,4 +1,4 @@
-import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory } from './store.mjs';
+import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory, payments, paymentEvents } from './store.mjs';
 
 function appendAuditLog({ orderId = null, actor = 'admin', action, metadata = {} }) {
   if (!action) return;
@@ -301,6 +301,40 @@ export function updateAdminRefundStatusFallback(input = {}) {
     req.status = 'refunded';
     req.refundedAt = now;
     order.status = 'refunded';
+
+    let payment = payments.find((p) => p.orderId === order.id);
+    if (!payment) {
+      payment = {
+        id: `pay_${String(payments.length + 1).padStart(6, '0')}`,
+        orderId: order.id,
+        provider: 'ecpay',
+        amountTwd: Number(order.totalTwd || 0),
+        status: 'refunded',
+        paidAt: order.paidAt || now,
+        updatedAt: now,
+      };
+      payments.push(payment);
+    } else {
+      payment.status = 'refunded';
+      payment.updatedAt = now;
+    }
+
+    const hasRefundedEvent = paymentEvents.some((e) => e.paymentId === payment.id && e.eventType === 'refunded');
+    if (!hasRefundedEvent) {
+      paymentEvents.push({
+        id: `pe_${String(paymentEvents.length + 1).padStart(6, '0')}`,
+        paymentId: payment.id,
+        eventType: 'refunded',
+        payload: {
+          source: 'updateAdminRefundStatusFallback',
+          refundRequestId: req.id,
+          orderId: order.id,
+          adminNote,
+        },
+        createdAt: now,
+      });
+    }
+
     // 退款完成 → 自動掛鉤 ops tracking，將退款金額寫入 refundAmountTwd
     const opsRow = findOrCreateOpsRow(order);
     const refundAmt = Number(req.totalTwd || order.totalTwd || 0);

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createOrderDb, createRefundRequestDb, listAdminRefundRequestsDb, updateAdminRefundStatusDb, getMyOrderDetailDb } from '../../src/lib/db.mjs';
+import { paymentEvents } from '../../src/lib/store.mjs';
 
 test('admin refund list returns rows', async () => {
   const order = await createOrderDb({
@@ -36,6 +37,15 @@ test('admin refund actions update refund and order status', async () => {
 
   const completed = await updateAdminRefundStatusDb({ refundRequestId: ref.id, action: 'complete' });
   assert.equal(completed.status, 'refunded');
+
+  const refundedEvents = paymentEvents.filter((e) => e.eventType === 'refunded');
+  assert.equal(refundedEvents.length >= 1, true);
+
+  const completedAgain = await updateAdminRefundStatusDb({ refundRequestId: ref.id, action: 'complete' });
+  assert.equal(completedAgain.status, 'refunded');
+
+  const refundedEventsAfterReplay = paymentEvents.filter((e) => e.eventType === 'refunded');
+  assert.equal(refundedEventsAfterReplay.length, refundedEvents.length);
 
   const detail = await getMyOrderDetailDb({ orderId: order.id });
   assert.equal(detail.status, 'refunded');
