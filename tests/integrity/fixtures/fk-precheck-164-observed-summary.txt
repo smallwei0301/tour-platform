@@ -1,0 +1,4 @@
+relation,total_rows,null_or_blank,invalid_format,orphan_count
+bookings.order_id,0,0,0,0
+orders.booking_id,32,32,0,0
+payments.order_id,11,0,0,0
