@@ -148,6 +148,7 @@ export const orders = [
 ];
 
 export const payments = [];
+export const paymentEvents = [];
 
 export const refundRequests = [
   {
