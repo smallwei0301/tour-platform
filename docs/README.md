@@ -20,6 +20,7 @@
 - `operations/booking-v2-b3-rollout.md`
 - `operations/booking-v2-daily-go-no-go.md`
 - `qa/booking-v2-rollout-manual-checklist.md`
+- `qa/issue-210-booking-cancel-verification-checklist.md`
 - `qa/reports/2026-04-17-booking-v2-manual-test-report.md`
 - `implementation/issue-103-metrics-dashboard-contract.md`
 - `operations/booking-v2-dashboard-data-source.md`
