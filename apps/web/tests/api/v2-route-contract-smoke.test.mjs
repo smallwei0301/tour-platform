@@ -33,6 +33,7 @@ test('booking draft route contract smoke: has validation + stateful errors + suc
   assert.match(src, /successV2\(/);
   assert.match(src, /bookingId:/);
   assert.match(src, /orderId:/);
+  assert.match(src, /from\('order_items'\)\.insert\([\s\S]*booking_id:\s*bookingInsert\.id/);
 });
 
 test('checkout route contract smoke: has bookingId validation + provider flow + success envelope', async () => {

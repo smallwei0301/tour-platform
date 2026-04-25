@@ -445,6 +445,7 @@ export async function POST(request: NextRequest) {
       order_id: orderInsert.id,
       item_type: 'activity_booking',
       ref_id: bookingInsert.id,
+      booking_id: bookingInsert.id,
       title: itemTitle,
       quantity: planData.price_type === 'per_person' ? data.participants : 1,
       unit_price: planData.base_price,
