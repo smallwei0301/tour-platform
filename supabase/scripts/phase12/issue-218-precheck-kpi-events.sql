@@ -2,22 +2,19 @@
 -- Purpose: decide whether kpi_settings_history.source_version_id can be FK-enforced,
 -- and profile events.session_id as analytics token (non-FK by design).
 
-\pset footer off
-\timing on
-
 SELECT NOW() AS generated_at, current_database() AS database_name, current_user AS executed_by;
 
 -- 1) KPI lineage orphan count (eligible for FK only when orphan_count = 0)
 SELECT
   COUNT(*) AS total_rows,
-  COUNT(*) FILTER (WHERE source_version_id IS NULL OR btrim(source_version_id) = '') AS null_or_blank_rows,
+  COUNT(*) FILTER (WHERE h.source_version_id IS NULL OR btrim(h.source_version_id) = '') AS null_or_blank_rows,
   COUNT(*) FILTER (
-    WHERE source_version_id IS NOT NULL
-      AND btrim(source_version_id) <> ''
+    WHERE h.source_version_id IS NOT NULL
+      AND btrim(h.source_version_id) <> ''
   ) AS non_empty_rows,
   COUNT(*) FILTER (
-    WHERE source_version_id IS NOT NULL
-      AND btrim(source_version_id) <> ''
+    WHERE h.source_version_id IS NOT NULL
+      AND btrim(h.source_version_id) <> ''
       AND p.version_id IS NULL
   ) AS orphan_count
 FROM kpi_settings_history h
