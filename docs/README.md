@@ -23,6 +23,7 @@
 - `qa/issue-210-booking-cancel-verification-checklist.md`
 - `qa/reports/2026-04-17-booking-v2-manual-test-report.md`
 - `implementation/issue-103-metrics-dashboard-contract.md`
+- `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（POS/LINE/Web/Callback 共用 audit 欄位契約）
 - `operations/booking-v2-dashboard-data-source.md`
 
 ### 技術設計
@@ -70,6 +71,7 @@
 - **#96** — `implementation/issue-96-rollout-contract.md`, `operations/booking-v2-b3-rollout.md`
 - **#105** — `operations/booking-v2-daily-go-no-go.md`, `operations/reports/samples/booking-v2-go-no-go-sample.md`
 - **#117** — 目前偏 issue / code 主線，文件索引較少，後續可補 `security/` 或 `implementation/`
+- **#170** — `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（定義 source_channel / correlation_id / actor-action-target-before-after 契約與排錯路徑）
 - **PR #128** — trusted client IP / rate limiting 修正，完成後應補回技術或安全文件
 
 ---
