@@ -54,9 +54,10 @@
 |---|---|---|---|
 | booking/create | **Partially Covered** | 既有 booking/create verification 已被 parent children 採納（先前 accepted slice） | 需與 parent gate 的統一模板對齊（同一 decision pack 命名/彙整） |
 | booking/cancel | **Covered** | #210 → PR #211 → `docs/qa/issue-210-booking-cancel-verification-checklist.md` + `reports/issue-210/*` | 仍需在 parent #171 統一 gate 中納入跨路徑 decision 彙整 |
+| payment-init (建立付款意圖/付款請求) | **Still Missing** | 尚無對應已驗收 child slice 證據 | issue #171 明確列為 critical write path；需獨立 child slice 補齊並納入 parent gate |
 | payment callback → payment_status sync | **Covered** | #197 closed + PR #213 (`c48401f`) | 屬既有落地，不應重開 scope |
 | refund_complete → payment_events(refunded) | **Covered** | #208 → PR #209 (`cfbe5b3`) | 屬既有落地，不應重開 scope |
-| POS / LINE / 其他人工/後台異動 audit 寫路徑 | **Still Missing** | 無對應已驗收 child slice 證據 | 需後續 child issues 分批補齊 |
+| admin-manual audit writes（POS / LINE / 後台人工異動） | **Still Missing** | 無對應已驗收 child slice 證據 | 路徑名稱需與 issue #171 文案對齊；後續以 child issues 分批補齊 |
 | Cross-path consolidated readiness report (#171 final gate) | **Still Missing** | 尚無單一 parent-level consolidated report | 本文件先建立門檻，後續以 child evidence 疊代收斂 |
 
 ---
@@ -90,7 +91,7 @@
 
 Reason (truthful):
 - 已有落地證據：#208、#210、#197 對應的關鍵子路徑已可被引用
-- 但 parent-level 全路徑收斂仍未完成，仍存在 **Still Missing** critical write paths
+- 但 parent-level 全路徑收斂仍未完成，仍存在 **Still Missing** critical write paths（含 payment-init、admin-manual audit writes）
 - 因此 #171 readiness 不能標為 GO，也不應誤報為全阻塞（已非全空白）
 
 ---
