@@ -16,6 +16,7 @@
 - `../README.md` — repo 根總覽
 
 ### 當前主線：Booking V2 / rollout
+- `implementation/phase-12-mainline-matrix.md`（Issue #163：Phase 12 主線 owner/status/artifact/source-of-truth matrix）
 - `implementation/issue-96-rollout-contract.md`
 - `operations/booking-v2-b3-rollout.md`
 - `operations/booking-v2-daily-go-no-go.md`
