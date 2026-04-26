@@ -27,6 +27,7 @@
 - `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（POS/LINE/Web/Callback 共用 audit 欄位契約）
 - `operations/booking-v2-dashboard-data-source.md`
 - `operations/issue-168-phase-12-fk-hardening-runbook.md`（Issue #168：Phase 12 FK hardening 執行/回滾 runbook）
+- `operations/issue-179-line-liff-rollout-support-sop.md`（Issue #179：LINE / LIFF 受控放量、fallback 與 support SOP）
 
 ### 技術設計
 - `04-tech/04-tech-architecture/02-database-schema.md`
