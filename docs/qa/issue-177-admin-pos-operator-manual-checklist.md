@@ -138,7 +138,7 @@
 
 ### 5.3 已知風險（本文件真實聲明）
 
-1. 本 repo 目前 **未找到** `docs/qa/issue-171-audit-verification-checklist.md` 實體檔案；Audit 驗證需以 #170 契約與實際查詢證據替代，屬 `BLOCKED` 風險。  
+1. `docs/qa/issue-171-audit-verification-checklist.md` 已存在，可作為 parent-level audit gate 參考；但本 issue 仍需以 #170 契約與實際查詢證據完成 issue-177 專用執行證明，故狀態仍為 `NOT VERIFIED`，非自動通過。  
 2. 本清單為 issue-177 專用 operator checklist；不宣稱 #176 或 #182 深層相容性已完成。  
 3. 若缺少可查詢的 runtime/DB 證據管道，operator sign-off 必須 `HOLD`。
 
