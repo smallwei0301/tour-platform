@@ -101,6 +101,7 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 先看：
 - [`docs/README.md`](./docs/README.md)
 - [`docs/implementation/issue-96-rollout-contract.md`](./docs/implementation/issue-96-rollout-contract.md)
+- [`docs/implementation/issue-181-line-liff-go-no-go-readiness.md`](./docs/implementation/issue-181-line-liff-go-no-go-readiness.md)
 - [`docs/operations/booking-v2-b3-rollout.md`](./docs/operations/booking-v2-b3-rollout.md)
 - [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
 - [`docs/qa/booking-v2-rollout-manual-checklist.md`](./docs/qa/booking-v2-rollout-manual-checklist.md)
