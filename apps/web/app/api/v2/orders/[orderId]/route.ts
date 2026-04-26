@@ -2,6 +2,29 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
 import { createClient } from '../../../../../src/lib/supabase/server';
 
+type OrderItem = {
+  id: string;
+  item_type: string;
+  title: string;
+  quantity: number;
+  unit_price: number;
+  subtotal_amount: number;
+};
+
+type OrderRow = {
+  id: string;
+  status: string;
+  payment_status: string;
+  total_twd: number;
+  people_count: number;
+  contact_name: string;
+  contact_email: string;
+  contact_phone: string;
+  source_channel: string;
+  created_at: string;
+  order_items: OrderItem[] | null;
+};
+
 function isValidUuid(str: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
@@ -29,7 +52,8 @@ export async function GET(
       return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
     }
 
-    const items = order.order_items as any;
+    const typedOrder = order as OrderRow;
+    const items = typedOrder.order_items ?? [];
     return Response.json(successV2({
       id: order.id,
       status: order.status,
