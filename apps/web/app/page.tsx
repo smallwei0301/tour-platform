@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { HeroSection } from '../src/components/home/HeroSection';
 import { FeaturedTours } from '../src/components/home/FeaturedTours';
+import { ValueTrustSection } from '../src/components/home/ValueTrustSection';
 import { StoryProofSection } from '../src/components/home/StoryProofSection';
 import { DestinationsSection } from '../src/components/home/DestinationsSection';
 import { ThemeCtas } from '../src/components/home/ThemeCtas';
@@ -21,6 +22,7 @@ export default function HomePage() {
   return (
     <>
       <HeroSection />
+      <ValueTrustSection />
       <FeaturedTours />
       <StoryProofSection />
       <DestinationsSection />
