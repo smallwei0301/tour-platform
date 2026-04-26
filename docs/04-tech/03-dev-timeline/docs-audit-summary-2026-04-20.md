@@ -1,62 +1,47 @@
-# Docs Audit Summary — 2026-04-20
+# Weekly Docs Sync Summary — Phase 12 Truth Alignment
 
-## 掃描範圍
-- `docs/` 全目錄
-- repo 內主要 `README*.md`（排除 `node_modules`）
+> Updated: 2026-04-26  
+> Related issues: [#183](https://github.com/smallwei0301/tour-platform/issues/183), parent [#5](https://github.com/smallwei0301/tour-platform/issues/5)
 
-## 核心結論
+## This week’s bounded docs-only objective
 
-### 1. 根 README 過期且過長
-舊版根 README 停在 2026-04-07，內容混合：
-- phase 歷史
-- 本週計畫
-- 功能清單
-- roadmap
-- 文件索引
-- 部署資訊
+Align entry docs to one shared Phase 12 issue breakdown, with correct child links and no stale open-PR / implementation-in-progress storytelling.
 
-問題：
-- 容易過期
-- 不易快速掌握當前主線
-- 會把歷史決策誤認成當前執行狀態
+## Canonical breakdown used in synced docs
 
-已處理：
-- 改為「當前狀態 + 今日收斂結果 + 核心索引 + 維護原則」的精簡版
+### P0
+- [#165](https://github.com/smallwei0301/tour-platform/issues/165)
+- [#168](https://github.com/smallwei0301/tour-platform/issues/168)
+- [#171](https://github.com/smallwei0301/tour-platform/issues/171)
+- [#221](https://github.com/smallwei0301/tour-platform/issues/221)
 
-### 2. docs/ 目前有新舊並存
-目前 docs 同時存在：
-- 早期規劃 / 背景 / roadmap
-- 中期 tech timeline 與 sprint log
-- 現在主線的 implementation / operations / qa / security 文件
+### P1
+- [#175](https://github.com/smallwei0301/tour-platform/issues/175)
+- [#176](https://github.com/smallwei0301/tour-platform/issues/176)
+- [#177](https://github.com/smallwei0301/tour-platform/issues/177)
+- [#178](https://github.com/smallwei0301/tour-platform/issues/178)
+- [#179](https://github.com/smallwei0301/tour-platform/issues/179)
+- [#180](https://github.com/smallwei0301/tour-platform/issues/180)
+- [#181](https://github.com/smallwei0301/tour-platform/issues/181)
+- [#182](https://github.com/smallwei0301/tour-platform/issues/182)
+- [#183](https://github.com/smallwei0301/tour-platform/issues/183)
+- [#184](https://github.com/smallwei0301/tour-platform/issues/184)
 
-問題：
-- 若沒有明確導航，容易誤把舊 roadmap 當最新主線
+### P2
+- [#185](https://github.com/smallwei0301/tour-platform/issues/185)
+- [#186](https://github.com/smallwei0301/tour-platform/issues/186)
+- [#217](https://github.com/smallwei0301/tour-platform/issues/217)
+- [#218](https://github.com/smallwei0301/tour-platform/issues/218)
 
-已處理：
-- `docs/README.md` 已補主線導覽與分層
+## Synced entry docs
 
-### 3. 真正的當前主線文件已經轉移
-目前最值得看的不是早期 phase 規劃，而是：
-- `docs/implementation/*`
-- `docs/operations/*`
-- `docs/qa/*`
-- `docs/security/*`
-- `docs/04-tech/04-tech-architecture/08~10*`
-
-### 4. 若干區塊仍需後續整理
-高機率下一輪要整理：
-- `docs/04-tech/03-dev-timeline/`
-- `docs/01-strategy/01-project-plan/`
-- `docs/05-business/06-payment-plan/`
-- `docs/05-business/07-operations-plan/`
-
-## 建議後續動作
-1. 逐步把 `04-tech/03-dev-timeline/` 從流水帳變成索引化
-2. 對空殼文件補上狀態標記（draft / stale / pending）
-3. 對當前 open issue（如 #96 / #105 / #117 / #128）補對應文件索引
-4. `apps/web/README.md` 之後也應更新為與 root README 一致的當前狀態版本
-
-## 本輪已更新文件
 - `README.md`
 - `docs/README.md`
-- `docs/04-tech/03-dev-timeline/docs-audit-summary-2026-04-20.md`
+- `docs/04-tech/03-dev-timeline/08-tracy-handoff-booking-pos.md`
+- this weekly summary file
+
+## Explicit non-goals
+
+- No Booking Engine / POS / LINE feature implementation
+- No schema/API/migration/UI change
+- No whole-repo historical-doc rewrite
