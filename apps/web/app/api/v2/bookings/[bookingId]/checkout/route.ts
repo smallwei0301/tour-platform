@@ -31,6 +31,7 @@ const VALID_PROVIDERS = ['ecpay'] as const;
 type PaymentProvider = (typeof VALID_PROVIDERS)[number];
 
 type CheckoutBooking = {
+  source_channel?: string | null;
   activities: { title: string } | null;
   activity_plans: { name: string } | null;
   [key: string]: unknown;
@@ -98,6 +99,7 @@ export async function POST(
         order_id,
         activity_id,
         activity_plan_id,
+        source_channel,
         start_at,
         participants,
         activities (
@@ -151,6 +153,28 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const checkoutBooking = booking as unknown as CheckoutBooking;
+    const sourceChannel = checkoutBooking.source_channel || 'web';
+
+    const { data: draftAuditLog } = await supabase
+      .from('booking_status_logs')
+      .select('metadata')
+      .eq('booking_id', bookingId)
+      .eq('to_status', 'draft')
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const draftMetadata =
+      draftAuditLog?.metadata && typeof draftAuditLog.metadata === 'object'
+        ? (draftAuditLog.metadata as Record<string, unknown>)
+        : null;
+
+    const correlationId =
+      (typeof draftMetadata?.correlationId === 'string' && draftMetadata.correlationId) ||
+      request.headers.get('x-correlation-id')?.trim() ||
+      `checkout-${bookingId}`;
 
     // 3. Check ECPay credentials
     let hashKey: string;
@@ -206,11 +230,13 @@ export async function POST(
         merchantTradeNo,
         amount: order.total_twd,
         provider,
+        sourceChannel,
+        correlationId,
+        auditSignal: 'line_liff_payment_init',
       },
     });
 
     // 7. Build ECPay payment form parameters
-    const checkoutBooking = booking as unknown as CheckoutBooking;
     const activities = checkoutBooking.activities;
     const plans = checkoutBooking.activity_plans;
     const activityTitle = activities?.title || '行程預訂';
@@ -273,6 +299,9 @@ export async function POST(
         paymentId: payment.id,
         merchantTradeNo,
         provider,
+        sourceChannel,
+        correlationId,
+        auditSignal: 'line_liff_payment_init',
       },
     });
 
@@ -282,6 +311,8 @@ export async function POST(
         provider,
         paymentId: payment.id,
         merchantTradeNo,
+        correlationId,
+        sourceChannel,
         paymentFormHtml,
         // Also return raw params for clients that want to build their own form
         paymentParams: {
