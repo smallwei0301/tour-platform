@@ -35,3 +35,10 @@
 - Plan linkage model explicitly documented.
 - If FK path selected, zero-orphan precheck and successful FK enforcement.
 - If non-FK path selected, explicit rationale + guardrail checks committed.
+
+## Issue #217 implementation note
+- 選擇 **Option-B（non-FK）**：`activity_availability_daily.plan_id` 保持語意 text key。
+- 實作檔案：
+  - `docs/implementation/issue-217-option-b-plan-linkage-decision.md`
+  - `supabase/scripts/phase12/issue-217-plan-linkage-guardrails.sql`
+  - `scripts/phase12/run-issue-217-plan-linkage-guardrails.sh`
