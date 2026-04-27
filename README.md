@@ -5,6 +5,31 @@
 
 ---
 
+## 🎯 品牌識別（Midao · 祕島）
+
+本專案採用 **Midao（祕島）** 品牌系統。所有網頁文案、配色、設計、社群內容**必須參考** **[BRAND_BOOK.md](./BRAND_BOOK.md)**。
+
+### 🚀 快速導航
+
+| 工作項目 | 參考位置 |
+|---------|--------|
+| 🎨 **網頁文案編寫** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 05 · Copywriting Library |
+| 🎭 **品牌語氣（必讀！）** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 06 · Voice & Tone |
+| 🌈 **配色系統** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 03 · Color System |
+| 🔤 **字體規範** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 04 · Typography |
+| 🏷️ **Logo 使用** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 02 · Logo System |
+| 📝 **命名系統** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 01 · Naming Architecture |
+| 📱 **社群 Bio / Email** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 05-08 |
+
+### ✅ 最新品牌應用
+
+- **2026-04-27**
+  - ✅ Hero Section 文案改寫（Commit: `9e641f1`）
+  - ✅ ValueTrustSection 文案精煉（Commit: `6e535a0`）
+  - ✅ [完整 PR 文檔](./PR_BRAND_IDENTITY.md)
+
+---
+
 ## 1. 專案現況（2026-04-27）
 
 ### 已完成的基礎能力
