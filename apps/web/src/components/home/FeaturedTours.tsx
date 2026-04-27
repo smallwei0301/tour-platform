@@ -3,13 +3,14 @@ import { activities, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
 
 const recommendationNotes: Record<string, string> = {
-  'kaohsiung-chaishan-cave-experience': '在地導遊最常推薦給第一次來高雄的旅客。',
-  'dadadaocheng-walk': '節奏輕鬆，適合半天走讀與拍照。',
-  'hualien-river-trekking': '偏戶外體驗，適合想避開一般觀光路線。',
+  'kaohsiung-chaishan-cave-experience': '第一次來高雄想玩得深入又安心，這條路線最容易留下記憶點。',
+  'dadadaocheng-walk': '半天就能把大稻埕從「走過」變成「真正看懂」。',
+  'hualien-river-trekking': '適合想把花蓮從觀景行程升級成真實參與感的人。',
 };
 
 export function FeaturedTours() {
   const featured = activities.slice(0, 3);
+  const [primary, ...secondary] = featured;
 
   return (
     <section className="tp-section">
@@ -18,34 +19,61 @@ export function FeaturedTours() {
           <div>
             <h2 style={{ marginBottom: 4 }}>本週精選行程</h2>
             <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
-              先從首頁精選的三條在地路線開始，快速看看目前平台主打的體驗方向。
+              先從一條最有代表性的路線開始，再挑你想延伸的旅程節奏。
             </p>
           </div>
           <Link href="/activities" className="tp-link">查看全部 →</Link>
         </div>
 
+        {primary && (
+          <article
+            className="tp-card tp-featured-primary"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)',
+              gap: 18,
+              marginBottom: 14,
+              borderWidth: 2,
+              borderColor: 'rgba(27,107,74,0.2)',
+              boxShadow: '0 8px 20px rgba(0,0,0,0.04)',
+            }}
+          >
+            <img src={primary.imageUrl} alt={primary.title} className="tp-card-img" style={{ marginBottom: 0, minHeight: 230 }} loading="lazy" />
+            <div style={{ display: 'grid', gap: 10 }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--tp-primary)' }}>推薦先從這條開始</p>
+              <h3 style={{ fontSize: 24, margin: 0, lineHeight: 1.4 }}>{primary.title}</h3>
+              <p style={{ margin: 0, color: '#2f2f2f', lineHeight: 1.65 }}>{recommendationNotes[primary.slug]}</p>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--tp-muted)' }}>
+                {primary.durationDisplay} · {primary.region} · {primary.priceLabel}
+              </p>
+              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                <Link className="tp-btn tp-btn-primary" href={buildActivityHref({ slug: primary.slug, region: primary.region, regionSlug: primary.regionSlug })}>
+                  查看主打行程
+                </Link>
+                <Link className="tp-btn tp-btn-ghost" href="/activities">比較其他路線</Link>
+              </div>
+            </div>
+          </article>
+        )}
+
         <div className="tp-card-grid tp-card-grid-featured" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-          {featured.map((a) => {
+          {secondary.map((a) => {
             const guide = guides.find((g) => g.slug === a.guideSlug);
             return (
               <article className="tp-card" key={a.slug}>
-                <img
-                  src={a.imageUrl}
-                  alt={a.title}
-                  className="tp-card-img"
-                  style={{ background: 'none' }}
-                  loading="lazy"
-                />
+                <img src={a.imageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
 
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{
-                    background: 'rgba(255, 109, 180, 0.12)',
-                    color: '#b12871',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    padding: '4px 10px',
-                    borderRadius: 999,
-                  }}>
+                  <span
+                    style={{
+                      background: 'rgba(255, 109, 180, 0.12)',
+                      color: '#b12871',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: '4px 10px',
+                      borderRadius: 999,
+                    }}
+                  >
                     {a.category}
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{a.region}</span>
