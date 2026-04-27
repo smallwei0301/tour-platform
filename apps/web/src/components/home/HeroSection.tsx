@@ -1,62 +1,138 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 
 export function HeroSection() {
+  const [destination, setDestination] = useState('');
+
   return (
     <section
-      className="tp-hero"
+      className="tp-hero-redesign"
       style={{
         backgroundImage:
-          'linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.58)), url(https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80)',
+          'linear-gradient(rgba(0,0,0,0.15), rgba(0,0,0,0.2)), url(https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1600&q=80)',
         backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        minHeight: '560px',
+        backgroundPosition: 'center 35%',
+        minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        paddingTop: '120px',
       }}
     >
-      <div className="tp-container" style={{ textAlign: 'left', alignItems: 'flex-start' }}>
-        <p className="tp-kicker" style={{ color: '#E8834D', letterSpacing: 2, fontWeight: 700, marginBottom: 8 }}>
+      <div className="tp-container" style={{ paddingTop: '40px', paddingBottom: '120px' }}>
+        {/* Kicker Badge */}
+        <div
+          style={{
+            display: 'inline-block',
+            backgroundColor: '#F4ECD8',
+            color: '#1A2E1F',
+            padding: '8px 14px',
+            borderRadius: '20px',
+            fontSize: '14px',
+            fontWeight: '600',
+            marginBottom: '20px',
+            fontFamily: "'Noto Sans TC', sans-serif",
+          }}
+        >
           台灣在地導遊平台
-        </p>
+        </div>
+
+        {/* Main Headline */}
         <h1
           style={{
-            color: '#fff',
-            textShadow: '0 2px 10px rgba(0,0,0,0.35)',
-            fontSize: 'clamp(30px, 5vw, 50px)',
+            color: '#1A2E1F',
+            fontSize: 'clamp(32px, 6vw, 52px)',
             lineHeight: 1.28,
-            maxWidth: 740,
-            marginBottom: 14,
+            maxWidth: '680px',
+            marginBottom: '20px',
+            fontWeight: '700',
+            fontFamily: "'Noto Serif TC', serif",
+            letterSpacing: '-0.5px',
           }}
         >
           找到懂路的人，
           <br />
           帶你走進台灣最有故事的地方
         </h1>
-        <p className="tp-hero-sub" style={{ color: 'rgba(255,255,255,0.9)', maxWidth: 560, lineHeight: 1.72 }}>
-          不跟團、不趕路。預約在地導遊，用你的節奏認識這座島嶼。
+
+        {/* Sub-headline */}
+        <p
+          style={{
+            color: '#5E7A4F',
+            fontSize: '16px',
+            lineHeight: 1.6,
+            maxWidth: '580px',
+            marginBottom: '32px',
+            fontFamily: "'Noto Sans TC', sans-serif",
+          }}
+        >
+          預約在地導遊，用你的節奏認識台灣。
         </p>
 
-        <div className="tp-cta-row" style={{ marginTop: 28, alignItems: 'center', gap: 12 }}>
-          <Link href="/activities" data-testid="home-cta-explore" className="tp-btn tp-btn-primary" style={{ fontSize: 16, padding: '13px 28px' }}>
-            先看本週精選路線
-          </Link>
-          <Link
-            href="/guides"
-            data-testid="home-cta-guides"
-            className="tp-btn"
-            style={{
-              fontSize: 15,
-              padding: '12px 22px',
-              color: '#fff',
-              borderColor: 'rgba(255,255,255,0.65)',
-              background: 'rgba(255,255,255,0.08)',
-            }}
+        {/* Search Input */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            backgroundColor: '#fff',
+            borderRadius: '28px',
+            padding: '14px 20px',
+            marginBottom: '24px',
+            maxWidth: '600px',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+          }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1A2E1F"
+            strokeWidth="2"
+            style={{ marginRight: '12px' }}
           >
-            再挑適合你的導遊
-          </Link>
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            placeholder="想去哪裡？"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+            style={{
+              border: 'none',
+              outline: 'none',
+              flex: 1,
+              fontSize: '16px',
+              color: '#1A2E1F',
+              fontFamily: "'Noto Sans TC', sans-serif",
+            }}
+          />
         </div>
+
+        {/* CTA Button */}
+        <button
+          style={{
+            backgroundColor: '#D97836',
+            color: '#fff',
+            border: 'none',
+            padding: '14px 32px',
+            borderRadius: '28px',
+            fontSize: '18px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            width: '100%',
+            maxWidth: '600px',
+            fontFamily: "'Noto Sans TC', sans-serif",
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#C2542E')}
+          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#D97836')}
+        >
+          開始找行程
+        </button>
       </div>
     </section>
   );

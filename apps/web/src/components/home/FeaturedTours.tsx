@@ -2,109 +2,158 @@ import Link from 'next/link';
 import { activities, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
 
-const recommendationNotes: Record<string, string> = {
-  'kaohsiung-chaishan-cave-experience': '第一次來高雄想玩得深入又安心，這條路線最容易留下記憶點。',
-  'dadadaocheng-walk': '半天就能把大稻埕從「走過」變成「真正看懂」。',
-  'hualien-river-trekking': '適合想把花蓮從觀景行程升級成真實參與感的人。',
-};
-
 export function FeaturedTours() {
-  const featured = activities.slice(0, 3);
-  const [primary, ...secondary] = featured;
+  const featured = activities.slice(0, 1);
+  const [primary] = featured;
 
   return (
-    <section className="tp-section">
+    <section style={{ backgroundColor: '#fff', padding: '40px 0' }}>
       <div className="tp-container">
-        <div className="tp-section-head">
-          <div>
-            <h2 style={{ marginBottom: 4 }}>本週精選行程</h2>
-            <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
-              先從一條最有代表性的路線開始，再挑你想延伸的旅程節奏。
-            </p>
-          </div>
-          <Link href="/activities" className="tp-link">查看全部 →</Link>
+        {/* Section Header */}
+        <div style={{ marginBottom: '32px' }}>
+          <h2
+            style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1A2E1F',
+              margin: '0 0 8px 0',
+              fontFamily: "'Noto Serif TC', serif",
+            }}
+          >
+            本月祕境檔案
+          </h2>
+          <p
+            style={{
+              fontSize: '14px',
+              color: '#5E7A4F',
+              margin: '0',
+              fontFamily: "'Noto Sans TC', sans-serif",
+            }}
+          >
+            每月精選最值得深入的路線
+          </p>
         </div>
 
         {primary && (
           <article
-            className="tp-card tp-featured-primary"
             style={{
-              display: 'grid',
-              gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr)',
-              gap: 18,
-              marginBottom: 14,
-              borderWidth: 2,
-              borderColor: 'rgba(27,107,74,0.2)',
-              boxShadow: '0 8px 20px rgba(0,0,0,0.04)',
+              border: '2px solid #5E7A4F',
+              borderRadius: '14px',
+              overflow: 'hidden',
+              backgroundColor: '#fff',
+              marginBottom: '24px',
             }}
           >
-            <img src={primary.imageUrl} alt={primary.title} className="tp-card-img" style={{ marginBottom: 0, minHeight: 230 }} loading="lazy" />
-            <div style={{ display: 'grid', gap: 10 }}>
-              <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--tp-primary)' }}>推薦先從這條開始</p>
-              <h3 style={{ fontSize: 24, margin: 0, lineHeight: 1.4 }}>{primary.title}</h3>
-              <p style={{ margin: 0, color: '#2f2f2f', lineHeight: 1.65 }}>{recommendationNotes[primary.slug]}</p>
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--tp-muted)' }}>
-                {primary.durationDisplay} · {primary.region} · {primary.priceLabel}
-              </p>
-              <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <Link className="tp-btn tp-btn-primary" href={buildActivityHref({ slug: primary.slug, region: primary.region, regionSlug: primary.regionSlug })}>
-                  查看主打行程
-                </Link>
-                <Link className="tp-btn tp-btn-ghost" href="/activities">比較其他路線</Link>
+            {/* Card Image */}
+            <div style={{ position: 'relative', height: '280px', overflow: 'hidden' }}>
+              <img
+                src={primary.imageUrl}
+                alt={primary.title}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                }}
+              />
+
+              {/* Badge: 精選行程 */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  backgroundColor: '#1A2E1F',
+                  color: '#fff',
+                  padding: '6px 12px',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  fontFamily: "'Noto Sans TC', sans-serif",
+                }}
+              >
+                ⭐ 精選行程
               </div>
+            </div>
+
+            {/* Card Content */}
+            <div style={{ padding: '18px' }}>
+              <h3
+                style={{
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  color: '#1A2E1F',
+                  margin: '0 0 12px 0',
+                  fontFamily: "'Noto Serif TC', serif",
+                }}
+              >
+                {primary.title}
+              </h3>
+
+              {/* Meta Info: Location, Rating, Price */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr auto',
+                  gap: '16px',
+                  alignItems: 'center',
+                  fontSize: '14px',
+                  color: '#5E7A4F',
+                  marginBottom: '14px',
+                  paddingBottom: '14px',
+                  borderBottom: '1px solid #E6DCC8',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📍</span>
+                  <span>{primary.region}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span>⭐ 5.0</span>
+                </div>
+                <div style={{ fontWeight: '700', color: '#D97836' }}>
+                  NT${primary.basePrice} / 人
+                </div>
+              </div>
+
+              {/* Guide Info */}
+              {guides.find((g) => g.slug === primary.guideSlug) && (
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: '#5E7A4F',
+                    margin: '0 0 12px 0',
+                    fontFamily: "'Noto Sans TC', sans-serif",
+                  }}
+                >
+                  導遊：{guides.find((g) => g.slug === primary.guideSlug)?.displayName}
+                </p>
+              )}
+
+              {/* CTA Button */}
+              <Link
+                href={buildActivityHref({
+                  slug: primary.slug,
+                  region: primary.region,
+                  regionSlug: primary.regionSlug,
+                })}
+                style={{
+                  display: 'inline-block',
+                  backgroundColor: '#D97836',
+                  color: '#fff',
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  fontFamily: "'Noto Sans TC', sans-serif",
+                  transition: 'background 0.2s',
+                }}
+              >
+                查看行程詳情
+              </Link>
             </div>
           </article>
         )}
-
-        <div className="tp-card-grid tp-card-grid-featured" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}>
-          {secondary.map((a) => {
-            const guide = guides.find((g) => g.slug === a.guideSlug);
-            return (
-              <article className="tp-card" key={a.slug}>
-                <img src={a.imageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
-
-                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      background: 'rgba(255, 109, 180, 0.12)',
-                      color: '#b12871',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      padding: '4px 10px',
-                      borderRadius: 999,
-                    }}
-                  >
-                    {a.category}
-                  </span>
-                  <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{a.region}</span>
-                </div>
-
-                <h3 style={{ fontSize: 18, margin: '10px 0 8px', lineHeight: 1.4 }}>{a.title}</h3>
-
-                {guide && (
-                  <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                    由 {guide.displayName} 帶路 · 導遊評價 {guide.rating.toFixed(1)} ★ / {guide.reviewCount} 則
-                  </p>
-                )}
-
-                <p style={{ margin: '0 0 14px', fontSize: 14, lineHeight: 1.6, color: '#2f2f2f' }}>
-                  {recommendationNotes[a.slug] ?? '適合想用在地視角重新認識台灣的人。'}
-                </p>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' }}>
-                  <strong style={{ color: 'var(--tp-primary)', fontSize: 15 }}>{a.priceLabel}</strong>
-                  <Link
-                    className="tp-btn tp-btn-primary"
-                    href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}
-                    style={{ fontSize: 13, padding: '6px 14px' }}
-                  >
-                    查看行程
-                  </Link>
-                </div>
-              </article>
-            );
-          })}
-        </div>
       </div>
     </section>
   );

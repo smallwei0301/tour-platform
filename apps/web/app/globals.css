@@ -1,21 +1,24 @@
 :root {
-  --tp-primary: #1b6b4a;
-  --tp-primary-dark: #145238;
-  --tp-accent: #e8834d;
-  --tp-cave: #4a5c3a;
-  --tp-river: #1a4a6b;
+  /* Midao Brand Color System */
+  --tp-primary: #1A2E1F;
+  --tp-primary-dark: #0F1F14;
+  --tp-accent: #D97836;
+  --tp-secondary: #5E7A4F;
+  --tp-cave: #1A2E1F;
+  --tp-river: #1A2E1F;
   --tp-bg: #ffffff;
-  --tp-bg-soft: #f9f6f0;
-  --tp-text: #1a1a1a;
-  --tp-muted: #666666;
-  --tp-border: #e5e5e5;
+  --tp-bg-soft: #F4ECD8;
+  --tp-text: #1A2E1F;
+  --tp-muted: #5E7A4F;
+  --tp-border: #D9D3C8;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; color: var(--tp-text); background: var(--tp-bg); font-family: 'Noto Sans TC', Inter, system-ui, -apple-system, sans-serif; }
+body { margin: 0; color: var(--tp-text); background: var(--tp-bg); font-family: 'Noto Sans TC', 'Noto Serif TC', Inter, system-ui, -apple-system, sans-serif; }
 html { overflow-x: hidden; }
 body { overflow-x: hidden; }
 a { color: inherit; text-decoration: none; }
+h1, h2, h3, h4, h5, h6 { font-family: 'Noto Serif TC', serif; font-weight: 700; letter-spacing: -0.5px; }
 
 .tp-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
 .kkd-detail-page { overflow-x: hidden; max-width: 100vw; }
