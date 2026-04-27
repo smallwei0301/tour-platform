@@ -20,10 +20,7 @@ export function Navbar() {
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
-
-  if (pathname === '/') {
-    return null;
-  }
+  const isHome = pathname === '/';
 
   useEffect(() => {
     const supabase = createClient();
@@ -57,6 +54,10 @@ export function Navbar() {
   }
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
+
+  if (isHome) {
+    return null;
+  }
 
   return (
     <header className="tp-navbar">
