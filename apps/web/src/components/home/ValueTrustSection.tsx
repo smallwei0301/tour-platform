@@ -2,16 +2,16 @@ import Link from 'next/link';
 
 const trustValuePoints = [
   {
-    title: '不是只有驗證標章，而是更快做對決定',
-    body: '導遊資料、評論與專長一次看清楚，第一次預約也能在幾分鐘內選到對的人。',
+    title: '看清楚再選，不賭人品',
+    body: '導遊資料、評論、專長一眼看清，幾分鐘選對人。',
   },
   {
-    title: '不是塞滿行程，而是把時間用在真正有感的體驗',
-    body: '你看到的不只是「去哪裡」，而是每條路線適合誰、會帶走什麼記憶。',
+    title: '走進回憶，而不是趕行程',
+    body: '看到的是「適合誰」「會記住什麼」，不只是地點。',
   },
   {
-    title: '不是賭運氣，而是用在地知識降低踩雷成本',
-    body: '由熟悉地方脈絡的導遊帶路，少走錯路、少花冤枉時間，旅程更穩定。',
+    title: '有在地人帶路，少花冤枉時間',
+    body: '熟悉地方的導遊，幫你避開陷阱、走穩定路線。',
   },
 ];
 
@@ -23,7 +23,7 @@ export function ValueTrustSection() {
           <div>
             <h2 style={{ marginBottom: 4 }}>為什麼這種玩法更值得</h2>
             <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>
-              我們把「平台該有的基本條件」，轉成你可以直接感受到的旅遊價值。
+              平台基本功轉成你能感受到的旅遊價值。
             </p>
           </div>
           <Link href="/why-choose-us" className="tp-link">
