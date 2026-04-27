@@ -1,14 +1,22 @@
 import { activities, guides, reviews } from '../src/fixtures/data';
+import { buildActivityHref } from '../src/lib/activity-url';
 
-const hualienActivity = activities.find((a) => a.slug === 'hualien-river-trekking') ?? activities[0];
-const kaohsiungActivity = activities.find((a) => a.slug === 'kaohsiung-chaishan-cave-experience') ?? activities[0];
-const taipeiActivity = activities.find((a) => a.slug === 'dadadaocheng-walk') ?? activities[0];
+const homepageActivities = [
+  activities.find((activity) => activity.slug === 'kaohsiung-chaishan-cave-experience'),
+  activities.find((activity) => activity.slug === 'dadadaocheng-walk'),
+  activities.find((activity) => activity.slug === 'hualien-river-trekking'),
+].filter(Boolean);
 
-const hualienGuide = guides.find((g) => g.slug === hualienActivity.guideSlug) ?? guides[0];
-const kaohsiungGuide = guides.find((g) => g.slug === kaohsiungActivity.guideSlug) ?? guides[0];
-const taipeiGuide = guides.find((g) => g.slug === taipeiActivity.guideSlug) ?? guides[0];
+const featuredActivity = homepageActivities[0] ?? activities[0];
+const featuredGuide = guides.find((guide) => guide.slug === featuredActivity.guideSlug) ?? guides[0];
 
-const featuredReviewCount = reviews.filter((r) => r.activitySlug === hualienActivity.slug).length;
+function getGuideBySlug(guideSlug: string) {
+  return guides.find((guide) => guide.slug === guideSlug) ?? guides[0];
+}
+
+function getReviewCount(activitySlug: string) {
+  return reviews.filter((review) => review.activitySlug === activitySlug).length;
+}
 
 export const midaoHero = {
   eyebrow: '— FIELD GUIDE TO HIDDEN TAIWAN —',
@@ -17,57 +25,40 @@ export const midaoHero = {
   description: '祕境不會自己出現。要有人帶你去。',
   primaryCta: { label: '尋找一條你的徑', href: '/activities' },
   secondaryCta: { label: '遇見引路人', href: '/guides' },
-  imageUrl: kaohsiungGuide.heroImageUrl || kaohsiungActivity.imageUrl,
+  imageUrl: featuredGuide.heroImageUrl || featuredActivity.imageUrl,
 };
 
 export const midaoSearch = {
   placeholder: '你想走哪一條徑？',
 };
 
-export const midaoChips = [
-  { label: '花蓮溪谷', icon: 'mountain', href: `/activities?region=${encodeURIComponent('hualien')}` },
-  { label: '高雄探洞', icon: 'tent', href: `/activities?region=${encodeURIComponent('kaohsiung')}` },
-  { label: '台北老街', icon: 'tree', href: `/activities?region=${encodeURIComponent('taipei')}` },
-];
+export const midaoChips = homepageActivities.map((activity) => ({
+  label: activity.region.replace('市', '').replace('縣', ''),
+  icon: activity.slug === 'kaohsiung-chaishan-cave-experience' ? 'tent' : activity.slug === 'hualien-river-trekking' ? 'mountain' : 'tree',
+  href: buildActivityHref({ slug: activity.slug, region: activity.region, regionSlug: activity.regionSlug }),
+}));
 
-export const featuredRoutes = [
-  {
-    id: hualienActivity.slug,
-    title: '花蓮・幾乎沒人走的溪谷徑',
-    location: hualienActivity.region.replace('縣', ''),
-    image: hualienActivity.imageUrl,
-    rating: hualienGuide.rating ?? 4.8,
-    groupSize: `${hualienActivity.maxParticipants}人小團`,
-    duration: hualienActivity.durationDisplay.includes('日') ? hualienActivity.durationDisplay : '1日',
-    cta: '替我留一個位置',
-    href: `/activities/${hualienActivity.regionSlug}/${hualienActivity.slug}`,
-    reviewCount: featuredReviewCount,
-  },
-  {
-    id: kaohsiungActivity.slug,
-    title: '高雄・城市邊緣的柴山洞徑',
-    location: kaohsiungActivity.region.replace('市', ''),
-    image: kaohsiungActivity.imageUrl,
-    rating: kaohsiungGuide.rating ?? 5,
-    groupSize: `${kaohsiungActivity.maxParticipants}人小團`,
-    duration: kaohsiungActivity.durationDisplay,
-    cta: '翻開路線',
-    href: `/activities/${kaohsiungActivity.regionSlug}/${kaohsiungActivity.slug}`,
-    reviewCount: reviews.filter((r) => r.activitySlug === kaohsiungActivity.slug).length,
-  },
-  {
-    id: taipeiActivity.slug,
-    title: '台北・老街與故事的慢行徑',
-    location: taipeiActivity.region.replace('市', ''),
-    image: taipeiActivity.imageUrl,
-    rating: taipeiGuide.rating ?? 5,
-    groupSize: `${taipeiActivity.maxParticipants}人小團`,
-    duration: taipeiActivity.durationDisplay,
-    cta: '看看這條徑',
-    href: `/activities/${taipeiActivity.regionSlug}/${taipeiActivity.slug}`,
-    reviewCount: reviews.filter((r) => r.activitySlug === taipeiActivity.slug).length,
-  },
-];
+export const featuredRoutes = homepageActivities.map((activity) => {
+  const guide = getGuideBySlug(activity.guideSlug);
+
+  return {
+    id: activity.slug,
+    title: activity.title,
+    location: activity.region,
+    image: activity.imageUrl,
+    rating: guide.rating ?? 5,
+    groupSize: `${activity.minParticipants}~${activity.maxParticipants} 人`,
+    duration: activity.durationDisplay,
+    cta: activity.guideSlug === 'andy-lee' ? '查看 Andy 的柴山行程' : '查看行程',
+    href: buildActivityHref({ slug: activity.slug, region: activity.region, regionSlug: activity.regionSlug }),
+    reviewCount: getReviewCount(activity.slug),
+    guideName: guide.displayName,
+    priceLabel: activity.priceLabel,
+    summary: activity.shortDescription,
+    tagline: activity.tagline,
+    isPrimary: activity.guideSlug === 'andy-lee',
+  };
+});
 
 export const bottomNavItems = [
   { label: '首頁', icon: 'home', href: '/', active: true },

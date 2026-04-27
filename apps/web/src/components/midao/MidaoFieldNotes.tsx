@@ -4,6 +4,9 @@ import MidaoIcon from './MidaoIcon';
 import MidaoRouteCard from './MidaoRouteCard';
 
 export default function MidaoFieldNotes() {
+  const primaryRoute = featuredRoutes.find((route) => route.isPrimary) ?? featuredRoutes[0];
+  const secondaryRoutes = featuredRoutes.filter((route) => route.id !== primaryRoute?.id);
+
   return (
     <section className="midao-section midao-field-notes">
       <div className="midao-divider" />
@@ -25,7 +28,10 @@ export default function MidaoFieldNotes() {
       </div>
 
       <div className="midao-route-scroll">
-        <MidaoRouteCard route={featuredRoutes[0]} />
+        {primaryRoute ? <MidaoRouteCard route={primaryRoute} /> : null}
+        {secondaryRoutes.map((route) => (
+          <MidaoRouteCard key={route.id} route={route} />
+        ))}
       </div>
     </section>
   );
