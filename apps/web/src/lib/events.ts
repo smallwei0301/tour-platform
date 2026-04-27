@@ -16,6 +16,7 @@ export type EventName =
   | 'payment_succeeded'
   | 'booking_page_view'
   | 'booking_v2_fallback_clicked'
+  | 'booking_v2_line_retry_clicked'
   | 'error';
 
 // ── 各事件 properties ────────────────────────────────────────────────────────
@@ -87,6 +88,12 @@ export interface BookingV2FallbackClickedProperties {
   rollout_variant: 'v2';
 }
 
+export interface BookingV2LineRetryClickedProperties {
+  reason: 'v2_error';
+  rollout_variant: 'v2';
+  correlation_id?: string;
+}
+
 export interface ErrorProperties {
   message: string;
   stack_summary?: string;
@@ -107,6 +114,7 @@ export type TrackEventPayload =
   | { event_name: 'payment_succeeded'; properties: PaymentSucceededProperties }
   | { event_name: 'booking_page_view'; properties: BookingPageViewProperties }
   | { event_name: 'booking_v2_fallback_clicked'; properties: BookingV2FallbackClickedProperties }
+  | { event_name: 'booking_v2_line_retry_clicked'; properties: BookingV2LineRetryClickedProperties }
   | { event_name: 'error'; properties: ErrorProperties; error_code?: string };
 
 // ── API request body ─────────────────────────────────────────────────────────
