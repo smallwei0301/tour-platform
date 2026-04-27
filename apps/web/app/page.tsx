@@ -1,12 +1,5 @@
 import type { Metadata } from 'next';
-import { HeroSection } from '../src/components/home/HeroSection';
-import { FeaturedTours } from '../src/components/home/FeaturedTours';
-import { ValueTrustSection } from '../src/components/home/ValueTrustSection';
-import { StoryProofSection } from '../src/components/home/StoryProofSection';
-import { DestinationsSection } from '../src/components/home/DestinationsSection';
-import { ThemeCtas } from '../src/components/home/ThemeCtas';
-import { GuideSpotlight } from '../src/components/home/GuideSpotlight';
-import { FaqSection } from '../src/components/home/FaqSection';
+import { HomeMobileLanding } from '../src/components/home/HomeMobileLanding';
 
 export const metadata: Metadata = {
   title: 'Tour Platform｜台灣在地導遊預約平台',
@@ -19,16 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return (
-    <>
-      <HeroSection />
-      <ValueTrustSection />
-      <FeaturedTours />
-      <StoryProofSection />
-      <DestinationsSection />
-      <ThemeCtas />
-      <GuideSpotlight />
-      <FaqSection />
-    </>
-  );
+  return <HomeMobileLanding />;
 }

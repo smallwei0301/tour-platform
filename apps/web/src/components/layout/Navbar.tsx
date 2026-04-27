@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -19,6 +19,11 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+
+  if (pathname === '/') {
+    return null;
+  }
 
   useEffect(() => {
     const supabase = createClient();
