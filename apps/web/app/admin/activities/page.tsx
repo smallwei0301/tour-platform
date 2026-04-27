@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
@@ -43,7 +43,7 @@ export default function AdminActivitiesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const q = statusFilter ? `?status=${encodeURIComponent(statusFilter)}` : '';
@@ -52,9 +52,9 @@ export default function AdminActivitiesPage() {
       setActivities(json.data || []);
     } catch { setActivities([]); }
     finally { setLoading(false); }
-  }
+  }, [statusFilter]);
 
-  useEffect(() => { load(); }, [statusFilter]);
+  useEffect(() => { load(); }, [load]);
 
   // ── 直接建立並跳轉 edit ──
   async function handleCreate() {

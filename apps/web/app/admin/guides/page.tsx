@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/components/admin/ui';
 import { AvatarUpload } from '../../../src/components/admin/AvatarUpload';
 
@@ -36,7 +36,7 @@ export default function AdminGuidesPage() {
   const [editState, setEditState] = useState<EditState | null>(null);
   const [suspendLoading, setSuspendLoading] = useState<string | null>(null);
 
-  async function loadApplications() {
+  const loadApplications = useCallback(async () => {
     setLoading(true);
     try {
       const q = status ? `?status=${encodeURIComponent(status)}` : '';
@@ -44,19 +44,19 @@ export default function AdminGuidesPage() {
       const json = await res.json();
       setRows(json?.data || []);
     } finally { setLoading(false); }
-  }
+  }, [status]);
 
-  async function loadProfiles() {
+  const loadProfiles = useCallback(async () => {
     setProfilesLoading(true);
     try {
       const res = await fetch('/api/admin/guides/approved', { cache: 'no-store' });
       const json = await res.json();
       setProfiles(json?.data || []);
     } finally { setProfilesLoading(false); }
-  }
+  }, []);
 
-  useEffect(() => { loadApplications(); }, [status]);
-  useEffect(() => { if (tab === 'profiles') loadProfiles(); }, [tab]);
+  useEffect(() => { loadApplications(); }, [loadApplications]);
+  useEffect(() => { if (tab === 'profiles') loadProfiles(); }, [tab, loadProfiles]);
 
   /** Approve / Reject application */
   async function appAction(id: string, kind: 'approve' | 'reject') {

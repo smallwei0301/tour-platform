@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // 前端即時試算（與後端公式一致）
 function calcContribution(row: Row, kpiConfig?: { commissionRate?: number; paymentFeeRate?: number }) {
@@ -40,7 +40,7 @@ export default function OperationsTrackingPage() {
   const [selected, setSelected] = useState<Row | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const [listRes, sumRes] = await Promise.all([
@@ -55,9 +55,9 @@ export default function OperationsTrackingPage() {
         if (fresh) setSelected(fresh);
       }
     } finally { setLoading(false); }
-  }
+  }, [selected]);
 
-  useEffect(() => { load().catch(() => { setRows([]); setSummary(null); }); }, []);
+  useEffect(() => { load().catch(() => { setRows([]); setSummary(null); }); }, [load]);
 
   const totals = useMemo(() => summary || { totalGmv: 0, totalCommissionTwd: 0, avgFinalContributionTwd: 0, healthyOrderRate: 0 }, [summary]);
 
