@@ -34,6 +34,27 @@ test('booking v2 flow forwards correlation header and source channel from line e
   assert.match(src, /const source = searchParams\.get\('source'\) \|\| searchParams\.get\('sourceChannel'\) \|\| 'web'/);
   assert.match(src, /const correlationId = searchParams\.get\('correlationId'\) \|\| ''/);
   assert.match(src, /const sourceChannel = source === 'line' \? 'line' : 'web'/);
+  assert.match(src, /const isLineContinuation = sourceChannel === 'line'/);
   assert.match(src, /'x-correlation-id': correlationId/);
   assert.match(src, /sourceChannel,/);
+});
+
+test('line continuation fallback is explicit and testable without silently dropping to legacy flow', async () => {
+  const src = await read('app/booking/[activityId]/page.tsx');
+
+  assert.match(src, /data-testid="booking-v2-line-fallback-state"/);
+  assert.match(src, /data-testid="booking-v2-line-retry-btn"/);
+  assert.match(src, /LINE LIFF 延續流程維持 shared checkout\/payment-init；不切換舊版流程/);
+});
+
+test('checkout route keeps line source + correlation continuity in payment-init audit payload', async () => {
+  const src = await read('app/api/v2/bookings/[bookingId]/checkout/route.ts');
+
+  assert.match(src, /const sourceChannel = checkoutBooking\.source_channel \|\| 'web'/);
+  assert.match(src, /eq\('to_status', 'draft'\)/);
+  assert.match(src, /const correlationId =/);
+  assert.match(src, /draftMetadata\?\.correlationId/);
+  assert.match(src, /auditSignal: 'line_liff_payment_init'/);
+  assert.match(src, /sourceChannel,/);
+  assert.match(src, /correlationId,/);
 });

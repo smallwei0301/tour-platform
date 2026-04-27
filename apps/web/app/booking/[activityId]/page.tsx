@@ -430,6 +430,7 @@ function BookingInnerV2FlagShell() {
   const source = searchParams.get('source') || searchParams.get('sourceChannel') || 'web';
   const correlationId = searchParams.get('correlationId') || '';
   const sourceChannel = source === 'line' ? 'line' : 'web';
+  const isLineContinuation = sourceChannel === 'line';
   const today = new Date().toISOString().slice(0, 10);
 
   const [activity, setActivity] = useState<Activity | null>(null);
@@ -571,20 +572,26 @@ function BookingInnerV2FlagShell() {
     return (
       <main className="tp-container" style={{ padding: '40px 0' }}>
         <p style={{ color: 'var(--tp-danger)' }}>缺少方案參數（plan），請從行程頁重新選擇方案。</p>
-        <button
-          className="tp-btn tp-btn-ghost"
-          data-testid="booking-v2-fallback-btn"
-          onClick={() => {
-            track({
-              event_name: 'booking_v2_fallback_clicked',
-              properties: { reason: 'missing_plan', rollout_variant: 'v2' },
-              page_path: `/booking/${activitySlug}`,
-            });
-            setUseLegacyFallback(true);
-          }}
-        >
-          改用舊版預約流程
-        </button>
+        {isLineContinuation ? (
+          <p data-testid="booking-v2-line-fallback-state" style={{ color: 'var(--tp-muted)' }}>
+            LINE LIFF 延續流程已中斷（缺少 plan）。請回到 LIFF 入口重新帶入完整參數後再試。
+          </p>
+        ) : (
+          <button
+            className="tp-btn tp-btn-ghost"
+            data-testid="booking-v2-fallback-btn"
+            onClick={() => {
+              track({
+                event_name: 'booking_v2_fallback_clicked',
+                properties: { reason: 'missing_plan', rollout_variant: 'v2' },
+                page_path: `/booking/${activitySlug}`,
+              });
+              setUseLegacyFallback(true);
+            }}
+          >
+            改用舊版預約流程
+          </button>
+        )}
       </main>
     );
   }
@@ -624,21 +631,44 @@ function BookingInnerV2FlagShell() {
           }}
         >
           <p style={{ color: 'var(--tp-danger)', margin: 0 }}>⚠️ {v2Error}</p>
+          {isLineContinuation && (
+            <p data-testid="booking-v2-line-fallback-state" style={{ color: 'var(--tp-muted)', margin: 0 }}>
+              LINE LIFF 延續流程維持 shared checkout/payment-init；不切換舊版流程。請重試，若持續失敗請回報 Correlation ID：
+              {correlationId || 'line-correlation-missing'}
+            </p>
+          )}
           <div>
-            <button
-              className="tp-btn tp-btn-ghost"
-              data-testid="booking-v2-fallback-btn"
-              onClick={() => {
-                track({
-                  event_name: 'booking_v2_fallback_clicked',
-                  properties: { reason: 'v2_error', rollout_variant: 'v2' },
-                  page_path: `/booking/${activitySlug}`,
-                });
-                setUseLegacyFallback(true);
-              }}
-            >
-              改用舊版預約流程
-            </button>
+            {isLineContinuation ? (
+              <button
+                className="tp-btn tp-btn-ghost"
+                data-testid="booking-v2-line-retry-btn"
+                onClick={() => {
+                  track({
+                    event_name: 'booking_v2_line_retry_clicked',
+                    properties: { reason: 'v2_error', rollout_variant: 'v2', correlation_id: correlationId || undefined },
+                    page_path: `/booking/${activitySlug}`,
+                  });
+                  setV2Error('');
+                }}
+              >
+                重新嘗試 shared checkout
+              </button>
+            ) : (
+              <button
+                className="tp-btn tp-btn-ghost"
+                data-testid="booking-v2-fallback-btn"
+                onClick={() => {
+                  track({
+                    event_name: 'booking_v2_fallback_clicked',
+                    properties: { reason: 'v2_error', rollout_variant: 'v2' },
+                    page_path: `/booking/${activitySlug}`,
+                  });
+                  setUseLegacyFallback(true);
+                }}
+              >
+                改用舊版預約流程
+              </button>
+            )}
           </div>
         </div>
       )}
