@@ -18,7 +18,7 @@ export function HeroSection() {
     >
       <div className="tp-container" style={{ textAlign: 'left', alignItems: 'flex-start' }}>
         <p className="tp-kicker" style={{ color: '#E8834D', letterSpacing: 2, fontWeight: 700, marginBottom: 8 }}>
-          不是逛景點，是把這趟旅程變成你的故事
+          台灣在地導遊平台
         </p>
         <h1
           style={{
@@ -30,12 +30,12 @@ export function HeroSection() {
             marginBottom: 14,
           }}
         >
-          跟著懂路的在地人，
+          找到懂路的人，
           <br />
-          用更深的方式認識台灣
+          帶你走進台灣最有故事的地方
         </h1>
         <p className="tp-hero-sub" style={{ color: 'rgba(255,255,255,0.9)', maxWidth: 560, lineHeight: 1.72 }}>
-          從一開始就選對帶路者，少走冤枉路、避開觀光模板，把每一次移動都變成值得回憶的體驗。
+          不跟團、不趕路。預約在地導遊，用你的節奏認識這座島嶼。
         </p>
 
         <div className="tp-cta-row" style={{ marginTop: 28, alignItems: 'center', gap: 12 }}>
