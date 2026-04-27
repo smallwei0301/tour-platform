@@ -1,6 +1,15 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 export function Footer() {
+  const pathname = usePathname();
+
+  if (pathname === '/') {
+    return null;
+  }
+
   return (
     <footer className="tp-footer">
       <div className="tp-container">

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -19,8 +19,15 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
+  const isHome = pathname === '/';
 
   useEffect(() => {
+    if (isHome) {
+      setLoadingUser(false);
+      return;
+    }
+
     const supabase = createClient();
 
     // Get initial session
@@ -35,7 +42,7 @@ export function Navbar() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [isHome]);
 
   async function handleSignOut() {
     const supabase = createClient();
@@ -52,6 +59,10 @@ export function Navbar() {
   }
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
+
+  if (isHome) {
+    return null;
+  }
 
   return (
     <header className="tp-navbar">

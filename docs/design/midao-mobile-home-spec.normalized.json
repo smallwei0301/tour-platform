@@ -1,0 +1,210 @@
+{
+  "page": {
+    "id": "midao-mobile-home",
+    "name": "祕島 MIDAO｜手機版首頁",
+    "type": "mobile_web_homepage",
+    "platform": "mobile_web",
+    "language": "zh-TW",
+    "design_intent": {
+      "style_keywords": [
+        "文青精品感",
+        "台灣山系旅行感",
+        "古紙質感",
+        "高級導覽平台",
+        "留白充足",
+        "editorial_ui",
+        "field-guide aesthetic"
+      ],
+      "tone_keywords": [
+        "安靜",
+        "有故事感",
+        "高質感",
+        "在地探索",
+        "mountain editorial",
+        "premium but warm"
+      ]
+    }
+  },
+  "viewport": {
+    "device_frame": "iphone_like",
+    "width": 430,
+    "height": 932,
+    "safe_area": { "top": 20, "right": 0, "bottom": 24, "left": 0 },
+    "scrolling": "vertical",
+    "background_color": "#F4ECD8"
+  },
+  "design_system": {
+    "color_tokens": {
+      "primary": { "name": "山墨", "hex": "#1A2E1F", "usage": ["logo", "heading", "bottom_nav_active", "icon_primary"] },
+      "background": { "name": "古紙", "hex": "#F4ECD8", "usage": ["page_background", "main_surface"] },
+      "accent": { "name": "朝霞", "hex": "#C2542E", "usage": ["primary_cta", "active_indicator", "featured_link"] },
+      "secondary": { "name": "苔綠", "hex": "#5E7A4F", "usage": ["chips_icon", "subtle_highlights", "supporting_text"] },
+      "premium": { "name": "黃銅", "hex": "#B08D3E", "usage": ["eyebrow_text", "decorative_micro_accent"] },
+      "neutral": { "name": "雲霧", "hex": "#A8B09E", "usage": ["placeholder_text", "inactive_nav", "divider_subtle"] },
+      "sub_bg": { "name": "米紙", "hex": "#EBE1C7", "usage": ["chips_background", "card_subtle_zones"] },
+      "deep": { "name": "礦石", "hex": "#2A2422", "usage": ["body_text", "meta_text", "secondary_dark_content"] }
+    },
+    "typography": {
+      "fonts": {
+        "chinese_heading": { "font_family": "Noto Serif TC", "fallback": "Source Han Serif TC, serif", "weights": { "primary": 900, "regular": 400 } },
+        "english_heading": { "font_family": "Fraunces", "fallback": "Georgia, serif", "weights": { "regular": 400, "semibold": 600 } },
+        "ui_font": { "font_family": "Noto Serif TC", "fallback": "serif" }
+      },
+      "styles": {
+        "brand_cn": { "font_family": "Noto Serif TC", "font_weight": 900, "font_size": 30, "line_height": 1.0, "letter_spacing": "0.02em", "color": "#1A2E1F" },
+        "brand_sub": { "font_family": "Fraunces", "font_weight": 400, "font_size": 12, "line_height": 1.0, "letter_spacing": "0.12em", "color": "#1A2E1F" },
+        "eyebrow": { "font_family": "Fraunces", "font_weight": 500, "font_size": 13, "line_height": 1.2, "letter_spacing": "0.16em", "color": "#B08D3E", "text_transform": "uppercase" },
+        "hero_title_cn": { "font_family": "Noto Serif TC", "font_weight": 900, "font_size": 52, "line_height": 1.18, "letter_spacing": "0.01em", "color": "#1A2E1F" },
+        "hero_title_en": { "font_family": "Fraunces", "font_weight": 400, "font_size": 30, "line_height": 1.2, "color": "#5E7A4F" },
+        "body_lg": { "font_family": "Noto Serif TC", "font_weight": 400, "font_size": 16, "line_height": 1.8, "color": "#2A2422" },
+        "button_text": { "font_family": "Noto Serif TC", "font_weight": 700, "font_size": 17, "line_height": 1.0 },
+        "section_title_cn": { "font_family": "Noto Serif TC", "font_weight": 800, "font_size": 22, "line_height": 1.25, "color": "#1A2E1F" },
+        "section_title_en": { "font_family": "Fraunces", "font_weight": 400, "font_size": 16, "line_height": 1.2, "color": "#5E7A4F" },
+        "card_title": { "font_family": "Noto Serif TC", "font_weight": 700, "font_size": 20, "line_height": 1.35, "color": "#1A2E1F" },
+        "meta_text": { "font_family": "Noto Serif TC", "font_weight": 400, "font_size": 13, "line_height": 1.4, "color": "#6A655D" },
+        "nav_label": { "font_family": "Noto Serif TC", "font_weight": 500, "font_size": 12, "line_height": 1.2 }
+      }
+    },
+    "radius": { "xs": 8, "sm": 12, "md": 16, "lg": 20, "xl": 24, "xxl": 28, "pill": 999 },
+    "spacing_scale": { "xxs": 4, "xs": 8, "sm": 12, "md": 16, "lg": 20, "xl": 24, "xxl": 32, "xxxl": 40 },
+    "shadows": {
+      "card_soft": { "x": 0, "y": 8, "blur": 24, "spread": 0, "color": "rgba(42, 36, 34, 0.08)" },
+      "floating": { "x": 0, "y": 10, "blur": 30, "spread": 0, "color": "rgba(42, 36, 34, 0.10)" },
+      "search": { "x": 0, "y": 6, "blur": 18, "spread": 0, "color": "rgba(42, 36, 34, 0.08)" }
+    }
+  },
+  "page_background": {
+    "type": "solid_with_texture",
+    "base_color": "#F4ECD8",
+    "overlay_texture": { "type": "paper_grain", "opacity": 0.08, "blend_mode": "multiply" },
+    "overall_feel": "aged_paper_soft_editorial"
+  },
+  "layout": {
+    "page_padding_horizontal": 0,
+    "sections_stack": ["header", "hero", "search_bar", "chips_row", "divider", "featured_section", "bottom_nav"],
+    "visual_balance": [
+      "Hero 左文字右圖片，右圖需有弧形切邊感。",
+      "整頁留白必須充足，不可塞滿。",
+      "主要內容集中在上半部與卡片區，底部 nav 固定。",
+      "Hero 區視覺重心在右側山景，文案重心在左側。",
+      "朝霞橘只用於主 CTA、active indicator、重要 CTA 文字，不可濫用。"
+    ],
+    "spacing_rules": [
+      "頁面左右主邊距統一 28px。",
+      "Hero 內文塊與圖片之間不可硬切，需有柔和疊合感。",
+      "每個主區塊之間垂直節奏保持 18~28px。",
+      "按鈕間距 14px。",
+      "chips 與 search bar 間距 18px。",
+      "section title 與 card 間距 18px。"
+    ]
+  },
+  "components": {
+    "header": {
+      "padding": { "top": 26, "left": 28, "right": 28, "bottom": 12 },
+      "brand": {
+        "cn": "祕島",
+        "sub": "MIDAO · SECRET ISLE",
+        "logo_mark": "深山墨綠色島中島／洞口輪廓 logo"
+      },
+      "actions": ["search", "menu"]
+    },
+    "hero": {
+      "padding": { "top": 118, "left": 28, "right": 28, "bottom": 24 },
+      "text_content": {
+        "eyebrow": "— FIELD GUIDE TO HIDDEN TAIWAN —",
+        "title_lines": ["島嶼裡，", "還有一座島。"],
+        "english_title": "An island, untold.",
+        "description": "祕境不會自己出現。要有人帶你去。"
+      },
+      "actions": [
+        { "label": "尋找一條你的徑", "variant": "primary" },
+        { "label": "遇見引路人", "variant": "secondary" }
+      ],
+      "image": {
+        "shape": "right-side vertical image with left curved edge",
+        "asset_purpose": "台灣高山山徑主視覺",
+        "overlay": { "type": "fade_left", "color": "#F4ECD8", "opacity": 0.42 }
+      }
+    },
+    "search_bar": {
+      "placeholder": "你想走哪一條徑？",
+      "height": 64,
+      "width": 374,
+      "margin_top": -8
+    },
+    "chips_row": {
+      "items": [
+        { "label": "花蓮溪谷", "icon": "mountain" },
+        { "label": "阿里山古道", "icon": "tree" },
+        { "label": "部落路線", "icon": "tent" }
+      ]
+    },
+    "featured_section": {
+      "title_cn": "本月祕境檔案",
+      "title_en": "This Month's Field Notes",
+      "card": {
+        "layout": "horizontal",
+        "title": "花蓮・幾乎沒人走的溪谷徑",
+        "meta": ["4.8", "6人小團", "1日"],
+        "cta": "替我留一個位置"
+      }
+    },
+    "bottom_nav": {
+      "items": [
+        { "label": "首頁", "icon": "mountains", "active": true },
+        { "label": "路線", "icon": "signpost", "active": false },
+        { "label": "引路人", "icon": "guide_person", "active": false },
+        { "label": "我的", "icon": "user", "active": false }
+      ],
+      "active_indicator": { "color": "#C2542E", "width": 20, "height": 3 }
+    }
+  },
+  "image_assets": {
+    "hero_main": {
+      "purpose": "hero_visual",
+      "orientation": "portrait",
+      "recommended_size": "1000x1600 or above",
+      "composition": "登山者走在台灣高山山徑上，右下有人物，中景是蜿蜒山脊，遠景有雲海與山巒，左側保留亮色霧氣與留白。"
+    },
+    "featured_card_river": {
+      "purpose": "route_card_image",
+      "orientation": "landscape",
+      "recommended_size": "1200x900 or above",
+      "composition": "溪谷、岩石、清澈水流、兩側綠色山壁。"
+    }
+  },
+  "icon_system": {
+    "style": {
+      "type": "stroke_based",
+      "rounded_line_caps": true,
+      "stroke_width": "1.8_to_2.2",
+      "color_primary": "#1A2E1F",
+      "color_inactive": "#8B877D",
+      "size_standard": "22_to_24"
+    },
+    "required_icons": ["search", "menu", "chevron-right", "mountain", "tree", "tent", "compass-star", "star", "users", "clock", "mountains", "signpost", "guide_person", "user"]
+  },
+  "implementation_notes": {
+    "recommended_stack": ["Next.js", "React", "Tailwind CSS or CSS Modules"],
+    "notes": [
+      "背景建議加入極淡紙張噪點 texture。",
+      "Hero 右側圖片需用 mask 或 border-radius 做半圓弧切邊。",
+      "Header 可疊在 hero 上方，但不可有明顯底色塊。",
+      "Search bar 與 chips 區應從 hero 區往下自然銜接。",
+      "整體視覺像高級旅遊編輯頁，而不是一般 OTA。"
+    ]
+  },
+  "rebuild_checklist": [
+    "確認頁面底色為古紙色 #F4ECD8",
+    "確認 logo 為深綠色且置於左上",
+    "確認 hero 主標分兩行：島嶼裡 / 還有一座島。",
+    "確認英文副標為 An island, untold.",
+    "確認主按鈕為朝霞橘、次按鈕為描邊",
+    "確認 hero 圖右側弧形裁切",
+    "確認 search bar 在 hero 下方且寬度約 374px",
+    "確認 chips 為 3 顆 pill",
+    "確認 featured section 標題為中英並列",
+    "確認 featured card 為左圖右文",
+    "確認底部 nav 為 4 欄且首頁 active"
+  ]
+}
