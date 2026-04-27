@@ -427,6 +427,9 @@ function BookingInnerV2FlagShell() {
   const activitySlug = params.activityId as string;
   const urlPlanId = searchParams.get('plan') || '';
   const timezone = searchParams.get('timezone') || 'Asia/Taipei';
+  const source = searchParams.get('source') || searchParams.get('sourceChannel') || 'web';
+  const correlationId = searchParams.get('correlationId') || '';
+  const sourceChannel = source === 'line' ? 'line' : 'web';
   const today = new Date().toISOString().slice(0, 10);
 
   const [activity, setActivity] = useState<Activity | null>(null);
@@ -456,7 +459,7 @@ function BookingInnerV2FlagShell() {
       },
       page_path: `/booking/${activitySlug}`,
     });
-  }, [activitySlug, urlPlanId, selectedDate]);
+  }, [activitySlug, urlPlanId, selectedDate, sourceChannel, correlationId]);
 
   useEffect(() => {
     let mounted = true;
@@ -512,14 +515,17 @@ function BookingInnerV2FlagShell() {
 
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(correlationId ? { 'x-correlation-id': correlationId } : {}),
+        },
         body: JSON.stringify({
           activityId: activity.id,
           planId: urlPlanId,
           startAt: selectedSlotStartAt,
           timezone,
           participants: guests,
-          sourceChannel: 'web',
+          sourceChannel,
           contactName,
           contactPhone,
           contactEmail,
@@ -533,7 +539,10 @@ function BookingInnerV2FlagShell() {
 
       const checkoutRes = await fetch(`/api/v2/bookings/${draftJson.data.bookingId}/checkout`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(correlationId ? { 'x-correlation-id': correlationId } : {}),
+        },
         body: JSON.stringify({ provider: 'ecpay' }),
       });
       const checkoutJson = await checkoutRes.json();
