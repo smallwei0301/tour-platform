@@ -59,6 +59,22 @@ function isValidPhone(phone: string): boolean {
 
 const VALID_CHANNELS = ['web', 'line', 'admin_pos'] as const;
 type SourceChannel = (typeof VALID_CHANNELS)[number];
+type PlanActivityRelation = { id: string; guide_id: string; title: string };
+
+function isSourceChannel(value: unknown): value is SourceChannel {
+  return typeof value === 'string' && VALID_CHANNELS.includes(value as SourceChannel);
+}
+
+function pickPlanActivityRelation(
+  value: PlanActivityRelation | PlanActivityRelation[] | null
+): PlanActivityRelation | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
+  return value === 'manual' || value === 'system';
+}
 
 interface DraftBookingRequest {
   activityId: string;
@@ -124,8 +140,8 @@ function parseAndValidateBody(
 
   // sourceChannel (optional, default to 'web')
   let sourceChannel: SourceChannel = 'web';
-  if (b.sourceChannel) {
-    if (!VALID_CHANNELS.includes(b.sourceChannel as SourceChannel)) {
+  if (b.sourceChannel !== undefined) {
+    if (!isSourceChannel(b.sourceChannel)) {
       return {
         error: {
           code: 'VALIDATION_ERROR',
@@ -133,7 +149,7 @@ function parseAndValidateBody(
         },
       };
     }
-    sourceChannel = b.sourceChannel as SourceChannel;
+    sourceChannel = b.sourceChannel;
   }
 
   // contactName
@@ -245,12 +261,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract guide_id and activity info
-    const activities = planData.activities as unknown as {
-      id: string;
-      guide_id: string;
-      title: string;
-    };
-    const guideId = activities.guide_id;
+    const activities = pickPlanActivityRelation(
+      planData.activities as PlanActivityRelation | PlanActivityRelation[] | null
+    );
+    const guideId = activities?.guide_id;
 
     if (!guideId) {
       return Response.json(errorV2('INTERNAL_ERROR', 'Activity has no assigned guide'), {
@@ -327,7 +341,7 @@ export async function POST(request: NextRequest) {
       starts_at: row.starts_at,
       ends_at: row.ends_at,
       reason: row.reason,
-      source: row.source as 'manual' | 'system',
+      source: isManualOrSystemSource(row.source) ? row.source : 'manual',
     }));
 
     const bookings: ExistingBooking[] = (bookingsData || []).map((row) => ({
@@ -442,7 +456,8 @@ export async function POST(request: NextRequest) {
     await supabase.from('bookings').update({ order_id: orderInsert.id }).eq('id', bookingInsert.id);
 
     // 9. Create order_item
-    const itemTitle = `${activities.title} - ${planData.name}`;
+    const activityTitle = activities?.title ?? '行程預訂';
+    const itemTitle = `${activityTitle} - ${planData.name}`;
     const { error: itemError } = await supabase.from('order_items').insert({
       order_id: orderInsert.id,
       item_type: 'activity_booking',

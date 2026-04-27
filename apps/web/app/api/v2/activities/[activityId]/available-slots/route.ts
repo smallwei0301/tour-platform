@@ -48,6 +48,19 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
+type ActivityRelation = { id: string; guide_id: string };
+
+function pickActivityRelation(
+  value: ActivityRelation | ActivityRelation[] | null
+): ActivityRelation | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
+  return value === 'manual' || value === 'system';
+}
+
 interface QueryParams {
   activityId: string;
   planId: string;
@@ -197,8 +210,8 @@ export async function GET(
     }
 
     // Extract guide_id from the nested activities relation
-    const activities = planData.activities as unknown as { id: string; guide_id: string };
-    const guideId = activities.guide_id;
+    const activities = pickActivityRelation(planData.activities as ActivityRelation | ActivityRelation[] | null);
+    const guideId = activities?.guide_id;
 
     if (!guideId) {
       return Response.json(errorV2('INTERNAL_ERROR', 'Activity has no assigned guide'), {
@@ -277,7 +290,7 @@ export async function GET(
       starts_at: row.starts_at,
       ends_at: row.ends_at,
       reason: row.reason,
-      source: row.source as 'manual' | 'system',
+      source: isManualOrSystemSource(row.source) ? row.source : 'manual',
     }));
 
     const bookings: ExistingBooking[] = (bookingsData || []).map((row) => ({

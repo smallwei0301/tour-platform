@@ -2,6 +2,30 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
 import { createClient } from '../../../../../src/lib/supabase/server';
 
+type BookingActivity = { id: string; title: string; slug: string | null };
+type BookingPlan = { id: string; name: string; slug: string | null };
+type BookingOrder = { id: string; status: string; payment_status: string; total_twd: number };
+
+type BookingRow = {
+  id: string;
+  booking_no: string;
+  status: string;
+  source_channel: string;
+  start_at: string;
+  end_at: string;
+  timezone: string;
+  participants: number;
+  order_id: string | null;
+  activities: BookingActivity | BookingActivity[] | null;
+  activity_plans: BookingPlan | BookingPlan[] | null;
+  orders: BookingOrder | BookingOrder[] | null;
+};
+
+function normalizeSingleRelation<T>(value: T | T[] | null): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
 function isValidUuid(str: string): boolean {
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
@@ -29,9 +53,10 @@ export async function GET(
       return Response.json(errorV2('NOT_FOUND', 'Booking not found'), { status: 404 });
     }
 
-    const activities = booking.activities as any;
-    const plans = booking.activity_plans as any;
-    const orders = booking.orders as any;
+    const typedBooking = booking as BookingRow;
+    const activities = normalizeSingleRelation(typedBooking.activities);
+    const plans = normalizeSingleRelation(typedBooking.activity_plans);
+    const orders = normalizeSingleRelation(typedBooking.orders);
 
     return Response.json(successV2({
       id: booking.id,
