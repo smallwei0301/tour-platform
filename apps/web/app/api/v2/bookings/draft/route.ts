@@ -184,6 +184,8 @@ function parseAndValidateBody(
 }
 
 export async function POST(request: NextRequest) {
+  const correlationId = request.headers.get('x-correlation-id')?.trim() || crypto.randomUUID();
+
   let body: unknown;
   try {
     body = await request.json();
@@ -474,7 +476,9 @@ export async function POST(request: NextRequest) {
       reason: 'Booking draft created',
       metadata: {
         sourceChannel: data.sourceChannel,
+        correlationId,
         contactEmail: data.contactEmail,
+        auditSignal: 'line_liff_draft_entry',
       },
     });
 
