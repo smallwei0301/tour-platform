@@ -1,6 +1,6 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-04-20  
+> 最後更新：2026-04-20
 > 當前主線：**Booking V2 rollout / Booking Engine V2 / 安全與 CI 穩定化**
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
@@ -13,7 +13,7 @@
 ## 先看這些（最高優先）
 
 ### 專案總覽
-- `../README.md` — repo 根總覽
+- `../README.md` - repo 根總覽
 
 ### 當前主線：Booking V2 / rollout
 - `implementation/phase-12-mainline-matrix.md`（Issue #163：Phase 12 主線 owner/status/artifact/source-of-truth matrix）
@@ -71,11 +71,12 @@
 ---
 
 ## 目前 open issue 對應文件主線
-- **#96** — `implementation/issue-96-rollout-contract.md`, `operations/booking-v2-b3-rollout.md`
-- **#105** — `operations/booking-v2-daily-go-no-go.md`, `operations/reports/samples/booking-v2-go-no-go-sample.md`
-- **#117** — 目前偏 issue / code 主線，文件索引較少，後續可補 `security/` 或 `implementation/`
-- **#170** — `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（定義 source_channel / correlation_id / actor-action-target-before-after 契約與排錯路徑）
-- **#175** — `implementation/issue-175-admin-pos-lite-operator-sop.md`（Admin POS Lite 營運 SOP：happy path / failure path / escalation / MVP 邊界）
+- **#96** - `implementation/issue-96-rollout-contract.md`, `operations/booking-v2-b3-rollout.md`
+- **#105** - `operations/booking-v2-daily-go-no-go.md`, `operations/reports/samples/booking-v2-go-no-go-sample.md`
+- **#117** - 目前偏 issue / code 主線，文件索引較少，後續可補 `security/` 或 `implementation/`
+- **#170** - `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（定義 source_channel / correlation_id / actor-action-target-before-after 契約與排錯路徑）
+- **#175** - `implementation/issue-175-admin-pos-lite-operator-sop.md`（Admin POS Lite 營運 SOP：happy path / failure path / escalation / MVP 邊界）
+- **#181** - `implementation/issue-181-line-liff-go-no-go-readiness.md`（LINE/LIFF staged rollout checkpoints + GO/HOLD/ROLLBACK WATCH + data-quality HOLD gate）
 - **PR #128** — trusted client IP / rate limiting 修正，完成後應補回技術或安全文件
 
 ---
