@@ -111,7 +111,7 @@ export function FeaturedTours() {
                   <span>⭐ 5.0</span>
                 </div>
                 <div style={{ fontWeight: '700', color: '#D97836' }}>
-                  NT${primary.basePrice} / 人
+                  NT${primary.price} / 人
                 </div>
               </div>
 
