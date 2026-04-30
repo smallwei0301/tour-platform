@@ -1,7 +1,11 @@
 import { activities, guides, reviews } from '../src/fixtures/data';
 import { buildActivityHref } from '../src/lib/activity-url';
 
-const homepageActivities = activities.slice(0, 3);
+const homepageActivities = [
+  activities.find((activity) => activity.slug === 'kaohsiung-chaishan-cave-experience'),
+  activities.find((activity) => activity.slug === 'dadadaocheng-walk'),
+  activities.find((activity) => activity.slug === 'hualien-river-trekking'),
+].filter(Boolean);
 
 const featuredActivity = homepageActivities[0] ?? activities[0];
 const featuredGuide = guides.find((guide) => guide.slug === featuredActivity.guideSlug) ?? guides[0];

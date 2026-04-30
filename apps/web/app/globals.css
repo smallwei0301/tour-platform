@@ -2165,6 +2165,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-weight: 700;
 }
 
+.midao-notes-grid {
+  display: grid;
+  gap: 16px;
+}
+
 .midao-feature-card {
   overflow: hidden;
   border-radius: 28px;
@@ -2175,13 +2180,81 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 .midao-feature-thumb {
   aspect-ratio: 16 / 11;
-  background:
-    linear-gradient(180deg, rgba(27, 31, 28, 0.06) 0%, rgba(27, 31, 28, 0.26) 100%),
-    url('https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
 }
 
 .midao-feature-body {
   padding: 18px;
+}
+
+.midao-feature-guide,
+.midao-secondary-guide {
+  margin: 10px 0 0;
+  color: #876a4d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.midao-secondary-list {
+  display: grid;
+  gap: 12px;
+}
+
+.midao-secondary-card {
+  border-radius: 24px;
+  background: #fffdf9;
+  border: 1px solid rgba(168, 138, 104, 0.12);
+  box-shadow: 0 12px 24px rgba(86, 67, 49, 0.08);
+  padding: 18px;
+}
+
+.midao-secondary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.midao-secondary-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f5ece1;
+  color: #6e543d;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.midao-secondary-card h3 {
+  margin: 0;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.midao-secondary-card p {
+  margin: 12px 0 0;
+  color: #61564b;
+  line-height: 1.75;
+  font-size: 14px;
+}
+
+.midao-secondary-footer {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.midao-secondary-price {
+  font-size: 15px;
+  font-weight: 800;
+  color: #2a3f30;
 }
 
 .midao-feature-meta {

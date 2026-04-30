@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { featuredRoutes } from '../../../data/midaoHomeData';
 
 const quickFilters = [
   { label: '柴山探洞', href: '/activities/kaohsiung/kaohsiung-chaishan-cave-experience' },
@@ -14,6 +15,9 @@ const bottomNav = [
 ];
 
 export function MidaoHome() {
+  const primaryRoute = featuredRoutes.find((route) => route.isPrimary) ?? featuredRoutes[0];
+  const secondaryRoutes = featuredRoutes.filter((route) => route.id !== primaryRoute?.id);
+
   return (
     <main className="midao-home">
       <section className="midao-hero">
@@ -97,31 +101,54 @@ export function MidaoHome() {
               <p className="midao-kicker">This Month&apos;s Field Notes</p>
               <h2>本月祕境檔案</h2>
             </div>
-            <Link href="/blog" className="midao-more-link">
-              更多筆記 →
+            <Link href="/activities" className="midao-more-link">
+              看更多行程 →
             </Link>
           </div>
 
-          <article className="midao-feature-card">
-            <div className="midao-feature-thumb" />
-            <div className="midao-feature-body">
-              <div className="midao-feature-meta">
-                <span>5.0</span>
-                <span>4~12 人小團</span>
-                <span>3-4 小時</span>
-              </div>
-              <h3>高雄・跟著 Andy 走進柴山地形秘境</h3>
-              <p>
-                不是一般觀光路線，而是由真正熟悉地形的人帶你走進城市邊緣最有記憶點的柴山探洞路線。從洞穴、坡面到林徑節奏，這才是很多人沒看過的高雄。
-              </p>
-              <div className="midao-feature-footer">
-                <span className="midao-feature-price">NT$2,000 / 人</span>
-                <Link href="/activities/kaohsiung/kaohsiung-chaishan-cave-experience" className="midao-inline-link">
-                  看完整路線 →
-                </Link>
+          {primaryRoute ? (
+            <div className="midao-notes-grid">
+              <article className="midao-feature-card">
+                <div className="midao-feature-thumb" style={{ backgroundImage: `linear-gradient(180deg, rgba(27, 31, 28, 0.06) 0%, rgba(27, 31, 28, 0.26) 100%), url(${primaryRoute.image})` }} />
+                <div className="midao-feature-body">
+                  <div className="midao-feature-meta">
+                    <span>{primaryRoute.rating.toFixed(1)}</span>
+                    <span>{primaryRoute.groupSize}</span>
+                    <span>{primaryRoute.duration}</span>
+                  </div>
+                  <h3>{primaryRoute.title}</h3>
+                  {primaryRoute.guideName ? <p className="midao-feature-guide">由 {primaryRoute.guideName} 帶路</p> : null}
+                  <p>{primaryRoute.summary ?? primaryRoute.tagline}</p>
+                  <div className="midao-feature-footer">
+                    <span className="midao-feature-price">{primaryRoute.priceLabel}</span>
+                    <Link href={primaryRoute.href} className="midao-inline-link">
+                      {primaryRoute.cta} →
+                    </Link>
+                  </div>
+                </div>
+              </article>
+
+              <div className="midao-secondary-list">
+                {secondaryRoutes.map((route) => (
+                  <article key={route.id} className="midao-secondary-card">
+                    <div className="midao-secondary-meta">
+                      <span>{route.location}</span>
+                      <span>{route.duration}</span>
+                    </div>
+                    <h3>{route.title}</h3>
+                    {route.guideName ? <p className="midao-secondary-guide">由 {route.guideName} 帶路</p> : null}
+                    <p>{route.summary ?? route.tagline}</p>
+                    <div className="midao-secondary-footer">
+                      <span className="midao-secondary-price">{route.priceLabel}</span>
+                      <Link href={route.href} className="midao-inline-link">
+                        查看行程 →
+                      </Link>
+                    </div>
+                  </article>
+                ))}
               </div>
             </div>
-          </article>
+          ) : null}
         </div>
       </section>
 
