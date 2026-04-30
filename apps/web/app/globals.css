@@ -2203,18 +2203,27 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 .midao-secondary-card {
+  overflow: hidden;
   border-radius: 24px;
   background: #fffdf9;
   border: 1px solid rgba(168, 138, 104, 0.12);
   box-shadow: 0 12px 24px rgba(86, 67, 49, 0.08);
-  padding: 18px;
+  padding: 0 0 18px;
+}
+
+.midao-secondary-thumb {
+  aspect-ratio: 16 / 8.5;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  margin-bottom: 14px;
 }
 
 .midao-secondary-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 10px;
+  margin: 0 18px 10px;
 }
 
 .midao-secondary-meta span {
@@ -2230,21 +2239,21 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 .midao-secondary-card h3 {
-  margin: 0;
+  margin: 0 18px;
   font-family: 'Noto Serif TC', serif;
   font-size: 20px;
   line-height: 1.4;
 }
 
 .midao-secondary-card p {
-  margin: 12px 0 0;
+  margin: 12px 18px 0;
   color: #61564b;
   line-height: 1.75;
   font-size: 14px;
 }
 
 .midao-secondary-footer {
-  margin-top: 16px;
+  margin: 16px 18px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;

@@ -131,6 +131,7 @@ export function MidaoHome() {
               <div className="midao-secondary-list">
                 {secondaryRoutes.map((route) => (
                   <article key={route.id} className="midao-secondary-card">
+                    <div className="midao-secondary-thumb" style={{ backgroundImage: `linear-gradient(180deg, rgba(27, 31, 28, 0.06) 0%, rgba(27, 31, 28, 0.22) 100%), url(${route.image})` }} />
                     <div className="midao-secondary-meta">
                       <span>{route.location}</span>
                       <span>{route.duration}</span>
