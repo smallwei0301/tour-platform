@@ -5,16 +5,14 @@ import { usePathname } from 'next/navigation';
 
 export function Footer() {
   const pathname = usePathname();
+  const isHome = pathname === '/';
 
-  if (pathname === '/') {
-    return null;
-  }
+  if (isHome) return null;
 
   return (
     <footer className="tp-footer">
       <div className="tp-container">
         <div className="tp-footer-main-grid">
-          {/* Col 1: Brand + App download */}
           <section className="tp-footer-brand">
             <h3 className="tp-footer-logo">Tour Platform</h3>
             <p>台灣在地導遊交易平台<br />找到懂路的人，帶你走進台灣最有故事的地方。</p>
@@ -41,7 +39,6 @@ export function Footer() {
             </div>
           </section>
 
-          {/* Col 2: Explore */}
           <section>
             <h4>探索行程</h4>
             <ul>
@@ -53,7 +50,6 @@ export function Footer() {
             </ul>
           </section>
 
-          {/* Col 3: Platform */}
           <section>
             <h4>平台資訊</h4>
             <ul>
@@ -66,7 +62,6 @@ export function Footer() {
             </ul>
           </section>
 
-          {/* Col 4: Support + Legal */}
           <section>
             <h4>客戶支援</h4>
             <ul>
@@ -83,7 +78,6 @@ export function Footer() {
           </section>
         </div>
 
-        {/* Region links */}
         <div className="tp-footer-regions-wrap">
           <p className="tp-footer-regions-title">依地區探索</p>
           <div className="tp-footer-regions-list">

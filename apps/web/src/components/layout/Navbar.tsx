@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -60,9 +60,7 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
-  if (isHome) {
-    return null;
-  }
+  if (isHome) return null;
 
   return (
     <header className="tp-navbar">
