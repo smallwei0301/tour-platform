@@ -30,6 +30,8 @@ export default function MidaoHero() {
         </div>
       </div>
       <div className="midao-hero-image" aria-hidden="true" />
+      <div className="midao-hero-image-fade" aria-hidden="true" />
+      <div className="midao-hero-bottom-fade" aria-hidden="true" />
     </section>
   );
 }
