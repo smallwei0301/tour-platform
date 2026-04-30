@@ -1,9 +1,9 @@
 import Link from 'next/link';
 
 const quickFilters = [
-  { label: '花蓮溪谷', href: '/activities?tag=hualien-river' },
-  { label: '阿里山古道', href: '/activities?tag=ancient-trail' },
-  { label: '部落路線', href: '/activities?tag=tribal-routes' },
+  { label: '柴山探洞', href: '/activities/kaohsiung/kaohsiung-chaishan-cave-experience' },
+  { label: '大稻埕老街', href: '/activities/taipei/dadadaocheng-walk' },
+  { label: '花蓮溪谷', href: '/activities/hualien/hualien-river-trekking' },
 ];
 
 const bottomNav = [
@@ -106,17 +106,17 @@ export function MidaoHome() {
             <div className="midao-feature-thumb" />
             <div className="midao-feature-body">
               <div className="midao-feature-meta">
-                <span>4.8</span>
-                <span>8 人小團</span>
-                <span>3 小時</span>
+                <span>5.0</span>
+                <span>4~12 人小團</span>
+                <span>3-4 小時</span>
               </div>
-              <h3>花蓮・幾乎沒人走的溪谷徑</h3>
+              <h3>高雄・跟著 Andy 走進柴山地形秘境</h3>
               <p>
-                不是征服感，而是沿著溪谷地形慢慢被打開。從石壁、濕苔到水聲，你會重新理解花蓮山水不是背景，而是會帶路的主角。
+                不是一般觀光路線，而是由真正熟悉地形的人帶你走進城市邊緣最有記憶點的柴山探洞路線。從洞穴、坡面到林徑節奏，這才是很多人沒看過的高雄。
               </p>
               <div className="midao-feature-footer">
-                <span className="midao-feature-price">小團 8 人內</span>
-                <Link href="/activities/hualien/hualien-river-trekking" className="midao-inline-link">
+                <span className="midao-feature-price">NT$2,000 / 人</span>
+                <Link href="/activities/kaohsiung/kaohsiung-chaishan-cave-experience" className="midao-inline-link">
                   看完整路線 →
                 </Link>
               </div>
