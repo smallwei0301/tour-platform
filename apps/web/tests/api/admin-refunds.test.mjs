@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createOrderDb, createRefundRequestDb, listAdminRefundRequestsDb, updateAdminRefundStatusDb, getMyOrderDetailDb } from '../../src/lib/db.mjs';
+import { createOrderDb, createRefundRequestDb, listAdminRefundRequestsDb, updateAdminRefundStatusDb, getMyOrderDetailDb, createAdminPosRefundEntryDb, updateAdminOrderDb } from '../../src/lib/db.mjs';
 import { paymentEvents } from '../../src/lib/store.mjs';
 
 test('admin refund list returns rows', async () => {
@@ -16,6 +16,42 @@ test('admin refund list returns rows', async () => {
 
   const rows = await listAdminRefundRequestsDb();
   assert.ok(rows.some((r) => r.id === ref.id));
+});
+
+test('admin POS refund entry is rerunnable and traceable', async () => {
+  const order = await createOrderDb({
+    experienceSlug: 'dadadaocheng-walk',
+    scheduleId: 'sch_dadaocheng_0402',
+    peopleCount: 1,
+    contactName: 'POS Refund',
+    contactPhone: '0900000009',
+    contactEmail: 'pos-refund@example.com'
+  });
+
+  await updateAdminOrderDb({ orderId: order.id, status: 'paid', actor: 'admin', sourceChannel: 'admin_pos' });
+
+  const first = await createAdminPosRefundEntryDb({
+    orderId: order.id,
+    requestId: 'req-admin-pos-refund-1',
+    adminNote: 'POS refund entry',
+  });
+  assert.equal(first.refundStatus, 'refunded');
+
+  const refundedEventsBeforeReplay = paymentEvents.filter((e) => e.eventType === 'refunded');
+  assert.equal(refundedEventsBeforeReplay.length >= 1, true);
+
+  const second = await createAdminPosRefundEntryDb({
+    orderId: order.id,
+    requestId: 'req-admin-pos-refund-1',
+    adminNote: 'POS refund entry replay',
+  });
+  assert.equal(second.refundStatus, 'refunded');
+
+  const refundedEventsAfterReplay = paymentEvents.filter((e) => e.eventType === 'refunded');
+  assert.equal(refundedEventsAfterReplay.length, refundedEventsBeforeReplay.length);
+
+  const detail = await getMyOrderDetailDb({ orderId: order.id });
+  assert.equal(detail.status, 'refunded');
 });
 
 test('admin refund actions update refund and order status', async () => {
