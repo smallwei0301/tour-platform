@@ -7,8 +7,6 @@
  * - call sites can keep main flow success while explicitly surfacing email failures
  */
 
-import { Resend } from 'resend';
-
 // ── Delivery logger ────────────────────────────────────────────────────────────
 
 interface EmailLogEntry {
@@ -52,13 +50,43 @@ function logEmail(entry: EmailLogEntry): void {
 const FROM = process.env.EMAIL_FROM || 'Tour Platform <noreply@resend.dev>';
 
 type EmailClient = { emails: { send: (args: any) => Promise<{ data?: { id?: string } }> } };
-let _resend: Resend | null = null;
+let _resend: EmailClient | null = null;
 let _emailClientOverride: EmailClient | null = null;
 
-function getResend(): EmailClient | null {
+function createResendHttpClient(apiKey: string): EmailClient {
+  return {
+    emails: {
+      async send(args: { from: string; to: string; subject: string; html: string }) {
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: args.from,
+            to: [args.to],
+            subject: args.subject,
+            html: args.html,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text().catch(() => response.statusText);
+          throw new Error(`Resend API error: ${response.status} ${errorText}`);
+        }
+
+        const json = await response.json().catch(() => ({}));
+        return { data: { id: json?.id } };
+      },
+    },
+  };
+}
+
+async function getResend(): Promise<EmailClient | null> {
   if (_emailClientOverride) return _emailClientOverride;
   if (!process.env.RESEND_API_KEY) return null;
-  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY);
+  if (!_resend) _resend = createResendHttpClient(process.env.RESEND_API_KEY);
   return _resend;
 }
 
@@ -74,7 +102,7 @@ async function sendEmailWithContract(input: {
   html: string;
   orderId?: string;
 }): Promise<EmailDeliveryResult> {
-  const resend = getResend();
+  const resend = await getResend();
   const base = {
     fn: input.fn,
     to: input.to,
