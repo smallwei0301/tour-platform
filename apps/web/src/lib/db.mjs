@@ -566,6 +566,71 @@ export async function createRefundRequestDb(input = {}) {
   };
 }
 
+export async function createAdminPosRefundEntryDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  const adminNote = String(input?.adminNote || '').trim() || null;
+  const adminUserId = String(input?.adminUserId || '').trim() || null;
+  const requestId = String(input?.requestId || '').trim() || `admin-pos-refund-${orderId}`;
+
+  if (!orderId) throw new Error('orderId is required');
+
+  let created;
+  try {
+    created = await createRefundRequestDb({
+      orderId,
+      requestId,
+      reason: 'admin_pos_refund_entry',
+      note: adminNote,
+    });
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes('order cannot request refund in current status')) {
+      throw error;
+    }
+    const existingRows = await listAdminRefundRequestsDb();
+    const existingCompleted = existingRows.find((row) => row.orderId === orderId && row.status === 'refunded');
+    if (!existingCompleted) throw error;
+    return {
+      orderId,
+      refundRequestId: existingCompleted.id,
+      refundStatus: existingCompleted.status,
+      orderStatus: 'refunded',
+      replayedRequest: true,
+      actor: adminUserId || 'admin',
+    };
+  }
+
+  let refundRequest = created;
+  if (!created?.id || created?.idempotentReplay === true) {
+    const rows = await listRefundRequestsDb({ orderId });
+    const existing = rows.find((r) => r.id === created?.id) || rows.find((r) => r.status === 'requested');
+    if (existing) {
+      refundRequest = {
+        id: existing.id,
+        orderId: existing.orderId,
+        reason: existing.reason,
+        note: existing.note,
+        status: existing.status,
+        requestedAt: existing.requestedAt,
+      };
+    }
+  }
+
+  const completed = await updateAdminRefundStatusDb({
+    refundRequestId: refundRequest.id,
+    action: 'complete',
+    adminNote,
+  });
+
+  return {
+    orderId,
+    refundRequestId: refundRequest.id,
+    refundStatus: completed.status,
+    orderStatus: completed.orderStatus,
+    replayedRequest: created?.idempotentReplay === true,
+    actor: adminUserId || 'admin',
+  };
+}
+
 export async function listRefundRequestsDb(input = {}) {
   if (!hasSupabaseEnv()) return listRefundRequestsInMemory(input);
 
