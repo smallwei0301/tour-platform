@@ -76,7 +76,6 @@ export default function CheckoutPage() {
       utm_content:  utm?.utm_content,
       utm_term:     utm?.utm_term,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity?.id, selectedScheduleId]);
 
   const onSubmit = async () => {

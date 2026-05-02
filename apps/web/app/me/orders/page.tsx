@@ -79,7 +79,7 @@ export default function MyOrdersPage() {
       setAuthChecking(false);
       fetchOrders();
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchOrders = async () => {
     setLoading(true);
