@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
+import { createClient } from '../../../../../src/lib/supabase/server';
 import { trackServer } from '../../../../../src/lib/track';
 import { sendPaymentSuccess } from '../../../../../src/lib/email';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
@@ -185,6 +186,20 @@ export async function POST(request: Request) {
 
     // 🔔 Fire-and-forget: 付款成功 email + LINE 通知
     const order = result.order;
+
+    let sourceChannel: string | null = null;
+    try {
+      const supabase = await createClient();
+      const { data: orderChannelRow } = await supabase
+        .from('orders')
+        .select('source_channel')
+        .eq('id', orderId)
+        .single();
+      sourceChannel = typeof orderChannelRow?.source_channel === 'string' ? orderChannelRow.source_channel : null;
+    } catch {
+      sourceChannel = null;
+    }
+
     const notifyData = {
       orderId,
       activityTitle: order?.activity_title || '行程',
@@ -221,8 +236,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // LINE Notify 通知管理員/導遊
-    notifyPaymentReceived(notifyData).catch(() => {});
+    // LINE-only booking success notify: keep shared V2 core channel-agnostic.
+    // Truthful scope: current implementation uses LINE Notify (not Messaging API push/reply).
+    if (sourceChannel === 'line') {
+      notifyPaymentReceived(notifyData).catch(() => {});
+    }
 
     // ECPay 正式回調期望回覆 "1|OK" 格式
     // 模擬付款（JSON 請求）則回覆 JSON 格式以便前端處理
