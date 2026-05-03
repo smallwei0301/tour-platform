@@ -1,79 +1,42 @@
-# Issue #184 — Phase 12 Readiness Gate Skeleton / Evidence Map (Bounded Slice)
+# Issue #184 — Parent Convergence Refresh Packet (Bounded, Docs-only)
 
-> Status: **Bounded skeleton only** (not full closure package)
-> 
-> Updated: 2026-04-27
-> 
-> Parent policy: **KEEP_OPEN / SCOPE_SPLIT** for umbrella issue #184
+> Status: **KEEP_OPEN / HOLD** (docs convergence refresh only; not close-ready)
+>
+> Convergence checkpoint **T**: `2026-05-04T03:24:00+08:00`
+>
+> Last updated: `2026-05-04T03:24:00+08:00`
 
-## 1) Scope of this slice
+## DoD (this bounded child #274)
+- 提供父層 #184 的一次收斂刷新（Integrity / Audit / Operations / QA / Docs）。
+- 每個 gate 區域都附上「最新決定性證據」連結。
+- 每個未解 blocker 都包含 owner、unblock condition、last-updated。
+- 明確宣告單一收斂時間點 T。
+- 保持 **HOLD / KEEP_OPEN**；若任一 gate 非綠燈，不宣告 GO。
 
-This document only establishes a truthful readiness-gate skeleton and evidence map for issue #184.
-It does **not** claim Phase 12 is fully complete tonight.
+## 1) Gate convergence table @ T
 
-Target outcome of this slice:
-- Put Integrity / Audit / Operations / QA / Docs into one auditable gate view
-- Link each area to current truth-source issues/artifacts
-- Mark explicit blockers and accepted risks
-- Provide an honest recommendation path (GO / HOLD / ROLLBACK WATCH)
+| Gate Area | Status @T | Latest decisive evidence link | Open blockers (owner / unblock condition / last-updated) | Decision |
+|---|---|---|---|---|
+| Integrity | HOLD | Child issue evidence set: <https://github.com/smallwei0301/tour-platform/issues/178>, <https://github.com/smallwei0301/tour-platform/issues/236>, <https://github.com/smallwei0301/tour-platform/issues/179>, <https://github.com/smallwei0301/tour-platform/issues/182> ; Matrix artifact: `docs/implementation/phase-12-mainline-matrix.md` | **B-INT-184-01** / Owner: child-issue assignees + parent controller Amy / Unblock: single parent-linked verification pack proves cross-issue data integrity at one timestamp / Last-updated: `2026-05-04T03:24:00+08:00` | HOLD |
+| Audit | HOLD | Audit checklist: `docs/qa/issue-171-audit-verification-checklist.md` ; Child issues: <https://github.com/smallwei0301/tour-platform/issues/165>, <https://github.com/smallwei0301/tour-platform/issues/171> | **B-AUD-184-01** / Owner: audit flow owners in #165/#171 / Unblock: parent #184 receives consolidated PASS verdict with execution evidence links for critical flows / Last-updated: `2026-05-04T03:24:00+08:00` | HOLD |
+| Operations | BLOCKED | Ops handoff timeline artifact: `docs/04-tech/03-dev-timeline/08-tracy-handoff-booking-pos.md` ; Child issues: <https://github.com/smallwei0301/tour-platform/issues/176>, <https://github.com/smallwei0301/tour-platform/issues/180>, <https://github.com/smallwei0301/tour-platform/issues/181> | **B-OPS-184-01** / Owner: operations owners in #176/#180/#181 / Unblock: rollback drill evidence + runbook completion + owner acknowledgment linked under #184 / Last-updated: `2026-05-04T03:24:00+08:00` | HOLD (ROLLBACK WATCH) |
+| QA | HOLD | QA anchor issue: <https://github.com/smallwei0301/tour-platform/issues/171> ; supporting child issues: <https://github.com/smallwei0301/tour-platform/issues/182>, <https://github.com/smallwei0301/tour-platform/issues/180> ; Checklist: `docs/qa/issue-171-audit-verification-checklist.md` | **B-QA-184-01** / Owner: QA owners across child gates / Unblock: simultaneous GREEN proof across critical child gates at one convergence timestamp / Last-updated: `2026-05-04T03:24:00+08:00` | HOLD |
+| Docs | GREEN (for refresh packet) | This packet: `docs/implementation/issue-184-readiness-gate-skeleton.md` ; parent matrix: `docs/implementation/phase-12-mainline-matrix.md` | **No blocking docs defect for this bounded refresh**; still dependent on non-doc gate completion for parent GO | KEEP_OPEN |
 
-## 2) Truth-source set (fixed for this slice)
+## 2) Parent-level convergence statement (bounded)
 
-### Named child issues
-- #165
-- #171
-- #178
-- #236
-- #179
-- #181
-- #182
-- #176
-- #180
+- Parent issue **#184 remains KEEP_OPEN**.
+- At checkpoint **T = 2026-05-04T03:24:00+08:00**, Integrity/Audit/Operations/QA are not all GREEN.
+- Therefore: **No GO declaration**; closure claim is intentionally withheld.
 
-### Named artifacts
-- `docs/implementation/phase-12-mainline-matrix.md`
-- `docs/04-tech/03-dev-timeline/08-tracy-handoff-booking-pos.md`
-- `docs/qa/issue-171-audit-verification-checklist.md`
+## 3) Risk / rollback / observability (bounded refresh)
 
-## 3) Readiness Gate Evidence Map (current truth)
+- Rollback posture: **ROLLBACK WATCH** remains active while Operations is BLOCKED/HOLD.
+- Observability posture: evidence is mapped and linkable, but still distributed across child issues.
+- Bounded risk accepted: temporal drift after T; mitigation is to re-run convergence refresh before any close-ready proposal.
 
-| Gate Area | Current Status | Evidence Links | Explicit Blockers | Accepted Risks (time-bounded) | Recommendation |
-|---|---|---|---|---|---|
-| Integrity | HOLD | Issues: #178, #236, #179, #182  \nArtifacts: `docs/implementation/phase-12-mainline-matrix.md` | Cross-issue data integrity closure is not yet represented as one signed verification pack under #184; unresolved items remain in child threads. | Temporary acceptance of split evidence across child issues while umbrella gate is assembled. | HOLD |
-| Audit | HOLD | Issues: #165, #171  \nArtifacts: `docs/qa/issue-171-audit-verification-checklist.md` | Audit checklist exists, but parent #184 still lacks a single consolidated PASS verdict with linked execution evidence across critical flows. | Accept checklist-driven partial confidence for controlled rollout prep only (not full phase close). | HOLD |
-| Operations | BLOCKED | Issues: #176, #180, #181  \nArtifacts: `docs/04-tech/03-dev-timeline/08-tracy-handoff-booking-pos.md` | Operations readiness (rollback drill evidence / runbook completion / ownership confirmation) is still fragmented and not yet signed as a unified gate packet. | Risk accepted only for non-production-forward planning work; no claim of release readiness. | ROLLBACK WATCH |
-| QA | HOLD | Issues: #171, #182, #180  \nArtifacts: `docs/qa/issue-171-audit-verification-checklist.md` | QA signals are present in parts, but there is no parent-level convergence proof that all critical child gates are GREEN simultaneously. | Accept staggered QA evidence while keeping parent gate open and explicit about missing convergence. | HOLD |
-| Docs | GREEN (skeleton level) | Artifacts: `docs/implementation/phase-12-mainline-matrix.md`, `docs/04-tech/03-dev-timeline/08-tracy-handoff-booking-pos.md`, this doc | Documentation now has a bounded parent-level readiness map, but downstream evidence updates are still required as child issues move. | Possible drift if child issue status changes without refreshing this map. | GO (for skeleton only) |
+## 4) Explicit non-goals of this child (#274)
 
-## 4) Parent-level blocker register (for #184)
-
-1. No single merged evidence packet yet proving all gate domains are GREEN at the same timestamp.
-2. Integrity / Audit / Ops / QA remain distributed across active child issues.
-3. Parent #184 cannot truthfully move to "complete" until cross-domain convergence evidence is explicitly attached.
-
-## 5) Accepted-risk register (bounded)
-
-- **AR-184-01 (Evidence fragmentation):** Continue with split child-issue evidence while parent map exists.
-  - Mitigation: update this map on each meaningful child gate change.
-- **AR-184-02 (Temporal mismatch):** Different domains may show evidence from different times.
-  - Mitigation: require one convergence refresh before any closure proposal.
-- **AR-184-03 (Ops confidence gap):** Operations rollback/observability artifacts not yet unified.
-  - Mitigation: keep recommendation at HOLD / ROLLBACK WATCH for release-like decisions.
-
-## 6) Rollback / observability stance (current)
-
-- Rollback decision posture: **ROLLBACK WATCH** remains active until Operations gate reaches at least HOLD-with-proof and no critical blocker is open.
-- Observability stance: evidence exists in distributed child channels, but parent-level observable convergence checkpoint is still missing.
-
-## 7) Truthful current recommendation path
-
-- **Parent #184 overall recommendation: HOLD**
-- **Do now:** keep #184 open as umbrella readiness tracker; continue bounded slices that improve evidence convergence.
-- **Do not do:** do not mark #184 fully done tonight.
-- **Promotion rule to GO (future):** only when Integrity/Audit/Operations/QA all show explicit GREEN with linked evidence and no unresolved critical blocker.
-
-## 8) Next bounded slice candidates
-
-1. Add direct child issue permalink rows (latest decisive comment / artifact per issue).
-2. Add timestamped convergence checklist row: "all domains GREEN at T".
-3. Add explicit owner + due-date fields per blocker for merge-ready governance.
+- 不在本子任務內解完全部 blocker。
+- 不宣告 #184 close-ready。
+- 不重寫全部文件或擴大到不相關 issue 範圍。
