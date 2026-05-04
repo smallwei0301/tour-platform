@@ -2425,3 +2425,281 @@ details[open] .kkd-faq-q::before { content: '- '; }
     width: min(calc(100% - 40px), 520px);
   }
 }
+
+/* === MIDAO activities redesign === */
+.midao-activities-page {
+  background: linear-gradient(180deg, #f5efe6 0%, #fcfaf6 45%, #f6f1e8 100%);
+  color: #1e1d1a;
+  padding-bottom: 64px;
+}
+
+.midao-activities-hero {
+  position: relative;
+  min-height: 420px;
+  background:
+    linear-gradient(180deg, rgba(23, 20, 16, 0.28) 0%, rgba(23, 20, 16, 0.48) 68%, rgba(23, 20, 16, 0.74) 100%),
+    url('https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?auto=format&fit=crop&w=1600&q=80') center 42% / cover no-repeat;
+}
+
+.midao-activities-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(23, 28, 24, 0.08) 0%, rgba(23, 28, 24, 0) 36%, rgba(23, 28, 24, 0.44) 100%);
+}
+
+.midao-activities-hero-content {
+  position: relative;
+  z-index: 1;
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: 18px;
+  padding-bottom: 40px;
+  color: #f8f2ea;
+}
+
+.midao-activities-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: auto;
+}
+
+.midao-share-btn {
+  border-radius: 999px;
+  border: 1px solid rgba(248, 242, 234, 0.52);
+  background: rgba(248, 242, 234, 0.10);
+  color: #f8f2ea;
+  font-size: 13px;
+  padding: 10px 14px;
+}
+
+.midao-activities-hero-content h1 {
+  margin: 0;
+  max-width: 460px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: clamp(34px, 5.8vw, 62px);
+  line-height: 1.14;
+}
+
+.midao-activities-search-wrap {
+  margin-top: -38px;
+}
+
+.midao-activities-search-card {
+  border-radius: 24px;
+}
+
+.midao-activities-content {
+  padding-top: 28px;
+}
+
+.midao-activities-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 24px;
+}
+
+.midao-filter-panel {
+  border: 1px solid rgba(151, 124, 97, 0.2);
+  border-radius: 20px;
+  background: rgba(255, 252, 247, 0.92);
+  padding: 18px;
+  height: fit-content;
+  position: sticky;
+  top: 84px;
+}
+
+.midao-filter-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.midao-filter-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.midao-clear-btn {
+  border: 0;
+  background: transparent;
+  color: #8a5d37;
+  font-weight: 700;
+}
+
+.midao-filter-panel details {
+  border-top: 1px solid rgba(151, 124, 97, 0.16);
+  padding: 10px 0;
+}
+
+.midao-filter-panel summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #2f2a24;
+}
+
+.midao-check-group {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.midao-check-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #50453a;
+  font-size: 14px;
+}
+
+.midao-check-group.is-disabled {
+  opacity: 0.62;
+}
+
+.midao-result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.midao-result-head h2 {
+  margin: 4px 0 8px;
+  font-size: clamp(24px, 3.6vw, 34px);
+  font-family: 'Noto Serif TC', serif;
+}
+
+.midao-result-head p {
+  margin: 0;
+  color: #6d6357;
+  font-size: 14px;
+}
+
+.midao-result-head select {
+  border-radius: 999px;
+  border: 1px solid rgba(151, 124, 97, 0.3);
+  background: #fff;
+  color: #2f2a24;
+  padding: 8px 14px;
+}
+
+.midao-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.midao-activity-card {
+  border: 1px solid rgba(151, 124, 97, 0.2);
+  border-radius: 18px;
+  background: #fffdf9;
+  overflow: hidden;
+  box-shadow: 0 14px 28px rgba(76, 57, 37, 0.08);
+}
+
+.midao-activity-thumb {
+  aspect-ratio: 16 / 10;
+  background-size: cover;
+  background-position: center;
+  position: relative;
+}
+
+.midao-activity-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  border-radius: 999px;
+  background: rgba(27, 41, 30, 0.78);
+  color: #fffaf3;
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+.midao-activity-body {
+  padding: 14px;
+}
+
+.midao-activity-guide {
+  margin: 0;
+  font-size: 13px;
+  color: #7a6d61;
+}
+
+.midao-activity-body h3 {
+  margin: 8px 0;
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+.midao-activity-meta {
+  margin: 0;
+  font-size: 13px;
+  color: #76695d;
+}
+
+.midao-activity-footer {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.midao-activity-price {
+  color: #354b3a;
+  font-weight: 800;
+}
+
+.midao-activities-empty {
+  text-align: center;
+  border: 1px dashed rgba(151, 124, 97, 0.4);
+  border-radius: 18px;
+  padding: 40px 18px;
+  color: #62584c;
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+}
+
+@media (max-width: 1024px) {
+  .midao-activities-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .midao-filter-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .midao-activities-hero {
+    min-height: 360px;
+  }
+
+  .midao-activities-hero-content {
+    min-height: 360px;
+    padding-bottom: 30px;
+  }
+
+  .midao-activities-brand-row {
+    margin-bottom: 44px;
+  }
+
+  .midao-share-btn {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+
+  .midao-activity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .midao-result-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
