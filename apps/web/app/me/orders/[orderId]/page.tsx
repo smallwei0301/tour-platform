@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '../../../../src/lib/supabase/client';
 
 type OrderDetail = {
@@ -31,47 +31,67 @@ const STATUS_LABELS: Record<string, string> = {
   refunded: '已退款',
 };
 
-const STATUS_DESCRIPTIONS: Record<string, string> = {
-  pending_payment: '訂單已建立，請完成付款以保留席位。',
-  paid: '我們已收到付款，等待導遊確認。',
-  confirmed: '行程已確認，請依照集合資訊準時到場。',
-  rejected: '此行程無法成行，請聯絡客服了解後續處理。',
-  cancelled_by_user: '你已取消此訂單。',
-  cancelled_by_guide: '導遊取消了此行程，平台會協助後續安排。',
-  completed: '行程已完成，感謝參與。',
-  refund_pending: '退款申請審核中，通常 3-5 個工作天完成。',
-  refunded: '退款已完成，款項將於 3-5 個工作天入帳。',
+const STATUS_COLORS: Record<string, string> = {
+  pending_payment: '#f59e0b',
+  paid:            '#3b82f6',
+  confirmed:       '#10b981',
+  rejected:        '#ef4444',
+  cancelled_by_user:  '#6b7280',
+  cancelled_by_guide: '#6b7280',
+  completed:       '#8b5cf6',
+  refund_pending:  '#f97316',
+  refunded:        '#6b7280',
 };
 
-function statusClass(status: string) {
-  if (['paid', 'confirmed'].includes(status)) return 'success';
-  if (['pending_payment', 'refund_pending'].includes(status)) return 'warning';
-  if (['rejected', 'cancelled_by_user', 'cancelled_by_guide', 'refunded'].includes(status)) return 'danger';
-  return 'neutral';
-}
+const STATUS_DESCRIPTIONS: Record<string, string> = {
+  pending_payment: '⏳ 訂單已建立，請完成付款以確保席位。',
+  paid:            '✅ 已收到您的付款，等待導遊確認行程。',
+  confirmed:       '🎉 行程已確認！請準時到達集合地點。',
+  rejected:        '😔 很遺憾，此行程無法成行，請聯絡客服了解詳情。',
+  cancelled_by_user:  '🚫 您已取消此訂單。',
+  cancelled_by_guide: '😔 導遊取消了此行程，我們將協助安排退款，請聯絡客服。',
+  completed:       '⭐ 行程已完成，感謝您的參與！期待下次再見。',
+  refund_pending:  '🔄 退款申請處理中，請耐心等候（通常 3-5 個工作天）。',
+  refunded:        '💰 退款已完成，款項將於 3-5 個工作天入帳。',
+};
 
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
+
   const orderId = typeof params.orderId === 'string' ? params.orderId : '';
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
+
+  // Cancel state
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelErr, setCancelErr] = useState<string | null>(null);
+
+  // Refund state
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState('');
   const [submittingRefund, setSubmittingRefund] = useState(false);
   const [refundErr, setRefundErr] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState(false);
 
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.replace(`/login?next=${encodeURIComponent(`/me/orders/${orderId}`)}`);
+        return;
+      }
+      setAuthChecking(false);
+      void fetch('/api/me/csrf', { cache: 'no-store' });
+      loadOrder();
+    });
+  }, [orderId]);
+
   const loadOrder = async () => {
-    if (!orderId) {
-      setLoading(false);
-      return;
-    }
+    if (!orderId) { setLoading(false); return; }
     try {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
       if (res.status === 401) {
@@ -86,19 +106,6 @@ export default function OrderDetailPage() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        router.replace(`/login?next=${encodeURIComponent(`/me/orders/${orderId}`)}`);
-        return;
-      }
-      setAuthChecking(false);
-      void fetch('/api/me/csrf', { cache: 'no-store' });
-      void loadOrder();
-    });
-  }, [orderId]);
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -143,145 +150,180 @@ export default function OrderDetailPage() {
     }
   };
 
+  // Styles
+  const containerStyle: React.CSSProperties = { maxWidth: 560, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif' };
+  const cardStyle: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 };
+  const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f3f4f6', fontSize: 14 };
+  const labelStyle: React.CSSProperties = { color: '#6b7280' };
+  const valueStyle: React.CSSProperties = { fontWeight: 600, color: '#111827', textAlign: 'right' };
+  const btnPrimary: React.CSSProperties = { padding: '11px 20px', background: '#ec4899', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+  const btnSecondary: React.CSSProperties = { padding: '11px 20px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' };
+  const btnDanger: React.CSSProperties = { padding: '11px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+
   if (authChecking || loading) {
-    return <main className="tp-container tp-member-order-detail-page"><div className="tp-member-empty">載入中…</div></main>;
+    return <div style={containerStyle}><p style={{ color: '#9ca3af', textAlign: 'center', marginTop: 60 }}>載入中…</p></div>;
   }
 
   if (!order) {
     return (
-      <main className="tp-container tp-member-order-detail-page">
-        <div className="tp-member-panel">
-          <div className="tp-member-empty">
-            找不到訂單或你沒有權限查看此訂單。
-            <div className="tp-member-actions-row" style={{ justifyContent: 'center' }}>
-              <button type="button" className="tp-btn tp-btn-ghost" onClick={() => router.push('/me/orders')}>
-                返回訂單列表
-              </button>
-            </div>
-          </div>
+      <div style={containerStyle}>
+        <p style={{ color: '#ef4444', textAlign: 'center', marginTop: 60 }}>找不到訂單或您沒有權限查看此訂單。</p>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <button onClick={() => router.push('/me/orders')} style={btnSecondary}>返回訂單列表</button>
         </div>
-      </main>
+      </div>
     );
   }
 
   const status = order.status;
+  const statusColor = STATUS_COLORS[status] || '#6b7280';
+  const statusLabel = STATUS_LABELS[status] || status;
+  const statusDesc = STATUS_DESCRIPTIONS[status] || '';
+
   const canCancel = status === 'pending_payment';
   const canRefund = ['paid', 'confirmed'].includes(status);
   const isTerminal = ['cancelled_by_user', 'cancelled_by_guide', 'rejected', 'completed', 'refunded'].includes(status);
 
   return (
-    <main className="tp-container tp-member-order-detail-page">
-      <section className="tp-member-hero">
-        <p className="tp-member-kicker">order detail</p>
-        <h1>{order.title || '行程訂單'}</h1>
-        <p>{STATUS_DESCRIPTIONS[status] || ''}</p>
-        <div className="tp-member-hero-meta">
-          <span className={`tp-member-status ${statusClass(status)}`}>{STATUS_LABELS[status] || status}</span>
-          <span className="tp-member-chip">訂單編號：{order.id.slice(0, 8)}</span>
-        </div>
-      </section>
+    <div style={containerStyle}>
+      {/* Back */}
+      <button onClick={() => router.push('/me/orders')} style={{ ...btnSecondary, marginBottom: 20, fontSize: 13, padding: '8px 14px' }}>
+        ← 返回訂單列表
+      </button>
 
-      <div className="tp-member-actions-row" style={{ marginTop: 18 }}>
-        <button type="button" className="tp-btn tp-btn-ghost" onClick={() => router.push('/me/orders')}>
-          ← 返回訂單列表
-        </button>
+      <h1 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 4 }}>訂單詳情</h1>
+
+      {/* Status banner */}
+      <div style={{
+        background: statusColor + '18',
+        borderLeft: `4px solid ${statusColor}`,
+        borderRadius: 10,
+        padding: '12px 16px',
+        marginBottom: 20,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <span style={{ background: statusColor, color: '#fff', borderRadius: 999, padding: '2px 12px', fontSize: 12, fontWeight: 700 }}>
+            {statusLabel}
+          </span>
+        </div>
+        <p style={{ fontSize: 13, color: '#374151', margin: 0 }}>{statusDesc}</p>
       </div>
 
-      <section className="tp-member-detail-grid" style={{ marginTop: 18 }}>
-        <div className="tp-member-panel">
-          <h2>訂單資訊</h2>
-          <div className="tp-member-info-list">
-            <div className="tp-member-info-row"><span>訂單編號</span><span>{order.id}</span></div>
-            <div className="tp-member-info-row"><span>行程名稱</span><span>{order.title || '—'}</span></div>
-            <div className="tp-member-info-row"><span>預訂人數</span><span>{order.peopleCount ?? '—'} 人</span></div>
-            <div className="tp-member-info-row"><span>建立時間</span><span>{order.createdAt ? new Date(order.createdAt).toLocaleString('zh-TW') : '—'}</span></div>
-            {order.paidAt && <div className="tp-member-info-row"><span>付款時間</span><span>{new Date(order.paidAt).toLocaleString('zh-TW')}</span></div>}
-            <div className="tp-member-info-row"><span>應付金額</span><span>NT$ {(order.totalTwd ?? 0).toLocaleString()}</span></div>
-          </div>
+      {/* Order info */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>訂單資訊</h2>
+        <div style={rowStyle}>
+          <span style={labelStyle}>訂單編號</span>
+          <span style={{ ...valueStyle, fontSize: 11, fontFamily: 'monospace', maxWidth: 220, wordBreak: 'break-all' }}>{order.id}</span>
         </div>
-
-        <div className="tp-member-panel">
-          <h2>聯絡資訊</h2>
-          <div className="tp-member-info-list">
-            <div className="tp-member-info-row"><span>姓名</span><span>{order.contactName || '—'}</span></div>
-            <div className="tp-member-info-row"><span>電話</span><span>{order.contactPhone || '—'}</span></div>
-            <div className="tp-member-info-row"><span>Email</span><span>{order.contactEmail || '—'}</span></div>
-          </div>
+        <div style={rowStyle}>
+          <span style={labelStyle}>行程名稱</span>
+          <span style={valueStyle}>{order.title || '—'}</span>
         </div>
-      </section>
+        <div style={rowStyle}>
+          <span style={labelStyle}>預訂人數</span>
+          <span style={valueStyle}>{order.peopleCount ?? '—'} 人</span>
+        </div>
+        <div style={rowStyle}>
+          <span style={labelStyle}>建立時間</span>
+          <span style={valueStyle}>{order.createdAt ? new Date(order.createdAt).toLocaleString('zh-TW') : '—'}</span>
+        </div>
+        {order.paidAt && (
+          <div style={rowStyle}>
+            <span style={labelStyle}>付款時間</span>
+            <span style={valueStyle}>{new Date(order.paidAt).toLocaleString('zh-TW')}</span>
+          </div>
+        )}
+        <div style={{ ...rowStyle, borderBottom: 'none' }}>
+          <span style={{ ...labelStyle, fontWeight: 700, fontSize: 15, color: '#111827' }}>應付金額</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: '#ec4899' }}>NT$ {(order.totalTwd ?? 0).toLocaleString()}</span>
+        </div>
+      </div>
 
+      {/* Contact info */}
+      <div style={cardStyle}>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>聯絡資訊</h2>
+        <div style={rowStyle}>
+          <span style={labelStyle}>姓名</span>
+          <span style={valueStyle}>{order.contactName || '—'}</span>
+        </div>
+        <div style={rowStyle}>
+          <span style={labelStyle}>電話</span>
+          <span style={valueStyle}>{order.contactPhone || '—'}</span>
+        </div>
+        <div style={{ ...rowStyle, borderBottom: 'none' }}>
+          <span style={labelStyle}>Email</span>
+          <span style={valueStyle}>{order.contactEmail || '—'}</span>
+        </div>
+      </div>
+
+      {/* Actions */}
       {!isTerminal && (
-        <section className="tp-member-panel" style={{ marginTop: 18 }}>
-          <h2>下一步操作</h2>
-          <div className="tp-member-actions-row">
-            {status === 'pending_payment' && (
-              <button type="button" className="tp-btn tp-btn-primary" onClick={() => router.push(`/order/pay?orderId=${order.id}`)}>
-                前往付款
-              </button>
-            )}
-            {canRefund && !refundSuccess && !showRefundForm && (
-              <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setShowRefundForm(true)}>
-                申請退款
-              </button>
-            )}
-            {canCancel && (
-              <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setShowCancelDialog(true)}>
-                取消訂單
-              </button>
-            )}
-          </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {status === 'pending_payment' && (
+            <button onClick={() => router.push(`/order/pay?orderId=${order.id}`)} style={btnPrimary}>
+              前往付款
+            </button>
+          )}
 
-          {refundSuccess && <div className="tp-member-status success" style={{ marginTop: 16 }}>✅ 退款申請已送出，等待審核中</div>}
+          {canRefund && !refundSuccess && !showRefundForm && (
+            <button onClick={() => setShowRefundForm(true)} style={btnSecondary}>申請退款</button>
+          )}
+
+          {refundSuccess && (
+            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center' }}>✅ 退款申請已送出，等待審核中</p>
+          )}
 
           {showRefundForm && (
-            <form className="tp-member-form" style={{ marginTop: 18 }} onSubmit={handleRefund}>
-              <div className="tp-member-field">
-                <label htmlFor="refundReason">退款原因</label>
-                <textarea
-                  id="refundReason"
-                  className="tp-member-textarea"
-                  required
-                  value={refundReason}
-                  onChange={(e) => setRefundReason(e.target.value)}
-                  placeholder="請說明退款原因…"
-                />
-              </div>
-              {refundErr && <div className="tp-member-status danger">⚠️ {refundErr}</div>}
-              <div className="tp-member-actions-row">
-                <button type="submit" className="tp-btn tp-btn-primary" disabled={submittingRefund}>
+            <form onSubmit={handleRefund} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>退款原因</label>
+              <textarea
+                required
+                value={refundReason}
+                onChange={e => setRefundReason(e.target.value)}
+                placeholder="請說明退款原因…"
+                rows={3}
+                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+              />
+              {refundErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{refundErr}</p>}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button type="submit" style={btnPrimary} disabled={submittingRefund}>
                   {submittingRefund ? '送出中…' : '送出申請'}
                 </button>
-                <button type="button" className="tp-btn tp-btn-ghost" onClick={() => { setShowRefundForm(false); setRefundErr(null); }}>
-                  取消
-                </button>
+                <button type="button" onClick={() => { setShowRefundForm(false); setRefundErr(null); }} style={btnSecondary}>取消</button>
               </div>
             </form>
           )}
-        </section>
+
+          {canCancel && (
+            <button onClick={() => setShowCancelDialog(true)} style={{ ...btnSecondary, color: '#ef4444', marginTop: 4 }}>
+              取消訂單
+            </button>
+          )}
+        </div>
       )}
 
+      {/* Cancel dialog */}
       {showCancelDialog && (
-        <div className="tp-member-overlay" onClick={() => { setShowCancelDialog(false); setCancelErr(null); }}>
-          <div className="tp-member-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="tp-member-modal-head">
-              <div>
-                <p className="tp-member-kicker">cancel order</p>
-                <h2 style={{ marginBottom: 6 }}>確認取消訂單？</h2>
-                <div className="tp-member-meta">取消後無法恢復，席位將自動釋出。</div>
-              </div>
-            </div>
-            {cancelErr && <div className="tp-member-status danger" style={{ marginBottom: 16 }}>⚠️ {cancelErr}</div>}
-            <div className="tp-member-actions-row">
-              <button type="button" className="tp-btn tp-btn-primary" onClick={handleCancel} disabled={cancelling}>
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+        }}>
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>確認取消訂單？</h3>
+            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>取消後無法恢復，席位將自動釋出。</p>
+            {cancelErr && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 10 }}>{cancelErr}</p>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={handleCancel} disabled={cancelling} style={btnDanger}>
                 {cancelling ? '取消中…' : '確認取消'}
               </button>
-              <button type="button" className="tp-btn tp-btn-ghost" onClick={() => { setShowCancelDialog(false); setCancelErr(null); }}>
+              <button onClick={() => { setShowCancelDialog(false); setCancelErr(null); }} style={btnSecondary}>
                 返回
               </button>
             </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 
@@ -28,11 +28,33 @@ const STATUS_LABELS: Record<string, string> = {
   refunded: '已退款',
 };
 
-function statusClass(status: string) {
-  if (['paid', 'confirmed'].includes(status)) return 'success';
-  if (['pending_payment', 'refund_pending'].includes(status)) return 'warning';
-  if (['rejected', 'cancelled_by_user', 'cancelled_by_guide', 'refunded'].includes(status)) return 'danger';
-  return 'neutral';
+const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
+  pending_payment: { bg: '#fef3c7', color: '#92400e' },
+  paid:            { bg: '#dbeafe', color: '#1e40af' },
+  confirmed:       { bg: '#d1fae5', color: '#065f46' },
+  rejected:        { bg: '#fee2e2', color: '#991b1b' },
+  cancelled_by_user:  { bg: '#f3f4f6', color: '#374151' },
+  cancelled_by_guide: { bg: '#f3f4f6', color: '#374151' },
+  completed:       { bg: '#ede9fe', color: '#5b21b6' },
+  refund_pending:  { bg: '#ffedd5', color: '#9a3412' },
+  refunded:        { bg: '#f3f4f6', color: '#374151' },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const style = STATUS_COLORS[status] || { bg: '#f3f4f6', color: '#374151' };
+  return (
+    <span style={{
+      background: style.bg,
+      color: style.color,
+      borderRadius: 999,
+      padding: '3px 10px',
+      fontSize: 12,
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+    }}>
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
 }
 
 export default function MyOrdersPage() {
@@ -42,7 +64,22 @@ export default function MyOrdersPage() {
   const [authChecking, setAuthChecking] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
-  const [tab, setTab] = useState<'all' | 'active' | 'done'>('all');
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    supabase.auth.getUser().then(({ data }) => {
+      const user = data.user;
+      if (!user) {
+        // 未登入 → 導向登入頁
+        router.replace(`/login?next=${encodeURIComponent('/me/orders')}`);
+        return;
+      }
+      setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
+      setAuthChecking(false);
+      fetchOrders();
+    });
+  }, []);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -63,114 +100,101 @@ export default function MyOrdersPage() {
     }
   };
 
-  useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) {
-        router.replace(`/login?next=${encodeURIComponent('/me/orders')}`);
-        return;
-      }
-      setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
-      setAuthChecking(false);
-      void fetchOrders();
-    });
-  }, []);
+  const containerStyle: React.CSSProperties = {
+    maxWidth: 640,
+    margin: '40px auto',
+    padding: '0 16px',
+    fontFamily: 'system-ui, sans-serif',
+  };
 
-  const filteredOrders = useMemo(() => {
-    if (tab === 'active') return orders.filter((order) => ['pending_payment', 'paid', 'confirmed', 'refund_pending'].includes(order.status));
-    if (tab === 'done') return orders.filter((order) => ['completed', 'refunded', 'cancelled_by_user', 'cancelled_by_guide', 'rejected'].includes(order.status));
-    return orders;
-  }, [orders, tab]);
+  const cardStyle: React.CSSProperties = {
+    background: '#fff',
+    border: '1px solid #e5e7eb',
+    borderRadius: 16,
+    padding: 20,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+    marginBottom: 12,
+    cursor: 'pointer',
+    transition: 'box-shadow 0.15s',
+  };
 
+  // 驗證中 — 避免閃爍
   if (authChecking) {
-    return <div className="tp-container tp-member-orders-page"><div className="tp-member-empty">驗證登入中…</div></div>;
+    return (
+      <div style={{ ...containerStyle, textAlign: 'center', paddingTop: 80 }}>
+        <p style={{ color: '#9ca3af' }}>驗證登入中…</p>
+      </div>
+    );
   }
 
   return (
-    <main className="tp-container tp-member-orders-page">
-      <section className="tp-member-hero">
-        <p className="tp-member-kicker">member orders</p>
-        <h1>你的行程、付款與退款進度，都在同一個旅程看板。</h1>
-        <p>
-          保留 `/api/me/orders` 與原本登入驗證流程，只把會員訂單頁改成和封面一致的 MIDAO 視覺語言。
-          {userName ? ` 歡迎回來，${userName}。` : ''}
+    <div style={containerStyle}>
+      <h1 style={{ fontSize: 22, fontWeight: 800, color: '#111827', marginBottom: 4 }} data-testid="my-orders-title">
+        我的訂單
+      </h1>
+      {userName && (
+        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 24 }}>
+          歡迎回來，{userName} 👋
         </p>
-        <div className="tp-member-hero-meta">
-          <span className="tp-member-chip">📦 全部訂單</span>
-          <span className="tp-member-chip">💳 付款狀態</span>
-          <span className="tp-member-chip">🧾 退款進度</span>
+      )}
+
+      {err && <p style={{ color: '#ef4444', fontSize: 13, marginBottom: 16 }}>{err}</p>}
+
+      {loading && <p style={{ color: '#9ca3af', textAlign: 'center' }}>載入訂單中…</p>}
+
+      {!loading && orders.length === 0 && (
+        <div style={{ textAlign: 'center', padding: '40px 0', color: '#9ca3af' }} data-testid="orders-empty">
+          <div style={{ fontSize: 40, marginBottom: 8 }}>📭</div>
+          <p style={{ fontSize: 14 }}>目前還沒有訂單</p>
+          <button
+            onClick={() => router.push('/activities')}
+            style={{
+              marginTop: 16,
+              padding: '10px 24px',
+              background: '#ec4899',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 10,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            探索行程
+          </button>
         </div>
-      </section>
+      )}
 
-      <section className="tp-member-panel" style={{ marginTop: 18 }}>
-        <div className="tp-member-actions-row" style={{ marginTop: 0 }}>
-          {[
-            { key: 'all', label: '全部' },
-            { key: 'active', label: '進行中' },
-            { key: 'done', label: '已完成 / 已關閉' },
-          ].map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className={tab === item.key ? 'tp-btn tp-btn-primary' : 'tp-btn tp-btn-ghost'}
-              onClick={() => setTab(item.key as typeof tab)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {err && <div className="tp-member-panel" style={{ marginTop: 18 }}><div className="tp-member-status danger">⚠️ {err}</div></div>}
-
-      {loading ? (
-        <div className="tp-member-panel" style={{ marginTop: 18 }}><div className="tp-member-empty">載入訂單中…</div></div>
-      ) : filteredOrders.length === 0 ? (
-        <div className="tp-member-panel" style={{ marginTop: 18 }}>
-          <div className="tp-member-empty">
-            <div style={{ fontSize: 40, marginBottom: 8 }}>📭</div>
-            <p>目前還沒有符合條件的訂單</p>
-            <div className="tp-member-actions-row" style={{ justifyContent: 'center' }}>
-              <button type="button" className="tp-btn tp-btn-primary" onClick={() => router.push('/activities')}>
-                探索行程
-              </button>
+      {orders.map(order => (
+        <div
+          key={order.id}
+          data-testid="order-list-item"
+          data-order-id={order.id}
+          data-order-status={order.status}
+          style={cardStyle}
+          onClick={() => router.push(`/me/orders/${order.id}`)}
+          onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)')}
+          onMouseLeave={e => (e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)')}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <div style={{ flex: 1, marginRight: 12 }}>
+              <div style={{ fontWeight: 700, fontSize: 15, color: '#111827', marginBottom: 2 }}>
+                {order.title || '行程訂單'}
+              </div>
+              <div style={{ fontSize: 12, color: '#9ca3af' }}>
+                {order.createdAt ? new Date(order.createdAt).toLocaleDateString('zh-TW') : '—'}
+              </div>
             </div>
+            <StatusBadge status={order.status} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, color: '#6b7280' }}>{order.peopleCount ?? '—'} 人</span>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#ec4899' }}>
+              NT$ {(order.totalTwd ?? 0).toLocaleString()}
+            </span>
           </div>
         </div>
-      ) : (
-        <section className="tp-member-card-list" style={{ marginTop: 18 }}>
-          {filteredOrders.map((order) => (
-            <article key={order.id} className="tp-member-order-card">
-              <div className="tp-member-order-cover" />
-              <div>
-                <div className="tp-member-data-top">
-                  <div>
-                    <strong>{order.title || '行程訂單'}</strong>
-                    <div className="tp-member-meta">
-                      建立時間：{order.createdAt ? new Date(order.createdAt).toLocaleDateString('zh-TW') : '—'}
-                    </div>
-                  </div>
-                  <span className={`tp-member-status ${statusClass(order.status)}`}>
-                    {STATUS_LABELS[order.status] || order.status}
-                  </span>
-                </div>
-                <div className="tp-member-actions-row">
-                  <span className="tp-member-chip">👥 {order.peopleCount ?? '—'} 人</span>
-                  {order.paidAt && <span className="tp-member-chip">已付款</span>}
-                  {order.contactEmail && <span className="tp-member-chip">{order.contactEmail}</span>}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <strong style={{ display: 'block', fontSize: 22, marginBottom: 12 }}>NT$ {(order.totalTwd ?? 0).toLocaleString()}</strong>
-                <button type="button" className="tp-btn tp-btn-ghost" onClick={() => router.push(`/me/orders/${order.id}`)}>
-                  查看詳情
-                </button>
-              </div>
-            </article>
-          ))}
-        </section>
-      )}
-    </main>
+      ))}
+    </div>
   );
 }

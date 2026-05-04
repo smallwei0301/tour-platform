@@ -1,7 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+
+const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
+const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
 type AvailabilityRule = {
   id: string;
@@ -35,21 +38,22 @@ type PreviewSlot = {
   isAvailable: boolean;
 };
 
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-
 export default function GuideAvailabilityPage() {
   const [rules, setRules] = useState<AvailabilityRule[]>([]);
   const [blackouts, setBlackouts] = useState<BlackoutDate[]>([]);
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Modal states
   const [showRuleModal, setShowRuleModal] = useState(false);
   const [showBlackoutModal, setShowBlackoutModal] = useState(false);
   const [editingRule, setEditingRule] = useState<AvailabilityRule | null>(null);
   const [editingBlackout, setEditingBlackout] = useState<BlackoutDate | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  // Rule form state
   const [ruleForm, setRuleForm] = useState({
     weekday: 1,
     start_time_local: '09:00',
@@ -60,17 +64,21 @@ export default function GuideAvailabilityPage() {
     buffer_after_minutes: 15,
     is_active: true,
   });
+
+  // Blackout form state
   const [blackoutForm, setBlackoutForm] = useState({
     starts_at: '',
     ends_at: '',
     reason: '',
   });
+
+  // Preview date range
   const today = new Date().toISOString().slice(0, 10);
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [previewDateFrom, setPreviewDateFrom] = useState(today);
   const [previewDateTo, setPreviewDateTo] = useState(nextWeek);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const [rulesRes, blackoutsRes] = await Promise.all([
@@ -79,30 +87,36 @@ export default function GuideAvailabilityPage() {
       ]);
       const rulesJson = await rulesRes.json();
       const blackoutsJson = await blackoutsRes.json();
+
       if (rulesJson.ok) setRules(rulesJson.data?.rules || []);
       if (blackoutsJson.ok) setBlackouts(blackoutsJson.data?.blackouts || []);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadPreview = async () => {
+  const loadPreview = useCallback(async () => {
     setPreviewLoading(true);
     try {
-      const res = await fetch(`/api/guide/availability-preview?dateFrom=${previewDateFrom}&dateTo=${previewDateTo}&timezone=Asia/Taipei`);
+      const res = await fetch(
+        `/api/guide/availability-preview?dateFrom=${previewDateFrom}&dateTo=${previewDateTo}&timezone=Asia/Taipei`
+      );
       const json = await res.json();
-      if (json.ok) setPreviewSlots(json.data?.slots || []);
+      if (json.ok) {
+        setPreviewSlots(json.data?.slots || []);
+      }
     } finally {
       setPreviewLoading(false);
     }
-  };
+  }, [previewDateFrom, previewDateTo]);
 
   useEffect(() => {
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
-    void loadData();
-    void loadPreview();
-  }, []);
+    loadData();
+    loadPreview();
+  }, [loadData, loadPreview]);
 
+  // ── Rule handlers ──
   const openRuleModal = (rule?: AvailabilityRule) => {
     if (rule) {
       setEditingRule(rule);
@@ -137,14 +151,18 @@ export default function GuideAvailabilityPage() {
     setSaving(true);
     setError('');
     try {
-      const url = editingRule ? `/api/guide/availability-rules/${editingRule.id}` : '/api/guide/availability-rules';
+      const url = editingRule
+        ? `/api/guide/availability-rules/${editingRule.id}`
+        : '/api/guide/availability-rules';
       const method = editingRule ? 'PUT' : 'POST';
+
       const res = await fetch(url, {
         method,
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(ruleForm),
       });
       const json = await res.json();
+
       if (json.ok) {
         setShowRuleModal(false);
         await loadData();
@@ -159,11 +177,15 @@ export default function GuideAvailabilityPage() {
 
   const deleteRule = async (ruleId: string) => {
     if (!confirm('確定要刪除此時段規則嗎？')) return;
-    await fetch(`/api/guide/availability-rules/${ruleId}`, { method: 'DELETE', headers: csrfHeaders() });
+    await fetch(`/api/guide/availability-rules/${ruleId}`, {
+      method: 'DELETE',
+      headers: csrfHeaders(),
+    });
     await loadData();
     await loadPreview();
   };
 
+  // ── Blackout handlers ──
   const openBlackoutModal = (blackout?: BlackoutDate) => {
     if (blackout) {
       setEditingBlackout(blackout);
@@ -190,8 +212,11 @@ export default function GuideAvailabilityPage() {
     setSaving(true);
     setError('');
     try {
-      const url = editingBlackout ? `/api/guide/blackout-dates/${editingBlackout.id}` : '/api/guide/blackout-dates';
+      const url = editingBlackout
+        ? `/api/guide/blackout-dates/${editingBlackout.id}`
+        : '/api/guide/blackout-dates';
       const method = editingBlackout ? 'PUT' : 'POST';
+
       const res = await fetch(url, {
         method,
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
@@ -203,6 +228,7 @@ export default function GuideAvailabilityPage() {
         }),
       });
       const json = await res.json();
+
       if (json.ok) {
         setShowBlackoutModal(false);
         await loadData();
@@ -217,17 +243,22 @@ export default function GuideAvailabilityPage() {
 
   const deleteBlackout = async (blackoutId: string) => {
     if (!confirm('確定要刪除此休假時段嗎？')) return;
-    await fetch(`/api/guide/blackout-dates/${blackoutId}`, { method: 'DELETE', headers: csrfHeaders() });
+    await fetch(`/api/guide/blackout-dates/${blackoutId}`, {
+      method: 'DELETE',
+      headers: csrfHeaders(),
+    });
     await loadData();
     await loadPreview();
   };
 
+  // ── Group rules by weekday ──
   const rulesByWeekday = rules.reduce((acc, rule) => {
     if (!acc[rule.weekday]) acc[rule.weekday] = [];
     acc[rule.weekday].push(rule);
     return acc;
   }, {} as Record<number, AvailabilityRule[]>);
 
+  // ── Group preview slots by date ──
   const slotsByDate = previewSlots.reduce((acc, slot) => {
     const date = slot.startAt.slice(0, 10);
     if (!acc[date]) acc[date] = [];
@@ -235,194 +266,395 @@ export default function GuideAvailabilityPage() {
     return acc;
   }, {} as Record<string, PreviewSlot[]>);
 
-  return (
-    <div className="tp-guide-grid">
-      <section className="tp-guide-hero">
-        <p className="tp-guide-kicker">guide availability</p>
-        <h1>把可帶團的時間規則，收成一眼看懂的排班台。</h1>
-        <p>
-          這頁保留原本時段規則、休假黑名單與 preview API 行為，只把整個時間管理改成與 guide shell 一致的配置。
-        </p>
-      </section>
+  const btn = (bg: string, color: string, border = 'none') =>
+    ({
+      padding: '8px 16px',
+      borderRadius: 8,
+      border,
+      background: bg,
+      color,
+      fontSize: 14,
+      fontWeight: 600,
+      cursor: 'pointer',
+    }) as React.CSSProperties;
 
+  const smallBtn = (bg: string, color: string) =>
+    ({
+      padding: '4px 10px',
+      borderRadius: 6,
+      border: 'none',
+      background: bg,
+      color,
+      fontSize: 12,
+      fontWeight: 600,
+      cursor: 'pointer',
+    }) as React.CSSProperties;
+
+  const cardStyle: React.CSSProperties = {
+    background: '#fff',
+    borderRadius: 14,
+    border: '1px solid #e5e7eb',
+    overflow: 'hidden',
+  };
+
+  const badgeStyle = (variant: 'warning' | 'default'): React.CSSProperties => ({
+    display: 'inline-block',
+    padding: '2px 8px',
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: 600,
+    marginTop: 4,
+    background: variant === 'warning' ? '#fef3c7' : '#f3f4f6',
+    color: variant === 'warning' ? '#d97706' : '#6b7280',
+  });
+
+  return (
+    <div>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800 }}>
+          <span style={{ marginRight: 8 }}>&#128197;</span>
+          時間管理
+        </h1>
+        <p style={{ margin: '4px 0 0', fontSize: 14, color: '#6b7280' }}>
+          設定您的可預約時段與休假日期
+        </p>
+      </div>
+
+      {/* ── Rule Modal ── */}
       {showRuleModal && (
-        <div className="tp-guide-overlay" onClick={() => setShowRuleModal(false)}>
-          <div className="tp-guide-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="tp-guide-modal-head">
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <p className="tp-guide-kicker">rule editor</p>
-                <h2 style={{ marginBottom: 6 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h2>
-              </div>
-              <button type="button" className="tp-guide-action-btn" onClick={() => setShowRuleModal(false)}>關閉</button>
-            </div>
-            <div className="tp-guide-form">
-              <div className="tp-guide-field">
-                <label>星期</label>
-                <select className="tp-guide-select" value={ruleForm.weekday} onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}>
-                  {WEEKDAY_LABELS.map((label, i) => <option key={i} value={i}>{label}</option>)}
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
+                <select
+                  value={ruleForm.weekday}
+                  onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                >
+                  {WEEKDAY_LABELS.map((label, i) => (
+                    <option key={i} value={i}>
+                      {label}
+                    </option>
+                  ))}
                 </select>
               </div>
-              <div className="tp-guide-form-row">
-                <div className="tp-guide-field">
-                  <label>開始時間</label>
-                  <input className="tp-guide-input" type="time" value={ruleForm.start_time_local} onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })} />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+                  <input
+                    type="time"
+                    value={ruleForm.start_time_local}
+                    onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                  />
                 </div>
-                <div className="tp-guide-field">
-                  <label>結束時間</label>
-                  <input className="tp-guide-input" type="time" value={ruleForm.end_time_local} onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })} />
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+                  <input
+                    type="time"
+                    value={ruleForm.end_time_local}
+                    onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                  />
                 </div>
               </div>
-              <div className="tp-guide-form-row">
-                <div className="tp-guide-field">
-                  <label>時段間隔（分鐘）</label>
-                  <input className="tp-guide-input" type="number" min={15} step={15} value={ruleForm.slot_interval_minutes} onChange={(e) => setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) })} />
+              <div style={{ display: 'flex', gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
+                  <input
+                    type="number"
+                    min="15"
+                    step="15"
+                    value={ruleForm.slot_interval_minutes}
+                    onChange={(e) => setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                  />
                 </div>
-                <div className="tp-guide-field">
-                  <label>緩衝時間（分鐘）</label>
-                  <input className="tp-guide-input" type="number" min={0} step={5} value={ruleForm.buffer_before_minutes} onChange={(e) => setRuleForm({ ...ruleForm, buffer_before_minutes: Number(e.target.value), buffer_after_minutes: Number(e.target.value) })} />
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="5"
+                    value={ruleForm.buffer_before_minutes}
+                    onChange={(e) =>
+                      setRuleForm({
+                        ...ruleForm,
+                        buffer_before_minutes: Number(e.target.value),
+                        buffer_after_minutes: Number(e.target.value),
+                      })
+                    }
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                  />
                 </div>
               </div>
-              <label className="tp-guide-choice" style={{ justifyContent: 'flex-start' }}>
-                <input type="checkbox" checked={ruleForm.is_active} onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={ruleForm.is_active}
+                  onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })}
+                />
                 啟用此規則
               </label>
-              {error && <div className="tp-guide-status danger">⚠️ {error}</div>}
-              <div className="tp-guide-actions-row">
-                <button type="button" className="tp-btn tp-btn-primary" onClick={saveRule} disabled={saving}>{saving ? '儲存中…' : '儲存規則'}</button>
-                <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setShowRuleModal(false)}>取消</button>
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
+                  {error}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button onClick={saveRule} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
+                  {saving ? '儲存中...' : '儲存'}
+                </button>
+                <button onClick={() => setShowRuleModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
+                  取消
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
+      {/* ── Blackout Modal ── */}
       {showBlackoutModal && (
-        <div className="tp-guide-overlay" onClick={() => setShowBlackoutModal(false)}>
-          <div className="tp-guide-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="tp-guide-modal-head">
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingBlackout ? '編輯休假時段' : '新增休假時段'}</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <p className="tp-guide-kicker">blackout editor</p>
-                <h2 style={{ marginBottom: 6 }}>{editingBlackout ? '編輯休假時段' : '新增休假時段'}</h2>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+                <input
+                  type="datetime-local"
+                  value={blackoutForm.starts_at}
+                  onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                />
               </div>
-              <button type="button" className="tp-guide-action-btn" onClick={() => setShowBlackoutModal(false)}>關閉</button>
-            </div>
-            <div className="tp-guide-form">
-              <div className="tp-guide-field">
-                <label>開始時間</label>
-                <input className="tp-guide-input" type="datetime-local" value={blackoutForm.starts_at} onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })} />
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+                <input
+                  type="datetime-local"
+                  value={blackoutForm.ends_at}
+                  onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                />
               </div>
-              <div className="tp-guide-field">
-                <label>結束時間</label>
-                <input className="tp-guide-input" type="datetime-local" value={blackoutForm.ends_at} onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })} />
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
+                <input
+                  type="text"
+                  value={blackoutForm.reason}
+                  onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })}
+                  placeholder="例：私人行程"
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                />
               </div>
-              <div className="tp-guide-field">
-                <label>原因（選填）</label>
-                <input className="tp-guide-input" type="text" value={blackoutForm.reason} onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })} placeholder="例：私人行程" />
-              </div>
-              {error && <div className="tp-guide-status danger">⚠️ {error}</div>}
-              <div className="tp-guide-actions-row">
-                <button type="button" className="tp-btn tp-btn-primary" onClick={saveBlackout} disabled={saving}>{saving ? '儲存中…' : editingBlackout ? '更新休假' : '新增休假'}</button>
-                <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setShowBlackoutModal(false)}>取消</button>
+              {error && (
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
+                  {error}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button onClick={saveBlackout} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
+                  {saving ? '儲存中...' : (editingBlackout ? '更新' : '儲存')}
+                </button>
+                <button onClick={() => setShowBlackoutModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
+                  取消
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {loading ? (
-        <div className="tp-guide-empty">載入時間管理資料中…</div>
-      ) : (
-        <>
-          <section className="tp-guide-panel">
-            <div className="tp-guide-data-top">
-              <div>
-                <h2>每週可預約時段</h2>
-                <div className="tp-guide-meta">設定每週固定可接單的日期與時段。</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {loading ? (
+          <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中...</div>
+        ) : (
+          <>
+            {/* ── Weekly Rules ── */}
+            <div style={cardStyle}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>每週可預約時段</h2>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定您每週的固定可預約時間</p>
+                </div>
+                <button onClick={() => openRuleModal()} style={btn('#7c3aed', '#fff')}>
+                  + 新增時段
+                </button>
               </div>
-              <button type="button" className="tp-btn tp-btn-primary" onClick={() => openRuleModal()}>+ 新增時段</button>
+              <div style={{ padding: 20 }}>
+                {rules.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>尚未設定可預約時段</div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
+                    {[0, 1, 2, 3, 4, 5, 6].map((day) => (
+                      <div key={day} style={{ background: '#f9fafb', borderRadius: 12, padding: 12, minHeight: 100 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: day === 0 || day === 6 ? '#dc2626' : '#111' }}>
+                          {WEEKDAY_LABELS[day]}
+                        </div>
+                        {rulesByWeekday[day]?.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {rulesByWeekday[day].map((rule) => (
+                              <div
+                                key={rule.id}
+                                style={{
+                                  background: rule.is_active ? '#dcfce7' : '#f3f4f6',
+                                  borderRadius: 6,
+                                  padding: '6px 10px',
+                                  fontSize: 12,
+                                }}
+                              >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                  <span style={{ fontWeight: 600 }}>
+                                    {rule.start_time_local}-{rule.end_time_local}
+                                  </span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button onClick={() => openRuleModal(rule)} style={smallBtn('#fff', '#374151')}>
+                                    編輯
+                                  </button>
+                                  <button onClick={() => deleteRule(rule.id)} style={smallBtn('#fee2e2', '#dc2626')}>
+                                    刪除
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 12, color: '#9ca3af' }}>無時段</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="tp-guide-grid cols-3" style={{ marginTop: 18 }}>
-              {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                <div key={day} className="tp-guide-data-card">
-                  <strong style={{ color: day === 0 || day === 6 ? '#b42318' : undefined }}>{WEEKDAY_LABELS[day]}</strong>
-                  <div className="tp-guide-card-list" style={{ marginTop: 12 }}>
-                    {rulesByWeekday[day]?.length ? rulesByWeekday[day].map((rule) => (
-                      <div key={rule.id} className="tp-guide-banner">
-                        <div className="tp-guide-meta">{rule.start_time_local} - {rule.end_time_local}</div>
-                        <div className="tp-guide-meta">間隔 {rule.slot_interval_minutes} 分鐘 · 緩衝 {rule.buffer_before_minutes} 分鐘</div>
-                        <div className="tp-guide-actions-row">
-                          <button type="button" className="tp-btn tp-btn-ghost" onClick={() => openRuleModal(rule)}>編輯</button>
-                          <button type="button" className="tp-btn tp-btn-ghost" onClick={() => deleteRule(rule.id)}>刪除</button>
+
+            {/* ── Blackout Dates ── */}
+            <div style={cardStyle}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>休假/不可預約時段</h2>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定特定日期的休假或不可接單時間</p>
+                </div>
+                <button onClick={() => openBlackoutModal()} style={btn('#dc2626', '#fff')}>
+                  + 新增休假
+                </button>
+              </div>
+              <div style={{ padding: 20 }}>
+                {blackouts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>尚無休假設定</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {blackouts.map((b) => (
+                      <div
+                        key={b.id}
+                        style={{
+                          background: '#fef2f2',
+                          borderRadius: 8,
+                          padding: '12px 16px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 14 }}>
+                            {new Date(b.starts_at).toLocaleString('zh-TW')} ~ {new Date(b.ends_at).toLocaleString('zh-TW')}
+                          </div>
+                          {b.reason && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{b.reason}</div>}
+                          <span style={badgeStyle(b.source === 'manual' ? 'warning' : 'default')}>
+                            {b.source === 'manual' ? '手動設定' : '系統設定'}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={() => openBlackoutModal(b)} style={smallBtn('#fff', '#7c3aed')}>
+                            編輯
+                          </button>
+                          <button onClick={() => deleteBlackout(b.id)} style={smallBtn('#fff', '#dc2626')}>
+                            刪除
+                          </button>
                         </div>
                       </div>
-                    )) : <div className="tp-guide-empty">無時段</div>}
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="tp-guide-grid cols-2" style={{ alignItems: 'start' }}>
-            <div className="tp-guide-panel">
-              <div className="tp-guide-data-top">
-                <div>
-                  <h2>休假 / 不可預約時段</h2>
-                  <div className="tp-guide-meta">設定特定日期不可接單的時間區間。</div>
-                </div>
-                <button type="button" className="tp-btn tp-btn-primary" onClick={() => openBlackoutModal()}>+ 新增休假</button>
-              </div>
-              <div className="tp-guide-card-list" style={{ marginTop: 18 }}>
-                {blackouts.length ? blackouts.map((item) => (
-                  <article key={item.id} className="tp-guide-data-card">
-                    <div className="tp-guide-data-top">
-                      <div>
-                        <strong>{new Date(item.starts_at).toLocaleString('zh-TW')} → {new Date(item.ends_at).toLocaleString('zh-TW')}</strong>
-                        {item.reason && <div className="tp-guide-meta">{item.reason}</div>}
-                      </div>
-                      <span className={`tp-guide-status ${item.source === 'manual' ? 'warning' : 'neutral'}`}>{item.source === 'manual' ? '手動設定' : '系統設定'}</span>
-                    </div>
-                    <div className="tp-guide-actions-row">
-                      <button type="button" className="tp-btn tp-btn-ghost" onClick={() => openBlackoutModal(item)}>編輯</button>
-                      <button type="button" className="tp-btn tp-btn-ghost" onClick={() => deleteBlackout(item.id)}>刪除</button>
-                    </div>
-                  </article>
-                )) : <div className="tp-guide-empty">尚無休假設定</div>}
+                )}
               </div>
             </div>
 
-            <div className="tp-guide-panel">
-              <div className="tp-guide-data-top">
+            {/* ── Slot Preview ── */}
+            <div style={cardStyle}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <div>
-                  <h2>時段預覽</h2>
-                  <div className="tp-guide-meta">檢查系統根據規則產生的可預約時間。</div>
+                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>時段預覽</h2>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>預覽系統將產生的可預約時段</p>
                 </div>
-                <div className="tp-guide-actions-row" style={{ marginTop: 0 }}>
-                  <input className="tp-guide-input" type="date" value={previewDateFrom} onChange={(e) => setPreviewDateFrom(e.target.value)} style={{ maxWidth: 160 }} />
-                  <input className="tp-guide-input" type="date" value={previewDateTo} onChange={(e) => setPreviewDateTo(e.target.value)} style={{ maxWidth: 160 }} />
-                  <button type="button" className="tp-btn tp-btn-primary" onClick={loadPreview} disabled={previewLoading}>{previewLoading ? '更新中…' : '更新預覽'}</button>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    type="date"
+                    value={previewDateFrom}
+                    onChange={(e) => setPreviewDateFrom(e.target.value)}
+                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                  />
+                  <span>~</span>
+                  <input
+                    type="date"
+                    value={previewDateTo}
+                    onChange={(e) => setPreviewDateTo(e.target.value)}
+                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                  />
+                  <button onClick={loadPreview} disabled={previewLoading} style={smallBtn('#7c3aed', '#fff')}>
+                    {previewLoading ? '載入中...' : '更新預覽'}
+                  </button>
                 </div>
               </div>
-              <div className="tp-guide-card-list" style={{ marginTop: 18 }}>
-                {previewSlots.length ? Object.entries(slotsByDate).map(([date, slots]) => {
-                  const dayOfWeek = new Date(date).getDay();
-                  return (
-                    <article key={date} className="tp-guide-data-card">
-                      <strong>{date}（週{WEEKDAYS[dayOfWeek]}）</strong>
-                      <div className="tp-guide-actions-row">
-                        {slots.map((slot, idx) => (
-                          <span key={idx} className={`tp-guide-status ${slot.isAvailable ? 'success' : 'neutral'}`}>
-                            {new Date(slot.startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        ))}
-                      </div>
-                    </article>
-                  );
-                }) : <div className="tp-guide-empty">此期間無可用時段</div>}
+              <div style={{ padding: 20 }}>
+                {previewSlots.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>此期間無可用時段</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    {Object.entries(slotsByDate).map(([date, slots]) => {
+                      const dayOfWeek = new Date(date).getDay();
+                      return (
+                        <div key={date}>
+                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: dayOfWeek === 0 || dayOfWeek === 6 ? '#dc2626' : '#111' }}>
+                            {date} ({WEEKDAYS[dayOfWeek]})
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {slots.map((slot, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  background: slot.isAvailable ? '#dcfce7' : '#f3f4f6',
+                                  color: slot.isAvailable ? '#166534' : '#9ca3af',
+                                  padding: '4px 10px',
+                                  borderRadius: 6,
+                                  fontSize: 12,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {new Date(slot.startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
-          </section>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

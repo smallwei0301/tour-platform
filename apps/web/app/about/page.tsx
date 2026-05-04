@@ -1,93 +1,58 @@
 import Link from 'next/link';
 
-const stats = [
-  { value: '3+', label: '合作導遊', note: '持續擴編中' },
-  { value: '4+', label: '精選路線', note: '從洞穴到老街' },
-  { value: '22', label: '目標縣市', note: '逐步拓展全台' },
-  { value: '15%', label: '平台抽成', note: '透明且固定' },
-];
-
-const principles = [
-  {
-    title: '不是帶你打卡，是帶你進場景',
-    body: '我們希望旅客看到的不是一串景點清單，而是一個地方真正的節奏、人物與故事。',
-  },
-  {
-    title: '讓好的在地導遊被看見',
-    body: '很多優秀導遊沒有自己的品牌與後台，平台要做的是把他們的專業與可信度清楚呈現出來。',
-  },
-  {
-    title: '把預約、付款、售後做成安心流程',
-    body: '從下單、確認、取消到退款，我們把原本混亂的旅遊溝通，整理成可以信任的標準流程。',
-  },
-];
-
 export default function AboutPage() {
   return (
-    <main className="tp-container tp-editorial-page">
-      <section className="tp-editorial-hero">
-        <p className="tp-editorial-kicker">about midao</p>
-        <h1>我們想讓台灣在地導覽，看起來像一種值得被正式對待的體驗品牌。</h1>
-        <p className="tp-editorial-lead">
-          不只是上架行程，而是把導遊、旅客、付款與服務細節，整理成一個有溫度又可信任的旅程系統。
+    <main className="tp-container" style={{ paddingBottom: 40 }}>
+      {/* Hero */}
+      <section style={{
+        backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1528164344705-47542687000d?w=1400&q=80)',
+        backgroundSize: 'cover', backgroundPosition: 'center',
+        borderRadius: 14, padding: '60px 40px', marginTop: 18, color: '#fff',
+      }}>
+        <h1 style={{ fontSize: 36, marginBottom: 12 }}>關於我們</h1>
+        <p style={{ fontSize: 18, maxWidth: 600, lineHeight: 1.7, opacity: 0.95 }}>
+          我們相信，最好的旅行不是跟團趕景點，而是找到一個懂路的人，帶你走進真正有故事的地方。
         </p>
-        <div className="tp-editorial-chip-row">
-          <span className="tp-editorial-chip">在地導遊</span>
-          <span className="tp-editorial-chip">深度體驗</span>
-          <span className="tp-editorial-chip">透明預約</span>
-        </div>
       </section>
 
-      <section className="tp-editorial-section tp-editorial-grid-two">
-        <article className="tp-editorial-prose">
-          <h2>為什麼做這件事？</h2>
-          <p>
-            台灣有很多很會帶路的人，知道什麼時間看山最好、哪一段老街該慢慢走、哪個洞口該先彎腰再前進。
-            但旅客很難找到他們，導遊也缺乏一個能好好展示專業的平台。
-          </p>
-          <p>
-            MIDAO 想做的，就是把「找導遊」這件事從零散私訊、口耳相傳，變成一個清楚、可信、可以安心付款與回頭的體驗流程。
-          </p>
-        </article>
-        <article className="tp-editorial-card-soft">
-          <h2>我們現在的路線</h2>
-          <ul className="tp-editorial-list">
-            <li>從最有辨識度的在地體驗開始，例如柴山探洞、老街走讀、戶外溪谷。</li>
-            <li>優先整理導遊端工作流，讓申請、排班、預約、退款都能被清楚管理。</li>
-            <li>把封面風格延伸到全站，讓每個頁面都像同一本 field guide 的不同章節。</li>
-          </ul>
-        </article>
+      {/* Story */}
+      <section style={{ marginTop: 40, maxWidth: 720 }}>
+        <h2>為什麼做這件事？</h2>
+        <p style={{ lineHeight: 1.8, color: 'var(--tp-muted)', marginBottom: 16 }}>
+          台灣有非常多在地的好導遊，他們了解自己生活的土地、知道哪些路線最有記憶點、也知道如何讓旅客安全又開心地探索。
+          但這些導遊大多沒有自己的平台，旅客也很難找到他們。
+        </p>
+        <p style={{ lineHeight: 1.8, color: 'var(--tp-muted)', marginBottom: 16 }}>
+          Tour Platform 要做的事很簡單：<strong>讓好的在地導遊被看見，讓旅客可以直接預約、安心付款、享受一段有品質的體驗。</strong>
+        </p>
+        <p style={{ lineHeight: 1.8, color: 'var(--tp-muted)' }}>
+          我們先從高雄柴山探洞、台北老街、花蓮溯溪這些最有特色的行程開始，再逐步拓展到全台灣。
+        </p>
       </section>
 
-      <section className="tp-editorial-section tp-editorial-grid-three">
-        {stats.map((item) => (
-          <article key={item.label} className="tp-editorial-card">
-            <div className="tp-editorial-stat">
-              <strong>{item.value}</strong>
-              <span>{item.label}</span>
-            </div>
-            <p>{item.note}</p>
-          </article>
+      {/* Numbers */}
+      <section style={{ marginTop: 40, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16 }}
+        className="about-numbers">
+        <style>{`@media (min-width: 640px) { .about-numbers { grid-template-columns: repeat(4, 1fr) !important; } }`}</style>
+        {[
+          { num: '3+', label: '合作導遊' },
+          { num: '4+', label: '精選行程' },
+          { num: '22', label: '涵蓋縣市（目標）' },
+          { num: '15%', label: '平台抽成（業界最低）' },
+        ].map((d, i) => (
+          <div key={i} style={{ textAlign: 'center', padding: 20, border: '1px solid var(--tp-border)', borderRadius: 12 }}>
+            <p style={{ fontSize: 32, fontWeight: 800, color: 'var(--tp-primary)', margin: 0 }}>{d.num}</p>
+            <p style={{ color: 'var(--tp-muted)', margin: '4px 0 0', fontSize: 14 }}>{d.label}</p>
+          </div>
         ))}
       </section>
 
-      <section className="tp-editorial-section tp-editorial-grid-three">
-        {principles.map((item) => (
-          <article key={item.title} className="tp-editorial-card-soft">
-            <h3>{item.title}</h3>
-            <p>{item.body}</p>
-          </article>
-        ))}
-      </section>
-
-      <section className="tp-editorial-section tp-editorial-card">
-        <h2>下一步</h2>
-        <p>
-          如果你是旅客，就去找一條你想真的走進去的路；如果你是導遊，就把你的 field note 帶進來，讓更多人看見。
-        </p>
-        <div className="tp-member-actions-row" style={{ marginTop: 12 }}>
-          <Link href="/activities" className="tp-btn tp-btn-primary">探索行程</Link>
-          <Link href="/guide/apply" className="tp-btn tp-btn-ghost">成為導遊</Link>
+      {/* CTA */}
+      <section style={{ marginTop: 40, textAlign: 'center', padding: '40px 0' }}>
+        <h2>一起讓台灣的好導遊被看見</h2>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+          <Link href="/guide/apply" className="tp-btn tp-btn-primary" style={{ padding: '12px 28px' }}>成為導遊</Link>
+          <Link href="/activities" className="tp-btn tp-btn-ghost" style={{ padding: '12px 28px' }}>探索行程</Link>
         </div>
       </section>
     </main>

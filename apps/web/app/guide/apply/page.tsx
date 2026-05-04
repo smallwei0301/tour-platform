@@ -2,16 +2,6 @@
 
 import { useState } from 'react';
 
-const specialtyOptions = ['文化走讀', '美食導覽', '山林健行', '水上活動', '單車行程'];
-const languageOptions = ['中文', '英文', '日文', '韓文', '泰文'];
-const regionOptions = ['台北', '桃園', '台中', '台南', '高雄', '花蓮', '台東'];
-const certOptions = ['急救證照', '登山證照', '潛水證照', '導遊證', '領隊證'];
-const paymentOptions = [
-  { id: 'bank', label: '銀行轉帳' },
-  { id: 'linepay', label: 'LINE Pay' },
-  { id: 'transfer', label: '第三方金流' },
-];
-
 export default function GuideApplyPage() {
   const [step, setStep] = useState(1);
   const [fullName, setFullName] = useState('');
@@ -33,6 +23,16 @@ export default function GuideApplyPage() {
     setter(list.includes(value) ? list.filter((item) => item !== value) : [...list, value]);
   }
 
+  const specialtyOptions = ['文化走讀', '美食導覽', '山林健行', '水上活動', '單車行程'];
+  const languageOptions = ['中文', '英文', '日文', '韓文', '泰文'];
+  const regionOptions = ['台北', '桃園', '台中', '台南', '高雄', '花蓮', '台東'];
+  const certOptions = ['急救證照', '登山證照', '潛水證照', '導遊證', '領隊證'];
+  const paymentOptions = [
+    { id: 'bank', label: '銀行轉帳' },
+    { id: 'linepay', label: 'LINE Pay' },
+    { id: 'transfer', label: '第三方金流' },
+  ];
+
   async function submitApplication() {
     try {
       setSubmitting(true);
@@ -51,7 +51,7 @@ export default function GuideApplyPage() {
           regions,
           certs: otherCert ? [...certs, otherCert] : certs,
           payment,
-        }),
+        })
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json?.error?.message || '申請失敗');
@@ -65,219 +65,154 @@ export default function GuideApplyPage() {
   }
 
   return (
-    <main className="tp-container tp-static-editorial-page">
-      <section className="tp-guide-hero" style={{ marginBottom: 18 }}>
-        <p className="tp-guide-kicker">guide apply</p>
-        <h1>把你的在地帶路能力，變成一套可被預約的體驗。</h1>
-        <p>
-          我們保留原本 `/api/guide-applications` 的送件流程，只把申請體驗改成 MIDAO onboarding。
-          你可以一次填好專長、語言、熟悉區域、相關證照與收款方式，交由平台審核。
-        </p>
-        <div className="tp-guide-hero-meta">
-          <span className="tp-guide-chip">🧾 線上申請</span>
-          <span className="tp-guide-chip">🪪 證照審核</span>
-          <span className="tp-guide-chip">💳 收款設定</span>
-        </div>
-      </section>
+    <main className="tp-container tp-apply-page">
+      <h1>成為我們的導遊</h1>
+      <p>佣金 15% · 安全收款 · 後台管理行程</p>
 
-      <section className="tp-guide-stepper">
-        <div className={`tp-guide-step${step >= 1 ? ' is-active' : ''}${step > 1 ? ' is-done' : ''}`}>
-          <strong>1. 基本資料</strong>
-          <span>姓名、電話、城市、自我介紹與帶團主題。</span>
-        </div>
-        <div className={`tp-guide-step${step >= 2 ? ' is-active' : ''}${step > 2 ? ' is-done' : ''}`}>
-          <strong>2. 上傳資料</strong>
-          <span>證件與形象照，讓審核更快完成。</span>
-        </div>
-        <div className={`tp-guide-step${step >= 3 ? ' is-active' : ''}${step > 3 ? ' is-done' : ''}`}>
-          <strong>3. 最後確認</strong>
-          <span>再次確認專長、區域、語言與收款方式。</span>
-        </div>
-        <div className={`tp-guide-step${step >= 4 ? ' is-active is-done' : ''}`}>
-          <strong>4. 送出完成</strong>
-          <span>建立申請編號，等待 MIDAO 團隊聯繫。</span>
-        </div>
-      </section>
+      <div className="tp-stepper">
+        <span className={step >= 1 ? 'active' : ''}>1 基本資料</span>
+        <span className={step >= 2 ? 'active' : ''}>2 上傳證件</span>
+        <span className={step >= 3 ? 'active' : ''}>3 審核送出</span>
+      </div>
 
       {step === 1 && (
-        <section className="tp-guide-grid cols-2" style={{ alignItems: 'start' }}>
-          <div className="tp-guide-panel">
-            <h2>基本資料</h2>
-            <p className="tp-guide-meta">請先填寫導遊介紹與可帶領主題。這些資料會用於審核與後續建檔。</p>
+        <section className="tp-step-card">
+          <label>姓名*<input value={fullName} onChange={(e) => setFullName(e.target.value)} /></label>
+          <label>電話*<input value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+          <label>電子信箱*<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+          <label>所在縣市*<input placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} /></label>
+          <label>自我介紹*<textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} /></label>
 
-            <div className="tp-guide-form">
-              <div className="tp-guide-form-row">
-                <div className="tp-guide-field">
-                  <label htmlFor="fullName">姓名 *</label>
-                  <input id="fullName" className="tp-guide-input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-                </div>
-                <div className="tp-guide-field">
-                  <label htmlFor="phone">電話 *</label>
-                  <input id="phone" className="tp-guide-input" value={phone} onChange={(e) => setPhone(e.target.value)} />
-                </div>
-              </div>
-
-              <div className="tp-guide-form-row">
-                <div className="tp-guide-field">
-                  <label htmlFor="email">電子信箱 *</label>
-                  <input id="email" className="tp-guide-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </div>
-                <div className="tp-guide-field">
-                  <label htmlFor="city">所在縣市 *</label>
-                  <input id="city" className="tp-guide-input" value={city} onChange={(e) => setCity(e.target.value)} placeholder="例如：高雄市" />
-                </div>
-              </div>
-
-              <div className="tp-guide-field">
-                <label htmlFor="bio">自我介紹 *</label>
-                <textarea id="bio" className="tp-guide-textarea" value={bio} onChange={(e) => setBio(e.target.value)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="tp-guide-panel">
-            <h2>專長與語言</h2>
-            <div className="tp-guide-field" style={{ marginBottom: 16 }}>
-              <span className="tp-guide-fieldset-title">專長領域 *</span>
-              <div className="tp-guide-option-grid">
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div>
+              <p style={{ fontWeight: 600, marginBottom: 6 }}>專長領域*</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {specialtyOptions.map((item) => (
-                  <label key={item} className="tp-guide-choice">
-                    <input type="checkbox" checked={specialties.includes(item)} onChange={() => toggleList(item, specialties, setSpecialties)} />
+                  <label key={item} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={specialties.includes(item)}
+                      onChange={() => toggleList(item, specialties, setSpecialties)}
+                    />
                     {item}
                   </label>
                 ))}
               </div>
             </div>
 
-            <div className="tp-guide-field" style={{ marginBottom: 16 }}>
-              <span className="tp-guide-fieldset-title">可帶語言 *</span>
-              <div className="tp-guide-option-grid">
+            <div>
+              <p style={{ fontWeight: 600, marginBottom: 6 }}>可帶語言*</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {languageOptions.map((item) => (
-                  <label key={item} className="tp-guide-choice">
-                    <input type="checkbox" checked={languages.includes(item)} onChange={() => toggleList(item, languages, setLanguages)} />
+                  <label key={item} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={languages.includes(item)}
+                      onChange={() => toggleList(item, languages, setLanguages)}
+                    />
                     {item}
                   </label>
                 ))}
               </div>
             </div>
 
-            <div className="tp-guide-field">
-              <span className="tp-guide-fieldset-title">熟悉區域 *</span>
-              <div className="tp-guide-option-grid">
+            <div>
+              <p style={{ fontWeight: 600, marginBottom: 6 }}>熟悉區域*</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {regionOptions.map((item) => (
-                  <label key={item} className="tp-guide-choice">
-                    <input type="checkbox" checked={regions.includes(item)} onChange={() => toggleList(item, regions, setRegions)} />
+                  <label key={item} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={regions.includes(item)}
+                      onChange={() => toggleList(item, regions, setRegions)}
+                    />
                     {item}
                   </label>
                 ))}
               </div>
             </div>
 
-            <div className="tp-guide-actions-row">
-              <button type="button" className="tp-btn tp-btn-primary" onClick={() => setStep(2)}>
-                下一步：上傳資料
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {step === 2 && (
-        <section className="tp-guide-grid cols-2" style={{ alignItems: 'start' }}>
-          <div className="tp-guide-panel">
-            <h2>上傳證件與照片</h2>
-            <p className="tp-guide-meta">這一段保留原本上傳欄位形式，先收資料，審核通過後再建立正式導遊帳號。</p>
-            <div className="tp-guide-form">
-              <div className="tp-guide-field">
-                <label htmlFor="identity-file">身分證件上傳 *</label>
-                <input id="identity-file" className="tp-guide-input" type="file" />
-              </div>
-              <div className="tp-guide-field">
-                <label htmlFor="portrait-file">個人照片上傳 *</label>
-                <input id="portrait-file" className="tp-guide-input" type="file" />
-              </div>
-            </div>
-          </div>
-
-          <div className="tp-guide-panel">
-            <h2>證照與收款方式</h2>
-            <div className="tp-guide-field" style={{ marginBottom: 16 }}>
-              <span className="tp-guide-fieldset-title">相關證照</span>
-              <div className="tp-guide-option-grid">
+            <div>
+              <p style={{ fontWeight: 600, marginBottom: 6 }}>相關證照</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 {certOptions.map((item) => (
-                  <label key={item} className="tp-guide-choice">
-                    <input type="checkbox" checked={certs.includes(item)} onChange={() => toggleList(item, certs, setCerts)} />
+                  <label key={item} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="checkbox"
+                      checked={certs.includes(item)}
+                      onChange={() => toggleList(item, certs, setCerts)}
+                    />
                     {item}
                   </label>
                 ))}
+                <input
+                  placeholder="其他證照"
+                  value={otherCert}
+                  onChange={(e) => setOtherCert(e.target.value)}
+                  style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #d1d5db' }}
+                />
               </div>
-              <input className="tp-guide-input" placeholder="其他證照" value={otherCert} onChange={(e) => setOtherCert(e.target.value)} />
             </div>
 
-            <div className="tp-guide-field">
-              <span className="tp-guide-fieldset-title">收款方式 *</span>
-              <div className="tp-guide-option-grid">
+            <div>
+              <p style={{ fontWeight: 600, marginBottom: 6 }}>收款方式*</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
                 {paymentOptions.map((option) => (
-                  <label key={option.id} className="tp-guide-choice">
-                    <input type="radio" name="payment" checked={payment === option.id} onChange={() => setPayment(option.id)} />
+                  <label key={option.id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      type="radio"
+                      name="payment"
+                      checked={payment === option.id}
+                      onChange={() => setPayment(option.id)}
+                    />
                     {option.label}
                   </label>
                 ))}
               </div>
             </div>
+          </div>
 
-            <div className="tp-guide-actions-row">
-              <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>
-                上一步
-              </button>
-              <button type="button" className="tp-btn tp-btn-primary" onClick={() => setStep(3)}>
-                下一步：最後確認
-              </button>
-            </div>
+          <div className="tp-step-actions">
+            <button className="tp-btn tp-btn-primary" onClick={() => setStep(2)}>下一步：上傳證件</button>
+          </div>
+        </section>
+      )}
+
+      {step === 2 && (
+        <section className="tp-step-card">
+          <label>身分證件上傳*<input type="file" /></label>
+          <label>個人照片上傳*<input type="file" /></label>
+          <div className="tp-step-actions">
+            <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>上一步</button>
+            <button className="tp-btn tp-btn-primary" onClick={() => setStep(3)}>下一步：審核送出</button>
           </div>
         </section>
       )}
 
       {step === 3 && (
-        <section className="tp-guide-grid cols-2" style={{ alignItems: 'start' }}>
-          <div className="tp-guide-panel">
-            <h2>最後確認</h2>
-            <div className="tp-guide-card-list">
-              <div className="tp-guide-data-card"><strong>姓名</strong><div className="tp-guide-meta">{fullName || '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>Email</strong><div className="tp-guide-meta">{email || '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>城市</strong><div className="tp-guide-meta">{city || '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>專長</strong><div className="tp-guide-meta">{specialties.length ? specialties.join('、') : '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>語言</strong><div className="tp-guide-meta">{languages.length ? languages.join('、') : '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>區域</strong><div className="tp-guide-meta">{regions.length ? regions.join('、') : '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>證照</strong><div className="tp-guide-meta">{[...certs, otherCert].filter(Boolean).length ? [...certs, otherCert].filter(Boolean).join('、') : '—'}</div></div>
-              <div className="tp-guide-data-card"><strong>收款方式</strong><div className="tp-guide-meta">{paymentOptions.find((item) => item.id === payment)?.label || '—'}</div></div>
-            </div>
-          </div>
-
-          <div className="tp-guide-panel">
-            <h2>送件前提醒</h2>
-            <div className="tp-guide-banner">
-              平台會依照你填寫的專長、區域與證照進行人工審核。若需要補件，會透過 Email 與電話聯繫你。
-            </div>
-            {error && <div className="tp-guide-status danger" style={{ marginTop: 16 }}>⚠️ {error}</div>}
-            <div className="tp-guide-actions-row">
-              <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>
-                返回修改
-              </button>
-              <button type="button" className="tp-btn tp-btn-primary" disabled={submitting} onClick={submitApplication}>
-                {submitting ? '送出中…' : '送出申請'}
-              </button>
-            </div>
+        <section className="tp-step-card">
+          <h2>申請資料確認</h2>
+          <p>姓名：{fullName || '—'}</p>
+          <p>Email：{email || '—'}</p>
+          <p>城市：{city || '—'}</p>
+          <p>專長：{specialties.length ? specialties.join('、') : '—'}</p>
+          <p>語言：{languages.length ? languages.join('、') : '—'}</p>
+          <p>區域：{regions.length ? regions.join('、') : '—'}</p>
+          <p>證照：{[...certs, otherCert].filter(Boolean).length ? [...certs, otherCert].filter(Boolean).join('、') : '—'}</p>
+          <p>收款方式：{paymentOptions.find((item) => item.id === payment)?.label || '—'}</p>
+          {error && <p style={{ color: '#b42318' }}>⚠️ {error}</p>}
+          <div className="tp-step-actions">
+            <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>返回修改</button>
+            <button className="tp-btn tp-btn-primary" disabled={submitting} onClick={submitApplication}>{submitting ? '送出中…' : '送出申請'}</button>
           </div>
         </section>
       )}
 
       {step === 4 && (
-        <section className="tp-guide-panel">
-          <p className="tp-guide-kicker">application submitted</p>
+        <section className="tp-step-card">
           <h2>申請已送出 ✅</h2>
-          <p className="tp-guide-meta">申請編號：{doneId || '—'}</p>
-          <p className="tp-guide-meta">審核結果將以 Email 通知，通過後會發送導遊工作台邀請連結。</p>
+          <p>申請編號：{doneId || '—'}</p>
+          <p>審核結果將以 Email 通知。</p>
         </section>
       )}
     </main>
