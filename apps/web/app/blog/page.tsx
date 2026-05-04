@@ -3,94 +3,84 @@ import Link from 'next/link';
 
 export const metadata: Metadata = {
   title: '旅遊指南 | Tour Platform',
-  description: '台灣各地旅遊攻略、導遊推薦、活動體驗分享。從柴山探洞到花蓮溯溪，讓我們帶你深度認識台灣。',
-  openGraph: {
-    title: '旅遊指南 | Tour Platform',
-    description: '台灣各地旅遊攻略與在地體驗分享。',
-  },
+  description: '台灣各地旅遊攻略、導遊推薦與在地體驗筆記。',
 };
 
 const posts = [
   {
     slug: 'why-private-guide',
     title: '為什麼在台灣旅行要找私人導遊，而不是跟團？',
-    excerpt: '從效率到深度體驗，兩種旅行方式的根本差距。當你不再被行程表綁架，才能真正認識一個地方。',
+    excerpt: '從節奏、故事到路線彈性，私人導遊真正改變的是你和地方的關係。',
     category: '台灣旅遊',
     date: '2026-03-20',
     readTime: '5 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=800&q=80',
-    featured: true,
   },
   {
     slug: 'chaishan-cave-guide',
     title: '高雄柴山探洞完全攻略：第一次就上手',
-    excerpt: '裝備怎麼準備？路線怎麼選？帶小孩可以嗎？一篇搞懂柴山探洞的所有眉角。',
+    excerpt: '第一次探洞該準備什麼、怕不怕、適不適合親子，這篇一次講清楚。',
     category: '戶外冒險',
     date: '2026-03-15',
     readTime: '7 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=800&q=80',
-    featured: false,
   },
   {
     slug: 'dadaocheng-food-map',
     title: '大稻埕在地美食地圖：只有導遊知道的隱藏版',
-    excerpt: '迪化街不只有南北貨，還有你在旅遊書上找不到的碗粿和百年老店。',
+    excerpt: '把旅遊書上不會出現的口袋名單，整理成可讀的散步路線。',
     category: '美食體驗',
     date: '2026-03-10',
     readTime: '4 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80',
-    featured: false,
   },
   {
     slug: 'hualien-river-trekking-tips',
     title: '花蓮溯溪新手指南：你需要知道的 10 件事',
-    excerpt: '不會游泳可以去嗎？幾月最適合？裝備要自己帶嗎？溯溪前必讀。',
+    excerpt: '如果你想第一次就玩得安心，先把這篇讀完。',
     category: '戶外冒險',
     date: '2026-03-05',
     readTime: '6 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1504858700536-882c978a3464?w=800&q=80',
-    featured: false,
   },
 ];
 
 export default function BlogPage() {
-  const featured = posts.find((p) => p.featured);
-  const rest = posts.filter((p) => !p.featured);
+  const [featured, ...rest] = posts;
 
   return (
-    <main className="tp-container" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>首頁 &gt; 旅遊指南</div>
-      <h1>旅遊指南</h1>
+    <main className="tp-container tp-editorial-page">
+      <section className="tp-editorial-hero">
+        <p className="tp-editorial-kicker">journal</p>
+        <h1>旅遊指南與 field notes。</h1>
+        <p className="tp-editorial-lead">把導遊經驗、旅遊觀察與實際路線整理成可閱讀、可收藏、可轉化成預約的內容頁。</p>
+      </section>
 
-      {/* Featured */}
-      {featured && (
-        <Link href={`/blog/${featured.slug}`} style={{ display: 'block', marginBottom: 30 }}>
-          <article style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, border: '1px solid var(--tp-border)', borderRadius: 14, overflow: 'hidden' }}>
-            <img src={featured.imageUrl} alt={featured.title} style={{ width: '100%', height: '100%', minHeight: 240, objectFit: 'cover' }} />
-            <div style={{ padding: '24px 20px 24px 0' }}>
-              <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12 }}>{featured.category}</span>
-              <h2 style={{ margin: '12px 0 8px' }}>{featured.title}</h2>
-              <p style={{ color: 'var(--tp-muted)', lineHeight: 1.7 }}>{featured.excerpt}</p>
-              <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{featured.date} · 閱讀約 {featured.readTime}</p>
+      <section className="tp-editorial-section">
+        <Link href={`/blog/${featured.slug}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+          <article className="tp-editorial-card-soft">
+            <p className="tp-editorial-kicker" style={{ color: 'var(--tp-primary)' }}>{featured.category}</p>
+            <h2>{featured.title}</h2>
+            <p>{featured.excerpt}</p>
+            <div className="tp-editorial-meta-row">
+              <span className="tp-member-chip">{featured.date}</span>
+              <span className="tp-member-chip">{featured.readTime}</span>
             </div>
           </article>
         </Link>
-      )}
+      </section>
 
-      {/* Grid */}
-      <div className="tp-card-grid">
-        {rest.map((p) => (
-          <Link href={`/blog/${p.slug}`} key={p.slug} style={{ display: 'block' }}>
-            <article className="tp-card">
-              <img src={p.imageUrl} alt={p.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
-              <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '2px 8px', borderRadius: 6, fontSize: 11, display: 'inline-block', marginBottom: 6 }}>{p.category}</span>
-              <h3>{p.title}</h3>
-              <p style={{ fontSize: 14, lineHeight: 1.6 }}>{p.excerpt}</p>
-              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{p.date} · {p.readTime}</p>
+      <section className="tp-editorial-section tp-editorial-card-grid">
+        {rest.map((post) => (
+          <Link key={post.slug} href={`/blog/${post.slug}`} style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}>
+            <article className="tp-editorial-card">
+              <p className="tp-editorial-kicker" style={{ color: 'var(--tp-primary)' }}>{post.category}</p>
+              <h3>{post.title}</h3>
+              <p>{post.excerpt}</p>
+              <div className="tp-editorial-meta-row">
+                <span className="tp-member-chip">{post.date}</span>
+                <span className="tp-member-chip">{post.readTime}</span>
+              </div>
             </article>
           </Link>
         ))}
-      </div>
+      </section>
     </main>
   );
 }

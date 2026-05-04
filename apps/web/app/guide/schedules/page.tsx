@@ -4,11 +4,25 @@ import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Schedule = {
-  id: string; activityId: string; tourTitle: string; planName: string; date: string;
-  capacity: number; bookedCount: number; status: string; guideNote: string | null;
+  id: string;
+  activityId: string;
+  tourTitle: string;
+  planName: string;
+  date: string;
+  capacity: number;
+  bookedCount: number;
+  status: string;
+  guideNote: string | null;
 };
 
 type Filter = 'all' | 'upcoming' | 'past';
+
+function statusClass(status: string) {
+  if (status === 'open') return 'success';
+  if (status === 'full') return 'warning';
+  if (status === 'cancelled') return 'danger';
+  return 'neutral';
+}
 
 export default function GuideSchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -23,7 +37,9 @@ export default function GuideSchedulesPage() {
       const res = await fetch('/api/guide/schedules');
       const json = await res.json();
       setSchedules(json?.data || []);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -32,25 +48,22 @@ export default function GuideSchedulesPage() {
   }, []);
 
   const now = new Date();
-  const filtered = schedules.filter((s) => {
-    if (filter === 'upcoming') return new Date(s.date) >= now;
-    if (filter === 'past') return new Date(s.date) < now;
+  const filtered = schedules.filter((schedule) => {
+    if (filter === 'upcoming') return new Date(schedule.date) >= now;
+    if (filter === 'past') return new Date(schedule.date) < now;
     return true;
   });
 
   async function toggleActive(id: string, currentStatus: string) {
-    const isActive = currentStatus === 'cancelled' || currentStatus === 'full' ? true : false;
-    // Optimistic update
-    setSchedules((prev) =>
-      prev.map((s) => s.id === id ? { ...s, status: isActive ? 'open' : 'cancelled' } : s)
-    );
+    const isActive = currentStatus === 'cancelled' || currentStatus === 'full';
+    setSchedules((prev) => prev.map((schedule) => (schedule.id === id ? { ...schedule, status: isActive ? 'open' : 'cancelled' } : schedule)));
     const res = await fetch(`/api/guide/schedules/${id}`, {
       method: 'PATCH',
       headers: csrfHeaders({ 'content-type': 'application/json' }),
       body: JSON.stringify({ isActive }),
     });
     if (!res.ok) {
-      load(); // Revert on error
+      load();
       const json = await res.json().catch(() => ({}));
       alert(json?.error?.message || '操作失敗');
     }
@@ -58,7 +71,10 @@ export default function GuideSchedulesPage() {
 
   async function updateCapacity(id: string) {
     const newCap = Number(capValue);
-    if (isNaN(newCap) || newCap < 1) { alert('請輸入有效數字'); return; }
+    if (Number.isNaN(newCap) || newCap < 1) {
+      alert('請輸入有效數字');
+      return;
+    }
     const res = await fetch(`/api/guide/schedules/${id}`, {
       method: 'PATCH',
       headers: csrfHeaders({ 'content-type': 'application/json' }),
@@ -74,134 +90,119 @@ export default function GuideSchedulesPage() {
   }
 
   return (
-    <div>
-      <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📅 場次管理</h1>
+    <div className="tp-guide-grid">
+      <section className="tp-guide-hero">
+        <p className="tp-guide-kicker">guide schedules</p>
+        <h1>場次開關、容量調整與近期出團節奏，都在這裡。</h1>
+        <p>
+          保留 `/api/guide/schedules` 與 PATCH 邏輯，只把場次管理收進同一套 MIDAO guide shell。
+          你可以切換 upcoming / all / past，也能直接改容量、關閉或重新開放場次。
+        </p>
+      </section>
 
-      {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {(['upcoming', 'all', 'past'] as Filter[]).map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            style={{
-              padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-              background: filter === f ? '#7c3aed' : '#f3f4f6',
-              color: filter === f ? '#fff' : '#6b7280',
-            }}
-          >
-            {{ upcoming: '即將出發', all: '全部', past: '已結束' }[f]}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
-      ) : filtered.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>無場次資料</div>
-      ) : (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, background: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '10px 12px' }}>行程</th>
-                <th>方案</th>
-                <th>日期</th>
-                <th>已訂/容量</th>
-                <th>狀態</th>
-                <th style={{ width: 100 }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>{s.tourTitle}</td>
-                  <td style={{ color: '#6b7280' }}>{s.planName}</td>
-                  <td style={{ fontSize: 13 }}>
-                    {new Date(s.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}
-                    <br />
-                    <span style={{ color: '#9ca3af', fontSize: 12 }}>
-                      {new Date(s.date).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </td>
-                  <td style={{ minWidth: 120 }}>
-                    {editingCap === s.id ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontWeight: 600, color: '#374151' }}>{s.bookedCount}/</span>
-                        <input
-                          value={capValue}
-                          onChange={(e) => setCapValue(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') updateCapacity(s.id); if (e.key === 'Escape') setEditingCap(null); }}
-                          autoFocus
-                          type="number"
-                          min={s.bookedCount}
-                          style={{ width: 56, padding: '4px 6px', borderRadius: 6, border: '1.5px solid #7c3aed', fontSize: 14, textAlign: 'center' }}
-                        />
-                        <button
-                          onClick={() => updateCapacity(s.id)}
-                          title="儲存"
-                          style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => setEditingCap(null)}
-                          title="取消"
-                          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>
-                          <span style={{ fontWeight: 600 }}>{s.bookedCount}</span>
-                          <span style={{ color: '#9ca3af' }}>/{s.capacity}</span>
-                        </span>
-                        <button
-                          onClick={() => { setEditingCap(s.id); setCapValue(String(s.capacity)); }}
-                          title="修改上限人數"
-                          style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          ✏️ 改
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <StatusPill status={s.status} />
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => toggleActive(s.id, s.status)}
-                      style={{
-                        padding: '5px 10px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: s.status === 'open' ? '#fef2f2' : '#dcfce7',
-                        color: s.status === 'open' ? '#dc2626' : '#16a34a',
-                      }}
-                    >
-                      {s.status === 'open' ? '關閉' : '開啟'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <section className="tp-guide-panel">
+        <div className="tp-guide-actions-row" style={{ marginTop: 0 }}>
+          {(['upcoming', 'all', 'past'] as Filter[]).map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={filter === item ? 'tp-btn tp-btn-primary' : 'tp-btn tp-btn-ghost'}
+              onClick={() => setFilter(item)}
+            >
+              {{ upcoming: '即將出發', all: '全部', past: '已結束' }[item]}
+            </button>
+          ))}
         </div>
-      )}
-    </div>
-  );
-}
+      </section>
 
-function StatusPill({ status }: { status: string }) {
-  const map: Record<string, { bg: string; text: string; label: string }> = {
-    open: { bg: '#dcfce7', text: '#16a34a', label: '開放' },
-    full: { bg: '#fef3c7', text: '#d97706', label: '額滿' },
-    cancelled: { bg: '#fee2e2', text: '#dc2626', label: '已關閉' },
-  };
-  const c = map[status] || { bg: '#f3f4f6', text: '#6b7280', label: status };
-  return (
-    <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 6, background: c.bg, color: c.text, fontSize: 12, fontWeight: 600 }}>
-      {c.label}
-    </span>
+      <section className="tp-guide-panel">
+        {loading ? (
+          <div className="tp-guide-empty">載入場次中…</div>
+        ) : filtered.length === 0 ? (
+          <div className="tp-guide-empty">目前沒有符合條件的場次。</div>
+        ) : (
+          <div className="tp-guide-table-shell">
+            <table className="tp-guide-table">
+              <thead>
+                <tr>
+                  <th>行程</th>
+                  <th>方案</th>
+                  <th>日期</th>
+                  <th>已訂 / 容量</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((schedule) => (
+                  <tr key={schedule.id}>
+                    <td>
+                      <strong>{schedule.tourTitle}</strong>
+                      {schedule.guideNote && <div className="tp-guide-meta">{schedule.guideNote}</div>}
+                    </td>
+                    <td>{schedule.planName}</td>
+                    <td>
+                      {new Date(schedule.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}
+                      <div className="tp-guide-meta">
+                        {new Date(schedule.date).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </td>
+                    <td>
+                      {editingCap === schedule.id ? (
+                        <div className="tp-guide-actions-row" style={{ marginTop: 0 }}>
+                          <input
+                            className="tp-guide-input"
+                            value={capValue}
+                            type="number"
+                            min={schedule.bookedCount}
+                            onChange={(e) => setCapValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') updateCapacity(schedule.id);
+                              if (e.key === 'Escape') setEditingCap(null);
+                            }}
+                            autoFocus
+                            style={{ maxWidth: 96 }}
+                          />
+                          <button type="button" className="tp-btn tp-btn-primary" onClick={() => updateCapacity(schedule.id)}>
+                            儲存
+                          </button>
+                          <button type="button" className="tp-btn tp-btn-ghost" onClick={() => setEditingCap(null)}>
+                            取消
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="tp-guide-actions-row" style={{ marginTop: 0 }}>
+                          <span>{schedule.bookedCount} / {schedule.capacity}</span>
+                          <button
+                            type="button"
+                            className="tp-btn tp-btn-ghost"
+                            onClick={() => {
+                              setEditingCap(schedule.id);
+                              setCapValue(String(schedule.capacity));
+                            }}
+                          >
+                            修改容量
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`tp-guide-status ${statusClass(schedule.status)}`}>
+                        {schedule.status === 'open' ? '開放' : schedule.status === 'full' ? '額滿' : schedule.status === 'cancelled' ? '已關閉' : schedule.status}
+                      </span>
+                    </td>
+                    <td>
+                      <button type="button" className={schedule.status === 'open' ? 'tp-btn tp-btn-ghost' : 'tp-btn tp-btn-primary'} onClick={() => toggleActive(schedule.id, schedule.status)}>
+                        {schedule.status === 'open' ? '關閉' : '開啟'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

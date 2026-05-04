@@ -4,70 +4,63 @@ const faqs = [
   {
     category: '預訂與付款',
     items: [
-      { q: '如何預約導遊行程？', a: '選擇行程後點擊「立即預約」，填寫聯絡資訊並完成付款即可。我們支援信用卡與 LINE Pay。' },
-      { q: '付款後多久會收到確認？', a: '付款成功後系統會立即發送確認信到您的 Email。導遊通常會在 24 小時內聯繫您確認細節。' },
-      { q: '可以先預留行程、之後再付款嗎？', a: '目前需完成付款才算確認預約。建議您在確定出發時間後再完成訂單，避免因名額已滿而無法預約。' },
+      ['如何預約導遊行程？', '選定行程後直接下單，填寫聯絡資料並完成付款即可。'],
+      ['付款後多久收到確認？', '付款成功後會建立訂單，導遊或平台會依流程確認後續細節。'],
+      ['可以先卡位再付款嗎？', '目前仍以完成付款作為保留席位的依據。'],
     ],
   },
   {
     category: '退款與取消',
     items: [
-      { q: '退款政策是什麼？', a: '活動開始前 48 小時以上取消，全額退款。活動前 24–48 小時取消，退款 50%。活動前 24 小時內取消，不予退款（特殊情況除外）。' },
-      { q: '如果導遊取消行程怎麼辦？', a: '若因導遊或平台原因取消，將全額退款，並協助您重新安排或推薦替代行程。' },
-      { q: '遇到惡劣天氣可以取消嗎？', a: '若天氣條件危及安全，導遊有權取消並全額退款。請在出發前與導遊確認天氣狀況。' },
+      ['退款政策怎麼算？', '活動 48 小時前取消可全額退款；24-48 小時為 50%；24 小時內原則上不退款。'],
+      ['如果導遊取消呢？', '若因導遊或平台因素取消，將協助全額退款或改安排替代方案。'],
+      ['惡劣天氣可以取消嗎？', '以安全為前提，必要時導遊可取消並走退款流程。'],
     ],
   },
   {
-    category: '關於導遊',
+    category: '導遊與平台',
     items: [
-      { q: '導遊都有認證嗎？', a: '所有導遊都需通過實名 KYC 身份認證與平台審核，確認其導覽資格與背景。' },
-      { q: '可以指定導遊語言嗎？', a: '每位導遊的頁面上都會標示服務語言。目前多數導遊提供中文（繁體）服務，部分導遊可提供英文服務。' },
-      { q: '如何評價導遊？', a: '活動結束後您會收到評價邀請。我們鼓勵旅客分享真實體驗，幫助其他旅客做出更好的選擇。' },
-    ],
-  },
-  {
-    category: '其他',
-    items: [
-      { q: '可以包場（企業、家族包團）嗎？', a: '可以！請透過「聯絡我們」頁面或直接聯繫導遊，我們可以為您量身規劃包場行程。' },
-      { q: '行程中發生意外怎麼辦？', a: '活動當天如有緊急狀況，請直接聯繫導遊。平台緊急熱線也會在 30 分鐘內回應。' },
-      { q: '想成為導遊怎麼申請？', a: '請前往「成為導遊」頁面填寫申請表，審核通過後即可上架行程。' },
+      ['導遊有審核嗎？', '有，平台會做實名與資格審核，並持續優化導遊端流程。'],
+      ['可以指定語言嗎？', '每位導遊頁面會標示可服務語言，預約前可先確認。'],
+      ['想成為導遊怎麼做？', '可前往導遊申請頁填寫資料，通過審核後即可進入後續流程。'],
     ],
   },
 ];
 
 export default function FaqPage() {
   return (
-    <main className="tp-container" style={{ paddingBottom: 56 }}>
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
-        <Link href="/">首頁</Link> &gt; 常見問題
-      </div>
+    <main className="tp-container tp-editorial-page">
+      <section className="tp-editorial-hero">
+        <p className="tp-editorial-kicker">faq</p>
+        <h1>把你最常問的事，整理成可以快速找到答案的 field notes。</h1>
+        <p className="tp-editorial-lead">
+          我把原本 FAQ 內容保留下來，只重做層次與版型，讓預訂、付款、退款、導遊審核這些問題更容易掃讀。
+        </p>
+      </section>
 
-      <h1 style={{ marginTop: 20, marginBottom: 4 }}>常見問題</h1>
-      <p style={{ color: 'var(--tp-muted)', marginBottom: 36, fontSize: 16 }}>找不到答案？歡迎<Link href="/contact" style={{ color: 'var(--tp-primary)' }}>聯絡我們</Link>。</p>
-
-      <div style={{ display: 'grid', gap: 36 }}>
+      <section className="tp-editorial-section tp-editorial-grid">
         {faqs.map((section) => (
-          <section key={section.category}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--tp-primary)', marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--tp-primary)' }}>
-              {section.category}
-            </h2>
-            <div style={{ display: 'grid', gap: 12 }}>
-              {section.items.map((item, i) => (
-                <div key={i} style={{ background: 'var(--tp-bg-soft)', borderRadius: 10, padding: '16px 18px', border: '1px solid var(--tp-border)' }}>
-                  <p style={{ fontWeight: 700, margin: '0 0 6px', fontSize: 15 }}>Q：{item.q}</p>
-                  <p style={{ color: 'var(--tp-muted)', margin: 0, lineHeight: 1.8, fontSize: 14 }}>A：{item.a}</p>
+          <article key={section.category} className="tp-editorial-card-soft">
+            <h2>{section.category}</h2>
+            <div className="tp-editorial-grid">
+              {section.items.map(([q, a]) => (
+                <div key={q} className="tp-editorial-card">
+                  <h3>{q}</h3>
+                  <p>{a}</p>
                 </div>
               ))}
             </div>
-          </section>
+          </article>
         ))}
-      </div>
+      </section>
 
-      <div style={{ marginTop: 40, textAlign: 'center', padding: '28px 20px', background: 'var(--tp-bg-soft)', borderRadius: 12, border: '1px solid var(--tp-border)' }}>
-        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 8px' }}>還有其他問題？</p>
-        <p style={{ color: 'var(--tp-muted)', margin: '0 0 14px', fontSize: 14 }}>我們的客服團隊在 1–2 個工作天內回覆</p>
-        <Link href="/contact" className="tp-btn tp-btn-primary" style={{ padding: '10px 28px' }}>聯絡我們</Link>
-      </div>
+      <section className="tp-editorial-section tp-editorial-card">
+        <h2>還是沒找到答案？</h2>
+        <p>如果你的問題跟訂單、退款、活動當天狀況有關，直接聯絡我們會更快。</p>
+        <div className="tp-member-actions-row" style={{ marginTop: 12 }}>
+          <Link href="/contact" className="tp-btn tp-btn-primary">聯絡我們</Link>
+        </div>
+      </section>
     </main>
   );
 }

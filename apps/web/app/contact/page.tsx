@@ -1,67 +1,64 @@
 import Link from 'next/link';
 
+const contactCards = [
+  { title: 'Email', value: 'hello@tourplatform.tw', note: '一般詢問 / 合作提案 / 媒體聯繫' },
+  { title: '客服時段', value: '平日 09:00 - 18:00', note: '活動當天緊急問題優先處理' },
+  { title: '回覆節奏', value: '1-2 個工作天', note: '急件請在訊息中註明活動日期與訂單資訊' },
+];
+
 export default function ContactPage() {
   return (
-    <main className="tp-container" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>首頁 &gt; 聯絡我們</div>
+    <main className="tp-container tp-editorial-page">
+      <section className="tp-editorial-hero">
+        <p className="tp-editorial-kicker">contact</p>
+        <h1>需要協助、合作、包團，或只是想先問清楚，都可以直接來找我們。</h1>
+        <p className="tp-editorial-lead">
+          我們保留聯絡頁的原始用途，但把它整理成更像 concierge desk 的感覺：該找誰、多久回、要附什麼資訊，一眼看懂。
+        </p>
+      </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 32, marginTop: 20 }}
-        className="contact-grid">
-        <style>{`
-          @media (min-width: 640px) {
-            .contact-grid { grid-template-columns: 1fr 1fr !important; }
-          }
-        `}</style>
-        <div>
-          <h1>聯絡我們</h1>
-          <p style={{ color: 'var(--tp-muted)', lineHeight: 1.8, marginBottom: 24 }}>
-            有任何問題、合作提案或回饋？歡迎透過以下表單與我們聯繫。我們會在 1-2 個工作天內回覆。
-          </p>
-
-          <form style={{ display: 'grid', gap: 14 }}>
-            <label style={{ display: 'block' }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>姓名 *</span>
-              <input type="text" placeholder="您的姓名" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
-            </label>
-            <label style={{ display: 'block' }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>電子信箱 *</span>
-              <input type="email" placeholder="you@example.com" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
-            </label>
-            <label style={{ display: 'block' }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>主題</span>
-              <select style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }}>
-                <option>一般詢問</option>
-                <option>訂單問題</option>
-                <option>導遊合作</option>
-                <option>企業包團</option>
-                <option>媒體合作</option>
-                <option>其他</option>
-              </select>
-            </label>
-            <label style={{ display: 'block' }}>
-              <span style={{ fontWeight: 700, fontSize: 14 }}>訊息 *</span>
-              <textarea rows={5} placeholder="請輸入您的訊息⋯"
-                style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
-            </label>
-            <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '12px 0', fontSize: 16 }}>送出訊息</button>
+      <section className="tp-editorial-section tp-editorial-grid-two">
+        <article className="tp-editorial-card">
+          <h2>留下訊息</h2>
+          <form className="tp-auth-form">
+            <div className="tp-auth-field">
+              <label htmlFor="name">姓名 *</label>
+              <input id="name" className="tp-auth-input" type="text" placeholder="你的名字" />
+            </div>
+            <div className="tp-auth-field">
+              <label htmlFor="email">電子信箱 *</label>
+              <input id="email" className="tp-auth-input" type="email" placeholder="you@example.com" />
+            </div>
+            <div className="tp-auth-field">
+              <label htmlFor="topic">主題</label>
+              <input id="topic" className="tp-auth-input" type="text" placeholder="例如：訂單問題 / 企業包團 / 媒體合作" />
+            </div>
+            <div className="tp-auth-field">
+              <label htmlFor="message">訊息 *</label>
+              <textarea id="message" className="tp-auth-textarea" placeholder="請描述你的需求、活動日期、預計人數或訂單編號…" />
+            </div>
+            <button type="submit" className="tp-btn tp-btn-primary">送出訊息</button>
+            <p className="tp-auth-footnote">目前此頁先統一成 MIDAO UI，送出邏輯維持後續串接空間。</p>
           </form>
-        </div>
+        </article>
 
-        <div style={{ paddingTop: 0 }}>
-          <div style={{ background: 'var(--tp-bg-soft)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
-            <h3 style={{ marginTop: 0 }}>📧 Email</h3>
-            <p style={{ color: 'var(--tp-muted)' }}>hello@tourplatform.tw</p>
-          </div>
-          <div style={{ background: 'var(--tp-bg-soft)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
-            <h3 style={{ marginTop: 0 }}>📞 客服熱線</h3>
-            <p style={{ color: 'var(--tp-muted)' }}>0800-XXX-XXX（平日 9:00-18:00）</p>
-          </div>
-          <div style={{ background: 'var(--tp-bg-soft)', borderRadius: 12, padding: 24 }}>
-            <h3 style={{ marginTop: 0 }}>⏰ 回覆時間</h3>
-            <p style={{ color: 'var(--tp-muted)' }}>一般詢問：1-2 個工作天<br />緊急問題（活動當天）：30 分鐘內</p>
-          </div>
+        <div className="tp-editorial-grid">
+          {contactCards.map((card) => (
+            <article key={card.title} className="tp-editorial-card-soft">
+              <h3>{card.title}</h3>
+              <p style={{ color: 'var(--tp-text)', fontWeight: 700 }}>{card.value}</p>
+              <p>{card.note}</p>
+            </article>
+          ))}
+          <article className="tp-editorial-card">
+            <h3>常見捷徑</h3>
+            <div className="tp-member-actions-row" style={{ marginTop: 12 }}>
+              <Link href="/faq" className="tp-btn tp-btn-ghost">先看 FAQ</Link>
+              <Link href="/guide/apply" className="tp-btn tp-btn-ghost">導遊申請</Link>
+            </div>
+          </article>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
