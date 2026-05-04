@@ -1919,7 +1919,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   min-height: 640px;
   background:
     linear-gradient(180deg, rgba(26, 22, 16, 0.20) 0%, rgba(26, 22, 16, 0.52) 70%, rgba(26, 22, 16, 0.82) 100%),
-    url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80') center/cover no-repeat;
+    url('https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80') center 34% / cover no-repeat;
 }
 
 .midao-hero-overlay {
@@ -2009,7 +2009,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 .midao-copy {
-  margin-top: auto;
+  margin-top: clamp(56px, 12vh, 96px);
   padding-bottom: 8px;
   color: #f7f1e9;
 }
@@ -2379,6 +2379,14 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .midao-hero,
   .midao-hero-content {
     min-height: 760px;
+  }
+
+  .midao-hero {
+    background-position: center 40%;
+  }
+
+  .midao-copy {
+    margin-top: clamp(72px, 10vh, 120px);
   }
 
   .midao-copy h1 {
