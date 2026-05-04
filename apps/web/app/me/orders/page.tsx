@@ -41,7 +41,7 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [authChecking, setAuthChecking] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [userName, setUserName] = useState('');
+  const [userName, setUserName] = useState<string>('');
   const [tab, setTab] = useState<'all' | 'active' | 'done'>('all');
 
   const fetchOrders = async () => {
@@ -75,7 +75,7 @@ export default function MyOrdersPage() {
       setAuthChecking(false);
       void fetchOrders();
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const filteredOrders = useMemo(() => {
     if (tab === 'active') return orders.filter((order) => ['pending_payment', 'paid', 'confirmed', 'refund_pending'].includes(order.status));

@@ -1,5 +1,7 @@
 # Midao Mobile Home Implementation Plan
 
+相關品牌資產索引：`docs/design/midao-brand-assets.md`
+
 ## Phase order
 1. `MidaoIcon.tsx`
 2. `MidaoLogo.tsx`

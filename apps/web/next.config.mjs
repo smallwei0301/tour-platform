@@ -19,10 +19,22 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  webpack: (config) => {
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      {
+        module: /@opentelemetry\/instrumentation/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+    ];
+    return config;
+  },
 };
 
 // Allow bypassing Sentry build wrapping via DISABLE_SENTRY_BUILD=1
-const disableSentryBuild = process.env.DISABLE_SENTRY_BUILD === '1';
+// Also auto-disable when no Sentry DSN is present, so local/non-Sentry builds stay lean.
+const hasSentryDsn = !!(process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN);
+const disableSentryBuild = process.env.DISABLE_SENTRY_BUILD === '1' || !hasSentryDsn;
 
 export default disableSentryBuild
   ? nextConfig

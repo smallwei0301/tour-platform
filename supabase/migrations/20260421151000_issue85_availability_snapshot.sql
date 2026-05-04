@@ -9,9 +9,16 @@ CREATE TABLE IF NOT EXISTS activity_availability_daily (
   total_booked integer NOT NULL DEFAULT 0,
   remaining integer NOT NULL DEFAULT 0,
   is_open boolean NOT NULL DEFAULT false,
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (activity_id, date, plan_id)
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS activity_availability_daily_plan_unique_idx
+  ON activity_availability_daily(activity_id, date, plan_id)
+  WHERE plan_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS activity_availability_daily_all_plan_unique_idx
+  ON activity_availability_daily(activity_id, date)
+  WHERE plan_id IS NULL;
 
 CREATE INDEX IF NOT EXISTS activity_availability_daily_lookup_idx
   ON activity_availability_daily(activity_id, date, is_open);
@@ -44,7 +51,7 @@ BEGIN
     SELECT
       s.activity_id,
       (s.start_at AT TIME ZONE 'Asia/Taipei')::date AS date,
-      s.plan_id,
+      NULLIF(btrim(s.plan_id), '') AS plan_id,
       GREATEST(COALESCE(s.capacity, 0), 0) AS capacity,
       GREATEST(COALESCE(s.booked_count, 0), 0) AS booked,
       COALESCE(s.status, 'open') AS status
@@ -62,6 +69,7 @@ BEGIN
       GREATEST(SUM(capacity) - SUM(booked), 0)::int AS remaining,
       BOOL_OR(status = 'open') AND (SUM(capacity) - SUM(booked) > 0) AS is_open
     FROM base
+    WHERE plan_id IS NOT NULL
     GROUP BY activity_id, date, plan_id
   ),
   all_plan AS (

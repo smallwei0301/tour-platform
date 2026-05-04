@@ -105,7 +105,6 @@ export function Navbar() {
                 </Link>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {user.user_metadata?.avatar_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={user.user_metadata.avatar_url}
                       alt={displayName}

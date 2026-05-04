@@ -62,6 +62,8 @@
 - `05-business/**`
 - `06-legal/**`
 - `04-tech/03-dev-timeline/**`
+- `design/midao-mobile-home-implementation-plan.md`（Midao 首頁重建實作分期）
+- `design/midao-brand-assets.md`（Midao 首頁品牌 logo 資產索引）
 
 ### C. 需要後續持續整理的區塊
 - `04-tech/03-dev-timeline/`：歷史很多，應逐步轉為「索引 + 關鍵里程碑」

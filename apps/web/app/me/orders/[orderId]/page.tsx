@@ -98,7 +98,7 @@ export default function OrderDetailPage() {
       void fetch('/api/me/csrf', { cache: 'no-store' });
       void loadOrder();
     });
-  }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [orderId]);
 
   const handleCancel = async () => {
     setCancelling(true);

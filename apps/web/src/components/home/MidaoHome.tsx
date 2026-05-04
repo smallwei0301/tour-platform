@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { featuredRoutes } from '../../../data/midaoHomeData';
+import MidaoLogo from '../midao/MidaoLogo';
 
 const quickFilters = [
   { label: '柴山探洞', href: '/activities/kaohsiung/kaohsiung-chaishan-cave-experience' },
@@ -25,7 +26,9 @@ export function MidaoHome() {
         <div className="midao-shell midao-hero-content">
           <header className="midao-topbar">
             <Link href="/" className="midao-brand" aria-label="祕島首頁">
-              <span className="midao-brand-mark">◌</span>
+              <span className="midao-brand-mark">
+                <MidaoLogo />
+              </span>
               <span>
                 <strong>祕島</strong>
                 <small>MIDAO · SECRET ISLE</small>

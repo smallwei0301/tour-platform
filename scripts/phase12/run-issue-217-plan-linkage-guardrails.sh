@@ -4,9 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$ROOT_DIR"
 
+DB_MODE="env_psql"
 if [[ -z "${DATABASE_URL:-}" && -z "${PGHOST:-}" ]]; then
-  echo "[ERROR] DATABASE_URL 或 PGHOST/PG* 未設定，無法執行 issue-217 plan-linkage guardrails" >&2
-  exit 1
+  DB_MODE="supabase_linked"
 fi
 
 TS="$(date +%Y%m%d-%H%M%S)"
@@ -17,8 +17,15 @@ SQL_FILE="supabase/scripts/phase12/issue-217-plan-linkage-guardrails.sql"
 DB_OUT="$OUT_DIR/issue-217-plan-linkage-guardrails-output.txt"
 SUMMARY_OUT="$OUT_DIR/summary.md"
 
-echo "[INFO] Running issue-217 guardrail SQL pack: $SQL_FILE"
-if [[ -n "${DATABASE_URL:-}" ]]; then
+SQL_SOURCE="$SQL_FILE"
+if [[ "$DB_MODE" == "supabase_linked" ]]; then
+  SQL_SOURCE="supabase/scripts/phase12/issue-217-plan-linkage-guardrails.linked.sql"
+fi
+
+echo "[INFO] Running issue-217 guardrail SQL pack: $SQL_SOURCE"
+if [[ "$DB_MODE" == "supabase_linked" ]]; then
+  npx -y supabase db query --linked --file "$SQL_SOURCE" --output table --agent=no | tee "$DB_OUT"
+elif [[ -n "${DATABASE_URL:-}" ]]; then
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$SQL_FILE" | tee "$DB_OUT"
 else
   psql -v ON_ERROR_STOP=1 -f "$SQL_FILE" | tee "$DB_OUT"
@@ -28,6 +35,8 @@ fi
   echo "# Issue #217 Option-B Plan Linkage Guardrail Summary"
   echo
   echo "- executed_at: $(date -Iseconds)"
+  echo "- db_mode: $DB_MODE"
+  echo "- sql_source: \`$SQL_SOURCE\`"
   echo "- out_dir: \`$OUT_DIR\`"
   echo "- sql_output: \`$DB_OUT\`"
   echo
