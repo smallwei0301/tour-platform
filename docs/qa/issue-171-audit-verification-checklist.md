@@ -46,19 +46,38 @@
 - Commit trace: `c48401f` (`fix(payment-callback): sync orders.payment_status on paid callback replay (#213)`)
 - Grounded effect: callback paid/replay path 與 `orders.payment_status` 同步行為已有落地，應視為既有證據，不在本 #221 重新實作。
 
+### 2.4 Child #236 landed (payment-init audit verification)
+- Issue: #236 (closed)
+- Landing PR: #238 (merged)
+- Grounded artifact: `reports/issue-236/payment-init-audit-verification.md`
+- Grounded effect: 補齊 payment-init critical write path 的驗證證據，納入 parent truth gate。
+
+### 2.5 Child #257 landed (admin-manual cross-entry consistency)
+- Issue: #257 (closed)
+- Landing PR: #258 (merged)
+- Grounded artifact: `reports/issue-257/admin-manual-cross-entry-consistency-report.md`
+- Grounded effect: 補齊 admin-manual（POS/manual cross-entry）一致性驗證證據。
+
+### 2.6 Child #259 landed (booking status manual transition audit pack)
+- Issue: #259 (closed)
+- Landing PR: #260 (merged)
+- Merge commit: `63e815613c945762f8dfd4f4346b33d65f6a826f`
+- Grounded artifact: `docs/qa/issue-259-booking-status-manual-transition-audit-pack.md`
+- Grounded effect: 補齊 booking status manual transition 的 audit write-chain 證據。
+
 ---
 
 ## 3) Critical write-path coverage matrix (parent truth table)
 
 | Write Path | Current Status | Grounded Evidence | Gap Notes |
 |---|---|---|---|
-| booking/create | **Partially Covered** | 既有 booking/create verification 已被 parent children 採納（先前 accepted slice） | 需與 parent gate 的統一模板對齊（同一 decision pack 命名/彙整） |
-| booking/cancel | **Covered** | #210 → PR #211 → `docs/qa/issue-210-booking-cancel-verification-checklist.md` + `reports/issue-210/*` | 仍需在 parent #171 統一 gate 中納入跨路徑 decision 彙整 |
-| payment-init (建立付款意圖/付款請求) | **Still Missing** | 尚無對應已驗收 child slice 證據 | issue #171 明確列為 critical write path；需獨立 child slice 補齊並納入 parent gate |
+| booking/create | **Partially Covered** | 既有 booking/create verification 已被 parent children 採納（先前 accepted slice） | 仍需與 parent gate 的統一模板對齊（同一 decision pack 命名/彙整） |
+| booking/cancel | **Covered** | #210 → PR #211 → `docs/qa/issue-210-booking-cancel-verification-checklist.md` + `reports/issue-210/*` | 無新增 code gap；待 parent decision pack 彙整 |
+| payment-init (建立付款意圖/付款請求) | **Covered** | #236 → PR #238 → `reports/issue-236/payment-init-audit-verification.md` | 已有落地證據，僅待 parent 統一收斂結論 |
 | payment callback → payment_status sync | **Covered** | #197 closed + PR #213 (`c48401f`) | 屬既有落地，不應重開 scope |
 | refund_complete → payment_events(refunded) | **Covered** | #208 → PR #209 (`cfbe5b3`) | 屬既有落地，不應重開 scope |
-| admin-manual audit writes（POS / LINE / 後台人工異動） | **Still Missing** | 無對應已驗收 child slice 證據 | 路徑名稱需與 issue #171 文案對齊；後續以 child issues 分批補齊 |
-| Cross-path consolidated readiness report (#171 final gate) | **Still Missing** | 尚無單一 parent-level consolidated report | 本文件先建立門檻，後續以 child evidence 疊代收斂 |
+| admin-manual audit writes（POS / LINE / 後台人工異動） | **Covered** | #257 → PR #258 → `reports/issue-257/admin-manual-cross-entry-consistency-report.md`; #259 → PR #260 → `docs/qa/issue-259-booking-status-manual-transition-audit-pack.md` | 主要子路徑已補齊；仍需與 booking/create 一併完成 parent-level 最終 gate |
+| Cross-path consolidated readiness report (#171 final gate) | **Covered (this slice)** | `docs/qa/issue-171-parent-convergence-summary-2026-05-03.md` | 此次新增單一 convergence artifact；決策仍依 remaining partial path 評估 |
 
 ---
 
@@ -90,9 +109,9 @@
 **Decision: HOLD**
 
 Reason (truthful):
-- 已有落地證據：#208、#210、#197 對應的關鍵子路徑已可被引用
-- 但 parent-level 全路徑收斂仍未完成，仍存在 **Still Missing** critical write paths（含 payment-init、admin-manual audit writes）
-- 因此 #171 readiness 不能標為 GO，也不應誤報為全阻塞（已非全空白）
+- 已有落地證據：#208、#210、#197、#236、#257、#259 對應關鍵子路徑已可被引用。
+- 本輪已補上單一 parent convergence artifact，但 `booking/create` 仍為 **Partially Covered**，尚未達成全 critical paths = Covered 的 GO 條件。
+- 因此 #171 readiness 目前維持 HOLD（可收斂、不可誤報 closable）。
 
 ---
 
