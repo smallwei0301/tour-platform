@@ -13,7 +13,8 @@ export function HeroSection() {
         backgroundPosition: 'center',
         minHeight: '560px',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
+        paddingTop: '56px',
       }}
     >
       <div className="tp-container" style={{ textAlign: 'left', alignItems: 'flex-start' }}>
