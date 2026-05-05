@@ -66,9 +66,12 @@ export function Navbar() {
     <header className="tp-navbar">
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo / 祕島區域 */}
-        <Link href="/" className="tp-logo" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span aria-hidden>🏝️</span>
-          <span>祕島 MIDAO</span>
+        <Link href="/" className="tp-logo" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span aria-hidden style={{ fontSize: 20 }}>🏝️</span>
+          <span style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
+            <strong style={{ fontSize: 14 }}>祕島</strong>
+            <span style={{ fontSize: 11, letterSpacing: 0.6, opacity: 0.85 }}>MIDAO · SECRET ISLE</span>
+          </span>
         </Link>
 
         {/* Desktop: search bar */}
