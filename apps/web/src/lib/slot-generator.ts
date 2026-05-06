@@ -431,24 +431,28 @@ export function slotConflictsWithBooking(
   bufferBefore: number,
   bufferAfter: number
 ): boolean {
-  // Expand the slot to include the buffers for conflict detection
-  const slotWithBufferStart = addMinutes(slot.startAt, -bufferBefore);
-  const slotWithBufferEnd = addMinutes(slot.endAt, bufferAfter);
-
   for (const booking of bookings) {
     const bookingStart = new Date(booking.start_at);
     const bookingEnd = new Date(booking.end_at);
 
-    // Also consider the booking's own buffers if specified
+    // Availability-rule buffers protect time around existing bookings.
+    // A new candidate slot must not overlap the booked time plus the
+    // required before/after buffer window.
     const bookingBufferBefore = booking.buffer_before_minutes || 0;
     const bookingBufferAfter = booking.buffer_after_minutes || 0;
-    const bookingWithBufferStart = addMinutes(bookingStart, -bookingBufferBefore);
-    const bookingWithBufferEnd = addMinutes(bookingEnd, bookingBufferAfter);
+    const bookingWithBufferStart = addMinutes(
+      bookingStart,
+      -(bufferBefore + bookingBufferBefore)
+    );
+    const bookingWithBufferEnd = addMinutes(
+      bookingEnd,
+      bufferAfter + bookingBufferAfter
+    );
 
     if (
       rangesOverlap(
-        slotWithBufferStart,
-        slotWithBufferEnd,
+        slot.startAt,
+        slot.endAt,
         bookingWithBufferStart,
         bookingWithBufferEnd
       )
@@ -496,7 +500,7 @@ export function serializeSlots(
   return slots.map((slot) => ({
     startAt: formatDateWithTimezone(slot.startAt, timezone),
     endAt: formatDateWithTimezone(slot.endAt, timezone),
-    capacityLeft: Math.max(0, plan.max_participants - participants + 1),
+    capacityLeft: Math.max(0, plan.max_participants - participants),
     bookingType: plan.booking_type,
     isAvailable: true,
   }));

@@ -111,6 +111,8 @@
 - 回傳已序列化好的 client-ready slots
 
 #### Response
+> `capacityLeft` 語意：剩餘可預約名額（remaining participants），計算為 `maxParticipants - participants`，最小值為 `0`。此欄位應與前端 UI 文案「剩餘」一致。
+
 ```json
 {
   "success": true,

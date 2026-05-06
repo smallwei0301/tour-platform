@@ -384,7 +384,7 @@ test('successV2 response format matches API spec', () => {
   assert.equal(response.data.slots.length, 1);
   assert.ok(response.data.slots[0].startAt);
   assert.ok(response.data.slots[0].endAt);
-  assert.ok(typeof response.data.slots[0].capacityLeft === 'number');
+  assert.equal(response.data.slots[0].capacityLeft, 2);
   assert.ok(response.data.slots[0].bookingType);
   assert.ok(typeof response.data.slots[0].isAvailable === 'boolean');
 });
