@@ -45,6 +45,25 @@ function isValidPhone(phone) {
 }
 
 const VALID_CHANNELS = ['web', 'line', 'admin_pos'];
+const REUSABLE_PAYMENT_STATUSES = new Set(['pending', 'processing', 'created']);
+
+function isReusableCheckoutPayment(status) {
+  if (!status) return false;
+  return REUSABLE_PAYMENT_STATUSES.has(status);
+}
+
+function findReusableCheckoutPayment(payments) {
+  if (!payments || payments.length === 0) return null;
+
+  return (
+    payments.find(
+      (payment) =>
+        Boolean(payment?.id) &&
+        Boolean(payment?.trade_no) &&
+        isReusableCheckoutPayment(payment?.status)
+    ) || null
+  );
+}
 
 function parseAndValidateDraftBody(body) {
   if (!body || typeof body !== 'object') {
@@ -579,6 +598,42 @@ test('valid payment statuses', () => {
     assert.ok(typeof status === 'string');
     assert.ok(status.length > 0);
   });
+});
+
+test('isReusableCheckoutPayment only allows pending-like statuses', () => {
+  assert.equal(isReusableCheckoutPayment('created'), true);
+  assert.equal(isReusableCheckoutPayment('pending'), true);
+  assert.equal(isReusableCheckoutPayment('processing'), true);
+
+  assert.equal(isReusableCheckoutPayment('paid'), false);
+  assert.equal(isReusableCheckoutPayment('failed'), false);
+  assert.equal(isReusableCheckoutPayment('cancelled'), false);
+  assert.equal(isReusableCheckoutPayment('refunded'), false);
+  assert.equal(isReusableCheckoutPayment(null), false);
+});
+
+test('findReusableCheckoutPayment picks reusable payment from latest-first list', () => {
+  const latestFirstPayments = [
+    { id: 'pay_new_failed', trade_no: 'TN_NEW_FAILED', status: 'failed' },
+    { id: 'pay_old_pending', trade_no: 'TN_OLD_PENDING', status: 'pending' },
+  ];
+
+  const candidate = findReusableCheckoutPayment(latestFirstPayments);
+  assert.ok(candidate);
+  assert.equal(candidate.id, 'pay_old_pending');
+  assert.equal(candidate.trade_no, 'TN_OLD_PENDING');
+});
+
+test('findReusableCheckoutPayment rejects non-reusable or malformed payments', () => {
+  const noReusable = [
+    { id: 'pay_paid', trade_no: 'TN_PAID', status: 'paid' },
+    { id: 'pay_failed', trade_no: 'TN_FAILED', status: 'failed' },
+    { id: 'pay_missing_trade_no', trade_no: null, status: 'pending' },
+  ];
+
+  assert.equal(findReusableCheckoutPayment(noReusable), null);
+  assert.equal(findReusableCheckoutPayment([]), null);
+  assert.equal(findReusableCheckoutPayment(null), null);
 });
 
 // ============================================================================

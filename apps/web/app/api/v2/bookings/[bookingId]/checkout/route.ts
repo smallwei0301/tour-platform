@@ -19,6 +19,7 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../src/lib/api';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../../src/lib/ecpay';
+import { findReusableCheckoutPayment } from '../../../../../../src/lib/checkout-idempotency';
 
 // Validation helpers
 function isValidUuid(str: string): boolean {
@@ -36,6 +37,7 @@ type CheckoutBooking = {
   activity_plans: { name: string } | null;
   [key: string]: unknown;
 };
+
 
 // ECPay configuration
 const ECPAY_ENDPOINTS = {
@@ -176,7 +178,81 @@ export async function POST(
       request.headers.get('x-correlation-id')?.trim() ||
       `checkout-${bookingId}`;
 
-    // 3. Check ECPay credentials
+    // 3. Reuse existing pending payment if available (idempotent checkout)
+    const { data: existingPayments, error: existingPaymentError } = await supabase
+      .from('payments')
+      .select('id, trade_no, status')
+      .eq('order_id', order.id)
+      .eq('provider', provider)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (existingPaymentError) {
+      console.error('Error checking existing payment:', existingPaymentError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to check existing payment'), {
+        status: 500,
+      });
+    }
+
+    const reusablePayment = findReusableCheckoutPayment(existingPayments);
+    const shouldReusePayment = Boolean(reusablePayment);
+
+    let paymentId: string | null = null;
+    let merchantTradeNo: string;
+
+    if (reusablePayment) {
+      paymentId = reusablePayment.id;
+      merchantTradeNo = reusablePayment.trade_no!;
+    } else {
+      // 4. Check ECPay credentials
+      let hashKey: string;
+      let hashIV: string;
+      try {
+        const credentials = getECPayCredentials();
+        hashKey = credentials.hashKey;
+        hashIV = credentials.hashIV;
+      } catch (err) {
+        console.error('ECPay credentials error:', err);
+        return Response.json(errorV2('INTERNAL_ERROR', 'Payment provider not configured'), {
+          status: 500,
+        });
+      }
+
+      const merchantId = process.env.ECPAY_MERCHANT_ID;
+      if (!merchantId) {
+        return Response.json(errorV2('INTERNAL_ERROR', 'ECPAY_MERCHANT_ID not configured'), {
+          status: 500,
+        });
+      }
+
+      // 5. Generate merchant trade number
+      merchantTradeNo = generateMerchantTradeNo(bookingId);
+
+      // 6. Create payment record
+      const { data: payment, error: paymentError } = await supabase
+        .from('payments')
+        .insert({
+          order_id: order.id,
+          provider: provider,
+          trade_no: merchantTradeNo,
+          amount_twd: order.total_twd,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
+
+      if (paymentError || !payment) {
+        console.error('Error creating payment:', paymentError);
+        return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create payment'), {
+          status: 500,
+        });
+      }
+
+      paymentId = payment.id;
+
+    }
+
+    // 4b. Re-prepare credentials for payment params (shared path)
     let hashKey: string;
     let hashIV: string;
     try {
@@ -197,46 +273,13 @@ export async function POST(
       });
     }
 
-    // 4. Generate merchant trade number
-    const merchantTradeNo = generateMerchantTradeNo(bookingId);
-
-    // 5. Create payment record
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .insert({
-        order_id: order.id,
-        provider: provider,
-        trade_no: merchantTradeNo,
-        amount_twd: order.total_twd,
-        status: 'pending',
-      })
-      .select('id')
-      .single();
-
-    if (paymentError || !payment) {
-      console.error('Error creating payment:', paymentError);
-      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create payment'), {
+    if (!paymentId) {
+      return Response.json(errorV2('INTERNAL_ERROR', 'Payment session is not available'), {
         status: 500,
       });
     }
 
-    // 6. Create payment_event (initiated)
-    await supabase.from('payment_events').insert({
-      payment_id: payment.id,
-      event_type: 'initiated',
-      payload: {
-        bookingId,
-        orderId: order.id,
-        merchantTradeNo,
-        amount: order.total_twd,
-        provider,
-        sourceChannel,
-        correlationId,
-        auditSignal: 'line_liff_payment_init',
-      },
-    });
-
-    // 7. Build ECPay payment form parameters
+    // 8. Build ECPay payment form parameters
     const activities = checkoutBooking.activities;
     const plans = checkoutBooking.activity_plans;
     const activityTitle = activities?.title || '行程預訂';
@@ -266,14 +309,14 @@ export async function POST(
       // V2 fields for tracking
       CustomField1: bookingId,
       CustomField2: order.id,
-      CustomField3: payment.id,
+      CustomField3: paymentId,
       CustomField4: order.contact_email || '',
     };
 
     // Generate CheckMacValue
     const checkMacValue = generateCheckMacValue(ecpayParams, hashKey, hashIV);
 
-    // 8. Build payment form HTML
+    // 9. Build payment form HTML
     const formInputs = Object.entries({ ...ecpayParams, CheckMacValue: checkMacValue })
       .map(
         ([key, value]) =>
@@ -288,7 +331,23 @@ export async function POST(
 <script>document.getElementById('ecpay-form').submit();</script>
 `.trim();
 
-    // 9. Update booking status log
+    // 10. Create payment_event (initiated)
+    await supabase.from('payment_events').insert({
+      payment_id: paymentId,
+      event_type: shouldReusePayment ? 'initiated_reused' : 'initiated',
+      payload: {
+        bookingId,
+        orderId: order.id,
+        merchantTradeNo,
+        amount: order.total_twd,
+        provider,
+        sourceChannel,
+        correlationId,
+        auditSignal: 'line_liff_payment_init',
+      },
+    });
+
+    // 11. Update booking status log
     await supabase.from('booking_status_logs').insert({
       booking_id: bookingId,
       from_status: 'draft',
@@ -296,7 +355,7 @@ export async function POST(
       actor_role: 'system',
       reason: 'Checkout initiated',
       metadata: {
-        paymentId: payment.id,
+        paymentId,
         merchantTradeNo,
         provider,
         sourceChannel,
@@ -309,7 +368,7 @@ export async function POST(
     return Response.json(
       successV2({
         provider,
-        paymentId: payment.id,
+        paymentId,
         merchantTradeNo,
         correlationId,
         sourceChannel,
