@@ -13,6 +13,13 @@ interface RateLimitEntry {
   resetAt: number;
 }
 
+export interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+  maxRequests: number;
+}
+
 export class RateLimiter {
   private store = new Map<string, RateLimitEntry>();
   private readonly maxRequests: number;
@@ -29,13 +36,9 @@ export class RateLimiter {
 
   /**
    * Check if request is allowed
-   * @returns { allowed: boolean, remaining: number, resetAt: number }
+   * @returns { allowed: boolean, remaining: number, resetAt: number, maxRequests: number }
    */
-  check(identifier: string): {
-    allowed: boolean;
-    remaining: number;
-    resetAt: number;
-  } {
+  check(identifier: string): RateLimitResult {
     const key = this.getClientKey(identifier);
     const now = Date.now();
 
@@ -52,6 +55,7 @@ export class RateLimiter {
         allowed: true,
         remaining: this.maxRequests - 1,
         resetAt: entry.resetAt,
+        maxRequests: this.maxRequests,
       };
     }
 
@@ -65,6 +69,7 @@ export class RateLimiter {
       allowed,
       remaining,
       resetAt: entry.resetAt,
+      maxRequests: this.maxRequests,
     };
   }
 
@@ -119,7 +124,7 @@ export function createRateLimitResponse(
       status: 429,
       headers: {
         'Retry-After': String(retryAfter),
-        'X-RateLimit-Limit': '10',
+        'X-RateLimit-Limit': String(result.maxRequests),
         'X-RateLimit-Remaining': String(result.remaining),
         'X-RateLimit-Reset': String(result.resetAt),
       },
