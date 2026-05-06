@@ -377,10 +377,10 @@ test('slotConflictsWithBooking respects buffer_before', () => {
     }),
   ];
 
-  // Slot ending 30 min before booking - should conflict with 30 min buffer_before
+  // Slot ending inside the 30 min buffer_before window should conflict
   const bufferBeforeConflict = {
-    startAt: new Date('2026-04-21T00:30:00Z'), // 08:30 Taipei
-    endAt: new Date('2026-04-21T04:30:00Z'), // 12:30 Taipei
+    startAt: new Date('2026-04-21T00:45:00Z'), // 08:45 Taipei
+    endAt: new Date('2026-04-21T04:45:00Z'), // 12:45 Taipei
   };
   assert.equal(slotConflictsWithBooking(bufferBeforeConflict, bookings, 30, 0), true);
 
@@ -538,13 +538,28 @@ test('serializeSlots formats slots correctly', () => {
   ];
   const plan = createMockPlan();
 
-  const result = serializeSlots(slots, TIMEZONE_TAIPEI, plan, 2);
+  const result = serializeSlots(slots, TIMEZONE_TAIPEI, plan, 1);
   assert.equal(result.length, 1);
   assert.ok(result[0].startAt.includes('09:00:00'));
   assert.ok(result[0].endAt.includes('13:00:00'));
-  assert.equal(result[0].capacityLeft, 3); // max 4 - 2 + 1 = 3
+  assert.equal(result[0].capacityLeft, 3); // max 4 - 1 = 3
   assert.equal(result[0].bookingType, 'instant');
   assert.equal(result[0].isAvailable, true);
+});
+
+test('serializeSlots capacityLeft means remaining participants (max - participants, min 0)', () => {
+  const slots = [
+    { startAt: new Date('2026-04-20T01:00:00Z'), endAt: new Date('2026-04-20T05:00:00Z') },
+  ];
+  const plan = createMockPlan({ max_participants: 4 });
+
+  const participants1 = serializeSlots(slots, TIMEZONE_TAIPEI, plan, 1);
+  const participants2 = serializeSlots(slots, TIMEZONE_TAIPEI, plan, 2);
+  const participants4 = serializeSlots(slots, TIMEZONE_TAIPEI, plan, 4);
+
+  assert.equal(participants1[0].capacityLeft, 3);
+  assert.equal(participants2[0].capacityLeft, 2);
+  assert.equal(participants4[0].capacityLeft, 0);
 });
 
 // ============================================================================
