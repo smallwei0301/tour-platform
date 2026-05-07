@@ -48,3 +48,14 @@ test('checkout route contract smoke: has bookingId validation + provider flow + 
   assert.match(src, /paymentFormHtml/);
   assert.match(src, /merchantTradeNo/);
 });
+
+test('v2 order detail route contract smoke: has auth guard + ownership check', async () => {
+  const src = await readRoute('app/api/v2/orders/[orderId]/route.ts');
+
+  assert.match(src, /export\s+async\s+function\s+GET\s*\(/);
+  assert.match(src, /auth\.getUser\(\)/);
+  assert.match(src, /UNAUTHORIZED/);
+  assert.match(src, /FORBIDDEN/);
+  assert.match(src, /user_id/);
+  assert.match(src, /isOrderOwner/);
+});
