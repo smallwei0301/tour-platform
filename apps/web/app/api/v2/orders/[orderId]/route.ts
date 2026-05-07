@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
 import { createClient } from '../../../../../src/lib/supabase/server';
+import { isOrderOwner } from '../../../../../src/lib/v2-order-authz';
 
 type OrderItem = {
   id: string;
@@ -20,6 +21,7 @@ type OrderRow = {
   contact_name: string;
   contact_email: string;
   contact_phone: string;
+  user_id: string | null;
   source_channel: string;
   created_at: string;
   order_items: OrderItem[] | null;
@@ -42,9 +44,15 @@ export async function GET(
 
   try {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user?.id && !user?.email) {
+      return Response.json(errorV2('UNAUTHORIZED', 'Please login first'), { status: 401 });
+    }
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, status, payment_status, total_twd, people_count, contact_name, contact_email, contact_phone, source_channel, created_at, order_items(id, item_type, title, quantity, unit_price, subtotal_amount)')
+      .select('id, status, payment_status, total_twd, people_count, user_id, contact_name, contact_email, contact_phone, source_channel, created_at, order_items(id, item_type, title, quantity, unit_price, subtotal_amount)')
       .eq('id', orderId)
       .single();
 
@@ -53,6 +61,17 @@ export async function GET(
     }
 
     const typedOrder = order as OrderRow;
+    const hasAccess = isOrderOwner(typedOrder, {
+      id: user?.id ?? null,
+      email: user?.email ?? null,
+    });
+
+    if (!hasAccess) {
+      return Response.json(errorV2('FORBIDDEN', 'You are not allowed to access this order'), {
+        status: 403,
+      });
+    }
+
     const items = typedOrder.order_items ?? [];
     return Response.json(successV2({
       id: order.id,
