@@ -100,8 +100,7 @@ BEGIN
               AND pe.payload ? 'correlationId'
             ORDER BY pe.created_at ASC
             LIMIT 1
-          ),
-          'callback-' || v_booking.id::text
+          )
         ) INTO v_correlation_id;
 
         INSERT INTO booking_status_logs(
