@@ -29,5 +29,5 @@ test('resolvePlanBookingHref carries v2 params only when flag is on', () => {
     scheduleId: 'sch_1',
     useBookingV2: false,
   });
-  assert.equal(legacyHref, '/checkout?slug=kaohsiung-cave');
+  assert.equal(legacyHref, '/checkout?slug=kaohsiung-cave&scheduleId=sch_1');
 });
