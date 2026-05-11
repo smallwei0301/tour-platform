@@ -11,7 +11,16 @@ export async function GET(req: Request) {
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
   if (!process.env.SUPABASE_URL) {
-    return Response.json(ok({ monthlyBookings: 0, pendingBookings: [], upcomingSchedules: [] }));
+    return Response.json(ok({
+      monthlyBookings: 0,
+      pendingBookings: [],
+      upcomingSchedules: [],
+      monthGmvTwd: 0,
+      monthGmvOrderCount: 0,
+      revenueTrend6m: [],
+      expectedPayoutTwd: null,
+      nextPayoutDate: null,
+    }));
   }
 
   const supabase = await getSupabase();
@@ -27,7 +36,16 @@ export async function GET(req: Request) {
   const activityMap = Object.fromEntries((activities || []).map((a: any) => [a.id, a]));
 
   if (activityIds.length === 0) {
-    return Response.json(ok({ monthlyBookings: 0, pendingBookings: [], upcomingSchedules: [] }));
+    return Response.json(ok({
+      monthlyBookings: 0,
+      pendingBookings: [],
+      upcomingSchedules: [],
+      monthGmvTwd: 0,
+      monthGmvOrderCount: 0,
+      revenueTrend6m: [],
+      expectedPayoutTwd: null,
+      nextPayoutDate: null,
+    }));
   }
 
   // 2. Monthly bookings count (current month)
@@ -41,10 +59,10 @@ export async function GET(req: Request) {
     .in('activity_id', activityIds)
     .gte('created_at', monthStart.toISOString());
 
-  // 3. Recent pending/confirmed bookings (last 5)
+  // 3. Recent pending/confirmed bookings (last 5), including total_twd for AC6
   const { data: recentOrders } = await supabase
     .from('orders')
-    .select('id, contact_name, people_count, status, created_at, schedule_id, activity_id')
+    .select('id, contact_name, people_count, status, created_at, schedule_id, activity_id, total_twd')
     .in('activity_id', activityIds)
     .order('created_at', { ascending: false })
     .limit(5);
@@ -56,6 +74,7 @@ export async function GET(req: Request) {
     status: o.status,
     createdAt: o.created_at,
     tourTitle: activityMap[o.activity_id]?.title || '',
+    totalTwd: o.total_twd ?? 0,
   }));
 
   // 4. Upcoming schedules (next 7 days)
@@ -81,9 +100,55 @@ export async function GET(req: Request) {
     status: s.status,
   }));
 
+  // 5. Monthly GMV (Asia/Taipei month boundary) — AC1, AC3
+  const taipeiOffset = 8 * 60; // UTC+8 minutes
+  const taipeiNow = new Date(now.getTime() + taipeiOffset * 60000);
+  const gmvMonthStart = new Date(
+    Date.UTC(taipeiNow.getUTCFullYear(), taipeiNow.getUTCMonth(), 1) - taipeiOffset * 60000
+  );
+
+  // AC3: only paid/confirmed/completed orders count toward GMV
+  const gmvStatuses = ['paid', 'confirmed', 'completed'];
+
+  const { data: monthOrders } = await supabase
+    .from('orders')
+    .select('total_twd, created_at')
+    .in('activity_id', activityIds)
+    .in('status', gmvStatuses)
+    .gte('created_at', gmvMonthStart.toISOString());
+
+  const monthGmvTwd = (monthOrders ?? []).reduce((sum: number, o: any) => sum + (o.total_twd ?? 0), 0);
+  const monthGmvOrderCount = (monthOrders ?? []).length;
+
+  // 6. 6-month revenue trend — AC1
+  const revenueTrend6m: Array<{ month: string; gmvTwd: number; orderCount: number }> = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(taipeiNow);
+    d.setUTCMonth(d.getUTCMonth() - i);
+    const mStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1) - taipeiOffset * 60000);
+    const mEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) - taipeiOffset * 60000);
+    const { data: mOrders } = await supabase
+      .from('orders')
+      .select('total_twd')
+      .in('activity_id', activityIds)
+      .in('status', gmvStatuses)
+      .gte('created_at', mStart.toISOString())
+      .lt('created_at', mEnd.toISOString());
+    revenueTrend6m.push({
+      month: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`,
+      gmvTwd: (mOrders ?? []).reduce((s: number, o: any) => s + (o.total_twd ?? 0), 0),
+      orderCount: (mOrders ?? []).length,
+    });
+  }
+
   return Response.json(ok({
     monthlyBookings: monthlyBookings || 0,
     pendingBookings,
     upcomingSchedules,
+    monthGmvTwd,
+    monthGmvOrderCount,
+    revenueTrend6m,
+    expectedPayoutTwd: null,
+    nextPayoutDate: null,
   }));
 }
