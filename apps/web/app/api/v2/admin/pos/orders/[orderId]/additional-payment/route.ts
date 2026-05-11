@@ -62,6 +62,9 @@ export async function POST(
   try {
     const supabase = await createClient();
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return Response.json(errorV2('UNAUTHORIZED', 'Unauthorized'), { status: 401 });
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('id, status, payment_status, total_twd')
@@ -126,7 +129,6 @@ export async function POST(
     });
 
     const { error: auditError } = await supabase.from('audit_logs').insert({
-      id: crypto.randomUUID(),
       order_id: orderId,
       actor: body.adminUserId || 'admin',
       action: 'additional_payment_recorded',
@@ -140,7 +142,6 @@ export async function POST(
         tradeNo,
         note: body.note || null,
       },
-      created_at: paidAt,
     });
 
     if (auditError) {
