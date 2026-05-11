@@ -159,8 +159,8 @@ test('AC5: admin [id] PATCH normalizes code to UPPER+TRIM if code provided', () 
 
 // ── Unit tests: calculateDiscount pure function ───────────────────────────────
 
-// Import the function dynamically
-const { calculateDiscount } = await import(resolve(APPS_WEB, 'app/api/promo-codes/validate/route.ts'));
+// Import the pure utility function (no Next.js dependencies)
+const { calculateDiscount } = await import(resolve(APPS_WEB, 'src/lib/promo-discount.ts'));
 
 test('Unit: percentage discount = Math.floor(originalTotal * discountValue / 100)', () => {
   assert.strictEqual(calculateDiscount('percentage', 10, 1000), 100, '10% of 1000 = 100');

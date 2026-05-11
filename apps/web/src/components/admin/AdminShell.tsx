@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: '/admin/orders', label: '訂單管理', icon: '🧾' },
   { href: '/admin/refunds', label: '退款管理', icon: '↩️' },
   { href: '/admin/guides', label: '導遊審核', icon: '🧭' },
+  { href: '/admin/promo-codes', label: '折扣碼', icon: '🎟️' },
   { href: '/admin/operations-tracking', label: '操作追蹤', icon: '📈' },
   { href: '/admin/settings/kpi', label: '設定', icon: '⚙️' },
 ];
