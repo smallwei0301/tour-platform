@@ -86,3 +86,68 @@ export function getECPayCredentials() {
 
   return { hashKey, hashIV };
 }
+
+/**
+ * ECPay DoAction URL — used for AllRefund (Action=R)
+ * Reference: https://payment.ecpay.com.tw/Cashier/DoAction
+ */
+const ECPAY_DO_ACTION_URL =
+  process.env.ECPAY_ENV === 'production'
+    ? 'https://payment.ecpay.com.tw/Cashier/DoAction'
+    : 'https://payment-stage.ecpay.com.tw/Cashier/DoAction';
+
+export interface AllRefundParams {
+  merchantTradeNo: string;
+  tradeNo: string;
+  totalAmount: number;
+  reason?: string;
+}
+
+export interface AllRefundResult {
+  ok: boolean;
+  rtnCode: string;
+  rtnMsg: string;
+}
+
+/**
+ * Request full refund (AllRefund) via ECPay DoAction API
+ *
+ * Sends Action=R to trigger a full refund for the given trade.
+ * Returns parsed {ok, rtnCode, rtnMsg} — ok is true only when RtnCode === '1'.
+ *
+ * CONTRACT TESTS ONLY — do NOT make real ECPay API calls in tests.
+ */
+export async function requestAllRefund(
+  params: AllRefundParams
+): Promise<AllRefundResult> {
+  const merchantId = process.env.ECPAY_MERCHANT_ID ?? '';
+  const hashKey = process.env.ECPAY_HASH_KEY ?? '';
+  const hashIV = process.env.ECPAY_HASH_IV ?? '';
+
+  const payload: Record<string, string> = {
+    MerchantID: merchantId,
+    MerchantTradeNo: params.merchantTradeNo,
+    TradeNo: params.tradeNo,
+    Action: 'R', // R = Refund (AllRefund)
+    TotalAmount: String(params.totalAmount),
+  };
+
+  const checkMacValue = generateCheckMacValue(payload, hashKey, hashIV);
+  payload.CheckMacValue = checkMacValue;
+
+  const body = new URLSearchParams(payload).toString();
+  const res = await fetch(ECPAY_DO_ACTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+
+  const text = await res.text();
+  // ECPay DoAction returns: RtnCode=1&RtnMsg=Succeeded (or error code)
+  const parsed = Object.fromEntries(new URLSearchParams(text));
+  return {
+    ok: parsed.RtnCode === '1',
+    rtnCode: parsed.RtnCode ?? '',
+    rtnMsg: parsed.RtnMsg ?? '',
+  };
+}
