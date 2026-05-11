@@ -13,8 +13,6 @@ import { fail } from '../../../../src/lib/api';
 import { RateLimiter } from '../../../../src/lib/rate-limit';
 import { calculateDiscount } from '../../../../src/lib/promo-discount';
 
-// Re-export for backwards-compat / convenience
-export { calculateDiscount };
 
 // ── Rate limiter: 10 req/min per IP ───────────────────────────────────────────
 const promoValidateLimiter = new RateLimiter(10, 60 * 1000);
