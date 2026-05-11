@@ -213,9 +213,21 @@ export default function ActivitiesContent() {
                       </div>
                     )}
                     <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
-                    <p style={{ margin: '0 0 2px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                      ⭐ {a.ratingAvg?.toFixed(1) || '5.0'} · 📍 {a.region}
-                    </p>
+                    <div data-testid="activity-card-rating" style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 2px', fontSize: 13 }}>
+                      {a.ratingAvg != null ? (
+                        <>
+                          <span style={{ color: '#f59e0b' }}>⭐</span>
+                          <span>{a.ratingAvg.toFixed(1)}</span>
+                          <span style={{ color: 'var(--tp-muted)' }}>({a.reviewCount ?? 0}則)</span>
+                          <span style={{ color: 'var(--tp-muted)' }}>· 📍 {a.region}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span style={{ color: 'var(--tp-muted)' }} className="text-xs">尚無評價</span>
+                          <span style={{ color: 'var(--tp-muted)' }}>· 📍 {a.region}</span>
+                        </>
+                      )}
+                    </div>
                     {durationDisplay && (
                       <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
                         🕐 {durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人

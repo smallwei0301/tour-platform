@@ -1938,6 +1938,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
       id, slug, title, tagline, short_description, region, region_slug, category,
       price_twd, duration_minutes, min_participants, max_participants,
       cover_image_url, status, published_at,
+      rating_avg, review_count,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(display_name, profile_photo_url, rating_avg, review_count, slug)
     `)
@@ -1960,8 +1961,8 @@ export async function listPublishedActivitiesDb(filters = {}) {
     guideName: r.guide_profiles?.display_name || '',
     guideSlug: r.guide_slug || r.guide_profiles?.slug || '',
     guideAvatarUrl: r.guide_profiles?.profile_photo_url || '',
-    ratingAvg: r.guide_profiles?.rating_avg || 5.0,
-    reviewCount: r.guide_profiles?.review_count || 0
+    ratingAvg: r.rating_avg ?? null,
+    reviewCount: r.review_count ?? 0
   }));
 }
 
@@ -2098,6 +2099,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
       inclusions, exclusions, notices, refund_rules, refund_policy_type,
       safety_notice, faq, good_for, not_good_for, plans, status, published_at,
       itinerary, social_proof_quotes,
+      rating_avg, review_count,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(
         id, slug, display_name, headline, bio, region, languages, specialties,
@@ -2245,6 +2247,8 @@ export async function getActivityBySlugDb(slug, options = {}) {
     itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
     plans: act.plans || null,
     status: act.status,
+    ratingAvg: act.rating_avg ?? null,
+    reviewCount: act.review_count ?? 0,
     guide: {
       id: gp.id, slug: gp.slug, displayName: gp.display_name,
       headline: gp.headline, bio: gp.bio, region: gp.region,
@@ -2419,6 +2423,7 @@ export async function getAdminActivityByIdDb(id) {
       inclusions, exclusions, notices, refund_rules, safety_notice, faq,
       good_for, not_good_for, transport_mode, seo_title, seo_description,
       itinerary, social_proof_quotes,
+      rating_avg, review_count,
       plans,
       status, published_at, created_at, updated_at,
       guide_id, guide_slug,
@@ -2450,6 +2455,8 @@ export async function getAdminActivityByIdDb(id) {
     itinerary: data.itinerary || [], socialProofQuotes: data.social_proof_quotes || [],
     transportMode: data.transport_mode, seoTitle: data.seo_title, seoDescription: data.seo_description,
     plans: data.plans || null,
+    ratingAvg: data.rating_avg ?? null,
+    reviewCount: data.review_count ?? 0,
     status: data.status, publishedAt: data.published_at,
     createdAt: data.created_at, updatedAt: data.updated_at,
     guideId: data.guide_id, guideSlug: data.guide_slug,
@@ -2559,6 +2566,13 @@ export async function updateActivityDb(id, input = {}) {
     ['transportMode', 'transport_mode'], ['seoTitle', 'seo_title'], ['seoDescription', 'seo_description'],
     ['guideSlug', 'guide_slug']
   ];
+  // Rating signal fields (warm-start; will be auto-updated by review system #301)
+  if (input.ratingAvg !== undefined) {
+    patch.rating_avg = input.ratingAvg === null ? null : Math.min(5, Math.max(0, Number(input.ratingAvg)));
+  }
+  if (input.reviewCount !== undefined) {
+    patch.review_count = Math.max(0, Number(input.reviewCount) || 0);
+  }
   for (const [k, col] of fields) {
     if (input[k] !== undefined) patch[col] = input[k];
   }

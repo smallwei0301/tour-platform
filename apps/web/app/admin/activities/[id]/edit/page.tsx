@@ -1008,6 +1008,8 @@ export default function AdminActivityEditPage() {
   const [itinerary,          setItinerary]          = useState<Array<{step:number;title:string;description:string;duration:string;icon:string}>>([]);
   const [status,             setStatus]             = useState('draft');
   const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
+  const [ratingAvg,          setRatingAvg]          = useState('');
+  const [reviewCount,        setReviewCount]        = useState('0');
   const [activitySlug,       setActivitySlug]       = useState('');
   const [importErrors,       setImportErrors]       = useState<string[]>([]);
   const [importDiff,         setImportDiff]         = useState<Array<{field:string;before:string;after:string}>>([]);
@@ -1046,6 +1048,8 @@ export default function AdminActivityEditPage() {
         setSocialProofQuotes((d.socialProofQuotes || []).join('\n'));
         setFaq(d.faq || []);
         setItinerary(d.itinerary || []);
+        setRatingAvg(d.ratingAvg != null ? String(d.ratingAvg) : '');
+        setReviewCount(String(d.reviewCount ?? 0));
         setStatus(d.status || 'draft');
         // plans: use DB value if exists, otherwise default
         if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
@@ -1377,6 +1381,8 @@ export default function AdminActivityEditPage() {
           socialProofQuotes: toArray(socialProofQuotes),
           faq, itinerary,
           plans, imageUrls,
+          ratingAvg: ratingAvg !== '' ? Number(ratingAvg) : null,
+          reviewCount: Number(reviewCount) || 0,
         }),
       });
       const json = await res.json();
@@ -1657,6 +1663,31 @@ export default function AdminActivityEditPage() {
               社群口碑語錄（每行一句）
               <textarea value={socialProofQuotes} onChange={e => setSocialProofQuotes(e.target.value)} rows={3} style={fieldStyle} placeholder={'超值行程，CP值超高！\n導遊非常專業親切'} />
             </label>
+
+            <h3 style={sectionTitle}>⭐ 評分信任信號（暖場用）</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <label style={labelStyle}>
+                初始評分（0–5）
+                <input
+                  type="number" step="0.1" min="0" max="5"
+                  value={ratingAvg}
+                  onChange={e => setRatingAvg(e.target.value)}
+                  style={fieldStyle}
+                  placeholder="例：4.8"
+                />
+                <span style={{ fontSize: 11, color: '#6b7280', marginTop: 4, display: 'block' }}>未來由評論系統（#301）自動計算；留空表示尚無評價</span>
+              </label>
+              <label style={labelStyle}>
+                初始評論數
+                <input
+                  type="number" min="0"
+                  value={reviewCount}
+                  onChange={e => setReviewCount(e.target.value)}
+                  style={fieldStyle}
+                  placeholder="0"
+                />
+              </label>
+            </div>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
               <button type="submit" disabled={saving}

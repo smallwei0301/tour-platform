@@ -31,15 +31,15 @@ test('AC1: ActivitiesContent listing card has data-testid="activity-card-rating"
 });
 
 // AC2: detail page
-test('AC2: detail page uses activity.ratingAvg not guide?.ratingAvg for headline', async () => {
+test('AC2: detail page uses activity ratingAvg (not guide?.ratingAvg) for headline', async () => {
   const src = await readSource('app/activities/[region]/[slug]/page.tsx');
-  // The kkd-rating span (headline rating) must use activity.ratingAvg
-  assert.match(src, /activity\.ratingAvg/, 'Should use activity.ratingAvg for headline rating');
+  // activityData is a cast of activity with ratingAvg; both patterns are valid
+  assert.match(src, /activityData\.ratingAvg|activity\.ratingAvg/, 'Should use activity-sourced ratingAvg for headline rating');
 });
 
-test('AC2: detail page uses activity.reviewCount', async () => {
+test('AC2: detail page uses activity reviewCount', async () => {
   const src = await readSource('app/activities/[region]/[slug]/page.tsx');
-  assert.match(src, /activity\.reviewCount/, 'Should use activity.reviewCount');
+  assert.match(src, /activityData\.reviewCount|activity\.reviewCount/, 'Should use activity reviewCount');
 });
 
 test('AC2: detail page has data-testid="activity-detail-rating"', async () => {
@@ -47,11 +47,10 @@ test('AC2: detail page has data-testid="activity-detail-rating"', async () => {
   assert.match(src, /data-testid="activity-detail-rating"/, 'Should have activity-detail-rating testid');
 });
 
-test('AC2: detail page headline rating no longer uses guide?.ratingAvg in kkd-rating span', async () => {
+test('AC2: detail page activity-detail-rating block references activityData.ratingAvg', async () => {
   const src = await readSource('app/activities/[region]/[slug]/page.tsx');
-  // The kkd-rating span must NOT contain guide?.ratingAvg (it moved to activity-based rating)
-  // We check the activity-detail-rating block contains activity.ratingAvg
-  assert.match(src, /activity-detail-rating[\s\S]{0,400}activity\.ratingAvg/, 'activity-detail-rating block must reference activity.ratingAvg');
+  // The activity-detail-rating block must reference activity-sourced ratingAvg
+  assert.match(src, /activity-detail-rating[\s\S]{0,400}activityData\.ratingAvg/, 'activity-detail-rating block must reference activityData.ratingAvg');
 });
 
 // AC5: admin edit form
