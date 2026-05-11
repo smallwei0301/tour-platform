@@ -8,6 +8,9 @@ TS="$(date +%Y%m%d-%H%M%S)"
 REPORT_DIR="reports/issue-314/${TS}"
 mkdir -p "$REPORT_DIR"
 
+# Tests use process.cwd() for path resolution — must run from apps/web
+WEB_DIR="${ROOT_DIR}/apps/web"
+
 # ---------------------------------------------------------------------------
 # Phase 12 full regression composer
 # Runs 7 critical paths (P1–P7) and reports results.
@@ -28,12 +31,13 @@ run_path() {
   local log_file="${REPORT_DIR}/path-${path_num}.log"
   local suite_args=()
   for s in "${suites[@]}"; do
-    suite_args+=("apps/web/tests/api/${s}")
+    suite_args+=("tests/api/${s}")
   done
 
   echo "[RUN] P${path_num} ${label}"
 
-  if node --test "${suite_args[@]}" > "$log_file" 2>&1; then
+  # Run from apps/web so process.cwd() resolves correctly
+  if (cd "${WEB_DIR}" && node --test "${suite_args[@]}") > "$log_file" 2>&1; then
     echo "[PASS] P${path_num} ${label}"
     PASS=$((PASS + 1))
   else
