@@ -955,6 +955,16 @@ export async function listAdminRefundRequestsDb() {
   }));
 }
 
+export async function refundRequestsCsvDb() {
+  const rows = await listAdminRefundRequestsDb();
+  const header = ['id', 'orderId', 'status', 'reason', 'note', 'requestedAt', 'approvedAt', 'refundedAt', 'totalTwd', 'contactName', 'contactEmail'];
+  const esc = (v) => {
+    const s = String(v ?? '');
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [header.join(','), ...rows.map((r) => header.map((h) => esc(r[h])).join(','))].join('\n');
+}
+
 export async function updateAdminRefundStatusDb(input = {}) {
   if (!hasSupabaseEnv()) return updateAdminRefundStatusFallback(input);
 
