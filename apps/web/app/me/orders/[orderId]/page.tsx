@@ -71,6 +71,14 @@ export default function OrderDetailPage() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelErr, setCancelErr] = useState<string | null>(null);
 
+  // Review state
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewErr, setReviewErr] = useState<string | null>(null);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
   // Refund state
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState('');
@@ -150,6 +158,33 @@ export default function OrderDetailPage() {
       setRefundErr(e instanceof Error ? e.message : '退款申請失敗，請稍後再試');
     } finally {
       setSubmittingRefund(false);
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reviewText.trim()) return;
+    setSubmittingReview(true);
+    setReviewErr(null);
+    try {
+      const res = await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          activityId: order?.scheduleId || '',
+          bookingId: orderId,
+          rating: reviewRating,
+          reviewText: reviewText.trim(),
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error?.message || '評價送出失敗');
+      setReviewSubmitted(true);
+      setShowReviewForm(false);
+    } catch (e) {
+      setReviewErr(e instanceof Error ? e.message : '評價送出失敗，請稍後再試');
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -260,6 +295,68 @@ export default function OrderDetailPage() {
           <span style={valueStyle}>{order.contactEmail || '—'}</span>
         </div>
       </div>
+
+      {/* Review section — shown for completed orders */}
+      {status === 'completed' && (
+        <div style={{ marginBottom: 16 }}>
+          {reviewSubmitted ? (
+            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center', padding: '12px 0' }}>
+              評價已送出，等候審核
+            </p>
+          ) : !showReviewForm ? (
+            <button
+              onClick={() => setShowReviewForm(true)}
+              style={{ ...btnPrimary, width: '100%' }}
+            >
+              撰寫評價
+            </button>
+          ) : (
+            <form onSubmit={handleSubmitReview} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
+                評分
+              </label>
+              {/* star-rating: 1-5 rating buttons */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    style={{
+                      fontSize: 24, background: 'none', border: 'none',
+                      cursor: 'pointer', padding: '2px 4px',
+                      color: star <= reviewRating ? '#f59e0b' : '#d1d5db',
+                    }}
+                    aria-label={`rating ${star}`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                行程評價
+              </label>
+              <textarea
+                required
+                value={reviewText}
+                onChange={e => setReviewText(e.target.value)}
+                placeholder="分享您的行程體驗..."
+                rows={4}
+                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+              />
+              {reviewErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{reviewErr}</p>}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <button type="submit" style={btnPrimary} disabled={submittingReview}>
+                  {submittingReview ? '送出中…' : '提交評價'}
+                </button>
+                <button type="button" onClick={() => { setShowReviewForm(false); setReviewErr(null); }} style={btnSecondary}>
+                  取消
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       {!isTerminal && (
