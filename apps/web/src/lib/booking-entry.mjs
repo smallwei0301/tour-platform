@@ -9,8 +9,7 @@ export function resolvePlanBookingHref({ activitySlug, planId, date, scheduleId,
   if (!slug) return '/activities';
 
   if (!useBookingV2) {
-    const qs = planId ? `&plan=${encodeURIComponent(String(planId))}` : '';
-    return `/checkout?slug=${slug}${qs}`;
+    return `/checkout?slug=${slug}`;
   }
 
   const params = new URLSearchParams();
