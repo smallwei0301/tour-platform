@@ -63,7 +63,7 @@ ECPay POST 到 ECPAY_CALLBACK_URL
 | Callback 接收 | ✅ | 訂單自動更新為 `paid`，paid_at 記錄正確 |
 | 管理員 Email | ✅ | smallwei0301@gmail.com 收到通知 |
 | 返回商店 | ✅ | NEXT_PUBLIC_SITE_URL 設定後，ClientBackURL 正確導回 |
-| 退款流程 | 🔄 | 待補充 |
+| 退款流程 | ✅ | NT$18 取消授權成功（G19，2026-05-11）。ECPay 不發退款 callback，訂單狀態需管理員手動更新。自動退款 API 為後續 issue (#304 P1c) |
 
 ## 5. 退款操作方法
 
@@ -75,11 +75,13 @@ ECPay POST 到 ECPAY_CALLBACK_URL
 4. 點入訂單 → 「退款」→ 輸入退款金額
 5. 確認退款
 
-### 注意事項
+### 重要限制
 
+- **ECPay 退款不發 callback** — 取消授權/退刷後，tour-platform 訂單狀態**不會自動更新**，需管理員手動在後台改為 `refunded`
 - 信用卡退款通常 3–5 個工作天入帳
 - ECPay 退款需在交易後 180 天內發起
 - 部分退款：輸入小於原始金額即可
+- 自動退款 API（AllRefund）為待實作功能，見 #304 P1c
 
 ## 6. 已知限制
 
