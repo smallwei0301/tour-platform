@@ -1,0 +1,14 @@
+✔ buildFaqPatch returns error for empty question (1.354427ms)
+✔ buildFaqPatch returns error for answer over 500 chars (0.257675ms)
+✔ buildFaqPatch returns error for non-array faq (0.201344ms)
+✔ buildFaqPatch normalises {q, a} entries to {question, answer} shape (1.052521ms)
+✔ buildFaqPatch normalises {question, answer} entries unchanged (0.356237ms)
+✔ buildFaqPatch accepts empty array (clearing FAQ) (0.211154ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 81.375192
