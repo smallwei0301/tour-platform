@@ -217,11 +217,16 @@ export default function AdminDashboardPage() {
           ))}
         </div>
 
-        <div>
+        {/* Quick Links */}
+        <Card style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>快速導覽</span>
           <Link href="/admin/operations-tracking" style={{ fontSize: 14, color: 'var(--tp-primary)', fontWeight: 600 }}>
             前往 Operations Tracking →
           </Link>
-        </div>
+          <Link href="/admin/health" style={{ fontSize: 14, color: 'var(--tp-primary)', fontWeight: 600 }}>
+            系統健康 →
+          </Link>
+        </Card>
 
       </div>
     </div>
