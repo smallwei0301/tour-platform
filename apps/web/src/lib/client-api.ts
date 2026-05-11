@@ -8,6 +8,7 @@ export async function fetchExperiences() {
 export async function createOrder(payload: {
   experienceSlug: string;
   scheduleId: string;
+  planId?: string;
   peopleCount: number;
   contactName: string;
   contactPhone: string;

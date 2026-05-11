@@ -118,11 +118,21 @@ export async function createOrderDb(input) {
 
   const { data: activity, error: activityError } = await supabase
     .from('activities')
-    .select('id, slug, price_twd')
+    .select('id, slug, price_twd, plans')
     .eq('slug', experienceSlug)
     .single();
 
   if (activityError || !activity) throw new Error('experience not found');
+
+  // Apply plan priceMultiplier if planId provided
+  const planId = String(input?.planId || '').trim();
+  let effectivePriceTwd = activity.price_twd;
+  if (planId && Array.isArray(activity.plans)) {
+    const plan = activity.plans.find(p => p.id === planId);
+    if (plan?.priceMultiplier != null && plan?.price != null) {
+      effectivePriceTwd = Math.round(plan.price * plan.priceMultiplier);
+    }
+  }
 
   const { data: schedule, error: scheduleError } = await supabase
     .from('activity_schedules')
@@ -174,7 +184,7 @@ export async function createOrderDb(input) {
     contact_phone: contactPhone,
     contact_email: contactEmail,
     status: 'pending_payment',
-    total_twd: activity.price_twd * peopleCount
+    total_twd: effectivePriceTwd * peopleCount
   };
 
   const { data: inserted, error: orderError } = await supabase

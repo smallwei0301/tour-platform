@@ -1,7 +1,7 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 export async function GET(_request: Request, context: { params: Promise<{ slug: string }> }) {
   const { slug } = await context.params;
@@ -16,7 +16,7 @@ export async function GET(_request: Request, context: { params: Promise<{ slug: 
       status: 200,
       headers: {
         'content-type': 'application/json; charset=utf-8',
-        'cache-control': 'public, s-maxage=60, stale-while-revalidate=120'
+        'cache-control': 'no-store'
       }
     });
   } catch (err) {

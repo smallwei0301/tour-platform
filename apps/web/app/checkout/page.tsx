@@ -15,17 +15,26 @@ type Schedule = {
   status: string;
 };
 
+type Plan = {
+  id: string;
+  label?: string;
+  price?: number;
+  priceMultiplier?: number;
+};
+
 type ActivityInfo = {
   id?: string;
   title: string;
   priceTwd: number;
   schedules: Schedule[];
+  plans?: Plan[] | null;
 };
 
 export default function CheckoutPage() {
   const params = useSearchParams();
   const router = useRouter();
   const slug = params.get('slug') || 'kaohsiung-chaishan-cave-experience';
+  const planId = params.get('plan') || '';
 
   const [activity, setActivity] = useState<ActivityInfo | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
@@ -110,6 +119,7 @@ export default function CheckoutPage() {
       const order = await createOrder({
         experienceSlug: slug,
         scheduleId: selectedScheduleId,
+        planId: planId || undefined,
         peopleCount: 1,
         contactName: 'Guest',
         contactPhone: '0912345678',
@@ -171,11 +181,17 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {activity?.priceTwd && (
-        <p style={{ fontSize: 15, fontWeight: 700, color: '#ec4899', marginBottom: 20 }}>
-          NT$ {activity.priceTwd.toLocaleString()} / 人
-        </p>
-      )}
+      {activity?.priceTwd && (() => {
+        const plan = planId ? (activity.plans || []).find((p: Plan) => p.id === planId) : null;
+        const displayPrice = plan?.price != null && plan?.priceMultiplier != null
+          ? Math.round(plan.price * plan.priceMultiplier)
+          : activity.priceTwd;
+        return (
+          <p style={{ fontSize: 15, fontWeight: 700, color: '#ec4899', marginBottom: 20 }}>
+            NT$ {displayPrice.toLocaleString()} / 人
+          </p>
+        );
+      })()}
 
       <button
         data-testid="create-order-btn"
