@@ -11,6 +11,8 @@ function statusFromErrorMessage(message: string) {
   if (message.includes('not enough seats') || message.includes('schedule is full')) return 409;
   if (message.includes('not found')) return 404;
   if (message.includes('required') || message.includes('peopleCount')) return 400;
+  // #355: Promo code redemption errors
+  if (message.includes('EXHAUSTED') || message.includes('ALREADY_REDEEMED')) return 409;
   return 400;
 }
 
@@ -37,7 +39,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    const order = await createOrderDb({ ...body, userId });
+    // #355: Extract promoCode from body and pass through to createOrderDb
+    const promoCode = typeof body?.promoCode === 'string' ? body.promoCode.trim() || undefined : undefined;
+    const order = await createOrderDb({ ...body, userId, promoCode });
 
     // 🔔 Fire-and-forget: 訂單建立確認 email + LINE 通知
     const orderRecord = order as Record<string, unknown>;

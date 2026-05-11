@@ -11,6 +11,7 @@ import {
   updateGuideApplicationStatus as updateGuideApplicationStatusInMemory,
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
+import { calculateDiscount } from './promo-discount.ts';
 import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
@@ -149,8 +150,15 @@ export async function createOrderDb(input) {
   // 🔐 Phase 9: 支持 user_id 綁定（可選）
   const userId = input?.userId || null;
 
+  // #355: 折扣碼支援
+  const promoCode = String(input?.promoCode || '').trim().toUpperCase() || null;
+
   // 座位扣除在付款確認時執行（fn_process_payment_callback_atomic 內建 fn_book_schedule）
   // 建立訂單時只做可用性檢查（不扣位），避免未付款訂單佔用席次
+
+  // Compute base total
+  let totalTwd = effectivePriceTwd * peopleCount;
+  let discountAmount = 0;
 
   const payload = {
     id: crypto.randomUUID(),
@@ -162,7 +170,8 @@ export async function createOrderDb(input) {
     contact_phone: contactPhone,
     contact_email: contactEmail,
     status: 'pending_payment',
-    total_twd: effectivePriceTwd * peopleCount
+    total_twd: totalTwd,
+    discount_amount: 0,
   };
 
   const { data: inserted, error: orderError } = await supabase
@@ -175,6 +184,37 @@ export async function createOrderDb(input) {
     throw new Error(orderError?.message || 'order create failed');
   }
 
+  // #355: 若有折扣碼，原子性兌換並更新金額
+  if (promoCode && userId) {
+    const { data: redeemResult } = await supabase.rpc('fn_redeem_promo_code', {
+      p_code: promoCode,
+      p_user_id: userId,
+      p_order_id: inserted.id,
+    });
+
+    if (redeemResult?.ok) {
+      discountAmount = calculateDiscount(
+        redeemResult.discount_type,
+        Number(redeemResult.discount_value),
+        totalTwd
+      );
+      const finalTotal = Math.max(0, totalTwd - discountAmount);
+      // Update order with discounted total
+      await supabase
+        .from('orders')
+        .update({
+          total_twd: finalTotal,
+          discount_amount: discountAmount,
+        })
+        .eq('id', inserted.id);
+      totalTwd = finalTotal;
+    } else if (redeemResult?.reason) {
+      // Rollback: delete the order that was just created
+      await supabase.from('orders').delete().eq('id', inserted.id);
+      throw new Error(redeemResult.reason); // e.g. EXHAUSTED / ALREADY_REDEEMED / NOT_FOUND
+    }
+  }
+
   await insertAuditLogDb(supabase, {
     orderId: inserted.id,
     actor: 'user',
@@ -184,6 +224,8 @@ export async function createOrderDb(input) {
       scheduleId: inserted.schedule_id,
       peopleCount: inserted.people_count,
       status: inserted.status,
+      promoCode: promoCode || null,
+      discountAmount,
     }
   });
 
@@ -192,7 +234,8 @@ export async function createOrderDb(input) {
   return {
     id: inserted.id,
     status: inserted.status,
-    totalTwd: inserted.total_twd,
+    totalTwd: totalTwd,
+    discountAmount,
     experienceId: inserted.activity_id,
     experienceSlug: activity.slug,
     scheduleId: inserted.schedule_id,
