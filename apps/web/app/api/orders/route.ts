@@ -1,6 +1,8 @@
 import { fail, ok } from '../../../src/lib/api';
 import { createOrderDb } from '../../../src/lib/db.mjs';
 import { sendOrderConfirmation } from '../../../src/lib/email';
+import type { OrderEmailData } from '../../../src/lib/email';
+import type { OrderNotifyData } from '../../../src/lib/line-notify';
 import { notifyNewOrder } from '../../../src/lib/line-notify';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 import { createClient } from '../../../src/lib/supabase/server';
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
     return rateLimitResponse;
   }
 
-  const body = await request.json().catch(() => null);
+  const body = await request.json().catch((): null => null);
 
   // 🔐 Phase 9: 嘗試獲取已登入用戶的 user_id（非必須，允許訪客下單）
   let userId: string | null = null;
@@ -38,9 +40,10 @@ export async function POST(request: Request) {
     const order = await createOrderDb({ ...body, userId });
 
     // 🔔 Fire-and-forget: 訂單建立確認 email + LINE 通知
-    const notifyData = {
-      orderId: order.id,
-      activityTitle: order.title || body?.experienceSlug || '行程',
+    const orderRecord = order as Record<string, unknown>;
+    const notifyData: OrderEmailData & OrderNotifyData & { contactPhone?: string } = {
+      orderId: order.id as string,
+      activityTitle: (orderRecord.title as string | undefined) || body?.experienceSlug || '行程',
       scheduleDate: order.scheduleStartAt
         ? new Date(order.scheduleStartAt).toLocaleDateString('zh-TW')
         : null,

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   // 永遠回 200 — 追蹤失敗不能影響主流程
   try {
-    const body = await req.json().catch(() => null);
+    const body = await req.json().catch((): null => null);
     if (!body || typeof body !== 'object') {
       return NextResponse.json({ ok: false, reason: 'invalid body' }, { status: 200 });
     }

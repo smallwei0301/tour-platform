@@ -24,7 +24,7 @@ export default function OrderDetailPage() {
     try {
       const [detail, refundRows] = await Promise.all([
         fetchMyOrderDetail(orderId),
-        fetchRefundRequests(orderId).catch(() => [])
+        fetchRefundRequests(orderId).catch((): unknown[] => [])
       ]);
       setOrder(detail || null);
       setRefunds(Array.isArray(refundRows) ? refundRows : []);

@@ -2,6 +2,8 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { getMyOrderDetailDb, cancelOrderDb } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { sendOrderCancellation } from '../../../../../src/lib/email';
+import type { OrderEmailData } from '../../../../../src/lib/email';
+import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
@@ -39,13 +41,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
 
     if (action === 'cancel') {
       // 先查訂單詳情（取 email 通知用）
-      const orderBefore = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
+      const orderBefore = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch((): null => null);
 
       const result = await cancelOrderDb({ orderId, contactEmail: user.email });
 
       // 🔔 Fire-and-forget: 訂單取消 email + LINE 通知
       if (orderBefore) {
-        const notifyData = {
+        const notifyData: OrderEmailData & OrderNotifyData = {
           orderId,
           activityTitle: orderBefore.title || '行程',
           scheduleDate: null,

@@ -82,13 +82,13 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         return true;
       });
 
-      schedules = normalized.map((r: any) => ({
+      schedules = normalized.map((r: Record<string, unknown>): AvailabilitySchedule => ({
         id: null,
         startAt: `${r.date}T00:00:00+08:00`,
         capacity: Number(r.total_capacity ?? 0),
         bookedCount: Number(r.total_booked ?? 0),
         status: r.is_open ? 'open' : 'full',
-        planId: r.plan_id ?? null,
+        planId: (r.plan_id as string | null) ?? null,
       }));
     } else {
       // Fallback to raw schedules if snapshot not ready.

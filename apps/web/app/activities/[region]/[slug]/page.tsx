@@ -34,7 +34,7 @@ async function getCachedActivityBySlug(slug: string) {
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getCachedActivityBySlug(slug).catch(() => null);
+  const activity = await getCachedActivityBySlug(slug).catch((): null => null);
   if (!activity) return notFound();
 
   const guide = activity.guide;
@@ -98,7 +98,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             </span>
             <span className="kkd-policy-item">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v8"/><path d="M9 10h6"/><path d="M9 19l3-4 3 4"/></svg>
-              {activity.transportMode || '步行'}
+              {(activity as {transportMode?: string}).transportMode || '步行'}
             </span>
             <span className="kkd-policy-item">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -292,7 +292,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 <h2 className="kkd-section-title">🧑‍🦯 關於你的導遊</h2>
                 <div className="kkd-guide-card">
                   <img
-                    src={guide.profilePhotoUrl || guide.avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
+                    src={guide.profilePhotoUrl || (guide as {avatarUrl?: string}).avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
                     alt={guide.displayName}
                     className="kkd-guide-avatar"
                   />
@@ -300,7 +300,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     <strong className="kkd-guide-name">{guide.displayName}</strong>
                     <span className="kkd-guide-verified">✅ 實名已驗證</span>
                     <p className="kkd-guide-meta">
-                      ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guide.reviewCount || guide.serviceCount || 0} 次服務）&nbsp;·&nbsp;
+                      ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guide.reviewCount || (guide as {serviceCount?: number}).serviceCount || 0} 次服務）&nbsp;·&nbsp;
                       📍 {guide.region}
                       {guide.languages && guide.languages.length > 0 && (
                         <>&nbsp;·&nbsp;🌍 {guide.languages.slice(0, 3).join('、')}</>

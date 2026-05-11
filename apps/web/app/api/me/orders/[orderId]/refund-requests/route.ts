@@ -2,6 +2,8 @@ import { ok, fail } from '../../../../../../src/lib/api';
 import { createRefundRequestDb, listRefundRequestsDb, getMyOrderDetailDb } from '../../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { sendRefundRequested } from '../../../../../../src/lib/email';
+import type { OrderEmailData } from '../../../../../../src/lib/email';
+import type { OrderNotifyData } from '../../../../../../src/lib/line-notify';
 import { notifyRefundRequest } from '../../../../../../src/lib/line-notify';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
@@ -43,9 +45,9 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
     });
 
     // 🔔 Fire-and-forget: 退款申請收到 email + LINE 通知
-    const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch(() => null);
+    const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch((): null => null);
     if (order) {
-      const notifyData = {
+      const notifyData: OrderEmailData & OrderNotifyData & { reason?: string; note?: string } = {
         orderId,
         activityTitle: order.title || '行程',
         scheduleDate: null,

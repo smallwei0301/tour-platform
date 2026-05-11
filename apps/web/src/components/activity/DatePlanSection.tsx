@@ -166,7 +166,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
     setAvailabilityLoaded(true);
     try {
       const res = await fetch(`/api/activities/${encodeURIComponent(activity.slug)}/availability`);
-      const json = await res.json().catch(() => null);
+      const json = await res.json().catch((): null => null);
       if (!res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) {
         setAvailabilityLoaded(false);
         return;

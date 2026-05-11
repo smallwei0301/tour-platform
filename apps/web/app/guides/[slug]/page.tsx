@@ -8,7 +8,7 @@ import { GalleryImage } from '../../../src/components/shared/GalleryImage';
 
 export default async function GuideProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const guide = await getGuideBySlugDb(slug).catch(() => null);
+  const guide = await getGuideBySlugDb(slug).catch((): null => null);
   if (!guide) return notFound();
 
   const guideActivities = guide.activities || [];
