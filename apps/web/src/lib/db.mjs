@@ -149,29 +149,8 @@ export async function createOrderDb(input) {
   // 🔐 Phase 9: 支持 user_id 綁定（可選）
   const userId = input?.userId || null;
 
-  // 優化防超賣：在建立訂單前先向 Postgres RPC 要求原子扣位（fn_book_schedule），
-  // 若 RPC 成功則代表已原子更新 booked_count，避免之後的付款流程產生競爭條件。
-  // 若 RPC 不可用（舊 DB），fallback 到原先的檢查流程。
-  let bookedViaRpc = false;
-  try {
-    const { data: rpcResult, error: rpcError } = await supabase.rpc('fn_book_schedule', {
-      p_schedule_id: schedule.id,
-      p_count: peopleCount
-    });
-    if (rpcError) throw rpcError;
-    const rpc = rpcResult ?? {};
-    if (!rpc.ok) {
-      const code = rpc.error || 'booking_failed';
-      const remainingAfter = rpc.remaining ?? 0;
-      const err = new Error(`booking_failed: ${code} (remaining=${remainingAfter})`);
-      err.code = code;
-      err.remaining = remainingAfter;
-      throw err;
-    }
-    bookedViaRpc = true;
-  } catch (e) {
-    console.warn('[createOrderDb] booking RPC failed or missing, falling back to pre-check only:', e?.message || e);
-  }
+  // 座位扣除在付款確認時執行（fn_process_payment_callback_atomic 內建 fn_book_schedule）
+  // 建立訂單時只做可用性檢查（不扣位），避免未付款訂單佔用席次
 
   const payload = {
     id: crypto.randomUUID(),
@@ -193,14 +172,6 @@ export async function createOrderDb(input) {
     .single();
 
   if (orderError || !inserted) {
-    // 如果插入訂單失敗且先前已透過 RPC 扣位，嘗試回滾扣位（記錄但不阻塞）
-    if (bookedViaRpc) {
-      try {
-        await supabase.rpc('fn_release_schedule', { p_schedule_id: schedule.id, p_count: peopleCount });
-      } catch (releaseErr) {
-        console.warn('[createOrderDb] failed to release rpc hold after order insert failure:', releaseErr?.message || releaseErr);
-      }
-    }
     throw new Error(orderError?.message || 'order create failed');
   }
 
