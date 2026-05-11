@@ -1,34 +1,44 @@
-✖ AC1: activities has column "dismissal_point" of type text (1.250365ms)
-✖ AC1: activities has column "dismissal_point_map_url" of type text (0.234425ms)
-✖ AC1: activities has column "meeting_lat" of type numeric (0.178233ms)
-✖ AC1: activities has column "meeting_lng" of type numeric (0.169533ms)
-✖ AC1: activities has column "dismissal_lat" of type numeric (1.075922ms)
-✖ AC1: activities has column "dismissal_lng" of type numeric (0.187444ms)
-✖ AC1: all 6 new columns exist on activities table (0.343687ms)
-ℹ tests 7
+✖ AC1: activities has column "dismissal_point" of type text (2.383767ms)
+✖ AC1: activities has column "dismissal_point_map_url" of type text (0.206634ms)
+✖ AC1: activities has column "meeting_lat" of type numeric (0.159243ms)
+✖ AC1: activities has column "meeting_lng" of type numeric (0.209204ms)
+✖ AC1: activities has column "dismissal_lat" of type numeric (0.264815ms)
+✖ AC1: activities has column "dismissal_lng" of type numeric (0.160363ms)
+✖ AC1: all 6 new columns exist on activities table (0.315246ms)
+✖ AC2: activity_images table exists (0.210894ms)
+✖ AC2: activity_images.kind column has CHECK constraint (cover|gallery) (0.294916ms)
+✖ AC2: activity_images.sort_order column has DEFAULT 0 (0.447319ms)
+✖ AC2: activity_images has index on (activity_id, sort_order) (0.238954ms)
+✖ AC2: activity_images FK to activities has ON DELETE CASCADE (0.227955ms)
+✖ AC2: activity_plan_tiers table exists (0.194363ms)
+✖ AC2: activity_plan_tiers.tier column has CHECK constraint (adult|child|infant) (0.198744ms)
+✖ AC2: activity_plan_tiers has UNIQUE(plan_id, tier) (0.230534ms)
+✖ AC2: activity_plan_tiers FK to activity_plans has ON DELETE CASCADE (0.251035ms)
+✖ AC2: both new tables have RLS enabled (0.224225ms)
+ℹ tests 17
 ℹ suites 0
 ℹ pass 0
-ℹ fail 7
+ℹ fail 17
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 90.480313
+ℹ duration_ms 94.505394
 
 ✖ failing tests:
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
-✖ AC1: activities has column "dismissal_point" of type text (1.250365ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:68:3
+✖ AC1: activities has column "dismissal_point" of type text (2.383767ms)
   Error: [EXPECTED-RED pre-migration] Column "dismissal_point" not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:70:13)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.start (node:internal/test_runner/test:1015:17)
       at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17)
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
-✖ AC1: activities has column "dismissal_point_map_url" of type text (0.234425ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:68:3
+✖ AC1: activities has column "dismissal_point_map_url" of type text (0.206634ms)
   Error: [EXPECTED-RED pre-migration] Column "dismissal_point_map_url" not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:70:13)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
@@ -36,10 +46,10 @@ test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
       at Test.run (node:internal/test_runner/test:1175:12)
       at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
-✖ AC1: activities has column "meeting_lat" of type numeric (0.178233ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:68:3
+✖ AC1: activities has column "meeting_lat" of type numeric (0.159243ms)
   Error: [EXPECTED-RED pre-migration] Column "meeting_lat" not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:70:13)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
@@ -47,10 +57,10 @@ test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
       at Test.run (node:internal/test_runner/test:1175:12)
       at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
-✖ AC1: activities has column "meeting_lng" of type numeric (0.169533ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:68:3
+✖ AC1: activities has column "meeting_lng" of type numeric (0.209204ms)
   Error: [EXPECTED-RED pre-migration] Column "meeting_lng" not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:70:13)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
@@ -58,10 +68,10 @@ test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
       at Test.run (node:internal/test_runner/test:1175:12)
       at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
-✖ AC1: activities has column "dismissal_lat" of type numeric (1.075922ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:68:3
+✖ AC1: activities has column "dismissal_lat" of type numeric (0.264815ms)
   Error: [EXPECTED-RED pre-migration] Column "dismissal_lat" not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:70:13)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
@@ -69,10 +79,10 @@ test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
       at Test.run (node:internal/test_runner/test:1175:12)
       at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
-✖ AC1: activities has column "dismissal_lng" of type numeric (0.187444ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:68:3
+✖ AC1: activities has column "dismissal_lng" of type numeric (0.160363ms)
   Error: [EXPECTED-RED pre-migration] Column "dismissal_lng" not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:70:13)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
@@ -80,10 +90,120 @@ test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
       at Test.run (node:internal/test_runner/test:1175:12)
       at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
 
-test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:83:1
-✖ AC1: all 6 new columns exist on activities table (0.343687ms)
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:85:1
+✖ AC1: all 6 new columns exist on activities table (0.315246ms)
   Error: [EXPECTED-RED pre-migration] 6 new columns not yet added — migration not applied
-      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:85:11)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:87:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:106:1
+✖ AC2: activity_images table exists (0.210894ms)
+  Error: [EXPECTED-RED pre-migration] activity_images table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:108:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:119:1
+✖ AC2: activity_images.kind column has CHECK constraint (cover|gallery) (0.294916ms)
+  Error: [EXPECTED-RED pre-migration] activity_images table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:121:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:141:1
+✖ AC2: activity_images.sort_order column has DEFAULT 0 (0.447319ms)
+  Error: [EXPECTED-RED pre-migration] activity_images table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:143:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:159:1
+✖ AC2: activity_images has index on (activity_id, sort_order) (0.238954ms)
+  Error: [EXPECTED-RED pre-migration] activity_images table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:161:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:173:1
+✖ AC2: activity_images FK to activities has ON DELETE CASCADE (0.227955ms)
+  Error: [EXPECTED-RED pre-migration] activity_images table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:175:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:192:1
+✖ AC2: activity_plan_tiers table exists (0.194363ms)
+  Error: [EXPECTED-RED pre-migration] activity_plan_tiers table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:194:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:205:1
+✖ AC2: activity_plan_tiers.tier column has CHECK constraint (adult|child|infant) (0.198744ms)
+  Error: [EXPECTED-RED pre-migration] activity_plan_tiers table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:207:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:226:1
+✖ AC2: activity_plan_tiers has UNIQUE(plan_id, tier) (0.230534ms)
+  Error: [EXPECTED-RED pre-migration] activity_plan_tiers table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:228:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:245:1
+✖ AC2: activity_plan_tiers FK to activity_plans has ON DELETE CASCADE (0.251035ms)
+  Error: [EXPECTED-RED pre-migration] activity_plan_tiers table does not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:247:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:262:1
+✖ AC2: both new tables have RLS enabled (0.224225ms)
+  Error: [EXPECTED-RED pre-migration] new tables do not exist — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:264:11)
       at Test.runInAsyncScope (node:async_hooks:228:14)
       at Test.run (node:internal/test_runner/test:1118:25)
       at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
