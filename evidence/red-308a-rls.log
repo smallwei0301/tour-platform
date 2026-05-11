@@ -1,0 +1,49 @@
+✔ AC3/AC4: migration SQL contains guide owner SELECT policy on activities (1.50526ms)
+✔ AC3/AC4: migration SQL contains guide owner UPDATE policy on activities (0.189603ms)
+✔ AC3/AC4: migration SQL contains guide owner INSERT policy on activities (0.163244ms)
+✔ AC3/AC4: migration SQL contains guide owner DELETE policy on activities (0.199834ms)
+✔ AC4: all guide-scoped policies guard nullable user_id (0.351317ms)
+✔ AC4: guide owner UPDATE policy uses both USING and WITH CHECK on activities (0.197414ms)
+✔ AC6: existing public-read policy is preserved in migration (not dropped) (0.170763ms)
+✔ AC6: migration does NOT drop or replace the existing public-read policy (0.232985ms)
+✔ AC3/AC4: migration SQL contains guide owner policies on activity_schedules (0.269186ms)
+✔ AC3/AC4: migration SQL contains guide owner policies on activity_plans (0.308367ms)
+✔ AC3: guide G1 can SELECT own activity (guide_id matches) (0.261806ms)
+✔ AC4: guide G1 cannot SELECT G2 activity (cross-guide isolation) (0.195444ms)
+✔ AC4: nullable user_id does not grant access (NULL guard) (0.229185ms)
+✔ AC4: anon user (uid=null) cannot access any guide activity (0.191034ms)
+✔ AC3: guide with draft activity can SELECT it (any status allowed) (0.205054ms)
+✖ AC3/AC4: guide owner policies exist in pg_policies (requires DB) (0.463639ms)
+✖ AC6: existing "activities: public read published" policy still exists after migration (requires DB) (0.369457ms)
+ℹ tests 17
+ℹ suites 0
+ℹ pass 15
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 93.040735
+
+✖ failing tests:
+
+test at apps/web/tests/security/guide-activities-rls-isolation.test.mjs:279:1
+✖ AC3/AC4: guide owner policies exist in pg_policies (requires DB) (0.463639ms)
+  Error: [EXPECTED-RED pre-migration] No DB connection — verify on CI/staging after migration
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/security/guide-activities-rls-isolation.test.mjs:281:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/security/guide-activities-rls-isolation.test.mjs:307:1
+✖ AC6: existing "activities: public read published" policy still exists after migration (requires DB) (0.369457ms)
+  Error: [EXPECTED-RED pre-migration] No DB connection — verify on CI/staging after migration
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/security/guide-activities-rls-isolation.test.mjs:309:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
