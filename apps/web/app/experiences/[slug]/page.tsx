@@ -28,11 +28,11 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
   const { slug } = await params;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const response = await fetch(`${baseUrl}/api/experiences`, { cache: 'no-store' }).catch(() => null);
+  const response = await fetch(`${baseUrl}/api/experiences`, { cache: 'no-store' }).catch((): null => null);
 
   let experience = fallbackExperience(slug);
   if (response?.ok) {
-    const json = await response.json().catch(() => null);
+    const json = await response.json().catch((): null => null);
     const found = json?.data?.find((x: any) => x.slug === slug);
     if (found) {
       experience = {

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { listPublishedGuidesDb } from '../../src/lib/db.mjs';
 
 export default async function GuidesPage() {
-  const guides = await listPublishedGuidesDb().catch(() => []);
+  const guides = await listPublishedGuidesDb().catch((): unknown[] => []);
 
   return (
     <main className="tp-container tp-guides-page" style={{ paddingBottom: 40 }}>

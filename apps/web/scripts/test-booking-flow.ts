@@ -192,7 +192,7 @@ async function verifyDatabaseRecords(
   const bookingResp = await fetch(
     `${BASE_URL}/api/v2/bookings/${bookingId}`,
     { method: 'GET' }
-  ).catch(() => null);
+  ).catch((): null => null);
 
   if (bookingResp?.ok) {
     const booking = await bookingResp.json();

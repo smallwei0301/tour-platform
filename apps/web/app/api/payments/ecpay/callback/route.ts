@@ -3,6 +3,8 @@ import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { trackServer } from '../../../../../src/lib/track';
 import { sendPaymentSuccess } from '../../../../../src/lib/email';
+import type { OrderEmailData } from '../../../../../src/lib/email';
+import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
@@ -168,7 +170,7 @@ export async function POST(request: Request) {
       orderId,
       ownerEmail: mapOwnerEmail(payload),
       tradeNo: mapTradeNo(payload)
-    });
+    }) as { order?: Record<string, unknown> | null; scheduleUpdated?: boolean; schedule?: Record<string, unknown> | null };
 
     // 事件：付款成功
     void trackServer(
@@ -176,7 +178,7 @@ export async function POST(request: Request) {
         event_name: 'payment_succeeded',
         properties: {
           order_id: orderId,
-          amount: result.order?.total_twd ?? 0,
+          amount: (result.order?.total_twd as number | undefined) ?? (result.order?.totalTwd as number | undefined) ?? 0,
           payment_provider: 'ecpay',
         },
         order_id: orderId,
@@ -185,7 +187,8 @@ export async function POST(request: Request) {
     );
 
     // 🔔 Fire-and-forget: 付款成功 email + LINE 通知
-    const order = result.order;
+    // Cast to Record to allow snake_case property access (in-memory path returns snake_case fields).
+    const order = result.order as Record<string, unknown> | null | undefined;
 
     let sourceChannel: string | null = null;
     try {
@@ -200,16 +203,16 @@ export async function POST(request: Request) {
       sourceChannel = null;
     }
 
-    const notifyData = {
+    const notifyData: OrderEmailData & OrderNotifyData = {
       orderId,
-      activityTitle: order?.activity_title || '行程',
+      activityTitle: (order?.activity_title as string | undefined) || '行程',
       scheduleDate: order?.schedule_start_at
-        ? new Date(order.schedule_start_at).toLocaleDateString('zh-TW')
+        ? new Date(order.schedule_start_at as string).toLocaleDateString('zh-TW')
         : null,
-      peopleCount: order?.people_count,
-      totalTwd: order?.total_twd,
-      contactName: order?.contact_name,
-      contactEmail: order?.contact_email,
+      peopleCount: order?.people_count as number | undefined,
+      totalTwd: (order?.total_twd as number | undefined) ?? (order?.totalTwd as number | undefined),
+      contactName: order?.contact_name as string | undefined,
+      contactEmail: (order?.contact_email as string | undefined) || '',
     };
 
     if (order?.contact_email) {
@@ -257,7 +260,7 @@ export async function POST(request: Request) {
       ok({
         received: true,
         orderId,
-        status: result.order?.status || 'paid',
+        status: (result.order?.status as string | undefined) || 'paid',
         scheduleUpdated: !!result.scheduleUpdated,
         schedule: result.schedule || null
       })
