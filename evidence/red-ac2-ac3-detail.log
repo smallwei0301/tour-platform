@@ -1,0 +1,14 @@
+✔ faq defaults to empty array (safe for .length > 0 check in detail page) (1.318537ms)
+✔ faq with entries shows FAQ section (detail page condition is truthy) (0.214675ms)
+✔ FAQ section hidden when faq is empty array (0.174603ms)
+✔ detail page renders both {question, answer} and legacy {q, a} FAQ entries (0.221885ms)
+✔ normalised FAQ entries use {question, answer} shape (canonical for storage) (1.829936ms)
+✔ revalidation tag matches the tag used in unstable_cache in detail page (0.229544ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 76.441153

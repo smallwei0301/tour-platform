@@ -1,0 +1,19 @@
+✔ validateFaqEntries accepts valid {question, answer} entries (2.074921ms)
+✔ validateFaqEntries accepts valid {q, a} entries (legacy shape) (0.267775ms)
+✔ validateFaqEntries rejects empty question (1.428839ms)
+✔ validateFaqEntries rejects empty answer (0.390788ms)
+✔ validateFaqEntries rejects question exceeding 500 chars (0.276305ms)
+✔ validateFaqEntries rejects answer exceeding 500 chars (0.252015ms)
+✔ validateFaqEntries accepts entries at exactly 500 chars boundary (0.243495ms)
+✔ validateFaqEntries rejects non-array input (0.173693ms)
+✔ validateFaqEntries accepts empty array (clearing all FAQs) (0.185494ms)
+✔ getFaqRevalidationTag returns correct cache tag for activity slug (0.278956ms)
+✔ getFaqRevalidationTag returns tag for any slug (0.219554ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 84.707259
