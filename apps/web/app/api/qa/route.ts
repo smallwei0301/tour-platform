@@ -18,6 +18,30 @@ function getServiceClient() {
   );
 }
 
+// GET /api/qa?activityId=X — fetch approved Q&A for public display
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const activityId = searchParams.get('activityId')?.trim() || '';
+
+  if (!activityId) {
+    return NextResponse.json(fail('INVALID_REQUEST', 'activityId is required'), { status: 400 });
+  }
+
+  const supabase = getAnonClient();
+  const { data, error } = await supabase
+    .from('activity_qa')
+    .select('id, question, answer, status')
+    .eq('activity_id', activityId)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    return NextResponse.json(fail('DB_ERROR', error.message), { status: 500 });
+  }
+
+  return NextResponse.json(ok(data ?? []), { status: 200 });
+}
+
 // AC3: POST /api/qa — traveler submits a question (requires authentication)
 export async function POST(req: NextRequest) {
   // AC3: Require authenticated user

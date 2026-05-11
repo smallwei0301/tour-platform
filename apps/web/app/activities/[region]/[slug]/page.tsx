@@ -9,6 +9,7 @@ import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnc
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { resolveBookingEntryHref } from '../../../../src/lib/booking-entry.mjs';
+import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
 
 // Issue #84 strategy: page shell/content stay on ISR; volatile availability moves to client intent fetch.
 export const dynamic = 'force-static';
@@ -139,6 +140,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             { id: 'section-reviews', label: '評價' },
             { id: 'section-details', label: '商品說明' },
             { id: 'section-policy', label: '購買須知' },
+            { id: 'section-qa', label: '問答' },
           ]} />
         </div>
       </div>
@@ -335,6 +337,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 </div>
               </section>
             )}
+
+            {/* Q&A section — ActivityQASection (client component) */}
+            <ActivityQASection activityId={activity.id} />
 
           </div>
 
