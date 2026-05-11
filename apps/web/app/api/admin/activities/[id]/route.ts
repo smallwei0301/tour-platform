@@ -1,7 +1,8 @@
 import { revalidateTag } from 'next/cache';
 import { ok, fail } from '../../../../../src/lib/api';
 import { getAdminActivityByIdDb, updateActivityDb, deleteActivityDb } from '../../../../../src/lib/db.mjs';
-import { buildFaqPatch, getFaqRevalidationTag } from '../../../../../src/lib/faq-route-helpers';
+import { buildFaqPatch } from '../../../../../src/lib/faq-route-helpers';
+import { getFaqRevalidationTag } from '../../../../../src/lib/faq-validate.mjs';
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
