@@ -1,0 +1,115 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { ok, fail } from '../../../src/lib/api';
+import { createClient } from '@supabase/supabase-js';
+
+function getAnonClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+}
+
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+}
+
+export async function POST(req: NextRequest) {
+  // AC3 + AC7: Require authenticated user
+  const supabase = getAnonClient();
+  const authHeader = req.headers.get('authorization') || '';
+  const anonClientWithToken = authHeader
+    ? createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          auth: { persistSession: false, autoRefreshToken: false },
+          global: { headers: { Authorization: authHeader } },
+        }
+      )
+    : supabase;
+
+  const { data: { user } } = await anonClientWithToken.auth.getUser();
+  if (!user) {
+    return NextResponse.json(fail('UNAUTHORIZED', 'login required'), { status: 401 });
+  }
+
+  // Parse body
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json(fail('INVALID_REQUEST', 'invalid JSON body'), { status: 400 });
+  }
+
+  const { activityId, bookingId, rating, reviewText } = body as {
+    activityId?: unknown;
+    bookingId?: unknown;
+    rating?: unknown;
+    reviewText?: unknown;
+  };
+
+  // Validate rating
+  const ratingNum = Number(rating);
+  if (!rating || ratingNum < 1 || ratingNum > 5) {
+    return NextResponse.json(fail('INVALID_RATING', 'rating must be 1-5'), { status: 400 });
+  }
+
+  // Validate reviewText
+  const reviewTextStr = typeof reviewText === 'string' ? reviewText.trim() : '';
+  if (!reviewTextStr) {
+    return NextResponse.json(fail('EMPTY_TEXT', 'review text required'), { status: 400 });
+  }
+
+  const adminSupabase = getServiceClient();
+
+  // AC7: Verify booking ownership
+  const { data: booking } = await adminSupabase
+    .from('bookings')
+    .select('id, user_id, status')
+    .eq('id', String(bookingId || ''))
+    .single();
+
+  if (!booking || booking.user_id !== user.id) {
+    return NextResponse.json(fail('FORBIDDEN', 'booking not owned by user'), { status: 403 });
+  }
+
+  // AC3: Idempotency — check if review already exists for this (user_id, booking_id)
+  const { data: existing } = await adminSupabase
+    .from('activity_reviews')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('booking_id', String(bookingId || ''))
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json(fail('ALREADY_REVIEWED', 'review already submitted for this booking'), { status: 409 });
+  }
+
+  // AC3: Insert pending review
+  const { data: review, error } = await adminSupabase
+    .from('activity_reviews')
+    .insert({
+      activity_slug: String(activityId || ''),
+      rating: ratingNum,
+      review_text: reviewTextStr,
+      user_id: user.id,
+      booking_id: String(bookingId || ''),
+      status: 'pending',
+      review_date: new Date().toISOString().split('T')[0],
+      author: user.email || user.id,
+      guide_slug: '',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    return NextResponse.json(fail('DB_ERROR', error.message), { status: 500 });
+  }
+
+  return NextResponse.json(ok(review), { status: 201 });
+}

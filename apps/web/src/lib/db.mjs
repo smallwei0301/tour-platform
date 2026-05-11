@@ -2247,6 +2247,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
           .from('activity_reviews')
           .select('id, author, city, rating, review_text, review_date, is_verified')
           .eq('activity_slug', act.slug)
+          .eq('status', 'approved')
           .order('review_date', { ascending: false })
           .limit(20);
         if (!reviewErr && dbReviews && dbReviews.length > 0) {
