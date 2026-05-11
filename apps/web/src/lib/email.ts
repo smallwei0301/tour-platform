@@ -259,6 +259,35 @@ export async function sendPaymentSuccess(data: OrderEmailData): Promise<EmailDel
 }
 
 /**
+ * 管理員付款通知 email
+ */
+export async function sendAdminPaymentNotification(data: OrderEmailData): Promise<void> {
+  const adminEmails = (process.env.ADMIN_EMAIL_ALLOWLIST || '').split(',').map(e => e.trim()).filter(Boolean);
+  if (adminEmails.length === 0) return;
+
+  const subject = `[Tour Platform] 新訂單付款確認 — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">💳 收到新訂單付款</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 16px;">以下訂單已付款成功，請做後續安排。</p>
+    ${orderInfoBlock(data)}
+    <div style="background:#dbeafe;border-left:4px solid #3b82f6;border-radius:8px;padding:12px 16px;margin-top:16px;">
+      <p style="margin:0;font-size:13px;color:#1e40af;font-weight:600;">📋 訂單 ID</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#1e40af;font-family:monospace;">${data.orderId}</p>
+    </div>
+  `);
+
+  for (const adminEmail of adminEmails) {
+    await sendEmailWithContract({
+      fn: 'sendAdminPaymentNotification',
+      to: adminEmail,
+      subject,
+      html,
+      orderId: data.orderId,
+    }).catch(() => {});
+  }
+}
+
+/**
  * 訂單取消 email
  */
 export async function sendOrderCancellation(data: OrderEmailData): Promise<EmailDeliveryResult> {

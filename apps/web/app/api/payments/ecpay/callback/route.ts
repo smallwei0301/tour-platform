@@ -2,7 +2,7 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { processPaymentCallbackDb } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { trackServer } from '../../../../../src/lib/track';
-import { sendPaymentSuccess } from '../../../../../src/lib/email';
+import { sendPaymentSuccess, sendAdminPaymentNotification } from '../../../../../src/lib/email';
 import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
@@ -253,6 +253,9 @@ export async function POST(request: Request) {
         }
       });
     }
+
+    // 管理員付款通知（所有渠道）
+    void sendAdminPaymentNotification(notifyData);
 
     // LINE-only booking success notify: keep shared V2 core channel-agnostic.
     // Truthful scope: current implementation uses LINE Notify (not Messaging API push/reply).
