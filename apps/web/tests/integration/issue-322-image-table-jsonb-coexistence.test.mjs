@@ -15,14 +15,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../../../supabase/migrations');
 const FORWARD_FILE = path.join(MIGRATIONS_DIR, '20260511_issue322_guide_activity_authoring.sql');
 
-// Path to the read route for activities
+// Path to the read route for activities (inside apps/web/)
 const ACTIVITY_SLUG_ROUTE = path.resolve(
   __dirname,
-  '../../../../app/api/activities/[slug]/route.ts'
+  '../../app/api/activities/[slug]/route.ts'
 );
 
-// Path to the DB lib
-const DB_LIB = path.resolve(__dirname, '../../../../src/lib/db.mjs');
+// Path to the DB lib (inside apps/web/)
+const DB_LIB = path.resolve(__dirname, '../../src/lib/db.mjs');
 
 function readFile(filePath) {
   assert.ok(fs.existsSync(filePath), `File must exist: ${filePath}`);
