@@ -28,7 +28,7 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
 
 export async function PATCH(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
-  const body = await request.json().catch(() => null);
+  const body = await request.json().catch((): null => null);
   const action = body?.action || '';
 
   try {
