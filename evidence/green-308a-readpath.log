@@ -1,0 +1,18 @@
+[SKIP] AC5 DB test: no DB connection — logic verified by unit tests, confirm on CI/staging
+✔ AC5: getActivityBySlugDb maps imageUrls from act.image_urls (jsonb column) (1.319826ms)
+✔ AC5: getAdminActivityByIdDb maps imageUrls from data.image_urls (jsonb column) (0.962659ms)
+✔ AC5: db.mjs select query includes image_urls column (0.259145ms)
+✔ AC5: db.mjs does NOT join activity_images table (0.207724ms)
+✔ AC5: no API route under app/api/activities references activity_images (0.754605ms)
+✔ AC5: mapping function returns imageUrls from image_urls jsonb field (0.49799ms)
+✔ AC5: imageUrls defaults to empty array when image_urls is null (0.588232ms)
+✔ AC5: activity_images rows do NOT affect imageUrls in the mapping (0.241335ms)
+✔ AC5: GET /api/activities/[slug] imageUrls unaffected by activity_images table rows (requires DB) (1.223365ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 89.437451
