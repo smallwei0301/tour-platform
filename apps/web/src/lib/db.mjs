@@ -546,6 +546,77 @@ export async function createRefundRequestDb(input = {}) {
   };
 }
 
+/**
+ * Admin-initiated order cancellation.
+ * Unlike cancelOrderDb, this:
+ * - skips contact-email ownership check (admin can cancel any order)
+ * - works for any cancellable status (paid, confirmed, pending_payment)
+ * - sets status to 'cancelled_by_guide' (not 'cancelled_by_user')
+ */
+export async function cancelOrderAdminDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  if (!orderId) throw new Error('orderId is required');
+
+  const CANCELLABLE = ['pending_payment', 'paid', 'confirmed', 'rejected'];
+
+  if (!hasSupabaseEnv()) {
+    // In-memory fallback: update order status directly
+    const { getOrders, setOrders } = await import('./store.mjs');
+    const orders = getOrders();
+    const order = orders.find(o => o.id === orderId);
+    if (!order) throw new Error('order not found');
+    if (!CANCELLABLE.includes(order.status)) throw new Error(`order_cancel_locked:${order.status}`);
+    order.status = 'cancelled_by_guide';
+    setOrders(orders);
+    return { id: orderId, status: 'cancelled_by_guide' };
+  }
+
+  const supabase = await getSupabase();
+
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('id, status, schedule_id, people_count')
+    .eq('id', orderId)
+    .single();
+
+  if (fetchErr || !order) throw new Error('order not found');
+  if (!CANCELLABLE.includes(order.status)) throw new Error(`order_cancel_locked:${order.status}`);
+
+  // Set status first so subsequent reads see it as cancelled
+  const { error: updateErr } = await supabase
+    .from('orders')
+    .update({ status: 'cancelled_by_guide', updated_at: new Date().toISOString() })
+    .eq('id', orderId);
+  if (updateErr) throw new Error(updateErr.message);
+
+  // Release booked seats atomically via RPC (same pattern as cancelOrderDb)
+  if (order.schedule_id && order.people_count) {
+    try {
+      const { error: rpcError } = await supabase.rpc('fn_cancel_booking', {
+        p_schedule_id: order.schedule_id,
+        p_count: order.people_count,
+      });
+      if (rpcError) throw rpcError;
+    } catch (e) {
+      // Fallback: manual decrement
+      const { data: sched } = await supabase
+        .from('activity_schedules')
+        .select('booked_count, capacity')
+        .eq('id', order.schedule_id)
+        .single();
+      if (sched) {
+        const newBooked = Math.max(0, (sched.booked_count || 0) - order.people_count);
+        await supabase
+          .from('activity_schedules')
+          .update({ booked_count: newBooked, status: newBooked < sched.capacity ? 'open' : 'full' })
+          .eq('id', order.schedule_id);
+      }
+    }
+  }
+
+  return { id: orderId, status: 'cancelled_by_guide', previousStatus: order.status };
+}
+
 export async function createAdminPosRefundEntryDb(input = {}) {
   const orderId = String(input?.orderId || '').trim();
   const adminNote = String(input?.adminNote || '').trim() || null;
