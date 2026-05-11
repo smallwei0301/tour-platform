@@ -37,6 +37,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const activity = await getCachedActivityBySlug(slug).catch((): null => null);
   if (!activity) return notFound();
 
+  const activityData = activity as typeof activity & { ratingAvg?: number | null; reviewCount?: number };
   const guide = activity.guide;
   const actReviews = activity.reviews || [];
   const displayedSchedules = activity.schedules || [];
@@ -72,9 +73,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           )}
 
           <div className="kkd-meta-row">
-            <span className="kkd-rating">
-              ★ {guide?.ratingAvg?.toFixed(1) || '5.0'}
-              <span className="kkd-review-count">（{actReviews.length} 則評價）</span>
+            <span className="kkd-rating" data-testid="activity-detail-rating">
+              {activityData.ratingAvg != null ? (
+                <>★ {activityData.ratingAvg.toFixed(1)}<span className="kkd-review-count">（{activityData.reviewCount ?? 0} 則評價）</span></>
+              ) : (
+                <span style={{ color: 'var(--tp-muted)', fontSize: 13 }}>尚無評價</span>
+              )}
             </span>
             <span className="kkd-dot">·</span>
             <span className="kkd-location">📍 {activity.region}</span>
@@ -178,7 +182,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <section id="section-reviews" className="kkd-scroll-section">
               <h2 className="kkd-section-title">⭐ 旅客評價</h2>
               <div className="kkd-reviews-summary">
-                <span className="kkd-reviews-score">★ {guide?.ratingAvg?.toFixed(1) || '5.0'}</span>
+                <span className="kkd-reviews-score">★ {activityData.ratingAvg != null ? activityData.ratingAvg.toFixed(1) : (guide?.ratingAvg?.toFixed(1) || '5.0')}</span>
                 <span className="kkd-reviews-total">共 {actReviews.length} 則評價</span>
               </div>
 
