@@ -21,8 +21,9 @@ function getServiceClient() {
 // AC5: PATCH /api/admin/reviews/[id] — approve or reject review
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   const token = parseCookie(request, 'admin_token');
   const email = parseCookie(request, 'admin_email');
   const expiresAt = parseCookie(request, 'admin_session_expires_at');
