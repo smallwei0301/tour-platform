@@ -1,17 +1,20 @@
 import Link from 'next/link';
 import type { Activity } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
+import WishlistToggle from '../WishlistToggle';
 
 interface ActivityCardProps {
   activity: Activity;
   rating?: number;
   reviewCount?: number;
+  initialWishlisted?: boolean;
 }
 
 export function ActivityCard({
   activity,
   rating = 5.0,
   reviewCount = 0,
+  initialWishlisted = false,
 }: ActivityCardProps) {
   const originalPrice = Math.round(activity.price * 1.25);
 
@@ -24,9 +27,7 @@ export function ActivityCard({
           className="tp-card-img"
           loading="lazy"
         />
-        <button className="tp-fav-btn" aria-label="收藏">
-          ♡
-        </button>
+        <WishlistToggle activityId={activity.id ?? activity.slug} initialWishlisted={initialWishlisted} />
         <span className="tp-card-region-badge">{activity.region}</span>
       </div>
       <div style={{ padding: '4px 2px' }}>

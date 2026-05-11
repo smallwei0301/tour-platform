@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
+import WishlistToggle from '../../src/components/WishlistToggle';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
 const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
@@ -43,6 +44,7 @@ export default function ActivitiesContent() {
   const [sort, setSort] = useState('recommended');
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
 
   // Sync URL → state on mount
   useEffect(() => {
@@ -66,6 +68,14 @@ export default function ActivitiesContent() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [query]);
+
+  // Fetch wishlisted activity IDs for hydration
+  useEffect(() => {
+    fetch('/api/me/wishlist/ids')
+      .then(r => r.json())
+      .then(({ data }) => setWishlistedIds(new Set(data ?? [])))
+      .catch(() => {}); // Silently handle — user will see unhearted state
+  }, []);
 
   function toggleRegion(r: string) {
     setSelectedRegions((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]);
@@ -197,7 +207,7 @@ export default function ActivitiesContent() {
                         style={{ background: 'none' }}
                         loading="lazy"
                       />
-                      <button className="tp-fav-btn" aria-label="收藏">❤️</button>
+                      <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{
                         position: 'absolute', top: 10, left: 10,
                         background: 'var(--tp-accent)', color: '#fff',

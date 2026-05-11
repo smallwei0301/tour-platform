@@ -1,23 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { resolveBookingEntryHref } from '../../lib/booking-entry.mjs';
+import WishlistToggle from '../WishlistToggle';
 
 interface ActivityBottomBarProps {
   activitySlug: string;
+  activityId: string;
   priceLabel: string;
   price: number;
   useBookingV2: boolean;
+  initialWishlisted?: boolean;
 }
 
 export function ActivityBottomBar({
   activitySlug,
+  activityId,
   priceLabel,
-  price,
   useBookingV2,
+  initialWishlisted: initialWishlistedProp = false,
 }: ActivityBottomBarProps) {
-  const [wishlisted, setWishlisted] = useState(false);
+  const [initialWishlisted, setInitialWishlisted] = useState(initialWishlistedProp);
+
+  // Hydrate wishlist state from /api/me/wishlist/ids on mount
+  useEffect(() => {
+    fetch('/api/me/wishlist/ids')
+      .then(r => r.json())
+      .then(({ data }) => {
+        const ids: string[] = data ?? [];
+        setInitialWishlisted(ids.includes(activityId));
+      })
+      .catch(() => {}); // Silently handle — user will see unhearted state
+  }, [activityId]);
 
   return (
     <div className="tp-activity-bottom-bar">
@@ -27,13 +42,7 @@ export function ActivityBottomBar({
           <strong className="tp-bottom-bar-price-value">{priceLabel}</strong>
         </div>
         <div className="tp-bottom-bar-actions">
-          <button
-            className={`tp-bottom-bar-wishlist${wishlisted ? ' active' : ''}`}
-            onClick={() => setWishlisted((v) => !v)}
-            aria-label={wishlisted ? '取消收藏' : '加入收藏'}
-          >
-            {wishlisted ? '❤️' : '🤍'}
-          </button>
+          <WishlistToggle activityId={activityId} initialWishlisted={initialWishlisted} />
           <Link
             href={resolveBookingEntryHref({ activitySlug, useBookingV2 })}
             className="tp-btn tp-btn-primary tp-bottom-bar-cta"

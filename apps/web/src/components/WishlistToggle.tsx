@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { csrfHeaders } from '../lib/csrf-client';
 
 interface WishlistToggleProps {
   activityId: string;
@@ -11,7 +12,7 @@ interface WishlistToggleProps {
 
 /**
  * Heart icon toggle for adding/removing an activity from the user's wishlist.
- * - Authenticated users: toggles optimistically via /api/me/wishlist
+ * - Authenticated users: toggles optimistically via /api/me/wishlist (with CSRF headers)
  * - Unauthenticated users: redirects to /login
  */
 export function WishlistToggle({
@@ -39,7 +40,7 @@ export function WishlistToggle({
         // Add to wishlist
         const res = await fetch('/api/me/wishlist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
           body: JSON.stringify({ activityId }),
         });
         if (!res.ok) {
@@ -49,6 +50,7 @@ export function WishlistToggle({
         // Remove from wishlist
         const res = await fetch(`/api/me/wishlist/${activityId}`, {
           method: 'DELETE',
+          headers: { ...csrfHeaders() },
         });
         if (!res.ok) {
           setWishlisted(prev); // rollback on failure

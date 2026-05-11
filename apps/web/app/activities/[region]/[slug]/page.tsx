@@ -400,6 +400,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       {/* ── Mobile bottom bar ── */}
       <ActivityBottomBar
         activitySlug={activity.slug}
+        activityId={activity.id}
         priceLabel={`NT$${activity.priceTwd?.toLocaleString()} / 人`}
         price={activity.priceTwd || 0}
         useBookingV2={useBookingV2}
