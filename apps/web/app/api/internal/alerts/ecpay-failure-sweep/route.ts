@@ -11,8 +11,8 @@
  * Risk: HIGH (payment_correctness, secrets)
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { recordIncident } from '../../../../src/lib/incidents';
-import { shouldAlertEcpayFailures } from '../../../../src/lib/alerting/thresholds';
+import { recordIncident } from '../../../../../src/lib/incidents';
+import { shouldAlertEcpayFailures } from '../../../../../src/lib/alerting/thresholds';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
