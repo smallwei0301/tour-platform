@@ -15,10 +15,9 @@ export async function POST(request: Request) {
     return Response.json(fail('INVALID_REQUEST', 'orderId is required'), { status: 400 });
   }
 
-  // Only allow in non-production ECPay env
-  const ecpayEnv = process.env.ECPAY_ENV || 'sandbox';
-  if (ecpayEnv === 'production') {
-    return Response.json(fail('FORBIDDEN', 'mock-confirm is disabled in production ECPay mode'), { status: 403 });
+  // Only allow when ALLOW_MOCK_PAYMENT=true is explicitly set
+  if (process.env.ALLOW_MOCK_PAYMENT !== 'true') {
+    return Response.json(fail('FORBIDDEN', 'mock payment is not enabled'), { status: 403 });
   }
 
   try {
