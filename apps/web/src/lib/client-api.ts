@@ -13,6 +13,7 @@ export async function createOrder(payload: {
   contactName: string;
   contactPhone: string;
   contactEmail: string;
+  promoCode?: string;
 }) {
   const res = await fetch('/api/orders', {
     method: 'POST',

@@ -47,6 +47,9 @@ export default function CheckoutPage() {
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoValidation, setPromoValidation] = useState<null | { valid: boolean; discountAmount?: number; discountedTotal?: number; reason?: string }>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -106,6 +109,39 @@ export default function CheckoutPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activity?.id, selectedScheduleId]);
 
+  const applyPromoCode = async () => {
+    const code = promoCode.trim().toUpperCase();
+    if (!code) return;
+    setPromoLoading(true);
+    setPromoValidation(null);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      // Compute current base price for discount preview
+      const plan = planId ? (activity?.plans || []).find((p: Plan) => p.id === planId) : null;
+      const basePriceTwd = (plan?.price != null && plan?.priceMultiplier != null)
+        ? Math.round(plan.price * plan.priceMultiplier)
+        : (activity?.priceTwd ?? 0);
+      const originalTotal = basePriceTwd * 1; // peopleCount = 1
+
+      const res = await fetch('/api/promo-codes/validate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ code, originalTotal }),
+      });
+      const json = await res.json();
+      setPromoValidation(json);
+    } catch {
+      setPromoValidation({ valid: false, reason: 'NETWORK_ERROR' });
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
   const onSubmit = async () => {
     if (!selectedScheduleId) { setErr('請選擇排期'); return; }
     if (!contactName.trim()) { setErr('請填入聯絡人姓名'); return; }
@@ -144,7 +180,8 @@ export default function CheckoutPage() {
         peopleCount: 1,
         contactName: contactName.trim(),
         contactPhone: contactPhone.trim(),
-        contactEmail: contactEmail.trim()
+        contactEmail: contactEmail.trim(),
+        promoCode: promoCode.trim().toUpperCase() || undefined,
       });
       router.push(`/order/pay?orderId=${order.id}&email=${encodeURIComponent(contactEmail.trim())}`);
     } catch (e) {
@@ -224,15 +261,60 @@ export default function CheckoutPage() {
         <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>訂單確認 Email 將發送至上述地址</p>
       </div>
 
+      {/* 折扣碼 */}
+      <div style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>折扣碼（選填）</p>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input
+            data-testid="promo-code-input"
+            type="text"
+            value={promoCode}
+            onChange={e => { setPromoCode(e.target.value); setPromoValidation(null); }}
+            placeholder="輸入折扣碼"
+            style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 12px', fontSize: 14, boxSizing: 'border-box' }}
+          />
+          <button
+            data-testid="promo-apply-btn"
+            onClick={applyPromoCode}
+            disabled={promoLoading || !promoCode.trim()}
+            style={{
+              padding: '8px 16px', background: '#6b7280', color: '#fff',
+              border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            {promoLoading ? '套用中…' : '套用'}
+          </button>
+        </div>
+        {promoValidation?.valid === true && (
+          <p style={{ color: '#16a34a', fontSize: 13, marginTop: 6 }}>
+            折扣 NT$ {promoValidation.discountAmount?.toLocaleString()} ✓
+          </p>
+        )}
+        {promoValidation?.valid === false && (
+          <p style={{ color: 'crimson', fontSize: 13, marginTop: 6 }}>
+            折扣碼無效：{promoValidation.reason}
+          </p>
+        )}
+      </div>
+
       {activity?.priceTwd && (() => {
         const plan = planId ? (activity.plans || []).find((p: Plan) => p.id === planId) : null;
-        const displayPrice = plan?.price != null && plan?.priceMultiplier != null
+        const basePrice = plan?.price != null && plan?.priceMultiplier != null
           ? Math.round(plan.price * plan.priceMultiplier)
           : activity.priceTwd;
+        const discountAmount = promoValidation?.valid ? (promoValidation.discountAmount ?? 0) : 0;
+        const displayPrice = basePrice - discountAmount;
         return (
-          <p style={{ fontSize: 15, fontWeight: 700, color: '#ec4899', marginBottom: 20 }}>
-            NT$ {displayPrice.toLocaleString()} / 人
-          </p>
+          <div style={{ marginBottom: 20 }}>
+            {discountAmount > 0 && (
+              <p style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
+                NT$ {basePrice.toLocaleString()} / 人
+              </p>
+            )}
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#ec4899', marginBottom: 0 }}>
+              NT$ {displayPrice.toLocaleString()} / 人
+            </p>
+          </div>
         );
       })()}
 
