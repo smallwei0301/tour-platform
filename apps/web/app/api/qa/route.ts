@@ -64,10 +64,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(fail('EMPTY_QUESTION', 'question text required'), { status: 400 });
   }
 
-  const adminSupabase = getServiceClient();
-
-  // AC3: Insert with status pending_moderation
-  const { data: qa, error } = await adminSupabase
+  // Use user-scoped client for INSERT so RLS authenticated_insert_pending_qa is enforced
+  const { data: qa, error } = await anonClientWithToken
     .from('activity_qa')
     .insert({
       activity_id: activityIdStr,

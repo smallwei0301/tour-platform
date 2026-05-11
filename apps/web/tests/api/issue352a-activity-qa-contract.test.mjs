@@ -270,3 +270,30 @@ describe('Issue 361 — AC5: PATCH /api/admin/qa/[id] route', () => {
     assert.match(src, /activity_qa/, 'Must update activity_qa table');
   });
 });
+
+// ---------------------------------------------------------------------------
+// FIX_RETRY: rollback file + RLS INSERT enforcement
+// ---------------------------------------------------------------------------
+describe('Issue 361 — FIX: standalone rollback file + user-scoped INSERT', () => {
+  it('Fix1: standalone rollback file exists', () => {
+    const rollbackPath = path.join(MIGRATIONS_DIR, '20260511_issue352a_activity_qa.rollback.sql');
+    assert.ok(fs.existsSync(rollbackPath), `Standalone rollback file must exist: ${rollbackPath}`);
+    const sql = fs.readFileSync(rollbackPath, 'utf8');
+    assert.match(sql, /DROP TABLE IF EXISTS\s+(public\.)?activity_qa\s+CASCADE/i,
+      'Rollback file must drop activity_qa table');
+  });
+
+  it('Fix2: POST /api/qa does NOT use service client for INSERT (RLS must be enforced)', () => {
+    const src = readRoute('app/api/qa/route.ts');
+    // Service client (getServiceClient) must NOT be used for the activity_qa insert
+    const hasServiceClientInsert = src.match(/getServiceClient\(\)[\s\S]{0,200}\.from\('activity_qa'\)/);
+    assert.ok(!hasServiceClientInsert,
+      'INSERT to activity_qa must use user-scoped client (anonClientWithToken), not service client');
+  });
+
+  it('Fix2: POST /api/qa uses user-scoped client for INSERT', () => {
+    const src = readRoute('app/api/qa/route.ts');
+    assert.match(src, /anonClientWithToken[\s\S]{0,50}\.from\('activity_qa'\)/,
+      'Must use anonClientWithToken (user JWT) for INSERT so RLS authenticated_insert_pending_qa is enforced');
+  });
+});
