@@ -36,6 +36,7 @@ export default function AdminOrdersPage() {
   const [targetScheduleId, setTargetScheduleId] = useState('');
   const [newCapacity, setNewCapacity] = useState('');
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [timeline, setTimeline] = useState<any[]>([]);
   const [exceptionBusy, setExceptionBusy] = useState(false);
 
   async function load() {
@@ -51,11 +52,13 @@ export default function AdminOrdersPage() {
   useEffect(() => { load().catch(() => setRows([])); }, [status]);
 
   useEffect(() => {
-    if (!selectedId) { setDetail(null); return; }
+    if (!selectedId) { setDetail(null); setTimeline([]); return; }
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' })
       .then(r => r.json()).then(j => { setDetail(j.data||null); setEditStatus(j.data?.status||''); setEditNote(j.data?.adminNote||''); }).catch(() => setDetail(null));
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
       .then(r => r.json()).then(j => setAuditLogs(j.data||[])).catch(() => setAuditLogs([]));
+    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/timeline`, { cache: 'no-store' })
+      .then(r => r.json()).then(j => setTimeline(j.data?.timeline||[])).catch(() => setTimeline([]));
   }, [selectedId]);
 
   const filtered = useMemo(() => rows, [rows]);
@@ -194,6 +197,72 @@ export default function AdminOrdersPage() {
                 <button onClick={saveDetail} disabled={saving} style={{ ...btnStyle('primary'), marginTop: 14, width: '100%' }}>
                   {saving ? '儲存中…' : '儲存變更'}
                 </button>
+
+                {/* Refund Timeline — AC1/AC2/AC5 */}
+                {timeline.filter((e: any) => /refund/.test(e.type || '')).length > 0 && (
+                  <details data-guide="refund-timeline" open style={{ marginTop: 14, border: '1px solid #fde68a', borderRadius: 8, background: '#fffbeb' }}>
+                    <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#92400e' }}>
+                      🔄 退款時間軸 ({timeline.filter((e: any) => /refund/.test(e.type || '')).length})
+                    </summary>
+                    <ul style={{ margin: 0, padding: '8px 14px 12px', listStyle: 'none' }}>
+                      {timeline
+                        .filter((e: any) => /refund/.test(e.type || ''))
+                        .map((e: any, idx: number) => (
+                          <li key={e.at + idx} style={{ fontSize: 12, color: '#6b7280', padding: '6px 0', borderBottom: '1px solid #fde68a' }}>
+                            <strong style={{ color: '#374151' }}>{e.title}</strong>
+                            <span style={{ marginLeft: 6, color: '#9ca3af' }}>
+                              {e.at ? new Date(e.at).toLocaleString('zh-TW') : '-'}
+                            </span>
+                            {e.detail?.trade_no && (
+                              <span style={{ marginLeft: 8, fontFamily: 'monospace', fontSize: 11, background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>
+                                ECPay: {String(e.detail.trade_no)}
+                              </span>
+                            )}
+                            {e.detail?.tradeNo && !e.detail?.trade_no && (
+                              <span style={{ marginLeft: 8, fontFamily: 'monospace', fontSize: 11, background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>
+                                ECPay: {String(e.detail.tradeNo)}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                    </ul>
+                  </details>
+                )}
+
+                {/* Payment Timeline — shows trade_no for all payment events */}
+                {timeline.filter((e: any) => /payment/.test(e.type || '') && (e.detail?.trade_no || e.detail?.tradeNo)).length > 0 && (
+                  <details data-guide="payment-timeline" style={{ marginTop: 10, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                    <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                      💳 付款紀錄 trade_no
+                    </summary>
+                    <ul style={{ margin: 0, padding: '8px 14px 12px', listStyle: 'none' }}>
+                      {timeline
+                        .filter((e: any) => /payment/.test(e.type || '') && (e.detail?.trade_no || e.detail?.tradeNo))
+                        .map((e: any, idx: number) => (
+                          <li key={e.at + idx} style={{ fontSize: 12, color: '#6b7280', padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+                            <strong style={{ color: '#374151' }}>{e.title}</strong>
+                            <span style={{ marginLeft: 8, fontFamily: 'monospace', fontSize: 11, background: '#f3f4f6', padding: '1px 5px', borderRadius: 4 }}>
+                              trade_no: {String(e.detail?.trade_no || e.detail?.tradeNo)}
+                            </span>
+                          </li>
+                        ))}
+                    </ul>
+                  </details>
+                )}
+
+                {/* AC5 — Refund action disabled when order is already refunded */}
+                {(detail.status === 'refunded' || detail.status === 'refund_pending') && (
+                  <div data-guide="refund-status-banner" style={{ marginTop: 14, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
+                    ✅ 此訂單已退款（{detail.status}）— 退款操作已停用
+                    <button
+                      disabled
+                      data-guide="refund-action-disabled"
+                      style={{ marginLeft: 12, padding: '4px 12px', borderRadius: 6, border: 'none', background: '#e5e7eb', color: '#9ca3af', fontSize: 12, cursor: 'not-allowed' }}
+                    >
+                      退款（已停用）
+                    </button>
+                  </div>
+                )}
 
                 {auditLogs.length > 0 && (
                   <details data-guide="audit-logs" style={{ marginTop: 14, border: '1px solid #e5e7eb', borderRadius: 8 }}>
