@@ -63,7 +63,6 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 async function insertAuditLogDb(supabase, { orderId = null, actor = 'admin', action, metadata = {} }) {
   if (!action) return;
   const payload = {
-    id: crypto.randomUUID(),
     order_id: orderId || null,
     actor,
     action,
