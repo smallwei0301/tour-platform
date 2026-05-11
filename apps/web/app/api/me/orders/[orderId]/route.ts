@@ -6,18 +6,23 @@ import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
 
-export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
+export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
 
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user?.email) {
+    // Allow guest access via contactEmail query param (order-status-by-email pattern)
+    const url = new URL(request.url);
+    const guestEmail = url.searchParams.get('contactEmail') || '';
+
+    const contactEmail = user?.email || guestEmail;
+    if (!contactEmail) {
       return Response.json(fail('UNAUTHORIZED', '請先登入'), { status: 401 });
     }
 
-    const row = await getMyOrderDetailDb({ orderId, contactEmail: user.email });
+    const row = await getMyOrderDetailDb({ orderId, contactEmail });
     return Response.json(ok(row));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
