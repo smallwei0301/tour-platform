@@ -2810,3 +2810,86 @@ async function getSupabaseServiceRole() {
   }
   return getSupabase();
 }
+
+// ---------------------------------------------------------------------------
+// Issue #305: Wishlist helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Add an activity to the user's wishlist.
+ * Silently upserts to handle duplicate clicks gracefully.
+ * @param {{ userId: string, activityId: string }} input
+ * @returns {Promise<{ id: string, userId: string, activityId: string, addedAt: string }>}
+ */
+export async function addToWishlistDb(input) {
+  const userId = String(input?.userId || '').trim();
+  const activityId = String(input?.activityId || '').trim();
+
+  if (!userId) throw new Error('userId is required');
+  if (!activityId) throw new Error('activityId is required');
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('wishlists')
+    .upsert({ user_id: userId, activity_id: activityId }, { onConflict: 'user_id,activity_id' })
+    .select('id, user_id, activity_id, added_at')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return {
+    id: data.id,
+    userId: data.user_id,
+    activityId: data.activity_id,
+    addedAt: data.added_at,
+  };
+}
+
+/**
+ * Remove an activity from the user's wishlist.
+ * @param {{ userId: string, activityId: string }} input
+ * @returns {Promise<void>}
+ */
+export async function removeFromWishlistDb(input) {
+  const userId = String(input?.userId || '').trim();
+  const activityId = String(input?.activityId || '').trim();
+
+  if (!userId) throw new Error('userId is required');
+  if (!activityId) throw new Error('activityId is required');
+
+  const supabase = await getSupabase();
+  const { error } = await supabase
+    .from('wishlists')
+    .delete()
+    .eq('user_id', userId)
+    .eq('activity_id', activityId);
+
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * List all wishlisted activities for a user, with activity details.
+ * @param {{ userId: string }} input
+ * @returns {Promise<Array<{ id: string, activityId: string, addedAt: string, title: string, slug: string, priceTwd: number }>>}
+ */
+export async function listWishlistDb(input) {
+  const userId = String(input?.userId || '').trim();
+  if (!userId) throw new Error('userId is required');
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('wishlists')
+    .select('id, activity_id, added_at, activities(id, title, slug, price_twd, cover_image_url)')
+    .eq('user_id', userId)
+    .order('added_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data || []).map((row) => ({
+    id: row.id,
+    activityId: row.activity_id,
+    addedAt: row.added_at,
+    title: row.activities?.title || '',
+    slug: row.activities?.slug || '',
+    priceTwd: row.activities?.price_twd || 0,
+    coverImageUrl: row.activities?.cover_image_url || null,
+  }));
+}
