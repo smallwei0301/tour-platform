@@ -28,6 +28,7 @@ export interface Schedule {
 }
 
 export interface Activity {
+  id?: string;
   slug: string;
   guideSlug: string;
   title: string;
