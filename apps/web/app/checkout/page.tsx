@@ -36,6 +36,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const slug = params.get('slug') || 'kaohsiung-chaishan-cave-experience';
   const planId = params.get('plan') || '';
+  const urlScheduleId = params.get('scheduleId') || '';
 
   const [activity, setActivity] = useState<ActivityInfo | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
@@ -64,9 +65,14 @@ export default function CheckoutPage() {
         const data = j.data;
         if (!data) { setErr('找不到行程'); return; }
         setActivity(data);
-        // 自動選第一個 open 的排期
-        const openSchedule = (data.schedules || []).find((s: Schedule) => s.status === 'open');
-        if (openSchedule) setSelectedScheduleId(openSchedule.id);
+        // 優先用 URL 帶的 scheduleId，否則自動選第一個 open 排期
+        const schedules: Schedule[] = data.schedules || [];
+        if (urlScheduleId && schedules.find(s => s.id === urlScheduleId)) {
+          setSelectedScheduleId(urlScheduleId);
+        } else {
+          const openSchedule = schedules.find((s: Schedule) => s.status === 'open');
+          if (openSchedule) setSelectedScheduleId(openSchedule.id);
+        }
       })
       .catch(() => setErr('行程資料載入失敗'))
       .finally(() => setFetching(false));

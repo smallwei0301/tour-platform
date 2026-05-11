@@ -9,7 +9,10 @@ export function resolvePlanBookingHref({ activitySlug, planId, date, scheduleId,
   if (!slug) return '/activities';
 
   if (!useBookingV2) {
-    return `/checkout?slug=${slug}`;
+    const params = new URLSearchParams({ slug: String(activitySlug || '').trim() });
+    if (planId) params.set('plan', String(planId));
+    if (scheduleId) params.set('scheduleId', String(scheduleId));
+    return `/checkout?${params.toString()}`;
   }
 
   const params = new URLSearchParams();
