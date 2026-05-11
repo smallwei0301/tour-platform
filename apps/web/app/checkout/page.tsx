@@ -43,11 +43,15 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string>('guest@example.com');
+  const [authChecked, setAuthChecked] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
-      if (data?.user?.email) setUserEmail(data.user.email);
+      if (data?.user?.email) setContactEmail(data.user.email);
+      setAuthChecked(true);
     });
   }, []);
 
@@ -65,11 +69,12 @@ export default function CheckoutPage() {
         const data = j.data;
         if (!data) { setErr('找不到行程'); return; }
         setActivity(data);
-        // 優先用 URL 帶的 scheduleId（來自活動頁選擇），否則自動選第一個 open 排期
-        if (urlScheduleId) {
+        // 優先用 URL 帶的 scheduleId，否則自動選第一個 open 排期
+        const schedules: Schedule[] = data.schedules || [];
+        if (urlScheduleId && schedules.find(s => s.id === urlScheduleId)) {
           setSelectedScheduleId(urlScheduleId);
         } else {
-          const openSchedule = (data.schedules || []).find((s: Schedule) => s.status === 'open');
+          const openSchedule = schedules.find((s: Schedule) => s.status === 'open');
           if (openSchedule) setSelectedScheduleId(openSchedule.id);
         }
       })
@@ -103,6 +108,9 @@ export default function CheckoutPage() {
 
   const onSubmit = async () => {
     if (!selectedScheduleId) { setErr('請選擇排期'); return; }
+    if (!contactName.trim()) { setErr('請填入聯絡人姓名'); return; }
+    if (!contactPhone.trim()) { setErr('請填入聯絡電話'); return; }
+    if (!contactEmail.trim() || !contactEmail.includes('@')) { setErr('請填入有效的 Email'); return; }
     setLoading(true);
     setErr(null);
 
@@ -134,11 +142,11 @@ export default function CheckoutPage() {
         scheduleId: selectedScheduleId,
         planId: planId || undefined,
         peopleCount: 1,
-        contactName: 'Guest',
-        contactPhone: '0912345678',
-        contactEmail: userEmail
+        contactName: contactName.trim(),
+        contactPhone: contactPhone.trim(),
+        contactEmail: contactEmail.trim()
       });
-      router.push(`/order/pay?orderId=${order.id}&email=${encodeURIComponent(userEmail)}`);
+      router.push(`/order/pay?orderId=${order.id}&email=${encodeURIComponent(contactEmail.trim())}`);
     } catch (e) {
       // 事件：error
       track({
@@ -157,7 +165,7 @@ export default function CheckoutPage() {
 
   const openSchedules = (activity?.schedules || []).filter(s => s.status === 'open');
 
-  if (fetching) return <main style={{ padding: 24 }}><p>載入行程資料中…</p></main>;
+  if (fetching || !authChecked) return <main style={{ padding: 24 }}><p>載入中…</p></main>;
 
   return (
     <main style={{ padding: 24, maxWidth: 480, fontFamily: 'system-ui, sans-serif' }}>
@@ -193,6 +201,28 @@ export default function CheckoutPage() {
           </select>
         </div>
       )}
+
+      {/* 聯絡人資料 */}
+      <div style={{ marginBottom: 20 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>聯絡人資料</p>
+        {[
+          { label: '姓名', value: contactName, setter: setContactName, placeholder: '王小明', type: 'text' },
+          { label: '電話', value: contactPhone, setter: setContactPhone, placeholder: '0912345678', type: 'tel' },
+          { label: 'Email', value: contactEmail, setter: setContactEmail, placeholder: 'email@example.com', type: 'email' },
+        ].map(({ label, value, setter, placeholder, type }) => (
+          <div key={label} style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 3 }}>{label}</label>
+            <input
+              type={type}
+              value={value}
+              onChange={e => setter(e.target.value)}
+              placeholder={placeholder}
+              style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 12px', fontSize: 14, boxSizing: 'border-box' }}
+            />
+          </div>
+        ))}
+        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>訂單確認 Email 將發送至上述地址</p>
+      </div>
 
       {activity?.priceTwd && (() => {
         const plan = planId ? (activity.plans || []).find((p: Plan) => p.id === planId) : null;

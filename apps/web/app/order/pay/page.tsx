@@ -108,10 +108,10 @@ export default function OrderPayPage() {
     setPaying(true);
     setErr(null);
     try {
-      const res = await fetch('/api/payments/ecpay/callback', {
+      const res = await fetch('/api/payments/mock-confirm', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ orderId, tradeNo: `MOCK-${Date.now()}` }),
+        body: JSON.stringify({ orderId }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '付款失敗');
