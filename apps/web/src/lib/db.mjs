@@ -240,6 +240,16 @@ export async function listMyOrdersDb(input = {}) {
     activityMap = new Map((acts || []).map((a) => [a.id, a]));
   }
 
+  const scheduleIds = [...new Set((data || []).map((r) => r.schedule_id).filter(Boolean))];
+  let scheduleMap = new Map();
+  if (scheduleIds.length > 0) {
+    const { data: scheds } = await supabase
+      .from('activity_schedules')
+      .select('id, start_at')
+      .in('id', scheduleIds);
+    scheduleMap = new Map((scheds || []).map((s) => [s.id, s]));
+  }
+
   return (data || []).map((r) => ({
     id: r.id,
     status: r.status,
@@ -249,6 +259,7 @@ export async function listMyOrdersDb(input = {}) {
     title: activityMap.get(r.activity_id)?.title || null,
     guideSlug: activityMap.get(r.activity_id)?.guide_slug || null,
     scheduleId: r.schedule_id,
+    scheduleStartAt: scheduleMap.get(r.schedule_id)?.start_at || null,
     peopleCount: r.people_count,
     contactName: r.contact_name,
     contactPhone: r.contact_phone,

@@ -17,6 +17,7 @@ type OrderDetail = {
   createdAt?: string | null;
   paidAt?: string | null;
   scheduleId?: string | null;
+  scheduleStartAt?: string | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -73,6 +74,8 @@ export default function OrderDetailPage() {
   // Refund state
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState('');
+  const [refundNote, setRefundNote] = useState('');
+  const [refundRequestId] = useState(() => crypto.randomUUID());
   const [submittingRefund, setSubmittingRefund] = useState(false);
   const [refundErr, setRefundErr] = useState<string | null>(null);
   const [refundSuccess, setRefundSuccess] = useState(false);
@@ -136,7 +139,7 @@ export default function OrderDetailPage() {
       const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/refund-requests`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ requestId: crypto.randomUUID(), reason: refundReason }),
+        body: JSON.stringify({ requestId: refundRequestId, reason: refundReason, note: refundNote }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '退款申請失敗');
@@ -181,8 +184,9 @@ export default function OrderDetailPage() {
   const statusDesc = STATUS_DESCRIPTIONS[status] || '';
 
   const canCancel = status === 'pending_payment';
-  const canRefund = ['paid', 'confirmed'].includes(status);
-  const isTerminal = ['cancelled_by_user', 'cancelled_by_guide', 'rejected', 'completed', 'refunded'].includes(status);
+  const departureNotPassed = !order.scheduleStartAt || new Date(order.scheduleStartAt) > new Date();
+  const canRefund = ['paid', 'confirmed'].includes(status) && departureNotPassed;
+  const isTerminal = ['cancelled_by_user', 'cancelled_by_guide', 'rejected', 'completed', 'refunded', 'refund_pending'].includes(status);
 
   return (
     <div style={containerStyle}>
@@ -267,22 +271,34 @@ export default function OrderDetailPage() {
           )}
 
           {canRefund && !refundSuccess && !showRefundForm && (
-            <button onClick={() => setShowRefundForm(true)} style={btnSecondary}>申請退款</button>
+            <button onClick={() => setShowRefundForm(true)} style={btnSecondary}>申請取消/退款</button>
           )}
 
           {refundSuccess && (
-            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center' }}>✅ 退款申請已送出，等待審核中</p>
+            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center' }}>✅ 已申請，客服將於 2 個工作天內處理</p>
           )}
 
           {showRefundForm && (
             <form onSubmit={handleRefund} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>退款原因</label>
-              <textarea
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>取消／退款原因</label>
+              <select
                 required
                 value={refundReason}
                 onChange={e => setRefundReason(e.target.value)}
-                placeholder="請說明退款原因…"
-                rows={3}
+                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', marginBottom: 10 }}
+              >
+                <option value="">請選擇原因</option>
+                <option value="schedule_conflict">行程衝突</option>
+                <option value="personal_reason">個人因素</option>
+                <option value="health_issue">健康因素</option>
+                <option value="other">其他</option>
+              </select>
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>補充說明（選填）</label>
+              <textarea
+                value={refundNote}
+                onChange={e => setRefundNote(e.target.value)}
+                placeholder="如有其他說明請填寫…"
+                rows={2}
                 style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
               />
               {refundErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{refundErr}</p>}
