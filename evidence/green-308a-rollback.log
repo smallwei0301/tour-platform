@@ -1,0 +1,35 @@
+Issue #322 rollback contract tests completed!
+✔ AC7: rollback SQL file exists (1.839996ms)
+✔ AC7: rollback drops activity_images table (0.225574ms)
+✔ AC7: rollback drops activity_plan_tiers table (0.169394ms)
+✔ AC7: rollback drops activities.dismissal_point column (0.174203ms)
+✔ AC7: rollback drops activities.dismissal_point_map_url column (0.231294ms)
+✔ AC7: rollback drops activities.meeting_lat column (0.134093ms)
+✔ AC7: rollback drops activities.meeting_lng column (0.140943ms)
+✔ AC7: rollback drops activities.dismissal_lat column (0.124723ms)
+✔ AC7: rollback drops activities.dismissal_lng column (0.207434ms)
+✔ AC7: rollback drops policy "activities: guide owner read own" (0.307866ms)
+✔ AC7: rollback drops policy "activities: guide owner insert own" (0.142263ms)
+✔ AC7: rollback drops policy "activities: guide owner update own" (0.122612ms)
+✔ AC7: rollback drops policy "activities: guide owner delete own" (3.463139ms)
+✔ AC7: rollback drops policy "activity_schedules: guide owner read own" (0.226535ms)
+✔ AC7: rollback drops policy "activity_schedules: guide owner insert own" (0.104822ms)
+✔ AC7: rollback drops policy "activity_schedules: guide owner update own" (0.089952ms)
+✔ AC7: rollback drops policy "activity_schedules: guide owner delete own" (0.181424ms)
+✔ AC7: rollback drops policy "activity_plans: guide owner read own" (0.315986ms)
+✔ AC7: rollback drops policy "activity_plans: guide owner insert own" (0.085542ms)
+✔ AC7: rollback drops policy "activity_plans: guide owner update own" (0.071712ms)
+✔ AC7: rollback drops policy "activity_plans: guide owner delete own" (0.072302ms)
+✔ AC7: rollback does NOT drop "activities: public read published" (0.326707ms)
+✔ AC7: rollback does NOT drop "activities: service role full access" (0.233314ms)
+✔ AC7: rollback does NOT drop "activity_schedules: public read" (0.199464ms)
+✔ AC7: rollback does NOT drop "activity_plans: public read active plans" (0.153763ms)
+✔ AC7: activity_images policies covered by DROP TABLE CASCADE (0.112083ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 443.948199
