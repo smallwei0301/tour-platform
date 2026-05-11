@@ -1,0 +1,92 @@
+✖ AC1: activities has column "dismissal_point" of type text (1.250365ms)
+✖ AC1: activities has column "dismissal_point_map_url" of type text (0.234425ms)
+✖ AC1: activities has column "meeting_lat" of type numeric (0.178233ms)
+✖ AC1: activities has column "meeting_lng" of type numeric (0.169533ms)
+✖ AC1: activities has column "dismissal_lat" of type numeric (1.075922ms)
+✖ AC1: activities has column "dismissal_lng" of type numeric (0.187444ms)
+✖ AC1: all 6 new columns exist on activities table (0.343687ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.480313
+
+✖ failing tests:
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
+✖ AC1: activities has column "dismissal_point" of type text (1.250365ms)
+  Error: [EXPECTED-RED pre-migration] Column "dismissal_point" not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.start (node:internal/test_runner/test:1015:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
+✖ AC1: activities has column "dismissal_point_map_url" of type text (0.234425ms)
+  Error: [EXPECTED-RED pre-migration] Column "dismissal_point_map_url" not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
+✖ AC1: activities has column "meeting_lat" of type numeric (0.178233ms)
+  Error: [EXPECTED-RED pre-migration] Column "meeting_lat" not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
+✖ AC1: activities has column "meeting_lng" of type numeric (0.169533ms)
+  Error: [EXPECTED-RED pre-migration] Column "meeting_lng" not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
+✖ AC1: activities has column "dismissal_lat" of type numeric (1.075922ms)
+  Error: [EXPECTED-RED pre-migration] Column "dismissal_lat" not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:63:3
+✖ AC1: activities has column "dismissal_lng" of type numeric (0.187444ms)
+  Error: [EXPECTED-RED pre-migration] Column "dismissal_lng" not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:66:13)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
+
+test at apps/web/tests/api/issue-308a-schema-extension.test.mjs:83:1
+✖ AC1: all 6 new columns exist on activities table (0.343687ms)
+  Error: [EXPECTED-RED pre-migration] 6 new columns not yet added — migration not applied
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue-308a-schema-extension.test.mjs:85:11)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7)
