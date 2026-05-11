@@ -65,12 +65,11 @@ export default function CheckoutPage() {
         const data = j.data;
         if (!data) { setErr('找不到行程'); return; }
         setActivity(data);
-        // 優先用 URL 帶的 scheduleId，否則自動選第一個 open 排期
-        const schedules: Schedule[] = data.schedules || [];
-        if (urlScheduleId && schedules.find(s => s.id === urlScheduleId)) {
+        // 優先用 URL 帶的 scheduleId（來自活動頁選擇），否則自動選第一個 open 排期
+        if (urlScheduleId) {
           setSelectedScheduleId(urlScheduleId);
         } else {
-          const openSchedule = schedules.find((s: Schedule) => s.status === 'open');
+          const openSchedule = (data.schedules || []).find((s: Schedule) => s.status === 'open');
           if (openSchedule) setSelectedScheduleId(openSchedule.id);
         }
       })
