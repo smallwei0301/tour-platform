@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS public.activity_images (
   activity_id uuid         NOT NULL REFERENCES public.activities(id) ON DELETE CASCADE,
   url         text         NOT NULL,
   alt         text,
-  kind        text         CHECK (kind IN ('cover', 'gallery')),
+  kind        text         NOT NULL CHECK (kind IN ('cover', 'gallery')),
   sort_order  integer      NOT NULL DEFAULT 0,
   created_at  timestamptz  NOT NULL DEFAULT now()
 );
