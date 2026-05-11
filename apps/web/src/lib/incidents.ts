@@ -1,11 +1,12 @@
 /**
  * Centralized Alerting Bus — incident recording
- * Phase 13 — Tour Platform (Issue #325)
+ * Phase 13 — Tour Platform (Issue #325, fixed #326/#330)
  *
  * Fire-and-forget: recordIncident never throws.
- * Both Sentry and LINE Notify are best-effort; failures are silently swallowed.
+ * Sentry, LINE Notify, and DB insert are all best-effort.
  */
 import * as Sentry from '@sentry/nextjs';
+import { createClient } from '@supabase/supabase-js';
 import { notifySystemError } from './line-notify';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -20,24 +21,10 @@ export interface IncidentOpts {
 
 // ── PII redaction ─────────────────────────────────────────────────────────────
 
-/** Keys whose values contain personally identifiable information and must be masked. */
 const PII_KEYS = new Set([
-  'email',
-  'phone',
-  'contact_email',
-  'contact_phone',
-  'contactEmail',
-  'contactPhone',
+  'email', 'phone', 'contact_email', 'contact_phone', 'contactEmail', 'contactPhone',
 ]);
 
-/**
- * Redact PII fields from a metadata object.
- * Non-PII fields (e.g. amount, orderId) are preserved as-is.
- *
- * @example
- * redactPii({ email: 'test@example.com', phone: '0912345678', amount: 100 })
- * // => { email: '***', phone: '***', amount: 100 }
- */
 export function redactPii(metadata: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(metadata).map(([k, v]) =>
@@ -46,18 +33,20 @@ export function redactPii(metadata: Record<string, unknown>): Record<string, unk
   );
 }
 
+// ── DB helper ─────────────────────────────────────────────────────────────────
+
+function getSupabaseForIncidents() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
 // ── Core ──────────────────────────────────────────────────────────────────────
 
-/**
- * Record an incident to Sentry and LINE Notify.
- *
- * Both calls are fire-and-forget — this function never throws.
- * If LINE_NOTIFY_ACCESS_TOKEN is absent, the LINE call is silently skipped.
- */
 export async function recordIncident(opts: IncidentOpts): Promise<void> {
   const safeMetadata = opts.metadata ? redactPii(opts.metadata) : {};
 
-  // Map severity to Sentry level
   const sentryLevel =
     opts.severity === 'critical' ? 'fatal'
     : opts.severity === 'error'  ? 'error'
@@ -68,15 +57,9 @@ export async function recordIncident(opts: IncidentOpts): Promise<void> {
   try {
     Sentry.captureMessage(opts.message, {
       level: sentryLevel as Sentry.SeverityLevel,
-      extra: {
-        source:   opts.source,
-        category: opts.category,
-        ...safeMetadata,
-      },
+      extra: { source: opts.source, category: opts.category, ...safeMetadata },
     });
-  } catch {
-    // intentionally swallowed — fire-and-forget
-  }
+  } catch { /* fire-and-forget */ }
 
   // LINE Notify — fire-and-forget
   try {
@@ -85,7 +68,20 @@ export async function recordIncident(opts: IncidentOpts): Promise<void> {
       `[${opts.severity.toUpperCase()}] ${opts.message}`,
       safeMetadata
     );
-  } catch {
-    // intentionally swallowed — fire-and-forget
-  }
+  } catch { /* fire-and-forget */ }
+
+  // DB insert to incidents table — fire-and-forget
+  try {
+    const supabase = getSupabaseForIncidents();
+    if (supabase) {
+      await supabase.from('incidents').insert({
+        severity: opts.severity,
+        source: opts.source,
+        category: opts.category ?? null,
+        message: opts.message,
+        metadata: safeMetadata,
+        created_at: new Date().toISOString(),
+      });
+    }
+  } catch { /* fire-and-forget — no DB in test/CI env */ }
 }

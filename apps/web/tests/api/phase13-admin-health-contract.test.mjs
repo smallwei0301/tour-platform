@@ -47,8 +47,11 @@ test('AC2: health route references incidents table and returns counts/recent/dep
 
   const src = readFileSync(healthPath, 'utf8');
 
-  // Must reference incidents table
-  assert.match(src, /incidents/, 'Must reference incidents table');
+  // Must ACTUALLY QUERY incidents table (not just reference the string)
+  assert.match(src, /\.from\s*\(\s*['"]incidents['"]\s*\)/, 'Must call supabase.from("incidents") — not just comment it');
+  assert.match(src, /\.select\s*\(/, 'Must call .select() to actually query the table');
+  assert.ok(!src.includes('counts: {}'), 'Must NOT return hardcoded empty counts: {}');
+  assert.ok(!src.includes('recent: []'), 'Must NOT return hardcoded empty recent: []');
 
   // Must return counts
   assert.match(src, /counts/, 'Must include counts in response shape');

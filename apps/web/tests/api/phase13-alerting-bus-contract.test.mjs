@@ -70,6 +70,11 @@ test('AC2: incidents.ts exists and exports recordIncident with Sentry + LINE + f
   assert.match(src, /try\s*\{[\s\S]*?Sentry\.(captureException|captureMessage)[\s\S]*?\}\s*catch/, 'Sentry call must be wrapped in try/catch');
   assert.match(src, /try\s*\{[\s\S]*?notifySystemError[\s\S]*?\}\s*catch/, 'notifySystemError call must be wrapped in try/catch');
 
+  // DB insert to incidents table — behavioral check (not just string presence)
+  assert.match(src, /\.from\s*\(\s*['"]incidents['"]\s*\)\.insert/, 'recordIncident must write to incidents table via supabase.from("incidents").insert()');
+  assert.match(src, /SUPABASE_URL/, 'Must use server-side SUPABASE_URL env var (not NEXT_PUBLIC_*)');
+  assert.ok(!src.includes('NEXT_PUBLIC_SUPABASE_URL'), 'Must NOT use NEXT_PUBLIC_SUPABASE_URL in server-side lib');
+
   // returns void/Promise<void>
   assert.match(src, /Promise<void>|:.*void/, 'Must return void or Promise<void>');
 });
