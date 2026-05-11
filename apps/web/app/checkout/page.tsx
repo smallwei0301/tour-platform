@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createOrder } from '../../src/lib/client-api';
+import { createClient } from '../../src/lib/supabase/client';
 import { track } from '../../src/lib/track';
 import { captureUtm, getStoredUtm } from '../../src/lib/utm';
 
@@ -41,6 +42,13 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>('guest@example.com');
+
+  useEffect(() => {
+    createClient().auth.getUser().then(({ data }) => {
+      if (data?.user?.email) setUserEmail(data.user.email);
+    });
+  }, []);
 
   // 擷取並快取 UTM（首次帶 UTM landing 時保留歸因）
   useEffect(() => {
@@ -123,9 +131,9 @@ export default function CheckoutPage() {
         peopleCount: 1,
         contactName: 'Guest',
         contactPhone: '0912345678',
-        contactEmail: 'guest@example.com'
+        contactEmail: userEmail
       });
-      router.push(`/order/pay?orderId=${order.id}&email=guest@example.com`);
+      router.push(`/order/pay?orderId=${order.id}&email=${encodeURIComponent(userEmail)}`);
     } catch (e) {
       // 事件：error
       track({
