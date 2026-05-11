@@ -1,0 +1,28 @@
+name: pre-tour-reminder-sweep
+
+on:
+  schedule:
+    # Every 30 minutes — h24 and h1 windows both checked per run
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: POST to pre-tour-sweep endpoint
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/sweep-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/reminders/pre-tour-sweep" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}")
+          echo "HTTP status: $RESPONSE"
+          cat /tmp/sweep-response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Sweep returned non-200 status: $RESPONSE"
+            exit 1
+          fi
