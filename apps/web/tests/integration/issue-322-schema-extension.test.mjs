@@ -95,6 +95,12 @@ describe('Issue 322 schema extension - forward migration', () => {
       'activity_images must have kind with CHECK constraint for cover/gallery');
   });
 
+  it('AC2: activity_images.kind is NOT NULL', () => {
+    const sql = readMigration(FORWARD_FILE);
+    assert.match(sql, /kind\s+text\s+NOT NULL\s+CHECK/i,
+      'activity_images.kind must be NOT NULL per spec (kind text NOT NULL CHECK (kind IN (\'cover\',\'gallery\')))');
+  });
+
   it('AC2: activity_images has sort_order NOT NULL DEFAULT 0', () => {
     const sql = readMigration(FORWARD_FILE);
     assert.match(sql, /activity_images[\s\S]{0,800}sort_order\s+int(?:eger)?\s+NOT NULL\s+DEFAULT\s+0/i,
