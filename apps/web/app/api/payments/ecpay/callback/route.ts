@@ -8,6 +8,7 @@ import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
+import { recordIncident } from '../../../../../src/lib/incidents';
 
 function normalizePayload(headers: Headers, rawText: string) {
   const contentType = headers.get('content-type') || '';
@@ -156,6 +157,20 @@ export async function POST(request: Request) {
       },
       request
     );
+
+    // 🚨 Phase 13: alerting bus — record payment failure incident (fire-and-forget)
+    void recordIncident({
+      source: 'ecpay_callback',
+      severity: 'error',
+      category: 'payment',
+      message: `ECPay payment failed: RtnCode=${rtnCode}, RtnMsg=${payload?.RtnMsg || 'unknown'}`,
+      metadata: {
+        orderId,
+        rtnCode,
+        rtnMsg: payload?.RtnMsg || 'unknown',
+        merchantTradeNo: payload?.MerchantTradeNo,
+      },
+    });
 
     // ECPay 期望收到 "1|OK" 回應，即使付款失敗
     return new Response('1|OK', {
