@@ -720,11 +720,26 @@ export async function updateAdminOrderDb(input = {}) {
   const bookingId = input?.bookingId || null;
   const paymentId = input?.paymentId || null;
 
+  // Contact info fields
+  const contactNameProvided = input?.contactName != null;
+  const contactPhoneProvided = input?.contactPhone != null;
+  const contactEmailProvided = input?.contactEmail != null;
+  const newContactName = contactNameProvided ? String(input.contactName).trim() : null;
+  const newContactPhone = contactPhoneProvided ? String(input.contactPhone).trim() : null;
+  const newContactEmail = contactEmailProvided ? String(input.contactEmail).trim() : null;
+
+  // Headcount field
+  const peopleCountProvided = input?.peopleCount != null;
+  const newPeopleCount = peopleCountProvided ? Number(input.peopleCount) : null;
+
   if (!orderId) throw new Error('orderId is required');
 
   const validStatuses = [
     'pending_payment', 'paid', 'confirmed', 'rejected', 'cancelled_by_user', 'cancelled_by_guide', 'completed', 'refund_pending', 'refunded'
   ];
+
+  // AC5: locked statuses cannot be edited
+  const lockedStatuses = ['refunded', 'refund_pending', 'completed', 'cancelled_by_user', 'cancelled_by_guide'];
 
   const patch = { updated_at: new Date().toISOString() };
   if (status) {
@@ -742,14 +757,61 @@ export async function updateAdminOrderDb(input = {}) {
     }
   }
   if (adminNoteProvided) patch.admin_note = adminNote;
+  if (contactNameProvided) patch.contact_name = newContactName;
+  if (contactPhoneProvided) patch.contact_phone = newContactPhone;
+  if (contactEmailProvided) patch.contact_email = newContactEmail;
 
   const supabase = await getSupabase();
   const { data: beforeOrder, error: beforeError } = await supabase
     .from('orders')
-    .select('id, status, payment_status, paid_at, admin_note')
+    .select('id, status, payment_status, paid_at, admin_note, contact_name, contact_phone, contact_email, people_count, total_twd, schedule_id')
     .eq('id', orderId)
     .single();
   if (beforeError || !beforeOrder) throw new Error(beforeError?.message || 'order not found');
+
+  // AC5: reject edits on locked orders
+  if (lockedStatuses.includes(beforeOrder.status)) {
+    throw new Error(`order_edit_locked:${beforeOrder.status}`);
+  }
+
+  // AC1.1 / AC1.2 / AC1.3: handle peopleCount change
+  if (peopleCountProvided && newPeopleCount !== beforeOrder.people_count) {
+    if (!Number.isInteger(newPeopleCount) || newPeopleCount < 1) {
+      throw new Error('peopleCount must be a positive integer');
+    }
+    const delta = newPeopleCount - beforeOrder.people_count;
+
+    // Fetch schedule capacity info
+    const { data: schedule, error: scheduleError } = await supabase
+      .from('activity_schedules')
+      .select('id, capacity, booked_count, status')
+      .eq('id', beforeOrder.schedule_id)
+      .single();
+
+    if (scheduleError || !schedule) throw new Error('schedule not found');
+
+    const newBooked = schedule.booked_count + delta;
+    // AC1.1: capacity check
+    if (newBooked > schedule.capacity) {
+      throw new Error(`capacity insufficient: capacity=${schedule.capacity} booked=${schedule.booked_count} delta=${delta}`);
+    }
+
+    // AC1.2: update booked_count and schedule status
+    const newScheduleStatus = newBooked >= schedule.capacity ? 'full' : 'open';
+    const { error: scheduleUpdateError } = await supabase
+      .from('activity_schedules')
+      .update({ booked_count: newBooked, status: newScheduleStatus })
+      .eq('id', beforeOrder.schedule_id);
+    if (scheduleUpdateError) throw new Error(scheduleUpdateError.message);
+
+    // AC1.3: recompute total_twd
+    // Derive price_per_head from existing total / pax, fallback to no recompute if pax was 0
+    patch.people_count = newPeopleCount;
+    if (beforeOrder.people_count > 0 && beforeOrder.total_twd != null) {
+      const pricePerHead = Math.round(beforeOrder.total_twd / beforeOrder.people_count);
+      patch.total_twd = pricePerHead * newPeopleCount;
+    }
+  }
 
   const { error } = await supabase.from('orders').update(patch).eq('id', orderId);
   if (error) throw new Error(error.message);
@@ -758,6 +820,8 @@ export async function updateAdminOrderDb(input = {}) {
   const afterAdminNote = adminNoteProvided ? (patch.admin_note || null) : (beforeOrder.admin_note || null);
   const statusChanged = !!status && beforeOrder.status !== afterStatus;
   const noteChanged = adminNoteProvided && (beforeOrder.admin_note || null) !== afterAdminNote;
+  const contactChanged = contactNameProvided || contactPhoneProvided || contactEmailProvided;
+  const headcountChanged = peopleCountProvided && patch.people_count != null;
 
   if (statusChanged || noteChanged) {
     await insertAuditLogDb(supabase, {
@@ -782,6 +846,35 @@ export async function updateAdminOrderDb(input = {}) {
           paymentStatus: patch.payment_status ?? beforeOrder.payment_status ?? null,
           paidAt: patch.paid_at ?? beforeOrder.paid_at ?? null,
           adminNote: afterAdminNote
+        }
+      }
+    });
+  }
+
+  // AC1.4: audit log for admin edit (contact / headcount changes)
+  if (contactChanged || headcountChanged) {
+    await insertAuditLogDb(supabase, {
+      orderId,
+      actor,
+      action: 'order_admin_edit',
+      metadata: {
+        actor,
+        actorRole: 'admin',
+        sourceChannel: 'admin_pos',
+        targetOrderId: orderId,
+        before: {
+          contactName: beforeOrder.contact_name || null,
+          contactPhone: beforeOrder.contact_phone || null,
+          contactEmail: beforeOrder.contact_email || null,
+          peopleCount: beforeOrder.people_count || null,
+          totalTwd: beforeOrder.total_twd || null
+        },
+        after: {
+          contactName: contactNameProvided ? newContactName : (beforeOrder.contact_name || null),
+          contactPhone: contactPhoneProvided ? newContactPhone : (beforeOrder.contact_phone || null),
+          contactEmail: contactEmailProvided ? newContactEmail : (beforeOrder.contact_email || null),
+          peopleCount: headcountChanged ? patch.people_count : (beforeOrder.people_count || null),
+          totalTwd: headcountChanged ? (patch.total_twd ?? beforeOrder.total_twd) : (beforeOrder.total_twd || null)
         }
       }
     });

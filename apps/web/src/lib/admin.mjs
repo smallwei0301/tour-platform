@@ -64,6 +64,18 @@ export function updateAdminOrderFallback(input = {}) {
   const actor = String(input?.actor || 'admin').trim() || 'admin';
   const sourceChannel = String(input?.sourceChannel || 'admin_pos').trim() || 'admin_pos';
 
+  // Contact info fields
+  const contactNameProvided = input?.contactName != null;
+  const contactPhoneProvided = input?.contactPhone != null;
+  const contactEmailProvided = input?.contactEmail != null;
+  const newContactName = contactNameProvided ? String(input.contactName).trim() : null;
+  const newContactPhone = contactPhoneProvided ? String(input.contactPhone).trim() : null;
+  const newContactEmail = contactEmailProvided ? String(input.contactEmail).trim() : null;
+
+  // Headcount field
+  const peopleCountProvided = input?.peopleCount != null;
+  const newPeopleCount = peopleCountProvided ? Number(input.peopleCount) : null;
+
   if (!orderId) throw new Error('orderId is required');
 
   const validStatuses = [
@@ -78,13 +90,26 @@ export function updateAdminOrderFallback(input = {}) {
     'refunded'
   ];
 
+  // AC5: locked statuses cannot be edited
+  const lockedStatuses = ['refunded', 'refund_pending', 'completed', 'cancelled_by_user', 'cancelled_by_guide'];
+
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw new Error('order not found');
+
+  // AC5: reject edits on locked orders
+  if (lockedStatuses.includes(order.status)) {
+    throw new Error(`order_edit_locked:${order.status}`);
+  }
 
   const previousStatus = order.status;
   const previousPaymentStatus = order.paymentStatus || null;
   const previousPaidAt = order.paidAt || null;
   const previousAdminNote = order.adminNote || null;
+  const previousContactName = order.contactName || null;
+  const previousContactPhone = order.contactPhone || null;
+  const previousContactEmail = order.contactEmail || null;
+  const previousPeopleCount = order.peopleCount || null;
+  const previousTotalTwd = order.totalTwd || null;
 
   if (status) {
     if (!validStatuses.includes(status)) throw new Error('invalid order status');
@@ -104,10 +129,48 @@ export function updateAdminOrderFallback(input = {}) {
     order.adminNote = adminNote || null;
   }
 
+  if (contactNameProvided) order.contactName = newContactName;
+  if (contactPhoneProvided) order.contactPhone = newContactPhone;
+  if (contactEmailProvided) order.contactEmail = newContactEmail;
+
+  // AC1.1 / AC1.2 / AC1.3: headcount change
+  let headcountChanged = false;
+  if (peopleCountProvided && newPeopleCount !== order.peopleCount) {
+    if (!Number.isInteger(newPeopleCount) || newPeopleCount < 1) {
+      throw new Error('peopleCount must be a positive integer');
+    }
+    const delta = newPeopleCount - order.peopleCount;
+
+    // Find schedule in in-memory experience data (experiences is imported from store.mjs at top)
+    const expData = experiences.find((e) => e.id === order.experienceId);
+    const schedule = expData?.schedules?.find((s) => s.id === order.scheduleId);
+
+    if (schedule) {
+      const newBooked = (schedule.bookedCount || 0) + delta;
+      // AC1.1: capacity check
+      if (newBooked > schedule.capacity) {
+        throw new Error(`capacity insufficient: capacity=${schedule.capacity} booked=${schedule.bookedCount} delta=${delta}`);
+      }
+      // AC1.2: update booked_count
+      schedule.bookedCount = newBooked;
+      schedule.status = newBooked >= schedule.capacity ? 'full' : 'open';
+    }
+
+    order.peopleCount = newPeopleCount;
+    // AC1.3: recompute total_twd
+    if (previousPeopleCount > 0 && order.totalTwd != null) {
+      const pricePerHead = Math.round(order.totalTwd / previousPeopleCount);
+      order.totalTwd = pricePerHead * newPeopleCount;
+    }
+    headcountChanged = true;
+  }
+
   order.updatedAt = new Date().toISOString();
 
   const statusChanged = !!status && previousStatus !== order.status;
   const noteChanged = adminNoteProvided && previousAdminNote !== (order.adminNote || null);
+  const contactChanged = contactNameProvided || contactPhoneProvided || contactEmailProvided;
+
   if (statusChanged || noteChanged) {
     appendAuditLog({
       orderId: order.id,
@@ -131,6 +194,35 @@ export function updateAdminOrderFallback(input = {}) {
           paymentStatus: order.paymentStatus || null,
           paidAt: order.paidAt || null,
           adminNote: order.adminNote || null
+        }
+      }
+    });
+  }
+
+  // AC1.4: audit log for admin edit (contact / headcount changes)
+  if (contactChanged || headcountChanged) {
+    appendAuditLog({
+      orderId: order.id,
+      actor,
+      action: 'order_admin_edit',
+      metadata: {
+        actor,
+        actorRole: 'admin',
+        sourceChannel: 'admin_pos',
+        targetOrderId: order.id,
+        before: {
+          contactName: previousContactName,
+          contactPhone: previousContactPhone,
+          contactEmail: previousContactEmail,
+          peopleCount: previousPeopleCount,
+          totalTwd: previousTotalTwd
+        },
+        after: {
+          contactName: order.contactName || null,
+          contactPhone: order.contactPhone || null,
+          contactEmail: order.contactEmail || null,
+          peopleCount: order.peopleCount || null,
+          totalTwd: order.totalTwd || null
         }
       }
     });
