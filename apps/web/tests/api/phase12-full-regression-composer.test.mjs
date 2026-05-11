@@ -7,9 +7,11 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
-const ROOT = process.cwd();
-const SCRIPT_PATH = path.join(ROOT, 'scripts/phase12/run-full-regression.sh');
-const PKG_PATH = path.join(ROOT, 'package.json');
+// process.cwd() is apps/web when run from there; repo root is two levels up
+const WEB_ROOT = process.cwd();
+const REPO_ROOT = path.resolve(WEB_ROOT, '../..');
+const SCRIPT_PATH = path.join(REPO_ROOT, 'scripts/phase12/run-full-regression.sh');
+const PKG_PATH = path.join(WEB_ROOT, 'package.json');
 
 // AC1: script exists
 test('AC1: run-full-regression.sh exists', () => {
