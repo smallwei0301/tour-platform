@@ -2,16 +2,27 @@
 
 import { useEffect, useState } from 'react';
 
+type RevenueTrendItem = {
+  month: string;
+  gmvTwd: number;
+  orderCount: number;
+};
+
 type DashboardData = {
   monthlyBookings: number;
   pendingBookings: Array<{
     id: string; guestName: string; partySize: number;
-    status: string; createdAt: string; tourTitle: string;
+    status: string; createdAt: string; tourTitle: string; totalTwd: number;
   }>;
   upcomingSchedules: Array<{
     id: string; tourTitle: string; date: string;
     planId: string; bookedCount: number; maxCapacity: number; status: string;
   }>;
+  monthGmvTwd: number;
+  monthGmvOrderCount: number;
+  revenueTrend6m: RevenueTrendItem[];
+  expectedPayoutTwd: number | null;
+  nextPayoutDate: string | null;
 };
 
 type ScheduleBooking = {
@@ -120,6 +131,75 @@ export default function GuideDashboardPage() {
         <StatCard label="本週場次" value={data?.upcomingSchedules?.length ?? 0} icon="📅" />
       </div>
 
+      {/* Revenue Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+        <RevenueCard
+          label="本月營收"
+          value={`NT$ ${(data?.monthGmvTwd ?? 0).toLocaleString()}`}
+          subtext={`共 ${data?.monthGmvOrderCount ?? 0} 筆訂單`}
+          icon="💰"
+        />
+        <RevenueCard
+          label="預計入帳"
+          value="--"
+          subtext="結算規則公告後啟用"
+          icon="🏦"
+          muted
+        />
+        <RevenueCard
+          label="下次出款日"
+          value="--"
+          subtext="結算規則公告後啟用"
+          icon="📆"
+          muted
+        />
+      </div>
+
+      {/* 6-Month Revenue Trend */}
+      <Section title="📈 近 6 個月營收趨勢">
+        {(!data?.revenueTrend6m?.length) ? (
+          <Empty text="暫無趨勢資料" />
+        ) : (
+          <div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', height: 80, marginBottom: 8 }}>
+              {(() => {
+                const maxGmv = Math.max(...data.revenueTrend6m.map(t => t.gmvTwd), 1);
+                return data.revenueTrend6m.map((t) => (
+                  <div key={t.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <div style={{ fontSize: 10, color: '#6b7280', fontWeight: 600 }}>
+                      {t.gmvTwd > 0 ? `${Math.round(t.gmvTwd / 1000)}K` : ''}
+                    </div>
+                    <div style={{
+                      width: '100%',
+                      height: Math.max(4, Math.round((t.gmvTwd / maxGmv) * 60)),
+                      background: t.gmvTwd > 0 ? '#7c3aed' : '#e5e7eb',
+                      borderRadius: '4px 4px 0 0',
+                      minHeight: 4,
+                    }} />
+                  </div>
+                ));
+              })()}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {data.revenueTrend6m.map((t) => (
+                <div key={t.month} style={{ flex: 1, textAlign: 'center', fontSize: 10, color: '#9ca3af' }}>
+                  {t.month.slice(5)}
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {data.revenueTrend6m.map((t) => (
+                <div key={t.month} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#374151' }}>
+                  <span style={{ color: '#6b7280' }}>{t.month}</span>
+                  <span>NT$ {t.gmvTwd.toLocaleString()}</span>
+                  <span style={{ color: '#9ca3af' }}>{t.orderCount} 筆</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Section>
+
       {/* Recent Bookings */}
       <Section title="📋 近期訂單">
         {(!data?.pendingBookings?.length) ? (
@@ -132,6 +212,7 @@ export default function GuideDashboardPage() {
                 <th>行程</th>
                 <th>人數</th>
                 <th>狀態</th>
+                <th>金額</th>
                 <th>時間</th>
               </tr>
             </thead>
@@ -142,6 +223,9 @@ export default function GuideDashboardPage() {
                   <td>{b.tourTitle}</td>
                   <td>{b.partySize}</td>
                   <td><StatusPill status={b.status} /></td>
+                  <td style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
+                    NT$ {(b.totalTwd ?? 0).toLocaleString()}
+                  </td>
                   <td style={{ color: '#9ca3af', fontSize: 12 }}>
                     {new Date(b.createdAt).toLocaleDateString('zh-TW')}
                   </td>
@@ -304,6 +388,29 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
           <div style={{ fontSize: 28, fontWeight: 800, color: '#1f2937' }}>{value}</div>
         </div>
         <div style={{ fontSize: 28 }}>{icon}</div>
+      </div>
+    </div>
+  );
+}
+
+function RevenueCard({ label, value, subtext, icon, muted }: {
+  label: string; value: string; subtext: string; icon: string; muted?: boolean;
+}) {
+  return (
+    <div style={{
+      background: muted ? '#fafafa' : '#fff',
+      borderRadius: 14,
+      padding: '18px 20px',
+      border: `1px solid ${muted ? '#f3f4f6' : '#ede9fe'}`,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>{label}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: muted ? '#9ca3af' : '#7c3aed' }}>{value}</div>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{subtext}</div>
+        </div>
+        <div style={{ fontSize: 24, opacity: muted ? 0.4 : 1 }}>{icon}</div>
       </div>
     </div>
   );

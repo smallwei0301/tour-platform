@@ -90,3 +90,23 @@ test('guide booking detail route returns schedule sync data', () => {
   assert.match(src, /activity_schedules/, 'activity_schedules join missing — schedule sync data absent');
   assert.match(src, /bookedCount/, 'bookedCount field missing — capacity sync incomplete');
 });
+
+// Issue #357: extended assertions for new GMV + trend + amount fields
+test('[357] guide dashboard route includes monthGmvTwd and revenueTrend6m', () => {
+  const src = readFileSync(DASHBOARD_ROUTE, 'utf8');
+  assert.match(src, /monthGmvTwd/, 'monthGmvTwd field missing — GMV extension absent');
+  assert.match(src, /revenueTrend6m/, 'revenueTrend6m field missing — 6-month trend absent');
+});
+
+test('[357] guide dashboard route pendingBookings includes totalTwd', () => {
+  const src = readFileSync(DASHBOARD_ROUTE, 'utf8');
+  assert.match(src, /totalTwd.*total_twd|total_twd.*totalTwd/s, 'totalTwd ↔ total_twd mapping missing from pendingBookings');
+});
+
+test('[357] guide dashboard route GMV is gated to paid/confirmed/completed statuses only', () => {
+  const src = readFileSync(DASHBOARD_ROUTE, 'utf8');
+  assert.match(src, /gmvStatuses/, 'gmvStatuses not found — status filter missing from GMV query');
+  assert.match(src, /'paid'/, "'paid' not in gmvStatuses");
+  assert.match(src, /'confirmed'/, "'confirmed' not in gmvStatuses");
+  assert.match(src, /'completed'/, "'completed' not in gmvStatuses");
+});
