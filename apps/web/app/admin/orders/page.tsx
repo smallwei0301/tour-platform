@@ -7,6 +7,7 @@ type Row = {
   id: string; status: string; totalTwd: number; costTwd: number; marginTwd: number;
   title?: string | null; peopleCount?: number; contactName?: string | null;
   contactEmail?: string | null; createdAt?: string | null; paidAt?: string | null; adminNote?: string | null;
+  trade_no?: string | null;
 };
 
 const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancelled_by_user','cancelled_by_guide','completed','refund_pending','refunded'];
@@ -38,6 +39,10 @@ export default function AdminOrdersPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [exceptionBusy, setExceptionBusy] = useState(false);
+  const [refundReason, setRefundReason] = useState('');
+  const [isExecutingRefund, setIsExecutingRefund] = useState(false);
+  const [refundExecuted, setRefundExecuted] = useState(false);
+  const [refundError, setRefundError] = useState('');
 
   async function load() {
     setLoading(true);
@@ -53,6 +58,9 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     if (!selectedId) { setDetail(null); setTimeline([]); return; }
+    setRefundReason('');
+    setRefundExecuted(false);
+    setRefundError('');
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' })
       .then(r => r.json()).then(j => { setDetail(j.data||null); setEditStatus(j.data?.status||''); setEditNote(j.data?.adminNote||''); }).catch(() => setDetail(null));
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
@@ -62,6 +70,31 @@ export default function AdminOrdersPage() {
   }, [selectedId]);
 
   const filtered = useMemo(() => rows, [rows]);
+
+  async function executeRefund(orderId: string) {
+    setIsExecutingRefund(true);
+    setRefundError('');
+    try {
+      const body = detail?.trade_no ? {} : { reason: refundReason };
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/refund-execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        setRefundExecuted(true);
+        await load();
+        const dr = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+        setDetail((await dr.json()).data || null);
+      } else {
+        setRefundError('退款執行失敗');
+      }
+    } catch {
+      setRefundError('退款執行失敗');
+    } finally {
+      setIsExecutingRefund(false);
+    }
+  }
 
   async function applyException() {
     if (!selectedId) return;
@@ -250,17 +283,44 @@ export default function AdminOrdersPage() {
                   </details>
                 )}
 
-                {/* AC5 — Refund action disabled when order is already refunded */}
-                {(detail.status === 'refunded' || detail.status === 'refund_pending') && (
-                  <div data-guide="refund-status-banner" style={{ marginTop: 14, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
-                    ✅ 此訂單已退款（{detail.status}）— 退款操作已停用
+                {/* AC1/AC2/AC3 — 執行退款 button for refund_pending orders */}
+                {detail.status === 'refund_pending' && !refundExecuted && (
+                  <div data-guide="refund-execute-section" style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#9a3412', marginBottom: 8 }}>退款執行</div>
+                    {/* AC3: cash orders (no trade_no) require reason textarea */}
+                    {!detail.trade_no && (
+                      <textarea
+                        data-guide="refund-reason-input"
+                        value={refundReason}
+                        onChange={e => setRefundReason(e.target.value)}
+                        placeholder="退款原因（現金訂單必填）"
+                        rows={3}
+                        style={{ ...inputStyle, resize: 'vertical', marginBottom: 8 }}
+                      />
+                    )}
                     <button
-                      disabled
-                      data-guide="refund-action-disabled"
-                      style={{ marginLeft: 12, padding: '4px 12px', borderRadius: 6, border: 'none', background: '#e5e7eb', color: '#9ca3af', fontSize: 12, cursor: 'not-allowed' }}
+                      data-guide="refund-execute-btn"
+                      onClick={() => executeRefund(detail.id)}
+                      disabled={isExecutingRefund || (!detail.trade_no && !refundReason.trim())}
+                      style={{ ...btnStyle('danger'), width: '100%', opacity: (isExecutingRefund || (!detail.trade_no && !refundReason.trim())) ? 0.5 : 1, cursor: (isExecutingRefund || (!detail.trade_no && !refundReason.trim())) ? 'not-allowed' : 'pointer' }}
                     >
-                      退款（已停用）
+                      {isExecutingRefund ? '退款執行中…' : '執行退款'}
                     </button>
+                    {refundError && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#dc2626' }}>{refundError}</p>}
+                  </div>
+                )}
+
+                {/* AC2: success message after execution */}
+                {refundExecuted && (
+                  <div data-guide="refund-executed-msg" style={{ marginTop: 14, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
+                    退款已執行
+                  </div>
+                )}
+
+                {/* AC4: already-refunded state */}
+                {detail.status === 'refunded' && (
+                  <div data-guide="refund-completed-banner" style={{ marginTop: 14, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
+                    已完成退款 ✓
                   </div>
                 )}
 

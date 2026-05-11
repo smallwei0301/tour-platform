@@ -35,17 +35,11 @@ test('AC1: page conditionally renders 執行退款 button for refund_pending', a
 
 test('AC1: 執行退款 button is inside a refund_pending conditional block', async () => {
   const src = await readSource(PAGE);
-  // The button text and refund_pending check should appear near each other
-  const refundPendingIdx = src.indexOf('refund_pending');
-  const executeRefundIdx = src.indexOf('執行退款');
+  // Find the JSX conditional: detail.status === 'refund_pending' ... 執行退款
+  // The source must contain a pattern where refund_pending check precedes 執行退款 within 2000 chars
   assert.ok(
-    refundPendingIdx !== -1 && executeRefundIdx !== -1,
-    'both refund_pending and 執行退款 must exist in source'
-  );
-  // They should be within 2000 chars of each other (same conditional block)
-  assert.ok(
-    Math.abs(refundPendingIdx - executeRefundIdx) < 2000,
-    '執行退款 must appear near the refund_pending status check'
+    /refund_pending[\s\S]{0,2000}執行退款/.test(src),
+    '執行退款 must appear inside a block that checks refund_pending'
   );
 });
 
