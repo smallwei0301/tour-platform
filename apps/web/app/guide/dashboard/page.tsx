@@ -2,6 +2,16 @@
 
 import { useEffect, useState } from 'react';
 
+type QAEntry = {
+  id: string;
+  activity_id: string;
+  question: string;
+  answer: string | null;
+  status: string;
+  created_at: string;
+  user_id?: string;
+};
+
 type RevenueTrendItem = {
   month: string;
   gmvTwd: number;
@@ -51,6 +61,12 @@ export default function GuideDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isNew, setIsNew] = useState(false);
 
+  // Pending Q&A state
+  const [pendingQa, setPendingQa] = useState<QAEntry[]>([]);
+  const [qaLoading, setQaLoading] = useState(false);
+  const [qaAnswerMap, setQaAnswerMap] = useState<Record<string, string>>({});
+  const [qaActionLoading, setQaActionLoading] = useState<string | null>(null);
+
   // Schedule detail modal
   const [scheduleModal, setScheduleModal] = useState<{
     scheduleId: string; tourTitle: string; date: string; planId: string;
@@ -80,6 +96,52 @@ export default function GuideDashboardPage() {
       .then((r) => r.json())
       .then((json) => setData(json?.data))
       .finally(() => setLoading(false));
+  }, []);
+
+  async function loadQa() {
+    setQaLoading(true);
+    try {
+      const res = await fetch('/api/guide/qa?status=pending_moderation', { cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        setPendingQa(json?.data?.data || json?.data || []);
+      }
+    } catch {
+      // silently ignore — Q&A section degrades gracefully
+    } finally {
+      setQaLoading(false);
+    }
+  }
+
+  async function handleQaAnswer(id: string) {
+    const answer = qaAnswerMap[id] ?? '';
+    if (!answer.trim()) {
+      alert('請先填寫回答內容再送出');
+      return;
+    }
+    setQaActionLoading(id);
+    try {
+      const res = await fetch(`/api/admin/qa/${id}`, {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ answer: answer.trim(), status: 'approved' }),
+      });
+      if (res.ok) {
+        setQaAnswerMap((prev) => { const next = { ...prev }; delete next[id]; return next; });
+        setPendingQa((prev) => prev.filter((q) => q.id !== id));
+      } else {
+        const json = await res.json();
+        alert('回答失敗：' + (json.error?.message || '未知錯誤'));
+      }
+    } catch {
+      alert('網路錯誤，請重試');
+    } finally {
+      setQaActionLoading(null);
+    }
+  }
+
+  useEffect(() => {
+    void loadQa();
   }, []);
 
   const [guideName, setGuideName] = useState('導遊');
@@ -267,6 +329,70 @@ export default function GuideDashboardPage() {
                   <StatusPill status={s.status} />
                 </div>
                 <span style={{ marginLeft: 8, color: '#d1d5db', fontSize: 16 }}>›</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Section>
+
+      {/* Pending Q&A */}
+      <Section title="❓ 待回答的問題">
+        {qaLoading ? (
+          <Empty text="載入中…" />
+        ) : pendingQa.length === 0 ? (
+          <Empty text="目前沒有待回答的問題" />
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {pendingQa.map((q) => (
+              <div key={q.id} style={{
+                padding: '14px 16px',
+                background: '#fefce8',
+                border: '1px solid #fde68a',
+                borderRadius: 10,
+              }}>
+                <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>
+                  行程 ID：<span style={{ fontFamily: 'monospace', fontSize: 12 }}>{q.activity_id}</span>
+                  <span style={{ marginLeft: 12, color: '#9ca3af', fontSize: 11 }}>
+                    {new Date(q.created_at).toLocaleDateString('zh-TW')}
+                  </span>
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 10 }}>
+                  {q.question}
+                </div>
+                <textarea
+                  value={qaAnswerMap[q.id] ?? ''}
+                  onChange={(e) => setQaAnswerMap((prev) => ({ ...prev, [q.id]: e.target.value }))}
+                  placeholder="填寫回答內容（必填）"
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    fontSize: 13,
+                    padding: '8px 10px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: 8,
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div style={{ marginTop: 8, display: 'flex', justifyContent: 'flex-end' }}>
+                  <button
+                    onClick={() => void handleQaAnswer(q.id)}
+                    disabled={qaActionLoading === q.id}
+                    style={{
+                      padding: '8px 18px',
+                      borderRadius: 8,
+                      border: 'none',
+                      background: qaActionLoading === q.id ? '#d1d5db' : '#7c3aed',
+                      color: '#fff',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: qaActionLoading === q.id ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {qaActionLoading === q.id ? '送出中...' : '回答並發布'}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
