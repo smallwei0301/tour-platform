@@ -107,6 +107,9 @@ export async function GET(req: Request) {
   const gmvMonthStart = new Date(
     Date.UTC(taipeiNow.getUTCFullYear(), taipeiNow.getUTCMonth(), 1) - taipeiOffset * 60000
   );
+  const gmvMonthEnd = new Date(
+    Date.UTC(taipeiNow.getUTCFullYear(), taipeiNow.getUTCMonth() + 1, 1) - taipeiOffset * 60000
+  );
 
   // AC3: only paid/confirmed/completed orders count toward GMV
   const gmvStatuses = ['paid', 'confirmed', 'completed'];
@@ -116,7 +119,8 @@ export async function GET(req: Request) {
     .select('total_twd, created_at')
     .in('activity_id', activityIds)
     .in('status', gmvStatuses)
-    .gte('created_at', gmvMonthStart.toISOString());
+    .gte('created_at', gmvMonthStart.toISOString())
+    .lt('created_at', gmvMonthEnd.toISOString());
 
   const monthGmvTwd = (monthOrders ?? []).reduce((sum: number, o: any) => sum + (o.total_twd ?? 0), 0);
   const monthGmvOrderCount = (monthOrders ?? []).length;
