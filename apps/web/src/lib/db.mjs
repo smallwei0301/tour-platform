@@ -36,6 +36,10 @@ export function hasSupabaseEnv() {
 
 let supabaseClient = null;
 
+export function __setSupabaseClientForTest(client = null) {
+  supabaseClient = client;
+}
+
 export async function getSupabase() {
   if (supabaseClient) return supabaseClient;
   const { createClient } = await import('@supabase/supabase-js');
@@ -773,7 +777,7 @@ export async function listAdminOrdersDb(input = {}) {
 
   let query = supabase
     .from('orders')
-    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at')
+    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at')
     .order('created_at', { ascending: false });
 
   if (status) query = query.eq('status', status);
@@ -813,6 +817,7 @@ export async function listAdminOrdersDb(input = {}) {
       contactName: r.contact_name,
       contactPhone: r.contact_phone,
       contactEmail: r.contact_email,
+      trade_no: r.trade_no || null,
       createdAt: r.created_at,
       paidAt: r.paid_at,
       adminNote: r.admin_note,
