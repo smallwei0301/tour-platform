@@ -202,6 +202,31 @@ ${data.note ? `💬 備註: ${data.note}` : ''}
 }
 
 /**
+ * 退款完成通知 — 僅在 REFUND_AUTO_EXECUTE 自動執行成功時發送
+ */
+export async function notifyRefundExecuted(data: OrderNotifyData): Promise<void> {
+  const message = `
+✅ 退款完成：${data.activityTitle}
+
+📋 訂單編號: ${data.orderId.slice(0, 8).toUpperCase()}
+💰 金額: NT$ ${(data.totalTwd || 0).toLocaleString()}
+
+款項將於 3-5 個工作天退回至原付款工具。`;
+
+  try {
+    const sent = await sendLineNotify(message);
+    if (!sent) {
+      logNotify({ fn: 'notifyRefundExecuted', orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
+      return;
+    }
+    logNotify({ fn: 'notifyRefundExecuted', orderId: data.orderId, status: 'sent', ts: new Date().toISOString() });
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    logNotify({ fn: 'notifyRefundExecuted', orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
+  }
+}
+
+/**
  * 系統錯誤通知（發送給管理員）
  */
 export async function notifySystemError(context: string, error: string, details?: Record<string, unknown>): Promise<void> {

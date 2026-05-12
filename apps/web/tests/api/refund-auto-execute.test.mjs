@@ -32,4 +32,25 @@ describe('refund auto-execute', () => {
   it('flag evaluates process.env string "true" not boolean', () => {
     assert.match(execSrc, /process\.env\.REFUND_AUTO_EXECUTE\s*===\s*['"]true['"]/)
   })
+
+  it('route skips auto-execute for cash orders (no trade_no guard)', () => {
+    assert.match(routeSrc, /trade_no/)
+    assert.match(routeSrc, /no trade_no \(cash/)
+  })
+
+  it('route checks policySnapshot.eligible (not just amount > 0)', () => {
+    assert.match(routeSrc, /eligible/)
+  })
+
+  it('route tracks autoExecuted flag', () => {
+    assert.match(routeSrc, /autoExecuted/)
+  })
+
+  it('sends sendRefundExecuted on success', () => {
+    assert.match(routeSrc, /sendRefundExecuted/)
+  })
+
+  it('audit log on trigger', () => {
+    assert.match(routeSrc, /\[refund-auto-execute\].*Triggering/)
+  })
 })
