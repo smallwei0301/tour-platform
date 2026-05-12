@@ -1,0 +1,37 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+
+const ROOT = process.cwd();
+const PAGE_PATH = path.join(ROOT, 'app/me/orders/[orderId]/page.tsx');
+
+// AC1 — refund_pending description uses neutral copy (no wait-hint language)
+test('AC1: refund_pending copy is neutral — contains 退款申請已受理，處理中', () => {
+  const src = readFileSync(PAGE_PATH, 'utf8');
+  assert.match(
+    src,
+    /退款申請已受理，處理中/,
+    'refund_pending description must use neutral "已受理，處理中" phrasing'
+  );
+});
+
+// AC2 — old misleading copy is gone
+test('AC2: old wait-hint copy removed — does NOT contain 請耐心等候', () => {
+  const src = readFileSync(PAGE_PATH, 'utf8');
+  assert.doesNotMatch(
+    src,
+    /請耐心等候/,
+    'refund_pending description must NOT contain old "請耐心等候" text'
+  );
+});
+
+// AC3 — refunded copy already accurate — must contain 退款已完成
+test('AC3: refunded copy is accurate — contains 退款已完成', () => {
+  const src = readFileSync(PAGE_PATH, 'utf8');
+  assert.match(
+    src,
+    /退款已完成/,
+    'refunded description must contain "退款已完成"'
+  );
+});
