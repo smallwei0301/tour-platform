@@ -80,6 +80,8 @@ BEGIN
   ) THEN
     CREATE POLICY "wishlists: service role full access"
       ON public.wishlists
+      FOR ALL
+      TO service_role
       USING (true)
       WITH CHECK (true);
   END IF;

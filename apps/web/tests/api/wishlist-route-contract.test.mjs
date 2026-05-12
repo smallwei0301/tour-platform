@@ -90,6 +90,12 @@ describe('Issue 305 Wishlist — migration contract', () => {
     assert.ok(hasDeletePolicy,
       'Must have DELETE policy on wishlists: USING (user_id = auth.uid())');
   });
+
+  it('service role policy is scoped to TO service_role (no public-wide bypass)', () => {
+    const sql = fs.readFileSync(MIGRATION_FILE, 'utf8');
+    const hasScopedServiceRolePolicy = /CREATE POLICY\s+"wishlists:\s*service role full access"[\s\S]{0,250}TO\s+service_role/i.test(sql);
+    assert.ok(hasScopedServiceRolePolicy, 'Service role policy must be explicitly scoped TO service_role');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -134,6 +140,12 @@ describe('Issue 305 Wishlist — GET /api/me/wishlist route contract', () => {
   it('AC1: POST requires activityId in request body', () => {
     const src = readRoute('app/api/me/wishlist/route.ts');
     assert.match(src, /activityId/, 'Must reference activityId from request body');
+  });
+
+  it('GH-405: GET/POST surfaces backend schema errors as SERVER_ERROR (not silent success)', () => {
+    const src = readRoute('app/api/me/wishlist/route.ts');
+    assert.match(src, /fail\('SERVER_ERROR'/, 'GET/POST must map DB/schema errors to SERVER_ERROR response');
+    assert.match(src, /status:\s*500/, 'SERVER_ERROR should return HTTP 500');
   });
 });
 
