@@ -22,6 +22,33 @@ a { color: inherit; text-decoration: none; }
 .tp-section { padding: 56px 0; }
 
 .tp-navbar { position: sticky; top: 0; z-index: 40; background: #fff; border-bottom: 1px solid var(--tp-border); }
+.tp-navbar-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: transparent;
+  border-bottom: 0;
+}
+.tp-navbar-inner-overlay {
+  min-height: 74px;
+}
+.tp-nav-links-overlay {
+  color: #f3ece2;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.24);
+}
+.tp-search-shell-overlay {
+  border-color: rgba(248, 242, 234, 0.48);
+  background: rgba(20, 22, 20, 0.18);
+  backdrop-filter: blur(6px);
+}
+.tp-search-shell-overlay .tp-search-input {
+  background: transparent;
+  color: #fff;
+}
+.tp-search-shell-overlay .tp-search-input::placeholder {
+  color: rgba(248, 242, 234, 0.86);
+}
 .tp-navbar-full { width: 100%; padding: 0 16px; box-sizing: border-box; }
 .tp-navbar-inner { min-height: 64px; display: grid; grid-template-columns: 180px 1fr auto; align-items: center; gap: 16px; }
 .tp-logo { font-weight: 800; color: var(--tp-primary); }
@@ -2459,11 +2486,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
   color: #f8f2ea;
 }
 
-.midao-activities-brand-row {
+.midao-activities-hero-top-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   margin-bottom: auto;
+  padding-top: 72px;
 }
 
 .midao-share-btn {
@@ -2685,8 +2712,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
     padding-bottom: 30px;
   }
 
-  .midao-activities-brand-row {
+  .midao-activities-hero-top-actions {
     margin-bottom: 44px;
+    padding-top: 66px;
   }
 
   .midao-share-btn {

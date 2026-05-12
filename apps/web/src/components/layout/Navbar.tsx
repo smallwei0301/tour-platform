@@ -22,6 +22,7 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const isHome = pathname === '/';
+  const isActivities = pathname?.startsWith('/activities');
 
   useEffect(() => {
     if (isHome) {
@@ -64,10 +65,21 @@ export function Navbar() {
   if (isHome) return null;
 
   return (
-    <header className="tp-navbar">
-      <div className="tp-navbar-inner tp-navbar-full">
+    <header className={`tp-navbar${isActivities ? ' tp-navbar-overlay' : ''}`}>
+      <div className={`tp-navbar-inner tp-navbar-full${isActivities ? ' tp-navbar-inner-overlay' : ''}`}>
         {/* Logo */}
-        <Link href="/" className="tp-logo" aria-label="祕島首頁" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+        <Link
+          href="/"
+          className="tp-logo"
+          aria-label="祕島首頁"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 10,
+            color: isActivities ? '#f8f2ea' : undefined,
+            textShadow: isActivities ? '0 2px 8px rgba(0,0,0,0.28)' : undefined,
+          }}
+        >
           <span aria-hidden="true" style={{ display: 'inline-flex' }}>
             <MidaoLogo />
           </span>
@@ -75,7 +87,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop: search bar */}
-        <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label="搜尋">
+        <form onSubmit={handleSearch} className={`tp-search-shell tp-nav-search-desktop${isActivities ? ' tp-search-shell-overlay' : ''}`} aria-label="搜尋">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -92,7 +104,7 @@ export function Navbar() {
         </form>
 
         {/* Desktop nav links */}
-        <nav className="tp-nav-links" aria-label="主要導覽">
+        <nav className={`tp-nav-links${isActivities ? ' tp-nav-links-overlay' : ''}`} aria-label="主要導覽">
           {NAV_LINKS.map((l) => (
             <Link key={l.href} href={l.href}>
               {l.label}

@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
-import MidaoLogo from '../../src/components/midao/MidaoLogo';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
 const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
@@ -137,20 +136,11 @@ export default function ActivitiesContent() {
       <section className="midao-activities-hero">
         <div className="midao-activities-hero-overlay" />
         <div className="midao-shell midao-activities-hero-content">
-          <header className="midao-activities-brand-row">
-            <Link href="/" className="midao-brand" aria-label="祕島首頁">
-              <span className="midao-brand-mark">
-                <MidaoLogo />
-              </span>
-              <span>
-                <strong>祕島</strong>
-                <small>MIDAO · SECRET ISLE</small>
-              </span>
-            </Link>
+          <div className="midao-activities-hero-top-actions">
             <button type="button" onClick={copyShareLink} className="midao-share-btn" aria-label="複製此頁連結">
               {copyState === 'done' ? '已複製連結 ✓' : copyState === 'error' ? '複製失敗' : '分享此頁 ↗'}
             </button>
-          </header>
+          </div>
 
           <p className="midao-eyebrow">Field Guide to Hidden Taiwan</p>
           <h1>找到一條你的徑</h1>
