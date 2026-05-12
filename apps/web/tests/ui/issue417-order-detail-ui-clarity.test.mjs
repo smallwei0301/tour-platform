@@ -105,28 +105,24 @@ test('AC3: hint is shown when NOT completed AND NOT terminal', async () => {
   );
 });
 
-test('AC3: hint does NOT appear inside the review-eligible block (review form handles paid/confirmed/completed)', async () => {
+test('AC3: hint does NOT appear inside the status=completed block (review form handles completed)', async () => {
   const src = await readSource(PAGE);
-  // Review form section is now gated by ['paid','confirmed','completed'].includes(status)
-  // The hint must be OUTSIDE that block, i.e., guarded by the negation of that condition
-  // Pattern: !['paid','confirmed','completed'].includes(status) near the hint
+  // Review form section starts with `status === 'completed'`
+  // The hint must be OUTSIDE that block, i.e., it should be in a separate condition
+  // We check that the hint is not ONLY inside status=completed block by ensuring
+  // there is a conditional other than status === 'completed' guarding it
   assert.match(
     src,
-    /!\s*\[['"]paid['"],\s*['"]confirmed['"],\s*['"]completed['"]\]\.includes\(status\)[\s\S]{0,400}行程完成後即可撰寫評價|行程完成後即可撰寫評價[\s\S]{0,400}!\s*\[['"]paid['"],\s*['"]confirmed['"],\s*['"]completed['"]\]\.includes\(status\)/,
-    'hint must be rendered outside the [paid,confirmed,completed].includes(status) block'
+    /status\s*!==\s*['"]completed['"][\s\S]{0,400}行程完成後即可撰寫評價|行程完成後即可撰寫評價[\s\S]{0,400}status\s*!==\s*['"]completed['"]/,
+    'hint must be rendered outside the status===completed block'
   );
 });
 
 // ─── AC4: Existing flows unchanged ───────────────────────────────────────────
 
-test('AC4: completed status still shows 撰寫評價 button (review form includes completed)', async () => {
+test('AC4: completed status still shows 撰寫評價 button (review form unchanged)', async () => {
   const src = await readSource(PAGE);
-  // Review form is now gated on ['paid','confirmed','completed'].includes(status) — completed is still included
-  assert.match(
-    src,
-    /\[['"]paid['"],\s*['"]confirmed['"],\s*['"]completed['"]\]\.includes\(status\)/,
-    'review form must be gated on [\'paid\',\'confirmed\',\'completed\'].includes(status) — completed still covered'
-  );
+  assert.match(src, /status\s*===\s*['"]completed['"]/, 'review form must still be gated on status === completed');
   assert.match(src, /撰寫評價/, 'review button text 撰寫評價 must still exist');
 });
 
