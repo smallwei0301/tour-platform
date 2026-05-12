@@ -68,12 +68,12 @@ test('AC2: orderId page has 撰寫評價 button', async () => {
   assert.match(src, /撰寫評價/, 'must have 撰寫評價 button text');
 });
 
-test('AC2: 撰寫評價 button shown for paid, confirmed, and completed orders', async () => {
+test('AC2: 撰寫評價 button only shown when status === completed', async () => {
   const src = await readSource('app/me/orders/[orderId]/page.tsx');
   assert.match(
     src,
-    /\[['"]paid['"],\s*['"]confirmed['"],\s*['"]completed['"]\]\.includes\(status\)/,
-    'review button must be guarded by [\'paid\',\'confirmed\',\'completed\'].includes(status)'
+    /status\s*===\s*['"]completed['"]/,
+    'review button must be guarded by status === completed'
   );
 });
 
