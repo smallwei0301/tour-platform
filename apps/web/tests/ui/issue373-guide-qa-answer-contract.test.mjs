@@ -3,7 +3,7 @@
  *
  * AC1: guide/dashboard/page.tsx references /api/guide/qa or /api/admin/qa to fetch pending Q&A,
  *      and shows a question list (待回答的問題 section)
- * AC2: source contains answer textarea + submit button that calls PATCH /api/admin/qa/${id}
+ * AC2: source contains answer textarea + submit button that calls PATCH /api/guide/qa/${id}
  *      with {answer, status:'approved'}
  * AC3: after answer submitted, item disappears from pending list (state update or refetch)
  */
@@ -52,13 +52,18 @@ test('AC2: guide/dashboard/page.tsx contains textarea for answer input', async (
   assert.match(src, /textarea/, 'must have textarea element for answer input');
 });
 
-test('AC2: guide/dashboard/page.tsx calls PATCH /api/admin/qa/${id}', async () => {
+test('AC2: guide/dashboard/page.tsx calls PATCH /api/guide/qa/${id}', async () => {
   const src = await readSource('app/guide/dashboard/page.tsx');
   assert.match(
     src,
-    /PATCH[\s\S]{0,300}\/api\/admin\/qa\/|\/api\/admin\/qa\/[\s\S]{0,300}PATCH/,
-    'must call PATCH /api/admin/qa/{id} for submitting answer'
+    /PATCH[\s\S]{0,300}\/api\/guide\/qa\/|\/api\/guide\/qa\/[\s\S]{0,300}PATCH/,
+    'must call PATCH /api/guide/qa/{id} for submitting answer'
   );
+});
+
+test('AC2: guide/dashboard/page.tsx must not submit via admin-only endpoint', async () => {
+  const src = await readSource('app/guide/dashboard/page.tsx');
+  assert.doesNotMatch(src, /\/api\/admin\/qa\//, 'guide dashboard must not call admin-only qa patch endpoint');
 });
 
 test('AC2: PATCH body includes status approved', async () => {
@@ -100,4 +105,22 @@ test('AC3: /api/guide/qa route filters by guide activity_ids', async () => {
     /activity_ids?|activityIds|guide_id/,
     'guide QA route must filter Q&A by guide activity IDs'
   );
+});
+
+test('AC3: /api/guide/qa/[id] PATCH route exists', async () => {
+  const src = await readSource('app/api/guide/qa/[id]/route.ts');
+  assert.ok(src.length > 0, '/api/guide/qa/[id] PATCH route must exist and be non-empty');
+});
+
+test('AC3: /api/guide/qa/[id] PATCH route uses verifyGuideSession auth', async () => {
+  const src = await readSource('app/api/guide/qa/[id]/route.ts');
+  assert.match(src, /verifyGuideSession/, 'guide qa patch route must use verifyGuideSession');
+  assert.match(src, /UNAUTHORIZED|session required/, 'must reject unauthenticated guide session');
+});
+
+test('AC3: /api/guide/qa/[id] PATCH route enforces guide ownership on activities', async () => {
+  const src = await readSource('app/api/guide/qa/[id]/route.ts');
+  assert.match(src, /from\('activities'\)/, 'must verify ownership from activities table');
+  assert.match(src, /guide_id/, 'must scope by guide_id');
+  assert.match(src, /FORBIDDEN|無權/, 'must deny update when qa is not owned by guide');
 });
