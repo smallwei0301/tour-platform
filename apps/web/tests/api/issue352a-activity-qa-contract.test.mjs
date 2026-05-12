@@ -272,9 +272,9 @@ describe('Issue 361 — AC5: PATCH /api/admin/qa/[id] route', () => {
 });
 
 // ---------------------------------------------------------------------------
-// FIX_RETRY: rollback file + RLS INSERT enforcement
+// FIX_RETRY: rollback file + service-role INSERT (GH-400 final fix)
 // ---------------------------------------------------------------------------
-describe('Issue 361 — FIX: standalone rollback file + user-scoped INSERT', () => {
+describe('Issue 361 — FIX: standalone rollback file + service-role INSERT', () => {
   it('Fix1: standalone rollback file exists', () => {
     const rollbackPath = path.join(MIGRATIONS_DIR, '20260511_issue352a_activity_qa.rollback.sql');
     assert.ok(fs.existsSync(rollbackPath), `Standalone rollback file must exist: ${rollbackPath}`);
@@ -283,17 +283,22 @@ describe('Issue 361 — FIX: standalone rollback file + user-scoped INSERT', () 
       'Rollback file must drop activity_qa table');
   });
 
-  it('Fix2: POST /api/qa does NOT use service client for INSERT (RLS must be enforced)', () => {
+  // GH-400: Updated — anonClientWithToken passes apikey=anon so PostgREST resolves role=anon,
+  // not authenticated → RLS TO authenticated fails in production. Fix uses service-role client
+  // for INSERT (mirrors /api/reviews), with user_id and status written explicitly.
+  it('Fix2: POST /api/qa uses service-role client for activity_qa INSERT (GH-400 fix)', () => {
     const src = readRoute('app/api/qa/route.ts');
-    // Service client (getServiceClient) must NOT be used for the activity_qa insert
-    const hasServiceClientInsert = src.match(/getServiceClient\(\)[\s\S]{0,200}\.from\('activity_qa'\)/);
-    assert.ok(!hasServiceClientInsert,
-      'INSERT to activity_qa must use user-scoped client (anonClientWithToken), not service client');
+    assert.match(src, /function\s+getServiceClient\s*\(\)/,
+      'Must define getServiceClient() helper (GH-400 fix mirrors /api/reviews)');
+    const serviceClientInsert = src.match(/getServiceClient\(\)[\s\S]{0,300}\.from\('activity_qa'\)/)
+      || src.match(/=\s*getServiceClient\(\)[\s\S]{0,500}\.from\('activity_qa'\)/);
+    assert.ok(serviceClientInsert,
+      'Service-role client must be used for activity_qa INSERT to bypass PostgREST anon-role resolution');
   });
 
-  it('Fix2: POST /api/qa uses user-scoped client for INSERT', () => {
+  it('Fix2: POST /api/qa writes user_id: user.id explicitly with service-role INSERT', () => {
     const src = readRoute('app/api/qa/route.ts');
-    assert.match(src, /anonClientWithToken[\s\S]{0,50}\.from\('activity_qa'\)/,
-      'Must use anonClientWithToken (user JWT) for INSERT so RLS authenticated_insert_pending_qa is enforced');
+    assert.match(src, /user_id\s*:\s*user\.id/,
+      'Must write user_id: user.id explicitly when using service-role client');
   });
 });
