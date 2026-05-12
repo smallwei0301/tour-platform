@@ -203,17 +203,17 @@ export default function GuideDashboardPage() {
         />
         <RevenueCard
           label="預計入帳"
-          value="--"
-          subtext="結算規則公告後啟用"
+          value={data?.expectedPayoutTwd != null ? `NT$${data.expectedPayoutTwd.toLocaleString()}` : '--'}
+          subtext="依 Draft v1 結算規則計算（抽成 15%，T+7 天）"
           icon="🏦"
-          muted
+          muted={data?.expectedPayoutTwd == null}
         />
         <RevenueCard
           label="下次出款日"
-          value="--"
-          subtext="結算規則公告後啟用"
+          value={data?.nextPayoutDate ?? '--'}
+          subtext="依 Draft v1 結算規則計算（T+7 天）"
           icon="📆"
-          muted
+          muted={data?.nextPayoutDate == null}
         />
       </div>
 

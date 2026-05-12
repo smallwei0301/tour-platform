@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
+import { computeExpectedPayout, computeNextPayoutDate } from '../../../../src/lib/settlement-config';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -141,6 +142,25 @@ export async function GET(req: Request) {
     });
   }
 
+  // 7. Draft v1 settlement: expectedPayout + nextPayoutDate
+  // Query the most recent completed tour schedule for this guide
+  const { data: latestScheduleRows } = await supabase
+    .from('activity_schedules')
+    .select('start_at')
+    .in('activity_id', activityIds)
+    .lt('start_at', now.toISOString())
+    .order('start_at', { ascending: false })
+    .limit(1);
+
+  const latestCompletedTourDate =
+    latestScheduleRows && latestScheduleRows.length > 0
+      ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
+      : null;
+
+  const expectedPayoutTwd = computeExpectedPayout(monthGmvTwd);
+  const nextPayoutDateObj = computeNextPayoutDate(latestCompletedTourDate);
+  const nextPayoutDate = nextPayoutDateObj ? nextPayoutDateObj.toISOString().slice(0, 10) : null;
+
   return Response.json(ok({
     monthlyBookings: monthlyBookings || 0,
     pendingBookings,
@@ -148,7 +168,7 @@ export async function GET(req: Request) {
     monthGmvTwd,
     monthGmvOrderCount,
     revenueTrend6m,
-    expectedPayoutTwd: null,
-    nextPayoutDate: null,
+    expectedPayoutTwd,
+    nextPayoutDate,
   }));
 }
