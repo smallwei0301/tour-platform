@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import MidaoLogo from '../midao/MidaoLogo';
 
 const NAV_LINKS = [
   { label: '探索行程', href: '/activities' },
@@ -66,7 +67,12 @@ export function Navbar() {
     <header className="tp-navbar">
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
-        <Link href="/" className="tp-logo">Tour Platform</Link>
+        <Link href="/" className="tp-logo" aria-label="祕島首頁" style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <span aria-hidden="true" style={{ display: 'inline-flex' }}>
+            <MidaoLogo />
+          </span>
+          <span>祕島</span>
+        </Link>
 
         {/* Desktop: search bar */}
         <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label="搜尋">
