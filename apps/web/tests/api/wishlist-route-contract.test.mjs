@@ -92,7 +92,9 @@ describe('Issue 305 Wishlist — migration contract', () => {
   });
 
   it('service role policy is scoped to TO service_role (no public-wide bypass)', () => {
-    const sql = fs.readFileSync(MIGRATION_FILE, 'utf8');
+    // Check the ensure-migration (issue #405) which fixes the service_all scoping
+    const ensureFile = path.join(MIGRATIONS_DIR, '20260512_issue405_wishlists_ensure.sql');
+    const sql = fs.readFileSync(ensureFile, 'utf8');
     const hasScopedServiceRolePolicy = /CREATE POLICY\s+"wishlists:\s*service role full access"[\s\S]{0,250}TO\s+service_role/i.test(sql);
     assert.ok(hasScopedServiceRolePolicy, 'Service role policy must be explicitly scoped TO service_role');
   });
