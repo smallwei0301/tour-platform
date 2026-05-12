@@ -9,6 +9,7 @@
  * AC4 — contains all 4 RLS policies (select_own, insert_own, delete_own, service_all)
  * AC5 — contains schema cache reload (pg_notify)
  * AC6 — rollback file exists and contains DROP TABLE IF EXISTS public.wishlists
+ * AC7 — #431 FK repair migration exists and has uuid type + FK constraint + schema reload
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
@@ -27,6 +28,10 @@ const MIGRATION_FILE = path.join(
 const ROLLBACK_FILE = path.join(
   MIGRATIONS_DIR,
   '20260512_issue405_wishlists_ensure.rollback.sql'
+);
+const FK_REPAIR_FILE = path.join(
+  MIGRATIONS_DIR,
+  '20260513_issue431_wishlists_fk_repair.sql'
 );
 
 // ---------------------------------------------------------------------------
@@ -63,12 +68,15 @@ describe('Issue 405 — AC2: idempotent CREATE TABLE IF NOT EXISTS', () => {
     );
   });
 
-  it('AC2: contains activity_id column definition', () => {
+  it('AC2: contains activity_id column definition (text; will be repaired to uuid by #431 migration)', () => {
     const sql = fs.readFileSync(MIGRATION_FILE, 'utf8');
+    // The original ensure-migration uses text (wrong type). The #431 repair migration
+    // converts it to uuid + adds FK. We assert text here to document the original state;
+    // see AC7 for the corrected uuid + FK assertions.
     assert.match(
       sql,
       /activity_id\s+text\s+NOT NULL/i,
-      'Must define activity_id text NOT NULL column'
+      'Must define activity_id text NOT NULL column (original; repaired by #431 migration)'
     );
   });
 
@@ -175,6 +183,65 @@ describe('Issue 405 — AC6: rollback file exists and is correct', () => {
       sql,
       /DROP TABLE IF EXISTS\s+public\.wishlists/i,
       'Rollback must DROP TABLE IF EXISTS public.wishlists'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AC7 — #431 FK repair migration: uuid type + FK constraint + schema reload
+// ---------------------------------------------------------------------------
+describe('Issue 431 — AC7: wishlists FK repair migration', () => {
+  it('AC7: FK repair migration file exists', () => {
+    assert.ok(
+      fs.existsSync(FK_REPAIR_FILE),
+      `FK repair migration must exist: ${FK_REPAIR_FILE}`
+    );
+  });
+
+  it('AC7: repair migration casts activity_id to uuid', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /ALTER COLUMN\s+activity_id\s+TYPE\s+uuid/i,
+      'Repair migration must ALTER COLUMN activity_id TYPE uuid'
+    );
+  });
+
+  it('AC7: repair migration adds wishlists_activity_id_fkey FK constraint', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /wishlists_activity_id_fkey/i,
+      'Repair migration must add wishlists_activity_id_fkey FK constraint'
+    );
+  });
+
+  it('AC7: FK references public.activities(id) ON DELETE CASCADE', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /REFERENCES\s+public\.activities\s*\(\s*id\s*\)\s*ON DELETE CASCADE/i,
+      'FK must REFERENCES public.activities(id) ON DELETE CASCADE'
+    );
+  });
+
+  it('AC7: repair migration reloads PostgREST schema cache', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /pg_notify\s*\(\s*'pgrst'/i,
+      "Repair migration must call pg_notify('pgrst', 'reload schema')"
+    );
+  });
+
+  it('AC7: repair migration is idempotent (checks FK existence before adding)', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    const hasIdempotentCheck =
+      /wishlists_activity_id_fkey[\s\S]{0,300}NOT EXISTS/i.test(sql) ||
+      /NOT EXISTS[\s\S]{0,300}wishlists_activity_id_fkey/i.test(sql);
+    assert.ok(
+      hasIdempotentCheck,
+      'Repair migration must guard FK addition with NOT EXISTS check for idempotency'
     );
   });
 });
