@@ -121,7 +121,7 @@ export default function GuideDashboardPage() {
     }
     setQaActionLoading(id);
     try {
-      const res = await fetch(`/api/admin/qa/${id}`, {
+      const res = await fetch(`/api/guide/qa/${id}`, {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ answer: answer.trim(), status: 'approved' }),
