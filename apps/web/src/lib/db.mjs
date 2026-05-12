@@ -478,6 +478,7 @@ export async function createRefundRequestDb(input = {}) {
   const note = String(input?.note || '').trim() || null;
   const contactEmail = String(input?.contactEmail || '').trim();
   const requestId = String(input?.requestId || '').trim();
+  const policySnapshot = input?.policySnapshot ?? null;
 
   if (!orderId) throw new Error('orderId is required');
   if (!requestId) throw new Error('requestId is required');
@@ -536,7 +537,8 @@ export async function createRefundRequestDb(input = {}) {
     reason,
     note,
     status: 'requested',
-    requested_at: new Date().toISOString()
+    requested_at: new Date().toISOString(),
+    ...(policySnapshot !== null && { policy_snapshot: policySnapshot }),
   };
 
   const { data: inserted, error: insertError } = await supabase

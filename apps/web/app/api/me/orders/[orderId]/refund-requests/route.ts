@@ -5,6 +5,8 @@ import { sendRefundRequested } from '../../../../../../src/lib/email';
 import type { OrderEmailData } from '../../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../../src/lib/line-notify';
 import { notifyRefundRequest } from '../../../../../../src/lib/line-notify';
+import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
+import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -36,12 +38,45 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
       return Response.json(fail('INVALID_REQUEST', 'requestId is required'), { status: 400 });
     }
 
+    // Compute policy_snapshot: non-blocking — failure stores null, does not abort submission
+    let policySnapshot: (RefundResult & { policy_version: string }) | null = null;
+    try {
+      const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch((): null => null);
+      const tourStartAt = order?.scheduleStartAt;
+      const totalTwd = order?.totalTwd;
+
+      if (tourStartAt && typeof totalTwd === 'number') {
+        type PolicyRow = { version: string; tiers: RefundPolicy['tiers'] };
+        const { data: policyRow } = await supabase
+          .from('refund_policies')
+          .select('version, tiers')
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle() as { data: PolicyRow | null };
+
+        if (policyRow?.tiers) {
+          const result = calculateRefundAmount(
+            totalTwd,
+            new Date(tourStartAt),
+            { version: policyRow.version, tiers: policyRow.tiers }
+          );
+          policySnapshot = { ...result, policy_version: policyRow.version };
+        }
+      }
+    } catch (snapshotErr) {
+      console.warn('[refund-request][policy-snapshot] non-blocking failure', {
+        orderId,
+        error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),
+      });
+    }
+
     const created = await createRefundRequestDb({
       orderId,
       requestId,
       reason: body?.reason,
       note: body?.note,
       contactEmail: user.email, // 以 session email 為準
+      policySnapshot,
     });
 
     // 🔔 Fire-and-forget: 退款申請收到 email + LINE 通知
