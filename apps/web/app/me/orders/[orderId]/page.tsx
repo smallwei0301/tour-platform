@@ -54,7 +54,7 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
   cancelled_by_guide: '😔 導遊取消了此行程，我們將協助安排退款，請聯絡客服。',
   completed:       '⭐ 行程已完成，感謝您的參與！期待下次再見。',
   refund_pending:  '🔄 退款申請已受理，處理中（通常 3-5 個工作天入帳）。',
-  refunded:        '💰 退款已完成，款項將於 3-5 個工作天入帳。',
+  refunded:        '💰 退款已完成，款項將於 3-5 個工作天退回至原付款工具。',
 };
 
 export default function OrderDetailPage() {
