@@ -132,6 +132,18 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
           if (execResult.status === 200) {
             autoExecuted = true;
             console.info('[refund-auto-execute] Success', { orderId, rtnCode: (execResult.body as any)?.data?.rtnCode });
+            // Sync refund_requests to terminal 'refunded' state (mirrors orders update above)
+            const now = new Date().toISOString();
+            await svcClient
+              .from('refund_requests')
+              .update({
+                status: 'refunded',
+                approved_at: now,
+                refunded_at: now,
+                admin_note: '[auto-execute] ECPay AllRefund succeeded',
+              })
+              .eq('id', created.id)
+              .eq('status', 'requested'); // guard: only advance if still in initial state
           } else {
             console.warn('[refund-auto-execute] ECPay returned non-200', { orderId, status: execResult.status });
           }
