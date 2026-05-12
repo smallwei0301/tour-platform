@@ -1,12 +1,15 @@
 import { ok, fail } from '../../../../../../src/lib/api';
 import { createRefundRequestDb, listRefundRequestsDb, getMyOrderDetailDb } from '../../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../../src/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { sendRefundRequested } from '../../../../../../src/lib/email';
 import type { OrderEmailData } from '../../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../../src/lib/line-notify';
 import { notifyRefundRequest } from '../../../../../../src/lib/line-notify';
 import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
+import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
+import { requestAllRefund } from '../../../../../../src/lib/ecpay';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -78,6 +81,45 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
       contactEmail: user.email, // 以 session email 為準
       policySnapshot,
     });
+
+    // Auto-execute refund when REFUND_AUTO_EXECUTE=true (default off)
+    // Non-blocking: failure logs a warning but does NOT propagate — order stays
+    // in refund_pending for admin to handle manually.
+    if (REFUND_AUTO_EXECUTE) {
+      try {
+        const refundableAmount = policySnapshot?.refundable_amount ?? null;
+        if (refundableAmount !== null && refundableAmount > 0) {
+          const svcClient = createServiceClient(
+            process.env.SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { persistSession: false, autoRefreshToken: false } }
+          );
+          const { data: orderRow, error: fetchErr } = await svcClient
+            .from('orders')
+            .select('*')
+            .eq('id', orderId)
+            .single();
+
+          if (!fetchErr && orderRow) {
+            await executeRefund({
+              order: orderRow as Parameters<typeof executeRefund>[0]['order'],
+              body: { reason: body?.reason },
+              requestAllRefund,
+              updateOrder: async (oid, payload) => {
+                const { data, error, count } = await svcClient
+                  .from('orders')
+                  .update(payload)
+                  .eq('id', oid)
+                  .select('id');
+                return { error, data, count };
+              },
+            });
+          }
+        }
+      } catch (autoExecErr) {
+        console.warn('[refund-auto-execute] Auto-execute failed, leaving refund_pending:', autoExecErr);
+      }
+    }
 
     // 🔔 Fire-and-forget: 退款申請收到 email + LINE 通知
     const order = await getMyOrderDetailDb({ orderId, contactEmail: user.email }).catch((): null => null);

@@ -1,5 +1,14 @@
 import { fail, ok } from './api.ts';
 
+/**
+ * REFUND_AUTO_EXECUTE — when true, the traveler-facing refund-requests POST
+ * handler will automatically call executeRefund() immediately after the
+ * refund_request row is created, without waiting for admin review.
+ *
+ * Default: false (safe — requires REFUND_AUTO_EXECUTE=true in env to enable)
+ */
+export const REFUND_AUTO_EXECUTE = process.env.REFUND_AUTO_EXECUTE === 'true';
+
 export interface OrderForRefund {
   id: string;
   total_twd: number;
