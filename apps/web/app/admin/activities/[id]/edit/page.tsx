@@ -345,7 +345,7 @@ function PlanEditor({
             取消政策（每行一條）
             <textarea value={(plan.planRefundRules ?? []).join('\n')} rows={3}
               onChange={e => update({ planRefundRules: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
-              style={fieldStyle} placeholder={'6天前可免費取消\n4~5天取消收50%手續費\n0~3天不可取消'} />
+              style={fieldStyle} placeholder={'出團7天前取消：100%退款\n出團前3–7天取消：70%退款\n出團前72小時內取消：不退款'} />
           </label>
 
         </div>
@@ -1246,10 +1246,10 @@ export default function AdminActivityEditPage() {
         '柴山洞穴探索需持合法申請許可，本行程已代辦申請'
       ],
       refundRules: [
-        '出發 6 天（含）以前取消：100% 退款',
-        '出發 4-5 天前取消：退款 50%',
-        '出發 3 天以內或當天取消：不退款',
-        '因惡劣天氣或安全因素由主辦取消：全額退款或改期'
+        '出團 7 天前取消：100% 退款',
+        '出團前 3–7 天取消：70% 退款',
+        '出團前 72 小時內取消：不退款',
+        '不可抗力或主辦取消：100% 退款或 1 次免費改期'
       ],
       safetyNotice: '部分路段地形陡峭濕滑，全程請依嚮導指示行進，禁止脫隊。洞穴內光線昏暗，請確保頭燈電量充足。心臟病、嚴重膝傷、孕婦請勿參加。',
       goodFor: ['7-65 歲，有基本體能者', '喜愛地形探索與地質奇景', '想在城市近郊體驗真實探險', '攝影愛好者（石灰岩地形光影極具特色）', '熱愛自然生態觀察者'],
@@ -1308,7 +1308,7 @@ export default function AdminActivityEditPage() {
           experiencePointName: '柴山龍谷、小錐麓、金瓜洞',
           experienceAddress: '高雄市鼓山區柴山（壽山國家自然公園）',
           planNotices: ['請穿著止滑鞋', '請自備至少 1 公升飲水', '行程含輕度攀岩與鑽洞，需彎腰匍匐前進', '請勿餵食或挑釁柴山獼猴', '小錐麓有輕微高度，嚴重懼高症者請事先告知'],
-          planRefundRules: ['出發 3 天（含）以前取消：全額退款', '出發 2 天前取消：退款 50%', '出發當天或 1 天前取消：不退款', '因天氣或安全取消：全額退款或免費改期']
+          planRefundRules: ['出團 7 天前取消：100% 退款', '出團前 3–7 天取消：70% 退款', '出團前 72 小時內取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
         },
         {
           id: 'full-day-complete',
@@ -1342,7 +1342,7 @@ export default function AdminActivityEditPage() {
           experiencePointName: '柴山龍谷、小錐麓、金瓜洞、北峰砲台、隱谷秘境',
           experienceAddress: '高雄市鼓山區柴山（壽山國家自然公園）',
           planNotices: ['請穿著止滑運動鞋或登山鞋，禁止穿涼鞋', '請自備至少 1.5 公升飲水', '午餐有葷食（鴨肉），素食者請報名時告知，可安排替代餐食', '行程含攀岩、鑽洞與下午北峰路線，體力需求高於半日'],
-          planRefundRules: ['出發 6 天（含）以前取消：全額退款', '出發 4-5 天前取消：退款 50%', '出發 3 天以內或當天取消：不退款', '因天氣或安全取消：全額退款或免費改期']
+          planRefundRules: ['出團 7 天前取消：100% 退款', '出團前 3–7 天取消：70% 退款', '出團前 72 小時內取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
         }
       ]
     };
