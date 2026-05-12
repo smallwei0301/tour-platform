@@ -301,15 +301,15 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Review hint — shown for non-completed, non-terminal orders */}
-      {status !== 'completed' && !isTerminal && (
+      {/* Review hint — shown for orders that cannot yet show the review form and are non-terminal */}
+      {!['paid','confirmed','completed'].includes(status) && !isTerminal && (
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
           <p style={{ fontSize: 13, color: '#0369a1', margin: 0 }}>行程完成後即可撰寫評價</p>
         </div>
       )}
 
-      {/* Review section — shown for completed orders */}
-      {status === 'completed' && (
+      {/* Review section — shown for paid, confirmed, and completed orders */}
+      {['paid','confirmed','completed'].includes(status) && (
         <div style={{ marginBottom: 16 }}>
           {reviewSubmitted ? (
             <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center', padding: '12px 0' }}>
