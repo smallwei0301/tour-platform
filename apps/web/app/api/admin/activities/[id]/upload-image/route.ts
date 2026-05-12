@@ -106,7 +106,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     // Validate image dimensions and aspect ratio
     const validation = await validateImageDimensions(file, type as 'cover' | 'gallery');
     if (!validation.valid) {
-      return Response.json(fail('INVALID_DIMENSIONS', validation.error), { status: 400 });
+      return Response.json(fail('INVALID_DIMENSIONS', validation.error ?? '尺寸驗證失敗'), { status: 400 });
     }
 
     // Sanitize slug: keep alphanumeric, hyphen, underscore only

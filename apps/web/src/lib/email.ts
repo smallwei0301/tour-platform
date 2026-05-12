@@ -7,7 +7,7 @@
  * - call sites can keep main flow success while explicitly surfacing email failures
  */
 
-import { Resend } from 'resend';
+import { Resend, type CreateEmailOptions } from 'resend';
 
 // ── Delivery logger ────────────────────────────────────────────────────────────
 
@@ -51,7 +51,7 @@ function logEmail(entry: EmailLogEntry): void {
 
 const FROM = process.env.EMAIL_FROM || 'Tour Platform <noreply@resend.dev>';
 
-type EmailClient = { emails: { send: (args: any) => Promise<{ data?: { id?: string } }> } };
+type EmailClient = { emails: { send: (args: CreateEmailOptions) => Promise<{ data: { id?: string } | null }> } };
 let _resend: Resend | null = null;
 let _emailClientOverride: EmailClient | null = null;
 
