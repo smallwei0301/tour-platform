@@ -204,20 +204,6 @@ export async function POST(
       paymentId = reusablePayment.id;
       merchantTradeNo = reusablePayment.trade_no!;
     } else {
-      // 4. Check ECPay credentials
-      let hashKey: string;
-      let hashIV: string;
-      try {
-        const credentials = getECPayCredentials();
-        hashKey = credentials.hashKey;
-        hashIV = credentials.hashIV;
-      } catch (err) {
-        console.error('ECPay credentials error:', err);
-        return Response.json(errorV2('INTERNAL_ERROR', 'Payment provider not configured'), {
-          status: 500,
-        });
-      }
-
       const merchantId = process.env.ECPAY_MERCHANT_ID;
       if (!merchantId) {
         return Response.json(errorV2('INTERNAL_ERROR', 'ECPAY_MERCHANT_ID not configured'), {

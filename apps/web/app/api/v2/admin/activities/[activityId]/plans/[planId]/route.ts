@@ -16,7 +16,7 @@ const VALID_BOOKING_TYPES = ['scheduled', 'request', 'instant'];
 const VALID_STATUSES = ['active', 'inactive', 'archived'];
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ activityId: string; planId: string }> }
 ) {
   const { activityId, planId } = await context.params;
@@ -166,7 +166,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ activityId: string; planId: string }> }
 ) {
   const { activityId, planId } = await context.params;

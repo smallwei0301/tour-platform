@@ -557,8 +557,6 @@ function AddScheduleModal({
   const [progress,        setProgress]        = useState('');
   const [err,             setErr]             = useState('');
 
-  const today = new Date().toISOString().split('T')[0];
-
   function toggleDate(date: string) {
     setSelectedDates(prev =>
       prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date].sort()

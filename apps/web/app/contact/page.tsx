@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 export default function ContactPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 
 // ── Types ──────────────────────────────────────────────
 export type GuideStep = {
@@ -222,7 +222,6 @@ export function AdminGuide({ pathname }: { pathname: string }) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<Rect | null>(null);
-  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (!open || !guide) return;

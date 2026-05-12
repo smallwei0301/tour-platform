@@ -20,7 +20,7 @@ function calcContribution(row: Row, kpiConfig?: { commissionRate?: number; payme
     finalContributionTwd: commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd,
   };
 }
-import { Card, PageHeader, StatusBadge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
 
 type Row = {
   orderId: string; orderDate: string; guideName: string; activityName: string;

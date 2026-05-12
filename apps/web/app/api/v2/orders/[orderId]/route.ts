@@ -33,7 +33,7 @@ function isValidUuid(str: string): boolean {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ orderId: string }> }
 ) {
   const { orderId } = await context.params;

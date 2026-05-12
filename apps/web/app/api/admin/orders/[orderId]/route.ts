@@ -12,9 +12,6 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
   }
 }
 
-// AC5: statuses that lock the order against edits
-const LOCKED_STATUSES = ['refunded', 'refund_pending', 'completed', 'cancelled_by_user', 'cancelled_by_guide'];
-
 export async function PATCH(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
   const body = await request.json().catch(() => ({}));

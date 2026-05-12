@@ -15,7 +15,7 @@ const VALID_BOOKING_TYPES = ['scheduled', 'request', 'instant'];
 const VALID_STATUSES = ['active', 'inactive', 'archived'];
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ activityId: string }> }
 ) {
   const { activityId } = await context.params;

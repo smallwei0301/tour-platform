@@ -11,7 +11,7 @@
  * Run: npx playwright test e2e/booking-flow-validation.spec.ts
  */
 
-import { test, expect, Page, APIRequestContext } from '@playwright/test';
+import { test, Page } from '@playwright/test';
 
 // ============================================================================
 // Configuration
@@ -544,7 +544,7 @@ test.describe('E2E Booking Flow Validation', () => {
       return;
     }
 
-    const debug = setupPageDebug(page);
+    setupPageDebug(page);
 
     try {
       await gotoPage(page, `/activities/${state.activitySlug}`);
@@ -787,7 +787,7 @@ test.describe('E2E Booking Flow Validation', () => {
       return;
     }
 
-    const debug = setupPageDebug(page);
+    setupPageDebug(page);
 
     try {
       // Start from activity page
@@ -1098,7 +1098,7 @@ test.describe('E2E Booking Flow Validation', () => {
       return;
     }
 
-    const debug = setupPageDebug(page);
+    setupPageDebug(page);
 
     try {
       await adminLogin(page);
