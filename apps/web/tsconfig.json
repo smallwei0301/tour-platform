@@ -11,6 +11,7 @@
     "skipLibCheck": true,
     "strict": false,
     "noImplicitAny": true,
+    "noUnusedLocals": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
@@ -30,8 +31,7 @@
       {
         "name": "next"
       }
-    ],
-    "noUnusedLocals": true
+    ]
   },
   "include": [
     "**/*.ts",
