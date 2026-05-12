@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '../../../../src/lib/supabase/client';
+import { RefundPreviewBanner } from '../../../../src/components/orders/RefundPreviewBanner';
 
 type OrderDetail = {
   id: string;
@@ -365,6 +366,10 @@ export default function OrderDetailPage() {
             <button onClick={() => router.push(`/order/pay?orderId=${order.id}`)} style={btnPrimary}>
               前往付款
             </button>
+          )}
+
+          {canRefund && (
+            <RefundPreviewBanner orderId={orderId} />
           )}
 
           {canRefund && !refundSuccess && !showRefundForm && (
