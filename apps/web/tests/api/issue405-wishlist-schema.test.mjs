@@ -138,6 +138,11 @@ describe('Issue 405 — AC4: RLS policies', () => {
       /service[\s\S]{0,200}USING\s*\(\s*true\s*\)/i.test(sql);
     assert.ok(hasService, 'Must have service_all policy USING (true) WITH CHECK (true)');
   });
+
+  it('AC4: service_all policy is scoped TO service_role', () => {
+    const sql = fs.readFileSync(MIGRATION_FILE, 'utf8');
+    assert.match(sql, /TO\s+service_role/, 'service_all policy must be scoped TO service_role');
+  });
 });
 
 // ---------------------------------------------------------------------------
