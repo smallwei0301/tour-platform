@@ -340,3 +340,30 @@ export async function sendRefundRequested(data: OrderEmailData): Promise<EmailDe
     orderId: data.orderId,
   });
 }
+
+/**
+ * 退款已完成 email — 僅在 REFUND_AUTO_EXECUTE 自動執行成功時發送
+ */
+export async function sendRefundExecuted(data: OrderEmailData): Promise<EmailDeliveryResult> {
+  const subject = `【${data.activityTitle}】退款已完成`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">退款已完成 ✅</h1>
+    <p style="font-size:14px;color:#6b7280;margin:0 0 4px;">嗨 ${data.contactName || '旅客'}，</p>
+    <p style="font-size:14px;color:#374151;margin:0 0 20px;">
+      您的訂單退款已完成處理。款項將於 3-5 個工作天退回至原付款工具。
+    </p>
+    ${orderInfoBlock(data)}
+    <div style="background:#d1fae5;border-left:4px solid #10b981;border-radius:8px;padding:12px 16px;margin-top:16px;">
+      <p style="margin:0;font-size:13px;color:#065f46;font-weight:600;">💳 退款時間</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#065f46;">款項將於 3-5 個工作天退回至原付款工具。感謝您的耐心等候。</p>
+    </div>
+  `);
+
+  return sendEmailWithContract({
+    fn: 'sendRefundExecuted',
+    to: data.contactEmail,
+    subject,
+    html,
+    orderId: data.orderId,
+  });
+}
