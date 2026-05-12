@@ -481,6 +481,15 @@ export default function GuideDashboardPage() {
             ) : (
               <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>
             )}
+            {payoutDetail && payoutDetail.orders.length > 0 && (
+              <a
+                href={`/api/guide/payout/monthly/csv?month=${payoutModal}`}
+                download
+                style={{ display:'inline-block', marginTop:8, marginRight:8, padding:'6px 14px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, fontSize:12, color:'#16a34a', textDecoration:'none' }}
+              >
+                下載 CSV
+              </a>
+            )}
             <button onClick={() => setPayoutModal(null)} style={{ marginTop:16, padding:'6px 16px', background:'#f3f4f6', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}>關閉</button>
           </div>
         </div>
