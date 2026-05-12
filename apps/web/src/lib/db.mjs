@@ -2958,6 +2958,7 @@ export async function listWishlistDb(input) {
   let activityMap = new Map();
 
   if (activityIds.length > 0) {
+    // Safe: getSupabase() uses service-role key, which bypasses activities RLS (status='published' filter does not apply here).
     const { data: activities, error: activityError } = await supabase
       .from('activities')
       .select('id, title, slug, price_twd, cover_image_url')
