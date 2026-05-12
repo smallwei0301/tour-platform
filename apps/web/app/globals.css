@@ -51,6 +51,12 @@ a { color: inherit; text-decoration: none; }
 }
 .tp-navbar-full { width: 100%; padding: 0 16px; box-sizing: border-box; }
 .tp-navbar-inner { min-height: 64px; display: grid; grid-template-columns: 180px 1fr auto; align-items: center; gap: 16px; }
+.tp-navbar-home-like {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 78px;
+}
 .tp-logo { font-weight: 800; color: var(--tp-primary); }
 .tp-search-shell { display: flex; border: 1.5px solid #d1d5db; border-radius: 24px; overflow: hidden; }
 .tp-search-input { border: 0; flex: 1; padding: 10px 14px; outline: none; }

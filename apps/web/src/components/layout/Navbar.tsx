@@ -31,14 +31,11 @@ export function Navbar() {
     }
 
     const supabase = createClient();
-
-    // Get initial session
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
       setLoadingUser(false);
     });
 
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
@@ -66,132 +63,38 @@ export function Navbar() {
 
   return (
     <header className={`tp-navbar${isActivities ? ' tp-navbar-overlay' : ''}`}>
-      <div className={`tp-navbar-inner tp-navbar-full${isActivities ? ' tp-navbar-inner-overlay' : ''}`}>
-        {/* Logo */}
-        <Link
-          href="/"
-          className="tp-logo"
-          aria-label="祕島首頁"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 10,
-            color: isActivities ? '#f8f2ea' : undefined,
-            textShadow: isActivities ? '0 2px 8px rgba(0,0,0,0.28)' : undefined,
-          }}
-        >
-          <span aria-hidden="true" style={{ display: 'inline-flex' }}>
+      <div className={`tp-navbar-inner tp-navbar-full tp-navbar-home-like${isActivities ? ' tp-navbar-inner-overlay' : ''}`}>
+        <Link href="/" className="midao-brand" aria-label="祕島首頁">
+          <span className="midao-brand-mark">
             <MidaoLogo />
           </span>
-          <span>祕島</span>
+          <span>
+            <strong>祕島</strong>
+            <small>MIDAO · SECRET ISLE</small>
+          </span>
         </Link>
 
-        {/* Desktop: search bar */}
-        <form onSubmit={handleSearch} className={`tp-search-shell tp-nav-search-desktop${isActivities ? ' tp-search-shell-overlay' : ''}`} aria-label="搜尋">
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜尋行程、目的地⋯"
-            className="tp-search-input"
-          />
+        <div className="midao-top-actions" aria-label="導覽操作">
           <button
-            type="submit"
-            className="tp-btn tp-btn-primary"
-            style={{ borderRadius: '0 24px 24px 0', padding: '10px 18px' }}
+            className="midao-icon-btn"
+            aria-label="搜尋路線"
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
           >
-            🔍
+            ⌕
           </button>
-        </form>
-
-        {/* Desktop nav links */}
-        <nav className={`tp-nav-links${isActivities ? ' tp-nav-links-overlay' : ''}`} aria-label="主要導覽">
-          {NAV_LINKS.map((l) => (
-            <Link key={l.href} href={l.href}>
-              {l.label}
-            </Link>
-          ))}
-
-          {!loadingUser && (
-            user ? (
-              <>
-                <Link
-                  href="/me/orders"
-                  style={{ fontSize: 14, color: '#374151' }}
-                  data-testid="nav-my-orders"
-                >
-                  我的訂單
-                </Link>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {user.user_metadata?.avatar_url && (
-                    <img
-                      src={user.user_metadata.avatar_url}
-                      alt={displayName}
-                      width={28}
-                      height={28}
-                      style={{ borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                  )}
-                  <span
-                    style={{ fontSize: 14, color: '#374151', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    data-testid="nav-user-name"
-                  >
-                    {displayName}
-                  </span>
-                  <button
-                    onClick={handleSignOut}
-                    data-testid="nav-sign-out-btn"
-                    className="tp-btn"
-                    style={{
-                      border: '1.5px solid #d1d5db',
-                      color: '#6b7280',
-                      padding: '6px 14px',
-                      fontSize: 13,
-                      background: 'transparent',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    登出
-                  </button>
-                </div>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                data-testid="nav-login-btn"
-                className="tp-btn"
-                style={{
-                  border: '1.5px solid var(--tp-primary)',
-                  color: 'var(--tp-primary)',
-                  padding: '6px 16px',
-                  fontSize: 14,
-                }}
-              >
-                登入 / 註冊
-              </Link>
-            )
-          )}
-        </nav>
-
-        {/* Hamburger (mobile only) */}
-        <button
-          className="tp-hamburger"
-          onClick={() => setMenuOpen((v) => !v)}
-          aria-label={menuOpen ? '關閉選單' : '開啟選單'}
-          aria-expanded={menuOpen}
-        >
-          {menuOpen ? (
-            <span style={{ fontSize: 20, lineHeight: 1 }}>✕</span>
-          ) : (
-            <span className="tp-hamburger-icon">
-              <span />
-              <span />
-              <span />
-            </span>
-          )}
-        </button>
+          <button
+            className="midao-icon-btn"
+            aria-label={menuOpen ? '關閉選單' : '開啟選單'}
+            aria-expanded={menuOpen}
+            type="button"
+            onClick={() => setMenuOpen((v) => !v)}
+          >
+            {menuOpen ? '✕' : '☰'}
+          </button>
+        </div>
       </div>
 
-      {/* Mobile dropdown menu */}
       {menuOpen && (
         <nav className="tp-mobile-menu" aria-label="手機導覽">
           <div className="tp-container">
@@ -206,37 +109,32 @@ export function Navbar() {
                 🔍
               </button>
             </form>
+
             {NAV_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="tp-mobile-menu-item"
-                onClick={() => setMenuOpen(false)}
-              >
+              <Link key={l.href} href={l.href} className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
                 {l.label}
               </Link>
             ))}
-            {user ? (
-              <>
-                <Link href="/me/orders" className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
-                  我的訂單
+
+            {!loadingUser && (
+              user ? (
+                <>
+                  <Link href="/me/orders" className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
+                    我的訂單
+                  </Link>
+                  <button
+                    onClick={() => { handleSignOut(); setMenuOpen(false); }}
+                    className="tp-mobile-menu-item"
+                    style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: '#6b7280' }}
+                  >
+                    登出（{displayName}）
+                  </button>
+                </>
+              ) : (
+                <Link href="/login" className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
+                  登入 / 註冊
                 </Link>
-                <button
-                  onClick={() => { handleSignOut(); setMenuOpen(false); }}
-                  className="tp-mobile-menu-item"
-                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: '#6b7280' }}
-                >
-                  登出（{displayName}）
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className="tp-mobile-menu-item"
-                onClick={() => setMenuOpen(false)}
-              >
-                登入 / 註冊
-              </Link>
+              )
             )}
           </div>
         </nav>
