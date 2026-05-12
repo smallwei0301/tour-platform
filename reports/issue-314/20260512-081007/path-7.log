@@ -1,0 +1,24 @@
+✔ admin dashboard summary aggregates queues and KPI (4.890389ms)
+✔ guide dashboard route exists (2.699505ms)
+✔ guide bookings route exists (0.310037ms)
+✔ guide booking detail route exists (0.223224ms)
+✔ guide dashboard route uses guide session auth (0.426948ms)
+✔ guide dashboard route fetches bookings via orders table (0.323816ms)
+✔ guide dashboard route syncs via activity_id to guide (0.352147ms)
+✔ guide dashboard route returns monthlyBookings, pendingBookings, upcomingSchedules (0.296696ms)
+✔ guide bookings route filters by guide ownership via activity_id (13.592197ms)
+✔ guide bookings route supports optional scheduleId filter (booking sync gate) (1.061122ms)
+✔ guide bookings route returns sync fields: status, paymentStatus, scheduleDate (1.48337ms)
+✔ guide booking detail route enforces guide ownership verification (1.240855ms)
+✔ guide booking detail route returns schedule sync data (0.534421ms)
+✔ [357] guide dashboard route includes monthGmvTwd and revenueTrend6m (0.302686ms)
+✔ [357] guide dashboard route pendingBookings includes totalTwd (0.410108ms)
+✔ [357] guide dashboard route GMV is gated to paid/confirmed/completed statuses only (0.51829ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 206.010781

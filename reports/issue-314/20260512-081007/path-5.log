@@ -1,0 +1,18 @@
+✔ admin refund list returns rows (4.281307ms)
+✔ admin POS refund entry is rerunnable and traceable (4.788118ms)
+✔ admin refund actions update refund and order status (1.228294ms)
+✔ ecpay callback mapping contract: V2 CustomField2=orderId + legacy fallback (12.455423ms)
+✔ requestId is required for refund request (4.022582ms)
+✔ create refund request updates order status to refund_pending (1.380138ms)
+✔ duplicate refund request is blocked (0.440599ms)
+✔ same requestId retry is idempotent and stable (0.377178ms)
+✔ timeout-retry behavior with same requestId remains idempotent (1.548942ms)
+✔ concurrent same requestId submissions do not create duplicate refund request (0.591922ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 232.638282

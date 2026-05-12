@@ -1,0 +1,34 @@
+✔ admin refund list returns rows (3.460438ms)
+✔ admin POS refund entry is rerunnable and traceable (4.101542ms)
+✔ admin refund actions update refund and order status (2.670343ms)
+✖ ecpay callback mapping contract: V2 CustomField2=orderId + legacy fallback (11.064788ms)
+✔ requestId is required for refund request (4.007059ms)
+✔ create refund request updates order status to refund_pending (1.884077ms)
+✔ duplicate refund request is blocked (0.742025ms)
+✔ same requestId retry is idempotent and stable (0.748545ms)
+✔ timeout-retry behavior with same requestId remains idempotent (1.777315ms)
+✔ concurrent same requestId submissions do not create duplicate refund request (0.702214ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 217.086804
+
+✖ failing tests:
+
+test at apps/web/tests/api/ecpay-callback-mapping-contract.test.mjs:8:1
+✖ ecpay callback mapping contract: V2 CustomField2=orderId + legacy fallback (11.064788ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/payments/ecpay/callback/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async Object.readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/ecpay-callback-mapping-contract.test.mjs:9:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/payments/ecpay/callback/route.ts'
+  }

@@ -1,0 +1,15 @@
+✔ GH-178 callback audit continuity: preserves LINE/LIFF origin and correlation separately from system actor (24.016566ms)
+✔ GH-178 callback audit continuity: keeps #197 payment status sync and idempotency guard (2.322106ms)
+✔ line auth handoff route exists and preserves line source + correlation continuity (8.964397ms)
+✔ booking line wrapper page exists and redirects into handoff path (2.327346ms)
+✔ booking v2 flow forwards correlation header and source channel from line entry (2.192363ms)
+✔ line continuation fallback is explicit and testable without silently dropping to legacy flow (3.130012ms)
+✔ checkout route keeps line source + correlation continuity in payment-init audit payload (1.551541ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 107.542507

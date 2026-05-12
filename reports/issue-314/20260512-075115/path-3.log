@@ -1,0 +1,20 @@
+✔ admin POS additional-payment route exists (26.564105ms)
+✔ admin POS additional-payment route is a POST endpoint (3.908587ms)
+✔ admin POS additional-payment route validates orderId as UUID (2.887427ms)
+✔ admin POS additional-payment route validates amount as positive integer (1.389638ms)
+✔ admin POS additional-payment route validates method field (0.99768ms)
+✔ admin POS additional-payment route uses shared db primitives (1.465179ms)
+✔ admin POS additional-payment route tags channel as admin_pos (1.03537ms)
+✔ admin POS additional-payment route enforces allowed order statuses (1.046991ms)
+✔ admin POS additional-payment route returns success envelope with paymentId and amount (1.831336ms)
+✔ admin POS additional-payment route returns NOT_FOUND when order missing (1.662423ms)
+✔ admin POS additional-payment route does not call BookingStateService (order-centric flow) (1.52347ms)
+✔ admin POS additional-payment route tags paymentType as additional_payment in raw_payload (0.984849ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 112.917254

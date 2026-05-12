@@ -1,0 +1,190 @@
+✖ admin POS additional-payment route exists (8.08017ms)
+✖ admin POS additional-payment route is a POST endpoint (2.662453ms)
+✖ admin POS additional-payment route validates orderId as UUID (3.207314ms)
+✖ admin POS additional-payment route validates amount as positive integer (1.676833ms)
+✖ admin POS additional-payment route validates method field (1.576071ms)
+✖ admin POS additional-payment route uses shared db primitives (1.372107ms)
+✖ admin POS additional-payment route tags channel as admin_pos (1.801056ms)
+✖ admin POS additional-payment route enforces allowed order statuses (1.460889ms)
+✖ admin POS additional-payment route returns success envelope with paymentId and amount (1.144543ms)
+✖ admin POS additional-payment route returns NOT_FOUND when order missing (1.442209ms)
+✖ admin POS additional-payment route does not call BookingStateService (order-centric flow) (1.055071ms)
+✖ admin POS additional-payment route tags paymentType as additional_payment in raw_payload (0.953709ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 0
+ℹ fail 12
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 95.347696
+
+✖ failing tests:
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:12:1
+✖ admin POS additional-payment route exists (8.08017ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:13:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:17:1
+✖ admin POS additional-payment route is a POST endpoint (2.662453ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:18:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:22:1
+✖ admin POS additional-payment route validates orderId as UUID (3.207314ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:23:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:28:1
+✖ admin POS additional-payment route validates amount as positive integer (1.676833ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:29:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:35:1
+✖ admin POS additional-payment route validates method field (1.576071ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:36:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:41:1
+✖ admin POS additional-payment route uses shared db primitives (1.372107ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:42:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:49:1
+✖ admin POS additional-payment route tags channel as admin_pos (1.801056ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:50:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:54:1
+✖ admin POS additional-payment route enforces allowed order statuses (1.460889ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:55:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:62:1
+✖ admin POS additional-payment route returns success envelope with paymentId and amount (1.144543ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:63:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:71:1
+✖ admin POS additional-payment route returns NOT_FOUND when order missing (1.442209ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:72:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:76:1
+✖ admin POS additional-payment route does not call BookingStateService (order-centric flow) (1.055071ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:77:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }
+
+test at apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:82:1
+✖ admin POS additional-payment route tags paymentType as additional_payment in raw_payload (0.953709ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-admin-pos-additional-payment-regression.test.mjs:83:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
+  }

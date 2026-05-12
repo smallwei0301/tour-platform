@@ -1,0 +1,282 @@
+✔ admin dashboard summary aggregates queues and KPI (6.58829ms)
+✖ guide dashboard route exists (4.631611ms)
+✖ guide bookings route exists (0.49861ms)
+✖ guide booking detail route exists (0.412868ms)
+✖ guide dashboard route uses guide session auth (0.423279ms)
+✖ guide dashboard route fetches bookings via orders table (0.357677ms)
+✖ guide dashboard route syncs via activity_id to guide (0.314756ms)
+✖ guide dashboard route returns monthlyBookings, pendingBookings, upcomingSchedules (0.344877ms)
+✖ guide bookings route filters by guide ownership via activity_id (0.328277ms)
+✖ guide bookings route supports optional scheduleId filter (booking sync gate) (0.439479ms)
+✖ guide bookings route returns sync fields: status, paymentStatus, scheduleDate (0.614462ms)
+✖ guide booking detail route enforces guide ownership verification (0.372298ms)
+✖ guide booking detail route returns schedule sync data (0.314256ms)
+✖ [357] guide dashboard route includes monthGmvTwd and revenueTrend6m (0.298126ms)
+✖ [357] guide dashboard route pendingBookings includes totalTwd (0.271545ms)
+✖ [357] guide dashboard route GMV is gated to paid/confirmed/completed statuses only (0.285755ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 1
+ℹ fail 15
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 157.330892
+
+✖ failing tests:
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:29:1
+✖ guide dashboard route exists (4.631611ms)
+  AssertionError [ERR_ASSERTION]: Expected /root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts to exist
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:30:10)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.start (node:internal/test_runner/test:1015:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:358:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:33:1
+✖ guide bookings route exists (0.49861ms)
+  AssertionError [ERR_ASSERTION]: Expected /root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts to exist
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:34:10)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:37:1
+✖ guide booking detail route exists (0.412868ms)
+  AssertionError [ERR_ASSERTION]: Expected /root/.openclaw/workspace/tour-platform/app/api/guide/bookings/[bookingId]/route.ts to exist
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:38:10)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:41:1
+✖ guide dashboard route uses guide session auth (0.423279ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:42:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:46:1
+✖ guide dashboard route fetches bookings via orders table (0.357677ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:47:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:51:1
+✖ guide dashboard route syncs via activity_id to guide (0.314756ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:52:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:57:1
+✖ guide dashboard route returns monthlyBookings, pendingBookings, upcomingSchedules (0.344877ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:58:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:64:1
+✖ guide bookings route filters by guide ownership via activity_id (0.328277ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:65:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:70:1
+✖ guide bookings route supports optional scheduleId filter (booking sync gate) (0.439479ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:71:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:75:1
+✖ guide bookings route returns sync fields: status, paymentStatus, scheduleDate (0.614462ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:76:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:82:1
+✖ guide booking detail route enforces guide ownership verification (0.372298ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/[bookingId]/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:83:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/[bookingId]/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:88:1
+✖ guide booking detail route returns schedule sync data (0.314256ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/[bookingId]/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:89:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/bookings/[bookingId]/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:95:1
+✖ [357] guide dashboard route includes monthGmvTwd and revenueTrend6m (0.298126ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:96:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:101:1
+✖ [357] guide dashboard route pendingBookings includes totalTwd (0.271545ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:102:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }
+
+test at apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:106:1
+✖ [357] guide dashboard route GMV is gated to paid/confirmed/completed statuses only (0.285755ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+      at readFileSync (node:fs:440:20)
+      at TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-guide-dashboard-booking-sync.test.mjs:107:15)
+      at Test.runInAsyncScope (node:async_hooks:228:14)
+      at Test.run (node:internal/test_runner/test:1118:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:787:18)
+      at Test.postRun (node:internal/test_runner/test:1247:19)
+      at Test.run (node:internal/test_runner/test:1175:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/guide/dashboard/route.ts'
+  }

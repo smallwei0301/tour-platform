@@ -1,0 +1,115 @@
+✖ GH-178 callback audit continuity: preserves LINE/LIFF origin and correlation separately from system actor (4.787545ms)
+✖ GH-178 callback audit continuity: keeps #197 payment status sync and idempotency guard (4.596271ms)
+✖ line auth handoff route exists and preserves line source + correlation continuity (8.641431ms)
+✖ booking line wrapper page exists and redirects into handoff path (3.436218ms)
+✖ booking v2 flow forwards correlation header and source channel from line entry (1.964859ms)
+✖ line continuation fallback is explicit and testable without silently dropping to legacy flow (3.230634ms)
+✖ checkout route keeps line source + correlation continuity in payment-init audit payload (1.981789ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 104.253352
+
+✖ failing tests:
+
+test at apps/web/tests/api/issue178-line-liff-callback-audit-contract.test.mjs:11:1
+✖ GH-178 callback audit continuity: preserves LINE/LIFF origin and correlation separately from system actor (4.787545ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/supabase/migrations/20260508203000_issue178_line_liff_callback_audit_continuity.sql'
+      at async open (node:internal/fs/promises:637:25)
+      at async Object.readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue178-line-liff-callback-audit-contract.test.mjs:12:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/supabase/migrations/20260508203000_issue178_line_liff_callback_audit_continuity.sql'
+  }
+
+test at apps/web/tests/api/issue178-line-liff-callback-audit-contract.test.mjs:29:1
+✖ GH-178 callback audit continuity: keeps #197 payment status sync and idempotency guard (4.596271ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/supabase/migrations/20260508203000_issue178_line_liff_callback_audit_continuity.sql'
+      at async open (node:internal/fs/promises:637:25)
+      at async Object.readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/issue178-line-liff-callback-audit-contract.test.mjs:30:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/supabase/migrations/20260508203000_issue178_line_liff_callback_audit_continuity.sql'
+  }
+
+test at apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:12:1
+✖ line auth handoff route exists and preserves line source + correlation continuity (8.641431ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/line/auth/handoff/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:13:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:358:3) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/line/auth/handoff/route.ts'
+  }
+
+test at apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:23:1
+✖ booking line wrapper page exists and redirects into handoff path (3.436218ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/booking/line/page.tsx'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:24:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/booking/line/page.tsx'
+  }
+
+test at apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:31:1
+✖ booking v2 flow forwards correlation header and source channel from line entry (1.964859ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/booking/[activityId]/page.tsx'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:32:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/booking/[activityId]/page.tsx'
+  }
+
+test at apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:42:1
+✖ line continuation fallback is explicit and testable without silently dropping to legacy flow (3.230634ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/booking/[activityId]/page.tsx'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:43:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/booking/[activityId]/page.tsx'
+  }
+
+test at apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:50:1
+✖ checkout route keeps line source + correlation continuity in payment-init audit payload (1.981789ms)
+  Error: ENOENT: no such file or directory, open '/root/.openclaw/workspace/tour-platform/app/api/v2/bookings/[bookingId]/checkout/route.ts'
+      at async open (node:internal/fs/promises:637:25)
+      at async readFile (node:internal/fs/promises:1269:14)
+      at async TestContext.<anonymous> (file:///root/.openclaw/workspace/tour-platform/apps/web/tests/api/v2-line-liff-entry-contract.test.mjs:51:15)
+      at async Test.run (node:internal/test_runner/test:1125:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:787:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/root/.openclaw/workspace/tour-platform/app/api/v2/bookings/[bookingId]/checkout/route.ts'
+  }

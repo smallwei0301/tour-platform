@@ -1,0 +1,13 @@
+✔ route contract keeps web/line/admin_pos channels (regression guard) (66.8644ms)
+✔ Admin POS draft flow keeps create-order envelope shape (0.895648ms)
+✔ LINE draft flow regression stays mockable without real LINE API (0.572942ms)
+✔ admin POS manual payment route exists and writes shared primitives only (22.763403ms)
+✔ manual payment route keeps availability refresh integration through admin order update path (2.177254ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 165.240801
