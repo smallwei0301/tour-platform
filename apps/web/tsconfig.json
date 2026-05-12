@@ -30,7 +30,8 @@
       {
         "name": "next"
       }
-    ]
+    ],
+    "noUnusedLocals": true
   },
   "include": [
     "**/*.ts",
