@@ -129,7 +129,7 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ guideId: string; ruleId: string }> }
 ) {
   const { guideId, ruleId } = await context.params;

@@ -32,7 +32,7 @@ function isValidUuid(str: string): boolean {
 }
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   context: { params: Promise<{ bookingId: string }> }
 ) {
   const { bookingId } = await context.params;

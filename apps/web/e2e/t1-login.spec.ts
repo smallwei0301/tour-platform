@@ -4,7 +4,6 @@
 import { test, expect } from '@playwright/test';
 import { adminLogin } from './helpers';
 
-const ADMIN_ACCESS_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
 
 test('T1.1 - 正確登入後可進入後台或受控落在活動頁', async ({ page }) => {

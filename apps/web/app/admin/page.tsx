@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Card, PageHeader, StatusBadge, Badge, Select, LoadingSkeleton, EmptyState } from '../../src/components/admin/ui';
+import { Card, PageHeader, Badge, LoadingSkeleton, EmptyState } from '../../src/components/admin/ui';
 
 type Preset = 'today' | '7d' | '30d' | 'custom';
 type TrendMetric = 'orders' | 'refunds' | 'guides';

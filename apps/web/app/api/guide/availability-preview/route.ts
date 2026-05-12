@@ -169,7 +169,7 @@ function generatePreviewSlots(
   bookings: Booking[],
   dateFrom: string,
   dateTo: string,
-  timezone: string
+  _timezone: string
 ): Slot[] {
   const slots: Slot[] = [];
 
@@ -259,7 +259,6 @@ function isSlotBlocked(
   }
 
   // Check bookings with buffer
-  const bufferMs = (bufferBefore + bufferAfter) * 60 * 1000;
   for (const booking of bookings) {
     if (booking.status === 'cancelled' || booking.status === 'no_show') continue;
 
