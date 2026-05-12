@@ -10,6 +10,19 @@ function getAnonClient() {
   );
 }
 
+// GH-400: service-role client bypasses RLS role resolution issue.
+// PostgREST resolves role from the apikey header (anon), not the JWT Bearer token,
+// so anonClientWithToken INSERT into activity_qa always gets role=anon and fails the
+// TO authenticated RLS policy. Mirror /api/reviews: verify identity via bearer client,
+// then INSERT via service-role client with explicit user_id and status.
+function getServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+}
+
 // GET /api/qa?activityId=X — fetch approved Q&A for public display
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -80,8 +93,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(fail('EMPTY_QUESTION', 'question text required'), { status: 400 });
   }
 
-  // Use user-scoped client for INSERT so RLS authenticated_insert_pending_qa is enforced
-  const { data: qa, error } = await anonClientWithToken
+  // GH-400: use service-role client for INSERT (mirrors /api/reviews).
+  // anonClientWithToken passes apikey=anon; PostgREST resolves role=anon not authenticated,
+  // so the RLS policy TO authenticated fails with HTTP 500 in production.
+  // Service-role bypasses RLS role resolution; user_id and status are written explicitly.
+  const serviceSupabase = getServiceClient();
+  const { data: qa, error } = await serviceSupabase
     .from('activity_qa')
     .insert({
       activity_id: activityIdStr,
