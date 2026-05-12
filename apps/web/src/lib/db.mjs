@@ -2941,20 +2941,42 @@ export async function listWishlistDb(input) {
   if (!userId) throw new Error('userId is required');
 
   const supabase = await getSupabase();
-  const { data, error } = await supabase
+
+  // NOTE (Issue #431): avoid PostgREST embed dependency on
+  // wishlists.activity_id -> activities.id relationship metadata.
+  // Some production environments may have drifted schema/FK definitions,
+  // which breaks embeds with PGRST200/PGRST201.
+  const { data: rows, error } = await supabase
     .from('wishlists')
-    .select('id, activity_id, added_at, activities(id, title, slug, price_twd, cover_image_url)')
+    .select('id, activity_id, added_at')
     .eq('user_id', userId)
     .order('added_at', { ascending: false });
 
   if (error) throw new Error(error.message);
-  return (data || []).map((row) => ({
-    id: row.id,
-    activityId: row.activity_id,
-    addedAt: row.added_at,
-    title: row.activities?.title || '',
-    slug: row.activities?.slug || '',
-    priceTwd: row.activities?.price_twd || 0,
-    coverImageUrl: row.activities?.cover_image_url || null,
-  }));
+
+  const activityIds = [...new Set((rows || []).map((r) => r.activity_id).filter(Boolean))];
+  let activityMap = new Map();
+
+  if (activityIds.length > 0) {
+    const { data: activities, error: activityError } = await supabase
+      .from('activities')
+      .select('id, title, slug, price_twd, cover_image_url')
+      .in('id', activityIds);
+
+    if (activityError) throw new Error(activityError.message);
+    activityMap = new Map((activities || []).map((a) => [a.id, a]));
+  }
+
+  return (rows || []).map((row) => {
+    const activity = activityMap.get(row.activity_id);
+    return {
+      id: row.id,
+      activityId: row.activity_id,
+      addedAt: row.added_at,
+      title: activity?.title || '',
+      slug: activity?.slug || '',
+      priceTwd: activity?.price_twd || 0,
+      coverImageUrl: activity?.cover_image_url || null,
+    };
+  });
 }
