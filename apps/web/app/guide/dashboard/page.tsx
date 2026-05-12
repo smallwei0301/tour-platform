@@ -46,6 +46,21 @@ type ScheduleBooking = {
   paidAt: string | null;
 };
 
+type PayoutOrderItem = {
+  orderId: string;
+  activityId: string;
+  activityTitle: string;
+  totalTwd: number;
+  commissionTwd: number;
+  netTwd: number;
+};
+
+type PayoutDetailResponse = {
+  month: string;
+  orders: PayoutOrderItem[];
+  totals: { gmvTwd: number; commissionTwd: number; netTwd: number };
+};
+
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: '待付款',
   confirmed: '已確認',
@@ -67,6 +82,11 @@ export default function GuideDashboardPage() {
   const [qaAnswerMap, setQaAnswerMap] = useState<Record<string, string>>({});
   const [qaActionLoading, setQaActionLoading] = useState<string | null>(null);
 
+  // Payout detail modal
+  const [payoutModal, setPayoutModal] = useState<string | null>(null); // month string e.g. "2026-05"
+  const [payoutDetail, setPayoutDetail] = useState<PayoutDetailResponse | null>(null);
+  const [payoutLoading, setPayoutLoading] = useState(false);
+
   // Schedule detail modal
   const [scheduleModal, setScheduleModal] = useState<{
     scheduleId: string; tourTitle: string; date: string; planId: string;
@@ -74,6 +94,19 @@ export default function GuideDashboardPage() {
   } | null>(null);
   const [scheduleBookings, setScheduleBookings] = useState<ScheduleBooking[]>([]);
   const [scheduleBookingsLoading, setScheduleBookingsLoading] = useState(false);
+
+  const openPayoutDetail = async (month: string) => {
+    setPayoutModal(month);
+    setPayoutLoading(true);
+    setPayoutDetail(null);
+    try {
+      const res = await fetch(`/api/guide/payout/monthly?month=${month}`);
+      const json = await res.json();
+      if (json.ok) setPayoutDetail(json.data);
+    } finally {
+      setPayoutLoading(false);
+    }
+  };
 
   async function openScheduleDetail(s: NonNullable<DashboardData['upcomingSchedules']>[0]) {
     setScheduleModal({ scheduleId: s.id, tourTitle: s.tourTitle, date: s.date, planId: s.planId, bookedCount: s.bookedCount, maxCapacity: s.maxCapacity });
@@ -156,6 +189,10 @@ export default function GuideDashboardPage() {
     return <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>;
   }
 
+  // Current month in Asia/Taipei (UTC+8) for payout drawer
+  const taipeiNow = new Date(Date.now() + 8 * 60 * 60 * 1000);
+  const currentMonthStr = `${taipeiNow.getUTCFullYear()}-${String(taipeiNow.getUTCMonth() + 1).padStart(2, '0')}`;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Welcome Banner */}
@@ -202,11 +239,12 @@ export default function GuideDashboardPage() {
           icon="💰"
         />
         <RevenueCard
-          label="預計入帳"
+          label="本月預計入帳"
           value={data?.expectedPayoutTwd != null ? `NT$${data.expectedPayoutTwd.toLocaleString()}` : '--'}
-          subtext="依 Draft v1 結算規則計算（抽成 15%，T+7 天）"
+          subtext="點擊查看明細 · 依 Draft v1 結算規則計算（抽成 15%，T+7 天）"
           icon="🏦"
           muted={data?.expectedPayoutTwd == null}
+          onClick={() => openPayoutDetail(currentMonthStr)}
         />
         <RevenueCard
           label="下次出款日"
@@ -399,6 +437,55 @@ export default function GuideDashboardPage() {
         )}
       </Section>
 
+      {/* Payout Detail Modal */}
+      {payoutModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50 }}
+             onClick={() => setPayoutModal(null)}>
+          <div style={{ background:'#fff', borderRadius:16, padding:24, maxWidth:540, width:'92%', maxHeight:'80vh', overflowY:'auto' }}
+               onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize:16, fontWeight:700, marginBottom:12 }}>{payoutModal} 入帳明細</h3>
+            {payoutLoading ? (
+              <p style={{ color:'#6b7280', fontSize:13 }}>載入中…</p>
+            ) : payoutDetail && payoutDetail.orders.length > 0 ? (
+              <>
+                <table style={{ width:'100%', fontSize:12, borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr style={{ color:'#6b7280', borderBottom:'1px solid #e5e7eb' }}>
+                      <th style={{ textAlign:'left', padding:'4px 6px' }}>行程</th>
+                      <th style={{ textAlign:'right', padding:'4px 6px' }}>訂單金額</th>
+                      <th style={{ textAlign:'right', padding:'4px 6px' }}>平台抽成</th>
+                      <th style={{ textAlign:'right', padding:'4px 6px' }}>預計入帳</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {payoutDetail.orders.map(o => (
+                      <tr key={o.orderId} style={{ borderBottom:'1px solid #f3f4f6' }}>
+                        <td style={{ padding:'4px 6px' }}>{o.activityTitle}</td>
+                        <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.totalTwd.toLocaleString()}</td>
+                        <td style={{ textAlign:'right', padding:'4px 6px', color:'#ef4444' }}>-NT${o.commissionTwd.toLocaleString()}</td>
+                        <td style={{ textAlign:'right', padding:'4px 6px', fontWeight:600 }}>NT${o.netTwd.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ fontWeight:700, borderTop:'2px solid #e5e7eb' }}>
+                      <td style={{ padding:'6px 6px' }}>合計</td>
+                      <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.gmvTwd.toLocaleString()}</td>
+                      <td style={{ textAlign:'right', padding:'6px 6px', color:'#ef4444' }}>-NT${payoutDetail.totals.commissionTwd.toLocaleString()}</td>
+                      <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.netTwd.toLocaleString()}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>依 Draft v1 結算規則計算（抽成 {Math.round(payoutDetail.totals.commissionTwd / payoutDetail.totals.gmvTwd * 100)}%）</p>
+              </>
+            ) : (
+              <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>
+            )}
+            <button onClick={() => setPayoutModal(null)} style={{ marginTop:16, padding:'6px 16px', background:'#f3f4f6', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}>關閉</button>
+          </div>
+        </div>
+      )}
+
       {/* Schedule Booking Detail Modal */}
       {scheduleModal && (
         <div
@@ -519,17 +606,21 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
   );
 }
 
-function RevenueCard({ label, value, subtext, icon, muted }: {
-  label: string; value: string; subtext: string; icon: string; muted?: boolean;
+function RevenueCard({ label, value, subtext, icon, muted, onClick }: {
+  label: string; value: string; subtext: string; icon: string; muted?: boolean; onClick?: () => void;
 }) {
   return (
-    <div style={{
-      background: muted ? '#fafafa' : '#fff',
-      borderRadius: 14,
-      padding: '18px 20px',
-      border: `1px solid ${muted ? '#f3f4f6' : '#ede9fe'}`,
-      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-    }}>
+    <div
+      onClick={onClick}
+      style={{
+        background: muted ? '#fafafa' : '#fff',
+        borderRadius: 14,
+        padding: '18px 20px',
+        border: `1px solid ${muted ? '#f3f4f6' : '#ede9fe'}`,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        cursor: onClick ? 'pointer' : undefined,
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div>
           <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 4 }}>{label}</div>
