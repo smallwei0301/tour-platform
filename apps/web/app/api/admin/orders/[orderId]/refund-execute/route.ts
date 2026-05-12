@@ -10,7 +10,7 @@
  * AC4: idempotency — if ecpay_refund_trade_no already set, returns alreadyRefunded:true without calling ECPay
  * AC5: cash orders (no trade_no) — skip ECPay, require reason, mark refunded directly
  */
-import { ok, fail } from '../../../../../../src/lib/api';
+import { fail } from '../../../../../../src/lib/api';
 import { isAdminAuthorized } from '../../../../../../src/lib/admin-auth.mjs';
 import {
   getAdminSecurityState,
@@ -18,6 +18,7 @@ import {
 } from '../../../../../../src/lib/admin-session.mjs';
 import { requestAllRefund } from '../../../../../../src/lib/ecpay';
 import { createClient } from '@supabase/supabase-js';
+import { executeRefund } from '../../../../../../src/lib/refund-execute';
 
 function parseCookie(req: Request, key: string) {
   const cookie = req.headers.get('cookie') || '';
@@ -90,16 +91,6 @@ export async function POST(
     );
   }
 
-  // AC4: idempotency — already refunded via ECPay
-  if (order.ecpay_refund_trade_no) {
-    return Response.json(
-      ok({
-        alreadyRefunded: true,
-        ecpayRefundTradeNo: order.ecpay_refund_trade_no,
-      })
-    );
-  }
-
   // Parse body (required for cash orders; optional for ECPay orders)
   let body: Record<string, unknown> = {};
   try {
@@ -108,52 +99,19 @@ export async function POST(
     // body is optional for ECPay orders
   }
 
-  // AC5: cash orders (no trade_no) — skip ECPay, require reason, mark refunded directly
-  if (!order.trade_no) {
-    const reason = String(body?.reason ?? '').trim();
-    if (!reason) {
-      return Response.json(
-        fail('REASON_REQUIRED', 'reason required for cash orders'),
-        { status: 400 }
-      );
-    }
-
-    await supabase
-      .from('orders')
-      .update({
-        status: 'refunded',
-        refunded_amount: order.total_twd,
-        refunded_at: new Date().toISOString(),
-      })
-      .eq('id', orderId);
-
-    return Response.json(ok({ refunded: true, cashOrder: true }));
-  }
-
-  // AC2: call ECPay AllRefund
-  const result = await requestAllRefund({
-    merchantTradeNo: order.merchant_trade_no ?? orderId,
-    tradeNo: order.trade_no,
-    totalAmount: order.total_twd,
+  const outcome = await executeRefund({
+    order: order as any,
+    body,
+    requestAllRefund,
+    updateOrder: async (orderId, payload) => {
+      const { data, error, count } = await supabase
+        .from('orders')
+        .update(payload)
+        .eq('id', orderId)
+        .select('id');
+      return { error, data, count };
+    },
   });
 
-  if (!result.ok) {
-    return Response.json(
-      fail('ECPAY_REFUND_FAILED', result.rtnMsg),
-      { status: 502 }
-    );
-  }
-
-  // AC3: persist refund result
-  await supabase
-    .from('orders')
-    .update({
-      status: 'refunded',
-      refunded_amount: order.total_twd,
-      refunded_at: new Date().toISOString(),
-      ecpay_refund_trade_no: result.rtnCode,
-    })
-    .eq('id', orderId);
-
-  return Response.json(ok({ refunded: true, rtnCode: result.rtnCode }));
+  return Response.json(outcome.body, { status: outcome.status });
 }

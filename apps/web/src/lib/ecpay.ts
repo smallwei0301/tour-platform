@@ -88,6 +88,19 @@ export function getECPayCredentials() {
 }
 
 /**
+ * Get ECPay merchant id from env.
+ */
+export function getECPayMerchantId() {
+  const merchantId = process.env.ECPAY_MERCHANT_ID;
+
+  if (!merchantId) {
+    throw new Error('ECPAY_MERCHANT_ID must be set in environment');
+  }
+
+  return merchantId;
+}
+
+/**
  * ECPay DoAction URL — used for AllRefund (Action=R)
  * Reference: https://payment.ecpay.com.tw/Cashier/DoAction
  */
@@ -107,6 +120,53 @@ export interface AllRefundResult {
   ok: boolean;
   rtnCode: string;
   rtnMsg: string;
+  ecpayTradeNo: string | null;
+}
+
+function getFirstNonEmpty(values: Array<string | undefined>): string | null {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim() !== '') {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function extractEcpayTradeNo(parsed: Record<string, string>): string | null {
+  return getFirstNonEmpty([
+    parsed.RefundTradeNo,
+    parsed.RefundNo,
+    parsed.RefundTradeNo2,
+    parsed.OriginalTradeNo,
+    parsed.RtnTradeNo,
+    parsed.TradeNo,
+    parsed.ECPayTradeNo,
+  ]);
+}
+
+function getResponseField(parsed: Record<string, string>, key: 'RtnCode' | 'RtnMsg'): string | null {
+  const value = parsed[key];
+  if (!value || typeof value !== 'string') {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseResponseText(text: string): {
+  rtnCode: string;
+  rtnMsg: string;
+  ecpayTradeNo: string | null;
+} {
+  const parsed = Object.fromEntries(new URLSearchParams(text));
+
+  const rtnCode = getResponseField(parsed, 'RtnCode') || '';
+  const rtnMsg = getResponseField(parsed, 'RtnMsg') || '';
+  const ecpayTradeNo = extractEcpayTradeNo(parsed);
+
+  return { rtnCode, rtnMsg, ecpayTradeNo };
 }
 
 /**
@@ -120,9 +180,8 @@ export interface AllRefundResult {
 export async function requestAllRefund(
   params: AllRefundParams
 ): Promise<AllRefundResult> {
-  const merchantId = process.env.ECPAY_MERCHANT_ID ?? '';
-  const hashKey = process.env.ECPAY_HASH_KEY ?? '';
-  const hashIV = process.env.ECPAY_HASH_IV ?? '';
+  const merchantId = getECPayMerchantId();
+  const { hashKey, hashIV } = getECPayCredentials();
 
   const payload: Record<string, string> = {
     MerchantID: merchantId,
@@ -130,6 +189,7 @@ export async function requestAllRefund(
     TradeNo: params.tradeNo,
     Action: 'R', // R = Refund (AllRefund)
     TotalAmount: String(params.totalAmount),
+    ...('reason' in params && params.reason ? {Remark: params.reason} : {}),
   };
 
   const checkMacValue = generateCheckMacValue(payload, hashKey, hashIV);
@@ -143,11 +203,11 @@ export async function requestAllRefund(
   });
 
   const text = await res.text();
-  // ECPay DoAction returns: RtnCode=1&RtnMsg=Succeeded (or error code)
-  const parsed = Object.fromEntries(new URLSearchParams(text));
+  const parsed = parseResponseText(text);
   return {
-    ok: parsed.RtnCode === '1',
-    rtnCode: parsed.RtnCode ?? '',
-    rtnMsg: parsed.RtnMsg ?? '',
+    ok: parsed.rtnCode === '1',
+    rtnCode: parsed.rtnCode,
+    rtnMsg: parsed.rtnMsg,
+    ecpayTradeNo: parsed.ecpayTradeNo,
   };
 }
