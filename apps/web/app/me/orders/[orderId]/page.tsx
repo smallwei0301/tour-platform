@@ -265,6 +265,10 @@ export default function OrderDetailPage() {
           <span style={valueStyle}>{order.peopleCount ?? '—'} 人</span>
         </div>
         <div style={rowStyle}>
+          <span style={labelStyle}>出發時間</span>
+          <span style={valueStyle}>{order.scheduleStartAt ? new Date(order.scheduleStartAt).toLocaleString('zh-TW') : '—'}</span>
+        </div>
+        <div style={rowStyle}>
           <span style={labelStyle}>建立時間</span>
           <span style={valueStyle}>{order.createdAt ? new Date(order.createdAt).toLocaleString('zh-TW') : '—'}</span>
         </div>
@@ -296,6 +300,13 @@ export default function OrderDetailPage() {
           <span style={valueStyle}>{order.contactEmail || '—'}</span>
         </div>
       </div>
+
+      {/* Review hint — shown for non-completed, non-terminal orders */}
+      {status !== 'completed' && !isTerminal && (
+        <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: '#0369a1', margin: 0 }}>行程完成後即可撰寫評價</p>
+        </div>
+      )}
 
       {/* Review section — shown for completed orders */}
       {status === 'completed' && (
@@ -366,6 +377,12 @@ export default function OrderDetailPage() {
             <button onClick={() => router.push(`/order/pay?orderId=${order.id}`)} style={btnPrimary}>
               前往付款
             </button>
+          )}
+
+          {['paid', 'confirmed'].includes(status) && !departureNotPassed && (
+            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '10px 14px' }}>
+              <p style={{ fontSize: 13, color: '#c2410c', margin: 0 }}>行程已開始/結束，無法線上申請退款，請聯絡客服</p>
+            </div>
           )}
 
           {canRefund && (
