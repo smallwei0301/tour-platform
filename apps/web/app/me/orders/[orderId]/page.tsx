@@ -394,7 +394,7 @@ export default function OrderDetailPage() {
           )}
 
           {refundSuccess && (
-            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center' }}>✅ 已申請，客服將於 2 個工作天內處理</p>
+            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600, textAlign: 'center' }}>✅ 退款申請已送出，將自動退回原付款工具或由客服確認處理。</p>
           )}
 
           {showRefundForm && (
