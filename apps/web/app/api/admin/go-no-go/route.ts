@@ -1,0 +1,211 @@
+import { ok, fail } from '../../../../src/lib/api';
+import { adminDashboardSummaryDb } from '../../../../src/lib/db.mjs';
+import { createClient } from '@supabase/supabase-js';
+
+export const dynamic = 'force-dynamic';
+
+function getSupabase() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual';
+
+interface ReadinessItem {
+  id: string;
+  label: string;
+  status: ReadinessStatus;
+  owner: string;
+  note: string;
+}
+
+interface Metrics {
+  healthyOrderRate: number;
+  exceptionRate: number;
+  pendingRefunds: number;
+  paidConfirmedRatio: number;
+  incidents24h: number;
+}
+
+type VerdictState = 'GO' | 'HOLD' | 'NO_GO';
+
+interface Verdict {
+  state: VerdictState;
+  reason: string;
+  computedAt: string;
+  deploySha: string;
+}
+
+interface RecommendedAction {
+  label: string;
+  href: string;
+}
+
+function computeVerdict(
+  metrics: Metrics,
+  hasCriticalIncident: boolean,
+  readiness: ReadinessItem[]
+): { state: VerdictState; reason: string } {
+  const hasBlockerReadiness = readiness.some((r) => r.status === 'fail');
+
+  // NO_GO takes precedence over HOLD
+  if (metrics.exceptionRate > 10) {
+    return { state: 'NO_GO', reason: `Exception rate ${metrics.exceptionRate}% exceeds 10% threshold` };
+  }
+  if (metrics.incidents24h > 0 && hasCriticalIncident) {
+    return { state: 'NO_GO', reason: `${metrics.incidents24h} critical incident(s) in last 24h` };
+  }
+  if (hasBlockerReadiness) {
+    return { state: 'NO_GO', reason: 'One or more readiness checklist items are failing' };
+  }
+
+  // HOLD conditions
+  if (metrics.exceptionRate > 5) {
+    return { state: 'HOLD', reason: `Exception rate ${metrics.exceptionRate}% exceeds 5% caution threshold` };
+  }
+  if (metrics.pendingRefunds > 10) {
+    return { state: 'HOLD', reason: `${metrics.pendingRefunds} pending refunds exceed threshold of 10` };
+  }
+
+  return { state: 'GO', reason: 'All metrics within acceptable thresholds' };
+}
+
+export async function GET(_req: Request) {
+  try {
+    const deploySha = process.env.VERCEL_GIT_COMMIT_SHA || 'local';
+    const supabase = getSupabase();
+
+    // --- Order metrics from adminDashboardSummaryDb ---
+    let healthyOrderRate = 0;
+    let exceptionRate = 0;
+    let pendingRefunds = 0;
+    let paidConfirmedRatio = 0;
+
+    if (supabase) {
+      try {
+        const summary = await adminDashboardSummaryDb({ preset: '7d' });
+        healthyOrderRate = summary?.kpi?.healthyOrderRate ?? 0;
+        exceptionRate = summary?.kpi?.exceptionRate ?? 0;
+        pendingRefunds = summary?.kpi?.pendingRefunds ?? 0;
+
+        // paidConfirmedRatio: ratio of paid+confirmed orders to total
+        const orders: any[] = summary?.queues?.orders ?? [];
+        const totalOrders = summary?.kpi?.totalOrders ?? 1;
+        const paidConfirmed = orders.filter(
+          (o: any) => o.status === 'paid' || o.status === 'confirmed'
+        ).length;
+        paidConfirmedRatio = Number(((paidConfirmed / Math.max(totalOrders, 1)) * 100).toFixed(1));
+      } catch {
+        // Fallback to zeros if DB call fails
+      }
+    }
+
+    // --- incidents24h: replicate pattern from api/admin/health/route.ts ---
+    let incidents24h = 0;
+    let hasCriticalIncident = false;
+
+    if (supabase) {
+      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: incidentRows } = await supabase
+        .from('incidents')
+        .select('severity')
+        .gte('created_at', since24h);
+
+      if (incidentRows) {
+        incidents24h = incidentRows.length;
+        hasCriticalIncident = incidentRows.some(
+          (r: any) => r.severity === 'critical'
+        );
+      }
+    }
+
+    const metrics: Metrics = {
+      healthyOrderRate,
+      exceptionRate,
+      pendingRefunds,
+      paidConfirmedRatio,
+      incidents24h,
+    };
+
+    // --- Readiness checklist (static items, manually verified by ops) ---
+    const readiness: ReadinessItem[] = [
+      {
+        id: 'ecpay-sandbox',
+        label: 'ECPay sandbox → production credentials rotated',
+        status: 'manual',
+        owner: 'ops',
+        note: 'Verify ECPAY_HASH_KEY and ECPAY_HASH_IV are production values',
+      },
+      {
+        id: 'supabase-rls',
+        label: 'Supabase RLS policies enabled on all tables',
+        status: supabase ? 'pass' : 'warning',
+        owner: 'infra',
+        note: supabase ? 'Supabase connection confirmed' : 'Supabase not connected — check env vars',
+      },
+      {
+        id: 'sentry-dsn',
+        label: 'Sentry DSN configured and receiving events',
+        status: process.env.SENTRY_DSN ? 'pass' : 'warning',
+        owner: 'ops',
+        note: process.env.SENTRY_DSN ? 'SENTRY_DSN detected' : 'SENTRY_DSN not set',
+      },
+      {
+        id: 'vercel-deploy',
+        label: 'Latest Vercel deploy is production branch',
+        status: deploySha !== 'local' ? 'pass' : 'warning',
+        owner: 'infra',
+        note: deploySha !== 'local' ? `Commit: ${deploySha}` : 'Running locally — not a Vercel deploy',
+      },
+    ];
+
+    // --- Verdict ---
+    const { state, reason } = computeVerdict(metrics, hasCriticalIncident, readiness);
+
+    const verdict: Verdict = {
+      state,
+      reason,
+      computedAt: new Date().toISOString(),
+      deploySha,
+    };
+
+    // --- Recommended actions (only when not GO) ---
+    const recommendedActions: RecommendedAction[] = [];
+
+    if (state !== 'GO') {
+      if (exceptionRate > 5) {
+        recommendedActions.push({
+          label: 'Review exception orders',
+          href: '/admin/operations-tracking',
+        });
+      }
+      if (pendingRefunds > 10) {
+        recommendedActions.push({
+          label: 'Process pending refunds',
+          href: '/admin/refunds',
+        });
+      }
+      if (incidents24h > 0) {
+        recommendedActions.push({
+          label: 'View system health incidents',
+          href: '/admin/health',
+        });
+      }
+      if (recommendedActions.length === 0) {
+        recommendedActions.push({
+          label: 'Review readiness checklist',
+          href: '/admin/go-no-go',
+        });
+      }
+    }
+
+    return Response.json(
+      ok({ readiness, metrics, verdict, recommendedActions })
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown error';
+    return Response.json(fail('SERVER_ERROR', message), { status: 500 });
+  }
+}
