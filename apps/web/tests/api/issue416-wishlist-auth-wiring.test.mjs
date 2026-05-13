@@ -25,6 +25,11 @@ const wishlistToggleSrc = readFileSync(
   'utf8'
 );
 
+const csrfClientSrc = readFileSync(
+  resolve(__dirname, '../../src/lib/csrf-client.ts'),
+  'utf8'
+);
+
 // AC1: ActivityBottomBar imports createClient from supabase/client
 test('AC1: ActivityBottomBar imports createClient from supabase/client', () => {
   assert.match(
@@ -77,5 +82,40 @@ test('AC5: WishlistToggle still redirects unauthenticated users to /login', () =
     wishlistToggleSrc,
     /router\.push\s*\(\s*['"]\/login['"]\s*\)/,
     'WishlistToggle must still redirect to /login when not logged in'
+  );
+});
+
+// AC6: WishlistToggle primes CSRF token before wishlist mutation requests
+test('AC6: WishlistToggle primes CSRF before POST/DELETE wishlist calls', () => {
+  assert.match(
+    wishlistToggleSrc,
+    /import\s*\{[^}]*ensureCsrfToken[^}]*\}\s*from\s*['"][^'"]*csrf-client['"]/,
+    'WishlistToggle must import ensureCsrfToken from csrf-client'
+  );
+
+  const ensureCallIndex = wishlistToggleSrc.indexOf('await ensureCsrfToken()');
+  const postCallIndex = wishlistToggleSrc.indexOf("fetch('/api/me/wishlist'");
+  const deleteCallIndex = wishlistToggleSrc.indexOf('fetch(`/api/me/wishlist/${activityId}`');
+
+  assert.ok(ensureCallIndex !== -1, 'WishlistToggle must call await ensureCsrfToken()');
+  assert.ok(postCallIndex !== -1, 'WishlistToggle must call POST /api/me/wishlist');
+  assert.ok(deleteCallIndex !== -1, 'WishlistToggle must call DELETE /api/me/wishlist/:activityId');
+  assert.ok(
+    ensureCallIndex < postCallIndex && ensureCallIndex < deleteCallIndex,
+    'ensureCsrfToken() must run before wishlist mutation fetch calls'
+  );
+});
+
+// AC7: csrfHeaders still only appends header when cookie token exists
+test('AC7: csrfHeaders keeps existing behavior', () => {
+  assert.match(
+    csrfClientSrc,
+    /export\s+function\s+csrfHeaders\s*\(/,
+    'csrfHeaders export must still exist'
+  );
+  assert.match(
+    csrfClientSrc,
+    /return\s+token\s*\?\s*\{\s*\.\.\.base,\s*\[CSRF_HEADER_NAME\]:\s*token\s*\}\s*:\s*base/,
+    'csrfHeaders should still return base untouched when token is missing'
   );
 });
