@@ -29,10 +29,24 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const activityId = String(body?.activityId || '').trim();
+    let activityId = String(body?.activityId || '').trim();
 
     if (!activityId) {
       return Response.json(fail('INVALID_REQUEST', 'activityId is required'), { status: 400 });
+    }
+
+    // If activityId is a slug (not a UUID), resolve it to the real UUID
+    const UUID_RE = /^[0-9a-f-]{36}$/i;
+    if (!UUID_RE.test(activityId)) {
+      const { data: activity, error: slugErr } = await supabase
+        .from('activities')
+        .select('id')
+        .eq('slug', activityId)
+        .single();
+      if (slugErr || !activity) {
+        return Response.json(fail('NOT_FOUND', `Activity not found for slug: ${activityId}`), { status: 404 });
+      }
+      activityId = activity.id;
     }
 
     const entry = await addToWishlistDb({ userId: user.id, activityId });
