@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type WishlistItem = {
   id: string;
@@ -59,7 +60,7 @@ export default function WishlistPage() {
   async function handleRemove(activityId: string) {
     setRemovingId(activityId);
     try {
-      const res = await fetch(`/api/me/wishlist/${activityId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/me/wishlist/${activityId}`, { method: 'DELETE', headers: csrfHeaders() });
       if (res.ok) {
         setItems((prev) => prev.filter((item) => item.activityId !== activityId));
       }

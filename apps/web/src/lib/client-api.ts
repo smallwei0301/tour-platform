@@ -1,3 +1,5 @@
+import { csrfHeaders } from './csrf-client';
+
 export async function fetchExperiences() {
   const res = await fetch('/api/experiences', { cache: 'no-store' });
   const json = await res.json();
@@ -51,7 +53,7 @@ export async function fetchRefundRequests(orderId: string) {
 export async function createRefundRequest(payload: { orderId: string; requestId: string; reason?: string; note?: string; contactEmail?: string }) {
   const res = await fetch(`/api/me/orders/${encodeURIComponent(payload.orderId)}/refund-requests`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: csrfHeaders({ 'content-type': 'application/json' }),
     body: JSON.stringify({ requestId: payload.requestId, reason: payload.reason, note: payload.note, contactEmail: payload.contactEmail })
   });
   const json = await res.json();
