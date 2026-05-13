@@ -2,11 +2,15 @@ import { readFileSync, readdirSync } from 'fs'
 import { strict as assert } from 'assert'
 import { describe, it } from 'node:test'
 
-const WORKTREE = '/root/.openclaw/workspace/tour-platform-worktrees/issue-446-settlement-rules'
+import { fileURLToPath } from 'url'
+import { dirname, join, resolve } from 'path'
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+const REPO_ROOT = resolve(__dirname, '../../../..')
 
 describe('Issue 446 — settlement_rules table + admin override API', () => {
   it('migration file exists', () => {
-    const files = readdirSync(`${WORKTREE}/supabase/migrations`)
+    const files = readdirSync(`${REPO_ROOT}/supabase/migrations`)
     assert.ok(
       files.some(f => f.includes('issue446') || f.includes('settlement_rules')),
       'migration file must exist'
@@ -14,10 +18,10 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
   })
 
   it('migration creates settlement_rules table with correct columns', () => {
-    const files = readdirSync(`${WORKTREE}/supabase/migrations`)
+    const files = readdirSync(`${REPO_ROOT}/supabase/migrations`)
     const f = files.find(f => f.includes('issue446') || f.includes('settlement_rules'))
     assert.ok(f, 'migration file must exist')
-    const sql = readFileSync(`${WORKTREE}/supabase/migrations/${f}`, 'utf8')
+    const sql = readFileSync(`${REPO_ROOT}/supabase/migrations/${f}`, 'utf8')
     assert.match(sql, /CREATE TABLE.*settlement_rules/s)
     assert.match(sql, /commission_rate/)
     assert.match(sql, /t_days/)
@@ -27,16 +31,16 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
   })
 
   it('migration has unique index for active row', () => {
-    const files = readdirSync(`${WORKTREE}/supabase/migrations`)
+    const files = readdirSync(`${REPO_ROOT}/supabase/migrations`)
     const f = files.find(f => f.includes('issue446') || f.includes('settlement_rules'))
-    const sql = readFileSync(`${WORKTREE}/supabase/migrations/${f}`, 'utf8')
+    const sql = readFileSync(`${REPO_ROOT}/supabase/migrations/${f}`, 'utf8')
     assert.match(sql, /settlement_rules_active_unique/)
     assert.match(sql, /WHERE is_active = true/)
   })
 
   it('admin settlement route exists with GET and PATCH', () => {
     const src = readFileSync(
-      `${WORKTREE}/apps/web/app/api/admin/settings/settlement/route.ts`,
+      join(__dirname, '../../app/api/admin/settings/settlement/route.ts'),
       'utf8'
     )
     assert.match(src, /export async function GET/)
@@ -48,7 +52,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
   it('admin route uses ok/fail helpers', () => {
     const src = readFileSync(
-      `${WORKTREE}/apps/web/app/api/admin/settings/settlement/route.ts`,
+      join(__dirname, '../../app/api/admin/settings/settlement/route.ts'),
       'utf8'
     )
     assert.match(src, /import.*ok.*fail.*from/)
@@ -58,7 +62,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
   it('getSettlementConfig exported from settlement-config.ts', () => {
     const src = readFileSync(
-      `${WORKTREE}/apps/web/src/lib/settlement-config.ts`,
+      join(__dirname, '../../src/lib/settlement-config.ts'),
       'utf8'
     )
     assert.match(src, /export.*getSettlementConfig/)
@@ -67,7 +71,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
   it('getSettlementConfig falls back to env constants', () => {
     const src = readFileSync(
-      `${WORKTREE}/apps/web/src/lib/settlement-config.ts`,
+      join(__dirname, '../../src/lib/settlement-config.ts'),
       'utf8'
     )
     assert.match(src, /env-fallback/)
@@ -78,7 +82,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
   it('db.mjs exports getSettlementRulesDb and updateSettlementRulesDb', () => {
     const src = readFileSync(
-      `${WORKTREE}/apps/web/src/lib/db.mjs`,
+      join(__dirname, '../../src/lib/db.mjs'),
       'utf8'
     )
     assert.match(src, /export async function getSettlementRulesDb/)
@@ -90,7 +94,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
 describe('Issue 446 — updateSettlementRulesDb behavioral (mock)', () => {
   it('rollback path exists in updateSettlementRulesDb source', () => {
-    const src = readFileSync(`${WORKTREE}/apps/web/src/lib/db.mjs`, 'utf8')
+    const src = readFileSync(join(__dirname, '../../src/lib/db.mjs'), 'utf8')
     // Must capture old row id before deactivation
     assert.match(src, /oldRows/, 'must capture old active row id for rollback')
     // Must re-activate on insert failure
@@ -105,7 +109,7 @@ describe('Issue 446 — updateSettlementRulesDb behavioral (mock)', () => {
   })
 
   it('getSettlementConfig returns env fallback when supabase throws', () => {
-    const src = readFileSync(`${WORKTREE}/apps/web/src/lib/settlement-config.ts`, 'utf8')
+    const src = readFileSync(join(__dirname, '../../src/lib/settlement-config.ts'), 'utf8')
     assert.match(src, /try\s*\{/, 'must have try block')
     assert.match(src, /catch\s*[({]/, 'must have catch block for fallback')
     assert.match(src, /SETTLEMENT_COMMISSION_RATE/, 'must return env constant in fallback')
@@ -115,7 +119,7 @@ describe('Issue 446 — updateSettlementRulesDb behavioral (mock)', () => {
 
   it('route.ts PATCH delegates to updateSettlementRulesDb (not raw Supabase)', () => {
     const src = readFileSync(
-      `${WORKTREE}/apps/web/app/api/admin/settings/settlement/route.ts`,
+      join(__dirname, '../../app/api/admin/settings/settlement/route.ts'),
       'utf8'
     )
     assert.match(src, /updateSettlementRulesDb/, 'PATCH must delegate to updateSettlementRulesDb helper')
@@ -129,7 +133,7 @@ describe('Issue 446 — updateSettlementRulesDb behavioral (mock)', () => {
 
   it('updateSettlementRulesDb behavioral: successful insert returns new row (mock)', async () => {
     // Inline mock: import the function directly and drive it with a mock supabase
-    const { updateSettlementRulesDb } = await import(`${WORKTREE}/apps/web/src/lib/db.mjs`)
+    const { updateSettlementRulesDb } = await import(join(__dirname, '../../src/lib/db.mjs'))
 
     const newRow = { id: 'new-id', commission_rate: 0.18, t_days: 10, min_withdrawal_twd: 3000, is_active: true }
     let updateCalled = false
@@ -159,7 +163,7 @@ describe('Issue 446 — updateSettlementRulesDb behavioral (mock)', () => {
   })
 
   it('updateSettlementRulesDb behavioral: re-activates old row when insert fails (mock)', async () => {
-    const { updateSettlementRulesDb } = await import(`${WORKTREE}/apps/web/src/lib/db.mjs`)
+    const { updateSettlementRulesDb } = await import(join(__dirname, '../../src/lib/db.mjs'))
 
     const updateCalls = []
 
