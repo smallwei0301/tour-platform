@@ -2053,6 +2053,91 @@ export async function processPaymentCallbackDb(input) {
   };
 }
 
+/**
+ * Idempotently record an ECPay refund callback result.
+ * Returns { alreadyRefunded, orderId, refundRequestId }
+ *
+ * @param {import('@supabase/supabase-js').SupabaseClient} supabase
+ * @param {{ merchantTradeNo: string, tradeNo: string, rawPayload: Record<string, unknown> }} opts
+ */
+export async function processRefundCallbackDb(supabase, { merchantTradeNo, tradeNo, rawPayload }) {
+  if (!merchantTradeNo) throw new Error('merchantTradeNo is required');
+
+  // 1. Find order by MerchantTradeNo (stored in payments.merchant_trade_no)
+  const { data: paymentRow, error: paymentErr } = await supabase
+    .from('payments')
+    .select('order_id')
+    .eq('merchant_trade_no', merchantTradeNo)
+    .maybeSingle();
+
+  if (paymentErr) throw new Error(paymentErr.message || 'failed to look up payment');
+  if (!paymentRow) throw new Error(`no payment found for MerchantTradeNo=${merchantTradeNo}`);
+
+  const orderId = paymentRow.order_id;
+
+  // 2. Idempotency: check payment_events for existing refunded event
+  const { data: existingEvent } = await supabase
+    .from('payment_events')
+    .select('id')
+    .eq('order_id', orderId)
+    .eq('event_type', 'refunded')
+    .maybeSingle();
+
+  if (existingEvent) {
+    // 3. Already processed — return early with no DB side effects
+    return { alreadyRefunded: true, orderId, refundRequestId: null };
+  }
+
+  // 4. Update orders.status = 'refunded', payment_status = 'refunded'
+  const { error: orderErr } = await supabase
+    .from('orders')
+    .update({ status: 'refunded', payment_status: 'refunded' })
+    .eq('id', orderId);
+
+  if (orderErr) throw new Error(orderErr.message || 'failed to update order status');
+
+  // 5. Update latest refund_request: status = 'refunded', refunded_at = now()
+  const { data: refundReqRow, error: refundReqErr } = await supabase
+    .from('refund_requests')
+    .update({ status: 'refunded', refunded_at: new Date().toISOString() })
+    .eq('order_id', orderId)
+    .eq('status', 'approved')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .select('id')
+    .maybeSingle();
+
+  if (refundReqErr) {
+    // Non-fatal: refund_requests row may not exist for all flows
+    console.warn('[processRefundCallbackDb] refund_requests update warning:', refundReqErr.message);
+  }
+
+  const refundRequestId = refundReqRow?.id ?? null;
+
+  // 6. Update payments.status = 'refunded'
+  const { error: paymentsErr } = await supabase
+    .from('payments')
+    .update({ status: 'refunded' })
+    .eq('merchant_trade_no', merchantTradeNo);
+
+  if (paymentsErr) {
+    console.warn('[processRefundCallbackDb] payments update warning:', paymentsErr.message);
+  }
+
+  // 7. Insert payment_events(event_type='refunded', payload)
+  const { error: eventErr } = await supabase.from('payment_events').insert({
+    order_id: orderId,
+    event_type: 'refunded',
+    payload: rawPayload ?? {},
+    trade_no: tradeNo || null,
+  });
+
+  if (eventErr) throw new Error(eventErr.message || 'failed to insert payment_event');
+
+  // 8. Return result
+  return { alreadyRefunded: false, orderId, refundRequestId };
+}
+
 // =============================================================
 // Sprint 4.0+4.1 — Activities DB functions
 // =============================================================
