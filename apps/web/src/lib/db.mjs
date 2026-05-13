@@ -1392,6 +1392,74 @@ export async function updateSettlementRulesDb(supabase, patch, createdBy) {
   return data
 }
 
+// ── Settlement Write-Side (Issue #447) ─────────────────────────────────────────
+
+/**
+ * Fetch orders eligible for settlement:
+ * - status IN ('paid', 'confirmed', 'completed')
+ * - activity schedule start_at <= now() - t_days (cutoff)
+ * - not yet present in payout_items
+ *
+ * @param {object} supabase - service-role Supabase client
+ * @param {number} tDays - T+N days holdback period (from settlement_rules)
+ * @returns {Promise<Array>} orders with nested activities and activity_schedules
+ */
+export async function getUnsettledOrdersDb(supabase, tDays) {
+  const cutoff = new Date(Date.now() - tDays * 24 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('orders')
+    .select('id, total_twd, activity_id, schedule_id, activities!inner(guide_id), activity_schedules!inner(start_at)')
+    .in('status', ['paid', 'confirmed', 'completed'])
+    .lte('activity_schedules.start_at', cutoff)
+    .not('id', 'in', supabase.from('payout_items').select('order_id'))
+  if (error) throw error
+  return data ?? []
+}
+
+/**
+ * Atomically record settlement:
+ * 1. Insert payout_items rows (idempotent: ON CONFLICT DO NOTHING via UNIQUE order_id)
+ * 2. Upsert guide_balances (fetch existing + accumulate new net_twd)
+ *
+ * @param {object} supabase - service-role Supabase client
+ * @param {Array<{order_id, guide_id, gmv_twd, commission_twd, net_twd, rules_version, settled_at}>} items
+ */
+export async function recordSettlementDb(supabase, items) {
+  if (!items || items.length === 0) return
+
+  // 1. Upsert payout_items — ON CONFLICT DO NOTHING (idempotency via UNIQUE order_id)
+  // Supabase upsert with ignoreDuplicates=true maps to ON CONFLICT DO NOTHING in PostgREST
+  const { error: piError } = await supabase
+    .from('payout_items')
+    .upsert(items, { onConflict: 'order_id', ignoreDuplicates: true })
+  if (piError) throw piError
+
+  // 2. Accumulate net_twd per guide
+  const balanceDeltas = {}
+  for (const item of items) {
+    balanceDeltas[item.guide_id] = (balanceDeltas[item.guide_id] ?? 0) + item.net_twd
+  }
+
+  const now = new Date().toISOString()
+  for (const [guide_id, delta] of Object.entries(balanceDeltas)) {
+    // Fetch existing balance first so we can accumulate (upsert replaces, not adds)
+    const { data: existing } = await supabase
+      .from('guide_balances')
+      .select('balance_twd')
+      .eq('guide_id', guide_id)
+      .single()
+
+    const newBalance = (existing?.balance_twd ?? 0) + delta
+    const { error: balError } = await supabase
+      .from('guide_balances')
+      .upsert(
+        { guide_id, balance_twd: newBalance, last_settled_at: now, updated_at: now },
+        { onConflict: 'guide_id' }
+      )
+    if (balError) throw balError
+  }
+}
+
 // ── KPI Config ─────────────────────────────────────────────────────────────────
 
 export async function getKpiConfigDb() {

@@ -1,18 +1,46 @@
-▶ Issue 446 — settlement_rules table + admin override API
-  ✔ migration file exists (1.246155ms)
-  ✔ migration creates settlement_rules table with correct columns (1.933049ms)
-  ✔ migration has unique index for active row (0.52387ms)
-  ✔ admin settlement route exists with GET and PATCH (0.338386ms)
-  ✔ admin route uses ok/fail helpers (0.264865ms)
-  ✔ getSettlementConfig exported from settlement-config.ts (0.269416ms)
-  ✔ getSettlementConfig falls back to env constants (0.294596ms)
-  ✔ db.mjs exports getSettlementRulesDb and updateSettlementRulesDb (0.767175ms)
-✔ Issue 446 — settlement_rules table + admin override API (7.227727ms)
-ℹ tests 8
-ℹ suites 1
-ℹ pass 8
+▶ Issue 447 — guide_balances migration
+  ✔ migration file exists (1.137583ms)
+  ✔ migration creates guide_balances table with correct columns (0.636883ms)
+  ✔ migration enables RLS and creates service_role policy (0.419448ms)
+✔ Issue 447 — guide_balances migration (3.437929ms)
+▶ Issue 447 — payout_items migration
+  ✔ migration file exists (0.423789ms)
+  ✔ migration creates payout_items table with correct columns (0.630483ms)
+  ✔ migration has idempotency UNIQUE constraint on order_id (0.378738ms)
+  ✔ migration enables RLS and creates service_role policy (0.398138ms)
+✔ Issue 447 — payout_items migration (2.241545ms)
+▶ Issue 447 — settlement sweep route structural checks
+  ✔ sweep route file exists (1.727495ms)
+  ✔ sweep route exports POST handler (0.373628ms)
+  ✔ sweep route has x-internal-token auth guard (0.421009ms)
+  ✔ sweep route uses getSettlementConfig for commission_rate and t_days (0.358067ms)
+  ✔ sweep route filters on status IN paid/confirmed/completed (0.296296ms)
+  ✔ sweep route filters by activity_schedules.start_at (not tour_date) (0.362577ms)
+  ✔ sweep route inserts into payout_items with ON CONFLICT DO NOTHING (0.337687ms)
+  ✔ sweep route accumulates guide_balances via fetch+upsert (0.264225ms)
+  ✔ sweep route snapshots rules_version per row (0.183624ms)
+  ✔ sweep route uses floor for commission and net math (0.238765ms)
+  ✔ sweep route returns ok/settled/guides_updated on success (0.218524ms)
+✔ Issue 447 — settlement sweep route structural checks (5.545531ms)
+▶ Issue 447 — db.mjs new settlement helpers
+  ✔ getUnsettledOrdersDb is exported (0.782046ms)
+  ✔ getUnsettledOrdersDb uses tDays cutoff (0.784426ms)
+  ✔ recordSettlementDb is exported (0.676864ms)
+  ✔ recordSettlementDb upserts payout_items with ignoreDuplicates on conflict (0.793046ms)
+  ✔ recordSettlementDb accumulates guide_balances (fetch + upsert) (0.674644ms)
+✔ Issue 447 — db.mjs new settlement helpers (3.950089ms)
+▶ Issue 447 — settlement sweep behavioral (mock)
+  ✔ net_twd = floor(total * (1 - 0.15)), commission_twd = floor(total * 0.15) (0.367667ms)
+  ✔ guide balance accumulates correctly across 2 orders for same guide (0.209464ms)
+  ✔ recordSettlementDb behavioral: inserts payout_items and accumulates balances (mock) (57.172522ms)
+  ✔ recordSettlementDb behavioral: accumulates on top of existing balance (mock) (0.536981ms)
+  ✔ recordSettlementDb is a no-op for empty items array (0.254586ms)
+✔ Issue 447 — settlement sweep behavioral (mock) (58.859376ms)
+ℹ tests 28
+ℹ suites 5
+ℹ pass 28
 ℹ fail 0
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 88.563055
+ℹ duration_ms 183.542499
