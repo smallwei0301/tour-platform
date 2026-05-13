@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, StatusBadge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type RefundRow = {
   id: string; orderId: string; reason: string; note: string; status: string;
@@ -29,7 +30,7 @@ export default function AdminRefundsPage() {
     setBusyId(id + action);
     try {
       await fetch(`/api/admin/refund-requests/${id}/${action}`, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
+        method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ adminNote: `admin ${action}` }),
       });
       await loadRows();

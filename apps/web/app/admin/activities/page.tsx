@@ -63,7 +63,7 @@ export default function AdminActivitiesPage() {
     try {
       const res = await fetch('/api/admin/activities', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ title: '新行程', priceTwd: 0 }),
       });
       const json = await res.json();
@@ -84,7 +84,7 @@ export default function AdminActivitiesPage() {
     try {
       await fetch(`/api/admin/activities/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status: newStatus }),
       });
       await load();

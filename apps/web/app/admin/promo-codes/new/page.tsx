@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Card, PageHeader } from '../../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 export default function AdminNewPromoCodePage() {
   const router = useRouter();
@@ -32,7 +33,7 @@ export default function AdminNewPromoCodePage() {
     try {
       const res = await fetch('/api/admin/promo-codes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           code: form.code,
           discount_type: form.discount_type,

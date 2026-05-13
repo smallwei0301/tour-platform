@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Card, PageHeader, StatusBadge, Select, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Row = {
   id: string; status: string; totalTwd: number; costTwd: number; marginTwd: number;
@@ -78,7 +79,7 @@ export default function AdminOrdersPage() {
       const body = detail?.trade_no ? {} : { reason: refundReason };
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/refund-execute`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       });
       if (res.ok) {
@@ -101,7 +102,7 @@ export default function AdminOrdersPage() {
     setExceptionBusy(true);
     try {
       await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/exceptions`, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
+        method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ action: exceptionAction, targetScheduleId: targetScheduleId||undefined, newCapacity: newCapacity?Number(newCapacity):undefined, adminNote: editNote }),
       });
       await load();
@@ -119,7 +120,7 @@ export default function AdminOrdersPage() {
     setSaving(true);
     try {
       await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, {
-        method: 'PATCH', headers: { 'content-type': 'application/json' },
+        method: 'PATCH', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ status: editStatus, adminNote: editNote }),
       });
       await load();

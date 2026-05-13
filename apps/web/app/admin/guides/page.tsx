@@ -63,7 +63,7 @@ export default function AdminGuidesPage() {
   async function appAction(id: string, kind: 'approve' | 'reject') {
     await fetch(`/api/admin/guide-applications/${id}/${kind}`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: csrfHeaders({ 'content-type': 'application/json' }),
       body: JSON.stringify({ adminNote: `admin ${kind}` }),
     });
     await loadApplications();
@@ -78,7 +78,7 @@ export default function AdminGuidesPage() {
     try {
       const res = await fetch('/api/admin/guides/promote', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ applicationId }),
       });
       const json = await res.json();
@@ -109,7 +109,7 @@ export default function AdminGuidesPage() {
     try {
       const res = await fetch(`/api/admin/guides/${guideId}/suspend`, {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ suspend }),
       });
       const json = await res.json();
@@ -137,7 +137,7 @@ export default function AdminGuidesPage() {
     if (editState.email) body.email = editState.email;
     if (editState.password) body.password = editState.password;
     const res = await fetch(`/api/admin/guides/${editState.guideId}`, {
-      method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+      method: 'PATCH', headers: csrfHeaders({ 'content-type': 'application/json' }), body: JSON.stringify(body),
     });
     const json = await res.json();
     if (json.ok) {
