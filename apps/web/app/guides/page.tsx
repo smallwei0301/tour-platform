@@ -5,8 +5,18 @@ export default async function GuidesPage() {
   const guides = await listPublishedGuidesDb().catch(() => []);
 
   return (
-    <main className="tp-container tp-guides-page midao-page" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb">首頁 &gt; 全部導遊</div>
+    <main className="tp-container tp-guides-page tp-editorial-page midao-page" style={{ paddingBottom: 40 }}>
+      <div className="tp-breadcrumb tp-editorial-breadcrumb">首頁 &gt; 全部導遊</div>
+      <section
+        className="tp-editorial-hero"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(18, 30, 24, 0.36), rgba(18, 30, 24, 0.54)), url(/images/midao-style/why-hero.png)',
+        }}
+      >
+        <h1>認識真正懂路的人</h1>
+        <p>每位在地導遊都有自己的土地記憶，從山徑、溪谷到老街，把台灣帶成一段有故事的路。</p>
+      </section>
       <section className="tp-activities-layout">
         <aside className="tp-filter">
           <div className="tp-filter-head">

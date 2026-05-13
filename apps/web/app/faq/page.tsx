@@ -37,13 +37,23 @@ const faqs = [
 
 export default function FaqPage() {
   return (
-    <main className="tp-container midao-page" style={{ paddingBottom: 56 }}>
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
+    <main className="tp-container tp-editorial-page midao-page" style={{ paddingBottom: 56 }}>
+      <div className="tp-breadcrumb tp-editorial-breadcrumb">
         <Link href="/">首頁</Link> &gt; 常見問題
       </div>
 
-      <h1 style={{ marginTop: 20, marginBottom: 4 }}>常見問題</h1>
-      <p style={{ color: 'var(--tp-muted)', marginBottom: 36, fontSize: 16 }}>找不到答案？歡迎<Link href="/contact" style={{ color: 'var(--tp-primary)' }}>聯絡我們</Link>。</p>
+      <section
+        className="tp-editorial-hero"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(14, 26, 20, 0.38), rgba(14, 26, 20, 0.52)), url(/images/midao-style/about-hero.png)',
+        }}
+      >
+        <h1>常見問題</h1>
+        <p>把預約、付款、取消與安全相關的問題整理成一份可快速查找的現場手冊。</p>
+      </section>
+
+      <p style={{ color: 'var(--tp-muted)', marginBottom: 4, fontSize: 16 }}>找不到答案？歡迎<Link href="/contact" style={{ color: 'var(--tp-primary)' }}>聯絡我們</Link>。</p>
 
       <div style={{ display: 'grid', gap: 36 }}>
         {faqs.map((section) => (
