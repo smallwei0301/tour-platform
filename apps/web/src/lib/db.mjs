@@ -2990,6 +2990,34 @@ async function getSupabaseServiceRole() {
 // Issue #305: Wishlist helpers
 // ---------------------------------------------------------------------------
 
+const UUID_V4_LIKE_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolve wishlist activity input to canonical activities.id (uuid).
+ * Accepts either a uuid id or a slug.
+ * @param {import('@supabase/supabase-js').SupabaseClient<any, 'public', any>} supabase
+ * @param {string} activityRef
+ * @returns {Promise<string>}
+ */
+async function resolveWishlistActivityId(supabase, activityRef) {
+  const normalizedRef = String(activityRef || '').trim();
+  if (!normalizedRef) throw new Error('activityId is required');
+
+  if (UUID_V4_LIKE_RE.test(normalizedRef)) {
+    return normalizedRef;
+  }
+
+  const { data: activity, error } = await supabase
+    .from('activities')
+    .select('id')
+    .eq('slug', normalizedRef)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!activity?.id) throw new Error('activity not found');
+  return String(activity.id);
+}
+
 /**
  * Add an activity to the user's wishlist.
  * Silently upserts to handle duplicate clicks gracefully.
@@ -2998,15 +3026,17 @@ async function getSupabaseServiceRole() {
  */
 export async function addToWishlistDb(input) {
   const userId = String(input?.userId || '').trim();
-  const activityId = String(input?.activityId || '').trim();
+  const activityRef = String(input?.activityId || '').trim();
 
   if (!userId) throw new Error('userId is required');
-  if (!activityId) throw new Error('activityId is required');
+  if (!activityRef) throw new Error('activityId is required');
 
   const supabase = await getSupabase();
+  const resolvedActivityId = await resolveWishlistActivityId(supabase, activityRef);
+
   const { data, error } = await supabase
     .from('wishlists')
-    .upsert({ user_id: userId, activity_id: activityId }, { onConflict: 'user_id,activity_id' })
+    .upsert({ user_id: userId, activity_id: resolvedActivityId }, { onConflict: 'user_id,activity_id' })
     .select('id, user_id, activity_id, added_at')
     .single();
 
