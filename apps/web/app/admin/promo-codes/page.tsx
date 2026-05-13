@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type PromoCode = {
   id: string;
@@ -47,7 +48,7 @@ export default function AdminPromoCodesPage() {
     if (!confirm('確定要停用此折扣碼？')) return;
     setDeactivating(id);
     try {
-      const res = await fetch(`/api/admin/promo-codes/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/promo-codes/${id}`, { method: 'DELETE', headers: csrfHeaders() });
       if (res.ok) {
         await load();
       } else {

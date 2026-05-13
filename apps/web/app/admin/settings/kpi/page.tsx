@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, TableWrapper, Th, Td, EmptyState } from '../../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 export default function AdminKpiSettingsPage() {
   const [cfg, setCfg] = useState<any>(null);
@@ -24,7 +25,7 @@ export default function AdminKpiSettingsPage() {
     if (!cfg) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/settings/kpi', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...cfg, actor: 'admin', note }) });
+      const res = await fetch('/api/admin/settings/kpi', { method: 'PATCH', headers: csrfHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ ...cfg, actor: 'admin', note }) });
       setCfg((await res.json()).data || cfg);
       setNote('');
       await loadAll();
@@ -34,7 +35,7 @@ export default function AdminKpiSettingsPage() {
   async function revert(versionId: string) {
     setSaving(true);
     try {
-      await fetch('/api/admin/settings/kpi/revert', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ versionId, actor: 'admin' }) });
+      await fetch('/api/admin/settings/kpi/revert', { method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ versionId, actor: 'admin' }) });
       await loadAll();
     } finally { setSaving(false); }
   }

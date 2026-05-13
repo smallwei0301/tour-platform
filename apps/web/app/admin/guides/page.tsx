@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { AvatarUpload } from '../../../src/components/admin/AvatarUpload';
 
 type GuideApp = {
@@ -94,7 +95,7 @@ export default function AdminGuidesPage() {
   async function generateInvite(guideId: string) {
     setInviteLoading(guideId);
     try {
-      const res = await fetch(`/api/admin/guides/${guideId}/invite`, { method: 'POST' });
+      const res = await fetch(`/api/admin/guides/${guideId}/invite`, { method: 'POST', headers: csrfHeaders() });
       const json = await res.json();
       if (json?.data) setInviteResult(json.data);
       else alert(json?.error?.message || '產生失敗');

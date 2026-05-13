@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader } from '../../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 export default function AdminSecuritySettingsPage() {
   const [state, setState] = useState<any>(null);
@@ -20,7 +21,7 @@ export default function AdminSecuritySettingsPage() {
   async function rotate() {
     setBusy(true); setMsg(null);
     try {
-      const res = await fetch('/api/admin/auth/security', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ currentToken, newToken }) });
+      const res = await fetch('/api/admin/auth/security', { method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }), body: JSON.stringify({ currentToken, newToken }) });
       const json = await res.json();
       if (!json.ok) throw new Error(json?.error?.message || 'rotate failed');
       setMsg({ type: 'success', text: 'Token 已旋轉，所有舊 session 已失效。' });
@@ -34,7 +35,7 @@ export default function AdminSecuritySettingsPage() {
   async function forceLogoutAll() {
     setBusy(true); setMsg(null);
     try {
-      await fetch('/api/admin/auth/force-logout-all', { method: 'POST' });
+      await fetch('/api/admin/auth/force-logout-all', { method: 'POST', headers: csrfHeaders() });
       setMsg({ type: 'success', text: '已強制登出全部 session。' });
       await load();
     } finally { setBusy(false); }
