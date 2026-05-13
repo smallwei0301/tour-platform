@@ -11,13 +11,13 @@ const caveTours = [
     title: '柴山石灰岩洞穴地質探索',
     slug: 'kaohsiung-chaishan-cave-experience',
     meta: '3小時 · 4~10人 · NT$2,200',
-    imageUrl: 'https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/midao-style/about-hero.png',
   },
   {
     title: '柴山親子安全探洞體驗',
     slug: 'kaohsiung-chaishan-cave-experience',
     meta: '2.5小時 · 4~8人 · NT$1,800',
-    imageUrl: 'https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/midao-style/why-hero.png',
   },
 ];
 

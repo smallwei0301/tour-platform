@@ -46,8 +46,18 @@ export default function OrdersPage() {
   }, [rows, tab]);
 
   return (
-    <main className="tp-container tp-orders-page midao-page">
-      <h1>我的訂單</h1>
+    <main className="tp-container tp-orders-page tp-editorial-page midao-page">
+      <div className="tp-breadcrumb tp-editorial-breadcrumb">首頁 &gt; 我的帳戶 &gt; 我的訂單</div>
+      <section
+        className="tp-editorial-hero"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(14, 26, 20, 0.4), rgba(14, 26, 20, 0.56)), url(/images/midao-style/why-hero.png)',
+        }}
+      >
+        <h1>我的訂單</h1>
+        <p>在這裡管理你的行程狀態、出發時間與退款進度，讓每一段旅程都清楚安心。</p>
+      </section>
 
       <div className="tp-order-tabs">
         <button className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>全部</button>

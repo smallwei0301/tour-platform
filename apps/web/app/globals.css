@@ -28,48 +28,47 @@ body {
   right: 0;
   bottom: 0;
   z-index: 70;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-  background: rgba(248, 245, 240, 0.92);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(118, 96, 73, 0.14);
+  padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+  background: #f5f4f1;
+  border-top: 1px solid rgba(126, 113, 95, 0.12);
 }
 
 .midao-bottom-nav-inner {
-  max-width: 560px;
+  max-width: 620px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .midao-bottom-item {
-  min-height: 54px;
-  border-radius: 14px;
+  min-height: 50px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
   align-content: center;
-  color: #56483a;
+  color: #4e4337;
   text-align: center;
-  line-height: 1.1;
+  line-height: 1.08;
 }
 
 .midao-bottom-item strong {
   display: block;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .midao-bottom-item span {
   display: block;
-  margin-top: 3px;
+  margin-top: 2px;
   font-size: 10px;
-  letter-spacing: 0.12em;
-  color: #7f6d5a;
+  letter-spacing: 0.14em;
+  color: #8a7a67;
 }
 
 .midao-bottom-item.is-active {
-  background: #ece1d2;
-  color: #3e342a;
+  background: #e9e0d2;
+  color: #3f352a;
 }
 
 .tp-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }

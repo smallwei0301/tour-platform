@@ -5,19 +5,19 @@ const riverTours = [
     title: '花蓮秀姑巒溪溯溪全日冒險',
     slug: 'hualien-river-trekking',
     meta: 'Level 2 · 4~8人 · NT$3,200',
-    imageUrl: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/midao-style/why-hero.png',
   },
   {
     title: '南澳野溪溯溪入門路線',
     slug: 'hualien-river-trekking',
     meta: 'Level 1 · 4~8人 · NT$2,400',
-    imageUrl: 'https://images.pexels.com/photos/210186/pexels-photo-210186.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/midao-style/about-hero.png',
   },
   {
     title: '台東山谷溪降挑戰',
     slug: 'hualien-river-trekking',
     meta: 'Level 3 · 4~6人 · NT$4,200',
-    imageUrl: 'https://images.pexels.com/photos/125510/pexels-photo-125510.jpeg?auto=compress&cs=tinysrgb&w=1200',
+    imageUrl: '/images/midao-style/why-hero.png',
   },
 ];
 
