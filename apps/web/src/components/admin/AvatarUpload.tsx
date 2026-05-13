@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { csrfHeaders } from '../../lib/csrf-client';
 
 interface AvatarUploadProps {
   guideId: string;
@@ -81,6 +82,7 @@ export function AvatarUpload({ guideId, currentUrl, onUpload, size = 120 }: Avat
 
       const res = await fetch(`/api/admin/guides/${guideId}/upload-avatar`, {
         method: 'POST',
+        headers: csrfHeaders(),
         body: fd,
       });
       const json = await res.json();

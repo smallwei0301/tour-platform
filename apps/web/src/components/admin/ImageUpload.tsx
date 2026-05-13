@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
+import { csrfHeaders } from '../../lib/csrf-client';
 
 interface ImageUploadProps {
   activityId: string;
@@ -122,7 +123,7 @@ export function ImageUpload({
 
         const res = await fetch(
           `/api/admin/activities/${activityId}/upload-image`,
-          { method: 'POST', body: fd }
+          { method: 'POST', headers: csrfHeaders(), body: fd }
         );
         const json = await res.json();
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Review = {
   id: string;
@@ -49,7 +50,7 @@ export default function AdminReviewsPage() {
     try {
       const res = await fetch(`/api/admin/reviews/${id}`, {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ status: newStatus }),
       });
       if (res.ok) {

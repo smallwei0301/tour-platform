@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type QAEntry = {
   id: string;
@@ -58,7 +59,7 @@ export default function AdminQAPage() {
       if (answer.trim()) body.answer = answer.trim();
       const res = await fetch(`/api/admin/qa/${id}`, {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify(body),
       });
       if (res.ok) {
