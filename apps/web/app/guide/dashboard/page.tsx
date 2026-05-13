@@ -241,7 +241,7 @@ export default function GuideDashboardPage() {
         <RevenueCard
           label="本月預計入帳"
           value={data?.expectedPayoutTwd != null ? `NT$${data.expectedPayoutTwd.toLocaleString()}` : '--'}
-          subtext="點擊查看明細 · 依 Draft v1 結算規則計算（抽成 15%，T+7 天）"
+          subtext="點擊查看明細 · 依結算規則 v1 計算（抽成 15%，T+7 天）"
           icon="🏦"
           muted={data?.expectedPayoutTwd == null}
           onClick={() => openPayoutDetail(currentMonthStr)}
@@ -249,7 +249,7 @@ export default function GuideDashboardPage() {
         <RevenueCard
           label="下次出款日"
           value={data?.nextPayoutDate ?? '--'}
-          subtext="依 Draft v1 結算規則計算（T+7 天）"
+          subtext="依結算規則 v1 計算（T+7 天）"
           icon="📆"
           muted={data?.nextPayoutDate == null}
         />
@@ -476,7 +476,7 @@ export default function GuideDashboardPage() {
                     </tr>
                   </tfoot>
                 </table>
-                <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>依 Draft v1 結算規則計算（抽成 {Math.round(payoutDetail.totals.commissionTwd / payoutDetail.totals.gmvTwd * 100)}%）</p>
+                <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>依結算規則 v1 計算（抽成 {Math.round(payoutDetail.totals.commissionTwd / payoutDetail.totals.gmvTwd * 100)}%）</p>
               </>
             ) : (
               <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>

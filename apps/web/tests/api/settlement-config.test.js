@@ -1,6 +1,6 @@
 /**
  * Issue #387: settlement-config.ts contract test
- * Verifies that the Draft v1 settlement config module exports
+ * Verifies that the settlement config v1 module exports
  * the required constants and functions, and is env-overridable.
  */
 import { readFileSync } from 'node:fs'
@@ -48,8 +48,8 @@ describe('settlement-config.ts structure', () => {
     assert.match(src, /'7'/, "default T+7 must be present as string '7'")
   })
 
-  it('must use 1000 as default minimum withdrawal', () => {
-    assert.match(src, /1000/, 'minimum withdrawal NT$1,000 must be present')
+  it('must use 5000 as default minimum withdrawal', () => {
+    assert.match(src, /5000/, 'minimum withdrawal NT$5,000 must be present')
   })
 })
 
@@ -92,8 +92,9 @@ describe('page wiring', () => {
     assert.match(pageSrc, /nextPayoutDate/, 'page must reference nextPayoutDate')
   })
 
-  it('page shows Draft v1 settlement rule tooltip for payout card', () => {
-    assert.match(pageSrc, /Draft v1 結算規則/, 'page must show Draft v1 settlement rule annotation')
+  it('page shows settlement rule v1 annotation for payout card', () => {
+    assert.match(pageSrc, /結算規則 v1/, 'page must show 結算規則 v1 annotation')
+    assert.doesNotMatch(pageSrc, /Draft v1 結算規則/, 'page must not contain Draft copy')
   })
 
   it('page falls back to -- when values are null', () => {
