@@ -47,6 +47,8 @@ export interface ExecuteRefundInput {
   ) => Promise<AllRefundResult>;
   updateOrder: UpdateOrder;
   now?: () => string;
+  /** Optional hook called after successful refund. Failures are non-blocking. */
+  postRefundHook?: (orderId: string) => Promise<void>;
 }
 
 export interface RefundExecutionOutcome {
@@ -84,7 +86,7 @@ function failPersist(message: string) {
 }
 
 export async function executeRefund(input: ExecuteRefundInput): Promise<RefundExecutionOutcome> {
-  const { order, body, requestAllRefund, updateOrder, now = () => new Date().toISOString() } = input;
+  const { order, body, requestAllRefund, updateOrder, now = () => new Date().toISOString(), postRefundHook } = input;
 
   if (order.ecpay_refund_trade_no) {
     return {
@@ -113,6 +115,15 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
 
     if (!hasPersisted({ error, data, count })) {
       return failPersist(error?.message ?? 'no rows updated');
+    }
+
+    // Attempt settlement reversal (non-blocking: failure does not affect refund outcome)
+    if (postRefundHook) {
+      try {
+        await postRefundHook(order.id);
+      } catch (reversalErr) {
+        console.warn('[refund-execute] settlement reversal failed (cash):', reversalErr);
+      }
     }
 
     return {
@@ -157,6 +168,15 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
 
   if (!hasPersisted({ error, data, count })) {
     return failPersist(error?.message ?? 'no rows updated');
+  }
+
+  // Attempt settlement reversal (non-blocking: failure does not affect refund outcome)
+  if (postRefundHook) {
+    try {
+      await postRefundHook(order.id);
+    } catch (reversalErr) {
+      console.warn('[refund-execute] settlement reversal failed (ecpay):', reversalErr);
+    }
   }
 
   return {
