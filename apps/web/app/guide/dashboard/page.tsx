@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 type QAEntry = {
   id: string;
@@ -161,7 +162,7 @@ export default function GuideDashboardPage() {
     try {
       const res = await fetch(`/api/guide/qa/${id}`, {
         method: 'PATCH',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ answer: answer.trim(), status: 'approved' }),
       });
       if (res.ok) {
