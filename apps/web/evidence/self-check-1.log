@@ -1,0 +1,18 @@
+▶ Issue 446 — settlement_rules table + admin override API
+  ✔ migration file exists (1.246155ms)
+  ✔ migration creates settlement_rules table with correct columns (1.933049ms)
+  ✔ migration has unique index for active row (0.52387ms)
+  ✔ admin settlement route exists with GET and PATCH (0.338386ms)
+  ✔ admin route uses ok/fail helpers (0.264865ms)
+  ✔ getSettlementConfig exported from settlement-config.ts (0.269416ms)
+  ✔ getSettlementConfig falls back to env constants (0.294596ms)
+  ✔ db.mjs exports getSettlementRulesDb and updateSettlementRulesDb (0.767175ms)
+✔ Issue 446 — settlement_rules table + admin override API (7.227727ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 88.563055

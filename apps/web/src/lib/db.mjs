@@ -1352,6 +1352,33 @@ export async function updateAdminRefundStatusDb(input = {}) {
   };
 }
 
+// ── Settlement Rules (Issue #446) ──────────────────────────────────────────────
+
+export async function getSettlementRulesDb(supabase) {
+  const { data, error } = await supabase
+    .from('settlement_rules')
+    .select('*')
+    .eq('is_active', true)
+    .single()
+  if (error) return null
+  return data
+}
+
+export async function updateSettlementRulesDb(supabase, patch, createdBy) {
+  // Deactivate current active row
+  await supabase.from('settlement_rules').update({ is_active: false }).eq('is_active', true)
+  // Insert new active row (versioned history preserved)
+  const { data, error } = await supabase
+    .from('settlement_rules')
+    .insert({ ...patch, is_active: true, created_by: createdBy })
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}
+
+// ── KPI Config ─────────────────────────────────────────────────────────────────
+
 export async function getKpiConfigDb() {
   if (!hasSupabaseEnv()) return getKpiConfigFallback();
 

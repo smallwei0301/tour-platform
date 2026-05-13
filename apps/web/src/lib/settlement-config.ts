@@ -28,3 +28,36 @@ export function computeNextPayoutDate(lastCompletedTourDate: Date | null): Date 
   d.setDate(d.getDate() + SETTLEMENT_T_DAYS)
   return d
 }
+
+// ── DB-backed config (Issue #446) ──────────────────────────────────────────────
+
+export type SettlementConfig = {
+  commission_rate: number
+  t_days: number
+  min_withdrawal_twd: number
+  fee_absorbed_by: string
+  version: string
+}
+
+/**
+ * Read active settlement_rules row from DB.
+ * Falls back to env constants if DB is unreachable or returns no row.
+ * Existing env-backed constants (SETTLEMENT_COMMISSION_RATE etc.) remain unchanged.
+ */
+export async function getSettlementConfig(supabase: any): Promise<SettlementConfig> {
+  try {
+    const { data } = await supabase
+      .from('settlement_rules')
+      .select('commission_rate, t_days, min_withdrawal_twd, fee_absorbed_by, version')
+      .eq('is_active', true)
+      .single()
+    if (data) return data
+  } catch {}
+  return {
+    commission_rate: SETTLEMENT_COMMISSION_RATE,
+    t_days: SETTLEMENT_T_DAYS,
+    min_withdrawal_twd: SETTLEMENT_MIN_WITHDRAWAL_TWD,
+    fee_absorbed_by: 'platform',
+    version: 'env-fallback',
+  }
+}
