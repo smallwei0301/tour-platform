@@ -30,6 +30,6 @@ test('wishlist upsert writes resolved UUID instead of raw request value', () => 
 });
 
 test('POST /api/me/wishlist still accepts activityId input from client payload', () => {
-  assert.match(routeSource, /const activityId = String\(body\?\.activityId \|\| ''\)\.trim\(\)/, 'route must keep activityId payload contract');
+  assert.match(routeSource, /(?:const|let) activityId = String\(body\?\.activityId \|\| ''\)\.trim\(\)/, 'route must keep activityId payload contract');
   assert.match(routeSource, /addToWishlistDb\(\{ userId: user\.id, activityId \}\)/, 'route delegates activityId to db helper resolver');
 });
