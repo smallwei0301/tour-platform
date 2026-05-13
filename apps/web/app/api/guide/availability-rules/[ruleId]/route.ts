@@ -42,7 +42,7 @@ async function ensureOwnedUsablePlan(
     return { ok: false, status: 403, code: 'FORBIDDEN', message: 'activity_plan_id is not owned by this guide' };
   }
 
-  if (!['active', 'published'].includes(data.status)) {
+  if (data.status !== 'active') {
     return {
       ok: false,
       status: 400,
