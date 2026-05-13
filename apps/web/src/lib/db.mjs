@@ -1365,15 +1365,30 @@ export async function getSettlementRulesDb(supabase) {
 }
 
 export async function updateSettlementRulesDb(supabase, patch, createdBy) {
+  // Capture current active row id for rollback
+  const { data: oldRows } = await supabase
+    .from('settlement_rules')
+    .select('id')
+    .eq('is_active', true)
+
   // Deactivate current active row
   await supabase.from('settlement_rules').update({ is_active: false }).eq('is_active', true)
+
   // Insert new active row (versioned history preserved)
   const { data, error } = await supabase
     .from('settlement_rules')
     .insert({ ...patch, is_active: true, created_by: createdBy })
     .select()
     .single()
-  if (error) throw error
+
+  if (error) {
+    // Rollback: re-activate the old row so system never has zero active rows
+    if (oldRows && oldRows.length > 0) {
+      await supabase.from('settlement_rules').update({ is_active: true }).eq('id', oldRows[0].id)
+    }
+    throw error
+  }
+
   return data
 }
 
