@@ -207,6 +207,33 @@ describe('Issue 431 — AC7: wishlists FK repair migration', () => {
     );
   });
 
+  it('AC7: repair migration translates slug/text drift before uuid cast', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /UPDATE\s+public\.wishlists\s+w[\s\S]{0,400}SET\s+activity_id\s*=\s*a\.id::text[\s\S]{0,400}a\.slug\s*=\s*btrim\(w\.activity_id\)/i,
+      'Repair migration must translate non-UUID activity_id slug values to matching activities.id before uuid cast'
+    );
+  });
+
+  it('AC7: repair migration stops on unmatched slug/text drift', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /non-uuid values that do not match activities\.slug/i,
+      'Repair migration must fail safely when non-UUID values cannot be matched to activities.slug'
+    );
+  });
+
+  it('AC7: repair migration guards duplicate rows before slug repair', () => {
+    const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
+    assert.match(
+      sql,
+      /GROUP BY\s+user_id\s*,\s*target_activity_id[\s\S]{0,120}HAVING\s+count\(\*\)\s*>\s*1/i,
+      'Repair migration must detect duplicates that would collide after slug-to-uuid translation'
+    );
+  });
+
   it('AC7: repair migration adds wishlists_activity_id_fkey FK constraint', () => {
     const sql = fs.readFileSync(FK_REPAIR_FILE, 'utf8');
     assert.match(
