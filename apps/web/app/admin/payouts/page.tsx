@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { Card, PageHeader, StatusBadge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
 
 type PayoutRow = {
@@ -38,7 +39,7 @@ export default function AdminPayoutsPage() {
     try {
       await fetch(`/api/admin/payouts/${id}/confirm`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ confirmed_by: 'admin', transfer_ref: transferRef[id] || null }),
       });
       await loadRows();
