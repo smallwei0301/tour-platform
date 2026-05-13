@@ -16,6 +16,42 @@ async function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+async function ensureOwnedUsablePlan(
+  supabase: any,
+  guideId: string,
+  activityPlanId: string
+): Promise<{ ok: true } | { ok: false; status: number; code: string; message: string }> {
+  const { data, error } = await supabase
+    .from('activity_plans')
+    .select(
+      `
+        id,
+        status,
+        activities!inner (
+          guide_id
+        )
+      `
+    )
+    .eq('id', activityPlanId)
+    .eq('activities.guide_id', guideId)
+    .single();
+
+  if (error || !data) {
+    return { ok: false, status: 403, code: 'FORBIDDEN', message: 'activity_plan_id is not owned by this guide' };
+  }
+
+  if (!['active', 'published'].includes(data.status)) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'VALIDATION_ERROR',
+      message: 'activity_plan_id is not in usable status',
+    };
+  }
+
+  return { ok: true };
+}
+
 function isValidTimezone(tz: string): boolean {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: tz });
@@ -134,6 +170,13 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = await getSupabase();
+
+    if (body.activity_plan_id) {
+      const planCheck = await ensureOwnedUsablePlan(supabase, session.guideId, body.activity_plan_id);
+      if (!planCheck.ok) {
+        return Response.json(fail(planCheck.code, planCheck.message), { status: planCheck.status });
+      }
+    }
 
     const insertData = {
       guide_id: session.guideId, // Always use session guideId for ownership
