@@ -1,6 +1,6 @@
 export default function TermsPage() {
   return (
-    <main className="tp-container tp-static-page">
+    <main className="tp-container tp-static-page midao-page">
       <h1>服務條款（草案）</h1>
       <section className="tp-step-card">
         <p>平台提供在地導遊媒合與訂單管理服務，非旅行社包團服務。</p>

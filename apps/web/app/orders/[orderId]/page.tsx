@@ -64,7 +64,7 @@ export default function OrderDetailPage() {
 
   if (loading) {
     return (
-      <main className="tp-container tp-order-detail-page">
+      <main className="tp-container tp-order-detail-page midao-page">
         <PageSkeleton title="載入訂單詳情中" lines={5} />
       </main>
     );
@@ -72,7 +72,7 @@ export default function OrderDetailPage() {
 
   if (error) {
     return (
-      <main className="tp-container tp-order-detail-page">
+      <main className="tp-container tp-order-detail-page midao-page">
         <InlineErrorState title="訂單詳情載入失敗" message={error} onRetry={() => void loadOrder()} />
       </main>
     );
@@ -80,7 +80,7 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <main className="tp-container tp-order-detail-page">
+      <main className="tp-container tp-order-detail-page midao-page">
         <EmptyState
           title="找不到這筆訂單"
           description="可能已刪除或你暫時沒有存取權限。"
@@ -95,7 +95,7 @@ export default function OrderDetailPage() {
   const latestRefund = refunds[0] || null;
 
   return (
-    <main className="tp-container tp-order-detail-page">
+    <main className="tp-container tp-order-detail-page midao-page">
       <Link className="tp-link" href="/orders">← 返回訂單列表</Link>
       <h1>訂單 #{order.id}</h1>
       <p className="tp-status tp-status-upcoming">{order.status}</p>
@@ -103,9 +103,9 @@ export default function OrderDetailPage() {
       <section className="tp-step-card">
         <h2>行程資訊</h2>
         <p>{order.title || order.experienceSlug}</p>
-        <p>📅 {scheduleText}</p>
-        <p>👥 人數：{order.peopleCount || 1}</p>
-        <p>👤 聯絡人：{order.contactName || '—'}（{order.contactPhone || '—'}）</p>
+        <p>日期：{scheduleText}</p>
+        <p>人數：{order.peopleCount || 1}</p>
+        <p>聯絡人：{order.contactName || '—'}（{order.contactPhone || '—'}）</p>
       </section>
 
       <section className="tp-step-card">
@@ -139,7 +139,7 @@ export default function OrderDetailPage() {
         )}
       </section>
 
-      <button className="tp-btn tp-btn-danger">🚨 緊急聯繫</button>
+      <button className="tp-btn tp-btn-danger">緊急聯繫</button>
     </main>
   );
 }

@@ -4,26 +4,26 @@ const riverTours = [
   {
     title: '花蓮秀姑巒溪溯溪全日冒險',
     slug: 'hualien-river-trekking',
-    meta: '🌊 Level 2 · 👥 4~8人 · NT$3,200',
+    meta: 'Level 2 · 4~8人 · NT$3,200',
     imageUrl: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     title: '南澳野溪溯溪入門路線',
     slug: 'hualien-river-trekking',
-    meta: '🌊 Level 1 · 👥 4~8人 · NT$2,400',
+    meta: 'Level 1 · 4~8人 · NT$2,400',
     imageUrl: 'https://images.pexels.com/photos/210186/pexels-photo-210186.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     title: '台東山谷溪降挑戰',
     slug: 'hualien-river-trekking',
-    meta: '🌊 Level 3 · 👥 4~6人 · NT$4,200',
+    meta: 'Level 3 · 4~6人 · NT$4,200',
     imageUrl: 'https://images.pexels.com/photos/125510/pexels-photo-125510.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
 export default function RiverTrekkingPage() {
   return (
-    <main>
+    <main className="midao-page">
       <section className="tp-theme-hero tp-theme-river-hero">
         <div className="tp-container">
           <h1>走進台灣最純淨的野溪</h1>
@@ -34,9 +34,9 @@ export default function RiverTrekkingPage() {
 
       <section className="tp-section">
         <div className="tp-container tp-feature-3col">
-          <article>🪨 裝備租借<br/>安全鞋、頭盔、防護裝備齊全</article>
-          <article>🌊 難度分三級<br/>Level 1 初階到 Level 3 進階</article>
-          <article>✅ 嚮導認證<br/>具戶外教學與安全訓練背景</article>
+          <article>裝備租借<br/>安全鞋、頭盔、防護裝備齊全</article>
+          <article>難度分三級<br/>Level 1 初階到 Level 3 進階</article>
+          <article>嚮導認證<br/>具戶外教學與安全訓練背景</article>
         </div>
       </section>
 

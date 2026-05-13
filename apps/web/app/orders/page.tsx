@@ -46,7 +46,7 @@ export default function OrdersPage() {
   }, [rows, tab]);
 
   return (
-    <main className="tp-container tp-orders-page">
+    <main className="tp-container tp-orders-page midao-page">
       <h1>我的訂單</h1>
 
       <div className="tp-order-tabs">

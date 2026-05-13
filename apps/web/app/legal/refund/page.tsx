@@ -1,6 +1,6 @@
 export default function RefundPage() {
   return (
-    <main className="tp-container tp-static-page">
+    <main className="tp-container tp-static-page midao-page">
       <h1>退款政策</h1>
       <section className="tp-step-card">
         <p>活動 48 小時前取消：全額退款。</p>

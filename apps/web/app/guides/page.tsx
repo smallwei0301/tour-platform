@@ -5,7 +5,7 @@ export default async function GuidesPage() {
   const guides = await listPublishedGuidesDb().catch(() => []);
 
   return (
-    <main className="tp-container tp-guides-page" style={{ paddingBottom: 40 }}>
+    <main className="tp-container tp-guides-page midao-page" style={{ paddingBottom: 40 }}>
       <div className="tp-breadcrumb">首頁 &gt; 全部導遊</div>
       <section className="tp-activities-layout">
         <aside className="tp-filter">
@@ -30,13 +30,13 @@ export default async function GuidesPage() {
             <label><input type="checkbox" /> 文化歷史</label>
             <label><input type="checkbox" /> 美食體驗</label>
             <label><input type="checkbox" /> 戶外冒險</label>
-            <label><input type="checkbox" /> 柴山探洞 🔦</label>
-            <label><input type="checkbox" /> 溯溪 🌊</label>
+            <label><input type="checkbox" /> 柴山探洞</label>
+            <label><input type="checkbox" /> 溯溪</label>
           </details>
           <details>
             <summary>特殊認證</summary>
-            <label><input type="checkbox" /> ✅ KYC 已驗證</label>
-            <label><input type="checkbox" /> 🏆 精選導遊</label>
+            <label><input type="checkbox" /> KYC 已驗證</label>
+            <label><input type="checkbox" /> 精選導遊</label>
           </details>
         </aside>
 
@@ -60,12 +60,12 @@ export default async function GuidesPage() {
                     style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 10 }}
                     loading="lazy"
                   />
-                  <span style={{ position: 'absolute', top: 8, right: 8, background: '#27ae60', color: '#fff', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>✅ 已驗證</span>
+                  <span className="midao-pill" style={{ position: 'absolute', top: 8, right: 8, padding: '3px 8px', fontSize: 12 }}>已驗證</span>
                 </div>
                 <h3 style={{ marginTop: 10 }}>{g.displayName}</h3>
-                <p>⭐ {g.ratingAvg?.toFixed(1) || '5.0'}（{g.reviewCount || 0} 則評價）</p>
-                <p>📍 {g.region}</p>
-                {g.languages?.length > 0 && <p>🌍 {g.languages.slice(0, 3).join('、')}</p>}
+                <p>評分 {g.ratingAvg?.toFixed(1) || '5.0'}（{g.reviewCount || 0} 則評價）</p>
+                <p>{g.region}</p>
+                {g.languages?.length > 0 && <p>{g.languages.slice(0, 3).join('、')}</p>}
                 {g.specialties?.length > 0 && <p style={{ fontSize: 13 }}>{g.specialties.slice(0, 3).join(' · ')}</p>}
                 {g.headline && (
                   <p style={{ fontSize: 13, color: 'var(--tp-muted)', fontStyle: 'italic', margin: '6px 0' }}>

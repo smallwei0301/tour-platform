@@ -37,7 +37,7 @@ const faqs = [
 
 export default function FaqPage() {
   return (
-    <main className="tp-container" style={{ paddingBottom: 56 }}>
+    <main className="tp-container midao-page" style={{ paddingBottom: 56 }}>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/">首頁</Link> &gt; 常見問題
       </div>
@@ -53,7 +53,7 @@ export default function FaqPage() {
             </h2>
             <div style={{ display: 'grid', gap: 12 }}>
               {section.items.map((item, i) => (
-                <div key={i} style={{ background: 'var(--tp-bg-soft)', borderRadius: 10, padding: '16px 18px', border: '1px solid var(--tp-border)' }}>
+                <div key={i} className="midao-card" style={{ padding: '16px 18px' }}>
                   <p style={{ fontWeight: 700, margin: '0 0 6px', fontSize: 15 }}>Q：{item.q}</p>
                   <p style={{ color: 'var(--tp-muted)', margin: 0, lineHeight: 1.8, fontSize: 14 }}>A：{item.a}</p>
                 </div>
@@ -63,7 +63,7 @@ export default function FaqPage() {
         ))}
       </div>
 
-      <div style={{ marginTop: 40, textAlign: 'center', padding: '28px 20px', background: 'var(--tp-bg-soft)', borderRadius: 12, border: '1px solid var(--tp-border)' }}>
+      <div className="midao-card" style={{ marginTop: 40, textAlign: 'center', padding: '28px 20px' }}>
         <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 8px' }}>還有其他問題？</p>
         <p style={{ color: 'var(--tp-muted)', margin: '0 0 14px', fontSize: 14 }}>我們的客服團隊在 1–2 個工作天內回覆</p>
         <Link href="/contact" className="tp-btn tp-btn-primary" style={{ padding: '10px 28px' }}>聯絡我們</Link>

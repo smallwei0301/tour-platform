@@ -4,26 +4,26 @@ const caveTours = [
   {
     title: '高雄柴山自然公園探洞半日遊',
     slug: 'kaohsiung-chaishan-cave-experience',
-    meta: '🕐 3-4小時 · 👥 4~12人 · NT$2,000',
+    meta: '3-4小時 · 4~12人 · NT$2,000',
     imageUrl: '/images/activities/chaishan/main.jpg',
   },
   {
     title: '柴山石灰岩洞穴地質探索',
     slug: 'kaohsiung-chaishan-cave-experience',
-    meta: '🕐 3小時 · 👥 4~10人 · NT$2,200',
+    meta: '3小時 · 4~10人 · NT$2,200',
     imageUrl: 'https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
   {
     title: '柴山親子安全探洞體驗',
     slug: 'kaohsiung-chaishan-cave-experience',
-    meta: '🕐 2.5小時 · 👥 4~8人 · NT$1,800',
+    meta: '2.5小時 · 4~8人 · NT$1,800',
     imageUrl: 'https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200',
   },
 ];
 
 export default function CaveExplorationPage() {
   return (
-    <main>
+    <main className="midao-page">
       <section className="tp-theme-hero tp-theme-cave">
         <div className="tp-container">
           <h1>鑽進高雄的秘密地下世界</h1>
@@ -34,9 +34,9 @@ export default function CaveExplorationPage() {
 
       <section className="tp-section">
         <div className="tp-container tp-feature-3col">
-          <article>🔦 裝備全包<br/>頭燈、安全帽、手套完整配發</article>
-          <article>🦎 生態解說<br/>導遊帶你認識洞穴生態與地形</article>
-          <article>✅ 安全認證嚮導<br/>具山林與戶外安全相關認證</article>
+          <article>裝備全包<br/>頭燈、安全帽、手套完整配發</article>
+          <article>生態解說<br/>導遊帶你認識洞穴生態與地形</article>
+          <article>安全認證嚮導<br/>具山林與戶外安全相關認證</article>
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 export default function PrivacyPage() {
   return (
-    <main className="tp-container tp-static-page">
+    <main className="tp-container tp-static-page midao-page">
       <h1>隱私政策（草案）</h1>
       <section className="tp-step-card">
         <p>我們僅在提供服務必要範圍內蒐集資料（訂單、聯絡方式、付款相關資訊）。</p>
