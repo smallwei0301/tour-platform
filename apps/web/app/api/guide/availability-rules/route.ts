@@ -16,42 +16,6 @@ async function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-async function ensureOwnedUsablePlan(
-  supabase: any,
-  guideId: string,
-  activityPlanId: string
-): Promise<{ ok: true } | { ok: false; status: number; code: string; message: string }> {
-  const { data, error } = await supabase
-    .from('activity_plans')
-    .select(
-      `
-        id,
-        status,
-        activities!inner (
-          guide_id
-        )
-      `
-    )
-    .eq('id', activityPlanId)
-    .eq('activities.guide_id', guideId)
-    .single();
-
-  if (error || !data) {
-    return { ok: false, status: 403, code: 'FORBIDDEN', message: 'activity_plan_id is not owned by this guide' };
-  }
-
-  if (!['active', 'published'].includes(data.status)) {
-    return {
-      ok: false,
-      status: 400,
-      code: 'VALIDATION_ERROR',
-      message: 'activity_plan_id is not in usable status',
-    };
-  }
-
-  return { ok: true };
-}
-
 function isValidTimezone(tz: string): boolean {
   try {
     Intl.DateTimeFormat(undefined, { timeZone: tz });
@@ -171,10 +135,35 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await getSupabase();
 
+    // Validate activity_plan_id ownership if provided
     if (body.activity_plan_id) {
-      const planCheck = await ensureOwnedUsablePlan(supabase, session.guideId, body.activity_plan_id);
-      if (!planCheck.ok) {
-        return Response.json(fail(planCheck.code, planCheck.message), { status: planCheck.status });
+      const { data: planData, error: planError } = await supabase
+        .from('activity_plans')
+        .select(`
+          id,
+          status,
+          activities!inner (
+            guide_id
+          )
+        `)
+        .eq('id', body.activity_plan_id)
+        .single();
+
+      if (planError || !planData) {
+        return Response.json(fail('VALIDATION_ERROR', 'activity_plan_id not found'), { status: 400 });
+      }
+
+      // Check ownership: plan must belong to this guide
+      const planActivities = planData.activities as { guide_id: string } | { guide_id: string }[] | null;
+      const activityGuideId = Array.isArray(planActivities)
+        ? planActivities[0]?.guide_id
+        : planActivities?.guide_id;
+
+      if (activityGuideId !== session.guideId) {
+        return Response.json(
+          fail('FORBIDDEN', 'activity_plan_id belongs to another guide'),
+          { status: 403 }
+        );
       }
     }
 

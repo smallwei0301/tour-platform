@@ -23,6 +23,8 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 export async function GET(request: NextRequest) {
   const session = verifyGuideSession(request);
   if (!session) {
@@ -33,6 +35,7 @@ export async function GET(request: NextRequest) {
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const timezone = searchParams.get('timezone') || 'Asia/Taipei';
+  const activityPlanId = searchParams.get('activityPlanId');
 
   if (!dateFrom || !dateTo) {
     return Response.json(fail('VALIDATION_ERROR', 'dateFrom and dateTo are required'), { status: 400 });
@@ -46,6 +49,11 @@ export async function GET(request: NextRequest) {
   const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
   if (!dateRegex.test(dateFrom) || !dateRegex.test(dateTo)) {
     return Response.json(fail('VALIDATION_ERROR', 'Invalid date format (use YYYY-MM-DD)'), { status: 400 });
+  }
+
+  // Validate activityPlanId format if provided
+  if (activityPlanId && !UUID_REGEX.test(activityPlanId)) {
+    return Response.json(fail('VALIDATION_ERROR', 'Invalid activityPlanId format'), { status: 400 });
   }
 
   // Limit preview range to 14 days
@@ -66,6 +74,7 @@ export async function GET(request: NextRequest) {
       timezone,
       dateFrom,
       dateTo,
+      activityPlanId: activityPlanId || null,
       rulesCount: 0,
       blackoutsCount: 0,
       activeBookingsCount: 0,
@@ -76,6 +85,43 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await getSupabase();
 
+    // Validate activityPlanId ownership: must belong to this guide's activity
+    if (activityPlanId) {
+      const { data: planData, error: planError } = await supabase
+        .from('activity_plans')
+        .select(`
+          id,
+          status,
+          activities!inner (
+            guide_id
+          )
+        `)
+        .eq('id', activityPlanId)
+        .single();
+
+      if (planError || !planData) {
+        return Response.json(fail('VALIDATION_ERROR', 'activityPlanId not found'), { status: 400 });
+      }
+
+      // Check ownership: plan must belong to this guide
+      const planActivities = planData.activities as { guide_id: string } | { guide_id: string }[] | null;
+      const activityGuideId = Array.isArray(planActivities)
+        ? planActivities[0]?.guide_id
+        : planActivities?.guide_id;
+
+      if (activityGuideId !== session.guideId) {
+        return Response.json(fail('FORBIDDEN', 'activityPlanId belongs to another guide'), { status: 403 });
+      }
+
+      // Plan must be bookable (active) for preview
+      if (planData.status !== 'active') {
+        return Response.json(
+          fail('VALIDATION_ERROR', 'activityPlanId refers to a non-bookable plan'),
+          { status: 400 }
+        );
+      }
+    }
+
     // Fetch guide info
     const { data: guide } = await supabase
       .from('guide_profiles')
@@ -83,12 +129,18 @@ export async function GET(request: NextRequest) {
       .eq('id', session.guideId)
       .single();
 
-    // Fetch rules
-    const { data: rules } = await supabase
+    // Fetch rules — filter by activityPlanId when provided (plan-scoped preview)
+    let rulesQuery = supabase
       .from('guide_availability_rules')
       .select('*')
       .eq('guide_id', session.guideId)
       .eq('is_active', true);
+
+    if (activityPlanId) {
+      rulesQuery = rulesQuery.or(`activity_plan_id.is.null,activity_plan_id.eq.${activityPlanId}`);
+    }
+
+    const { data: rules } = await rulesQuery;
 
     // Fetch blackouts in range
     const { data: blackouts } = await supabase
@@ -122,6 +174,7 @@ export async function GET(request: NextRequest) {
       timezone,
       dateFrom,
       dateTo,
+      activityPlanId: activityPlanId || null,
       rulesCount: (rules || []).length,
       blackoutsCount: (blackouts || []).length,
       activeBookingsCount: (bookings || []).length,
