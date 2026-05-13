@@ -57,10 +57,13 @@ test('refund form has a reason select/input AND a note textarea', async () => {
     'POST body must send note field');
 });
 
-test('success message says "已申請，客服將於 2 個工作天內處理"', async () => {
+test('success message is auto-execute aware (not customer-service specific)', async () => {
   const src = await readSource('app/me/orders/[orderId]/page.tsx');
-  assert.match(src, /已申請，客服將於\s*2\s*個工作天內處理/,
-    'success copy must read "已申請，客服將於 2 個工作天內處理"');
+  // Updated in #459: neutral copy that works for both auto-execute and manual paths
+  assert.match(src, /退款申請已送出|退回原付款工具/,
+    'success copy must be auto-execute aware, not "客服將於 2 個工作天"');
+  assert.doesNotMatch(src, /客服將於 2 個工作天/,
+    'must not contain outdated customer-service message');
 });
 
 // ─── AC#3: terminal states show status copy, hide button ─────────────────────
