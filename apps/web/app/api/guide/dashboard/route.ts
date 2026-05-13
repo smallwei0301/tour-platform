@@ -146,7 +146,7 @@ export async function GET(req: Request) {
     });
   }
 
-  // 7. Draft v1 settlement: expectedPayout + nextPayoutDate
+  // 7. Settlement v1: expectedPayout + nextPayoutDate
   // Query the most recent completed tour schedule for this guide
   const { data: latestScheduleRows } = await supabase
     .from('activity_schedules')
