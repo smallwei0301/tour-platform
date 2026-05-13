@@ -39,6 +39,13 @@ type DashboardData = {
   minWithdrawalTwd: number | null;
   pendingPayoutTwd: number | null;
   settlementRulesVersion: string;
+  pendingSettlementOrders: Array<{
+    orderId: string;
+    tourTitle: string;
+    scheduleDate: string | null;
+    totalTwd: number;
+    status: string;
+  }>;
 };
 
 type ScheduleBooking = {
@@ -72,6 +79,7 @@ const STATUS_LABELS: Record<string, string> = {
   confirmed: '已確認',
   cancelled: '已取消',
   refunded: '已退款',
+  refund_pending: '待對帳',
   open: '開放',
   full: '額滿',
   cancelled_schedule: '已取消',
@@ -282,6 +290,45 @@ export default function GuideDashboardPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* 待對帳區塊 — refund_pending orders */}
+      {(data?.pendingSettlementOrders?.length ?? 0) > 0 && (
+        <Section title="⏳ 待對帳">
+          <div style={{ fontSize: 12, color: '#c2410c', marginBottom: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 12px' }}>
+            退款處理中，金額可能變動
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, borderBottom: '1px solid #e5e7eb' }}>
+                <th style={{ padding: '8px 10px' }}>訂單編號</th>
+                <th>行程名稱</th>
+                <th>出團日</th>
+                <th>訂單金額</th>
+                <th>當前狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data!.pendingSettlementOrders.map((o) => (
+                <tr key={o.orderId} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                  <td style={{ padding: '10px', fontFamily: 'monospace', fontSize: 12, color: '#9ca3af' }}>
+                    {o.orderId.slice(0, 8)}…
+                  </td>
+                  <td>{o.tourTitle}</td>
+                  <td style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>
+                    {o.scheduleDate
+                      ? new Date(o.scheduleDate).toLocaleDateString('zh-TW')
+                      : '—'}
+                  </td>
+                  <td style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
+                    NT$ {(o.totalTwd ?? 0).toLocaleString()}
+                  </td>
+                  <td><StatusPill status={o.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Section>
       )}
 
       {/* 6-Month Revenue Trend */}
@@ -687,6 +734,7 @@ function StatusPill({ status }: { status: string }) {
     full: { bg: '#fef3c7', text: '#d97706' },
     pending_payment: { bg: '#fef9c3', text: '#ca8a04' },
     cancelled: { bg: '#fee2e2', text: '#dc2626' },
+    refund_pending: { bg: '#fff7ed', text: '#c2410c' },
   };
   const c = colors[status] || { bg: '#f3f4f6', text: '#6b7280' };
   return (
