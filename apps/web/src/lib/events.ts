@@ -14,6 +14,8 @@ export type EventName =
   | 'purchase_intent'
   | 'payment_callback_received'
   | 'payment_succeeded'
+  | 'refund_callback_received'
+  | 'refund_succeeded'
   | 'booking_page_view'
   | 'booking_v2_fallback_clicked'
   | 'booking_v2_line_retry_clicked'
@@ -76,6 +78,18 @@ export interface PaymentSucceededProperties {
   payment_provider?: string;
 }
 
+export interface RefundCallbackReceivedProperties {
+  merchant_trade_no: string;
+  trade_no?: string;
+  raw_result_code?: string;
+}
+
+export interface RefundSucceededProperties {
+  order_id: string;
+  refund_request_id?: string;
+  merchant_trade_no?: string;
+}
+
 export interface BookingPageViewProperties {
   activity_slug?: string;
   plan_id?: string;
@@ -112,6 +126,8 @@ export type TrackEventPayload =
   | { event_name: 'purchase_intent'; properties: PurchaseIntentProperties }
   | { event_name: 'payment_callback_received'; properties: PaymentCallbackReceivedProperties }
   | { event_name: 'payment_succeeded'; properties: PaymentSucceededProperties }
+  | { event_name: 'refund_callback_received'; properties: RefundCallbackReceivedProperties }
+  | { event_name: 'refund_succeeded'; properties: RefundSucceededProperties }
   | { event_name: 'booking_page_view'; properties: BookingPageViewProperties }
   | { event_name: 'booking_v2_fallback_clicked'; properties: BookingV2FallbackClickedProperties }
   | { event_name: 'booking_v2_line_retry_clicked'; properties: BookingV2LineRetryClickedProperties }
