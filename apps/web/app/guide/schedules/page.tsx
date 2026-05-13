@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Schedule = {
-  id: string; activityId: string; tourTitle: string; planName: string; date: string;
+  id: string; activityId: string; tourTitle: string; planName: string; date: string; endAt?: string;
   capacity: number; bookedCount: number; status: string; guideNote: string | null;
 };
 
@@ -76,6 +76,9 @@ export default function GuideSchedulesPage() {
   return (
     <div>
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📅 場次管理</h1>
+      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280' }}>
+        狀態說明：開放 / 額滿 / 已關閉（open/full/cancelled）。開啟/關閉只管理固定場次 activity_schedules，不會自動建立新場次。
+      </p>
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -121,6 +124,7 @@ export default function GuideSchedulesPage() {
                     <br />
                     <span style={{ color: '#9ca3af', fontSize: 12 }}>
                       {new Date(s.date).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                      {s.endAt ? ` - ${new Date(s.endAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}` : ''}
                     </span>
                   </td>
                   <td style={{ minWidth: 120 }}>

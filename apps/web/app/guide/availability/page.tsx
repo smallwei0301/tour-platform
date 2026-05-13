@@ -38,10 +38,18 @@ type PreviewSlot = {
   isAvailable: boolean;
 };
 
+type GuideActivityPlanOption = {
+  activityId: string;
+  activityTitle: string;
+  planId: string;
+  planName: string;
+};
+
 export default function GuideAvailabilityPage() {
   const [rules, setRules] = useState<AvailabilityRule[]>([]);
   const [blackouts, setBlackouts] = useState<BlackoutDate[]>([]);
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
+  const [activityPlanOptions, setActivityPlanOptions] = useState<GuideActivityPlanOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
 
@@ -55,6 +63,10 @@ export default function GuideAvailabilityPage() {
 
   // Rule form state
   const [ruleForm, setRuleForm] = useState({
+    activity_id: '',
+    activity_plan_id: '',
+    rule_mode: 'weekly' as 'weekly' | 'single-day',
+    single_date: '',
     weekday: 1,
     start_time_local: '09:00',
     end_time_local: '17:00',
@@ -62,6 +74,8 @@ export default function GuideAvailabilityPage() {
     slot_interval_minutes: 60,
     buffer_before_minutes: 15,
     buffer_after_minutes: 15,
+    effective_from: '',
+    effective_to: '',
     is_active: true,
   });
 
@@ -81,15 +95,18 @@ export default function GuideAvailabilityPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [rulesRes, blackoutsRes] = await Promise.all([
+      const [rulesRes, blackoutsRes, plansRes] = await Promise.all([
         fetch('/api/guide/availability-rules'),
         fetch('/api/guide/blackout-dates'),
+        fetch('/api/guide/activities-with-plans'),
       ]);
       const rulesJson = await rulesRes.json();
       const blackoutsJson = await blackoutsRes.json();
+      const plansJson = await plansRes.json();
 
       if (rulesJson.ok) setRules(rulesJson.data?.rules || []);
       if (blackoutsJson.ok) setBlackouts(blackoutsJson.data?.blackouts || []);
+      if (plansJson.ok) setActivityPlanOptions(plansJson.data || []);
     } finally {
       setLoading(false);
     }
@@ -119,8 +136,14 @@ export default function GuideAvailabilityPage() {
   // ── Rule handlers ──
   const openRuleModal = (rule?: AvailabilityRule) => {
     if (rule) {
+      const selectedPlan = activityPlanOptions.find((opt) => opt.planId === (rule.activity_plan_id || ''));
+      const isSingleDay = Boolean(rule.effective_from && rule.effective_to && rule.effective_from === rule.effective_to);
       setEditingRule(rule);
       setRuleForm({
+        activity_id: selectedPlan?.activityId || '',
+        activity_plan_id: rule.activity_plan_id || '',
+        rule_mode: isSingleDay ? 'single-day' : 'weekly',
+        single_date: isSingleDay ? (rule.effective_from || '') : '',
         weekday: rule.weekday,
         start_time_local: rule.start_time_local,
         end_time_local: rule.end_time_local,
@@ -128,11 +151,17 @@ export default function GuideAvailabilityPage() {
         slot_interval_minutes: rule.slot_interval_minutes,
         buffer_before_minutes: rule.buffer_before_minutes,
         buffer_after_minutes: rule.buffer_after_minutes,
+        effective_from: rule.effective_from || '',
+        effective_to: rule.effective_to || '',
         is_active: rule.is_active,
       });
     } else {
       setEditingRule(null);
       setRuleForm({
+        activity_id: '',
+        activity_plan_id: '',
+        rule_mode: 'weekly',
+        single_date: '',
         weekday: 1,
         start_time_local: '09:00',
         end_time_local: '17:00',
@@ -140,6 +169,8 @@ export default function GuideAvailabilityPage() {
         slot_interval_minutes: 60,
         buffer_before_minutes: 15,
         buffer_after_minutes: 15,
+        effective_from: '',
+        effective_to: '',
         is_active: true,
       });
     }
@@ -156,10 +187,20 @@ export default function GuideAvailabilityPage() {
         : '/api/guide/availability-rules';
       const method = editingRule ? 'PUT' : 'POST';
 
+      const singleDate = ruleForm.single_date;
+      const weekdayFromSingleDate = singleDate ? new Date(`${singleDate}T00:00:00+08:00`).getDay() : ruleForm.weekday;
+      const payload = {
+        ...ruleForm,
+        weekday: ruleForm.rule_mode === 'single-day' ? weekdayFromSingleDate : ruleForm.weekday,
+        activity_plan_id: ruleForm.activity_plan_id || null,
+        effective_from: ruleForm.rule_mode === 'single-day' ? singleDate : (ruleForm.effective_from || null),
+        effective_to: ruleForm.rule_mode === 'single-day' ? singleDate : (ruleForm.effective_to || null),
+      };
+
       const res = await fetch(url, {
         method,
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
-        body: JSON.stringify(ruleForm),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
 
@@ -258,6 +299,18 @@ export default function GuideAvailabilityPage() {
     return acc;
   }, {} as Record<number, AvailabilityRule[]>);
 
+  const plansByActivity = activityPlanOptions.reduce((acc, option) => {
+    if (!acc[option.activityId]) acc[option.activityId] = [];
+    acc[option.activityId].push(option);
+    return acc;
+  }, {} as Record<string, GuideActivityPlanOption[]>);
+
+  const selectedActivityPlans = plansByActivity[ruleForm.activity_id] || [];
+  const optionByPlanId = activityPlanOptions.reduce((acc, option) => {
+    acc[option.planId] = option;
+    return acc;
+  }, {} as Record<string, GuideActivityPlanOption>);
+
   // ── Group preview slots by date ──
   const slotsByDate = previewSlots.reduce((acc, slot) => {
     const date = slot.startAt.slice(0, 10);
@@ -318,6 +371,9 @@ export default function GuideAvailabilityPage() {
         <p style={{ margin: '4px 0 0', fontSize: 14, color: '#6b7280' }}>
           設定您的可預約時段與休假日期
         </p>
+        <p style={{ margin: '4px 0 0', fontSize: 12, color: '#9ca3af' }}>
+          所有時間皆以台灣時間 (Asia/Taipei) 顯示與儲存
+        </p>
       </div>
 
       {/* ── Rule Modal ── */}
@@ -329,11 +385,63 @@ export default function GuideAvailabilityPage() {
             <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
+                <select
+                  value={ruleForm.activity_id}
+                  onChange={(e) => setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: '' })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                >
+                  <option value="">請選擇活動</option>
+                  {[...new Map(activityPlanOptions.map((opt) => [opt.activityId, opt])).values()].map((activity) => (
+                    <option key={activity.activityId} value={activity.activityId}>{activity.activityTitle}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>
+                <select
+                  value={ruleForm.activity_plan_id}
+                  onChange={(e) => setRuleForm({ ...ruleForm, activity_plan_id: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  disabled={!ruleForm.activity_id}
+                >
+                  <option value="">請選擇方案</option>
+                  {selectedActivityPlans.map((plan) => (
+                    <option key={plan.planId} value={plan.planId}>{plan.planName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開放模式</label>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'weekly'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'weekly' })} /> 每週重複</label>
+                  <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'single-day'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'single-day' })} /> 單日開放</label>
+                </div>
+              </div>
+              {ruleForm.rule_mode === 'single-day' ? (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
+                  <input type="date" value={ruleForm.single_date} onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
+                    <input type="date" value={ruleForm.effective_from} onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
+                    <input type="date" value={ruleForm.effective_to} onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+                  </div>
+                </div>
+              )}
+              <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
                 <select
                   value={ruleForm.weekday}
                   onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  disabled={ruleForm.rule_mode === 'single-day'}
                 >
                   {WEEKDAY_LABELS.map((label, i) => (
                     <option key={i} value={i}>
@@ -515,6 +623,17 @@ export default function GuideAvailabilityPage() {
                                     {rule.start_time_local}-{rule.end_time_local}
                                   </span>
                                 </div>
+                                <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
+                                  活動：{optionByPlanId[rule.activity_plan_id || '']?.activityTitle || '未指定'}
+                                </div>
+                                <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
+                                  方案：{optionByPlanId[rule.activity_plan_id || '']?.planName || rule.activity_plans?.name || '未指定'}
+                                </div>
+                                {(rule.effective_from || rule.effective_to) && (
+                                  <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+                                    生效：{rule.effective_from || '不限'} ~ {rule.effective_to || '不限'}
+                                  </div>
+                                )}
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   <button onClick={() => openRuleModal(rule)} style={smallBtn('#fff', '#374151')}>
                                     編輯
