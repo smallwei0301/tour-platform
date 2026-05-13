@@ -375,7 +375,7 @@ function PlansSection({
     try {
       const res = await fetch(`/api/admin/activities/${activityId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ plans }),
       });
       const json = await res.json();
@@ -596,7 +596,7 @@ function AddScheduleModal({
         const endAt   = `${date}T${endHH}:00+08:00`;
         const res = await fetch(`/api/admin/activities/${activityId}/schedules`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: csrfHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
             startAt, endAt,
             capacity: Number(capacity),
@@ -799,7 +799,7 @@ function ScheduleSection({ activityId, availablePlans }: { activityId: string; a
     try {
       const res = await fetch(`/api/admin/schedules/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ capacity: Number(editCap), status: editSt }),
       });
       const json = await res.json();
@@ -1361,7 +1361,7 @@ export default function AdminActivityEditPage() {
     try {
       const res = await fetch(`/api/admin/activities/${activityId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           title: title.trim(), guideSlug: guideSlug || undefined,
           region,
@@ -1396,7 +1396,7 @@ export default function AdminActivityEditPage() {
     try {
       const res = await fetch(`/api/admin/activities/${activityId}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status: newStatus }),
       });
       const json = await res.json();
@@ -1735,7 +1735,7 @@ export default function AdminActivityEditPage() {
           {itinerary.length > 0 && (
             <button type="button" onClick={async () => {
               const res = await fetch(`/api/admin/activities/${activityId}`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                method: 'PUT', headers: csrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ itinerary }),
               });
               const json = await res.json();
@@ -1769,7 +1769,7 @@ export default function AdminActivityEditPage() {
           {faq.length > 0 && (
             <button type="button" onClick={async () => {
               const res = await fetch(`/api/admin/activities/${activityId}`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                method: 'PUT', headers: csrfHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({ faq }),
               });
               const json = await res.json();
