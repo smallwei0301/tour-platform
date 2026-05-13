@@ -3110,3 +3110,114 @@ export async function listWishlistDb(input) {
     };
   });
 }
+
+// ── Issue #448: Payouts — generate + confirm ───────────────────────────────────
+
+/**
+ * Return guide_balances rows where balance_twd >= minTwd.
+ * Used by the generate-payouts cron to find eligible guides.
+ * @param {any} supabase — service-role Supabase client
+ * @param {number} minTwd — minimum balance threshold (e.g. 5000)
+ * @returns {Promise<Array<{ guide_id: string, balance_twd: number }>>}
+ */
+export async function getGuideBalancesAboveThresholdDb(supabase, minTwd) {
+  const { data, error } = await supabase
+    .from('guide_balances')
+    .select('guide_id, balance_twd')
+    .gte('balance_twd', minTwd);
+  if (error) throw error;
+  return data ?? [];
+}
+
+/**
+ * Create a pending payout for a guide, skipping if one already exists.
+ * @param {any} supabase — service-role Supabase client
+ * @param {string} guideId
+ * @param {number} totalTwd
+ * @returns {Promise<{ skipped: boolean, id: string, [key: string]: any }>}
+ */
+export async function createPayoutDb(supabase, guideId, totalTwd) {
+  // Check no pending payout exists first
+  const { data: existing } = await supabase
+    .from('payouts')
+    .select('id')
+    .eq('guide_id', guideId)
+    .eq('state', 'pending')
+    .maybeSingle();
+  if (existing) return { skipped: true, id: existing.id };
+
+  const { data, error } = await supabase
+    .from('payouts')
+    .insert({ guide_id: guideId, total_twd: totalTwd, state: 'pending' })
+    .select()
+    .single();
+  if (error) throw error;
+  return { skipped: false, ...data };
+}
+
+/**
+ * Confirm a pending payout: debit guide_balances, mark payout paid, write audit log.
+ * @param {any} supabase — service-role Supabase client
+ * @param {string} payoutId
+ * @param {string|null} confirmedBy — admin identifier
+ * @param {string|null} transferRef — bank transfer reference
+ * @returns {Promise<object>} updated payout row
+ */
+export async function confirmPayoutDb(supabase, payoutId, confirmedBy, transferRef) {
+  // Fetch payout
+  const { data: payout, error: fetchErr } = await supabase
+    .from('payouts')
+    .select('*')
+    .eq('id', payoutId)
+    .single();
+  if (fetchErr || !payout) throw new Error('payout not found');
+  if (payout.state !== 'pending') throw new Error(`payout already ${payout.state}`);
+
+  // Fetch current guide balance
+  const { data: balance } = await supabase
+    .from('guide_balances')
+    .select('balance_twd')
+    .eq('guide_id', payout.guide_id)
+    .single();
+  const newBalance = Math.max(0, (balance?.balance_twd ?? 0) - payout.total_twd);
+
+  // Debit guide_balances
+  await supabase
+    .from('guide_balances')
+    .upsert(
+      { guide_id: payout.guide_id, balance_twd: newBalance, updated_at: new Date().toISOString() },
+      { onConflict: 'guide_id' }
+    );
+
+  // Mark payout paid
+  const { data: updated, error: updateErr } = await supabase
+    .from('payouts')
+    .update({
+      state: 'paid',
+      confirmed_by: confirmedBy ?? 'admin',
+      confirmed_at: new Date().toISOString(),
+      transfer_ref: transferRef ?? null,
+    })
+    .eq('id', payoutId)
+    .select()
+    .single();
+  if (updateErr) throw updateErr;
+
+  // Audit log
+  await supabase
+    .from('audit_logs')
+    .insert({
+      actor: confirmedBy ?? 'admin',
+      action: 'payout_confirmed',
+      metadata: {
+        payout_id: payoutId,
+        guide_id: payout.guide_id,
+        total_twd: payout.total_twd,
+        before_balance: balance?.balance_twd ?? 0,
+        after_balance: newBalance,
+        transfer_ref: transferRef ?? null,
+      },
+    });
+
+  return updated;
+}
