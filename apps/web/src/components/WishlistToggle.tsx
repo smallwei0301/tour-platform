@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { csrfHeaders } from '../lib/csrf-client';
+import { csrfHeaders, ensureCsrfToken } from '../lib/csrf-client';
 
 interface WishlistToggleProps {
   activityId: string;
@@ -36,6 +36,8 @@ export function WishlistToggle({
     setWishlisted(!wishlisted);
 
     try {
+      await ensureCsrfToken();
+
       if (!wishlisted) {
         // Add to wishlist
         const res = await fetch('/api/me/wishlist', {

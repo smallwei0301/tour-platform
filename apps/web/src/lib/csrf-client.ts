@@ -13,3 +13,20 @@ export function csrfHeaders(base: Record<string, string> = {}): Record<string, s
   const token = readCsrfTokenFromCookie();
   return token ? { ...base, [CSRF_HEADER_NAME]: token } : base;
 }
+
+export async function ensureCsrfToken(): Promise<string> {
+  const existing = readCsrfTokenFromCookie();
+  if (existing) return existing;
+
+  try {
+    await fetch('/api/me/csrf', {
+      method: 'GET',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+  } catch {
+    return '';
+  }
+
+  return readCsrfTokenFromCookie();
+}
