@@ -8,13 +8,6 @@ const quickFilters = [
   { label: '花蓮溪谷', href: '/activities/hualien/hualien-river-trekking' },
 ];
 
-const bottomNav = [
-  { label: '首頁', sub: 'Home', href: '/' },
-  { label: '路線', sub: 'Routes', href: '/activities' },
-  { label: '引路人', sub: 'Guides', href: '/guides' },
-  { label: '我的', sub: 'Profile', href: '/login' },
-];
-
 export function MidaoHome() {
   const primaryRoute = featuredRoutes.find((route) => route.isPrimary) ?? featuredRoutes[0];
   const secondaryRoutes = featuredRoutes.filter((route) => route.id !== primaryRoute?.id);
@@ -155,15 +148,6 @@ export function MidaoHome() {
           ) : null}
         </div>
       </section>
-
-      <nav className="midao-bottom-nav" aria-label="主要頁籤">
-        {bottomNav.map((item, index) => (
-          <Link key={item.label} href={item.href} className={`midao-bottom-item${index === 0 ? ' is-active' : ''}`}>
-            <strong>{item.label}</strong>
-            <span>{item.sub}</span>
-          </Link>
-        ))}
-      </nav>
     </main>
   );
 }

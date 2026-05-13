@@ -1,6 +1,7 @@
 import './globals.css';
 import { Navbar } from '../src/components/layout/Navbar';
 import { Footer } from '../src/components/layout/Footer';
+import MidaoBottomNav from '../src/components/midao/MidaoBottomNav';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Navbar />
         {children}
         <Footer />
+        <MidaoBottomNav />
         {/* Vercel Analytics + Speed Insights — zero-config, GDPR-friendly */}
         <Analytics />
         <SpeedInsights />
