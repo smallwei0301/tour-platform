@@ -26,6 +26,7 @@ export async function GET(req: Request) {
       minWithdrawalTwd: 5000,
       pendingPayoutTwd: null,
       settlementRulesVersion: 'env-fallback',
+      pendingSettlementOrders: [],
     }));
   }
 
@@ -58,6 +59,7 @@ export async function GET(req: Request) {
       minWithdrawalTwd: settlementConfig.min_withdrawal_twd,
       pendingPayoutTwd: null,
       settlementRulesVersion: settlementConfig.version ?? 'v1',
+      pendingSettlementOrders: [],
     }));
   }
 
@@ -195,6 +197,37 @@ export async function GET(req: Request) {
 
   const pendingPayoutTwd = (pendingPayouts ?? []).reduce((s: number, p: any) => s + (p.total_twd ?? 0), 0);
 
+  // 10. Pending settlement orders (refund_pending) — 待對帳
+  const { data: refundPendingOrders } = await supabase
+    .from('orders')
+    .select('id, status, total_twd, schedule_id, activity_id, created_at')
+    .in('activity_id', activityIds)
+    .eq('status', 'refund_pending')
+    .order('created_at', { ascending: false });
+
+  // Fetch schedule dates for refund_pending orders
+  const refundScheduleIds = [...new Set(
+    (refundPendingOrders ?? []).map((o: any) => o.schedule_id).filter(Boolean)
+  )];
+  let refundScheduleMap: Record<string, string> = {};
+  if (refundScheduleIds.length > 0) {
+    const { data: refundSchedules } = await supabase
+      .from('activity_schedules')
+      .select('id, start_at')
+      .in('id', refundScheduleIds);
+    refundScheduleMap = Object.fromEntries(
+      (refundSchedules ?? []).map((s: any) => [s.id, s.start_at])
+    );
+  }
+
+  const pendingSettlementOrders = (refundPendingOrders ?? []).map((o: any) => ({
+    orderId: o.id,
+    tourTitle: activityMap[o.activity_id]?.title || '',
+    scheduleDate: o.schedule_id ? (refundScheduleMap[o.schedule_id] ?? null) : null,
+    totalTwd: o.total_twd ?? 0,
+    status: o.status,
+  }));
+
   return Response.json(ok({
     monthlyBookings: monthlyBookings || 0,
     pendingBookings,
@@ -209,5 +242,6 @@ export async function GET(req: Request) {
     minWithdrawalTwd: settlementConfig.min_withdrawal_twd,
     pendingPayoutTwd: pendingPayouts && pendingPayouts.length > 0 ? pendingPayoutTwd : null,
     settlementRulesVersion: settlementConfig.version ?? 'v1',
+    pendingSettlementOrders,
   }));
 }
