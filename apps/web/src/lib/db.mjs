@@ -2954,22 +2954,41 @@ export async function listWishlistDb(input) {
 
   if (error) throw new Error(error.message);
 
-  const activityIds = [...new Set((rows || []).map((r) => r.activity_id).filter(Boolean))];
-  let activityMap = new Map();
+  const activityRefs = [...new Set((rows || []).map((r) => String(r.activity_id || '').trim()).filter(Boolean))];
+  // Accept any canonical UUID shape (not only RFC4122 v1-v5) because legacy production
+  // rows may contain non-standard variant/version UUID-looking ids.
+  const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const activityIds = activityRefs.filter((ref) => uuidLike.test(ref));
+  const activitySlugs = activityRefs.filter((ref) => !uuidLike.test(ref));
 
+  let activityByIdMap = new Map();
+  let activityBySlugMap = new Map();
+
+  // Safe: getSupabase() uses service-role key, which bypasses activities RLS
+  // (status='published' filter does not apply here).
   if (activityIds.length > 0) {
-    // Safe: getSupabase() uses service-role key, which bypasses activities RLS (status='published' filter does not apply here).
-    const { data: activities, error: activityError } = await supabase
+    const { data: activitiesById, error: activityByIdError } = await supabase
       .from('activities')
       .select('id, title, slug, price_twd, cover_image_url')
       .in('id', activityIds);
 
-    if (activityError) throw new Error(activityError.message);
-    activityMap = new Map((activities || []).map((a) => [a.id, a]));
+    if (activityByIdError) throw new Error(activityByIdError.message);
+    activityByIdMap = new Map((activitiesById || []).map((a) => [a.id, a]));
+  }
+
+  if (activitySlugs.length > 0) {
+    const { data: activitiesBySlug, error: activityBySlugError } = await supabase
+      .from('activities')
+      .select('id, title, slug, price_twd, cover_image_url')
+      .in('slug', activitySlugs);
+
+    if (activityBySlugError) throw new Error(activityBySlugError.message);
+    activityBySlugMap = new Map((activitiesBySlug || []).map((a) => [a.slug, a]));
   }
 
   return (rows || []).map((row) => {
-    const activity = activityMap.get(row.activity_id);
+    const activityRef = String(row.activity_id || '').trim();
+    const activity = activityByIdMap.get(activityRef) || activityBySlugMap.get(activityRef);
     return {
       id: row.id,
       activityId: row.activity_id,

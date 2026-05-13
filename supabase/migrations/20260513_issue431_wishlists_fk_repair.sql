@@ -35,7 +35,49 @@ BEGIN
       AND column_name  = 'activity_id'
       AND data_type    = 'text'
   ) THEN
-    -- Validate: every activity_id must be a valid uuid
+    -- Repair known production drift before the uuid cast: some rows may contain
+    -- activities.slug text instead of activities.id uuid text. Translate exact
+    -- slug matches to the canonical activity uuid; keep unmatched text values as
+    -- a hard stop so the cast never drops or invents data.
+    IF EXISTS (
+      SELECT 1
+      FROM public.wishlists w
+      WHERE w.activity_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+        AND NOT EXISTS (
+          SELECT 1 FROM public.activities a WHERE a.slug = btrim(w.activity_id)
+        )
+    ) THEN
+      RAISE EXCEPTION 'wishlists.activity_id contains non-uuid values that do not match activities.slug; cannot repair safely';
+    END IF;
+
+    -- Guard against collisions that would violate UNIQUE(user_id, activity_id)
+    -- after slug values are translated to their matching activity uuid.
+    IF EXISTS (
+      WITH normalized AS (
+        SELECT
+          w.id,
+          w.user_id,
+          COALESCE(a.id::text, w.activity_id) AS target_activity_id
+        FROM public.wishlists w
+        LEFT JOIN public.activities a
+          ON w.activity_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+         AND a.slug = btrim(w.activity_id)
+      )
+      SELECT 1
+      FROM normalized
+      GROUP BY user_id, target_activity_id
+      HAVING count(*) > 1
+    ) THEN
+      RAISE EXCEPTION 'wishlists.activity_id slug repair would create duplicate (user_id, activity_id) rows; clean duplicates first';
+    END IF;
+
+    UPDATE public.wishlists w
+    SET activity_id = a.id::text
+    FROM public.activities a
+    WHERE w.activity_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      AND a.slug = btrim(w.activity_id);
+
+    -- Validate: every activity_id must now be a valid uuid
     IF EXISTS (
       SELECT 1 FROM public.wishlists
       WHERE activity_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
