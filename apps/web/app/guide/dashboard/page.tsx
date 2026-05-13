@@ -33,6 +33,11 @@ type DashboardData = {
   revenueTrend6m: RevenueTrendItem[];
   expectedPayoutTwd: number | null;
   nextPayoutDate: string | null;
+  currentBalanceTwd: number | null;
+  lastSettledAt: string | null;
+  minWithdrawalTwd: number | null;
+  pendingPayoutTwd: number | null;
+  settlementRulesVersion: string;
 };
 
 type ScheduleBooking = {
@@ -254,6 +259,29 @@ export default function GuideDashboardPage() {
           muted={data?.nextPayoutDate == null}
         />
       </div>
+
+      {/* Settlement Balance Card */}
+      {data?.currentBalanceTwd !== null && data?.currentBalanceTwd !== undefined && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: 16, marginBottom: 12 }}>
+          <div style={{ fontSize: 12, color: '#166534', marginBottom: 4 }}>可結算餘額</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: '#15803d' }}>
+            NT${data.currentBalanceTwd.toLocaleString()}
+          </div>
+          {data.minWithdrawalTwd && (
+            <div style={{ fontSize: 11, color: '#4ade80', marginTop: 4 }}>
+              最低出款門檻：NT${data.minWithdrawalTwd.toLocaleString()}
+              {data.currentBalanceTwd >= data.minWithdrawalTwd
+                ? ' ✓ 已達門檻'
+                : ` · 尚差 NT$${(data.minWithdrawalTwd - data.currentBalanceTwd).toLocaleString()}`}
+            </div>
+          )}
+          {data.pendingPayoutTwd && (
+            <div style={{ fontSize: 11, color: '#ea580c', marginTop: 4 }}>
+              待出款：NT${data.pendingPayoutTwd.toLocaleString()}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 6-Month Revenue Trend */}
       <Section title="📈 近 6 個月營收趨勢">
