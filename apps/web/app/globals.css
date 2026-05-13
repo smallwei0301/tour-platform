@@ -2063,7 +2063,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 .midao-copy {
-  margin-top: clamp(56px, 12vh, 96px);
+  margin-top: clamp(28px, 6vh, 48px);
   padding-bottom: 8px;
   color: #f7f1e9;
 }
