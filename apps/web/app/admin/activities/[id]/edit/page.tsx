@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
@@ -87,7 +88,7 @@ function ItineraryImageUpload({ activityId, activitySlug, onUploaded }: {
       fd.append('file', compressed);
       fd.append('slug', activitySlug || activityId);
       fd.append('type', 'gallery');
-      const res = await fetch(`/api/admin/activities/${activityId}/upload-image`, { method: 'POST', body: fd });
+      const res = await fetch(`/api/admin/activities/${activityId}/upload-image`, { method: 'POST', headers: csrfHeaders(), body: fd });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error?.message || '上傳失敗');
       onUploaded(json.data.url);
@@ -815,7 +816,7 @@ function ScheduleSection({ activityId, availablePlans }: { activityId: string; a
     if (!confirm('確認刪除此場次？')) return;
     setSchedErr(''); setSchedOk('');
     try {
-      const res = await fetch(`/api/admin/schedules/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/schedules/${id}`, { method: 'DELETE', headers: csrfHeaders() });
       const json = await res.json();
       if (json.ok) { setSchedOk('✅ 場次已刪除'); load(); }
       else setSchedErr(json.error?.message || '刪除失敗');

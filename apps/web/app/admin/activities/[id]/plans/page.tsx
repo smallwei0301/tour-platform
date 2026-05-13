@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge, EmptyState, LoadingSkeleton, TableWrapper, Th, Td } from '../../../../../src/components/admin/ui';
 
 type ActivityPlan = {
@@ -162,7 +163,7 @@ export default function ActivityPlansPage() {
 
   const archivePlan = async (planId: string) => {
     if (!confirm('確定要封存此方案嗎？封存後旅客將無法預約此方案。')) return;
-    await fetch(`/api/v2/admin/activities/${activityId}/plans/${planId}`, { method: 'DELETE' });
+    await fetch(`/api/v2/admin/activities/${activityId}/plans/${planId}`, { method: 'DELETE', headers: csrfHeaders() });
     await loadData();
   };
 

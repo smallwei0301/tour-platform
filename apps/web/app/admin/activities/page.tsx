@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
 
 type Activity = {
@@ -94,7 +95,7 @@ export default function AdminActivitiesPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/admin/activities/${deleteTarget.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/admin/activities/${deleteTarget.id}`, { method: 'DELETE', headers: csrfHeaders() });
       const json = await res.json();
       if (json.ok) {
         setDeleteTarget(null);

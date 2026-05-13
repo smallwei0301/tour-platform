@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 // 前端即時試算（與後端公式一致）
 function calcContribution(row: Row, kpiConfig?: { commissionRate?: number; paymentFeeRate?: number }) {
@@ -68,7 +69,7 @@ export default function OperationsTrackingPage() {
     if (!selected) return;
     setSaving(true);
     try {
-      await fetch('/api/admin/operations-tracking', { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(selected) });
+      await fetch('/api/admin/operations-tracking', { method: 'PATCH', headers: csrfHeaders({ 'content-type': 'application/json' }), body: JSON.stringify(selected) });
       await load();
     } finally { setSaving(false); }
   }

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge, EmptyState, LoadingSkeleton } from '../../../../../src/components/admin/ui';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
@@ -187,7 +188,7 @@ export default function GuideAvailabilityPage() {
 
   const deleteRule = async (ruleId: string) => {
     if (!confirm('確定要刪除此時段規則嗎？')) return;
-    await fetch(`/api/v2/admin/guides/${guideId}/availability-rules/${ruleId}`, { method: 'DELETE' });
+    await fetch(`/api/v2/admin/guides/${guideId}/availability-rules/${ruleId}`, { method: 'DELETE', headers: csrfHeaders() });
     await loadData();
     await loadPreview();
   };
@@ -235,7 +236,7 @@ export default function GuideAvailabilityPage() {
 
   const deleteBlackout = async (blackoutId: string) => {
     if (!confirm('確定要刪除此休假時段嗎？')) return;
-    await fetch(`/api/v2/admin/guides/${guideId}/blackout-dates/${blackoutId}`, { method: 'DELETE' });
+    await fetch(`/api/v2/admin/guides/${guideId}/blackout-dates/${blackoutId}`, { method: 'DELETE', headers: csrfHeaders() });
     await loadData();
     await loadPreview();
   };
