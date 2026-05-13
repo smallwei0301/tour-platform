@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: '/admin/reviews', label: '評價管理', icon: '⭐' },
   { href: '/admin/qa', label: 'Q&A管理', icon: '💬' },
   { href: '/admin/operations-tracking', label: '操作追蹤', icon: '📈' },
+  { href: '/admin/go-no-go', label: 'Go/No-Go', icon: '🚦' },
   { href: '/admin/settings/kpi', label: '設定', icon: '⚙️' },
 ];
 
