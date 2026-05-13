@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { csrfHeaders } from '../../../../src/lib/csrf-client';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type QAEntry = {
   id: string;
