@@ -55,6 +55,11 @@ export function Footer() {
               <li><Link href="/why-choose-us">為什麼選擇我們</Link></li>
               <li><Link href="/contact">聯絡我們</Link></li>
             </ul>
+            <h4 style={{ marginTop: 20 }}>後台入口</h4>
+            <ul>
+              <li><Link href="/guide/dashboard">導遊後台</Link></li>
+              <li><Link href="/admin">Admin 後台</Link></li>
+            </ul>
           </section>
 
           {/* Col 4: Support + Legal */}
