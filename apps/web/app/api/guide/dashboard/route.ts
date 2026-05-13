@@ -1,6 +1,6 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
-import { computeExpectedPayout, computeNextPayoutDate } from '../../../../src/lib/settlement-config';
+import { getSettlementConfig } from '../../../../src/lib/settlement-config';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -21,11 +21,18 @@ export async function GET(req: Request) {
       revenueTrend6m: [],
       expectedPayoutTwd: null,
       nextPayoutDate: null,
+      currentBalanceTwd: null,
+      lastSettledAt: null,
+      minWithdrawalTwd: 5000,
+      pendingPayoutTwd: null,
+      settlementRulesVersion: 'env-fallback',
     }));
   }
 
   const supabase = await getSupabase();
   const guideId = session.guideId;
+
+  const settlementConfig = await getSettlementConfig(supabase);
 
   // 1. Get guide's activity IDs
   const { data: activities } = await supabase
@@ -46,6 +53,11 @@ export async function GET(req: Request) {
       revenueTrend6m: [],
       expectedPayoutTwd: null,
       nextPayoutDate: null,
+      currentBalanceTwd: null,
+      lastSettledAt: null,
+      minWithdrawalTwd: settlementConfig.min_withdrawal_twd,
+      pendingPayoutTwd: null,
+      settlementRulesVersion: settlementConfig.version ?? 'v1',
     }));
   }
 
@@ -161,9 +173,27 @@ export async function GET(req: Request) {
       ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
       : null;
 
-  const expectedPayoutTwd = computeExpectedPayout(monthGmvTwd);
-  const nextPayoutDateObj = computeNextPayoutDate(latestCompletedTourDate);
+  const expectedPayoutTwd = Math.floor(monthGmvTwd * (1 - settlementConfig.commission_rate));
+  const nextPayoutDateObj = latestCompletedTourDate
+    ? new Date(latestCompletedTourDate.getTime() + settlementConfig.t_days * 24 * 60 * 60 * 1000)
+    : null;
   const nextPayoutDate = nextPayoutDateObj ? nextPayoutDateObj.toISOString().slice(0, 10) : null;
+
+  // 8. Guide balance from settlement sweep
+  const { data: balanceRow } = await supabase
+    .from('guide_balances')
+    .select('balance_twd, last_settled_at')
+    .eq('guide_id', guideId)
+    .maybeSingle();
+
+  // 9. Pending payout (max one per unique index, but aggregate defensively)
+  const { data: pendingPayouts } = await supabase
+    .from('payouts')
+    .select('total_twd')
+    .eq('guide_id', guideId)
+    .eq('state', 'pending');
+
+  const pendingPayoutTwd = (pendingPayouts ?? []).reduce((s: number, p: any) => s + (p.total_twd ?? 0), 0);
 
   return Response.json(ok({
     monthlyBookings: monthlyBookings || 0,
@@ -174,5 +204,10 @@ export async function GET(req: Request) {
     revenueTrend6m,
     expectedPayoutTwd,
     nextPayoutDate,
+    currentBalanceTwd: balanceRow?.balance_twd ?? null,
+    lastSettledAt: balanceRow?.last_settled_at ?? null,
+    minWithdrawalTwd: settlementConfig.min_withdrawal_twd,
+    pendingPayoutTwd: pendingPayouts && pendingPayouts.length > 0 ? pendingPayoutTwd : null,
+    settlementRulesVersion: settlementConfig.version ?? 'v1',
   }));
 }
