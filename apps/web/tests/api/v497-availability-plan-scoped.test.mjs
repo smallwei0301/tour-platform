@@ -119,15 +119,14 @@ describe('AC3: guide availability-preview supports activityPlanId query param', 
 
   it('preview route validates activityPlanId ownership (plan must belong to guide)', () => {
     const src = readFile('app/api/guide/availability-preview/route.ts');
-    // Must perform an ownership check on the plan
-    assert.match(
-      src,
-      /activity_plan_id|activityPlanId/,
-      'Must validate activityPlanId references a plan owned by this guide'
+    // Must perform ownership check: join activity_plans→activities, compare guide_id to session
+    const hasOwnershipCheck =
+      /activityGuideId !== session\.guideId/.test(src) ||
+      (/activities!inner/.test(src) && /status:\s*403/.test(src));
+    assert.ok(
+      hasOwnershipCheck,
+      'Must validate activityPlanId guide ownership via activities!inner join and return 403 on mismatch'
     );
-    // Must return 400/403 on invalid plan ownership
-    const hasBadOwnerResponse = /status:\s*40[03]/.test(src);
-    assert.ok(hasBadOwnerResponse, 'Must return 400 or 403 for invalid plan ownership');
   });
 
   it('preview plan-scoped filter logic — unit-level simulation', () => {
@@ -214,12 +213,17 @@ describe('Guide availability-rules POST validates activityPlanId ownership', () 
 
 // ─── availability-rules PUT: activityPlanId ownership validation ──────────────
 describe('Guide availability-rules PUT validates activityPlanId ownership', () => {
-  it('PUT handler validates activity_plan_id when provided in update', () => {
+  it('PUT handler validates activity_plan_id ownership and returns 403 for foreign plans', () => {
     const src = readFile('app/api/guide/availability-rules/[ruleId]/route.ts');
-    assert.match(
-      src,
-      /activity_plan_id/,
-      'Must reference activity_plan_id in PUT handler'
+    // Must perform a guide ownership check on activity_plan_id when it is updated,
+    // mirroring the POST handler pattern (join activity_plans→activities, compare guide_id).
+    const hasOwnershipCheck =
+      /activityGuideId !== session\.guideId/.test(src) ||
+      (/activities!inner/.test(src) && /status:\s*403/.test(src) && /activity_plan_id/.test(src));
+    assert.ok(
+      hasOwnershipCheck,
+      'PUT handler must validate activity_plan_id ownership (join activities!inner + 403 for foreign guide_id). ' +
+      'Found in: app/api/guide/availability-rules/[ruleId]/route.ts'
     );
   });
 });
