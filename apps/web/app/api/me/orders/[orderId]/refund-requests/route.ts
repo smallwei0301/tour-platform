@@ -1,5 +1,5 @@
 import { ok, fail } from '../../../../../../src/lib/api';
-import { createRefundRequestDb, listRefundRequestsDb, getMyOrderDetailDb } from '../../../../../../src/lib/db.mjs';
+import { createRefundRequestDb, listRefundRequestsDb, getMyOrderDetailDb, recordRefundReversalDb } from '../../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { sendRefundRequested, sendRefundExecuted } from '../../../../../../src/lib/email';
@@ -127,6 +127,9 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
                 .eq('id', oid)
                 .select('id');
               return { error, data, count };
+            },
+            postRefundHook: async (refundedOrderId) => {
+              await recordRefundReversalDb(svcClient, { orderId: refundedOrderId, actor: 'refund-auto-execute' });
             },
           });
           if (execResult.status === 200) {

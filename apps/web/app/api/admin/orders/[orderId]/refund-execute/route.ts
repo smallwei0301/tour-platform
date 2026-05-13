@@ -19,6 +19,7 @@ import {
 import { requestAllRefund } from '../../../../../../src/lib/ecpay';
 import { createClient } from '@supabase/supabase-js';
 import { executeRefund } from '../../../../../../src/lib/refund-execute';
+import { recordRefundReversalDb } from '../../../../../../src/lib/db.mjs';
 
 function parseCookie(req: Request, key: string) {
   const cookie = req.headers.get('cookie') || '';
@@ -110,6 +111,9 @@ export async function POST(
         .eq('id', orderId)
         .select('id');
       return { error, data, count };
+    },
+    postRefundHook: async (refundedOrderId) => {
+      await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
     },
   });
 
