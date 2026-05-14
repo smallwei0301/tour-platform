@@ -185,7 +185,40 @@ export async function POST(request: Request) {
       orderId,
       ownerEmail: mapOwnerEmail(payload),
       tradeNo: mapTradeNo(payload)
-    }) as { order?: Record<string, unknown> | null; scheduleUpdated?: boolean; schedule?: Record<string, unknown> | null };
+    }) as { order?: Record<string, unknown> | null; scheduleUpdated?: boolean; schedule?: Record<string, unknown> | null; simulated?: boolean };
+
+    if (result.simulated) {
+      void trackServer(
+        {
+          event_name: 'payment_callback_simulate_paid_noop',
+          properties: {
+            order_id: orderId,
+            trade_no: mapTradeNo(payload) ?? '',
+            raw_result_code: payload?.RtnCode ?? payload?.resultCode ?? '',
+          },
+          order_id: orderId,
+        },
+        request
+      );
+
+      if (isECPayCallback) {
+        return new Response('1|OK', {
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' },
+        });
+      }
+
+      return Response.json(
+        ok({
+          received: true,
+          simulated: true,
+          orderId,
+          status: (result.order?.status as string | undefined) || 'pending_payment',
+          scheduleUpdated: false,
+          schedule: result.schedule || null
+        })
+      );
+    }
 
     // 事件：付款成功
     void trackServer(
@@ -265,8 +298,6 @@ export async function POST(request: Request) {
 
     // ECPay 正式回調期望回覆 "1|OK" 格式
     // 模擬付款（JSON 請求）則回覆 JSON 格式以便前端處理
-    const isECPayCallback = request.headers.get('content-type')?.includes('application/x-www-form-urlencoded');
-
     if (isECPayCallback) {
       return new Response('1|OK', {
         status: 200,
