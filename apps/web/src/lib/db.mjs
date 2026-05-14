@@ -2503,7 +2503,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     if (fixtureFirst) return fixtureFirst;
   }
 
-  const detailedSelect = `
+  const minimalSelect = `
       id, slug, title, tagline, short_description, description, region, region_slug, category,
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
@@ -2511,14 +2511,10 @@ export async function getActivityBySlugDb(slug, options = {}) {
       safety_notice, faq, good_for, not_good_for, plans, status, published_at,
       itinerary, social_proof_quotes,
       rating_avg, review_count,
-      guide_id, guide_slug,
-      guide_profiles!activities_guide_id_fkey(
-        id, slug, display_name, headline, bio, region, languages, specialties,
-        profile_photo_url, rating_avg, review_count, gallery_urls
-      )
+      guide_id, guide_slug
     `;
 
-  const minimalSelect = `
+  const retryMinimalSelect = `
       id, slug, title, tagline, short_description, description, region, region_slug, category,
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
@@ -2537,7 +2533,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     const result = await withActivityDetailTimeout(
       supabase
         .from('activities')
-        .select(detailedSelect)
+        .select(minimalSelect)
         .eq('slug', slug)
         .single(),
       { timeoutMs: queryTimeoutMs, label: 'activities-single' }
@@ -2553,7 +2549,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     const retryRes = await withActivityDetailTimeout(
       supabase
         .from('activities')
-        .select(minimalSelect)
+        .select(retryMinimalSelect)
         .eq('slug', slug)
         .single(),
       { timeoutMs: queryTimeoutMs, label: 'activities-single-retry' }
