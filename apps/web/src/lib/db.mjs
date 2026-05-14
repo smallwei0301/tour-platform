@@ -2221,7 +2221,6 @@ export async function listPublishedActivitiesDb(filters = {}) {
       id, slug, title, tagline, short_description, region, region_slug, category,
       price_twd, duration_minutes, min_participants, max_participants,
       cover_image_url, status, published_at,
-      rating_avg, review_count,
       guide_id, guide_slug
     `)
     .eq('status', 'published')
@@ -2239,7 +2238,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
   if (guideIds.length > 0) {
     const { data: guides, error: guidesError } = await supabase
       .from('guide_profiles')
-      .select('id, slug, display_name, profile_photo_url')
+      .select('id, slug, display_name, profile_photo_url, rating_avg, review_count')
       .in('id', guideIds);
     if (guidesError) throw new Error(guidesError.message);
     guideMap = new Map((guides || []).map((g) => [g.id, g]));
@@ -2256,8 +2255,8 @@ export async function listPublishedActivitiesDb(filters = {}) {
       guideName: guide?.display_name || '',
       guideSlug: r.guide_slug || guide?.slug || '',
       guideAvatarUrl: guide?.profile_photo_url || '',
-      ratingAvg: r.rating_avg ?? null,
-      reviewCount: r.review_count ?? 0
+      ratingAvg: guide?.rating_avg ?? null,
+      reviewCount: guide?.review_count ?? 0
     };
   });
 }
