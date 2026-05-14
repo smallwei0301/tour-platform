@@ -309,6 +309,26 @@ export function processPaymentCallback(input) {
   const order = orders.find((o) => o.id === orderId);
   if (!order) throw new Error('order not found');
 
+  const simulatePaid = String(input?.SimulatePaid ?? input?.simulatePaid ?? '').trim() === '1';
+  if (simulatePaid) {
+    appendAuditLog({
+      orderId: order.id,
+      actor: 'system',
+      action: 'payment_callback_simulate_paid_noop',
+      metadata: {
+        event_type: 'payment_callback_simulate_paid_noop',
+        source: 'payment/ecpay_callback',
+        provider: 'ecpay',
+        order_id: order.id,
+        trade_no: normalizeSlug(input?.tradeNo || input?.TradeNo) || null,
+        order_status: order.status,
+        callback_received_at: new Date().toISOString(),
+      },
+    });
+
+    return { order, scheduleUpdated: false, simulated: true };
+  }
+
   const ownerEmail = normalizeSlug(input?.ownerEmail).toLowerCase();
   const contactEmail = normalizeSlug(order.contactEmail).toLowerCase();
   if (ownerEmail && contactEmail && ownerEmail !== contactEmail) {

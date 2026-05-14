@@ -2015,6 +2015,44 @@ export async function processPaymentCallbackDb(input) {
   const orderId = String(input?.orderId || '').trim();
   if (!orderId) throw new Error('orderId is required');
 
+  const isSimulatePaid = String(input?.SimulatePaid ?? input?.simulatePaid ?? '').trim() === '1';
+  if (isSimulatePaid) {
+    const supabase = await getSupabase();
+    const { data: order, error } = await supabase
+      .from('orders')
+      .select('id, status, total_twd, paid_at')
+      .eq('id', orderId)
+      .single();
+    if (error || !order) throw new Error(error?.message || 'order not found');
+
+    await insertAuditLogDb(supabase, {
+      orderId,
+      actor: 'system',
+      action: 'payment_callback_simulate_paid_noop',
+      metadata: {
+        event_type: 'payment_callback_simulate_paid_noop',
+        source: 'payment/ecpay_callback',
+        provider: 'ecpay',
+        order_id: orderId,
+        trade_no: String(input?.tradeNo || input?.TradeNo || '').trim() || null,
+        order_status: order.status,
+        callback_received_at: new Date().toISOString(),
+      },
+    });
+
+    return {
+      order: {
+        id: order.id,
+        status: order.status,
+        totalTwd: order.total_twd,
+        paidAt: order.paid_at,
+      },
+      scheduleUpdated: false,
+      schedule: null,
+      simulated: true,
+    };
+  }
+
   const supabase = await getSupabase();
 
   const { data, error } = await supabase.rpc('fn_process_payment_callback_atomic', {

@@ -13,6 +13,7 @@ export type EventName =
   | 'begin_checkout'
   | 'purchase_intent'
   | 'payment_callback_received'
+  | 'payment_callback_simulate_paid_noop'
   | 'payment_succeeded'
   | 'refund_callback_received'
   | 'refund_succeeded'
@@ -72,6 +73,12 @@ export interface PaymentCallbackReceivedProperties {
   raw_result_code?: string;
 }
 
+export interface PaymentCallbackSimulatePaidNoopProperties {
+  order_id: string;
+  trade_no: string;
+  raw_result_code?: string;
+}
+
 export interface PaymentSucceededProperties {
   order_id: string;
   amount: number;
@@ -125,6 +132,7 @@ export type TrackEventPayload =
   | { event_name: 'begin_checkout'; properties: BeginCheckoutProperties }
   | { event_name: 'purchase_intent'; properties: PurchaseIntentProperties }
   | { event_name: 'payment_callback_received'; properties: PaymentCallbackReceivedProperties }
+  | { event_name: 'payment_callback_simulate_paid_noop'; properties: PaymentCallbackSimulatePaidNoopProperties }
   | { event_name: 'payment_succeeded'; properties: PaymentSucceededProperties }
   | { event_name: 'refund_callback_received'; properties: RefundCallbackReceivedProperties }
   | { event_name: 'refund_succeeded'; properties: RefundSucceededProperties }
