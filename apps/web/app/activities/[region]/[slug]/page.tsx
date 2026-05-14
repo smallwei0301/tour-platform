@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { unstable_cache } from 'next/cache';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
@@ -11,9 +10,10 @@ import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { resolveBookingEntryHref } from '../../../../src/lib/booking-entry.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
 
-// Issue #84 strategy: page shell/content stay on ISR; volatile availability moves to client intent fetch.
-export const dynamic = 'force-static';
-export const revalidate = 300;
+// Issue #502: avoid force-static/unstable_cache render lock on production cold path.
+// Keep volatile availability on client intent fetch; detail page stays runtime-rendered.
+export const dynamic = 'force-dynamic';
+export const revalidate = 60;
 
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
@@ -25,17 +25,9 @@ export async function generateMetadata(
   };
 }
 
-async function getCachedActivityBySlug(slug: string) {
-  return unstable_cache(
-    async () => getActivityBySlugDb(slug),
-    ['activity-detail', slug],
-    { revalidate: 60, tags: [`activity:${slug}`] }
-  )();
-}
-
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getCachedActivityBySlug(slug).catch((): null => null);
+  const activity = await getActivityBySlugDb(slug).catch((): null => null);
   if (!activity) return notFound();
 
   const activityData = activity as typeof activity & {
