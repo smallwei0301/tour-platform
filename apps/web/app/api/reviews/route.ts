@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
   const { data: review, error } = await adminSupabase
     .from('activity_reviews')
     .insert({
+      id: crypto.randomUUID(),
       activity_slug: String(activityId || ''),
       rating: ratingNum,
       review_text: reviewTextStr,
