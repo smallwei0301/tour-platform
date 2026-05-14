@@ -30,7 +30,7 @@
 
 ---
 
-## 1. 專案現況（2026-05-11）
+## 1. 專案現況（2026-05-14）
 
 ### 已完成的基礎能力
 - 前台 MVP 已完成
@@ -43,13 +43,13 @@
 - secret scan guard 已落地
 - GitHub Actions CI 已修復並維持轉綠
 
-### 2026-04-27 → 2026-05-11 收斂（近 14 天 26+ issues closed）
+### 2026-04-27 → 2026-05-14 收斂（近 14 天重點）
 
-**POS（主要 child 大致完成）：**
+**POS（主要 child）：**
 - #296 Admin POS additional-payment on existing order
 - #264 Admin POS order detail + timeline
 - #182 POS / LINE availability compatibility validation
-- #190 / #195 / #177 等 POS sub-tasks
+- #190 / #195 / #177 等 POS 子任務
 
 **Booking / Payment 安全：**
 - #280 idempotent checkout（去重複 checkout）
@@ -69,29 +69,34 @@
 - #292 docs-only full-chain Phase B/C fixture
 - #165 Phase 12 audit coverage matrix
 
-**ghloop 自動化基礎建設**（13 張 cron-followup closed：#287/#288/#283/#278/#277/#276/#272/#266/#255/#254/#253/#251/#241）— 夜跑流程大致穩定。
-
-### 還 open 的主線（2026-05-11，open issues = 9 張）
+### 還 open 的主線（2026-05-14）
 
 **P0（1）：**
-- **#171** Audit verification checklist for critical write operations（parent convergence #267 已 closed，建議下一輪 sanity check 即可結案）
+- **#402** 實際 ECPay 實金流結帳 + 退款 + Email side-effect 證據仍開啟，為最上層上線阻斷。
 
-**P1（3）：**
-- **#184** Phase 12 readiness review and release gate（KEEP_OPEN 等 #176 整個 Operations gate 收完）
-- **#176** Admin POS Lite MVP parent tracker（5 個 child 已完成；split 提案還剩 3 個：訂單編輯/取消、refund timeline 整合、回歸測試 checklist）
-- **#5** Phase 12 Booking Engine + POS Lite 啟動（頂層 parent）
+**P1（5）：**
+- **#500** manual regression（手動回歸）
+- **#403** real Google traveler session（真實旅客瀏覽器 session）
+- **#318** onboarding 流程與營運接手準備
+- **#319** CS / 客服 SOP 演練
+- **#320** readiness gate / soft launch control / Admin Go-No-Go dashboard
 
-**P2（5）：**
-- **#73** Critical operations audit source tracker（parent）
-- **#72** FK hardening source tracker（parent）
-- **#68** TypeScript strict mode program source tracker（parent）
-- **#16** LINE / LIFF Booking Flow（parent #178 已 closed，leaf 可推進）
-- **#15** Admin POS Lite（parent；主要 child #296 已完成）
+**P2（1+）：**
+- **#504** 統整實測與放行證據封裝（若仍 open，作為 #402 專案的 evidence index）
+- **#502** production schema-drift follow-up（若環境有新 schema 觀測差異時，需逐步清理）
 
-### 最新 CI 狀態
-- main 過去 14 天持續轉綠
-- 最新 merge：PR #297 Admin POS additional-payment（2026-05-11）
-- **目前主線從「issue queue 收斂」轉向「Phase 12 收尾 + Go-Live 準備」**
+### 最新 CI / 主線真值
+- main 近 14 天持續轉綠
+- 最新 merge：PR #501 test(ecpay): guard SimulatePaid callback side effects（merge commit a4fe92a，2026-05-11）
+- **警示：** PR #501 僅確認 SimulatePaid=1 callback 為模擬 no-op；不代表真金流 `trade success` / `refund` / `email` side-effect 已完成。
+- **目前主線焦點：** 從「大地圖收斂」轉為「上線前就緒證據」與營運接管準備。
+
+### Go-Live 仍缺
+- 在 #402 結案前，正式上線缺口包括：
+  - 以真實（非 SimulatePaid）付款成功產生付費訂單並完成 booked/paid 流程
+  - 退款成功後證據可被追溯到訂單更新
+  - 旅客與管理員郵件通知 side-effect 可重複驗證
+  - 操作人員可在 docs/operations/issue-402-real-payment-refund-verification-runbook.md 取得可執行驗證路徑
 
 ---
 
@@ -165,14 +170,16 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 - [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
 - [`docs/qa/booking-v2-rollout-manual-checklist.md`](./docs/qa/booking-v2-rollout-manual-checklist.md)
 
-### Step 2：先看現在還開著的主線 issue（2026-05-11 更新）
+### Step 2：先看現在還開著的主線 issue（2026-05-14 更新）
 目前不要自己發明主線，先接（依優先順序）：
-- **#171**（P0，audit checklist；#267 convergence 已 closed，可能 sanity check 即可結案）
-- **#176**（P1，Admin POS Lite parent，剩 3 個 child 沒做：訂單編輯/取消、refund timeline、回歸測試）
-- **#184**（P1，readiness review；等 #176 收完）
-- **#73 / #72 / #68**（P2 parent tracker：audit / FK / strict mode 後續波）
-- **#16**（P2，LINE / LIFF booking flow leaf；parent #178 已 closed 解鎖）
-- **#15 / #5**（P2/P1 頂層 parent，等 child 收完才能結）
+- **#402**（P0，真實 ECPay 付款/退款/Email side-effect 證據）
+- **#500**（P1，manual regression / 監看清單）
+- **#403**（P1，真實 Google traveler session）
+- **#318**（P1，營運 onboarding 接手）
+- **#319**（P1，CS SOP 演練）
+- **#320**（P1，readiness gate / soft launch control / Admin Go-No-Go）
+- **#504**（P2，統整上線證據封裝）
+- **#502**（P2，production schema drift follow-up，僅在遇到 schema 差異時補強）
 
 ### Step 3：確認本地與 CI 都健康
 - `npm install`
@@ -261,9 +268,10 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 ## 7. 建議的下一步執行順序
 
 ### 第一優先
-1. 推進 **#161 / #72**：把 schema / FK hardening 做成 migration-safe rollout
-2. 推進 **#73**：把 audit trail 補到 critical operations 可驗收程度
-3. 推進 **#15 / #16**：從 readiness 文檔進入真正可操作的 POS / LINE-LIFF 流程落地
+1. 推進 **#402**：完成真實付款/退款/Email side-effect 三段式證據（依據 `docs/operations/issue-402-real-payment-refund-verification-runbook.md`）
+2. 推進 **#500 / #403**：補齊 manual regression 與 real Google traveler session 證據
+3. 推進 **#318 / #319 / #320**：讓營運 onboarding、客服 SOP、go/no-go gate 可實際演練
+4. 若需要，補齊 **#504** 將上述證據封裝到放行檔案
 
 ### 第二優先
 4. 補齊 Go-Live 所需：
@@ -280,7 +288,7 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 ## 8. 重要文件索引
 
 ### 當前主線
-- [`docs/implementation/issue-96-rollout-contract.md`](./docs/implementation/issue-96-rollout-contract.md)
+- [`docs/operations/issue-402-real-payment-refund-verification-runbook.md`](./docs/operations/issue-402-real-payment-refund-verification-runbook.md)
 - [`docs/operations/booking-v2-b3-rollout.md`](./docs/operations/booking-v2-b3-rollout.md)
 - [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
 - [`docs/qa/booking-v2-rollout-manual-checklist.md`](./docs/qa/booking-v2-rollout-manual-checklist.md)
