@@ -37,4 +37,18 @@ describe('Issue #502 query contract', () => {
     assert.ok(!fnBody.includes('guide_profiles!activities_guide_id_fkey('), 'must not use hard-coded activities_guide_id_fkey embed in list query');
     assert.match(fnBody, /\.from\('guide_profiles'\)[\s\S]*\.in\('id',\s*guideIds\)/, 'must load guide profiles by guide_ids in a separate query');
   });
+
+  it('listPublishedActivitiesDb must not select activity-level rating fields and must map ratings from guide_profiles', () => {
+    const src = read(DB_LIB);
+    const start = src.indexOf('export async function listPublishedActivitiesDb(filters = {}) {');
+    const end = src.indexOf('async function getFixtureActivityBySlug', start);
+    assert.notEqual(start, -1, 'listPublishedActivitiesDb must exist');
+    assert.notEqual(end, -1, 'next function boundary must exist');
+    const fnBody = src.slice(start, end);
+
+    assert.ok(!fnBody.includes('rating_avg, review_count,'), 'must not select rating fields from activities table');
+    assert.match(fnBody, /\.from\('guide_profiles'\)[\s\S]*\.select\('id, slug, display_name, profile_photo_url, rating_avg, review_count'\)/, 'guide profile query must include rating_avg/review_count');
+    assert.match(fnBody, /ratingAvg:\s*guide\?\.rating_avg\s*\?\?\s*null/, 'ratingAvg should map from guide_profiles.rating_avg');
+    assert.match(fnBody, /reviewCount:\s*guide\?\.review_count\s*\?\?\s*0/, 'reviewCount should map from guide_profiles.review_count');
+  });
 });
