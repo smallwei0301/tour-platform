@@ -2328,6 +2328,17 @@ function isPrimaryActivityTimeoutError(error) {
   return message.includes('timeout after') && message.includes('activities-single');
 }
 
+function isPrimaryActivityNoRowError(error) {
+  const message = String(error?.message || '').toLowerCase();
+
+  if (error?.code === 'PGRST116') return true;
+
+  return (
+    message.includes('multiple (or no) rows returned') ||
+    message.includes('no rows')
+  );
+}
+
 function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
   const gp = guideProfileOverride || act?.guide_profiles || {};
 
@@ -2553,82 +2564,6 @@ export async function getActivityBySlugDb(slug, options = {}) {
   }
 
   if (error || !act) {
-    try {
-      const { activities, guides, getReviewsByActivity } = await import('../fixtures/data');
-      const fixture = (activities || []).find((x) => x.slug === slug);
-      if (fixture) {
-        const guide = (guides || []).find(g => g.slug === fixture.guideSlug);
-        const fixtureReviews = getReviewsByActivity
-          ? getReviewsByActivity(fixture.slug)
-          : ([]);
-        return {
-          id: fixture.slug,
-          slug: fixture.slug,
-          title: fixture.title,
-          tagline: fixture.tagline,
-          shortDescription: fixture.shortDescription,
-          description: fixture.longDescription,
-          region: fixture.region,
-          regionSlug: fixture.regionSlug,
-          category: fixture.category,
-          priceTwd: fixture.price,
-          priceLabel: fixture.priceLabel,
-          durationMinutes: fixture.durationMinutes,
-          durationDisplay: fixture.durationDisplay,
-          minParticipants: fixture.minParticipants,
-          maxParticipants: fixture.maxParticipants,
-          meetingPoint: fixture.meetingPoint,
-          meetingPointMapUrl: fixture.meetingPointMapUrl,
-          coverImageUrl: fixture.imageUrl,
-          imageUrls: fixture.galleryUrls || [],
-          inclusions: fixture.inclusions || [],
-          exclusions: fixture.exclusions || [],
-          notices: fixture.notices || [],
-          refundRules: fixture.refundRules || [],
-          safetyNotice: fixture.safetyNotice,
-          faq: fixture.faq || [],
-          goodFor: fixture.goodFor || [],
-          notGoodFor: fixture.notGoodFor || [],
-          itinerary: fixture.faq ? [] : [],
-          socialProofQuotes: fixture.socialProofQuotes || [],
-          plans: null,
-          status: 'published',
-          guide: guide ? {
-            id: guide.slug,
-            slug: guide.slug,
-            displayName: guide.displayName,
-            headline: guide.headline,
-            bio: guide.longBio || guide.shortBio,
-            region: guide.region,
-            languages: guide.languages || [],
-            specialties: guide.specialties || [],
-            profilePhotoUrl: guide.avatarUrl,
-            ratingAvg: guide.rating,
-            reviewCount: guide.reviewCount,
-            galleryUrls: guide.galleryUrls || [],
-          } : null,
-          schedules: (fixture.schedules || []).map((s, i) => ({
-            id: `${fixture.slug}-schedule-${i}`,
-            startAt: s.startAt,
-            endAt: s.endAt,
-            capacity: s.capacity,
-            bookedCount: s.bookedCount,
-            status: s.status,
-            planId: null,
-            minParticipants: s.minParticipants,
-            guideNote: null,
-          })),
-          reviews: (fixtureReviews || []).map(r => ({
-            id: r.id,
-            author: r.author,
-            city: r.city,
-            rating: r.rating,
-            text: r.text || r.comment,
-            date: r.date || r.reviewDate,
-          })),
-        };
-      }
-    } catch {}
     if (primaryQueryTimedOut && requirePrimaryResult) {
       const timeoutMessage =
         error instanceof Error
@@ -2636,6 +2571,95 @@ export async function getActivityBySlugDb(slug, options = {}) {
           : 'activities-single query timed out while loading activity detail';
       throw new Error(timeoutMessage);
     }
+
+    const shouldFallbackToFixture =
+      shouldRetryActivityDetailQuery(error) && !isPrimaryActivityNoRowError(error);
+    if (requirePrimaryResult && error && !shouldFallbackToFixture && !isPrimaryActivityNoRowError(error)) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(`activity lookup failed: ${String(error?.message || error)}`);
+    }
+
+    if (shouldFallbackToFixture) {
+      try {
+        const { activities, guides, getReviewsByActivity } = await import('../fixtures/data');
+        const fixture = (activities || []).find((x) => x.slug === slug);
+        if (fixture) {
+          const guide = (guides || []).find(g => g.slug === fixture.guideSlug);
+          const fixtureReviews = getReviewsByActivity
+            ? getReviewsByActivity(fixture.slug)
+            : ([]);
+          return {
+            id: fixture.slug,
+            slug: fixture.slug,
+            title: fixture.title,
+            tagline: fixture.tagline,
+            shortDescription: fixture.shortDescription,
+            description: fixture.longDescription,
+            region: fixture.region,
+            regionSlug: fixture.regionSlug,
+            category: fixture.category,
+            priceTwd: fixture.price,
+            priceLabel: fixture.priceLabel,
+            durationMinutes: fixture.durationMinutes,
+            durationDisplay: fixture.durationDisplay,
+            minParticipants: fixture.minParticipants,
+            maxParticipants: fixture.maxParticipants,
+            meetingPoint: fixture.meetingPoint,
+            meetingPointMapUrl: fixture.meetingPointMapUrl,
+            coverImageUrl: fixture.imageUrl,
+            imageUrls: fixture.galleryUrls || [],
+            inclusions: fixture.inclusions || [],
+            exclusions: fixture.exclusions || [],
+            notices: fixture.notices || [],
+            refundRules: fixture.refundRules || [],
+            safetyNotice: fixture.safetyNotice,
+            faq: fixture.faq || [],
+            goodFor: fixture.goodFor || [],
+            notGoodFor: fixture.notGoodFor || [],
+            itinerary: fixture.faq ? [] : [],
+            socialProofQuotes: fixture.socialProofQuotes || [],
+            plans: null,
+            status: 'published',
+            guide: guide ? {
+              id: guide.slug,
+              slug: guide.slug,
+              displayName: guide.displayName,
+              headline: guide.headline,
+              bio: guide.longBio || guide.shortBio,
+              region: guide.region,
+              languages: guide.languages || [],
+              specialties: guide.specialties || [],
+              profilePhotoUrl: guide.avatarUrl,
+              ratingAvg: guide.rating,
+              reviewCount: guide.reviewCount,
+              galleryUrls: guide.galleryUrls || [],
+            } : null,
+            schedules: (fixture.schedules || []).map((s, i) => ({
+              id: `${fixture.slug}-schedule-${i}`,
+              startAt: s.startAt,
+              endAt: s.endAt,
+              capacity: s.capacity,
+              bookedCount: s.bookedCount,
+              status: s.status,
+              planId: null,
+              minParticipants: s.minParticipants,
+              guideNote: null,
+            })),
+            reviews: (fixtureReviews || []).map(r => ({
+              id: r.id,
+              author: r.author,
+              city: r.city,
+              rating: r.rating,
+              text: r.text || r.comment,
+              date: r.date || r.reviewDate,
+            })),
+          };
+        }
+      } catch {}
+    }
+
     return null;
   }
 

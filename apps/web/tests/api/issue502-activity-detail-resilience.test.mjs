@@ -130,6 +130,156 @@ function createSupabaseStubWithHangingActivityQuery() {
   };
 }
 
+function createSupabaseStubWithPrimaryError({
+  message,
+  code,
+}) {
+  return {
+    from() {
+      return {
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        in() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        async single() {
+          return {
+            data: null,
+            error: { message, code },
+          };
+        },
+        async maybeSingle() {
+          return { data: null, error: null };
+        },
+        then(resolve, reject) {
+          return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        },
+      };
+    },
+  };
+}
+
+function createSupabaseStubForOptionalQueryFailure() {
+  const hangingQuery = () => new Promise(() => {});
+  const validActivity = {
+    id: 'act-1',
+    slug: 'safe-slug',
+    title: 'Safe Activity',
+    tagline: 'tag',
+    short_description: 'short',
+    description: 'desc',
+    region: '台北市',
+    region_slug: 'taipei',
+    category: 'walk',
+    price_twd: 1000,
+    duration_minutes: 120,
+    min_participants: 1,
+    max_participants: 10,
+    meeting_point: 'm',
+    meeting_point_map_url: null,
+    cover_image_url: null,
+    image_urls: [],
+    inclusions: [],
+    exclusions: [],
+    notices: [],
+    refund_rules: [],
+    safety_notice: null,
+    faq: [],
+    status: 'published',
+    guide_id: null,
+    guide_slug: null,
+  };
+
+  return {
+    from(table) {
+      if (table === 'activities') {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          async single() {
+            return { data: validActivity, error: null };
+          },
+        };
+      }
+
+      if (table === 'guide_profiles') {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          async maybeSingle() {
+            return hangingQuery();
+          },
+        };
+      }
+
+      if (table === 'activity_schedules') {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          in() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          then(resolve, reject) {
+            return hangingQuery().then(resolve, reject);
+          },
+        };
+      }
+
+      if (table === 'activity_reviews') {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          order() {
+            return this;
+          },
+          limit() {
+            return this;
+          },
+          then(resolve, reject) {
+            return Promise.reject(new Error('activity_reviews failed')).then(resolve, reject);
+          },
+        };
+      }
+
+      return {
+        then(resolve, reject) {
+          return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        },
+      };
+    },
+  };
+}
+
+
 test('shouldRetryActivityDetailQuery returns true for missing optional column errors', () => {
   assert.equal(
     shouldRetryActivityDetailQuery({ message: 'column activities.social_proof_quotes does not exist' }),
@@ -266,6 +416,76 @@ test('getActivityBySlugDb should fail fast on primary timeout for DB-only slug a
   } finally {
     global.setTimeout = original.setTimeout;
     global.clearTimeout = original.clearTimeout;
+    __setSupabaseClientForTest(null);
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});
+
+test('getActivityBySlugDb should fail fast on permission errors and avoid fixture fallback', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SUPABASE_URL = 'http://local.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+  __setSupabaseClientForTest(createSupabaseStubWithPrimaryError({
+    message: 'permission denied for table activities',
+  }));
+
+  try {
+    await assert.rejects(
+      () => getActivityBySlugDb('safe-slug'),
+      /permission denied for table activities/,
+    );
+  } finally {
+    __setSupabaseClientForTest(null);
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});
+
+test('getActivityBySlugDb should return null for no-row / not found responses', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SUPABASE_URL = 'http://local.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+  __setSupabaseClientForTest(createSupabaseStubWithPrimaryError({
+    message: 'JSON object requested, multiple (or no) rows returned',
+  }));
+
+  try {
+    const activity = await getActivityBySlugDb('safe-slug');
+    assert.equal(activity, null);
+  } finally {
+    __setSupabaseClientForTest(null);
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});
+
+test('getActivityBySlugDb keeps optional guide/schedule/review lookups soft-failing', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SUPABASE_URL = 'http://local.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+  __setSupabaseClientForTest(createSupabaseStubForOptionalQueryFailure());
+
+  try {
+    const activity = await getActivityBySlugDb('safe-slug', { queryTimeoutMs: 10 });
+    assert.equal(activity?.slug, 'safe-slug');
+    assert.equal(Array.isArray(activity?.schedules), true);
+    assert.equal(activity.schedules.length, 0);
+    assert.equal(Array.isArray(activity?.reviews), true);
+    assert.equal(activity.reviews.length, 0);
+  } finally {
     __setSupabaseClientForTest(null);
     process.env.SUPABASE_URL = original.SUPABASE_URL;
     process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
