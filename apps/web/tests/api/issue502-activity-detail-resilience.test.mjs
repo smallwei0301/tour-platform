@@ -223,24 +223,51 @@ test('getActivityBySlugDb retry succeeds when activities-guide_profiles relation
   process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
 });
 
-test('getActivityBySlugDb should fallback quickly when primary activities query hangs', async () => {
+test('getActivityBySlugDb should fail fast on primary timeout for DB-only slug and avoid fixture fallback', async () => {
   const original = {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    setTimeout: global.setTimeout,
+    clearTimeout: global.clearTimeout,
   };
   process.env.SUPABASE_URL = 'http://local.test';
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
 
+  const queryTimeoutMs = 10;
+  const timeoutRefs = new Set();
+  const clearedTimeoutRefs = new Set();
+  global.setTimeout = (cb, ms, ...rest) => {
+    const timeoutId = original.setTimeout(cb, ms, ...rest);
+    if (ms === queryTimeoutMs) {
+      timeoutRefs.add(timeoutId);
+    }
+    return timeoutId;
+  };
+  global.clearTimeout = (id) => {
+    if (timeoutRefs.has(id)) {
+      clearedTimeoutRefs.add(id);
+    }
+    return original.clearTimeout(id);
+  };
+
   __setSupabaseClientForTest(createSupabaseStubWithHangingActivityQuery());
 
   const startedAt = Date.now();
-  const activity = await getActivityBySlugDb('dadadaocheng-walk', { queryTimeoutMs: 10 });
-  const elapsedMs = Date.now() - startedAt;
+  try {
+    await assert.rejects(
+      () => getActivityBySlugDb('e2e-accept-test-001', { queryTimeoutMs }),
+      /\[activities-single\] timeout after 10ms/,
+    );
 
-  assert.equal(elapsedMs < 200, true);
-  assert.equal(activity == null || activity.slug === 'dadadaocheng-walk', true);
-
-  __setSupabaseClientForTest(null);
-  process.env.SUPABASE_URL = original.SUPABASE_URL;
-  process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+    const elapsedMs = Date.now() - startedAt;
+    assert.equal(elapsedMs < 200, true);
+    assert.equal(timeoutRefs.size, 1, 'one timeout should be armed for the primary query');
+    assert.equal(clearedTimeoutRefs.size, timeoutRefs.size, 'armed timeout should be cleared once request settles');
+  } finally {
+    global.setTimeout = original.setTimeout;
+    global.clearTimeout = original.clearTimeout;
+    __setSupabaseClientForTest(null);
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+  }
 });

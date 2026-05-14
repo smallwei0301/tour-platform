@@ -2311,14 +2311,21 @@ export function shouldRetryActivityDetailQuery(error) {
 
 function withActivityDetailTimeout(promise, { timeoutMs = 3500, label = 'activity-detail-query' } = {}) {
   const safeTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Number(timeoutMs) : 3500;
-  return Promise.race([
-    promise,
-    new Promise((_, reject) => {
-      setTimeout(() => {
-        reject(new Error(`[${label}] timeout after ${safeTimeoutMs}ms`));
-      }, safeTimeoutMs);
-    }),
-  ]);
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[${label}] timeout after ${safeTimeoutMs}ms`));
+    }, safeTimeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
+function isPrimaryActivityTimeoutError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('timeout after') && message.includes('activities-single');
 }
 
 function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
@@ -2513,6 +2520,8 @@ export async function getActivityBySlugDb(slug, options = {}) {
 
   let act = null;
   let error = null;
+  const requirePrimaryResult = options.required !== false;
+  let primaryQueryTimedOut = false;
   try {
     const result = await withActivityDetailTimeout(
       supabase
@@ -2526,6 +2535,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     error = result?.error || null;
   } catch (e) {
     error = e;
+    primaryQueryTimedOut = isPrimaryActivityTimeoutError(e);
   }
 
   if ((!act || error) && shouldRetryActivityDetailQuery(error)) {
@@ -2619,6 +2629,13 @@ export async function getActivityBySlugDb(slug, options = {}) {
         };
       }
     } catch {}
+    if (primaryQueryTimedOut && requirePrimaryResult) {
+      const timeoutMessage =
+        error instanceof Error
+          ? error.message
+          : 'activities-single query timed out while loading activity detail';
+      throw new Error(timeoutMessage);
+    }
     return null;
   }
 
