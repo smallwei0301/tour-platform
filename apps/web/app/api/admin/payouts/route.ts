@@ -14,12 +14,25 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('payouts')
-      .select('*, guide_profiles(display_name, email)')
+      .select('*, guide_profiles(display_name, guide_email)')
       .order('created_at', { ascending: false })
       .limit(50);
 
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    return NextResponse.json({ ok: true, data });
+
+    const normalized = (data ?? []).map((row) => {
+      const profile = row?.guide_profiles;
+      if (!profile) return row;
+      return {
+        ...row,
+        guide_profiles: {
+          ...profile,
+          email: profile.email ?? profile.guide_email ?? null,
+        },
+      };
+    });
+
+    return NextResponse.json({ ok: true, data: normalized });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
