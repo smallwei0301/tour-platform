@@ -53,12 +53,15 @@ export async function GET(
     .eq('id', orderId)
     .single();
 
-  if (!order) {
-    return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
+  if (orderError) {
+    if (orderError.code === 'PGRST116') {
+      return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
+    }
+    return Response.json(errorV2('INTERNAL_ERROR', 'Failed to load order'), { status: 500 });
   }
 
-  if (orderError) {
-    return Response.json(errorV2('INTERNAL_ERROR', 'Failed to load order'), { status: 500 });
+  if (!order) {
+    return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
   }
 
   const typedOrder = order as OrderRow;

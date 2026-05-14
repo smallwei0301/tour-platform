@@ -39,3 +39,23 @@ test('refund-preview route keeps uuid validation, not-found, and non-owner guard
   assert.match(src, /errorV2\('NOT_FOUND',\s*'Order not found'\)[\s\S]*status:\s*404/);
   assert.match(src, /errorV2\('FORBIDDEN',\s*'You are not allowed to access this order'\)[\s\S]*status:\s*403/);
 });
+
+test('refund-preview route must classify order query failures before null-order 404', async () => {
+  const src = await readRefundPreviewRoute();
+
+  assert.match(
+    src,
+    /if \(orderError\)\s*\{[\s\S]*if \(orderError\.code\s*===\s*'PGRST116'\)\s*\{[\s\S]*errorV2\('NOT_FOUND',\s*'Order not found'\)[\s\S]*status:\s*404[\s\S]*\}[\s\S]*errorV2\('INTERNAL_ERROR',\s*'Failed to load order'\)[\s\S]*status:\s*500/,
+    'order query errors must be handled before !order; only PGRST116 should map to NOT_FOUND, others to INTERNAL_ERROR'
+  );
+
+  const orderErrorIndex = src.indexOf('if (orderError)');
+  const nullOrderIndex = src.indexOf('if (!order)');
+
+  assert.notEqual(orderErrorIndex, -1, 'route should include orderError guard');
+  assert.notEqual(nullOrderIndex, -1, 'route should keep missing-order guard');
+  assert.ok(
+    orderErrorIndex < nullOrderIndex,
+    'route should handle orderError before null-order NOT_FOUND mapping'
+  );
+});
