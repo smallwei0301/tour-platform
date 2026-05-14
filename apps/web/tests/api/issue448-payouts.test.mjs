@@ -149,6 +149,16 @@ describe('Issue 448 Payouts — GET /api/admin/payouts route contract', () => {
     assert.match(src, /guide_profiles/, 'Must join guide_profiles');
     assert.match(src, /display_name|email/, 'Must include display_name or email from guide_profiles');
   });
+
+  it('Issue #502: does not project guide_profiles.email directly in admin payouts query', () => {
+    const src = readRoute(ROUTE);
+    assert.doesNotMatch(
+      src,
+      /guide_profiles\s*\(\s*display_name\s*,\s*email\s*\)/,
+      'Must not select guide_profiles(display_name, email) because production column is guide_email'
+    );
+    assert.match(src, /guide_profiles\s*\(\s*display_name\s*,\s*guide_email\s*\)/, 'Must select guide_profiles(display_name, guide_email)');
+  });
 });
 
 // ---------------------------------------------------------------------------
