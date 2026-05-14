@@ -256,9 +256,15 @@ describe('Issue 359 — AC7: POST /api/reviews verifies booking ownership', () =
     assert.match(src, /bookings/, 'Must query bookings table to verify ownership');
   });
 
-  it('AC7: checks user_id matches authenticated user', () => {
+  it('AC7: uses bookings.traveler_id ownership contract (not bookings.user_id)', () => {
     const src = readRoute('app/api/reviews/route.ts');
-    assert.match(src, /user\.id/, 'Must compare booking user_id with authenticated user.id');
+    assert.match(
+      src,
+      /\.select\(\s*['"]id,\s*traveler_id,\s*status['"]\s*\)/,
+      'Must select id, traveler_id, status from bookings'
+    );
+    assert.match(src, /booking\.traveler_id\s*!==\s*user\.id/, 'Must compare booking.traveler_id with user.id');
+    assert.doesNotMatch(src, /\.select\(\s*['"][^'"]*\buser_id\b[^'"]*['"]\s*\)/, 'Booking ownership query must not select user_id');
   });
 
   it('AC7: returns 403 FORBIDDEN if booking not owned by user', () => {

@@ -70,11 +70,11 @@ export async function POST(req: NextRequest) {
   // AC7: Verify booking ownership
   const { data: booking } = await adminSupabase
     .from('bookings')
-    .select('id, user_id, status')
+    .select('id, traveler_id, status')
     .eq('id', String(bookingId || ''))
     .single();
 
-  if (!booking || booking.user_id !== user.id) {
+  if (!booking || booking.traveler_id !== user.id) {
     return NextResponse.json(fail('FORBIDDEN', 'booking not owned by user'), { status: 403 });
   }
 
