@@ -2309,8 +2309,8 @@ export function shouldRetryActivityDetailQuery(error) {
   return false;
 }
 
-function mapActivityDetailRow(act, schedules, reviews) {
-  const gp = act?.guide_profiles || {};
+function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
+  const gp = guideProfileOverride || act?.guide_profiles || {};
 
   return {
     id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
@@ -2329,8 +2329,8 @@ function mapActivityDetailRow(act, schedules, reviews) {
     itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
     plans: act.plans || null,
     status: act.status,
-    ratingAvg: act.rating_avg ?? null,
-    reviewCount: act.review_count ?? 0,
+    ratingAvg: act.rating_avg ?? gp.rating_avg ?? null,
+    reviewCount: act.review_count ?? gp.review_count ?? 0,
     guide: {
       id: gp.id, slug: gp.slug, displayName: gp.display_name,
       headline: gp.headline, bio: gp.bio, region: gp.region,
@@ -2494,12 +2494,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules,
       safety_notice, faq, status,
-      rating_avg, review_count,
-      guide_id, guide_slug,
-      guide_profiles!activities_guide_id_fkey(
-        id, slug, display_name, headline, bio, region, languages, specialties,
-        profile_photo_url, rating_avg, review_count, gallery_urls
-      )
+      guide_id, guide_slug
     `;
 
   let { data: act, error } = await supabase
@@ -2599,6 +2594,16 @@ export async function getActivityBySlugDb(slug, options = {}) {
     return null;
   }
 
+  let guideProfile = act?.guide_profiles || null;
+  if (!guideProfile && act?.guide_id) {
+    const { data: gp } = await supabase
+      .from('guide_profiles')
+      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
+      .eq('id', act.guide_id)
+      .maybeSingle();
+    guideProfile = gp || null;
+  }
+
   const [scheduleRes, reviewsRes] = await Promise.all([
     supabase
       .from('activity_schedules')
@@ -2639,7 +2644,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
 
   const reviews = reviewsRes || [];
 
-  return mapActivityDetailRow(act, schedules, reviews);
+  return mapActivityDetailRow(act, schedules, reviews, guideProfile);
 }
 
 export async function listPublishedGuidesDb() {
