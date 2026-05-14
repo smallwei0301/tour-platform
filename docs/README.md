@@ -1,7 +1,7 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-04-20
-> 當前主線：**Booking V2 rollout / Booking Engine V2 / 安全與 CI 穩定化**
+> 最後更新：2026-05-14
+> 當前主線：**上線前就緒（Pre-launch Readiness）**：聚焦真實付款/退款/Email 證據、手動回歸與營運接管（以 #402 為核心）
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
 1. 現在專案在做什麼
@@ -15,19 +15,14 @@
 ### 專案總覽
 - `../README.md` - repo 根總覽
 
-### 當前主線：Booking V2 / rollout
-- `implementation/phase-12-mainline-matrix.md`（Issue #163：Phase 12 主線 owner/status/artifact/source-of-truth matrix）
-- `implementation/issue-96-rollout-contract.md`
-- `operations/booking-v2-b3-rollout.md`
-- `operations/booking-v2-daily-go-no-go.md`
-- `qa/booking-v2-rollout-manual-checklist.md`
-- `qa/issue-210-booking-cancel-verification-checklist.md`
-- `qa/reports/2026-04-17-booking-v2-manual-test-report.md`
-- `implementation/issue-103-metrics-dashboard-contract.md`
-- `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（POS/LINE/Web/Callback 共用 audit 欄位契約）
-- `operations/booking-v2-dashboard-data-source.md`
-- `operations/issue-168-phase-12-fk-hardening-runbook.md`（Issue #168：Phase 12 FK hardening 執行/回滾 runbook）
-- `operations/issue-179-line-liff-rollout-support-sop.md`（Issue #179：LINE / LIFF 受控放量、fallback 與 support SOP）
+### 當前主線：Pre-Launch Readiness / 金流證據 / 營運接管
+- `../README.md` - repo 根總覽與 #402 狀態
+- `NEXT_PHASE_PLAN.md` - 當前下一步與就緒判斷
+- `operations/issue-402-real-payment-refund-verification-runbook.md`（Issue #402：真實付款/退款/Email 證據 runbook）
+- `operations/booking-v2-daily-go-no-go.md`（Go/No-Go 節奏）
+- `operations/booking-v2-b3-rollout.md`（放量與風險控管）
+- `qa/booking-v2-rollout-manual-checklist.md`（手動回歸檢核）
+- `implementation/issue-96-rollout-contract.md`（readiness 契約參考）
 
 ### 技術設計
 - `04-tech/04-tech-architecture/02-database-schema.md`
@@ -71,25 +66,30 @@
 ---
 
 ## 目前 open issue 對應文件主線
-- **#96** - `implementation/issue-96-rollout-contract.md`, `operations/booking-v2-b3-rollout.md`
-- **#105** - `operations/booking-v2-daily-go-no-go.md`, `operations/reports/samples/booking-v2-go-no-go-sample.md`
-- **#117** - 目前偏 issue / code 主線，文件索引較少，後續可補 `security/` 或 `implementation/`
-- **#170** - `implementation/issue-170-audit-field-contract-and-troubleshooting.md`（定義 source_channel / correlation_id / actor-action-target-before-after 契約與排錯路徑）
-- **#175** - `implementation/issue-175-admin-pos-lite-operator-sop.md`（Admin POS Lite 營運 SOP：happy path / failure path / escalation / MVP 邊界）
-- **#181** - `implementation/issue-181-line-liff-go-no-go-readiness.md`（LINE/LIFF staged rollout checkpoints + GO/HOLD/ROLLBACK WATCH + data-quality HOLD gate）
-- **PR #128** — trusted client IP / rate limiting 修正，完成後應補回技術或安全文件
+- **#402** - `operations/issue-402-real-payment-refund-verification-runbook.md`（真實付款/退款/Email side-effect 證據 runbook）
+- **#500** - manual regression / evidence：`qa/booking-v2-rollout-manual-checklist.md`（若未涵蓋 #500 子項，需以 issue #500 記錄為主）
+- **#403** - real Google traveler session evidence（目前主要為 issue / code 討論，文件待補：建議新增後在此同步）
+- **#318** - onboarding 與營運接手文件（以 `operations/` / `security/` / `qa/` 交叉更新）
+- **#319** - CS SOP 演練（相關 SOP 文件由 `operations/` 執行中主題補齊）
+- **#320** - readiness gate / soft launch control / Admin Go-No-Go dashboard（文件索引待對齊）
+- **#504** - 統整上線證據封裝（目標來源為 issue 討論與驗證回傳）
+- **PR #501**：僅作為 SimulatePaid no-op guard，不能作為 #402 結案證據
+
+**注意：** 以上為目前就緒路徑的 source-of-truth 指引，凡未有對應實際文件者，待 issue/PR 補齊後再更新。
+
+**同樣補充：** PR #501 只做 SimulatePaid 模擬回調保護，未驗證真實付款成功/退款/Email side-effect；#402 仍為未結案 blocker。
 
 ---
 
-## 今天（2026-04-20）文件清理重點
-- 已更新根 README，改成較精簡的「當前狀態 + 索引」
+## 今天（2026-05-14）文件清理重點
+- 已更新根 README，改成精簡就緒主線地圖：PR #501 是 SimulatePaid no-op guard，不代表 #402 結案
 - 已把 docs 主線明確切成：
-  - 當前有效主線
+  - 會造成上線差異的就緒主線
   - 歷史背景
   - 待整理區塊
-- 已確認 issue #103 / #104 / #119 對應文件落地 main
-- 已確認 #96 應保留 open，文件已存在但主題尚未完結
-- 已確認 CI env guard 問題由 PR #127 修復，最新 main CI PASS
+- 已將 #402 證據路徑收斂到 `operations/issue-402-real-payment-refund-verification-runbook.md`（待人工執行後補齊實測紀錄）
+- 已同步 open issue 對應與就緒路徑（#402 / #500 / #403 / #318 / #319 / #320）
+
 
 ---
 
