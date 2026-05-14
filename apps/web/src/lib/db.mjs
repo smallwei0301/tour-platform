@@ -2309,6 +2309,36 @@ export function shouldRetryActivityDetailQuery(error) {
   return false;
 }
 
+function withActivityDetailTimeout(promise, { timeoutMs = 3500, label = 'activity-detail-query' } = {}) {
+  const safeTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Number(timeoutMs) : 3500;
+  let timeoutId;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`[${label}] timeout after ${safeTimeoutMs}ms`));
+    }, safeTimeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
+function isPrimaryActivityTimeoutError(error) {
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('timeout after') && message.includes('activities-single');
+}
+
+function isPrimaryActivityNoRowError(error) {
+  const message = String(error?.message || '').toLowerCase();
+
+  if (error?.code === 'PGRST116') return true;
+
+  return (
+    message.includes('multiple (or no) rows returned') ||
+    message.includes('no rows')
+  );
+}
+
 function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
   const gp = guideProfileOverride || act?.guide_profiles || {};
 
@@ -2497,129 +2527,177 @@ export async function getActivityBySlugDb(slug, options = {}) {
       guide_id, guide_slug
     `;
 
-  let { data: act, error } = await supabase
-    .from('activities')
-    .select(detailedSelect)
-    .eq('slug', slug)
-    .single();
+  const queryTimeoutMs = Number(options.queryTimeoutMs || 3500);
+
+  let act = null;
+  let error = null;
+  const requirePrimaryResult = options.required !== false;
+  let primaryQueryTimedOut = false;
+  try {
+    const result = await withActivityDetailTimeout(
+      supabase
+        .from('activities')
+        .select(detailedSelect)
+        .eq('slug', slug)
+        .single(),
+      { timeoutMs: queryTimeoutMs, label: 'activities-single' }
+    );
+    act = result?.data || null;
+    error = result?.error || null;
+  } catch (e) {
+    error = e;
+    primaryQueryTimedOut = isPrimaryActivityTimeoutError(e);
+  }
 
   if ((!act || error) && shouldRetryActivityDetailQuery(error)) {
-    const retryRes = await supabase
-      .from('activities')
-      .select(minimalSelect)
-      .eq('slug', slug)
-      .single();
+    const retryRes = await withActivityDetailTimeout(
+      supabase
+        .from('activities')
+        .select(minimalSelect)
+        .eq('slug', slug)
+        .single(),
+      { timeoutMs: queryTimeoutMs, label: 'activities-single-retry' }
+    );
 
     act = retryRes.data;
     error = retryRes.error;
   }
 
   if (error || !act) {
-    try {
-      const { activities, guides, getReviewsByActivity } = await import('../fixtures/data');
-      const fixture = (activities || []).find((x) => x.slug === slug);
-      if (fixture) {
-        const guide = (guides || []).find(g => g.slug === fixture.guideSlug);
-        const fixtureReviews = getReviewsByActivity
-          ? getReviewsByActivity(fixture.slug)
-          : ([]);
-        return {
-          id: fixture.slug,
-          slug: fixture.slug,
-          title: fixture.title,
-          tagline: fixture.tagline,
-          shortDescription: fixture.shortDescription,
-          description: fixture.longDescription,
-          region: fixture.region,
-          regionSlug: fixture.regionSlug,
-          category: fixture.category,
-          priceTwd: fixture.price,
-          priceLabel: fixture.priceLabel,
-          durationMinutes: fixture.durationMinutes,
-          durationDisplay: fixture.durationDisplay,
-          minParticipants: fixture.minParticipants,
-          maxParticipants: fixture.maxParticipants,
-          meetingPoint: fixture.meetingPoint,
-          meetingPointMapUrl: fixture.meetingPointMapUrl,
-          coverImageUrl: fixture.imageUrl,
-          imageUrls: fixture.galleryUrls || [],
-          inclusions: fixture.inclusions || [],
-          exclusions: fixture.exclusions || [],
-          notices: fixture.notices || [],
-          refundRules: fixture.refundRules || [],
-          safetyNotice: fixture.safetyNotice,
-          faq: fixture.faq || [],
-          goodFor: fixture.goodFor || [],
-          notGoodFor: fixture.notGoodFor || [],
-          itinerary: fixture.faq ? [] : [],
-          socialProofQuotes: fixture.socialProofQuotes || [],
-          plans: null,
-          status: 'published',
-          guide: guide ? {
-            id: guide.slug,
-            slug: guide.slug,
-            displayName: guide.displayName,
-            headline: guide.headline,
-            bio: guide.longBio || guide.shortBio,
-            region: guide.region,
-            languages: guide.languages || [],
-            specialties: guide.specialties || [],
-            profilePhotoUrl: guide.avatarUrl,
-            ratingAvg: guide.rating,
-            reviewCount: guide.reviewCount,
-            galleryUrls: guide.galleryUrls || [],
-          } : null,
-          schedules: (fixture.schedules || []).map((s, i) => ({
-            id: `${fixture.slug}-schedule-${i}`,
-            startAt: s.startAt,
-            endAt: s.endAt,
-            capacity: s.capacity,
-            bookedCount: s.bookedCount,
-            status: s.status,
-            planId: null,
-            minParticipants: s.minParticipants,
-            guideNote: null,
-          })),
-          reviews: (fixtureReviews || []).map(r => ({
-            id: r.id,
-            author: r.author,
-            city: r.city,
-            rating: r.rating,
-            text: r.text || r.comment,
-            date: r.date || r.reviewDate,
-          })),
-        };
+    if (primaryQueryTimedOut && requirePrimaryResult) {
+      const timeoutMessage =
+        error instanceof Error
+          ? error.message
+          : 'activities-single query timed out while loading activity detail';
+      throw new Error(timeoutMessage);
+    }
+
+    const shouldFallbackToFixture =
+      shouldRetryActivityDetailQuery(error) && !isPrimaryActivityNoRowError(error);
+    if (requirePrimaryResult && error && !shouldFallbackToFixture && !isPrimaryActivityNoRowError(error)) {
+      if (error instanceof Error) {
+        throw error;
       }
-    } catch {}
+      throw new Error(`activity lookup failed: ${String(error?.message || error)}`);
+    }
+
+    if (shouldFallbackToFixture) {
+      try {
+        const { activities, guides, getReviewsByActivity } = await import('../fixtures/data');
+        const fixture = (activities || []).find((x) => x.slug === slug);
+        if (fixture) {
+          const guide = (guides || []).find(g => g.slug === fixture.guideSlug);
+          const fixtureReviews = getReviewsByActivity
+            ? getReviewsByActivity(fixture.slug)
+            : ([]);
+          return {
+            id: fixture.slug,
+            slug: fixture.slug,
+            title: fixture.title,
+            tagline: fixture.tagline,
+            shortDescription: fixture.shortDescription,
+            description: fixture.longDescription,
+            region: fixture.region,
+            regionSlug: fixture.regionSlug,
+            category: fixture.category,
+            priceTwd: fixture.price,
+            priceLabel: fixture.priceLabel,
+            durationMinutes: fixture.durationMinutes,
+            durationDisplay: fixture.durationDisplay,
+            minParticipants: fixture.minParticipants,
+            maxParticipants: fixture.maxParticipants,
+            meetingPoint: fixture.meetingPoint,
+            meetingPointMapUrl: fixture.meetingPointMapUrl,
+            coverImageUrl: fixture.imageUrl,
+            imageUrls: fixture.galleryUrls || [],
+            inclusions: fixture.inclusions || [],
+            exclusions: fixture.exclusions || [],
+            notices: fixture.notices || [],
+            refundRules: fixture.refundRules || [],
+            safetyNotice: fixture.safetyNotice,
+            faq: fixture.faq || [],
+            goodFor: fixture.goodFor || [],
+            notGoodFor: fixture.notGoodFor || [],
+            itinerary: fixture.faq ? [] : [],
+            socialProofQuotes: fixture.socialProofQuotes || [],
+            plans: null,
+            status: 'published',
+            guide: guide ? {
+              id: guide.slug,
+              slug: guide.slug,
+              displayName: guide.displayName,
+              headline: guide.headline,
+              bio: guide.longBio || guide.shortBio,
+              region: guide.region,
+              languages: guide.languages || [],
+              specialties: guide.specialties || [],
+              profilePhotoUrl: guide.avatarUrl,
+              ratingAvg: guide.rating,
+              reviewCount: guide.reviewCount,
+              galleryUrls: guide.galleryUrls || [],
+            } : null,
+            schedules: (fixture.schedules || []).map((s, i) => ({
+              id: `${fixture.slug}-schedule-${i}`,
+              startAt: s.startAt,
+              endAt: s.endAt,
+              capacity: s.capacity,
+              bookedCount: s.bookedCount,
+              status: s.status,
+              planId: null,
+              minParticipants: s.minParticipants,
+              guideNote: null,
+            })),
+            reviews: (fixtureReviews || []).map(r => ({
+              id: r.id,
+              author: r.author,
+              city: r.city,
+              rating: r.rating,
+              text: r.text || r.comment,
+              date: r.date || r.reviewDate,
+            })),
+          };
+        }
+      } catch {}
+    }
+
     return null;
   }
 
   let guideProfile = act?.guide_profiles || null;
   if (!guideProfile && act?.guide_id) {
-    const { data: gp } = await supabase
-      .from('guide_profiles')
-      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
-      .eq('id', act.guide_id)
-      .maybeSingle();
+    const { data: gp } = await withActivityDetailTimeout(
+      supabase
+        .from('guide_profiles')
+        .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
+        .eq('id', act.guide_id)
+        .maybeSingle(),
+      { timeoutMs: queryTimeoutMs, label: 'guide-profile' }
+    ).catch(() => ({ data: null, error: null }));
     guideProfile = gp || null;
   }
 
   const [scheduleRes, reviewsRes] = await Promise.all([
-    supabase
-      .from('activity_schedules')
-      .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
-      .eq('activity_id', act.id)
-      .in('status', ['open', 'full'])
-      .order('start_at', { ascending: true }),
+    withActivityDetailTimeout(
+      supabase
+        .from('activity_schedules')
+        .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
+        .eq('activity_id', act.id)
+        .in('status', ['open', 'full'])
+        .order('start_at', { ascending: true }),
+      { timeoutMs: queryTimeoutMs, label: 'activity-schedules' }
+    ).catch(() => ({ data: [], error: null })),
     (async () => {
       try {
-        const { data: dbReviews, error: reviewErr } = await supabase
-          .from('activity_reviews')
-          .select('id, author, city, rating, review_text, review_date, is_verified')
-          .eq('activity_slug', act.slug)
-          .eq('status', 'approved')
-          .order('review_date', { ascending: false })
-          .limit(20);
+        const { data: dbReviews, error: reviewErr } = await withActivityDetailTimeout(
+          supabase
+            .from('activity_reviews')
+            .select('id, author, city, rating, review_text, review_date, is_verified')
+            .eq('activity_slug', act.slug)
+            .eq('status', 'approved')
+            .order('review_date', { ascending: false })
+            .limit(20),
+          { timeoutMs: queryTimeoutMs, label: 'activity-reviews' }
+        );
         if (!reviewErr && dbReviews && dbReviews.length > 0) {
           return dbReviews.map(r => ({
             id: r.id, author: r.author, city: r.city, rating: r.rating,

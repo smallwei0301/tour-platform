@@ -27,7 +27,7 @@ export async function generateMetadata(
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getActivityBySlugDb(slug).catch((): null => null);
+  const activity = await getActivityBySlugDb(slug);
   if (!activity) return notFound();
 
   const activityData = activity as typeof activity & {
