@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
   shouldRetryActivityDetailQuery,
   buildCanonicalActivityDetailPath,
@@ -126,6 +128,19 @@ test('buildCanonicalActivityDetailPath falls back to normalized region when regi
     buildCanonicalActivityDetailPath({ slug: 'dadadaocheng-walk', region: '台北市' }),
     '/activities/taipei/dadadaocheng-walk',
   );
+});
+
+test('activity detail pages should not force fixture-first DB fallback in runtime path', async () => {
+  const root = path.resolve(process.cwd());
+  const regionPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
+  const compatPage = path.join(root, 'app/activities/[slug]/page.tsx');
+  const [regionSrc, compatSrc] = await Promise.all([
+    fs.readFile(regionPage, 'utf8'),
+    fs.readFile(compatPage, 'utf8'),
+  ]);
+
+  assert.equal(regionSrc.includes('preferFixtureFirst: true'), false);
+  assert.equal(compatSrc.includes('preferFixtureFirst: true'), false);
 });
 
 test('getActivityBySlugDb retry succeeds when production lacks activity rating columns', async () => {

@@ -27,7 +27,7 @@ export async function generateMetadata(
 
 async function getCachedActivityBySlug(slug: string) {
   return unstable_cache(
-    async () => getActivityBySlugDb(slug, { preferFixtureFirst: true }),
+    async () => getActivityBySlugDb(slug),
     ['activity-detail', slug],
     { revalidate: 60, tags: [`activity:${slug}`] }
   )();
