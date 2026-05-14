@@ -38,7 +38,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const activity = await getCachedActivityBySlug(slug).catch((): null => null);
   if (!activity) return notFound();
 
-  const activityData = activity as typeof activity & { ratingAvg?: number | null; reviewCount?: number };
+  const activityData = activity as typeof activity & {
+    ratingAvg?: number | null;
+    reviewCount?: number;
+    itinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string }>;
+    socialProofQuotes?: string[];
+    goodFor?: string[];
+  };
   const guide = activity.guide;
   const actReviews = activity.reviews || [];
   const displayedSchedules = activity.schedules || [];
@@ -159,11 +165,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             </section>
 
             {/* SECTION 1.5: 詳細行程時間表 */}
-            {activity.itinerary && activity.itinerary.length > 0 && (
+            {activityData.itinerary && activityData.itinerary.length > 0 && (
               <section id="section-itinerary" className="kkd-scroll-section">
                 <h2 className="kkd-section-title">🗺 詳細行程</h2>
                 <div className="kkd-itinerary">
-                  {activity.itinerary.map((step: any, i: number) => (
+                  {activityData.itinerary.map((step: { icon?: string; title?: string; duration?: string; description?: string }, i: number) => (
                     <div key={i} className="kkd-itinerary-step">
                       <div className="kkd-itinerary-icon">{step.icon || '📍'}</div>
                       <div className="kkd-itinerary-content">
@@ -173,7 +179,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                         </div>
                         {step.description && <p className="kkd-itinerary-desc">{step.description}</p>}
                       </div>
-                      {i < activity.itinerary.length - 1 && <div className="kkd-itinerary-connector" />}
+                      {i < activityData.itinerary!.length - 1 && <div className="kkd-itinerary-connector" />}
                     </div>
                   ))}
                 </div>
@@ -189,9 +195,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               </div>
 
               {/* Social proof quote chips */}
-              {activity.socialProofQuotes && activity.socialProofQuotes.length > 0 && (
+              {activityData.socialProofQuotes && activityData.socialProofQuotes.length > 0 && (
                 <div className="kkd-quote-chips">
-                  {activity.socialProofQuotes.map((q: string, i: number) => (
+                  {activityData.socialProofQuotes.map((q: string, i: number) => (
                     <span key={i} className="kkd-quote-chip">💬 {q}</span>
                   ))}
                 </div>
@@ -239,11 +245,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 </div>
               )}
 
-              {activity.goodFor && activity.goodFor.length > 0 && (
+              {activityData.goodFor && activityData.goodFor.length > 0 && (
                 <div className="kkd-detail-block">
                   <h3 className="kkd-detail-subtitle">適合對象</h3>
                   <ul className="kkd-checklist">
-                    {activity.goodFor.map((item: string, i: number) => (
+                    {activityData.goodFor.map((item: string, i: number) => (
                       <li key={i}><span className="kkd-check">👍</span>{item}</li>
                     ))}
                   </ul>
