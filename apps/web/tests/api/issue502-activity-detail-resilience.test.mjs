@@ -314,9 +314,11 @@ test('activity detail pages should stay runtime-rendered without fixture-first/s
   const root = path.resolve(process.cwd());
   const regionPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
   const compatPage = path.join(root, 'app/activities/[slug]/page.tsx');
-  const [regionSrc, compatSrc] = await Promise.all([
+  const dbFile = path.join(root, 'src/lib/db.mjs');
+  const [regionSrc, compatSrc, dbSrc] = await Promise.all([
     fs.readFile(regionPage, 'utf8'),
     fs.readFile(compatPage, 'utf8'),
+    fs.readFile(dbFile, 'utf8'),
   ]);
 
   assert.equal(regionSrc.includes('preferFixtureFirst: true'), false);
@@ -326,6 +328,11 @@ test('activity detail pages should stay runtime-rendered without fixture-first/s
   assert.equal(regionSrc.includes("dynamic = 'force-static'"), false);
   assert.equal(compatSrc.includes("dynamic = 'force-static'"), false);
   assert.equal(regionSrc.includes('unstable_cache('), false);
+
+  // Root-cause guard for GH #502: primary detail query should avoid relational embed,
+  // so schema/relationship drift won't stall server render before first byte.
+  const primarySelectBlock = dbSrc.split('const minimalSelect = `')[1]?.split('`;')[0] || '';
+  assert.equal(primarySelectBlock.includes('guide_profiles!activities_guide_id_fkey'), false);
 });
 
 test('getActivityBySlugDb retry succeeds when production lacks activity rating columns', async () => {
