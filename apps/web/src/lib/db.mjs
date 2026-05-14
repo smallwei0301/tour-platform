@@ -2261,6 +2261,94 @@ export async function listPublishedActivitiesDb(filters = {}) {
   });
 }
 
+function normalizeRegionForActivityPath(region) {
+  if (!region || typeof region !== 'string') return 'taiwan';
+  const regionTrimmed = region.trim();
+  if (!regionTrimmed) return 'taiwan';
+
+  const map = {
+    '台北市': 'taipei',
+    '台北': 'taipei',
+    '新北市': 'new-taipei',
+    '桃園市': 'taoyuan',
+    '台中市': 'taichung',
+    '台南市': 'tainan',
+    '高雄市': 'kaohsiung',
+    '高雄': 'kaohsiung',
+    '花蓮縣': 'hualien',
+    '花蓮': 'hualien',
+  };
+
+  const mapped = map[regionTrimmed];
+  if (mapped) return mapped;
+
+  const asciiSlug = regionTrimmed
+    .toLowerCase()
+    .replace(/[^\w]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  return asciiSlug || 'taiwan';
+}
+
+export function buildCanonicalActivityDetailPath(activity = {}) {
+  const slug = typeof activity.slug === 'string' ? activity.slug.trim() : '';
+  if (!slug) return '/activities';
+
+  const regionSlug = typeof activity.regionSlug === 'string' ? activity.regionSlug.trim() : '';
+  const region = regionSlug || normalizeRegionForActivityPath(activity.region);
+  return `/activities/${encodeURIComponent(region)}/${encodeURIComponent(slug)}`;
+}
+
+export function shouldRetryActivityDetailQuery(error) {
+  const message = String(error?.message || '').toLowerCase();
+  if (!message) return false;
+
+  if (message.includes('column') && message.includes('does not exist')) return true;
+  if (message.includes('relationship') && message.includes('activities') && message.includes('guide_profiles')) return true;
+
+  return false;
+}
+
+function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
+  const gp = guideProfileOverride || act?.guide_profiles || {};
+
+  return {
+    id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
+    shortDescription: act.short_description, description: act.description,
+    region: act.region, regionSlug: act.region_slug, category: act.category,
+    priceTwd: act.price_twd, priceLabel: `NT$${act.price_twd?.toLocaleString()} / 人`,
+    durationMinutes: act.duration_minutes,
+    durationDisplay: act.duration_minutes ? `${Math.floor(act.duration_minutes/60)} 小時` : '',
+    minParticipants: act.min_participants, maxParticipants: act.max_participants,
+    meetingPoint: act.meeting_point, meetingPointMapUrl: act.meeting_point_map_url,
+    coverImageUrl: act.cover_image_url, imageUrls: act.image_urls || [],
+    inclusions: act.inclusions || [], exclusions: act.exclusions || [],
+    notices: act.notices || [], refundRules: act.refund_rules || [],
+    safetyNotice: act.safety_notice, faq: act.faq || [],
+    goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
+    itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
+    plans: act.plans || null,
+    status: act.status,
+    ratingAvg: act.rating_avg ?? gp.rating_avg ?? null,
+    reviewCount: act.review_count ?? gp.review_count ?? 0,
+    guide: {
+      id: gp.id, slug: gp.slug, displayName: gp.display_name,
+      headline: gp.headline, bio: gp.bio, region: gp.region,
+      languages: gp.languages || [], specialties: gp.specialties || [],
+      profilePhotoUrl: gp.profile_photo_url,
+      ratingAvg: gp.rating_avg, reviewCount: gp.review_count,
+      galleryUrls: gp.gallery_urls || []
+    },
+    schedules: (schedules || []).map(s => ({
+      id: s.id, startAt: s.start_at, endAt: s.end_at,
+      capacity: s.capacity, bookedCount: s.booked_count, status: s.status,
+      planId: s.plan_id || null, minParticipants: s.min_participants || 1,
+      guideNote: s.guide_note || null,
+    })),
+    reviews,
+  };
+}
+
 async function getFixtureActivityBySlug(slug) {
   try {
     const { activities, guides, getReviewsByActivity } = await import('../fixtures/data');
@@ -2385,9 +2473,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     if (fixtureFirst) return fixtureFirst;
   }
 
-  const { data: act, error } = await supabase
-    .from('activities')
-    .select(`
+  const detailedSelect = `
       id, slug, title, tagline, short_description, description, region, region_slug, category,
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
@@ -2400,9 +2486,33 @@ export async function getActivityBySlugDb(slug, options = {}) {
         id, slug, display_name, headline, bio, region, languages, specialties,
         profile_photo_url, rating_avg, review_count, gallery_urls
       )
-    `)
+    `;
+
+  const minimalSelect = `
+      id, slug, title, tagline, short_description, description, region, region_slug, category,
+      price_twd, duration_minutes, min_participants, max_participants,
+      meeting_point, meeting_point_map_url, cover_image_url, image_urls,
+      inclusions, exclusions, notices, refund_rules,
+      safety_notice, faq, status,
+      guide_id, guide_slug
+    `;
+
+  let { data: act, error } = await supabase
+    .from('activities')
+    .select(detailedSelect)
     .eq('slug', slug)
     .single();
+
+  if ((!act || error) && shouldRetryActivityDetailQuery(error)) {
+    const retryRes = await supabase
+      .from('activities')
+      .select(minimalSelect)
+      .eq('slug', slug)
+      .single();
+
+    act = retryRes.data;
+    error = retryRes.error;
+  }
 
   if (error || !act) {
     try {
@@ -2484,7 +2594,15 @@ export async function getActivityBySlugDb(slug, options = {}) {
     return null;
   }
 
-  const gp = act.guide_profiles || {};
+  let guideProfile = act?.guide_profiles || null;
+  if (!guideProfile && act?.guide_id) {
+    const { data: gp } = await supabase
+      .from('guide_profiles')
+      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
+      .eq('id', act.guide_id)
+      .maybeSingle();
+    guideProfile = gp || null;
+  }
 
   const [scheduleRes, reviewsRes] = await Promise.all([
     supabase
@@ -2526,42 +2644,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
 
   const reviews = reviewsRes || [];
 
-  return {
-    id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
-    shortDescription: act.short_description, description: act.description,
-    region: act.region, regionSlug: act.region_slug, category: act.category,
-    priceTwd: act.price_twd, priceLabel: `NT$${act.price_twd?.toLocaleString()} / 人`,
-    durationMinutes: act.duration_minutes,
-    durationDisplay: act.duration_minutes ? `${Math.floor(act.duration_minutes/60)} 小時` : '',
-    minParticipants: act.min_participants, maxParticipants: act.max_participants,
-    meetingPoint: act.meeting_point, meetingPointMapUrl: act.meeting_point_map_url,
-    coverImageUrl: act.cover_image_url, imageUrls: act.image_urls || [],
-    inclusions: act.inclusions || [], exclusions: act.exclusions || [],
-    notices: act.notices || [], refundRules: act.refund_rules || [],
-    safetyNotice: act.safety_notice, faq: act.faq || [],
-    goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
-    itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
-    plans: act.plans || null,
-    status: act.status,
-    ratingAvg: act.rating_avg ?? null,
-    reviewCount: act.review_count ?? 0,
-    guide: {
-      id: gp.id, slug: gp.slug, displayName: gp.display_name,
-      headline: gp.headline, bio: gp.bio, region: gp.region,
-      languages: gp.languages || [], specialties: gp.specialties || [],
-      profilePhotoUrl: gp.profile_photo_url,
-      ratingAvg: gp.rating_avg, reviewCount: gp.review_count,
-      galleryUrls: gp.gallery_urls || []
-    },
-    schedules: (schedules || []).map(s => ({
-      id: s.id, startAt: s.start_at, endAt: s.end_at,
-      capacity: s.capacity, bookedCount: s.booked_count, status: s.status,
-      planId: s.plan_id || null, minParticipants: s.min_participants || 1,
-      guideNote: s.guide_note || null,
-    })),
-    // Reviews: query from activity_reviews table (migration 003), fallback to fixtures
-    reviews,
-  };
+  return mapActivityDetailRow(act, schedules, reviews, guideProfile);
 }
 
 export async function listPublishedGuidesDb() {
