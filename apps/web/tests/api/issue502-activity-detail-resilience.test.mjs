@@ -100,6 +100,36 @@ function createSupabaseStubForRetry({ firstErrorMessage }) {
   };
 }
 
+function createSupabaseStubWithHangingActivityQuery() {
+  return {
+    from() {
+      return {
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        in() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        async single() {
+          return new Promise(() => {});
+        },
+        async maybeSingle() {
+          return { data: null, error: null };
+        },
+      };
+    },
+  };
+}
+
 test('shouldRetryActivityDetailQuery returns true for missing optional column errors', () => {
   assert.equal(
     shouldRetryActivityDetailQuery({ message: 'column activities.social_proof_quotes does not exist' }),
@@ -187,6 +217,28 @@ test('getActivityBySlugDb retry succeeds when activities-guide_profiles relation
 
   assert.equal(activity?.slug, 'safe-slug');
   assert.equal(activity?.guide?.slug ?? null, null);
+
+  __setSupabaseClientForTest(null);
+  process.env.SUPABASE_URL = original.SUPABASE_URL;
+  process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+});
+
+test('getActivityBySlugDb should fallback quickly when primary activities query hangs', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SUPABASE_URL = 'http://local.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+  __setSupabaseClientForTest(createSupabaseStubWithHangingActivityQuery());
+
+  const startedAt = Date.now();
+  const activity = await getActivityBySlugDb('dadadaocheng-walk', { queryTimeoutMs: 10 });
+  const elapsedMs = Date.now() - startedAt;
+
+  assert.equal(elapsedMs < 200, true);
+  assert.equal(activity == null || activity.slug === 'dadadaocheng-walk', true);
 
   __setSupabaseClientForTest(null);
   process.env.SUPABASE_URL = original.SUPABASE_URL;

@@ -2309,6 +2309,18 @@ export function shouldRetryActivityDetailQuery(error) {
   return false;
 }
 
+function withActivityDetailTimeout(promise, { timeoutMs = 3500, label = 'activity-detail-query' } = {}) {
+  const safeTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? Number(timeoutMs) : 3500;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`[${label}] timeout after ${safeTimeoutMs}ms`));
+      }, safeTimeoutMs);
+    }),
+  ]);
+}
+
 function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
   const gp = guideProfileOverride || act?.guide_profiles || {};
 
@@ -2497,18 +2509,34 @@ export async function getActivityBySlugDb(slug, options = {}) {
       guide_id, guide_slug
     `;
 
-  let { data: act, error } = await supabase
-    .from('activities')
-    .select(detailedSelect)
-    .eq('slug', slug)
-    .single();
+  const queryTimeoutMs = Number(options.queryTimeoutMs || 3500);
+
+  let act = null;
+  let error = null;
+  try {
+    const result = await withActivityDetailTimeout(
+      supabase
+        .from('activities')
+        .select(detailedSelect)
+        .eq('slug', slug)
+        .single(),
+      { timeoutMs: queryTimeoutMs, label: 'activities-single' }
+    );
+    act = result?.data || null;
+    error = result?.error || null;
+  } catch (e) {
+    error = e;
+  }
 
   if ((!act || error) && shouldRetryActivityDetailQuery(error)) {
-    const retryRes = await supabase
-      .from('activities')
-      .select(minimalSelect)
-      .eq('slug', slug)
-      .single();
+    const retryRes = await withActivityDetailTimeout(
+      supabase
+        .from('activities')
+        .select(minimalSelect)
+        .eq('slug', slug)
+        .single(),
+      { timeoutMs: queryTimeoutMs, label: 'activities-single-retry' }
+    );
 
     act = retryRes.data;
     error = retryRes.error;
@@ -2596,30 +2624,39 @@ export async function getActivityBySlugDb(slug, options = {}) {
 
   let guideProfile = act?.guide_profiles || null;
   if (!guideProfile && act?.guide_id) {
-    const { data: gp } = await supabase
-      .from('guide_profiles')
-      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
-      .eq('id', act.guide_id)
-      .maybeSingle();
+    const { data: gp } = await withActivityDetailTimeout(
+      supabase
+        .from('guide_profiles')
+        .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
+        .eq('id', act.guide_id)
+        .maybeSingle(),
+      { timeoutMs: queryTimeoutMs, label: 'guide-profile' }
+    ).catch(() => ({ data: null, error: null }));
     guideProfile = gp || null;
   }
 
   const [scheduleRes, reviewsRes] = await Promise.all([
-    supabase
-      .from('activity_schedules')
-      .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
-      .eq('activity_id', act.id)
-      .in('status', ['open', 'full'])
-      .order('start_at', { ascending: true }),
+    withActivityDetailTimeout(
+      supabase
+        .from('activity_schedules')
+        .select('id, start_at, end_at, capacity, booked_count, status, plan_id, min_participants, guide_note')
+        .eq('activity_id', act.id)
+        .in('status', ['open', 'full'])
+        .order('start_at', { ascending: true }),
+      { timeoutMs: queryTimeoutMs, label: 'activity-schedules' }
+    ).catch(() => ({ data: [], error: null })),
     (async () => {
       try {
-        const { data: dbReviews, error: reviewErr } = await supabase
-          .from('activity_reviews')
-          .select('id, author, city, rating, review_text, review_date, is_verified')
-          .eq('activity_slug', act.slug)
-          .eq('status', 'approved')
-          .order('review_date', { ascending: false })
-          .limit(20);
+        const { data: dbReviews, error: reviewErr } = await withActivityDetailTimeout(
+          supabase
+            .from('activity_reviews')
+            .select('id, author, city, rating, review_text, review_date, is_verified')
+            .eq('activity_slug', act.slug)
+            .eq('status', 'approved')
+            .order('review_date', { ascending: false })
+            .limit(20),
+          { timeoutMs: queryTimeoutMs, label: 'activity-reviews' }
+        );
         if (!reviewErr && dbReviews && dbReviews.length > 0) {
           return dbReviews.map(r => ({
             id: r.id, author: r.author, city: r.city, rating: r.rating,
