@@ -141,6 +141,8 @@ test('activity detail pages should stay runtime-rendered without fixture-first/s
 
   assert.equal(regionSrc.includes('preferFixtureFirst: true'), false);
   assert.equal(compatSrc.includes('preferFixtureFirst: true'), false);
+  assert.equal(regionSrc.includes("dynamic = 'force-dynamic'"), true);
+  assert.equal(compatSrc.includes("dynamic = 'force-dynamic'"), true);
   assert.equal(regionSrc.includes("dynamic = 'force-static'"), false);
   assert.equal(compatSrc.includes("dynamic = 'force-static'"), false);
   assert.equal(regionSrc.includes('unstable_cache('), false);
