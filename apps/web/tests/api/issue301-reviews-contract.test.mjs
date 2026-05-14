@@ -150,6 +150,15 @@ describe('Issue 359 — AC3: POST /api/reviews submit route', () => {
     assert.match(src, /status:\s*['"]pending['"]/i, "Must insert review with status: 'pending'");
   });
 
+  it('AC3: inserts review with non-null text id for activity_reviews.id contract', () => {
+    const src = readRoute('app/api/reviews/route.ts');
+    assert.match(
+      src,
+      /\.insert\(\s*\{[\s\S]*\bid\s*:\s*[^,}\n]+/m,
+      'Must include id in activity_reviews insert payload'
+    );
+  });
+
   it('AC3: returns 201 on success', () => {
     const src = readRoute('app/api/reviews/route.ts');
     assert.match(src, /status:\s*201/, 'Must return HTTP 201 on success');
