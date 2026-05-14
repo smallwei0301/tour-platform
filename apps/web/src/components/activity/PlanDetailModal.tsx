@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState } from 'react';
 
@@ -191,11 +192,10 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                     <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: '#374151' }}>
                       {item.text}
                       {item.imageUrl && (
-                        <img
+                        <Image
                           src={item.imageUrl}
                           alt=""
-                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }}
-                        />
+                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }} width={1200} height={675} />
                       )}
                     </li>
                   ))}

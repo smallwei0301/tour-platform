@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState } from 'react';
 
@@ -43,7 +44,7 @@ export function ActivityHero({
     <div className={className} style={containerStyle}>
       {hasValidImage ? (
         <>
-          <img
+          <Image
             src={imageUrl}
             alt={`${title} 封面`}
             style={{
@@ -53,8 +54,7 @@ export function ActivityHero({
               display: 'block',
             }}
             onError={() => setImageError(true)}
-            loading="eager"
-          />
+            loading="eager" width={1200} height={675} />
           {/* Overlay gradient for better text readability */}
           <div
             style={{

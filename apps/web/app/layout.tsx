@@ -1,8 +1,23 @@
+import { Inter, Noto_Sans_TC } from 'next/font/google';
 import './globals.css';
 import { Navbar } from '../src/components/layout/Navbar';
 import { Footer } from '../src/components/layout/Footer';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+
+const notoSans = Noto_Sans_TC({
+  subsets: ['latin'],
+  weight: ['400', '500', '700', '900'],
+  display: 'swap',
+  variable: '--font-noto-sans-tc',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+  variable: '--font-inter',
+});
 
 export const metadata = {
   title: 'Tour Platform — 台灣在地導遊平台',
@@ -12,12 +27,7 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-Hant">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
-      </head>
-      <body>
+      <body className={`${notoSans.variable} ${inter.variable}`}>
         <Navbar />
         {children}
         <Footer />

@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState, useRef, useCallback } from 'react';
 import { csrfHeaders } from '../../lib/csrf-client';
@@ -196,11 +197,10 @@ export function ImageUpload({
             marginBottom: 12,
           }}
         >
-          <img
+          <Image
             src={displayUrl}
             alt="預覽"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} width={1200} height={675} />
         </div>
       )}
 

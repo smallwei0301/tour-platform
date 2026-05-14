@@ -1,6 +1,7 @@
 'use client';
+import Image from 'next/image';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
@@ -32,10 +33,9 @@ export default function WishlistPage() {
       }
       await fetchWishlist();
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router, fetchWishlist]);
 
-  async function fetchWishlist() {
+  const fetchWishlist = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -55,7 +55,7 @@ export default function WishlistPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [router]);
 
   async function handleRemove(activityId: string) {
     setRemovingId(activityId);
@@ -85,11 +85,10 @@ export default function WishlistPage() {
               className="flex items-center gap-4 border rounded-lg p-4 hover:bg-gray-50 transition"
             >
               {item.coverImageUrl && (
-                <img
+                <Image
                   src={item.coverImageUrl}
                   alt={item.title}
-                  className="w-20 h-16 object-cover rounded"
-                />
+                  className="w-20 h-16 object-cover rounded" width={1200} height={675} />
               )}
               <div className="flex-1 min-w-0">
                 <a

@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState } from 'react';
 
@@ -42,7 +43,7 @@ export function GalleryImage({
   }
 
   return (
-    <img
+    <Image
       src={url}
       alt={alt}
       style={{
@@ -52,7 +53,6 @@ export function GalleryImage({
         borderRadius: 10,
       }}
       loading="lazy"
-      onError={() => setError(true)}
-    />
+      onError={() => setError(true)} width={1200} height={675} />
   );
 }
