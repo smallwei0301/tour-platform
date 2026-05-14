@@ -130,7 +130,7 @@ test('buildCanonicalActivityDetailPath falls back to normalized region when regi
   );
 });
 
-test('activity detail pages should not force fixture-first DB fallback in runtime path', async () => {
+test('activity detail pages should stay runtime-rendered without fixture-first/static-cache lock-ins', async () => {
   const root = path.resolve(process.cwd());
   const regionPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
   const compatPage = path.join(root, 'app/activities/[slug]/page.tsx');
@@ -141,6 +141,11 @@ test('activity detail pages should not force fixture-first DB fallback in runtim
 
   assert.equal(regionSrc.includes('preferFixtureFirst: true'), false);
   assert.equal(compatSrc.includes('preferFixtureFirst: true'), false);
+  assert.equal(regionSrc.includes("dynamic = 'force-dynamic'"), true);
+  assert.equal(compatSrc.includes("dynamic = 'force-dynamic'"), true);
+  assert.equal(regionSrc.includes("dynamic = 'force-static'"), false);
+  assert.equal(compatSrc.includes("dynamic = 'force-static'"), false);
+  assert.equal(regionSrc.includes('unstable_cache('), false);
 });
 
 test('getActivityBySlugDb retry succeeds when production lacks activity rating columns', async () => {
