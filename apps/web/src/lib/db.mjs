@@ -2222,8 +2222,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
       price_twd, duration_minutes, min_participants, max_participants,
       cover_image_url, status, published_at,
       rating_avg, review_count,
-      guide_id, guide_slug,
-      guide_profiles!activities_guide_id_fkey(display_name, profile_photo_url, rating_avg, review_count, slug)
+      guide_id, guide_slug
     `)
     .eq('status', 'published')
     .order('published_at', { ascending: false });
@@ -2235,18 +2234,32 @@ export async function listPublishedActivitiesDb(filters = {}) {
   const { data, error } = await query;
   if (error) throw new Error(error.message);
 
-  return (data || []).map(r => ({
-    id: r.id, slug: r.slug, title: r.title, tagline: r.tagline,
-    shortDescription: r.short_description, region: r.region, regionSlug: r.region_slug,
-    category: r.category, priceTwd: r.price_twd, durationMinutes: r.duration_minutes,
-    minParticipants: r.min_participants, maxParticipants: r.max_participants,
-    coverImageUrl: r.cover_image_url, status: r.status,
-    guideName: r.guide_profiles?.display_name || '',
-    guideSlug: r.guide_slug || r.guide_profiles?.slug || '',
-    guideAvatarUrl: r.guide_profiles?.profile_photo_url || '',
-    ratingAvg: r.rating_avg ?? null,
-    reviewCount: r.review_count ?? 0
-  }));
+  const guideIds = [...new Set((data || []).map((r) => r.guide_id).filter(Boolean))];
+  let guideMap = new Map();
+  if (guideIds.length > 0) {
+    const { data: guides, error: guidesError } = await supabase
+      .from('guide_profiles')
+      .select('id, slug, display_name, profile_photo_url')
+      .in('id', guideIds);
+    if (guidesError) throw new Error(guidesError.message);
+    guideMap = new Map((guides || []).map((g) => [g.id, g]));
+  }
+
+  return (data || []).map(r => {
+    const guide = guideMap.get(r.guide_id) || null;
+    return {
+      id: r.id, slug: r.slug, title: r.title, tagline: r.tagline,
+      shortDescription: r.short_description, region: r.region, regionSlug: r.region_slug,
+      category: r.category, priceTwd: r.price_twd, durationMinutes: r.duration_minutes,
+      minParticipants: r.min_participants, maxParticipants: r.max_participants,
+      coverImageUrl: r.cover_image_url, status: r.status,
+      guideName: guide?.display_name || '',
+      guideSlug: r.guide_slug || guide?.slug || '',
+      guideAvatarUrl: guide?.profile_photo_url || '',
+      ratingAvg: r.rating_avg ?? null,
+      reviewCount: r.review_count ?? 0
+    };
+  });
 }
 
 async function getFixtureActivityBySlug(slug) {

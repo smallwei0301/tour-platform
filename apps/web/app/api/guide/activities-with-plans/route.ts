@@ -10,7 +10,7 @@ type ActivityRelation = {
   id: string;
   title: string | null;
   slug: string | null;
-  is_active: boolean | null;
+  status: string | null;
   guide_id: string;
 };
 
@@ -45,12 +45,12 @@ export async function GET(req: Request) {
           id,
           title,
           slug,
-          is_active,
+          status,
           guide_id
         )
       `)
       .eq('activities.guide_id', session.guideId)
-      .eq('activities.is_active', true)
+      .in('activities.status', ['active', 'published'])
       .in('status', ['active', 'published'])
       .order('created_at', { ascending: true });
 
