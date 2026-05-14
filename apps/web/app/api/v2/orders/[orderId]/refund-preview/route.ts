@@ -9,12 +9,15 @@ function isValidUuid(str: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 }
 
+type ScheduleRow = { start_at: string | null };
+
 type OrderRow = {
   id: string;
   user_id: string | null;
   total_twd: number;
   status: string;
-  tour_start_at: string | null;
+  schedule_id: string | null;
+  activity_schedules: ScheduleRow | ScheduleRow[] | null;
 };
 
 type PolicyRow = {
@@ -46,11 +49,18 @@ export async function GET(
   // Fetch order
   const { data: order, error: orderError } = await db
     .from('orders')
-    .select('id, user_id, total_twd, status, tour_start_at')
+    .select('id, user_id, total_twd, status, schedule_id, activity_schedules(start_at)')
     .eq('id', orderId)
     .single();
 
-  if (orderError || !order) {
+  if (orderError) {
+    if (orderError.code === 'PGRST116') {
+      return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
+    }
+    return Response.json(errorV2('INTERNAL_ERROR', 'Failed to load order'), { status: 500 });
+  }
+
+  if (!order) {
     return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
   }
 
@@ -100,7 +110,12 @@ export async function GET(
 
   const typedPolicy = policy as PolicyRow;
 
-  if (!typedOrder.tour_start_at) {
+  const schedule = Array.isArray(typedOrder.activity_schedules)
+    ? typedOrder.activity_schedules[0]
+    : typedOrder.activity_schedules;
+  const tourStartAt = schedule?.start_at ?? null;
+
+  if (!tourStartAt) {
     return Response.json(successV2({
       eligible: false,
       refundable_amount: 0,
@@ -112,7 +127,7 @@ export async function GET(
 
   const result = calculateRefundAmount(
     typedOrder.total_twd,
-    new Date(typedOrder.tour_start_at),
+    new Date(tourStartAt),
     { version: typedPolicy.version, tiers: typedPolicy.tiers }
   );
 
