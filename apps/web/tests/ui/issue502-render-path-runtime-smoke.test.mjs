@@ -54,7 +54,7 @@ function loadCjsModule({ filePath, source, mockMap }) {
 }
 
 test('GH-502 render-path isolation: module import + metadata + component render + route behavior', async () => {
-  process.env.GH502_RENDER_PROBE_MODE = '1';
+  process.env.GH502_RENDER_PROBE_MODE = '0';
 
   const regionPagePath = path.join(ROOT, 'app/activities/[region]/[slug]/page.tsx');
   const compatPagePath = path.join(ROOT, 'app/activities/[slug]/page.tsx');
@@ -79,9 +79,9 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   };
 
   const activityFixture = {
-    id: 'probe-activity-id',
-    slug: '__render_probe__',
-    title: 'GH502 Render Probe Activity',
+    id: 'db-activity-id',
+    slug: 'real-slug',
+    title: 'DB Activity Title',
     tagline: 'render-path probe',
     shortDescription: 'Probe short description',
     description: 'Probe long description',
@@ -109,13 +109,11 @@ test('GH-502 render-path isolation: module import + metadata + component render 
     'next/navigation': nextNavigationMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../src/lib/db.mjs': {
-      getActivityBySlugDb: async () => {
-        throw new Error('DB helper should not be called for probe slug');
-      },
+      getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }),
     },
     '../../../src/lib/db.mjs': {
-      getActivityBySlugDb: async () => ({ slug: '__render_probe__', regionSlug: 'taipei', region: '台北市' }),
-      buildCanonicalActivityDetailPath: () => '/activities/taipei/__render_probe__',
+      getActivityBySlugDb: async () => ({ slug: 'real-slug', regionSlug: 'taipei', region: '台北市' }),
+      buildCanonicalActivityDetailPath: () => '/activities/taipei/real-slug',
     },
     '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
     '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
@@ -134,13 +132,13 @@ test('GH-502 render-path isolation: module import + metadata + component render 
     mockMap,
   });
 
-  const metadata = await regionModule.generateMetadata({ params: Promise.resolve({ region: 'taipei', slug: '__render_probe__' }) });
-  assert.equal(metadata.title, '__render_probe__ | Tour Platform');
+  const metadata = await regionModule.generateMetadata({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
+  assert.equal(metadata.title, 'real-slug | Tour Platform');
   assert.equal(metadata.description, '探索台灣在地導遊行程');
 
-  const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: '__render_probe__' }) });
+  const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
   const html = renderToStaticMarkup(element);
-  assert.equal(html.includes('GH502 Render Probe Activity'), true);
+  assert.equal(html.includes('DB Activity Title'), true);
   assert.equal(html.includes('data-testid="activity-detail-title"'), true);
   assert.equal(html.includes('DatePlanSection'), true);
   assert.equal(notFoundCalled, false);
@@ -153,15 +151,60 @@ test('GH-502 render-path isolation: module import + metadata + component render 
 
   redirectTarget = null;
   await assert.rejects(
-    () => compatModule.default({ params: Promise.resolve({ slug: '__render_probe__' }) }),
+    () => compatModule.default({ params: Promise.resolve({ slug: 'real-slug' }) }),
     /REDIRECT_CALLED/,
   );
-  assert.equal(redirectTarget, '/activities/taipei/__render_probe__');
+  assert.equal(redirectTarget, '/activities/taipei/real-slug');
 
   assert.equal(regionModule.dynamic, 'force-dynamic');
   assert.equal(regionModule.revalidate, 60);
   assert.equal(compatModule.dynamic, 'force-dynamic');
   assert.equal(compatModule.revalidate, 60);
+});
+
+test('GH-502 probe safety: production-like env must not serve fake probe activity', async () => {
+  process.env.GH502_RENDER_PROBE_MODE = '1';
+  process.env.NODE_ENV = 'production';
+
+  const regionPagePath = path.join(ROOT, 'app/activities/[region]/[slug]/page.tsx');
+  const regionSrc = await fs.readFile(regionPagePath, 'utf8');
+
+  let notFoundCalled = false;
+  const nextNavigationMock = {
+    notFound: () => {
+      notFoundCalled = true;
+      throw new Error('NOT_FOUND_CALLED');
+    },
+  };
+
+  const mockMap = {
+    'next/navigation': nextNavigationMock,
+    'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
+    '../../../../src/lib/db.mjs': {
+      getActivityBySlugDb: async () => null,
+    },
+    '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
+    '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
+    '../../../../src/components/activity/DatePlanSection': { DatePlanSection: () => React.createElement('div', null, 'DatePlanSection') },
+    '../../../../src/components/activity/ActivityBottomBar': { ActivityBottomBar: () => React.createElement('div', null, 'BottomBar') },
+    '../../../../src/components/activity/SectionAnchorNav': { SectionAnchorNav: () => React.createElement('div', null, 'SectionAnchorNav') },
+    '../../../../src/components/activity/ImageCarousel': { ImageCarousel: () => React.createElement('div', null, 'ImageCarousel') },
+    '../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div', null, 'ActivityQASection') },
+    react: React,
+    'react/jsx-runtime': require('react/jsx-runtime'),
+  };
+
+  const regionModule = loadCjsModule({
+    filePath: regionPagePath,
+    source: transpileTsxToCjs(regionSrc, regionPagePath),
+    mockMap,
+  });
+
+  await assert.rejects(
+    () => regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: '__render_probe__' }) }),
+    /NOT_FOUND_CALLED/,
+  );
+  assert.equal(notFoundCalled, true);
 });
 
 test('GH-502 render-path isolation: non-probe render path uses DB result and does not fallback to 404 shell', async () => {
