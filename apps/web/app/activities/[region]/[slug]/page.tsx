@@ -15,6 +15,21 @@ import { ActivityQASection } from '../../../../src/components/activity/ActivityQ
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
+const RENDER_ACTIVITY_TIMEOUT_MS = 8000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutRef: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    timeoutRef = setTimeout(() => {
+      reject(new Error(`[${label}] timeout after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]).finally(() => {
+    if (timeoutRef) clearTimeout(timeoutRef);
+  }) as Promise<T>;
+}
+
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {
@@ -27,7 +42,18 @@ export async function generateMetadata(
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ region: string; slug: string }> }) {
   const { slug } = await params;
-  const activity = await getActivityBySlugDb(slug);
+
+  let activity: Awaited<ReturnType<typeof getActivityBySlugDb>>;
+  try {
+    activity = await withTimeout(
+      getActivityBySlugDb(slug),
+      RENDER_ACTIVITY_TIMEOUT_MS,
+      'activity-detail-render',
+    );
+  } catch {
+    return notFound();
+  }
+
   if (!activity) return notFound();
 
   const activityData = activity as typeof activity & {
