@@ -268,15 +268,36 @@ describe('Issue 359 — AC7: POST /api/reviews verifies booking ownership', () =
     assert.match(src, /bookings/, 'Must query bookings table to verify ownership');
   });
 
-  it('AC7: uses bookings.traveler_id ownership contract (not bookings.user_id)', () => {
+  it('AC7: uses bookings.traveler_id ownership contract, with orders.user_id fallback for legacy orderId payload', () => {
     const src = readRoute('app/api/reviews/route.ts');
     assert.match(
       src,
-      /\.select\(\s*['"]id,\s*traveler_id,\s*status['"]\s*\)/,
-      'Must select id, traveler_id, status from bookings'
+      /\.from\('bookings'\)[\s\S]*\.select\(\s*['"]id,\s*traveler_id,\s*status['"]\s*\)/,
+      'Must query bookings with traveler_id ownership fields'
     );
-    assert.match(src, /booking\.traveler_id\s*!==\s*user\.id/, 'Must compare booking.traveler_id with user.id');
-    assert.doesNotMatch(src, /\.select\(\s*['"][^'"]*\buser_id\b[^'"]*['"]\s*\)/, 'Booking ownership query must not select user_id');
+    assert.match(src, /bookingOwned\s*=\s*Boolean\(booking\s*&&\s*booking\.traveler_id\s*===\s*user\.id\)/,
+      'Must perform primary booking owner check with traveler_id');
+    assert.match(
+      src,
+      /\.from\('orders'\)[\s\S]*\.select\(\s*['"]id,\s*user_id,\s*status['"]\s*\)/,
+      'Must support orders ownership fallback using orders.user_id'
+    );
+    assert.match(src, /if \(!booking\)/, 'Must use fallback order lookup only when booking lookup failed');
+    assert.doesNotMatch(
+      src,
+      /\.from\('orders'\)[\s\S]*\.select\(\s*['"]id,\s*user_id,\s*status,\s*traveler_id|traveler_id\s*\]/,
+      'Fallback must not reference orders.traveler_id'
+    );
+  });
+
+  it('AC7: route forbids non-owned existing booking even when fallback order belongs to another traveler', () => {
+    const src = readRoute('app/api/reviews/route.ts');
+    assert.match(src, /!booking && order\?\.user_id === user\.id/, 'Fallback gate should be coupled with !booking');
+    assert.doesNotMatch(
+      src,
+      /Boolean\(\s*order\.user_id\s*===\s*user\.id\s*\)/,
+      'Must not authorize by order owner when booking exists (must gate by !booking)'
+    );
   });
 
   it('AC7: returns 403 FORBIDDEN if booking not owned by user', () => {

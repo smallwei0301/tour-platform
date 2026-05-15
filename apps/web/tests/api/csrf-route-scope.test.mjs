@@ -77,3 +77,27 @@ test('me mutation route with csrf token passes csrf gate (positive gate)', () =>
   // Expected to pass middleware CSRF gate and continue as NextResponse.next().
   assert.equal(Number(result.stdout.trim()), 200);
 });
+
+test('reviews route without csrf token is blocked (mutation route)', () => {
+  const result = runMiddleware({
+    url: '/api/reviews',
+    method: 'POST',
+    cookie: 'sb-access-token=mock-user-session',
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(Number(result.stdout.trim()), 403);
+});
+
+test('reviews route with csrf token passes csrf gate (positive gate)', () => {
+  const token = 'c'.repeat(64);
+  const result = runMiddleware({
+    url: '/api/reviews',
+    method: 'POST',
+    cookie: `sb-access-token=mock-user-session; tp_csrf=${token}`,
+    csrfHeader: token,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(Number(result.stdout.trim()), 200);
+});
