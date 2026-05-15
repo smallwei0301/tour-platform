@@ -12,9 +12,9 @@ const MIGRATION_FILE = path.resolve(__dirname, '../../../../supabase/migrations/
 test('migration repair for request_id exists and is idempotent', () => {
   assert.ok(fs.existsSync(MIGRATION_FILE), `migration must exist: ${MIGRATION_FILE}`);
   const sql = fs.readFileSync(MIGRATION_FILE, 'utf8');
-  assert.match(sql, /ALTER TABLE\s+refund_requests[\s\S]*ADD COLUMN IF NOT EXISTS\s+request_id\s+text;/i);
+  assert.match(sql, /ALTER TABLE\s+(?:public\.)?refund_requests[\s\S]*ADD COLUMN IF NOT EXISTS\s+request_id\s+text;/i);
   assert.match(sql, /CREATE UNIQUE INDEX IF NOT EXISTS\s+refund_requests_order_request_id_unique/i);
-  assert.match(sql, /ON\s+refund_requests\(order_id,\s*request_id\)/i);
+  assert.match(sql, /ON\s+(?:public\.)?refund_requests\(order_id,\s*request_id\)/i);
 });
 
 test('requestId is required for refund request', async () => {
