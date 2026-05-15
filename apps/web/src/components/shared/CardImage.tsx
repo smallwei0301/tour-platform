@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState } from 'react';
 
@@ -45,12 +46,11 @@ export function CardImage({
   }
 
   return (
-    <img
+    <Image
       src={url}
       alt={alt}
       className={className}
       loading="lazy"
-      onError={() => setError(true)}
-    />
+      onError={() => setError(true)} width={1200} height={675} />
   );
 }

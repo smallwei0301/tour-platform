@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { activities, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
@@ -38,7 +39,7 @@ export function FeaturedTours() {
               boxShadow: '0 8px 20px rgba(0,0,0,0.04)',
             }}
           >
-            <img src={primary.imageUrl} alt={primary.title} className="tp-card-img" style={{ marginBottom: 0, minHeight: 230 }} loading="lazy" />
+            <Image src={primary.imageUrl} alt={primary.title} className="tp-card-img" style={{ marginBottom: 0, minHeight: 230 }} loading="lazy" width={1200} height={675} />
             <div style={{ display: 'grid', gap: 10 }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--tp-primary)' }}>推薦先從這條開始</p>
               <h3 style={{ fontSize: 24, margin: 0, lineHeight: 1.4 }}>{primary.title}</h3>
@@ -61,7 +62,7 @@ export function FeaturedTours() {
             const guide = guides.find((g) => g.slug === a.guideSlug);
             return (
               <article className="tp-card" key={a.slug}>
-                <img src={a.imageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
+                <Image src={a.imageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" width={1200} height={675} />
 
                 <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span

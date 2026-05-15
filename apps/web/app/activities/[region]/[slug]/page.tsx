@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -328,11 +329,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <section className="kkd-scroll-section">
                 <h2 className="kkd-section-title">🧑‍🦯 關於你的導遊</h2>
                 <div className="kkd-guide-card">
-                  <img
+                  <Image
                     src={guide.profilePhotoUrl || (guide as {avatarUrl?: string}).avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
                     alt={guide.displayName}
-                    className="kkd-guide-avatar"
-                  />
+                    className="kkd-guide-avatar" width={1200} height={675} />
                   <div className="kkd-guide-info">
                     <strong className="kkd-guide-name">{guide.displayName}</strong>
                     <span className="kkd-guide-verified">✅ 實名已驗證</span>

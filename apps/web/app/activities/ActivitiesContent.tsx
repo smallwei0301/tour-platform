@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -200,13 +201,12 @@ export default function ActivitiesContent() {
                 return (
                   <article className="tp-card" key={a.slug} data-testid="activity-card" data-activity-slug={a.slug}>
                     <div style={{ position: 'relative' }}>
-                      <img
+                      <Image
                         src={a.coverImageUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'}
                         alt={a.title}
                         className="tp-card-img"
                         style={{ background: 'none' }}
-                        loading="lazy"
-                      />
+                        loading="lazy" width={1200} height={675} />
                       <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{
                         position: 'absolute', top: 10, left: 10,
@@ -217,7 +217,7 @@ export default function ActivitiesContent() {
                     {a.guideName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px' }}>
                         {a.guideAvatarUrl && (
-                          <img src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} />
+                          <Image src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} width={1200} height={675} />
                         )}
                         <span style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{a.guideName} ✅</span>
                       </div>

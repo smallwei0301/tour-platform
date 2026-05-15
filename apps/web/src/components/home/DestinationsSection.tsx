@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 const DESTINATIONS = [
@@ -77,7 +78,7 @@ export function DestinationsSection() {
               className="tp-destination-card"
             >
               <div className="tp-destination-img-wrap">
-                <img src={d.image} alt={d.name} className="tp-destination-img" loading="lazy" />
+                <Image src={d.image} alt={d.name} className="tp-destination-img" loading="lazy" width={1200} height={675} />
                 <div className="tp-destination-overlay" />
               </div>
               <div className="tp-destination-label">

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
@@ -102,7 +103,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
                 {guideActivities.map((a: any) => (
                   <article className="tp-card" key={a.slug}>
                     {a.coverImageUrl && (
-                      <img src={a.coverImageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
+                      <Image src={a.coverImageUrl} alt={a.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" width={1200} height={675} />
                     )}
                     <h3>{a.title}</h3>
                     <p>📍 {a.region}</p>

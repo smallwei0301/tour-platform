@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
 import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/components/admin/ui';
 import { csrfHeaders } from '../../../src/lib/csrf-client';

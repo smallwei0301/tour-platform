@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState, useRef, useCallback } from 'react';
 import { csrfHeaders } from '../../lib/csrf-client';
@@ -15,7 +16,7 @@ interface AvatarUploadProps {
  */
 async function compressToSquareAvatar(file: File, targetSize = 400): Promise<File> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new window.Image();
     const url = URL.createObjectURL(file);
 
     img.onload = () => {
@@ -142,11 +143,10 @@ export function AvatarUpload({ guideId, currentUrl, onUpload, size = 120 }: Avat
         onMouseLeave={e => { (e.target as HTMLElement).style.borderColor = '#e5e7eb'; }}
       >
         {displayUrl ? (
-          <img
+          <Image
             src={displayUrl}
             alt="頭像預覽"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} width={1200} height={675} />
         ) : (
           <span style={{ fontSize: size * 0.35, color: '#9ca3af' }}>👤</span>
         )}

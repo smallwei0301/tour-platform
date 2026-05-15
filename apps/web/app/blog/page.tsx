@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
@@ -66,7 +67,7 @@ export default function BlogPage() {
       {featured && (
         <Link href={`/blog/${featured.slug}`} style={{ display: 'block', marginBottom: 30 }}>
           <article style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20, border: '1px solid var(--tp-border)', borderRadius: 14, overflow: 'hidden' }}>
-            <img src={featured.imageUrl} alt={featured.title} style={{ width: '100%', height: '100%', minHeight: 240, objectFit: 'cover' }} />
+            <Image src={featured.imageUrl} alt={featured.title} style={{ width: '100%', height: '100%', minHeight: 240, objectFit: 'cover' }} width={1200} height={675} />
             <div style={{ padding: '24px 20px 24px 0' }}>
               <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12 }}>{featured.category}</span>
               <h2 style={{ margin: '12px 0 8px' }}>{featured.title}</h2>
@@ -82,7 +83,7 @@ export default function BlogPage() {
         {rest.map((p) => (
           <Link href={`/blog/${p.slug}`} key={p.slug} style={{ display: 'block' }}>
             <article className="tp-card">
-              <img src={p.imageUrl} alt={p.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" />
+              <Image src={p.imageUrl} alt={p.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" width={1200} height={675} />
               <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '2px 8px', borderRadius: 6, fontSize: 11, display: 'inline-block', marginBottom: 6 }}>{p.category}</span>
               <h3>{p.title}</h3>
               <p style={{ fontSize: 14, lineHeight: 1.6 }}>{p.excerpt}</p>

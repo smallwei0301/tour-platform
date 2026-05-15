@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState } from 'react';
 
@@ -58,7 +59,7 @@ export function GuideAvatar({
   return (
     <div className={className} style={containerStyle}>
       {hasValidImage ? (
-        <img
+        <Image
           src={photoUrl}
           alt={`${name} 頭像`}
           style={{
@@ -67,8 +68,7 @@ export function GuideAvatar({
             objectFit: 'cover',
             display: 'block',
           }}
-          onError={() => setImageError(true)}
-        />
+          onError={() => setImageError(true)} width={1200} height={675} />
       ) : (
         <span style={initialsStyle}>{initials}</span>
       )}

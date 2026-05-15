@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -68,7 +69,7 @@ function ItineraryImageUpload({ activityId, activitySlug, onUploaded }: {
     setUploading(true); setErr('');
     try {
       // 壓縮
-      const img = new Image();
+      const img = new window.Image();
       const objectUrl = URL.createObjectURL(file);
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve(); img.onerror = reject; img.src = objectUrl;
@@ -287,7 +288,7 @@ function PlanEditor({
                 {/* 圖片上傳 or 預覽 */}
                 {item.imageUrl ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
-                    <img src={item.imageUrl} alt="" style={{ width: 80, height: 54, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }} />
+                    <Image src={item.imageUrl} alt="" style={{ width: 80, height: 54, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb' }} width={1200} height={675} />
                     <button type="button"
                       onClick={() => { const arr = [...(plan.planItinerary ?? [])]; arr[i] = { ...arr[i], imageUrl: undefined }; update({ planItinerary: arr }); }}
                       style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fee2e2', color: '#dc2626', border: 'none', cursor: 'pointer' }}>
@@ -1624,7 +1625,7 @@ export default function AdminActivityEditPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                   {imageUrls.map((url, i) => (
                     <div key={url + i} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, background: '#fff' }}>
-                      <img src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} />
+                      <Image src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} width={1200} height={675} />
                       <div style={{ flex: 1, fontSize: 12, color: '#4b5563', wordBreak: 'break-all' }}>{url}</div>
                       <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>移除</button>
                     </div>

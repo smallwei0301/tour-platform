@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
@@ -90,7 +91,7 @@ function BookingInnerLegacy() {
         if (mounted) setLoadError(err.message || '找不到此行程');
       });
     return () => { mounted = false; };
-  }, [activitySlug]);
+  }, [activitySlug, urlScheduleId]);
 
   // 開放場次（status=open 且有剩餘名額）
   const openSchedules = useMemo(() => {
@@ -219,7 +220,7 @@ function BookingInnerLegacy() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
                 {activity.coverImageUrl && (
-                  <img src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} />
+                  <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={1200} height={675} />
                 )}
                 <div>
                   <h3 style={{ margin: 0 }}>{activity.title}</h3>
@@ -392,8 +393,8 @@ function BookingInnerLegacy() {
         {/* ── 右側摘要卡 ── */}
         <div style={{ position: 'sticky', top: 80, height: 'fit-content', border: '1px solid var(--tp-border)', borderRadius: 12, padding: 16 }}>
           {activity.coverImageUrl && (
-            <img src={activity.coverImageUrl} alt={activity.title}
-              style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} />
+            <Image src={activity.coverImageUrl} alt={activity.title}
+              style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} width={1200} height={675} />
           )}
           <h4 style={{ margin: '0 0 4px' }}>{activity.title}</h4>
           <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>📍 {activity.region} · 🕐 {activity.durationDisplay}</p>

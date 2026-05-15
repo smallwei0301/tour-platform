@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { Activity } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
@@ -21,12 +22,11 @@ export function ActivityCard({
   return (
     <article className="tp-card tp-activity-card">
       <div style={{ position: 'relative' }}>
-        <img
+        <Image
           src={activity.imageUrl}
           alt={activity.title}
           className="tp-card-img"
-          loading="lazy"
-        />
+          loading="lazy" width={1200} height={675} />
         <WishlistToggle activityId={activity.id ?? activity.slug} initialWishlisted={initialWishlisted} />
         <span className="tp-card-region-badge">{activity.region}</span>
       </div>

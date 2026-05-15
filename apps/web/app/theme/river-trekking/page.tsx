@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 
 const riverTours = [
@@ -46,7 +47,7 @@ export default function RiverTrekkingPage() {
           <div className="tp-card-grid tp-card-grid-activities">
             {riverTours.map((t) => (
               <article className="tp-card" key={t.slug + t.title}>
-                <img src={t.imageUrl} alt={t.title} className="tp-card-img" loading="lazy" />
+                <Image src={t.imageUrl} alt={t.title} className="tp-card-img" loading="lazy" width={1200} height={675} />
                 <h3>{t.title}</h3>
                 <p>{t.meta}</p>
                 <Link className="tp-link" href={`/activities/hualien/${encodeURIComponent(t.slug)}`}>查看行程 →</Link>

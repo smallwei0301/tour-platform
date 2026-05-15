@@ -34,12 +34,11 @@ export function ImageWithFallback({
   // Fallback to CSS sizing if not provided
   if (!width || !height) {
     return (
-      <img
+      <Image
         src={imageUrl}
         alt={imageAlt}
         style={style}
-        className={className}
-      />
+        className={className} width={1200} height={675} />
     );
   }
 

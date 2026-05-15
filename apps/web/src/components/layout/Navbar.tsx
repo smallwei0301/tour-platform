@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -97,13 +98,12 @@ export function Navbar() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {user.user_metadata?.avatar_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={user.user_metadata.avatar_url}
                       alt={displayName}
                       width={28}
                       height={28}
-                      style={{ borderRadius: '50%', objectFit: 'cover' }}
-                    />
+                      style={{ borderRadius: '50%', objectFit: 'cover' }} />
                   )}
                   <span
                     style={{ fontSize: 14, color: '#374151', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}

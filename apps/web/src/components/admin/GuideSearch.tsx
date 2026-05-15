@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -37,7 +38,7 @@ export function GuideSearch({ value, onChange, style }: GuideSearchProps) {
         .catch(() => {});
     }
     if (!value) setSelectedName('');
-  }, [value]);
+  }, [value, selectedName]);
 
   const search = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -164,7 +165,7 @@ export function GuideSearch({ value, onChange, style }: GuideSearchProps) {
               onMouseLeave={e => (e.currentTarget.style.background = '')}
             >
               {g.profilePhotoUrl ? (
-                <img src={g.profilePhotoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                <Image src={g.profilePhotoUrl} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} width={1200} height={675} />
               ) : (
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 14 }}>
                   {g.displayName?.[0] || '?'}

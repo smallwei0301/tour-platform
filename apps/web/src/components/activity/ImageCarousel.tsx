@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import { useRef, useState, useEffect } from 'react';
 
@@ -92,12 +93,11 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
                 無法載入
               </div>
             ) : (
-              <img
+              <Image
                 src={url}
                 alt={`${alt} ${i + 1}`}
                 loading={i === 0 ? 'eager' : 'lazy'}
-                onError={() => handleImageError(i)}
-              />
+                onError={() => handleImageError(i)} width={1200} height={675} />
             )}
           </div>
         ))}
@@ -118,24 +118,22 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
       {/* Desktop: 3:1 grid */}
       <div className="kkd-gallery-desktop">
         {validImages.length > 0 && (
-          <img
+          <Image
             src={validImages[0]}
             alt={alt}
             className="kkd-gallery-main"
-            onError={() => handleImageError(images.indexOf(validImages[0]))}
-          />
+            onError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
         )}
         {validImages.length > 1 && (
           <div className="kkd-gallery-grid">
             {validImages.slice(1, 4).map((url, i) => (
-              <img
+              <Image
                 key={i}
                 src={url}
                 alt={`${alt} ${i + 2}`}
                 className="kkd-gallery-thumb"
                 loading="lazy"
-                onError={() => handleImageError(images.indexOf(url))}
-              />
+                onError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
             ))}
           </div>
         )}
