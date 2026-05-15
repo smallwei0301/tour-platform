@@ -1,14 +1,67 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
+const REQUEST_TIMEOUT_MS = 10000;
+const AUTH_REQUEST_TIMEOUT = 'AUTH_REQUEST_TIMEOUT';
+
+function sanitizeGuideNext(next: string | null): string {
+  const fallback = '/guide/dashboard';
+  if (!next) return fallback;
+  if (next.startsWith('//')) return fallback;
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(next)) return fallback;
+
+  try {
+    const base = 'https://guide.local';
+    const parsed = new URL(next, base);
+    if (parsed.origin !== base) return fallback;
+
+    const normalizedPath = parsed.pathname;
+    if (normalizedPath !== '/guide' && !normalizedPath.startsWith('/guide/')) return fallback;
+
+    return `${normalizedPath}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      const timeoutError = new Error('request timeout');
+      timeoutError.name = AUTH_REQUEST_TIMEOUT;
+      throw timeoutError;
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function GuideLoginForm() {
-  const router = useRouter();
-  const params = useSearchParams();
+  const params = useMemo(() => {
+    if (typeof window === 'undefined') return new URLSearchParams();
+    return new URLSearchParams(window.location.search);
+  }, []);
   const token = params.get('token') || '';
+  const safeNext = sanitizeGuideNext(params.get('next'));
+  const router = useMemo(
+    () => ({
+      push: (nextPath: string) => {
+        window.location.assign(nextPath);
+      },
+    }),
+    []
+  );
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,10 +86,10 @@ function GuideLoginForm() {
 
     setLoading(true);
     try {
-      await fetch('/api/guide/auth/csrf', { cache: 'no-store' });
+      await fetchWithTimeout('/api/guide/auth/csrf', { cache: 'no-store' });
 
       const body = isFirstTime ? { token, password } : { email: email.trim().toLowerCase(), password };
-      const res = await fetch('/api/guide/auth/session', {
+      const res = await fetchWithTimeout('/api/guide/auth/session', {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify(body),
@@ -44,7 +97,7 @@ function GuideLoginForm() {
       const json = await res.json();
 
       if (json?.data?.created) {
-        router.push('/guide/dashboard');
+        router.push(safeNext);
       } else {
         const code = json?.error?.code || '';
         if (code === 'TOKEN_EXPIRED') setError('邀請碼已過期，請聯絡管理員重新產生');
@@ -53,8 +106,12 @@ function GuideLoginForm() {
         else if (code === 'ACCOUNT_SUSPENDED') setError('帳號已停用，請聯絡管理員');
         else setError(json?.error?.message || '登入失敗，請再試一次');
       }
-    } catch {
-      setError('網路錯誤，請再試一次');
+    } catch (error) {
+      if (error instanceof Error && error.name === AUTH_REQUEST_TIMEOUT) {
+        setError('連線逾時，請稍後再試（若持續發生請聯絡管理員）');
+      } else {
+        setError('網路錯誤，請再試一次');
+      }
     } finally {
       setLoading(false);
     }
