@@ -163,3 +163,75 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   assert.equal(compatModule.dynamic, 'force-dynamic');
   assert.equal(compatModule.revalidate, 60);
 });
+
+test('GH-502 render-path isolation: non-probe render path uses DB result and does not fallback to 404 shell', async () => {
+  process.env.GH502_RENDER_PROBE_MODE = '0';
+
+  const regionPagePath = path.join(ROOT, 'app/activities/[region]/[slug]/page.tsx');
+  const regionSrc = await fs.readFile(regionPagePath, 'utf8');
+
+  let notFoundCalled = false;
+  const nextNavigationMock = {
+    notFound: () => {
+      notFoundCalled = true;
+      throw new Error('NOT_FOUND_CALLED');
+    },
+  };
+
+  const activityFixture = {
+    id: 'db-activity-id',
+    slug: 'real-slug',
+    title: 'DB Activity Title',
+    tagline: 'from-db',
+    shortDescription: 'DB short',
+    description: 'DB long',
+    region: '台北市',
+    regionSlug: 'taipei',
+    category: 'city-walk',
+    priceTwd: 1800,
+    durationDisplay: '3 小時',
+    minParticipants: 1,
+    maxParticipants: 6,
+    imageUrls: [],
+    inclusions: ['導覽服務'],
+    exclusions: [],
+    notices: ['準時集合'],
+    refundRules: ['出發前 3 天可免費取消'],
+    safetyNotice: '注意安全',
+    faq: [],
+    schedules: [],
+    reviews: [],
+    guide: null,
+    coverImageUrl: null,
+  };
+
+  const mockMap = {
+    'next/navigation': nextNavigationMock,
+    'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
+    '../../../../src/lib/db.mjs': {
+      getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }),
+    },
+    '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
+    '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/real-slug' },
+    '../../../../src/components/activity/DatePlanSection': { DatePlanSection: () => React.createElement('div', null, 'DatePlanSection') },
+    '../../../../src/components/activity/ActivityBottomBar': { ActivityBottomBar: () => React.createElement('div', null, 'BottomBar') },
+    '../../../../src/components/activity/SectionAnchorNav': { SectionAnchorNav: () => React.createElement('div', null, 'SectionAnchorNav') },
+    '../../../../src/components/activity/ImageCarousel': { ImageCarousel: () => React.createElement('div', null, 'ImageCarousel') },
+    '../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div', null, 'ActivityQASection') },
+    react: React,
+    'react/jsx-runtime': require('react/jsx-runtime'),
+  };
+
+  const regionModule = loadCjsModule({
+    filePath: regionPagePath,
+    source: transpileTsxToCjs(regionSrc, regionPagePath),
+    mockMap,
+  });
+
+  const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
+  const html = renderToStaticMarkup(element);
+
+  assert.equal(notFoundCalled, false);
+  assert.equal(html.includes('DB Activity Title'), true);
+  assert.equal(html.includes('data-testid="activity-detail-title"'), true);
+});
