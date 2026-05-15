@@ -16,6 +16,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
 const RENDER_ACTIVITY_TIMEOUT_MS = 8000;
+const RENDER_PROBE_MODE = process.env.GH502_RENDER_PROBE_MODE === '1';
+const RENDER_PROBE_SLUG = '__render_probe__';
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutRef: ReturnType<typeof setTimeout> | null = null;
@@ -44,14 +46,43 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const { slug } = await params;
 
   let activity: Awaited<ReturnType<typeof getActivityBySlugDb>>;
-  try {
-    activity = await withTimeout(
-      getActivityBySlugDb(slug),
-      RENDER_ACTIVITY_TIMEOUT_MS,
-      'activity-detail-render',
-    );
-  } catch {
-    return notFound();
+  if (RENDER_PROBE_MODE && slug === RENDER_PROBE_SLUG) {
+    activity = {
+      id: 'probe-activity-id',
+      slug: RENDER_PROBE_SLUG,
+      title: 'GH502 Render Probe Activity',
+      tagline: 'render-path probe',
+      shortDescription: 'Probe short description',
+      description: 'Probe long description',
+      region: '台北市',
+      regionSlug: 'taipei',
+      category: 'city-walk',
+      priceTwd: 1234,
+      durationDisplay: '2 小時',
+      minParticipants: 1,
+      maxParticipants: 8,
+      imageUrls: [],
+      inclusions: ['導覽服務'],
+      exclusions: [],
+      notices: ['準時集合'],
+      refundRules: ['出發前 3 天可免費取消'],
+      safetyNotice: '請穿著防滑鞋',
+      faq: [],
+      schedules: [],
+      reviews: [],
+      guide: null,
+      coverImageUrl: null,
+    } as Awaited<ReturnType<typeof getActivityBySlugDb>>;
+  } else {
+    try {
+      activity = await withTimeout(
+        getActivityBySlugDb(slug),
+        RENDER_ACTIVITY_TIMEOUT_MS,
+        'activity-detail-render',
+      );
+    } catch {
+      return notFound();
+    }
   }
 
   if (!activity) return notFound();
