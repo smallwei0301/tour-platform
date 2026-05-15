@@ -6,14 +6,21 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const routePath = resolve(__dirname, '../../app/api/guide/auth/session/route.ts');
+const helperPath = resolve(__dirname, '../../src/lib/guide-auth-session-route.test-support.ts');
 const routeSrc = readFileSync(routePath, 'utf8');
+const helperSrc = readFileSync(helperPath, 'utf8');
 
 test('POST route enforces CSRF validation before Supabase access', () => {
   const csrfIndex = routeSrc.indexOf('const csrfError = validateCsrf(req);');
-  const supabaseIndex = routeSrc.indexOf('const supabase = await getSupabase();');
+  const supabaseIndex = routeSrc.indexOf('const supabase = await getGuideAuthSupabaseClient();');
   assert.ok(csrfIndex !== -1, 'route must validate CSRF');
-  assert.ok(supabaseIndex !== -1, 'route must initialize Supabase client');
+  assert.ok(supabaseIndex !== -1, 'route must initialize Supabase client via test-injectable helper');
   assert.ok(csrfIndex < supabaseIndex, 'CSRF check must happen before Supabase access');
+});
+
+test('POST test-only Supabase factory hook moved out of route module', () => {
+  assert.ok(!/__setGuideAuthSupabaseFactoryForTests/.test(routeSrc), 'route must not export route-only test helper');
+  assert.match(helperSrc, /__setGuideAuthSupabaseFactoryForTests/, 'helper module should provide test-only factory override');
 });
 
 test('POST route has bounded Supabase query timeout and explicit 503 fallback', () => {

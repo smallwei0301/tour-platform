@@ -8,37 +8,7 @@ import {
   clearGuideSessionCookies,
 } from '../../../../../src/lib/guide-auth';
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
-
-type SupabaseClientLike = {
-  from: (table: string) => {
-    select: (columns: string) => {
-      eq: (column: string, value: string) => {
-        single: () => Promise<{ data: any; error: any }>;
-      };
-    };
-    update: (payload: Record<string, unknown>) => {
-      eq: (column: string, value: string) => Promise<{ error?: any }>;
-    };
-  };
-};
-
-let supabaseFactoryOverride: (() => Promise<SupabaseClientLike>) | null = null;
-
-export function __setGuideAuthSupabaseFactoryForTests(factory: (() => Promise<SupabaseClientLike>) | null) {
-  supabaseFactoryOverride = factory;
-}
-
-async function getSupabase(): Promise<SupabaseClientLike> {
-  if (supabaseFactoryOverride) {
-    return supabaseFactoryOverride();
-  }
-
-  const { createClient } = await import('@supabase/supabase-js');
-  return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  ) as SupabaseClientLike;
-}
+import { getGuideAuthSupabaseClient } from '../../../../../src/lib/guide-auth-session-route.test-support';
 
 const SUPABASE_QUERY_TIMEOUT_MS = Number(process.env.GUIDE_AUTH_SUPABASE_TIMEOUT_MS ?? 8000);
 
@@ -92,7 +62,7 @@ export async function POST(req: Request) {
       return Response.json(fail('NOT_AVAILABLE', 'Auth not configured'), { status: 503 });
     }
 
-    const supabase = await getSupabase();
+    const supabase = await getGuideAuthSupabaseClient();
 
     // ── First-time login via invite token ──────────────────────────────────────
     if (token) {
