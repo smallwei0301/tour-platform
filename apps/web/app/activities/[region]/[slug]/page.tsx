@@ -15,7 +15,14 @@ import { ActivityQASection } from '../../../../src/components/activity/ActivityQ
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
-const RENDER_ACTIVITY_TIMEOUT_MS = 8000;
+const DEFAULT_ACTIVITY_LOOKUP_TIMEOUT_MS = 8_000;
+
+function parseActivityLookupTimeout() {
+  const rawTimeout = Number.parseInt(process.env.GH502_ACTIVITY_LOOKUP_TIMEOUT_MS ?? '', 10);
+  return Number.isFinite(rawTimeout) && rawTimeout > 0 ? rawTimeout : DEFAULT_ACTIVITY_LOOKUP_TIMEOUT_MS;
+}
+
+const RENDER_ACTIVITY_TIMEOUT_MS = parseActivityLookupTimeout();
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutRef: ReturnType<typeof setTimeout> | null = null;
