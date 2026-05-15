@@ -7,10 +7,23 @@ const REQUEST_TIMEOUT_MS = 10000;
 const AUTH_REQUEST_TIMEOUT = 'AUTH_REQUEST_TIMEOUT';
 
 function sanitizeGuideNext(next: string | null): string {
-  if (!next || !next.startsWith('/guide')) return '/guide/dashboard';
-  if (next.startsWith('//')) return '/guide/dashboard';
-  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(next)) return '/guide/dashboard';
-  return next;
+  const fallback = '/guide/dashboard';
+  if (!next) return fallback;
+  if (next.startsWith('//')) return fallback;
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(next)) return fallback;
+
+  try {
+    const base = 'https://guide.local';
+    const parsed = new URL(next, base);
+    if (parsed.origin !== base) return fallback;
+
+    const normalizedPath = parsed.pathname;
+    if (normalizedPath !== '/guide' && !normalizedPath.startsWith('/guide/')) return fallback;
+
+    return `${normalizedPath}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
 }
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {

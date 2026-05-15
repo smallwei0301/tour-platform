@@ -19,11 +19,20 @@ test('guide login submit flow uses bounded fetch timeout and timeout-specific er
   assert.match(src, /連線逾時|服務暫時忙碌/, 'should show actionable timeout message');
 });
 
-test('guide login redirect only allows safe internal /guide path from next param', async () => {
+test('guide login redirect sanitizer blocks path-normalization escapes and keeps safe guide routes', async () => {
   const src = await readSource('app/guide/login/page.tsx');
 
-  assert.match(src, /params\.get\('next'\)/, 'should read next query parameter');
-  assert.match(src, /sanitizeGuideNext|safeNext/, 'should sanitize next destination before redirect');
-  assert.match(src, /startsWith\('\/guide'\)/, 'should only allow /guide internal routes');
-  assert.match(src, /router\.push\(safeNext\)/, 'successful login should redirect to sanitized next path');
+  const match = src.match(/function sanitizeGuideNext\(next: string \| null\): string \{([\s\S]*?)\n\}/);
+  assert.ok(match, 'should define sanitizeGuideNext');
+
+  const sanitizeGuideNext = new Function(
+    'URL',
+    `return function sanitizeGuideNext(next){${match[1]}\n}`
+  )(URL);
+
+  assert.equal(sanitizeGuideNext('/guide/orders?tab=today'), '/guide/orders?tab=today');
+  assert.equal(sanitizeGuideNext('/guide/../admin'), '/guide/dashboard');
+  assert.equal(sanitizeGuideNext('/guide/%2e%2e/admin'), '/guide/dashboard');
+  assert.equal(sanitizeGuideNext('//evil.example/path'), '/guide/dashboard');
+  assert.equal(sanitizeGuideNext('https://evil.example/guide/dashboard'), '/guide/dashboard');
 });
