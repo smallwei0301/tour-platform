@@ -22,4 +22,19 @@ test('GH-502 render path guard: activity detail page must fail fast when activit
     true,
     'missing timeout guard for render-path activity lookup',
   );
+
+  // Compat route (/activities/[slug]) should also avoid unguarded DB await to prevent hanging render path.
+  const compatPagePath = path.join(root, 'app/activities/[slug]/page.tsx');
+  const compatSrc = await fs.readFile(compatPagePath, 'utf8');
+  const compatBlock = compatSrc.split('export default async function ActivityDetailCompatPage')[1] || '';
+  assert.equal(
+    compatBlock.includes('const activity = await getActivityBySlugDb(slug);'),
+    false,
+    'compat route still uses unguarded DB await',
+  );
+  assert.equal(
+    compatBlock.includes('Promise.race([') || compatBlock.includes('withTimeout('),
+    true,
+    'missing timeout guard for compat route activity lookup',
+  );
 });
