@@ -48,14 +48,33 @@ export async function POST(req: NextRequest) {
 
   const adminSupabase = getServiceClient();
 
-  // AC7: Verify booking ownership
+  const reviewTargetId = String(bookingId || '').trim();
+  if (!reviewTargetId) {
+    return NextResponse.json(fail('INVALID_REQUEST', 'bookingId/orderId required'), { status: 400 });
+  }
+
+  // AC7: Verify ownership.
+  // Primary contract: bookings.id + bookings.traveler_id
+  // Compatibility fallback: legacy clients may pass orderId in bookingId field.
   const { data: booking } = await adminSupabase
     .from('bookings')
     .select('id, traveler_id, status')
-    .eq('id', String(bookingId || ''))
-    .single();
+    .eq('id', reviewTargetId)
+    .maybeSingle();
 
-  if (!booking || booking.traveler_id !== user.id) {
+  const bookingOwned = Boolean(booking && booking.traveler_id === user.id);
+
+  let orderOwned = false;
+  if (!bookingOwned) {
+    const { data: order } = await adminSupabase
+      .from('orders')
+      .select('id, user_id, status')
+      .eq('id', reviewTargetId)
+      .maybeSingle();
+    orderOwned = Boolean(order && order.user_id === user.id);
+  }
+
+  if (!bookingOwned && !orderOwned) {
     return NextResponse.json(fail('FORBIDDEN', 'booking not owned by user'), { status: 403 });
   }
 
@@ -64,7 +83,7 @@ export async function POST(req: NextRequest) {
     .from('activity_reviews')
     .select('id')
     .eq('user_id', user.id)
-    .eq('booking_id', String(bookingId || ''))
+    .eq('booking_id', reviewTargetId)
     .maybeSingle();
 
   if (existing) {
@@ -80,7 +99,7 @@ export async function POST(req: NextRequest) {
       rating: ratingNum,
       review_text: reviewTextStr,
       user_id: user.id,
-      booking_id: String(bookingId || ''),
+      booking_id: reviewTargetId,
       status: 'pending',
       review_date: new Date().toISOString().split('T')[0],
       author: user.email || user.id,
