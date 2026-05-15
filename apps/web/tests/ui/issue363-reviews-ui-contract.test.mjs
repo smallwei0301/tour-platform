@@ -107,6 +107,12 @@ test('AC3: review form submit handler POSTs to /api/reviews', async () => {
     'submit handler must POST to /api/reviews');
 });
 
+test('AC3: review submit includes csrfHeaders', async () => {
+  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  assert.match(src, /csrfHeaders\(\{\s*['\"]content-type['\"]\s*:\s*['\"]application\/json['\"]/);
+  assert.match(src, /\/api\/reviews[\s\S]{0,120}csrfHeaders\(/);
+});
+
 test('AC3: review POST body includes activityId, bookingId, rating, reviewText', async () => {
   const src = await readSource('app/me/orders/[orderId]/page.tsx');
   assert.match(src, /activityId/, 'POST body must include activityId');

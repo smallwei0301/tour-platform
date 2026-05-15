@@ -282,10 +282,11 @@ describe('Issue 359 — AC7: POST /api/reviews verifies booking ownership', () =
       /\.from\('orders'\)[\s\S]*\.select\(\s*['"]id,\s*user_id,\s*status['"]\s*\)/,
       'Must support orders ownership fallback using orders.user_id'
     );
-    assert.match(
+    assert.match(src, /if \(!booking\)/, 'Must use fallback order lookup only when booking lookup failed');
+    assert.doesNotMatch(
       src,
-      /if \(!booking\)/,
-      'Must use fallback order lookup only when booking lookup failed'
+      /\.from\('orders'\)[\s\S]*\.select\(\s*['"]id,\s*user_id,\s*status,\s*traveler_id|traveler_id\s*\]/,
+      'Fallback must not reference orders.traveler_id'
     );
   });
 

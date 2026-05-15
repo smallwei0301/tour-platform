@@ -74,7 +74,14 @@ export async function POST(req: NextRequest) {
       .maybeSingle());
   }
 
-  const isOwned = Boolean(bookingOwned || (!booking && order?.user_id === user.id));
+  const orderOwned = !booking && order?.user_id === user.id;
+  const isOwned = isReviewSubmissionAuthorized({
+    booking,
+    order,
+    userId: user.id,
+    bookingOwned,
+    orderOwned,
+  });
 
   if (!isOwned) {
     return NextResponse.json(fail('FORBIDDEN', 'booking not owned by user'), { status: 403 });

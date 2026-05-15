@@ -170,7 +170,7 @@ export default function OrderDetailPage() {
     try {
       const res = await fetch('/api/reviews', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({
           activityId: order?.scheduleId || '',
           bookingId: orderId,

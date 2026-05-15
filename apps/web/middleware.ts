@@ -57,7 +57,13 @@ function shouldRequireCsrf(req: NextRequest): boolean {
   const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
   if (!isMutation) return false;
 
-  if (!(pathname.startsWith('/api/admin/') || pathname.startsWith('/api/guide/') || pathname.startsWith('/api/me/'))) {
+  if (!(
+    pathname.startsWith('/api/admin/') ||
+    pathname.startsWith('/api/guide/') ||
+    pathname.startsWith('/api/me/') ||
+    pathname.startsWith('/api/orders') ||
+    pathname.startsWith('/api/reviews')
+  )) {
     return false;
   }
 
@@ -73,6 +79,7 @@ function shouldRequireCsrf(req: NextRequest): boolean {
   if (pathname.startsWith('/api/admin/')) return !!req.cookies.get('admin_token')?.value;
   if (pathname.startsWith('/api/guide/')) return !!req.cookies.get('guide_token')?.value;
   if (pathname.startsWith('/api/me/')) return hasTravelerAuthCookie(req);
+  if (pathname.startsWith('/api/reviews')) return hasTravelerAuthCookie(req);
 
   return false;
 }
@@ -237,5 +244,7 @@ export const config = {
     '/orders/:path*',
     '/api/me/:path*',
     '/api/orders/:path*',
+    '/api/reviews',
+    '/api/reviews/:path*',
   ],
 };
