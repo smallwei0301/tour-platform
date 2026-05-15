@@ -8,7 +8,7 @@ import {
   clearGuideSessionCookies,
 } from '../../../../../src/lib/guide-auth';
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
-import { getGuideAuthSupabaseClient } from '../../../../../src/lib/guide-auth-session-route.test-support';
+import { getGuideAuthSupabaseClient } from '../../../../../src/lib/guide-auth-session-supabase';
 
 type GuideSessionInviteProfile = {
   id: string;
