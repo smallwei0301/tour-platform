@@ -69,7 +69,7 @@ function ItineraryImageUpload({ activityId, activitySlug, onUploaded }: {
     setUploading(true); setErr('');
     try {
       // 壓縮
-      const img = new Image();
+      const img = new window.Image();
       const objectUrl = URL.createObjectURL(file);
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve(); img.onerror = reject; img.src = objectUrl;

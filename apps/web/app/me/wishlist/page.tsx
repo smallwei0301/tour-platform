@@ -23,18 +23,6 @@ export default function WishlistPage() {
   const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      await fetchWishlist();
-    })();
-  }, [router, fetchWishlist]);
-
   const fetchWishlist = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -56,6 +44,18 @@ export default function WishlistPage() {
       setLoading(false);
     }
   }, [router]);
+
+  useEffect(() => {
+    (async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      await fetchWishlist();
+    })();
+  }, [router, fetchWishlist]);
 
   async function handleRemove(activityId: string) {
     setRemovingId(activityId);

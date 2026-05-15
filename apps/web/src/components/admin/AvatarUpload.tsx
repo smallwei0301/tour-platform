@@ -16,7 +16,7 @@ interface AvatarUploadProps {
  */
 async function compressToSquareAvatar(file: File, targetSize = 400): Promise<File> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new window.Image();
     const url = URL.createObjectURL(file);
 
     img.onload = () => {

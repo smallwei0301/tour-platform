@@ -26,7 +26,7 @@ async function compressImage(
   type: 'cover' | 'gallery'
 ): Promise<File> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new window.Image();
     const url = URL.createObjectURL(file);
 
     const config = type === 'cover'
