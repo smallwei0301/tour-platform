@@ -310,24 +310,40 @@ test('buildCanonicalActivityDetailPath falls back to normalized region when regi
   );
 });
 
-test('activity detail pages should stay runtime-rendered without fixture-first/static-cache lock-ins', async () => {
+test('activity routes should avoid dynamic-segment name conflict and keep runtime rendering constraints', async () => {
   const root = path.resolve(process.cwd());
-  const regionPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
-  const compatPage = path.join(root, 'app/activities/[slug]/page.tsx');
+  const canonicalPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
+  const compatPage = path.join(root, 'app/activities/[region]/page.tsx');
+  const legacyCompatPage = path.join(root, 'app/activities/[slug]/page.tsx');
   const dbFile = path.join(root, 'src/lib/db.mjs');
-  const [regionSrc, compatSrc, dbSrc] = await Promise.all([
-    fs.readFile(regionPage, 'utf8'),
+
+  const [canonicalSrc, compatSrc, dbSrc, legacyCompatExists] = await Promise.all([
+    fs.readFile(canonicalPage, 'utf8'),
     fs.readFile(compatPage, 'utf8'),
     fs.readFile(dbFile, 'utf8'),
+    fs.access(legacyCompatPage).then(() => true).catch(() => false),
   ]);
 
-  assert.equal(regionSrc.includes('preferFixtureFirst: true'), false);
+  assert.equal(legacyCompatExists, false, 'legacy /activities/[slug] route should be removed');
+  assert.equal(canonicalSrc.includes('preferFixtureFirst: true'), false);
   assert.equal(compatSrc.includes('preferFixtureFirst: true'), false);
-  assert.equal(regionSrc.includes("dynamic = 'force-dynamic'"), true);
+  assert.equal(canonicalSrc.includes("dynamic = 'force-dynamic'"), true);
   assert.equal(compatSrc.includes("dynamic = 'force-dynamic'"), true);
-  assert.equal(regionSrc.includes("dynamic = 'force-static'"), false);
+  assert.equal(canonicalSrc.includes("dynamic = 'force-static'"), false);
   assert.equal(compatSrc.includes("dynamic = 'force-static'"), false);
-  assert.equal(regionSrc.includes('unstable_cache('), false);
+  assert.equal(canonicalSrc.includes('unstable_cache('), false);
+  assert.equal(compatSrc.includes('unstable_cache('), false);
+  assert.equal(canonicalSrc.includes('generateMetadata'), true);
+  assert.equal(canonicalSrc.includes('getActivityBySlugDb('), true);
+  assert.equal(canonicalSrc.includes('const { slug } = await params;'), true);
+  assert.equal(canonicalSrc.includes('generateMetadata') && canonicalSrc.includes('getActivityBySlugDb('), true);
+  assert.equal(compatSrc.includes('params }: { params: Promise<{ region: string }> }'), true);
+  assert.equal(compatSrc.includes('const { region } = await params;'), true);
+  assert.equal(compatSrc.includes('getActivityBySlugDb(region)'), true);
+
+  // Metadata guard: metadata should not trigger DB lookup.
+  const metadataBlock = canonicalSrc.split('export async function generateMetadata')[1]?.split('export default async function')[0] || '';
+  assert.equal(metadataBlock.includes('getActivityBySlugDb('), false);
 
   // Root-cause guard for GH #502: primary detail query should avoid relational embed,
   // so schema/relationship drift won't stall server render before first byte.
