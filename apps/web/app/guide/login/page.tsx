@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 const REQUEST_TIMEOUT_MS = 10000;
@@ -37,10 +35,20 @@ async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
 }
 
 function GuideLoginForm() {
-  const router = useRouter();
-  const params = useSearchParams();
+  const params = useMemo(() => {
+    if (typeof window === 'undefined') return new URLSearchParams();
+    return new URLSearchParams(window.location.search);
+  }, []);
   const token = params.get('token') || '';
   const safeNext = sanitizeGuideNext(params.get('next'));
+  const router = useMemo(
+    () => ({
+      push: (nextPath: string) => {
+        window.location.assign(nextPath);
+      },
+    }),
+    []
+  );
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
