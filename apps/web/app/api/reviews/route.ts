@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../src/lib/api';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '../../../src/lib/supabase/server';
+import { isReviewSubmissionAuthorized } from '../../../src/lib/review-ownership.mjs';
 
 function getServiceClient() {
   return createServiceClient(
@@ -64,17 +65,18 @@ export async function POST(req: NextRequest) {
 
   const bookingOwned = Boolean(booking && booking.traveler_id === user.id);
 
-  let orderOwned = false;
-  if (!bookingOwned) {
-    const { data: order } = await adminSupabase
+  let order;
+  if (!booking) {
+    ({ data: order } = await adminSupabase
       .from('orders')
       .select('id, user_id, status')
       .eq('id', reviewTargetId)
-      .maybeSingle();
-    orderOwned = Boolean(order && order.user_id === user.id);
+      .maybeSingle());
   }
 
-  if (!bookingOwned && !orderOwned) {
+  const isOwned = Boolean(bookingOwned || (!booking && order?.user_id === user.id));
+
+  if (!isOwned) {
     return NextResponse.json(fail('FORBIDDEN', 'booking not owned by user'), { status: 403 });
   }
 
