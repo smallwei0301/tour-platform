@@ -26,13 +26,13 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   }) as Promise<T>;
 }
 
-export default async function ActivityDetailCompatPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function ActivityDetailCompatPage({ params }: { params: Promise<{ region: string }> }) {
+  const { region } = await params;
 
   let activity: Awaited<ReturnType<typeof getActivityBySlugDb>>;
   try {
     activity = await withTimeout(
-      getActivityBySlugDb(slug),
+      getActivityBySlugDb(region),
       COMPAT_ACTIVITY_TIMEOUT_MS,
       'activity-detail-compat-redirect',
     );
