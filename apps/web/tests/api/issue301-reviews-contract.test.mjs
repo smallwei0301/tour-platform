@@ -124,9 +124,12 @@ describe('Issue 359 — AC3: POST /api/reviews submit route', () => {
     assert.match(src, /export\s+async\s+function\s+POST\s*\(/, 'Must export POST handler');
   });
 
-  it('AC3: checks auth via getUser() and returns 401 if no user', () => {
+  it('AC3: checks auth via server-session getUser() and returns 401 if no user', () => {
     const src = readRoute('app/api/reviews/route.ts');
+    assert.match(src, /from ['"]\.\.\/\.\.\/\.\.\/src\/lib\/supabase\/server['"]/, 'Must import server-side Supabase client for cookie session auth');
+    assert.match(src, /const\s+supabase\s*=\s*await\s+createClient\(\)/, 'Must create cookie-bound server Supabase client');
     assert.match(src, /auth\.getUser\(\)/, 'Must call auth.getUser()');
+    assert.doesNotMatch(src, /headers\.get\(['"]authorization['"]\)/i, 'Must not require Authorization header for browser session flow');
     assert.match(src, /UNAUTHORIZED/i, 'Must return UNAUTHORIZED error code');
     assert.match(src, /status:\s*401/, 'Must return HTTP 401 status');
   });

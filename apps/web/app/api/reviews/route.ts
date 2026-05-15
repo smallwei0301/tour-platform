@@ -1,17 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../src/lib/api';
-import { createClient } from '@supabase/supabase-js';
-
-function getAnonClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { persistSession: false, autoRefreshToken: false } }
-  );
-}
+import { createClient as createServiceClient } from '@supabase/supabase-js';
+import { createClient } from '../../../src/lib/supabase/server';
 
 function getServiceClient() {
-  return createClient(
+  return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
@@ -19,21 +12,9 @@ function getServiceClient() {
 }
 
 export async function POST(req: NextRequest) {
-  // AC3 + AC7: Require authenticated user
-  const supabase = getAnonClient();
-  const authHeader = req.headers.get('authorization') || '';
-  const anonClientWithToken = authHeader
-    ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-          auth: { persistSession: false, autoRefreshToken: false },
-          global: { headers: { Authorization: authHeader } },
-        }
-      )
-    : supabase;
-
-  const { data: { user } } = await anonClientWithToken.auth.getUser();
+  // AC3 + AC7: Require authenticated user (browser session cookie)
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json(fail('UNAUTHORIZED', 'login required'), { status: 401 });
   }
