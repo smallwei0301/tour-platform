@@ -8,7 +8,7 @@ import {
   clearGuideSessionCookies,
 } from '../../../../../src/lib/guide-auth';
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
-import { getGuideAuthSupabaseClient } from '../../../../../src/lib/guide-auth-session-supabase';
+import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../src/lib/guide-auth-session-supabase';
 
 type GuideSessionInviteProfile = {
   id: string;
@@ -26,10 +26,7 @@ type GuideSessionLoginProfile = {
   verification_status: string;
 };
 
-type SupabaseSingleResult<T> = {
-  data: T | null;
-  error: unknown | null;
-};
+type SupabaseSingleResult<T> = GuideAuthSingleResult<T>;
 
 const SUPABASE_QUERY_TIMEOUT_MS = Number(process.env.GUIDE_AUTH_SUPABASE_TIMEOUT_MS ?? 8000);
 
@@ -39,11 +36,11 @@ function timeoutError() {
   return err;
 }
 
-async function withTimeout<T>(promise: Promise<T>, ms = SUPABASE_QUERY_TIMEOUT_MS): Promise<T> {
+async function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_QUERY_TIMEOUT_MS): Promise<T> {
   let timer: NodeJS.Timeout | null = null;
   try {
     return await Promise.race([
-      promise,
+      Promise.resolve(promise),
       new Promise<T>((_, reject) => {
         timer = setTimeout(() => reject(timeoutError()), ms);
       }),
@@ -94,7 +91,7 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionInviteProfile>>(
         supabase
           .from('guide_profiles')
-          .select('id, display_name, invite_token, invite_token_expires_at, guide_session_version')
+          .select<GuideSessionInviteProfile>('id, display_name, invite_token, invite_token_expires_at, guide_session_version')
           .eq('invite_token', token)
           .single()
       );
@@ -135,7 +132,7 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
-          .select('id, display_name, guide_password_hash, guide_session_version, verification_status')
+          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status')
           .eq('guide_email', loginEmail)
           .single()
       );
@@ -166,7 +163,7 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
-          .select('id, display_name, guide_password_hash, guide_session_version, verification_status')
+          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status')
           .eq('id', loginGuideId)
           .single()
       );
