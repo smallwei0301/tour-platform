@@ -10,6 +10,27 @@ import {
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { getGuideAuthSupabaseClient } from '../../../../../src/lib/guide-auth-session-route.test-support';
 
+type GuideSessionInviteProfile = {
+  id: string;
+  display_name: string;
+  invite_token: string | null;
+  invite_token_expires_at: string | null;
+  guide_session_version: number | null;
+};
+
+type GuideSessionLoginProfile = {
+  id: string;
+  display_name: string;
+  guide_password_hash: string | null;
+  guide_session_version: number | null;
+  verification_status: string;
+};
+
+type SupabaseSingleResult<T> = {
+  data: T | null;
+  error: unknown | null;
+};
+
 const SUPABASE_QUERY_TIMEOUT_MS = Number(process.env.GUIDE_AUTH_SUPABASE_TIMEOUT_MS ?? 8000);
 
 function timeoutError() {
@@ -70,7 +91,7 @@ export async function POST(req: Request) {
         return Response.json(fail('INVALID_PASSWORD', '密碼至少 6 個字元'), { status: 400 });
       }
 
-      const { data: guide, error } = await withTimeout(
+      const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionInviteProfile>>(
         supabase
           .from('guide_profiles')
           .select('id, display_name, invite_token, invite_token_expires_at, guide_session_version')
@@ -111,7 +132,7 @@ export async function POST(req: Request) {
     // ── Regular password login (email + password) ─────────────────────────────
     const loginEmail = (body.email as string | undefined)?.toLowerCase().trim();
     if (loginEmail && password) {
-      const { data: guide, error } = await withTimeout(
+      const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
           .select('id, display_name, guide_password_hash, guide_session_version, verification_status')
@@ -142,7 +163,7 @@ export async function POST(req: Request) {
 
     // ── Legacy: guideId + password (backward compat) ───────────────────────────
     if (loginGuideId && password) {
-      const { data: guide, error } = await withTimeout(
+      const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
           .select('id, display_name, guide_password_hash, guide_session_version, verification_status')
