@@ -28,8 +28,16 @@ export function calculateRefundAmount(
   // Sort tiers descending by cutoff_hours (longest first)
   const sorted = [...policy.tiers].sort((a, b) => b.cutoff_hours - a.cutoff_hours);
 
-  for (const tier of sorted) {
-    if (hoursUntilTour >= tier.cutoff_hours) {
+  for (const [index, tier] of sorted.entries()) {
+    const isFirstTier = index === 0;
+    const isLastTier = index === sorted.length - 1;
+
+    const matches =
+      (isFirstTier && hoursUntilTour >= tier.cutoff_hours) ||
+      (isLastTier && hoursUntilTour >= tier.cutoff_hours) ||
+      (!isFirstTier && !isLastTier && hoursUntilTour > tier.cutoff_hours);
+
+    if (matches) {
       const refundable = Math.round(originalAmount * tier.refund_pct / 100);
       return {
         eligible: tier.refund_pct > 0,
@@ -40,6 +48,7 @@ export function calculateRefundAmount(
       };
     }
   }
+
 
   // Fallback — should not happen with well-formed policy (last tier has cutoff_hours=0)
   return {

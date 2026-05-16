@@ -71,23 +71,16 @@ test('24h before tour → 0% refund, not eligible', () => {
   assert.strictEqual(result.breakdown.tier, '<=72h');
 });
 
-test('exactly at 72h boundary → 0% refund (3-7d tier requires >72h, <=72h catches 72h)', () => {
+test('exactly at 72h boundary → 0% refund', () => {
   // At exactly 72h: hoursUntilTour = 72
-  // sorted tiers: 168, 72, 0
-  // 72 >= 168? No. 72 >= 72? Yes → 3-7d tier (70%)
-  // Wait — 72h exactly matches the "3-7d" tier (cutoff_hours: 72), so it gets 70%.
-  // But per spec: "72 小時內 取消者 不予退款" means < 72h is 0%.
-  // The policy seeds cutoff_hours: 72 as the lower bound of 3-7d.
-  // With the algorithm: sorted = [168, 72, 0]; at 72h:
-  //   72 >= 168? No. 72 >= 72? Yes → refund_pct: 70
-  // So exactly 72h = 70% refund (matches the spec's boundary: "3–7天" includes exactly 72h)
+  // expected rule: <=72h -> 0%
   const now = new Date('2026-06-01T00:00:00Z');
   const tourStart = new Date(now.getTime() + 72 * 60 * 60 * 1000); // exactly 72h
   const result = calculateRefundAmount(10000, tourStart, V2_POLICY, now);
-  assert.strictEqual(result.refund_pct, 70);
-  assert.strictEqual(result.refundable_amount, 7000);
-  assert.strictEqual(result.eligible, true);
-  assert.strictEqual(result.breakdown.tier, '3-7d');
+  assert.strictEqual(result.refund_pct, 0);
+  assert.strictEqual(result.refundable_amount, 0);
+  assert.strictEqual(result.eligible, false);
+  assert.strictEqual(result.breakdown.tier, '<=72h');
 });
 
 test('exactly at 168h boundary → 100% refund', () => {
