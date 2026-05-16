@@ -12,7 +12,7 @@ function getSupabase() {
   return createClient(url, key);
 }
 
-type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual';
+type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual' | 'evidence_required';
 
 interface ReadinessItem {
   id: string;
@@ -20,6 +20,7 @@ interface ReadinessItem {
   status: ReadinessStatus;
   owner: string;
   note: string;
+  issueRef?: string;
 }
 
 interface Metrics {
@@ -68,6 +69,11 @@ function computeVerdict(
   }
   if (metrics.pendingRefunds > 10) {
     return { state: 'HOLD', reason: `${metrics.pendingRefunds} pending refunds exceed threshold of 10` };
+  }
+
+  const hasEvidenceRequired = readiness.some((r) => r.status === 'evidence_required');
+  if (hasEvidenceRequired) {
+    return { state: 'HOLD', reason: 'Required pre-launch evidence items are unsigned or incomplete' };
   }
 
   return { state: 'GO', reason: 'All metrics within acceptable thresholds' };
@@ -159,6 +165,46 @@ export async function GET(_req: Request) {
         status: deploySha !== 'local' ? 'pass' : 'warning',
         owner: 'infra',
         note: deploySha !== 'local' ? `Commit: ${deploySha}` : 'Running locally — not a Vercel deploy',
+      },
+      {
+        id: 'evidence-real-payment',
+        label: '#402 Real payment/refund/email side-effect evidence',
+        status: process.env.EVIDENCE_402_SIGNED === 'true' ? 'pass' : 'evidence_required',
+        owner: 'ops',
+        note: '#402: Requires real ECPay payment + refund side-effect verification. Set EVIDENCE_402_SIGNED=true when done.',
+        issueRef: '#402',
+      },
+      {
+        id: 'evidence-manual-regression',
+        label: '#500 Recent-merge manual regression checklist',
+        status: process.env.EVIDENCE_500_SIGNED === 'true' ? 'pass' : 'evidence_required',
+        owner: 'qa',
+        note: '#500: Manual regression for PRs May 12-14. Set EVIDENCE_500_SIGNED=true when done.',
+        issueRef: '#500',
+      },
+      {
+        id: 'evidence-traveler-browser',
+        label: '#403 Authenticated traveler browser session evidence',
+        status: process.env.EVIDENCE_403_SIGNED === 'true' ? 'pass' : 'evidence_required',
+        owner: 'qa',
+        note: '#403: Requires real Google OAuth traveler session QA. Set EVIDENCE_403_SIGNED=true when done.',
+        issueRef: '#403',
+      },
+      {
+        id: 'evidence-guide-onboarding',
+        label: '#318 Guide onboarding demo run + retrospective',
+        status: process.env.EVIDENCE_318_SIGNED === 'true' ? 'pass' : 'evidence_required',
+        owner: 'ops',
+        note: '#318: Real guide self-operation walkthrough. Set EVIDENCE_318_SIGNED=true when done.',
+        issueRef: '#318',
+      },
+      {
+        id: 'evidence-cs-sop',
+        label: '#319 Customer-service SOP drill (4 scenarios)',
+        status: process.env.EVIDENCE_319_SIGNED === 'true' ? 'pass' : 'evidence_required',
+        owner: 'ops',
+        note: '#319: SOP drill for cancel/refund/incident/emergency. Set EVIDENCE_319_SIGNED=true when done.',
+        issueRef: '#319',
       },
     ];
 
