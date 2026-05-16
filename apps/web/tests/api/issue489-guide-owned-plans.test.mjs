@@ -28,7 +28,7 @@ test('adds guide activities-with-plans endpoint using activity_plans source of t
   assert.match(source, /verifyGuideSession\(/, 'must require guide session');
   assert.match(source, /from\('activity_plans'\)/, 'must query activity_plans table');
   assert.match(source, /\.eq\('activities\.guide_id',\s*session\.guideId\)/, 'must scope to current guide ownership');
-  assert.match(source, /\.eq\('activities\.is_active',\s*true\)/, 'must only expose active activities');
+  assert.match(source, /\.in\('activities\.status',\s*\[['"]active['"],\s*['"]published['"]\]\)/, 'must only expose active/published activities');
   assert.match(source, /\.in\('status',\s*\[['"]active['"],\s*['"]published['"]\]\)/, 'must include only usable plan statuses');
   assert.match(source, /activityId/, 'response should expose activityId');
   assert.match(source, /planId/, 'response should expose planId');
