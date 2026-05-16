@@ -102,6 +102,17 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
 
+    // Soft-launch guard — refund_manual_only: skip auto-execution, return OK to ECPay
+    {
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const { getControls } = await import('../../../../../src/lib/soft-launch.mjs');
+      const svc = createServiceClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const controls = await getControls(svc);
+      if (controls.refund_manual_only) {
+        return new Response('1|OK (refund_manual_only mode)', { status: 200, headers: { 'content-type': 'text/plain' } });
+      }
+    }
+
     const dbResult = await processRefundCallbackDb(supabase, {
       merchantTradeNo,
       tradeNo,
