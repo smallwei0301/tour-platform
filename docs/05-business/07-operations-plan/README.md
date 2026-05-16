@@ -100,7 +100,7 @@ Email / LINE 通知完成
 | 取消時間 | 退款比例 | 依據 |
 |---------|--------|------|
 | 活動 7 天以上（168 小時以上） | 100% | `04-refund-policy-v2.md` |
-| 活動 3~7 天前（大於 72 小時且少於 168 小時） | 70% | `04-refund-policy-v2.md` |
+| 活動大於 72 小時且小於 168 小時 | 70% | `04-refund-policy-v2.md` |
 | 活動 72 小時（含）內 | 0% | `04-refund-policy-v2.md` |
 | 導遊 / 平台取消 | 100% | `04-refund-policy-v2.md` |
 | 不可抗力（限定類別） | 100% 或 1 次免費改期 | `government_order`、`typhoon`、`earthquake`、`organizer_cancel` |
