@@ -1,6 +1,7 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { adminDashboardSummaryDb } from '../../../../src/lib/db.mjs';
 import { createClient } from '@supabase/supabase-js';
+import { getControls } from '../../../../src/lib/soft-launch.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -201,8 +202,18 @@ export async function GET(_req: Request) {
       }
     }
 
+    // --- Soft-launch controls ---
+    let soft_launch_controls = null;
+    if (supabase) {
+      try {
+        soft_launch_controls = await getControls(supabase);
+      } catch {
+        // non-fatal: soft-launch controls are supplementary
+      }
+    }
+
     return Response.json(
-      ok({ readiness, metrics, verdict, recommendedActions })
+      ok({ readiness, metrics, verdict, recommendedActions, soft_launch_controls })
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
