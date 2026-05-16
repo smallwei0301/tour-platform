@@ -97,13 +97,13 @@ Email / LINE 通知完成
 ```
 
 **退款政策（清楚，不藏在細則裡）：**
-|| 取消時間 | 退款比例 | 依據 |
-||---------|--------|------|
-|| 活動 7 天以上（168 小時以上） | 100% | `04-refund-policy-v2.md` |
-|| 活動 3~7 天前（72～168 小時） | 70% | `04-refund-policy-v2.md` |
-|| 活動低於 72 小時前 | 0% | `04-refund-policy-v2.md` |
-|| 導遊 / 平台取消 | 100% | `04-refund-policy-v2.md` |
-|| 不可抗力（限定類別） | 100% 或 1 次免費改期 | `04-refund-policy-v2.md` |
+| 取消時間 | 退款比例 | 依據 |
+|---------|--------|------|
+| 活動 7 天以上（168 小時以上） | 100% | `04-refund-policy-v2.md` |
+| 活動 3~7 天前（大於 72 小時且少於 168 小時） | 70% | `04-refund-policy-v2.md` |
+| 活動 72 小時（含）內 | 0% | `04-refund-policy-v2.md` |
+| 導遊 / 平台取消 | 100% | `04-refund-policy-v2.md` |
+| 不可抗力（限定類別） | 100% 或 1 次免費改期 | `government_order`、`typhoon`、`earthquake`、`organizer_cancel` |
 
 - 主檔位置：`docs/05-business/06-payment-plan/04-refund-policy-v2.md`
 - 手續費：旅客端不再另收退費手續費，平台承擔退費手續費處理邏輯
