@@ -29,5 +29,8 @@
     "playwright": "^1.58.2",
     "supabase": "^2.87.2",
     "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
