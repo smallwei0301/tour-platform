@@ -388,6 +388,20 @@ export async function POST(request: NextRequest) {
       // Not logged in, continue without traveler_id
     }
 
+    // Soft-launch guard
+    {
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const { getControls, isWhitelisted } = await import('../../../../../src/lib/soft-launch.mjs');
+      const svc = createServiceClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const controls = await getControls(svc);
+      if (controls.new_booking_paused) {
+        const allowed = controls.whitelist_enabled ? await isWhitelisted(svc, { userId: travelerId ?? undefined, activityId: undefined, guideId: undefined }) : false;
+        if (!allowed) {
+          return Response.json(errorV2('BOOKING_PAUSED', '目前暫停接受新訂單，請稍後再試'), { status: 423 });
+        }
+      }
+    }
+
     // 5. Calculate total amount
     let totalAmount: number;
     if (planData.price_type === 'per_person') {

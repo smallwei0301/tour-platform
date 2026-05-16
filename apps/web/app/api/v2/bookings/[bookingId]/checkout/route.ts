@@ -159,6 +159,22 @@ export async function POST(
     const checkoutBooking = booking as unknown as CheckoutBooking;
     const sourceChannel = checkoutBooking.source_channel || 'web';
 
+    // Soft-launch guard
+    {
+      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+      const { getControls, isWhitelisted } = await import('../../../../../../src/lib/soft-launch.mjs');
+      const svc = createServiceClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const controls = await getControls(svc);
+      if (controls.new_booking_paused) {
+        const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
+        const userId = user?.id;
+        const allowed = controls.whitelist_enabled ? await isWhitelisted(svc, { userId, activityId: undefined, guideId: undefined }) : false;
+        if (!allowed) {
+          return Response.json(errorV2('BOOKING_PAUSED', '目前暫停接受新訂單，請稍後再試'), { status: 423 });
+        }
+      }
+    }
+
     const { data: draftAuditLog } = await supabase
       .from('booking_status_logs')
       .select('metadata')
