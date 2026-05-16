@@ -87,7 +87,7 @@
 
 ---
 
-## 6.5 退款政策（請以 v2 主檔為準）
+## 6.5 退款政策（請以 `04-refund-policy-v2.md`（v2 Source of Truth）為準）
 
 - 主檔：`docs/05-business/06-payment-plan/04-refund-policy-v2.md`（Source of Truth）
 

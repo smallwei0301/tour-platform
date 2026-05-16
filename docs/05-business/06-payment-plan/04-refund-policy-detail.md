@@ -1,13 +1,13 @@
-# 退款政策細則（v2 導向）
+# 退款政策細則（v2 參考版）
 
 > 最後更新：2026-05-16
-> 狀態：v2 對齊版（以 `04-refund-policy-v2.md` 為主檔）
+> 狀態：v2 參考版（以 `04-refund-policy-v2.md` 為主檔）
 
 ## 1. 目的
 
 本檔為客服與團隊實務操作參考，所有最終數值、例外條件與流程請以
 `docs/05-business/06-payment-plan/04-refund-policy-v2.md`
-作為主檔。
+作為主檔（Source of Truth）。
 
 ## 2. v2 對齊重點
 
