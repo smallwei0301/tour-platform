@@ -276,19 +276,43 @@ function detectMissingTarget(error) {
   const hint = String(error?.hint || '');
   const all = `${message} ${details} ${hint}`;
 
-  const missing_table = all.match(/"([a-zA-Z0-9_]+)"(?:\.[a-zA-Z0-9_]+)?/i)?.[1] ?? null;
+  const extractTableName = (qualified) => {
+    if (!qualified) return null;
+    const normalized = String(qualified).replace(/^"|"$/g, '');
+    const segments = normalized.split('.').map((seg) => seg.replace(/^"|"$/g, '')).filter(Boolean);
+    if (segments.length === 0) return null;
+    return segments[segments.length - 1];
+  };
 
-  if (all.match(/relation|table/i) && /does not exist/.test(all)) {
-    return { missing_table: missing_table };
+  const relationToken =
+    all.match(/(?:relation|table)\s+((?:"?[a-zA-Z0-9_]+"?\.)?"?[a-zA-Z0-9_]+"?)\s+does not exist/i)?.[1]
+    ?? all.match(/(?:relation|table)\s+"([^"]+)"\s+does not exist/i)?.[1]
+    ?? null;
+  const columnToken =
+    all.match(/column\s+((?:"?[a-zA-Z0-9_]+"?\.)?"?[a-zA-Z0-9_]+"?)\s+does not exist/i)?.[1]
+    ?? all.match(/column\s+"([^"]+)"\s+does not exist/i)?.[1]
+    ?? null;
+
+  if (/relation|table/i.test(all) && /does not exist/i.test(all)) {
+    return { missing_table: extractTableName(relationToken) };
   }
-  if (/column/i.test(all) && /does not exist/.test(all)) {
-    const missing_column = all.match(/column\s+([a-zA-Z0-9_]+)\s+does not exist/i)?.[1] || all.match(/"([a-zA-Z0-9_]+)"/i)?.[1];
-    return { missing_column: missing_column || null, missing_table: missing_table || null };
+
+  if (/column/i.test(all) && /does not exist/i.test(all)) {
+    const missing_column = columnToken ? extractTableName(columnToken) : null;
+    const missing_table = columnToken?.includes('.')
+      ? extractTableName(columnToken.split('.').slice(0, -1).join('.'))
+      : null;
+    return {
+      missing_column,
+      missing_table,
+    };
   }
-  if (/relationship|relationship does not exist|relationship|does not exist/i.test(all)) {
+
+  if (/relationship/i.test(all) && /does not exist/i.test(all)) {
     const missing_relation = all.match(/"([a-zA-Z0-9_!]+)"/i)?.[1] || null;
-    return { missing_relation: missing_relation || null, missing_table: missing_table || null };
+    return { missing_relation, missing_table: extractTableName(relationToken) };
   }
+
   return {};
 }
 

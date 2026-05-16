@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
+import http from 'node:http';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT_PATH = path.resolve(__dirname, '../../../../scripts/production-schema-drift-preflight.mjs');
@@ -27,11 +28,75 @@ function runPreflight(args = [], extraEnv = {}) {
   };
 }
 
+async function runPreflightAsync(args = [], extraEnv = {}) {
+  const env = { ...process.env, ...extraEnv };
+  return await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [SCRIPT_PATH, ...args], {
+      cwd: ROOT_PATH,
+      env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      resolve({
+        status: code,
+        stdout,
+        stderr,
+        output: `${stdout}${stderr}`,
+      });
+    });
+  });
+}
+
 function withNoDbEnv(baseEnv = {}) {
   const env = { ...process.env, ...baseEnv };
   delete env.SUPABASE_URL;
   delete env.SUPABASE_SERVICE_ROLE_KEY;
   return env;
+}
+
+async function withFakePostgrest(fakeBody, run) {
+  const requests = [];
+  const server = http.createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    requests.push({
+      method: req.method,
+      url: req.url,
+      headers: req.headers,
+      body: Buffer.concat(chunks).toString('utf8'),
+    });
+
+    res.writeHead(400, { 'content-type': 'application/json' });
+    res.end(JSON.stringify(fakeBody));
+  });
+
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+
+  try {
+    return await run(
+      {
+        SUPABASE_URL: `${baseUrl}/rest/v1`,
+        SUPABASE_SERVICE_ROLE_KEY: 'test_service_role_key',
+      },
+      requests,
+    );
+  } finally {
+    await new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
+  }
 }
 
 const EXPECTED_CHECKS = [
@@ -287,5 +352,44 @@ describe('Issue 507 schema drift preflight contract', () => {
       assert.equal(check.error_classification, 'no_db_env');
       assert.equal(check.impacted_feature?.length > 0, true);
     }
+  });
+
+  it('reports exact missing column + table for qualified postgrest missing-column errors', async () => {
+    await withFakePostgrest(
+      {
+        code: '42703',
+        message: 'column activities.is_active does not exist',
+      },
+      async (dbEnv) => {
+        const result = await runPreflightAsync(['--json'], dbEnv);
+        assert.equal(result.status, 1, 'missing column should fail preflight');
+
+        const payload = JSON.parse(result.output);
+        const target = payload.checks.find((check) => check.feature_area === 'public activities');
+        assert.ok(target, 'public activities check missing');
+        assert.equal(target.error_classification, 'missing_column');
+        assert.equal(target.missing_column, 'is_active');
+        assert.equal(target.missing_table, 'activities');
+      },
+    );
+  });
+
+  it('reports exact missing relation/table target for relation-does-not-exist errors', async () => {
+    await withFakePostgrest(
+      {
+        code: '42P01',
+        message: 'relation public.guide_profiles does not exist',
+      },
+      async (dbEnv) => {
+        const result = await runPreflightAsync(['--json'], dbEnv);
+        assert.equal(result.status, 1, 'missing relation should fail preflight');
+
+        const payload = JSON.parse(result.output);
+        const target = payload.checks.find((check) => check.feature_area === 'public activities');
+        assert.ok(target, 'public activities check missing');
+        assert.equal(target.error_classification, 'missing_relation');
+        assert.equal(target.missing_table, 'guide_profiles');
+      },
+    );
   });
 });
