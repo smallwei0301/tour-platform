@@ -35,7 +35,8 @@ test('availability API response payload keeps only UI-required fields', async ()
 test('activity detail page keeps ISR shell and does not couple availability to page-level re-render', async () => {
   const src = await readSource('app/activities/[region]/[slug]/page.tsx');
 
-  assert.match(src, /export const dynamic = 'force-static';/);
-  assert.match(src, /export const revalidate = 300;/);
+  // Issue #502: force-dynamic with revalidate=60 avoids render lock on cold path
+  assert.match(src, /export const dynamic = 'force-dynamic';/);
+  assert.match(src, /export const revalidate = 60;/);
   assert.match(src, /DatePlanSection activity=\{activity\} schedules=\{displayedSchedules\} useBookingV2=\{useBookingV2\} \/>/);
 });
