@@ -1,7 +1,7 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-05-14
-> 當前主線：**上線前就緒（Pre-launch Readiness）**：聚焦真實付款/退款/Email 證據、手動回歸與營運接管（以 #402 為核心）
+> 最後更新：2026-05-16
+> 當前主線：**Soft-Launch 就緒**：soft-launch 控制機制全套上線（#550/#552/#554/#557），Go/No-Go 預設 HOLD，等待手動 QA sign-off（#545 / #500）
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
 1. 現在專案在做什麼
@@ -15,8 +15,8 @@
 ### 專案總覽
 - `../README.md` - repo 根總覽
 
-### 當前主線：Pre-Launch Readiness / 金流證據 / 營運接管
-- `../README.md` - repo 根總覽與 #402 狀態
+### 當前主線：Soft-Launch 就緒 / 手動 QA / Go/No-Go
+- `../README.md` - repo 根總覽與 soft-launch 狀態（#402 CLOSED，Go/No-Go 預設 HOLD）
 - `NEXT_PHASE_PLAN.md` - 當前下一步與就緒判斷
 - `operations/issue-402-real-payment-refund-verification-runbook.md`（Issue #402：真實付款/退款/Email 證據 runbook）
 - `operations/booking-v2-daily-go-no-go.md`（Go/No-Go 節奏）
@@ -65,30 +65,31 @@
 
 ---
 
-## 目前 open issue 對應文件主線
-- **#402** - `operations/issue-402-real-payment-refund-verification-runbook.md`（真實付款/退款/Email side-effect 證據 runbook）
-- **#500** - manual regression / evidence：`qa/booking-v2-rollout-manual-checklist.md`（若未涵蓋 #500 子項，需以 issue #500 記錄為主）
-- **#403** - real Google traveler session evidence（目前主要為 issue / code 討論，文件待補：建議新增後在此同步）
-- **#318** - onboarding 與營運接手文件（以 `operations/` / `security/` / `qa/` 交叉更新）
-- **#319** - CS SOP 演練（相關 SOP 文件由 `operations/` 執行中主題補齊）
-- **#320** - readiness gate / soft launch control / Admin Go-No-Go dashboard（文件索引待對齊）
-- **#504** - 統整上線證據封裝（目標來源為 issue 討論與驗證回傳）
-- **PR #501**：僅作為 SimulatePaid no-op guard，不能作為 #402 結案證據
+## 目前 open issue 對應文件主線（2026-05-16）
+
+**P1（手動 QA）：**
+- **#545** - manual QA checklist（最高優先）
+- **#500** - manual regression / evidence：`qa/booking-v2-rollout-manual-checklist.md`
+
+**其他 open（調查 / 文件 / 環境）：**
+- **#559, #537, #508, #504, #515, #514** - 調查、文件補強、環境議題
+
+**已完成，僅供參考：**
+- **#402 CLOSED** — 真實付款/退款/Email 證據收斂；`operations/issue-402-real-payment-refund-verification-runbook.md` 為執行路徑。**注意：** 實際 Go/No-Go **預設 HOLD**，需人工 QA sign-off 才能切換
+- **#505 / #506 COMPLETED** — Go/No-Go evidence-driven（PR #557）、soft-launch 控制全套（PR #550 / #552 / #554）均已落地
+- **#528 COMPLETED** — Node 22 pin（PR #548）
 
 **注意：** 以上為目前就緒路徑的 source-of-truth 指引，凡未有對應實際文件者，待 issue/PR 補齊後再更新。
 
-**同樣補充：** PR #501 只做 SimulatePaid 模擬回調保護，未驗證真實付款成功/退款/Email side-effect；#402 仍為未結案 blocker。
-
 ---
 
-## 今天（2026-05-14）文件清理重點
-- 已更新根 README，改成精簡就緒主線地圖：PR #501 是 SimulatePaid no-op guard，不代表 #402 結案
-- 已把 docs 主線明確切成：
-  - 會造成上線差異的就緒主線
-  - 歷史背景
-  - 待整理區塊
-- 已將 #402 證據路徑收斂到 `operations/issue-402-real-payment-refund-verification-runbook.md`（待人工執行後補齊實測紀錄）
-- 已同步 open issue 對應與就緒路徑（#402 / #500 / #403 / #318 / #319 / #320）
+## 2026-05-16 文件同步重點
+- 根 README 與本檔已同步至 2026-05-16 live 狀態（issue #520）
+- #402 CLOSED — Go/No-Go 預設 HOLD，#545 / #500 為當前 P1 手動 QA 主線
+- Soft-launch 控制機制全套落地：admin kill-switch、checkout guards、admin UI、evidence-driven Go/No-Go（PR #550–#557）
+- Node 22 已 pin（PR #548）
+- 最新 merge：PR #566 docs(ops): settlement/payout runbook v1（截至 2026-05-16）
+- 14 open issues（2026-05-16）
 
 
 ---

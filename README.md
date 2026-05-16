@@ -30,7 +30,7 @@
 
 ---
 
-## 1. 專案現況（2026-05-14）
+## 1. 專案現況（2026-05-16）
 
 ### 已完成的基礎能力
 - 前台 MVP 已完成
@@ -69,34 +69,33 @@
 - #292 docs-only full-chain Phase B/C fixture
 - #165 Phase 12 audit coverage matrix
 
-### 還 open 的主線（2026-05-14）
+### 還 open 的主線（2026-05-16）
 
-**P0（1）：**
-- **#402** 實際 ECPay 實金流結帳 + 退款 + Email side-effect 證據仍開啟，為最上層上線阻斷。
-
-**P1（5）：**
+**P1（2）：**
+- **#545** manual QA checklist（手動 QA 必做項目）
 - **#500** manual regression（手動回歸）
-- **#403** real Google traveler session（真實旅客瀏覽器 session）
-- **#318** onboarding 流程與營運接手準備
-- **#319** CS / 客服 SOP 演練
-- **#320** readiness gate / soft launch control / Admin Go-No-Go dashboard
 
-**P2（1+）：**
-- **#504** 統整實測與放行證據封裝（若仍 open，作為 #402 專案的 evidence index）
-- **#502** production schema-drift follow-up（若環境有新 schema 觀測差異時，需逐步清理）
+**其他 open（調查 / 文件 / 環境）：**
+- **#559, #537, #520, #508, #504, #515, #514**（調查、文件補強、環境議題）
+
+**已結案 / 已完成（2026-05-14 → 2026-05-16）：**
+- **#402 CLOSED** — 真實付款/退款/Email 證據已收斂；實際 Go/No-Go 結果需人工 QA 簽核，**Go/No-Go 預設 HOLD 直到 QA sign-off**
+- **#505 COMPLETED** — Go/No-Go 已改為 evidence-driven，預設 HOLD（PR #557）
+- **#506 COMPLETED** — soft-launch 控制全套完成：admin kill-switch、checkout guards、admin UI（PR #550 / #552 / #554）
+- **#528 COMPLETED** — Node 22 已 pin（.nvmrc + engines field，PR #548）
 
 ### 最新 CI / 主線真值
-- main 近 14 天持續轉綠
-- 最新 merge：PR #501 test(ecpay): guard SimulatePaid callback side effects（merge commit a4fe92a，2026-05-11）
-- **警示：** PR #501 僅確認 SimulatePaid=1 callback 為模擬 no-op；不代表真金流 `trade success` / `refund` / `email` side-effect 已完成。
-- **目前主線焦點：** 從「大地圖收斂」轉為「上線前就緒證據」與營運接管準備。
+- main 持續轉綠
+- 最新 merge（截至 2026-05-16）：PR #566 docs(ops): settlement/payout runbook v1
+- 近期重要合併：#566（settlement runbook）、#565（security evidence governance）、#564（QA runbook v2）、#563（incident runbook v2）、#562（refund policy v2）、#557（admin Go/No-Go evidence-driven）、#556（soft-launch behavioral tests）、#554（soft-launch admin UI）、#552（soft-launch checkout/refund guards）、#550（soft-launch control foundation）
+- **Node 22 已 pin**：.nvmrc + engines field（PR #548）
+- **目前主線焦點：** soft-launch 控制就緒，Go/No-Go 預設 HOLD，等待人工 QA sign-off（#545 / #500）。
 
-### Go-Live 仍缺
-- 在 #402 結案前，正式上線缺口包括：
-  - 以真實（非 SimulatePaid）付款成功產生付費訂單並完成 booked/paid 流程
-  - 退款成功後證據可被追溯到訂單更新
-  - 旅客與管理員郵件通知 side-effect 可重複驗證
-  - 操作人員可在 docs/operations/issue-402-real-payment-refund-verification-runbook.md 取得可執行驗證路徑
+### Go-Live 仍缺（2026-05-16 狀態）
+- **#402 已 CLOSED**，但真實付款/退款/Email 證據為手動 QA 前置條件，Go/No-Go dashboard **預設 HOLD**，需 QA sign-off 才能切換 PROCEED
+- Soft-launch 控制機制已全套就緒（admin kill-switch + checkout guards + admin UI）
+- 14 個 open issues（2026-05-16），P1 為 #545、#500（手動 QA）
+- 操作人員可在 docs/operations/issue-402-real-payment-refund-verification-runbook.md 取得可執行驗證路徑
 
 ---
 
@@ -170,16 +169,15 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 - [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
 - [`docs/qa/booking-v2-rollout-manual-checklist.md`](./docs/qa/booking-v2-rollout-manual-checklist.md)
 
-### Step 2：先看現在還開著的主線 issue（2026-05-14 更新）
+### Step 2：先看現在還開著的主線 issue（2026-05-16 更新）
 目前不要自己發明主線，先接（依優先順序）：
-- **#402**（P0，真實 ECPay 付款/退款/Email side-effect 證據）
+- **#545**（P1，manual QA checklist，手動 QA 必做項目）
 - **#500**（P1，manual regression / 監看清單）
-- **#403**（P1，真實 Google traveler session）
-- **#318**（P1，營運 onboarding 接手）
-- **#319**（P1，CS SOP 演練）
-- **#320**（P1，readiness gate / soft launch control / Admin Go-No-Go）
-- **#504**（P2，統整上線證據封裝）
-- **#502**（P2，production schema drift follow-up，僅在遇到 schema 差異時補強）
+- **#559, #537, #508, #504, #515, #514**（調查、文件補強、環境議題，共 14 open issues）
+
+**已完成，不需再接：**
+- **#402 CLOSED** — 證據收斂完成；Go/No-Go 預設 HOLD，需 QA sign-off
+- **#505 / #506 / #528 COMPLETED** — Go/No-Go evidence-driven 機制、soft-launch 全套控制、Node 22 pin 均已落地
 
 ### Step 3：確認本地與 CI 都健康
 - `npm install`
