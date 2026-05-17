@@ -347,7 +347,7 @@ function PlanEditor({
             取消政策（每行一條）
             <textarea value={(plan.planRefundRules ?? []).join('\n')} rows={3}
               onChange={e => update({ planRefundRules: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
-              style={fieldStyle} placeholder={'出團 168 小時前（含）取消：100%退款\n出團前 72 小時以上且少於 168 小時取消：70%退款\n出團前 72 小時內（含）取消：不退款'} />
+              style={fieldStyle} placeholder={'出團 168 小時前（含）取消：100%退款\n出團前 超過 72 小時且少於 168 小時取消：70%退款\n出團前 72 小時內（含）取消：不退款'} />
           </label>
 
         </div>
@@ -1249,7 +1249,7 @@ export default function AdminActivityEditPage() {
       ],
       refundRules: [
         '出團 168 小時前（含）取消：100% 退款',
-        '出團前 72 小時以上且少於 168 小時取消：70% 退款',
+        '出團前 超過 72 小時且少於 168 小時取消：70% 退款',
         '出團前 72 小時內（含）取消：不退款',
         '不可抗力或主辦取消：100% 退款或 1 次免費改期'
       ],
@@ -1310,7 +1310,7 @@ export default function AdminActivityEditPage() {
           experiencePointName: '柴山龍谷、小錐麓、金瓜洞',
           experienceAddress: '高雄市鼓山區柴山（壽山國家自然公園）',
           planNotices: ['請穿著止滑鞋', '請自備至少 1 公升飲水', '行程含輕度攀岩與鑽洞，需彎腰匍匐前進', '請勿餵食或挑釁柴山獼猴', '小錐麓有輕微高度，嚴重懼高症者請事先告知'],
-          planRefundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 72 小時以上且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
+          planRefundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 超過 72 小時且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
         },
         {
           id: 'full-day-complete',
@@ -1344,7 +1344,7 @@ export default function AdminActivityEditPage() {
           experiencePointName: '柴山龍谷、小錐麓、金瓜洞、北峰砲台、隱谷秘境',
           experienceAddress: '高雄市鼓山區柴山（壽山國家自然公園）',
           planNotices: ['請穿著止滑運動鞋或登山鞋，禁止穿涼鞋', '請自備至少 1.5 公升飲水', '午餐有葷食（鴨肉），素食者請報名時告知，可安排替代餐食', '行程含攀岩、鑽洞與下午北峰路線，體力需求高於半日'],
-          planRefundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 72 小時以上且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
+          planRefundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 超過 72 小時且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
         }
       ]
     };
@@ -1649,7 +1649,7 @@ export default function AdminActivityEditPage() {
             </label>
             <label style={labelStyle}>
               退款規則（每行一項）
-              <textarea value={refundRules} onChange={e => setRefundRules(e.target.value)} rows={3} style={fieldStyle} placeholder={'出團 168 小時前（含）取消：100%退款\n出團前 72 小時以上且少於 168 小時取消：70%退款\n出團前 72 小時內（含）取消：不退款'} />
+              <textarea value={refundRules} onChange={e => setRefundRules(e.target.value)} rows={3} style={fieldStyle} placeholder={'出團 168 小時前（含）取消：100%退款\n出團前 超過 72 小時且少於 168 小時取消：70%退款\n出團前 72 小時內（含）取消：不退款'} />
             </label>
             <label style={labelStyle}>
               安全說明
