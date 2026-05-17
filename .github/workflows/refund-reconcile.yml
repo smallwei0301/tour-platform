@@ -10,6 +10,9 @@ jobs:
   reconcile:
     runs-on: ubuntu-latest
     env:
+      # Set REFUND_RECONCILE_ENABLED=true in repo secrets to activate live ECPay reconciliation.
+      # When not set, the script exits 0 with HOLD status (no red CI noise during soft-launch).
+      REFUND_RECONCILE_ENABLED: ${{ secrets.REFUND_RECONCILE_ENABLED }}
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       ECPAY_MERCHANT_ID: ${{ secrets.ECPAY_MERCHANT_ID }}
