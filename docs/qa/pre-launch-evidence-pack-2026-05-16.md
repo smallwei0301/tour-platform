@@ -12,7 +12,7 @@
 | 項目 | 值 |
 |------|---|
 | Deploy URL | https://tour-platform-nine.vercel.app |
-| Main commit SHA | (以當下 main 為準，查詢：`git rev-parse HEAD`) |
+| Main commit SHA | `5f6c1138111bed20164553c6e325270d3e354711`（2026-05-17 re-sync）|
 | Runtime | Node 22（.nvmrc + engines field）|
 | 測試時間區間 | 2026-05-12 – 2026-05-16 |
 | 測試帳號角色 | traveler / guide / admin（帳號詳情存於受控位置）|
@@ -25,7 +25,7 @@
 |-------|------|------|--------|--------------|---------|-------------|
 | #402 | Real ECPay payment/refund/email evidence | CLOSED / **HOLD** | 0% real run | 無（manual QA 未執行）| 需真實金流環境 | Wei |
 | #500 | May 12-14 manual regression checklist | OPEN / **HOLD** | ~50% | /root/.openclaw/workspace/tour-platform-qa-*.md | 旅客 session 失效 | Wei/QA |
-| #403 | Google traveler browser session evidence | OPEN / **HOLD** | 0% | /root/.openclaw/workspace/tour-platform-traveler-storageState-pointer.md | storageState 失效，需重建 | Wei |
+| #403 | Google traveler browser session evidence | CLOSED / **HOLD** | 0% | /root/.openclaw/workspace/tour-platform-traveler-storageState-pointer.md | storageState 失效（已結案，需重建後執行 UI flows 驗證）| Wei |
 | #318 | Guide onboarding demo run + retrospective | OPEN | 0% | 尚未執行 | 需 Andy Lee 協調 | Wei |
 | #319 | 客服 SOP 四情境演練 | OPEN | 25% (1/4 documented) | docs/07-operations-plan/06-cs-cxl-*.md | 需完整 4 情境 drill | Wei/CS |
 | #320 | Readiness gate + soft launch control | **COMPLETED** | 100% | #505 Go/No-Go, #506 controls merged | - | - |
@@ -40,7 +40,7 @@
 
 原因：
 - #402 真實金流 evidence 未執行 → Admin Go/No-Go 顯示 `evidence_required` HOLD
-- #403 旅客瀏覽器 session 失效 → 登入 UI flows 無法驗證
+- #403 CLOSED，但 storageState 已失效 → 登入 UI flows 無法驗證，需重建 storageState
 - #500 regression checklist 僅部分完成
 - #318 / #319 均未執行
 
@@ -62,9 +62,9 @@
 - 備注：ECPay sandbox credentials 存於 Vercel env；real payment test 需要 Wei 執行
 
 ### Logged-in Traveler Browser Evidence
-- **狀態：HOLD** — storageState 失效
+- **狀態：CLOSED / HOLD** — #403 已結案，storageState 已失效，UI flows 驗證仍需重建
 - 指針文件：`/root/.openclaw/workspace/tour-platform-traveler-storageState-pointer.md`
-- 備注：需 Wei 重新產生 storageState（`npx playwright codegen --save-storage=state.json ...`）
+- 備注：需 Wei 重新產生 storageState（`npx playwright codegen --save-storage=state.json ...`）才能完成後續驗證
 
 ### Recent Merge Regression
 - **狀態：部分完成**

@@ -1,7 +1,8 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-05-16
+> 最後更新：2026-05-17
 > 當前主線：**Soft-Launch 就緒**：soft-launch 控制機制全套上線（#550/#552/#554/#557），Go/No-Go 預設 HOLD，等待手動 QA sign-off（#545 / #500）
+> 最新 merge：PR #581 fix(refund): refund-reconcile HOLD gate（2026-05-17）
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
 1. 現在專案在做什麼
@@ -16,7 +17,7 @@
 - `../README.md` - repo 根總覽
 
 ### 當前主線：Soft-Launch 就緒 / 手動 QA / Go/No-Go
-- `../README.md` - repo 根總覽與 soft-launch 狀態（#402 CLOSED，Go/No-Go 預設 HOLD）
+- `../README.md` - repo 根總覽與 soft-launch 狀態（#402/#403 CLOSED，Go/No-Go 預設 HOLD，manual QA evidence still needed）
 - `NEXT_PHASE_PLAN.md` - 當前下一步與就緒判斷
 - `operations/issue-402-real-payment-refund-verification-runbook.md`（Issue #402：真實付款/退款/Email 證據 runbook）
 - `operations/booking-v2-daily-go-no-go.md`（Go/No-Go 節奏）
@@ -65,17 +66,20 @@
 
 ---
 
-## 目前 open issue 對應文件主線（2026-05-16）
+## 目前 open issue 對應文件主線（2026-05-17）
 
 **P1（手動 QA）：**
 - **#545** - manual QA checklist（最高優先）
 - **#500** - manual regression / evidence：`qa/booking-v2-rollout-manual-checklist.md`
 
 **其他 open（調查 / 文件 / 環境）：**
-- **#559, #537, #508, #504, #515, #514** - 調查、文件補強、環境議題
+- **#559, #516, #515, #514** - 調查、文件補強、環境議題
+- **#320, #319, #318** - readiness gate、CS SOP、guide onboarding
+- **#572, #573, #574** - 新開議題 2026-05-17
 
 **已完成，僅供參考：**
 - **#402 CLOSED** — 真實付款/退款/Email 證據收斂；`operations/issue-402-real-payment-refund-verification-runbook.md` 為執行路徑。**注意：** 實際 Go/No-Go **預設 HOLD**，需人工 QA sign-off 才能切換
+- **#403 CLOSED** — Google traveler browser session 結案；**注意：** storageState 已失效，需重建才能完成登入 UI flows 驗證
 - **#505 / #506 COMPLETED** — Go/No-Go evidence-driven（PR #557）、soft-launch 控制全套（PR #550 / #552 / #554）均已落地
 - **#528 COMPLETED** — Node 22 pin（PR #548）
 

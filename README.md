@@ -30,7 +30,7 @@
 
 ---
 
-## 1. 專案現況（2026-05-16）
+## 1. 專案現況（2026-05-17）
 
 ### 已完成的基礎能力
 - 前台 MVP 已完成
@@ -69,32 +69,36 @@
 - #292 docs-only full-chain Phase B/C fixture
 - #165 Phase 12 audit coverage matrix
 
-### 還 open 的主線（2026-05-16）
+### 還 open 的主線（2026-05-17）
 
 **P1（2）：**
 - **#545** manual QA checklist（手動 QA 必做項目）
 - **#500** manual regression（手動回歸）
 
 **其他 open（調查 / 文件 / 環境）：**
-- **#559, #537, #520, #508, #504, #515, #514**（調查、文件補強、環境議題）
+- **#559, #516, #515, #514**（調查、文件補強、環境議題）
+- **#320, #319, #318**（readiness gate、CS SOP、guide onboarding）
+- **#572, #573, #574**（新開議題 2026-05-17）
 
-**已結案 / 已完成（2026-05-14 → 2026-05-16）：**
+**已結案 / 已完成（2026-05-14 → 2026-05-17）：**
 - **#402 CLOSED** — 真實付款/退款/Email 證據已收斂；實際 Go/No-Go 結果需人工 QA 簽核，**Go/No-Go 預設 HOLD 直到 QA sign-off**
+- **#403 CLOSED** — Google traveler browser session 證據已結案；storageState 已失效，需重建才能執行後續 UI flows 驗證
 - **#505 COMPLETED** — Go/No-Go 已改為 evidence-driven，預設 HOLD（PR #557）
 - **#506 COMPLETED** — soft-launch 控制全套完成：admin kill-switch、checkout guards、admin UI（PR #550 / #552 / #554）
 - **#528 COMPLETED** — Node 22 已 pin（.nvmrc + engines field，PR #548）
 
 ### 最新 CI / 主線真值
 - main 持續轉綠
-- 最新 merge（截至 2026-05-16）：PR #566 docs(ops): settlement/payout runbook v1
-- 近期重要合併：#566（settlement runbook）、#565（security evidence governance）、#564（QA runbook v2）、#563（incident runbook v2）、#562（refund policy v2）、#557（admin Go/No-Go evidence-driven）、#556（soft-launch behavioral tests）、#554（soft-launch admin UI）、#552（soft-launch checkout/refund guards）、#550（soft-launch control foundation）
+- 最新 merge（截至 2026-05-17）：PR #581 fix(refund): refund-reconcile HOLD gate
+- 近期重要合併：#581（refund-reconcile HOLD gate）、#566（settlement runbook）、#565（security evidence governance）、#564（QA runbook v2）、#563（incident runbook v2）、#562（refund policy v2）、#557（admin Go/No-Go evidence-driven）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
 - **目前主線焦點：** soft-launch 控制就緒，Go/No-Go 預設 HOLD，等待人工 QA sign-off（#545 / #500）。
 
-### Go-Live 仍缺（2026-05-16 狀態）
+### Go-Live 仍缺（2026-05-17 狀態）
 - **#402 已 CLOSED**，但真實付款/退款/Email 證據為手動 QA 前置條件，Go/No-Go dashboard **預設 HOLD**，需 QA sign-off 才能切換 PROCEED
+- **#403 已 CLOSED**，但 storageState 已失效，登入 UI flows 仍需人工重建驗證
 - Soft-launch 控制機制已全套就緒（admin kill-switch + checkout guards + admin UI）
-- 14 個 open issues（2026-05-16），P1 為 #545、#500（手動 QA）
+- 9 個 open issues（查詢時間：2026-05-17），P1 為 #545、#500（手動 QA）
 - 操作人員可在 docs/operations/issue-402-real-payment-refund-verification-runbook.md 取得可執行驗證路徑
 
 ---
