@@ -1,7 +1,7 @@
 # 客服 SOP
 
-> 最後更新：2026-04-20
-> 狀態：Draft v1
+> 最後更新：2026-05-16
+> 狀態：v2 aligned（依主檔同步）
 
 ## 1. 目的
 建立 Tour Platform 客服的標準處理流程，讓旅客問題、退款、爭議與緊急事件都有一致回應方式。
@@ -55,8 +55,15 @@
 - 退款 / 爭議 SLA
 - CSAT 滿意度
 
-## 7. 與其他 SOP 的關聯
-- 退款政策細則
+## 7. 退款政策來源
+
+- 退款規則以 `docs/05-business/06-payment-plan/04-refund-policy-v2.md` 為主檔。
+- 對外回覆時先查主檔時間區間與例外條件，再回覆實際可退比例與處理路徑。
+- 人工爭議需保留截圖、聊天紀錄、付款時間點與責任判定。
+
+## 8. 與其他 SOP 的關聯
+
+- 退款政策細則（v2 參照）：`docs/05-business/06-payment-plan/04-refund-policy-detail.md`
 - 結算規則
 - 導遊 onboarding SOP
 - incident response / rollback runbook（技術事件時）

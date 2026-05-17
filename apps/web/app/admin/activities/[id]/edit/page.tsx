@@ -41,7 +41,7 @@ const DEFAULT_PLANS: PlanConfig[] = [
     label: 'A. 半日行程',
     duration: '約 4 小時',
     priceMultiplier: 1,
-    highlights: ['最早出發前 1 天可預訂', '免費取消（72 小時前）', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
+    highlights: ['最早出發前 1 天可預訂', '免費取消（168 小時前（含））', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
     detailsLinkText: '查看方案詳情 ›',
     bookingBtnText: '立即預約',
   },
@@ -50,7 +50,7 @@ const DEFAULT_PLANS: PlanConfig[] = [
     label: 'B. 全日行程',
     duration: '約 8 小時',
     priceMultiplier: 1.6,
-    highlights: ['午餐含餐（在地餐廳）', '免費取消（72 小時前）', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
+    highlights: ['午餐含餐（在地餐廳）', '免費取消（168 小時前（含））', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
     detailsLinkText: '查看方案詳情 ›',
     bookingBtnText: '立即預約',
   },
@@ -214,7 +214,7 @@ function PlanEditor({
           value={plan.highlights.join('\n')}
           onChange={e => update({ highlights: e.target.value.split('\n') })}
           rows={4} style={fieldStyle}
-          placeholder={'最早出發前 1 天可預訂\n免費取消（72 小時前）\n實名認證導遊帶領'}
+          placeholder={'最早出發前 1 天可預訂\n免費取消（168 小時前（含））\n實名認證導遊帶領'}
         />
       </label>
 
@@ -347,7 +347,7 @@ function PlanEditor({
             取消政策（每行一條）
             <textarea value={(plan.planRefundRules ?? []).join('\n')} rows={3}
               onChange={e => update({ planRefundRules: e.target.value.split('\n').map(x=>x.trim()).filter(Boolean) })}
-              style={fieldStyle} placeholder={'出團7天前取消：100%退款\n出團前3–7天取消：70%退款\n出團前72小時內取消：不退款'} />
+              style={fieldStyle} placeholder={'出團 168 小時前（含）取消：100%退款\n出團前 超過 72 小時且少於 168 小時取消：70%退款\n出團前 72 小時內（含）取消：不退款'} />
           </label>
 
         </div>
@@ -1248,9 +1248,9 @@ export default function AdminActivityEditPage() {
         '柴山洞穴探索需持合法申請許可，本行程已代辦申請'
       ],
       refundRules: [
-        '出團 7 天前取消：100% 退款',
-        '出團前 3–7 天取消：70% 退款',
-        '出團前 72 小時內取消：不退款',
+        '出團 168 小時前（含）取消：100% 退款',
+        '出團前 超過 72 小時且少於 168 小時取消：70% 退款',
+        '出團前 72 小時內（含）取消：不退款',
         '不可抗力或主辦取消：100% 退款或 1 次免費改期'
       ],
       safetyNotice: '部分路段地形陡峭濕滑，全程請依嚮導指示行進，禁止脫隊。洞穴內光線昏暗，請確保頭燈電量充足。心臟病、嚴重膝傷、孕婦請勿參加。',
@@ -1287,13 +1287,13 @@ export default function AdminActivityEditPage() {
           duration: '約 4.5 小時（08:00–12:30）',
           priceMultiplier: 1,
           price: 1800,
-          highlights: ['晨光穿透峽谷，光影最美時段', '猴群活動最頻繁，最容易近距離觀察', '涼爽舒適，無日曬困擾', '最早出發前 1 天可預訂', '免費取消（出發 72 小時前）', '每場最多 10 人小團，品質有保障'],
+          highlights: ['晨光穿透峽谷，光影最美時段', '猴群活動最頻繁，最容易近距離觀察', '涼爽舒適，無日曬困擾', '最早出發前 1 天可預訂', '免費取消（出發 168 小時前（含））', '每場最多 10 人小團，品質有保障'],
           detailsLinkText: '查看方案詳情 ›',
           bookingBtnText: '立即預約',
           language: '中文主導 / English available',
           earliestDeparture: '2026-04-10',
           confirmByDays: 2,
-          freeCancelDays: 3,
+          freeCancelDays: 7,
           planInclusions: ['認證嚮導全程帶領', '頭燈（洞穴探索用）', '安全帽', '手套', '洞穴探索保險', '電子憑證'],
           planExclusions: ['個人交通', '餐飲', '個人意外險升級'],
           planItinerary: [
@@ -1310,7 +1310,7 @@ export default function AdminActivityEditPage() {
           experiencePointName: '柴山龍谷、小錐麓、金瓜洞',
           experienceAddress: '高雄市鼓山區柴山（壽山國家自然公園）',
           planNotices: ['請穿著止滑鞋', '請自備至少 1 公升飲水', '行程含輕度攀岩與鑽洞，需彎腰匍匐前進', '請勿餵食或挑釁柴山獼猴', '小錐麓有輕微高度，嚴重懼高症者請事先告知'],
-          planRefundRules: ['出團 7 天前取消：100% 退款', '出團前 3–7 天取消：70% 退款', '出團前 72 小時內取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
+          planRefundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 超過 72 小時且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
         },
         {
           id: 'full-day-complete',
@@ -1324,7 +1324,7 @@ export default function AdminActivityEditPage() {
           language: '中文主導 / English available',
           earliestDeparture: '2026-04-10',
           confirmByDays: 2,
-          freeCancelDays: 6,
+          freeCancelDays: 7,
           planInclusions: ['認證嚮導全程帶領', '頭燈（洞穴探索用）', '安全帽', '手套', '洞穴探索保險', '在地午餐（鴨肉飯 + 湯品）', '嚮導拍攝紀念照片 5 張', '電子憑證'],
           planExclusions: ['個人交通', '個人額外飲品', '個人意外險升級'],
           planItinerary: [
@@ -1344,7 +1344,7 @@ export default function AdminActivityEditPage() {
           experiencePointName: '柴山龍谷、小錐麓、金瓜洞、北峰砲台、隱谷秘境',
           experienceAddress: '高雄市鼓山區柴山（壽山國家自然公園）',
           planNotices: ['請穿著止滑運動鞋或登山鞋，禁止穿涼鞋', '請自備至少 1.5 公升飲水', '午餐有葷食（鴨肉），素食者請報名時告知，可安排替代餐食', '行程含攀岩、鑽洞與下午北峰路線，體力需求高於半日'],
-          planRefundRules: ['出團 7 天前取消：100% 退款', '出團前 3–7 天取消：70% 退款', '出團前 72 小時內取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
+          planRefundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 超過 72 小時且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期']
         }
       ]
     };
@@ -1649,7 +1649,7 @@ export default function AdminActivityEditPage() {
             </label>
             <label style={labelStyle}>
               退款規則（每行一項）
-              <textarea value={refundRules} onChange={e => setRefundRules(e.target.value)} rows={3} style={fieldStyle} placeholder={'出發72小時前免費取消\n出發24小時內不退款'} />
+              <textarea value={refundRules} onChange={e => setRefundRules(e.target.value)} rows={3} style={fieldStyle} placeholder={'出團 168 小時前（含）取消：100%退款\n出團前 超過 72 小時且少於 168 小時取消：70%退款\n出團前 72 小時內（含）取消：不退款'} />
             </label>
             <label style={labelStyle}>
               安全說明
