@@ -306,7 +306,8 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 ### 金流 / 營運 / Go-Live
 - [`docs/05-business/06-payment-plan/01-ecpay-integration-guide.md`](./docs/05-business/06-payment-plan/01-ecpay-integration-guide.md)
 - [`docs/05-business/06-payment-plan/03-settlement-rules.md`](./docs/05-business/06-payment-plan/03-settlement-rules.md)
-- [`docs/05-business/06-payment-plan/04-refund-policy-detail.md`](./docs/05-business/06-payment-plan/04-refund-policy-detail.md)
+- [`docs/05-business/06-payment-plan/04-refund-policy-v2.md`](./docs/05-business/06-payment-plan/04-refund-policy-v2.md)（退款政策 Source of Truth）
+- [`docs/05-business/06-payment-plan/04-refund-policy-detail.md`](./docs/05-business/06-payment-plan/04-refund-policy-detail.md)（實作參考）
 - [`docs/05-business/07-operations-plan/01-guide-onboarding-sop.md`](./docs/05-business/07-operations-plan/01-guide-onboarding-sop.md)
 - [`docs/05-business/07-operations-plan/02-customer-service-sop.md`](./docs/05-business/07-operations-plan/02-customer-service-sop.md)
 - [`docs/05-business/07-operations-plan/03-quality-control.md`](./docs/05-business/07-operations-plan/03-quality-control.md)
