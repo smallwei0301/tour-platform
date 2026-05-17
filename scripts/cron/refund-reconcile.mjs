@@ -28,6 +28,13 @@ const ECPAY_MERCHANT_ID = process.env.ECPAY_MERCHANT_ID;
 const ECPAY_HASH_KEY = process.env.ECPAY_HASH_KEY;
 const ECPAY_HASH_IV = process.env.ECPAY_HASH_IV;
 
+// Soft-launch gate: skip reconciliation unless explicitly enabled.
+// Set REFUND_RECONCILE_ENABLED=true in GitHub Actions secrets when production ECPay is ready.
+if (process.env.REFUND_RECONCILE_ENABLED !== 'true') {
+  console.log(JSON.stringify({ status: 'HOLD', reason: 'REFUND_RECONCILE_ENABLED not set — skipping until soft-launch enabled', scanned: 0, synced: 0, retried: 0, alerted: 0, errors: 0 }));
+  process.exit(0);
+}
+
 const missing = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ECPAY_MERCHANT_ID', 'ECPAY_HASH_KEY', 'ECPAY_HASH_IV']
   .filter((k) => !process.env[k]);
 
