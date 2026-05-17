@@ -1,22 +1,21 @@
-# Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-14）
+# Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-17）
 
 ## 📌 當前主線摘要（Pre-launch Readiness）
 
-- main 目前 latest gate 關注：**PR #501**（`test(ecpay): guard SimulatePaid callback side effects`，merge commit `a4fe92a`）
-- **PR #501 僅保證 SimulatePaid=1 callback 模擬為 no-op**，不等於真實 ECPay 成功付款、退款與 Email side-effect
-- **#402 仍為 P0 blocker**：尚缺真實付款、退款、Email 實際驗證證據
-- 專案文件主線已改為：
-  - `#402` 真實金流/退款/Email 證據
-  - `#500` 人工回歸與放行驗證
-  - `#403` 真實 Google 旅客 session
-  - `#318`/`#319`/`#320` 營運 onboarding、CS SOP、go/no-go gate
-  - `#504` 上線證據封裝彙整（待補完）
+- live state 確認：Open issues = **#586 / #500 / #320 / #319 / #318**，open PR = **1**（含本 PR **#587**）
+- **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作為歷史/運維參考，不再列為當前 blocker
+- 目前主線重點：
+  - **#500** 人工回歸與放行驗證（manual QA）
+  - **#320** 人工決策與 go/no-go dashboard（soft-launch）
+  - **#319** CS SOP 演練（取消/退款/出團異常/緊急事故）
+  - **#318** 導遊 onboarding 實跑與回饋
+  - **#586** 本任務（文件 live-state 同步）
 
 ## 🧭 當前可執行行動（5–10 分鐘上手）
-1. 確認 `docs/README.md` 與本 repo root README 的主線一致，確認 #402 仍開啟與 PR #501 限制
-2. 進入 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 執行可核對的操作清單（待執行）
-3. 收斂 #500/#403 的人工驗證節點與 issue 記錄一致性
-4. 補齊營運 handoff 文件（#318/#319/#320）並在 `docs/operations/*`、`docs/qa/*` 留下可重複執行的驗證條件
+1. 確認 `docs/README.md` 與 repo root README 的主線一致，重點以 open issues / merged PR 當天快照為準。
+2. 進入 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 參考歷史驗證路徑（僅作參考），確認是否需補足最新人工證據與責任歸屬。
+3. 收斂 `#500` 的人工驗證節點與 issue 記錄一致性。
+4. 補齊 `#318/#319/#320` 的營運 handoff 文件（`docs/operations/*`、`docs/qa/*`）並保留可重複執行條件。
 
 ---
 
@@ -46,9 +45,9 @@
 
 ---
 
-## ✅ 下一步建議（對齊 #402）
-1. 把每一筆 #402 證據（付款成功、退款、Email）集中到 `docs/operations/issue-402-real-payment-refund-verification-runbook.md`
-2. 以 `#500` 補齊 manual regression checklist，並讓結果可追溯
-3. 對 #403 補足真實 Google session 的檢核證據，不混淆模擬或靜態文件
-4. 於 #318/#319/#320 的文件範圍中補上營運接管、客服/客服升級與上線 gate 的可執行條件
-5. 保持 `docs/README.md` 與 root README 的主線一致，避免回到過時 Phase 8/10 文法
+## ✅ 下一步建議（對齊 live-state）
+1. 將 #402/#403 runbook 的 `Status` 保持為 `CLOSED`，並明確註記只作歷史與運維執行參考
+2. 讓 `#500` 的 manual regression checklist 結果可追溯
+3. 補齊 `#318/#319/#320` 文件與實際驗證/交接資料
+4. 保持 `docs/README.md` 與 root README 的主線一致，避免回到過時版本語法
+5. 每次更新 readiness docs 前，先跑 open issue / open PR / latest merged PR 查詢，將輸出納入 PR 說明

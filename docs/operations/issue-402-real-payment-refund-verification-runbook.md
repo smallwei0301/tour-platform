@@ -2,12 +2,14 @@
 
 **Issue:** [#402 真實金流驗證](https://github.com/smallwei0301/tour-platform/issues/402)
 **Owner:** 產品/營運/QA
-**Status:** `OPEN`（尚未結案）
-**Last updated:** 2026-05-14
+**Status:** `CLOSED`（issue closed；文件保留為歷史/未來參考）
+**Last updated:** 2026-05-17
 
-> 這份文件是「操作指南」而非已完成證據；執行人可直接複製步驟記錄結果。
+> 這份文件不再是當前 blocker；文件保留為歷史 runbook / 下一輪人工驗證參考。
+> 重要：Go/No-Go 仍以人工 QA sign-off（#500）為先決條件，文件本身僅為歷史驗證參考。
 
-## 1. 為什麼是 blocker
+## 1. 文件定位
+
 
 - PR #501 只做 **SimulatePaid** callback no-op guard，確保模擬交易不會污染交易與通知。
 - #402 的開啟原因是：**未完成真實 ECPay 成功付款、退款、Email side-effect 的可重複驗證證據**。
@@ -112,9 +114,9 @@
 - `evidence_paths`:（issue comment / repo docs / CI link）
 - `blockers`:（有則列出）
 
-## 8. 何時可判定 #402 可被關閉
+## 8. 歷史關閉條件（供追溯）
 
-當以下條件同時成立且可追溯時，才可關閉 #402：
+#402 曾被視為可關閉條件（可作為往後再驗證參考）：
 1. 至少一筆真實付款成功且 callback 可驗證
 2. 退款閉環有完整追蹤（含必要的 manual reconcile 記錄）
 3. 旅客與管理員 email side-effect 可被重複驗證
@@ -129,4 +131,4 @@
 - `docs/operations/booking-v2-daily-go-no-go.md`：daily go/no-go 節奏
 - `docs/qa/booking-v2-rollout-manual-checklist.md`：人工回歸
 
-> 完成後請將上述 evidence 檢核結果同步到 issue #402 / #504 / #503 所對應的檢核清單。
+> 若後續再有驗證循環，請將 evidence 檢核結果同步到 issue #402 / #504 / #503 對應的檢核清單（必要時註明為重跑）
