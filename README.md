@@ -87,7 +87,7 @@
 - main 持續轉綠
 - 最新 merge（截至 2026-05-17）：PR #585（docs: restore canonical refund policy v2 source of truth）
 - 近期重要合併：#585、#584、#583、#582、#581
-- Open PR：0（`gh pr list --state open --limit 50`）
+- Open PR：1（`gh pr list --state open --limit 50`；含本 PR #587）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
 - **目前主線焦點：** soft-launch 控制就緒，Go/No-Go 預設 HOLD，等待人工 QA sign-off（#500）。
 
@@ -182,7 +182,7 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 - **#320、#319、#318**（human-decision + CS/SOP + onboarding）
 
 **已完成 / 歷史參考，不需再接：**
-- **#402 / #403 CLOSED** — 真實付款/退款/Email 證據已收斂；runbook 保留為歷史/操作參考
+- **#402 / #403 CLOSED** — 真實付款、退款、Email 證據未形成正式上線完成條件；文件僅保留為歷史/歷史運維參考。
 - **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已為已關閉議題（勿當作 open blocker）
 - **#505 / #506 / #528 COMPLETED** — Go/No-Go evidence-driven 機制、soft-launch 全套控制、Node 22 pin 均已落地
 

@@ -2,7 +2,7 @@
 
 ## 📌 當前主線摘要（Pre-launch Readiness）
 
-- live state 確認：Open issues = **#586 / #500 / #320 / #319 / #318**，open PR = **0**
+- live state 確認：Open issues = **#586 / #500 / #320 / #319 / #318**，open PR = **1**（含本 PR **#587**）
 - **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作為歷史/運維參考，不再列為當前 blocker
 - 目前主線重點：
   - **#500** 人工回歸與放行驗證（manual QA）

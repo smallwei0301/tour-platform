@@ -76,7 +76,7 @@
 - **#320、#319、#318** - readiness gate、CS SOP、guide onboarding
 
 **已完成，僅供參考：**
-- **#402/#403 CLOSED** — 真實付款/退款/Email 證據收斂，`operations/issue-402-real-payment-refund-verification-runbook.md` 保留為歷史/運維操作參考。
+- **#402/#403 CLOSED** — 真實付款/退款/Email 證據未形成正式上線完成證據；`operations/issue-402-real-payment-refund-verification-runbook.md` 保留為歷史/運維參考，非當前完成條件。
 - **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已關閉，非當前 blocker。
 - **#505 / #506 COMPLETE** — Go/No-Go evidence-driven（PR #557）、soft-launch 控制全套（PR #550 / #552 / #554）均已落地。
 - **#528 COMPLETE** — Node 22 pin（PR #548）
@@ -90,7 +90,7 @@
 - #402/#403 已 CLOSED — 保留證據/流程 runbook 作為歷史參考，Go/No-Go 現況仍 HOLD（待人工 QA sign-off）
 - Soft-launch 控制機制全套落地：admin kill-switch、checkout guards、admin UI、evidence-driven Go/No-Go（PR #550–#557）
 - Node 22 已 pin（PR #548）
-- 開放 PR：0（`gh pr list --state open`）
+- 開放 PR：1（`gh pr list --state open`；含本 PR #587）
 - 最近 merged（截至 2026-05-17）：PR #585/#584/#583/#582/#581
 - 目前 open issue 數：5（`gh issue list --state open`）
 
