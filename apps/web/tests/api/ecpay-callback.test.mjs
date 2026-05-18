@@ -1,5 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+
+// Keep this suite deterministic: force in-memory DB path even when operator shell has SUPABASE_* set.
+// This suite validates callback/idempotency logic with fixture schedules, not live DB fixtures.
+delete process.env.SUPABASE_URL;
+delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 import { createOrderDb, processPaymentCallbackDb } from '../../src/lib/db.mjs';
 import { experiences, orders, auditLogs, payments } from '../../src/lib/store.mjs';
 import { ecpaySimulatePaidReturnUrlPayload } from '../fixtures/ecpay-return-url-payloads.mjs';

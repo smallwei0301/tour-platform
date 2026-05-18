@@ -233,7 +233,7 @@ const EXPECTED_CHECKS = [
   {
     feature_area: 'payouts / balances',
     table: 'payouts',
-    relation: 'guide_profiles(display_name, email)',
+    relation: 'guide_profiles(display_name, guide_email)',
     required_columns: [
       'id',
       'guide_id',
