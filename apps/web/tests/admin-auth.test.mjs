@@ -31,6 +31,19 @@ test('admin auth passes with token, future expiry and no allowlist', () => {
   assert.equal(r.ok, true);
 });
 
+test('admin auth allows explicit stateless header token without session cookies', () => {
+  const r = isAdminAuthorized({
+    token: 'abc',
+    requiredToken: 'abc',
+    allowlistRaw: '',
+    expectedSessionVersion: 2,
+    sessionVersion: 0,
+    expiresAt: '',
+    requireSession: false,
+  });
+  assert.equal(r.ok, true);
+});
+
 test('admin auth rejects expired session cookie', () => {
   const r = isAdminAuthorized({
     token: 'abc',

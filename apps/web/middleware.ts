@@ -15,6 +15,10 @@ function pickEmail(req: NextRequest): string {
   return req.headers.get('x-admin-email') || req.cookies.get('admin_email')?.value || '';
 }
 
+function hasAdminCredential(req: NextRequest): boolean {
+  return !!(req.headers.get('x-admin-token') || req.cookies.get('admin_token')?.value);
+}
+
 const CSRF_COOKIE_NAME = 'tp_csrf';
 const CSRF_HEADER_NAME = 'x-csrf-token';
 
@@ -182,7 +186,15 @@ export async function middleware(req: NextRequest) {
     const isPublicAdminApi = pathname === '/api/admin/auth/session';
     if (isPublicAdminPage || isPublicAdminApi) return NextResponse.next();
 
+    if (isAdminPage && !hasAdminCredential(req)) {
+      const url = req.nextUrl.clone();
+      url.pathname = '/admin/login';
+      url.searchParams.set('next', pathname);
+      return NextResponse.redirect(url);
+    }
+
     const security = getAdminSecurityState();
+    const hasHeaderToken = !!req.headers.get('x-admin-token');
 
     const result = isAdminAuthorized({
       token: pickToken(req),
@@ -191,7 +203,8 @@ export async function middleware(req: NextRequest) {
       requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
       allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
       expectedSessionVersion: security.sessionVersion,
-      sessionVersion: req.cookies.get('admin_session_version')?.value || 0
+      sessionVersion: req.cookies.get('admin_session_version')?.value || 0,
+      requireSession: !hasHeaderToken
     });
 
     if (result.ok) return NextResponse.next();
