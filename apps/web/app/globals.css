@@ -2488,11 +2488,16 @@ details[open] .kkd-faq-q::before { content: '- '; }
   }
 
   .midao-hero,
-  .midao-hero-content {
+  .midao-hero-content,
+  .midao-activities-hero,
+  .midao-activities-hero-content,
+  .midao-guides-hero {
     min-height: 760px;
   }
 
-  .midao-hero {
+  .midao-hero,
+  .midao-activities-hero,
+  .midao-guides-hero {
     background-position: center 40%;
   }
 
@@ -2501,6 +2506,12 @@ details[open] .kkd-faq-q::before { content: '- '; }
   }
 
   .midao-copy h1 {
+    max-width: 520px;
+    font-size: 68px;
+  }
+
+  .midao-activities-hero-content h1,
+  .midao-guides-hero h1 {
     max-width: 520px;
     font-size: 68px;
   }
@@ -2546,10 +2557,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 .midao-activities-hero {
   position: relative;
-  min-height: 420px;
+  min-height: 640px;
   background:
     linear-gradient(180deg, rgba(23, 20, 16, 0.28) 0%, rgba(23, 20, 16, 0.48) 68%, rgba(23, 20, 16, 0.74) 100%),
-    url('https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?auto=format&fit=crop&w=1600&q=80') center 42% / cover no-repeat;
+    url('https://images.unsplash.com/photo-1517760444937-f6397edcbbcd?auto=format&fit=crop&w=1600&q=80') center 34% / cover no-repeat;
 }
 
 .midao-activities-hero-overlay {
@@ -2561,12 +2572,12 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .midao-activities-hero-content {
   position: relative;
   z-index: 1;
-  min-height: 420px;
+  min-height: 640px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding-top: 18px;
-  padding-bottom: 40px;
+  padding-top: 20px;
+  padding-bottom: 44px;
   color: #f8f2ea;
 }
 
@@ -2588,10 +2599,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 .midao-activities-hero-content h1 {
   margin: 0;
-  max-width: 460px;
+  max-width: 280px;
   font-family: 'Noto Serif TC', serif;
-  font-size: clamp(34px, 5.8vw, 62px);
-  line-height: 1.14;
+  font-size: 42px;
+  line-height: 1.16;
 }
 
 .midao-activities-search-wrap {
@@ -3095,6 +3106,25 @@ details[open] .kkd-faq-q::before { content: '- '; }
   color: rgba(250, 245, 236, 0.95);
 }
 
+.midao-guides-hero {
+  min-height: 640px;
+  padding-top: 20px;
+  padding-bottom: 44px;
+  background-position: center 34%;
+  align-content: end;
+}
+
+.midao-guides-hero h1 {
+  max-width: 280px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 42px;
+  line-height: 1.16;
+}
+
+.midao-guides-hero p {
+  max-width: 560px;
+}
+
 .tp-editorial-story {
   max-width: 760px;
   display: grid;
@@ -3294,6 +3324,18 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .tp-editorial-hero {
     min-height: 220px;
     padding: 36px 20px;
+  }
+
+  .midao-guides-hero {
+    min-height: 640px;
+    padding-top: 20px;
+    padding-bottom: 44px;
+    background-position: center 34%;
+  }
+
+  .midao-guides-hero h1 {
+    max-width: 280px;
+    font-size: 42px;
   }
 
   .tp-editorial-hero p { font-size: 16px; }

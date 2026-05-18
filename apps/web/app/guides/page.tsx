@@ -8,7 +8,7 @@ export default async function GuidesPage() {
     <main className="tp-container tp-guides-page tp-editorial-page midao-page" style={{ paddingBottom: 40 }}>
       <div className="tp-breadcrumb tp-editorial-breadcrumb">首頁 &gt; 全部導遊</div>
       <section
-        className="tp-editorial-hero"
+        className="tp-editorial-hero midao-guides-hero"
         style={{
           backgroundImage:
             'linear-gradient(rgba(18, 30, 24, 0.36), rgba(18, 30, 24, 0.54)), url(/images/midao-style/why-hero.png)',
