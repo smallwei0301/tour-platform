@@ -144,7 +144,7 @@ const CHECK_DEFINITIONS = [
     feature_area: 'payouts / balances',
     impacted_feature: 'payout finance',
     table: 'payouts',
-    relation: 'guide_profiles(display_name, email)',
+    relation: 'guide_profiles(display_name, guide_email)',
     required_columns: [
       'id',
       'guide_id',
@@ -157,7 +157,7 @@ const CHECK_DEFINITIONS = [
       'created_at',
     ],
     select:
-      'id, guide_id, total_twd, state, confirmed_by, confirmed_at, transfer_ref, notes, created_at, guide_profiles(display_name, email)',
+      'id, guide_id, total_twd, state, confirmed_by, confirmed_at, transfer_ref, notes, created_at, guide_profiles(display_name, guide_email)',
   },
   {
     feature_area: 'payouts / balances',
