@@ -2440,9 +2440,6 @@ details[open] .kkd-faq-q::before { content: '- '; }
   bottom: 14px;
   transform: translateX(-50%);
   width: min(calc(100% - 24px), 406px);
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
   padding: 10px;
   border-radius: 24px;
   background: rgba(255, 250, 243, 0.92);
@@ -2450,6 +2447,12 @@ details[open] .kkd-faq-q::before { content: '- '; }
   border: 1px solid rgba(173, 144, 114, 0.15);
   backdrop-filter: blur(20px);
   z-index: 20;
+}
+
+.midao-bottom-nav-inner {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .midao-bottom-item {
