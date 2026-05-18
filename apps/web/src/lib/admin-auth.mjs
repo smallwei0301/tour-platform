@@ -10,6 +10,7 @@ export function isAdminAuthorized(input = {}) {
   const email = String(input.email || '').toLowerCase();
   const requiredToken = String(input.requiredToken || '');
   const allowlist = parseAllowlist(input.allowlistRaw);
+  const requireSession = input.requireSession !== false;
 
   const expectedSessionVersion = Number(input.expectedSessionVersion || 1);
   const sessionVersion = Number(input.sessionVersion || 0);
@@ -18,21 +19,23 @@ export function isAdminAuthorized(input = {}) {
   if (!requiredToken) return { ok: false, reason: 'ADMIN_ACCESS_TOKEN not configured' };
   if (!token || token !== requiredToken) return { ok: false, reason: 'invalid token' };
 
-  if (sessionVersion !== expectedSessionVersion) {
-    return { ok: false, reason: 'session expired' };
-  }
+  if (requireSession) {
+    if (sessionVersion !== expectedSessionVersion) {
+      return { ok: false, reason: 'session expired' };
+    }
 
-  if (!expiresAtRaw) {
-    return { ok: false, reason: 'session expired' };
-  }
+    if (!expiresAtRaw) {
+      return { ok: false, reason: 'session expired' };
+    }
 
-  const expiresAtMs = Date.parse(expiresAtRaw);
-  if (!Number.isFinite(expiresAtMs)) {
-    return { ok: false, reason: 'session expired' };
-  }
+    const expiresAtMs = Date.parse(expiresAtRaw);
+    if (!Number.isFinite(expiresAtMs)) {
+      return { ok: false, reason: 'session expired' };
+    }
 
-  if (expiresAtMs <= Date.now()) {
-    return { ok: false, reason: 'session expired' };
+    if (expiresAtMs <= Date.now()) {
+      return { ok: false, reason: 'session expired' };
+    }
   }
 
   if (allowlist.length > 0) {
