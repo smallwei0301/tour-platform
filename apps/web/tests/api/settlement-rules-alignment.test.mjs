@@ -13,10 +13,12 @@ describe('settlement rules alignment', () => {
     assert.doesNotMatch(page, /guidePayoutRate \?\? 0\.65/, 'admin KPI page must not fallback to stale 0.65');
   });
 
-  it('migration updates kpi_settings default guide_payout_rate to 0.85', () => {
+  it('migration updates kpi_settings settlement defaults to 15% commission and 85% guide payout', () => {
     const migration = src('../../supabase/migrations/20260519_align_settlement_rules.sql');
+    assert.match(migration, /commission_rate\s+SET\s+DEFAULT\s+0\.15/i);
     assert.match(migration, /guide_payout_rate\s+SET\s+DEFAULT\s+0\.85/i);
     assert.match(migration, /UPDATE\s+public\.kpi_settings/i);
+    assert.match(migration, /commission_rate\s*=\s*0\.15/i);
     assert.match(migration, /guide_payout_rate\s*=\s*0\.85/i);
   });
 
