@@ -777,15 +777,27 @@ export async function listAdminOrdersDb(input = {}) {
   const contactEmail = String(input?.contactEmail || '').trim();
   const supabase = await getSupabase();
 
-  let query = supabase
-    .from('orders')
-    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at')
-    .order('created_at', { ascending: false });
+  const selectWithTradeNo = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at';
+  const selectWithoutTradeNo = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at';
 
-  if (status) query = query.eq('status', status);
-  if (contactEmail) query = query.eq('contact_email', contactEmail);
+  const buildQuery = (selectClause) => {
+    let q = supabase
+      .from('orders')
+      .select(selectClause)
+      .order('created_at', { ascending: false });
 
-  const { data, error } = await query;
+    if (status) q = q.eq('status', status);
+    if (contactEmail) q = q.eq('contact_email', contactEmail);
+    return q;
+  };
+
+  let { data, error } = await buildQuery(selectWithTradeNo);
+
+  // Schema drift guard: some environments may not yet have orders.trade_no.
+  if (error?.message?.includes('column orders.trade_no does not exist')) {
+    ({ data, error } = await buildQuery(selectWithoutTradeNo));
+  }
+
   if (error) throw new Error(error.message);
 
   const cfg = await getKpiConfigDb().catch(() => ({ guidePayoutRate: 0.85 }));
