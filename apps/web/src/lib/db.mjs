@@ -387,6 +387,54 @@ export async function getOrderDetailForPayment(input = {}) {
   };
 }
 
+export async function upsertEcpayPaymentAttemptDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  const merchantTradeNo = String(input?.merchantTradeNo || '').trim();
+  const amountTwd = Number(input?.amountTwd || 0);
+
+  if (!orderId) throw new Error('orderId is required');
+  if (!merchantTradeNo) throw new Error('merchantTradeNo is required');
+  if (!Number.isFinite(amountTwd) || amountTwd < 0) throw new Error('amountTwd must be a non-negative number');
+
+  if (!hasSupabaseEnv()) {
+    return {
+      orderId,
+      merchantTradeNo,
+      status: 'pending',
+      simulated: true,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const supabase = await getSupabase();
+  const payload = {
+    order_id: orderId,
+    provider: 'ecpay',
+    merchant_trade_no: merchantTradeNo,
+    amount_twd: Math.round(amountTwd),
+    currency: 'TWD',
+    method: 'credit_card',
+    status: 'pending',
+    provider_status: 'pending',
+    updated_at: now,
+  };
+
+  const { data, error } = await supabase
+    .from('payments')
+    .upsert(payload, { onConflict: 'provider,merchant_trade_no' })
+    .select('id, order_id, merchant_trade_no, status')
+    .single();
+
+  if (error || !data) throw new Error(error?.message || 'failed to upsert ecpay payment attempt');
+
+  return {
+    id: data.id,
+    orderId: data.order_id,
+    merchantTradeNo: data.merchant_trade_no,
+    status: data.status,
+  };
+}
+
 export async function cancelOrderDb(input = {}) {
   const orderId = String(input?.orderId || '').trim();
   const contactEmail = String(input?.contactEmail || '').trim();
@@ -2067,11 +2115,16 @@ export async function processPaymentCallbackDb(input) {
 
   const supabase = await getSupabase();
 
+  const merchantTradeNo = String(input?.merchantTradeNo || input?.MerchantTradeNo || '').trim() || null;
+  const tradeNo = String(input?.tradeNo || input?.TradeNo || '').trim() || null;
+
   const { data, error } = await supabase.rpc('fn_process_payment_callback_atomic', {
     p_order_id: orderId,
-    p_trade_no: String(input?.tradeNo || '').trim() || null,
+    p_trade_no: tradeNo,
     p_owner_email: String(input?.ownerEmail || '').trim() || null,
     p_raw_payload: input || null,
+    p_merchant_trade_no: merchantTradeNo,
+    p_provider: 'ecpay',
   });
 
   if (error) {
@@ -2083,6 +2136,53 @@ export async function processPaymentCallbackDb(input) {
 
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) throw new Error('payment callback processing returned empty result');
+
+  const { data: paymentRow, error: paymentRowError } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('order_id', orderId)
+    .eq('provider', 'ecpay')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (paymentRowError) throw new Error(paymentRowError.message || 'failed to resolve payment row after callback');
+
+  if (paymentRow?.id) {
+    const { data: existingPaidEvent, error: existingPaidEventError } = await supabase
+      .from('payment_events')
+      .select('id')
+      .eq('payment_id', paymentRow.id)
+      .eq('event_type', 'callback_paid')
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPaidEventError) throw new Error(existingPaidEventError.message || 'failed to query callback_paid event');
+
+    if (!existingPaidEvent) {
+      const { error: insertCallbackEventError } = await supabase
+        .from('payment_events')
+        .insert({
+          payment_id: paymentRow.id,
+          order_id: orderId,
+          provider: 'ecpay',
+          merchant_trade_no: merchantTradeNo,
+          trade_no: tradeNo,
+          event_type: 'callback_paid',
+          payload: {
+            source: 'processPaymentCallbackDb',
+            provider: 'ecpay',
+            orderId,
+            merchantTradeNo,
+            tradeNo,
+          },
+        });
+
+      if (insertCallbackEventError && insertCallbackEventError.code !== '23505') {
+        throw new Error(insertCallbackEventError.message || 'failed to insert callback_paid payment event');
+      }
+    }
+  }
 
   await tryRefreshAvailabilitySnapshotByOrderId(orderId);
 

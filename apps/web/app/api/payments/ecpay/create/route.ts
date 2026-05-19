@@ -1,5 +1,5 @@
 import { fail, ok } from '../../../../../src/lib/api';
-import { getOrderDetailForPayment } from '../../../../../src/lib/db.mjs';
+import { getOrderDetailForPayment, upsertEcpayPaymentAttemptDb } from '../../../../../src/lib/db.mjs';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
@@ -94,9 +94,15 @@ export async function POST(request: Request) {
       ChoosePayment: 'ALL',
       EncryptType: '1', // SHA256
       // 訂單關聯資訊
-      CustomField1: orderId,
-      CustomField2: order.contactEmail || '',
+      CustomField2: orderId,
+      CustomField4: order.contactEmail || '',
     };
+
+    await upsertEcpayPaymentAttemptDb({
+      orderId,
+      merchantTradeNo,
+      amountTwd: Number(order.totalTwd || 0),
+    });
 
     // 生成 CheckMacValue
     const checkMacValue = generateCheckMacValue(ecpayParams, hashKey, hashIV);
