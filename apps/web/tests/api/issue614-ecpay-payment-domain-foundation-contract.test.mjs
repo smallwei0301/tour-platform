@@ -50,3 +50,14 @@ test('callback RPC contract accepts merchant_trade_no and provider defaults', ()
   assert.match(sql, /CREATE OR REPLACE FUNCTION\s+fn_process_payment_callback_atomic\s*\([\s\S]*p_merchant_trade_no\s+text\s+DEFAULT\s+NULL,[\s\S]*p_provider\s+text\s+DEFAULT\s+'ecpay'/i);
   assert.match(sql, /merchant_trade_no\s*=\s*coalesce\(pay\.merchant_trade_no,\s*v_merchant_trade_no\)/i);
 });
+
+test('callback audit continuity metadata is preserved in fn_process_payment_callback_atomic', () => {
+  assert.match(sql, /v_origin_source_channel text/i);
+  assert.match(sql, /v_correlation_id text/i);
+  assert.match(sql, /nullif\(v_booking\.source_channel, ''\),[\s\S]*nullif\(v_order\.source_channel, ''\)/i);
+  assert.match(sql, /'source', 'fn_process_payment_callback_atomic',[\s\S]*'sourceChannel', v_origin_source_channel/i);
+  assert.match(sql, /'originSourceChannel', v_origin_source_channel/i);
+  assert.match(sql, /'correlationId', v_correlation_id/i);
+  assert.match(sql, /'auditSignal', CASE[\s\S]*line_liff_payment_callback_status_transition[\s\S]*payment_callback_status_transition/i);
+  assert.match(sql, /payload\s*\?\s*'correlationId'/i);
+});

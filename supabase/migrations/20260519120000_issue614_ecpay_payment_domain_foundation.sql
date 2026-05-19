@@ -162,6 +162,8 @@ DECLARE
   v_booking bookings%ROWTYPE;
   v_now timestamptz := now();
   v_book_result jsonb;
+  v_origin_source_channel text;
+  v_correlation_id text;
   v_provider text := lower(coalesce(nullif(btrim(p_provider), ''), 'ecpay'));
   v_trade_no text := nullif(btrim(p_trade_no), '');
   v_merchant_trade_no text := nullif(btrim(p_merchant_trade_no), '');
@@ -198,37 +200,78 @@ BEGIN
       WHERE id = v_booking.id
         AND status = 'draft';
 
-      IF FOUND THEN
-        INSERT INTO booking_status_logs(
-          booking_id,
-          from_status,
-          to_status,
-          actor_role,
-          reason,
-          metadata
-        )
-        SELECT
-          v_booking.id,
-          'draft',
-          'pending_confirmation',
-          'system',
-          'Payment callback received',
-          jsonb_build_object(
-            'orderId', v_order.id,
-            'tradeNo', v_trade_no,
-            'merchantTradeNo', v_merchant_trade_no,
-            'provider', v_provider,
-            'source', 'fn_process_payment_callback_atomic'
-          )
-        WHERE NOT EXISTS (
-          SELECT 1
+    IF FOUND THEN
+      SELECT coalesce(
+        nullif(v_booking.source_channel, ''),
+        nullif(v_order.source_channel, ''),
+        (
+          SELECT nullif(bsl.metadata->>'sourceChannel', '')
           FROM booking_status_logs bsl
           WHERE bsl.booking_id = v_booking.id
-            AND bsl.to_status = 'pending_confirmation'
-            AND bsl.actor_role = 'system'
-            AND coalesce(bsl.metadata->>'orderId', '') = v_order.id::text
-        );
-      END IF;
+            AND bsl.metadata ? 'sourceChannel'
+          ORDER BY bsl.created_at ASC
+          LIMIT 1
+        ),
+        'web'
+      ) INTO v_origin_source_channel;
+
+      SELECT coalesce(
+        (
+          SELECT nullif(bsl.metadata->>'correlationId', '')
+          FROM booking_status_logs bsl
+          WHERE bsl.booking_id = v_booking.id
+            AND bsl.metadata ? 'correlationId'
+          ORDER BY bsl.created_at ASC
+          LIMIT 1
+        ),
+        (
+          SELECT nullif(pe.payload->>'correlationId', '')
+          FROM payments pay
+          JOIN payment_events pe ON pe.payment_id = pay.id
+          WHERE pay.order_id = v_order.id
+            AND pe.payload ? 'correlationId'
+          ORDER BY pe.created_at ASC
+          LIMIT 1
+        )
+      ) INTO v_correlation_id;
+
+      INSERT INTO booking_status_logs(
+        booking_id,
+        from_status,
+        to_status,
+        actor_role,
+        reason,
+        metadata
+      )
+      SELECT
+        v_booking.id,
+        'draft',
+        'pending_confirmation',
+        'system',
+        'Payment callback received',
+        jsonb_build_object(
+          'orderId', v_order.id,
+          'tradeNo', v_trade_no,
+          'merchantTradeNo', v_merchant_trade_no,
+          'provider', v_provider,
+          'source', 'fn_process_payment_callback_atomic',
+          'sourceChannel', v_origin_source_channel,
+          'originSourceChannel', v_origin_source_channel,
+          'correlationId', v_correlation_id,
+          'auditSignal', CASE
+            WHEN v_origin_source_channel = 'line' THEN 'line_liff_payment_callback_status_transition'
+            ELSE 'payment_callback_status_transition'
+          END
+        )
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM booking_status_logs bsl
+        WHERE bsl.booking_id = v_booking.id
+          AND bsl.to_status = 'pending_confirmation'
+          AND bsl.actor_role = 'system'
+          AND coalesce(bsl.metadata->>'orderId', '') = v_order.id::text
+      );
+    END IF;
     END IF;
   END IF;
 
