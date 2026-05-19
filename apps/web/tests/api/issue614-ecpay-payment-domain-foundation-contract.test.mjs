@@ -48,7 +48,11 @@ test('RLS/grants hardened to service_role-only for payments and payment_events',
 
 test('callback RPC contract accepts merchant_trade_no and provider defaults', () => {
   assert.match(sql, /CREATE OR REPLACE FUNCTION\s+fn_process_payment_callback_atomic\s*\([\s\S]*p_merchant_trade_no\s+text\s+DEFAULT\s+NULL,[\s\S]*p_provider\s+text\s+DEFAULT\s+'ecpay'/i);
-  assert.match(sql, /merchant_trade_no\s*=\s*coalesce\(pay\.merchant_trade_no,\s*v_merchant_trade_no\)/i);
+  assert.match(sql, /v_target_payment_id\s+uuid/i);
+  assert.match(sql, /IF v_merchant_trade_no IS NOT NULL THEN[\s\S]*pay\.merchant_trade_no = v_merchant_trade_no/i);
+  assert.match(sql, /IF v_target_payment_id IS NULL AND v_trade_no IS NOT NULL THEN[\s\S]*pay\.trade_no = v_trade_no/i);
+  assert.match(sql, /IF v_target_payment_id IS NULL[\s\S]*v_merchant_trade_no IS NULL[\s\S]*v_trade_no IS NULL/i);
+  assert.match(sql, /WHERE pay\.id = v_target_payment_id;/i);
 });
 
 test('callback audit continuity metadata is preserved in fn_process_payment_callback_atomic', () => {

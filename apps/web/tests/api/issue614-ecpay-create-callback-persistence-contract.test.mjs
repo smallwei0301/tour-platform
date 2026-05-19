@@ -25,10 +25,19 @@ test('callback DB path forwards merchant_trade_no/provider into callback RPC', (
   assert.match(dbLib, /p_provider:\s*'ecpay'/);
 });
 
-test('callback DB path inserts callback_paid payment_events idempotently', () => {
-  assert.match(dbLib, /event_type:\s*'callback_paid'/);
+test('callback DB path resolves payment attempt by provider identity before fallback', () => {
+  assert.match(dbLib, /if \(merchantTradeNo\)\s*{[\s\S]*\.eq\('merchant_trade_no', merchantTradeNo\)/);
+  assert.match(dbLib, /else if \(tradeNo\)\s*{[\s\S]*\.eq\('trade_no', tradeNo\)/);
+  assert.match(dbLib, /else \{[\s\S]*\.order\('created_at', \{ ascending: false \}\)\.limit\(1\)/);
+});
+
+test('callback DB path inserts callback_paid payment_events idempotently by provider/event/order/trade identity', () => {
+  assert.match(dbLib, /\.eq\('provider', 'ecpay'\)/);
+  assert.match(dbLib, /\.eq\('event_type', 'callback_paid'\)/);
+  assert.match(dbLib, /\.eq\('order_id', orderId\)/);
+  assert.match(dbLib, /merchantTradeNo\s*\?\s*paidEventQuery\.eq\('merchant_trade_no', merchantTradeNo\)\s*:\s*paidEventQuery\.is\('merchant_trade_no', null\)/);
+  assert.match(dbLib, /tradeNo\s*\?\s*paidEventQuery\.eq\('trade_no', tradeNo\)\s*:\s*paidEventQuery\.is\('trade_no', null\)/);
   assert.match(dbLib, /insertCallbackEventError\.code\s*!==\s*'23505'/);
-  assert.match(dbLib, /\.from\('payment_events'\)/);
 });
 
 test('callback route records sanitized incidents for key failure paths', () => {

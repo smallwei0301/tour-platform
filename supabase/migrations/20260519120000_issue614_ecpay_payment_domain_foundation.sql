@@ -160,6 +160,7 @@ DECLARE
   v_order orders%ROWTYPE;
   v_schedule record;
   v_booking bookings%ROWTYPE;
+  v_target_payment_id uuid;
   v_now timestamptz := now();
   v_book_result jsonb;
   v_origin_source_channel text;
@@ -185,6 +186,43 @@ BEGIN
      AND btrim(p_owner_email) <> ''
      AND lower(coalesce(v_order.contact_email, '')) <> lower(btrim(p_owner_email)) THEN
     RAISE EXCEPTION 'order ownership validation failed' USING ERRCODE = '28000';
+  END IF;
+
+  IF v_merchant_trade_no IS NOT NULL THEN
+    SELECT pay.id
+    INTO v_target_payment_id
+    FROM payments pay
+    WHERE pay.order_id = v_order.id
+      AND coalesce(nullif(pay.provider, ''), 'ecpay') = v_provider
+      AND pay.merchant_trade_no = v_merchant_trade_no
+    ORDER BY pay.created_at DESC
+    LIMIT 1
+    FOR UPDATE;
+  END IF;
+
+  IF v_target_payment_id IS NULL AND v_trade_no IS NOT NULL THEN
+    SELECT pay.id
+    INTO v_target_payment_id
+    FROM payments pay
+    WHERE pay.order_id = v_order.id
+      AND coalesce(nullif(pay.provider, ''), 'ecpay') = v_provider
+      AND pay.trade_no = v_trade_no
+    ORDER BY pay.created_at DESC
+    LIMIT 1
+    FOR UPDATE;
+  END IF;
+
+  IF v_target_payment_id IS NULL
+     AND v_merchant_trade_no IS NULL
+     AND v_trade_no IS NULL THEN
+    SELECT pay.id
+    INTO v_target_payment_id
+    FROM payments pay
+    WHERE pay.order_id = v_order.id
+      AND coalesce(nullif(pay.provider, ''), 'ecpay') = v_provider
+    ORDER BY pay.created_at DESC
+    LIMIT 1
+    FOR UPDATE;
   END IF;
 
   IF v_order.booking_id IS NOT NULL THEN
@@ -292,7 +330,7 @@ BEGIN
         provider_status = coalesce(pay.provider_status, 'paid'),
         paid_at = coalesce(pay.paid_at, v_order.paid_at, v_now),
         updated_at = now()
-    WHERE pay.order_id = v_order.id;
+    WHERE pay.id = v_target_payment_id;
 
     IF NOT FOUND THEN
       INSERT INTO payments(order_id, provider, merchant_trade_no, trade_no, amount_twd, currency, status, provider_status, captured_amount_twd, paid_at, raw_payload)
@@ -350,7 +388,7 @@ BEGIN
       END,
       raw_payload = coalesce(p_raw_payload, pay.raw_payload),
       updated_at = now()
-  WHERE pay.order_id = v_order.id;
+  WHERE pay.id = v_target_payment_id;
 
   IF NOT FOUND THEN
     INSERT INTO payments(order_id, provider, merchant_trade_no, trade_no, amount_twd, currency, status, provider_status, captured_amount_twd, paid_at, raw_payload)

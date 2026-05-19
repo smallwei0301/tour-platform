@@ -2137,25 +2137,42 @@ export async function processPaymentCallbackDb(input) {
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) throw new Error('payment callback processing returned empty result');
 
-  const { data: paymentRow, error: paymentRowError } = await supabase
+  let paymentQuery = supabase
     .from('payments')
     .select('id')
     .eq('order_id', orderId)
-    .eq('provider', 'ecpay')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq('provider', 'ecpay');
+
+  if (merchantTradeNo) {
+    paymentQuery = paymentQuery.eq('merchant_trade_no', merchantTradeNo);
+  } else if (tradeNo) {
+    paymentQuery = paymentQuery.eq('trade_no', tradeNo);
+  } else {
+    paymentQuery = paymentQuery.order('created_at', { ascending: false }).limit(1);
+  }
+
+  const { data: paymentRow, error: paymentRowError } = await paymentQuery.maybeSingle();
 
   if (paymentRowError) throw new Error(paymentRowError.message || 'failed to resolve payment row after callback');
 
   if (paymentRow?.id) {
-    const { data: existingPaidEvent, error: existingPaidEventError } = await supabase
+    let paidEventQuery = supabase
       .from('payment_events')
       .select('id')
-      .eq('payment_id', paymentRow.id)
+      .eq('provider', 'ecpay')
       .eq('event_type', 'callback_paid')
-      .limit(1)
-      .maybeSingle();
+      .eq('order_id', orderId)
+      .limit(1);
+
+    paidEventQuery = merchantTradeNo
+      ? paidEventQuery.eq('merchant_trade_no', merchantTradeNo)
+      : paidEventQuery.is('merchant_trade_no', null);
+
+    paidEventQuery = tradeNo
+      ? paidEventQuery.eq('trade_no', tradeNo)
+      : paidEventQuery.is('trade_no', null);
+
+    const { data: existingPaidEvent, error: existingPaidEventError } = await paidEventQuery.maybeSingle();
 
     if (existingPaidEventError) throw new Error(existingPaidEventError.message || 'failed to query callback_paid event');
 
