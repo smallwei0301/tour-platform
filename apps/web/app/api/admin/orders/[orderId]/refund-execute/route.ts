@@ -16,10 +16,11 @@ import {
   getAdminSecurityState,
   getRequiredAdminToken,
 } from '../../../../../../src/lib/admin-session.mjs';
-import { requestAllRefund } from '../../../../../../src/lib/ecpay';
+import { requestAllRefund, requestEcpayDoAction, queryEcpayTradeInfo } from '../../../../../../src/lib/ecpay';
 import { createClient } from '@supabase/supabase-js';
-import { executeRefund } from '../../../../../../src/lib/refund-execute';
+import { executeRefund, executeEcpayReversal } from '../../../../../../src/lib/refund-execute';
 import { recordRefundReversalDb } from '../../../../../../src/lib/db.mjs';
+import { recordIncident } from '../../../../../../src/lib/incidents';
 
 function parseCookie(req: Request, key: string) {
   const cookie = req.headers.get('cookie') || '';
@@ -100,22 +101,101 @@ export async function POST(
     // body is optional for ECPay orders
   }
 
-  const outcome = await executeRefund({
-    order: order as any,
-    body,
-    requestAllRefund,
-    updateOrder: async (orderId, payload) => {
-      const { data, error, count } = await supabase
-        .from('orders')
-        .update(payload)
-        .eq('id', orderId)
-        .select('id');
-      return { error, data, count };
-    },
-    postRefundHook: async (refundedOrderId) => {
-      await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
-    },
-  });
+  const outcome = order.trade_no
+    ? await executeEcpayReversal({
+      order: order as any,
+      body,
+      resolveLatestReversiblePayment: async (targetOrderId) => {
+        const { data, error } = await supabase
+          .from('payments')
+          .select('id, order_id, merchant_trade_no, trade_no, status, provider_status, amount_twd, created_at')
+          .eq('order_id', targetOrderId)
+          .eq('provider', 'ecpay')
+          .in('status', ['pending', 'authorized', 'paid'])
+          .order('created_at', { ascending: false })
+          .limit(2);
+
+        if (error) return { payment: null, ambiguous: false };
+        const rows = Array.isArray(data) ? data : [];
+        if (rows.length !== 1) {
+          return { payment: null, ambiguous: rows.length > 1 };
+        }
+        return { payment: rows[0] as any, ambiguous: false };
+      },
+      queryTradeInfo: async (merchantTradeNo) => queryEcpayTradeInfo({ merchantTradeNo }),
+      requestDoAction: async ({ merchantTradeNo, tradeNo, totalAmount, reason, action }) => requestEcpayDoAction({
+        merchantTradeNo,
+        tradeNo,
+        totalAmount,
+        reason,
+        action,
+      }),
+      persistReversal: async ({ orderId: targetOrderId, paymentId, eventType, providerStatus, reversedTradeNo, refundedAmountTwd }) => {
+        const now = new Date().toISOString();
+
+        const paymentPatch: Record<string, unknown> = {
+          status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
+          provider_status: providerStatus,
+          trade_no: reversedTradeNo,
+          updated_at: now,
+        };
+        if (eventType === 'authorization_voided') {
+          paymentPatch.voided_at = now;
+        } else {
+          paymentPatch.refunded_at = now;
+          paymentPatch.refunded_amount_twd = refundedAmountTwd;
+        }
+
+        await supabase.from('payments').update(paymentPatch).eq('id', paymentId);
+
+        await supabase.from('orders').update({
+          status: 'refunded',
+          payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
+          refunded_at: now,
+          refunded_amount: refundedAmountTwd ?? 0,
+          ecpay_refund_trade_no: reversedTradeNo,
+        }).eq('id', targetOrderId);
+
+        await supabase.from('payment_events').insert({
+          payment_id: paymentId,
+          order_id: targetOrderId,
+          provider: 'ecpay',
+          event_type: eventType,
+          merchant_trade_no: order.merchant_trade_no || null,
+          trade_no: reversedTradeNo,
+          payload: { source: 'admin_refund_execute', mode: eventType },
+        });
+
+        await recordRefundReversalDb(supabase, { orderId: targetOrderId, actor: 'refund-execute' });
+
+        return { error: null, data: [{ id: targetOrderId }], count: 1 };
+      },
+      recordIncident: ({ message, metadata }) => {
+        void recordIncident({
+          source: 'admin_refund_execute',
+          severity: 'warn',
+          category: 'payment',
+          message,
+          metadata: { orderId, ...metadata },
+        });
+      },
+    })
+    : await executeRefund({
+      order: order as any,
+      body,
+      requestAllRefund,
+      updateOrder: async (targetOrderId, payload) => {
+        const { data, error, count } = await supabase
+          .from('orders')
+          .update(payload)
+          .eq('id', targetOrderId)
+          .select('id');
+        return { error, data, count };
+      },
+      postRefundHook: async (refundedOrderId) => {
+        await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
+      },
+    });
 
   return Response.json(outcome.body, { status: outcome.status });
 }

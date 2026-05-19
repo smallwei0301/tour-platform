@@ -128,6 +128,14 @@ export interface AllRefundResult {
   ecpayTradeNo: string | null;
 }
 
+export interface DoActionParams {
+  merchantTradeNo: string;
+  tradeNo: string;
+  action: 'N' | 'E' | 'R' | 'C';
+  totalAmount?: number;
+  reason?: string;
+}
+
 function getFirstNonEmpty(values: Array<string | undefined>): string | null {
   for (const value of values) {
     if (typeof value === 'string' && value.trim() !== '') {
@@ -185,6 +193,24 @@ function parseResponseText(text: string): {
 export async function requestAllRefund(
   params: AllRefundParams
 ): Promise<AllRefundResult> {
+  return requestEcpayDoAction({
+    merchantTradeNo: params.merchantTradeNo,
+    tradeNo: params.tradeNo,
+    action: 'R',
+    totalAmount: params.totalAmount,
+    reason: params.reason,
+  });
+}
+
+/**
+ * Request DoAction with explicit action mapping.
+ * Docs (retrieved by Ava):
+ * - https://developers.ecpay.com.tw/45919/
+ * - https://developers.ecpay.com.tw/51795/
+ */
+export async function requestEcpayDoAction(
+  params: DoActionParams
+): Promise<AllRefundResult> {
   const merchantId = getECPayMerchantId();
   const { hashKey, hashIV } = getECPayCredentials();
 
@@ -192,8 +218,10 @@ export async function requestAllRefund(
     MerchantID: merchantId,
     MerchantTradeNo: params.merchantTradeNo,
     TradeNo: params.tradeNo,
-    Action: 'R', // R = Refund (AllRefund)
-    TotalAmount: String(params.totalAmount),
+    Action: params.action,
+    ...(typeof params.totalAmount === 'number'
+      ? { TotalAmount: String(params.totalAmount) }
+      : {}),
     ...('reason' in params && params.reason ? {Remark: params.reason} : {}),
   };
 
@@ -215,6 +243,15 @@ export async function requestAllRefund(
     rtnMsg: parsed.rtnMsg,
     ecpayTradeNo: parsed.ecpayTradeNo,
   };
+}
+
+export async function requestEcpayAuthorizationVoid(
+  params: Pick<DoActionParams, 'merchantTradeNo' | 'tradeNo' | 'reason'>
+): Promise<AllRefundResult> {
+  return requestEcpayDoAction({
+    ...params,
+    action: 'N',
+  });
 }
 
 
