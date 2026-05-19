@@ -87,10 +87,42 @@ export async function POST(
 
   // AC2: order must be in refund_pending status
   if (order.status !== 'refund_pending') {
-    return Response.json(
-      fail('INVALID_STATUS', 'order must be refund_pending to execute refund'),
-      { status: 409 }
-    );
+    const canRepairRefundReversal =
+      order.status === 'refunded' ||
+      order.ecpay_refund_trade_no ||
+      order.payment_status === 'refunded' ||
+      order.payment_status === 'voided';
+
+    if (!canRepairRefundReversal) {
+      return Response.json(
+        fail('INVALID_STATUS', 'order must be refund_pending to execute refund'),
+        { status: 409 }
+      );
+    }
+
+    try {
+      const repairResult = await recordRefundReversalDb(supabase, {
+        orderId: order.id,
+        actor: 'refund-execute',
+      });
+
+      if (repairResult.reversed) {
+        return Response.json(
+          {
+            ok: true,
+            alreadyRefunded: true,
+            repaired: repairResult.repaired || false,
+            ...repairResult,
+          },
+          { status: 200 }
+        );
+      }
+
+      return Response.json(fail('INVALID_STATUS', 'order has no reversal settlement records'), { status: 409 });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'failed to repair refund reversal records';
+      return Response.json(fail('DB_UPDATE_FAILED', message), { status: 500 });
+    }
   }
 
   // Parse body (required for cash orders; optional for ECPay orders)

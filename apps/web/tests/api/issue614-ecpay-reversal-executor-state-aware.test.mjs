@@ -615,7 +615,15 @@ test('recordRefundReversalDb treats already-completed reversal as idempotent suc
     },
     {
       table: 'audit_logs',
-      data: { id: 2 },
+      data: {
+        id: 2,
+        metadata: {
+          status: 'completed',
+          before_balance: 500,
+          after_balance: -700,
+          debit: 1200,
+        },
+      },
       error: null,
     },
   ]);
@@ -627,4 +635,79 @@ test('recordRefundReversalDb treats already-completed reversal as idempotent suc
     reversal_id: 'reversal-1',
     skipped: false,
   });
+});
+
+test('recordRefundReversalDb skips duplicate debit when an in-progress marker already reflects target balance', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: {
+        id: 'settlement-1',
+        order_id: 'order-614',
+        guide_id: 'guide-1',
+        gmv_twd: 1200,
+        commission_twd: 0,
+        net_twd: 1200,
+        rules_version: 'r1',
+      },
+      error: null,
+    },
+    {
+      table: 'payout_items',
+      direct: false,
+      result: {
+        data: {
+          id: 'reversal-1',
+        },
+        error: null,
+      },
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: {
+        id: 2,
+        metadata: {
+          status: 'started',
+          before_balance: 500,
+          after_balance: -700,
+          debit: 1200,
+          order_id: 'order-614',
+          reversal_id: 'reversal-1',
+        },
+      },
+      error: null,
+    },
+    {
+      table: 'guide_balances',
+      data: {
+        balance_twd: -700,
+      },
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: { id: 3 },
+      error: null,
+    },
+  ]);
+
+  const result = await recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' });
+
+  assert.deepEqual(result, {
+    reversed: true,
+    repaired: true,
+    reversal_id: 'reversal-1',
+    before_balance: 500,
+    after_balance: -700,
+  });
+
+  const balanceUpserts = supabase.calls.filter(
+    (call) => call.table === 'guide_balances' && call.action === 'upsert'
+  );
+  assert.equal(balanceUpserts.length, 0);
 });

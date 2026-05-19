@@ -183,7 +183,7 @@ test('post-settlement: creates reversal row, debits balance (carry-forward allow
   };
 
   let upsertedBalance = null;
-  let auditRows = null;
+  const auditRows = [];
 
   let callCount = 0;
   const supabase = {
@@ -227,7 +227,11 @@ test('post-settlement: creates reversal row, debits balance (carry-forward allow
       if (table === 'audit_logs') {
         return {
           insert: async (rows) => {
-            auditRows = rows;
+            if (Array.isArray(rows)) {
+              auditRows.push(...rows);
+            } else {
+              auditRows.push(rows);
+            }
             return { error: null };
           },
         };
