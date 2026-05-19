@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, PageHeader } from '../../../src/components/admin/ui';
 
-type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual';
+type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual' | 'evidence_required';
 
 interface ReadinessItem {
   id: string;
@@ -47,6 +47,7 @@ const READINESS_STATUS_CONFIG: Record<ReadinessStatus, { label: string; color: s
   warning: { label: 'WARNING', color: '#854d0e', bg: '#fef9c3' },
   fail: { label: 'FAIL', color: '#991b1b', bg: '#fee2e2' },
   manual: { label: 'MANUAL', color: '#1e40af', bg: '#dbeafe' },
+  evidence_required: { label: 'EVIDENCE REQUIRED', color: '#7c2d12', bg: '#ffedd5' },
 };
 
 const VERDICT_CONFIG: Record<VerdictState, { label: string; color: string; bg: string; border: string }> = {
