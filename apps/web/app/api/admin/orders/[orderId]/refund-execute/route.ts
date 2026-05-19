@@ -201,7 +201,7 @@ export async function POST(
           return { error: { message: 'order update returned no rows' }, data: [], count: 0 };
         }
 
-        const eventResult = await supabase
+        let eventResult = await supabase
           .from('payment_events')
           .insert({
             payment_id: paymentId,
@@ -215,7 +215,30 @@ export async function POST(
           .select('id');
 
         if (eventResult.error) {
-          return { error: { message: eventResult.error.message || 'failed to insert payment event' }, data: [], count: 0 };
+          const isDuplicateEventError =
+            eventResult.error.code === '23505' || /duplicate key/i.test(eventResult.error.message || '');
+
+          if (isDuplicateEventError) {
+            const { data: existingEvent, error: eventLookupErr } = await supabase
+              .from('payment_events')
+              .select('id')
+              .eq('payment_id', paymentId)
+              .eq('order_id', targetOrderId)
+              .eq('provider', 'ecpay')
+              .eq('event_type', eventType)
+              .eq('trade_no', reversedTradeNo)
+              .maybeSingle();
+
+            if (eventLookupErr) {
+              return { error: { message: eventLookupErr.message || 'failed to verify existing payment event' }, data: [], count: 0 };
+            }
+            if (!existingEvent) {
+              return { error: { message: eventResult.error.message || 'failed to insert payment event' }, data: [], count: 0 };
+            }
+            eventResult = { ...eventResult, data: [existingEvent], count: 1 };
+          } else {
+            return { error: { message: eventResult.error.message || 'failed to insert payment event' }, data: [], count: 0 };
+          }
         }
 
         if (typeof eventResult.count === 'number' && eventResult.count < 1) {

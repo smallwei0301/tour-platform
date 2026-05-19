@@ -3680,6 +3680,19 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
     return new Error(err.message ?? JSON.stringify(err));
   };
 
+  const readLog = async (action, reversalId) => {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select('id')
+      .eq('action', action)
+      .eq('metadata->>order_id', orderId)
+      .eq('metadata->>reversal_id', reversalId)
+      .maybeSingle();
+
+    if (error) throw normalizeError(error);
+    return Boolean(data);
+  };
+
   // Check if this order was already settled
   const { data: settlement, error: settlementErr } = await supabase
     .from('payout_items')
@@ -3691,6 +3704,8 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
   if (settlementErr) throw normalizeError(settlementErr);
   if (!settlement) return { skipped: 'pre_settlement' };
 
+  const settledAt = new Date().toISOString();
+
   // Insert reversal row (idempotent via UNIQUE(order_id, settlement_kind))
   const reversalRow = {
     order_id: orderId,
@@ -3700,7 +3715,7 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
     net_twd: -settlement.net_twd,
     rules_version: settlement.rules_version,
     settlement_kind: 'reversal',
-    settled_at: new Date().toISOString(),
+    settled_at: settledAt,
   };
 
   const { data: reversal, error: insertErr } = await supabase
@@ -3710,58 +3725,104 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
     .maybeSingle();
 
   if (insertErr) throw normalizeError(insertErr);
-  if (!reversal) return { skipped: 'already_reversed' };
 
-  // Debit guide_balances (carry-forward: balance can go negative)
-  const { data: balance, error: balanceReadErr } = await supabase
-    .from('guide_balances')
-    .select('balance_twd')
-    .eq('guide_id', settlement.guide_id)
-    .maybeSingle();
+  const reversalIdRef = String(
+    reversal?.id ||
+      (await (async () => {
+        const { data: existingReversal, error: existingReversalErr } = await supabase
+          .from('payout_items')
+          .select('id')
+          .eq('order_id', orderId)
+          .eq('settlement_kind', 'reversal')
+          .maybeSingle();
 
-  if (balanceReadErr) throw normalizeError(balanceReadErr);
+        if (existingReversalErr) throw normalizeError(existingReversalErr);
+        if (!existingReversal) {
+          throw new Error('reversal row missing after upsert conflict');
+        }
 
-  const beforeBalance = balance?.balance_twd ?? 0;
-  const debit = Math.abs(settlement.net_twd);
-  const newBalance = beforeBalance - debit; // can be negative (carry-forward)
+        return existingReversal.id;
+      })())
+  );
 
-  const { error: balanceUpsertErr } = await supabase
-    .from('guide_balances')
-    .upsert(
-      { guide_id: settlement.guide_id, balance_twd: newBalance, updated_at: new Date().toISOString() },
-      { onConflict: 'guide_id' }
-    );
+  const hadReversalCreatedLog = await readLog('payout_reversal_created', reversalIdRef);
+  const hadBalanceDebitLog = await readLog('guide_balance_debited_reversal', reversalIdRef);
 
-  if (balanceUpsertErr) throw normalizeError(balanceUpsertErr);
+  let beforeBalance = null;
+  let afterBalance = null;
+  let repaired = false;
 
-  // Audit log entries
-  const { error: auditErr } = await supabase
-    .from('audit_logs')
-    .insert([
-      {
-        actor,
-        action: 'payout_reversal_created',
-        metadata: {
-          order_id: orderId,
-          guide_id: settlement.guide_id,
-          net_twd: settlement.net_twd,
-          reversal_id: reversal.id,
-          settlement_id: settlement.id,
-        },
+  const needsDebit = !hadBalanceDebitLog;
+  if (needsDebit) {
+    const { data: balance, error: balanceReadErr } = await supabase
+      .from('guide_balances')
+      .select('balance_twd')
+      .eq('guide_id', settlement.guide_id)
+      .maybeSingle();
+
+    if (balanceReadErr) throw normalizeError(balanceReadErr);
+
+    beforeBalance = balance?.balance_twd ?? 0;
+    const debit = Math.abs(settlement.net_twd);
+    afterBalance = beforeBalance - debit; // can be negative (carry-forward)
+
+    const { error: balanceUpsertErr } = await supabase
+      .from('guide_balances')
+      .upsert(
+        { guide_id: settlement.guide_id, balance_twd: afterBalance, updated_at: new Date().toISOString() },
+        { onConflict: 'guide_id' }
+      );
+
+    if (balanceUpsertErr) throw normalizeError(balanceUpsertErr);
+    repaired = true;
+
+    if (!hadBalanceDebitLog) {
+      const { error: auditBalanceErr } = await supabase
+        .from('audit_logs')
+        .insert({
+          actor,
+          action: 'guide_balance_debited_reversal',
+          metadata: {
+            order_id: orderId,
+            guide_id: settlement.guide_id,
+            before_balance: beforeBalance,
+            after_balance: afterBalance,
+            debit,
+            reversal_id: reversalIdRef,
+            settlement_id: settlement.id,
+          },
+        });
+
+      if (auditBalanceErr) throw normalizeError(auditBalanceErr);
+    }
+  }
+
+  if (!hadReversalCreatedLog) {
+    const { error: auditErr } = await supabase.from('audit_logs').insert({
+      actor,
+      action: 'payout_reversal_created',
+      metadata: {
+        order_id: orderId,
+        guide_id: settlement.guide_id,
+        net_twd: settlement.net_twd,
+        reversal_id: reversalIdRef,
+        settlement_id: settlement.id,
+        settled_at: settledAt,
       },
-      {
-        actor,
-        action: 'guide_balance_debited_reversal',
-        metadata: {
-          guide_id: settlement.guide_id,
-          before_balance: beforeBalance,
-          after_balance: newBalance,
-          debit,
-        },
-      },
-    ]);
+    });
 
-  if (auditErr) throw normalizeError(auditErr);
+    if (auditErr) throw normalizeError(auditErr);
+  }
 
-  return { reversed: true, reversal_id: reversal.id, before_balance: beforeBalance, after_balance: newBalance };
+  if (repaired) {
+    return {
+      reversed: true,
+      repaired: true,
+      reversal_id: reversalIdRef,
+      before_balance: beforeBalance,
+      after_balance: afterBalance,
+    };
+  }
+
+  return { reversed: true, reversal_id: reversalIdRef, skipped: false };
 }

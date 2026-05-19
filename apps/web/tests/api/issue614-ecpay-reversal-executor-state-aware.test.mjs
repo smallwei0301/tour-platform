@@ -413,6 +413,16 @@ test('recordRefundReversalDb throws when guide_balances upsert fails', async () 
       },
     },
     {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
       table: 'guide_balances',
       data: {
         balance_twd: 200,
@@ -458,6 +468,16 @@ test('recordRefundReversalDb throws when audit insert fails', async () => {
       },
     },
     {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
       table: 'guide_balances',
       data: {
         balance_twd: 200,
@@ -480,4 +500,131 @@ test('recordRefundReversalDb throws when audit insert fails', async () => {
     () => recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' }),
     /audit insert failed/
   );
+});
+
+test('recordRefundReversalDb repairs missing effects on idempotent retry', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: {
+        id: 'settlement-1',
+        order_id: 'order-614',
+        guide_id: 'guide-1',
+        gmv_twd: 1200,
+        commission_twd: 0,
+        net_twd: 1200,
+        rules_version: 'r1',
+      },
+      error: null,
+    },
+    {
+      table: 'payout_items',
+      direct: false,
+      result: {
+        data: null,
+        error: null,
+      },
+    },
+    {
+      table: 'payout_items',
+      data: {
+        id: 'reversal-1',
+      },
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'guide_balances',
+      data: {
+        balance_twd: 500,
+      },
+      error: null,
+    },
+    {
+      table: 'guide_balances',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+  ]);
+
+  const result = await recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' });
+
+  assert.deepEqual(result, {
+    reversed: true,
+    repaired: true,
+    reversal_id: 'reversal-1',
+    before_balance: 500,
+    after_balance: -700,
+  });
+});
+
+
+test('recordRefundReversalDb treats already-completed reversal as idempotent success, not skipped', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: {
+        id: 'settlement-1',
+        order_id: 'order-614',
+        guide_id: 'guide-1',
+        gmv_twd: 1200,
+        commission_twd: 0,
+        net_twd: 1200,
+        rules_version: 'r1',
+      },
+      error: null,
+    },
+    {
+      table: 'payout_items',
+      direct: false,
+      result: {
+        data: null,
+        error: null,
+      },
+    },
+    {
+      table: 'payout_items',
+      data: {
+        id: 'reversal-1',
+      },
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: { id: 1 },
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: { id: 2 },
+      error: null,
+    },
+  ]);
+
+  const result = await recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' });
+
+  assert.deepEqual(result, {
+    reversed: true,
+    reversal_id: 'reversal-1',
+    skipped: false,
+  });
 });
