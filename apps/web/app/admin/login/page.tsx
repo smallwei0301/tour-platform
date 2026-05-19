@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 function LoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const next = params.get('next') || '/admin';
 
@@ -25,7 +24,9 @@ function LoginForm() {
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json?.error?.message || '登入失敗');
-      router.push(next);
+      // Use a full document navigation after Set-Cookie so the middleware and
+      // server components read the freshly-created HttpOnly admin cookies.
+      window.location.assign(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : '登入失敗');
     } finally { setLoading(false); }
