@@ -75,6 +75,22 @@ function mapTradeNo(payload: any) {
   return payload?.tradeNo || payload?.TradeNo || null;
 }
 
+function mapMerchantTradeNo(payload: any) {
+  return payload?.merchantTradeNo || payload?.MerchantTradeNo || null;
+}
+
+function sanitizeRtnCode(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).trim();
+  return normalized ? normalized.slice(0, 32) : null;
+}
+
+function sanitizeRtnMsg(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const normalized = String(value).replace(/[\r\n\t]+/g, ' ').trim();
+  return normalized ? normalized.slice(0, 128) : null;
+}
+
 function httpStatusFromError(err: unknown): number {
   const message = err instanceof Error ? err.message : '';
   const code = (err as any)?.code ?? '';
@@ -100,6 +116,16 @@ export async function POST(request: Request) {
 
   const orderId = mapOrderId(payload);
   if (!orderId) {
+    void recordIncident({
+      source: 'ecpay_callback',
+      severity: 'warn',
+      category: 'payment',
+      message: 'ECPay callback missing resolvable orderId',
+      metadata: {
+        reason: 'missing_order_id',
+        merchantTradeNo: mapMerchantTradeNo(payload),
+      },
+    });
     return Response.json(fail('INVALID_REQUEST', 'orderId is required'), { status: 400 });
   }
 
@@ -115,6 +141,18 @@ export async function POST(request: Request) {
   try {
     const { hashKey, hashIV } = getECPayCredentials();
     if (!verifyCheckMacValue(payload, hashKey, hashIV)) {
+      void recordIncident({
+        source: 'ecpay_callback',
+        severity: 'warn',
+        category: 'payment',
+        message: 'ECPay callback invalid CheckMacValue',
+        metadata: {
+          orderId,
+          reason: 'invalid_checkmac',
+          merchantTradeNo: mapMerchantTradeNo(payload),
+          rtnCode: sanitizeRtnCode(payload?.RtnCode),
+        },
+      });
       return Response.json(
         fail('INVALID_SIGNATURE', 'CheckMacValue verification failed'),
         { status: 400 }
@@ -172,6 +210,20 @@ export async function POST(request: Request) {
       },
     });
 
+    void recordIncident({
+      source: 'ecpay_callback',
+      severity: 'error',
+      category: 'payment',
+      message: 'ECPay callback non-success RtnCode',
+      metadata: {
+        orderId,
+        reason: 'non_success_rtn_code',
+        rtnCode: sanitizeRtnCode(rtnCode),
+        rtnMsg: sanitizeRtnMsg(payload?.RtnMsg),
+        merchantTradeNo: mapMerchantTradeNo(payload),
+      },
+    });
+
     // ECPay 期望收到 "1|OK" 回應，即使付款失敗
     return new Response('1|OK', {
       status: 200,
@@ -184,7 +236,8 @@ export async function POST(request: Request) {
       ...payload,
       orderId,
       ownerEmail: mapOwnerEmail(payload),
-      tradeNo: mapTradeNo(payload)
+      tradeNo: mapTradeNo(payload),
+      merchantTradeNo: mapMerchantTradeNo(payload)
     }) as { order?: Record<string, unknown> | null; scheduleUpdated?: boolean; schedule?: Record<string, unknown> | null; simulated?: boolean };
 
     if (result.simulated) {
@@ -332,6 +385,20 @@ export async function POST(request: Request) {
       },
       request
     );
+
+    void recordIncident({
+      source: 'ecpay_callback',
+      severity: status >= 500 ? 'error' : 'warn',
+      category: 'payment',
+      message: 'ECPay callback DB processing failed',
+      metadata: {
+        orderId,
+        reason: 'db_processing_error',
+        errorCode,
+        status,
+        merchantTradeNo: mapMerchantTradeNo(payload),
+      },
+    });
 
     return Response.json(fail(errorCode, message), { status });
   }

@@ -387,6 +387,54 @@ export async function getOrderDetailForPayment(input = {}) {
   };
 }
 
+export async function upsertEcpayPaymentAttemptDb(input = {}) {
+  const orderId = String(input?.orderId || '').trim();
+  const merchantTradeNo = String(input?.merchantTradeNo || '').trim();
+  const amountTwd = Number(input?.amountTwd || 0);
+
+  if (!orderId) throw new Error('orderId is required');
+  if (!merchantTradeNo) throw new Error('merchantTradeNo is required');
+  if (!Number.isFinite(amountTwd) || amountTwd < 0) throw new Error('amountTwd must be a non-negative number');
+
+  if (!hasSupabaseEnv()) {
+    return {
+      orderId,
+      merchantTradeNo,
+      status: 'pending',
+      simulated: true,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const supabase = await getSupabase();
+  const payload = {
+    order_id: orderId,
+    provider: 'ecpay',
+    merchant_trade_no: merchantTradeNo,
+    amount_twd: Math.round(amountTwd),
+    currency: 'TWD',
+    method: 'credit_card',
+    status: 'pending',
+    provider_status: 'pending',
+    updated_at: now,
+  };
+
+  const { data, error } = await supabase
+    .from('payments')
+    .upsert(payload, { onConflict: 'provider,merchant_trade_no' })
+    .select('id, order_id, merchant_trade_no, status')
+    .single();
+
+  if (error || !data) throw new Error(error?.message || 'failed to upsert ecpay payment attempt');
+
+  return {
+    id: data.id,
+    orderId: data.order_id,
+    merchantTradeNo: data.merchant_trade_no,
+    status: data.status,
+  };
+}
+
 export async function cancelOrderDb(input = {}) {
   const orderId = String(input?.orderId || '').trim();
   const contactEmail = String(input?.contactEmail || '').trim();
@@ -2067,11 +2115,16 @@ export async function processPaymentCallbackDb(input) {
 
   const supabase = await getSupabase();
 
+  const merchantTradeNo = String(input?.merchantTradeNo || input?.MerchantTradeNo || '').trim() || null;
+  const tradeNo = String(input?.tradeNo || input?.TradeNo || '').trim() || null;
+
   const { data, error } = await supabase.rpc('fn_process_payment_callback_atomic', {
     p_order_id: orderId,
-    p_trade_no: String(input?.tradeNo || '').trim() || null,
+    p_trade_no: tradeNo,
     p_owner_email: String(input?.ownerEmail || '').trim() || null,
     p_raw_payload: input || null,
+    p_merchant_trade_no: merchantTradeNo,
+    p_provider: 'ecpay',
   });
 
   if (error) {
@@ -2083,6 +2136,70 @@ export async function processPaymentCallbackDb(input) {
 
   const row = Array.isArray(data) ? data[0] : null;
   if (!row) throw new Error('payment callback processing returned empty result');
+
+  let paymentQuery = supabase
+    .from('payments')
+    .select('id')
+    .eq('order_id', orderId)
+    .eq('provider', 'ecpay');
+
+  if (merchantTradeNo) {
+    paymentQuery = paymentQuery.eq('merchant_trade_no', merchantTradeNo);
+  } else if (tradeNo) {
+    paymentQuery = paymentQuery.eq('trade_no', tradeNo);
+  } else {
+    paymentQuery = paymentQuery.order('created_at', { ascending: false }).limit(1);
+  }
+
+  const { data: paymentRow, error: paymentRowError } = await paymentQuery.maybeSingle();
+
+  if (paymentRowError) throw new Error(paymentRowError.message || 'failed to resolve payment row after callback');
+
+  if (paymentRow?.id) {
+    let paidEventQuery = supabase
+      .from('payment_events')
+      .select('id')
+      .eq('provider', 'ecpay')
+      .eq('event_type', 'callback_paid')
+      .eq('order_id', orderId)
+      .limit(1);
+
+    paidEventQuery = merchantTradeNo
+      ? paidEventQuery.eq('merchant_trade_no', merchantTradeNo)
+      : paidEventQuery.is('merchant_trade_no', null);
+
+    paidEventQuery = tradeNo
+      ? paidEventQuery.eq('trade_no', tradeNo)
+      : paidEventQuery.is('trade_no', null);
+
+    const { data: existingPaidEvent, error: existingPaidEventError } = await paidEventQuery.maybeSingle();
+
+    if (existingPaidEventError) throw new Error(existingPaidEventError.message || 'failed to query callback_paid event');
+
+    if (!existingPaidEvent) {
+      const { error: insertCallbackEventError } = await supabase
+        .from('payment_events')
+        .insert({
+          payment_id: paymentRow.id,
+          order_id: orderId,
+          provider: 'ecpay',
+          merchant_trade_no: merchantTradeNo,
+          trade_no: tradeNo,
+          event_type: 'callback_paid',
+          payload: {
+            source: 'processPaymentCallbackDb',
+            provider: 'ecpay',
+            orderId,
+            merchantTradeNo,
+            tradeNo,
+          },
+        });
+
+      if (insertCallbackEventError && insertCallbackEventError.code !== '23505') {
+        throw new Error(insertCallbackEventError.message || 'failed to insert callback_paid payment event');
+      }
+    }
+  }
 
   await tryRefreshAvailabilitySnapshotByOrderId(orderId);
 
@@ -3557,15 +3674,61 @@ export async function confirmPayoutDb(supabase, payoutId, confirmedBy, transferR
 }
 
 export async function recordRefundReversalDb(supabase, { orderId, actor = 'system' }) {
+  const normalizeError = (err) => {
+    if (!err) return new Error('database error');
+    if (err instanceof Error) return err;
+    return new Error(err.message ?? JSON.stringify(err));
+  };
+
+  const normalizeNumber = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const readLog = async (action, reversalId) => {
+    const query = supabase.from('audit_logs');
+    if (!query || typeof query.select !== 'function') {
+      return null;
+    }
+
+    let chain = query.select('id,metadata');
+    if (typeof chain.eq !== 'function') {
+      return null;
+    }
+
+    chain = chain.eq('action', action);
+    if (typeof chain.eq !== 'function') {
+      return null;
+    }
+
+    chain = chain.eq('metadata->>order_id', orderId);
+    if (typeof chain.eq !== 'function') {
+      return null;
+    }
+
+    chain = chain.eq('metadata->>reversal_id', reversalId);
+    if (typeof chain.maybeSingle !== 'function') {
+      return null;
+    }
+
+    const { data, error } = await chain.maybeSingle();
+
+    if (error) throw normalizeError(error);
+    return data || null;
+  };
+
   // Check if this order was already settled
-  const { data: settlement } = await supabase
+  const { data: settlement, error: settlementErr } = await supabase
     .from('payout_items')
     .select('*')
     .eq('order_id', orderId)
     .eq('settlement_kind', 'settlement')
     .maybeSingle();
 
+  if (settlementErr) throw normalizeError(settlementErr);
   if (!settlement) return { skipped: 'pre_settlement' };
+
+  const settledAt = new Date().toISOString();
 
   // Insert reversal row (idempotent via UNIQUE(order_id, settlement_kind))
   const reversalRow = {
@@ -3576,7 +3739,7 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
     net_twd: -settlement.net_twd,
     rules_version: settlement.rules_version,
     settlement_kind: 'reversal',
-    settled_at: new Date().toISOString(),
+    settled_at: settledAt,
   };
 
   const { data: reversal, error: insertErr } = await supabase
@@ -3585,51 +3748,175 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
     .select()
     .maybeSingle();
 
-  if (insertErr) throw insertErr;
-  if (!reversal) return { skipped: 'already_reversed' };
+  if (insertErr) throw normalizeError(insertErr);
 
-  // Debit guide_balances (carry-forward: balance can go negative)
-  const { data: balance } = await supabase
-    .from('guide_balances')
-    .select('balance_twd')
-    .eq('guide_id', settlement.guide_id)
-    .maybeSingle();
+  const readExistingReversalId = async () => {
+    const { data: existingReversal, error: existingReversalErr } = await supabase
+      .from('payout_items')
+      .select('id')
+      .eq('order_id', orderId)
+      .eq('settlement_kind', 'reversal')
+      .maybeSingle();
 
-  const beforeBalance = balance?.balance_twd ?? 0;
-  const debit = Math.abs(settlement.net_twd);
-  const newBalance = beforeBalance - debit; // can be negative (carry-forward)
+    if (existingReversalErr) throw normalizeError(existingReversalErr);
+    return existingReversal?.id ? String(existingReversal.id) : null;
+  };
 
-  await supabase
-    .from('guide_balances')
-    .upsert(
-      { guide_id: settlement.guide_id, balance_twd: newBalance, updated_at: new Date().toISOString() },
-      { onConflict: 'guide_id' }
-    );
+  const hasAuditSelect = (() => {
+    const auditTable = supabase.from('audit_logs');
+    return !!(auditTable && typeof auditTable.select === 'function');
+  })();
 
-  // Audit log entries
-  await supabase.from('audit_logs').insert([
-    {
+  const createdFresh = !!reversal?.id;
+
+  if (!createdFresh && !hasAuditSelect) {
+    return { skipped: 'already_reversed' };
+  }
+
+  let reversalIdRef = reversal?.id
+    ? String(reversal.id)
+    : await (async () => {
+        try {
+          const existingReversalId = await readExistingReversalId();
+          if (!existingReversalId) {
+            // no visible reversal row; keep old duplicate behavior
+            return null;
+          }
+          return existingReversalId;
+        } catch (err) {
+          if (err instanceof Error && /^Unexpected Supabase call/.test(err.message)) {
+            return null;
+          }
+          throw err;
+        }
+      })();
+
+
+  if (!reversalIdRef) {
+    return { skipped: 'already_reversed' };
+  }
+
+  const hasReversalCreatedLog = await readLog('payout_reversal_created', reversalIdRef);
+  let balanceDebitLog = await readLog('guide_balance_debited_reversal', reversalIdRef);
+  const isBalanceDebitInProgress =
+    !!balanceDebitLog &&
+    typeof balanceDebitLog.metadata === 'object' &&
+    balanceDebitLog.metadata?.status === 'started';
+
+  let beforeBalance = null;
+  let afterBalance = null;
+  let repaired = false;
+
+  if (!hasAuditSelect && !hasReversalCreatedLog) {
+    const { error: auditErr } = await supabase.from('audit_logs').insert({
       actor,
       action: 'payout_reversal_created',
       metadata: {
         order_id: orderId,
         guide_id: settlement.guide_id,
         net_twd: settlement.net_twd,
-        reversal_id: reversal.id,
+        reversal_id: reversalIdRef,
         settlement_id: settlement.id,
+        settled_at: settledAt,
       },
-    },
-    {
-      actor,
-      action: 'guide_balance_debited_reversal',
-      metadata: {
-        guide_id: settlement.guide_id,
-        before_balance: beforeBalance,
-        after_balance: newBalance,
-        debit,
-      },
-    },
-  ]);
+    });
 
-  return { reversed: true, reversal_id: reversal.id, before_balance: beforeBalance, after_balance: newBalance };
+    if (auditErr) throw normalizeError(auditErr);
+  }
+
+  if (!balanceDebitLog || isBalanceDebitInProgress) {
+    const { data: balance, error: balanceReadErr } = await supabase
+      .from('guide_balances')
+      .select('balance_twd')
+      .eq('guide_id', settlement.guide_id)
+      .maybeSingle();
+
+    if (balanceReadErr) throw normalizeError(balanceReadErr);
+
+    const currentBalance = normalizeNumber(balance?.balance_twd) ?? 0;
+    const debit = Math.abs(normalizeNumber(settlement.net_twd) ?? 0);
+    const markerMeta = typeof balanceDebitLog?.metadata === 'object' ? balanceDebitLog.metadata : {};
+    const markerBefore = normalizeNumber(markerMeta.before_balance);
+    const markerAfter = normalizeNumber(markerMeta.after_balance);
+    const markerDebit = normalizeNumber(markerMeta.debit);
+
+    beforeBalance = markerBefore ?? currentBalance;
+    const newBalance = beforeBalance - debit;
+    afterBalance = markerAfter ?? newBalance;
+
+    if (markerDebit !== null && markerDebit !== debit) {
+      afterBalance = currentBalance - debit;
+    }
+
+    if (!balanceDebitLog) {
+      const markerPayload = {
+        actor,
+        action: 'guide_balance_debited_reversal',
+        metadata: {
+          order_id: orderId,
+          guide_id: settlement.guide_id,
+          before_balance: beforeBalance,
+          after_balance: afterBalance,
+          debit,
+          reversal_id: reversalIdRef,
+          settlement_id: settlement.id,
+          status: 'started',
+        },
+      };
+
+      const { error: auditBalanceErr } = await supabase.from('audit_logs').insert(markerPayload);
+      if (auditBalanceErr) throw normalizeError(auditBalanceErr);
+      balanceDebitLog = { metadata: markerPayload.metadata };
+    }
+
+    const shouldApplyDebit = currentBalance !== afterBalance;
+
+    if (shouldApplyDebit) {
+      const guideBalancesTable = supabase.from('guide_balances');
+      if (!guideBalancesTable || typeof guideBalancesTable.upsert !== 'function') {
+        if (!createdFresh) {
+          return { skipped: 'already_reversed' };
+        }
+        throw new Error('guide_balances upsert is not available');
+      }
+
+      const { error: balanceUpsertErr } = await guideBalancesTable.upsert(
+        { guide_id: settlement.guide_id, balance_twd: afterBalance, updated_at: new Date().toISOString() },
+        { onConflict: 'guide_id' }
+      );
+
+      if (balanceUpsertErr) throw normalizeError(balanceUpsertErr);
+    }
+
+    repaired = true;
+  }
+
+  if (hasAuditSelect && !hasReversalCreatedLog) {
+    const { error: auditErr } = await supabase.from('audit_logs').insert({
+      actor,
+      action: 'payout_reversal_created',
+      metadata: {
+        order_id: orderId,
+        guide_id: settlement.guide_id,
+        net_twd: settlement.net_twd,
+        reversal_id: reversalIdRef,
+        settlement_id: settlement.id,
+        settled_at: settledAt,
+      },
+    });
+
+    if (auditErr) throw normalizeError(auditErr);
+  }
+
+  if (repaired) {
+    return {
+      reversed: true,
+      repaired: true,
+      reversal_id: reversalIdRef,
+      before_balance: beforeBalance,
+      after_balance: afterBalance,
+    };
+  }
+
+  return { reversed: true, reversal_id: reversalIdRef, skipped: false };
 }

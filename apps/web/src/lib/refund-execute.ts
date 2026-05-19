@@ -56,6 +56,34 @@ export interface RefundExecutionOutcome {
   body: ReturnType<typeof ok> | ReturnType<typeof fail>;
 }
 
+export interface ReversiblePayment {
+  id: string;
+  order_id: string;
+  merchant_trade_no: string | null;
+  trade_no: string | null;
+  status: string | null;
+  provider_status: string | null;
+  amount_twd: number | null;
+}
+
+export interface ExecuteEcpayReversalInput {
+  order: OrderForRefund;
+  body: Record<string, unknown>;
+  resolveLatestReversiblePayment: (orderId: string) => Promise<{ payment: ReversiblePayment | null; ambiguous: boolean }>;
+  queryTradeInfo: (merchantTradeNo: string) => Promise<{ ok: boolean; rtnCode: string; rtnMsg: string; tradeStatus: string; tradeNo: string; raw: Record<string, string> }>;
+  requestDoAction: (params: RefundRequestParams & { action: 'N' | 'R' }) => Promise<AllRefundResult>;
+  persistReversal: (args: {
+    orderId: string;
+    paymentId: string;
+    paymentMerchantTradeNo?: string | null;
+    eventType: 'authorization_voided' | 'refunded';
+    providerStatus: string;
+    reversedTradeNo: string | null;
+    refundedAmountTwd: number | null;
+  }) => Promise<UpdateOrderResult>;
+  recordIncident?: (args: { message: string; metadata?: Record<string, unknown> }) => void;
+}
+
 export function getFailureResult(code: string, message: string): RefundExecutionOutcome {
   return {
     status: code.startsWith('DB_') || code === 'CASH_REFUND_PERSIST_FAILED'
@@ -182,5 +210,96 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
   return {
     status: 200,
     body: ok({ refunded: true, rtnCode: result.rtnCode, ecpayRefundTradeNo: ecpayTradeNo }),
+  };
+}
+
+function resolveEcpayReversalAction(query: { tradeStatus: string; raw: Record<string, string> }): 'N' | 'R' | null {
+  const tradeStatus = String(query.tradeStatus || '').trim();
+  const paymentType = String(query.raw?.PaymentType || '').toLowerCase();
+
+  if (paymentType && !paymentType.includes('credit')) {
+    return null;
+  }
+
+  if (tradeStatus === '0') return 'N';
+  if (tradeStatus === '1') return 'R';
+  return null;
+}
+
+export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Promise<RefundExecutionOutcome> {
+  const { order, body, resolveLatestReversiblePayment, queryTradeInfo, requestDoAction, persistReversal, recordIncident } = input;
+  const reason = String(body?.reason ?? '').trim() || undefined;
+
+  const resolved = await resolveLatestReversiblePayment(order.id);
+  if (resolved.ambiguous || !resolved.payment) {
+    recordIncident?.({
+      message: 'refund-execute blocked before provider call: latest reversible payment missing/ambiguous',
+      metadata: { orderId: order.id, reason: resolved.ambiguous ? 'ambiguous_latest_payment' : 'missing_latest_payment' },
+    });
+    return { status: 409, body: fail('PAYMENT_NOT_REVERSIBLE', 'latest reversible payment is missing or ambiguous') };
+  }
+
+  const payment = resolved.payment;
+  if (!payment.merchant_trade_no) {
+    return { status: 409, body: fail('PAYMENT_NOT_REVERSIBLE', 'merchant_trade_no missing on latest reversible payment') };
+  }
+
+  const query = await queryTradeInfo(payment.merchant_trade_no);
+  if (!query.ok) {
+    recordIncident?.({
+      message: 'refund-execute blocked: QueryTradeInfo failed',
+      metadata: { orderId: order.id, merchantTradeNo: payment.merchant_trade_no, rtnCode: query.rtnCode, rtnMsg: query.rtnMsg },
+    });
+    return { status: 502, body: fail('ECPAY_QUERY_FAILED', 'failed to query provider state before reversal') };
+  }
+
+  const action = resolveEcpayReversalAction({ tradeStatus: query.tradeStatus, raw: query.raw || {} });
+  if (!action) {
+    recordIncident?.({
+      message: 'refund-execute blocked: unknown or inconsistent provider state',
+      metadata: {
+        orderId: order.id,
+        merchantTradeNo: payment.merchant_trade_no,
+        tradeStatus: query.tradeStatus,
+        paymentType: query.raw?.PaymentType || null,
+      },
+    });
+    return { status: 409, body: fail('ECPAY_STATE_UNKNOWN', 'provider state unknown/inconsistent; reversal blocked') };
+  }
+
+  const reversalResult = await requestDoAction({
+    merchantTradeNo: payment.merchant_trade_no,
+    tradeNo: query.tradeNo || payment.trade_no || order.trade_no || '',
+    totalAmount: order.total_twd,
+    reason,
+    action,
+  });
+
+  if (!reversalResult.ok) {
+    recordIncident?.({
+      message: 'refund-execute provider reversal failed',
+      metadata: { orderId: order.id, action, rtnCode: reversalResult.rtnCode, rtnMsg: reversalResult.rtnMsg },
+    });
+    return { status: 502, body: fail('ECPAY_REVERSAL_FAILED', 'provider reversal failed') };
+  }
+
+  const eventType = action === 'N' ? 'authorization_voided' : 'refunded';
+  const persist = await persistReversal({
+    orderId: order.id,
+    paymentId: payment.id,
+    paymentMerchantTradeNo: payment.merchant_trade_no,
+    eventType,
+    providerStatus: query.tradeStatus || payment.provider_status || '',
+    reversedTradeNo: reversalResult.ecpayTradeNo || query.tradeNo || payment.trade_no,
+    refundedAmountTwd: action === 'R' ? order.total_twd : null,
+  });
+
+  if (!hasPersisted(persist)) {
+    return failPersist(persist.error?.message ?? 'no rows updated');
+  }
+
+  return {
+    status: 200,
+    body: ok({ reversed: true, mode: eventType, rtnCode: reversalResult.rtnCode }),
   };
 }
