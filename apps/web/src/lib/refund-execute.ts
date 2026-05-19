@@ -75,6 +75,7 @@ export interface ExecuteEcpayReversalInput {
   persistReversal: (args: {
     orderId: string;
     paymentId: string;
+    paymentMerchantTradeNo?: string | null;
     eventType: 'authorization_voided' | 'refunded';
     providerStatus: string;
     reversedTradeNo: string | null;
@@ -286,6 +287,7 @@ export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Pr
   const persist = await persistReversal({
     orderId: order.id,
     paymentId: payment.id,
+    paymentMerchantTradeNo: payment.merchant_trade_no,
     eventType,
     providerStatus: query.tradeStatus || payment.provider_status || '',
     reversedTradeNo: reversalResult.ecpayTradeNo || query.tradeNo || payment.trade_no,

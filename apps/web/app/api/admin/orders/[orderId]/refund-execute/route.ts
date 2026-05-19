@@ -101,27 +101,32 @@ export async function POST(
     // body is optional for ECPay orders
   }
 
-  const outcome = order.trade_no
+  const resolveLatestReversiblePayment = async (targetOrderId: string) => {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, order_id, merchant_trade_no, trade_no, status, provider_status, amount_twd, created_at')
+      .eq('order_id', targetOrderId)
+      .eq('provider', 'ecpay')
+      .in('status', ['pending', 'authorized', 'paid'])
+      .order('created_at', { ascending: false })
+      .limit(2);
+
+    if (error) return { payment: null, ambiguous: false };
+    const rows = Array.isArray(data) ? data : [];
+    if (rows.length !== 1) {
+      return { payment: null, ambiguous: rows.length > 1 };
+    }
+    return { payment: rows[0] as any, ambiguous: false };
+  };
+
+  const latestReversiblePayment = await resolveLatestReversiblePayment(order.id);
+  const shouldUseEcpayReversal = Boolean(latestReversiblePayment.payment) || latestReversiblePayment.ambiguous || Boolean(order.trade_no);
+
+  const outcome = shouldUseEcpayReversal
     ? await executeEcpayReversal({
       order: order as any,
       body,
-      resolveLatestReversiblePayment: async (targetOrderId) => {
-        const { data, error } = await supabase
-          .from('payments')
-          .select('id, order_id, merchant_trade_no, trade_no, status, provider_status, amount_twd, created_at')
-          .eq('order_id', targetOrderId)
-          .eq('provider', 'ecpay')
-          .in('status', ['pending', 'authorized', 'paid'])
-          .order('created_at', { ascending: false })
-          .limit(2);
-
-        if (error) return { payment: null, ambiguous: false };
-        const rows = Array.isArray(data) ? data : [];
-        if (rows.length !== 1) {
-          return { payment: null, ambiguous: rows.length > 1 };
-        }
-        return { payment: rows[0] as any, ambiguous: false };
-      },
+      resolveLatestReversiblePayment: async () => latestReversiblePayment,
       queryTradeInfo: async (merchantTradeNo) => queryEcpayTradeInfo({ merchantTradeNo }),
       requestDoAction: async ({ merchantTradeNo, tradeNo, totalAmount, reason, action }) => requestEcpayDoAction({
         merchantTradeNo,
@@ -130,7 +135,15 @@ export async function POST(
         reason,
         action,
       }),
-      persistReversal: async ({ orderId: targetOrderId, paymentId, eventType, providerStatus, reversedTradeNo, refundedAmountTwd }) => {
+      persistReversal: async ({
+        orderId: targetOrderId,
+        paymentId,
+        paymentMerchantTradeNo,
+        eventType,
+        providerStatus,
+        reversedTradeNo,
+        refundedAmountTwd,
+      }) => {
         const now = new Date().toISOString();
 
         const paymentPatch: Record<string, unknown> = {
@@ -161,7 +174,7 @@ export async function POST(
           order_id: targetOrderId,
           provider: 'ecpay',
           event_type: eventType,
-          merchant_trade_no: order.merchant_trade_no || null,
+          merchant_trade_no: paymentMerchantTradeNo || null,
           trade_no: reversedTradeNo,
           payload: { source: 'admin_refund_execute', mode: eventType },
         });

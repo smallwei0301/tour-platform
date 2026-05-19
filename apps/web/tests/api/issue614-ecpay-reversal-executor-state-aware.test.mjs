@@ -45,26 +45,81 @@ test('authorized-not-captured state uses void (Action=N), not refund', async () 
   assert.equal(calls[1].eventType, 'authorization_voided');
 });
 
-test('captured/settled state uses refund (Action=R)', async () => {
-  const calls = [];
+test('missing/zero trade_no on order still takes ECPay reversal path when reversible payment exists', async () => {
+  let queriedMerchantNo = null;
+  let requestedAction = null;
+
   const outcome = await executeEcpayReversal({
-    order: baseOrder(),
-    body: {},
-    resolveLatestReversiblePayment: async () => ({ payment: { ...basePayment(), status: 'paid', provider_status: '1' }, ambiguous: false }),
-    queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '1', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard' } }),
+    order: { ...baseOrder(), trade_no: null },
+    body: { reason: 'route consistency' },
+    resolveLatestReversiblePayment: async () => ({
+      payment: { ...basePayment(), provider_status: '1', status: 'paid' },
+      ambiguous: false,
+    }),
+    queryTradeInfo: async (merchantTradeNo) => {
+      queriedMerchantNo = merchantTradeNo;
+      return {
+        ok: true,
+        rtnCode: '1',
+        rtnMsg: 'ok',
+        tradeStatus: '1',
+        tradeNo: 'TN-614',
+        raw: { PaymentType: 'Credit_CreditCard' },
+      };
+    },
     requestDoAction: async (params) => {
-      calls.push(params);
-      return { ok: true, rtnCode: '1', rtnMsg: 'ok', ecpayTradeNo: 'EC-REFUND-1' };
+      requestedAction = params.action;
+      return { ok: true, rtnCode: '1', rtnMsg: 'ok', ecpayTradeNo: 'EC-REFUND-ORDER-TRADE-MISSING' };
     },
-    persistReversal: async (args) => {
-      calls.push(args);
-      return { error: null, data: [{ id: args.orderId }], count: 1 };
-    },
+    persistReversal: async () => ({
+      error: null,
+      data: [{ id: 'order-614' }],
+      count: 1,
+    }),
   });
 
   assert.equal(outcome.status, 200);
-  assert.equal(calls[0].action, 'R');
-  assert.equal(calls[1].eventType, 'refunded');
+  assert.equal(queriedMerchantNo, 'MTN-614');
+  assert.equal(requestedAction, 'R');
+});
+
+test('executeEcpayReversal persists payment_events using payment row merchant_trade_no', async () => {
+  let persistedMerchantNo = undefined;
+
+  const outcome = await executeEcpayReversal({
+    order: { ...baseOrder(), trade_no: null },
+    body: {},
+    resolveLatestReversiblePayment: async () => ({
+      payment: { ...basePayment(), merchant_trade_no: 'MTN-REPLACEMENT', status: 'authorized', provider_status: '0' },
+      ambiguous: false,
+    }),
+    queryTradeInfo: async () => ({
+      ok: true,
+      rtnCode: '1',
+      rtnMsg: 'ok',
+      tradeStatus: '0',
+      tradeNo: 'TN-614',
+      raw: { PaymentType: 'Credit_CreditCard' },
+    }),
+    requestDoAction: async () => ({
+      ok: true,
+      rtnCode: '1',
+      rtnMsg: 'ok',
+      ecpayTradeNo: 'EC-VOID-ORDER-TRADE-MISSING',
+    }),
+    persistReversal: async ({ paymentMerchantTradeNo }) => {
+      persistedMerchantNo = paymentMerchantTradeNo;
+      return {
+        error: null,
+        data: [{ id: 'order-614' }],
+        count: 1,
+      };
+    },
+    recordIncident: () => {},
+  });
+
+  assert.equal(outcome.status, 200);
+  assert.equal(persistedMerchantNo, 'MTN-REPLACEMENT');
 });
 
 test('unknown provider state blocks and never calls provider reversal API', async () => {
