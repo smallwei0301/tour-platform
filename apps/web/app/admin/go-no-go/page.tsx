@@ -43,17 +43,17 @@ interface GoNoGoData {
 }
 
 const READINESS_STATUS_CONFIG: Record<ReadinessStatus, { label: string; color: string; bg: string }> = {
-  pass: { label: 'PASS', color: '#166534', bg: '#dcfce7' },
-  warning: { label: 'WARNING', color: '#854d0e', bg: '#fef9c3' },
-  fail: { label: 'FAIL', color: '#991b1b', bg: '#fee2e2' },
-  manual: { label: 'MANUAL', color: '#1e40af', bg: '#dbeafe' },
-  evidence_required: { label: 'EVIDENCE REQUIRED', color: '#7c2d12', bg: '#ffedd5' },
+  pass: { label: '通過', color: '#166534', bg: '#dcfce7' },
+  warning: { label: '注意', color: '#854d0e', bg: '#fef9c3' },
+  fail: { label: '未通過', color: '#991b1b', bg: '#fee2e2' },
+  manual: { label: '人工確認', color: '#1e40af', bg: '#dbeafe' },
+  evidence_required: { label: '待補佐證', color: '#7c2d12', bg: '#ffedd5' },
 };
 
 const VERDICT_CONFIG: Record<VerdictState, { label: string; color: string; bg: string; border: string }> = {
-  GO: { label: 'GO', color: '#166534', bg: '#dcfce7', border: '#86efac' },
-  HOLD: { label: 'HOLD', color: '#854d0e', bg: '#fef9c3', border: '#fde047' },
-  NO_GO: { label: 'NO_GO', color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' },
+  GO: { label: '可上線', color: '#166534', bg: '#dcfce7', border: '#86efac' },
+  HOLD: { label: '暫緩', color: '#854d0e', bg: '#fef9c3', border: '#fde047' },
+  NO_GO: { label: '不可上線', color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' },
 };
 
 const READINESS_STATUS_FALLBACK_CONFIG = {
@@ -64,7 +64,7 @@ const READINESS_STATUS_FALLBACK_CONFIG = {
 function ReadinessStatusPill({ status }: { status: ReadinessStatus }) {
   const cfg = READINESS_STATUS_CONFIG[status as keyof typeof READINESS_STATUS_CONFIG] ?? {
     ...READINESS_STATUS_FALLBACK_CONFIG,
-    label: `UNKNOWN: ${status}`,
+    label: `未知狀態：${status}`,
   };
   return (
     <span style={{
@@ -76,6 +76,96 @@ function ReadinessStatusPill({ status }: { status: ReadinessStatus }) {
     </span>
   );
 }
+
+const READINESS_TEXT: Record<string, { label: string; note: string }> = {
+  'ecpay-sandbox': {
+    label: 'ECPay 沙盒 → 正式環境金流憑證已輪替',
+    note: '確認 ECPAY_HASH_KEY 與 ECPAY_HASH_IV 已改為正式環境值',
+  },
+  'supabase-rls': {
+    label: 'Supabase RLS 權限政策已在所有資料表啟用',
+    note: 'Supabase 連線與權限狀態需確認',
+  },
+  'sentry-dsn': {
+    label: 'Sentry DSN 已設定並可接收事件',
+    note: '確認 SENTRY_DSN 已設定且錯誤事件能送達',
+  },
+  'vercel-deploy': {
+    label: '最新 Vercel 部署來自正式 production 分支',
+    note: '確認目前部署 commit 與 production 分支一致',
+  },
+  'evidence-real-payment': {
+    label: '#402 真實付款／退款／Email 副作用佐證',
+    note: '#402：需要真實 ECPay 付款與退款副作用驗證；完成後設定 EVIDENCE_402_SIGNED=true。',
+  },
+  'evidence-manual-regression': {
+    label: '#500 近期合併人工回歸檢查表',
+    note: '#500：針對 5/12–5/14 PR 進行人工回歸；完成後設定 EVIDENCE_500_SIGNED=true。',
+  },
+  'evidence-traveler-browser': {
+    label: '#403 旅客登入瀏覽器 session 佐證',
+    note: '#403：需要真實 Google OAuth 旅客 session QA；完成後設定 EVIDENCE_403_SIGNED=true。',
+  },
+  'evidence-guide-onboarding': {
+    label: '#318 導遊 onboarding demo run 與回顧',
+    note: '#318：真實導遊自助操作 walkthrough；完成後設定 EVIDENCE_318_SIGNED=true。',
+  },
+  'evidence-cs-sop': {
+    label: '#319 客服 SOP 演練（4 種情境）',
+    note: '#319：取消／退款／事件／緊急情境 SOP 演練；完成後設定 EVIDENCE_319_SIGNED=true。',
+  },
+};
+
+const OWNER_LABELS: Record<string, string> = {
+  ops: '營運',
+  infra: '基礎設施',
+  qa: 'QA',
+};
+
+const ACTION_LABELS: Record<string, string> = {
+  'Review exception orders': '檢查異常訂單',
+  'Process pending refunds': '處理待退款項目',
+  'View system health incidents': '查看系統健康事件',
+  'Review readiness checklist': '檢查上線準備清單',
+};
+
+function translateReadinessLabel(item: ReadinessItem) {
+  return READINESS_TEXT[item.id]?.label ?? item.label;
+}
+
+function translateReadinessNote(item: ReadinessItem) {
+  return READINESS_TEXT[item.id]?.note ?? item.note;
+}
+
+function translateOwner(owner: string) {
+  return OWNER_LABELS[owner] ?? owner;
+}
+
+function translateVerdictReason(reason: string) {
+  if (/^Exception rate (.+)% exceeds 10% threshold$/.test(reason)) {
+    return reason.replace(/^Exception rate (.+)% exceeds 10% threshold$/, '例外率 $1% 超過 10% 上限');
+  }
+  if (/^Exception rate (.+)% exceeds 5% caution threshold$/.test(reason)) {
+    return reason.replace(/^Exception rate (.+)% exceeds 5% caution threshold$/, '例外率 $1% 超過 5% 警戒線');
+  }
+  if (/^(\d+) critical incident\(s\) in last 24h$/.test(reason)) {
+    return reason.replace(/^(\d+) critical incident\(s\) in last 24h$/, '過去 24 小時內有 $1 件 critical 事件');
+  }
+  if (/^(\d+) pending refunds exceed threshold of 10$/.test(reason)) {
+    return reason.replace(/^(\d+) pending refunds exceed threshold of 10$/, '待退款 $1 件，超過 10 件門檻');
+  }
+  const staticReasons: Record<string, string> = {
+    'One or more readiness checklist items are failing': '有一個或多個上線準備項目未通過',
+    'Required pre-launch evidence items are unsigned or incomplete': '必要的上線前佐證尚未簽核或未完成',
+    'All metrics within acceptable thresholds': '所有指標都在可接受門檻內',
+  };
+  return staticReasons[reason] ?? reason;
+}
+
+function translateActionLabel(label: string) {
+  return ACTION_LABELS[label] ?? label;
+}
+
 
 export default function GoNoGoPage() {
   const [data, setData] = useState<GoNoGoData | null>(null);
@@ -90,10 +180,10 @@ export default function GoNoGoPage() {
         if (j?.ok && j?.data) {
           setData(j.data);
         } else {
-          setError(j?.error?.message || 'Unknown error loading dashboard');
+          setError(j?.error?.message || '載入面板時發生未知錯誤');
         }
       })
-      .catch((e) => setError(e?.message || 'Network error'))
+      .catch((e) => setError(e?.message || '網路連線錯誤'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -103,8 +193,8 @@ export default function GoNoGoPage() {
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader
-        title="Go/No-Go Dashboard"
-        subtitle="Release readiness checklist and system verdict"
+        title="Go/No-Go 上線決策面板"
+        subtitle="上線準備清單與系統決策摘要"
         actions={
           verdict && verdictCfg ? (
             <span style={{
@@ -124,7 +214,7 @@ export default function GoNoGoPage() {
 
         {loading && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
-            Loading...
+            載入中…
           </div>
         )}
 
@@ -134,12 +224,12 @@ export default function GoNoGoPage() {
           </Card>
         )}
 
-        {/* ── Block 1: Readiness Checklist ── */}
+        {/* ── Block 1: 上線準備清單 ── */}
         {data && (
           <Card>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>
-                Readiness Checklist
+                上線準備清單
               </h2>
             </div>
             <div style={{ padding: '12px 20px' }}>
@@ -153,11 +243,11 @@ export default function GoNoGoPage() {
                 >
                   <ReadinessStatusPill status={item.status} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: '#111' }}>{item.label}</div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{item.note}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: '#111' }}>{translateReadinessLabel(item)}</div>
+                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{translateReadinessNote(item)}</div>
                   </div>
                   <div style={{ fontSize: 11, color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                    owner: {item.owner}
+                    負責：{translateOwner(item.owner)}
                   </div>
                 </div>
               ))}
@@ -165,12 +255,12 @@ export default function GoNoGoPage() {
           </Card>
         )}
 
-        {/* ── Block 2: Core Metrics ── */}
+        {/* ── Block 2: 核心指標 ── */}
         {data && (
           <Card>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>
-                Core Metrics <span style={{ fontWeight: 400, fontSize: 12, color: '#9ca3af' }}>(last 7 days)</span>
+                核心指標 <span style={{ fontWeight: 400, fontSize: 12, color: '#9ca3af' }}>（最近 7 天）</span>
               </h2>
             </div>
             <div style={{
@@ -180,11 +270,11 @@ export default function GoNoGoPage() {
               gap: 16,
             }}>
               {[
-                { label: 'Healthy Order Rate', value: `${data.metrics.healthyOrderRate}%`, alert: data.metrics.healthyOrderRate < 80 },
-                { label: 'Exception Rate', value: `${data.metrics.exceptionRate}%`, alert: data.metrics.exceptionRate > 5 },
-                { label: 'Pending Refunds', value: String(data.metrics.pendingRefunds), alert: data.metrics.pendingRefunds > 10 },
-                { label: 'Paid/Confirmed Ratio', value: `${data.metrics.paidConfirmedRatio}%`, alert: false },
-                { label: 'Incidents (24h)', value: String(data.metrics.incidents24h), alert: data.metrics.incidents24h > 0 },
+                { label: '健康訂單率', value: `${data.metrics.healthyOrderRate}%`, alert: data.metrics.healthyOrderRate < 80 },
+                { label: '例外率', value: `${data.metrics.exceptionRate}%`, alert: data.metrics.exceptionRate > 5 },
+                { label: '待退款數', value: String(data.metrics.pendingRefunds), alert: data.metrics.pendingRefunds > 10 },
+                { label: '已付款／已確認比率', value: `${data.metrics.paidConfirmedRatio}%`, alert: false },
+                { label: '24 小時事件數', value: String(data.metrics.incidents24h), alert: data.metrics.incidents24h > 0 },
               ].map((m) => (
                 <div
                   key={m.label}
@@ -204,12 +294,12 @@ export default function GoNoGoPage() {
           </Card>
         )}
 
-        {/* ── Block 3: Today's Verdict ── */}
+        {/* ── Block 3: 今日決策 ── */}
         {data && verdict && verdictCfg && (
           <Card style={{ borderColor: verdictCfg.border }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>
-                {"Today's Verdict"}
+                {"今日決策"}
               </h2>
               <span style={{
                 background: verdictCfg.bg,
@@ -223,22 +313,22 @@ export default function GoNoGoPage() {
             </div>
             <div style={{ padding: '20px 24px' }}>
               <p style={{ margin: '0 0 12px', fontSize: 14, color: '#374151', fontWeight: 500 }}>
-                {verdict.reason}
+                {translateVerdictReason(verdict.reason)}
               </p>
               <div style={{ fontSize: 12, color: '#9ca3af', display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-                <span>Computed: {new Date(verdict.computedAt).toLocaleString()}</span>
-                <span>Deploy SHA: <code style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>{verdict.deploySha.slice(0, 8)}</code></span>
+                <span>計算時間：{new Date(verdict.computedAt).toLocaleString()}</span>
+                <span>部署 SHA： <code style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '1px 6px', borderRadius: 4 }}>{verdict.deploySha.slice(0, 8)}</code></span>
               </div>
             </div>
           </Card>
         )}
 
-        {/* ── Block 4: Recommended Actions ── */}
+        {/* ── Block 4: 建議處置 ── */}
         {data && (
           <Card>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0' }}>
               <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>
-                Recommended Actions
+                建議處置
               </h2>
             </div>
             <div style={{ padding: '16px 20px' }}>
@@ -246,7 +336,7 @@ export default function GoNoGoPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>✅</span>
                   <span style={{ fontSize: 14, color: '#166534', fontWeight: 500 }}>
-                    No actions required — system is healthy and ready to deploy.
+                    目前不需處置，系統健康且可準備上線。
                   </span>
                 </div>
               ) : (
@@ -262,7 +352,7 @@ export default function GoNoGoPage() {
                         }}
                       >
                         <span>→</span>
-                        {action.label}
+                        {translateActionLabel(action.label)}
                       </a>
                     </li>
                   ))}
