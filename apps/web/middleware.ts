@@ -183,7 +183,7 @@ export async function middleware(req: NextRequest) {
 
   if (isAdminPage || isAdminApi) {
     const isPublicAdminPage = pathname === '/admin/login' || pathname === '/admin/unauthorized';
-    const isPublicAdminApi = pathname === '/api/admin/auth/session';
+    const isPublicAdminApi = pathname === '/api/admin/auth/session' || pathname === '/api/admin/auth/csrf';
     if (isPublicAdminPage || isPublicAdminApi) return NextResponse.next();
 
     if (isAdminPage && !hasAdminCredential(req)) {
