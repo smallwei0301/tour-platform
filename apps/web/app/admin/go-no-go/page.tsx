@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, PageHeader } from '../../../src/components/admin/ui';
 
-type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual' | 'evidence_required';
+type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual' | 'evidence_required' | (string & {});
 
 interface ReadinessItem {
   id: string;
@@ -56,8 +56,16 @@ const VERDICT_CONFIG: Record<VerdictState, { label: string; color: string; bg: s
   NO_GO: { label: 'NO_GO', color: '#991b1b', bg: '#fee2e2', border: '#fca5a5' },
 };
 
+const READINESS_STATUS_FALLBACK_CONFIG = {
+  color: '#475569',
+  bg: '#f1f5f9',
+};
+
 function ReadinessStatusPill({ status }: { status: ReadinessStatus }) {
-  const cfg = READINESS_STATUS_CONFIG[status];
+  const cfg = READINESS_STATUS_CONFIG[status as keyof typeof READINESS_STATUS_CONFIG] ?? {
+    ...READINESS_STATUS_FALLBACK_CONFIG,
+    label: `UNKNOWN: ${status}`,
+  };
   return (
     <span style={{
       background: cfg.bg, color: cfg.color,
