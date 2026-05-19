@@ -122,6 +122,76 @@ test('executeEcpayReversal persists payment_events using payment row merchant_tr
   assert.equal(persistedMerchantNo, 'MTN-REPLACEMENT');
 });
 
+test('executeEcpayReversal returns DB_UPDATE_FAILED when payments update fails', async () => {
+  const outcome = await executeEcpayReversal({
+    order: baseOrder(),
+    body: { reason: 'rollback safety' },
+    resolveLatestReversiblePayment: async () => ({ payment: basePayment(), ambiguous: false }),
+    queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '0', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard' } }),
+    requestDoAction: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', ecpayTradeNo: 'EC-VOID-1' }),
+    persistReversal: async () => ({
+      error: { message: 'failed to update payment' },
+      data: [],
+      count: 0,
+    }),
+    recordIncident: () => {},
+  });
+
+  assert.equal(outcome.status, 500);
+  assert.equal(outcome.body.error.code, 'DB_UPDATE_FAILED');
+  assert.match(outcome.body.error.message, /failed to persist refund result: failed to update payment/);
+});
+
+test('executeEcpayReversal returns DB_UPDATE_FAILED when orders update touches no rows', async () => {
+  const outcome = await executeEcpayReversal({
+    order: baseOrder(),
+    body: {},
+    resolveLatestReversiblePayment: async () => ({ payment: basePayment(), ambiguous: false }),
+    queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '1', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard' } }),
+    requestDoAction: async () => ({
+      ok: true,
+      rtnCode: '1',
+      rtnMsg: 'ok',
+      ecpayTradeNo: 'EC-REFUND-1',
+    }),
+    persistReversal: async () => ({
+      error: null,
+      data: [],
+      count: 0,
+    }),
+    recordIncident: () => {},
+  });
+
+  assert.equal(outcome.status, 500);
+  assert.equal(outcome.body.error.code, 'DB_UPDATE_FAILED');
+  assert.equal(outcome.body.error.message, 'failed to persist refund result: no rows updated');
+});
+
+test('executeEcpayReversal returns DB_UPDATE_FAILED when payment_events insert fails', async () => {
+  const outcome = await executeEcpayReversal({
+    order: baseOrder(),
+    body: { reason: 'audit safety' },
+    resolveLatestReversiblePayment: async () => ({ payment: basePayment(), ambiguous: false }),
+    queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '0', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard' } }),
+    requestDoAction: async () => ({
+      ok: true,
+      rtnCode: '1',
+      rtnMsg: 'ok',
+      ecpayTradeNo: 'EC-VOID-1',
+    }),
+    persistReversal: async () => ({
+      error: { message: 'failed to insert payment event' },
+      data: [{ id: 'order-614' }],
+      count: 1,
+    }),
+    recordIncident: () => {},
+  });
+
+  assert.equal(outcome.status, 500);
+  assert.equal(outcome.body.error.code, 'DB_UPDATE_FAILED');
+  assert.match(outcome.body.error.message, /failed to persist refund result: failed to insert payment event/);
+});
+
 test('unknown provider state blocks and never calls provider reversal API', async () => {
   let called = 0;
   const outcome = await executeEcpayReversal({

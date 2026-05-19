@@ -159,27 +159,79 @@ export async function POST(
           paymentPatch.refunded_amount_twd = refundedAmountTwd;
         }
 
-        await supabase.from('payments').update(paymentPatch).eq('id', paymentId);
+        const paymentResult = await supabase
+          .from('payments')
+          .update(paymentPatch)
+          .eq('id', paymentId)
+          .select('id');
 
-        await supabase.from('orders').update({
-          status: 'refunded',
-          payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
-          refunded_at: now,
-          refunded_amount: refundedAmountTwd ?? 0,
-          ecpay_refund_trade_no: reversedTradeNo,
-        }).eq('id', targetOrderId);
+        if (paymentResult.error) {
+          return { error: { message: paymentResult.error.message || 'failed to update payment' }, data: [], count: 0 };
+        }
 
-        await supabase.from('payment_events').insert({
-          payment_id: paymentId,
-          order_id: targetOrderId,
-          provider: 'ecpay',
-          event_type: eventType,
-          merchant_trade_no: paymentMerchantTradeNo || null,
-          trade_no: reversedTradeNo,
-          payload: { source: 'admin_refund_execute', mode: eventType },
-        });
+        if (typeof paymentResult.count === 'number' && paymentResult.count < 1) {
+          return { error: { message: 'payment update affected 0 rows' }, data: [], count: 0 };
+        }
 
-        await recordRefundReversalDb(supabase, { orderId: targetOrderId, actor: 'refund-execute' });
+        if (!Array.isArray(paymentResult.data) || paymentResult.data.length === 0) {
+          return { error: { message: 'payment update returned no rows' }, data: [], count: 0 };
+        }
+
+        const orderResult = await supabase
+          .from('orders')
+          .update({
+            status: 'refunded',
+            payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
+            refunded_at: now,
+            refunded_amount: refundedAmountTwd ?? 0,
+            ecpay_refund_trade_no: reversedTradeNo,
+          })
+          .eq('id', targetOrderId)
+          .select('id');
+
+        if (orderResult.error) {
+          return { error: { message: orderResult.error.message || 'failed to update order' }, data: [], count: 0 };
+        }
+
+        if (typeof orderResult.count === 'number' && orderResult.count < 1) {
+          return { error: { message: 'order update affected 0 rows' }, data: [], count: 0 };
+        }
+
+        if (!Array.isArray(orderResult.data) || orderResult.data.length === 0) {
+          return { error: { message: 'order update returned no rows' }, data: [], count: 0 };
+        }
+
+        const eventResult = await supabase
+          .from('payment_events')
+          .insert({
+            payment_id: paymentId,
+            order_id: targetOrderId,
+            provider: 'ecpay',
+            event_type: eventType,
+            merchant_trade_no: paymentMerchantTradeNo || null,
+            trade_no: reversedTradeNo,
+            payload: { source: 'admin_refund_execute', mode: eventType },
+          })
+          .select('id');
+
+        if (eventResult.error) {
+          return { error: { message: eventResult.error.message || 'failed to insert payment event' }, data: [], count: 0 };
+        }
+
+        if (typeof eventResult.count === 'number' && eventResult.count < 1) {
+          return { error: { message: 'payment event insert affected 0 rows' }, data: [], count: 0 };
+        }
+
+        if (!Array.isArray(eventResult.data) || eventResult.data.length === 0) {
+          return { error: { message: 'payment event insert returned no rows' }, data: [], count: 0 };
+        }
+
+        try {
+          await recordRefundReversalDb(supabase, { orderId: targetOrderId, actor: 'refund-execute' });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'failed to record refund reversal';
+          return { error: { message }, data: [], count: 0 };
+        }
 
         return { error: null, data: [{ id: targetOrderId }], count: 1 };
       },
