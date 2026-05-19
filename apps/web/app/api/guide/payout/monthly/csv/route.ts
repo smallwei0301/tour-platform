@@ -21,10 +21,10 @@ export async function GET(req: Request) {
     return new Response('month must be YYYY-MM', { status: 400 });
   }
 
-  const csvHeader = '行程,出團日,訂單金額(NT$),平台抽成(NT$),預計入帳(NT$)\n';
+  const csvHeader = '行程,出團日,訂單金額(NT$),已退款(NT$),實付扣退款(NT$),平台抽成(NT$),預計入帳(NT$)\n';
 
   if (!process.env.SUPABASE_URL) {
-    const emptyCsv = csvHeader + `合計,,,0,0\n`;
+    const emptyCsv = csvHeader + `合計,,,,0,0,0\n`;
     return new Response(emptyCsv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   );
 
   if (activityIds.length === 0) {
-    const emptyCsv = csvHeader + `合計,,,0,0\n`;
+    const emptyCsv = csvHeader + `合計,,,,0,0,0\n`;
     return new Response(emptyCsv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
@@ -77,28 +77,42 @@ export async function GET(req: Request) {
     .gte('created_at', monthStart.toISOString())
     .lt('created_at', monthEnd.toISOString());
 
+  const orderIds = (monthOrders ?? []).map((o: { id: string }) => o.id);
+  let refundAmountByOrderId: Record<string, number> = {};
+  if (orderIds.length > 0) {
+    const { data: refundRows } = await supabase
+      .from('operations_tracking')
+      .select('order_id, refund_amount_twd')
+      .in('order_id', orderIds);
+    refundAmountByOrderId = Object.fromEntries(
+      (refundRows ?? []).map((r: { order_id: string; refund_amount_twd: number | null }) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+    );
+  }
+
   const orders = (monthOrders ?? []).map((o: { id: string; activity_id: string; total_twd: number | null; created_at: string }) => {
     const totalTwd = o.total_twd ?? 0;
-    const commissionTwd = Math.floor(totalTwd * SETTLEMENT_COMMISSION_RATE);
-    const netTwd = totalTwd - commissionTwd;
+    const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
+    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
+    const commissionTwd = Math.floor(effectiveTwd * SETTLEMENT_COMMISSION_RATE);
+    const netTwd = effectiveTwd - commissionTwd;
     const activityTitle = activityMap[o.activity_id] ?? '';
     const scheduleDate = o.created_at.slice(0, 10);
-    return { activityTitle, scheduleDate, totalTwd, commissionTwd, netTwd };
+    return { activityTitle, scheduleDate, totalTwd, refundAmountTwd, effectiveTwd, commissionTwd, netTwd };
   });
 
-  const gmvTwd = orders.reduce((sum: number, o: { totalTwd: number }) => sum + o.totalTwd, 0);
+  const gmvTwd = orders.reduce((sum: number, o: { effectiveTwd: number }) => sum + o.effectiveTwd, 0);
   const totalCommission = orders.reduce((sum: number, o: { commissionTwd: number }) => sum + o.commissionTwd, 0);
   const totalNet = orders.reduce((sum: number, o: { netTwd: number }) => sum + o.netTwd, 0);
 
-  const rows = orders.map((o: { activityTitle: string; scheduleDate: string; totalTwd: number; commissionTwd: number; netTwd: number }) =>
-    `${o.activityTitle},${o.scheduleDate},${o.totalTwd},${o.commissionTwd},${o.netTwd}`
+  const rows = orders.map((o: { activityTitle: string; scheduleDate: string; totalTwd: number; refundAmountTwd: number; effectiveTwd: number; commissionTwd: number; netTwd: number }) =>
+    `${o.activityTitle},${o.scheduleDate},${o.totalTwd},${o.refundAmountTwd},${o.effectiveTwd},${o.commissionTwd},${o.netTwd}`
   );
 
   const csvContent =
     csvHeader +
     rows.join('\n') +
     (rows.length > 0 ? '\n' : '') +
-    `合計,,${gmvTwd},${totalCommission},${totalNet}\n`;
+    `合計,,,,${gmvTwd},${totalCommission},${totalNet}\n`;
 
   return new Response(csvContent, {
     headers: {

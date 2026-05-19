@@ -130,13 +130,31 @@ export async function GET(req: Request) {
 
   const { data: monthOrders } = await supabase
     .from('orders')
-    .select('total_twd, created_at')
+    .select('id, total_twd, created_at')
     .in('activity_id', activityIds)
     .in('status', gmvStatuses)
     .gte('created_at', gmvMonthStart.toISOString())
     .lt('created_at', gmvMonthEnd.toISOString());
 
-  const monthGmvTwd = (monthOrders ?? []).reduce((sum: number, o: any) => sum + (o.total_twd ?? 0), 0);
+  const monthOrderIds = (monthOrders ?? []).map((o: any) => o.id);
+  let monthRefundAmountByOrderId: Record<string, number> = {};
+  if (monthOrderIds.length > 0) {
+    const { data: monthRefundRows } = await supabase
+      .from('operations_tracking')
+      .select('order_id, refund_amount_twd')
+      .in('order_id', monthOrderIds);
+    monthRefundAmountByOrderId = Object.fromEntries(
+      (monthRefundRows ?? []).map((r: any) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+    );
+  }
+
+  const effectiveMonthGmvTwd = (monthOrders ?? []).reduce((sum: number, o: any) => {
+    const totalTwd = o.total_twd ?? 0;
+    const refundAmountTwd = monthRefundAmountByOrderId[o.id] ?? 0;
+    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
+    return sum + effectiveTwd;
+  }, 0);
+  const monthGmvTwd = effectiveMonthGmvTwd;
   const monthGmvOrderCount = (monthOrders ?? []).length;
 
   // 6. 6-month revenue trend — AC1
@@ -148,14 +166,30 @@ export async function GET(req: Request) {
     const mEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1) - taipeiOffset * 60000);
     const { data: mOrders } = await supabase
       .from('orders')
-      .select('total_twd')
+      .select('id, total_twd')
       .in('activity_id', activityIds)
       .in('status', gmvStatuses)
       .gte('created_at', mStart.toISOString())
       .lt('created_at', mEnd.toISOString());
+    const mOrderIds = (mOrders ?? []).map((o: any) => o.id);
+    let mRefundAmountByOrderId: Record<string, number> = {};
+    if (mOrderIds.length > 0) {
+      const { data: mRefundRows } = await supabase
+        .from('operations_tracking')
+        .select('order_id, refund_amount_twd')
+        .in('order_id', mOrderIds);
+      mRefundAmountByOrderId = Object.fromEntries(
+        (mRefundRows ?? []).map((r: any) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+      );
+    }
     revenueTrend6m.push({
       month: `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`,
-      gmvTwd: (mOrders ?? []).reduce((s: number, o: any) => s + (o.total_twd ?? 0), 0),
+      gmvTwd: (mOrders ?? []).reduce((s: number, o: any) => {
+        const totalTwd = o.total_twd ?? 0;
+        const refundAmountTwd = mRefundAmountByOrderId[o.id] ?? 0;
+        const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
+        return s + effectiveTwd;
+      }, 0),
       orderCount: (mOrders ?? []).length,
     });
   }
@@ -175,7 +209,7 @@ export async function GET(req: Request) {
       ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
       : null;
 
-  const expectedPayoutTwd = Math.floor(monthGmvTwd * (1 - settlementConfig.commission_rate));
+  const expectedPayoutTwd = Math.floor(effectiveMonthGmvTwd * (1 - settlementConfig.commission_rate));
   const nextPayoutDateObj = latestCompletedTourDate
     ? new Date(latestCompletedTourDate.getTime() + settlementConfig.t_days * 24 * 60 * 60 * 1000)
     : null;

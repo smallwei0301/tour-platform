@@ -64,6 +64,8 @@ type PayoutOrderItem = {
   activityId: string;
   activityTitle: string;
   totalTwd: number;
+  refundAmountTwd: number;
+  effectiveTwd: number;
   commissionTwd: number;
   netTwd: number;
 };
@@ -255,7 +257,7 @@ export default function GuideDashboardPage() {
         <RevenueCard
           label="本月預計入帳"
           value={data?.expectedPayoutTwd != null ? `NT$${data.expectedPayoutTwd.toLocaleString()}` : '--'}
-          subtext="點擊查看明細 · 依結算規則 v1 計算（抽成 15%，T+7 天）"
+          subtext="點擊查看明細 · 平台抽成 15%，導遊實拿 85%；以旅客實付金額扣除已退款部分後計算；最低出款門檻：NT$5,000；金流手續費平台吸收"
           icon="🏦"
           muted={data?.expectedPayoutTwd == null}
           onClick={() => openPayoutDetail(currentMonthStr)}
@@ -263,7 +265,7 @@ export default function GuideDashboardPage() {
         <RevenueCard
           label="下次出款日"
           value={data?.nextPayoutDate ?? '--'}
-          subtext="依結算規則 v1 計算（T+7 天）"
+          subtext="活動完成後第 7 天（T+7）依結算規則 v1 出款"
           icon="📆"
           muted={data?.nextPayoutDate == null}
         />
@@ -278,7 +280,7 @@ export default function GuideDashboardPage() {
           </div>
           {data.minWithdrawalTwd && (
             <div style={{ fontSize: 11, color: '#4ade80', marginTop: 4 }}>
-              最低出款門檻：NT${data.minWithdrawalTwd.toLocaleString()}
+              {`最低出款門檻：NT$${data.minWithdrawalTwd.toLocaleString()}`}
               {data.currentBalanceTwd >= data.minWithdrawalTwd
                 ? ' ✓ 已達門檻'
                 : ` · 尚差 NT$${(data.minWithdrawalTwd - data.currentBalanceTwd).toLocaleString()}`}
@@ -529,6 +531,8 @@ export default function GuideDashboardPage() {
                     <tr style={{ color:'#6b7280', borderBottom:'1px solid #e5e7eb' }}>
                       <th style={{ textAlign:'left', padding:'4px 6px' }}>行程</th>
                       <th style={{ textAlign:'right', padding:'4px 6px' }}>訂單金額</th>
+                      <th style={{ textAlign:'right', padding:'4px 6px' }}>已退款</th>
+                      <th style={{ textAlign:'right', padding:'4px 6px' }}>實付扣退款</th>
                       <th style={{ textAlign:'right', padding:'4px 6px' }}>平台抽成</th>
                       <th style={{ textAlign:'right', padding:'4px 6px' }}>預計入帳</th>
                     </tr>
@@ -538,6 +542,8 @@ export default function GuideDashboardPage() {
                       <tr key={o.orderId} style={{ borderBottom:'1px solid #f3f4f6' }}>
                         <td style={{ padding:'4px 6px' }}>{o.activityTitle}</td>
                         <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.totalTwd.toLocaleString()}</td>
+                        <td style={{ textAlign:'right', padding:'4px 6px', color:'#f97316' }}>-NT${o.refundAmountTwd.toLocaleString()}</td>
+                        <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.effectiveTwd.toLocaleString()}</td>
                         <td style={{ textAlign:'right', padding:'4px 6px', color:'#ef4444' }}>-NT${o.commissionTwd.toLocaleString()}</td>
                         <td style={{ textAlign:'right', padding:'4px 6px', fontWeight:600 }}>NT${o.netTwd.toLocaleString()}</td>
                       </tr>
@@ -546,13 +552,15 @@ export default function GuideDashboardPage() {
                   <tfoot>
                     <tr style={{ fontWeight:700, borderTop:'2px solid #e5e7eb' }}>
                       <td style={{ padding:'6px 6px' }}>合計</td>
+                      <td style={{ textAlign:'right', padding:'6px 6px' }}>—</td>
+                      <td style={{ textAlign:'right', padding:'6px 6px' }}>—</td>
                       <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.gmvTwd.toLocaleString()}</td>
                       <td style={{ textAlign:'right', padding:'6px 6px', color:'#ef4444' }}>-NT${payoutDetail.totals.commissionTwd.toLocaleString()}</td>
                       <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.netTwd.toLocaleString()}</td>
                     </tr>
                   </tfoot>
                 </table>
-                <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>依結算規則 v1 計算（抽成 {Math.round(payoutDetail.totals.commissionTwd / payoutDetail.totals.gmvTwd * 100)}%）</p>
+                <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>平台抽成 15%，導遊實拿 85%；以旅客實付金額扣除已退款部分後計算，金流手續費平台吸收。</p>
               </>
             ) : (
               <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>

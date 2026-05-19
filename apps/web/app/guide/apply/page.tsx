@@ -67,7 +67,7 @@ export default function GuideApplyPage() {
   return (
     <main className="tp-container tp-apply-page">
       <h1>成為我們的導遊</h1>
-      <p>佣金 15% · 安全收款 · 後台管理行程</p>
+      <p>平台抽成 15%，導遊實拿 85% · 金流手續費平台吸收 · 後台管理行程</p>
 
       <div className="tp-stepper">
         <span className={step >= 1 ? 'active' : ''}>1 基本資料</span>
