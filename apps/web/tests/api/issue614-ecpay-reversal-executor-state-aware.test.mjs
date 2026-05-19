@@ -158,7 +158,7 @@ test('missing/zero trade_no on order still takes ECPay reversal path when revers
         rtnMsg: 'ok',
         tradeStatus: '1',
         tradeNo: 'TN-614',
-        raw: { PaymentType: 'Credit_CreditCard' },
+        raw: { PaymentType: 'Credit_CreditCard', CaptureAMT: '1200' },
       };
     },
     requestDoAction: async (params) => {
@@ -236,18 +236,17 @@ test('executeEcpayReversal returns DB_UPDATE_FAILED when payments update fails',
   assert.match(outcome.body.error.message, /failed to persist refund result: failed to update payment/);
 });
 
-test('executeEcpayReversal returns DB_UPDATE_FAILED when orders update touches no rows', async () => {
+test('executeEcpayReversal blocks when TradeStatus=1 lacks capture evidence and no provider action', async () => {
+  let called = 0;
   const outcome = await executeEcpayReversal({
     order: baseOrder(),
     body: {},
     resolveLatestReversiblePayment: async () => ({ payment: basePayment(), ambiguous: false }),
     queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '1', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard' } }),
-    requestDoAction: async () => ({
-      ok: true,
-      rtnCode: '1',
-      rtnMsg: 'ok',
-      ecpayTradeNo: 'EC-REFUND-1',
-    }),
+    requestDoAction: async () => {
+      called += 1;
+      return { ok: true, rtnCode: '1', rtnMsg: 'ok', ecpayTradeNo: 'EC-REFUND-1' };
+    },
     persistReversal: async () => ({
       error: null,
       data: [],
@@ -256,9 +255,9 @@ test('executeEcpayReversal returns DB_UPDATE_FAILED when orders update touches n
     recordIncident: () => {},
   });
 
-  assert.equal(outcome.status, 500);
-  assert.equal(outcome.body.error.code, 'DB_UPDATE_FAILED');
-  assert.equal(outcome.body.error.message, 'failed to persist refund result: no rows updated');
+  assert.equal(outcome.status, 409);
+  assert.equal(outcome.body.error.code, 'ECPAY_STATE_UNKNOWN');
+  assert.equal(called, 0);
 });
 
 test('executeEcpayReversal returns DB_UPDATE_FAILED when payment_events insert fails', async () => {
@@ -342,10 +341,12 @@ test('provider failure returns sanitized error and records incident path', async
     order: baseOrder(),
     body: {},
     resolveLatestReversiblePayment: async () => ({ payment: basePayment(), ambiguous: false }),
-    queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '1', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard' } }),
+    queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '1', tradeNo: 'TN-614', raw: { PaymentType: 'Credit_CreditCard', CaptureAMT: '1200' } }),
     requestDoAction: async () => ({ ok: false, rtnCode: '102', rtnMsg: 'raw provider details', ecpayTradeNo: null }),
     persistReversal: async () => ({ error: null, data: [{ id: 'order-614' }], count: 1 }),
-    recordIncident: () => { incident += 1; },
+    recordIncident: () => {
+      incident += 1;
+    },
   });
 
   assert.equal(outcome.status, 502);

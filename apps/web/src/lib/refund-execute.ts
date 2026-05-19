@@ -245,7 +245,6 @@ function resolveEcpayReversalAction(query: { tradeStatus: string; raw: Record<st
     toPositiveAmount(raw.CaptureAMT),
     toPositiveAmount(raw.CloseAMT),
     toPositiveAmount(raw.ChargedAmt),
-    toPositiveAmount(raw.TradeAmt),
   ].find((value) => typeof value === 'number' && value > 0);
 
   if (typeof capturedAmount === 'number' && capturedAmount > 0) {

@@ -43,6 +43,7 @@ test('issue611 regression: TradeStatus=1 + credit authorized-only evidence must 
         TradeStatus: '1',
         PaymentType: 'Credit_CreditCard',
         AuthCode: '123456',
+        TradeAmt: '30',
         CaptureAMT: '0',
         CloseAMT: '0',
       },
