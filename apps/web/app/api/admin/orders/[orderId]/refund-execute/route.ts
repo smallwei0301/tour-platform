@@ -85,15 +85,38 @@ export async function POST(
     );
   }
 
-  // AC2: order must be in refund_pending status
-  if (order.status !== 'refund_pending') {
-    const canRepairRefundReversal =
-      order.status === 'refunded' ||
-      order.ecpay_refund_trade_no ||
-      order.payment_status === 'refunded' ||
-      order.payment_status === 'voided';
+  // Repair path: non-refund-pending orders, or refund_pending orders
+  // that already have visible reversal evidence (e.g., payment_events) should
+  // not re-trigger the provider.
+  const canRepairRefundReversalByStatus =
+    order.status === 'refunded' ||
+    order.ecpay_refund_trade_no ||
+    order.payment_status === 'refunded' ||
+    order.payment_status === 'voided';
 
-    if (!canRepairRefundReversal) {
+  const hasReversalExecutionEvidence = async () => {
+    const { data, error } = await supabase
+      .from('payment_events')
+      .select('id')
+      .eq('order_id', order.id)
+      .eq('provider', 'ecpay')
+      .in('event_type', ['authorization_voided', 'refunded'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw new Error(error.message || 'failed to inspect payment event evidence');
+    }
+
+    return !!data;
+  };
+
+  const shouldRepairFromEvidence =
+    order.status === 'refund_pending' && (await hasReversalExecutionEvidence());
+
+  if (order.status !== 'refund_pending' || shouldRepairFromEvidence) {
+    if (!canRepairRefundReversalByStatus && !shouldRepairFromEvidence) {
       return Response.json(
         fail('INVALID_STATUS', 'order must be refund_pending to execute refund'),
         { status: 409 }
@@ -179,17 +202,10 @@ export async function POST(
         const now = new Date().toISOString();
 
         const paymentPatch: Record<string, unknown> = {
-          status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
           provider_status: providerStatus,
           trade_no: reversedTradeNo,
           updated_at: now,
         };
-        if (eventType === 'authorization_voided') {
-          paymentPatch.voided_at = now;
-        } else {
-          paymentPatch.refunded_at = now;
-          paymentPatch.refunded_amount_twd = refundedAmountTwd;
-        }
 
         const paymentResult = await supabase
           .from('payments')
@@ -264,6 +280,48 @@ export async function POST(
         } catch (err) {
           const message = err instanceof Error ? err.message : 'failed to record refund reversal';
           return { error: { message }, data: [], count: 0 };
+        }
+
+        const finalPaymentPatch: Record<string, unknown> = {
+          status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
+          provider_status: providerStatus,
+          trade_no: reversedTradeNo,
+          updated_at: now,
+        };
+        if (eventType === 'authorization_voided') {
+          finalPaymentPatch.voided_at = now;
+        } else {
+          finalPaymentPatch.refunded_at = now;
+          finalPaymentPatch.refunded_amount_twd = refundedAmountTwd;
+        }
+
+        const finalPaymentResult = await supabase
+          .from('payments')
+          .update(finalPaymentPatch)
+          .eq('id', paymentId)
+          .select('id');
+        if (finalPaymentResult.error) {
+          return {
+            error: { message: finalPaymentResult.error.message || 'failed to finalize payment status' },
+            data: [],
+            count: 0,
+          };
+        }
+
+        if (typeof finalPaymentResult.count === 'number' && finalPaymentResult.count < 1) {
+          return {
+            error: { message: 'payment finalize update affected 0 rows' },
+            data: [],
+            count: 0,
+          };
+        }
+
+        if (!Array.isArray(finalPaymentResult.data) || finalPaymentResult.data.length === 0) {
+          return {
+            error: { message: 'payment finalize update returned no rows' },
+            data: [],
+            count: 0,
+          };
         }
 
         const orderResult = await supabase

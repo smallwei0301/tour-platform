@@ -802,3 +802,112 @@ test('recordRefundReversalDb writes marker before debit so retry does not double
   assert.equal(state.balance, -700);
   assert.equal(retry.reversed, true);
 });
+
+test('recordRefundReversalDb repairs when payout_reversal_created insert fails once after debit', async () => {
+  const state = {
+    balance: 500,
+    marker: null,
+    reversalId: 'reversal-1',
+    failAfterAuditInsertOnce: true,
+    debitUpsertCount: 0,
+    reversalCreated: false,
+  };
+
+  const supabase = {
+    from(table) {
+      const chain = {
+        select() { return chain; },
+        eq() { return chain; },
+        maybeSingle: async () => {
+          if (table === 'payout_items') {
+            return {
+              data: {
+                id: 'settlement-1',
+                order_id: 'order-614',
+                guide_id: 'guide-1',
+                gmv_twd: 1200,
+                commission_twd: 0,
+                net_twd: 1200,
+                rules_version: 'r1',
+              },
+              error: null,
+            };
+          }
+          if (table === 'guide_balances') {
+            return { data: { balance_twd: state.balance }, error: null };
+          }
+          if (table === 'audit_logs') {
+            if (chain._action === 'payout_reversal_created' && state.reversalCreated) {
+              return {
+                data: {
+                  id: 3,
+                  metadata: {
+                    order_id: 'order-614',
+                    reversal_id: state.reversalId,
+                    audit_log_id: 'payout-created',
+                  },
+                },
+                error: null,
+              };
+            }
+            if (chain._action === 'guide_balance_debited_reversal' && state.marker) {
+              return { data: { id: 2, metadata: state.marker }, error: null };
+            }
+            return { data: null, error: null };
+          }
+          return { data: null, error: null };
+        },
+        upsert: () => {
+          if (table === 'payout_items') {
+            return {
+              select: () => ({ maybeSingle: async () => ({ data: { id: state.reversalId }, error: null }) }),
+            };
+          }
+          if (table === 'guide_balances') {
+            return (async () => {
+              state.debitUpsertCount += 1;
+              state.balance = -700;
+              return { data: null, error: null };
+            })();
+          }
+          return { data: null, error: null };
+        },
+        insert: async (payload) => {
+          if (table === 'audit_logs' && payload?.action === 'guide_balance_debited_reversal') {
+            state.marker = payload.metadata;
+            return { data: null, error: null };
+          }
+          if (table === 'audit_logs' && payload?.action === 'payout_reversal_created') {
+            if (state.failAfterAuditInsertOnce) {
+              state.failAfterAuditInsertOnce = false;
+              return { data: null, error: { message: 'payout_reversal_created insert failed after debit' } };
+            }
+            state.reversalCreated = true;
+            return { data: { id: 3 }, error: null };
+          }
+          return { data: null, error: null };
+        },
+      };
+
+      const eqOrig = chain.eq;
+      chain.eq = (field, value) => {
+        if (table === 'audit_logs' && field === 'action') chain._action = value;
+        return eqOrig();
+      };
+
+      return chain;
+    },
+  };
+
+  await assert.rejects(
+    () => recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' }),
+    /payout_reversal_created insert failed after debit/
+  );
+
+  const retry = await recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' });
+  assert.equal(state.debitUpsertCount, 1);
+  assert.equal(state.balance, -700);
+  assert.equal(state.reversalCreated, true);
+  assert.equal(retry.reversed, true);
+});
+
