@@ -910,4 +910,3 @@ test('recordRefundReversalDb repairs when payout_reversal_created insert fails o
   assert.equal(state.reversalCreated, true);
   assert.equal(retry.reversed, true);
 });
-
