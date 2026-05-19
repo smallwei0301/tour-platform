@@ -66,21 +66,37 @@ export async function GET(req: Request) {
     .gte('created_at', monthStart.toISOString())
     .lt('created_at', monthEnd.toISOString());
 
+  const orderIds = (monthOrders ?? []).map((o: { id: string }) => o.id);
+  let refundAmountByOrderId: Record<string, number> = {};
+  if (orderIds.length > 0) {
+    const { data: refundRows } = await supabase
+      .from('operations_tracking')
+      .select('order_id, refund_amount_twd')
+      .in('order_id', orderIds);
+    refundAmountByOrderId = Object.fromEntries(
+      (refundRows ?? []).map((r: { order_id: string; refund_amount_twd: number | null }) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+    );
+  }
+
   const orders = (monthOrders ?? []).map((o: { id: string; activity_id: string; total_twd: number | null; created_at: string }) => {
     const totalTwd = o.total_twd ?? 0;
-    const commissionTwd = Math.floor(totalTwd * SETTLEMENT_COMMISSION_RATE);
-    const netTwd = totalTwd - commissionTwd;
+    const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
+    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
+    const commissionTwd = Math.floor(effectiveTwd * SETTLEMENT_COMMISSION_RATE);
+    const netTwd = effectiveTwd - commissionTwd;
     return {
       orderId: o.id,
       activityId: o.activity_id,
       activityTitle: activityMap[o.activity_id] ?? '',
       totalTwd,
+      refundAmountTwd,
+      effectiveTwd,
       commissionTwd,
       netTwd,
     };
   });
 
-  const gmvTwd = orders.reduce((sum: number, o: { totalTwd: number }) => sum + o.totalTwd, 0);
+  const gmvTwd = orders.reduce((sum: number, o: { effectiveTwd: number }) => sum + o.effectiveTwd, 0);
   const commissionTwd = orders.reduce((sum: number, o: { commissionTwd: number }) => sum + o.commissionTwd, 0);
   const netTwd = orders.reduce((sum: number, o: { netTwd: number }) => sum + o.netTwd, 0);
 
