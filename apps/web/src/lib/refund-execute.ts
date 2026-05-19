@@ -213,16 +213,55 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
   };
 }
 
+function toPositiveAmount(rawValue: string | undefined): number | null {
+  if (typeof rawValue !== 'string') return null;
+  const normalized = rawValue.trim().replace(/,/g, '');
+  if (!normalized) return null;
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount)) return null;
+  return amount > 0 ? amount : 0;
+}
+
+function hasNonEmpty(rawValue: string | undefined): boolean {
+  return typeof rawValue === 'string' && rawValue.trim().length > 0;
+}
+
 function resolveEcpayReversalAction(query: { tradeStatus: string; raw: Record<string, string> }): 'N' | 'R' | null {
   const tradeStatus = String(query.tradeStatus || '').trim();
-  const paymentType = String(query.raw?.PaymentType || '').toLowerCase();
+  const raw = query.raw || {};
+  const paymentType = String(raw.PaymentType || '').toLowerCase();
 
   if (paymentType && !paymentType.includes('credit')) {
     return null;
   }
 
   if (tradeStatus === '0') return 'N';
-  if (tradeStatus === '1') return 'R';
+
+  if (tradeStatus !== '1') {
+    return null;
+  }
+
+  const capturedAmount = [
+    toPositiveAmount(raw.CaptureAMT),
+    toPositiveAmount(raw.CloseAMT),
+    toPositiveAmount(raw.ChargedAmt),
+  ].find((value) => typeof value === 'number' && value > 0);
+
+  if (typeof capturedAmount === 'number' && capturedAmount > 0) {
+    return 'R';
+  }
+
+  const authorizationHints = [
+    hasNonEmpty(raw.AuthCode),
+    hasNonEmpty(raw.AuthCodeNo),
+    hasNonEmpty(raw.gwsr),
+    hasNonEmpty(raw.ProcessDate),
+  ];
+
+  if (authorizationHints.some(Boolean)) {
+    return 'N';
+  }
+
   return null;
 }
 
