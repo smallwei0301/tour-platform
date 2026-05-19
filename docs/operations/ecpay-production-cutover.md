@@ -85,7 +85,7 @@ ECPay POST 到 ECPAY_CALLBACK_URL
 
 ## 6. 已知限制
 
-- `ALLOW_MOCK_PAYMENT=true` 設定允許測試環境使用模擬付款（正式上線前應移除）
+- `ALLOW_MOCK_PAYMENT=true` 僅允許測試環境使用模擬付款 API；production/soft-launch 的 `/order/pay` 不得出現任何「模擬付款（測試用）」旅客可見 CTA
 - ECPay 最低交易金額：信用卡約 NT$10–NT$15
 - Callback URL 需為公開可訪問的 HTTPS 網址
 

@@ -102,26 +102,6 @@ export default function OrderPayPage() {
     }
   };
 
-  // 模擬付款（開發/測試用）
-  const handleMockPay = async () => {
-    if (!orderId) return;
-    setPaying(true);
-    setErr(null);
-    try {
-      const res = await fetch('/api/payments/mock-confirm', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ orderId }),
-      });
-      const j = await res.json();
-      if (!res.ok || j.error) throw new Error(j.error?.message || '付款失敗');
-      router.push(`/order/success?orderId=${orderId}&email=${encodeURIComponent(email)}`);
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : '付款失敗，請重試');
-    } finally {
-      setPaying(false);
-    }
-  };
 
   const containerStyle: React.CSSProperties = {
     maxWidth: 480,
@@ -163,11 +143,6 @@ export default function OrderPayPage() {
     letterSpacing: '0.02em',
   };
 
-  const secondaryBtnStyle: React.CSSProperties = {
-    ...btnStyle,
-    background: paying ? '#e5e7eb' : '#6b7280',
-    marginTop: 12,
-  };
 
   if (loading) {
     return <div style={containerStyle}><p style={{ color: '#9ca3af', textAlign: 'center' }}>載入中…</p></div>;
@@ -252,11 +227,6 @@ export default function OrderPayPage() {
       {/* ECPay 正式付款 */}
       <button onClick={handlePay} disabled={paying} style={btnStyle} data-testid="ecpay-pay-btn">
         {paying ? '付款處理中…' : '前往 ECPay 付款'}
-      </button>
-
-      {/* 模擬付款（開發用） */}
-      <button onClick={handleMockPay} disabled={paying} style={secondaryBtnStyle} data-testid="mock-pay-btn">
-        {paying ? '處理中…' : '模擬付款（測試用）'}
       </button>
 
       <p style={{ fontSize: 12, color: '#9ca3af', textAlign: 'center', marginTop: 12 }}>
