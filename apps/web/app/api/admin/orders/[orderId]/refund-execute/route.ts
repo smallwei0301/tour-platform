@@ -209,31 +209,7 @@ export async function POST(
           return { error: { message: 'payment update returned no rows' }, data: [], count: 0 };
         }
 
-        const orderResult = await supabase
-          .from('orders')
-          .update({
-            status: 'refunded',
-            payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
-            refunded_at: now,
-            refunded_amount: refundedAmountTwd ?? 0,
-            ecpay_refund_trade_no: reversedTradeNo,
-          })
-          .eq('id', targetOrderId)
-          .select('id');
-
-        if (orderResult.error) {
-          return { error: { message: orderResult.error.message || 'failed to update order' }, data: [], count: 0 };
-        }
-
-        if (typeof orderResult.count === 'number' && orderResult.count < 1) {
-          return { error: { message: 'order update affected 0 rows' }, data: [], count: 0 };
-        }
-
-        if (!Array.isArray(orderResult.data) || orderResult.data.length === 0) {
-          return { error: { message: 'order update returned no rows' }, data: [], count: 0 };
-        }
-
-        let eventResult = await supabase
+        const eventResult = await supabase
           .from('payment_events')
           .insert({
             payment_id: paymentId,
@@ -245,6 +221,8 @@ export async function POST(
             payload: { source: 'admin_refund_execute', mode: eventType },
           })
           .select('id');
+
+        let hasEventRecord = Array.isArray(eventResult.data) && eventResult.data.length > 0;
 
         if (eventResult.error) {
           const isDuplicateEventError =
@@ -267,17 +245,17 @@ export async function POST(
             if (!existingEvent) {
               return { error: { message: eventResult.error.message || 'failed to insert payment event' }, data: [], count: 0 };
             }
-            eventResult = { ...eventResult, data: [existingEvent], count: 1 };
+            hasEventRecord = true;
           } else {
             return { error: { message: eventResult.error.message || 'failed to insert payment event' }, data: [], count: 0 };
           }
         }
 
-        if (typeof eventResult.count === 'number' && eventResult.count < 1) {
+        if (typeof eventResult.count === 'number' && eventResult.count < 1 && !hasEventRecord) {
           return { error: { message: 'payment event insert affected 0 rows' }, data: [], count: 0 };
         }
 
-        if (!Array.isArray(eventResult.data) || eventResult.data.length === 0) {
+        if (!hasEventRecord) {
           return { error: { message: 'payment event insert returned no rows' }, data: [], count: 0 };
         }
 
@@ -286,6 +264,30 @@ export async function POST(
         } catch (err) {
           const message = err instanceof Error ? err.message : 'failed to record refund reversal';
           return { error: { message }, data: [], count: 0 };
+        }
+
+        const orderResult = await supabase
+          .from('orders')
+          .update({
+            status: 'refunded',
+            payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
+            refunded_at: now,
+            refunded_amount: refundedAmountTwd ?? 0,
+            ecpay_refund_trade_no: reversedTradeNo,
+          })
+          .eq('id', targetOrderId)
+          .select('id');
+
+        if (orderResult.error) {
+          return { error: { message: orderResult.error.message || 'failed to update order' }, data: [], count: 0 };
+        }
+
+        if (typeof orderResult.count === 'number' && orderResult.count < 1) {
+          return { error: { message: 'order update affected 0 rows' }, data: [], count: 0 };
+        }
+
+        if (!Array.isArray(orderResult.data) || orderResult.data.length === 0) {
+          return { error: { message: 'order update returned no rows' }, data: [], count: 0 };
         }
 
         return { error: null, data: [{ id: targetOrderId }], count: 1 };

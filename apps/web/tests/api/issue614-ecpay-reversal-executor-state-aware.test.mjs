@@ -430,6 +430,11 @@ test('recordRefundReversalDb throws when guide_balances upsert fails', async () 
       error: null,
     },
     {
+      table: 'audit_logs',
+      data: null,
+      error: null,
+    },
+    {
       table: 'guide_balances',
       data: null,
       error: { message: 'balance update failed' },
@@ -482,11 +487,6 @@ test('recordRefundReversalDb throws when audit insert fails', async () => {
       data: {
         balance_twd: 200,
       },
-      error: null,
-    },
-    {
-      table: 'guide_balances',
-      data: null,
       error: null,
     },
     {
@@ -550,12 +550,12 @@ test('recordRefundReversalDb repairs missing effects on idempotent retry', async
       error: null,
     },
     {
-      table: 'guide_balances',
+      table: 'audit_logs',
       data: null,
       error: null,
     },
     {
-      table: 'audit_logs',
+      table: 'guide_balances',
       data: null,
       error: null,
     },
@@ -710,4 +710,95 @@ test('recordRefundReversalDb skips duplicate debit when an in-progress marker al
     (call) => call.table === 'guide_balances' && call.action === 'upsert'
   );
   assert.equal(balanceUpserts.length, 0);
+});
+
+test('recordRefundReversalDb writes marker before debit so retry does not double-debit after post-debit failure', async () => {
+  const state = {
+    balance: 500,
+    marker: null,
+    reversalId: 'reversal-1',
+    failAfterDebitOnce: true,
+    debitUpsertCount: 0,
+  };
+
+  const supabase = {
+    from(table) {
+      const chain = {
+        select() { return chain; },
+        eq() { return chain; },
+        maybeSingle: async () => {
+          if (table === 'payout_items') {
+            return {
+              data: {
+                id: 'settlement-1',
+                order_id: 'order-614',
+                guide_id: 'guide-1',
+                gmv_twd: 1200,
+                commission_twd: 0,
+                net_twd: 1200,
+                rules_version: 'r1',
+              },
+              error: null,
+            };
+          }
+          if (table === 'guide_balances') {
+            return { data: { balance_twd: state.balance }, error: null };
+          }
+          if (table === 'audit_logs') {
+            if (chain._action === 'payout_reversal_created') {
+              return { data: { id: 1, metadata: { order_id: 'order-614', reversal_id: state.reversalId } }, error: null };
+            }
+            if (chain._action === 'guide_balance_debited_reversal' && state.marker) {
+              return { data: { id: 2, metadata: state.marker }, error: null };
+            }
+            return { data: null, error: null };
+          }
+          return { data: null, error: null };
+        },
+        upsert: () => {
+          if (table === 'payout_items') {
+            return {
+              select: () => ({ maybeSingle: async () => ({ data: { id: state.reversalId }, error: null }) }),
+            };
+          }
+          if (table === 'guide_balances') {
+            return (async () => {
+              state.debitUpsertCount += 1;
+              state.balance = -700;
+              return { data: null, error: null };
+            })();
+          }
+          return { data: null, error: null };
+        },
+        insert: async (payload) => {
+          if (table === 'audit_logs' && payload?.action === 'guide_balance_debited_reversal') {
+            state.marker = payload.metadata;
+            if (state.failAfterDebitOnce) {
+              state.failAfterDebitOnce = false;
+              return { data: null, error: { message: 'audit marker failed after debit' } };
+            }
+            return { data: null, error: null };
+          }
+          return { data: null, error: null };
+        },
+      };
+
+      const eqOrig = chain.eq;
+      chain.eq = (field, value) => {
+        if (table === 'audit_logs' && field === 'action') chain._action = value;
+        return eqOrig();
+      };
+      return chain;
+    },
+  };
+
+  await assert.rejects(
+    () => recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' }),
+    /audit marker failed after debit/
+  );
+
+  const retry = await recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' });
+  assert.equal(state.debitUpsertCount, 1);
+  assert.equal(state.balance, -700);
+  assert.equal(retry.reversed, true);
 });

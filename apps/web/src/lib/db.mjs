@@ -3797,7 +3797,7 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
   }
 
   const hasReversalCreatedLog = await readLog('payout_reversal_created', reversalIdRef);
-  const balanceDebitLog = await readLog('guide_balance_debited_reversal', reversalIdRef);
+  let balanceDebitLog = await readLog('guide_balance_debited_reversal', reversalIdRef);
   const isBalanceDebitInProgress =
     !!balanceDebitLog &&
     typeof balanceDebitLog.metadata === 'object' &&
@@ -3848,7 +3848,28 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
       afterBalance = currentBalance - debit;
     }
 
-    const shouldApplyDebit = !balanceDebitLog || currentBalance !== afterBalance;
+    if (!balanceDebitLog) {
+      const markerPayload = {
+        actor,
+        action: 'guide_balance_debited_reversal',
+        metadata: {
+          order_id: orderId,
+          guide_id: settlement.guide_id,
+          before_balance: beforeBalance,
+          after_balance: afterBalance,
+          debit,
+          reversal_id: reversalIdRef,
+          settlement_id: settlement.id,
+          status: 'started',
+        },
+      };
+
+      const { error: auditBalanceErr } = await supabase.from('audit_logs').insert(markerPayload);
+      if (auditBalanceErr) throw normalizeError(auditBalanceErr);
+      balanceDebitLog = { metadata: markerPayload.metadata };
+    }
+
+    const shouldApplyDebit = currentBalance !== afterBalance;
 
     if (shouldApplyDebit) {
       const guideBalancesTable = supabase.from('guide_balances');
@@ -3865,25 +3886,6 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
       );
 
       if (balanceUpsertErr) throw normalizeError(balanceUpsertErr);
-    }
-
-    if (!balanceDebitLog) {
-      const { error: auditBalanceErr } = await supabase.from('audit_logs').insert({
-        actor,
-        action: 'guide_balance_debited_reversal',
-        metadata: {
-          order_id: orderId,
-          guide_id: settlement.guide_id,
-          before_balance: beforeBalance,
-          after_balance: afterBalance,
-          debit,
-          reversal_id: reversalIdRef,
-          settlement_id: settlement.id,
-          status: 'started',
-        },
-      });
-
-      if (auditBalanceErr) throw normalizeError(auditBalanceErr);
     }
 
     repaired = true;
