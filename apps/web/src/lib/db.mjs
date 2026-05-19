@@ -3674,14 +3674,21 @@ export async function confirmPayoutDb(supabase, payoutId, confirmedBy, transferR
 }
 
 export async function recordRefundReversalDb(supabase, { orderId, actor = 'system' }) {
+  const normalizeError = (err) => {
+    if (!err) return new Error('database error');
+    if (err instanceof Error) return err;
+    return new Error(err.message ?? JSON.stringify(err));
+  };
+
   // Check if this order was already settled
-  const { data: settlement } = await supabase
+  const { data: settlement, error: settlementErr } = await supabase
     .from('payout_items')
     .select('*')
     .eq('order_id', orderId)
     .eq('settlement_kind', 'settlement')
     .maybeSingle();
 
+  if (settlementErr) throw normalizeError(settlementErr);
   if (!settlement) return { skipped: 'pre_settlement' };
 
   // Insert reversal row (idempotent via UNIQUE(order_id, settlement_kind))
@@ -3702,51 +3709,59 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
     .select()
     .maybeSingle();
 
-  if (insertErr) throw insertErr;
+  if (insertErr) throw normalizeError(insertErr);
   if (!reversal) return { skipped: 'already_reversed' };
 
   // Debit guide_balances (carry-forward: balance can go negative)
-  const { data: balance } = await supabase
+  const { data: balance, error: balanceReadErr } = await supabase
     .from('guide_balances')
     .select('balance_twd')
     .eq('guide_id', settlement.guide_id)
     .maybeSingle();
 
+  if (balanceReadErr) throw normalizeError(balanceReadErr);
+
   const beforeBalance = balance?.balance_twd ?? 0;
   const debit = Math.abs(settlement.net_twd);
   const newBalance = beforeBalance - debit; // can be negative (carry-forward)
 
-  await supabase
+  const { error: balanceUpsertErr } = await supabase
     .from('guide_balances')
     .upsert(
       { guide_id: settlement.guide_id, balance_twd: newBalance, updated_at: new Date().toISOString() },
       { onConflict: 'guide_id' }
     );
 
+  if (balanceUpsertErr) throw normalizeError(balanceUpsertErr);
+
   // Audit log entries
-  await supabase.from('audit_logs').insert([
-    {
-      actor,
-      action: 'payout_reversal_created',
-      metadata: {
-        order_id: orderId,
-        guide_id: settlement.guide_id,
-        net_twd: settlement.net_twd,
-        reversal_id: reversal.id,
-        settlement_id: settlement.id,
+  const { error: auditErr } = await supabase
+    .from('audit_logs')
+    .insert([
+      {
+        actor,
+        action: 'payout_reversal_created',
+        metadata: {
+          order_id: orderId,
+          guide_id: settlement.guide_id,
+          net_twd: settlement.net_twd,
+          reversal_id: reversal.id,
+          settlement_id: settlement.id,
+        },
       },
-    },
-    {
-      actor,
-      action: 'guide_balance_debited_reversal',
-      metadata: {
-        guide_id: settlement.guide_id,
-        before_balance: beforeBalance,
-        after_balance: newBalance,
-        debit,
+      {
+        actor,
+        action: 'guide_balance_debited_reversal',
+        metadata: {
+          guide_id: settlement.guide_id,
+          before_balance: beforeBalance,
+          after_balance: newBalance,
+          debit,
+        },
       },
-    },
-  ]);
+    ]);
+
+  if (auditErr) throw normalizeError(auditErr);
 
   return { reversed: true, reversal_id: reversal.id, before_balance: beforeBalance, after_balance: newBalance };
 }

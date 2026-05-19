@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { executeEcpayReversal } from '../../src/lib/refund-execute.ts';
+import { recordRefundReversalDb } from '../../src/lib/db.mjs';
 
 function baseOrder() {
   return {
@@ -20,6 +21,99 @@ function basePayment() {
     status: 'authorized',
     provider_status: '0',
     amount_twd: 1200,
+  };
+}
+
+function createMockSupabase(steps) {
+  const calls = [];
+  let cursor = 0;
+
+  const next = (expectedTable) => {
+    const step = steps[cursor++];
+    if (!step) {
+      throw new Error(`Unexpected Supabase call for ${expectedTable}`);
+    }
+    if (step.table && step.table !== expectedTable) {
+      throw new Error(`Expected table ${step.table} but got ${expectedTable}`);
+    }
+    return step;
+  };
+
+  const makeChain = (table) => {
+    let pendingUpsert = null;
+
+    const chain = {
+      select: () => {
+        calls.push({ table, action: 'select' });
+        return chain;
+      },
+      eq: () => {
+        calls.push({ table, action: 'eq' });
+        return chain;
+      },
+      maybeSingle: () => {
+        calls.push({ table, action: 'maybeSingle' });
+
+        if (pendingUpsert && pendingUpsert.op === 'upsert') {
+          const result = pendingUpsert.result;
+          pendingUpsert = null;
+          return {
+            data: result.data ?? null,
+            error: result.error ?? null,
+            count: result.count,
+          };
+        }
+
+        const step = next(table);
+        return {
+          data: step.data ?? null,
+          error: step.error ?? null,
+          count: step.count,
+        };
+      },
+      upsert: () => {
+        const step = next(table);
+        calls.push({
+          table,
+          action: 'upsert',
+          payload: step.payload,
+          options: step.options,
+        });
+
+        if (step.direct === false) {
+          pendingUpsert = {
+            op: 'upsert',
+            result: step.result ?? { data: null, error: null },
+          };
+          return chain;
+        }
+
+        return {
+          data: step.data ?? null,
+          error: step.error ?? null,
+          count: step.count,
+        };
+      },
+      insert: () => {
+        const step = next(table);
+        calls.push({ table, action: 'insert', payload: step.payload });
+        return {
+          data: step.data ?? null,
+          error: step.error ?? null,
+          count: step.count,
+        };
+      },
+    };
+
+    return chain;
+  };
+
+  return {
+    calls,
+    from: (table) => {
+      calls.push({ table, action: 'from' });
+      return makeChain(table);
+    },
   };
 }
 
@@ -257,4 +351,133 @@ test('provider failure returns sanitized error and records incident path', async
   assert.equal(outcome.status, 502);
   assert.equal(outcome.body.error.code, 'ECPAY_REVERSAL_FAILED');
   assert.equal(incident, 1);
+});
+
+test('recordRefundReversalDb returns pre_settlement when no settlement row exists', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: null,
+      error: null,
+    },
+  ]);
+
+  const result = await recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' });
+
+  assert.deepEqual(result, { skipped: 'pre_settlement' });
+  assert.equal(supabase.calls.length, 5);
+  assert.equal(supabase.calls[0].action, 'from');
+  assert.equal(supabase.calls[1].action, 'select');
+  assert.equal(supabase.calls[2].action, 'eq');
+  assert.equal(supabase.calls[3].action, 'eq');
+});
+
+test('recordRefundReversalDb throws when settlement lookup fails', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: null,
+      error: { message: 'lookup failed' },
+    },
+  ]);
+
+  await assert.rejects(
+    () => recordRefundReversalDb(supabase, { orderId: 'order-614' }),
+    /lookup failed/
+  );
+});
+
+test('recordRefundReversalDb throws when guide_balances upsert fails', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: {
+        id: 'settlement-1',
+        order_id: 'order-614',
+        guide_id: 'guide-1',
+        gmv_twd: 1200,
+        commission_twd: 0,
+        net_twd: 1200,
+        rules_version: 'r1',
+      },
+      error: null,
+    },
+    {
+      table: 'payout_items',
+      direct: false,
+      result: {
+        data: {
+          id: 'reversal-1',
+        },
+        error: null,
+      },
+    },
+    {
+      table: 'guide_balances',
+      data: {
+        balance_twd: 200,
+      },
+      error: null,
+    },
+    {
+      table: 'guide_balances',
+      data: null,
+      error: { message: 'balance update failed' },
+    },
+  ]);
+
+  await assert.rejects(
+    () => recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' }),
+    /balance update failed/
+  );
+});
+
+test('recordRefundReversalDb throws when audit insert fails', async () => {
+  const supabase = createMockSupabase([
+    {
+      table: 'payout_items',
+      data: {
+        id: 'settlement-1',
+        order_id: 'order-614',
+        guide_id: 'guide-1',
+        gmv_twd: 1200,
+        commission_twd: 0,
+        net_twd: 1200,
+        rules_version: 'r1',
+      },
+      error: null,
+    },
+    {
+      table: 'payout_items',
+      direct: false,
+      result: {
+        data: {
+          id: 'reversal-1',
+        },
+        error: null,
+      },
+    },
+    {
+      table: 'guide_balances',
+      data: {
+        balance_twd: 200,
+      },
+      error: null,
+    },
+    {
+      table: 'guide_balances',
+      data: null,
+      error: null,
+    },
+    {
+      table: 'audit_logs',
+      data: null,
+      error: { message: 'audit insert failed' },
+    },
+  ]);
+
+  await assert.rejects(
+    () => recordRefundReversalDb(supabase, { orderId: 'order-614', actor: 'system' }),
+    /audit insert failed/
+  );
 });
