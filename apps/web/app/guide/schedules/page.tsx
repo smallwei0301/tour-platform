@@ -76,9 +76,21 @@ export default function GuideSchedulesPage() {
   return (
     <div>
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📅 場次管理</h1>
-      <p style={{ margin: '0 0 12px', fontSize: 12, color: '#6b7280' }}>
-        狀態說明：開放 / 額滿 / 已關閉（open/full/cancelled）。開啟/關閉只管理固定場次 activity_schedules，不會自動建立新場次。
-      </p>
+      <div style={{ margin: '0 0 12px', border: '1px solid #fde68a', background: '#fffbeb', borderRadius: 10, padding: '10px 12px' }}>
+        <p style={{ margin: '0 0 6px', fontSize: 12, color: '#92400e', fontWeight: 700 }}>
+          Legacy 固定場次管理（activity_schedules）
+        </p>
+        <p style={{ margin: '0 0 6px', fontSize: 12, color: '#78350f' }}>
+          狀態說明：開放 / 額滿 / 已關閉（open/full/cancelled）。這個頁面只會調整既有固定場次的開關與容量，屬於舊制快照/備援流程，不會建立 V2 導遊可售時段規則。
+        </p>
+        <p style={{ margin: 0, fontSize: 12, color: '#78350f' }}>
+          若你目前使用 V2 模式，請到
+          <a href="/guide/availability" style={{ marginLeft: 4, color: '#7c3aed', fontWeight: 700 }}>
+            /guide/availability
+          </a>
+          管理正式的可售時段來源（source of truth）。
+        </p>
+      </div>
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
