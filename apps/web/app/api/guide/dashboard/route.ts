@@ -148,13 +148,12 @@ export async function GET(req: Request) {
     );
   }
 
-  const effectiveMonthGmvTwd = (monthOrders ?? []).reduce((sum: number, o: any) => {
+  const monthGmvTwd = (monthOrders ?? []).reduce((sum: number, o: any) => {
     const totalTwd = o.total_twd ?? 0;
     const refundAmountTwd = monthRefundAmountByOrderId[o.id] ?? 0;
     const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
     return sum + effectiveTwd;
   }, 0);
-  const monthGmvTwd = effectiveMonthGmvTwd;
   const monthGmvOrderCount = (monthOrders ?? []).length;
 
   // 6. 6-month revenue trend — AC1
@@ -209,7 +208,13 @@ export async function GET(req: Request) {
       ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
       : null;
 
-  const expectedPayoutTwd = Math.floor(effectiveMonthGmvTwd * (1 - settlementConfig.commission_rate));
+  const expectedPayoutTwd = (monthOrders ?? []).reduce((sum: number, o: any) => {
+    const totalTwd = o.total_twd ?? 0;
+    const refundAmountTwd = monthRefundAmountByOrderId[o.id] ?? 0;
+    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
+    const commissionTwd = Math.floor(effectiveTwd * settlementConfig.commission_rate);
+    return sum + (effectiveTwd - commissionTwd);
+  }, 0);
   const nextPayoutDateObj = latestCompletedTourDate
     ? new Date(latestCompletedTourDate.getTime() + settlementConfig.t_days * 24 * 60 * 60 * 1000)
     : null;
