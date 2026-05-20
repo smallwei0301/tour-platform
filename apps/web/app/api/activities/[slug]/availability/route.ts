@@ -91,8 +91,8 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
       const schedules: AvailabilitySchedule[] = v2.plans.map((row) => ({
         id: null,
         startAt: row.firstSlotStartAt ?? `${row.date}T00:00:00+08:00`,
-        capacity: row.slotCount,
-        bookedCount: Math.max(0, row.slotCount - row.remaining),
+        capacity: row.capacity,
+        bookedCount: row.bookedCount,
         status: row.status,
         planId: row.planId,
       }));
