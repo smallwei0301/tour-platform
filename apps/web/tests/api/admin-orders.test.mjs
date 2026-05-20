@@ -4,18 +4,39 @@ import { createOrderDb, listAdminOrdersDb, __setSupabaseClientForTest } from '..
 import { listAdminOrdersFallback } from '../../src/lib/admin.mjs';
 
 test('admin orders includes margin fields', async () => {
-  await createOrderDb({
-    experienceSlug: 'kaohsiung-chaishan-cave-experience',
-    scheduleId: 'sch_chaishan_0410',
-    peopleCount: 1,
-    contactName: 'Wei',
-    contactPhone: '0912345678',
-    contactEmail: 'wei@example.com'
-  });
-  const rows = listAdminOrdersFallback();
-  assert.ok(rows.length >= 1);
-  assert.equal(typeof rows[0].marginTwd, 'number');
-  assert.equal(rows[0].totalTwd - rows[0].costTwd, rows[0].marginTwd);
+  const originalSupabaseUrl = process.env.SUPABASE_URL;
+  const originalSupabaseRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  try {
+    delete process.env.SUPABASE_URL;
+    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    await createOrderDb({
+      experienceSlug: 'kaohsiung-chaishan-cave-experience',
+      scheduleId: 'sch_chaishan_0410',
+      peopleCount: 1,
+      contactName: 'Wei',
+      contactPhone: '0912345678',
+      contactEmail: 'wei@example.com'
+    });
+
+    const rows = listAdminOrdersFallback();
+    assert.ok(rows.length >= 1);
+    assert.equal(typeof rows[0].marginTwd, 'number');
+    assert.equal(rows[0].totalTwd - rows[0].costTwd, rows[0].marginTwd);
+  } finally {
+    if (originalSupabaseUrl === undefined) {
+      delete process.env.SUPABASE_URL;
+    } else {
+      process.env.SUPABASE_URL = originalSupabaseUrl;
+    }
+
+    if (originalSupabaseRoleKey === undefined) {
+      delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    } else {
+      process.env.SUPABASE_SERVICE_ROLE_KEY = originalSupabaseRoleKey;
+    }
+  }
 });
 
 test('listAdminOrdersDb falls back when orders.trade_no column is missing', async () => {
