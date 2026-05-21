@@ -56,6 +56,8 @@ describe('settlement rules alignment', () => {
     const route = src('app/api/guide/dashboard/route.ts');
     assert.match(route, /refund_amount_twd/, 'dashboard must read refund amounts');
     assert.match(route, /effectiveMonthGmvTwd/, 'dashboard must compute effective monthly GMV');
-    assert.match(route, /expectedPayoutTwd\s*=\s*Math\.floor\(effectiveMonthGmvTwd \* \(1 - settlementConfig\.commission_rate\)\)/);
+    assert.match(route, /const monthGmvTwd = \(monthOrders \?\? \[\]\)\.reduce\(/);
+    assert.match(route, /const expectedPayoutTwd = \(monthOrders \?\? \[\]\)\.reduce\(/);
+    assert.match(route, /commissionTwd\s*=\s*Math\.floor\(effectiveTwd \* settlementConfig\.commission_rate\)/);
   });
 });
