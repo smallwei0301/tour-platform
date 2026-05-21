@@ -90,6 +90,26 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   return (
     <main className="kkd-detail-page" style={{ paddingBottom: 100 }}>
+      {/* ── Structured data (JSON-LD) for SEO/GEO/AEO — issue #637 ── */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "TouristAttraction",
+            "name": activity.title,
+            "description": activity.shortDescription || activity.title,
+            "url": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}/activities/${activity.region}/${activity.slug}`,
+            "image": activity.coverImageUrl || undefined,
+            "priceRange": `NT$${activity.priceTwd}起`,
+            "address": {
+              "@type": "PostalAddress",
+              "addressRegion": activity.region,
+              "addressCountry": "TW"
+            }
+          })
+        }}
+      />
       {/* ── Breadcrumb ── */}
       <div className="tp-container">
         <div className="tp-breadcrumb">
