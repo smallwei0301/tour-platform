@@ -2,6 +2,7 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/components/admin/ui';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { AvatarUpload } from '../../../src/components/admin/AvatarUpload';
@@ -278,7 +279,9 @@ export default function AdminGuidesPage() {
                   <Card key={r.id} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <div style={{ fontWeight: 700, fontSize: 16, color: '#111' }}>{r.fullName}</div>
+                        <Link href={`/admin/guides/${r.id}`} style={{ fontWeight: 700, fontSize: 16, color: '#111', textDecoration: 'none' }}>
+                          {r.fullName}
+                        </Link>
                         <div style={{ fontSize: 13, color: '#6b7280', marginTop: 2 }}>📍 {r.city}</div>
                       </div>
                       <StatusBadge status={r.status} />
@@ -343,7 +346,9 @@ export default function AdminGuidesPage() {
                     <Card key={p.id} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12, opacity: isSuspended ? 0.7 : 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div>
-                          <div style={{ fontWeight: 700, fontSize: 16, color: '#111' }}>{p.display_name}</div>
+                          <Link href={`/admin/guides/${p.id}`} style={{ fontWeight: 700, fontSize: 16, color: '#111', textDecoration: 'none' }}>
+                            {p.display_name}
+                          </Link>
                           <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>@{p.slug}</div>
                           {p.headline && <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>{p.headline}</div>}
                         </div>
