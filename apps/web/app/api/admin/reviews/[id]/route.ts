@@ -1,14 +1,7 @@
 import { ok, fail } from '../../../../../src/lib/api';
-import { isAdminAuthorized } from '../../../../../src/lib/admin-auth.mjs';
+import { isAdminAuthorized, pickAdminCredentials } from '../../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../src/lib/admin-session.mjs';
 import { createClient } from '@supabase/supabase-js';
-
-function parseCookie(req: Request, key: string) {
-  const cookie = req.headers.get('cookie') || '';
-  const parts = cookie.split(';').map((s) => s.trim());
-  const hit = parts.find((p) => p.startsWith(`${key}=`));
-  return hit ? decodeURIComponent(hit.slice(key.length + 1)) : '';
-}
 
 function getServiceClient() {
   return createClient(
@@ -24,10 +17,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
-  const token = parseCookie(request, 'admin_token');
-  const email = parseCookie(request, 'admin_email');
-  const expiresAt = parseCookie(request, 'admin_session_expires_at');
-  const sessionVersion = Number(parseCookie(request, 'admin_session_version') || 0);
+  const { token, email, expiresAt, sessionVersion, requireSession } = pickAdminCredentials(request);
 
   const security = getAdminSecurityState();
   const auth = isAdminAuthorized({
@@ -37,7 +27,8 @@ export async function PATCH(
     requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
     allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
     expectedSessionVersion: security.sessionVersion,
-    sessionVersion,
+    sessionVersion: Number(sessionVersion || 0),
+    requireSession,
   });
 
   if (!auth.ok) {

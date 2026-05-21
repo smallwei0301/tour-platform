@@ -7,23 +7,13 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../../../src/lib/api';
-import { isAdminAuthorized } from '../../../../../src/lib/admin-auth.mjs';
+import { isAdminAuthorized, pickAdminCredentials } from '../../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../src/lib/admin-session.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
 
-function parseCookie(req: NextRequest, key: string): string {
-  const cookie = req.headers.get('cookie') || '';
-  const parts = cookie.split(';').map((s) => s.trim());
-  const hit = parts.find((p) => p.startsWith(`${key}=`));
-  return hit ? decodeURIComponent(hit.slice(key.length + 1)) : '';
-}
-
 function checkAdminAuth(req: NextRequest): { ok: boolean; reason?: string } {
-  const token = parseCookie(req, 'admin_token');
-  const email = parseCookie(req, 'admin_email');
-  const expiresAt = parseCookie(req, 'admin_session_expires_at');
-  const sessionVersion = Number(parseCookie(req, 'admin_session_version') || 0);
+  const { token, email, expiresAt, sessionVersion, requireSession } = pickAdminCredentials(req);
 
   const security = getAdminSecurityState();
   return isAdminAuthorized({
@@ -33,7 +23,8 @@ function checkAdminAuth(req: NextRequest): { ok: boolean; reason?: string } {
     requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
     allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
     expectedSessionVersion: security.sessionVersion,
-    sessionVersion,
+    sessionVersion: Number(sessionVersion || 0),
+    requireSession,
   });
 }
 
