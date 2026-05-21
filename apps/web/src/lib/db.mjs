@@ -407,6 +407,31 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
 
   const now = new Date().toISOString();
   const supabase = await getSupabase();
+
+  const { data: existingPending, error: existingPendingError } = await supabase
+    .from('payments')
+    .select('id, order_id, merchant_trade_no, status')
+    .eq('order_id', orderId)
+    .eq('provider', 'ecpay')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingPendingError) {
+    throw new Error(existingPendingError.message || 'failed to fetch existing pending payment attempt');
+  }
+
+  if (existingPending) {
+    return {
+      id: existingPending.id,
+      orderId: existingPending.order_id,
+      merchantTradeNo: existingPending.merchant_trade_no,
+      status: existingPending.status,
+      reused: true,
+    };
+  }
+
   const payload = {
     order_id: orderId,
     provider: 'ecpay',
@@ -420,17 +445,18 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
 
   const { data, error } = await supabase
     .from('payments')
-    .upsert(payload, { onConflict: 'provider,merchant_trade_no' })
+    .insert(payload)
     .select('id, order_id, merchant_trade_no, status')
     .single();
 
-  if (error || !data) throw new Error(error?.message || 'failed to upsert ecpay payment attempt');
+  if (error || !data) throw new Error(error?.message || 'failed to create ecpay payment attempt');
 
   return {
     id: data.id,
     orderId: data.order_id,
     merchantTradeNo: data.merchant_trade_no,
     status: data.status,
+    reused: false,
   };
 }
 

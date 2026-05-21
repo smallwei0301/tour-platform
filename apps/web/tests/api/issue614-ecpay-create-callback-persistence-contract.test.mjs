@@ -8,6 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const createRoute = readFileSync(join(__dirname, '../../app/api/payments/ecpay/create/route.ts'), 'utf8');
 const callbackRoute = readFileSync(join(__dirname, '../../app/api/payments/ecpay/callback/route.ts'), 'utf8');
 const dbLib = readFileSync(join(__dirname, '../../src/lib/db.mjs'), 'utf8');
+const orchestrationLib = readFileSync(join(__dirname, '../../src/lib/ecpay-create-orchestration.mjs'), 'utf8');
 
 test('create route persists pending payment attempt before returning form params', () => {
   assert.match(createRoute, /upsertEcpayPaymentAttemptDb\(/);
@@ -16,8 +17,9 @@ test('create route persists pending payment attempt before returning form params
 });
 
 test('create route uses canonical custom fields: CustomField2=orderId and CustomField4=email', () => {
-  assert.match(createRoute, /CustomField2:\s*orderId/);
-  assert.match(createRoute, /CustomField4:\s*order\.contactEmail\s*\|\|\s*''/);
+  assert.match(createRoute, /buildEcpayCheckoutParams\(/);
+  assert.match(orchestrationLib, /CustomField2:\s*orderId/);
+  assert.match(orchestrationLib, /CustomField4:\s*String\(input\?\.contactEmail\s*\|\|\s*''\)/);
 });
 
 test('callback DB path forwards merchant_trade_no/provider into callback RPC', () => {
