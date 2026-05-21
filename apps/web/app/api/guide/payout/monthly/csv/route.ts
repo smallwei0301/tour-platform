@@ -71,11 +71,24 @@ export async function GET(req: Request) {
 
   const { data: monthOrders } = await supabase
     .from('orders')
-    .select('id, activity_id, total_twd, created_at')
+    .select('id, activity_id, schedule_id, total_twd, created_at')
     .in('activity_id', activityIds)
     .in('status', gmvStatuses)
     .gte('created_at', monthStart.toISOString())
     .lt('created_at', monthEnd.toISOString());
+
+  // Batch-fetch schedule start dates to use tour date instead of order created_at
+  const scheduleIds = [...new Set((monthOrders ?? []).filter((o: { schedule_id?: string | null }) => o.schedule_id).map((o: { schedule_id: string }) => o.schedule_id))];
+  const scheduleDates: Record<string, string> = {};
+  if (scheduleIds.length > 0) {
+    const { data: schedules } = await supabase
+      .from('activity_schedules')
+      .select('id, start_at')
+      .in('id', scheduleIds);
+    (schedules || []).forEach((s: { id: string; start_at: string }) => {
+      scheduleDates[s.id] = s.start_at.slice(0, 10);
+    });
+  }
 
   const orderIds = (monthOrders ?? []).map((o: { id: string }) => o.id);
   let refundAmountByOrderId: Record<string, number> = {};
@@ -89,14 +102,16 @@ export async function GET(req: Request) {
     );
   }
 
-  const orders = (monthOrders ?? []).map((o: { id: string; activity_id: string; total_twd: number | null; created_at: string }) => {
+  const orders = (monthOrders ?? []).map((o: { id: string; activity_id: string; schedule_id?: string | null; total_twd: number | null; created_at: string }) => {
     const totalTwd = o.total_twd ?? 0;
     const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
     const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
     const commissionTwd = Math.floor(effectiveTwd * SETTLEMENT_COMMISSION_RATE);
     const netTwd = effectiveTwd - commissionTwd;
     const activityTitle = activityMap[o.activity_id] ?? '';
-    const scheduleDate = o.created_at.slice(0, 10);
+    const scheduleDate = (o.schedule_id && scheduleDates[o.schedule_id])
+      ? scheduleDates[o.schedule_id]
+      : 'needs_manual_review';
     return { activityTitle, scheduleDate, totalTwd, refundAmountTwd, effectiveTwd, commissionTwd, netTwd };
   });
 
