@@ -102,13 +102,16 @@ describe('issue #626 — SEO: activity detail generateMetadata', () => {
     assert.ok(src.includes('twitter'), 'activity page generateMetadata should include twitter metadata');
   });
 
-  it('generateMetadata returns fallback when activity not found', () => {
+  it('generateMetadata does not call DB (GH-502 guard)', () => {
+    // Per GH-502: generateMetadata must not trigger getActivityBySlugDb to avoid render lock
     const src = readFile('activities/[region]/[slug]/page.tsx');
-    assert.ok(src.includes('活動不存在'), 'activity page generateMetadata should handle missing activity');
+    const metaBlock = src.split('export async function generateMetadata')[1]?.split('export default async function')[0] ?? '';
+    assert.ok(!metaBlock.includes('getActivityBySlugDb('), 'generateMetadata must not call getActivityBySlugDb (GH-502)');
   });
 
-  it('generateMetadata uses coverImageUrl for og:image', () => {
+  it('generateMetadata uses slug for title', () => {
     const src = readFile('activities/[region]/[slug]/page.tsx');
-    assert.ok(src.includes('coverImageUrl'), 'activity page generateMetadata should use coverImageUrl');
+    const metaBlock = src.split('export async function generateMetadata')[1]?.split('export default async function')[0] ?? '';
+    assert.ok(metaBlock.includes('slug'), 'generateMetadata should use slug for title');
   });
 });
