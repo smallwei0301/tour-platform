@@ -1,4 +1,5 @@
 import { Inter, Noto_Sans_TC } from 'next/font/google';
+import type { Metadata } from 'next';
 import './globals.css';
 import { Navbar } from '../src/components/layout/Navbar';
 import { Footer } from '../src/components/layout/Footer';
@@ -19,9 +20,30 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
-export const metadata = {
-  title: 'Tour Platform — 台灣在地導遊平台',
-  description: '找到懂路的人，帶你走進台灣最有故事的地方。預約在地導遊，柴山探洞、大稻埕老街、花蓮溯溪。',
+export const metadata: Metadata = {
+  title: {
+    template: '%s | Midao 祕島 — 台灣在地導遊',
+    default: 'Midao 祕島 — 找到懂路的人，帶你走進台灣最有故事的地方',
+  },
+  description: '台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。',
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'),
+  openGraph: {
+    type: 'website',
+    locale: 'zh_TW',
+    siteName: 'Midao 祕島',
+    title: 'Midao 祕島 — 台灣在地導遊預約',
+    description: '找到懂路的人，帶你走進台灣最有故事的地方',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Midao 祕島 — 台灣在地導遊預約',
+    description: '找到懂路的人，帶你走進台灣最有故事的地方',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true },
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

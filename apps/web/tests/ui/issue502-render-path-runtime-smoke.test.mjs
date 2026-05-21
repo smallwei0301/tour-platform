@@ -133,8 +133,9 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   });
 
   const metadata = await regionModule.generateMetadata({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
-  assert.equal(metadata.title, 'real-slug | Tour Platform');
-  assert.equal(metadata.description, '探索台灣在地導遊行程');
+  // GH-502 + #626: generateMetadata uses slug only (no DB lookup). Layout adds brand suffix.
+  assert.equal(metadata.title, 'real-slug');
+  // description from layout default; generateMetadata no longer sets it per #626
 
   const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
   const html = renderToStaticMarkup(element);

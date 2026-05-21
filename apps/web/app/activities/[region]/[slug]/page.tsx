@@ -41,10 +41,19 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {
+  // GH-502: do NOT call getActivityBySlugDb here — metadata must not trigger a DB lookup
+  // to avoid render lock on cold path. Title uses slug; OG metadata uses layout defaults.
   const { slug } = await params;
   return {
-    title: `${slug} | Tour Platform`,
-    description: '探索台灣在地導遊行程',
+    title: slug,
+    openGraph: {
+      title: `${slug} | Midao 祕島`,
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: slug,
+    },
   };
 }
 
