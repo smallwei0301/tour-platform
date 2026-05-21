@@ -98,10 +98,13 @@
 - **open issue 數：5**（查詢時間：2026-05-17）
 - 操作人員可在 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 取得可執行驗證參考（非當前開啟 blocker）
 
+> ℹ️ For the current live state of issues and PRs, run `npm run readiness:snapshot` or see `docs/operations/reports/readiness-live-state-latest.md`.
+
 #### 實作前資料同步檢查（每次更新 readiness docs）
 - 先跑 `gh issue list --repo smallwei0301/tour-platform --state open --limit 100 --json number,title,labels,updatedAt,url`
 - 再跑 `gh pr list --repo smallwei0301/tour-platform --state open --limit 50 --json number,title,headRefName,baseRefName,isDraft,updatedAt,url`
 - 最後確認近期 merged PR（`gh pr list --repo smallwei0301/tour-platform --state merged --limit 20 --json number,title,mergedAt,headRefName,url`）是否反映到文件中
+- 或直接執行 `npm run readiness:snapshot` 自動產生 `docs/operations/reports/readiness-live-state-latest.md`
 
 ---
 
