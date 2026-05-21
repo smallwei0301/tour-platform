@@ -46,6 +46,9 @@ export interface ExistingBooking {
   start_at: string; // ISO 8601 UTC
   end_at: string; // ISO 8601 UTC
   status: string;
+  participants?: number;
+  activity_id?: string | null;
+  activity_plan_id?: string | null;
   buffer_before_minutes?: number;
   buffer_after_minutes?: number;
 }

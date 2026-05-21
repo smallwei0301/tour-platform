@@ -1,4 +1,5 @@
 import { ok, fail } from '../../../../../src/lib/api';
+import { getV2ActivityAvailability } from '../../../../../src/lib/availability-v2/activity-day-availability';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +25,6 @@ function resolveCacheTierSeconds(schedules: AvailabilitySchedule[]): 15 | 30 | 6
     if (days < minDaysUntilStart) minDaysUntilStart = days;
   }
 
-  // 15s: very near-term inventory (0-3 days), 30s: short-term (4-14 days), 60s: longer horizon.
   if (minDaysUntilStart <= 3) return 15;
   if (minDaysUntilStart <= 14) return 30;
   return 60;
@@ -35,7 +35,22 @@ async function getSupabaseAdmin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-export async function GET(_req: Request, context: { params: Promise<{ slug: string }> }) {
+function isV2AvailabilityMode(url: URL): boolean {
+  const bookingV2 = process.env.BOOKING_V2;
+  const flag = bookingV2 === '1' || bookingV2 === 'true';
+  const query = url.searchParams.get('v2');
+  return flag || query === '1' || query === 'true';
+}
+
+function normalizeParticipants(url: URL): number {
+  const raw = url.searchParams.get('participants');
+  if (!raw) return 1;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return n;
+}
+
+export async function GET(req: Request, context: { params: Promise<{ slug: string }> }) {
   const { slug } = await context.params;
   if (!slug) {
     return Response.json(fail('INVALID_SLUG', 'slug is required'), { status: 400 });
@@ -59,7 +74,39 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
       return Response.json(fail('NOT_FOUND', 'activity not found'), { status: 404 });
     }
 
-    // Prefer snapshot/aggregate table for frontend read path.
+    if (isV2AvailabilityMode(new URL(req.url))) {
+      const requestUrl = new URL(req.url);
+      const timezone = requestUrl.searchParams.get('timezone') || 'Asia/Taipei';
+      const dateFrom = requestUrl.searchParams.get('dateFrom') || undefined;
+      const dateTo = requestUrl.searchParams.get('dateTo') || undefined;
+      const participants = normalizeParticipants(requestUrl);
+
+      const v2 = await getV2ActivityAvailability(supabase, activityRow.id, {
+        timezone,
+        dateFrom,
+        dateTo,
+        participants,
+      });
+
+      const schedules: AvailabilitySchedule[] = v2.plans.map((row) => ({
+        id: null,
+        startAt: row.firstSlotStartAt ?? `${row.date}T00:00:00+08:00`,
+        capacity: row.capacity,
+        bookedCount: row.bookedCount,
+        status: row.status,
+        planId: row.planId,
+      }));
+
+      const sMaxAge = resolveCacheTierSeconds(schedules);
+      return Response.json(ok({ schedules, timezone: v2.timezone, source: 'v2' }), {
+        headers: {
+          'cache-control': `public, s-maxage=${sMaxAge}, stale-while-revalidate=${Math.max(30, sMaxAge * 2)}`,
+          'x-availability-cache-tier': String(sMaxAge),
+          'x-availability-source': 'v2',
+        },
+      });
+    }
+
     const { data: snapshotRows, error: snapshotError } = await supabase
       .from('activity_availability_daily')
       .select('date, plan_id, total_capacity, total_booked, remaining, is_open')
@@ -77,7 +124,6 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
       );
 
       const normalized = snapshotRows.filter((r: any) => {
-        // If plan-specific rows exist for a date, drop aggregate (plan_id null) row for that date.
         if (!r.plan_id && hasPlanSpecificByDate.has(String(r.date))) return false;
         return true;
       });
@@ -91,7 +137,6 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         planId: (r.plan_id as string | null) ?? null,
       }));
     } else {
-      // Fallback to raw schedules if snapshot not ready.
       const { data, error } = await supabase
         .from('activity_schedules')
         .select('id,start_at,end_at,capacity,booked_count,status,plan_id,min_participants,activities!inner(slug)')
@@ -121,9 +166,9 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
 
     return Response.json(ok({ schedules }), {
       headers: {
-        // Tiered cache window: 15/30/60 seconds by nearest upcoming departure.
         'cache-control': `public, s-maxage=${sMaxAge}, stale-while-revalidate=${Math.max(30, sMaxAge * 2)}`,
         'x-availability-cache-tier': String(sMaxAge),
+        'x-availability-source': 'legacy',
       },
     });
   } catch (error) {

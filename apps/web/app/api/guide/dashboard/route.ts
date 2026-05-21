@@ -154,6 +154,7 @@ export async function GET(req: Request) {
     const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
     return sum + effectiveTwd;
   }, 0);
+  const effectiveMonthGmvTwd = monthGmvTwd;
   const monthGmvOrderCount = (monthOrders ?? []).length;
 
   // 6. 6-month revenue trend — AC1
@@ -205,8 +206,8 @@ export async function GET(req: Request) {
 
   const latestCompletedTourDate =
     latestScheduleRows && latestScheduleRows.length > 0
-      ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
-      : null;
+    ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
+    : null;
 
   const expectedPayoutTwd = (monthOrders ?? []).reduce((sum: number, o: any) => {
     const totalTwd = o.total_twd ?? 0;
@@ -272,6 +273,7 @@ export async function GET(req: Request) {
     pendingBookings,
     upcomingSchedules,
     monthGmvTwd,
+    effectiveMonthGmvTwd,
     monthGmvOrderCount,
     revenueTrend6m,
     expectedPayoutTwd,
