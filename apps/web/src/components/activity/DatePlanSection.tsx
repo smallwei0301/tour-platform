@@ -82,24 +82,38 @@ function getPlanScheduleForDate(
   planId: string,
 ): { schedule: Schedule | null; remaining: number; isFull: boolean; isOpen: boolean } {
   if (!date) return { schedule: null, remaining: 0, isFull: false, isOpen: false };
+
+  let matchedSchedule: Schedule | null = null;
+  let totalRemaining = 0;
+  let hasMatch = false;
+  let hasOpen = false;
+
   for (const s of schedules) {
     const startAt = s.startAt || s.start_at || '';
     const sPlanId = s.planId ?? s.plan_id ?? null;
     const dateKey = new Date(startAt).toISOString().slice(0, 10);
     // 匹配日期 + 方案（plan_id=null 表示適用所有方案）
     if (dateKey === date && (sPlanId === planId || sPlanId === null)) {
+      hasMatch = true;
+      if (!matchedSchedule) matchedSchedule = s;
       const capacity = Number(s.capacity || 0);
       const bookedCount = Number(s.bookedCount ?? s.booked_count ?? 0);
       const remaining = capacity - bookedCount;
       const status = s.status || (remaining <= 0 ? 'full' : 'open');
-      return {
-        schedule: s,
-        remaining: Math.max(0, remaining),
-        isFull: status === 'full' || remaining <= 0,
-        isOpen: status === 'open' && remaining > 0,
-      };
+      totalRemaining += Math.max(0, remaining);
+      if (status === 'open' && remaining > 0) hasOpen = true;
     }
   }
+
+  if (hasMatch) {
+    return {
+      schedule: matchedSchedule,
+      remaining: totalRemaining,
+      isFull: !hasOpen,
+      isOpen: hasOpen,
+    };
+  }
+
   // 該日期 + 方案沒有場次 → 未開放
   return { schedule: null, remaining: 0, isFull: false, isOpen: false };
 }
@@ -160,21 +174,37 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   const [showAllPlans, setShowAllPlans] = useState(false);
   const [liveSchedules, setLiveSchedules] = useState<Schedule[] | null>(null);
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+  const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
 
   async function ensureLiveAvailability() {
     if (availabilityLoaded) return;
     setAvailabilityLoaded(true);
     try {
-      const res = await fetch(`/api/activities/${encodeURIComponent(activity.slug)}/availability`);
+      const endpoint = useBookingV2
+        ? `/api/activities/${encodeURIComponent(activity.slug)}/availability?v2=1`
+        : `/api/activities/${encodeURIComponent(activity.slug)}/availability`;
+      const res = await fetch(endpoint);
       const json = await res.json().catch((): null => null);
       if (!res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) {
+        if (useBookingV2) {
+          setAvailabilityNotice('目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。');
+        }
         setAvailabilityLoaded(false);
         return;
       }
+
+      if (useBookingV2 && json?.data?.source !== 'v2') {
+        setAvailabilityNotice('目前可預約資料來源非 V2 聚合結果，顯示可能延遲，請稍後重試。');
+      } else {
+        setAvailabilityNotice(null);
+      }
+
       setLiveSchedules(json.data.schedules as Schedule[]);
     } catch {
       setAvailabilityLoaded(false);
-      // ignore: keep SSR schedules as fallback
+      if (useBookingV2) {
+        setAvailabilityNotice('目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。');
+      }
     }
   }
 
@@ -183,6 +213,11 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   // Use DB plans if available, otherwise fall back to defaults
   const PLANS = (activity.plans && activity.plans.length > 0) ? activity.plans : DEFAULT_PLANS;
   const VISIBLE_PLANS = showAllPlans ? PLANS : PLANS.slice(0, 2);
+  const selectedOrVisiblePlanIds = selectedPlan ? [selectedPlan] : VISIBLE_PLANS.map((p) => p.id);
+  const datePickerSchedules = effectiveSchedules.filter((s) => {
+    const planId = s.planId ?? s.plan_id ?? null;
+    return planId === null || selectedOrVisiblePlanIds.includes(planId);
+  });
 
   return (
   <>
@@ -193,7 +228,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           <span className="kkd-section-label">出發日期</span>
         </div>
         <DatePicker
-          schedules={effectiveSchedules}
+          schedules={datePickerSchedules}
           selectedDate={selectedDate}
           onSelect={(date) => {
             void ensureLiveAvailability();
@@ -201,6 +236,11 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           }}
           price={activity.priceTwd ?? activity.price ?? 0}
         />
+        {availabilityNotice && (
+          <p style={{ marginTop: 8, color: '#b45309', fontSize: 13 }} role="status">
+            {availabilityNotice}
+          </p>
+        )}
       </div>
 
       {/* Plan cards */}

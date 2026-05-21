@@ -28,7 +28,8 @@ test('availability API response payload keeps only UI-required fields', async ()
   // Drop non-required fields from route payload.
   assert.doesNotMatch(src, /fetchedAt/);
   assert.doesNotMatch(src, /minParticipants:/);
-  assert.doesNotMatch(src, /source:/);
+  // V2 mode explicitly returns source='v2'; keep this field for source-of-truth diagnostics.
+  assert.match(src, /source: 'v2'/);
   assert.doesNotMatch(src, /remaining:/);
 });
 
