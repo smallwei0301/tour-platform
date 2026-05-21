@@ -7,6 +7,7 @@ import { createOrder } from '../../src/lib/client-api';
 import { createClient } from '../../src/lib/supabase/client';
 import { track } from '../../src/lib/track';
 import { captureUtm, getStoredUtm } from '../../src/lib/utm';
+import { resolveInitialCheckoutSelection } from '../../src/lib/checkout-selection.mjs';
 
 type Schedule = {
   id: string;
@@ -15,6 +16,8 @@ type Schedule = {
   capacity: number;
   bookedCount: number;
   status: string;
+  planId?: string | null;
+  plan_id?: string | null;
 };
 
 type Plan = {
@@ -38,6 +41,7 @@ export default function CheckoutPage() {
   const slug = params.get('slug') || 'kaohsiung-chaishan-cave-experience';
   const planId = params.get('plan') || '';
   const urlScheduleId = params.get('scheduleId') || '';
+  const urlDate = params.get('date') || '';
 
   const [activity, setActivity] = useState<ActivityInfo | null>(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState<string>('');
@@ -73,18 +77,19 @@ export default function CheckoutPage() {
         const data = j.data;
         if (!data) { setErr('找不到行程'); return; }
         setActivity(data);
-        // 優先用 URL 帶的 scheduleId，否則自動選第一個 open 排期
         const schedules: Schedule[] = data.schedules || [];
-        if (urlScheduleId && schedules.find(s => s.id === urlScheduleId)) {
-          setSelectedScheduleId(urlScheduleId);
-        } else {
-          const openSchedule = schedules.find((s: Schedule) => s.status === 'open');
-          if (openSchedule) setSelectedScheduleId(openSchedule.id);
-        }
+        const initialSelection = resolveInitialCheckoutSelection({
+          schedules,
+          urlScheduleId,
+          urlDate,
+          planId,
+        });
+        setSelectedScheduleId(initialSelection.selectedScheduleId);
+        setErr(initialSelection.validationError);
       })
       .catch(() => setErr('行程資料載入失敗'))
       .finally(() => setFetching(false));
-  }, [slug]);
+  }, [slug, planId, urlScheduleId, urlDate]);
 
   // 行程資料載入完成後，發送 begin_checkout 事件
   useEffect(() => {
