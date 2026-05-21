@@ -23,8 +23,14 @@ import { createClient } from '../../../../../src/lib/supabase/server';
 import {
   validateSlotAvailability,
   addMinutes,
+  generateAvailableSlots,
+  getDateStringInTimezone,
+  type ActivityPlan,
+  type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
+  type SlotGeneratorInput,
+  type SlotGeneratorDeps,
 } from '../../../../../src/lib/slot-generator';
 
 // Validation helpers
@@ -74,6 +80,127 @@ function pickPlanActivityRelation(
 
 function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
   return value === 'manual' || value === 'system';
+}
+
+async function isSlotInGeneratedV2Availability(
+  supabase: any,
+  payload: {
+    guideId: string;
+    planId: string;
+    activityId: string;
+    timezone: string;
+    participants: number;
+    planDurationMinutes: number;
+    planMaxParticipants: number;
+    planBookingType: 'scheduled' | 'request' | 'instant';
+    slotDate: string;
+    startAt: string;
+  }
+): Promise<{ available: boolean; reason?: string }> {
+  // Fetch availability rules for this guide and plan
+  const { data: rulesData, error: rulesError } = await supabase
+    .from('guide_availability_rules')
+    .select('*')
+    .eq('guide_id', payload.guideId)
+    .eq('is_active', true)
+    .or(`activity_plan_id.is.null,activity_plan_id.eq.${payload.planId}`);
+
+  if (rulesError) {
+    throw new Error('Failed to fetch availability rules');
+  }
+
+  // Fetch blackout dates
+  const { data: blackoutsData, error: blackoutsError } = await supabase
+    .from('guide_blackout_dates')
+    .select('*')
+    .eq('guide_id', payload.guideId);
+  if (blackoutsError) {
+    throw new Error('Failed to fetch blackout dates');
+  }
+
+  // Fetch existing bookings (active statuses)
+  const activeStatuses = ['draft', 'pending_confirmation', 'confirmed', 'reschedule_requested'];
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from('bookings')
+    .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
+    .eq('guide_id', payload.guideId)
+    .in('status', activeStatuses);
+
+  if (bookingsError) {
+    throw new Error('Failed to fetch bookings');
+  }
+
+  const rules: AvailabilityRule[] = (rulesData || []).map((row: any) => ({
+    id: row.id,
+    guide_id: row.guide_id,
+    activity_plan_id: row.activity_plan_id,
+    weekday: row.weekday,
+    start_time_local: row.start_time_local,
+    end_time_local: row.end_time_local,
+    timezone: row.timezone,
+    slot_interval_minutes: row.slot_interval_minutes,
+    buffer_before_minutes: row.buffer_before_minutes,
+    buffer_after_minutes: row.buffer_after_minutes,
+    effective_from: row.effective_from,
+    effective_to: row.effective_to,
+    is_active: row.is_active,
+  }));
+
+  const blackouts: BlackoutWindow[] = (blackoutsData || []).map((row: any) => ({
+    id: row.id,
+    guide_id: row.guide_id,
+    starts_at: row.starts_at,
+    ends_at: row.ends_at,
+    reason: row.reason,
+    source: isManualOrSystemSource(row.source) ? row.source : 'manual',
+  }));
+
+  const bookings: ExistingBooking[] = (bookingsData || []).map((row: any) => ({
+    id: row.id,
+    guide_id: row.guide_id,
+    start_at: row.start_at,
+    end_at: row.end_at,
+    status: row.status,
+    participants: Number.isFinite(Number(row.participants)) ? Number(row.participants) : 1,
+    activity_id: row.activity_id ?? null,
+    activity_plan_id: row.activity_plan_id ?? null,
+    buffer_before_minutes: row.buffer_before_minutes,
+    buffer_after_minutes: row.buffer_after_minutes,
+  }));
+
+  const plan: ActivityPlan = {
+    id: payload.planId,
+    activity_id: payload.activityId,
+    duration_minutes: payload.planDurationMinutes,
+    max_participants: payload.planMaxParticipants,
+    booking_type: payload.planBookingType,
+  };
+
+  const input: SlotGeneratorInput = {
+    guideId: payload.guideId,
+    activityPlanId: payload.planId,
+    dateFrom: payload.slotDate,
+    dateTo: payload.slotDate,
+    timezone: payload.timezone,
+    participants: payload.participants,
+  };
+
+  const deps: SlotGeneratorDeps = {
+    rules,
+    blackouts,
+    bookings,
+    plan,
+  };
+
+  const availability = generateAvailableSlots(input, deps);
+  const targetStart = new Date(payload.startAt).getTime();
+  const isAvailable = availability.slots.some((slot) => new Date(slot.startAt).getTime() === targetStart);
+
+  if (!isAvailable) {
+    return { available: false, reason: 'NOT_IN_GENERATED_SLOT_LIST' };
+  }
+
+  return { available: true };
 }
 
 interface DraftBookingRequest {
@@ -294,7 +421,7 @@ export async function POST(request: NextRequest) {
     const slotEndAt = addMinutes(slotStartAt, planData.duration_minutes);
 
     // 3. Server-side slot validation
-    // Fetch blackouts
+    // Validate with legacy checks (past/blackout/booking overlap)
     const { data: blackoutsData, error: blackoutsError } = await supabase
       .from('guide_blackout_dates')
       .select('*')
@@ -307,7 +434,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Fetch existing bookings (active statuses)
     const activeStatuses = ['draft', 'pending_confirmation', 'confirmed', 'reschedule_requested'];
     const { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
@@ -330,7 +456,6 @@ export async function POST(request: NextRequest) {
       .eq('is_active', true)
       .or(`activity_plan_id.is.null,activity_plan_id.eq.${data.planId}`)
       .limit(1);
-
     const bufferBefore = rulesData?.[0]?.buffer_before_minutes ?? 0;
     const bufferAfter = rulesData?.[0]?.buffer_after_minutes ?? 0;
 
@@ -352,7 +477,6 @@ export async function POST(request: NextRequest) {
       status: row.status,
     }));
 
-    // Validate slot availability
     const slotValidation = validateSlotAvailability(
       slotStartAt.toISOString(),
       slotEndAt.toISOString(),
@@ -377,8 +501,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const slotDate = getDateStringInTimezone(slotStartAt, data.timezone);
+    let generatedSlotValidation: { available: boolean; reason?: string };
+    try {
+      generatedSlotValidation = await isSlotInGeneratedV2Availability(supabase, {
+        guideId,
+        planId: data.planId,
+        activityId: data.activityId,
+        timezone: data.timezone,
+        participants: data.participants,
+        planDurationMinutes: planData.duration_minutes,
+        planMaxParticipants: planData.max_participants,
+        planBookingType: planData.booking_type,
+        slotDate,
+        startAt: data.startAt,
+      });
+    } catch (error) {
+      console.error('Error generating slot availability', error);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to validate slot availability'), {
+        status: 500,
+      });
+    }
+
+    if (!generatedSlotValidation.available) {
+      return Response.json(errorV2('SLOT_UNAVAILABLE', 'The selected time slot is not available'), {
+        status: 409,
+      });
+    }
+
     // 4. Get or find traveler_id from auth (optional)
     let travelerId: string | null = null;
+
     try {
       const {
         data: { user },
