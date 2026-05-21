@@ -98,7 +98,39 @@
 - 交易方 CAPTCHA / OTP 造成自動化難度升高
 - SimulatePaid 與 real flow 混淆
 - 測試信箱或 sendgrid/resend 日誌不可見
-- 退款只回報成功但未同步本地 refunded 狀態
+- 退款只回報成功但未同步本地 refunded 狀態（#627 後此項已由 payment_events 自動追蹤）
+
+## 6a. #627 Payment-Domain 模型補充（2026-05）
+
+PR #627 合併後，以下操作規則取代或補充原有流程描述：
+
+### Provider-paid / App-pending 狀態不一致
+
+**舊做法：** 手動直接更新 `orders.status`。
+
+**新做法（#627 起）：** 使用 QueryTradeInfo 對帳，以 provider evidence 驅動修復：
+1. 以 `MerchantTradeNo` 呼叫 ECPay QueryTradeInfo，確認 `TradeStatus=1`。
+2. 補寫 `payment_events`（或呼叫 `/api/payments/ecpay/reconcile`）。
+3. 系統自動將 `orders.status` 更新為 `paid`。
+4. **不得**在缺乏 provider evidence 的情況下直接改訂單狀態。
+
+### Void（取消授權）vs Refund（退刷）
+
+| 情境 | 操作 | 備註 |
+|------|------|------|
+| 付款已授權，尚未請款 | **Void（取消授權）** | ECPay 後台操作；不產生請款紀錄 |
+| 付款已請款/已結帳 | **Refund（退刷）** | ECPay 後台操作；3–5 工作天入帳 |
+| Provider 狀態不明 | **HOLD** | 未取得明確 provider 狀態前禁止任何退款動作 |
+
+退款操作後，若 ECPay 發回 callback，`payment_events` 自動記錄；若無 callback，請以 QueryTradeInfo 確認後手動補記。
+
+### Post-debit 部分失敗修復
+
+若請款成功但後續步驟（email、狀態更新）部分失敗：
+1. **不要重送** ECPay 付款 API（避免重複請款）。
+2. 以 QueryTradeInfo 取得 provider evidence，確認金額與狀態。
+3. 以 evidence 補寫 `payment_events`，讓系統從正確狀態重試後續動作。
+4. 在管理後台或 issue 備註修復時間戳與操作者。
 
 ## 7. 交付格式（對 issue / PR 友好）
 
