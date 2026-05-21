@@ -113,7 +113,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
       </div>
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 10px' }}>
+      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
         {navLinks(onClose)}
       </nav>
       {/* Logout */}
