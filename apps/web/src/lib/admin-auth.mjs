@@ -45,3 +45,33 @@ export function isAdminAuthorized(input = {}) {
 
   return { ok: true };
 }
+
+/**
+ * Read admin credentials from header (x-admin-token / x-admin-email) or cookie.
+ * Returns the same shape as parseCookie-based calls but prefers header auth.
+ */
+export function pickAdminCredentials(req) {
+  const headerToken = req.headers.get('x-admin-token');
+  const headerEmail = req.headers.get('x-admin-email');
+  if (headerToken && headerEmail) {
+    return {
+      token: headerToken,
+      email: headerEmail,
+      sessionVersion: null,
+      expiresAt: null,
+      requireSession: false, // header-auth callers skip session checks (mirrors middleware)
+    };
+  }
+  // Fall back to cookie
+  function parseCookieLocal(key) {
+    const cookie = req.headers.get('cookie') || '';
+    const parts = cookie.split(';').map((s) => s.trim());
+    const hit = parts.find((p) => p.startsWith(`${key}=`));
+    return hit ? decodeURIComponent(hit.slice(key.length + 1)) : '';
+  }
+  const token = parseCookieLocal('admin_token');
+  const email = parseCookieLocal('admin_email');
+  const sessionVersion = parseCookieLocal('admin_session_version');
+  const expiresAt = parseCookieLocal('admin_session_expires_at');
+  return { token, email, sessionVersion, expiresAt, requireSession: true };
+}
