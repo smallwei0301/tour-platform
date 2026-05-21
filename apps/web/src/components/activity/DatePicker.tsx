@@ -30,12 +30,21 @@ interface DayInfo {
   hasSchedule?: boolean;
 }
 
+function toDateKey(rawStartAt: string): string | null {
+  const isoLikeMatch = rawStartAt.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoLikeMatch) return isoLikeMatch[1];
+  const parsed = new Date(rawStartAt);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+}
+
 function buildAvailMap(schedules: Schedule[]): Map<string, { available: boolean; remaining: number }> {
   const map = new Map<string, { available: boolean; remaining: number }>();
   for (const s of schedules) {
     const startAt = s.startAt || s.start_at;
     if (!startAt) continue;
-    const dateKey = new Date(startAt).toISOString().slice(0, 10);
+    const dateKey = toDateKey(startAt);
+    if (!dateKey) continue;
     const capacity = Number(s.capacity || 0);
     const bookedCount = Number(s.bookedCount ?? s.booked_count ?? 0);
     const remaining = capacity - bookedCount;

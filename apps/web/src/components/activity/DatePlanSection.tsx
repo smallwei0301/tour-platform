@@ -80,18 +80,28 @@ function getPlanScheduleForDate(
   schedules: Schedule[],
   date: string | null,
   planId: string,
-): { schedule: Schedule | null; remaining: number; isFull: boolean; isOpen: boolean } {
-  if (!date) return { schedule: null, remaining: 0, isFull: false, isOpen: false };
+): { schedule: Schedule | null; remaining: number; isFull: boolean; isOpen: boolean; isNotOpen: boolean } {
+  if (!date) return { schedule: null, remaining: 0, isFull: false, isOpen: false, isNotOpen: false };
 
   let matchedSchedule: Schedule | null = null;
   let totalRemaining = 0;
   let hasMatch = false;
   let hasOpen = false;
+  let hasNotOpen = false;
+
+  const toDateKey = (rawStartAt: string): string | null => {
+    const isoLikeMatch = rawStartAt.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoLikeMatch) return isoLikeMatch[1];
+    const parsed = new Date(rawStartAt);
+    if (Number.isNaN(parsed.getTime())) return null;
+    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+  };
 
   for (const s of schedules) {
     const startAt = s.startAt || s.start_at || '';
     const sPlanId = s.planId ?? s.plan_id ?? null;
-    const dateKey = new Date(startAt).toISOString().slice(0, 10);
+    const dateKey = toDateKey(startAt);
+    if (!dateKey) continue;
     // 匹配日期 + 方案（plan_id=null 表示適用所有方案）
     if (dateKey === date && (sPlanId === planId || sPlanId === null)) {
       hasMatch = true;
@@ -102,6 +112,7 @@ function getPlanScheduleForDate(
       const status = s.status || (remaining <= 0 ? 'full' : 'open');
       totalRemaining += Math.max(0, remaining);
       if (status === 'open' && remaining > 0) hasOpen = true;
+      if (status === 'not-open') hasNotOpen = true;
     }
   }
 
@@ -109,13 +120,14 @@ function getPlanScheduleForDate(
     return {
       schedule: matchedSchedule,
       remaining: totalRemaining,
-      isFull: !hasOpen,
+      isFull: !hasOpen && !hasNotOpen,
       isOpen: hasOpen,
+      isNotOpen: !hasOpen && hasNotOpen,
     };
   }
 
   // 該日期 + 方案沒有場次 → 未開放
-  return { schedule: null, remaining: 0, isFull: false, isOpen: false };
+  return { schedule: null, remaining: 0, isFull: false, isOpen: false, isNotOpen: true };
 }
 
 // 簡單 SVG 圖示（純黑線條，無填色）
@@ -258,7 +270,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           // 取得該方案在選中日期的可用性
           const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id);
           const showFull = selectedDate && planAvail.isFull;
-          const showNotOpen = selectedDate && !planAvail.schedule;
+          const showNotOpen = selectedDate && planAvail.isNotOpen;
           const canBook = !selectedDate || planAvail.isOpen;
 
           return (

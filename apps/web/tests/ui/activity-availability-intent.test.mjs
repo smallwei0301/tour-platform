@@ -51,6 +51,29 @@ test('date picker availability is scoped to selected or visible plans plus globa
   assert.match(src, /<DatePicker\s+[\s\S]*schedules=\{datePickerSchedules\}/);
 });
 
+test('V2 not-open schedule does not collapse into full badge state', async () => {
+  const src = await readSource('src/components/activity/DatePlanSection.tsx');
+
+  assert.match(src, /let hasNotOpen = false;/);
+  assert.match(src, /if \(status === 'not-open'\) hasNotOpen = true;/);
+  assert.match(src, /isFull: !hasOpen && !hasNotOpen,/);
+  assert.match(src, /isNotOpen: !hasOpen && hasNotOpen,/);
+  assert.match(src, /const showNotOpen = selectedDate && planAvail\.isNotOpen;/);
+});
+
+test('date key extraction avoids UTC midnight rollback for +08 fallback timestamps', async () => {
+  const planSrc = await readSource('src/components/activity/DatePlanSection.tsx');
+  const pickerSrc = await readSource('src/components/activity/DatePicker.tsx');
+
+  assert.match(planSrc, /const isoLikeMatch = rawStartAt\.match\(/);
+  assert.match(planSrc, /rawStartAt\.match\(\/\^\(\\d\{4\}-\\d\{2\}-\\d\{2\}\)\//);
+  assert.doesNotMatch(planSrc, /toISOString\(\)\.slice\(0, 10\)/);
+
+  assert.match(pickerSrc, /function toDateKey\(rawStartAt: string\): string \| null/);
+  assert.match(pickerSrc, /const dateKey = toDateKey\(startAt\);/);
+  assert.doesNotMatch(pickerSrc, /new Date\(startAt\)\.toISOString\(\)\.slice\(0, 10\)/);
+});
+
 test('checkout/payment callback still enforce strong-consistency conflict semantics', async () => {
   const checkoutSrc = await readSource('app/api/v2/bookings/[bookingId]/checkout/route.ts');
   const callbackSrc = await readSource('app/api/payments/ecpay/callback/route.ts');
