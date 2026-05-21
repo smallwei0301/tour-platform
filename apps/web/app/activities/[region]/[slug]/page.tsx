@@ -42,9 +42,23 @@ export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {
   const { slug } = await params;
+  const activity = await getActivityBySlugDb(slug).catch(() => null);
+  if (!activity) return { title: '活動不存在' };
   return {
-    title: `${slug} | Tour Platform`,
-    description: '探索台灣在地導遊行程',
+    title: activity.title,
+    description: activity.shortDescription || `${activity.region} · ${activity.title} — 台灣在地導遊行程`,
+    openGraph: {
+      title: `${activity.title} | Midao 祕島`,
+      description: activity.shortDescription || `${activity.region} · ${activity.durationDisplay}`,
+      images: activity.coverImageUrl ? [{ url: activity.coverImageUrl, width: 1200, height: 675, alt: activity.title }] : [],
+      type: 'website',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: activity.title,
+      description: activity.shortDescription ?? '',
+      images: activity.coverImageUrl ? [activity.coverImageUrl] : [],
+    },
   };
 }
 
