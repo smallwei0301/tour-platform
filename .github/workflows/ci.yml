@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     env:
       DISABLE_SENTRY_BUILD: '1'
       # CI build runs with NODE_ENV=production; provide strong non-default test secrets
