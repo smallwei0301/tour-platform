@@ -2,6 +2,13 @@ import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { __setSupabaseClientForTest, upsertEcpayPaymentAttemptDb } from '../../src/lib/db.mjs';
+import { buildEcpayCheckoutParams } from '../../src/lib/ecpay-create-orchestration.mjs';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const createRoute = readFileSync(join(__dirname, '../../app/api/payments/ecpay/create/route.ts'), 'utf8');
 
 const originalEnv = {
   SUPABASE_URL: process.env.SUPABASE_URL,
@@ -130,4 +137,30 @@ test('creates pending payment attempt when none exists', async () => {
   assert.equal(insertedPayload.amount_twd, 4321);
   assert.equal(result.id, created.id);
   assert.equal(result.reused, false);
+});
+
+test('route orchestration uses persisted/reused merchantTradeNo for checkout params', () => {
+  const persistedMerchantTradeNo = 'EXISTINGTRADE123';
+  const generatedMerchantTradeNo = 'NEWTRADE999';
+
+  const params = buildEcpayCheckoutParams({
+    merchantId: '2000132',
+    merchantTradeNo: persistedMerchantTradeNo,
+    tradeDate: '2026/05/21 11:22:33',
+    totalTwd: 999,
+    title: '測試行程',
+    callbackUrl: 'https://example.com/api/payments/ecpay/callback',
+    returnUrl: 'https://example.com/order/success?orderId=o1',
+    orderId: 'o1',
+    contactEmail: 'u@example.com',
+  });
+
+  assert.equal(params.MerchantTradeNo, persistedMerchantTradeNo);
+  assert.notEqual(params.MerchantTradeNo, generatedMerchantTradeNo);
+});
+
+test('create route wires checkout params with paymentAttempt.merchantTradeNo', () => {
+  assert.match(createRoute, /const paymentAttempt = await upsertEcpayPaymentAttemptDb\(/);
+  assert.match(createRoute, /const merchantTradeNo = paymentAttempt\.merchantTradeNo/);
+  assert.match(createRoute, /buildEcpayCheckoutParams\(\{[\s\S]*merchantTradeNo[\s\S]*\}\)/);
 });

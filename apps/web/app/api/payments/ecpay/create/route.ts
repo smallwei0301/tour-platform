@@ -1,6 +1,7 @@
 import { fail, ok } from '../../../../../src/lib/api';
 import { getOrderDetailForPayment, upsertEcpayPaymentAttemptDb } from '../../../../../src/lib/db.mjs';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
+import { buildEcpayCheckoutParams } from '../../../../../src/lib/ecpay-create-orchestration.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 /**
@@ -75,33 +76,29 @@ export async function POST(request: Request) {
     const callbackUrl = process.env.ECPAY_CALLBACK_URL || `${process.env.NEXT_PUBLIC_SITE_URL}/api/payments/ecpay/callback`;
     const returnUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/order/success?orderId=${orderId}`;
 
+    // MerchantTradeNo 必須是唯一的，使用 orderId + timestamp
+    const generatedMerchantTradeNo = `${orderId.replace(/-/g, '').slice(0, 12)}${Date.now().toString().slice(-8)}`;
+
+    const paymentAttempt = await upsertEcpayPaymentAttemptDb({
+      orderId,
+      merchantTradeNo: generatedMerchantTradeNo,
+      amountTwd: Number(order.totalTwd || 0),
+    });
+
+    const merchantTradeNo = paymentAttempt.merchantTradeNo;
     const now = new Date();
     const tradeDate = formatDate(now);
 
-    // MerchantTradeNo 必須是唯一的，使用 orderId + timestamp
-    const merchantTradeNo = `${orderId.replace(/-/g, '').slice(0, 12)}${Date.now().toString().slice(-8)}`;
-
-    const ecpayParams: Record<string, string> = {
-      MerchantID: merchantId,
-      MerchantTradeNo: merchantTradeNo,
-      MerchantTradeDate: tradeDate,
-      PaymentType: 'aio',
-      TotalAmount: String(order.totalTwd),
-      TradeDesc: encodeURIComponent('Tour Platform 行程預訂'),
-      ItemName: order.title || '行程預訂',
-      ReturnURL: callbackUrl,
-      ClientBackURL: returnUrl,
-      ChoosePayment: 'ALL',
-      EncryptType: '1', // SHA256
-      // 訂單關聯資訊
-      CustomField2: orderId,
-      CustomField4: order.contactEmail || '',
-    };
-
-    await upsertEcpayPaymentAttemptDb({
-      orderId,
+    const ecpayParams = buildEcpayCheckoutParams({
+      merchantId,
       merchantTradeNo,
-      amountTwd: Number(order.totalTwd || 0),
+      tradeDate,
+      totalTwd: order.totalTwd,
+      title: order.title,
+      callbackUrl,
+      returnUrl,
+      orderId,
+      contactEmail: order.contactEmail,
     });
 
     // 生成 CheckMacValue
