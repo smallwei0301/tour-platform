@@ -48,8 +48,16 @@ interface RecommendedAction {
 function computeVerdict(
   metrics: Metrics,
   hasCriticalIncident: boolean,
-  readiness: ReadinessItem[]
+  readiness: ReadinessItem[],
+  dashboardMetricsDegraded: boolean,
+  incidentMetricsDegraded: boolean,
+  metricsErrors: string[]
 ): { state: VerdictState; reason: string } {
+  // Fail-closed: if required metrics are degraded, force HOLD
+  if (dashboardMetricsDegraded || incidentMetricsDegraded) {
+    return { state: 'HOLD', reason: `Required metrics unavailable: ${metricsErrors.join(', ')} — cannot confirm GO` };
+  }
+
   const hasBlockerReadiness = readiness.some((r) => r.status === 'fail');
 
   // NO_GO takes precedence over HOLD
@@ -84,6 +92,11 @@ export async function GET(_req: Request) {
     const deploySha = process.env.VERCEL_GIT_COMMIT_SHA || 'local';
     const supabase = getSupabase();
 
+    // Metrics degradation tracking
+    const metricsErrors: string[] = [];
+    let dashboardMetricsDegraded = false;
+    let incidentMetricsDegraded = false;
+
     // --- Order metrics from adminDashboardSummaryDb ---
     let healthyOrderRate = 0;
     let exceptionRate = 0;
@@ -105,7 +118,9 @@ export async function GET(_req: Request) {
         ).length;
         paidConfirmedRatio = Number(((paidConfirmed / Math.max(totalOrders, 1)) * 100).toFixed(1));
       } catch {
-        // Fallback to zeros if DB call fails
+        // Fallback to zeros if DB call fails; track degradation
+        metricsErrors.push('dashboard_summary_unavailable');
+        dashboardMetricsDegraded = true;
       }
     }
 
@@ -114,17 +129,25 @@ export async function GET(_req: Request) {
     let hasCriticalIncident = false;
 
     if (supabase) {
-      const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: incidentRows } = await supabase
-        .from('incidents')
-        .select('severity')
-        .gte('created_at', since24h);
+      try {
+        const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: incidentRows, error: incidentsError } = await supabase
+          .from('incidents')
+          .select('severity')
+          .gte('created_at', since24h);
 
-      if (incidentRows) {
-        incidents24h = incidentRows.length;
-        hasCriticalIncident = incidentRows.some(
-          (r: any) => r.severity === 'critical'
-        );
+        if (incidentsError) {
+          metricsErrors.push('incidents_query_unavailable');
+          incidentMetricsDegraded = true;
+        } else if (incidentRows) {
+          incidents24h = incidentRows.length;
+          hasCriticalIncident = incidentRows.some(
+            (r: any) => r.severity === 'critical'
+          );
+        }
+      } catch {
+        metricsErrors.push('incidents_query_unavailable');
+        incidentMetricsDegraded = true;
       }
     }
 
@@ -209,7 +232,7 @@ export async function GET(_req: Request) {
     ];
 
     // --- Verdict ---
-    const { state, reason } = computeVerdict(metrics, hasCriticalIncident, readiness);
+    const { state, reason } = computeVerdict(metrics, hasCriticalIncident, readiness, dashboardMetricsDegraded, incidentMetricsDegraded, metricsErrors);
 
     const verdict: Verdict = {
       state,
@@ -258,8 +281,14 @@ export async function GET(_req: Request) {
       }
     }
 
+    const metricsStatus = {
+      degraded: dashboardMetricsDegraded || incidentMetricsDegraded,
+      errors: metricsErrors,
+      note: metricsErrors.length > 0 ? 'Some metrics unavailable — verdict forced to HOLD' : 'All metrics available',
+    };
+
     return Response.json(
-      ok({ readiness, metrics, verdict, recommendedActions, soft_launch_controls })
+      ok({ readiness, metrics, verdict, recommendedActions, soft_launch_controls, metricsStatus })
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
