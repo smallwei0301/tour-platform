@@ -413,7 +413,6 @@ export async function upsertEcpayPaymentAttemptDb(input = {}) {
     merchant_trade_no: merchantTradeNo,
     amount_twd: Math.round(amountTwd),
     currency: 'TWD',
-    method: 'credit_card',
     status: 'pending',
     provider_status: 'pending',
     updated_at: now,

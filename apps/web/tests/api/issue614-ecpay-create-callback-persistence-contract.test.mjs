@@ -25,6 +25,12 @@ test('callback DB path forwards merchant_trade_no/provider into callback RPC', (
   assert.match(dbLib, /p_provider:\s*'ecpay'/);
 });
 
+test('create DB upsert payload avoids legacy payments.method column dependency', () => {
+  const fnBlock = dbLib.match(/export async function upsertEcpayPaymentAttemptDb\(input = \{\}\) \{[\s\S]*?\n\}/);
+  assert.ok(fnBlock, 'upsertEcpayPaymentAttemptDb function block should exist');
+  assert.doesNotMatch(fnBlock[0], /\bmethod\s*:\s*['\"]credit_card['\"]/);
+});
+
 test('callback DB path resolves payment attempt by provider identity before fallback', () => {
   assert.match(dbLib, /if \(merchantTradeNo\)\s*{[\s\S]*\.eq\('merchant_trade_no', merchantTradeNo\)/);
   assert.match(dbLib, /else if \(tradeNo\)\s*{[\s\S]*\.eq\('trade_no', tradeNo\)/);
