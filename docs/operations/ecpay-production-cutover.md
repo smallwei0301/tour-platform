@@ -63,7 +63,7 @@ ECPay POST 到 ECPAY_CALLBACK_URL
 | Callback 接收 | ✅ | 訂單自動更新為 `paid`，paid_at 記錄正確 |
 | 管理員 Email | ✅ | smallwei0301@gmail.com 收到通知 |
 | 返回商店 | ✅ | NEXT_PUBLIC_SITE_URL 設定後，ClientBackURL 正確導回 |
-| 退款流程 | ✅ | NT$18 取消授權成功（G19，2026-05-11）。ECPay 不發退款 callback，訂單狀態需管理員手動更新。自動退款 API 為後續 issue (#304 P1c) |
+| 退款流程 | ✅ | NT$18 取消授權成功（G19，2026-05-11）。取消授權（void）與退刷（refund）已由 #627 payment-domain 自動化處理，詳見第 8 節。 |
 
 ## 5. 退款操作方法
 
@@ -77,11 +77,11 @@ ECPay POST 到 ECPAY_CALLBACK_URL
 
 ### 重要限制
 
-- **ECPay 退款不發 callback** — 取消授權/退刷後，tour-platform 訂單狀態**不會自動更新**，需管理員手動在後台改為 `refunded`
+- **ECPay 退款不發 callback** — 取消授權/退刷後，tour-platform 透過 #627 payment-domain 自動追蹤狀態；若 callback 未收到，請使用 QueryTradeInfo 對帳（詳見第 8 節）
 - 信用卡退款通常 3–5 個工作天入帳
 - ECPay 退款需在交易後 180 天內發起
 - 部分退款：輸入小於原始金額即可
-- 自動退款 API（AllRefund）為待實作功能，見 #304 P1c
+- **void vs refund 判斷**：已授權未請款 → void（取消授權）；已請款/已結帳 → refund（退刷）；詳見第 8 節
 
 ## 6. 已知限制
 
@@ -102,6 +102,46 @@ ECPAY_HASH_IV=<sandbox HashIV>
 # 觸發 redeploy
 ```
 
+## 8. Post-#627 更新 (2026-05)
+
+PR #627 引入 payment-domain 模型，以下為操作層面的重要變更：
+
+### 8.1 付款追蹤層
+
+- `payments` 與 `payment_events` 表成為主要付款狀態來源（取代直接讀寫 `orders.status`）。
+- 完整流程：ECPay Callback 收到 → 寫入 `payment_events` → 更新 `orders` 狀態。
+- 訂單狀態以 `payment_events` 最後一筆 event 驅動，不再由 callback 直接寫 orders。
+
+### 8.2 Callback 遺失時的 QueryTradeInfo 對帳
+
+若訂單在 ECPay 側顯示已付款，但 app 仍為 `pending_payment`，請執行主動對帳：
+
+1. 從管理後台或 Supabase 取得 `MerchantTradeNo`（訂單內部 ID）。
+2. 呼叫 ECPay QueryTradeInfo API，確認 `TradeStatus=1`（付款成功）。
+3. 以查詢結果手動補寫 `payment_events`，或觸發 `/api/payments/ecpay/reconcile`（若已部署）。
+4. 確認 `orders.status` 自動更新為 `paid`。
+
+> **不要**在 callback 遺失時直接手動改 `orders.status`，應以 provider evidence 驅動修復。
+
+### 8.3 Void vs Refund 決策規則
+
+| 付款狀態 | 操作 | 說明 |
+|---------|------|------|
+| 已授權，尚未請款（TradeStatus=10）| **Void（取消授權）** | 在 ECPay 後台執行「取消授權」，不產生請款 |
+| 已請款/已結帳（TradeStatus=1）| **Refund（退刷）** | 在 ECPay 後台執行「退刷」，3–5 工作天入帳 |
+| 狀態不明 | **HOLD** | 不得在未確認 provider 狀態前進行任何退款操作 |
+
+操作後 `payment_events` 將自動記錄退款事件（若 callback 有返回），若無 callback 請以 QueryTradeInfo 確認後手動補記。
+
+### 8.4 Post-debit 部分失敗修復路徑
+
+若訂單在請款後發生部分失敗（例如：付款成功但 email 未發送、訂單狀態未更新）：
+
+1. **不要重新呼叫** ECPay 付款 API（避免重複請款）。
+2. 以現有 provider evidence（QueryTradeInfo 回應）確認付款金額與狀態。
+3. 根據 evidence 補寫 `payment_events`，讓系統從正確狀態重試後續動作（email、狀態更新）。
+4. 在 issue / 管理後台備註修復時間戳與操作者。
+
 ---
 
-*本文件由 Claudia (AI) 協助撰寫，2026-05-11*
+*本文件由 Claudia (AI) 協助撰寫，2026-05-11；#627 payment-domain 更新補充 2026-05-22*
