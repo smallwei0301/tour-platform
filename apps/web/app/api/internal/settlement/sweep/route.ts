@@ -17,6 +17,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSettlementConfig } from '../../../../../src/lib/settlement-config';
+import { isOrderEligibleForSettlement, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
         total_twd,
         activities!inner(guide_id),
         bookings(start_at, end_at, activity_plan_id, activity_id, guide_id),
-        activity_schedules!inner(start_at)
+        activity_schedules(start_at)
       `)
       .in('status', ['paid', 'confirmed', 'completed'])
       .not('id', 'in', `(SELECT order_id FROM payout_items)`);
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
       total_twd: number;
       activities: { guide_id: string } | { guide_id: string }[];
       bookings?: { start_at?: string | null } | { start_at?: string | null }[] | null;
-      activity_schedules: { start_at: string } | { start_at: string }[];
+      activity_schedules?: { start_at: string } | { start_at: string }[] | null;
     };
 
     const eligibleOrders = (orders as Order[]).filter((order) => {
@@ -91,10 +92,8 @@ export async function POST(req: NextRequest) {
       const schedule = Array.isArray(order.activity_schedules)
         ? order.activity_schedules[0]
         : order.activity_schedules;
-      const startAt = booking?.start_at ?? schedule?.start_at ?? null;
-      if (!startAt) return false;
-      const startMs = Date.parse(startAt);
-      return Number.isFinite(startMs) && startMs <= cutoffDate.getTime();
+      const effectiveStartAt = pickEffectiveStartAt(booking?.start_at ?? null, schedule?.start_at ?? null);
+      return isOrderEligibleForSettlement(effectiveStartAt, cutoffDate.toISOString());
     });
 
     if (eligibleOrders.length === 0) {

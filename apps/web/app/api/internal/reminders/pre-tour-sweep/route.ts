@@ -19,6 +19,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordIncident } from '../../../../../src/lib/incidents';
 import { composePreTourReminder, sendReminder, type ReminderKind } from '../../../../../src/lib/pre-tour-reminder';
+import { isOrderInReminderWindow, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -42,15 +43,6 @@ function getWindowBounds(kind: ReminderKind, now: number): { from: string; to: s
   const from = new Date(now + 30 * 60 * 1000).toISOString();
   const to   = new Date(now + 90 * 60 * 1000).toISOString();
   return { from, to };
-}
-
-function inWindow(isoStartAt: string | null | undefined, fromIso: string, toIso: string): boolean {
-  if (!isoStartAt) return false;
-  const t = Date.parse(isoStartAt);
-  const from = Date.parse(fromIso);
-  const to = Date.parse(toIso);
-  if (!Number.isFinite(t) || !Number.isFinite(from) || !Number.isFinite(to)) return false;
-  return t >= from && t < to;
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -100,7 +92,7 @@ export async function POST(req: NextRequest) {
             activity_id,
             guide_id
           ),
-          activity_schedules!inner (
+          activity_schedules (
             id,
             start_at,
             activities!inner (
@@ -128,12 +120,11 @@ export async function POST(req: NextRequest) {
         const booking = (order.bookings as unknown as { start_at?: string | null } | null) ?? null;
         // Type coercion for nested Supabase join result
         const schedule = (order.activity_schedules as unknown as { id: string; start_at: string; activities: { title: string; meeting_point: string; meeting_point_map_url: string; notices?: unknown } }[])?.[0];
-        if (!schedule) continue;
 
-        const effectiveStartAt = booking?.start_at ?? schedule.start_at;
-        if (!inWindow(effectiveStartAt, from, to)) continue;
+        const effectiveStartAt = pickEffectiveStartAt(booking?.start_at ?? null, schedule?.start_at ?? null);
+        if (!isOrderInReminderWindow(effectiveStartAt, from, to)) continue;
 
-        const activity = schedule.activities;
+        const activity = schedule?.activities;
         if (!activity) continue;
 
         // AC7: Skip orders with missing contact_email for email channel
@@ -147,7 +138,7 @@ export async function POST(req: NextRequest) {
             await supabase.from('tour_reminder_log').upsert(
               {
                 order_id: order.id,
-                schedule_id: schedule.id,
+                schedule_id: schedule?.id,
                 reminder_kind: kind,
                 channel,
                 status: 'skipped',
@@ -183,7 +174,7 @@ export async function POST(req: NextRequest) {
           const body = composePreTourReminder(
             { contact_name: order.contact_name, contact_email: order.contact_email },
             activity,
-            { start_at: schedule.start_at },
+            { start_at: effectiveStartAt },
             kind
           );
 
@@ -212,7 +203,7 @@ export async function POST(req: NextRequest) {
             .upsert(
               {
                 order_id: order.id,
-                schedule_id: schedule.id,
+                schedule_id: schedule?.id,
                 reminder_kind: kind,
                 channel,
                 status,
