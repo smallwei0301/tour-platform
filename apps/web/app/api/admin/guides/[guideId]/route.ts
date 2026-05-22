@@ -9,6 +9,42 @@ function hashPassword(password: string): string {
 }
 
 /**
+ * GET /api/admin/guides/:guideId
+ * Returns a single guide profile by ID regardless of verification_status.
+ * Fixes: admin guide detail page couldn't load pending/needs-review guides
+ * because the old implementation only queried /api/admin/guides/approved.
+ * Auth via middleware.
+ */
+export async function GET(
+  _req: Request,
+  context: { params: Promise<{ guideId: string }> }
+) {
+  const { guideId } = await context.params;
+  if (!guideId) {
+    return NextResponse.json(errorV2('BAD_REQUEST', 'guideId is required'), { status: 400 });
+  }
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data, error } = await supabase
+      .from('guide_profiles')
+      .select('id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, bio, specialty, created_at')
+      .eq('id', guideId)
+      .single();
+    if (error || !data) {
+      return NextResponse.json(errorV2('NOT_FOUND', '找不到導遊資料'), { status: 404 });
+    }
+    return NextResponse.json({ ok: true, data });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'SERVER_ERROR';
+    return NextResponse.json(errorV2('SERVER_ERROR', msg), { status: 500 });
+  }
+}
+
+/**
  * PATCH /api/admin/guides/:guideId
  * Update guide email and/or reset password. Auth via middleware.
  */
