@@ -69,34 +69,35 @@
 - #292 docs-only full-chain Phase B/C fixture
 - #165 Phase 12 audit coverage matrix
 
-### 還 open 的主線（2026-05-17）
+### 還 open 的主線
 
-**目前實際開放（含本任務）：** 5
-- **#586** docs readiness sync（本次）
-- **#500** manual regression / evidence
-- **#320** readiness gate、Go/No-Go dashboard
-- **#319** CS SOP 演練（取消 / 退款 / 出團異常 / 緊急事故）
-- **#318** 導遊 onboarding 實跑 + retrospective
+> **Live state is not encoded here to prevent recurring drift.**
+> For the current open issues, open PRs, and latest merged PRs, see the auto-generated snapshot:
+> **[docs/operations/reports/readiness-live-state-latest.md](./docs/operations/reports/readiness-live-state-latest.md)**
+> Refresh with: `npm run readiness:snapshot`
 
-**已結案 / 歷史參考：**
-- **#402 CLOSED** — 真實付款/退款/Email 證據未形成正式上線結論；文件仍保留為歷史 runbook 參考。
-- **#403 CLOSED** — Google traveler browser session 證據已結案；storageState 已失效，後續驗證需重建。
+**已結案 / 歷史參考（不再是當前 open blocker）：**
+- **#586 CLOSED** — docs readiness sync（PR #587 merged）
+- **#588 CLOSED** — evidence pack live-state resync（已結案）
+- **#402 CLOSED** — 真實付款/退款/Email 證據；文件仍保留為歷史 runbook 參考。
+- **#403 CLOSED** — Google traveler browser session 證據；storageState 已失效，後續驗證需重建。
 - **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已完成/已關閉，非當前主線 blocker。
 
 ### 最新 CI / 主線真值
+
+> **For current PR and issue counts, see the live-state snapshot.**
+> [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
+
 - main 持續轉綠
-- 最新 merge（截至 2026-05-17）：PR #585（docs: restore canonical refund policy v2 source of truth）
-- 近期重要合併：#585、#584、#583、#582、#581
-- Open PR：1（`gh pr list --state open --limit 50`；含本 PR #587）
+- 最新 merge（截至 2026-05-22）：PR #682（ops: add public liveness endpoint and synthetic probe workflow）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
-- **目前主線焦點：** soft-launch 控制就緒，Go/No-Go 預設 HOLD，等待人工 QA sign-off（#500）。
+- **目前主線焦點：** Booking V2 已上線為主流程；觀察視窗運行中（#642）。
 - **Automated health-check issue policy:** for dedupe lookup, required labels, sanitized body fields, and survivor designation, see [`docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md` — "Automated health-check issues"](./docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md#automated-health-check-issues).
 
-### Go-Live 仍缺（2026-05-17 狀態）
+### Go-Live 仍缺
+
 - **#402/#403 已 CLOSED**，不再是目前 open blocker；仍保留 runbook/證據歷史作為運維參考。
-- **#500（本任務依賴）**、#320、#319、#318、#586：仍為 open 主線（以 `gh issue list --state open --limit 100` 驗證）
 - Soft-launch 控制機制已全套就緒（admin kill-switch + checkout guards + admin UI）
-- **open issue 數：5**（查詢時間：2026-05-17）
 - 操作人員可在 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 取得可執行驗證參考（非當前開啟 blocker）
 
 > ℹ️ For the current live state of issues and PRs, run `npm run readiness:snapshot` or see `docs/operations/reports/readiness-live-state-latest.md`.
@@ -179,13 +180,18 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 - [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
 - [`docs/qa/booking-v2-rollout-manual-checklist.md`](./docs/qa/booking-v2-rollout-manual-checklist.md)
 
-### Step 2：先看現在還開著的主線 issue（2026-05-17 更新）
-目前不要自己發明主線，先接（依優先順序）：
-- **#586**（docs readiness sync，現任務）
-- **#500**（manual regression / 監看清單）
-- **#320、#319、#318**（human-decision + CS/SOP + onboarding）
+### Step 2：先看現在還開著的主線 issue
+
+> 查詢即時 open issues 請用: `gh issue list --repo smallwei0301/tour-platform --state open --limit 20`
+> 或參閱: [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
+
+目前不要自己發明主線，先確認 open issues（依優先順序接手）。近期重點：
+- **#640**（V2 Launch P0 — V2 launch QA blocker checklist）
+- **#642**（V2 觀察視窗 + legacy fallback 守護）
+- **#641**（V2 rollback drill 與 operator handoff）
 
 **已完成 / 歷史參考，不需再接：**
+- **#586 / #588 CLOSED** — docs readiness sync（PR #587/#589 merged）
 - **#402 / #403 CLOSED** — 真實付款、退款、Email 證據未形成正式上線完成條件；文件僅保留為歷史/歷史運維參考。
 - **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已為已關閉議題（勿當作 open blocker）
 - **#505 / #506 / #528 COMPLETED** — Go/No-Go evidence-driven 機制、soft-launch 全套控制、Node 22 pin 均已落地
@@ -277,10 +283,10 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 ## 7. 建議的下一步執行順序
 
 ### 第一優先
-1. 補齊 **#500**：完成 manual regression / 放行清單並同步 evidence
-2. 推進 **#318 / #319 / #320**：讓營運 onboarding、客服 SOP、go/no-go gate 可實際演練
-3. 檢查是否需更新 **#586**：保持 readiness docs 與 live state 一致（open issues / open PR / recent merged PR）
-4. 將 runbook / evidence 更新為「僅保留參考」狀態並補齊交接入口
+1. 推進 **#640**：完成 V2 Launch QA blocker checklist
+2. 監看 **#642**：V2 觀察視窗運行，守護 legacy fallback
+3. 推進 **#641**：V2 rollback drill 與 operator handoff
+4. 保持 readiness docs 與 live state 一致 — 執行 `npm run readiness:snapshot` 定期刷新 `docs/operations/reports/readiness-live-state-latest.md`
 
 ### 第二優先
 4. 補齊 Go-Live 所需：

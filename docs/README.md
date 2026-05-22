@@ -1,8 +1,8 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-05-17
-> 當前主線：**Soft-Launch 就緒**：soft-launch 控制機制全套上線（#550/#552/#554/#557），Go/No-Go 預設 HOLD，等待人工 QA sign-off（#500）
-> 最新 merge：PR #585（docs: restore canonical refund policy v2 source of truth） + PR #584 / #583 / #582 / #581（截至 2026-05-17）
+> 最後更新：2026-05-22（本次更新移除硬編碼的 live-state 數字，改以 snapshot 指標取代，防止 drift）
+> 當前主線：**Booking V2 已上線**：V2 為主流程，觀察視窗運行中（#642）
+> 即時 live state 請看：[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)（執行 `npm run readiness:snapshot` 刷新）
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
 1. 現在專案在做什麼
@@ -16,10 +16,11 @@
 ### 專案總覽
 - `../README.md` - repo 根總覽
 
-### 當前主線：Soft-Launch 就緒 / 手動 QA / Go/No-Go
-- `../README.md` - repo 根總覽與 soft-launch 狀態（#402/#403 CLOSED，Go/No-Go 預設 HOLD，需 #500 人工 QA sign-off）
+### 當前主線：Booking V2 上線 / 觀察視窗
+- `../README.md` - repo 根總覽
 - `NEXT_PHASE_PLAN.md` - 當前下一步與就緒判斷
-- `operations/issue-402-real-payment-refund-verification-runbook.md`（Issue #402：真實付款/退款/Email 證據 runbook）
+- `operations/reports/readiness-live-state-latest.md` — **即時 live state 快照（自動生成，勿手改）**
+- `operations/issue-402-real-payment-refund-verification-runbook.md`（Issue #402：真實付款/退款/Email 證據 runbook，歷史參考）
 - `operations/booking-v2-daily-go-no-go.md`（Go/No-Go 節奏）
 - `operations/booking-v2-b3-rollout.md`（放量與風險控管）
 - `qa/booking-v2-rollout-manual-checklist.md`（手動回歸檢核）
@@ -66,17 +67,21 @@
 
 ---
 
-## 目前 open issue 對應文件主線（2026-05-17）
+## 目前 open issue 對應文件主線
 
-**P1（手動 QA）：**
-- **#500** - manual regression / evidence：`qa/booking-v2-rollout-manual-checklist.md`
+> **Live-state 不在本文硬編碼，以防 drift。**
+> 即時 open issues / open PRs / latest merged PRs，請查閱：
+> **[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)**
+> 或執行 `npm run readiness:snapshot` 刷新。
 
-**其他 open：**
-- **#586** - docs readiness sync（本任務）
-- **#320、#319、#318** - readiness gate、CS SOP、guide onboarding
+**近期主線 issue（截至 2026-05-22 快照）：**
+- **#640**（V2 Launch P0 QA blocker checklist）：`qa/booking-v2-rollout-manual-checklist.md`
+- **#642**（V2 觀察視窗 + legacy fallback 守護）
+- **#641**（V2 rollback drill + operator handoff）
 
-**已完成，僅供參考：**
-- **#402/#403 CLOSED** — 真實付款/退款/Email 證據未形成正式上線完成證據；`operations/issue-402-real-payment-refund-verification-runbook.md` 保留為歷史/運維參考，非當前完成條件。
+**已完成，僅供參考（歷史）：**
+- **#586 / #588 CLOSED** — docs readiness sync / evidence pack resync（PR #587/#589 merged）
+- **#402/#403 CLOSED** — 真實付款/退款/Email 證據；`operations/issue-402-real-payment-refund-verification-runbook.md` 保留為歷史/運維參考，非當前完成條件。
 - **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已關閉，非當前 blocker。
 - **#505 / #506 COMPLETE** — Go/No-Go evidence-driven（PR #557）、soft-launch 控制全套（PR #550 / #552 / #554）均已落地。
 - **#528 COMPLETE** — Node 22 pin（PR #548）
@@ -85,14 +90,12 @@
 
 ---
 
-## 2026-05-17 文件同步重點
-- 根 README 與本檔已同步至 2026-05-17 live state（issues：#586, #500, #320, #319, #318）
-- #402/#403 已 CLOSED — 保留證據/流程 runbook 作為歷史參考，Go/No-Go 現況仍 HOLD（待人工 QA sign-off）
-- Soft-launch 控制機制全套落地：admin kill-switch、checkout guards、admin UI、evidence-driven Go/No-Go（PR #550–#557）
+## 2026-05-22 文件同步重點
+- **本次更新（PR 解決 #590）**：移除硬編碼 live-state，改以 `operations/reports/readiness-live-state-latest.md` 為 source of truth，防止下次 drift
+- #586/#588 已 CLOSED — 保留歷史指標；docs readiness sync 任務已收斂
+- Booking V2 已上線為主流程（PR #678 merged）
+- Soft-launch 控制機制全套落地；Go/No-Go 機制持續運行
 - Node 22 已 pin（PR #548）
-- 開放 PR：1（`gh pr list --state open`；含本 PR #587）
-- 最近 merged（截至 2026-05-17）：PR #585/#584/#583/#582/#581
-- 目前 open issue 數：5（`gh issue list --state open`）
 
 
 ---
