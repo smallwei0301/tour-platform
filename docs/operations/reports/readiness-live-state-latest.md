@@ -2,8 +2,8 @@
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-21T17:44:37.192Z  
-**Commit SHA:** `47129e98ba2d1d1d0214162a37f291f428e60ebe`
+**Query timestamp:** 2026-05-22T14:52:59.153Z  
+**Commit SHA:** `9a2c620638ae73b7cc77323c5bcc922327568cea`
 
 ---
 
@@ -11,60 +11,67 @@
 
 _none_
 
-## Open Issues (32 total)
+## Open Issues (36 total)
 
-### P0 (0)
-
-_none_
-
-### P1 (0)
-
-_none_
-
-### P2 (0)
-
-_none_
-
-### Human-Decision (0)
-
-_none_
-
-### Other (32)
+### P0 (2)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #657 | [[Ops][Agents] Keep agent routing labels from pointing at closed issues](https://github.com/smallwei0301/tour-platform/issues/657) | documentation, triaged, type:optimization, priority:P2 |
-| #653 | [[QA] Delta checklist for PRs merged after 2026-05-21 daily cutoff](https://github.com/smallwei0301/tour-platform/issues/653) | triaged, type:investigation, priority:P1, qa |
-| #645 | [[QA] Daily test checklist for recent merged PRs 2026-05-21](https://github.com/smallwei0301/tour-platform/issues/645) | priority:P1, qa |
-| #644 | [[QA] Delta checklist for PRs merged after 2026-05-20 daily cutoff](https://github.com/smallwei0301/tour-platform/issues/644) | triaged, type:investigation, priority:P1, qa, agent:backlog |
-| #642 | [[V2 Launch P1] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued |
-| #641 | [[V2 Launch P1] Prepare production rollback drill evidence and operator handoff for Booking V2](https://github.com/smallwei0301/tour-platform/issues/641) | type:investigation, priority:P1, qa, agent:queued |
-| #640 | [[V2 Launch P0] Execute V2 launch QA blocker checklist across slots, draft, checkout, fallback, and legacy safety](https://github.com/smallwei0301/tour-platform/issues/640) | type:investigation, priority:P0, qa, agent:queued |
-| #638 | [[Docs][Readiness] Add generated live-state snapshot to prevent recurring docs drift](https://github.com/smallwei0301/tour-platform/issues/638) | documentation, triaged, type:optimization, priority:P2, qa |
-| #637 | [[Launch][SEO/GEO/AEO] Optimize public discovery, AI answerability, and Core Web Vitals](https://github.com/smallwei0301/tour-platform/issues/637) | documentation, triaged, type:optimization, priority:P1, qa, agent:backlog |
-| #633 | [[QA] Daily test checklist for recent merged PRs 2026-05-20](https://github.com/smallwei0301/tour-platform/issues/633) | priority:P1, qa, agent:backlog |
-| #632 | [[daily bug scan] tour-platform 2026-05-20](https://github.com/smallwei0301/tour-platform/issues/632) | — |
-| #630 | [[Docs][Payments] Refresh ECPay production runbooks after #627 payment-domain changes](https://github.com/smallwei0301/tour-platform/issues/630) | documentation, triaged, type:investigation, priority:P1, qa, agent:backlog |
-| #629 | [[Ops][Monitoring] Add external synthetic health checks before soft launch](https://github.com/smallwei0301/tour-platform/issues/629) | triaged, type:investigation, priority:P2, qa |
-| #628 | [[Launch][Brand] Complete public copy and CTA consistency pass before soft launch](https://github.com/smallwei0301/tour-platform/issues/628) | documentation, triaged, type:optimization, priority:P2, qa |
-| #626 | [[Launch][SEO] Add public discoverability, sharing metadata, and index-control preflight](https://github.com/smallwei0301/tour-platform/issues/626) | documentation, triaged, type:optimization, priority:P2, qa |
-| #621 | [Enable Booking/Availability V2 as primary traveler flow](https://github.com/smallwei0301/tour-platform/issues/621) | triaged, type:feature, priority:P0, guide-dashboard, agent:next |
-| #609 | [[QA] Daily test checklist for recent merged PRs 2026-05-19](https://github.com/smallwei0301/tour-platform/issues/609) | priority:P1, qa |
-| #608 | [[QA][Schema] Verify post-#599/#601 payment events and guide payout schema repairs](https://github.com/smallwei0301/tour-platform/issues/608) | triaged, type:investigation, priority:P1, qa |
-| #607 | [[Ops][Monitoring] Execute production alert drill evidence before soft-launch sign-off](https://github.com/smallwei0301/tour-platform/issues/607) | triaged, type:investigation, priority:P1, qa, agent:backlog |
-| #606 | [[Ops][Guide] Define guide onboarding KYC/data-retention rules and notification templates](https://github.com/smallwei0301/tour-platform/issues/606) | documentation, triaged, type:investigation, priority:P2 |
-| #605 | [[Ops][Content] Finalize Andy Lee launch listing content and media before public booking](https://github.com/smallwei0301/tour-platform/issues/605) | documentation, triaged, type:investigation, priority:P1, qa, agent:backlog |
-| #604 | [[QA][Copy] Align public activity payment/refund copy with soft-launch evidence](https://github.com/smallwei0301/tour-platform/issues/604) | documentation, triaged, type:bug, priority:P1, qa, agent:backlog |
-| #602 | [[QA][Security] Add sensitive-table RLS/grants preflight before soft-launch sign-off](https://github.com/smallwei0301/tour-platform/issues/602) | triaged, type:security, priority:P1, qa, agent:backlog |
-| #596 | [[QA] Daily test checklist for recent merged PRs 2026-05-18](https://github.com/smallwei0301/tour-platform/issues/596) | priority:P1, qa |
-| #595 | [[Frontend Daily Check] 2026-05-18 lint failed: eslint not found](https://github.com/smallwei0301/tour-platform/issues/595) | — |
-| #594 | [[Ops][DR] Define and drill Supabase backup/restore runbook before soft launch](https://github.com/smallwei0301/tour-platform/issues/594) | documentation, triaged, type:investigation, priority:P2, qa |
-| #593 | [[Ops][Safety] Finalize Andy Lee launch activity safety, insurance, and risk disclosures](https://github.com/smallwei0301/tour-platform/issues/593) | documentation, triaged, type:investigation, priority:P1 |
-| #590 | [[Docs][Readiness] Reconcile post-#589 live-state drift across canonical docs](https://github.com/smallwei0301/tour-platform/issues/590) | documentation, triaged, type:investigation, priority:P2 |
-| #500 | [[QA] Manual regression checklist for recent merged PRs (May 12-14)](https://github.com/smallwei0301/tour-platform/issues/500) | priority:P1, qa, agent:backlog |
-| #320 | [[Human-Decision][Pre-Launch Ops] Readiness gate + soft launch control + Admin Go/No-Go dashboard](https://github.com/smallwei0301/tour-platform/issues/320) | triaged, type:investigation, priority:P2, agent:queued |
-| #319 | [[Human-Decision][Phase 11][Ops] 客服 SOP 演練（取消/退款/出團異常/緊急事故 四情境）](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, type:investigation, priority:P1 |
-| #318 | [[Human-Decision][Phase 11][Ops] 第一位導遊（Andy Lee）onboarding 實跑 + retrospective](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1 |
+| #640 | [[QA] Execute V2 launch blocker checklist across slots, draft, checkout, fallback, and legacy safety](https://github.com/smallwei0301/tour-platform/issues/640) | type:investigation, priority:P0, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking |
+| #621 | [[Traveler Booking] Enable Booking/Availability V2 as primary traveler flow](https://github.com/smallwei0301/tour-platform/issues/621) | triaged, type:feature, priority:P0, guide-dashboard, agent:now, owner:ai-agent, status:ready, traveler-booking |
+
+### P1 (18)
+
+| # | Title | Labels |
+|---|-------|--------|
+| #677 | [[QA] Verify post-PR #674/#676 Booking V2 primary-flow delta](https://github.com/smallwei0301/tour-platform/issues/677) | triaged, priority:P1, qa, owner:ai-agent, status:ready, type:qa, traveler-booking |
+| #673 | [[Admin Guides] Fix guide detail page showing 找不到導遊資料 after guide application](https://github.com/smallwei0301/tour-platform/issues/673) | triaged, type:bug, priority:P1, qa, guide-dashboard, agent:next, owner:ai-agent, status:needs-repro, admin-guides |
+| #672 | [[QA] Verify daily test checklist for PRs merged on 2026-05-22](https://github.com/smallwei0301/tour-platform/issues/672) | priority:P1, qa, owner:ai-agent, status:ready, type:qa |
+| #666 | [[QA] Verify delta checklist for PRs #658-#665 after #653 cutoff](https://github.com/smallwei0301/tour-platform/issues/666) | triaged, type:investigation, priority:P1, qa, owner:ai-agent, status:ready, type:qa |
+| #653 | [[QA] Verify delta checklist for PRs merged after 2026-05-21 cutoff](https://github.com/smallwei0301/tour-platform/issues/653) | triaged, type:investigation, priority:P1, qa, owner:ai-agent, status:ready, type:qa |
+| #645 | [[QA] Verify daily test checklist for PRs merged on 2026-05-21](https://github.com/smallwei0301/tour-platform/issues/645) | priority:P1, qa, owner:ai-agent, status:ready, type:qa |
+| #644 | [[QA] Verify delta checklist for PRs merged after 2026-05-20 cutoff](https://github.com/smallwei0301/tour-platform/issues/644) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa |
+| #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking |
+| #641 | [[Ops] Prepare production rollback drill evidence and operator handoff for Booking V2](https://github.com/smallwei0301/tour-platform/issues/641) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, infra |
+| #633 | [[QA] Verify daily test checklist for PRs merged on 2026-05-20](https://github.com/smallwei0301/tour-platform/issues/633) | priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa |
+| #609 | [[QA] Verify daily test checklist for PRs merged on 2026-05-19](https://github.com/smallwei0301/tour-platform/issues/609) | priority:P1, qa, owner:ai-agent, status:ready, type:qa |
+| #608 | [[QA] Verify payment events and guide payout schema repairs after #599/#601](https://github.com/smallwei0301/tour-platform/issues/608) | triaged, type:investigation, priority:P1, qa, owner:ai-agent, status:ready, type:qa, payments, database |
+| #607 | [[Ops] Execute production alert drill evidence before soft-launch sign-off](https://github.com/smallwei0301/tour-platform/issues/607) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, infra |
+| #605 | [[Ops] Finalize Andy Lee launch listing content and media before public booking](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, status:needs-info, type:docs, docs |
+| #604 | [[QA] Align public activity payment and refund copy with soft-launch evidence](https://github.com/smallwei0301/tour-platform/issues/604) | triaged, type:bug, priority:P1, qa, agent:backlog, owner:mixed, status:needs-decision, type:docs, payments, docs |
+| #602 | [[Security] Add sensitive-table RLS/grants preflight before soft-launch sign-off](https://github.com/smallwei0301/tour-platform/issues/602) | triaged, type:security, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, database, rls |
+| #596 | [[QA] Verify daily test checklist for PRs merged on 2026-05-18](https://github.com/smallwei0301/tour-platform/issues/596) | priority:P1, qa, owner:ai-agent, status:ready, type:qa |
+| #500 | [[QA] Verify manual regression checklist for PRs merged May 12-14](https://github.com/smallwei0301/tour-platform/issues/500) | priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa |
+
+### P2 (11)
+
+| # | Title | Labels |
+|---|-------|--------|
+| #675 | [[Docs] Fix live-state snapshot priority bucket taxonomy](https://github.com/smallwei0301/tour-platform/issues/675) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, type:docs, docs |
+| #671 | [[QA] Investigate daily bug scan findings for 2026-05-22](https://github.com/smallwei0301/tour-platform/issues/671) | type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro |
+| #670 | [[Ops] Deduplicate and label recurring health-check issues](https://github.com/smallwei0301/tour-platform/issues/670) | triaged, type:optimization, priority:P2, qa, owner:ai-agent, status:ready, infra |
+| #669 | [[QA] Fix reproducible lint environment missing eslint](https://github.com/smallwei0301/tour-platform/issues/669) | type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
+| #668 | [[QA] Verify PR #667 TouristAttraction JSON-LD and SEO/GEO/AEO launch checklist](https://github.com/smallwei0301/tour-platform/issues/668) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:ready, type:qa |
+| #632 | [[QA] Investigate daily bug scan findings for 2026-05-20](https://github.com/smallwei0301/tour-platform/issues/632) | type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro |
+| #629 | [[Ops] Add external synthetic health checks before soft launch](https://github.com/smallwei0301/tour-platform/issues/629) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:ready, infra |
+| #628 | [[Docs] Align public brand copy and CTA consistency before soft launch](https://github.com/smallwei0301/tour-platform/issues/628) | triaged, type:optimization, priority:P2, qa, owner:mixed, status:needs-decision, type:docs, docs |
+| #595 | [[QA] Fix frontend daily check lint environment missing eslint](https://github.com/smallwei0301/tour-platform/issues/595) | type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
+| #594 | [[Ops] Define and drill Supabase backup/restore runbook before soft launch](https://github.com/smallwei0301/tour-platform/issues/594) | triaged, type:investigation, priority:P2, qa, owner:mixed, status:ready, type:docs, database, infra |
+| #590 | [[Docs] Reconcile post-#589 live-state drift across canonical docs](https://github.com/smallwei0301/tour-platform/issues/590) | triaged, type:investigation, priority:P2, owner:ai-agent, status:ready, type:docs, docs |
+
+### Human-Decision (5)
+
+| # | Title | Labels |
+|---|-------|--------|
+| #606 | [[Decision] Choose guide onboarding KYC, data-retention, and notification rules](https://github.com/smallwei0301/tour-platform/issues/606) | triaged, priority:P2, owner:human-decision, status:needs-decision, type:decision, admin-guides, notifications |
+| #593 | [[Decision] Choose Andy Lee launch activity safety, insurance, and risk disclosures](https://github.com/smallwei0301/tour-platform/issues/593) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision |
+| #320 | [[Decision] Choose pre-launch readiness gate, soft-launch control, and Admin Go/No-Go dashboard](https://github.com/smallwei0301/tour-platform/issues/320) | triaged, priority:P2, owner:human-decision, status:needs-decision, type:decision, infra |
+| #319 | [[Decision] Choose customer support SOP drill coverage for cancellation, refund, tour exception, and emergency scenarios](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision |
+| #318 | [[Decision] Choose Andy Lee first-guide onboarding run and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, priority:P1, owner:human-decision, status:needs-decision, type:decision, admin-guides |
+
+### Other (0)
+
+_none_
 
 ---
 
@@ -72,13 +79,13 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #678 | [feat: advance GH-621 V2 source rollout readiness](https://github.com/smallwei0301/tour-platform/pull/678) | 2026-05-22 |
+| #676 | [fix(booking): guard legacy order path and label checkout fallback](https://github.com/smallwei0301/tour-platform/pull/676) | 2026-05-22 |
+| #674 | [feat(booking): enable V2 as primary traveler flow](https://github.com/smallwei0301/tour-platform/pull/674) | 2026-05-22 |
+| #667 | [feat(seo): TouristAttraction JSON-LD + SEO/GEO/AEO launch checklist (#637)](https://github.com/smallwei0301/tour-platform/pull/667) | 2026-05-21 |
+| #665 | [docs(ops): fix stale agent routing labels (#657)](https://github.com/smallwei0301/tour-platform/pull/665) | 2026-05-21 |
+| #664 | [feat(seo): sitemap, robots.txt, and expanded metadata (#626)](https://github.com/smallwei0301/tour-platform/pull/664) | 2026-05-21 |
+| #663 | [docs(ops): refresh ECPay runbooks after #627 payment-domain model update (#630)](https://github.com/smallwei0301/tour-platform/pull/663) | 2026-05-21 |
+| #662 | [feat(#638): add readiness live-state snapshot mechanism](https://github.com/smallwei0301/tour-platform/pull/662) | 2026-05-21 |
 | #661 | [fix(#616): normalize admin API header-auth for all /api/admin/** routes](https://github.com/smallwei0301/tour-platform/pull/661) | 2026-05-21 |
 | #660 | [feat(admin): sidebar scrollable + guide names clickable (#620)](https://github.com/smallwei0301/tour-platform/pull/660) | 2026-05-21 |
-| #659 | [fix(go-no-go): fail-closed when metrics DB queries fail or are missing (#656)](https://github.com/smallwei0301/tour-platform/pull/659) | 2026-05-21 |
-| #658 | [fix(payout): use tour schedule date (activity_schedules.start_at) in monthly payout (#655)](https://github.com/smallwei0301/tour-platform/pull/658) | 2026-05-21 |
-| #654 | [Fix GH-652 ECPay payment create ON CONFLICT mismatch](https://github.com/smallwei0301/tour-platform/pull/654) | 2026-05-21 |
-| #651 | [test(checkout): align GH-648 legacy booking link expectation](https://github.com/smallwei0301/tour-platform/pull/651) | 2026-05-21 |
-| #650 | [Fix GH-648 checkout selected date preservation](https://github.com/smallwei0301/tour-platform/pull/650) | 2026-05-21 |
-| #649 | [fix(payments): remove legacy method column write](https://github.com/smallwei0301/tour-platform/pull/649) | 2026-05-21 |
-| #646 | [Fix GH-619 V2 availability source of truth](https://github.com/smallwei0301/tour-platform/pull/646) | 2026-05-21 |
-| #643 | [fix: align guide dashboard payout with refund-aware settlement policy](https://github.com/smallwei0301/tour-platform/pull/643) | 2026-05-20 |
