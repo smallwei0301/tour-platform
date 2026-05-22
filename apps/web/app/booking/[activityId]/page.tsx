@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
-import { isBookingV2Enabled } from '../../../src/config/feature-flags.mjs';
+import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
 import { track } from '../../../src/lib/track';
 
 // ── 型別 ──────────────────────────────────────────────────────
@@ -719,7 +719,7 @@ function BookingInnerV2FlagShell() {
 
 // ── 外層包 Suspense（useSearchParams 需要）───────────────────
 export default function BookingPage() {
-  const useV2 = isBookingV2Enabled();
+  const useV2 = isBookingV2ShellEnabled();
 
   return (
     <Suspense fallback={
