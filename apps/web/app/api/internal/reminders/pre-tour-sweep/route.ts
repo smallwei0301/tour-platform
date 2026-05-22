@@ -68,9 +68,10 @@ export async function POST(req: NextRequest) {
     let totalFailed = 0;
 
     // GH-621 compatibility note:
-    // time_source_policy documents that jobs should prefer booking_v2 time fields,
-    // and fallback to legacy schedule fields when old orders do not carry V2 fields.
-    const timeSourcePolicy = 'booking_v2_then_legacy_fallback';
+    // current sweep still reads only legacy activity_schedules.start_at.
+    // do not claim booking_v2 fallback semantics until canonical booking-time
+    // fields are actually wired into this query path.
+    const timeSourcePolicy = 'legacy_schedule_only';
 
     for (const kind of KINDS) {
       const { from, to } = getWindowBounds(kind, now);

@@ -5,20 +5,26 @@ import path from 'node:path';
 
 const ROOT = process.cwd();
 
-test('issue621 /api/orders enforces legacy-only guard with explicit opt-in and diagnostics', async () => {
+test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_V2_PRIMARY mode', async () => {
   const rel = 'app/api/orders/route.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(
     src,
-    /BOOKING_V2|BOOKING_V2_HARD_BLOCK|ORDER_V2_PRIMARY/,
-    'orders route must read V2 cutover flag to guard primary traveler traffic'
+    /BOOKING_V2_PRIMARY/,
+    'orders route must use explicit BOOKING_V2_PRIMARY hard-block gate'
+  );
+
+  assert.doesNotMatch(
+    src,
+    /BOOKING_V2_PRIMARY\s*\?\?\s*process\.env\.BOOKING_V2/,
+    'orders route must not auto-hard-block legacy /api/orders under broad BOOKING_V2 shell flag'
   );
 
   assert.match(
     src,
     /legacy|x-order-path-mode|x-order-route-mode/,
-    'orders route must have an explicit legacy opt-in signal and diagnostic header for observability'
+    'orders route must keep explicit legacy opt-in signal and diagnostic header for observability'
   );
 
   assert.match(
@@ -28,7 +34,7 @@ test('issue621 /api/orders enforces legacy-only guard with explicit opt-in and d
   );
 });
 
-test('issue621 internal sweeps must prefer V2 booking time fields before legacy schedule fallback', async () => {
+test('issue621 internal sweeps must not claim booking_v2 time-source policy before real V2 booking-time read is implemented', async () => {
   const reminderSrc = await readFile(
     path.join(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'),
     'utf8'
@@ -40,23 +46,34 @@ test('issue621 internal sweeps must prefer V2 booking time fields before legacy 
 
   assert.match(
     reminderSrc,
-    /bookings|start_at|activity_schedules|coalesce|fallback/i,
-    'reminder sweep must include explicit V2 booking time path with legacy fallback'
+    /activity_schedules!inner\s*\(\s*id,\s*start_at/i,
+    'reminder sweep currently reads legacy activity_schedules.start_at and should document that source honestly'
   );
   assert.match(
     settlementSrc,
-    /bookings|start_at|activity_schedules|coalesce|fallback/i,
-    'settlement sweep must include explicit V2 booking time path with legacy fallback'
+    /activity_schedules!inner\(start_at\)/i,
+    'settlement sweep currently reads legacy activity_schedules.start_at and should document that source honestly'
+  );
+
+  assert.doesNotMatch(
+    reminderSrc,
+    /booking_v2_then_legacy_fallback/,
+    'reminder sweep must not claim booking_v2 fallback policy until V2 booking-time source is wired'
+  );
+  assert.doesNotMatch(
+    settlementSrc,
+    /booking_v2_then_legacy_fallback/,
+    'settlement sweep must not claim booking_v2 fallback policy until V2 booking-time source is wired'
   );
 
   assert.match(
     reminderSrc,
-    /x-reminder-source|reminder_source|booking_v2|legacy_fallback/i,
-    'reminder sweep should expose safe source diagnostics for V2/legacy path distinction'
+    /reminder_source:\s*'legacy_fallback'/,
+    'reminder sweep response should still expose legacy source diagnostic'
   );
   assert.match(
     settlementSrc,
-    /x-settlement-source|settlement_source|booking_v2|legacy_fallback/i,
-    'settlement sweep should expose safe source diagnostics for V2/legacy path distinction'
+    /settlement_source:\s*'legacy_fallback'/,
+    'settlement sweep response should still expose legacy source diagnostic'
   );
 });

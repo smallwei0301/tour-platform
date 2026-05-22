@@ -17,7 +17,10 @@ function statusFromErrorMessage(message: string) {
 }
 
 function isBookingV2PrimaryTrafficEnabled(): boolean {
-  const raw = process.env.BOOKING_V2_PRIMARY ?? process.env.BOOKING_V2;
+  // GH-621: hard-block legacy /api/orders only under explicit cutover gate.
+  // BOOKING_V2 shell flag controls /booking UI shell selection and must not
+  // automatically block legacy createOrder calls before full runtime cutover.
+  const raw = process.env.BOOKING_V2_PRIMARY;
   return raw === '1' || raw === 'true';
 }
 

@@ -72,7 +72,9 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const rulesVersion = config.version ?? 'v1';
-    const settlementSourcePolicy = 'booking_v2_then_legacy_fallback';
+    // GH-621 compatibility note: this sweep currently settles by
+    // activity_schedules.start_at only; keep diagnostics honest.
+    const settlementSourcePolicy = 'legacy_schedule_only';
 
     // Compute payout items — floor like computeExpectedPayout in settlement-config.ts
     type Order = {
