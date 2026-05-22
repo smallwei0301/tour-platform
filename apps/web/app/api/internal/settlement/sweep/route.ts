@@ -48,18 +48,20 @@ export async function POST(req: NextRequest) {
 
     // Fetch unsettled orders:
     // - status IN ('paid', 'confirmed', 'completed')
-    // - activity schedule start_at <= cutoff (tour has ended)
+    // - use booking.start_at as canonical cutoff for V2-linked rows,
+    //   and fallback to activity_schedules.start_at for legacy rows
     // - not yet present in payout_items
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id,
+        booking_id,
         total_twd,
         activities!inner(guide_id),
+        bookings(start_at, end_at, activity_plan_id, activity_id, guide_id),
         activity_schedules!inner(start_at)
       `)
       .in('status', ['paid', 'confirmed', 'completed'])
-      .lte('activity_schedules.start_at', cutoffDate.toISOString())
       .not('id', 'in', `(SELECT order_id FROM payout_items)`);
 
     if (ordersError) {
@@ -72,19 +74,34 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const rulesVersion = config.version ?? 'v1';
-    // GH-621 compatibility note: this sweep currently settles by
-    // activity_schedules.start_at only; keep diagnostics honest.
-    const settlementSourcePolicy = 'legacy_schedule_only';
+    const settlementSourcePolicy = 'booking_v2_then_legacy_fallback';
 
     // Compute payout items — floor like computeExpectedPayout in settlement-config.ts
     type Order = {
       id: string;
+      booking_id?: string | null;
       total_twd: number;
       activities: { guide_id: string } | { guide_id: string }[];
+      bookings?: { start_at?: string | null } | { start_at?: string | null }[] | null;
       activity_schedules: { start_at: string } | { start_at: string }[];
     };
 
-    const payoutItems = (orders as Order[]).map(order => {
+    const eligibleOrders = (orders as Order[]).filter((order) => {
+      const booking = Array.isArray(order.bookings) ? order.bookings[0] : order.bookings;
+      const schedule = Array.isArray(order.activity_schedules)
+        ? order.activity_schedules[0]
+        : order.activity_schedules;
+      const startAt = booking?.start_at ?? schedule?.start_at ?? null;
+      if (!startAt) return false;
+      const startMs = Date.parse(startAt);
+      return Number.isFinite(startMs) && startMs <= cutoffDate.getTime();
+    });
+
+    if (eligibleOrders.length === 0) {
+      return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
+    }
+
+    const payoutItems = eligibleOrders.map(order => {
       const guide_id = Array.isArray(order.activities)
         ? order.activities[0].guide_id
         : order.activities.guide_id;

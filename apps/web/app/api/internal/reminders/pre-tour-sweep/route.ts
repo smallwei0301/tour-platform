@@ -44,6 +44,15 @@ function getWindowBounds(kind: ReminderKind, now: number): { from: string; to: s
   return { from, to };
 }
 
+function inWindow(isoStartAt: string | null | undefined, fromIso: string, toIso: string): boolean {
+  if (!isoStartAt) return false;
+  const t = Date.parse(isoStartAt);
+  const from = Date.parse(fromIso);
+  const to = Date.parse(toIso);
+  if (!Number.isFinite(t) || !Number.isFinite(from) || !Number.isFinite(to)) return false;
+  return t >= from && t < to;
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -67,24 +76,30 @@ export async function POST(req: NextRequest) {
     let totalSkipped = 0;
     let totalFailed = 0;
 
-    // GH-621 compatibility note:
-    // current sweep still reads only legacy activity_schedules.start_at.
-    // do not claim booking_v2 fallback semantics until canonical booking-time
-    // fields are actually wired into this query path.
-    const timeSourcePolicy = 'legacy_schedule_only';
+    const timeSourcePolicy = 'booking_v2_then_legacy_fallback';
 
     for (const kind of KINDS) {
       const { from, to } = getWindowBounds(kind, now);
 
-      // Query: orders JOIN activity_schedules JOIN activities
-      // Filters: orders.status IN ('paid','confirmed'), schedule.start_at in window
+      // Query: orders JOIN bookings + activity_schedules + activities.
+      // Eligibility window is computed in runtime by preferring bookings.start_at,
+      // then falling back to activity_schedules.start_at for legacy rows.
       const { data: rows, error: queryError } = await supabase
         .from('orders')
         .select(`
           id,
+          booking_id,
           contact_name,
           contact_email,
           status,
+          bookings (
+            id,
+            start_at,
+            end_at,
+            activity_plan_id,
+            activity_id,
+            guide_id
+          ),
           activity_schedules!inner (
             id,
             start_at,
@@ -96,9 +111,7 @@ export async function POST(req: NextRequest) {
             )
           )
         `)
-        .in('status', ['paid', 'confirmed'])
-        .gte('activity_schedules.start_at', from)
-        .lt('activity_schedules.start_at', to);
+        .in('status', ['paid', 'confirmed']);
 
       if (queryError) {
         void recordIncident({
@@ -112,9 +125,13 @@ export async function POST(req: NextRequest) {
       }
 
       for (const order of (rows ?? [])) {
+        const booking = (order.bookings as unknown as { start_at?: string | null } | null) ?? null;
         // Type coercion for nested Supabase join result
         const schedule = (order.activity_schedules as unknown as { id: string; start_at: string; activities: { title: string; meeting_point: string; meeting_point_map_url: string; notices?: unknown } }[])?.[0];
         if (!schedule) continue;
+
+        const effectiveStartAt = booking?.start_at ?? schedule.start_at;
+        if (!inWindow(effectiveStartAt, from, to)) continue;
 
         const activity = schedule.activities;
         if (!activity) continue;

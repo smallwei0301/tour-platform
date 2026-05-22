@@ -34,7 +34,7 @@ test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_
   );
 });
 
-test('issue621 internal sweeps must not claim booking_v2 time-source policy before real V2 booking-time read is implemented', async () => {
+test('issue621 internal sweeps should prefer V2 booking start_at with legacy schedule fallback and truthful policy diagnostics', async () => {
   const reminderSrc = await readFile(
     path.join(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'),
     'utf8'
@@ -46,34 +46,44 @@ test('issue621 internal sweeps must not claim booking_v2 time-source policy befo
 
   assert.match(
     reminderSrc,
+    /booking_id/,
+    'reminder sweep query should read orders.booking_id for V2-linked orders'
+  );
+  assert.match(
+    reminderSrc,
+    /bookings\s*\([^)]*start_at/s,
+    'reminder sweep should include bookings.start_at join payload for V2 canonical time source'
+  );
+  assert.match(
+    reminderSrc,
     /activity_schedules!inner\s*\(\s*id,\s*start_at/i,
-    'reminder sweep currently reads legacy activity_schedules.start_at and should document that source honestly'
+    'reminder sweep should keep legacy activity_schedules.start_at fallback for historical orders'
+  );
+
+  assert.match(
+    settlementSrc,
+    /booking_id/,
+    'settlement sweep query should read orders.booking_id for V2-linked orders'
+  );
+  assert.match(
+    settlementSrc,
+    /bookings\s*\([^)]*start_at/s,
+    'settlement sweep should include bookings.start_at join payload for V2 canonical time source'
   );
   assert.match(
     settlementSrc,
     /activity_schedules!inner\(start_at\)/i,
-    'settlement sweep currently reads legacy activity_schedules.start_at and should document that source honestly'
-  );
-
-  assert.doesNotMatch(
-    reminderSrc,
-    /booking_v2_then_legacy_fallback/,
-    'reminder sweep must not claim booking_v2 fallback policy until V2 booking-time source is wired'
-  );
-  assert.doesNotMatch(
-    settlementSrc,
-    /booking_v2_then_legacy_fallback/,
-    'settlement sweep must not claim booking_v2 fallback policy until V2 booking-time source is wired'
+    'settlement sweep should keep legacy activity_schedules.start_at fallback for historical orders'
   );
 
   assert.match(
     reminderSrc,
-    /reminder_source:\s*'legacy_fallback'/,
-    'reminder sweep response should still expose legacy source diagnostic'
+    /time_source_policy:\s*timeSourcePolicy|timeSourcePolicy\s*=\s*'booking_v2_then_legacy_fallback'/,
+    'reminder sweep should report booking_v2_then_legacy_fallback policy in diagnostics'
   );
   assert.match(
     settlementSrc,
-    /settlement_source:\s*'legacy_fallback'/,
-    'settlement sweep response should still expose legacy source diagnostic'
+    /time_source_policy:\s*settlementSourcePolicy|settlementSourcePolicy\s*=\s*'booking_v2_then_legacy_fallback'/,
+    'settlement sweep should report booking_v2_then_legacy_fallback policy in diagnostics'
   );
 });
