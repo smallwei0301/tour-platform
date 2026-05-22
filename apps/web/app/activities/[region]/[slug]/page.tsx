@@ -471,8 +471,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               </button>
 
               <div className="kkd-booking-trust">
-                <p>🔒 安全付款（ECPay / LINE Pay）</p>
-                <p>✅ 免費取消（依各行程政策）</p>
+                <p>🔒 安全付款（ECPay 信用卡）</p>
+                <p>📋 依取消時間適用退款：7天以上全額退款、3-7天退70%、72小時內不退款，<a href="/legal/refund" style={{ color: 'inherit', textDecoration: 'underline' }}>詳見退款政策</a></p>
                 <p>📞 緊急熱線 30 分鐘回應</p>
                 <p>✅ 實名認證導遊</p>
               </div>
