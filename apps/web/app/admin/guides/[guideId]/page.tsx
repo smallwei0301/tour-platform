@@ -31,15 +31,13 @@ export default function AdminGuideDetailPage() {
   useEffect(() => {
     if (!guideId) return;
     setLoading(true);
-    fetch(`/api/admin/guides/approved`, { cache: 'no-store' })
+    fetch(`/api/admin/guides/${guideId}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(json => {
-        const all: GuideDetail[] = json?.data || [];
-        const found = all.find((g: GuideDetail) => g.id === guideId);
-        if (found) {
-          setGuide(found);
+        if (json?.ok && json?.data) {
+          setGuide(json.data as GuideDetail);
         } else {
-          setError('找不到導遊資料');
+          setError(json?.error?.message || '找不到導遊資料');
         }
       })
       .catch(() => setError('載入失敗'))
