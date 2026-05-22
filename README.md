@@ -90,6 +90,7 @@
 - Open PR：1（`gh pr list --state open --limit 50`；含本 PR #587）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
 - **目前主線焦點：** soft-launch 控制就緒，Go/No-Go 預設 HOLD，等待人工 QA sign-off（#500）。
+- **Automated health-check issue policy:** for dedupe lookup, required labels, sanitized body fields, and survivor designation, see [`docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md` — "Automated health-check issues"](./docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md#automated-health-check-issues).
 
 ### Go-Live 仍缺（2026-05-17 狀態）
 - **#402/#403 已 CLOSED**，不再是目前 open blocker；仍保留 runbook/證據歷史作為運維參考。
