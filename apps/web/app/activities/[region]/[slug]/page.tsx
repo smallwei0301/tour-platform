@@ -484,6 +484,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         priceLabel={`NT$${activity.priceTwd?.toLocaleString()} / 人`}
         price={activity.priceTwd || 0}
         useBookingV2={useBookingV2}
+        directBookingHref={directBookingHref}
       />
     </main>
   );
