@@ -9,7 +9,10 @@ function isTruthy(value) {
  * Uses NEXT_PUBLIC_ prefix because booking page is a client component.
  */
 export function isBookingV2Enabled(env = process.env) {
-  return isTruthy(env.NEXT_PUBLIC_BOOKING_V2_ENABLED);
+  if (Object.prototype.hasOwnProperty.call(env, 'NEXT_PUBLIC_BOOKING_V2_ENABLED')) {
+    return isTruthy(env.NEXT_PUBLIC_BOOKING_V2_ENABLED);
+  }
+  return isTruthy(env.BOOKING_V2);
 }
 
 export const __internal = { isTruthy };
