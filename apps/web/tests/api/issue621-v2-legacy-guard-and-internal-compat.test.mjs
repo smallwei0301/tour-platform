@@ -38,6 +38,10 @@ test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_
 test('issue621 internal sweeps should prefer V2 booking start_at with legacy schedule fallback and truthful policy diagnostics', async () => {
   const reminderSrc = await readFile(path.join(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'), 'utf8');
   const settlementSrc = await readFile(path.join(ROOT, 'app/api/internal/settlement/sweep/route.ts'), 'utf8');
+  const reminderLogMigration = await readFile(
+    path.join(ROOT, '../../supabase/migrations/20260522_issue621_allow_null_schedule_id_in_tour_reminder_log.sql'),
+    'utf8'
+  );
 
   assert.match(reminderSrc, /booking_id/, 'reminder sweep query should read orders.booking_id for V2-linked orders');
   assert.match(
@@ -82,6 +86,18 @@ test('issue621 internal sweeps should prefer V2 booking start_at with legacy sch
     settlementSrc,
     /time_source_policy:\s*settlementSourcePolicy|settlementSourcePolicy\s*=\s*'booking_v2_then_legacy_fallback'/,
     'settlement sweep should report booking_v2_then_legacy_fallback policy in diagnostics'
+  );
+
+  assert.match(
+    reminderSrc,
+    /onConflict:\s*'order_id,\s*reminder_kind,\s*channel'/,
+    'reminder log upsert must keep idempotency key on order_id, reminder_kind, channel for V2 and legacy rows'
+  );
+
+  assert.match(
+    reminderLogMigration,
+    /ALTER\s+TABLE\s+tour_reminder_log\s+ALTER\s+COLUMN\s+schedule_id\s+DROP\s+NOT\s+NULL/i,
+    'tour_reminder_log migration must allow null schedule_id for V2-only rows without legacy schedules'
   );
 });
 
