@@ -28,3 +28,37 @@ export function isOrderEligibleForSettlement(
   if (!Number.isFinite(t) || !Number.isFinite(cutoff)) return false;
   return t <= cutoff;
 }
+
+export type SweepReminderActivity = {
+  title: string;
+  meeting_point: string;
+  meeting_point_map_url: string;
+  notices?: unknown;
+};
+
+export type SweepReminderRow = {
+  bookings?: {
+    start_at?: string | null;
+    activities?: SweepReminderActivity | null;
+  } | null;
+  activity_schedules?: {
+    id?: string;
+    start_at?: string | null;
+    activities?: SweepReminderActivity | null;
+  }[] | null;
+};
+
+export function resolveReminderActivityAndStart(order: SweepReminderRow): {
+  effectiveStartAt: string | null;
+  scheduleId: string | null;
+  activity: SweepReminderActivity | null;
+} {
+  const booking = order.bookings ?? null;
+  const schedule = order.activity_schedules?.[0] ?? null;
+
+  return {
+    effectiveStartAt: pickEffectiveStartAt(booking?.start_at ?? null, schedule?.start_at ?? null),
+    scheduleId: schedule?.id ?? null,
+    activity: schedule?.activities ?? booking?.activities ?? null,
+  };
+}

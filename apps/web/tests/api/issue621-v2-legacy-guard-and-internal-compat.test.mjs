@@ -5,7 +5,7 @@ import path from 'node:path';
 import {
   isOrderEligibleForSettlement,
   isOrderInReminderWindow,
-  pickEffectiveStartAt,
+  resolveReminderActivityAndStart,
 } from '../../src/lib/internal-sweep-time-source.ts';
 
 const ROOT = process.cwd();
@@ -85,18 +85,53 @@ test('issue621 internal sweeps should prefer V2 booking start_at with legacy sch
   );
 });
 
-test('issue621 regression: V2-linked order with booking_id but no legacy schedule is still eligible by booking start_at', () => {
-  const bookingStartAt = '2026-06-01T01:00:00.000Z';
-  const effectiveStartAt = pickEffectiveStartAt(bookingStartAt, null);
-  assert.equal(effectiveStartAt, bookingStartAt, 'effective time should prefer booking.start_at for V2-linked rows');
+test('issue621 regression: reminder row resolver keeps V2-only rows without legacy schedule and falls back to legacy schedule metadata', () => {
+  const v2OnlyRow = {
+    bookings: {
+      start_at: '2026-06-01T01:00:00.000Z',
+      activities: {
+        title: 'V2 海岸線步道',
+        meeting_point: '東門集合',
+        meeting_point_map_url: 'https://maps.example/v2',
+        notices: '請攜帶雨具',
+      },
+    },
+    activity_schedules: [],
+  };
+
+  const v2Resolved = resolveReminderActivityAndStart(v2OnlyRow);
+  assert.equal(v2Resolved.effectiveStartAt, '2026-06-01T01:00:00.000Z');
+  assert.equal(v2Resolved.scheduleId, null);
+  assert.equal(v2Resolved.activity?.title, 'V2 海岸線步道');
 
   const inReminderWindow = isOrderInReminderWindow(
-    effectiveStartAt,
+    v2Resolved.effectiveStartAt,
     '2026-06-01T00:30:00.000Z',
     '2026-06-01T01:30:00.000Z'
   );
   assert.equal(inReminderWindow, true, 'reminder sweep must include V2-only rows when booking.start_at falls in window');
 
-  const eligibleForSettlement = isOrderEligibleForSettlement(effectiveStartAt, '2026-06-01T02:00:00.000Z');
+  const eligibleForSettlement = isOrderEligibleForSettlement(v2Resolved.effectiveStartAt, '2026-06-01T02:00:00.000Z');
   assert.equal(eligibleForSettlement, true, 'settlement sweep must include V2-only rows when booking.start_at is before cutoff');
+
+  const legacyRow = {
+    bookings: { start_at: null, activities: null },
+    activity_schedules: [
+      {
+        id: 'sched_legacy_1',
+        start_at: '2026-06-02T03:00:00.000Z',
+        activities: {
+          title: 'Legacy 山徑行程',
+          meeting_point: '西門捷運站',
+          meeting_point_map_url: 'https://maps.example/legacy',
+          notices: null,
+        },
+      },
+    ],
+  };
+
+  const legacyResolved = resolveReminderActivityAndStart(legacyRow);
+  assert.equal(legacyResolved.effectiveStartAt, '2026-06-02T03:00:00.000Z');
+  assert.equal(legacyResolved.scheduleId, 'sched_legacy_1');
+  assert.equal(legacyResolved.activity?.title, 'Legacy 山徑行程');
 });
