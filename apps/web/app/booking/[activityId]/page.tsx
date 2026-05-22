@@ -569,6 +569,10 @@ function BookingInnerV2FlagShell() {
     }
   }
 
+  if (useLegacyFallback) {
+    return <BookingInnerLegacy />;
+  }
+
   if (!urlPlanId) {
     return (
       <main className="tp-container" style={{ padding: '40px 0' }}>
@@ -595,10 +599,6 @@ function BookingInnerV2FlagShell() {
         )}
       </main>
     );
-  }
-
-  if (useLegacyFallback) {
-    return <BookingInnerLegacy />;
   }
 
   if (!activity) {

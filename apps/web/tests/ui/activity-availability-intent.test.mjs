@@ -22,6 +22,14 @@ test('activity date-plan UI does not trigger mount-time live availability fetch'
   );
 });
 
+test('activity primary CTA in V2 uses plan/date-aware booking href when schedule context exists', async () => {
+  const src = await readSource('app/activities/[region]/[slug]/page.tsx');
+
+  assert.match(src, /const directBookingHref = firstSchedulableEntry/);
+  assert.match(src, /resolvePlanBookingHref\(\{/);
+  assert.match(src, /href=\{directBookingHref\}/);
+});
+
 test('live availability refresh is only wired to high-intent actions', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
