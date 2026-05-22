@@ -36,29 +36,36 @@ export type SweepReminderActivity = {
   notices?: unknown;
 };
 
+type ActivityScheduleRow = {
+  id?: string;
+  start_at?: string | null;
+  activities?: SweepReminderActivity | null;
+};
+
 export type SweepReminderRow = {
   bookings?: {
     start_at?: string | null;
     activities?: SweepReminderActivity | null;
   } | null;
-  activity_schedules?: {
-    id?: string;
-    start_at?: string | null;
-    activities?: SweepReminderActivity | null;
-  }[] | null;
+  activity_schedules?: ActivityScheduleRow | ActivityScheduleRow[] | null;
 };
 
-export function resolveReminderActivityAndStart(order: SweepReminderRow): {
+export function resolveReminderActivityAndStart(
+  order: SweepReminderRow
+): {
   effectiveStartAt: string | null;
   scheduleId: string | null;
   activity: SweepReminderActivity | null;
 } {
   const booking = order.bookings ?? null;
-  const schedule = order.activity_schedules?.[0] ?? null;
+  const activitySchedule = Array.isArray(order.activity_schedules)
+    ? order.activity_schedules?.[0] ?? null
+    : order.activity_schedules ?? null;
+  const hasV2BookingTime = Boolean(booking?.start_at);
 
   return {
-    effectiveStartAt: pickEffectiveStartAt(booking?.start_at ?? null, schedule?.start_at ?? null),
-    scheduleId: schedule?.id ?? null,
-    activity: schedule?.activities ?? booking?.activities ?? null,
+    effectiveStartAt: pickEffectiveStartAt(booking?.start_at ?? null, activitySchedule?.start_at ?? null),
+    scheduleId: hasV2BookingTime ? null : activitySchedule?.id ?? null,
+    activity: hasV2BookingTime ? booking?.activities ?? null : activitySchedule?.activities ?? booking?.activities ?? null,
   };
 }

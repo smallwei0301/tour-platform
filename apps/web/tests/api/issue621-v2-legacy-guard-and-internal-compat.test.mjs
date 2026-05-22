@@ -130,24 +130,43 @@ test('issue621 regression: reminder row resolver keeps V2-only rows without lega
   const eligibleForSettlement = isOrderEligibleForSettlement(v2Resolved.effectiveStartAt, '2026-06-01T02:00:00.000Z');
   assert.equal(eligibleForSettlement, true, 'settlement sweep must include V2-only rows when booking.start_at is before cutoff');
 
-  const legacyRow = {
+  const legacyArrayRow = {
     bookings: { start_at: null, activities: null },
     activity_schedules: [
       {
         id: 'sched_legacy_1',
         start_at: '2026-06-02T03:00:00.000Z',
         activities: {
-          title: 'Legacy 山徑行程',
+          title: 'Legacy 山徑行程（陣列）',
           meeting_point: '西門捷運站',
-          meeting_point_map_url: 'https://maps.example/legacy',
+          meeting_point_map_url: 'https://maps.example/legacy-array',
           notices: null,
         },
       },
     ],
   };
 
-  const legacyResolved = resolveReminderActivityAndStart(legacyRow);
-  assert.equal(legacyResolved.effectiveStartAt, '2026-06-02T03:00:00.000Z');
-  assert.equal(legacyResolved.scheduleId, 'sched_legacy_1');
-  assert.equal(legacyResolved.activity?.title, 'Legacy 山徑行程');
+  const legacyArrayResolved = resolveReminderActivityAndStart(legacyArrayRow);
+  assert.equal(legacyArrayResolved.effectiveStartAt, '2026-06-02T03:00:00.000Z');
+  assert.equal(legacyArrayResolved.scheduleId, 'sched_legacy_1');
+  assert.equal(legacyArrayResolved.activity?.title, 'Legacy 山徑行程（陣列）');
+
+  const legacyObjectRow = {
+    bookings: { start_at: null, activities: null },
+    activity_schedules: {
+      id: 'sched_legacy_obj',
+      start_at: '2026-06-03T04:00:00.000Z',
+      activities: {
+        title: 'Legacy 山徑行程（物件）',
+        meeting_point: '南港軟體園區',
+        meeting_point_map_url: 'https://maps.example/legacy-object',
+        notices: null,
+      },
+    },
+  };
+
+  const legacyObjectResolved = resolveReminderActivityAndStart(legacyObjectRow);
+  assert.equal(legacyObjectResolved.effectiveStartAt, '2026-06-03T04:00:00.000Z');
+  assert.equal(legacyObjectResolved.scheduleId, 'sched_legacy_obj');
+  assert.equal(legacyObjectResolved.activity?.title, 'Legacy 山徑行程（物件）');
 });
