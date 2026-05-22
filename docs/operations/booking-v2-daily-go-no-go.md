@@ -73,3 +73,10 @@ Keep latest 7 daily reports in `docs/operations/reports/`.
 ## Failure Handling
 - Workflow uploads markdown reports as artifacts even when job fails (`if: always()`).
 - Runner exits non-zero on any dashboard/go-no-go step failure (non-silent failure).
+
+## Related: Synthetic Health Monitoring
+
+Real-time liveness checks complement this daily report. See:
+- `docs/operations/synthetic-health-monitoring.md` — external synthetic probe (issue #629)
+- Probe runs every 15 minutes via `.github/workflows/synthetic-health-probe.yml`
+- On failure: Telegram alert + GitHub Actions job failure

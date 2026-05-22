@@ -1,0 +1,51 @@
+name: synthetic-health-probe
+
+on:
+  schedule:
+    # Every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ]; then
+            echo "WARNING: NEXT_PUBLIC_VERCEL_URL secret not configured."
+            echo "   Set it in GitHub repo Settings → Secrets → Actions to enable synthetic monitoring."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run synthetic health probe
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PROBE_TIMEOUT_MS: '5000'
+        run: node scripts/cron/synthetic-health-probe.mjs | tee /tmp/probe-results.json
+
+      - name: Upload probe results as artifact
+        if: steps.check-secrets.outputs.skip != 'true' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-health-probe-${{ github.run_id }}
+          path: /tmp/probe-results.json
+          retention-days: 7
