@@ -1,21 +1,27 @@
 # Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-17）
 
-## 📌 當前主線摘要（Pre-launch Readiness）
+## 📌 當前主線摘要
 
-- live state 確認：Open issues = **#586 / #500 / #320 / #319 / #318**，open PR = **1**（含本 PR **#587**）
+> **Live state 不在本文硬編碼，以防 drift。**
+> 即時 open issues / open PRs，請查閱：
+> **[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)**
+> 或執行 `npm run readiness:snapshot` 刷新。
+
+**截至 2026-05-22 快照：**
 - **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作為歷史/運維參考，不再列為當前 blocker
-- 目前主線重點：
-  - **#500** 人工回歸與放行驗證（manual QA）
-  - **#320** 人工決策與 go/no-go dashboard（soft-launch）
-  - **#319** CS SOP 演練（取消/退款/出團異常/緊急事故）
-  - **#318** 導遊 onboarding 實跑與回饋
-  - **#586** 本任務（文件 live-state 同步）
+- **#586 / #588 已 CLOSED**：docs readiness sync 任務已收斂（PR #587 / #589 merged）
+- **#500 / #320 / #319 / #318** 狀態請以 live-state 快照為準（可能已更新）
+- 目前主線重點（V2 上線後）：
+  - **#640**（P0）V2 Launch QA blocker checklist
+  - **#642** V2 觀察視窗 + legacy fallback 守護
+  - **#641** V2 rollback drill + operator handoff
 
 ## 🧭 當前可執行行動（5–10 分鐘上手）
-1. 確認 `docs/README.md` 與 repo root README 的主線一致，重點以 open issues / merged PR 當天快照為準。
-2. 進入 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 參考歷史驗證路徑（僅作參考），確認是否需補足最新人工證據與責任歸屬。
-3. 收斂 `#500` 的人工驗證節點與 issue 記錄一致性。
-4. 補齊 `#318/#319/#320` 的營運 handoff 文件（`docs/operations/*`、`docs/qa/*`）並保留可重複執行條件。
+1. 執行 `npm run readiness:snapshot` 取得最新 live state，查閱 `docs/operations/reports/readiness-live-state-latest.md`。
+2. 接手 **#640**（V2 Launch P0 QA blockers）並確認 checklist 是否全部通過。
+3. 監看 **#642** 觀察視窗，確認 V2 無異常；確認 legacy fallback 守護機制正常。
+4. 推進 **#641** rollback drill — 確保 operator handoff 文件備妥。
+5. 進入 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 參考歷史驗證路徑（僅作參考）。
 
 ---
 
@@ -46,8 +52,8 @@
 ---
 
 ## ✅ 下一步建議（對齊 live-state）
-1. 將 #402/#403 runbook 的 `Status` 保持為 `CLOSED`，並明確註記只作歷史與運維執行參考
-2. 讓 `#500` 的 manual regression checklist 結果可追溯
-3. 補齊 `#318/#319/#320` 文件與實際驗證/交接資料
-4. 保持 `docs/README.md` 與 root README 的主線一致，避免回到過時版本語法
-5. 每次更新 readiness docs 前，先跑 open issue / open PR / latest merged PR 查詢，將輸出納入 PR 說明
+1. 以 `npm run readiness:snapshot` 為主要 live-state 查詢工具，勿在 docs 手工維護 issue/PR 清單
+2. 將 #402/#403 runbook 的 `Status` 保持為 `CLOSED`，並明確註記只作歷史與運維執行參考
+3. 推進 #640 V2 Launch P0 QA blocker checklist 至全部通過
+4. 確認 #641 rollback drill 與 operator handoff 備妥
+5. 保持 `docs/README.md` 與 root README 只參考 snapshot，避免 hardcoded live-state 再次漂移

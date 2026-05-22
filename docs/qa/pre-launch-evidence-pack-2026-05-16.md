@@ -1,9 +1,15 @@
 # Pre-Launch Evidence Pack Index
-> 版本：2026-05-16
-> 查詢時間：2026-05-17 UTC+8
-> 狀態：**HOLD** — 多項 manual QA 尚未完成
+
+> **HISTORICAL SNAPSHOT — FROZEN AT 2026-05-16**
+> This document reflects the live state as of 2026-05-16/17 and should NOT be used as a current readiness reference.
+> For current live state, see: [`docs/operations/reports/readiness-live-state-latest.md`](../operations/reports/readiness-live-state-latest.md)
+> Refresh with: `npm run readiness:snapshot`
+
+> 版本：2026-05-16（歷史快照，已凍結）
+> 查詢時間：2026-05-17 UTC+8（快照時間點）
+> 狀態：**HISTORICAL** — 本文件為歷史時間點存檔，非當前就緒狀態
 > 決策人：Wei
-> 引用：#504, #505, #586/#587 readiness resync
+> 引用：#504, #505, #586/#587 readiness resync（已結案）
 
 ---
 
@@ -23,7 +29,7 @@
 
 | Issue | 標題 | 狀態 | 完成 % | Evidence 位置 | Blocker | 下一步 Owner |
 |-------|------|------|--------|--------------|---------|-------------|
-| #588 | Reconcile pre-launch evidence pack after #586/#587 live-state resync | OPEN / **HOLD** | 0% | 本文件（本次更新） | live-state 同步後需要補齊 #500/#319/#318/#320 | Wei |
+| #588 | Reconcile pre-launch evidence pack after #586/#587 live-state resync | CLOSED / **HISTORICAL** | 100%（已結案） | 本文件為歷史結案快照 | 已結案（PR #589 merged） | — |
 | #500 | [QA] Manual regression checklist for recent merged PRs (May 12-14) | OPEN / **HOLD** | ~50% | /root/.openclaw/workspace/tour-platform-qa-*.md | 旅客 session / regression 斷點待補 | Wei/QA |
 | #320 | [Human-Decision][Pre-Launch Ops] Readiness gate + soft launch control + Admin Go/No-Go dashboard | OPEN / **HOLD** | 70% | #505 / #506（控制與儀表板） | 人為決策核可與 readiness sign-off 尚未完成（非系統阻塞） | Wei/PM |
 | #319 | 客服 SOP 演練（取消/退款/出團異常/緊急事故 四情境） | OPEN / **HOLD** | 25% (1/4 documented) | docs/07-operations-plan/06-cs-cxl-*.md | 需完整 3 情境演練 | Wei/CS |
