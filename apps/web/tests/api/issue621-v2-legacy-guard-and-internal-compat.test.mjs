@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import {
+  isOrderEligibleForSettlement,
+  isOrderInReminderWindow,
+  resolveReminderActivityAndStart,
+} from '../../src/lib/internal-sweep-time-source.ts';
 
 const ROOT = process.cwd();
 
@@ -9,11 +14,7 @@ test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_
   const rel = 'app/api/orders/route.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
-  assert.match(
-    src,
-    /BOOKING_V2_PRIMARY/,
-    'orders route must use explicit BOOKING_V2_PRIMARY hard-block gate'
-  );
+  assert.match(src, /BOOKING_V2_PRIMARY/, 'orders route must use explicit BOOKING_V2_PRIMARY hard-block gate');
 
   assert.doesNotMatch(
     src,
@@ -34,46 +35,138 @@ test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_
   );
 });
 
-test('issue621 internal sweeps must not claim booking_v2 time-source policy before real V2 booking-time read is implemented', async () => {
-  const reminderSrc = await readFile(
-    path.join(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'),
-    'utf8'
-  );
-  const settlementSrc = await readFile(
-    path.join(ROOT, 'app/api/internal/settlement/sweep/route.ts'),
+test('issue621 internal sweeps should prefer V2 booking start_at with legacy schedule fallback and truthful policy diagnostics', async () => {
+  const reminderSrc = await readFile(path.join(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'), 'utf8');
+  const settlementSrc = await readFile(path.join(ROOT, 'app/api/internal/settlement/sweep/route.ts'), 'utf8');
+  const reminderLogMigration = await readFile(
+    path.join(ROOT, '../../supabase/migrations/20260522_issue621_allow_null_schedule_id_in_tour_reminder_log.sql'),
     'utf8'
   );
 
+  assert.match(reminderSrc, /booking_id/, 'reminder sweep query should read orders.booking_id for V2-linked orders');
   assert.match(
     reminderSrc,
-    /activity_schedules!inner\s*\(\s*id,\s*start_at/i,
-    'reminder sweep currently reads legacy activity_schedules.start_at and should document that source honestly'
+    /bookings\s*\([^)]*start_at/s,
+    'reminder sweep should include bookings.start_at join payload for V2 canonical time source'
   );
   assert.match(
+    reminderSrc,
+    /activity_schedules\s*\(\s*id,\s*start_at/i,
+    'reminder sweep should keep legacy activity_schedules.start_at payload as fallback for historical orders'
+  );
+  assert.doesNotMatch(
+    reminderSrc,
+    /activity_schedules!inner\s*\(/i,
+    'reminder sweep must not use inner join that would pre-exclude V2-only rows without legacy schedule'
+  );
+
+  assert.match(settlementSrc, /booking_id/, 'settlement sweep query should read orders.booking_id for V2-linked orders');
+  assert.match(
+    settlementSrc,
+    /bookings\s*\([^)]*start_at/s,
+    'settlement sweep should include bookings.start_at join payload for V2 canonical time source'
+  );
+  assert.match(
+    settlementSrc,
+    /activity_schedules\(start_at\)/i,
+    'settlement sweep should keep legacy activity_schedules.start_at payload as fallback for historical orders'
+  );
+  assert.doesNotMatch(
     settlementSrc,
     /activity_schedules!inner\(start_at\)/i,
-    'settlement sweep currently reads legacy activity_schedules.start_at and should document that source honestly'
-  );
-
-  assert.doesNotMatch(
-    reminderSrc,
-    /booking_v2_then_legacy_fallback/,
-    'reminder sweep must not claim booking_v2 fallback policy until V2 booking-time source is wired'
-  );
-  assert.doesNotMatch(
-    settlementSrc,
-    /booking_v2_then_legacy_fallback/,
-    'settlement sweep must not claim booking_v2 fallback policy until V2 booking-time source is wired'
+    'settlement sweep must not use inner join that would pre-exclude V2-only rows without legacy schedule'
   );
 
   assert.match(
     reminderSrc,
-    /reminder_source:\s*'legacy_fallback'/,
-    'reminder sweep response should still expose legacy source diagnostic'
+    /time_source_policy:\s*timeSourcePolicy|timeSourcePolicy\s*=\s*'booking_v2_then_legacy_fallback'/,
+    'reminder sweep should report booking_v2_then_legacy_fallback policy in diagnostics'
   );
   assert.match(
     settlementSrc,
-    /settlement_source:\s*'legacy_fallback'/,
-    'settlement sweep response should still expose legacy source diagnostic'
+    /time_source_policy:\s*settlementSourcePolicy|settlementSourcePolicy\s*=\s*'booking_v2_then_legacy_fallback'/,
+    'settlement sweep should report booking_v2_then_legacy_fallback policy in diagnostics'
   );
+
+  assert.match(
+    reminderSrc,
+    /onConflict:\s*'order_id,\s*reminder_kind,\s*channel'/,
+    'reminder log upsert must keep idempotency key on order_id, reminder_kind, channel for V2 and legacy rows'
+  );
+
+  assert.match(
+    reminderLogMigration,
+    /ALTER\s+TABLE\s+tour_reminder_log\s+ALTER\s+COLUMN\s+schedule_id\s+DROP\s+NOT\s+NULL/i,
+    'tour_reminder_log migration must allow null schedule_id for V2-only rows without legacy schedules'
+  );
+});
+
+test('issue621 regression: reminder row resolver keeps V2-only rows without legacy schedule and falls back to legacy schedule metadata', () => {
+  const v2OnlyRow = {
+    bookings: {
+      start_at: '2026-06-01T01:00:00.000Z',
+      activities: {
+        title: 'V2 海岸線步道',
+        meeting_point: '東門集合',
+        meeting_point_map_url: 'https://maps.example/v2',
+        notices: '請攜帶雨具',
+      },
+    },
+    activity_schedules: [],
+  };
+
+  const v2Resolved = resolveReminderActivityAndStart(v2OnlyRow);
+  assert.equal(v2Resolved.effectiveStartAt, '2026-06-01T01:00:00.000Z');
+  assert.equal(v2Resolved.scheduleId, null);
+  assert.equal(v2Resolved.activity?.title, 'V2 海岸線步道');
+
+  const inReminderWindow = isOrderInReminderWindow(
+    v2Resolved.effectiveStartAt,
+    '2026-06-01T00:30:00.000Z',
+    '2026-06-01T01:30:00.000Z'
+  );
+  assert.equal(inReminderWindow, true, 'reminder sweep must include V2-only rows when booking.start_at falls in window');
+
+  const eligibleForSettlement = isOrderEligibleForSettlement(v2Resolved.effectiveStartAt, '2026-06-01T02:00:00.000Z');
+  assert.equal(eligibleForSettlement, true, 'settlement sweep must include V2-only rows when booking.start_at is before cutoff');
+
+  const legacyArrayRow = {
+    bookings: { start_at: null, activities: null },
+    activity_schedules: [
+      {
+        id: 'sched_legacy_1',
+        start_at: '2026-06-02T03:00:00.000Z',
+        activities: {
+          title: 'Legacy 山徑行程（陣列）',
+          meeting_point: '西門捷運站',
+          meeting_point_map_url: 'https://maps.example/legacy-array',
+          notices: null,
+        },
+      },
+    ],
+  };
+
+  const legacyArrayResolved = resolveReminderActivityAndStart(legacyArrayRow);
+  assert.equal(legacyArrayResolved.effectiveStartAt, '2026-06-02T03:00:00.000Z');
+  assert.equal(legacyArrayResolved.scheduleId, 'sched_legacy_1');
+  assert.equal(legacyArrayResolved.activity?.title, 'Legacy 山徑行程（陣列）');
+
+  const legacyObjectRow = {
+    bookings: { start_at: null, activities: null },
+    activity_schedules: {
+      id: 'sched_legacy_obj',
+      start_at: '2026-06-03T04:00:00.000Z',
+      activities: {
+        title: 'Legacy 山徑行程（物件）',
+        meeting_point: '南港軟體園區',
+        meeting_point_map_url: 'https://maps.example/legacy-object',
+        notices: null,
+      },
+    },
+  };
+
+  const legacyObjectResolved = resolveReminderActivityAndStart(legacyObjectRow);
+  assert.equal(legacyObjectResolved.effectiveStartAt, '2026-06-03T04:00:00.000Z');
+  assert.equal(legacyObjectResolved.scheduleId, 'sched_legacy_obj');
+  assert.equal(legacyObjectResolved.activity?.title, 'Legacy 山徑行程（物件）');
 });

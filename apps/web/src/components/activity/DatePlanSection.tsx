@@ -205,7 +205,9 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         return;
       }
 
-      if (useBookingV2 && json?.data?.source !== 'v2') {
+      if (useBookingV2 && json?.data?.source === 'legacy_fallback') {
+        setAvailabilityNotice('目前可預約資料為 Legacy 備援（fallback）結果，可能延遲，建議稍後再試。');
+      } else if (useBookingV2 && json?.data?.source !== 'v2') {
         setAvailabilityNotice('目前可預約資料來源非 V2 聚合結果，顯示可能延遲，請稍後重試。');
       } else {
         setAvailabilityNotice(null);
