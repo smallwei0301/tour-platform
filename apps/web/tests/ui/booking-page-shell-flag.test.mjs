@@ -37,3 +37,17 @@ test('missing-plan fallback can actually render legacy shell by checking branch 
   assert.ok(missingPlanIndex >= 0, 'expected missing-plan branch');
   assert.ok(useLegacyIndex < missingPlanIndex, 'legacy fallback branch should be checked before missing-plan branch');
 });
+
+test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead of legacy createOrder(/api/orders)', async () => {
+  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
+  const v2End = src.indexOf('if (useLegacyFallback) {');
+  assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');
+
+  const v2ShellSource = src.slice(v2Start, v2End);
+
+  assert.match(v2ShellSource, /\/api\/v2\/bookings\/draft/);
+  assert.match(v2ShellSource, /\/api\/v2\/bookings\/\$\{draftJson\.data\.bookingId\}\/checkout/);
+  assert.doesNotMatch(v2ShellSource, /createOrder\(/);
+  assert.doesNotMatch(v2ShellSource, /fetch\('\/api\/orders'/);
+});

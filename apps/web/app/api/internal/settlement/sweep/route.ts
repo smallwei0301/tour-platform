@@ -72,6 +72,9 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const rulesVersion = config.version ?? 'v1';
+    // GH-621 compatibility note: this sweep currently settles by
+    // activity_schedules.start_at only; keep diagnostics honest.
+    const settlementSourcePolicy = 'legacy_schedule_only';
 
     // Compute payout items — floor like computeExpectedPayout in settlement-config.ts
     type Order = {
@@ -139,6 +142,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       settled: payoutItems.length,
       guides_updated: Object.keys(balanceDeltas).length,
+      settlement_source: 'legacy_fallback',
+      time_source_policy: settlementSourcePolicy,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

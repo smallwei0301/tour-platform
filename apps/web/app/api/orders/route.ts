@@ -16,7 +16,39 @@ function statusFromErrorMessage(message: string) {
   return 400;
 }
 
+function isBookingV2PrimaryTrafficEnabled(): boolean {
+  // GH-621: hard-block legacy /api/orders only under explicit cutover gate.
+  // BOOKING_V2 shell flag controls /booking UI shell selection and must not
+  // automatically block legacy createOrder calls before full runtime cutover.
+  const raw = process.env.BOOKING_V2_PRIMARY;
+  return raw === '1' || raw === 'true';
+}
+
+function isExplicitLegacyRequest(request: Request): boolean {
+  const url = new URL(request.url);
+  const mode = url.searchParams.get('mode');
+  const source = url.searchParams.get('source');
+  const legacyHeader = request.headers.get('x-legacy-order-path');
+  return mode === 'legacy' || source === 'legacy' || legacyHeader === '1';
+}
+
 export async function POST(request: Request) {
+  const bookingV2Primary = isBookingV2PrimaryTrafficEnabled();
+  const isLegacyOptIn = isExplicitLegacyRequest(request);
+
+  if (bookingV2Primary && !isLegacyOptIn) {
+    return Response.json(
+      fail('ORDER_ROUTE_LEGACY_ONLY', 'legacy order route is disabled for primary traveler traffic'),
+      {
+        status: 410,
+        headers: {
+          'x-order-route-mode': 'legacy-only',
+          'x-order-requested-mode': 'auto',
+        },
+      }
+    );
+  }
+
   // 🟡 P10-2: Rate Limiting
   const clientIp = RateLimiter.getClientIp(request);
   const result = limiters.orders.check(clientIp);

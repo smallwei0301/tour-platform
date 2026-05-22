@@ -67,6 +67,12 @@ export async function POST(req: NextRequest) {
     let totalSkipped = 0;
     let totalFailed = 0;
 
+    // GH-621 compatibility note:
+    // current sweep still reads only legacy activity_schedules.start_at.
+    // do not claim booking_v2 fallback semantics until canonical booking-time
+    // fields are actually wired into this query path.
+    const timeSourcePolicy = 'legacy_schedule_only';
+
     for (const kind of KINDS) {
       const { from, to } = getWindowBounds(kind, now);
 
@@ -212,6 +218,8 @@ export async function POST(req: NextRequest) {
       sent: totalSent,
       skipped: totalSkipped,
       failed: totalFailed,
+      reminder_source: 'legacy_fallback',
+      time_source_policy: timeSourcePolicy,
       sweep_time: new Date(now).toISOString(),
     });
   } catch (err) {
