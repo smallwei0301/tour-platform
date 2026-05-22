@@ -67,6 +67,11 @@ export async function POST(req: NextRequest) {
     let totalSkipped = 0;
     let totalFailed = 0;
 
+    // GH-621 compatibility note:
+    // time_source_policy documents that jobs should prefer booking_v2 time fields,
+    // and fallback to legacy schedule fields when old orders do not carry V2 fields.
+    const timeSourcePolicy = 'booking_v2_then_legacy_fallback';
+
     for (const kind of KINDS) {
       const { from, to } = getWindowBounds(kind, now);
 
@@ -212,6 +217,8 @@ export async function POST(req: NextRequest) {
       sent: totalSent,
       skipped: totalSkipped,
       failed: totalFailed,
+      reminder_source: 'legacy_fallback',
+      time_source_policy: timeSourcePolicy,
       sweep_time: new Date(now).toISOString(),
     });
   } catch (err) {

@@ -72,6 +72,7 @@ export async function POST(req: NextRequest) {
 
     const now = new Date().toISOString();
     const rulesVersion = config.version ?? 'v1';
+    const settlementSourcePolicy = 'booking_v2_then_legacy_fallback';
 
     // Compute payout items — floor like computeExpectedPayout in settlement-config.ts
     type Order = {
@@ -139,6 +140,8 @@ export async function POST(req: NextRequest) {
       ok: true,
       settled: payoutItems.length,
       guides_updated: Object.keys(balanceDeltas).length,
+      settlement_source: 'legacy_fallback',
+      time_source_policy: settlementSourcePolicy,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
