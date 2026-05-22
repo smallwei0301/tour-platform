@@ -8,7 +8,7 @@ import { ActivityBottomBar } from '../../../../src/components/activity/ActivityB
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
-import { resolveBookingEntryHref } from '../../../../src/lib/booking-entry.mjs';
+import { resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
 
 // Issue #502: avoid force-static/unstable_cache render lock on production cold path.
@@ -84,6 +84,26 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const actReviews = activity.reviews || [];
   const displayedSchedules = activity.schedules || [];
   const useBookingV2 = isBookingV2Enabled();
+  const firstSchedulableEntry = displayedSchedules.find((s: any) => {
+    const status = String(s?.status || '').toLowerCase();
+    const capacity = Number(s?.capacity ?? 0);
+    const bookedCount = Number(s?.bookedCount ?? s?.booked_count ?? 0);
+    const hasRemaining = capacity > 0 ? bookedCount < capacity : true;
+    return status !== 'full' && status !== 'closed' && hasRemaining;
+  });
+  const directBookingHref = firstSchedulableEntry
+    ? resolvePlanBookingHref({
+        activitySlug: activity.slug,
+        planId: firstSchedulableEntry?.planId ?? firstSchedulableEntry?.plan_id ?? undefined,
+        date: String(firstSchedulableEntry?.startAt || firstSchedulableEntry?.start_at || '').slice(0, 10) || undefined,
+        scheduleId:
+          firstSchedulableEntry?.scheduleId
+          ?? firstSchedulableEntry?.schedule_id
+          ?? firstSchedulableEntry?.id
+          ?? undefined,
+        useBookingV2,
+      })
+    : resolveBookingEntryHref({ activitySlug: activity.slug, useBookingV2 });
 
   const imageUrls: string[] = activity.imageUrls?.length ? activity.imageUrls : (activity.coverImageUrl ? [activity.coverImageUrl] : []);
   const originalPrice = Math.round(activity.priceTwd * 1.25);
@@ -439,7 +459,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               )}
 
               <Link
-                href={resolveBookingEntryHref({ activitySlug: activity.slug, useBookingV2 })}
+                href={directBookingHref}
                 className="tp-btn tp-btn-primary"
                 data-testid="begin-checkout-btn"
                 style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px 0', fontSize: 16, marginTop: 16 }}
@@ -469,6 +489,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         priceLabel={`NT$${activity.priceTwd?.toLocaleString()} / 人`}
         price={activity.priceTwd || 0}
         useBookingV2={useBookingV2}
+        directBookingHref={directBookingHref}
       />
     </main>
   );

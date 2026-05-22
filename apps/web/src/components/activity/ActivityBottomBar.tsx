@@ -12,6 +12,7 @@ interface ActivityBottomBarProps {
   priceLabel: string;
   price: number;
   useBookingV2: boolean;
+  directBookingHref?: string;
   initialWishlisted?: boolean;
 }
 
@@ -20,6 +21,7 @@ export function ActivityBottomBar({
   activityId,
   priceLabel,
   useBookingV2,
+  directBookingHref,
   initialWishlisted: initialWishlistedProp = false,
 }: ActivityBottomBarProps) {
   const [initialWishlisted, setInitialWishlisted] = useState(initialWishlistedProp);
@@ -61,7 +63,7 @@ export function ActivityBottomBar({
         <div className="tp-bottom-bar-actions">
           <WishlistToggle activityId={activityId} initialWishlisted={initialWishlisted} isLoggedIn={isLoggedIn} />
           <Link
-            href={resolveBookingEntryHref({ activitySlug, useBookingV2 })}
+            href={directBookingHref ?? resolveBookingEntryHref({ activitySlug, useBookingV2 })}
             className="tp-btn tp-btn-primary tp-bottom-bar-cta"
           >
             選擇方案
