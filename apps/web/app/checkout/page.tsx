@@ -1,7 +1,8 @@
 'use client';
 
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createOrder } from '../../src/lib/client-api';
 import { createClient } from '../../src/lib/supabase/client';
@@ -55,6 +56,15 @@ export default function CheckoutPage() {
   const [promoCode, setPromoCode] = useState('');
   const [promoValidation, setPromoValidation] = useState<null | { valid: boolean; discountAmount?: number; discountedTotal?: number; reason?: string }>(null);
   const [promoLoading, setPromoLoading] = useState(false);
+
+  const bookingV2Href = useMemo(() => {
+    const params = new URLSearchParams();
+    if (planId) params.set('plan', planId);
+    if (urlDate) params.set('date', urlDate);
+    if (urlScheduleId) params.set('scheduleId', urlScheduleId);
+    const qs = params.toString();
+    return `/booking/${encodeURIComponent(slug)}${qs ? `?${qs}` : ''}`;
+  }, [slug, planId, urlDate, urlScheduleId]);
 
   useEffect(() => {
     createClient().auth.getUser().then(({ data }) => {
@@ -212,9 +222,28 @@ export default function CheckoutPage() {
   return (
     <main style={{ padding: 24, maxWidth: 480, fontFamily: 'system-ui, sans-serif' }}>
       <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Checkout</h1>
-      <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>
+      <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 12 }}>
         行程：{activity?.title || slug}
       </p>
+
+      <section
+        data-testid="checkout-legacy-notice"
+        style={{ marginBottom: 16, border: '1px solid #fde68a', background: '#fffbeb', borderRadius: 10, padding: '10px 12px' }}
+        aria-label="舊版結帳入口說明"
+      >
+        <p style={{ margin: '0 0 6px', fontSize: 12, color: '#92400e', fontWeight: 700 }}>
+          舊版結帳入口（Legacy fallback）
+        </p>
+        <p style={{ margin: '0 0 8px', fontSize: 12, color: '#78350f' }}>
+          你目前在舊版備援流程。一般旅客請改走新版 /booking 預約路徑；此頁僅保留相容與故障切換用途。
+        </p>
+        <Link
+          href={bookingV2Href}
+          style={{ color: '#7c3aed', fontSize: 12, fontWeight: 700, textDecoration: 'underline' }}
+        >
+          改走新版預約流程（/booking）
+        </Link>
+      </section>
 
       {openSchedules.length === 0 && (
         <p style={{ color: '#ef4444', marginBottom: 16 }}>⚠️ 此行程目前沒有可預訂的排期</p>
