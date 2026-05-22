@@ -96,6 +96,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         activitySlug: activity.slug,
         planId: firstSchedulableEntry?.planId ?? firstSchedulableEntry?.plan_id ?? undefined,
         date: String(firstSchedulableEntry?.startAt || firstSchedulableEntry?.start_at || '').slice(0, 10) || undefined,
+        scheduleId:
+          firstSchedulableEntry?.scheduleId
+          ?? firstSchedulableEntry?.schedule_id
+          ?? firstSchedulableEntry?.id
+          ?? undefined,
         useBookingV2,
       })
     : resolveBookingEntryHref({ activitySlug: activity.slug, useBookingV2 });
