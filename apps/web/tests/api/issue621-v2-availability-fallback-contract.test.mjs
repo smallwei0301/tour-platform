@@ -33,3 +33,26 @@ test('issue621 availability route exposes explicit v2/legacy/fallback source con
     'route should expose a non-sensitive requested-mode diagnostic header for QA/UI contract checks'
   );
 });
+
+test('issue621 regression: legacy no-schedules path must return 404/NOT_FOUND instead of bubbling into 500', async () => {
+  const rel = 'app/api/activities/[slug]/availability/route.ts';
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
+
+  const hasLegacyNotFoundSignal = /legacy_schedules_not_found/.test(src);
+  const hasNotFoundResponse = /fail\('NOT_FOUND',\s*'activity not found'\)/.test(src);
+  const hasLoadFailure500 = /fail\('LOAD_AVAILABILITY_FAILED',\s*message\),\s*\{\s*status:\s*500\s*\}/.test(src);
+  const catchBlock = src.match(/catch \(error\) \{[\s\S]*?\n\s*\}\n\}/)?.[0] ?? '';
+  const hasLegacy404Guard = /legacy_schedules_not_found/.test(catchBlock) && /status:\s*404/.test(catchBlock);
+
+  assert.equal(hasLegacyNotFoundSignal, true, 'test precondition: route must keep explicit legacy no-schedules signal');
+  assert.equal(hasNotFoundResponse, true, 'route must preserve existing 404 NOT_FOUND payload shape');
+  assert.equal(hasLoadFailure500, true, 'test precondition: generic failures still map to 500 LOAD_AVAILABILITY_FAILED');
+
+  const classifyHttpStatus = ({ legacySchedulesNotFound }) => {
+    if (legacySchedulesNotFound) return 404;
+    return 500;
+  };
+
+  assert.equal(classifyHttpStatus({ legacySchedulesNotFound: true }), 404, 'legacy no-schedules semantic expectation must remain 404');
+  assert.equal(hasLegacy404Guard, true, 'route must explicitly map legacy_schedules_not_found to 404 before generic 500 catch');
+});

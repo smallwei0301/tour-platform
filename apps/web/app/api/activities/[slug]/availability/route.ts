@@ -205,6 +205,9 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown error';
+    if (message === 'legacy_schedules_not_found') {
+      return Response.json(fail('NOT_FOUND', 'activity not found or no schedules'), { status: 404 });
+    }
     return Response.json(fail('LOAD_AVAILABILITY_FAILED', message), { status: 500 });
   }
 }
