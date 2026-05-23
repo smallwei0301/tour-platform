@@ -412,8 +412,8 @@ test('route resolves slug activity key and plan slug before validation', async (
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
   const src = await readFile(path.join(process.cwd(), rel), 'utf8');
 
-  assert.match(src, /if \(!isUuidLike\(resolvedActivityId\)\)/);
-  assert.match(src, /\.eq\('slug', activityKey\)/);
+  assert.match(src, /const activityIdLookupColumn = isUuidLike\(activityKey\) \? 'id' : 'slug'/);
+  assert.match(src, /\.eq\(activityIdLookupColumn, activityKey\)/);
   assert.match(src, /resolvedActivityId = activityRow\.id/);
 
   assert.match(src, /const planKey = searchParams\.get\('planId'\)/);

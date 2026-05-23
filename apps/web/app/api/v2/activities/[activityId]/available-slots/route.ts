@@ -167,21 +167,21 @@ export async function GET(
     const supabase = await createClient();
 
     let resolvedActivityId = activityKey;
-    if (!isUuidLike(resolvedActivityId)) {
-      const { data: activityRow, error: activityResolveError } = await supabase
-        .from('activities')
-        .select('id')
-        .eq('slug', activityKey)
-        .maybeSingle();
 
-      if (activityResolveError || !activityRow?.id || !isUuidLike(activityRow.id)) {
-        return Response.json(errorV2('VALIDATION_ERROR', 'Invalid activityId'), {
-          status: 400,
-        });
-      }
+    const activityIdLookupColumn = isUuidLike(activityKey) ? 'id' : 'slug';
+    const { data: activityRow, error: activityResolveError } = await supabase
+      .from('activities')
+      .select('id')
+      .eq(activityIdLookupColumn, activityKey)
+      .maybeSingle();
 
-      resolvedActivityId = activityRow.id;
+    if (activityResolveError || !activityRow?.id || !isUuidLike(activityRow.id)) {
+      return Response.json(errorV2('VALIDATION_ERROR', 'Invalid activityId'), {
+        status: 400,
+      });
     }
+
+    resolvedActivityId = activityRow.id;
 
     const planKey = searchParams.get('planId');
     if (!planKey) {
