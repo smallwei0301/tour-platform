@@ -9,6 +9,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 
 // Mock validation helpers (mirrors implementation in route.ts)
 function isValidUuid(str) {
@@ -401,6 +403,16 @@ test('errorV2 response format matches API spec', () => {
   assert.ok(response.error);
   assert.equal(response.error.code, 'VALIDATION_ERROR');
   assert.equal(response.error.message, 'planId is required');
+});
+
+test('route supports slug-like activity key by resolving slug to UUID before validation', async () => {
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
+  const src = await readFile(path.join(process.cwd(), rel), 'utf8');
+
+  assert.match(src, /if \(!isValidUuid\(resolvedActivityId\)\)/);
+  assert.match(src, /\.eq\('slug', activityKey\)/);
+  assert.match(src, /resolvedActivityId = activityRow\.id/);
+  assert.match(src, /parseAndValidateParams\(resolvedActivityId, searchParams\)/);
 });
 
 console.log('All Available Slots API tests completed!');

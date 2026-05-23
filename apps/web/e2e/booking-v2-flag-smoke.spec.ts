@@ -26,6 +26,6 @@ test.describe('Booking V2 flag-on smoke', () => {
 
     await page.getByTestId('booking-v2-fallback-btn').first().click();
     await expect(page.getByText('（V2 預約流程）')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /建立訂單並前往付款/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /下一步：填寫資訊|下一步.*填寫資訊/i })).toBeVisible();
   });
 });

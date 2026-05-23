@@ -160,21 +160,38 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ activityId: string }> }
 ) {
-  const { activityId } = await context.params;
+  const { activityId: activityKey } = await context.params;
   const searchParams = request.nextUrl.searchParams;
-
-  // Validate request params
-  const validation = parseAndValidateParams(activityId, searchParams);
-  if ('error' in validation) {
-    return Response.json(errorV2(validation.error.code, validation.error.message), {
-      status: 400,
-    });
-  }
-
-  const { params } = validation;
 
   try {
     const supabase = await createClient();
+
+    let resolvedActivityId = activityKey;
+    if (!isValidUuid(resolvedActivityId)) {
+      const { data: activityRow, error: activityResolveError } = await supabase
+        .from('activities')
+        .select('id')
+        .eq('slug', activityKey)
+        .maybeSingle();
+
+      if (activityResolveError || !activityRow?.id || !isValidUuid(activityRow.id)) {
+        return Response.json(errorV2('VALIDATION_ERROR', 'Invalid activityId'), {
+          status: 400,
+        });
+      }
+
+      resolvedActivityId = activityRow.id;
+    }
+
+    // Validate request params
+    const validation = parseAndValidateParams(resolvedActivityId, searchParams);
+    if ('error' in validation) {
+      return Response.json(errorV2(validation.error.code, validation.error.message), {
+        status: 400,
+      });
+    }
+
+    const { params } = validation;
 
     // Fetch activity plan with activity details (to get guide_id)
     const { data: planData, error: planError } = await supabase
