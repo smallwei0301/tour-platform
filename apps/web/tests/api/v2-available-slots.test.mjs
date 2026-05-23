@@ -13,9 +13,9 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // Mock validation helpers (mirrors implementation in route.ts)
-function isValidUuid(str) {
+function isUuidLike(str) {
   const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(str);
 }
 
@@ -35,12 +35,10 @@ function isValidTimezone(tz) {
   }
 }
 
-function parseAndValidateParams(activityId, searchParams) {
-  if (!activityId || !isValidUuid(activityId)) {
+function parseAndValidateParams(activityId, planId, searchParams) {
+  if (!activityId || !isUuidLike(activityId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid activityId' } };
   }
-
-  const planId = searchParams.get('planId');
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const timezone = searchParams.get('timezone');
@@ -49,7 +47,7 @@ function parseAndValidateParams(activityId, searchParams) {
   if (!planId) {
     return { error: { code: 'VALIDATION_ERROR', message: 'planId is required' } };
   }
-  if (!isValidUuid(planId)) {
+  if (!isUuidLike(planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
   }
 
@@ -119,18 +117,18 @@ function parseAndValidateParams(activityId, searchParams) {
 // UUID Validation Tests
 // ============================================================================
 
-test('isValidUuid accepts valid UUIDs', () => {
-  assert.equal(isValidUuid('550e8400-e29b-41d4-a716-446655440000'), true);
-  assert.equal(isValidUuid('6ba7b810-9dad-11d1-80b4-00c04fd430c8'), true);
-  assert.equal(isValidUuid('f47ac10b-58cc-4372-a567-0e02b2c3d479'), true);
+test('isUuidLike accepts UUID and UUID-like IDs', () => {
+  assert.equal(isUuidLike('550e8400-e29b-41d4-a716-446655440000'), true);
+  assert.equal(isUuidLike('6ba7b810-9dad-11d1-80b4-00c04fd430c8'), true);
+  assert.equal(isUuidLike('f47ac10b-58cc-4372-a567-0e02b2c3d479'), true);
+  assert.equal(isUuidLike('c0000003-0000-0000-0000-000000000001'), true);
 });
 
-test('isValidUuid rejects invalid UUIDs', () => {
-  assert.equal(isValidUuid('not-a-uuid'), false);
-  assert.equal(isValidUuid(''), false);
-  assert.equal(isValidUuid('550e8400-e29b-41d4-a716'), false); // too short
-  assert.equal(isValidUuid('550e8400-e29b-41d4-a716-446655440000-extra'), false); // too long
-  assert.equal(isValidUuid('550e8400-e29b-61d4-a716-446655440000'), false); // invalid version
+test('isUuidLike rejects invalid IDs', () => {
+  assert.equal(isUuidLike('not-a-uuid'), false);
+  assert.equal(isUuidLike(''), false);
+  assert.equal(isUuidLike('550e8400-e29b-41d4-a716'), false); // too short
+  assert.equal(isUuidLike('550e8400-e29b-41d4-a716-446655440000-extra'), false); // too long
 });
 
 // ============================================================================
@@ -186,7 +184,7 @@ test('parseAndValidateParams validates all required params', () => {
     dateTo: '2026-04-25',
     timezone: 'Asia/Taipei',
   });
-  let result = parseAndValidateParams(activityId, params);
+  let result = parseAndValidateParams(activityId, '', params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'planId is required');
 
@@ -196,7 +194,7 @@ test('parseAndValidateParams validates all required params', () => {
     dateTo: '2026-04-25',
     timezone: 'Asia/Taipei',
   });
-  result = parseAndValidateParams(activityId, params);
+  result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'dateFrom is required');
 
@@ -206,7 +204,7 @@ test('parseAndValidateParams validates all required params', () => {
     dateFrom: '2026-04-20',
     timezone: 'Asia/Taipei',
   });
-  result = parseAndValidateParams(activityId, params);
+  result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'dateTo is required');
 
@@ -216,7 +214,7 @@ test('parseAndValidateParams validates all required params', () => {
     dateFrom: '2026-04-20',
     dateTo: '2026-04-25',
   });
-  result = parseAndValidateParams(activityId, params);
+  result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'timezone is required');
 });
@@ -232,7 +230,7 @@ test('parseAndValidateParams validates date range order', () => {
     timezone: 'Asia/Taipei',
   });
 
-  const result = parseAndValidateParams(activityId, params);
+  const result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'dateFrom must be before or equal to dateTo');
 });
@@ -248,7 +246,7 @@ test('parseAndValidateParams enforces 31-day limit', () => {
     timezone: 'Asia/Taipei',
   });
 
-  const result = parseAndValidateParams(activityId, params);
+  const result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'Date range cannot exceed 31 days');
 });
@@ -265,7 +263,7 @@ test('parseAndValidateParams validates participants', () => {
     timezone: 'Asia/Taipei',
     participants: 'abc',
   });
-  let result = parseAndValidateParams(activityId, params);
+  let result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'participants must be a positive integer');
 
@@ -277,7 +275,7 @@ test('parseAndValidateParams validates participants', () => {
     timezone: 'Asia/Taipei',
     participants: '0',
   });
-  result = parseAndValidateParams(activityId, params);
+  result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'participants must be a positive integer');
 
@@ -289,7 +287,7 @@ test('parseAndValidateParams validates participants', () => {
     timezone: 'Asia/Taipei',
     participants: '-1',
   });
-  result = parseAndValidateParams(activityId, params);
+  result = parseAndValidateParams(activityId, planId, params);
   assert.ok('error' in result);
 });
 
@@ -304,7 +302,7 @@ test('parseAndValidateParams accepts valid params with default participants', ()
     timezone: 'Asia/Taipei',
   });
 
-  const result = parseAndValidateParams(activityId, params);
+  const result = parseAndValidateParams(activityId, planId, params);
   assert.ok('params' in result);
   assert.equal(result.params.activityId, activityId);
   assert.equal(result.params.planId, planId);
@@ -326,28 +324,33 @@ test('parseAndValidateParams accepts valid params with custom participants', () 
     participants: '4',
   });
 
-  const result = parseAndValidateParams(activityId, params);
+  const result = parseAndValidateParams(activityId, planId, params);
   assert.ok('params' in result);
   assert.equal(result.params.participants, 4);
 });
 
 test('parseAndValidateParams validates activityId', () => {
+  const planId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
   const params = new URLSearchParams({
-    planId: '6ba7b810-9dad-11d1-80b4-00c04fd430c8',
+    planId,
     dateFrom: '2026-04-20',
     dateTo: '2026-04-25',
     timezone: 'Asia/Taipei',
   });
 
   // Invalid activityId
-  let result = parseAndValidateParams('not-a-uuid', params);
+  let result = parseAndValidateParams('not-a-uuid', planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'Invalid activityId');
 
   // Empty activityId
-  result = parseAndValidateParams('', params);
+  result = parseAndValidateParams('', planId, params);
   assert.ok('error' in result);
   assert.equal(result.error.message, 'Invalid activityId');
+
+  // UUID-like fixture activityId should pass validation
+  result = parseAndValidateParams('c0000003-0000-0000-0000-000000000001', planId, params);
+  assert.ok('params' in result);
 });
 
 // ============================================================================
@@ -405,14 +408,22 @@ test('errorV2 response format matches API spec', () => {
   assert.equal(response.error.message, 'planId is required');
 });
 
-test('route supports slug-like activity key by resolving slug to UUID before validation', async () => {
+test('route resolves slug activity key and plan slug before validation', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
   const src = await readFile(path.join(process.cwd(), rel), 'utf8');
 
-  assert.match(src, /if \(!isValidUuid\(resolvedActivityId\)\)/);
+  assert.match(src, /if \(!isUuidLike\(resolvedActivityId\)\)/);
   assert.match(src, /\.eq\('slug', activityKey\)/);
   assert.match(src, /resolvedActivityId = activityRow\.id/);
-  assert.match(src, /parseAndValidateParams\(resolvedActivityId, searchParams\)/);
+
+  assert.match(src, /const planKey = searchParams\.get\('planId'\)/);
+  assert.match(src, /if \(!isUuidLike\(resolvedPlanId\)\)/);
+  assert.match(src, /\.from\('activity_plans'\)/);
+  assert.match(src, /\.eq\('activity_id', resolvedActivityId\)/);
+  assert.match(src, /\.eq\('slug', planKey\)/);
+  assert.match(src, /resolvedPlanId = planRow\.id/);
+
+  assert.match(src, /parseAndValidateParams\(resolvedActivityId, resolvedPlanId, searchParams\)/);
 });
 
 console.log('All Available Slots API tests completed!');

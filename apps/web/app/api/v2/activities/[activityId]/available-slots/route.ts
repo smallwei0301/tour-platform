@@ -5,7 +5,7 @@
  * Returns available booking slots for an activity plan.
  *
  * Query params:
- *   - planId (required): Activity plan UUID
+ *   - planId (required): Activity plan UUID or plan slug
  *   - dateFrom (required): Start date YYYY-MM-DD
  *   - dateTo (required): End date YYYY-MM-DD
  *   - timezone (required): IANA timezone (e.g., Asia/Taipei)
@@ -26,10 +26,10 @@ import {
 } from '../../../../../../src/lib/slot-generator';
 
 // Validation helpers
-function isValidUuid(str: string): boolean {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
+function isUuidLike(str: string): boolean {
+  const uuidLikeRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidLikeRegex.test(str);
 }
 
 function isValidDateString(str: string): boolean {
@@ -72,15 +72,15 @@ interface QueryParams {
 
 function parseAndValidateParams(
   activityId: string,
+  planId: string,
   searchParams: URLSearchParams
 ): { params: QueryParams } | { error: { code: string; message: string } } {
-  // Validate activityId
-  if (!activityId || !isValidUuid(activityId)) {
+  // Validate resolved IDs (support UUID-like fixture IDs in public booking flow)
+  if (!activityId || !isUuidLike(activityId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid activityId' } };
   }
 
   // Required params
-  const planId = searchParams.get('planId');
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const timezone = searchParams.get('timezone');
@@ -89,7 +89,7 @@ function parseAndValidateParams(
   if (!planId) {
     return { error: { code: 'VALIDATION_ERROR', message: 'planId is required' } };
   }
-  if (!isValidUuid(planId)) {
+  if (!isUuidLike(planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
   }
 
@@ -167,14 +167,14 @@ export async function GET(
     const supabase = await createClient();
 
     let resolvedActivityId = activityKey;
-    if (!isValidUuid(resolvedActivityId)) {
+    if (!isUuidLike(resolvedActivityId)) {
       const { data: activityRow, error: activityResolveError } = await supabase
         .from('activities')
         .select('id')
         .eq('slug', activityKey)
         .maybeSingle();
 
-      if (activityResolveError || !activityRow?.id || !isValidUuid(activityRow.id)) {
+      if (activityResolveError || !activityRow?.id || !isUuidLike(activityRow.id)) {
         return Response.json(errorV2('VALIDATION_ERROR', 'Invalid activityId'), {
           status: 400,
         });
@@ -183,8 +183,33 @@ export async function GET(
       resolvedActivityId = activityRow.id;
     }
 
+    const planKey = searchParams.get('planId');
+    if (!planKey) {
+      return Response.json(errorV2('VALIDATION_ERROR', 'planId is required'), {
+        status: 400,
+      });
+    }
+
+    let resolvedPlanId = planKey;
+    if (!isUuidLike(resolvedPlanId)) {
+      const { data: planRow, error: planResolveError } = await supabase
+        .from('activity_plans')
+        .select('id')
+        .eq('activity_id', resolvedActivityId)
+        .eq('slug', planKey)
+        .maybeSingle();
+
+      if (planResolveError || !planRow?.id || !isUuidLike(planRow.id)) {
+        return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
+          status: 400,
+        });
+      }
+
+      resolvedPlanId = planRow.id;
+    }
+
     // Validate request params
-    const validation = parseAndValidateParams(resolvedActivityId, searchParams);
+    const validation = parseAndValidateParams(resolvedActivityId, resolvedPlanId, searchParams);
     if ('error' in validation) {
       return Response.json(errorV2(validation.error.code, validation.error.message), {
         status: 400,
