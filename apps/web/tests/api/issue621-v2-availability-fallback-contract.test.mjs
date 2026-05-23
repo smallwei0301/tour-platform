@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = process.cwd();
@@ -55,4 +56,17 @@ test('issue621 regression: legacy no-schedules path must return 404/NOT_FOUND in
 
   assert.equal(classifyHttpStatus({ legacySchedulesNotFound: true }), 404, 'legacy no-schedules semantic expectation must remain 404');
   assert.equal(hasLegacy404Guard, true, 'route must explicitly map legacy_schedules_not_found to 404 before generic 500 catch');
+});
+
+test('issue621 justification doc records why legacy_fallback slugs are not V2-positive fixtures', async () => {
+  const rel = 'docs/qa/issue-621-v2-primary-availability-fallback-justification.md';
+  const full = path.join(ROOT, rel);
+  assert.equal(existsSync(full), true, `justification doc must exist: ${rel}`);
+
+  const src = await readFile(full, 'utf8');
+  assert.match(src, /hualien-river-trekking/);
+  assert.match(src, /legacy-fallback|legacy_fallback/);
+  assert.match(src, /not an approved V2-positive fixture/i);
+  assert.match(src, /kaohsiung-chaishan-cave-experience/);
+  assert.match(src, /x-availability-source:\s*v2|data.source:\s*v2/i);
 });
