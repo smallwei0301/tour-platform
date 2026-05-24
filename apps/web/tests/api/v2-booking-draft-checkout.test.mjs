@@ -16,10 +16,10 @@ import assert from 'node:assert/strict';
 // Validation Helpers (mirrors implementation)
 // ============================================================================
 
-function isValidUuid(str) {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
+function isUuidLike(str) {
+  const uuidLikeRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidLikeRegex.test(str);
 }
 
 function isValidISODateTime(str) {
@@ -74,7 +74,7 @@ function parseAndValidateDraftBody(body) {
   if (!body.activityId || typeof body.activityId !== 'string') {
     return { error: { code: 'VALIDATION_ERROR', message: 'activityId is required' } };
   }
-  if (!isValidUuid(body.activityId)) {
+  if (!isUuidLike(body.activityId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid activityId format' } };
   }
 
@@ -82,7 +82,7 @@ function parseAndValidateDraftBody(body) {
   if (!body.planId || typeof body.planId !== 'string') {
     return { error: { code: 'VALIDATION_ERROR', message: 'planId is required' } };
   }
-  if (!isValidUuid(body.planId)) {
+  if (!isUuidLike(body.planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
   }
 
@@ -175,17 +175,18 @@ function parseAndValidateDraftBody(body) {
 // UUID Validation Tests
 // ============================================================================
 
-test('isValidUuid accepts valid UUIDs', () => {
-  assert.equal(isValidUuid('550e8400-e29b-41d4-a716-446655440000'), true);
-  assert.equal(isValidUuid('6ba7b810-9dad-11d1-80b4-00c04fd430c8'), true);
-  assert.equal(isValidUuid('f47ac10b-58cc-4372-a567-0e02b2c3d479'), true);
+test('isUuidLike accepts database UUID values including fixture UUID-like IDs', () => {
+  assert.equal(isUuidLike('550e8400-e29b-41d4-a716-446655440000'), true);
+  assert.equal(isUuidLike('6ba7b810-9dad-11d1-80b4-00c04fd430c8'), true);
+  assert.equal(isUuidLike('f47ac10b-58cc-4372-a567-0e02b2c3d479'), true);
+  assert.equal(isUuidLike('c0000003-0000-0000-0000-000000000001'), true);
 });
 
-test('isValidUuid rejects invalid UUIDs', () => {
-  assert.equal(isValidUuid('not-a-uuid'), false);
-  assert.equal(isValidUuid(''), false);
-  assert.equal(isValidUuid('550e8400-e29b-41d4-a716'), false);
-  assert.equal(isValidUuid('550e8400-e29b-61d4-a716-446655440000'), false);
+test('isUuidLike rejects malformed UUID strings', () => {
+  assert.equal(isUuidLike('not-a-uuid'), false);
+  assert.equal(isUuidLike(''), false);
+  assert.equal(isUuidLike('550e8400-e29b-41d4-a716'), false);
+  assert.equal(isUuidLike('550e8400-e29b-zzzz-a716-446655440000'), false);
 });
 
 // ============================================================================
@@ -641,10 +642,10 @@ test('findReusableCheckoutPayment rejects non-reusable or malformed payments', (
 // ============================================================================
 
 test('checkout requires valid bookingId', () => {
-  // Validates that bookingId must be a valid UUID
-  assert.equal(isValidUuid('not-a-uuid'), false);
-  assert.equal(isValidUuid(''), false);
-  assert.equal(isValidUuid('550e8400-e29b-41d4-a716-446655440000'), true);
+  // Validates that bookingId must be a database UUID-like value
+  assert.equal(isUuidLike('not-a-uuid'), false);
+  assert.equal(isUuidLike(''), false);
+  assert.equal(isUuidLike('550e8400-e29b-41d4-a716-446655440000'), true);
 });
 
 test('valid payment providers', () => {

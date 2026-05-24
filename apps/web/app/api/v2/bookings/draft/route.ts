@@ -34,10 +34,10 @@ import {
 } from '../../../../../src/lib/slot-generator';
 
 // Validation helpers
-function isValidUuid(str: string): boolean {
-  const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
+function isUuidLike(str: string): boolean {
+  const uuidLikeRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidLikeRegex.test(str);
 }
 
 function isValidISODateTime(str: string): boolean {
@@ -229,7 +229,7 @@ function parseAndValidateBody(
   if (!b.activityId || typeof b.activityId !== 'string') {
     return { error: { code: 'VALIDATION_ERROR', message: 'activityId is required' } };
   }
-  if (!isValidUuid(b.activityId)) {
+  if (!isUuidLike(b.activityId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid activityId format' } };
   }
 
@@ -237,7 +237,7 @@ function parseAndValidateBody(
   if (!b.planId || typeof b.planId !== 'string') {
     return { error: { code: 'VALIDATION_ERROR', message: 'planId is required' } };
   }
-  if (!isValidUuid(b.planId)) {
+  if (!isUuidLike(b.planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
   }
 
