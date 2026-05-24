@@ -60,7 +60,7 @@ export default function BlogPage() {
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>首頁 &gt; 旅遊指南</div>
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}><Link href="/">首頁</Link> &gt; 旅遊指南</div>
       <h1>旅遊指南</h1>
 
       {/* Featured */}

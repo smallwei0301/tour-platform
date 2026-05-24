@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -12,7 +13,9 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>首頁 &gt; 聯絡我們</div>
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
+        <Link href="/">首頁</Link> &gt; 聯絡我們
+      </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 32, marginTop: 20 }}
         className="contact-grid">
