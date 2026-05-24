@@ -141,7 +141,16 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               "@type": "PostalAddress",
               "addressRegion": activity.region,
               "addressCountry": "TW"
-            }
+            },
+            ...(activityData.ratingAvg != null && activityData.reviewCount ? {
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": activityData.ratingAvg,
+                "reviewCount": activityData.reviewCount,
+                "bestRating": 5,
+                "worstRating": 1,
+              }
+            } : {})
           })
         }}
       />
