@@ -1,4 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '常見問題 | Midao 祕島',
+  description: '關於預訂、付款、取消退款、導遊品質與安全保障的常見問題解答。',
+  openGraph: {
+    title: '常見問題 | Midao 祕島',
+    description: '私人導遊行程怎麼預訂？付款安全嗎？可以取消嗎？一次解答所有疑問。',
+  },
+};
 
 const faqs = [
   {

@@ -1,4 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '為什麼選擇我們 | Midao 祕島',
+  description: '私人在地導遊 vs 一般跟團：行程彈性、導遊認證、退款保障、深度體驗一次比較清楚。',
+  openGraph: {
+    title: '為什麼選擇私人在地導遊？ | Midao 祕島',
+    description: '不跟團、不趕路。找到懂路的人，用你的節奏認識台灣。',
+  },
+};
 
 export default function WhyChooseUsPage() {
   return (

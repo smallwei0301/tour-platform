@@ -1,3 +1,14 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '聯絡我們 | Midao 祕島',
+  description: '有任何問題、合作提案或回饋？聯絡 Midao 祕島，我們會在 1-2 個工作天內回覆。',
+  openGraph: {
+    title: '聯絡我們 | Midao 祕島',
+    description: '歡迎透過表單、Email 或客服熱線與我們聯繫。',
+  },
+};
+
 export default function ContactPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>

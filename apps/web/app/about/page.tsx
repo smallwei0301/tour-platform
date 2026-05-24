@@ -1,4 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '關於我們 | Midao 祕島',
+  description: '祕島不是發明的地方。是已經在那裡，只是還沒被你看見的台灣。認識 Midao 祕島的故事與理念。',
+  openGraph: {
+    title: '關於我們 | Midao 祕島',
+    description: '真正在山林裡走過的在地人，帶你走進台灣最有故事的地方。',
+  },
+};
 
 export default function AboutPage() {
   return (
