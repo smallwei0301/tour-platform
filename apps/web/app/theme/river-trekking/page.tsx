@@ -32,9 +32,46 @@ const riverTours = [
   },
 ];
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+
+const riverJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
+        { '@type': 'ListItem', position: 3, name: '野外溯溪', item: `${baseUrl}/theme/river-trekking` },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: '不會游泳可以參加嗎？',
+          acceptedAnswer: { '@type': 'Answer', text: '可參加 Level 1 路線，導遊會先做安全說明與裝備檢查。' },
+        },
+        {
+          '@type': 'Question',
+          name: '幾月份最適合溯溪？',
+          acceptedAnswer: { '@type': 'Answer', text: '春末到秋季較穩定，但仍以當日水況與安全為準。' },
+        },
+        {
+          '@type': 'Question',
+          name: 'Level 1 與 Level 3 差在哪？',
+          acceptedAnswer: { '@type': 'Answer', text: '主要差在地形難度、體能需求與通過技術。' },
+        },
+      ],
+    },
+  ],
+};
+
 export default function RiverTrekkingPage() {
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(riverJsonLd) }} />
       <section className="tp-theme-hero tp-theme-river-hero">
         <div className="tp-container">
           <h1>走進台灣最純淨的野溪</h1>
