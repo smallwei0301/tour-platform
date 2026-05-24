@@ -15,11 +15,22 @@ export const metadata: Metadata = {
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 const activitiesJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: '探索行程 | Midao 祕島',
-  description: '瀏覽台灣全島私人導遊行程。',
-  url: `${baseUrl}/activities`,
-  publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      name: '探索行程 | Midao 祕島',
+      description: '瀏覽台灣全島私人導遊行程。',
+      url: `${baseUrl}/activities`,
+      publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
+      ],
+    },
+  ],
 };
 
 export default function ActivitiesPage() {

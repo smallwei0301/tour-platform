@@ -39,20 +39,31 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.v
 
 const blogJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'ItemList',
-  name: '旅遊指南 | Midao 祕島',
-  url: `${baseUrl}/blog`,
-  itemListElement: posts.map((p, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    item: {
-      '@type': 'Article',
-      headline: p.title,
-      url: `${baseUrl}/blog/${p.slug}`,
-      datePublished: p.date,
-      image: p.imageUrl,
+  '@graph': [
+    {
+      '@type': 'ItemList',
+      name: '旅遊指南 | Midao 祕島',
+      url: `${baseUrl}/blog`,
+      itemListElement: posts.map((p, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        item: {
+          '@type': 'Article',
+          headline: p.title,
+          url: `${baseUrl}/blog/${p.slug}`,
+          datePublished: p.date,
+          image: p.imageUrl,
+        },
+      })),
     },
-  })),
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '旅遊指南', item: `${baseUrl}/blog` },
+      ],
+    },
+  ],
 };
 
 export default function BlogPage() {

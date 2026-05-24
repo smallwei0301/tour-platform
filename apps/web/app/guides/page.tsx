@@ -19,19 +19,30 @@ export default async function GuidesPage() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const guidesJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'ItemList',
-    name: '台灣在地導遊 | Midao 祕島',
-    url: `${baseUrl}/guides`,
-    itemListElement: (guides as Array<{ slug: string; displayName: string; region?: string }>).map((g, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      item: {
-        '@type': 'Person',
-        name: g.displayName,
-        url: `${baseUrl}/guides/${g.slug}`,
-        ...(g.region ? { address: { '@type': 'PostalAddress', addressLocality: g.region } } : {}),
+    '@graph': [
+      {
+        '@type': 'ItemList',
+        name: '台灣在地導遊 | Midao 祕島',
+        url: `${baseUrl}/guides`,
+        itemListElement: (guides as Array<{ slug: string; displayName: string; region?: string }>).map((g, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: {
+            '@type': 'Person',
+            name: g.displayName,
+            url: `${baseUrl}/guides/${g.slug}`,
+            ...(g.region ? { address: { '@type': 'PostalAddress', addressLocality: g.region } } : {}),
+          },
+        })),
       },
-    })),
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: '認識導遊', item: `${baseUrl}/guides` },
+        ],
+      },
+    ],
   };
 
   return (
