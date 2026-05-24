@@ -2,13 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { isBookingV2ShellEnabled } from '../../src/config/feature-flags.mjs';
 
-const ROOT = process.cwd();
+// Use import.meta.url so paths are portable regardless of cwd (works from repo root or apps/web/)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WEB_ROOT = path.resolve(__dirname, '../..');
 
 async function readSource(relPath) {
-  return readFile(path.join(ROOT, relPath), 'utf8');
+  return readFile(path.join(WEB_ROOT, relPath), 'utf8');
 }
 
 test('booking page shell defaults to V2 when NEXT_PUBLIC flag is not set', () => {

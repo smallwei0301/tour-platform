@@ -2,17 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   isOrderEligibleForSettlement,
   isOrderInReminderWindow,
   resolveReminderActivityAndStart,
 } from '../../src/lib/internal-sweep-time-source.ts';
 
-const ROOT = process.cwd();
+// Use import.meta.url so paths are portable regardless of cwd (works from repo root or apps/web/)
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WEB_ROOT = path.resolve(__dirname, '../..');
+const SUPABASE_MIGRATIONS = path.resolve(__dirname, '../../../../supabase/migrations');
 
 test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_V2_PRIMARY mode', async () => {
-  const rel = 'app/api/orders/route.ts';
-  const src = await readFile(path.join(ROOT, rel), 'utf8');
+  const src = await readFile(path.join(WEB_ROOT, 'app/api/orders/route.ts'), 'utf8');
 
   assert.match(src, /BOOKING_V2_PRIMARY/, 'orders route must use explicit BOOKING_V2_PRIMARY hard-block gate');
 
@@ -36,10 +39,10 @@ test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_
 });
 
 test('issue621 internal sweeps should prefer V2 booking start_at with legacy schedule fallback and truthful policy diagnostics', async () => {
-  const reminderSrc = await readFile(path.join(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'), 'utf8');
-  const settlementSrc = await readFile(path.join(ROOT, 'app/api/internal/settlement/sweep/route.ts'), 'utf8');
+  const reminderSrc = await readFile(path.join(WEB_ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'), 'utf8');
+  const settlementSrc = await readFile(path.join(WEB_ROOT, 'app/api/internal/settlement/sweep/route.ts'), 'utf8');
   const reminderLogMigration = await readFile(
-    path.join(ROOT, '../../supabase/migrations/20260522_issue621_allow_null_schedule_id_in_tour_reminder_log.sql'),
+    path.join(SUPABASE_MIGRATIONS, '20260522_issue621_allow_null_schedule_id_in_tour_reminder_log.sql'),
     'utf8'
   );
 
