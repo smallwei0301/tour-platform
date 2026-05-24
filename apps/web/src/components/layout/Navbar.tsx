@@ -1,6 +1,4 @@
 'use client';
-import Image from 'next/image';
-
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
@@ -99,7 +97,7 @@ export function Navbar() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {user.user_metadata?.avatar_url && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <Image
+                    <img
                       src={user.user_metadata.avatar_url}
                       alt={displayName}
                       width={28}
