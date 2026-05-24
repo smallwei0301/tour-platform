@@ -1,5 +1,5 @@
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
-import { SETTLEMENT_COMMISSION_RATE } from '../../../../../../src/lib/settlement-config';
+import { getSettlementConfig } from '../../../../../../src/lib/settlement-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,6 +34,7 @@ export async function GET(req: Request) {
   }
 
   const supabase = await getSupabase();
+  const settlementConfig = await getSettlementConfig(supabase);
   const guideId = session.guideId;
 
   // Get guide's activity IDs and titles
@@ -106,7 +107,7 @@ export async function GET(req: Request) {
     const totalTwd = o.total_twd ?? 0;
     const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
     const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
-    const commissionTwd = Math.floor(effectiveTwd * SETTLEMENT_COMMISSION_RATE);
+    const commissionTwd = Math.floor(effectiveTwd * settlementConfig.commission_rate);
     const netTwd = effectiveTwd - commissionTwd;
     const activityTitle = activityMap[o.activity_id] ?? '';
     const scheduleDate = (o.schedule_id && scheduleDates[o.schedule_id])
@@ -133,6 +134,7 @@ export async function GET(req: Request) {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="payout-${month}.csv"`,
+      'X-Settlement-Rule-Version': settlementConfig.version ?? 'env-fallback',
     },
   });
 }
