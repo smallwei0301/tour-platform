@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 export default function AboutPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <link rel="preload" as="image" href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1400&q=80" fetchPriority="high" />
       {/* Hero */}
       <section style={{
         backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1528164344705-47542687000d?w=1400&q=80)',
