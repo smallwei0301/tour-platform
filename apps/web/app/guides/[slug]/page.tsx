@@ -12,9 +12,18 @@ export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
   const { slug } = await params;
+  const guide = await getGuideBySlugDb(slug).catch((): null => null);
+  const name = guide?.displayName ?? slug;
+  const description = guide?.bio ? guide.bio.slice(0, 140).replace(/\n/g, ' ') : `${name} 是 Midao 祕島平台上的在地導遊，提供台灣深度旅遊體驗。`;
   return {
-    title: `${slug} | 導遊 | Midao 祕島`,
-    openGraph: { title: `${slug} | Midao 祕島`, type: 'profile' },
+    title: `${name} | 導遊 | Midao 祕島`,
+    description,
+    openGraph: {
+      title: `${name} | Midao 祕島`,
+      description,
+      type: 'profile',
+      ...(guide?.profilePhotoUrl ? { images: [{ url: guide.profilePhotoUrl }] } : {}),
+    },
   };
 }
 
