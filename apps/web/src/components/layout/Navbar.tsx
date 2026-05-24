@@ -67,6 +67,7 @@ export function Navbar() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜尋行程、目的地⋯"
             className="tp-search-input"
+            aria-label="搜尋行程或目的地"
           />
           <button
             type="submit"
@@ -175,6 +176,7 @@ export function Navbar() {
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="搜尋行程、目的地⋯"
                 className="tp-search-input"
+                aria-label="搜尋行程或目的地"
               />
               <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }}>
                 🔍
