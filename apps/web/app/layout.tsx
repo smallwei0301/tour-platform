@@ -57,6 +57,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.pexels.com" />
         <link rel="dns-prefetch" href="https://images.pexels.com" />
+        {/* Preload hero background image to improve homepage LCP */}
+        <link
+          rel="preload"
+          as="image"
+          href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
+          fetchPriority="high"
+        />
       </head>
       <body className={`${notoSans.variable} ${inter.variable}`}>
         <Navbar />

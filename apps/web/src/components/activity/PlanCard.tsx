@@ -94,7 +94,7 @@ export function PlanCard({ activity, selectedDate, schedules }: PlanCardProps) {
         </div>
       </div>
 
-      <a href="#" className="tp-plan-detail-link">查看方案詳情 &gt;</a>
+      <span className="tp-plan-detail-link">查看方案詳情 &gt;</span>
 
       <div className="tp-plan-card-footer">
         <div className="tp-plan-price-block">
