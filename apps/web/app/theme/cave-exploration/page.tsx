@@ -73,6 +73,11 @@ export default function CaveExplorationPage() {
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(caveJsonLd) }} />
+      <div className="tp-container">
+        <div className="tp-breadcrumb" style={{ paddingTop: 16 }}>
+          <Link href="/">首頁</Link> &gt; <Link href="/activities">探索行程</Link> &gt; 柴山探洞
+        </div>
+      </div>
       <section className="tp-theme-hero tp-theme-cave">
         <div className="tp-container">
           <h1>鑽進高雄的秘密地下世界</h1>

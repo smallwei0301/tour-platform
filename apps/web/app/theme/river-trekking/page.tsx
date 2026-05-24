@@ -73,6 +73,11 @@ export default function RiverTrekkingPage() {
   return (
     <main>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(riverJsonLd) }} />
+      <div className="tp-container">
+        <div className="tp-breadcrumb" style={{ paddingTop: 16 }}>
+          <Link href="/">首頁</Link> &gt; <Link href="/activities">探索行程</Link> &gt; 野外溯溪
+        </div>
+      </div>
       <section className="tp-theme-hero tp-theme-river-hero">
         <div className="tp-container">
           <h1>走進台灣最純淨的野溪</h1>
