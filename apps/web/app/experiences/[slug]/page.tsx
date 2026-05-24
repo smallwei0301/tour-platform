@@ -51,7 +51,7 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
   return (
     <main className="tp-detail">
       <div className="tp-container">
-        <div className="tp-breadcrumb">首頁 / 體驗 / {experience.title}</div>
+        <div className="tp-breadcrumb"><Link href="/">首頁</Link> / 體驗 / {experience.title}</div>
 
         <section className="tp-detail-layout">
           <article className="tp-detail-main">
