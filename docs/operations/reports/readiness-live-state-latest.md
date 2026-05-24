@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-24T17:11:39.787Z -->
+<!-- query_timestamp: 2026-05-24T18:26:35.440Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-24T17:11:39.787Z  
-**Commit SHA:** `8257d793fb9ec5eaf20e71bd06a3f5767a9d72d1`
+**Query timestamp:** 2026-05-24T18:26:35.440Z  
+**Commit SHA:** `1c714e789f8beccbe192b3dc8b6dc1bab65ac39e`
 
 ---
 
@@ -60,16 +60,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #734 | [fix(brand): align admin UI + email support address to Midao 祕島](https://github.com/smallwei0301/tour-platform/pull/734) | 2026-05-24 |
-| #733 | [fix(brand): replace Tour Platform name + email in about/contact pages](https://github.com/smallwei0301/tour-platform/pull/733) | 2026-05-24 |
-| #732 | [fix(brand): align Footer logo + email templates to Midao 祕島](https://github.com/smallwei0301/tour-platform/pull/732) | 2026-05-24 |
-| #731 | [fix(brand): align public-facing pages + Navbar + Footer to Midao 祕島](https://github.com/smallwei0301/tour-platform/pull/731) | 2026-05-24 |
-| #730 | [security(rls): add automated preflight workflow + update runbook + readiness docs (closes #701)](https://github.com/smallwei0301/tour-platform/pull/730) | 2026-05-24 |
-| #729 | [ops(cron): add fingerprint dedup + secret sanitization to health-check issue generator (closes #721)](https://github.com/smallwei0301/tour-platform/pull/729) | 2026-05-24 |
-| #728 | [ops(tests): replace process.cwd() with import.meta.url across 50 test files (closes #711)](https://github.com/smallwei0301/tour-platform/pull/728) | 2026-05-24 |
-| #727 | [docs(readiness): add snapshot freshness guard + drift check script (closes #700)](https://github.com/smallwei0301/tour-platform/pull/727) | 2026-05-24 |
-| #726 | [payout(monthly): use active settlement_rules for commission calc (closes #719)](https://github.com/smallwei0301/tour-platform/pull/726) | 2026-05-24 |
-| #725 | [ops(supabase): backup/restore runbook + drill template (closes #723)](https://github.com/smallwei0301/tour-platform/pull/725) | 2026-05-24 |
+| #781 | [fix: add *.supabase.co to Next.js image remotePatterns](https://github.com/smallwei0301/tour-platform/pull/781) | 2026-05-24 |
+| #780 | [a11y: aria-label for navbar search inputs](https://github.com/smallwei0301/tour-platform/pull/780) | 2026-05-24 |
+| #779 | [a11y: associate search label with input in ActivitiesContent](https://github.com/smallwei0301/tour-platform/pull/779) | 2026-05-24 |
+| #778 | [seo: BreadcrumbList JSON-LD + visual breadcrumb for legal pages](https://github.com/smallwei0301/tour-platform/pull/778) | 2026-05-24 |
+| #777 | [seo: noindex layout wrapper for /orders](https://github.com/smallwei0301/tour-platform/pull/777) | 2026-05-24 |
+| #776 | [perf: preconnect + dns-prefetch for image CDNs in root layout](https://github.com/smallwei0301/tour-platform/pull/776) | 2026-05-24 |
+| #775 | [seo: add /order to robots.txt disallow list](https://github.com/smallwei0301/tour-platform/pull/775) | 2026-05-24 |
+| #774 | [seo: noindex layout wrappers for private/transactional pages](https://github.com/smallwei0301/tour-platform/pull/774) | 2026-05-24 |
+| #773 | [seo: BreadcrumbList JSON-LD added to FAQ page](https://github.com/smallwei0301/tour-platform/pull/773) | 2026-05-24 |
+| #772 | [perf: priority LCP on blog detail hero image](https://github.com/smallwei0301/tour-platform/pull/772) | 2026-05-24 |
 
 ---
 
