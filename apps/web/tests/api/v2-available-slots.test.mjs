@@ -10,7 +10,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
 
 // Mock validation helpers (mirrors implementation in route.ts)
 function isUuidLike(str) {
@@ -410,7 +414,7 @@ test('errorV2 response format matches API spec', () => {
 
 test('route resolves slug activity key and plan slug before validation', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
-  const src = await readFile(path.join(process.cwd(), rel), 'utf8');
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(src, /const activityIdLookupColumn = isUuidLike\(activityKey\) \? 'id' : 'slug'/);
   assert.match(src, /\.eq\(activityIdLookupColumn, activityKey\)/);

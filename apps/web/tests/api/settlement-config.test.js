@@ -6,9 +6,11 @@
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url';
 import path from 'node:path'
 
-const ROOT = process.cwd()
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..')
 const src = readFileSync(path.join(ROOT, 'src/lib/settlement-config.ts'), 'utf8')
 
 describe('settlement-config.ts structure', () => {
