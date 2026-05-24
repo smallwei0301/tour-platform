@@ -82,14 +82,22 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
         </div>
 
         {/* Tab nav */}
-        <div style={{
-          display: 'flex', gap: 0, overflowX: 'auto', flexShrink: 0,
-          borderBottom: '1px solid #e5e7eb', padding: '0 20px',
-          scrollbarWidth: 'none',
-        }}>
+        <div
+          role="tablist"
+          aria-label="方案詳情分頁"
+          style={{
+            display: 'flex', gap: 0, overflowX: 'auto', flexShrink: 0,
+            borderBottom: '1px solid #e5e7eb', padding: '0 20px',
+            scrollbarWidth: 'none',
+          }}
+        >
           {TABS.map(tab => (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`plan-tab-panel-${tab.id}`}
+              id={`plan-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
@@ -105,7 +113,12 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
         </div>
 
         {/* Tab content */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '20px' }}>
+        <div
+          role="tabpanel"
+          id={`plan-tab-panel-${activeTab}`}
+          aria-labelledby={`plan-tab-${activeTab}`}
+          style={{ overflowY: 'auto', flex: 1, padding: '20px' }}
+        >
 
           {/* ── 方案亮點 ── */}
           {activeTab === 'highlights' && (
