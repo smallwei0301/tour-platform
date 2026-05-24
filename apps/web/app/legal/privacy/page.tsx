@@ -1,3 +1,10 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '隱私政策 | Midao 祕島',
+  description: 'Midao 祕島平台的個人資料保護政策，說明資料蒐集範圍、使用方式與用戶權利。',
+};
+
 export default function PrivacyPage() {
   return (
     <main className="tp-container tp-static-page">

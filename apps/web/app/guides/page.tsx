@@ -1,6 +1,16 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { listPublishedGuidesDb } from '../../src/lib/db.mjs';
+
+export const metadata: Metadata = {
+  title: '認識導遊 | Midao 祕島',
+  description: '認識 Midao 祕島平台上的在地導遊。每位導遊都經過實名認證，帶你走進台灣最有故事的地方。',
+  openGraph: {
+    title: '認識導遊 | Midao 祕島',
+    description: '找到屬於你的引路人——認識台灣各地在地導遊的專長與故事。',
+  },
+};
 
 export default async function GuidesPage() {
   const guides = await listPublishedGuidesDb().catch((): unknown[] => []);
