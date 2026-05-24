@@ -75,6 +75,14 @@ _none_
 
 ---
 
+## Release Evidence Gates
+
+| Gate | Evidence Required | Notes |
+|------|------------------|-------|
+| RLS/Grants Preflight | Run `.github/workflows/rls-grants-preflight.yml` via workflow_dispatch; download artifact `rls-preflight-<run-id>`; verify `overall_status: pass` | Required before soft-launch sign-off |
+
+---
+
 ## Recent Merged PRs (last 10)
 
 | # | Title | Merged |

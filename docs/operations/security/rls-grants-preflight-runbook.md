@@ -136,3 +136,21 @@ Attach the JSON output (`--json --output <path>`) to the release checklist issue
 - **2026-05**: Initial script — issue #602.
 - **2026-05**: `payment_events` RLS hardened — issues #597, #598. Script validates this remains in place.
 - **Ref**: #508 — sensitive data classification that identified these tables as high-risk.
+
+---
+
+## Automated Workflow
+
+A GitHub Actions workflow runs this script automatically every Monday at 03:00 UTC and can also be triggered manually via `workflow_dispatch`.
+
+**Workflow file:** `.github/workflows/rls-grants-preflight.yml`
+
+**Required secrets** (set in repo Settings → Secrets → Actions):
+- `SUPABASE_URL` — Supabase project URL
+- `SUPABASE_SERVICE_ROLE_KEY` — Service-role secret key (**never** anon key)
+
+**If secrets are not configured:** The run produces a `HOLD` artifact and exits 0 (visible hold, not silent skip).
+
+**Artifact:** Download `rls-preflight-<run-id>` from the workflow run to view the full JSON result. The artifact is retained for 30 days.
+
+**Important:** This workflow performs read-only catalog checks. It does **not** modify RLS policies, grants, or production schema. All production changes require explicit human approval.
