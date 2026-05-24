@@ -185,6 +185,18 @@ if (isMain) {
   }
   lines.push('');
 
+  // Release Evidence Gates (static section — required before soft-launch sign-off)
+  lines.push('---');
+  lines.push('');
+  lines.push('## Release Evidence Gates');
+  lines.push('');
+  lines.push('The following evidence must be collected and reviewed before soft-launch sign-off:');
+  lines.push('');
+  lines.push('| Gate | Evidence Required | Notes |');
+  lines.push('|------|------------------|-------|');
+  lines.push('| RLS/Grants Preflight | Run `.github/workflows/rls-grants-preflight.yml` via `workflow_dispatch`; download artifact `rls-preflight-<run-id>`; verify `overall_status: pass` | Required before soft-launch sign-off; workflow runs read-only catalog checks only |');
+  lines.push('');
+
   // ── Write output ───────────────────────────────────────────────────────────
 
   mkdirSync(dirname(OUTPUT_PATH), { recursive: true });
