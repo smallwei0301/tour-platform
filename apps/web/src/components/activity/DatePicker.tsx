@@ -150,10 +150,13 @@ function CalendarModal({
             const isSelected = selectedDate === cell.dateKey;
             const isSun = new Date(cell.dateKey).getDay() === 0;
             const isSat = new Date(cell.dateKey).getDay() === 6;
+            const [y, m, d] = cell.dateKey.split('-');
+            const ariaLabel = `${y}年${Number(m)}月${Number(d)}日，${cell.available ? `可預約，剩餘 ${cell.remaining} 位` : (cell.remaining === 0 && cell.hasSchedule ? '已額滿' : '不可預約')}`;
             return (
               <button
                 key={cell.dateKey}
                 disabled={!cell.available}
+                aria-label={ariaLabel}
                 onClick={() => { onSelect(cell.dateKey); onClose(); }}
                 className={[
                   'kkd-cal-day',
