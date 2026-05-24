@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-24T16:48:00.937Z -->
+<!-- query_timestamp: 2026-05-24T17:11:39.787Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-24T16:48:00.937Z  
-**Commit SHA:** `e356506a9119496af6ac0ddced1eb2bebb9dab8e`
+**Query timestamp:** 2026-05-24T17:11:39.787Z  
+**Commit SHA:** `8257d793fb9ec5eaf20e71bd06a3f5767a9d72d1`
 
 ---
 
@@ -14,7 +14,7 @@
 
 _none_
 
-## Open Issues (15 total)
+## Open Issues (14 total)
 
 ### P0 (1)
 
@@ -31,12 +31,11 @@ _none_
 | #607 | [[Ops] Execute production alert drill evidence before soft-launch sign-off](https://github.com/smallwei0301/tour-platform/issues/607) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, infra |
 | #605 | [[Ops] Finalize Andy Lee launch listing content and media before public booking](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, status:needs-info, type:docs, docs |
 
-### P2 (3)
+### P2 (2)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #685 | [[Ops] Add third-party synthetic monitor after soft launch](https://github.com/smallwei0301/tour-platform/issues/685) | triaged, type:optimization, priority:P2, qa, owner:mixed, status:needs-decision, infra |
-| #628 | [[Docs] Align public brand copy and CTA consistency before soft launch](https://github.com/smallwei0301/tour-platform/issues/628) | triaged, type:optimization, priority:P2, qa, owner:mixed, status:needs-decision, type:docs, docs |
 | #594 | [[Ops] Define and drill Supabase backup/restore runbook before soft launch](https://github.com/smallwei0301/tour-platform/issues/594) | triaged, type:investigation, priority:P2, qa, owner:mixed, status:ready, type:docs, database, infra |
 
 ### Human-Decision (7)
@@ -57,28 +56,20 @@ _none_
 
 ---
 
-## Release Evidence Gates
-
-| Gate | Evidence Required | Notes |
-|------|------------------|-------|
-| RLS/Grants Preflight | Run `.github/workflows/rls-grants-preflight.yml` via workflow_dispatch; download artifact `rls-preflight-<run-id>`; verify `overall_status: pass` | Required before soft-launch sign-off |
-
----
-
 ## Recent Merged PRs (last 10)
 
 | # | Title | Merged |
 |---|-------|--------|
+| #734 | [fix(brand): align admin UI + email support address to Midao 祕島](https://github.com/smallwei0301/tour-platform/pull/734) | 2026-05-24 |
+| #733 | [fix(brand): replace Tour Platform name + email in about/contact pages](https://github.com/smallwei0301/tour-platform/pull/733) | 2026-05-24 |
+| #732 | [fix(brand): align Footer logo + email templates to Midao 祕島](https://github.com/smallwei0301/tour-platform/pull/732) | 2026-05-24 |
+| #731 | [fix(brand): align public-facing pages + Navbar + Footer to Midao 祕島](https://github.com/smallwei0301/tour-platform/pull/731) | 2026-05-24 |
 | #730 | [security(rls): add automated preflight workflow + update runbook + readiness docs (closes #701)](https://github.com/smallwei0301/tour-platform/pull/730) | 2026-05-24 |
 | #729 | [ops(cron): add fingerprint dedup + secret sanitization to health-check issue generator (closes #721)](https://github.com/smallwei0301/tour-platform/pull/729) | 2026-05-24 |
 | #728 | [ops(tests): replace process.cwd() with import.meta.url across 50 test files (closes #711)](https://github.com/smallwei0301/tour-platform/pull/728) | 2026-05-24 |
 | #727 | [docs(readiness): add snapshot freshness guard + drift check script (closes #700)](https://github.com/smallwei0301/tour-platform/pull/727) | 2026-05-24 |
 | #726 | [payout(monthly): use active settlement_rules for commission calc (closes #719)](https://github.com/smallwei0301/tour-platform/pull/726) | 2026-05-24 |
 | #725 | [ops(supabase): backup/restore runbook + drill template (closes #723)](https://github.com/smallwei0301/tour-platform/pull/725) | 2026-05-24 |
-| #722 | [ops(auto-check): post-hoc issue policy enforcer + #702 retroactive fix (closes #720)](https://github.com/smallwei0301/tour-platform/pull/722) | 2026-05-24 |
-| #718 | [qa(booking-v2): slug-rejection regression tests + delta QA for PR #708 (closes #709)](https://github.com/smallwei0301/tour-platform/pull/718) | 2026-05-24 |
-| #717 | [docs(booking-v2): Phase 7 observation window report scaffold (closes #716)](https://github.com/smallwei0301/tour-platform/pull/717) | 2026-05-24 |
-| #715 | [ops(alert-drill): static verification + drill evidence skeleton (closes #713)](https://github.com/smallwei0301/tour-platform/pull/715) | 2026-05-24 |
 
 ---
 
