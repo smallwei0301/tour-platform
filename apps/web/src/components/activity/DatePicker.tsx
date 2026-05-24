@@ -132,11 +132,11 @@ function CalendarModal({
 
   return (
     <div className="kkd-cal-overlay" onClick={onClose}>
-      <div className="kkd-cal-modal" onClick={e => e.stopPropagation()}>
+      <div className="kkd-cal-modal" role="dialog" aria-modal="true" aria-label="選擇日期" onClick={e => e.stopPropagation()}>
         <div className="kkd-cal-header">
-          <button className="kkd-cal-nav" onClick={prevMonth}>‹</button>
+          <button className="kkd-cal-nav" onClick={prevMonth} aria-label="上個月">‹</button>
           <span className="kkd-cal-title">{viewYear} 年 {MONTH_NAMES[viewMonth]}</span>
-          <button className="kkd-cal-nav" onClick={nextMonth}>›</button>
+          <button className="kkd-cal-nav" onClick={nextMonth} aria-label="下個月">›</button>
           <button className="kkd-cal-close" onClick={onClose} aria-label="關閉">✕</button>
         </div>
 
