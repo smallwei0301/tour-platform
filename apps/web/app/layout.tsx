@@ -51,6 +51,13 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-Hant">
+      <head>
+        {/* Preconnect to image CDNs used by CSS background images */}
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://images.pexels.com" />
+        <link rel="dns-prefetch" href="https://images.pexels.com" />
+      </head>
       <body className={`${notoSans.variable} ${inter.variable}`}>
         <Navbar />
         {children}
