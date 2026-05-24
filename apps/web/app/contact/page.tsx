@@ -48,7 +48,7 @@ export default function ContactPage() {
         <div style={{ paddingTop: 0 }}>
           <div style={{ background: 'var(--tp-bg-soft)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
             <h3 style={{ marginTop: 0 }}>📧 Email</h3>
-            <p style={{ color: 'var(--tp-muted)' }}>hello@tourplatform.tw</p>
+            <p style={{ color: 'var(--tp-muted)' }}>hello@midao.tw</p>
           </div>
           <div style={{ background: 'var(--tp-bg-soft)', borderRadius: 12, padding: 24, marginBottom: 20 }}>
             <h3 style={{ marginTop: 0 }}>📞 客服熱線</h3>
