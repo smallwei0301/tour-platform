@@ -5,11 +5,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-// process.cwd() is apps/web when run from there; repo root is two levels up
-const WEB_ROOT = process.cwd();
-const REPO_ROOT = path.resolve(WEB_ROOT, '../..');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WEB_ROOT = path.resolve(__dirname, '../..');
+const REPO_ROOT = path.resolve(__dirname, '../../../..');
 const SCRIPT_PATH = path.join(REPO_ROOT, 'scripts/phase12/run-full-regression.sh');
 const PKG_PATH = path.join(WEB_ROOT, 'package.json');
 

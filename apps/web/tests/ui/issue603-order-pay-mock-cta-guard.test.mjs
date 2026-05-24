@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const APP_ROOT = process.cwd().endsWith(path.join('apps', 'web'))
-  ? process.cwd()
-  : path.join(process.cwd(), 'apps', 'web');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const APP_ROOT = path.resolve(__dirname, '../..');
 
 async function readSource(relPath) {
   return readFile(path.join(APP_ROOT, relPath), 'utf8');

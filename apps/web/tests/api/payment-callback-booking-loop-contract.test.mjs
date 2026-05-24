@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const SQL = path.resolve(process.cwd(), '../../supabase/migrations/20260423194000_issue195_callback_booking_status_loop.sql');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SQL = path.resolve(__dirname, '../../../../supabase/migrations/20260423194000_issue195_callback_booking_status_loop.sql');
 
 test('payment callback DB contract: closes booking status loop with idempotent log', async () => {
   const src = await fs.readFile(SQL, 'utf8');

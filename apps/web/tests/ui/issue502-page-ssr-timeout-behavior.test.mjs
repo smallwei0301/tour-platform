@@ -1,13 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import vm from 'node:vm';
 import ts from 'typescript';
 import React from 'react';
 import { createRequire } from 'node:module';
 
-const ROOT = path.resolve(process.cwd());
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
 const require = createRequire(import.meta.url);
 
 function transpileTsxToCjs(source, fileName) {

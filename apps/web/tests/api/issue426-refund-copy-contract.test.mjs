@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const ROOT = process.cwd();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
 const PAGE_PATH = path.join(ROOT, 'app/me/orders/[orderId]/page.tsx');
 
 // AC1 — refund_pending description uses neutral copy (no wait-hint language)

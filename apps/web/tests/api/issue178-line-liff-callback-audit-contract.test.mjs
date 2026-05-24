@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const SQL = path.resolve(
-  process.cwd(),
-  '../../supabase/migrations/20260508203000_issue178_line_liff_callback_audit_continuity.sql'
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SQL = path.resolve(__dirname, '../../../../supabase/migrations/20260508203000_issue178_line_liff_callback_audit_continuity.sql');
 
 test('GH-178 callback audit continuity: preserves LINE/LIFF origin and correlation separately from system actor', async () => {
   const src = await fs.readFile(SQL, 'utf8');

@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
+
 import {
   shouldRetryActivityDetailQuery,
   buildCanonicalActivityDetailPath,
@@ -311,7 +316,7 @@ test('buildCanonicalActivityDetailPath falls back to normalized region when regi
 });
 
 test('activity routes should avoid dynamic-segment name conflict and keep runtime rendering constraints', async () => {
-  const root = path.resolve(process.cwd());
+  const root = ROOT;
   const canonicalPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
   const compatPage = path.join(root, 'app/activities/[region]/page.tsx');
   const legacyCompatPage = path.join(root, 'app/activities/[slug]/page.tsx');

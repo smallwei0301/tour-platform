@@ -1,11 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createOrderDb, processPaymentCallbackDb } from '../../src/lib/db.mjs';
 import { experiences, orders, payments, auditLogs } from '../../src/lib/store.mjs';
 
-const ROUTE = path.resolve(process.cwd(), 'app/api/payments/ecpay/callback/route.ts');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROUTE = path.resolve(__dirname, '../../app/api/payments/ecpay/callback/route.ts');
 
 test('ecpay SimulatePaid=1 fixture is a no-op: no paid status, no seat booking, no payment row', async () => {
   const order = await createOrderDb({

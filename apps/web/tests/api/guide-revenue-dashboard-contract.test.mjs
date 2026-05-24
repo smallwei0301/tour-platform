@@ -6,9 +6,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const ROOT = process.cwd();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
 
 const DASHBOARD_ROUTE = path.join(ROOT, 'app/api/guide/dashboard/route.ts');
 const DASHBOARD_PAGE = path.join(ROOT, 'app/guide/dashboard/page.tsx');

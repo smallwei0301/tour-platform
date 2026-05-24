@@ -1,12 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const SQL = path.resolve(
-  process.cwd(),
-  '../../supabase/migrations/20260424124000_issue197_sync_orders_payment_status_callback.sql'
-);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const SQL = path.resolve(__dirname, '../../../../supabase/migrations/20260424124000_issue197_sync_orders_payment_status_callback.sql');
 
 test('payment-status-update verification pack: success path sets orders.payment_status=paid', async () => {
   const src = await fs.readFile(SQL, 'utf8');

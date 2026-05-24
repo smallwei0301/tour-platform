@@ -1,10 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
+
 test('GH-502 render path guard: activity detail page must fail fast when activity lookup hangs', async () => {
-  const root = path.resolve(process.cwd());
+  const root = ROOT;
   const pagePath = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
   const src = await fs.readFile(pagePath, 'utf8');
 

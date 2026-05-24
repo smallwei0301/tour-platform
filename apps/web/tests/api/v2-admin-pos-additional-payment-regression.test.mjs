@@ -1,9 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const ROOT = process.cwd();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
 const ADDITIONAL_PAYMENT_ROUTE = path.join(
   ROOT,
   'app/api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts'
