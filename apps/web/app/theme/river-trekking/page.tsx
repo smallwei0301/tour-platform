@@ -1,5 +1,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '野外溯溪行程 | Midao 祕島',
+  description: '走進台灣最純淨的野溪，感受花蓮溪谷的力量。小團深度溯溪體驗，在地導遊全程帶領。',
+  openGraph: {
+    title: '野外溯溪 — 花蓮秘境野溪體驗 | Midao 祕島',
+    description: '不只是戲水。跟著懂溪的導遊，走進花蓮最美的溪谷。',
+  },
+};
 
 const riverTours = [
   {
