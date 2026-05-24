@@ -12,6 +12,7 @@ export default function robots(): MetadataRoute.Robots {
           '/blog', '/blog/',
           '/about', '/faq', '/contact', '/why-choose-us',
           '/theme/', '/legal/',
+          '/guide/apply',
         ],
         disallow: [
           '/admin', '/guide/', '/api/', '/booking/', '/me/',
