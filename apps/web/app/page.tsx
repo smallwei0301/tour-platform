@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Midao 祕島｜台灣在地導遊預約平台',
     description: '找到懂路的人，帶你走進台灣最有故事的地方。',
-    images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80' }],
+    images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: 'Midao 祕島｜台灣在地導遊預約平台' }],
   },
 };
 

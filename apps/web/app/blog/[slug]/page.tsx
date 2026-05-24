@@ -87,7 +87,7 @@ export async function generateMetadata(
     openGraph: {
       title: `${article.title} | Midao 祕島`,
       description: article.content.slice(0, 120).replace(/\n/g, ' '),
-      images: article.imageUrl ? [{ url: article.imageUrl }] : [],
+      images: article.imageUrl ? [{ url: article.imageUrl, width: 1200, height: 630, alt: article.title }] : [],
       type: 'article',
     },
   };

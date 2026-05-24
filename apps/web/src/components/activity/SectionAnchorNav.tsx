@@ -54,6 +54,7 @@ export function SectionAnchorNav({ sections }: { sections?: Section[] }) {
         <button
           key={id}
           className={`kkd-anchor-btn${active === id ? ' active' : ''}`}
+          aria-current={active === id ? 'true' : undefined}
           onClick={() => handleClick(id)}
         >
           {label}
