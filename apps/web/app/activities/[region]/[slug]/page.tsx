@@ -130,6 +130,22 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           })
         }}
       />
+      {activity.faq && activity.faq.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": activity.faq.map((item: { question?: string; q?: string; answer?: string; a?: string }) => ({
+                "@type": "Question",
+                "name": item.question || item.q,
+                "acceptedAnswer": { "@type": "Answer", "text": item.answer || item.a },
+              })),
+            })
+          }}
+        />
+      )}
       {/* ── Breadcrumb ── */}
       <div className="tp-container">
         <div className="tp-breadcrumb">
