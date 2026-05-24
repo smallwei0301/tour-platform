@@ -13,6 +13,7 @@ export async function generateMetadata(
       title: `${readable} | Midao 祕島`,
       description: `跟著懂路的在地導遊，探索台灣最有故事的地方。`,
       type: 'website',
+      images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: `${readable} | Midao 祕島` }],
     },
   };
 }
