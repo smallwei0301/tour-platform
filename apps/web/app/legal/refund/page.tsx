@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -5,9 +6,23 @@ export const metadata: Metadata = {
   description: 'Midao 祕島退款政策說明：出團前 168 小時全額退款、72 小時以上退 70%，不可抗力免費改期。',
 };
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+    { '@type': 'ListItem', position: 2, name: '退款政策', item: `${baseUrl}/legal/refund` },
+  ],
+};
+
 export default function RefundPage() {
   return (
     <main className="tp-container tp-static-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
+        <Link href="/">首頁</Link> &gt; 退款政策
+      </div>
       <h1>退款政策</h1>
       <section className="tp-step-card">
         <p>出團 168 小時前（含）取消：100% 退款。</p>
