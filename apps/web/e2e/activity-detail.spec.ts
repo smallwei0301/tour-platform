@@ -20,7 +20,7 @@ test.describe('Activities - DB Integration', () => {
 
   test('2. /activities 前台頁面正常載入', async ({ page }) => {
     await page.goto(`${BASE_URL}/activities`);
-    await expect(page).toHaveTitle(/Tour Platform/);
+    await expect(page).toHaveTitle(/Midao|祕島/);
 
     // 等待行程卡片出現（client component hydration）
     await page.waitForTimeout(2000);
