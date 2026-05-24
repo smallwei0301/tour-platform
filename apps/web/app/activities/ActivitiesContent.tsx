@@ -125,8 +125,9 @@ export default function ActivitiesContent() {
 
           {/* 關鍵字搜尋 */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>關鍵字搜尋</label>
+            <label htmlFor="activities-search" style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>關鍵字搜尋</label>
             <input
+              id="activities-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
