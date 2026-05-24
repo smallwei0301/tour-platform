@@ -1,11 +1,22 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
 import { buildActivityHref } from '../../../src/lib/activity-url';
 import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../src/components/shared/ActivityHero';
 import { GalleryImage } from '../../../src/components/shared/GalleryImage';
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  return {
+    title: `${slug} | 導遊 | Midao 祕島`,
+    openGraph: { title: `${slug} | Midao 祕島`, type: 'profile' },
+  };
+}
 
 export default async function GuideProfilePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;

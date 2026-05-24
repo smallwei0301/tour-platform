@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
 
 const articles: Record<string, { title: string; category: string; date: string; readTime: string; imageUrl: string; content: string }> = {
   'why-private-guide': {
@@ -73,6 +74,24 @@ const articles: Record<string, { title: string; category: string; date: string; 
 我們平台上 Andy Lee（李衍錫）是柴山探洞的專家，他是壽山國家自然公園巡守員，帶過數百團旅客。行程約 3-4 小時，NT$2,000/人。`,
   },
 };
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const article = articles[slug];
+  if (!article) return { title: '文章不存在 | Midao 祕島' };
+  return {
+    title: `${article.title} | Midao 祕島`,
+    description: article.content.slice(0, 120).replace(/\n/g, ' '),
+    openGraph: {
+      title: `${article.title} | Midao 祕島`,
+      description: article.content.slice(0, 120).replace(/\n/g, ' '),
+      images: article.imageUrl ? [{ url: article.imageUrl }] : [],
+      type: 'article',
+    },
+  };
+}
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
