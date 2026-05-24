@@ -94,7 +94,7 @@ function LoginContent() {
             margin: '0 0 6px',
             letterSpacing: '-0.5px',
           }}>
-            Tour Platform
+            Midao 祕島
           </h1>
           <p style={{
             color: 'rgba(255,255,255,0.75)',
