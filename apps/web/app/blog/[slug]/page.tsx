@@ -109,14 +109,26 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const articleJsonLd = {
     '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: article.title,
-    description: article.content.slice(0, 160).replace(/\n/g, ' '),
-    image: article.imageUrl,
-    datePublished: article.date,
-    author: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
-    publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
-    url: `${baseUrl}/blog/${slug}`,
+    '@graph': [
+      {
+        '@type': 'Article',
+        headline: article.title,
+        description: article.content.slice(0, 160).replace(/\n/g, ' '),
+        image: article.imageUrl,
+        datePublished: article.date,
+        author: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
+        publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
+        url: `${baseUrl}/blog/${slug}`,
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: '旅遊指南', item: `${baseUrl}/blog` },
+          { '@type': 'ListItem', position: 3, name: article.title },
+        ],
+      },
+    ],
   };
 
   return (
