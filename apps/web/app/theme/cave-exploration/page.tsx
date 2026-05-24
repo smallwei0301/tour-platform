@@ -32,9 +32,46 @@ const caveTours = [
   },
 ];
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+
+const caveJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
+        { '@type': 'ListItem', position: 3, name: '柴山探洞', item: `${baseUrl}/theme/cave-exploration` },
+      ],
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: [
+        {
+          '@type': 'Question',
+          name: '需要有攀岩經驗嗎？',
+          acceptedAnswer: { '@type': 'Answer', text: '不需要，MVP 路線以初中階安全探索為主。' },
+        },
+        {
+          '@type': 'Question',
+          name: '適合幾歲的人參加？',
+          acceptedAnswer: { '@type': 'Answer', text: '建議 10 歲以上，實際依行程標示與導遊評估。' },
+        },
+        {
+          '@type': 'Question',
+          name: '當天要穿什麼？',
+          acceptedAnswer: { '@type': 'Answer', text: '建議防滑鞋、長褲、可活動上衣，避免拖鞋。' },
+        },
+      ],
+    },
+  ],
+};
+
 export default function CaveExplorationPage() {
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(caveJsonLd) }} />
       <section className="tp-theme-hero tp-theme-cave">
         <div className="tp-container">
           <h1>鑽進高雄的秘密地下世界</h1>
