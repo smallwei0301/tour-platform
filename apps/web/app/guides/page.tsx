@@ -48,7 +48,7 @@ export default async function GuidesPage() {
   return (
     <main className="tp-container tp-guides-page" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guidesJsonLd) }} />
-      <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; 全部導遊</div>
+      <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; <Link href="/guides">認識導遊</Link></div>
       <section className="tp-activities-layout">
         <aside className="tp-filter">
           <div className="tp-filter-head">
