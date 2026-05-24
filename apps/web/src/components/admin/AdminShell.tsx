@@ -105,7 +105,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       {/* Logo */}
       <div style={{ padding: '22px 20px 14px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--tp-primary)' }}>🌿 Tour Platform</div>
+          <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--tp-primary)' }}>🌿 Midao 祕島</div>
           <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin Console</div>
         </div>
         {onClose && (
@@ -177,7 +177,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             >
               ☰
             </button>
-            <span style={{ fontWeight: 700, color: 'var(--tp-primary)', fontSize: 15 }}>🌿 Tour Platform Admin</span>
+            <span style={{ fontWeight: 700, color: 'var(--tp-primary)', fontSize: 15 }}>🌿 Midao 祕島 Admin</span>
           </div>
         )}
 

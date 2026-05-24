@@ -40,7 +40,7 @@ function LoginForm() {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🌿</div>
-          <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--tp-primary)' }}>Tour Platform</div>
+          <div style={{ fontWeight: 800, fontSize: 20, color: 'var(--tp-primary)' }}>Midao 祕島</div>
           <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Admin Console</div>
         </div>
 
@@ -68,7 +68,7 @@ function LoginForm() {
         </form>
 
         <p style={{ marginTop: 20, textAlign: 'center', fontSize: 12, color: '#d1d5db' }}>
-          Tour Platform Admin Console · 僅限授權人員使用
+          Midao 祕島 Admin Console · 僅限授權人員使用
         </p>
       </div>
     </main>

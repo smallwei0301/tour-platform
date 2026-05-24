@@ -160,7 +160,7 @@ function wrapEmail(title: string, body: string): string {
             <td style="background:#f1f5f9;padding:20px 32px;border-top:1px solid #e5e7eb;">
               <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">
                 此信由系統自動發送，請勿直接回覆。<br/>
-                如有問題請聯絡 <a href="mailto:support@tourplatform.tw" style="color:#ec4899;">support@tourplatform.tw</a>
+                如有問題請聯絡 <a href="mailto:support@midao.tw" style="color:#ec4899;">support@midao.tw</a>
               </p>
             </td>
           </tr>
