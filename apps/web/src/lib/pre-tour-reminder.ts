@@ -132,11 +132,11 @@ export async function sendReminder(
       return;
     }
     const resend = new Resend(apiKey);
-    const from = process.env.EMAIL_FROM || 'Tour Platform <noreply@resend.dev>';
+    const from = process.env.EMAIL_FROM || 'Midao 祕島 <noreply@resend.dev>';
     await resend.emails.send({
       from,
       to: payload.to!,
-      subject: payload.subject || '出團前提醒 — Tour Platform',
+      subject: payload.subject || '出團前提醒 — Midao 祕島',
       text: payload.body,
     });
     return;
