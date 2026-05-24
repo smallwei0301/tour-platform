@@ -93,14 +93,16 @@ export default async function GuidesPage() {
           </div>
 
           <div className="tp-card-grid tp-card-grid-activities">
-            {guides.map((g: any) => (
+            {guides.map((g: any, idx: number) => (
               <article className="tp-card" key={g.slug}>
                 <div style={{ position: 'relative' }}>
                   <Image
                     src={g.profilePhotoUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
                     alt={g.displayName}
                     style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', borderRadius: 10 }}
-                    loading="lazy" width={1200} height={675} />
+                    priority={idx === 0}
+                    loading={idx === 0 ? undefined : 'lazy'}
+                    width={1200} height={675} />
                   <span style={{ position: 'absolute', top: 8, right: 8, background: '#27ae60', color: '#fff', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>✅ 已驗證</span>
                 </div>
                 <h3 style={{ marginTop: 10 }}>{g.displayName}</h3>
