@@ -96,7 +96,7 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
     <main className="tp-detail">
       <div className="tp-container">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(experienceJsonLd) }} />
-        <div className="tp-breadcrumb"><Link href="/">首頁</Link> / 體驗 / {experience.title}</div>
+        <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; 體驗 &gt; {experience.title}</div>
 
         <section className="tp-detail-layout">
           <article className="tp-detail-main">
