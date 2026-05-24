@@ -66,8 +66,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className={`${notoSans.variable} ${inter.variable}`}>
+        <a href="#main-content" className="tp-skip-link">跳至主要內容</a>
         <Navbar />
-        {children}
+        <div id="main-content">
+          {children}
+        </div>
         <Footer />
         {/* Vercel Analytics + Speed Insights — zero-config, GDPR-friendly */}
         <Analytics />
