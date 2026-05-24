@@ -34,10 +34,14 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
   return (
     <div className="tp-activity-tabs-wrap">
       {/* Tab Nav */}
-      <div className="tp-activity-tab-nav">
+      <div className="tp-activity-tab-nav" role="tablist" aria-label="行程詳情分頁">
         {TABS.map((tab) => (
           <button
             key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`tab-panel-${tab}`}
+            id={`tab-${tab}`}
             className={`tp-activity-tab-btn${activeTab === tab ? ' active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
@@ -47,7 +51,12 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
       </div>
 
       {/* Tab Content */}
-      <div className="tp-activity-tab-content">
+      <div
+        className="tp-activity-tab-content"
+        role="tabpanel"
+        id={`tab-panel-${activeTab}`}
+        aria-labelledby={`tab-${activeTab}`}
+      >
         {activeTab === '方案' && (
           <div>
             {/* Date Picker */}
