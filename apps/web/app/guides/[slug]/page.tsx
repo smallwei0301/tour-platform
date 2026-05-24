@@ -26,8 +26,33 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
   const guideActivities = guide.activities || [];
   const guideReviews = guide.reviews || [];
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const guideJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Person',
+        name: guide.displayName,
+        url: `${baseUrl}/guides/${slug}`,
+        ...(guide.profilePhotoUrl ? { image: guide.profilePhotoUrl } : {}),
+        ...(guide.region ? { address: { '@type': 'PostalAddress', addressLocality: guide.region, addressCountry: 'TW' } } : {}),
+        ...(guide.ratingAvg ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: guide.ratingAvg, reviewCount: guide.reviewCount || 1 } } : {}),
+        ...(guide.bio ? { description: guide.bio } : {}),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: '導遊', item: `${baseUrl}/guides` },
+          { '@type': 'ListItem', position: 3, name: guide.displayName },
+        ],
+      },
+    ],
+  };
+
   return (
     <main className="tp-container tp-guide-detail" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guideJsonLd) }} />
       {/* Hero cover with placeholder fallback */}
       <div style={{ marginTop: 18 }}>
         <ActivityHero
