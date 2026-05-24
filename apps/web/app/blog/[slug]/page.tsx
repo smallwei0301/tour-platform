@@ -141,7 +141,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         <Link href="/">首頁</Link> &gt; <Link href="/blog">旅遊指南</Link> &gt; {article.title}
       </div>
 
-      <Image src={article.imageUrl} alt={article.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 14, marginTop: 12 }} width={1200} height={675} />
+      <Image src={article.imageUrl} alt={article.title} priority style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 14, marginTop: 12 }} width={1200} height={675} />
 
       <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12, display: 'inline-block', marginTop: 16 }}>{article.category}</span>
       <h1 style={{ margin: '12px 0 6px' }}>{article.title}</h1>
