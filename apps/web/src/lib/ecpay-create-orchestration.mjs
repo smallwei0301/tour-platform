@@ -15,7 +15,7 @@ export function buildEcpayCheckoutParams(input = {}) {
     MerchantTradeDate: tradeDate,
     PaymentType: 'aio',
     TotalAmount: String(input?.totalTwd ?? ''),
-    TradeDesc: encodeURIComponent('Tour Platform 行程預訂'),
+    TradeDesc: encodeURIComponent('Midao 祕島 行程預訂'),
     ItemName: input?.title || '行程預訂',
     ReturnURL: String(input?.callbackUrl || ''),
     ClientBackURL: String(input?.returnUrl || ''),

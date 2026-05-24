@@ -302,7 +302,7 @@ export async function POST(
       MerchantTradeDate: tradeDate,
       PaymentType: 'aio',
       TotalAmount: String(order.total_twd),
-      TradeDesc: encodeURIComponent('Tour Platform 行程預訂'),
+      TradeDesc: encodeURIComponent('Midao 祕島 行程預訂'),
       ItemName: itemName.slice(0, 200), // ECPay has 200 char limit
       ReturnURL: callbackUrl,
       ClientBackURL: returnUrl,
