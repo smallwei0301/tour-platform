@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '聯絡我們 | Midao 祕島',
     description: '歡迎透過表單、Email 或客服熱線與我們聯繫。',
+    images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: '聯絡 Midao 祕島' }],
   },
 };
 

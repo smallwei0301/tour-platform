@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '野外溯溪 — 花蓮秘境野溪體驗 | Midao 祕島',
     description: '不只是戲水。跟著懂溪的導遊，走進花蓮最美的溪谷。',
+    images: [{ url: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200', width: 1200, height: 630, alt: '野外溯溪 | Midao 祕島' }],
   },
 };
 

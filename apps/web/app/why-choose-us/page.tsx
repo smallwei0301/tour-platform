@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '為什麼選擇私人在地導遊？ | Midao 祕島',
     description: '不跟團、不趕路。找到懂路的人，用你的節奏認識台灣。',
+    images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: 'Midao 祕島 — 私人在地導遊' }],
   },
 };
 
