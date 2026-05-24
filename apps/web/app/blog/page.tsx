@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '旅遊指南 | Midao 祕島',
     description: '台灣各地旅遊攻略與在地體驗分享。',
+    images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: '台灣旅遊指南 | Midao 祕島' }],
   },
 };
 

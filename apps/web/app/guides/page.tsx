@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: '認識導遊 | Midao 祕島',
     description: '找到屬於你的引路人——認識台灣各地在地導遊的專長與故事。',
+    images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: '台灣在地導遊 | Midao 祕島' }],
   },
 };
 
