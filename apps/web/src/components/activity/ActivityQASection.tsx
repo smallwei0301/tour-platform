@@ -121,10 +121,11 @@ export function ActivityQASection({ activityId }: Props) {
             </p>
           ) : (
             <form onSubmit={handleSubmitQuestion} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+              <label htmlFor="qa-question-input" style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
                 有疑問嗎？歡迎提問
               </label>
               <textarea
+                id="qa-question-input"
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="有疑問嗎？歡迎提問..."
