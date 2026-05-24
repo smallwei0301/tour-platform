@@ -7,7 +7,7 @@ export function Footer() {
         <div className="tp-footer-main-grid">
           {/* Col 1: Brand + App download */}
           <section className="tp-footer-brand">
-            <h3 className="tp-footer-logo">Tour Platform</h3>
+            <h3 className="tp-footer-logo">Midao 祕島</h3>
             <p>台灣在地導遊交易平台<br />找到懂路的人，帶你走進台灣最有故事的地方。</p>
             <div className="tp-footer-app-badges">
               <a href="#" className="tp-footer-app-badge" aria-label="App Store">

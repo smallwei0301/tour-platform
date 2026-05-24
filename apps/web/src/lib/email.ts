@@ -49,7 +49,7 @@ function logEmail(entry: EmailLogEntry): void {
   }
 }
 
-const FROM = process.env.EMAIL_FROM || 'Tour Platform <noreply@resend.dev>';
+const FROM = process.env.EMAIL_FROM || 'Midao 祕島 <noreply@resend.dev>';
 
 type EmailClient = { emails: { send: (args: CreateEmailOptions) => Promise<{ data: { id?: string } | null }> } };
 let _resend: Resend | null = null;
@@ -145,7 +145,7 @@ function wrapEmail(title: string, body: string): string {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#ec4899,#f97316);padding:28px 32px;">
-              <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">🗺️ Tour Platform</p>
+              <p style="margin:0;font-size:22px;font-weight:800;color:#fff;">🗺️ Midao 祕島</p>
               <p style="margin:4px 0 0;font-size:14px;color:rgba(255,255,255,0.85);">台灣在地導遊平台</p>
             </td>
           </tr>
@@ -265,7 +265,7 @@ export async function sendAdminPaymentNotification(data: OrderEmailData): Promis
   const adminEmails = (process.env.ADMIN_EMAIL_ALLOWLIST || '').split(',').map(e => e.trim()).filter(Boolean);
   if (adminEmails.length === 0) return;
 
-  const subject = `[Tour Platform] 新訂單付款確認 — ${data.activityTitle}`;
+  const subject = `[Midao 祕島] 新訂單付款確認 — ${data.activityTitle}`;
   const html = wrapEmail(subject, `
     <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">💳 收到新訂單付款</h1>
     <p style="font-size:14px;color:#374151;margin:0 0 16px;">以下訂單已付款成功，請做後續安排。</p>
