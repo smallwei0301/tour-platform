@@ -10,9 +10,21 @@ export const metadata: Metadata = {
   },
 };
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+
+const whyChooseJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+    { '@type': 'ListItem', position: 2, name: '為什麼選擇我們', item: `${baseUrl}/why-choose-us` },
+  ],
+};
+
 export default function WhyChooseUsPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(whyChooseJsonLd) }} />
       <link rel="preload" as="image" href="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1400&q=80" fetchPriority="high" />
       {/* Hero */}
       <section style={{
