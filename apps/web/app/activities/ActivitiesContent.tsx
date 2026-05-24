@@ -113,7 +113,7 @@ export default function ActivitiesContent() {
 
   return (
     <main className="tp-container tp-activities" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb">首頁 &gt; 全部行程{query ? ` &gt; 搜尋：${query}` : ''}</div>
+      <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; 全部行程{query ? ` &gt; 搜尋：${query}` : ''}</div>
 
       <section className="tp-activities-layout">
         {/* 篩選側欄 */}
