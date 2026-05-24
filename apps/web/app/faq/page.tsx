@@ -45,9 +45,25 @@ const faqs = [
   },
 ];
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.flatMap((section) =>
+    section.items.map((item) => ({
+      '@type': 'Question',
+      name: item.q,
+      acceptedAnswer: { '@type': 'Answer', text: item.a },
+    }))
+  ),
+};
+
 export default function FaqPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 56 }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/">首頁</Link> &gt; 常見問題
       </div>
