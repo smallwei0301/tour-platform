@@ -1,3 +1,10 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '退款政策 | Midao 祕島',
+  description: 'Midao 祕島退款政策說明：出團前 168 小時全額退款、72 小時以上退 70%，不可抗力免費改期。',
+};
+
 export default function RefundPage() {
   return (
     <main className="tp-container tp-static-page">

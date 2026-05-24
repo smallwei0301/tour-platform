@@ -1,3 +1,10 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '服務條款 | Midao 祕島',
+  description: 'Midao 祕島平台服務條款，說明平台性質、預約流程與旅客權利義務。',
+};
+
 export default function TermsPage() {
   return (
     <main className="tp-container tp-static-page">
