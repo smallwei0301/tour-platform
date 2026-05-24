@@ -37,6 +37,9 @@ export default function AboutPage() {
     <main className="tp-container" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }} />
       <link rel="preload" as="image" href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1400&q=80" fetchPriority="high" />
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
+        <Link href="/">首頁</Link> &gt; 關於我們
+      </div>
       {/* Hero */}
       <section style={{
         backgroundImage: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1528164344705-47542687000d?w=1400&q=80)',
