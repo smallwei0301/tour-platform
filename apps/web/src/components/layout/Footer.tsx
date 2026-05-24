@@ -97,7 +97,7 @@ export function Footer() {
       </div>
 
       <div className="tp-footer-copy">
-        © 2026 Tour Platform · 台灣 · 保留一切權利
+        © 2026 Midao 祕島 · 台灣 · 保留一切權利
       </div>
     </footer>
   );

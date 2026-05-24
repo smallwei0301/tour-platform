@@ -58,7 +58,7 @@ export function Navbar() {
     <header className="tp-navbar">
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
-        <Link href="/" className="tp-logo">Tour Platform</Link>
+        <Link href="/" className="tp-logo">Midao 祕島</Link>
 
         {/* Desktop: search bar */}
         <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label="搜尋">
