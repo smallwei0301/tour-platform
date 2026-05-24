@@ -56,21 +56,26 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
       />
 
       {/* Modal panel */}
-      <div style={{
-        position: 'fixed', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        background: '#fff', borderRadius: 16,
-        zIndex: 1001, width: '90vw', maxWidth: 560, maxHeight: '85dvh',
-        display: 'flex', flexDirection: 'column',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-      }}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="plan-modal-title"
+        style={{
+          position: 'fixed', top: '50%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          background: '#fff', borderRadius: 16,
+          zIndex: 1001, width: '90vw', maxWidth: 560, maxHeight: '85dvh',
+          display: 'flex', flexDirection: 'column',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        }}
+      >
         {/* Header */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px 0', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
         }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>方案詳情</h2>
-          <button onClick={onClose} style={{
+          <h2 id="plan-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>方案詳情</h2>
+          <button onClick={onClose} aria-label="關閉" style={{
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 22, color: '#6b7280', padding: '4px 8px', lineHeight: 1,
           }}>×</button>
