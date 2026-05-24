@@ -54,7 +54,8 @@ export function ActivityHero({
               display: 'block',
             }}
             onError={() => setImageError(true)}
-            loading="eager" width={1200} height={675} />
+            priority
+            width={1200} height={675} />
           {/* Overlay gradient for better text readability */}
           <div
             style={{
