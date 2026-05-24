@@ -22,7 +22,9 @@ export async function generateMetadata(
       title: `${name} | Midao 祕島`,
       description,
       type: 'profile',
-      ...(guide?.profilePhotoUrl ? { images: [{ url: guide.profilePhotoUrl }] } : {}),
+      images: guide?.profilePhotoUrl
+        ? [{ url: guide.profilePhotoUrl }]
+        : [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: `${name} | Midao 祕島` }],
     },
   };
 }

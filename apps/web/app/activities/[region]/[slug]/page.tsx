@@ -49,6 +49,7 @@ export async function generateMetadata(
     openGraph: {
       title: `${slug} | Midao 祕島`,
       type: 'website',
+      images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: 'Midao 祕島 行程' }],
     },
     twitter: {
       card: 'summary_large_image',
