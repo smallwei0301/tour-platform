@@ -1,0 +1,80 @@
+name: auto-check-issue-policy
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  enforce-policy:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.issue.title, '[Auto Check]')
+    steps:
+      - name: Apply required labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          REQUIRED_LABELS="triaged,type:investigation,priority:P2,qa,infra,owner:ai-agent,status:needs-repro"
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "$REQUIRED_LABELS" || \
+            echo "::warning::Failed to apply labels to issue #$ISSUE_NUMBER"
+
+      - name: Check for duplicate open issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Search for other open issues with the same title (excluding this one)
+          DUPLICATES=$(gh issue list --repo "$REPO" --state open \
+            --search "\"$ISSUE_TITLE\" in:title" \
+            --json number,title \
+            --jq ".[] | select(.number != $ISSUE_NUMBER) | \"#\(.number)\"" | head -5)
+
+          if [ -n "$DUPLICATES" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" \
+              --body "⚠️ **Possible duplicate detected.** Open issues with same title: $DUPLICATES. Please check if this is already tracked before investigating."
+          fi
+
+      - name: Add related history from closed issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Find closed related issues
+          RELATED=$(gh issue list --repo "$REPO" --state closed \
+            --search "\"$ISSUE_TITLE\" in:title" \
+            --json number,title,closedAt \
+            --jq ".[0:3] | .[] | \"#\(.number) (closed \(.closedAt | split(\"T\")[0])): \(.title)\"" | head -3)
+
+          if [ -n "$RELATED" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" \
+              --body "📋 **Related closed issues (same title pattern):**
+          $RELATED
+          Please compare current evidence with prior occurrences before classifying."
+          fi
+
+      - name: Check body length
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          BODY_LEN=${#ISSUE_BODY}
+          if [ "$BODY_LEN" -lt 200 ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" \
+              --body "⚠️ **Issue body is too short** ($BODY_LEN chars). Please update with the full template from \`docs/operations/templates/auto-health-check-issue-template.md\`:
+          - Environment (staging/production)
+          - Endpoint and HTTP status
+          - Fingerprint
+          - Rerun command
+          - Sanitized log preview
+          - No-secrets declaration"
+          fi
