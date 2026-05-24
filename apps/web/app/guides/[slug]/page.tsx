@@ -64,8 +64,11 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
   return (
     <main className="tp-container tp-guide-detail" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guideJsonLd) }} />
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
+        <Link href="/">首頁</Link> &gt; <Link href="/guides">認識導遊</Link> &gt; {guide.displayName}
+      </div>
       {/* Hero cover with placeholder fallback */}
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: 12 }}>
         <ActivityHero
           imageUrl={guide.heroImageUrl}
           title={guide.displayName}
