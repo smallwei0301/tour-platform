@@ -119,7 +119,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             "@type": "BreadcrumbList",
             "itemListElement": [
               { "@type": "ListItem", "position": 1, "name": "首頁", "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}` },
-              { "@type": "ListItem", "position": 2, "name": "全部行程", "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}/activities` },
+              { "@type": "ListItem", "position": 2, "name": "探索行程", "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}/activities` },
               { "@type": "ListItem", "position": 3, "name": activity.title },
             ],
           })
@@ -164,7 +164,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       <div className="tp-container">
         <div className="tp-breadcrumb">
           <Link href="/">首頁</Link> &gt;{' '}
-          <Link href="/activities">全部行程</Link> &gt;{' '}
+          <Link href="/activities">探索行程</Link> &gt;{' '}
           {activity.region} &gt; {activity.title}
         </div>
       </div>
