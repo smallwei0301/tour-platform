@@ -6,6 +6,10 @@ on:
     - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -40,6 +44,11 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           PROBE_TIMEOUT_MS: '5000'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          DRY_RUN: ${{ vars.SYNTHETIC_PROBE_DRY_RUN || '' }}
         run: node scripts/cron/synthetic-health-probe.mjs | tee /tmp/probe-results.json
 
       - name: Upload probe results as artifact
