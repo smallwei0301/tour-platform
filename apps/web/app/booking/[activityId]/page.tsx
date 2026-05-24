@@ -443,6 +443,8 @@ function BookingInnerV2FlagShell() {
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
+  const [resolvedActivityId, setResolvedActivityId] = useState('');
+  const [resolvedPlanId, setResolvedPlanId] = useState('');
   const [guests, setGuests] = useState(2);
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -494,6 +496,9 @@ function BookingInnerV2FlagShell() {
           return;
         }
         const nextSlots = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
+        const resolvedPlanCandidate = json.data?.planId || urlPlanId;
+        setResolvedActivityId(json.data?.activityId || activity?.id || '');
+        setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
         setSlots(nextSlots);
         if (!nextSlots.find((s: V2Slot) => s.startAt === selectedSlotStartAt)) {
           setSelectedSlotStartAt(nextSlots[0]?.startAt || '');
@@ -509,7 +514,7 @@ function BookingInnerV2FlagShell() {
   }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt]);
 
   async function handleV2Checkout() {
-    if (!activity?.id || !urlPlanId || !selectedSlotStartAt || !agreed) return;
+    if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
     try {
       setLoading(true);
       setLoadError('');
@@ -522,8 +527,8 @@ function BookingInnerV2FlagShell() {
           ...(correlationId ? { 'x-correlation-id': correlationId } : {}),
         },
         body: JSON.stringify({
-          activityId: activity.id,
-          planId: urlPlanId,
+          activityId: resolvedActivityId,
+          planId: resolvedPlanId,
           startAt: selectedSlotStartAt,
           timezone,
           participants: guests,
