@@ -6,6 +6,12 @@
 
 ---
 
+## Static Verification Refresh — 2026-05-24
+
+Verified at HEAD SHA `c36c624d939dda04b323ca18baafd3187cc60aa9`. Phase 13 contract tests: all pass (alerting-bus 6/6, failure-detectors 12/12). See evidence skeleton at `docs/operations/drills/2026-05-24-monitoring-alert-drill-production-skeleton.md`.
+
+---
+
 ## 1. 靜態程式碼驗證（已完成）
 
 Before running the live drill, verify the alert infrastructure exists in code.
