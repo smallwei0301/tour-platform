@@ -106,8 +106,25 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     );
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const articleJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.content.slice(0, 160).replace(/\n/g, ' '),
+    image: article.imageUrl,
+    datePublished: article.date,
+    author: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
+    publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
+    url: `${baseUrl}/blog/${slug}`,
+  };
+
   return (
     <main className="tp-container" style={{ paddingBottom: 40, maxWidth: 780, margin: '0 auto' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/">首頁</Link> &gt; <Link href="/blog">旅遊指南</Link> &gt; {article.title}
       </div>
