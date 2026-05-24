@@ -73,19 +73,19 @@ export default function GuideApplyPage() {
       <h1>成為我們的導遊</h1>
       <p>平台抽成 15%，導遊實拿 85% · 金流手續費平台吸收 · 後台管理行程</p>
 
-      <div className="tp-stepper">
-        <span className={step >= 1 ? 'active' : ''}>1 基本資料</span>
-        <span className={step >= 2 ? 'active' : ''}>2 上傳證件</span>
-        <span className={step >= 3 ? 'active' : ''}>3 審核送出</span>
-      </div>
+      <ol className="tp-stepper" aria-label="申請步驟">
+        <li className={step >= 1 ? 'active' : ''} aria-current={step === 1 ? 'step' : undefined}>1 基本資料</li>
+        <li className={step >= 2 ? 'active' : ''} aria-current={step === 2 ? 'step' : undefined}>2 上傳證件</li>
+        <li className={step >= 3 ? 'active' : ''} aria-current={step === 3 ? 'step' : undefined}>3 審核送出</li>
+      </ol>
 
       {step === 1 && (
         <section className="tp-step-card">
-          <label>姓名*<input value={fullName} onChange={(e) => setFullName(e.target.value)} /></label>
-          <label>電話*<input value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
-          <label>電子信箱*<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-          <label>所在縣市*<input placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} /></label>
-          <label>自我介紹*<textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} /></label>
+          <label>姓名*<input value={fullName} onChange={(e) => setFullName(e.target.value)} required aria-required="true" /></label>
+          <label>電話*<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" /></label>
+          <label>電子信箱*<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" /></label>
+          <label>所在縣市*<input placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} required aria-required="true" /></label>
+          <label>自我介紹*<textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} required aria-required="true" /></label>
 
           <div style={{ display: 'grid', gap: 16 }}>
             <div>
