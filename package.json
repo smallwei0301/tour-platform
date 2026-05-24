@@ -21,7 +21,8 @@
     "regression:issue-210:booking-cancel": "bash scripts/phase12/run-issue-210-booking-cancel-verification-pack.sh",
     "regression:issue-217:plan-linkage": "bash scripts/phase12/run-issue-217-plan-linkage-guardrails.sh",
     "preflight:schema-drift": "node scripts/production-schema-drift-preflight.mjs",
-    "readiness:snapshot": "node scripts/readiness/generate-live-state-snapshot.mjs"
+    "readiness:snapshot": "node scripts/readiness/generate-live-state-snapshot.mjs",
+    "readiness:check": "node scripts/readiness/check-snapshot-freshness.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

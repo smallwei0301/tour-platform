@@ -3,6 +3,7 @@
 > 最後更新：2026-05-22（本次更新移除硬編碼的 live-state 數字，改以 snapshot 指標取代，防止 drift）
 > 當前主線：**Booking V2 已上線**：V2 為主流程，觀察視窗運行中（#642）
 > 即時 live state 請看：[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)（執行 `npm run readiness:snapshot` 刷新）
+> Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
 1. 現在專案在做什麼

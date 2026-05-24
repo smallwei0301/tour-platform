@@ -132,6 +132,9 @@ if (isMain) {
 
   const lines = [];
 
+  lines.push(`<!-- query_timestamp: ${timestamp} -->`);
+  lines.push(`<!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run \`npm run readiness:snapshot\` to refresh -->`);
+  lines.push('');
   lines.push(`# Readiness Live-State Snapshot`);
   lines.push('');
   lines.push(`> This file is auto-generated. Run \`npm run readiness:snapshot\` to refresh.`);
