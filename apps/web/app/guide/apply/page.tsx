@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 
 export default function GuideApplyPage() {
   const [step, setStep] = useState(1);
@@ -66,6 +67,9 @@ export default function GuideApplyPage() {
 
   return (
     <main className="tp-container tp-apply-page">
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
+        <Link href="/">首頁</Link> &gt; 成為導遊
+      </div>
       <h1>成為我們的導遊</h1>
       <p>平台抽成 15%，導遊實拿 85% · 金流手續費平台吸收 · 後台管理行程</p>
 
