@@ -32,27 +32,27 @@ const posts = [
     imageUrl: 'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=800&q=80',
     featured: false,
   },
-  {
-    slug: 'dadaocheng-food-map',
-    title: '大稻埕在地美食地圖：只有導遊知道的隱藏版',
-    excerpt: '迪化街不只有南北貨，還有你在旅遊書上找不到的碗粿和百年老店。',
-    category: '美食體驗',
-    date: '2026-03-10',
-    readTime: '4 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&q=80',
-    featured: false,
-  },
-  {
-    slug: 'hualien-river-trekking-tips',
-    title: '花蓮溯溪新手指南：你需要知道的 10 件事',
-    excerpt: '不會游泳可以去嗎？幾月最適合？裝備要自己帶嗎？溯溪前必讀。',
-    category: '戶外冒險',
-    date: '2026-03-05',
-    readTime: '6 分鐘',
-    imageUrl: 'https://images.unsplash.com/photo-1504858700536-882c978a3464?w=800&q=80',
-    featured: false,
-  },
 ];
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+
+const blogJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: '旅遊指南 | Midao 祕島',
+  url: `${baseUrl}/blog`,
+  itemListElement: posts.map((p, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    item: {
+      '@type': 'Article',
+      headline: p.title,
+      url: `${baseUrl}/blog/${p.slug}`,
+      datePublished: p.date,
+      image: p.imageUrl,
+    },
+  })),
+};
 
 export default function BlogPage() {
   const featured = posts.find((p) => p.featured);
@@ -60,6 +60,7 @@ export default function BlogPage() {
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }} />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}><Link href="/">首頁</Link> &gt; 旅遊指南</div>
       <h1>旅遊指南</h1>
 
