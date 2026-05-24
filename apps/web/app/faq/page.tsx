@@ -45,16 +45,29 @@ const faqs = [
   },
 ];
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+
 const faqJsonLd = {
   '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: faqs.flatMap((section) =>
-    section.items.map((item) => ({
-      '@type': 'Question',
-      name: item.q,
-      acceptedAnswer: { '@type': 'Answer', text: item.a },
-    }))
-  ),
+  '@graph': [
+    {
+      '@type': 'FAQPage',
+      mainEntity: faqs.flatMap((section) =>
+        section.items.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        }))
+      ),
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '常見問題', item: `${baseUrl}/faq` },
+      ],
+    },
+  ],
 };
 
 export default function FaqPage() {
