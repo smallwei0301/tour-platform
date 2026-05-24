@@ -1,4 +1,4 @@
-// Tour Platform MVP — Complete Fixture Data
+// Midao 祕島 MVP — Complete Fixture Data
 // Source: 04-tech-architecture/07-andy-lee-mvp-content.json + placeholder guides
 
 export interface GuideProfile {
