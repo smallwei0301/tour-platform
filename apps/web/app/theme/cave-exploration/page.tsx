@@ -1,5 +1,15 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '柴山探洞行程 | Midao 祕島',
+  description: '跟著在地導遊鑽進高雄柴山的秘密地下世界，探索億萬年石灰岩洞穴。小團深度體驗，實名認證導遊帶路。',
+  openGraph: {
+    title: '柴山探洞 — 高雄秘境地下世界 | Midao 祕島',
+    description: '不一樣的高雄旅行：跟著在地人鑽進柴山洞穴，看見你在景點地圖上找不到的台灣。',
+  },
+};
 
 const caveTours = [
   {
