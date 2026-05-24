@@ -50,6 +50,11 @@
 - 批次轉帳失敗
 - 導遊回報金額不符
 
+## Operator notes
+
+- Monthly payout JSON (`/api/guide/payout/monthly`) and CSV (`/api/guide/payout/monthly/csv`) now read the active `settlement_rules` row from the database (same source as the guide dashboard). The env constant `SETTLEMENT_COMMISSION_RATE` is only used as a fallback if the DB is unreachable or has no active row.
+- When approving payouts, verify that the `settlementRulesVersion` field in the JSON response (or the `X-Settlement-Rule-Version` response header for CSV downloads) matches the version shown on the guide dashboard. A mismatch indicates a data inconsistency that must be investigated before approving.
+
 ## 9. Go-Live 前待確認事項（已解決 — 2026-05）
 
 以下事項已拍板，詳見 [05-settlement-payout-ops-runbook.md](./05-settlement-payout-ops-runbook.md)（#540）：

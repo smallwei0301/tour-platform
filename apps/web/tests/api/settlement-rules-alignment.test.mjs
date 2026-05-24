@@ -47,8 +47,9 @@ describe('settlement rules alignment', () => {
       assert.match(route, /refund_amount_twd/, `${path} must query refund amounts`);
       assert.match(route, /effectiveTwd/, `${path} must compute effectiveTwd`);
       assert.match(route, /Math\.max\(0,\s*totalTwd\s*-\s*refundAmountTwd\)/, `${path} must deduct refunds before commission`);
-      assert.match(route, /effectiveTwd \* SETTLEMENT_COMMISSION_RATE/, `${path} must calculate commission from effectiveTwd`);
-      assert.doesNotMatch(route, /totalTwd \* SETTLEMENT_COMMISSION_RATE/, `${path} must not calculate commission from gross totalTwd`);
+      assert.match(route, /effectiveTwd \* settlementConfig\.commission_rate/, `${path} must calculate commission from effectiveTwd using DB-backed settlementConfig`);
+      assert.doesNotMatch(route, /totalTwd \* settlementConfig\.commission_rate/, `${path} must not calculate commission from gross totalTwd`);
+      assert.doesNotMatch(route, /SETTLEMENT_COMMISSION_RATE/, `${path} must not use static SETTLEMENT_COMMISSION_RATE constant`);
     }
   });
 

@@ -1,6 +1,6 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
-import { SETTLEMENT_COMMISSION_RATE } from '../../../../../src/lib/settlement-config';
+import { getSettlementConfig } from '../../../../../src/lib/settlement-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,10 +23,11 @@ export async function GET(req: Request) {
   const emptyTotals = { gmvTwd: 0, commissionTwd: 0, netTwd: 0 };
 
   if (!process.env.SUPABASE_URL) {
-    return Response.json(ok({ month, orders: [], totals: emptyTotals }));
+    return Response.json(ok({ month, orders: [], totals: emptyTotals, settlementRulesVersion: 'env-fallback' }));
   }
 
   const supabase = await getSupabase();
+  const settlementConfig = await getSettlementConfig(supabase);
   const guideId = session.guideId;
 
   // Get guide's activity IDs and titles
@@ -95,7 +96,7 @@ export async function GET(req: Request) {
     const totalTwd = o.total_twd ?? 0;
     const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
     const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
-    const commissionTwd = Math.floor(effectiveTwd * SETTLEMENT_COMMISSION_RATE);
+    const commissionTwd = Math.floor(effectiveTwd * settlementConfig.commission_rate);
     const netTwd = effectiveTwd - commissionTwd;
     const scheduleDate = (o.schedule_id && scheduleDates[o.schedule_id]) ? scheduleDates[o.schedule_id] : null;
     return {
@@ -120,5 +121,6 @@ export async function GET(req: Request) {
     month,
     orders,
     totals: { gmvTwd, commissionTwd, netTwd },
+    settlementRulesVersion: settlementConfig.version ?? 'v1',
   }));
 }

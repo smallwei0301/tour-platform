@@ -35,12 +35,13 @@ test('route does not export non-route utilities or types', () => {
   }
 });
 
-// ── Route: imports SETTLEMENT_COMMISSION_RATE ────────────────────────────────
+// ── Route: imports getSettlementConfig ───────────────────────────────────────
 
-test('route imports SETTLEMENT_COMMISSION_RATE from settlement-config', () => {
+test('route imports getSettlementConfig from settlement-config', () => {
   const src = readFileSync(PAYOUT_ROUTE, 'utf8');
-  assert.match(src, /SETTLEMENT_COMMISSION_RATE/, 'SETTLEMENT_COMMISSION_RATE not imported in route');
+  assert.match(src, /getSettlementConfig/, 'getSettlementConfig not imported in route');
   assert.match(src, /settlement-config/, 'settlement-config not imported in route');
+  assert.doesNotMatch(src, /SETTLEMENT_COMMISSION_RATE/, 'route must not use static SETTLEMENT_COMMISSION_RATE constant');
 });
 
 // ── Route: validates month param ─────────────────────────────────────────────
