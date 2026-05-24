@@ -54,6 +54,13 @@ const homeJsonLd = {
 export default function HomePage() {
   return (
     <>
+      {/* Preload hero background image to improve LCP */}
+      <link
+        rel="preload"
+        as="image"
+        href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
+        fetchPriority="high"
+      />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
