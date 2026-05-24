@@ -96,7 +96,8 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
               <Image
                 src={url}
                 alt={`${alt} ${i + 1}`}
-                loading={i === 0 ? 'eager' : 'lazy'}
+                priority={i === 0}
+                loading="lazy"
                 onError={() => handleImageError(i)} width={1200} height={675} />
             )}
           </div>
@@ -122,6 +123,7 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
             src={validImages[0]}
             alt={alt}
             className="kkd-gallery-main"
+            priority
             onError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
         )}
         {validImages.length > 1 && (
