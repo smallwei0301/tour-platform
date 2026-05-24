@@ -1,4 +1,21 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const readable = slug.replace(/-/g, ' ');
+  return {
+    title: `${readable} | 體驗行程 | Midao 祕島`,
+    description: `預約台灣在地體驗行程：${readable}。實名認證導遊帶路，小團深度探索。`,
+    openGraph: {
+      title: `${readable} | Midao 祕島`,
+      description: `跟著懂路的在地導遊，探索台灣最有故事的地方。`,
+      type: 'website',
+    },
+  };
+}
 
 type Experience = {
   slug: string;
@@ -27,7 +44,7 @@ function fallbackExperience(slug: string): Experience {
 export default async function ExperiencePage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const response = await fetch(`${baseUrl}/api/experiences`, { cache: 'no-store' }).catch((): null => null);
 
   let experience = fallbackExperience(slug);
@@ -48,9 +65,37 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
     }
   }
 
+  const experienceJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'TouristAttraction',
+        name: experience.title,
+        description: experience.description,
+        url: `${baseUrl}/experiences/${experience.slug}`,
+        ...(experience.locationLabel ? { address: { '@type': 'PostalAddress', addressLocality: experience.locationLabel, addressCountry: 'TW' } } : {}),
+        offers: {
+          '@type': 'Offer',
+          price: experience.priceTwd,
+          priceCurrency: 'TWD',
+          availability: 'https://schema.org/InStock',
+        },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: '體驗', item: `${baseUrl}/experiences` },
+          { '@type': 'ListItem', position: 3, name: experience.title },
+        ],
+      },
+    ],
+  };
+
   return (
     <main className="tp-detail">
       <div className="tp-container">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(experienceJsonLd) }} />
         <div className="tp-breadcrumb"><Link href="/">首頁</Link> / 體驗 / {experience.title}</div>
 
         <section className="tp-detail-layout">
