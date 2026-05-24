@@ -6,6 +6,8 @@
 > 即時 open issues / open PRs，請查閱：
 > **[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)**
 > 或執行 `npm run readiness:snapshot` 刷新。
+>
+> Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
 **截至 2026-05-22 快照：**
 - **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作為歷史/運維參考，不再列為當前 blocker

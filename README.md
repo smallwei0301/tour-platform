@@ -75,6 +75,8 @@
 > For the current open issues, open PRs, and latest merged PRs, see the auto-generated snapshot:
 > **[docs/operations/reports/readiness-live-state-latest.md](./docs/operations/reports/readiness-live-state-latest.md)**
 > Refresh with: `npm run readiness:snapshot`
+>
+> Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
 **已結案 / 歷史參考（不再是當前 open blocker）：**
 - **#586 CLOSED** — docs readiness sync（PR #587 merged）
