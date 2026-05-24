@@ -681,4 +681,67 @@ test('generateMerchantTradeNo creates valid trade number', () => {
   assert.equal(tradeNo.slice(0, 12), '550e8400e29b');
 });
 
+// ============================================================================
+// PR #708 Regression Guards — slug→resolved-ID fix
+// ============================================================================
+
+test('draft API rejects slug-style activityId (regression guard for PR #708)', () => {
+  // Slug-style IDs should be rejected — not UUID-like
+  const slugPayloads = [
+    'kaohsiung-chaishan-cave-experience',
+    'half-day',
+    'taipei-101-night-tour',
+    'activity-slug-with-numbers-123',
+  ];
+  for (const slug of slugPayloads) {
+    const result = parseAndValidateDraftBody({
+      activityId: slug,
+      planId: 'c0000003-0000-0000-0000-000000000002',
+      startAt: '2026-06-01T09:00:00+08:00',
+      timezone: 'Asia/Taipei',
+      participants: 2,
+      contactName: 'Test User',
+      contactPhone: '0912345678',
+      contactEmail: 'test@example.com',
+    });
+    assert.ok('error' in result, `Expected error for slug activityId: ${slug}`);
+    assert.equal(result.error.message, 'Invalid activityId format', `Expected Invalid activityId format for: ${slug}`);
+  }
+});
+
+test('draft API rejects slug-style planId (regression guard for PR #708)', () => {
+  const slugPlanIds = ['half-day', 'full-day', 'sunset-tour', 'plan-slug-123'];
+  for (const slug of slugPlanIds) {
+    const result = parseAndValidateDraftBody({
+      activityId: 'c0000003-0000-0000-0000-000000000001',
+      planId: slug,
+      startAt: '2026-06-01T09:00:00+08:00',
+      timezone: 'Asia/Taipei',
+      participants: 2,
+      contactName: 'Test User',
+      contactPhone: '0912345678',
+      contactEmail: 'test@example.com',
+    });
+    assert.ok('error' in result, `Expected error for slug planId: ${slug}`);
+    assert.equal(result.error.message, 'Invalid planId format', `Expected Invalid planId format for: ${slug}`);
+  }
+});
+
+test('draft API accepts UUID-like resolved activityId and planId (regression guard for PR #708)', () => {
+  // These are the resolved IDs that the V2 booking shell should send after slug resolution
+  const result = parseAndValidateDraftBody({
+    activityId: 'c0000003-0000-0000-0000-000000000001',
+    planId: 'c0000003-0000-0000-0000-000000000002',
+    startAt: '2026-06-01T09:00:00+08:00',
+    timezone: 'Asia/Taipei',
+    participants: 2,
+    contactName: 'Test User',
+    contactPhone: '0912345678',
+    contactEmail: 'test@example.com',
+  });
+  assert.ok('data' in result, `Expected no error for UUID-like IDs, got: ${result.error?.message}`);
+  assert.equal(result.data.activityId, 'c0000003-0000-0000-0000-000000000001');
+  assert.equal(result.data.planId, 'c0000003-0000-0000-0000-000000000002');
+});
+
 console.log('All Booking Draft + Checkout API tests completed!');
