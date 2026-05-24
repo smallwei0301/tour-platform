@@ -10,9 +10,32 @@ export const metadata: Metadata = {
   },
 };
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+
+const aboutJsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      name: 'Midao 祕島',
+      url: baseUrl,
+      description: '台灣在地導遊預約平台 — 連結旅客與在地導遊，提供深度文化體驗。',
+      sameAs: [`${baseUrl}/about`],
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '關於我們', item: `${baseUrl}/about` },
+      ],
+    },
+  ],
+};
+
 export default function AboutPage() {
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }} />
       <link rel="preload" as="image" href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1400&q=80" fetchPriority="high" />
       {/* Hero */}
       <section style={{
