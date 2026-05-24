@@ -16,7 +16,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
         disallow: [
           '/admin', '/guide/', '/api/', '/booking/', '/me/',
-          '/checkout', '/orders', '/login', '/dashboard',
+          '/checkout', '/order', '/orders', '/login', '/dashboard',
         ],
       },
     ],
