@@ -1,8 +1,10 @@
 # Supabase Backup & Restore Runbook
 
 **Owner:** Wei (Supabase project owner)
-**Last updated:** 2026-05-24
+**Last updated:** 2026-05-25
 **Applies to:** Production Supabase project (tour-platform)
+
+> Guardrail: agents may prepare docs/templates/preflight only. Any restore or PITR action requires Wei/operator and must target non-production first.
 
 ## RTO / RPO Targets (Soft-Launch Phase)
 
@@ -41,6 +43,7 @@ Incident detected
 
 ### Full Database Restore (PITR)
 
+0. **Run non-production preflight** — `node scripts/ops/restore-drill-preflight.mjs --dry-run` for agent validation, then operator reruns without `--dry-run` using non-production target env/URL/ref.
 1. **Stop application traffic** — set `MAINTENANCE_MODE=1` on Vercel (prevents new writes)
 2. **Identify restore point** — Supabase Dashboard → Backups → select point in time
 3. **Create restore target** — provision new Supabase project (staging-restore) or use existing staging
@@ -59,8 +62,10 @@ Incident detected
 ### Forbidden Actions
 
 - ❌ NEVER run restore directly against production DB without staging verification
+- ❌ NEVER skip the preflight confirmation that target env/project is non-production
 - ❌ NEVER share service_role key or DB URL in issues, PRs, logs, or artifacts
 - ❌ NEVER include real traveler/guide PII, payment data, or connection strings in drill evidence
+- ❌ NEVER treat agent dry-run/prep work as completion of #724; live drill remains operator-owned
 
 ## Post-Restore Smoke Checklist
 
@@ -117,4 +122,5 @@ SELECT count(*) FROM payment_events pe LEFT JOIN payments p ON pe.payment_id = p
 - Incident response: docs/05-business/07-operations-plan/04-incident-response.md
 - Migration history: supabase/migrations/
 - Drill template: docs/operations/drills/2026-05-24-supabase-restore-drill-template.md
-- References: #594, #320, #529
+- Dry-run preflight: scripts/ops/restore-drill-preflight.mjs
+- References: #724, #594, #320, #529
