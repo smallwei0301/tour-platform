@@ -1,7 +1,7 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-05-22（本次更新移除硬編碼的 live-state 數字，改以 snapshot 指標取代，防止 drift）
-> 當前主線：**Booking V2 已上線**：V2 為主流程，觀察視窗運行中（#642）
+> 最後更新：2026-05-25（refs #792：同步 NEXT_PHASE_PLAN，移除已關閉 #640/#641 作為當前主線；V2 預設 ON，guide 自編上線）
+> 當前主線：**Booking V2 已上線且為預設**（PR #800），guide 自編頁已上線（PR #802），觀察視窗運行中（#642）
 > 即時 live state 請看：[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)（執行 `npm run readiness:snapshot` 刷新）
 > Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
