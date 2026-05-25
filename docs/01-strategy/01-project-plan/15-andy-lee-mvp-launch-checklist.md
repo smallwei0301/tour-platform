@@ -92,6 +92,7 @@
 
 ## 7. 上線前最後確認
 
+- [ ] **[LAUNCH BLOCKER]** Safety/Insurance/Risk disclosure evidence reviewed and zero HOLD items (Issue #593 → refs doc 18 [`18-andy-lee-launch-safety-evidence.md`](./18-andy-lee-launch-safety-evidence.md))
 - [ ] 用 1 筆假訂單完整走一次
 - [ ] 用 1 筆真實預約完整走一次
 - [ ] 驗證付款後名額更新

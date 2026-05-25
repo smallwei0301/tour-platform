@@ -1,5 +1,7 @@
 # Andy Lee（李衍錫） Content Pack
 
+> ⚠️ **Safety/Insurance/Risk content tracker:** See [18-andy-lee-launch-safety-evidence.md](./18-andy-lee-launch-safety-evidence.md) for canonical checklist. Do not replace [MOCK] items here directly — update the tracker first, then edit this file.
+
 > 目的：把 Andy Lee（李衍錫）做成 Tour Platform MVP 第一位可上線導遊所需的正式內容素材包。
 > 適用對象：Tracy / Glory / 營運 / 設計
 > 更新日期：2026-03-27
