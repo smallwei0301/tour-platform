@@ -1,4 +1,4 @@
-# Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-17）
+# Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-25）
 
 ## 📌 當前主線摘要
 
@@ -9,21 +9,25 @@
 >
 > Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
-**截至 2026-05-22 快照：**
-- **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作為歷史/運維參考，不再列為當前 blocker
-- **#586 / #588 已 CLOSED**：docs readiness sync 任務已收斂（PR #587 / #589 merged）
-- **#500 / #320 / #319 / #318** 狀態請以 live-state 快照為準（可能已更新）
-- 目前主線重點（V2 上線後）：
-  - **#640**（P0）V2 Launch QA blocker checklist
-  - **#642** V2 觀察視窗 + legacy fallback 守護
-  - **#641** V2 rollback drill + operator handoff
+**截至 2026-05-25 快照（refs #792）：**
+- **#640 / #641 已 CLOSED**：V2 Launch QA blocker checklist 與 rollback drill 已完成，移至歷史
+- **#799 已 CLOSED**：`isBookingV2Enabled` 預設改為 true — V2 booking entry 為主流程（PR #800）
+- **#791 已 CLOSED**：Guide 自行編輯公開頁面（/guide/profile）已上線（PR #802）
+- **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作歷史/運維參考
+- **#500 / #320 / #319 / #318** 狀態請以 live-state 快照為準
+- 目前主線重點（V2 上線 + 觀察中）：
+  - **#621** Enable Booking/Availability V2 as primary traveler flow（P0，umbrella，leaf #799 已完成，leaf 2 可接續）
+  - **#642** V2 觀察視窗 + legacy fallback 守護（P1）
+  - **#593** Andy Lee launch safety / insurance 揭露（P1）
+  - **#319** Customer support SOP drill（P1）
+  - **#607 / #714** Production alert drill evidence（P1，需 live credentials + 人工決策）
 
 ## 🧭 當前可執行行動（5–10 分鐘上手）
 1. 執行 `npm run readiness:snapshot` 取得最新 live state，查閱 `docs/operations/reports/readiness-live-state-latest.md`。
-2. 接手 **#640**（V2 Launch P0 QA blockers）並確認 checklist 是否全部通過。
-3. 監看 **#642** 觀察視窗，確認 V2 無異常；確認 legacy fallback 守護機制正常。
-4. 推進 **#641** rollback drill — 確保 operator handoff 文件備妥。
-5. 進入 `docs/operations/issue-402-real-payment-refund-verification-runbook.md` 參考歷史驗證路徑（僅作參考）。
+2. 監看 **#642** V2 觀察視窗，確認 V2 無異常；確認 legacy fallback 守護機制正常。
+3. 推進 **#593** Andy Lee launch safety/insurance 揭露文件（P1）。
+4. 執行 **#319** customer support SOP 首次 drill（P1）。
+5. 確認 **#714** production alert drill 前置條件（LINE vs Telegram 決策、SENTRY_DSN、incidents migration、admin access）。
 
 ---
 
@@ -56,6 +60,6 @@
 ## ✅ 下一步建議（對齊 live-state）
 1. 以 `npm run readiness:snapshot` 為主要 live-state 查詢工具，勿在 docs 手工維護 issue/PR 清單
 2. 將 #402/#403 runbook 的 `Status` 保持為 `CLOSED`，並明確註記只作歷史與運維執行參考
-3. 推進 #640 V2 Launch P0 QA blocker checklist 至全部通過
-4. 確認 #641 rollback drill 與 operator handoff 備妥
+3. #640 / #641 已 CLOSED — 不再作為當前行動項；移至歷史區
+4. 監看 #642 V2 觀察視窗，確認無異常後推進 soft launch
 5. 保持 `docs/README.md` 與 root README 只參考 snapshot，避免 hardcoded live-state 再次漂移
