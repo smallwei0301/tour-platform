@@ -36,14 +36,15 @@ async function getSupabaseAdmin() {
 }
 
 function isV2AvailabilityMode(url: URL): boolean {
-  const bookingV2 = process.env.BOOKING_V2;
-  const flag = bookingV2 === '1' || bookingV2 === 'true';
   const explicitSource = url.searchParams.get('source');
   const explicitMode = url.searchParams.get('mode');
   if (explicitSource === 'legacy' || explicitMode === 'legacy') return false;
 
-  const query = url.searchParams.get('v2');
-  return flag || query === '1' || query === 'true';
+  // BOOKING_V2=0 or BOOKING_V2=false allows env-level rollback to legacy
+  const bookingV2 = process.env.BOOKING_V2;
+  if (bookingV2 === '0' || bookingV2 === 'false') return false;
+
+  return true;
 }
 
 function requestedAvailabilityMode(url: URL): 'v2' | 'legacy' | 'auto' {
