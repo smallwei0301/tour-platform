@@ -67,21 +67,25 @@ Closed launch-blocking items are historical-only. Current live-check shows no op
    - Labels: `priority:P2`, `agent:queued`
    - Routing: support issue; active only after readiness blockers are under control.
 
-2. **#594 — [Ops] Define and drill Supabase backup/restore runbook before soft launch** `agent:queued`
+2. **#594 — [Ops] Define and drill Supabase backup/restore runbook before soft launch** `snapshot-only`
    - State: OPEN
    - Labels: `priority:P2`
+   - Routing: no live `agent:*` label is present. Keep as snapshot-only and re-validate live routing before assigning an active route.
 
-3. **#724 — [Ops] Execute live Supabase restore drill and fill evidence template** `agent:queued`
+3. **#724 — [Ops] Execute live Supabase restore drill and fill evidence template** `agent:backlog`
    - State: OPEN
-   - Labels: `priority:P2`
+   - Labels: `priority:P2`, `agent:backlog`, `status:blocked`
+   - Routing: backlog support only until unblocked; do not queue for active execution while `status:blocked`.
 
-4. **#685 — [Ops] Add third-party synthetic monitor after soft launch** `agent:queued`
+4. **#685 — [Ops] Add third-party synthetic monitor after soft launch** `agent:backlog`
    - State: OPEN
-   - Labels: `priority:P2`, `agent:queued`
+   - Labels: `priority:P2`, `agent:backlog`, `status:blocked`
+   - Routing: backlog support only until `status:blocked` is cleared.
 
-5. **#797 — [Decision] Confirm incident regulatory reporting and compliance sign-off** `agent:backlog`
+5. **#797 — [Decision] Confirm incident regulatory reporting and compliance sign-off** `agent:human-decision`
    - State: OPEN
-   - Labels: `priority:P2`
+   - Labels: `priority:P2`, `owner:human-decision`, `status:needs-decision`
+   - Routing: human-decision/approval gate item. Not executable backlog while `status:needs-decision`.
 
 ## Historical/archived entries (non-routing)
 
