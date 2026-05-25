@@ -3945,3 +3945,26 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
 
   return { reversed: true, reversal_id: reversalIdRef, skipped: false };
 }
+
+export async function updateGuideProfileByGuideId(guideId, fields) {
+  // fields: allowed subset only — display_name, bio, region, languages, specialties, headline
+  if (!hasSupabaseEnv()) {
+    return { ok: true }; // no-op in fixture mode
+  }
+  const supabase = await getSupabase();
+  const allowed = ['display_name', 'bio', 'region', 'languages', 'specialties', 'headline'];
+  const update = {};
+  for (const k of allowed) {
+    if (Object.prototype.hasOwnProperty.call(fields, k)) {
+      update[k] = fields[k];
+    }
+  }
+  if (Object.keys(update).length === 0) return { ok: true };
+  update.updated_at = new Date().toISOString();
+  const { error } = await supabase
+    .from('guide_profiles')
+    .update(update)
+    .eq('id', guideId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
