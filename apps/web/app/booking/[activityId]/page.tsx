@@ -442,6 +442,7 @@ function BookingInnerV2FlagShell() {
 
   const activitySlug = params.activityId as string;
   const urlPlanId = searchParams.get('plan') || '';
+  const urlScheduleId = searchParams.get('scheduleId') || '';
   const timezone = searchParams.get('timezone') || 'Asia/Taipei';
   const source = searchParams.get('source') || searchParams.get('sourceChannel') || 'web';
   const correlationId = searchParams.get('correlationId') || '';
@@ -467,6 +468,7 @@ function BookingInnerV2FlagShell() {
   const [contactEmail, setContactEmail] = useState('');
   const [note, setNote] = useState('');
   const [agreed, setAgreed] = useState(false);
+  const [createdBookingId, setCreatedBookingId] = useState('');
   const [step, setStep] = useState(1);
 
   useEffect(() => {
@@ -511,7 +513,8 @@ function BookingInnerV2FlagShell() {
       if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
 
       try {
-        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=1`;
+        const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
+        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=1`;
         const res = await fetch(probeUrl, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         const onePersonSlots = (json?.data?.slots || []).filter((slot) => slot.isAvailable);
@@ -522,7 +525,7 @@ function BookingInnerV2FlagShell() {
     }
 
     probeOnePersonAddOn();
-  }, [activity?.id, selectedDate, timezone, urlPlanId, useLegacyFallback]);
+  }, [activity?.id, selectedDate, timezone, urlPlanId, useLegacyFallback, urlScheduleId]);
 
   useEffect(() => {
     async function fetchSlots() {
@@ -531,7 +534,8 @@ function BookingInnerV2FlagShell() {
         setSlotsLoading(true);
         setV2Error('');
         const participants = Math.max(guests, effectiveMinParticipants);
-        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
+        const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
@@ -567,7 +571,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants]);
+  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, urlScheduleId]);
 
   async function handleV2Checkout() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
@@ -599,6 +603,7 @@ function BookingInnerV2FlagShell() {
       if (!draftRes.ok || !draftJson?.success || !draftJson?.data?.bookingId) {
         throw new Error(draftJson?.error?.message || '建立預約草稿失敗');
       }
+      setCreatedBookingId(draftJson.data.bookingId);
 
       const checkoutRes = await fetch(`/api/v2/bookings/${draftJson.data.bookingId}/checkout`, {
         method: 'POST',
@@ -776,13 +781,13 @@ function BookingInnerV2FlagShell() {
 
           {step === 1 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h2 style={{ marginTop: 0 }}>Step 1｜行程確認</h2>
+              <h3 style={{ marginTop: 0 }}>行程確認</h3>
               <label style={{ display: 'block', marginBottom: 12 }}>
-                預約日期
+                <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
                 <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="tp-input" />
               </label>
               <label style={{ display: 'block', marginBottom: 12 }}>
-                人數
+                <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
                 <input
                   type="number"
                   min={effectiveMinParticipants}
@@ -793,20 +798,31 @@ function BookingInnerV2FlagShell() {
               </label>
               {!allowOnePersonAddOn && <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>此行程最少 {baseMinParticipants} 人成團</p>}
 
-              <p style={{ margin: '0 0 6px' }}>可預約日期</p>
+              <p style={{ margin: '0 0 6px' }}>選擇可預約場次</p>
               <div className="tp-input" style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12 }}>
                 {slotsLoading && '載入中…'}
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${slots[0]?.capacityLeft ?? 0}）`}
               </div>
 
-              <div style={{ background: '#f8fafc', borderRadius: 10, padding: 12, marginBottom: 12 }}>
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>費用小計</div>
-                <div>NT${activity.priceTwd.toLocaleString()} × {guests} 人 = NT${total.toLocaleString()}</div>
+              <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
+                <h4>費用明細</h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span>{activity.priceLabel} × {guests} 人</span>
+                  <span>NT${total.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>
+                  <span>平台服務費</span>
+                  <span>NT$0</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: '1px solid var(--tp-border)', paddingTop: 8, marginTop: 8 }}>
+                  <span>總計</span>
+                  <span>NT${total.toLocaleString()}</span>
+                </div>
               </div>
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, marginBottom: 6 }}>取消與退款規則</div>
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <div style={{ marginTop: 16 }}>
+                <h4>取消政策</h4>
+                <ul style={{ paddingLeft: 18, lineHeight: 2, fontSize: 14, color: 'var(--tp-muted)' }}>
                   {(activity.refundRules || []).map((rule, idx) => <li key={idx}>{rule}</li>)}
                 </ul>
               </div>
@@ -819,40 +835,82 @@ function BookingInnerV2FlagShell() {
 
           {step === 2 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h2 style={{ marginTop: 0 }}>Step 2｜旅客資訊</h2>
-              <label>聯絡人姓名<input className="tp-input" value={contactName} onChange={(e) => setContactName(e.target.value)} /></label>
-              <label>電話<input className="tp-input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></label>
-              <label>Email<input className="tp-input" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></label>
-              <label>備註（選填）<textarea className="tp-input" value={note} onChange={(e) => setNote(e.target.value)} /></label>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
-                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                我已閱讀並同意取消與退款條款
+              <h3>聯絡人資訊</h3>
+              <label style={{ display: 'block', marginBottom: 10 }}>
+                姓名 *
+                <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
+                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>返回行程確認</button>
-                <button className="tp-btn tp-btn-primary" onClick={() => setStep(3)} disabled={!canGoStep3}>下一步：付款 →</button>
+              <label style={{ display: 'block', marginBottom: 10 }}>
+                電話 *
+                <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
+                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+              </label>
+              <label style={{ display: 'block', marginBottom: 10 }}>
+                電子信箱 *
+                <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
+                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+              </label>
+              <label style={{ display: 'block', marginBottom: 16 }}>
+                給導遊的備註（選填）
+                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
+                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 16 }}>
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
+              </label>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)} disabled={loading}>← 上一步</button>
+                <button
+                  className="tp-btn tp-btn-primary"
+                  style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
+                  onClick={() => setStep(3)}
+                  disabled={loading || !canGoStep3}
+                >
+                  建立訂單並前往付款 →
+                </button>
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h2 style={{ marginTop: 0 }}>Step 3｜付款</h2>
-              <p style={{ color: 'var(--tp-muted)' }}>將使用 V2 草稿與 checkout 流程建立綠界付款表單。</p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <strong>總計：NT${total.toLocaleString()}</strong>
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>返回旅客資訊</button>
-                  <button className="tp-btn tp-btn-primary" disabled={!canSubmit} onClick={handleV2Checkout}>
-                    {loading ? '處理中…' : '確認並前往付款'}
-                  </button>
-                </div>
+              <h3 style={{ marginTop: 0 }}>選擇付款方式</h3>
+              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
+                  <input type="radio" name="payment" defaultChecked /> 💳 信用卡（Visa / Mastercard / JCB）
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--tp-border)', borderRadius: 10, padding: 12 }}>
+                  <input type="radio" name="payment" /> LINE Pay
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--tp-border)', borderRadius: 10, padding: 12 }}>
+                  <input type="radio" name="payment" /> ATM 虛擬帳號
+                </label>
+              </div>
+              <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
+              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
+              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdBookingId || '尚未建立'}</p>
+              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)} disabled={loading}>← 上一步</button>
+                <button
+                  className="tp-btn tp-btn-primary"
+                  style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
+                  onClick={handleV2Checkout}
+                  disabled={loading || !canSubmit}
+                >
+                  {loading ? '付款處理中…' : `確認付款 NT$${total.toLocaleString()}`}
+                </button>
               </div>
             </div>
           )}
         </div>
 
-        <aside style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 16, height: 'fit-content', position: 'sticky', top: 90 }}>
+        <aside style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 16, height: 'fit-content', position: 'sticky', top: 80 }}>
+          {activity.coverImageUrl && (
+            <Image src={activity.coverImageUrl} alt={activity.title}
+              style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 10, marginBottom: 10 }} width={1200} height={675} />
+          )}
           <h3 style={{ marginTop: 0 }}>預約摘要</h3>
           <p style={{ margin: '6px 0' }}>日期：{selectedDate}</p>
           <p style={{ margin: '6px 0' }}>人數：{guests} 人</p>

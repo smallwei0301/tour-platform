@@ -2,11 +2,16 @@
  * Next.js Instrumentation — Sentry server/edge init
  * Phase 10-3 — Tour Platform
  */
-import * as Sentry from '@sentry/nextjs';
 
-export const onRequestError = Sentry.captureRequestError;
+export const onRequestError = async (...args: Parameters<typeof import('@sentry/nextjs')['captureRequestError']>) => {
+  if (process.env.NODE_ENV !== 'production') return;
+  const Sentry = await import('@sentry/nextjs');
+  return Sentry.captureRequestError(...args);
+};
 
 export async function register() {
+  if (process.env.NODE_ENV !== 'production') return;
+
   if (process.env.NEXT_RUNTIME === 'nodejs') {
     await import('./sentry.server.config');
   }

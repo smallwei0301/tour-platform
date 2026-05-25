@@ -20,7 +20,8 @@ test('available-slots route contract smoke: has validation + success/error envel
   assert.match(src, /code:\s*'VALIDATION_ERROR'/);
   assert.match(src, /errorV2\('NOT_FOUND'/);
   assert.match(src, /successV2\(/);
-  assert.match(src, /slots:\s*filteredSlots/);
+  assert.match(src, /slots:\s*slotsToReturn/);
+  assert.match(src, /messageZh:\s*slotsToReturn\.length === 0/);
 });
 
 test('booking draft route contract smoke: has validation + stateful errors + success envelope', async () => {

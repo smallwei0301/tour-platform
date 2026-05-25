@@ -1,5 +1,10 @@
-import { withSentryConfig } from '@sentry/nextjs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { assertStartupEnv } from './src/config/startup-env.mjs';
+
+const appDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(appDir, '../..');
 
 // Single authority startup ENV validation (issue #60)
 assertStartupEnv(process.env);
@@ -14,8 +19,9 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: repoRoot,
   reactStrictMode: true,
-  allowedDevOrigins: ['172.17.0.2'],
+  allowedDevOrigins: ['127.0.0.1', 'localhost', '172.17.0.2', '172.20.0.2'],
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -29,6 +35,14 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: false,
   },
+  webpack(config, { dev }) {
+    if (dev) {
+      config.resolve ??= {};
+      config.resolve.alias ??= {};
+      config.resolve.alias['@sentry/nextjs'] = path.join(appDir, 'src/test-support/sentry-nextjs-dev-noop.js');
+    }
+    return config;
+  },
   async headers() {
     return [
       {
@@ -39,23 +53,30 @@ const nextConfig = {
   },
 };
 
-// Allow bypassing Sentry build wrapping via DISABLE_SENTRY_BUILD=1
-const disableSentryBuild = process.env.DISABLE_SENTRY_BUILD === '1';
+// Avoid loading Sentry's build wrapper in local/dev smoke runs. A disabled
+// wrapper still pulls a large dependency graph into Next dev cold-start, which
+// makes browser smoke flaky on memory-constrained CI/agent hosts.
+const disableSentryBuild = process.env.NODE_ENV !== 'production' || process.env.DISABLE_SENTRY_BUILD === '1';
 
-export default disableSentryBuild
-  ? nextConfig
-  : withSentryConfig(nextConfig, {
-      // Sentry organization and project (optional: set via env SENTRY_ORG / SENTRY_PROJECT)
-      silent: true,
+let exportedConfig = nextConfig;
 
-      // Only upload source maps in production CI
-      sourcemaps: {
-        disable: process.env.NODE_ENV !== 'production' || !process.env.SENTRY_AUTH_TOKEN,
-      },
+if (!disableSentryBuild) {
+  const { withSentryConfig } = await import('@sentry/nextjs');
+  exportedConfig = withSentryConfig(nextConfig, {
+    // Sentry organization and project (optional: set via env SENTRY_ORG / SENTRY_PROJECT)
+    silent: true,
 
-      // Tunnel to avoid ad-blockers
-      tunnelRoute: '/monitoring',
+    // Only upload source maps in production CI
+    sourcemaps: {
+      disable: !process.env.SENTRY_AUTH_TOKEN,
+    },
 
-      // Suppress build warnings when DSN is not set
-      hideSourceMaps: true,
-    });
+    // Tunnel to avoid ad-blockers
+    tunnelRoute: '/monitoring',
+
+    // Suppress build warnings when DSN is not set
+    hideSourceMaps: true,
+  });
+}
+
+export default exportedConfig;
