@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { PublicIcon } from '../../src/components/ui/PublicIcon';
 
 export const metadata: Metadata = {
   title: '為什麼選擇我們 | Midao 祕島',
@@ -47,13 +48,13 @@ export default function WhyChooseUsPage() {
         className="why-promises">
         <style>{`@media (min-width: 640px) { .why-promises { grid-template-columns: repeat(4, 1fr) !important; } }`}</style>
         {[
-          { icon: '✅', title: '實名認證', desc: '每位導遊都經過 KYC 身分驗證與審核' },
-          { icon: '💰', title: '退款保障', desc: '明確退款政策，依規定時間內全額退款' },
-          { icon: '📞', title: '緊急熱線', desc: '活動當天有問題，30 分鐘內回應' },
-          { icon: '🗺️', title: '客製行程', desc: '可依需求客製化，包團、親子、企業都行' },
+          { icon: 'badgeCheck', title: '實名認證', desc: '每位導遊都經過 KYC 身分驗證與審核' },
+          { icon: 'shieldCheck', title: '退款保障', desc: '明確退款政策，依規定時間內全額退款' },
+          { icon: 'phone', title: '緊急熱線', desc: '活動當天有問題，30 分鐘內回應' },
+          { icon: 'route', title: '客製行程', desc: '可依需求客製化，包團、親子、企業都行' },
         ].map((p, i) => (
           <div key={i} style={{ textAlign: 'center', padding: 20, border: '1px solid var(--tp-border)', borderRadius: 12 }}>
-            <p style={{ fontSize: 36, margin: '0 0 8px' }}>{p.icon}</p>
+            <p style={{ fontSize: 36, margin: '0 0 8px', color: 'var(--tp-primary)', display: 'flex', justifyContent: 'center' }}><PublicIcon name={p.icon as any} size={36} /></p>
             <h4 style={{ margin: '0 0 6px' }}>{p.title}</h4>
             <p style={{ color: 'var(--tp-muted)', fontSize: 14, margin: 0 }}>{p.desc}</p>
           </div>
@@ -68,8 +69,8 @@ export default function WhyChooseUsPage() {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--tp-primary)' }}>
                 <th style={{ textAlign: 'left', padding: '12px 16px' }}></th>
-                <th style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-primary)', fontWeight: 700 }}>🌿 我們的平台</th>
-                <th style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-muted)' }}>🚌 一般跟團</th>
+                <th style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-primary)', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="sparkles" size={16} /> 我們的平台</span></th>
+                <th style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-muted)' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><PublicIcon name="mountain" size={16} /> 一般跟團</span></th>
               </tr>
             </thead>
             <tbody>
