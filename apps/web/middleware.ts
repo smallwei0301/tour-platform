@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server.js';
 
 import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
+import { getControls, isWhitelisted } from './src/lib/soft-launch.mjs';
 
 function pickToken(req: NextRequest): string {
   // Security: never read admin credentials from URL query params.
@@ -88,6 +89,102 @@ function shouldRequireCsrf(req: NextRequest): boolean {
   return false;
 }
 
+/**
+ * Returns a minimal read-only Supabase client suitable for edge middleware.
+ * Uses the public anon key — no service-role credentials needed for
+ * soft_launch_controls (readable by anon with appropriate RLS).
+ */
+function createSoftLaunchClient(req: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) return null;
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return req.cookies.getAll().map(({ name, value }) => ({ name, value }));
+      },
+      // We don't need to set cookies for a read-only check.
+      setAll() {},
+    },
+  });
+}
+
+/**
+ * Returns a NextResponse that blocks the request when `public_paused=true`
+ * and the visitor is not whitelisted. Returns `null` if the request should
+ * proceed normally.
+ *
+ * Fail-open: if getControls() throws, returns null (treat public_paused as false).
+ */
+async function applyPublicPausedGuard(req: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = req.nextUrl;
+
+  // Admin, guide, and auth routes are always exempt.
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/api/admin') ||
+    pathname.startsWith('/guide') ||
+    pathname.startsWith('/api/guide') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api/auth')
+  ) {
+    return null;
+  }
+
+  try {
+    const supabase = createSoftLaunchClient(req);
+    if (!supabase) return null; // no env vars — fail open
+
+    const controls = await getControls(supabase);
+    if (!controls.public_paused) return null; // site is open
+
+    // Site is paused. Check whitelist if enabled.
+    if (controls.whitelist_enabled) {
+      // Identify traveler by Supabase auth user id (from cookie).
+      let userId: string | undefined;
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        userId = user?.id ?? undefined;
+      } catch {
+        // Cannot resolve user — treat as non-whitelisted.
+      }
+
+      if (userId) {
+        const allowed = await isWhitelisted(supabase, { userId, activityId: undefined, guideId: undefined });
+        if (allowed) return null; // whitelisted — let through
+      }
+    }
+
+    // Block the request: return JSON 503 for API routes, redirect for page routes.
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: {
+            code: 'PUBLIC_PAUSED',
+            message: '網站目前暫停開放，請稍後再試',
+          },
+        },
+        { status: 503 }
+      );
+    }
+
+    // Page route: redirect to /maintenance
+    const url = req.nextUrl.clone();
+    url.pathname = '/maintenance';
+    return NextResponse.redirect(url);
+  } catch {
+    // Fail-open: any unexpected error is treated as public_paused=false.
+    console.warn('[middleware] applyPublicPausedGuard error — failing open', {
+      path: req.nextUrl.pathname,
+    });
+    return null;
+  }
+}
+
 function resolveRefreshTimeoutMs(): number {
   const raw = Number(process.env.SUPABASE_MIDDLEWARE_REFRESH_TIMEOUT_MS || 1200);
   if (!Number.isFinite(raw)) return 1200;
@@ -136,6 +233,12 @@ async function refreshTravelerSession(req: NextRequest): Promise<NextResponse> {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  // ── Soft-launch: public_paused guard ─────────────────────────────────────
+  // Runs before route-specific logic. Admin/guide/auth routes are exempt.
+  // Fails open if getControls() errors (treats public_paused as false).
+  const pausedResponse = await applyPublicPausedGuard(req);
+  if (pausedResponse) return pausedResponse;
 
   if (shouldRequireCsrf(req) && !hasValidCsrf(req)) {
     return NextResponse.json(
@@ -259,5 +362,13 @@ export const config = {
     '/api/orders/:path*',
     '/api/reviews',
     '/api/reviews/:path*',
+    // Public routes subject to public_paused soft-launch guard (issue #805).
+    '/',
+    '/activities/:path*',
+    '/booking/:path*',
+    '/checkout/:path*',
+    '/order/success/:path*',
+    '/api/activities/:path*',
+    '/api/orders/:path*',
   ],
 };
