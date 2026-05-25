@@ -442,6 +442,7 @@ function BookingInnerV2FlagShell() {
 
   const activitySlug = params.activityId as string;
   const urlPlanId = searchParams.get('plan') || '';
+  const urlScheduleId = searchParams.get('scheduleId') || '';
   const timezone = searchParams.get('timezone') || 'Asia/Taipei';
   const source = searchParams.get('source') || searchParams.get('sourceChannel') || 'web';
   const correlationId = searchParams.get('correlationId') || '';
@@ -511,7 +512,8 @@ function BookingInnerV2FlagShell() {
       if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
 
       try {
-        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=1`;
+        const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
+        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=1`;
         const res = await fetch(probeUrl, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         const onePersonSlots = (json?.data?.slots || []).filter((slot) => slot.isAvailable);
@@ -522,7 +524,7 @@ function BookingInnerV2FlagShell() {
     }
 
     probeOnePersonAddOn();
-  }, [activity?.id, selectedDate, timezone, urlPlanId, useLegacyFallback]);
+  }, [activity?.id, selectedDate, timezone, urlPlanId, useLegacyFallback, urlScheduleId]);
 
   useEffect(() => {
     async function fetchSlots() {
@@ -531,7 +533,8 @@ function BookingInnerV2FlagShell() {
         setSlotsLoading(true);
         setV2Error('');
         const participants = Math.max(guests, effectiveMinParticipants);
-        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
+        const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
@@ -567,7 +570,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants]);
+  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, urlScheduleId]);
 
   async function handleV2Checkout() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
@@ -776,13 +779,13 @@ function BookingInnerV2FlagShell() {
 
           {step === 1 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h2 style={{ marginTop: 0 }}>Step 1｜行程確認</h2>
+              <h3 style={{ marginTop: 0 }}>行程確認</h3>
               <label style={{ display: 'block', marginBottom: 12 }}>
-                預約日期
+                <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
                 <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="tp-input" />
               </label>
               <label style={{ display: 'block', marginBottom: 12 }}>
-                人數
+                <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
                 <input
                   type="number"
                   min={effectiveMinParticipants}
@@ -819,17 +822,17 @@ function BookingInnerV2FlagShell() {
 
           {step === 2 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h2 style={{ marginTop: 0 }}>Step 2｜旅客資訊</h2>
-              <label>聯絡人姓名<input className="tp-input" value={contactName} onChange={(e) => setContactName(e.target.value)} /></label>
-              <label>電話<input className="tp-input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></label>
-              <label>Email<input className="tp-input" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></label>
+              <h3 style={{ marginTop: 0 }}>聯絡人資訊</h3>
+              <label>姓名 *<input className="tp-input" value={contactName} onChange={(e) => setContactName(e.target.value)} /></label>
+              <label>電話 *<input className="tp-input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></label>
+              <label>電子信箱 *<input className="tp-input" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} /></label>
               <label>備註（選填）<textarea className="tp-input" value={note} onChange={(e) => setNote(e.target.value)} /></label>
               <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '12px 0' }}>
                 <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意取消與退款條款
               </label>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>返回行程確認</button>
+                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>← 上一步</button>
                 <button className="tp-btn tp-btn-primary" onClick={() => setStep(3)} disabled={!canGoStep3}>下一步：付款 →</button>
               </div>
             </div>
@@ -837,14 +840,13 @@ function BookingInnerV2FlagShell() {
 
           {step === 3 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h2 style={{ marginTop: 0 }}>Step 3｜付款</h2>
-              <p style={{ color: 'var(--tp-muted)' }}>將使用 V2 草稿與 checkout 流程建立綠界付款表單。</p>
+              <h3 style={{ marginTop: 0 }}>選擇付款方式</h3>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <strong>總計：NT${total.toLocaleString()}</strong>
                 <div style={{ display: 'flex', gap: 10 }}>
-                  <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>返回旅客資訊</button>
+                  <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)}>← 上一步</button>
                   <button className="tp-btn tp-btn-primary" disabled={!canSubmit} onClick={handleV2Checkout}>
-                    {loading ? '處理中…' : '確認並前往付款'}
+                    {loading ? '付款處理中…' : `確認付款 NT$${total.toLocaleString()}`}
                   </button>
                 </div>
               </div>

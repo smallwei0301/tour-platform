@@ -53,6 +53,7 @@ function parseAndValidateParams(activityId, planId, searchParams) {
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const timezone = searchParams.get('timezone');
+  const scheduleId = searchParams.get('scheduleId');
   const participantsStr = searchParams.get('participants');
 
   if (!planId) {
@@ -60,6 +61,10 @@ function parseAndValidateParams(activityId, planId, searchParams) {
   }
   if (!isUuidLike(planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
+  }
+
+  if (scheduleId && !isUuidLike(scheduleId)) {
+    return { error: { code: 'VALIDATION_ERROR', message: 'Invalid scheduleId format' } };
   }
 
   if (!dateFrom) {
@@ -116,6 +121,7 @@ function parseAndValidateParams(activityId, planId, searchParams) {
     params: {
       activityId,
       planId,
+      scheduleId,
       dateFrom,
       dateTo,
       timezone,
@@ -437,6 +443,38 @@ test('route resolves slug activity key and plan slug before validation', async (
   assert.match(src, /parseAndValidateParams\(resolvedActivityId, resolvedPlanId, searchParams\)/);
 });
 
+test('route supports optional scheduleId mapping + validation for legacy public URL flow', async () => {
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
+
+  assert.match(src, /const scheduleId = searchParams\.get\('scheduleId'\)/);
+  assert.match(src, /if \(scheduleId && !isUuidLike\(scheduleId\)\)/);
+  assert.match(src, /\.from\('activity_schedules'\)/);
+  assert.match(src, /\.eq\('id', params\.scheduleId\)/);
+  assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
+  assert.match(src, /scheduleLocalDate < params\.dateFrom \|\| scheduleLocalDate > params\.dateTo/);
+  assert.match(src, /scheduleData\.plan_id && scheduleData\.plan_id !== params\.planId/);
+  assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
+  assert.match(src, /capacityLeft: remaining/);
+});
+
+test('parseAndValidateParams rejects invalid scheduleId format', () => {
+  const activityId = '550e8400-e29b-41d4-a716-446655440000';
+  const planId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
+
+  const params = new URLSearchParams({
+    planId,
+    scheduleId: 'legacy-schedule-slug',
+    dateFrom: '2026-04-20',
+    dateTo: '2026-04-25',
+    timezone: 'Asia/Taipei',
+  });
+
+  const result = parseAndValidateParams(activityId, planId, params);
+  assert.ok('error' in result);
+  assert.equal(result.error.message, 'Invalid scheduleId format');
+});
+
 test('route enforces unformed-group min participants and Chinese copy contract', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
@@ -448,9 +486,9 @@ test('route enforces unformed-group min participants and Chinese copy contract',
   assert.match(src, /evaluateGroupBookingRule\(/);
   assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
   assert.match(src, /bookings: nonGroupConflictBookings/);
-  assert.match(src, /slots: filteredSlots/);
-  assert.match(src, /reason: filteredSlots\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
-  assert.match(src, /messageZh: filteredSlots\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+  assert.match(src, /slots: slotsToReturn/);
+  assert.match(src, /reason: slotsToReturn\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
+  assert.match(src, /messageZh: slotsToReturn\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {

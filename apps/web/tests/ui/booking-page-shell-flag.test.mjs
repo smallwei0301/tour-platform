@@ -69,7 +69,7 @@ test('v2 shell posts resolved UUID activityId and planId from available-slots re
   assert.match(v2ShellSource, /planId: resolvedPlanId/);
 });
 
-test('v2 shell uses legacy-style booking UI markers and removes debug V2 title', async () => {
+test('v2 shell reuses legacy booking presentation copy and strips V2-only shell wording', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
   const v2End = src.indexOf('// ── 外層包 Suspense（useSearchParams 需要）');
@@ -82,5 +82,10 @@ test('v2 shell uses legacy-style booking UI markers and removes debug V2 title',
   assert.match(v2ShellSource, /付款/);
   assert.match(v2ShellSource, /下一步：填寫資訊/);
   assert.match(v2ShellSource, /預約摘要/);
+  assert.match(v2ShellSource, /聯絡人資訊/);
+  assert.doesNotMatch(v2ShellSource, /Step\s*1｜/);
+  assert.doesNotMatch(v2ShellSource, /Step\s*2｜/);
+  assert.doesNotMatch(v2ShellSource, /Step\s*3｜/);
+  assert.doesNotMatch(v2ShellSource, /將使用 V2 草稿與 checkout 流程建立綠界付款表單/);
   assert.doesNotMatch(v2ShellSource, /（V2 預約流程）/);
 });

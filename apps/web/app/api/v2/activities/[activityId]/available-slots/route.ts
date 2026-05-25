@@ -18,12 +18,14 @@ import { createClient } from '../../../../../../src/lib/supabase/server';
 import {
   generateAvailableSlots,
   getDateStringInTimezone,
+  formatDateWithTimezone,
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
   type ActivityPlan,
   type SlotGeneratorInput,
   type SlotGeneratorDeps,
+  type SerializedSlot,
 } from '../../../../../../src/lib/slot-generator';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
@@ -73,6 +75,7 @@ function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
 interface QueryParams {
   activityId: string;
   planId: string;
+  scheduleId: string | null;
   dateFrom: string;
   dateTo: string;
   timezone: string;
@@ -93,6 +96,7 @@ function parseAndValidateParams(
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const timezone = searchParams.get('timezone');
+  const scheduleId = searchParams.get('scheduleId');
   const participantsStr = searchParams.get('participants');
 
   if (!planId) {
@@ -100,6 +104,10 @@ function parseAndValidateParams(
   }
   if (!isUuidLike(planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
+  }
+
+  if (scheduleId && !isUuidLike(scheduleId)) {
+    return { error: { code: 'VALIDATION_ERROR', message: 'Invalid scheduleId format' } };
   }
 
   if (!dateFrom) {
@@ -157,6 +165,7 @@ function parseAndValidateParams(
     params: {
       activityId,
       planId,
+      scheduleId,
       dateFrom,
       dateTo,
       timezone,
@@ -226,6 +235,48 @@ export async function GET(
     }
 
     const { params } = validation;
+
+    type ActivitySchedule = {
+      id: string;
+      activity_id: string;
+      plan_id: string | null;
+      start_at: string;
+      end_at: string;
+      capacity: number;
+      booked_count: number;
+      status: string;
+    };
+
+    let selectedSchedule: ActivitySchedule | null = null;
+    if (params.scheduleId) {
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from('activity_schedules')
+        .select('id, activity_id, plan_id, start_at, end_at, capacity, booked_count, status')
+        .eq('id', params.scheduleId)
+        .eq('activity_id', params.activityId)
+        .maybeSingle();
+
+      if (scheduleError || !scheduleData) {
+        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for this activity'), {
+          status: 404,
+        });
+      }
+
+      const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
+      if (scheduleLocalDate < params.dateFrom || scheduleLocalDate > params.dateTo) {
+        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for requested date range'), {
+          status: 404,
+        });
+      }
+
+      if (scheduleData.plan_id && scheduleData.plan_id !== params.planId) {
+        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for requested plan'), {
+          status: 404,
+        });
+      }
+
+      selectedSchedule = scheduleData;
+    }
 
     // Fetch activity plan with activity details (to get guide_id)
     const { data: planData, error: planError } = await supabase
@@ -446,15 +497,32 @@ export async function GET(
       | { reasonCode?: string; messageZh?: string }
       | undefined;
 
+    let slotsToReturn = filteredSlots;
+    if (selectedSchedule) {
+      const remaining = Math.max(0, selectedSchedule.capacity - selectedSchedule.booked_count);
+      if (selectedSchedule.status !== 'open' || remaining < params.participants) {
+        slotsToReturn = [];
+      } else {
+        const scheduleSlot: SerializedSlot = {
+          startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), params.timezone),
+          endAt: formatDateWithTimezone(new Date(selectedSchedule.end_at), params.timezone),
+          capacityLeft: remaining,
+          bookingType: plan.booking_type,
+          isAvailable: true,
+        };
+        slotsToReturn = [scheduleSlot];
+      }
+    }
+
     // Return response per API spec
     return Response.json(
       successV2({
         timezone: result.timezone,
         activityId: params.activityId,
         planId: params.planId,
-        slots: filteredSlots,
-        reason: filteredSlots.length === 0 ? firstRuleFailure?.reasonCode : undefined,
-        messageZh: filteredSlots.length === 0 ? firstRuleFailure?.messageZh : undefined,
+        slots: slotsToReturn,
+        reason: slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined,
+        messageZh: slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined,
       })
     );
   } catch (err) {
