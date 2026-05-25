@@ -36,6 +36,13 @@ import {
   generateAvailableSlots,
   validateSlotAvailability,
 } from '../src/lib/slot-generator.ts';
+import {
+  FORMED_GROUP_BOOKING_STATUSES,
+  calculateExistingParticipantsForGroup,
+  evaluateGroupBookingRule,
+  excludeSameActivityPlanDateBookings,
+  excludeSameActivityPlanDateRangeBookings,
+} from '../src/lib/availability-v2/group-booking-rule.ts';
 
 // ============================================================================
 // Test Data Fixtures
@@ -910,6 +917,109 @@ test('handles back-to-back bookings with buffers', () => {
 
     assert.ok(!rangesOverlap(startTime, endTime, bufferStart, bufferEnd));
   });
+});
+
+test('formed-group add-on keeps same-slot availability when conflict filtering excludes same activity/plan/date', () => {
+  const rules = [
+    createMockRule({ weekday: 1, start_time_local: '09:00', end_time_local: '13:00', slot_interval_minutes: 60 }),
+  ];
+  const plan = createMockPlan({ max_participants: 6, duration_minutes: 240 });
+
+  const bookings = [
+    createMockBooking({
+      id: 'same-plan-booking',
+      activity_id: 'activity_001',
+      activity_plan_id: PLAN_ID,
+      participants: 4,
+      status: 'confirmed',
+      start_at: '2026-04-20T01:00:00Z',
+      end_at: '2026-04-20T05:00:00Z',
+    }),
+  ];
+
+  const requestedParticipants = 1;
+  const localDate = '2026-04-20';
+  const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+    bookings,
+    activityId: 'activity_001',
+    planId: PLAN_ID,
+    localDate,
+    timezone: TIMEZONE_TAIPEI,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+  const groupRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 6,
+    effectiveExistingParticipants,
+    requestedParticipants,
+  });
+  assert.equal(groupRule.allowed, true);
+
+  const filteredConflicts = excludeSameActivityPlanDateRangeBookings({
+    bookings,
+    activityId: 'activity_001',
+    planId: PLAN_ID,
+    dateFrom: localDate,
+    dateTo: localDate,
+    timezone: TIMEZONE_TAIPEI,
+  });
+
+  const result = generateAvailableSlots(
+    {
+      guideId: GUIDE_ID,
+      activityPlanId: PLAN_ID,
+      dateFrom: localDate,
+      dateTo: localDate,
+      timezone: TIMEZONE_TAIPEI,
+      participants: requestedParticipants,
+    },
+    { rules, blackouts: [], bookings: filteredConflicts, plan }
+  );
+
+  assert.equal(result.slots.length, 1);
+  assert.equal(result.slots[0].startAt, '2026-04-20T09:00:00+08:00');
+});
+
+test('draft generated-slot validation still blocks when formed add-on exceeds max capacity', () => {
+  const bookings = [
+    createMockBooking({
+      id: 'same-plan-booking',
+      activity_id: 'activity_001',
+      activity_plan_id: PLAN_ID,
+      participants: 5,
+      status: 'confirmed',
+      start_at: '2026-04-20T01:00:00Z',
+      end_at: '2026-04-20T05:00:00Z',
+    }),
+  ];
+
+  const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+    bookings,
+    activityId: 'activity_001',
+    planId: PLAN_ID,
+    localDate: '2026-04-20',
+    timezone: TIMEZONE_TAIPEI,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+
+  const groupRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants,
+    requestedParticipants: 1,
+  });
+
+  assert.equal(groupRule.allowed, false);
+  assert.equal(groupRule.reasonCode, 'CAPACITY_EXCEEDED');
+
+  const nonGroupBookings = excludeSameActivityPlanDateBookings({
+    bookings,
+    activityId: 'activity_001',
+    planId: PLAN_ID,
+    localDate: '2026-04-20',
+    timezone: TIMEZONE_TAIPEI,
+  });
+  assert.equal(nonGroupBookings.length, 0);
 });
 
 console.log('All slot generator tests completed!');

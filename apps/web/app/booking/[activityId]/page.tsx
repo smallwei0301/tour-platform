@@ -421,6 +421,21 @@ interface V2Slot {
   isAvailable: boolean;
 }
 
+interface V2AvailableSlotsResponse {
+  success?: boolean;
+  data?: {
+    timezone?: string;
+    activityId?: string;
+    planId?: string;
+    slots?: V2Slot[];
+    reason?: string;
+    messageZh?: string;
+  };
+  error?: {
+    message?: string;
+  };
+}
+
 function BookingInnerV2FlagShell() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -445,7 +460,8 @@ function BookingInnerV2FlagShell() {
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
-  const [guests, setGuests] = useState(2);
+  const [guests, setGuests] = useState(1);
+  const [allowOnePersonAddOn, setAllowOnePersonAddOn] = useState(false);
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -481,37 +497,76 @@ function BookingInnerV2FlagShell() {
     };
   }, [activitySlug]);
 
+  const baseMinParticipants = Math.max(1, activity?.minParticipants || 1);
+  const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
+
+  useEffect(() => {
+    if (!activity) return;
+    setGuests((prev) => Math.max(prev, effectiveMinParticipants));
+  }, [activity, effectiveMinParticipants]);
+
+  useEffect(() => {
+    async function probeOnePersonAddOn() {
+      if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
+
+      try {
+        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=1`;
+        const res = await fetch(probeUrl, { cache: 'no-store' });
+        const json = (await res.json()) as V2AvailableSlotsResponse;
+        const onePersonSlots = (json?.data?.slots || []).filter((slot) => slot.isAvailable);
+        setAllowOnePersonAddOn(onePersonSlots.length > 0);
+      } catch {
+        setAllowOnePersonAddOn(false);
+      }
+    }
+
+    probeOnePersonAddOn();
+  }, [activity?.id, selectedDate, timezone, urlPlanId, useLegacyFallback]);
+
   useEffect(() => {
     async function fetchSlots() {
       if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
       try {
         setSlotsLoading(true);
         setV2Error('');
-        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=${guests}`;
+        const participants = Math.max(guests, effectiveMinParticipants);
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
-        const json = await res.json();
+        const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
           setSlots([]);
-          setV2Error(json?.error?.message || '目前無法載入可預約時段，請稍後再試。');
+          setV2Error(json?.data?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
           return;
         }
-        const nextSlots = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
+        const nextSlotsRaw = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
+        const nextSlotsByDate = new Map<string, V2Slot>();
+        for (const slot of nextSlotsRaw) {
+          const localDate = new Date(slot.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
+          const existing = nextSlotsByDate.get(localDate);
+          if (!existing || new Date(slot.startAt).getTime() < new Date(existing.startAt).getTime()) {
+            nextSlotsByDate.set(localDate, slot);
+          }
+        }
+        const nextSlots = Array.from(nextSlotsByDate.values()).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
         const resolvedPlanCandidate = json.data?.planId || urlPlanId;
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
         setSlots(nextSlots);
+        if (nextSlots.length === 0 && json.data?.messageZh) {
+          setV2Error(json.data.messageZh);
+        }
         if (!nextSlots.find((s: V2Slot) => s.startAt === selectedSlotStartAt)) {
           setSelectedSlotStartAt(nextSlots[0]?.startAt || '');
         }
       } catch {
         setSlots([]);
-        setV2Error('目前無法載入可預約時段，請稍後再試。');
+        setV2Error('目前無法載入可預約日期，請稍後再試。');
       } finally {
         setSlotsLoading(false);
       }
     }
     fetchSlots();
-  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt]);
+  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants]);
 
   async function handleV2Checkout() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
@@ -531,7 +586,7 @@ function BookingInnerV2FlagShell() {
           planId: resolvedPlanId,
           startAt: selectedSlotStartAt,
           timezone,
-          participants: guests,
+          participants: Math.max(guests, effectiveMinParticipants),
           sourceChannel,
           contactName,
           contactPhone,
@@ -620,7 +675,7 @@ function BookingInnerV2FlagShell() {
   return (
     <main className="tp-container" style={{ padding: '24px 0 40px' }}>
       <h1 style={{ marginBottom: 8 }}>{activity.title}（V2 預約流程）</h1>
-      <p style={{ color: 'var(--tp-muted)', marginBottom: 16 }}>此流程透過 available-slots → draft → checkout 串接。</p>
+      <p style={{ color: 'var(--tp-muted)', marginBottom: 16 }}>此流程透過可預約日期 → 草稿 → 付款串接。</p>
       {loadError && <p style={{ color: 'var(--tp-danger)' }}>⚠️ {loadError}</p>}
       {v2Error && (
         <div
@@ -687,19 +742,28 @@ function BookingInnerV2FlagShell() {
 
         <label>
           人數
-          <input type="number" min={1} value={guests} onChange={(e) => setGuests(Math.max(1, Number(e.target.value) || 1))} className="tp-input" />
+          <input
+            type="number"
+            min={effectiveMinParticipants}
+            value={guests}
+            onChange={(e) => setGuests(Math.max(effectiveMinParticipants, Number(e.target.value) || effectiveMinParticipants))}
+            className="tp-input"
+          />
         </label>
+        {!allowOnePersonAddOn && (
+          <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 13 }}>
+            此行程最少 {baseMinParticipants} 人成團
+          </p>
+        )}
 
-        <label>
-          可預約時段
-          <select className="tp-input" value={selectedSlotStartAt} onChange={(e) => setSelectedSlotStartAt(e.target.value)} disabled={slotsLoading || slots.length === 0}>
-            {slotsLoading && <option>載入中…</option>}
-            {!slotsLoading && slots.length === 0 && <option value="">無可預約時段</option>}
-            {!slotsLoading && slots.map((slot) => (
-              <option key={slot.startAt} value={slot.startAt}>{new Date(slot.startAt).toLocaleString('zh-TW')}（剩餘 {slot.capacityLeft}）</option>
-            ))}
-          </select>
-        </label>
+        <div>
+          <p style={{ margin: '0 0 6px' }}>可預約日期</p>
+          <div className="tp-input" style={{ minHeight: 44, display: 'flex', alignItems: 'center' }}>
+            {slotsLoading && '載入中…'}
+            {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
+            {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${slots[0]?.capacityLeft ?? 0}）`}
+          </div>
+        </div>
 
         <label>聯絡人姓名<input className="tp-input" value={contactName} onChange={(e) => setContactName(e.target.value)} /></label>
         <label>電話<input className="tp-input" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} /></label>
