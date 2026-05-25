@@ -27,6 +27,8 @@ type Experience = {
   levelLabel?: string;
   highlightBullets?: string[];
   description?: string;
+  ratingAvg?: number | null;
+  ratingCount?: number;
 };
 
 function fallbackExperience(slug: string): Experience {
@@ -62,6 +64,8 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
         levelLabel: found.levelLabel || '新手友善',
         highlightBullets: found.highlightBullets || found.highlights || ['實名在地導遊', '小團體深度體驗', '透明價格與彈性取消'],
         description: found.description || '跟著懂路的人，走進最有故事的地方。',
+        ratingAvg: found.ratingAvg ?? found.rating_avg ?? null,
+        ratingCount: found.ratingCount ?? found.rating_count ?? 0,
       };
     }
   }
@@ -81,6 +85,15 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
           priceCurrency: 'TWD',
           availability: 'https://schema.org/InStock',
         },
+        ...(experience.ratingAvg != null && experience.ratingCount && experience.ratingCount > 0 ? {
+          aggregateRating: {
+            '@type': 'AggregateRating',
+            ratingValue: experience.ratingAvg,
+            reviewCount: experience.ratingCount,
+            bestRating: 5,
+            worstRating: 1,
+          },
+        } : {}),
       },
       {
         '@type': 'BreadcrumbList',
