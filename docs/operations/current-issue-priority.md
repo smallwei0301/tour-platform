@@ -47,16 +47,16 @@ Closed launch-blocking items are historical-only. Current live-check shows no op
    - Routing: run immediately after #642 is validated for the same run.
    - Done signal: alert drill evidence and sign-off attached to issue.
 
-3. **#605 — [Ops] Finalize Andy Lee launch listing content and media before public booking** `agent:queued`
+3. **#605 — [Ops] Finalize Andy Lee launch listing content and media before public booking** `agent:backlog`
    - State: OPEN
    - Labels: `priority:P1`, `agent:backlog`
    - Status blocker: `needs-info` in issue labels.
 
-4. **#319 — [Ops] Run customer support SOP first-case drill follow-through** `agent:queued`
+4. **#319 — [Ops] Run customer support SOP first-case drill follow-through** `agent:backlog`
    - State: OPEN
    - Labels: `priority:P1`, `agent:backlog`
 
-5. **#318 — [Ops] Run Andy Lee first-guide onboarding demo and retrospective scope** `agent:queued`
+5. **#318 — [Ops] Run Andy Lee first-guide onboarding demo and retrospective scope** `agent:backlog`
    - State: OPEN
    - Labels: `priority:P1`, `agent:backlog`
 
