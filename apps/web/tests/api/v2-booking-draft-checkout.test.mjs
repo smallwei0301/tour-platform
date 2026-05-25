@@ -15,6 +15,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
+  CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
   calculateExistingParticipantsForGroup,
   evaluateGroupBookingRule,
@@ -761,11 +762,93 @@ test('draft route applies formed-group rule and avoids same-group overlap hard c
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
+  assert.match(src, /CAPACITY_HOLD_BOOKING_STATUSES/);
   assert.match(src, /evaluateGroupBookingRule\(/);
+  assert.match(src, /effectiveGroupRule/);
   assert.match(src, /calculateExistingParticipantsForGroup\(/);
-  assert.match(src, /groupRule\.messageZh/);
+  assert.match(src, /effectiveGroupRule\.messageZh/);
   assert.match(src, /excludeSameActivityPlanDateBookings\(/);
   assert.match(src, /bookings: nonGroupBookings/);
+});
+
+test('behavior: draft rule blocks if confirmed+draft participants already exceed remaining capacity', () => {
+  const guideId = 'guide_001';
+  const activityId = 'activity_001';
+  const planId = 'plan_001';
+  const timezone = 'Asia/Taipei';
+
+  const slotDate = '2026-04-20';
+  const baseBooking = {
+    id: 'same_slot_existing',
+    guide_id: guideId,
+    start_at: '2026-04-20T01:00:00Z',
+    end_at: '2026-04-20T05:00:00Z',
+    participants: 4,
+    activity_id: activityId,
+    activity_plan_id: planId,
+  };
+
+  const formedExisting = calculateExistingParticipantsForGroup({
+    bookings: [
+      {
+        ...baseBooking,
+        id: 'formed_existing',
+        status: 'confirmed',
+        participants: 4,
+      },
+      {
+        ...baseBooking,
+        id: 'draft_existing',
+        status: 'draft',
+        participants: 3,
+      },
+    ],
+    activityId,
+    planId,
+    localDate: slotDate,
+    timezone,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+  const capacityHoldExisting = calculateExistingParticipantsForGroup({
+    bookings: [
+      {
+        ...baseBooking,
+        id: 'formed_existing',
+        status: 'confirmed',
+        participants: 4,
+      },
+      {
+        ...baseBooking,
+        id: 'draft_existing',
+        status: 'draft',
+        participants: 3,
+      },
+    ],
+    activityId,
+    planId,
+    localDate: slotDate,
+    timezone,
+    statuses: CAPACITY_HOLD_BOOKING_STATUSES,
+  });
+
+  const capacityHoldRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants: capacityHoldExisting,
+    requestedParticipants: 1,
+  });
+  const formedRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants: formedExisting,
+    requestedParticipants: 1,
+  });
+
+  assert.equal(capacityHoldExisting, 7);
+  assert.equal(formedExisting, 4);
+  assert.equal(formedRule.allowed, true);
+  assert.equal(capacityHoldRule.allowed, false);
+  assert.equal(capacityHoldRule.reasonCode, 'CAPACITY_EXCEEDED');
 });
 
 test('behavior: draft pre-insert validation allows formed add-on but blocks when total exceeds max', () => {

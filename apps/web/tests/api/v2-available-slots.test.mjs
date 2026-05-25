@@ -13,6 +13,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import {
+  CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
   calculateExistingParticipantsForGroup,
   evaluateGroupBookingRule,
@@ -441,13 +442,82 @@ test('route enforces unformed-group min participants and Chinese copy contract',
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
+  assert.match(src, /CAPACITY_HOLD_BOOKING_STATUSES/);
   assert.match(src, /calculateExistingParticipantsForGroup\(/);
+  assert.match(src, /effectiveExistingParticipantsForCapacityHold/);
   assert.match(src, /evaluateGroupBookingRule\(/);
   assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
   assert.match(src, /bookings: nonGroupConflictBookings/);
   assert.match(src, /slots: filteredSlots/);
   assert.match(src, /reason: filteredSlots\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
   assert.match(src, /messageZh: filteredSlots\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+});
+
+test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {
+  const guideId = 'guide_001';
+  const activityId = 'activity_001';
+  const planId = 'plan_001';
+  const timezone = 'Asia/Taipei';
+
+  const bookings = [
+    {
+      id: 'existing_formed_group',
+      guide_id: guideId,
+      start_at: '2026-04-20T01:00:00Z',
+      end_at: '2026-04-20T05:00:00Z',
+      status: 'confirmed',
+      participants: 4,
+      activity_id: activityId,
+      activity_plan_id: planId,
+    },
+    {
+      id: 'existing_draft_hold',
+      guide_id: guideId,
+      start_at: '2026-04-20T01:00:00Z',
+      end_at: '2026-04-20T05:00:00Z',
+      status: 'draft',
+      participants: 3,
+      activity_id: activityId,
+      activity_plan_id: planId,
+    },
+  ];
+
+  const effectiveExistingForFormed = calculateExistingParticipantsForGroup({
+    bookings,
+    activityId,
+    planId,
+    localDate: '2026-04-20',
+    timezone,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+
+  const effectiveExistingForCapacityHold = calculateExistingParticipantsForGroup({
+    bookings,
+    activityId,
+    planId,
+    localDate: '2026-04-20',
+    timezone,
+    statuses: CAPACITY_HOLD_BOOKING_STATUSES,
+  });
+
+  const formedRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants: effectiveExistingForFormed,
+    requestedParticipants: 1,
+  });
+  const capacityHoldRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants: effectiveExistingForCapacityHold,
+    requestedParticipants: 1,
+  });
+
+  assert.equal(effectiveExistingForFormed, 4);
+  assert.equal(effectiveExistingForCapacityHold, 7);
+  assert.equal(formedRule.allowed, true);
+  assert.equal(capacityHoldRule.allowed, false);
+  assert.equal(capacityHoldRule.reasonCode, 'CAPACITY_EXCEEDED');
 });
 
 test('behavior: available-slots keeps same-plan/date slot for formed-group 1-person add-on', () => {

@@ -30,7 +30,7 @@ test('booking draft route contract smoke: has validation + stateful errors + suc
   assert.match(src, /parseAndValidateBody\(/);
   assert.match(src, /errorV2\('VALIDATION_ERROR'/);
   assert.match(src, /errorV2\('NOT_FOUND'/);
-  assert.match(src, /groupRule\.reasonCode === 'CAPACITY_EXCEEDED'/);
+  assert.match(src, /effectiveGroupRule\.reasonCode === 'CAPACITY_EXCEEDED'/);
   assert.match(src, /errorV2\('SLOT_UNAVAILABLE'/);
   assert.match(src, /successV2\(/);
   assert.match(src, /bookingId:/);

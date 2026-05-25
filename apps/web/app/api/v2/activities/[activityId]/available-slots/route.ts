@@ -396,7 +396,7 @@ export async function GET(
     const groupedRuleFailuresByDate = new Map<string, { reasonCode?: string; messageZh?: string }>();
     const filteredSlots = result.slots.filter((slot) => {
       const localDate = getDateStringInTimezone(new Date(slot.startAt), params.timezone);
-      const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+      const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
         bookings,
         activityId: params.activityId,
         planId: params.planId,
@@ -405,12 +405,31 @@ export async function GET(
         statuses: FORMED_GROUP_BOOKING_STATUSES,
       });
 
-      const rule = evaluateGroupBookingRule({
+      const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
+        bookings,
+        activityId: params.activityId,
+        planId: params.planId,
+        localDate,
+        timezone: params.timezone,
+        statuses: CAPACITY_HOLD_BOOKING_STATUSES,
+      });
+
+      const capacityHoldRule = evaluateGroupBookingRule({
         minParticipants,
         maxParticipants: plan.max_participants,
-        effectiveExistingParticipants,
+        effectiveExistingParticipants: effectiveExistingParticipantsForCapacityHold,
         requestedParticipants: params.participants,
       });
+      const groupRule = evaluateGroupBookingRule({
+        minParticipants,
+        maxParticipants: plan.max_participants,
+        effectiveExistingParticipants: effectiveExistingParticipantsForFormed,
+        requestedParticipants: params.participants,
+      });
+      const rule =
+        !capacityHoldRule.allowed && capacityHoldRule.reasonCode === 'CAPACITY_EXCEEDED'
+          ? capacityHoldRule
+          : groupRule;
 
       if (rule.allowed) {
         return true;

@@ -480,7 +480,7 @@ export async function POST(request: NextRequest) {
     }));
 
     const slotDate = getDateStringInTimezone(slotStartAt, data.timezone);
-    const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+    const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
       bookings,
       activityId: data.activityId,
       planId: data.planId,
@@ -489,22 +489,41 @@ export async function POST(request: NextRequest) {
       statuses: FORMED_GROUP_BOOKING_STATUSES,
     });
 
+    const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
+      bookings,
+      activityId: data.activityId,
+      planId: data.planId,
+      localDate: slotDate,
+      timezone: data.timezone,
+      statuses: CAPACITY_HOLD_BOOKING_STATUSES,
+    });
+
     const minParticipants =
       Number.isFinite(Number(planData.min_participants)) && Number(planData.min_participants) > 0
         ? Number(planData.min_participants)
         : 1;
+    const capacityHoldRule = evaluateGroupBookingRule({
+      minParticipants,
+      maxParticipants: planData.max_participants,
+      effectiveExistingParticipants: effectiveExistingParticipantsForCapacityHold,
+      requestedParticipants: data.participants,
+    });
     const groupRule = evaluateGroupBookingRule({
       minParticipants,
       maxParticipants: planData.max_participants,
-      effectiveExistingParticipants,
+      effectiveExistingParticipants: effectiveExistingParticipantsForFormed,
       requestedParticipants: data.participants,
     });
+    const effectiveGroupRule =
+      !capacityHoldRule.allowed && capacityHoldRule.reasonCode === 'CAPACITY_EXCEEDED'
+        ? capacityHoldRule
+        : groupRule;
 
-    if (!groupRule.allowed) {
+    if (!effectiveGroupRule.allowed) {
       return Response.json(
         errorV2(
-          groupRule.reasonCode === 'CAPACITY_EXCEEDED' ? 'CAPACITY_EXCEEDED' : 'VALIDATION_ERROR',
-          groupRule.messageZh || '此行程目前無法預訂'
+          effectiveGroupRule.reasonCode === 'CAPACITY_EXCEEDED' ? 'CAPACITY_EXCEEDED' : 'VALIDATION_ERROR',
+          effectiveGroupRule.messageZh || '此行程目前無法預訂'
         ),
         { status: 400 }
       );
