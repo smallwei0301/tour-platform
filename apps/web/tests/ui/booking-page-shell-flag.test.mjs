@@ -53,6 +53,8 @@ test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead
   assert.match(v2ShellSource, /\/api\/v2\/bookings\/\$\{draftJson\.data\.bookingId\}\/checkout/);
   assert.doesNotMatch(v2ShellSource, /createOrder\(/);
   assert.doesNotMatch(v2ShellSource, /fetch\('\/api\/orders'/);
+  assert.doesNotMatch(v2ShellSource, /submitEcpayCallback\(/);
+  assert.doesNotMatch(v2ShellSource, /handleMockPaymentSuccess/);
 });
 
 test('v2 shell posts resolved UUID activityId and planId from available-slots response into draft payload', async () => {
@@ -69,7 +71,7 @@ test('v2 shell posts resolved UUID activityId and planId from available-slots re
   assert.match(v2ShellSource, /planId: resolvedPlanId/);
 });
 
-test('v2 shell reuses legacy booking presentation copy and strips V2-only shell wording', async () => {
+test('v2 shell keeps exact legacy booking presentation markers while retaining v2 mutation path', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
   const v2End = src.indexOf('// ── 外層包 Suspense（useSearchParams 需要）');
@@ -77,12 +79,30 @@ test('v2 shell reuses legacy booking presentation copy and strips V2-only shell 
 
   const v2ShellSource = src.slice(v2Start, v2End);
 
-  assert.match(v2ShellSource, /行程確認/);
-  assert.match(v2ShellSource, /旅客資訊/);
-  assert.match(v2ShellSource, /付款/);
-  assert.match(v2ShellSource, /下一步：填寫資訊/);
-  assert.match(v2ShellSource, /預約摘要/);
-  assert.match(v2ShellSource, /聯絡人資訊/);
+  const legacyMarkers = [
+    '選擇可預約場次',
+    '費用明細',
+    '平台服務費',
+    '取消政策',
+    '請輸入真實姓名',
+    '0912-345-678',
+    '給導遊的備註（選填）',
+    '服務條款',
+    '退款政策',
+    '建立訂單並前往付款',
+    '信用卡（Visa / Mastercard / JCB）',
+    'LINE Pay',
+    'ATM 虛擬帳號',
+    '付款由 ECPay 加密處理',
+    '訂單編號：',
+    "top: 80",
+    "aspectRatio: '16/9'",
+  ];
+
+  for (const marker of legacyMarkers) {
+    assert.match(v2ShellSource, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&')));
+  }
+
   assert.doesNotMatch(v2ShellSource, /Step\s*1｜/);
   assert.doesNotMatch(v2ShellSource, /Step\s*2｜/);
   assert.doesNotMatch(v2ShellSource, /Step\s*3｜/);
