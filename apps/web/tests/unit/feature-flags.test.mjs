@@ -2,14 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { isBookingV2Enabled } from '../../src/config/feature-flags.mjs';
 
-test('isBookingV2Enabled defaults to false when no runtime flag is provided', () => {
-  assert.equal(isBookingV2Enabled({}), false);
+test('isBookingV2Enabled defaults to true (V2 primary) when no runtime flag is provided', () => {
+  assert.equal(isBookingV2Enabled({}), true);
 });
 
-test('isBookingV2Enabled follows runtime BOOKING_V2 default when NEXT_PUBLIC flag is absent', () => {
+test('isBookingV2Enabled follows runtime BOOKING_V2 when NEXT_PUBLIC flag is absent', () => {
   assert.equal(isBookingV2Enabled({ BOOKING_V2: '1' }), true);
   assert.equal(isBookingV2Enabled({ BOOKING_V2: 'true' }), true);
   assert.equal(isBookingV2Enabled({ BOOKING_V2: '0' }), false);
+});
+
+test('isBookingV2Enabled rollback: NEXT_PUBLIC_BOOKING_V2_ENABLED=0 disables V2 even with no BOOKING_V2', () => {
+  assert.equal(isBookingV2Enabled({ NEXT_PUBLIC_BOOKING_V2_ENABLED: '0' }), false);
+  assert.equal(isBookingV2Enabled({ NEXT_PUBLIC_BOOKING_V2_ENABLED: 'false' }), false);
 });
 
 test('isBookingV2Enabled allows explicit legacy fallback via NEXT_PUBLIC flag even if runtime default is on', () => {
