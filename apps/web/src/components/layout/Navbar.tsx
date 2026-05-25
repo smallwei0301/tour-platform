@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { PublicIcon } from '../ui/PublicIcon';
 
 const NAV_LINKS = [
   { label: '探索行程', href: '/activities' },
@@ -72,7 +73,7 @@ export function Navbar() {
             className="tp-btn tp-btn-primary"
             style={{ borderRadius: '0 24px 24px 0', padding: '10px 18px' }}
           >
-            🔍
+            <PublicIcon name="search" size={16} />
           </button>
         </form>
 
@@ -153,7 +154,7 @@ export function Navbar() {
           aria-expanded={menuOpen}
         >
           {menuOpen ? (
-            <span style={{ fontSize: 20, lineHeight: 1 }}>✕</span>
+            <span style={{ display: 'inline-flex', lineHeight: 1 }}><PublicIcon name="close" size={20} /></span>
           ) : (
             <span className="tp-hamburger-icon">
               <span />
@@ -177,7 +178,7 @@ export function Navbar() {
                 aria-label="搜尋行程或目的地"
               />
               <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }}>
-                🔍
+                <PublicIcon name="search" size={16} />
               </button>
             </form>
             {NAV_LINKS.map((l) => (

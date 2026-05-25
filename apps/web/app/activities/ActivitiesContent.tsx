@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
 import WishlistToggle from '../../src/components/WishlistToggle';
+import { PublicIcon } from '../../src/components/ui/PublicIcon';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
 const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
@@ -185,7 +186,7 @@ export default function ActivitiesContent() {
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
-              <p style={{ fontSize: 40, marginBottom: 12 }}>🔍</p>
+              <div style={{ marginBottom: 12, color: 'var(--tp-primary)' }}><PublicIcon name="search" size={40} /></div>
               <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的行程</p>
               <p style={{ fontSize: 14, marginBottom: 20 }}>試試看其他關鍵字，或清除篩選條件</p>
               <button onClick={clearAll} className="tp-btn tp-btn-primary">清除所有篩選</button>
@@ -220,28 +221,28 @@ export default function ActivitiesContent() {
                         {a.guideAvatarUrl && (
                           <Image src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} width={1200} height={675} />
                         )}
-                        <span style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{a.guideName} ✅</span>
+                        <span style={{ fontSize: 13, color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{a.guideName} <PublicIcon name="badgeCheck" size={14} /></span>
                       </div>
                     )}
                     <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
                     <div data-testid="activity-card-rating" style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 2px', fontSize: 13 }}>
                       {a.ratingAvg != null ? (
                         <>
-                          <span style={{ color: '#f59e0b' }}>⭐</span>
+                          <span style={{ color: '#f59e0b', display: 'inline-flex' }}><PublicIcon name="star" size={14} /></span>
                           <span>{a.ratingAvg.toFixed(1)}</span>
                           <span style={{ color: 'var(--tp-muted)' }}>({a.reviewCount ?? 0}則)</span>
-                          <span style={{ color: 'var(--tp-muted)' }}>· 📍 {a.region}</span>
+                          <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
                         </>
                       ) : (
                         <>
                           <span style={{ color: 'var(--tp-muted)' }} className="text-xs">尚無評價</span>
-                          <span style={{ color: 'var(--tp-muted)' }}>· 📍 {a.region}</span>
+                          <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
                         </>
                       )}
                     </div>
                     {durationDisplay && (
                       <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                        🕐 {durationDisplay} · 👥 {a.minParticipants}~{a.maxParticipants} 人
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="clock" size={13} /> {durationDisplay}</span> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="users" size={13} /> {a.minParticipants}~{a.maxParticipants} 人</span>
                       </p>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

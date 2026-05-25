@@ -10,6 +10,7 @@ import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
+import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
 
 // Issue #502: avoid force-static/unstable_cache render lock on production cold path.
 // Keep volatile availability on client intent fetch; detail page stays runtime-rendered.
@@ -275,18 +276,18 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
             {/* SECTION 1: 方案 (DatePlanSection) */}
             <section id="section-plan" className="kkd-scroll-section">
-              <h2 className="kkd-section-title">🗓 選擇方案</h2>
+              <h2 className="kkd-section-title"><PublicIcon name="calendar" size={18} /> 選擇方案</h2>
               <DatePlanSection activity={activity} schedules={displayedSchedules} useBookingV2={useBookingV2} />
             </section>
 
             {/* SECTION 1.5: 詳細行程時間表 */}
             {activityData.itinerary && activityData.itinerary.length > 0 && (
               <section id="section-itinerary" className="kkd-scroll-section">
-                <h2 className="kkd-section-title">🗺 詳細行程</h2>
+                <h2 className="kkd-section-title"><PublicIcon name="route" size={18} /> 詳細行程</h2>
                 <div className="kkd-itinerary">
                   {activityData.itinerary.map((step: { icon?: string; title?: string; duration?: string; description?: string }, i: number) => (
                     <div key={i} className="kkd-itinerary-step">
-                      <div className="kkd-itinerary-icon">{step.icon || '📍'}</div>
+                      <div className="kkd-itinerary-icon"><PublicIcon name="pin" size={18} /></div>
                       <div className="kkd-itinerary-content">
                         <div className="kkd-itinerary-header">
                           <strong className="kkd-itinerary-title">{step.title}</strong>
@@ -303,9 +304,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
             {/* SECTION 2: 旅客評價 */}
             <section id="section-reviews" className="kkd-scroll-section">
-              <h2 className="kkd-section-title">⭐ 旅客評價</h2>
+              <h2 className="kkd-section-title"><PublicIcon name="star" size={18} /> 旅客評價</h2>
               <div className="kkd-reviews-summary">
-                <span className="kkd-reviews-score">★ {activityData.ratingAvg != null ? activityData.ratingAvg.toFixed(1) : (guide?.ratingAvg?.toFixed(1) || '5.0')}</span>
+                <span className="kkd-reviews-score"><PublicIcon name="star" size={20} /> {activityData.ratingAvg != null ? activityData.ratingAvg.toFixed(1) : (guide?.ratingAvg?.toFixed(1) || '5.0')}</span>
                 <span className="kkd-reviews-total">共 {actReviews.length} 則評價</span>
               </div>
 
@@ -313,7 +314,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               {activityData.socialProofQuotes && activityData.socialProofQuotes.length > 0 && (
                 <div className="kkd-quote-chips">
                   {activityData.socialProofQuotes.map((q: string, i: number) => (
-                    <span key={i} className="kkd-quote-chip">💬 {q}</span>
+                    <span key={i} className="kkd-quote-chip"><PublicIcon name="chat" size={13} /> {q}</span>
                   ))}
                 </div>
               )}
@@ -336,14 +337,14 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
             {/* SECTION 3: 商品說明 */}
             <section id="section-details" className="kkd-scroll-section">
-              <h2 className="kkd-section-title">📋 商品說明</h2>
+              <h2 className="kkd-section-title"><PublicIcon name="document" size={18} /> 商品說明</h2>
 
               {activity.inclusions && activity.inclusions.length > 0 && (
                 <div className="kkd-detail-block">
                   <h3 className="kkd-detail-subtitle">行程包含</h3>
                   <ul className="kkd-checklist">
                     {activity.inclusions.map((item: string, i: number) => (
-                      <li key={i}><span className="kkd-check">✅</span>{item}</li>
+                      <li key={i}><span className="kkd-check"><PublicIcon name="checkCircle" size={16} /></span>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -354,7 +355,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                   <h3 className="kkd-detail-subtitle">行程不含</h3>
                   <ul className="kkd-checklist">
                     {activity.exclusions.map((item: string, i: number) => (
-                      <li key={i}><span className="kkd-check">❌</span>{item}</li>
+                      <li key={i}><span className="kkd-check"><PublicIcon name="xCircle" size={16} /></span>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -365,7 +366,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                   <h3 className="kkd-detail-subtitle">適合對象</h3>
                   <ul className="kkd-checklist">
                     {activityData.goodFor.map((item: string, i: number) => (
-                      <li key={i}><span className="kkd-check">👍</span>{item}</li>
+                      <li key={i}><span className="kkd-check"><PublicIcon name="thumbsUp" size={16} /></span>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -381,7 +382,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
             {/* SECTION 4: 購買須知 */}
             <section id="section-policy" className="kkd-scroll-section">
-              <h2 className="kkd-section-title">📌 購買須知</h2>
+              <h2 className="kkd-section-title"><PublicIcon name="pin" size={18} /> 購買須知</h2>
 
               {activity.notices && activity.notices.length > 0 && (
                 <div className="kkd-detail-block">
@@ -416,7 +417,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {/* 導遊介紹 */}
             {guide && (
               <section className="kkd-scroll-section">
-                <h2 className="kkd-section-title">🧑‍🦯 關於你的導遊</h2>
+                <h2 className="kkd-section-title"><PublicIcon name="badgeCheck" size={18} /> 關於你的導遊</h2>
                 <div className="kkd-guide-card">
                   <Image
                     src={guide.profilePhotoUrl || (guide as {avatarUrl?: string}).avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
@@ -424,12 +425,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     className="kkd-guide-avatar" width={1200} height={675} />
                   <div className="kkd-guide-info">
                     <strong className="kkd-guide-name">{guide.displayName}</strong>
-                    <span className="kkd-guide-verified">✅ 實名已驗證</span>
+                    <span className="kkd-guide-verified"><PublicIcon name="badgeCheck" size={15} /> 實名已驗證</span>
                     <p className="kkd-guide-meta">
-                      ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guide.reviewCount || (guide as {serviceCount?: number}).serviceCount || 0} 次服務）&nbsp;·&nbsp;
-                      📍 {guide.region}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="star" size={14} /> {guide.ratingAvg?.toFixed(1) || '5.0'}</span>（{guide.reviewCount || (guide as {serviceCount?: number}).serviceCount || 0} 次服務）&nbsp;·&nbsp;
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="pin" size={14} /> {guide.region}</span>
                       {guide.languages && guide.languages.length > 0 && (
-                        <>&nbsp;·&nbsp;🌍 {guide.languages.slice(0, 3).join('、')}</>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>&nbsp;·&nbsp;<PublicIcon name="globe" size={14} /> {guide.languages.slice(0, 3).join('、')}</span>
                       )}
                     </p>
                     {(guide.headline || guide.bio) && (
