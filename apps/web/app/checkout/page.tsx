@@ -251,10 +251,11 @@ export default function CheckoutPage() {
 
       {openSchedules.length > 0 && (
         <div style={{ marginBottom: 20 }}>
-          <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+          <label htmlFor="schedule-select" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
             選擇排期
           </label>
           <select
+            id="schedule-select"
             data-testid="checkout-schedule-select"
             value={selectedScheduleId}
             onChange={e => setSelectedScheduleId(e.target.value)}
@@ -280,10 +281,11 @@ export default function CheckoutPage() {
           { label: '姓名', value: contactName, setter: setContactName, placeholder: '王小明', type: 'text' },
           { label: '電話', value: contactPhone, setter: setContactPhone, placeholder: '0912345678', type: 'tel' },
           { label: 'Email', value: contactEmail, setter: setContactEmail, placeholder: 'email@example.com', type: 'email' },
-        ].map(({ label, value, setter, placeholder, type }) => (
+        ].map(({ label, value, setter, placeholder, type }, index) => (
           <div key={label} style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 3 }}>{label}</label>
+            <label htmlFor={`contact-field-${index}`} style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 3 }}>{label}</label>
             <input
+              id={`contact-field-${index}`}
               type={type}
               value={value}
               onChange={e => setter(e.target.value)}
