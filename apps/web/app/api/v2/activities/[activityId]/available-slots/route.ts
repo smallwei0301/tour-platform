@@ -30,6 +30,7 @@ import {
   FORMED_GROUP_BOOKING_STATUSES,
   calculateExistingParticipantsForGroup,
   evaluateGroupBookingRule,
+  excludeSameActivityPlanDateRangeBookings,
   normalizeBookingParticipants,
 } from '../../../../../../src/lib/availability-v2/group-booking-rule';
 
@@ -368,10 +369,19 @@ export async function GET(
       participants: params.participants,
     };
 
+    const nonGroupConflictBookings = excludeSameActivityPlanDateRangeBookings({
+      bookings,
+      activityId: params.activityId,
+      planId: params.planId,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      timezone: params.timezone,
+    });
+
     const deps: SlotGeneratorDeps = {
       rules,
       blackouts,
-      bookings,
+      bookings: nonGroupConflictBookings,
       plan,
     };
 

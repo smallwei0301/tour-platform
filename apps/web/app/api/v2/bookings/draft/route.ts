@@ -37,6 +37,7 @@ import {
   FORMED_GROUP_BOOKING_STATUSES,
   calculateExistingParticipantsForGroup,
   evaluateGroupBookingRule,
+  excludeSameActivityPlanDateBookings,
   normalizeBookingParticipants,
 } from '../../../../../src/lib/availability-v2/group-booking-rule';
 
@@ -192,10 +193,18 @@ async function isSlotInGeneratedV2Availability(
     participants: payload.participants,
   };
 
+  const nonGroupConflictBookings = excludeSameActivityPlanDateBookings({
+    bookings,
+    activityId: payload.activityId,
+    planId: payload.planId,
+    localDate: payload.slotDate,
+    timezone: payload.timezone,
+  });
+
   const deps: SlotGeneratorDeps = {
     rules,
     blackouts,
-    bookings,
+    bookings: nonGroupConflictBookings,
     plan,
   };
 
@@ -501,10 +510,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const nonGroupBookings = bookings.filter((booking) => {
-      if (booking.activity_id !== data.activityId) return true;
-      if (booking.activity_plan_id !== data.planId) return true;
-      return getDateStringInTimezone(new Date(booking.start_at), data.timezone) !== slotDate;
+    const nonGroupBookings = excludeSameActivityPlanDateBookings({
+      bookings,
+      activityId: data.activityId,
+      planId: data.planId,
+      localDate: slotDate,
+      timezone: data.timezone,
     });
 
     const slotValidation = validateSlotAvailability(

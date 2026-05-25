@@ -41,6 +41,23 @@ export interface ExistingParticipantsInput {
   statuses: readonly string[];
 }
 
+export interface GroupDateBookingFilterInput {
+  bookings: ExistingBooking[];
+  activityId: string;
+  planId: string;
+  localDate: string;
+  timezone: string;
+}
+
+export interface GroupDateRangeBookingFilterInput {
+  bookings: ExistingBooking[];
+  activityId: string;
+  planId: string;
+  dateFrom: string;
+  dateTo: string;
+  timezone: string;
+}
+
 export function normalizeBookingParticipants(value: unknown): number {
   if (value === null || value === undefined) {
     return 1;
@@ -84,6 +101,37 @@ export function calculateExistingParticipantsForGroup({
 
     return sum + normalizeBookingParticipants(booking.participants);
   }, 0);
+}
+
+export function excludeSameActivityPlanDateBookings({
+  bookings,
+  activityId,
+  planId,
+  localDate,
+  timezone,
+}: GroupDateBookingFilterInput): ExistingBooking[] {
+  return bookings.filter((booking) => {
+    if (booking.activity_id !== activityId) return true;
+    if (booking.activity_plan_id !== planId) return true;
+    return getLocalDateInTimezone(booking.start_at, timezone) !== localDate;
+  });
+}
+
+export function excludeSameActivityPlanDateRangeBookings({
+  bookings,
+  activityId,
+  planId,
+  dateFrom,
+  dateTo,
+  timezone,
+}: GroupDateRangeBookingFilterInput): ExistingBooking[] {
+  return bookings.filter((booking) => {
+    if (booking.activity_id !== activityId) return true;
+    if (booking.activity_plan_id !== planId) return true;
+
+    const bookingLocalDate = getLocalDateInTimezone(booking.start_at, timezone);
+    return bookingLocalDate < dateFrom || bookingLocalDate > dateTo;
+  });
 }
 
 export function evaluateGroupBookingRule({

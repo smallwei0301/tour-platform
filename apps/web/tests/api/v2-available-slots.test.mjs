@@ -12,6 +12,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {
+  FORMED_GROUP_BOOKING_STATUSES,
+  calculateExistingParticipantsForGroup,
+  evaluateGroupBookingRule,
+  excludeSameActivityPlanDateRangeBookings,
+} from '../../src/lib/availability-v2/group-booking-rule.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -437,9 +443,71 @@ test('route enforces unformed-group min participants and Chinese copy contract',
   assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
   assert.match(src, /calculateExistingParticipantsForGroup\(/);
   assert.match(src, /evaluateGroupBookingRule\(/);
+  assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
+  assert.match(src, /bookings: nonGroupConflictBookings/);
   assert.match(src, /slots: filteredSlots/);
   assert.match(src, /reason: filteredSlots\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
   assert.match(src, /messageZh: filteredSlots\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+});
+
+test('behavior: available-slots keeps same-plan/date slot for formed-group 1-person add-on', () => {
+  const guideId = 'guide_001';
+  const activityId = 'activity_001';
+  const planId = 'plan_001';
+  const timezone = 'Asia/Taipei';
+
+  const bookings = [
+    {
+      id: 'existing_formed_group',
+      guide_id: guideId,
+      start_at: '2026-04-20T01:00:00Z',
+      end_at: '2026-04-20T05:00:00Z',
+      status: 'confirmed',
+      participants: 4,
+      activity_id: activityId,
+      activity_plan_id: planId,
+    },
+  ];
+
+  const filtered = excludeSameActivityPlanDateRangeBookings({
+    bookings,
+    activityId,
+    planId,
+    dateFrom: '2026-04-20',
+    dateTo: '2026-04-20',
+    timezone,
+  });
+  assert.equal(filtered.length, 0);
+
+  const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+    bookings,
+    activityId,
+    planId,
+    localDate: '2026-04-20',
+    timezone,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+
+  const groupRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 6,
+    effectiveExistingParticipants,
+    requestedParticipants: 1,
+  });
+
+  const slot = {
+    startAt: new Date('2026-04-20T01:00:00Z'),
+    endAt: new Date('2026-04-20T05:00:00Z'),
+  };
+
+  const hasConflict = filtered.some((booking) => {
+    const bookingStart = new Date(booking.start_at);
+    const bookingEnd = new Date(booking.end_at);
+    return slot.startAt < bookingEnd && slot.endAt > bookingStart;
+  });
+
+  assert.equal(groupRule.allowed, true);
+  assert.equal(hasConflict, false);
 });
 
 console.log('All Available Slots API tests completed!');

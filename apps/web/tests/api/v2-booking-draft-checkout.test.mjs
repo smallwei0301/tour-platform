@@ -14,6 +14,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import {
+  FORMED_GROUP_BOOKING_STATUSES,
+  calculateExistingParticipantsForGroup,
+  evaluateGroupBookingRule,
+  excludeSameActivityPlanDateBookings,
+} from '../../src/lib/availability-v2/group-booking-rule.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -758,8 +764,81 @@ test('draft route applies formed-group rule and avoids same-group overlap hard c
   assert.match(src, /evaluateGroupBookingRule\(/);
   assert.match(src, /calculateExistingParticipantsForGroup\(/);
   assert.match(src, /groupRule\.messageZh/);
-  assert.match(src, /const nonGroupBookings = bookings\.filter\(/);
+  assert.match(src, /excludeSameActivityPlanDateBookings\(/);
   assert.match(src, /bookings: nonGroupBookings/);
+});
+
+test('behavior: draft pre-insert validation allows formed add-on but blocks when total exceeds max', () => {
+  const guideId = 'guide_001';
+  const activityId = 'activity_001';
+  const planId = 'plan_001';
+  const timezone = 'Asia/Taipei';
+
+  const slotStart = '2026-04-20T01:00:00Z';
+  const slotEnd = '2026-04-20T05:00:00Z';
+  const baseBooking = {
+    id: 'same_slot_existing',
+    guide_id: guideId,
+    start_at: slotStart,
+    end_at: slotEnd,
+    status: 'confirmed',
+    activity_id: activityId,
+    activity_plan_id: planId,
+  };
+
+  const formedBookings = [{ ...baseBooking, participants: 4 }];
+  const formedExisting = calculateExistingParticipantsForGroup({
+    bookings: formedBookings,
+    activityId,
+    planId,
+    localDate: '2026-04-20',
+    timezone,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+  const formedRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants: formedExisting,
+    requestedParticipants: 1,
+  });
+  assert.equal(formedRule.allowed, true);
+
+  const nonGroupBookings = excludeSameActivityPlanDateBookings({
+    bookings: formedBookings,
+    activityId,
+    planId,
+    localDate: '2026-04-20',
+    timezone,
+  });
+  assert.equal(nonGroupBookings.length, 0);
+
+  const slotHasHardConflict = nonGroupBookings.some((booking) => {
+    const bookingStart = new Date(booking.start_at).getTime();
+    const bookingEnd = new Date(booking.end_at).getTime();
+    const requestStart = new Date(slotStart).getTime();
+    const requestEnd = new Date(slotEnd).getTime();
+    return requestStart < bookingEnd && requestEnd > bookingStart;
+  });
+  assert.equal(slotHasHardConflict, false);
+
+  const overCapacityBookings = [{ ...baseBooking, participants: 5 }];
+  const overCapacityExisting = calculateExistingParticipantsForGroup({
+    bookings: overCapacityBookings,
+    activityId,
+    planId,
+    localDate: '2026-04-20',
+    timezone,
+    statuses: FORMED_GROUP_BOOKING_STATUSES,
+  });
+  const overCapacityRule = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 5,
+    effectiveExistingParticipants: overCapacityExisting,
+    requestedParticipants: 1,
+  });
+
+  assert.equal(overCapacityRule.allowed, false);
+  assert.equal(overCapacityRule.reasonCode, 'CAPACITY_EXCEEDED');
 });
 
 console.log('All Booking Draft + Checkout API tests completed!');
