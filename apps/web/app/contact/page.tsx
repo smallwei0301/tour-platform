@@ -54,17 +54,17 @@ export default function ContactPage() {
           </p>
 
           <form style={{ display: 'grid', gap: 14 }}>
-            <label style={{ display: 'block' }}>
+            <label htmlFor="contact-name" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>姓名 *</span>
-              <input type="text" name="name" placeholder="您的姓名" required aria-required="true" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+              <input id="contact-name" type="text" name="name" placeholder="您的姓名" required aria-required="true" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
             </label>
-            <label style={{ display: 'block' }}>
+            <label htmlFor="contact-email" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>電子信箱 *</span>
-              <input type="email" name="email" placeholder="you@example.com" required aria-required="true" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+              <input id="contact-email" type="email" name="email" placeholder="you@example.com" required aria-required="true" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
             </label>
-            <label style={{ display: 'block' }}>
+            <label htmlFor="contact-subject" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>主題</span>
-              <select name="subject" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }}>
+              <select id="contact-subject" name="subject" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }}>
                 <option>一般詢問</option>
                 <option>訂單問題</option>
                 <option>導遊合作</option>
@@ -73,9 +73,9 @@ export default function ContactPage() {
                 <option>其他</option>
               </select>
             </label>
-            <label style={{ display: 'block' }}>
+            <label htmlFor="contact-message" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>訊息 *</span>
-              <textarea name="message" rows={5} placeholder="請輸入您的訊息⋯" required aria-required="true"
+              <textarea id="contact-message" name="message" rows={5} placeholder="請輸入您的訊息⋯" required aria-required="true"
                 style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
             </label>
             <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '12px 0', fontSize: 16 }}>送出訊息</button>

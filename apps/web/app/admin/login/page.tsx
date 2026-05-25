@@ -46,13 +46,13 @@ function LoginForm() {
 
         <form onSubmit={onSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admin Token</label>
-            <input type="password" value={token} onChange={e => setToken(e.target.value)} required style={inputStyle} placeholder="輸入 admin token" />
+            <label htmlFor="admin-token" style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admin Token</label>
+            <input id="admin-token" type="password" value={token} onChange={e => setToken(e.target.value)} required aria-required="true" style={inputStyle} placeholder="輸入 admin token" />
           </div>
 
           <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admin Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="owner@example.com" />
+            <label htmlFor="admin-email" style={{ fontSize: 12, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Admin Email</label>
+            <input id="admin-email" type="email" value={email} onChange={e => setEmail(e.target.value)} style={inputStyle} placeholder="owner@example.com" />
           </div>
 
           {error && (
