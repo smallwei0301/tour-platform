@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-24T18:26:35.440Z -->
+<!-- query_timestamp: 2026-05-25T00:53:42.417Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-24T18:26:35.440Z  
-**Commit SHA:** `1c714e789f8beccbe192b3dc8b6dc1bab65ac39e`
+**Query timestamp:** 2026-05-25T00:53:42.417Z  
+**Commit SHA:** `b009b3e4f3dd3524c879e570054250f487413e5e`
 
 ---
 
@@ -14,7 +14,7 @@
 
 _none_
 
-## Open Issues (14 total)
+## Open Issues (17 total)
 
 ### P0 (1)
 
@@ -22,19 +22,22 @@ _none_
 |---|-------|--------|
 | #621 | [[Traveler Booking] Enable Booking/Availability V2 as primary traveler flow](https://github.com/smallwei0301/tour-platform/issues/621) | triaged, type:feature, priority:P0, guide-dashboard, agent:now, owner:ai-agent, status:ready, traveler-booking |
 
-### P1 (4)
+### P1 (6)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #785 | [[Traveler Booking] Align minimum participants and one-date booking UX in Booking V2](https://github.com/smallwei0301/tour-platform/issues/785) | triaged, type:bug, priority:P1, owner:ai-agent, status:ready, traveler-booking |
+| #784 | [[QA] Daily test checklist for recent merged PRs 2026-05-25](https://github.com/smallwei0301/tour-platform/issues/784) | priority:P1, qa |
 | #704 | [[QA] Daily test checklist for recent merged PRs 2026-05-23](https://github.com/smallwei0301/tour-platform/issues/704) | priority:P1, qa |
 | #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking |
 | #607 | [[Ops] Execute production alert drill evidence before soft-launch sign-off](https://github.com/smallwei0301/tour-platform/issues/607) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, infra |
 | #605 | [[Ops] Finalize Andy Lee launch listing content and media before public booking](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, status:needs-info, type:docs, docs |
 
-### P2 (2)
+### P2 (3)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #783 | [[Auto Check] STAGING healthcheck returns 404 at /api/health](https://github.com/smallwei0301/tour-platform/issues/783) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #685 | [[Ops] Add third-party synthetic monitor after soft launch](https://github.com/smallwei0301/tour-platform/issues/685) | triaged, type:optimization, priority:P2, qa, owner:mixed, status:needs-decision, infra |
 | #594 | [[Ops] Define and drill Supabase backup/restore runbook before soft launch](https://github.com/smallwei0301/tour-platform/issues/594) | triaged, type:investigation, priority:P2, qa, owner:mixed, status:ready, type:docs, database, infra |
 
@@ -60,6 +63,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #782 | [fix: use <img> for OAuth user avatar in Navbar](https://github.com/smallwei0301/tour-platform/pull/782) | 2026-05-24 |
 | #781 | [fix: add *.supabase.co to Next.js image remotePatterns](https://github.com/smallwei0301/tour-platform/pull/781) | 2026-05-24 |
 | #780 | [a11y: aria-label for navbar search inputs](https://github.com/smallwei0301/tour-platform/pull/780) | 2026-05-24 |
 | #779 | [a11y: associate search label with input in ActivitiesContent](https://github.com/smallwei0301/tour-platform/pull/779) | 2026-05-24 |
@@ -69,7 +73,6 @@ _none_
 | #775 | [seo: add /order to robots.txt disallow list](https://github.com/smallwei0301/tour-platform/pull/775) | 2026-05-24 |
 | #774 | [seo: noindex layout wrappers for private/transactional pages](https://github.com/smallwei0301/tour-platform/pull/774) | 2026-05-24 |
 | #773 | [seo: BreadcrumbList JSON-LD added to FAQ page](https://github.com/smallwei0301/tour-platform/pull/773) | 2026-05-24 |
-| #772 | [perf: priority LCP on blog detail hero image](https://github.com/smallwei0301/tour-platform/pull/772) | 2026-05-24 |
 
 ---
 
