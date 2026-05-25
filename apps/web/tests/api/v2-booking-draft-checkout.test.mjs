@@ -11,6 +11,12 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
 
 // ============================================================================
 // Validation Helpers (mirrors implementation)
@@ -742,6 +748,18 @@ test('draft API accepts UUID-like resolved activityId and planId (regression gua
   assert.ok('data' in result, `Expected no error for UUID-like IDs, got: ${result.error?.message}`);
   assert.equal(result.data.activityId, 'c0000003-0000-0000-0000-000000000001');
   assert.equal(result.data.planId, 'c0000003-0000-0000-0000-000000000002');
+});
+
+test('draft route applies formed-group rule and avoids same-group overlap hard conflict', async () => {
+  const rel = 'app/api/v2/bookings/draft/route.ts';
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
+
+  assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
+  assert.match(src, /evaluateGroupBookingRule\(/);
+  assert.match(src, /calculateExistingParticipantsForGroup\(/);
+  assert.match(src, /groupRule\.messageZh/);
+  assert.match(src, /const nonGroupBookings = bookings\.filter\(/);
+  assert.match(src, /bookings: nonGroupBookings/);
 });
 
 console.log('All Booking Draft + Checkout API tests completed!');

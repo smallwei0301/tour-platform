@@ -32,6 +32,13 @@ import {
   type SlotGeneratorInput,
   type SlotGeneratorDeps,
 } from '../../../../../src/lib/slot-generator';
+import {
+  CAPACITY_HOLD_BOOKING_STATUSES,
+  FORMED_GROUP_BOOKING_STATUSES,
+  calculateExistingParticipantsForGroup,
+  evaluateGroupBookingRule,
+  normalizeBookingParticipants,
+} from '../../../../../src/lib/availability-v2/group-booking-rule';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -119,7 +126,7 @@ async function isSlotInGeneratedV2Availability(
   }
 
   // Fetch existing bookings (active statuses)
-  const activeStatuses = ['draft', 'pending_confirmation', 'confirmed', 'reschedule_requested'];
+  const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
     .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
@@ -161,7 +168,7 @@ async function isSlotInGeneratedV2Availability(
     start_at: row.start_at,
     end_at: row.end_at,
     status: row.status,
-    participants: Number.isFinite(Number(row.participants)) ? Number(row.participants) : 1,
+    participants: normalizeBookingParticipants(row.participants),
     activity_id: row.activity_id ?? null,
     activity_plan_id: row.activity_plan_id ?? null,
     buffer_before_minutes: row.buffer_before_minutes,
@@ -399,23 +406,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Validate participants against plan limits
-    if (data.participants < planData.min_participants) {
-      return Response.json(
-        errorV2(
-          'VALIDATION_ERROR',
-          `Minimum participants required: ${planData.min_participants}`
-        ),
-        { status: 400 }
-      );
-    }
-    if (data.participants > planData.max_participants) {
-      return Response.json(
-        errorV2('CAPACITY_EXCEEDED', `Maximum participants allowed: ${planData.max_participants}`),
-        { status: 400 }
-      );
-    }
-
     // 2. Calculate slot end time
     const slotStartAt = new Date(data.startAt);
     const slotEndAt = addMinutes(slotStartAt, planData.duration_minutes);
@@ -434,10 +424,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const activeStatuses = ['draft', 'pending_confirmation', 'confirmed', 'reschedule_requested'];
+    const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
     const { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
-      .select('id, guide_id, start_at, end_at, status')
+      .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
       .eq('guide_id', guideId)
       .in('status', activeStatuses);
 
@@ -475,7 +465,47 @@ export async function POST(request: NextRequest) {
       start_at: row.start_at,
       end_at: row.end_at,
       status: row.status,
+      participants: normalizeBookingParticipants(row.participants),
+      activity_id: row.activity_id ?? null,
+      activity_plan_id: row.activity_plan_id ?? null,
     }));
+
+    const slotDate = getDateStringInTimezone(slotStartAt, data.timezone);
+    const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+      bookings,
+      activityId: data.activityId,
+      planId: data.planId,
+      localDate: slotDate,
+      timezone: data.timezone,
+      statuses: FORMED_GROUP_BOOKING_STATUSES,
+    });
+
+    const minParticipants =
+      Number.isFinite(Number(planData.min_participants)) && Number(planData.min_participants) > 0
+        ? Number(planData.min_participants)
+        : 1;
+    const groupRule = evaluateGroupBookingRule({
+      minParticipants,
+      maxParticipants: planData.max_participants,
+      effectiveExistingParticipants,
+      requestedParticipants: data.participants,
+    });
+
+    if (!groupRule.allowed) {
+      return Response.json(
+        errorV2(
+          groupRule.reasonCode === 'CAPACITY_EXCEEDED' ? 'CAPACITY_EXCEEDED' : 'VALIDATION_ERROR',
+          groupRule.messageZh || '此行程目前無法預訂'
+        ),
+        { status: 400 }
+      );
+    }
+
+    const nonGroupBookings = bookings.filter((booking) => {
+      if (booking.activity_id !== data.activityId) return true;
+      if (booking.activity_plan_id !== data.planId) return true;
+      return getDateStringInTimezone(new Date(booking.start_at), data.timezone) !== slotDate;
+    });
 
     const slotValidation = validateSlotAvailability(
       slotStartAt.toISOString(),
@@ -483,7 +513,7 @@ export async function POST(request: NextRequest) {
       guideId,
       {
         blackouts,
-        bookings,
+        bookings: nonGroupBookings,
         bufferBefore,
         bufferAfter,
       }
@@ -501,7 +531,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const slotDate = getDateStringInTimezone(slotStartAt, data.timezone);
     let generatedSlotValidation: { available: boolean; reason?: string };
     try {
       generatedSlotValidation = await isSlotInGeneratedV2Availability(supabase, {

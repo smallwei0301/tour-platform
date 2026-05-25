@@ -17,6 +17,7 @@ import { successV2, errorV2 } from '../../../../../../src/lib/api';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import {
   generateAvailableSlots,
+  getDateStringInTimezone,
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
@@ -24,6 +25,13 @@ import {
   type SlotGeneratorInput,
   type SlotGeneratorDeps,
 } from '../../../../../../src/lib/slot-generator';
+import {
+  CAPACITY_HOLD_BOOKING_STATUSES,
+  FORMED_GROUP_BOOKING_STATUSES,
+  calculateExistingParticipantsForGroup,
+  evaluateGroupBookingRule,
+  normalizeBookingParticipants,
+} from '../../../../../../src/lib/availability-v2/group-booking-rule';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -226,6 +234,7 @@ export async function GET(
         id,
         activity_id,
         duration_minutes,
+        min_participants,
         max_participants,
         booking_type,
         status,
@@ -290,15 +299,10 @@ export async function GET(
     }
 
     // Fetch existing bookings for this guide (active statuses only)
-    const activeStatuses = [
-      'draft',
-      'pending_confirmation',
-      'confirmed',
-      'reschedule_requested',
-    ];
+    const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
     const { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
-      .select('id, guide_id, start_at, end_at, status')
+      .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
       .eq('guide_id', guideId)
       .in('status', activeStatuses);
 
@@ -341,6 +345,9 @@ export async function GET(
       start_at: row.start_at,
       end_at: row.end_at,
       status: row.status,
+      participants: normalizeBookingParticipants(row.participants),
+      activity_id: row.activity_id ?? null,
+      activity_plan_id: row.activity_plan_id ?? null,
     }));
 
     const plan: ActivityPlan = {
@@ -371,13 +378,54 @@ export async function GET(
     // Generate slots
     const result = generateAvailableSlots(input, deps);
 
+    const minParticipants =
+      Number.isFinite(Number((planData as { min_participants?: unknown }).min_participants)) &&
+      Number((planData as { min_participants?: unknown }).min_participants) > 0
+        ? Number((planData as { min_participants?: unknown }).min_participants)
+        : 1;
+    const groupedRuleFailuresByDate = new Map<string, { reasonCode?: string; messageZh?: string }>();
+    const filteredSlots = result.slots.filter((slot) => {
+      const localDate = getDateStringInTimezone(new Date(slot.startAt), params.timezone);
+      const effectiveExistingParticipants = calculateExistingParticipantsForGroup({
+        bookings,
+        activityId: params.activityId,
+        planId: params.planId,
+        localDate,
+        timezone: params.timezone,
+        statuses: FORMED_GROUP_BOOKING_STATUSES,
+      });
+
+      const rule = evaluateGroupBookingRule({
+        minParticipants,
+        maxParticipants: plan.max_participants,
+        effectiveExistingParticipants,
+        requestedParticipants: params.participants,
+      });
+
+      if (rule.allowed) {
+        return true;
+      }
+
+      groupedRuleFailuresByDate.set(localDate, {
+        reasonCode: rule.reasonCode,
+        messageZh: rule.messageZh,
+      });
+      return false;
+    });
+
+    const firstRuleFailure = groupedRuleFailuresByDate.values().next().value as
+      | { reasonCode?: string; messageZh?: string }
+      | undefined;
+
     // Return response per API spec
     return Response.json(
       successV2({
         timezone: result.timezone,
         activityId: params.activityId,
         planId: params.planId,
-        slots: result.slots,
+        slots: filteredSlots,
+        reason: filteredSlots.length === 0 ? firstRuleFailure?.reasonCode : undefined,
+        messageZh: filteredSlots.length === 0 ? firstRuleFailure?.messageZh : undefined,
       })
     );
   } catch (err) {

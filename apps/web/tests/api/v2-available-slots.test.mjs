@@ -430,4 +430,16 @@ test('route resolves slug activity key and plan slug before validation', async (
   assert.match(src, /parseAndValidateParams\(resolvedActivityId, resolvedPlanId, searchParams\)/);
 });
 
+test('route enforces unformed-group min participants and Chinese copy contract', async () => {
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
+
+  assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
+  assert.match(src, /calculateExistingParticipantsForGroup\(/);
+  assert.match(src, /evaluateGroupBookingRule\(/);
+  assert.match(src, /slots: filteredSlots/);
+  assert.match(src, /reason: filteredSlots\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
+  assert.match(src, /messageZh: filteredSlots\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+});
+
 console.log('All Available Slots API tests completed!');
