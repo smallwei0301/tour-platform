@@ -1,115 +1,119 @@
 # Current Issue Priority Queue
 
-Updated: 2026-05-26 CST (freshness-first routing refresh for GH-814)
+Updated: 2026-05-26 CST (GH-814 live-readiness refresh)
+
 Repo: `smallwei0301/tour-platform`
 
-Purpose: make the current execution order obvious to Ava/Pandora/Anna/Una/Fiora/Rita and any GitHub/Kanban agent. When agents inspect an issue, they should combine this doc with GitHub labels and issue state. The canonical product/launch evidence still lives in each issue body, PRs, and QA reports.
+## Purpose
+This is a bounded routing snapshot for this run only. Agents should treat this file as a starting point and re-check live GitHub state before dispatching work.
+
+## Live-source requirements
+- Canonical launch/readiness state: `gh issue view 814 --repo smallwei0301/tour-platform`
+- Issue-body intent source: open refs listed there
+- Live issue state/labels source: `gh issue view <n> --repo smallwei0301/tour-platform --json number,state,title,labels`
+
+If live checks cannot run, stop routing and ask for unblock.
 
 ## Agent routing labels vs business priority labels
 
-- **Business priority labels (`priority:*`)** describe problem urgency in issue triage.
-- **Agent routing labels (`agent:*`)** describe execution order in this doc and should never be treated as priority labels.
-- Keep these concepts separate to avoid stale routing decisions.
+- **Business priority labels (`priority:P0`, `priority:P1`, `priority:P2`)** describe triage urgency.
+- **Agent routing labels (`agent:*`)** describe execution order.
+- Keep these concepts separate.
 
-- `priority:p0`: launch-blocking work.
-- `priority:p1`: supporting readiness work.
-- `agent:now`: the single issue that should be pulled first by default.
-- `agent:next`: high-priority issue that can be prepared next.
-- `agent:queued`: ordered launch/readiness queue; start only when prerequisites are satisfied.
-- `agent:backlog`: important but not on current launch path.
+- `agent:now`: first validated issue to start when scope is stable.
+- `agent:next`: second issue after `agent:now`.
+- `agent:queued`: ordered follow-up when prerequisites are satisfied.
+- `agent:backlog`: support work.
 
 ## Current top pointer
 
-**No hardcoded "Do #621 first" rule anymore.**
+Closed launch-blocking items are historical-only. Current live-check shows no open `priority:P0` issue in active launch blocking.
 
-Before selecting work, run the stale-check below and only keep **OPEN** issues in the active path.
+- No open `P0` remains active today.
+- `agent:now` should be the first validated OPEN issue in `P1`/`P2` queues.
+- As of this snapshot, `#642` is the first active candidate.
 
-- If the open top candidate is `#621`, run it as `agent:now`.
-- If `#621` is `CLOSED`, skip it and promote the next OPEN candidate from P0 to `agent:now`.
-- Never treat closed issues (`#621`, `#639`, `#640`, `#641`) as active routing targets.
+## P1 / launch-blocking and immediate-readiness queue
 
-Current snapshot guidance: after this manual check, the next recommended `agent:now` is the first OPEN issue in the active P0 list (currently **`#642`** if still OPEN), with `agent:next` as the remaining active candidate.
+1. **#642 — [Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch** `agent:now`
+   - State: OPEN
+   - Labels: `priority:P1`, `agent:queued`
+   - Routing: first candidate after live stale-check; launch-readiness evidence and safety controls are required before proceeding.
+   - Done signal: observation-window monitoring is producing regular alerts and fallback coverage with no regression.
 
-## P0 / launch-blocking queue
+2. **#714 — [Ops] Execute production alert drill and fill evidence skeleton** `agent:next`
+   - State: OPEN
+   - Labels: `priority:P1`, `agent:queued`
+   - Routing: run immediately after #642 is validated for the same run.
+   - Done signal: alert drill evidence and sign-off attached to issue.
 
-1. **#619 — Unify V2 availability source of truth** ✅ `CLOSED` *(historical)*
-   - Historical marker: this issue is complete and should stay read-only reference.
+3. **#605 — [Ops] Finalize Andy Lee launch listing content and media before public booking** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P1`, `agent:backlog`
+   - Status blocker: `needs-info` in issue labels.
 
-2. **#621 — Enable Booking/Availability V2 as primary traveler flow** ✅ `CLOSED` *(historical — do not route active agents)*
-   - Historical marker: referenced as milestone history only; no active routing.
+4. **#319 — [Ops] Run customer support SOP first-case drill follow-through** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P1`, `agent:backlog`
 
-3. **#639 — Verify payment callback and booking/order/payment state chain** ✅ `CLOSED` *(historical — do not route active agents)*
-   - Historical marker: referenced for rollback knowledge, not active execution.
+5. **#318 — [Ops] Run Andy Lee first-guide onboarding demo and retrospective scope** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P1`, `agent:backlog`
 
-4. **#640 — Execute V2 launch blocker checklist** ✅ `CLOSED` *(historical — do not route active agents)*
-   - Historical marker: QA checklist updates moved to post-closure references only.
+## P2 / launch support queue
 
-5. **#641 — Production rollback drill / operator handoff** ✅ `CLOSED` *(historical — do not route active agents)*
-   - Historical marker: used for training/archive context; not active routing.
+1. **#320 — [Ops] Implement pre-launch readiness gate, soft-launch control, and Admin Go/No-Go dashboard** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P2`, `agent:queued`
+   - Routing: support issue; active only after readiness blockers are under control.
 
-6. **#642 — Admin Go/No-Go dashboard and soft-launch control** `agent:now` *(OPEN — first active P0 candidate after stale-check)*
-   - Prerequisite: launch-blocker evidence available and operator visibility is aligned.
-   - Preferred routing: Pandora for readiness gate shape; Una/Admin UI; Anna for data aggregation; Rita for evidence review.
-   - Done signal: Admin shows Go/Hold/No-Go state and operator decision path.
+2. **#594 — [Ops] Define and drill Supabase backup/restore runbook before soft launch** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P2`
 
-7. **#320 — Admin dashboard and soft-launch control** `agent:queued`
-   - Prerequisite: P0 launch-blocking evidence from #642 and related launch checks.
-   - Preferred routing: Pandora for readiness gate shape; Una/Admin UI; Anna for data aggregation; Rita review.
-   - Done signal: Admin control panel reflects a clear go/no-go operator decision.
+3. **#724 — [Ops] Execute live Supabase restore drill and fill evidence template** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P2`
 
+4. **#685 — [Ops] Add third-party synthetic monitor after soft launch** `agent:queued`
+   - State: OPEN
+   - Labels: `priority:P2`, `agent:queued`
 
-## P1 supporting readiness queue
+5. **#797 — [Decision] Confirm incident regulatory reporting and compliance sign-off** `agent:backlog`
+   - State: OPEN
+   - Labels: `priority:P2`
 
-These are important, but should not replace the active P0 pointer unless user or Ava explicitly switches focus.
+## Historical/archived entries (non-routing)
 
-1. **#602 — Sensitive-table RLS/grants preflight**
-   - Security gate; can run in parallel if Anna has capacity.
-2. **#607 — Production alert drill evidence**
-   - Ops readiness gate; can run in parallel if it does not require destructive production actions.
-3. **#630 — Refresh ECPay production runbooks after #627**
-   - Supports #639 lineage and production ops.
-4. **#605 — Finalize Andy Lee launch listing content/media**
-   - Launch content readiness.
-5. **#604 — Align public activity payment/refund copy**
-   - Traveler trust/legal copy; bounded UI/docs fix.
-6. **#637 — SEO/GEO/AEO optimization**
-   - High-value launch optimization, after core booking/payment readiness.
-7. **#644 / #633 / #500 — QA checklist consolidation**
-   - #644 is the current delta after the 2026-05-20 cutoff.
-   - #633 is the broader daily QA window.
-   - #500 is the older regression index; use as historical context, not the default next issue.
+- #621 — `[Traveler Booking] Enable Booking/Availability V2 as primary traveler flow` *(CLOSED)*
+- #639 — Verify payment callback and booking/order/payment state chain *(CLOSED)*
+- #640 — Execute V2 launch blocker checklist *(CLOSED)*
+- #641 — Production rollback drill / operator handoff *(CLOSED)*
+- #813 — `[QA] Post-PR #805–#812 soft-launch / maintenance / SEO-a11y regression pass` *(CLOSED)*
 
 ## Stale-check protocol (repeatable)
 
-Before starting any P0/P1 item, run this read-only check on all currently labeled queue entries:
+Before dispatch, verify every issue in this doc that is marked routing-active or queued.
 
 ```bash
-for n in 619 621 639 640 641 642 320
-do
-  gh issue view "$n" --repo smallwei0301/tour-platform --json number,state,title,labels --jq '.number, .state, .title'
-  # Fallback if gh auth is unavailable:
-  # curl -fsSL "https://api.github.com/repos/smallwei0301/tour-platform/issues/$n"
-done
+for n in 642 714 605 594 319 318 320 724 685 797 621 639 640 641 813
+ do
+   gh issue view "$n" --repo smallwei0301/tour-platform \
+     --json number,state,title,labels \
+     --jq '{num:.number,state:.state,title:.title,labels:(.labels|map(.name))}'
+ done
 ```
 
-Rule: if a listed issue is `CLOSED`, remove it from the active queue and move it into historical-marked context before dispatch.
+Rule:
+- If a listed issue is `CLOSED`, keep it in the historical section and remove it from active routing order.
+- If a listed issue is `OPEN`, ensure its `priority:*` and `agent:*` labels are reflected in the active list before routing.
 
-## Snapshot freshness rule
-
-- Any generated readiness snapshot (`npm run readiness:snapshot`) is an **input**, not ground truth.
-- Always regenerate the snapshot and compare issue states before trusting top-pointer text.
-- Never copy forward stale entries from prior snapshots without re-validating each `agent:*` item.
-- If no active OPEN issue survives the stale-check, pause and escalate for explicit reroute.
+If any mapped labels/states changed since this snapshot, update this doc before dispatch.
 
 ## Rules for agents
 
-1. `agent:now` should be on at most one OPEN issue at a time.
-2. When an issue with `agent:now` closes, move `agent:now` to the next validated OPEN issue.
-3. If no OPEN issue has `agent:now`, use `agent:next` or explicit priority+readiness validation first.
-4. Keep this doc as a bounded snapshot. If stale-check fails, stop and update this file before starting.
-5. Use Pandora when issue scope or split is unclear.
-6. Use Anna for backend/API/payment/data work.
-7. Use Una for frontend/UI/admin/traveler flow work.
-8. Use Fiora for narrow bugfix/finalize/salvage only.
-9. Use Rita for independent review before claiming completion.
-10. After Fiora/Anna/Una changes, return to Rita; do not self-approve.
+1. `agent:now` should be at most one issue.
+2. `agent:now` moves only after live stale-check passes.
+3. Do not treat historical entries as active routing targets.
+4. Keep this file bounded and update it when live GH state for tracked issues changes.
+5. After any fix/finalize, return to Rita for independent review.
