@@ -68,3 +68,19 @@ test('v2 shell posts resolved UUID activityId and planId from available-slots re
   assert.match(v2ShellSource, /activityId: resolvedActivityId/);
   assert.match(v2ShellSource, /planId: resolvedPlanId/);
 });
+
+test('v2 shell uses legacy-style booking UI markers and removes debug V2 title', async () => {
+  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
+  const v2End = src.indexOf('// ── 外層包 Suspense（useSearchParams 需要）');
+  assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');
+
+  const v2ShellSource = src.slice(v2Start, v2End);
+
+  assert.match(v2ShellSource, /行程確認/);
+  assert.match(v2ShellSource, /旅客資訊/);
+  assert.match(v2ShellSource, /付款/);
+  assert.match(v2ShellSource, /下一步：填寫資訊/);
+  assert.match(v2ShellSource, /預約摘要/);
+  assert.doesNotMatch(v2ShellSource, /（V2 預約流程）/);
+});
