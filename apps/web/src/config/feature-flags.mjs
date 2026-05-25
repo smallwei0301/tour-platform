@@ -6,12 +6,16 @@ function isTruthy(value) {
 
 /**
  * Booking V2 rollout flag used by entry routing and non-client contracts.
+ * Default: ON (aligns with isBookingV2ShellEnabled). Set NEXT_PUBLIC_BOOKING_V2_ENABLED=0 to roll back.
  */
 export function isBookingV2Enabled(env = process.env) {
   if (Object.prototype.hasOwnProperty.call(env, 'NEXT_PUBLIC_BOOKING_V2_ENABLED')) {
     return isTruthy(env.NEXT_PUBLIC_BOOKING_V2_ENABLED);
   }
-  return isTruthy(env.BOOKING_V2);
+  if (Object.prototype.hasOwnProperty.call(env, 'BOOKING_V2')) {
+    return isTruthy(env.BOOKING_V2);
+  }
+  return true;
 }
 
 /**
