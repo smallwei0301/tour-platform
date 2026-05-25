@@ -30,7 +30,7 @@
 
 ---
 
-## 1. 專案現況（2026-05-17）
+## 1. 專案現況（2026-05-25）
 
 ### 已完成的基礎能力
 - 前台 MVP 已完成
@@ -43,31 +43,23 @@
 - secret scan guard 已落地
 - GitHub Actions CI 已修復並維持轉綠
 
-### 2026-04-27 → 2026-05-14 收斂（近 14 天重點）
+### 2026-05-20 → 2026-05-25 收斂（近 7 天重點）
 
-**POS（主要 child）：**
-- #296 Admin POS additional-payment on existing order
-- #264 Admin POS order detail + timeline
-- #182 POS / LINE availability compatibility validation
-- #190 / #195 / #177 等 POS 子任務
+**Booking V2 / Traveler Flow：**
+- #621 是目前 P0 主線：把 Booking / Availability V2 變成旅客主要流程
+- #787 持續追蹤：Booking V2 沿用 legacy booking UI，降低切換風險
+- PR #786 已合併：Booking V2 minimum participants 與 one-date UX 已對齊
+- PR #789 已合併：Booking V2 legacy booking UI 已落地
 
-**Booking / Payment 安全：**
-- #280 idempotent checkout（去重複 checkout）
-- #279 `/api/v2/orders/:orderId` owner/session authz
-- #281 rate-limit response headers 修正
-- #282 slot capacityLeft 計算修復
-- #236 LINE / LIFF payment-init audit coverage
+**Launch / Observation：**
+- #642 繼續監看 V2 observation window，避免 legacy fallback 靜默回歸
+- #784 / #704 維持近期 merged PR 的 daily QA checklist
+- open PR 目前為 0；主線工作集中在 open issues 與下一批 PR
 
-**LINE / LIFF：**
-- #178 audit trail for LINE / LIFF booking draft / checkout
-- #269 bounded LINE webhook + booking-success notification slice
-
-**QA / Audit：**
-- #267 audit gate #171 convergence with child evidence
-- #274 parent-level convergence refresh packet
-- #291 controlled execution smoke-chain evidence checklist
-- #292 docs-only full-chain Phase B/C fixture
-- #165 Phase 12 audit coverage matrix
+**Ops / Readiness：**
+- #607 / #714：production alert drill 與 operator evidence
+- #594 / #724：Supabase backup/restore runbook 與 live restore drill
+- #320 / #319 / #318 / #593 / #606：上線前仍需人類決策的 readiness / SOP / guide / risk / KYC 類議題
 
 ### 還 open 的主線
 
@@ -90,10 +82,10 @@
 > **For current PR and issue counts, see the live-state snapshot.**
 > [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
 
-- main 持續轉綠
-- 最新 merge（截至 2026-05-22）：PR #682（ops: add public liveness endpoint and synthetic probe workflow）
+- main 持續以 CI / readiness snapshot 作為真值；本 README 不手寫即時數字
+- 最新 merge（截至 2026-05-25）：PR #789（fix: render Booking V2 with legacy booking UI）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
-- **目前主線焦點：** Booking V2 已上線為主流程；觀察視窗運行中（#642）。
+- **目前主線焦點：** #621 讓 Booking / Availability V2 成為旅客主要流程；#642 持續監看 observation window 與 legacy fallback。
 - **Automated health-check issue policy:** for dedupe lookup, required labels, sanitized body fields, and survivor designation, see [`docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md` — "Automated health-check issues"](./docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md#automated-health-check-issues).
 
 ### Go-Live 仍缺
@@ -188,9 +180,11 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 > 或參閱: [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
 
 目前不要自己發明主線，先確認 open issues（依優先順序接手）。近期重點：
-- **#640**（V2 Launch P0 — V2 launch QA blocker checklist）
-- **#642**（V2 觀察視窗 + legacy fallback 守護）
-- **#641**（V2 rollback drill 與 operator handoff）
+- **#621**（P0 / agent:now）Booking / Availability V2 作為旅客主要流程
+- **#787**（P1）用 legacy booking UI 呈現 Booking V2，降低旅客流程切換風險
+- **#642**（P1）V2 observation window + legacy fallback 守護
+- **#784 / #704**（P1 QA）近期 merged PR 的 daily test checklist
+- **#607 / #714 / #594 / #724**（Ops）production alert drill、Supabase backup/restore drill 與 evidence
 
 **已完成 / 歷史參考，不需再接：**
 - **#586 / #588 CLOSED** — docs readiness sync（PR #587/#589 merged）
@@ -231,11 +225,12 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 6. **客服 SOP 可執行**
    - 取消、退款、出團異常、緊急事故要有人能照流程處理
 
-### B. Booking Engine / POS / LINE 必做
-1. **#161 / #72 FK hardening** 要拿到 migration-safe rollout + rollback 證據
-2. **#73 audit trail** 要把 critical operations 的 write path 再補深
-3. **#15 Admin POS Lite** 要從文件/驗證切到 operator-ready 真落地
-4. **#16 LINE / LIFF booking flow** 要從 readiness / SOP / validation slice 切到真實流程落地
+### B. Booking V2 / Traveler Flow 必做
+1. **#621** 要完成 V2 primary traveler flow：activity detail CTA -> `/booking/[slug]` -> slots -> draft -> checkout
+2. **#787** 要讓 V2 使用旅客已熟悉的 legacy booking UI，降低上線前體驗風險
+3. **#642** 要持續監看 observation window，確認 legacy fallback 不會靜默變回主流程
+4. **Payment / order / booking 狀態鏈路** 仍需保留上線前證據：callback、idempotency、booking/order/payment 三層狀態一致
+5. **Ops drills**：production alert drill、Supabase restore drill、operator handoff 需要可執行證據
 
 ### C. 安全 / 穩定化必做
 1. **#68 TypeScript strict mode** 逐步擴大到 booking-critical 以外模組
@@ -285,26 +280,28 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 ## 7. 建議的下一步執行順序
 
 ### 第一優先
-1. 推進 **#640**：完成 V2 Launch QA blocker checklist
-2. 監看 **#642**：V2 觀察視窗運行，守護 legacy fallback
-3. 推進 **#641**：V2 rollback drill 與 operator handoff
-4. 保持 readiness docs 與 live state 一致 — 執行 `npm run readiness:snapshot` 定期刷新 `docs/operations/reports/readiness-live-state-latest.md`
+1. 推進 **#621**：Booking / Availability V2 成為旅客主要流程
+2. 收斂 **#787**：Booking V2 採用 legacy booking UI，減少 UX 切換風險
+3. 監看 **#642**：V2 observation window 運行，守護 legacy fallback
+4. 維持 **#784 / #704** daily QA checklist，避免近期 merged PR 回歸
+5. 保持 readiness docs 與 live state 一致 — 執行 `npm run readiness:snapshot` 定期刷新 `docs/operations/reports/readiness-live-state-latest.md`
 
 ### 第二優先
-4. 補齊 Go-Live 所需：
+6. 補齊 Go-Live 所需：
    - ECPay 正式串接最終驗證
    - refund policy final
    - settlement rules final
    - onboarding / CS SOP 實跑
 
 ### 第三優先
-5. 持續收斂 Phase 12 / rollout / docs index，避免 readiness artifact 與真實主線脫節
+7. 持續收斂 Phase 12 / rollout / docs index，避免 readiness artifact 與真實主線脫節
 
 ---
 
 ## 8. 重要文件索引
 
 ### 當前主線
+- [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
 - [`docs/operations/issue-402-real-payment-refund-verification-runbook.md`](./docs/operations/issue-402-real-payment-refund-verification-runbook.md)
 - [`docs/operations/booking-v2-b3-rollout.md`](./docs/operations/booking-v2-b3-rollout.md)
 - [`docs/operations/booking-v2-daily-go-no-go.md`](./docs/operations/booking-v2-daily-go-no-go.md)
