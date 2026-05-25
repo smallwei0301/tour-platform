@@ -81,11 +81,11 @@ export default function GuideApplyPage() {
 
       {step === 1 && (
         <section className="tp-step-card">
-          <label>姓名*<input value={fullName} onChange={(e) => setFullName(e.target.value)} required aria-required="true" /></label>
-          <label>電話*<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" /></label>
-          <label>電子信箱*<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" /></label>
-          <label>所在縣市*<input placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} required aria-required="true" /></label>
-          <label>自我介紹*<textarea rows={4} value={bio} onChange={(e) => setBio(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-fullname">姓名*<input id="apply-fullname" value={fullName} onChange={(e) => setFullName(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-phone">電話*<input id="apply-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-email">電子信箱*<input id="apply-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-city">所在縣市*<input id="apply-city" placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-bio">自我介紹*<textarea id="apply-bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} required aria-required="true" /></label>
 
           <div style={{ display: 'grid', gap: 16 }}>
             <div>
@@ -184,8 +184,8 @@ export default function GuideApplyPage() {
 
       {step === 2 && (
         <section className="tp-step-card">
-          <label>身分證件上傳*<input type="file" /></label>
-          <label>個人照片上傳*<input type="file" /></label>
+          <label htmlFor="apply-id-doc">身分證件上傳*<input id="apply-id-doc" type="file" /></label>
+          <label htmlFor="apply-photo">個人照片上傳*<input id="apply-photo" type="file" /></label>
           <div className="tp-step-actions">
             <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>上一步</button>
             <button className="tp-btn tp-btn-primary" onClick={() => setStep(3)}>下一步：審核送出</button>
