@@ -8,7 +8,7 @@ import { ActivityBottomBar } from '../../../../src/components/activity/ActivityB
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
-import { resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
+import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
 import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
 
@@ -96,7 +96,16 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const directBookingHref = firstSchedulableEntry
     ? resolvePlanBookingHref({
         activitySlug: activity.slug,
-        planId: firstSchedulableEntry?.planId ?? firstSchedulableEntry?.plan_id ?? undefined,
+        planId: inferPlanIdForBookingUrl({
+          explicitPlanId: firstSchedulableEntry?.planId ?? firstSchedulableEntry?.plan_id ?? undefined,
+          scheduleId:
+            firstSchedulableEntry?.scheduleId
+            ?? firstSchedulableEntry?.schedule_id
+            ?? firstSchedulableEntry?.id
+            ?? undefined,
+          schedules: displayedSchedules,
+          plans: (activity as { plans?: unknown[] }).plans || [],
+        }) || undefined,
         date: String(firstSchedulableEntry?.startAt || firstSchedulableEntry?.start_at || '').slice(0, 10) || undefined,
         scheduleId:
           firstSchedulableEntry?.scheduleId
