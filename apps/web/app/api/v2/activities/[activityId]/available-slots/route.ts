@@ -210,6 +210,7 @@ export async function GET(
 
     let resolvedPlanId = planKey;
     if (!isUuidLike(resolvedPlanId)) {
+      const scheduleKey = searchParams.get('scheduleId');
       const { data: planRow, error: planResolveError } = await supabase
         .from('activity_plans')
         .select('id')
@@ -218,12 +219,46 @@ export async function GET(
         .maybeSingle();
 
       if (planResolveError || !planRow?.id || !isUuidLike(planRow.id)) {
-        return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-          status: 400,
-        });
-      }
+        if (scheduleKey && isUuidLike(scheduleKey)) {
+          const { data: legacyScheduleRow, error: legacyScheduleError } = await supabase
+            .from('activity_schedules')
+            .select('id, plan_id')
+            .eq('id', scheduleKey)
+            .eq('activity_id', resolvedActivityId)
+            .maybeSingle();
 
-      resolvedPlanId = planRow.id;
+          if (legacyScheduleError || !legacyScheduleRow?.id) {
+            return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
+              status: 400,
+            });
+          }
+
+          if (legacyScheduleRow.plan_id && isUuidLike(legacyScheduleRow.plan_id)) {
+            resolvedPlanId = legacyScheduleRow.plan_id;
+          } else {
+            const { data: activePlans, error: activePlansError } = await supabase
+              .from('activity_plans')
+              .select('id')
+              .eq('activity_id', resolvedActivityId)
+              .eq('status', 'active')
+              .limit(2);
+
+            if (activePlansError || !activePlans || activePlans.length !== 1 || !isUuidLike(activePlans[0].id)) {
+              return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
+                status: 400,
+              });
+            }
+
+            resolvedPlanId = activePlans[0].id;
+          }
+        } else {
+          return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
+            status: 400,
+          });
+        }
+      } else {
+        resolvedPlanId = planRow.id;
+      }
     }
 
     // Validate request params
