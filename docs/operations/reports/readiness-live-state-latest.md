@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-26T13:06:25.326Z -->
+<!-- query_timestamp: 2026-05-26T18:52:52.280Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-26T13:06:25.326Z  
-**Commit SHA:** `ddef2ae008d7b251a11bdc8eabc3094b4d4e2fcc`
+**Query timestamp:** 2026-05-26T18:52:52.280Z  
+**Commit SHA:** `603b1369746629c723ee52c9f7af2854e92b3ef0`
 
 ---
 
@@ -14,7 +14,7 @@
 
 _none_
 
-## Open Issues (17 total)
+## Open Issues (18 total)
 
 ### P0 (0)
 
@@ -24,19 +24,20 @@ _none_
 
 | # | Title | Labels |
 |---|-------|--------|
+| #828 | [[QA] Verify post-#824 Booking/payment close-gate for PR #825/#826](https://github.com/smallwei0301/tour-platform/issues/828) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments |
 | #824 | [[QA] Verify post-#818 Booking V2 availability delta for PR #820/#823](https://github.com/smallwei0301/tour-platform/issues/824) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking |
 | #818 | [[QA] Daily test checklist for recent merged PRs 2026-05-26](https://github.com/smallwei0301/tour-platform/issues/818) | priority:P1, qa |
-| #787 | [[Traveler Booking] Render Booking V2 with legacy booking UI](https://github.com/smallwei0301/tour-platform/issues/787) | triaged, type:bug, priority:P1, owner:ai-agent, status:ready, traveler-booking, launch:first-payment-blocker |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:queued, owner:ai-agent, status:ready, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, launch:post-first-payment |
 | #605 | [[Launch Content] Strict Andy Lee listing content gate before public exposure](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, type:docs, docs, status:awaiting-implementation, launch:first-payment-blocker |
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (9)
+### P2 (10)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #829 | [[SEO] Add dynamic sitemap entries for public activity detail pages](https://github.com/smallwei0301/tour-platform/issues/829) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, docs |
 | #827 | [[Ops] Repair agent:now routing after #621 closure](https://github.com/smallwei0301/tour-platform/issues/827) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:ready, infra, docs |
 | #822 | [[Blog] Fix mobile card layout and broken thumbnail image](https://github.com/smallwei0301/tour-platform/issues/822) | triaged, type:bug, priority:P2, qa, agent:queued, owner:ai-agent, status:ready |
 | #816 | [[Ops] Align synthetic health probe workflow with Node 22 runtime contract](https://github.com/smallwei0301/tour-platform/issues/816) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
