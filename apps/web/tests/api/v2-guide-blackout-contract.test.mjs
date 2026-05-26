@@ -53,7 +53,7 @@ test('guide availability preview contract smoke: preview includes blackout + boo
 });
 
 test('booking routes still consult guide blackout dates during draft + available-slots flows', async () => {
-  const availableSlots = await readRoute('app/api/v2/activities/[activityId]/available-slots/route.ts');
+  const availableSlots = await readRoute('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
   const draft = await readRoute('app/api/v2/bookings/draft/route.ts');
 
   assert.match(availableSlots, /from\('guide_blackout_dates'\)/);

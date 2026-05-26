@@ -27,7 +27,7 @@ function readFile(relPath) {
 // ─── AC1: available-slots plan status gating ────────────────────────────────
 describe('AC1: available-slots returns slots only for active plans', () => {
   it('route checks plan.status === active before generating slots', () => {
-    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route.ts');
+    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
     assert.match(
       src,
       /planData\.status\s*!==\s*['"]active['"]/,
@@ -36,7 +36,7 @@ describe('AC1: available-slots returns slots only for active plans', () => {
   });
 
   it('route filters rules by activity_plan_id IS NULL OR activity_plan_id = planId', () => {
-    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route.ts');
+    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
     // Verify the .or() filter for plan-scoped rules
     assert.match(
       src,
@@ -49,7 +49,7 @@ describe('AC1: available-slots returns slots only for active plans', () => {
 // ─── AC2: rule isolation — planB query excludes planA-bound rules ────────────
 describe('AC2: available-slots rule isolation between plans', () => {
   it('rule filter uses planId from query params (not hardcoded)', () => {
-    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route.ts');
+    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
     // The filter must reference params.planId dynamically
     assert.match(
       src,

@@ -51,7 +51,7 @@ describe('AC4.1: admin plans route — VALID_STATUSES includes archived', () => 
 // ─── AC4.2 — available-slots only serves active plans ───────────────────────
 describe('AC4.2: available-slots route — rejects non-active plan status', () => {
   it('checks planData.status === active before proceeding', () => {
-    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route.ts');
+    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
     assert.match(
       src,
       /planData\.status\s*!==\s*['"]active['"]/,
@@ -60,7 +60,7 @@ describe('AC4.2: available-slots route — rejects non-active plan status', () =
   });
 
   it('returns 404 when plan status is not active', () => {
-    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route.ts');
+    const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
     // Status check must result in a 404 response
     const statusCheckRegion = src.match(
       /planData\.status\s*!==\s*['"]active['"][^}]*}/s
