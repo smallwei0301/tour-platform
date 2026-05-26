@@ -34,7 +34,7 @@ test('missing-plan fallback can actually render legacy shell by checking branch 
   const src = await readSource('app/booking/[activityId]/page.tsx');
 
   const useLegacyIndex = src.indexOf('if (useLegacyFallback) {');
-  const missingPlanIndex = src.indexOf('if (!urlPlanId) {');
+  const missingPlanIndex = src.indexOf('if (!canRunV2PlanFlow) {');
 
   assert.ok(useLegacyIndex >= 0, 'expected useLegacyFallback branch');
   assert.ok(missingPlanIndex >= 0, 'expected missing-plan branch');

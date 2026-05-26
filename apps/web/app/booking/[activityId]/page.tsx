@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
 import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
+import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { track } from '../../../src/lib/track';
 
 // ── 型別 ──────────────────────────────────────────────────────
@@ -32,6 +33,7 @@ interface Activity {
   maxParticipants: number;
   minParticipants: number;
   schedules: Schedule[];
+  plans?: Array<{ id?: string | null; status?: string | null }> | null;
   guide?: { displayName?: string } | null;
 }
 
@@ -470,6 +472,13 @@ function BookingInnerV2FlagShell() {
   const [agreed, setAgreed] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState('');
   const [step, setStep] = useState(1);
+  const v2PlanKey = useMemo(() => inferPlanIdForBookingUrl({
+    explicitPlanId: urlPlanId,
+    scheduleId: urlScheduleId,
+    schedules: activity?.schedules || [],
+    plans: activity?.plans || [],
+  }), [activity?.schedules, activity?.plans, urlPlanId, urlScheduleId]);
+  const canRunV2PlanFlow = Boolean(v2PlanKey);
 
   useEffect(() => {
     track({
@@ -510,11 +519,11 @@ function BookingInnerV2FlagShell() {
 
   useEffect(() => {
     async function probeOnePersonAddOn() {
-      if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
+      if (!activity?.id || !canRunV2PlanFlow || !selectedDate || useLegacyFallback) return;
 
       try {
         const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
-        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=1`;
+        const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=1`;
         const res = await fetch(probeUrl, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         const onePersonSlots = (json?.data?.slots || []).filter((slot) => slot.isAvailable);
@@ -525,17 +534,17 @@ function BookingInnerV2FlagShell() {
     }
 
     probeOnePersonAddOn();
-  }, [activity?.id, selectedDate, timezone, urlPlanId, useLegacyFallback, urlScheduleId]);
+  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, urlScheduleId]);
 
   useEffect(() => {
     async function fetchSlots() {
-      if (!activity?.id || !urlPlanId || !selectedDate || useLegacyFallback) return;
+      if (!activity?.id || !canRunV2PlanFlow || !selectedDate || useLegacyFallback) return;
       try {
         setSlotsLoading(true);
         setV2Error('');
         const participants = Math.max(guests, effectiveMinParticipants);
         const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
-        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(urlPlanId)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
@@ -553,7 +562,7 @@ function BookingInnerV2FlagShell() {
           }
         }
         const nextSlots = Array.from(nextSlotsByDate.values()).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-        const resolvedPlanCandidate = json.data?.planId || urlPlanId;
+        const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
         setSlots(nextSlots);
@@ -571,7 +580,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, urlPlanId, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, urlScheduleId]);
+  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, urlScheduleId]);
 
   async function handleV2Checkout() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
@@ -639,13 +648,21 @@ function BookingInnerV2FlagShell() {
     return <BookingInnerLegacy />;
   }
 
-  if (!urlPlanId) {
+  if (!activity) {
     return (
       <main className="tp-container" style={{ padding: '40px 0' }}>
-        <p style={{ color: 'var(--tp-danger)' }}>缺少方案參數（plan），請從行程頁重新選擇方案。</p>
+        <p style={{ color: 'var(--tp-muted)' }}>{loadError || '載入行程中…'}</p>
+      </main>
+    );
+  }
+
+  if (!canRunV2PlanFlow) {
+    return (
+      <main className="tp-container" style={{ padding: '40px 0' }}>
+        <p style={{ color: 'var(--tp-danger)' }}>缺少或無法判定方案參數（plan），請從行程頁重新選擇方案。</p>
         {isLineContinuation ? (
           <p data-testid="booking-v2-line-fallback-state" style={{ color: 'var(--tp-muted)' }}>
-            LINE LIFF 延續流程已中斷（缺少 plan）。請回到 LIFF 入口重新帶入完整參數後再試。
+            LINE LIFF 延續流程已中斷（缺少或無法判定 plan）。請回到 LIFF 入口重新帶入完整參數後再試。
           </p>
         ) : (
           <button
@@ -654,7 +671,7 @@ function BookingInnerV2FlagShell() {
             onClick={() => {
               track({
                 event_name: 'booking_v2_fallback_clicked',
-                properties: { reason: 'missing_plan', rollout_variant: 'v2' },
+                properties: { reason: 'missing_or_ambiguous_plan', rollout_variant: 'v2' },
                 page_path: `/booking/${activitySlug}`,
               });
               setUseLegacyFallback(true);
@@ -663,14 +680,6 @@ function BookingInnerV2FlagShell() {
             改用舊版預約流程
           </button>
         )}
-      </main>
-    );
-  }
-
-  if (!activity) {
-    return (
-      <main className="tp-container" style={{ padding: '40px 0' }}>
-        <p style={{ color: 'var(--tp-muted)' }}>{loadError || '載入行程中…'}</p>
       </main>
     );
   }
