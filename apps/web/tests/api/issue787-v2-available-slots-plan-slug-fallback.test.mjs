@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler';
+import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
 function createSupabaseMock(results) {
   const calls = [];

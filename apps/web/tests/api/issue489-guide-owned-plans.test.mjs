@@ -19,7 +19,7 @@ const availabilityRulesRoute = resolve(appRoot, 'app/api/guide/availability-rule
 const availabilityRuleByIdRoute = resolve(appRoot, 'app/api/guide/availability-rules/[ruleId]/route.ts');
 const schedulesRoute = resolve(appRoot, 'app/api/guide/schedules/route.ts');
 const scheduleByIdRoute = resolve(appRoot, 'app/api/guide/schedules/[scheduleId]/route.ts');
-const travelerSlotsRoute = resolve(appRoot, 'app/api/v2/activities/[activityId]/available-slots/route.ts');
+const travelerSlotsRoute = resolve(appRoot, 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
 
 test('adds guide activities-with-plans endpoint using activity_plans source of truth', () => {
   assert.ok(existsSync(activitiesWithPlansRoute), 'route file must exist');

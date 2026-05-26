@@ -13,8 +13,8 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { successV2, errorV2 } from '../../../../../../src/lib/api';
-import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server';
+import { successV2, errorV2 } from '../../../../../../src/lib/api.ts';
+import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server.ts';
 import {
   generateAvailableSlots,
   getDateStringInTimezone,
@@ -26,7 +26,7 @@ import {
   type SlotGeneratorInput,
   type SlotGeneratorDeps,
   type SerializedSlot,
-} from '../../../../../../src/lib/slot-generator';
+} from '../../../../../../src/lib/slot-generator.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -34,7 +34,7 @@ import {
   evaluateGroupBookingRule,
   excludeSameActivityPlanDateRangeBookings,
   normalizeBookingParticipants,
-} from '../../../../../../src/lib/availability-v2/group-booking-rule';
+} from '../../../../../../src/lib/availability-v2/group-booking-rule.ts';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -185,7 +185,7 @@ export async function getAvailableSlots(
   try {
     const resolvedCreateClient = routeDeps?.createClient
       ? routeDeps.createClient
-      : (await import('../../../../../../src/lib/supabase/server')).createClient;
+      : (await import('../../../../../../src/lib/supabase/server.ts')).createClient;
     const supabase = await resolvedCreateClient();
 
     let resolvedActivityId = activityKey;
