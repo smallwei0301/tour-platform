@@ -12,9 +12,9 @@
  *   - participants (optional): Number of participants (default: 1)
  */
 
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../src/lib/api';
-import { createClient } from '../../../../../../src/lib/supabase/server';
+import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server';
 import {
   generateAvailableSlots,
   getDateStringInTimezone,
@@ -174,15 +174,19 @@ function parseAndValidateParams(
   };
 }
 
-export async function GET(
+async function getAvailableSlots(
   request: NextRequest,
-  context: { params: Promise<{ activityId: string }> }
+  context: { params: Promise<{ activityId: string }> },
+  routeDeps?: { createClient?: typeof CreateClientFn }
 ) {
   const { activityId: activityKey } = await context.params;
   const searchParams = request.nextUrl.searchParams;
 
   try {
-    const supabase = await createClient();
+    const resolvedCreateClient = routeDeps?.createClient
+      ? routeDeps.createClient
+      : (await import('../../../../../../src/lib/supabase/server')).createClient;
+    const supabase = await resolvedCreateClient();
 
     let resolvedActivityId = activityKey;
 
@@ -566,3 +570,14 @@ export async function GET(
     return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
   }
 }
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ activityId: string }> }
+) {
+  return getAvailableSlots(request, context);
+}
+
+export const __testOnly = {
+  getAvailableSlots,
+};

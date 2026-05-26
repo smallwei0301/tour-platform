@@ -285,9 +285,9 @@ export function generateDateRange(
   let current = fromStr;
   while (current <= toStr) {
     dates.push(current);
-    // Parse and add one day
+    // Parse and add one day using UTC to avoid timezone-sensitive regressions.
     const [year, month, day] = current.split('-').map(Number);
-    const nextDate = new Date(year, month - 1, day + 1);
+    const nextDate = new Date(Date.UTC(year, month - 1, day + 1));
     current = nextDate.toISOString().split('T')[0];
   }
   return dates;
