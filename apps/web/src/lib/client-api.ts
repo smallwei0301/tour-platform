@@ -72,9 +72,20 @@ export async function submitEcpayCallback(payload: { orderId: string; tradeNo?: 
     body: form.toString()
   });
 
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to process payment callback');
-  return json.data;
+  const contentType = res.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    const json = await res.json();
+    if (!json.ok) throw new Error(json?.error?.message || 'failed to process payment callback');
+    return json.data;
+  }
+
+  const text = (await res.text()).trim();
+  if (res.ok && text === '1|OK') {
+    return { received: true, ack: text };
+  }
+
+  throw new Error(text || 'failed to process payment callback');
 }
 
 export async function fetchActivityBySlug(slug: string) {
