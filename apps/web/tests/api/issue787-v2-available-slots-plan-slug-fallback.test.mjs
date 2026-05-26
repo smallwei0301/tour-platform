@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { __testOnly } from '../../app/api/v2/activities/[activityId]/available-slots/route.ts';
+import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler';
 
 function createSupabaseMock(results) {
   const calls = [];
@@ -63,7 +63,6 @@ function buildRequest(url) {
   return { nextUrl: new URL(url) };
 }
 
-const { getAvailableSlots } = __testOnly;
 
 test('issue787 behavior: legacy plan slug + schedule fallback succeeds when schedule.plan_id is null and exactly one active plan exists', async () => {
   const activityId = '11111111-1111-1111-1111-111111111111';
