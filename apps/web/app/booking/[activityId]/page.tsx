@@ -671,7 +671,7 @@ function BookingInnerV2FlagShell() {
             onClick={() => {
               track({
                 event_name: 'booking_v2_fallback_clicked',
-                properties: { reason: 'missing_or_ambiguous_plan', rollout_variant: 'v2' },
+                properties: { reason: 'missing_plan', rollout_variant: 'v2' },
                 page_path: `/booking/${activitySlug}`,
               });
               setUseLegacyFallback(true);

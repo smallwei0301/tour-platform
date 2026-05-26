@@ -33,6 +33,14 @@ export function resolvePlanBookingHref({ activitySlug, planId, date, scheduleId,
   return `/booking/${slug}${qs ? `?${qs}` : ''}`;
 }
 
+/**
+ * @param {{
+ *   explicitPlanId?: unknown,
+ *   scheduleId?: unknown,
+ *   schedules?: Array<any>,
+ *   plans?: Array<any>,
+ * }} input
+ */
 export function inferPlanIdForBookingUrl({
   explicitPlanId,
   scheduleId,
