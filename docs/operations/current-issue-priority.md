@@ -30,8 +30,16 @@ If live checks cannot run, stop routing and ask for unblock.
 Closed launch-blocking items are historical-only. Current live-check shows no open `priority:P0` issue in active launch blocking.
 
 - No open `P0` remains active today.
+- Historical note: `#621` was the prior top-priority open issue referenced by the original agent-routing contract, but it is now CLOSED and must not be routed as active work.
 - `agent:now` should be the first validated OPEN issue in `P1`/`P2` queues.
 - As of this snapshot, `#642` is the first active candidate.
+
+## Agent Routing Invariants
+
+- `agent:now` should be assigned to at most one OPEN issue at a time.
+- Closed or historical issues must not be treated as active routing targets.
+- Agents must re-check live GitHub state before dispatch because this file is a bounded snapshot.
+- Business priority labels (`priority:*`) and execution routing labels (`agent:*`) are separate signals and must both be reflected accurately.
 
 ## P1 / launch-blocking and immediate-readiness queue
 
