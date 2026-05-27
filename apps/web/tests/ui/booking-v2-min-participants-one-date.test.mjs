@@ -64,3 +64,17 @@ test('v2 shell keeps initial URL scheduleId guard and resolves matching schedule
   assert.match(src, /const activeScheduleId = activeUrlScheduleId \|\| matchedScheduleIdForSelectedDate/);
   assert.match(src, /const scheduleParam = activeScheduleId \? `&scheduleId=\$\{encodeURIComponent\(activeScheduleId\)\}` : ''/);
 });
+
+test('v2 shell derives fee detail from selected plan effective price', async () => {
+  const src = await readBookingSource();
+
+  assert.match(src, /function resolvePlanUnitPriceTwd\(activity: Activity \| null, planKeys: Array<unknown>\)/);
+  assert.match(src, /priceMultiplier\?: number \| null/);
+  assert.match(src, /const hasPlanPriceMultiplier = selectedPlan\?\.priceMultiplier !== null && selectedPlan\?\.priceMultiplier !== undefined/);
+  assert.match(src, /Math\.round\(planPrice \* planPriceMultiplier\)/);
+  assert.match(src, /const unitPriceTwd = resolvePlanUnitPriceTwd\(activity, \[urlPlanId, v2PlanKey, resolvedPlanId, activeSchedule\?\.planId\]\)/);
+  assert.match(src, /const priceLabel = `NT\$\$\{unitPriceTwd\.toLocaleString\(\)\} \/ 人`/);
+  assert.match(src, /const total = unitPriceTwd \* guests/);
+  assert.match(src, /<span>\{priceLabel\} × \{guests\} 人<\/span>/);
+  assert.doesNotMatch(src, /const total = activity\.priceTwd \* guests/);
+});

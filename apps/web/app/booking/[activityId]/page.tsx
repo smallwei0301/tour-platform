@@ -33,8 +33,41 @@ interface Activity {
   maxParticipants: number;
   minParticipants: number;
   schedules: Schedule[];
-  plans?: Array<{ id?: string | null; status?: string | null }> | null;
+  plans?: Array<{
+    id?: string | null;
+    planId?: string | null;
+    slug?: string | null;
+    key?: string | null;
+    status?: string | null;
+    price?: number | null;
+    priceMultiplier?: number | null;
+  }> | null;
   guide?: { displayName?: string } | null;
+}
+
+function normalizePlanKey(value: unknown) {
+  return String(value || '').trim();
+}
+
+function resolvePlanUnitPriceTwd(activity: Activity | null, planKeys: Array<unknown>) {
+  if (!activity) return 0;
+
+  const normalizedKeys = new Set(planKeys.map(normalizePlanKey).filter(Boolean));
+  const selectedPlan = (activity.plans || []).find((plan) => {
+    const candidates = [plan?.id, plan?.planId, plan?.slug, plan?.key].map(normalizePlanKey).filter(Boolean);
+    return candidates.some((candidate) => normalizedKeys.has(candidate));
+  });
+
+  const planPrice = Number(selectedPlan?.price);
+  const hasPlanPriceMultiplier = selectedPlan?.priceMultiplier !== null && selectedPlan?.priceMultiplier !== undefined;
+  const planPriceMultiplier = hasPlanPriceMultiplier ? Number(selectedPlan?.priceMultiplier) : 1;
+  if (selectedPlan && Number.isFinite(planPrice)) {
+    return Number.isFinite(planPriceMultiplier)
+      ? Math.round(planPrice * planPriceMultiplier)
+      : Math.round(planPrice);
+  }
+
+  return activity.priceTwd;
 }
 
 // ── 內部元件（useSearchParams 必須在 Suspense 內）────────────
@@ -714,7 +747,10 @@ function BookingInnerV2FlagShell() {
 
   const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
-  const total = activity.priceTwd * guests;
+  const activeSchedule = activity.schedules.find((schedule) => schedule.id === activeScheduleId);
+  const unitPriceTwd = resolvePlanUnitPriceTwd(activity, [urlPlanId, v2PlanKey, resolvedPlanId, activeSchedule?.planId]);
+  const priceLabel = `NT$${unitPriceTwd.toLocaleString()} / 人`;
+  const total = unitPriceTwd * guests;
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
@@ -845,7 +881,7 @@ function BookingInnerV2FlagShell() {
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>費用明細</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span>{activity.priceLabel} × {guests} 人</span>
+                  <span>{priceLabel} × {guests} 人</span>
                   <span>NT${total.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>
