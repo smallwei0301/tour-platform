@@ -593,10 +593,12 @@ export async function getAvailableSlots(
           : groupRule;
 
       const remaining = Math.max(0, selectedSchedule.capacity - selectedSchedule.booked_count);
+      const hasInsufficientCapacityForSelectedSchedule = remaining < params.participants;
+
       if (
         selectedSchedule.status !== 'open' ||
-        remaining < params.participants ||
-        !selectedScheduleRule.allowed
+        !selectedScheduleRule.allowed ||
+        hasInsufficientCapacityForSelectedSchedule
       ) {
         slotsToReturn = [];
 
@@ -604,6 +606,11 @@ export async function getAvailableSlots(
           selectedScheduleRuleFailure = {
             reasonCode: selectedScheduleRule.reasonCode,
             messageZh: selectedScheduleRule.messageZh,
+          };
+        } else if (hasInsufficientCapacityForSelectedSchedule) {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'CAPACITY_EXCEEDED',
+            messageZh: `此行程最多 ${selectedSchedule.capacity} 人，當前時段剩餘 ${remaining} 人可預訂`,
           };
         }
       } else {

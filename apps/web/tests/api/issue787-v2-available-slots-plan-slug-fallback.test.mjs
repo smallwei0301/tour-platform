@@ -186,6 +186,52 @@ test('issue841 behavior: stale scheduleId falls back to matching date-range sche
   supabase.assertAllConsumed();
 });
 
+test('issue841 behavior: stale scheduleId fallback enforces schedule remaining capacity', async () => {
+  const activityId = '11111111-1111-1111-1111-111111111111';
+  const staleScheduleId = '22222222-2222-2222-2222-222222222222';
+  const planId = '33333333-3333-4333-8333-333333333333';
+  const matchedScheduleId = '55555555-5555-4555-8555-555555555555';
+
+  const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
+    { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
+    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: '2026-07-01T01:00:00.000Z', end_at: '2026-07-01T03:00:00.000Z', capacity: 3, booked_count: 2, status: 'open' }] },
+    {
+      terminal: 'single',
+      table: 'activity_plans',
+      data: {
+        id: planId,
+        activity_id: activityId,
+        duration_minutes: 120,
+        min_participants: 1,
+        max_participants: 10,
+        booking_type: 'scheduled',
+        status: 'active',
+        activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' },
+      },
+    },
+    { terminal: 'or', table: 'guide_availability_rules', data: [] },
+    { terminal: 'then', table: 'guide_blackout_dates', data: [] },
+    { terminal: 'in', table: 'bookings', data: [] },
+  ]);
+
+  const response = await getAvailableSlots(
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=2`),
+    { params: Promise.resolve({ activityId }) },
+    { createClient: async () => supabase.client }
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.data.activityId, activityId);
+  assert.equal(body.data.planId, planId);
+  assert.equal(body.data.slots.length, 0);
+  assert.equal(body.data.reason, 'CAPACITY_EXCEEDED');
+  assert.equal(body.data.messageZh, '此行程最多 3 人，當前時段剩餘 1 人可預訂');
+  supabase.assertAllConsumed();
+});
+
 test('issue841 behavior: stale scheduleId fallback enforces minParticipants for selected schedule', async () => {
   const activityId = '11111111-1111-1111-1111-111111111111';
   const staleScheduleId = '22222222-2222-2222-2222-222222222222';
