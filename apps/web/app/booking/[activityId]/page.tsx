@@ -445,6 +445,7 @@ function BookingInnerV2FlagShell() {
   const activitySlug = params.activityId as string;
   const urlPlanId = searchParams.get('plan') || '';
   const urlScheduleId = searchParams.get('scheduleId') || '';
+  const urlDate = searchParams.get('date') || '';
   const timezone = searchParams.get('timezone') || 'Asia/Taipei';
   const source = searchParams.get('source') || searchParams.get('sourceChannel') || 'web';
   const correlationId = searchParams.get('correlationId') || '';
@@ -460,6 +461,7 @@ function BookingInnerV2FlagShell() {
   const [useLegacyFallback, setUseLegacyFallback] = useState(false);
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
+  const activeUrlScheduleId = urlScheduleId && (!urlDate || urlDate === selectedDate) ? urlScheduleId : '';
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
@@ -522,7 +524,7 @@ function BookingInnerV2FlagShell() {
       if (!activity?.id || !canRunV2PlanFlow || !selectedDate || useLegacyFallback) return;
 
       try {
-        const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
+        const scheduleParam = activeUrlScheduleId ? `&scheduleId=${encodeURIComponent(activeUrlScheduleId)}` : '';
         const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=1`;
         const res = await fetch(probeUrl, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
@@ -534,7 +536,7 @@ function BookingInnerV2FlagShell() {
     }
 
     probeOnePersonAddOn();
-  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, urlScheduleId]);
+  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, activeUrlScheduleId]);
 
   useEffect(() => {
     async function fetchSlots() {
@@ -543,7 +545,7 @@ function BookingInnerV2FlagShell() {
         setSlotsLoading(true);
         setV2Error('');
         const participants = Math.max(guests, effectiveMinParticipants);
-        const scheduleParam = urlScheduleId ? `&scheduleId=${encodeURIComponent(urlScheduleId)}` : '';
+        const scheduleParam = activeUrlScheduleId ? `&scheduleId=${encodeURIComponent(activeUrlScheduleId)}` : '';
         const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
@@ -580,7 +582,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, urlScheduleId]);
+  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeUrlScheduleId]);
 
   async function handleV2Checkout() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;

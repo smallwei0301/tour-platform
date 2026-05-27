@@ -51,3 +51,11 @@ test('v2 shell deduplicates same-date slots and keeps canonical earliest startAt
   assert.match(src, /new Date\(slot\.startAt\)\.getTime\(\) < new Date\(existing\.startAt\)\.getTime\(\)/);
   assert.match(src, /setSelectedSlotStartAt\(nextSlots\[0\]\?\.startAt \|\| ''\)/);
 });
+
+test('v2 shell only forwards URL scheduleId for the original URL date, not after user date change', async () => {
+  const src = await readBookingSource();
+
+  assert.match(src, /const urlDate = searchParams\.get\('date'\) \|\| ''/);
+  assert.match(src, /const activeUrlScheduleId = urlScheduleId && \(!urlDate \|\| urlDate === selectedDate\) \? urlScheduleId : ''/);
+  assert.match(src, /const scheduleParam = activeUrlScheduleId \? `&scheduleId=\$\{encodeURIComponent\(activeUrlScheduleId\)\}` : ''/);
+});
