@@ -2493,8 +2493,47 @@ function isPrimaryActivityNoRowError(error) {
   );
 }
 
-function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null) {
+function normalizeActivityDetailFormalPlan(plan) {
+  if (!plan || typeof plan !== 'object') return null;
+
+  const basePrice = Number(plan.base_price);
+  const minParticipants = Number(plan.min_participants);
+  const maxParticipants = Number(plan.max_participants);
+
+  return {
+    id: plan.id || plan.slug || plan.legacy_plan_id || null,
+    label: plan.name || plan.slug || plan.legacy_plan_id || '方案',
+    duration: Number.isFinite(Number(plan.duration_minutes)) && Number(plan.duration_minutes) > 0
+      ? `約 ${Math.round(Number(plan.duration_minutes) / 60)} 小時`
+      : undefined,
+    priceType: plan.price_type === 'per_group' ? 'per_group' : 'per_person',
+    basePrice: Number.isFinite(basePrice) && basePrice > 0 ? Math.trunc(basePrice) : undefined,
+    minParticipants: Number.isFinite(minParticipants) && minParticipants > 0 ? Math.trunc(minParticipants) : undefined,
+    maxParticipants: Number.isFinite(maxParticipants) && maxParticipants > 0 ? Math.trunc(maxParticipants) : undefined,
+    highlights: Array.isArray(plan.highlights) ? plan.highlights.filter(Boolean) : [],
+    detailsLinkText: plan.details_link_text || undefined,
+    bookingBtnText: plan.booking_btn_text || undefined,
+    language: plan.language || undefined,
+    earliestDeparture: plan.earliest_departure || undefined,
+    confirmByDays: Number.isFinite(Number(plan.confirm_by_days)) ? Math.trunc(Number(plan.confirm_by_days)) : undefined,
+    freeCancelDays: Number.isFinite(Number(plan.free_cancel_days)) ? Math.trunc(Number(plan.free_cancel_days)) : undefined,
+    planInclusions: Array.isArray(plan.plan_inclusions) ? plan.plan_inclusions.filter(Boolean) : [],
+    planExclusions: Array.isArray(plan.plan_exclusions) ? plan.plan_exclusions.filter(Boolean) : [],
+    planItinerary: Array.isArray(plan.plan_itinerary) ? plan.plan_itinerary : [],
+    meetingPointName: plan.meeting_point_name || undefined,
+    meetingAddress: plan.meeting_address || undefined,
+    experiencePointName: plan.experience_point_name || undefined,
+    experienceAddress: plan.experience_address || undefined,
+    planNotices: Array.isArray(plan.plan_notices) ? plan.plan_notices.filter(Boolean) : [],
+    planRefundRules: Array.isArray(plan.plan_refund_rules) ? plan.plan_refund_rules.filter(Boolean) : [],
+  };
+}
+
+function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null, formalPlans = []) {
   const gp = guideProfileOverride || act?.guide_profiles || {};
+  const mappedFormalPlans = (formalPlans || [])
+    .map((plan) => normalizeActivityDetailFormalPlan(plan))
+    .filter((plan) => plan?.id);
 
   return {
     id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
@@ -2511,7 +2550,7 @@ function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = nu
     safetyNotice: act.safety_notice, faq: act.faq || [],
     goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
     itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
-    plans: act.plans || null,
+    plans: mappedFormalPlans.length > 0 ? mappedFormalPlans : (act.plans || null),
     status: act.status,
     ratingAvg: act.rating_avg ?? gp.rating_avg ?? null,
     reviewCount: act.review_count ?? gp.review_count ?? 0,
@@ -2826,7 +2865,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     guideProfile = gp || null;
   }
 
-  const [scheduleRes, reviewsRes] = await Promise.all([
+  const [scheduleRes, reviewsRes, formalPlansRes] = await Promise.all([
     withActivityDetailTimeout(
       supabase
         .from('activity_schedules')
@@ -2865,14 +2904,34 @@ export async function getActivityBySlugDb(slug, options = {}) {
       } catch {
         return [];
       }
-    })()
+    })(),
+    withActivityDetailTimeout(
+      supabase
+        .from('activity_plans')
+        .select(`
+          id, slug, name, duration_minutes, price_type, base_price,
+          min_participants, max_participants,
+          details_link_text, booking_btn_text, highlights,
+          language, earliest_departure, confirm_by_days, free_cancel_days,
+          plan_inclusions, plan_exclusions, plan_itinerary,
+          meeting_point_name, meeting_address,
+          experience_point_name, experience_address,
+          plan_notices, plan_refund_rules,
+          status
+        `)
+        .eq('activity_id', act.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: true }),
+      { timeoutMs: queryTimeoutMs, label: 'activity-plans' }
+    ).catch(() => ({ data: [], error: null })),
   ]);
 
   const schedules = scheduleRes.data || [];
 
   const reviews = reviewsRes || [];
+  const formalPlans = formalPlansRes.data || [];
 
-  return mapActivityDetailRow(act, schedules, reviews, guideProfile);
+  return mapActivityDetailRow(act, schedules, reviews, guideProfile, formalPlans);
 }
 
 export async function listPublishedGuidesDb() {

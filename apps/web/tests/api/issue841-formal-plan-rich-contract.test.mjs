@@ -13,6 +13,118 @@ function read(relPath) {
   return fs.readFileSync(full, 'utf8');
 }
 
+function buildSupabaseMock() {
+  const activityRow = {
+    id: 'act-1',
+    slug: 'midao-demo',
+    title: 'demo',
+    tagline: null,
+    short_description: null,
+    description: null,
+    region: null,
+    region_slug: null,
+    category: null,
+    price_twd: 4200,
+    duration_minutes: 240,
+    min_participants: 1,
+    max_participants: 8,
+    meeting_point: null,
+    meeting_point_map_url: null,
+    cover_image_url: null,
+    image_urls: [],
+    inclusions: [],
+    exclusions: [],
+    notices: [],
+    refund_rules: [],
+    safety_notice: null,
+    faq: [],
+    good_for: [],
+    not_good_for: [],
+    plans: [
+      {
+        id: 'legacy-fallback',
+        label: 'Legacy 方案',
+        price: 999,
+      },
+    ],
+    status: 'published',
+    rating_avg: null,
+    review_count: 0,
+    guide_id: null,
+    guide_slug: null,
+  };
+
+  const formalPlanRows = [
+    {
+      id: 'plan-formal-1',
+      slug: 'formal-plan-1',
+      name: '正式方案一',
+      duration_minutes: 300,
+      price_type: 'per_group',
+      base_price: 5200,
+      min_participants: 2,
+      max_participants: 6,
+      details_link_text: '查看方案詳情 ›',
+      booking_btn_text: '立即預約',
+      highlights: ['亮點 A'],
+      plan_inclusions: ['含導覽'],
+      plan_exclusions: ['不含餐食'],
+      plan_itinerary: [{ text: '第一站', imageUrl: 'https://example.com/1.jpg' }],
+      meeting_point_name: '集合點',
+      meeting_address: '台北市',
+      experience_point_name: '體驗點',
+      experience_address: '新北市',
+      plan_notices: ['注意事項'],
+      plan_refund_rules: ['退款規則'],
+      language: '中文',
+      earliest_departure: '1 天前',
+      confirm_by_days: 1,
+      free_cancel_days: 7,
+      status: 'active',
+    },
+  ];
+
+  function chain(table, ctx = {}) {
+    return {
+      select() {
+        return chain(table, ctx);
+      },
+      eq(column, value) {
+        const next = { ...ctx, [column]: value };
+        return chain(table, next);
+      },
+      in() {
+        return chain(table, ctx);
+      },
+      order() {
+        if (table === 'activity_schedules') return Promise.resolve({ data: [], error: null });
+        if (table === 'activity_reviews') return Promise.resolve({ data: [], error: null });
+        if (table === 'activity_plans') return Promise.resolve({ data: formalPlanRows, error: null });
+        return Promise.resolve({ data: [], error: null });
+      },
+      limit() {
+        if (table === 'activity_reviews') return Promise.resolve({ data: [], error: null });
+        return Promise.resolve({ data: [], error: null });
+      },
+      single() {
+        if (table === 'activities' && ctx.slug === 'midao-demo') {
+          return Promise.resolve({ data: activityRow, error: null });
+        }
+        return Promise.resolve({ data: null, error: { message: 'not found' } });
+      },
+      maybeSingle() {
+        return Promise.resolve({ data: null, error: null });
+      },
+    };
+  }
+
+  return {
+    from(table) {
+      return chain(table);
+    },
+  };
+}
+
 describe('GH-841 formal plan rich contract', () => {
   it('migration adds rich columns to activity_plans', () => {
     const migrationPath = path.resolve(
@@ -116,5 +228,38 @@ describe('GH-841 formal plan rich contract', () => {
 
     assert.match(listRoute, /normalizeRichPlanPayload/i, 'POST route should normalize rich payload fields');
     assert.match(itemRoute, /normalizeRichPlanPayload/i, 'PUT route should normalize rich payload fields');
+  });
+
+  it('activity detail prefers active formal activity_plans over legacy activities.plans', async () => {
+    const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
+    const originalUrl = process.env.SUPABASE_URL;
+    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+    dbMod.__setSupabaseClientForTest(buildSupabaseMock());
+
+    try {
+      const activity = await dbMod.getActivityBySlugDb('midao-demo');
+      assert.ok(Array.isArray(activity?.plans), 'plans should exist');
+      assert.equal(activity.plans[0].id, 'plan-formal-1');
+      assert.equal(activity.plans[0].label, '正式方案一');
+      assert.equal(activity.plans[0].basePrice, 5200);
+      assert.equal(activity.plans[0].priceType, 'per_group');
+      assert.equal(activity.plans[0].minParticipants, 2);
+      assert.equal(activity.plans[0].maxParticipants, 6);
+      assert.deepEqual(activity.plans[0].planInclusions, ['含導覽']);
+      assert.deepEqual(activity.plans[0].planExclusions, ['不含餐食']);
+      assert.deepEqual(activity.plans[0].planItinerary, [{ text: '第一站', imageUrl: 'https://example.com/1.jpg' }]);
+      assert.equal(activity.plans[0].meetingPointName, '集合點');
+      assert.equal(activity.plans[0].experiencePointName, '體驗點');
+      assert.notEqual(activity.plans[0].id, 'legacy-fallback');
+    } finally {
+      dbMod.__setSupabaseClientForTest(null);
+      if (originalUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+    }
   });
 });
