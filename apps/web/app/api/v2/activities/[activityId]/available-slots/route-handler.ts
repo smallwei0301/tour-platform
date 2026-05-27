@@ -329,6 +329,9 @@ export async function getAvailableSlots(
         max_participants,
         booking_type,
         status,
+        name,
+        price_type,
+        base_price,
         activities!inner (
           id,
           guide_id
@@ -559,6 +562,13 @@ export async function getAvailableSlots(
         timezone: result.timezone,
         activityId: params.activityId,
         planId: params.planId,
+        selectedPlan: {
+          id: plan.id,
+          priceType: plan.price_type,
+          basePrice: plan.base_price,
+          minParticipants: plan.min_participants,
+          maxParticipants: plan.max_participants,
+        },
         slots: slotsToReturn,
         reason: slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined,
         messageZh: slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined,

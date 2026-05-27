@@ -24,8 +24,12 @@ interface PlanConfig {
   id: string;
   label: string;
   duration: string;
-  priceMultiplier: number;
+  priceMultiplier?: number;
   price?: number;
+  priceType?: 'per_person' | 'per_group';
+  basePrice?: number;
+  minParticipants?: number;
+  maxParticipants?: number;
   highlights: string[];
   detailsLinkText?: string;
   bookingBtnText?: string;
@@ -173,6 +177,28 @@ function getIconForHighlight(text: string) {
   return ICONS.check;
 }
 
+function formatPlanParticipantText(plan: PlanConfig) {
+  const min = Number.isFinite(Number(plan.minParticipants)) ? Number(plan.minParticipants) : 1;
+  const max = Number.isFinite(Number(plan.maxParticipants)) ? Number(plan.maxParticipants) : null;
+  const minLabel = min <= 1 ? '1 人可成行' : `最少 ${min} 人成團`;
+  if (max && max > 0) {
+    return `${minLabel} · 最多 ${max} 人`;
+  }
+  return minLabel;
+}
+
+function resolvePlanPrice(plan: PlanConfig, activityBasePrice: number, guests = 1) {
+  const basePrice = Number.isFinite(Number(plan.basePrice)) ? Number(plan.basePrice) : null;
+  if (basePrice && basePrice > 0) {
+    if (plan.priceType === 'per_group') return basePrice;
+    return basePrice * guests;
+  }
+  if (Number.isFinite(Number(plan.price)) && Number(plan.price) > 0) {
+    return Number(plan.price);
+  }
+  return Math.round(activityBasePrice * Number(plan.priceMultiplier ?? 1));
+}
+
 interface DatePlanSectionProps {
   activity: Activity;
   schedules: Schedule[];
@@ -265,7 +291,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
       <div className="kkd-plans-list">
         {VISIBLE_PLANS.map((plan) => {
           const basePrice = activity.priceTwd ?? activity.price ?? 0;
-          const planPrice = Math.round(basePrice * plan.priceMultiplier);
+          const planPrice = resolvePlanPrice(plan, basePrice, 1);
           const origPrice = Math.round(planPrice * 1.25);
           const isSelected = selectedPlan === plan.id;
 
@@ -297,6 +323,9 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                   <span className="kkd-plan-duration">
                     {ICONS.clock}
                     {plan.duration}
+                  </span>
+                  <span className="kkd-plan-duration" style={{ marginTop: 4 }}>
+                    {formatPlanParticipantText(plan)}
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -354,7 +383,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                 <div className="kkd-plan-price-block">
                   <span className="kkd-plan-orig-price">NT${origPrice.toLocaleString()}</span>
                   <strong className="kkd-plan-price">NT${planPrice.toLocaleString()}</strong>
-                  <span className="kkd-plan-per"> 起 / 人</span>
+                  <span className="kkd-plan-per"> 起 / {plan.priceType === 'per_group' ? '組' : '人'}</span>
                 </div>
                 {showFull ? (
                   <span
