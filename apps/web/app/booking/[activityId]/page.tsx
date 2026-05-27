@@ -545,7 +545,7 @@ function BookingInnerV2FlagShell() {
     };
   }, [activitySlug]);
 
-  const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants || 1);
+  const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
   const baseMaxParticipants = selectedPlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
 
