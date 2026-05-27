@@ -8,6 +8,7 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../../src/lib/supabase/server';
+import { normalizeRichPlanPayload } from '../../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -67,6 +68,23 @@ interface UpdatePlanBody {
   max_participants?: number;
   booking_type?: 'scheduled' | 'request' | 'instant';
   status?: 'active' | 'inactive' | 'archived';
+  legacy_plan_id?: string;
+  details_link_text?: string;
+  booking_btn_text?: string;
+  highlights?: string[];
+  language?: string;
+  earliest_departure?: string;
+  confirm_by_days?: number;
+  free_cancel_days?: number;
+  plan_inclusions?: string[];
+  plan_exclusions?: string[];
+  plan_itinerary_image_url?: string;
+  meeting_point_name?: string;
+  meeting_address?: string;
+  experience_point_name?: string;
+  experience_address?: string;
+  plan_notices?: string[];
+  plan_refund_rules?: string[];
 }
 
 export async function PUT(
@@ -108,6 +126,12 @@ export async function PUT(
   if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid status'), { status: 400 });
   }
+  const arrayFields = ['highlights', 'plan_inclusions', 'plan_exclusions', 'plan_notices', 'plan_refund_rules'] as const;
+  for (const key of arrayFields) {
+    if ((body as Record<string, unknown>)[key] !== undefined && !Array.isArray((body as Record<string, unknown>)[key])) {
+      return Response.json(errorV2('VALIDATION_ERROR', `${key} must be an array`), { status: 400 });
+    }
+  }
 
   try {
     const supabase = await createClient();
@@ -142,6 +166,8 @@ export async function PUT(
     if (body.max_participants !== undefined) updateData.max_participants = body.max_participants;
     if (body.booking_type !== undefined) updateData.booking_type = body.booking_type;
     if (body.status !== undefined) updateData.status = body.status;
+
+    Object.assign(updateData, normalizeRichPlanPayload(body));
 
     const { data, error } = await supabase
       .from('activity_plans')
