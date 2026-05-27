@@ -462,6 +462,38 @@ function BookingInnerV2FlagShell() {
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
   const activeUrlScheduleId = urlScheduleId && (!urlDate || urlDate === selectedDate) ? urlScheduleId : '';
+  const v2PlanKey = useMemo(() => inferPlanIdForBookingUrl({
+    explicitPlanId: urlPlanId,
+    scheduleId: urlScheduleId,
+    schedules: activity?.schedules || [],
+    plans: activity?.plans || [],
+  }), [activity?.schedules, activity?.plans, urlPlanId, urlScheduleId]);
+  const matchedScheduleIdForSelectedDate = useMemo(() => {
+    if (!activity?.schedules?.length || !selectedDate) return '';
+
+    const sameDateSchedules = activity.schedules.filter((schedule) => {
+      const localDate = new Date(schedule.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
+      return localDate === selectedDate;
+    });
+
+    if (sameDateSchedules.length === 0) return '';
+
+    const openSameDateSchedules = sameDateSchedules.filter((schedule) => {
+      const remaining = schedule.capacity - schedule.bookedCount;
+      return schedule.status === 'open' && remaining > 0;
+    });
+
+    const candidateSchedules = openSameDateSchedules.length > 0 ? openSameDateSchedules : sameDateSchedules;
+
+    const exactPlanMatch = candidateSchedules.find((schedule) => schedule.planId === v2PlanKey);
+    if (exactPlanMatch) return exactPlanMatch.id;
+
+    const allPlanFallback = candidateSchedules.find((schedule) => !schedule.planId);
+    if (allPlanFallback) return allPlanFallback.id;
+
+    return candidateSchedules[0]?.id || '';
+  }, [activity?.schedules, selectedDate, timezone, v2PlanKey]);
+  const activeScheduleId = activeUrlScheduleId || matchedScheduleIdForSelectedDate;
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
@@ -474,12 +506,6 @@ function BookingInnerV2FlagShell() {
   const [agreed, setAgreed] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState('');
   const [step, setStep] = useState(1);
-  const v2PlanKey = useMemo(() => inferPlanIdForBookingUrl({
-    explicitPlanId: urlPlanId,
-    scheduleId: urlScheduleId,
-    schedules: activity?.schedules || [],
-    plans: activity?.plans || [],
-  }), [activity?.schedules, activity?.plans, urlPlanId, urlScheduleId]);
   const canRunV2PlanFlow = Boolean(v2PlanKey);
 
   useEffect(() => {
@@ -524,7 +550,7 @@ function BookingInnerV2FlagShell() {
       if (!activity?.id || !canRunV2PlanFlow || !selectedDate || useLegacyFallback) return;
 
       try {
-        const scheduleParam = activeUrlScheduleId ? `&scheduleId=${encodeURIComponent(activeUrlScheduleId)}` : '';
+        const scheduleParam = activeScheduleId ? `&scheduleId=${encodeURIComponent(activeScheduleId)}` : '';
         const probeUrl = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=1`;
         const res = await fetch(probeUrl, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
@@ -536,7 +562,7 @@ function BookingInnerV2FlagShell() {
     }
 
     probeOnePersonAddOn();
-  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, activeUrlScheduleId]);
+  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, activeScheduleId]);
 
   useEffect(() => {
     async function fetchSlots() {
@@ -545,7 +571,7 @@ function BookingInnerV2FlagShell() {
         setSlotsLoading(true);
         setV2Error('');
         const participants = Math.max(guests, effectiveMinParticipants);
-        const scheduleParam = activeUrlScheduleId ? `&scheduleId=${encodeURIComponent(activeUrlScheduleId)}` : '';
+        const scheduleParam = activeScheduleId ? `&scheduleId=${encodeURIComponent(activeScheduleId)}` : '';
         const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
@@ -582,7 +608,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeUrlScheduleId]);
+  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
 
   async function handleV2Checkout() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
