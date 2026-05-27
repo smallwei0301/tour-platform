@@ -296,8 +296,7 @@ export async function getAvailableSlots(
         .maybeSingle();
 
       // scheduleId in traveler booking links is treated as a hint only.
-      // If stale/mismatched, gracefully fall back to date-range slot generation
-      // instead of hard-failing with 404.
+      // If stale/mismatched, gracefully fall back instead of hard-failing with 404.
       if (!scheduleError && scheduleData) {
         const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
         const inDateRange = scheduleLocalDate >= params.dateFrom && scheduleLocalDate <= params.dateTo;
@@ -305,6 +304,28 @@ export async function getAvailableSlots(
 
         if (inDateRange && planMatches) {
           selectedSchedule = scheduleData;
+        }
+      }
+
+      // If scheduleId points to a stale/mismatched schedule, try to recover by
+      // selecting a schedule that matches the requested plan/date window.
+      if (!selectedSchedule) {
+        const { data: fallbackSchedules, error: fallbackSchedulesError } = await supabase
+          .from('activity_schedules')
+          .select('id, activity_id, plan_id, start_at, end_at, capacity, booked_count, status')
+          .eq('activity_id', params.activityId)
+          .or(`plan_id.is.null,plan_id.eq.${params.planId}`);
+
+        if (!fallbackSchedulesError && Array.isArray(fallbackSchedules)) {
+          selectedSchedule =
+            fallbackSchedules
+              .filter((candidate) => candidate.status === 'open')
+              .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+              .find((candidate) => {
+                const localDate = getDateStringInTimezone(new Date(candidate.start_at), params.timezone);
+                const inDateRange = localDate >= params.dateFrom && localDate <= params.dateTo;
+                return inDateRange;
+              }) ?? null;
         }
       }
     }

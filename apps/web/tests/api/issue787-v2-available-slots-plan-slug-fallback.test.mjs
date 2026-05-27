@@ -39,6 +39,10 @@ function createSupabaseMock(results) {
       this.filters.push(['limit', value]);
       return Promise.resolve(take('limit', this.table, this.filters));
     }
+    order(column, options) {
+      this.filters.push(['order', column, options]);
+      return this;
+    }
     maybeSingle() {
       return Promise.resolve(take('maybeSingle', this.table, this.filters));
     }
@@ -128,6 +132,7 @@ test('issue787 behavior: stale scheduleId is ignored and falls back to date-rang
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
+    { terminal: 'or', table: 'activity_schedules', data: [] },
     { terminal: 'single', table: 'activity_plans', data: { id: planId, activity_id: activityId, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' } } },
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
@@ -146,5 +151,37 @@ test('issue787 behavior: stale scheduleId is ignored and falls back to date-rang
   assert.equal(body.data.activityId, activityId);
   assert.equal(body.data.planId, planId);
   assert.ok(Array.isArray(body.data.slots));
+  supabase.assertAllConsumed();
+});
+
+test('issue841 behavior: stale scheduleId falls back to matching date-range schedules when rules are empty', async () => {
+  const activityId = '11111111-1111-1111-1111-111111111111';
+  const staleScheduleId = '22222222-2222-2222-2222-222222222222';
+  const planId = '33333333-3333-4333-8333-333333333333';
+  const matchedScheduleId = '55555555-5555-4555-8555-555555555555';
+
+  const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
+    { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
+    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: '2026-07-01T01:00:00.000Z', end_at: '2026-07-01T03:00:00.000Z', capacity: 8, booked_count: 2, status: 'open' }] },
+    { terminal: 'single', table: 'activity_plans', data: { id: planId, activity_id: activityId, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' } } },
+    { terminal: 'or', table: 'guide_availability_rules', data: [] },
+    { terminal: 'then', table: 'guide_blackout_dates', data: [] },
+    { terminal: 'in', table: 'bookings', data: [] },
+  ]);
+
+  const response = await getAvailableSlots(
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=4`),
+    { params: Promise.resolve({ activityId }) },
+    { createClient: async () => supabase.client }
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.data.activityId, activityId);
+  assert.equal(body.data.planId, planId);
+  assert.equal(body.data.slots.length, 1);
+  assert.equal(body.data.slots[0].capacityLeft, 6);
   supabase.assertAllConsumed();
 });
