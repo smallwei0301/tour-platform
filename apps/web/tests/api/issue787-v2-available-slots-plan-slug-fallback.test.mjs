@@ -120,7 +120,7 @@ test('issue787 behavior: ambiguous active plans fails closed with validation err
   supabase.assertAllConsumed();
 });
 
-test('issue787 behavior: schedule missing/mismatch returns safe NOT_FOUND', async () => {
+test('issue787 behavior: stale scheduleId is ignored and falls back to date-range availability generation', async () => {
   const activityId = '11111111-1111-1111-1111-111111111111';
   const scheduleId = '22222222-2222-2222-2222-222222222222';
   const planId = '33333333-3333-4333-8333-333333333333';
@@ -128,8 +128,11 @@ test('issue787 behavior: schedule missing/mismatch returns safe NOT_FOUND', asyn
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
+    { terminal: 'single', table: 'activity_plans', data: { id: planId, activity_id: activityId, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' } } },
+    { terminal: 'or', table: 'guide_availability_rules', data: [] },
+    { terminal: 'then', table: 'guide_blackout_dates', data: [] },
+    { terminal: 'in', table: 'bookings', data: [] },
   ]);
-
 
   const response = await getAvailableSlots(
     buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${scheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
@@ -137,8 +140,11 @@ test('issue787 behavior: schedule missing/mismatch returns safe NOT_FOUND', asyn
     { createClient: async () => supabase.client }
   );
 
-  assert.equal(response.status, 404);
+  assert.equal(response.status, 200);
   const body = await response.json();
-  assert.deepEqual(body.error, { code: 'NOT_FOUND', message: 'Schedule not found for this activity' });
+  assert.equal(body.success, true);
+  assert.equal(body.data.activityId, activityId);
+  assert.equal(body.data.planId, planId);
+  assert.ok(Array.isArray(body.data.slots));
   supabase.assertAllConsumed();
 });

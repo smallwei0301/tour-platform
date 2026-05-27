@@ -295,26 +295,18 @@ export async function getAvailableSlots(
         .eq('activity_id', params.activityId)
         .maybeSingle();
 
-      if (scheduleError || !scheduleData) {
-        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for this activity'), {
-          status: 404,
-        });
-      }
+      // scheduleId in traveler booking links is treated as a hint only.
+      // If stale/mismatched, gracefully fall back to date-range slot generation
+      // instead of hard-failing with 404.
+      if (!scheduleError && scheduleData) {
+        const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
+        const inDateRange = scheduleLocalDate >= params.dateFrom && scheduleLocalDate <= params.dateTo;
+        const planMatches = !scheduleData.plan_id || scheduleData.plan_id === params.planId;
 
-      const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
-      if (scheduleLocalDate < params.dateFrom || scheduleLocalDate > params.dateTo) {
-        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for requested date range'), {
-          status: 404,
-        });
+        if (inDateRange && planMatches) {
+          selectedSchedule = scheduleData;
+        }
       }
-
-      if (scheduleData.plan_id && scheduleData.plan_id !== params.planId) {
-        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for requested plan'), {
-          status: 404,
-        });
-      }
-
-      selectedSchedule = scheduleData;
     }
 
     // Fetch activity plan with activity details (to get guide_id)

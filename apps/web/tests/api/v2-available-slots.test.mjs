@@ -452,8 +452,10 @@ test('route-handler supports optional scheduleId mapping + validation for legacy
   assert.match(src, /\.from\('activity_schedules'\)/);
   assert.match(src, /\.eq\('id', params\.scheduleId\)/);
   assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
-  assert.match(src, /scheduleLocalDate < params\.dateFrom \|\| scheduleLocalDate > params\.dateTo/);
-  assert.match(src, /scheduleData\.plan_id && scheduleData\.plan_id !== params\.planId/);
+  assert.match(src, /if \(!scheduleError && scheduleData\)/);
+  assert.match(src, /const inDateRange = scheduleLocalDate >= params\.dateFrom && scheduleLocalDate <= params\.dateTo/);
+  assert.match(src, /const planMatches = !scheduleData\.plan_id \|\| scheduleData\.plan_id === params\.planId/);
+  assert.match(src, /if \(inDateRange && planMatches\)/);
   assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
   assert.match(src, /capacityLeft: remaining/);
 });
