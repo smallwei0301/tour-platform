@@ -20,6 +20,22 @@ type ActivityPlan = {
   status: 'active' | 'inactive' | 'archived';
   created_at: string;
   updated_at: string;
+  details_link_text?: string | null;
+  booking_btn_text?: string | null;
+  highlights?: string[] | null;
+  language?: string | null;
+  earliest_departure?: string | null;
+  confirm_by_days?: number | null;
+  free_cancel_days?: number | null;
+  plan_inclusions?: string[] | null;
+  plan_exclusions?: string[] | null;
+  plan_itinerary?: Array<{ text: string; imageUrl?: string | null }> | null;
+  meeting_point_name?: string | null;
+  meeting_address?: string | null;
+  experience_point_name?: string | null;
+  experience_address?: string | null;
+  plan_notices?: string[] | null;
+  plan_refund_rules?: string[] | null;
 };
 
 type Activity = {
@@ -59,7 +75,7 @@ export default function ActivityPlansPage() {
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
 
-  const [form, setForm] = useState({
+  const createDefaultForm = () => ({
     name: '',
     description: '',
     duration_minutes: 60,
@@ -69,7 +85,53 @@ export default function ActivityPlansPage() {
     max_participants: 10,
     booking_type: 'scheduled' as 'scheduled' | 'request' | 'instant',
     status: 'active' as 'active' | 'inactive' | 'archived',
+    details_link_text: '',
+    booking_btn_text: '',
+    highlights: '',
+    language: '',
+    earliest_departure: '',
+    confirm_by_days: '',
+    free_cancel_days: '',
+    plan_inclusions: '',
+    plan_exclusions: '',
+    plan_itinerary: '',
+    meeting_point_name: '',
+    meeting_address: '',
+    experience_point_name: '',
+    experience_address: '',
+    plan_notices: '',
+    plan_refund_rules: '',
   });
+
+  const [form, setForm] = useState(createDefaultForm());
+
+  const listToTextarea = (value?: string[] | null) => (Array.isArray(value) ? value.join('\n') : '');
+  const itineraryToTextarea = (value?: Array<{ text: string; imageUrl?: string | null }> | null) =>
+    Array.isArray(value)
+      ? value
+          .map((step) => {
+            const text = (step?.text || '').trim();
+            const imageUrl = (step?.imageUrl || '').trim();
+            if (!text && !imageUrl) return '';
+            return imageUrl ? `${text} | ${imageUrl}` : text;
+          })
+          .filter(Boolean)
+          .join('\n')
+      : '';
+
+  const parseLineList = (value: string) => value.split('\n').map((x) => x.trim()).filter(Boolean);
+  const parseItineraryLines = (value: string) =>
+    value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [textPart, ...imageParts] = line.split('|');
+        const text = (textPart || '').trim();
+        const imageUrl = imageParts.join('|').trim();
+        return imageUrl ? { text, imageUrl } : { text };
+      })
+      .filter((step) => step.text.length > 0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,6 +155,7 @@ export default function ActivityPlansPage() {
     if (plan) {
       setEditingPlan(plan);
       setForm({
+        ...createDefaultForm(),
         name: plan.name,
         description: plan.description || '',
         duration_minutes: plan.duration_minutes,
@@ -102,20 +165,26 @@ export default function ActivityPlansPage() {
         max_participants: plan.max_participants,
         booking_type: plan.booking_type,
         status: plan.status,
+        details_link_text: plan.details_link_text || '',
+        booking_btn_text: plan.booking_btn_text || '',
+        highlights: listToTextarea(plan.highlights),
+        language: plan.language || '',
+        earliest_departure: plan.earliest_departure || '',
+        confirm_by_days: plan.confirm_by_days == null ? '' : String(plan.confirm_by_days),
+        free_cancel_days: plan.free_cancel_days == null ? '' : String(plan.free_cancel_days),
+        plan_inclusions: listToTextarea(plan.plan_inclusions),
+        plan_exclusions: listToTextarea(plan.plan_exclusions),
+        plan_itinerary: itineraryToTextarea(plan.plan_itinerary),
+        meeting_point_name: plan.meeting_point_name || '',
+        meeting_address: plan.meeting_address || '',
+        experience_point_name: plan.experience_point_name || '',
+        experience_address: plan.experience_address || '',
+        plan_notices: listToTextarea(plan.plan_notices),
+        plan_refund_rules: listToTextarea(plan.plan_refund_rules),
       });
     } else {
       setEditingPlan(null);
-      setForm({
-        name: '',
-        description: '',
-        duration_minutes: 60,
-        price_type: 'per_person',
-        base_price: 0,
-        min_participants: 1,
-        max_participants: 10,
-        booking_type: 'scheduled',
-        status: 'active',
-      });
+      setForm(createDefaultForm());
     }
     setError('');
     setShowModal(true);
@@ -143,10 +212,22 @@ export default function ActivityPlansPage() {
         : `/api/v2/admin/activities/${activityId}/plans`;
       const method = editingPlan ? 'PUT' : 'POST';
 
+      const payload = {
+        ...form,
+        highlights: parseLineList(form.highlights),
+        plan_inclusions: parseLineList(form.plan_inclusions),
+        plan_exclusions: parseLineList(form.plan_exclusions),
+        plan_itinerary: parseItineraryLines(form.plan_itinerary),
+        plan_notices: parseLineList(form.plan_notices),
+        plan_refund_rules: parseLineList(form.plan_refund_rules),
+        confirm_by_days: form.confirm_by_days === '' ? undefined : Number(form.confirm_by_days),
+        free_cancel_days: form.free_cancel_days === '' ? undefined : Number(form.free_cancel_days),
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
 
@@ -300,7 +381,7 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>最少人數</label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
                   <input
                     type="number"
                     min="1"
@@ -310,7 +391,7 @@ export default function ActivityPlansPage() {
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>最多人數</label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
                   <input
                     type="number"
                     min="1"
@@ -320,6 +401,66 @@ export default function ActivityPlansPage() {
                   />
                 </div>
               </div>
+
+              <details style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12, background: '#f9fafb' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#2563eb' }}>方案詳情內容（點擊展開）</summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>語言導覽
+                    <input type="text" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>「查看詳情」連結文字
+                      <input type="text" value={form.details_link_text} onChange={(e) => setForm({ ...form, details_link_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>預約按鈕文字
+                      <input type="text" value={form.booking_btn_text} onChange={(e) => setForm({ ...form, booking_btn_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最早可出發日
+                      <input type="date" value={form.earliest_departure} onChange={(e) => setForm({ ...form, earliest_departure: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最晚 N 天前確認
+                      <input type="number" min="0" value={form.confirm_by_days} onChange={(e) => setForm({ ...form, confirm_by_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>N 天前可免費取消
+                      <input type="number" min="0" value={form.free_cancel_days} onChange={(e) => setForm({ ...form, free_cancel_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                  </div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>亮點（每行一項）
+                    <textarea rows={3} value={form.highlights} onChange={(e) => setForm({ ...form, highlights: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用包含（每行一項）
+                    <textarea rows={3} value={form.plan_inclusions} onChange={(e) => setForm({ ...form, plan_inclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用不包含（每行一項）
+                    <textarea rows={3} value={form.plan_exclusions} onChange={(e) => setForm({ ...form, plan_exclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>行程介紹（每行一個步驟，格式：文字 或 文字 | 圖片URL）
+                    <textarea rows={4} value={form.plan_itinerary} onChange={(e) => setForm({ ...form, plan_itinerary: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地點名稱
+                      <input type="text" value={form.meeting_point_name} onChange={(e) => setForm({ ...form, meeting_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地址
+                      <input type="text" value={form.meeting_address} onChange={(e) => setForm({ ...form, meeting_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地點名稱
+                      <input type="text" value={form.experience_point_name} onChange={(e) => setForm({ ...form, experience_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地址
+                      <input type="text" value={form.experience_address} onChange={(e) => setForm({ ...form, experience_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                  </div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>購買須知（每行一項）
+                    <textarea rows={3} value={form.plan_notices} onChange={(e) => setForm({ ...form, plan_notices: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>取消政策（每行一項）
+                    <textarea rows={3} value={form.plan_refund_rules} onChange={(e) => setForm({ ...form, plan_refund_rules: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                </div>
+              </details>
               {editingPlan && (
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>狀態</label>

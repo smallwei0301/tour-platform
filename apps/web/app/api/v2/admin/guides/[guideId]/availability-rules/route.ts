@@ -56,7 +56,9 @@ export async function GET(
         updated_at,
         activity_plans (
           id,
-          name
+          name,
+          min_participants,
+          max_participants
         )
       `)
       .eq('guide_id', guideId)

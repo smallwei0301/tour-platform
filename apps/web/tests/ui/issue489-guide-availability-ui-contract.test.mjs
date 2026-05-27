@@ -29,6 +29,14 @@ test('availability rules list renders human-readable activity/plan labels and Ta
   assert.match(src, /台灣時間|Asia\/Taipei/, 'UI should clearly indicate timezone context');
 });
 
+test('guide availability surfaces formal plan min/max participant context in option/rule/preview labels', async () => {
+  const src = await readSource('app/guide/availability/page.tsx');
+
+  assert.match(src, /minParticipants|maxParticipants/, 'page should consume plan min/max metadata from API options');
+  assert.match(src, /最少\s*\$\{[^}]+\}\s*[｜|]\s*最多\s*\$\{[^}]+\}/, 'plan dropdown label should include min/max participants');
+  assert.match(src, /人?成團/, 'preview slot label should support concise min participants wording (e.g. 4人成團)');
+});
+
 test('guide schedules page keeps capacity min at bookedCount and surfaces server error path', async () => {
   const src = await readSource('app/guide/schedules/page.tsx');
 

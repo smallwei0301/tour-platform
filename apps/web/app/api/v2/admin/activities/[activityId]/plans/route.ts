@@ -7,6 +7,7 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
+import { normalizeRichPlanPayload } from '../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -70,6 +71,24 @@ interface CreatePlanBody {
   max_participants?: number;
   booking_type?: 'scheduled' | 'request' | 'instant';
   status?: 'active' | 'inactive' | 'archived';
+  legacy_plan_id?: string;
+  details_link_text?: string;
+  booking_btn_text?: string;
+  highlights?: string[];
+  language?: string;
+  earliest_departure?: string;
+  confirm_by_days?: number;
+  free_cancel_days?: number;
+  plan_inclusions?: string[];
+  plan_exclusions?: string[];
+  plan_itinerary?: Array<{ text: string; imageUrl?: string }>;
+  plan_itinerary_image_url?: string;
+  meeting_point_name?: string;
+  meeting_address?: string;
+  experience_point_name?: string;
+  experience_address?: string;
+  plan_notices?: string[];
+  plan_refund_rules?: string[];
 }
 
 export async function POST(
@@ -108,6 +127,13 @@ export async function POST(
   if (body.status && !VALID_STATUSES.includes(body.status)) {
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid status'), { status: 400 });
   }
+  const arrayFields = ['highlights', 'plan_inclusions', 'plan_exclusions', 'plan_notices', 'plan_refund_rules'] as const;
+  const bodyRecord = body as unknown as Record<string, unknown>;
+  for (const key of arrayFields) {
+    if (bodyRecord[key] !== undefined && !Array.isArray(bodyRecord[key])) {
+      return Response.json(errorV2('VALIDATION_ERROR', `${key} must be an array`), { status: 400 });
+    }
+  }
 
   const minParticipants = body.min_participants ?? 1;
   const maxParticipants = body.max_participants ?? 10;
@@ -144,6 +170,7 @@ export async function POST(
       max_participants: maxParticipants,
       booking_type: body.booking_type || 'scheduled',
       status: body.status || 'active',
+      ...normalizeRichPlanPayload(body),
     };
 
     let data: any = null;

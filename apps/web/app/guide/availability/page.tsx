@@ -36,6 +36,7 @@ type PreviewSlot = {
   startAt: string;
   endAt: string;
   isAvailable: boolean;
+  minParticipants?: number | null;
 };
 
 type GuideActivityPlanOption = {
@@ -43,6 +44,8 @@ type GuideActivityPlanOption = {
   activityTitle: string;
   planId: string;
   planName: string;
+  minParticipants: number | null;
+  maxParticipants: number | null;
 };
 
 export default function GuideAvailabilityPage() {
@@ -91,6 +94,7 @@ export default function GuideAvailabilityPage() {
   const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const [previewDateFrom, setPreviewDateFrom] = useState(today);
   const [previewDateTo, setPreviewDateTo] = useState(nextWeek);
+  const [previewPlanId, setPreviewPlanId] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -115,17 +119,24 @@ export default function GuideAvailabilityPage() {
   const loadPreview = useCallback(async () => {
     setPreviewLoading(true);
     try {
-      const res = await fetch(
-        `/api/guide/availability-preview?dateFrom=${previewDateFrom}&dateTo=${previewDateTo}&timezone=Asia/Taipei`
-      );
+      const query = new URLSearchParams({
+        dateFrom: previewDateFrom,
+        dateTo: previewDateTo,
+        timezone: 'Asia/Taipei',
+      });
+      if (previewPlanId) query.set('activityPlanId', previewPlanId);
+      const res = await fetch(`/api/guide/availability-preview?${query.toString()}`);
       const json = await res.json();
       if (json.ok) {
-        setPreviewSlots(json.data?.slots || []);
+        setPreviewSlots((json.data?.slots || []).map((slot: PreviewSlot) => ({
+          ...slot,
+          minParticipants: slot.minParticipants ?? null,
+        })));
       }
     } finally {
       setPreviewLoading(false);
     }
-  }, [previewDateFrom, previewDateTo]);
+  }, [previewDateFrom, previewDateTo, previewPlanId]);
 
   useEffect(() => {
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
@@ -310,6 +321,12 @@ export default function GuideAvailabilityPage() {
     acc[option.planId] = option;
     return acc;
   }, {} as Record<string, GuideActivityPlanOption>);
+  const previewPlan = optionByPlanId[previewPlanId] || null;
+  const formatParticipants = (minParticipants: number | null, maxParticipants: number | null) => {
+    const minText = minParticipants ?? '-';
+    const maxText = maxParticipants ?? '-';
+    return `最少 ${minText}｜最多 ${maxText}`;
+  };
 
   // ── Group preview slots by date ──
   const slotsByDate = previewSlots.reduce((acc, slot) => {
@@ -407,7 +424,9 @@ export default function GuideAvailabilityPage() {
                 >
                   <option value="">請選擇方案</option>
                   {selectedActivityPlans.map((plan) => (
-                    <option key={plan.planId} value={plan.planId}>{plan.planName}</option>
+                    <option key={plan.planId} value={plan.planId}>
+                      {`${plan.planName}（${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -629,6 +648,14 @@ export default function GuideAvailabilityPage() {
                                 <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
                                   方案：{optionByPlanId[rule.activity_plan_id || '']?.planName || rule.activity_plans?.name || '未指定'}
                                 </div>
+                                {rule.activity_plan_id && optionByPlanId[rule.activity_plan_id] && (
+                                  <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
+                                    人數：{formatParticipants(
+                                      optionByPlanId[rule.activity_plan_id]?.minParticipants ?? null,
+                                      optionByPlanId[rule.activity_plan_id]?.maxParticipants ?? null
+                                    )}
+                                  </div>
+                                )}
                                 {(rule.effective_from || rule.effective_to) && (
                                   <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
                                     生效：{rule.effective_from || '不限'} ~ {rule.effective_to || '不限'}
@@ -717,6 +744,18 @@ export default function GuideAvailabilityPage() {
                   <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>預覽系統將產生的可預約時段</p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <select
+                    value={previewPlanId}
+                    onChange={(e) => setPreviewPlanId(e.target.value)}
+                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 240 }}
+                  >
+                    <option value="">全部方案（不篩選）</option>
+                    {activityPlanOptions.map((plan) => (
+                      <option key={plan.planId} value={plan.planId}>
+                        {`${plan.activityTitle}・${plan.planName}（${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
+                      </option>
+                    ))}
+                  </select>
                   <input
                     type="date"
                     value={previewDateFrom}
@@ -736,6 +775,11 @@ export default function GuideAvailabilityPage() {
                 </div>
               </div>
               <div style={{ padding: 20 }}>
+                {previewPlan && (
+                  <div style={{ marginBottom: 10, fontSize: 12, color: '#374151' }}>
+                    預覽方案：{previewPlan.planName}（{formatParticipants(previewPlan.minParticipants, previewPlan.maxParticipants)}）
+                  </div>
+                )}
                 {previewSlots.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>此期間無可用時段</div>
                 ) : (
@@ -761,6 +805,7 @@ export default function GuideAvailabilityPage() {
                                 }}
                               >
                                 {new Date(slot.startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                                {slot.minParticipants && `・${slot.minParticipants}人成團`}
                               </div>
                             ))}
                           </div>

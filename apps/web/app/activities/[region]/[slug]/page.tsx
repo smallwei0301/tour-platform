@@ -118,6 +118,15 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   const imageUrls: string[] = activity.imageUrls?.length ? activity.imageUrls : (activity.coverImageUrl ? [activity.coverImageUrl] : []);
   const originalPrice = Math.round(activity.priceTwd * 1.25);
+  const formalPlans = Array.isArray((activity as { plans?: unknown[] }).plans) ? ((activity as { plans?: any[] }).plans || []) : [];
+  const hasFormalPlanRangeVariance = formalPlans.length > 0 && formalPlans.some((plan) => {
+    const min = Number(plan?.minParticipants ?? plan?.min_participants ?? activity.minParticipants);
+    const max = Number(plan?.maxParticipants ?? plan?.max_participants ?? activity.maxParticipants);
+    return Number.isFinite(min) && Number.isFinite(max) && (min !== activity.minParticipants || max !== activity.maxParticipants);
+  });
+  const participantSummaryLabel = hasFormalPlanRangeVariance
+    ? '最少人數依方案而定'
+    : `${activity.minParticipants}~${activity.maxParticipants} 人`;
 
   return (
     <main className="kkd-detail-page" style={{ paddingBottom: 100 }}>
@@ -238,7 +247,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             </span>
             <span className="kkd-policy-item">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              {activity.minParticipants}~{activity.maxParticipants} 人
+              {participantSummaryLabel}
             </span>
             <span className="kkd-policy-divider" />
             <span className="kkd-policy-item">

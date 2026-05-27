@@ -142,6 +142,25 @@ export async function GET(request: NextRequest) {
 
     const { data: rules } = await rulesQuery;
 
+    const planIds = Array.from(
+      new Set(
+        (rules || [])
+          .map((rule: any) => rule.activity_plan_id)
+          .filter((id: string | null) => typeof id === 'string' && id.length > 0)
+      )
+    );
+
+    const minParticipantsByPlanId: Record<string, number | null> = {};
+    if (planIds.length > 0) {
+      const { data: plansData } = await supabase
+        .from('activity_plans')
+        .select('id, min_participants')
+        .in('id', planIds as string[]);
+      for (const plan of plansData || []) {
+        minParticipantsByPlanId[plan.id] = plan.min_participants ?? null;
+      }
+    }
+
     // Fetch blackouts in range
     const { data: blackouts } = await supabase
       .from('guide_blackout_dates')
@@ -166,7 +185,8 @@ export async function GET(request: NextRequest) {
       bookings || [],
       dateFrom,
       dateTo,
-      timezone
+      timezone,
+      minParticipantsByPlanId
     );
 
     return Response.json(ok({
@@ -187,6 +207,7 @@ export async function GET(request: NextRequest) {
 }
 
 interface Rule {
+  activity_plan_id?: string | null;
   weekday: number;
   start_time_local: string;
   end_time_local: string;
@@ -214,6 +235,7 @@ interface Slot {
   startAt: string;
   endAt: string;
   isAvailable: boolean;
+  minParticipants: number | null;
 }
 
 function generatePreviewSlots(
@@ -222,7 +244,8 @@ function generatePreviewSlots(
   bookings: Booking[],
   dateFrom: string,
   dateTo: string,
-  _timezone: string
+  _timezone: string,
+  minParticipantsByPlanId: Record<string, number | null>
 ): Slot[] {
   const slots: Slot[] = [];
 
@@ -278,6 +301,7 @@ function generatePreviewSlots(
           startAt: slotStartISO,
           endAt: slotEndISO,
           isAvailable,
+          minParticipants: rule.activity_plan_id ? (minParticipantsByPlanId[rule.activity_plan_id] ?? null) : null,
         });
       }
     }

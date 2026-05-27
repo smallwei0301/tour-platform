@@ -295,26 +295,39 @@ export async function getAvailableSlots(
         .eq('activity_id', params.activityId)
         .maybeSingle();
 
-      if (scheduleError || !scheduleData) {
-        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for this activity'), {
-          status: 404,
-        });
+      // scheduleId in traveler booking links is treated as a hint only.
+      // If stale/mismatched, gracefully fall back instead of hard-failing with 404.
+      if (!scheduleError && scheduleData) {
+        const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
+        const inDateRange = scheduleLocalDate >= params.dateFrom && scheduleLocalDate <= params.dateTo;
+        const planMatches = !scheduleData.plan_id || scheduleData.plan_id === params.planId;
+
+        if (inDateRange && planMatches) {
+          selectedSchedule = scheduleData;
+        }
       }
 
-      const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
-      if (scheduleLocalDate < params.dateFrom || scheduleLocalDate > params.dateTo) {
-        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for requested date range'), {
-          status: 404,
-        });
-      }
+      // If scheduleId points to a stale/mismatched schedule, try to recover by
+      // selecting a schedule that matches the requested plan/date window.
+      if (!selectedSchedule) {
+        const { data: fallbackSchedules, error: fallbackSchedulesError } = await supabase
+          .from('activity_schedules')
+          .select('id, activity_id, plan_id, start_at, end_at, capacity, booked_count, status')
+          .eq('activity_id', params.activityId)
+          .or(`plan_id.is.null,plan_id.eq.${params.planId}`);
 
-      if (scheduleData.plan_id && scheduleData.plan_id !== params.planId) {
-        return Response.json(errorV2('NOT_FOUND', 'Schedule not found for requested plan'), {
-          status: 404,
-        });
+        if (!fallbackSchedulesError && Array.isArray(fallbackSchedules)) {
+          selectedSchedule =
+            fallbackSchedules
+              .filter((candidate) => candidate.status === 'open')
+              .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime())
+              .find((candidate) => {
+                const localDate = getDateStringInTimezone(new Date(candidate.start_at), params.timezone);
+                const inDateRange = localDate >= params.dateFrom && localDate <= params.dateTo;
+                return inDateRange;
+              }) ?? null;
+        }
       }
-
-      selectedSchedule = scheduleData;
     }
 
     // Fetch activity plan with activity details (to get guide_id)
@@ -329,6 +342,9 @@ export async function getAvailableSlots(
         max_participants,
         booking_type,
         status,
+        name,
+        price_type,
+        base_price,
         activities!inner (
           id,
           guide_id
@@ -536,11 +552,67 @@ export async function getAvailableSlots(
       | { reasonCode?: string; messageZh?: string }
       | undefined;
 
+    let selectedScheduleRuleFailure: { reasonCode?: string; messageZh?: string } | undefined =
+      undefined;
     let slotsToReturn = filteredSlots;
     if (selectedSchedule) {
+      const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), params.timezone);
+      const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
+        bookings,
+        activityId: params.activityId,
+        planId: params.planId,
+        localDate,
+        timezone: params.timezone,
+        statuses: FORMED_GROUP_BOOKING_STATUSES,
+      });
+
+      const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
+        bookings,
+        activityId: params.activityId,
+        planId: params.planId,
+        localDate,
+        timezone: params.timezone,
+        statuses: CAPACITY_HOLD_BOOKING_STATUSES,
+      });
+
+      const capacityHoldRule = evaluateGroupBookingRule({
+        minParticipants,
+        maxParticipants: plan.max_participants,
+        effectiveExistingParticipants: effectiveExistingParticipantsForCapacityHold,
+        requestedParticipants: params.participants,
+      });
+      const groupRule = evaluateGroupBookingRule({
+        minParticipants,
+        maxParticipants: plan.max_participants,
+        effectiveExistingParticipants: effectiveExistingParticipantsForFormed,
+        requestedParticipants: params.participants,
+      });
+      const selectedScheduleRule =
+        !capacityHoldRule.allowed && capacityHoldRule.reasonCode === 'CAPACITY_EXCEEDED'
+          ? capacityHoldRule
+          : groupRule;
+
       const remaining = Math.max(0, selectedSchedule.capacity - selectedSchedule.booked_count);
-      if (selectedSchedule.status !== 'open' || remaining < params.participants) {
+      const hasInsufficientCapacityForSelectedSchedule = remaining < params.participants;
+
+      if (
+        selectedSchedule.status !== 'open' ||
+        !selectedScheduleRule.allowed ||
+        hasInsufficientCapacityForSelectedSchedule
+      ) {
         slotsToReturn = [];
+
+        if (!selectedScheduleRule.allowed) {
+          selectedScheduleRuleFailure = {
+            reasonCode: selectedScheduleRule.reasonCode,
+            messageZh: selectedScheduleRule.messageZh,
+          };
+        } else if (hasInsufficientCapacityForSelectedSchedule) {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'CAPACITY_EXCEEDED',
+            messageZh: `此行程最多 ${selectedSchedule.capacity} 人，當前時段剩餘 ${remaining} 人可預訂`,
+          };
+        }
       } else {
         const scheduleSlot: SerializedSlot = {
           startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), params.timezone),
@@ -553,15 +625,31 @@ export async function getAvailableSlots(
       }
     }
 
+    const reasonCode =
+      slotsToReturn.length === 0
+        ? selectedScheduleRuleFailure?.reasonCode ?? firstRuleFailure?.reasonCode
+        : undefined;
+    const reasonMessage =
+      slotsToReturn.length === 0
+        ? selectedScheduleRuleFailure?.messageZh ?? firstRuleFailure?.messageZh
+        : undefined;
+
     // Return response per API spec
     return Response.json(
       successV2({
         timezone: result.timezone,
         activityId: params.activityId,
         planId: params.planId,
+        selectedPlan: {
+          id: plan.id,
+          priceType: plan.price_type,
+          basePrice: plan.base_price,
+          minParticipants: plan.min_participants,
+          maxParticipants: plan.max_participants,
+        },
         slots: slotsToReturn,
-        reason: slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined,
-        messageZh: slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined,
+        reason: reasonCode,
+        messageZh: reasonMessage,
       })
     );
   } catch (err) {

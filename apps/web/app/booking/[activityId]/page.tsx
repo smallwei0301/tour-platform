@@ -429,6 +429,13 @@ interface V2AvailableSlotsResponse {
     timezone?: string;
     activityId?: string;
     planId?: string;
+    selectedPlan?: {
+      id?: string;
+      priceType?: 'per_person' | 'per_group';
+      basePrice?: number;
+      minParticipants?: number;
+      maxParticipants?: number;
+    };
     slots?: V2Slot[];
     reason?: string;
     messageZh?: string;
@@ -497,6 +504,7 @@ function BookingInnerV2FlagShell() {
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
+  const [selectedPlanMeta, setSelectedPlanMeta] = useState<{ priceType: 'per_person' | 'per_group'; basePrice: number; minParticipants: number; maxParticipants: number | null } | null>(null);
   const [guests, setGuests] = useState(1);
   const [allowOnePersonAddOn, setAllowOnePersonAddOn] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -537,7 +545,8 @@ function BookingInnerV2FlagShell() {
     };
   }, [activitySlug]);
 
-  const baseMinParticipants = Math.max(1, activity?.minParticipants || 1);
+  const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
+  const baseMaxParticipants = selectedPlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
 
   useEffect(() => {
@@ -591,6 +600,15 @@ function BookingInnerV2FlagShell() {
         }
         const nextSlots = Array.from(nextSlotsByDate.values()).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
+        const selectedPlan = json.data?.selectedPlan;
+        if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
+          setSelectedPlanMeta({
+            priceType: selectedPlan.priceType === 'per_group' ? 'per_group' : 'per_person',
+            basePrice: Number(selectedPlan.basePrice),
+            minParticipants: Number.isFinite(Number(selectedPlan.minParticipants)) ? Math.max(1, Number(selectedPlan.minParticipants)) : 1,
+            maxParticipants: Number.isFinite(Number(selectedPlan.maxParticipants)) ? Number(selectedPlan.maxParticipants) : null,
+          });
+        }
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
         setSlots(nextSlots);
@@ -714,7 +732,8 @@ function BookingInnerV2FlagShell() {
 
   const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
-  const total = activity.priceTwd * guests;
+  const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
+  const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
@@ -833,7 +852,7 @@ function BookingInnerV2FlagShell() {
                   className="tp-input"
                 />
               </label>
-              {!allowOnePersonAddOn && <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>此行程最少 {baseMinParticipants} 人成團</p>}
+              {!allowOnePersonAddOn && <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>此行程最少 {baseMinParticipants} 人成團{baseMaxParticipants ? `，最多 ${baseMaxParticipants} 人` : ''}</p>}
 
               <p style={{ margin: '0 0 6px' }}>選擇可預約場次</p>
               <div className="tp-input" style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12 }}>
@@ -845,7 +864,11 @@ function BookingInnerV2FlagShell() {
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>費用明細</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span>{activity.priceLabel} × {guests} 人</span>
+                  <span>單價（{selectedPlanMeta?.priceType === 'per_group' ? '每組' : '每人'}）</span>
+                  <span>NT${unitPrice.toLocaleString()}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span>{selectedPlanMeta?.priceType === 'per_group' ? '每組價格' : `NT$${unitPrice.toLocaleString()} × ${guests} 人`}</span>
                   <span>NT${total.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>

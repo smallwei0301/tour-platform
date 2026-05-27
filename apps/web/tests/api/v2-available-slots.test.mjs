@@ -452,8 +452,10 @@ test('route-handler supports optional scheduleId mapping + validation for legacy
   assert.match(src, /\.from\('activity_schedules'\)/);
   assert.match(src, /\.eq\('id', params\.scheduleId\)/);
   assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
-  assert.match(src, /scheduleLocalDate < params\.dateFrom \|\| scheduleLocalDate > params\.dateTo/);
-  assert.match(src, /scheduleData\.plan_id && scheduleData\.plan_id !== params\.planId/);
+  assert.match(src, /if \(!scheduleError && scheduleData\)/);
+  assert.match(src, /const inDateRange = scheduleLocalDate >= params\.dateFrom && scheduleLocalDate <= params\.dateTo/);
+  assert.match(src, /const planMatches = !scheduleData\.plan_id \|\| scheduleData\.plan_id === params\.planId/);
+  assert.match(src, /if \(inDateRange && planMatches\)/);
   assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
   assert.match(src, /capacityLeft: remaining/);
 });
@@ -487,8 +489,8 @@ test('route-handler enforces unformed-group min participants and Chinese copy co
   assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
   assert.match(src, /bookings: nonGroupConflictBookings/);
   assert.match(src, /slots: slotsToReturn/);
-  assert.match(src, /reason: slotsToReturn\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
-  assert.match(src, /messageZh: slotsToReturn\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+  assert.match(src, /reason: reasonCode/);
+  assert.match(src, /messageZh: reasonMessage/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {

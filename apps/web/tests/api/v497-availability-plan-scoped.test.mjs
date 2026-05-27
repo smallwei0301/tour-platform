@@ -179,9 +179,17 @@ describe('Guide activities-with-plans route exists and is structured correctly',
     const src = readFile('app/api/guide/activities-with-plans/route.ts');
     assert.match(
       src,
-      /['"']active['"']/,
+      /['"]active['"]/,
       "Must filter plans to 'active' status only"
     );
+  });
+
+  it('route exposes formal plan min/max participants in API contract', () => {
+    const src = readFile('app/api/guide/activities-with-plans/route.ts');
+    assert.match(src, /min_participants/, 'must select min_participants from activity_plans');
+    assert.match(src, /max_participants/, 'must select max_participants from activity_plans');
+    assert.match(src, /minParticipants\s*:/, 'must map min_participants to minParticipants field');
+    assert.match(src, /maxParticipants\s*:/, 'must map max_participants to maxParticipants field');
   });
 });
 

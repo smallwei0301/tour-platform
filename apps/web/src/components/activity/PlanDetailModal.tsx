@@ -9,6 +9,8 @@ export interface PlanDetail {
   duration?: string;
   price?: number;
   priceMultiplier?: number;
+  priceType?: 'per_person' | 'per_group';
+  basePrice?: number;
   language?: string;
   earliestDeparture?: string;
   confirmByDays?: number;
@@ -42,7 +44,12 @@ const TABS = [
 
 export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalProps) {
   const [activeTab, setActiveTab] = useState('highlights');
-  const planPrice = plan.price ?? Math.round(basePrice * (plan.priceMultiplier ?? 1));
+  const planPrice =
+    (Number.isFinite(Number(plan.basePrice)) && Number(plan.basePrice) > 0
+      ? Number(plan.basePrice)
+      : null) ??
+    plan.price ??
+    Math.round(basePrice * (plan.priceMultiplier ?? 1));
 
   return (
     <>
