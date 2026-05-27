@@ -231,6 +231,7 @@ const EXPECTED_CHECKS = [
       'free_cancel_days',
       'plan_inclusions',
       'plan_exclusions',
+      'plan_itinerary',
       'plan_itinerary_image_url',
       'meeting_point_name',
       'meeting_address',

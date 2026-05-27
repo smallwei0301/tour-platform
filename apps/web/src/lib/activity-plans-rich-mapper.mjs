@@ -15,6 +15,29 @@ function toTrimmedStringArray(value) {
   return arr.length > 0 ? arr : [];
 }
 
+function toPlanItinerary(value, fallbackImageUrl = null) {
+  if (Array.isArray(value)) {
+    const arr = value
+      .map((step) => {
+        if (typeof step === 'string') {
+          const text = toNullableTrimmedString(step);
+          return text ? { text } : null;
+        }
+        if (!step || typeof step !== 'object') return null;
+        const text = toNullableTrimmedString(step.text);
+        const imageUrl = toNullableTrimmedString(step.imageUrl ?? step.image_url);
+        if (!text && !imageUrl) return null;
+        if (!text) return null;
+        return imageUrl ? { text, imageUrl } : { text };
+      })
+      .filter(Boolean);
+    return arr.length > 0 ? arr : [];
+  }
+
+  const oneImage = toNullableTrimmedString(fallbackImageUrl);
+  return oneImage ? [{ text: '行程圖片', imageUrl: oneImage }] : null;
+}
+
 function toNullableInteger(value) {
   if (value === undefined || value === null || value === '') return null;
   const num = Number(value);
@@ -40,7 +63,8 @@ export function normalizeRichPlanPayload(input = {}) {
     free_cancel_days: toNullableInteger(input.free_cancel_days ?? input.freeCancelDays),
     plan_inclusions: toTrimmedStringArray(input.plan_inclusions ?? input.planInclusions),
     plan_exclusions: toTrimmedStringArray(input.plan_exclusions ?? input.planExclusions),
-    plan_itinerary_image_url: toNullableTrimmedString(input.plan_itinerary_image_url ?? input.planItinerary?.imageUrl),
+    plan_itinerary: toPlanItinerary(input.plan_itinerary ?? input.planItinerary, input.plan_itinerary_image_url),
+    plan_itinerary_image_url: toNullableTrimmedString(input.plan_itinerary_image_url),
     meeting_point_name: toNullableTrimmedString(input.meeting_point_name ?? input.meetingPointName),
     meeting_address: toNullableTrimmedString(input.meeting_address ?? input.meetingAddress),
     experience_point_name: toNullableTrimmedString(input.experience_point_name ?? input.experiencePointName),

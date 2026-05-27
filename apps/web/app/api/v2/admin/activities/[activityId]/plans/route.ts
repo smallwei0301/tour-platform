@@ -81,6 +81,7 @@ interface CreatePlanBody {
   free_cancel_days?: number;
   plan_inclusions?: string[];
   plan_exclusions?: string[];
+  plan_itinerary?: Array<{ text: string; imageUrl?: string }>;
   plan_itinerary_image_url?: string;
   meeting_point_name?: string;
   meeting_address?: string;

@@ -10,11 +10,15 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 describe('GH-841 admin formal plan editor UI contract', () => {
   it('plans page exposes rich formal-plan fields and payload mapping', () => {
     const source = read('app/admin/activities/[id]/plans/page.tsx');
-    for (const label of ['語言導覽','最早可出發日','最晚 N 天前確認','N 天前可免費取消','費用包含（每行一項）','費用不包含（每行一項）','行程圖片 URL（可多行）','集合地點名稱','體驗地點名稱','購買須知（每行一項）','取消政策（每行一項）','方案最低成團人數','方案最多人數']) {
+    for (const label of ['語言導覽','最早可出發日','最晚 N 天前確認','N 天前可免費取消','費用包含（每行一項）','費用不包含（每行一項）','行程介紹（每行一個步驟，格式：文字 或 文字 | 圖片URL）','集合地點名稱','體驗地點名稱','購買須知（每行一項）','取消政策（每行一項）','方案最低成團人數','方案最多人數']) {
       assert.match(source, new RegExp(label), `missing label: ${label}`);
     }
-    for (const key of ['details_link_text','booking_btn_text','highlights','language','earliest_departure','confirm_by_days','free_cancel_days','plan_inclusions','plan_exclusions','plan_itinerary_image_url','meeting_point_name','meeting_address','experience_point_name','experience_address','plan_notices','plan_refund_rules']) {
+    for (const key of ['details_link_text','booking_btn_text','highlights','language','earliest_departure','confirm_by_days','free_cancel_days','plan_inclusions','plan_exclusions','plan_itinerary','meeting_point_name','meeting_address','experience_point_name','experience_address','plan_notices','plan_refund_rules']) {
       assert.match(source, new RegExp(key), `missing payload key: ${key}`);
+    }
+    for (const required of ['createDefaultForm', 'parseItineraryLines', 'setForm(createDefaultForm())', '...createDefaultForm()']) {
+      assert.match(source, new RegExp(required.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+        `missing rich form init/reset guard: ${required}`);
     }
   });
 

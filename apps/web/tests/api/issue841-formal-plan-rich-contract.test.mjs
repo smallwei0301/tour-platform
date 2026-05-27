@@ -33,6 +33,7 @@ describe('GH-841 formal plan rich contract', () => {
       'free_cancel_days',
       'plan_inclusions',
       'plan_exclusions',
+      'plan_itinerary',
       'plan_itinerary_image_url',
       'meeting_point_name',
       'meeting_address',
@@ -69,7 +70,10 @@ describe('GH-841 formal plan rich contract', () => {
         freeCancelDays: 7,
         planInclusions: ['導覽'],
         planExclusions: ['餐食'],
-        planItinerary: { imageUrl: 'https://example.com/i.jpg' },
+        planItinerary: [
+          { text: '迪化街導覽', imageUrl: 'https://example.com/i.jpg' },
+          { text: '永樂市場自由活動' },
+        ],
         meetingPointName: '台北車站',
         meetingAddress: '台北市中正區',
         experiencePointName: '迪化街',
@@ -99,6 +103,10 @@ describe('GH-841 formal plan rich contract', () => {
     assert.equal(result.skipped.length, 1, 'invalid price row should be audited as skipped');
     assert.equal(result.upserts[0].id, '11111111-1111-4111-8111-111111111111', 'must preserve existing formal row id');
     assert.equal(result.upserts[0].base_price, 3600);
+    assert.deepEqual(result.upserts[0].plan_itinerary, [
+      { text: '迪化街導覽', imageUrl: 'https://example.com/i.jpg' },
+      { text: '永樂市場自由活動' },
+    ]);
     assert.equal(result.skipped[0].reason, 'invalid_price');
   });
 

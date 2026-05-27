@@ -20,6 +20,22 @@ type ActivityPlan = {
   status: 'active' | 'inactive' | 'archived';
   created_at: string;
   updated_at: string;
+  details_link_text?: string | null;
+  booking_btn_text?: string | null;
+  highlights?: string[] | null;
+  language?: string | null;
+  earliest_departure?: string | null;
+  confirm_by_days?: number | null;
+  free_cancel_days?: number | null;
+  plan_inclusions?: string[] | null;
+  plan_exclusions?: string[] | null;
+  plan_itinerary?: Array<{ text: string; imageUrl?: string | null }> | null;
+  meeting_point_name?: string | null;
+  meeting_address?: string | null;
+  experience_point_name?: string | null;
+  experience_address?: string | null;
+  plan_notices?: string[] | null;
+  plan_refund_rules?: string[] | null;
 };
 
 type Activity = {
@@ -59,7 +75,7 @@ export default function ActivityPlansPage() {
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
 
-  const [form, setForm] = useState({
+  const createDefaultForm = () => ({
     name: '',
     description: '',
     duration_minutes: 60,
@@ -69,7 +85,53 @@ export default function ActivityPlansPage() {
     max_participants: 10,
     booking_type: 'scheduled' as 'scheduled' | 'request' | 'instant',
     status: 'active' as 'active' | 'inactive' | 'archived',
+    details_link_text: '',
+    booking_btn_text: '',
+    highlights: '',
+    language: '',
+    earliest_departure: '',
+    confirm_by_days: '',
+    free_cancel_days: '',
+    plan_inclusions: '',
+    plan_exclusions: '',
+    plan_itinerary: '',
+    meeting_point_name: '',
+    meeting_address: '',
+    experience_point_name: '',
+    experience_address: '',
+    plan_notices: '',
+    plan_refund_rules: '',
   });
+
+  const [form, setForm] = useState(createDefaultForm());
+
+  const listToTextarea = (value?: string[] | null) => (Array.isArray(value) ? value.join('\n') : '');
+  const itineraryToTextarea = (value?: Array<{ text: string; imageUrl?: string | null }> | null) =>
+    Array.isArray(value)
+      ? value
+          .map((step) => {
+            const text = (step?.text || '').trim();
+            const imageUrl = (step?.imageUrl || '').trim();
+            if (!text && !imageUrl) return '';
+            return imageUrl ? `${text} | ${imageUrl}` : text;
+          })
+          .filter(Boolean)
+          .join('\n')
+      : '';
+
+  const parseLineList = (value: string) => value.split('\n').map((x) => x.trim()).filter(Boolean);
+  const parseItineraryLines = (value: string) =>
+    value
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [textPart, ...imageParts] = line.split('|');
+        const text = (textPart || '').trim();
+        const imageUrl = imageParts.join('|').trim();
+        return imageUrl ? { text, imageUrl } : { text };
+      })
+      .filter((step) => step.text.length > 0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,6 +155,7 @@ export default function ActivityPlansPage() {
     if (plan) {
       setEditingPlan(plan);
       setForm({
+        ...createDefaultForm(),
         name: plan.name,
         description: plan.description || '',
         duration_minutes: plan.duration_minutes,
@@ -102,20 +165,26 @@ export default function ActivityPlansPage() {
         max_participants: plan.max_participants,
         booking_type: plan.booking_type,
         status: plan.status,
+        details_link_text: plan.details_link_text || '',
+        booking_btn_text: plan.booking_btn_text || '',
+        highlights: listToTextarea(plan.highlights),
+        language: plan.language || '',
+        earliest_departure: plan.earliest_departure || '',
+        confirm_by_days: plan.confirm_by_days == null ? '' : String(plan.confirm_by_days),
+        free_cancel_days: plan.free_cancel_days == null ? '' : String(plan.free_cancel_days),
+        plan_inclusions: listToTextarea(plan.plan_inclusions),
+        plan_exclusions: listToTextarea(plan.plan_exclusions),
+        plan_itinerary: itineraryToTextarea(plan.plan_itinerary),
+        meeting_point_name: plan.meeting_point_name || '',
+        meeting_address: plan.meeting_address || '',
+        experience_point_name: plan.experience_point_name || '',
+        experience_address: plan.experience_address || '',
+        plan_notices: listToTextarea(plan.plan_notices),
+        plan_refund_rules: listToTextarea(plan.plan_refund_rules),
       });
     } else {
       setEditingPlan(null);
-      setForm({
-        name: '',
-        description: '',
-        duration_minutes: 60,
-        price_type: 'per_person',
-        base_price: 0,
-        min_participants: 1,
-        max_participants: 10,
-        booking_type: 'scheduled',
-        status: 'active',
-      });
+      setForm(createDefaultForm());
     }
     setError('');
     setShowModal(true);
@@ -145,11 +214,12 @@ export default function ActivityPlansPage() {
 
       const payload = {
         ...form,
-        highlights: form.highlights.split('\n').map((x) => x.trim()).filter(Boolean),
-        plan_inclusions: form.plan_inclusions.split('\n').map((x) => x.trim()).filter(Boolean),
-        plan_exclusions: form.plan_exclusions.split('\n').map((x) => x.trim()).filter(Boolean),
-        plan_notices: form.plan_notices.split('\n').map((x) => x.trim()).filter(Boolean),
-        plan_refund_rules: form.plan_refund_rules.split('\n').map((x) => x.trim()).filter(Boolean),
+        highlights: parseLineList(form.highlights),
+        plan_inclusions: parseLineList(form.plan_inclusions),
+        plan_exclusions: parseLineList(form.plan_exclusions),
+        plan_itinerary: parseItineraryLines(form.plan_itinerary),
+        plan_notices: parseLineList(form.plan_notices),
+        plan_refund_rules: parseLineList(form.plan_refund_rules),
         confirm_by_days: form.confirm_by_days === '' ? undefined : Number(form.confirm_by_days),
         free_cancel_days: form.free_cancel_days === '' ? undefined : Number(form.free_cancel_days),
       };
@@ -366,8 +436,8 @@ export default function ActivityPlansPage() {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用不包含（每行一項）
                     <textarea rows={3} value={form.plan_exclusions} onChange={(e) => setForm({ ...form, plan_exclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>行程圖片 URL（可多行）
-                    <textarea rows={2} value={form.plan_itinerary_image_url} onChange={(e) => setForm({ ...form, plan_itinerary_image_url: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>行程介紹（每行一個步驟，格式：文字 或 文字 | 圖片URL）
+                    <textarea rows={4} value={form.plan_itinerary} onChange={(e) => setForm({ ...form, plan_itinerary: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地點名稱
