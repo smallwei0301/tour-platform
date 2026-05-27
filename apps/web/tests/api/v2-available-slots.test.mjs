@@ -489,8 +489,8 @@ test('route-handler enforces unformed-group min participants and Chinese copy co
   assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
   assert.match(src, /bookings: nonGroupConflictBookings/);
   assert.match(src, /slots: slotsToReturn/);
-  assert.match(src, /reason: slotsToReturn\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
-  assert.match(src, /messageZh: slotsToReturn\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+  assert.match(src, /reason: reasonCode/);
+  assert.match(src, /messageZh: reasonMessage/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {

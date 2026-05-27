@@ -552,11 +552,60 @@ export async function getAvailableSlots(
       | { reasonCode?: string; messageZh?: string }
       | undefined;
 
+    let selectedScheduleRuleFailure: { reasonCode?: string; messageZh?: string } | undefined =
+      undefined;
     let slotsToReturn = filteredSlots;
     if (selectedSchedule) {
+      const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), params.timezone);
+      const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
+        bookings,
+        activityId: params.activityId,
+        planId: params.planId,
+        localDate,
+        timezone: params.timezone,
+        statuses: FORMED_GROUP_BOOKING_STATUSES,
+      });
+
+      const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
+        bookings,
+        activityId: params.activityId,
+        planId: params.planId,
+        localDate,
+        timezone: params.timezone,
+        statuses: CAPACITY_HOLD_BOOKING_STATUSES,
+      });
+
+      const capacityHoldRule = evaluateGroupBookingRule({
+        minParticipants,
+        maxParticipants: plan.max_participants,
+        effectiveExistingParticipants: effectiveExistingParticipantsForCapacityHold,
+        requestedParticipants: params.participants,
+      });
+      const groupRule = evaluateGroupBookingRule({
+        minParticipants,
+        maxParticipants: plan.max_participants,
+        effectiveExistingParticipants: effectiveExistingParticipantsForFormed,
+        requestedParticipants: params.participants,
+      });
+      const selectedScheduleRule =
+        !capacityHoldRule.allowed && capacityHoldRule.reasonCode === 'CAPACITY_EXCEEDED'
+          ? capacityHoldRule
+          : groupRule;
+
       const remaining = Math.max(0, selectedSchedule.capacity - selectedSchedule.booked_count);
-      if (selectedSchedule.status !== 'open' || remaining < params.participants) {
+      if (
+        selectedSchedule.status !== 'open' ||
+        remaining < params.participants ||
+        !selectedScheduleRule.allowed
+      ) {
         slotsToReturn = [];
+
+        if (!selectedScheduleRule.allowed) {
+          selectedScheduleRuleFailure = {
+            reasonCode: selectedScheduleRule.reasonCode,
+            messageZh: selectedScheduleRule.messageZh,
+          };
+        }
       } else {
         const scheduleSlot: SerializedSlot = {
           startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), params.timezone),
@@ -568,6 +617,15 @@ export async function getAvailableSlots(
         slotsToReturn = [scheduleSlot];
       }
     }
+
+    const reasonCode =
+      slotsToReturn.length === 0
+        ? selectedScheduleRuleFailure?.reasonCode ?? firstRuleFailure?.reasonCode
+        : undefined;
+    const reasonMessage =
+      slotsToReturn.length === 0
+        ? selectedScheduleRuleFailure?.messageZh ?? firstRuleFailure?.messageZh
+        : undefined;
 
     // Return response per API spec
     return Response.json(
@@ -583,8 +641,8 @@ export async function getAvailableSlots(
           maxParticipants: plan.max_participants,
         },
         slots: slotsToReturn,
-        reason: slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined,
-        messageZh: slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined,
+        reason: reasonCode,
+        messageZh: reasonMessage,
       })
     );
   } catch (err) {
