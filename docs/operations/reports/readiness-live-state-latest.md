@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-27T13:17:26.180Z -->
+<!-- query_timestamp: 2026-05-27T18:52:00.212Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-27T13:17:26.180Z  
-**Commit SHA:** `1e890edd91c2b23b27ebb9d1932938d845357deb`
+**Query timestamp:** 2026-05-27T18:52:00.212Z  
+**Commit SHA:** `bbe4279ae27182615a512cb4fe642d5c5a1fd292`
 
 ---
 
@@ -20,16 +20,17 @@
 | #840 | [fix(booking-v2): align fee detail with plan price](https://github.com/smallwei0301/tour-platform/pull/840) | `kanban/issue-838-plan-price-alignment` |
 | #836 | [qa: verify post-#818 Booking V2 availability delta (closes #824)](https://github.com/smallwei0301/tour-platform/pull/836) | `qa/824-post-818-availability-delta` |
 
-## Open Issues (28 total)
+## Open Issues (30 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (12)
+### P1 (13)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #847 | [[Payments] Align settlement sweep eligibility with payout policy](https://github.com/smallwei0301/tour-platform/issues/847) | triaged, type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, payments, launch:post-first-payment |
 | #844 | [[Ops] Align Admin Go/No-Go dashboard with current launch gates](https://github.com/smallwei0301/tour-platform/issues/844) | triaged, type:optimization, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, infra, launch:first-payment-blocker |
 | #841 | [[Admin Activities] Unify formal plan management without losing rich plan details](https://github.com/smallwei0301/tour-platform/issues/841) | triaged, type:feature, priority:P1, guide-dashboard, agent:now, owner:ai-agent, status:in-progress, traveler-booking, database |
 | #839 | [活動詳情頁選日期後可預約狀態延遲變灰／未開放](https://github.com/smallwei0301/tour-platform/issues/839) | type:bug, priority:P1, status:ready, traveler-booking |
@@ -43,10 +44,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (13)
+### P2 (14)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #848 | [[Ops] Dedupe automated QA failure issues across daily scan generators](https://github.com/smallwei0301/tour-platform/issues/848) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
 | #846 | [[Docs] Refresh entry docs after #621/#787 turnover and current readiness drift](https://github.com/smallwei0301/tour-platform/issues/846) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, docs |
 | #832 | [[Ops] Add taxonomy labels to Frontend Daily Check issues](https://github.com/smallwei0301/tour-platform/issues/832) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
 | #830 | [[Ops] Detect conflicting owner/status labels in issue taxonomy](https://github.com/smallwei0301/tour-platform/issues/830) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:ready, infra, docs |
