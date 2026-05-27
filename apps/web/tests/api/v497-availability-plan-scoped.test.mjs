@@ -179,7 +179,7 @@ describe('Guide activities-with-plans route exists and is structured correctly',
     const src = readFile('app/api/guide/activities-with-plans/route.ts');
     assert.match(
       src,
-      /['"]active['"]/, 
+      /['"]active['"]/,
       "Must filter plans to 'active' status only"
     );
   });
