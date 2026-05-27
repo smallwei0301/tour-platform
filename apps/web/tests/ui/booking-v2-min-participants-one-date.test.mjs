@@ -51,3 +51,16 @@ test('v2 shell deduplicates same-date slots and keeps canonical earliest startAt
   assert.match(src, /new Date\(slot\.startAt\)\.getTime\(\) < new Date\(existing\.startAt\)\.getTime\(\)/);
   assert.match(src, /setSelectedSlotStartAt\(nextSlots\[0\]\?\.startAt \|\| ''\)/);
 });
+
+test('v2 shell keeps initial URL scheduleId guard and resolves matching scheduleId after date change', async () => {
+  const src = await readBookingSource();
+
+  assert.match(src, /const urlDate = searchParams\.get\('date'\) \|\| ''/);
+  assert.match(src, /const activeUrlScheduleId = urlScheduleId && \(!urlDate \|\| urlDate === selectedDate\) \? urlScheduleId : ''/);
+  assert.match(src, /const matchedScheduleIdForSelectedDate = useMemo\(\(\) => \{/);
+  assert.match(src, /const sameDateSchedules = activity\.schedules\.filter\(\(schedule\) => \{/);
+  assert.match(src, /const exactPlanMatch = candidateSchedules\.find\(\(schedule\) => schedule\.planId === v2PlanKey\)/);
+  assert.match(src, /const allPlanFallback = candidateSchedules\.find\(\(schedule\) => !schedule\.planId\)/);
+  assert.match(src, /const activeScheduleId = activeUrlScheduleId \|\| matchedScheduleIdForSelectedDate/);
+  assert.match(src, /const scheduleParam = activeScheduleId \? `&scheduleId=\$\{encodeURIComponent\(activeScheduleId\)\}` : ''/);
+});
