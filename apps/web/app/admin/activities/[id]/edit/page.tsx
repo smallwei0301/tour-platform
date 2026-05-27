@@ -1144,6 +1144,7 @@ export default function AdminActivityEditPage() {
             </label>
 
             <h3 style={sectionTitle}>🖼️ 圖片</h3>
+            {/* CSRF contract: ImageUpload performs FormData POST to upload-image with headers: csrfHeaders() (no content-type). */}
             <label style={{ ...labelStyle, marginBottom: 8 }}>封面圖</label>
             <ImageUpload
               activityId={activityId}
