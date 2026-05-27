@@ -126,6 +126,76 @@ function buildSupabaseMock() {
 }
 
 describe('GH-841 formal plan rich contract', () => {
+  it('backfill script provides deterministic dry-run audit and blocks invalid price writes', async () => {
+    const scriptPath = path.resolve(ROOT, '../../scripts/admin/issue841-formal-plan-backfill.mjs');
+    assert.ok(fs.existsSync(scriptPath), 'backfill script must exist');
+
+    const { runFormalPlanBackfill } = await import(pathToFileURL(scriptPath).href);
+
+    const upsertCalls = [];
+    function chain(table, ctx = {}) {
+      return {
+        select() {
+          return chain(table, ctx);
+        },
+        not() {
+          return chain(table, ctx);
+        },
+        in(column, values) {
+          return chain(table, { ...ctx, [column]: values });
+        },
+        order() {
+          if (table === 'activities') {
+            return Promise.resolve({
+              data: [
+                {
+                  id: 'act-1',
+                  plans: [
+                    { id: 'legacy-ok', label: 'OK 方案', price: 3200, minParticipants: 1, maxParticipants: 4 },
+                    { id: 'legacy-bad-price', label: '壞價格方案', price: 0 },
+                  ],
+                },
+              ],
+              error: null,
+            });
+          }
+          if (table === 'activity_plans') {
+            return Promise.resolve({
+              data: [{ id: 'plan-1', activity_id: 'act-1', slug: 'legacy-ok' }],
+              error: null,
+            });
+          }
+          return Promise.resolve({ data: [], error: null });
+        },
+        upsert(rows) {
+          upsertCalls.push(rows);
+          return Promise.resolve({ error: null });
+        },
+      };
+    }
+
+    const client = { from: (table) => chain(table) };
+    const audit = await runFormalPlanBackfill({ client, apply: false });
+
+    assert.equal(audit.scannedActivities, 1);
+    assert.equal(audit.candidatePlans, 2);
+    assert.equal(audit.rowsUpdate, 1);
+    assert.equal(audit.rowsInsert, 0);
+    assert.equal(audit.rowsSkip, 1);
+    assert.equal(audit.invalidPriceBlocked, 1);
+    assert.equal(audit.skippedReasons.invalid_price, 1);
+    assert.equal(upsertCalls.length, 0, 'dry-run must not mutate DB');
+  });
+
+  it('backfill apply mode is explicitly gated and dry-run is default', () => {
+    const scriptPath = path.resolve(ROOT, '../../scripts/admin/issue841-formal-plan-backfill.mjs');
+    const src = fs.readFileSync(scriptPath, 'utf8');
+
+    assert.match(src, /const\s+dryRun\s*=\s*!apply/);
+    assert.match(src, /ISSUE841_BACKFILL_ALLOW_APPLY/);
+    assert.match(src, /--yes/);
+    assert.match(src, /mode:\s*apply\s*\?\s*'apply'\s*:\s*'dry-run'/);
+  });
   it('migration adds rich columns to activity_plans', () => {
     const migrationPath = path.resolve(
       ROOT,
