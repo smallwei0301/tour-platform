@@ -1380,7 +1380,7 @@ export default function AdminActivityEditPage() {
           goodFor: toArray(goodFor),
           socialProofQuotes: toArray(socialProofQuotes),
           faq, itinerary,
-          plans, imageUrls,
+          imageUrls,
           ratingAvg: ratingAvg !== '' ? Number(ratingAvg) : null,
           reviewCount: Number(reviewCount) || 0,
         }),
@@ -1707,8 +1707,33 @@ export default function AdminActivityEditPage() {
           </form>
         </Card>
 
-        {/* ── 方案管理 ── */}
-        <PlansSection plans={plans} activityId={activityId} activitySlug={activitySlug || activityId} onChange={setPlans} />
+        {/* ── 正式方案改由專屬頁管理 ── */}
+        <Card style={{ marginTop: 24, border: '1px solid #86efac', background: '#f0fdf4' }}>
+          <h3 style={{ ...sectionTitle, marginBottom: 8 }}>📋 正式方案編輯入口</h3>
+          <p style={{ color: '#166534', margin: 0, lineHeight: 1.6 }}>
+            正式方案（rich contract）已移至專屬頁集中管理，避免與活動主編輯頁重複維護。
+          </p>
+          <p style={{ color: '#166534', marginTop: 8, marginBottom: 8 }}>
+            目前 legacy plans 筆數：{plans.length}
+          </p>
+          <p style={{ color: '#166534', marginTop: 0, marginBottom: 12 }}>
+            方案欄位統一在專屬頁維護，這裡僅保留預設值/fallback 提示。
+          </p>
+          <a
+            href={`/admin/activities/${activityId}/plans`}
+            style={{
+              display: 'inline-block',
+              background: '#16a34a',
+              color: '#fff',
+              textDecoration: 'none',
+              padding: '10px 14px',
+              borderRadius: 8,
+              fontWeight: 700,
+            }}
+          >
+            前往「方案管理」完整編輯
+          </a>
+        </Card>
 
         {/* ── 行程時間表 Editor ── */}
         <Card style={{ marginTop: 24 }}>

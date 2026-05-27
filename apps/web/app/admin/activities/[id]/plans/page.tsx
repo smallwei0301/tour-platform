@@ -143,10 +143,21 @@ export default function ActivityPlansPage() {
         : `/api/v2/admin/activities/${activityId}/plans`;
       const method = editingPlan ? 'PUT' : 'POST';
 
+      const payload = {
+        ...form,
+        highlights: form.highlights.split('\n').map((x) => x.trim()).filter(Boolean),
+        plan_inclusions: form.plan_inclusions.split('\n').map((x) => x.trim()).filter(Boolean),
+        plan_exclusions: form.plan_exclusions.split('\n').map((x) => x.trim()).filter(Boolean),
+        plan_notices: form.plan_notices.split('\n').map((x) => x.trim()).filter(Boolean),
+        plan_refund_rules: form.plan_refund_rules.split('\n').map((x) => x.trim()).filter(Boolean),
+        confirm_by_days: form.confirm_by_days === '' ? undefined : Number(form.confirm_by_days),
+        free_cancel_days: form.free_cancel_days === '' ? undefined : Number(form.free_cancel_days),
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const json = await res.json();
 
@@ -300,7 +311,7 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>最少人數</label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
                   <input
                     type="number"
                     min="1"
@@ -310,7 +321,7 @@ export default function ActivityPlansPage() {
                   />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>最多人數</label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
                   <input
                     type="number"
                     min="1"
@@ -320,6 +331,66 @@ export default function ActivityPlansPage() {
                   />
                 </div>
               </div>
+
+              <details style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12, background: '#f9fafb' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#2563eb' }}>方案詳情內容（點擊展開）</summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>語言導覽
+                    <input type="text" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>「查看詳情」連結文字
+                      <input type="text" value={form.details_link_text} onChange={(e) => setForm({ ...form, details_link_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>預約按鈕文字
+                      <input type="text" value={form.booking_btn_text} onChange={(e) => setForm({ ...form, booking_btn_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最早可出發日
+                      <input type="date" value={form.earliest_departure} onChange={(e) => setForm({ ...form, earliest_departure: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最晚 N 天前確認
+                      <input type="number" min="0" value={form.confirm_by_days} onChange={(e) => setForm({ ...form, confirm_by_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>N 天前可免費取消
+                      <input type="number" min="0" value={form.free_cancel_days} onChange={(e) => setForm({ ...form, free_cancel_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                  </div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>亮點（每行一項）
+                    <textarea rows={3} value={form.highlights} onChange={(e) => setForm({ ...form, highlights: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用包含（每行一項）
+                    <textarea rows={3} value={form.plan_inclusions} onChange={(e) => setForm({ ...form, plan_inclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用不包含（每行一項）
+                    <textarea rows={3} value={form.plan_exclusions} onChange={(e) => setForm({ ...form, plan_exclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>行程圖片 URL（可多行）
+                    <textarea rows={2} value={form.plan_itinerary_image_url} onChange={(e) => setForm({ ...form, plan_itinerary_image_url: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地點名稱
+                      <input type="text" value={form.meeting_point_name} onChange={(e) => setForm({ ...form, meeting_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地址
+                      <input type="text" value={form.meeting_address} onChange={(e) => setForm({ ...form, meeting_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地點名稱
+                      <input type="text" value={form.experience_point_name} onChange={(e) => setForm({ ...form, experience_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地址
+                      <input type="text" value={form.experience_address} onChange={(e) => setForm({ ...form, experience_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                    </label>
+                  </div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>購買須知（每行一項）
+                    <textarea rows={3} value={form.plan_notices} onChange={(e) => setForm({ ...form, plan_notices: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>取消政策（每行一項）
+                    <textarea rows={3} value={form.plan_refund_rules} onChange={(e) => setForm({ ...form, plan_refund_rules: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
+                  </label>
+                </div>
+              </details>
               {editingPlan && (
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>狀態</label>
