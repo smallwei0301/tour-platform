@@ -40,6 +40,7 @@ export async function GET(req: Request) {
         base_price,
         status,
         booking_type,
+        min_participants,
         max_participants,
         activities!inner (
           id,
@@ -74,6 +75,7 @@ export async function GET(req: Request) {
           basePrice: row.base_price ?? null,
           status: row.status,
           bookingType: row.booking_type || null,
+          minParticipants: row.min_participants ?? null,
           maxParticipants: row.max_participants ?? null,
         };
       })
