@@ -2905,25 +2905,35 @@ export async function getActivityBySlugDb(slug, options = {}) {
         return [];
       }
     })(),
-    withActivityDetailTimeout(
-      supabase
-        .from('activity_plans')
-        .select(`
-          id, slug, name, duration_minutes, price_type, base_price,
-          min_participants, max_participants,
-          details_link_text, booking_btn_text, highlights,
-          language, earliest_departure, confirm_by_days, free_cancel_days,
-          plan_inclusions, plan_exclusions, plan_itinerary,
-          meeting_point_name, meeting_address,
-          experience_point_name, experience_address,
-          plan_notices, plan_refund_rules,
-          status
-        `)
-        .eq('activity_id', act.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: true }),
-      { timeoutMs: queryTimeoutMs, label: 'activity-plans' }
-    ).catch(() => ({ data: [], error: null })),
+    (async () => {
+      try {
+        const plansQuery = supabase.from('activity_plans');
+        if (!plansQuery || typeof plansQuery.select !== 'function') {
+          return { data: [], error: null };
+        }
+
+        return await withActivityDetailTimeout(
+          plansQuery
+            .select(`
+              id, slug, name, duration_minutes, price_type, base_price,
+              min_participants, max_participants,
+              details_link_text, booking_btn_text, highlights,
+              language, earliest_departure, confirm_by_days, free_cancel_days,
+              plan_inclusions, plan_exclusions, plan_itinerary,
+              meeting_point_name, meeting_address,
+              experience_point_name, experience_address,
+              plan_notices, plan_refund_rules,
+              status
+            `)
+            .eq('activity_id', act.id)
+            .eq('status', 'active')
+            .order('created_at', { ascending: true }),
+          { timeoutMs: queryTimeoutMs, label: 'activity-plans' }
+        );
+      } catch {
+        return { data: [], error: null };
+      }
+    })(),
   ]);
 
   const schedules = scheduleRes.data || [];
