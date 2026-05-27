@@ -128,8 +128,9 @@ export async function POST(
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid status'), { status: 400 });
   }
   const arrayFields = ['highlights', 'plan_inclusions', 'plan_exclusions', 'plan_notices', 'plan_refund_rules'] as const;
+  const bodyRecord = body as unknown as Record<string, unknown>;
   for (const key of arrayFields) {
-    if ((body as Record<string, unknown>)[key] !== undefined && !Array.isArray((body as Record<string, unknown>)[key])) {
+    if (bodyRecord[key] !== undefined && !Array.isArray(bodyRecord[key])) {
       return Response.json(errorV2('VALIDATION_ERROR', `${key} must be an array`), { status: 400 });
     }
   }

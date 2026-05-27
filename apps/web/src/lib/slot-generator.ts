@@ -59,6 +59,9 @@ export interface ActivityPlan {
   duration_minutes: number;
   max_participants: number;
   booking_type: 'scheduled' | 'request' | 'instant';
+  price_type?: 'per_person' | 'per_group' | null;
+  base_price?: number | null;
+  min_participants?: number | null;
 }
 
 export interface TimeSlot {
