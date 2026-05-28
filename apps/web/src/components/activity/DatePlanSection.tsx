@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
 import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
+import { getPlanScheduleForDate } from './plan-schedule-match';
 
 interface Schedule {
   startAt?: string;
@@ -78,61 +79,6 @@ const DEFAULT_PLANS: PlanConfig[] = [
     bookingBtnText: '立即預約',
   },
 ];
-
-// ── 工具函數：取得某日期 + 某方案的場次資訊 ──
-function getPlanScheduleForDate(
-  schedules: Schedule[],
-  date: string | null,
-  planId: string,
-): { schedule: Schedule | null; remaining: number; isFull: boolean; isOpen: boolean; isNotOpen: boolean } {
-  if (!date) return { schedule: null, remaining: 0, isFull: false, isOpen: false, isNotOpen: false };
-
-  let matchedSchedule: Schedule | null = null;
-  let totalRemaining = 0;
-  let hasMatch = false;
-  let hasOpen = false;
-  let hasNotOpen = false;
-
-  const toDateKey = (rawStartAt: string): string | null => {
-    const isoLikeMatch = rawStartAt.match(/^(\d{4}-\d{2}-\d{2})/);
-    if (isoLikeMatch) return isoLikeMatch[1];
-    const parsed = new Date(rawStartAt);
-    if (Number.isNaN(parsed.getTime())) return null;
-    return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
-  };
-
-  for (const s of schedules) {
-    const startAt = s.startAt || s.start_at || '';
-    const sPlanId = s.planId ?? s.plan_id ?? null;
-    const dateKey = toDateKey(startAt);
-    if (!dateKey) continue;
-    // 匹配日期 + 方案（plan_id=null 表示適用所有方案）
-    if (dateKey === date && (sPlanId === planId || sPlanId === null)) {
-      hasMatch = true;
-      if (!matchedSchedule) matchedSchedule = s;
-      const capacity = Number(s.capacity || 0);
-      const bookedCount = Number(s.bookedCount ?? s.booked_count ?? 0);
-      const remaining = capacity - bookedCount;
-      const status = s.status || (remaining <= 0 ? 'full' : 'open');
-      totalRemaining += Math.max(0, remaining);
-      if (status === 'open' && remaining > 0) hasOpen = true;
-      if (status === 'not-open') hasNotOpen = true;
-    }
-  }
-
-  if (hasMatch) {
-    return {
-      schedule: matchedSchedule,
-      remaining: totalRemaining,
-      isFull: !hasOpen && !hasNotOpen,
-      isOpen: hasOpen,
-      isNotOpen: !hasOpen && hasNotOpen,
-    };
-  }
-
-  // 該日期 + 方案沒有場次 → 未開放
-  return { schedule: null, remaining: 0, isFull: false, isOpen: false, isNotOpen: true };
-}
 
 // 簡單 SVG 圖示（純黑線條，無填色）
 const ICONS = {
@@ -295,8 +241,8 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           const origPrice = Math.round(planPrice * 1.25);
           const isSelected = selectedPlan === plan.id;
 
-          // 取得該方案在選中日期的可用性
-          const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id);
+          // 取得該方案在選中日期的可用性（傳入 knownPlanIds 以防 V2 UUID↔legacy slug ID 空間不一致）
+          const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id, PLANS.map((p) => p.id));
           const showFull = selectedDate && planAvail.isFull;
           const showNotOpen = selectedDate && planAvail.isNotOpen;
           const canBook = !selectedDate || planAvail.isOpen;

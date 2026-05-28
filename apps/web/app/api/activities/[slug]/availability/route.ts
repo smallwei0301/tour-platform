@@ -1,5 +1,5 @@
 import { ok, fail } from '../../../../../src/lib/api';
-import { getV2ActivityAvailability } from '../../../../../src/lib/availability-v2/activity-day-availability';
+import { getV2ActivityAvailability, v2HasGeneratedSlots } from '../../../../../src/lib/availability-v2/activity-day-availability';
 
 export const dynamic = 'force-dynamic';
 
@@ -159,6 +159,31 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
           dateTo,
           participants,
         });
+
+        // When V2 produced zero candidate slots across the entire window, the
+        // activity is not yet configured in V2 (no guide_availability_rules).
+        // This is distinct from "genuinely full" (slotCount>0, status='full').
+        // Fall back to the legacy snapshot so traveler-facing availability is not
+        // inadvertently grayed out. v2-no-generated-slots header enables observability.
+        if (!v2HasGeneratedSlots(v2.plans)) {
+          try {
+            const legacySchedules = await loadLegacySchedules(supabase, activityRow.id, slug);
+            if (legacySchedules.length > 0) {
+              const sMaxAge = resolveCacheTierSeconds(legacySchedules);
+              return Response.json(ok({ schedules: legacySchedules, source: 'legacy_fallback' }), {
+                headers: {
+                  'cache-control': `public, s-maxage=${sMaxAge}, stale-while-revalidate=${Math.max(30, sMaxAge * 2)}`,
+                  'x-availability-cache-tier': String(sMaxAge),
+                  'x-availability-source': 'legacy-fallback',
+                  'x-availability-requested-mode': requestedMode,
+                  'x-availability-fallback-reason': 'v2-no-generated-slots',
+                },
+              });
+            }
+          } catch {
+            // Legacy also unavailable → fall through to return the V2 result as-is
+          }
+        }
 
         const schedules: AvailabilitySchedule[] = v2.plans.map((row) => ({
           id: null,
