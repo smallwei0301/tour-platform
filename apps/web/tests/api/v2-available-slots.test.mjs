@@ -426,7 +426,7 @@ test('errorV2 response format matches API spec', () => {
 });
 
 test('route resolves slug activity key and plan slug before validation', async () => {
-  const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(src, /const activityIdLookupColumn = isUuidLike\(activityKey\) \? 'id' : 'slug'/);
@@ -444,7 +444,7 @@ test('route resolves slug activity key and plan slug before validation', async (
 });
 
 test('route supports optional scheduleId mapping + validation for legacy public URL flow', async () => {
-  const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(src, /const scheduleId = searchParams\.get\('scheduleId'\)/);
@@ -476,7 +476,7 @@ test('parseAndValidateParams rejects invalid scheduleId format', () => {
 });
 
 test('route enforces unformed-group min participants and Chinese copy contract', async () => {
-  const rel = 'app/api/v2/activities/[activityId]/available-slots/route.ts';
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
   assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);

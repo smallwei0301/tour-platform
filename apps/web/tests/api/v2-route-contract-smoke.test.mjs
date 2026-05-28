@@ -13,9 +13,9 @@ async function readRoute(relPath) {
 }
 
 test('available-slots route contract smoke: has validation + success/error envelope', async () => {
-  const src = await readRoute('app/api/v2/activities/[activityId]/available-slots/route.ts');
+  const src = await readRoute('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
 
-  assert.match(src, /export\s+async\s+function\s+GET\s*\(/);
+  assert.match(src, /export\s+async\s+function\s+getAvailableSlots\s*\(/);
   assert.match(src, /parseAndValidateParams\(/);
   assert.match(src, /code:\s*'VALIDATION_ERROR'/);
   assert.match(src, /errorV2\('NOT_FOUND'/);
