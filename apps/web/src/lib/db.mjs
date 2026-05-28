@@ -1491,11 +1491,15 @@ export async function updateSettlementRulesDb(supabase, patch, createdBy) {
  * @returns {Promise<Array>} orders with nested activities and activity_schedules
  */
 export async function getUnsettledOrdersDb(supabase, tDays) {
+  // Issue #847: only `completed` orders enter payout (per
+  // docs/05-business/06-payment-plan/03-settlement-rules.md §5). Orders in
+  // `paid`/`confirmed` are pre-completion; `refund_pending`/`refunded` are
+  // excluded by definition.
   const cutoff = new Date(Date.now() - tDays * 24 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('orders')
-    .select('id, total_twd, activity_id, schedule_id, activities!inner(guide_id), activity_schedules!inner(start_at)')
-    .in('status', ['paid', 'confirmed', 'completed'])
+    .select('id, total_twd, activity_id, schedule_id, activities!inner(guide_id), activity_schedules!inner(start_at), operations_tracking(refund_amount_twd)')
+    .eq('status', 'completed')
     .lte('activity_schedules.start_at', cutoff)
     .not('id', 'in', supabase.from('payout_items').select('order_id'))
   if (error) throw error
