@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication language
+
+When responding to the user in chat (explanations, summaries, status updates, questions), always reply in Traditional Chinese (繁體中文 / zh-Hant). Keep code, identifiers, file paths, and Conventional-Commit message prefixes (`feat:`/`fix:` …) in their existing English form.
+
 ## What this is
 
 Tour Platform (brand: **Midao / 祕島**) — a Taiwan local-guide tour marketplace. Travelers browse activities, book slots, pay (ECPay), and manage orders; guides manage availability and bookings; admins run a back-office POS/order/refund console. Most product/operations docs and code comments are in Traditional Chinese.
