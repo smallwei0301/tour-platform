@@ -7,7 +7,7 @@ const THEMES = [
     desc: '鑽進高雄的秘密地下世界，探索億萬年石灰岩洞穴',
     href: '/theme/cave-exploration',
     image:
-      'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=800&q=80',
+      '/images/activities/chaishan/main.jpg',
     color: 'rgba(74,92,58,0.75)',
   },
   {
