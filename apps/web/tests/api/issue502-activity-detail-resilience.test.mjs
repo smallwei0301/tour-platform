@@ -174,6 +174,117 @@ function createSupabaseStubWithPrimaryError({
   };
 }
 
+function createSupabaseStubForFormalPlanFallback() {
+  const validActivity = {
+    id: 'act-1',
+    slug: 'safe-slug',
+    title: 'Safe Activity',
+    tagline: 'tag',
+    short_description: 'short',
+    description: 'desc',
+    region: '台北市',
+    region_slug: 'taipei',
+    category: 'walk',
+    price_twd: 1000,
+    duration_minutes: 120,
+    min_participants: 1,
+    max_participants: 10,
+    meeting_point: 'm',
+    meeting_point_map_url: null,
+    cover_image_url: null,
+    image_urls: [],
+    inclusions: [],
+    exclusions: [],
+    notices: [],
+    refund_rules: [],
+    safety_notice: null,
+    faq: [],
+    plans: [
+      { id: 'legacy-half-day', label: 'half-day-morning' },
+      { id: 'legacy-full-day', label: 'full-day-complete' },
+    ],
+    status: 'published',
+    guide_id: null,
+    guide_slug: null,
+  };
+
+  return {
+    from(table) {
+      const state = {
+        table,
+        selected: '',
+      };
+
+      return {
+        select(fields) {
+          state.selected = String(fields || '');
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        in() {
+          return this;
+        },
+        order() {
+          return this;
+        },
+        limit() {
+          return this;
+        },
+        async single() {
+          if (state.table === 'activities') {
+            return { data: validActivity, error: null };
+          }
+          return { data: null, error: null };
+        },
+        async maybeSingle() {
+          return { data: null, error: null };
+        },
+        then(resolve, reject) {
+          if (state.table === 'activity_schedules') {
+            return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+          }
+
+          if (state.table === 'activity_reviews') {
+            return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+          }
+
+          if (state.table === 'activity_plans') {
+            // Simulate old schema: rich + retry selects fail due missing optional columns,
+            // but minimal select should still work and return formal active plans.
+            if (state.selected.includes('details_link_text')) {
+              return Promise.resolve({
+                data: null,
+                error: { message: 'column activity_plans.details_link_text does not exist' },
+              }).then(resolve, reject);
+            }
+
+            return Promise.resolve({
+              data: [
+                {
+                  id: 'plan-half-day-uuid',
+                  slug: 'half-day-morning',
+                  name: '半日',
+                  duration_minutes: 240,
+                  price_type: 'per_person',
+                  base_price: 1800,
+                  min_participants: 1,
+                  max_participants: 4,
+                  status: 'active',
+                },
+              ],
+              error: null,
+            }).then(resolve, reject);
+          }
+
+          return Promise.resolve({ data: [], error: null }).then(resolve, reject);
+        },
+      };
+    },
+  };
+}
+
 function createSupabaseStubForOptionalQueryFailure() {
   const hangingQuery = () => new Promise(() => {});
   const validActivity = {
@@ -489,6 +600,30 @@ test('getActivityBySlugDb should return null for no-row / not found responses', 
   try {
     const activity = await getActivityBySlugDb('safe-slug');
     assert.equal(activity, null);
+  } finally {
+    __setSupabaseClientForTest(null);
+    process.env.SUPABASE_URL = original.SUPABASE_URL;
+    process.env.SUPABASE_SERVICE_ROLE_KEY = original.SUPABASE_SERVICE_ROLE_KEY;
+  }
+});
+
+test('getActivityBySlugDb falls back to minimal formal plan projection when optional activity_plans columns are missing', async () => {
+  const original = {
+    SUPABASE_URL: process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  };
+  process.env.SUPABASE_URL = 'http://local.test';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+  __setSupabaseClientForTest(createSupabaseStubForFormalPlanFallback());
+
+  try {
+    const activity = await getActivityBySlugDb('safe-slug');
+    assert.equal(activity?.slug, 'safe-slug');
+    assert.equal(Array.isArray(activity?.plans), true);
+    assert.equal(activity?.plans?.length, 1);
+    assert.equal(activity?.plans?.[0]?.id, 'plan-half-day-uuid');
+    assert.equal(activity?.plans?.[0]?.label, '半日');
   } finally {
     __setSupabaseClientForTest(null);
     process.env.SUPABASE_URL = original.SUPABASE_URL;

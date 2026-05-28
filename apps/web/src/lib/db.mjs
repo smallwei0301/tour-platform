@@ -2939,7 +2939,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
           return richResult;
         }
 
-        return await withActivityDetailTimeout(
+        const retryResult = await withActivityDetailTimeout(
           supabase
             .from('activity_plans')
             .select(`
@@ -2952,6 +2952,23 @@ export async function getActivityBySlugDb(slug, options = {}) {
             .eq('activity_id', act.id)
             .order('created_at', { ascending: true }),
           { timeoutMs: queryTimeoutMs, label: 'activity-plans-retry' }
+        );
+
+        if (!retryResult?.error) {
+          return retryResult;
+        }
+
+        return await withActivityDetailTimeout(
+          supabase
+            .from('activity_plans')
+            .select(`
+              id, slug, name, duration_minutes, price_type, base_price,
+              min_participants, max_participants,
+              status
+            `)
+            .eq('activity_id', act.id)
+            .order('created_at', { ascending: true }),
+          { timeoutMs: queryTimeoutMs, label: 'activity-plans-minimal' }
         );
       } catch {
         return { data: [], error: null };
