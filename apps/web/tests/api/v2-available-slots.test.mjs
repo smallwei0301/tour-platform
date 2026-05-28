@@ -461,6 +461,21 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /capacityLeft:\s*Math\.min\(remaining,\s*plan\.max_participants\)/);
 });
 
+test('issue838: legacy_plan_id lookup must not hard-require status=active (status-null formal rows are valid)', async () => {
+  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
+
+  const legacyLookupStart = src.indexOf(".eq('legacy_plan_id', planKey)");
+  assert.ok(legacyLookupStart >= 0, 'must keep legacy_plan_id fallback lookup');
+
+  const legacyLookupWindow = src.slice(legacyLookupStart, legacyLookupStart + 260);
+  assert.equal(
+    legacyLookupWindow.includes(".eq('status', 'active')"),
+    false,
+    'legacy_plan_id lookup must not exclude status-null formal rows by forcing status=active'
+  );
+});
+
 test('parseAndValidateParams rejects invalid scheduleId format', () => {
   const activityId = '550e8400-e29b-41d4-a716-446655440000';
   const planId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
