@@ -587,6 +587,38 @@ img { max-width: 100%; height: auto; }
 .tp-theme-card-body p { margin: 0 0 8px; font-size: 13px; opacity: 0.9; }
 .tp-theme-card-link { font-size: 13px; font-weight: 700; color: #fff; }
 
+/* --- Scroll row (horizontal carousel with desktop arrows) --- */
+.tp-scroll-row { position: relative; }
+.tp-scroll-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #fff;
+  color: #333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: opacity 0.15s ease, background 0.15s ease, visibility 0.15s ease;
+}
+.tp-scroll-arrow:hover { background: #f4f4f4; }
+.tp-scroll-arrow:focus-visible { outline: 2px solid var(--tp-primary); outline-offset: 2px; }
+.tp-scroll-arrow-left { left: -6px; }
+.tp-scroll-arrow-right { right: -6px; }
+.tp-scroll-arrow[data-visible="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+@media (max-width: 768px) {
+  .tp-scroll-arrow { display: none; }
+}
+
 /* --- Footer redesign --- */
 .tp-footer-main-grid {
   display: grid;

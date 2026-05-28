@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ScrollRow } from '../ui/ScrollRow';
 
 const THEMES = [
   {
@@ -61,7 +62,7 @@ export function ThemeCtas() {
             全部主題 →
           </Link>
         </div>
-        <div className="tp-theme-scroll">
+        <ScrollRow className="tp-theme-scroll" ariaLabel="特色主題">
           {THEMES.map((t) => (
             <Link
               key={t.href}
@@ -78,7 +79,7 @@ export function ThemeCtas() {
               </div>
             </Link>
           ))}
-        </div>
+        </ScrollRow>
       </div>
     </section>
   );
