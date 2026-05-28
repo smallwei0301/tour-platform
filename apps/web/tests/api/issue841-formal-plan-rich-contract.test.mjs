@@ -424,4 +424,103 @@ describe('GH-841 formal plan rich contract', () => {
       else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
     }
   });
+
+  it('activity detail falls back to legacy plans when all formal plans are inactive/archived', async () => {
+    const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
+    const originalUrl = process.env.SUPABASE_URL;
+    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+    const activityRow = {
+      id: 'act-3',
+      slug: 'fallback-to-legacy-from-archived',
+      title: 'legacy fallback',
+      price_twd: 1200,
+      duration_minutes: 180,
+      min_participants: 1,
+      max_participants: 4,
+      plans: [
+        { id: 'legacy-arch', label: 'Legacy 方案', price: 18, priceMultiplier: 0.01 },
+      ],
+      status: 'published',
+      guide_id: null,
+      guide_slug: null,
+    };
+
+    const formalPlanRows = [
+      {
+        id: 'inactive-plan',
+        slug: 'formal-inactive',
+        name: '停用正式方案',
+        duration_minutes: 180,
+        price_type: 'per_person',
+        base_price: 5000,
+        min_participants: 1,
+        max_participants: 4,
+        status: 'inactive',
+      },
+      {
+        id: 'archived-plan',
+        slug: 'formal-archived',
+        name: '封存正式方案',
+        duration_minutes: 180,
+        price_type: 'per_person',
+        base_price: 5500,
+        min_participants: 1,
+        max_participants: 4,
+        status: 'archived',
+      },
+    ];
+
+    function chain(table, ctx = {}) {
+      return {
+        select() {
+          return chain(table, ctx);
+        },
+        eq(column, value) {
+          return chain(table, { ...ctx, [column]: value });
+        },
+        in() {
+          return chain(table, ctx);
+        },
+        order() {
+          if (table === 'activity_schedules') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_reviews') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_plans') {
+            return Promise.resolve({ data: formalPlanRows, error: null });
+          }
+          return Promise.resolve({ data: [], error: null });
+        },
+        single() {
+          if (table === 'activities' && ctx.slug === 'fallback-to-legacy-from-archived') {
+            return Promise.resolve({ data: activityRow, error: null });
+          }
+          return Promise.resolve({ data: null, error: { message: 'not found' } });
+        },
+        maybeSingle() {
+          return Promise.resolve({ data: null, error: null });
+        },
+        limit() {
+          return Promise.resolve({ data: [], error: null });
+        },
+      };
+    }
+
+    dbMod.__setSupabaseClientForTest({ from: (table) => chain(table) });
+
+    try {
+      const activity = await dbMod.getActivityBySlugDb('fallback-to-legacy-from-archived');
+      assert.ok(Array.isArray(activity?.plans), 'plans should exist');
+      assert.equal(activity.plans[0].id, 'legacy-arch');
+      assert.equal(activity.plans[0].price || activity.plans[0].basePrice, 18);
+    } finally {
+      dbMod.__setSupabaseClientForTest(null);
+      if (originalUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+    }
+  });
 });

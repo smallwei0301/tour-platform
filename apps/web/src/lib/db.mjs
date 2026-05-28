@@ -2943,7 +2943,11 @@ export async function getActivityBySlugDb(slug, options = {}) {
   const schedules = scheduleRes.data || [];
 
   const reviews = reviewsRes || [];
-  const formalPlans = formalPlansRes.data || [];
+  const rawFormalPlans = formalPlansRes.data || [];
+  const formalPlans = rawFormalPlans.filter((plan) => {
+    const status = plan?.status;
+    return status === null || status === undefined || status === 'active';
+  });
 
   return mapActivityDetailRow(act, schedules, reviews, guideProfile, formalPlans);
 }
