@@ -3320,6 +3320,19 @@ export async function updateActivityStatusDb(id, status) {
   if (!validStatuses.includes(status)) throw new Error('invalid status');
 
   const supabase = await getSupabase();
+
+  // ── Issue #881: Booking readiness gate before publishing ─────────────────
+  if (status === 'published') {
+    const { validateActivityBookability } = await import('./booking-readiness/validate-activity-bookability.mjs');
+    const check = await validateActivityBookability(id, { supabase });
+    if (!check.ok) {
+      const err = new Error('BOOKING_READINESS_FAILED');
+      err.code = 'BOOKING_READINESS_FAILED';
+      err.details = check.blockers;
+      throw err;
+    }
+  }
+
   const patch = { status, updated_at: new Date().toISOString() };
   if (status === 'published') patch.published_at = new Date().toISOString();
 
