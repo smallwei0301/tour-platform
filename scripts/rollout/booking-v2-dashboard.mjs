@@ -197,6 +197,10 @@ async function main() {
       purchaseIntentRatePct: pct(purchaseIntent, beginCheckout),
       paymentSuccessRatePct: pct(paymentSucceeded, callbackReceived),
       fallbackRateVsV2PageViewPct: pct(fallbackClicked, bookingPageViewV2),
+      // checkout-init success: begin_checkout→purchase_intent proxy until checkout_initiated event is instrumented
+      checkoutInitiated: beginCheckout,
+      checkoutInitSucceeded: purchaseIntent,
+      ...(beginCheckout > 0 ? { checkoutInitSuccessRatePct: pct(purchaseIntent, beginCheckout) } : {}),
     },
     orders: { paid: paidOrders, failed: failedOrders },
     bookings: { completed: completedBookings, cancelled: cancelledBookings },
@@ -213,6 +217,7 @@ async function main() {
       'booking_page_view and booking_v2_fallback_clicked are now first-class events.',
       'rollout_variant=legacy|v2 is read from events.properties.rollout_variant.',
       'latency metrics require event.properties.latency_ms instrumentation to be present.',
+      'checkoutInitiated/checkoutInitSucceeded use begin_checkout→purchase_intent as a proxy; a dedicated checkout_initiated event would give a more precise signal.',
     ],
   };
 
@@ -227,7 +232,8 @@ async function main() {
 `- purchase_intent: ${report.funnel.purchaseIntent} (${report.funnel.purchaseIntentRatePct}%)\n` +
 `- payment_callback_received: ${report.funnel.paymentCallbackReceived}\n` +
 `- payment_succeeded: ${report.funnel.paymentSucceeded} (${report.funnel.paymentSuccessRatePct}%)\n` +
-`- booking_v2_fallback_clicked: ${report.funnel.fallbackClicked} (${report.funnel.fallbackRateVsV2PageViewPct}% of v2 page views)\n\n` +
+`- booking_v2_fallback_clicked: ${report.funnel.fallbackClicked} (${report.funnel.fallbackRateVsV2PageViewPct}% of v2 page views)\n` +
+`- checkout_init_success: ${report.funnel.checkoutInitSucceeded}/${report.funnel.checkoutInitiated} (${report.funnel.checkoutInitSuccessRatePct != null ? report.funnel.checkoutInitSuccessRatePct + '%' : 'N/A — no begin_checkout events'})\n\n` +
 `## Orders / Bookings\n` +
 `- orders.paid: ${report.orders.paid}\n` +
 `- orders.failed: ${report.orders.failed}\n` +
