@@ -3,6 +3,12 @@
  *
  * These are static (source-analysis) tests — they verify the route.ts implementation
  * contains the required logic without making HTTP calls.
+ *
+ * Membership of the readiness array was refreshed by issue #844 to align with the
+ * current first-payment / soft-launch gates (#714 / #828 / #838 / #724 / #605 /
+ * #318 / #319). The three originally-asserted closed-issue gates (#402 / #500 /
+ * #403) were retired together with this update — see issue844-go-no-go-current-gates.test.mjs
+ * for the regression guard that keeps them out.
  */
 
 import { describe, it } from 'node:test';
@@ -19,6 +25,16 @@ const routePath = path.resolve(
 
 const source = readFileSync(routePath, 'utf-8');
 
+const EVIDENCE_GATES = [
+  { id: 'evidence-alert-drill',      issueRef: '#714', env: 'EVIDENCE_714_SIGNED' },
+  { id: 'evidence-first-payment-qa', issueRef: '#828', env: 'EVIDENCE_828_SIGNED' },
+  { id: 'evidence-booking-v2-qa',    issueRef: '#838', env: 'EVIDENCE_838_SIGNED' },
+  { id: 'evidence-restore-drill',    issueRef: '#724', env: 'EVIDENCE_724_SIGNED' },
+  { id: 'evidence-guide-content',    issueRef: '#605', env: 'EVIDENCE_605_SIGNED' },
+  { id: 'evidence-guide-onboarding', issueRef: '#318', env: 'EVIDENCE_318_SIGNED' },
+  { id: 'evidence-cs-sop',           issueRef: '#319', env: 'EVIDENCE_319_SIGNED' },
+];
+
 describe('issue #505 — go-no-go evidence-driven HOLD', () => {
   it('ReadinessStatus type includes evidence_required', () => {
     assert.ok(
@@ -34,108 +50,31 @@ describe('issue #505 — go-no-go evidence-driven HOLD', () => {
     );
   });
 
-  it('route has evidence-real-payment item (issue #402)', () => {
-    assert.ok(
-      source.includes("id: 'evidence-real-payment'"),
-      'readiness array must include evidence-real-payment item'
-    );
-    assert.ok(
-      source.includes("issueRef: '#402'"),
-      'evidence-real-payment must reference issue #402'
-    );
-  });
-
-  it('route checks EVIDENCE_402_SIGNED env var', () => {
-    assert.ok(
-      source.includes('EVIDENCE_402_SIGNED'),
-      'route must check EVIDENCE_402_SIGNED env var'
-    );
-  });
-
-  it('route has evidence-manual-regression item (issue #500)', () => {
-    assert.ok(
-      source.includes("id: 'evidence-manual-regression'"),
-      'readiness array must include evidence-manual-regression item'
-    );
-    assert.ok(
-      source.includes("issueRef: '#500'"),
-      'evidence-manual-regression must reference issue #500'
-    );
-  });
-
-  it('route checks EVIDENCE_500_SIGNED env var', () => {
-    assert.ok(
-      source.includes('EVIDENCE_500_SIGNED'),
-      'route must check EVIDENCE_500_SIGNED env var'
-    );
-  });
-
-  it('route has evidence-traveler-browser item (issue #403)', () => {
-    assert.ok(
-      source.includes("id: 'evidence-traveler-browser'"),
-      'readiness array must include evidence-traveler-browser item'
-    );
-    assert.ok(
-      source.includes("issueRef: '#403'"),
-      'evidence-traveler-browser must reference issue #403'
-    );
-  });
-
-  it('route checks EVIDENCE_403_SIGNED env var', () => {
-    assert.ok(
-      source.includes('EVIDENCE_403_SIGNED'),
-      'route must check EVIDENCE_403_SIGNED env var'
-    );
-  });
-
-  it('route has evidence-guide-onboarding item (issue #318)', () => {
-    assert.ok(
-      source.includes("id: 'evidence-guide-onboarding'"),
-      'readiness array must include evidence-guide-onboarding item'
-    );
-    assert.ok(
-      source.includes("issueRef: '#318'"),
-      'evidence-guide-onboarding must reference issue #318'
-    );
-  });
-
-  it('route checks EVIDENCE_318_SIGNED env var', () => {
-    assert.ok(
-      source.includes('EVIDENCE_318_SIGNED'),
-      'route must check EVIDENCE_318_SIGNED env var'
-    );
-  });
-
-  it('route has evidence-cs-sop item (issue #319)', () => {
-    assert.ok(
-      source.includes("id: 'evidence-cs-sop'"),
-      'readiness array must include evidence-cs-sop item'
-    );
-    assert.ok(
-      source.includes("issueRef: '#319'"),
-      'evidence-cs-sop must reference issue #319'
-    );
-  });
-
-  it('route checks EVIDENCE_319_SIGNED env var', () => {
-    assert.ok(
-      source.includes('EVIDENCE_319_SIGNED'),
-      'route must check EVIDENCE_319_SIGNED env var'
-    );
-  });
-
-  it('all 5 evidence items are present', () => {
-    const evidenceIds = [
-      'evidence-real-payment',
-      'evidence-manual-regression',
-      'evidence-traveler-browser',
-      'evidence-guide-onboarding',
-      'evidence-cs-sop',
-    ];
-    for (const id of evidenceIds) {
+  for (const gate of EVIDENCE_GATES) {
+    it(`route has ${gate.id} item (issue ${gate.issueRef})`, () => {
       assert.ok(
-        source.includes(`id: '${id}'`),
-        `readiness array must include ${id}`
+        source.includes(`id: '${gate.id}'`),
+        `readiness array must include ${gate.id} item`
+      );
+      assert.ok(
+        source.includes(`issueRef: '${gate.issueRef}'`),
+        `${gate.id} must reference issue ${gate.issueRef}`
+      );
+    });
+
+    it(`route checks ${gate.env} env var`, () => {
+      assert.ok(
+        source.includes(gate.env),
+        `route must check ${gate.env} env var`
+      );
+    });
+  }
+
+  it(`all ${EVIDENCE_GATES.length} evidence items are present`, () => {
+    for (const gate of EVIDENCE_GATES) {
+      assert.ok(
+        source.includes(`id: '${gate.id}'`),
+        `readiness array must include ${gate.id}`
       );
     }
   });
