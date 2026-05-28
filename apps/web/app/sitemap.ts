@@ -1,11 +1,16 @@
 import type { MetadataRoute } from 'next';
+import { getActivitySitemapEntries } from '../src/lib/sitemap-activities.mjs';
 
 const BLOG_SLUGS = [
   'why-private-guide',
   'chaishan-cave-guide',
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+// Sitemap reads the published-activity catalog; revalidate hourly so crawlers
+// don't trigger a DB read on every request.
+export const revalidate = 3600;
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const now = new Date();
   return [
@@ -29,5 +34,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${baseUrl}/legal/privacy`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${baseUrl}/legal/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${baseUrl}/legal/refund`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
+    ...(await getActivitySitemapEntries({ baseUrl, now })),
   ];
 }
