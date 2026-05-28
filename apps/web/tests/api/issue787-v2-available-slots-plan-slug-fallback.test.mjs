@@ -76,6 +76,7 @@ test('issue787 behavior: legacy plan slug + schedule fallback succeeds when sche
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: scheduleId, plan_id: null } },
     { terminal: 'limit', table: 'activity_plans', data: [{ id: fallbackPlanId }] },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: scheduleId, activity_id: activityId, plan_id: null, start_at: '2026-07-01T09:00:00.000Z', end_at: '2026-07-01T11:00:00.000Z', capacity: 10, booked_count: 2, status: 'open' } },
@@ -101,6 +102,7 @@ test('issue787 behavior: legacy plan slug + schedule fallback succeeds when sche
   supabase.assertAllConsumed();
 });
 
+
 test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN (#882 contract update)', async () => {
   // Original #787 returned 400 VALIDATION_ERROR. #880 narrowed it to 404
   // PLAN_NOT_FOUND. #882 split that further: ambiguous resolution now returns
@@ -111,6 +113,7 @@ test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN
 
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: scheduleId, plan_id: null } },
     { terminal: 'limit', table: 'activity_plans', data: [{ id: 'a' }, { id: 'b' }] },

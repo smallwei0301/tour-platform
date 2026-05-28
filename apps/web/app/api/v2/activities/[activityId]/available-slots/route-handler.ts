@@ -241,8 +241,6 @@ export async function getAvailableSlots(
     }
 
     const resolvedPlanId = resolved.planId;
-
-    // Validate request params
     const validation = parseAndValidateParams(resolvedActivityId, resolvedPlanId, searchParams);
     if ('error' in validation) {
       return Response.json(errorV2(validation.error.code, validation.error.message), {
