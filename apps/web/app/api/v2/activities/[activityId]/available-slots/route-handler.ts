@@ -212,6 +212,23 @@ export async function getAvailableSlots(
       });
     }
 
+    // Issue #880: unresolved plan slugs return 404 PLAN_NOT_FOUND with the
+    // requested key in details, so client UIs have a stable contract for
+    // localized "this plan is no longer bookable" messaging. The 400
+    // VALIDATION_ERROR path is reserved for real input format issues.
+    const planNotFound = () =>
+      Response.json(
+        {
+          success: false,
+          error: {
+            code: 'PLAN_NOT_FOUND',
+            message: 'Activity plan not found or no longer bookable',
+            details: { planKey, activityId: resolvedActivityId },
+          },
+        },
+        { status: 404 },
+      );
+
     let resolvedPlanId = planKey;
     if (!isUuidLike(resolvedPlanId)) {
       const scheduleKey = searchParams.get('scheduleId');
@@ -232,9 +249,7 @@ export async function getAvailableSlots(
             .maybeSingle();
 
           if (legacyScheduleError || !legacyScheduleRow?.id) {
-            return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-              status: 400,
-            });
+            return planNotFound();
           }
 
           if (legacyScheduleRow.plan_id && isUuidLike(legacyScheduleRow.plan_id)) {
@@ -248,17 +263,13 @@ export async function getAvailableSlots(
               .limit(2);
 
             if (activePlansError || !activePlans || activePlans.length !== 1 || !isUuidLike(activePlans[0].id)) {
-              return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-                status: 400,
-              });
+              return planNotFound();
             }
 
             resolvedPlanId = activePlans[0].id;
           }
         } else {
-          return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-            status: 400,
-          });
+          return planNotFound();
         }
       } else {
         resolvedPlanId = planRow.id;
@@ -614,10 +625,13 @@ export async function getAvailableSlots(
           };
         }
       } else {
+        // Issue #880: clamp at plan.max_participants so the response never
+        // advertises more seats than the per-group ceiling, even when
+        // schedule.capacity (legacy seed) exceeds plan.max.
         const scheduleSlot: SerializedSlot = {
           startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), params.timezone),
           endAt: formatDateWithTimezone(new Date(selectedSchedule.end_at), params.timezone),
-          capacityLeft: remaining,
+          capacityLeft: Math.min(remaining, plan.max_participants),
           bookingType: plan.booking_type,
           isAvailable: true,
         };
