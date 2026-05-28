@@ -152,11 +152,60 @@ test('issue787 behavior: status-null formal plan legacy_plan_id fallback returns
   supabase.assertAllConsumed();
 });
 
+test('issue838 behavior: full-day-complete falls back to same-activity derived slug full-day', async () => {
+  const activityId = '11111111-1111-1111-1111-111111111111';
+  const resolvedPlanId = '77777777-7777-4777-8777-777777777777';
+
+  const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: { id: resolvedPlanId } },
+    {
+      terminal: 'single',
+      table: 'activity_plans',
+      data: {
+        id: resolvedPlanId,
+        activity_id: activityId,
+        duration_minutes: 480,
+        min_participants: 1,
+        max_participants: 10,
+        booking_type: 'scheduled',
+        status: 'active',
+        activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' },
+      },
+    },
+    { terminal: 'or', table: 'guide_availability_rules', data: [] },
+    { terminal: 'then', table: 'guide_blackout_dates', data: [] },
+    { terminal: 'in', table: 'bookings', data: [] },
+  ]);
+
+  const response = await getAvailableSlots(
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=full-day-complete&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    { params: Promise.resolve({ activityId }) },
+    { createClient: async () => supabase.client }
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.data.planId, resolvedPlanId);
+
+  const derivedSlugLookup = supabase.calls.find((call) =>
+    call.table === 'activity_plans' &&
+    call.terminal === 'maybeSingle' &&
+    call.filters.some((f) => f[0] === 'eq' && f[1] === 'slug' && f[2] === 'full-day')
+  );
+  assert.ok(derivedSlugLookup, 'should fallback to derived slug lookup in current activity scope');
+  supabase.assertAllConsumed();
+});
+
 test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN (#882 contract update)', async () => {
   // Original #787 returned 400 VALIDATION_ERROR. #880 narrowed it to 404
   // PLAN_NOT_FOUND. #882 split that further: ambiguous resolution now returns
   // 409 AMBIGUOUS_PLAN with a localized message so client UIs can prompt
   // travelers to reselect from the activity page.
+
   const activityId = '11111111-1111-1111-1111-111111111111';
   const scheduleId = '22222222-2222-2222-2222-222222222222';
 
