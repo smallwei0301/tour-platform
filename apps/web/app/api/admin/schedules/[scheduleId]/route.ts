@@ -7,7 +7,13 @@ export async function PUT(request: Request, context: { params: Promise<{ schedul
   try {
     const data = await updateScheduleDb(scheduleId, body);
     return Response.json(ok(data));
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'SCHEDULE_CAPACITY_EXCEEDS_PLAN') {
+      return Response.json(
+        fail('SCHEDULE_CAPACITY_EXCEEDS_PLAN', err.messageZh ?? '場次人數上限超過方案上限'),
+        { status: 422 },
+      );
+    }
     const message = err instanceof Error ? err.message : 'unknown error';
     return Response.json(fail('SERVER_ERROR', message), { status: 500 });
   }
