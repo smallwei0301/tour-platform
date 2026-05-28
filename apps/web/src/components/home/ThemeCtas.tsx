@@ -53,7 +53,7 @@ const THEMES = [
 
 export function ThemeCtas() {
   return (
-    <section className="tp-section">
+    <section className="tp-section" style={{ paddingTop: 0 }}>
       <div className="tp-container">
         <div className="tp-section-head">
           <h2>🏷️ 特色主題</h2>

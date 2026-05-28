@@ -101,11 +101,11 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
       />
       <HeroSection />
-      <ValueTrustSection />
+      <ThemeCtas />
       <FeaturedTours />
       <StoryProofSection />
       <DestinationsSection />
-      <ThemeCtas />
+      <ValueTrustSection />
       <GuideSpotlight />
       <FaqSection />
     </>
