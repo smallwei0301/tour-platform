@@ -22,7 +22,8 @@
     "regression:issue-217:plan-linkage": "bash scripts/phase12/run-issue-217-plan-linkage-guardrails.sh",
     "preflight:schema-drift": "node scripts/production-schema-drift-preflight.mjs",
     "readiness:snapshot": "node scripts/readiness/generate-live-state-snapshot.mjs",
-    "readiness:check": "node scripts/readiness/check-snapshot-freshness.mjs"
+    "readiness:check": "node scripts/readiness/check-snapshot-freshness.mjs",
+    "taxonomy:check": "node scripts/taxonomy/check-labels.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
