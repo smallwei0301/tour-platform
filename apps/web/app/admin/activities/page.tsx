@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
-import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
+import { ResponsiveTable, ResponsiveModal, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type Activity = {
   id: string;
@@ -111,6 +112,82 @@ export default function AdminActivitiesPage() {
     }
   }
 
+  const activityColumns: ResponsiveColumn<Activity>[] = [
+    {
+      key: 'title', header: '行程名稱', mobilePriority: 'title',
+      cell: (a) => (
+        <Link href={`/admin/activities/${a.id}/edit`} style={{ color: 'var(--tp-primary, #16a34a)', fontWeight: 600, textDecoration: 'none' }}>
+          {a.title?.length > 30 ? a.title.slice(0, 30) + '…' : a.title}
+        </Link>
+      ),
+    },
+    {
+      key: 'status', header: '狀態', mobilePriority: 'subtitle',
+      cell: (a) => {
+        const badge = STATUS_BADGE[a.status] || { variant: 'default' as const, label: a.status };
+        return <Badge variant={badge.variant}>{badge.label}</Badge>;
+      },
+    },
+    { key: 'guide', header: '導遊', mobileLabel: '導遊', cell: (a) => a.guideName || a.guideSlug || '—' },
+    { key: 'region', header: '地區', mobileLabel: '地區', cell: (a) => a.region || '—' },
+    { key: 'category', header: '類別', mobileLabel: '類別', cell: (a) => a.category || '—' },
+    { key: 'price', header: '價格', mobileLabel: '價格', cell: (a) => `NT$${a.priceTwd?.toLocaleString() ?? 0}` },
+    { key: 'schedules', header: '場次', mobileLabel: '場次', cell: (a) => String(a.scheduleCount ?? 0) },
+    {
+      key: 'actions', header: '操作', mobileLabel: '操作',
+      cell: (a) => (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <Link
+            href={`/admin/activities/${a.id}/edit`}
+            style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#f0f0f0', textDecoration: 'none', color: '#333' }}
+          >
+            編輯
+          </Link>
+          <Link
+            href={`/admin/activities/${a.id}/plans`}
+            style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#ecfdf5', textDecoration: 'none', color: '#059669' }}
+          >
+            方案
+          </Link>
+          {a.status === 'draft' && (
+            <button
+              onClick={() => handleStatusChange(a.id, 'published')}
+              disabled={busy === a.id}
+              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#dcfce7', color: '#166534', border: 'none', cursor: 'pointer' }}
+            >
+              發佈
+            </button>
+          )}
+          {a.status === 'published' && (
+            <button
+              onClick={() => handleStatusChange(a.id, 'archived')}
+              disabled={busy === a.id}
+              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fef9c3', color: '#854d0e', border: 'none', cursor: 'pointer' }}
+            >
+              下架
+            </button>
+          )}
+          {a.status === 'archived' && (
+            <button
+              onClick={() => handleStatusChange(a.id, 'draft')}
+              disabled={busy === a.id}
+              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#dbeafe', color: '#1e40af', border: 'none', cursor: 'pointer' }}
+            >
+              重新編輯
+            </button>
+          )}
+          <button
+            onClick={() => setDeleteTarget(a)}
+            disabled={busy === a.id}
+            style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fee2e2', color: '#991b1b', border: 'none', cursor: 'pointer' }}
+          >
+            刪除
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <>
       <PageHeader
@@ -133,9 +210,9 @@ export default function AdminActivitiesPage() {
         }
       />
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="admin-page">
         {/* Status tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.value}
@@ -146,7 +223,7 @@ export default function AdminActivitiesPage() {
                 fontSize: 14, cursor: 'pointer',
                 borderBottom: statusFilter === tab.value ? '2px solid var(--tp-primary, #16a34a)' : '2px solid transparent',
                 color: statusFilter === tab.value ? 'var(--tp-primary, #16a34a)' : '#666',
-                marginBottom: -2,
+                marginBottom: -2, flexShrink: 0,
               }}
             >
               {tab.label}
@@ -155,143 +232,52 @@ export default function AdminActivitiesPage() {
         </div>
 
         <Card>
-          {loading ? (
-            <LoadingSkeleton />
-          ) : activities.length === 0 ? (
-            <EmptyState message={statusFilter ? `沒有${STATUS_BADGE[statusFilter]?.label || ''}行程` : '尚無行程'} />
-          ) : (
-            <TableWrapper>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <Th>行程名稱</Th>
-                    <Th>導遊</Th>
-                    <Th>地區</Th>
-                    <Th>類別</Th>
-                    <Th>價格</Th>
-                    <Th>場次</Th>
-                    <Th>狀態</Th>
-                    <Th>操作</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activities.map((a) => {
-                    const badge = STATUS_BADGE[a.status] || { variant: 'default' as const, label: a.status };
-                    return (
-                      <tr key={a.id}>
-                        <Td>
-                          <Link href={`/admin/activities/${a.id}/edit`} style={{ color: 'var(--tp-primary, #16a34a)', fontWeight: 600, textDecoration: 'none' }}>
-                            {a.title?.length > 30 ? a.title.slice(0, 30) + '…' : a.title}
-                          </Link>
-                        </Td>
-                        <Td>{a.guideName || a.guideSlug || '—'}</Td>
-                        <Td>{a.region || '—'}</Td>
-                        <Td>{a.category || '—'}</Td>
-                        <Td>NT${a.priceTwd?.toLocaleString()}</Td>
-                        <Td>{a.scheduleCount ?? 0}</Td>
-                        <Td><Badge variant={badge.variant}>{badge.label}</Badge></Td>
-                        <Td>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <Link
-                              href={`/admin/activities/${a.id}/edit`}
-                              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#f0f0f0', textDecoration: 'none', color: '#333' }}
-                            >
-                              編輯
-                            </Link>
-                            <Link
-                              href={`/admin/activities/${a.id}/plans`}
-                              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#ecfdf5', textDecoration: 'none', color: '#059669' }}
-                            >
-                              方案
-                            </Link>
-                            {a.status === 'draft' && (
-                              <button
-                                onClick={() => handleStatusChange(a.id, 'published')}
-                                disabled={busy === a.id}
-                                style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#dcfce7', color: '#166534', border: 'none', cursor: 'pointer' }}
-                              >
-                                發佈
-                              </button>
-                            )}
-                            {a.status === 'published' && (
-                              <button
-                                onClick={() => handleStatusChange(a.id, 'archived')}
-                                disabled={busy === a.id}
-                                style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fef9c3', color: '#854d0e', border: 'none', cursor: 'pointer' }}
-                              >
-                                下架
-                              </button>
-                            )}
-                            {a.status === 'archived' && (
-                              <button
-                                onClick={() => handleStatusChange(a.id, 'draft')}
-                                disabled={busy === a.id}
-                                style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#dbeafe', color: '#1e40af', border: 'none', cursor: 'pointer' }}
-                              >
-                                重新編輯
-                              </button>
-                            )}
-                            <button
-                              onClick={() => setDeleteTarget(a)}
-                              disabled={busy === a.id}
-                              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#fee2e2', color: '#991b1b', border: 'none', cursor: 'pointer' }}
-                            >
-                              刪除
-                            </button>
-                          </div>
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TableWrapper>
-          )}
+          <ResponsiveTable
+            columns={activityColumns}
+            rows={activities}
+            getRowKey={(a) => a.id}
+            loading={loading}
+            emptyMessage={statusFilter ? `沒有${STATUS_BADGE[statusFilter]?.label || ''}行程` : '尚無行程'}
+          />
         </Card>
       </div>
 
       {/* ── 刪除確認 Dialog ── */}
-      {deleteTarget && (
-        <>
-          <div
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000 }}
-            onClick={() => !deleting && setDeleteTarget(null)}
-          />
-          <div style={{
-            position: 'fixed', top: '50%', left: '50%',
-            transform: 'translate(-50%, -50%)',
-            background: '#fff', borderRadius: 12, padding: 28,
-            zIndex: 1001, width: 380, maxWidth: '90vw',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-          }}>
-            <h3 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 10px', color: '#111' }}>
-              🗑️ 確認刪除行程
-            </h3>
-            <p style={{ fontSize: 14, color: '#374151', marginBottom: 8 }}>
+      <ResponsiveModal
+        open={!!deleteTarget}
+        onClose={() => !deleting && setDeleteTarget(null)}
+        size="sm"
+        title="🗑️ 確認刪除行程"
+        footer={
+          <>
+            <button
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+              style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
+            >
+              取消
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              style={{ padding: '9px 20px', borderRadius: 8, background: '#dc2626', color: '#fff', border: 'none', cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: deleting ? 0.7 : 1 }}
+            >
+              {deleting ? '刪除中⋯' : '確認刪除'}
+            </button>
+          </>
+        }
+      >
+        {deleteTarget && (
+          <>
+            <p style={{ fontSize: 14, color: '#374151', marginTop: 0, marginBottom: 8 }}>
               即將刪除：<strong>{deleteTarget.title}</strong>
             </p>
-            <p style={{ fontSize: 13, color: '#dc2626', background: '#fee2e2', padding: '10px 14px', borderRadius: 8, marginBottom: 20 }}>
+            <p style={{ fontSize: 13, color: '#dc2626', background: '#fee2e2', padding: '10px 14px', borderRadius: 8, margin: 0 }}>
               ⚠️ 此操作不可復原。行程資料及所有已上傳的圖片都將永久刪除。
             </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setDeleteTarget(null)}
-                disabled={deleting}
-                style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}
-              >
-                取消
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                style={{ padding: '9px 20px', borderRadius: 8, background: '#dc2626', color: '#fff', border: 'none', cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 14, opacity: deleting ? 0.7 : 1 }}
-              >
-                {deleting ? '刪除中⋯' : '確認刪除'}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </ResponsiveModal>
     </>
   );
 }

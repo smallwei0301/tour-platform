@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, PageHeader, StatusBadge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, StatusBadge } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type RefundRow = {
@@ -51,52 +52,77 @@ export default function AdminRefundsPage() {
     </button>
   );
 
+  const refundColumns: ResponsiveColumn<RefundRow>[] = [
+    {
+      key: 'id', header: 'Refund ID', mobilePriority: 'hidden',
+      cell: (r) => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{r.id.slice(0, 10)}…</span>,
+    },
+    {
+      key: 'order', header: '訂單', mobilePriority: 'title',
+      cell: (r) => (
+        <>
+          <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{r.orderId.slice(0, 10)}…</span>
+          {r.orderStatus && <div style={{ marginTop: 2 }}><StatusBadge status={r.orderStatus} /></div>}
+        </>
+      ),
+    },
+    {
+      key: 'status', header: '狀態', mobilePriority: 'subtitle',
+      cell: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: 'reason', header: '原因', mobileLabel: '原因',
+      cell: (r) => (
+        <>
+          <span style={{ fontSize: 13 }}>{r.reason}</span>
+          {r.note && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{r.note}</div>}
+        </>
+      ),
+    },
+    {
+      key: 'amount', header: '金額', align: 'right', mobileLabel: '金額',
+      cell: (r) => <strong>NT${Number(r.totalTwd || 0).toLocaleString()}</strong>,
+    },
+    {
+      key: 'contact', header: '聯絡人', mobileLabel: '聯絡人',
+      cell: (r) => (
+        <>
+          <span style={{ fontSize: 13 }}>{r.contactName || '-'}</span>
+          {r.contactEmail && <div style={{ fontSize: 12, color: '#9ca3af' }}>{r.contactEmail}</div>}
+        </>
+      ),
+    },
+    {
+      key: 'requestedAt', header: '申請時間', mobileLabel: '申請',
+      cell: (r) => <span style={{ fontSize: 12, color: '#6b7280' }}>{r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('zh-TW') : '-'}</span>,
+    },
+    {
+      key: 'actions', header: '操作', mobileLabel: '操作',
+      cell: (r) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span data-guide="refund-approve">{actionBtn(r.id, 'approve', '通過', '#1B6B4A')}</span>
+          <span data-guide="refund-reject">{actionBtn(r.id, 'reject', '拒絕', '#dc2626')}</span>
+          {actionBtn(r.id, 'process', '處理中', '#d97706')}
+          {actionBtn(r.id, 'complete', '完成', '#6b7280')}
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="退款管理" subtitle="審核退款申請、追蹤退款進度" />
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="admin-page">
         <Card data-guide="refund-list">
-          {loading ? <LoadingSkeleton rows={6} /> : rows.length === 0 ? <EmptyState message="目前沒有退款申請 🎉" /> : (
-            <TableWrapper>
-              <thead>
-                <tr>
-                  <Th>Refund ID</Th><Th>訂單</Th><Th>狀態</Th><Th>原因</Th>
-                  <Th align="right">金額</Th><Th>聯絡人</Th><Th>申請時間</Th><Th>操作</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(r => (
-                  <tr key={r.id}>
-                    <Td><span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{r.id.slice(0,10)}…</span></Td>
-                    <Td>
-                      <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{r.orderId.slice(0,10)}…</span>
-                      {r.orderStatus && <div style={{ marginTop: 2 }}><StatusBadge status={r.orderStatus} /></div>}
-                    </Td>
-                    <Td><StatusBadge status={r.status} /></Td>
-                    <Td>
-                      <span style={{ fontSize: 13 }}>{r.reason}</span>
-                      {r.note && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{r.note}</div>}
-                    </Td>
-                    <Td align="right"><strong>NT${Number(r.totalTwd||0).toLocaleString()}</strong></Td>
-                    <Td>
-                      <span style={{ fontSize: 13 }}>{r.contactName || '-'}</span>
-                      {r.contactEmail && <div style={{ fontSize: 12, color: '#9ca3af' }}>{r.contactEmail}</div>}
-                    </Td>
-                    <Td><span style={{ fontSize: 12, color: '#6b7280' }}>{r.requestedAt ? new Date(r.requestedAt).toLocaleDateString('zh-TW') : '-'}</span></Td>
-                    <Td>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <span data-guide="refund-approve">{actionBtn(r.id, 'approve', '通過', '#1B6B4A')}</span>
-                        <span data-guide="refund-reject">{actionBtn(r.id, 'reject', '拒絕', '#dc2626')}</span>
-                        {actionBtn(r.id, 'process', '處理中', '#d97706')}
-                        {actionBtn(r.id, 'complete', '完成', '#6b7280')}
-                      </div>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </TableWrapper>
-          )}
+          <ResponsiveTable
+            columns={refundColumns}
+            rows={rows}
+            getRowKey={(r) => r.id}
+            loading={loading}
+            loadingRows={6}
+            emptyMessage="目前沒有退款申請 🎉"
+          />
         </Card>
       </div>
     </div>

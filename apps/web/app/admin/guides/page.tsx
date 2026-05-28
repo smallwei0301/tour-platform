@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/components/admin/ui';
+import { ResponsiveModal } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { AvatarUpload } from '../../../src/components/admin/AvatarUpload';
 
@@ -166,10 +167,14 @@ export default function AdminGuidesPage() {
       <PageHeader title="導遊管理" subtitle="審核申請、管理已上線導遊帳號" />
 
       {/* ── Invite Result Modal ── */}
-      {inviteResult && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700 }}>🔑 登入碼已產生</h3>
+      <ResponsiveModal
+        open={!!inviteResult}
+        onClose={() => setInviteResult(null)}
+        size="md"
+        title="🔑 登入碼已產生"
+      >
+        {inviteResult && (
+          <>
             <p style={{ margin: '0 0 16px', color: '#6b7280', fontSize: 14 }}>
               請將以下連結傳給 <strong>{inviteResult.guideName}</strong>，有效期至{' '}
               {new Date(inviteResult.expiresAt).toLocaleString('zh-TW')}
@@ -188,18 +193,21 @@ export default function AdminGuidesPage() {
                 關閉
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </ResponsiveModal>
 
       {/* ── Edit Guide Account Modal ── */}
-      {editState && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1001, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 440, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 4px', fontSize: 18, fontWeight: 700 }}>✏️ 編輯導遊帳號</h3>
+      <ResponsiveModal
+        open={!!editState}
+        onClose={() => setEditState(null)}
+        size="sm"
+        title="✏️ 編輯導遊帳號"
+      >
+        {editState && (
+          <>
             <p style={{ margin: '0 0 20px', color: '#6b7280', fontSize: 13 }}>{editState.guideName}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {/* Avatar Upload */}
               <div style={{ display: 'flex', justifyContent: 'center', paddingBottom: 8, borderBottom: '1px solid #f3f4f6' }}>
                 <AvatarUpload
                   guideId={editState.guideId}
@@ -236,21 +244,21 @@ export default function AdminGuidesPage() {
               )}
               {editState.error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>⚠️ {editState.error}</div>}
               {editState.success && <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 12px', color: '#16a34a', fontSize: 13 }}>{editState.success}</div>}
-              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
                 <button onClick={handleEditSave} disabled={editState.loading}
-                  style={{ flex: 1, padding: '10px 0', borderRadius: 8, border: 'none', background: editState.loading ? '#a78bfa' : '#7c3aed', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
+                  style={{ flex: '1 1 160px', padding: '10px 0', borderRadius: 8, border: 'none', background: editState.loading ? '#a78bfa' : '#7c3aed', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
                   {editState.loading ? '儲存中…' : '💾 儲存'}
                 </button>
                 <button onClick={() => setEditState(null)} style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 14 }}>取消</button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </ResponsiveModal>
 
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tabs */}
-        <Card style={{ padding: '10px 14px', display: 'flex', gap: 8 }}>
+        <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button style={tabStyle('applications')} onClick={() => setTab('applications')}>📋 導遊申請</button>
           <button style={tabStyle('profiles')} onClick={() => setTab('profiles')}>👤 已上線導遊</button>
         </Card>
@@ -258,7 +266,7 @@ export default function AdminGuidesPage() {
         {/* ── Applications Tab ── */}
         {tab === 'applications' && (
           <>
-            <Card style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Card className="admin-toolbar" style={{ padding: '14px 18px' }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>篩選狀態</span>
               <Select value={status} onChange={setStatus} style={{ minWidth: 160 }}>
                 <option value="">全部狀態</option>
@@ -266,7 +274,7 @@ export default function AdminGuidesPage() {
                 <option value="approved">已通過</option>
                 <option value="rejected">已拒絕</option>
               </Select>
-              <span style={{ fontSize: 13, color: '#9ca3af', marginLeft: 'auto' }}>共 {rows.length} 筆</span>
+              <span className="admin-toolbar-meta" style={{ fontSize: 13, color: '#9ca3af' }}>共 {rows.length} 筆</span>
             </Card>
 
             {loading ? (
@@ -274,7 +282,7 @@ export default function AdminGuidesPage() {
             ) : rows.length === 0 ? (
               <Card><EmptyState message="沒有符合條件的導遊申請" /></Card>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: 16 }}>
                 {rows.map(r => (
                   <Card key={r.id} style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -329,9 +337,9 @@ export default function AdminGuidesPage() {
         {/* ── Profiles Tab ── */}
         {tab === 'profiles' && (
           <>
-            <Card style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Card className="admin-toolbar" style={{ padding: '14px 18px' }}>
               <span style={{ fontSize: 13, color: '#6b7280' }}>已上線導遊帳號管理</span>
-              <span style={{ fontSize: 13, color: '#9ca3af', marginLeft: 'auto' }}>共 {profiles.length} 位</span>
+              <span className="admin-toolbar-meta" style={{ fontSize: 13, color: '#9ca3af' }}>共 {profiles.length} 位</span>
             </Card>
 
             {profilesLoading ? (
@@ -339,7 +347,7 @@ export default function AdminGuidesPage() {
             ) : profiles.length === 0 ? (
               <Card><EmptyState message="目前沒有已審核的導遊" /></Card>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
                 {profiles.map(p => {
                   const isSuspended = p.verification_status === 'suspended';
                   return (

@@ -48,12 +48,11 @@ export default function AdminSecuritySettingsPage() {
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="安全設定" subtitle="Admin Token 旋轉與強制登出所有 session" />
 
-      <div style={{ padding: '20px 28px', maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="admin-page" style={{ maxWidth: 720, display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Status */}
         <Card data-guide="security-version" style={{ padding: 20 }}>
           <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700, color: '#111' }}>目前安全狀態</h3>
-          <div className="admin-sec-status" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-            <style>{`@media (min-width: 480px) { .admin-sec-status { grid-template-columns: 1fr 1fr !important; } @media (min-width: 768px) { .admin-sec-status { grid-template-columns: 1fr 1fr 1fr !important; } } }`}</style>
+          <div className="admin-stat-grid-3">
             {[
               { label: 'Session Version', value: state?.sessionVersion ?? '-' },
               { label: 'Rotated At', value: state?.rotatedAt ? new Date(state.rotatedAt).toLocaleDateString('zh-TW') : '-' },

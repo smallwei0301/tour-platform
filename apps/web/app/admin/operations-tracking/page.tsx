@@ -22,7 +22,8 @@ function calcContribution(row: Row, kpiConfig?: { commissionRate?: number; payme
     finalContributionTwd: commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd,
   };
 }
-import { Card, PageHeader, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type Row = {
   orderId: string; orderDate: string; guideName: string; activityName: string;
@@ -78,6 +79,37 @@ export default function OperationsTrackingPage() {
   const inputStyle: React.CSSProperties = { width: '100%', border: '1px solid #e5e7eb', borderRadius: 8, padding: '7px 10px', fontSize: 13, marginTop: 3, boxSizing: 'border-box' };
   const labelStyle: React.CSSProperties = { display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginTop: 12 };
 
+  const opsColumns: ResponsiveColumn<Row>[] = [
+    {
+      key: 'orderId', header: 'Order', mobilePriority: 'hidden',
+      cell: (r) => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{r.orderId.slice(0, 10)}…</span>,
+    },
+    {
+      key: 'activity', header: '行程', mobilePriority: 'title',
+      cell: (r) => <span style={{ fontSize: 13 }}>{r.activityName || '-'}</span>,
+    },
+    {
+      key: 'healthy', header: '健康', mobilePriority: 'subtitle',
+      cell: (r) => <span style={{ fontSize: 16 }}>{r.isHealthyOrder ? '✅' : '⚠️'}</span>,
+    },
+    {
+      key: 'gmv', header: 'GMV', align: 'right', mobileLabel: 'GMV',
+      cell: (r) => <strong>NT${Number(r.gmv || 0).toLocaleString()}</strong>,
+    },
+    {
+      key: 'commission', header: '抽成', align: 'right', mobileLabel: '抽成',
+      cell: (r) => `NT$${Number(r.commissionTwd || 0).toLocaleString()}`,
+    },
+    {
+      key: 'final', header: '最終貢獻', align: 'right', mobileLabel: '最終貢獻',
+      cell: (r) => (
+        <span style={{ color: r.finalContributionTwd >= 0 ? '#15803d' : '#dc2626', fontWeight: 700 }}>
+          NT${Number(r.finalContributionTwd || 0).toLocaleString()}
+        </span>
+      ),
+    },
+  ];
+
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader
@@ -91,9 +123,9 @@ export default function OperationsTrackingPage() {
         }
       />
 
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Summary KPI */}
-        <div data-guide="ops-kpi" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px,1fr))', gap: 12 }}>
+        <div data-guide="ops-kpi" className="admin-stat-grid">
           {[
             { label: '總 GMV', value: `NT$${Number(totals.totalGmv||0).toLocaleString()}`, icon: '💰' },
             { label: '平台總收入', value: `NT$${Number(totals.totalCommissionTwd||0).toLocaleString()}`, icon: '📊' },
@@ -108,35 +140,19 @@ export default function OperationsTrackingPage() {
           ))}
         </div>
 
-        <div className="admin-ops-split" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, alignItems: 'start' }}>
-          <style>{`@media (min-width: 768px) { .admin-ops-split { grid-template-columns: 1.4fr 1fr !important; } }`}</style>
+        <div className="admin-split-grid">
           {/* Table */}
           <Card data-guide="ops-table">
-            {loading ? <LoadingSkeleton rows={8} /> : rows.length === 0 ? <EmptyState message="無操作追蹤資料" /> : (
-              <TableWrapper>
-                <thead>
-                  <tr>
-                    <Th>Order</Th><Th>行程</Th><Th align="right">GMV</Th>
-                    <Th align="right">抽成</Th><Th align="right">最終貢獻</Th><Th>健康</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(r => (
-                    <tr key={r.orderId} onClick={() => setSelected(r)}
-                      style={{ cursor: 'pointer', background: selected?.orderId === r.orderId ? '#f0fdf4' : 'transparent' }}>
-                      <Td><span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{r.orderId.slice(0,10)}…</span></Td>
-                      <Td><span style={{ fontSize: 13 }}>{r.activityName || '-'}</span></Td>
-                      <Td align="right"><strong>NT${Number(r.gmv||0).toLocaleString()}</strong></Td>
-                      <Td align="right">NT${Number(r.commissionTwd||0).toLocaleString()}</Td>
-                      <Td align="right" style={{ color: r.finalContributionTwd >= 0 ? '#15803d' : '#dc2626', fontWeight: 700 }}>
-                        NT${Number(r.finalContributionTwd||0).toLocaleString()}
-                      </Td>
-                      <Td style={{ textAlign: 'center', fontSize: 16 }}>{r.isHealthyOrder ? '✅' : '⚠️'}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TableWrapper>
-            )}
+            <ResponsiveTable
+              columns={opsColumns}
+              rows={rows}
+              getRowKey={(r) => r.orderId}
+              onRowClick={(r) => setSelected(r)}
+              selectedKey={selected?.orderId}
+              loading={loading}
+              loadingRows={8}
+              emptyMessage="無操作追蹤資料"
+            />
           </Card>
 
           {/* Edit Panel */}

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
-import { Card, PageHeader, StatusBadge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, StatusBadge } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type PayoutRow = {
   id: string;
@@ -46,95 +47,97 @@ export default function AdminPayoutsPage() {
     } finally { setBusyId(''); }
   }
 
+  const payoutColumns: ResponsiveColumn<PayoutRow>[] = [
+    {
+      key: 'id', header: 'Payout ID', mobilePriority: 'hidden',
+      cell: (r) => <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>{r.id.slice(0, 10)}…</span>,
+    },
+    {
+      key: 'guide', header: '導遊', mobilePriority: 'title',
+      cell: (r) => (
+        <>
+          <span style={{ fontSize: 13 }}>{r.guide_profiles?.display_name || '-'}</span>
+          {r.guide_profiles?.email && (
+            <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{r.guide_profiles.email}</div>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'amount', header: '金額', align: 'right', mobileLabel: '金額',
+      cell: (r) => <strong>NT${Number(r.total_twd || 0).toLocaleString()}</strong>,
+    },
+    {
+      key: 'state', header: '狀態', mobilePriority: 'subtitle',
+      cell: (r) => <StatusBadge status={r.state} />,
+    },
+    {
+      key: 'ref', header: '轉帳備註', mobileLabel: '備註',
+      cell: (r) => (
+        r.state === 'pending' ? (
+          <input
+            type="text"
+            placeholder="轉帳流水號"
+            value={transferRef[r.id] || ''}
+            onChange={e => setTransferRef(prev => ({ ...prev, [r.id]: e.target.value }))}
+            style={{ padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 12, width: '100%', maxWidth: 160, boxSizing: 'border-box' }}
+          />
+        ) : (
+          <span style={{ fontSize: 12, color: '#6b7280' }}>{r.transfer_ref || '-'}</span>
+        )
+      ),
+    },
+    {
+      key: 'created', header: '建立時間', mobileLabel: '建立',
+      cell: (r) => <span style={{ fontSize: 12, color: '#6b7280' }}>{r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW') : '-'}</span>,
+    },
+    {
+      key: 'actions', header: '操作', mobileLabel: '操作',
+      cell: (r) => (
+        <>
+          {r.state === 'pending' && (
+            <button
+              disabled={!!busyId}
+              onClick={() => confirmPayout(r.id)}
+              data-guide="payout-confirm"
+              style={{
+                padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 12,
+                fontWeight: 600, cursor: busyId ? 'not-allowed' : 'pointer',
+                background: busyId ? '#f1f5f9' : '#1B6B4A', color: '#fff',
+                opacity: busyId ? 0.6 : 1,
+              }}
+            >
+              {busyId === r.id ? '…' : '確認出款'}
+            </button>
+          )}
+          {r.state === 'paid' && (
+            <div style={{ fontSize: 12, color: '#6b7280' }}>
+              <div>已出款</div>
+              {r.confirmed_at && <div>{new Date(r.confirmed_at).toLocaleDateString('zh-TW')}</div>}
+            </div>
+          )}
+          {r.state === 'cancelled' && (
+            <span style={{ fontSize: 12, color: '#9ca3af' }}>已取消</span>
+          )}
+        </>
+      ),
+    },
+  ];
+
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="出款管理" subtitle="審核並確認導遊出款申請" />
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="admin-page">
         <Card data-guide="payout-list">
-          {loading ? <LoadingSkeleton rows={6} /> : rows.length === 0 ? <EmptyState message="目前沒有待出款紀錄 🎉" /> : (
-            <TableWrapper>
-              <thead>
-                <tr>
-                  <Th>Payout ID</Th>
-                  <Th>導遊</Th>
-                  <Th align="right">金額</Th>
-                  <Th>狀態</Th>
-                  <Th>轉帳備註</Th>
-                  <Th>建立時間</Th>
-                  <Th>操作</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(r => (
-                  <tr key={r.id}>
-                    <Td>
-                      <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#9ca3af' }}>
-                        {r.id.slice(0, 10)}…
-                      </span>
-                    </Td>
-                    <Td>
-                      <span style={{ fontSize: 13 }}>{r.guide_profiles?.display_name || '-'}</span>
-                      {r.guide_profiles?.email && (
-                        <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>{r.guide_profiles.email}</div>
-                      )}
-                    </Td>
-                    <Td align="right">
-                      <strong>NT${Number(r.total_twd || 0).toLocaleString()}</strong>
-                    </Td>
-                    <Td><StatusBadge status={r.state} /></Td>
-                    <Td>
-                      {r.state === 'pending' ? (
-                        <input
-                          type="text"
-                          placeholder="轉帳流水號"
-                          value={transferRef[r.id] || ''}
-                          onChange={e => setTransferRef(prev => ({ ...prev, [r.id]: e.target.value }))}
-                          style={{
-                            padding: '4px 8px', border: '1px solid #d1d5db', borderRadius: 6,
-                            fontSize: 12, width: 130,
-                          }}
-                        />
-                      ) : (
-                        <span style={{ fontSize: 12, color: '#6b7280' }}>{r.transfer_ref || '-'}</span>
-                      )}
-                    </Td>
-                    <Td>
-                      <span style={{ fontSize: 12, color: '#6b7280' }}>
-                        {r.created_at ? new Date(r.created_at).toLocaleDateString('zh-TW') : '-'}
-                      </span>
-                    </Td>
-                    <Td>
-                      {r.state === 'pending' && (
-                        <button
-                          disabled={!!busyId}
-                          onClick={() => confirmPayout(r.id)}
-                          data-guide="payout-confirm"
-                          style={{
-                            padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 12,
-                            fontWeight: 600, cursor: busyId ? 'not-allowed' : 'pointer',
-                            background: busyId ? '#f1f5f9' : '#1B6B4A', color: '#fff',
-                            opacity: busyId ? 0.6 : 1,
-                          }}
-                        >
-                          {busyId === r.id ? '…' : '確認出款'}
-                        </button>
-                      )}
-                      {r.state === 'paid' && (
-                        <div style={{ fontSize: 12, color: '#6b7280' }}>
-                          <div>已出款</div>
-                          {r.confirmed_at && <div>{new Date(r.confirmed_at).toLocaleDateString('zh-TW')}</div>}
-                        </div>
-                      )}
-                      {r.state === 'cancelled' && (
-                        <span style={{ fontSize: 12, color: '#9ca3af' }}>已取消</span>
-                      )}
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </TableWrapper>
-          )}
+          <ResponsiveTable
+            columns={payoutColumns}
+            rows={rows}
+            getRowKey={(r) => r.id}
+            loading={loading}
+            loadingRows={6}
+            emptyMessage="目前沒有待出款紀錄 🎉"
+          />
         </Card>
       </div>
     </div>

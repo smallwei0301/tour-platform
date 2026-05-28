@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type QAEntry = {
@@ -89,8 +90,84 @@ export default function AdminQAPage() {
 
   const pendingCount = qaList.filter(q => q.status === 'pending').length;
 
+  const qaColumns: ResponsiveColumn<QAEntry>[] = [
+    {
+      key: 'question', header: '問題 (question)', mobilePriority: 'title',
+      cell: (q) => <span style={{ fontSize: 13, color: '#374151' }}>{truncate(q.question, 80)}</span>,
+      tdStyle: { maxWidth: 220 },
+    },
+    {
+      key: 'status', header: '狀態 (status)', mobilePriority: 'subtitle',
+      cell: (q) => (
+        <Badge
+          variant={q.status === 'approved' ? 'success' : q.status === 'rejected' ? 'danger' : 'warning'}
+        >
+          {q.status === 'approved' ? '已核准' : q.status === 'rejected' ? '已拒絕' : '待審核'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'activity', header: '行程 ID (activity_id)', mobileLabel: '行程',
+      cell: (q) => <span style={{ fontSize: 12, wordBreak: 'break-all' }}>{q.activity_id || '—'}</span>,
+      tdStyle: { maxWidth: 140 },
+    },
+    {
+      key: 'answer', header: '現有回答 (answer)', mobileLabel: '現有回答',
+      cell: (q) => <span style={{ fontSize: 12, color: '#6b7280' }}>{q.answer ? truncate(q.answer, 60) : '—'}</span>,
+      tdStyle: { maxWidth: 200 },
+    },
+    {
+      key: 'created', header: '建立時間', mobileLabel: '建立',
+      cell: (q) => <span style={{ fontSize: 12 }}>{formatDate(q.created_at)}</span>,
+    },
+    {
+      key: 'actions', header: '填寫回答 / 操作', mobileLabel: '回答 / 操作',
+      cell: (q) => (
+        q.status === 'pending' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
+            <textarea
+              value={answerMap[q.id] ?? ''}
+              onChange={(e) => setAnswerMap((prev) => ({ ...prev, [q.id]: e.target.value }))}
+              placeholder="填寫回答（核准前必填）"
+              rows={3}
+              style={{
+                width: '100%', fontSize: 12, padding: '6px 8px',
+                border: '1px solid #d1d5db', borderRadius: 6,
+                resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => void handleAction(q.id, 'approved')}
+                disabled={actionLoading === q.id + 'approved'}
+                style={{
+                  fontSize: 12, color: '#10b981', background: 'none', border: '1px solid #10b981',
+                  borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
+                }}
+              >
+                {actionLoading === q.id + 'approved' ? '處理中...' : '核准'}
+              </button>
+              <button
+                onClick={() => void handleAction(q.id, 'rejected')}
+                disabled={actionLoading === q.id + 'rejected'}
+                style={{
+                  fontSize: 12, color: '#dc2626', background: 'none', border: '1px solid #dc2626',
+                  borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
+                }}
+              >
+                {actionLoading === q.id + 'rejected' ? '處理中...' : '拒絕'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
+        )
+      ),
+    },
+  ];
+
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="admin-page" style={{ maxWidth: 1200, margin: '0 auto' }}>
       <PageHeader
         title="Q&A管理"
         subtitle="審核旅客提交的行程問題，填寫回答後核准或拒絕"
@@ -139,89 +216,14 @@ export default function AdminQAPage() {
       )}
 
       <Card>
-        {loading ? (
-          <LoadingSkeleton rows={4} />
-        ) : qaList.length === 0 ? (
-          <EmptyState message={`目前沒有${statusFilter === 'pending' ? '待審核' : statusFilter === 'approved' ? '已核准' : statusFilter === 'rejected' ? '已拒絕' : ''}的問題。`} />
-        ) : (
-          <TableWrapper>
-            <thead>
-              <tr>
-                <Th>行程 ID (activity_id)</Th>
-                <Th>問題 (question)</Th>
-                <Th>現有回答 (answer)</Th>
-                <Th>狀態 (status)</Th>
-                <Th>建立時間</Th>
-                <Th>填寫回答 / 操作</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {qaList.map((q) => (
-                <tr key={q.id}>
-                  <Td style={{ fontSize: 12, maxWidth: 140, wordBreak: 'break-all' }}>{q.activity_id || '—'}</Td>
-                  <Td style={{ fontSize: 13, maxWidth: 220, color: '#374151' }}>{truncate(q.question, 80)}</Td>
-                  <Td style={{ fontSize: 12, maxWidth: 200, color: '#6b7280' }}>{q.answer ? truncate(q.answer, 60) : '—'}</Td>
-                  <Td>
-                    <Badge
-                      variant={
-                        q.status === 'approved' ? 'success'
-                          : q.status === 'rejected' ? 'danger'
-                          : 'warning'
-                      }
-                    >
-                      {q.status === 'approved' ? '已核准'
-                        : q.status === 'rejected' ? '已拒絕'
-                        : '待審核'}
-                    </Badge>
-                  </Td>
-                  <Td style={{ fontSize: 12 }}>{formatDate(q.created_at)}</Td>
-                  <Td>
-                    {q.status === 'pending' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 220 }}>
-                        <textarea
-                          value={answerMap[q.id] ?? ''}
-                          onChange={(e) => setAnswerMap((prev) => ({ ...prev, [q.id]: e.target.value }))}
-                          placeholder="填寫回答（核准前必填）"
-                          rows={3}
-                          style={{
-                            width: '100%', fontSize: 12, padding: '6px 8px',
-                            border: '1px solid #d1d5db', borderRadius: 6,
-                            resize: 'vertical', fontFamily: 'inherit',
-                          }}
-                        />
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button
-                            onClick={() => void handleAction(q.id, 'approved')}
-                            disabled={actionLoading === q.id + 'approved'}
-                            style={{
-                              fontSize: 12, color: '#10b981', background: 'none', border: '1px solid #10b981',
-                              borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
-                            }}
-                          >
-                            {actionLoading === q.id + 'approved' ? '處理中...' : '核准'}
-                          </button>
-                          <button
-                            onClick={() => void handleAction(q.id, 'rejected')}
-                            disabled={actionLoading === q.id + 'rejected'}
-                            style={{
-                              fontSize: 12, color: '#dc2626', background: 'none', border: '1px solid #dc2626',
-                              borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
-                            }}
-                          >
-                            {actionLoading === q.id + 'rejected' ? '處理中...' : '拒絕'}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {q.status !== 'pending' && (
-                      <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
-                    )}
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrapper>
-        )}
+        <ResponsiveTable
+          columns={qaColumns}
+          rows={qaList}
+          getRowKey={(q) => q.id}
+          loading={loading}
+          loadingRows={4}
+          emptyMessage={`目前沒有${statusFilter === 'pending' ? '待審核' : statusFilter === 'approved' ? '已核准' : statusFilter === 'rejected' ? '已拒絕' : ''}的問題。`}
+        />
       </Card>
     </div>
   );

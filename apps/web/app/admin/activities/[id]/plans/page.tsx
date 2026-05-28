@@ -3,7 +3,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
-import { Card, PageHeader, Badge, EmptyState, LoadingSkeleton, TableWrapper, Th, Td } from '../../../../../src/components/admin/ui';
+import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
+import { ResponsiveModal, ResponsiveTable, FormGrid, type ResponsiveColumn } from '../../../../../src/components/admin/responsive';
 
 type ActivityPlan = {
   id: string;
@@ -304,13 +305,13 @@ export default function ActivityPlansPage() {
       />
 
       {/* ── Modal ── */}
-      {showModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 560, width: '95%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingPlan ? '編輯方案' : '新增方案'}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <ResponsiveModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        size="md"
+        title={editingPlan ? '編輯方案' : '新增方案'}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
                 <input
@@ -331,8 +332,8 @@ export default function ActivityPlansPage() {
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }}
                 />
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
                   <input
                     type="number"
@@ -343,7 +344,7 @@ export default function ActivityPlansPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>計價方式</label>
                   <select
                     value={form.price_type}
@@ -355,8 +356,8 @@ export default function ActivityPlansPage() {
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
                   <input
                     type="number"
@@ -366,7 +367,7 @@ export default function ActivityPlansPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>預約方式</label>
                   <select
                     value={form.booking_type}
@@ -379,8 +380,8 @@ export default function ActivityPlansPage() {
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
                   <input
                     type="number"
@@ -390,7 +391,7 @@ export default function ActivityPlansPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
                   <input
                     type="number"
@@ -408,15 +409,15 @@ export default function ActivityPlansPage() {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>語言導覽
                     <input type="text" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <FormGrid cols={2} gap={10}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>「查看詳情」連結文字
                       <input type="text" value={form.details_link_text} onChange={(e) => setForm({ ...form, details_link_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                     </label>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>預約按鈕文字
                       <input type="text" value={form.booking_btn_text} onChange={(e) => setForm({ ...form, booking_btn_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                     </label>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                  </FormGrid>
+                  <FormGrid cols={3} gap={10}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最早可出發日
                       <input type="date" value={form.earliest_departure} onChange={(e) => setForm({ ...form, earliest_departure: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                     </label>
@@ -426,7 +427,7 @@ export default function ActivityPlansPage() {
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>N 天前可免費取消
                       <input type="number" min="0" value={form.free_cancel_days} onChange={(e) => setForm({ ...form, free_cancel_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                     </label>
-                  </div>
+                  </FormGrid>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>亮點（每行一項）
                     <textarea rows={3} value={form.highlights} onChange={(e) => setForm({ ...form, highlights: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
@@ -439,7 +440,7 @@ export default function ActivityPlansPage() {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>行程介紹（每行一個步驟，格式：文字 或 文字 | 圖片URL）
                     <textarea rows={4} value={form.plan_itinerary} onChange={(e) => setForm({ ...form, plan_itinerary: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <FormGrid cols={2} gap={10}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地點名稱
                       <input type="text" value={form.meeting_point_name} onChange={(e) => setForm({ ...form, meeting_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                     </label>
@@ -452,7 +453,7 @@ export default function ActivityPlansPage() {
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地址
                       <input type="text" value={form.experience_address} onChange={(e) => setForm({ ...form, experience_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                     </label>
-                  </div>
+                  </FormGrid>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>購買須知（每行一項）
                     <textarea rows={3} value={form.plan_notices} onChange={(e) => setForm({ ...form, plan_notices: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
@@ -480,7 +481,7 @@ export default function ActivityPlansPage() {
                   {error}
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 <button onClick={savePlan} disabled={saving} style={btn(saving ? '#86efac' : '#16a34a', '#fff')}>
                   {saving ? '儲存中...' : '儲存'}
                 </button>
@@ -489,13 +490,11 @@ export default function ActivityPlansPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </ResponsiveModal>
 
-      <div style={{ padding: '20px 28px' }}>
+      <div className="admin-page">
         {/* Status Filter */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0 }}>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
             { value: '', label: '全部' },
             { value: 'active', label: '啟用中' },
@@ -523,72 +522,57 @@ export default function ActivityPlansPage() {
         </div>
 
         <Card>
-          {loading ? (
-            <LoadingSkeleton />
-          ) : filteredPlans.length === 0 ? (
-            <EmptyState message={statusFilter ? `沒有${STATUS_CONFIG[statusFilter]?.label || ''}方案` : '尚無方案，點擊「新增方案」建立第一個'} />
-          ) : (
-            <TableWrapper>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    <Th>方案名稱</Th>
-                    <Th>時長</Th>
-                    <Th>價格</Th>
-                    <Th>人數</Th>
-                    <Th>預約方式</Th>
-                    <Th>狀態</Th>
-                    <Th>操作</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPlans.map((plan) => {
-                    const statusCfg = STATUS_CONFIG[plan.status] || { variant: 'default', label: plan.status };
-                    return (
-                      <tr key={plan.id}>
-                        <Td>
-                          <div style={{ fontWeight: 600 }}>{plan.name}</div>
-                          {plan.description && (
-                            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                              {plan.description.length > 50 ? plan.description.slice(0, 50) + '...' : plan.description}
-                            </div>
-                          )}
-                        </Td>
-                        <Td>{plan.duration_minutes} 分鐘</Td>
-                        <Td>
-                          NT${plan.base_price.toLocaleString()} / {PRICE_TYPE_LABELS[plan.price_type]}
-                        </Td>
-                        <Td>
-                          {plan.min_participants}-{plan.max_participants} 人
-                        </Td>
-                        <Td>{BOOKING_TYPE_LABELS[plan.booking_type]}</Td>
-                        <Td>
-                          <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
-                        </Td>
-                        <Td>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <button onClick={() => openModal(plan)} style={smallBtn('#f0f0f0', '#333')}>
-                              編輯
-                            </button>
-                            {plan.status !== 'archived' && (
-                              <button onClick={() => toggleStatus(plan)} style={smallBtn(plan.status === 'active' ? '#fef9c3' : '#dcfce7', plan.status === 'active' ? '#854d0e' : '#166534')}>
-                                {plan.status === 'active' ? '停用' : '啟用'}
-                              </button>
-                            )}
-                            {plan.status !== 'archived' && (
-                              <button onClick={() => archivePlan(plan.id)} style={smallBtn('#fee2e2', '#991b1b')}>
-                                封存
-                              </button>
-                            )}
-                          </div>
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </TableWrapper>
-          )}
+          <ResponsiveTable
+            columns={[
+              {
+                key: 'name', header: '方案名稱', mobilePriority: 'title',
+                cell: (plan: ActivityPlan) => (
+                  <>
+                    <div style={{ fontWeight: 600 }}>{plan.name}</div>
+                    {plan.description && (
+                      <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                        {plan.description.length > 50 ? plan.description.slice(0, 50) + '...' : plan.description}
+                      </div>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: 'status', header: '狀態', mobilePriority: 'subtitle',
+                cell: (plan: ActivityPlan) => {
+                  const cfg = STATUS_CONFIG[plan.status] || { variant: 'default', label: plan.status };
+                  return <Badge variant={cfg.variant}>{cfg.label}</Badge>;
+                },
+              },
+              { key: 'duration', header: '時長', mobileLabel: '時長', cell: (plan: ActivityPlan) => `${plan.duration_minutes} 分鐘` },
+              {
+                key: 'price', header: '價格', mobileLabel: '價格',
+                cell: (plan: ActivityPlan) => `NT$${plan.base_price.toLocaleString()} / ${PRICE_TYPE_LABELS[plan.price_type]}`,
+              },
+              { key: 'people', header: '人數', mobileLabel: '人數', cell: (plan: ActivityPlan) => `${plan.min_participants}-${plan.max_participants} 人` },
+              { key: 'booking', header: '預約方式', mobileLabel: '預約', cell: (plan: ActivityPlan) => BOOKING_TYPE_LABELS[plan.booking_type] },
+              {
+                key: 'actions', header: '操作', mobileLabel: '操作',
+                cell: (plan: ActivityPlan) => (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <button onClick={() => openModal(plan)} style={smallBtn('#f0f0f0', '#333')}>編輯</button>
+                    {plan.status !== 'archived' && (
+                      <button onClick={() => toggleStatus(plan)} style={smallBtn(plan.status === 'active' ? '#fef9c3' : '#dcfce7', plan.status === 'active' ? '#854d0e' : '#166534')}>
+                        {plan.status === 'active' ? '停用' : '啟用'}
+                      </button>
+                    )}
+                    {plan.status !== 'archived' && (
+                      <button onClick={() => archivePlan(plan.id)} style={smallBtn('#fee2e2', '#991b1b')}>封存</button>
+                    )}
+                  </div>
+                ),
+              },
+            ] as ResponsiveColumn<ActivityPlan>[]}
+            rows={filteredPlans}
+            getRowKey={(p: ActivityPlan) => p.id}
+            loading={loading}
+            emptyMessage={statusFilter ? `沒有${STATUS_CONFIG[statusFilter]?.label || ''}方案` : '尚無方案，點擊「新增方案」建立第一個'}
+          />
         </Card>
       </div>
     </div>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Review = {
@@ -82,8 +83,74 @@ export default function AdminReviewsPage() {
 
   const pendingCount = reviews.filter(r => r.status === 'pending').length;
 
+  const reviewColumns: ResponsiveColumn<Review>[] = [
+    {
+      key: 'author', header: '作者 (author)', mobilePriority: 'title',
+      cell: (r) => <span style={{ fontSize: 13 }}>{r.author || '—'}</span>,
+    },
+    {
+      key: 'status', header: '狀態 (status)', mobilePriority: 'subtitle',
+      cell: (r) => (
+        <Badge
+          variant={r.status === 'approved' ? 'success' : r.status === 'rejected' ? 'danger' : 'warning'}
+        >
+          {r.status === 'approved' ? '已核准' : r.status === 'rejected' ? '已拒絕' : '待審核'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'activity', header: '行程', mobileLabel: '行程',
+      cell: (r) => <span style={{ fontSize: 12, wordBreak: 'break-all' }}>{r.activity_slug || '—'}</span>,
+      tdStyle: { maxWidth: 160, wordBreak: 'break-all' },
+    },
+    {
+      key: 'rating', header: '評分 (rating)', mobileLabel: '評分',
+      cell: (r) => <span style={{ fontSize: 15, letterSpacing: 1, color: '#f59e0b' }}>{renderStars(r.rating)}</span>,
+    },
+    {
+      key: 'text', header: '評價內容', mobileLabel: '內容',
+      cell: (r) => <span style={{ fontSize: 12, color: '#374151' }}>{truncate(r.review_text)}</span>,
+      tdStyle: { maxWidth: 200 },
+    },
+    {
+      key: 'created', header: '建立時間', mobileLabel: '建立',
+      cell: (r) => <span style={{ fontSize: 12 }}>{formatDate(r.created_at)}</span>,
+    },
+    {
+      key: 'actions', header: '操作', mobileLabel: '操作',
+      cell: (r) => (
+        r.status === 'pending' ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              onClick={() => void handleAction(r.id, 'approved')}
+              disabled={actionLoading === r.id + 'approved'}
+              style={{
+                fontSize: 12, color: '#10b981', background: 'none', border: '1px solid #10b981',
+                borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              {actionLoading === r.id + 'approved' ? '處理中...' : '核准'}
+            </button>
+            <button
+              onClick={() => void handleAction(r.id, 'rejected')}
+              disabled={actionLoading === r.id + 'rejected'}
+              style={{
+                fontSize: 12, color: '#dc2626', background: 'none', border: '1px solid #dc2626',
+                borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              {actionLoading === r.id + 'rejected' ? '處理中...' : '拒絕'}
+            </button>
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
+        )
+      ),
+    },
+  ];
+
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="admin-page" style={{ maxWidth: 1200, margin: '0 auto' }}>
       <PageHeader
         title="評價管理"
         subtitle="審核旅客提交的行程評價，核准或拒絕後更新行程評分"
@@ -132,78 +199,14 @@ export default function AdminReviewsPage() {
       )}
 
       <Card>
-        {loading ? (
-          <LoadingSkeleton rows={4} />
-        ) : reviews.length === 0 ? (
-          <EmptyState message={`目前沒有${statusFilter === 'pending' ? '待審核' : statusFilter === 'approved' ? '已核准' : statusFilter === 'rejected' ? '已拒絕' : ''}的評價。`} />
-        ) : (
-          <TableWrapper>
-            <thead>
-              <tr>
-                <Th>作者 (author)</Th>
-                <Th>行程</Th>
-                <Th>評分 (rating)</Th>
-                <Th>評價內容</Th>
-                <Th>狀態 (status)</Th>
-                <Th>建立時間</Th>
-                <Th>操作</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {reviews.map((r) => (
-                <tr key={r.id}>
-                  <Td style={{ fontSize: 13 }}>{r.author || '—'}</Td>
-                  <Td style={{ fontSize: 12, maxWidth: 160, wordBreak: 'break-all' }}>{r.activity_slug || '—'}</Td>
-                  <Td style={{ fontSize: 15, letterSpacing: 1, color: '#f59e0b' }}>{renderStars(r.rating)}</Td>
-                  <Td style={{ fontSize: 12, maxWidth: 200, color: '#374151' }}>{truncate(r.review_text)}</Td>
-                  <Td>
-                    <Badge
-                      variant={
-                        r.status === 'approved' ? 'success'
-                          : r.status === 'rejected' ? 'danger'
-                          : 'warning'
-                      }
-                    >
-                      {r.status === 'approved' ? '已核准'
-                        : r.status === 'rejected' ? '已拒絕'
-                        : '待審核'}
-                    </Badge>
-                  </Td>
-                  <Td style={{ fontSize: 12 }}>{formatDate(r.created_at)}</Td>
-                  <Td>
-                    {r.status === 'pending' && (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          onClick={() => void handleAction(r.id, 'approved')}
-                          disabled={actionLoading === r.id + 'approved'}
-                          style={{
-                            fontSize: 12, color: '#10b981', background: 'none', border: '1px solid #10b981',
-                            borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
-                          }}
-                        >
-                          {actionLoading === r.id + 'approved' ? '處理中...' : '核准'}
-                        </button>
-                        <button
-                          onClick={() => void handleAction(r.id, 'rejected')}
-                          disabled={actionLoading === r.id + 'rejected'}
-                          style={{
-                            fontSize: 12, color: '#dc2626', background: 'none', border: '1px solid #dc2626',
-                            borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontWeight: 600,
-                          }}
-                        >
-                          {actionLoading === r.id + 'rejected' ? '處理中...' : '拒絕'}
-                        </button>
-                      </div>
-                    )}
-                    {r.status !== 'pending' && (
-                      <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
-                    )}
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrapper>
-        )}
+        <ResponsiveTable
+          columns={reviewColumns}
+          rows={reviews}
+          getRowKey={(r) => r.id}
+          loading={loading}
+          loadingRows={4}
+          emptyMessage={`目前沒有${statusFilter === 'pending' ? '待審核' : statusFilter === 'approved' ? '已核准' : statusFilter === 'rejected' ? '已拒絕' : ''}的評價。`}
+        />
       </Card>
     </div>
   );

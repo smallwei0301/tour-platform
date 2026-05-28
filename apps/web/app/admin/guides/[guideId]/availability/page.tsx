@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge, EmptyState, LoadingSkeleton } from '../../../../../src/components/admin/ui';
+import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/responsive';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -293,12 +294,12 @@ export default function GuideAvailabilityPage() {
       />
 
       {/* ── Rule Modal ── */}
-      {showRuleModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h3>
+      <ResponsiveModal
+        open={showRuleModal}
+        onClose={() => setShowRuleModal(false)}
+        size="sm"
+        title={editingRule ? '編輯時段規則' : '新增時段規則'}
+      >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
@@ -314,8 +315,8 @@ export default function GuideAvailabilityPage() {
                   ))}
                 </select>
               </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
+              <FormGrid cols={2} gap={12}>
+                <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
                   <input
                     type="time"
@@ -324,7 +325,7 @@ export default function GuideAvailabilityPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
                   <input
                     type="time"
@@ -333,9 +334,9 @@ export default function GuideAvailabilityPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-              </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
+              </FormGrid>
+              <FormGrid cols={2} gap={12}>
+                <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
                   <input
                     type="number"
@@ -346,7 +347,7 @@ export default function GuideAvailabilityPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-                <div style={{ flex: 1 }}>
+                <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
                   <input
                     type="number"
@@ -363,7 +364,7 @@ export default function GuideAvailabilityPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
-              </div>
+              </FormGrid>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
                 <input
                   type="checkbox"
@@ -377,7 +378,7 @@ export default function GuideAvailabilityPage() {
                   {error}
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 <button onClick={saveRule} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
                   {saving ? '儲存中...' : '儲存'}
                 </button>
@@ -386,17 +387,15 @@ export default function GuideAvailabilityPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </ResponsiveModal>
 
       {/* ── Blackout Modal ── */}
-      {showBlackoutModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>新增休假時段</h3>
+      <ResponsiveModal
+        open={showBlackoutModal}
+        onClose={() => setShowBlackoutModal(false)}
+        size="sm"
+        title="新增休假時段"
+      >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
@@ -431,7 +430,7 @@ export default function GuideAvailabilityPage() {
                   {error}
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                 <button onClick={saveBlackout} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
                   {saving ? '儲存中...' : '儲存'}
                 </button>
@@ -440,11 +439,9 @@ export default function GuideAvailabilityPage() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+      </ResponsiveModal>
 
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
           <Card>
             <LoadingSkeleton />
@@ -466,9 +463,9 @@ export default function GuideAvailabilityPage() {
                 {rules.length === 0 ? (
                   <EmptyState message="尚未設定可預約時段" />
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12 }}>
+                  <div className="admin-day-strip">
                     {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                      <div key={day} style={{ background: '#f9fafb', borderRadius: 12, padding: 12, minHeight: 100 }}>
+                      <div key={day} style={{ background: '#f9fafb', borderRadius: 12, padding: 12, minHeight: 100, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: day === 0 || day === 6 ? '#dc2626' : '#111' }}>
                           {WEEKDAY_LABELS[day]}
                         </div>
