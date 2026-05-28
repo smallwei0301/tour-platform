@@ -2931,7 +2931,6 @@ export async function getActivityBySlugDb(slug, options = {}) {
               status
             `)
             .eq('activity_id', act.id)
-            .eq('status', 'active')
             .order('created_at', { ascending: true }),
           { timeoutMs: queryTimeoutMs, label: 'activity-plans' }
         );
