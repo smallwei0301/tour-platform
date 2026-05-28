@@ -552,6 +552,24 @@ export default function ActivityPlansPage() {
           ))}
         </div>
 
+        {error && (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 10,
+              padding: '10px 14px',
+              color: '#b91c1c',
+              fontSize: 14,
+              marginBottom: 16,
+            }}
+          >
+            {error}
+          </div>
+        )}
+
         <Card>
           {loading ? (
             <LoadingSkeleton />
