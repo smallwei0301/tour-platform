@@ -12,16 +12,20 @@ async function readRoute(relPath) {
   return readFile(full, 'utf8');
 }
 
-test('available-slots route contract smoke: has validation + success/error envelope', async () => {
-  const src = await readRoute('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
+test('available-slots route contract smoke: route.ts is thin wrapper delegating to handler', async () => {
+  const routeSrc = await readRoute('app/api/v2/activities/[activityId]/available-slots/route.ts');
+  const handlerSrc = await readRoute(
+    'app/api/v2/activities/[activityId]/available-slots/route-handler.ts'
+  );
 
-  assert.match(src, /export\s+async\s+function\s+getAvailableSlots\s*\(/);
-  assert.match(src, /parseAndValidateParams\(/);
-  assert.match(src, /code:\s*'VALIDATION_ERROR'/);
-  assert.match(src, /errorV2\('NOT_FOUND'/);
-  assert.match(src, /successV2\(/);
-  assert.match(src, /slots:\s*slotsToReturn/);
-  assert.match(src, /messageZh:\s*slotsToReturn\.length === 0/);
+  assert.match(routeSrc, /import\s+\{\s*getAvailableSlots\s*\}\s+from\s+['"]\.\/route-handler['"]/);
+  assert.match(routeSrc, /export\s+async\s+function\s+GET\s*\(/);
+  assert.match(routeSrc, /return\s+getAvailableSlots\(request,\s*context\);/);
+
+  assert.match(handlerSrc, /export\s+async\s+function\s+getAvailableSlots\s*\(/);
+  assert.match(handlerSrc, /parseAndValidateParams\(/);
+  assert.match(handlerSrc, /Response\.json\(\s*errorV2\(/);
+  assert.match(handlerSrc, /Response\.json[\s\S]*successV2\(/);
 });
 
 test('booking draft route contract smoke: has validation + stateful errors + success envelope', async () => {

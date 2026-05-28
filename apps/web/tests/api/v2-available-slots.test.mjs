@@ -425,7 +425,7 @@ test('errorV2 response format matches API spec', () => {
   assert.equal(response.error.message, 'planId is required');
 });
 
-test('route resolves slug activity key and plan slug before validation', async () => {
+test('route-handler resolves slug activity key and plan slug before validation', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
@@ -443,7 +443,7 @@ test('route resolves slug activity key and plan slug before validation', async (
   assert.match(src, /parseAndValidateParams\(resolvedActivityId, resolvedPlanId, searchParams\)/);
 });
 
-test('route supports optional scheduleId mapping + validation for legacy public URL flow', async () => {
+test('route-handler supports optional scheduleId mapping + validation for legacy public URL flow', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
@@ -452,8 +452,10 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /\.from\('activity_schedules'\)/);
   assert.match(src, /\.eq\('id', params\.scheduleId\)/);
   assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
-  assert.match(src, /scheduleLocalDate < params\.dateFrom \|\| scheduleLocalDate > params\.dateTo/);
-  assert.match(src, /scheduleData\.plan_id && scheduleData\.plan_id !== params\.planId/);
+  assert.match(src, /if \(!scheduleError && scheduleData\)/);
+  assert.match(src, /const inDateRange = scheduleLocalDate >= params\.dateFrom && scheduleLocalDate <= params\.dateTo/);
+  assert.match(src, /const planMatches = !scheduleData\.plan_id \|\| scheduleData\.plan_id === params\.planId/);
+  assert.match(src, /if \(inDateRange && planMatches\)/);
   assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
   assert.match(src, /capacityLeft: remaining/);
 });
@@ -475,7 +477,7 @@ test('parseAndValidateParams rejects invalid scheduleId format', () => {
   assert.equal(result.error.message, 'Invalid scheduleId format');
 });
 
-test('route enforces unformed-group min participants and Chinese copy contract', async () => {
+test('route-handler enforces unformed-group min participants and Chinese copy contract', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
@@ -487,8 +489,8 @@ test('route enforces unformed-group min participants and Chinese copy contract',
   assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
   assert.match(src, /bookings: nonGroupConflictBookings/);
   assert.match(src, /slots: slotsToReturn/);
-  assert.match(src, /reason: slotsToReturn\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
-  assert.match(src, /messageZh: slotsToReturn\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+  assert.match(src, /reason: reasonCode/);
+  assert.match(src, /messageZh: reasonMessage/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {
