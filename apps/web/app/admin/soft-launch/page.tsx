@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader } from '../../../src/components/admin/ui';
+import { ResponsiveModal } from '../../../src/components/admin/responsive';
 
 interface SoftLaunchControls {
   public_paused: boolean;
@@ -226,55 +227,16 @@ export default function SoftLaunchPage() {
       </div>
 
       {/* ── Confirm dialog ── */}
-      {pendingKey && data && (() => {
-        const meta = CONTROL_META.find((m) => m.key === pendingKey)!;
+      {(() => {
+        const meta = pendingKey ? CONTROL_META.find((m) => m.key === pendingKey) : null;
         return (
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 500,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            {/* Backdrop */}
-            <div
-              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }}
-              onClick={closeDialog}
-            />
-            {/* Modal */}
-            <div style={{
-              position: 'relative', background: '#fff', borderRadius: 12,
-              width: '100%', maxWidth: 480, padding: 28,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            }}>
-              <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: '#111' }}>
-                確認變更
-              </h3>
-              <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6b7280' }}>
-                將 <strong>{meta.label}</strong> 設為{' '}
-                <strong style={{ color: pendingValue ? '#991b1b' : '#166534' }}>
-                  {pendingValue ? 'ON（啟用）' : 'OFF（關閉）'}
-                </strong>
-              </p>
-
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
-                變更原因 <span style={{ color: '#ef4444' }}>*</span>
-              </label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="請說明此次變更的原因..."
-                rows={3}
-                style={{
-                  width: '100%', padding: '9px 12px', borderRadius: 8,
-                  border: '1px solid #d1d5db', fontSize: 14, resize: 'vertical',
-                  fontFamily: 'inherit', boxSizing: 'border-box',
-                  outline: 'none',
-                }}
-              />
-
-              {submitError && (
-                <p style={{ margin: '8px 0 0', fontSize: 13, color: '#991b1b' }}>{submitError}</p>
-              )}
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
+          <ResponsiveModal
+            open={!!pendingKey && !!data}
+            onClose={closeDialog}
+            size="sm"
+            title="確認變更"
+            footer={
+              <>
                 <button
                   onClick={closeDialog}
                   disabled={submitting}
@@ -299,9 +261,40 @@ export default function SoftLaunchPage() {
                 >
                   {submitting ? '處理中...' : '確認變更'}
                 </button>
-              </div>
-            </div>
-          </div>
+              </>
+            }
+          >
+            {meta && (
+              <>
+                <p style={{ margin: '0 0 16px', fontSize: 14, color: '#6b7280' }}>
+                  將 <strong>{meta.label}</strong> 設為{' '}
+                  <strong style={{ color: pendingValue ? '#991b1b' : '#166534' }}>
+                    {pendingValue ? 'ON（啟用）' : 'OFF（關閉）'}
+                  </strong>
+                </p>
+
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                  變更原因 <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="請說明此次變更的原因..."
+                  rows={3}
+                  style={{
+                    width: '100%', padding: '9px 12px', borderRadius: 8,
+                    border: '1px solid #d1d5db', fontSize: 14, resize: 'vertical',
+                    fontFamily: 'inherit', boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+
+                {submitError && (
+                  <p style={{ margin: '8px 0 0', fontSize: 13, color: '#991b1b' }}>{submitError}</p>
+                )}
+              </>
+            )}
+          </ResponsiveModal>
         );
       })()}
     </div>
