@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { ScrollRow } from '../ui/ScrollRow';
 
 const DESTINATIONS = [
   {
@@ -70,7 +71,7 @@ export function DestinationsSection() {
             查看全部地區 →
           </Link>
         </div>
-        <div className="tp-destinations-scroll">
+        <ScrollRow className="tp-destinations-scroll" ariaLabel="熱門目的地">
           {DESTINATIONS.map((d) => (
             <Link
               key={d.slug}
@@ -87,7 +88,7 @@ export function DestinationsSection() {
               </div>
             </Link>
           ))}
-        </div>
+        </ScrollRow>
       </div>
     </section>
   );
