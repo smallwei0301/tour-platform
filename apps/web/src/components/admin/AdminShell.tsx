@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminSessionBar } from './AdminSessionBar';
 import { AdminGuide } from './AdminGuide';
+import { useIsMobile } from './responsive';
 import { csrfHeaders, readCsrfTokenFromCookie } from '../../lib/csrf-client';
 
 const NAV_ITEMS = [
@@ -27,14 +28,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-
-  useEffect(() => {
-    const check = () => setIsDesktop(window.innerWidth >= 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
+  const isMobile = useIsMobile(768);
+  const isDesktop = !isMobile;
 
   // Close mobile drawer on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]);
