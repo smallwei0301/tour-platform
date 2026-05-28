@@ -108,7 +108,10 @@ test('#880 AC2: slug + scheduleId but legacy schedule row missing → 404 PLAN_N
   supabase.assertAllConsumed();
 });
 
-test('#880 AC2: slug + scheduleId.plan_id null + ambiguous active plans → 404 PLAN_NOT_FOUND', async () => {
+test('#880 AC2: slug + scheduleId.plan_id null + ambiguous active plans → 409 AMBIGUOUS_PLAN (#882 contract)', async () => {
+  // #882 split the previously-conflated PLAN_NOT_FOUND case into two stable
+  // codes: PLAN_NOT_FOUND (404) for "no candidate exists" and AMBIGUOUS_PLAN
+  // (409) for "multiple active candidates, server refuses to guess".
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
@@ -120,9 +123,10 @@ test('#880 AC2: slug + scheduleId.plan_id null + ambiguous active plans → 404 
     { params: Promise.resolve({ activityId: ACTIVITY }) },
     { createClient: async () => supabase.client },
   );
-  assert.equal(response.status, 404, 'ambiguous fallback should yield 404 PLAN_NOT_FOUND under new contract');
+  assert.equal(response.status, 409, 'ambiguous fallback yields 409 under #882 contract');
   const body = await response.json();
-  assert.equal(body.error.code, 'PLAN_NOT_FOUND');
+  assert.equal(body.error.code, 'AMBIGUOUS_PLAN');
+  assert.ok(body.error.messageZh && body.error.messageZh.length > 0, 'must include messageZh');
   supabase.assertAllConsumed();
 });
 
