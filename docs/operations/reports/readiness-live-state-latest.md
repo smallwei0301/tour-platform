@@ -1,38 +1,39 @@
-<!-- query_timestamp: 2026-05-28T00:48:36.161Z -->
+<!-- query_timestamp: 2026-05-28T13:21:38.089Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-28T00:48:36.161Z  
-**Commit SHA:** `3d3f2d1028738812fe79eb53b9e3f0721e878e20`
+**Query timestamp:** 2026-05-28T13:21:38.089Z  
+**Commit SHA:** `d92b91b37291d4b8ae728921ca82ea385dad6213`
 
 ---
 
-## Open PRs (3)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #843 | [feat(seo): dynamic sitemap entries for activity detail pages (#829)](https://github.com/smallwei0301/tour-platform/pull/843) | `claude/new-session-4ra75` |
-| #842 | [Fix available-slots route-handler.ts missing implementation causing v497 contract test failures](https://github.com/smallwei0301/tour-platform/pull/842) _(draft)_ | `copilot/feat621-availability-route-v2-default` |
-| #836 | [qa: verify post-#818 Booking V2 availability delta (closes #824)](https://github.com/smallwei0301/tour-platform/pull/836) | `qa/824-post-818-availability-delta` |
+| #879 | [fix(settlement): align sweep eligibility with v1 payout policy (closes #847)](https://github.com/smallwei0301/tour-platform/pull/879) | `claude/issue-847-settlement-eligibility` |
+| #873 | [fix(booking): align activity detail formal plan pricing](https://github.com/smallwei0301/tour-platform/pull/873) | `kanban/issue-838-post-845-price-alignment` |
+| #869 | [fix(booking-v2): clean available-slots source-contract blockers](https://github.com/smallwei0301/tour-platform/pull/869) | `fix/824-source-contract-smoke-clean` |
+| #868 | [docs(qa): refresh #828 launch-critical evidence against latest staging](https://github.com/smallwei0301/tour-platform/pull/868) | `claude/qa-828-evidence-20260528` |
+| #863 | [fix(booking-v2): include v2PlanKey in probeOnePersonAddOn useEffect deps](https://github.com/smallwei0301/tour-platform/pull/863) | `claude/fix-861-booking-effect-deps` |
 
-## Open Issues (32 total)
+## Open Issues (24 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (15)
+### P1 (14)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #851 | [[Admin Plans] Fix plan creation failure and preserve sample JSON plan copy](https://github.com/smallwei0301/tour-platform/issues/851) | triaged, type:bug, priority:P1, guide-dashboard, agent:now, owner:ai-agent, status:in-progress, database |
+| #876 | [[QA] Late-wave regression checklist for PRs merged after #850 on 2026-05-28](https://github.com/smallwei0301/tour-platform/issues/876) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, admin-guides, traveler-booking, docs |
+| #860 | [[Bug] Booking V2 可預約場次進入付款前回 SLOT_UNAVAILABLE](https://github.com/smallwei0301/tour-platform/issues/860) | bug, priority:P1, qa, traveler-booking, payments |
 | #850 | [[QA] Daily test checklist for recent merged PRs 2026-05-28](https://github.com/smallwei0301/tour-platform/issues/850) | triaged, priority:P1, qa, owner:ai-agent, status:ready, type:qa |
 | #847 | [[Payments] Align settlement sweep eligibility with payout policy](https://github.com/smallwei0301/tour-platform/issues/847) | triaged, type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, payments, launch:post-first-payment |
-| #844 | [[Ops] Align Admin Go/No-Go dashboard with current launch gates](https://github.com/smallwei0301/tour-platform/issues/844) | triaged, type:optimization, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, infra, launch:first-payment-blocker |
-| #839 | [活動詳情頁選日期後可預約狀態延遲變灰／未開放](https://github.com/smallwei0301/tour-platform/issues/839) | type:bug, priority:P1, status:ready, traveler-booking |
 | #838 | [[Traveler Booking] Align Booking V2 price with selected plan amount](https://github.com/smallwei0301/tour-platform/issues/838) | triaged, type:bug, priority:P1, agent:next, owner:ai-agent, status:blocked, traveler-booking, launch:first-payment-blocker |
 | #834 | [[QA] Daily test checklist for recent merged PRs 2026-05-27](https://github.com/smallwei0301/tour-platform/issues/834) | triaged, priority:P1, qa, owner:ai-agent, status:ready, type:qa |
 | #828 | [[QA Gate] Focused launch-critical QA before first real payment](https://github.com/smallwei0301/tour-platform/issues/828) | triaged, priority:P1, qa, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, launch:first-payment-blocker |
@@ -44,20 +45,15 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (15)
+### P2 (10)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #849 | [[QA] Repair root Booking V2 smoke script alias](https://github.com/smallwei0301/tour-platform/issues/849) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #848 | [[Ops] Dedupe automated QA failure issues across daily scan generators](https://github.com/smallwei0301/tour-platform/issues/848) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
 | #846 | [[Docs] Refresh entry docs after #621/#787 turnover and current readiness drift](https://github.com/smallwei0301/tour-platform/issues/846) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, docs |
 | #832 | [[Ops] Add taxonomy labels to Frontend Daily Check issues](https://github.com/smallwei0301/tour-platform/issues/832) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
-| #830 | [[Ops] Detect conflicting owner/status labels in issue taxonomy](https://github.com/smallwei0301/tour-platform/issues/830) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:ready, infra, docs |
-| #829 | [[SEO] Add dynamic sitemap entries for public activity detail pages](https://github.com/smallwei0301/tour-platform/issues/829) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, docs |
 | #827 | [[Ops] Repair agent:now routing after #621 closure](https://github.com/smallwei0301/tour-platform/issues/827) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:ready, infra, docs |
-| #822 | [[Blog] Fix mobile card layout and broken thumbnail image](https://github.com/smallwei0301/tour-platform/issues/822) | triaged, type:bug, priority:P2, qa, agent:queued, owner:ai-agent, status:ready |
 | #816 | [[Ops] Align synthetic health probe workflow with Node 22 runtime contract](https://github.com/smallwei0301/tour-platform/issues/816) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
-| #815 | [[Auto Check] STAGING healthcheck returns 404 at /api/health](https://github.com/smallwei0301/tour-platform/issues/815) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
 | #724 | [[Ops] Execute Supabase live restore drill within 7 days after soft launch](https://github.com/smallwei0301/tour-platform/issues/724) | triaged, type:investigation, priority:P2, agent:backlog, owner:mixed, database, infra, status:awaiting-implementation, launch:post-first-payment |
 | #685 | [[Monitoring] Add simple outside website monitor after soft launch](https://github.com/smallwei0301/tour-platform/issues/685) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, infra, status:awaiting-implementation, launch:post-first-payment |
@@ -68,12 +64,9 @@ _none_
 
 _none_
 
-### Other (2)
+### Other (0)
 
-| # | Title | Labels |
-|---|-------|--------|
-| #833 | [[daily bug scan] tour-platform 2026-05-27](https://github.com/smallwei0301/tour-platform/issues/833) | — |
-| #831 | [[Frontend Daily Check] 2026-05-27 前端健康檢查失敗（available-slots route contract）](https://github.com/smallwei0301/tour-platform/issues/831) | — |
+_none_
 
 ---
 
@@ -81,16 +74,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #845 | [feat: formal plan contract for booking and availability](https://github.com/smallwei0301/tour-platform/pull/845) | 2026-05-27 |
-| #837 | [fix(booking-v2): drop stale scheduleId after date change](https://github.com/smallwei0301/tour-platform/pull/837) | 2026-05-27 |
-| #835 | [docs: add CLAUDE.md with build commands and architecture overview](https://github.com/smallwei0301/tour-platform/pull/835) | 2026-05-27 |
-| #826 | [fix(web): handle ECPay text ack in legacy mock callback path](https://github.com/smallwei0301/tour-platform/pull/826) | 2026-05-26 |
-| #825 | [fix(booking): infer safe plan fallback for v2 booking URLs](https://github.com/smallwei0301/tour-platform/pull/825) | 2026-05-26 |
-| #823 | [fix(v2): handle legacy plan slug availability fallback](https://github.com/smallwei0301/tour-platform/pull/823) | 2026-05-26 |
-| #821 | [docs: refresh current issue priority routing after Booking V2 turnover](https://github.com/smallwei0301/tour-platform/pull/821) | 2026-05-26 |
-| #820 | [feat(availability): default activity availability route to V2 source (refs #621)](https://github.com/smallwei0301/tour-platform/pull/820) | 2026-05-25 |
-| #819 | [qa: post-PR #807–#817 soft-launch / maintenance / SEO-a11y regression pass (closes #813)](https://github.com/smallwei0301/tour-platform/pull/819) | 2026-05-25 |
-| #817 | [a11y: DatePicker aria-labelledby + guide apply form label associations](https://github.com/smallwei0301/tour-platform/pull/817) | 2026-05-25 |
+| #878 | [feat(taxonomy): add label-conflict detection script for open issues (closes #830)](https://github.com/smallwei0301/tour-platform/pull/878) | 2026-05-28 |
+| #877 | [chore(admin/go-no-go): align readiness checklist with current first-payment gates](https://github.com/smallwei0301/tour-platform/pull/877) | 2026-05-28 |
+| #875 | [fix(admin-v2): protect plan CRUD and visible errors](https://github.com/smallwei0301/tour-platform/pull/875) | 2026-05-28 |
+| #874 | [fix(blog): stack featured card on mobile and replace broken thumbnail](https://github.com/smallwei0301/tour-platform/pull/874) | 2026-05-28 |
+| #872 | [chore(booking-v2): add v2PlanKey to probeOnePersonAddOn deps (#861)](https://github.com/smallwei0301/tour-platform/pull/872) | 2026-05-28 |
+| #871 | [feat(home): desktop prev/next arrows for horizontal card carousels](https://github.com/smallwei0301/tour-platform/pull/871) | 2026-05-28 |
+| #870 | [fix(qa): alias test:smoke:booking-core to v2-core in apps/web (#849)](https://github.com/smallwei0301/tour-platform/pull/870) | 2026-05-28 |
+| #864 | [feat(home): swap 特色主題 / 為什麼這種玩法更值得 + horizontal-scroll theme cards](https://github.com/smallwei0301/tour-platform/pull/864) | 2026-05-28 |
+| #859 | [test: fix stale import paths in v2-core smoke tests after #818 route-handler split (closes #855)](https://github.com/smallwei0301/tour-platform/pull/859) | 2026-05-28 |
+| #857 | [qa: daily QA evidence for PRs #835-#837 merged 2026-05-28 (closes #850)](https://github.com/smallwei0301/tour-platform/pull/857) | 2026-05-28 |
 
 ---
 

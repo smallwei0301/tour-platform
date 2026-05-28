@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ScrollRow } from '../ui/ScrollRow';
 
 const THEMES = [
   {
@@ -6,7 +7,7 @@ const THEMES = [
     desc: '鑽進高雄的秘密地下世界，探索億萬年石灰岩洞穴',
     href: '/theme/cave-exploration',
     image:
-      'https://images.unsplash.com/photo-1504699439244-a9a8618cafc6?w=800&q=80',
+      '/images/activities/chaishan/main.jpg',
     color: 'rgba(74,92,58,0.75)',
   },
   {
@@ -53,7 +54,7 @@ const THEMES = [
 
 export function ThemeCtas() {
   return (
-    <section className="tp-section" style={{ paddingTop: 0 }}>
+    <section className="tp-section">
       <div className="tp-container">
         <div className="tp-section-head">
           <h2>🏷️ 特色主題</h2>
@@ -61,7 +62,7 @@ export function ThemeCtas() {
             全部主題 →
           </Link>
         </div>
-        <div className="tp-theme-grid">
+        <ScrollRow className="tp-theme-scroll" ariaLabel="特色主題">
           {THEMES.map((t) => (
             <Link
               key={t.href}
@@ -78,7 +79,7 @@ export function ThemeCtas() {
               </div>
             </Link>
           ))}
-        </div>
+        </ScrollRow>
       </div>
     </section>
   );

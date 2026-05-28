@@ -123,11 +123,12 @@ describe('Issue 447 — settlement sweep route structural checks', () => {
     assert.match(src, /t_days/, 'must use t_days from config')
   })
 
-  it('sweep route filters on status IN paid/confirmed/completed', () => {
+  it('sweep route filters on status = completed (#847 policy alignment)', () => {
+    // Updated per #847: payout policy (docs §5) requires completed-only
+    // eligibility. Earlier #447 contract accepted paid/confirmed/completed
+    // and is superseded by issue847-settlement-eligibility.test.mjs.
     const src = readFileSync(routePath, 'utf8')
-    assert.match(src, /paid/, 'must include paid status')
-    assert.match(src, /confirmed/, 'must include confirmed status')
-    assert.match(src, /completed/, 'must include completed status')
+    assert.match(src, /completed/, 'must include completed status in eligibility filter')
   })
 
   it('sweep route filters by activity_schedules.start_at (not tour_date)', () => {
@@ -153,15 +154,17 @@ describe('Issue 447 — settlement sweep route structural checks', () => {
     assert.match(src, /existing.*balance_twd|balance_twd.*existing/s, 'must fetch existing balance before upserting')
   })
 
-  it('sweep route snapshots rules_version per row', () => {
+  it('sweep route delegates payout-item math to computeSweepPayoutItem (#847)', () => {
+    // Issue #847 moved the per-row math (gmv/commission/net/rules_version)
+    // into a pure helper so the policy is unit-testable. Route must call it.
     const src = readFileSync(routePath, 'utf8')
-    assert.match(src, /rules_version/, 'must set rules_version on each payout_item')
-  })
-
-  it('sweep route uses floor for commission and net math', () => {
-    const src = readFileSync(routePath, 'utf8')
-    assert.match(src, /Math\.floor.*commission_rate/, 'must floor commission_twd')
-    assert.match(src, /Math\.floor.*1\s*-\s*config\.commission_rate/, 'must floor net_twd using (1 - commission_rate)')
+    assert.match(src, /computeSweepPayoutItem/, 'must import + invoke computeSweepPayoutItem helper')
+    // Helper file must still floor commission and net per rules version snapshot.
+    const cfgPath = join(__dirname, '../../src/lib/settlement-config.ts')
+    const cfgSrc = readFileSync(cfgPath, 'utf8')
+    assert.match(cfgSrc, /Math\.floor.*commission_rate/, 'helper must floor commission_twd')
+    assert.match(cfgSrc, /Math\.floor.*1\s*-\s*[^)]*commission_rate/, 'helper must floor net_twd using (1 - commission_rate)')
+    assert.match(cfgSrc, /rules_version/, 'helper must snapshot rules_version onto each payout item')
   })
 
   it('sweep route returns ok/settled/guides_updated on success', () => {
@@ -182,7 +185,7 @@ describe('Issue 447 — db.mjs new settlement helpers', () => {
     assert.match(src, /export async function getUnsettledOrdersDb/, 'must export getUnsettledOrdersDb')
   })
 
-  it('getUnsettledOrdersDb uses tDays cutoff', () => {
+  it('getUnsettledOrdersDb uses tDays cutoff and completed-only status (#847)', () => {
     const src = readFileSync(dbPath, 'utf8')
     // Find the function body
     const fnStart = src.indexOf('export async function getUnsettledOrdersDb')
@@ -191,7 +194,7 @@ describe('Issue 447 — db.mjs new settlement helpers', () => {
     assert.match(fnBody, /tDays/, 'must use tDays parameter')
     assert.match(fnBody, /cutoff/, 'must compute cutoff date')
     assert.match(fnBody, /lte.*start_at|start_at.*lte/s, 'must filter by start_at lte cutoff')
-    assert.match(fnBody, /paid.*confirmed.*completed|paid|confirmed|completed/s, 'must filter by status')
+    assert.match(fnBody, /completed/, 'must filter by status (#847 narrowed to completed)')
   })
 
   it('recordSettlementDb is exported', () => {

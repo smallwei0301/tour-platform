@@ -571,7 +571,7 @@ function BookingInnerV2FlagShell() {
     }
 
     probeOnePersonAddOn();
-  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, activeScheduleId]);
+  }, [activity?.id, selectedDate, timezone, canRunV2PlanFlow, useLegacyFallback, activeScheduleId, v2PlanKey]);
 
   useEffect(() => {
     async function fetchSlots() {

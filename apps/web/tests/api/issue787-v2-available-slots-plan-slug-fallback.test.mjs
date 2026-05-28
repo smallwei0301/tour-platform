@@ -101,7 +101,11 @@ test('issue787 behavior: legacy plan slug + schedule fallback succeeds when sche
   supabase.assertAllConsumed();
 });
 
-test('issue787 behavior: ambiguous active plans fails closed with validation error', async () => {
+test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN (#882 contract update)', async () => {
+  // Original #787 returned 400 VALIDATION_ERROR. #880 narrowed it to 404
+  // PLAN_NOT_FOUND. #882 split that further: ambiguous resolution now returns
+  // 409 AMBIGUOUS_PLAN with a localized message so client UIs can prompt
+  // travelers to reselect from the activity page.
   const activityId = '11111111-1111-1111-1111-111111111111';
   const scheduleId = '22222222-2222-2222-2222-222222222222';
 
@@ -118,9 +122,10 @@ test('issue787 behavior: ambiguous active plans fails closed with validation err
     { createClient: async () => supabase.client }
   );
 
-  assert.equal(response.status, 400);
+  assert.equal(response.status, 409);
   const body = await response.json();
-  assert.deepEqual(body.error, { code: 'VALIDATION_ERROR', message: 'Invalid planId format' });
+  assert.equal(body.error.code, 'AMBIGUOUS_PLAN');
+  assert.ok(body.error.messageZh && body.error.messageZh.length > 0);
   supabase.assertAllConsumed();
 });
 

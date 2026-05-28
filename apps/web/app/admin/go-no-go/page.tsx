@@ -94,17 +94,25 @@ const READINESS_TEXT: Record<string, { label: string; note: string }> = {
     label: '最新 Vercel 部署來自正式 production 分支',
     note: '確認目前部署 commit 與 production 分支一致',
   },
-  'evidence-real-payment': {
-    label: '#402 真實付款／退款／Email 副作用佐證',
-    note: '#402：需要真實 ECPay 付款與退款副作用驗證；完成後設定 EVIDENCE_402_SIGNED=true。',
+  'evidence-alert-drill': {
+    label: '#714 首筆付款前告警演練',
+    note: '#714：模擬告警觸發 → ops 收警 → on-call 回覆，確認鏈路全通；完成後設定 EVIDENCE_714_SIGNED=true。',
   },
-  'evidence-manual-regression': {
-    label: '#500 近期合併人工回歸檢查表',
-    note: '#500：針對 5/12–5/14 PR 進行人工回歸；完成後設定 EVIDENCE_500_SIGNED=true。',
+  'evidence-first-payment-qa': {
+    label: '#828 首筆付款 QA 閘門決策',
+    note: '#828：確認 first-payment QA gate 已簽核可放行；完成後設定 EVIDENCE_828_SIGNED=true。',
   },
-  'evidence-traveler-browser': {
-    label: '#403 旅客登入瀏覽器 session 佐證',
-    note: '#403：需要真實 Google OAuth 旅客 session QA；完成後設定 EVIDENCE_403_SIGNED=true。',
+  'evidence-booking-v2-qa': {
+    label: '#838 Booking V2 回歸 QA（含 #824 / #839）',
+    note: '#838 / #824 / #839：Booking V2 近期 PR 與 bug 回歸 QA 須通過；完成後設定 EVIDENCE_838_SIGNED=true。',
+  },
+  'evidence-restore-drill': {
+    label: '#724 復原演練（per #320/#594）',
+    note: '#724：依 #320 與 #594 訂定的時限完成 restore drill；完成後設定 EVIDENCE_724_SIGNED=true。',
+  },
+  'evidence-guide-content': {
+    label: '#605 導遊與商品內容上架準備',
+    note: '#605：首批導遊與活動內容已完整上架、審核通過；完成後設定 EVIDENCE_605_SIGNED=true。',
   },
   'evidence-guide-onboarding': {
     label: '#318 導遊 onboarding demo run 與回顧',

@@ -425,20 +425,21 @@ test('errorV2 response format matches API spec', () => {
   assert.equal(response.error.message, 'planId is required');
 });
 
-test('route resolves slug activity key and plan slug before validation', async () => {
+test('route resolves slug activity key and delegates plan resolution to canonical resolver (#882)', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
+  // Activity slug → UUID resolution stays inline (legacy contract).
   assert.match(src, /const activityIdLookupColumn = isUuidLike\(activityKey\) \? 'id' : 'slug'/);
   assert.match(src, /\.eq\(activityIdLookupColumn, activityKey\)/);
   assert.match(src, /resolvedActivityId = activityRow\.id/);
 
+  // Plan resolution is now delegated to the canonical resolver (#882) instead
+  // of an inline `if (!isUuidLike(resolvedPlanId))` block; this guards against
+  // future regressions where someone might add a route-local fallback.
   assert.match(src, /const planKey = searchParams\.get\('planId'\)/);
-  assert.match(src, /if \(!isUuidLike\(resolvedPlanId\)\)/);
-  assert.match(src, /\.from\('activity_plans'\)/);
-  assert.match(src, /\.eq\('activity_id', resolvedActivityId\)/);
-  assert.match(src, /\.eq\('slug', planKey\)/);
-  assert.match(src, /resolvedPlanId = planRow\.id/);
+  assert.match(src, /resolveBookingPlan\(supabase, \{/);
+  assert.match(src, /const resolvedPlanId = resolved\.planId/);
 
   assert.match(src, /parseAndValidateParams\(resolvedActivityId, resolvedPlanId, searchParams\)/);
 });
@@ -452,10 +453,12 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /\.from\('activity_schedules'\)/);
   assert.match(src, /\.eq\('id', params\.scheduleId\)/);
   assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
-  assert.match(src, /scheduleLocalDate < params\.dateFrom \|\| scheduleLocalDate > params\.dateTo/);
-  assert.match(src, /scheduleData\.plan_id && scheduleData\.plan_id !== params\.planId/);
+  assert.match(src, /inDateRange\s*=\s*scheduleLocalDate\s*>=\s*params\.dateFrom\s*&&\s*scheduleLocalDate\s*<=\s*params\.dateTo/);
+  assert.match(src, /planMatches\s*=\s*!scheduleData\.plan_id\s*\|\|\s*scheduleData\.plan_id\s*===\s*params\.planId/);
   assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
-  assert.match(src, /capacityLeft: remaining/);
+  // #880: capacityLeft is now clamped at plan.max_participants so the response
+  // never advertises more seats than the per-group ceiling.
+  assert.match(src, /capacityLeft:\s*Math\.min\(remaining,\s*plan\.max_participants\)/);
 });
 
 test('parseAndValidateParams rejects invalid scheduleId format', () => {
@@ -487,8 +490,10 @@ test('route enforces unformed-group min participants and Chinese copy contract',
   assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
   assert.match(src, /bookings: nonGroupConflictBookings/);
   assert.match(src, /slots: slotsToReturn/);
-  assert.match(src, /reason: slotsToReturn\.length === 0 \? firstRuleFailure\?\.reasonCode : undefined/);
-  assert.match(src, /messageZh: slotsToReturn\.length === 0 \? firstRuleFailure\?\.messageZh : undefined/);
+  assert.match(src, /reason:\s*reasonCode/);
+  assert.match(src, /messageZh:\s*reasonMessage/);
+  assert.match(src, /reasonCode\s*=[\s\S]{0,200}slotsToReturn\.length === 0[\s\S]{0,200}firstRuleFailure\?\.reasonCode/);
+  assert.match(src, /reasonMessage\s*=[\s\S]{0,200}slotsToReturn\.length === 0[\s\S]{0,200}firstRuleFailure\?\.messageZh/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {
