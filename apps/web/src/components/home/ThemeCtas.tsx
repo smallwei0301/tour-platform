@@ -53,7 +53,7 @@ const THEMES = [
 
 export function ThemeCtas() {
   return (
-    <section className="tp-section" style={{ paddingTop: 0 }}>
+    <section className="tp-section">
       <div className="tp-container">
         <div className="tp-section-head">
           <h2>🏷️ 特色主題</h2>
@@ -61,7 +61,7 @@ export function ThemeCtas() {
             全部主題 →
           </Link>
         </div>
-        <div className="tp-theme-grid">
+        <div className="tp-theme-scroll">
           {THEMES.map((t) => (
             <Link
               key={t.href}
