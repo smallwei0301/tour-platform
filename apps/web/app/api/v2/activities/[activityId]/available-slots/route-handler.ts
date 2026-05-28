@@ -299,10 +299,12 @@ export async function getAvailableSlots(
       // If stale/mismatched, gracefully fall back instead of hard-failing with 404.
       if (!scheduleError && scheduleData) {
         const scheduleLocalDate = getDateStringInTimezone(new Date(scheduleData.start_at), params.timezone);
-        const inDateRange = scheduleLocalDate >= params.dateFrom && scheduleLocalDate <= params.dateTo;
-        const planMatches = !scheduleData.plan_id || scheduleData.plan_id === params.planId;
+        const isScheduleDateOutOfRange =
+          scheduleLocalDate < params.dateFrom || scheduleLocalDate > params.dateTo;
+        const isSchedulePlanMismatched =
+          scheduleData.plan_id && scheduleData.plan_id !== params.planId;
 
-        if (inDateRange && planMatches) {
+        if (!isScheduleDateOutOfRange && !isSchedulePlanMismatched) {
           selectedSchedule = scheduleData;
         }
       }
@@ -548,12 +550,10 @@ export async function getAvailableSlots(
       return false;
     });
 
-    const firstRuleFailure = groupedRuleFailuresByDate.values().next().value as
+    let firstRuleFailure = groupedRuleFailuresByDate.values().next().value as
       | { reasonCode?: string; messageZh?: string }
       | undefined;
 
-    let selectedScheduleRuleFailure: { reasonCode?: string; messageZh?: string } | undefined =
-      undefined;
     let slotsToReturn = filteredSlots;
     if (selectedSchedule) {
       const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), params.timezone);
@@ -603,12 +603,12 @@ export async function getAvailableSlots(
         slotsToReturn = [];
 
         if (!selectedScheduleRule.allowed) {
-          selectedScheduleRuleFailure = {
+          firstRuleFailure = {
             reasonCode: selectedScheduleRule.reasonCode,
             messageZh: selectedScheduleRule.messageZh,
           };
         } else if (hasInsufficientCapacityForSelectedSchedule) {
-          selectedScheduleRuleFailure = {
+          firstRuleFailure = {
             reasonCode: 'CAPACITY_EXCEEDED',
             messageZh: `此行程最多 ${selectedSchedule.capacity} 人，當前時段剩餘 ${remaining} 人可預訂`,
           };
@@ -625,15 +625,6 @@ export async function getAvailableSlots(
       }
     }
 
-    const reasonCode =
-      slotsToReturn.length === 0
-        ? selectedScheduleRuleFailure?.reasonCode ?? firstRuleFailure?.reasonCode
-        : undefined;
-    const reasonMessage =
-      slotsToReturn.length === 0
-        ? selectedScheduleRuleFailure?.messageZh ?? firstRuleFailure?.messageZh
-        : undefined;
-
     // Return response per API spec
     return Response.json(
       successV2({
@@ -648,8 +639,8 @@ export async function getAvailableSlots(
           maxParticipants: plan.max_participants,
         },
         slots: slotsToReturn,
-        reason: reasonCode,
-        messageZh: reasonMessage,
+        reason: slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined,
+        messageZh: slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined,
       })
     );
   } catch (err) {
