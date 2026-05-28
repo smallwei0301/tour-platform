@@ -455,7 +455,9 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /inDateRange\s*=\s*scheduleLocalDate\s*>=\s*params\.dateFrom\s*&&\s*scheduleLocalDate\s*<=\s*params\.dateTo/);
   assert.match(src, /planMatches\s*=\s*!scheduleData\.plan_id\s*\|\|\s*scheduleData\.plan_id\s*===\s*params\.planId/);
   assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
-  assert.match(src, /capacityLeft: remaining/);
+  // #880: capacityLeft is now clamped at plan.max_participants so the response
+  // never advertises more seats than the per-group ceiling.
+  assert.match(src, /capacityLeft:\s*Math\.min\(remaining,\s*plan\.max_participants\)/);
 });
 
 test('parseAndValidateParams rejects invalid scheduleId format', () => {

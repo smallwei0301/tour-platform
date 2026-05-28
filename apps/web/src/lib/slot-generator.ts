@@ -495,18 +495,28 @@ export function filterConflicts(
 }
 
 /**
- * Serialize slots for client consumption
+ * Serialize slots for client consumption.
+ *
+ * Issue #880: `scheduleCapacityHint` (when provided) clamps `capacityLeft`
+ * at the schedule-level available count, so the response never advertises
+ * more seats than the underlying schedule can actually hold. Plan
+ * `max_participants` remains the per-group ceiling.
  */
 export function serializeSlots(
   slots: TimeSlot[],
   timezone: string,
   plan: ActivityPlan,
-  participants: number = 1
+  participants: number = 1,
+  scheduleCapacityHint?: number | null
 ): SerializedSlot[] {
+  const cap =
+    scheduleCapacityHint != null && Number.isFinite(scheduleCapacityHint)
+      ? Math.min(plan.max_participants, scheduleCapacityHint)
+      : plan.max_participants;
   return slots.map((slot) => ({
     startAt: formatDateWithTimezone(slot.startAt, timezone),
     endAt: formatDateWithTimezone(slot.endAt, timezone),
-    capacityLeft: Math.max(0, plan.max_participants - participants),
+    capacityLeft: Math.max(0, cap - participants),
     bookingType: plan.booking_type,
     isAvailable: true,
   }));
