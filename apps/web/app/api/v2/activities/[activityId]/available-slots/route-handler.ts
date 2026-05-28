@@ -336,7 +336,9 @@ export async function getAvailableSlots(
       });
     }
 
-    if (planData.status !== 'active') {
+    const normalizedPlanStatus =
+      typeof planData.status === 'string' ? planData.status.trim().toLowerCase() : null;
+    if (normalizedPlanStatus && normalizedPlanStatus !== 'active') {
       return Response.json(errorV2('NOT_FOUND', 'Activity plan is not active'), {
         status: 404,
       });

@@ -103,6 +103,55 @@ test('issue787 behavior: legacy plan slug + schedule fallback succeeds when sche
 });
 
 
+test('issue787 behavior: status-null formal plan legacy_plan_id fallback returns scheduled plan details', async () => {
+  const activityId = '11111111-1111-1111-1111-111111111111';
+  const resolvedPlanId = '33333333-3333-4333-8333-333333333333';
+
+  const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: { id: resolvedPlanId } },
+    {
+      terminal: 'single',
+      table: 'activity_plans',
+      data: {
+        id: resolvedPlanId,
+        activity_id: activityId,
+        duration_minutes: 480,
+        min_participants: 1,
+        max_participants: 10,
+        booking_type: 'scheduled',
+        status: null,
+        activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' },
+      },
+    },
+    { terminal: 'or', table: 'guide_availability_rules', data: [] },
+    { terminal: 'then', table: 'guide_blackout_dates', data: [] },
+    { terminal: 'in', table: 'bookings', data: [] },
+  ]);
+
+  const response = await getAvailableSlots(
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=full-day-complete&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    { params: Promise.resolve({ activityId }) },
+    { createClient: async () => supabase.client }
+  );
+
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.success, true);
+  assert.equal(body.data.planId, resolvedPlanId);
+
+  const legacyPlanLookup = supabase.calls.find((call) =>
+    call.table === 'activity_plans' &&
+    call.terminal === 'maybeSingle' &&
+    call.filters.some((f) => f[0] === 'eq' && f[1] === 'legacy_plan_id' && f[2] === 'full-day-complete')
+  );
+  assert.ok(legacyPlanLookup, 'should query activity_plans by legacy_plan_id inside current activity scope');
+  assert.equal(legacyPlanLookup.filters[0][0], 'eq');
+  assert.equal(legacyPlanLookup.filters[1][0], 'eq');
+  supabase.assertAllConsumed();
+});
+
 test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN (#882 contract update)', async () => {
   // Original #787 returned 400 VALIDATION_ERROR. #880 narrowed it to 404
   // PLAN_NOT_FOUND. #882 split that further: ambiguous resolution now returns
@@ -110,6 +159,7 @@ test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN
   // travelers to reselect from the activity page.
   const activityId = '11111111-1111-1111-1111-111111111111';
   const scheduleId = '22222222-2222-2222-2222-222222222222';
+
 
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
