@@ -8,6 +8,11 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import { normalizeRichPlanPayload } from '../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
+import {
+  duplicatePlanSlugMessage,
+  generatePlanSlug,
+  isDuplicatePlanSlugError,
+} from '../../../../../../../src/lib/activity-plan-slugs.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -155,8 +160,9 @@ export async function POST(
       return Response.json(errorV2('NOT_FOUND', 'Activity not found'), { status: 404 });
     }
 
-    // Generate slug if not provided
-    const slug = body.slug || body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    // Generate slug if not provided. Chinese-only names produce an empty ASCII slug,
+    // so fall back to a safe unique value instead of inserting ''.
+    const slug = generatePlanSlug({ name: body.name, slug: body.slug });
 
     const insertData = {
       activity_id: activityId,
@@ -194,8 +200,8 @@ export async function POST(
 
     if (error) {
       console.error('Error creating activity plan:', error);
-      if (error.code === '23505') {
-        return Response.json(errorV2('DUPLICATE_SLUG', 'Plan slug already exists'), { status: 409 });
+      if (isDuplicatePlanSlugError(error)) {
+        return Response.json(errorV2('DUPLICATE_SLUG', duplicatePlanSlugMessage(slug)), { status: 409 });
       }
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create plan'), { status: 500 });
     }

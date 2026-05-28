@@ -12,6 +12,7 @@ import {
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
 import { calculateDiscount } from './promo-discount.ts';
+import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
 import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
@@ -3276,7 +3277,40 @@ export async function updateActivityDb(id, input = {}) {
   const { error } = await supabase.from('activities').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 
+  if (input.plans !== undefined) {
+    await syncImportedActivityPlansDb(supabase, id, input.plans);
+  }
+
   return getAdminActivityByIdDb(id);
+}
+
+async function syncImportedActivityPlansDb(supabase, activityId, legacyPlans) {
+  const { data: existingRows, error: existingError } = await supabase
+    .from('activity_plans')
+    .select('id, slug')
+    .eq('activity_id', activityId);
+  if (existingError) throw new Error(existingError.message);
+
+  const existingBySlug = new Map((existingRows || []).map((row) => [row.slug, row]));
+  const { upserts, skipped } = buildFormalPlanBackfillRows({
+    activityId,
+    legacyPlans,
+    existingBySlug,
+  });
+
+  if (skipped.length > 0) {
+    console.warn('[admin-activity-import] skipped invalid legacy plans while syncing activity_plans', {
+      activityId,
+      skipped,
+    });
+  }
+
+  if (upserts.length === 0) return;
+
+  const { error } = await supabase
+    .from('activity_plans')
+    .upsert(upserts, { onConflict: 'activity_id,slug' });
+  if (error) throw new Error(error.message);
 }
 
 export async function updateActivityStatusDb(id, status) {
