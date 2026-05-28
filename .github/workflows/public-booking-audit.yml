@@ -1,0 +1,50 @@
+name: Public Booking V2 Audit
+
+on:
+  schedule:
+    - cron: '0 17 * * *'  # 01:00 Asia/Taipei daily
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Base URL to audit'
+        required: false
+        default: 'https://tour-platform-nine.vercel.app'
+      audit_date:
+        description: 'Date to probe availability for (YYYY-MM-DD, default: today+30d)'
+        required: false
+        default: ''
+      participants:
+        description: 'Number of participants to probe with'
+        required: false
+        default: '1'
+
+jobs:
+  audit:
+    name: Probe all published activities against Booking V2 API
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Public Booking V2 Audit
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://tour-platform-nine.vercel.app' }}
+          AUDIT_DATE: ${{ github.event.inputs.audit_date || '' }}
+          AUDIT_PARTICIPANTS: ${{ github.event.inputs.participants || '1' }}
+        run: node scripts/audit-public-booking-v2.mjs
+
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-booking-audit-${{ github.run_number }}
+          path: docs/operations/reports/public-booking-audit-*.{md,json}
+          if-no-files-found: warn
