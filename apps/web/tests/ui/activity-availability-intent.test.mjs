@@ -62,22 +62,25 @@ test('date picker availability is scoped to selected or visible plans plus globa
 });
 
 test('V2 not-open schedule does not collapse into full badge state', async () => {
-  const src = await readSource('src/components/activity/DatePlanSection.tsx');
+  // getPlanScheduleForDate was extracted to plan-schedule-match.ts (#839)
+  const matchSrc = await readSource('src/components/activity/plan-schedule-match.ts');
+  const planSrc = await readSource('src/components/activity/DatePlanSection.tsx');
 
-  assert.match(src, /let hasNotOpen = false;/);
-  assert.match(src, /if \(status === 'not-open'\) hasNotOpen = true;/);
-  assert.match(src, /isFull: !hasOpen && !hasNotOpen,/);
-  assert.match(src, /isNotOpen: !hasOpen && hasNotOpen,/);
-  assert.match(src, /const showNotOpen = selectedDate && planAvail\.isNotOpen;/);
+  assert.match(matchSrc, /let hasNotOpen = false;/);
+  assert.match(matchSrc, /if \(status === 'not-open'\) hasNotOpen = true;/);
+  assert.match(matchSrc, /isFull: !hasOpen && !hasNotOpen,/);
+  assert.match(matchSrc, /isNotOpen: !hasOpen && hasNotOpen,/);
+  assert.match(planSrc, /const showNotOpen = selectedDate && planAvail\.isNotOpen;/);
 });
 
 test('date key extraction avoids UTC midnight rollback for +08 fallback timestamps', async () => {
-  const planSrc = await readSource('src/components/activity/DatePlanSection.tsx');
+  // getPlanScheduleForDate logic was extracted to plan-schedule-match.ts (#839)
+  const matchSrc = await readSource('src/components/activity/plan-schedule-match.ts');
   const pickerSrc = await readSource('src/components/activity/DatePicker.tsx');
 
-  assert.match(planSrc, /const isoLikeMatch = rawStartAt\.match\(/);
-  assert.match(planSrc, /rawStartAt\.match\(\/\^\(\\d\{4\}-\\d\{2\}-\\d\{2\}\)\//);
-  assert.doesNotMatch(planSrc, /toISOString\(\)\.slice\(0, 10\)/);
+  assert.match(matchSrc, /const isoLikeMatch = rawStartAt\.match\(/);
+  assert.match(matchSrc, /rawStartAt\.match\(\/\^\(\\d\{4\}-\\d\{2\}-\\d\{2\}\)\//);
+  assert.doesNotMatch(matchSrc, /toISOString\(\)\.slice\(0, 10\)/);
 
   assert.match(pickerSrc, /function toDateKey\(rawStartAt: string\): string \| null/);
   assert.match(pickerSrc, /const dateKey = toDateKey\(startAt\);/);

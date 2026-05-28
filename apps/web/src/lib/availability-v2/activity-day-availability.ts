@@ -7,7 +7,7 @@ import {
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
-} from '../slot-generator';
+} from '../slot-generator.ts';
 
 type SupabaseLike = {
   from: (table: string) => {
@@ -190,6 +190,16 @@ function aggregateByDayAndPlan(
   });
 
   return result;
+}
+
+/**
+ * Returns true when V2 generated at least one candidate slot across the window.
+ * false means the activity has plans but no slot rules — triggers legacy fallback
+ * in the route layer. Distinguishes "unconfigured" from "genuinely full" (full
+ * activities have slotCount > 0 with status='full').
+ */
+export function v2HasGeneratedSlots(plans: V2AvailabilityDayPlanRow[]): boolean {
+  return plans.some((p) => p.slotCount > 0);
 }
 
 export async function getV2ActivityAvailability(
