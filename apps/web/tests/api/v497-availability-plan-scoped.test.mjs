@@ -26,12 +26,18 @@ function readFile(relPath) {
 
 // ─── AC1: available-slots plan status gating ────────────────────────────────
 describe('AC1: available-slots returns slots only for active plans', () => {
-  it('route checks plan.status === active before generating slots', () => {
+  it('route normalizes legacy null/undefined plan.status and rejects explicit non-active status', () => {
     const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
+    // D9feb60 contract: legacy rows may have NULL/undefined status.
     assert.match(
       src,
-      /planData\.status\s*!==\s*['"]active['"]/,
-      "Must reject non-active plans with status check"
+      /normalizedPlanStatus[\s\S]*planData\.status[\s\S]*trim\(\)\s*\.toLowerCase\(\)/,
+      'Must normalize plan status before active comparison'
+    );
+    assert.match(
+      src,
+      /if \(normalizedPlanStatus\s*&&\s*normalizedPlanStatus\s*!==\s*['"]active['"]/,
+      'Must reject explicit non-active status when status is present'
     );
   });
 
