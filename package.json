@@ -12,7 +12,7 @@
     "lint": "npm run lint -w @tour/web",
     "typecheck": "npm run typecheck -w @tour/web",
     "test": "npm run test -w @tour/web",
-    "test:smoke:booking-core": "npm run test:smoke:booking-core -w @tour/web",
+    "test:smoke:booking-core": "npm run test:smoke:v2-core -w @tour/web",
     "dashboard:booking-v2": "node scripts/rollout/booking-v2-dashboard.mjs",
     "report:booking-v2-go-no-go": "node scripts/rollout/booking-v2-go-no-go.mjs",
     "rollout:booking-v2-daily": "node scripts/rollout/booking-v2-daily-trigger.mjs",
