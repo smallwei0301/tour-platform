@@ -38,14 +38,16 @@ export default function AdminRefundsPage() {
     } finally { setBusyId(''); }
   }
 
-  const actionBtn = (id: string, action: 'approve'|'reject'|'process'|'complete', label: string, color: string) => (
+  const actionBtn = (id: string, action: 'approve'|'reject'|'process'|'complete', label: string, color: string, dataGuide?: string) => (
     <button
       disabled={!!busyId}
       onClick={() => doAction(id, action)}
+      data-guide={dataGuide}
       style={{
         padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 12,
         fontWeight: 600, cursor: busyId ? 'not-allowed' : 'pointer',
         background: busyId ? '#f1f5f9' : color, color: '#fff', opacity: busyId ? 0.6 : 1,
+        width: '100%', minWidth: 64, boxSizing: 'border-box',
       }}
     >
       {busyId === id + action ? '…' : label}
@@ -99,11 +101,11 @@ export default function AdminRefundsPage() {
     {
       key: 'actions', header: '操作', mobileLabel: '操作',
       cell: (r) => (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span data-guide="refund-approve">{actionBtn(r.id, 'approve', '通過', '#1B6B4A')}</span>
-          <span data-guide="refund-reject">{actionBtn(r.id, 'reject', '拒絕', '#dc2626')}</span>
-          {actionBtn(r.id, 'process', '處理中', '#d97706')}
-          {actionBtn(r.id, 'complete', '完成', '#6b7280')}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 4, maxWidth: 120 }}>
+          {actionBtn(r.id, 'approve',  '通過',   '#1B6B4A', 'refund-approve')}
+          {actionBtn(r.id, 'reject',   '拒絕',   '#dc2626', 'refund-reject')}
+          {actionBtn(r.id, 'process',  '處理中', '#d97706')}
+          {actionBtn(r.id, 'complete', '完成',   '#6b7280')}
         </div>
       ),
     },
