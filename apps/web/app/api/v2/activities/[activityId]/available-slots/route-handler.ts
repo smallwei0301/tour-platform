@@ -73,18 +73,6 @@ function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
   return value === 'manual' || value === 'system';
 }
 
-function deriveLegacyPlanSlugCandidates(planKey: string): string[] {
-  const normalized = planKey.trim().toLowerCase();
-  if (!normalized) return [];
-
-  const candidates = new Set<string>();
-  if (normalized.endsWith('-complete')) {
-    candidates.add(normalized.replace(/-complete$/, ''));
-  }
-
-  return Array.from(candidates).filter((candidate) => candidate && candidate !== normalized);
-}
-
 interface QueryParams {
   activityId: string;
   planId: string;
