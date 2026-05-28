@@ -462,18 +462,19 @@ test('route supports optional scheduleId mapping + validation for legacy public 
 });
 
 test('issue838: legacy_plan_id lookup must not hard-require status=active (status-null formal rows are valid)', async () => {
-  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
+  const rel = 'src/lib/booking-plan-resolver.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
 
-  const legacyLookupStart = src.indexOf(".eq('legacy_plan_id', planKey)");
+  const legacyLookupStart = src.indexOf(".eq('legacy_plan_id', legacyPlanId)");
   assert.ok(legacyLookupStart >= 0, 'must keep legacy_plan_id fallback lookup');
 
-  const legacyLookupWindow = src.slice(legacyLookupStart, legacyLookupStart + 260);
+  const legacyLookupWindow = src.slice(legacyLookupStart, legacyLookupStart + 320);
   assert.equal(
     legacyLookupWindow.includes(".eq('status', 'active')"),
     false,
     'legacy_plan_id lookup must not exclude status-null formal rows by forcing status=active'
   );
+  assert.match(src, /function isResolvablePlanStatus\(status: string \| null \| undefined\): boolean/);
 });
 
 test('parseAndValidateParams rejects invalid scheduleId format', () => {
