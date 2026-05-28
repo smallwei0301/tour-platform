@@ -5,6 +5,10 @@
  * Audit all published activities' public plans against the Booking V2 API.
  * No Supabase credentials required — public API only.
  *
+ * DB-direct capacity audit requires SUPABASE_SERVICE_ROLE_KEY.
+ * The admin write-path guard (PR implementing #891) now prevents new violations.
+ * Existing violations are caught by validateActivityBookability() at publish time (#881).
+ *
  * Classification:
  *   PASS                    200 + valid slots schema + capacityLeft ≤ selectedPlan.maxParticipants
  *   GRACEFUL_PLAN_NOT_FOUND 404 code=PLAN_NOT_FOUND  (known, pending #883 data backfill)

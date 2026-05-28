@@ -19,7 +19,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const schedule = await createScheduleDb({ activityId: id, ...body });
     return Response.json(ok(schedule), { status: 201 });
-  } catch (err) {
+  } catch (err: any) {
+    if (err.code === 'SCHEDULE_CAPACITY_EXCEEDS_PLAN') {
+      return Response.json(
+        fail('SCHEDULE_CAPACITY_EXCEEDS_PLAN', err.messageZh ?? '場次人數上限超過方案上限'),
+        { status: 422 },
+      );
+    }
     const message = err instanceof Error ? err.message : 'unknown error';
     return Response.json(fail('SERVER_ERROR', message), { status: 500 });
   }
