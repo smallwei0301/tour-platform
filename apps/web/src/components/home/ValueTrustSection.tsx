@@ -17,7 +17,7 @@ const trustValuePoints = [
 
 export function ValueTrustSection() {
   return (
-    <section className="tp-section" style={{ paddingTop: 0 }}>
+    <section className="tp-section">
       <div className="tp-container">
         <div className="tp-section-head" style={{ marginBottom: 18 }}>
           <div>
