@@ -6,6 +6,13 @@ const BLOG_SLUGS = [
   'chaishan-cave-guide',
 ];
 
+// Experience detail pages — public-facing, not covered by /theme/* collection pages.
+// Slugs sourced from store.mjs; add new slugs here when new experiences launch.
+const EXPERIENCE_SLUGS = [
+  'kaohsiung-chaishan-cave-experience',
+  'dadadaocheng-walk',
+];
+
 // Sitemap reads the published-activity catalog; revalidate hourly so crawlers
 // don't trigger a DB read on every request.
 export const revalidate = 3600;
@@ -26,6 +33,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     { url: `${baseUrl}/theme/cave-exploration`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/theme/river-trekking`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    ...EXPERIENCE_SLUGS.map((slug) => ({
+      url: `${baseUrl}/experiences/${slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
     { url: `${baseUrl}/why-choose-us`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/guide/apply`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
