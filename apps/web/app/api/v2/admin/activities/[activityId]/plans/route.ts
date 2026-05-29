@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { getSupabase } from '../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
+import { applyWithMissingColumnFallback } from '../../../../../../../src/lib/activity-plans-insert-fallback.mjs';
 import {
   duplicatePlanSlugMessage,
   generatePlanSlug,
@@ -179,34 +180,30 @@ export async function POST(
       ...normalizeRichPlanPayload(body),
     };
 
-    let data: any = null;
-    let error: any = null;
-
-    // New schema supports `description`; old schema may not have it yet.
-    ({ data, error } = await supabase
-      .from('activity_plans')
-      .insert(insertData)
-      .select()
-      .single());
-
-    if (error && /description/i.test(String(error.message || ''))) {
-      const { description: _omitDescription, ...fallbackInsertData } = insertData as any;
-      ({ data, error } = await supabase
-        .from('activity_plans')
-        .insert(fallbackInsertData)
-        .select()
-        .single());
-    }
+    // Production schema may lag behind the rich-fields migration; strip any
+    // missing rich column from the payload and retry, surfacing the dropped
+    // columns to the caller so the UI can prompt the operator to apply the migration.
+    const { data, error, droppedColumns } = await applyWithMissingColumnFallback(
+      (payload: Record<string, unknown>) =>
+        supabase.from('activity_plans').insert(payload).select().single(),
+      insertData,
+    );
 
     if (error) {
       console.error('Error creating activity plan:', error);
       if (isDuplicatePlanSlugError(error)) {
         return Response.json(errorV2('DUPLICATE_SLUG', duplicatePlanSlugMessage(slug)), { status: 409 });
       }
-      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create plan'), { status: 500 });
+      if ((error as { code?: string }).code === 'SCHEMA_MISMATCH') {
+        return Response.json(
+          errorV2('SCHEMA_MISMATCH', '資料庫 schema 與方案欄位不一致，請聯絡技術人員套用最新 migration。'),
+          { status: 500 },
+        );
+      }
+      return Response.json(errorV2('INTERNAL_ERROR', '建立方案失敗，請稍後再試或聯絡技術人員。'), { status: 500 });
     }
 
-    return Response.json(successV2({ plan: data }), { status: 201 });
+    return Response.json(successV2({ plan: data, droppedColumns }), { status: 201 });
   } catch (err) {
     console.error('Create plan API error:', err);
     return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });

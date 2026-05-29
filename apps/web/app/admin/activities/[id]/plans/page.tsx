@@ -74,6 +74,7 @@ export default function ActivityPlansPage() {
   const [editingPlan, setEditingPlan] = useState<ActivityPlan | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
 
   const createDefaultForm = () => ({
@@ -238,6 +239,12 @@ export default function ActivityPlansPage() {
       const json = await res.json();
 
       if (json.success) {
+        const dropped: string[] = Array.isArray(json.data?.droppedColumns) ? json.data.droppedColumns : [];
+        if (dropped.length > 0) {
+          setNotice(`方案已儲存，但下列 ${dropped.length} 個進階欄位因資料庫 schema 未升級暫未保存：${dropped.join('、')}。請聯絡技術人員套用最新 migration。`);
+        } else {
+          setNotice('');
+        }
         setShowModal(false);
         await loadData();
       } else {
@@ -566,6 +573,24 @@ export default function ActivityPlansPage() {
             }}
           >
             {error}
+          </div>
+        )}
+
+        {notice && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: 10,
+              padding: '10px 14px',
+              color: '#92400e',
+              fontSize: 14,
+              marginBottom: 16,
+            }}
+          >
+            {notice}
           </div>
         )}
 
