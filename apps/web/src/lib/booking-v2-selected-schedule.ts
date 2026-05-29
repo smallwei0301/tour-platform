@@ -10,6 +10,41 @@ export type DraftScheduleRow = {
   booked_count: number;
 };
 
+export function pickFallbackDraftSelectedSchedule(payload: {
+  schedules: DraftScheduleRow[];
+  activityId: string;
+  resolvedPlanId: string;
+  requestStartAt: string;
+  slotDate: string;
+  timezone: string;
+  participants: number;
+}): { schedule: DraftScheduleRow; validation: { available: boolean; reason?: string } } | null {
+  const { schedules, activityId, resolvedPlanId, requestStartAt, slotDate, timezone, participants } = payload;
+  let firstAuthoritativeReject: { schedule: DraftScheduleRow; validation: { available: boolean; reason?: string } } | null = null;
+
+  for (const schedule of schedules) {
+    const validation = validateDraftSlotAgainstSelectedSchedule({
+      schedule,
+      activityId,
+      resolvedPlanId,
+      requestStartAt,
+      slotDate,
+      timezone,
+      participants,
+    });
+
+    if (validation.available) {
+      return { schedule, validation };
+    }
+
+    if (!firstAuthoritativeReject && shouldRejectDraftWhenSelectedScheduleInvalid({ hasScheduleId: true, selectedScheduleValidation: validation })) {
+      firstAuthoritativeReject = { schedule, validation };
+    }
+  }
+
+  return firstAuthoritativeReject;
+}
+
 export function validateDraftSlotAgainstSelectedSchedule(payload: {
   schedule: DraftScheduleRow | null;
   activityId: string;

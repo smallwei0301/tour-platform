@@ -36,6 +36,7 @@ import {
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
+  pickFallbackDraftSelectedSchedule,
 } from '../../../../../src/lib/booking-v2-selected-schedule';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
@@ -627,6 +628,32 @@ export async function POST(request: NextRequest) {
           timezone: data.timezone,
           participants: data.participants,
         });
+      }
+
+      if (selectedScheduleValidation?.available !== true) {
+        const { data: fallbackSchedules, error: fallbackScheduleError } = await supabase
+          .from('activity_schedules')
+          .select('id, activity_id, plan_id, start_at, status, capacity, booked_count')
+          .eq('activity_id', data.activityId)
+          .eq('start_at', data.startAt)
+          .or(`plan_id.eq.${resolvedPlanId},plan_id.is.null`)
+          .order('plan_id', { ascending: false });
+
+        if (!fallbackScheduleError && Array.isArray(fallbackSchedules) && fallbackSchedules.length > 0) {
+          const fallbackSelectedSchedule = pickFallbackDraftSelectedSchedule({
+            schedules: fallbackSchedules as ActivitySchedule[],
+            activityId: data.activityId,
+            resolvedPlanId,
+            requestStartAt: data.startAt,
+            slotDate,
+            timezone: data.timezone,
+            participants: data.participants,
+          });
+
+          if (fallbackSelectedSchedule) {
+            selectedScheduleValidation = fallbackSelectedSchedule.validation;
+          }
+        }
       }
     }
 

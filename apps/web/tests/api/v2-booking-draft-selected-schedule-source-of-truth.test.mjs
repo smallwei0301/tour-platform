@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
+  pickFallbackDraftSelectedSchedule,
 } from '../../src/lib/booking-v2-selected-schedule.ts';
 
 const PLAN_ID = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
@@ -94,4 +95,38 @@ test('GH-860 RED: scheduleId resolves but selected schedule is closed, draft mus
     true,
     'draft must hard-reject closed selected schedule even when generated availability says true'
   );
+});
+
+test('GH-860 RED: stale scheduleId should fallback to activity_schedules selectedSchedule for same startAt', () => {
+  const fallback = pickFallbackDraftSelectedSchedule({
+    schedules: [
+      {
+        id: 'closed-first',
+        activity_id: '11111111-1111-1111-1111-111111111111',
+        plan_id: null,
+        start_at: '2026-06-01T10:00:00+08:00',
+        status: 'closed',
+        capacity: 8,
+        booked_count: 0,
+      },
+      {
+        id: 'open-target',
+        activity_id: '11111111-1111-1111-1111-111111111111',
+        plan_id: null,
+        start_at: '2026-06-01T10:00:00+08:00',
+        status: 'open',
+        capacity: 8,
+        booked_count: 2,
+      },
+    ],
+    activityId: '11111111-1111-1111-1111-111111111111',
+    resolvedPlanId: PLAN_ID,
+    requestStartAt: '2026-06-01T10:00:00+08:00',
+    slotDate: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    participants: 4,
+  });
+
+  assert.equal(fallback?.schedule.id, 'open-target');
+  assert.equal(fallback?.validation.available, true);
 });
