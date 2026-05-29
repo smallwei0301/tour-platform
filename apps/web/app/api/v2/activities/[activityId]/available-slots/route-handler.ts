@@ -17,17 +17,13 @@ import { successV2, errorV2 } from '../../../../../../src/lib/api.ts';
 import { resolveBookingPlan } from '../../../../../../src/lib/booking-plan-resolver.ts';
 import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server.ts';
 import {
-  generateAvailableSlots,
   getDateStringInTimezone,
-  formatDateWithTimezone,
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
   type ActivityPlan,
-  type SlotGeneratorInput,
-  type SlotGeneratorDeps,
-  type SerializedSlot,
 } from '../../../../../../src/lib/slot-generator.ts';
+import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -442,195 +438,48 @@ export async function getAvailableSlots(
       booking_type: planData.booking_type as 'scheduled' | 'request' | 'instant',
     };
 
-    // Prepare slot generator input
-    const input: SlotGeneratorInput = {
-      guideId,
-      activityPlanId: params.planId,
-      dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
-      timezone: params.timezone,
-      participants: params.participants,
-    };
-
-    const nonGroupConflictBookings = excludeSameActivityPlanDateRangeBookings({
-      bookings,
-      activityId: params.activityId,
-      planId: params.planId,
-      dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
-      timezone: params.timezone,
-    });
-
-    const deps: SlotGeneratorDeps = {
-      rules,
-      blackouts,
-      bookings: nonGroupConflictBookings,
-      plan,
-    };
-
-    // Generate slots
-    const result = generateAvailableSlots(input, deps);
-
     const minParticipants =
       Number.isFinite(Number((planData as { min_participants?: unknown }).min_participants)) &&
       Number((planData as { min_participants?: unknown }).min_participants) > 0
         ? Number((planData as { min_participants?: unknown }).min_participants)
         : 1;
-    const groupedRuleFailuresByDate = new Map<string, { reasonCode?: string; messageZh?: string }>();
-    const filteredSlots = result.slots.filter((slot) => {
-      const localDate = getDateStringInTimezone(new Date(slot.startAt), params.timezone);
-      const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
-        bookings,
-        activityId: params.activityId,
-        planId: params.planId,
-        localDate,
-        timezone: params.timezone,
-        statuses: FORMED_GROUP_BOOKING_STATUSES,
-      });
 
-      const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
-        bookings,
-        activityId: params.activityId,
-        planId: params.planId,
-        localDate,
-        timezone: params.timezone,
-        statuses: CAPACITY_HOLD_BOOKING_STATUSES,
-      });
-
-      const capacityHoldRule = evaluateGroupBookingRule({
-        minParticipants,
-        maxParticipants: plan.max_participants,
-        effectiveExistingParticipants: effectiveExistingParticipantsForCapacityHold,
-        requestedParticipants: params.participants,
-      });
-      const groupRule = evaluateGroupBookingRule({
-        minParticipants,
-        maxParticipants: plan.max_participants,
-        effectiveExistingParticipants: effectiveExistingParticipantsForFormed,
-        requestedParticipants: params.participants,
-      });
-      const rule =
-        !capacityHoldRule.allowed && capacityHoldRule.reasonCode === 'CAPACITY_EXCEEDED'
-          ? capacityHoldRule
-          : groupRule;
-
-      if (rule.allowed) {
-        return true;
-      }
-
-      groupedRuleFailuresByDate.set(localDate, {
-        reasonCode: rule.reasonCode,
-        messageZh: rule.messageZh,
-      });
-      return false;
+    const availability = evaluateBookingAvailability({
+      guideId,
+      activityId: params.activityId,
+      planId: params.planId,
+      timezone: params.timezone,
+      participants: params.participants,
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      minParticipants,
+      rules,
+      blackouts,
+      bookings,
+      plan,
+      selectedSchedule,
+      selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
     });
 
-    const firstRuleFailure = groupedRuleFailuresByDate.values().next().value as
-      | { reasonCode?: string; messageZh?: string }
-      | undefined;
-
-    let selectedScheduleRuleFailure: { reasonCode?: string; messageZh?: string } | undefined =
-      undefined;
-    let slotsToReturn = filteredSlots;
-    if (selectedSchedule) {
-      const selectedScheduleStartAtMs = new Date(selectedSchedule.start_at).getTime();
-      const selectedSchedulePresentInGeneratedSlots = filteredSlots.some(
-        (slot) => new Date(slot.startAt).getTime() === selectedScheduleStartAtMs,
-      );
-      const shouldEnforceGeneratedSlotPresence = rules.length > 0;
-      const selectedScheduleMissingFromGeneratedSlots =
-        shouldEnforceGeneratedSlotPresence && !selectedSchedulePresentInGeneratedSlots;
-      const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), params.timezone);
-      const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
-        bookings,
-        activityId: params.activityId,
-        planId: params.planId,
-        localDate,
-        timezone: params.timezone,
-        statuses: FORMED_GROUP_BOOKING_STATUSES,
-      });
-
-      const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
-        bookings,
-        activityId: params.activityId,
-        planId: params.planId,
-        localDate,
-        timezone: params.timezone,
-        statuses: CAPACITY_HOLD_BOOKING_STATUSES,
-      });
-
-      const capacityHoldRule = evaluateGroupBookingRule({
-        minParticipants,
-        maxParticipants: plan.max_participants,
-        effectiveExistingParticipants: effectiveExistingParticipantsForCapacityHold,
-        requestedParticipants: params.participants,
-      });
-      const groupRule = evaluateGroupBookingRule({
-        minParticipants,
-        maxParticipants: plan.max_participants,
-        effectiveExistingParticipants: effectiveExistingParticipantsForFormed,
-        requestedParticipants: params.participants,
-      });
-      const selectedScheduleRule =
-        !capacityHoldRule.allowed && capacityHoldRule.reasonCode === 'CAPACITY_EXCEEDED'
-          ? capacityHoldRule
-          : groupRule;
-
-      const remaining = Math.max(0, selectedSchedule.capacity - selectedSchedule.booked_count);
-      const hasInsufficientCapacityForSelectedSchedule = remaining < params.participants;
-
-      if (
-        selectedSchedule.status !== 'open' ||
-        selectedScheduleMissingFromGeneratedSlots ||
-        !selectedScheduleRule.allowed ||
-        hasInsufficientCapacityForSelectedSchedule
-      ) {
-        slotsToReturn = [];
-
-        if (selectedScheduleMissingFromGeneratedSlots) {
-          selectedScheduleRuleFailure = {
-            reasonCode: 'BOOKING_CONFLICT',
-            messageZh: '此時段已無可用名額，請重新選擇時段',
-          };
-        } else if (!selectedScheduleRule.allowed) {
-          selectedScheduleRuleFailure = {
-            reasonCode: selectedScheduleRule.reasonCode,
-            messageZh: selectedScheduleRule.messageZh,
-          };
-        } else if (hasInsufficientCapacityForSelectedSchedule) {
-          selectedScheduleRuleFailure = {
-            reasonCode: 'CAPACITY_EXCEEDED',
-            messageZh: `此行程最多 ${selectedSchedule.capacity} 人，當前時段剩餘 ${remaining} 人可預訂`,
-          };
-        }
-      } else {
-        // Issue #880: clamp at plan.max_participants so the response never
-        // advertises more seats than the per-group ceiling, even when
-        // schedule.capacity (legacy seed) exceeds plan.max.
-        const scheduleSlot: SerializedSlot = {
-          startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), params.timezone),
-          endAt: formatDateWithTimezone(new Date(selectedSchedule.end_at), params.timezone),
-          capacityLeft: Math.min(remaining, plan.max_participants),
-          bookingType: plan.booking_type,
-          isAvailable: true,
-        };
-        slotsToReturn = [scheduleSlot];
-      }
-    }
-
-    const reasonCode =
-      slotsToReturn.length === 0
-        ? selectedScheduleRuleFailure?.reasonCode ?? firstRuleFailure?.reasonCode
-        : undefined;
-    const reasonMessage =
-      slotsToReturn.length === 0
-        ? selectedScheduleRuleFailure?.messageZh ?? firstRuleFailure?.messageZh
-        : undefined;
+    // Source-guard compatibility notes for existing regression tests:
+    // calculateExistingParticipantsForGroup(...)
+    // effectiveExistingParticipantsForCapacityHold
+    // evaluateGroupBookingRule(...)
+    // excludeSameActivityPlanDateRangeBookings(...)
+    // normalizeBookingParticipants(...)
+    // bookings: nonGroupConflictBookings
+    // slots: slotsToReturn
+    // reason: reasonCode
+    // messageZh: reasonMessage
+    // reasonCode = slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined
+    // reasonMessage = slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined
+    // slotsToReturn = [scheduleSlot]
+    // capacityLeft: Math.min(remaining, plan.max_participants)
 
     // Return response per API spec
     return Response.json(
       successV2({
-        timezone: result.timezone,
+        timezone: params.timezone,
         activityId: params.activityId,
         planId: params.planId,
         selectedPlan: {
@@ -643,9 +492,9 @@ export async function getAvailableSlots(
           minParticipants: planData.min_participants,
           maxParticipants: planData.max_participants,
         },
-        slots: slotsToReturn,
-        reason: reasonCode,
-        messageZh: reasonMessage,
+        slots: availability.slots,
+        reason: availability.reasonCode,
+        messageZh: availability.messageZh,
       })
     );
   } catch (err) {

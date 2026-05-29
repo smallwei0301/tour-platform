@@ -24,15 +24,13 @@ import { resolveBookingPlan } from '../../../../../src/lib/booking-plan-resolver
 import {
   validateSlotAvailability,
   addMinutes,
-  generateAvailableSlots,
   getDateStringInTimezone,
   type ActivityPlan,
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
-  type SlotGeneratorInput,
-  type SlotGeneratorDeps,
 } from '../../../../../src/lib/slot-generator';
+import { evaluateBookingAvailability } from '../../../../../src/lib/availability-v2/booking-availability-evaluator';
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
@@ -191,36 +189,27 @@ async function isSlotInGeneratedV2Availability(
     booking_type: payload.planBookingType,
   };
 
-  const input: SlotGeneratorInput = {
+  const minParticipants = 1;
+  const availability = evaluateBookingAvailability({
     guideId: payload.guideId,
-    activityPlanId: payload.planId,
-    dateFrom: payload.slotDate,
-    dateTo: payload.slotDate,
-    timezone: payload.timezone,
-    participants: payload.participants,
-  };
-
-  const nonGroupConflictBookings = excludeSameActivityPlanDateBookings({
-    bookings,
     activityId: payload.activityId,
     planId: payload.planId,
-    localDate: payload.slotDate,
     timezone: payload.timezone,
-  });
-
-  const deps: SlotGeneratorDeps = {
+    participants: payload.participants,
+    dateFrom: payload.slotDate,
+    dateTo: payload.slotDate,
+    minParticipants,
     rules,
     blackouts,
-    bookings: nonGroupConflictBookings,
+    bookings,
     plan,
-  };
+  });
 
-  const availability = generateAvailableSlots(input, deps);
   const targetStart = new Date(payload.startAt).getTime();
   const isAvailable = availability.slots.some((slot) => new Date(slot.startAt).getTime() === targetStart);
 
   if (!isAvailable) {
-    return { available: false, reason: 'NOT_IN_GENERATED_SLOT_LIST' };
+    return { available: false, reason: availability.reasonCode ?? 'NOT_IN_GENERATED_SLOT_LIST' };
   }
 
   return { available: true };
