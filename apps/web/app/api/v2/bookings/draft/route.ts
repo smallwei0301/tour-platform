@@ -36,6 +36,7 @@ import {
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
+  shouldAttemptDraftSelectedScheduleFallback,
   pickFallbackDraftSelectedSchedule,
 } from '../../../../../src/lib/booking-v2-selected-schedule';
 import {
@@ -630,7 +631,23 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      if (selectedScheduleValidation?.available !== true) {
+      if (
+        shouldRejectDraftWhenSelectedScheduleInvalid({
+          hasScheduleId: Boolean(data.scheduleId),
+          selectedScheduleValidation,
+        })
+      ) {
+        return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
+          status: 409,
+        });
+      }
+
+      if (
+        shouldAttemptDraftSelectedScheduleFallback({
+          hasScheduleId: Boolean(data.scheduleId),
+          selectedScheduleValidation,
+        })
+      ) {
         const { data: fallbackSchedules, error: fallbackScheduleError } = await supabase
           .from('activity_schedules')
           .select('id, activity_id, plan_id, start_at, status, capacity, booked_count')

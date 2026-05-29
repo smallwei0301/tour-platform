@@ -84,6 +84,13 @@ const AUTHORITATIVE_SELECTED_SCHEDULE_REJECT_REASONS = new Set([
   'SCHEDULE_CAPACITY_EXCEEDED',
 ]);
 
+const STALE_SELECTED_SCHEDULE_FALLBACK_REASONS = new Set([
+  'SCHEDULE_NOT_FOUND',
+  'SCHEDULE_PLAN_MISMATCH',
+  'SCHEDULE_DATE_MISMATCH',
+  'SCHEDULE_START_MISMATCH',
+]);
+
 export function shouldRejectDraftWhenSelectedScheduleInvalid(payload: {
   hasScheduleId: boolean;
   selectedScheduleValidation: { available: boolean; reason?: string } | null;
@@ -93,4 +100,15 @@ export function shouldRejectDraftWhenSelectedScheduleInvalid(payload: {
   if (!selectedScheduleValidation) return false;
   if (selectedScheduleValidation.available === true) return false;
   return AUTHORITATIVE_SELECTED_SCHEDULE_REJECT_REASONS.has(selectedScheduleValidation.reason ?? '');
+}
+
+export function shouldAttemptDraftSelectedScheduleFallback(payload: {
+  hasScheduleId: boolean;
+  selectedScheduleValidation: { available: boolean; reason?: string } | null;
+}): boolean {
+  const { hasScheduleId, selectedScheduleValidation } = payload;
+  if (!hasScheduleId) return false;
+  if (!selectedScheduleValidation) return false;
+  if (selectedScheduleValidation.available === true) return false;
+  return STALE_SELECTED_SCHEDULE_FALLBACK_REASONS.has(selectedScheduleValidation.reason ?? '');
 }

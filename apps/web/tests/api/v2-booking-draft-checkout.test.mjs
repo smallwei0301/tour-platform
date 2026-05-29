@@ -779,6 +779,16 @@ test('draft route aligns with available-slots resolver contract for schedule fal
   assert.match(src, /scheduleId/);
   assert.match(src, /or\(`activity_plan_id\.is\.null,activity_plan_id\.eq\.\$\{resolvedPlanId\}`\)/);
   assert.match(src, /messageZh/);
+
+  const rejectCheckPos = src.indexOf('shouldRejectDraftWhenSelectedScheduleInvalid({');
+  const fallbackQueryPos = src.indexOf(".from('activity_schedules')", src.indexOf('fallbackSchedules'));
+
+  assert.notEqual(rejectCheckPos, -1, 'must enforce selectedSchedule authoritative reject check');
+  assert.notEqual(fallbackQueryPos, -1, 'must keep fallback selectedSchedule lookup for stale/mismatch hints');
+  assert.ok(
+    rejectCheckPos < fallbackQueryPos,
+    'authoritative selectedSchedule reject must happen before fallback lookup to avoid replacing closed/full source-of-truth schedule'
+  );
 });
 
 test('behavior: draft rule blocks if confirmed+draft participants already exceed remaining capacity', () => {
