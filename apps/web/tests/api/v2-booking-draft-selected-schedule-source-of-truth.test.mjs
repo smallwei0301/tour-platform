@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateDraftSlotAgainstSelectedSchedule } from '../../src/lib/booking-v2-selected-schedule.ts';
+import {
+  validateDraftSlotAgainstSelectedSchedule,
+  shouldRejectDraftWhenSelectedScheduleInvalid,
+} from '../../src/lib/booking-v2-selected-schedule.ts';
 
 const PLAN_ID = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
 const SCHEDULE_ID = 'f1917b79-42e3-481f-9f06-0284f6fda422';
@@ -48,4 +51,37 @@ test('GH-860 guard: reject stale schedule mismatch (startAt mismatch) to preserv
 
   assert.equal(result.available, false);
   assert.equal(result.reason, 'SCHEDULE_START_MISMATCH');
+});
+
+test('GH-860 RED: scheduleId resolves but selected schedule is closed, draft must not fallback to generated availability', () => {
+  const selectedScheduleValidation = validateDraftSlotAgainstSelectedSchedule({
+    schedule: {
+      id: SCHEDULE_ID,
+      activity_id: '11111111-1111-1111-1111-111111111111',
+      plan_id: null,
+      start_at: '2026-06-01T10:00:00+08:00',
+      status: 'closed',
+      capacity: 8,
+      booked_count: 2,
+    },
+    activityId: '11111111-1111-1111-1111-111111111111',
+    resolvedPlanId: PLAN_ID,
+    requestStartAt: '2026-06-01T10:00:00+08:00',
+    slotDate: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    participants: 2,
+  });
+
+  const shouldReject = shouldRejectDraftWhenSelectedScheduleInvalid({
+    hasScheduleId: true,
+    selectedScheduleValidation,
+  });
+
+  assert.equal(selectedScheduleValidation.available, false);
+  assert.equal(selectedScheduleValidation.reason, 'SCHEDULE_NOT_OPEN');
+  assert.equal(
+    shouldReject,
+    true,
+    'draft must hard-reject closed selected schedule even when generated availability says true'
+  );
 });

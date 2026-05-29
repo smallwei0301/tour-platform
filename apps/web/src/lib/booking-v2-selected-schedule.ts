@@ -43,3 +43,13 @@ export function validateDraftSlotAgainstSelectedSchedule(payload: {
 
   return { available: true };
 }
+
+export function shouldRejectDraftWhenSelectedScheduleInvalid(payload: {
+  hasScheduleId: boolean;
+  selectedScheduleValidation: { available: boolean; reason?: string } | null;
+}): boolean {
+  const { hasScheduleId, selectedScheduleValidation } = payload;
+  if (!hasScheduleId) return false;
+  if (!selectedScheduleValidation) return false;
+  return selectedScheduleValidation.available !== true;
+}

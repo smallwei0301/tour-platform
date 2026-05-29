@@ -33,7 +33,10 @@ import {
   type SlotGeneratorInput,
   type SlotGeneratorDeps,
 } from '../../../../../src/lib/slot-generator';
-import { validateDraftSlotAgainstSelectedSchedule } from '../../../../../src/lib/booking-v2-selected-schedule';
+import {
+  validateDraftSlotAgainstSelectedSchedule,
+  shouldRejectDraftWhenSelectedScheduleInvalid,
+} from '../../../../../src/lib/booking-v2-selected-schedule';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -628,6 +631,16 @@ export async function POST(request: NextRequest) {
     }
 
     const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
+    if (
+      shouldRejectDraftWhenSelectedScheduleInvalid({
+        hasScheduleId: Boolean(data.scheduleId),
+        selectedScheduleValidation,
+      })
+    ) {
+      return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
+        status: 409,
+      });
+    }
 
     let generatedSlotValidation: { available: boolean; reason?: string };
     try {
