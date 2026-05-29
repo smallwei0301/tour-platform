@@ -6,6 +6,7 @@ import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
 import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
 import { getPlanScheduleForDate } from './plan-schedule-match';
+import { useSelectedPlan } from './SelectedPlanContext';
 
 interface Schedule {
   startAt?: string;
@@ -155,6 +156,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+  const { setSelected: setSharedSelectedPlan } = useSelectedPlan();
   const [showAllPlans, setShowAllPlans] = useState(false);
   const [liveSchedules, setLiveSchedules] = useState<Schedule[] | null>(null);
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
@@ -260,6 +262,15 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                 if (!canBook) return;
                 void ensureLiveAvailability();
                 setSelectedPlan(plan.id);
+                // #919: surface selection to the page-level bottom CTA
+                setSharedSelectedPlan({
+                  id: plan.id,
+                  label: plan.label,
+                  price: planPrice,
+                  priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
+                  date: selectedDate || undefined,
+                  scheduleId: planAvail.schedule?.id || undefined,
+                });
               }}
               style={(!canBook && selectedDate) ? { opacity: 0.55, pointerEvents: 'none' as const } : undefined}
             >
@@ -358,6 +369,15 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                     onClick={() => {
                       void ensureLiveAvailability();
                       setSelectedPlan(plan.id);
+                      // #919: surface selection so the bottom CTA reflects it on quick re-entry
+                      setSharedSelectedPlan({
+                        id: plan.id,
+                        label: plan.label,
+                        price: planPrice,
+                        priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
+                        date: selectedDate || undefined,
+                        scheduleId: planAvail.schedule?.id || undefined,
+                      });
                     }}
                   >
                     {plan.bookingBtnText || '立即預約'}
