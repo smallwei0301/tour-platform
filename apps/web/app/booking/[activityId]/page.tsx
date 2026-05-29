@@ -441,7 +441,14 @@ interface V2AvailableSlotsResponse {
     messageZh?: string;
   };
   error?: {
+    code?: string;
     message?: string;
+    messageZh?: string;
+    details?: {
+      planKey?: string;
+      activityId?: string;
+      scheduleId?: string | null;
+    };
   };
 }
 
@@ -586,7 +593,10 @@ function BookingInnerV2FlagShell() {
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
           setSlots([]);
-          setV2Error(json?.data?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
+          // Issue #903: prefer the resolver's Traditional-Chinese messageZh
+          // (e.g. AMBIGUOUS_PLAN -> '此活動有多個方案,無法自動判斷,請從活動頁重新選擇明確方案')
+          // before falling back to the English message or the generic default.
+          setV2Error(json?.data?.messageZh || json?.error?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
           return;
         }
         const nextSlotsRaw = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
