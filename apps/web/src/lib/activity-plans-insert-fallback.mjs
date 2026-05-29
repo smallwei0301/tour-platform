@@ -70,3 +70,37 @@ export async function applyWithMissingColumnFallback(runOperation, payload, opti
     droppedColumns,
   };
 }
+
+// Array-aware variant for bulk upserts (e.g. JSON-import backfill into activity_plans).
+// Run runOperation(rows) repeatedly, peeling off any rich column the server reports as
+// missing from EVERY row before retrying. Bails (returns the original error) when the
+// missing column isn't a rich field, so a genuinely broken required column still surfaces.
+export async function applyUpsertWithMissingColumnFallback(runOperation, rows, options = {}) {
+  const maxRetries = options.maxRetries ?? 25;
+  const droppedColumns = [];
+  let attempt = Array.isArray(rows) ? rows.map((row) => ({ ...row })) : [];
+
+  for (let i = 0; i <= maxRetries; i++) {
+    const { data, error } = await runOperation(attempt);
+    if (!error) {
+      return { data, error: null, droppedColumns };
+    }
+    const missing = extractMissingColumn(error);
+    const presentInSomeRow = attempt.some((row) => missing != null && missing in row);
+    if (!missing || !presentInSomeRow || !isRichColumn(missing)) {
+      return { data: null, error, droppedColumns };
+    }
+    droppedColumns.push(missing);
+    attempt = attempt.map((row) => {
+      const next = { ...row };
+      delete next[missing];
+      return next;
+    });
+  }
+
+  return {
+    data: null,
+    error: { code: 'SCHEMA_MISMATCH', message: 'Exceeded missing-column fallback retries' },
+    droppedColumns,
+  };
+}
