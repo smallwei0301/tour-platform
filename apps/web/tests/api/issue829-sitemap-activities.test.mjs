@@ -77,6 +77,49 @@ describe('#829 — mapActivitiesToSitemapEntries: region 正規化（無 regionS
   });
 });
 
+describe('排除自動化測試殘留 slug（playwright-/e2e- 前綴）', () => {
+  it('playwright-e2e-<timestamp> 不進 sitemap 即使 status=published', () => {
+    const result = mapActivitiesToSitemapEntries(
+      [
+        { slug: 'playwright-e2e-1775872569478-1775872569552', region: '台北市', regionSlug: 'taipei', status: 'published' },
+        { slug: 'playwright-e2e-1775872048549-1775872048625', region: '台北市', regionSlug: 'taipei', status: 'published' },
+      ],
+      { baseUrl: BASE_URL, now: NOW }
+    );
+    assert.equal(result.length, 0);
+  });
+
+  it('e2e-accept-test-* 不進 sitemap 即使 status=published', () => {
+    const result = mapActivitiesToSitemapEntries(
+      [{ slug: 'e2e-accept-test-001', region: '台北市', regionSlug: 'taipei', status: 'published' }],
+      { baseUrl: BASE_URL, now: NOW }
+    );
+    assert.equal(result.length, 0);
+  });
+
+  it('PLAYWRIGHT-... 大寫前綴也被排除（case-insensitive）', () => {
+    const result = mapActivitiesToSitemapEntries(
+      [{ slug: 'PLAYWRIGHT-e2e-upper', region: '台北市', regionSlug: 'taipei', status: 'published' }],
+      { baseUrl: BASE_URL, now: NOW }
+    );
+    assert.equal(result.length, 0);
+  });
+
+  it('正常活動 slug 不受影響', () => {
+    const result = mapActivitiesToSitemapEntries(
+      [
+        { slug: 'kaohsiung-chaishan-cave-experience', region: '高雄市', regionSlug: 'kaohsiung', status: 'published' },
+        { slug: 'andy-lee-private-tour', region: '台北市', regionSlug: 'taipei', status: 'published' },
+        { slug: 'e2eish-but-not-prefix', region: '台北市', regionSlug: 'taipei', status: 'published' },
+      ],
+      { baseUrl: BASE_URL, now: NOW }
+    );
+    assert.equal(result.length, 3);
+    assert.ok(result.some((r) => r.url.endsWith('/kaohsiung-chaishan-cave-experience')));
+    assert.ok(result.some((r) => r.url.endsWith('/e2eish-but-not-prefix')));
+  });
+});
+
 describe('#829 — mapActivitiesToSitemapEntries: 排除未發佈', () => {
   it('status:draft 不產生項目', () => {
     const result = mapActivitiesToSitemapEntries(
