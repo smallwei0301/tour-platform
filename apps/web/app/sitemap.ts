@@ -1,9 +1,17 @@
 import type { MetadataRoute } from 'next';
 import { getActivitySitemapEntries } from '../src/lib/sitemap-activities.mjs';
+import { listPublishedGuidesDb } from '../src/lib/db.mjs';
 
 const BLOG_SLUGS = [
   'why-private-guide',
   'chaishan-cave-guide',
+];
+
+// Experience detail pages — public-facing, not covered by /theme/* collection pages.
+// Slugs sourced from store.mjs; add new slugs here when new experiences launch.
+const EXPERIENCE_SLUGS = [
+  'kaohsiung-chaishan-cave-experience',
+  'dadadaocheng-walk',
 ];
 
 // Sitemap reads the published-activity catalog; revalidate hourly so crawlers
@@ -26,6 +34,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     { url: `${baseUrl}/theme/cave-exploration`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${baseUrl}/theme/river-trekking`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
+    ...EXPERIENCE_SLUGS.map((slug) => ({
+      url: `${baseUrl}/experiences/${slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
     { url: `${baseUrl}/why-choose-us`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/guide/apply`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
@@ -35,5 +49,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/legal/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${baseUrl}/legal/refund`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
     ...(await getActivitySitemapEntries({ baseUrl, now })),
+    // Guide profile pages — dynamic from DB, same revalidation as activities.
+    ...(await listPublishedGuidesDb().then(guides =>
+      (guides || [])
+        .filter((g: { slug?: string }) => g.slug)
+        .map((g: { slug: string }) => ({
+          url: `${baseUrl}/guides/${encodeURIComponent(g.slug)}`,
+          lastModified: now,
+          changeFrequency: 'monthly' as const,
+          priority: 0.7,
+        }))
+    ).catch(() => [])),
   ];
 }
