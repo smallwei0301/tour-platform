@@ -33,6 +33,20 @@ export function assertRuntimeSecretPolicy(env = process.env) {
     violations.push('ADMIN_ACCESS_TOKEN missing/weak/default (production requires >=16 chars)');
   }
 
+  // LINE Messaging secrets are only enforced once the kill-switch is ON, so the
+  // flag-OFF default (incl. CI build) is unaffected.
+  const lineMessagingOn = ['1', 'true', 'yes', 'on'].includes(
+    String(env.LINE_MESSAGING_ENABLED || '').trim().toLowerCase(),
+  );
+  if (lineMessagingOn) {
+    if (isWeakSecret(env.LINE_CHANNEL_ACCESS_TOKEN, 32)) {
+      violations.push('LINE_CHANNEL_ACCESS_TOKEN missing/weak/default (>=32 chars required when LINE_MESSAGING_ENABLED)');
+    }
+    if (isWeakSecret(env.LINE_CHANNEL_SECRET, 24)) {
+      violations.push('LINE_CHANNEL_SECRET missing/weak/default (>=24 chars required when LINE_MESSAGING_ENABLED)');
+    }
+  }
+
   if (violations.length) {
     throw new Error(`[SECURITY_ENV_BLOCK] ${violations.join('; ')}`);
   }
