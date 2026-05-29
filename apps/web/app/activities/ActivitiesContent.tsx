@@ -184,7 +184,7 @@ export default function ActivitiesContent() {
         {/* 結果區 */}
         <section>
           <div className="tp-result-head">
-            <h2>{resultLabel}</h2>
+            <h1>{resultLabel}</h1>
             <select aria-label="排序" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="recommended">推薦排序</option>
               <option value="price-asc">價格：低到高</option>
