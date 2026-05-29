@@ -154,6 +154,10 @@ export const paymentEvents = [];
 // Each entry: { lineUserId, userId, contactEmail, displayName, isBlocked, boundAt, updatedAt }
 export const lineUserMappings = [];
 
+// LINE webhook event idempotency (in-memory fallback for line_webhook_events).
+// Each entry: { webhookEventId, eventType, lineUserId, receivedAt }
+export const lineWebhookEvents = [];
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',

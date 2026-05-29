@@ -13,6 +13,8 @@
  * - LINE_OPS_GROUP_ID         — target group for ops notifications
  */
 
+import crypto from 'node:crypto';
+
 import { isLineMessagingEnabled } from '../config/feature-flags.mjs';
 
 const LINE_PUSH_API = 'https://api.line.me/v2/bot/message/push';
@@ -78,6 +80,20 @@ export async function pushMessage(to: string, messages: LineMessage | LineMessag
 export async function replyMessage(replyToken: string, messages: LineMessage | LineMessage[]): Promise<PushResult> {
   if (!replyToken) return { status: 'skipped', reason: 'no_reply_token' };
   return postToLine(LINE_REPLY_API, { replyToken, messages: toArray(messages) });
+}
+
+/**
+ * Verify a LINE webhook signature: base64(HMAC-SHA256(channelSecret, rawBody)).
+ * Constant-time comparison; returns false when the secret/signature is absent.
+ */
+export function verifyLineSignature(rawBody: string, signature: string | null | undefined): boolean {
+  const secret = process.env.LINE_CHANNEL_SECRET || '';
+  if (!secret || !signature) return false;
+  const expected = crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('base64');
+  const a = Buffer.from(expected);
+  const b = Buffer.from(String(signature));
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
 }
 
 /** Push a plain-text notification to the ops/admin group. */

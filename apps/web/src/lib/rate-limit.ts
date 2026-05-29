@@ -94,6 +94,9 @@ export const limiters = {
 
   // /api/events — 50 requests per minute
   events: new RateLimiter(50, 60 * 1000),
+
+  // /api/line/webhook — 60 requests per minute (LINE delivers in bursts)
+  lineWebhook: new RateLimiter(60, 60 * 1000),
 };
 
 // Named exports for convenience
