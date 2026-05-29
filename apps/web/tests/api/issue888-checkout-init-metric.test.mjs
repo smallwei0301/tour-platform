@@ -77,7 +77,8 @@ function runGoNoGo(fixture, env = {}) {
   execFileSync(
     process.execPath,
     [path.join(SCRIPTS, 'booking-v2-go-no-go.mjs')],
-    { env: { ...process.env, ...env }, encoding: 'utf8' }
+    // Run from repo root so the script's `path.join(cwd, 'docs/...')` resolves correctly.
+    { env: { ...process.env, ...env }, encoding: 'utf8', cwd: path.resolve(ROOT, '../..') }
   );
   // go-no-go writes results to a file; read it to inspect the content
   return readFileSync(path.join(REPORTS_DIR, 'booking-v2-go-no-go-latest.md'), 'utf8');
