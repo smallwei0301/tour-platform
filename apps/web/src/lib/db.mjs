@@ -13,6 +13,7 @@ import {
 } from './services.mjs';
 import { calculateDiscount } from './promo-discount.ts';
 import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
+import { applyUpsertWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
 import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
@@ -3350,10 +3351,21 @@ async function syncImportedActivityPlansDb(supabase, activityId, legacyPlans) {
 
   if (upserts.length === 0) return;
 
-  const { error } = await supabase
-    .from('activity_plans')
-    .upsert(upserts, { onConflict: 'activity_id,slug' });
+  // Issue #904: production activity_plans may lag behind the rich-fields migration.
+  // Strip any missing rich column from every row and retry so the JSON-import path
+  // still creates the basic formal plans instead of throwing "Failed to create plan".
+  const { error, droppedColumns } = await applyUpsertWithMissingColumnFallback(
+    (rows) => supabase.from('activity_plans').upsert(rows, { onConflict: 'activity_id,slug' }),
+    upserts,
+  );
   if (error) throw new Error(error.message);
+
+  if (droppedColumns.length > 0) {
+    console.warn('[admin-activity-import] dropped rich columns missing from schema while syncing activity_plans', {
+      activityId,
+      droppedColumns,
+    });
+  }
 }
 
 export async function updateActivityStatusDb(id, status) {
