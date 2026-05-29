@@ -53,7 +53,7 @@ export default function AdminGuideDetailPage() {
         subtitle={guide?.display_name || '載入中…'}
       />
 
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Back button */}
         <div>
           <button
@@ -129,7 +129,7 @@ export default function AdminGuideDetailPage() {
 
             <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
               {/* Contact & meta */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
                 <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px' }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>電子信箱</div>
                   <div style={{ fontSize: 14, color: '#374151', fontFamily: 'monospace' }}>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, PageHeader, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type IncidentRow = {
   source: string;
@@ -56,7 +57,7 @@ export default function AdminHealthPage() {
         }
       />
 
-      <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
         {/* Deploy SHA */}
         {data && (
@@ -95,53 +96,45 @@ export default function AdminHealthPage() {
           <div style={{ padding: '14px 18px', borderBottom: '1px solid #f0f0f0' }}>
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#111' }}>最近事件（最新 10 筆）</h3>
           </div>
-          <div style={{ padding: '0 18px 12px' }}>
-            {loading ? (
-              <LoadingSkeleton rows={5} />
-            ) : error ? (
-              <p style={{ margin: '12px 0', fontSize: 13, color: '#ef4444' }}>{error}</p>
-            ) : !data || data.recent.length === 0 ? (
-              <EmptyState message="過去 24 小時無事件紀錄" />
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#f9fafb' }}>
-                    {(['source', 'severity', 'message', 'created_at'] as const).map((col) => (
-                      <th key={col} style={{
-                        padding: '10px 12px', textAlign: 'left', fontWeight: 700,
-                        color: '#374151', borderBottom: '1px solid #e5e7eb',
-                        fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em',
-                      }}>
-                        {col === 'created_at' ? '時間' : col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.recent.map((row, i) => (
-                    <tr key={i} style={{ borderBottom: i < data.recent.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                      <td style={{ padding: '10px 12px', color: '#374151' }}>{row.source}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{
-                          padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700,
-                          background: `${SEVERITY_COLOR[row.severity] ?? '#9ca3af'}22`,
-                          color: SEVERITY_COLOR[row.severity] ?? '#6b7280',
-                        }}>
-                          {row.severity}
-                        </span>
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#374151', maxWidth: 360, wordBreak: 'break-word' }}>
-                        {row.message}
-                      </td>
-                      <td style={{ padding: '10px 12px', color: '#9ca3af', whiteSpace: 'nowrap' }}>
-                        {new Date(row.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {error ? (
+            <p style={{ margin: '12px 18px', fontSize: 13, color: '#ef4444' }}>{error}</p>
+          ) : (
+            <ResponsiveTable
+              columns={[
+                { key: 'source', header: 'source', mobilePriority: 'title', cell: (row: IncidentRow) => row.source },
+                {
+                  key: 'severity', header: 'severity', mobilePriority: 'subtitle',
+                  cell: (row: IncidentRow) => (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: 999, fontSize: 11, fontWeight: 700,
+                      background: `${SEVERITY_COLOR[row.severity] ?? '#9ca3af'}22`,
+                      color: SEVERITY_COLOR[row.severity] ?? '#6b7280',
+                    }}>
+                      {row.severity}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'message', header: 'message', mobileLabel: 'message',
+                  cell: (row: IncidentRow) => <span style={{ color: '#374151', wordBreak: 'break-word' }}>{row.message}</span>,
+                  tdStyle: { maxWidth: 360, wordBreak: 'break-word' },
+                },
+                {
+                  key: 'created_at', header: '時間', mobileLabel: '時間',
+                  cell: (row: IncidentRow) => (
+                    <span style={{ color: '#9ca3af', whiteSpace: 'nowrap' }}>
+                      {new Date(row.created_at).toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' })}
+                    </span>
+                  ),
+                },
+              ] as ResponsiveColumn<IncidentRow>[]}
+              rows={data?.recent ?? []}
+              getRowKey={(row) => `${row.created_at}-${row.source}-${row.severity}`}
+              loading={loading}
+              loadingRows={5}
+              emptyMessage="過去 24 小時無事件紀錄"
+            />
+          )}
         </Card>
 
       </div>

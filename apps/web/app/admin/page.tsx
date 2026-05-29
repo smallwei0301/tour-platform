@@ -68,10 +68,10 @@ export default function AdminDashboardPage() {
         }
       />
 
-      <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {/* Time Filter */}
-        <Card data-guide="time-filter" style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Card data-guide="time-filter" className="admin-toolbar" style={{ padding: '16px 20px' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>時間範圍</span>
           {(['today', '7d', '30d'] as Preset[]).map((p) => (
             <button key={p} onClick={() => setPreset(p)} style={{
@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
             </>
           )}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+          <div className="admin-toolbar-meta" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <Link href="/admin/settings/kpi" style={{ fontSize: 13, color: 'var(--tp-primary)', textDecoration: 'underline' }}>KPI 設定</Link>
             <Link href="/admin/settings/security" style={{ fontSize: 13, color: 'var(--tp-primary)', textDecoration: 'underline' }}>安全設定</Link>
           </div>
@@ -107,13 +107,13 @@ export default function AdminDashboardPage() {
 
         {/* KPI Cards */}
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          <div className="admin-stat-grid">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} style={{ height: 88, borderRadius: 12, background: 'linear-gradient(90deg,#f3f4f6,#e5e7eb,#f3f4f6)' }} />
             ))}
           </div>
         ) : (
-          <div data-guide="kpi-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+          <div data-guide="kpi-cards" className="admin-stat-grid">
             {KPI_CARDS.map((c) => (
               <Link key={c.label} href={c.href} style={{ textDecoration: 'none' }}>
                 <Card style={{
@@ -164,11 +164,11 @@ export default function AdminDashboardPage() {
               ))}
             </div>
           </div>
-          <div style={{ padding: '20px' }}>
+          <div style={{ padding: '20px', overflowX: 'auto' }}>
             {trends.length === 0 ? (
               <EmptyState message="無趨勢資料" />
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${trends.length}, minmax(0,1fr))`, gap: 8, alignItems: 'end', minHeight: 120 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${trends.length}, minmax(32px,1fr))`, gap: 8, alignItems: 'end', minHeight: 120, minWidth: trends.length * 36 }}>
                 {trends.map((t: any) => {
                   const value = Number(t[trendMetric] || 0);
                   const h = Math.max(8, Math.round((value / maxValue) * 100));
@@ -187,7 +187,7 @@ export default function AdminDashboardPage() {
         </Card>
 
         {/* Queues */}
-        <div data-guide="pending-orders" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px,1fr))', gap: 16 }}>
+        <div data-guide="pending-orders" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
           {[
             { title: '待處理訂單', items: data?.queues?.orders || [], href: '/admin/orders', renderItem: (o: any) => `${o.id} · ${STATUS_LABELS[o.status] ?? o.status}`, empty: '🎉 無待處理訂單' },
             { title: '待處理退款', items: data?.queues?.refunds || [], href: '/admin/refunds', renderItem: (r: any) => `${r.orderId} · ${STATUS_LABELS[r.status] ?? r.status}`, empty: '🎉 無待處理退款' },

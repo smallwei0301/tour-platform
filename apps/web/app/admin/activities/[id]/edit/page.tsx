@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
+import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/responsive';
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
@@ -180,17 +181,8 @@ function AddScheduleModal({
   const days = buildDateGrid();
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }}>
-      <div style={{
-        background: '#fff', borderRadius: 12, padding: 28, width: 560,
-        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-        maxHeight: '90vh', overflowY: 'auto',
-      }}>
-        <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 4 }}>📅 批次新增場次</h3>
-        <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 16 }}>
+    <ResponsiveModal open={true} onClose={onClose} size="md" title="📅 批次新增場次">
+        <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 16px' }}>
           可同時選擇多個日期，一次建立多筆場次
         </p>
 
@@ -273,7 +265,7 @@ function AddScheduleModal({
             </select>
           </label>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormGrid cols={2} gap={12}>
             <label style={labelStyle}>
               開始時間
               <input type="time" value={startHH} onChange={e => setStartHH(e.target.value)} style={fieldStyle} />
@@ -282,9 +274,9 @@ function AddScheduleModal({
               結束時間
               <input type="time" value={endHH} onChange={e => setEndHH(e.target.value)} style={fieldStyle} />
             </label>
-          </div>
+          </FormGrid>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormGrid cols={2} gap={12}>
             <label style={labelStyle}>
               最大容量（人數）
               <input
@@ -299,9 +291,9 @@ function AddScheduleModal({
                 min={1} max={50} style={fieldStyle}
               />
             </label>
-          </div>
+          </FormGrid>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
             {progress && <span style={{ fontSize: 13, color: '#16a34a' }}>{progress}</span>}
             <button type="button" onClick={onClose}
               style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 14 }}>
@@ -319,8 +311,7 @@ function AddScheduleModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ResponsiveModal>
   );
 }
 
@@ -1029,7 +1020,7 @@ export default function AdminActivityEditPage() {
         }
       />
 
-      <div style={{ padding: '20px 28px', maxWidth: 800 }}>
+      <div className="admin-page" style={{ maxWidth: 800 }}>
         {error   && <div style={{ background: '#fee2e2', color: '#991b1b', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 14 }}>❌ {error}</div>}
         {success && <div style={{ background: '#dcfce7', color: '#166534', padding: '10px 14px', borderRadius: 8, marginBottom: 16, fontSize: 14 }}>{success}</div>}
 
@@ -1064,10 +1055,10 @@ export default function AdminActivityEditPage() {
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>匯入預覽 diff</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {importDiff.map((row, i) => (
-                    <div key={i} style={{ display: 'grid', gridTemplateColumns: '140px 1fr 1fr', gap: 8 }}>
-                      <div style={{ fontWeight: 600 }}>{row.field}</div>
-                      <div style={{ color: '#6b7280' }}>原：{row.before}</div>
-                      <div style={{ color: '#166534' }}>新：{row.after}</div>
+                    <div key={i} style={{ display: 'grid', gridTemplateColumns: 'minmax(100px, 140px) 1fr 1fr', gap: 8 }}>
+                      <div style={{ fontWeight: 600, wordBreak: 'break-word' }}>{row.field}</div>
+                      <div style={{ color: '#6b7280', wordBreak: 'break-word' }}>原：{row.before}</div>
+                      <div style={{ color: '#166534', wordBreak: 'break-word' }}>新：{row.after}</div>
                     </div>
                   ))}
                 </div>
@@ -1089,7 +1080,7 @@ export default function AdminActivityEditPage() {
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <FormGrid cols={2} gap={16}>
               <label style={labelStyle}>
                 地區
                 <select value={region} onChange={e => setRegion(e.target.value)} style={fieldStyle}>
@@ -1104,7 +1095,7 @@ export default function AdminActivityEditPage() {
                   {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                 </select>
               </label>
-            </div>
+            </FormGrid>
 
             <label style={labelStyle}>
               Tagline
@@ -1120,7 +1111,7 @@ export default function AdminActivityEditPage() {
             </label>
 
             <h3 style={sectionTitle}>💰 定價與容量</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+            <FormGrid cols={3} gap={16}>
               <label style={labelStyle}>
                 價格/人 (TWD) *
                 <input type="number" value={priceTwd} onChange={e => setPriceTwd(e.target.value)} min={0} style={fieldStyle} required />
@@ -1133,7 +1124,7 @@ export default function AdminActivityEditPage() {
                 最多人數
                 <input type="number" value={maxParticipants} onChange={e => setMaxParticipants(e.target.value)} min={1} style={fieldStyle} />
               </label>
-            </div>
+            </FormGrid>
             <label style={labelStyle}>
               行程時長（分鐘）
               <input type="number" value={durationMinutes} onChange={e => setDurationMinutes(e.target.value)} min={0} style={fieldStyle} />
@@ -1232,7 +1223,7 @@ export default function AdminActivityEditPage() {
             </label>
 
             <h3 style={sectionTitle}>⭐ 評分信任信號（暖場用）</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <FormGrid cols={2} gap={16}>
               <label style={labelStyle}>
                 初始評分（0–5）
                 <input
@@ -1254,9 +1245,9 @@ export default function AdminActivityEditPage() {
                   placeholder="0"
                 />
               </label>
-            </div>
+            </FormGrid>
 
-            <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
+            <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
               <button type="submit" disabled={saving}
                 style={{
                   background: 'var(--tp-primary, #16a34a)', color: '#fff',

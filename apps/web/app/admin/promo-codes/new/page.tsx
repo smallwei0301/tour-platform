@@ -70,7 +70,7 @@ export default function AdminNewPromoCodePage() {
   };
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 640, margin: '0 auto' }}>
+    <div className="admin-page" style={{ maxWidth: 640, margin: '0 auto' }}>
       <PageHeader
         title="新增折扣碼"
         subtitle="建立新的促銷折扣碼"
@@ -193,7 +193,7 @@ export default function AdminNewPromoCodePage() {
             </div>
 
             {/* Submit */}
-            <div style={{ display: 'flex', gap: 12, paddingTop: 8 }}>
+            <div style={{ display: 'flex', gap: 12, paddingTop: 8, flexWrap: 'wrap' }}>
               <button
                 type="submit"
                 disabled={submitting}

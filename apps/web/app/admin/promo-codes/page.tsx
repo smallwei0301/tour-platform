@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Card, PageHeader, Badge, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type PromoCode = {
@@ -74,8 +75,55 @@ export default function AdminPromoCodesPage() {
     return d.toLocaleDateString('zh-TW');
   }
 
+  const promoColumns: ResponsiveColumn<PromoCode>[] = [
+    {
+      key: 'code', header: '折扣碼', mobilePriority: 'title',
+      cell: (c) => (
+        <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
+          {c.code}
+        </code>
+      ),
+    },
+    {
+      key: 'status', header: '狀態', mobilePriority: 'subtitle',
+      cell: (c) => <Badge variant={c.active ? 'success' : 'default'}>{c.active ? '啟用' : '停用'}</Badge>,
+    },
+    { key: 'discount', header: '折扣', mobileLabel: '折扣', cell: (c) => formatDiscount(c) },
+    { key: 'uses', header: '使用次數', mobileLabel: '使用', cell: (c) => `${c.used_count} / ${c.max_uses}` },
+    { key: 'per_user', header: '每人限制', mobileLabel: '每人', cell: (c) => `${c.per_user_limit} 次` },
+    {
+      key: 'expiry', header: '到期日', mobileLabel: '到期',
+      cell: (c) => <span style={{ fontSize: 12 }}>{formatExpiry(c.expires_at)}</span>,
+    },
+    {
+      key: 'actions', header: '操作', mobileLabel: '操作',
+      cell: (c) => (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link
+            href={`/admin/promo-codes/${c.id}/edit`}
+            style={{ fontSize: 13, color: 'var(--tp-primary)', textDecoration: 'none' }}
+          >
+            編輯
+          </Link>
+          {c.active && (
+            <button
+              onClick={() => void handleDeactivate(c.id)}
+              disabled={deactivating === c.id}
+              style={{
+                fontSize: 13, color: '#dc2626', background: 'none', border: 'none',
+                cursor: deactivating === c.id ? 'not-allowed' : 'pointer', padding: 0,
+              }}
+            >
+              {deactivating === c.id ? '停用中...' : '停用'}
+            </button>
+          )}
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1100, margin: '0 auto' }}>
+    <div className="admin-page" style={{ maxWidth: 1100, margin: '0 auto' }}>
       <PageHeader
         title="折扣碼管理"
         subtitle="管理促銷折扣碼，設定折扣類型與使用限制"
@@ -101,67 +149,14 @@ export default function AdminPromoCodesPage() {
       )}
 
       <Card>
-        {loading ? (
-          <LoadingSkeleton rows={4} />
-        ) : codes.length === 0 ? (
-          <EmptyState message="尚無折扣碼，點擊「新增折扣碼」開始建立。" />
-        ) : (
-          <TableWrapper>
-            <thead>
-              <tr>
-                <Th>折扣碼</Th>
-                <Th>折扣</Th>
-                <Th>使用次數</Th>
-                <Th>每人限制</Th>
-                <Th>到期日</Th>
-                <Th>狀態</Th>
-                <Th>操作</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {codes.map((c) => (
-                <tr key={c.id}>
-                  <Td>
-                    <code style={{ background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, fontSize: 13, fontWeight: 600 }}>
-                      {c.code}
-                    </code>
-                  </Td>
-                  <Td>{formatDiscount(c)}</Td>
-                  <Td>{c.used_count} / {c.max_uses}</Td>
-                  <Td>{c.per_user_limit} 次</Td>
-                  <Td style={{ fontSize: 12 }}>{formatExpiry(c.expires_at)}</Td>
-                  <Td>
-                    <Badge variant={c.active ? 'success' : 'default'}>
-                      {c.active ? '啟用' : '停用'}
-                    </Badge>
-                  </Td>
-                  <Td>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <Link
-                        href={`/admin/promo-codes/${c.id}/edit`}
-                        style={{ fontSize: 13, color: 'var(--tp-primary)', textDecoration: 'none' }}
-                      >
-                        編輯
-                      </Link>
-                      {c.active && (
-                        <button
-                          onClick={() => void handleDeactivate(c.id)}
-                          disabled={deactivating === c.id}
-                          style={{
-                            fontSize: 13, color: '#dc2626', background: 'none', border: 'none',
-                            cursor: deactivating === c.id ? 'not-allowed' : 'pointer', padding: 0,
-                          }}
-                        >
-                          {deactivating === c.id ? '停用中...' : '停用'}
-                        </button>
-                      )}
-                    </div>
-                  </Td>
-                </tr>
-              ))}
-            </tbody>
-          </TableWrapper>
-        )}
+        <ResponsiveTable
+          columns={promoColumns}
+          rows={codes}
+          getRowKey={(c) => c.id}
+          loading={loading}
+          loadingRows={4}
+          emptyMessage="尚無折扣碼，點擊「新增折扣碼」開始建立。"
+        />
       </Card>
     </div>
   );

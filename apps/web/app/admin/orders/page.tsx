@@ -2,7 +2,8 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useMemo, useState } from 'react';
-import { Card, PageHeader, StatusBadge, Select, TableWrapper, Th, Td, LoadingSkeleton, EmptyState } from '../../../src/components/admin/ui';
+import { Card, PageHeader, StatusBadge, Select } from '../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Row = {
@@ -138,43 +139,57 @@ export default function AdminOrdersPage() {
     color: variant === 'secondary' ? '#374151' : '#fff',
   });
 
+  const orderColumns: ResponsiveColumn<Row>[] = [
+    {
+      key: 'id', header: 'Order ID', mobilePriority: 'hidden',
+      cell: (r) => <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#6b7280' }}>{r.id.slice(0, 12)}…</span>,
+    },
+    {
+      key: 'status', header: '狀態', mobilePriority: 'subtitle',
+      cell: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: 'title', header: '行程', mobilePriority: 'title',
+      cell: (r) => <span style={{ fontSize: 13 }}>{r.title || '-'}</span>,
+    },
+    {
+      key: 'total', header: '金額', align: 'right', mobileLabel: '金額',
+      cell: (r) => <strong>NT${r.totalTwd.toLocaleString()}</strong>,
+    },
+    {
+      key: 'margin', header: '毛利', align: 'right', mobileLabel: '毛利',
+      cell: (r) => <span style={{ color: r.marginTwd >= 0 ? '#15803d' : '#dc2626', fontWeight: 600 }}>NT${r.marginTwd.toLocaleString()}</span>,
+    },
+  ];
+
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="訂單管理" subtitle="查看、篩選、修改訂單狀態與備註" />
 
-      <div style={{ padding: '20px 28px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Filter */}
-        <Card style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <Card className="admin-toolbar" style={{ padding: '14px 18px' }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>篩選狀態</span>
           <Select data-guide="order-filter" value={status} onChange={setStatus} style={{ minWidth: 160 }}>
             <option value="">全部狀態</option>
             {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
           </Select>
-          <span style={{ fontSize: 13, color: '#9ca3af', marginLeft: 'auto' }}>共 {filtered.length} 筆</span>
+          <span className="admin-toolbar-meta" style={{ fontSize: 13, color: '#9ca3af' }}>共 {filtered.length} 筆</span>
         </Card>
 
-        <div className="admin-split-grid" style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, alignItems: 'start' }}>
-          <style>{`@media (min-width: 768px) { .admin-split-grid { grid-template-columns: 1.3fr 1fr !important; } }`}</style>
+        <div className="admin-split-grid">
           {/* Table */}
           <Card data-guide="order-table">
-            {loading ? <LoadingSkeleton rows={8} /> : filtered.length === 0 ? <EmptyState message="沒有訂單資料" /> : (
-              <TableWrapper>
-                <thead>
-                  <tr><Th>Order ID</Th><Th>狀態</Th><Th>行程</Th><Th align="right">金額</Th><Th align="right">毛利</Th></tr>
-                </thead>
-                <tbody>
-                  {filtered.map(r => (
-                    <tr key={r.id} onClick={() => setSelectedId(r.id)} style={{ cursor: 'pointer', background: selectedId === r.id ? '#f0fdf4' : 'transparent' }}>
-                      <Td><span style={{ fontFamily: 'monospace', fontSize: 12, color: '#6b7280' }}>{r.id.slice(0,12)}…</span></Td>
-                      <Td><StatusBadge status={r.status} /></Td>
-                      <Td><span style={{ fontSize: 13 }}>{r.title || '-'}</span></Td>
-                      <Td align="right"><strong>NT${r.totalTwd.toLocaleString()}</strong></Td>
-                      <Td align="right" style={{ color: r.marginTwd >= 0 ? '#15803d' : '#dc2626', fontWeight: 600 }}>NT${r.marginTwd.toLocaleString()}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TableWrapper>
-            )}
+            <ResponsiveTable
+              columns={orderColumns}
+              rows={filtered}
+              getRowKey={(r) => r.id}
+              onRowClick={(r) => setSelectedId(r.id)}
+              selectedKey={selectedId}
+              loading={loading}
+              loadingRows={8}
+              emptyMessage="沒有訂單資料"
+            />
           </Card>
 
           {/* Detail Panel */}

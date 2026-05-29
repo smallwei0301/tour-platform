@@ -218,7 +218,7 @@ export default function GoNoGoPage() {
         }
       />
 
-      <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
 
         {loading && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>
@@ -271,12 +271,7 @@ export default function GoNoGoPage() {
                 核心指標 <span style={{ fontWeight: 400, fontSize: 12, color: '#9ca3af' }}>（最近 7 天）</span>
               </h2>
             </div>
-            <div style={{
-              padding: '20px',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-              gap: 16,
-            }}>
+            <div className="admin-stat-grid" style={{ padding: '20px' }}>
               {[
                 { label: '健康訂單率', value: `${data.metrics.healthyOrderRate}%`, alert: data.metrics.healthyOrderRate < 80 },
                 { label: '例外率', value: `${data.metrics.exceptionRate}%`, alert: data.metrics.exceptionRate > 5 },

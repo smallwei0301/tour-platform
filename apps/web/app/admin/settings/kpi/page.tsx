@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card, PageHeader, TableWrapper, Th, Td, EmptyState } from '../../../../src/components/admin/ui';
+import { Card, PageHeader, EmptyState } from '../../../../src/components/admin/ui';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 export default function AdminKpiSettingsPage() {
@@ -54,8 +55,7 @@ export default function AdminKpiSettingsPage() {
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader title="KPI 計算設定" subtitle="抽成率、金流費率、健康訂單判準（含版本回滾）" />
 
-      <div className="admin-kpi-split" style={{ padding: '20px 28px', display: 'grid', gridTemplateColumns: '1fr', gap: 20, alignItems: 'start' }}>
-        <style>{`@media (min-width: 768px) { .admin-kpi-split { grid-template-columns: 1fr 1.5fr !important; } }`}</style>
+      <div className="admin-split-grid admin-page" style={{ gap: 20 }}>
         {/* Settings Form */}
         <Card data-guide="kpi-form" style={{ padding: 24 }}>
           <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#111' }}>目前設定</h3>
@@ -102,28 +102,35 @@ export default function AdminKpiSettingsPage() {
           </div>
           {history.length === 0 ? <EmptyState message="目前無版本歷史" /> : (
             <div style={{ maxHeight: 480, overflowY: 'auto' }}>
-              <TableWrapper>
-                <thead>
-                  <tr><Th>Version</Th><Th>Action</Th><Th>誰</Th><Th>時間</Th><Th>備註</Th><Th></Th></tr>
-                </thead>
-                <tbody>
-                  {history.map(h => (
-                    <tr key={h.versionId}>
-                      <Td><span style={{ fontFamily: 'monospace', fontSize: 11 }}>{String(h.versionId).slice(0,10)}</span></Td>
-                      <Td><span style={{ fontSize: 12 }}>{h.action}</span></Td>
-                      <Td><span style={{ fontSize: 12 }}>{h.actor || '-'}</span></Td>
-                      <Td><span style={{ fontSize: 12, color: '#6b7280' }}>{h.createdAt ? new Date(h.createdAt).toLocaleDateString('zh-TW') : '-'}</span></Td>
-                      <Td><span style={{ fontSize: 12, color: '#9ca3af' }}>{h.note || '-'}</span></Td>
-                      <Td>
-                        <button onClick={() => revert(h.versionId)} disabled={saving}
-                          style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', fontSize: 12, color: '#6b7280', cursor: 'pointer' }}>
-                          回滾
-                        </button>
-                      </Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </TableWrapper>
+              <ResponsiveTable
+                columns={[
+                  {
+                    key: 'version', header: 'Version', mobilePriority: 'title',
+                    cell: (h: any) => <span style={{ fontFamily: 'monospace', fontSize: 11 }}>{String(h.versionId).slice(0, 10)}</span>,
+                  },
+                  {
+                    key: 'action', header: 'Action', mobilePriority: 'subtitle',
+                    cell: (h: any) => <span style={{ fontSize: 12 }}>{h.action}</span>,
+                  },
+                  { key: 'actor', header: '誰', mobileLabel: '誰', cell: (h: any) => <span style={{ fontSize: 12 }}>{h.actor || '-'}</span> },
+                  {
+                    key: 'createdAt', header: '時間', mobileLabel: '時間',
+                    cell: (h: any) => <span style={{ fontSize: 12, color: '#6b7280' }}>{h.createdAt ? new Date(h.createdAt).toLocaleDateString('zh-TW') : '-'}</span>,
+                  },
+                  { key: 'note', header: '備註', mobileLabel: '備註', cell: (h: any) => <span style={{ fontSize: 12, color: '#9ca3af' }}>{h.note || '-'}</span> },
+                  {
+                    key: 'revert', header: '', mobileLabel: '操作',
+                    cell: (h: any) => (
+                      <button onClick={() => revert(h.versionId)} disabled={saving}
+                        style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', fontSize: 12, color: '#6b7280', cursor: 'pointer' }}>
+                        回滾
+                      </button>
+                    ),
+                  },
+                ] as ResponsiveColumn<any>[]}
+                rows={history}
+                getRowKey={(h: any) => h.versionId}
+              />
             </div>
           )}
         </Card>
