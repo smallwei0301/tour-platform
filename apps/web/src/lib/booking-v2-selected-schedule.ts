@@ -21,6 +21,10 @@ export function pickFallbackDraftSelectedSchedule(payload: {
 }): { schedule: DraftScheduleRow; validation: { available: boolean; reason?: string } } | null {
   const { schedules, activityId, resolvedPlanId, requestStartAt, slotDate, timezone, participants } = payload;
   for (const schedule of schedules) {
+    if (schedule.status !== 'open') {
+      continue;
+    }
+
     const validation = validateDraftSlotAgainstSelectedSchedule({
       schedule,
       activityId,
@@ -31,9 +35,7 @@ export function pickFallbackDraftSelectedSchedule(payload: {
       participants,
     });
 
-    if (validation.available) {
-      return { schedule, validation };
-    }
+    return { schedule, validation };
   }
 
   return null;

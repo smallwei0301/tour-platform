@@ -131,11 +131,11 @@ test('GH-860 RED: stale scheduleId should fallback to activity_schedules selecte
   assert.equal(fallback?.validation.available, true);
 });
 
-test('GH-860 RED: stale scheduleId fallback with only closed/full rows should not become authoritative reject', () => {
+test('GH-860 RED: stale scheduleId fallback with only closed rows should not become authoritative reject', () => {
   const fallback = pickFallbackDraftSelectedSchedule({
     schedules: [
       {
-        id: 'closed-only',
+        id: 'closed-only-1',
         activity_id: '11111111-1111-1111-1111-111111111111',
         plan_id: null,
         start_at: '2026-06-01T10:00:00+08:00',
@@ -144,7 +144,40 @@ test('GH-860 RED: stale scheduleId fallback with only closed/full rows should no
         booked_count: 0,
       },
       {
-        id: 'full-only',
+        id: 'closed-only-2',
+        activity_id: '11111111-1111-1111-1111-111111111111',
+        plan_id: null,
+        start_at: '2026-06-01T10:00:00+08:00',
+        status: 'closed',
+        capacity: 4,
+        booked_count: 4,
+      },
+    ],
+    activityId: '11111111-1111-1111-1111-111111111111',
+    resolvedPlanId: PLAN_ID,
+    requestStartAt: '2026-06-01T10:00:00+08:00',
+    slotDate: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    participants: 2,
+  });
+
+  assert.equal(fallback, null);
+});
+
+test('GH-860 RED: stale scheduleId fallback with open-but-full row should stay authoritative and reject draft', () => {
+  const fallback = pickFallbackDraftSelectedSchedule({
+    schedules: [
+      {
+        id: 'closed-first',
+        activity_id: '11111111-1111-1111-1111-111111111111',
+        plan_id: null,
+        start_at: '2026-06-01T10:00:00+08:00',
+        status: 'closed',
+        capacity: 8,
+        booked_count: 0,
+      },
+      {
+        id: 'open-full',
         activity_id: '11111111-1111-1111-1111-111111111111',
         plan_id: null,
         start_at: '2026-06-01T10:00:00+08:00',
@@ -161,5 +194,7 @@ test('GH-860 RED: stale scheduleId fallback with only closed/full rows should no
     participants: 2,
   });
 
-  assert.equal(fallback, null);
+  assert.equal(fallback?.schedule.id, 'open-full');
+  assert.equal(fallback?.validation.available, false);
+  assert.equal(fallback?.validation.reason, 'SCHEDULE_CAPACITY_EXCEEDED');
 });
