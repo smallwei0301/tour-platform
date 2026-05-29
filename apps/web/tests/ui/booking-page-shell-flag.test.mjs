@@ -71,6 +71,20 @@ test('v2 shell posts resolved UUID activityId and planId from available-slots re
   assert.match(v2ShellSource, /planId: resolvedPlanId/);
 });
 
+test('v2 shell renders selected plan display name and avoids showing raw UUID in plan summary', async () => {
+  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
+  const v2FallbackBranch = src.indexOf('if (useLegacyFallback) {');
+  assert.ok(v2Start >= 0 && v2FallbackBranch > v2Start, 'expected bounded V2 shell source range');
+
+  const v2ShellPreRender = src.slice(v2Start, v2FallbackBranch);
+
+  assert.match(v2ShellPreRender, /selectedPlanDisplayName/);
+  assert.match(v2ShellPreRender, /selectedPlan\.displayName, selectedPlan\.label, selectedPlan\.name/);
+  assert.match(src, /📋 方案：\{selectedPlanDisplayName \|\|/);
+  assert.match(src, /方案代碼 \$\{urlPlanId\.slice\(0, 8\)\}/);
+});
+
 test('v2 shell keeps exact legacy booking presentation markers while retaining v2 mutation path', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');

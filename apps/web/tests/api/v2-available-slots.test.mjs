@@ -459,6 +459,15 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   // #880: capacityLeft is now clamped at plan.max_participants so the response
   // never advertises more seats than the per-group ceiling.
   assert.match(src, /capacityLeft:\s*Math\.min\(remaining,\s*plan\.max_participants\)/);
+  // #910: selectedPlan metadata for Booking V2 UI must come from planData,
+  // not the narrowed slot-generator plan object.
+  assert.match(src, /selectedPlan:\s*\{/);
+  assert.match(src, /id:\s*planData\.id/);
+  assert.match(src, /name:\s*planData\.name/);
+  assert.match(src, /priceType:\s*planData\.price_type/);
+  assert.match(src, /basePrice:\s*planData\.base_price/);
+  assert.match(src, /minParticipants:\s*planData\.min_participants/);
+  assert.match(src, /maxParticipants:\s*planData\.max_participants/);
 });
 
 test('issue838: legacy_plan_id lookup must not hard-require status=active (status-null formal rows are valid)', async () => {

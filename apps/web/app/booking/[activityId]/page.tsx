@@ -33,7 +33,13 @@ interface Activity {
   maxParticipants: number;
   minParticipants: number;
   schedules: Schedule[];
-  plans?: Array<{ id?: string | null; status?: string | null }> | null;
+  plans?: Array<{
+    id?: string | null;
+    status?: string | null;
+    name?: string | null;
+    label?: string | null;
+    displayName?: string | null;
+  }> | null;
   guide?: { displayName?: string } | null;
 }
 
@@ -431,6 +437,9 @@ interface V2AvailableSlotsResponse {
     planId?: string;
     selectedPlan?: {
       id?: string;
+      name?: string;
+      label?: string;
+      displayName?: string;
       priceType?: 'per_person' | 'per_group';
       basePrice?: number;
       minParticipants?: number;
@@ -504,7 +513,13 @@ function BookingInnerV2FlagShell() {
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
-  const [selectedPlanMeta, setSelectedPlanMeta] = useState<{ priceType: 'per_person' | 'per_group'; basePrice: number; minParticipants: number; maxParticipants: number | null } | null>(null);
+  const [selectedPlanMeta, setSelectedPlanMeta] = useState<{
+    name: string | null;
+    priceType: 'per_person' | 'per_group';
+    basePrice: number;
+    minParticipants: number;
+    maxParticipants: number | null;
+  } | null>(null);
   const [guests, setGuests] = useState(1);
   const [allowOnePersonAddOn, setAllowOnePersonAddOn] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -548,6 +563,16 @@ function BookingInnerV2FlagShell() {
   const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
   const baseMaxParticipants = selectedPlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
+  const selectedPlanDisplayName = useMemo(() => {
+    const fromApi = selectedPlanMeta?.name?.trim();
+    if (fromApi) return fromApi;
+    const matchedPlan = (activity?.plans || []).find((plan) => plan?.id && plan.id === v2PlanKey);
+    if (!matchedPlan) return null;
+    const candidates = [matchedPlan.displayName, matchedPlan.label, matchedPlan.name]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+    return candidates[0] || null;
+  }, [activity?.plans, selectedPlanMeta?.name, v2PlanKey]);
 
   useEffect(() => {
     if (!activity) return;
@@ -602,7 +627,11 @@ function BookingInnerV2FlagShell() {
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         const selectedPlan = json.data?.selectedPlan;
         if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
+          const selectedPlanName = [selectedPlan.displayName, selectedPlan.label, selectedPlan.name]
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .find((value) => value.length > 0) || null;
           setSelectedPlanMeta({
+            name: selectedPlanName,
             priceType: selectedPlan.priceType === 'per_group' ? 'per_group' : 'per_person',
             basePrice: Number(selectedPlan.basePrice),
             minParticipants: Number.isFinite(Number(selectedPlan.minParticipants)) ? Math.max(1, Number(selectedPlan.minParticipants)) : 1,
@@ -830,7 +859,9 @@ function BookingInnerV2FlagShell() {
                   📍 {activity.region} · 🕐 {activity.durationDisplay}
                   {activity.guide?.displayName ? ` · 導遊：${activity.guide.displayName}` : ''}
                 </p>
-                <p style={{ margin: '4px 0', fontSize: 13, color: 'var(--tp-primary)', fontWeight: 600 }}>📋 方案：{urlPlanId}</p>
+                <p style={{ margin: '4px 0', fontSize: 13, color: 'var(--tp-primary)', fontWeight: 600 }}>
+                  📋 方案：{selectedPlanDisplayName || (urlPlanId ? `方案代碼 ${urlPlanId.slice(0, 8)}` : '已選擇')}
+                </p>
               </div>
             </div>
           </div>

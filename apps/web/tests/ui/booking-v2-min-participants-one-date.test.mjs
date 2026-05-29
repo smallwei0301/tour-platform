@@ -34,6 +34,15 @@ test('v2 shell prefers API Chinese copy for below-min or slot rule errors', asyn
   assert.match(src, /if \(nextSlots\.length === 0 && json\.data\?\.messageZh\)/);
 });
 
+test('v2 shell uses selected plan base price from available-slots selectedPlan metadata', async () => {
+  const src = await readBookingSource();
+
+  assert.match(src, /if \(selectedPlan && Number\.isFinite\(Number\(selectedPlan\.basePrice\)\)\)/);
+  assert.match(src, /basePrice: Number\(selectedPlan\.basePrice\)/);
+  assert.match(src, /const unitPrice = selectedPlanMeta\?\.basePrice \?\? activity\.priceTwd/);
+  assert.match(src, /const total = selectedPlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
+});
+
 test('v2 shell uses date-level availability UI and removes multi-time dropdown', async () => {
   const src = await readBookingSource();
 
