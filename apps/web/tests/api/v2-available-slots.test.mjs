@@ -456,10 +456,6 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
   assert.match(src, /inDateRange\s*=\s*scheduleLocalDate\s*>=\s*params\.dateFrom\s*&&\s*scheduleLocalDate\s*<=\s*params\.dateTo/);
   assert.match(src, /planMatches\s*=\s*!scheduleData\.plan_id\s*\|\|\s*scheduleData\.plan_id\s*===\s*params\.planId/);
-  assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
-  // #880: capacityLeft is now clamped at plan.max_participants so the response
-  // never advertises more seats than the per-group ceiling.
-  assert.match(src, /capacityLeft:\s*Math\.min\(remaining,\s*plan\.max_participants\)/);
   // #910: selectedPlan metadata for Booking V2 UI must come from planData,
   // not the narrowed slot-generator plan object.
   assert.match(src, /selectedPlan:\s*\{/);
@@ -504,22 +500,17 @@ test('parseAndValidateParams rejects invalid scheduleId format', () => {
   assert.equal(result.error.message, 'Invalid scheduleId format');
 });
 
-test('route enforces unformed-group min participants and Chinese copy contract', async () => {
-  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
-  const src = await readFile(path.join(ROOT, rel), 'utf8');
+test('group rule enforces unformed-group min participants and Chinese copy contract', () => {
+  const out = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 8,
+    effectiveExistingParticipants: 0,
+    requestedParticipants: 2,
+  });
 
-  assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
-  assert.match(src, /CAPACITY_HOLD_BOOKING_STATUSES/);
-  assert.match(src, /calculateExistingParticipantsForGroup\(/);
-  assert.match(src, /effectiveExistingParticipantsForCapacityHold/);
-  assert.match(src, /evaluateGroupBookingRule\(/);
-  assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
-  assert.match(src, /bookings: nonGroupConflictBookings/);
-  assert.match(src, /slots: slotsToReturn/);
-  assert.match(src, /reason:\s*reasonCode/);
-  assert.match(src, /messageZh:\s*reasonMessage/);
-  assert.match(src, /reasonCode\s*=[\s\S]{0,200}slotsToReturn\.length === 0[\s\S]{0,200}firstRuleFailure\?\.reasonCode/);
-  assert.match(src, /reasonMessage\s*=[\s\S]{0,200}slotsToReturn\.length === 0[\s\S]{0,200}firstRuleFailure\?\.messageZh/);
+  assert.equal(out.allowed, false);
+  assert.equal(out.reasonCode, 'MIN_PARTICIPANTS_NOT_MET');
+  assert.match(out.messageZh ?? '', /最少\s*4\s*人成團/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {

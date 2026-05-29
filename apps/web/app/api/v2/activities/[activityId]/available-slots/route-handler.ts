@@ -26,10 +26,6 @@ import {
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
-  FORMED_GROUP_BOOKING_STATUSES,
-  calculateExistingParticipantsForGroup,
-  evaluateGroupBookingRule,
-  excludeSameActivityPlanDateRangeBookings,
   normalizeBookingParticipants,
 } from '../../../../../../src/lib/availability-v2/group-booking-rule.ts';
 
@@ -460,21 +456,6 @@ export async function getAvailableSlots(
       selectedSchedule,
       selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
     });
-
-    // Source-guard compatibility notes for existing regression tests:
-    // calculateExistingParticipantsForGroup(...)
-    // effectiveExistingParticipantsForCapacityHold
-    // evaluateGroupBookingRule(...)
-    // excludeSameActivityPlanDateRangeBookings(...)
-    // normalizeBookingParticipants(...)
-    // bookings: nonGroupConflictBookings
-    // slots: slotsToReturn
-    // reason: reasonCode
-    // messageZh: reasonMessage
-    // reasonCode = slotsToReturn.length === 0 ? firstRuleFailure?.reasonCode : undefined
-    // reasonMessage = slotsToReturn.length === 0 ? firstRuleFailure?.messageZh : undefined
-    // slotsToReturn = [scheduleSlot]
-    // capacityLeft: Math.min(remaining, plan.max_participants)
 
     // Return response per API spec
     return Response.json(
