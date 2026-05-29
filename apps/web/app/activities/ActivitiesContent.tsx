@@ -57,6 +57,13 @@ export default function ActivitiesContent() {
     if (t) setSelectedTypes([t]);
   }, [searchParams]);
 
+  // Update URL when text query changes (debounced 500ms for shareability)
+  useEffect(() => {
+    const t = setTimeout(() => updateUrl(query, selectedRegions, selectedTypes), 500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
   // Fetch from API
   useEffect(() => {
     setLoading(true);
