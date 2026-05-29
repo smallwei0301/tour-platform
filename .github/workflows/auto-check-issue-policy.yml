@@ -109,3 +109,39 @@ jobs:
           - Sanitized log preview
           - No-secrets declaration"
           fi
+
+  enforce-daily-bug-scan-policy:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.issue.title, '[daily bug scan]')
+    steps:
+      - name: Apply taxonomy labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Routing labels per ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md
+          REQUIRED_LABELS="triaged,type:bug,priority:P2,qa,owner:ai-agent,status:needs-repro,traveler-booking"
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "$REQUIRED_LABELS" || \
+            echo "::warning::Failed to apply labels to issue #$ISSUE_NUMBER"
+
+      - name: Dedupe against open Frontend Daily Check issues (cross-generator)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          ISSUE_CREATED_AT: ${{ github.event.issue.created_at }}
+        run: |
+          # Extract the date window from the issue creation date (YYYY-MM-DD)
+          DATE_WINDOW=$(echo "$ISSUE_CREATED_AT" | cut -c1-10)
+          # Search for open Frontend Daily Check issues created on the same day
+          RELATED=$(gh issue list --repo "$REPO" --state open \
+            --search "[Frontend Daily Check] in:title created:${DATE_WINDOW}" \
+            --json number,title \
+            --jq ".[] | select(.number != $ISSUE_NUMBER) | \"#\(.number): \(.title)\"" | head -3)
+          if [ -n "$RELATED" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" \
+              --body "🔗 **Possible cross-generator duplicate:** A [Frontend Daily Check] issue was opened on the same date and may cover the same failure cluster:
+          $RELATED
+          Consider consolidating investigation into one canonical issue. See #848 for the dedup policy."
+          fi
