@@ -19,6 +19,7 @@ import {
   evaluateGroupBookingRule,
   excludeSameActivityPlanDateRangeBookings,
 } from '../../src/lib/availability-v2/group-booking-rule.ts';
+import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -588,6 +589,73 @@ test('behavior: available-slots filters out slots when capacity-hold bookings wo
   assert.equal(capacityHoldRule.reasonCode, 'CAPACITY_EXCEEDED');
 });
 
+function createMockQueryBuilder(rows) {
+  let data = rows;
+
+  return {
+    eq(column, value) {
+      data = data.filter((row) => row[column] === value);
+      return this;
+    },
+
+    or(expression) {
+      if (expression.includes('plan_id.is.null,plan_id.eq.')) {
+        const [, targetPlanId] = expression.split('plan_id.eq.');
+        data = data.filter(
+          (row) => row.plan_id == null || row.plan_id === targetPlanId,
+        );
+        return this;
+      }
+
+      if (expression.includes('activity_plan_id.is.null,activity_plan_id.eq.')) {
+        const [, targetPlanId] = expression.split('activity_plan_id.eq.');
+        data = data.filter(
+          (row) => row.activity_plan_id == null || row.activity_plan_id === targetPlanId,
+        );
+        return this;
+      }
+
+      return this;
+    },
+
+    in(column, values) {
+      const normalized = new Set(values);
+      data = data.filter((row) => normalized.has(row[column]));
+      return this;
+    },
+
+    select() {
+      return this;
+    },
+
+    then(resolve, reject) {
+      return Promise.resolve({ data, error: null }).then(resolve, reject);
+    },
+
+    maybeSingle() {
+      const first = data[0] ?? null;
+      return Promise.resolve({ data: first, error: null });
+    },
+
+    single() {
+      const first = data[0] ?? null;
+      return Promise.resolve({
+        data: first,
+        error: first ? null : { message: 'not found' },
+      });
+    },
+  };
+}
+
+function createMockSupabaseClient(seed) {
+  return {
+    from(tableName) {
+      const rows = seed[tableName] ?? [];
+      return createMockQueryBuilder(rows);
+    },
+  };
+}
+
 test('behavior: available-slots keeps same-plan/date slot for formed-group 1-person add-on', () => {
   const guideId = 'guide_001';
   const activityId = 'activity_001';
@@ -646,6 +714,81 @@ test('behavior: available-slots keeps same-plan/date slot for formed-group 1-per
 
   assert.equal(groupRule.allowed, true);
   assert.equal(hasConflict, false);
+});
+
+test('selected-plan metadata from issue-910 fixture appears in successful response', async () => {
+  const activityId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const planId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const timezone = 'Asia/Taipei';
+
+  const mockDb = {
+    activities: [
+      {
+        id: activityId,
+        guide_id: 'guide_910',
+        activities: {
+          id: activityId,
+          guide_id: 'guide_910',
+        },
+      },
+    ],
+    activity_plans: [
+      {
+        id: planId,
+        activity_id: activityId,
+        duration_minutes: 60,
+        min_participants: 1,
+        max_participants: 99,
+        booking_type: 'scheduled',
+        status: 'active',
+        name: 'Test',
+        price_type: 'per_person',
+        base_price: 20,
+        activities: {
+          id: activityId,
+          guide_id: 'guide_910',
+        },
+      },
+    ],
+    guide_availability_rules: [],
+    guide_blackout_dates: [],
+    bookings: [],
+  };
+
+  const response = await getAvailableSlots(
+    {
+      nextUrl: new URL(
+        `https://example.com/api/v2/activities/${activityId}/available-slots?planId=${planId}&dateFrom=2026-05-01&dateTo=2026-05-01&timezone=${encodeURIComponent(
+          timezone,
+        )}&participants=1`,
+      ),
+    },
+    { params: Promise.resolve({ activityId }) },
+    {
+      createClient: async () => createMockSupabaseClient(mockDb),
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.success, true);
+
+  const selectedPlan = json?.data?.selectedPlan;
+  assert.equal(selectedPlan?.name, 'Test');
+  assert.equal(selectedPlan?.label, 'Test');
+  assert.equal(selectedPlan?.displayName, 'Test');
+  assert.equal(selectedPlan?.basePrice, 20);
+  assert.notEqual(selectedPlan?.basePrice, 1800);
+  assert.deepStrictEqual(Object.keys(selectedPlan).sort(), [
+    'basePrice',
+    'displayName',
+    'id',
+    'label',
+    'maxParticipants',
+    'minParticipants',
+    'name',
+    'priceType',
+  ]);
 });
 
 console.log('All Available Slots API tests completed!');
