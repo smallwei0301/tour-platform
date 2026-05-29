@@ -332,4 +332,287 @@ describe('GH-841 formal plan rich contract', () => {
       else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
     }
   });
+
+  it('activity detail still uses formal activity_plans when formal rows are status-null (avoid silent legacy price fallback)', async () => {
+    const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
+    const originalUrl = process.env.SUPABASE_URL;
+    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+    const activityRow = {
+      id: 'act-2',
+      slug: 'status-null-formal',
+      title: 'demo',
+      price_twd: 1800,
+      duration_minutes: 240,
+      min_participants: 1,
+      max_participants: 8,
+      plans: [
+        { id: 'half-day-morning', label: 'Legacy 半日', price: 18, priceMultiplier: 0.01 },
+      ],
+      status: 'published',
+      guide_id: null,
+      guide_slug: null,
+    };
+
+    const formalPlanRows = [
+      {
+        id: 'plan-formal-2',
+        slug: 'half-day-morning',
+        name: '半日行程（正式）',
+        duration_minutes: 240,
+        price_type: 'per_person',
+        base_price: 1800,
+        min_participants: 1,
+        max_participants: 8,
+        status: null,
+      },
+    ];
+
+    function chain(table, ctx = {}) {
+      return {
+        select() {
+          return chain(table, ctx);
+        },
+        eq(column, value) {
+          return chain(table, { ...ctx, [column]: value });
+        },
+        in() {
+          return chain(table, ctx);
+        },
+        order() {
+          if (table === 'activity_schedules') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_reviews') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_plans') {
+            if (ctx.status === 'active') return Promise.resolve({ data: [], error: null });
+            return Promise.resolve({ data: formalPlanRows, error: null });
+          }
+          return Promise.resolve({ data: [], error: null });
+        },
+        single() {
+          if (table === 'activities' && ctx.slug === 'status-null-formal') {
+            return Promise.resolve({ data: activityRow, error: null });
+          }
+          return Promise.resolve({ data: null, error: { message: 'not found' } });
+        },
+        maybeSingle() {
+          return Promise.resolve({ data: null, error: null });
+        },
+        limit() {
+          return Promise.resolve({ data: [], error: null });
+        },
+      };
+    }
+
+    dbMod.__setSupabaseClientForTest({ from: (table) => chain(table) });
+
+    try {
+      const activity = await dbMod.getActivityBySlugDb('status-null-formal');
+      assert.ok(Array.isArray(activity?.plans), 'plans should exist');
+      assert.equal(activity.plans[0].id, 'plan-formal-2');
+      assert.equal(activity.plans[0].basePrice, 1800);
+      assert.equal(activity.plans[0].priceType, 'per_person');
+      assert.notEqual(activity.plans[0].id, 'half-day-morning');
+      assert.notEqual(activity.plans[0].basePrice, 18);
+    } finally {
+      dbMod.__setSupabaseClientForTest(null);
+      if (originalUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+    }
+  });
+
+  it('activity detail retries formal-plan query with pricing-safe subset when rich columns are unavailable', async () => {
+    const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
+    const originalUrl = process.env.SUPABASE_URL;
+    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+    const activityRow = {
+      id: 'act-4',
+      slug: 'formal-query-retry',
+      title: 'retry demo',
+      price_twd: 1800,
+      duration_minutes: 240,
+      min_participants: 1,
+      max_participants: 8,
+      plans: [{ id: 'legacy-plan', label: 'Legacy 方案', price: 18, priceMultiplier: 0.01 }],
+      status: 'published',
+      guide_id: null,
+      guide_slug: null,
+    };
+
+    const formalPlanRows = [{
+      id: 'plan-formal-retry',
+      slug: 'half-day-morning',
+      name: '半日正式方案',
+      duration_minutes: 240,
+      price_type: 'per_person',
+      base_price: 1800,
+      min_participants: 1,
+      max_participants: 8,
+      status: null,
+    }];
+
+    let activityPlansOrderCount = 0;
+    function chain(table, ctx = {}) {
+      return {
+        select() {
+          return chain(table, ctx);
+        },
+        eq(column, value) {
+          return chain(table, { ...ctx, [column]: value });
+        },
+        in() {
+          return chain(table, ctx);
+        },
+        order() {
+          if (table === 'activity_schedules') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_reviews') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_plans') {
+            activityPlansOrderCount += 1;
+            if (activityPlansOrderCount === 1) {
+              return Promise.resolve({ data: null, error: { message: 'column activity_plans.plan_itinerary_image_url does not exist' } });
+            }
+            return Promise.resolve({ data: formalPlanRows, error: null });
+          }
+          return Promise.resolve({ data: [], error: null });
+        },
+        single() {
+          if (table === 'activities' && ctx.slug === 'formal-query-retry') {
+            return Promise.resolve({ data: activityRow, error: null });
+          }
+          return Promise.resolve({ data: null, error: { message: 'not found' } });
+        },
+        maybeSingle() {
+          return Promise.resolve({ data: null, error: null });
+        },
+        limit() {
+          return Promise.resolve({ data: [], error: null });
+        },
+      };
+    }
+
+    dbMod.__setSupabaseClientForTest({ from: (table) => chain(table) });
+
+    try {
+      const activity = await dbMod.getActivityBySlugDb('formal-query-retry');
+      assert.ok(Array.isArray(activity?.plans), 'plans should exist');
+      assert.equal(activityPlansOrderCount, 2, 'should retry formal-plan query after rich-column failure');
+      assert.equal(activity.plans[0].id, 'plan-formal-retry');
+      assert.equal(activity.plans[0].basePrice, 1800);
+      assert.equal(activity.plans[0].priceType, 'per_person');
+      assert.notEqual(activity.plans[0].basePrice, 18);
+    } finally {
+      dbMod.__setSupabaseClientForTest(null);
+      if (originalUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+    }
+  });
+
+  it('activity detail falls back to legacy plans when all formal plans are inactive/archived', async () => {
+    const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
+    const originalUrl = process.env.SUPABASE_URL;
+    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    process.env.SUPABASE_URL = 'https://example.supabase.co';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
+
+    const activityRow = {
+      id: 'act-3',
+      slug: 'fallback-to-legacy-from-archived',
+      title: 'legacy fallback',
+      price_twd: 1200,
+      duration_minutes: 180,
+      min_participants: 1,
+      max_participants: 4,
+      plans: [
+        { id: 'legacy-arch', label: 'Legacy 方案', price: 18, priceMultiplier: 0.01 },
+      ],
+      status: 'published',
+      guide_id: null,
+      guide_slug: null,
+    };
+
+    const formalPlanRows = [
+      {
+        id: 'inactive-plan',
+        slug: 'formal-inactive',
+        name: '停用正式方案',
+        duration_minutes: 180,
+        price_type: 'per_person',
+        base_price: 5000,
+        min_participants: 1,
+        max_participants: 4,
+        status: 'inactive',
+      },
+      {
+        id: 'archived-plan',
+        slug: 'formal-archived',
+        name: '封存正式方案',
+        duration_minutes: 180,
+        price_type: 'per_person',
+        base_price: 5500,
+        min_participants: 1,
+        max_participants: 4,
+        status: 'archived',
+      },
+    ];
+
+    function chain(table, ctx = {}) {
+      return {
+        select() {
+          return chain(table, ctx);
+        },
+        eq(column, value) {
+          return chain(table, { ...ctx, [column]: value });
+        },
+        in() {
+          return chain(table, ctx);
+        },
+        order() {
+          if (table === 'activity_schedules') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_reviews') return Promise.resolve({ data: [], error: null });
+          if (table === 'activity_plans') {
+            return Promise.resolve({ data: formalPlanRows, error: null });
+          }
+          return Promise.resolve({ data: [], error: null });
+        },
+        single() {
+          if (table === 'activities' && ctx.slug === 'fallback-to-legacy-from-archived') {
+            return Promise.resolve({ data: activityRow, error: null });
+          }
+          return Promise.resolve({ data: null, error: { message: 'not found' } });
+        },
+        maybeSingle() {
+          return Promise.resolve({ data: null, error: null });
+        },
+        limit() {
+          return Promise.resolve({ data: [], error: null });
+        },
+      };
+    }
+
+    dbMod.__setSupabaseClientForTest({ from: (table) => chain(table) });
+
+    try {
+      const activity = await dbMod.getActivityBySlugDb('fallback-to-legacy-from-archived');
+      assert.ok(Array.isArray(activity?.plans), 'plans should exist');
+      assert.equal(activity.plans[0].id, 'legacy-arch');
+      assert.equal(activity.plans[0].price || activity.plans[0].basePrice, 18);
+    } finally {
+      dbMod.__setSupabaseClientForTest(null);
+      if (originalUrl === undefined) delete process.env.SUPABASE_URL;
+      else process.env.SUPABASE_URL = originalUrl;
+      if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+      else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
+    }
+  });
 });

@@ -241,8 +241,6 @@ export async function getAvailableSlots(
     }
 
     const resolvedPlanId = resolved.planId;
-
-    // Validate request params
     const validation = parseAndValidateParams(resolvedActivityId, resolvedPlanId, searchParams);
     if ('error' in validation) {
       return Response.json(errorV2(validation.error.code, validation.error.message), {
@@ -338,7 +336,9 @@ export async function getAvailableSlots(
       });
     }
 
-    if (planData.status !== 'active') {
+    const normalizedPlanStatus =
+      typeof planData.status === 'string' ? planData.status.trim().toLowerCase() : null;
+    if (normalizedPlanStatus && normalizedPlanStatus !== 'active') {
       return Response.json(errorV2('NOT_FOUND', 'Activity plan is not active'), {
         status: 404,
       });

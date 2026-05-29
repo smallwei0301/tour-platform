@@ -101,6 +101,8 @@ test('#882 resolver: slug found but inactive → PLAN_INACTIVE (covers #880 §6 
 test('#882 resolver: slug not in formal table + no scheduleId → PLAN_NOT_FOUND', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
   ]);
   const out = await resolveBookingPlan(supabase.client, {
     activityId: ACTIVITY, planKey: 'full-day-complete',
@@ -115,6 +117,8 @@ test('#882 resolver: slug not in formal table + no scheduleId → PLAN_NOT_FOUND
 
 test('#882 resolver: legacy slug + scheduleId.plan_id resolves to formal UUID → ok resolution=schedule_plan_id', async () => {
   const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: PLAN_UUID } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: { id: PLAN_UUID, slug: 'half-day', status: 'active', booking_type: 'scheduled' } },
@@ -131,6 +135,8 @@ test('#882 resolver: legacy slug + scheduleId.plan_id resolves to formal UUID �
 test('#882 resolver: slug not found + scheduleId.plan_id null + single active plan → ok resolution=single_active_fallback', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: null } },
     { terminal: 'limit', table: 'activity_plans', data: [{ id: PLAN_UUID, slug: 'half-day', status: 'active', booking_type: 'scheduled' }] },
   ]);
@@ -144,6 +150,8 @@ test('#882 resolver: slug not found + scheduleId.plan_id null + single active pl
 
 test('#882 resolver: slug not found + scheduleId.plan_id null + 2 active plans → AMBIGUOUS_PLAN', async () => {
   const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: null } },
     { terminal: 'limit', table: 'activity_plans', data: [{ id: PLAN_UUID, slug: 'a' }, { id: OTHER_PLAN_UUID, slug: 'b' }] },
@@ -161,6 +169,8 @@ test('#882 resolver: slug not found + scheduleId.plan_id null + 2 active plans �
 test('#882 resolver: slug not found + scheduleId not in DB → PLAN_NOT_FOUND', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
   ]);
   const out = await resolveBookingPlan(supabase.client, {
@@ -176,6 +186,8 @@ test('#882 resolver: scheduleId.activity_id mismatch (cross-activity attack) →
   // a foreign scheduleId from leaking into the resolution. Mocked as data:null
   // because the real query would filter it out before returning.
   const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
   ]);
@@ -196,6 +208,7 @@ test('#882 resolver: scheduleId.activity_id mismatch (cross-activity attack) →
 
 test('#882 resolver: scheduleId.plan_id UUID is itself inactive → PLAN_INACTIVE', async () => {
   const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: PLAN_UUID } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: { id: PLAN_UUID, slug: 'archived', status: 'archived', booking_type: 'scheduled' } },
@@ -223,6 +236,7 @@ test('#882 resolver: ACTIVITY_NOT_FOUND when activityId is not UUID-like (defens
 test('#882 resolver: every failure has messageEn + messageZh + details', async () => {
   // Use slug planKey so the resolver actually runs through its DB lookup path.
   const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
   ]);
   const out = await resolveBookingPlan(supabase.client, {

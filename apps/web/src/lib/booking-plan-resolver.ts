@@ -72,7 +72,7 @@ export type ResolveBookingPlanArgs = {
 type ActivityPlanRow = {
   id: string;
   slug: string | null;
-  status: string;
+  status: string | null;
   booking_type?: string | null;
 };
 
@@ -158,6 +158,37 @@ async function fetchPlanBySlug(
   return data ?? null;
 }
 
+async function fetchPlanByLegacyPlanId(
+  supabase: any,
+  activityId: string,
+  legacyPlanId: string,
+): Promise<ActivityPlanRow | null> {
+  const { data } = await supabase
+    .from('activity_plans')
+    .select('id, slug, status, booking_type')
+    .eq('activity_id', activityId)
+    .eq('legacy_plan_id', legacyPlanId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+function deriveLegacyPlanSlugCandidates(planKey: string): string[] {
+  const normalized = planKey.trim().toLowerCase();
+  if (!normalized) return [];
+
+  const candidates = new Set<string>();
+  if (normalized.endsWith('-complete')) {
+    candidates.add(normalized.replace(/-complete$/, ''));
+  }
+
+  return Array.from(candidates).filter((candidate) => candidate && candidate !== normalized);
+}
+
+function isResolvablePlanStatus(status: string | null | undefined): boolean {
+  if (status == null) return true;
+  return status === 'active';
+}
+
 export async function resolveBookingPlan(
   supabase: any,
   args: ResolveBookingPlanArgs,
@@ -183,13 +214,33 @@ export async function resolveBookingPlan(
     };
   }
 
-  // Step 2: slug lookup with explicit status check (new vs legacy behavior).
+  // Step 2: slug lookup in current activity scope.
   const slugLookup = await fetchPlanBySlug(supabase, args.activityId, args.planKey);
   if (slugLookup) {
-    if (slugLookup.status !== 'active') {
+    if (!isResolvablePlanStatus(slugLookup.status)) {
       return fail('PLAN_INACTIVE', args);
     }
     return ok(args, slugLookup, 'slug');
+  }
+
+  // Step 2.5: legacy_plan_id fallback (Issue #838 / post-rebase parity)
+  const legacyLookup = await fetchPlanByLegacyPlanId(supabase, args.activityId, args.planKey);
+  if (legacyLookup) {
+    if (!isResolvablePlanStatus(legacyLookup.status)) {
+      return fail('PLAN_INACTIVE', args);
+    }
+    return ok(args, legacyLookup, 'slug');
+  }
+
+  // Step 2.6: derived slug fallback (e.g. full-day-complete -> full-day)
+  const derivedSlugCandidates = deriveLegacyPlanSlugCandidates(args.planKey);
+  for (const candidate of derivedSlugCandidates) {
+    const derivedSlugLookup = await fetchPlanBySlug(supabase, args.activityId, candidate);
+    if (!derivedSlugLookup) continue;
+    if (!isResolvablePlanStatus(derivedSlugLookup.status)) {
+      return fail('PLAN_INACTIVE', args);
+    }
+    return ok(args, derivedSlugLookup, 'slug');
   }
 
   // Step 3: scheduleId fallback.

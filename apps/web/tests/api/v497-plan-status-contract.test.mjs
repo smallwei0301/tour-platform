@@ -48,29 +48,28 @@ describe('AC4.1: admin plans route — VALID_STATUSES includes archived', () => 
   });
 });
 
-// ─── AC4.2 — available-slots only serves active plans ───────────────────────
+// AC4.2 — available-slots only serves active plans
 describe('AC4.2: available-slots route — rejects non-active plan status', () => {
-  it('checks planData.status === active before proceeding', () => {
+  it('normalizes string status and allows null/undefined to pass', () => {
     const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
     assert.match(
       src,
-      /planData\.status\s*!==\s*['"]active['"]/,
-      "Must check planData.status !== 'active' and reject non-active plans"
+      /const normalizedPlanStatus\s*=\s*typeof\s+planData\.status\s*===\s*['"]string['"]\s*\?\s*planData\.status\.trim\(\)\.toLowerCase\(\)\s*:\s*null;/,
+      'Must normalize status through normalizedPlanStatus with nullish fallback'
+    );
+    assert.match(
+      src,
+      /if \(normalizedPlanStatus\s*&&\s*normalizedPlanStatus\s*!==\s*['"]active['"]\)/,
+      'Must guard non-empty normalized status and reject non-active strings'
     );
   });
 
-  it('returns 404 when plan status is not active', () => {
+  it('returns 404 when normalized plan status is inactive/archived/non-active', () => {
     const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
-    // Status check must result in a 404 response
     const statusCheckRegion = src.match(
-      /planData\.status\s*!==\s*['"]active['"][^}]*}/s
+      /if \(normalizedPlanStatus\s*&&\s*normalizedPlanStatus\s*!==\s*['"]active['"]\)\s*\{[\s\S]{0,180}status:\s*404[\s\S]{0,80}\}/
     );
-    assert.ok(statusCheckRegion, 'Must have a status check block');
-    assert.match(
-      statusCheckRegion[0],
-      /status:\s*404/,
-      'Non-active plan must return HTTP 404'
-    );
+    assert.ok(statusCheckRegion, 'Must reject non-active normalized status with HTTP 404');
   });
 });
 
@@ -100,31 +99,40 @@ describe('AC4.3: migration file adds archived to activity_plans CHECK constraint
 describe('AC4.4: status vocabulary logic — pure unit tests', () => {
   const CANONICAL_STATUSES = ['active', 'inactive', 'archived'];
 
+  function isPlanBookable(status) {
+    const normalized =
+      typeof status === 'string' ? status.trim().toLowerCase() : null;
+    return normalized === null || normalized === 'active';
+  }
+
   it('active is bookable', () => {
     assert.ok(CANONICAL_STATUSES.includes('active'));
+    assert.equal(isPlanBookable('active'), true);
   });
 
   it('inactive is not bookable', () => {
     assert.ok(CANONICAL_STATUSES.includes('inactive'));
-    // available-slots must reject inactive
-    function isPlanBookable(status) {
-      return status === 'active';
-    }
     assert.equal(isPlanBookable('inactive'), false);
+    assert.equal(isPlanBookable('  INACTIVE  '), false);
+    assert.equal(isPlanBookable('inactive '), false);
   });
 
   it('archived is not bookable', () => {
     assert.ok(CANONICAL_STATUSES.includes('archived'));
-    function isPlanBookable(status) {
-      return status === 'active';
-    }
     assert.equal(isPlanBookable('archived'), false);
+    assert.equal(isPlanBookable(' ARCHIVED '), false);
+  });
+
+  it('legacy null/undefined status remains allowlisted for compatibility', () => {
+    assert.equal(isPlanBookable(null), true);
+    assert.equal(isPlanBookable(undefined), true);
   });
 
   it('unknown status is rejected at API boundary', () => {
     function isValidStatus(status) {
       return CANONICAL_STATUSES.includes(status);
     }
+
     assert.equal(isValidStatus('draft'), false);
     assert.equal(isValidStatus('deleted'), false);
     assert.equal(isValidStatus(''), false);

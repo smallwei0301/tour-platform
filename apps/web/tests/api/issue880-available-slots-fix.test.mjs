@@ -75,6 +75,8 @@ test('#880 AC2: slug with no matching active plan and no scheduleId → 404 PLAN
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
   ]);
   const response = await getAvailableSlots(
     buildRequest(`https://example.test/api/v2/activities/${ACTIVITY}/available-slots?planId=full-day-complete&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
@@ -93,6 +95,8 @@ test('#880 AC2: slug with no matching active plan and no scheduleId → 404 PLAN
 test('#880 AC2: slug + scheduleId but legacy schedule row missing → 404 PLAN_NOT_FOUND', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
   ]);
@@ -114,6 +118,8 @@ test('#880 AC2: slug + scheduleId.plan_id null + ambiguous active plans → 409 
   // (409) for "multiple active candidates, server refuses to guess".
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, plan_id: null } },
     { terminal: 'limit', table: 'activity_plans', data: [{ id: 'a' }, { id: 'b' }] },

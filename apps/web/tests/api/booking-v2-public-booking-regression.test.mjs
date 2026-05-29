@@ -107,6 +107,8 @@ test('#885 A1: resolveBookingPlan for unresolved public slug is NOT VALIDATION_E
   // return PLAN_NOT_FOUND instead.
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activity_plans', data: null }, // slug lookup misses
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null }, // legacy_plan_id lookup misses
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null }, // derived slug lookup misses (full-day)
   ]);
   const out = await resolveBookingPlan(supabase.client, {
     activityId: ACTIVITY,
@@ -130,6 +132,7 @@ test('#885 A1: resolveBookingPlan for unresolved public slug is NOT VALIDATION_E
 test('#885 A1: route-level regression — slug returns 404, not 400 VALIDATION_ERROR', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
   ]);
   const response = await getAvailableSlots(
@@ -165,6 +168,10 @@ for (const slug of UNRESOLVED_SLUGS) {
   test(`#885 A2: unresolved slug '${slug}' → PLAN_NOT_FOUND with details.planKey`, async () => {
     const supabase = createSupabaseMock([
       { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+      { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+      ...(slug === 'full-day-complete'
+        ? [{ terminal: 'maybeSingle', table: 'activity_plans', data: null }]
+        : []),
     ]);
     const out = await resolveBookingPlan(supabase.client, {
       activityId: ACTIVITY,
@@ -184,6 +191,7 @@ for (const slug of UNRESOLVED_SLUGS) {
 test('#885 A2: route returns 404 + PLAN_NOT_FOUND + details.planKey for unresolved slug', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
   ]);
   const response = await getAvailableSlots(
@@ -239,6 +247,7 @@ test('#885 A3: archived plan slug → PLAN_INACTIVE (covers non-active statuses)
 test('#885 A4: slug + scheduleId + plan_id null + 2 active plans → AMBIGUOUS_PLAN', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     {
       terminal: 'maybeSingle',
       table: 'activity_schedules',
@@ -268,6 +277,7 @@ test('#885 A4: slug + scheduleId + plan_id null + 2 active plans → AMBIGUOUS_P
 test('#885 A4: route returns 409 for ambiguous schedule fallback', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     {
       terminal: 'maybeSingle',
