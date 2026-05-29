@@ -50,7 +50,8 @@ test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead
   const v2ShellSource = src.slice(v2Start, v2End);
 
   assert.match(v2ShellSource, /\/api\/v2\/bookings\/draft/);
-  assert.match(v2ShellSource, /\/api\/v2\/bookings\/\$\{draftJson\.data\.bookingId\}\/checkout/);
+  assert.match(v2ShellSource, /\/api\/v2\/bookings\/\$\{createdBookingId\}\/checkout/);
+  assert.match(v2ShellSource, /if \(!createdBookingId \|\| !agreed\)/);
   assert.doesNotMatch(v2ShellSource, /createOrder\(/);
   assert.doesNotMatch(v2ShellSource, /fetch\('\/api\/orders'/);
   assert.doesNotMatch(v2ShellSource, /submitEcpayCallback\(/);
