@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getActivitySitemapEntries } from '../src/lib/sitemap-activities.mjs';
+import { listPublishedGuidesDb } from '../src/lib/db.mjs';
 
 const BLOG_SLUGS = [
   'why-private-guide',
@@ -48,5 +49,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${baseUrl}/legal/terms`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
     { url: `${baseUrl}/legal/refund`, lastModified: now, changeFrequency: 'monthly', priority: 0.3 },
     ...(await getActivitySitemapEntries({ baseUrl, now })),
+    // Guide profile pages — dynamic from DB, same revalidation as activities.
+    ...(await listPublishedGuidesDb().then(guides =>
+      (guides || [])
+        .filter((g: { slug?: string }) => g.slug)
+        .map((g: { slug: string }) => ({
+          url: `${baseUrl}/guides/${encodeURIComponent(g.slug)}`,
+          lastModified: now,
+          changeFrequency: 'monthly' as const,
+          priority: 0.7,
+        }))
+    ).catch(() => [])),
   ];
 }
