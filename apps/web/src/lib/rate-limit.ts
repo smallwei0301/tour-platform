@@ -143,6 +143,9 @@ export const limiters = {
 
   // /api/line/webhook — 60 requests per minute (LINE delivers in bursts)
   lineWebhook: new RateLimiter(60, 60 * 1000),
+
+  // /api/line/auth/verify — 20 requests per minute per IP
+  lineAuth: new RateLimiter(20, 60 * 1000),
 };
 
 // Named exports for convenience
