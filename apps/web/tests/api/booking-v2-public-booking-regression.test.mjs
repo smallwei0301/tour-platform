@@ -107,11 +107,8 @@ test('#885 A1: resolveBookingPlan for unresolved public slug is NOT VALIDATION_E
   // return PLAN_NOT_FOUND instead.
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activity_plans', data: null }, // slug lookup misses
-<<<<<<< HEAD
-=======
     { terminal: 'maybeSingle', table: 'activity_plans', data: null }, // legacy_plan_id lookup misses
     { terminal: 'maybeSingle', table: 'activity_plans', data: null }, // derived slug lookup misses (full-day)
->>>>>>> c0672e4 (test(booking): align merge-ref mock query sequence for resolver fallback)
   ]);
   const out = await resolveBookingPlan(supabase.client, {
     activityId: ACTIVITY,
@@ -136,11 +133,7 @@ test('#885 A1: route-level regression — slug returns 404, not 400 VALIDATION_E
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
-<<<<<<< HEAD
-=======
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
-    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
->>>>>>> c0672e4 (test(booking): align merge-ref mock query sequence for resolver fallback)
   ]);
   const response = await getAvailableSlots(
     buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=full-day-complete&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
@@ -175,13 +168,10 @@ for (const slug of UNRESOLVED_SLUGS) {
   test(`#885 A2: unresolved slug '${slug}' → PLAN_NOT_FOUND with details.planKey`, async () => {
     const supabase = createSupabaseMock([
       { terminal: 'maybeSingle', table: 'activity_plans', data: null },
-<<<<<<< HEAD
-=======
       { terminal: 'maybeSingle', table: 'activity_plans', data: null },
       ...(slug === 'full-day-complete'
         ? [{ terminal: 'maybeSingle', table: 'activity_plans', data: null }]
         : []),
->>>>>>> c0672e4 (test(booking): align merge-ref mock query sequence for resolver fallback)
     ]);
     const out = await resolveBookingPlan(supabase.client, {
       activityId: ACTIVITY,
@@ -202,10 +192,7 @@ test('#885 A2: route returns 404 + PLAN_NOT_FOUND + details.planKey for unresolv
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
-<<<<<<< HEAD
-=======
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
->>>>>>> c0672e4 (test(booking): align merge-ref mock query sequence for resolver fallback)
   ]);
   const response = await getAvailableSlots(
     buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=standard&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
