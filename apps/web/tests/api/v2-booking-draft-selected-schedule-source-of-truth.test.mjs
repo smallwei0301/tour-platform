@@ -130,3 +130,36 @@ test('GH-860 RED: stale scheduleId should fallback to activity_schedules selecte
   assert.equal(fallback?.schedule.id, 'open-target');
   assert.equal(fallback?.validation.available, true);
 });
+
+test('GH-860 RED: stale scheduleId fallback with only closed/full rows should not become authoritative reject', () => {
+  const fallback = pickFallbackDraftSelectedSchedule({
+    schedules: [
+      {
+        id: 'closed-only',
+        activity_id: '11111111-1111-1111-1111-111111111111',
+        plan_id: null,
+        start_at: '2026-06-01T10:00:00+08:00',
+        status: 'closed',
+        capacity: 8,
+        booked_count: 0,
+      },
+      {
+        id: 'full-only',
+        activity_id: '11111111-1111-1111-1111-111111111111',
+        plan_id: null,
+        start_at: '2026-06-01T10:00:00+08:00',
+        status: 'open',
+        capacity: 4,
+        booked_count: 4,
+      },
+    ],
+    activityId: '11111111-1111-1111-1111-111111111111',
+    resolvedPlanId: PLAN_ID,
+    requestStartAt: '2026-06-01T10:00:00+08:00',
+    slotDate: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    participants: 2,
+  });
+
+  assert.equal(fallback, null);
+});

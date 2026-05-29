@@ -20,8 +20,6 @@ export function pickFallbackDraftSelectedSchedule(payload: {
   participants: number;
 }): { schedule: DraftScheduleRow; validation: { available: boolean; reason?: string } } | null {
   const { schedules, activityId, resolvedPlanId, requestStartAt, slotDate, timezone, participants } = payload;
-  let firstAuthoritativeReject: { schedule: DraftScheduleRow; validation: { available: boolean; reason?: string } } | null = null;
-
   for (const schedule of schedules) {
     const validation = validateDraftSlotAgainstSelectedSchedule({
       schedule,
@@ -36,13 +34,9 @@ export function pickFallbackDraftSelectedSchedule(payload: {
     if (validation.available) {
       return { schedule, validation };
     }
-
-    if (!firstAuthoritativeReject && shouldRejectDraftWhenSelectedScheduleInvalid({ hasScheduleId: true, selectedScheduleValidation: validation })) {
-      firstAuthoritativeReject = { schedule, validation };
-    }
   }
 
-  return firstAuthoritativeReject;
+  return null;
 }
 
 export function validateDraftSlotAgainstSelectedSchedule(payload: {
