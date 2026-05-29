@@ -197,9 +197,9 @@ function BookingInnerLegacy() {
       </div>
 
       {/* 進度列 */}
-      <div className="tp-booking-progress" style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500 }}>
-        {['行程確認', '旅客資訊', '付款'].map((label, i) => (
-          <div key={i} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+      <ol className="tp-booking-progress" aria-label="預約步驟" style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500, listStyle: 'none', padding: 0 }}>
+        {(['行程確認', '旅客資訊', '付款'] as const).map((label, i) => (
+          <li key={i} aria-current={step === i + 1 ? 'step' : undefined} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
             <div style={{
               width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: step >= i + 1 ? 'var(--tp-primary)' : '#e5e5e5',
@@ -210,10 +210,10 @@ function BookingInnerLegacy() {
             <span style={{ marginLeft: 6, fontSize: 14, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? 'var(--tp-text)' : 'var(--tp-muted)' }}>
               {label}
             </span>
-            {i < 2 && <div style={{ flex: 1, height: 2, background: step > i + 1 ? 'var(--tp-primary)' : '#e5e5e5', margin: '0 8px' }} />}
-          </div>
+            {i < 2 && <div role="presentation" style={{ flex: 1, height: 2, background: step > i + 1 ? 'var(--tp-primary)' : '#e5e5e5', margin: '0 8px' }} />}
+          </li>
         ))}
-      </div>
+      </ol>
 
       {errorMessage && (
         <div style={{ marginBottom: 16, background: '#fff4f4', border: '1px solid #f5c2c2', color: '#b42318', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>
