@@ -771,6 +771,16 @@ test('draft route applies formed-group rule and avoids same-group overlap hard c
   assert.match(src, /bookings: nonGroupBookings/);
 });
 
+test('draft route aligns with available-slots resolver contract for schedule fallback (GH-860)', async () => {
+  const rel = 'app/api/v2/bookings/draft/route.ts';
+  const src = await readFile(path.join(ROOT, rel), 'utf8');
+
+  assert.match(src, /resolveBookingPlan\(/);
+  assert.match(src, /scheduleId/);
+  assert.match(src, /or\(`activity_plan_id\.is\.null,activity_plan_id\.eq\.\$\{resolvedPlanId\}`\)/);
+  assert.match(src, /messageZh/);
+});
+
 test('behavior: draft rule blocks if confirmed+draft participants already exceed remaining capacity', () => {
   const guideId = 'guide_001';
   const activityId = 'activity_001';

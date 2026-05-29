@@ -20,6 +20,7 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
 import { createClient } from '../../../../../src/lib/supabase/server';
+import { resolveBookingPlan } from '../../../../../src/lib/booking-plan-resolver';
 import {
   validateSlotAvailability,
   addMinutes,
@@ -222,6 +223,7 @@ async function isSlotInGeneratedV2Availability(
 interface DraftBookingRequest {
   activityId: string;
   planId: string;
+  scheduleId?: string;
   startAt: string;
   timezone: string;
   participants: number;
@@ -255,6 +257,12 @@ function parseAndValidateBody(
   }
   if (!isUuidLike(b.planId)) {
     return { error: { code: 'VALIDATION_ERROR', message: 'Invalid planId format' } };
+  }
+
+  if (b.scheduleId !== undefined) {
+    if (typeof b.scheduleId !== 'string' || !isUuidLike(b.scheduleId)) {
+      return { error: { code: 'VALIDATION_ERROR', message: 'Invalid scheduleId format' } };
+    }
   }
 
   // startAt
@@ -330,6 +338,7 @@ function parseAndValidateBody(
     data: {
       activityId: b.activityId,
       planId: b.planId,
+      scheduleId: b.scheduleId,
       startAt: b.startAt,
       timezone: b.timezone,
       participants: b.participants,
@@ -365,6 +374,30 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
 
+    const resolvedPlan = await resolveBookingPlan(supabase, {
+      activityId: data.activityId,
+      planKey: data.planId,
+      scheduleId: data.scheduleId ?? null,
+    });
+
+    if (!resolvedPlan.ok) {
+      const status = resolvedPlan.code === 'AMBIGUOUS_PLAN' ? 409 : 404;
+      return Response.json(
+        {
+          success: false,
+          error: {
+            code: resolvedPlan.code,
+            message: resolvedPlan.messageEn,
+            messageZh: resolvedPlan.messageZh,
+            details: resolvedPlan.details,
+          },
+        },
+        { status }
+      );
+    }
+
+    const resolvedPlanId = resolvedPlan.planId;
+
     // 1. Fetch activity plan and verify it exists and is active
     const { data: planData, error: planError } = await supabase
       .from('activity_plans')
@@ -387,7 +420,7 @@ export async function POST(request: NextRequest) {
         )
       `
       )
-      .eq('id', data.planId)
+      .eq('id', resolvedPlanId)
       .eq('activity_id', data.activityId)
       .single();
 
@@ -453,7 +486,7 @@ export async function POST(request: NextRequest) {
       .select('buffer_before_minutes, buffer_after_minutes')
       .eq('guide_id', guideId)
       .eq('is_active', true)
-      .or(`activity_plan_id.is.null,activity_plan_id.eq.${data.planId}`)
+      .or(`activity_plan_id.is.null,activity_plan_id.eq.${resolvedPlanId}`)
       .limit(1);
     const bufferBefore = rulesData?.[0]?.buffer_before_minutes ?? 0;
     const bufferAfter = rulesData?.[0]?.buffer_after_minutes ?? 0;
@@ -483,7 +516,7 @@ export async function POST(request: NextRequest) {
     const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
       bookings,
       activityId: data.activityId,
-      planId: data.planId,
+      planId: resolvedPlanId,
       localDate: slotDate,
       timezone: data.timezone,
       statuses: FORMED_GROUP_BOOKING_STATUSES,
@@ -492,7 +525,7 @@ export async function POST(request: NextRequest) {
     const effectiveExistingParticipantsForCapacityHold = calculateExistingParticipantsForGroup({
       bookings,
       activityId: data.activityId,
-      planId: data.planId,
+      planId: resolvedPlanId,
       localDate: slotDate,
       timezone: data.timezone,
       statuses: CAPACITY_HOLD_BOOKING_STATUSES,
@@ -532,7 +565,7 @@ export async function POST(request: NextRequest) {
     const nonGroupBookings = excludeSameActivityPlanDateBookings({
       bookings,
       activityId: data.activityId,
-      planId: data.planId,
+      planId: resolvedPlanId,
       localDate: slotDate,
       timezone: data.timezone,
     });
@@ -565,7 +598,7 @@ export async function POST(request: NextRequest) {
     try {
       generatedSlotValidation = await isSlotInGeneratedV2Availability(supabase, {
         guideId,
-        planId: data.planId,
+        planId: resolvedPlanId,
         activityId: data.activityId,
         timezone: data.timezone,
         participants: data.participants,
@@ -583,7 +616,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!generatedSlotValidation.available) {
-      return Response.json(errorV2('SLOT_UNAVAILABLE', 'The selected time slot is not available'), {
+      return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
         status: 409,
       });
     }
@@ -630,7 +663,7 @@ export async function POST(request: NextRequest) {
         traveler_id: travelerId,
         guide_id: guideId,
         activity_id: data.activityId,
-        activity_plan_id: data.planId,
+        activity_plan_id: resolvedPlanId,
         source_channel: data.sourceChannel,
         start_at: slotStartAt.toISOString(),
         end_at: slotEndAt.toISOString(),
@@ -694,7 +727,7 @@ export async function POST(request: NextRequest) {
       unit_price: planData.base_price,
       subtotal_amount: totalAmount,
       metadata: {
-        planId: data.planId,
+        planId: resolvedPlanId,
         activityId: data.activityId,
         startAt: slotStartAt.toISOString(),
         endAt: slotEndAt.toISOString(),
