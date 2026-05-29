@@ -12,5 +12,6 @@ test('ecpay callback line notify contract: gate notify by source_channel=line', 
 
   assert.match(src, /select\('source_channel'\)/);
   assert.match(src, /if \(sourceChannel === 'line'\)/);
-  assert.match(src, /Truthful scope: current implementation uses LINE Notify/);
+  // Migrated off LINE Notify (#302b): ops notify + per-traveler push via Messaging API.
+  assert.match(src, /per-traveler push via Messaging API/);
 });

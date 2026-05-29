@@ -6,6 +6,7 @@ import { sendPaymentSuccess, sendAdminPaymentNotification } from '../../../../..
 import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { recordIncident } from '../../../../../src/lib/incidents';
@@ -344,9 +345,21 @@ export async function POST(request: Request) {
     void sendAdminPaymentNotification(notifyData);
 
     // LINE-only booking success notify: keep shared V2 core channel-agnostic.
-    // Truthful scope: current implementation uses LINE Notify (not Messaging API push/reply).
+    // Scope: ops notify via Messaging API (LINE_MESSAGING_ENABLED).
+    // per-traveler push via Messaging API (LINE_PUSH_ENABLED + a resolved line_user_id).
     if (sourceChannel === 'line') {
       notifyPaymentReceived(notifyData).catch(() => {});
+      // 旅客付款成功推播（未綁定或未開啟旗標時自動 skip）
+      void pushTravelerOrderEvent({
+        kind: 'payment_received',
+        orderId,
+        activityTitle: notifyData.activityTitle,
+        scheduleDate: notifyData.scheduleDate,
+        peopleCount: notifyData.peopleCount,
+        totalTwd: notifyData.totalTwd,
+        userId: (order?.user_id as string | undefined) ?? undefined,
+        contactEmail: notifyData.contactEmail,
+      }).catch(() => {});
     }
 
     // ECPay 正式回調期望回覆 "1|OK" 格式
