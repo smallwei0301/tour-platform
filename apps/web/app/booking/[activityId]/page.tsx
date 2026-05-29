@@ -684,7 +684,7 @@ function BookingInnerV2FlagShell() {
         body: JSON.stringify({
           activityId: resolvedActivityId,
           planId: resolvedPlanId,
-          activeScheduleId: activeScheduleId || undefined,
+          scheduleId: activeScheduleId || undefined,
           startAt: selectedSlotStartAt,
           timezone,
           participants: Math.max(guests, effectiveMinParticipants),
