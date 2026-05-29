@@ -154,6 +154,10 @@ export const rescheduleRequests = [];
 export const orderMessages = [];
 export const paymentEvents = [];
 
+// LINE user binding (in-memory fallback for line_user_mapping).
+// Each entry: { lineUserId, userId, contactEmail, displayName, isBlocked, boundAt, updatedAt }
+export const lineUserMappings = [];
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',
