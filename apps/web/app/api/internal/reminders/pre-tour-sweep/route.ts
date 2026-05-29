@@ -22,12 +22,15 @@ import {
   composePreTourReminder,
   sendReminder,
   type ReminderKind,
+  type ReminderChannel,
 } from '../../../../../src/lib/pre-tour-reminder';
 import {
   isOrderInReminderWindow,
   resolveReminderActivityAndStart,
   type SweepReminderRow,
 } from '../../../../../src/lib/internal-sweep-time-source';
+import { isLinePushEnabled } from '../../../../../src/config/feature-flags.mjs';
+import { getLineUserIdForOrder } from '../../../../../src/lib/line-binding.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -69,7 +72,10 @@ export async function POST(req: NextRequest) {
     );
 
     const now = Date.now();
-    const CHANNELS = ['email', 'line_notify_admin'] as const;
+    // line_push is opt-in: only swept when the per-traveler push flag is on.
+    const CHANNELS: ReminderChannel[] = isLinePushEnabled()
+      ? ['email', 'line_notify_admin', 'line_push']
+      : ['email', 'line_notify_admin'];
     const KINDS: ReminderKind[] = ['h24', 'h1'];
 
     let totalSent = 0;
@@ -91,6 +97,7 @@ export async function POST(req: NextRequest) {
           booking_id,
           contact_name,
           contact_email,
+          user_id,
           status,
           bookings (
             id,
@@ -162,6 +169,35 @@ export async function POST(req: NextRequest) {
             continue;
           }
 
+          // line_push: resolve a LINE binding; skip (no_line_binding) when unbound.
+          let lineUserId: string | null = null;
+          if (channel === 'line_push') {
+            lineUserId = await getLineUserIdForOrder({
+              userId: (order as { user_id?: string }).user_id,
+              contactEmail: order.contact_email ?? undefined,
+            });
+            if (!lineUserId) {
+              totalSkipped++;
+              await supabase.from('tour_reminder_log').upsert(
+                {
+                  order_id: order.id,
+                  schedule_id: scheduleId,
+                  reminder_kind: kind,
+                  channel,
+                  status: 'skipped',
+                  error: 'no_line_binding',
+                  created_at: new Date(now).toISOString(),
+                },
+                { onConflict: 'order_id, reminder_kind, channel', ignoreDuplicates: true }
+              ).then(({ error }) => {
+                if (error && !error.message?.includes('duplicate')) {
+                  console.error('[pre-tour-sweep] line_push skip log error:', error.message);
+                }
+              });
+              continue;
+            }
+          }
+
           // AC4: Idempotency — check tour_reminder_log before sending
           // ON CONFLICT DO NOTHING handles race conditions; we pre-check to avoid wasted sends
           const { data: existing } = await supabase
@@ -192,6 +228,7 @@ export async function POST(req: NextRequest) {
           try {
             await sendReminder(channel, {
               to: channel === 'email' ? order.contact_email! : undefined,
+              lineUserId: lineUserId ?? undefined,
               subject: kind === 'h24'
                 ? `【明日出發提醒】${activity.title}`
                 : `【即將出發】${activity.title}`,
