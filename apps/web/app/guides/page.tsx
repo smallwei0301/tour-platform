@@ -84,7 +84,7 @@ export default async function GuidesPage() {
 
         <section>
           <div className="tp-result-head">
-            <h2>全台灣 {guides.length} 位在地導遊</h2>
+            <h1>全台灣 {guides.length} 位在地導遊</h1>
             <select>
               <option>推薦排序</option>
               <option>評分高到低</option>
