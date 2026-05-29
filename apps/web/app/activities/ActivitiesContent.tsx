@@ -79,11 +79,23 @@ export default function ActivitiesContent() {
       .catch(() => {}); // Silently handle — user will see unhearted state
   }, []);
 
+  function updateUrl(q: string, regions: string[], types: string[]) {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (regions.length === 1) params.set('region', regions[0]);
+    if (types.length === 1) params.set('type', types[0]);
+    const qs = params.toString();
+    router.replace(qs ? `/activities?${qs}` : '/activities');
+  }
   function toggleRegion(r: string) {
-    setSelectedRegions((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]);
+    const next = selectedRegions.includes(r) ? selectedRegions.filter((x) => x !== r) : [...selectedRegions, r];
+    setSelectedRegions(next);
+    updateUrl(query, next, selectedTypes);
   }
   function toggleType(t: string) {
-    setSelectedTypes((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+    const next = selectedTypes.includes(t) ? selectedTypes.filter((x) => x !== t) : [...selectedTypes, t];
+    setSelectedTypes(next);
+    updateUrl(query, selectedRegions, next);
   }
   function clearAll() {
     setQuery('');
