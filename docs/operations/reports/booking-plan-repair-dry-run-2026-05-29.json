@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "generatedAt": "2026-05-29T02:18:04.850Z",
+    "dateStamp": "2026-05-29",
+    "mode": "DRY_RUN",
+    "issue": "#893 refs #883"
+  },
+  "summary": {
+    "TEST_FIXTURE": 4,
+    "MISSING_FORMAL_PLAN": 5,
+    "OK": 1,
+    "NEEDS_HUMAN_REVIEW": 1
+  },
+  "actionableCount": 6,
+  "findings": [
+    {
+      "activityId": "16cffbec-1918-4de8-acb5-720444ffc0b5",
+      "activitySlug": "e2e-accept-test-001",
+      "activityTitle": "E2E 驗收測試行程",
+      "planKey": "standard-plan",
+      "problemCode": "TEST_FIXTURE",
+      "detail": ""
+    },
+    {
+      "activityId": "c0000003-0000-0000-0000-000000000002",
+      "activitySlug": "dadadaocheng-walk",
+      "activityTitle": "大稻埕百年老街深度漫步",
+      "planKey": "morning-walk",
+      "problemCode": "MISSING_FORMAL_PLAN",
+      "detail": ""
+    },
+    {
+      "activityId": "c0000003-0000-0000-0000-000000000002",
+      "activitySlug": "dadadaocheng-walk",
+      "activityTitle": "大稻埕百年老街深度漫步",
+      "planKey": "afternoon-tea",
+      "problemCode": "MISSING_FORMAL_PLAN",
+      "detail": ""
+    },
+    {
+      "activityId": "c680224f-b57d-409b-9dda-175c0f34b2bb",
+      "activitySlug": "playwright-e2e-1775872569478-1775872569552",
+      "activityTitle": "Playwright E2E 測試行程-2",
+      "planKey": "half-day",
+      "problemCode": "TEST_FIXTURE",
+      "detail": ""
+    },
+    {
+      "activityId": "c680224f-b57d-409b-9dda-175c0f34b2bb",
+      "activitySlug": "playwright-e2e-1775872569478-1775872569552",
+      "activityTitle": "Playwright E2E 測試行程-2",
+      "planKey": "full-day",
+      "problemCode": "TEST_FIXTURE",
+      "detail": ""
+    },
+    {
+      "activityId": "9bf5d0f8-aca1-4777-91c6-73ef1d172236",
+      "activitySlug": "playwright-e2e-1775872048549-1775872048625",
+      "activityTitle": "Playwright E2E 測試行程",
+      "planKey": "(none)",
+      "problemCode": "TEST_FIXTURE",
+      "detail": "activity.plans is empty or null"
+    },
+    {
+      "activityId": "c0000003-0000-0000-0000-000000000003",
+      "activitySlug": "hualien-river-trekking",
+      "activityTitle": "花蓮秀姑巒溪溯溪全日冒險",
+      "planKey": "standard",
+      "problemCode": "MISSING_FORMAL_PLAN",
+      "detail": ""
+    },
+    {
+      "activityId": "c0000003-0000-0000-0000-000000000001",
+      "activitySlug": "kaohsiung-chaishan-cave-experience",
+      "activityTitle": "高雄柴山探洞體驗｜跟著 Andy Lee 走進城市邊緣的地形秘境",
+      "planKey": "half-day",
+      "problemCode": "OK",
+      "detail": ""
+    },
+    {
+      "activityId": "c0000003-0000-0000-0000-000000000001",
+      "activitySlug": "kaohsiung-chaishan-cave-experience",
+      "activityTitle": "高雄柴山探洞體驗｜跟著 Andy Lee 走進城市邊緣的地形秘境",
+      "planKey": "full-day",
+      "problemCode": "MISSING_FORMAL_PLAN",
+      "detail": ""
+    },
+    {
+      "activityId": "e78fb7c9-67be-4788-9195-bedd74f953e2",
+      "activitySlug": "activity-1775040922554",
+      "activityTitle": "柴山秘境之旅｜龍谷、小錐麓、金瓜洞全探索",
+      "planKey": "half-day-morning",
+      "problemCode": "NEEDS_HUMAN_REVIEW",
+      "detail": "price public=18 formal=1800"
+    },
+    {
+      "activityId": "e78fb7c9-67be-4788-9195-bedd74f953e2",
+      "activitySlug": "activity-1775040922554",
+      "activityTitle": "柴山秘境之旅｜龍谷、小錐麓、金瓜洞全探索",
+      "planKey": "full-day-complete",
+      "problemCode": "MISSING_FORMAL_PLAN",
+      "detail": ""
+    }
+  ]
+}
