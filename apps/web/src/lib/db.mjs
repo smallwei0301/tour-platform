@@ -5274,6 +5274,25 @@ export async function setLineBlockedDb(lineUserId, blocked) {
   return mapLineMappingRow(data);
 }
 
+export async function markLineWebhookEventDb(webhookEventId, meta = {}) {
+  if (!hasSupabaseEnv()) return { firstTime: true };
+  const supabase = await getSupabase();
+  // Insert; a unique-violation on the PK means we've already seen this event.
+  const { error } = await supabase
+    .from('line_webhook_events')
+    .insert({
+      webhook_event_id: webhookEventId,
+      event_type: meta.eventType ?? null,
+      line_user_id: meta.lineUserId ?? null,
+    });
+  if (error) {
+    // 23505 = unique_violation (duplicate delivery)
+    if (error.code === '23505') return { firstTime: false };
+    throw new Error(error.message);
+  }
+  return { firstTime: true };
+}
+
 export async function getLineUserIdForOrderDb(order) {
   if (!hasSupabaseEnv()) return null;
   const supabase = await getSupabase();

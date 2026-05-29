@@ -8,7 +8,7 @@
 //
 // PII note: only line_user_id + the keys needed to resolve an order are stored.
 
-import { lineUserMappings } from './store.mjs';
+import { lineUserMappings, lineWebhookEvents } from './store.mjs';
 
 function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -128,7 +128,35 @@ export async function setLineBlocked(lineUserId, blocked) {
   return setBlockedInMemory(id, blocked);
 }
 
+/**
+ * Record a webhook event for idempotency. Returns { firstTime: true } the first
+ * time an eventId is seen, { firstTime: false } on any replay so callers can skip.
+ */
+export async function markWebhookEventProcessed(webhookEventId, meta = {}) {
+  const id = String(webhookEventId || '').trim();
+  if (!id) return { firstTime: true }; // no id → cannot dedupe, process once
+  if (hasSupabaseEnv()) {
+    const { markLineWebhookEventDb } = await import('./db.mjs');
+    return markLineWebhookEventDb(id, meta);
+  }
+  if (lineWebhookEvents.some((e) => e.webhookEventId === id)) {
+    return { firstTime: false };
+  }
+  lineWebhookEvents.push({
+    webhookEventId: id,
+    eventType: meta.eventType ?? null,
+    lineUserId: meta.lineUserId ?? null,
+    receivedAt: new Date().toISOString(),
+  });
+  return { firstTime: true };
+}
+
 /** Test-only: clear the in-memory mapping store. */
 export function __resetLineMappingsForTest() {
   lineUserMappings.length = 0;
+}
+
+/** Test-only: clear the in-memory webhook idempotency store. */
+export function __resetWebhookEventsForTest() {
+  lineWebhookEvents.length = 0;
 }

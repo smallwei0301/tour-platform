@@ -140,6 +140,9 @@ export const limiters = {
 
   // order messages POST — 10 messages per 10 minutes per sender (#1411)
   messageSend: new RateLimiter(10, 10 * 60 * 1000),
+
+  // /api/line/webhook — 60 requests per minute (LINE delivers in bursts)
+  lineWebhook: new RateLimiter(60, 60 * 1000),
 };
 
 // Named exports for convenience
