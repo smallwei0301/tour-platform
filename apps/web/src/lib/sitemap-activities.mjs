@@ -1,5 +1,11 @@
 import { buildCanonicalActivityDetailPath, listPublishedActivitiesDb } from './db.mjs';
 
+// Exclude rows whose slug matches automation/test seed prefixes (e.g.
+// `playwright-e2e-…`, `e2e-accept-test-…`). Such rows can land in DB with
+// status:'published' from CI fixtures or accepted-test scaffolding, and we
+// don't want them indexed by search engines via the public sitemap.
+const TEST_DATA_SLUG_PATTERN = /^(playwright-|e2e-)/i;
+
 /**
  * Issue #829 — Build dynamic sitemap entries for public activity detail pages.
  *
@@ -19,6 +25,7 @@ export function mapActivitiesToSitemapEntries(activities, { baseUrl, now }) {
 
     const slug = typeof activity.slug === 'string' ? activity.slug.trim() : '';
     if (!slug) continue;
+    if (TEST_DATA_SLUG_PATTERN.test(slug)) continue;
 
     const path = buildCanonicalActivityDetailPath(activity);
     // Guard: only emit real detail pages. A bare "/activities" means the slug
