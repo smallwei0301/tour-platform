@@ -44,6 +44,11 @@ export function validateDraftSlotAgainstSelectedSchedule(payload: {
   return { available: true };
 }
 
+const AUTHORITATIVE_SELECTED_SCHEDULE_REJECT_REASONS = new Set([
+  'SCHEDULE_NOT_OPEN',
+  'SCHEDULE_CAPACITY_EXCEEDED',
+]);
+
 export function shouldRejectDraftWhenSelectedScheduleInvalid(payload: {
   hasScheduleId: boolean;
   selectedScheduleValidation: { available: boolean; reason?: string } | null;
@@ -51,5 +56,6 @@ export function shouldRejectDraftWhenSelectedScheduleInvalid(payload: {
   const { hasScheduleId, selectedScheduleValidation } = payload;
   if (!hasScheduleId) return false;
   if (!selectedScheduleValidation) return false;
-  return selectedScheduleValidation.available !== true;
+  if (selectedScheduleValidation.available === true) return false;
+  return AUTHORITATIVE_SELECTED_SCHEDULE_REJECT_REASONS.has(selectedScheduleValidation.reason ?? '');
 }

@@ -30,8 +30,8 @@ test('GH-860 RED/GREEN: plan UUID + schedule-backed slot (2026-06-01, 4 pax) sho
   assert.equal(result.available, true);
 });
 
-test('GH-860 guard: reject stale schedule mismatch (startAt mismatch) to preserve slot/capacity protections', () => {
-  const result = validateDraftSlotAgainstSelectedSchedule({
+test('GH-860 RED: stale schedule mismatch (startAt mismatch) should not force draft hard-reject when selectedSchedule is only a hint', () => {
+  const selectedScheduleValidation = validateDraftSlotAgainstSelectedSchedule({
     schedule: {
       id: SCHEDULE_ID,
       activity_id: '11111111-1111-1111-1111-111111111111',
@@ -49,8 +49,18 @@ test('GH-860 guard: reject stale schedule mismatch (startAt mismatch) to preserv
     participants: 4,
   });
 
-  assert.equal(result.available, false);
-  assert.equal(result.reason, 'SCHEDULE_START_MISMATCH');
+  const shouldReject = shouldRejectDraftWhenSelectedScheduleInvalid({
+    hasScheduleId: true,
+    selectedScheduleValidation,
+  });
+
+  assert.equal(selectedScheduleValidation.available, false);
+  assert.equal(selectedScheduleValidation.reason, 'SCHEDULE_START_MISMATCH');
+  assert.equal(
+    shouldReject,
+    false,
+    'startAt mismatch should be treated as stale hint and allow generated availability fallback'
+  );
 });
 
 test('GH-860 RED: scheduleId resolves but selected schedule is closed, draft must not fallback to generated availability', () => {
