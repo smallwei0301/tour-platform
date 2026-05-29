@@ -61,3 +61,55 @@ export async function getSettlementConfig(supabase: any): Promise<SettlementConf
     version: 'env-fallback',
   }
 }
+
+// ── Sweep payout item (Issue #847) ─────────────────────────────────────────────
+
+export type SweepPayoutItemInput = {
+  id: string
+  total_twd: number
+  guide_id: string
+}
+
+export type SweepPayoutItemOpsTracking = {
+  refund_amount_twd?: number | null
+} | null | undefined
+
+export type SweepPayoutItem = {
+  order_id: string
+  guide_id: string
+  gmv_twd: number
+  commission_twd: number
+  net_twd: number
+  rules_version: string
+}
+
+/**
+ * Compute a payout-item row from an eligible order, applying the v1 policy
+ * (docs/05-business/06-payment-plan/03-settlement-rules.md §4):
+ * - effective gmv = total_twd - operations_tracking.refund_amount_twd
+ * - commission = floor(effective_gmv * commission_rate)
+ * - net = floor(effective_gmv * (1 - commission_rate))
+ *
+ * Returns null when the order is fully (or over-) refunded — fully refunded
+ * orders MUST NOT create a payout item per docs §5.
+ */
+export function computeSweepPayoutItem(
+  order: SweepPayoutItemInput,
+  opsTracking: SweepPayoutItemOpsTracking,
+  config: Pick<SettlementConfig, 'commission_rate' | 'version'>,
+): SweepPayoutItem | null {
+  const gross = Number(order.total_twd) || 0
+  const refunded = Number(opsTracking?.refund_amount_twd ?? 0) || 0
+  const effective = gross - refunded
+  if (effective <= 0) return null
+  const commission_twd = Math.floor(effective * config.commission_rate)
+  const net_twd = Math.floor(effective * (1 - config.commission_rate))
+  return {
+    order_id: order.id,
+    guide_id: order.guide_id,
+    gmv_twd: effective,
+    commission_twd,
+    net_twd,
+    rules_version: config.version ?? 'v1',
+  }
+}

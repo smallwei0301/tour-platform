@@ -7,7 +7,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
-import { createClient } from '../../../../../../../../src/lib/supabase/server';
+import { getSupabase } from '../../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -30,7 +30,7 @@ export async function GET(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabase();
 
     const { data, error } = await supabase
       .from('activity_plans')
@@ -135,7 +135,7 @@ export async function PUT(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabase();
 
     // Check plan exists and belongs to activity
     const { data: existing, error: existingError } = await supabase
@@ -206,7 +206,7 @@ export async function DELETE(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabase();
 
     // Verify plan exists and belongs to activity
     const { data: existing, error: existingError } = await supabase

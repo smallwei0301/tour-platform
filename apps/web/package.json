@@ -17,6 +17,7 @@
     "test:smoke:guide-blackout": "node --test --test-name-pattern='Blackout|validateSlotAvailability detects blackout conflicts' tests/slot-generator.test.mjs && node --test tests/api/v2-guide-blackout-contract.test.mjs",
     "test:smoke:admin-pos-line": "node --test tests/api/v2-admin-pos-line-regression.test.mjs",
     "test:smoke:phase12-full": "bash ../../scripts/phase12/run-full-regression.sh",
+    "test:smoke:public-booking-regression": "node --test tests/api/booking-v2-public-booking-regression.test.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

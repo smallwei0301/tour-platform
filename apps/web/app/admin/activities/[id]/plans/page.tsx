@@ -142,7 +142,12 @@ export default function ActivityPlansPage() {
       if (json.success) {
         setActivity(json.data.activity);
         setPlans(json.data.plans || []);
+        setError('');
+      } else {
+        setError(json.error?.message || '載入方案失敗，請重新整理後再試。');
       }
+    } catch {
+      setError('載入方案失敗，請檢查網路或稍後再試。');
     } finally {
       setLoading(false);
     }
@@ -227,7 +232,7 @@ export default function ActivityPlansPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(payload),
       });
       const json = await res.json();
@@ -245,18 +250,43 @@ export default function ActivityPlansPage() {
 
   const archivePlan = async (planId: string) => {
     if (!confirm('確定要封存此方案嗎？封存後旅客將無法預約此方案。')) return;
-    await fetch(`/api/v2/admin/activities/${activityId}/plans/${planId}`, { method: 'DELETE', headers: csrfHeaders() });
-    await loadData();
+
+    try {
+      const res = await fetch(`/api/v2/admin/activities/${activityId}/plans/${planId}`, {
+        method: 'DELETE',
+        headers: csrfHeaders(),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.error?.message || '封存方案失敗，請稍後再試。');
+        return;
+      }
+      setError('');
+      await loadData();
+    } catch {
+      setError('封存方案失敗，請檢查網路或稍後再試。');
+    }
   };
 
   const toggleStatus = async (plan: ActivityPlan) => {
     const newStatus = plan.status === 'active' ? 'inactive' : 'active';
-    await fetch(`/api/v2/admin/activities/${activityId}/plans/${plan.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    await loadData();
+
+    try {
+      const res = await fetch(`/api/v2/admin/activities/${activityId}/plans/${plan.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setError(json.error?.message || '更新方案狀態失敗，請稍後再試。');
+        return;
+      }
+      setError('');
+      await loadData();
+    } catch {
+      setError('更新方案狀態失敗，請檢查網路或稍後再試。');
+    }
   };
 
   const filteredPlans = statusFilter
@@ -520,6 +550,24 @@ export default function ActivityPlansPage() {
             </button>
           ))}
         </div>
+
+        {error && (
+          <div
+            role="alert"
+            aria-live="polite"
+            style={{
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: 10,
+              padding: '10px 14px',
+              color: '#b91c1c',
+              fontSize: 14,
+              marginBottom: 16,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         <Card>
           <ResponsiveTable

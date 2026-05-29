@@ -1491,11 +1491,15 @@ export async function updateSettlementRulesDb(supabase, patch, createdBy) {
  * @returns {Promise<Array>} orders with nested activities and activity_schedules
  */
 export async function getUnsettledOrdersDb(supabase, tDays) {
+  // Issue #847: only `completed` orders enter payout (per
+  // docs/05-business/06-payment-plan/03-settlement-rules.md §5). Orders in
+  // `paid`/`confirmed` are pre-completion; `refund_pending`/`refunded` are
+  // excluded by definition.
   const cutoff = new Date(Date.now() - tDays * 24 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('orders')
-    .select('id, total_twd, activity_id, schedule_id, activities!inner(guide_id), activity_schedules!inner(start_at)')
-    .in('status', ['paid', 'confirmed', 'completed'])
+    .select('id, total_twd, activity_id, schedule_id, activities!inner(guide_id), activity_schedules!inner(start_at), operations_tracking(refund_amount_twd)')
+    .eq('status', 'completed')
     .lte('activity_schedules.start_at', cutoff)
     .not('id', 'in', supabase.from('payout_items').select('order_id'))
   if (error) throw error
@@ -3320,6 +3324,19 @@ export async function updateActivityStatusDb(id, status) {
   if (!validStatuses.includes(status)) throw new Error('invalid status');
 
   const supabase = await getSupabase();
+
+  // ── Issue #881: Booking readiness gate before publishing ─────────────────
+  if (status === 'published') {
+    const { validateActivityBookability } = await import('./booking-readiness/validate-activity-bookability.mjs');
+    const check = await validateActivityBookability(id, { supabase });
+    if (!check.ok) {
+      const err = new Error('BOOKING_READINESS_FAILED');
+      err.code = 'BOOKING_READINESS_FAILED';
+      err.details = check.blockers;
+      throw err;
+    }
+  }
+
   const patch = { status, updated_at: new Date().toISOString() };
   if (status === 'published') patch.published_at = new Date().toISOString();
 
@@ -3358,6 +3375,62 @@ export async function listSchedulesByActivityDb(activityId) {
   }));
 }
 
+/**
+ * Check if a given capacity is compatible with the plan's max_participants.
+ * Returns { ok: true } or { ok: false, blocker: { code, messageZh } }
+ *
+ * - If planId provided → look up that specific plan's max_participants.
+ * - If planId null → query active plans for activityId.
+ *   - If exactly 1 active plan → use its max_participants.
+ *   - If 0 or 2+ active plans → return { ok: true } (don't block — readiness gate handles ambiguity).
+ * - If capacity > plan.max_participants → return { ok: false }.
+ *
+ * Issue #891 — guard for admin schedule create/update write path.
+ */
+export async function validateScheduleCapacityAgainstPlan({ supabase, activityId, planId, capacity }) {
+  const cap = Number(capacity);
+  if (!Number.isFinite(cap) || cap <= 0) return { ok: true }; // let DB constraints handle bad values
+
+  let maxParticipants = null;
+
+  if (planId) {
+    // Specific plan provided — look it up directly
+    const { data, error } = await supabase
+      .from('activity_plans')
+      .select('max_participants')
+      .eq('id', planId)
+      .maybeSingle();
+    if (error || !data) return { ok: true }; // plan not found → don't block
+    maxParticipants = Number(data.max_participants);
+  } else if (activityId) {
+    // No planId — look for active plans for this activity
+    const { data, error } = await supabase
+      .from('activity_plans')
+      .select('max_participants')
+      .eq('activity_id', activityId)
+      .eq('status', 'active');
+    if (error || !data) return { ok: true }; // DB error → don't block
+    if (data.length !== 1) return { ok: true }; // 0 or 2+ active plans → don't block
+    maxParticipants = Number(data[0].max_participants);
+  } else {
+    return { ok: true }; // no context to check
+  }
+
+  if (!Number.isFinite(maxParticipants) || maxParticipants <= 0) return { ok: true };
+
+  if (cap > maxParticipants) {
+    return {
+      ok: false,
+      blocker: {
+        code: 'SCHEDULE_CAPACITY_EXCEEDS_PLAN',
+        messageZh: `場次人數上限（${cap}）超過方案上限（${maxParticipants}）`,
+      },
+    };
+  }
+
+  return { ok: true };
+}
+
 export async function createScheduleDb(input = {}) {
   if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
   const { activityId, startAt, endAt, capacity = 10, status = 'open', planId = null, minParticipants = 1, guideNote = null } = input;
@@ -3366,6 +3439,22 @@ export async function createScheduleDb(input = {}) {
   if (!endAt)      throw new Error('endAt is required');
 
   const supabase = await getSupabase();
+
+  if (input.capacity !== undefined) {
+    const check = await validateScheduleCapacityAgainstPlan({
+      supabase,
+      activityId,
+      planId: planId ?? null,
+      capacity: input.capacity,
+    });
+    if (!check.ok) {
+      const err = new Error(`SCHEDULE_CAPACITY_EXCEEDS_PLAN: ${check.blocker.messageZh}`);
+      err.code = 'SCHEDULE_CAPACITY_EXCEEDS_PLAN';
+      err.messageZh = check.blocker.messageZh;
+      throw err;
+    }
+  }
+
   const row = {
     activity_id: activityId, start_at: startAt, end_at: endAt,
     capacity: Number(capacity), booked_count: 0, status,
@@ -3390,6 +3479,37 @@ export async function createScheduleDb(input = {}) {
 export async function updateScheduleDb(id, input = {}) {
   if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
   const supabase = await getSupabase();
+
+  if (input.capacity !== undefined) {
+    // For updates we need activityId — fetch it from the existing schedule row
+    let activityId = null;
+    let existingPlanId = null;
+    const { data: existing } = await supabase
+      .from('activity_schedules')
+      .select('activity_id, plan_id')
+      .eq('id', id)
+      .maybeSingle();
+    if (existing) {
+      activityId = existing.activity_id;
+      existingPlanId = existing.plan_id || null;
+    }
+
+    // planId in input takes precedence over existing plan_id
+    const planIdToCheck = input.planId !== undefined ? (input.planId || null) : existingPlanId;
+
+    const check = await validateScheduleCapacityAgainstPlan({
+      supabase,
+      activityId,
+      planId: planIdToCheck,
+      capacity: input.capacity,
+    });
+    if (!check.ok) {
+      const err = new Error(`SCHEDULE_CAPACITY_EXCEEDS_PLAN: ${check.blocker.messageZh}`);
+      err.code = 'SCHEDULE_CAPACITY_EXCEEDS_PLAN';
+      err.messageZh = check.blocker.messageZh;
+      throw err;
+    }
+  }
 
   const patch = {};
   if (input.startAt         !== undefined) patch.start_at        = input.startAt;

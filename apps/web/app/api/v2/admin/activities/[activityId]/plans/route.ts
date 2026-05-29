@@ -6,7 +6,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
-import { createClient } from '../../../../../../../src/lib/supabase/server';
+import { getSupabase } from '../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 import {
   duplicatePlanSlugMessage,
@@ -31,7 +31,7 @@ export async function GET(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabase();
 
     // Verify activity exists
     const { data: activity, error: actError } = await supabase
@@ -147,7 +147,7 @@ export async function POST(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await getSupabase();
 
     // Verify activity exists
     const { data: activity, error: actError } = await supabase

@@ -955,6 +955,12 @@ export default function AdminActivityEditPage() {
       if (json.ok) {
         setStatus(newStatus);
         setSuccess(`✅ 狀態已更新為「${STATUS_BADGE[newStatus]?.label || newStatus}」`);
+      } else if (json.error?.code === 'BOOKING_READINESS_FAILED') {
+        const details: Array<{ messageZh?: string; code?: string }> = json.error?.details ?? [];
+        const detailLines = details.length > 0
+          ? details.map((d: { messageZh?: string; code?: string }) => d.messageZh || d.code || '').filter(Boolean).join('\n')
+          : '';
+        setError(`${json.error.message}${detailLines ? `\n\n發現以下問題：\n${detailLines}` : ''}`);
       } else {
         setError(json.error?.message || '狀態更新失敗');
       }

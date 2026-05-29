@@ -14,6 +14,7 @@
 
 import type { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../src/lib/api.ts';
+import { resolveBookingPlan } from '../../../../../../src/lib/booking-plan-resolver.ts';
 import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server.ts';
 import {
   generateAvailableSlots,
@@ -212,58 +213,34 @@ export async function getAvailableSlots(
       });
     }
 
-    let resolvedPlanId = planKey;
-    if (!isUuidLike(resolvedPlanId)) {
-      const scheduleKey = searchParams.get('scheduleId');
-      const { data: planRow, error: planResolveError } = await supabase
-        .from('activity_plans')
-        .select('id')
-        .eq('activity_id', resolvedActivityId)
-        .eq('slug', planKey)
-        .maybeSingle();
+    // Issue #882: delegate the slug → schedule → ambiguous fallback chain to
+    // the canonical resolver so all Booking V2 callers share one contract.
+    // Failure shape (PLAN_NOT_FOUND 404 + details.planKey) is preserved from
+    // #880 / PR #886; PLAN_INACTIVE and AMBIGUOUS_PLAN are additive — existing
+    // clients see 404 PLAN_NOT_FOUND exactly as before.
+    const resolved = await resolveBookingPlan(supabase, {
+      activityId: resolvedActivityId,
+      planKey,
+      scheduleId: searchParams.get('scheduleId'),
+    });
 
-      if (planResolveError || !planRow?.id || !isUuidLike(planRow.id)) {
-        if (scheduleKey && isUuidLike(scheduleKey)) {
-          const { data: legacyScheduleRow, error: legacyScheduleError } = await supabase
-            .from('activity_schedules')
-            .select('id, plan_id')
-            .eq('id', scheduleKey)
-            .eq('activity_id', resolvedActivityId)
-            .maybeSingle();
-
-          if (legacyScheduleError || !legacyScheduleRow?.id) {
-            return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-              status: 400,
-            });
-          }
-
-          if (legacyScheduleRow.plan_id && isUuidLike(legacyScheduleRow.plan_id)) {
-            resolvedPlanId = legacyScheduleRow.plan_id;
-          } else {
-            const { data: activePlans, error: activePlansError } = await supabase
-              .from('activity_plans')
-              .select('id')
-              .eq('activity_id', resolvedActivityId)
-              .eq('status', 'active')
-              .limit(2);
-
-            if (activePlansError || !activePlans || activePlans.length !== 1 || !isUuidLike(activePlans[0].id)) {
-              return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-                status: 400,
-              });
-            }
-
-            resolvedPlanId = activePlans[0].id;
-          }
-        } else {
-          return Response.json(errorV2('VALIDATION_ERROR', 'Invalid planId format'), {
-            status: 400,
-          });
-        }
-      } else {
-        resolvedPlanId = planRow.id;
-      }
+    if (!resolved.ok) {
+      const status = resolved.code === 'AMBIGUOUS_PLAN' ? 409 : 404;
+      return Response.json(
+        {
+          success: false,
+          error: {
+            code: resolved.code,
+            message: resolved.messageEn,
+            messageZh: resolved.messageZh,
+            details: resolved.details,
+          },
+        },
+        { status },
+      );
     }
+
+    const resolvedPlanId = resolved.planId;
 
     // Validate request params
     const validation = parseAndValidateParams(resolvedActivityId, resolvedPlanId, searchParams);
@@ -614,10 +591,13 @@ export async function getAvailableSlots(
           };
         }
       } else {
+        // Issue #880: clamp at plan.max_participants so the response never
+        // advertises more seats than the per-group ceiling, even when
+        // schedule.capacity (legacy seed) exceeds plan.max.
         const scheduleSlot: SerializedSlot = {
           startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), params.timezone),
           endAt: formatDateWithTimezone(new Date(selectedSchedule.end_at), params.timezone),
-          capacityLeft: remaining,
+          capacityLeft: Math.min(remaining, plan.max_participants),
           bookingType: plan.booking_type,
           isAvailable: true,
         };

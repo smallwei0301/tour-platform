@@ -64,6 +64,7 @@ function shouldRequireCsrf(req: NextRequest): boolean {
 
   if (!(
     pathname.startsWith('/api/admin/') ||
+    pathname.startsWith('/api/v2/admin/') ||
     pathname.startsWith('/api/guide/') ||
     pathname.startsWith('/api/me/') ||
     pathname.startsWith('/api/orders') ||
@@ -81,7 +82,9 @@ function shouldRequireCsrf(req: NextRequest): boolean {
   }
 
   // Apply only to cookie/session-authenticated mutation requests.
-  if (pathname.startsWith('/api/admin/')) return !!req.cookies.get('admin_token')?.value;
+  if (pathname.startsWith('/api/admin/') || pathname.startsWith('/api/v2/admin/')) {
+    return !!req.cookies.get('admin_token')?.value;
+  }
   if (pathname.startsWith('/api/guide/')) return !!req.cookies.get('guide_token')?.value;
   if (pathname.startsWith('/api/me/')) return hasTravelerAuthCookie(req);
   if (pathname.startsWith('/api/reviews')) return hasTravelerAuthCookie(req);
@@ -124,6 +127,7 @@ async function applyPublicPausedGuard(req: NextRequest): Promise<NextResponse | 
   if (
     pathname.startsWith('/admin') ||
     pathname.startsWith('/api/admin') ||
+    pathname.startsWith('/api/v2/admin') ||
     pathname.startsWith('/guide') ||
     pathname.startsWith('/api/guide') ||
     pathname.startsWith('/auth') ||
@@ -282,7 +286,7 @@ export async function middleware(req: NextRequest) {
 
   // ── Admin routes ───────────────────────────────────────────────────────────
   const isAdminPage = pathname.startsWith('/admin');
-  const isAdminApi = pathname.startsWith('/api/admin');
+  const isAdminApi = pathname.startsWith('/api/admin') || pathname.startsWith('/api/v2/admin');
 
   if (isAdminPage || isAdminApi) {
     const isPublicAdminPage = pathname === '/admin/login' || pathname === '/admin/unauthorized';
@@ -353,6 +357,7 @@ export const config = {
   matcher: [
     '/admin/:path*',
     '/api/admin/:path*',
+    '/api/v2/admin/:path*',
     '/guide/:path*',
     '/api/guide/:path*',
     // Traveler auth/session refresh only where needed; keep public marketing + activity pages fully cacheable.

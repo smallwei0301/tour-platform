@@ -2,21 +2,25 @@
  * POST /api/internal/settlement/sweep
  * Issue #447 — Tour Platform (Leaf B of #310)
  *
- * Internal cron sweep: settles eligible orders (paid/confirmed/completed, start_at <= now()-T)
- * into payout_items and accumulates guide_balances.
+ * Internal cron sweep: settles eligible orders (status = 'completed' only,
+ * start_at <= now() - T days, no pending refund) into payout_items and
+ * accumulates guide_balances.
+ *
+ * Eligibility & math policy: docs/05-business/06-payment-plan/03-settlement-rules.md
+ * (拍板 by Wei, 2026-05). Updated for #847 — eligibility narrowed from
+ * paid/confirmed/completed to completed-only, payout math uses effective amount
+ * (total_twd - operations_tracking.refund_amount_twd) so partial refunds reduce
+ * the guide payout and fully refunded orders are skipped entirely.
  *
  * Authentication: `x-internal-token` header must match INTERNAL_ALERT_TOKEN env var.
  * Returns 401 when the header is absent or mismatched.
  *
  * Idempotency: UNIQUE(order_id) on payout_items + ON CONFLICT DO NOTHING
  *
- * Settlement math: net = floor(total_twd * (1 - commission_rate))
- * Commission: floor(total_twd * commission_rate)
- *
  * Risk: HIGH (auth, db-write, financial, cron-safety)
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { getSettlementConfig } from '../../../../../src/lib/settlement-config';
+import { computeSweepPayoutItem, getSettlementConfig } from '../../../../../src/lib/settlement-config';
 import { isOrderEligibleForSettlement, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
@@ -47,10 +51,11 @@ export async function POST(req: NextRequest) {
     const config = await getSettlementConfig(supabase);
     const cutoffDate = new Date(Date.now() - config.t_days * 24 * 60 * 60 * 1000);
 
-    // Fetch unsettled orders:
-    // - status IN ('paid', 'confirmed', 'completed')
+    // Fetch unsettled orders (Issue #847 policy):
+    // - status = 'completed' only (refund_pending / refunded are out by definition)
     // - use booking.start_at as canonical cutoff for V2-linked rows,
     //   and fallback to activity_schedules.start_at for legacy rows
+    // - join operations_tracking.refund_amount_twd for effective-amount math
     // - not yet present in payout_items
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
@@ -60,9 +65,10 @@ export async function POST(req: NextRequest) {
         total_twd,
         activities!inner(guide_id),
         bookings(start_at, end_at, activity_plan_id, activity_id, guide_id),
-        activity_schedules(start_at)
+        activity_schedules(start_at),
+        operations_tracking(refund_amount_twd)
       `)
-      .in('status', ['paid', 'confirmed', 'completed'])
+      .eq('status', 'completed')
       .not('id', 'in', `(SELECT order_id FROM payout_items)`);
 
     if (ordersError) {
@@ -74,10 +80,8 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString();
-    const rulesVersion = config.version ?? 'v1';
     const settlementSourcePolicy = 'booking_v2_then_legacy_fallback';
 
-    // Compute payout items — floor like computeExpectedPayout in settlement-config.ts
     type Order = {
       id: string;
       booking_id?: string | null;
@@ -85,6 +89,7 @@ export async function POST(req: NextRequest) {
       activities: { guide_id: string } | { guide_id: string }[];
       bookings?: { start_at?: string | null } | { start_at?: string | null }[] | null;
       activity_schedules?: { start_at: string } | { start_at: string }[] | null;
+      operations_tracking?: { refund_amount_twd?: number | null } | { refund_amount_twd?: number | null }[] | null;
     };
 
     const eligibleOrders = (orders as Order[]).filter((order) => {
@@ -100,23 +105,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
-    const payoutItems = eligibleOrders.map(order => {
+    // Compute payout items via shared helper. Returns null for fully-refunded
+    // orders (effective_gmv <= 0) per docs §5; those rows are skipped entirely.
+    const payoutItems = eligibleOrders.flatMap((order) => {
       const guide_id = Array.isArray(order.activities)
         ? order.activities[0].guide_id
         : order.activities.guide_id;
-      const gmv_twd = order.total_twd;
-      const commission_twd = Math.floor(gmv_twd * config.commission_rate);
-      const net_twd = Math.floor(gmv_twd * (1 - config.commission_rate));
-      return {
-        order_id: order.id,
-        guide_id,
-        gmv_twd,
-        commission_twd,
-        net_twd,
-        rules_version: rulesVersion,
-        settled_at: now,
-      };
+      const opsTracking = Array.isArray(order.operations_tracking)
+        ? order.operations_tracking[0]
+        : order.operations_tracking;
+      const item = computeSweepPayoutItem(
+        { id: order.id, total_twd: order.total_twd, guide_id },
+        opsTracking ?? null,
+        { commission_rate: config.commission_rate, version: config.version ?? 'v1' },
+      );
+      return item ? [{ ...item, settled_at: now }] : [];
     });
+
+    if (payoutItems.length === 0) {
+      return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
+    }
 
     // Upsert payout_items — ON CONFLICT DO NOTHING (idempotent via UNIQUE order_id)
     // Supabase upsert with ignoreDuplicates=true maps to ON CONFLICT DO NOTHING in PostgREST

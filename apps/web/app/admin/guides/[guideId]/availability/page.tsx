@@ -170,7 +170,7 @@ export default function GuideAvailabilityPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify(ruleForm),
       });
       const json = await res.json();
@@ -213,7 +213,7 @@ export default function GuideAvailabilityPage() {
     try {
       const res = await fetch(`/api/v2/admin/guides/${guideId}/blackout-dates`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
         body: JSON.stringify({
           starts_at: new Date(blackoutForm.starts_at).toISOString(),
           ends_at: new Date(blackoutForm.ends_at).toISOString(),
