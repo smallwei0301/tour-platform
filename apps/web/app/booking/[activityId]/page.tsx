@@ -491,35 +491,11 @@ function BookingInnerV2FlagShell() {
     schedules: activity?.schedules || [],
     plans: activity?.plans || [],
   }), [activity?.schedules, activity?.plans, urlPlanId, urlScheduleId]);
-  const matchedScheduleIdForSelectedDate = useMemo(() => {
-    if (!activity?.schedules?.length || !selectedDate) return '';
-
-    const sameDateSchedules = activity.schedules.filter((schedule) => {
-      const localDate = new Date(schedule.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
-      return localDate === selectedDate;
-    });
-
-    if (sameDateSchedules.length === 0) return '';
-
-    const openSameDateSchedules = sameDateSchedules.filter((schedule) => {
-      const remaining = schedule.capacity - schedule.bookedCount;
-      return schedule.status === 'open' && remaining > 0;
-    });
-
-    const candidateSchedules = openSameDateSchedules.length > 0 ? openSameDateSchedules : sameDateSchedules;
-
-    const exactPlanMatch = candidateSchedules.find((schedule) => schedule.planId === v2PlanKey);
-    if (exactPlanMatch) return exactPlanMatch.id;
-
-    const allPlanFallback = candidateSchedules.find((schedule) => !schedule.planId);
-    if (allPlanFallback) return allPlanFallback.id;
-
-    return candidateSchedules[0]?.id || '';
-  }, [activity?.schedules, selectedDate, timezone, v2PlanKey]);
-  const activeScheduleId = activeUrlScheduleId || matchedScheduleIdForSelectedDate;
+  const activeScheduleId = activeUrlScheduleId;
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
+  const [availabilityReason, setAvailabilityReason] = useState('');
   const [selectedPlanMeta, setSelectedPlanMeta] = useState<{
     name: string | null;
     priceType: 'per_person' | 'per_group';
@@ -618,6 +594,7 @@ function BookingInnerV2FlagShell() {
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
           setSlots([]);
+          setAvailabilityReason(json?.data?.reason || '');
           // Issue #903: prefer the resolver's Traditional-Chinese messageZh
           // (e.g. AMBIGUOUS_PLAN -> '此活動有多個方案,無法自動判斷,請從活動頁重新選擇明確方案')
           // before falling back to the English message or the generic default.
@@ -650,6 +627,7 @@ function BookingInnerV2FlagShell() {
         }
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
+        setAvailabilityReason(json.data?.reason || '');
         setSlots(nextSlots);
         if (nextSlots.length === 0 && json.data?.messageZh) {
           setV2Error(json.data.messageZh);
@@ -659,6 +637,7 @@ function BookingInnerV2FlagShell() {
         }
       } catch {
         setSlots([]);
+        setAvailabilityReason('');
         setV2Error('目前無法載入可預約日期，請稍後再試。');
       } finally {
         setSlotsLoading(false);
@@ -797,6 +776,8 @@ function BookingInnerV2FlagShell() {
   const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
+  const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
+  const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
@@ -925,8 +906,13 @@ function BookingInnerV2FlagShell() {
               <div className="tp-input" style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12 }}>
                 {slotsLoading && '載入中…'}
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
-                {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${slots[0]?.capacityLeft ?? 0}）`}
+                {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
+              {!slotsLoading && slots.length === 0 && availabilityReason && (
+                <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>
+                  目前狀態：{availabilityReason}
+                </p>
+              )}
 
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>費用明細</h4>
@@ -1003,7 +989,7 @@ function BookingInnerV2FlagShell() {
 
           {step === 3 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h3 style={{ marginTop: 0 }}>選擇付款方式</h3>
+              <h3 style={{ marginTop: 0 }}>付款確認（建立預約後）</h3>
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
                   <input type="radio" name="payment" defaultChecked /> 💳 信用卡（Visa / Mastercard / JCB）
@@ -1017,6 +1003,7 @@ function BookingInnerV2FlagShell() {
               </div>
               <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
+              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>完成本步驟後才會啟動付款提供商流程。</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdBookingId || '尚未建立'}</p>
               {!createdBookingId && (
                 <p style={{ fontSize: 13, color: 'var(--tp-danger)', marginTop: 4 }}>
@@ -1046,7 +1033,7 @@ function BookingInnerV2FlagShell() {
           <h3 style={{ marginTop: 0 }}>預約摘要</h3>
           <p style={{ margin: '6px 0' }}>日期：{selectedDate}</p>
           <p style={{ margin: '6px 0' }}>人數：{guests} 人</p>
-          <p style={{ margin: '6px 0' }}>可預約名額：{slots[0]?.capacityLeft ?? 0}</p>
+          <p style={{ margin: '6px 0' }}>可預約名額：{selectedCapacityLeft}</p>
           <hr style={{ border: 0, borderTop: '1px solid var(--tp-border)', margin: '12px 0' }} />
           <p style={{ margin: 0, fontWeight: 700 }}>總計 NT${total.toLocaleString()}</p>
         </aside>

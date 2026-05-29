@@ -11,13 +11,9 @@
  *   A4. Ambiguous schedule fallback → 409 AMBIGUOUS_PLAN
  *   A5. capacityLeft ≤ plan.max_participants (capacity cap)
  *
- * Source-pattern guards (read the file, check import + Math.min):
- *   S1. route-handler.ts imports resolveBookingPlan
- *   S2. route-handler.ts has capacityLeft: Math.min(..., plan.max_participants)
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -25,11 +21,6 @@ import { resolveBookingPlan } from '../../src/lib/booking-plan-resolver.ts';
 import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, '../..');
-const handlerPath = path.resolve(
-  __dirname,
-  '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts',
-);
 
 // ── Shared Supabase mock factory (mirrors #882/#880 pattern) ─────────────────
 
@@ -74,31 +65,6 @@ const PLAN_UUID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const OTHER_PLAN = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
 const SCHEDULE   = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
-// ── S1/S2: Source-pattern guards ─────────────────────────────────────────────
-
-test('#885 source: route-handler imports resolveBookingPlan (PR #887 contract)', () => {
-  const src = readFileSync(handlerPath, 'utf8');
-  assert.match(
-    src,
-    /import.*resolveBookingPlan.*from/,
-    'route-handler.ts must import resolveBookingPlan from booking-plan-resolver',
-  );
-});
-
-test('#885 source: route-handler uses Math.min(..., plan.max_participants) for capacityLeft (PR #886 cap)', () => {
-  const src = readFileSync(handlerPath, 'utf8');
-  assert.match(
-    src,
-    /capacityLeft\s*:.*Math\.min\s*\(/,
-    'route-handler.ts must cap capacityLeft with Math.min (PR #886)',
-  );
-  assert.match(
-    src,
-    /Math\.min\s*\([^)]*max_participants/,
-    'Math.min cap must reference plan.max_participants',
-  );
-});
-
 // ── A1: Raw 'Invalid planId format' must NOT appear for unresolved slugs ─────
 
 test('#885 A1: resolveBookingPlan for unresolved public slug is NOT VALIDATION_ERROR/Invalid planId format', async () => {
@@ -132,6 +98,7 @@ test('#885 A1: resolveBookingPlan for unresolved public slug is NOT VALIDATION_E
 test('#885 A1: route-level regression — slug returns 404, not 400 VALIDATION_ERROR', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
   ]);
