@@ -330,16 +330,19 @@ function BookingInnerLegacy() {
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
+                  required aria-required="true" name="contactName"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
+                  required aria-required="true" name="contactPhone"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
+                  required aria-required="true" name="contactEmail"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
@@ -952,16 +955,19 @@ function BookingInnerV2FlagShell() {
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
+                  required aria-required="true" name="contactName"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
+                  required aria-required="true" name="contactPhone"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
+                  required aria-required="true" name="contactEmail"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
