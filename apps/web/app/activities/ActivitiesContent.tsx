@@ -193,7 +193,7 @@ export default function ActivitiesContent() {
             </div>
           ) : (
             <div className="tp-card-grid tp-card-grid-activities">
-              {filtered.map((a) => {
+              {filtered.map((a, idx) => {
                 const href = buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug });
                 const durationDisplay = a.durationMinutes
                   ? a.durationMinutes >= 60
@@ -208,7 +208,8 @@ export default function ActivitiesContent() {
                         alt={a.title}
                         className="tp-card-img"
                         style={{ background: 'none' }}
-                        loading="lazy" width={1200} height={675} />
+                        priority={idx === 0}
+                        loading={idx === 0 ? 'eager' : 'lazy'} width={1200} height={675} />
                       <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{
                         position: 'absolute', top: 10, left: 10,
