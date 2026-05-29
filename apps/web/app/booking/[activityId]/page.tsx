@@ -667,12 +667,13 @@ function BookingInnerV2FlagShell() {
     fetchSlots();
   }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
 
-  async function handleV2Checkout() {
-    if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
+  async function handleCreateDraftBookingAndGoPayment() {
+    if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !canGoStep3) return;
     try {
       setLoading(true);
       setLoadError('');
       setV2Error('');
+      setCreatedBookingId('');
 
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
@@ -683,6 +684,7 @@ function BookingInnerV2FlagShell() {
         body: JSON.stringify({
           activityId: resolvedActivityId,
           planId: resolvedPlanId,
+          activeScheduleId: activeScheduleId || undefined,
           startAt: selectedSlotStartAt,
           timezone,
           participants: Math.max(guests, effectiveMinParticipants),
@@ -695,11 +697,31 @@ function BookingInnerV2FlagShell() {
       });
       const draftJson = await draftRes.json();
       if (!draftRes.ok || !draftJson?.success || !draftJson?.data?.bookingId) {
-        throw new Error(draftJson?.error?.message || '建立預約草稿失敗');
+        throw new Error(
+          draftJson?.error?.messageZh || draftJson?.error?.message || '此場次目前無法預約，請重新整理或選擇其他日期。'
+        );
       }
       setCreatedBookingId(draftJson.data.bookingId);
+      setStep(3);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '此場次目前無法預約，請重新整理或選擇其他日期。';
+      setV2Error(msg || '此場次目前無法預約，請重新整理或選擇其他日期。');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      const checkoutRes = await fetch(`/api/v2/bookings/${draftJson.data.bookingId}/checkout`, {
+  async function handleV2Checkout() {
+    if (!createdBookingId || !agreed) {
+      setV2Error('訂單尚未建立完成，請先回到上一步重新建立訂單。');
+      return;
+    }
+    try {
+      setLoading(true);
+      setLoadError('');
+      setV2Error('');
+
+      const checkoutRes = await fetch(`/api/v2/bookings/${createdBookingId}/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -709,7 +731,9 @@ function BookingInnerV2FlagShell() {
       });
       const checkoutJson = await checkoutRes.json();
       if (!checkoutRes.ok || !checkoutJson?.success) {
-        throw new Error(checkoutJson?.error?.message || '建立付款失敗');
+        throw new Error(
+          checkoutJson?.error?.messageZh || checkoutJson?.error?.message || '此場次目前無法預約，請重新整理或選擇其他日期。'
+        );
       }
 
       const paymentFormHtml = checkoutJson?.data?.paymentFormHtml;
@@ -723,8 +747,9 @@ function BookingInnerV2FlagShell() {
       if (!form) throw new Error('付款表單格式錯誤');
       form.submit();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '處理失敗';
-      setV2Error(msg || '目前無法建立付款流程，請稍後再試。');
+      const msg = err instanceof Error ? err.message : '此場次目前無法預約，請重新整理或選擇其他日期。';
+      setV2Error(msg || '此場次目前無法預約，請重新整理或選擇其他日期。');
+    } finally {
       setLoading(false);
     }
   }
@@ -771,6 +796,7 @@ function BookingInnerV2FlagShell() {
 
   const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
+  const canConfirmPayment = Boolean(createdBookingId && canSubmit);
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
@@ -966,10 +992,10 @@ function BookingInnerV2FlagShell() {
                 <button
                   className="tp-btn tp-btn-primary"
                   style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
-                  onClick={() => setStep(3)}
+                  onClick={handleCreateDraftBookingAndGoPayment}
                   disabled={loading || !canGoStep3}
                 >
-                  建立訂單並前往付款 →
+                  {loading ? '建立訂單中…' : '建立訂單並前往付款 →'}
                 </button>
               </div>
             </div>
@@ -992,13 +1018,18 @@ function BookingInnerV2FlagShell() {
               <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdBookingId || '尚未建立'}</p>
+              {!createdBookingId && (
+                <p style={{ fontSize: 13, color: 'var(--tp-danger)', marginTop: 4 }}>
+                  請先回上一步建立訂單後，再進行付款確認。
+                </p>
+              )}
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
                 <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)} disabled={loading}>← 上一步</button>
                 <button
                   className="tp-btn tp-btn-primary"
                   style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
                   onClick={handleV2Checkout}
-                  disabled={loading || !canSubmit}
+                  disabled={loading || !canConfirmPayment}
                 >
                   {loading ? '付款處理中…' : `確認付款 NT$${total.toLocaleString()}`}
                 </button>
