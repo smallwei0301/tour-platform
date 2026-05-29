@@ -559,6 +559,10 @@ export default function AdminActivityEditPage() {
   const [itinerary,          setItinerary]          = useState<Array<{step:number;title:string;description:string;duration:string;icon:string}>>([]);
   const [status,             setStatus]             = useState('draft');
   const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
+  // #917: only send `plans` on save when they are real (loaded from DB or imported),
+  // never the DEFAULT_PLANS placeholder — otherwise saving a plan-less activity would
+  // persist the placeholder into activities.plans JSONB.
+  const [plansTouched,       setPlansTouched]       = useState(false);
   const [ratingAvg,          setRatingAvg]          = useState('');
   const [reviewCount,        setReviewCount]        = useState('0');
   const [activitySlug,       setActivitySlug]       = useState('');
@@ -605,6 +609,7 @@ export default function AdminActivityEditPage() {
         // plans: use DB value if exists, otherwise default
         if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
           setPlans(d.plans);
+          setPlansTouched(true); // real plans loaded → safe to round-trip on save
         } else {
           setPlans(DEFAULT_PLANS);
         }
@@ -679,7 +684,12 @@ export default function AdminActivityEditPage() {
     setSocialProofQuotes((d.socialProofQuotes || []).join('\n'));
     setFaq(Array.isArray(d.faq) ? d.faq : []);
     setItinerary(Array.isArray(d.itinerary) ? d.itinerary : []);
-    setPlans(Array.isArray(d.plans) && d.plans.length ? d.plans : DEFAULT_PLANS);
+    if (Array.isArray(d.plans) && d.plans.length) {
+      setPlans(d.plans);
+      setPlansTouched(true); // #917: imported plans must persist to 方案管理 on save
+    } else {
+      setPlans(DEFAULT_PLANS);
+    }
     setSuccess('✅ 已從 JSON 樣板匯入內容，請確認後再儲存');
   }
 
@@ -934,6 +944,9 @@ export default function AdminActivityEditPage() {
           imageUrls,
           ratingAvg: ratingAvg !== '' ? Number(ratingAvg) : null,
           reviewCount: Number(reviewCount) || 0,
+          // #917: persist plans so imported/edited plans reach 方案管理 (activity_plans).
+          // Guarded by plansTouched so a plan-less activity never saves the DEFAULT_PLANS placeholder.
+          ...(plansTouched ? { plans } : {}),
         }),
       });
       const json = await res.json();
