@@ -533,6 +533,13 @@ export async function getAvailableSlots(
       undefined;
     let slotsToReturn = filteredSlots;
     if (selectedSchedule) {
+      const selectedScheduleStartAtMs = new Date(selectedSchedule.start_at).getTime();
+      const selectedSchedulePresentInGeneratedSlots = filteredSlots.some(
+        (slot) => new Date(slot.startAt).getTime() === selectedScheduleStartAtMs,
+      );
+      const shouldEnforceGeneratedSlotPresence = rules.length > 0;
+      const selectedScheduleMissingFromGeneratedSlots =
+        shouldEnforceGeneratedSlotPresence && !selectedSchedulePresentInGeneratedSlots;
       const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), params.timezone);
       const effectiveExistingParticipantsForFormed = calculateExistingParticipantsForGroup({
         bookings,
@@ -574,12 +581,18 @@ export async function getAvailableSlots(
 
       if (
         selectedSchedule.status !== 'open' ||
+        selectedScheduleMissingFromGeneratedSlots ||
         !selectedScheduleRule.allowed ||
         hasInsufficientCapacityForSelectedSchedule
       ) {
         slotsToReturn = [];
 
-        if (!selectedScheduleRule.allowed) {
+        if (selectedScheduleMissingFromGeneratedSlots) {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'BOOKING_CONFLICT',
+            messageZh: '此時段已無可用名額，請重新選擇時段',
+          };
+        } else if (!selectedScheduleRule.allowed) {
           selectedScheduleRuleFailure = {
             reasonCode: selectedScheduleRule.reasonCode,
             messageZh: selectedScheduleRule.messageZh,

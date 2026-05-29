@@ -791,4 +791,97 @@ test('selected-plan metadata from issue-910 fixture appears in successful respon
   ]);
 });
 
+test('GH-923 RED: selectedSchedule must not bypass overlap hold conflict from other activity/plan', async () => {
+  const activityId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const planId = 'f50048b1-a10f-4539-85b1-77ca1b3d8094';
+  const scheduleId = 'd7096f9b-6162-4b6e-b50e-6c23bd2ce627';
+  const timezone = 'Asia/Taipei';
+  const slotStart = '2026-06-01T01:00:00.000Z';
+  const slotEnd = '2026-06-01T02:00:00.000Z';
+
+  const mockDb = {
+    activities: [{ id: activityId, guide_id: 'guide_923' }],
+    activity_schedules: [
+      {
+        id: scheduleId,
+        activity_id: activityId,
+        plan_id: null,
+        start_at: slotStart,
+        end_at: slotEnd,
+        capacity: 10,
+        booked_count: 0,
+        status: 'open',
+      },
+    ],
+    activity_plans: [
+      {
+        id: planId,
+        activity_id: activityId,
+        duration_minutes: 60,
+        min_participants: 1,
+        max_participants: 10,
+        booking_type: 'scheduled',
+        status: 'active',
+        name: 'GH923 Plan',
+        price_type: 'per_person',
+        base_price: 1000,
+        activities: { id: activityId, guide_id: 'guide_923' },
+      },
+    ],
+    guide_availability_rules: [
+      {
+        id: 'rule_923',
+        guide_id: 'guide_923',
+        activity_plan_id: null,
+        weekday: 1,
+        start_time_local: '09:00',
+        end_time_local: '18:00',
+        timezone,
+        slot_interval_minutes: 60,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        effective_from: null,
+        effective_to: null,
+        is_active: true,
+      },
+    ],
+    guide_blackout_dates: [],
+    bookings: [
+      {
+        id: 'overlap_hold_other_plan',
+        guide_id: 'guide_923',
+        start_at: slotStart,
+        end_at: slotEnd,
+        status: 'draft',
+        participants: 2,
+        activity_id: 'other-activity',
+        activity_plan_id: 'other-plan',
+      },
+    ],
+  };
+
+  const response = await getAvailableSlots(
+    {
+      nextUrl: new URL(
+        `https://example.com/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${scheduleId}&dateFrom=2026-06-01&dateTo=2026-06-01&timezone=${encodeURIComponent(
+          timezone,
+        )}&participants=4`,
+      ),
+    },
+    { params: Promise.resolve({ activityId }) },
+    {
+      createClient: async () => createMockSupabaseClient(mockDb),
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.success, true);
+  assert.deepEqual(
+    json.data.slots,
+    [],
+    'overlapping draft hold should suppress selectedSchedule slot in available-slots response',
+  );
+});
+
 console.log('All Available Slots API tests completed!');
