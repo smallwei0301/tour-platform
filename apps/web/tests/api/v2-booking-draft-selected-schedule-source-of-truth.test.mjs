@@ -1,0 +1,51 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { validateDraftSlotAgainstSelectedSchedule } from '../../src/lib/booking-v2-selected-schedule.ts';
+
+const PLAN_ID = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+const SCHEDULE_ID = 'f1917b79-42e3-481f-9f06-0284f6fda422';
+
+test('GH-860 RED/GREEN: plan UUID + schedule-backed slot (2026-06-01, 4 pax) should be draft-acceptable when selected schedule is open/matching/capacity-ok', () => {
+  const result = validateDraftSlotAgainstSelectedSchedule({
+    schedule: {
+      id: SCHEDULE_ID,
+      activity_id: '11111111-1111-1111-1111-111111111111',
+      plan_id: null,
+      start_at: '2026-06-01T10:00:00+08:00',
+      status: 'open',
+      capacity: 8,
+      booked_count: 2,
+    },
+    activityId: '11111111-1111-1111-1111-111111111111',
+    resolvedPlanId: PLAN_ID,
+    requestStartAt: '2026-06-01T10:00:00+08:00',
+    slotDate: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    participants: 4,
+  });
+
+  assert.equal(result.available, true);
+});
+
+test('GH-860 guard: reject stale schedule mismatch (startAt mismatch) to preserve slot/capacity protections', () => {
+  const result = validateDraftSlotAgainstSelectedSchedule({
+    schedule: {
+      id: SCHEDULE_ID,
+      activity_id: '11111111-1111-1111-1111-111111111111',
+      plan_id: null,
+      start_at: '2026-06-01T09:00:00+08:00',
+      status: 'open',
+      capacity: 8,
+      booked_count: 2,
+    },
+    activityId: '11111111-1111-1111-1111-111111111111',
+    resolvedPlanId: PLAN_ID,
+    requestStartAt: '2026-06-01T10:00:00+08:00',
+    slotDate: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    participants: 4,
+  });
+
+  assert.equal(result.available, false);
+  assert.equal(result.reason, 'SCHEDULE_START_MISMATCH');
+});

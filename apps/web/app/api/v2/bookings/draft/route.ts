@@ -33,6 +33,7 @@ import {
   type SlotGeneratorInput,
   type SlotGeneratorDeps,
 } from '../../../../../src/lib/slot-generator';
+import { validateDraftSlotAgainstSelectedSchedule } from '../../../../../src/lib/booking-v2-selected-schedule';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -233,6 +234,16 @@ interface DraftBookingRequest {
   contactEmail: string;
   customerNote?: string;
 }
+
+type ActivitySchedule = {
+  id: string;
+  activity_id: string;
+  plan_id: string | null;
+  start_at: string;
+  status: string;
+  capacity: number;
+  booked_count: number;
+};
 
 function parseAndValidateBody(
   body: unknown
@@ -584,15 +595,39 @@ export async function POST(request: NextRequest) {
 
     if (!slotValidation.available) {
       const errorMessages: Record<string, string> = {
-        SLOT_IN_PAST: 'The selected time slot is in the past',
-        BLACKOUT_CONFLICT: 'The guide is not available at the selected time',
-        BOOKING_CONFLICT: 'The selected time slot is already booked',
+        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
+        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
+        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
       };
       return Response.json(
-        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || 'Slot not available'),
+        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
         { status: 409 }
       );
     }
+
+    let selectedScheduleValidation: { available: boolean; reason?: string } | null = null;
+    if (data.scheduleId) {
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from('activity_schedules')
+        .select('id, activity_id, plan_id, start_at, status, capacity, booked_count')
+        .eq('id', data.scheduleId)
+        .eq('activity_id', data.activityId)
+        .maybeSingle();
+
+      if (!scheduleError) {
+        selectedScheduleValidation = validateDraftSlotAgainstSelectedSchedule({
+          schedule: (scheduleData as ActivitySchedule | null) ?? null,
+          activityId: data.activityId,
+          resolvedPlanId,
+          requestStartAt: data.startAt,
+          slotDate,
+          timezone: data.timezone,
+          participants: data.participants,
+        });
+      }
+    }
+
+    const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
 
     let generatedSlotValidation: { available: boolean; reason?: string };
     try {
@@ -615,7 +650,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!generatedSlotValidation.available) {
+    if (!scheduleValidatedBySourceOfTruth && !generatedSlotValidation.available) {
       return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
         status: 409,
       });
