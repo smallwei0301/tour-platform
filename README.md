@@ -46,8 +46,8 @@
 ### 2026-05-20 → 2026-05-25 收斂（近 7 天重點）
 
 **Booking V2 / Traveler Flow：**
-- #621 是目前 P0 主線：把 Booking / Availability V2 變成旅客主要流程
-- #787 持續追蹤：Booking V2 沿用 legacy booking UI，降低切換風險
+- **#621 CLOSED**：Booking / Availability V2 已成為旅客主要流程（已結案）
+- **#787 CLOSED**：Booking V2 沿用 legacy booking UI 已落地（已結案）
 - PR #786 已合併：Booking V2 minimum participants 與 one-date UX 已對齊
 - PR #789 已合併：Booking V2 legacy booking UI 已落地
 
@@ -71,6 +71,9 @@
 > Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
 **已結案 / 歷史參考（不再是當前 open blocker）：**
+- **#621 CLOSED** — Booking / Availability V2 已成為旅客主要流程（PR #800）
+- **#787 CLOSED** — Booking V2 沿用 legacy booking UI 已落地（PR #789）
+- **#640 / #641 CLOSED** — V2 Launch QA blocker checklist 與 rollback drill 已完成
 - **#586 CLOSED** — docs readiness sync（PR #587 merged）
 - **#588 CLOSED** — evidence pack live-state resync（已結案）
 - **#402 CLOSED** — 真實付款/退款/Email 證據；文件仍保留為歷史 runbook 參考。
@@ -85,7 +88,7 @@
 - main 持續以 CI / readiness snapshot 作為真值；本 README 不手寫即時數字
 - 最新 merge（截至 2026-05-25）：PR #789（fix: render Booking V2 with legacy booking UI）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
-- **目前主線焦點：** #621 讓 Booking / Availability V2 成為旅客主要流程；#642 持續監看 observation window 與 legacy fallback。
+- **目前主線焦點：** #621 / #787 已 CLOSED；#642 持續監看 observation window 與 legacy fallback。當前優先事項請查閱 `docs/operations/reports/readiness-live-state-latest.md` 或執行 `npm run readiness:snapshot`。
 - **Automated health-check issue policy:** for dedupe lookup, required labels, sanitized body fields, and survivor designation, see [`docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md` — "Automated health-check issues"](./docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md#automated-health-check-issues).
 
 ### Go-Live 仍缺
@@ -179,12 +182,11 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 > 查詢即時 open issues 請用: `gh issue list --repo smallwei0301/tour-platform --state open --limit 20`
 > 或參閱: [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
 
-目前不要自己發明主線，先確認 open issues（依優先順序接手）。近期重點：
-- **#621**（P0 / agent:now）Booking / Availability V2 作為旅客主要流程
-- **#787**（P1）用 legacy booking UI 呈現 Booking V2，降低旅客流程切換風險
-- **#642**（P1）V2 observation window + legacy fallback 守護
-- **#784 / #704**（P1 QA）近期 merged PR 的 daily test checklist
-- **#607 / #714 / #594 / #724**（Ops）production alert drill、Supabase backup/restore drill 與 evidence
+目前不要自己發明主線，先確認 open issues（依優先順序接手）。**#621 / #787 已 CLOSED**；當前主線請以 live-state 快照為準：`docs/operations/reports/readiness-live-state-latest.md`（執行 `npm run readiness:snapshot` 刷新）。
+
+歷史已結案（勿視為當前主線）：
+- **#621 CLOSED** — Booking / Availability V2 作為旅客主要流程（已完成）
+- **#787 CLOSED** — 用 legacy booking UI 呈現 Booking V2（已完成）
 
 **已完成 / 歷史參考，不需再接：**
 - **#586 / #588 CLOSED** — docs readiness sync（PR #587/#589 merged）
@@ -280,10 +282,15 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 ## 7. 建議的下一步執行順序
 
 ### 第一優先
-1. 推進 **#621**：Booking / Availability V2 成為旅客主要流程
-2. 收斂 **#787**：Booking V2 採用 legacy booking UI，減少 UX 切換風險
+
+> **#621 / #787 已 CLOSED**，不再是執行優先項。當前第一優先請查閱 live-state 快照：
+> [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
+> 或執行 `npm run readiness:snapshot` 取得最新狀態。
+
+1. ~~推進 **#621**~~（已 CLOSED — Booking V2 已上線）
+2. ~~收斂 **#787**~~（已 CLOSED — legacy booking UI 已落地）
 3. 監看 **#642**：V2 observation window 運行，守護 legacy fallback
-4. 維持 **#784 / #704** daily QA checklist，避免近期 merged PR 回歸
+4. 維持 daily QA checklist，避免近期 merged PR 回歸
 5. 保持 readiness docs 與 live state 一致 — 執行 `npm run readiness:snapshot` 定期刷新 `docs/operations/reports/readiness-live-state-latest.md`
 
 ### 第二優先

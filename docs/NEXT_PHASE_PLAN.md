@@ -1,4 +1,4 @@
-# Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-25）
+# Tour Platform 開發階段規劃與上線就緒指標（更新：2026-05-30）
 
 ## 📌 當前主線摘要
 
@@ -9,14 +9,15 @@
 >
 > Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
-**截至 2026-05-25 快照（refs #792）：**
+**截至 2026-05-30 快照（refs #846）：**
+- **#621 已 CLOSED**：Booking / Availability V2 已成為旅客主要流程（PR #800）
+- **#787 已 CLOSED**：Booking V2 沿用 legacy booking UI 已落地（PR #789）
 - **#640 / #641 已 CLOSED**：V2 Launch QA blocker checklist 與 rollback drill 已完成，移至歷史
 - **#799 已 CLOSED**：`isBookingV2Enabled` 預設改為 true — V2 booking entry 為主流程（PR #800）
 - **#791 已 CLOSED**：Guide 自行編輯公開頁面（/guide/profile）已上線（PR #802）
 - **#402/#403 已 CLOSED**：真實付款、退款、Email 與 Google session 的證據 runbook 保留作歷史/運維參考
 - **#500 / #320 / #319 / #318** 狀態請以 live-state 快照為準
-- 目前主線重點（V2 上線 + 觀察中）：
-  - **#621** Enable Booking/Availability V2 as primary traveler flow（P0，umbrella，leaf #799 已完成，leaf 2 可接續）
+- **當前主線重點**：請以 live-state 快照為準（下方連結）；以下為 2026-05-25 快照參考：
   - **#642** V2 觀察視窗 + legacy fallback 守護（P1）
   - **#593** Andy Lee launch safety / insurance 揭露（P1）
   - **#319** Customer support SOP drill（P1）

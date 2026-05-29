@@ -1,7 +1,7 @@
 # Tour Platform 文件總覽
 
-> 最後更新：2026-05-25（refs #792：同步 NEXT_PHASE_PLAN，移除已關閉 #640/#641 作為當前主線；V2 預設 ON，guide 自編上線）
-> 當前主線：**Booking V2 已上線且為預設**（PR #800），guide 自編頁已上線（PR #802），觀察視窗運行中（#642）
+> 最後更新：2026-05-30（refs #846：移除已關閉 #621/#787/#640/#641 作為當前主線；指向 live-state 快照）
+> 當前主線：**Booking V2 已上線且為預設**（#621/#787 已 CLOSED）；當前優先事項請查閱 live-state 快照
 > 即時 live state 請看：[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)（執行 `npm run readiness:snapshot` 刷新）
 > Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
@@ -75,12 +75,13 @@
 > **[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)**
 > 或執行 `npm run readiness:snapshot` 刷新。
 
-**近期主線 issue（截至 2026-05-22 快照）：**
-- **#640**（V2 Launch P0 QA blocker checklist）：`qa/booking-v2-rollout-manual-checklist.md`
-- **#642**（V2 觀察視窗 + legacy fallback 守護）
-- **#641**（V2 rollback drill + operator handoff）
+**當前主線 issue：請以 live-state 快照為準（上方連結）**
 
 **已完成，僅供參考（歷史）：**
+- **#621 CLOSED** — Booking / Availability V2 成為旅客主要流程（PR #800）
+- **#787 CLOSED** — Booking V2 沿用 legacy booking UI（PR #789）
+- **#640 / #641 CLOSED** — V2 Launch QA blocker checklist 與 rollback drill（已完成）；`qa/booking-v2-rollout-manual-checklist.md` 保留為歷史參考
+- **#642**（V2 觀察視窗 + legacy fallback 守護）— 狀態請以 live-state 快照為準
 - **#586 / #588 CLOSED** — docs readiness sync / evidence pack resync（PR #587/#589 merged）
 - **#402/#403 CLOSED** — 真實付款/退款/Email 證據；`operations/issue-402-real-payment-refund-verification-runbook.md` 保留為歷史/運維參考，非當前完成條件。
 - **#545 / #559 / #572 / #573 / #574 / #516 / #515 / #514 CLOSED** — 已關閉，非當前 blocker。
