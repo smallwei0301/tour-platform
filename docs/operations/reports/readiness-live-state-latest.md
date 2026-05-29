@@ -1,34 +1,41 @@
-<!-- query_timestamp: 2026-05-28T18:57:15.129Z -->
+<!-- query_timestamp: 2026-05-29T00:55:53.418Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-28T18:57:15.129Z  
-**Commit SHA:** `9b33397f99033f7590aa901c4c0003fe4ffb710c`
+**Query timestamp:** 2026-05-29T00:55:53.418Z  
+**Commit SHA:** `f86c0b025dff27a36b9eec7457623a150c4bc321`
 
 ---
 
-## Open PRs (3)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #901 | [feat(admin): mobile-responsive overhaul across all admin pages](https://github.com/smallwei0301/tour-platform/pull/901) | `claude/feature-section-reorder-yGPlt` |
+| #900 | [fix(seo): exclude playwright-/e2e- test seed slugs from public sitemap](https://github.com/smallwei0301/tour-platform/pull/900) | `claude/fix-sitemap-test-data-leak` |
+| #899 | [feat(rollout): add checkout-init success metric to booking-v2 dashboard (#888)](https://github.com/smallwei0301/tour-platform/pull/899) | `feat/888-checkout-init-metric` |
 | #873 | [fix(booking): align activity detail formal plan pricing](https://github.com/smallwei0301/tour-platform/pull/873) | `kanban/issue-838-post-845-price-alignment` |
 | #868 | [docs(qa): refresh #828 launch-critical evidence against latest staging](https://github.com/smallwei0301/tour-platform/pull/868) | `claude/qa-828-evidence-20260528` |
-| #863 | [fix(booking-v2): include v2PlanKey in probeOnePersonAddOn useEffect deps](https://github.com/smallwei0301/tour-platform/pull/863) | `claude/fix-861-booking-effect-deps` |
 
-## Open Issues (28 total)
+## Open Issues (35 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (17)
+### P1 (22)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #895 | [[QA] Post-#876 regression gate for booking readiness, capacity, and settlement fixes](https://github.com/smallwei0301/tour-platform/issues/895) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, admin-guides, traveler-booking, payments, booking-v2 |
+| #906 | [[Admin] Add or route missing settlements page instead of generic 404](https://github.com/smallwei0301/tour-platform/issues/906) | type:bug, priority:P1, agent:queued, owner:ai-agent, status:ready, payments, orders, regression |
+| #905 | [[Ops] Restore or correct missing Booking Plan Repair workflow link](https://github.com/smallwei0301/tour-platform/issues/905) | type:bug, priority:P1, agent:queued, owner:ai-agent, status:ready, database, infra, booking-v2 |
+| #904 | [[Admin] Fix activity plan creation schema mismatch causing Failed to create plan](https://github.com/smallwei0301/tour-platform/issues/904) | type:bug, priority:P1, agent:queued, owner:ai-agent, status:ready, database, booking-v2, regression |
+| #903 | [[Traveler Booking] Fix Booking V2 full-day plan deep link resolving to AMBIGUOUS_PLAN](https://github.com/smallwei0301/tour-platform/issues/903) | type:bug, priority:P1, agent:queued, owner:ai-agent, status:ready, traveler-booking, database, booking-v2 |
+| #902 | [[Traveler Booking] Resolve Andy Lee legacy activity URL to canonical published activity](https://github.com/smallwei0301/tour-platform/issues/902) | type:bug, priority:P1, agent:queued, owner:ai-agent, status:ready, traveler-booking, regression |
+| #898 | [[QA] Daily test checklist for recent merged PRs 2026-05-29](https://github.com/smallwei0301/tour-platform/issues/898) | priority:P1, qa, type:qa |
 | #883 | [[P1] 修復 production published activities 的 formal plans / public plans 對應資料](https://github.com/smallwei0301/tour-platform/issues/883) | type:bug, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, database, booking-v2 |
 | #881 | [[P1] 發佈前新增 Booking readiness validation，阻擋未對齊方案/場次/容量公開](https://github.com/smallwei0301/tour-platform/issues/881) | type:bug, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, admin-guides, traveler-booking, database, booking-v2 |
 | #880 | [[Bug] Booking V2 公開方案 slug/UUID 不一致導致 Invalid planId format，且容量與後台不符](https://github.com/smallwei0301/tour-platform/issues/880) | bug, type:bug, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, booking-v2 |
@@ -46,10 +53,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (11)
+### P2 (12)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #897 | [[Auto Check] STAGING healthcheck returns 404 at /api/health](https://github.com/smallwei0301/tour-platform/issues/897) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #888 | [[Ops] Align Booking V2 Go/No-Go checkout-init success metric contract](https://github.com/smallwei0301/tour-platform/issues/888) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, infra, booking-v2 |
 | #848 | [[Ops] Dedupe automated QA failure issues across daily scan generators](https://github.com/smallwei0301/tour-platform/issues/848) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
 | #846 | [[Docs] Refresh entry docs after #621/#787 turnover and current readiness drift](https://github.com/smallwei0301/tour-platform/issues/846) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, docs |
@@ -66,9 +74,11 @@ _none_
 
 _none_
 
-### Other (0)
+### Other (1)
 
-_none_
+| # | Title | Labels |
+|---|-------|--------|
+| #896 | [[Frontend Daily Check] 2026-05-29 lint/test failed: module resolution errors](https://github.com/smallwei0301/tour-platform/issues/896) | — |
 
 ---
 
