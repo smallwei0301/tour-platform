@@ -20,8 +20,11 @@ Background planning notes (non-truth source): `docs/LINE_BOOKING_PLAN.md`
 This SOP **does not claim** the following are already production-ready:
 
 1. Full LINE / LIFF GA rollout to all users.
-2. Dedicated, independently verified LINE-only kill switch beyond existing Booking V2/operational controls.
-3. New architecture/API behavior not already described in the current Phase 12 specs.
+2. New architecture/API behavior not already described in the current Phase 12 specs.
+
+> **Update (#302b):** dedicated LINE feature flags / kill switches now exist and are
+> verified by automated tests + production build (see §2.5). They default **OFF**, so
+> the boundaries above remain truthful: enabling them is a deliberate, staged action.
 
 ---
 
@@ -103,7 +106,51 @@ Initiate incident decision if any of the following occur:
 
 ### Explicit limitation statement
 
-If a dedicated LINE-only technical kill switch is not yet implemented/verified in production, do **not** claim one exists. Use approved rollout gating + operational fallback communications instead.
+A dedicated LINE-only kill switch **now exists** (§2.5, #302b) and is verified by tests
++ build. Operators should prefer it for fast containment; the Booking V2 operational
+fallback above remains the backstop for booking-chain (non-LINE-specific) incidents.
+
+---
+
+## 2.5) LINE feature flags / kill switches (#302b — verified)
+
+All LINE integration is gated by environment flags that default **OFF**. Each is a real,
+test-covered switch; flipping a flag to `0`/unset takes effect on the next deploy/boot
+(flags are read at request time, so a redeploy with the new value is sufficient — no code
+change). There is **no** persisted state that keeps a disabled feature running.
+
+| Flag | Scope | Default | Effect when OFF |
+|---|---|---|---|
+| `LINE_MESSAGING_ENABLED` | **Master** kill switch for all outbound Messaging API calls (ops notifications **and** per-traveler push) | OFF | All outbound LINE messages return `skipped` (`messaging_disabled`); nothing is sent. Inbound webhook still ACKs 200. |
+| `LINE_PUSH_ENABLED` | Per-traveler push only (booking / payment / cancel / refund / pre-tour reminder) | OFF | Traveler pushes return `skipped` (`push_disabled`); ops notifications unaffected. |
+| `NEXT_PUBLIC_LINE_LIFF_ENABLED` | Real LIFF login + idToken verification on `/booking/line` | OFF | Entry reverts to the **legacy query-param handoff** (no LIFF SDK, no idToken) — instant, behavior-preserving rollback. |
+
+Supporting secrets (only **required** at boot when the relevant flag is ON — enforced in
+`startup-env.mjs` / `security-env.mjs`, so the OFF default never hard-fails CI/build):
+`LINE_CHANNEL_ACCESS_TOKEN`, `LINE_CHANNEL_SECRET`, `LINE_OPS_GROUP_ID`,
+`LINE_LOGIN_CHANNEL_ID`, `NEXT_PUBLIC_LIFF_ID`.
+
+### Flag posture per stage
+
+| Stage | `NEXT_PUBLIC_LINE_LIFF_ENABLED` | `LINE_MESSAGING_ENABLED` | `LINE_PUSH_ENABLED` |
+|---|---|---|---|
+| **L0** internal dry-run (staging/test) | ON (staging) | ON (staging) | OFF→ON to internal testers only |
+| **L1** staff / friendly pilot | ON (prod, allowlist) | ON | ON (bindings limited to staff) |
+| **L2** controlled external pilot | ON | ON | ON |
+| **L3** readiness for broader enablement | ON | ON | ON |
+
+### Fast containment (kill order)
+
+1. **Stop traveler push only** (notifications noisy/wrong, booking fine):
+   set `LINE_PUSH_ENABLED=0` → all per-traveler pushes skip; ops alerts keep working.
+2. **Stop all LINE messaging** (any outbound LINE concern):
+   set `LINE_MESSAGING_ENABLED=0` → ops + push both stop sending.
+3. **Disable LIFF login** (auth/entry concern):
+   set `NEXT_PUBLIC_LINE_LIFF_ENABLED=0` → `/booking/line` falls back to the proven
+   query-param handoff; travelers can still book.
+
+Each switch is independent; use the narrowest one that contains the incident. None of them
+block or delay the booking/payment chain (all LINE calls are fire-and-forget).
 
 ---
 

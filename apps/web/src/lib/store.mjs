@@ -150,6 +150,14 @@ export const orders = [
 export const payments = [];
 export const paymentEvents = [];
 
+// LINE user binding (in-memory fallback for line_user_mapping).
+// Each entry: { lineUserId, userId, contactEmail, displayName, isBlocked, boundAt, updatedAt }
+export const lineUserMappings = [];
+
+// LINE webhook event idempotency (in-memory fallback for line_webhook_events).
+// Each entry: { webhookEventId, eventType, lineUserId, receivedAt }
+export const lineWebhookEvents = [];
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',

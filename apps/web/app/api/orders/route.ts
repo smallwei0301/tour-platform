@@ -4,6 +4,7 @@ import { sendOrderConfirmation } from '../../../src/lib/email';
 import type { OrderEmailData } from '../../../src/lib/email';
 import type { OrderNotifyData } from '../../../src/lib/line-notify';
 import { notifyNewOrder } from '../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../src/lib/line-traveler-push.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 import { createClient } from '../../../src/lib/supabase/server';
 
@@ -102,8 +103,23 @@ export async function POST(request: Request) {
       });
     }
 
-    // LINE Notify 通知管理員/導遊
+    // LINE 通知管理員/導遊（ops push）
     notifyNewOrder(notifyData).catch(() => {});
+
+    // 旅客預約確認推播：僅限 LINE 來源訂單，且未綁定/未開旗標時自動 skip
+    const orderSourceChannel = body?.sourceChannel ?? body?.source ?? body?.source_channel;
+    if (orderSourceChannel === 'line') {
+      void pushTravelerOrderEvent({
+        kind: 'booking_confirmed',
+        orderId: order.id,
+        activityTitle: notifyData.activityTitle,
+        scheduleDate: notifyData.scheduleDate,
+        peopleCount: notifyData.peopleCount,
+        totalTwd: notifyData.totalTwd,
+        userId: userId ?? undefined,
+        contactEmail: order.contactEmail ?? undefined,
+      }).catch(() => {});
+    }
 
     return Response.json(ok(order));
   } catch (err) {

@@ -115,13 +115,19 @@ test('AC4: redactPii masks email and phone, preserves amount', () => {
 
 // ── AC5: no-token graceful skip ───────────────────────────────────────────────
 
-test('AC5: line-notify skips when LINE_NOTIFY_ACCESS_TOKEN is absent', () => {
+test('AC5: ops notify gracefully skips when LINE Messaging is not configured', () => {
+  // Migration (#302b): LINE Notify was shut down 2025-03-31. line-notify.ts now
+  // delegates to the Messaging API ops push; the graceful-skip lives in
+  // line-messaging.ts (no token / no ops group / kill-switch off → skipped).
   const lineNotifyPath = path.resolve(ROOT, 'src/lib/line-notify.ts');
   assert.ok(existsSync(lineNotifyPath), `line-notify.ts not found: ${lineNotifyPath}`);
+  const notifySrc = readFileSync(lineNotifyPath, 'utf8');
+  assert.match(notifySrc, /pushToOps/, 'line-notify must route ops alerts through pushToOps');
 
-  const src = readFileSync(lineNotifyPath, 'utf8');
-
-  // Token check exists
-  assert.match(src, /LINE_NOTIFY_ACCESS_TOKEN/, 'Must check LINE_NOTIFY_ACCESS_TOKEN env var');
-  assert.match(src, /if\s*\(!token\)|!token\s*\)|return false/, 'Must skip/return early when token is absent');
+  const messagingPath = path.resolve(ROOT, 'src/lib/line-messaging.ts');
+  assert.ok(existsSync(messagingPath), `line-messaging.ts not found: ${messagingPath}`);
+  const messagingSrc = readFileSync(messagingPath, 'utf8');
+  // Skips when the access token is missing instead of throwing.
+  assert.match(messagingSrc, /no_access_token/, 'Must skip when access token is absent');
+  assert.match(messagingSrc, /status:\s*'skipped'/, 'Must return a skipped status rather than throw');
 });

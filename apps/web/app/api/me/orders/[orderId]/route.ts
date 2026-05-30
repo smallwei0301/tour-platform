@@ -5,6 +5,7 @@ import { sendOrderCancellation } from '../../../../../src/lib/email';
 import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
 
 export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -71,6 +72,17 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           }
         });
         notifyOrderCancelled(notifyData).catch(() => {});
+        // 旅客取消推播（未綁定/未開旗標時自動 skip）
+        void pushTravelerOrderEvent({
+          kind: 'order_cancelled',
+          orderId,
+          activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate,
+          peopleCount: notifyData.peopleCount,
+          totalTwd: notifyData.totalTwd,
+          userId: user.id,
+          contactEmail: user.email,
+        }).catch(() => {});
       }
 
       return Response.json(ok(result));
