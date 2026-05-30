@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-05-30T00:51:22.755Z -->
+<!-- query_timestamp: 2026-05-30T07:06:37.547Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-30T00:51:22.755Z  
-**Commit SHA:** `fbeae4260a7ecde9bc8cb3e6be5ea4b9a78415b8`
+**Query timestamp:** 2026-05-30T07:06:37.547Z  
+**Commit SHA:** `afbb33740f2e9c7c8fd1dcb0ae2a4d62c35c1faa`
 
 ---
 
-## Open PRs (3)
+## Open PRs (2)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #925 | [fix(booking-v2): align date/people inputs with Legacy + people stepper](https://github.com/smallwei0301/tour-platform/pull/925) | `claude/booking-v2-date-people-style` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 | #868 | [docs(qa): refresh #828 launch-critical evidence against latest staging](https://github.com/smallwei0301/tour-platform/pull/868) | `claude/qa-828-evidence-20260528` |
 
@@ -24,12 +23,11 @@
 
 _none_
 
-### P1 (12)
+### P1 (11)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #959 | [[QA] Daily test checklist for recent merged PRs 2026-05-30](https://github.com/smallwei0301/tour-platform/issues/959) | priority:P1, qa |
-| #957 | [[QA] Late-wave daily regression checklist for PRs #933-#956 on 2026-05-30](https://github.com/smallwei0301/tour-platform/issues/957) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra, booking-v2 |
 | #909 | [[P1] #883 phase 2 APPLY: 修復 5 個 missing formal plans + 1 個 pricing mismatch（dry-run report 已產出）](https://github.com/smallwei0301/tour-platform/issues/909) | type:bug, priority:P1, owner:ai-agent, status:ready, traveler-booking, database, booking-v2 |
 | #902 | [[Traveler Booking] Resolve Andy Lee legacy activity URL to canonical published activity](https://github.com/smallwei0301/tour-platform/issues/902) | type:bug, priority:P1, agent:queued, owner:ai-agent, status:ready, traveler-booking, regression |
 | #880 | [[Bug] Booking V2 公開方案 slug/UUID 不一致導致 Invalid planId format，且容量與後台不符](https://github.com/smallwei0301/tour-platform/issues/880) | bug, type:bug, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, booking-v2 |
@@ -57,10 +55,11 @@ _none_
 
 _none_
 
-### Other (2)
+### Other (3)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #960 | [Manual QA: activities filter, detail a11y, blog 404, admin import gaps](https://github.com/smallwei0301/tour-platform/issues/960) | bug, qa |
 | #958 | [[Auto Check] STAGING healthcheck returns 404 at /api/health](https://github.com/smallwei0301/tour-platform/issues/958) | — |
 | #907 | [chore(data): demote 3 playwright/e2e test-seed activities from status=published](https://github.com/smallwei0301/tour-platform/issues/907) | good-first-issue, seo, data-hygiene, ops |
 
