@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 
 const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
@@ -117,6 +117,59 @@ function CalendarModal({
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const calendarRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const trigger = document.activeElement;
+
+    // Focus the modal panel so it can receive keyboard events immediately
+    calendarRef.current?.focus();
+
+    const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const modal = calendarRef.current;
+        if (!modal) return;
+        const focusable = Array.from(modal.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+          (el) => !el.hasAttribute('disabled') && el.tabIndex !== -1
+        );
+        if (focusable.length === 0) {
+          e.preventDefault();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          // Shift+Tab: if focus is on first focusable (or the modal div itself), wrap to last
+          if (document.activeElement === first || document.activeElement === modal) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          // Tab: if focus is on last focusable (or the modal div itself), wrap to first
+          if (document.activeElement === last || document.activeElement === modal) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      (trigger as HTMLElement)?.focus();
+    };
+  }, [onClose]);
 
   const availMap = useMemo(() => buildAvailMap(schedules), [schedules]);
   const cells = useMemo(() => buildMonthDays(viewYear, viewMonth, availMap, price), [viewYear, viewMonth, availMap, price]);
@@ -132,7 +185,7 @@ function CalendarModal({
 
   return (
     <div className="kkd-cal-overlay" onClick={onClose}>
-      <div className="kkd-cal-modal" role="dialog" aria-modal="true" aria-label="選擇日期" aria-labelledby="calendar-title" onClick={e => e.stopPropagation()}>
+      <div ref={calendarRef} className="kkd-cal-modal" role="dialog" aria-modal="true" aria-label="選擇日期" aria-labelledby="calendar-title" tabIndex={-1} onClick={e => e.stopPropagation()}>
         <div className="kkd-cal-header">
           <button className="kkd-cal-nav" onClick={prevMonth} aria-label="上個月">‹</button>
           <span id="calendar-title" className="kkd-cal-title">{viewYear} 年 {MONTH_NAMES[viewMonth]}</span>
