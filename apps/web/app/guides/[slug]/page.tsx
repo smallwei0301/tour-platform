@@ -47,7 +47,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
         url: `${baseUrl}/guides/${slug}`,
         ...(guide.profilePhotoUrl ? { image: guide.profilePhotoUrl } : {}),
         ...(guide.region ? { address: { '@type': 'PostalAddress', addressLocality: guide.region, addressCountry: 'TW' } } : {}),
-        ...(guide.ratingAvg ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: guide.ratingAvg, reviewCount: guide.reviewCount || 1 } } : {}),
+        ...(guide.ratingAvg != null && guide.reviewCount >= 1 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: guide.ratingAvg, reviewCount: guide.reviewCount } } : {}),
         ...(guide.bio ? { description: guide.bio } : {}),
       },
       {
