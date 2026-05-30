@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 
 export function HeroSection() {
@@ -7,16 +8,29 @@ export function HeroSection() {
     <section
       className="tp-hero"
       style={{
-        backgroundImage:
-          'linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.58)), url(https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
+        position: 'relative',
         minHeight: '560px',
         display: 'flex',
         alignItems: 'center',
       }}
     >
-      <div className="tp-container" style={{ textAlign: 'left', alignItems: 'flex-start' }}>
+      <Image
+        src="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
+        alt="Midao 祕島 — 台灣在地深度旅遊"
+        fill
+        priority
+        className="object-cover object-center"
+        sizes="100vw"
+      />
+      {/* dark gradient overlay */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.58))',
+        }}
+      />
+      <div className="tp-container" style={{ position: 'relative', zIndex: 1, textAlign: 'left', alignItems: 'flex-start' }}>
         <p className="tp-kicker" style={{ color: '#E8834D', letterSpacing: 2, fontWeight: 700, marginBottom: 8 }}>
           台灣在地導遊平台
         </p>
