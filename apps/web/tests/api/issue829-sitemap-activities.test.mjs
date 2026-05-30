@@ -109,7 +109,7 @@ describe('排除自動化測試殘留 slug（playwright-/e2e- 前綴）', () => 
     const result = mapActivitiesToSitemapEntries(
       [
         { slug: 'kaohsiung-chaishan-cave-experience', region: '高雄市', regionSlug: 'kaohsiung', status: 'published' },
-        { slug: 'andy-lee-private-tour', region: '台北市', regionSlug: 'taipei', status: 'published' },
+        { slug: 'andy-lee-private-tour', region: '台北市', regionSlug: 'taipei', status: 'published' }, // test-only slug; not a real published activity
         { slug: 'e2eish-but-not-prefix', region: '台北市', regionSlug: 'taipei', status: 'published' },
       ],
       { baseUrl: BASE_URL, now: NOW }
