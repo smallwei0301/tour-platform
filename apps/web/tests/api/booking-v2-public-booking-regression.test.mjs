@@ -8,7 +8,7 @@
  *   A1. Raw 'Invalid planId format' MUST NOT appear for unresolved slugs
  *   A2. Unresolved slug → 404 PLAN_NOT_FOUND with details.planKey
  *   A3. Inactive plan → PLAN_INACTIVE (not bookable)
- *   A4. Ambiguous schedule fallback → 409 AMBIGUOUS_PLAN
+ *   A4. Ambiguous schedule fallback → AMBIGUOUS_PLAN success response (HTTP 200)
  *   A5. capacityLeft ≤ plan.max_participants (capacity cap)
  *
  */
@@ -209,7 +209,7 @@ test('#885 A3: archived plan slug → PLAN_INACTIVE (covers non-active statuses)
   supabase.assertAllConsumed();
 });
 
-// ── A4: Ambiguous schedule fallback → 409 AMBIGUOUS_PLAN ─────────────────────
+// ── A4: Ambiguous schedule fallback → AMBIGUOUS_PLAN success payload (HTTP 200) ─────────
 
 test('#885 A4: slug + scheduleId + plan_id null + 2 active plans → AMBIGUOUS_PLAN', async () => {
   const supabase = createSupabaseMock([
@@ -240,8 +240,7 @@ test('#885 A4: slug + scheduleId + plan_id null + 2 active plans → AMBIGUOUS_P
   assert.equal(out.details?.scheduleId, SCHEDULE, 'details must carry scheduleId');
   supabase.assertAllConsumed();
 });
-
-test('#885 A4: route returns 409 for ambiguous schedule fallback', async () => {
+test('#885 A4: route returns ambiguous fallback success payload (AMBIGUOUS_PLAN)', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
@@ -262,9 +261,14 @@ test('#885 A4: route returns 409 for ambiguous schedule fallback', async () => {
     { params: Promise.resolve({ activityId: ACTIVITY }) },
     { createClient: async () => supabase.client },
   );
-  assert.equal(response.status, 409, 'ambiguous schedule must yield 409');
+  assert.equal(response.status, 200, 'ambiguous schedule now returns success payload');
   const body = await response.json();
-  assert.equal(body.error.code, 'AMBIGUOUS_PLAN');
+  assert.equal(body.success, true, 'ambiguous fallback is now a success response');
+  assert.equal(body.data?.reason, 'AMBIGUOUS_PLAN');
+  assert.equal(body.data?.slots?.length, 0);
+  assert.ok(body.data?.messageZh && body.data.messageZh.length > 0, 'must include messageZh');
+  assert.match(body.data.messageZh, /重新選擇/);
+  assert.equal(body.data?.planId, 'ambiguous-slug');
   supabase.assertAllConsumed();
 });
 
