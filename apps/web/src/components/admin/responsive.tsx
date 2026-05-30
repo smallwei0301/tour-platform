@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, Th, Td, EmptyState, LoadingSkeleton, StatusBadge, Badge } from './ui';
 
 // ────────────────────────────────────────────────────────────────────
@@ -197,9 +197,44 @@ export function ResponsiveModal({
   size = 'md', dismissOnBackdrop = true,
   ...rest
 }: ResponsiveModalProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<Element | null>(null);
+  const titleId = 'responsive-modal-title';
+
+  // Capture trigger element on open; restore focus on close.
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement;
+      // Defer so the panel is mounted before we focus it.
+      setTimeout(() => panelRef.current?.focus(), 0);
+    } else {
+      if (triggerRef.current && (triggerRef.current as HTMLElement).focus) {
+        (triggerRef.current as HTMLElement).focus();
+      }
+      triggerRef.current = null;
+    }
+  }, [open]);
+
+  // Focus trap + Escape handler.
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const FOCUSABLE =
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
+      if (focusable.length === 0) { e.preventDefault(); return; }
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey) {
+        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+      } else {
+        if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
@@ -215,8 +250,13 @@ export function ResponsiveModal({
       data-testid={rest['data-testid']}
     >
       <div
+        ref={panelRef}
         onClick={(e) => e.stopPropagation()}
         className="admin-modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         style={{
           background: '#fff',
           borderRadius: 12,
@@ -226,6 +266,7 @@ export function ResponsiveModal({
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
+          outline: 'none',
         }}
       >
         {title && (
@@ -233,7 +274,10 @@ export function ResponsiveModal({
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
             padding: '14px 20px', borderBottom: '1px solid #f0f0f0', gap: 12,
           }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: '#111', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
+            <div
+              id={titleId}
+              style={{ fontWeight: 700, fontSize: 16, color: '#111', flex: 1, minWidth: 0, wordBreak: 'break-word' }}
+            >
               {title}
             </div>
             <button
