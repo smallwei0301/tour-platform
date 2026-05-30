@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-30T07:06:37.547Z -->
+<!-- query_timestamp: 2026-05-30T12:30:40.841Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-30T07:06:37.547Z  
-**Commit SHA:** `afbb33740f2e9c7c8fd1dcb0ae2a4d62c35c1faa`
+**Query timestamp:** 2026-05-30T12:30:40.841Z  
+**Commit SHA:** `58da9228bcdc3d9ffb10f7f237c4b3a7bf393c78`
 
 ---
 
@@ -17,7 +17,7 @@
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 | #868 | [docs(qa): refresh #828 launch-critical evidence against latest staging](https://github.com/smallwei0301/tour-platform/pull/868) | `claude/qa-828-evidence-20260528` |
 
-## Open Issues (21 total)
+## Open Issues (23 total)
 
 ### P0 (0)
 
@@ -39,10 +39,12 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (7)
+### P2 (9)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #966 | [[Ops] Fix auto-check issue policy workflow regression after #958](https://github.com/smallwei0301/tour-platform/issues/966) | triaged, type:bug, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra |
+| #965 | [[Ops] Add Booking V2 legacy vs V2 funnel delta metrics to Go/No-Go](https://github.com/smallwei0301/tour-platform/issues/965) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, infra, booking-v2 |
 | #951 | [[a11y] Add focus trap to PlanDetailModal for keyboard accessibility](https://github.com/smallwei0301/tour-platform/issues/951) | type:optimization, priority:P2, owner:ai-agent, status:ready |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
@@ -69,16 +71,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #964 | [fix(a11y): add GH-960 detail tab keyboard semantics](https://github.com/smallwei0301/tour-platform/pull/964) | 2026-05-30 |
+| #963 | [fix(activities): normalize GH-960 type filter restore](https://github.com/smallwei0301/tour-platform/pull/963) | 2026-05-30 |
+| #962 | [fix(api): return empty availability for ambiguous booking plan](https://github.com/smallwei0301/tour-platform/pull/962) | 2026-05-30 |
+| #961 | [fix(blog): return true 404 for unknown blog slugs](https://github.com/smallwei0301/tour-platform/pull/961) | 2026-05-30 |
 | #956 | [feat(activities): debounced URL persistence for text search query](https://github.com/smallwei0301/tour-platform/pull/956) | 2026-05-29 |
 | #955 | [a11y: add ARIA stepper pattern to booking progress indicator](https://github.com/smallwei0301/tour-platform/pull/955) | 2026-05-29 |
 | #954 | [a11y: add arrow key keyboard navigation to ActivityTabs](https://github.com/smallwei0301/tour-platform/pull/954) | 2026-05-29 |
 | #953 | [a11y: fix guides listing page heading hierarchy (h2→h1)](https://github.com/smallwei0301/tour-platform/pull/953) | 2026-05-29 |
 | #952 | [a11y: fix activities listing page heading hierarchy (h2→h1)](https://github.com/smallwei0301/tour-platform/pull/952) | 2026-05-29 |
 | #950 | [feat(activities): persist filter selection in URL for shareability](https://github.com/smallwei0301/tour-platform/pull/950) | 2026-05-29 |
-| #949 | [test: source-level contract tests for blog/experience 404 handling (refs #948)](https://github.com/smallwei0301/tour-platform/pull/949) | 2026-05-29 |
-| #948 | [fix(blog): return proper 404 for missing blog articles](https://github.com/smallwei0301/tour-platform/pull/948) | 2026-05-29 |
-| #947 | [perf: priority load home featured activity image for LCP](https://github.com/smallwei0301/tour-platform/pull/947) | 2026-05-29 |
-| #946 | [a11y: add required + aria-required + name to booking contact form inputs](https://github.com/smallwei0301/tour-platform/pull/946) | 2026-05-29 |
 
 ---
 
