@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
+import { isActivityTypeMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
 
@@ -41,7 +42,7 @@ export default function ActivitiesContent() {
     searchParams.get('region') ? [searchParams.get('region')!] : []
   );
   const [selectedTypes, setSelectedTypes] = useState<string[]>(
-    searchParams.get('type') ? [searchParams.get('type')!] : []
+    searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
   );
   const [sort, setSort] = useState('recommended');
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -53,8 +54,10 @@ export default function ActivitiesContent() {
     setQuery(searchParams.get('q') || '');
     const r = searchParams.get('region');
     if (r) setSelectedRegions([r]);
+    else setSelectedRegions([]);
     const t = searchParams.get('type');
-    if (t) setSelectedTypes([t]);
+    if (t) setSelectedTypes([resolveCanonicalType(TYPES, t)]);
+    else setSelectedTypes([]);
   }, [searchParams]);
 
   // Update URL when text query changes (debounced 500ms for shareability)
@@ -118,7 +121,7 @@ export default function ActivitiesContent() {
     }
     if (selectedTypes.length > 0) {
       result = result.filter((a) =>
-        selectedTypes.some((t) => a.category?.includes(t.replace(' 🔦', '').replace(' 🌊', '')))
+        selectedTypes.some((t) => isActivityTypeMatch(a.category, t))
       );
     }
     if (sort === 'price-asc') result.sort((a, b) => a.priceTwd - b.priceTwd);
