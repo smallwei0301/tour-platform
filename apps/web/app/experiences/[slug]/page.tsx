@@ -54,6 +54,11 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
   if (response?.ok) {
     const json = await response.json().catch((): null => null);
     const found = json?.data?.find((x: any) => x.slug === slug);
+    if (!found) {
+      // API responded but slug not in data — 404 rather than generic fallback
+      const { notFound } = await import('next/navigation');
+      notFound();
+    }
     if (found) {
       experience = {
         slug: found.slug,

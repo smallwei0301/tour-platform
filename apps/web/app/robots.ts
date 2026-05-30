@@ -9,6 +9,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           '/', '/activities', '/activities/',
           '/guides', '/guides/',
+          '/experiences', '/experiences/',
           '/blog', '/blog/',
           '/about', '/faq', '/contact', '/why-choose-us',
           '/theme/', '/legal/',

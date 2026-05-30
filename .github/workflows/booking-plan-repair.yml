@@ -1,0 +1,144 @@
+name: booking-plan-repair
+
+# Issue #905: documented operator entry point for the Booking Plan Repair audit.
+# Wraps scripts/admin/audit-or-repair-booking-plans.mjs (delivered by PR #894).
+#
+# DRY-RUN by default. Apply mode is triple-gated:
+#   1. workflow input `apply` must be true
+#   2. workflow input `confirm` must equal the literal string `APPLY`
+#   3. the underlying script still requires ISSUE883_REPAIR_ALLOW_APPLY=1 + --yes
+#
+# No `schedule:` trigger — repair must never run on a timer.
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Run in APPLY mode (default false = dry-run). Requires confirm=APPLY.'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      confirm:
+        description: 'Type APPLY to confirm apply mode (ignored when apply=false).'
+        required: false
+        default: ''
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.SUPABASE_URL != '' }}
+          HAS_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_KEY" != "true" ]; then
+            echo "HOLD: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured."
+            echo "   Set them in GitHub repo Settings -> Secrets -> Actions."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write HOLD summary
+        if: steps.check-secrets.outputs.skip == 'true'
+        run: |
+          echo "## Booking Plan Repair - HOLD" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** HOLD - secrets not configured" >> $GITHUB_STEP_SUMMARY
+          echo "Set \`SUPABASE_URL\` and \`SUPABASE_SERVICE_ROLE_KEY\` in repo Settings -> Secrets -> Actions." >> $GITHUB_STEP_SUMMARY
+
+      - name: Resolve run mode (dry-run vs apply)
+        id: mode
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          INPUT_APPLY: ${{ github.event.inputs.apply }}
+          INPUT_CONFIRM: ${{ github.event.inputs.confirm }}
+        run: |
+          if [ "$INPUT_APPLY" = "true" ] && [ "$INPUT_CONFIRM" = "APPLY" ]; then
+            echo "mode=apply" >> "$GITHUB_OUTPUT"
+            echo "Resolved mode: APPLY (gated: apply=true + confirm=APPLY)"
+          else
+            echo "mode=dry-run" >> "$GITHUB_OUTPUT"
+            if [ "$INPUT_APPLY" = "true" ] && [ "$INPUT_CONFIRM" != "APPLY" ]; then
+              echo "Notice: apply=true but confirm!='APPLY' -> falling back to DRY-RUN."
+            fi
+            echo "Resolved mode: DRY-RUN"
+          fi
+
+      - name: Checkout
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        if: steps.check-secrets.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Run Booking Plan Repair (dry-run)
+        if: steps.check-secrets.outputs.skip != 'true' && steps.mode.outputs.mode == 'dry-run'
+        id: dry-run
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node scripts/admin/audit-or-repair-booking-plans.mjs
+        continue-on-error: true
+
+      - name: Run Booking Plan Repair (apply, gated)
+        if: steps.check-secrets.outputs.skip != 'true' && steps.mode.outputs.mode == 'apply'
+        id: apply
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          APPLY: '1'
+          ISSUE883_REPAIR_ALLOW_APPLY: '1'
+        run: |
+          node scripts/admin/audit-or-repair-booking-plans.mjs --yes
+        continue-on-error: true
+
+      - name: Write step summary
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+        run: |
+          echo "## Booking Plan Repair - $MODE" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Mode:** $MODE" >> $GITHUB_STEP_SUMMARY
+          REPORT_DIR="docs/operations/reports"
+          LATEST_JSON=$(ls -1t $REPORT_DIR/booking-plan-repair-dry-run-*.json 2>/dev/null | head -n 1 || true)
+          if [ -n "$LATEST_JSON" ] && [ -f "$LATEST_JSON" ]; then
+            ACTIONABLE=$(node -e "const d=require('$PWD/$LATEST_JSON'); console.log((d.summary && d.summary.actionableCount) ?? (d.actionableCount ?? 'unknown'))" 2>/dev/null || echo "unknown")
+            echo "**Actionable findings:** $ACTIONABLE" >> $GITHUB_STEP_SUMMARY
+            echo "**Report:** \`$LATEST_JSON\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "_No report file produced. See job log._" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Apply path remains stubbed in phase 1; non-zero exit on APPLY is expected until phase 2 (#909) lands._" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload repair report artifact
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: booking-plan-repair-${{ github.run_id }}
+          path: docs/operations/reports/booking-plan-repair-dry-run-*
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Fail if dry-run script errored
+        if: steps.check-secrets.outputs.skip != 'true' && steps.mode.outputs.mode == 'dry-run' && steps.dry-run.outcome == 'failure'
+        run: |
+          echo "Booking Plan Repair dry-run FAILED - review artifact and logs"
+          exit 1

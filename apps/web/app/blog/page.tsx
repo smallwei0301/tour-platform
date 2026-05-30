@@ -92,7 +92,7 @@ export default function BlogPage() {
       )}
 
       {/* Grid */}
-      <div className="tp-card-grid">
+      <div className="tp-card-grid tp-blog-grid">
         {rest.map((p) => (
           <Link href={`/blog/${p.slug}`} key={p.slug} style={{ display: 'block' }}>
             <article className="tp-card">

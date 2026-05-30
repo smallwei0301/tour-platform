@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 
 const articles: Record<string, { title: string; category: string; date: string; readTime: string; imageUrl: string; content: string }> = {
@@ -98,12 +99,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const article = articles[slug];
 
   if (!article) {
-    return (
-      <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center' }}>
-        <h1>文章不存在</h1>
-        <Link href="/blog" className="tp-link">返回旅遊指南</Link>
-      </main>
-    );
+    notFound();
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';

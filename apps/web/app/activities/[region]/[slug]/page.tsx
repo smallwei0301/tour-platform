@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
+import { SelectedPlanProvider } from '../../../../src/components/activity/SelectedPlanContext';
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
@@ -129,6 +130,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     : `${activity.minParticipants}~${activity.maxParticipants} 人`;
 
   return (
+    <SelectedPlanProvider>
     <main className="kkd-detail-page" style={{ paddingBottom: 100 }}>
       {/* ── Structured data (JSON-LD) for SEO/GEO/AEO — issue #637 ── */}
       <script
@@ -551,5 +553,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         directBookingHref={directBookingHref}
       />
     </main>
+    </SelectedPlanProvider>
   );
 }

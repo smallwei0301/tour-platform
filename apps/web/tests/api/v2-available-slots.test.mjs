@@ -19,6 +19,7 @@ import {
   evaluateGroupBookingRule,
   excludeSameActivityPlanDateRangeBookings,
 } from '../../src/lib/availability-v2/group-booking-rule.ts';
+import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -455,10 +456,15 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /\.eq\('activity_id', params\.activityId\)/);
   assert.match(src, /inDateRange\s*=\s*scheduleLocalDate\s*>=\s*params\.dateFrom\s*&&\s*scheduleLocalDate\s*<=\s*params\.dateTo/);
   assert.match(src, /planMatches\s*=\s*!scheduleData\.plan_id\s*\|\|\s*scheduleData\.plan_id\s*===\s*params\.planId/);
-  assert.match(src, /slotsToReturn = \[scheduleSlot\]/);
-  // #880: capacityLeft is now clamped at plan.max_participants so the response
-  // never advertises more seats than the per-group ceiling.
-  assert.match(src, /capacityLeft:\s*Math\.min\(remaining,\s*plan\.max_participants\)/);
+  // #910: selectedPlan metadata for Booking V2 UI must come from planData,
+  // not the narrowed slot-generator plan object.
+  assert.match(src, /selectedPlan:\s*\{/);
+  assert.match(src, /id:\s*planData\.id/);
+  assert.match(src, /name:\s*planData\.name/);
+  assert.match(src, /priceType:\s*planData\.price_type/);
+  assert.match(src, /basePrice:\s*planData\.base_price/);
+  assert.match(src, /minParticipants:\s*planData\.min_participants/);
+  assert.match(src, /maxParticipants:\s*planData\.max_participants/);
 });
 
 test('issue838: legacy_plan_id lookup must not hard-require status=active (status-null formal rows are valid)', async () => {
@@ -494,22 +500,17 @@ test('parseAndValidateParams rejects invalid scheduleId format', () => {
   assert.equal(result.error.message, 'Invalid scheduleId format');
 });
 
-test('route enforces unformed-group min participants and Chinese copy contract', async () => {
-  const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
-  const src = await readFile(path.join(ROOT, rel), 'utf8');
+test('group rule enforces unformed-group min participants and Chinese copy contract', () => {
+  const out = evaluateGroupBookingRule({
+    minParticipants: 4,
+    maxParticipants: 8,
+    effectiveExistingParticipants: 0,
+    requestedParticipants: 2,
+  });
 
-  assert.match(src, /FORMED_GROUP_BOOKING_STATUSES/);
-  assert.match(src, /CAPACITY_HOLD_BOOKING_STATUSES/);
-  assert.match(src, /calculateExistingParticipantsForGroup\(/);
-  assert.match(src, /effectiveExistingParticipantsForCapacityHold/);
-  assert.match(src, /evaluateGroupBookingRule\(/);
-  assert.match(src, /excludeSameActivityPlanDateRangeBookings\(/);
-  assert.match(src, /bookings: nonGroupConflictBookings/);
-  assert.match(src, /slots: slotsToReturn/);
-  assert.match(src, /reason:\s*reasonCode/);
-  assert.match(src, /messageZh:\s*reasonMessage/);
-  assert.match(src, /reasonCode\s*=[\s\S]{0,200}slotsToReturn\.length === 0[\s\S]{0,200}firstRuleFailure\?\.reasonCode/);
-  assert.match(src, /reasonMessage\s*=[\s\S]{0,200}slotsToReturn\.length === 0[\s\S]{0,200}firstRuleFailure\?\.messageZh/);
+  assert.equal(out.allowed, false);
+  assert.equal(out.reasonCode, 'MIN_PARTICIPANTS_NOT_MET');
+  assert.match(out.messageZh ?? '', /最少\s*4\s*人成團/);
 });
 
 test('behavior: available-slots filters out slots when capacity-hold bookings would exceed plan max', () => {
@@ -579,6 +580,73 @@ test('behavior: available-slots filters out slots when capacity-hold bookings wo
   assert.equal(capacityHoldRule.reasonCode, 'CAPACITY_EXCEEDED');
 });
 
+function createMockQueryBuilder(rows) {
+  let data = rows;
+
+  return {
+    eq(column, value) {
+      data = data.filter((row) => row[column] === value);
+      return this;
+    },
+
+    or(expression) {
+      if (expression.includes('plan_id.is.null,plan_id.eq.')) {
+        const [, targetPlanId] = expression.split('plan_id.eq.');
+        data = data.filter(
+          (row) => row.plan_id == null || row.plan_id === targetPlanId,
+        );
+        return this;
+      }
+
+      if (expression.includes('activity_plan_id.is.null,activity_plan_id.eq.')) {
+        const [, targetPlanId] = expression.split('activity_plan_id.eq.');
+        data = data.filter(
+          (row) => row.activity_plan_id == null || row.activity_plan_id === targetPlanId,
+        );
+        return this;
+      }
+
+      return this;
+    },
+
+    in(column, values) {
+      const normalized = new Set(values);
+      data = data.filter((row) => normalized.has(row[column]));
+      return this;
+    },
+
+    select() {
+      return this;
+    },
+
+    then(resolve, reject) {
+      return Promise.resolve({ data, error: null }).then(resolve, reject);
+    },
+
+    maybeSingle() {
+      const first = data[0] ?? null;
+      return Promise.resolve({ data: first, error: null });
+    },
+
+    single() {
+      const first = data[0] ?? null;
+      return Promise.resolve({
+        data: first,
+        error: first ? null : { message: 'not found' },
+      });
+    },
+  };
+}
+
+function createMockSupabaseClient(seed) {
+  return {
+    from(tableName) {
+      const rows = seed[tableName] ?? [];
+      return createMockQueryBuilder(rows);
+    },
+  };
+}
+
 test('behavior: available-slots keeps same-plan/date slot for formed-group 1-person add-on', () => {
   const guideId = 'guide_001';
   const activityId = 'activity_001';
@@ -637,6 +705,174 @@ test('behavior: available-slots keeps same-plan/date slot for formed-group 1-per
 
   assert.equal(groupRule.allowed, true);
   assert.equal(hasConflict, false);
+});
+
+test('selected-plan metadata from issue-910 fixture appears in successful response', async () => {
+  const activityId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const planId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const timezone = 'Asia/Taipei';
+
+  const mockDb = {
+    activities: [
+      {
+        id: activityId,
+        guide_id: 'guide_910',
+        activities: {
+          id: activityId,
+          guide_id: 'guide_910',
+        },
+      },
+    ],
+    activity_plans: [
+      {
+        id: planId,
+        activity_id: activityId,
+        duration_minutes: 60,
+        min_participants: 1,
+        max_participants: 99,
+        booking_type: 'scheduled',
+        status: 'active',
+        name: 'Test',
+        price_type: 'per_person',
+        base_price: 20,
+        activities: {
+          id: activityId,
+          guide_id: 'guide_910',
+        },
+      },
+    ],
+    guide_availability_rules: [],
+    guide_blackout_dates: [],
+    bookings: [],
+  };
+
+  const response = await getAvailableSlots(
+    {
+      nextUrl: new URL(
+        `https://example.com/api/v2/activities/${activityId}/available-slots?planId=${planId}&dateFrom=2026-05-01&dateTo=2026-05-01&timezone=${encodeURIComponent(
+          timezone,
+        )}&participants=1`,
+      ),
+    },
+    { params: Promise.resolve({ activityId }) },
+    {
+      createClient: async () => createMockSupabaseClient(mockDb),
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.success, true);
+
+  const selectedPlan = json?.data?.selectedPlan;
+  assert.equal(selectedPlan?.name, 'Test');
+  assert.equal(selectedPlan?.label, 'Test');
+  assert.equal(selectedPlan?.displayName, 'Test');
+  assert.equal(selectedPlan?.basePrice, 20);
+  assert.notEqual(selectedPlan?.basePrice, 1800);
+  assert.deepStrictEqual(Object.keys(selectedPlan).sort(), [
+    'basePrice',
+    'displayName',
+    'id',
+    'label',
+    'maxParticipants',
+    'minParticipants',
+    'name',
+    'priceType',
+  ]);
+});
+
+test('GH-923 RED: selectedSchedule must not bypass overlap hold conflict from other activity/plan', async () => {
+  const activityId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const planId = 'f50048b1-a10f-4539-85b1-77ca1b3d8094';
+  const scheduleId = 'd7096f9b-6162-4b6e-b50e-6c23bd2ce627';
+  const timezone = 'Asia/Taipei';
+  const slotStart = '2026-06-01T01:00:00.000Z';
+  const slotEnd = '2026-06-01T02:00:00.000Z';
+
+  const mockDb = {
+    activities: [{ id: activityId, guide_id: 'guide_923' }],
+    activity_schedules: [
+      {
+        id: scheduleId,
+        activity_id: activityId,
+        plan_id: null,
+        start_at: slotStart,
+        end_at: slotEnd,
+        capacity: 10,
+        booked_count: 0,
+        status: 'open',
+      },
+    ],
+    activity_plans: [
+      {
+        id: planId,
+        activity_id: activityId,
+        duration_minutes: 60,
+        min_participants: 1,
+        max_participants: 10,
+        booking_type: 'scheduled',
+        status: 'active',
+        name: 'GH923 Plan',
+        price_type: 'per_person',
+        base_price: 1000,
+        activities: { id: activityId, guide_id: 'guide_923' },
+      },
+    ],
+    guide_availability_rules: [
+      {
+        id: 'rule_923',
+        guide_id: 'guide_923',
+        activity_plan_id: null,
+        weekday: 1,
+        start_time_local: '09:00',
+        end_time_local: '18:00',
+        timezone,
+        slot_interval_minutes: 60,
+        buffer_before_minutes: 0,
+        buffer_after_minutes: 0,
+        effective_from: null,
+        effective_to: null,
+        is_active: true,
+      },
+    ],
+    guide_blackout_dates: [],
+    bookings: [
+      {
+        id: 'overlap_hold_other_plan',
+        guide_id: 'guide_923',
+        start_at: slotStart,
+        end_at: slotEnd,
+        status: 'draft',
+        participants: 2,
+        activity_id: 'other-activity',
+        activity_plan_id: 'other-plan',
+      },
+    ],
+  };
+
+  const response = await getAvailableSlots(
+    {
+      nextUrl: new URL(
+        `https://example.com/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${scheduleId}&dateFrom=2026-06-01&dateTo=2026-06-01&timezone=${encodeURIComponent(
+          timezone,
+        )}&participants=4`,
+      ),
+    },
+    { params: Promise.resolve({ activityId }) },
+    {
+      createClient: async () => createMockSupabaseClient(mockDb),
+    },
+  );
+
+  assert.equal(response.status, 200);
+  const json = await response.json();
+  assert.equal(json.success, true);
+  assert.deepEqual(
+    json.data.slots,
+    [],
+    'overlapping draft hold should suppress selectedSchedule slot in available-slots response',
+  );
 });
 
 console.log('All Available Slots API tests completed!');

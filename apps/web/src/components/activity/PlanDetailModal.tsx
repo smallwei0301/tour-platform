@@ -98,14 +98,24 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
             scrollbarWidth: 'none',
           }}
         >
-          {TABS.map(tab => (
+          {TABS.map((tab, idx) => (
             <button
               key={tab.id}
               role="tab"
               aria-selected={activeTab === tab.id}
               aria-controls={`plan-tab-panel-${tab.id}`}
               id={`plan-tab-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => setActiveTab(tab.id)}
+              onKeyDown={(e) => {
+                let nextIdx = idx;
+                if (e.key === 'ArrowRight') nextIdx = (idx + 1) % TABS.length;
+                else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + TABS.length) % TABS.length;
+                else return;
+                e.preventDefault();
+                setActiveTab(TABS[nextIdx].id);
+                (e.currentTarget.parentElement?.children[nextIdx] as HTMLElement)?.focus();
+              }}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '10px 14px', fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap',

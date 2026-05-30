@@ -57,6 +57,13 @@ export default function ActivitiesContent() {
     if (t) setSelectedTypes([t]);
   }, [searchParams]);
 
+  // Update URL when text query changes (debounced 500ms for shareability)
+  useEffect(() => {
+    const t = setTimeout(() => updateUrl(query, selectedRegions, selectedTypes), 500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
   // Fetch from API
   useEffect(() => {
     setLoading(true);
@@ -79,11 +86,23 @@ export default function ActivitiesContent() {
       .catch(() => {}); // Silently handle — user will see unhearted state
   }, []);
 
+  function updateUrl(q: string, regions: string[], types: string[]) {
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (regions.length === 1) params.set('region', regions[0]);
+    if (types.length === 1) params.set('type', types[0]);
+    const qs = params.toString();
+    router.replace(qs ? `/activities?${qs}` : '/activities');
+  }
   function toggleRegion(r: string) {
-    setSelectedRegions((prev) => prev.includes(r) ? prev.filter((x) => x !== r) : [...prev, r]);
+    const next = selectedRegions.includes(r) ? selectedRegions.filter((x) => x !== r) : [...selectedRegions, r];
+    setSelectedRegions(next);
+    updateUrl(query, next, selectedTypes);
   }
   function toggleType(t: string) {
-    setSelectedTypes((prev) => prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]);
+    const next = selectedTypes.includes(t) ? selectedTypes.filter((x) => x !== t) : [...selectedTypes, t];
+    setSelectedTypes(next);
+    updateUrl(query, selectedRegions, next);
   }
   function clearAll() {
     setQuery('');
@@ -172,7 +191,7 @@ export default function ActivitiesContent() {
         {/* 結果區 */}
         <section>
           <div className="tp-result-head">
-            <h2>{resultLabel}</h2>
+            <h1>{resultLabel}</h1>
             <select aria-label="排序" value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="recommended">推薦排序</option>
               <option value="price-asc">價格：低到高</option>
@@ -193,7 +212,7 @@ export default function ActivitiesContent() {
             </div>
           ) : (
             <div className="tp-card-grid tp-card-grid-activities">
-              {filtered.map((a) => {
+              {filtered.map((a, idx) => {
                 const href = buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug });
                 const durationDisplay = a.durationMinutes
                   ? a.durationMinutes >= 60
@@ -208,7 +227,8 @@ export default function ActivitiesContent() {
                         alt={a.title}
                         className="tp-card-img"
                         style={{ background: 'none' }}
-                        loading="lazy" width={1200} height={675} />
+                        priority={idx === 0}
+                        loading={idx === 0 ? 'eager' : 'lazy'} width={1200} height={675} />
                       <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{
                         position: 'absolute', top: 10, left: 10,

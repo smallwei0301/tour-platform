@@ -33,7 +33,13 @@ interface Activity {
   maxParticipants: number;
   minParticipants: number;
   schedules: Schedule[];
-  plans?: Array<{ id?: string | null; status?: string | null }> | null;
+  plans?: Array<{
+    id?: string | null;
+    status?: string | null;
+    name?: string | null;
+    label?: string | null;
+    displayName?: string | null;
+  }> | null;
   guide?: { displayName?: string } | null;
 }
 
@@ -191,9 +197,9 @@ function BookingInnerLegacy() {
       </div>
 
       {/* 進度列 */}
-      <div className="tp-booking-progress" style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500 }}>
-        {['行程確認', '旅客資訊', '付款'].map((label, i) => (
-          <div key={i} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+      <ol className="tp-booking-progress" aria-label="預約步驟" style={{ display: 'flex', alignItems: 'center', gap: 0, margin: '20px 0 30px', maxWidth: 500, listStyle: 'none', padding: 0 }}>
+        {(['行程確認', '旅客資訊', '付款'] as const).map((label, i) => (
+          <li key={i} aria-current={step === i + 1 ? 'step' : undefined} style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
             <div style={{
               width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: step >= i + 1 ? 'var(--tp-primary)' : '#e5e5e5',
@@ -204,10 +210,10 @@ function BookingInnerLegacy() {
             <span style={{ marginLeft: 6, fontSize: 14, fontWeight: step === i + 1 ? 700 : 400, color: step === i + 1 ? 'var(--tp-text)' : 'var(--tp-muted)' }}>
               {label}
             </span>
-            {i < 2 && <div style={{ flex: 1, height: 2, background: step > i + 1 ? 'var(--tp-primary)' : '#e5e5e5', margin: '0 8px' }} />}
-          </div>
+            {i < 2 && <div role="presentation" style={{ flex: 1, height: 2, background: step > i + 1 ? 'var(--tp-primary)' : '#e5e5e5', margin: '0 8px' }} />}
+          </li>
         ))}
-      </div>
+      </ol>
 
       {errorMessage && (
         <div style={{ marginBottom: 16, background: '#fff4f4', border: '1px solid #f5c2c2', color: '#b42318', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>
@@ -324,16 +330,19 @@ function BookingInnerLegacy() {
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
+                  required aria-required="true" name="contactName"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
+                  required aria-required="true" name="contactPhone"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
+                  required aria-required="true" name="contactEmail"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
@@ -431,6 +440,9 @@ interface V2AvailableSlotsResponse {
     planId?: string;
     selectedPlan?: {
       id?: string;
+      name?: string;
+      label?: string;
+      displayName?: string;
       priceType?: 'per_person' | 'per_group';
       basePrice?: number;
       minParticipants?: number;
@@ -441,7 +453,14 @@ interface V2AvailableSlotsResponse {
     messageZh?: string;
   };
   error?: {
+    code?: string;
     message?: string;
+    messageZh?: string;
+    details?: {
+      planKey?: string;
+      activityId?: string;
+      scheduleId?: string | null;
+    };
   };
 }
 
@@ -475,36 +494,18 @@ function BookingInnerV2FlagShell() {
     schedules: activity?.schedules || [],
     plans: activity?.plans || [],
   }), [activity?.schedules, activity?.plans, urlPlanId, urlScheduleId]);
-  const matchedScheduleIdForSelectedDate = useMemo(() => {
-    if (!activity?.schedules?.length || !selectedDate) return '';
-
-    const sameDateSchedules = activity.schedules.filter((schedule) => {
-      const localDate = new Date(schedule.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
-      return localDate === selectedDate;
-    });
-
-    if (sameDateSchedules.length === 0) return '';
-
-    const openSameDateSchedules = sameDateSchedules.filter((schedule) => {
-      const remaining = schedule.capacity - schedule.bookedCount;
-      return schedule.status === 'open' && remaining > 0;
-    });
-
-    const candidateSchedules = openSameDateSchedules.length > 0 ? openSameDateSchedules : sameDateSchedules;
-
-    const exactPlanMatch = candidateSchedules.find((schedule) => schedule.planId === v2PlanKey);
-    if (exactPlanMatch) return exactPlanMatch.id;
-
-    const allPlanFallback = candidateSchedules.find((schedule) => !schedule.planId);
-    if (allPlanFallback) return allPlanFallback.id;
-
-    return candidateSchedules[0]?.id || '';
-  }, [activity?.schedules, selectedDate, timezone, v2PlanKey]);
-  const activeScheduleId = activeUrlScheduleId || matchedScheduleIdForSelectedDate;
+  const activeScheduleId = activeUrlScheduleId;
   const [selectedSlotStartAt, setSelectedSlotStartAt] = useState('');
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
-  const [selectedPlanMeta, setSelectedPlanMeta] = useState<{ priceType: 'per_person' | 'per_group'; basePrice: number; minParticipants: number; maxParticipants: number | null } | null>(null);
+  const [availabilityReason, setAvailabilityReason] = useState('');
+  const [selectedPlanMeta, setSelectedPlanMeta] = useState<{
+    name: string | null;
+    priceType: 'per_person' | 'per_group';
+    basePrice: number;
+    minParticipants: number;
+    maxParticipants: number | null;
+  } | null>(null);
   const [guests, setGuests] = useState(1);
   const [allowOnePersonAddOn, setAllowOnePersonAddOn] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -548,6 +549,16 @@ function BookingInnerV2FlagShell() {
   const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
   const baseMaxParticipants = selectedPlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
+  const selectedPlanDisplayName = useMemo(() => {
+    const fromApi = selectedPlanMeta?.name?.trim();
+    if (fromApi) return fromApi;
+    const matchedPlan = (activity?.plans || []).find((plan) => plan?.id && plan.id === v2PlanKey);
+    if (!matchedPlan) return null;
+    const candidates = [matchedPlan.displayName, matchedPlan.label, matchedPlan.name]
+      .map((value) => (typeof value === 'string' ? value.trim() : ''))
+      .filter(Boolean);
+    return candidates[0] || null;
+  }, [activity?.plans, selectedPlanMeta?.name, v2PlanKey]);
 
   useEffect(() => {
     if (!activity) return;
@@ -586,7 +597,11 @@ function BookingInnerV2FlagShell() {
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
           setSlots([]);
-          setV2Error(json?.data?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
+          setAvailabilityReason(json?.data?.reason || '');
+          // Issue #903: prefer the resolver's Traditional-Chinese messageZh
+          // (e.g. AMBIGUOUS_PLAN -> '此活動有多個方案,無法自動判斷,請從活動頁重新選擇明確方案')
+          // before falling back to the English message or the generic default.
+          setV2Error(json?.data?.messageZh || json?.error?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
           return;
         }
         const nextSlotsRaw = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
@@ -602,7 +617,11 @@ function BookingInnerV2FlagShell() {
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         const selectedPlan = json.data?.selectedPlan;
         if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
+          const selectedPlanName = [selectedPlan.displayName, selectedPlan.label, selectedPlan.name]
+            .map((value) => (typeof value === 'string' ? value.trim() : ''))
+            .find((value) => value.length > 0) || null;
           setSelectedPlanMeta({
+            name: selectedPlanName,
             priceType: selectedPlan.priceType === 'per_group' ? 'per_group' : 'per_person',
             basePrice: Number(selectedPlan.basePrice),
             minParticipants: Number.isFinite(Number(selectedPlan.minParticipants)) ? Math.max(1, Number(selectedPlan.minParticipants)) : 1,
@@ -611,6 +630,7 @@ function BookingInnerV2FlagShell() {
         }
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
+        setAvailabilityReason(json.data?.reason || '');
         setSlots(nextSlots);
         if (nextSlots.length === 0 && json.data?.messageZh) {
           setV2Error(json.data.messageZh);
@@ -620,6 +640,7 @@ function BookingInnerV2FlagShell() {
         }
       } catch {
         setSlots([]);
+        setAvailabilityReason('');
         setV2Error('目前無法載入可預約日期，請稍後再試。');
       } finally {
         setSlotsLoading(false);
@@ -628,12 +649,13 @@ function BookingInnerV2FlagShell() {
     fetchSlots();
   }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
 
-  async function handleV2Checkout() {
-    if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !agreed) return;
+  async function handleCreateDraftBookingAndGoPayment() {
+    if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !canGoStep3) return;
     try {
       setLoading(true);
       setLoadError('');
       setV2Error('');
+      setCreatedBookingId('');
 
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
@@ -644,6 +666,7 @@ function BookingInnerV2FlagShell() {
         body: JSON.stringify({
           activityId: resolvedActivityId,
           planId: resolvedPlanId,
+          scheduleId: activeScheduleId || undefined,
           startAt: selectedSlotStartAt,
           timezone,
           participants: Math.max(guests, effectiveMinParticipants),
@@ -656,11 +679,31 @@ function BookingInnerV2FlagShell() {
       });
       const draftJson = await draftRes.json();
       if (!draftRes.ok || !draftJson?.success || !draftJson?.data?.bookingId) {
-        throw new Error(draftJson?.error?.message || '建立預約草稿失敗');
+        throw new Error(
+          draftJson?.error?.messageZh || draftJson?.error?.message || '此場次目前無法預約，請重新整理或選擇其他日期。'
+        );
       }
       setCreatedBookingId(draftJson.data.bookingId);
+      setStep(3);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '此場次目前無法預約，請重新整理或選擇其他日期。';
+      setV2Error(msg || '此場次目前無法預約，請重新整理或選擇其他日期。');
+    } finally {
+      setLoading(false);
+    }
+  }
 
-      const checkoutRes = await fetch(`/api/v2/bookings/${draftJson.data.bookingId}/checkout`, {
+  async function handleV2Checkout() {
+    if (!createdBookingId || !agreed) {
+      setV2Error('訂單尚未建立完成，請先回到上一步重新建立訂單。');
+      return;
+    }
+    try {
+      setLoading(true);
+      setLoadError('');
+      setV2Error('');
+
+      const checkoutRes = await fetch(`/api/v2/bookings/${createdBookingId}/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -670,7 +713,9 @@ function BookingInnerV2FlagShell() {
       });
       const checkoutJson = await checkoutRes.json();
       if (!checkoutRes.ok || !checkoutJson?.success) {
-        throw new Error(checkoutJson?.error?.message || '建立付款失敗');
+        throw new Error(
+          checkoutJson?.error?.messageZh || checkoutJson?.error?.message || '此場次目前無法預約，請重新整理或選擇其他日期。'
+        );
       }
 
       const paymentFormHtml = checkoutJson?.data?.paymentFormHtml;
@@ -684,8 +729,9 @@ function BookingInnerV2FlagShell() {
       if (!form) throw new Error('付款表單格式錯誤');
       form.submit();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '處理失敗';
-      setV2Error(msg || '目前無法建立付款流程，請稍後再試。');
+      const msg = err instanceof Error ? err.message : '此場次目前無法預約，請重新整理或選擇其他日期。';
+      setV2Error(msg || '此場次目前無法預約，請重新整理或選擇其他日期。');
+    } finally {
       setLoading(false);
     }
   }
@@ -732,6 +778,9 @@ function BookingInnerV2FlagShell() {
 
   const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
+  const canConfirmPayment = Boolean(createdBookingId && canSubmit);
+  const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
+  const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
@@ -830,7 +879,9 @@ function BookingInnerV2FlagShell() {
                   📍 {activity.region} · 🕐 {activity.durationDisplay}
                   {activity.guide?.displayName ? ` · 導遊：${activity.guide.displayName}` : ''}
                 </p>
-                <p style={{ margin: '4px 0', fontSize: 13, color: 'var(--tp-primary)', fontWeight: 600 }}>📋 方案：{urlPlanId}</p>
+                <p style={{ margin: '4px 0', fontSize: 13, color: 'var(--tp-primary)', fontWeight: 600 }}>
+                  📋 方案：{selectedPlanDisplayName || (urlPlanId ? `方案代碼 ${urlPlanId.slice(0, 8)}` : '已選擇')}
+                </p>
               </div>
             </div>
           </div>
@@ -901,8 +952,13 @@ function BookingInnerV2FlagShell() {
               <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12, padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, fontSize: 14 }}>
                 {slotsLoading && '載入中…'}
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
-                {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${slots[0]?.capacityLeft ?? 0}）`}
+                {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
+              {!slotsLoading && slots.length === 0 && availabilityReason && (
+                <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>
+                  目前狀態：{availabilityReason}
+                </p>
+              )}
 
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>費用明細</h4>
@@ -942,16 +998,19 @@ function BookingInnerV2FlagShell() {
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
+                  required aria-required="true" name="contactName"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
+                  required aria-required="true" name="contactPhone"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
+                  required aria-required="true" name="contactEmail"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
@@ -968,10 +1027,10 @@ function BookingInnerV2FlagShell() {
                 <button
                   className="tp-btn tp-btn-primary"
                   style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
-                  onClick={() => setStep(3)}
+                  onClick={handleCreateDraftBookingAndGoPayment}
                   disabled={loading || !canGoStep3}
                 >
-                  建立訂單並前往付款 →
+                  {loading ? '建立訂單中…' : '建立訂單並前往付款 →'}
                 </button>
               </div>
             </div>
@@ -979,7 +1038,7 @@ function BookingInnerV2FlagShell() {
 
           {step === 3 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h3 style={{ marginTop: 0 }}>選擇付款方式</h3>
+              <h3 style={{ marginTop: 0 }}>付款確認（建立預約後）</h3>
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
                   <input type="radio" name="payment" defaultChecked /> 💳 信用卡（Visa / Mastercard / JCB）
@@ -993,14 +1052,20 @@ function BookingInnerV2FlagShell() {
               </div>
               <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
+              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>完成本步驟後才會啟動付款提供商流程。</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdBookingId || '尚未建立'}</p>
+              {!createdBookingId && (
+                <p style={{ fontSize: 13, color: 'var(--tp-danger)', marginTop: 4 }}>
+                  請先回上一步建立訂單後，再進行付款確認。
+                </p>
+              )}
               <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
                 <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)} disabled={loading}>← 上一步</button>
                 <button
                   className="tp-btn tp-btn-primary"
                   style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
                   onClick={handleV2Checkout}
-                  disabled={loading || !canSubmit}
+                  disabled={loading || !canConfirmPayment}
                 >
                   {loading ? '付款處理中…' : `確認付款 NT$${total.toLocaleString()}`}
                 </button>
@@ -1017,7 +1082,7 @@ function BookingInnerV2FlagShell() {
           <h3 style={{ marginTop: 0 }}>預約摘要</h3>
           <p style={{ margin: '6px 0' }}>日期：{selectedDate}</p>
           <p style={{ margin: '6px 0' }}>人數：{guests} 人</p>
-          <p style={{ margin: '6px 0' }}>可預約名額：{slots[0]?.capacityLeft ?? 0}</p>
+          <p style={{ margin: '6px 0' }}>可預約名額：{selectedCapacityLeft}</p>
           <hr style={{ border: 0, borderTop: '1px solid var(--tp-border)', margin: '12px 0' }} />
           <p style={{ margin: 0, fontWeight: 700 }}>總計 NT${total.toLocaleString()}</p>
         </aside>

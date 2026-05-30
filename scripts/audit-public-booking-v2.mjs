@@ -103,7 +103,8 @@ function classify(status, body) {
 // ── Fetch public activities list ─────────────────────────────────────────────
 
 async function fetchPublishedActivities() {
-  const url = `${BASE_URL}/api/v2/activities?status=published&limit=200`;
+  // /api/activities returns published activities (status filter applied server-side)
+  const url = `${BASE_URL}/api/activities`;
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch activities list: ${res.status} ${await res.text()}`);

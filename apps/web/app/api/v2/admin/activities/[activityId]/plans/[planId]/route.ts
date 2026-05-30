@@ -9,6 +9,7 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
 import { getSupabase } from '../../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
+import { applyWithMissingColumnFallback } from '../../../../../../../../src/lib/activity-plans-insert-fallback.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -170,22 +171,32 @@ export async function PUT(
 
     Object.assign(updateData, normalizeRichPlanPayload(body));
 
-    const { data, error } = await supabase
-      .from('activity_plans')
-      .update(updateData)
-      .eq('id', planId)
-      .select()
-      .single();
+    const { data, error, droppedColumns } = await applyWithMissingColumnFallback(
+      (payload: Record<string, unknown>) =>
+        supabase
+          .from('activity_plans')
+          .update(payload)
+          .eq('id', planId)
+          .select()
+          .single(),
+      updateData,
+    );
 
     if (error) {
       console.error('Error updating activity plan:', error);
-      if (error.code === '23505') {
+      if ((error as { code?: string }).code === '23505') {
         return Response.json(errorV2('DUPLICATE_SLUG', 'Plan slug already exists'), { status: 409 });
       }
-      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to update plan'), { status: 500 });
+      if ((error as { code?: string }).code === 'SCHEMA_MISMATCH') {
+        return Response.json(
+          errorV2('SCHEMA_MISMATCH', '資料庫 schema 與方案欄位不一致，請聯絡技術人員套用最新 migration。'),
+          { status: 500 },
+        );
+      }
+      return Response.json(errorV2('INTERNAL_ERROR', '更新方案失敗，請稍後再試或聯絡技術人員。'), { status: 500 });
     }
 
-    return Response.json(successV2({ plan: data }));
+    return Response.json(successV2({ plan: data, droppedColumns }));
   } catch (err) {
     console.error('Update plan API error:', err);
     return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });

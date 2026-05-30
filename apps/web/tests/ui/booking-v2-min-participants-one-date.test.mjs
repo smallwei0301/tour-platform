@@ -32,11 +32,22 @@ test('v2 shell shows Traditional Chinese min-participants hint for unformed grou
   assert.match(src, /!allowOnePersonAddOn/);
 });
 
-test('v2 shell prefers API Chinese copy for below-min or slot rule errors', async () => {
+test('v2 shell prefers API Chinese copy and evaluator reason for blocked state messaging', async () => {
   const src = await readBookingSource();
 
-  assert.match(src, /json\?\.data\?\.messageZh \|\| json\?\.error\?\.message/);
+  assert.match(src, /setAvailabilityReason\(json\?\.data\?\.reason \|\| ''\)/);
+  assert.match(src, /json\?\.data\?\.messageZh \|\| json\?\.error\?\.messageZh \|\| json\?\.error\?\.message/);
   assert.match(src, /if \(nextSlots\.length === 0 && json\.data\?\.messageZh\)/);
+  assert.match(src, /目前狀態：\{availabilityReason\}/);
+});
+
+test('v2 shell uses selected plan base price from available-slots selectedPlan metadata', async () => {
+  const src = await readBookingSource();
+
+  assert.match(src, /if \(selectedPlan && Number\.isFinite\(Number\(selectedPlan\.basePrice\)\)\)/);
+  assert.match(src, /basePrice: Number\(selectedPlan\.basePrice\)/);
+  assert.match(src, /const unitPrice = selectedPlanMeta\?\.basePrice \?\? activity\.priceTwd/);
+  assert.match(src, /const total = selectedPlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
 });
 
 test('v2 shell uses date-level availability UI and removes multi-time dropdown', async () => {
@@ -48,24 +59,21 @@ test('v2 shell uses date-level availability UI and removes multi-time dropdown',
   assert.doesNotMatch(src, /<select className="tp-input" value=\{selectedSlotStartAt\}/);
 });
 
-test('v2 shell deduplicates same-date slots and keeps canonical earliest startAt', async () => {
+test('v2 shell uses evaluator capacityLeft from selected slot in booking summary displays', async () => {
   const src = await readBookingSource();
 
-  assert.match(src, /const nextSlotsByDate = new Map<string, V2Slot>\(\)/);
-  assert.match(src, /new Date\(slot\.startAt\)\.toLocaleDateString\('sv-SE', \{ timeZone: timezone \}\)/);
-  assert.match(src, /new Date\(slot\.startAt\)\.getTime\(\) < new Date\(existing\.startAt\)\.getTime\(\)/);
-  assert.match(src, /setSelectedSlotStartAt\(nextSlots\[0\]\?\.startAt \|\| ''\)/);
+  assert.match(src, /const selectedSlot = slots\.find\(\(slot\) => slot\.startAt === selectedSlotStartAt\) \|\| slots\[0\] \|\| null/);
+  assert.match(src, /const selectedCapacityLeft = selectedSlot\?\.capacityLeft \?\? 0/);
+  assert.match(src, /selectedDate}（可預約，剩餘 \$\{selectedCapacityLeft\}）/);
+  assert.match(src, /可預約名額：\{selectedCapacityLeft\}/);
 });
 
-test('v2 shell keeps initial URL scheduleId guard and resolves matching scheduleId after date change', async () => {
+test('v2 shell keeps scheduleId as URL-date hint only and never re-derives schedule from local activity.schedules', async () => {
   const src = await readBookingSource();
 
   assert.match(src, /const urlDate = searchParams\.get\('date'\) \|\| ''/);
   assert.match(src, /const activeUrlScheduleId = urlScheduleId && \(!urlDate \|\| urlDate === selectedDate\) \? urlScheduleId : ''/);
-  assert.match(src, /const matchedScheduleIdForSelectedDate = useMemo\(\(\) => \{/);
-  assert.match(src, /const sameDateSchedules = activity\.schedules\.filter\(\(schedule\) => \{/);
-  assert.match(src, /const exactPlanMatch = candidateSchedules\.find\(\(schedule\) => schedule\.planId === v2PlanKey\)/);
-  assert.match(src, /const allPlanFallback = candidateSchedules\.find\(\(schedule\) => !schedule\.planId\)/);
-  assert.match(src, /const activeScheduleId = activeUrlScheduleId \|\| matchedScheduleIdForSelectedDate/);
+  assert.match(src, /const activeScheduleId = activeUrlScheduleId;/);
   assert.match(src, /const scheduleParam = activeScheduleId \? `&scheduleId=\$\{encodeURIComponent\(activeScheduleId\)\}` : ''/);
+  assert.doesNotMatch(src, /const matchedScheduleIdForSelectedDate = useMemo\(\(\) => \{/);
 });

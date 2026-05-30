@@ -31,19 +31,31 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
   const [activeTab, setActiveTab] = useState<TabKey>('方案');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
+  function handleTabKeyDown(e: React.KeyboardEvent, currentIdx: number) {
+    let nextIdx = currentIdx;
+    if (e.key === 'ArrowRight') nextIdx = (currentIdx + 1) % TABS.length;
+    else if (e.key === 'ArrowLeft') nextIdx = (currentIdx - 1 + TABS.length) % TABS.length;
+    else return;
+    e.preventDefault();
+    setActiveTab(TABS[nextIdx]);
+    (e.currentTarget.parentElement?.children[nextIdx] as HTMLElement)?.focus();
+  }
+
   return (
     <div className="tp-activity-tabs-wrap">
       {/* Tab Nav */}
       <div className="tp-activity-tab-nav" role="tablist" aria-label="行程詳情分頁">
-        {TABS.map((tab) => (
+        {TABS.map((tab, idx) => (
           <button
             key={tab}
             role="tab"
             aria-selected={activeTab === tab}
             aria-controls={`tab-panel-${tab}`}
             id={`tab-${tab}`}
+            tabIndex={activeTab === tab ? 0 : -1}
             className={`tp-activity-tab-btn${activeTab === tab ? ' active' : ''}`}
             onClick={() => setActiveTab(tab)}
+            onKeyDown={(e) => handleTabKeyDown(e, idx)}
           >
             {tab}
           </button>

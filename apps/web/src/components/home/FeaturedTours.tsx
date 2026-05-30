@@ -39,7 +39,7 @@ export function FeaturedTours() {
               boxShadow: '0 8px 20px rgba(0,0,0,0.04)',
             }}
           >
-            <Image src={primary.imageUrl} alt={primary.title} className="tp-card-img" style={{ marginBottom: 0, minHeight: 230 }} loading="lazy" width={1200} height={675} />
+            <Image src={primary.imageUrl} alt={primary.title} className="tp-card-img" style={{ marginBottom: 0, minHeight: 230 }} priority width={1200} height={675} />
             <div style={{ display: 'grid', gap: 10 }}>
               <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: 'var(--tp-primary)' }}>推薦先從這條開始</p>
               <h3 style={{ fontSize: 24, margin: 0, lineHeight: 1.4 }}>{primary.title}</h3>
