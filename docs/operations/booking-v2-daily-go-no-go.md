@@ -60,6 +60,27 @@ Only when:
 
 If required metrics are missing, decision must become `HOLD` with explicit missing reasons.
 
+## Funnel delta metrics — source, denominator, and warning behaviour (issue #965)
+
+Three new delta pairs are emitted by the dashboard and consumed by the go-no-go report:
+
+| Delta pair | Source events | Numerator (legacy) | Numerator (v2) | Denominator (legacy) | Denominator (v2) |
+|---|---|---|---|---|---|
+| `begin_checkout_rate` | `begin_checkout` where `properties.rollout_variant` = `'legacy'` / `'v2'` | `funnel.beginCheckoutLegacy` | `funnel.beginCheckoutV2` | `funnel.bookingPageViewLegacy` | `funnel.bookingPageViewV2` |
+| `purchase_intent_rate` | `purchase_intent` where `properties.rollout_variant` = `'legacy'` / `'v2'` | `funnel.purchaseIntentLegacy` | `funnel.purchaseIntentV2` | `funnel.beginCheckoutLegacy` | `funnel.beginCheckoutV2` |
+| `error_rate` | `error` where `properties.rollout_variant` = `'legacy'` / `'v2'` | `errors.errorRateVsPageViewLegacyPct` | `errors.errorRateVsPageViewV2Pct` | `funnel.bookingPageViewLegacy` | `funnel.bookingPageViewV2` |
+
+### Warning behaviour when variant data is missing
+
+- When variant-level counts are absent (field missing from JSON) or produce NaN denominators, the go-no-go emits `MISSING_DELTA_INPUT(begin_checkout_rate)`, `MISSING_DELTA_INPUT(purchase_intent_rate)`, or `MISSING_DELTA_INPUT(error_rate)` under **warnings**, not under `hold_reasons` or `rollback_reasons`.
+- Missing delta data **never** fabricates a GO, HOLD, or ROLLBACK WATCH decision on its own — the delta pair is informational only and requires real data to produce a meaningful signal.
+- `errorRateVsPageViewLegacyPct` / `errorRateVsPageViewV2Pct` are **omitted from the JSON** (not set to 0) when the corresponding page-view count is zero — this prevents `toNum(undefined)` = `NaN` from being misread as 0% error rate.
+
+### Event instrumentation (issue #965)
+
+- Legacy checkout path (`/checkout`): `begin_checkout` and `purchase_intent` events emit `properties.rollout_variant = 'legacy'`
+- V2 booking path (`/booking/[activityId]`): `begin_checkout` fires when the user advances from Step 1 to Step 2 ("下一步：填寫資訊"); `purchase_intent` fires when the user taps "建立訂單並前往付款" in Step 2. Both emit `properties.rollout_variant = 'v2'`.
+
 ## Retention
 Keep latest 7 daily reports in `docs/operations/reports/`.
 
