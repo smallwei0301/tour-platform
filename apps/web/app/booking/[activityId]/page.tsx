@@ -657,6 +657,19 @@ function BookingInnerV2FlagShell() {
       setV2Error('');
       setCreatedBookingId('');
 
+      // 事件：purchase_intent（v2 — 使用者按下「建立訂單並前往付款」）
+      track({
+        event_name: 'purchase_intent',
+        properties: {
+          item_id: resolvedActivityId,
+          item_name: activity?.title,
+          schedule_id: selectedSlotStartAt,
+          amount: total,
+          rollout_variant: 'v2',
+        },
+        page_path: `/booking/${activitySlug}`,
+      });
+
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
         headers: {
@@ -986,7 +999,24 @@ function BookingInnerV2FlagShell() {
                 </ul>
               </div>
 
-              <button className="tp-btn tp-btn-primary" onClick={() => setStep(2)} disabled={slotsLoading || slots.length === 0}>
+              <button
+                className="tp-btn tp-btn-primary"
+                onClick={() => {
+                  track({
+                    event_name: 'begin_checkout',
+                    properties: {
+                      item_id: activity.id,
+                      item_name: activity.title,
+                      schedule_id: selectedSlotStartAt,
+                      price: unitPrice,
+                      rollout_variant: 'v2',
+                    },
+                    page_path: `/booking/${activitySlug}`,
+                  });
+                  setStep(2);
+                }}
+                disabled={slotsLoading || slots.length === 0}
+              >
                 下一步：填寫資訊 →
               </button>
             </div>
