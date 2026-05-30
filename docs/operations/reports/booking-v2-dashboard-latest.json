@@ -1,0 +1,36 @@
+{
+  "generatedAt": "2026-05-30T02:41:43.785Z",
+  "window": {
+    "hours": 24
+  },
+  "funnel": {
+    "bookingPageView": 50,
+    "bookingPageViewLegacy": 25,
+    "bookingPageViewV2": 25,
+    "beginCheckout": 30,
+    "purchaseIntent": 28,
+    "paymentCallbackReceived": 20,
+    "paymentSucceeded": 19,
+    "fallbackClicked": 1,
+    "beginCheckoutRatePct": 60,
+    "purchaseIntentRatePct": 93.33,
+    "paymentSuccessRatePct": 95,
+    "fallbackRateVsV2PageViewPct": 4,
+    "checkoutInitiated": 0,
+    "checkoutInitSucceeded": 0
+  },
+  "orders": {
+    "paid": 10,
+    "failed": 1
+  },
+  "bookings": {
+    "completed": 8,
+    "cancelled": 0
+  },
+  "errors": {
+    "eventError": 1,
+    "errorRateVsPageViewPct": 2
+  },
+  "latency": {},
+  "notes": []
+}
