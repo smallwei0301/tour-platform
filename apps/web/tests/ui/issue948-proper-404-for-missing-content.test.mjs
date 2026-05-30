@@ -42,6 +42,19 @@ describe('issue #948/#960 — proper 404 for missing blog articles', () => {
       blogSlugSrc.match(/if\s*\(!article\)\s*\{[\s\S]*?文章不存在[\s\S]*?\}/);
     assert.ok(!hasStale200, 'must not return HTTP 200 with "文章不存在" message in page component');
   });
+
+  test('blog route statically enumerates valid slugs so unknown slugs are true HTTP 404', () => {
+    assert.match(
+      blogSlugSrc,
+      /export\s+const\s+dynamicParams\s*=\s*false/,
+      'dynamicParams=false must make unknown blog slugs a route-level 404 instead of a streamed 200 fallback'
+    );
+    assert.match(
+      blogSlugSrc,
+      /export\s+function\s+generateStaticParams\s*\(\s*\)[\s\S]*Object\.keys\(articles\)\.map\(\(slug\)\s*=>\s*\(\{\s*slug\s*\}\)\)/,
+      'generateStaticParams must enumerate article slugs for valid blog pages'
+    );
+  });
 });
 
 describe('issue #948 — proper 404 for unknown experience slugs', () => {

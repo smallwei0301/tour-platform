@@ -76,6 +76,12 @@ const articles: Record<string, { title: string; category: string; date: string; 
   },
 };
 
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return Object.keys(articles).map((slug) => ({ slug }));
+}
+
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
