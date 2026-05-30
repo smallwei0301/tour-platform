@@ -217,7 +217,19 @@ export async function getAvailableSlots(
     });
 
     if (!resolved.ok) {
-      const status = resolved.code === 'AMBIGUOUS_PLAN' ? 409 : 404;
+      if (resolved.code === 'AMBIGUOUS_PLAN') {
+        return Response.json(
+          successV2({
+            timezone: searchParams.get('timezone') ?? 'Asia/Taipei',
+            activityId: resolvedActivityId,
+            planId: planKey,
+            slots: [],
+            reason: resolved.code,
+            messageZh: resolved.messageZh,
+          }),
+        );
+      }
+
       return Response.json(
         {
           success: false,
@@ -228,7 +240,7 @@ export async function getAvailableSlots(
             details: resolved.details,
           },
         },
-        { status },
+        { status: 404 },
       );
     }
 
