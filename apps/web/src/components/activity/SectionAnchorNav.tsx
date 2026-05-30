@@ -48,14 +48,44 @@ export function SectionAnchorNav({ sections }: { sections?: Section[] }) {
     setActive(id);
   };
 
+  const handleKeyDown = (
+    event: React.KeyboardEvent<HTMLButtonElement>,
+    index: number,
+    id: string
+  ) => {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      const direction = event.key === 'ArrowRight' ? 1 : -1;
+      const nextIndex = (index + direction + SECTIONS.length) % SECTIONS.length;
+      const nextSection = SECTIONS[nextIndex];
+      if (!nextSection) return;
+
+      setActive(nextSection.id);
+      const nextTab = document.getElementById(`anchor-tab-${nextSection.id}`) as HTMLButtonElement | null;
+      nextTab?.focus();
+      return;
+    }
+
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleClick(id);
+    }
+  };
+
   return (
-    <nav className="kkd-anchor-nav" aria-label="頁面錨點導覽">
-      {SECTIONS.map(({ id, label }) => (
+    <nav className="kkd-anchor-nav" aria-label="頁面錨點導覽" role="tablist">
+      {SECTIONS.map(({ id, label }, index) => (
         <button
+          id={`anchor-tab-${id}`}
           key={id}
           className={`kkd-anchor-btn${active === id ? ' active' : ''}`}
           aria-current={active === id ? 'true' : undefined}
+          aria-selected={active === id}
+          aria-controls={id}
+          role="tab"
+          tabIndex={active === id ? 0 : -1}
           onClick={() => handleClick(id)}
+          onKeyDown={(event) => handleKeyDown(event, index, id)}
         >
           {label}
         </button>
