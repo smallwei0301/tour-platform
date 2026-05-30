@@ -11,37 +11,6 @@ jobs:
   enforce-policy:
     runs-on: ubuntu-latest
     if: startsWith(github.event.issue.title, '[Auto Check]')
-
-  enforce-frontend-daily-check-policy:
-    runs-on: ubuntu-latest
-    if: startsWith(github.event.issue.title, '[Frontend Daily Check]')
-    steps:
-      - name: Apply taxonomy labels
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          # Routing labels: business priority + execution order + ownership (per ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md)
-          REQUIRED_LABELS="triaged,type:bug,priority:P2,qa,owner:ai-agent,status:ready,traveler-booking"
-          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "$REQUIRED_LABELS" || \
-            echo "::warning::Failed to apply labels to issue #$ISSUE_NUMBER"
-
-      - name: Check for duplicate open issues
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          REPO: ${{ github.repository }}
-        run: |
-          DUPLICATES=$(gh issue list --repo "$REPO" --state open \
-            --search "\"$ISSUE_TITLE\" in:title" \
-            --json number,title \
-            --jq ".[] | select(.number != $ISSUE_NUMBER) | \"#\(.number)\"" | head -5)
-          if [ -n "$DUPLICATES" ]; then
-            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" \
-              --body "⚠️ **Possible duplicate detected.** Open issues with same title: $DUPLICATES."
-          fi
     steps:
       - name: Apply required labels
         env:
@@ -108,6 +77,37 @@ jobs:
           - Rerun command
           - Sanitized log preview
           - No-secrets declaration"
+          fi
+
+  enforce-frontend-daily-check-policy:
+    runs-on: ubuntu-latest
+    if: startsWith(github.event.issue.title, '[Frontend Daily Check]')
+    steps:
+      - name: Apply taxonomy labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Routing labels: business priority + execution order + ownership (per ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md)
+          REQUIRED_LABELS="triaged,type:bug,priority:P2,qa,owner:ai-agent,status:ready,traveler-booking"
+          gh issue edit "$ISSUE_NUMBER" --repo "$REPO" --add-label "$REQUIRED_LABELS" || \
+            echo "::warning::Failed to apply labels to issue #$ISSUE_NUMBER"
+
+      - name: Check for duplicate open issues
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          DUPLICATES=$(gh issue list --repo "$REPO" --state open \
+            --search "\"$ISSUE_TITLE\" in:title" \
+            --json number,title \
+            --jq ".[] | select(.number != $ISSUE_NUMBER) | \"#\(.number)\"" | head -5)
+          if [ -n "$DUPLICATES" ]; then
+            gh issue comment "$ISSUE_NUMBER" --repo "$REPO" \
+              --body "⚠️ **Possible duplicate detected.** Open issues with same title: $DUPLICATES."
           fi
 
   enforce-daily-bug-scan-policy:
