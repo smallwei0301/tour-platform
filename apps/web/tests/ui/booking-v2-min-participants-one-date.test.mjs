@@ -16,7 +16,12 @@ test('v2 shell clamps participants to effective minimum and never posts below-mi
 
   assert.match(src, /const effectiveMinParticipants = allowOnePersonAddOn \? 1 : baseMinParticipants/);
   assert.match(src, /min=\{effectiveMinParticipants\}/);
-  assert.match(src, /setGuests\(Math\.max\(effectiveMinParticipants, Number\(e\.target\.value\) \|\| effectiveMinParticipants\)\)/);
+  // Semantic check: the people-count handler must clamp the typed value up to
+  // effectiveMinParticipants. (Pre-PR #902 this lived in a single-line
+  // expression; PR #902 split it across lines to also clamp against
+  // baseMaxParticipants for the new stepper. Either shape is fine.)
+  assert.match(src, /Math\.max\(effectiveMinParticipants,/);
+  assert.match(src, /Number\(e\.target\.value\)\s*\|\|\s*effectiveMinParticipants/);
   assert.match(src, /participants: Math\.max\(guests, effectiveMinParticipants\)/);
 });
 

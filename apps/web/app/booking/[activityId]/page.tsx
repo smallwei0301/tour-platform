@@ -891,22 +891,65 @@ function BookingInnerV2FlagShell() {
               <h3 style={{ marginTop: 0 }}>行程確認</h3>
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
-                <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="tp-input" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, fontSize: 14, boxSizing: 'border-box' }}
+                />
               </label>
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
-                <input
-                  type="number"
-                  min={effectiveMinParticipants}
-                  value={guests}
-                  onChange={(e) => setGuests(Math.max(effectiveMinParticipants, Number(e.target.value) || effectiveMinParticipants))}
-                  className="tp-input"
-                />
+                <div style={{ display: 'flex', alignItems: 'stretch', marginTop: 4, border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>
+                  <button
+                    type="button"
+                    aria-label="減少人數"
+                    disabled={guests <= effectiveMinParticipants}
+                    onClick={() => setGuests((g) => Math.max(effectiveMinParticipants, g - 1))}
+                    style={{
+                      padding: '8px 16px', border: 'none', borderRight: '1px solid var(--tp-border)',
+                      background: '#f9fafb', color: '#374151',
+                      fontSize: 18, fontWeight: 700, minWidth: 44,
+                      cursor: guests <= effectiveMinParticipants ? 'not-allowed' : 'pointer',
+                      opacity: guests <= effectiveMinParticipants ? 0.4 : 1,
+                    }}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={effectiveMinParticipants}
+                    max={baseMaxParticipants ?? undefined}
+                    value={guests}
+                    onChange={(e) => {
+                      const n = Number(e.target.value) || effectiveMinParticipants;
+                      const capped = baseMaxParticipants != null ? Math.min(n, baseMaxParticipants) : n;
+                      setGuests(Math.max(effectiveMinParticipants, capped));
+                    }}
+                    style={{ flex: 1, minWidth: 0, padding: '10px 12px', border: 'none', textAlign: 'center', fontSize: 14, outline: 'none' }}
+                  />
+                  <button
+                    type="button"
+                    aria-label="增加人數"
+                    disabled={baseMaxParticipants != null && guests >= baseMaxParticipants}
+                    onClick={() => setGuests((g) => (baseMaxParticipants != null ? Math.min(baseMaxParticipants, g + 1) : g + 1))}
+                    style={{
+                      padding: '8px 16px', border: 'none', borderLeft: '1px solid var(--tp-border)',
+                      background: '#f9fafb', color: '#374151',
+                      fontSize: 18, fontWeight: 700, minWidth: 44,
+                      cursor: baseMaxParticipants != null && guests >= baseMaxParticipants ? 'not-allowed' : 'pointer',
+                      opacity: baseMaxParticipants != null && guests >= baseMaxParticipants ? 0.4 : 1,
+                    }}
+                  >
+                    +
+                  </button>
+                </div>
               </label>
               {!allowOnePersonAddOn && <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>此行程最少 {baseMinParticipants} 人成團{baseMaxParticipants ? `，最多 ${baseMaxParticipants} 人` : ''}</p>}
 
               <p style={{ margin: '0 0 6px' }}>選擇可預約場次</p>
-              <div className="tp-input" style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12 }}>
+              <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12, padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, fontSize: 14 }}>
                 {slotsLoading && '載入中…'}
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
