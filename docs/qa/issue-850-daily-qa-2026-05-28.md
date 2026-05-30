@@ -82,7 +82,7 @@ Exit code: 0 — no errors
 | # | Test | PR | Expected | Status |
 |---|------|----|----------|--------|
 | M1 | Booking V2 date change clears stale `scheduleId` — open booking URL with `?scheduleId=…`, switch to another date, verify URL/query no longer carries old scheduleId | #837 | No stale scheduleId after date change; draft/checkout uses new date's schedule | **HOLD** (browser required) |
-| M2 | Public activity → Booking V2 deep link date-switch smoke — `/activities/taipei/andy-lee-private-tour?date=…&scheduleId=…` → booking page → switch date | #837 | Consistent date semantics; no stale schedule residue; no console/network errors | **HOLD** (browser required) |
+| M2 | Public activity → Booking V2 deep link date-switch smoke — `/activities/kaohsiung/activity-1775040922554?date=…&scheduleId=…` → booking page → switch date | #837 | Consistent date semantics; no stale schedule residue; no console/network errors | **HOLD** (browser required) |
 | M3 | Mobile Booking V2 one-date / min-participants spot-check — mobile viewport, switch date and participants at boundary | #837 | Mobile CTA not obscured; date + schedule state sync; no horizontal overflow | **HOLD** (browser required) |
 | M4 | Availability API query consistency — call `/api/v2/activities/…/available-slots?…` after date switch, verify UI and API agree | #837 | 200 or typed error; no cross-date schedule mismatch | **HOLD** (browser required) |
 | M5 | CLAUDE.md developer onboarding doc sanity — review on GitHub, confirm no secrets, commands match repo | #835 | Readable; no secrets; build/test instructions correct | **HOLD** (browser required) |
