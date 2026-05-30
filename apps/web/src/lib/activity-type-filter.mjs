@@ -27,6 +27,18 @@ export function isActivityTypeMatch(category, selectedType) {
   return normalizedCategory.includes(normalizedSelected) || normalizedSelected.includes(normalizedCategory);
 }
 
+export function isActivityTypeKeywordMatch(activity, selectedType) {
+  const keyword = normalizeActivityTypeForFilter(selectedType);
+  if (!keyword) return false;
+
+  const searchable = [activity?.title, activity?.tagline, activity?.shortDescription]
+    .map((value) => normalizeActivityTypeForFilter(value))
+    .filter(Boolean)
+    .join(' ');
+
+  return searchable.includes(keyword);
+}
+
 export function resolveCanonicalType(typeOptions, rawType) {
   const normalizedRaw = normalizeActivityTypeForFilter(rawType);
   if (!normalizedRaw) return '';

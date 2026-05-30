@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
-import { isActivityTypeMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
+import { isActivityTypeMatch, isActivityTypeKeywordMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
 
@@ -121,7 +121,9 @@ export default function ActivitiesContent() {
     }
     if (selectedTypes.length > 0) {
       result = result.filter((a) =>
-        selectedTypes.some((t) => isActivityTypeMatch(a.category, t))
+        selectedTypes.some((t) =>
+          isActivityTypeMatch(a.category, t) || isActivityTypeKeywordMatch(a, t)
+        )
       );
     }
     if (sort === 'price-asc') result.sort((a, b) => a.priceTwd - b.priceTwd);
