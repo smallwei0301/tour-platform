@@ -81,7 +81,9 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const { slug } = await params;
   const article = articles[slug];
-  if (!article) return { title: '文章不存在 | Midao 祕島' };
+  if (!article) {
+    notFound();
+  }
   return {
     title: `${article.title} | Midao 祕島`,
     description: article.content.slice(0, 120).replace(/\n/g, ' '),

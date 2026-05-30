@@ -15,10 +15,22 @@ const appDir = resolve(__dirname, '../../app');
 const blogSlugSrc = readFileSync(resolve(appDir, 'blog/[slug]/page.tsx'), 'utf8');
 const experienceSlugSrc = readFileSync(resolve(appDir, 'experiences/[slug]/page.tsx'), 'utf8');
 
-describe('issue #948 — proper 404 for missing blog articles', () => {
+describe('issue #948/#960 — proper 404 for missing blog articles', () => {
   test('blog/[slug]/page.tsx imports notFound from next/navigation', () => {
     assert.ok(blogSlugSrc.includes("from 'next/navigation'"), 'must import from next/navigation');
     assert.ok(blogSlugSrc.includes('notFound'), 'must use notFound');
+  });
+
+  test('blog generateMetadata rejects missing slug with notFound() to preserve HTTP 404 contract', () => {
+    const metadataFnMatch = blogSlugSrc.match(/export\s+async\s+function\s+generateMetadata[\s\S]*?\n}\n/);
+    assert.ok(metadataFnMatch, 'generateMetadata function must exist');
+
+    const metadataFn = metadataFnMatch[0];
+    assert.match(
+      metadataFn,
+      /if\s*\(!article\)\s*\{?[\s\S]*notFound\(\)/,
+      'generateMetadata must call notFound() for missing slugs instead of returning fallback metadata'
+    );
   });
 
   test('blog page calls notFound() when article is missing (not custom 200 message)', () => {
