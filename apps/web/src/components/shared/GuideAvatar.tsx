@@ -68,6 +68,7 @@ export function GuideAvatar({
             objectFit: 'cover',
             display: 'block',
           }}
+          loading="lazy"
           onError={() => setImageError(true)} width={1200} height={675} />
       ) : (
         <span style={initialsStyle}>{initials}</span>
