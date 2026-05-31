@@ -350,9 +350,9 @@ export default function ActivityPlansPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
+                <label htmlFor="plan-form-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
                 <input
-                  aria-label="方案名稱"
+                  id="plan-form-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -361,9 +361,9 @@ export default function ActivityPlansPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案說明</label>
+                <label htmlFor="plan-form-description" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案說明</label>
                 <textarea
-                  aria-label="方案說明"
+                  id="plan-form-description"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="方案詳細說明..."
@@ -373,9 +373,9 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
+                  <label htmlFor="plan-form-duration" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
                   <input
-                    aria-label="時長 (分鐘)"
+                    id="plan-form-duration"
                     type="number"
                     min="15"
                     step="15"
@@ -399,9 +399,9 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
+                  <label htmlFor="plan-form-base-price" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
                   <input
-                    aria-label="基本價格 (TWD)"
+                    id="plan-form-base-price"
                     type="number"
                     min="0"
                     value={form.base_price}
@@ -425,9 +425,9 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
+                  <label htmlFor="plan-form-min-participants" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
                   <input
-                    aria-label="方案最低成團人數"
+                    id="plan-form-min-participants"
                     type="number"
                     min="1"
                     value={form.min_participants}
@@ -436,9 +436,9 @@ export default function ActivityPlansPage() {
                   />
                 </div>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
+                  <label htmlFor="plan-form-max-participants" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
                   <input
-                    aria-label="方案最多人數"
+                    id="plan-form-max-participants"
                     type="number"
                     min="1"
                     value={form.max_participants}
