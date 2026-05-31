@@ -56,4 +56,23 @@ describe('issue #1027 — guides listing filter URL persistence', () => {
       'must have a handleSort handler wired to the select onChange'
     );
   });
+
+  test('GuidesContent.tsx has text search with debounced URL persistence', () => {
+    assert.ok(
+      guidesContentSrc.includes('setQuery') && guidesContentSrc.includes('query'),
+      'must have query state for text search'
+    );
+    assert.ok(
+      guidesContentSrc.includes('type="search"') || guidesContentSrc.includes("type='search'"),
+      'must have a search input with type=search'
+    );
+    assert.ok(
+      guidesContentSrc.includes('setTimeout') && guidesContentSrc.includes('500'),
+      'must debounce URL updates with 500ms timeout'
+    );
+    assert.ok(
+      guidesContentSrc.includes("params.set('q', q)") || guidesContentSrc.includes('params.set("q"'),
+      'must persist query in URL as ?q='
+    );
+  });
 });
