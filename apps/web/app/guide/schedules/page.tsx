@@ -118,12 +118,12 @@ export default function GuideSchedulesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, background: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '10px 12px' }}>行程</th>
-                <th>方案</th>
-                <th>日期</th>
-                <th>已訂/容量</th>
-                <th>狀態</th>
-                <th style={{ width: 100 }}>操作</th>
+                <th scope="col" style={{ padding: '10px 12px' }}>行程</th>
+                <th scope="col">方案</th>
+                <th scope="col">日期</th>
+                <th scope="col">已訂/容量</th>
+                <th scope="col">狀態</th>
+                <th scope="col" style={{ width: 100 }}>操作</th>
               </tr>
             </thead>
             <tbody>

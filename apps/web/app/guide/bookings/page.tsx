@@ -77,13 +77,13 @@ export default function GuideBookingsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, background: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '10px 12px' }}>旅客</th>
-                <th>行程</th>
-                <th>場次日期</th>
-                <th>人數</th>
-                <th>金額</th>
-                <th>狀態</th>
-                <th>操作</th>
+                <th scope="col" style={{ padding: '10px 12px' }}>旅客</th>
+                <th scope="col">行程</th>
+                <th scope="col">場次日期</th>
+                <th scope="col">人數</th>
+                <th scope="col">金額</th>
+                <th scope="col">狀態</th>
+                <th scope="col">操作</th>
               </tr>
             </thead>
             <tbody>
