@@ -145,7 +145,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
           />
           {/* Drawer */}
-          <div style={{
+          <div role="dialog" aria-modal="true" aria-label="管理導覽選單" style={{
             position: 'absolute', top: 0, left: 0, bottom: 0, width: 260,
             background: '#fff', zIndex: 10, display: 'flex', flexDirection: 'column',
             boxShadow: '4px 0 24px rgba(0,0,0,0.15)',
