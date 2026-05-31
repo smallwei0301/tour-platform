@@ -384,6 +384,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>計價方式</label>
                   <select
+                    aria-label="計價方式"
                     value={form.price_type}
                     onChange={(e) => setForm({ ...form, price_type: e.target.value as 'per_person' | 'per_group' })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -407,6 +408,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>預約方式</label>
                   <select
+                    aria-label="預約方式"
                     value={form.booking_type}
                     onChange={(e) => setForm({ ...form, booking_type: e.target.value as 'scheduled' | 'request' | 'instant' })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -503,6 +505,7 @@ export default function ActivityPlansPage() {
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>狀態</label>
                   <select
+                    aria-label="狀態"
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value as 'active' | 'inactive' | 'archived' })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}

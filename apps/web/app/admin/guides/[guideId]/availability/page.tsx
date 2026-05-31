@@ -304,6 +304,7 @@ export default function GuideAvailabilityPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
                 <select
+                  aria-label="星期"
                   value={ruleForm.weekday}
                   onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
