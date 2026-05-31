@@ -1081,7 +1081,7 @@ export default function AdminActivityEditPage() {
 
             <label style={labelStyle}>
               行程名稱 *
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required />
+              <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required aria-required="true" />
             </label>
 
             <div style={labelStyle}>
@@ -1127,7 +1127,7 @@ export default function AdminActivityEditPage() {
             <FormGrid cols={3} gap={16}>
               <label style={labelStyle}>
                 價格/人 (TWD) *
-                <input type="number" value={priceTwd} onChange={e => setPriceTwd(e.target.value)} min={0} style={fieldStyle} required />
+                <input type="number" value={priceTwd} onChange={e => setPriceTwd(e.target.value)} min={0} style={fieldStyle} required aria-required="true" />
               </label>
               <label style={labelStyle}>
                 最少人數
