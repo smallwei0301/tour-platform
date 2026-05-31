@@ -592,7 +592,7 @@ function BookingInnerV2FlagShell() {
       try {
         setSlotsLoading(true);
         setV2Error('');
-        const participants = Math.max(guests, effectiveMinParticipants);
+        const participants = effectiveMinParticipants;
         const scheduleParam = activeScheduleId ? `&scheduleId=${encodeURIComponent(activeScheduleId)}` : '';
         const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
@@ -649,7 +649,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
+  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
 
   async function handleCreateDraftBookingAndGoPayment() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !canGoStep3) return;
@@ -796,6 +796,7 @@ function BookingInnerV2FlagShell() {
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
   const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
+  const overCapacity = slots.length > 0 && guests > selectedCapacityLeft;
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
@@ -971,6 +972,11 @@ function BookingInnerV2FlagShell() {
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
+              {!slotsLoading && overCapacity && (
+                <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
+                  參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。
+                </p>
+              )}
               {!slotsLoading && slots.length === 0 && availabilityReason && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>
                   目前狀態：{availabilityReason}
@@ -1019,7 +1025,7 @@ function BookingInnerV2FlagShell() {
                   });
                   setStep(2);
                 }}
-                disabled={slotsLoading || slots.length === 0}
+                disabled={slotsLoading || slots.length === 0 || overCapacity}
               >
                 下一步：填寫資訊 →
               </button>
