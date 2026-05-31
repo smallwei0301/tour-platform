@@ -540,7 +540,7 @@ export default function ActivityPlansPage() {
 
       <div className="admin-page">
         {/* Status Filter */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div role="tablist" aria-label="方案狀態篩選" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
             { value: '', label: '全部' },
             { value: 'active', label: '啟用中' },
@@ -549,6 +549,8 @@ export default function ActivityPlansPage() {
           ].map((tab) => (
             <button
               key={tab.value}
+              role="tab"
+              aria-selected={statusFilter === tab.value}
               onClick={() => setStatusFilter(tab.value)}
               style={{
                 padding: '10px 18px',
