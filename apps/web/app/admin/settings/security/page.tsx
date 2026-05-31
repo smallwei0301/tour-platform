@@ -71,11 +71,11 @@ export default function AdminSecuritySettingsPage() {
           <h3 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#111' }}>旋轉 Admin Token</h3>
           <p style={{ margin: '0 0 16px', fontSize: 13, color: '#9ca3af' }}>旋轉後，所有舊 session 立即失效。</p>
 
-          <label style={labelStyle}>Current Token</label>
-          <input type="password" value={currentToken} onChange={e => setCurrentToken(e.target.value)} style={inputStyle} placeholder="輸入現有 token" />
+          <label htmlFor="security-current-token" style={labelStyle}>Current Token</label>
+          <input id="security-current-token" type="password" value={currentToken} onChange={e => setCurrentToken(e.target.value)} style={inputStyle} placeholder="輸入現有 token" />
 
-          <label style={labelStyle}>New Token（至少 8 字元）</label>
-          <input type="password" value={newToken} onChange={e => setNewToken(e.target.value)} style={inputStyle} placeholder="輸入新 token" />
+          <label htmlFor="security-new-token" style={labelStyle}>New Token（至少 8 字元）</label>
+          <input id="security-new-token" type="password" value={newToken} onChange={e => setNewToken(e.target.value)} style={inputStyle} placeholder="輸入新 token" />
 
           <button onClick={rotate} disabled={busy}
             style={{ marginTop: 16, padding: '9px 24px', borderRadius: 8, border: 'none', background: 'var(--tp-primary)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.7 : 1 }}>
