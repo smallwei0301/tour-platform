@@ -65,8 +65,21 @@ export default function GuideApplyPage() {
     }
   }
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://tour-platform-nine.vercel.app' },
+      { '@type': 'ListItem', position: 2, name: '成為導遊', item: 'https://tour-platform-nine.vercel.app/guide/apply' },
+    ],
+  };
+
   return (
     <main className="tp-container tp-apply-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/">首頁</Link> &gt; 成為導遊
       </div>

@@ -253,6 +253,7 @@ function BookingInnerLegacy() {
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>📅 選擇可預約場次</span>
                 <select
+                  name="date"
                   value={selectedScheduleId}
                   onChange={(e) => setSelectedScheduleId(e.target.value)}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }}
@@ -278,6 +279,7 @@ function BookingInnerLegacy() {
                 <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
                 <input
                   type="number"
+                  name="participants"
                   value={guests}
                   onChange={(e) => setGuests(Math.max(activity.minParticipants || 1, parseInt(e.target.value) || 1))}
                   min={activity.minParticipants || 1}
@@ -347,11 +349,11 @@ function BookingInnerLegacy() {
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
                 給導遊的備註（選填）
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
+                <textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 16 }}>
-                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <input type="checkbox" name="agreement" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
               </label>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -906,6 +908,7 @@ function BookingInnerV2FlagShell() {
                 <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
                 <input
                   type="date"
+                  name="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, fontSize: 14, boxSizing: 'border-box' }}
@@ -931,6 +934,7 @@ function BookingInnerV2FlagShell() {
                   </button>
                   <input
                     type="number"
+                    name="participants"
                     inputMode="numeric"
                     min={effectiveMinParticipants}
                     max={baseMaxParticipants ?? undefined}
@@ -1045,11 +1049,11 @@ function BookingInnerV2FlagShell() {
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
                 給導遊的備註（選填）
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
+                <textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 16 }}>
-                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <input type="checkbox" name="agreement" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
               </label>
               <div style={{ display: 'flex', gap: 12 }}>
