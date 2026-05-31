@@ -228,7 +228,7 @@ function BookingInnerLegacy() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
                 {activity.coverImageUrl && (
-                  <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={1200} height={675} />
+                  <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={120} height={80} />
                 )}
                 <div>
                   <h3 style={{ margin: 0 }}>{activity.title}</h3>
@@ -886,7 +886,7 @@ function BookingInnerV2FlagShell() {
           <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 14 }}>
               {activity.coverImageUrl && (
-                <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={1200} height={675} />
+                <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={120} height={80} />
               )}
               <div>
                 <h3 style={{ margin: 0 }}>{activity.title}</h3>

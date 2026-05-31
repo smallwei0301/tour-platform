@@ -232,7 +232,7 @@ export default function ActivitiesContent() {
                     {a.guideName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px' }}>
                         {a.guideAvatarUrl && (
-                          <Image src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} width={1200} height={675} />
+                          <Image src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} width={28} height={28} />
                         )}
                         <span style={{ fontSize: 13, color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{a.guideName} <PublicIcon name="badgeCheck" size={14} /></span>
                       </div>

@@ -20,7 +20,7 @@ export function GuideSpotlight() {
               src={andy.avatarUrl}
               alt={andy.displayName}
               loading="lazy"
-              style={{ width: 160, height: 160, borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--tp-primary)' }} width={1200} height={675} />
+              style={{ width: 160, height: 160, borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--tp-primary)' }} width={160} height={160} />
             <h3 style={{ marginTop: 12 }}>{andy.displayName}</h3>
             <p style={{ color: 'var(--tp-muted)', fontSize: 14 }}>⭐ {andy.rating} · {andy.reviewCount} 則評價</p>
             <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>📍 {andy.region} · 🌍 {andy.languages.slice(0, 3).join('、')}</p>
