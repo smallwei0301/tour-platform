@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import EmptyState from '../../src/components/guards/EmptyState';
 import InlineErrorState from '../../src/components/guards/InlineErrorState';
 import PageSkeleton from '../../src/components/guards/PageSkeleton';
@@ -14,11 +14,19 @@ function toLabel(status: string) {
   return '處理中';
 }
 
+const TABS = [
+  { key: 'all' as const, label: '全部', id: 'orders-tab-all' },
+  { key: 'upcoming' as const, label: '即將出發', id: 'orders-tab-upcoming' },
+  { key: 'completed' as const, label: '已完成', id: 'orders-tab-completed' },
+  { key: 'cancelled' as const, label: '已取消', id: 'orders-tab-cancelled' },
+] as const;
+
 export default function OrdersPage() {
   const [rows, setRows] = useState<any[]>([]);
   const [tab, setTab] = useState<'all' | 'upcoming' | 'completed' | 'cancelled'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -45,17 +53,43 @@ export default function OrdersPage() {
     return rows.filter((r) => r.status?.includes('cancelled') || r.status === 'refunded');
   }, [rows, tab]);
 
+  function handleTabKeyDown(e: React.KeyboardEvent, idx: number) {
+    const nextIdx =
+      e.key === 'ArrowRight' ? (idx + 1) % TABS.length :
+      e.key === 'ArrowLeft' ? (idx - 1 + TABS.length) % TABS.length :
+      null;
+    if (nextIdx === null) return;
+    e.preventDefault();
+    setTab(TABS[nextIdx].key);
+    tabRefs.current[nextIdx]?.focus();
+  }
+
+  const activeTabId = TABS.find((t) => t.key === tab)?.id ?? 'orders-tab-all';
+
   return (
     <main className="tp-container tp-orders-page">
       <h1>我的訂單</h1>
 
-      <div className="tp-order-tabs">
-        <button className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>全部</button>
-        <button className={tab === 'upcoming' ? 'active' : ''} onClick={() => setTab('upcoming')}>即將出發</button>
-        <button className={tab === 'completed' ? 'active' : ''} onClick={() => setTab('completed')}>已完成</button>
-        <button className={tab === 'cancelled' ? 'active' : ''} onClick={() => setTab('cancelled')}>已取消</button>
+      <div className="tp-order-tabs" role="tablist" aria-label="訂單篩選">
+        {TABS.map((t, idx) => (
+          <button
+            key={t.key}
+            ref={(el) => { tabRefs.current[idx] = el; }}
+            id={t.id}
+            role="tab"
+            aria-selected={tab === t.key}
+            aria-controls="orders-tabpanel"
+            tabIndex={tab === t.key ? 0 : -1}
+            className={tab === t.key ? 'active' : ''}
+            onClick={() => setTab(t.key)}
+            onKeyDown={(e) => handleTabKeyDown(e, idx)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
+      <div id="orders-tabpanel" role="tabpanel" aria-labelledby={activeTabId}>
       {loading ? (
         <PageSkeleton title="載入訂單中" lines={4} />
       ) : error ? (
@@ -88,6 +122,7 @@ export default function OrdersPage() {
           })}
         </section>
       )}
+      </div>
     </main>
   );
 }
