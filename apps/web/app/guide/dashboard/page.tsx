@@ -519,9 +519,10 @@ export default function GuideDashboardPage() {
       {payoutModal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50 }}
              onClick={() => setPayoutModal(null)}>
-          <div style={{ background:'#fff', borderRadius:16, padding:24, maxWidth:540, width:'92%', maxHeight:'80vh', overflowY:'auto' }}
+          <div role="dialog" aria-modal="true" aria-labelledby="payout-modal-title"
+               style={{ background:'#fff', borderRadius:16, padding:24, maxWidth:540, width:'92%', maxHeight:'80vh', overflowY:'auto' }}
                onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize:16, fontWeight:700, marginBottom:12 }}>{payoutModal} 入帳明細</h3>
+            <h3 id="payout-modal-title" style={{ fontSize:16, fontWeight:700, marginBottom:12 }}>{payoutModal} 入帳明細</h3>
             {payoutLoading ? (
               <p style={{ color:'#6b7280', fontSize:13 }}>載入中…</p>
             ) : payoutDetail && payoutDetail.orders.length > 0 ? (
@@ -586,6 +587,7 @@ export default function GuideDashboardPage() {
           onClick={() => setScheduleModal(null)}
         >
           <div
+            role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title"
             style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px', width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 -4px 30px rgba(0,0,0,0.15)' }}
             onClick={e => e.stopPropagation()}
           >
@@ -594,7 +596,7 @@ export default function GuideDashboardPage() {
 
             {/* Header */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, color: '#111' }}>{scheduleModal.tourTitle}</div>
+              <div id="schedule-modal-title" style={{ fontWeight: 700, fontSize: 16, color: '#111' }}>{scheduleModal.tourTitle}</div>
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
                 📅 {new Date(scheduleModal.date).toLocaleString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' })}
                 {scheduleModal.planId && ` · ${scheduleModal.planId}`}
