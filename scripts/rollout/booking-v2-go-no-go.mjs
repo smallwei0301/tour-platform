@@ -134,6 +134,12 @@ if (!Number.isFinite(beginCheckoutRateLegacy) || !Number.isFinite(beginCheckoutR
 if (!Number.isFinite(purchaseIntentRateLegacy) || !Number.isFinite(purchaseIntentRateV2)) warnings.push('MISSING_DELTA_INPUT(purchase_intent_rate)');
 if (!Number.isFinite(errorRateLegacy) || !Number.isFinite(errorRateV2)) warnings.push('MISSING_DELTA_INPUT(error_rate)');
 
+// DATA_QUALITY_WARNING: aggregate traffic exists but variant tags are all zero →
+// events are being tracked but rollout_variant is not set (instrumentation gap, not absent traffic)
+if (pv > 0 && bookingPvLegacy === 0 && bookingPvV2 === 0) {
+  warnings.push('DATA_QUALITY_WARNING(variant_instrumentation_untagged)');
+}
+
 let decision = 'GO';
 if (rollbackReasons.length) decision = 'ROLLBACK WATCH';
 else if (holdReasons.length) decision = 'HOLD';

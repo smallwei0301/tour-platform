@@ -70,6 +70,14 @@ Three new delta pairs are emitted by the dashboard and consumed by the go-no-go 
 | `purchase_intent_rate` | `purchase_intent` where `properties.rollout_variant` = `'legacy'` / `'v2'` | `funnel.purchaseIntentLegacy` | `funnel.purchaseIntentV2` | `funnel.beginCheckoutLegacy` | `funnel.beginCheckoutV2` |
 | `error_rate` | `error` where `properties.rollout_variant` = `'legacy'` / `'v2'` | `errors.errorRateVsPageViewLegacyPct` | `errors.errorRateVsPageViewV2Pct` | `funnel.bookingPageViewLegacy` | `funnel.bookingPageViewV2` |
 
+### DATA_QUALITY_WARNING(variant_instrumentation_untagged)
+
+**Meaning**: Aggregate funnel counts (e.g. `booking_page_view = 100`) are non-zero but **both** legacy and v2 variant counts are 0. This means events are being tracked but the `rollout_variant` property is not set on them — an instrumentation gap, not the absence of traffic.
+
+**Post-#970 context**: PR #970 added dashboard support for reading `events.properties.rollout_variant`. When this warning appears, check that the booking page correctly emits `rollout_variant: 'legacy'` or `rollout_variant: 'v2'` on tracking calls.
+
+**Impact on Go/No-Go**: This is a **warning only** — it does NOT block GO or trigger HOLD. However, operators should not trust delta-based signals (V2 vs legacy conversion comparisons) until this warning is resolved, as all variant comparisons will show N/A.
+
 ### Warning behaviour when variant data is missing
 
 - When variant-level counts are absent (field missing from JSON) or produce NaN denominators, the go-no-go emits `MISSING_DELTA_INPUT(begin_checkout_rate)`, `MISSING_DELTA_INPUT(purchase_intent_rate)`, or `MISSING_DELTA_INPUT(error_rate)` under **warnings**, not under `hold_reasons` or `rollback_reasons`.
