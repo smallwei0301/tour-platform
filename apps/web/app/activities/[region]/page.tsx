@@ -38,6 +38,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [{ url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=630&fit=crop' }],
     },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: ['https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&h=630&fit=crop'],
+    },
   };
 }
 
