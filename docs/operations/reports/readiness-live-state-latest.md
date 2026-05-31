@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-31T00:55:52.818Z -->
+<!-- query_timestamp: 2026-05-31T07:24:23.016Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T00:55:52.818Z  
-**Commit SHA:** `054027616e429a09ac32ac6a1e3297eb07c780bb`
+**Query timestamp:** 2026-05-31T07:24:23.016Z  
+**Commit SHA:** `965b718a67bbe1d9967d82d63dcbbd1add905f68`
 
 ---
 
@@ -17,20 +17,19 @@
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 | #868 | [docs(qa): refresh #828 launch-critical evidence against latest staging](https://github.com/smallwei0301/tour-platform/pull/868) | `claude/qa-828-evidence-20260528` |
 
-## Open Issues (21 total)
+## Open Issues (18 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (11)
+### P1 (10)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1022 | [[Booking V2] Participant count change incorrectly clears available date as CAPACITY_EXCEEDED](https://github.com/smallwei0301/tour-platform/issues/1022) | triaged, type:bug, priority:P1, owner:ai-agent, status:ready, traveler-booking, launch:first-payment-blocker, booking-v2, regression |
 | #982 | [[QA] Daily test checklist for recent merged PRs 2026-05-31](https://github.com/smallwei0301/tour-platform/issues/982) | priority:P1, qa |
 | #959 | [[QA] Daily test checklist for recent merged PRs 2026-05-30](https://github.com/smallwei0301/tour-platform/issues/959) | priority:P1, qa |
-| #909 | [[P1] #883 phase 2 APPLY: 修復 5 個 missing formal plans + 1 個 pricing mismatch（dry-run report 已產出）](https://github.com/smallwei0301/tour-platform/issues/909) | type:bug, priority:P1, owner:ai-agent, status:ready, traveler-booking, database, booking-v2 |
-| #880 | [[Bug] Booking V2 公開方案 slug/UUID 不一致導致 Invalid planId format，且容量與後台不符](https://github.com/smallwei0301/tour-platform/issues/880) | bug, type:bug, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, booking-v2 |
 | #838 | [[Traveler Booking] Align Booking V2 price with selected plan amount](https://github.com/smallwei0301/tour-platform/issues/838) | triaged, type:bug, priority:P1, agent:next, owner:ai-agent, status:blocked, traveler-booking, launch:first-payment-blocker |
 | #824 | [[QA] Verify post-#818 Booking V2 availability delta for PR #820/#823](https://github.com/smallwei0301/tour-platform/issues/824) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:queued, owner:ai-agent, status:ready, infra, status:awaiting-implementation, launch:first-payment-blocker |
@@ -39,11 +38,10 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (9)
+### P2 (8)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #981 | [[Auto Check] STAGING healthcheck returns 404 at /api/health](https://github.com/smallwei0301/tour-platform/issues/981) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #980 | [[QA] Verify late-wave PRs #961-#979 regression after 2026-05-30 merges](https://github.com/smallwei0301/tour-platform/issues/980) | triaged, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, infra, docs |
 | #978 | [[Ops] Verify post-#970 Booking V2 variant metrics are populated before trusting delta GO](https://github.com/smallwei0301/tour-platform/issues/978) | triaged, type:investigation, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, infra, booking-v2 |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
@@ -57,11 +55,9 @@ _none_
 
 _none_
 
-### Other (1)
+### Other (0)
 
-| # | Title | Labels |
-|---|-------|--------|
-| #907 | [chore(data): demote 3 playwright/e2e test-seed activities from status=published](https://github.com/smallwei0301/tour-platform/issues/907) | good-first-issue, seo, data-hygiene, ops |
+_none_
 
 ---
 
@@ -69,16 +65,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #979 | [perf: convert homepage hero to priority Next.js Image for LCP (closes #977)](https://github.com/smallwei0301/tour-platform/pull/979) | 2026-05-30 |
-| #976 | [seo/a11y: fix aggregateRating schema + admin modal ARIA (closes #974, closes #975)](https://github.com/smallwei0301/tour-platform/pull/976) | 2026-05-30 |
-| #973 | [a11y/seo: CalendarModal focus trap + activities/[region] metadata (closes #971, closes #972)](https://github.com/smallwei0301/tour-platform/pull/973) | 2026-05-30 |
-| #970 | [feat(rollout): legacy/v2 funnel delta metrics for Booking V2 Go/No-Go (closes #965)](https://github.com/smallwei0301/tour-platform/pull/970) | 2026-05-30 |
-| #969 | [a11y: add focus trap and Escape-close to PlanDetailModal (closes #951)](https://github.com/smallwei0301/tour-platform/pull/969) | 2026-05-30 |
-| #968 | [docs(qa): correct andy-lee-private-tour to canonical URL (closes #902)](https://github.com/smallwei0301/tour-platform/pull/968) | 2026-05-30 |
-| #967 | [fix(ci): repair auto-check-issue-policy YAML structure (closes #966)](https://github.com/smallwei0301/tour-platform/pull/967) | 2026-05-30 |
-| #964 | [fix(a11y): add GH-960 detail tab keyboard semantics](https://github.com/smallwei0301/tour-platform/pull/964) | 2026-05-30 |
-| #963 | [fix(activities): normalize GH-960 type filter restore](https://github.com/smallwei0301/tour-platform/pull/963) | 2026-05-30 |
-| #962 | [fix(api): return empty availability for ambiguous booking plan](https://github.com/smallwei0301/tour-platform/pull/962) | 2026-05-30 |
+| #1024 | [a11y: label associations for traveler order review/refund form](https://github.com/smallwei0301/tour-platform/pull/1024) | 2026-05-31 |
+| #1023 | [a11y: add htmlFor/id to admin soft-launch reason textarea](https://github.com/smallwei0301/tour-platform/pull/1023) | 2026-05-31 |
+| #1021 | [a11y: proper label associations on admin activity plans form (closes aria-label redundancy)](https://github.com/smallwei0301/tour-platform/pull/1021) | 2026-05-31 |
+| #1020 | [a11y: label associations for guide/availability + admin guide availability forms](https://github.com/smallwei0301/tour-platform/pull/1020) | 2026-05-31 |
+| #1019 | [a11y: htmlFor/id on admin orders + activities edit form fields](https://github.com/smallwei0301/tour-platform/pull/1019) | 2026-05-31 |
+| #1018 | [a11y: label associations for admin KPI settings + operations-tracking forms](https://github.com/smallwei0301/tour-platform/pull/1018) | 2026-05-31 |
+| #1017 | [a11y: guide login label/id + outline fix + admin settings/promo-codes form associations](https://github.com/smallwei0301/tour-platform/pull/1017) | 2026-05-31 |
+| #1016 | [a11y: htmlFor/id on admin guides edit form fields (closes #1015)](https://github.com/smallwei0301/tour-platform/pull/1016) | 2026-05-31 |
+| #1014 | [perf: fix Image dimensions on remaining small thumbnails (closes #1013)](https://github.com/smallwei0301/tour-platform/pull/1014) | 2026-05-31 |
+| #1012 | [perf: correct Image width/height on small thumbnails for better srcset (closes #1011)](https://github.com/smallwei0301/tour-platform/pull/1012) | 2026-05-31 |
 
 ---
 
