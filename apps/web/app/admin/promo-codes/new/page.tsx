@@ -96,8 +96,9 @@ export default function AdminNewPromoCodePage() {
 
             {/* Code */}
             <div>
-              <label style={labelStyle}>折扣碼 *</label>
+              <label htmlFor="promo-code" style={labelStyle}>折扣碼 *</label>
               <input
+                id="promo-code"
                 type="text"
                 required
                 placeholder="例：SUMMER2026"
@@ -113,8 +114,9 @@ export default function AdminNewPromoCodePage() {
 
             {/* Discount Type */}
             <div>
-              <label style={labelStyle}>折扣類型 *</label>
+              <label htmlFor="promo-discount-type" style={labelStyle}>折扣類型 *</label>
               <select
+                id="promo-discount-type"
                 value={form.discount_type}
                 onChange={(e) => handleChange('discount_type', e.target.value)}
                 style={{ ...inputStyle, cursor: 'pointer' }}
@@ -126,10 +128,11 @@ export default function AdminNewPromoCodePage() {
 
             {/* Discount Value */}
             <div>
-              <label style={labelStyle}>
+              <label htmlFor="promo-discount-value" style={labelStyle}>
                 折扣值 * ({form.discount_type === 'percentage' ? '%' : 'NT$'})
               </label>
               <input
+                id="promo-discount-value"
                 type="number"
                 required
                 min="0.01"
@@ -143,8 +146,9 @@ export default function AdminNewPromoCodePage() {
 
             {/* Max Uses */}
             <div>
-              <label style={labelStyle}>最大使用次數</label>
+              <label htmlFor="promo-max-uses" style={labelStyle}>最大使用次數</label>
               <input
+                id="promo-max-uses"
                 type="number"
                 min="1"
                 step="1"
@@ -156,8 +160,9 @@ export default function AdminNewPromoCodePage() {
 
             {/* Per User Limit */}
             <div>
-              <label style={labelStyle}>每人使用次數限制</label>
+              <label htmlFor="promo-per-user-limit" style={labelStyle}>每人使用次數限制</label>
               <input
+                id="promo-per-user-limit"
                 type="number"
                 min="1"
                 step="1"
@@ -169,8 +174,9 @@ export default function AdminNewPromoCodePage() {
 
             {/* Expires At */}
             <div>
-              <label style={labelStyle}>到期日（可選）</label>
+              <label htmlFor="promo-expires-at" style={labelStyle}>到期日（可選）</label>
               <input
+                id="promo-expires-at"
                 type="datetime-local"
                 value={form.expires_at}
                 onChange={(e) => handleChange('expires_at', e.target.value)}
