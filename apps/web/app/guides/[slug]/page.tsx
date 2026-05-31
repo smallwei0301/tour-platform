@@ -49,6 +49,8 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
         ...(guide.region ? { address: { '@type': 'PostalAddress', addressLocality: guide.region, addressCountry: 'TW' } } : {}),
         ...(guide.ratingAvg != null && guide.reviewCount >= 1 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: guide.ratingAvg, reviewCount: guide.reviewCount } } : {}),
         ...(guide.bio ? { description: guide.bio } : {}),
+        ...(guide.specialties?.length ? { knowsAbout: guide.specialties } : {}),
+        ...(guide.languages?.length ? { knowsLanguage: guide.languages } : {}),
       },
       {
         '@type': 'BreadcrumbList',
