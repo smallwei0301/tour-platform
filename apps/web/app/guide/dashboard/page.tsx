@@ -304,10 +304,10 @@ export default function GuideDashboardPage() {
             <thead>
               <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, borderBottom: '1px solid #e5e7eb' }}>
                 <th style={{ padding: '8px 10px' }}>訂單編號</th>
-                <th>行程名稱</th>
-                <th>出團日</th>
-                <th>訂單金額</th>
-                <th>當前狀態</th>
+                <th scope="col">行程名稱</th>
+                <th scope="col">出團日</th>
+                <th scope="col">訂單金額</th>
+                <th scope="col">當前狀態</th>
               </tr>
             </thead>
             <tbody>
@@ -387,10 +387,10 @@ export default function GuideDashboardPage() {
             <thead>
               <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, borderBottom: '1px solid #e5e7eb' }}>
                 <th style={{ padding: '8px 10px' }}>旅客</th>
-                <th>行程</th>
-                <th>人數</th>
+                <th scope="col">行程</th>
+                <th scope="col">人數</th>
                 <th>狀態</th>
-                <th>金額</th>
+                <th scope="col">金額</th>
                 <th>時間</th>
               </tr>
             </thead>

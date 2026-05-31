@@ -26,11 +26,11 @@ export default function AdminOrdersPage() {
       <table cellPadding={8}>
         <thead>
           <tr>
-            <th>Order ID</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Cost</th>
-            <th>Margin</th>
+            <th scope="col">Order ID</th>
+            <th scope="col">Status</th>
+            <th scope="col">Total</th>
+            <th scope="col">Cost</th>
+            <th scope="col">Margin</th>
           </tr>
         </thead>
         <tbody>
