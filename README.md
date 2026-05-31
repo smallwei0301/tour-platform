@@ -30,7 +30,7 @@
 
 ---
 
-## 1. 專案現況（2026-05-25）
+## 1. 專案現況（2026-06-01）
 
 ### 已完成的基礎能力
 - 前台 MVP 已完成
@@ -54,7 +54,7 @@
 **Launch / Observation：**
 - #642 繼續監看 V2 observation window，避免 legacy fallback 靜默回歸
 - #784 / #704 維持近期 merged PR 的 daily QA checklist
-- open PR 目前為 0；主線工作集中在 open issues 與下一批 PR
+- open PR 目前為 1；主線工作集中在 open issues 與下一批 PR
 
 **Ops / Readiness：**
 - #607 / #714：production alert drill 與 operator evidence
@@ -86,7 +86,7 @@
 > [`docs/operations/reports/readiness-live-state-latest.md`](./docs/operations/reports/readiness-live-state-latest.md)
 
 - main 持續以 CI / readiness snapshot 作為真值；本 README 不手寫即時數字
-- 最新 merge（截至 2026-05-25）：PR #789（fix: render Booking V2 with legacy booking UI）
+- 最新 merge（截至 2026-06-01）：PR #1062（docs: add GH-1061 late PR regression QA report）
 - **Node 22 已 pin**：.nvmrc + engines field（PR #548）
 - **目前主線焦點：** #621 / #787 已 CLOSED；#642 持續監看 observation window 與 legacy fallback。當前優先事項請查閱 `docs/operations/reports/readiness-live-state-latest.md` 或執行 `npm run readiness:snapshot`。
 - **Automated health-check issue policy:** for dedupe lookup, required labels, sanitized body fields, and survivor designation, see [`docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md` — "Automated health-check issues"](./docs/ISSUE_ROUTING_AND_CLASSIFICATION_SOP.md#automated-health-check-issues).
