@@ -287,7 +287,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                           src={item.imageUrl}
                           alt=""
                           loading="lazy"
-                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }} width={1200} height={675} />
+                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }} width={360} height={240} />
                       )}
                     </li>
                   ))}
