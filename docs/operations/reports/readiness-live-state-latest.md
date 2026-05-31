@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-31T16:17:24.589Z -->
+<!-- query_timestamp: 2026-05-31T17:35:59.752Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T16:17:24.589Z  
-**Commit SHA:** `90d453dc2999ac160f60a7e99d112300eb448307`
+**Query timestamp:** 2026-05-31T17:35:59.752Z  
+**Commit SHA:** `a3b41177d551391e547aa83ac0cc2b7a86e7a909`
 
 ---
 
@@ -60,16 +60,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1033 | [fix(test): isolate issue965 go-no-go fixture tests to prevent parallel-run races](https://github.com/smallwei0301/tour-platform/pull/1033) | 2026-05-31 |
-| #1031 | [feat(guides): add text search with URL persistence to guides listing](https://github.com/smallwei0301/tour-platform/pull/1031) | 2026-05-31 |
-| #1030 | [feat(guides): wire up sort controls on guides listing](https://github.com/smallwei0301/tour-platform/pull/1030) | 2026-05-31 |
-| #1029 | [feat(guides): wire up URL-persistent filter controls on guides listing](https://github.com/smallwei0301/tour-platform/pull/1029) | 2026-05-31 |
-| #1028 | [fix(ops): add DATA_QUALITY_WARNING when aggregate > 0 but variant counts = 0](https://github.com/smallwei0301/tour-platform/pull/1028) | 2026-05-31 |
-| #1025 | [fix: keep Booking V2 selected date on participant changes](https://github.com/smallwei0301/tour-platform/pull/1025) | 2026-05-31 |
-| #1024 | [a11y: label associations for traveler order review/refund form](https://github.com/smallwei0301/tour-platform/pull/1024) | 2026-05-31 |
-| #1023 | [a11y: add htmlFor/id to admin soft-launch reason textarea](https://github.com/smallwei0301/tour-platform/pull/1023) | 2026-05-31 |
-| #1021 | [a11y: proper label associations on admin activity plans form (closes aria-label redundancy)](https://github.com/smallwei0301/tour-platform/pull/1021) | 2026-05-31 |
-| #1020 | [a11y: label associations for guide/availability + admin guide availability forms](https://github.com/smallwei0301/tour-platform/pull/1020) | 2026-05-31 |
+| #1047 | [seo: add numberOfItems to guides listing ItemList JSON-LD schema](https://github.com/smallwei0301/tour-platform/pull/1047) | 2026-05-31 |
+| #1046 | [seo: add knowsAbout and knowsLanguage to guide profile JSON-LD](https://github.com/smallwei0301/tour-platform/pull/1046) | 2026-05-31 |
+| #1045 | [feat/a11y: extend guides search to include languages; add aria-label to admin date inputs](https://github.com/smallwei0301/tour-platform/pull/1045) | 2026-05-31 |
+| #1044 | [a11y: add aria-expanded and aria-controls to guide mobile navigation button](https://github.com/smallwei0301/tour-platform/pull/1044) | 2026-05-31 |
+| #1043 | [a11y: add ARIA dialog to admin mobile navigation drawer](https://github.com/smallwei0301/tour-platform/pull/1043) | 2026-05-31 |
+| #1042 | [a11y: add ARIA dialog pattern to guide bookings order detail modal](https://github.com/smallwei0301/tour-platform/pull/1042) | 2026-05-31 |
+| #1041 | [test: extend issue1027 test suite to cover guides text search contract](https://github.com/smallwei0301/tour-platform/pull/1041) | 2026-05-31 |
+| #1040 | [a11y: add aria-label to guide and admin navigation landmarks](https://github.com/smallwei0301/tour-platform/pull/1040) | 2026-05-31 |
+| #1039 | [a11y: add ARIA dialog pattern to traveler order cancel dialog](https://github.com/smallwei0301/tour-platform/pull/1039) | 2026-05-31 |
+| #1038 | [a11y: add ARIA tablist/tab semantics to admin status filter tabs](https://github.com/smallwei0301/tour-platform/pull/1038) | 2026-05-31 |
 
 ---
 
