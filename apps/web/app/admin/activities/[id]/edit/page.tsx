@@ -1318,7 +1318,7 @@ export default function AdminActivityEditPage() {
                   style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="地點名稱" />
                 <input value={step.duration} onChange={e => { const s=[...itinerary]; s[i]={...s[i],duration:e.target.value}; setItinerary(s); }}
                   style={{ width: 90, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px' }} placeholder="60分鐘" />
-                <button type="button" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
+                <button type="button" aria-label="移除行程點" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
                   style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
               </div>
               <textarea value={step.description} onChange={e => { const s=[...itinerary]; s[i]={...s[i],description:e.target.value}; setItinerary(s); }}
@@ -1352,7 +1352,7 @@ export default function AdminActivityEditPage() {
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <input value={item.q} onChange={e => { const f=[...faq]; f[i]={...f[i],q:e.target.value}; setFaq(f); }}
                   style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="問題" />
-                <button type="button" onClick={() => setFaq(faq.filter((_,j)=>j!==i))}
+                <button type="button" aria-label="移除常見問題" onClick={() => setFaq(faq.filter((_,j)=>j!==i))}
                   style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
               </div>
               <textarea value={item.a} onChange={e => { const f=[...faq]; f[i]={...f[i],a:e.target.value}; setFaq(f); }}
