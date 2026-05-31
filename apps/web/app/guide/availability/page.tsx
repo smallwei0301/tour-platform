@@ -398,8 +398,8 @@ export default function GuideAvailabilityPage() {
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="rule-modal-title" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 id="rule-modal-title" style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
@@ -556,8 +556,8 @@ export default function GuideAvailabilityPage() {
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingBlackout ? '編輯休假時段' : '新增休假時段'}</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="blackout-modal-title" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <h3 id="blackout-modal-title" style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingBlackout ? '編輯休假時段' : '新增休假時段'}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label htmlFor="avail-blackout-starts-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
