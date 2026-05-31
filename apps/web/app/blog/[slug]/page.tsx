@@ -99,6 +99,12 @@ export async function generateMetadata(
       images: article.imageUrl ? [{ url: article.imageUrl, width: 1200, height: 630, alt: `${article.title} — 旅遊指南封面圖` }] : [],
       type: 'article',
     },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${article.title} | Midao 祕島`,
+      description: article.content.slice(0, 120).replace(/\n/g, ' '),
+      ...(article.imageUrl ? { images: [article.imageUrl] } : {}),
+    },
   };
 }
 
