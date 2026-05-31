@@ -273,10 +273,11 @@ export default function SoftLaunchPage() {
                   </strong>
                 </p>
 
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
+                <label htmlFor="soft-launch-reason" style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 6 }}>
                   變更原因 <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <textarea
+                  id="soft-launch-reason"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="請說明此次變更的原因..."
