@@ -1,0 +1,291 @@
+'use client';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+
+interface Guide {
+  slug: string;
+  displayName: string;
+  region?: string;
+  languages?: string[];
+  specialties?: string[];
+  profilePhotoUrl?: string;
+  ratingAvg?: number;
+  reviewCount?: number;
+  headline?: string;
+  serviceCount?: number;
+}
+
+interface GuidesContentProps {
+  guides: any[];
+}
+
+export default function GuidesContent({ guides }: GuidesContentProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // Derive filter options from actual guide data
+  const { regions, languages, specialties } = useMemo(() => {
+    const regionSet = new Set<string>();
+    const languageSet = new Set<string>();
+    const specialtySet = new Set<string>();
+    for (const g of guides) {
+      if (g.region) regionSet.add(g.region);
+      if (Array.isArray(g.languages)) g.languages.forEach((l: string) => languageSet.add(l));
+      if (Array.isArray(g.specialties)) g.specialties.forEach((s: string) => specialtySet.add(s));
+    }
+    return {
+      regions: Array.from(regionSet).sort(),
+      languages: Array.from(languageSet).sort(),
+      specialties: Array.from(specialtySet).sort(),
+    };
+  }, [guides]);
+
+  // Initialize state from URL params
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(
+    () => searchParams.getAll('region')
+  );
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
+    () => searchParams.getAll('lang')
+  );
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
+    () => searchParams.getAll('spec')
+  );
+
+  // Sync URL → state when URL params change (back/forward navigation)
+  useEffect(() => {
+    setSelectedRegions(searchParams.getAll('region'));
+    setSelectedLanguages(searchParams.getAll('lang'));
+    setSelectedSpecialties(searchParams.getAll('spec'));
+  }, [searchParams]);
+
+  function buildUrl(
+    regions: string[],
+    langs: string[],
+    specs: string[]
+  ): string {
+    const params = new URLSearchParams();
+    regions.forEach((r) => params.append('region', r));
+    langs.forEach((l) => params.append('lang', l));
+    specs.forEach((s) => params.append('spec', s));
+    const qs = params.toString();
+    return qs ? `/guides?${qs}` : '/guides';
+  }
+
+  function toggleRegion(r: string) {
+    const next = selectedRegions.includes(r)
+      ? selectedRegions.filter((x) => x !== r)
+      : [...selectedRegions, r];
+    setSelectedRegions(next);
+    router.push(buildUrl(next, selectedLanguages, selectedSpecialties), { scroll: false });
+  }
+
+  function toggleLanguage(l: string) {
+    const next = selectedLanguages.includes(l)
+      ? selectedLanguages.filter((x) => x !== l)
+      : [...selectedLanguages, l];
+    setSelectedLanguages(next);
+    router.push(buildUrl(selectedRegions, next, selectedSpecialties), { scroll: false });
+  }
+
+  function toggleSpecialty(s: string) {
+    const next = selectedSpecialties.includes(s)
+      ? selectedSpecialties.filter((x) => x !== s)
+      : [...selectedSpecialties, s];
+    setSelectedSpecialties(next);
+    router.push(buildUrl(selectedRegions, selectedLanguages, next), { scroll: false });
+  }
+
+  function clearAll() {
+    setSelectedRegions([]);
+    setSelectedLanguages([]);
+    setSelectedSpecialties([]);
+    router.push('/guides');
+  }
+
+  // Filter guides in-memory
+  const filtered = useMemo(() => {
+    let result: Guide[] = [...(guides as Guide[])];
+    if (selectedRegions.length > 0) {
+      result = result.filter((g) => g.region && selectedRegions.includes(g.region));
+    }
+    if (selectedLanguages.length > 0) {
+      result = result.filter((g) =>
+        selectedLanguages.some((l) => g.languages?.includes(l))
+      );
+    }
+    if (selectedSpecialties.length > 0) {
+      result = result.filter((g) =>
+        selectedSpecialties.some((s) => g.specialties?.includes(s))
+      );
+    }
+    return result;
+  }, [guides, selectedRegions, selectedLanguages, selectedSpecialties]);
+
+  const hasFilters =
+    selectedRegions.length > 0 ||
+    selectedLanguages.length > 0 ||
+    selectedSpecialties.length > 0;
+
+  return (
+    <section className="tp-activities-layout">
+      {/* Filter sidebar */}
+      <aside className="tp-filter" aria-label="篩選條件">
+        <div className="tp-filter-head">
+          <h3>導遊篩選</h3>
+          {hasFilters && (
+            <button
+              onClick={clearAll}
+              style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}
+            >
+              清除全部
+            </button>
+          )}
+        </div>
+
+        {/* Region */}
+        {regions.length > 0 && (
+          <details open>
+            <summary>縣市</summary>
+            {regions.map((r) => (
+              <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedRegions.includes(r)}
+                  onChange={() => toggleRegion(r)}
+                />
+                {r}
+              </label>
+            ))}
+          </details>
+        )}
+
+        {/* Language */}
+        {languages.length > 0 && (
+          <details open>
+            <summary>語言</summary>
+            {languages.map((l) => (
+              <label key={l} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedLanguages.includes(l)}
+                  onChange={() => toggleLanguage(l)}
+                />
+                {l}
+              </label>
+            ))}
+          </details>
+        )}
+
+        {/* Specialty */}
+        {specialties.length > 0 && (
+          <details open>
+            <summary>主題專長</summary>
+            {specialties.map((s) => (
+              <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedSpecialties.includes(s)}
+                  onChange={() => toggleSpecialty(s)}
+                />
+                {s}
+              </label>
+            ))}
+          </details>
+        )}
+      </aside>
+
+      {/* Results section */}
+      <section>
+        <div className="tp-result-head">
+          <h1>全台灣 {filtered.length} 位在地導遊</h1>
+          <select aria-label="排序">
+            <option>推薦排序</option>
+            <option>評分高到低</option>
+            <option>評價多到少</option>
+          </select>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
+            <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的導遊</p>
+            <p style={{ fontSize: 14, marginBottom: 20 }}>試試看其他篩選條件，或清除現有篩選</p>
+            <button onClick={clearAll} className="tp-btn tp-btn-primary">
+              清除所有篩選
+            </button>
+          </div>
+        ) : (
+          <div className="tp-card-grid tp-card-grid-activities">
+            {filtered.map((g: any, idx: number) => (
+              <article className="tp-card" key={g.slug}>
+                <div style={{ position: 'relative' }}>
+                  <Image
+                    src={
+                      g.profilePhotoUrl ||
+                      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'
+                    }
+                    alt={g.displayName}
+                    style={{
+                      width: '100%',
+                      aspectRatio: '3/4',
+                      objectFit: 'cover',
+                      borderRadius: 10,
+                    }}
+                    priority={idx === 0}
+                    loading={idx === 0 ? undefined : 'lazy'}
+                    width={1200}
+                    height={675}
+                  />
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: 8,
+                      right: 8,
+                      background: '#27ae60',
+                      color: '#fff',
+                      padding: '3px 8px',
+                      borderRadius: 6,
+                      fontSize: 12,
+                    }}
+                  >
+                    ✅ 已驗證
+                  </span>
+                </div>
+                <h3 style={{ marginTop: 10 }}>{g.displayName}</h3>
+                <p>
+                  ⭐ {g.ratingAvg?.toFixed(1) || '5.0'}（{g.reviewCount || 0} 則評價）
+                </p>
+                <p>📍 {g.region}</p>
+                {g.languages?.length > 0 && (
+                  <p>🌍 {g.languages.slice(0, 3).join('、')}</p>
+                )}
+                {g.specialties?.length > 0 && (
+                  <p style={{ fontSize: 13 }}>{g.specialties.slice(0, 3).join(' · ')}</p>
+                )}
+                {g.headline && (
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: 'var(--tp-muted)',
+                      fontStyle: 'italic',
+                      margin: '6px 0',
+                    }}
+                  >
+                    「{g.headline.length > 40 ? g.headline.slice(0, 40) + '...' : g.headline}」
+                  </p>
+                )}
+                <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>
+                  {g.serviceCount || 0} 次服務
+                </p>
+                <Link className="tp-link" href={`/guides/${g.slug}`}>
+                  查看導遊簡介 →
+                </Link>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </section>
+  );
+}

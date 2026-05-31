@@ -1,0 +1,44 @@
+import test, { describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
+const guidesContentSrc = readFileSync(path.join(ROOT, 'app/guides/GuidesContent.tsx'), 'utf8');
+const guidePageSrc = readFileSync(path.join(ROOT, 'app/guides/page.tsx'), 'utf8');
+
+describe('issue #1027 — guides listing filter URL persistence', () => {
+  test('GuidesContent.tsx uses useSearchParams and useRouter', () => {
+    assert.ok(guidesContentSrc.includes("'use client'"), 'must be a client component');
+    assert.ok(guidesContentSrc.includes('useSearchParams'), 'must use useSearchParams');
+    assert.ok(guidesContentSrc.includes('useRouter'), 'must use useRouter');
+  });
+
+  test('GuidesContent.tsx updates URL on filter toggle', () => {
+    assert.ok(
+      guidesContentSrc.includes('router.push') || guidesContentSrc.includes('router.replace'),
+      'must update URL on filter change'
+    );
+  });
+
+  test('GuidesContent.tsx derives filter options from data', () => {
+    assert.ok(
+      guidesContentSrc.includes('useMemo') || guidesContentSrc.includes('new Set'),
+      'must derive filter options from guide data'
+    );
+  });
+
+  test('page.tsx wraps GuidesContent in Suspense', () => {
+    assert.ok(guidePageSrc.includes('Suspense'), 'page.tsx must wrap GuidesContent in Suspense');
+    assert.ok(guidePageSrc.includes('GuidesContent'), 'page.tsx must import and render GuidesContent');
+  });
+
+  test('page.tsx passes guides prop to GuidesContent', () => {
+    assert.ok(
+      guidePageSrc.includes('guides={guides') || guidePageSrc.includes('guides={'),
+      'page.tsx must pass guides as prop to GuidesContent'
+    );
+  });
+});
