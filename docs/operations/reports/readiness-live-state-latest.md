@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-05-31T18:24:45.774Z -->
+<!-- query_timestamp: 2026-05-31T18:29:27.420Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T18:24:45.774Z  
-**Commit SHA:** `7ee229720d997ce1a37c79ffb48987671c24c7a4`
+**Query timestamp:** 2026-05-31T18:29:27.420Z  
+**Commit SHA:** `9b6406692e6834ecea27b713eab8066a023295b8`
 
 ---
 
-## Open PRs (1)
+## Open PRs (2)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1059 | [seo: add Twitter card to activities region listing pages](https://github.com/smallwei0301/tour-platform/pull/1059) | `seo/activities-region-twitter-card` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (15 total)
