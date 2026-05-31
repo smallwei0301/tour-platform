@@ -186,7 +186,7 @@ export default function AdminQAPage() {
       />
 
       {/* Status filter tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div role="tablist" aria-label="問題狀態篩選" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {[
           { value: 'pending', label: '待審核' },
           { value: 'approved', label: '已核准' },
@@ -195,6 +195,8 @@ export default function AdminQAPage() {
         ].map(tab => (
           <button
             key={tab.value}
+            role="tab"
+            aria-selected={statusFilter === tab.value}
             onClick={() => setStatusFilter(tab.value)}
             style={{
               padding: '7px 16px', borderRadius: 8, border: '1px solid #e5e7eb',
