@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-31T15:00:56.174Z -->
+<!-- query_timestamp: 2026-05-31T16:17:24.589Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T15:00:56.174Z  
-**Commit SHA:** `48d4295cb6669c8e177138a8b00b2bf6106ff4e1`
+**Query timestamp:** 2026-05-31T16:17:24.589Z  
+**Commit SHA:** `90d453dc2999ac160f60a7e99d112300eb448307`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (17 total)
+## Open Issues (14 total)
 
 ### P0 (0)
 
@@ -35,13 +35,10 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (9)
+### P2 (6)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1027 | [[UX/SEO] Wire up guides listing filter controls and make selections URL-persistent](https://github.com/smallwei0301/tour-platform/issues/1027) | type:optimization, priority:P2, traveler-booking |
-| #980 | [[QA] Verify late-wave PRs #961-#979 regression after 2026-05-30 merges](https://github.com/smallwei0301/tour-platform/issues/980) | triaged, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, infra, docs |
-| #978 | [[Ops] Verify post-#970 Booking V2 variant metrics are populated before trusting delta GO](https://github.com/smallwei0301/tour-platform/issues/978) | triaged, type:investigation, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, infra, booking-v2 |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
 | #724 | [[Ops] Execute Supabase live restore drill within 7 days after soft launch](https://github.com/smallwei0301/tour-platform/issues/724) | triaged, type:investigation, priority:P2, agent:backlog, owner:mixed, database, infra, status:awaiting-implementation, launch:post-first-payment |
@@ -63,16 +60,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1033 | [fix(test): isolate issue965 go-no-go fixture tests to prevent parallel-run races](https://github.com/smallwei0301/tour-platform/pull/1033) | 2026-05-31 |
+| #1031 | [feat(guides): add text search with URL persistence to guides listing](https://github.com/smallwei0301/tour-platform/pull/1031) | 2026-05-31 |
+| #1030 | [feat(guides): wire up sort controls on guides listing](https://github.com/smallwei0301/tour-platform/pull/1030) | 2026-05-31 |
+| #1029 | [feat(guides): wire up URL-persistent filter controls on guides listing](https://github.com/smallwei0301/tour-platform/pull/1029) | 2026-05-31 |
+| #1028 | [fix(ops): add DATA_QUALITY_WARNING when aggregate > 0 but variant counts = 0](https://github.com/smallwei0301/tour-platform/pull/1028) | 2026-05-31 |
 | #1025 | [fix: keep Booking V2 selected date on participant changes](https://github.com/smallwei0301/tour-platform/pull/1025) | 2026-05-31 |
 | #1024 | [a11y: label associations for traveler order review/refund form](https://github.com/smallwei0301/tour-platform/pull/1024) | 2026-05-31 |
 | #1023 | [a11y: add htmlFor/id to admin soft-launch reason textarea](https://github.com/smallwei0301/tour-platform/pull/1023) | 2026-05-31 |
 | #1021 | [a11y: proper label associations on admin activity plans form (closes aria-label redundancy)](https://github.com/smallwei0301/tour-platform/pull/1021) | 2026-05-31 |
 | #1020 | [a11y: label associations for guide/availability + admin guide availability forms](https://github.com/smallwei0301/tour-platform/pull/1020) | 2026-05-31 |
-| #1019 | [a11y: htmlFor/id on admin orders + activities edit form fields](https://github.com/smallwei0301/tour-platform/pull/1019) | 2026-05-31 |
-| #1018 | [a11y: label associations for admin KPI settings + operations-tracking forms](https://github.com/smallwei0301/tour-platform/pull/1018) | 2026-05-31 |
-| #1017 | [a11y: guide login label/id + outline fix + admin settings/promo-codes form associations](https://github.com/smallwei0301/tour-platform/pull/1017) | 2026-05-31 |
-| #1016 | [a11y: htmlFor/id on admin guides edit form fields (closes #1015)](https://github.com/smallwei0301/tour-platform/pull/1016) | 2026-05-31 |
-| #1014 | [perf: fix Image dimensions on remaining small thumbnails (closes #1013)](https://github.com/smallwei0301/tour-platform/pull/1014) | 2026-05-31 |
 
 ---
 
