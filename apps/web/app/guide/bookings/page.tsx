@@ -130,6 +130,7 @@ export default function GuideBookingsPage() {
           onClick={() => !detailLoading && setSelected(null)}
         >
           <div
+            role="dialog" aria-modal="true" aria-labelledby="booking-detail-modal-title"
             style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 500, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -138,7 +139,7 @@ export default function GuideBookingsPage() {
             ) : selected && (
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>訂單詳情</h3>
+                  <h3 id="booking-detail-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>訂單詳情</h3>
                   <button aria-label="關閉" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>✕</button>
                 </div>
 
