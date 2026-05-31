@@ -41,4 +41,19 @@ describe('issue #1027 — guides listing filter URL persistence', () => {
       'page.tsx must pass guides as prop to GuidesContent'
     );
   });
+
+  test('GuidesContent.tsx has functional sort (rating-desc and reviews-desc)', () => {
+    assert.ok(
+      guidesContentSrc.includes('rating-desc'),
+      'must support sort by rating descending'
+    );
+    assert.ok(
+      guidesContentSrc.includes('reviews-desc'),
+      'must support sort by review count descending'
+    );
+    assert.ok(
+      guidesContentSrc.includes('handleSort'),
+      'must have a handleSort handler wired to the select onChange'
+    );
+  });
 });

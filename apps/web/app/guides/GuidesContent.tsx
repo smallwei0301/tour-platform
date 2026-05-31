@@ -52,23 +52,29 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>(
     () => searchParams.getAll('spec')
   );
+  const [sort, setSort] = useState<string>(
+    () => searchParams.get('sort') ?? 'recommended'
+  );
 
   // Sync URL → state when URL params change (back/forward navigation)
   useEffect(() => {
     setSelectedRegions(searchParams.getAll('region'));
     setSelectedLanguages(searchParams.getAll('lang'));
     setSelectedSpecialties(searchParams.getAll('spec'));
+    setSort(searchParams.get('sort') ?? 'recommended');
   }, [searchParams]);
 
   function buildUrl(
     regions: string[],
     langs: string[],
-    specs: string[]
+    specs: string[],
+    sortVal: string
   ): string {
     const params = new URLSearchParams();
     regions.forEach((r) => params.append('region', r));
     langs.forEach((l) => params.append('lang', l));
     specs.forEach((s) => params.append('spec', s));
+    if (sortVal && sortVal !== 'recommended') params.set('sort', sortVal);
     const qs = params.toString();
     return qs ? `/guides?${qs}` : '/guides';
   }
@@ -78,7 +84,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       ? selectedRegions.filter((x) => x !== r)
       : [...selectedRegions, r];
     setSelectedRegions(next);
-    router.push(buildUrl(next, selectedLanguages, selectedSpecialties), { scroll: false });
+    router.push(buildUrl(next, selectedLanguages, selectedSpecialties, sort), { scroll: false });
   }
 
   function toggleLanguage(l: string) {
@@ -86,7 +92,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       ? selectedLanguages.filter((x) => x !== l)
       : [...selectedLanguages, l];
     setSelectedLanguages(next);
-    router.push(buildUrl(selectedRegions, next, selectedSpecialties), { scroll: false });
+    router.push(buildUrl(selectedRegions, next, selectedSpecialties, sort), { scroll: false });
   }
 
   function toggleSpecialty(s: string) {
@@ -94,17 +100,23 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       ? selectedSpecialties.filter((x) => x !== s)
       : [...selectedSpecialties, s];
     setSelectedSpecialties(next);
-    router.push(buildUrl(selectedRegions, selectedLanguages, next), { scroll: false });
+    router.push(buildUrl(selectedRegions, selectedLanguages, next, sort), { scroll: false });
+  }
+
+  function handleSort(s: string) {
+    setSort(s);
+    router.push(buildUrl(selectedRegions, selectedLanguages, selectedSpecialties, s), { scroll: false });
   }
 
   function clearAll() {
     setSelectedRegions([]);
     setSelectedLanguages([]);
     setSelectedSpecialties([]);
+    setSort('recommended');
     router.push('/guides');
   }
 
-  // Filter guides in-memory
+  // Filter and sort guides in-memory
   const filtered = useMemo(() => {
     let result: Guide[] = [...(guides as Guide[])];
     if (selectedRegions.length > 0) {
@@ -120,13 +132,19 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
         selectedSpecialties.some((s) => g.specialties?.includes(s))
       );
     }
+    if (sort === 'rating-desc') {
+      result.sort((a, b) => (b.ratingAvg ?? 0) - (a.ratingAvg ?? 0));
+    } else if (sort === 'reviews-desc') {
+      result.sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0));
+    }
     return result;
-  }, [guides, selectedRegions, selectedLanguages, selectedSpecialties]);
+  }, [guides, selectedRegions, selectedLanguages, selectedSpecialties, sort]);
 
   const hasFilters =
     selectedRegions.length > 0 ||
     selectedLanguages.length > 0 ||
-    selectedSpecialties.length > 0;
+    selectedSpecialties.length > 0 ||
+    sort !== 'recommended';
 
   return (
     <section className="tp-activities-layout">
@@ -200,10 +218,10 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       <section>
         <div className="tp-result-head">
           <h1>全台灣 {filtered.length} 位在地導遊</h1>
-          <select aria-label="排序">
-            <option>推薦排序</option>
-            <option>評分高到低</option>
-            <option>評價多到少</option>
+          <select aria-label="排序" value={sort} onChange={(e) => handleSort(e.target.value)}>
+            <option value="recommended">推薦排序</option>
+            <option value="rating-desc">評分高到低</option>
+            <option value="reviews-desc">評價多到少</option>
           </select>
         </div>
 
