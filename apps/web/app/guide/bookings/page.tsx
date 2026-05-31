@@ -47,7 +47,7 @@ export default function GuideBookingsPage() {
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單查看</h1>
 
       {/* Filter */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div role="tablist" aria-label="預約狀態篩選" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {[
           { value: '', label: '全部' },
           { value: 'confirmed', label: '已確認' },
@@ -56,6 +56,8 @@ export default function GuideBookingsPage() {
         ].map((f) => (
           <button
             key={f.value}
+            role="tab"
+            aria-selected={statusFilter === f.value}
             onClick={() => setStatusFilter(f.value)}
             style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
