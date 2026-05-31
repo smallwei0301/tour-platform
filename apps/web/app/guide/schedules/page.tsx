@@ -93,10 +93,12 @@ export default function GuideSchedulesPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div role="tablist" aria-label="場次篩選" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {(['upcoming', 'all', 'past'] as Filter[]).map((f) => (
           <button
             key={f}
+            role="tab"
+            aria-selected={filter === f}
             onClick={() => setFilter(f)}
             style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
