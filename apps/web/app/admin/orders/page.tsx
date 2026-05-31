@@ -216,28 +216,28 @@ export default function AdminOrdersPage() {
                   <div><strong>付款：</strong>{detail.paidAt ? new Date(detail.paidAt).toLocaleString('zh-TW') : '-'}</div>
                 </div>
 
-                <label style={labelStyle}>狀態</label>
-                <Select value={editStatus} onChange={setEditStatus}>
+                <label htmlFor="admin-order-status" style={labelStyle}>狀態</label>
+                <Select id="admin-order-status" value={editStatus} onChange={setEditStatus}>
                   {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
                 </Select>
 
-                <label style={labelStyle}>Admin Note</label>
-                <textarea value={editNote} onChange={e => setEditNote(e.target.value)} rows={3}
+                <label htmlFor="admin-order-note" style={labelStyle}>Admin Note</label>
+                <textarea id="admin-order-note" value={editNote} onChange={e => setEditNote(e.target.value)} rows={3}
                   style={{ ...inputStyle, resize: 'vertical' }} />
 
                 <details data-guide="exception-panel" style={{ marginTop: 16, border: '1px solid #e5e7eb', borderRadius: 8 }}>
                   <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151' }}>🔧 例外處理</summary>
                   <div style={{ padding: '10px 14px', borderTop: '1px solid #f0f0f0' }}>
-                    <label style={labelStyle}>Action</label>
-                    <Select value={exceptionAction} onChange={v => setExceptionAction(v as any)}>
+                    <label htmlFor="admin-order-exception-action" style={labelStyle}>Action</label>
+                    <Select id="admin-order-exception-action" value={exceptionAction} onChange={v => setExceptionAction(v as any)}>
                       <option value="reschedule">reschedule（改期）</option>
                       <option value="adjust_capacity">adjust_capacity（名額修正）</option>
                       <option value="oversell_fix">oversell_fix（超賣修正）</option>
                     </Select>
-                    <label style={labelStyle}>targetScheduleId（可選）</label>
-                    <input value={targetScheduleId} onChange={e => setTargetScheduleId(e.target.value)} style={inputStyle} placeholder="例如 sch_chaishan_0401" />
-                    <label style={labelStyle}>newCapacity（adjust_capacity 時使用）</label>
-                    <input value={newCapacity} onChange={e => setNewCapacity(e.target.value)} style={inputStyle} placeholder="例如 12" />
+                    <label htmlFor="admin-order-target-schedule-id" style={labelStyle}>targetScheduleId（可選）</label>
+                    <input id="admin-order-target-schedule-id" value={targetScheduleId} onChange={e => setTargetScheduleId(e.target.value)} style={inputStyle} placeholder="例如 sch_chaishan_0401" />
+                    <label htmlFor="admin-order-new-capacity" style={labelStyle}>newCapacity（adjust_capacity 時使用）</label>
+                    <input id="admin-order-new-capacity" value={newCapacity} onChange={e => setNewCapacity(e.target.value)} style={inputStyle} placeholder="例如 12" />
                     <button onClick={applyException} disabled={exceptionBusy} style={{ ...btnStyle('secondary'), marginTop: 10 }}>
                       {exceptionBusy ? '套用中…' : '套用例外處理'}
                     </button>
