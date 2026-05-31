@@ -1,36 +1,34 @@
-<!-- query_timestamp: 2026-05-31T12:34:37.278Z -->
+<!-- query_timestamp: 2026-05-31T15:00:56.174Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T12:34:37.278Z  
-**Commit SHA:** `67f07dace2833c5fca0140af85e10207957ea661`
+**Query timestamp:** 2026-05-31T15:00:56.174Z  
+**Commit SHA:** `48d4295cb6669c8e177138a8b00b2bf6106ff4e1`
 
 ---
 
-## Open PRs (2)
+## Open PRs (1)
 
 | # | Title | Branch |
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
-| #868 | [docs(qa): refresh #828 launch-critical evidence against latest staging](https://github.com/smallwei0301/tour-platform/pull/868) | `claude/qa-828-evidence-20260528` |
 
-## Open Issues (18 total)
+## Open Issues (17 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (9)
+### P1 (8)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #982 | [[QA] Daily test checklist for recent merged PRs 2026-05-31](https://github.com/smallwei0301/tour-platform/issues/982) | priority:P1, qa |
 | #959 | [[QA] Daily test checklist for recent merged PRs 2026-05-30](https://github.com/smallwei0301/tour-platform/issues/959) | priority:P1, qa |
 | #838 | [[Traveler Booking] Align Booking V2 price with selected plan amount](https://github.com/smallwei0301/tour-platform/issues/838) | triaged, type:bug, priority:P1, agent:next, owner:ai-agent, status:blocked, traveler-booking, launch:first-payment-blocker |
-| #824 | [[QA] Verify post-#818 Booking V2 availability delta for PR #820/#823](https://github.com/smallwei0301/tour-platform/issues/824) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:queued, owner:ai-agent, status:ready, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, launch:post-first-payment |
 | #605 | [[Launch Content] Strict Andy Lee listing content gate before public exposure](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, type:docs, docs, status:awaiting-implementation, launch:first-payment-blocker |
@@ -41,7 +39,7 @@ _none_
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1026 | [[QA] Verify post-#1014–#1025 regression after 2026-05-31 merges](https://github.com/smallwei0301/tour-platform/issues/1026) | triaged, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, type:qa, admin-guides, traveler-booking |
+| #1027 | [[UX/SEO] Wire up guides listing filter controls and make selections URL-persistent](https://github.com/smallwei0301/tour-platform/issues/1027) | type:optimization, priority:P2, traveler-booking |
 | #980 | [[QA] Verify late-wave PRs #961-#979 regression after 2026-05-30 merges](https://github.com/smallwei0301/tour-platform/issues/980) | triaged, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, infra, docs |
 | #978 | [[Ops] Verify post-#970 Booking V2 variant metrics are populated before trusting delta GO](https://github.com/smallwei0301/tour-platform/issues/978) | triaged, type:investigation, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, infra, booking-v2 |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
