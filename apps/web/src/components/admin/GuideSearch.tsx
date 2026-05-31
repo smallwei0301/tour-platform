@@ -98,7 +98,7 @@ export function GuideSearch({ value, onChange, style }: GuideSearchProps) {
   const fieldStyle: React.CSSProperties = {
     display: 'block', width: '100%', padding: '10px 12px',
     border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14,
-    outline: 'none', boxSizing: 'border-box',
+    boxSizing: 'border-box',
     ...style,
   };
 

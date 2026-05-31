@@ -86,7 +86,7 @@ export function Select({ value, onChange, children, style, ...rest }: {
       style={{
         border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px',
         fontSize: 14, background: '#fff', color: '#374151',
-        cursor: 'pointer', outline: 'none', ...style,
+        cursor: 'pointer', ...style,
       }}
     >
       {children}
