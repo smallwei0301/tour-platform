@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { PublicIcon } from '../../src/components/ui/PublicIcon';
 
 interface Guide {
   slug: string;
@@ -276,6 +277,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
+            <div style={{ marginBottom: 12, color: 'var(--tp-primary)' }}><PublicIcon name="search" size={40} /></div>
             <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的導遊</p>
             <p style={{ fontSize: 14, marginBottom: 20 }}>試試看其他篩選條件，或清除現有篩選</p>
             <button onClick={clearAll} className="tp-btn tp-btn-primary">
