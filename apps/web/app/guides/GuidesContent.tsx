@@ -55,6 +55,9 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
   const [sort, setSort] = useState<string>(
     () => searchParams.get('sort') ?? 'recommended'
   );
+  const [query, setQuery] = useState<string>(
+    () => searchParams.get('q') ?? ''
+  );
 
   // Sync URL → state when URL params change (back/forward navigation)
   useEffect(() => {
@@ -62,15 +65,27 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
     setSelectedLanguages(searchParams.getAll('lang'));
     setSelectedSpecialties(searchParams.getAll('spec'));
     setSort(searchParams.get('sort') ?? 'recommended');
+    setQuery(searchParams.get('q') ?? '');
   }, [searchParams]);
+
+  // Debounced URL update for text query (500ms)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      router.push(buildUrl(selectedRegions, selectedLanguages, selectedSpecialties, sort, query), { scroll: false });
+    }, 500);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   function buildUrl(
     regions: string[],
     langs: string[],
     specs: string[],
-    sortVal: string
+    sortVal: string,
+    q: string = ''
   ): string {
     const params = new URLSearchParams();
+    if (q) params.set('q', q);
     regions.forEach((r) => params.append('region', r));
     langs.forEach((l) => params.append('lang', l));
     specs.forEach((s) => params.append('spec', s));
@@ -84,7 +99,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       ? selectedRegions.filter((x) => x !== r)
       : [...selectedRegions, r];
     setSelectedRegions(next);
-    router.push(buildUrl(next, selectedLanguages, selectedSpecialties, sort), { scroll: false });
+    router.push(buildUrl(next, selectedLanguages, selectedSpecialties, sort, query), { scroll: false });
   }
 
   function toggleLanguage(l: string) {
@@ -92,7 +107,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       ? selectedLanguages.filter((x) => x !== l)
       : [...selectedLanguages, l];
     setSelectedLanguages(next);
-    router.push(buildUrl(selectedRegions, next, selectedSpecialties, sort), { scroll: false });
+    router.push(buildUrl(selectedRegions, next, selectedSpecialties, sort, query), { scroll: false });
   }
 
   function toggleSpecialty(s: string) {
@@ -100,12 +115,12 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       ? selectedSpecialties.filter((x) => x !== s)
       : [...selectedSpecialties, s];
     setSelectedSpecialties(next);
-    router.push(buildUrl(selectedRegions, selectedLanguages, next, sort), { scroll: false });
+    router.push(buildUrl(selectedRegions, selectedLanguages, next, sort, query), { scroll: false });
   }
 
   function handleSort(s: string) {
     setSort(s);
-    router.push(buildUrl(selectedRegions, selectedLanguages, selectedSpecialties, s), { scroll: false });
+    router.push(buildUrl(selectedRegions, selectedLanguages, selectedSpecialties, s, query), { scroll: false });
   }
 
   function clearAll() {
@@ -113,12 +128,23 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
     setSelectedLanguages([]);
     setSelectedSpecialties([]);
     setSort('recommended');
+    setQuery('');
     router.push('/guides');
   }
 
   // Filter and sort guides in-memory
   const filtered = useMemo(() => {
     let result: Guide[] = [...(guides as Guide[])];
+    // Text search across name, headline, region, specialties
+    if (query.trim()) {
+      const q = query.trim().toLowerCase();
+      result = result.filter((g) =>
+        g.displayName?.toLowerCase().includes(q) ||
+        g.headline?.toLowerCase().includes(q) ||
+        g.region?.toLowerCase().includes(q) ||
+        g.specialties?.some((s) => s.toLowerCase().includes(q))
+      );
+    }
     if (selectedRegions.length > 0) {
       result = result.filter((g) => g.region && selectedRegions.includes(g.region));
     }
@@ -138,9 +164,10 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       result.sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0));
     }
     return result;
-  }, [guides, selectedRegions, selectedLanguages, selectedSpecialties, sort]);
+  }, [guides, query, selectedRegions, selectedLanguages, selectedSpecialties, sort]);
 
   const hasFilters =
+    !!query.trim() ||
     selectedRegions.length > 0 ||
     selectedLanguages.length > 0 ||
     selectedSpecialties.length > 0 ||
@@ -160,6 +187,27 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
               清除全部
             </button>
           )}
+        </div>
+
+        {/* Text search */}
+        <div style={{ marginBottom: 12 }}>
+          <label htmlFor="guide-search" style={{ display: 'none' }}>搜尋導遊</label>
+          <input
+            id="guide-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜尋導遊名稱、地區、專長…"
+            aria-label="搜尋導遊"
+            style={{
+              width: '100%',
+              padding: '8px 12px',
+              border: '1px solid var(--tp-border)',
+              borderRadius: 8,
+              fontSize: 13,
+              boxSizing: 'border-box',
+            }}
+          />
         </div>
 
         {/* Region */}
