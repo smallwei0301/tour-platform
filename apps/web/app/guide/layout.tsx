@@ -35,7 +35,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
       {/* ── Desktop Top Navbar ── */}
-      <nav style={{
+      <nav aria-label="導遊後台主要導覽" style={{
         background: '#fff',
         borderBottom: '1px solid #e5e7eb',
         padding: '0 24px',

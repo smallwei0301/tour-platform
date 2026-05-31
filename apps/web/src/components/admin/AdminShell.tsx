@@ -108,7 +108,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         )}
       </div>
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
+      <nav aria-label="管理後台導覽" style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
         {navLinks(onClose)}
       </nav>
       {/* Logout */}
