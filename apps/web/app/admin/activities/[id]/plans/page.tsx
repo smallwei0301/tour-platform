@@ -352,6 +352,7 @@ export default function ActivityPlansPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
                 <input
+                  aria-label="方案名稱"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -362,6 +363,7 @@ export default function ActivityPlansPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案說明</label>
                 <textarea
+                  aria-label="方案說明"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="方案詳細說明..."
@@ -373,6 +375,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
                   <input
+                    aria-label="時長 (分鐘)"
                     type="number"
                     min="15"
                     step="15"
@@ -398,6 +401,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
                   <input
+                    aria-label="基本價格 (TWD)"
                     type="number"
                     min="0"
                     value={form.base_price}
@@ -423,6 +427,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
                   <input
+                    aria-label="方案最低成團人數"
                     type="number"
                     min="1"
                     value={form.min_participants}
@@ -433,6 +438,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
                   <input
+                    aria-label="方案最多人數"
                     type="number"
                     min="1"
                     value={form.max_participants}
