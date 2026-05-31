@@ -25,6 +25,7 @@ export default async function GuidesPage() {
         '@type': 'ItemList',
         name: '台灣在地導遊 | Midao 祕島',
         url: `${baseUrl}/guides`,
+        numberOfItems: guides.length,
         itemListElement: (guides as Array<{ slug: string; displayName: string; region?: string }>).map((g, i) => ({
           '@type': 'ListItem',
           position: i + 1,
