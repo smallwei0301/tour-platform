@@ -93,9 +93,11 @@ export default function AdminDashboardPage() {
           {preset === 'custom' && (
             <>
               <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)}
+                aria-label="開始日期"
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
               <span style={{ color: '#9ca3af' }}>~</span>
               <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)}
+                aria-label="結束日期"
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '6px 10px', fontSize: 13 }} />
             </>
           )}

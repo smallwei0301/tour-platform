@@ -135,14 +135,15 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
   // Filter and sort guides in-memory
   const filtered = useMemo(() => {
     let result: Guide[] = [...(guides as Guide[])];
-    // Text search across name, headline, region, specialties
+    // Text search across name, headline, region, specialties, languages
     if (query.trim()) {
       const q = query.trim().toLowerCase();
       result = result.filter((g) =>
         g.displayName?.toLowerCase().includes(q) ||
         g.headline?.toLowerCase().includes(q) ||
         g.region?.toLowerCase().includes(q) ||
-        g.specialties?.some((s) => s.toLowerCase().includes(q))
+        g.specialties?.some((s) => s.toLowerCase().includes(q)) ||
+        g.languages?.some((l) => l.toLowerCase().includes(q))
       );
     }
     if (selectedRegions.length > 0) {
