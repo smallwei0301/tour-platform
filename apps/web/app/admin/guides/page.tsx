@@ -258,9 +258,9 @@ export default function AdminGuidesPage() {
 
       <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tabs */}
-        <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button style={tabStyle('applications')} onClick={() => setTab('applications')}>📋 導遊申請</button>
-          <button style={tabStyle('profiles')} onClick={() => setTab('profiles')}>👤 已上線導遊</button>
+        <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }} role="tablist" aria-label="導遊管理分頁">
+          <button role="tab" aria-selected={tab === 'applications'} style={tabStyle('applications')} onClick={() => setTab('applications')}>📋 導遊申請</button>
+          <button role="tab" aria-selected={tab === 'profiles'} style={tabStyle('profiles')} onClick={() => setTab('profiles')}>👤 已上線導遊</button>
         </Card>
 
         {/* ── Applications Tab ── */}
