@@ -179,18 +179,6 @@ export default function ActivitiesContent() {
               </label>
             ))}
           </details>
-          <details>
-            <summary>行程時長</summary>
-            <label><input type="checkbox" /> 2 小時以內</label>
-            <label><input type="checkbox" /> 2～4 小時</label>
-            <label><input type="checkbox" /> 4～8 小時（半天）</label>
-            <label><input type="checkbox" /> 8 小時以上（全天）</label>
-          </details>
-          <details>
-            <summary>語言</summary>
-            <label><input type="checkbox" /> 中文</label>
-            <label><input type="checkbox" /> 英語</label>
-          </details>
         </aside>
 
         {/* 結果區 */}
