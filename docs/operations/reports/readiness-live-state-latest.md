@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-05-31T17:35:59.752Z -->
+<!-- query_timestamp: 2026-05-31T18:24:45.774Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T17:35:59.752Z  
-**Commit SHA:** `a3b41177d551391e547aa83ac0cc2b7a86e7a909`
+**Query timestamp:** 2026-05-31T18:24:45.774Z  
+**Commit SHA:** `7ee229720d997ce1a37c79ffb48987671c24c7a4`
 
 ---
 
@@ -16,16 +16,17 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (14 total)
+## Open Issues (15 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (8)
+### P1 (9)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1054 | [[QA] Verify early 2026-06-01 PRs #1031/#1033-#1053 regression](https://github.com/smallwei0301/tour-platform/issues/1054) | triaged, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa |
 | #982 | [[QA] Daily test checklist for recent merged PRs 2026-05-31](https://github.com/smallwei0301/tour-platform/issues/982) | priority:P1, qa |
 | #959 | [[QA] Daily test checklist for recent merged PRs 2026-05-30](https://github.com/smallwei0301/tour-platform/issues/959) | priority:P1, qa |
 | #838 | [[Traveler Booking] Align Booking V2 price with selected plan amount](https://github.com/smallwei0301/tour-platform/issues/838) | triaged, type:bug, priority:P1, agent:next, owner:ai-agent, status:blocked, traveler-booking, launch:first-payment-blocker |
@@ -60,16 +61,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1047 | [seo: add numberOfItems to guides listing ItemList JSON-LD schema](https://github.com/smallwei0301/tour-platform/pull/1047) | 2026-05-31 |
-| #1046 | [seo: add knowsAbout and knowsLanguage to guide profile JSON-LD](https://github.com/smallwei0301/tour-platform/pull/1046) | 2026-05-31 |
-| #1045 | [feat/a11y: extend guides search to include languages; add aria-label to admin date inputs](https://github.com/smallwei0301/tour-platform/pull/1045) | 2026-05-31 |
-| #1044 | [a11y: add aria-expanded and aria-controls to guide mobile navigation button](https://github.com/smallwei0301/tour-platform/pull/1044) | 2026-05-31 |
-| #1043 | [a11y: add ARIA dialog to admin mobile navigation drawer](https://github.com/smallwei0301/tour-platform/pull/1043) | 2026-05-31 |
-| #1042 | [a11y: add ARIA dialog pattern to guide bookings order detail modal](https://github.com/smallwei0301/tour-platform/pull/1042) | 2026-05-31 |
-| #1041 | [test: extend issue1027 test suite to cover guides text search contract](https://github.com/smallwei0301/tour-platform/pull/1041) | 2026-05-31 |
-| #1040 | [a11y: add aria-label to guide and admin navigation landmarks](https://github.com/smallwei0301/tour-platform/pull/1040) | 2026-05-31 |
-| #1039 | [a11y: add ARIA dialog pattern to traveler order cancel dialog](https://github.com/smallwei0301/tour-platform/pull/1039) | 2026-05-31 |
-| #1038 | [a11y: add ARIA tablist/tab semantics to admin status filter tabs](https://github.com/smallwei0301/tour-platform/pull/1038) | 2026-05-31 |
+| #1058 | [a11y: add ARIA tablist/tab to admin QA status filter tabs](https://github.com/smallwei0301/tour-platform/pull/1058) | 2026-05-31 |
+| #1057 | [a11y: add ARIA tablist/tab to guide bookings status filter tabs](https://github.com/smallwei0301/tour-platform/pull/1057) | 2026-05-31 |
+| #1056 | [a11y: add ARIA tablist/tab to guide schedules filter tabs](https://github.com/smallwei0301/tour-platform/pull/1056) | 2026-05-31 |
+| #1055 | [a11y: add scope=col to all th elements in guide dashboard table](https://github.com/smallwei0301/tour-platform/pull/1055) | 2026-05-31 |
+| #1053 | [a11y: add aria-live announcement for activities filter result count](https://github.com/smallwei0301/tour-platform/pull/1053) | 2026-05-31 |
+| #1052 | [a11y: add aria-live announcement for guides filter result count](https://github.com/smallwei0301/tour-platform/pull/1052) | 2026-05-31 |
+| #1051 | [seo: add Twitter card metadata to blog article and experience pages](https://github.com/smallwei0301/tour-platform/pull/1051) | 2026-05-31 |
+| #1050 | [seo: add Twitter card metadata to guide profile pages](https://github.com/smallwei0301/tour-platform/pull/1050) | 2026-05-31 |
+| #1049 | [seo: add dateModified and inLanguage to blog article JSON-LD](https://github.com/smallwei0301/tour-platform/pull/1049) | 2026-05-31 |
+| #1048 | [ux: add search icon to guides listing empty state](https://github.com/smallwei0301/tour-platform/pull/1048) | 2026-05-31 |
 
 ---
 
