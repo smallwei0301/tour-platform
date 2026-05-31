@@ -1079,9 +1079,9 @@ export default function AdminActivityEditPage() {
             )}
             <h3 style={sectionTitle}>📝 基本資訊</h3>
 
-            <label style={labelStyle}>
+            <label htmlFor="activity-edit-title" style={labelStyle}>
               行程名稱 *
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required aria-required="true" />
+              <input id="activity-edit-title" type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required aria-required="true" />
             </label>
 
             <div style={labelStyle}>
@@ -1164,8 +1164,9 @@ export default function AdminActivityEditPage() {
               onUpload={setCoverImageUrl}
             />
             <div style={{ marginTop: 12, marginBottom: 16 }}>
-              <label style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上封面圖 URL</label>
+              <label htmlFor="activity-edit-cover-image-url" style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上封面圖 URL</label>
               <input
+                id="activity-edit-cover-image-url"
                 type="url"
                 value={coverImageUrl}
                 onChange={e => setCoverImageUrl(e.target.value)}
@@ -1184,8 +1185,9 @@ export default function AdminActivityEditPage() {
               onGalleryUpdate={setImageUrls}
             />
             <div style={{ marginTop: 12, marginBottom: 16 }}>
-              <label style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上活動照片 URL（每行一張）</label>
+              <label htmlFor="activity-edit-gallery-urls" style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上活動照片 URL（每行一張）</label>
               <textarea
+                id="activity-edit-gallery-urls"
                 value={imageUrls.join('\n')}
                 onChange={e => setImageUrls(e.target.value.split('\n').map(x => x.trim()).filter(Boolean))}
                 rows={3}
