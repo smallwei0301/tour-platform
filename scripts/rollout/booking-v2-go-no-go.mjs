@@ -3,10 +3,11 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlink
 import path from 'node:path';
 
 const cwd = process.cwd();
-const reportsDir = path.join(cwd, 'docs/operations/reports');
+// GO_NO_GO_REPORTS_DIR allows tests to isolate I/O to avoid parallel-run races.
+const reportsDir = process.env.GO_NO_GO_REPORTS_DIR || path.join(cwd, 'docs/operations/reports');
 mkdirSync(reportsDir, { recursive: true });
 
-const inputPath = path.join(reportsDir, 'booking-v2-dashboard-latest.json');
+const inputPath = process.env.GO_NO_GO_INPUT_PATH || path.join(reportsDir, 'booking-v2-dashboard-latest.json');
 if (!existsSync(inputPath)) {
   console.error('Missing input:', inputPath);
   process.exit(1);
