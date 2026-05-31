@@ -142,7 +142,7 @@ export default function ActivitiesContent() {
 
       <section className="tp-activities-layout">
         {/* 篩選側欄 */}
-        <aside className="tp-filter">
+        <aside className="tp-filter" aria-label="篩選條件">
           <div className="tp-filter-head">
             <h3>篩選條件</h3>
             {hasFilters && <button onClick={clearAll} style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}>清除全部</button>}
