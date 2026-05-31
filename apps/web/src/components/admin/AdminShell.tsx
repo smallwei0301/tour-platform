@@ -104,7 +104,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin Console</div>
         </div>
         {onClose && (
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', padding: 4 }}>✕</button>
+          <button aria-label="關閉選單" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', padding: 4 }}>✕</button>
         )}
       </div>
       {/* Nav */}
