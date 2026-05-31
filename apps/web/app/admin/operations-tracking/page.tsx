@@ -167,17 +167,17 @@ export default function OperationsTrackingPage() {
                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, color: '#111' }}>編輯營運欄位</div>
                 <div style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace', marginBottom: 14, background: '#f9fafb', padding: '6px 10px', borderRadius: 6 }}>{selected.orderId}</div>
 
-                <label style={labelStyle}>人工時間（分鐘）</label>
-                <input type="number" value={selected.manualMinutes||0} onChange={e => setSelected({...selected, manualMinutes: Number(e.target.value||0)})} style={inputStyle} />
+                <label htmlFor="ops-manual-minutes" style={labelStyle}>人工時間（分鐘）</label>
+                <input id="ops-manual-minutes" type="number" value={selected.manualMinutes||0} onChange={e => setSelected({...selected, manualMinutes: Number(e.target.value||0)})} style={inputStyle} />
 
-                <label style={labelStyle}>人工成本（TWD）</label>
-                <input type="number" value={selected.manualCostTwd||0} onChange={e => setSelected({...selected, manualCostTwd: Number(e.target.value||0)})} style={inputStyle} />
+                <label htmlFor="ops-manual-cost" style={labelStyle}>人工成本（TWD）</label>
+                <input id="ops-manual-cost" type="number" value={selected.manualCostTwd||0} onChange={e => setSelected({...selected, manualCostTwd: Number(e.target.value||0)})} style={inputStyle} />
 
-                <label style={labelStyle}>退款金額（TWD）</label>
-                <input type="number" value={selected.refundAmountTwd||0} onChange={e => setSelected({...selected, refundAmountTwd: Number(e.target.value||0)})} style={inputStyle} />
+                <label htmlFor="ops-refund-amount" style={labelStyle}>退款金額（TWD）</label>
+                <input id="ops-refund-amount" type="number" value={selected.refundAmountTwd||0} onChange={e => setSelected({...selected, refundAmountTwd: Number(e.target.value||0)})} style={inputStyle} />
 
-                <label style={labelStyle}>補貼金額（TWD）</label>
-                <input type="number" value={selected.subsidyTwd||0} onChange={e => setSelected({...selected, subsidyTwd: Number(e.target.value||0)})} style={inputStyle} />
+                <label htmlFor="ops-subsidy-amount" style={labelStyle}>補貼金額（TWD）</label>
+                <input id="ops-subsidy-amount" type="number" value={selected.subsidyTwd||0} onChange={e => setSelected({...selected, subsidyTwd: Number(e.target.value||0)})} style={inputStyle} />
 
                 <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {[
