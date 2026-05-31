@@ -120,9 +120,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         description: article.content.slice(0, 160).replace(/\n/g, ' '),
         image: article.imageUrl,
         datePublished: article.date,
+        dateModified: article.date,
         author: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
         publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
         url: `${baseUrl}/blog/${slug}`,
+        inLanguage: 'zh-TW',
       },
       {
         '@type': 'BreadcrumbList',
