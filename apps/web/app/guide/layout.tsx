@@ -109,6 +109,9 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
         {/* Mobile Hamburger (shown on mobile) */}
         <button
           className="guide-mobile-hamburger"
+          aria-label={menuOpen ? '關閉導覽選單' : '開啟導覽選單'}
+          aria-expanded={menuOpen}
+          aria-controls="guide-mobile-menu"
           onClick={() => setMenuOpen(!menuOpen)}
           style={{
             marginLeft: 'auto',
@@ -128,6 +131,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
       {/* ── Mobile Dropdown Menu ── */}
       {menuOpen && (
         <div
+          id="guide-mobile-menu"
           className="guide-mobile-menu"
           style={{
             position: 'fixed',
