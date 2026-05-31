@@ -183,6 +183,10 @@ export default function ActivitiesContent() {
 
         {/* 結果區 */}
         <section>
+          {/* aria-live announces result count changes to screen readers */}
+          <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+            {hasFilters ? resultLabel : ''}
+          </div>
           <div className="tp-result-head">
             <h1>{resultLabel}</h1>
             <select aria-label="排序" value={sort} onChange={(e) => setSort(e.target.value)}>
