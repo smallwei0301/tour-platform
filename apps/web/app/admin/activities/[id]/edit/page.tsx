@@ -1196,7 +1196,7 @@ export default function AdminActivityEditPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                   {imageUrls.map((url, i) => (
                     <div key={url + i} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, background: '#fff' }}>
-                      <Image src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} width={1200} height={675} />
+                      <Image src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} width={96} height={64} />
                       <div style={{ flex: 1, fontSize: 12, color: '#4b5563', wordBreak: 'break-all' }}>{url}</div>
                       <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>移除</button>
                     </div>
