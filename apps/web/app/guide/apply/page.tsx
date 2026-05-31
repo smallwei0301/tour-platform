@@ -95,8 +95,8 @@ export default function GuideApplyPage() {
       {step === 1 && (
         <section className="tp-step-card">
           <label htmlFor="apply-fullname">姓名*<input id="apply-fullname" value={fullName} onChange={(e) => setFullName(e.target.value)} required aria-required="true" /></label>
-          <label htmlFor="apply-phone">電話*<input id="apply-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" /></label>
-          <label htmlFor="apply-email">電子信箱*<input id="apply-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-phone">電話*<input id="apply-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" autoComplete="tel" /></label>
+          <label htmlFor="apply-email">電子信箱*<input id="apply-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" autoComplete="email" /></label>
           <label htmlFor="apply-city">所在縣市*<input id="apply-city" placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} required aria-required="true" /></label>
           <label htmlFor="apply-bio">自我介紹*<textarea id="apply-bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} required aria-required="true" /></label>
 
