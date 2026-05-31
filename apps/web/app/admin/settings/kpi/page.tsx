@@ -61,22 +61,22 @@ export default function AdminKpiSettingsPage() {
           <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 700, color: '#111' }}>目前設定</h3>
           <p style={{ margin: '0 0 16px', fontSize: 12, color: '#9ca3af' }}>最後更新：{cfg.updatedAt || '-'}</p>
 
-          <label style={labelStyle}>抽成率 commissionRate（0~1）</label>
-          <input type="number" step="0.001" value={cfg.commissionRate ?? 0.15}
+          <label htmlFor="guide-kpi-commission-rate" style={labelStyle}>抽成率 commissionRate（0~1）</label>
+          <input id="guide-kpi-commission-rate" type="number" step="0.001" value={cfg.commissionRate ?? 0.15}
             onChange={e => setCfg({...cfg, commissionRate: Number(e.target.value)})} style={inputStyle} />
 
-          <label style={labelStyle}>金流費率 paymentFeeRate（0~1）</label>
-          <input type="number" step="0.001" value={cfg.paymentFeeRate ?? 0.035}
+          <label htmlFor="guide-kpi-payment-fee" style={labelStyle}>金流費率 paymentFeeRate（0~1）</label>
+          <input id="guide-kpi-payment-fee" type="number" step="0.001" value={cfg.paymentFeeRate ?? 0.035}
             onChange={e => setCfg({...cfg, paymentFeeRate: Number(e.target.value)})} style={inputStyle} />
           <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>paymentFeeRate 僅用於平台內部損益試算；金流手續費由平台吸收，不影響導遊 85% 實拿。</p>
 
-          <label style={labelStyle}>導遊分潤率 guidePayoutRate（0~1）</label>
-          <input type="number" step="0.001" value={(cfg as any).guidePayoutRate ?? 0.85}
+          <label htmlFor="guide-kpi-payout-rate" style={labelStyle}>導遊分潤率 guidePayoutRate（0~1）</label>
+          <input id="guide-kpi-payout-rate" type="number" step="0.001" value={(cfg as any).guidePayoutRate ?? 0.85}
             onChange={e => setCfg({...cfg, guidePayoutRate: Number(e.target.value)} as any)} style={inputStyle} />
           <p style={{ margin: '4px 0 0', fontSize: 11, color: '#9ca3af' }}>用於訂單管理「導遊成本」欄位計算（旅客實付金額扣除已退款部分後 × 導遊分潤率）</p>
 
-          <label style={labelStyle}>健康訂單最低貢獻 healthyMinContributionTwd</label>
-          <input type="number" step="1" value={cfg.healthyMinContributionTwd ?? 1}
+          <label htmlFor="guide-kpi-min-contribution" style={labelStyle}>健康訂單最低貢獻 healthyMinContributionTwd</label>
+          <input id="guide-kpi-min-contribution" type="number" step="1" value={cfg.healthyMinContributionTwd ?? 1}
             onChange={e => setCfg({...cfg, healthyMinContributionTwd: Number(e.target.value)})} style={inputStyle} />
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 14, fontSize: 13, color: '#374151', cursor: 'pointer' }}>
@@ -86,8 +86,8 @@ export default function AdminKpiSettingsPage() {
             健康訂單允許 exception（僅看貢獻門檻）
           </label>
 
-          <label style={labelStyle}>變更說明</label>
-          <input value={note} onChange={e => setNote(e.target.value)} style={inputStyle} placeholder="例：Q2 佣金策略調整" />
+          <label htmlFor="guide-kpi-change-note" style={labelStyle}>變更說明</label>
+          <input id="guide-kpi-change-note" value={note} onChange={e => setNote(e.target.value)} style={inputStyle} placeholder="例：Q2 佣金策略調整" />
 
           <button onClick={save} disabled={saving}
             style={{ marginTop: 20, width: '100%', padding: '10px 0', borderRadius: 8, border: 'none', background: 'var(--tp-primary)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
