@@ -56,11 +56,11 @@ export default function ContactPage() {
           <form style={{ display: 'grid', gap: 14 }}>
             <label htmlFor="contact-name" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>姓名 *</span>
-              <input id="contact-name" type="text" name="name" placeholder="您的姓名" required aria-required="true" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+              <input id="contact-name" type="text" name="name" placeholder="您的姓名" required aria-required="true" autoComplete="name" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
             </label>
             <label htmlFor="contact-email" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>電子信箱 *</span>
-              <input id="contact-email" type="email" name="email" placeholder="you@example.com" required aria-required="true" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
+              <input id="contact-email" type="email" name="email" placeholder="you@example.com" required aria-required="true" autoComplete="email" style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
             </label>
             <label htmlFor="contact-subject" style={{ display: 'block' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>主題</span>
