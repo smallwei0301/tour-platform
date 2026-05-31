@@ -404,6 +404,7 @@ export default function GuideAvailabilityPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
                 <select
+                  aria-label="活動"
                   value={ruleForm.activity_id}
                   onChange={(e) => setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: '' })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -417,6 +418,7 @@ export default function GuideAvailabilityPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>
                 <select
+                  aria-label="方案"
                   value={ruleForm.activity_plan_id}
                   onChange={(e) => setRuleForm({ ...ruleForm, activity_plan_id: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -457,6 +459,7 @@ export default function GuideAvailabilityPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
                 <select
+                  aria-label="星期"
                   value={ruleForm.weekday}
                   onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -745,6 +748,7 @@ export default function GuideAvailabilityPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <select
+                    aria-label="篩選方案"
                     value={previewPlanId}
                     onChange={(e) => setPreviewPlanId(e.target.value)}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 240 }}
