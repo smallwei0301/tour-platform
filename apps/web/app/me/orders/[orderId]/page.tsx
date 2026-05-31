@@ -447,8 +447,8 @@ export default function OrderDetailPage() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
         }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
-            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>確認取消訂單？</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
+            <h3 id="cancel-dialog-title" style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>確認取消訂單？</h3>
             <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>取消後無法恢復，席位將自動釋出。</p>
             {cancelErr && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 10 }}>{cancelErr}</p>}
             <div style={{ display: 'flex', gap: 10 }}>
