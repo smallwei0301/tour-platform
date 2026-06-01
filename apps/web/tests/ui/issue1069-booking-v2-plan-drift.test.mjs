@@ -107,6 +107,32 @@ test('GH-1069: Step1 enabled has no disabled reason or accessibility linkage', (
   assert.equal(state.tone, null);
 });
 
+test('GH-1069: Step1 disabled states always include reason text + a11y reason id linkage', () => {
+  const cases = [
+    {
+      input: { slotsLoading: true, slotsCount: 0, guests: 2, selectedCapacityLeft: 0 },
+      expectedRole: 'status',
+    },
+    {
+      input: { slotsLoading: false, slotsCount: 0, guests: 2, selectedCapacityLeft: 0 },
+      expectedRole: 'alert',
+    },
+    {
+      input: { slotsLoading: false, slotsCount: 2, guests: 6, selectedCapacityLeft: 4 },
+      expectedRole: 'alert',
+    },
+  ];
+
+  for (const testCase of cases) {
+    const state = getBookingV2Step1CtaState(testCase.input);
+    assert.equal(state.disabled, true);
+    assert.equal(state.reasonId, BOOKING_V2_STEP1_CTA_REASON_ID);
+    assert.equal(state.role, testCase.expectedRole);
+    assert.equal(typeof state.reason, 'string');
+    assert.equal(state.reason.length > 0, true);
+  }
+});
+
 test('GH-1069: Step1 hard-block reason uses explicit red error color in booking shell', async () => {
   const { readFile } = await import('node:fs/promises');
   const { fileURLToPath } = await import('node:url');
