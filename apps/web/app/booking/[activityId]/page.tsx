@@ -7,6 +7,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
 import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
+import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
 import { track } from '../../../src/lib/track';
 
 // ── 型別 ──────────────────────────────────────────────────────
@@ -796,7 +797,13 @@ function BookingInnerV2FlagShell() {
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
   const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
-  const overCapacity = slots.length > 0 && guests > selectedCapacityLeft;
+  const isOverCapacity = slots.length > 0 && guests > selectedCapacityLeft;
+  const step1CtaState = getBookingV2Step1CtaState({
+    slotsLoading,
+    slotsCount: slots.length,
+    guests,
+    selectedCapacityLeft,
+  });
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
@@ -972,7 +979,7 @@ function BookingInnerV2FlagShell() {
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
-              {!slotsLoading && overCapacity && (
+              {!slotsLoading && isOverCapacity && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
                   參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。
                 </p>
@@ -1025,10 +1032,25 @@ function BookingInnerV2FlagShell() {
                   });
                   setStep(2);
                 }}
-                disabled={slotsLoading || slots.length === 0 || overCapacity}
+                disabled={step1CtaState.disabled}
+                aria-describedby={step1CtaState.disabled ? step1CtaState.reasonId ?? undefined : undefined}
               >
                 下一步：填寫資訊 →
               </button>
+              {step1CtaState.reason && (
+                <p
+                  id={step1CtaState.reasonId ?? undefined}
+                  style={{
+                    margin: '10px 0 0',
+                    color: step1CtaState.tone === 'muted' ? 'var(--tp-muted)' : '#b42318',
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                  role={step1CtaState.role ?? undefined}
+                >
+                  {step1CtaState.reason}
+                </p>
+              )}
             </div>
           )}
 

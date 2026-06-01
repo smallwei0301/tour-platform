@@ -16,6 +16,7 @@ interface ActivityBottomBarProps {
   directBookingHref?: string;
   initialWishlisted?: boolean;
   planSectionId?: string;
+  bookingUnavailable?: boolean;
 }
 
 export function ActivityBottomBar({
@@ -26,6 +27,7 @@ export function ActivityBottomBar({
   directBookingHref,
   initialWishlisted: initialWishlistedProp = false,
   planSectionId = 'section-plan',
+  bookingUnavailable = false,
 }: ActivityBottomBarProps) {
   const [initialWishlisted, setInitialWishlisted] = useState(initialWishlistedProp);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -88,7 +90,16 @@ export function ActivityBottomBar({
         </div>
         <div className="tp-bottom-bar-actions">
           <WishlistToggle activityId={activityId} initialWishlisted={initialWishlisted} isLoggedIn={isLoggedIn} />
-          {cta.mode === 'book' ? (
+          {bookingUnavailable ? (
+            <span
+              className="tp-btn tp-bottom-bar-cta"
+              aria-disabled="true"
+              data-testid="activity-bottom-bar-unavailable"
+              style={{ background: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' }}
+            >
+              目前無可預約方案
+            </span>
+          ) : cta.mode === 'book' ? (
             <Link href={cta.href!} className="tp-btn tp-btn-primary tp-bottom-bar-cta">
               {cta.label}
             </Link>

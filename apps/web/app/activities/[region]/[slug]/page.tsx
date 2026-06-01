@@ -10,6 +10,7 @@ import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnc
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
+import { resolveDatePlanPresentation } from '../../../../src/lib/date-plan-source.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
 import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
 
@@ -120,6 +121,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const imageUrls: string[] = activity.imageUrls?.length ? activity.imageUrls : (activity.coverImageUrl ? [activity.coverImageUrl] : []);
   const originalPrice = Math.round(activity.priceTwd * 1.25);
   const formalPlans = Array.isArray((activity as { plans?: unknown[] }).plans) ? ((activity as { plans?: any[] }).plans || []) : [];
+  const datePlanPresentation = resolveDatePlanPresentation({
+    useBookingV2,
+    canonicalPlans: formalPlans,
+    defaultPlans: [],
+  });
+  const hidePublicBookingCta = Boolean(useBookingV2 && datePlanPresentation.showMissingCanonicalMessage);
   const hasFormalPlanRangeVariance = formalPlans.length > 0 && formalPlans.some((plan) => {
     const min = Number(plan?.minParticipants ?? plan?.min_participants ?? activity.minParticipants);
     const max = Number(plan?.maxParticipants ?? plan?.max_participants ?? activity.maxParticipants);
@@ -520,14 +527,35 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 </div>
               )}
 
-              <Link
-                href={directBookingHref}
-                className="tp-btn tp-btn-primary"
-                data-testid="begin-checkout-btn"
-                style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px 0', fontSize: 16, marginTop: 16 }}
-              >
-                立即預約
-              </Link>
+              {hidePublicBookingCta ? (
+                <span
+                  className="tp-btn"
+                  data-testid="begin-checkout-unavailable"
+                  aria-disabled="true"
+                  style={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'center',
+                    padding: '14px 0',
+                    fontSize: 16,
+                    marginTop: 16,
+                    background: '#e5e7eb',
+                    color: '#6b7280',
+                    cursor: 'not-allowed',
+                  }}
+                >
+                  目前無可預約方案
+                </span>
+              ) : (
+                <Link
+                  href={directBookingHref}
+                  className="tp-btn tp-btn-primary"
+                  data-testid="begin-checkout-btn"
+                  style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px 0', fontSize: 16, marginTop: 16 }}
+                >
+                  立即預約
+                </Link>
+              )}
               <button className="tp-btn tp-btn-ghost" style={{ width: '100%', marginTop: 8 }}>
                 ✉️ 詢問導遊
               </button>
@@ -552,6 +580,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         price={activity.priceTwd || 0}
         useBookingV2={useBookingV2}
         directBookingHref={directBookingHref}
+        bookingUnavailable={hidePublicBookingCta}
       />
     </main>
     </SelectedPlanProvider>

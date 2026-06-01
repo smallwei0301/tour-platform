@@ -7,6 +7,7 @@ import { PlanDetailModal } from './PlanDetailModal';
 import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
 import { getPlanScheduleForDate } from './plan-schedule-match';
 import { useSelectedPlan } from './SelectedPlanContext';
+import { resolveDatePlanPresentation } from '../../lib/date-plan-source.mjs';
 
 interface Schedule {
   startAt?: string;
@@ -198,10 +199,14 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
 
   const effectiveSchedules = liveSchedules && liveSchedules.length > 0 ? liveSchedules : schedules;
 
-  // Use DB plans if available, otherwise fall back to defaults
-  const PLANS = (activity.plans && activity.plans.length > 0) ? activity.plans : DEFAULT_PLANS;
+  const { plans: resolvedPlans, showMissingCanonicalMessage } = resolveDatePlanPresentation({
+    useBookingV2,
+    canonicalPlans: activity.plans,
+    defaultPlans: DEFAULT_PLANS,
+  });
+  const PLANS: PlanConfig[] = resolvedPlans as PlanConfig[];
   const VISIBLE_PLANS = showAllPlans ? PLANS : PLANS.slice(0, 2);
-  const selectedOrVisiblePlanIds = selectedPlan ? [selectedPlan] : VISIBLE_PLANS.map((p) => p.id);
+  const selectedOrVisiblePlanIds: string[] = selectedPlan ? [selectedPlan] : VISIBLE_PLANS.map((p: PlanConfig) => p.id);
   const datePickerSchedules = effectiveSchedules.filter((s) => {
     const planId = s.planId ?? s.plan_id ?? null;
     return planId === null || selectedOrVisiblePlanIds.includes(planId);
@@ -236,172 +241,180 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         <span className="kkd-section-label">選擇方案</span>
       </div>
 
-      <div className="kkd-plans-list">
-        {VISIBLE_PLANS.map((plan) => {
-          const basePrice = activity.priceTwd ?? activity.price ?? 0;
-          const planPrice = resolvePlanPrice(plan, basePrice, 1);
-          const origPrice = Math.round(planPrice * 1.25);
-          const isSelected = selectedPlan === plan.id;
+      {showMissingCanonicalMessage ? (
+        <p style={{ margin: '0 0 12px', color: '#b42318', fontSize: 14 }} role="status" data-testid="v2-no-canonical-plan-message">
+          此行程尚未設定可預約方案，請稍後再查看。
+        </p>
+      ) : (
+        <>
+          <div className="kkd-plans-list">
+            {VISIBLE_PLANS.map((plan: PlanConfig) => {
+              const basePrice = activity.priceTwd ?? activity.price ?? 0;
+              const planPrice = resolvePlanPrice(plan, basePrice, 1);
+              const origPrice = Math.round(planPrice * 1.25);
+              const isSelected = selectedPlan === plan.id;
 
-          // 取得該方案在選中日期的可用性（傳入 knownPlanIds 以防 V2 UUID↔legacy slug ID 空間不一致）
-          const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id, PLANS.map((p) => p.id));
-          const showFull = selectedDate && planAvail.isFull;
-          const showNotOpen = selectedDate && planAvail.isNotOpen;
-          const canBook = !selectedDate || planAvail.isOpen;
+              // 取得該方案在選中日期的可用性（傳入 knownPlanIds 以防 V2 UUID↔legacy slug ID 空間不一致）
+              const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id, PLANS.map((p: PlanConfig) => p.id));
+              const showFull = selectedDate && planAvail.isFull;
+              const showNotOpen = selectedDate && planAvail.isNotOpen;
+              const canBook = !selectedDate || planAvail.isOpen;
 
-          return (
-            <div
-              key={plan.id}
-              className={[
-                'kkd-plan-card',
-                isSelected ? 'selected' : '',
-                showFull ? 'full' : '',
-                showNotOpen ? 'not-open' : '',
-              ].filter(Boolean).join(' ')}
-              onClick={() => {
-                if (!canBook) return;
-                void ensureLiveAvailability();
-                setSelectedPlan(plan.id);
-                // #919: surface selection to the page-level bottom CTA
-                setSharedSelectedPlan({
-                  id: plan.id,
-                  label: plan.label,
-                  price: planPrice,
-                  priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
-                  date: selectedDate || undefined,
-                  scheduleId: planAvail.schedule?.id || undefined,
-                });
-              }}
-              style={(!canBook && selectedDate) ? { opacity: 0.55, pointerEvents: 'none' as const } : undefined}
-            >
-              <div className="kkd-plan-header">
-                <div>
-                  <span className="kkd-plan-name">{plan.label}</span>
-                  <span className="kkd-plan-duration">
-                    {ICONS.clock}
-                    {plan.duration}
-                  </span>
-                  <span className="kkd-plan-duration" style={{ marginTop: 4 }}>
-                    {formatPlanParticipantText(plan)}
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {/* 額滿 / 未開放 badge */}
-                  {showFull && (
-                    <span style={{
-                      background: '#fee2e2', color: '#991b1b', padding: '2px 10px',
-                      borderRadius: 20, fontSize: 12, fontWeight: 700,
-                    }}>額滿</span>
-                  )}
-                  {showNotOpen && (
-                    <span style={{
-                      background: '#f3f4f6', color: '#6b7280', padding: '2px 10px',
-                      borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    }}>未開放</span>
-                  )}
-                  {/* 剩餘名額 */}
-                  {selectedDate && planAvail.isOpen && (
-                    <span style={{
-                      background: planAvail.remaining <= 3 ? '#fef9c3' : '#dcfce7',
-                      color: planAvail.remaining <= 3 ? '#854d0e' : '#166534',
-                      padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                    }}>
-                      剩 {planAvail.remaining} 位
-                    </span>
-                  )}
-                  {selectedDate && (
-                    <span className="kkd-plan-date-tag">
-                      {selectedDate.slice(5).replace('-', '/')}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Highlights: transparent bg, black icon + text */}
-              <ul className="kkd-plan-notice-list">
-                {plan.highlights.map((h, i) => (
-                  <li key={i} className="kkd-plan-notice-item">
-                    <span className="kkd-plan-notice-icon">{getIconForHighlight(h)}</span>
-                    <span>{h}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                type="button"
-                className="kkd-link-sm"
-                style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', color: 'inherit' }}
-                onClick={() => setModalPlan(plan)}
-              >
-                {plan.detailsLinkText || '查看方案詳情 ›'}
-              </button>
-
-              <div className="kkd-plan-footer">
-                <div className="kkd-plan-price-block">
-                  <span className="kkd-plan-orig-price">NT${origPrice.toLocaleString()}</span>
-                  <strong className="kkd-plan-price">NT${planPrice.toLocaleString()}</strong>
-                  <span className="kkd-plan-per"> 起 / {plan.priceType === 'per_group' ? '組' : '人'}</span>
-                </div>
-                {showFull ? (
-                  <span
-                    className="tp-btn kkd-plan-select-btn"
-                    style={{ background: '#d1d5db', color: '#6b7280', cursor: 'not-allowed', pointerEvents: 'auto' }}
-                  >
-                    已額滿
-                  </span>
-                ) : showNotOpen ? (
-                  <span
-                    className="tp-btn kkd-plan-select-btn"
-                    style={{ background: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed', pointerEvents: 'auto' }}
-                  >
-                    未開放
-                  </span>
-                ) : (
-                  <Link
-                    href={resolvePlanBookingHref({
-                      activitySlug: activity.slug,
-                      planId: plan.id,
+              return (
+                <div
+                  key={plan.id}
+                  className={[
+                    'kkd-plan-card',
+                    isSelected ? 'selected' : '',
+                    showFull ? 'full' : '',
+                    showNotOpen ? 'not-open' : '',
+                  ].filter(Boolean).join(' ')}
+                  onClick={() => {
+                    if (!canBook) return;
+                    void ensureLiveAvailability();
+                    setSelectedPlan(plan.id);
+                    // #919: surface selection to the page-level bottom CTA
+                    setSharedSelectedPlan({
+                      id: plan.id,
+                      label: plan.label,
+                      price: planPrice,
+                      priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
                       date: selectedDate || undefined,
                       scheduleId: planAvail.schedule?.id || undefined,
-                      useBookingV2,
-                    })}
-                    className="tp-btn tp-btn-primary kkd-plan-select-btn"
-                    onClick={() => {
-                      void ensureLiveAvailability();
-                      setSelectedPlan(plan.id);
-                      // #919: surface selection so the bottom CTA reflects it on quick re-entry
-                      setSharedSelectedPlan({
-                        id: plan.id,
-                        label: plan.label,
-                        price: planPrice,
-                        priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
-                        date: selectedDate || undefined,
-                        scheduleId: planAvail.schedule?.id || undefined,
-                      });
-                    }}
-                  >
-                    {plan.bookingBtnText || '立即預約'}
-                  </Link>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                    });
+                  }}
+                  style={(!canBook && selectedDate) ? { opacity: 0.55, pointerEvents: 'none' as const } : undefined}
+                >
+                  <div className="kkd-plan-header">
+                    <div>
+                      <span className="kkd-plan-name">{plan.label}</span>
+                      <span className="kkd-plan-duration">
+                        {ICONS.clock}
+                        {plan.duration}
+                      </span>
+                      <span className="kkd-plan-duration" style={{ marginTop: 4 }}>
+                        {formatPlanParticipantText(plan)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      {/* 額滿 / 未開放 badge */}
+                      {showFull && (
+                        <span style={{
+                          background: '#fee2e2', color: '#991b1b', padding: '2px 10px',
+                          borderRadius: 20, fontSize: 12, fontWeight: 700,
+                        }}>額滿</span>
+                      )}
+                      {showNotOpen && (
+                        <span style={{
+                          background: '#f3f4f6', color: '#6b7280', padding: '2px 10px',
+                          borderRadius: 20, fontSize: 12, fontWeight: 600,
+                        }}>未開放</span>
+                      )}
+                      {/* 剩餘名額 */}
+                      {selectedDate && planAvail.isOpen && (
+                        <span style={{
+                          background: planAvail.remaining <= 3 ? '#fef9c3' : '#dcfce7',
+                          color: planAvail.remaining <= 3 ? '#854d0e' : '#166534',
+                          padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                        }}>
+                          剩 {planAvail.remaining} 位
+                        </span>
+                      )}
+                      {selectedDate && (
+                        <span className="kkd-plan-date-tag">
+                          {selectedDate.slice(5).replace('-', '/')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-      {PLANS.length > 2 && (
-        <div style={{ marginTop: 14, textAlign: 'center' }}>
-          <button
-            type="button"
-            onClick={() => setShowAllPlans(v => !v)}
-            style={{
-              background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer',
-              fontSize: 14, fontWeight: 600,
-            }}
-          >
-            {showAllPlans ? '收合方案' : `查看更多方案（還有 ${PLANS.length - 2} 個）`}
-          </button>
-        </div>
+                  {/* Highlights: transparent bg, black icon + text */}
+                  <ul className="kkd-plan-notice-list">
+                    {plan.highlights.map((h: string, i: number) => (
+                      <li key={i} className="kkd-plan-notice-item">
+                        <span className="kkd-plan-notice-icon">{getIconForHighlight(h)}</span>
+                        <span>{h}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    type="button"
+                    className="kkd-link-sm"
+                    style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', color: 'inherit' }}
+                    onClick={() => setModalPlan(plan)}
+                  >
+                    {plan.detailsLinkText || '查看方案詳情 ›'}
+                  </button>
+
+                  <div className="kkd-plan-footer">
+                    <div className="kkd-plan-price-block">
+                      <span className="kkd-plan-orig-price">NT${origPrice.toLocaleString()}</span>
+                      <strong className="kkd-plan-price">NT${planPrice.toLocaleString()}</strong>
+                      <span className="kkd-plan-per"> 起 / {plan.priceType === 'per_group' ? '組' : '人'}</span>
+                    </div>
+                    {showFull ? (
+                      <span
+                        className="tp-btn kkd-plan-select-btn"
+                        style={{ background: '#d1d5db', color: '#6b7280', cursor: 'not-allowed', pointerEvents: 'auto' }}
+                      >
+                        已額滿
+                      </span>
+                    ) : showNotOpen ? (
+                      <span
+                        className="tp-btn kkd-plan-select-btn"
+                        style={{ background: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed', pointerEvents: 'auto' }}
+                      >
+                        未開放
+                      </span>
+                    ) : (
+                      <Link
+                        href={resolvePlanBookingHref({
+                          activitySlug: activity.slug,
+                          planId: plan.id,
+                          date: selectedDate || undefined,
+                          scheduleId: planAvail.schedule?.id || undefined,
+                          useBookingV2,
+                        })}
+                        className="tp-btn tp-btn-primary kkd-plan-select-btn"
+                        onClick={() => {
+                          void ensureLiveAvailability();
+                          setSelectedPlan(plan.id);
+                          // #919: surface selection so the bottom CTA reflects it on quick re-entry
+                          setSharedSelectedPlan({
+                            id: plan.id,
+                            label: plan.label,
+                            price: planPrice,
+                            priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
+                            date: selectedDate || undefined,
+                            scheduleId: planAvail.schedule?.id || undefined,
+                          });
+                        }}
+                      >
+                        {plan.bookingBtnText || '立即預約'}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {PLANS.length > 2 && (
+            <div style={{ marginTop: 14, textAlign: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setShowAllPlans(v => !v)}
+                style={{
+                  background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 600,
+                }}
+              >
+                {showAllPlans ? '收合方案' : `查看更多方案（還有 ${PLANS.length - 2} 個）`}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
 
