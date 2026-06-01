@@ -60,6 +60,7 @@ export interface BookingAvailabilityEvaluation {
     filteredSlotCount: number;
     schedulePresentInGeneratedSlots: boolean;
     hasRules: boolean;
+    groupedRuleFailuresByDate: Record<string, { reasonCode?: string; messageZh?: string }>;
   };
 }
 
@@ -264,6 +265,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       filteredSlotCount: filteredSlots.length,
       schedulePresentInGeneratedSlots,
       hasRules: input.rules.length > 0,
+      groupedRuleFailuresByDate: Object.fromEntries(groupedRuleFailuresByDate.entries()),
     },
   };
 }

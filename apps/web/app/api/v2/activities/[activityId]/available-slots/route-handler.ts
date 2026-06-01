@@ -24,6 +24,7 @@ import {
   type ActivityPlan,
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   normalizeBookingParticipants,
@@ -469,6 +470,16 @@ export async function getAvailableSlots(
       selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
     });
 
+    const dateAvailability = buildDateAvailabilitySummary({
+      dateFrom: params.dateFrom,
+      dateTo: params.dateTo,
+      timezone: params.timezone,
+      slots: availability.slots,
+      fallbackReason: availability.reasonCode,
+      fallbackMessageZh: availability.messageZh,
+      groupedRuleFailuresByDate: availability.diagnostics.groupedRuleFailuresByDate,
+    });
+
     // Return response per API spec
     return Response.json(
       successV2({
@@ -486,6 +497,8 @@ export async function getAvailableSlots(
           maxParticipants: planData.max_participants,
         },
         slots: availability.slots,
+        dateAvailability,
+        dates: dateAvailability,
         reason: availability.reasonCode,
         messageZh: availability.messageZh,
       })

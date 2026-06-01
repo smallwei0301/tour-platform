@@ -457,7 +457,10 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /inDateRange\s*=\s*scheduleLocalDate\s*>=\s*params\.dateFrom\s*&&\s*scheduleLocalDate\s*<=\s*params\.dateTo/);
   assert.match(src, /planMatches\s*=\s*!scheduleData\.plan_id\s*\|\|\s*scheduleData\.plan_id\s*===\s*params\.planId/);
   // #910: selectedPlan metadata for Booking V2 UI must come from planData,
-  // not the narrowed slot-generator plan object.
+  assert.match(src, /slots:\s*availability\.slots/);
+  assert.match(src, /dateAvailability/);
+  assert.match(src, /dates:\s*dateAvailability/);
+  assert.match(src, /buildDateAvailabilitySummary\(/);
   assert.match(src, /selectedPlan:\s*\{/);
   assert.match(src, /id:\s*planData\.id/);
   assert.match(src, /name:\s*planData\.name/);

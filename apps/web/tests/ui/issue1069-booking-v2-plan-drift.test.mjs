@@ -143,4 +143,7 @@ test('GH-1069: Step1 hard-block reason uses explicit red error color in booking 
   assert.match(src, /color: step1CtaState\.tone === 'muted' \? 'var\(--tp-muted\)' : '#b42318'/);
   assert.match(src, /role=\{step1CtaState\.role \?\? undefined\}/);
   assert.match(src, /aria-describedby=\{step1CtaState\.disabled \? step1CtaState\.reasonId \?\? undefined : undefined\}/);
+  assert.match(src, /data-testid="booking-v2-date-capacity-picker"/);
+  assert.match(src, /entry\.state === 'available'\s*\? `\$\{entry\.date\}（剩餘 \$\{entry\.capacityLeft\}）`/);
+  assert.doesNotMatch(src, /type="date"\s*\n\s*name="date"/);
 });
