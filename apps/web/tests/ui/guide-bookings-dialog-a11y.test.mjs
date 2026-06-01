@@ -15,8 +15,15 @@ test('guide bookings detail modal wires dialog focus management and keyboard con
   const src = await readSource('app/guide/bookings/page.tsx');
 
   assert.match(src, /const triggerRef = useRef<HTMLElement \| null>\(null\)/);
+  assert.match(src, /const detailRequestIdRef = useRef\(0\)/);
   assert.match(src, /const detailDialogOpen = selected !== null \|\| detailLoading/);
   assert.match(src, /if \(trigger\) triggerRef\.current = trigger/);
+  assert.match(src, /const requestId = detailRequestIdRef\.current \+ 1/);
+  assert.match(src, /detailRequestIdRef\.current = requestId/);
+  assert.match(src, /if \(detailRequestIdRef\.current !== requestId\) return/);
+  assert.match(src, /if \(detailRequestIdRef\.current === requestId\) \{/);
+  assert.match(src, /detailRequestIdRef\.current \+= 1/);
+  assert.match(src, /setDetailLoading\(false\);/);
   assert.match(src, /if \(!detailDialogOpen\) \{/);
   assert.match(src, /triggerRef\.current\.focus\(\)/);
   assert.match(src, /const dialog = dialogRef\.current/);

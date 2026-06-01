@@ -26,6 +26,7 @@ export default function GuideBookingsPage() {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const detailRequestIdRef = useRef(0);
   const detailDialogOpen = selected !== null || detailLoading;
 
   useEffect(() => {
@@ -37,15 +38,24 @@ export default function GuideBookingsPage() {
 
   async function openDetail(id: string, trigger?: HTMLElement | null) {
     if (trigger) triggerRef.current = trigger;
+    const requestId = detailRequestIdRef.current + 1;
+    detailRequestIdRef.current = requestId;
     setDetailLoading(true);
     try {
       const res = await fetch(`/api/guide/bookings/${id}`);
       const json = await res.json();
+      if (detailRequestIdRef.current !== requestId) return;
       if (json?.data) setSelected(json.data);
-    } finally { setDetailLoading(false); }
+    } finally {
+      if (detailRequestIdRef.current === requestId) {
+        setDetailLoading(false);
+      }
+    }
   }
 
   function closeDetail() {
+    detailRequestIdRef.current += 1;
+    setDetailLoading(false);
     setSelected(null);
   }
 
