@@ -57,11 +57,12 @@ export default function GuideBookingsPage() {
       return;
     }
 
-    const container = dialogRef.current;
-    if (!container) return;
+    const dialog = dialogRef.current;
+    if (!(dialog instanceof HTMLElement)) return;
+    const dialogEl: HTMLElement = dialog;
 
-    const focusables = getFocusableElements(container);
-    const initialFocus = closeButtonRef.current || focusables[0] || container;
+    const focusables = getFocusableElements(dialogEl);
+    const initialFocus = closeButtonRef.current || focusables[0] || dialogEl;
     initialFocus.focus();
 
     function onKeyDown(event: KeyboardEvent) {
@@ -73,16 +74,16 @@ export default function GuideBookingsPage() {
 
       if (event.key !== 'Tab') return;
 
-      const currentFocusables = getFocusableElements(container);
+      const currentFocusables = getFocusableElements(dialogEl);
       if (currentFocusables.length === 0) {
         event.preventDefault();
-        container.focus();
+        dialogEl.focus();
         return;
       }
 
       const first = currentFocusables[0];
       const last = currentFocusables[currentFocusables.length - 1];
-      const active = document.activeElement as HTMLElement | null;
+      const active = document.activeElement;
 
       if (!event.shiftKey && active === last) {
         event.preventDefault();
@@ -90,7 +91,7 @@ export default function GuideBookingsPage() {
       } else if (event.shiftKey && active === first) {
         event.preventDefault();
         last.focus();
-      } else if (active && !container.contains(active)) {
+      } else if (active instanceof HTMLElement && !dialogEl.contains(active)) {
         event.preventDefault();
         first.focus();
       }
@@ -98,7 +99,7 @@ export default function GuideBookingsPage() {
 
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, [detailDialogOpen]);
+  }, [detailDialogOpen, detailLoading, selected]);
 
   const filtered = bookings.filter((b) => !statusFilter || b.status === statusFilter);
 

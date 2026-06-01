@@ -19,12 +19,16 @@ test('guide bookings detail modal wires dialog focus management and keyboard con
   assert.match(src, /if \(trigger\) triggerRef\.current = trigger/);
   assert.match(src, /if \(!detailDialogOpen\) \{/);
   assert.match(src, /triggerRef\.current\.focus\(\)/);
-  assert.match(src, /const initialFocus = closeButtonRef\.current \|\| focusables\[0\] \|\| container/);
+  assert.match(src, /const dialog = dialogRef\.current/);
+  assert.match(src, /if \(!\(dialog instanceof HTMLElement\)\) return/);
+  assert.match(src, /const dialogEl: HTMLElement = dialog/);
+  assert.match(src, /const initialFocus = closeButtonRef\.current \|\| focusables\[0\] \|\| dialogEl/);
   assert.match(src, /if \(event\.key === 'Escape'\)/);
   assert.match(src, /if \(event\.key !== 'Tab'\) return/);
   assert.match(src, /if \(!event\.shiftKey && active === last\)/);
   assert.match(src, /else if \(event\.shiftKey && active === first\)/);
-  assert.match(src, /else if \(active && !container\.contains\(active\)\)/);
+  assert.match(src, /else if \(active instanceof HTMLElement && !dialogEl\.contains\(active\)\)/);
+  assert.match(src, /\}, \[detailDialogOpen, detailLoading, selected\]\);/);
 });
 
 test('guide bookings detail modal keeps a11y semantics and close button focus target', async () => {
