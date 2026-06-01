@@ -191,8 +191,21 @@ function BookingInnerLegacy() {
     );
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: activity.title, item: `${baseUrl}/activities/${activity.region}/${activity.slug}` },
+      { '@type': 'ListItem', position: 3, name: '預約' },
+    ],
+  };
+
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <h1 className="sr-only">{activity.title} — 預約</h1>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/activities">全部行程</Link> &gt; {activity.title} &gt; 預約
       </div>
@@ -828,8 +841,21 @@ function BookingInnerV2FlagShell() {
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: activity.title, item: `${baseUrl}/activities/${activity.region}/${activity.slug}` },
+      { '@type': 'ListItem', position: 3, name: '預約' },
+    ],
+  };
+
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <h1 className="sr-only">{activity.title} — 預約</h1>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/activities">全部行程</Link> &gt; {activity.title} &gt; 預約
       </div>

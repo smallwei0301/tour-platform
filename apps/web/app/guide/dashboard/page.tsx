@@ -212,6 +212,7 @@ export default function GuideDashboardPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <h1 className="sr-only">導遊後台</h1>
       {/* Welcome Banner */}
       {isNew && (
         <div style={{
@@ -233,6 +234,7 @@ export default function GuideDashboardPage() {
           </div>
           <button
             onClick={() => { setIsNew(false); document.cookie = 'guide_is_new=; Path=/guide; Max-Age=0'; }}
+            aria-label="關閉歡迎訊息"
             style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer', color: '#a78bfa' }}
           >
             ✕
