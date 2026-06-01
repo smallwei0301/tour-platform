@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type Schedule = {
   id: string; activityId: string; tourTitle: string; planName: string; date: string; endAt?: string;
@@ -109,101 +110,105 @@ export default function GuideSchedulesPage() {
         ))}
       </div>
 
-      {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
-      ) : filtered.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>無場次資料</div>
-      ) : (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, background: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '10px 12px' }}>行程</th>
-                <th>方案</th>
-                <th>日期</th>
-                <th>已訂/容量</th>
-                <th>狀態</th>
-                <th style={{ width: 100 }}>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((s) => (
-                <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px 12px', fontWeight: 600 }}>{s.tourTitle}</td>
-                  <td style={{ color: '#6b7280' }}>{s.planName}</td>
-                  <td style={{ fontSize: 13 }}>
-                    {new Date(s.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}
-                    <br />
-                    <span style={{ color: '#9ca3af', fontSize: 12 }}>
-                      {new Date(s.date).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
-                      {s.endAt ? ` - ${new Date(s.endAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}` : ''}
-                    </span>
-                  </td>
-                  <td style={{ minWidth: 120 }}>
-                    {editingCap === s.id ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontWeight: 600, color: '#374151' }}>{s.bookedCount}/</span>
-                        <input
-                          value={capValue}
-                          onChange={(e) => setCapValue(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter') updateCapacity(s.id); if (e.key === 'Escape') setEditingCap(null); }}
-                          autoFocus
-                          type="number"
-                          min={s.bookedCount}
-                          style={{ width: 56, padding: '4px 6px', borderRadius: 6, border: '1.5px solid #7c3aed', fontSize: 14, textAlign: 'center' }}
-                        />
-                        <button
-                          onClick={() => updateCapacity(s.id)}
-                          title="儲存"
-                          style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
-                        >
-                          ✓
-                        </button>
-                        <button
-                          onClick={() => setEditingCap(null)}
-                          title="取消"
-                          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>
-                          <span style={{ fontWeight: 600 }}>{s.bookedCount}</span>
-                          <span style={{ color: '#9ca3af' }}>/{s.capacity}</span>
-                        </span>
-                        <button
-                          onClick={() => { setEditingCap(s.id); setCapValue(String(s.capacity)); }}
-                          title="修改上限人數"
-                          style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          ✏️ 改
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                  <td>
-                    <StatusPill status={s.status} />
-                  </td>
-                  <td>
-                    <button
-                      onClick={() => toggleActive(s.id, s.status)}
-                      style={{
-                        padding: '5px 10px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                        background: s.status === 'open' ? '#fef2f2' : '#dcfce7',
-                        color: s.status === 'open' ? '#dc2626' : '#16a34a',
-                      }}
-                    >
-                      {s.status === 'open' ? '關閉' : '開啟'}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {(() => {
+        const columns: ResponsiveColumn<Schedule>[] = [
+          {
+            key: 'tour', header: '行程', mobilePriority: 'title',
+            cell: (s) => <span style={{ fontWeight: 600 }}>{s.tourTitle}</span>,
+          },
+          { key: 'plan', header: '方案', cell: (s) => <span style={{ color: '#6b7280' }}>{s.planName}</span> },
+          {
+            key: 'date', header: '日期',
+            cell: (s) => (
+              <span style={{ fontSize: 13 }}>
+                {new Date(s.date).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short' })}
+                <br />
+                <span style={{ color: '#9ca3af', fontSize: 12 }}>
+                  {new Date(s.date).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                  {s.endAt ? ` - ${new Date(s.endAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                </span>
+              </span>
+            ),
+          },
+          {
+            key: 'capacity', header: '已訂/容量',
+            cell: (s) => (
+              editingCap === s.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <span style={{ fontWeight: 600, color: '#374151' }}>{s.bookedCount}/</span>
+                  <input
+                    value={capValue}
+                    onChange={(e) => setCapValue(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') updateCapacity(s.id); if (e.key === 'Escape') setEditingCap(null); }}
+                    autoFocus
+                    type="number"
+                    min={s.bookedCount}
+                    style={{ width: 56, padding: '4px 6px', borderRadius: 6, border: '1.5px solid #7c3aed', fontSize: 14, textAlign: 'center' }}
+                  />
+                  <button
+                    onClick={() => updateCapacity(s.id)}
+                    title="儲存"
+                    style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#7c3aed', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+                  >
+                    ✓
+                  </button>
+                  <button
+                    onClick={() => setEditingCap(null)}
+                    title="取消"
+                    style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>
+                    <span style={{ fontWeight: 600 }}>{s.bookedCount}</span>
+                    <span style={{ color: '#9ca3af' }}>/{s.capacity}</span>
+                  </span>
+                  <button
+                    onClick={() => { setEditingCap(s.id); setCapValue(String(s.capacity)); }}
+                    title="修改上限人數"
+                    style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid #e5e7eb', background: '#f9fafb', color: '#6b7280', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+                  >
+                    ✏️ 改
+                  </button>
+                </div>
+              )
+            ),
+          },
+          {
+            key: 'status', header: '狀態', align: 'right', mobilePriority: 'subtitle',
+            cell: (s) => <StatusPill status={s.status} />,
+          },
+          {
+            key: 'action', header: '操作', align: 'right',
+            cell: (s) => (
+              <button
+                onClick={() => toggleActive(s.id, s.status)}
+                style={{
+                  padding: '5px 10px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  background: s.status === 'open' ? '#fef2f2' : '#dcfce7',
+                  color: s.status === 'open' ? '#dc2626' : '#16a34a',
+                }}
+              >
+                {s.status === 'open' ? '關閉' : '開啟'}
+              </button>
+            ),
+          },
+        ];
+        return (
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+            <ResponsiveTable<Schedule>
+              columns={columns}
+              rows={filtered}
+              getRowKey={(s) => s.id}
+              loading={loading}
+              emptyMessage="無場次資料"
+            />
+          </div>
+        );
+      })()}
     </div>
   );
 }

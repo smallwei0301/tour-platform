@@ -21,6 +21,12 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
   }, []);
 
+  // Close the mobile dropdown whenever the route changes (back button,
+  // bottom-tab tap, programmatic nav — anything that isn't an item click).
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   // Don't show nav on login page
   if (pathname === '/guide/login') return <>{children}</>;
 
@@ -33,7 +39,17 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
+    <div
+      style={{
+        minHeight: '100vh',
+        background: '#f9fafb',
+        // Accent palette consumed by ResponsiveTable's selected-row styles.
+        // Keeps the guide subtree purple while admin keeps green via the
+        // CSS-var fallback (var(--rt-accent, var(--tp-primary))).
+        ['--rt-accent' as any]: '#7c3aed',
+        ['--rt-accent-soft' as any]: '#f5f3ff',
+      }}
+    >
       {/* ── Desktop Top Navbar ── */}
       <nav style={{
         background: '#fff',
@@ -127,6 +143,19 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
 
       {/* ── Mobile Dropdown Menu ── */}
       {menuOpen && (
+        <>
+          {/* Outside-click backdrop (sits below the dropdown, above content). */}
+          <div
+            onClick={() => setMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              top: 56,
+              background: 'transparent',
+              zIndex: 48,
+            }}
+            aria-hidden
+          />
         <div
           className="guide-mobile-menu"
           style={{
@@ -142,6 +171,8 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
             display: 'flex',
             flexDirection: 'column',
             gap: 4,
+            maxHeight: 'calc(100dvh - 56px - 60px)',
+            overflowY: 'auto',
           }}
         >
           {NAV_ITEMS.map((item) => {
@@ -192,6 +223,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
             <span>登出</span>
           </button>
         </div>
+        </>
       )}
 
       {/* ── Mobile Bottom Tab Bar ── */}
@@ -208,6 +240,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
           justifyContent: 'space-around',
           alignItems: 'center',
           height: 60,
+          paddingBottom: 'env(safe-area-inset-bottom)',
           zIndex: 50,
           boxShadow: '0 -1px 4px rgba(0,0,0,0.04)',
         }}
@@ -253,8 +286,15 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
         }
       `}</style>
 
-      {/* Page Content (with bottom padding for mobile tab bar) */}
-      <main style={{ padding: '24px 16px', maxWidth: 1200, margin: '0 auto', paddingBottom: 80 }}>
+      {/* Page Content (with bottom padding for mobile tab bar + iPhone safe area). */}
+      <main
+        style={{
+          padding: '24px 16px',
+          maxWidth: 1200,
+          margin: '0 auto',
+          paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
+        }}
+      >
         {children}
       </main>
     </div>

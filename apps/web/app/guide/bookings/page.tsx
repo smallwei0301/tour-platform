@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { ResponsiveTable, ResponsiveModal, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type Booking = {
   id: string; guestName: string; maskedEmail: string; scheduleDate: string | null;
@@ -16,6 +17,18 @@ type BookingDetail = Booking & {
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: '待付款', confirmed: '已確認', cancelled: '已取消', refunded: '已退款',
 };
+
+function StatusPill({ status }: { status: string }) {
+  return (
+    <span style={{
+      display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+      background: status === 'confirmed' ? '#dcfce7' : status === 'pending_payment' ? '#fef9c3' : '#fee2e2',
+      color: status === 'confirmed' ? '#16a34a' : status === 'pending_payment' ? '#ca8a04' : '#dc2626',
+    }}>
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
+}
 
 export default function GuideBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -42,12 +55,65 @@ export default function GuideBookingsPage() {
 
   const filtered = bookings.filter((b) => !statusFilter || b.status === statusFilter);
 
+  const columns: ResponsiveColumn<Booking>[] = [
+    {
+      key: 'guest',
+      header: '旅客',
+      mobilePriority: 'title',
+      cell: (b) => (
+        <>
+          <div style={{ fontWeight: 600 }}>{b.guestName}</div>
+          <div style={{ fontSize: 11, color: '#9ca3af' }}>{b.maskedEmail}</div>
+        </>
+      ),
+    },
+    { key: 'tour', header: '行程', cell: (b) => b.tourTitle },
+    {
+      key: 'date',
+      header: '場次日期',
+      cell: (b) => (
+        <span style={{ fontSize: 13 }}>
+          {b.scheduleDate ? new Date(b.scheduleDate).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' }) : '-'}
+        </span>
+      ),
+    },
+    { key: 'party', header: '人數', cell: (b) => `${b.partySize}` },
+    {
+      key: 'amount',
+      header: '金額',
+      align: 'right',
+      cell: (b) => <span style={{ fontWeight: 600 }}>NT$ {b.totalTwd.toLocaleString()}</span>,
+    },
+    {
+      key: 'status',
+      header: '狀態',
+      align: 'right',
+      mobilePriority: 'subtitle',
+      cell: (b) => <StatusPill status={b.status} />,
+    },
+    // Whole row/card is tappable — drop the redundant 詳情 button on mobile.
+    {
+      key: 'action',
+      header: '操作',
+      align: 'right',
+      mobilePriority: 'hidden',
+      cell: (b) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); openDetail(b.id); }}
+          style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', fontSize: 12, cursor: 'pointer' }}
+        >
+          詳情
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div>
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單查看</h1>
 
       {/* Filter */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
           { value: '', label: '全部' },
           { value: 'confirmed', label: '已確認' },
@@ -68,122 +134,64 @@ export default function GuideBookingsPage() {
         ))}
       </div>
 
-      {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
-      ) : filtered.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>無訂單資料</div>
-      ) : (
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, background: '#fafafa', borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '10px 12px' }}>旅客</th>
-                <th>行程</th>
-                <th>場次日期</th>
-                <th>人數</th>
-                <th>金額</th>
-                <th>狀態</th>
-                <th>操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((b) => (
-                <tr key={b.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => openDetail(b.id)}>
-                  <td style={{ padding: '10px 12px' }}>
-                    <div style={{ fontWeight: 600 }}>{b.guestName}</div>
-                    <div style={{ fontSize: 11, color: '#9ca3af' }}>{b.maskedEmail}</div>
-                  </td>
-                  <td>{b.tourTitle}</td>
-                  <td style={{ fontSize: 13 }}>
-                    {b.scheduleDate ? new Date(b.scheduleDate).toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' }) : '-'}
-                  </td>
-                  <td>{b.partySize}</td>
-                  <td style={{ fontWeight: 600 }}>NT$ {b.totalTwd.toLocaleString()}</td>
-                  <td>
-                    <span style={{
-                      display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-                      background: b.status === 'confirmed' ? '#dcfce7' : b.status === 'pending_payment' ? '#fef9c3' : '#fee2e2',
-                      color: b.status === 'confirmed' ? '#16a34a' : b.status === 'pending_payment' ? '#ca8a04' : '#dc2626',
-                    }}>
-                      {STATUS_LABELS[b.status] || b.status}
-                    </span>
-                  </td>
-                  <td>
+      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+        <ResponsiveTable<Booking>
+          columns={columns}
+          rows={filtered}
+          getRowKey={(b) => b.id}
+          onRowClick={(b) => openDetail(b.id)}
+          loading={loading}
+          emptyMessage="無訂單資料"
+        />
+      </div>
+
+      <ResponsiveModal
+        open={!!(selected || detailLoading)}
+        onClose={() => { if (!detailLoading) setSelected(null); }}
+        title="訂單詳情"
+        size="sm"
+      >
+        {detailLoading ? (
+          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
+        ) : selected && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
+            <InfoRow label="旅客姓名" value={selected.guestName} />
+            <InfoRow
+              label="手機號碼"
+              value={
+                <span>
+                  {selected.guestPhone || '無'}
+                  {selected.guestPhone && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); openDetail(b.id); }}
-                      style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', fontSize: 12, cursor: 'pointer' }}
+                      onClick={() => navigator.clipboard.writeText(selected.guestPhone)}
+                      style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: 11, cursor: 'pointer' }}
                     >
-                      詳情
+                      📋 複製
                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {(selected || detailLoading) && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => !detailLoading && setSelected(null)}
-        >
-          <div
-            style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 500, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {detailLoading ? (
-              <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
-            ) : selected && (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>訂單詳情</h3>
-                  <button onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>✕</button>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
-                  <InfoRow label="旅客姓名" value={selected.guestName} />
-                  <InfoRow
-                    label="手機號碼"
-                    value={
-                      <span>
-                        {selected.guestPhone || '無'}
-                        {selected.guestPhone && (
-                          <button
-                            onClick={() => navigator.clipboard.writeText(selected.guestPhone)}
-                            style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: 11, cursor: 'pointer' }}
-                          >
-                            📋 複製
-                          </button>
-                        )}
-                      </span>
-                    }
-                  />
-                  <InfoRow label="Email" value={selected.maskedEmail} />
-                  <InfoRow label="行程" value={selected.tourTitle} />
-                  <InfoRow label="場次日期" value={selected.schedule ? new Date(selected.schedule.date).toLocaleString('zh-TW') : '-'} />
-                  <InfoRow label="人數" value={`${selected.partySize} 人`} />
-                  <InfoRow label="金額" value={`NT$ ${selected.totalTwd.toLocaleString()}`} />
-                  <InfoRow label="訂單狀態" value={STATUS_LABELS[selected.status] || selected.status} />
-                  <InfoRow label="付款狀態" value={selected.paymentStatus === 'paid' ? `✅ 已付款（${new Date(selected.paidAt!).toLocaleString('zh-TW')}）` : '⏳ 未付款'} />
-                  {selected.adminNote && <InfoRow label="管理員備註" value={selected.adminNote} />}
-
-                </div>
-              </>
-            )}
+                  )}
+                </span>
+              }
+            />
+            <InfoRow label="Email" value={selected.maskedEmail} />
+            <InfoRow label="行程" value={selected.tourTitle} />
+            <InfoRow label="場次日期" value={selected.schedule ? new Date(selected.schedule.date).toLocaleString('zh-TW') : '-'} />
+            <InfoRow label="人數" value={`${selected.partySize} 人`} />
+            <InfoRow label="金額" value={`NT$ ${selected.totalTwd.toLocaleString()}`} />
+            <InfoRow label="訂單狀態" value={STATUS_LABELS[selected.status] || selected.status} />
+            <InfoRow label="付款狀態" value={selected.paymentStatus === 'paid' ? `✅ 已付款（${new Date(selected.paidAt!).toLocaleString('zh-TW')}）` : '⏳ 未付款'} />
+            {selected.adminNote && <InfoRow label="管理員備註" value={selected.adminNote} />}
           </div>
-        </div>
-      )}
+        )}
+      </ResponsiveModal>
     </div>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', gap: 12, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+    <div style={{ display: 'flex', gap: 12, padding: '6px 0', borderBottom: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
       <div style={{ width: 90, flexShrink: 0, color: '#6b7280', fontSize: 13 }}>{label}</div>
-      <div style={{ fontWeight: 500 }}>{value}</div>
+      <div style={{ fontWeight: 500, flex: '1 1 200px', minWidth: 0, wordBreak: 'break-word' }}>{value}</div>
     </div>
   );
 }
