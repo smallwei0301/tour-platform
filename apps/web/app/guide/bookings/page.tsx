@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type Booking = {
   id: string; guestName: string; maskedEmail: string; scheduleDate: string | null;
@@ -23,6 +23,11 @@ export default function GuideBookingsPage() {
   const [selected, setSelected] = useState<BookingDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const detailRequestIdRef = useRef(0);
+  const detailDialogOpen = selected !== null || detailLoading;
 
   useEffect(() => {
     fetch('/api/guide/bookings')
@@ -31,14 +36,80 @@ export default function GuideBookingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function openDetail(id: string) {
+  async function openDetail(id: string, trigger?: HTMLElement | null) {
+    if (trigger) triggerRef.current = trigger;
+    const requestId = detailRequestIdRef.current + 1;
+    detailRequestIdRef.current = requestId;
     setDetailLoading(true);
     try {
       const res = await fetch(`/api/guide/bookings/${id}`);
       const json = await res.json();
+      if (detailRequestIdRef.current !== requestId) return;
       if (json?.data) setSelected(json.data);
-    } finally { setDetailLoading(false); }
+    } finally {
+      if (detailRequestIdRef.current === requestId) {
+        setDetailLoading(false);
+      }
+    }
   }
+
+  function closeDetail() {
+    detailRequestIdRef.current += 1;
+    setDetailLoading(false);
+    setSelected(null);
+  }
+
+  useEffect(() => {
+    if (!detailDialogOpen) {
+      if (triggerRef.current && document.contains(triggerRef.current)) {
+        triggerRef.current.focus();
+      }
+      return;
+    }
+
+    const dialog = dialogRef.current;
+    if (!(dialog instanceof HTMLElement)) return;
+    const dialogEl: HTMLElement = dialog;
+
+    const focusables = getFocusableElements(dialogEl);
+    const initialFocus = closeButtonRef.current || focusables[0] || dialogEl;
+    initialFocus.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDetail();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const currentFocusables = getFocusableElements(dialogEl);
+      if (currentFocusables.length === 0) {
+        event.preventDefault();
+        dialogEl.focus();
+        return;
+      }
+
+      const first = currentFocusables[0];
+      const last = currentFocusables[currentFocusables.length - 1];
+      const active = document.activeElement;
+
+      if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (active instanceof HTMLElement && !dialogEl.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [detailDialogOpen, detailLoading, selected]);
 
   const filtered = bookings.filter((b) => !statusFilter || b.status === statusFilter);
 
@@ -90,7 +161,7 @@ export default function GuideBookingsPage() {
             </thead>
             <tbody>
               {filtered.map((b) => (
-                <tr key={b.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={() => openDetail(b.id)}>
+                <tr key={b.id} style={{ borderBottom: '1px solid #f3f4f6', cursor: 'pointer' }} onClick={(e) => openDetail(b.id, e.currentTarget as HTMLElement)}>
                   <td style={{ padding: '10px 12px' }}>
                     <div style={{ fontWeight: 600 }}>{b.guestName}</div>
                     <div style={{ fontSize: 11, color: '#9ca3af' }}>{b.maskedEmail}</div>
@@ -112,7 +183,7 @@ export default function GuideBookingsPage() {
                   </td>
                   <td>
                     <button
-                      onClick={(e) => { e.stopPropagation(); openDetail(b.id); }}
+                      onClick={(e) => { e.stopPropagation(); openDetail(b.id, e.currentTarget); }}
                       style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', fontSize: 12, cursor: 'pointer' }}
                     >
                       詳情
@@ -126,13 +197,14 @@ export default function GuideBookingsPage() {
       )}
 
       {/* Detail Modal */}
-      {(selected || detailLoading) && (
+      {detailDialogOpen && (
         <div
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => !detailLoading && setSelected(null)}
+          onClick={() => !detailLoading && closeDetail()}
         >
           <div
-            role="dialog" aria-modal="true" aria-labelledby="booking-detail-modal-title"
+            ref={dialogRef}
+            role="dialog" aria-modal="true" aria-labelledby="booking-detail-modal-title" tabIndex={-1}
             style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 500, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -142,7 +214,7 @@ export default function GuideBookingsPage() {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                   <h3 id="booking-detail-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>訂單詳情</h3>
-                  <button aria-label="關閉" onClick={() => setSelected(null)} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>✕</button>
+                  <button ref={closeButtonRef} aria-label="關閉" onClick={closeDetail} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>✕</button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
@@ -180,6 +252,14 @@ export default function GuideBookingsPage() {
       )}
     </div>
   );
+}
+
+function getFocusableElements(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden'));
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
