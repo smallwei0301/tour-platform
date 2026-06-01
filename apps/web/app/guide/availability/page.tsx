@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { ResponsiveModal, FormGrid, useIsMobile } from '../../../src/components/admin/responsive';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -49,6 +50,7 @@ type GuideActivityPlanOption = {
 };
 
 export default function GuideAvailabilityPage() {
+  const isMobile = useIsMobile(768);
   const [rules, setRules] = useState<AvailabilityRule[]>([]);
   const [blackouts, setBlackouts] = useState<BlackoutDate[]>([]);
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
@@ -378,6 +380,63 @@ export default function GuideAvailabilityPage() {
     color: variant === 'warning' ? '#d97706' : '#6b7280',
   });
 
+  // Single rule card — shared by desktop 7-col grid and mobile stacked list.
+  function RuleCard({
+    rule,
+    optionByPlanId: opts,
+    onEdit,
+    onDelete,
+  }: {
+    rule: AvailabilityRule;
+    optionByPlanId: Record<string, GuideActivityPlanOption>;
+    onEdit: (rule: AvailabilityRule) => void;
+    onDelete: (id: string) => void;
+  }) {
+    return (
+      <div
+        style={{
+          background: rule.is_active ? '#dcfce7' : '#f3f4f6',
+          borderRadius: 6,
+          padding: '6px 10px',
+          fontSize: 12,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+          <span style={{ fontWeight: 600 }}>
+            {rule.start_time_local}-{rule.end_time_local}
+          </span>
+        </div>
+        <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
+          活動：{opts[rule.activity_plan_id || '']?.activityTitle || '未指定'}
+        </div>
+        <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
+          方案：{opts[rule.activity_plan_id || '']?.planName || rule.activity_plans?.name || '未指定'}
+        </div>
+        {rule.activity_plan_id && opts[rule.activity_plan_id] && (
+          <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
+            人數：{formatParticipants(
+              opts[rule.activity_plan_id]?.minParticipants ?? null,
+              opts[rule.activity_plan_id]?.maxParticipants ?? null
+            )}
+          </div>
+        )}
+        {(rule.effective_from || rule.effective_to) && (
+          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
+            生效：{rule.effective_from || '不限'} ~ {rule.effective_to || '不限'}
+          </div>
+        )}
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button onClick={() => onEdit(rule)} style={smallBtn('#fff', '#374151')}>
+            編輯
+          </button>
+          <button onClick={() => onDelete(rule.id)} style={smallBtn('#fee2e2', '#dc2626')}>
+            刪除
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
@@ -394,210 +453,210 @@ export default function GuideAvailabilityPage() {
       </div>
 
       {/* ── Rule Modal ── */}
-      {showRuleModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingRule ? '編輯時段規則' : '新增時段規則'}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
-                <select
-                  value={ruleForm.activity_id}
-                  onChange={(e) => setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: '' })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-                >
-                  <option value="">請選擇活動</option>
-                  {[...new Map(activityPlanOptions.map((opt) => [opt.activityId, opt])).values()].map((activity) => (
-                    <option key={activity.activityId} value={activity.activityId}>{activity.activityTitle}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>
-                <select
-                  value={ruleForm.activity_plan_id}
-                  onChange={(e) => setRuleForm({ ...ruleForm, activity_plan_id: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-                  disabled={!ruleForm.activity_id}
-                >
-                  <option value="">請選擇方案</option>
-                  {selectedActivityPlans.map((plan) => (
-                    <option key={plan.planId} value={plan.planId}>
-                      {`${plan.planName}（${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開放模式</label>
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                  <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'weekly'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'weekly' })} /> 每週重複</label>
-                  <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'single-day'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'single-day' })} /> 單日開放</label>
-                </div>
-              </div>
-              {ruleForm.rule_mode === 'single-day' ? (
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
-                  <input type="date" value={ruleForm.single_date} onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
-                </div>
-              ) : (
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
-                    <input type="date" value={ruleForm.effective_from} onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
-                    <input type="date" value={ruleForm.effective_to} onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
-                  </div>
-                </div>
-              )}
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
-                <select
-                  value={ruleForm.weekday}
-                  onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-                  disabled={ruleForm.rule_mode === 'single-day'}
-                >
-                  {WEEKDAY_LABELS.map((label, i) => (
-                    <option key={i} value={i}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
-                  <input
-                    type="time"
-                    value={ruleForm.start_time_local}
-                    onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
-                  <input
-                    type="time"
-                    value={ruleForm.end_time_local}
-                    onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
-                  <input
-                    type="number"
-                    min="15"
-                    step="15"
-                    value={ruleForm.slot_interval_minutes}
-                    onChange={(e) => setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="5"
-                    value={ruleForm.buffer_before_minutes}
-                    onChange={(e) =>
-                      setRuleForm({
-                        ...ruleForm,
-                        buffer_before_minutes: Number(e.target.value),
-                        buffer_after_minutes: Number(e.target.value),
-                      })
-                    }
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-                <input
-                  type="checkbox"
-                  checked={ruleForm.is_active}
-                  onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })}
-                />
-                啟用此規則
-              </label>
-              {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
-                  {error}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button onClick={saveRule} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
-                  {saving ? '儲存中...' : '儲存'}
-                </button>
-                <button onClick={() => setShowRuleModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
-                  取消
-                </button>
-              </div>
+      <ResponsiveModal
+        open={showRuleModal}
+        onClose={() => setShowRuleModal(false)}
+        title={editingRule ? '編輯時段規則' : '新增時段規則'}
+        size="md"
+        footer={
+          <>
+            <button onClick={() => setShowRuleModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
+              取消
+            </button>
+            <button onClick={saveRule} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
+              {saving ? '儲存中...' : '儲存'}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
+            <select
+              value={ruleForm.activity_id}
+              onChange={(e) => setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: '' })}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+            >
+              <option value="">請選擇活動</option>
+              {[...new Map(activityPlanOptions.map((opt) => [opt.activityId, opt])).values()].map((activity) => (
+                <option key={activity.activityId} value={activity.activityId}>{activity.activityTitle}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>
+            <select
+              value={ruleForm.activity_plan_id}
+              onChange={(e) => setRuleForm({ ...ruleForm, activity_plan_id: e.target.value })}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+              disabled={!ruleForm.activity_id}
+            >
+              <option value="">請選擇方案</option>
+              {selectedActivityPlans.map((plan) => (
+                <option key={plan.planId} value={plan.planId}>
+                  {`${plan.planName}（${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開放模式</label>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'weekly'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'weekly' })} /> 每週重複</label>
+              <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'single-day'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'single-day' })} /> 單日開放</label>
             </div>
           </div>
+          {ruleForm.rule_mode === 'single-day' ? (
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
+              <input type="date" value={ruleForm.single_date} onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+            </div>
+          ) : (
+            <FormGrid cols={2}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
+                <input type="date" value={ruleForm.effective_from} onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
+                <input type="date" value={ruleForm.effective_to} onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+              </div>
+            </FormGrid>
+          )}
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
+            <select
+              value={ruleForm.weekday}
+              onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+              disabled={ruleForm.rule_mode === 'single-day'}
+            >
+              {WEEKDAY_LABELS.map((label, i) => (
+                <option key={i} value={i}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <FormGrid cols={2}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+              <input
+                type="time"
+                value={ruleForm.start_time_local}
+                onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+              <input
+                type="time"
+                value={ruleForm.end_time_local}
+                onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+              />
+            </div>
+          </FormGrid>
+          <FormGrid cols={2}>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
+              <input
+                type="number"
+                min="15"
+                step="15"
+                value={ruleForm.slot_interval_minutes}
+                onChange={(e) => setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) })}
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
+              <input
+                type="number"
+                min="0"
+                step="5"
+                value={ruleForm.buffer_before_minutes}
+                onChange={(e) =>
+                  setRuleForm({
+                    ...ruleForm,
+                    buffer_before_minutes: Number(e.target.value),
+                    buffer_after_minutes: Number(e.target.value),
+                  })
+                }
+                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+              />
+            </div>
+          </FormGrid>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+            <input
+              type="checkbox"
+              checked={ruleForm.is_active}
+              onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })}
+            />
+            啟用此規則
+          </label>
+          {error && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
+              {error}
+            </div>
+          )}
         </div>
-      )}
+      </ResponsiveModal>
 
       {/* ── Blackout Modal ── */}
-      {showBlackoutModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 480, width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 700 }}>{editingBlackout ? '編輯休假時段' : '新增休假時段'}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
-                <input
-                  type="datetime-local"
-                  value={blackoutForm.starts_at}
-                  onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
-                <input
-                  type="datetime-local"
-                  value={blackoutForm.ends_at}
-                  onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
-                <input
-                  type="text"
-                  value={blackoutForm.reason}
-                  onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })}
-                  placeholder="例：私人行程"
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
-                  {error}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button onClick={saveBlackout} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
-                  {saving ? '儲存中...' : (editingBlackout ? '更新' : '儲存')}
-                </button>
-                <button onClick={() => setShowBlackoutModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
-                  取消
-                </button>
-              </div>
-            </div>
+      <ResponsiveModal
+        open={showBlackoutModal}
+        onClose={() => setShowBlackoutModal(false)}
+        title={editingBlackout ? '編輯休假時段' : '新增休假時段'}
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setShowBlackoutModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
+              取消
+            </button>
+            <button onClick={saveBlackout} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
+              {saving ? '儲存中...' : (editingBlackout ? '更新' : '儲存')}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+            <input
+              type="datetime-local"
+              value={blackoutForm.starts_at}
+              onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+            />
           </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+            <input
+              type="datetime-local"
+              value={blackoutForm.ends_at}
+              onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })}
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
+            <input
+              type="text"
+              value={blackoutForm.reason}
+              onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })}
+              placeholder="例：私人行程"
+              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+            />
+          </div>
+          {error && (
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
+              {error}
+            </div>
+          )}
         </div>
-      )}
+      </ResponsiveModal>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
@@ -618,6 +677,30 @@ export default function GuideAvailabilityPage() {
               <div style={{ padding: 20 }}>
                 {rules.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>尚未設定可預約時段</div>
+                ) : isMobile ? (
+                  // Mobile: weekdays stacked vertically; weekday header + full-width
+                  // rule cards. Skip weekdays with no rules to avoid 7 tall empty blocks.
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                      const dayRules = rulesByWeekday[day] || [];
+                      if (dayRules.length === 0) return null;
+                      return (
+                        <div key={day}>
+                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: day === 0 || day === 6 ? '#dc2626' : '#111' }}>
+                            {WEEKDAY_LABELS[day]}
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {dayRules.map((rule) => (
+                              <RuleCard key={rule.id} rule={rule} optionByPlanId={optionByPlanId} onEdit={openRuleModal} onDelete={deleteRule} />
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {[0, 1, 2, 3, 4, 5, 6].every((day) => !(rulesByWeekday[day]?.length)) && (
+                      <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}>尚未設定可預約時段</div>
+                    )}
+                  </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
                     {[0, 1, 2, 3, 4, 5, 6].map((day) => (
@@ -628,48 +711,7 @@ export default function GuideAvailabilityPage() {
                         {rulesByWeekday[day]?.length > 0 ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             {rulesByWeekday[day].map((rule) => (
-                              <div
-                                key={rule.id}
-                                style={{
-                                  background: rule.is_active ? '#dcfce7' : '#f3f4f6',
-                                  borderRadius: 6,
-                                  padding: '6px 10px',
-                                  fontSize: 12,
-                                }}
-                              >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                                  <span style={{ fontWeight: 600 }}>
-                                    {rule.start_time_local}-{rule.end_time_local}
-                                  </span>
-                                </div>
-                                <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
-                                  活動：{optionByPlanId[rule.activity_plan_id || '']?.activityTitle || '未指定'}
-                                </div>
-                                <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
-                                  方案：{optionByPlanId[rule.activity_plan_id || '']?.planName || rule.activity_plans?.name || '未指定'}
-                                </div>
-                                {rule.activity_plan_id && optionByPlanId[rule.activity_plan_id] && (
-                                  <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
-                                    人數：{formatParticipants(
-                                      optionByPlanId[rule.activity_plan_id]?.minParticipants ?? null,
-                                      optionByPlanId[rule.activity_plan_id]?.maxParticipants ?? null
-                                    )}
-                                  </div>
-                                )}
-                                {(rule.effective_from || rule.effective_to) && (
-                                  <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-                                    生效：{rule.effective_from || '不限'} ~ {rule.effective_to || '不限'}
-                                  </div>
-                                )}
-                                <div style={{ display: 'flex', gap: 4 }}>
-                                  <button onClick={() => openRuleModal(rule)} style={smallBtn('#fff', '#374151')}>
-                                    編輯
-                                  </button>
-                                  <button onClick={() => deleteRule(rule.id)} style={smallBtn('#fee2e2', '#dc2626')}>
-                                    刪除
-                                  </button>
-                                </div>
-                              </div>
+                              <RuleCard key={rule.id} rule={rule} optionByPlanId={optionByPlanId} onEdit={openRuleModal} onDelete={deleteRule} />
                             ))}
                           </div>
                         ) : (
@@ -747,7 +789,7 @@ export default function GuideAvailabilityPage() {
                   <select
                     value={previewPlanId}
                     onChange={(e) => setPreviewPlanId(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 240 }}
+                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 0, flex: '1 1 240px' }}
                   >
                     <option value="">全部方案（不篩選）</option>
                     {activityPlanOptions.map((plan) => (

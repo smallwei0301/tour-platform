@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { ResponsiveTable, ResponsiveModal, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type QAEntry = {
   id: string;
@@ -240,14 +241,14 @@ export default function GuideDashboardPage() {
       )}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      <div className="admin-stat-grid-3">
         <StatCard label="本月預訂數" value={data?.monthlyBookings ?? 0} icon="📦" />
         <StatCard label="近期訂單" value={data?.pendingBookings?.length ?? 0} icon="📋" />
         <StatCard label="本週場次" value={data?.upcomingSchedules?.length ?? 0} icon="📅" />
       </div>
 
       {/* Revenue Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+      <div className="admin-stat-grid-3">
         <RevenueCard
           label="本月營收"
           value={`NT$ ${(data?.monthGmvTwd ?? 0).toLocaleString()}`}
@@ -300,36 +301,38 @@ export default function GuideDashboardPage() {
           <div style={{ fontSize: 12, color: '#c2410c', marginBottom: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 12px' }}>
             退款處理中，金額可能變動
           </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '8px 10px' }}>訂單編號</th>
-                <th>行程名稱</th>
-                <th>出團日</th>
-                <th>訂單金額</th>
-                <th>當前狀態</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data!.pendingSettlementOrders.map((o) => (
-                <tr key={o.orderId} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px', fontFamily: 'monospace', fontSize: 12, color: '#9ca3af' }}>
+          <ResponsiveTable
+            columns={[
+              {
+                key: 'orderId', header: '訂單編號',
+                cell: (o: DashboardData['pendingSettlementOrders'][number]) => (
+                  <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#9ca3af' }}>
                     {o.orderId.slice(0, 8)}…
-                  </td>
-                  <td>{o.tourTitle}</td>
-                  <td style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>
-                    {o.scheduleDate
-                      ? new Date(o.scheduleDate).toLocaleDateString('zh-TW')
-                      : '—'}
-                  </td>
-                  <td style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
+                  </span>
+                ),
+              },
+              { key: 'tour', header: '行程名稱', mobilePriority: 'title',
+                cell: (o) => o.tourTitle },
+              { key: 'date', header: '出團日',
+                cell: (o) => (
+                  <span style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>
+                    {o.scheduleDate ? new Date(o.scheduleDate).toLocaleDateString('zh-TW') : '—'}
+                  </span>
+                ),
+              },
+              { key: 'amount', header: '訂單金額', align: 'right',
+                cell: (o) => (
+                  <span style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
                     NT$ {(o.totalTwd ?? 0).toLocaleString()}
-                  </td>
-                  <td><StatusPill status={o.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                ),
+              },
+              { key: 'status', header: '當前狀態', align: 'right', mobilePriority: 'subtitle',
+                cell: (o) => <StatusPill status={o.status} /> },
+            ] as ResponsiveColumn<DashboardData['pendingSettlementOrders'][number]>[]}
+            rows={data!.pendingSettlementOrders}
+            getRowKey={(o) => o.orderId}
+          />
         </Section>
       )}
 
@@ -383,34 +386,32 @@ export default function GuideDashboardPage() {
         {(!data?.pendingBookings?.length) ? (
           <Empty text="尚無訂單" />
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-            <thead>
-              <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12, borderBottom: '1px solid #e5e7eb' }}>
-                <th style={{ padding: '8px 10px' }}>旅客</th>
-                <th>行程</th>
-                <th>人數</th>
-                <th>狀態</th>
-                <th>金額</th>
-                <th>時間</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.pendingBookings.map((b) => (
-                <tr key={b.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={{ padding: '10px' }}>{b.guestName}</td>
-                  <td>{b.tourTitle}</td>
-                  <td>{b.partySize}</td>
-                  <td><StatusPill status={b.status} /></td>
-                  <td style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
+          <ResponsiveTable
+            columns={[
+              { key: 'guest', header: '旅客', mobilePriority: 'title',
+                cell: (b: DashboardData['pendingBookings'][number]) => b.guestName },
+              { key: 'tour', header: '行程', cell: (b) => b.tourTitle },
+              { key: 'party', header: '人數', cell: (b) => `${b.partySize}` },
+              { key: 'status', header: '狀態', align: 'right', mobilePriority: 'subtitle',
+                cell: (b) => <StatusPill status={b.status} /> },
+              { key: 'amount', header: '金額', align: 'right',
+                cell: (b) => (
+                  <span style={{ fontSize: 13, color: '#374151', whiteSpace: 'nowrap' }}>
                     NT$ {(b.totalTwd ?? 0).toLocaleString()}
-                  </td>
-                  <td style={{ color: '#9ca3af', fontSize: 12 }}>
+                  </span>
+                ),
+              },
+              { key: 'time', header: '時間',
+                cell: (b) => (
+                  <span style={{ color: '#9ca3af', fontSize: 12 }}>
                     {new Date(b.createdAt).toLocaleDateString('zh-TW')}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </span>
+                ),
+              },
+            ] as ResponsiveColumn<DashboardData['pendingBookings'][number]>[]}
+            rows={data.pendingBookings}
+            getRowKey={(b) => b.id}
+          />
         )}
       </Section>
 
@@ -516,90 +517,99 @@ export default function GuideDashboardPage() {
       </Section>
 
       {/* Payout Detail Modal */}
-      {payoutModal && (
-        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.4)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:50 }}
-             onClick={() => setPayoutModal(null)}>
-          <div style={{ background:'#fff', borderRadius:16, padding:24, maxWidth:540, width:'92%', maxHeight:'80vh', overflowY:'auto' }}
-               onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize:16, fontWeight:700, marginBottom:12 }}>{payoutModal} 入帳明細</h3>
-            {payoutLoading ? (
-              <p style={{ color:'#6b7280', fontSize:13 }}>載入中…</p>
-            ) : payoutDetail && payoutDetail.orders.length > 0 ? (
-              <>
-                <table style={{ width:'100%', fontSize:12, borderCollapse:'collapse' }}>
-                  <thead>
-                    <tr style={{ color:'#6b7280', borderBottom:'1px solid #e5e7eb' }}>
-                      <th style={{ textAlign:'left', padding:'4px 6px' }}>行程</th>
-                      <th style={{ textAlign:'right', padding:'4px 6px' }}>訂單金額</th>
-                      <th style={{ textAlign:'right', padding:'4px 6px' }}>已退款</th>
-                      <th style={{ textAlign:'right', padding:'4px 6px' }}>實付扣退款</th>
-                      <th style={{ textAlign:'right', padding:'4px 6px' }}>平台抽成</th>
-                      <th style={{ textAlign:'right', padding:'4px 6px' }}>預計入帳</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {payoutDetail.orders.map(o => (
-                      <tr key={o.orderId} style={{ borderBottom:'1px solid #f3f4f6' }}>
-                        <td style={{ padding:'4px 6px' }}>{o.activityTitle}</td>
-                        <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.totalTwd.toLocaleString()}</td>
-                        <td style={{ textAlign:'right', padding:'4px 6px', color:'#f97316' }}>-NT${o.refundAmountTwd.toLocaleString()}</td>
-                        <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.effectiveTwd.toLocaleString()}</td>
-                        <td style={{ textAlign:'right', padding:'4px 6px', color:'#ef4444' }}>-NT${o.commissionTwd.toLocaleString()}</td>
-                        <td style={{ textAlign:'right', padding:'4px 6px', fontWeight:600 }}>NT${o.netTwd.toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ fontWeight:700, borderTop:'2px solid #e5e7eb' }}>
-                      <td style={{ padding:'6px 6px' }}>合計</td>
-                      <td style={{ textAlign:'right', padding:'6px 6px' }}>—</td>
-                      <td style={{ textAlign:'right', padding:'6px 6px' }}>—</td>
-                      <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.gmvTwd.toLocaleString()}</td>
-                      <td style={{ textAlign:'right', padding:'6px 6px', color:'#ef4444' }}>-NT${payoutDetail.totals.commissionTwd.toLocaleString()}</td>
-                      <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.netTwd.toLocaleString()}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-                <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>平台抽成 15%，導遊實拿 85%；以旅客實付金額扣除已退款部分後計算，金流手續費平台吸收。</p>
-              </>
-            ) : (
-              <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>
-            )}
+      <ResponsiveModal
+        open={!!payoutModal}
+        onClose={() => setPayoutModal(null)}
+        size="lg"
+        title={`${payoutModal ?? ''} 入帳明細`}
+        footer={
+          <>
             {payoutDetail && payoutDetail.orders.length > 0 && (
               <a
                 href={`/api/guide/payout/monthly/csv?month=${payoutModal}`}
                 download
-                style={{ display:'inline-block', marginTop:8, marginRight:8, padding:'6px 14px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, fontSize:12, color:'#16a34a', textDecoration:'none' }}
+                style={{ padding:'7px 14px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, fontSize:12, color:'#16a34a', textDecoration:'none' }}
               >
                 下載 CSV
               </a>
             )}
-            <button onClick={() => setPayoutModal(null)} style={{ marginTop:16, padding:'6px 16px', background:'#f3f4f6', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}>關閉</button>
-          </div>
-        </div>
-      )}
+            <button onClick={() => setPayoutModal(null)} style={{ padding:'7px 16px', background:'#f3f4f6', border:'none', borderRadius:8, cursor:'pointer', fontSize:13 }}>關閉</button>
+          </>
+        }
+      >
+        {payoutLoading ? (
+          <p style={{ color:'#6b7280', fontSize:13 }}>載入中…</p>
+        ) : payoutDetail && payoutDetail.orders.length > 0 ? (
+          <>
+            {/* Financial breakdown table with totals row — kept as a horizontally scrollable
+                native table because tfoot totals don't map to a card-list model. */}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width:'100%', fontSize:12, borderCollapse:'collapse', minWidth: 480 }}>
+                <thead>
+                  <tr style={{ color:'#6b7280', borderBottom:'1px solid #e5e7eb' }}>
+                    <th style={{ textAlign:'left', padding:'4px 6px' }}>行程</th>
+                    <th style={{ textAlign:'right', padding:'4px 6px' }}>訂單金額</th>
+                    <th style={{ textAlign:'right', padding:'4px 6px' }}>已退款</th>
+                    <th style={{ textAlign:'right', padding:'4px 6px' }}>實付扣退款</th>
+                    <th style={{ textAlign:'right', padding:'4px 6px' }}>平台抽成</th>
+                    <th style={{ textAlign:'right', padding:'4px 6px' }}>預計入帳</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {payoutDetail.orders.map(o => (
+                    <tr key={o.orderId} style={{ borderBottom:'1px solid #f3f4f6' }}>
+                      <td style={{ padding:'4px 6px' }}>{o.activityTitle}</td>
+                      <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.totalTwd.toLocaleString()}</td>
+                      <td style={{ textAlign:'right', padding:'4px 6px', color:'#f97316' }}>-NT${o.refundAmountTwd.toLocaleString()}</td>
+                      <td style={{ textAlign:'right', padding:'4px 6px' }}>NT${o.effectiveTwd.toLocaleString()}</td>
+                      <td style={{ textAlign:'right', padding:'4px 6px', color:'#ef4444' }}>-NT${o.commissionTwd.toLocaleString()}</td>
+                      <td style={{ textAlign:'right', padding:'4px 6px', fontWeight:600 }}>NT${o.netTwd.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr style={{ fontWeight:700, borderTop:'2px solid #e5e7eb' }}>
+                    <td style={{ padding:'6px 6px' }}>合計</td>
+                    <td style={{ textAlign:'right', padding:'6px 6px' }}>—</td>
+                    <td style={{ textAlign:'right', padding:'6px 6px' }}>—</td>
+                    <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.gmvTwd.toLocaleString()}</td>
+                    <td style={{ textAlign:'right', padding:'6px 6px', color:'#ef4444' }}>-NT${payoutDetail.totals.commissionTwd.toLocaleString()}</td>
+                    <td style={{ textAlign:'right', padding:'6px 6px' }}>NT${payoutDetail.totals.netTwd.toLocaleString()}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            <p style={{ fontSize:11, color:'#9ca3af', marginTop:10 }}>平台抽成 15%，導遊實拿 85%；以旅客實付金額扣除已退款部分後計算，金流手續費平台吸收。</p>
+          </>
+        ) : (
+          <p style={{ color:'#6b7280', fontSize:13 }}>本月尚無可計算訂單</p>
+        )}
+      </ResponsiveModal>
 
       {/* Schedule Booking Detail Modal */}
-      {scheduleModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
-          onClick={() => setScheduleModal(null)}
-        >
-          <div
-            style={{ background: '#fff', borderRadius: '20px 20px 0 0', padding: '24px 20px', width: '100%', maxWidth: 600, maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 -4px 30px rgba(0,0,0,0.15)' }}
-            onClick={e => e.stopPropagation()}
+      <ResponsiveModal
+        open={!!scheduleModal}
+        onClose={() => setScheduleModal(null)}
+        size="lg"
+        title={scheduleModal?.tourTitle ?? ''}
+        footer={
+          <button
+            onClick={() => setScheduleModal(null)}
+            style={{ padding: '8px 18px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
           >
-            {/* Handle bar */}
-            <div style={{ width: 40, height: 4, background: '#e5e7eb', borderRadius: 2, margin: '0 auto 16px' }} />
-
+            關閉
+          </button>
+        }
+      >
+        {scheduleModal && (
+          <>
             {/* Header */}
             <div style={{ marginBottom: 16 }}>
-              <div style={{ fontWeight: 700, fontSize: 16, color: '#111' }}>{scheduleModal.tourTitle}</div>
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
                 📅 {new Date(scheduleModal.date).toLocaleString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' })}
                 {scheduleModal.planId && ` · ${scheduleModal.planId}`}
               </div>
-              <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 13, color: '#374151' }}>
                   👥 已訂 <strong>{scheduleModal.bookedCount}</strong> / {scheduleModal.maxCapacity} 人
                 </span>
@@ -629,9 +639,9 @@ export default function GuideDashboardPage() {
                         border: `1px solid ${isCancelled ? '#f3f4f6' : '#ede9fe'}`,
                         opacity: isCancelled ? 0.6 : 1,
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div>
-                            <div style={{ fontWeight: 600, fontSize: 15 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+                          <div style={{ flex: '1 1 160px', minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: 15, wordBreak: 'break-word' }}>
                               {b.guestName}
                               {isCancelled && <span style={{ marginLeft: 6, fontSize: 11, color: '#9ca3af', fontWeight: 400 }}>（已取消）</span>}
                             </div>
@@ -648,7 +658,7 @@ export default function GuideDashboardPage() {
                         </div>
                         {/* Phone - full number for guide */}
                         {b.guestPhone && (
-                          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 13, color: '#374151' }}>📞 {b.guestPhone}</span>
                             <button
                               onClick={() => navigator.clipboard.writeText(b.guestPhone)}
@@ -658,23 +668,16 @@ export default function GuideDashboardPage() {
                             </button>
                           </div>
                         )}
-                        <div style={{ marginTop: 4, fontSize: 12, color: '#9ca3af' }}>{b.maskedEmail}</div>
+                        <div style={{ marginTop: 4, fontSize: 12, color: '#9ca3af', wordBreak: 'break-word' }}>{b.maskedEmail}</div>
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
-
-            <button
-              onClick={() => setScheduleModal(null)}
-              style={{ width: '100%', marginTop: 16, padding: '12px 0', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', color: '#374151', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
-            >
-              關閉
-            </button>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </ResponsiveModal>
     </div>
   );
 }
