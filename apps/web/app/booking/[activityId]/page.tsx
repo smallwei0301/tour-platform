@@ -499,7 +499,7 @@ function BookingInnerV2FlagShell() {
   const [v2Error, setV2Error] = useState('');
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [useLegacyFallback, setUseLegacyFallback] = useState(false);
+  const [useLegacyFallback] = useState(false);
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [dateAvailabilityOptions, setDateAvailabilityOptions] = useState<V2DateAvailability[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
