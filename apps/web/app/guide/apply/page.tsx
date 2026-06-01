@@ -197,8 +197,8 @@ export default function GuideApplyPage() {
 
       {step === 2 && (
         <section className="tp-step-card">
-          <label htmlFor="apply-id-doc">身分證件上傳*<input id="apply-id-doc" type="file" /></label>
-          <label htmlFor="apply-photo">個人照片上傳*<input id="apply-photo" type="file" /></label>
+          <label htmlFor="apply-id-doc">身分證件上傳*<input id="apply-id-doc" type="file" accept="image/*,application/pdf" /></label>
+          <label htmlFor="apply-photo">個人照片上傳*<input id="apply-photo" type="file" accept="image/*" /></label>
           <div className="tp-step-actions">
             <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>上一步</button>
             <button className="tp-btn tp-btn-primary" onClick={() => setStep(3)}>下一步：審核送出</button>

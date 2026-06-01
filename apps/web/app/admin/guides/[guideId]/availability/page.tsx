@@ -352,8 +352,9 @@ export default function GuideAvailabilityPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
+                  <label htmlFor="avail-buffer-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
                   <input
+                    id="avail-buffer-time"
                     type="number"
                     min="0"
                     step="5"
