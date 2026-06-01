@@ -797,6 +797,7 @@ function BookingInnerV2FlagShell() {
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
   const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
+  const isOverCapacity = slots.length > 0 && guests > selectedCapacityLeft;
   const step1CtaState = getBookingV2Step1CtaState({
     slotsLoading,
     slotsCount: slots.length,
@@ -978,7 +979,7 @@ function BookingInnerV2FlagShell() {
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
-              {!slotsLoading && step1CtaState.overCapacity && (
+              {!slotsLoading && isOverCapacity && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
                   參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。
                 </p>
