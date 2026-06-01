@@ -55,8 +55,8 @@ test('V2 mode requests v2 availability source and exposes explicit fallback noti
 test('date picker availability is scoped to selected or visible plans plus global schedules', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
-  assert.match(src, /const selectedOrVisiblePlanIds = selectedPlan \? \[selectedPlan\] : VISIBLE_PLANS\.map\(\(p\) => p\.id\);/);
-  assert.match(src, /const datePickerSchedules = effectiveSchedules\.filter\(\(s\) => \{/);
+  assert.match(src, /const selectedOrVisiblePlanIds[^=]*= selectedPlan \? \[selectedPlan\] : VISIBLE_PLANS\.map\(\((?:p|plan)(?::[^)]*)?\) => (?:p|plan)\.id\);/);
+  assert.match(src, /const datePickerSchedules = effectiveSchedules\.filter\(\((?:s|schedule)(?::[^)]*)?\) => \{/);
   assert.match(src, /return planId === null \|\| selectedOrVisiblePlanIds\.includes\(planId\);/);
   assert.match(src, /<DatePicker\s+[\s\S]*schedules=\{datePickerSchedules\}/);
 });
