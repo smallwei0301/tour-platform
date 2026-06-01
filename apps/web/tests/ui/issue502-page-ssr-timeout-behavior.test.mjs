@@ -88,6 +88,13 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
     },
     '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
     '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
+    '../../../../src/lib/date-plan-source.mjs': {
+      resolveDatePlanPresentation: () => ({
+        source: 'legacy',
+        selectedDatePlan: null,
+        datePlanCards: [],
+      }),
+    },
     '../../../../src/components/activity/DatePlanSection': { DatePlanSection: () => React.createElement('div', null, 'DatePlanSection') },
     '../../../../src/components/activity/ActivityBottomBar': { ActivityBottomBar: () => React.createElement('div', null, 'BottomBar') },
     '../../../../src/components/activity/SectionAnchorNav': { SectionAnchorNav: () => React.createElement('div', null, 'SectionAnchorNav') },
