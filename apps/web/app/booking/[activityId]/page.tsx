@@ -1042,7 +1042,7 @@ function BookingInnerV2FlagShell() {
                   id={step1CtaState.reasonId ?? undefined}
                   style={{
                     margin: '10px 0 0',
-                    color: step1CtaState.tone === 'muted' ? 'var(--tp-muted)' : 'var(--tp-danger)',
+                    color: step1CtaState.tone === 'muted' ? 'var(--tp-muted)' : '#b42318',
                     fontSize: 13,
                     fontWeight: 600,
                   }}

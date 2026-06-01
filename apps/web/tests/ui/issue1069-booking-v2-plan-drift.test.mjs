@@ -106,3 +106,15 @@ test('GH-1069: Step1 enabled has no disabled reason or accessibility linkage', (
   assert.equal(state.role, null);
   assert.equal(state.tone, null);
 });
+
+test('GH-1069: Step1 hard-block reason uses explicit red error color in booking shell', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { fileURLToPath } = await import('node:url');
+  const path = await import('node:path');
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const src = await readFile(path.join(__dirname, '../../app/booking/[activityId]/page.tsx'), 'utf8');
+
+  assert.match(src, /color: step1CtaState\.tone === 'muted' \? 'var\(--tp-muted\)' : '#b42318'/);
+  assert.match(src, /role=\{step1CtaState\.role \?\? undefined\}/);
+  assert.match(src, /aria-describedby=\{step1CtaState\.disabled \? step1CtaState\.reasonId \?\? undefined : undefined\}/);
+});

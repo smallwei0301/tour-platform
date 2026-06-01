@@ -32,6 +32,17 @@ test('activity primary CTA in V2 uses plan/date-aware booking href when schedule
   assert.match(src, /href=\{directBookingHref\}/);
 });
 
+test('activity page hides public booking CTAs when V2 has no canonical plans', async () => {
+  const pageSrc = await readSource('app/activities/[region]/[slug]/page.tsx');
+  const bottomBarSrc = await readSource('src/components/activity/ActivityBottomBar.tsx');
+
+  assert.match(pageSrc, /const hidePublicBookingCta = Boolean\(useBookingV2 && datePlanPresentation\.showMissingCanonicalMessage\)/);
+  assert.match(pageSrc, /data-testid="begin-checkout-unavailable"/);
+  assert.match(pageSrc, /bookingUnavailable=\{hidePublicBookingCta\}/);
+  assert.match(bottomBarSrc, /data-testid="activity-bottom-bar-unavailable"/);
+  assert.match(bottomBarSrc, /bookingUnavailable = false/);
+});
+
 test('live availability refresh is only wired to high-intent actions', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
