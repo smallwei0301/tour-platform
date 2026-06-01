@@ -30,7 +30,10 @@ import {
   type BlackoutWindow,
   type ExistingBooking,
 } from '../../../../../src/lib/slot-generator';
-import { evaluateBookingAvailability } from '../../../../../src/lib/availability-v2/booking-availability-evaluator';
+import {
+  evaluateEffectiveBookingAvailability,
+  shouldRejectDraftByEffectiveAvailability,
+} from '../../../../../src/lib/availability-v2/effective-booking-availability';
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
@@ -108,8 +111,19 @@ async function isSlotInGeneratedV2Availability(
     planBookingType: 'scheduled' | 'request' | 'instant';
     slotDate: string;
     startAt: string;
-  }
-): Promise<{ available: boolean; reason?: string }> {
+    minParticipants: number;
+  selectedSchedule?: {
+    id: string;
+    activity_id: string;
+    plan_id: string | null;
+    start_at: string;
+    end_at: string;
+    capacity: number;
+    booked_count: number;
+    status: string;
+  } | null;
+  selectedScheduleAuthority?: 'authoritative' | 'fallback';
+}): Promise<{ available: boolean; reasonCode?: string; messageZh?: string }> {
   // Fetch availability rules for this guide and plan
   const { data: rulesData, error: rulesError } = await supabase
     .from('guide_availability_rules')
@@ -189,8 +203,7 @@ async function isSlotInGeneratedV2Availability(
     booking_type: payload.planBookingType,
   };
 
-  const minParticipants = 1;
-  const availability = evaluateBookingAvailability({
+  const availability = evaluateEffectiveBookingAvailability({
     guideId: payload.guideId,
     activityId: payload.activityId,
     planId: payload.planId,
@@ -198,18 +211,22 @@ async function isSlotInGeneratedV2Availability(
     participants: payload.participants,
     dateFrom: payload.slotDate,
     dateTo: payload.slotDate,
-    minParticipants,
+    requestedStartAt: payload.startAt,
+    minParticipants: payload.minParticipants,
     rules,
     blackouts,
     bookings,
     plan,
+    selectedSchedule: payload.selectedSchedule ?? null,
+    selectedScheduleAuthority: payload.selectedScheduleAuthority,
   });
 
-  const targetStart = new Date(payload.startAt).getTime();
-  const isAvailable = availability.slots.some((slot) => new Date(slot.startAt).getTime() === targetStart);
-
-  if (!isAvailable) {
-    return { available: false, reason: availability.reasonCode ?? 'NOT_IN_GENERATED_SLOT_LIST' };
+  if (!availability.available) {
+    return {
+      available: false,
+      reasonCode: availability.reasonCode,
+      messageZh: availability.messageZh,
+    };
   }
 
   return { available: true };
@@ -600,6 +617,8 @@ export async function POST(request: NextRequest) {
     }
 
     let selectedScheduleValidation: { available: boolean; reason?: string } | null = null;
+    let selectedScheduleForAvailability: ActivitySchedule | null = null;
+    let selectedScheduleAuthority: 'authoritative' | 'fallback' | undefined;
     if (data.scheduleId) {
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('activity_schedules')
@@ -609,8 +628,11 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (!scheduleError) {
+        const selectedSchedule = (scheduleData as ActivitySchedule | null) ?? null;
+        selectedScheduleForAvailability = selectedSchedule;
+        selectedScheduleAuthority = selectedSchedule ? 'authoritative' : undefined;
         selectedScheduleValidation = validateDraftSlotAgainstSelectedSchedule({
-          schedule: (scheduleData as ActivitySchedule | null) ?? null,
+          schedule: selectedSchedule,
           activityId: data.activityId,
           resolvedPlanId,
           requestStartAt: data.startAt,
@@ -658,6 +680,8 @@ export async function POST(request: NextRequest) {
 
           if (fallbackSelectedSchedule) {
             selectedScheduleValidation = fallbackSelectedSchedule.validation;
+            selectedScheduleForAvailability = fallbackSelectedSchedule.schedule;
+            selectedScheduleAuthority = 'fallback';
           }
         }
       }
@@ -675,7 +699,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let generatedSlotValidation: { available: boolean; reason?: string };
+    let generatedSlotValidation: { available: boolean; reasonCode?: string; messageZh?: string };
     try {
       generatedSlotValidation = await isSlotInGeneratedV2Availability(supabase, {
         guideId,
@@ -688,6 +712,20 @@ export async function POST(request: NextRequest) {
         planBookingType: planData.booking_type,
         slotDate,
         startAt: data.startAt,
+        minParticipants,
+            selectedSchedule: selectedScheduleForAvailability
+          ? {
+              id: selectedScheduleForAvailability.id,
+              activity_id: selectedScheduleForAvailability.activity_id,
+              plan_id: selectedScheduleForAvailability.plan_id,
+              start_at: selectedScheduleForAvailability.start_at,
+              end_at: addMinutes(new Date(selectedScheduleForAvailability.start_at), planData.duration_minutes).toISOString(),
+              capacity: selectedScheduleForAvailability.capacity,
+              booked_count: selectedScheduleForAvailability.booked_count,
+              status: selectedScheduleForAvailability.status,
+            }
+          : null,
+        selectedScheduleAuthority,
       });
     } catch (error) {
       console.error('Error generating slot availability', error);
@@ -696,10 +734,27 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!scheduleValidatedBySourceOfTruth && !generatedSlotValidation.available) {
-      return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
-        status: 409,
-      });
+    if (
+      shouldRejectDraftByEffectiveAvailability({
+        scheduleValidatedBySourceOfTruth,
+        generatedSlotValidation,
+      })
+    ) {
+      const generatedReasonCode = generatedSlotValidation.reasonCode;
+      const generatedMessageZh = generatedSlotValidation.messageZh;
+      const generatedErrorCode =
+        generatedReasonCode === 'CAPACITY_EXCEEDED'
+          ? 'CAPACITY_EXCEEDED'
+          : generatedReasonCode === 'MIN_PARTICIPANTS_NOT_MET'
+            ? 'VALIDATION_ERROR'
+            : 'SLOT_UNAVAILABLE';
+
+      return Response.json(
+        errorV2(generatedErrorCode, generatedMessageZh || '此時段已無可用名額，請重新選擇時段'),
+        {
+          status: generatedErrorCode === 'VALIDATION_ERROR' ? 400 : 409,
+        }
+      );
     }
 
     // 4. Get or find traveler_id from auth (optional)
