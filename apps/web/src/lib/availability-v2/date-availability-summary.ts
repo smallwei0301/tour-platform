@@ -7,6 +7,13 @@ export interface DateAvailabilityEntry {
   reason: string;
   messageZh: string;
   firstAvailableStartAt?: string;
+  selectedSlot?: {
+    startAt: string;
+    endAt: string;
+    capacityLeft: number;
+    bookingType: SerializedSlot['bookingType'];
+    isAvailable: boolean;
+  };
 }
 
 interface BuildDateAvailabilityInput {
@@ -50,14 +57,21 @@ export function buildDateAvailabilitySummary(input: BuildDateAvailabilityInput):
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 
     if (slots.length > 0) {
-      const maxCapacity = slots.reduce((max, slot) => Math.max(max, slot.capacityLeft), 0);
+      const selectedSlot = slots[0];
       return {
         date,
         state: 'available',
-        capacityLeft: maxCapacity,
+        capacityLeft: selectedSlot.capacityLeft,
         reason: '',
         messageZh: '',
-        firstAvailableStartAt: slots[0].startAt,
+        firstAvailableStartAt: selectedSlot.startAt,
+        selectedSlot: {
+          startAt: selectedSlot.startAt,
+          endAt: selectedSlot.endAt,
+          capacityLeft: selectedSlot.capacityLeft,
+          bookingType: selectedSlot.bookingType,
+          isAvailable: selectedSlot.isAvailable,
+        },
       };
     }
 

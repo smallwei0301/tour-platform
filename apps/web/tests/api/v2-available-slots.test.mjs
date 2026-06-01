@@ -19,6 +19,7 @@ import {
   evaluateGroupBookingRule,
   excludeSameActivityPlanDateRangeBookings,
 } from '../../src/lib/availability-v2/group-booking-rule.ts';
+import { buildDateAvailabilitySummary } from '../../src/lib/availability-v2/date-availability-summary.ts';
 import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -424,6 +425,43 @@ test('errorV2 response format matches API spec', () => {
   assert.ok(response.error);
   assert.equal(response.error.code, 'VALIDATION_ERROR');
   assert.equal(response.error.message, 'planId is required');
+});
+
+test('GH-1069: dateAvailability selected slot payload keeps displayed capacity aligned with submitted slot startAt', () => {
+  const dateAvailability = buildDateAvailabilitySummary({
+    dateFrom: '2026-06-01',
+    dateTo: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    slots: [
+      {
+        startAt: '2026-06-01T09:00:00+08:00',
+        endAt: '2026-06-01T12:00:00+08:00',
+        capacityLeft: 2,
+        bookingType: 'instant',
+        isAvailable: true,
+      },
+      {
+        startAt: '2026-06-01T13:00:00+08:00',
+        endAt: '2026-06-01T16:00:00+08:00',
+        capacityLeft: 5,
+        bookingType: 'instant',
+        isAvailable: true,
+      },
+    ],
+  });
+
+  assert.equal(dateAvailability.length, 1);
+  const [entry] = dateAvailability;
+  assert.equal(entry.state, 'available');
+  assert.equal(entry.firstAvailableStartAt, '2026-06-01T09:00:00+08:00');
+  assert.equal(entry.capacityLeft, 2);
+  assert.deepEqual(entry.selectedSlot, {
+    startAt: '2026-06-01T09:00:00+08:00',
+    endAt: '2026-06-01T12:00:00+08:00',
+    capacityLeft: 2,
+    bookingType: 'instant',
+    isAvailable: true,
+  });
 });
 
 test('route resolves slug activity key and delegates plan resolution to canonical resolver (#882)', async () => {

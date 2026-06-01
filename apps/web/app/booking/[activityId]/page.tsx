@@ -442,6 +442,7 @@ interface V2DateAvailability {
   reason: string;
   messageZh: string;
   firstAvailableStartAt?: string;
+  selectedSlot?: V2Slot;
 }
 
 interface V2AvailableSlotsResponse {
@@ -630,15 +631,25 @@ function BookingInnerV2FlagShell() {
         setDateAvailabilityOptions(dateAvailability);
 
         const selectedDateEntry = dateAvailability.find((entry) => entry.date === selectedDate);
-        const nextSlots = selectedDateEntry?.firstAvailableStartAt
-          ? [{
+        const selectedSlotFromDateEntry = selectedDateEntry?.selectedSlot;
+        const selectedDateSlots = (json.data?.slots || [])
+          .filter((slot) => slot.isAvailable)
+          .filter((slot) => {
+            const localDate = new Date(slot.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
+            return localDate === selectedDate;
+          })
+          .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+        const fallbackSlot = selectedDateEntry?.firstAvailableStartAt
+          ? {
               startAt: selectedDateEntry.firstAvailableStartAt,
               endAt: selectedDateEntry.firstAvailableStartAt,
               capacityLeft: selectedDateEntry.capacityLeft,
               bookingType: 'instant' as const,
               isAvailable: selectedDateEntry.state === 'available',
-            }]
-          : [];
+            }
+          : null;
+        const canonicalSelectedSlot = selectedSlotFromDateEntry || selectedDateSlots[0] || fallbackSlot;
+        const nextSlots = canonicalSelectedSlot ? [canonicalSelectedSlot] : [];
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         const selectedPlan = json.data?.selectedPlan;
         if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
