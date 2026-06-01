@@ -551,12 +551,12 @@ export default function GuideDashboardPage() {
               <table style={{ width:'100%', fontSize:12, borderCollapse:'collapse', minWidth: 480 }}>
                 <thead>
                   <tr style={{ color:'#6b7280', borderBottom:'1px solid #e5e7eb' }}>
-                    <th style={{ textAlign:'left', padding:'4px 6px' }}>行程</th>
-                    <th style={{ textAlign:'right', padding:'4px 6px' }}>訂單金額</th>
-                    <th style={{ textAlign:'right', padding:'4px 6px' }}>已退款</th>
-                    <th style={{ textAlign:'right', padding:'4px 6px' }}>實付扣退款</th>
-                    <th style={{ textAlign:'right', padding:'4px 6px' }}>平台抽成</th>
-                    <th style={{ textAlign:'right', padding:'4px 6px' }}>預計入帳</th>
+                    <th scope="col" style={{ textAlign:'left', padding:'4px 6px' }}>行程</th>
+                    <th scope="col" style={{ textAlign:'right', padding:'4px 6px' }}>訂單金額</th>
+                    <th scope="col" style={{ textAlign:'right', padding:'4px 6px' }}>已退款</th>
+                    <th scope="col" style={{ textAlign:'right', padding:'4px 6px' }}>實付扣退款</th>
+                    <th scope="col" style={{ textAlign:'right', padding:'4px 6px' }}>平台抽成</th>
+                    <th scope="col" style={{ textAlign:'right', padding:'4px 6px' }}>預計入帳</th>
                   </tr>
                 </thead>
                 <tbody>
