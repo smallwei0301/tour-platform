@@ -435,6 +435,16 @@ interface V2Slot {
   isAvailable: boolean;
 }
 
+interface V2DateAvailability {
+  date: string;
+  state: 'available' | 'blocked' | 'no_slots';
+  capacityLeft: number;
+  reason: string;
+  messageZh: string;
+  firstAvailableStartAt?: string;
+  selectedSlot?: V2Slot;
+}
+
 interface V2AvailableSlotsResponse {
   success?: boolean;
   data?: {
@@ -452,6 +462,8 @@ interface V2AvailableSlotsResponse {
       maxParticipants?: number;
     };
     slots?: V2Slot[];
+    dateAvailability?: V2DateAvailability[];
+    dates?: V2DateAvailability[];
     reason?: string;
     messageZh?: string;
   };
@@ -489,6 +501,7 @@ function BookingInnerV2FlagShell() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [useLegacyFallback, setUseLegacyFallback] = useState(false);
   const [slots, setSlots] = useState<V2Slot[]>([]);
+  const [dateAvailabilityOptions, setDateAvailabilityOptions] = useState<V2DateAvailability[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
   const activeUrlScheduleId = urlScheduleId && (!urlDate || urlDate === selectedDate) ? urlScheduleId : '';
   const v2PlanKey = useMemo(() => inferPlanIdForBookingUrl({
@@ -595,11 +608,17 @@ function BookingInnerV2FlagShell() {
         setV2Error('');
         const participants = effectiveMinParticipants;
         const scheduleParam = activeScheduleId ? `&scheduleId=${encodeURIComponent(activeScheduleId)}` : '';
-        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
+        const rangeStart = new Date(`${selectedDate}T00:00:00.000Z`);
+        const rangeEnd = new Date(rangeStart);
+        rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 13);
+        const dateFrom = rangeStart.toISOString().slice(0, 10);
+        const dateTo = rangeEnd.toISOString().slice(0, 10);
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
           setSlots([]);
+          setDateAvailabilityOptions([]);
           setAvailabilityReason(json?.data?.reason || '');
           // Issue #903: prefer the resolver's Traditional-Chinese messageZh
           // (e.g. AMBIGUOUS_PLAN -> '此活動有多個方案,無法自動判斷,請從活動頁重新選擇明確方案')
@@ -607,16 +626,30 @@ function BookingInnerV2FlagShell() {
           setV2Error(json?.data?.messageZh || json?.error?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
           return;
         }
-        const nextSlotsRaw = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
-        const nextSlotsByDate = new Map<string, V2Slot>();
-        for (const slot of nextSlotsRaw) {
-          const localDate = new Date(slot.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
-          const existing = nextSlotsByDate.get(localDate);
-          if (!existing || new Date(slot.startAt).getTime() < new Date(existing.startAt).getTime()) {
-            nextSlotsByDate.set(localDate, slot);
-          }
-        }
-        const nextSlots = Array.from(nextSlotsByDate.values()).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+        const dateAvailability = (json.data?.dateAvailability || json.data?.dates || []).sort((a, b) => a.date.localeCompare(b.date));
+        setDateAvailabilityOptions(dateAvailability);
+
+        const selectedDateEntry = dateAvailability.find((entry) => entry.date === selectedDate);
+        const selectedSlotFromDateEntry = selectedDateEntry?.selectedSlot;
+        const selectedDateSlots = (json.data?.slots || [])
+          .filter((slot) => slot.isAvailable)
+          .filter((slot) => {
+            const localDate = new Date(slot.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
+            return localDate === selectedDate;
+          })
+          .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+        const fallbackSlot = selectedDateEntry?.firstAvailableStartAt
+          ? {
+              startAt: selectedDateEntry.firstAvailableStartAt,
+              endAt: selectedDateEntry.firstAvailableStartAt,
+              capacityLeft: selectedDateEntry.capacityLeft,
+              bookingType: 'instant' as const,
+              isAvailable: selectedDateEntry.state === 'available',
+            }
+          : null;
+        const canonicalSelectedSlot = selectedSlotFromDateEntry || selectedDateSlots[0] || fallbackSlot;
+        const nextSlots = canonicalSelectedSlot ? [canonicalSelectedSlot] : [];
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         const selectedPlan = json.data?.selectedPlan;
         if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
@@ -633,16 +666,20 @@ function BookingInnerV2FlagShell() {
         }
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
-        setAvailabilityReason(json.data?.reason || '');
+        setAvailabilityReason(selectedDateEntry?.reason || json.data?.reason || '');
         setSlots(nextSlots);
-        if (nextSlots.length === 0 && json.data?.messageZh) {
-          setV2Error(json.data.messageZh);
+        if (nextSlots.length === 0 && (selectedDateEntry?.messageZh || json.data?.messageZh)) {
+          setV2Error(selectedDateEntry?.messageZh || json.data?.messageZh || '');
+        }
+        if (nextSlots.length > 0) {
+          setV2Error('');
         }
         if (!nextSlots.find((s: V2Slot) => s.startAt === selectedSlotStartAt)) {
           setSelectedSlotStartAt(nextSlots[0]?.startAt || '');
         }
       } catch {
         setSlots([]);
+        setDateAvailabilityOptions([]);
         setAvailabilityReason('');
         setV2Error('目前無法載入可預約日期，請稍後再試。');
       } finally {
@@ -912,16 +949,49 @@ function BookingInnerV2FlagShell() {
           {step === 1 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>行程確認</h3>
-              <label style={{ display: 'block', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
-                <input
-                  type="date"
-                  name="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </label>
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>📅 選擇日期與名額</span>
+                <div
+                  data-testid="booking-v2-date-capacity-picker"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                    gap: 8,
+                    marginTop: 4,
+                  }}
+                >
+                  {dateAvailabilityOptions.map((entry) => {
+                    const active = entry.date === selectedDate;
+                    const disabled = entry.state !== 'available';
+                    const label =
+                      entry.state === 'available'
+                        ? `${entry.date}（剩餘 ${entry.capacityLeft}）`
+                        : `${entry.date}（不可預約）`;
+                    return (
+                      <button
+                        key={entry.date}
+                        type="button"
+                        onClick={() => setSelectedDate(entry.date)}
+                        aria-pressed={active}
+                        disabled={disabled}
+                        title={disabled ? entry.messageZh || '此日期目前無可預約名額' : undefined}
+                        style={{
+                          textAlign: 'left',
+                          padding: '10px 12px',
+                          borderRadius: 10,
+                          border: active ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)',
+                          background: disabled ? '#f5f5f5' : '#fff',
+                          color: disabled ? 'var(--tp-muted)' : 'var(--tp-text)',
+                          cursor: disabled ? 'not-allowed' : 'pointer',
+                          opacity: disabled ? 0.7 : 1,
+                        }}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
                 <div style={{ display: 'flex', alignItems: 'stretch', marginTop: 4, border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>

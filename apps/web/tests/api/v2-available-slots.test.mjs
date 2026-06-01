@@ -19,6 +19,7 @@ import {
   evaluateGroupBookingRule,
   excludeSameActivityPlanDateRangeBookings,
 } from '../../src/lib/availability-v2/group-booking-rule.ts';
+import { buildDateAvailabilitySummary } from '../../src/lib/availability-v2/date-availability-summary.ts';
 import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -426,6 +427,43 @@ test('errorV2 response format matches API spec', () => {
   assert.equal(response.error.message, 'planId is required');
 });
 
+test('GH-1069: dateAvailability selected slot payload keeps displayed capacity aligned with submitted slot startAt', () => {
+  const dateAvailability = buildDateAvailabilitySummary({
+    dateFrom: '2026-06-01',
+    dateTo: '2026-06-01',
+    timezone: 'Asia/Taipei',
+    slots: [
+      {
+        startAt: '2026-06-01T09:00:00+08:00',
+        endAt: '2026-06-01T12:00:00+08:00',
+        capacityLeft: 2,
+        bookingType: 'instant',
+        isAvailable: true,
+      },
+      {
+        startAt: '2026-06-01T13:00:00+08:00',
+        endAt: '2026-06-01T16:00:00+08:00',
+        capacityLeft: 5,
+        bookingType: 'instant',
+        isAvailable: true,
+      },
+    ],
+  });
+
+  assert.equal(dateAvailability.length, 1);
+  const [entry] = dateAvailability;
+  assert.equal(entry.state, 'available');
+  assert.equal(entry.firstAvailableStartAt, '2026-06-01T09:00:00+08:00');
+  assert.equal(entry.capacityLeft, 2);
+  assert.deepEqual(entry.selectedSlot, {
+    startAt: '2026-06-01T09:00:00+08:00',
+    endAt: '2026-06-01T12:00:00+08:00',
+    capacityLeft: 2,
+    bookingType: 'instant',
+    isAvailable: true,
+  });
+});
+
 test('route resolves slug activity key and delegates plan resolution to canonical resolver (#882)', async () => {
   const rel = 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
   const src = await readFile(path.join(ROOT, rel), 'utf8');
@@ -457,7 +495,10 @@ test('route supports optional scheduleId mapping + validation for legacy public 
   assert.match(src, /inDateRange\s*=\s*scheduleLocalDate\s*>=\s*params\.dateFrom\s*&&\s*scheduleLocalDate\s*<=\s*params\.dateTo/);
   assert.match(src, /planMatches\s*=\s*!scheduleData\.plan_id\s*\|\|\s*scheduleData\.plan_id\s*===\s*params\.planId/);
   // #910: selectedPlan metadata for Booking V2 UI must come from planData,
-  // not the narrowed slot-generator plan object.
+  assert.match(src, /slots:\s*availability\.slots/);
+  assert.match(src, /dateAvailability/);
+  assert.match(src, /dates:\s*dateAvailability/);
+  assert.match(src, /buildDateAvailabilitySummary\(/);
   assert.match(src, /selectedPlan:\s*\{/);
   assert.match(src, /id:\s*planData\.id/);
   assert.match(src, /name:\s*planData\.name/);
