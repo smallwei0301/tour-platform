@@ -68,9 +68,9 @@ export default function WhyChooseUsPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
             <thead>
               <tr style={{ borderBottom: '2px solid var(--tp-primary)' }}>
-                <th style={{ textAlign: 'left', padding: '12px 16px' }}></th>
-                <th style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-primary)', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="sparkles" size={16} /> 我們的平台</span></th>
-                <th style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-muted)' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><PublicIcon name="mountain" size={16} /> 一般跟團</span></th>
+                <th scope="col" style={{ textAlign: 'left', padding: '12px 16px' }}></th>
+                <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-primary)', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="sparkles" size={16} /> 我們的平台</span></th>
+                <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-muted)' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><PublicIcon name="mountain" size={16} /> 一般跟團</span></th>
               </tr>
             </thead>
             <tbody>
