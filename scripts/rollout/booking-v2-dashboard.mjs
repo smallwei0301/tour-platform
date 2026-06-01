@@ -144,17 +144,37 @@ async function avgLatencyFromEvents(eventName) {
   return { avgMs: Math.round(avg), p95Ms: Math.round(p95), sample: values.length };
 }
 
+async function countErrorByVariant(variant) {
+  const rows = await selectRows(
+    'events',
+    'properties',
+    [
+      `event_name=eq.error`,
+      `created_at=gte.${iso(START_AT)}`,
+      `created_at=lte.${iso(END_AT)}`,
+    ],
+    5000,
+  );
+  return (rows || []).filter((r) => r?.properties?.rollout_variant === variant).length;
+}
+
 async function main() {
   const [
     bookingPageView,
     bookingPageViewLegacy,
     bookingPageViewV2,
     beginCheckout,
+    beginCheckoutLegacy,
+    beginCheckoutV2,
     purchaseIntent,
+    purchaseIntentLegacy,
+    purchaseIntentV2,
     callbackReceived,
     paymentSucceeded,
     fallbackClicked,
     eventError,
+    errorLegacy,
+    errorV2,
     paidOrders,
     failedOrders,
     completedBookings,
@@ -167,11 +187,17 @@ async function main() {
     countEventByVariant('booking_page_view', 'legacy'),
     countEventByVariant('booking_page_view', 'v2'),
     countEvents('begin_checkout'),
+    countEventByVariant('begin_checkout', 'legacy'),
+    countEventByVariant('begin_checkout', 'v2'),
     countEvents('purchase_intent'),
+    countEventByVariant('purchase_intent', 'legacy'),
+    countEventByVariant('purchase_intent', 'v2'),
     countEvents('payment_callback_received'),
     countEvents('payment_succeeded'),
     countEvents('booking_v2_fallback_clicked'),
     countEvents('error'),
+    countErrorByVariant('legacy'),
+    countErrorByVariant('v2'),
     countOrdersByPaymentStatus('paid'),
     countOrdersByPaymentStatus('failed'),
     countBookingsStatus('completed'),
@@ -189,7 +215,11 @@ async function main() {
       bookingPageViewLegacy,
       bookingPageViewV2,
       beginCheckout,
+      beginCheckoutLegacy,
+      beginCheckoutV2,
       purchaseIntent,
+      purchaseIntentLegacy,
+      purchaseIntentV2,
       paymentCallbackReceived: callbackReceived,
       paymentSucceeded,
       fallbackClicked,
@@ -207,6 +237,8 @@ async function main() {
     errors: {
       eventError,
       errorRateVsPageViewPct: pct(eventError, bookingPageView),
+      ...(bookingPageViewLegacy > 0 ? { errorRateVsPageViewLegacyPct: pct(errorLegacy, bookingPageViewLegacy) } : {}),
+      ...(bookingPageViewV2 > 0 ? { errorRateVsPageViewV2Pct: pct(errorV2, bookingPageViewV2) } : {}),
     },
     latency: {
       availableSlots: slotsLatency,
@@ -218,6 +250,8 @@ async function main() {
       'rollout_variant=legacy|v2 is read from events.properties.rollout_variant.',
       'latency metrics require event.properties.latency_ms instrumentation to be present.',
       'checkoutInitiated/checkoutInitSucceeded use begin_checkout→purchase_intent as a proxy; a dedicated checkout_initiated event would give a more precise signal.',
+      'beginCheckoutLegacy/V2 and purchaseIntentLegacy/V2 are counted from events.properties.rollout_variant on begin_checkout and purchase_intent events respectively (issue #965).',
+      'errorRateVsPageViewLegacyPct/V2 are null when the corresponding page-view count is 0 — missing-delta warnings in go-no-go remain WARNINGs, not false-GO (issue #965).',
     ],
   };
 
@@ -229,7 +263,11 @@ async function main() {
 `  - legacy: ${report.funnel.bookingPageViewLegacy}\n` +
 `  - v2: ${report.funnel.bookingPageViewV2}\n` +
 `- begin_checkout: ${report.funnel.beginCheckout} (${report.funnel.beginCheckoutRatePct}%)\n` +
+`  - legacy: ${report.funnel.beginCheckoutLegacy}\n` +
+`  - v2: ${report.funnel.beginCheckoutV2}\n` +
 `- purchase_intent: ${report.funnel.purchaseIntent} (${report.funnel.purchaseIntentRatePct}%)\n` +
+`  - legacy: ${report.funnel.purchaseIntentLegacy}\n` +
+`  - v2: ${report.funnel.purchaseIntentV2}\n` +
 `- payment_callback_received: ${report.funnel.paymentCallbackReceived}\n` +
 `- payment_succeeded: ${report.funnel.paymentSucceeded} (${report.funnel.paymentSuccessRatePct}%)\n` +
 `- booking_v2_fallback_clicked: ${report.funnel.fallbackClicked} (${report.funnel.fallbackRateVsV2PageViewPct}% of v2 page views)\n` +
@@ -241,7 +279,9 @@ async function main() {
 `- bookings.cancelled: ${report.bookings.cancelled}\n\n` +
 `## Errors\n` +
 `- events.error: ${report.errors.eventError}\n` +
-`- error_rate_vs_page_view: ${report.errors.errorRateVsPageViewPct}%\n\n` +
+`- error_rate_vs_page_view: ${report.errors.errorRateVsPageViewPct}%\n` +
+`  - legacy: ${'errorRateVsPageViewLegacyPct' in report.errors ? report.errors.errorRateVsPageViewLegacyPct + '%' : 'N/A — no legacy page views'}\n` +
+`  - v2: ${'errorRateVsPageViewV2Pct' in report.errors ? report.errors.errorRateVsPageViewV2Pct + '%' : 'N/A — no v2 page views'}\n\n` +
 `## Latency (from events.properties.latency_ms)\n` +
 `- available-slots: ${report.latency.availableSlots ? `avg ${report.latency.availableSlots.avgMs}ms / p95 ${report.latency.availableSlots.p95Ms}ms (n=${report.latency.availableSlots.sample})` : 'N/A'}\n` +
 `- draft-create: ${report.latency.draftCreate ? `avg ${report.latency.draftCreate.avgMs}ms / p95 ${report.latency.draftCreate.p95Ms}ms (n=${report.latency.draftCreate.sample})` : 'N/A'}\n` +

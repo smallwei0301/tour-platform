@@ -200,15 +200,13 @@ test('issue838 behavior: full-day-complete falls back to same-activity derived s
   supabase.assertAllConsumed();
 });
 
-test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN (#882 contract update)', async () => {
-  // Original #787 returned 400 VALIDATION_ERROR. #880 narrowed it to 404
-  // PLAN_NOT_FOUND. #882 split that further: ambiguous resolution now returns
-  // 409 AMBIGUOUS_PLAN with a localized message so client UIs can prompt
-  // travelers to reselect from the activity page.
+test('issue787 behavior: ambiguous active plans returns 200 empty slots with AMBIGUOUS_PLAN reason (no noisy 409)', async () => {
+  // GH-960 contract: expected unavailable/ambiguous booking states should be
+  // handled as successful empty availability payloads to avoid repeated
+  // unhandled 409 resource noise in Booking V2 clients.
 
   const activityId = '11111111-1111-1111-1111-111111111111';
   const scheduleId = '22222222-2222-2222-2222-222222222222';
-
 
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
@@ -224,10 +222,14 @@ test('issue787 behavior: ambiguous active plans fails closed with AMBIGUOUS_PLAN
     { createClient: async () => supabase.client }
   );
 
-  assert.equal(response.status, 409);
+  assert.equal(response.status, 200);
   const body = await response.json();
-  assert.equal(body.error.code, 'AMBIGUOUS_PLAN');
-  assert.ok(body.error.messageZh && body.error.messageZh.length > 0);
+  assert.equal(body.success, true);
+  assert.equal(body.data.activityId, activityId);
+  assert.equal(body.data.reason, 'AMBIGUOUS_PLAN');
+  assert.ok(body.data.messageZh && body.data.messageZh.length > 0);
+  assert.ok(Array.isArray(body.data.slots));
+  assert.equal(body.data.slots.length, 0);
   supabase.assertAllConsumed();
 });
 

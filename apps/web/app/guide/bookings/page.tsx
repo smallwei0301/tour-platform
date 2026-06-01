@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { ResponsiveTable, ResponsiveModal, type ResponsiveColumn } from '../../../src/components/admin/responsive';
+import { useEffect, useRef, useState } from 'react';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type Booking = {
   id: string; guestName: string; maskedEmail: string; scheduleDate: string | null;
@@ -36,6 +36,11 @@ export default function GuideBookingsPage() {
   const [selected, setSelected] = useState<BookingDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const detailRequestIdRef = useRef(0);
+  const detailDialogOpen = selected !== null || detailLoading;
 
   useEffect(() => {
     fetch('/api/guide/bookings')
@@ -44,14 +49,80 @@ export default function GuideBookingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function openDetail(id: string) {
+  async function openDetail(id: string, trigger?: HTMLElement | null) {
+    if (trigger) triggerRef.current = trigger;
+    const requestId = detailRequestIdRef.current + 1;
+    detailRequestIdRef.current = requestId;
     setDetailLoading(true);
     try {
       const res = await fetch(`/api/guide/bookings/${id}`);
       const json = await res.json();
+      if (detailRequestIdRef.current !== requestId) return;
       if (json?.data) setSelected(json.data);
-    } finally { setDetailLoading(false); }
+    } finally {
+      if (detailRequestIdRef.current === requestId) {
+        setDetailLoading(false);
+      }
+    }
   }
+
+  function closeDetail() {
+    detailRequestIdRef.current += 1;
+    setDetailLoading(false);
+    setSelected(null);
+  }
+
+  useEffect(() => {
+    if (!detailDialogOpen) {
+      if (triggerRef.current && document.contains(triggerRef.current)) {
+        triggerRef.current.focus();
+      }
+      return;
+    }
+
+    const dialog = dialogRef.current;
+    if (!(dialog instanceof HTMLElement)) return;
+    const dialogEl: HTMLElement = dialog;
+
+    const focusables = getFocusableElements(dialogEl);
+    const initialFocus = closeButtonRef.current || focusables[0] || dialogEl;
+    initialFocus.focus();
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeDetail();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const currentFocusables = getFocusableElements(dialogEl);
+      if (currentFocusables.length === 0) {
+        event.preventDefault();
+        dialogEl.focus();
+        return;
+      }
+
+      const first = currentFocusables[0];
+      const last = currentFocusables[currentFocusables.length - 1];
+      const active = document.activeElement;
+
+      if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (active instanceof HTMLElement && !dialogEl.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [detailDialogOpen, detailLoading, selected]);
 
   const filtered = bookings.filter((b) => !statusFilter || b.status === statusFilter);
 
@@ -99,7 +170,7 @@ export default function GuideBookingsPage() {
       mobilePriority: 'hidden',
       cell: (b) => (
         <button
-          onClick={(e) => { e.stopPropagation(); openDetail(b.id); }}
+          onClick={(e) => { e.stopPropagation(); openDetail(b.id, e.currentTarget); }}
           style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', fontSize: 12, cursor: 'pointer' }}
         >
           詳情
@@ -112,8 +183,8 @@ export default function GuideBookingsPage() {
     <div>
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單查看</h1>
 
-      {/* Filter */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      {/* Filter — role=tablist/aria-selected from PR #1057. */}
+      <div role="tablist" aria-label="預約狀態篩選" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         {[
           { value: '', label: '全部' },
           { value: 'confirmed', label: '已確認' },
@@ -122,6 +193,8 @@ export default function GuideBookingsPage() {
         ].map((f) => (
           <button
             key={f.value}
+            role="tab"
+            aria-selected={statusFilter === f.value}
             onClick={() => setStatusFilter(f.value)}
             style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -145,46 +218,74 @@ export default function GuideBookingsPage() {
         />
       </div>
 
-      <ResponsiveModal
-        open={!!(selected || detailLoading)}
-        onClose={() => { if (!detailLoading) setSelected(null); }}
-        title="訂單詳情"
-        size="sm"
-      >
-        {detailLoading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
-        ) : selected && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
-            <InfoRow label="旅客姓名" value={selected.guestName} />
-            <InfoRow
-              label="手機號碼"
-              value={
-                <span>
-                  {selected.guestPhone || '無'}
-                  {selected.guestPhone && (
-                    <button
-                      onClick={() => navigator.clipboard.writeText(selected.guestPhone)}
-                      style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: 11, cursor: 'pointer' }}
-                    >
-                      📋 複製
-                    </button>
-                  )}
-                </span>
-              }
-            />
-            <InfoRow label="Email" value={selected.maskedEmail} />
-            <InfoRow label="行程" value={selected.tourTitle} />
-            <InfoRow label="場次日期" value={selected.schedule ? new Date(selected.schedule.date).toLocaleString('zh-TW') : '-'} />
-            <InfoRow label="人數" value={`${selected.partySize} 人`} />
-            <InfoRow label="金額" value={`NT$ ${selected.totalTwd.toLocaleString()}`} />
-            <InfoRow label="訂單狀態" value={STATUS_LABELS[selected.status] || selected.status} />
-            <InfoRow label="付款狀態" value={selected.paymentStatus === 'paid' ? `✅ 已付款（${new Date(selected.paidAt!).toLocaleString('zh-TW')}）` : '⏳ 未付款'} />
-            {selected.adminNote && <InfoRow label="管理員備註" value={selected.adminNote} />}
+      {/* Detail Modal — kept as a hand-rolled dialog because PR #1066's
+          source-grep a11y tests assert on the literal markup (dialogRef,
+          closeButtonRef, role="dialog", focus-trap effect, Tab/Escape
+          handlers). The RWD adjustment here is the panel sizing:
+          width clamps to the viewport and maxHeight uses 100dvh so the
+          modal never overflows a 375-wide phone. */}
+      {detailDialogOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12 }}
+          onClick={() => !detailLoading && closeDetail()}
+        >
+          <div
+            ref={dialogRef}
+            role="dialog" aria-modal="true" aria-labelledby="booking-detail-modal-title" tabIndex={-1}
+            style={{ background: '#fff', borderRadius: 16, padding: 28, width: 'min(500px, calc(100vw - 24px))', maxHeight: 'calc(100dvh - 24px)', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {detailLoading ? (
+              <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中…</div>
+            ) : selected && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                  <h3 id="booking-detail-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>訂單詳情</h3>
+                  <button ref={closeButtonRef} aria-label="關閉" onClick={closeDetail} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>✕</button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
+                  <InfoRow label="旅客姓名" value={selected.guestName} />
+                  <InfoRow
+                    label="手機號碼"
+                    value={
+                      <span>
+                        {selected.guestPhone || '無'}
+                        {selected.guestPhone && (
+                          <button
+                            onClick={() => navigator.clipboard.writeText(selected.guestPhone)}
+                            style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: 11, cursor: 'pointer' }}
+                          >
+                            📋 複製
+                          </button>
+                        )}
+                      </span>
+                    }
+                  />
+                  <InfoRow label="Email" value={selected.maskedEmail} />
+                  <InfoRow label="行程" value={selected.tourTitle} />
+                  <InfoRow label="場次日期" value={selected.schedule ? new Date(selected.schedule.date).toLocaleString('zh-TW') : '-'} />
+                  <InfoRow label="人數" value={`${selected.partySize} 人`} />
+                  <InfoRow label="金額" value={`NT$ ${selected.totalTwd.toLocaleString()}`} />
+                  <InfoRow label="訂單狀態" value={STATUS_LABELS[selected.status] || selected.status} />
+                  <InfoRow label="付款狀態" value={selected.paymentStatus === 'paid' ? `✅ 已付款（${new Date(selected.paidAt!).toLocaleString('zh-TW')}）` : '⏳ 未付款'} />
+                  {selected.adminNote && <InfoRow label="管理員備註" value={selected.adminNote} />}
+                </div>
+              </>
+            )}
           </div>
-        )}
-      </ResponsiveModal>
+        </div>
+      )}
     </div>
   );
+}
+
+function getFocusableElements(container: HTMLElement) {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => !element.hasAttribute('disabled') && !element.getAttribute('aria-hidden'));
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {

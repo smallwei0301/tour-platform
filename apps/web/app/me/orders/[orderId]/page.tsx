@@ -345,10 +345,11 @@ export default function OrderDetailPage() {
                   </button>
                 ))}
               </div>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              <label htmlFor="order-review-text" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
                 行程評價
               </label>
               <textarea
+                id="order-review-text"
                 required
                 value={reviewText}
                 onChange={e => setReviewText(e.target.value)}
@@ -399,8 +400,9 @@ export default function OrderDetailPage() {
 
           {showRefundForm && (
             <form onSubmit={handleRefund} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>取消／退款原因</label>
+              <label htmlFor="order-refund-reason" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>取消／退款原因</label>
               <select
+                id="order-refund-reason"
                 required
                 value={refundReason}
                 onChange={e => setRefundReason(e.target.value)}
@@ -412,8 +414,9 @@ export default function OrderDetailPage() {
                 <option value="health_issue">健康因素</option>
                 <option value="other">其他</option>
               </select>
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>補充說明（選填）</label>
+              <label htmlFor="order-refund-note" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>補充說明（選填）</label>
               <textarea
+                id="order-refund-note"
                 value={refundNote}
                 onChange={e => setRefundNote(e.target.value)}
                 placeholder="如有其他說明請填寫…"
@@ -444,8 +447,8 @@ export default function OrderDetailPage() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
         }}>
-          <div style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
-            <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>確認取消訂單？</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
+            <h3 id="cancel-dialog-title" style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>確認取消訂單？</h3>
             <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>取消後無法恢復，席位將自動釋出。</p>
             {cancelErr && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 10 }}>{cancelErr}</p>}
             <div style={{ display: 'flex', gap: 10 }}>

@@ -200,7 +200,7 @@ export function ImageUpload({
           <Image
             src={displayUrl}
             alt="預覽"
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }} width={1200} height={675} />
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }} width={300} height={200} />
         </div>
       )}
 

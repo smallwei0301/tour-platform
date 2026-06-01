@@ -220,23 +220,23 @@ export default function AdminGuidesPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>電子信箱（登入用）</label>
-                <input type="email" value={editState.email}
+                <label htmlFor="guide-edit-email" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>電子信箱（登入用）</label>
+                <input id="guide-edit-email" type="email" value={editState.email}
                   onChange={e => setEditState(s => s ? { ...s, email: e.target.value, success: '' } : null)}
                   placeholder="guide@example.com"
                   style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14 }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>新密碼（留空則不修改）</label>
-                <input type="password" value={editState.password}
+                <label htmlFor="guide-edit-password" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>新密碼（留空則不修改）</label>
+                <input id="guide-edit-password" type="password" value={editState.password}
                   onChange={e => setEditState(s => s ? { ...s, password: e.target.value, success: '' } : null)}
                   placeholder="至少 6 個字元"
                   style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14 }} />
               </div>
               {editState.password && (
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>確認新密碼</label>
-                  <input type="password" value={editState.confirmPassword}
+                  <label htmlFor="guide-edit-confirm-password" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>確認新密碼</label>
+                  <input id="guide-edit-confirm-password" type="password" value={editState.confirmPassword}
                     onChange={e => setEditState(s => s ? { ...s, confirmPassword: e.target.value, success: '' } : null)}
                     placeholder="再輸入一次"
                     style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb', fontSize: 14 }} />
@@ -258,9 +258,9 @@ export default function AdminGuidesPage() {
 
       <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tabs */}
-        <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button style={tabStyle('applications')} onClick={() => setTab('applications')}>📋 導遊申請</button>
-          <button style={tabStyle('profiles')} onClick={() => setTab('profiles')}>👤 已上線導遊</button>
+        <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }} role="tablist" aria-label="導遊管理分頁">
+          <button role="tab" aria-selected={tab === 'applications'} style={tabStyle('applications')} onClick={() => setTab('applications')}>📋 導遊申請</button>
+          <button role="tab" aria-selected={tab === 'profiles'} style={tabStyle('profiles')} onClick={() => setTab('profiles')}>👤 已上線導遊</button>
         </Card>
 
         {/* ── Applications Tab ── */}

@@ -301,6 +301,8 @@ export default function GuideDashboardPage() {
           <div style={{ fontSize: 12, color: '#c2410c', marginBottom: 12, background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '8px 12px' }}>
             退款處理中，金額可能變動
           </div>
+          {/* ResponsiveTable's internal <Th> already renders scope="col"
+              so the a11y improvement from PR #1055 is preserved. */}
           <ResponsiveTable
             columns={[
               {
@@ -516,7 +518,9 @@ export default function GuideDashboardPage() {
         )}
       </Section>
 
-      {/* Payout Detail Modal */}
+      {/* Payout Detail Modal — ResponsiveModal already provides role=dialog,
+          aria-modal, aria-labelledby (via title), and a 關閉 aria-label, so
+          the a11y improvements from PR #1066 are preserved. */}
       <ResponsiveModal
         open={!!payoutModal}
         onClose={() => setPayoutModal(null)}
@@ -586,7 +590,7 @@ export default function GuideDashboardPage() {
         )}
       </ResponsiveModal>
 
-      {/* Schedule Booking Detail Modal */}
+      {/* Schedule Booking Detail Modal — same a11y story as above. */}
       <ResponsiveModal
         open={!!scheduleModal}
         onClose={() => setScheduleModal(null)}
@@ -603,7 +607,8 @@ export default function GuideDashboardPage() {
       >
         {scheduleModal && (
           <>
-            {/* Header */}
+            {/* Header — the tourTitle row is rendered by ResponsiveModal's
+                title= prop above, so it's intentionally not repeated here. */}
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
                 📅 {new Date(scheduleModal.date).toLocaleString('zh-TW', { month: 'short', day: 'numeric', weekday: 'short', hour: '2-digit', minute: '2-digit' })}

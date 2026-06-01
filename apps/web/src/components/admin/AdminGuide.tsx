@@ -312,7 +312,7 @@ export function AdminGuide({ pathname }: { pathname: string }) {
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tp-primary)' }}>
                 {stepData?.title}
               </span>
-              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1 }}>✕</button>
+              <button aria-label="關閉" onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', fontSize: 16, lineHeight: 1 }}>✕</button>
             </div>
 
             {/* Content */}

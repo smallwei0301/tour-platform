@@ -26,6 +26,12 @@ export async function generateMetadata(
         ? [{ url: guide.profilePhotoUrl }]
         : [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: `${name} | Midao 祕島` }],
     },
+    twitter: {
+      card: 'summary',
+      title: `${name} | Midao 祕島`,
+      description,
+      ...(guide?.profilePhotoUrl ? { images: [guide.profilePhotoUrl] } : {}),
+    },
   };
 }
 
@@ -47,8 +53,10 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
         url: `${baseUrl}/guides/${slug}`,
         ...(guide.profilePhotoUrl ? { image: guide.profilePhotoUrl } : {}),
         ...(guide.region ? { address: { '@type': 'PostalAddress', addressLocality: guide.region, addressCountry: 'TW' } } : {}),
-        ...(guide.ratingAvg ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: guide.ratingAvg, reviewCount: guide.reviewCount || 1 } } : {}),
+        ...(guide.ratingAvg != null && guide.reviewCount >= 1 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: guide.ratingAvg, reviewCount: guide.reviewCount } } : {}),
         ...(guide.bio ? { description: guide.bio } : {}),
+        ...(guide.specialties?.length ? { knowsAbout: guide.specialties } : {}),
+        ...(guide.languages?.length ? { knowsLanguage: guide.languages } : {}),
       },
       {
         '@type': 'BreadcrumbList',

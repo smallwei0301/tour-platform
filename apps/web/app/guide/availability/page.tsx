@@ -452,7 +452,11 @@ export default function GuideAvailabilityPage() {
         </p>
       </div>
 
-      {/* ── Rule Modal ── */}
+      {/* ── Rule Modal ── ResponsiveModal already provides role=dialog /
+          aria-modal / aria-labelledby (via title=) + Escape / focus trap.
+          We keep PR #1063's explicit field associations (id+htmlFor on every
+          date/time/number input, aria-label on every select that doesn't
+          have an htmlFor). */}
       <ResponsiveModal
         open={showRuleModal}
         onClose={() => setShowRuleModal(false)}
@@ -473,6 +477,7 @@ export default function GuideAvailabilityPage() {
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
             <select
+              aria-label="活動"
               value={ruleForm.activity_id}
               onChange={(e) => setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: '' })}
               style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -486,6 +491,7 @@ export default function GuideAvailabilityPage() {
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>
             <select
+              aria-label="方案"
               value={ruleForm.activity_plan_id}
               onChange={(e) => setRuleForm({ ...ruleForm, activity_plan_id: e.target.value })}
               style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -508,24 +514,25 @@ export default function GuideAvailabilityPage() {
           </div>
           {ruleForm.rule_mode === 'single-day' ? (
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
-              <input type="date" value={ruleForm.single_date} onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+              <label htmlFor="avail-single-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
+              <input id="avail-single-date" type="date" value={ruleForm.single_date} onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
             </div>
           ) : (
             <FormGrid cols={2}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
-                <input type="date" value={ruleForm.effective_from} onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+                <label htmlFor="avail-start-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
+                <input id="avail-start-date" type="date" value={ruleForm.effective_from} onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
-                <input type="date" value={ruleForm.effective_to} onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
+                <label htmlFor="avail-end-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
+                <input id="avail-end-date" type="date" value={ruleForm.effective_to} onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
               </div>
             </FormGrid>
           )}
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
             <select
+              aria-label="星期"
               value={ruleForm.weekday}
               onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
               style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -540,8 +547,9 @@ export default function GuideAvailabilityPage() {
           </div>
           <FormGrid cols={2}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+              <label htmlFor="avail-start-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
               <input
+                id="avail-start-time"
                 type="time"
                 value={ruleForm.start_time_local}
                 onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })}
@@ -549,8 +557,9 @@ export default function GuideAvailabilityPage() {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+              <label htmlFor="avail-end-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
               <input
+                id="avail-end-time"
                 type="time"
                 value={ruleForm.end_time_local}
                 onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })}
@@ -560,8 +569,9 @@ export default function GuideAvailabilityPage() {
           </FormGrid>
           <FormGrid cols={2}>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
+              <label htmlFor="avail-interval-minutes" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
               <input
+                id="avail-interval-minutes"
                 type="number"
                 min="15"
                 step="15"
@@ -571,8 +581,9 @@ export default function GuideAvailabilityPage() {
               />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
+              <label htmlFor="avail-buffer-minutes" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
               <input
+                id="avail-buffer-minutes"
                 type="number"
                 min="0"
                 step="5"
@@ -604,7 +615,7 @@ export default function GuideAvailabilityPage() {
         </div>
       </ResponsiveModal>
 
-      {/* ── Blackout Modal ── */}
+      {/* ── Blackout Modal ── same a11y story as the rule modal above. */}
       <ResponsiveModal
         open={showBlackoutModal}
         onClose={() => setShowBlackoutModal(false)}
@@ -623,8 +634,9 @@ export default function GuideAvailabilityPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+            <label htmlFor="avail-blackout-starts-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
             <input
+              id="avail-blackout-starts-at"
               type="datetime-local"
               value={blackoutForm.starts_at}
               onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })}
@@ -632,8 +644,9 @@ export default function GuideAvailabilityPage() {
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+            <label htmlFor="avail-blackout-ends-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
             <input
+              id="avail-blackout-ends-at"
               type="datetime-local"
               value={blackoutForm.ends_at}
               onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })}
@@ -641,8 +654,9 @@ export default function GuideAvailabilityPage() {
             />
           </div>
           <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
+            <label htmlFor="avail-blackout-reason" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
             <input
+              id="avail-blackout-reason"
               type="text"
               value={blackoutForm.reason}
               onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })}
@@ -787,6 +801,7 @@ export default function GuideAvailabilityPage() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   <select
+                    aria-label="篩選方案"
                     value={previewPlanId}
                     onChange={(e) => setPreviewPlanId(e.target.value)}
                     style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 0, flex: '1 1 240px' }}

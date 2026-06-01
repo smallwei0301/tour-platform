@@ -104,11 +104,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <div style={{ fontSize: 10, color: '#aaa', marginTop: 2, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Admin Console</div>
         </div>
         {onClose && (
-          <button onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', padding: 4 }}>✕</button>
+          <button aria-label="關閉選單" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: 20, cursor: 'pointer', color: '#9ca3af', padding: 4 }}>✕</button>
         )}
       </div>
       {/* Nav */}
-      <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
+      <nav aria-label="管理後台導覽" style={{ flex: 1, padding: '12px 10px', overflowY: 'auto' }}>
         {navLinks(onClose)}
       </nav>
       {/* Logout */}
@@ -145,7 +145,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             onClick={() => setMobileOpen(false)}
           />
           {/* Drawer */}
-          <div style={{
+          <div role="dialog" aria-modal="true" aria-label="管理導覽選單" style={{
             position: 'absolute', top: 0, left: 0, bottom: 0, width: 260,
             background: '#fff', zIndex: 10, display: 'flex', flexDirection: 'column',
             boxShadow: '4px 0 24px rgba(0,0,0,0.15)',

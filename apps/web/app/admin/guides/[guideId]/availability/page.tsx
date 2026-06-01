@@ -304,6 +304,7 @@ export default function GuideAvailabilityPage() {
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
                 <select
+                  aria-label="星期"
                   value={ruleForm.weekday}
                   onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -317,8 +318,9 @@ export default function GuideAvailabilityPage() {
               </div>
               <FormGrid cols={2} gap={12}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+                  <label htmlFor="admin-avail-start-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
                   <input
+                    id="admin-avail-start-time"
                     type="time"
                     value={ruleForm.start_time_local}
                     onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })}
@@ -326,8 +328,9 @@ export default function GuideAvailabilityPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+                  <label htmlFor="admin-avail-end-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
                   <input
+                    id="admin-avail-end-time"
                     type="time"
                     value={ruleForm.end_time_local}
                     onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })}
@@ -337,8 +340,9 @@ export default function GuideAvailabilityPage() {
               </FormGrid>
               <FormGrid cols={2} gap={12}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
+                  <label htmlFor="admin-avail-interval-minutes" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
                   <input
+                    id="admin-avail-interval-minutes"
                     type="number"
                     min="15"
                     step="15"
@@ -398,8 +402,9 @@ export default function GuideAvailabilityPage() {
       >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
+                <label htmlFor="admin-avail-blackout-starts-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
                 <input
+                  id="admin-avail-blackout-starts-at"
                   type="datetime-local"
                   value={blackoutForm.starts_at}
                   onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })}
@@ -407,8 +412,9 @@ export default function GuideAvailabilityPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
+                <label htmlFor="admin-avail-blackout-ends-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
                 <input
+                  id="admin-avail-blackout-ends-at"
                   type="datetime-local"
                   value={blackoutForm.ends_at}
                   onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })}
@@ -416,8 +422,9 @@ export default function GuideAvailabilityPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
+                <label htmlFor="admin-avail-blackout-reason" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
                 <input
+                  id="admin-avail-blackout-reason"
                   type="text"
                   value={blackoutForm.reason}
                   onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })}

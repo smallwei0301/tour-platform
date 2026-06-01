@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -19,6 +19,7 @@ export function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
@@ -80,7 +81,11 @@ export function Navbar() {
         {/* Desktop nav links */}
         <nav className="tp-nav-links" aria-label="主要導覽">
           {NAV_LINKS.map((l) => (
-            <Link key={l.href} href={l.href}>
+            <Link
+              key={l.href}
+              href={l.href}
+              aria-current={pathname === l.href || (l.href !== '/' && pathname.startsWith(l.href)) ? 'page' : undefined}
+            >
               {l.label}
             </Link>
           ))}
@@ -187,6 +192,7 @@ export function Navbar() {
                 href={l.href}
                 className="tp-mobile-menu-item"
                 onClick={() => setMenuOpen(false)}
+                aria-current={pathname === l.href || (l.href !== '/' && pathname.startsWith(l.href)) ? 'page' : undefined}
               >
                 {l.label}
               </Link>

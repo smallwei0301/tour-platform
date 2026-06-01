@@ -126,6 +126,7 @@ export function ActivityQASection({ activityId }: Props) {
               </label>
               <textarea
                 id="qa-question-input"
+                name="question"
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="有疑問嗎？歡迎提問..."

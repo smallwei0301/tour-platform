@@ -18,7 +18,10 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const SCRIPTS = path.resolve(ROOT, '../../scripts/rollout');
-const REPORTS_DIR = path.resolve(ROOT, '../../docs/operations/reports');
+// Use an isolated tmp directory per process to avoid racing with other go-no-go tests
+// (issue965, issue978) that also write to the shared booking-v2-dashboard-latest.json.
+const REPORTS_DIR = path.resolve(ROOT, '../../docs/operations/reports', `issue888-tmp-${process.pid}`);
+mkdirSync(REPORTS_DIR, { recursive: true });
 
 const dashboardSrc = readFileSync(path.join(SCRIPTS, 'booking-v2-dashboard.mjs'), 'utf8');
 const goNoGoSrc = readFileSync(path.join(SCRIPTS, 'booking-v2-go-no-go.mjs'), 'utf8');
@@ -70,7 +73,6 @@ describe('issue #888 — dashboard source contract', () => {
 // ── Fixture-driven go-no-go behaviour ────────────────────────────────────────
 
 function runGoNoGo(fixture, env = {}) {
-  mkdirSync(REPORTS_DIR, { recursive: true });
   const inputPath = path.join(REPORTS_DIR, 'booking-v2-dashboard-latest.json');
   writeFileSync(inputPath, JSON.stringify(fixture, null, 2));
 
@@ -78,7 +80,16 @@ function runGoNoGo(fixture, env = {}) {
     process.execPath,
     [path.join(SCRIPTS, 'booking-v2-go-no-go.mjs')],
     // Run from repo root so the script's `path.join(cwd, 'docs/...')` resolves correctly.
-    { env: { ...process.env, ...env }, encoding: 'utf8', cwd: path.resolve(ROOT, '../..') }
+    {
+      env: {
+        ...process.env,
+        ...env,
+        GO_NO_GO_INPUT_PATH: inputPath,
+        GO_NO_GO_REPORTS_DIR: REPORTS_DIR,
+      },
+      encoding: 'utf8',
+      cwd: path.resolve(ROOT, '../..'),
+    }
   );
   // go-no-go writes results to a file; read it to inspect the content
   return readFileSync(path.join(REPORTS_DIR, 'booking-v2-go-no-go-latest.md'), 'utf8');

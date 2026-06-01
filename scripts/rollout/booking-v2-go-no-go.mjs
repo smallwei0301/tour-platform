@@ -3,10 +3,11 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlink
 import path from 'node:path';
 
 const cwd = process.cwd();
-const reportsDir = path.join(cwd, 'docs/operations/reports');
+// GO_NO_GO_REPORTS_DIR allows tests to isolate I/O to avoid parallel-run races.
+const reportsDir = process.env.GO_NO_GO_REPORTS_DIR || path.join(cwd, 'docs/operations/reports');
 mkdirSync(reportsDir, { recursive: true });
 
-const inputPath = path.join(reportsDir, 'booking-v2-dashboard-latest.json');
+const inputPath = process.env.GO_NO_GO_INPUT_PATH || path.join(reportsDir, 'booking-v2-dashboard-latest.json');
 if (!existsSync(inputPath)) {
   console.error('Missing input:', inputPath);
   process.exit(1);
@@ -133,6 +134,12 @@ if (Number.isFinite(errorPct) && errorPct > cfg.errorWarnPct.value) rollbackReas
 if (!Number.isFinite(beginCheckoutRateLegacy) || !Number.isFinite(beginCheckoutRateV2)) warnings.push('MISSING_DELTA_INPUT(begin_checkout_rate)');
 if (!Number.isFinite(purchaseIntentRateLegacy) || !Number.isFinite(purchaseIntentRateV2)) warnings.push('MISSING_DELTA_INPUT(purchase_intent_rate)');
 if (!Number.isFinite(errorRateLegacy) || !Number.isFinite(errorRateV2)) warnings.push('MISSING_DELTA_INPUT(error_rate)');
+
+// DATA_QUALITY_WARNING: aggregate traffic exists but variant tags are all zero →
+// events are being tracked but rollout_variant is not set (instrumentation gap, not absent traffic)
+if (pv > 0 && bookingPvLegacy === 0 && bookingPvV2 === 0) {
+  warnings.push('DATA_QUALITY_WARNING(variant_instrumentation_untagged)');
+}
 
 let decision = 'GO';
 if (rollbackReasons.length) decision = 'ROLLBACK WATCH';

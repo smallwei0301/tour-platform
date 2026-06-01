@@ -65,8 +65,21 @@ export default function GuideApplyPage() {
     }
   }
 
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: 'https://tour-platform-nine.vercel.app' },
+      { '@type': 'ListItem', position: 2, name: '成為導遊', item: 'https://tour-platform-nine.vercel.app/guide/apply' },
+    ],
+  };
+
   return (
     <main className="tp-container tp-apply-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/">首頁</Link> &gt; 成為導遊
       </div>
@@ -82,8 +95,8 @@ export default function GuideApplyPage() {
       {step === 1 && (
         <section className="tp-step-card">
           <label htmlFor="apply-fullname">姓名*<input id="apply-fullname" value={fullName} onChange={(e) => setFullName(e.target.value)} required aria-required="true" /></label>
-          <label htmlFor="apply-phone">電話*<input id="apply-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" /></label>
-          <label htmlFor="apply-email">電子信箱*<input id="apply-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" /></label>
+          <label htmlFor="apply-phone">電話*<input id="apply-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required aria-required="true" autoComplete="tel" /></label>
+          <label htmlFor="apply-email">電子信箱*<input id="apply-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required aria-required="true" autoComplete="email" /></label>
           <label htmlFor="apply-city">所在縣市*<input id="apply-city" placeholder="例如：高雄市" value={city} onChange={(e) => setCity(e.target.value)} required aria-required="true" /></label>
           <label htmlFor="apply-bio">自我介紹*<textarea id="apply-bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} required aria-required="true" /></label>
 

@@ -350,8 +350,9 @@ export default function ActivityPlansPage() {
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
+                <label htmlFor="plan-form-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
                 <input
+                  id="plan-form-name"
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -360,8 +361,9 @@ export default function ActivityPlansPage() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案說明</label>
+                <label htmlFor="plan-form-description" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案說明</label>
                 <textarea
+                  id="plan-form-description"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                   placeholder="方案詳細說明..."
@@ -371,8 +373,9 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
+                  <label htmlFor="plan-form-duration" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
                   <input
+                    id="plan-form-duration"
                     type="number"
                     min="15"
                     step="15"
@@ -384,6 +387,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>計價方式</label>
                   <select
+                    aria-label="計價方式"
                     value={form.price_type}
                     onChange={(e) => setForm({ ...form, price_type: e.target.value as 'per_person' | 'per_group' })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -395,8 +399,9 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
+                  <label htmlFor="plan-form-base-price" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
                   <input
+                    id="plan-form-base-price"
                     type="number"
                     min="0"
                     value={form.base_price}
@@ -407,6 +412,7 @@ export default function ActivityPlansPage() {
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>預約方式</label>
                   <select
+                    aria-label="預約方式"
                     value={form.booking_type}
                     onChange={(e) => setForm({ ...form, booking_type: e.target.value as 'scheduled' | 'request' | 'instant' })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -419,8 +425,9 @@ export default function ActivityPlansPage() {
               </div>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
+                  <label htmlFor="plan-form-min-participants" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
                   <input
+                    id="plan-form-min-participants"
                     type="number"
                     min="1"
                     value={form.min_participants}
@@ -429,8 +436,9 @@ export default function ActivityPlansPage() {
                   />
                 </div>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
+                  <label htmlFor="plan-form-max-participants" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
                   <input
+                    id="plan-form-max-participants"
                     type="number"
                     min="1"
                     value={form.max_participants}
@@ -503,6 +511,7 @@ export default function ActivityPlansPage() {
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>狀態</label>
                   <select
+                    aria-label="狀態"
                     value={form.status}
                     onChange={(e) => setForm({ ...form, status: e.target.value as 'active' | 'inactive' | 'archived' })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
@@ -531,7 +540,7 @@ export default function ActivityPlansPage() {
 
       <div className="admin-page">
         {/* Status Filter */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div role="tablist" aria-label="方案狀態篩選" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {[
             { value: '', label: '全部' },
             { value: 'active', label: '啟用中' },
@@ -540,6 +549,8 @@ export default function ActivityPlansPage() {
           ].map((tab) => (
             <button
               key={tab.value}
+              role="tab"
+              aria-selected={statusFilter === tab.value}
               onClick={() => setStatusFilter(tab.value)}
               style={{
                 padding: '10px 18px',

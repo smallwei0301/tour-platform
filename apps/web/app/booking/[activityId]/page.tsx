@@ -228,7 +228,7 @@ function BookingInnerLegacy() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <div style={{ display: 'flex', gap: 14, marginBottom: 16 }}>
                 {activity.coverImageUrl && (
-                  <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={1200} height={675} />
+                  <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={120} height={80} />
                 )}
                 <div>
                   <h3 style={{ margin: 0 }}>{activity.title}</h3>
@@ -253,6 +253,7 @@ function BookingInnerLegacy() {
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>📅 選擇可預約場次</span>
                 <select
+                  name="date"
                   value={selectedScheduleId}
                   onChange={(e) => setSelectedScheduleId(e.target.value)}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }}
@@ -278,6 +279,7 @@ function BookingInnerLegacy() {
                 <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
                 <input
                   type="number"
+                  name="participants"
                   value={guests}
                   onChange={(e) => setGuests(Math.max(activity.minParticipants || 1, parseInt(e.target.value) || 1))}
                   min={activity.minParticipants || 1}
@@ -330,28 +332,28 @@ function BookingInnerLegacy() {
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
-                  required aria-required="true" name="contactName"
+                  required aria-required="true" name="contactName" autoComplete="name"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
-                  required aria-required="true" name="contactPhone"
+                  required aria-required="true" name="contactPhone" autoComplete="tel"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
-                  required aria-required="true" name="contactEmail"
+                  required aria-required="true" name="contactEmail" autoComplete="email"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
                 給導遊的備註（選填）
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
+                <textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 16 }}>
-                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <input type="checkbox" name="agreement" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
               </label>
               <div style={{ display: 'flex', gap: 12 }}>
@@ -590,7 +592,7 @@ function BookingInnerV2FlagShell() {
       try {
         setSlotsLoading(true);
         setV2Error('');
-        const participants = Math.max(guests, effectiveMinParticipants);
+        const participants = effectiveMinParticipants;
         const scheduleParam = activeScheduleId ? `&scheduleId=${encodeURIComponent(activeScheduleId)}` : '';
         const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
@@ -647,7 +649,7 @@ function BookingInnerV2FlagShell() {
       }
     }
     fetchSlots();
-  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, guests, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
+  }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
 
   async function handleCreateDraftBookingAndGoPayment() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !canGoStep3) return;
@@ -656,6 +658,19 @@ function BookingInnerV2FlagShell() {
       setLoadError('');
       setV2Error('');
       setCreatedBookingId('');
+
+      // 事件：purchase_intent（v2 — 使用者按下「建立訂單並前往付款」）
+      track({
+        event_name: 'purchase_intent',
+        properties: {
+          item_id: resolvedActivityId,
+          item_name: activity?.title,
+          schedule_id: selectedSlotStartAt,
+          amount: total,
+          rollout_variant: 'v2',
+        },
+        page_path: `/booking/${activitySlug}`,
+      });
 
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
@@ -781,6 +796,7 @@ function BookingInnerV2FlagShell() {
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
   const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
+  const overCapacity = slots.length > 0 && guests > selectedCapacityLeft;
   const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
   const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
@@ -871,7 +887,7 @@ function BookingInnerV2FlagShell() {
           <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
             <div style={{ display: 'flex', gap: 14 }}>
               {activity.coverImageUrl && (
-                <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={1200} height={675} />
+                <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={120} height={80} />
               )}
               <div>
                 <h3 style={{ margin: 0 }}>{activity.title}</h3>
@@ -893,6 +909,7 @@ function BookingInnerV2FlagShell() {
                 <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
                 <input
                   type="date"
+                  name="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, fontSize: 14, boxSizing: 'border-box' }}
@@ -918,6 +935,7 @@ function BookingInnerV2FlagShell() {
                   </button>
                   <input
                     type="number"
+                    name="participants"
                     inputMode="numeric"
                     min={effectiveMinParticipants}
                     max={baseMaxParticipants ?? undefined}
@@ -954,6 +972,11 @@ function BookingInnerV2FlagShell() {
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
+              {!slotsLoading && overCapacity && (
+                <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
+                  參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。
+                </p>
+              )}
               {!slotsLoading && slots.length === 0 && availabilityReason && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-muted)', fontSize: 13 }}>
                   目前狀態：{availabilityReason}
@@ -986,7 +1009,24 @@ function BookingInnerV2FlagShell() {
                 </ul>
               </div>
 
-              <button className="tp-btn tp-btn-primary" onClick={() => setStep(2)} disabled={slotsLoading || slots.length === 0}>
+              <button
+                className="tp-btn tp-btn-primary"
+                onClick={() => {
+                  track({
+                    event_name: 'begin_checkout',
+                    properties: {
+                      item_id: activity.id,
+                      item_name: activity.title,
+                      schedule_id: selectedSlotStartAt,
+                      price: unitPrice,
+                      rollout_variant: 'v2',
+                    },
+                    page_path: `/booking/${activitySlug}`,
+                  });
+                  setStep(2);
+                }}
+                disabled={slotsLoading || slots.length === 0 || overCapacity}
+              >
                 下一步：填寫資訊 →
               </button>
             </div>
@@ -998,28 +1038,28 @@ function BookingInnerV2FlagShell() {
               <label style={{ display: 'block', marginBottom: 10 }}>
                 姓名 *
                 <input type="text" value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請輸入真實姓名"
-                  required aria-required="true" name="contactName"
+                  required aria-required="true" name="contactName" autoComplete="name"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電話 *
                 <input type="tel" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="0912-345-678"
-                  required aria-required="true" name="contactPhone"
+                  required aria-required="true" name="contactPhone" autoComplete="tel"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 10 }}>
                 電子信箱 *
                 <input type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} placeholder="you@example.com"
-                  required aria-required="true" name="contactEmail"
+                  required aria-required="true" name="contactEmail" autoComplete="email"
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4 }} />
               </label>
               <label style={{ display: 'block', marginBottom: 16 }}>
                 給導遊的備註（選填）
-                <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
+                <textarea name="note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="例：有食物過敏、行動不便、希望多停留某景點等" rows={3}
                   style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, resize: 'vertical' }} />
               </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, marginBottom: 16 }}>
-                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                <input type="checkbox" name="agreement" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
               </label>
               <div style={{ display: 'flex', gap: 12 }}>

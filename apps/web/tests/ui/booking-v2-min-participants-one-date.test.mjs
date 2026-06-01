@@ -77,3 +77,16 @@ test('v2 shell keeps scheduleId as URL-date hint only and never re-derives sched
   assert.match(src, /const scheduleParam = activeScheduleId \? `&scheduleId=\$\{encodeURIComponent\(activeScheduleId\)\}` : ''/);
   assert.doesNotMatch(src, /const matchedScheduleIdForSelectedDate = useMemo\(\(\) => \{/);
 });
+
+test('v2 shell keeps selected date visible when participants exceed capacity and does not refetch slots on guests change', async () => {
+  const src = await readBookingSource();
+
+  assert.match(src, /const overCapacity = slots\.length > 0 && guests > selectedCapacityLeft/);
+  assert.match(src, /參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。/);
+  assert.match(src, /disabled=\{slotsLoading \|\| slots\.length === 0 \|\| overCapacity\}/);
+  assert.match(src, /const participants = effectiveMinParticipants/);
+
+  const depsMatch = src.match(/fetchSlots\(\);\n\s*\}, \[(.*?)\]\);/s);
+  assert.ok(depsMatch, 'fetchSlots useEffect dependencies should exist');
+  assert.ok(!depsMatch[1].includes('guests'), 'fetchSlots effect dependencies must not include guests');
+});

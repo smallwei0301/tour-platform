@@ -94,10 +94,12 @@ export default function GuideSchedulesPage() {
       </div>
 
       {/* Filter Tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div role="tablist" aria-label="場次篩選" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {(['upcoming', 'all', 'past'] as Filter[]).map((f) => (
           <button
             key={f}
+            role="tab"
+            aria-selected={filter === f}
             onClick={() => setFilter(f)}
             style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -198,6 +200,8 @@ export default function GuideSchedulesPage() {
           },
         ];
         return (
+          // ResponsiveTable's internal <Th> already renders scope="col" so the
+          // a11y improvement from PR #1055 is preserved automatically.
           <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
             <ResponsiveTable<Schedule>
               columns={columns}

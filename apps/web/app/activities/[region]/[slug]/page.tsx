@@ -442,6 +442,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                   <Image
                     src={guide.profilePhotoUrl || (guide as {avatarUrl?: string}).avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
                     alt={guide.displayName}
+                    loading="lazy"
                     className="kkd-guide-avatar" width={1200} height={675} />
                   <div className="kkd-guide-info">
                     <strong className="kkd-guide-name">{guide.displayName}</strong>

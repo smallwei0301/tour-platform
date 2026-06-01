@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface PlanDetail {
   id: string;
@@ -44,6 +44,60 @@ const TABS = [
 
 export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalProps) {
   const [activeTab, setActiveTab] = useState('highlights');
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const trigger = document.activeElement;
+
+    // Focus the modal panel so it can receive keyboard events immediately
+    modalRef.current?.focus();
+
+    const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab') {
+        const modal = modalRef.current;
+        if (!modal) return;
+        const focusable = Array.from(modal.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+          (el) => !el.hasAttribute('disabled') && el.tabIndex !== -1
+        );
+        if (focusable.length === 0) {
+          e.preventDefault();
+          return;
+        }
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+
+        if (e.shiftKey) {
+          // Shift+Tab: if focus is on first focusable (or the modal div itself), wrap to last
+          if (document.activeElement === first || document.activeElement === modal) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          // Tab: if focus is on last focusable (or the modal div itself), wrap to first
+          if (document.activeElement === last || document.activeElement === modal) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      (trigger as HTMLElement)?.focus();
+    };
+  }, [onClose]);
+
   const planPrice =
     (Number.isFinite(Number(plan.basePrice)) && Number(plan.basePrice) > 0
       ? Number(plan.basePrice)
@@ -64,9 +118,11 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
 
       {/* Modal panel */}
       <div
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="plan-modal-title"
+        tabIndex={-1}
         style={{
           position: 'fixed', top: '50%', left: '50%',
           transform: 'translate(-50%, -50%)',
@@ -230,7 +286,8 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                         <Image
                           src={item.imageUrl}
                           alt=""
-                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }} width={1200} height={675} />
+                          loading="lazy"
+                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }} width={360} height={240} />
                       )}
                     </li>
                   ))}

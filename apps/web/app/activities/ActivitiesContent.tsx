@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
+import { isActivityTypeMatch, isActivityTypeKeywordMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
 
@@ -41,7 +42,7 @@ export default function ActivitiesContent() {
     searchParams.get('region') ? [searchParams.get('region')!] : []
   );
   const [selectedTypes, setSelectedTypes] = useState<string[]>(
-    searchParams.get('type') ? [searchParams.get('type')!] : []
+    searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
   );
   const [sort, setSort] = useState('recommended');
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -53,8 +54,10 @@ export default function ActivitiesContent() {
     setQuery(searchParams.get('q') || '');
     const r = searchParams.get('region');
     if (r) setSelectedRegions([r]);
+    else setSelectedRegions([]);
     const t = searchParams.get('type');
-    if (t) setSelectedTypes([t]);
+    if (t) setSelectedTypes([resolveCanonicalType(TYPES, t)]);
+    else setSelectedTypes([]);
   }, [searchParams]);
 
   // Update URL when text query changes (debounced 500ms for shareability)
@@ -118,7 +121,9 @@ export default function ActivitiesContent() {
     }
     if (selectedTypes.length > 0) {
       result = result.filter((a) =>
-        selectedTypes.some((t) => a.category?.includes(t.replace(' 🔦', '').replace(' 🌊', '')))
+        selectedTypes.some((t) =>
+          isActivityTypeMatch(a.category, t) || isActivityTypeKeywordMatch(a, t)
+        )
       );
     }
     if (sort === 'price-asc') result.sort((a, b) => a.priceTwd - b.priceTwd);
@@ -137,7 +142,7 @@ export default function ActivitiesContent() {
 
       <section className="tp-activities-layout">
         {/* 篩選側欄 */}
-        <aside className="tp-filter">
+        <aside className="tp-filter" aria-label="篩選條件">
           <div className="tp-filter-head">
             <h3>篩選條件</h3>
             {hasFilters && <button onClick={clearAll} style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}>清除全部</button>}
@@ -174,22 +179,14 @@ export default function ActivitiesContent() {
               </label>
             ))}
           </details>
-          <details>
-            <summary>行程時長</summary>
-            <label><input type="checkbox" /> 2 小時以內</label>
-            <label><input type="checkbox" /> 2～4 小時</label>
-            <label><input type="checkbox" /> 4～8 小時（半天）</label>
-            <label><input type="checkbox" /> 8 小時以上（全天）</label>
-          </details>
-          <details>
-            <summary>語言</summary>
-            <label><input type="checkbox" /> 中文</label>
-            <label><input type="checkbox" /> 英語</label>
-          </details>
         </aside>
 
         {/* 結果區 */}
         <section>
+          {/* aria-live announces result count changes to screen readers */}
+          <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
+            {hasFilters ? resultLabel : ''}
+          </div>
           <div className="tp-result-head">
             <h1>{resultLabel}</h1>
             <select aria-label="排序" value={sort} onChange={(e) => setSort(e.target.value)}>
@@ -239,7 +236,7 @@ export default function ActivitiesContent() {
                     {a.guideName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px' }}>
                         {a.guideAvatarUrl && (
-                          <Image src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} width={1200} height={675} />
+                          <Image src={a.guideAvatarUrl} alt={a.guideName} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover' }} width={28} height={28} />
                         )}
                         <span style={{ fontSize: 13, color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{a.guideName} <PublicIcon name="badgeCheck" size={14} /></span>
                       </div>

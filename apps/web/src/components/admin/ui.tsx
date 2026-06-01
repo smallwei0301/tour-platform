@@ -86,7 +86,7 @@ export function Select({ value, onChange, children, style, ...rest }: {
       style={{
         border: '1px solid #e5e7eb', borderRadius: 8, padding: '8px 12px',
         fontSize: 14, background: '#fff', color: '#374151',
-        cursor: 'pointer', outline: 'none', ...style,
+        cursor: 'pointer', ...style,
       }}
     >
       {children}
@@ -105,7 +105,7 @@ export function TableWrapper({ children }: { children: React.ReactNode }) {
 }
 
 export const Th = ({ children, align = 'left' }: { children?: React.ReactNode; align?: 'left' | 'right' }) => (
-  <th style={{ textAlign: align, padding: '10px 14px', background: '#f9fafb', color: '#6b7280', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>
+  <th scope="col" style={{ textAlign: align, padding: '10px 14px', background: '#f9fafb', color: '#6b7280', fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }}>
     {children}
   </th>
 );

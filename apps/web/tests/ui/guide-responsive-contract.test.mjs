@@ -6,7 +6,9 @@
 //   - each guide table/modal page actually imports from the shared
 //     components/admin/responsive module (no regression to inline tables);
 //   - no fixed-width modal pattern (position:fixed + inset:0 + maxWidth)
-//     remains anywhere under app/guide/**.
+//     remains anywhere under app/guide/** EXCEPT bookings, which keeps a
+//     hand-rolled focus-trapped dialog to stay compatible with PR #1066's
+//     a11y suite — there we instead assert the panel sizing is RWD-friendly.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
@@ -52,8 +54,12 @@ for (const rel of GUIDE_TABLE_PAGES) {
   });
 }
 
+// dashboard + availability use ResponsiveModal. bookings stays hand-rolled
+// because PR #1066's a11y suite source-greps for dialogRef / closeButtonRef
+// and the literal role="dialog" markup — moving it into ResponsiveModal
+// would break that contract. The hand-rolled bookings panel is still RWD,
+// asserted separately below.
 const GUIDE_MODAL_PAGES = [
-  'app/guide/bookings/page.tsx',
   'app/guide/dashboard/page.tsx',
   'app/guide/availability/page.tsx',
 ];
@@ -64,17 +70,23 @@ for (const rel of GUIDE_MODAL_PAGES) {
   });
 }
 
-test('no fixed-width hand-rolled modal remains under app/guide/**', async () => {
-  // Walk app/guide for .tsx files; assert none combine `position: 'fixed'`
-  // with `inset: 0` and a literal maxWidth (the legacy modal pattern).
+test('bookings hand-rolled dialog panel is RWD-friendly (width clamps to viewport)', async () => {
+  // Asserts the panel width is `min(<px>, calc(100vw - <px>))` and that
+  // maxHeight uses 100dvh so the modal never overflows a 375-wide phone.
+  const src = await readSrc('app/guide/bookings/page.tsx');
+  assert.match(src, /width:\s*'min\(\d+px,\s*calc\(100vw - \d+px\)\)'/);
+  assert.match(src, /maxHeight:\s*'calc\(100dvh - \d+px\)'/);
+});
+
+test('no fixed-width hand-rolled modal remains in non-bookings app/guide/** pages', async () => {
+  // bookings/page.tsx is intentionally excluded — see the test above.
   const guideRoot = path.join(WEB_ROOT, 'app/guide');
-  const tsxFiles = await walkTsx(guideRoot);
+  const tsxFiles = (await walkTsx(guideRoot)).filter(
+    (abs) => !abs.endsWith(path.join('app/guide/bookings/page.tsx')),
+  );
   const offenders = [];
   for (const abs of tsxFiles) {
     const src = await readFile(abs, 'utf8');
-    // Heuristic: a single style object that opens with position:'fixed',
-    // contains inset:0, and contains maxWidth: <number>. The hand-rolled
-    // overlay always sits within the same {{ ... }} block.
     const re = /position:\s*['"]fixed['"][^{}]*?inset:\s*0[^{}]*?maxWidth:\s*\d/g;
     if (re.test(src)) offenders.push(path.relative(WEB_ROOT, abs));
   }

@@ -212,10 +212,12 @@ export default function AdminActivitiesPage() {
 
       <div className="admin-page">
         {/* Status tabs */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div role="tablist" aria-label="活動狀態篩選" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           {STATUS_TABS.map((tab) => (
             <button
               key={tab.value}
+              role="tab"
+              aria-selected={statusFilter === tab.value}
               onClick={() => setStatusFilter(tab.value)}
               style={{
                 padding: '10px 18px', border: 'none', background: 'none',

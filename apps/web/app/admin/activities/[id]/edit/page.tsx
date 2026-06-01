@@ -417,7 +417,7 @@ function ScheduleSection({ activityId, availablePlans }: { activityId: string; a
             <thead>
               <tr style={{ background: '#f9fafb', borderBottom: '1px solid #e5e7eb' }}>
                 {['方案', '日期', '時段', '容量', '已訂 / 剩餘', '狀態', '操作'].map(h => (
-                  <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap' }}>{h}</th>
+                  <th key={h} scope="col" style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#374151', whiteSpace: 'nowrap' }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -1079,9 +1079,9 @@ export default function AdminActivityEditPage() {
             )}
             <h3 style={sectionTitle}>📝 基本資訊</h3>
 
-            <label style={labelStyle}>
+            <label htmlFor="activity-edit-title" style={labelStyle}>
               行程名稱 *
-              <input type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required />
+              <input id="activity-edit-title" type="text" value={title} onChange={e => setTitle(e.target.value)} style={fieldStyle} required aria-required="true" />
             </label>
 
             <div style={labelStyle}>
@@ -1127,7 +1127,7 @@ export default function AdminActivityEditPage() {
             <FormGrid cols={3} gap={16}>
               <label style={labelStyle}>
                 價格/人 (TWD) *
-                <input type="number" value={priceTwd} onChange={e => setPriceTwd(e.target.value)} min={0} style={fieldStyle} required />
+                <input type="number" value={priceTwd} onChange={e => setPriceTwd(e.target.value)} min={0} style={fieldStyle} required aria-required="true" />
               </label>
               <label style={labelStyle}>
                 最少人數
@@ -1164,8 +1164,9 @@ export default function AdminActivityEditPage() {
               onUpload={setCoverImageUrl}
             />
             <div style={{ marginTop: 12, marginBottom: 16 }}>
-              <label style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上封面圖 URL</label>
+              <label htmlFor="activity-edit-cover-image-url" style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上封面圖 URL</label>
               <input
+                id="activity-edit-cover-image-url"
                 type="url"
                 value={coverImageUrl}
                 onChange={e => setCoverImageUrl(e.target.value)}
@@ -1184,8 +1185,9 @@ export default function AdminActivityEditPage() {
               onGalleryUpdate={setImageUrls}
             />
             <div style={{ marginTop: 12, marginBottom: 16 }}>
-              <label style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上活動照片 URL（每行一張）</label>
+              <label htmlFor="activity-edit-gallery-urls" style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上活動照片 URL（每行一張）</label>
               <textarea
+                id="activity-edit-gallery-urls"
                 value={imageUrls.join('\n')}
                 onChange={e => setImageUrls(e.target.value.split('\n').map(x => x.trim()).filter(Boolean))}
                 rows={3}
@@ -1196,7 +1198,7 @@ export default function AdminActivityEditPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
                   {imageUrls.map((url, i) => (
                     <div key={url + i} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, background: '#fff' }}>
-                      <Image src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} width={1200} height={675} />
+                      <Image src={url} alt="" style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} width={96} height={64} />
                       <div style={{ flex: 1, fontSize: 12, color: '#4b5563', wordBreak: 'break-all' }}>{url}</div>
                       <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>移除</button>
                     </div>
@@ -1318,7 +1320,7 @@ export default function AdminActivityEditPage() {
                   style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="地點名稱" />
                 <input value={step.duration} onChange={e => { const s=[...itinerary]; s[i]={...s[i],duration:e.target.value}; setItinerary(s); }}
                   style={{ width: 90, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px' }} placeholder="60分鐘" />
-                <button type="button" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
+                <button type="button" aria-label="移除行程點" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
                   style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
               </div>
               <textarea value={step.description} onChange={e => { const s=[...itinerary]; s[i]={...s[i],description:e.target.value}; setItinerary(s); }}
@@ -1352,7 +1354,7 @@ export default function AdminActivityEditPage() {
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                 <input value={item.q} onChange={e => { const f=[...faq]; f[i]={...f[i],q:e.target.value}; setFaq(f); }}
                   style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="問題" />
-                <button type="button" onClick={() => setFaq(faq.filter((_,j)=>j!==i))}
+                <button type="button" aria-label="移除常見問題" onClick={() => setFaq(faq.filter((_,j)=>j!==i))}
                   style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
               </div>
               <textarea value={item.a} onChange={e => { const f=[...faq]; f[i]={...f[i],a:e.target.value}; setFaq(f); }}
