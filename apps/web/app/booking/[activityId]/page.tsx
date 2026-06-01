@@ -978,7 +978,7 @@ function BookingInnerV2FlagShell() {
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
                 {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
               </div>
-              {!slotsLoading && overCapacity && (
+              {!slotsLoading && step1CtaState.overCapacity && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
                   參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。
                 </p>

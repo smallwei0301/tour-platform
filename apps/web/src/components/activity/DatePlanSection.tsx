@@ -199,13 +199,14 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
 
   const effectiveSchedules = liveSchedules && liveSchedules.length > 0 ? liveSchedules : schedules;
 
-  const { plans: PLANS, showMissingCanonicalMessage } = resolveDatePlanPresentation({
+  const { plans: resolvedPlans, showMissingCanonicalMessage } = resolveDatePlanPresentation({
     useBookingV2,
     canonicalPlans: activity.plans,
     defaultPlans: DEFAULT_PLANS,
   });
+  const PLANS: PlanConfig[] = resolvedPlans as PlanConfig[];
   const VISIBLE_PLANS = showAllPlans ? PLANS : PLANS.slice(0, 2);
-  const selectedOrVisiblePlanIds = selectedPlan ? [selectedPlan] : VISIBLE_PLANS.map((p) => p.id);
+  const selectedOrVisiblePlanIds: string[] = selectedPlan ? [selectedPlan] : VISIBLE_PLANS.map((p: PlanConfig) => p.id);
   const datePickerSchedules = effectiveSchedules.filter((s) => {
     const planId = s.planId ?? s.plan_id ?? null;
     return planId === null || selectedOrVisiblePlanIds.includes(planId);
@@ -247,14 +248,14 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
       ) : (
         <>
           <div className="kkd-plans-list">
-            {VISIBLE_PLANS.map((plan) => {
+            {VISIBLE_PLANS.map((plan: PlanConfig) => {
               const basePrice = activity.priceTwd ?? activity.price ?? 0;
               const planPrice = resolvePlanPrice(plan, basePrice, 1);
               const origPrice = Math.round(planPrice * 1.25);
               const isSelected = selectedPlan === plan.id;
 
               // 取得該方案在選中日期的可用性（傳入 knownPlanIds 以防 V2 UUID↔legacy slug ID 空間不一致）
-              const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id, PLANS.map((p) => p.id));
+              const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id, PLANS.map((p: PlanConfig) => p.id));
               const showFull = selectedDate && planAvail.isFull;
               const showNotOpen = selectedDate && planAvail.isNotOpen;
               const canBook = !selectedDate || planAvail.isOpen;
@@ -329,7 +330,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
 
                   {/* Highlights: transparent bg, black icon + text */}
                   <ul className="kkd-plan-notice-list">
-                    {plan.highlights.map((h, i) => (
+                    {plan.highlights.map((h: string, i: number) => (
                       <li key={i} className="kkd-plan-notice-item">
                         <span className="kkd-plan-notice-icon">{getIconForHighlight(h)}</span>
                         <span>{h}</span>
