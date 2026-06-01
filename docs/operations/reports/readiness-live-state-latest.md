@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-01T14:07:44.715Z -->
+<!-- query_timestamp: 2026-06-01T19:42:05.355Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-01T14:07:44.715Z  
-**Commit SHA:** `b9cc8eff33bd03df2c7a334dc318164c1bf725d2`
+**Query timestamp:** 2026-06-01T19:42:05.355Z  
+**Commit SHA:** `1649f6f8c820851cafd010c1c616a37a29a6a001`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (26 total)
+## Open Issues (28 total)
 
 ### P0 (2)
 
@@ -45,13 +45,14 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (9)
+### P2 (10)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1104 | [[QA] Verify post-#1092–#1102 a11y and SEO regression guards](https://github.com/smallwei0301/tour-platform/issues/1104) | triaged, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, type:qa, docs, seo, admin |
+| #1090 | [[QA] Verify post-#1084/#1087/#1089 a11y and SEO regressions](https://github.com/smallwei0301/tour-platform/issues/1090) | triaged, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, docs, admin |
 | #1081 | [[Ops] Harden readiness live-state snapshot auto-refresh after stale regression](https://github.com/smallwei0301/tour-platform/issues/1081) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, docs |
 | #1078 | [[Ops] Prevent temporary Go/No-Go report artifacts from polluting repo reports](https://github.com/smallwei0301/tour-platform/issues/1078) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, docs |
-| #1060 | [[A11y] Finish guide dashboard table header scope coverage after #1055](https://github.com/smallwei0301/tour-platform/issues/1060) | triaged, type:bug, priority:P2, qa, guide-dashboard, owner:ai-agent, status:ready |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
 | #724 | [[Ops] Execute Supabase live restore drill within 7 days after soft launch](https://github.com/smallwei0301/tour-platform/issues/724) | triaged, type:investigation, priority:P2, agent:backlog, owner:mixed, database, infra, status:awaiting-implementation, launch:post-first-payment |
@@ -63,9 +64,11 @@
 
 _none_
 
-### Other (0)
+### Other (1)
 
-_none_
+| # | Title | Labels |
+|---|-------|--------|
+| #1103 | [[TypeScript] Replace supabase: any with SupabaseClient type in booking-critical lib files](https://github.com/smallwei0301/tour-platform/issues/1103) | — |
 
 ---
 
@@ -73,16 +76,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1082 | [fix: expose guide availability source labels](https://github.com/smallwei0301/tour-platform/pull/1082) | 2026-06-01 |
-| #1080 | [fix(booking): enforce draft availability SOT parity](https://github.com/smallwei0301/tour-platform/pull/1080) | 2026-06-01 |
-| #1076 | [fix: remove Booking V2 duplicate warning and use select date-capacity picker](https://github.com/smallwei0301/tour-platform/pull/1076) | 2026-06-01 |
-| #1075 | [fix(booking-v2): add date-capacity availability contract and picker](https://github.com/smallwei0301/tour-platform/pull/1075) | 2026-06-01 |
-| #1074 | [feat(guide): rebuild profile editor + fix availability slot-preview overflow](https://github.com/smallwei0301/tour-platform/pull/1074) | 2026-06-01 |
-| #1071 | [test: follow-up GH-1069 booking v2 disabled reason invariant](https://github.com/smallwei0301/tour-platform/pull/1071) | 2026-06-01 |
-| #1070 | [fix(ui): clarify Booking V2 blocked states and plan source](https://github.com/smallwei0301/tour-platform/pull/1070) | 2026-06-01 |
-| #1068 | [feat(guide-backend): RWD overhaul — responsive tables / modals / 7-day grid / layout](https://github.com/smallwei0301/tour-platform/pull/1068) | 2026-06-01 |
-| #1066 | [fix(ui): harden guide booking detail dialog a11y](https://github.com/smallwei0301/tour-platform/pull/1066) | 2026-06-01 |
-| #1064 | [docs: add GH-1061 guide authenticated smoke addendum](https://github.com/smallwei0301/tour-platform/pull/1064) | 2026-06-01 |
+| #1102 | [test: global BreadcrumbList JSON-LD guard for public pages](https://github.com/smallwei0301/tour-platform/pull/1102) | 2026-06-01 |
+| #1101 | [test: admin guide availability buffer-time label/id guard (GH-1093)](https://github.com/smallwei0301/tour-platform/pull/1101) | 2026-06-01 |
+| #1100 | [test(a11y): regression guards for GH-1093 and GH-1097 (#1099)](https://github.com/smallwei0301/tour-platform/pull/1100) | 2026-06-01 |
+| #1098 | [a11y: aria-label on capacity inline edit + descriptive alt on image previews (GH-1097)](https://github.com/smallwei0301/tour-platform/pull/1098) | 2026-06-01 |
+| #1096 | [test: global regression guard — all raw <th> must have scope=col (GH-1095)](https://github.com/smallwei0301/tour-platform/pull/1096) | 2026-06-01 |
+| #1094 | [a11y/ux: file accept attrs + label association (GH-1093)](https://github.com/smallwei0301/tour-platform/pull/1094) | 2026-06-01 |
+| #1092 | [test: regression guards for GH-1085 GH-1086 GH-1088 a11y/SEO fixes](https://github.com/smallwei0301/tour-platform/pull/1092) | 2026-06-01 |
+| #1089 | [a11y: add aria-current to admin and guide nav active states (GH-1088)](https://github.com/smallwei0301/tour-platform/pull/1089) | 2026-06-01 |
+| #1087 | [[A11y/SEO] h1 hierarchy, scope=col, BreadcrumbList fixes (GH-1085 GH-1086)](https://github.com/smallwei0301/tour-platform/pull/1087) | 2026-06-01 |
+| #1084 | [[A11y] Add scope=col to guide dashboard table headers (GH-1060)](https://github.com/smallwei0301/tour-platform/pull/1084) | 2026-06-01 |
 
 ---
 
