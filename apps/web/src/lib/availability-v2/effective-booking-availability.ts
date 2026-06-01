@@ -40,6 +40,13 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
   };
 }
 
+export function shouldRejectDraftByEffectiveAvailability(params: {
+  scheduleValidatedBySourceOfTruth: boolean;
+  generatedSlotValidation: { available: boolean };
+}): boolean {
+  return !params.generatedSlotValidation.available;
+}
+
 export function evaluateEffectiveBookingAvailability(
   input: BookingAvailabilityEvaluatorInput & { requestedStartAt: string }
 ): EffectiveBookingAvailabilityResult {

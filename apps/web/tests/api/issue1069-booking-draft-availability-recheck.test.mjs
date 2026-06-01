@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   evaluateEffectiveBookingAvailability,
+  shouldRejectDraftByEffectiveAvailability,
 } from '../../src/lib/availability-v2/effective-booking-availability.ts';
 
 const BASE = {
@@ -88,6 +89,18 @@ test('GH-1069 RED: authoritative selected schedule closed/full rejects even when
 
   assert.equal(out.available, false);
   assert.equal(out.reasonCode, 'BOOKING_CONFLICT');
+});
+
+test('GH-1069 RED: stale schedule fallback cannot bypass effective generated unavailable decision', () => {
+  const reject = shouldRejectDraftByEffectiveAvailability({
+    scheduleValidatedBySourceOfTruth: true,
+    generatedSlotValidation: {
+      available: false,
+      reasonCode: 'BOOKING_CONFLICT',
+    },
+  });
+
+  assert.equal(reject, true);
 });
 
 test('GH-1069 RED: happy path keeps available=true and matched slot', () => {

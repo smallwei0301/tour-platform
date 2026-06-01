@@ -30,7 +30,10 @@ import {
   type BlackoutWindow,
   type ExistingBooking,
 } from '../../../../../src/lib/slot-generator';
-import { evaluateEffectiveBookingAvailability } from '../../../../../src/lib/availability-v2/effective-booking-availability';
+import {
+  evaluateEffectiveBookingAvailability,
+  shouldRejectDraftByEffectiveAvailability,
+} from '../../../../../src/lib/availability-v2/effective-booking-availability';
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
@@ -109,8 +112,18 @@ async function isSlotInGeneratedV2Availability(
     slotDate: string;
     startAt: string;
     minParticipants: number;
-  }
-): Promise<{ available: boolean; reasonCode?: string; messageZh?: string }> {
+  selectedSchedule?: {
+    id: string;
+    activity_id: string;
+    plan_id: string | null;
+    start_at: string;
+    end_at: string;
+    capacity: number;
+    booked_count: number;
+    status: string;
+  } | null;
+  selectedScheduleAuthority?: 'authoritative' | 'fallback';
+}): Promise<{ available: boolean; reasonCode?: string; messageZh?: string }> {
   // Fetch availability rules for this guide and plan
   const { data: rulesData, error: rulesError } = await supabase
     .from('guide_availability_rules')
@@ -204,6 +217,8 @@ async function isSlotInGeneratedV2Availability(
     blackouts,
     bookings,
     plan,
+    selectedSchedule: payload.selectedSchedule ?? null,
+    selectedScheduleAuthority: payload.selectedScheduleAuthority,
   });
 
   if (!availability.available) {
@@ -602,6 +617,8 @@ export async function POST(request: NextRequest) {
     }
 
     let selectedScheduleValidation: { available: boolean; reason?: string } | null = null;
+    let selectedScheduleForAvailability: ActivitySchedule | null = null;
+    let selectedScheduleAuthority: 'authoritative' | 'fallback' | undefined;
     if (data.scheduleId) {
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('activity_schedules')
@@ -611,8 +628,11 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (!scheduleError) {
+        const selectedSchedule = (scheduleData as ActivitySchedule | null) ?? null;
+        selectedScheduleForAvailability = selectedSchedule;
+        selectedScheduleAuthority = selectedSchedule ? 'authoritative' : undefined;
         selectedScheduleValidation = validateDraftSlotAgainstSelectedSchedule({
-          schedule: (scheduleData as ActivitySchedule | null) ?? null,
+          schedule: selectedSchedule,
           activityId: data.activityId,
           resolvedPlanId,
           requestStartAt: data.startAt,
@@ -660,6 +680,8 @@ export async function POST(request: NextRequest) {
 
           if (fallbackSelectedSchedule) {
             selectedScheduleValidation = fallbackSelectedSchedule.validation;
+            selectedScheduleForAvailability = fallbackSelectedSchedule.schedule;
+            selectedScheduleAuthority = 'fallback';
           }
         }
       }
@@ -691,6 +713,19 @@ export async function POST(request: NextRequest) {
         slotDate,
         startAt: data.startAt,
         minParticipants,
+            selectedSchedule: selectedScheduleForAvailability
+          ? {
+              id: selectedScheduleForAvailability.id,
+              activity_id: selectedScheduleForAvailability.activity_id,
+              plan_id: selectedScheduleForAvailability.plan_id,
+              start_at: selectedScheduleForAvailability.start_at,
+              end_at: addMinutes(new Date(selectedScheduleForAvailability.start_at), planData.duration_minutes).toISOString(),
+              capacity: selectedScheduleForAvailability.capacity,
+              booked_count: selectedScheduleForAvailability.booked_count,
+              status: selectedScheduleForAvailability.status,
+            }
+          : null,
+        selectedScheduleAuthority,
       });
     } catch (error) {
       console.error('Error generating slot availability', error);
@@ -699,7 +734,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (!scheduleValidatedBySourceOfTruth && !generatedSlotValidation.available) {
+    if (
+      shouldRejectDraftByEffectiveAvailability({
+        scheduleValidatedBySourceOfTruth,
+        generatedSlotValidation,
+      })
+    ) {
       const generatedReasonCode = generatedSlotValidation.reasonCode;
       const generatedMessageZh = generatedSlotValidation.messageZh;
       const generatedErrorCode =
