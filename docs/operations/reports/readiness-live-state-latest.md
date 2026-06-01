@@ -1,23 +1,22 @@
-<!-- query_timestamp: 2026-05-31T18:29:27.420Z -->
+<!-- query_timestamp: 2026-06-01T00:58:47.358Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-05-31T18:29:27.420Z  
-**Commit SHA:** `9b6406692e6834ecea27b713eab8066a023295b8`
+**Query timestamp:** 2026-06-01T00:58:47.358Z  
+**Commit SHA:** `34637608d9e8f12957a217fe45e5a08913c5f7e0`
 
 ---
 
-## Open PRs (2)
+## Open PRs (1)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1059 | [seo: add Twitter card to activities region listing pages](https://github.com/smallwei0301/tour-platform/pull/1059) | `seo/activities-region-twitter-card` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (15 total)
+## Open Issues (16 total)
 
 ### P0 (0)
 
@@ -37,10 +36,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (6)
+### P2 (7)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1060 | [[A11y] Finish guide dashboard table header scope coverage after #1055](https://github.com/smallwei0301/tour-platform/issues/1060) | triaged, type:bug, priority:P2, qa, guide-dashboard, owner:ai-agent, status:ready |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
 | #724 | [[Ops] Execute Supabase live restore drill within 7 days after soft launch](https://github.com/smallwei0301/tour-platform/issues/724) | triaged, type:investigation, priority:P2, agent:backlog, owner:mixed, database, infra, status:awaiting-implementation, launch:post-first-payment |
@@ -62,16 +62,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1064 | [docs: add GH-1061 guide authenticated smoke addendum](https://github.com/smallwei0301/tour-platform/pull/1064) | 2026-06-01 |
+| #1063 | [docs: refresh README live markers after GH-1061 report merge](https://github.com/smallwei0301/tour-platform/pull/1063) | 2026-05-31 |
+| #1062 | [docs: add GH-1061 late PR regression QA report](https://github.com/smallwei0301/tour-platform/pull/1062) | 2026-05-31 |
+| #1059 | [seo: add Twitter card to activities region listing pages](https://github.com/smallwei0301/tour-platform/pull/1059) | 2026-05-31 |
 | #1058 | [a11y: add ARIA tablist/tab to admin QA status filter tabs](https://github.com/smallwei0301/tour-platform/pull/1058) | 2026-05-31 |
 | #1057 | [a11y: add ARIA tablist/tab to guide bookings status filter tabs](https://github.com/smallwei0301/tour-platform/pull/1057) | 2026-05-31 |
 | #1056 | [a11y: add ARIA tablist/tab to guide schedules filter tabs](https://github.com/smallwei0301/tour-platform/pull/1056) | 2026-05-31 |
 | #1055 | [a11y: add scope=col to all th elements in guide dashboard table](https://github.com/smallwei0301/tour-platform/pull/1055) | 2026-05-31 |
 | #1053 | [a11y: add aria-live announcement for activities filter result count](https://github.com/smallwei0301/tour-platform/pull/1053) | 2026-05-31 |
 | #1052 | [a11y: add aria-live announcement for guides filter result count](https://github.com/smallwei0301/tour-platform/pull/1052) | 2026-05-31 |
-| #1051 | [seo: add Twitter card metadata to blog article and experience pages](https://github.com/smallwei0301/tour-platform/pull/1051) | 2026-05-31 |
-| #1050 | [seo: add Twitter card metadata to guide profile pages](https://github.com/smallwei0301/tour-platform/pull/1050) | 2026-05-31 |
-| #1049 | [seo: add dateModified and inLanguage to blog article JSON-LD](https://github.com/smallwei0301/tour-platform/pull/1049) | 2026-05-31 |
-| #1048 | [ux: add search icon to guides listing empty state](https://github.com/smallwei0301/tour-platform/pull/1048) | 2026-05-31 |
 
 ---
 
