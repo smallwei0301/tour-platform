@@ -37,7 +37,7 @@ test('v2 shell prefers API Chinese copy and evaluator reason for blocked state m
 
   assert.match(src, /setAvailabilityReason\(json\?\.data\?\.reason \|\| ''\)/);
   assert.match(src, /json\?\.data\?\.messageZh \|\| json\?\.error\?\.messageZh \|\| json\?\.error\?\.message/);
-  assert.match(src, /if \(nextSlots\.length === 0 && json\.data\?\.messageZh\)/);
+  assert.match(src, /if \(nextSlots\.length === 0 && \(selectedDateEntry\?\.messageZh \|\| json\.data\?\.messageZh\)\)/);
   assert.match(src, /目前狀態：\{availabilityReason\}/);
 });
 
