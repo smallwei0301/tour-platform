@@ -794,17 +794,47 @@ export default function GuideAvailabilityPage() {
 
             {/* ── Slot Preview ── */}
             <div style={cardStyle}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+              <div
+                style={{
+                  padding: '16px 20px',
+                  borderBottom: '1px solid #f0f0f0',
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  justifyContent: 'space-between',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}
+              >
                 <div>
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>時段預覽</h2>
                   <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>預覽系統將產生的可預約時段</p>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* On mobile, stack each control on its own row so the native
+                    date picker can be tapped without overflowing the viewport. */}
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    alignItems: isMobile ? 'stretch' : 'center',
+                    gap: 8,
+                    flexWrap: 'wrap',
+                  }}
+                >
                   <select
                     aria-label="篩選方案"
                     value={previewPlanId}
                     onChange={(e) => setPreviewPlanId(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13, minWidth: 0, flex: '1 1 240px' }}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #e5e7eb',
+                      fontSize: 13,
+                      minWidth: 0,
+                      flex: isMobile ? undefined : '1 1 240px',
+                      width: isMobile ? '100%' : undefined,
+                      boxSizing: 'border-box',
+                    }}
                   >
                     <option value="">全部方案（不篩選）</option>
                     {activityPlanOptions.map((plan) => (
@@ -815,18 +845,40 @@ export default function GuideAvailabilityPage() {
                   </select>
                   <input
                     type="date"
+                    aria-label="預覽起日"
                     value={previewDateFrom}
                     onChange={(e) => setPreviewDateFrom(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #e5e7eb',
+                      fontSize: 13,
+                      minWidth: 0,
+                      width: isMobile ? '100%' : undefined,
+                      boxSizing: 'border-box',
+                    }}
                   />
-                  <span>~</span>
+                  <span style={{ display: isMobile ? 'none' : 'inline' }}>~</span>
                   <input
                     type="date"
+                    aria-label="預覽迄日"
                     value={previewDateTo}
                     onChange={(e) => setPreviewDateTo(e.target.value)}
-                    style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: 6,
+                      border: '1px solid #e5e7eb',
+                      fontSize: 13,
+                      minWidth: 0,
+                      width: isMobile ? '100%' : undefined,
+                      boxSizing: 'border-box',
+                    }}
                   />
-                  <button onClick={loadPreview} disabled={previewLoading} style={smallBtn('#7c3aed', '#fff')}>
+                  <button
+                    onClick={loadPreview}
+                    disabled={previewLoading}
+                    style={{ ...smallBtn('#7c3aed', '#fff'), width: isMobile ? '100%' : undefined }}
+                  >
                     {previewLoading ? '載入中...' : '更新預覽'}
                   </button>
                 </div>

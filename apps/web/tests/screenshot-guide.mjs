@@ -18,6 +18,7 @@ const PAGES = [
   { route: '/guide/availability', name: 'availability' },
   { route: '/guide/schedules',    name: 'schedules' },
   { route: '/guide/bookings',     name: 'bookings' },
+  { route: '/guide/profile',      name: 'profile' },
 ];
 
 const VIEWPORTS = [
@@ -99,9 +100,26 @@ async function mockApi(page) {
     if (p === '/api/guide/blackout-dates')              return ok({ blackouts: AVAILABILITY_BLACKOUTS });
     if (p === '/api/guide/availability-preview')        return ok({ slots: [] });
     if (p === '/api/guide/activities-with-plans')      return ok(AVAILABILITY_PLANS);
+    if (p === '/api/guide/profile')                     return ok(PROFILE_DATA);
     return ok(null);
   });
 }
+
+const PROFILE_DATA = {
+  display_name: '阿明導遊',
+  headline: '在地八年的高雄柴山嚮導，帶你看見不一樣的港都',
+  bio: '我從 2018 年開始帶旅客探索柴山的秘境洞窟、北投的溫泉小巷、猴硐的貓村故事。我相信好的導遊不只是把你帶到景點，而是讓你聽見地方的聲音。\n\n中文・英文流利、簡單日文溝通沒問題。喜歡攝影、爬山、跟旅客一起喝下午茶。',
+  region: '高雄',
+  languages: ['中文', '英文', '日文'],
+  specialties: ['歷史導覽', '美食探訪', '山林秘境'],
+  // Empty image state so screenshots don't depend on an external image host
+  // being whitelisted in next.config remotePatterns. The dashed-upload UI
+  // is what we want to verify visually anyway.
+  profile_photo_url: null,
+  hero_image_url: null,
+  gallery_urls: [],
+  slug: 'andy-ming',
+};
 
 const browser = await chromium.launch();
 try {

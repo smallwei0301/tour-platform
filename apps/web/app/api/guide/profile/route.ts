@@ -7,21 +7,36 @@ async function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-const EDITABLE_FIELDS = ['display_name', 'bio', 'region', 'languages', 'specialties', 'headline'] as const;
+const EDITABLE_FIELDS = [
+  'display_name',
+  'bio',
+  'region',
+  'languages',
+  'specialties',
+  'headline',
+  'profile_photo_url',
+  'hero_image_url',
+  'gallery_urls',
+] as const;
 type EditableField = typeof EDITABLE_FIELDS[number];
+
+const GALLERY_MAX = 12;
 
 export async function GET(req: Request) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
   if (!process.env.SUPABASE_URL) {
-    return Response.json(ok({ display_name: '', bio: '', region: '', languages: [], specialties: [], headline: '' }));
+    return Response.json(ok({
+      display_name: '', bio: '', region: '', languages: [], specialties: [], headline: '',
+      profile_photo_url: null, hero_image_url: null, gallery_urls: [], slug: null,
+    }));
   }
 
   const supabase = await getSupabase();
   const { data: gp, error } = await supabase
     .from('guide_profiles')
-    .select('id, display_name, bio, region, languages, specialties, headline')
+    .select('id, slug, display_name, bio, region, languages, specialties, headline, profile_photo_url, hero_image_url, gallery_urls')
     .eq('id', session.guideId)
     .single();
 
@@ -34,6 +49,10 @@ export async function GET(req: Request) {
     languages: gp.languages ?? [],
     specialties: gp.specialties ?? [],
     headline: gp.headline ?? '',
+    profile_photo_url: gp.profile_photo_url ?? null,
+    hero_image_url: gp.hero_image_url ?? null,
+    gallery_urls: gp.gallery_urls ?? [],
+    slug: gp.slug ?? null,
   }));
 }
 
@@ -68,6 +87,23 @@ export async function PATCH(req: Request) {
   }
   if (update.specialties !== undefined && !Array.isArray(update.specialties)) {
     return Response.json(fail('BAD_REQUEST', 'specialties must be an array'), { status: 400 });
+  }
+  // Image URLs: accept string (set) or null (clear); reject other shapes.
+  for (const f of ['profile_photo_url', 'hero_image_url'] as const) {
+    if (update[f] !== undefined && update[f] !== null && typeof update[f] !== 'string') {
+      return Response.json(fail('BAD_REQUEST', `${f} must be a string or null`), { status: 400 });
+    }
+  }
+  if (update.gallery_urls !== undefined) {
+    if (!Array.isArray(update.gallery_urls)) {
+      return Response.json(fail('BAD_REQUEST', 'gallery_urls must be an array'), { status: 400 });
+    }
+    if ((update.gallery_urls as unknown[]).length > GALLERY_MAX) {
+      return Response.json(fail('BAD_REQUEST', `gallery_urls exceeds limit of ${GALLERY_MAX}`), { status: 400 });
+    }
+    if (!(update.gallery_urls as unknown[]).every((u) => typeof u === 'string')) {
+      return Response.json(fail('BAD_REQUEST', 'gallery_urls must contain only strings'), { status: 400 });
+    }
   }
 
   if (Object.keys(update).length === 0) {
