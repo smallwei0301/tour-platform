@@ -40,6 +40,10 @@ type PreviewSlot = {
   minParticipants?: number | null;
 };
 
+type PreviewSource = 'legacy_local_preview' | 'effective_booking_availability' | string;
+
+type PreviewReasonCode = string | null;
+
 type GuideActivityPlanOption = {
   activityId: string;
   activityTitle: string;
@@ -54,6 +58,8 @@ export default function GuideAvailabilityPage() {
   const [rules, setRules] = useState<AvailabilityRule[]>([]);
   const [blackouts, setBlackouts] = useState<BlackoutDate[]>([]);
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
+  const [previewSource, setPreviewSource] = useState<PreviewSource>('legacy_local_preview');
+  const [previewReasonCode, setPreviewReasonCode] = useState<PreviewReasonCode>(null);
   const [activityPlanOptions, setActivityPlanOptions] = useState<GuideActivityPlanOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -130,6 +136,8 @@ export default function GuideAvailabilityPage() {
       const res = await fetch(`/api/guide/availability-preview?${query.toString()}`);
       const json = await res.json();
       if (json.ok) {
+        setPreviewSource(json.data?.availabilitySource || 'legacy_local_preview');
+        setPreviewReasonCode(json.data?.previewReasonCode || null);
         setPreviewSlots((json.data?.slots || []).map((slot: PreviewSlot) => ({
           ...slot,
           minParticipants: slot.minParticipants ?? null,
@@ -884,6 +892,29 @@ export default function GuideAvailabilityPage() {
                 </div>
               </div>
               <div style={{ padding: 20 }}>
+                <div
+                  data-testid="guide-availability-preview-contract"
+                  style={{
+                    marginBottom: 12,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    border: '1px solid #e5e7eb',
+                    background: '#f9fafb',
+                    fontSize: 12,
+                    color: '#374151',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 4,
+                  }}
+                >
+                  <div data-testid="guide-preview-source-label">預覽來源：{previewSource}</div>
+                  <div data-testid="guide-preview-reason-label">原因代碼：{previewReasonCode || 'N/A'}</div>
+                  {previewSource === 'legacy_local_preview' && (
+                    <div data-testid="guide-preview-legacy-warning" style={{ color: '#92400e' }}>
+                      注意：目前為 local/legacy 預覽，僅供排班參考，不代表旅客端最終可訂狀態。
+                    </div>
+                  )}
+                </div>
                 {previewPlan && (
                   <div style={{ marginBottom: 10, fontSize: 12, color: '#374151' }}>
                     預覽方案：{previewPlan.planName}（{formatParticipants(previewPlan.minParticipants, previewPlan.maxParticipants)}）
