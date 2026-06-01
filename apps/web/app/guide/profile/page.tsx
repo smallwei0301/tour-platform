@@ -61,7 +61,7 @@ export default function GuideProfileEditPage() {
   if (loading) return <div className="p-8 text-gray-500">載入中...</div>;
 
   return (
-    <div className="max-w-2xl mx-auto p-8">
+    <div className="max-w-2xl mx-auto px-4 py-6 sm:p-8">
       <h1 className="text-2xl font-bold mb-6">編輯公開導遊頁面</h1>
       <form onSubmit={handleSave} className="space-y-4">
         <div>
@@ -131,7 +131,7 @@ export default function GuideProfileEditPage() {
         <button
           type="submit"
           disabled={saving}
-          className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          className="bg-violet-600 text-white px-6 py-2 rounded hover:bg-violet-700 disabled:opacity-50"
         >
           {saving ? '儲存中...' : '儲存變更'}
         </button>

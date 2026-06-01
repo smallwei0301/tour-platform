@@ -99,7 +99,7 @@ export function ResponsiveTable<T>({
                   onClick={onRowClick ? () => onRowClick(r) : undefined}
                   style={{
                     cursor: onRowClick ? 'pointer' : 'default',
-                    background: selected ? '#f0fdf4' : 'transparent',
+                    background: selected ? 'var(--rt-accent-soft, #f0fdf4)' : 'transparent',
                   }}
                 >
                   {columns.map((c) => (
@@ -129,9 +129,9 @@ export function ResponsiveTable<T>({
             key={key}
             onClick={onRowClick ? () => onRowClick(r) : undefined}
             style={{
-              background: selected ? '#f0fdf4' : '#fff',
+              background: selected ? 'var(--rt-accent-soft, #f0fdf4)' : '#fff',
               border: '1px solid #e5e7eb',
-              borderLeft: selected ? '3px solid var(--tp-primary)' : '1px solid #e5e7eb',
+              borderLeft: selected ? '3px solid var(--rt-accent, var(--tp-primary))' : '1px solid #e5e7eb',
               borderRadius: 10,
               padding: '12px 14px',
               cursor: onRowClick ? 'pointer' : 'default',
