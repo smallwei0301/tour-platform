@@ -499,7 +499,7 @@ function BookingInnerV2FlagShell() {
   const [v2Error, setV2Error] = useState('');
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [useLegacyFallback, setUseLegacyFallback] = useState(false);
+  const [useLegacyFallback] = useState(false);
   const [slots, setSlots] = useState<V2Slot[]>([]);
   const [dateAvailabilityOptions, setDateAvailabilityOptions] = useState<V2DateAvailability[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
@@ -668,12 +668,7 @@ function BookingInnerV2FlagShell() {
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
         setAvailabilityReason(selectedDateEntry?.reason || json.data?.reason || '');
         setSlots(nextSlots);
-        if (nextSlots.length === 0 && (selectedDateEntry?.messageZh || json.data?.messageZh)) {
-          setV2Error(selectedDateEntry?.messageZh || json.data?.messageZh || '');
-        }
-        if (nextSlots.length > 0) {
-          setV2Error('');
-        }
+        setV2Error('');
         if (!nextSlots.find((s: V2Slot) => s.startAt === selectedSlotStartAt)) {
           setSelectedSlotStartAt(nextSlots[0]?.startAt || '');
         }
@@ -810,20 +805,9 @@ function BookingInnerV2FlagShell() {
             LINE LIFF 延續流程已中斷（缺少或無法判定 plan）。請回到 LIFF 入口重新帶入完整參數後再試。
           </p>
         ) : (
-          <button
-            className="tp-btn tp-btn-ghost"
-            data-testid="booking-v2-fallback-btn"
-            onClick={() => {
-              track({
-                event_name: 'booking_v2_fallback_clicked',
-                properties: { reason: 'missing_plan', rollout_variant: 'v2' },
-                page_path: `/booking/${activitySlug}`,
-              });
-              setUseLegacyFallback(true);
-            }}
-          >
-            改用舊版預約流程
-          </button>
+          <p style={{ color: 'var(--tp-muted)' }}>
+            請返回行程頁重新選擇方案後再試。
+          </p>
         )}
       </main>
     );
@@ -890,8 +874,8 @@ function BookingInnerV2FlagShell() {
               {correlationId || 'line-correlation-missing'}
             </p>
           )}
-          <div style={{ marginTop: 10 }}>
-            {isLineContinuation ? (
+          {isLineContinuation && (
+            <div style={{ marginTop: 10 }}>
               <button
                 className="tp-btn tp-btn-ghost"
                 data-testid="booking-v2-line-retry-btn"
@@ -906,23 +890,8 @@ function BookingInnerV2FlagShell() {
               >
                 重新嘗試 shared checkout
               </button>
-            ) : (
-              <button
-                className="tp-btn tp-btn-ghost"
-                data-testid="booking-v2-fallback-btn"
-                onClick={() => {
-                  track({
-                    event_name: 'booking_v2_fallback_clicked',
-                    properties: { reason: 'v2_error', rollout_variant: 'v2' },
-                    page_path: `/booking/${activitySlug}`,
-                  });
-                  setUseLegacyFallback(true);
-                }}
-              >
-                改用舊版預約流程
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -951,46 +920,34 @@ function BookingInnerV2FlagShell() {
               <h3 style={{ marginTop: 0 }}>行程確認</h3>
               <div style={{ marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>📅 選擇日期與名額</span>
-                <div
+                <select
                   data-testid="booking-v2-date-capacity-picker"
+                  name="date-capacity"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-                    gap: 8,
+                    display: 'block',
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--tp-border)',
+                    borderRadius: 10,
                     marginTop: 4,
+                    background: '#fff',
+                    color: 'var(--tp-text)',
                   }}
                 >
                   {dateAvailabilityOptions.map((entry) => {
-                    const active = entry.date === selectedDate;
-                    const disabled = entry.state !== 'available';
                     const label =
                       entry.state === 'available'
                         ? `${entry.date}（剩餘 ${entry.capacityLeft}）`
                         : `${entry.date}（不可預約）`;
                     return (
-                      <button
-                        key={entry.date}
-                        type="button"
-                        onClick={() => setSelectedDate(entry.date)}
-                        aria-pressed={active}
-                        disabled={disabled}
-                        title={disabled ? entry.messageZh || '此日期目前無可預約名額' : undefined}
-                        style={{
-                          textAlign: 'left',
-                          padding: '10px 12px',
-                          borderRadius: 10,
-                          border: active ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)',
-                          background: disabled ? '#f5f5f5' : '#fff',
-                          color: disabled ? 'var(--tp-muted)' : 'var(--tp-text)',
-                          cursor: disabled ? 'not-allowed' : 'pointer',
-                          opacity: disabled ? 0.7 : 1,
-                        }}
-                      >
+                      <option key={entry.date} value={entry.date} disabled={entry.state !== 'available'}>
                         {label}
-                      </button>
+                      </option>
                     );
                   })}
-                </div>
+                </select>
               </div>
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
