@@ -208,3 +208,22 @@ describe('adminFollowupCategory', () => {
     assert.equal(adminFollowupCategory({ isSafetyCase: true, isDisputed: true, missingTripReport: true, isNegativeReview: true }), 'refund_dispute_safety');
   });
 });
+
+// ── computePostTripStatus convenience function ────────────────────────────────
+describe('computePostTripStatus convenience', () => {
+  it('returns all 5 status fields for a clean completed order', () => {
+    const result = import('../../src/lib/post-trip-eligibility.mjs').then(m => {
+      const result = m.computePostTripStatus({
+        orderStatus: 'completed',
+        scheduleEndAt: new Date('2026-06-01T12:00:00Z'),
+        now: new Date('2026-06-03T10:00:00Z'),
+      });
+      assert.equal(typeof result.completionEligible, 'boolean');
+      assert.equal(typeof result.reviewInvitationEligible, 'boolean');
+      assert.ok('payoutHoldReason' in result);
+      assert.ok('tripReportStatus' in result);
+      assert.ok('adminFollowupCategory' in result);
+    });
+    return result;
+  });
+});
