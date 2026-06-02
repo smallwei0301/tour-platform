@@ -105,6 +105,24 @@
 - refund policy
 - customer service SOP
 - security evidence / closure docs
+- **Supabase backup & restore runbook** — `docs/operations/supabase-backup-restore-runbook.md`（資料層 P0/P1 recovery 主流程；§2 決策樹涵蓋 migration 失敗 / 誤刪 / 資料漂移三種情境；§4 post-restore smoke checklist 覆蓋 schema、row counts、orphan refs、payment events 與 soft_launch_controls 一致性驗證）
+- **Restore drill template** — `docs/operations/drills/2026-05-24-supabase-restore-drill-template.md`（演練 #724 用模板；填寫後留存為 evidence）
+
+### 6.1 P0/P1 Recovery 必含的資料一致性驗證（連回 backup/restore runbook）
+
+P0/P1 事故 close-out 前，若涉及資料層改動（含 production 寫入、migration、restore），必須完成以下 backup/restore runbook §4 post-restore smoke 對應檢查並留在事故 post-mortem 中：
+
+- [ ] **Schema verification**（`SELECT tablename FROM pg_tables WHERE schemaname='public'`）— 確認核心表全在：activities, activity_plans, activity_schedules, bookings, booking_status_logs, guide_availability_rules, guide_blackout_dates, guide_balances, incidents, order_items, orders, payment_events, payouts, refund_requests, soft_launch_controls
+- [ ] **Activities count > 0** + **Orders count** 與事故前期望值差異可解釋
+- [ ] **No orphan order_items**（LEFT JOIN orders WHERE orders.id IS NULL → count 0）
+- [ ] **No orphan bookings**（LEFT JOIN orders WHERE orders.id IS NULL AND bookings.status != 'abandoned' → count 0）
+- [ ] **Payment events all reference valid payments**（LEFT JOIN payments WHERE payments.id IS NULL → count 0）
+- [ ] **`soft_launch_controls` 狀態 intact**（最近 5 筆 flag 值未被誤改）
+
+若任一項不通過：
+1. 不可宣告事故 close-out。
+2. 套用 §8.6.1 保守處理（若涉及 PII / 金流）並升級為 deferred 在 §8.6.2 紀錄。
+3. 若涉及資料 restore，依 backup runbook §3 決策樹 + §5 升級條件處理；payment data 缺失視為 P0 並 page Wei + Wei 的銀行聯絡窗口。
 
 ## 7. 後續待補
 - 法規通報義務對照表 → 見 [§8 法規/合規通報義務矩陣](#法規合規通報義務矩陣初版)
