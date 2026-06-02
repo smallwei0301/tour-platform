@@ -55,3 +55,18 @@ describe('POST_TRIP_SUMMARY endpoint source contracts', () => {
     assert.ok(src.includes('computedAt'), 'must include computedAt timestamp');
   });
 });
+
+// Test the category filter validation
+describe('POST_TRIP_SUMMARY category filter', () => {
+  const routePath = join(ROOT, 'app/api/v2/admin/orders/post-trip-summary/route.ts');
+
+  it('validates category parameter against allowed values', () => {
+    const src = readFileSync(routePath, 'utf-8');
+    assert.ok(src.includes('VALID_CATEGORIES') || src.includes("'guide_report_risk'"), 'must validate category');
+  });
+
+  it('includes categoryFilter in response', () => {
+    const src = readFileSync(routePath, 'utf-8');
+    assert.ok(src.includes('categoryFilter'), 'must return categoryFilter in response');
+  });
+});
