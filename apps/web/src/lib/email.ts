@@ -367,3 +367,44 @@ export async function sendRefundExecuted(data: OrderEmailData): Promise<EmailDel
     orderId: data.orderId,
   });
 }
+
+/**
+ * 旅客評價邀請 email (post-trip)
+ *
+ * Sent when isReviewInvitationEligible() returns true (24h+ after activity ended,
+ * not cancelled/refunded/no-show/disputed). See src/lib/post-trip-eligibility.mjs.
+ */
+export interface ReviewInvitationData {
+  contactEmail: string;
+  contactName?: string;
+  activityTitle: string;
+  orderId: string;
+  reviewUrl: string;
+}
+
+export async function sendReviewInvitation(data: ReviewInvitationData): Promise<EmailDeliveryResult> {
+  const subject = `分享您的旅遊體驗 — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">行程完成！希望聽到您的回饋 ⭐</h1>
+    <p style="font-size:14px;color:#6b7280;margin:0 0 4px;">嗨 ${data.contactName || '旅客'}，</p>
+    <p style="font-size:14px;color:#374151;margin:0 0 20px;">
+      感謝您參加「${data.activityTitle}」！您的評價對其他旅客與導遊都非常有幫助。
+      只需 1 分鐘，分享您的真實體驗。
+    </p>
+    <a href="${data.reviewUrl}"
+       style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;margin-bottom:20px;">
+      立即評價 →
+    </a>
+    <p style="font-size:12px;color:#9ca3af;margin:0;">
+      如果您不希望收到此類通知，請忽略此信。您的訂單編號：${data.orderId.slice(0, 8).toUpperCase()}
+    </p>
+  `);
+
+  return sendEmailWithContract({
+    fn: 'sendReviewInvitation',
+    to: data.contactEmail,
+    subject,
+    html,
+    orderId: data.orderId,
+  });
+}
