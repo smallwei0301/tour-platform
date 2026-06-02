@@ -72,6 +72,26 @@ export function shouldRejectDraftByEffectiveAvailability(params: {
   return !params.generatedSlotValidation.available;
 }
 
+export function shouldRejectDraftByLegacySlotAvailability(params: {
+  hasActiveAvailabilityRules: boolean;
+  scheduleValidatedBySourceOfTruth: boolean;
+  slotValidation: { available: boolean; reason?: string };
+}): boolean {
+  if (params.slotValidation.available) {
+    return false;
+  }
+
+  if (params.slotValidation.reason === 'SLOT_IN_PAST') {
+    return true;
+  }
+
+  if (!params.scheduleValidatedBySourceOfTruth) {
+    return true;
+  }
+
+  return !params.hasActiveAvailabilityRules;
+}
+
 export function evaluateEffectiveBookingAvailability(
   input: BookingAvailabilityEvaluatorInput & { requestedStartAt: string }
 ): EffectiveBookingAvailabilityResult {

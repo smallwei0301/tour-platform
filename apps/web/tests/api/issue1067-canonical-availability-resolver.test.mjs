@@ -4,7 +4,11 @@ import assert from 'node:assert/strict';
 import {
   resolveCanonicalAvailabilityState,
 } from '../../src/lib/availability-v2/effective-availability-resolver.ts';
-import { evaluateEffectiveBookingAvailability } from '../../src/lib/availability-v2/effective-booking-availability.ts';
+import {
+  evaluateEffectiveBookingAvailability,
+  shouldRejectDraftByLegacySlotAvailability,
+} from '../../src/lib/availability-v2/effective-booking-availability.ts';
+import { pickFallbackDraftSelectedSchedule } from '../../src/lib/booking-v2-selected-schedule.ts';
 
 const TZ = 'Asia/Taipei';
 
@@ -168,4 +172,78 @@ test('GH-1067 RED: effective booking evaluator propagates outside_season canonic
 
   assert.equal(out.available, false);
   assert.equal(out.reasonCode, 'outside_season');
+});
+
+test('GH-1067 RED: draft must defer legacy conflict reject when active rules already validate the selected schedule canonically', () => {
+  const reject = shouldRejectDraftByLegacySlotAvailability({
+    hasActiveAvailabilityRules: true,
+    scheduleValidatedBySourceOfTruth: true,
+    slotValidation: {
+      available: false,
+      reason: 'BOOKING_CONFLICT',
+    },
+  });
+
+  assert.equal(reject, false);
+});
+
+test('GH-1067 RED: no-rules legacy selected schedule still keeps conflict/blackout safety reject', () => {
+  const reject = shouldRejectDraftByLegacySlotAvailability({
+    hasActiveAvailabilityRules: false,
+    scheduleValidatedBySourceOfTruth: true,
+    slotValidation: {
+      available: false,
+      reason: 'BOOKING_CONFLICT',
+    },
+  });
+
+  assert.equal(reject, true);
+});
+
+test('GH-1067 RED: slot-in-past remains a hard reject even when canonical selected schedule validates', () => {
+  const reject = shouldRejectDraftByLegacySlotAvailability({
+    hasActiveAvailabilityRules: true,
+    scheduleValidatedBySourceOfTruth: true,
+    slotValidation: {
+      available: false,
+      reason: 'SLOT_IN_PAST',
+    },
+  });
+
+  assert.equal(reject, true);
+});
+
+test('GH-1067 RED: fallback selected schedule must keep scanning until it finds a valid exact candidate', () => {
+  const fallback = pickFallbackDraftSelectedSchedule({
+    schedules: [
+      {
+        id: 'too-full',
+        activity_id: 'a-1',
+        plan_id: 'p-1',
+        start_at: '2026-07-01T09:00:00+08:00',
+        status: 'open',
+        capacity: 2,
+        booked_count: 2,
+      },
+      {
+        id: 'exact-match',
+        activity_id: 'a-1',
+        plan_id: 'p-1',
+        start_at: '2026-07-01T09:00:00+08:00',
+        status: 'open',
+        capacity: 10,
+        booked_count: 2,
+      },
+    ],
+    activityId: 'a-1',
+    resolvedPlanId: 'p-1',
+    requestStartAt: '2026-07-01T09:00:00+08:00',
+    slotDate: '2026-07-01',
+    timezone: 'Asia/Taipei',
+    participants: 4,
+  });
+
+  assert.ok(fallback);
+  assert.equal(fallback?.schedule.id, 'exact-match');
+  assert.equal(fallback?.validation.available, true);
 });

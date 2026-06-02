@@ -35,7 +35,9 @@ export function pickFallbackDraftSelectedSchedule(payload: {
       participants,
     });
 
-    return { schedule, validation };
+    if (validation.available) {
+      return { schedule, validation };
+    }
   }
 
   return null;
