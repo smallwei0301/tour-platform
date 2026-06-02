@@ -162,6 +162,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   const [liveSchedules, setLiveSchedules] = useState<Schedule[] | null>(null);
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
   const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
+  const [planConfigState, setPlanConfigState] = useState<'ok' | 'no_active_plans' | 'no_plans' | null>(null);
 
   async function ensureLiveAvailability() {
     if (availabilityLoaded) return;
@@ -172,6 +173,18 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         : `/api/activities/${encodeURIComponent(activity.slug)}/availability`;
       const res = await fetch(endpoint);
       const json = await res.json().catch((): null => null);
+
+      // Handle explicit inactive-plan state from V2: planConfigState='no_active_plans'|'no_plans'
+      // The API returns schedules:[] with an availabilityNotice — surface it directly.
+      // This check must run BEFORE the !Array.isArray(schedules) guard since schedules:[] is valid here.
+      if (useBookingV2 && json?.ok && json?.data?.planConfigState && json.data.planConfigState !== 'ok') {
+        const state = json.data.planConfigState as 'no_active_plans' | 'no_plans';
+        setPlanConfigState(state);
+        setAvailabilityNotice(json.data.availabilityNotice ?? null);
+        setLiveSchedules([]);
+        return;
+      }
+
       if (!res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) {
         if (useBookingV2) {
           setAvailabilityNotice('目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。');
@@ -188,6 +201,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         setAvailabilityNotice(null);
       }
 
+      setPlanConfigState(null);
       setLiveSchedules(json.data.schedules as Schedule[]);
     } catch {
       setAvailabilityLoaded(false);
@@ -241,11 +255,31 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         <span className="kkd-section-label">選擇方案</span>
       </div>
 
+      {/* Inactive-plan state: plan exists but is not active — do not show plan cards */}
+      {planConfigState === 'no_active_plans' && (
+        <p
+          style={{ margin: '0 0 12px', color: '#92400e', fontSize: 14, background: '#fef3c7', padding: '8px 12px', borderRadius: 6 }}
+          role="status"
+          data-testid="plan-inactive-notice"
+        >
+          此活動方案目前未開放預約，請稍後再查看。
+        </p>
+      )}
+      {planConfigState === 'no_plans' && (
+        <p
+          style={{ margin: '0 0 12px', color: '#b42318', fontSize: 14 }}
+          role="status"
+          data-testid="plan-no-plans-notice"
+        >
+          此活動尚未設定可預約方案，請稍後再查看。
+        </p>
+      )}
+
       {showMissingCanonicalMessage ? (
         <p style={{ margin: '0 0 12px', color: '#b42318', fontSize: 14 }} role="status" data-testid="v2-no-canonical-plan-message">
           此行程尚未設定可預約方案，請稍後再查看。
         </p>
-      ) : (
+      ) : planConfigState === 'no_active_plans' || planConfigState === 'no_plans' ? null : (
         <>
           <div className="kkd-plans-list">
             {VISIBLE_PLANS.map((plan: PlanConfig) => {

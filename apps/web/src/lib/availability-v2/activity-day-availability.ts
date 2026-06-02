@@ -34,9 +34,13 @@ export interface V2AvailabilityDayPlanRow {
   timezone: string;
 }
 
+export type PlanConfigState = 'ok' | 'no_active_plans' | 'no_plans';
+
 export interface V2AvailabilityResult {
   timezone: string;
   plans: V2AvailabilityDayPlanRow[];
+  /** Present when no active plans were found; signals the route layer to skip legacy fallback */
+  planConfigState?: PlanConfigState;
 }
 
 interface QueryOptions {
@@ -235,6 +239,23 @@ export async function getV2ActivityAvailability(
   if (planError) throw new Error(planError.message);
   const plans: ActivityPlan[] = (planData ?? []).map(normalizePlanRow);
 
+  // When no active plans exist, detect whether plans exist at all (inactive vs unconfigured).
+  // Return early with planConfigState so the route layer can skip legacy fallback entirely —
+  // showing legacy schedules for an inactive plan would mislead travelers.
+  if (plans.length === 0) {
+    const { data: allPlanData } = await supabase
+      .from('activity_plans')
+      .select('id')
+      .eq('activity_id', activity.id);
+    const hasAnyPlans = (allPlanData ?? []).length > 0;
+    const planConfigState: PlanConfigState = hasAnyPlans ? 'no_active_plans' : 'no_plans';
+    return {
+      timezone: options.timezone,
+      plans: [],
+      planConfigState,
+    };
+  }
+
   const { data: rulesData, error: rulesError } = await supabase
     .from('guide_availability_rules')
     .select('*')
@@ -312,5 +333,6 @@ export async function getV2ActivityAvailability(
   return {
     timezone: options.timezone,
     plans: aggregateByDayAndPlan(planRows, options.timezone, options.dateFrom, options.dateTo),
+    planConfigState: 'ok' as const,
   };
 }
