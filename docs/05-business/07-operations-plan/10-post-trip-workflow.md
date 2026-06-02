@@ -2,7 +2,8 @@
 
 > 狀態：v1 — soft-launch 版本（人工介入為主）
 > 建立日期：2026-06-03（refs issue #1106）
-> 技術支援：post-trip-eligibility.mjs 模組，endpoints /api/v2/admin/orders/{id}/post-trip-status
+> 技術支援：post-trip-eligibility.mjs 模組（6 exported predicates + computePostTripStatus convenience）
+> Endpoints: /api/v2/admin/orders/{id}/post-trip-status, /api/v2/admin/orders/post-trip-summary, /api/v2/admin/orders/{id}/send-review-invitation, /api/v2/guide/trip-reports-due
 
 ---
 
