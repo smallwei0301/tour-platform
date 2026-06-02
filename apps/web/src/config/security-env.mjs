@@ -1,7 +1,12 @@
+// Known weak / placeholder values that must never be used in production for
+// GUIDE_SESSION_SECRET / ADMIN_ACCESS_TOKEN. The length check in isWeakSecret
+// (>=32 for guide secret, >=16 for admin token) already blocks short literals;
+// this list catches longer-looking-but-still-weak placeholders. Do not add
+// real values here — even rotated ones become identifying once a string is
+// committed to git history.
 const WEAK_TOKEN_VALUES = new Set([
   'test-token-123',
   'guide-dev-secret-change-in-prod',
-  '@Wei3362499',
   'changeme',
   'default',
   'admin',
