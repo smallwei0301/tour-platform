@@ -7,9 +7,12 @@ import {
   adminFollowupCategory,
 } from '../../../../../../src/lib/post-trip-eligibility.mjs';
 
+const VALID_CATEGORIES = new Set(['guide_report_risk', 'payment_order_mismatch', 'review_moderation', 'refund_dispute_safety']);
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const sinceParam = url.searchParams.get('since');
+  const categoryFilter = url.searchParams.get('category');
   const now = new Date();
   const since = sinceParam
     ? new Date(sinceParam)
@@ -17,6 +20,13 @@ export async function GET(req: Request) {
 
   if (sinceParam && isNaN(since.getTime())) {
     return Response.json(errorV2('INVALID_DATE', 'Invalid since parameter'), { status: 422 });
+  }
+
+  if (categoryFilter && !VALID_CATEGORIES.has(categoryFilter)) {
+    return Response.json(
+      errorV2('INVALID_CATEGORY', `category must be one of: ${[...VALID_CATEGORIES].join(', ')}`),
+      { status: 422 }
+    );
   }
 
   try {
@@ -99,14 +109,20 @@ export async function GET(req: Request) {
       }
     }
 
+    // Apply category filter if provided
+    const filteredFollowup = categoryFilter
+      ? adminFollowupNeeded.filter(o => o.category === categoryFilter)
+      : adminFollowupNeeded;
+
     return Response.json(
       successV2({
         overdueTripReports,
         readyForReviewInvitation,
         payoutOnHold,
-        adminFollowupNeeded,
+        adminFollowupNeeded: filteredFollowup,
         computedAt: now.toISOString(),
         since: since.toISOString(),
+        categoryFilter: categoryFilter ?? null,
         orderCount: (orders ?? []).length,
       })
     );
