@@ -7,6 +7,7 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
+import { assertPlanBelongsToGuide } from '../../../../../../../src/lib/availability-v2/assert-plan-belongs-to-guide';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -140,6 +141,21 @@ export async function POST(
 
     if (guideError || !guide) {
       return Response.json(errorV2('NOT_FOUND', 'Guide not found'), { status: 404 });
+    }
+
+    // Validate plan ownership if provided
+    if (body.activity_plan_id) {
+      const planCheck = await assertPlanBelongsToGuide({
+        planId: body.activity_plan_id,
+        guideId,
+        supabase,
+      });
+      if (!planCheck.ok) {
+        return Response.json(
+          errorV2(planCheck.code, '所選方案不屬於此導遊或已停用'),
+          { status: 422 }
+        );
+      }
     }
 
     const insertData = {

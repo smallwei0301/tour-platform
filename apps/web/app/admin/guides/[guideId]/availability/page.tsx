@@ -46,6 +46,21 @@ type Guide = {
   display_name: string;
 };
 
+type V2Plan = {
+  id: string;
+  name: string;
+  status: string;
+  booking_type: string;
+  base_price: number;
+};
+
+type V2Activity = {
+  id: string;
+  title: string;
+  slug: string;
+  plans: V2Plan[];
+};
+
 export default function GuideAvailabilityPage() {
   const params = useParams();
   const router = useRouter();
@@ -57,6 +72,7 @@ export default function GuideAvailabilityPage() {
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [v2Activities, setV2Activities] = useState<V2Activity[]>([]);
 
   // Modal states
   const [showRuleModal, setShowRuleModal] = useState(false);
@@ -75,6 +91,8 @@ export default function GuideAvailabilityPage() {
     buffer_before_minutes: 15,
     buffer_after_minutes: 15,
     is_active: true,
+    activity_id: '' as string,
+    activity_plan_id: null as string | null,
   });
 
   // Blackout form state
@@ -83,6 +101,9 @@ export default function GuideAvailabilityPage() {
     ends_at: '',
     reason: '',
   });
+
+  // Preview filter plan
+  const [previewPlanId, setPreviewPlanId] = useState('');
 
   // Preview date range
   const today = new Date().toISOString().slice(0, 10);
@@ -110,8 +131,9 @@ export default function GuideAvailabilityPage() {
   const loadPreview = useCallback(async () => {
     setPreviewLoading(true);
     try {
+      const planParam = previewPlanId ? `&activityPlanId=${previewPlanId}` : '';
       const res = await fetch(
-        `/api/v2/admin/guides/${guideId}/availability-preview?dateFrom=${previewDateFrom}&dateTo=${previewDateTo}&timezone=Asia/Taipei`
+        `/api/v2/admin/guides/${guideId}/availability-preview?dateFrom=${previewDateFrom}&dateTo=${previewDateTo}&timezone=Asia/Taipei${planParam}`
       );
       const json = await res.json();
       if (json.success) {
@@ -121,7 +143,17 @@ export default function GuideAvailabilityPage() {
     } finally {
       setPreviewLoading(false);
     }
-  }, [guideId, previewDateFrom, previewDateTo]);
+  }, [guideId, previewDateFrom, previewDateTo, previewPlanId]);
+
+  useEffect(() => {
+    if (!guideId) return;
+    fetch(`/api/v2/admin/guides/${guideId}/activity-plans`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data?.activities) setV2Activities(d.data.activities);
+      })
+      .catch(() => {/* non-critical */});
+  }, [guideId]);
 
   useEffect(() => {
     loadData();
@@ -132,6 +164,10 @@ export default function GuideAvailabilityPage() {
   const openRuleModal = (rule?: AvailabilityRule) => {
     if (rule) {
       setEditingRule(rule);
+      // Find which activity owns this plan so we can pre-select the activity dropdown
+      const boundActivity = rule.activity_plan_id
+        ? v2Activities.find((a) => a.plans.some((p) => p.id === rule.activity_plan_id))
+        : null;
       setRuleForm({
         weekday: rule.weekday,
         start_time_local: rule.start_time_local,
@@ -141,6 +177,8 @@ export default function GuideAvailabilityPage() {
         buffer_before_minutes: rule.buffer_before_minutes,
         buffer_after_minutes: rule.buffer_after_minutes,
         is_active: rule.is_active,
+        activity_id: boundActivity?.id ?? '',
+        activity_plan_id: rule.activity_plan_id ?? null,
       });
     } else {
       setEditingRule(null);
@@ -153,6 +191,8 @@ export default function GuideAvailabilityPage() {
         buffer_before_minutes: 15,
         buffer_after_minutes: 15,
         is_active: true,
+        activity_id: '',
+        activity_plan_id: null,
       });
     }
     setError('');
@@ -168,10 +208,14 @@ export default function GuideAvailabilityPage() {
         : `/api/v2/admin/guides/${guideId}/availability-rules`;
       const method = editingRule ? 'PUT' : 'POST';
 
+      const { activity_id: _activityId, ...rulePayload } = ruleForm;
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-        body: JSON.stringify(ruleForm),
+        body: JSON.stringify({
+          ...rulePayload,
+          activity_plan_id: ruleForm.activity_plan_id || null,
+        }),
       });
       const json = await res.json();
 
@@ -301,6 +345,48 @@ export default function GuideAvailabilityPage() {
         title={editingRule ? '編輯時段規則' : '新增時段規則'}
       >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Activity selector */}
+              {v2Activities.length > 0 && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
+                  <select
+                    aria-label="活動"
+                    value={ruleForm.activity_id}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: null })
+                    }
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  >
+                    <option value="">所有活動</option>
+                    {v2Activities.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {/* Plan selector — only shown when an activity is selected */}
+              {ruleForm.activity_id && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>
+                  <select
+                    aria-label="方案"
+                    value={ruleForm.activity_plan_id || ''}
+                    onChange={(e) =>
+                      setRuleForm({ ...ruleForm, activity_plan_id: e.target.value || null })
+                    }
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  >
+                    <option value="">不限方案</option>
+                    {(v2Activities.find((a) => a.id === ruleForm.activity_id)?.plans || []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
                 <select
@@ -494,6 +580,13 @@ export default function GuideAvailabilityPage() {
                               >
                                 <span>
                                   {rule.start_time_local}-{rule.end_time_local}
+                                  {rule.activity_plans?.name ? (
+                                    <span style={{ display: 'block', fontSize: 10, color: '#6b7280', marginTop: 1 }}>
+                                      {rule.activity_plans.name}
+                                    </span>
+                                  ) : rule.activity_plan_id ? null : (
+                                    <span style={{ display: 'block', fontSize: 10, color: '#9ca3af', marginTop: 1 }}>所有方案</span>
+                                  )}
                                 </span>
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   <button onClick={() => openRuleModal(rule)} style={smallBtn('#fff', '#374151')}>
@@ -568,7 +661,24 @@ export default function GuideAvailabilityPage() {
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>時段預覽</h2>
                   <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>預覽系統將產生的可預約時段</p>
                 </div>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {v2Activities.length > 0 && (
+                    <select
+                      aria-label="預覽方案篩選"
+                      value={previewPlanId}
+                      onChange={(e) => setPreviewPlanId(e.target.value)}
+                      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #e5e7eb', fontSize: 13 }}
+                    >
+                      <option value="">所有方案 (60分鐘預覽)</option>
+                      {v2Activities.flatMap((a) =>
+                        a.plans.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {a.title} — {p.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  )}
                   <input
                     type="date"
                     value={previewDateFrom}
