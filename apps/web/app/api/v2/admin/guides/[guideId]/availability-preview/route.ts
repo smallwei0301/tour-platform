@@ -45,6 +45,7 @@ export async function GET(
   const dateFrom = searchParams.get('dateFrom');
   const dateTo = searchParams.get('dateTo');
   const timezone = searchParams.get('timezone') || 'Asia/Taipei';
+  const activityPlanId = searchParams.get('activityPlanId');
 
   if (!dateFrom || !isValidDateString(dateFrom)) {
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid dateFrom (YYYY-MM-DD)'), { status: 400 });
@@ -133,18 +134,44 @@ export async function GET(
       status: row.status,
     }));
 
-    // Mock activity plan for preview (60 min duration)
-    const mockPlan: ActivityPlan = {
-      id: 'preview',
-      activity_id: 'preview',
-      duration_minutes: 60,
-      max_participants: 10,
-      booking_type: 'scheduled',
-    };
+    // Use real plan if activityPlanId provided, otherwise use mock plan for preview
+    let plan: ActivityPlan;
+    let resolvedPlanId: string;
+
+    if (activityPlanId && UUID_REGEX.test(activityPlanId)) {
+      const { data: planData, error: planError } = await supabase
+        .from('activity_plans')
+        .select('id, activity_id, duration_minutes, max_participants, booking_type')
+        .eq('id', activityPlanId)
+        .single();
+
+      if (planError || !planData) {
+        return Response.json(errorV2('NOT_FOUND', 'Plan not found'), { status: 422 });
+      }
+
+      plan = {
+        id: planData.id,
+        activity_id: planData.activity_id,
+        duration_minutes: planData.duration_minutes,
+        max_participants: planData.max_participants,
+        booking_type: planData.booking_type,
+      };
+      resolvedPlanId = planData.id;
+    } else {
+      // Mock activity plan for preview (60 min duration)
+      plan = {
+        id: 'preview',
+        activity_id: 'preview',
+        duration_minutes: 60,
+        max_participants: 10,
+        booking_type: 'scheduled',
+      };
+      resolvedPlanId = 'preview';
+    }
 
     const input: SlotGeneratorInput = {
       guideId,
-      activityPlanId: 'preview',
+      activityPlanId: resolvedPlanId,
       dateFrom,
       dateTo,
       timezone,
@@ -155,7 +182,7 @@ export async function GET(
       rules,
       blackouts,
       bookings,
-      plan: mockPlan,
+      plan,
     };
 
     const result = generateAvailableSlots(input, deps);
