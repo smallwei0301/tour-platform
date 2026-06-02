@@ -1,8 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { resolveDatePlanPresentation } from '../../src/lib/date-plan-source.mjs';
 import { BOOKING_V2_STEP1_CTA_REASON_ID, getBookingV2Step1CtaState } from '../../src/lib/booking-v2-step1-cta-state.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const appRoot = resolve(__dirname, '../../');
+const guideAvailabilityPage = resolve(appRoot, 'app/guide/availability/page.tsx');
 
 const DEFAULT_PLANS = [
   { id: 'half-day', label: 'A. 半日行程', bookingBtnText: '立即預約' },
@@ -143,4 +150,21 @@ test('GH-1069: Step1 hard-block reason uses explicit red error color in booking 
   assert.match(src, /color: step1CtaState\.tone === 'muted' \? 'var\(--tp-muted\)' : '#b42318'/);
   assert.match(src, /role=\{step1CtaState\.role \?\? undefined\}/);
   assert.match(src, /aria-describedby=\{step1CtaState\.disabled \? step1CtaState\.reasonId \?\? undefined : undefined\}/);
+  assert.match(src, /<select\s*\n\s*data-testid="booking-v2-date-capacity-picker"/);
+  assert.match(src, /<option key=\{entry\.date\} value=\{entry\.date\} disabled=\{entry\.state !== 'available'\}>/);
+  assert.match(src, /entry\.state === 'available'\s*\? `\$\{entry\.date\}（剩餘 \$\{entry\.capacityLeft\}）`/);
+  assert.doesNotMatch(src, /<button\s*\n\s*key=\{entry\.date\}/);
+  assert.doesNotMatch(src, /改用舊版預約流程/);
+  assert.doesNotMatch(src, /setV2Error\(selectedDateEntry\?\.messageZh \|\| json\.data\?\.messageZh \|\| ''\)/);
+  assert.doesNotMatch(src, /type="date"\s*\n\s*name="date"/);
+});
+
+test('GH-1069 RED: guide availability preview UI must expose source/reason parity labels to avoid traveler-bookability confusion', () => {
+  const source = readFileSync(guideAvailabilityPage, 'utf8');
+
+  assert.match(source, /預覽來源/, 'guide preview UI should show source label from API contract');
+  assert.match(source, /availabilitySource/, 'guide preview UI should read availabilitySource field from preview response');
+  assert.match(source, /原因代碼/, 'guide preview UI should show previewReasonCode for parity auditing');
+  assert.match(source, /previewReasonCode/, 'guide preview UI should read previewReasonCode field from preview response');
+  assert.match(source, /legacy_local_preview/, 'guide preview UI should disclose local legacy preview limitation explicitly');
 });

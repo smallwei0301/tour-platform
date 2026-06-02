@@ -8,6 +8,7 @@ import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../
 import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
+import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
 import { track } from '../../../src/lib/track';
 
 // ── 型別 ──────────────────────────────────────────────────────
@@ -36,10 +37,15 @@ interface Activity {
   schedules: Schedule[];
   plans?: Array<{
     id?: string | null;
+    slug?: string | null;
     status?: string | null;
     name?: string | null;
     label?: string | null;
     displayName?: string | null;
+    basePrice?: number | null;
+    priceType?: 'per_person' | 'per_group' | string | null;
+    minParticipants?: number | null;
+    maxParticipants?: number | null;
   }> | null;
   guide?: { displayName?: string } | null;
 }
@@ -191,8 +197,21 @@ function BookingInnerLegacy() {
     );
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: activity.title, item: `${baseUrl}/activities/${activity.region}/${activity.slug}` },
+      { '@type': 'ListItem', position: 3, name: '預約' },
+    ],
+  };
+
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <h1 className="sr-only">{activity.title} — 預約</h1>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/activities">全部行程</Link> &gt; {activity.title} &gt; 預約
       </div>
@@ -435,6 +454,16 @@ interface V2Slot {
   isAvailable: boolean;
 }
 
+interface V2DateAvailability {
+  date: string;
+  state: 'available' | 'blocked' | 'no_slots';
+  capacityLeft: number;
+  reason: string;
+  messageZh: string;
+  firstAvailableStartAt?: string;
+  selectedSlot?: V2Slot;
+}
+
 interface V2AvailableSlotsResponse {
   success?: boolean;
   data?: {
@@ -452,6 +481,8 @@ interface V2AvailableSlotsResponse {
       maxParticipants?: number;
     };
     slots?: V2Slot[];
+    dateAvailability?: V2DateAvailability[];
+    dates?: V2DateAvailability[];
     reason?: string;
     messageZh?: string;
   };
@@ -487,8 +518,9 @@ function BookingInnerV2FlagShell() {
   const [v2Error, setV2Error] = useState('');
   const [loading, setLoading] = useState(false);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [useLegacyFallback, setUseLegacyFallback] = useState(false);
+  const [useLegacyFallback] = useState(false);
   const [slots, setSlots] = useState<V2Slot[]>([]);
+  const [dateAvailabilityOptions, setDateAvailabilityOptions] = useState<V2DateAvailability[]>([]);
   const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || today);
   const activeUrlScheduleId = urlScheduleId && (!urlDate || urlDate === selectedDate) ? urlScheduleId : '';
   const v2PlanKey = useMemo(() => inferPlanIdForBookingUrl({
@@ -509,6 +541,11 @@ function BookingInnerV2FlagShell() {
     minParticipants: number;
     maxParticipants: number | null;
   } | null>(null);
+  const initialPlanMetaFromActivity = useMemo(
+    () => derivePlanMetaFromActivityPlans(activity?.plans, v2PlanKey),
+    [activity?.plans, v2PlanKey],
+  ) as typeof selectedPlanMeta;
+  const effectivePlanMeta = selectedPlanMeta ?? initialPlanMetaFromActivity;
   const [guests, setGuests] = useState(1);
   const [allowOnePersonAddOn, setAllowOnePersonAddOn] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -549,11 +586,11 @@ function BookingInnerV2FlagShell() {
     };
   }, [activitySlug]);
 
-  const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
-  const baseMaxParticipants = selectedPlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
+  const baseMinParticipants = Math.max(1, effectivePlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
+  const baseMaxParticipants = effectivePlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
   const selectedPlanDisplayName = useMemo(() => {
-    const fromApi = selectedPlanMeta?.name?.trim();
+    const fromApi = effectivePlanMeta?.name?.trim();
     if (fromApi) return fromApi;
     const matchedPlan = (activity?.plans || []).find((plan) => plan?.id && plan.id === v2PlanKey);
     if (!matchedPlan) return null;
@@ -561,7 +598,7 @@ function BookingInnerV2FlagShell() {
       .map((value) => (typeof value === 'string' ? value.trim() : ''))
       .filter(Boolean);
     return candidates[0] || null;
-  }, [activity?.plans, selectedPlanMeta?.name, v2PlanKey]);
+  }, [activity?.plans, effectivePlanMeta?.name, v2PlanKey]);
 
   useEffect(() => {
     if (!activity) return;
@@ -595,11 +632,17 @@ function BookingInnerV2FlagShell() {
         setV2Error('');
         const participants = effectiveMinParticipants;
         const scheduleParam = activeScheduleId ? `&scheduleId=${encodeURIComponent(activeScheduleId)}` : '';
-        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(selectedDate)}&dateTo=${encodeURIComponent(selectedDate)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
+        const rangeStart = new Date(`${selectedDate}T00:00:00.000Z`);
+        const rangeEnd = new Date(rangeStart);
+        rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 13);
+        const dateFrom = rangeStart.toISOString().slice(0, 10);
+        const dateTo = rangeEnd.toISOString().slice(0, 10);
+        const url = `/api/v2/activities/${activity.id}/available-slots?planId=${encodeURIComponent(v2PlanKey)}&dateFrom=${encodeURIComponent(dateFrom)}&dateTo=${encodeURIComponent(dateTo)}${scheduleParam}&timezone=${encodeURIComponent(timezone)}&participants=${participants}`;
         const res = await fetch(url, { cache: 'no-store' });
         const json = (await res.json()) as V2AvailableSlotsResponse;
         if (!res.ok || !json?.success) {
           setSlots([]);
+          setDateAvailabilityOptions([]);
           setAvailabilityReason(json?.data?.reason || '');
           // Issue #903: prefer the resolver's Traditional-Chinese messageZh
           // (e.g. AMBIGUOUS_PLAN -> '此活動有多個方案,無法自動判斷,請從活動頁重新選擇明確方案')
@@ -607,16 +650,30 @@ function BookingInnerV2FlagShell() {
           setV2Error(json?.data?.messageZh || json?.error?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
           return;
         }
-        const nextSlotsRaw = (json.data?.slots || []).filter((s: V2Slot) => s.isAvailable);
-        const nextSlotsByDate = new Map<string, V2Slot>();
-        for (const slot of nextSlotsRaw) {
-          const localDate = new Date(slot.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
-          const existing = nextSlotsByDate.get(localDate);
-          if (!existing || new Date(slot.startAt).getTime() < new Date(existing.startAt).getTime()) {
-            nextSlotsByDate.set(localDate, slot);
-          }
-        }
-        const nextSlots = Array.from(nextSlotsByDate.values()).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+
+        const dateAvailability = (json.data?.dateAvailability || json.data?.dates || []).sort((a, b) => a.date.localeCompare(b.date));
+        setDateAvailabilityOptions(dateAvailability);
+
+        const selectedDateEntry = dateAvailability.find((entry) => entry.date === selectedDate);
+        const selectedSlotFromDateEntry = selectedDateEntry?.selectedSlot;
+        const selectedDateSlots = (json.data?.slots || [])
+          .filter((slot) => slot.isAvailable)
+          .filter((slot) => {
+            const localDate = new Date(slot.startAt).toLocaleDateString('sv-SE', { timeZone: timezone });
+            return localDate === selectedDate;
+          })
+          .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+        const fallbackSlot = selectedDateEntry?.firstAvailableStartAt
+          ? {
+              startAt: selectedDateEntry.firstAvailableStartAt,
+              endAt: selectedDateEntry.firstAvailableStartAt,
+              capacityLeft: selectedDateEntry.capacityLeft,
+              bookingType: 'instant' as const,
+              isAvailable: selectedDateEntry.state === 'available',
+            }
+          : null;
+        const canonicalSelectedSlot = selectedSlotFromDateEntry || selectedDateSlots[0] || fallbackSlot;
+        const nextSlots = canonicalSelectedSlot ? [canonicalSelectedSlot] : [];
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         const selectedPlan = json.data?.selectedPlan;
         if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
@@ -633,16 +690,15 @@ function BookingInnerV2FlagShell() {
         }
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
         setResolvedPlanId(json.data?.planId || resolvedPlanCandidate);
-        setAvailabilityReason(json.data?.reason || '');
+        setAvailabilityReason(selectedDateEntry?.reason || json.data?.reason || '');
         setSlots(nextSlots);
-        if (nextSlots.length === 0 && json.data?.messageZh) {
-          setV2Error(json.data.messageZh);
-        }
+        setV2Error('');
         if (!nextSlots.find((s: V2Slot) => s.startAt === selectedSlotStartAt)) {
           setSelectedSlotStartAt(nextSlots[0]?.startAt || '');
         }
       } catch {
         setSlots([]);
+        setDateAvailabilityOptions([]);
         setAvailabilityReason('');
         setV2Error('目前無法載入可預約日期，請稍後再試。');
       } finally {
@@ -773,20 +829,9 @@ function BookingInnerV2FlagShell() {
             LINE LIFF 延續流程已中斷（缺少或無法判定 plan）。請回到 LIFF 入口重新帶入完整參數後再試。
           </p>
         ) : (
-          <button
-            className="tp-btn tp-btn-ghost"
-            data-testid="booking-v2-fallback-btn"
-            onClick={() => {
-              track({
-                event_name: 'booking_v2_fallback_clicked',
-                properties: { reason: 'missing_plan', rollout_variant: 'v2' },
-                page_path: `/booking/${activitySlug}`,
-              });
-              setUseLegacyFallback(true);
-            }}
-          >
-            改用舊版預約流程
-          </button>
+          <p style={{ color: 'var(--tp-muted)' }}>
+            請返回行程頁重新選擇方案後再試。
+          </p>
         )}
       </main>
     );
@@ -804,11 +849,24 @@ function BookingInnerV2FlagShell() {
     guests,
     selectedCapacityLeft,
   });
-  const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
-  const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
+  const unitPrice = effectivePlanMeta?.basePrice ?? activity.priceTwd;
+  const total = effectivePlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: activity.title, item: `${baseUrl}/activities/${activity.region}/${activity.slug}` },
+      { '@type': 'ListItem', position: 3, name: '預約' },
+    ],
+  };
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <h1 className="sr-only">{activity.title} — 預約</h1>
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
         <Link href="/activities">全部行程</Link> &gt; {activity.title} &gt; 預約
       </div>
@@ -853,8 +911,8 @@ function BookingInnerV2FlagShell() {
               {correlationId || 'line-correlation-missing'}
             </p>
           )}
-          <div style={{ marginTop: 10 }}>
-            {isLineContinuation ? (
+          {isLineContinuation && (
+            <div style={{ marginTop: 10 }}>
               <button
                 className="tp-btn tp-btn-ghost"
                 data-testid="booking-v2-line-retry-btn"
@@ -869,23 +927,8 @@ function BookingInnerV2FlagShell() {
               >
                 重新嘗試 shared checkout
               </button>
-            ) : (
-              <button
-                className="tp-btn tp-btn-ghost"
-                data-testid="booking-v2-fallback-btn"
-                onClick={() => {
-                  track({
-                    event_name: 'booking_v2_fallback_clicked',
-                    properties: { reason: 'v2_error', rollout_variant: 'v2' },
-                    page_path: `/booking/${activitySlug}`,
-                  });
-                  setUseLegacyFallback(true);
-                }}
-              >
-                改用舊版預約流程
-              </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -912,16 +955,37 @@ function BookingInnerV2FlagShell() {
           {step === 1 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>行程確認</h3>
-              <label style={{ display: 'block', marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 14 }}>📅 預約日期</span>
-                <input
-                  type="date"
-                  name="date"
+              <div style={{ marginBottom: 12 }}>
+                <span style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>📅 選擇日期與名額</span>
+                <select
+                  data-testid="booking-v2-date-capacity-picker"
+                  name="date-capacity"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  style={{ display: 'block', width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, marginTop: 4, fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </label>
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid var(--tp-border)',
+                    borderRadius: 10,
+                    marginTop: 4,
+                    background: '#fff',
+                    color: 'var(--tp-text)',
+                  }}
+                >
+                  {dateAvailabilityOptions.map((entry) => {
+                    const label =
+                      entry.state === 'available'
+                        ? `${entry.date}（剩餘 ${entry.capacityLeft}）`
+                        : `${entry.date}（不可預約）`;
+                    return (
+                      <option key={entry.date} value={entry.date} disabled={entry.state !== 'available'}>
+                        {label}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
               <label style={{ display: 'block', marginBottom: 12 }}>
                 <span style={{ fontWeight: 700, fontSize: 14 }}>👥 參加人數</span>
                 <div style={{ display: 'flex', alignItems: 'stretch', marginTop: 4, border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>
@@ -993,11 +1057,11 @@ function BookingInnerV2FlagShell() {
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>費用明細</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span>單價（{selectedPlanMeta?.priceType === 'per_group' ? '每組' : '每人'}）</span>
+                  <span>單價（{effectivePlanMeta?.priceType === 'per_group' ? '每組' : '每人'}）</span>
                   <span>NT${unitPrice.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span>{selectedPlanMeta?.priceType === 'per_group' ? '每組價格' : `NT$${unitPrice.toLocaleString()} × ${guests} 人`}</span>
+                  <span>{effectivePlanMeta?.priceType === 'per_group' ? '每組價格' : `NT$${unitPrice.toLocaleString()} × ${guests} 人`}</span>
                   <span>NT${total.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>

@@ -81,6 +81,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
               <button
                 key={item.href}
                 onClick={() => router.push(item.href)}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   padding: '8px 14px',
                   borderRadius: 8,
@@ -185,6 +186,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
               <button
                 key={item.href}
                 onClick={() => { router.push(item.href); setMenuOpen(false); }}
+                aria-current={isActive ? 'page' : undefined}
                 style={{
                   padding: '12px 16px',
                   borderRadius: 10,
@@ -255,6 +257,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
             <button
               key={item.href}
               onClick={() => router.push(item.href)}
+              aria-current={isActive ? 'page' : undefined}
               style={{
                 flex: 1,
                 display: 'flex',

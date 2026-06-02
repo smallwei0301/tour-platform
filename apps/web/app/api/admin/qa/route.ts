@@ -1,6 +1,7 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
+import { normalizeAdminQAStatusFilter } from '../../../../src/lib/admin-qa-status.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 function getServiceClient() {
@@ -32,7 +33,8 @@ export async function GET(request: Request) {
   }
 
   const url = new URL(request.url);
-  const status = url.searchParams.get('status') || '';
+  const rawStatus = url.searchParams.get('status') || '';
+  const status = normalizeAdminQAStatusFilter(rawStatus);
 
   try {
     const supabase = getServiceClient();

@@ -37,7 +37,8 @@ test('v2 shell prefers API Chinese copy and evaluator reason for blocked state m
 
   assert.match(src, /setAvailabilityReason\(json\?\.data\?\.reason \|\| ''\)/);
   assert.match(src, /json\?\.data\?\.messageZh \|\| json\?\.error\?\.messageZh \|\| json\?\.error\?\.message/);
-  assert.match(src, /if \(nextSlots\.length === 0 && json\.data\?\.messageZh\)/);
+  assert.match(src, /setAvailabilityReason\(selectedDateEntry\?\.reason \|\| json\.data\?\.reason \|\| ''\)/);
+  assert.match(src, /!slotsLoading && slots\.length === 0 && availabilityReason/);
   assert.match(src, /目前狀態：\{availabilityReason\}/);
 });
 
@@ -46,8 +47,10 @@ test('v2 shell uses selected plan base price from available-slots selectedPlan m
 
   assert.match(src, /if \(selectedPlan && Number\.isFinite\(Number\(selectedPlan\.basePrice\)\)\)/);
   assert.match(src, /basePrice: Number\(selectedPlan\.basePrice\)/);
-  assert.match(src, /const unitPrice = selectedPlanMeta\?\.basePrice \?\? activity\.priceTwd/);
-  assert.match(src, /const total = selectedPlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
+  // Issue #1108: unitPrice falls back through effectivePlanMeta first to avoid
+  // a ~1.5s transient where activity.priceTwd is shown before selectedPlanMeta loads.
+  assert.match(src, /const unitPrice = effectivePlanMeta\?\.basePrice \?\? activity\.priceTwd/);
+  assert.match(src, /const total = effectivePlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
 });
 
 test('v2 shell uses date-level availability UI and removes multi-time dropdown', async () => {

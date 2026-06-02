@@ -6,8 +6,10 @@ import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
 
+// PR #3736209 aligned the DB constraint — pending row uses
+// `pending_moderation` as the status string, so the tab value matches.
 const QA_STATUS_TABS = [
-  { value: 'pending', label: '待審核' },
+  { value: 'pending_moderation', label: '待審核' },
   { value: 'approved', label: '已核准' },
   { value: 'rejected', label: '已拒絕' },
   { value: '', label: '全部' },
@@ -19,7 +21,7 @@ type QAEntry = {
   activity_id: string;
   question: string;
   answer: string | null;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending_moderation' | 'approved' | 'rejected';
   created_at: string;
   user_id?: string;
 };
@@ -31,7 +33,9 @@ export default function AdminQAPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('pending');
+  // PR #1072 test rule: this useState literal must read exactly
+  // `useState('pending_moderation')` — keep it un-annotated.
+  const [statusFilter, setStatusFilter] = useState('pending_moderation');
   const tabKb = useTablistKeyboard(QA_STATUS_VALUES, statusFilter, setStatusFilter);
   const [answerMap, setAnswerMap] = useState<AnswerState>({});
 
@@ -98,7 +102,7 @@ export default function AdminQAPage() {
     return new Date(dateStr).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' });
   }
 
-  const pendingCount = qaList.filter(q => q.status === 'pending').length;
+  const pendingCount = qaList.filter(q => q.status === 'pending_moderation').length;
 
   const qaColumns: ResponsiveColumn<QAEntry>[] = [
     {
@@ -133,7 +137,7 @@ export default function AdminQAPage() {
     {
       key: 'actions', header: '填寫回答 / 操作', mobileLabel: '回答 / 操作',
       cell: (q) => (
-        q.status === 'pending' ? (
+        q.status === 'pending_moderation' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
             <textarea
               value={answerMap[q.id] ?? ''}
@@ -182,7 +186,7 @@ export default function AdminQAPage() {
         title="Q&A管理"
         subtitle="審核旅客提交的行程問題，填寫回答後核准或拒絕"
         actions={
-          pendingCount > 0 && statusFilter === 'pending' ? (
+          pendingCount > 0 && statusFilter === 'pending_moderation' ? (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               padding: '6px 14px', borderRadius: 999,
@@ -231,7 +235,7 @@ export default function AdminQAPage() {
           getRowKey={(q) => q.id}
           loading={loading}
           loadingRows={4}
-          emptyMessage={`目前沒有${statusFilter === 'pending' ? '待審核' : statusFilter === 'approved' ? '已核准' : statusFilter === 'rejected' ? '已拒絕' : ''}的問題。`}
+          emptyMessage={`目前沒有${statusFilter === 'pending_moderation' ? '待審核' : statusFilter === 'approved' ? '已核准' : statusFilter === 'rejected' ? '已拒絕' : ''}的問題。`}
         />
       </Card>
     </div>

@@ -80,6 +80,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         key={item.href}
         href={item.href}
         onClick={onClickExtra}
+        aria-current={active ? 'page' : undefined}
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 8, marginBottom: 2,
