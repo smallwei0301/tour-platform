@@ -252,6 +252,7 @@ type ActivitySchedule = {
   activity_id: string;
   plan_id: string | null;
   start_at: string;
+  end_at: string;
   status: string;
   capacity: number;
   booked_count: number;
@@ -623,7 +624,7 @@ export async function POST(request: NextRequest) {
     if (data.scheduleId) {
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('activity_schedules')
-        .select('id, activity_id, plan_id, start_at, status, capacity, booked_count')
+        .select('id, activity_id, plan_id, start_at, end_at, status, capacity, booked_count')
         .eq('id', data.scheduleId)
         .eq('activity_id', data.activityId)
         .maybeSingle();
@@ -662,7 +663,7 @@ export async function POST(request: NextRequest) {
       ) {
         const { data: fallbackSchedules, error: fallbackScheduleError } = await supabase
           .from('activity_schedules')
-          .select('id, activity_id, plan_id, start_at, status, capacity, booked_count')
+          .select('id, activity_id, plan_id, start_at, end_at, status, capacity, booked_count')
           .eq('activity_id', data.activityId)
           .eq('start_at', data.startAt)
           .or(`plan_id.eq.${resolvedPlanId},plan_id.is.null`)
