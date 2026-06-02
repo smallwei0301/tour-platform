@@ -556,3 +556,29 @@
 3. booking / order / payment 三者分開管理狀態，不可再塞進單一欄位。
 4. admin_pos 與 line 都只是 channel，不應改變核心 booking engine。
 5. 所有寫操作都要有 audit trail。
+
+---
+
+## Post-Trip Operations API (added 2026-06-03)
+
+### GET /api/v2/admin/orders/:orderId/post-trip-status
+Admin-auth. Returns post-trip eligibility status for a single order.
+Response: `{ readinessOk, blockers, warnings, summary: { activePlansCount, futureSchedulesCount, openSchedulesWithNullPlan }, computedAt }`
+
+### GET /api/v2/admin/orders/post-trip-summary
+Admin-auth. Returns all orders needing admin follow-up.
+Query: `?since=ISO` (default 30 days), `?category=guide_report_risk|payment_order_mismatch|review_moderation|refund_dispute_safety`
+Response: `{ overdueTripReports, readyForReviewInvitation, payoutOnHold, adminFollowupNeeded, computedAt, orderCount }`
+
+### POST /api/v2/admin/orders/:orderId/send-review-invitation
+Admin-auth. Sends review invitation email to traveler if `isReviewInvitationEligible()` passes.
+Response: `{ orderId, emailSentTo, messageId, reviewUrl }` or 422 if ineligible.
+
+### GET /api/v2/admin/activities/:activityId/readiness
+Admin-auth. Returns readiness gate check for an activity.
+Response: `{ readinessOk, blockers[], warnings[], summary: { activePlansCount, futureSchedulesCount, openSchedulesWithNullPlan }, computedAt }`
+
+### GET /api/v2/guide/trip-reports-due
+Guide-auth. Returns guide's past activities needing a trip report.
+Response: `{ count, tripReportsDue: [{ orderId, activityTitle, scheduleEndAt, tripReportStatus }] }`
+Note: All past activities show as 'overdue' until guide_trip_reports table is added.
