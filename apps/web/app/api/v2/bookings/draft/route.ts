@@ -33,7 +33,9 @@ import {
 import {
   evaluateEffectiveBookingAvailability,
   shouldRejectDraftByEffectiveAvailability,
+  shouldRejectDraftByLegacySlotAvailability,
 } from '../../../../../src/lib/availability-v2/effective-booking-availability';
+import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
@@ -158,6 +160,15 @@ async function isSlotInGeneratedV2Availability(
     throw new Error('Failed to fetch bookings');
   }
 
+  const { data: seasonsData, error: seasonsError } = await supabase
+    .from('activity_plan_seasons')
+    .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+    .eq('activity_plan_id', payload.planId);
+
+  if (seasonsError) {
+    throw new Error('Failed to fetch activity plan seasons');
+  }
+
   const rules: AvailabilityRule[] = (rulesData || []).map((row: any) => ({
     id: row.id,
     guide_id: row.guide_id,
@@ -196,6 +207,17 @@ async function isSlotInGeneratedV2Availability(
     buffer_after_minutes: row.buffer_after_minutes,
   }));
 
+  const seasons: ActivityPlanSeason[] = (seasonsData || []).map((row: any) => ({
+    id: row.id,
+    activity_plan_id: row.activity_plan_id,
+    start_month: Number(row.start_month),
+    start_day: Number(row.start_day),
+    end_month: Number(row.end_month),
+    end_day: Number(row.end_day),
+    timezone: row.timezone,
+    is_active: Boolean(row.is_active),
+  }));
+
   const plan: ActivityPlan = {
     id: payload.planId,
     activity_id: payload.activityId,
@@ -218,6 +240,8 @@ async function isSlotInGeneratedV2Availability(
     blackouts,
     bookings,
     plan,
+    seasons,
+    planStatus: 'active',
     selectedSchedule: payload.selectedSchedule ?? null,
     selectedScheduleAuthority: payload.selectedScheduleAuthority,
   });
@@ -606,18 +630,6 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    if (!slotValidation.available) {
-      const errorMessages: Record<string, string> = {
-        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
-        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
-        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
-      };
-      return Response.json(
-        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
-        { status: 409 }
-      );
-    }
-
     let selectedScheduleValidation: { available: boolean; reason?: string } | null = null;
     let selectedScheduleForAvailability: ActivitySchedule | null = null;
     let selectedScheduleAuthority: 'authoritative' | 'fallback' | undefined;
@@ -705,6 +717,24 @@ export async function POST(request: NextRequest) {
     }
 
     const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
+    if (
+      shouldRejectDraftByLegacySlotAvailability({
+        hasActiveAvailabilityRules: (rulesData?.length ?? 0) > 0,
+        scheduleValidatedBySourceOfTruth,
+        slotValidation,
+      })
+    ) {
+      const errorMessages: Record<string, string> = {
+        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
+        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
+        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
+      };
+      return Response.json(
+        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
+        { status: 409 }
+      );
+    }
+
     if (
       shouldRejectDraftWhenSelectedScheduleInvalid({
         hasScheduleId: Boolean(data.scheduleId),

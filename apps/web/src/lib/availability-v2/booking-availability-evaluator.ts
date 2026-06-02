@@ -2,6 +2,7 @@ import {
   generateAvailableSlots,
   getDateStringInTimezone,
   formatDateWithTimezone,
+  validateSlotAvailability,
   type ActivityPlan,
   type AvailabilityRule,
   type BlackoutWindow,
@@ -10,6 +11,7 @@ import {
   type SlotGeneratorDeps,
   type SlotGeneratorInput,
 } from '../slot-generator.ts';
+import type { ActivityPlanSeason } from './effective-availability-resolver.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -46,6 +48,8 @@ export interface BookingAvailabilityEvaluatorInput {
   plan: ActivityPlan;
   selectedSchedule?: EvaluatorSchedule | null;
   selectedScheduleAuthority?: Exclude<SelectedScheduleAuthority, 'generated' | 'none'>;
+  seasons?: ActivityPlanSeason[];
+  planStatus?: string;
 }
 
 export interface BookingAvailabilityEvaluation {
@@ -61,6 +65,12 @@ export interface BookingAvailabilityEvaluation {
     schedulePresentInGeneratedSlots: boolean;
     hasRules: boolean;
     groupedRuleFailuresByDate: Record<string, { reasonCode?: string; messageZh?: string }>;
+    rules: AvailabilityRule[];
+    blackouts: BlackoutWindow[];
+    bookings: ExistingBooking[];
+    seasons: ActivityPlanSeason[];
+    seasonGateEnabled: boolean;
+    planStatus: string;
   };
 }
 
@@ -162,6 +172,19 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     const shouldEnforceGeneratedSlotPresence = input.rules.length > 0;
     const selectedScheduleMissingFromGeneratedSlots =
       shouldEnforceGeneratedSlotPresence && !schedulePresentInGeneratedSlots;
+    const selectedScheduleBaseValidation = schedulePresentInGeneratedSlots
+      ? { available: true }
+      : validateSlotAvailability(
+          selectedSchedule.start_at,
+          selectedSchedule.end_at,
+          input.guideId,
+          {
+            blackouts: input.blackouts,
+            bookings: nonGroupConflictBookings,
+            bufferBefore: 0,
+            bufferAfter: 0,
+          },
+        );
 
     const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), input.timezone);
 
@@ -207,6 +230,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     if (
       selectedSchedule.status !== 'open' ||
       selectedScheduleMissingFromGeneratedSlots ||
+      !selectedScheduleBaseValidation.available ||
       !selectedScheduleRule.allowed ||
       insufficient
     ) {
@@ -220,6 +244,16 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
         selectedScheduleRuleFailure = {
           reasonCode: 'BOOKING_CONFLICT',
           messageZh: '此時段已無可用名額，請重新選擇時段',
+        };
+      } else if (!selectedScheduleBaseValidation.available) {
+        selectedScheduleRuleFailure = {
+          reasonCode: selectedScheduleBaseValidation.reason,
+          messageZh:
+            selectedScheduleBaseValidation.reason === 'SLOT_IN_PAST'
+              ? '所選時段已過期，請重新選擇時段'
+              : selectedScheduleBaseValidation.reason === 'BLACKOUT_CONFLICT'
+                ? '該時段暫停開放預約，請選擇其他時段'
+                : '該時段已無可用名額，請選擇其他時段',
         };
       } else if (!selectedScheduleRule.allowed) {
         selectedScheduleRuleFailure = {
@@ -266,6 +300,12 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       schedulePresentInGeneratedSlots,
       hasRules: input.rules.length > 0,
       groupedRuleFailuresByDate: Object.fromEntries(groupedRuleFailuresByDate.entries()),
+      rules: input.rules,
+      blackouts: input.blackouts,
+      bookings: input.bookings,
+      seasons: input.seasons ?? [],
+      seasonGateEnabled: input.seasons !== undefined,
+      planStatus: input.planStatus ?? 'active',
     },
   };
 }

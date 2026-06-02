@@ -24,6 +24,7 @@ import {
   type ActivityPlan,
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
@@ -402,6 +403,18 @@ export async function getAvailableSlots(
       });
     }
 
+    const { data: seasonsData, error: seasonsError } = await supabase
+      .from('activity_plan_seasons')
+      .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+      .eq('activity_plan_id', params.planId);
+
+    if (seasonsError) {
+      console.error('Error fetching activity plan seasons:', seasonsError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch activity plan seasons'), {
+        status: 500,
+      });
+    }
+
     // Transform database rows to slot generator types
     const rules: AvailabilityRule[] = (rulesData || []).map((row) => ({
       id: row.id,
@@ -439,6 +452,17 @@ export async function getAvailableSlots(
       activity_plan_id: row.activity_plan_id ?? null,
     }));
 
+    const seasons: ActivityPlanSeason[] = (seasonsData || []).map((row) => ({
+      id: row.id,
+      activity_plan_id: row.activity_plan_id,
+      start_month: Number(row.start_month),
+      start_day: Number(row.start_day),
+      end_month: Number(row.end_month),
+      end_day: Number(row.end_day),
+      timezone: row.timezone,
+      is_active: Boolean(row.is_active),
+    }));
+
     const plan: ActivityPlan = {
       id: planData.id,
       activity_id: planData.activity_id,
@@ -466,6 +490,8 @@ export async function getAvailableSlots(
       blackouts,
       bookings,
       plan,
+      seasons,
+      planStatus: planData.status,
       selectedSchedule,
       selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
     });

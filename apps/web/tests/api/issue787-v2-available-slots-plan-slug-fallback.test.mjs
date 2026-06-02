@@ -7,7 +7,12 @@ function createSupabaseMock(results) {
   let index = 0;
 
   const take = (terminal, table, filters) => {
-    const next = results[index++];
+    const next = results[index];
+    if ((!next || next.terminal !== terminal || next.table !== table) && terminal === 'then' && table === 'activity_plan_seasons') {
+      calls.push({ terminal, table, filters: [...filters] });
+      return { data: [], error: null };
+    }
+    index += 1;
     assert.ok(next, `unexpected query: ${terminal} on ${table}`);
     assert.equal(next.terminal, terminal, `terminal mismatch for ${table}`);
     assert.equal(next.table, table, `table mismatch for ${terminal}`);
