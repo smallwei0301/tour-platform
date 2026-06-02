@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
 import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
+import { normalizeAdminQAStatusFilter } from '../../../src/lib/admin-qa-status.mjs';
 
 // PR #3736209 aligned the DB constraint — pending row uses
 // `pending_moderation` as the status string, so the tab value matches.
@@ -15,6 +17,7 @@ const QA_STATUS_TABS = [
   { value: '', label: '全部' },
 ] as const;
 const QA_STATUS_VALUES = QA_STATUS_TABS.map((t) => t.value);
+const DEFAULT_STATUS_FILTER = 'pending_moderation';
 
 type QAEntry = {
   id: string;
@@ -28,18 +31,61 @@ type QAEntry = {
 
 type AnswerState = Record<string, string>;
 
-export default function AdminQAPage() {
+/**
+ * Read the canonical statusFilter from the URL. Legacy bookmarks like
+ * `?status=pending` are routed through `normalizeAdminQAStatusFilter` so the
+ * UI selects the right tab AND the fetch URL becomes canonical — that's
+ * issue #1119's T1072.4 contract. Empty / missing `status` → default tab.
+ *
+ * The `normalizeAdminQAStatusFilter` import is the only legacy-alias
+ * surface the page touches; no raw legacy literal appears in source here,
+ * which preserves the existing #1072 no-stale-legacy-status contract.
+ */
+function resolveStatusFromUrl(searchParams: URLSearchParams): string {
+  const raw = searchParams.get('status');
+  if (raw === null) return DEFAULT_STATUS_FILTER;
+  const normalized = normalizeAdminQAStatusFilter(raw);
+  // Empty string means "全部" — that's a legitimate filter, keep it.
+  // Any other value the API doesn't recognise just falls back to default.
+  if (normalized === '') return '';
+  const allowed = QA_STATUS_VALUES as readonly string[];
+  return allowed.includes(normalized) ? normalized : DEFAULT_STATUS_FILTER;
+}
+
+function AdminQAPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const [qaList, setQaList] = useState<QAEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
-  // PR #1072 test rule: this useState literal must read exactly
-  // `useState('pending_moderation')` — keep it un-annotated.
-  const [statusFilter, setStatusFilter] = useState('pending_moderation');
+
+  // statusFilter is URL-derived (#1119) — bookmarks / Back/Forward / shared
+  // links all work. `setStatusFilter` only ever writes canonical values, so
+  // the URL doesn't accumulate legacy aliases. The canonical default
+  // `pending_moderation` lives in DEFAULT_STATUS_FILTER above (asserted by
+  // the relaxed #1072 contract test).
+  const statusFilter = resolveStatusFromUrl(searchParams);
+
+  const setStatusFilter = useCallback(
+    (next: string) => {
+      const params = new URLSearchParams(Array.from(searchParams.entries()));
+      if (next === DEFAULT_STATUS_FILTER) {
+        params.delete('status');
+      } else {
+        params.set('status', next);
+      }
+      const qs = params.toString();
+      router.replace(qs ? `/admin/qa?${qs}` : '/admin/qa', { scroll: false });
+    },
+    [router, searchParams],
+  );
+
   const tabKb = useTablistKeyboard(QA_STATUS_VALUES, statusFilter, setStatusFilter);
   const [answerMap, setAnswerMap] = useState<AnswerState>({});
 
-  async function load(status: string) {
+  const load = useCallback(async (status: string) => {
     setLoading(true);
     setError('');
     try {
@@ -56,9 +102,9 @@ export default function AdminQAPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  useEffect(() => { void load(statusFilter); }, [statusFilter]);
+  useEffect(() => { void load(statusFilter); }, [statusFilter, load]);
 
   async function handleAction(id: string, newStatus: 'approved' | 'rejected') {
     const label = newStatus === 'approved' ? '核准' : '拒絕';
@@ -239,5 +285,15 @@ export default function AdminQAPage() {
         />
       </Card>
     </div>
+  );
+}
+
+// `useSearchParams()` opts the route into the client suspense boundary so
+// SSR / static rendering still works correctly.
+export default function AdminQAPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 24, color: '#9ca3af' }}>載入中…</div>}>
+      <AdminQAPageInner />
+    </Suspense>
   );
 }

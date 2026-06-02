@@ -94,10 +94,17 @@ test('admin Q&A page: TS union uses canonical pending_moderation', () => {
 
 test('admin Q&A page: default filter is pending_moderation', () => {
   const src = readFileSync(ADMIN_QA_PAGE, 'utf8');
+  // Relaxed by #1119 — the page now derives statusFilter from the URL
+  // (`useSearchParams`) instead of `useState('pending_moderation')`, so
+  // we look for one of:
+  //   - the literal default constant `DEFAULT_STATUS_FILTER = 'pending_moderation'`
+  //   - the old `useState('pending_moderation')` (back-compat)
+  //   - a `?? 'pending_moderation'` / `|| 'pending_moderation'` fallback
+  // What matters is the *canonical default value* — that hasn't changed.
   assert.match(
     src,
-    /useState\(\s*'pending_moderation'\s*\)/,
-    "default statusFilter must be 'pending_moderation'",
+    /(useState\(\s*'pending_moderation'\s*\)|DEFAULT_STATUS_FILTER\s*=\s*'pending_moderation'|(?:\?\?|\|\|)\s*'pending_moderation')/,
+    "default statusFilter must be 'pending_moderation' (literal or via DEFAULT_STATUS_FILTER constant)",
   );
 });
 
