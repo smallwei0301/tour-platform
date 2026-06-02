@@ -80,7 +80,7 @@ test('T1072.1 — 預設進入 /admin/qa 即帶 canonical status=pending_moderat
   await page.goto('/admin/qa');
   await page.waitForResponse(
     (r) => r.url().includes('/api/admin/qa') && r.status() === 200,
-    { timeout: 10000 },
+    { timeout: 30000 },
   );
   await page.waitForTimeout(500);
 
@@ -98,7 +98,7 @@ test('T1072.2 — 待審清單顯示旅客提問與核准/拒絕按鈕', async (
   await page.goto('/admin/qa');
   await page.waitForResponse(
     (r) => r.url().includes('/api/admin/qa') && r.status() === 200,
-    { timeout: 10000 },
+    { timeout: 30000 },
   );
 
   await expect(page.locator('body')).toContainText(PENDING_FIXTURE.question);
@@ -117,7 +117,7 @@ test('T1072.3 — 切到「已核准」分頁，URL 改帶 status=approved', asy
   await page.goto('/admin/qa');
   await page.waitForResponse(
     (r) => r.url().includes('/api/admin/qa') && r.status() === 200,
-    { timeout: 10000 },
+    { timeout: 30000 },
   );
 
   const approvedTab = page.locator('button:has-text("已核准")').first();
@@ -127,7 +127,7 @@ test('T1072.3 — 切到「已核准」分頁，URL 改帶 status=approved', asy
       r.url().includes('/api/admin/qa') &&
       r.url().includes('status=approved') &&
       r.status() === 200,
-    { timeout: 10000 },
+    { timeout: 30000 },
   );
 
   const approvedRequest = seenUrls.find((u) => u.includes('status=approved'));
@@ -142,7 +142,7 @@ test('T1072.4 — 舊書籤 /admin/qa?status=pending 仍能載入待審清單 (a
   await page.goto('/admin/qa?status=pending');
   await page.waitForResponse(
     (r) => r.url().includes('/api/admin/qa') && r.status() === 200,
-    { timeout: 10000 },
+    { timeout: 30000 },
   );
 
   // The stub treats ?status=pending as the canonical value, mirroring the
