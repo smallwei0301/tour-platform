@@ -228,3 +228,27 @@ describe('computePostTripStatus convenience', () => {
   });
 });
 
+
+// ── computePostTripStatus source contract ────────────────────────────────────
+import { computePostTripStatus } from '../../src/lib/post-trip-eligibility.mjs';
+
+describe('computePostTripStatus source contract', () => {
+  const PAST_END = new Date('2026-06-01T12:00:00Z');
+  const NOW = new Date('2026-06-03T10:00:00Z');
+
+  it('returns all 5 fields for completed order', () => {
+    const r = computePostTripStatus({ orderStatus: 'completed', scheduleEndAt: PAST_END, now: NOW });
+    assert.ok('completionEligible' in r);
+    assert.ok('reviewInvitationEligible' in r);
+    assert.ok('payoutHoldReason' in r);
+    assert.ok('tripReportStatus' in r);
+    assert.ok('adminFollowupCategory' in r);
+  });
+
+  it('disputed: not review-eligible, payment_dispute hold, payment_order_mismatch followup', () => {
+    const r = computePostTripStatus({ orderStatus: 'completed', scheduleEndAt: PAST_END, now: NOW, isDisputed: true });
+    assert.equal(r.reviewInvitationEligible, false);
+    assert.equal(r.payoutHoldReason, 'payment_dispute');
+    assert.equal(r.adminFollowupCategory, 'payment_order_mismatch');
+  });
+});
