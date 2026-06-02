@@ -19,6 +19,10 @@ function startAtMillis(value: string): number {
   return new Date(value).getTime();
 }
 
+function isSourceOfTruthSelectedScheduleAuthority(value: string | undefined): boolean {
+  return value === 'authoritative' || value === 'fallback';
+}
+
 export function resolveEffectiveBookingAvailabilityForStartAt(params: {
   requestedStartAt: string;
   timezone: string;
@@ -43,6 +47,19 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
   });
 
   if (matchedSlot && canonical.state === 'available') {
+    return {
+      available: true,
+      matchedSlot,
+      canonicalState: canonical.state,
+      evaluation: params.evaluation,
+    };
+  }
+
+  if (
+    matchedSlot &&
+    isSourceOfTruthSelectedScheduleAuthority(params.evaluation.selectedScheduleAuthority) &&
+    (canonical.state === 'outside_season' || canonical.state === 'outside_rule')
+  ) {
     return {
       available: true,
       matchedSlot,

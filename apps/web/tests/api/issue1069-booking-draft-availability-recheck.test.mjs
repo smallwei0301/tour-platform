@@ -112,3 +112,49 @@ test('GH-1069 RED: happy path keeps available=true and matched slot', () => {
   assert.equal(out.available, true);
   assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
 });
+
+test('GH-1069 RED: authoritative selected schedule keeps draft parity when source-of-truth slot is open but generated rules/seasons are absent', () => {
+  const out = evaluateEffectiveBookingAvailability({
+    ...BASE,
+    rules: [],
+    seasons: [],
+    selectedScheduleAuthority: 'authoritative',
+    selectedSchedule: {
+      id: 's-authoritative-open',
+      activity_id: 'a-1',
+      plan_id: 'p-1',
+      start_at: '2026-07-01T09:00:00+08:00',
+      end_at: '2026-07-01T11:00:00+08:00',
+      capacity: 6,
+      booked_count: 0,
+      status: 'open',
+    },
+  });
+
+  assert.equal(out.available, true);
+  assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
+  assert.equal(out.evaluation.selectedScheduleAuthority, 'authoritative');
+});
+
+test('GH-1069 RED: fallback selected schedule keeps draft parity when recovered exact slot is open but generated rules/seasons are absent', () => {
+  const out = evaluateEffectiveBookingAvailability({
+    ...BASE,
+    rules: [],
+    seasons: [],
+    selectedScheduleAuthority: 'fallback',
+    selectedSchedule: {
+      id: 's-fallback-open',
+      activity_id: 'a-1',
+      plan_id: 'p-1',
+      start_at: '2026-07-01T09:00:00+08:00',
+      end_at: '2026-07-01T11:00:00+08:00',
+      capacity: 6,
+      booked_count: 1,
+      status: 'open',
+    },
+  });
+
+  assert.equal(out.available, true);
+  assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
+  assert.equal(out.evaluation.selectedScheduleAuthority, 'fallback');
+});
