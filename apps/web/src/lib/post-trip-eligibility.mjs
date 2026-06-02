@@ -136,3 +136,45 @@ export function adminFollowupCategory({
   if (isNegativeReview) return 'review_moderation';
   return null;
 }
+
+/**
+ * Convenience: compute all post-trip status fields for an order at once.
+ * Accepts the same parameters as the individual predicates.
+ *
+ * @returns {{ completionEligible, reviewInvitationEligible, payoutHoldReason, tripReportStatus: string, adminFollowupCategory: string | null }}
+ */
+export function computePostTripStatus({
+  orderStatus,
+  scheduleEndAt,
+  now = new Date(),
+  hasComplaint = false,
+  refundAmountTwd = 0,
+  isNoShow = false,
+  isDisputed = false,
+  isSafetyCase = false,
+  hasOversellIssue = false,
+  submittedAt = null,
+  isPaymentDispute = false,
+  missingTripReport = false,
+  isNegativeReview = false,
+} = {}) {
+  const completionEligible = isCompletionEligible({ orderStatus, scheduleEndAt, now });
+  const reviewInvitationEligible = isReviewInvitationEligible({
+    orderStatus, scheduleEndAt, now,
+    hasComplaint, refundAmountTwd, isNoShow, isDisputed, isSafetyCase,
+  });
+  const payoutHoldReason = isPayoutOnHold({ refundAmountTwd, hasComplaint, hasOversellIssue, isDisputed, isSafetyCase });
+  const reportStatus = tripReportStatus({ scheduleEndAt, submittedAt, now });
+  const followupCategory = adminFollowupCategory({
+    isSafetyCase, isDisputed, hasComplaint, isPaymentDispute,
+    missingTripReport: missingTripReport || reportStatus === 'overdue',
+    isNegativeReview,
+  });
+  return {
+    completionEligible,
+    reviewInvitationEligible,
+    payoutHoldReason,
+    tripReportStatus: reportStatus,
+    adminFollowupCategory: followupCategory,
+  };
+}
