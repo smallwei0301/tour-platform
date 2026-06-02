@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-02T19:59:22.473Z -->
+<!-- query_timestamp: 2026-06-02T20:09:35.801Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T19:59:22.473Z  
-**Commit SHA:** `ce13223de416d3e7d69971201265796680f9d878`
+**Query timestamp:** 2026-06-02T20:09:35.801Z  
+**Commit SHA:** `7431316c69e1e1caa57c864e48f68fd53acf43a0`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (16 total)
+## Open Issues (17 total)
 
 ### P0 (1)
 
@@ -37,10 +37,11 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (7)
+### P2 (8)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1171 | [[Post-Trip Ops] Add guide trip report submission storage and API](https://github.com/smallwei0301/tour-platform/issues/1171) | triaged, type:feature, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, orders, database, launch:post-first-payment |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
@@ -63,6 +64,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1172 | [feat(post-trip): admin send-review-invitation endpoint (#1170)](https://github.com/smallwei0301/tour-platform/pull/1172) | 2026-06-02 |
 | #1168 | [feat(email): add sendReviewInvitation email for post-trip workflow (#1106)](https://github.com/smallwei0301/tour-platform/pull/1168) | 2026-06-02 |
 | #1167 | [feat(admin): add readiness gate widget to activity plans page (#1166)](https://github.com/smallwei0301/tour-platform/pull/1167) | 2026-06-02 |
 | #1165 | [feat(admin): add readiness gate API endpoint for activity plans page (#1164)](https://github.com/smallwei0301/tour-platform/pull/1165) | 2026-06-02 |
@@ -72,7 +74,6 @@ _none_
 | #1159 | [chore(security): untrack supabase/.temp CLI scratch from git (#1121)](https://github.com/smallwei0301/tour-platform/pull/1159) | 2026-06-02 |
 | #1158 | [chore(security): remove leaked admin-token literal from WEAK_TOKEN_VALUES (#1121)](https://github.com/smallwei0301/tour-platform/pull/1158) | 2026-06-02 |
 | #1157 | [docs(ops): add post-trip operations workflow document (#1106)](https://github.com/smallwei0301/tour-platform/pull/1157) | 2026-06-02 |
-| #1156 | [docs(ops): add Supabase backup/restore runbook (#594)](https://github.com/smallwei0301/tour-platform/pull/1156) | 2026-06-02 |
 
 ---
 
