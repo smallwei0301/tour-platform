@@ -160,9 +160,36 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
           participants,
         });
 
+        // When planConfigState signals that the plan is explicitly inactive or unconfigured,
+        // do NOT fall back to legacy — showing legacy schedules for an inactive plan would
+        // mislead travelers into thinking the activity is bookable. Return an explicit
+        // unavailability notice instead. This is the fix for issue #1133.
+        if (v2.planConfigState === 'no_active_plans' || v2.planConfigState === 'no_plans') {
+          const availabilityNotice = v2.planConfigState === 'no_active_plans'
+            ? '此活動方案目前未開放預約'
+            : '此活動尚未設定方案';
+          return Response.json(ok({
+            type: 'v2',
+            source: 'v2',
+            planConfigState: v2.planConfigState,
+            availabilityNotice,
+            schedules: [],
+            days: [],
+          }), {
+            headers: {
+              'cache-control': 'public, s-maxage=60, stale-while-revalidate=120',
+              'x-availability-cache-tier': '60',
+              'x-availability-source': 'v2',
+              'x-availability-requested-mode': requestedMode,
+              'x-availability-plan-config-state': v2.planConfigState,
+            },
+          });
+        }
+
         // When V2 produced zero candidate slots across the entire window, the
-        // activity is not yet configured in V2 (no guide_availability_rules).
-        // This is distinct from "genuinely full" (slotCount>0, status='full').
+        // activity is not yet configured in V2 (no guide_availability_rules) but
+        // has active plans. This is distinct from "genuinely full" (slotCount>0,
+        // status='full') and distinct from inactive plans (handled above).
         // Fall back to the legacy snapshot so traveler-facing availability is not
         // inadvertently grayed out. v2-no-generated-slots header enables observability.
         if (!v2HasGeneratedSlots(v2.plans)) {
