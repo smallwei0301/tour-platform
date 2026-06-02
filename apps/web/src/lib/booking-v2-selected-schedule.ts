@@ -5,6 +5,7 @@ export type DraftScheduleRow = {
   activity_id: string;
   plan_id: string | null;
   start_at: string;
+  end_at: string;
   status: string;
   capacity: number;
   booked_count: number;
