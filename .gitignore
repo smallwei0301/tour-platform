@@ -17,3 +17,7 @@ apps/web/tests/__screenshots__/
 # Readiness-snapshot scratch dirs (script writes `issue<id>-tmp-<pid>/` and
 # normally cleans them; leftovers from interrupted runs shouldn't be committed).
 docs/operations/reports/issue*-tmp-*/
+
+# Supabase CLI scratch (linked-project.json, pooler-url, project-ref, version
+# pins). Contains project ref + pooler hostname; should not be committed.
+supabase/.temp/
