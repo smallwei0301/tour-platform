@@ -23,6 +23,17 @@ function isSourceOfTruthSelectedScheduleAuthority(value: string | undefined): bo
   return value === 'authoritative' || value === 'fallback';
 }
 
+function canBypassGeneratedCanonicalMiss(params: {
+  canonicalState: string;
+  canonicalMetadata?: Record<string, string>;
+}): boolean {
+  if (params.canonicalState === 'outside_rule') {
+    return true;
+  }
+
+  return params.canonicalState === 'outside_season' && params.canonicalMetadata?.seasonGate === 'no_active_season';
+}
+
 export function resolveEffectiveBookingAvailabilityForStartAt(params: {
   requestedStartAt: string;
   timezone: string;
@@ -58,7 +69,10 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
   if (
     matchedSlot &&
     isSourceOfTruthSelectedScheduleAuthority(params.evaluation.selectedScheduleAuthority) &&
-    (canonical.state === 'outside_season' || canonical.state === 'outside_rule')
+    canBypassGeneratedCanonicalMiss({
+      canonicalState: canonical.state,
+      canonicalMetadata: canonical.metadata,
+    })
   ) {
     return {
       available: true,

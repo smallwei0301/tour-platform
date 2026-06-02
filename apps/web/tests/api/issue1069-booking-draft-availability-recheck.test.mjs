@@ -158,3 +158,39 @@ test('GH-1069 RED: fallback selected schedule keeps draft parity when recovered 
   assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
   assert.equal(out.evaluation.selectedScheduleAuthority, 'fallback');
 });
+
+test('GH-1067 RED: selected schedule parity bypass must not override active season gate', () => {
+  for (const authority of ['authoritative', 'fallback']) {
+    const out = evaluateEffectiveBookingAvailability({
+      ...BASE,
+      rules: [],
+      seasons: [
+        {
+          id: 'season-winter',
+          activity_plan_id: 'p-1',
+          start_month: 11,
+          start_day: 1,
+          end_month: 4,
+          end_day: 30,
+          timezone: 'Asia/Taipei',
+          is_active: true,
+        },
+      ],
+      selectedScheduleAuthority: authority,
+      selectedSchedule: {
+        id: `s-${authority}-outside-season`,
+        activity_id: 'a-1',
+        plan_id: 'p-1',
+        start_at: '2026-07-01T09:00:00+08:00',
+        end_at: '2026-07-01T11:00:00+08:00',
+        capacity: 6,
+        booked_count: 0,
+        status: 'open',
+      },
+    });
+
+    assert.equal(out.available, false);
+    assert.equal(out.reasonCode, 'outside_season');
+    assert.equal(out.canonicalState, 'outside_season');
+  }
+});
