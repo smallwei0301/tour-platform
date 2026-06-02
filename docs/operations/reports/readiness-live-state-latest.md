@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-02T20:27:26.059Z -->
+<!-- query_timestamp: 2026-06-02T20:34:05.861Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T20:27:26.059Z  
-**Commit SHA:** `92f7c37fb956fa37128d72ff546ac7c608efe3b1`
+**Query timestamp:** 2026-06-02T20:34:05.861Z  
+**Commit SHA:** `c41bd8a379c86b1fe28dd7f3b3e9e1b3666a1393`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (17 total)
+## Open Issues (18 total)
 
 ### P0 (1)
 
@@ -54,9 +54,11 @@
 
 _none_
 
-### Other (0)
+### Other (1)
 
-_none_
+| # | Title | Labels |
+|---|-------|--------|
+| #1173 | [[Frontend Daily Check] 2026-06-03 frontend checks blocked by missing toolchain](https://github.com/smallwei0301/tour-platform/issues/1173) | — |
 
 ---
 
