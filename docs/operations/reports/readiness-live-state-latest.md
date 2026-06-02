@@ -1,29 +1,29 @@
-<!-- query_timestamp: 2026-06-02T19:01:33.578Z -->
+<!-- query_timestamp: 2026-06-02T19:20:00.485Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T19:01:33.578Z  
-**Commit SHA:** `44ef22f8be59945bca7b49354b3462238e3e4783`
+**Query timestamp:** 2026-06-02T19:20:00.485Z  
+**Commit SHA:** `ee13e74077addbd70e86cf0bb9c2d206bc861773`
 
 ---
 
-## Open PRs (1)
+## Open PRs (2)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1163 | [test(e2e): add Playwright specs for #1111 price flicker and #1116 tablist keyboard nav (#1162)](https://github.com/smallwei0301/tour-platform/pull/1163) | `claude/issue1162-playwright-specs-flicker-tablist` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (17 total)
 
-### P0 (2)
+### P0 (1)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — pre-launch final check](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, priority:P0, security, owner:mixed, status:awaiting-implementation, launch:first-payment-blocker |
-| #1079 | [[Admin/Booking V2] Align backoffice schedules and availability with V2 activity_plans](https://github.com/smallwei0301/tour-platform/issues/1079) | type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, booking-v2, admin |
 
 ### P1 (8)
 
@@ -38,10 +38,11 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (7)
+### P2 (8)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1162 | [[QA] Add Playwright E2E specs for #1111 price flicker and #1116 tablist focus](https://github.com/smallwei0301/tour-platform/issues/1162) | priority:P2, owner:ai-agent, status:ready, type:qa, test-infra |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
@@ -64,6 +65,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1161 | [fix(seo): add twitter:card to theme and why-choose-us pages](https://github.com/smallwei0301/tour-platform/pull/1161) | 2026-06-02 |
 | #1160 | [docs(security): add credential rotation runbook (#1121)](https://github.com/smallwei0301/tour-platform/pull/1160) | 2026-06-02 |
 | #1159 | [chore(security): untrack supabase/.temp CLI scratch from git (#1121)](https://github.com/smallwei0301/tour-platform/pull/1159) | 2026-06-02 |
 | #1158 | [chore(security): remove leaked admin-token literal from WEAK_TOKEN_VALUES (#1121)](https://github.com/smallwei0301/tour-platform/pull/1158) | 2026-06-02 |
@@ -73,7 +75,6 @@ _none_
 | #1153 | [feat(post-trip): read-only post-trip status endpoint for admin order detail (#1151)](https://github.com/smallwei0301/tour-platform/pull/1153) | 2026-06-02 |
 | #1152 | [test(docs): add README stale closed-issue guard (#1143)](https://github.com/smallwei0301/tour-platform/pull/1152) | 2026-06-02 |
 | #1150 | [docs(ops): add third-party monitoring service comparison (#685)](https://github.com/smallwei0301/tour-platform/pull/1150) | 2026-06-02 |
-| #1149 | [docs(ops): add guide onboarding scorecard + retrospective template (#318)](https://github.com/smallwei0301/tour-platform/pull/1149) | 2026-06-02 |
 
 ---
 
