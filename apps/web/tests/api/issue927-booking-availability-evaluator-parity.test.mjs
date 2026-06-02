@@ -210,6 +210,39 @@ test('GH-927 truth-table: PR-924 hold-overlap and legacy no-rules selectedSchedu
   assert.equal(legacyNoRules.slots[0].capacityLeft, 3);
 });
 
+test('GH-1067 RED: no-rules selected schedule must still reject same-guide overlapping hold from another activity', () => {
+  const overlapReject = evaluate({
+    rules: [],
+    selectedScheduleAuthority: 'authoritative',
+    selectedSchedule: {
+      id: 'legacy-no-rules-open-conflict',
+      activity_id: 'a-1',
+      plan_id: null,
+      start_at: '2026-07-01T09:00:00+08:00',
+      end_at: '2026-07-01T11:00:00+08:00',
+      capacity: 4,
+      booked_count: 0,
+      status: 'open',
+    },
+    bookings: [
+      {
+        id: 'other-activity-overlap',
+        guide_id: 'g-1',
+        start_at: '2026-07-01T09:00:00+08:00',
+        end_at: '2026-07-01T11:00:00+08:00',
+        status: 'draft',
+        participants: 4,
+        activity_id: 'a-2',
+        activity_plan_id: 'p-2',
+      },
+    ],
+  });
+
+  assert.equal(overlapReject.available, false);
+  assert.equal(overlapReject.reasonCode, 'BOOKING_CONFLICT');
+  assert.equal(overlapReject.slots.length, 0);
+});
+
 test('GH-927 truth-table: participants/capacity/max/min produce deterministic allow/deny outcomes', () => {
   const minNotMet = evaluate({
     participants: 1,
