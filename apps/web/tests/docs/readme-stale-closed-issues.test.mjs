@@ -1,9 +1,15 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const README = readFileSync('/root/.openclaw/workspace/tour-platform/README.md', 'utf-8');
-const DOCS_README = readFileSync('/root/.openclaw/workspace/tour-platform/docs/README.md', 'utf-8');
+// Resolve paths relative to this test file: tests/docs/ -> ../../.. -> repo root
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
+
+const README = readFileSync(join(REPO_ROOT, 'README.md'), 'utf-8');
+const DOCS_README = readFileSync(join(REPO_ROOT, 'docs', 'README.md'), 'utf-8');
 
 const CLOSED_ISSUES = [621, 787, 640, 641, 586, 588];
 
