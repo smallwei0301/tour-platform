@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-06-02T19:20:00.485Z -->
+<!-- query_timestamp: 2026-06-02T19:32:03.509Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T19:20:00.485Z  
-**Commit SHA:** `ee13e74077addbd70e86cf0bb9c2d206bc861773`
+**Query timestamp:** 2026-06-02T19:32:03.509Z  
+**Commit SHA:** `fb26ab1f7933eb2395c7263a3694cf4fd3fd7fa3`
 
 ---
 
-## Open PRs (2)
+## Open PRs (1)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1163 | [test(e2e): add Playwright specs for #1111 price flicker and #1116 tablist keyboard nav (#1162)](https://github.com/smallwei0301/tour-platform/pull/1163) | `claude/issue1162-playwright-specs-flicker-tablist` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (17 total)
@@ -42,7 +41,7 @@
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1162 | [[QA] Add Playwright E2E specs for #1111 price flicker and #1116 tablist focus](https://github.com/smallwei0301/tour-platform/issues/1162) | priority:P2, owner:ai-agent, status:ready, type:qa, test-infra |
+| #1166 | [[Admin/Plans] Display readiness gate warnings widget on activity plans page](https://github.com/smallwei0301/tour-platform/issues/1166) | type:feature, priority:P2, owner:ai-agent, status:ready, booking-v2, admin |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
@@ -65,6 +64,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1165 | [feat(admin): add readiness gate API endpoint for activity plans page (#1164)](https://github.com/smallwei0301/tour-platform/pull/1165) | 2026-06-02 |
+| #1163 | [test(e2e): add Playwright specs for #1111 price flicker and #1116 tablist keyboard nav (#1162)](https://github.com/smallwei0301/tour-platform/pull/1163) | 2026-06-02 |
 | #1161 | [fix(seo): add twitter:card to theme and why-choose-us pages](https://github.com/smallwei0301/tour-platform/pull/1161) | 2026-06-02 |
 | #1160 | [docs(security): add credential rotation runbook (#1121)](https://github.com/smallwei0301/tour-platform/pull/1160) | 2026-06-02 |
 | #1159 | [chore(security): untrack supabase/.temp CLI scratch from git (#1121)](https://github.com/smallwei0301/tour-platform/pull/1159) | 2026-06-02 |
@@ -73,8 +74,6 @@ _none_
 | #1156 | [docs(ops): add Supabase backup/restore runbook (#594)](https://github.com/smallwei0301/tour-platform/pull/1156) | 2026-06-02 |
 | #1155 | [feat(post-trip): admin post-trip orders summary endpoint (#1154)](https://github.com/smallwei0301/tour-platform/pull/1155) | 2026-06-02 |
 | #1153 | [feat(post-trip): read-only post-trip status endpoint for admin order detail (#1151)](https://github.com/smallwei0301/tour-platform/pull/1153) | 2026-06-02 |
-| #1152 | [test(docs): add README stale closed-issue guard (#1143)](https://github.com/smallwei0301/tour-platform/pull/1152) | 2026-06-02 |
-| #1150 | [docs(ops): add third-party monitoring service comparison (#685)](https://github.com/smallwei0301/tour-platform/pull/1150) | 2026-06-02 |
 
 ---
 
