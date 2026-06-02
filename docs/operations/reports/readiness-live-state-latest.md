@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-02T19:32:03.509Z -->
+<!-- query_timestamp: 2026-06-02T19:59:22.473Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T19:32:03.509Z  
-**Commit SHA:** `fb26ab1f7933eb2395c7263a3694cf4fd3fd7fa3`
+**Query timestamp:** 2026-06-02T19:59:22.473Z  
+**Commit SHA:** `ce13223de416d3e7d69971201265796680f9d878`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (17 total)
+## Open Issues (16 total)
 
 ### P0 (1)
 
@@ -37,11 +37,10 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (8)
+### P2 (7)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1166 | [[Admin/Plans] Display readiness gate warnings widget on activity plans page](https://github.com/smallwei0301/tour-platform/issues/1166) | type:feature, priority:P2, owner:ai-agent, status:ready, booking-v2, admin |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
@@ -64,6 +63,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1168 | [feat(email): add sendReviewInvitation email for post-trip workflow (#1106)](https://github.com/smallwei0301/tour-platform/pull/1168) | 2026-06-02 |
+| #1167 | [feat(admin): add readiness gate widget to activity plans page (#1166)](https://github.com/smallwei0301/tour-platform/pull/1167) | 2026-06-02 |
 | #1165 | [feat(admin): add readiness gate API endpoint for activity plans page (#1164)](https://github.com/smallwei0301/tour-platform/pull/1165) | 2026-06-02 |
 | #1163 | [test(e2e): add Playwright specs for #1111 price flicker and #1116 tablist keyboard nav (#1162)](https://github.com/smallwei0301/tour-platform/pull/1163) | 2026-06-02 |
 | #1161 | [fix(seo): add twitter:card to theme and why-choose-us pages](https://github.com/smallwei0301/tour-platform/pull/1161) | 2026-06-02 |
@@ -72,8 +73,6 @@ _none_
 | #1158 | [chore(security): remove leaked admin-token literal from WEAK_TOKEN_VALUES (#1121)](https://github.com/smallwei0301/tour-platform/pull/1158) | 2026-06-02 |
 | #1157 | [docs(ops): add post-trip operations workflow document (#1106)](https://github.com/smallwei0301/tour-platform/pull/1157) | 2026-06-02 |
 | #1156 | [docs(ops): add Supabase backup/restore runbook (#594)](https://github.com/smallwei0301/tour-platform/pull/1156) | 2026-06-02 |
-| #1155 | [feat(post-trip): admin post-trip orders summary endpoint (#1154)](https://github.com/smallwei0301/tour-platform/pull/1155) | 2026-06-02 |
-| #1153 | [feat(post-trip): read-only post-trip status endpoint for admin order detail (#1151)](https://github.com/smallwei0301/tour-platform/pull/1153) | 2026-06-02 |
 
 ---
 
