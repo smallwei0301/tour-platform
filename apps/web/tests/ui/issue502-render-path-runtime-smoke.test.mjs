@@ -144,8 +144,9 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   });
 
   const metadata = await regionModule.generateMetadata({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
-  // GH-502 + #626: generateMetadata uses slug only (no DB lookup). Layout adds brand suffix.
-  assert.equal(metadata.title, 'real-slug');
+  // GH-502 + #626: generateMetadata humanizes slug (no DB lookup). Page adds brand suffix.
+  // Updated in 2026-06-03: slug is now humanized to "Real Slug | Midao 祕島" (Title Case + suffix)
+  assert.equal(metadata.title, 'Real Slug | Midao 祕島');
   // description from layout default; generateMetadata no longer sets it per #626
 
   const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
