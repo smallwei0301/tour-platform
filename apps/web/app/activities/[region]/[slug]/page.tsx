@@ -56,7 +56,9 @@ export async function generateMetadata(
     },
     twitter: {
       card: 'summary_large_image',
-      title: slug,
+      title: `${slug} | Midao 祕島`,
+      description: '探索台灣在地特色秘境行程，與專業導遊一起發現不一樣的台灣。',
+      images: ['https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80'],
     },
   };
 }
