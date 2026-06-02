@@ -1,33 +1,19 @@
+import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getActivityBySlugDb, buildCanonicalActivityDetailPath } from '../../../src/lib/db.mjs';
+import { getRegionBySlug, isKnownRegionSlug } from '../../../src/lib/region-slugs.mjs';
+import ActivitiesContent from '../ActivitiesContent';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
 type Props = { params: Promise<{ region: string }> };
 
-const REGION_NAMES: Record<string, string> = {
-  kaohsiung: '高雄',
-  taipei: '台北',
-  hualien: '花蓮',
-  taichung: '台中',
-  tainan: '台南',
-  keelung: '基隆',
-  taitung: '台東',
-  nantou: '南投',
-  yilan: '宜蘭',
-  pingtung: '屏東',
-  miaoli: '苗栗',
-  chiayi: '嘉義',
-  penghu: '澎湖',
-  kinmen: '金門',
-  matsu: '馬祖',
-};
-
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { region } = await params;
-  const regionName = REGION_NAMES[region] ?? region;
+  const entry = getRegionBySlug(region);
+  const regionName = entry?.displayName ?? region;
   const title = `${regionName} 在地行程導覽 | Midao 祕島`;
   const description = `探索${regionName}最道地的秘境行程，由在地導遊帶你體驗不一樣的${regionName}。`;
   return {
@@ -69,8 +55,17 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   }) as Promise<T>;
 }
 
-export default async function ActivityDetailCompatPage({ params }: { params: Promise<{ region: string }> }) {
+export default async function ActivitiesRegionPage({ params }: { params: Promise<{ region: string }> }) {
   const { region } = await params;
+
+  if (isKnownRegionSlug(region)) {
+    const entry = getRegionBySlug(region)!;
+    return (
+      <Suspense fallback={null}>
+        <ActivitiesContent initialRegion={entry.dbValue} />
+      </Suspense>
+    );
+  }
 
   let activity: Awaited<ReturnType<typeof getActivityBySlugDb>>;
   try {

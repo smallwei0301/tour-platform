@@ -33,13 +33,21 @@ interface Activity {
   reviewCount?: number;
 }
 
-export default function ActivitiesContent() {
+interface ActivitiesContentProps {
+  initialRegion?: string;
+}
+
+export default function ActivitiesContent({ initialRegion }: ActivitiesContentProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [selectedRegions, setSelectedRegions] = useState<string[]>(
-    searchParams.get('region') ? [searchParams.get('region')!] : []
+    searchParams.get('region')
+      ? [searchParams.get('region')!]
+      : initialRegion
+        ? [initialRegion]
+        : []
   );
   const [selectedTypes, setSelectedTypes] = useState<string[]>(
     searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
@@ -54,11 +62,12 @@ export default function ActivitiesContent() {
     setQuery(searchParams.get('q') || '');
     const r = searchParams.get('region');
     if (r) setSelectedRegions([r]);
+    else if (initialRegion) setSelectedRegions([initialRegion]);
     else setSelectedRegions([]);
     const t = searchParams.get('type');
     if (t) setSelectedTypes([resolveCanonicalType(TYPES, t)]);
     else setSelectedTypes([]);
-  }, [searchParams]);
+  }, [searchParams, initialRegion]);
 
   // Update URL when text query changes (debounced 500ms for shareability)
   useEffect(() => {
