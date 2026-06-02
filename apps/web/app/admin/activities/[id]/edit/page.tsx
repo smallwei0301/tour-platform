@@ -10,7 +10,16 @@ import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 
-// ── 方案型別 ──────────────────────────────────────────────
+// ── V2 方案型別（schedule modal 專用）─────────────────────
+interface V2ActivityPlan {
+  id: string;
+  name: string;
+  status: string;
+  booking_type: string;
+  base_price: number;
+}
+
+// ── Legacy 方案型別 ────────────────────────────────────────
 interface PlanConfig {
   id: string;
   label: string;
@@ -109,13 +118,13 @@ interface Schedule {
 // ── 新增場次 Modal ──────────────────────────────────────
 function AddScheduleModal({
   onClose, onAdded, activityId, availablePlans,
-}: { onClose: () => void; onAdded: () => void; activityId: string; availablePlans: PlanConfig[] }) {
+}: { onClose: () => void; onAdded: () => void; activityId: string; availablePlans: V2ActivityPlan[] }) {
   const [selectedDates,   setSelectedDates]   = useState<string[]>([]);
   const [startHH,         setStartHH]         = useState('09:00');
   const [endHH,           setEndHH]           = useState('13:00');
   const [capacity,        setCapacity]        = useState('10');
   const [minParticipants, setMinParticipants] = useState('1');
-  const [planId,          setPlanId]          = useState('');  // '' = 全部方案
+  const [planId,          setPlanId]          = useState('');  // '' = 全部方案（0 或 1 個 active 方案時允許）
   const [saving,          setSaving]          = useState(false);
   const [progress,        setProgress]        = useState('');
   const [err,             setErr]             = useState('');
@@ -147,16 +156,19 @@ function AddScheduleModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (selectedDates.length === 0) return setErr('請選擇至少一個日期');
+    // Require explicit plan selection when ≥2 active plans
+    if (availablePlans.length >= 2 && !planId) return setErr('方案有多個，請選擇適用方案');
     setSaving(true); setErr(''); setProgress('');
 
     let ok = 0; let fail = 0;
+    let lastErrMsg = '';
     for (let i = 0; i < selectedDates.length; i++) {
       const date = selectedDates[i];
       setProgress(`新增中 ${i + 1}/${selectedDates.length}⋯`);
       try {
         const startAt = `${date}T${startHH}:00+08:00`;
         const endAt   = `${date}T${endHH}:00+08:00`;
-        const res = await fetch(`/api/admin/activities/${activityId}/schedules`, {
+        const res = await fetch(`/api/v2/admin/activities/${activityId}/schedules`, {
           method: 'POST',
           headers: csrfHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify({
@@ -168,12 +180,22 @@ function AddScheduleModal({
           }),
         });
         const json = await res.json();
-        if (json.ok) ok++; else fail++;
+        if (json.ok) {
+          ok++;
+        } else {
+          fail++;
+          lastErrMsg = json.error?.message || '新增失敗';
+        }
       } catch { fail++; }
     }
 
     setSaving(false); setProgress('');
-    if (fail > 0) setErr(`⚠️ ${ok} 筆成功，${fail} 筆失敗（可能重複）`);
+    if (fail > 0) {
+      setErr(lastErrMsg
+        ? `⚠️ ${ok} 筆成功，${fail} 筆失敗：${lastErrMsg}`
+        : `⚠️ ${ok} 筆成功，${fail} 筆失敗（可能重複）`
+      );
+    }
     onAdded();
     if (fail === 0) onClose();
   }
@@ -254,13 +276,13 @@ function AddScheduleModal({
             )}
           </div>
 
-          {/* 方案選擇 */}
+          {/* 方案選擇（V2 activity_plans）*/}
           <label style={labelStyle}>
             適用方案
             <select value={planId} onChange={e => setPlanId(e.target.value)} style={fieldStyle}>
-              <option value="">全部方案</option>
+              {availablePlans.length < 2 && <option value="">全部方案</option>}
               {availablePlans.map(p => (
-                <option key={p.id} value={p.id}>{p.label}</option>
+                <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
           </label>
@@ -316,7 +338,7 @@ function AddScheduleModal({
 }
 
 // ── 場次管理 Section ─────────────────────────────────────
-function ScheduleSection({ activityId, availablePlans }: { activityId: string; availablePlans: PlanConfig[] }) {
+function ScheduleSection({ activityId }: { activityId: string }) {
   const [schedules, setSchedules]       = useState<Schedule[]>([]);
   const [loading,   setLoading]         = useState(true);
   const [showModal, setShowModal]       = useState(false);
@@ -325,6 +347,19 @@ function ScheduleSection({ activityId, availablePlans }: { activityId: string; a
   const [editSt,    setEditSt]          = useState('');
   const [schedErr,  setSchedErr]        = useState('');
   const [schedOk,   setSchedOk]         = useState('');
+
+  // V2 plans fetch — used exclusively for the schedule modal dropdown.
+  // Does NOT affect the legacy plans/DEFAULT_PLANS JSONB flow.
+  const [v2Plans, setV2Plans] = useState<V2ActivityPlan[]>([]);
+  useEffect(() => {
+    fetch(`/api/v2/admin/activities/${activityId}/plans`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.data?.plans) setV2Plans(d.data.plans);
+      })
+      .catch(() => {});
+  }, [activityId]);
+  const activePlans = v2Plans.filter(p => p.status === 'active');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -430,7 +465,7 @@ function ScheduleSection({ activityId, availablePlans }: { activityId: string; a
                   <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '12px', whiteSpace: 'nowrap', fontSize: 13 }}>
                       {s.planId
-                        ? (availablePlans.find(p => p.id === s.planId)?.label || s.planId)
+                        ? (v2Plans.find(p => p.id === s.planId)?.name || s.planId)
                         : <span style={{ color: '#9ca3af' }}>全部</span>}
                     </td>
                     <td style={{ padding: '12px', whiteSpace: 'nowrap', fontWeight: 600 }}>{fmtDate(s.startAt)}</td>
@@ -512,7 +547,7 @@ function ScheduleSection({ activityId, availablePlans }: { activityId: string; a
       {showModal && (
         <AddScheduleModal
           activityId={activityId}
-          availablePlans={availablePlans}
+          availablePlans={activePlans}
           onClose={() => setShowModal(false)}
           onAdded={() => { load(); setSchedOk('✅ 場次新增成功'); }}
         />
@@ -1382,7 +1417,7 @@ export default function AdminActivityEditPage() {
         </Card>
 
         {/* ── 場次管理 ── */}
-        <ScheduleSection activityId={activityId} availablePlans={plans} />
+        <ScheduleSection activityId={activityId} />
       </div>
     </>
   );
