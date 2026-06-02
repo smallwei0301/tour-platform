@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-02T13:23:32.429Z -->
+<!-- query_timestamp: 2026-06-02T18:41:45.777Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T13:23:32.429Z  
-**Commit SHA:** `68e04a0d95524d40aff369b19bf4d6332bb6a6ed`
+**Query timestamp:** 2026-06-02T18:41:45.777Z  
+**Commit SHA:** `4cc26e135798f1e985a19d289d08acdc8aba2c49`
 
 ---
 
@@ -14,18 +14,18 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1123 | [feat(v2/admin): strict-plan-validated schedule create endpoint (#1079 Section B, backend-only)](https://github.com/smallwei0301/tour-platform/pull/1123) | `claude/new-session-4ra75` |
-| #1112 | [fix(availability): add canonical season and conflict resolver slice](https://github.com/smallwei0301/tour-platform/pull/1112) | `kanban/issue-1067-canonical-availability-first-slice` |
+| #1156 | [docs(ops): add Supabase backup/restore runbook (#594)](https://github.com/smallwei0301/tour-platform/pull/1156) | `claude/issue594-supabase-restore-runbook` |
+| #1155 | [feat(post-trip): admin post-trip orders summary endpoint (#1154)](https://github.com/smallwei0301/tour-platform/pull/1155) | `claude/issue1154-post-trip-summary-endpoint` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (19 total)
+## Open Issues (18 total)
 
 ### P0 (2)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — pre-launch final check](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, priority:P0, security, owner:mixed, status:awaiting-implementation, launch:first-payment-blocker |
-| #1079 | [[Admin/Booking V2] Align backoffice schedules and availability with V2 activity_plans](https://github.com/smallwei0301/tour-platform/issues/1079) | type:bug, priority:P0, agent:next, owner:ai-agent, status:ready, booking-v2, admin |
+| #1079 | [[Admin/Booking V2] Align backoffice schedules and availability with V2 activity_plans](https://github.com/smallwei0301/tour-platform/issues/1079) | type:bug, priority:P0, agent:backlog, owner:ai-agent, status:ready, booking-v2, admin |
 
 ### P1 (8)
 
@@ -44,7 +44,7 @@
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1126 | [[QA] Verify post-#1122 admin login fixture and QA status URL-sync regressions](https://github.com/smallwei0301/tour-platform/issues/1126) | triaged, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, admin, a11y, test-infra |
+| #1154 | [[Post-Trip Ops #4] Admin post-trip orders summary: list orders needing follow-up](https://github.com/smallwei0301/tour-platform/issues/1154) | type:feature, priority:P2, owner:ai-agent, status:ready, orders, admin |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
@@ -57,11 +57,9 @@
 
 _none_
 
-### Other (1)
+### Other (0)
 
-| # | Title | Labels |
-|---|-------|--------|
-| #1125 | [[e2e] T1072.1 flakes under Next-dev Fast Refresh — raise waitForResponse timeout from 10s → 30s](https://github.com/smallwei0301/tour-platform/issues/1125) | type:bug, priority:P3, admin, test-infra |
+_none_
 
 ---
 
@@ -69,16 +67,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1122 | [fix(admin): URL-sync QA status filter + un-race e2e admin login (closes #1118, #1119)](https://github.com/smallwei0301/tour-platform/pull/1122) | 2026-06-02 |
-| #1120 | [fix(booking-v2): include end_at in activity_schedules SELECT so #1110 mismatch guard actually fires (closes #1115)](https://github.com/smallwei0301/tour-platform/pull/1120) | 2026-06-02 |
-| #1117 | [docs(claude.md): codify backend TDD / frontend Playwright E2E policy](https://github.com/smallwei0301/tour-platform/pull/1117) | 2026-06-02 |
-| #1116 | [fix(a11y): add ArrowRight/Left/Home/End keyboard nav to 7 tablists (#1113)](https://github.com/smallwei0301/tour-platform/pull/1116) | 2026-06-02 |
-| #1114 | [fix(booking-v2): reject plan-schedule duration mismatch on legacy plan_id=NULL schedules (closes #1110)](https://github.com/smallwei0301/tour-platform/pull/1114) | 2026-06-02 |
-| #1111 | [fix(booking-v2): eliminate ~1.5s fee detail price transient (closes #1108)](https://github.com/smallwei0301/tour-platform/pull/1111) | 2026-06-02 |
-| #1109 | [fix(activities): render region listing for /activities/:region instead of 404 (closes #1073)](https://github.com/smallwei0301/tour-platform/pull/1109) | 2026-06-02 |
-| #1107 | [fix(admin/qa): align pending status with DB constraint (closes #1072)](https://github.com/smallwei0301/tour-platform/pull/1107) | 2026-06-02 |
-| #1102 | [test: global BreadcrumbList JSON-LD guard for public pages](https://github.com/smallwei0301/tour-platform/pull/1102) | 2026-06-01 |
-| #1101 | [test: admin guide availability buffer-time label/id guard (GH-1093)](https://github.com/smallwei0301/tour-platform/pull/1101) | 2026-06-01 |
+| #1153 | [feat(post-trip): read-only post-trip status endpoint for admin order detail (#1151)](https://github.com/smallwei0301/tour-platform/pull/1153) | 2026-06-02 |
+| #1152 | [test(docs): add README stale closed-issue guard (#1143)](https://github.com/smallwei0301/tour-platform/pull/1152) | 2026-06-02 |
+| #1150 | [docs(ops): add third-party monitoring service comparison (#685)](https://github.com/smallwei0301/tour-platform/pull/1150) | 2026-06-02 |
+| #1149 | [docs(ops): add guide onboarding scorecard + retrospective template (#318)](https://github.com/smallwei0301/tour-platform/pull/1149) | 2026-06-02 |
+| #1148 | [feat(post-trip): add tripReportStatus + adminFollowupCategory predicates (#1147)](https://github.com/smallwei0301/tour-platform/pull/1148) | 2026-06-02 |
+| #1146 | [docs(ops): add CS drill scenario scripts + emergency contact chain template (#319)](https://github.com/smallwei0301/tour-platform/pull/1146) | 2026-06-02 |
+| #1145 | [docs(readme): remove stale #621/#787 as active Booking V2 must-do (#1143)](https://github.com/smallwei0301/tour-platform/pull/1145) | 2026-06-02 |
+| #1144 | [fix(e2e): raise waitForResponse timeout 10s → 30s in T1072.1–T1072.5 (#1125)](https://github.com/smallwei0301/tour-platform/pull/1144) | 2026-06-02 |
+| #1141 | [fix(seo): add twitter:card overrides to 7 public-facing pages](https://github.com/smallwei0301/tour-platform/pull/1141) | 2026-06-02 |
+| #1140 | [feat(post-trip): add pure eligibility predicates for completion, review-invitation, payout-hold (#1139)](https://github.com/smallwei0301/tour-platform/pull/1140) | 2026-06-02 |
 
 ---
 
