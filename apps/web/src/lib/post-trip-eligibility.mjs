@@ -94,3 +94,45 @@ export function isPayoutOnHold({
   if (hasOversellIssue) return 'oversell_investigation';
   return null;
 }
+
+/**
+ * What is the guide's trip report status for a given activity?
+ * - 'pending': activity ended, guide hasn't submitted yet, within 24h grace
+ * - 'submitted': guide submitted the report
+ * - 'overdue': 24h has passed since activity end without submission
+ *
+ * @param {{ scheduleEndAt: Date|string, submittedAt?: Date|string|null, now?: Date }} opts
+ * @returns {'pending' | 'submitted' | 'overdue'}
+ */
+export function tripReportStatus({ scheduleEndAt, submittedAt = null, now = new Date() }) {
+  if (submittedAt) return 'submitted';
+
+  const end = new Date(scheduleEndAt);
+  const deadline = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+  return now >= deadline ? 'overdue' : 'pending';
+}
+
+/**
+ * Which admin follow-up queue should this post-trip case land in?
+ * Returns the highest-severity applicable category.
+ *
+ * Priority: refund_dispute_safety > payment_order_mismatch > guide_report_risk > review_moderation
+ *
+ * @param {{ isSafetyCase?: boolean, isDisputed?: boolean, hasComplaint?: boolean,
+ *   isPaymentDispute?: boolean, missingTripReport?: boolean, isNegativeReview?: boolean }} opts
+ * @returns {'refund_dispute_safety' | 'payment_order_mismatch' | 'guide_report_risk' | 'review_moderation' | null}
+ */
+export function adminFollowupCategory({
+  isSafetyCase = false,
+  isDisputed = false,
+  hasComplaint = false,
+  isPaymentDispute = false,
+  missingTripReport = false,
+  isNegativeReview = false,
+} = {}) {
+  if (isSafetyCase || hasComplaint) return 'refund_dispute_safety';
+  if (isDisputed || isPaymentDispute) return 'payment_order_mismatch';
+  if (missingTripReport) return 'guide_report_risk';
+  if (isNegativeReview) return 'review_moderation';
+  return null;
+}

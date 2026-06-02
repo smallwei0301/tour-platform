@@ -4,6 +4,8 @@ import {
   isCompletionEligible,
   isReviewInvitationEligible,
   isPayoutOnHold,
+  tripReportStatus,
+  adminFollowupCategory,
 } from '../../src/lib/post-trip-eligibility.mjs';
 
 const NOW = new Date('2026-06-03T10:00:00Z');
@@ -149,5 +151,60 @@ describe('isPayoutOnHold', () => {
       isPayoutOnHold({ isDisputed: true, isSafetyCase: true, hasComplaint: true, refundAmountTwd: 100, hasOversellIssue: true }),
       'payment_dispute'
     );
+  });
+});
+
+// ── tripReportStatus (6 cases) ────────────────────────────────────────────────
+
+describe('tripReportStatus', () => {
+  const PAST_END_TS = new Date('2026-06-01T12:00:00Z');
+  const NOW_TS = new Date('2026-06-03T10:00:00Z');
+  const RECENT_END_TS = new Date('2026-06-03T08:00:00Z'); // 2h ago (within 24h)
+  const SUBMITTED_AT = new Date('2026-06-02T10:00:00Z');
+
+  it('1. submitted → "submitted" regardless of deadline', () => {
+    assert.equal(tripReportStatus({ scheduleEndAt: PAST_END_TS, submittedAt: SUBMITTED_AT, now: NOW_TS }), 'submitted');
+  });
+  it('2. null submittedAt + past deadline → "overdue"', () => {
+    assert.equal(tripReportStatus({ scheduleEndAt: PAST_END_TS, submittedAt: null, now: NOW_TS }), 'overdue');
+  });
+  it('3. undefined submittedAt + past deadline → "overdue"', () => {
+    assert.equal(tripReportStatus({ scheduleEndAt: PAST_END_TS, now: NOW_TS }), 'overdue');
+  });
+  it('4. no submission + within 24h grace → "pending"', () => {
+    assert.equal(tripReportStatus({ scheduleEndAt: RECENT_END_TS, now: NOW_TS }), 'pending');
+  });
+  it('5. exactly at 24h boundary → "overdue" (exclusive)', () => {
+    const exactEnd = new Date(NOW_TS.getTime() - 24 * 60 * 60 * 1000);
+    assert.equal(tripReportStatus({ scheduleEndAt: exactEnd, now: NOW_TS }), 'overdue');
+  });
+  it('6. submitted = empty string treated as falsy → "overdue" if past deadline', () => {
+    assert.equal(tripReportStatus({ scheduleEndAt: PAST_END_TS, submittedAt: '', now: NOW_TS }), 'overdue');
+  });
+});
+
+// ── adminFollowupCategory (7 cases) ───────────────────────────────────────────
+
+describe('adminFollowupCategory', () => {
+  it('1. isSafetyCase → "refund_dispute_safety"', () => {
+    assert.equal(adminFollowupCategory({ isSafetyCase: true }), 'refund_dispute_safety');
+  });
+  it('2. hasComplaint → "refund_dispute_safety"', () => {
+    assert.equal(adminFollowupCategory({ hasComplaint: true }), 'refund_dispute_safety');
+  });
+  it('3. isDisputed → "payment_order_mismatch"', () => {
+    assert.equal(adminFollowupCategory({ isDisputed: true }), 'payment_order_mismatch');
+  });
+  it('4. isPaymentDispute → "payment_order_mismatch"', () => {
+    assert.equal(adminFollowupCategory({ isPaymentDispute: true }), 'payment_order_mismatch');
+  });
+  it('5. missingTripReport → "guide_report_risk"', () => {
+    assert.equal(adminFollowupCategory({ missingTripReport: true }), 'guide_report_risk');
+  });
+  it('6. isNegativeReview → "review_moderation"', () => {
+    assert.equal(adminFollowupCategory({ isNegativeReview: true }), 'review_moderation');
+  });
+  it('7. safety wins over complaint + dispute + missingReport + negative review', () => {
+    assert.equal(adminFollowupCategory({ isSafetyCase: true, isDisputed: true, missingTripReport: true, isNegativeReview: true }), 'refund_dispute_safety');
   });
 });
