@@ -227,3 +227,4 @@ describe('computePostTripStatus convenience', () => {
     return result;
   });
 });
+
