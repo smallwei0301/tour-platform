@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-02T20:09:35.801Z -->
+<!-- query_timestamp: 2026-06-02T20:27:26.059Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T20:09:35.801Z  
-**Commit SHA:** `7431316c69e1e1caa57c864e48f68fd53acf43a0`
+**Query timestamp:** 2026-06-02T20:27:26.059Z  
+**Commit SHA:** `92f7c37fb956fa37128d72ff546ac7c608efe3b1`
 
 ---
 
