@@ -134,6 +134,30 @@ test('GH-1067 RED: overlapping active booking blocks half-day/full-day combinati
   assert.equal(state.state, 'blocked_by_conflict');
 });
 
+test('GH-1067 RED: evaluator-level canonical conflict check blocks same-guide overlap before availability', () => {
+  const out = evaluateEffectiveBookingAvailability({
+    ...BASE_INPUT,
+    rules: [weekdayRule({ weekday: 5, end: '17:00' })],
+    bookings: [
+      {
+        id: 'b-full',
+        guide_id: 'g-1067',
+        activity_id: 'a-1067',
+        activity_plan_id: 'p-1067',
+        start_at: '2026-04-10T09:00:00+08:00',
+        end_at: '2026-04-10T17:00:00+08:00',
+        status: 'confirmed',
+      },
+    ],
+    seasons: [season({ startMonth: 1, startDay: 1, endMonth: 12, endDay: 31 })],
+  });
+
+  assert.equal(out.available, false);
+  assert.equal(out.canonicalState, 'blocked_by_conflict');
+  assert.equal(out.reasonCode, 'blocked_by_conflict');
+  assert.equal(out.evaluation.slots.length > 0, true);
+});
+
 test('GH-1067 RED: effective booking evaluator propagates outside_season canonical reason for stale draft payload reject', () => {
   const out = evaluateEffectiveBookingAvailability({
     ...BASE_INPUT,

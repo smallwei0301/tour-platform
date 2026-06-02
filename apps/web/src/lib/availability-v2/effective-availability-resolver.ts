@@ -114,16 +114,16 @@ export function resolveCanonicalAvailabilityState(params: {
     return { state: 'outside_rule' };
   }
 
-  if (params.slotAvailable) {
-    return { state: 'available' };
-  }
-
   if (params.slotUnavailableReason === 'BLACKOUT_CONFLICT') {
     return { state: 'blackout' };
   }
 
   if (params.slotUnavailableReason === 'BOOKING_CONFLICT' || hasBlockingBookingConflict(params)) {
     return { state: 'blocked_by_conflict' };
+  }
+
+  if (params.slotAvailable) {
+    return { state: 'available' };
   }
 
   if (!params.capacityAvailable) {
