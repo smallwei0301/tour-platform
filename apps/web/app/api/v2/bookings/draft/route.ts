@@ -48,6 +48,7 @@ import {
   excludeSameActivityPlanDateBookings,
   normalizeBookingParticipants,
 } from '../../../../../src/lib/availability-v2/group-booking-rule';
+import { checkPlanScheduleDurationMismatch } from '../../../../../src/lib/availability-v2/plan-schedule-mismatch.mjs';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -685,6 +686,21 @@ export async function POST(request: NextRequest) {
           }
         }
       }
+    }
+
+    // #1110: When schedule.plan_id IS NULL (legacy shared schedule), the existing
+    // planMatches check passes any plan UUID. Compare the requested plan's
+    // duration_minutes against the DB schedule's real time window before continuing,
+    // so a Plan B (7h) + Plan A timing (5.75h) submission gets rejected up front.
+    const planScheduleMismatch = checkPlanScheduleDurationMismatch(
+      planData,
+      selectedScheduleForAvailability,
+    );
+    if (planScheduleMismatch) {
+      return Response.json(
+        errorV2(planScheduleMismatch.reasonCode, planScheduleMismatch.messageZh),
+        { status: 422 },
+      );
     }
 
     const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
