@@ -17,6 +17,7 @@
  *   - customerNote (optional): Customer note
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
 import { createClient } from '../../../../../src/lib/supabase/server';
@@ -99,7 +100,7 @@ function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
 }
 
 async function isSlotInGeneratedV2Availability(
-  supabase: any,
+  supabase: SupabaseClient,
   payload: {
     guideId: string;
     planId: string;

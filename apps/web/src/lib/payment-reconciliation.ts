@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabase, hasSupabaseEnv, processPaymentCallbackDb } from './db.mjs';
 import { queryEcpayTradeInfo } from './ecpay';
 import { recordIncident } from './incidents';
@@ -39,7 +40,7 @@ function isProviderPaid(query: { ok: boolean; rtnCode: string; tradeStatus: stri
   return rtnCode === '1' && tradeStatus === '1';
 }
 
-async function upsertReconciledPaidEvent(supabase: any, payment: CandidatePayment) {
+async function upsertReconciledPaidEvent(supabase: SupabaseClient, payment: CandidatePayment) {
   let existingQuery = supabase
     .from('payment_events')
     .select('id')
