@@ -21,15 +21,35 @@ create index if not exists idx_activity_plan_seasons_plan_active
 
 alter table public.activity_plan_seasons enable row level security;
 
-create policy if not exists "Activity plan seasons read for authenticated"
-  on public.activity_plan_seasons
-  for select
-  to authenticated
-  using (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'activity_plan_seasons'
+      AND policyname = 'Activity plan seasons read for authenticated'
+  ) THEN
+    CREATE POLICY "Activity plan seasons read for authenticated"
+      ON public.activity_plan_seasons
+      FOR SELECT
+      TO authenticated
+      USING (true);
+  END IF;
 
-create policy if not exists "Activity plan seasons mutate for service role"
-  on public.activity_plan_seasons
-  for all
-  to service_role
-  using (true)
-  with check (true);
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'activity_plan_seasons'
+      AND policyname = 'Activity plan seasons mutate for service role'
+  ) THEN
+    CREATE POLICY "Activity plan seasons mutate for service role"
+      ON public.activity_plan_seasons
+      FOR ALL
+      TO service_role
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END
+$$;
