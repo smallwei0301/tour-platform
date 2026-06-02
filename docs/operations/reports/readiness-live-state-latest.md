@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-01T19:42:05.355Z -->
+<!-- query_timestamp: 2026-06-02T00:58:35.128Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-01T19:42:05.355Z  
-**Commit SHA:** `1649f6f8c820851cafd010c1c616a37a29a6a001`
+**Query timestamp:** 2026-06-02T00:58:35.128Z  
+**Commit SHA:** `8fbda555fa49bdb615b8ee5b0b6e3fe3f59f7f22`
 
 ---
 
@@ -18,12 +18,11 @@
 
 ## Open Issues (28 total)
 
-### P0 (2)
+### P0 (1)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1079 | [[Admin/Booking V2] Align backoffice schedules and availability with V2 activity_plans](https://github.com/smallwei0301/tour-platform/issues/1079) | type:bug, priority:P0, agent:next, owner:ai-agent, status:ready, booking-v2, admin |
-| #1069 | [[Bug] Booking V2 capacity/blocked reasons and public/backoffice plan drift](https://github.com/smallwei0301/tour-platform/issues/1069) | type:bug, priority:P0, guide-dashboard, traveler-booking, booking-v2, admin |
 
 ### P1 (15)
 
@@ -45,11 +44,13 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (10)
+### P2 (12)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #1104 | [[QA] Verify post-#1092–#1102 a11y and SEO regression guards](https://github.com/smallwei0301/tour-platform/issues/1104) | triaged, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, type:qa, docs, seo, admin |
+| #1103 | [[TypeScript] Replace supabase: any with SupabaseClient type in booking-critical lib files](https://github.com/smallwei0301/tour-platform/issues/1103) | triaged, type:optimization, priority:P2, agent:backlog, owner:ai-agent, status:ready, payments, booking-v2 |
 | #1090 | [[QA] Verify post-#1084/#1087/#1089 a11y and SEO regressions](https://github.com/smallwei0301/tour-platform/issues/1090) | triaged, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, docs, admin |
 | #1081 | [[Ops] Harden readiness live-state snapshot auto-refresh after stale regression](https://github.com/smallwei0301/tour-platform/issues/1081) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, docs |
 | #1078 | [[Ops] Prevent temporary Go/No-Go report artifacts from polluting repo reports](https://github.com/smallwei0301/tour-platform/issues/1078) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, docs |
@@ -64,11 +65,9 @@
 
 _none_
 
-### Other (1)
+### Other (0)
 
-| # | Title | Labels |
-|---|-------|--------|
-| #1103 | [[TypeScript] Replace supabase: any with SupabaseClient type in booking-critical lib files](https://github.com/smallwei0301/tour-platform/issues/1103) | — |
+_none_
 
 ---
 
