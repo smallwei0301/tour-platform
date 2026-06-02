@@ -1,9 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = '/root/.openclaw/workspace/tour-platform/apps/web';
+// Resolve paths relative to this file: tests/api/ -> ../.. -> apps/web/
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
+const ROOT = resolve(__dirname, '..', '..');
 
 // Source-contract tests — read the route file and verify expected imports/patterns
 describe('POST_TRIP_STATUS endpoint source contracts', () => {
