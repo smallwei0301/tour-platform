@@ -10,6 +10,7 @@ import {
   type SlotGeneratorDeps,
   type SlotGeneratorInput,
 } from '../slot-generator.ts';
+import type { ActivityPlanSeason } from './effective-availability-resolver.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -46,6 +47,8 @@ export interface BookingAvailabilityEvaluatorInput {
   plan: ActivityPlan;
   selectedSchedule?: EvaluatorSchedule | null;
   selectedScheduleAuthority?: Exclude<SelectedScheduleAuthority, 'generated' | 'none'>;
+  seasons?: ActivityPlanSeason[];
+  planStatus?: string;
 }
 
 export interface BookingAvailabilityEvaluation {
@@ -61,6 +64,12 @@ export interface BookingAvailabilityEvaluation {
     schedulePresentInGeneratedSlots: boolean;
     hasRules: boolean;
     groupedRuleFailuresByDate: Record<string, { reasonCode?: string; messageZh?: string }>;
+    rules: AvailabilityRule[];
+    blackouts: BlackoutWindow[];
+    bookings: ExistingBooking[];
+    seasons: ActivityPlanSeason[];
+    seasonGateEnabled: boolean;
+    planStatus: string;
   };
 }
 
@@ -266,6 +275,12 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       schedulePresentInGeneratedSlots,
       hasRules: input.rules.length > 0,
       groupedRuleFailuresByDate: Object.fromEntries(groupedRuleFailuresByDate.entries()),
+      rules: input.rules,
+      blackouts: input.blackouts,
+      bookings: input.bookings,
+      seasons: input.seasons ?? [],
+      seasonGateEnabled: input.seasons !== undefined,
+      planStatus: input.planStatus ?? 'active',
     },
   };
 }

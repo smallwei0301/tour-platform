@@ -70,7 +70,7 @@ test('GH-1069 RED: stale schedule fallback only passes when requested startAt ex
   assert.equal(out.reasonCode, 'BOOKING_CONFLICT');
 });
 
-test('GH-1069 RED: authoritative selected schedule closed/full rejects even when generated slots exist', () => {
+test('GH-1069 RED: authoritative selected schedule closed/full rejects with canonical conflict reason', () => {
   const out = evaluateEffectiveBookingAvailability({
     ...BASE,
     rules: [ruleAtNine()],
@@ -88,7 +88,7 @@ test('GH-1069 RED: authoritative selected schedule closed/full rejects even when
   });
 
   assert.equal(out.available, false);
-  assert.equal(out.reasonCode, 'BOOKING_CONFLICT');
+  assert.equal(out.reasonCode, 'blocked_by_conflict');
 });
 
 test('GH-1069 RED: stale schedule fallback cannot bypass effective generated unavailable decision', () => {
