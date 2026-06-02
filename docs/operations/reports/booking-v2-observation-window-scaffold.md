@@ -17,10 +17,15 @@
 - V2 draft: `POST /api/v2/bookings/draft`
 - Plan/schedule alignment: ✅ All sections of #1079 complete
 
-### Recent Relevant PRs
+### Recent Relevant PRs (2026-06-02/03 window)
 - #1112: Canonical season + conflict resolver
 - #1120: end_at in activity_schedules SELECT (fixes mismatch guard)
+- #1123: Strict-plan-validated schedule create endpoint
+- #1134: Admin schedule modal sources from V2 activity_plans
+- #1135: Readiness gate — LEGACY_ONLY_PLANS, ALL_PLANS_INACTIVE, NO_FUTURE_SCHEDULES
+- #1137: Guide availability binds V2 activity_plan_id
 - #1138: Activity detail surfaces inactive-plan state (stops masking)
+- #1158/#1159: Security HEAD cleanup
 
 ## Metrics to Monitor
 
