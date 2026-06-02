@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
+import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
+
+const SCHEDULE_FILTERS = ['upcoming', 'all', 'past'] as const;
 
 type Schedule = {
   id: string; activityId: string; tourTitle: string; planName: string; date: string; endAt?: string;
@@ -15,6 +18,7 @@ export default function GuideSchedulesPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('upcoming');
+  const tabKb = useTablistKeyboard(SCHEDULE_FILTERS, filter, setFilter);
   const [editingCap, setEditingCap] = useState<string | null>(null);
   const [capValue, setCapValue] = useState('');
 
@@ -95,12 +99,14 @@ export default function GuideSchedulesPage() {
 
       {/* Filter Tabs */}
       <div role="tablist" aria-label="場次篩選" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {(['upcoming', 'all', 'past'] as Filter[]).map((f) => (
+        {SCHEDULE_FILTERS.map((f, i) => (
           <button
             key={f}
+            ref={tabKb.registerTab(i)}
             role="tab"
             aria-selected={filter === f}
             onClick={() => setFilter(f)}
+            onKeyDown={tabKb.onKeyDown}
             style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               background: filter === f ? '#7c3aed' : '#f3f4f6',

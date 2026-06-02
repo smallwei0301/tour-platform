@@ -7,6 +7,10 @@ import { Card, PageHeader, StatusBadge, Select, EmptyState } from '../../../src/
 import { ResponsiveModal } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { AvatarUpload } from '../../../src/components/admin/AvatarUpload';
+import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
+
+const GUIDES_TABS = ['applications', 'profiles'] as const;
+type GuidesTab = (typeof GUIDES_TABS)[number];
 
 type GuideApp = {
   id: string; fullName: string; email: string; phone: string;
@@ -34,7 +38,8 @@ export default function AdminGuidesPage() {
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState<GuideProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
-  const [tab, setTab] = useState<'applications' | 'profiles'>('applications');
+  const [tab, setTab] = useState<GuidesTab>('applications');
+  const tabKb = useTablistKeyboard(GUIDES_TABS, tab, setTab);
   const [inviteResult, setInviteResult] = useState<InviteResult>(null);
   const [inviteLoading, setInviteLoading] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -259,8 +264,8 @@ export default function AdminGuidesPage() {
       <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tabs */}
         <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }} role="tablist" aria-label="導遊管理分頁">
-          <button role="tab" aria-selected={tab === 'applications'} style={tabStyle('applications')} onClick={() => setTab('applications')}>📋 導遊申請</button>
-          <button role="tab" aria-selected={tab === 'profiles'} style={tabStyle('profiles')} onClick={() => setTab('profiles')}>👤 已上線導遊</button>
+          <button ref={tabKb.registerTab(0)} role="tab" aria-selected={tab === 'applications'} style={tabStyle('applications')} onClick={() => setTab('applications')} onKeyDown={tabKb.onKeyDown}>📋 導遊申請</button>
+          <button ref={tabKb.registerTab(1)} role="tab" aria-selected={tab === 'profiles'} style={tabStyle('profiles')} onClick={() => setTab('profiles')} onKeyDown={tabKb.onKeyDown}>👤 已上線導遊</button>
         </Card>
 
         {/* ── Applications Tab ── */}
