@@ -66,3 +66,28 @@ Logic that must be importable by edge middleware or run without TS compilation (
 - New API work should target the `v2` routes/contracts unless fixing legacy behavior; check `docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md` for the V2 contract.
 - Keep readiness/ops docs in sync with real state via `npm run readiness:snapshot` rather than editing live counts by hand.
 - Secrets are guarded at startup (`src/config/security-env.mjs`, `startup-env.mjs`) and by a CI secret-scan workflow — never commit real secrets or weaken these guards.
+
+## Testing policy
+
+**Match the test style to the layer being changed. Always reuse existing fixtures/helpers before writing new ones.**
+
+### Backend tasks → TDD with `node --test`
+Server routes, `src/lib/**` helpers, DB gateways, evaluators, validators, schedulers, payment/refund pipelines, anything that doesn't render a DOM.
+
+1. **Red first**: write `apps/web/tests/{api,unit,services}/issueNNNN-*.test.mjs` covering the new behavior; run it and see it fail.
+2. **Green**: write the minimum code to make the test pass. Prefer extracting pure helpers under `src/lib/` so the unit can be tested without Supabase — the in-memory fallback (`hasSupabaseEnv()` false branch) is the existing seam.
+3. **Refactor + regression**: rerun the targeted file (`node --test apps/web/tests/api/issueNNNN-*.test.mjs`) and then `npm test` for the whole suite before committing.
+4. **Source-contract tests** (read source via `fs.readFileSync` + regex) are acceptable for locking down route wiring (import order, `.eq('status', …)` shape, helper-call-before-`.insert(`). Recent examples: `tests/api/issue1072-admin-qa-status-helper.test.mjs`, `tests/api/issue1110-plan-schedule-mismatch.test.mjs`.
+
+### Frontend / frontend-interaction tasks → Playwright E2E
+Pages under `apps/web/app/**`, client components, navigation, filters, forms, fee detail / price rendering, anything users see or click.
+
+1. **Add a spec under `apps/web/e2e/issueNNNN-*.spec.ts`** following the existing file naming (`issue1072-admin-qa-pending-tab.spec.ts`, `issue1073-activities-region-listing.spec.ts` are the templates).
+2. **Reuse `apps/web/e2e/helpers.ts`** — it already provides `adminLogin()` and the `authedPage` fixture for admin-authed pages. Don't re-implement auth; extend `helpers.ts` only if a shared concept is genuinely missing (e.g. a new auth realm, a new shared fixture).
+3. **Mock backend via `page.route('**/api/**', …)`** so tests don't depend on Supabase seed. See `e2e/issue1073-activities-region-listing.spec.ts` for the pattern (mocked `/api/activities` + `/api/me/wishlist/ids`).
+4. **Always keep the new spec file committed.** Do not delete or rewrite existing specs (`t0-*.spec.ts` … `t7-t8-*.spec.ts`, `funnel-*.spec.ts`, deeplink/booking-flow suites). If an existing spec needs to change to match a new contract, update assertions surgically and explain why in the PR.
+5. **Run locally** with `npm run test:e2e -w @tour/web -- e2e/issueNNNN-…spec.ts` against the dev server (`npm run dev` in another terminal — the config has no `webServer` block and assumes one is running).
+6. **Pair with backend unit tests** when the frontend bug is driven by a backend behavior — e.g. issue #1108 ships both `tests/ui/issue1108-…` source-contract tests (locking the helper integration) and the page change.
+
+### Hybrid tasks
+Fix the backend layer with TDD, then add a Playwright E2E spec that exercises the visible behavior end-to-end. Don't skip the E2E spec just because the unit tests pass — the regression that gets users is almost always at the seam between layers.
