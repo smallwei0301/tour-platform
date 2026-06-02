@@ -173,7 +173,7 @@
 - 旅客緊急聯絡人（訂單填寫）
 - 保險顧問：待確認（#797 D.3）
 - 法律顧問：待確認（#797 D.1）
-- Wei 備用電話：填入 `05-emergency-contact-chain.md`
+- Wei 備用電話：填入 `11-emergency-contact-chain.md`
 
 ---
 
@@ -189,4 +189,4 @@
 - 退款政策：`docs/05-business/06-payment-plan/04-refund-policy-v2.md`
 - 事故通報矩陣：`docs/05-business/07-operations-plan/04-incident-response.md §8`（含 Decision Log — 待 Wei 確認 D.5）
 - ECPay 商家後台：依合約提供的 URL（不記錄在 repo）
-- 緊急聯絡鏈：`docs/05-business/07-operations-plan/05-emergency-contact-chain.md`（待建立）
+- 緊急聯絡鏈：`docs/05-business/07-operations-plan/11-emergency-contact-chain.md`（待建立）

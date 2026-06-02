@@ -120,4 +120,4 @@ GitHub Actions synthetic probe（#629）的殘餘風險：若 GitHub 與 Vercel 
 
 完成設定後，請更新以下文件：
 - `docs/operations/synthetic-health-monitoring.md` §107-125：移除「accepted deferred risk」，填入選定的服務、endpoint、interval、alert channel
-- `docs/05-business/07-operations-plan/05-emergency-contact-chain.md`：補上監控告警的 escalation contact
+- `docs/05-business/07-operations-plan/11-emergency-contact-chain.md`：補上監控告警的 escalation contact
