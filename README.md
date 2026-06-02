@@ -228,11 +228,13 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
    - 取消、退款、出團異常、緊急事故要有人能照流程處理
 
 ### B. Booking V2 / Traveler Flow 必做
-1. **#621** 要完成 V2 primary traveler flow：activity detail CTA -> `/booking/[slug]` -> slots -> draft -> checkout
-2. **#787** 要讓 V2 使用旅客已熟悉的 legacy booking UI，降低上線前體驗風險
+1. ~~**#621** 要完成 V2 primary traveler flow~~ — **CLOSED** (PR #800 已落地)
+2. ~~**#787** 要讓 V2 使用 legacy booking UI~~ — **CLOSED** (PR #789 已落地)
 3. **#642** 要持續監看 observation window，確認 legacy fallback 不會靜默變回主流程
-4. **Payment / order / booking 狀態鏈路** 仍需保留上線前證據：callback、idempotency、booking/order/payment 三層狀態一致
-5. **Ops drills**：production alert drill、Supabase restore drill、operator handoff 需要可執行證據
+4. **#1079 Booking V2 plan/source alignment** — 5 個子 section 已於 2026-06-03 全部合併（PR #1123/#1134/#1135/#1137/#1138）；後續子工作詳見 open issues
+5. **Payment / order / booking 狀態鏈路** 仍需保留上線前證據：callback、idempotency、booking/order/payment 三層狀態一致
+6. **Ops drills**：production alert drill、Supabase restore drill、operator handoff 需要可執行證據
+7. 當前主線焦點：查閱 `docs/operations/reports/readiness-live-state-latest.md` 或執行 `npm run readiness:snapshot`
 
 ### C. 安全 / 穩定化必做
 1. **#68 TypeScript strict mode** 逐步擴大到 booking-critical 以外模組
