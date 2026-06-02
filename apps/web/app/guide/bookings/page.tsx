@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
+import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
+
+const BOOKINGS_STATUS_TABS = [
+  { value: '', label: '全部' },
+  { value: 'confirmed', label: '已確認' },
+  { value: 'pending_payment', label: '待付款' },
+  { value: 'cancelled', label: '已取消' },
+] as const;
+const BOOKINGS_STATUS_VALUES = BOOKINGS_STATUS_TABS.map((t) => t.value);
 
 type Booking = {
   id: string; guestName: string; maskedEmail: string; scheduleDate: string | null;
@@ -35,7 +44,8 @@ export default function GuideBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<BookingDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const tabKb = useTablistKeyboard(BOOKINGS_STATUS_VALUES, statusFilter, setStatusFilter);
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -183,19 +193,17 @@ export default function GuideBookingsPage() {
     <div>
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單查看</h1>
 
-      {/* Filter — role=tablist/aria-selected from PR #1057. */}
+      {/* Filter — role=tablist/aria-selected from PR #1057 + ArrowRight/Left
+          keyboard nav from #1113. */}
       <div role="tablist" aria-label="預約狀態篩選" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {[
-          { value: '', label: '全部' },
-          { value: 'confirmed', label: '已確認' },
-          { value: 'pending_payment', label: '待付款' },
-          { value: 'cancelled', label: '已取消' },
-        ].map((f) => (
+        {BOOKINGS_STATUS_TABS.map((f, i) => (
           <button
             key={f.value}
+            ref={tabKb.registerTab(i)}
             role="tab"
             aria-selected={statusFilter === f.value}
             onClick={() => setStatusFilter(f.value)}
+            onKeyDown={tabKb.onKeyDown}
             style={{
               padding: '7px 16px', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer',
               background: statusFilter === f.value ? '#7c3aed' : '#f3f4f6',

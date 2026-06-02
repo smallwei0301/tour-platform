@@ -5,6 +5,15 @@ import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 import { ResponsiveModal, ResponsiveTable, FormGrid, type ResponsiveColumn } from '../../../../../src/components/admin/responsive';
+import { useTablistKeyboard } from '../../../../../src/lib/use-tablist-keyboard';
+
+const PLAN_STATUS_TABS = [
+  { value: '', label: '全部' },
+  { value: 'active', label: '啟用中' },
+  { value: 'inactive', label: '已停用' },
+  { value: 'archived', label: '已封存' },
+] as const;
+const PLAN_STATUS_VALUES = PLAN_STATUS_TABS.map((t) => t.value);
 
 type ActivityPlan = {
   id: string;
@@ -76,6 +85,7 @@ export default function ActivityPlansPage() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const tabKb = useTablistKeyboard(PLAN_STATUS_VALUES, statusFilter, setStatusFilter);
 
   const createDefaultForm = () => ({
     name: '',
@@ -541,17 +551,14 @@ export default function ActivityPlansPage() {
       <div className="admin-page">
         {/* Status Filter */}
         <div role="tablist" aria-label="方案狀態篩選" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          {[
-            { value: '', label: '全部' },
-            { value: 'active', label: '啟用中' },
-            { value: 'inactive', label: '已停用' },
-            { value: 'archived', label: '已封存' },
-          ].map((tab) => (
+          {PLAN_STATUS_TABS.map((tab, i) => (
             <button
               key={tab.value}
+              ref={tabKb.registerTab(i)}
               role="tab"
               aria-selected={statusFilter === tab.value}
               onClick={() => setStatusFilter(tab.value)}
+              onKeyDown={tabKb.onKeyDown}
               style={{
                 padding: '10px 18px',
                 border: 'none',

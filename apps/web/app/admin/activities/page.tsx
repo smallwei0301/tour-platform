@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
 import { ResponsiveTable, ResponsiveModal, type ResponsiveColumn } from '../../../src/components/admin/responsive';
+import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
 
 type Activity = {
   id: string;
@@ -28,7 +29,8 @@ const STATUS_TABS = [
   { value: 'draft', label: '草稿' },
   { value: 'published', label: '已發佈' },
   { value: 'archived', label: '已封存' },
-];
+] as const;
+const STATUS_TAB_VALUES = STATUS_TABS.map((t) => t.value);
 
 const STATUS_BADGE: Record<string, { variant: 'success' | 'warning' | 'danger' | 'default'; label: string }> = {
   draft:     { variant: 'warning', label: '草稿' },
@@ -40,7 +42,8 @@ export default function AdminActivitiesPage() {
   const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const tabKb = useTablistKeyboard(STATUS_TAB_VALUES, statusFilter, setStatusFilter);
   const [busy, setBusy] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
@@ -213,12 +216,14 @@ export default function AdminActivitiesPage() {
       <div className="admin-page">
         {/* Status tabs */}
         <div role="tablist" aria-label="活動狀態篩選" style={{ display: 'flex', gap: 4, marginBottom: 20, borderBottom: '2px solid #f0f0f0', paddingBottom: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          {STATUS_TABS.map((tab) => (
+          {STATUS_TABS.map((tab, i) => (
             <button
               key={tab.value}
+              ref={tabKb.registerTab(i)}
               role="tab"
               aria-selected={statusFilter === tab.value}
               onClick={() => setStatusFilter(tab.value)}
+              onKeyDown={tabKb.onKeyDown}
               style={{
                 padding: '10px 18px', border: 'none', background: 'none',
                 fontWeight: statusFilter === tab.value ? 700 : 400,

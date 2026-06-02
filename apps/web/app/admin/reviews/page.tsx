@@ -4,6 +4,15 @@ import { useEffect, useState } from 'react';
 import { Card, PageHeader, Badge } from '../../../src/components/admin/ui';
 import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
+
+const REVIEW_STATUS_TABS = [
+  { value: 'pending', label: '待審核' },
+  { value: 'approved', label: '已核准' },
+  { value: 'rejected', label: '已拒絕' },
+  { value: '', label: '全部' },
+] as const;
+const REVIEW_STATUS_VALUES = REVIEW_STATUS_TABS.map((t) => t.value);
 
 type Review = {
   id: string;
@@ -21,7 +30,8 @@ export default function AdminReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [statusFilter, setStatusFilter] = useState('pending');
+  const [statusFilter, setStatusFilter] = useState<string>('pending');
+  const tabKb = useTablistKeyboard(REVIEW_STATUS_VALUES, statusFilter, setStatusFilter);
 
   async function load(status: string) {
     setLoading(true);
@@ -170,17 +180,14 @@ export default function AdminReviewsPage() {
 
       {/* Status filter tabs */}
       <div role="tablist" aria-label="評價狀態篩選" style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        {[
-          { value: 'pending', label: '待審核' },
-          { value: 'approved', label: '已核准' },
-          { value: 'rejected', label: '已拒絕' },
-          { value: '', label: '全部' },
-        ].map(tab => (
+        {REVIEW_STATUS_TABS.map((tab, i) => (
           <button
             key={tab.value}
+            ref={tabKb.registerTab(i)}
             role="tab"
             aria-selected={statusFilter === tab.value}
             onClick={() => setStatusFilter(tab.value)}
+            onKeyDown={tabKb.onKeyDown}
             style={{
               padding: '7px 16px', borderRadius: 8, border: '1px solid #e5e7eb',
               background: statusFilter === tab.value ? 'var(--tp-primary)' : '#fff',
