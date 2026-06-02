@@ -8,6 +8,7 @@ import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../
 import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
+import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
 import { track } from '../../../src/lib/track';
 
 // ── 型別 ──────────────────────────────────────────────────────
@@ -36,10 +37,15 @@ interface Activity {
   schedules: Schedule[];
   plans?: Array<{
     id?: string | null;
+    slug?: string | null;
     status?: string | null;
     name?: string | null;
     label?: string | null;
     displayName?: string | null;
+    basePrice?: number | null;
+    priceType?: 'per_person' | 'per_group' | string | null;
+    minParticipants?: number | null;
+    maxParticipants?: number | null;
   }> | null;
   guide?: { displayName?: string } | null;
 }
@@ -535,6 +541,11 @@ function BookingInnerV2FlagShell() {
     minParticipants: number;
     maxParticipants: number | null;
   } | null>(null);
+  const initialPlanMetaFromActivity = useMemo(
+    () => derivePlanMetaFromActivityPlans(activity?.plans, v2PlanKey),
+    [activity?.plans, v2PlanKey],
+  ) as typeof selectedPlanMeta;
+  const effectivePlanMeta = selectedPlanMeta ?? initialPlanMetaFromActivity;
   const [guests, setGuests] = useState(1);
   const [allowOnePersonAddOn, setAllowOnePersonAddOn] = useState(false);
   const [contactName, setContactName] = useState('');
@@ -575,11 +586,11 @@ function BookingInnerV2FlagShell() {
     };
   }, [activitySlug]);
 
-  const baseMinParticipants = Math.max(1, selectedPlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
-  const baseMaxParticipants = selectedPlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
+  const baseMinParticipants = Math.max(1, effectivePlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
+  const baseMaxParticipants = effectivePlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
   const effectiveMinParticipants = allowOnePersonAddOn ? 1 : baseMinParticipants;
   const selectedPlanDisplayName = useMemo(() => {
-    const fromApi = selectedPlanMeta?.name?.trim();
+    const fromApi = effectivePlanMeta?.name?.trim();
     if (fromApi) return fromApi;
     const matchedPlan = (activity?.plans || []).find((plan) => plan?.id && plan.id === v2PlanKey);
     if (!matchedPlan) return null;
@@ -587,7 +598,7 @@ function BookingInnerV2FlagShell() {
       .map((value) => (typeof value === 'string' ? value.trim() : ''))
       .filter(Boolean);
     return candidates[0] || null;
-  }, [activity?.plans, selectedPlanMeta?.name, v2PlanKey]);
+  }, [activity?.plans, effectivePlanMeta?.name, v2PlanKey]);
 
   useEffect(() => {
     if (!activity) return;
@@ -838,8 +849,8 @@ function BookingInnerV2FlagShell() {
     guests,
     selectedCapacityLeft,
   });
-  const unitPrice = selectedPlanMeta?.basePrice ?? activity.priceTwd;
-  const total = selectedPlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
+  const unitPrice = effectivePlanMeta?.basePrice ?? activity.priceTwd;
+  const total = effectivePlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const breadcrumbJsonLd = {
@@ -1046,11 +1057,11 @@ function BookingInnerV2FlagShell() {
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>費用明細</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span>單價（{selectedPlanMeta?.priceType === 'per_group' ? '每組' : '每人'}）</span>
+                  <span>單價（{effectivePlanMeta?.priceType === 'per_group' ? '每組' : '每人'}）</span>
                   <span>NT${unitPrice.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span>{selectedPlanMeta?.priceType === 'per_group' ? '每組價格' : `NT$${unitPrice.toLocaleString()} × ${guests} 人`}</span>
+                  <span>{effectivePlanMeta?.priceType === 'per_group' ? '每組價格' : `NT$${unitPrice.toLocaleString()} × ${guests} 人`}</span>
                   <span>NT${total.toLocaleString()}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>

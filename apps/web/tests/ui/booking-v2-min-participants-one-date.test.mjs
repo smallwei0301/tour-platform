@@ -47,8 +47,10 @@ test('v2 shell uses selected plan base price from available-slots selectedPlan m
 
   assert.match(src, /if \(selectedPlan && Number\.isFinite\(Number\(selectedPlan\.basePrice\)\)\)/);
   assert.match(src, /basePrice: Number\(selectedPlan\.basePrice\)/);
-  assert.match(src, /const unitPrice = selectedPlanMeta\?\.basePrice \?\? activity\.priceTwd/);
-  assert.match(src, /const total = selectedPlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
+  // Issue #1108: unitPrice falls back through effectivePlanMeta first to avoid
+  // a ~1.5s transient where activity.priceTwd is shown before selectedPlanMeta loads.
+  assert.match(src, /const unitPrice = effectivePlanMeta\?\.basePrice \?\? activity\.priceTwd/);
+  assert.match(src, /const total = effectivePlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
 });
 
 test('v2 shell uses date-level availability UI and removes multi-time dropdown', async () => {
