@@ -124,7 +124,7 @@ function AddScheduleModal({
   const [endHH,           setEndHH]           = useState('13:00');
   const [capacity,        setCapacity]        = useState('10');
   const [minParticipants, setMinParticipants] = useState('1');
-  const [planId,          setPlanId]          = useState('');  // '' = 全部方案（0 或 1 個 active 方案時允許）
+  const [planId,          setPlanId]          = useState('');  // '' = 未選擇（≥2 active 方案時須明確選擇）
   const [saving,          setSaving]          = useState(false);
   const [progress,        setProgress]        = useState('');
   const [err,             setErr]             = useState('');
@@ -276,16 +276,40 @@ function AddScheduleModal({
             )}
           </div>
 
-          {/* 方案選擇（V2 activity_plans）*/}
-          <label style={labelStyle}>
-            適用方案
-            <select value={planId} onChange={e => setPlanId(e.target.value)} style={fieldStyle}>
-              {availablePlans.length < 2 && <option value="">全部方案</option>}
-              {availablePlans.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </label>
+          {/* 方案選擇（V2 activity_plans）
+              ─ 0 plans: blocking message, no dropdown, submit disabled
+              ─ 1 plan:  auto-apply display, no 全部方案 option
+              ─ ≥2 plans: required selection, no 全部方案 option            */}
+          {availablePlans.length === 0 ? (
+            <div style={{
+              background: '#fef9c3', color: '#78350f',
+              border: '1px solid #fde68a',
+              padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16,
+            }}>
+              此活動沒有可用的 V2 方案，請先到方案管理建立並啟用方案。
+            </div>
+          ) : availablePlans.length === 1 ? (
+            <div style={{ marginBottom: 16 }}>
+              <span style={{ display: 'block', fontWeight: 600, fontSize: 14, marginBottom: 6 }}>適用方案</span>
+              <div style={{
+                background: '#f0fdf4', color: '#166534',
+                border: '1px solid #bbf7d0',
+                padding: '8px 12px', borderRadius: 8, fontSize: 13,
+              }}>
+                將自動套用：{availablePlans[0].name}
+              </div>
+            </div>
+          ) : (
+            <label style={labelStyle}>
+              適用方案
+              <select value={planId} onChange={e => setPlanId(e.target.value)} style={fieldStyle}>
+                <option value="">— 請選擇方案 —</option>
+                {availablePlans.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
 
           <FormGrid cols={2} gap={12}>
             <label style={labelStyle}>
@@ -321,13 +345,13 @@ function AddScheduleModal({
               style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 14 }}>
               取消
             </button>
-            <button type="submit" disabled={saving || selectedDates.length === 0}
+            <button type="submit" disabled={saving || selectedDates.length === 0 || availablePlans.length === 0}
               style={{
                 padding: '9px 20px', borderRadius: 8, border: 'none',
                 background: 'var(--tp-primary, #16a34a)', color: '#fff',
                 fontWeight: 700, fontSize: 14,
-                cursor: (saving || selectedDates.length === 0) ? 'not-allowed' : 'pointer',
-                opacity: (saving || selectedDates.length === 0) ? 0.6 : 1,
+                cursor: (saving || selectedDates.length === 0 || availablePlans.length === 0) ? 'not-allowed' : 'pointer',
+                opacity: (saving || selectedDates.length === 0 || availablePlans.length === 0) ? 0.6 : 1,
               }}>
               {saving ? progress || '新增中⋯' : `確認新增 ${selectedDates.length > 0 ? `(${selectedDates.length} 天)` : ''}`}
             </button>
