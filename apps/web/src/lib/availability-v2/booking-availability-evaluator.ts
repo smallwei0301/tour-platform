@@ -178,7 +178,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     const shouldEnforceGeneratedSlotPresence = input.rules.length > 0;
     const selectedScheduleMissingFromGeneratedSlots =
       shouldEnforceGeneratedSlotPresence && !schedulePresentInGeneratedSlots;
-    const selectedScheduleBaseValidationRaw = validateSlotAvailability(
+    const selectedScheduleBaseValidation = validateSlotAvailability(
       selectedSchedule.start_at,
       selectedSchedule.end_at,
       input.guideId,
@@ -189,19 +189,6 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
         bufferAfter: 0,
       },
     );
-    const hasSelectedScheduleBookingConflict = input.bookings
-      .filter((booking) => booking.guide_id === input.guideId)
-      .some((booking) => {
-        const bookingStartAt = new Date(booking.start_at).getTime();
-        const bookingEndAt = new Date(booking.end_at).getTime();
-        const scheduleStartAt = new Date(selectedSchedule.start_at).getTime();
-        const scheduleEndAt = new Date(selectedSchedule.end_at).getTime();
-        return scheduleStartAt < bookingEndAt && scheduleEndAt > bookingStartAt;
-      });
-    const selectedScheduleBaseValidation =
-      selectedScheduleBaseValidationRaw.reason === 'SLOT_IN_PAST' && hasSelectedScheduleBookingConflict
-        ? { available: false, reason: 'BOOKING_CONFLICT' }
-        : selectedScheduleBaseValidationRaw;
 
     const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), input.timezone);
 

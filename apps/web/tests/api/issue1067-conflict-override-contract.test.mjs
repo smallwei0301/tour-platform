@@ -23,8 +23,10 @@ const TZ = 'Asia/Taipei';
 const GUIDE_ID = 'g-override';
 const ACTIVITY_ID = 'a-override';
 const PLAN_ID = 'p-override';
-const REQUEST_START = '2026-04-10T09:00:00+08:00';
-const REQUEST_END = '2026-04-10T12:00:00+08:00';
+const FUTURE_REQUEST_START = '2030-04-12T09:00:00+08:00';
+const FUTURE_REQUEST_END = '2030-04-12T12:00:00+08:00';
+const PAST_REQUEST_START = '2026-04-10T09:00:00+08:00';
+const PAST_REQUEST_END = '2026-04-10T12:00:00+08:00';
 
 function weekdayRule({ weekday, start = '09:00', end = '12:00' }) {
   return {
@@ -44,16 +46,17 @@ function weekdayRule({ weekday, start = '09:00', end = '12:00' }) {
   };
 }
 
-function activeBooking() {
+function activeBooking(overrides = {}) {
   return {
     id: 'b-conflict',
     guide_id: GUIDE_ID,
     activity_id: ACTIVITY_ID,
     activity_plan_id: PLAN_ID,
-    start_at: REQUEST_START,
-    end_at: '2026-04-10T17:00:00+08:00',
+    start_at: FUTURE_REQUEST_START,
+    end_at: '2030-04-12T17:00:00+08:00',
     status: 'confirmed',
     participants: 2,
+    ...overrides,
   };
 }
 
@@ -63,8 +66,8 @@ function overrideRecord(overrides = {}) {
     guide_id: GUIDE_ID,
     activity_id: ACTIVITY_ID,
     activity_plan_id: PLAN_ID,
-    start_at: REQUEST_START,
-    end_at: REQUEST_END,
+    start_at: FUTURE_REQUEST_START,
+    end_at: FUTURE_REQUEST_END,
     reason: 'VIP 客訴補救，主管核准此場例外開放',
     requires_helper: true,
     helper_status: 'required',
@@ -78,18 +81,34 @@ function overrideRecord(overrides = {}) {
 }
 
 function baseInput(overrides = {}) {
+  const selectedSchedule = overrides.selectedSchedule ?? {
+    id: 'sch-1',
+    activity_id: ACTIVITY_ID,
+    plan_id: PLAN_ID,
+    start_at: FUTURE_REQUEST_START,
+    end_at: FUTURE_REQUEST_END,
+    capacity: 10,
+    booked_count: 0,
+    status: 'open',
+  };
+  const selectedDate = selectedSchedule.start_at.slice(0, 10);
   return {
     guideId: GUIDE_ID,
     activityId: ACTIVITY_ID,
     planId: PLAN_ID,
     timezone: TZ,
     participants: 2,
-    dateFrom: '2026-04-10',
-    dateTo: '2026-04-10',
+    dateFrom: selectedDate,
+    dateTo: selectedDate,
     minParticipants: 1,
     rules: [weekdayRule({ weekday: 5, end: '17:00' })],
     blackouts: [],
-    bookings: [activeBooking()],
+    bookings: [
+      activeBooking({
+        start_at: selectedSchedule.start_at,
+        end_at: selectedSchedule.start_at.slice(0, 10) + 'T17:00:00+08:00',
+      }),
+    ],
     plan: {
       id: PLAN_ID,
       activity_id: ACTIVITY_ID,
@@ -98,16 +117,7 @@ function baseInput(overrides = {}) {
       booking_type: 'scheduled',
     },
     planStatus: 'active',
-    selectedSchedule: {
-      id: 'sch-1',
-      activity_id: ACTIVITY_ID,
-      plan_id: PLAN_ID,
-      start_at: REQUEST_START,
-      end_at: REQUEST_END,
-      capacity: 10,
-      booked_count: 0,
-      status: 'open',
-    },
+    selectedSchedule,
     selectedScheduleAuthority: 'authoritative',
     ...overrides,
   };
@@ -118,8 +128,8 @@ test('GH-1067 RED: exact active conflict override matches only same guide/activi
     guideId: GUIDE_ID,
     activityId: ACTIVITY_ID,
     planId: PLAN_ID,
-    requestedStartAt: REQUEST_START,
-    requestedEndAt: REQUEST_END,
+    requestedStartAt: FUTURE_REQUEST_START,
+    requestedEndAt: FUTURE_REQUEST_END,
     overrides: [overrideRecord()],
   });
 
@@ -132,9 +142,9 @@ test('GH-1067 RED: wrong plan/date/time override is ignored', () => {
     guideId: GUIDE_ID,
     activityId: ACTIVITY_ID,
     planId: PLAN_ID,
-    requestedStartAt: REQUEST_START,
-    requestedEndAt: REQUEST_END,
-    overrides: [overrideRecord({ activity_plan_id: 'different-plan', end_at: '2026-04-10T17:00:00+08:00' })],
+    requestedStartAt: FUTURE_REQUEST_START,
+    requestedEndAt: FUTURE_REQUEST_END,
+    overrides: [overrideRecord({ activity_plan_id: 'different-plan', end_at: '2030-04-12T17:00:00+08:00' })],
   });
 
   assert.equal(matched, null);
@@ -145,8 +155,8 @@ test('GH-1067 RED: disabled override never matches', () => {
     guideId: GUIDE_ID,
     activityId: ACTIVITY_ID,
     planId: PLAN_ID,
-    requestedStartAt: REQUEST_START,
-    requestedEndAt: REQUEST_END,
+    requestedStartAt: FUTURE_REQUEST_START,
+    requestedEndAt: FUTURE_REQUEST_END,
     overrides: [overrideRecord({ status: 'disabled' })],
   });
 
@@ -161,7 +171,7 @@ test('GH-1067 RED: selected schedule remains blocked_by_conflict without overrid
   assert.equal(out.slots.length, 0);
 });
 
-test('GH-1067 RED: exact active override makes selected conflicting slot bookable only as allowed_with_admin_override', () => {
+test('GH-1067 RED: exact active override makes future selected conflicting slot bookable only as allowed_with_admin_override', () => {
   const out = evaluateBookingAvailability(
     baseInput({
       conflictOverrides: [overrideRecord()],
@@ -176,6 +186,33 @@ test('GH-1067 RED: exact active override makes selected conflicting slot bookabl
   assert.equal(out.slots[0].conflictOverride?.helperStatus, 'required');
 });
 
+test('GH-1067 RED: exact active override must not reopen past selected schedule', () => {
+  const out = evaluateBookingAvailability(
+    baseInput({
+      selectedSchedule: {
+        id: 'sch-past',
+        activity_id: ACTIVITY_ID,
+        plan_id: PLAN_ID,
+        start_at: PAST_REQUEST_START,
+        end_at: PAST_REQUEST_END,
+        capacity: 10,
+        booked_count: 0,
+        status: 'open',
+      },
+      conflictOverrides: [
+        overrideRecord({
+          start_at: PAST_REQUEST_START,
+          end_at: PAST_REQUEST_END,
+        }),
+      ],
+    }),
+  );
+
+  assert.equal(out.available, false);
+  assert.equal(out.reasonCode, 'SLOT_IN_PAST');
+  assert.equal(out.slots.length, 0);
+});
+
 test('GH-1067 RED: disabled/wrong override does not weaken conflict block', () => {
   const disabled = evaluateBookingAvailability(
     baseInput({
@@ -187,7 +224,7 @@ test('GH-1067 RED: disabled/wrong override does not weaken conflict block', () =
 
   const wrongTime = evaluateBookingAvailability(
     baseInput({
-      conflictOverrides: [overrideRecord({ start_at: '2026-04-10T13:00:00+08:00' })],
+      conflictOverrides: [overrideRecord({ start_at: '2030-04-12T13:00:00+08:00' })],
     }),
   );
   assert.equal(wrongTime.available, false);
