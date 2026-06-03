@@ -18,6 +18,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const AVAILABLE_SLOTS_ROUTE = join(REPO_ROOT, 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
 const DRAFT_ROUTE = join(REPO_ROOT, 'app/api/v2/bookings/draft/route.ts');
+const MIGRATION_PATH = join(
+  REPO_ROOT,
+  '..',
+  '..',
+  'supabase/migrations/20260603_issue1067_guide_slot_conflict_overrides.sql',
+);
 
 const TZ = 'Asia/Taipei';
 const GUIDE_ID = 'g-override';
@@ -326,4 +332,37 @@ test('Source contract: draft route carries override metadata into booking status
   const tail = src.slice(statusLogIdx, statusLogIdx + 1200);
   assert.match(tail, /conflictOverride/);
   assert.match(tail, /overrideId|conflict_override_id/);
+});
+
+test('GH-1067 RED: migration source contract formalizes override table, booking audit columns, and RLS guardrails', () => {
+  const migration = readFileSync(MIGRATION_PATH, 'utf8');
+
+  assert.match(migration, /create table if not exists public\.guide_slot_conflict_overrides/i);
+  assert.match(migration, /id\s+uuid\s+primary key\s+default\s+gen_random_uuid\(\)/i);
+  assert.match(migration, /guide_id\s+uuid\s+not null/i);
+  assert.match(migration, /activity_id\s+uuid\s+not null/i);
+  assert.match(migration, /activity_plan_id\s+uuid\s+not null/i);
+  assert.match(migration, /start_at\s+timestamptz\s+not null/i);
+  assert.match(migration, /end_at\s+timestamptz\s+not null/i);
+  assert.match(migration, /reason\s+text\s+not null/i);
+  assert.match(migration, /check\s*\(\s*btrim\(reason\)\s*<>\s*''\s*\)/i);
+  assert.match(migration, /requires_helper\s+boolean\s+not null\s+default\s+false/i);
+  assert.match(migration, /helper_status\s+text\s+not null\s+default\s+'not_needed'/i);
+  assert.match(migration, /helper_status[\s\S]*not_needed[\s\S]*required[\s\S]*pending_assignment[\s\S]*assigned[\s\S]*declined/i);
+  assert.match(migration, /guide_note\s+text/i);
+  assert.match(migration, /admin_note\s+text/i);
+  assert.match(migration, /status\s+text\s+not null\s+default\s+'active'/i);
+  assert.match(migration, /status[\s\S]*active[\s\S]*disabled[\s\S]*cancelled/i);
+  assert.match(migration, /created_at\s+timestamptz\s+not null\s+default\s+now\(\)/i);
+  assert.match(migration, /created_by_admin_email\s+text/i);
+  assert.match(migration, /alter table public\.guide_slot_conflict_overrides enable row level security/i);
+  assert.match(migration, /create policy "Guide slot conflict overrides read for anonymous"/i);
+  assert.match(migration, /for select[\s\S]*to anon/i);
+  assert.match(migration, /create policy "Guide slot conflict overrides mutate for service role"/i);
+  assert.match(migration, /for all[\s\S]*to service_role/i);
+  assert.doesNotMatch(migration, /for\s+(insert|update|delete|all)[\s\S]*to\s+(anon|authenticated)/i);
+  assert.match(migration, /alter table public\.bookings[\s\S]*add column if not exists conflict_override_id\s+uuid/i);
+  assert.match(migration, /alter table public\.bookings[\s\S]*add column if not exists conflict_override_snapshot\s+jsonb/i);
+  assert.match(migration, /comment on table public\.guide_slot_conflict_overrides/i);
+  assert.match(migration, /must not be treated as ordinary availability/i);
 });
