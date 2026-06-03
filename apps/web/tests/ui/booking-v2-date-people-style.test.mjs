@@ -48,3 +48,40 @@ test('V2 booking date input uses Legacy-aligned border + radius', async () => {
     'Expected at least one borderRadius: 10 occurrence (Legacy style)',
   );
 });
+
+// ── Criterion 1 assertion gate: V2 date-capacity picker option label (#1083) ──
+//
+// PRs #1076/#1080/#1082 replaced the V2 date-capacity picker from a native
+// <input type="date"> and per-date buttons to a native <select> whose options
+// carry the '（剩餘 N）' remaining-capacity label, and removed the legacy
+// '改用舊版預約流程' button and the duplicate top no-slot warning.
+//
+// This test locks those invariants so any future regression is caught at CI.
+
+test('V2 date-capacity picker is a <select> identified by data-testid and options carry （剩餘 N） label', async () => {
+  const src = await readFile(pagePath, 'utf8');
+  // 1. The V2 date-capacity picker must be a native <select> with the canonical data-testid.
+  assert.match(
+    src,
+    /data-testid="booking-v2-date-capacity-picker"/,
+    'V2 date-capacity control must have data-testid="booking-v2-date-capacity-picker" on the <select>',
+  );
+  // 2. Option labels for available slots must use '（剩餘 N）' format (not the Legacy '（剩 N 位）' short form).
+  assert.match(
+    src,
+    /`\$\{entry\.date\}（剩餘 \$\{entry\.capacityLeft\}）`/,
+    'V2 picker option labels must use（剩餘 N）format with entry.capacityLeft — the Legacy short form（剩 N 位）must not leak into V2 picker options',
+  );
+  // 3. The removed '改用舊版預約流程' legacy-fallback button must be absent.
+  assert.doesNotMatch(
+    src,
+    /改用舊版預約流程/,
+    'V2 booking page must NOT contain "改用舊版預約流程" button — legacy fallback toggle was removed',
+  );
+  // 4. The duplicate top no-slot warning pattern that was removed in #1082 must be absent.
+  assert.doesNotMatch(
+    src,
+    /setV2Error\(selectedDateEntry\?\.messageZh/,
+    'Removed duplicate top-level setV2Error(selectedDateEntry?.messageZh...) warning must not reappear — slot-level errors are now rendered inline',
+  );
+});
