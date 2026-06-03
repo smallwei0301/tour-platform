@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-02T20:34:05.861Z -->
+<!-- query_timestamp: 2026-06-03T01:04:39.389Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-02T20:34:05.861Z  
-**Commit SHA:** `c41bd8a379c86b1fe28dd7f3b3e9e1b3666a1393`
+**Query timestamp:** 2026-06-03T01:04:39.389Z  
+**Commit SHA:** `a4135a7b80849787998656164e573f9117b94bcb`
 
 ---
 
@@ -16,7 +16,7 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (18 total)
+## Open Issues (24 total)
 
 ### P0 (1)
 
@@ -24,10 +24,13 @@
 |---|-------|--------|
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — pre-launch final check](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, priority:P0, security, owner:mixed, status:awaiting-implementation, launch:first-payment-blocker |
 
-### P1 (8)
+### P1 (11)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1179 | [[Admin/Booking V2] V2 activity plan archive action fails on plans page](https://github.com/smallwei0301/tour-platform/issues/1179) | type:bug, priority:P1, owner:ai-agent, status:ready, booking-v2, admin |
+| #1178 | [[Admin/Booking V2] Clarify schedule modal plan dropdown and unified availability field precedence](https://github.com/smallwei0301/tour-platform/issues/1178) | type:bug, priority:P1, owner:ai-agent, status:ready, booking-v2, admin |
+| #1177 | [[QA] Daily test checklist for recent merged PRs 2026-06-03](https://github.com/smallwei0301/tour-platform/issues/1177) | priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa |
 | #1124 | [[QA] Verify 2026-06-02 merged fixes #1107/#1109/#1111/#1114/#1116/#1120](https://github.com/smallwei0301/tour-platform/issues/1124) | triaged, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1083 | [[QA] Verify post-#1076/#1080/#1082 Booking V2 SOT regressions](https://github.com/smallwei0301/tour-platform/issues/1083) | triaged, priority:P1, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1067 | [[Guide Dashboard] Design V2 activity management and prevent half-day/full-day guide overbooking](https://github.com/smallwei0301/tour-platform/issues/1067) | priority:P1, guide-dashboard, owner:mixed, status:ready, type:decision, booking-v2 |
@@ -37,10 +40,14 @@
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (8)
+### P2 (12)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1176 | [[daily bug scan] tour-platform 2026-06-03](https://github.com/smallwei0301/tour-platform/issues/1176) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
+| #1175 | [[Post-Trip Ops] Automate review invitation sweep after delivery log](https://github.com/smallwei0301/tour-platform/issues/1175) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:blocked, orders, notifications, infra, launch:post-first-payment |
+| #1174 | [[Post-Trip Ops] Add review invitation delivery log and idempotency guard](https://github.com/smallwei0301/tour-platform/issues/1174) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, orders, database, notifications, launch:post-first-payment |
+| #1173 | [[Frontend Daily Check] 2026-06-03 frontend checks blocked by missing toolchain](https://github.com/smallwei0301/tour-platform/issues/1173) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1171 | [[Post-Trip Ops] Add guide trip report submission storage and API](https://github.com/smallwei0301/tour-platform/issues/1171) | triaged, type:feature, priority:P2, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, orders, database, launch:post-first-payment |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
@@ -54,11 +61,9 @@
 
 _none_
 
-### Other (1)
+### Other (0)
 
-| # | Title | Labels |
-|---|-------|--------|
-| #1173 | [[Frontend Daily Check] 2026-06-03 frontend checks blocked by missing toolchain](https://github.com/smallwei0301/tour-platform/issues/1173) | — |
+_none_
 
 ---
 
