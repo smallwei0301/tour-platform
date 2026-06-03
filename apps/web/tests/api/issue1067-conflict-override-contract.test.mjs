@@ -244,10 +244,7 @@ test('GH-1067 RED: serializeConflictOverrideForClient emits safe downstream meta
     reason: 'VIP 客訴補救，主管核准此場例外開放',
     requiresHelper: true,
     helperStatus: 'required',
-    guideNote: '導遊已知悉需協調半日衝突',
-    adminNote: '後台人工核准',
     createdAt: '2026-04-01T00:00:00Z',
-    createdByAdminEmail: 'admin@example.com',
   });
 });
 
@@ -312,17 +309,25 @@ test('GH-1067 RED: applyBookingConflictOverrideColumnFallback strips override-on
 test('Source contract: available-slots route reads conflict overrides via schema fallback and preserves allowed_with_admin_override slot state', () => {
   const src = readFileSync(AVAILABLE_SLOTS_ROUTE, 'utf8');
   assert.match(src, /loadConflictOverridesWithSchemaFallback/);
+  assert.match(src, /getSupabase/);
   assert.match(src, /guide_slot_conflict_overrides/);
   assert.match(src, /allowed_with_admin_override/);
+  assert.doesNotMatch(src, /guide_note/);
+  assert.doesNotMatch(src, /admin_note/);
+  assert.doesNotMatch(src, /created_by_admin_email/);
 });
 
 test('Source contract: draft route uses schema fallback for override reads and strips override-only booking columns on schema drift', () => {
   const src = readFileSync(DRAFT_ROUTE, 'utf8');
   assert.match(src, /loadConflictOverridesWithSchemaFallback/);
+  assert.match(src, /getSupabase/);
   assert.match(src, /applyBookingConflictOverrideColumnFallback/);
   assert.match(src, /conflict_override_id/);
   assert.match(src, /conflict_override_snapshot/);
   assert.match(src, /allowed_with_admin_override/);
+  assert.doesNotMatch(src, /guide_note/);
+  assert.doesNotMatch(src, /admin_note/);
+  assert.doesNotMatch(src, /created_by_admin_email/);
 });
 
 test('Source contract: draft route carries override metadata into booking status log audit trail', () => {
@@ -356,10 +361,9 @@ test('GH-1067 RED: migration source contract formalizes override table, booking 
   assert.match(migration, /created_at\s+timestamptz\s+not null\s+default\s+now\(\)/i);
   assert.match(migration, /created_by_admin_email\s+text/i);
   assert.match(migration, /alter table public\.guide_slot_conflict_overrides enable row level security/i);
-  assert.match(migration, /create policy "Guide slot conflict overrides read for anonymous"/i);
-  assert.match(migration, /for select[\s\S]*to anon/i);
   assert.match(migration, /create policy "Guide slot conflict overrides mutate for service role"/i);
   assert.match(migration, /for all[\s\S]*to service_role/i);
+  assert.doesNotMatch(migration, /for\s+select[\s\S]*to\s+(anon|authenticated)/i);
   assert.doesNotMatch(migration, /for\s+(insert|update|delete|all)[\s\S]*to\s+(anon|authenticated)/i);
   assert.match(migration, /alter table public\.bookings[\s\S]*add column if not exists conflict_override_id\s+uuid/i);
   assert.match(migration, /alter table public\.bookings[\s\S]*add column if not exists conflict_override_snapshot\s+jsonb/i);

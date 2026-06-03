@@ -15,6 +15,7 @@
 import type { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../src/lib/api.ts';
 import { resolveBookingPlan } from '../../../../../../src/lib/booking-plan-resolver.ts';
+import { getSupabase, hasSupabaseEnv } from '../../../../../../src/lib/db.mjs';
 import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server.ts';
 import {
   getDateStringInTimezone,
@@ -417,15 +418,16 @@ export async function getAvailableSlots(
       });
     }
 
+    const conflictOverrideSupabase = hasSupabaseEnv() ? await getSupabase() : supabase;
     const {
       data: conflictOverridesData,
       error: conflictOverridesError,
       schemaFallback: conflictOverridesSchemaFallback,
     } = await loadConflictOverridesWithSchemaFallback(async () =>
-      supabase
+      conflictOverrideSupabase
         .from('guide_slot_conflict_overrides')
         .select(
-          'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
+          'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, status, created_at'
         )
         .eq('guide_id', guideId)
         .eq('activity_id', params.activityId)
@@ -507,11 +509,8 @@ export async function getAvailableSlots(
       reason: row.reason,
       requires_helper: Boolean(row.requires_helper),
       helper_status: row.helper_status,
-      guide_note: row.guide_note ?? null,
-      admin_note: row.admin_note ?? null,
       status: row.status,
       created_at: row.created_at ?? null,
-      created_by_admin_email: row.created_by_admin_email ?? null,
     }));
 
     const plan: ActivityPlan = {

@@ -53,34 +53,6 @@ BEGIN
     FROM pg_policies
     WHERE schemaname = 'public'
       AND tablename = 'guide_slot_conflict_overrides'
-      AND policyname = 'Guide slot conflict overrides read for anonymous'
-  ) THEN
-    CREATE POLICY "Guide slot conflict overrides read for anonymous"
-      ON public.guide_slot_conflict_overrides
-      FOR SELECT
-      TO anon
-      USING (status = 'active');
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'guide_slot_conflict_overrides'
-      AND policyname = 'Guide slot conflict overrides read for authenticated'
-  ) THEN
-    CREATE POLICY "Guide slot conflict overrides read for authenticated"
-      ON public.guide_slot_conflict_overrides
-      FOR SELECT
-      TO authenticated
-      USING (status = 'active');
-  END IF;
-
-  IF NOT EXISTS (
-    SELECT 1
-    FROM pg_policies
-    WHERE schemaname = 'public'
-      AND tablename = 'guide_slot_conflict_overrides'
       AND policyname = 'Guide slot conflict overrides mutate for service role'
   ) THEN
     CREATE POLICY "Guide slot conflict overrides mutate for service role"
