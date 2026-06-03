@@ -219,6 +219,20 @@ test('GH-1067 RED: loadConflictOverridesWithSchemaFallback degrades missing over
   assert.equal(result.schemaFallback, 'missing_table');
 });
 
+test('GH-1067 RED: loadConflictOverridesWithSchemaFallback also degrades schema-cache missing public override table to empty list', async () => {
+  const result = await loadConflictOverridesWithSchemaFallback(async () => ({
+    data: null,
+    error: {
+      code: 'PGRST205',
+      message: "Could not find the table 'public.guide_slot_conflict_overrides' in the schema cache",
+    },
+  }));
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, []);
+  assert.equal(result.schemaFallback, 'missing_table');
+});
+
 test('GH-1067 RED: applyBookingConflictOverrideColumnFallback strips override-only booking columns on schema drift', async () => {
   const attempts = [];
   const result = await applyBookingConflictOverrideColumnFallback(async (payload) => {

@@ -28,8 +28,8 @@ function extractMissingColumn(error) {
 function isMissingOverrideTableError(error) {
   const msg = errorMessage(error);
   return (
-    /relation\s+"guide_slot_conflict_overrides"\s+does not exist/i.test(msg) ||
-    /Could not find the table ['"]guide_slot_conflict_overrides['"]/i.test(msg)
+    /relation\s+"(?:public\.)?guide_slot_conflict_overrides"\s+does not exist/i.test(msg) ||
+    /Could not find the table ['"](?:public\.)?guide_slot_conflict_overrides['"]/i.test(msg)
   );
 }
 
