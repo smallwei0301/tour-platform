@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-06-03T01:04:39.389Z -->
+<!-- query_timestamp: 2026-06-03T07:48:53.246Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-03T01:04:39.389Z  
-**Commit SHA:** `a4135a7b80849787998656164e573f9117b94bcb`
+**Query timestamp:** 2026-06-03T07:48:53.246Z  
+**Commit SHA:** `c1d6bf137898ca92f596108de9f30dd051be05e7`
 
 ---
 
-## Open PRs (1)
+## Open PRs (2)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1181 | [feat: add conflict override RLS migration slice](https://github.com/smallwei0301/tour-platform/pull/1181) | `kanban/issue-1067-conflict-override-migration-rollout` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (24 total)
@@ -71,6 +72,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1180 | [Booking V2 conflict override compatibility slice (Refs #1067)](https://github.com/smallwei0301/tour-platform/pull/1180) | 2026-06-03 |
 | #1172 | [feat(post-trip): admin send-review-invitation endpoint (#1170)](https://github.com/smallwei0301/tour-platform/pull/1172) | 2026-06-02 |
 | #1168 | [feat(email): add sendReviewInvitation email for post-trip workflow (#1106)](https://github.com/smallwei0301/tour-platform/pull/1168) | 2026-06-02 |
 | #1167 | [feat(admin): add readiness gate widget to activity plans page (#1166)](https://github.com/smallwei0301/tour-platform/pull/1167) | 2026-06-02 |
@@ -80,7 +82,6 @@ _none_
 | #1160 | [docs(security): add credential rotation runbook (#1121)](https://github.com/smallwei0301/tour-platform/pull/1160) | 2026-06-02 |
 | #1159 | [chore(security): untrack supabase/.temp CLI scratch from git (#1121)](https://github.com/smallwei0301/tour-platform/pull/1159) | 2026-06-02 |
 | #1158 | [chore(security): remove leaked admin-token literal from WEAK_TOKEN_VALUES (#1121)](https://github.com/smallwei0301/tour-platform/pull/1158) | 2026-06-02 |
-| #1157 | [docs(ops): add post-trip operations workflow document (#1106)](https://github.com/smallwei0301/tour-platform/pull/1157) | 2026-06-02 |
 
 ---
 
