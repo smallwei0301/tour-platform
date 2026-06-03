@@ -1,7 +1,7 @@
 # Booking V2 Observation Window Report
 
 > Status: PENDING REAL TRAFFIC
-> Last updated: 2026-06-03 (automated scaffold — no real traffic yet)
+> Last updated: 2026-06-04 (day-0 readiness verified — see booking-v2-observation-window-day0-readiness-2026-06-04.md)
 > Parent issue: #642
 
 ## Observation Period
