@@ -232,25 +232,44 @@ export async function DELETE(
     }
 
     // Soft delete by setting status to archived.
-    // Legacy schema may only allow active/inactive, so fallback to inactive.
-    let { error } = await supabase
+    // If the DB schema is missing the 'archived' CHECK constraint value
+    // (migration 20260513_issue497 not yet applied), the update will fail
+    // with a constraint error. Surface this explicitly rather than silently
+    // falling back to 'inactive', which would mislead the operator.
+    const { error: archiveError } = await supabase
       .from('activity_plans')
       .update({ status: 'archived', updated_at: new Date().toISOString() })
       .eq('id', planId);
 
-    if (error && /status/i.test(String(error.message || ''))) {
-      ({ error } = await supabase
-        .from('activity_plans')
-        .update({ status: 'inactive', updated_at: new Date().toISOString() })
-        .eq('id', planId));
-    }
-
-    if (error) {
-      console.error('Error archiving activity plan:', error);
+    if (archiveError) {
+      console.error('Error archiving activity plan:', archiveError);
+      const msg = String((archiveError as { message?: string }).message || '');
+      if (/check\s*constraint|status/i.test(msg)) {
+        // DB schema lacks 'archived' in the status CHECK constraint.
+        // Migration 20260513_issue497_activity_plans_status_archived.sql must
+        // be applied by infrastructure before this operation can succeed.
+        return Response.json(
+          errorV2('SCHEMA_MISMATCH', '封存狀態尚未在資料庫啟用，請聯絡管理員套用最新 migration。'),
+          { status: 422 },
+        );
+      }
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to archive plan'), { status: 500 });
     }
 
-    return Response.json(successV2({ archived: true }));
+    // Re-read the row to confirm the persisted status before responding.
+    const { data: confirmed, error: readError } = await supabase
+      .from('activity_plans')
+      .select('status')
+      .eq('id', planId)
+      .single();
+
+    if (readError || !confirmed) {
+      console.error('Error confirming archived status:', readError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Archive succeeded but could not confirm final status'), { status: 500 });
+    }
+
+    const finalStatus = confirmed.status as string;
+    return Response.json(successV2({ archived: finalStatus === 'archived', finalStatus }));
   } catch (err) {
     console.error('Delete plan API error:', err);
     return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
