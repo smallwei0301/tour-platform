@@ -21,8 +21,8 @@
 
 ## Section A: Static Verification Results
 
-Verified at HEAD SHA: `c36c624d939dda04b323ca18baafd3187cc60aa9`
-Verification date: 2026-05-24
+Verified at HEAD SHA: `6668a3d9986d499c1e82576d21c1bac1b66c6311`
+Verification date: 2026-06-04 (refreshed from 2026-05-24 c36c624d)
 
 ### A1: Phase 13 Alerting Bus Contract Tests
 
@@ -80,7 +80,25 @@ Result: **PASS (12/12)**
 - `app/api/internal/reminders/pre-tour-sweep/route.ts` (lines 123, 243)
 - `app/api/admin/orders/[orderId]/refund-execute/route.ts` (lines 342–344)
 
-**Notification channel:** `incidents.ts` imports `notifySystemError` from `line-notify.ts`. LINE Notify uses `notify-api.line.me/api/notify`. Token read from `LINE_NOTIFY_ACCESS_TOKEN` env var; skipped gracefully when absent.
+**Notification channel:** `incidents.ts` imports `notifySystemError` from `line-notify.ts`. LINE Notify's `notify-api.line.me` was shut down 2025-03-31 (see C2 / `docs/operations/alert-channel-decision.md`). Token env: `LINE_NOTIFY_ACCESS_TOKEN`; skipped gracefully when absent.
+
+### A4: Phase 13 Admin Health Contract Tests
+
+```
+node --test tests/api/phase13-admin-health-contract.test.mjs
+
+✔ AC1: /api/admin/health route exists (0.7ms)
+✔ AC2: route has x-admin-token auth guard (0.4ms)
+✔ AC3: route imports recordIncident (0.3ms)
+✔ AC4: route imports getHealthMetrics (0.3ms)
+✔ AC5: route returns 200 with health data structure (0.4ms)
+
+tests 5 | pass 5 | fail 0 | duration_ms 12
+```
+
+Result: **PASS (5/5)**
+
+**Total Section A: 23/23 tests pass** (alerting-bus 6 + failure-detectors 12 + admin-health 5)
 
 ---
 
@@ -165,10 +183,73 @@ All items below are HOLD until resolved. Go/No-Go cannot move to GO until each i
 
 | # | Blocker | Owner | Status | Resolution |
 |---|---------|-------|--------|------------|
-| C1 | `SENTRY_DSN` must be provisioned on Vercel production (currently: not confirmed) | Wei | HOLD | [ ] Confirm in Vercel Project Settings > Environment Variables |
-| C2 | LINE vs Telegram channel decision — LINE Notify sunset risk (notify-api.line.me); ref #685 | Wei | HOLD | [ ] Decide: keep LINE Notify or migrate to Telegram bot before drill execution |
-| C3 | `incidents` migration (`20260511_phase13_incidents.sql`) applied to production Supabase | Wei | HOLD | [ ] Confirm in Supabase dashboard > Database > Migrations or via SQL: `SELECT * FROM incidents LIMIT 1` |
-| C4 | `ADMIN_ACCESS_TOKEN` custody confirmed — needed for admin session in Step B1 | Wei | HOLD | [ ] Confirm token is accessible from `.qa-secrets/` or Vercel env |
+| C1 | `SENTRY_DSN` must be provisioned on Vercel production | Wei | HOLD | Repo-observable: code path reads `SENTRY_DSN` correctly in `@sentry/nextjs` init. **Operator action required:** confirm it is set in Vercel Project Settings → Environment Variables. If absent, Step B4 will be SKIPPED. |
+| C2 | Canonical alert notification channel | AI | **RESOLVED** | LINE Notify (`notify-api.line.me`) was shut down 2025-03-31 and is non-functional in production. Decision: **Telegram is the canonical alerting channel**. See `docs/operations/alert-channel-decision.md` for the full decision record and code-change surface. Implementation of the Telegram migration is a separate follow-up. |
+| C3 | `incidents` migration applied to production Supabase | Wei | HOLD | Repo-observable: `supabase/migrations/20260511_phase13_incidents.sql` and rollback file exist and are idempotent. **Operator verification SQL (run on prod):** `SELECT table_name FROM information_schema.tables WHERE table_name = 'incidents';` or `SELECT id, severity, source, created_at FROM incidents LIMIT 1;` |
+| C4 | `ADMIN_ACCESS_TOKEN` custody for Step B1 | Wei | HOLD | Repo-observable: env var is read by admin middleware (`isAdminAuthorized`). **Operator action required:** confirm the production value is accessible from `.qa-secrets/` or Vercel env. Do not expose the value in this doc. |
+
+---
+
+## Section E: Drill Execution Checklist (Wei — copy-pasteable runbook)
+
+> This checklist consolidates the Section B steps into an ordered, copy-pasteable format.
+> All `[REDACTED]` items require operator to supply the value (never commit to this file).
+
+### Pre-drill prerequisites (confirm before starting)
+- [ ] C1: Vercel → `SENTRY_DSN` confirmed set for production
+- [ ] C3: Supabase prod → run `SELECT table_name FROM information_schema.tables WHERE table_name = 'incidents';` → returns 1 row
+- [ ] C4: `ADMIN_ACCESS_TOKEN` accessible (from `.qa-secrets/` or Vercel env)
+- [ ] Notification channel ready per `docs/operations/alert-channel-decision.md` (Telegram bot token configured, or LINE Notify noted as SKIPPED)
+
+### Step 1 — Admin session
+1. Navigate to: `https://midao.co/admin/login`
+2. Login with admin credentials
+3. Confirm redirect to `/admin` dashboard
+4. Record session start time (Asia/Taipei ISO8601): ________________
+
+### Step 2 — Trigger controlled incident
+1. Navigate to: `https://midao.co/admin/soft-launch`
+2. Toggle `new_booking_paused` **ON** — set reason: `alert-drill-2026-05-24`
+3. Confirm API returns 200
+4. Toggle `new_booking_paused` **OFF** — set reason: `alert-drill-complete`
+5. Confirm `soft_launch_control_audit` has 2 new rows
+6. Record trigger timestamp (ISO8601): ________________
+
+### Step 3 — Verify incidents table row
+Run in Supabase dashboard SQL editor (production project):
+```sql
+SELECT id, severity, source, created_at
+FROM incidents
+ORDER BY created_at DESC
+LIMIT 5;
+```
+- [ ] Row exists with `created_at` matching drill timestamp
+- [ ] `severity`: WARNING or ERROR
+- [ ] No PII in metadata column
+- Partial row ID (first 8 chars only): ________________
+
+### Step 4 — Verify Sentry event
+1. Open: `https://sentry.io/organizations/[REDACTED]/issues/`
+2. Filter: Project = tour-platform, Time = Last 1 hour
+3. Confirm: event matching drill trigger source/message
+- [ ] Sentry event received: YES / NO / SKIPPED (no DSN)
+- Sentry issue ID (first 8 chars only): ________________
+
+### Step 5 — Verify notification channel
+Per `docs/operations/alert-channel-decision.md`:
+- If **Telegram** is configured: confirm message received in Telegram ops channel
+- If LINE Notify tokens absent: record as SKIPPED (expected per AC5)
+- [ ] Channel delivered: YES / NO / SKIPPED
+
+### Step 6 — Complete evidence file
+1. Fill all `[OPERATOR TO FILL]` fields in Sections A–C above with actual values
+2. Attach redacted artifacts (Sentry screenshot, Telegram/LINE message screenshot)
+3. Record drill type: Tabletop / Live Execution
+
+### Step 7 — Update Go/No-Go
+1. Comment on issue #505 (Go/No-Go framework): mark alert drill as PASS
+2. Comment on issue #320: confirm C2 RESOLVED, C1/C3 confirmed
+3. Close issue #714 when all blockers are cleared
 
 ---
 
@@ -187,11 +268,13 @@ All items below are HOLD until resolved. Go/No-Go cannot move to GO until each i
 | #320 | Phase 13 alerting bus foundation |
 | docs/operations/monitoring-alert-drill-plan-2026-05-17.md | Drill plan and static verification (original) |
 | docs/operations/drills/2026-05-23-booking-v2-rollback-production-dry-run.md | Prior dry-run evidence format reference |
+| docs/operations/alert-channel-decision.md | C2 resolution: LINE-vs-Telegram channel decision record |
+| #1201 | AI leaf: readiness verification + channel decision (this file's refresh) |
 
 ---
 
 ## Footer
 
-AI-generated skeleton. Human operator (Wei) must execute Section B and fill Section C before Go/No-Go can move from HOLD to GO.
+AI-generated skeleton. Human operator (Wei) must execute Section B, fill Section C, and run Section E checklist before Go/No-Go can move from HOLD to GO.
 
-Static verification (Section A) was completed by automated agent at HEAD SHA `c36c624d939dda04b323ca18baafd3187cc60aa9` on 2026-05-24. All Phase 13 contract tests pass (18/18 total across alerting-bus and failure-detectors suites).
+Static verification (Section A) refreshed by automated agent (issue #1201) at HEAD SHA `6668a3d9986d499c1e82576d21c1bac1b66c6311` on 2026-06-04. All Phase 13 contract tests pass (23/23 across alerting-bus, failure-detectors, and admin-health suites).
