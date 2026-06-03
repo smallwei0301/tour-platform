@@ -1,23 +1,28 @@
-<!-- query_timestamp: 2026-06-03T07:48:53.246Z -->
+<!-- query_timestamp: 2026-06-03T13:44:56.981Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-03T07:48:53.246Z  
-**Commit SHA:** `c1d6bf137898ca92f596108de9f30dd051be05e7`
+**Query timestamp:** 2026-06-03T13:44:56.981Z  
+**Commit SHA:** `9e5a6bfcdb7c014cc89d417c05d794ab43e32009`
 
 ---
 
-## Open PRs (2)
+## Open PRs (7)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1181 | [feat: add conflict override RLS migration slice](https://github.com/smallwei0301/tour-platform/pull/1181) | `kanban/issue-1067-conflict-override-migration-rollout` |
+| #1187 | [docs(incident): cross-reference Supabase backup runbook + add §6.1 P0/P1 data-consistency checklist (closes #594)](https://github.com/smallwei0301/tour-platform/pull/1187) | `claude/fix-594-incident-response-backup-xref` |
+| #1186 | [docs(incident): add §8.6 sign-off decision log + soft-launch conservative defaults (refs #797)](https://github.com/smallwei0301/tour-platform/pull/1186) | `claude/fix-797-incident-response-signoff` |
+| #1185 | [fix(types): replace supabase: any with SupabaseClient in booking-critical lib files (closes #1103)](https://github.com/smallwei0301/tour-platform/pull/1185) | `claude/fix-1103-supabase-client-type` |
+| #1184 | [fix(booking-v2): include end_at in activity_schedules SELECT so plan-schedule mismatch check actually fires (closes #1115)](https://github.com/smallwei0301/tour-platform/pull/1184) | `claude/fix-1110-followup-end-at-select` |
+| #1183 | [chore(security): remove leaked admin-token literal from WEAK_TOKEN_VALUES + add length-floor regression test (refs #1121)](https://github.com/smallwei0301/tour-platform/pull/1183) | `claude/fix-secrets-security-env-literal` |
+| #1182 | [chore(security): untrack supabase/.temp CLI scratch + add to .gitignore (refs #1121)](https://github.com/smallwei0301/tour-platform/pull/1182) | `claude/fix-secrets-untrack-supabase-temp` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (24 total)
+## Open Issues (25 total)
 
 ### P0 (1)
 
@@ -25,10 +30,11 @@
 |---|-------|--------|
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — pre-launch final check](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, priority:P0, security, owner:mixed, status:awaiting-implementation, launch:first-payment-blocker |
 
-### P1 (11)
+### P1 (12)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1188 | [[QA] Verify post-#1180/#1181 Booking V2 conflict override RLS slice](https://github.com/smallwei0301/tour-platform/issues/1188) | triaged, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, database, rls, booking-v2 |
 | #1179 | [[Admin/Booking V2] V2 activity plan archive action fails on plans page](https://github.com/smallwei0301/tour-platform/issues/1179) | type:bug, priority:P1, owner:ai-agent, status:ready, booking-v2, admin |
 | #1178 | [[Admin/Booking V2] Clarify schedule modal plan dropdown and unified availability field precedence](https://github.com/smallwei0301/tour-platform/issues/1178) | type:bug, priority:P1, owner:ai-agent, status:ready, booking-v2, admin |
 | #1177 | [[QA] Daily test checklist for recent merged PRs 2026-06-03](https://github.com/smallwei0301/tour-platform/issues/1177) | priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa |
@@ -72,6 +78,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1181 | [feat: add conflict override RLS migration slice](https://github.com/smallwei0301/tour-platform/pull/1181) | 2026-06-03 |
 | #1180 | [Booking V2 conflict override compatibility slice (Refs #1067)](https://github.com/smallwei0301/tour-platform/pull/1180) | 2026-06-03 |
 | #1172 | [feat(post-trip): admin send-review-invitation endpoint (#1170)](https://github.com/smallwei0301/tour-platform/pull/1172) | 2026-06-02 |
 | #1168 | [feat(email): add sendReviewInvitation email for post-trip workflow (#1106)](https://github.com/smallwei0301/tour-platform/pull/1168) | 2026-06-02 |
@@ -81,7 +88,6 @@ _none_
 | #1161 | [fix(seo): add twitter:card to theme and why-choose-us pages](https://github.com/smallwei0301/tour-platform/pull/1161) | 2026-06-02 |
 | #1160 | [docs(security): add credential rotation runbook (#1121)](https://github.com/smallwei0301/tour-platform/pull/1160) | 2026-06-02 |
 | #1159 | [chore(security): untrack supabase/.temp CLI scratch from git (#1121)](https://github.com/smallwei0301/tour-platform/pull/1159) | 2026-06-02 |
-| #1158 | [chore(security): remove leaked admin-token literal from WEAK_TOKEN_VALUES (#1121)](https://github.com/smallwei0301/tour-platform/pull/1158) | 2026-06-02 |
 
 ---
 
