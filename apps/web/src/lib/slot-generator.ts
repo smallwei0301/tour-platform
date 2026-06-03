@@ -75,6 +75,17 @@ export interface SerializedSlot {
   capacityLeft: number;
   bookingType: 'scheduled' | 'request' | 'instant';
   isAvailable: boolean;
+  canonicalState?: string;
+  conflictOverride?: {
+    id: string;
+    reason: string;
+    requiresHelper: boolean;
+    helperStatus: string;
+    guideNote?: string | null;
+    adminNote?: string | null;
+    createdAt?: string | null;
+    createdByAdminEmail?: string | null;
+  };
 }
 
 export interface SlotGeneratorInput {

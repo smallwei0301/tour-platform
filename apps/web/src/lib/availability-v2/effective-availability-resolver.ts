@@ -1,4 +1,5 @@
 import { getDateStringInTimezone, rangesOverlap, type AvailabilityRule, type BlackoutWindow, type ExistingBooking } from '../slot-generator.ts';
+import { findMatchingConflictOverride, type GuideSlotConflictOverride } from './conflict-override.ts';
 
 export type CanonicalAvailabilityState =
   | 'available'
@@ -78,6 +79,9 @@ function hasBlockingBookingConflict(params: {
 }
 
 export function resolveCanonicalAvailabilityState(params: {
+  guideId?: string;
+  activityId?: string;
+  planId?: string;
   requestedStartAt: string;
   requestedEndAt?: string;
   timezone: string;
@@ -90,6 +94,7 @@ export function resolveCanonicalAvailabilityState(params: {
   slotAvailable: boolean;
   slotUnavailableReason?: string;
   capacityAvailable: boolean;
+  conflictOverrides?: GuideSlotConflictOverride[];
 }): { state: CanonicalAvailabilityState; metadata?: Record<string, string> } {
   const normalizedPlanStatus = String(params.planStatus || '').trim().toLowerCase();
   if (normalizedPlanStatus && normalizedPlanStatus !== 'active') {
@@ -119,6 +124,31 @@ export function resolveCanonicalAvailabilityState(params: {
   }
 
   if (params.slotUnavailableReason === 'BOOKING_CONFLICT' || hasBlockingBookingConflict(params)) {
+    const matchedOverride =
+      params.guideId && params.activityId && params.planId
+        ? findMatchingConflictOverride({
+            guideId: params.guideId,
+            activityId: params.activityId,
+            planId: params.planId,
+            requestedStartAt: params.requestedStartAt,
+            requestedEndAt: params.requestedEndAt,
+            overrides: params.conflictOverrides,
+          })
+        : null;
+
+    if (matchedOverride) {
+      return {
+        state: 'allowed_with_admin_override',
+        metadata: {
+          overrideId: matchedOverride.id,
+          overrideReason: matchedOverride.reason,
+          helperStatus: matchedOverride.helper_status,
+          requiresHelper: matchedOverride.requires_helper ? 'true' : 'false',
+          createdByAdminEmail: matchedOverride.created_by_admin_email ?? '',
+        },
+      };
+    }
+
     return { state: 'blocked_by_conflict' };
   }
 
