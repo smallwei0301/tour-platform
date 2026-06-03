@@ -56,12 +56,13 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
     slotUnavailableReason: params.evaluation.reasonCode,
     capacityAvailable: params.evaluation.reasonCode !== 'CAPACITY_EXCEEDED',
   });
+  const effectiveCanonicalState = matchedSlot?.canonicalState ?? canonical.state;
 
-  if (matchedSlot && canonical.state === 'available') {
+  if (matchedSlot && (effectiveCanonicalState === 'available' || effectiveCanonicalState === 'allowed_with_admin_override')) {
     return {
       available: true,
       matchedSlot,
-      canonicalState: canonical.state,
+      canonicalState: effectiveCanonicalState,
       evaluation: params.evaluation,
     };
   }

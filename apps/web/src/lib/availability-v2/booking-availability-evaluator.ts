@@ -13,6 +13,11 @@ import {
 } from '../slot-generator.ts';
 import type { ActivityPlanSeason } from './effective-availability-resolver.ts';
 import {
+  findMatchingConflictOverride,
+  serializeConflictOverrideForClient,
+  type GuideSlotConflictOverride,
+} from './conflict-override.ts';
+import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
   calculateExistingParticipantsForGroup,
@@ -50,6 +55,7 @@ export interface BookingAvailabilityEvaluatorInput {
   selectedScheduleAuthority?: Exclude<SelectedScheduleAuthority, 'generated' | 'none'>;
   seasons?: ActivityPlanSeason[];
   planStatus?: string;
+  conflictOverrides?: GuideSlotConflictOverride[];
 }
 
 export interface BookingAvailabilityEvaluation {
@@ -172,19 +178,30 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     const shouldEnforceGeneratedSlotPresence = input.rules.length > 0;
     const selectedScheduleMissingFromGeneratedSlots =
       shouldEnforceGeneratedSlotPresence && !schedulePresentInGeneratedSlots;
-    const selectedScheduleBaseValidation = schedulePresentInGeneratedSlots
-      ? { available: true }
-      : validateSlotAvailability(
-          selectedSchedule.start_at,
-          selectedSchedule.end_at,
-          input.guideId,
-          {
-            blackouts: input.blackouts,
-            bookings: nonGroupConflictBookings,
-            bufferBefore: 0,
-            bufferAfter: 0,
-          },
-        );
+    const selectedScheduleBaseValidationRaw = validateSlotAvailability(
+      selectedSchedule.start_at,
+      selectedSchedule.end_at,
+      input.guideId,
+      {
+        blackouts: input.blackouts,
+        bookings: input.bookings,
+        bufferBefore: 0,
+        bufferAfter: 0,
+      },
+    );
+    const hasSelectedScheduleBookingConflict = input.bookings
+      .filter((booking) => booking.guide_id === input.guideId)
+      .some((booking) => {
+        const bookingStartAt = new Date(booking.start_at).getTime();
+        const bookingEndAt = new Date(booking.end_at).getTime();
+        const scheduleStartAt = new Date(selectedSchedule.start_at).getTime();
+        const scheduleEndAt = new Date(selectedSchedule.end_at).getTime();
+        return scheduleStartAt < bookingEndAt && scheduleEndAt > bookingStartAt;
+      });
+    const selectedScheduleBaseValidation =
+      selectedScheduleBaseValidationRaw.reason === 'SLOT_IN_PAST' && hasSelectedScheduleBookingConflict
+        ? { available: false, reason: 'BOOKING_CONFLICT' }
+        : selectedScheduleBaseValidationRaw;
 
     const localDate = getDateStringInTimezone(new Date(selectedSchedule.start_at), input.timezone);
 
@@ -226,6 +243,21 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
 
     const remaining = Math.max(0, selectedSchedule.capacity - selectedSchedule.booked_count);
     const insufficient = remaining < input.participants;
+    const matchedConflictOverride = findMatchingConflictOverride({
+      guideId: input.guideId,
+      activityId: input.activityId,
+      planId: input.planId,
+      requestedStartAt: selectedSchedule.start_at,
+      requestedEndAt: selectedSchedule.end_at,
+      overrides: input.conflictOverrides,
+    });
+    const canAllowWithAdminOverride =
+      selectedSchedule.status === 'open' &&
+      !selectedScheduleMissingFromGeneratedSlots &&
+      selectedScheduleBaseValidation.reason === 'BOOKING_CONFLICT' &&
+      selectedScheduleRule.allowed &&
+      !insufficient &&
+      Boolean(matchedConflictOverride);
 
     if (
       selectedSchedule.status !== 'open' ||
@@ -234,37 +266,52 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       !selectedScheduleRule.allowed ||
       insufficient
     ) {
-      slots = [];
-      if (selectedScheduleMissingFromGeneratedSlots) {
-        selectedScheduleRuleFailure = {
-          reasonCode: 'BOOKING_CONFLICT',
-          messageZh: '此時段已無可用名額，請重新選擇時段',
-        };
-      } else if (selectedSchedule.status !== 'open') {
-        selectedScheduleRuleFailure = {
-          reasonCode: 'BOOKING_CONFLICT',
-          messageZh: '此時段已無可用名額，請重新選擇時段',
-        };
-      } else if (!selectedScheduleBaseValidation.available) {
-        selectedScheduleRuleFailure = {
-          reasonCode: selectedScheduleBaseValidation.reason,
-          messageZh:
-            selectedScheduleBaseValidation.reason === 'SLOT_IN_PAST'
-              ? '所選時段已過期，請重新選擇時段'
-              : selectedScheduleBaseValidation.reason === 'BLACKOUT_CONFLICT'
-                ? '該時段暫停開放預約，請選擇其他時段'
-                : '該時段已無可用名額，請選擇其他時段',
-        };
-      } else if (!selectedScheduleRule.allowed) {
-        selectedScheduleRuleFailure = {
-          reasonCode: selectedScheduleRule.reasonCode,
-          messageZh: selectedScheduleRule.messageZh,
-        };
-      } else if (insufficient) {
-        selectedScheduleRuleFailure = {
-          reasonCode: 'CAPACITY_EXCEEDED',
-          messageZh: `此行程最多 ${selectedSchedule.capacity} 人，當前時段剩餘 ${remaining} 人可預訂`,
-        };
+      if (canAllowWithAdminOverride && matchedConflictOverride) {
+        capacityLeft = Math.min(remaining, input.plan.max_participants);
+        slots = [
+          {
+            startAt: formatDateWithTimezone(new Date(selectedSchedule.start_at), input.timezone),
+            endAt: formatDateWithTimezone(new Date(selectedSchedule.end_at), input.timezone),
+            capacityLeft,
+            bookingType: input.plan.booking_type,
+            isAvailable: true,
+            canonicalState: 'allowed_with_admin_override',
+            conflictOverride: serializeConflictOverrideForClient(matchedConflictOverride),
+          },
+        ];
+      } else {
+        slots = [];
+        if (selectedScheduleMissingFromGeneratedSlots) {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'BOOKING_CONFLICT',
+            messageZh: '此時段已無可用名額，請重新選擇時段',
+          };
+        } else if (selectedSchedule.status !== 'open') {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'BOOKING_CONFLICT',
+            messageZh: '此時段已無可用名額，請重新選擇時段',
+          };
+        } else if (!selectedScheduleBaseValidation.available) {
+          selectedScheduleRuleFailure = {
+            reasonCode: selectedScheduleBaseValidation.reason,
+            messageZh:
+              selectedScheduleBaseValidation.reason === 'SLOT_IN_PAST'
+                ? '所選時段已過期，請重新選擇時段'
+                : selectedScheduleBaseValidation.reason === 'BLACKOUT_CONFLICT'
+                  ? '該時段暫停開放預約，請選擇其他時段'
+                  : '該時段已無可用名額，請選擇其他時段',
+          };
+        } else if (!selectedScheduleRule.allowed) {
+          selectedScheduleRuleFailure = {
+            reasonCode: selectedScheduleRule.reasonCode,
+            messageZh: selectedScheduleRule.messageZh,
+          };
+        } else if (insufficient) {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'CAPACITY_EXCEEDED',
+            messageZh: `此行程最多 ${selectedSchedule.capacity} 人，當前時段剩餘 ${remaining} 人可預訂`,
+          };
+        }
       }
     } else {
       capacityLeft = Math.min(remaining, input.plan.max_participants);

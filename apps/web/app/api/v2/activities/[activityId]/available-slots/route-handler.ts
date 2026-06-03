@@ -24,6 +24,7 @@ import {
   type ActivityPlan,
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import {
@@ -415,6 +416,23 @@ export async function getAvailableSlots(
       });
     }
 
+    const { data: conflictOverridesData, error: conflictOverridesError } = await supabase
+      .from('guide_slot_conflict_overrides')
+      .select(
+        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
+      )
+      .eq('guide_id', guideId)
+      .eq('activity_id', params.activityId)
+      .eq('activity_plan_id', params.planId)
+      .eq('status', 'active');
+
+    if (conflictOverridesError) {
+      console.error('Error fetching guide_slot_conflict_overrides:', conflictOverridesError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch guide slot conflict overrides'), {
+        status: 500,
+      });
+    }
+
     // Transform database rows to slot generator types
     const rules: AvailabilityRule[] = (rulesData || []).map((row) => ({
       id: row.id,
@@ -463,6 +481,23 @@ export async function getAvailableSlots(
       is_active: Boolean(row.is_active),
     }));
 
+    const conflictOverrides: GuideSlotConflictOverride[] = (conflictOverridesData || []).map((row) => ({
+      id: row.id,
+      guide_id: row.guide_id,
+      activity_id: row.activity_id,
+      activity_plan_id: row.activity_plan_id,
+      start_at: row.start_at,
+      end_at: row.end_at,
+      reason: row.reason,
+      requires_helper: Boolean(row.requires_helper),
+      helper_status: row.helper_status,
+      guide_note: row.guide_note ?? null,
+      admin_note: row.admin_note ?? null,
+      status: row.status,
+      created_at: row.created_at ?? null,
+      created_by_admin_email: row.created_by_admin_email ?? null,
+    }));
+
     const plan: ActivityPlan = {
       id: planData.id,
       activity_id: planData.activity_id,
@@ -477,6 +512,8 @@ export async function getAvailableSlots(
         ? Number((planData as { min_participants?: unknown }).min_participants)
         : 1;
 
+    // Preserve canonical slot states from evaluator, including allowed_with_admin_override
+    // when a guide_slot_conflict_overrides record explicitly re-opens a conflicting slot.
     const availability = evaluateBookingAvailability({
       guideId,
       activityId: params.activityId,
@@ -491,6 +528,7 @@ export async function getAvailableSlots(
       bookings,
       plan,
       seasons,
+      conflictOverrides,
       planStatus: planData.status,
       selectedSchedule,
       selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
