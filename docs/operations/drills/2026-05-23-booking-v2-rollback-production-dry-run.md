@@ -15,7 +15,7 @@ Validate that the production rollback procedure is comprehensible, executable wi
 Cross-links:
 - Issue #641 — [Ops] Prepare production rollback drill evidence and operator handoff for Booking V2
 - Prior non-prod drill: docs/operations/drills/2026-04-18-booking-v2-rollback-drill.md (PASS)
-- Launch plan Phase 6: docs/operations/booking-v2-launch-priority-plan.md
+- Launch plan / current priority: docs/operations/current-issue-priority.md
 
 ---
 
@@ -133,4 +133,4 @@ SLA: PASS (estimated 3.5 min, target <= 5 min)
 - `docs/operations/booking-v2-rollback-runbook.md` (v2 — updated this session for production operator detail)
 - `docs/operations/templates/booking-v2-incident-template.md`
 - `docs/operations/drills/2026-04-18-booking-v2-rollback-drill.md` (prior non-prod drill, PASS)
-- `docs/operations/booking-v2-launch-priority-plan.md` (Phase 6 — this issue)
+- `docs/operations/current-issue-priority.md` (canonical launch routing + priority snapshot)
