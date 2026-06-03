@@ -37,9 +37,10 @@ const slotGenPath = path.resolve(__dirname, '../../src/lib/slot-generator.ts');
 function createSupabaseMock(results) {
   let index = 0;
   const calls = [];
+  const optionalThenTables = new Set(['activity_plan_seasons', 'guide_slot_conflict_overrides']);
   const take = (terminal, table, filters) => {
     const next = results[index];
-    if ((!next || next.terminal !== terminal || next.table !== table) && terminal === 'then' && table === 'activity_plan_seasons') {
+    if ((!next || next.terminal !== terminal || next.table !== table) && terminal === 'then' && optionalThenTables.has(table)) {
       calls.push({ terminal, table, filters: [...filters] });
       return { data: [], error: null };
     }

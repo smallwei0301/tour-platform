@@ -27,8 +27,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function createSupabaseMock(results) {
   let index = 0;
   const calls = [];
+  const optionalThenTables = new Set(['activity_plan_seasons', 'guide_slot_conflict_overrides']);
   const take = (terminal, table, filters) => {
     const next = results[index++];
+    if ((!next || next.terminal !== terminal || next.table !== table) && terminal === 'then' && optionalThenTables.has(table)) {
+      index -= 1;
+      calls.push({ terminal, table, filters: [...filters] });
+      return { data: [], error: null };
+    }
     assert.ok(next, `unexpected query: ${terminal} on ${table} (index ${index - 1})`);
     assert.equal(next.terminal, terminal, `terminal mismatch for ${table} at index ${index - 1}`);
     assert.equal(next.table, table, `table mismatch for ${terminal} at index ${index - 1}`);
