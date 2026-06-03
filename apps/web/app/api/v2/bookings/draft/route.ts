@@ -19,6 +19,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
+import { getSupabase, hasSupabaseEnv } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { resolveBookingPlan } from '../../../../../src/lib/booking-plan-resolver';
 import {
@@ -141,10 +142,7 @@ async function isSlotInGeneratedV2Availability(
     reason: string;
     requiresHelper: boolean;
     helperStatus: string;
-    guideNote?: string | null;
-    adminNote?: string | null;
     createdAt?: string | null;
-    createdByAdminEmail?: string | null;
   };
 }> {
   // Fetch availability rules for this guide and plan
@@ -189,15 +187,16 @@ async function isSlotInGeneratedV2Availability(
     throw new Error('Failed to fetch activity plan seasons');
   }
 
+  const conflictOverrideSupabase = hasSupabaseEnv() ? await getSupabase() : supabase;
   const {
     data: conflictOverridesData,
     error: conflictOverridesError,
     schemaFallback: conflictOverridesSchemaFallback,
   } = await loadConflictOverridesWithSchemaFallback(() =>
-    supabase
+    conflictOverrideSupabase
       .from('guide_slot_conflict_overrides')
       .select(
-        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
+        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, status, created_at'
       )
       .eq('guide_id', payload.guideId)
       .eq('activity_id', payload.activityId)
@@ -277,11 +276,8 @@ async function isSlotInGeneratedV2Availability(
     reason: row.reason,
     requires_helper: Boolean(row.requires_helper),
     helper_status: row.helper_status,
-    guide_note: row.guide_note ?? null,
-    admin_note: row.admin_note ?? null,
     status: row.status,
     created_at: row.created_at ?? null,
-    created_by_admin_email: row.created_by_admin_email ?? null,
   }));
 
   const plan: ActivityPlan = {
