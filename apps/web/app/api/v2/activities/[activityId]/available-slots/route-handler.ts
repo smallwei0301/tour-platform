@@ -25,6 +25,7 @@ import {
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
+import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
 import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import {
@@ -416,20 +417,35 @@ export async function getAvailableSlots(
       });
     }
 
-    const { data: conflictOverridesData, error: conflictOverridesError } = await supabase
-      .from('guide_slot_conflict_overrides')
-      .select(
-        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
-      )
-      .eq('guide_id', guideId)
-      .eq('activity_id', params.activityId)
-      .eq('activity_plan_id', params.planId)
-      .eq('status', 'active');
+    const {
+      data: conflictOverridesData,
+      error: conflictOverridesError,
+      schemaFallback: conflictOverridesSchemaFallback,
+    } = await loadConflictOverridesWithSchemaFallback(async () =>
+      supabase
+        .from('guide_slot_conflict_overrides')
+        .select(
+          'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
+        )
+        .eq('guide_id', guideId)
+        .eq('activity_id', params.activityId)
+        .eq('activity_plan_id', params.planId)
+        .eq('status', 'active')
+    );
 
     if (conflictOverridesError) {
       console.error('Error fetching guide_slot_conflict_overrides:', conflictOverridesError);
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch guide slot conflict overrides'), {
         status: 500,
+      });
+    }
+
+    if (conflictOverridesSchemaFallback) {
+      console.warn('Conflict override schema fallback during available-slots', {
+        guideId,
+        activityId: params.activityId,
+        planId: params.planId,
+        fallback: conflictOverridesSchemaFallback,
       });
     }
 
@@ -481,7 +497,7 @@ export async function getAvailableSlots(
       is_active: Boolean(row.is_active),
     }));
 
-    const conflictOverrides: GuideSlotConflictOverride[] = (conflictOverridesData || []).map((row) => ({
+    const conflictOverrides: GuideSlotConflictOverride[] = (conflictOverridesData || []).map((row: any) => ({
       id: row.id,
       guide_id: row.guide_id,
       activity_id: row.activity_id,

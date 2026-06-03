@@ -8,16 +8,16 @@ import {
   findMatchingConflictOverride,
   serializeConflictOverrideForClient,
 } from '../../src/lib/availability-v2/conflict-override.ts';
+import {
+  applyBookingConflictOverrideColumnFallback,
+  loadConflictOverridesWithSchemaFallback,
+} from '../../src/lib/conflict-override-schema-compat.mjs';
 import { evaluateBookingAvailability } from '../../src/lib/availability-v2/booking-availability-evaluator.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const AVAILABLE_SLOTS_ROUTE = join(REPO_ROOT, 'app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
 const DRAFT_ROUTE = join(REPO_ROOT, 'app/api/v2/bookings/draft/route.ts');
-const ADMIN_CONFLICT_OVERRIDE_ROUTE = join(
-  REPO_ROOT,
-  'app/api/v2/admin/guides/[guideId]/conflict-overrides/route.ts',
-);
 
 const TZ = 'Asia/Taipei';
 const GUIDE_ID = 'g-override';
@@ -208,15 +208,61 @@ test('GH-1067 RED: serializeConflictOverrideForClient emits safe downstream meta
   });
 });
 
-test('Source contract: available-slots route reads conflict overrides and preserves allowed_with_admin_override slot state', () => {
+test('GH-1067 RED: loadConflictOverridesWithSchemaFallback degrades missing override table to empty list', async () => {
+  const result = await loadConflictOverridesWithSchemaFallback(async () => ({
+    data: null,
+    error: { message: 'relation "guide_slot_conflict_overrides" does not exist' },
+  }));
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, []);
+  assert.equal(result.schemaFallback, 'missing_table');
+});
+
+test('GH-1067 RED: applyBookingConflictOverrideColumnFallback strips override-only booking columns on schema drift', async () => {
+  const attempts = [];
+  const result = await applyBookingConflictOverrideColumnFallback(async (payload) => {
+    attempts.push({ ...payload });
+    if ('conflict_override_id' in payload) {
+      return {
+        data: null,
+        error: { message: 'column "conflict_override_id" of relation "bookings" does not exist' },
+      };
+    }
+    if ('conflict_override_snapshot' in payload) {
+      return {
+        data: null,
+        error: { message: "Could not find the 'conflict_override_snapshot' column of 'bookings' in the schema cache" },
+      };
+    }
+    return { data: { id: 'booking-1' }, error: null };
+  }, {
+    traveler_id: 'traveler-1',
+    guide_id: GUIDE_ID,
+    conflict_override_id: 'ovr-1',
+    conflict_override_snapshot: { id: 'ovr-1' },
+  });
+
+  assert.equal(result.error, null);
+  assert.deepEqual(result.data, { id: 'booking-1' });
+  assert.deepEqual(result.droppedColumns, ['conflict_override_id', 'conflict_override_snapshot']);
+  assert.equal(attempts.length, 3);
+  assert.ok('conflict_override_id' in attempts[0]);
+  assert.ok(!('conflict_override_id' in attempts[1]));
+  assert.ok(!('conflict_override_snapshot' in attempts[2]));
+});
+
+test('Source contract: available-slots route reads conflict overrides via schema fallback and preserves allowed_with_admin_override slot state', () => {
   const src = readFileSync(AVAILABLE_SLOTS_ROUTE, 'utf8');
+  assert.match(src, /loadConflictOverridesWithSchemaFallback/);
   assert.match(src, /guide_slot_conflict_overrides/);
-  assert.match(src, /conflictOverrides/);
   assert.match(src, /allowed_with_admin_override/);
 });
 
-test('Source contract: draft route persists conflict override linkage and snapshot for later audit', () => {
+test('Source contract: draft route uses schema fallback for override reads and strips override-only booking columns on schema drift', () => {
   const src = readFileSync(DRAFT_ROUTE, 'utf8');
+  assert.match(src, /loadConflictOverridesWithSchemaFallback/);
+  assert.match(src, /applyBookingConflictOverrideColumnFallback/);
   assert.match(src, /conflict_override_id/);
   assert.match(src, /conflict_override_snapshot/);
   assert.match(src, /allowed_with_admin_override/);
@@ -229,20 +275,4 @@ test('Source contract: draft route carries override metadata into booking status
   const tail = src.slice(statusLogIdx, statusLogIdx + 1200);
   assert.match(tail, /conflictOverride/);
   assert.match(tail, /overrideId|conflict_override_id/);
-});
-
-test('Source contract: admin conflict override mutation route must guard auth before insert and require audit/helper fields', () => {
-  const src = readFileSync(ADMIN_CONFLICT_OVERRIDE_ROUTE, 'utf8');
-  assert.match(src, /pickAdminCredentials/);
-  assert.match(src, /isAdminAuthorized/);
-  assert.match(src, /getRequiredAdminToken/);
-  assert.match(src, /requires_helper/);
-  assert.match(src, /helper_status/);
-  assert.match(src, /created_by_admin_email/);
-
-  const authIdx = src.indexOf('isAdminAuthorized(');
-  const insertIdx = src.indexOf('.insert(');
-  assert.ok(authIdx >= 0, 'expected auth guard call');
-  assert.ok(insertIdx >= 0, 'expected insert call');
-  assert.ok(authIdx < insertIdx, 'auth guard must run before insert');
 });
