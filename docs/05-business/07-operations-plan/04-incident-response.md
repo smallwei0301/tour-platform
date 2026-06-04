@@ -105,6 +105,24 @@
 - refund policy
 - customer service SOP
 - security evidence / closure docs
+- **Supabase backup & restore runbook** — `docs/operations/supabase-backup-restore-runbook.md`（資料層 P0/P1 recovery 主流程；§2 決策樹涵蓋 migration 失敗 / 誤刪 / 資料漂移三種情境；§4 post-restore smoke checklist 覆蓋 schema、row counts、orphan refs、payment events 與 soft_launch_controls 一致性驗證）
+- **Restore drill template** — `docs/operations/drills/2026-05-24-supabase-restore-drill-template.md`（演練 #724 用模板；填寫後留存為 evidence）
+
+### 6.1 P0/P1 Recovery 必含的資料一致性驗證（連回 backup/restore runbook）
+
+P0/P1 事故 close-out 前，若涉及資料層改動（含 production 寫入、migration、restore），必須完成以下 backup/restore runbook §4 post-restore smoke 對應檢查並留在事故 post-mortem 中：
+
+- [ ] **Schema verification**（`SELECT tablename FROM pg_tables WHERE schemaname='public'`）— 確認核心表全在：activities, activity_plans, activity_schedules, bookings, booking_status_logs, guide_availability_rules, guide_blackout_dates, guide_balances, incidents, order_items, orders, payment_events, payouts, refund_requests, soft_launch_controls
+- [ ] **Activities count > 0** + **Orders count** 與事故前期望值差異可解釋
+- [ ] **No orphan order_items**（LEFT JOIN orders WHERE orders.id IS NULL → count 0）
+- [ ] **No orphan bookings**（LEFT JOIN orders WHERE orders.id IS NULL AND bookings.status != 'abandoned' → count 0）
+- [ ] **Payment events all reference valid payments**（LEFT JOIN payments WHERE payments.id IS NULL → count 0）
+- [ ] **`soft_launch_controls` 狀態 intact**（最近 5 筆 flag 值未被誤改）
+
+若任一項不通過：
+1. 不可宣告事故 close-out。
+2. 套用 §8.6.1 保守處理（若涉及 PII / 金流）並升級為 deferred 在 §8.6.2 紀錄。
+3. 若涉及資料 restore，依 backup runbook §3 決策樹 + §5 升級條件處理；payment data 缺失視為 P0 並 page Wei + Wei 的銀行聯絡窗口。
 
 ## 7. 後續待補
 - 法規通報義務對照表 → 見 [§8 法規/合規通報義務矩陣](#法規合規通報義務矩陣初版)
@@ -196,3 +214,59 @@
 - 所有 P0/P1 事故均需同步更新 post-mortem（見 §5.5 模板）。
 - 任何涉及外部通報的決定，需 Wei 批准後執行。
 - 若不確定是否需通報，寧可諮詢再決定，不可靜默忽略。
+
+---
+
+## 法規/合規通報義務矩陣 — 決策記錄（Decision Log）
+
+> 本節記錄每個 `[需確認]` 項目的決策狀態。以下為 soft launch 期間的**保守預設處理方式**，待 Wei / 外部顧問確認後更新為正式立場。
+>
+> 建立日期：2026-06-03（AI草稿由 tour-loop 生成）
+> 狀態：**DRAFT — 待 Wei 確認各項決策**
+
+### D.1 個資 / 帳號 / Session 疑似外洩 → §8.1
+
+| 項目 | `[需確認]` 內容 | 保守預設 (soft launch) | 決策狀態 |
+|------|------|------|------|
+| 個資法通報時限 | 個人資料保護委員會（台灣個資法 §22）的強制通報時限是否 72 小時或有所不同？ | **DEFERRED**: 事故發生時立即諮詢法律顧問，未確認前保守做法為「24 小時內完成內部評估，若涉及外洩則同日內諮詢是否需通報」 | ⬜ 待 Wei 確認 |
+| 確認角色 | 需要法律顧問、資安顧問的哪一方？是否有 retainer 聯絡人？ | **DEFERRED**: 暫依 Wei 直接決定，事後補簽法律顧問 | ⬜ 待 Wei 確認 |
+
+### D.2 付款 / 退款 / 金流 Provider 異常 → §8.2
+
+| 項目 | `[需確認]` 內容 | 保守預設 (soft launch) | 決策狀態 |
+|------|------|------|------|
+| 金管會通報門檻 | 付款異常/多重扣款需向金融監督管理委員會通報的適用門檻為何？ | **DEFERRED**: soft launch 期間預設不向金管會通報（規模小），但任何多重扣款立即停止結帳流程並通知 ECPay；若累積金額超過 NTD 1,000 或 3 筆，升級為 Wei 決定是否諮詢 | ⬜ 待 Wei 確認 |
+
+### D.3 旅遊現場安全事故 / 導遊失聯 → §8.3
+
+| 項目 | `[需確認]` 內容 | 保守預設 (soft launch) | 決策狀態 |
+|------|------|------|------|
+| 保險公司理賠時機 | 旅遊責任險何時啟動理賠申請？是否有 24 小時通報義務？ | **DEFERRED**: 旅客受傷時立即聯繫保險顧問；若保險顧問電話/聯絡人未確認，保守做法為「事故後 24 小時內書面告知事故摘要給 Wei，由 Wei 決定保險申請」 | ⬜ 待 Wei 確認保險顧問聯絡方式 |
+
+### D.4 大面積服務中斷 / 錯誤 Email 發出 → §8.4
+
+| 項目 | `[需確認]` 內容 | 保守預設 (soft launch) | 決策狀態 |
+|------|------|------|------|
+| 個資法通報（錯誤 Email 含 PII） | 錯誤發送含其他用戶個資的 Email，是否觸發個資法強制通報？ | **DEFERRED**: 若發送的錯誤 Email 含收件人名稱/訂單資訊/其他用戶 PII，保守做法為「立即 Resend 緊急暫停、告知 Wei、24 小時內諮詢法律顧問判斷通報義務」；若只含內部操作記錄（無個資），不通報 | ⬜ 待 Wei 確認 |
+
+### D.5 確認角色總覽（由 Wei 填寫）
+
+| 角色 | 是否需要 | Owner | 聯絡方式 | 備註 |
+|------|------|------|------|------|
+| 法律顧問 | ⬜ 待確認 | Wei | — | 個資法 §8.1 / §8.4 |
+| 保險顧問 | ⬜ 待確認 | Wei | — | 旅遊責任險 §8.3 |
+| ECPay 客服 | ✅ 已有 | Wei | 依 ECPay 合約 | §8.2 |
+| 金管會通報 | ⬜ 待確認 | Wei | — | soft launch 預設不觸發 |
+
+### D.6 相鄰 SOP 口徑對齊
+
+本矩陣的通報/升級口徑應與下列 issue 一致：
+- #319 客服 SOP 演練：升級路徑需引用 §8.3 緊急聯絡鏈
+- #593 活動安全/保險 posture：§8.3 保險申請觸發條件
+- #606 KYC 資料保存：§8.1 個資外洩時的保存標準
+- #320 Go/No-Go gate：任何未確認的 DEFERRED 項目應列為 soft launch 前必確認清單
+
+### D.7 下一次複查時機
+
+- **Soft launch 前**（第一筆真實付款前）：Wei 需確認 D.1 法律顧問聯絡方式 + D.3 保險顧問聯絡方式。
+- **首月後**：複查 D.2 金管會門檻是否因交易量增加而需更新。

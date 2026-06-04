@@ -21,13 +21,14 @@
  * @typedef {Object} ValidationResult
  * @property {boolean} ok - true if no blockers
  * @property {Blocker[]} blockers - list of validation issues
+ * @property {string[]} warnings - list of non-blocking warning codes
  */
 
 /**
  * Validate that an activity is bookable before publishing.
  *
  * @param {string} activityId
- * @param {{ supabase?: object }} [options]
+ * @param {{ supabase?: object, allPlansById?: object, now?: string }} [options]
  * @returns {Promise<ValidationResult>}
  */
 export async function validateActivityBookability(activityId, options = {}) {
@@ -40,6 +41,7 @@ export async function validateActivityBookability(activityId, options = {}) {
   }
 
   const blockers = [];
+  const warnings = [];
 
   // ── 1. Fetch activity ─────────────────────────────────────────────────────
   const { data: activity, error: activityError } = await supabase
@@ -56,6 +58,7 @@ export async function validateActivityBookability(activityId, options = {}) {
         messageZh: '找不到此行程',
         activityId,
       }],
+      warnings,
     };
   }
 
@@ -73,18 +76,39 @@ export async function validateActivityBookability(activityId, options = {}) {
         messageZh: '無法讀取行程方案資料',
         activityId,
       }],
+      warnings,
     };
   }
 
   const activeFormalPlans = (formalPlans || []).filter(p => p.status === 'active');
 
   // ── 3. Must have at least one active formal plan ───────────────────────────
-  if (activeFormalPlans.length === 0) {
+  if ((formalPlans || []).length === 0) {
+    // Zero activity_plans rows — check if legacy JSONB plans exist
+    const legacyPlans = activity.plans;
+    if (Array.isArray(legacyPlans) && legacyPlans.length > 0) {
+      // Activity is using legacy JSONB plans but has not migrated to activity_plans
+      blockers.push({
+        code: 'LEGACY_ONLY_PLANS',
+        messageZh: '行程仍使用舊版 JSONB 方案，請先遷移至正式預約方案',
+        activityId,
+      });
+    } else {
+      blockers.push({
+        code: 'NO_ACTIVE_FORMAL_PLAN',
+        messageZh: '尚未建立正式預約方案',
+        activityId,
+      });
+    }
+    return { ok: false, blockers, warnings };
+  } else if (activeFormalPlans.length === 0) {
+    // Has activity_plans rows, but ALL are inactive/archived
     blockers.push({
-      code: 'NO_ACTIVE_FORMAL_PLAN',
-      messageZh: '尚未建立正式預約方案',
+      code: 'ALL_PLANS_INACTIVE',
+      messageZh: '所有預約方案皆已停用或封存，請啟用至少一個方案',
       activityId,
     });
+    return { ok: false, blockers, warnings };
   }
 
   // Build slug → plan map for quick lookup
@@ -133,7 +157,7 @@ export async function validateActivityBookability(activityId, options = {}) {
 
   if (schedulesError) {
     // Non-fatal: skip schedule validation if table is unavailable
-    return { ok: blockers.length === 0, blockers };
+    return { ok: blockers.length === 0, blockers, warnings };
   }
 
   const openSchedules = (schedules || []).filter(s => s.status === 'open');
@@ -150,18 +174,52 @@ export async function validateActivityBookability(activityId, options = {}) {
           activityId,
           scheduleId: sid,
         });
+      } else if (activeFormalPlans.length === 1) {
+        // Exactly 1 active plan — can be auto-resolved at booking time (non-blocking warning)
+        if (!warnings.includes('SCHEDULE_PLAN_AUTORESOLVABLE')) {
+          warnings.push('SCHEDULE_PLAN_AUTORESOLVABLE');
+        }
       }
-      // If only 0 or 1 active formal plan, ambiguity is not an issue here
+      // If 0 active formal plans, that case is already handled above (early return)
     } else {
       // 5b. plan_id is set — verify it matches an active formal plan
       const matchedPlan = activeFormalPlanById.get(schedule.plan_id);
       if (!matchedPlan) {
-        blockers.push({
-          code: 'SCHEDULE_PLAN_MISMATCH',
-          messageZh: `場次指定方案不存在或已停用（scheduleId: ${sid}）`,
-          activityId,
-          scheduleId: sid,
-        });
+        // Check if this plan belongs to a different activity (cross-activity integrity violation)
+        let isCrossActivity = false;
+        if (options.allPlansById) {
+          // Test mode: use injected global map
+          const globalPlan = options.allPlansById[schedule.plan_id];
+          if (globalPlan && globalPlan.activity_id !== activityId) {
+            isCrossActivity = true;
+          }
+        } else {
+          // Production: query Supabase for the plan's activity_id
+          const { data: globalPlan } = await supabase
+            .from('activity_plans')
+            .select('id,activity_id')
+            .eq('id', schedule.plan_id)
+            .maybeSingle();
+          if (globalPlan && globalPlan.activity_id !== activityId) {
+            isCrossActivity = true;
+          }
+        }
+
+        if (isCrossActivity) {
+          blockers.push({
+            code: 'SCHEDULE_PLAN_CROSS_ACTIVITY',
+            messageZh: `場次指定方案屬於其他行程，資料完整性違規（scheduleId: ${sid}）`,
+            activityId,
+            scheduleId: sid,
+          });
+        } else {
+          blockers.push({
+            code: 'SCHEDULE_PLAN_MISMATCH',
+            messageZh: `場次指定方案不存在或已停用（scheduleId: ${sid}）`,
+            activityId,
+            scheduleId: sid,
+          });
+        }
         continue; // Can't check capacity without a valid plan
       }
 
@@ -177,8 +235,26 @@ export async function validateActivityBookability(activityId, options = {}) {
     }
   }
 
+  // ── 6. NO_FUTURE_SCHEDULES — only fire when schedules EXIST but all are in the past ──
+  // (When zero schedules exist, publish is not blocked — preserves backward compatibility)
+  if ((schedules || []).length > 0) {
+    const now = options.now ? new Date(options.now) : new Date();
+    const hasFutureSchedule = openSchedules.some(s => {
+      const planIsActive = !s.plan_id || activeFormalPlanById.get(s.plan_id);
+      return planIsActive && new Date(s.start_at) > now;
+    });
+    if (!hasFutureSchedule) {
+      blockers.push({
+        code: 'NO_FUTURE_SCHEDULES',
+        messageZh: '所有場次皆已過期，請新增未來日期的場次',
+        activityId,
+      });
+    }
+  }
+
   return {
     ok: blockers.length === 0,
     blockers,
+    warnings,
   };
 }

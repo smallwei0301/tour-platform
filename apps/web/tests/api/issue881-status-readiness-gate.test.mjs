@@ -40,8 +40,30 @@ function makeMockSupabase({ activity = null, formalPlans = [], schedules = [] } 
         // Returns array — need different interface
         const rows = formalPlans;
         return {
+          _rows: rows,
           select() { return this; },
-          eq() { return this; },
+          eq(col, val) {
+            // Support .eq('id', someId) for cross-activity plan lookup
+            if (col === 'id') {
+              return {
+                _rows: rows.filter(p => p.id === val),
+                select() { return this; },
+                eq() { return this; },
+                maybeSingle() {
+                  const row = this._rows[0] ?? null;
+                  return Promise.resolve({ data: row, error: null });
+                },
+                then(resolve) {
+                  return Promise.resolve({ data: this._rows, error: null }).then(resolve);
+                },
+              };
+            }
+            return this;
+          },
+          maybeSingle() {
+            const row = rows[0] ?? null;
+            return Promise.resolve({ data: row, error: null });
+          },
           then(resolve) {
             return Promise.resolve({ data: rows, error: null }).then(resolve);
           },
@@ -83,7 +105,7 @@ const activeFormalPlan = {
 
 const openSchedule = {
   id: 'schedule-00000-0000-0000-000000000001',
-  start_at: '2026-06-01T08:00:00+08:00',
+  start_at: '2099-06-01T08:00:00+08:00',  // far future — stable across time
   plan_id: 'formalplan-0000-0000-0000-000000000001',
   capacity: 8,
   booked_count: 0,
@@ -103,7 +125,7 @@ describe('validateActivityBookability', () => {
     assert.ok(result.blockers[0].messageZh, 'should have a Chinese message');
   });
 
-  it('returns NO_ACTIVE_FORMAL_PLAN when no active formal plans exist', async () => {
+  it('returns NO_ACTIVE_FORMAL_PLAN (or LEGACY_ONLY_PLANS) when no active formal plans exist', async () => {
     const supabase = makeMockSupabase({
       activity: validActivity,
       formalPlans: [],  // no formal plans at all
@@ -113,7 +135,11 @@ describe('validateActivityBookability', () => {
 
     assert.equal(result.ok, false);
     const codes = result.blockers.map(b => b.code);
-    assert.ok(codes.includes('NO_ACTIVE_FORMAL_PLAN'), `expected NO_ACTIVE_FORMAL_PLAN, got: ${JSON.stringify(codes)}`);
+    // validActivity has legacy JSONB plans, so LEGACY_ONLY_PLANS fires instead of NO_ACTIVE_FORMAL_PLAN
+    assert.ok(
+      codes.includes('NO_ACTIVE_FORMAL_PLAN') || codes.includes('LEGACY_ONLY_PLANS'),
+      `expected NO_ACTIVE_FORMAL_PLAN or LEGACY_ONLY_PLANS, got: ${JSON.stringify(codes)}`
+    );
   });
 
   it('returns PLAN_NOT_RESOLVABLE when public plan cannot be matched to a formal plan', async () => {
@@ -148,10 +174,12 @@ describe('validateActivityBookability', () => {
 
     assert.equal(result.ok, false);
     const codes = result.blockers.map(b => b.code);
-    // NO_ACTIVE_FORMAL_PLAN fires first because there are 0 active plans
+    // When formalPlans rows exist but all inactive, ALL_PLANS_INACTIVE fires.
+    // When zero formalPlans rows + legacy JSONB plans, LEGACY_ONLY_PLANS fires.
     assert.ok(
-      codes.includes('NO_ACTIVE_FORMAL_PLAN') || codes.includes('PLAN_NOT_ACTIVE'),
-      `expected NO_ACTIVE_FORMAL_PLAN or PLAN_NOT_ACTIVE, got: ${JSON.stringify(codes)}`
+      codes.includes('NO_ACTIVE_FORMAL_PLAN') || codes.includes('PLAN_NOT_ACTIVE') ||
+      codes.includes('ALL_PLANS_INACTIVE') || codes.includes('LEGACY_ONLY_PLANS'),
+      `expected a plan-inactive blocker, got: ${JSON.stringify(codes)}`
     );
   });
 

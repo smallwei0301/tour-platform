@@ -7,6 +7,17 @@ import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui'
 import { ResponsiveModal, ResponsiveTable, FormGrid, type ResponsiveColumn } from '../../../../../src/components/admin/responsive';
 import { useTablistKeyboard } from '../../../../../src/lib/use-tablist-keyboard';
 
+type ReadinessCheck = {
+  readinessOk: boolean;
+  blockers: Array<{ code: string; messageZh: string }>;
+  warnings: string[];
+  summary: {
+    activePlansCount: number;
+    futureSchedulesCount: number;
+    openSchedulesWithNullPlan: number;
+  };
+};
+
 const PLAN_STATUS_TABS = [
   { value: '', label: '全部' },
   { value: 'active', label: '啟用中' },
@@ -86,6 +97,9 @@ export default function ActivityPlansPage() {
   const [notice, setNotice] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const tabKb = useTablistKeyboard(PLAN_STATUS_VALUES, statusFilter, setStatusFilter);
+
+  const [readinessCheck, setReadinessCheck] = useState<ReadinessCheck | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
 
   const createDefaultForm = () => ({
     name: '',
@@ -167,6 +181,18 @@ export default function ActivityPlansPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (!activityId) return;
+    setReadinessLoading(true);
+    fetch(`/api/v2/admin/activities/${activityId}/readiness`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.data) setReadinessCheck(d.data as ReadinessCheck);
+      })
+      .catch(() => {})
+      .finally(() => setReadinessLoading(false));
+  }, [activityId]);
 
   const openModal = (plan?: ActivityPlan) => {
     if (plan) {
@@ -350,6 +376,46 @@ export default function ActivityPlansPage() {
           </div>
         }
       />
+
+      {/* ── Readiness gate widget ── */}
+      {readinessLoading ? (
+        <div style={{ padding: '12px 16px', background: '#f9fafb', borderRadius: 8, marginBottom: 16, fontSize: 13, color: '#6b7280' }}>
+          ⏳ 檢查發佈資格中⋯
+        </div>
+      ) : readinessCheck && !readinessCheck.readinessOk ? (
+        <div
+          data-testid="readiness-blockers"
+          style={{ padding: '12px 16px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, marginBottom: 16 }}
+        >
+          <p style={{ fontWeight: 600, color: '#b45309', margin: '0 0 8px', fontSize: 13 }}>
+            ⚠️ 此行程尚未符合發佈條件（{readinessCheck.blockers.length} 個問題）
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#92400e' }}>
+            {readinessCheck.blockers.map((b, i) => (
+              <li key={i}>{b.messageZh}</li>
+            ))}
+          </ul>
+        </div>
+      ) : readinessCheck && readinessCheck.readinessOk && readinessCheck.warnings.length > 0 ? (
+        <div
+          data-testid="readiness-warnings"
+          style={{ padding: '12px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, marginBottom: 16 }}
+        >
+          <p style={{ fontWeight: 600, color: '#92400e', margin: '0 0 4px', fontSize: 13 }}>
+            ℹ️ 注意（非阻擋警告）
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: '#78350f' }}>
+            {readinessCheck.warnings.map((w, i) => <li key={i}>{w}</li>)}
+          </ul>
+        </div>
+      ) : readinessCheck && readinessCheck.readinessOk ? (
+        <div
+          data-testid="readiness-ok"
+          style={{ padding: '8px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, marginBottom: 16, fontSize: 13, color: '#15803d' }}
+        >
+          ✅ 符合發佈條件（{readinessCheck.summary.activePlansCount} 個啟用方案，{readinessCheck.summary.futureSchedulesCount} 個未來場次）
+        </div>
+      ) : null}
 
       {/* ── Modal ── */}
       <ResponsiveModal

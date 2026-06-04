@@ -10,6 +10,12 @@ export const metadata: Metadata = {
     description: '不一樣的高雄旅行：跟著在地人鑽進柴山洞穴，看見你在景點地圖上找不到的台灣。',
     images: [{ url: 'https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200', width: 1200, height: 630, alt: '柴山探洞 | Midao 祕島' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: '柴山探洞 — 高雄秘境地下世界 | Midao 祕島',
+    description: '不一樣的高雄旅行：跟著在地人鑽進柴山洞穴，看見你在景點地圖上找不到的台灣。',
+    images: ['https://images.pexels.com/photos/1496373/pexels-photo-1496373.jpeg?auto=compress&cs=tinysrgb&w=1200'],
+  },
 };
 
 const caveTours = [

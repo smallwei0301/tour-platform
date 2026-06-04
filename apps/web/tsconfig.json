@@ -34,11 +34,29 @@
     ]
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "next-env.d.ts",
+    "global.d.ts",
+    "instrumentation*.ts",
+    "middleware.ts",
+    "playwright.config.ts",
+    "sentry*.config.ts",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "e2e/**/*.ts",
+    "e2e/**/*.tsx",
+    "scripts/**/*.ts",
     ".next/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "test-results",
+    "playwright-report",
+    "evidence",
+    "public",
+    "coverage"
   ]
 }

@@ -4,6 +4,8 @@
  * Override via env: SETTLEMENT_COMMISSION_RATE, SETTLEMENT_T_DAYS, SETTLEMENT_MIN_WITHDRAWAL_TWD
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export const SETTLEMENT_COMMISSION_RATE = parseFloat(process.env.SETTLEMENT_COMMISSION_RATE ?? '0.15')
 export const SETTLEMENT_T_DAYS = parseInt(process.env.SETTLEMENT_T_DAYS ?? '7', 10)
 export const SETTLEMENT_MIN_WITHDRAWAL_TWD = parseInt(process.env.SETTLEMENT_MIN_WITHDRAWAL_TWD ?? '5000', 10)
@@ -44,7 +46,7 @@ export type SettlementConfig = {
  * Falls back to env constants if DB is unreachable or returns no row.
  * Existing env-backed constants (SETTLEMENT_COMMISSION_RATE etc.) remain unchanged.
  */
-export async function getSettlementConfig(supabase: any): Promise<SettlementConfig> {
+export async function getSettlementConfig(supabase: SupabaseClient): Promise<SettlementConfig> {
   try {
     const { data } = await supabase
       .from('settlement_rules')

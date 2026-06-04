@@ -21,6 +21,11 @@ export function pickFallbackDraftSelectedSchedule(payload: {
   participants: number;
 }): { schedule: DraftScheduleRow; validation: { available: boolean; reason?: string } } | null {
   const { schedules, activityId, resolvedPlanId, requestStartAt, slotDate, timezone, participants } = payload;
+  let firstAuthoritativeReject: {
+    schedule: DraftScheduleRow;
+    validation: { available: boolean; reason?: string };
+  } | null = null;
+
   for (const schedule of schedules) {
     if (schedule.status !== 'open') {
       continue;
@@ -36,10 +41,20 @@ export function pickFallbackDraftSelectedSchedule(payload: {
       participants,
     });
 
-    return { schedule, validation };
+    if (validation.available) {
+      return { schedule, validation };
+    }
+
+    if (
+      !firstAuthoritativeReject &&
+      validation.reason &&
+      AUTHORITATIVE_SELECTED_SCHEDULE_REJECT_REASONS.has(validation.reason)
+    ) {
+      firstAuthoritativeReject = { schedule, validation };
+    }
   }
 
-  return null;
+  return firstAuthoritativeReject;
 }
 
 export function validateDraftSlotAgainstSelectedSchedule(payload: {

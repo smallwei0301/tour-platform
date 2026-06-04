@@ -15,6 +15,7 @@
 import type { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../src/lib/api.ts';
 import { resolveBookingPlan } from '../../../../../../src/lib/booking-plan-resolver.ts';
+import { getSupabase, hasSupabaseEnv } from '../../../../../../src/lib/db.mjs';
 import type { createClient as CreateClientFn } from '../../../../../../src/lib/supabase/server.ts';
 import {
   getDateStringInTimezone,
@@ -24,6 +25,9 @@ import {
   type ActivityPlan,
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
+import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
+import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
@@ -402,6 +406,51 @@ export async function getAvailableSlots(
       });
     }
 
+    const { data: seasonsData, error: seasonsError } = await supabase
+      .from('activity_plan_seasons')
+      .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+      .eq('activity_plan_id', params.planId);
+
+    if (seasonsError) {
+      console.error('Error fetching activity plan seasons:', seasonsError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch activity plan seasons'), {
+        status: 500,
+      });
+    }
+
+    const conflictOverrideSupabase = hasSupabaseEnv() ? await getSupabase() : supabase;
+    const {
+      data: conflictOverridesData,
+      error: conflictOverridesError,
+      schemaFallback: conflictOverridesSchemaFallback,
+    } = await loadConflictOverridesWithSchemaFallback(async () =>
+      conflictOverrideSupabase
+        .from('guide_slot_conflict_overrides')
+        .select(
+          'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, status, created_at'
+        )
+        .eq('guide_id', guideId)
+        .eq('activity_id', params.activityId)
+        .eq('activity_plan_id', params.planId)
+        .eq('status', 'active')
+    );
+
+    if (conflictOverridesError) {
+      console.error('Error fetching guide_slot_conflict_overrides:', conflictOverridesError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch guide slot conflict overrides'), {
+        status: 500,
+      });
+    }
+
+    if (conflictOverridesSchemaFallback) {
+      console.warn('Conflict override schema fallback during available-slots', {
+        guideId,
+        activityId: params.activityId,
+        planId: params.planId,
+        fallback: conflictOverridesSchemaFallback,
+      });
+    }
+
     // Transform database rows to slot generator types
     const rules: AvailabilityRule[] = (rulesData || []).map((row) => ({
       id: row.id,
@@ -439,6 +488,31 @@ export async function getAvailableSlots(
       activity_plan_id: row.activity_plan_id ?? null,
     }));
 
+    const seasons: ActivityPlanSeason[] = (seasonsData || []).map((row) => ({
+      id: row.id,
+      activity_plan_id: row.activity_plan_id,
+      start_month: Number(row.start_month),
+      start_day: Number(row.start_day),
+      end_month: Number(row.end_month),
+      end_day: Number(row.end_day),
+      timezone: row.timezone,
+      is_active: Boolean(row.is_active),
+    }));
+
+    const conflictOverrides: GuideSlotConflictOverride[] = (conflictOverridesData || []).map((row: any) => ({
+      id: row.id,
+      guide_id: row.guide_id,
+      activity_id: row.activity_id,
+      activity_plan_id: row.activity_plan_id,
+      start_at: row.start_at,
+      end_at: row.end_at,
+      reason: row.reason,
+      requires_helper: Boolean(row.requires_helper),
+      helper_status: row.helper_status,
+      status: row.status,
+      created_at: row.created_at ?? null,
+    }));
+
     const plan: ActivityPlan = {
       id: planData.id,
       activity_id: planData.activity_id,
@@ -453,6 +527,8 @@ export async function getAvailableSlots(
         ? Number((planData as { min_participants?: unknown }).min_participants)
         : 1;
 
+    // Preserve canonical slot states from evaluator, including allowed_with_admin_override
+    // when a guide_slot_conflict_overrides record explicitly re-opens a conflicting slot.
     const availability = evaluateBookingAvailability({
       guideId,
       activityId: params.activityId,
@@ -466,6 +542,9 @@ export async function getAvailableSlots(
       blackouts,
       bookings,
       plan,
+      seasons,
+      conflictOverrides,
+      planStatus: planData.status,
       selectedSchedule,
       selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
     });

@@ -5,9 +5,15 @@ import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/avai
 function createSupabaseMock(results) {
   const calls = [];
   let index = 0;
+  const optionalThenTables = new Set(['activity_plan_seasons', 'guide_slot_conflict_overrides']);
 
   const take = (terminal, table, filters) => {
-    const next = results[index++];
+    const next = results[index];
+    if ((!next || next.terminal !== terminal || next.table !== table) && terminal === 'then' && optionalThenTables.has(table)) {
+      calls.push({ terminal, table, filters: [...filters] });
+      return { data: [], error: null };
+    }
+    index += 1;
     assert.ok(next, `unexpected query: ${terminal} on ${table}`);
     assert.equal(next.terminal, terminal, `terminal mismatch for ${table}`);
     assert.equal(next.table, table, `table mismatch for ${terminal}`);

@@ -45,18 +45,21 @@ export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {
   // GH-502: do NOT call getActivityBySlugDb here — metadata must not trigger a DB lookup
-  // to avoid render lock on cold path. Title uses slug; OG metadata uses layout defaults.
+  // to avoid render lock on cold path. Title humanizes slug; actual title is set client-side.
   const { slug } = await params;
+  const humanTitle = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   return {
-    title: slug,
+    title: `${humanTitle} | Midao 祕島`,
     openGraph: {
-      title: `${slug} | Midao 祕島`,
+      title: `${humanTitle} | Midao 祕島`,
       type: 'website',
       images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: 'Midao 祕島 行程' }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: slug,
+      title: `${humanTitle} | Midao 祕島`,
+      description: '探索台灣在地特色秘境行程，與專業導遊一起發現不一樣的台灣。',
+      images: ['https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80'],
     },
   };
 }

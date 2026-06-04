@@ -27,8 +27,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 function createSupabaseMock(results) {
   let index = 0;
   const calls = [];
+  const optionalThenTables = new Set(['activity_plan_seasons', 'guide_slot_conflict_overrides']);
   const take = (terminal, table, filters) => {
     const next = results[index++];
+    if ((!next || next.terminal !== terminal || next.table !== table) && terminal === 'then' && optionalThenTables.has(table)) {
+      index -= 1;
+      calls.push({ terminal, table, filters: [...filters] });
+      return { data: [], error: null };
+    }
     assert.ok(next, `unexpected query: ${terminal} on ${table} (index ${index - 1})`);
     assert.equal(next.terminal, terminal, `terminal mismatch for ${table} at index ${index - 1}`);
     assert.equal(next.table, table, `table mismatch for ${terminal} at index ${index - 1}`);
@@ -308,6 +314,7 @@ test('#885 A5: schedule.capacity(11) > plan.max_participants(10) → capacityLef
     { terminal: 'or',   table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates',     data: [] },
     { terminal: 'in',   table: 'bookings',                 data: [] },
+    { terminal: 'then', table: 'activity_plan_seasons',    data: [] },
   ]);
   const response = await getAvailableSlots(
     buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${PLAN_UUID}&scheduleId=${SCHEDULE}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
@@ -367,6 +374,7 @@ test('#885 A5: schedule.capacity(5) < plan.max_participants(10) → capacityLeft
     { terminal: 'or',   table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates',     data: [] },
     { terminal: 'in',   table: 'bookings',                 data: [] },
+    { terminal: 'then', table: 'activity_plan_seasons',    data: [] },
   ]);
   const response = await getAvailableSlots(
     buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${PLAN_UUID}&scheduleId=${SCHEDULE}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),

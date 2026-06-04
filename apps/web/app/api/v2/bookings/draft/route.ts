@@ -17,8 +17,10 @@
  *   - customerNote (optional): Customer note
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
+import { getSupabase, hasSupabaseEnv } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { resolveBookingPlan } from '../../../../../src/lib/booking-plan-resolver';
 import {
@@ -29,11 +31,19 @@ import {
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
+  type SerializedSlot,
 } from '../../../../../src/lib/slot-generator';
 import {
   evaluateEffectiveBookingAvailability,
   shouldRejectDraftByEffectiveAvailability,
+  shouldRejectDraftByLegacySlotAvailability,
 } from '../../../../../src/lib/availability-v2/effective-booking-availability';
+import type { GuideSlotConflictOverride } from '../../../../../src/lib/availability-v2/conflict-override';
+import {
+  applyBookingConflictOverrideColumnFallback,
+  loadConflictOverridesWithSchemaFallback,
+} from '../../../../../src/lib/conflict-override-schema-compat.mjs';
+import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
   shouldRejectDraftWhenSelectedScheduleInvalid,
@@ -100,7 +110,7 @@ function isManualOrSystemSource(value: unknown): value is 'manual' | 'system' {
 }
 
 async function isSlotInGeneratedV2Availability(
-  supabase: any,
+  supabase: SupabaseClient,
   payload: {
     guideId: string;
     planId: string;
@@ -124,7 +134,18 @@ async function isSlotInGeneratedV2Availability(
     status: string;
   } | null;
   selectedScheduleAuthority?: 'authoritative' | 'fallback';
-}): Promise<{ available: boolean; reasonCode?: string; messageZh?: string }> {
+}): Promise<{
+  available: boolean;
+  reasonCode?: string;
+  messageZh?: string;
+  conflictOverride?: {
+    id: string;
+    reason: string;
+    requiresHelper: boolean;
+    helperStatus: string;
+    createdAt?: string | null;
+  };
+}> {
   // Fetch availability rules for this guide and plan
   const { data: rulesData, error: rulesError } = await supabase
     .from('guide_availability_rules')
@@ -156,6 +177,45 @@ async function isSlotInGeneratedV2Availability(
 
   if (bookingsError) {
     throw new Error('Failed to fetch bookings');
+  }
+
+  const { data: seasonsData, error: seasonsError } = await supabase
+    .from('activity_plan_seasons')
+    .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+    .eq('activity_plan_id', payload.planId);
+
+  if (seasonsError) {
+    throw new Error('Failed to fetch activity plan seasons');
+  }
+
+  const conflictOverrideSupabase = hasSupabaseEnv() ? await getSupabase() : supabase;
+  const {
+    data: conflictOverridesData,
+    error: conflictOverridesError,
+    schemaFallback: conflictOverridesSchemaFallback,
+  } = await loadConflictOverridesWithSchemaFallback(() =>
+    conflictOverrideSupabase
+      .from('guide_slot_conflict_overrides')
+      .select(
+        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, status, created_at'
+      )
+      .eq('guide_id', payload.guideId)
+      .eq('activity_id', payload.activityId)
+      .eq('activity_plan_id', payload.planId)
+      .eq('status', 'active')
+  );
+
+  if (conflictOverridesError) {
+    throw new Error('Failed to fetch guide_slot_conflict_overrides');
+  }
+
+  if (conflictOverridesSchemaFallback) {
+    console.warn('Conflict override schema fallback during draft availability precheck', {
+      guideId: payload.guideId,
+      activityId: payload.activityId,
+      planId: payload.planId,
+      fallback: conflictOverridesSchemaFallback,
+    });
   }
 
   const rules: AvailabilityRule[] = (rulesData || []).map((row: any) => ({
@@ -196,6 +256,31 @@ async function isSlotInGeneratedV2Availability(
     buffer_after_minutes: row.buffer_after_minutes,
   }));
 
+  const seasons: ActivityPlanSeason[] = (seasonsData || []).map((row: any) => ({
+    id: row.id,
+    activity_plan_id: row.activity_plan_id,
+    start_month: Number(row.start_month),
+    start_day: Number(row.start_day),
+    end_month: Number(row.end_month),
+    end_day: Number(row.end_day),
+    timezone: row.timezone,
+    is_active: Boolean(row.is_active),
+  }));
+
+  const conflictOverrides: GuideSlotConflictOverride[] = (conflictOverridesData || []).map((row: any) => ({
+    id: row.id,
+    guide_id: row.guide_id,
+    activity_id: row.activity_id,
+    activity_plan_id: row.activity_plan_id,
+    start_at: row.start_at,
+    end_at: row.end_at,
+    reason: row.reason,
+    requires_helper: Boolean(row.requires_helper),
+    helper_status: row.helper_status,
+    status: row.status,
+    created_at: row.created_at ?? null,
+  }));
+
   const plan: ActivityPlan = {
     id: payload.planId,
     activity_id: payload.activityId,
@@ -218,8 +303,11 @@ async function isSlotInGeneratedV2Availability(
     blackouts,
     bookings,
     plan,
+    seasons,
+    planStatus: 'active',
     selectedSchedule: payload.selectedSchedule ?? null,
     selectedScheduleAuthority: payload.selectedScheduleAuthority,
+    conflictOverrides,
   });
 
   if (!availability.available) {
@@ -227,10 +315,14 @@ async function isSlotInGeneratedV2Availability(
       available: false,
       reasonCode: availability.reasonCode,
       messageZh: availability.messageZh,
+      conflictOverride: availability.matchedSlot?.conflictOverride,
     };
   }
 
-  return { available: true };
+  return {
+    available: true,
+    conflictOverride: availability.matchedSlot?.conflictOverride,
+  };
 }
 
 interface DraftBookingRequest {
@@ -606,18 +698,6 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    if (!slotValidation.available) {
-      const errorMessages: Record<string, string> = {
-        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
-        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
-        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
-      };
-      return Response.json(
-        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
-        { status: 409 }
-      );
-    }
-
     let selectedScheduleValidation: { available: boolean; reason?: string } | null = null;
     let selectedScheduleForAvailability: ActivitySchedule | null = null;
     let selectedScheduleAuthority: 'authoritative' | 'fallback' | undefined;
@@ -706,6 +786,24 @@ export async function POST(request: NextRequest) {
 
     const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
     if (
+      shouldRejectDraftByLegacySlotAvailability({
+        hasActiveAvailabilityRules: (rulesData?.length ?? 0) > 0,
+        scheduleValidatedBySourceOfTruth,
+        slotValidation,
+      })
+    ) {
+      const errorMessages: Record<string, string> = {
+        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
+        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
+        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
+      };
+      return Response.json(
+        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
+        { status: 409 }
+      );
+    }
+
+    if (
       shouldRejectDraftWhenSelectedScheduleInvalid({
         hasScheduleId: Boolean(data.scheduleId),
         selectedScheduleValidation,
@@ -716,7 +814,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let generatedSlotValidation: { available: boolean; reasonCode?: string; messageZh?: string };
+    let generatedSlotValidation: {
+      available: boolean;
+      reasonCode?: string;
+      messageZh?: string;
+      conflictOverride?: SerializedSlot['conflictOverride'] | null;
+    };
     try {
       generatedSlotValidation = await isSlotInGeneratedV2Availability(supabase, {
         guideId,
@@ -774,6 +877,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const conflictOverride = generatedSlotValidation.conflictOverride ?? null;
+    const conflictOverrideId = conflictOverride?.id ?? null;
+    const conflictOverrideState = conflictOverride ? 'allowed_with_admin_override' : null;
+    const conflictOverrideSnapshot = conflictOverride
+      ? {
+          id: conflictOverride.id,
+          reason: conflictOverride.reason,
+          requiresHelper: conflictOverride.requiresHelper,
+          helperStatus: conflictOverride.helperStatus,
+          guideNote: conflictOverride.guideNote ?? null,
+          adminNote: conflictOverride.adminNote ?? null,
+          createdAt: conflictOverride.createdAt ?? null,
+          createdByAdminEmail: conflictOverride.createdByAdminEmail ?? null,
+          canonicalState: conflictOverrideState,
+        }
+      : null;
+
     // 4. Get or find traveler_id from auth (optional)
     let travelerId: string | null = null;
 
@@ -810,23 +930,44 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Create booking (draft status)
-    const { data: bookingInsert, error: bookingError } = await supabase
-      .from('bookings')
-      .insert({
-        traveler_id: travelerId,
-        guide_id: guideId,
-        activity_id: data.activityId,
-        activity_plan_id: resolvedPlanId,
-        source_channel: data.sourceChannel,
-        start_at: slotStartAt.toISOString(),
-        end_at: slotEndAt.toISOString(),
-        timezone: data.timezone,
-        participants: data.participants,
-        status: 'draft',
-        customer_note: data.customerNote || null,
-      })
-      .select('id, booking_no, status')
-      .single();
+    const bookingInsertPayload = {
+      traveler_id: travelerId,
+      guide_id: guideId,
+      activity_id: data.activityId,
+      activity_plan_id: resolvedPlanId,
+      source_channel: data.sourceChannel,
+      start_at: slotStartAt.toISOString(),
+      end_at: slotEndAt.toISOString(),
+      timezone: data.timezone,
+      participants: data.participants,
+      status: 'draft',
+      customer_note: data.customerNote || null,
+      conflict_override_id: conflictOverrideId,
+      conflict_override_snapshot: conflictOverrideSnapshot,
+    };
+
+    const {
+      data: bookingInsert,
+      error: bookingError,
+      droppedColumns: droppedConflictOverrideColumns,
+    } = await applyBookingConflictOverrideColumnFallback(
+      async (payload: typeof bookingInsertPayload) =>
+        supabase
+          .from('bookings')
+          .insert(payload)
+          .select('id, booking_no, status')
+          .single(),
+      bookingInsertPayload,
+    );
+
+    if (droppedConflictOverrideColumns.length > 0) {
+      console.warn('Conflict override booking-column schema fallback during draft create', {
+        guideId,
+        activityId: data.activityId,
+        planId: resolvedPlanId,
+        droppedColumns: droppedConflictOverrideColumns,
+      });
+    }
 
     if (bookingError || !bookingInsert) {
       console.error('Error creating booking:', bookingError);
@@ -906,6 +1047,8 @@ export async function POST(request: NextRequest) {
         correlationId,
         contactEmail: data.contactEmail,
         auditSignal: 'line_liff_draft_entry',
+        conflictOverride: conflictOverrideSnapshot,
+        overrideId: conflictOverrideId,
       },
     });
 

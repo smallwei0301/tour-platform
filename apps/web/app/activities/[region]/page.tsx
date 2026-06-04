@@ -60,10 +60,23 @@ export default async function ActivitiesRegionPage({ params }: { params: Promise
 
   if (isKnownRegionSlug(region)) {
     const entry = getRegionBySlug(region)!;
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+    const regionBreadcrumbLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
+        { '@type': 'ListItem', position: 3, name: entry.displayName, item: `${baseUrl}/activities/${region}` },
+      ],
+    };
     return (
-      <Suspense fallback={null}>
-        <ActivitiesContent initialRegion={entry.dbValue} />
-      </Suspense>
+      <>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbLd) }} />
+        <Suspense fallback={null}>
+          <ActivitiesContent initialRegion={entry.dbValue} />
+        </Suspense>
+      </>
     );
   }
 
