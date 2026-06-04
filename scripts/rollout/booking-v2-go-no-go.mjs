@@ -126,8 +126,10 @@ if (!Number.isFinite(payPct) || !Number.isFinite(fallbackPct) || !Number.isFinit
 if (Number.isFinite(pv) && pv < cfg.minPageView.value) holdReasons.push(`LOW_SAMPLE_PAGE_VIEW(${pv}<${cfg.minPageView.value})`);
 if (Number.isFinite(cb) && cb < cfg.minCallback.value) holdReasons.push(`LOW_SAMPLE_CALLBACK(${cb}<${cfg.minCallback.value})`);
 
-if (Number.isFinite(payPct) && payPct < cfg.paymentSuccessMinPct.value) rollbackReasons.push(`PAYMENT_SUCCESS_LOW(${payPct}%<${cfg.paymentSuccessMinPct.value}%)`);
-if (Number.isFinite(checkoutSuccessPct) && checkoutSuccessPct < cfg.checkoutSuccessMinPct.value) rollbackReasons.push(`CHECKOUT_SUCCESS_LOW(${checkoutSuccessPct}%<${cfg.checkoutSuccessMinPct.value}%)`);
+// Only flag low success rate when we have enough callbacks to judge (issue #1214)
+if (cb >= cfg.minCallback.value && Number.isFinite(payPct) && payPct < cfg.paymentSuccessMinPct.value) rollbackReasons.push(`PAYMENT_SUCCESS_LOW(${payPct.toFixed(0)}%<${cfg.paymentSuccessMinPct.value}%)`);
+// Only flag low checkout rate when we have enough page views to judge (issue #1214)
+if (pv >= cfg.minPageView.value && Number.isFinite(checkoutSuccessPct) && checkoutSuccessPct < cfg.checkoutSuccessMinPct.value) rollbackReasons.push(`CHECKOUT_SUCCESS_LOW(${checkoutSuccessPct.toFixed(0)}%<${cfg.checkoutSuccessMinPct.value}%)`);
 if (Number.isFinite(fallbackPct) && fallbackPct > cfg.fallbackWarnPct.value) rollbackReasons.push(`FALLBACK_RATE_HIGH(${fallbackPct}%>${cfg.fallbackWarnPct.value}%)`);
 if (Number.isFinite(errorPct) && errorPct > cfg.errorWarnPct.value) rollbackReasons.push(`ERROR_RATE_HIGH(${errorPct}%>${cfg.errorWarnPct.value}%)`);
 
