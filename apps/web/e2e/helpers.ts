@@ -1,101 +1,92 @@
-import { test as base, expect, Page } from '@playwright/test';
+import { test as base, expect, Page, APIRequestContext } from '@playwright/test';
 
 const ADMIN_TOKEN = process.env.ADMIN_ACCESS_TOKEN || 'test-token-123';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@tour-platform.com';
 
 /**
- * Helper: log in to the admin console and store session cookies. Fixes #1118.
+ * Helper: log in to the admin console via the auth API directly (#1206).
  *
- * The old version called `page.click('button[type="submit"]')` and then
- * `waitForURL(...)` with no other signal. Two cooperating bugs:
+ * History:
+ *   - The original helper drove the UI: fill inputs, click submit, wait for
+ *     URL change. That had two issues we already fixed in #1118:
+ *       (a) `button[type="submit"]` matched the global header search form,
+ *           not the login button.
+ *       (b) The post-login URL regex accepted /activities*, so a failed
+ *           login that bounced to traveler land was silently accepted.
+ *   - Even after #1118, the UI path remained flaky under Next dev:
+ *     `/admin/login` wraps its form in a `<Suspense>` boundary so
+ *     `useSearchParams()` doesn't throw at build, and the boundary
+ *     occasionally rerenders mid-fill — Playwright sees the password input
+ *     detach from the DOM during `tokenInput.fill()` and times out. This
+ *     affects roughly every #1067 sub-family spec that uses `authedPage`
+ *     (#1116, #1130, #1132, #1133, #1166, #1178).
  *
- *   1. The global header carries its own `<form aria-label="搜尋">` with a
- *      submit button — `button[type="submit"]` (DOM order) matched THAT
- *      button first, so the click triggered a navigation to /activities
- *      and the login form was never submitted. `waitForURL` then accepted
- *      /activities (the regex allowed either `/admin*` or `/activities*`)
- *      and the fixture silently returned without ever logging in.
- *   2. Every downstream `page.goto('/admin/...')` was redirected back to
- *      /admin/login by middleware. Specs that asserted on admin DOM (e.g.
- *      `waitForSelector('select')`) failed with "element not found"
- *      instead of "login didn't happen", which was very confusing.
+ * Fix per #1206 Option B: skip the UI entirely. We mint the session by
+ * calling /api/admin/auth/csrf + /api/admin/auth/session through Playwright's
+ * own request context, which shares cookies with the page context. After
+ * those two POSTs return ok, every cookie middleware needs to authorise
+ * /admin/* is set, and `page.goto('/admin/...')` works directly with no
+ * form rendering involved at all.
  *
- * Fix:
- *   - Target the submit button by its visible label `'登入'`.
- *   - Throw a loud, specific error if the URL stays on /admin/login OR
- *     if `admin_token` cookie isn't set afterwards.
- *   - Retry once before throwing, to tolerate Next-dev fast-refresh races
- *     when a long suite has been hammering the dev server.
+ * Falling back to the old form-driven path is unnecessary — the API
+ * surface is the contract; if the API can't issue a session, no UI dance
+ * is going to rescue us.
  */
-async function adminLogin(page: Page, attempt = 1): Promise<void> {
-  // Force deterministic post-login target to avoid env-specific next redirects.
-  await page.goto('/admin/login?next=/admin', { waitUntil: 'domcontentloaded' });
-
-  const tokenInput = page.locator('input[type="password"]');
-  await tokenInput.waitFor({ state: 'visible', timeout: 10_000 });
-  await tokenInput.fill(ADMIN_TOKEN);
-  const emailInput = page.locator('input[type="email"]');
-  if (await emailInput.count() > 0) {
-    await emailInput.fill(ADMIN_EMAIL);
+async function loginViaApi(request: APIRequestContext): Promise<void> {
+  // 1. Get a CSRF token. Server sets the `tp_csrf` cookie AND echoes the
+  //    token in the body — we use the body value so we don't have to read
+  //    cookies between two requests in the same tick.
+  const csrfRes = await request.get('/api/admin/auth/csrf', { failOnStatusCode: false });
+  if (!csrfRes.ok()) {
+    throw new Error(`adminLogin: /api/admin/auth/csrf returned ${csrfRes.status()}`);
+  }
+  const csrfBody = await csrfRes.json().catch(() => ({} as Record<string, unknown>));
+  const csrfToken: string =
+    (csrfBody as { data?: { csrfToken?: string } })?.data?.csrfToken ?? '';
+  if (!csrfToken) {
+    throw new Error(`adminLogin: csrf endpoint did not return a token (body=${JSON.stringify(csrfBody)})`);
   }
 
-  // See the header doc on the function for why this selector is by label.
-  await page.locator('button[type="submit"]', { hasText: '登入' }).click();
-
-  // Wait for the page to leave /admin/login. On success the page does
-  // `window.location.assign(next)` — a full document navigation — so the
-  // URL change is the user-visible contract. We deliberately avoid
-  // `waitForResponse` here because the response listener races the
-  // navigation that tears down the page.
-  try {
-    await page.waitForURL(
-      (url) => !/\/admin\/login(\?|$|#)/.test(url.pathname + url.search),
-      { timeout: 15_000 },
-    );
-  } catch {
-    // Still on /admin/login → login failed. Surface the on-screen error
-    // (the page renders a red banner from `setError(...)`) so spec
-    // failures show the real reason instead of "timeout".
-    const detail = await page
-      .locator('div', { hasText: '⚠️' })
-      .first()
-      .textContent({ timeout: 1_000 })
-      .catch(() => '');
-
-    // Dev mode is racy under heavy fast-refresh churn (especially after a
-    // long suite has been hammering the same dev server). Give it one
-    // retry before reporting failure.
-    if (attempt < 2) {
-      await page.waitForTimeout(800);
-      return adminLogin(page, attempt + 1);
-    }
-
+  // 2. Create the session. Middleware double-submit CSRF guard requires the
+  //    header to match the cookie set by step 1.
+  const sessionRes = await request.post('/api/admin/auth/session', {
+    headers: {
+      'content-type': 'application/json',
+      'x-csrf-token': csrfToken,
+    },
+    data: { token: ADMIN_TOKEN, email: ADMIN_EMAIL },
+    failOnStatusCode: false,
+  });
+  if (!sessionRes.ok()) {
+    const body = await sessionRes.text().catch(() => '');
     throw new Error(
-      `adminLogin: still on /admin/login after click (attempt ${attempt}) — ${detail || 'no on-screen error'}\n` +
+      `adminLogin: /api/admin/auth/session returned ${sessionRes.status()} — ${body}\n` +
         `  ADMIN_ACCESS_TOKEN length: ${ADMIN_TOKEN.length}\n` +
         `  ADMIN_EMAIL: ${ADMIN_EMAIL}\n` +
-        `Check the dev server has these in its environment.`,
+        `Check the dev server has both set in its environment.`,
     );
   }
+}
 
-  // Sanity-check the post-login cookies. Without admin_token, downstream
-  // `page.goto('/admin/...')` calls will be redirected back to login by
-  // middleware — and the failing spec would report a baffling "selector
-  // not found" instead of "login didn't set cookies".
+async function adminLogin(page: Page): Promise<void> {
+  await loginViaApi(page.request);
+
+  // Sanity-check the cookies the session response set. If admin_token is
+  // missing, downstream `page.goto('/admin/...')` will be redirected back
+  // to /admin/login and the failing spec would report a baffling
+  // "selector not found" instead of "session didn't stick".
   const cookies = await page.context().cookies();
   if (!cookies.some((c) => c.name === 'admin_token' && c.value)) {
     throw new Error(
-      `adminLogin: no admin_token cookie after click (landed=${page.url()}). ` +
-        `Login response did not Set-Cookie — check ADMIN_ACCESS_TOKEN / ADMIN_EMAIL_ALLOWLIST.`,
+      `adminLogin: no admin_token cookie after API login. ` +
+        `Cookies present: ${cookies.map((c) => c.name).join(', ') || '(none)'}. ` +
+        `Check ADMIN_ACCESS_TOKEN / ADMIN_EMAIL_ALLOWLIST.`,
     );
   }
 
-  // Accept either /admin* or /activities* — some preview envs fall back
-  // to /activities when middleware soft-rejects admin access.
-  const landed = new URL(page.url()).pathname;
-  if (!/^\/(admin|activities)(\/|$)/.test(landed)) {
-    throw new Error(`adminLogin: unexpected post-login URL ${page.url()}`);
-  }
+  // Land the page on /admin so callers that read `page.url()` immediately
+  // (e.g. t1-login.spec.ts T1.1) match the old form-driven contract.
+  await page.goto('/admin');
 }
 
 /** Helper: ensure logged in (re-login if session expired) */
