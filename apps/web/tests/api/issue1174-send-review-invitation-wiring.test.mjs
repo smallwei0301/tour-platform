@@ -190,3 +190,16 @@ test('AC4c: route imports createClient from @supabase/supabase-js (not only serv
     'route must import createClient from @supabase/supabase-js for the service-role client'
   );
 });
+
+test('AC5: unique-violation (23505) on sent insert is handled gracefully (not propagated as 500)', () => {
+  assert.match(
+    src,
+    /23505/,
+    'route must check insertError.code === "23505" to handle concurrent unique-violation gracefully'
+  );
+  assert.match(
+    src,
+    /insertError.*code.*!==.*23505|code.*23505/,
+    'unique-violation must be caught and treated as idempotent, not re-thrown'
+  );
+});

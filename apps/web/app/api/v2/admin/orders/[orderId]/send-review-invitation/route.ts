@@ -174,12 +174,17 @@ export async function POST(
 
     // ── Insert 'sent' delivery log row ───────────────────────────────────────
     if (srClient) {
-      await srClient.from('review_invitations').insert({
+      const { error: insertError } = await srClient.from('review_invitations').insert({
         order_id: orderId,
         status: 'sent',
         initiated_by: 'admin_manual',
         sent_at: new Date().toISOString(),
       });
+      // Treat unique-violation (23505) as idempotent — concurrent double-send
+      // already logged by the first insert; do not propagate as a 500.
+      if (insertError && insertError.code !== '23505') {
+        console.error('[send-review-invitation] delivery log insert failed:', insertError.code);
+      }
     }
 
     return NextResponse.json(
