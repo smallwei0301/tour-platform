@@ -35,9 +35,10 @@ export async function GET(req: Request) {
     const { data: orders, error } = await supabase
       .from('orders')
       .select(`
-        id, status,
+        id, status, booking_id,
         activity_schedules(id, start_at, end_at),
-        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
+        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue),
+        guide_trip_reports(submitted_at)
       `)
       .in('status', ['paid', 'confirmed', 'completed'])
       .gte('created_at', since.toISOString())
@@ -66,10 +67,21 @@ export async function GET(req: Request) {
       // Only process orders where the activity has already ended
       if (new Date(scheduleEndAt) >= now) continue;
 
+      // Read submitted_at from joined guide_trip_reports rows (issue #1171)
+      const reportRows = Array.isArray(order.guide_trip_reports)
+        ? order.guide_trip_reports
+        : order.guide_trip_reports
+          ? [order.guide_trip_reports]
+          : [];
+      const submittedRow = (reportRows as Array<{ submitted_at: string | null }>).find(
+        (r) => r?.submitted_at,
+      );
+      const submittedAt = submittedRow?.submitted_at ?? null;
+
       // Trip report overdue
       const reportStatus = tripReportStatus({
         scheduleEndAt,
-        submittedAt: null,
+        submittedAt,
         now,
       });
       if (reportStatus === 'overdue') {
