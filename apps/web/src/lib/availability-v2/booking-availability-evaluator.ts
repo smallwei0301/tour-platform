@@ -11,7 +11,10 @@ import {
   type SlotGeneratorDeps,
   type SlotGeneratorInput,
 } from '../slot-generator.ts';
-import type { ActivityPlanSeason } from './effective-availability-resolver.ts';
+import {
+  resolveCanonicalAvailabilityState,
+  type ActivityPlanSeason,
+} from './effective-availability-resolver.ts';
 import {
   findMatchingConflictOverride,
   serializeConflictOverrideForClient,
@@ -246,15 +249,44 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       selectedScheduleRule.allowed &&
       !insufficient &&
       Boolean(matchedConflictOverride);
+    const canonicalSelectedSchedule = resolveCanonicalAvailabilityState({
+      guideId: input.guideId,
+      activityId: input.activityId,
+      planId: input.planId,
+      requestedStartAt: selectedSchedule.start_at,
+      requestedEndAt: selectedSchedule.end_at,
+      timezone: input.timezone,
+      rules: input.rules,
+      blackouts: input.blackouts,
+      bookings: input.bookings,
+      seasons: input.seasons ?? [],
+      seasonGateEnabled: input.seasons !== undefined,
+      isYearRound: Boolean(input.plan.is_year_round),
+      planStatus: input.planStatus ?? 'active',
+      slotAvailable:
+        selectedSchedule.status === 'open' &&
+        !selectedScheduleMissingFromGeneratedSlots &&
+        selectedScheduleBaseValidation.available &&
+        selectedScheduleRule.allowed &&
+        !insufficient,
+      slotUnavailableReason:
+        selectedSchedule.status !== 'open' || selectedScheduleMissingFromGeneratedSlots
+          ? 'BOOKING_CONFLICT'
+          : selectedScheduleBaseValidation.reason,
+      capacityAvailable: !insufficient,
+      conflictOverrides: input.conflictOverrides,
+    });
+    const selectedScheduleOutsideSeason = canonicalSelectedSchedule.state === 'outside_season';
 
     if (
+      selectedScheduleOutsideSeason ||
       selectedSchedule.status !== 'open' ||
       selectedScheduleMissingFromGeneratedSlots ||
       !selectedScheduleBaseValidation.available ||
       !selectedScheduleRule.allowed ||
       insufficient
     ) {
-      if (canAllowWithAdminOverride && matchedConflictOverride) {
+      if (!selectedScheduleOutsideSeason && canAllowWithAdminOverride && matchedConflictOverride) {
         capacityLeft = Math.min(remaining, input.plan.max_participants);
         slots = [
           {
@@ -269,7 +301,12 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
         ];
       } else {
         slots = [];
-        if (selectedScheduleMissingFromGeneratedSlots) {
+        if (selectedScheduleOutsideSeason) {
+          selectedScheduleRuleFailure = {
+            reasonCode: 'outside_season',
+            messageZh: '該日期目前不在可預約季節內，請選擇其他日期',
+          };
+        } else if (selectedScheduleMissingFromGeneratedSlots) {
           selectedScheduleRuleFailure = {
             reasonCode: 'BOOKING_CONFLICT',
             messageZh: '此時段已無可用名額，請重新選擇時段',

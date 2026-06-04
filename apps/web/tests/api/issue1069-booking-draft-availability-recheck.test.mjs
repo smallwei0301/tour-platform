@@ -113,9 +113,13 @@ test('GH-1069 RED: happy path keeps available=true and matched slot', () => {
   assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
 });
 
-test('GH-1069 RED: authoritative selected schedule keeps draft parity when source-of-truth slot is open but generated rules/seasons are absent', () => {
+test('GH-1069 RED: authoritative selected schedule keeps draft parity when source-of-truth slot is open, generated rules are absent, and explicit year-round is set', () => {
   const out = evaluateEffectiveBookingAvailability({
     ...BASE,
+    plan: {
+      ...BASE.plan,
+      is_year_round: true,
+    },
     rules: [],
     seasons: [],
     selectedScheduleAuthority: 'authoritative',
@@ -136,9 +140,13 @@ test('GH-1069 RED: authoritative selected schedule keeps draft parity when sourc
   assert.equal(out.evaluation.selectedScheduleAuthority, 'authoritative');
 });
 
-test('GH-1069 RED: fallback selected schedule keeps draft parity when recovered exact slot is open but generated rules/seasons are absent', () => {
+test('GH-1069 RED: fallback selected schedule keeps draft parity when recovered exact slot is open, generated rules are absent, and explicit year-round is set', () => {
   const out = evaluateEffectiveBookingAvailability({
     ...BASE,
+    plan: {
+      ...BASE.plan,
+      is_year_round: true,
+    },
     rules: [],
     seasons: [],
     selectedScheduleAuthority: 'fallback',

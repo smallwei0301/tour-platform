@@ -308,6 +308,7 @@ test('#885 A5: schedule.capacity(11) > plan.max_participants(10) → capacityLef
         max_participants: 10,   // plan cap is 10
         booking_type: 'scheduled',
         status: 'active',
+        is_year_round: true,
         activities: { id: ACTIVITY, guide_id: '44444444-4444-4444-4444-444444444444' },
       },
     },
