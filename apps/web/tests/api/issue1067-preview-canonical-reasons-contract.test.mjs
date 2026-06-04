@@ -120,3 +120,28 @@ test('GH-1067 RED: guide/admin plan picker routes expose isYearRound and activeS
     assert.match(src, /activeSeasonSummaries/, 'plan picker route response must expose activeSeasonSummaries');
   }
 });
+
+test('GH-1067 RED: admin plan picker route uses explicit DTO and does not leak raw season fields', () => {
+  const adminSrc = read(ADMIN_ACTIVITY_PLANS_ROUTE);
+
+  assert.doesNotMatch(
+    adminSrc,
+    /\.map\(\(p\)\s*=>\s*\(\{[\s\S]*?\.\.\.p/,
+    'admin plan picker DTO must not spread raw plan row into the response object',
+  );
+  assert.match(
+    adminSrc,
+    /\.map\(\(p\)\s*=>\s*\(\{[\s\S]*?id:\s*p\.id,[\s\S]*?name:\s*p\.name,[\s\S]*?status:\s*p\.status,[\s\S]*?booking_type:\s*p\.booking_type,[\s\S]*?base_price:\s*p\.base_price,[\s\S]*?isYearRound:\s*Boolean\(p\.is_year_round\),[\s\S]*?activeSeasonSummaries:\s*summarizeActivePlanSeasons\(p\.activity_plan_seasons\s*\|\|\s*\[\]\)/,
+    'admin plan picker route must return an explicit public DTO including canonical season summary fields',
+  );
+  assert.doesNotMatch(
+    adminSrc,
+    /\.map\(\(p\)\s*=>\s*\(\{[\s\S]*?\bis_year_round\s*:/,
+    'admin plan picker response object must not expose raw is_year_round field',
+  );
+  assert.doesNotMatch(
+    adminSrc,
+    /\.map\(\(p\)\s*=>\s*\(\{[\s\S]*?activity_plan_seasons\s*:/,
+    'admin plan picker response object must not expose raw activity_plan_seasons field',
+  );
+});

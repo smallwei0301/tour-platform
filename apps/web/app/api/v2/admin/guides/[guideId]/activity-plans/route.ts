@@ -78,7 +78,11 @@ export async function GET(
         }>) || [])
           .filter((p) => p.status === 'active')
           .map((p) => ({
-            ...p,
+            id: p.id,
+            name: p.name,
+            status: p.status,
+            booking_type: p.booking_type,
+            base_price: p.base_price,
             isYearRound: Boolean(p.is_year_round),
             activeSeasonSummaries: summarizeActivePlanSeasons(p.activity_plan_seasons || []),
           })),
