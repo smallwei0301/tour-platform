@@ -3,7 +3,7 @@
 > 狀態：v1 — soft-launch 版本（人工介入為主）
 > 建立日期：2026-06-03（refs issue #1106）
 > 技術支援：post-trip-eligibility.mjs 模組（6 exported predicates + computePostTripStatus convenience）
-> Endpoints: /api/v2/admin/orders/{id}/post-trip-status, /api/v2/admin/orders/post-trip-summary, /api/v2/admin/orders/{id}/send-review-invitation, /api/v2/guide/trip-reports-due
+> Endpoints: /api/v2/admin/orders/{id}/post-trip-status, /api/v2/admin/orders/post-trip-summary, /api/v2/admin/orders/{id}/send-review-invitation, /api/v2/guide/trip-reports-due, POST /api/v2/guide/orders/{orderId}/trip-report
 
 ---
 
@@ -68,7 +68,7 @@
 3. 若出團正常但未填寫 → 督促填寫
 4. 若有特殊狀況 → 升級到 incident response
 
-> **注意**：目前尚未有 guide_trip_reports 資料表。`tripReportStatus` 回傳的 `submittedAt` 永遠為 null，所有過期出團都顯示 'overdue'。建立表後再接入真實資料。
+> **已實作（PR #1222）**：`guide_trip_reports` 資料表已建立（migration: `20260604_issue1171_guide_trip_reports.sql`）。`tripReportStatus` 的 `submittedAt` 現在從真實資料取得；導遊提交報告後 `submitted_at` 有值，不再顯示 'overdue'。提交端點：`POST /api/v2/guide/orders/{orderId}/trip-report`。
 
 ---
 
@@ -159,6 +159,7 @@ curl -H "Authorization: Bearer $ADMIN_ACCESS_TOKEN" \
 - 技術：`apps/web/src/lib/post-trip-eligibility.mjs`（pure predicates）
 - API：`GET /api/v2/admin/orders/{orderId}/post-trip-status`
 - API：`GET /api/v2/admin/orders/post-trip-summary`
+- API：`POST /api/v2/guide/orders/{orderId}/trip-report`（導遊提交出行報告，PR #1222）
 - 退款 SOP：`docs/05-business/06-payment-plan/04-refund-policy-v2.md`
 - 事故處理：`docs/05-business/07-operations-plan/04-incident-response.md`
 - 緊急聯絡：`docs/05-business/07-operations-plan/11-emergency-contact-chain.md`
