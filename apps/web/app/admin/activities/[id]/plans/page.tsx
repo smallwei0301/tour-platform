@@ -64,6 +64,28 @@ type Activity = {
   title: string;
 };
 
+type ActivityPlanSeason = {
+  id: string;
+  name: string;
+  start_month: number;
+  start_day: number;
+  end_month: number;
+  end_day: number;
+  timezone: string;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type SeasonFormState = {
+  name: string;
+  start_month: string;
+  start_day: string;
+  end_month: string;
+  end_day: string;
+  timezone: string;
+};
+
 const PRICE_TYPE_LABELS: Record<string, string> = {
   per_person: '每人',
   per_group: '每團',
@@ -80,6 +102,27 @@ const STATUS_CONFIG: Record<string, { variant: 'success' | 'warning' | 'default'
   inactive: { variant: 'warning', label: '停用' },
   archived: { variant: 'default', label: '已封存' },
 };
+
+const createDefaultSeasonForm = (): SeasonFormState => ({
+  name: '',
+  start_month: '',
+  start_day: '',
+  end_month: '',
+  end_day: '',
+  timezone: 'Asia/Taipei',
+});
+
+const seasonToForm = (season: ActivityPlanSeason): SeasonFormState => ({
+  name: season.name,
+  start_month: String(season.start_month),
+  start_day: String(season.start_day),
+  end_month: String(season.end_month),
+  end_day: String(season.end_day),
+  timezone: season.timezone,
+});
+
+const formatSeasonWindow = (season: Pick<ActivityPlanSeason, 'start_month' | 'start_day' | 'end_month' | 'end_day'>) =>
+  `${season.start_month}/${season.start_day} - ${season.end_month}/${season.end_day}`;
 
 export default function ActivityPlansPage() {
   const params = useParams();
@@ -100,6 +143,16 @@ export default function ActivityPlansPage() {
 
   const [readinessCheck, setReadinessCheck] = useState<ReadinessCheck | null>(null);
   const [readinessLoading, setReadinessLoading] = useState(false);
+  const [seasonPanelPlanId, setSeasonPanelPlanId] = useState<string | null>(null);
+  const [seasonPanelPlanName, setSeasonPanelPlanName] = useState('');
+  const [seasons, setSeasons] = useState<ActivityPlanSeason[]>([]);
+  const [seasonLoading, setSeasonLoading] = useState(false);
+  const [seasonError, setSeasonError] = useState('');
+  const [seasonNotice, setSeasonNotice] = useState('');
+  const [showSeasonForm, setShowSeasonForm] = useState(false);
+  const [seasonSaving, setSeasonSaving] = useState(false);
+  const [editingSeason, setEditingSeason] = useState<ActivityPlanSeason | null>(null);
+  const [seasonForm, setSeasonForm] = useState<SeasonFormState>(createDefaultSeasonForm());
 
   const createDefaultForm = () => ({
     name: '',
@@ -193,6 +246,14 @@ export default function ActivityPlansPage() {
       .catch(() => {})
       .finally(() => setReadinessLoading(false));
   }, [activityId]);
+
+  useEffect(() => {
+    if (!seasonPanelPlanId) return;
+    const selectedPlan = plans.find((plan) => plan.id === seasonPanelPlanId);
+    if (selectedPlan) {
+      setSeasonPanelPlanName(selectedPlan.name);
+    }
+  }, [plans, seasonPanelPlanId]);
 
   const openModal = (plan?: ActivityPlan) => {
     if (plan) {
@@ -311,6 +372,125 @@ export default function ActivityPlansPage() {
     }
   };
 
+  const loadPlanSeasons = useCallback(
+    async (planId: string) => {
+      setSeasonLoading(true);
+      try {
+        const res = await fetch(`/api/v2/admin/activities/${activityId}/plans/${planId}/seasons`);
+        const json = await res.json();
+        if (!json.success) {
+          setSeasonError(json.error?.message || '載入開放季節失敗，請稍後再試。');
+          return;
+        }
+        setSeasons(Array.isArray(json.data?.seasons) ? json.data.seasons : []);
+        setSeasonError('');
+      } catch {
+        setSeasonError('載入開放季節失敗，請檢查網路或稍後再試。');
+      } finally {
+        setSeasonLoading(false);
+      }
+    },
+    [activityId]
+  );
+
+  const openSeasonManager = async (plan: ActivityPlan) => {
+    setSeasonPanelPlanId(plan.id);
+    setSeasonPanelPlanName(plan.name);
+    setSeasonNotice('');
+    setShowSeasonForm(false);
+    setEditingSeason(null);
+    setSeasonForm(createDefaultSeasonForm());
+    await loadPlanSeasons(plan.id);
+  };
+
+  const openSeasonForm = (season?: ActivityPlanSeason) => {
+    setEditingSeason(season || null);
+    setSeasonForm(season ? seasonToForm(season) : createDefaultSeasonForm());
+    setSeasonError('');
+    setSeasonNotice('');
+    setShowSeasonForm(true);
+  };
+
+  const closeSeasonForm = () => {
+    setEditingSeason(null);
+    setSeasonForm(createDefaultSeasonForm());
+    setShowSeasonForm(false);
+  };
+
+  const saveSeason = async () => {
+    if (!seasonPanelPlanId) return;
+    if (!seasonForm.name.trim()) {
+      setSeasonError('請輸入季節名稱');
+      return;
+    }
+
+    setSeasonSaving(true);
+    setSeasonError('');
+
+    try {
+      const payload = {
+        name: seasonForm.name.trim(),
+        start_month: Number(seasonForm.start_month),
+        start_day: Number(seasonForm.start_day),
+        end_month: Number(seasonForm.end_month),
+        end_day: Number(seasonForm.end_day),
+        timezone: seasonForm.timezone.trim() || 'Asia/Taipei',
+      };
+
+      const url = editingSeason
+        ? `/api/v2/admin/activities/${activityId}/plans/${seasonPanelPlanId}/seasons/${editingSeason.id}`
+        : `/api/v2/admin/activities/${activityId}/plans/${seasonPanelPlanId}/seasons`;
+      const method = editingSeason ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+        body: JSON.stringify(payload),
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        setSeasonError(json.error?.message || '儲存季節失敗，請稍後再試。');
+        return;
+      }
+
+      setSeasonNotice(editingSeason ? '季節已更新。' : '季節已建立。');
+      closeSeasonForm();
+      await loadPlanSeasons(seasonPanelPlanId);
+    } catch {
+      setSeasonError('儲存季節失敗，請檢查網路或稍後再試。');
+    } finally {
+      setSeasonSaving(false);
+    }
+  };
+
+  const disableSeason = async (season: ActivityPlanSeason) => {
+    if (!seasonPanelPlanId) return;
+    if (!confirm(`確定要停用季節「${season.name}」嗎？`)) return;
+
+    try {
+      const res = await fetch(
+        `/api/v2/admin/activities/${activityId}/plans/${seasonPanelPlanId}/seasons/${season.id}`,
+        {
+          method: 'DELETE',
+          headers: csrfHeaders(),
+        }
+      );
+      const json = await res.json();
+
+      if (!json.success) {
+        setSeasonError(json.error?.message || '停用季節失敗，請稍後再試。');
+        return;
+      }
+
+      setSeasonNotice(`已停用「${season.name}」`);
+      setSeasonError('');
+      await loadPlanSeasons(seasonPanelPlanId);
+    } catch {
+      setSeasonError('停用季節失敗，請檢查網路或稍後再試。');
+    }
+  };
+
   const toggleStatus = async (plan: ActivityPlan) => {
     const newStatus = plan.status === 'active' ? 'inactive' : 'active';
 
@@ -335,6 +515,7 @@ export default function ActivityPlansPage() {
   const filteredPlans = statusFilter
     ? plans.filter((p) => p.status === statusFilter)
     : plans;
+  const hasActiveSeasons = seasons.some((season) => season.is_active);
 
   const btn = (bg: string, color: string, border = 'none') =>
     ({
@@ -713,6 +894,9 @@ export default function ActivityPlansPage() {
                 cell: (plan: ActivityPlan) => (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                     <button onClick={() => openModal(plan)} style={smallBtn('#f0f0f0', '#333')}>編輯</button>
+                    <button onClick={() => void openSeasonManager(plan)} style={smallBtn(seasonPanelPlanId === plan.id ? '#dbeafe' : '#eef2ff', seasonPanelPlanId === plan.id ? '#1d4ed8' : '#3730a3')}>
+                      開放季節
+                    </button>
                     {plan.status !== 'archived' && (
                       <button onClick={() => toggleStatus(plan)} style={smallBtn(plan.status === 'active' ? '#fef9c3' : '#dcfce7', plan.status === 'active' ? '#854d0e' : '#166534')}>
                         {plan.status === 'active' ? '停用' : '啟用'}
@@ -731,6 +915,160 @@ export default function ActivityPlansPage() {
             emptyMessage={statusFilter ? `沒有${STATUS_CONFIG[statusFilter]?.label || ''}方案` : '尚無方案，點擊「新增方案」建立第一個'}
           />
         </Card>
+
+        {seasonPanelPlanId && (
+          <Card>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 18, color: '#111827' }}>開放季節</h3>
+                <p style={{ margin: '6px 0 0', fontSize: 14, color: '#6b7280' }}>
+                  {seasonPanelPlanName}：管理可販售季節區間與停用狀態。
+                </p>
+              </div>
+              <button onClick={() => openSeasonForm()} style={btn('#2563eb', '#fff')}>
+                新增季節
+              </button>
+            </div>
+
+            {!hasActiveSeasons && !seasonLoading && (
+              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, color: '#9a3412', marginBottom: 4 }}>請先設定指定季節</div>
+                <div style={{ fontSize: 14, color: '#9a3412' }}>
+                  「全年開放」資料持久化仍在另一個資料契約切片處理中，空白季節或全部停用都不代表旅客端可全年販售。
+                </div>
+              </div>
+            )}
+
+            {seasonError && (
+              <div role="alert" aria-live="polite" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', color: '#b91c1c', fontSize: 14, marginBottom: 16 }}>
+                {seasonError}
+              </div>
+            )}
+
+            {seasonNotice && (
+              <div role="status" aria-live="polite" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', color: '#1d4ed8', fontSize: 14, marginBottom: 16 }}>
+                {seasonNotice}
+              </div>
+            )}
+
+            {showSeasonForm && (
+              <div style={{ border: '1px solid #dbeafe', background: '#f8fbff', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 12 }}>{editingSeason ? '編輯季節' : '新增季節'}</div>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+                    季節名稱
+                    <input
+                      type="text"
+                      aria-label="季節名稱"
+                      value={seasonForm.name}
+                      onChange={(e) => setSeasonForm({ ...seasonForm, name: e.target.value })}
+                      style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </label>
+                  <FormGrid cols={2} gap={12}>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+                      開始月份
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        aria-label="開始月份"
+                        value={seasonForm.start_month}
+                        onChange={(e) => setSeasonForm({ ...seasonForm, start_month: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+                      />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+                      開始日期
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        aria-label="開始日期"
+                        value={seasonForm.start_day}
+                        onChange={(e) => setSeasonForm({ ...seasonForm, start_day: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+                      />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+                      結束月份
+                      <input
+                        type="number"
+                        min="1"
+                        max="12"
+                        aria-label="結束月份"
+                        value={seasonForm.end_month}
+                        onChange={(e) => setSeasonForm({ ...seasonForm, end_month: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+                      />
+                    </label>
+                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+                      結束日期
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        aria-label="結束日期"
+                        value={seasonForm.end_day}
+                        onChange={(e) => setSeasonForm({ ...seasonForm, end_day: e.target.value })}
+                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+                      />
+                    </label>
+                  </FormGrid>
+                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
+                    時區
+                    <input
+                      type="text"
+                      aria-label="時區"
+                      value={seasonForm.timezone}
+                      onChange={(e) => setSeasonForm({ ...seasonForm, timezone: e.target.value })}
+                      style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </label>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
+                  <button onClick={saveSeason} disabled={seasonSaving} style={btn(seasonSaving ? '#93c5fd' : '#2563eb', '#fff')}>
+                    {seasonSaving ? '儲存中...' : '儲存季節'}
+                  </button>
+                  <button onClick={closeSeasonForm} disabled={seasonSaving} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
+                    取消
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {seasonLoading ? (
+              <div style={{ fontSize: 14, color: '#6b7280' }}>載入開放季節中...</div>
+            ) : seasons.length === 0 ? (
+              <div style={{ border: '1px dashed #cbd5e1', borderRadius: 12, padding: 20, color: '#64748b', fontSize: 14 }}>
+                尚未建立季節區間。請先新增季節，避免把空白狀態誤解為全年開放。
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: 12 }}>
+                {seasons.map((season) => (
+                  <div key={season.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, background: season.is_active ? '#ffffff' : '#f8fafc' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#111827' }}>{season.name}</div>
+                        <div style={{ marginTop: 6, fontSize: 14, color: '#374151' }}>{formatSeasonWindow(season)}</div>
+                        <div style={{ marginTop: 4, fontSize: 13, color: '#6b7280' }}>{season.timezone}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <Badge variant={season.is_active ? 'success' : 'default'}>{season.is_active ? '啟用中' : '已停用'}</Badge>
+                        <button onClick={() => openSeasonForm(season)} style={smallBtn('#e0f2fe', '#075985')}>編輯季節</button>
+                        {season.is_active && (
+                          <button onClick={() => void disableSeason(season)} style={smallBtn('#fee2e2', '#991b1b')}>
+                            停用季節
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        )}
       </div>
     </div>
   );
