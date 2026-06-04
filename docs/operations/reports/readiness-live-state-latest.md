@@ -1,20 +1,21 @@
-<!-- query_timestamp: 2026-06-04T07:44:20.788Z -->
+<!-- query_timestamp: 2026-06-04T13:11:47.044Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-04T07:44:20.788Z  
-**Commit SHA:** `f7d4d537ef10d45d4ab17cf6cbaddf384b091181`
+**Query timestamp:** 2026-06-04T13:11:47.044Z  
+**Commit SHA:** `5d28c2550ab5f82befe1bda7a65e2c85efa6cf54`
 
 ---
 
-## Open PRs (2)
+## Open PRs (3)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1208 | [test(e2e): admin login goes through the API, not the form (closes #1206)](https://github.com/smallwei0301/tour-platform/pull/1208) | `claude/issue-1206-admin-login-api-auth` |
+| #1210 | [test(toolchain): pin eslint-config-next major to next major to prevent circular config regression (closes #1195)](https://github.com/smallwei0301/tour-platform/pull/1210) | `claude/fix-1195-eslint-version-guard` |
+| #1209 | [feat(post-trip): review-invitation sweep decision engine + feature flag (refs #1175, backend slice)](https://github.com/smallwei0301/tour-platform/pull/1209) | `claude/new-session-4ra75` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (24 total)
@@ -25,12 +26,11 @@
 |---|-------|--------|
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — pre-launch final check](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, priority:P0, security, owner:mixed, status:awaiting-implementation, launch:first-payment-blocker |
 
-### P1 (8)
+### P1 (7)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1196 | [[Admin/Booking V2] Clarify unified availability field precedence across admin, guide, and traveler](https://github.com/smallwei0301/tour-platform/issues/1196) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:backlog, owner:ai-agent, status:ready, traveler-booking, booking-v2, admin |
-| #1188 | [[QA] Verify post-#1180/#1181 Booking V2 conflict override RLS slice](https://github.com/smallwei0301/tour-platform/issues/1188) | triaged, priority:P1, qa, agent:backlog, owner:ai-agent, status:ready, type:qa, traveler-booking, database, rls, booking-v2 |
 | #1067 | [[Guide Dashboard] Design V2 activity management and prevent half-day/full-day guide overbooking](https://github.com/smallwei0301/tour-platform/issues/1067) | priority:P1, guide-dashboard, owner:mixed, status:ready, type:decision, booking-v2 |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:queued, owner:ai-agent, status:ready, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, launch:post-first-payment |
@@ -42,9 +42,9 @@
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1206 | [[test-infra] helpers.ts adminLogin flakes under Next dev — Suspense + fast-refresh detaches the password input mid-fill (affects 6+ GH-1067 sub-family E2E specs)](https://github.com/smallwei0301/tour-platform/issues/1206) | type:bug, priority:P2, guide-dashboard, agent:next, owner:ai-agent, status:ready, admin, test-infra |
+| #1214 | [[Ops] Fix Booking V2 Go/No-Go zero-sample decision semantics](https://github.com/smallwei0301/tour-platform/issues/1214) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, infra, booking-v2 |
+| #1212 | [[Booking V2] Cross-surface QA: Admin / Guide / Traveler must show the same blocked reason for the same input (#1196 follow-up)](https://github.com/smallwei0301/tour-platform/issues/1212) | priority:P2, qa, guide-dashboard, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1197 | [[daily bug scan] tour-platform 2026-06-04](https://github.com/smallwei0301/tour-platform/issues/1197) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
-| #1195 | [[Frontend Daily Check] 2026-06-04 lint blocked by ESLint circular config error](https://github.com/smallwei0301/tour-platform/issues/1195) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1189 | [[Docs] Archive or refresh stale root migration rollback automation notes](https://github.com/smallwei0301/tour-platform/issues/1189) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, database, infra, docs |
 | #1176 | [[daily bug scan] tour-platform 2026-06-03](https://github.com/smallwei0301/tour-platform/issues/1176) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
 | #1175 | [[Post-Trip Ops] Automate review invitation sweep after delivery log](https://github.com/smallwei0301/tour-platform/issues/1175) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:blocked, orders, notifications, infra, launch:post-first-payment |
@@ -62,9 +62,11 @@
 
 _none_
 
-### Other (0)
+### Other (1)
 
-_none_
+| # | Title | Labels |
+|---|-------|--------|
+| #1213 | [[Admin/Booking V2] Pre-populate remaining plan-derived fields in the schedule-create modal (#1196 follow-up)](https://github.com/smallwei0301/tour-platform/issues/1213) | type:feature, agent:backlog, owner:ai-agent, status:ready, priority:P3, booking-v2, admin |
 
 ---
 
@@ -72,6 +74,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1211 | [fix(booking-v2): clarify field precedence across admin + guide UI + lock resolver contract (#1196 first slice)](https://github.com/smallwei0301/tour-platform/pull/1211) | 2026-06-04 |
+| #1208 | [test(e2e): admin login goes through the API, not the form (closes #1206)](https://github.com/smallwei0301/tour-platform/pull/1208) | 2026-06-04 |
 | #1207 | [feat(post-trip): guide_trip_reports storage + authz/idempotency helpers (refs #1171, backend slice)](https://github.com/smallwei0301/tour-platform/pull/1207) | 2026-06-04 |
 | #1205 | [test(e2e): add focused availability taxonomy smoke under resource gate (closes #1203)](https://github.com/smallwei0301/tour-platform/pull/1205) | 2026-06-04 |
 | #1204 | [feat(post-trip): review_invitations delivery log + eligibility/idempotency helpers (refs #1174, backend slice)](https://github.com/smallwei0301/tour-platform/pull/1204) | 2026-06-04 |
@@ -80,8 +84,6 @@ _none_
 | #1194 | [fix(admin): remove silent archive→inactive fallback in plan DELETE handler (#1179)](https://github.com/smallwei0301/tour-platform/pull/1194) | 2026-06-03 |
 | #1193 | [fix(admin): gate schedule modal dropdown by active V2 plan count (#1178)](https://github.com/smallwei0301/tour-platform/pull/1193) | 2026-06-03 |
 | #1192 | [qa(#1177): daily QA checklist evidence gate 2026-06-03](https://github.com/smallwei0301/tour-platform/pull/1192) | 2026-06-03 |
-| #1191 | [qa(#1124): evidence gate for 2026-06-02 merged fixes #1107/#1109/#1111/#1114/#1116/#1120](https://github.com/smallwei0301/tour-platform/pull/1191) | 2026-06-03 |
-| #1190 | [qa(#1083): verify post-1076/1080/1082 Booking V2 SOT evidence gate](https://github.com/smallwei0301/tour-platform/pull/1190) | 2026-06-03 |
 
 ---
 
