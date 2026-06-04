@@ -8,6 +8,10 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
+import {
+  summarizeActivePlanSeasons,
+  type PreviewActivityPlanSeason,
+} from '../../../../../../../src/lib/availability-v2/preview-canonical-reasons.ts';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -35,7 +39,18 @@ export async function GET(
           name,
           status,
           booking_type,
-          base_price
+          base_price,
+          is_year_round,
+          activity_plan_seasons (
+            id,
+            activity_plan_id,
+            start_month,
+            start_day,
+            end_month,
+            end_day,
+            timezone,
+            is_active
+          )
         )
       `)
       .eq('guide_id', guideId)
@@ -52,9 +67,21 @@ export async function GET(
         id: a.id,
         title: a.title,
         slug: a.slug,
-        plans: ((a.activity_plans as Array<{ id: string; name: string; status: string; booking_type: string; base_price: number }>) || []).filter(
-          (p) => p.status === 'active'
-        ),
+        plans: ((a.activity_plans as Array<{
+          id: string;
+          name: string;
+          status: string;
+          booking_type: string;
+          base_price: number;
+          is_year_round?: boolean | null;
+          activity_plan_seasons?: PreviewActivityPlanSeason[] | null;
+        }>) || [])
+          .filter((p) => p.status === 'active')
+          .map((p) => ({
+            ...p,
+            isYearRound: Boolean(p.is_year_round),
+            activeSeasonSummaries: summarizeActivePlanSeasons(p.activity_plan_seasons || []),
+          })),
       }))
       .filter((a) => a.plans.length > 0);
 
