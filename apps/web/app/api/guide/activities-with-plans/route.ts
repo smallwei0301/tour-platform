@@ -1,5 +1,9 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
+import {
+  summarizeActivePlanSeasons,
+  type PreviewActivityPlanSeason,
+} from '../../../../src/lib/availability-v2/preview-canonical-reasons.ts';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -42,6 +46,17 @@ export async function GET(req: Request) {
         booking_type,
         min_participants,
         max_participants,
+        is_year_round,
+        activity_plan_seasons (
+          id,
+          activity_plan_id,
+          start_month,
+          start_day,
+          end_month,
+          end_day,
+          timezone,
+          is_active
+        ),
         activities!inner (
           id,
           title,
@@ -64,6 +79,10 @@ export async function GET(req: Request) {
         const activity = pickActivity(row.activities as ActivityRelation | ActivityRelation[] | null);
         if (!activity) return null;
 
+        const activeSeasonSummaries = summarizeActivePlanSeasons(
+          (row.activity_plan_seasons as PreviewActivityPlanSeason[] | null) || []
+        );
+
         return {
           activityId: activity.id,
           activityTitle: activity.title || '',
@@ -77,6 +96,8 @@ export async function GET(req: Request) {
           bookingType: row.booking_type || null,
           minParticipants: row.min_participants ?? null,
           maxParticipants: row.max_participants ?? null,
+          isYearRound: Boolean(row.is_year_round),
+          activeSeasonSummaries,
         };
       })
       .filter(Boolean);

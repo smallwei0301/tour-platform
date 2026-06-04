@@ -8,6 +8,11 @@
 import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
+import {
+  resolvePreviewCanonicalReason,
+  summarizeActivePlanSeasons,
+  type PreviewActivityPlanSeason,
+} from '../../../../src/lib/availability-v2/preview-canonical-reasons.ts';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -77,6 +82,10 @@ export async function GET(request: NextRequest) {
       activityPlanId: activityPlanId || null,
       availabilitySource: 'legacy_local_preview',
       previewReasonCode: 'SUPABASE_UNAVAILABLE',
+      previewCanonicalState: 'outside_season',
+      previewSeasonGate: 'no_active_season',
+      isYearRound: false,
+      activeSeasonSummaries: [],
       rulesCount: 0,
       blackoutsCount: 0,
       activeBookingsCount: 0,
@@ -86,6 +95,8 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await getSupabase();
+    let previewPlanSeasons: PreviewActivityPlanSeason[] = [];
+    let previewIsYearRound = false;
 
     // Validate activityPlanId ownership: must belong to this guide's activity
     if (activityPlanId) {
@@ -94,6 +105,7 @@ export async function GET(request: NextRequest) {
         .select(`
           id,
           status,
+          is_year_round,
           activities!inner (
             guide_id
           )
@@ -122,6 +134,14 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      const { data: seasonsData } = await supabase
+        .from('activity_plan_seasons')
+        .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+        .eq('activity_plan_id', activityPlanId);
+
+      previewPlanSeasons = (seasonsData || []) as PreviewActivityPlanSeason[];
+      previewIsYearRound = Boolean(planData.is_year_round);
     }
 
     // Fetch guide info
@@ -180,6 +200,14 @@ export async function GET(request: NextRequest) {
       .lte('start_at', dateTo + 'T23:59:59Z')
       .gte('end_at', dateFrom + 'T00:00:00Z');
 
+    const previewCanonical = resolvePreviewCanonicalReason({
+      requestedDate: dateFrom,
+      timezone,
+      isYearRound: previewIsYearRound,
+      seasons: previewPlanSeasons,
+    });
+    const activeSeasonSummaries = summarizeActivePlanSeasons(previewPlanSeasons);
+
     // Generate slots using slot generator logic
     const slots = generatePreviewSlots(
       rules || [],
@@ -199,6 +227,10 @@ export async function GET(request: NextRequest) {
       activityPlanId: activityPlanId || null,
       availabilitySource: 'legacy_local_preview',
       previewReasonCode: 'LOCAL_PREVIEW_GENERATOR',
+      previewCanonicalState: previewCanonical.canonicalState,
+      previewSeasonGate: previewCanonical.seasonGate,
+      isYearRound: previewIsYearRound,
+      activeSeasonSummaries,
       rulesCount: (rules || []).length,
       blackoutsCount: (blackouts || []).length,
       activeBookingsCount: (bookings || []).length,
