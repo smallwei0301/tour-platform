@@ -41,7 +41,7 @@ interface TripReportBody {
 
 export async function POST(
   request: Request,
-  { params }: { params: { orderId: string } },
+  { params }: { params: Promise<{ orderId: string }> },
 ) {
   // Step 1: CSRF
   const csrfError = validateCsrf(request);
@@ -53,7 +53,7 @@ export async function POST(
     return Response.json(fail('UNAUTHORIZED', 'Guide session required'), { status: 401 });
   }
 
-  const { orderId } = params;
+  const { orderId } = await params;
 
   // Parse body
   let body: TripReportBody = {};
