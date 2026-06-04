@@ -1,12 +1,11 @@
 /**
  * GET /api/v2/guide/trip-reports-due
- * Issue #1169: Guide dashboard — show overdue trip reports
+ * Issue #1169/#1171: Guide dashboard — show overdue trip reports
  *
  * Returns the guide's past activities that need a trip report submission.
+ * Joins guide_trip_reports.submitted_at so orders with a submitted report
+ * are correctly excluded from the overdue list.
  * Read-only. Guide-session authenticated.
- *
- * Note: Until the guide_trip_reports table is added, submittedAt is always null,
- * so all past activities (>24h since end) show as 'overdue'. This is expected.
  */
 
 import { NextRequest } from 'next/server';
@@ -50,16 +49,19 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
 
-    // Query past confirmed/completed orders whose schedule has already ended
-    // activity_schedules.end_at < now means the trip has already happened
+    // Query past confirmed/completed orders whose schedule has already ended.
+    // Left-join guide_trip_reports so we can read submitted_at and show only
+    // orders that haven't been reported yet (issue #1171).
     const { data: orders, error } = await supabase
       .from('orders')
       .select(`
         id,
         activity_id,
+        booking_id,
         schedule_id,
         status,
-        activity_schedules!orders_schedule_id_fkey(end_at)
+        activity_schedules!orders_schedule_id_fkey(end_at),
+        guide_trip_reports(submitted_at)
       `)
       .in('activity_id', activityIds)
       .in('status', ['confirmed', 'completed', 'paid'])
@@ -78,6 +80,9 @@ export async function GET(request: NextRequest) {
     }> = [];
 
     for (const order of orders || []) {
+      // Orders without a V2 booking_id cannot have trip reports — skip gracefully
+      if (!order.booking_id) continue;
+
       const schedule = Array.isArray(order.activity_schedules)
         ? order.activity_schedules[0]
         : order.activity_schedules;
@@ -90,8 +95,16 @@ export async function GET(request: NextRequest) {
       // Only consider activities that have already ended
       if (endDate >= now) continue;
 
-      // Check trip report status (submittedAt always null until guide_trip_reports table exists)
-      const status = tripReportStatus({ scheduleEndAt, submittedAt: null, now });
+      // Read submitted_at from joined guide_trip_reports rows
+      const reportRows = Array.isArray(order.guide_trip_reports)
+        ? order.guide_trip_reports
+        : order.guide_trip_reports
+          ? [order.guide_trip_reports]
+          : [];
+      const submittedRow = reportRows.find((r: any) => r?.submitted_at);
+      const submittedAt = submittedRow?.submitted_at ?? null;
+
+      const status = tripReportStatus({ scheduleEndAt, submittedAt, now });
 
       if (status === 'overdue') {
         tripReportsDue.push({
