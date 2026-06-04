@@ -12,7 +12,7 @@
 // 9. Return result
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient as createAnonClient } from '../../../../../../../src/lib/supabase/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { isReviewInvitationEligible } from '../../../../../../../src/lib/post-trip-eligibility.mjs';
@@ -99,9 +99,13 @@ export async function POST(
     }
 
     // ── Service-role client for review_invitations (bypasses RLS) ────────────
+    // SupabaseClient<any> type lets us write to the new table without
+    // generated-types blocking (review_invitations not yet in schema types).
+    // Dynamic import matches the pre-tour-sweep/route.ts pattern.
     const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
-    let srClient: ReturnType<typeof createClient> | null = null;
+    let srClient: SupabaseClient | null = null;
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const { createClient } = await import('@supabase/supabase-js');
       srClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     }
 
