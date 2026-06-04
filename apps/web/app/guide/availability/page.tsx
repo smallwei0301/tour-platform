@@ -482,6 +482,12 @@ export default function GuideAvailabilityPage() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {/* Issue #1196: explain field precedence — guide rule only owns
+              the time window; capacity / 最低成團 come from the activity plan
+              (and can be per-date overridden in the schedule, by admin). */}
+          <p style={{ margin: 0, fontSize: 12, color: '#6b7280', background: '#f9fafb', border: '1px solid #f0f0f0', borderRadius: 8, padding: '8px 10px' }}>
+            這份規則只設定你「可出團的時間窗」。容量與最低成團人數來自活動方案；單日如需例外，由管理員在場次上調整。
+          </p>
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>活動</label>
             <select
