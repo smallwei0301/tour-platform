@@ -1,2 +1,5 @@
 .vercel
 .next/
+
+# TypeScript incremental build cache — changes every time tsc runs, never useful to commit
+tsconfig.tsbuildinfo
