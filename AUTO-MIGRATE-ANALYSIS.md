@@ -1,3 +1,5 @@
+> **[ARCHIVED / 已歸檔]** This document is archived. It was a one-shot Phase 11/12 analysis scratch note and does not reflect current migration status. Do not use for current migration workflow. For the canonical runbook see `docs/operations/booking-v2-rollback-runbook.md`.
+
 # Supabase Migrations 自動化方案（Claude Sonnet 分析）
 
 ## 📊 分析結果
