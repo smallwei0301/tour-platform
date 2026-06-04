@@ -51,7 +51,9 @@ test('AC1b: rollback file 20260511_phase13_incidents.rollback.sql exists', () =>
 
 // ── AC2: incidents.ts lib ─────────────────────────────────────────────────────
 
-test('AC2: incidents.ts exists and exports recordIncident with Sentry + LINE + fire-and-forget', () => {
+test('AC2: incidents.ts exists and exports recordIncident with Sentry + Telegram + fire-and-forget', () => {
+  // NOTE: Issue #1215 migrated the alerting bus from LINE Notify → Telegram.
+  // incidents.ts now imports notifySystemError from ./telegram-notify (not ./line-notify).
   const libPath = path.resolve(ROOT, 'src/lib/incidents.ts');
   assert.ok(existsSync(libPath), `incidents.ts not found: ${libPath}`);
 
@@ -63,8 +65,13 @@ test('AC2: incidents.ts exists and exports recordIncident with Sentry + LINE + f
   // Sentry integration
   assert.match(src, /Sentry\.(captureException|captureMessage)/, 'Must call Sentry.captureException or Sentry.captureMessage');
 
-  // LINE notify integration
-  assert.match(src, /notifySystemError/, 'Must call notifySystemError from line-notify');
+  // Telegram notify integration (LINE Notify replaced by Telegram per issue #1215)
+  assert.match(src, /notifySystemError/, 'Must call notifySystemError from telegram-notify');
+  assert.match(src, /from\s+['"]\.\/telegram-notify['"]/, "Must import notifySystemError from './telegram-notify' (not line-notify)");
+  assert.ok(
+    !src.includes("import { notifySystemError } from './line-notify'"),
+    'Must NOT import notifySystemError from ./line-notify (migrated to Telegram per #1215)'
+  );
 
   // fire-and-forget (try/catch wrapping)
   assert.match(src, /try\s*\{[\s\S]*?Sentry\.(captureException|captureMessage)[\s\S]*?\}\s*catch/, 'Sentry call must be wrapped in try/catch');
@@ -77,6 +84,22 @@ test('AC2: incidents.ts exists and exports recordIncident with Sentry + LINE + f
 
   // returns void/Promise<void>
   assert.match(src, /Promise<void>|:.*void/, 'Must return void or Promise<void>');
+});
+
+// AC2-telegram-skip: telegram-notify.ts skips silently when env vars are absent
+test('AC2-telegram-skip: telegram-notify.ts has no-token early-return guard for TELEGRAM_ALERT_BOT_TOKEN + TELEGRAM_ALERT_CHAT_ID', () => {
+  const telegramNotifyPath = path.resolve(ROOT, 'src/lib/telegram-notify.ts');
+  assert.ok(existsSync(telegramNotifyPath), `telegram-notify.ts not found: ${telegramNotifyPath}`);
+
+  const src = readFileSync(telegramNotifyPath, 'utf8');
+
+  // Must reference both env vars
+  assert.match(src, /TELEGRAM_ALERT_BOT_TOKEN/, 'Must check TELEGRAM_ALERT_BOT_TOKEN env var');
+  assert.match(src, /TELEGRAM_ALERT_CHAT_ID/, 'Must check TELEGRAM_ALERT_CHAT_ID env var');
+
+  // Must have a falsy guard (early return when missing)
+  assert.match(src, /if\s*\(!.*\|\|.*!|!token|!chatId/, 'Must guard with a falsy-check on both env vars and return early');
+  assert.match(src, /return\s*;/, 'Must have early return statement when env vars absent');
 });
 
 // ── AC3: ECPay callback wire ───────────────────────────────────────────────────
