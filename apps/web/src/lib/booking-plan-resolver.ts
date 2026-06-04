@@ -19,6 +19,8 @@
  * #884 capacity validator, #885 full-site crawl regression.
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 function isUuidLike(value: unknown): value is string {
   return typeof value === 'string' && UUID_RE.test(value);
@@ -128,7 +130,7 @@ function ok(
 }
 
 async function fetchPlanById(
-  supabase: any,
+  supabase: SupabaseClient,
   activityId: string,
   planId: string,
 ): Promise<ActivityPlanRow | null> {
@@ -145,7 +147,7 @@ async function fetchPlanById(
 }
 
 async function fetchPlanBySlug(
-  supabase: any,
+  supabase: SupabaseClient,
   activityId: string,
   slug: string,
 ): Promise<ActivityPlanRow | null> {
@@ -159,7 +161,7 @@ async function fetchPlanBySlug(
 }
 
 async function fetchPlanByLegacyPlanId(
-  supabase: any,
+  supabase: SupabaseClient,
   activityId: string,
   legacyPlanId: string,
 ): Promise<ActivityPlanRow | null> {
@@ -190,7 +192,7 @@ function isResolvablePlanStatus(status: string | null | undefined): boolean {
 }
 
 export async function resolveBookingPlan(
-  supabase: any,
+  supabase: SupabaseClient,
   args: ResolveBookingPlanArgs,
 ): Promise<BookingPlanResolveResult> {
   if (!isUuidLike(args.activityId)) {
