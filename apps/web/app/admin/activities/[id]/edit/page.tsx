@@ -208,6 +208,29 @@ function AddScheduleModal({
           可同時選擇多個日期，一次建立多筆場次
         </p>
 
+        {/* ── Availability Precedence Helper ── */}
+        <div
+          data-testid="admin-availability-precedence-helper"
+          style={{
+            marginBottom: 16,
+            padding: '10px 14px',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            background: '#f9fafb',
+            fontSize: 12,
+            color: '#374151',
+            lineHeight: 1.8,
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>可預約狀態優先順序：</span>
+          <span style={{ marginLeft: 6 }}>
+            方案狀態（未啟用）&gt; 開放季節（季節外）&gt; 時段規則（規則外）&gt; 黑名單/衝突（封鎖）&gt; 可預約
+          </span>
+          <div style={{ marginTop: 4, color: '#6b7280' }}>
+            場次可訂狀態由上述優先順序決定。方案狀態優先度最高，其次為季節設定、時段規則，最後才是衝突與黑名單。
+          </div>
+        </div>
+
         {err && (
           <div style={{ background: '#fee2e2', color: '#991b1b', padding: '8px 12px', borderRadius: 8, fontSize: 13, marginBottom: 12 }}>
             {err}
