@@ -99,11 +99,8 @@ export async function POST(
     }
 
     // ── Service-role client for review_invitations (bypasses RLS) ────────────
-    // review_invitations is a new table (issue #1174) not yet in the generated
-    // Supabase types — cast to any so the compiler does not block on it.
     const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let srClient: any = null;
+    let srClient: ReturnType<typeof createClient> | null = null;
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       srClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     }
