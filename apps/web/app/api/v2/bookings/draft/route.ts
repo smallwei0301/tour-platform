@@ -120,6 +120,7 @@ async function isSlotInGeneratedV2Availability(
     planDurationMinutes: number;
     planMaxParticipants: number;
     planBookingType: 'scheduled' | 'request' | 'instant';
+    planIsYearRound: boolean;
     slotDate: string;
     startAt: string;
     minParticipants: number;
@@ -287,6 +288,7 @@ async function isSlotInGeneratedV2Availability(
     duration_minutes: payload.planDurationMinutes,
     max_participants: payload.planMaxParticipants,
     booking_type: payload.planBookingType,
+    is_year_round: payload.planIsYearRound,
   };
 
   const availability = evaluateEffectiveBookingAvailability({
@@ -528,6 +530,7 @@ export async function POST(request: NextRequest) {
         min_participants,
         max_participants,
         booking_type,
+        is_year_round,
         status,
         activities!inner (
           id,
@@ -830,6 +833,7 @@ export async function POST(request: NextRequest) {
         planDurationMinutes: planData.duration_minutes,
         planMaxParticipants: planData.max_participants,
         planBookingType: planData.booking_type,
+        planIsYearRound: Boolean(planData.is_year_round),
         slotDate,
         startAt: data.startAt,
         minParticipants,
