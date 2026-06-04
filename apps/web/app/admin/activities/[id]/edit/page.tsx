@@ -17,6 +17,11 @@ interface V2ActivityPlan {
   status: string;
   booking_type: string;
   base_price: number;
+  // Capacity / participation defaults — issue #1196 precedence:
+  // these are the canonical defaults; a schedule may override them
+  // per-date when needed.
+  min_participants?: number;
+  max_participants?: number;
 }
 
 // ── Legacy 方案型別 ────────────────────────────────────────
@@ -122,12 +127,33 @@ function AddScheduleModal({
   const [selectedDates,   setSelectedDates]   = useState<string[]>([]);
   const [startHH,         setStartHH]         = useState('09:00');
   const [endHH,           setEndHH]           = useState('13:00');
-  const [capacity,        setCapacity]        = useState('10');
-  const [minParticipants, setMinParticipants] = useState('1');
-  const [planId,          setPlanId]          = useState('');  // '' = 未選擇（≥2 active 方案時須明確選擇）
+  // Issue #1196: capacity/min defaults come from the selected V2 plan. When
+  // exactly one plan is available it auto-applies, so we seed straight from
+  // it; otherwise the seeded values get overwritten the moment the user
+  // picks a plan (see useEffect below).
+  const initialPlan = availablePlans.length === 1 ? availablePlans[0] : undefined;
+  const [capacity,        setCapacity]        = useState(
+    initialPlan?.max_participants ? String(initialPlan.max_participants) : '10',
+  );
+  const [minParticipants, setMinParticipants] = useState(
+    initialPlan?.min_participants ? String(initialPlan.min_participants) : '1',
+  );
+  const [planId,          setPlanId]          = useState(initialPlan?.id ?? '');
   const [saving,          setSaving]          = useState(false);
   const [progress,        setProgress]        = useState('');
   const [err,             setErr]             = useState('');
+
+  // When the operator switches the plan dropdown (≥2 plans), re-seed the
+  // capacity / min participants fields with that plan's defaults. The
+  // operator can still type over them — Issue #1196 explicitly preserves
+  // per-schedule override capability on top of plan defaults.
+  const selectedPlan = availablePlans.find((p) => p.id === planId);
+  useEffect(() => {
+    if (!selectedPlan) return;
+    if (selectedPlan.max_participants) setCapacity(String(selectedPlan.max_participants));
+    if (selectedPlan.min_participants) setMinParticipants(String(selectedPlan.min_participants));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planId]);
 
   function toggleDate(date: string) {
     setSelectedDates(prev =>
@@ -338,6 +364,11 @@ function AddScheduleModal({
               />
             </label>
           </FormGrid>
+          {/* Issue #1196: explain field precedence — plan provides defaults,
+              schedule can override per-date. */}
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>
+            預設取自方案<span style={{ fontWeight: 600 }}>{selectedPlan ? `「${selectedPlan.name}」` : ''}</span>；如需單日不同容量或最低成團，在此調整即會覆蓋該日場次的設定。
+          </p>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
             {progress && <span style={{ fontSize: 13, color: '#16a34a' }}>{progress}</span>}
