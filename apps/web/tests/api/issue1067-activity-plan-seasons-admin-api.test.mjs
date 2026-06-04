@@ -400,6 +400,48 @@ test('GH-1067 RED: PUT updates only the selected plan season and keeps plan scop
   }
 });
 
+test('GH-1067 RED: PUT rejects partial month/day updates that become invalid against the existing season row', async () => {
+  const db = await importDbModule();
+  const route = await importSeasonItemRoute();
+  const supabase = createSupabaseMock({
+    seasons: [
+      {
+        id: SEASON_ID,
+        activity_plan_id: PLAN_ID,
+        name: 'February window',
+        start_month: 2,
+        start_day: 15,
+        end_month: 2,
+        end_day: 28,
+        timezone: 'Asia/Taipei',
+        is_active: true,
+        created_at: '2026-06-01T00:00:00.000Z',
+        updated_at: '2026-06-01T00:00:00.000Z',
+      },
+    ],
+  });
+  db.__setSupabaseClientForTest(supabase);
+
+  try {
+    const response = await route.PUT(
+      new Request(routeUrl('/api/v2/admin/activities/test/plans/test/seasons/test'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ start_day: 31 }),
+      }),
+      { params: Promise.resolve({ activityId: ACTIVITY_ID, planId: PLAN_ID, seasonId: SEASON_ID }) }
+    );
+    assert.equal(response.status, 400);
+    const body = await readJson(response);
+    assert.equal(body.success, false);
+    assert.match(body.error.message, /Invalid start month\/day bounds/);
+    assert.equal(supabase.state.updates.length, 0);
+    assert.equal(supabase.state.seasons[0].start_day, 15);
+  } finally {
+    db.__setSupabaseClientForTest(null);
+  }
+});
+
 test('GH-1067 RED: DELETE disables the season instead of deleting it', async () => {
   const db = await importDbModule();
   const route = await importSeasonItemRoute();

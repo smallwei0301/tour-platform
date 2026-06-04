@@ -47,15 +47,30 @@ export async function PUT(
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid JSON body'), { status: 400 });
   }
 
-  const validation = validateUpdateActivityPlanSeasonPayload(body);
-  if (!validation.ok) {
-    return Response.json(errorV2('VALIDATION_ERROR', validation.message), { status: 400 });
-  }
-
   try {
     const plan = await ensurePlanExists(activityId, planId);
     if (!plan.exists) {
       return Response.json(errorV2('NOT_FOUND', 'Plan not found'), { status: 404 });
+    }
+
+    const { data: existingSeason, error: existingSeasonError } = await plan.supabase
+      .from('activity_plan_seasons')
+      .select('start_month, start_day, end_month, end_day')
+      .eq('id', seasonId)
+      .eq('activity_plan_id', planId)
+      .single();
+
+    if ((existingSeasonError as { code?: string } | null)?.code === 'PGRST116' || !existingSeason) {
+      return Response.json(errorV2('NOT_FOUND', 'Season not found'), { status: 404 });
+    }
+    if (existingSeasonError) {
+      console.error('Error fetching activity plan season before update:', existingSeasonError);
+      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to load season'), { status: 500 });
+    }
+
+    const validation = validateUpdateActivityPlanSeasonPayload(body, existingSeason);
+    if (!validation.ok) {
+      return Response.json(errorV2('VALIDATION_ERROR', validation.message), { status: 400 });
     }
 
     const payload = {

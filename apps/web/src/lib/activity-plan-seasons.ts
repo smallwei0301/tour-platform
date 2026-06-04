@@ -120,7 +120,15 @@ export function validateCreateActivityPlanSeasonPayload(input: ActivityPlanSeaso
   };
 }
 
-export function validateUpdateActivityPlanSeasonPayload(input: ActivityPlanSeasonPayload) {
+type ActivityPlanSeasonDateBounds = Pick<
+  Required<ActivityPlanSeasonPayload>,
+  'start_month' | 'start_day' | 'end_month' | 'end_day'
+>;
+
+export function validateUpdateActivityPlanSeasonPayload(
+  input: ActivityPlanSeasonPayload,
+  existing?: Partial<ActivityPlanSeasonDateBounds>
+) {
   const update: Record<string, unknown> = {};
 
   if (input.name !== undefined) {
@@ -160,10 +168,10 @@ export function validateUpdateActivityPlanSeasonPayload(input: ActivityPlanSeaso
     }
   }
 
-  const resolvedStartMonth = Number(update.start_month ?? 1);
-  const resolvedStartDay = Number(update.start_day ?? 1);
-  const resolvedEndMonth = Number(update.end_month ?? 1);
-  const resolvedEndDay = Number(update.end_day ?? 1);
+  const resolvedStartMonth = Number(update.start_month ?? existing?.start_month ?? 1);
+  const resolvedStartDay = Number(update.start_day ?? existing?.start_day ?? 1);
+  const resolvedEndMonth = Number(update.end_month ?? existing?.end_month ?? 1);
+  const resolvedEndDay = Number(update.end_day ?? existing?.end_day ?? 1);
 
   if (
     (update.start_month !== undefined || update.start_day !== undefined) &&
