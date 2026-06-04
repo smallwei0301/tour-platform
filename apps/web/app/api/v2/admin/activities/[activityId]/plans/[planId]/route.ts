@@ -69,6 +69,7 @@ interface UpdatePlanBody {
   max_participants?: number;
   booking_type?: 'scheduled' | 'request' | 'instant';
   status?: 'active' | 'inactive' | 'archived';
+  is_year_round?: boolean;
   legacy_plan_id?: string;
   details_link_text?: string;
   booking_btn_text?: string;
@@ -128,6 +129,9 @@ export async function PUT(
   if (body.status !== undefined && !VALID_STATUSES.includes(body.status)) {
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid status'), { status: 400 });
   }
+  if (body.is_year_round !== undefined && typeof body.is_year_round !== 'boolean') {
+    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid is_year_round'), { status: 400 });
+  }
   const arrayFields = ['highlights', 'plan_inclusions', 'plan_exclusions', 'plan_notices', 'plan_refund_rules'] as const;
   for (const key of arrayFields) {
     if ((body as Record<string, unknown>)[key] !== undefined && !Array.isArray((body as Record<string, unknown>)[key])) {
@@ -168,6 +172,7 @@ export async function PUT(
     if (body.max_participants !== undefined) updateData.max_participants = body.max_participants;
     if (body.booking_type !== undefined) updateData.booking_type = body.booking_type;
     if (body.status !== undefined) updateData.status = body.status;
+    if (body.is_year_round !== undefined) updateData.is_year_round = body.is_year_round;
 
     Object.assign(updateData, normalizeRichPlanPayload(body));
 

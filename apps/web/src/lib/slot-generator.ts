@@ -62,6 +62,7 @@ export interface ActivityPlan {
   price_type?: 'per_person' | 'per_group' | null;
   base_price?: number | null;
   min_participants?: number | null;
+  is_year_round?: boolean | null;
 }
 
 export interface TimeSlot {

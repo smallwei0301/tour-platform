@@ -76,6 +76,7 @@ export interface BookingAvailabilityEvaluation {
     bookings: ExistingBooking[];
     seasons: ActivityPlanSeason[];
     seasonGateEnabled: boolean;
+    isYearRound: boolean;
     planStatus: string;
   };
 }
@@ -339,6 +340,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
       bookings: input.bookings,
       seasons: input.seasons ?? [],
       seasonGateEnabled: input.seasons !== undefined,
+      isYearRound: Boolean(input.plan.is_year_round),
       planStatus: input.planStatus ?? 'active',
     },
   };

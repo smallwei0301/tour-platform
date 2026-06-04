@@ -51,6 +51,7 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
     bookings: params.evaluation.diagnostics.bookings,
     seasons: params.evaluation.diagnostics.seasons,
     seasonGateEnabled: params.evaluation.diagnostics.seasonGateEnabled,
+    isYearRound: params.evaluation.diagnostics.isYearRound,
     planStatus: params.evaluation.diagnostics.planStatus,
     slotAvailable: Boolean(matchedSlot),
     slotUnavailableReason: params.evaluation.reasonCode,
