@@ -686,6 +686,29 @@ export default function GuideAvailabilityPage() {
         </div>
       </ResponsiveModal>
 
+      {/* ── Availability Precedence Helper ── */}
+      <div
+        data-testid="guide-availability-precedence-helper"
+        style={{
+          marginBottom: 20,
+          padding: '12px 16px',
+          borderRadius: 10,
+          border: '1px solid #e5e7eb',
+          background: '#f9fafb',
+          fontSize: 12,
+          color: '#374151',
+          lineHeight: 1.8,
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: 13 }}>可預約狀態優先順序說明：</span>
+        <span style={{ marginLeft: 6 }}>
+          方案狀態（未啟用）&gt; 開放季節（季節外）&gt; 時段規則（規則外）&gt; 黑名單/衝突（封鎖）&gt; 可預約
+        </span>
+        <div style={{ marginTop: 4, color: '#6b7280' }}>
+          最高優先：若方案狀態為「未啟用」，無論其他設定，此方案所有時段均不開放。依序往下，季節設定、時段規則、黑名單/衝突才會生效。
+        </div>
+      </div>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
           <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中...</div>
