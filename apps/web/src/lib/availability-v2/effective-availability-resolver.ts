@@ -45,9 +45,13 @@ function isInAnyActiveSeason(params: {
   requestedStartAt: string;
   timezone: string;
   seasons: ActivityPlanSeason[];
-}): { inSeason: boolean; reason: 'no_active_season' | 'outside_season' | 'inside_season' } {
+  isYearRound?: boolean;
+}): { inSeason: boolean; reason: 'no_active_season' | 'outside_season' | 'inside_season' | 'explicit_year_round' } {
   const activeSeasons = params.seasons.filter((season) => season.is_active);
   if (activeSeasons.length === 0) {
+    if (params.isYearRound) {
+      return { inSeason: true, reason: 'explicit_year_round' };
+    }
     return { inSeason: false, reason: 'no_active_season' };
   }
 
@@ -90,6 +94,7 @@ export function resolveCanonicalAvailabilityState(params: {
   bookings: ExistingBooking[];
   seasons: ActivityPlanSeason[];
   seasonGateEnabled?: boolean;
+  isYearRound?: boolean;
   planStatus: string;
   slotAvailable: boolean;
   slotUnavailableReason?: string;
@@ -101,17 +106,22 @@ export function resolveCanonicalAvailabilityState(params: {
     return { state: 'inactive_plan' };
   }
 
+  let seasonGateMetadata: Record<string, string> | undefined;
   if (params.seasonGateEnabled) {
     const seasonGate = isInAnyActiveSeason({
       requestedStartAt: params.requestedStartAt,
       timezone: params.timezone,
       seasons: params.seasons,
+      isYearRound: params.isYearRound,
     });
     if (!seasonGate.inSeason) {
       return {
         state: 'outside_season',
         metadata: { seasonGate: seasonGate.reason },
       };
+    }
+    if (seasonGate.reason === 'explicit_year_round') {
+      seasonGateMetadata = { seasonGate: seasonGate.reason };
     }
   }
 
@@ -153,7 +163,7 @@ export function resolveCanonicalAvailabilityState(params: {
   }
 
   if (params.slotAvailable) {
-    return { state: 'available' };
+    return seasonGateMetadata ? { state: 'available', metadata: seasonGateMetadata } : { state: 'available' };
   }
 
   if (!params.capacityAvailable) {

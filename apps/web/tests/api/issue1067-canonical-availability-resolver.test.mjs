@@ -95,7 +95,7 @@ test('GH-1067 RED: cross-year season allows April slot and blocks July slot', ()
   assert.equal(july.state, 'outside_season');
 });
 
-test('GH-1067 RED: no active season rows must fail closed outside_season', () => {
+test('GH-1067 RED: explicit year-round plan passes season gate even with no active season rows', () => {
   const out = resolveCanonicalAvailabilityState({
     requestedStartAt: '2026-04-10T09:00:00+08:00',
     timezone: TZ,
@@ -103,6 +103,42 @@ test('GH-1067 RED: no active season rows must fail closed outside_season', () =>
     blackouts: [],
     bookings: [],
     seasons: [],
+    seasonGateEnabled: true,
+    planStatus: 'active',
+    isYearRound: true,
+    slotAvailable: true,
+    capacityAvailable: true,
+  });
+  assert.equal(out.state, 'available');
+  assert.equal(out.metadata?.seasonGate, 'explicit_year_round');
+});
+
+test('GH-1067 RED: no active season rows must fail closed outside_season without explicit year-round', () => {
+  const out = resolveCanonicalAvailabilityState({
+    requestedStartAt: '2026-04-10T09:00:00+08:00',
+    timezone: TZ,
+    rules: [weekdayRule({ weekday: 5 })],
+    blackouts: [],
+    bookings: [],
+    seasons: [],
+    seasonGateEnabled: true,
+    planStatus: 'active',
+    slotAvailable: true,
+    capacityAvailable: true,
+  });
+  assert.equal(out.state, 'outside_season');
+  assert.equal(out.metadata?.seasonGate, 'no_active_season');
+});
+
+
+test('GH-1067 RED: disabled seasons do not imply year-round when explicit flag is false', () => {
+  const out = resolveCanonicalAvailabilityState({
+    requestedStartAt: '2026-04-10T09:00:00+08:00',
+    timezone: TZ,
+    rules: [weekdayRule({ weekday: 5 })],
+    blackouts: [],
+    bookings: [],
+    seasons: [season({ startMonth: 1, startDay: 1, endMonth: 12, endDay: 31, isActive: false })],
     seasonGateEnabled: true,
     planStatus: 'active',
     slotAvailable: true,
@@ -171,6 +207,30 @@ test('GH-1067 RED: effective booking evaluator propagates outside_season canonic
   });
 
   assert.equal(out.available, false);
+  assert.equal(out.reasonCode, 'outside_season');
+});
+
+test('GH-1067 RED: authoritative selected schedule cannot bypass no_active_season without explicit year-round', () => {
+  const out = evaluateEffectiveBookingAvailability({
+    ...BASE_INPUT,
+    rules: [weekdayRule({ weekday: 5 })],
+    bookings: [],
+    seasons: [],
+    selectedScheduleAuthority: 'authoritative',
+    selectedSchedule: {
+      id: 'schedule-1067',
+      activity_id: 'a-1067',
+      plan_id: 'p-1067',
+      start_at: '2026-04-10T09:00:00+08:00',
+      end_at: '2026-04-10T12:00:00+08:00',
+      capacity: 10,
+      booked_count: 0,
+      status: 'open',
+    },
+  });
+
+  assert.equal(out.available, false);
+  assert.equal(out.canonicalState, 'outside_season');
   assert.equal(out.reasonCode, 'outside_season');
 });
 

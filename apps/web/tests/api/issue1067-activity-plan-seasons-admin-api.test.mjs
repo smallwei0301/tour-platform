@@ -8,6 +8,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..', '..');
 const middlewareSrc = readFileSync(path.resolve(ROOT, 'middleware.ts'), 'utf-8');
+const planRouteSrc = readFileSync(
+  path.resolve(ROOT, 'app/api/v2/admin/activities/[activityId]/plans/[planId]/route.ts'),
+  'utf-8'
+);
 
 const ACTIVITY_ID = '11111111-1111-4111-8111-111111111111';
 const PLAN_ID = '22222222-2222-4222-8222-222222222222';
@@ -34,6 +38,12 @@ async function importSeasonItemRoute() {
   );
 }
 
+async function importPlanRoute() {
+  return import(
+    `${pathToFileURL(path.resolve(ROOT, 'app/api/v2/admin/activities/[activityId]/plans/[planId]/route.ts')).href}?t=${Date.now()}`
+  );
+}
+
 function sortRows(rows, orders) {
   const copy = rows.map((row) => ({ ...row }));
   if (!orders.length) return copy;
@@ -49,18 +59,32 @@ function sortRows(rows, orders) {
   });
 }
 
-function createSupabaseMock({ planExists = true, seasons = [] } = {}) {
+function createSupabaseMock({ planExists = true, seasons = [], plan } = {}) {
   const state = {
+    plan: {
+      id: PLAN_ID,
+      activity_id: ACTIVITY_ID,
+      name: 'Plan 1067',
+      min_participants: 1,
+      max_participants: 10,
+      duration_minutes: 180,
+      booking_type: 'scheduled',
+      status: 'active',
+      is_year_round: false,
+      updated_at: '2026-06-04T01:02:03.000Z',
+      ...(plan || {}),
+    },
     seasons: seasons.map((row) => ({ ...row })),
     inserts: [],
     updates: [],
+    planUpdates: [],
   };
 
   function resolvePlan(filters) {
     if (!planExists) return null;
     if (filters.id !== PLAN_ID) return null;
     if (filters.activity_id && filters.activity_id !== ACTIVITY_ID) return null;
-    return { id: PLAN_ID, activity_id: ACTIVITY_ID };
+    return { ...state.plan };
   }
 
   function makeSelectQuery(table, ctx = { filters: {}, orders: [] }) {
@@ -93,9 +117,9 @@ function createSupabaseMock({ planExists = true, seasons = [] } = {}) {
 
     function execute(expectSingle) {
       if (table === 'activity_plans') {
-        const plan = resolvePlan(ctx.filters);
-        return plan
-          ? { data: plan, error: null }
+        const planRow = resolvePlan(ctx.filters);
+        return planRow
+          ? { data: planRow, error: null }
           : { data: null, error: { message: 'not found', code: 'PGRST116' } };
       }
 
@@ -129,12 +153,12 @@ function createSupabaseMock({ planExists = true, seasons = [] } = {}) {
     };
   }
 
-  function makeUpdateChain(payload, filters = {}) {
+  function makeSeasonUpdateChain(payload, filters = {}) {
     return {
       eq(column, value) {
         const nextFilters = { ...filters, [column]: value };
         return {
-          ...makeUpdateChain(payload, nextFilters),
+          ...makeSeasonUpdateChain(payload, nextFilters),
           select() {
             return {
               single() {
@@ -176,6 +200,49 @@ function createSupabaseMock({ planExists = true, seasons = [] } = {}) {
     };
   }
 
+  function makePlanUpdateChain(payload, filters = {}) {
+    return {
+      eq(column, value) {
+        const nextFilters = { ...filters, [column]: value };
+        return {
+          ...makePlanUpdateChain(payload, nextFilters),
+          select() {
+            return {
+              single() {
+                const planRow = resolvePlan(nextFilters);
+                if (!planRow) {
+                  return Promise.resolve({ data: null, error: { message: 'not found', code: 'PGRST116' } });
+                }
+                state.plan = {
+                  ...state.plan,
+                  ...payload,
+                };
+                state.planUpdates.push({ payload: { ...payload }, filters: { ...nextFilters } });
+                return Promise.resolve({ data: { ...state.plan }, error: null });
+              },
+            };
+          },
+        };
+      },
+      select() {
+        return {
+          single() {
+            const planRow = resolvePlan(filters);
+            if (!planRow) {
+              return Promise.resolve({ data: null, error: { message: 'not found', code: 'PGRST116' } });
+            }
+            state.plan = {
+              ...state.plan,
+              ...payload,
+            };
+            state.planUpdates.push({ payload: { ...payload }, filters: { ...filters } });
+            return Promise.resolve({ data: { ...state.plan }, error: null });
+          },
+        };
+      },
+    };
+  }
+
   return {
     state,
     from(table) {
@@ -194,7 +261,16 @@ function createSupabaseMock({ planExists = true, seasons = [] } = {}) {
             return makeMutationSelect(() => ({ data: { ...row }, error: null }));
           },
           update(payload) {
-            return makeUpdateChain(payload);
+            return makeSeasonUpdateChain(payload);
+          },
+        };
+      }
+
+      if (table === 'activity_plans') {
+        return {
+          ...makeSelectQuery(table),
+          update(payload) {
+            return makePlanUpdateChain(payload);
           },
         };
       }
@@ -211,6 +287,21 @@ async function readJson(response) {
 test('GH-1067 seasons admin route stays under existing /api/v2/admin middleware protection', () => {
   assert.match(middlewareSrc, /pathname\.startsWith\('\/api\/v2\/admin'\)/);
   assert.match(middlewareSrc, /const isAdminApi = pathname\.startsWith\('\/api\/admin'\) \|\| pathname\.startsWith\('\/api\/v2\/admin'\);/);
+});
+
+test('GH-1067 RED: plan route GET returns plan payload without stripping is_year_round', () => {
+  assert.match(planRouteSrc, /return Response\.json\(successV2\(\{ plan: data \}\)\)/);
+  assert.match(planRouteSrc, /\.from\('activity_plans'\)[\s\S]*\.select\(`[\s\S]*\*[\s\S]*activities/);
+});
+
+test('GH-1067 RED: plan PUT validates is_year_round as boolean before writing', () => {
+  assert.match(planRouteSrc, /is_year_round\?: boolean;/);
+  assert.match(planRouteSrc, /body\.is_year_round !== undefined && typeof body\.is_year_round !== 'boolean'/);
+  assert.match(planRouteSrc, /Invalid is_year_round/);
+});
+
+test('GH-1067 RED: plan PUT persists explicit is_year_round boolean in updateData', () => {
+  assert.match(planRouteSrc, /if \(body\.is_year_round !== undefined\) updateData\.is_year_round = body\.is_year_round;/);
 });
 
 test('GH-1067 RED: GET lists only seasons for the selected plan in predictable order', async () => {
