@@ -37,8 +37,7 @@ export async function GET(req: Request) {
       .select(`
         id, status, booking_id,
         activity_schedules(id, start_at, end_at),
-        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue),
-        guide_trip_reports(submitted_at)
+        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
       `)
       .in('status', ['paid', 'confirmed', 'completed'])
       .gte('created_at', since.toISOString())
@@ -46,6 +45,33 @@ export async function GET(req: Request) {
 
     if (error) {
       return Response.json(errorV2('DB_ERROR', error.message), { status: 500 });
+    }
+
+    const bookingIds = [
+      ...new Set(
+        (orders ?? [])
+          .map((order) => order.booking_id)
+          .filter((bookingId): bookingId is string => typeof bookingId === 'string' && bookingId.length > 0)
+      ),
+    ];
+    const reportsByBookingId = new Map<string, Array<{ submitted_at: string | null }>>();
+
+    if (bookingIds.length > 0) {
+      const { data: guideTripReports, error: guideTripReportsError } = await supabase
+        .from('guide_trip_reports')
+        .select('booking_id, submitted_at')
+        .in('booking_id', bookingIds);
+
+      if (guideTripReportsError) {
+        return Response.json(errorV2('DB_ERROR', guideTripReportsError.message), { status: 500 });
+      }
+
+      for (const report of guideTripReports ?? []) {
+        if (!report.booking_id) continue;
+        const existing = reportsByBookingId.get(report.booking_id) ?? [];
+        existing.push({ submitted_at: report.submitted_at ?? null });
+        reportsByBookingId.set(report.booking_id, existing);
+      }
     }
 
     const overdueTripReports: Array<{ orderId: string; scheduleEndAt: string }> = [];
@@ -64,21 +90,16 @@ export async function GET(req: Request) {
       const scheduleEndAt = schedule?.end_at ?? schedule?.start_at;
       if (!scheduleEndAt) continue;
 
-      // Only process orders where the activity has already ended
       if (new Date(scheduleEndAt) >= now) continue;
 
-      // Read submitted_at from joined guide_trip_reports rows (issue #1171)
-      const reportRows = Array.isArray(order.guide_trip_reports)
-        ? order.guide_trip_reports
-        : order.guide_trip_reports
-          ? [order.guide_trip_reports]
-          : [];
+      const reportRows = order.booking_id
+        ? reportsByBookingId.get(order.booking_id) ?? []
+        : [];
       const submittedRow = (reportRows as Array<{ submitted_at: string | null }>).find(
-        (r) => r?.submitted_at,
+        (row) => row?.submitted_at,
       );
       const submittedAt = submittedRow?.submitted_at ?? null;
 
-      // Trip report overdue
       const reportStatus = tripReportStatus({
         scheduleEndAt,
         submittedAt,
@@ -88,7 +109,6 @@ export async function GET(req: Request) {
         overdueTripReports.push({ orderId: order.id, scheduleEndAt });
       }
 
-      // Review invitation eligible
       if (
         isReviewInvitationEligible({
           orderStatus: order.status,
@@ -101,7 +121,6 @@ export async function GET(req: Request) {
         readyForReviewInvitation.push({ orderId: order.id, scheduleEndAt });
       }
 
-      // Payout on hold
       const holdReason = isPayoutOnHold({
         refundAmountTwd: ops?.refund_amount_twd ?? 0,
         hasComplaint: ops?.has_complaint ?? false,
@@ -111,7 +130,6 @@ export async function GET(req: Request) {
         payoutOnHold.push({ orderId: order.id, holdReason });
       }
 
-      // Admin followup
       const followupCategory = adminFollowupCategory({
         missingTripReport: reportStatus === 'overdue',
         hasComplaint: ops?.has_complaint ?? false,
@@ -121,9 +139,8 @@ export async function GET(req: Request) {
       }
     }
 
-    // Apply category filter if provided
     const filteredFollowup = categoryFilter
-      ? adminFollowupNeeded.filter(o => o.category === categoryFilter)
+      ? adminFollowupNeeded.filter((order) => order.category === categoryFilter)
       : adminFollowupNeeded;
 
     return Response.json(

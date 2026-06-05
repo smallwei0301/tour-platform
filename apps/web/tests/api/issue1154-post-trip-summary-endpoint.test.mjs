@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Resolve paths relative to this file: tests/api/ -> ../.. -> apps/web/
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
 
@@ -56,7 +55,6 @@ describe('POST_TRIP_SUMMARY endpoint source contracts', () => {
   });
 });
 
-// Test the category filter validation
 describe('POST_TRIP_SUMMARY category filter', () => {
   const routePath = join(ROOT, 'app/api/v2/admin/orders/post-trip-summary/route.ts');
 
@@ -68,5 +66,20 @@ describe('POST_TRIP_SUMMARY category filter', () => {
   it('includes categoryFilter in response', () => {
     const src = readFileSync(routePath, 'utf-8');
     assert.ok(src.includes('categoryFilter'), 'must return categoryFilter in response');
+  });
+});
+
+describe('POST_TRIP_SUMMARY split guide trip reports query regression', () => {
+  const routePath = join(ROOT, 'app/api/v2/admin/orders/post-trip-summary/route.ts');
+
+  it('does not directly embed guide_trip_reports off orders select', () => {
+    const src = readFileSync(routePath, 'utf-8');
+    assert.ok(!src.includes('guide_trip_reports(submitted_at)'), 'orders select must not directly embed guide_trip_reports');
+  });
+
+  it('queries guide_trip_reports separately by booking_id after loading orders', () => {
+    const src = readFileSync(routePath, 'utf-8');
+    assert.ok(src.includes("from('guide_trip_reports')"), 'must query guide_trip_reports separately');
+    assert.ok(src.includes(".in('booking_id'"), 'guide_trip_reports query must filter by booking_id list');
   });
 });
