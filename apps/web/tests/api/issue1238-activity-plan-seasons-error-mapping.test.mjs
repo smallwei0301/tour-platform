@@ -75,6 +75,48 @@ test('PostgREST PGRST116 (no rows) → 404 NOT_FOUND', () => {
   assert.equal(r.status, 404);
 });
 
+test('GH-1238: PostgREST PGRST204 (schema cache missing column) → 500 SCHEMA_COLUMN_MISSING with actionable zh hint about reloading schema', () => {
+  const r = mapActivityPlanSeasonInsertError({
+    code: 'PGRST204',
+    message: "Could not find the 'name' column of 'activity_plan_seasons' in the schema cache",
+  });
+  assert.equal(r.code, 'SCHEMA_COLUMN_MISSING');
+  assert.equal(r.status, 500);
+  // Raw Supabase message must be preserved in EN for log greps
+  assert.match(r.message, /schema cache/);
+  // Operator-facing zh tells them which knobs to check
+  assert.match(r.messageZh, /欄位與程式不一致/);
+  assert.match(r.messageZh, /schema/);
+});
+
+test('GH-1238: message-only "schema cache" fallback also routes to SCHEMA_COLUMN_MISSING (handles future Supabase versions that drop the PGRST204 code)', () => {
+  const r = mapActivityPlanSeasonInsertError({
+    // No code at all — only the message form
+    message: "Could not find the 'name' column in the schema cache",
+  });
+  assert.equal(r.code, 'SCHEMA_COLUMN_MISSING');
+  assert.equal(r.status, 500);
+});
+
+test('GH-1238 migration: activity_plan_seasons.name column is added by a 2026-06-05 migration so admin POST stops failing PGRST204 once applied', () => {
+  // Source-contract guard. If the migration is removed (or its filename / column
+  // intent changes), this test must fail BEFORE production hits the old
+  // schema-cache-miss path again.
+  const MIGRATION_PATH = join(
+    REPO_ROOT,
+    '../../supabase/migrations/20260605_issue1238_activity_plan_seasons_add_name_column.sql',
+  );
+  const sql = readFileSync(MIGRATION_PATH, 'utf8');
+  assert.match(
+    sql,
+    /alter\s+table\s+public\.activity_plan_seasons[\s\S]*add\s+column\s+if\s+not\s+exists\s+name\s+text/i,
+    'GH-1238 migration must `alter table public.activity_plan_seasons add column if not exists name text`',
+  );
+  // Idempotent guard — the migration must be safe to run on environments that
+  // somehow already have the column (e.g. manually applied in production).
+  assert.match(sql, /if\s+not\s+exists/i, 'migration must use IF NOT EXISTS for idempotency');
+});
+
 test('Unknown error / no code → default 500 INTERNAL_ERROR + generic zh message', () => {
   const r = mapActivityPlanSeasonInsertError({ message: 'network blip' });
   assert.equal(r.code, 'INTERNAL_ERROR');

@@ -35,6 +35,9 @@
     "supabase": "^2.87.2",
     "typescript": "^5.9.3"
   },
+  "overrides": {
+    "eslint-config-next": "15.5.15"
+  },
   "engines": {
     "node": ">=22"
   }
