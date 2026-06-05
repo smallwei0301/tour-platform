@@ -36,7 +36,9 @@ test('v2 shell prefers API Chinese copy and evaluator reason for blocked state m
   const src = await readBookingSource();
 
   assert.match(src, /setAvailabilityReason\(json\?\.data\?\.reason \|\| ''\)/);
-  assert.match(src, /json\?\.data\?\.messageZh \|\| json\?\.error\?\.messageZh \|\| json\?\.error\?\.message/);
+  assert.match(src, /function getBookingV2RecoveryMessage\(response: V2AvailableSlotsResponse\)/);
+  assert.match(src, /response\?\.data\?\.messageZh, response\?\.error\?\.messageZh/);
+  assert.match(src, /return errorMessage \|\| BOOKING_V2_GENERIC_ERROR/);
   assert.match(src, /setAvailabilityReason\(selectedDateEntry\?\.reason \|\| json\.data\?\.reason \|\| ''\)/);
   assert.match(src, /!slotsLoading && slots\.length === 0 && availabilityReason/);
   assert.match(src, /目前狀態：\{availabilityReason\}/);
