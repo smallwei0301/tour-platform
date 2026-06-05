@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APPS_WEB_PKG = resolve(__dirname, '../../package.json');
 const ESLINTRC = resolve(__dirname, '../../.eslintrc.json');
+const ROOT_PKG = resolve(__dirname, '../../../../package.json');
 
 function parseMajor(spec) {
   // Accepts "^15.5.3", "~15.0", ">=15", "15.5.x", "15.x", "15.5.3" → 15.
@@ -66,6 +67,29 @@ describe('GH-1195 — toolchain version pin contract (eslint-config-next ↔ nex
     assert.ok(
       extendsArr.includes('next/core-web-vitals'),
       `.eslintrc.json should still extend "next/core-web-vitals" — if this is removed, the GH-1195 version pin is no longer required and this guard should be removed too. extends=${JSON.stringify(rc.extends)}`,
+    );
+  });
+
+  test('GH-1233 — root package.json overrides pins eslint-config-next to a 15.x version (resolution lockdown across npm/node versions)', () => {
+    // GH-1233 reported the same circular-structure error on a daily-check
+    // env (node v24 + npm 11) despite GH-1195 / PR #1210 being merged. Root
+    // cause was that `^15.5.3` allows any 15.x minor/patch; that env had
+    // somehow installed 16.x at some point (stale node_modules / cache /
+    // peer-dep churn). The fix is to use npm `overrides` which apply to ALL
+    // resolution paths regardless of declared range, preventing 16.x from
+    // ever being installed even on a clean `rm -rf node_modules && npm
+    // install` in any supported env.
+    const root = JSON.parse(readFileSync(ROOT_PKG, 'utf8'));
+    const override = root.overrides?.['eslint-config-next'];
+    assert.ok(
+      override,
+      `root package.json must set overrides["eslint-config-next"] to a 15.x version (see GH-1233). Current overrides: ${JSON.stringify(root.overrides ?? null)}`,
+    );
+    const overrideMajor = parseMajor(override);
+    assert.equal(
+      overrideMajor,
+      parseMajor(nextSpec),
+      `root overrides["eslint-config-next"] major (${overrideMajor}, from "${override}") must match next major (${parseMajor(nextSpec)}). The override is what blocks node-version-sensitive resolution churn from picking 16.x.`,
     );
   });
 });
