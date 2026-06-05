@@ -1,11 +1,6 @@
 import { successV2, errorV2 } from '../../../../../../src/lib/api';
 import { createClient } from '../../../../../../src/lib/supabase/server';
-import {
-  isReviewInvitationEligible,
-  isPayoutOnHold,
-  tripReportStatus,
-  adminFollowupCategory,
-} from '../../../../../../src/lib/post-trip-eligibility.mjs';
+import { buildAdminPostTripSummary } from '../../../../../../src/lib/admin-post-trip-summary.mjs';
 
 const VALID_CATEGORIES = new Set(['guide_report_risk', 'payment_order_mismatch', 'review_moderation', 'refund_dispute_safety']);
 
@@ -37,8 +32,7 @@ export async function GET(req: Request) {
       .select(`
         id, status, booking_id,
         activity_schedules(id, start_at, end_at),
-        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue),
-        guide_trip_reports(submitted_at)
+        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
       `)
       .in('status', ['paid', 'confirmed', 'completed'])
       .gte('created_at', since.toISOString())
@@ -48,94 +42,42 @@ export async function GET(req: Request) {
       return Response.json(errorV2('DB_ERROR', error.message), { status: 500 });
     }
 
-    const overdueTripReports: Array<{ orderId: string; scheduleEndAt: string }> = [];
-    const readyForReviewInvitation: Array<{ orderId: string; scheduleEndAt: string }> = [];
-    const payoutOnHold: Array<{ orderId: string; holdReason: string }> = [];
-    const adminFollowupNeeded: Array<{ orderId: string; category: string }> = [];
+    const bookingIds = [
+      ...new Set(
+        (orders ?? [])
+          .map((order) => order.booking_id)
+          .filter((bookingId): bookingId is string => typeof bookingId === 'string' && bookingId.length > 0)
+      ),
+    ];
 
-    for (const order of orders ?? []) {
-      const schedule = Array.isArray(order.activity_schedules)
-        ? order.activity_schedules[0]
-        : order.activity_schedules;
-      const ops = Array.isArray(order.operations_tracking)
-        ? order.operations_tracking[0]
-        : order.operations_tracking;
+    let guideTripReports: Array<{ booking_id: string | null; submitted_at: string | null }> = [];
 
-      const scheduleEndAt = schedule?.end_at ?? schedule?.start_at;
-      if (!scheduleEndAt) continue;
+    if (bookingIds.length > 0) {
+      const { data, error: guideTripReportsError } = await supabase
+        .from('guide_trip_reports')
+        .select('booking_id, submitted_at')
+        .in('booking_id', bookingIds);
 
-      // Only process orders where the activity has already ended
-      if (new Date(scheduleEndAt) >= now) continue;
-
-      // Read submitted_at from joined guide_trip_reports rows (issue #1171)
-      const reportRows = Array.isArray(order.guide_trip_reports)
-        ? order.guide_trip_reports
-        : order.guide_trip_reports
-          ? [order.guide_trip_reports]
-          : [];
-      const submittedRow = (reportRows as Array<{ submitted_at: string | null }>).find(
-        (r) => r?.submitted_at,
-      );
-      const submittedAt = submittedRow?.submitted_at ?? null;
-
-      // Trip report overdue
-      const reportStatus = tripReportStatus({
-        scheduleEndAt,
-        submittedAt,
-        now,
-      });
-      if (reportStatus === 'overdue') {
-        overdueTripReports.push({ orderId: order.id, scheduleEndAt });
+      if (guideTripReportsError) {
+        return Response.json(errorV2('DB_ERROR', guideTripReportsError.message), { status: 500 });
       }
 
-      // Review invitation eligible
-      if (
-        isReviewInvitationEligible({
-          orderStatus: order.status,
-          scheduleEndAt,
-          now,
-          hasComplaint: ops?.has_complaint ?? false,
-          refundAmountTwd: ops?.refund_amount_twd ?? 0,
-        })
-      ) {
-        readyForReviewInvitation.push({ orderId: order.id, scheduleEndAt });
-      }
-
-      // Payout on hold
-      const holdReason = isPayoutOnHold({
-        refundAmountTwd: ops?.refund_amount_twd ?? 0,
-        hasComplaint: ops?.has_complaint ?? false,
-        hasOversellIssue: ops?.has_oversell_issue ?? false,
-      });
-      if (holdReason) {
-        payoutOnHold.push({ orderId: order.id, holdReason });
-      }
-
-      // Admin followup
-      const followupCategory = adminFollowupCategory({
-        missingTripReport: reportStatus === 'overdue',
-        hasComplaint: ops?.has_complaint ?? false,
-      });
-      if (followupCategory) {
-        adminFollowupNeeded.push({ orderId: order.id, category: followupCategory });
-      }
+      guideTripReports = data ?? [];
     }
 
-    // Apply category filter if provided
-    const filteredFollowup = categoryFilter
-      ? adminFollowupNeeded.filter(o => o.category === categoryFilter)
-      : adminFollowupNeeded;
+    const summary = buildAdminPostTripSummary({
+      orders: orders ?? [],
+      guideTripReports,
+      now,
+      categoryFilter,
+    });
 
     return Response.json(
       successV2({
-        overdueTripReports,
-        readyForReviewInvitation,
-        payoutOnHold,
-        adminFollowupNeeded: filteredFollowup,
+        ...summary,
         computedAt: now.toISOString(),
         since: since.toISOString(),
         categoryFilter: categoryFilter ?? null,
-        orderCount: (orders ?? []).length,
       })
     );
   } catch (err) {
