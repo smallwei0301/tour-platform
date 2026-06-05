@@ -1,12 +1,9 @@
 /**
- * Contract tests for issue #657 — agent routing label consistency.
+ * Contract tests for issue #657 / #1231 — agent routing label consistency.
  *
- * These are static/structural tests that verify:
- * 1. The current-issue-priority.md doc exists.
- * 2. The doc mentions routing invariants.
- * 3. The doc does NOT reference #619 as agent:now (since #619 is closed).
- *
- * These tests do not make network calls. They only read the local file system.
+ * Static checks only. These tests verify that the current priority doc keeps
+ * routing invariants, does not route closed historical issues as active work,
+ * and names the current P0 business blocker when the readiness snapshot lists it.
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,40 +18,45 @@ const docPath = resolve(
   __dirname,
   '../../../../docs/operations/current-issue-priority.md'
 );
+const readinessSnapshotPath = resolve(
+  __dirname,
+  '../../../../docs/operations/reports/readiness-live-state-latest.md'
+);
 
 let docContent;
 
+function readDoc() {
+  if (!docContent) docContent = readFileSync(docPath, 'utf8');
+  return docContent;
+}
+
 test('current-issue-priority.md exists', () => {
-  try {
-    docContent = readFileSync(docPath, 'utf8');
-  } catch {
-    assert.fail(`File not found: ${docPath}`);
-  }
-  assert.ok(docContent.length > 0, 'File should not be empty');
+  const content = readDoc();
+  assert.ok(content.length > 0, 'File should not be empty');
 });
 
 test('doc contains Agent Routing Invariants section', () => {
-  if (!docContent) docContent = readFileSync(docPath, 'utf8');
+  const content = readDoc();
   assert.ok(
-    docContent.includes('## Agent Routing Invariants'),
+    content.includes('## Agent Routing Invariants'),
     'Expected "## Agent Routing Invariants" section in the doc'
   );
 });
 
 test('doc lists invariant: agent:now on at most one OPEN issue', () => {
-  if (!docContent) docContent = readFileSync(docPath, 'utf8');
+  const content = readDoc();
   assert.ok(
-    docContent.includes('agent:now') && docContent.includes('OPEN issue'),
+    content.includes('agent:now') && content.includes('OPEN issue'),
     'Expected invariant about agent:now being limited to one open issue'
   );
 });
 
 test('doc does not reference #619 as current agent:now', () => {
-  if (!docContent) docContent = readFileSync(docPath, 'utf8');
+  const content = readDoc();
   // #619 is CLOSED — it must not appear as the live agent:now routing target.
   // It may still appear as a historical/closed reference, but the "Current top pointer"
   // and "Rules for agents" sections must not direct agents to pull #619 as active work.
-  const lines = docContent.split('\n');
+  const lines = content.split('\n');
   for (const line of lines) {
     // Skip lines that explicitly mark it as CLOSED or historical
     if (/CLOSED/i.test(line)) continue;
@@ -67,21 +69,29 @@ test('doc does not reference #619 as current agent:now', () => {
   }
 });
 
-test('doc references #621 as the current top-priority open issue', () => {
-  if (!docContent) docContent = readFileSync(docPath, 'utf8');
-  assert.ok(
-    docContent.includes('#621'),
-    'Expected doc to mention #621 as priority issue'
-  );
-  // The "Current top pointer" should say #621, not #619
-  const topPointerMatch = docContent.match(/## Current top pointer[\s\S]*?(?=\n## )/);
+test('doc does not reference #621 as the current top-priority open issue', () => {
+  const content = readDoc();
+  const topPointerMatch = content.match(/## Current top pointer[\s\S]*?(?=\n## )/);
   assert.ok(topPointerMatch, 'Expected "## Current top pointer" section');
-  assert.ok(
+  assert.equal(
     topPointerMatch[0].includes('#621'),
-    'Current top pointer section should reference #621'
+    false,
+    'Current top pointer must not continue routing to historical #621'
   );
-  assert.ok(
-    !topPointerMatch[0].match(/\*\*Do #619 first\.\*\*/),
-    'Current top pointer should not say "Do #619 first"'
+});
+
+test('doc references #1121 as current P0 business blocker when readiness snapshot lists it', () => {
+  const content = readDoc();
+  const snapshot = readFileSync(readinessSnapshotPath, 'utf8');
+  if (!snapshot.includes('#1121')) return;
+
+  const topPointerMatch = content.match(/## Current top pointer[\s\S]*?(?=\n## )/);
+  assert.ok(topPointerMatch, 'Expected "## Current top pointer" section');
+  assert.match(topPointerMatch[0], /#1121/, 'Current top pointer should reference #1121');
+  assert.match(topPointerMatch[0], /priority:P0|P0/, 'Current top pointer should preserve P0 context');
+  assert.match(
+    topPointerMatch[0],
+    /not automatic agent pickup|security|secrets/i,
+    'Current top pointer should warn agents not to auto-pick high-risk security/secrets work'
   );
 });
