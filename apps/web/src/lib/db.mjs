@@ -2505,14 +2505,18 @@ function normalizeActivityDetailFormalPlan(plan) {
   const basePrice = Number(plan.base_price);
   const minParticipants = Number(plan.min_participants);
   const maxParticipants = Number(plan.max_participants);
+  /** @type {'per_group' | 'per_person'} */
+  const priceType = plan.price_type === 'per_group' ? 'per_group' : 'per_person';
 
   return {
     id: plan.id || plan.slug || plan.legacy_plan_id || null,
+    slug: plan.slug || null,
+    legacyPlanId: plan.legacy_plan_id || null,
     label: plan.name || plan.slug || plan.legacy_plan_id || '方案',
     duration: Number.isFinite(Number(plan.duration_minutes)) && Number(plan.duration_minutes) > 0
       ? `約 ${Math.round(Number(plan.duration_minutes) / 60)} 小時`
-      : undefined,
-    priceType: plan.price_type === 'per_group' ? 'per_group' : 'per_person',
+      : '依方案說明',
+    priceType,
     basePrice: Number.isFinite(basePrice) && basePrice > 0 ? Math.trunc(basePrice) : undefined,
     minParticipants: Number.isFinite(minParticipants) && minParticipants > 0 ? Math.trunc(minParticipants) : undefined,
     maxParticipants: Number.isFinite(maxParticipants) && maxParticipants > 0 ? Math.trunc(maxParticipants) : undefined,
@@ -2532,14 +2536,60 @@ function normalizeActivityDetailFormalPlan(plan) {
     experienceAddress: plan.experience_address || undefined,
     planNotices: Array.isArray(plan.plan_notices) ? plan.plan_notices.filter(Boolean) : [],
     planRefundRules: Array.isArray(plan.plan_refund_rules) ? plan.plan_refund_rules.filter(Boolean) : [],
+    status: plan.status || null,
   };
+}
+
+export function selectPublicActivityDetailPlans({ formalPlans = [], legacyPlans = null } = {}) {
+  const mappedFormalPlans = [];
+
+  for (const rawPlan of formalPlans || []) {
+    const normalizedPlan = normalizeActivityDetailFormalPlan(rawPlan);
+    if (normalizedPlan?.id) {
+      mappedFormalPlans.push(normalizedPlan);
+    }
+  }
+
+  if (mappedFormalPlans.length > 0) {
+    return mappedFormalPlans;
+  }
+
+  return null;
+}
+
+function buildActivityDetailFormalPlanIndex(plans = []) {
+  const index = new Map();
+
+  for (const plan of plans) {
+    const canonicalId = String(plan?.id || '').trim();
+    if (!canonicalId) continue;
+
+    index.set(canonicalId, canonicalId);
+
+    const slug = String(plan?.slug || '').trim();
+    if (slug) index.set(slug, canonicalId);
+
+    const legacyPlanId = String(plan?.legacyPlanId || '').trim();
+    if (legacyPlanId) index.set(legacyPlanId, canonicalId);
+  }
+
+  return index;
+}
+
+function canonicalizeActivityDetailSchedulePlanId(rawPlanId, formalPlanIndex) {
+  const candidate = String(rawPlanId || '').trim();
+  if (!candidate) return null;
+
+  return formalPlanIndex.get(candidate) || null;
 }
 
 function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null, formalPlans = []) {
   const gp = guideProfileOverride || act?.guide_profiles || {};
-  const mappedFormalPlans = (formalPlans || [])
-    .map((plan) => normalizeActivityDetailFormalPlan(plan))
-    .filter((plan) => plan?.id);
+  const selectedPlans = selectPublicActivityDetailPlans({
+    formalPlans,
+    legacyPlans: act?.plans || null,
+  });
+  const formalPlanIndex = buildActivityDetailFormalPlanIndex(formalPlans || []);
 
   return {
     id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
@@ -2556,7 +2606,7 @@ function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = nu
     safetyNotice: act.safety_notice, faq: act.faq || [],
     goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
     itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
-    plans: mappedFormalPlans.length > 0 ? mappedFormalPlans : (act.plans || null),
+    plans: selectedPlans,
     status: act.status,
     ratingAvg: act.rating_avg ?? gp.rating_avg ?? null,
     reviewCount: act.review_count ?? gp.review_count ?? 0,
@@ -2571,7 +2621,7 @@ function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = nu
     schedules: (schedules || []).map(s => ({
       id: s.id, startAt: s.start_at, endAt: s.end_at,
       capacity: s.capacity, bookedCount: s.booked_count, status: s.status,
-      planId: s.plan_id || null, minParticipants: s.min_participants || 1,
+      planId: canonicalizeActivityDetailSchedulePlanId(s.plan_id, formalPlanIndex), minParticipants: s.min_participants || 1,
       guideNote: s.guide_note || null,
     })),
     reviews,
@@ -2921,7 +2971,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
         const richResult = await withActivityDetailTimeout(
           plansQuery
             .select(`
-              id, slug, name, duration_minutes, price_type, base_price,
+              id, slug, legacy_plan_id, name, duration_minutes, price_type, base_price,
               min_participants, max_participants,
               details_link_text, booking_btn_text, highlights,
               language, earliest_departure, confirm_by_days, free_cancel_days,
@@ -2944,7 +2994,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
           supabase
             .from('activity_plans')
             .select(`
-              id, slug, name, duration_minutes, price_type, base_price,
+              id, slug, legacy_plan_id, name, duration_minutes, price_type, base_price,
               min_participants, max_participants,
               details_link_text, booking_btn_text, highlights,
               language, earliest_departure, confirm_by_days, free_cancel_days,
@@ -2963,7 +3013,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
           supabase
             .from('activity_plans')
             .select(`
-              id, slug, name, duration_minutes, price_type, base_price,
+              id, slug, legacy_plan_id, name, duration_minutes, price_type, base_price,
               min_participants, max_participants,
               status
             `)

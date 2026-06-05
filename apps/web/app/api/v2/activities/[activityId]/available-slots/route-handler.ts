@@ -29,6 +29,7 @@ import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availa
 import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
 import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
+import { loadActivityPlanWithMissingIsYearRoundFallback } from '../../../../../../src/lib/activity-plan-is-year-round-fallback.mjs';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   normalizeBookingParticipants,
@@ -314,31 +315,45 @@ export async function getAvailableSlots(
       }
     }
 
-    // Fetch activity plan with activity details (to get guide_id)
-    const { data: planData, error: planError } = await supabase
-      .from('activity_plans')
-      .select(
-        `
-        id,
-        activity_id,
-        duration_minutes,
-        min_participants,
-        max_participants,
-        booking_type,
-        is_year_round,
-        status,
-        name,
-        price_type,
-        base_price,
-        activities!inner (
-          id,
-          guide_id
-        )
-      `
-      )
-      .eq('id', params.planId)
-      .eq('activity_id', params.activityId)
-      .single();
+    // Fetch activity plan with activity details (to get guide_id).
+    // Production/prelaunch may lag the is_year_round migration, so tolerate that
+    // single-column schema drift and default to false rather than surfacing a
+    // misleading NOT_FOUND contract break for otherwise valid public plans.
+    const { data: planData, error: planError, schemaFallback: planSchemaFallback } = await loadActivityPlanWithMissingIsYearRoundFallback(
+      async ({ includeIsYearRound }: { includeIsYearRound: boolean }) =>
+        supabase
+          .from('activity_plans')
+          .select(
+            `
+            id,
+            activity_id,
+            duration_minutes,
+            min_participants,
+            max_participants,
+            booking_type,
+            ${includeIsYearRound ? 'is_year_round,' : ''}
+            status,
+            name,
+            price_type,
+            base_price,
+            activities!inner (
+              id,
+              guide_id
+            )
+          `
+          )
+          .eq('id', params.planId)
+          .eq('activity_id', params.activityId)
+          .single()
+    );
+
+    if (planSchemaFallback) {
+      console.warn('Activity plan schema fallback during available-slots', {
+        activityId: params.activityId,
+        planId: params.planId,
+        schemaFallback: planSchemaFallback,
+      });
+    }
 
     if (planError || !planData) {
       return Response.json(errorV2('NOT_FOUND', 'Activity plan not found'), {
