@@ -21,6 +21,13 @@ export async function GET(request: Request) {
     const data = await listPublishedActivitiesDb({ region, category, q });
     const res = Response.json(ok(data));
     res.headers.set('x-request-id', requestId);
+    // Issue #1249 — public, published activity list is the same for every
+    // anonymous visitor. Let Vercel's edge cache absorb the load instead of
+    // round-tripping Supabase every render. 60s fresh + 5min stale-while-
+    // revalidate keeps the listing fast (P95 < 50ms cache hit) while still
+    // refreshing when admins publish new activities. CDN cache, not browser,
+    // so authenticated travelers still get their own wishlist hydration.
+    res.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

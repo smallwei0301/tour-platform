@@ -35,9 +35,13 @@ interface Activity {
 
 interface ActivitiesContentProps {
   initialRegion?: string;
+  // Issue #1249 — server-side initial payload so the listing page paints
+  // cards immediately instead of flashing a `loading=true` placeholder
+  // for ~1–2s while the client-only fetch round-trips Supabase.
+  initialActivities?: Activity[];
 }
 
-export default function ActivitiesContent({ initialRegion }: ActivitiesContentProps = {}) {
+export default function ActivitiesContent({ initialRegion, initialActivities }: ActivitiesContentProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -53,8 +57,11 @@ export default function ActivitiesContent({ initialRegion }: ActivitiesContentPr
     searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
   );
   const [sort, setSort] = useState('recommended');
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Server-rendered initial data lets the cards render on first paint;
+  // the client-side fetch below still runs whenever the search query
+  // changes, so filters / search remain responsive.
+  const [activities, setActivities] = useState<Activity[]>(initialActivities ?? []);
+  const [loading, setLoading] = useState(initialActivities === undefined);
   const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
 
   // Sync URL → state on mount
@@ -90,8 +97,22 @@ export default function ActivitiesContent({ initialRegion }: ActivitiesContentPr
       .finally(() => setLoading(false));
   }, [query]);
 
-  // Fetch wishlisted activity IDs for hydration
+  // Fetch wishlisted activity IDs for hydration.
+  //
+  // Issue #1249 — short-circuit anonymous visitors so we don't pay the
+  // ~500–800ms supabase.auth.getUser() round-trip just to confirm there's
+  // no session. The wishlist API itself already returns `{ data: [] }`
+  // for logged-out users; this just avoids the request. The default
+  // empty `wishlistedIds` Set already renders the "unhearted" UI state
+  // correctly.
+  //
+  // This effect is intentionally non-blocking — `loading` is owned by
+  // the activities fetch effect above, so wishlist hydration can never
+  // delay the first useful render of the cards.
   useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const hasSupabaseSession = /(^|;\s*)sb-[^=]+-auth-token=/.test(document.cookie);
+    if (!hasSupabaseSession) return;
     fetch('/api/me/wishlist/ids')
       .then(r => r.json())
       .then(({ data }) => setWishlistedIds(new Set(data ?? [])))
@@ -276,8 +297,12 @@ export default function ActivitiesContent({ initialRegion }: ActivitiesContentPr
                       <Link
                         className="tp-btn tp-btn-primary"
                         href={href}
+                        // Issue #1249 — Next.js Link already does
+                        // viewport-based prefetch automatically; the
+                        // onMouseEnter `router.prefetch(href)` we used to
+                        // call here was redundant and flooded the network
+                        // with parallel _rsc requests during initial load.
                         prefetch
-                        onMouseEnter={() => router.prefetch(href)}
                         data-testid="activity-card-link"
                         style={{ fontSize: 13, padding: '6px 14px' }}
                       >
