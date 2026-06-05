@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// Resolve paths relative to this file: tests/api/ -> ../.. -> apps/web/
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '..', '..');
 
@@ -22,7 +23,7 @@ describe('POST_TRIP_SUMMARY endpoint source contracts', () => {
 
   it('imports post-trip-eligibility predicates', () => {
     const src = readFileSync(routePath, 'utf-8');
-    assert.ok(src.includes('post-trip-eligibility'), 'must import predicates');
+    assert.ok(src.includes('buildAdminPostTripSummary'), 'must import post-trip summary helper');
   });
 
   it('does NOT include any INSERT/UPDATE/DELETE mutations', () => {
@@ -31,13 +32,15 @@ describe('POST_TRIP_SUMMARY endpoint source contracts', () => {
   });
 
   it('returns summary with expected top-level keys', () => {
-    const src = readFileSync(routePath, 'utf-8');
+    const routeSrc = readFileSync(routePath, 'utf-8');
+    const helperSrc = readFileSync(join(ROOT, 'src/lib/admin-post-trip-summary.mjs'), 'utf-8');
+    assert.ok(routeSrc.includes('...summary'), 'route must spread helper summary into response payload');
     assert.ok(
-      src.includes('overdueTripReports') &&
-      src.includes('readyForReviewInvitation') &&
-      src.includes('payoutOnHold') &&
-      src.includes('adminFollowupNeeded'),
-      'must return all summary keys'
+      helperSrc.includes('overdueTripReports') &&
+      helperSrc.includes('readyForReviewInvitation') &&
+      helperSrc.includes('payoutOnHold') &&
+      helperSrc.includes('adminFollowupNeeded'),
+      'helper must return all summary keys'
     );
   });
 
@@ -55,6 +58,7 @@ describe('POST_TRIP_SUMMARY endpoint source contracts', () => {
   });
 });
 
+// Test the category filter validation
 describe('POST_TRIP_SUMMARY category filter', () => {
   const routePath = join(ROOT, 'app/api/v2/admin/orders/post-trip-summary/route.ts');
 
@@ -69,17 +73,29 @@ describe('POST_TRIP_SUMMARY category filter', () => {
   });
 });
 
-describe('POST_TRIP_SUMMARY split guide trip reports query regression', () => {
+describe('POST_TRIP_SUMMARY guide trip report split query regression', () => {
   const routePath = join(ROOT, 'app/api/v2/admin/orders/post-trip-summary/route.ts');
 
-  it('does not directly embed guide_trip_reports off orders select', () => {
+  function extractOrdersSelectBlock(source) {
+    const match = source.match(/\.from\('orders'\)[\s\S]*?\.select\(`([\s\S]*?)`\)/);
+    assert.ok(match, 'expected orders select block in post-trip-summary route');
+    return match[1];
+  }
+
+  it('does not directly embed guide_trip_reports from orders select', () => {
     const src = readFileSync(routePath, 'utf-8');
-    assert.ok(!src.includes('guide_trip_reports(submitted_at)'), 'orders select must not directly embed guide_trip_reports');
+    const ordersSelect = extractOrdersSelectBlock(src);
+    assert.doesNotMatch(
+      ordersSelect,
+      /guide_trip_reports\s*\(/,
+      'orders select must not directly embed guide_trip_reports because no FK exists from orders'
+    );
   });
 
   it('queries guide_trip_reports separately by booking_id after loading orders', () => {
     const src = readFileSync(routePath, 'utf-8');
-    assert.ok(src.includes("from('guide_trip_reports')"), 'must query guide_trip_reports separately');
-    assert.ok(src.includes(".in('booking_id'"), 'guide_trip_reports query must filter by booking_id list');
+    assert.match(src, /from\('guide_trip_reports'\)/, 'must query guide_trip_reports separately');
+    assert.match(src, /\.in\('booking_id',\s*bookingIds\)/, 'must filter guide_trip_reports by bookingIds');
+    assert.match(src, /select\('booking_id, submitted_at'\)/, 'must only fetch booking_id + submitted_at in split query');
   });
 });
