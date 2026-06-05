@@ -6,6 +6,8 @@ export interface UiActiveSeasonSummary {
   label: string;
 }
 
+import { getCanonicalReasonCopy } from './canonical-reason-copy.ts';
+
 export type CanonicalPreviewTone = 'info' | 'success' | 'warning';
 
 function monthDayToNumber(month: number, day: number): number {
@@ -106,6 +108,36 @@ export function describePlanSeasonStatus(params: {
   };
 }
 
+// Operator-facing label per state. The body text comes from
+// `getCanonicalReasonCopy(...)` so Admin / Guide / Traveler all read the
+// same canonical reason text for the same state — that's #1212's
+// acceptance criterion 1. The label is admin/guide-specific (it's
+// shown as a UI chip / heading) so it keeps the existing operator
+// language; only the description below converges on the canonical copy.
+const LABEL_BY_STATE: Record<string, string> = {
+  available: '可預約',
+  full: '已額滿',
+  closed: '已關閉',
+  blackout: '導遊不可服務',
+  inactive_plan: '方案未啟用',
+  outside_rule: '不在可預約時段',
+  outside_season: '不在方案開放季節內',
+  blocked_by_conflict: '既有衝突，暫不可開放',
+  allowed_with_admin_override: '管理員覆寫後可開放',
+};
+
+const TONE_BY_STATE: Record<string, CanonicalPreviewTone> = {
+  available: 'success',
+  full: 'warning',
+  closed: 'warning',
+  blackout: 'warning',
+  inactive_plan: 'warning',
+  outside_rule: 'warning',
+  outside_season: 'warning',
+  blocked_by_conflict: 'warning',
+  allowed_with_admin_override: 'warning',
+};
+
 export function describePreviewReason(params: {
   previewCanonicalState?: string | null;
   previewSeasonGate?: string | null;
@@ -117,35 +149,18 @@ export function describePreviewReason(params: {
   const canonicalState = params.previewCanonicalState || null;
   const seasonGate = params.previewSeasonGate || null;
 
-  if (canonicalState === 'allowed_with_admin_override') {
-    return {
-      tone: 'warning',
-      label: '管理員覆寫後可開放',
-      description: '此結果仰賴管理員覆寫，請勿視為一般可預約狀態。',
-    };
-  }
-
-  if (canonicalState === 'blocked_by_conflict') {
-    return {
-      tone: 'warning',
-      label: '既有衝突，暫不可開放',
-      description: '此時段與既有預約、黑名單或其他衝突條件重疊。',
-    };
-  }
-
+  // seasonGate metadata wins first: it carries admin-configuration hints
+  // (e.g. `no_active_season` = "you haven't set any seasons yet"; that
+  // matters even when the canonical state happens to be `outside_season`
+  // because the actionable advice is "configure seasons", not "pick
+  // another date"). These are admin/guide-flavoured config warnings, not
+  // booking-time reject reasons — so they keep their own description
+  // text and do NOT route through `getCanonicalReasonCopy`.
   if (seasonGate === 'no_active_season') {
     return {
       tone: 'warning',
       label: '方案尚未設定開放季節',
-      description: '目前沒有任何啟用中的季節設定，因此不會產生可預約場次。',
-    };
-  }
-
-  if (seasonGate === 'outside_season' || canonicalState === 'outside_season') {
-    return {
-      tone: 'warning',
-      label: '不在方案開放季節內',
-      description: '預覽日期落在非開放季節，因此不會產生可預約場次。',
+      description: '目前沒有任何啟用中的季節設定，預設為全部開放；請設定季節以限制可預約日期。',
     };
   }
 
@@ -165,10 +180,22 @@ export function describePreviewReason(params: {
     };
   }
 
+  // For the remaining cases the canonical state is the contract per #1212:
+  // we read the cross-surface bodyZh from `getCanonicalReasonCopy()` so
+  // Admin / Guide / Traveler can all render the same description for
+  // the same state. Label stays admin-flavoured (it's a UI chip).
+  if (canonicalState && LABEL_BY_STATE[canonicalState]) {
+    return {
+      tone: TONE_BY_STATE[canonicalState] ?? 'info',
+      label: LABEL_BY_STATE[canonicalState],
+      description: getCanonicalReasonCopy(canonicalState).bodyZh,
+    };
+  }
+
   return {
-    tone: canonicalState === 'available' ? 'success' : 'info',
-    label: canonicalState ? `狀態：${canonicalState}` : '尚無 canonical 狀態',
-    description: seasonGate ? `seasonGate：${seasonGate}` : '目前 API 未提供額外可讀原因。',
+    tone: 'info',
+    label: '尚無 canonical 狀態',
+    description: getCanonicalReasonCopy('').bodyZh,
   };
 }
 
