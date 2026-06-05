@@ -107,6 +107,21 @@ export function mapActivityPlanSeasonInsertError(error) {
     };
   }
 
+  // PGRST204 — PostgREST schema cache says the column does not exist
+  // (e.g. Supabase hasn't reloaded after a migration, or a column the API
+  // expects was never added). This was the actual GH-1238 root cause: the
+  // original activity_plan_seasons migration omitted `name`, so every POST
+  // hit this path. Surface it as actionable rather than masking as 500.
+  if (pgCode === 'PGRST204' || msg.includes('schema cache')) {
+    return {
+      code: 'SCHEMA_COLUMN_MISSING',
+      status: 500,
+      message: rawMessage || 'PostgREST schema cache missing expected column',
+      messageZh:
+        '伺服器資料表欄位與程式不一致（Supabase schema cache 找不到欄位），請確認 migration 已套用並重新載入 Supabase API schema 後再試。',
+    };
+  }
+
   // Default — keep the historic 500 + generic English so old log greps
   // continue to work, but add a generic zh message instead of leaving
   // the UI showing raw English.
