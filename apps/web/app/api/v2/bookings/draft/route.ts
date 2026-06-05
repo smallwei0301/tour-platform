@@ -146,9 +146,12 @@ async function isSlotInGeneratedV2Availability(
     reason: string;
     requiresHelper: boolean;
     helperStatus: string;
+    guideNote?: string | null;
+    adminNote?: string | null;
     createdAt?: string | null;
+    createdByAdminEmail?: string | null;
   };
-}> {
+}>{
   // Fetch availability rules for this guide and plan
   const { data: rulesData, error: rulesError } = await supabase
     .from('guide_availability_rules')
@@ -200,7 +203,7 @@ async function isSlotInGeneratedV2Availability(
     conflictOverrideSupabase
       .from('guide_slot_conflict_overrides')
       .select(
-        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, status, created_at'
+        'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
       )
       .eq('guide_id', payload.guideId)
       .eq('activity_id', payload.activityId)
@@ -280,8 +283,11 @@ async function isSlotInGeneratedV2Availability(
     reason: row.reason,
     requires_helper: Boolean(row.requires_helper),
     helper_status: row.helper_status,
+    guide_note: row.guide_note ?? null,
+    admin_note: row.admin_note ?? null,
     status: row.status,
     created_at: row.created_at ?? null,
+    created_by_admin_email: row.created_by_admin_email ?? null,
   }));
 
   const plan: ActivityPlan = {

@@ -28,7 +28,10 @@ export interface ConflictOverrideClientSnapshot {
   reason: string;
   requiresHelper: boolean;
   helperStatus: ConflictOverrideHelperStatus;
+  guideNote?: string | null;
+  adminNote?: string | null;
   createdAt?: string | null;
+  createdByAdminEmail?: string | null;
 }
 
 export function isActiveConflictOverride(
@@ -68,6 +71,9 @@ export function serializeConflictOverrideForClient(
     reason: override.reason,
     requiresHelper: Boolean(override.requires_helper),
     helperStatus: override.helper_status,
+    guideNote: override.guide_note ?? null,
+    adminNote: override.admin_note ?? null,
     createdAt: override.created_at ?? null,
+    createdByAdminEmail: override.created_by_admin_email ?? null,
   };
 }
