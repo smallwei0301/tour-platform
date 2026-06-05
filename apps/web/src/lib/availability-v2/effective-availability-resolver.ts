@@ -47,8 +47,13 @@ function isInAnyActiveSeason(params: {
   seasons: ActivityPlanSeason[];
 }): { inSeason: boolean; reason: 'no_active_season' | 'outside_season' | 'inside_season' } {
   const activeSeasons = params.seasons.filter((season) => season.is_active);
+  // Issue #1239 product decision: when no active season rows exist, the plan
+  // is 全部開放 / all-year open. Explicit active season windows still restrict
+  // outside dates. We still surface `no_active_season` in the reason so the
+  // caller can tell "this plan has no season config" from "this date is in
+  // an active season".
   if (activeSeasons.length === 0) {
-    return { inSeason: false, reason: 'no_active_season' };
+    return { inSeason: true, reason: 'no_active_season' };
   }
 
   const localDate = getDateStringInTimezone(new Date(params.requestedStartAt), params.timezone);

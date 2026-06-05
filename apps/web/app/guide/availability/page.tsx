@@ -495,12 +495,23 @@ export default function GuideAvailabilityPage() {
               value={ruleForm.activity_id}
               onChange={(e) => setRuleForm({ ...ruleForm, activity_id: e.target.value, activity_plan_id: '' })}
               style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+              disabled={activityPlanOptions.length === 0}
             >
               <option value="">請選擇活動</option>
               {[...new Map(activityPlanOptions.map((opt) => [opt.activityId, opt])).values()].map((activity) => (
                 <option key={activity.activityId} value={activity.activityId}>{activity.activityTitle}</option>
               ))}
             </select>
+            {/* Issue #1239: when the dropdown is empty, tell the guide why.
+                The /api/guide/activities-with-plans endpoint only filters by
+                activity.status ∈ active|published AND plan.status ∈ active|
+                published — it does not gate on seasons. So "empty" almost
+                always means an admin hasn't published an active plan yet. */}
+            {activityPlanOptions.length === 0 && (
+              <p style={{ margin: '6px 0 0', fontSize: 12, color: '#92400e', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px' }}>
+                目前找不到可選的活動或方案。請確認你已被指派到某個「已上架」的活動,且該活動有「啟用中」的 V2 方案。如需協助請聯絡管理員。
+              </p>
+            )}
           </div>
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案</label>

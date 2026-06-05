@@ -95,7 +95,11 @@ test('GH-1067 RED: cross-year season allows April slot and blocks July slot', ()
   assert.equal(july.state, 'outside_season');
 });
 
-test('GH-1067 RED: no active season rows must fail closed outside_season', () => {
+// Issue #1239 product decision: when no `activity_plan_seasons` rows exist
+// (or none are active), the plan is treated as 全部開放 / all-year open.
+// Only explicit active season windows restrict outside dates. This used to
+// be `fail-closed → outside_season`; the new contract is fail-open.
+test('GH-1067 / #1239: no active season rows → fail open (all-year open)', () => {
   const out = resolveCanonicalAvailabilityState({
     requestedStartAt: '2026-04-10T09:00:00+08:00',
     timezone: TZ,
@@ -108,8 +112,27 @@ test('GH-1067 RED: no active season rows must fail closed outside_season', () =>
     slotAvailable: true,
     capacityAvailable: true,
   });
-  assert.equal(out.state, 'outside_season');
-  assert.equal(out.metadata?.seasonGate, 'no_active_season');
+  assert.equal(out.state, 'available');
+});
+
+test('GH-1067 / #1239: inactive season rows alone also fail open (admin paused all seasons)', () => {
+  const out = resolveCanonicalAvailabilityState({
+    requestedStartAt: '2026-04-10T09:00:00+08:00',
+    timezone: TZ,
+    rules: [weekdayRule({ weekday: 5 })],
+    blackouts: [],
+    bookings: [],
+    seasons: [
+      // Season exists but is_active=false — same effect as no rows: plan is
+      // all-year open until an admin flips one back to active.
+      { id: 's1', activity_plan_id: 'p1', start_month: 6, start_day: 1, end_month: 8, end_day: 31, is_active: false },
+    ],
+    seasonGateEnabled: true,
+    planStatus: 'active',
+    slotAvailable: true,
+    capacityAvailable: true,
+  });
+  assert.equal(out.state, 'available');
 });
 
 test('GH-1067 RED: overlapping active booking blocks half-day/full-day combinations as blocked_by_conflict', () => {
@@ -162,7 +185,10 @@ test('GH-1067 RED: evaluator-level canonical conflict check blocks same-guide ov
   assert.equal(out.evaluation.slots.length > 0, true);
 });
 
-test('GH-1067 RED: effective booking evaluator propagates outside_season canonical reason for stale draft payload reject', () => {
+test('GH-1067 / #1239: booking evaluator treats empty seasons as 全部開放 (was: outside_season reject)', () => {
+  // Per #1239 the season gate is now fail-open when no active rows exist.
+  // The evaluator must therefore stop rejecting valid drafts whose plan has
+  // simply not had any season configured yet.
   const out = evaluateEffectiveBookingAvailability({
     ...BASE_INPUT,
     rules: [weekdayRule({ weekday: 5 })],
@@ -170,8 +196,7 @@ test('GH-1067 RED: effective booking evaluator propagates outside_season canonic
     seasons: [],
   });
 
-  assert.equal(out.available, false);
-  assert.equal(out.reasonCode, 'outside_season');
+  assert.equal(out.available, true);
 });
 
 test('GH-1067 RED: draft must defer legacy conflict reject when active rules already validate the selected schedule canonically', () => {
