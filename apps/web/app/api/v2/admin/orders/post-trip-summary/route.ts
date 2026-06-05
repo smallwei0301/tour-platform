@@ -37,8 +37,7 @@ export async function GET(req: Request) {
       .select(`
         id, status, booking_id,
         activity_schedules(id, start_at, end_at),
-        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue),
-        guide_trip_reports(submitted_at)
+        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
       `)
       .in('status', ['paid', 'confirmed', 'completed'])
       .gte('created_at', since.toISOString())
@@ -46,6 +45,38 @@ export async function GET(req: Request) {
 
     if (error) {
       return Response.json(errorV2('DB_ERROR', error.message), { status: 500 });
+    }
+
+    // #1254: Two-hop join through bookings. orders has no direct FK to
+    // guide_trip_reports (relation is orders.booking_id → bookings.id ←
+    // guide_trip_reports.booking_id), so PostgREST cannot embed
+    // guide_trip_reports(...) off orders. Fetch the report rows in a
+    // separate query keyed on booking_id and join in JS.
+    const bookingIds = Array.from(
+      new Set(
+        (orders ?? [])
+          .map((o) => o.booking_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0),
+      ),
+    );
+
+    const tripReportSubmittedAtByBookingId = new Map<string, string>();
+    if (bookingIds.length > 0) {
+      const { data: tripReports, error: tripReportsError } = await supabase
+        .from('guide_trip_reports')
+        .select('booking_id, submitted_at')
+        .in('booking_id', bookingIds)
+        .eq('status', 'submitted');
+
+      if (tripReportsError) {
+        return Response.json(errorV2('DB_ERROR', tripReportsError.message), { status: 500 });
+      }
+
+      for (const row of tripReports ?? []) {
+        if (row?.booking_id && row?.submitted_at) {
+          tripReportSubmittedAtByBookingId.set(row.booking_id, row.submitted_at);
+        }
+      }
     }
 
     const overdueTripReports: Array<{ orderId: string; scheduleEndAt: string }> = [];
@@ -67,16 +98,11 @@ export async function GET(req: Request) {
       // Only process orders where the activity has already ended
       if (new Date(scheduleEndAt) >= now) continue;
 
-      // Read submitted_at from joined guide_trip_reports rows (issue #1171)
-      const reportRows = Array.isArray(order.guide_trip_reports)
-        ? order.guide_trip_reports
-        : order.guide_trip_reports
-          ? [order.guide_trip_reports]
-          : [];
-      const submittedRow = (reportRows as Array<{ submitted_at: string | null }>).find(
-        (r) => r?.submitted_at,
-      );
-      const submittedAt = submittedRow?.submitted_at ?? null;
+      // Read submitted_at from the booking_id → submitted_at map built
+      // from the separate guide_trip_reports query above (issue #1254).
+      const submittedAt = order.booking_id
+        ? tripReportSubmittedAtByBookingId.get(order.booking_id) ?? null
+        : null;
 
       // Trip report overdue
       const reportStatus = tripReportStatus({
