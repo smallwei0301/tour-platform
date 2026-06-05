@@ -187,11 +187,7 @@ export async function POST(
   }
 
   const hasConflict = Array.isArray(bookings)
-    && bookings.some((booking) =>
-      booking.activity_id === parsed.data.activityId
-      && booking.activity_plan_id === parsed.data.activityPlanId
-      && overlaps(parsed.data.startAt, parsed.data.endAt, booking.start_at, booking.end_at)
-    );
+    && bookings.some((booking) => overlaps(parsed.data.startAt, parsed.data.endAt, booking.start_at, booking.end_at));
 
   if (!hasConflict) {
     return Response.json(errorV2('CONFLICT_NOT_FOUND', 'No overlapping booking conflict found'), { status: 409 });

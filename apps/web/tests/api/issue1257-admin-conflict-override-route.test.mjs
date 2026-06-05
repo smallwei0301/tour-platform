@@ -345,6 +345,52 @@ test('GH-1257 RED: creates exact active override with helper/admin metadata when
   }
 });
 
+test('GH-1257 RED: cross-activity overlapping active booking for same guide still creates override for requested target slot', async () => {
+  const db = await importDbModule();
+  const supabase = createSupabaseMock({
+    bookings: [
+      activeConflictBooking({
+        activity_id: '44444444-4444-4444-8444-444444444444',
+        activity_plan_id: '55555555-5555-4555-8555-555555555555',
+      }),
+    ],
+  });
+  db.__setSupabaseClientForTest(supabase);
+  process.env.ADMIN_ACCESS_TOKEN = ADMIN_TOKEN;
+  process.env.ADMIN_EMAIL_ALLOWLIST = ADMIN_EMAIL;
+
+  try {
+    const route = await importRoute();
+    const response = await route.POST(createRequest(validBody()), {
+      params: Promise.resolve({ guideId: GUIDE_ID }),
+    });
+    const json = await response.json();
+
+    assert.equal(response.status, 201);
+    assert.equal(supabase.state.inserts.length, 1);
+    assert.deepEqual(supabase.state.inserts[0], {
+      guide_id: GUIDE_ID,
+      activity_id: ACTIVITY_ID,
+      activity_plan_id: PLAN_ID,
+      start_at: START_AT,
+      end_at: END_AT,
+      reason: 'VIP 客訴補救，核准開放此衝突時段',
+      requires_helper: true,
+      helper_status: 'required',
+      guide_note: '導遊已知悉需協調半日衝突',
+      admin_note: '後台主管核准',
+      status: 'active',
+      created_by_admin_email: ADMIN_EMAIL,
+    });
+    assert.equal(json?.data?.override?.id, 'override-new');
+    assert.equal(json?.data?.duplicate, false);
+  } finally {
+    db.__setSupabaseClientForTest(null);
+    delete process.env.ADMIN_ACCESS_TOKEN;
+    delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  }
+});
+
 test('GH-1257 RED: duplicate exact active override returns deterministic existing row instead of inserting again', async () => {
   const db = await importDbModule();
   const duplicate = {
