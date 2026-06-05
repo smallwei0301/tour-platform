@@ -106,8 +106,10 @@ test('v2 shell keeps exact legacy booking presentation markers while retaining v
     '退款政策',
     '建立訂單並前往付款',
     '信用卡（Visa / Mastercard / JCB）',
-    'LINE Pay',
-    'ATM 虛擬帳號',
+    // Issue #1261: LINE Pay / ATM 虛擬帳號 were removed because the V2 checkout
+    // contract only supports the ecpay provider; advertising them as selectable
+    // was misleading. The ECPay hand-off copy below replaces them.
+    '實際可用付款方式以付款頁顯示為準',
     '付款由 ECPay 加密處理',
     '訂單編號：',
     "top: 80",
@@ -117,6 +119,11 @@ test('v2 shell keeps exact legacy booking presentation markers while retaining v
   for (const marker of legacyMarkers) {
     assert.match(v2ShellSource, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&')));
   }
+
+  // Issue #1261: no selectable LINE Pay / ATM payment radios may reappear.
+  assert.doesNotMatch(v2ShellSource, /name="payment"/);
+  assert.doesNotMatch(v2ShellSource, /LINE Pay/);
+  assert.doesNotMatch(v2ShellSource, /ATM 虛擬帳號/);
 
   assert.doesNotMatch(v2ShellSource, /Step\s*1｜/);
   assert.doesNotMatch(v2ShellSource, /Step\s*2｜/);
