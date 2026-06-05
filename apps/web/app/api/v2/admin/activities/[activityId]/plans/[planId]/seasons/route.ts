@@ -8,6 +8,7 @@ import {
   sortActivityPlanSeasons,
   validateCreateActivityPlanSeasonPayload,
 } from '../../../../../../../../../src/lib/activity-plan-seasons.ts';
+import { mapActivityPlanSeasonInsertError } from '../../../../../../../../../src/lib/activity-plan-seasons-error.mjs';
 
 async function ensurePlanExists(activityId: string, planId: string) {
   const supabase = await getSupabase();
@@ -109,7 +110,11 @@ export async function POST(
 
     if (error || !data) {
       console.error('Error creating activity plan season:', error);
-      return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create season'), { status: 500 });
+      const mapped = mapActivityPlanSeasonInsertError(error);
+      return Response.json(
+        { success: false, error: { code: mapped.code, message: mapped.message, messageZh: mapped.messageZh } },
+        { status: mapped.status }
+      );
     }
 
     return Response.json(successV2({ season: shapeActivityPlanSeason(data) }), { status: 201 });
