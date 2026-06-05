@@ -1,11 +1,15 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getActivityBySlugDb, buildCanonicalActivityDetailPath } from '../../../src/lib/db.mjs';
+import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
 import { getRegionBySlug, isKnownRegionSlug } from '../../../src/lib/region-slugs.mjs';
 import ActivitiesContent from '../ActivitiesContent';
 
-export const dynamic = 'force-dynamic';
+// Same posture as the parent /activities listing (PR #1252): let Vercel's
+// edge cache absorb anonymous region-page traffic for 60s. `revalidate`
+// alone is enough — the previous `dynamic = 'force-dynamic'` was canceling
+// it, which made every render a cold Supabase round-trip even though the
+// underlying data is the same for all anonymous visitors.
 export const revalidate = 60;
 
 type Props = { params: Promise<{ region: string }> };
@@ -70,11 +74,20 @@ export default async function ActivitiesRegionPage({ params }: { params: Promise
         { '@type': 'ListItem', position: 3, name: entry.displayName, item: `${baseUrl}/activities/${region}` },
       ],
     };
+    // Server-side fetch the region-filtered list so the first paint has
+    // cards. Mirrors PR #1252's /activities root SSR strategy. Fails soft
+    // to undefined → ActivitiesContent falls back to its client fetch.
+    const initialActivities = await listPublishedActivitiesDb({
+      region: entry.dbValue,
+      category: '',
+      q: '',
+    }).catch(() => undefined);
+
     return (
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbLd) }} />
         <Suspense fallback={null}>
-          <ActivitiesContent initialRegion={entry.dbValue} />
+          <ActivitiesContent initialRegion={entry.dbValue} initialActivities={initialActivities} />
         </Suspense>
       </>
     );
