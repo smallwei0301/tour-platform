@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../src/lib/api';
 import { listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
+import { applyPublicActivitiesCacheHeaders } from '../../../src/lib/public-cache-headers.mjs';
 
 function makeRequestId() {
   try {
@@ -21,6 +22,10 @@ export async function GET(request: Request) {
     const data = await listPublishedActivitiesDb({ region, category, q });
     const res = Response.json(ok(data));
     res.headers.set('x-request-id', requestId);
+    // #1249: public listing data — let Vercel Edge cache anonymous
+    // responses so traveler navigations don't pay the function round
+    // trip every time. Error path stays uncached below.
+    applyPublicActivitiesCacheHeaders(res);
     return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
