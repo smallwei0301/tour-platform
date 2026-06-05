@@ -101,18 +101,28 @@ function baseInput(overrides = {}) {
   };
 }
 
-test('GH-1067 RED: available-slots selectedSchedule fallback stays fail-closed for no_active_season and outside_season', () => {
+test('GH-1067 / #1239: available-slots selectedSchedule with no_active_season is fail-OPEN (was fail-closed pre-#1239)', () => {
   for (const authority of ['authoritative', 'fallback']) {
+    // #1239: empty seasons → 全部開放. The booking evaluator must NOT reject
+    // an authoritative / fallback selectedSchedule with `outside_season`
+    // just because no season rows exist. Explicit out-of-range seasons
+    // still close the gate — covered by the sibling test below.
     const noActiveSeason = evaluateBookingAvailability({
       ...baseInput(),
       selectedSchedule: selectedSchedule(),
       selectedScheduleAuthority: authority,
     });
 
-    assert.equal(noActiveSeason.available, false, `${authority} selected schedule must not reopen no_active_season`);
-    assert.equal(noActiveSeason.reasonCode, 'outside_season');
-    assert.equal(noActiveSeason.slots.length, 0);
+    assert.equal(noActiveSeason.available, true, `${authority} selectedSchedule with empty seasons must be available per #1239`);
+    assert.notEqual(noActiveSeason.reasonCode, 'outside_season');
+  }
+});
 
+test('GH-1067: available-slots selectedSchedule stays fail-closed for explicit outside_season', () => {
+  for (const authority of ['authoritative', 'fallback']) {
+    // Active season for Q1; request is in July → still rejected. This is
+    // the "explicit active season window restricts outside dates" guarantee
+    // #1239 deliberately preserves.
     const outsideSeason = evaluateBookingAvailability({
       ...baseInput({
         seasons: [season({ startMonth: 1, startDay: 1, endMonth: 3, endDay: 31 })],
@@ -121,13 +131,13 @@ test('GH-1067 RED: available-slots selectedSchedule fallback stays fail-closed f
       selectedScheduleAuthority: authority,
     });
 
-    assert.equal(outsideSeason.available, false, `${authority} selected schedule must not reopen outside-season dates`);
+    assert.equal(outsideSeason.available, false, `${authority} selectedSchedule must not reopen outside-season dates`);
     assert.equal(outsideSeason.reasonCode, 'outside_season');
     assert.equal(outsideSeason.slots.length, 0);
   }
 });
 
-test('GH-1067 RED: booking draft close gate rejects authoritative/fallback selected schedules when season gate is closed', () => {
+test('GH-1067 / #1239: booking draft close gate accepts selected schedule with no_active_season (fail-open)', () => {
   for (const authority of ['authoritative', 'fallback']) {
     const noActiveSeason = evaluateEffectiveBookingAvailability({
       ...baseInput(),
@@ -135,10 +145,17 @@ test('GH-1067 RED: booking draft close gate rejects authoritative/fallback selec
       selectedScheduleAuthority: authority,
     });
 
-    assert.equal(noActiveSeason.available, false, `${authority} draft path must reject no_active_season`);
-    assert.equal(noActiveSeason.reasonCode, 'outside_season');
-    assert.equal(noActiveSeason.canonicalState, 'outside_season');
+    // Per #1239 the season gate stops contributing to the rejection when
+    // no rows exist. The draft path may still reject for orthogonal
+    // reasons (missing-from-generated-slots etc.) — what we lock down
+    // here is that it is NOT `outside_season`.
+    assert.notEqual(noActiveSeason.reasonCode, 'outside_season', `${authority} draft path must not flag no_active_season as outside_season`);
+    assert.notEqual(noActiveSeason.canonicalState, 'outside_season');
+  }
+});
 
+test('GH-1067: booking draft close gate still rejects authoritative/fallback selected schedules on explicit outside-season dates', () => {
+  for (const authority of ['authoritative', 'fallback']) {
     const outsideSeason = evaluateEffectiveBookingAvailability({
       ...baseInput({
         seasons: [season({ startMonth: 1, startDay: 1, endMonth: 3, endDay: 31 })],
@@ -185,32 +202,12 @@ test('GH-1067 RED: explicit year-round keeps traveler close gate open when no ot
   }
 });
 
-test('GH-1067 RED: conflict override cannot unlock no_active_season or outside_season selected schedules', () => {
+test('GH-1067: conflict override cannot unlock explicit outside_season selected schedules', () => {
+  // #1239 only changes the empty-seasons case to fail-open. Explicit
+  // out-of-range seasons still close the gate hard, and a conflict
+  // override does not give an admin a back door to that — the seasonal
+  // restriction is a product-level guardrail, not a per-booking conflict.
   for (const authority of ['authoritative', 'fallback']) {
-    const noActiveSeason = evaluateBookingAvailability({
-      ...baseInput({
-        bookings: [
-          {
-            id: 'booking-conflict',
-            guide_id: GUIDE_ID,
-            activity_id: ACTIVITY_ID,
-            activity_plan_id: PLAN_ID,
-            start_at: REQUEST_START,
-            end_at: '2026-07-01T17:00:00+08:00',
-            status: 'confirmed',
-            participants: 2,
-          },
-        ],
-        conflictOverrides: [conflictOverride()],
-      }),
-      selectedSchedule: selectedSchedule(),
-      selectedScheduleAuthority: authority,
-    });
-
-    assert.equal(noActiveSeason.available, false);
-    assert.equal(noActiveSeason.reasonCode, 'outside_season');
-    assert.equal(noActiveSeason.slots.length, 0);
-
     const outsideSeasonDraft = evaluateEffectiveBookingAvailability({
       ...baseInput({
         seasons: [season({ startMonth: 1, startDay: 1, endMonth: 3, endDay: 31 })],

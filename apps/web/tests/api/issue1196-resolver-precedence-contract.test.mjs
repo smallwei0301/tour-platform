@@ -182,6 +182,17 @@ test('precedence #8: when slot is unavailable but capacity is fine → closed', 
   assert.equal(got.state, 'closed');
 });
 
+test('#1239: empty seasons array does NOT close the season gate — fail open', () => {
+  // Product decision: plans without any active `activity_plan_seasons` rows
+  // are 全部開放 / all-year open. Only explicit active windows restrict.
+  const out = resolveCanonicalAvailabilityState({
+    ...BASE,
+    seasonGateEnabled: true,
+    seasons: [],
+  });
+  assert.equal(out.state, 'available');
+});
+
 test('cancelled / failed / expired bookings do NOT cause blocked_by_conflict', () => {
   for (const status of ['cancelled', 'failed', 'expired']) {
     const got = resolveCanonicalAvailabilityState({
