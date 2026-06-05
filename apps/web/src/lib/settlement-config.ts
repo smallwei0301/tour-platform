@@ -5,6 +5,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isPayoutOnHold } from './post-trip-eligibility.mjs';
 
 export const SETTLEMENT_COMMISSION_RATE = parseFloat(process.env.SETTLEMENT_COMMISSION_RATE ?? '0.15')
 export const SETTLEMENT_T_DAYS = parseInt(process.env.SETTLEMENT_T_DAYS ?? '7', 10)
@@ -74,6 +75,17 @@ export type SweepPayoutItemInput = {
 
 export type SweepPayoutItemOpsTracking = {
   refund_amount_twd?: number | null
+  /**
+   * #1221 — payout-hold flags. When any of these is true, the order is
+   * blocked from entering the payout sweep regardless of effective gmv
+   * (partial refund with no holds still produces a reduced item; any
+   * hold reason produces null). Default false — existing callers that
+   * pass only refund_amount_twd keep their behavior.
+   */
+  has_complaint?: boolean | null
+  has_oversell_issue?: boolean | null
+  is_disputed?: boolean | null
+  is_safety_case?: boolean | null
 } | null | undefined
 
 export type SweepPayoutItem = {
@@ -104,6 +116,20 @@ export function computeSweepPayoutItem(
   const refunded = Number(opsTracking?.refund_amount_twd ?? 0) || 0
   const effective = gross - refunded
   if (effective <= 0) return null
+
+  // #1221 — enforce payout hold for non-refund signals (refund itself is
+  // already accounted for by the effective-gmv calculation above; this
+  // gate covers dispute, safety, complaint, and oversell holds that must
+  // block payable state until admin explicitly releases them).
+  const holdReason: string | null = isPayoutOnHold({
+    refundAmountTwd: 0,
+    hasComplaint: opsTracking?.has_complaint === true,
+    hasOversellIssue: opsTracking?.has_oversell_issue === true,
+    isDisputed: opsTracking?.is_disputed === true,
+    isSafetyCase: opsTracking?.is_safety_case === true,
+  })
+  if (holdReason) return null
+
   const commission_twd = Math.floor(effective * config.commission_rate)
   const net_twd = Math.floor(effective * (1 - config.commission_rate))
   return {
