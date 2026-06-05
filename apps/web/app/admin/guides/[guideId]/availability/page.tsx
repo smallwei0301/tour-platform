@@ -5,6 +5,11 @@ import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge, EmptyState, LoadingSkeleton } from '../../../../../src/components/admin/ui';
 import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/responsive';
+import {
+  describePlanSeasonStatus,
+  describePreviewReason,
+  type UiActiveSeasonSummary,
+} from '../../../../../src/lib/availability-v2/canonical-availability-ui';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -52,6 +57,8 @@ type V2Plan = {
   status: string;
   booking_type: string;
   base_price: number;
+  isYearRound?: boolean | null;
+  activeSeasonSummaries?: UiActiveSeasonSummary[];
 };
 
 type V2Activity = {
@@ -70,6 +77,10 @@ export default function GuideAvailabilityPage() {
   const [rules, setRules] = useState<AvailabilityRule[]>([]);
   const [blackouts, setBlackouts] = useState<BlackoutDate[]>([]);
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
+  const [previewCanonicalState, setPreviewCanonicalState] = useState<string | null>(null);
+  const [previewSeasonGate, setPreviewSeasonGate] = useState<string | null>(null);
+  const [previewIsYearRound, setPreviewIsYearRound] = useState<boolean>(false);
+  const [previewActiveSeasonSummaries, setPreviewActiveSeasonSummaries] = useState<UiActiveSeasonSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [v2Activities, setV2Activities] = useState<V2Activity[]>([]);
@@ -139,6 +150,10 @@ export default function GuideAvailabilityPage() {
       if (json.success) {
         setGuide(json.data.guide);
         setPreviewSlots(json.data.slots || []);
+        setPreviewCanonicalState(json.data.previewCanonicalState || null);
+        setPreviewSeasonGate(json.data.previewSeasonGate || null);
+        setPreviewIsYearRound(Boolean(json.data.isYearRound));
+        setPreviewActiveSeasonSummaries(json.data.activeSeasonSummaries || []);
       }
     } finally {
       setPreviewLoading(false);
@@ -292,6 +307,23 @@ export default function GuideAvailabilityPage() {
     acc[rule.weekday].push(rule);
     return acc;
   }, {} as Record<number, AvailabilityRule[]>);
+  const planById = Object.fromEntries(v2Activities.flatMap((activity) => activity.plans.map((plan) => [plan.id, plan]))) as Record<string, V2Plan>;
+  const selectedRulePlan = ruleForm.activity_plan_id ? planById[ruleForm.activity_plan_id] : null;
+  const previewPlan = previewPlanId ? planById[previewPlanId] : null;
+  const rulePlanSeasonStatus = describePlanSeasonStatus({
+    isYearRound: selectedRulePlan?.isYearRound,
+    activeSeasonSummaries: selectedRulePlan?.activeSeasonSummaries,
+  });
+  const previewPlanSeasonStatus = describePlanSeasonStatus({
+    isYearRound: previewPlanId ? previewPlan?.isYearRound : previewIsYearRound,
+    activeSeasonSummaries: previewPlanId ? previewPlan?.activeSeasonSummaries : previewActiveSeasonSummaries,
+  });
+  const previewReason = describePreviewReason({ previewCanonicalState, previewSeasonGate });
+  const toneStyles = {
+    success: { border: '#bbf7d0', background: '#f0fdf4', color: '#166534' },
+    info: { border: '#bfdbfe', background: '#eff6ff', color: '#1d4ed8' },
+    warning: { border: '#fcd34d', background: '#fffbeb', color: '#92400e' },
+  } as const;
 
   // ── Group preview slots by date ──
   const slotsByDate = previewSlots.reduce((acc, slot) => {
@@ -385,6 +417,13 @@ export default function GuideAvailabilityPage() {
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+              {selectedRulePlan && (
+                <div style={{ border: `1px solid ${toneStyles[rulePlanSeasonStatus.tone].border}`, background: toneStyles[rulePlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[rulePlanSeasonStatus.tone].color }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{rulePlanSeasonStatus.title}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{rulePlanSeasonStatus.description}</div>
+                  <div style={{ marginTop: 6, fontSize: 12 }}>常見提示：此方案尚未設定開放季節。</div>
                 </div>
               )}
               <div>
@@ -698,8 +737,19 @@ export default function GuideAvailabilityPage() {
                 </div>
               </div>
               <div style={{ padding: 20 }}>
+                <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewPlanSeasonStatus.title}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewPlanSeasonStatus.description}</div>
+                </div>
+                <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewReason.tone].border}`, background: toneStyles[previewReason.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewReason.tone].color }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>此期間無產生可預約時段時，請先確認 canonical 原因</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewReason.label}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewReason.description}</div>
+                  <div style={{ marginTop: 6, fontSize: 12 }}>可能原因包含管理員覆寫、已有衝突，或方案開放季節尚未設定。</div>
+                  <div style={{ marginTop: 4, fontSize: 12 }}>previewCanonicalState：{previewCanonicalState || 'N/A'}／previewSeasonGate：{previewSeasonGate || 'N/A'}</div>
+                </div>
                 {previewSlots.length === 0 ? (
-                  <EmptyState message="此期間無可用時段" />
+                  <EmptyState message={`此期間無可用時段：${previewReason.label}`} />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {Object.entries(slotsByDate).map(([date, slots]) => {

@@ -264,3 +264,77 @@ test('Migration: no plaintext PII columns (traveler email / phone / payment payl
   assert.doesNotMatch(sql, /payment_payload\s+text/);
   assert.doesNotMatch(sql, /credit_card/);
 });
+
+// ---------- AC5: READ route wiring source-contract ----------
+// trip-reports-due/route.ts and post-trip-summary/route.ts must no longer
+// contain `submittedAt: null` literal; both must query guide_trip_reports.submitted_at.
+
+const TRIP_REPORTS_DUE_ROUTE = join(
+  __dirname,
+  '../../app/api/v2/guide/trip-reports-due/route.ts',
+);
+const POST_TRIP_SUMMARY_ROUTE = join(
+  __dirname,
+  '../../app/api/v2/admin/orders/post-trip-summary/route.ts',
+);
+
+test('AC5: trip-reports-due/route.ts no longer contains submittedAt: null literal', () => {
+  const src = readFileSync(TRIP_REPORTS_DUE_ROUTE, 'utf8');
+  assert.doesNotMatch(src, /submittedAt:\s*null/);
+});
+
+test('AC5: trip-reports-due/route.ts queries guide_trip_reports.submitted_at', () => {
+  const src = readFileSync(TRIP_REPORTS_DUE_ROUTE, 'utf8');
+  assert.match(src, /guide_trip_reports/);
+  assert.match(src, /submitted_at/);
+});
+
+test('AC5: post-trip-summary/route.ts no longer contains submittedAt: null literal', () => {
+  const src = readFileSync(POST_TRIP_SUMMARY_ROUTE, 'utf8');
+  assert.doesNotMatch(src, /submittedAt:\s*null/);
+});
+
+test('AC5: post-trip-summary/route.ts queries guide_trip_reports.submitted_at', () => {
+  const src = readFileSync(POST_TRIP_SUMMARY_ROUTE, 'utf8');
+  assert.match(src, /guide_trip_reports/);
+  assert.match(src, /submitted_at/);
+});
+
+// ---------- AC6: status flip unit tests ----------
+// Given a non-null submittedAt, tripReportStatus() returns 'submitted'
+// and the order drops from the overdue list.
+// Import at top level via dynamic import resolved at module parse time is not
+// possible, so we import inline using async test callbacks.
+
+import { tripReportStatus } from '../../src/lib/post-trip-eligibility.mjs';
+
+test('AC6: tripReportStatus returns submitted when submittedAt is non-null', () => {
+  // If submitted 30min after schedule end, status should be 'submitted'
+  const result = tripReportStatus({
+    scheduleEndAt: '2026-06-04T10:00:00Z',
+    submittedAt: '2026-06-04T10:30:00Z',
+    now: new Date('2026-06-04T12:00:00Z'),
+  });
+  assert.equal(result, 'submitted');
+});
+
+test('AC6: tripReportStatus returns overdue when submittedAt is null and 24h elapsed', () => {
+  const result = tripReportStatus({
+    scheduleEndAt: '2026-06-03T10:00:00Z',
+    submittedAt: null,
+    now: new Date('2026-06-04T12:00:00Z'),
+  });
+  assert.equal(result, 'overdue');
+});
+
+test('AC6: order with non-null submittedAt does not appear in overdue list (eligibility check)', () => {
+  // Simulate processing an order: if status is 'submitted', it should not go into overdueTripReports
+  const scheduleEndAt = '2026-06-03T10:00:00Z';
+  const submittedAt = '2026-06-03T12:00:00Z';
+  const now = new Date('2026-06-04T12:00:00Z');
+
+  const reportStatus = tripReportStatus({ scheduleEndAt, submittedAt, now });
+  // Should be 'submitted', not 'overdue' — so it won't be pushed to overdueTripReports
+  assert.notEqual(reportStatus, 'overdue');
+  assert.equal(reportStatus, 'submitted');
+});

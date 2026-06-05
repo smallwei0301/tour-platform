@@ -27,11 +27,8 @@ function canBypassGeneratedCanonicalMiss(params: {
   canonicalState: string;
   canonicalMetadata?: Record<string, string>;
 }): boolean {
-  if (params.canonicalState === 'outside_rule') {
-    return true;
-  }
-
-  return params.canonicalState === 'outside_season' && params.canonicalMetadata?.seasonGate === 'no_active_season';
+  void params.canonicalMetadata;
+  return params.canonicalState === 'outside_rule';
 }
 
 export function resolveEffectiveBookingAvailabilityForStartAt(params: {
@@ -51,6 +48,7 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
     bookings: params.evaluation.diagnostics.bookings,
     seasons: params.evaluation.diagnostics.seasons,
     seasonGateEnabled: params.evaluation.diagnostics.seasonGateEnabled,
+    isYearRound: params.evaluation.diagnostics.isYearRound,
     planStatus: params.evaluation.diagnostics.planStatus,
     slotAvailable: Boolean(matchedSlot),
     slotUnavailableReason: params.evaluation.reasonCode,

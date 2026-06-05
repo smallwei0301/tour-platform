@@ -4,14 +4,19 @@
 // 1. Validate orderId UUID
 // 2. Fetch order + schedule + user profile + activity
 // 3. Check isReviewInvitationEligible
-// 4. Build reviewUrl (e.g. ${NEXT_PUBLIC_SITE_URL}/me/orders/${orderId}?review=1)
-// 5. Call sendReviewInvitation({ contactEmail, contactName, activityTitle, orderId, reviewUrl })
-// 6. Return result
+// 4. Fetch existing review_invitations rows (service-role client)
+// 5. Call evaluateReviewInvitationIdempotency → 409 if blocked
+// 6. Build reviewUrl (e.g. ${NEXT_PUBLIC_SITE_URL}/me/orders/${orderId}?review=1)
+// 7. Call sendReviewInvitation with contactEmail, contactName, activityTitle, orderId, reviewUrl
+// 8. Insert delivery log row (sent or failed) into review_invitations
+// 9. Return result
 
 import { NextResponse } from 'next/server';
-import { createClient } from '../../../../../../../src/lib/supabase/server';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { createClient as createAnonClient } from '../../../../../../../src/lib/supabase/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { isReviewInvitationEligible } from '../../../../../../../src/lib/post-trip-eligibility.mjs';
+import { evaluateReviewInvitationIdempotency } from '../../../../../../../src/lib/post-trip/review-invitation.mjs';
 import { sendReviewInvitation } from '../../../../../../../src/lib/email';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -27,7 +32,7 @@ export async function POST(
   }
 
   try {
-    const supabase = await createClient();
+    const supabase = await createAnonClient();
 
     const { data: order, error: orderError } = await supabase
       .from('orders')
@@ -93,6 +98,43 @@ export async function POST(
       );
     }
 
+    // ── Service-role client for review_invitations (bypasses RLS) ────────────
+    // SupabaseClient<any> type lets us write to the new table without
+    // generated-types blocking (review_invitations not yet in schema types).
+    // Dynamic import matches the pre-tour-sweep/route.ts pattern.
+    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+    let srClient: SupabaseClient | null = null;
+    if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      const { createClient } = await import('@supabase/supabase-js');
+      srClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    }
+
+    // ── Idempotency guard: fetch existing delivery log rows ───────────────────
+    let existingInvitations: Array<{ status: string }> = [];
+    if (srClient) {
+      const { data: existingRows } = await srClient
+        .from('review_invitations')
+        .select('status')
+        .eq('order_id', orderId);
+      existingInvitations = existingRows ?? [];
+    }
+
+    // ── evaluateReviewInvitationIdempotency must be called BEFORE sendReviewInvitation ──
+    const idempotency = evaluateReviewInvitationIdempotency({
+      existingInvitations,
+    });
+
+    if (!idempotency.allowSend) {
+      return NextResponse.json(
+        errorV2(
+          idempotency.code === 'already_sent' ? 'already_sent' : idempotency.code,
+          idempotency.reasonZh ?? 'Review invitation already sent for this order'
+        ),
+        { status: 409 }
+      );
+    }
+
+    // ── Build review URL and send ─────────────────────────────────────────────
     const activity = Array.isArray(order.activities) ? order.activities[0] : order.activities;
     const activityTitle = activity?.title ?? '您的行程';
     const contactName =
@@ -111,6 +153,17 @@ export async function POST(
     });
 
     if (!result.ok) {
+      // ── Insert 'failed' delivery log row ────────────────────────────────────
+      if (srClient) {
+        await srClient.from('review_invitations').insert({
+          order_id: orderId,
+          status: 'failed',
+          initiated_by: 'admin_manual',
+          failed_at: new Date().toISOString(),
+          failure_reason: result.errorCode ?? 'EMAIL_SEND_FAILED',
+        });
+      }
+
       return NextResponse.json(
         errorV2(
           result.errorCode ?? 'EMAIL_FAILED',
@@ -118,6 +171,21 @@ export async function POST(
         ),
         { status: 500 }
       );
+    }
+
+    // ── Insert 'sent' delivery log row ───────────────────────────────────────
+    if (srClient) {
+      const { error: insertError } = await srClient.from('review_invitations').insert({
+        order_id: orderId,
+        status: 'sent',
+        initiated_by: 'admin_manual',
+        sent_at: new Date().toISOString(),
+      });
+      // Treat unique-violation (23505) as idempotent — concurrent double-send
+      // already logged by the first insert; do not propagate as a 500.
+      if (insertError && insertError.code !== '23505') {
+        console.error('[send-review-invitation] delivery log insert failed:', insertError.code);
+      }
     }
 
     return NextResponse.json(

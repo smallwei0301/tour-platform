@@ -7,6 +7,11 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import {
+  resolvePreviewCanonicalReason,
+  summarizeActivePlanSeasons,
+  type PreviewActivityPlanSeason,
+} from '../../../../../../../src/lib/availability-v2/preview-canonical-reasons.ts';
+import {
   generateAvailableSlots,
   type AvailabilityRule,
   type BlackoutWindow,
@@ -137,11 +142,13 @@ export async function GET(
     // Use real plan if activityPlanId provided, otherwise use mock plan for preview
     let plan: ActivityPlan;
     let resolvedPlanId: string;
+    let previewPlanSeasons: PreviewActivityPlanSeason[] = [];
+    let previewIsYearRound = false;
 
     if (activityPlanId && UUID_REGEX.test(activityPlanId)) {
       const { data: planData, error: planError } = await supabase
         .from('activity_plans')
-        .select('id, activity_id, duration_minutes, max_participants, booking_type')
+        .select('id, activity_id, duration_minutes, max_participants, booking_type, is_year_round')
         .eq('id', activityPlanId)
         .single();
 
@@ -149,12 +156,21 @@ export async function GET(
         return Response.json(errorV2('NOT_FOUND', 'Plan not found'), { status: 422 });
       }
 
+      const { data: seasonsData } = await supabase
+        .from('activity_plan_seasons')
+        .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+        .eq('activity_plan_id', activityPlanId);
+
+      previewPlanSeasons = (seasonsData || []) as PreviewActivityPlanSeason[];
+      previewIsYearRound = Boolean(planData.is_year_round);
+
       plan = {
         id: planData.id,
         activity_id: planData.activity_id,
         duration_minutes: planData.duration_minutes,
         max_participants: planData.max_participants,
         booking_type: planData.booking_type,
+        is_year_round: planData.is_year_round,
       };
       resolvedPlanId = planData.id;
     } else {
@@ -168,6 +184,14 @@ export async function GET(
       };
       resolvedPlanId = 'preview';
     }
+
+    const previewCanonical = resolvePreviewCanonicalReason({
+      requestedDate: dateFrom,
+      timezone,
+      isYearRound: previewIsYearRound,
+      seasons: previewPlanSeasons,
+    });
+    const activeSeasonSummaries = summarizeActivePlanSeasons(previewPlanSeasons);
 
     const input: SlotGeneratorInput = {
       guideId,
@@ -192,6 +216,11 @@ export async function GET(
       timezone: result.timezone,
       dateFrom,
       dateTo,
+      activityPlanId: activityPlanId || null,
+      previewCanonicalState: previewCanonical.canonicalState,
+      previewSeasonGate: previewCanonical.seasonGate,
+      isYearRound: previewIsYearRound,
+      activeSeasonSummaries,
       rulesCount: rules.length,
       blackoutsCount: blackouts.length,
       activeBookingsCount: bookings.length,

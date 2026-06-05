@@ -3,11 +3,11 @@
  * Phase 13 — Tour Platform (Issue #325, fixed #326/#330)
  *
  * Fire-and-forget: recordIncident never throws.
- * Sentry, LINE Notify, and DB insert are all best-effort.
+ * Sentry, Telegram Alert, and DB insert are all best-effort.
  */
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@supabase/supabase-js';
-import { notifySystemError } from './line-notify';
+import { notifySystemError } from './telegram-notify';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,7 +61,7 @@ export async function recordIncident(opts: IncidentOpts): Promise<void> {
     });
   } catch { /* fire-and-forget */ }
 
-  // LINE Notify — fire-and-forget
+  // Telegram Alert — fire-and-forget
   try {
     await notifySystemError(
       opts.source,

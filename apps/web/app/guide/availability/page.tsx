@@ -3,6 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { ResponsiveModal, FormGrid, useIsMobile } from '../../../src/components/admin/responsive';
+import {
+  describePlanSeasonStatus,
+  describePreviewReason,
+  describeRuleSeasonConflict,
+  type UiActiveSeasonSummary,
+} from '../../../src/lib/availability-v2/canonical-availability-ui';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -51,6 +57,8 @@ type GuideActivityPlanOption = {
   planName: string;
   minParticipants: number | null;
   maxParticipants: number | null;
+  isYearRound?: boolean | null;
+  activeSeasonSummaries?: UiActiveSeasonSummary[];
 };
 
 export default function GuideAvailabilityPage() {
@@ -60,6 +68,10 @@ export default function GuideAvailabilityPage() {
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
   const [previewSource, setPreviewSource] = useState<PreviewSource>('legacy_local_preview');
   const [previewReasonCode, setPreviewReasonCode] = useState<PreviewReasonCode>(null);
+  const [previewCanonicalState, setPreviewCanonicalState] = useState<string | null>(null);
+  const [previewSeasonGate, setPreviewSeasonGate] = useState<string | null>(null);
+  const [previewIsYearRound, setPreviewIsYearRound] = useState<boolean>(false);
+  const [previewActiveSeasonSummaries, setPreviewActiveSeasonSummaries] = useState<UiActiveSeasonSummary[]>([]);
   const [activityPlanOptions, setActivityPlanOptions] = useState<GuideActivityPlanOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
@@ -138,6 +150,10 @@ export default function GuideAvailabilityPage() {
       if (json.ok) {
         setPreviewSource(json.data?.availabilitySource || 'legacy_local_preview');
         setPreviewReasonCode(json.data?.previewReasonCode || null);
+        setPreviewCanonicalState(json.data?.previewCanonicalState || null);
+        setPreviewSeasonGate(json.data?.previewSeasonGate || null);
+        setPreviewIsYearRound(Boolean(json.data?.isYearRound));
+        setPreviewActiveSeasonSummaries(json.data?.activeSeasonSummaries || []);
         setPreviewSlots((json.data?.slots || []).map((slot: PreviewSlot) => ({
           ...slot,
           minParticipants: slot.minParticipants ?? null,
@@ -332,11 +348,39 @@ export default function GuideAvailabilityPage() {
     return acc;
   }, {} as Record<string, GuideActivityPlanOption>);
   const previewPlan = optionByPlanId[previewPlanId] || null;
+  const selectedRulePlan = optionByPlanId[ruleForm.activity_plan_id] || null;
+  const rulePlanSeasonStatus = describePlanSeasonStatus({
+    isYearRound: selectedRulePlan?.isYearRound,
+    activeSeasonSummaries: selectedRulePlan?.activeSeasonSummaries,
+  });
+  const ruleSeasonConflict = selectedRulePlan
+    ? describeRuleSeasonConflict({
+        ruleMode: ruleForm.rule_mode,
+        effectiveFrom: ruleForm.effective_from,
+        effectiveTo: ruleForm.effective_to,
+        singleDate: ruleForm.single_date,
+        activeSeasonSummaries: selectedRulePlan.activeSeasonSummaries,
+        isYearRound: selectedRulePlan.isYearRound,
+      })
+    : null;
+  const previewPlanSeasonStatus = describePlanSeasonStatus({
+    isYearRound: previewPlanId ? previewPlan?.isYearRound : previewIsYearRound,
+    activeSeasonSummaries: previewPlanId ? previewPlan?.activeSeasonSummaries : previewActiveSeasonSummaries,
+  });
+  const previewReason = describePreviewReason({
+    previewCanonicalState,
+    previewSeasonGate,
+  });
   const formatParticipants = (minParticipants: number | null, maxParticipants: number | null) => {
     const minText = minParticipants ?? '-';
     const maxText = maxParticipants ?? '-';
     return `最少 ${minText}｜最多 ${maxText}`;
   };
+  const toneStyles = {
+    success: { border: '#bbf7d0', background: '#f0fdf4', color: '#166534' },
+    info: { border: '#bfdbfe', background: '#eff6ff', color: '#1d4ed8' },
+    warning: { border: '#fcd34d', background: '#fffbeb', color: '#92400e' },
+  } as const;
 
   // ── Group preview slots by date ──
   const slotsByDate = previewSlots.reduce((acc, slot) => {
@@ -530,6 +574,22 @@ export default function GuideAvailabilityPage() {
               ))}
             </select>
           </div>
+          {selectedRulePlan && (
+            <div style={{ border: `1px solid ${toneStyles[rulePlanSeasonStatus.tone].border}`, background: toneStyles[rulePlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[rulePlanSeasonStatus.tone].color }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{rulePlanSeasonStatus.title}</div>
+              <div style={{ fontSize: 12, lineHeight: 1.6 }}>{rulePlanSeasonStatus.description}</div>
+            </div>
+          )}
+          {selectedRulePlan && ruleSeasonConflict && (
+            <div style={{ border: `1px solid ${toneStyles[ruleSeasonConflict.tone].border}`, background: toneStyles[ruleSeasonConflict.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[ruleSeasonConflict.tone].color, fontSize: 12, lineHeight: 1.6 }}>
+              {ruleSeasonConflict.message}
+            </div>
+          )}
+          {selectedRulePlan && (
+            <div style={{ fontSize: 12, color: '#6b7280' }}>
+              常見提示：此方案尚未設定開放季節、你設定的日期包含方案非開放季節、這一天不在方案開放季節內。
+            </div>
+          )}
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開放模式</label>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -696,6 +756,29 @@ export default function GuideAvailabilityPage() {
           )}
         </div>
       </ResponsiveModal>
+
+      {/* ── Availability Precedence Helper ── */}
+      <div
+        data-testid="guide-availability-precedence-helper"
+        style={{
+          marginBottom: 20,
+          padding: '12px 16px',
+          borderRadius: 10,
+          border: '1px solid #e5e7eb',
+          background: '#f9fafb',
+          fontSize: 12,
+          color: '#374151',
+          lineHeight: 1.8,
+        }}
+      >
+        <span style={{ fontWeight: 700, fontSize: 13 }}>可預約狀態優先順序說明：</span>
+        <span style={{ marginLeft: 6 }}>
+          方案狀態（未啟用）&gt; 開放季節（季節外）&gt; 時段規則（規則外）&gt; 黑名單/衝突（封鎖）&gt; 可預約
+        </span>
+        <div style={{ marginTop: 4, color: '#6b7280' }}>
+          最高優先：若方案狀態為「未啟用」，無論其他設定，此方案所有時段均不開放。依序往下，季節設定、時段規則、黑名單/衝突才會生效。
+        </div>
+      </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         {loading ? (
@@ -926,6 +1009,8 @@ export default function GuideAvailabilityPage() {
                 >
                   <div data-testid="guide-preview-source-label">預覽來源：{previewSource}</div>
                   <div data-testid="guide-preview-reason-label">原因代碼：{previewReasonCode || 'N/A'}</div>
+                  <div>previewCanonicalState：{previewCanonicalState || 'N/A'}</div>
+                  <div>previewSeasonGate：{previewSeasonGate || 'N/A'}</div>
                   {previewSource === 'legacy_local_preview' && (
                     <div data-testid="guide-preview-legacy-warning" style={{ color: '#92400e' }}>
                       注意：目前為 local/legacy 預覽，僅供排班參考，不代表旅客端最終可訂狀態。
@@ -937,8 +1022,21 @@ export default function GuideAvailabilityPage() {
                     預覽方案：{previewPlan.planName}（{formatParticipants(previewPlan.minParticipants, previewPlan.maxParticipants)}）
                   </div>
                 )}
+                <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewPlanSeasonStatus.title}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewPlanSeasonStatus.description}</div>
+                </div>
+                <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewReason.tone].border}`, background: toneStyles[previewReason.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewReason.tone].color }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>此期間無產生可預約時段時，請先看這裡</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewReason.label}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewReason.description}</div>
+                  <div style={{ marginTop: 6, fontSize: 12 }}>可能原因包含管理員覆寫、已有衝突，或方案開放季節尚未設定。</div>
+                </div>
                 {previewSlots.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>此期間無可用時段</div>
+                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                    此期間無可用時段。
+                    <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>{previewReason.label}</div>
+                  </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     {Object.entries(slotsByDate).map(([date, slots]) => {

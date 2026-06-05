@@ -45,14 +45,25 @@ function isInAnyActiveSeason(params: {
   requestedStartAt: string;
   timezone: string;
   seasons: ActivityPlanSeason[];
-}): { inSeason: boolean; reason: 'no_active_season' | 'outside_season' | 'inside_season' } {
+  isYearRound?: boolean;
+}): { inSeason: boolean; reason: 'no_active_season' | 'outside_season' | 'inside_season' | 'explicit_year_round' } {
   const activeSeasons = params.seasons.filter((season) => season.is_active);
   // Issue #1239 product decision: when no active season rows exist, the plan
   // is 全部開放 / all-year open. Explicit active season windows still restrict
-  // outside dates. We still surface `no_active_season` in the reason so the
-  // caller can tell "this plan has no season config" from "this date is in
-  // an active season".
+  // outside dates. We still surface a distinct reason so the caller can
+  // tell:
+  //   - `'explicit_year_round'` — admin actively flipped the year-round flag
+  //     (PR #1230's contract: surface the marker so the UI can show 「全年
+  //     開放」). Both inSeason and reason carry through.
+  //   - `'no_active_season'`  — no season rows / all paused; same effective
+  //     behaviour as year-round (inSeason: true), distinct reason so the UI
+  //     can hint "請設定季節限制" if it wants. Per #1239 this stays
+  //     fail-open — admins should not have to set a year-round flag to make
+  //     a brand-new plan bookable.
   if (activeSeasons.length === 0) {
+    if (params.isYearRound) {
+      return { inSeason: true, reason: 'explicit_year_round' };
+    }
     return { inSeason: true, reason: 'no_active_season' };
   }
 
@@ -95,6 +106,7 @@ export function resolveCanonicalAvailabilityState(params: {
   bookings: ExistingBooking[];
   seasons: ActivityPlanSeason[];
   seasonGateEnabled?: boolean;
+  isYearRound?: boolean;
   planStatus: string;
   slotAvailable: boolean;
   slotUnavailableReason?: string;
@@ -106,17 +118,22 @@ export function resolveCanonicalAvailabilityState(params: {
     return { state: 'inactive_plan' };
   }
 
+  let seasonGateMetadata: Record<string, string> | undefined;
   if (params.seasonGateEnabled) {
     const seasonGate = isInAnyActiveSeason({
       requestedStartAt: params.requestedStartAt,
       timezone: params.timezone,
       seasons: params.seasons,
+      isYearRound: params.isYearRound,
     });
     if (!seasonGate.inSeason) {
       return {
         state: 'outside_season',
         metadata: { seasonGate: seasonGate.reason },
       };
+    }
+    if (seasonGate.reason === 'explicit_year_round') {
+      seasonGateMetadata = { seasonGate: seasonGate.reason };
     }
   }
 
@@ -158,7 +175,7 @@ export function resolveCanonicalAvailabilityState(params: {
   }
 
   if (params.slotAvailable) {
-    return { state: 'available' };
+    return seasonGateMetadata ? { state: 'available', metadata: seasonGateMetadata } : { state: 'available' };
   }
 
   if (!params.capacityAvailable) {

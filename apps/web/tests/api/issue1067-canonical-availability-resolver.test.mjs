@@ -97,9 +97,14 @@ test('GH-1067 RED: cross-year season allows April slot and blocks July slot', ()
 
 // Issue #1239 product decision: when no `activity_plan_seasons` rows exist
 // (or none are active), the plan is treated as 全部開放 / all-year open.
-// Only explicit active season windows restrict outside dates. This used to
-// be `fail-closed → outside_season`; the new contract is fail-open.
-test('GH-1067 / #1239: no active season rows → fail open (all-year open)', () => {
+// Only explicit active season windows restrict outside dates.
+//
+// PR #1230 added an `isYearRound` flag so admins can *explicitly* mark a
+// plan as year-round and surface that to the UI. Both paths reach
+// `available` — they differ only in the metadata reason the UI sees:
+//   - `isYearRound: true` → reason `'explicit_year_round'`
+//   - empty / inactive seasons (no explicit flag) → reason `'no_active_season'`
+test('GH-1067: explicit year-round plan passes season gate with no rows + carries metadata', () => {
   const out = resolveCanonicalAvailabilityState({
     requestedStartAt: '2026-04-10T09:00:00+08:00',
     timezone: TZ,
@@ -107,6 +112,42 @@ test('GH-1067 / #1239: no active season rows → fail open (all-year open)', () 
     blackouts: [],
     bookings: [],
     seasons: [],
+    seasonGateEnabled: true,
+    planStatus: 'active',
+    isYearRound: true,
+    slotAvailable: true,
+    capacityAvailable: true,
+  });
+  assert.equal(out.state, 'available');
+  assert.equal(out.metadata?.seasonGate, 'explicit_year_round');
+});
+
+test('GH-1067 / #1239: no active season rows → fail open without explicit year-round flag', () => {
+  const out = resolveCanonicalAvailabilityState({
+    requestedStartAt: '2026-04-10T09:00:00+08:00',
+    timezone: TZ,
+    rules: [weekdayRule({ weekday: 5 })],
+    blackouts: [],
+    bookings: [],
+    seasons: [],
+    seasonGateEnabled: true,
+    planStatus: 'active',
+    // intentionally no isYearRound flag — #1239's whole point is that admins
+    // shouldn't have to set one to get sensible default behaviour.
+    slotAvailable: true,
+    capacityAvailable: true,
+  });
+  assert.equal(out.state, 'available');
+});
+
+test('GH-1067: disabled seasons do not imply year-round when explicit flag is false', () => {
+  const out = resolveCanonicalAvailabilityState({
+    requestedStartAt: '2026-04-10T09:00:00+08:00',
+    timezone: TZ,
+    rules: [weekdayRule({ weekday: 5 })],
+    blackouts: [],
+    bookings: [],
+    seasons: [season({ startMonth: 1, startDay: 1, endMonth: 12, endDay: 31, isActive: false })],
     seasonGateEnabled: true,
     planStatus: 'active',
     slotAvailable: true,
@@ -197,6 +238,36 @@ test('GH-1067 / #1239: booking evaluator treats empty seasons as 全部開放 (w
   });
 
   assert.equal(out.available, true);
+});
+
+test('GH-1067 / #1239: authoritative selected schedule with empty seasons is never rejected as outside_season', () => {
+  // Per #1239 the season gate is fail-open when no active rows exist. An
+  // authoritative selected schedule on such a plan must therefore NOT be
+  // rejected with `outside_season` — admins should not have to set a
+  // year-round flag first. (The evaluator may still reject for orthogonal
+  // reasons like missing-from-generated-slots; those are covered by other
+  // tests in this file. The contract this test locks down is the
+  // narrower one: the season gate stops contributing to the rejection.)
+  const out = evaluateEffectiveBookingAvailability({
+    ...BASE_INPUT,
+    rules: [weekdayRule({ weekday: 5 })],
+    bookings: [],
+    seasons: [],
+    selectedScheduleAuthority: 'authoritative',
+    selectedSchedule: {
+      id: 'schedule-1067',
+      activity_id: 'a-1067',
+      plan_id: 'p-1067',
+      start_at: '2026-04-10T09:00:00+08:00',
+      end_at: '2026-04-10T12:00:00+08:00',
+      capacity: 10,
+      booked_count: 0,
+      status: 'open',
+    },
+  });
+
+  assert.notEqual(out.canonicalState, 'outside_season');
+  assert.notEqual(out.reasonCode, 'outside_season');
 });
 
 test('GH-1067 RED: draft must defer legacy conflict reject when active rules already validate the selected schedule canonically', () => {

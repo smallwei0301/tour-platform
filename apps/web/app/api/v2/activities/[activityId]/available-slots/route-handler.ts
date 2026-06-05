@@ -325,6 +325,7 @@ export async function getAvailableSlots(
         min_participants,
         max_participants,
         booking_type,
+        is_year_round,
         status,
         name,
         price_type,
@@ -519,6 +520,7 @@ export async function getAvailableSlots(
       duration_minutes: planData.duration_minutes,
       max_participants: planData.max_participants,
       booking_type: planData.booking_type as 'scheduled' | 'request' | 'instant',
+      is_year_round: Boolean(planData.is_year_round),
     };
 
     const minParticipants =

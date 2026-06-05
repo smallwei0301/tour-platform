@@ -207,7 +207,7 @@ test('#880 AC4 route: scheduleId path with schedule.capacity > plan.max → capa
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: null, start_at: '2026-07-01T09:00:00.000Z', end_at: '2026-07-01T11:00:00.000Z', capacity: 11, booked_count: 0, status: 'open' } },
-    { terminal: 'single', table: 'activity_plans', data: { id: planUuid, activity_id: ACTIVITY, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', activities: { id: ACTIVITY, guide_id: '44444444-4444-4444-4444-444444444444' } } },
+    { terminal: 'single', table: 'activity_plans', data: { id: planUuid, activity_id: ACTIVITY, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', is_year_round: true, activities: { id: ACTIVITY, guide_id: '44444444-4444-4444-4444-444444444444' } } },
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
     { terminal: 'in', table: 'bookings', data: [] },
