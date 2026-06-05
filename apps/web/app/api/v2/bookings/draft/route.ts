@@ -50,6 +50,7 @@ import {
   shouldAttemptDraftSelectedScheduleFallback,
   pickFallbackDraftSelectedSchedule,
 } from '../../../../../src/lib/booking-v2-selected-schedule';
+import { loadActivityPlanWithMissingIsYearRoundFallback } from '../../../../../src/lib/activity-plan-is-year-round-fallback.mjs';
 import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   FORMED_GROUP_BOOKING_STATUSES,
@@ -517,10 +518,12 @@ export async function POST(request: NextRequest) {
     const resolvedPlanId = resolvedPlan.planId;
 
     // 1. Fetch activity plan and verify it exists and is active
-    const { data: planData, error: planError } = await supabase
-      .from('activity_plans')
-      .select(
-        `
+    const { data: planData, error: planError, schemaFallback: planSchemaFallback } =
+      await loadActivityPlanWithMissingIsYearRoundFallback(async ({ includeIsYearRound }: { includeIsYearRound: boolean }) =>
+        supabase
+          .from('activity_plans')
+          .select(
+            `
         id,
         activity_id,
         name,
@@ -530,7 +533,7 @@ export async function POST(request: NextRequest) {
         min_participants,
         max_participants,
         booking_type,
-        is_year_round,
+        ${includeIsYearRound ? 'is_year_round,' : ''}
         status,
         activities!inner (
           id,
@@ -538,10 +541,19 @@ export async function POST(request: NextRequest) {
           title
         )
       `
-      )
-      .eq('id', resolvedPlanId)
-      .eq('activity_id', data.activityId)
-      .single();
+          )
+          .eq('id', resolvedPlanId)
+          .eq('activity_id', data.activityId)
+          .single()
+      );
+
+    if (planSchemaFallback) {
+      console.warn('Activity plan schema fallback during booking draft', {
+        activityId: data.activityId,
+        planId: resolvedPlanId,
+        schemaFallback: planSchemaFallback,
+      });
+    }
 
     if (planError || !planData) {
       return Response.json(errorV2('NOT_FOUND', 'Activity plan not found'), {

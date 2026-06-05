@@ -517,7 +517,7 @@ describe('GH-841 formal plan rich contract', () => {
     }
   });
 
-  it('activity detail falls back to legacy plans when all formal plans are inactive/archived', async () => {
+  it('activity detail does not fall back to legacy plans when all formal plans are inactive/archived', async () => {
     const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
     const originalUrl = process.env.SUPABASE_URL;
     const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -604,9 +604,8 @@ describe('GH-841 formal plan rich contract', () => {
 
     try {
       const activity = await dbMod.getActivityBySlugDb('fallback-to-legacy-from-archived');
-      assert.ok(Array.isArray(activity?.plans), 'plans should exist');
-      assert.equal(activity.plans[0].id, 'legacy-arch');
-      assert.equal(activity.plans[0].price || activity.plans[0].basePrice, 18);
+      assert.ok(activity, 'activity should exist');
+      assert.deepEqual(activity.plans || [], [], 'inactive/archived formal plans must not re-expose legacy booking plans');
     } finally {
       dbMod.__setSupabaseClientForTest(null);
       if (originalUrl === undefined) delete process.env.SUPABASE_URL;

@@ -31,8 +31,18 @@ describe('GH-903 Booking V2 surfaces Traditional-Chinese error messageZh on fail
     // Lock the exact ordering so a future refactor cannot silently flip it back.
     assert.match(
       bookingPageSrc,
-      /setV2Error\(\s*json\?\.data\?\.messageZh\s*\|\|\s*json\?\.error\?\.messageZh\s*\|\|\s*json\?\.error\?\.message/,
-      'expected setV2Error precedence: data.messageZh > error.messageZh > error.message',
+      /function getBookingV2RecoveryMessage\(response: V2AvailableSlotsResponse\)/,
+      'expected available-slots failures to flow through getBookingV2RecoveryMessage',
+    );
+    assert.match(
+      bookingPageSrc,
+      /response\?\.data\?\.messageZh, response\?\.error\?\.messageZh/,
+      'expected recovery helper to inspect data.messageZh before error.messageZh',
+    );
+    assert.match(
+      bookingPageSrc,
+      /return errorMessage \|\| BOOKING_V2_GENERIC_ERROR/,
+      'expected recovery helper to fall back from error.message to the generic Traditional-Chinese copy',
     );
   });
 

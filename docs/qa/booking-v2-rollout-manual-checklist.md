@@ -50,6 +50,9 @@
 - [ ] C-03 slots API 失敗時可 fallback
   - 操作：攔截 `/api/v2/activities/*/available-slots` 回 500
   - 預期：顯示 `booking-v2-error` + fallback 按鈕可切回 legacy
+- [ ] C-04 public plan → available-slots → draft contract 一致
+  - 操作：先 `GET /api/activities/:slug` 記錄 `activityId + plans[].id/slug/status + schedules[].id/planId/startAt`，再用同一組 public plan/schedule 依序呼叫 `/api/v2/activities/:activityId/available-slots` 與 `/api/v2/bookings/draft`
+  - 預期：若 public plan 仍被當成可預約選項，`available-slots` 與 `bookings/draft` 必須使用同一 formal `activity_plans` 來源成功驗證；若 formal plan 不存在，public DTO 不應再發出該方案為可預約選項
 
 ---
 

@@ -1,5 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.NEXT_PUBLIC_BASE_URL || 'http://127.0.0.1:3333';
+const managedWebServer = process.env.PLAYWRIGHT_NO_WEBSERVER === '1'
+  ? undefined
+  : {
+      command: 'PORT=3333 NODE_ENV=development VERCEL_ENV=preview NEXT_PUBLIC_BASE_URL=http://127.0.0.1:3333 NEXT_PUBLIC_APP_URL=http://127.0.0.1:3333 NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=playwright-local-anon npm run dev',
+      url: baseURL,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: 'pipe' as const,
+      stderr: 'pipe' as const,
+    };
+
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
@@ -7,8 +19,9 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: 'list',
+  webServer: managedWebServer,
   use: {
-    baseURL: process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3333',
+    baseURL,
     trace: 'on-first-retry',
   },
   projects: [

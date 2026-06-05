@@ -4,7 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { createOrder, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
+import { createOrder, fetchActivityByIdOrSlug, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
 import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
@@ -498,8 +498,42 @@ interface V2AvailableSlotsResponse {
   };
 }
 
+const BOOKING_V2_GENERIC_ERROR = '目前無法載入可預約日期，請稍後再試。';
+const BOOKING_V2_PLAN_RECOVERY_MESSAGE = '找不到此方案，請回到行程頁重新選擇。';
+const BOOKING_V2_PLAN_RECOVERY_REASONS = new Set(['PLAN_NOT_FOUND', 'AMBIGUOUS_PLAN', 'PLAN_INACTIVE', 'STALE_PLAN', 'UNRESOLVABLE_PLAN']);
+const BOOKING_V2_PLAN_RECOVERY_MESSAGES = [
+  'Activity plan not found',
+  'Activity plan is not active',
+  'Plan not found',
+  'Selected plan not found',
+  'Stale plan reference',
+];
+
+function getBookingV2RecoveryMessage(response: V2AvailableSlotsResponse) {
+  const explicitZh = [response?.data?.messageZh, response?.error?.messageZh]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .find(Boolean);
+  if (explicitZh) return explicitZh;
+
+  const reason = typeof response?.data?.reason === 'string' ? response.data.reason.trim().toUpperCase() : '';
+  if (reason && BOOKING_V2_PLAN_RECOVERY_REASONS.has(reason)) {
+    return BOOKING_V2_PLAN_RECOVERY_MESSAGE;
+  }
+
+  const errorMessage = typeof response?.error?.message === 'string' ? response.error.message.trim() : '';
+  if (
+    errorMessage &&
+    BOOKING_V2_PLAN_RECOVERY_MESSAGES.some((candidate) => errorMessage.toLowerCase() === candidate.toLowerCase())
+  ) {
+    return BOOKING_V2_PLAN_RECOVERY_MESSAGE;
+  }
+
+  return errorMessage || BOOKING_V2_GENERIC_ERROR;
+}
+
 function BookingInnerV2FlagShell() {
   const params = useParams();
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const activitySlug = params.activityId as string;
@@ -572,10 +606,19 @@ function BookingInnerV2FlagShell() {
 
   useEffect(() => {
     let mounted = true;
-    fetchActivityBySlug(activitySlug)
-      .then((data: Activity) => {
+    fetchActivityByIdOrSlug(activitySlug)
+      .then((resolved) => {
         if (!mounted) return;
-        setActivity(data);
+        setActivity(resolved.activity as Activity);
+        if (resolved.canonicalSlug && resolved.canonicalSlug !== activitySlug) {
+          const nextPath = `/booking/${encodeURIComponent(resolved.canonicalSlug)}`;
+          const nextQuery = searchParams.toString();
+          const nextUrl = nextQuery ? `${nextPath}?${nextQuery}` : nextPath;
+          if (typeof window !== 'undefined' && window.location.pathname !== nextPath) {
+            window.history.replaceState(window.history.state, '', nextUrl);
+          }
+          router.replace(nextUrl);
+        }
       })
       .catch((err: Error) => {
         if (!mounted) return;
@@ -584,7 +627,7 @@ function BookingInnerV2FlagShell() {
     return () => {
       mounted = false;
     };
-  }, [activitySlug]);
+  }, [activitySlug, router, searchParams]);
 
   const baseMinParticipants = Math.max(1, effectivePlanMeta?.minParticipants ?? activity?.minParticipants ?? 1);
   const baseMaxParticipants = effectivePlanMeta?.maxParticipants ?? activity?.maxParticipants ?? null;
@@ -644,10 +687,7 @@ function BookingInnerV2FlagShell() {
           setSlots([]);
           setDateAvailabilityOptions([]);
           setAvailabilityReason(json?.data?.reason || '');
-          // Issue #903: prefer the resolver's Traditional-Chinese messageZh
-          // (e.g. AMBIGUOUS_PLAN -> '此活動有多個方案,無法自動判斷,請從活動頁重新選擇明確方案')
-          // before falling back to the English message or the generic default.
-          setV2Error(json?.data?.messageZh || json?.error?.messageZh || json?.error?.message || '目前無法載入可預約日期，請稍後再試。');
+          setV2Error(getBookingV2RecoveryMessage(json));
           return;
         }
 
@@ -840,6 +880,7 @@ function BookingInnerV2FlagShell() {
   const canSubmit = Boolean(selectedSlotStartAt && contactName && contactPhone && contactEmail && agreed && !loading);
   const canGoStep3 = Boolean(contactName && contactPhone && contactEmail && agreed && !loading);
   const canConfirmPayment = Boolean(createdBookingId && canSubmit);
+  const recoveryHref = activity ? `/activities/${encodeURIComponent(activity.region)}/${encodeURIComponent(activity.slug)}#section-plan` : '/activities';
   const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
   const isOverCapacity = slots.length > 0 && guests > selectedCapacityLeft;
@@ -905,6 +946,13 @@ function BookingInnerV2FlagShell() {
           style={{ marginBottom: 16, background: '#fff4f4', border: '1px solid #f5c2c2', color: '#b42318', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}
         >
           ⚠️ {v2Error}
+          {!isLineContinuation && activity && (
+            <div style={{ marginTop: 10 }}>
+              <Link className="tp-link" data-testid="booking-v2-recovery-link" href={recoveryHref}>
+                回到行程頁重新選擇方案
+              </Link>
+            </div>
+          )}
           {isLineContinuation && (
             <p data-testid="booking-v2-line-fallback-state" style={{ color: 'var(--tp-muted)', margin: '10px 0 0' }}>
               LINE LIFF 延續流程維持 shared checkout/payment-init；不切換舊版流程。請重試，若持續失敗請回報 Correlation ID：
