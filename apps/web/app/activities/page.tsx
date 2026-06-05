@@ -1,6 +1,12 @@
 import { Suspense } from 'react';
 import ActivitiesContent from './ActivitiesContent';
+import { listPublishedActivitiesDb } from '../../src/lib/db.mjs';
 import type { Metadata } from 'next';
+
+// Issue #1249 — match the `/api/activities` cache window so the SSR HTML
+// for `/activities` is served from the edge cache for anonymous visitors
+// instead of round-tripping Supabase on every render.
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: '探索行程 | Midao 祕島',
@@ -39,12 +45,19 @@ const activitiesJsonLd = {
   ],
 };
 
-export default function ActivitiesPage() {
+export default async function ActivitiesPage() {
+  // Issue #1249 — server-side fetch so the first paint has cards. We
+  // hand the full unfiltered list to the client; client-side filters and
+  // search re-fetch through `/api/activities` as the operator types, but
+  // the initial render no longer has to wait for a Supabase round-trip.
+  // Fail soft: any error here just falls back to client-only fetch.
+  const initialActivities = await listPublishedActivitiesDb({ region: '', category: '', q: '' }).catch(() => undefined);
+
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(activitiesJsonLd) }} />
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666' }}>載入中⋯</div>}>
-        <ActivitiesContent />
+        <ActivitiesContent initialActivities={initialActivities} />
       </Suspense>
     </>
   );

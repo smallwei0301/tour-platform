@@ -24,7 +24,9 @@ export async function GET(request: Request) {
     res.headers.set('x-request-id', requestId);
     // #1249: public listing data — let Vercel Edge cache anonymous
     // responses so traveler navigations don't pay the function round
-    // trip every time. Error path stays uncached below.
+    // trip every time. Error path stays uncached below. The shared
+    // helper also defensively strips Authorization / Set-Cookie / admin
+    // headers so nothing personal can leak into a public cached body.
     applyPublicActivitiesCacheHeaders(res);
     return res;
   } catch (err) {
