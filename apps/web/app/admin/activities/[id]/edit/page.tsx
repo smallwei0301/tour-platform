@@ -9,6 +9,7 @@ import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/r
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
+import { addMinutesToHHMM } from '../../../../../src/lib/hhmm';
 
 // ── V2 方案型別（schedule modal 專用）─────────────────────
 interface V2ActivityPlan {
@@ -22,6 +23,10 @@ interface V2ActivityPlan {
   // per-date when needed.
   min_participants?: number;
   max_participants?: number;
+  // Issue #1213 — same precedence story for duration. The schedule's endAt
+  // is computed from startAt + duration_minutes when a plan is picked; the
+  // operator can still type over endHH after the seed.
+  duration_minutes?: number;
 }
 
 // ── Legacy 方案型別 ────────────────────────────────────────
@@ -124,14 +129,20 @@ interface Schedule {
 function AddScheduleModal({
   onClose, onAdded, activityId, availablePlans,
 }: { onClose: () => void; onAdded: () => void; activityId: string; availablePlans: V2ActivityPlan[] }) {
+  const DEFAULT_START_HH = '09:00';
   const [selectedDates,   setSelectedDates]   = useState<string[]>([]);
-  const [startHH,         setStartHH]         = useState('09:00');
-  const [endHH,           setEndHH]           = useState('13:00');
+  const [startHH,         setStartHH]         = useState(DEFAULT_START_HH);
   // Issue #1196: capacity/min defaults come from the selected V2 plan. When
   // exactly one plan is available it auto-applies, so we seed straight from
   // it; otherwise the seeded values get overwritten the moment the user
   // picks a plan (see useEffect below).
+  // Issue #1213 adds duration_minutes to the same precedence — endHH is
+  // seeded from `startHH + plan.duration_minutes` when the plan is known.
   const initialPlan = availablePlans.length === 1 ? availablePlans[0] : undefined;
+  const initialEndHH = initialPlan?.duration_minutes
+    ? addMinutesToHHMM(DEFAULT_START_HH, initialPlan.duration_minutes)
+    : '13:00';
+  const [endHH,           setEndHH]           = useState(initialEndHH);
   const [capacity,        setCapacity]        = useState(
     initialPlan?.max_participants ? String(initialPlan.max_participants) : '10',
   );
@@ -143,15 +154,20 @@ function AddScheduleModal({
   const [progress,        setProgress]        = useState('');
   const [err,             setErr]             = useState('');
 
-  // When the operator switches the plan dropdown (≥2 plans), re-seed the
-  // capacity / min participants fields with that plan's defaults. The
-  // operator can still type over them — Issue #1196 explicitly preserves
-  // per-schedule override capability on top of plan defaults.
+  // When the operator switches the plan dropdown (≥2 plans), re-seed:
+  //   - capacity / min participants (#1196)
+  //   - endHH from `startHH + duration_minutes` (#1213, option A — plan
+  //     drives endHH; later edits to startHH alone don't re-derive endHH
+  //     since the operator may have intentionally tuned it).
+  // Operators can still type over any of these fields.
   const selectedPlan = availablePlans.find((p) => p.id === planId);
   useEffect(() => {
     if (!selectedPlan) return;
     if (selectedPlan.max_participants) setCapacity(String(selectedPlan.max_participants));
     if (selectedPlan.min_participants) setMinParticipants(String(selectedPlan.min_participants));
+    if (selectedPlan.duration_minutes) {
+      setEndHH(addMinutesToHHMM(startHH, selectedPlan.duration_minutes));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
@@ -345,7 +361,15 @@ function AddScheduleModal({
                 border: '1px solid #bbf7d0',
                 padding: '8px 12px', borderRadius: 8, fontSize: 13,
               }}>
+                {/* Issue #1213: surface base_price next to the name so
+                    operators can sanity-check which plan they're booking
+                    to — especially helpful when names are similar. */}
                 將自動套用：{availablePlans[0].name}
+                {Number.isFinite(availablePlans[0].base_price) && (
+                  <span style={{ marginLeft: 6, color: '#15803d' }}>
+                    （每人 NT$ {availablePlans[0].base_price.toLocaleString()}）
+                  </span>
+                )}
               </div>
             </div>
           ) : (
@@ -357,6 +381,14 @@ function AddScheduleModal({
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
+              {/* Issue #1213: echo the chosen plan's price so the operator
+                  can verify they picked the right one. Empty span keeps
+                  the layout from jumping. */}
+              <span style={{ display: 'block', marginTop: 4, fontSize: 12, color: '#6b7280', minHeight: 16 }}>
+                {selectedPlan && Number.isFinite(selectedPlan.base_price)
+                  ? `每人 NT$ ${selectedPlan.base_price.toLocaleString()}`
+                  : ' '}
+              </span>
             </label>
           )}
 
