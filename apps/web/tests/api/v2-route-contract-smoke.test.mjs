@@ -18,7 +18,10 @@ test('available-slots route contract smoke: has validation + success/error envel
   assert.match(src, /export\s+async\s+function\s+getAvailableSlots\s*\(/);
   assert.match(src, /parseAndValidateParams\(/);
   assert.match(src, /code:\s*'VALIDATION_ERROR'/);
-  assert.match(src, /errorV2\('NOT_FOUND'/);
+  // #1237: NOT_FOUND for the "plan not found / not active" path is now
+  // produced by buildActivityPlanNotFoundResponse(...) so the traveler
+  // sees zh-TW copy. Other NOT_FOUND envelopes may still use errorV2.
+  assert.match(src, /buildActivityPlanNotFoundResponse\(/);
   assert.match(src, /successV2\(/);
   assert.match(src, /slots:\s*availability\.slots/);
   assert.match(src, /reason:\s*availability\.reasonCode/);
@@ -31,7 +34,9 @@ test('booking draft route contract smoke: has validation + stateful errors + suc
   assert.match(src, /export\s+async\s+function\s+POST\s*\(/);
   assert.match(src, /parseAndValidateBody\(/);
   assert.match(src, /errorV2\('VALIDATION_ERROR'/);
-  assert.match(src, /errorV2\('NOT_FOUND'/);
+  // #1237: same migration as above — plan-not-found NOT_FOUND envelope
+  // now flows through the shared helper.
+  assert.match(src, /buildActivityPlanNotFoundResponse\(/);
   assert.match(src, /effectiveGroupRule\.reasonCode === 'CAPACITY_EXCEEDED'/);
   assert.match(src, /errorV2\('SLOT_UNAVAILABLE'/);
   assert.match(src, /successV2\(/);

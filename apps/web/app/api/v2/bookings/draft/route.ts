@@ -60,6 +60,7 @@ import {
   normalizeBookingParticipants,
 } from '../../../../../src/lib/availability-v2/group-booking-rule';
 import { checkPlanScheduleDurationMismatch } from '../../../../../src/lib/availability-v2/plan-schedule-mismatch.mjs';
+import { buildActivityPlanNotFoundResponse } from '../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -556,15 +557,13 @@ export async function POST(request: NextRequest) {
     }
 
     if (planError || !planData) {
-      return Response.json(errorV2('NOT_FOUND', 'Activity plan not found'), {
-        status: 404,
-      });
+      const r = buildActivityPlanNotFoundResponse('PLAN_NOT_FOUND');
+      return Response.json(r.body, { status: r.status });
     }
 
     if (planData.status !== 'active') {
-      return Response.json(errorV2('NOT_FOUND', 'Activity plan is not active'), {
-        status: 404,
-      });
+      const r = buildActivityPlanNotFoundResponse('PLAN_NOT_ACTIVE');
+      return Response.json(r.body, { status: r.status });
     }
 
     // Extract guide_id and activity info

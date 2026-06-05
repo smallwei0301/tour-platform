@@ -25,6 +25,7 @@ import {
   type ActivityPlan,
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import { buildActivityPlanNotFoundResponse } from '../../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
 import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
@@ -356,17 +357,15 @@ export async function getAvailableSlots(
     }
 
     if (planError || !planData) {
-      return Response.json(errorV2('NOT_FOUND', 'Activity plan not found'), {
-        status: 404,
-      });
+      const r = buildActivityPlanNotFoundResponse('PLAN_NOT_FOUND');
+      return Response.json(r.body, { status: r.status });
     }
 
     const normalizedPlanStatus =
       typeof planData.status === 'string' ? planData.status.trim().toLowerCase() : null;
     if (normalizedPlanStatus && normalizedPlanStatus !== 'active') {
-      return Response.json(errorV2('NOT_FOUND', 'Activity plan is not active'), {
-        status: 404,
-      });
+      const r = buildActivityPlanNotFoundResponse('PLAN_NOT_ACTIVE');
+      return Response.json(r.body, { status: r.status });
     }
 
     // Extract guide_id from the nested activities relation

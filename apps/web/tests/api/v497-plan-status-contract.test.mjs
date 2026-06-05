@@ -66,10 +66,14 @@ describe('AC4.2: available-slots route — rejects non-active plan status', () =
 
   it('returns 404 when normalized plan status is inactive/archived/non-active', () => {
     const src = readFile('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
+    // #1237: the non-active branch now delegates to
+    // buildActivityPlanNotFoundResponse('PLAN_NOT_ACTIVE'), which hard-codes
+    // status: 404. Match either the historic inline `status: 404` or the new
+    // helper's `r.status` ((mapped to 404 by buildActivityPlanNotFoundResponse).
     const statusCheckRegion = src.match(
-      /if \(normalizedPlanStatus\s*&&\s*normalizedPlanStatus\s*!==\s*['"]active['"]\)\s*\{[\s\S]{0,180}status:\s*404[\s\S]{0,80}\}/
+      /if \(normalizedPlanStatus\s*&&\s*normalizedPlanStatus\s*!==\s*['"]active['"]\)\s*\{[\s\S]{0,260}(status:\s*404|status:\s*r\.status|buildActivityPlanNotFoundResponse\(\s*['"]PLAN_NOT_ACTIVE['"])[\s\S]{0,80}\}/
     );
-    assert.ok(statusCheckRegion, 'Must reject non-active normalized status with HTTP 404');
+    assert.ok(statusCheckRegion, 'Must reject non-active normalized status with HTTP 404 (inline or via buildActivityPlanNotFoundResponse)');
   });
 });
 
