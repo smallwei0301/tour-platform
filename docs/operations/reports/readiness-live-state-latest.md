@@ -1,28 +1,31 @@
-<!-- query_timestamp: 2026-06-06T07:09:42.603Z -->
+<!-- query_timestamp: 2026-06-06T12:33:11.320Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-06T07:09:42.603Z  
-**Commit SHA:** `b71fd00b9d7360ce9c7d959380b8f1f5b0587502`
+**Query timestamp:** 2026-06-06T12:33:11.320Z  
+**Commit SHA:** `47ffc3e69ec0edbefd4c25e76d56e59910c10a75`
 
 ---
 
-## Open PRs (1)
+## Open PRs (4)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | `claude/claudemd-primary-language` |
+| #1274 | [test(e2e): run GH-1257 browser E2E — conflict-override + guide-warning + single-day opening (#1273)](https://github.com/smallwei0301/tour-platform/pull/1274) | `claude/issue-1273-gh1257-e2e` |
+| #1272 | [chore(test): GH-1257 — remove unused dead-code helpers tzSafeWeekday & noonAnchorWeekday](https://github.com/smallwei0301/tour-platform/pull/1272) | `chore/issue-1257-remove-dead-helpers` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (22 total)
+## Open Issues (23 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (10)
+### P1 (9)
 
 | # | Title | Labels |
 |---|-------|--------|
@@ -30,17 +33,18 @@ _none_
 | #1267 | [[QA] Daily test checklist for recent merged PRs 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1267) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra |
 | #1263 | [[QA] Verify post-#1262 Admin conflict exception opening flow](https://github.com/smallwei0301/tour-platform/issues/1263) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1260 | [[QA] Verify late 2026-06-05 merged PRs after #1236 cutoff](https://github.com/smallwei0301/tour-platform/issues/1260) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, admin |
-| #1257 | [[Admin Booking V2] Implement conflict exception opening with helper prompt](https://github.com/smallwei0301/tour-platform/issues/1257) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, traveler-booking, booking-v2, admin |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:blocked, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, launch:post-first-payment |
 | #605 | [[Launch Content] Strict Andy Lee listing content gate before public exposure](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, type:docs, docs, status:awaiting-implementation, launch:first-payment-blocker |
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (11)
+### P2 (13)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1275 | [[Test Infra] Add focused Playwright E2E CI smoke for launch-critical browser regressions](https://github.com/smallwei0301/tour-platform/issues/1275) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, test-infra |
+| #1273 | [[QA] Run online Playwright E2E for GH-1257 conflict-override + guide-warning + single-day opening](https://github.com/smallwei0301/tour-platform/issues/1273) | priority:P2, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1266 | [[daily bug scan] tour-platform 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1266) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
 | #1265 | [[Ops] Refresh current issue priority routing after #1254 closure and #1121 label change](https://github.com/smallwei0301/tour-platform/issues/1265) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, infra, docs |
 | #1264 | [[Frontend Daily Check] 2026-06-06 lint fails with ESLint circular config error](https://github.com/smallwei0301/tour-platform/issues/1264) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
