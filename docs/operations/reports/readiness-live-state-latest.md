@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-06-06T12:33:11.320Z -->
+<!-- query_timestamp: 2026-06-06T18:31:47.826Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-06T12:33:11.320Z  
-**Commit SHA:** `47ffc3e69ec0edbefd4c25e76d56e59910c10a75`
+**Query timestamp:** 2026-06-06T18:31:47.826Z  
+**Commit SHA:** `460953f5450de88a96b0b65215a8573f7604b952`
 
 ---
 
-## Open PRs (4)
+## Open PRs (3)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | `claude/claudemd-primary-language` |
 | #1274 | [test(e2e): run GH-1257 browser E2E — conflict-override + guide-warning + single-day opening (#1273)](https://github.com/smallwei0301/tour-platform/pull/1274) | `claude/issue-1273-gh1257-e2e` |
 | #1272 | [chore(test): GH-1257 — remove unused dead-code helpers tzSafeWeekday & noonAnchorWeekday](https://github.com/smallwei0301/tour-platform/pull/1272) | `chore/issue-1257-remove-dead-helpers` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
@@ -73,6 +72,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | 2026-06-06 |
 | #1271 | [feat(admin): GH-1257 slice F — single-day opening in admin availability (TZ-safe)](https://github.com/smallwei0301/tour-platform/pull/1271) | 2026-06-06 |
 | #1270 | [feat(guide): GH-1257 slice D — surface conflict override warning in guide booking views](https://github.com/smallwei0301/tour-platform/pull/1270) | 2026-06-06 |
 | #1268 | [fix(booking-v2): align Step 3 payment UI with ECPay-only checkout + post-merge QA report](https://github.com/smallwei0301/tour-platform/pull/1268) | 2026-06-06 |
@@ -82,7 +82,6 @@ _none_
 | #1255 | [docs(ops): refresh current issue priority routing](https://github.com/smallwei0301/tour-platform/pull/1255) | 2026-06-05 |
 | #1253 | [fix(admin/seasons): add missing name column + map PGRST204 to actionable error (closes #1238)](https://github.com/smallwei0301/tour-platform/pull/1253) | 2026-06-05 |
 | #1252 | [perf(activities): SSR initial data + CDN cache + lazy prefetch (closes #1249)](https://github.com/smallwei0301/tour-platform/pull/1252) | 2026-06-05 |
-| #1251 | [perf(activities): public Cache-Control for /api/activities (refs #1249 criterion 2)](https://github.com/smallwei0301/tour-platform/pull/1251) | 2026-06-05 |
 
 ---
 
