@@ -8,6 +8,10 @@ Tour Platform (brand: **Midao / 祕島**) — a Taiwan local-guide tour marketpl
 
 All web copy, colors, and tone are governed by `BRAND_BOOK.md` — consult it before writing user-facing strings.
 
+## Language / 語言
+
+**繁體中文（Traditional Chinese）是本專案的主要輸出語言。** 預設用繁體中文進行：與使用者的對話回覆、寫入 repo 的維運／QA 文件、commit 說明，以及面向使用者的文案（後者仍以 `BRAND_BOOK.md` 為準）。技術識別字保留原文——程式碼、指令、檔名、API／欄位名稱、錯誤碼、log 訊息等不翻譯。程式碼註解沿用所在檔案的既有語言風格。使用者明確要求其他語言時，從其要求。
+
 ## Commands
 
 Node 22 is required and pinned (`.nvmrc` + `engines`). Run `npm install` once at the repo root (npm workspaces).
