@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-05T18:44:27.955Z -->
+<!-- query_timestamp: 2026-06-06T00:53:14.784Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-05T18:44:27.955Z  
-**Commit SHA:** `4f2b915b8eb4acc33a11cdb876c1d604a5a0bfc0`
+**Query timestamp:** 2026-06-06T00:53:14.784Z  
+**Commit SHA:** `5da2ac783f76521bd67aab8bb117005cefd7f7bd`
 
 ---
 
@@ -16,16 +16,17 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (18 total)
+## Open Issues (22 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (8)
+### P1 (9)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1267 | [[QA] Daily test checklist for recent merged PRs 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1267) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra |
 | #1263 | [[QA] Verify post-#1262 Admin conflict exception opening flow](https://github.com/smallwei0301/tour-platform/issues/1263) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1260 | [[QA] Verify late 2026-06-05 merged PRs after #1236 cutoff](https://github.com/smallwei0301/tour-platform/issues/1260) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, admin |
 | #1257 | [[Admin Booking V2] Implement conflict exception opening with helper prompt](https://github.com/smallwei0301/tour-platform/issues/1257) | triaged, type:feature, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, traveler-booking, booking-v2, admin |
@@ -35,10 +36,13 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (9)
+### P2 (12)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1266 | [[daily bug scan] tour-platform 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1266) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
+| #1265 | [[Ops] Refresh current issue priority routing after #1254 closure and #1121 label change](https://github.com/smallwei0301/tour-platform/issues/1265) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, infra, docs |
+| #1264 | [[Frontend Daily Check] 2026-06-06 lint fails with ESLint circular config error](https://github.com/smallwei0301/tour-platform/issues/1264) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
 | #1261 | [[Traveler Booking] Align Booking V2 payment method UI with checkout provider contract](https://github.com/smallwei0301/tour-platform/issues/1261) | triaged, type:bug, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, payments, booking-v2 |
 | #1235 | [[daily bug scan] tour-platform 2026-06-05](https://github.com/smallwei0301/tour-platform/issues/1235) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
 | #1175 | [[Post-Trip Ops] Automate review invitation sweep after delivery log](https://github.com/smallwei0301/tour-platform/issues/1175) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:blocked, orders, notifications, infra, launch:post-first-payment |
