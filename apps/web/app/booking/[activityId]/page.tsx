@@ -393,17 +393,14 @@ function BookingInnerLegacy() {
           {/* ── Step 3：付款 ── */}
           {step === 3 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
-              <h3>選擇付款方式</h3>
+              <h3>付款方式</h3>
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
-                  <input type="radio" name="payment" defaultChecked /> 💳 信用卡（Visa / Mastercard / JCB）
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--tp-border)', borderRadius: 10, padding: 12 }}>
-                  <input type="radio" name="payment" /> LINE Pay
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--tp-border)', borderRadius: 10, padding: 12 }}>
-                  <input type="radio" name="payment" /> ATM 虛擬帳號
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
+                  💳 信用卡（Visa / Mastercard / JCB）
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: 0 }}>
+                  確認後將前往 ECPay 安全付款頁，實際可用付款方式以付款頁顯示為準。
+                </p>
               </div>
               <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
@@ -1214,15 +1211,12 @@ function BookingInnerV2FlagShell() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>付款確認（建立預約後）</h3>
               <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
-                  <input type="radio" name="payment" defaultChecked /> 💳 信用卡（Visa / Mastercard / JCB）
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--tp-border)', borderRadius: 10, padding: 12 }}>
-                  <input type="radio" name="payment" /> LINE Pay
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid var(--tp-border)', borderRadius: 10, padding: 12 }}>
-                  <input type="radio" name="payment" /> ATM 虛擬帳號
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
+                  💳 信用卡（Visa / Mastercard / JCB）
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: 0 }}>
+                  確認後將前往 ECPay 安全付款頁，實際可用付款方式以付款頁顯示為準。
+                </p>
               </div>
               <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
               <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
