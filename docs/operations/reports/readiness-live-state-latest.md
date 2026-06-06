@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-06T00:53:14.784Z -->
+<!-- query_timestamp: 2026-06-06T07:09:42.603Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-06T00:53:14.784Z  
-**Commit SHA:** `5da2ac783f76521bd67aab8bb117005cefd7f7bd`
+**Query timestamp:** 2026-06-06T07:09:42.603Z  
+**Commit SHA:** `b71fd00b9d7360ce9c7d959380b8f1f5b0587502`
 
 ---
 
@@ -22,10 +22,11 @@
 
 _none_
 
-### P1 (9)
+### P1 (10)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
 | #1267 | [[QA] Daily test checklist for recent merged PRs 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1267) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra |
 | #1263 | [[QA] Verify post-#1262 Admin conflict exception opening flow](https://github.com/smallwei0301/tour-platform/issues/1263) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1260 | [[QA] Verify late 2026-06-05 merged PRs after #1236 cutoff](https://github.com/smallwei0301/tour-platform/issues/1260) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, admin |
@@ -36,14 +37,13 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (12)
+### P2 (11)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1266 | [[daily bug scan] tour-platform 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1266) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
 | #1265 | [[Ops] Refresh current issue priority routing after #1254 closure and #1121 label change](https://github.com/smallwei0301/tour-platform/issues/1265) | triaged, priority:P2, agent:backlog, owner:ai-agent, status:ready, type:docs, infra, docs |
 | #1264 | [[Frontend Daily Check] 2026-06-06 lint fails with ESLint circular config error](https://github.com/smallwei0301/tour-platform/issues/1264) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:ready, traveler-booking |
-| #1261 | [[Traveler Booking] Align Booking V2 payment method UI with checkout provider contract](https://github.com/smallwei0301/tour-platform/issues/1261) | triaged, type:bug, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, traveler-booking, payments, booking-v2 |
 | #1235 | [[daily bug scan] tour-platform 2026-06-05](https://github.com/smallwei0301/tour-platform/issues/1235) | triaged, type:bug, priority:P2, qa, owner:ai-agent, status:needs-repro, traveler-booking |
 | #1175 | [[Post-Trip Ops] Automate review invitation sweep after delivery log](https://github.com/smallwei0301/tour-platform/issues/1175) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:blocked, orders, notifications, infra, launch:post-first-payment |
 | #1106 | [[Post-Trip Ops] Implement completion, review invitation, guide report, and payout eligibility workflow](https://github.com/smallwei0301/tour-platform/issues/1106) | triaged, type:feature, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, payments, orders, notifications, launch:post-first-payment |
@@ -69,6 +69,9 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1271 | [feat(admin): GH-1257 slice F — single-day opening in admin availability (TZ-safe)](https://github.com/smallwei0301/tour-platform/pull/1271) | 2026-06-06 |
+| #1270 | [feat(guide): GH-1257 slice D — surface conflict override warning in guide booking views](https://github.com/smallwei0301/tour-platform/pull/1270) | 2026-06-06 |
+| #1268 | [fix(booking-v2): align Step 3 payment UI with ECPay-only checkout + post-merge QA report](https://github.com/smallwei0301/tour-platform/pull/1268) | 2026-06-06 |
 | #1262 | [feat(admin): add conflict exception opening flow](https://github.com/smallwei0301/tour-platform/pull/1262) | 2026-06-05 |
 | #1259 | [fix(admin): recover post-trip summary API](https://github.com/smallwei0301/tour-platform/pull/1259) | 2026-06-05 |
 | #1258 | [perf(activities/[region]): drop force-dynamic + add SSR initial data (follow-up to #1249)](https://github.com/smallwei0301/tour-platform/pull/1258) | 2026-06-05 |
@@ -76,9 +79,6 @@ _none_
 | #1253 | [fix(admin/seasons): add missing name column + map PGRST204 to actionable error (closes #1238)](https://github.com/smallwei0301/tour-platform/pull/1253) | 2026-06-05 |
 | #1252 | [perf(activities): SSR initial data + CDN cache + lazy prefetch (closes #1249)](https://github.com/smallwei0301/tour-platform/pull/1252) | 2026-06-05 |
 | #1251 | [perf(activities): public Cache-Control for /api/activities (refs #1249 criterion 2)](https://github.com/smallwei0301/tour-platform/pull/1251) | 2026-06-05 |
-| #1250 | [feat(availability-v2): wire describePreviewReason through getCanonicalReasonCopy (closes #1212)](https://github.com/smallwei0301/tour-platform/pull/1250) | 2026-06-05 |
-| #1248 | [fix(booking-v2): zh-TW messageZh for "Activity plan not found / not active" (refs #1237 criterion 4)](https://github.com/smallwei0301/tour-platform/pull/1248) | 2026-06-05 |
-| #1247 | [chore(toolchain): pin eslint-config-next via root overrides to prevent circular config regression (closes #1233)](https://github.com/smallwei0301/tour-platform/pull/1247) | 2026-06-05 |
 
 ---
 
