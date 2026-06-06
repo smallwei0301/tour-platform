@@ -16,15 +16,32 @@ type Booking = {
   id: string; guestName: string; maskedEmail: string; scheduleDate: string | null;
   planId: string | null; tourTitle: string; partySize: number; status: string;
   paymentStatus: string; totalTwd: number; createdAt: string;
+  hasConflictOverride: boolean;
+};
+
+// Guide-safe conflict override shape.
+// Privacy note: snapshot.adminNote is intentionally absent — never forward to guides.
+type ConflictOverride = {
+  reason: string | null;
+  requiresHelper: boolean;
+  helperStatus: string | null;
+  guideNote: string | null;
+  startAt: string | null;
+  endAt: string | null;
 };
 
 type BookingDetail = Booking & {
   guestPhone: string; paidAt: string | null; adminNote: string | null;
   schedule: { date: string; endAt: string; planId: string; capacity: number; bookedCount: number } | null;
+  conflictOverride: ConflictOverride | null;
 };
 
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: '待付款', confirmed: '已確認', cancelled: '已取消', refunded: '已退款',
+};
+
+const HELPER_STATUS_LABELS: Record<string, string> = {
+  required: '需要協助', assigned: '已指派', not_needed: '不需要',
 };
 
 function StatusPill({ status }: { status: string }) {
@@ -36,6 +53,68 @@ function StatusPill({ status }: { status: string }) {
     }}>
       {STATUS_LABELS[status] || status}
     </span>
+  );
+}
+
+/** Compact warning badge shown in the list row when conflict override is present. */
+function ConflictBadge() {
+  return (
+    <span
+      aria-label="管理者例外開放"
+      title="此訂單為管理者例外開放的時間衝突場次"
+      style={{
+        display: 'inline-block', padding: '1px 6px', borderRadius: 4, fontSize: 10, fontWeight: 700,
+        background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', marginLeft: 4,
+        verticalAlign: 'middle', lineHeight: '18px',
+      }}
+    >
+      ⚠ 例外開放
+    </span>
+  );
+}
+
+/** Warning section rendered inside the detail modal. */
+function ConflictOverrideWarning({ override }: { override: ConflictOverride }) {
+  return (
+    <div
+      role="note"
+      aria-label="管理者例外開放通知"
+      style={{
+        background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 14px',
+        marginBottom: 8,
+      }}
+    >
+      <div style={{ fontWeight: 700, color: '#b45309', fontSize: 13, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        ⚠ 管理者例外開放
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 13 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span style={{ color: '#92400e', width: 72, flexShrink: 0 }}>原因</span>
+          <span style={{ fontWeight: 500 }}>{override.reason || '—'}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span style={{ color: '#92400e', width: 72, flexShrink: 0 }}>時間衝突</span>
+          <span style={{ fontWeight: 500 }}>是（此場次與其他行程時段重疊）</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <span style={{ color: '#92400e', width: 72, flexShrink: 0 }}>需要助手</span>
+          <span style={{ fontWeight: 500 }}>
+            {override.requiresHelper ? '是' : '否'}
+            {override.requiresHelper && override.helperStatus && (
+              <span style={{ marginLeft: 6, color: '#6b7280', fontSize: 12 }}>
+                （{HELPER_STATUS_LABELS[override.helperStatus] || override.helperStatus}）
+              </span>
+            )}
+          </span>
+        </div>
+        {override.guideNote && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <span style={{ color: '#92400e', width: 72, flexShrink: 0 }}>給導遊的備注</span>
+            <span style={{ fontWeight: 500 }}>{override.guideNote}</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -148,7 +227,16 @@ export default function GuideBookingsPage() {
         </>
       ),
     },
-    { key: 'tour', header: '行程', cell: (b) => b.tourTitle },
+    {
+      key: 'tour',
+      header: '行程',
+      cell: (b) => (
+        <>
+          {b.tourTitle}
+          {b.hasConflictOverride && <ConflictBadge />}
+        </>
+      ),
+    },
     {
       key: 'date',
       header: '場次日期',
@@ -251,6 +339,11 @@ export default function GuideBookingsPage() {
                   <h3 id="booking-detail-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>訂單詳情</h3>
                   <button ref={closeButtonRef} aria-label="關閉" onClick={closeDetail} style={{ background: 'none', border: 'none', fontSize: 18, cursor: 'pointer' }}>✕</button>
                 </div>
+
+                {/* Conflict override warning — shown only when admin opened a conflicting slot */}
+                {selected.conflictOverride && (
+                  <ConflictOverrideWarning override={selected.conflictOverride} />
+                )}
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 14 }}>
                   <InfoRow label="旅客姓名" value={selected.guestName} />
