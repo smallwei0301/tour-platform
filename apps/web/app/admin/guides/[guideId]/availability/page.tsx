@@ -301,7 +301,16 @@ export default function GuideAvailabilityPage() {
 
       // single-day: derive weekday from date, set effective_from=effective_to=single_date
       const isSingleDay = rule_mode === 'single-day';
-      const weekdayFromSingleDate = single_date ? new Date(`${single_date}T00:00:00+08:00`).getDay() : rulePayload.weekday;
+      // TZ-safe weekday derivation aligned to resolver's getWeekdayInTimezone (Asia/Taipei).
+      // Use noon-anchor (T12:00:00+08:00) to avoid midnight rollover in non-Taiwan TZ browsers:
+      // noon +08:00 = 04:00 UTC → same calendar day in any timezone, getDay() returns correct Taiwan weekday.
+      const weekdayFromSingleDate = single_date
+        ? (() => {
+            const d = new Date(`${single_date}T12:00:00+08:00`);
+            const shortDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', weekday: 'short' }).format(d);
+            return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[shortDay] ?? 0;
+          })()
+        : rulePayload.weekday;
       const finalPayload = {
         ...rulePayload,
         weekday: isSingleDay ? weekdayFromSingleDate : rulePayload.weekday,

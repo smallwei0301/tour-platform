@@ -41,10 +41,16 @@ test('admin availability weekday select is disabled in single-day mode', async (
   assert.match(src, /disabled=\{ruleForm\.rule_mode\s*===\s*['"]single-day['"]\}/, 'weekday select must be disabled when rule_mode is single-day');
 });
 
-test('admin handleSaveRule derives weekday from single_date when single-day mode', async () => {
+test('admin handleSaveRule derives weekday from single_date when single-day mode (TZ-safe)', async () => {
   const src = await readSource(ADMIN_PAGE);
-  // Must derive weekday using getDay() from single_date
-  assert.match(src, /getDay\(\)/, 'saveRule must use getDay() to derive weekday from single_date');
+  // Must use TZ-safe weekday derivation: noon-anchor (T12:00:00+08:00) with Intl.DateTimeFormat Asia/Taipei
+  // This replaces the TZ-fragile `new Date(T00:00:00+08:00).getDay()` that produced wrong weekday
+  // under non-Taiwan host TZ (UTC/America/Los_Angeles), causing 0 slots on the target date (AC2 bug).
+  assert.match(
+    src,
+    /T12:00:00\+08:00|Intl\.DateTimeFormat[^)]*Asia\/Taipei/,
+    'saveRule must use TZ-safe derivation: noon-anchor (T12:00:00+08:00) or Intl.DateTimeFormat with Asia/Taipei'
+  );
   // Must set effective_from and effective_to equal to single_date when single-day
   assert.match(
     src,
