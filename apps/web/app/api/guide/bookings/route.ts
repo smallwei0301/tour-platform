@@ -29,13 +29,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const filterScheduleId = url.searchParams.get('scheduleId');
 
-  // Get orders with schedule info
+  // Get orders with schedule info and booking_id for conflict override lookup
   let query = supabase
     .from('orders')
     .select(`
       id, contact_name, contact_email, contact_phone,
       people_count, status, total_twd, paid_at, created_at, admin_note,
-      activity_id, schedule_id,
+      activity_id, schedule_id, booking_id,
       activity_schedules!orders_schedule_id_fkey(start_at, plan_id)
     `)
     .in('activity_id', activityIds)
@@ -49,6 +49,25 @@ export async function GET(req: Request) {
   const { data: orders, error } = await query;
 
   if (error) return Response.json(fail('SERVER_ERROR', error.message), { status: 500 });
+
+  // Fetch conflict_override_snapshot for orders that have a booking_id
+  const bookingIds = (orders || [])
+    .map((o: any) => o.booking_id)
+    .filter((id: any) => Boolean(id));
+
+  // Build a map of booking_id -> hasConflictOverride (boolean compact marker for list view)
+  const conflictOverrideMap: Record<string, boolean> = {};
+  if (bookingIds.length > 0) {
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('id, conflict_override_snapshot')
+      .in('id', bookingIds);
+    for (const booking of bookings || []) {
+      if (booking.conflict_override_snapshot) {
+        conflictOverrideMap[booking.id] = true;
+      }
+    }
+  }
 
   const result = (orders || []).map((o: any) => {
     const schedule = Array.isArray(o.activity_schedules) ? o.activity_schedules[0] : o.activity_schedules;
@@ -66,6 +85,7 @@ export async function GET(req: Request) {
       paymentStatus: o.paid_at ? 'paid' : 'unpaid',
       totalTwd: o.total_twd,
       createdAt: o.created_at,
+      hasConflictOverride: o.booking_id ? (conflictOverrideMap[o.booking_id] ?? false) : false,
     };
   });
 

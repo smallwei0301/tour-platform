@@ -6,6 +6,20 @@ async function getSupabase() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+// Guide-safe conflict override fields — never expose adminNote/internal fields.
+function extractGuideConflictOverride(snapshot: any): object | null {
+  if (!snapshot || typeof snapshot !== 'object') return null;
+  return {
+    reason: snapshot.reason ?? null,
+    requiresHelper: snapshot.requiresHelper ?? false,
+    helperStatus: snapshot.helperStatus ?? null,
+    guideNote: snapshot.guideNote ?? null,
+    startAt: snapshot.startAt ?? null,
+    endAt: snapshot.endAt ?? null,
+    // adminNote is intentionally omitted — guide-facing only
+  };
+}
+
 export async function GET(
   req: Request,
   context: { params: Promise<{ bookingId: string }> },
@@ -24,7 +38,7 @@ export async function GET(
     .select(`
       id, contact_name, contact_email, contact_phone,
       people_count, status, total_twd, paid_at, created_at, admin_note,
-      activity_id, schedule_id,
+      activity_id, schedule_id, booking_id,
       activity_schedules!orders_schedule_id_fkey(start_at, end_at, plan_id, capacity, booked_count)
     `)
     .eq('id', bookingId || '')
@@ -49,6 +63,20 @@ export async function GET(
     ? order.activity_schedules[0]
     : order.activity_schedules;
 
+  // Fetch conflict_override_snapshot from bookings table if booking_id is present.
+  // Only guide-safe fields are forwarded; adminNote is stripped in extractGuideConflictOverride.
+  let conflictOverride: object | null = null;
+  if (order.booking_id) {
+    const { data: booking } = await supabase
+      .from('bookings')
+      .select('conflict_override_snapshot')
+      .eq('id', order.booking_id)
+      .single();
+    if (booking?.conflict_override_snapshot) {
+      conflictOverride = extractGuideConflictOverride(booking.conflict_override_snapshot);
+    }
+  }
+
   return Response.json(ok({
     id: order.id,
     guestName: order.contact_name || '未知',
@@ -69,5 +97,6 @@ export async function GET(
       capacity: schedule.capacity,
       bookedCount: schedule.booked_count,
     } : null,
+    conflictOverride,  // null when no conflict override; guide-safe fields only
   }));
 }
