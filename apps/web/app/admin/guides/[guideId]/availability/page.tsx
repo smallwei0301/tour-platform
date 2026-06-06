@@ -155,6 +155,8 @@ export default function GuideAvailabilityPage() {
 
   // Rule form state
   const [ruleForm, setRuleForm] = useState({
+    rule_mode: 'weekly' as 'weekly' | 'single-day',
+    single_date: '',
     weekday: 1,
     start_time_local: '09:00',
     end_time_local: '17:00',
@@ -162,6 +164,8 @@ export default function GuideAvailabilityPage() {
     slot_interval_minutes: 60,
     buffer_before_minutes: 15,
     buffer_after_minutes: 15,
+    effective_from: '',
+    effective_to: '',
     is_active: true,
     activity_id: '' as string,
     activity_plan_id: null as string | null,
@@ -244,7 +248,10 @@ export default function GuideAvailabilityPage() {
       const boundActivity = rule.activity_plan_id
         ? v2Activities.find((a) => a.plans.some((p) => p.id === rule.activity_plan_id))
         : null;
+      const isSingleDay = Boolean(rule.effective_from && rule.effective_to && rule.effective_from === rule.effective_to);
       setRuleForm({
+        rule_mode: isSingleDay ? 'single-day' : 'weekly',
+        single_date: isSingleDay ? (rule.effective_from || '') : '',
         weekday: rule.weekday,
         start_time_local: rule.start_time_local,
         end_time_local: rule.end_time_local,
@@ -252,6 +259,8 @@ export default function GuideAvailabilityPage() {
         slot_interval_minutes: rule.slot_interval_minutes,
         buffer_before_minutes: rule.buffer_before_minutes,
         buffer_after_minutes: rule.buffer_after_minutes,
+        effective_from: rule.effective_from || '',
+        effective_to: rule.effective_to || '',
         is_active: rule.is_active,
         activity_id: boundActivity?.id ?? '',
         activity_plan_id: rule.activity_plan_id ?? null,
@@ -259,6 +268,8 @@ export default function GuideAvailabilityPage() {
     } else {
       setEditingRule(null);
       setRuleForm({
+        rule_mode: 'weekly',
+        single_date: '',
         weekday: 1,
         start_time_local: '09:00',
         end_time_local: '17:00',
@@ -266,6 +277,8 @@ export default function GuideAvailabilityPage() {
         slot_interval_minutes: 60,
         buffer_before_minutes: 15,
         buffer_after_minutes: 15,
+        effective_from: '',
+        effective_to: '',
         is_active: true,
         activity_id: '',
         activity_plan_id: null,
@@ -284,14 +297,32 @@ export default function GuideAvailabilityPage() {
         : `/api/v2/admin/guides/${guideId}/availability-rules`;
       const method = editingRule ? 'PUT' : 'POST';
 
-      const { activity_id: _activityId, ...rulePayload } = ruleForm;
+      const { activity_id: _activityId, rule_mode, single_date, ...rulePayload } = ruleForm;
+
+      // single-day: derive weekday from date, set effective_from=effective_to=single_date
+      const isSingleDay = rule_mode === 'single-day';
+      // TZ-safe weekday derivation aligned to resolver's getWeekdayInTimezone (Asia/Taipei).
+      // Use noon-anchor (T12:00:00+08:00) to avoid midnight rollover in non-Taiwan TZ browsers:
+      // noon +08:00 = 04:00 UTC → same calendar day in any timezone, getDay() returns correct Taiwan weekday.
+      const weekdayFromSingleDate = single_date
+        ? (() => {
+            const d = new Date(`${single_date}T12:00:00+08:00`);
+            const shortDay = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Taipei', weekday: 'short' }).format(d);
+            return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[shortDay] ?? 0;
+          })()
+        : rulePayload.weekday;
+      const finalPayload = {
+        ...rulePayload,
+        weekday: isSingleDay ? weekdayFromSingleDate : rulePayload.weekday,
+        activity_plan_id: ruleForm.activity_plan_id || null,
+        effective_from: isSingleDay ? single_date : (rulePayload.effective_from || null),
+        effective_to: isSingleDay ? single_date : (rulePayload.effective_to || null),
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-        body: JSON.stringify({
-          ...rulePayload,
-          activity_plan_id: ruleForm.activity_plan_id || null,
-        }),
+        body: JSON.stringify(finalPayload),
       });
       const json = await res.json();
 
@@ -559,12 +590,36 @@ export default function GuideAvailabilityPage() {
                 </div>
               )}
               <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開放模式</label>
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                  <label style={{ fontSize: 13 }}>
+                    <input type="radio" checked={ruleForm.rule_mode === 'weekly'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'weekly', single_date: '' })} /> 每週重複
+                  </label>
+                  <label style={{ fontSize: 13 }}>
+                    <input type="radio" checked={ruleForm.rule_mode === 'single-day'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'single-day' })} /> 單日開放
+                  </label>
+                </div>
+              </div>
+              {ruleForm.rule_mode === 'single-day' && (
+                <div>
+                  <label htmlFor="admin-avail-single-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
+                  <input
+                    id="admin-avail-single-date"
+                    type="date"
+                    value={ruleForm.single_date}
+                    onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                  />
+                </div>
+              )}
+              <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
                 <select
                   aria-label="星期"
                   value={ruleForm.weekday}
                   onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
                   style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
+                  disabled={ruleForm.rule_mode === 'single-day'}
                 >
                   {WEEKDAY_LABELS.map((label, i) => (
                     <option key={i} value={i}>
@@ -846,6 +901,11 @@ export default function GuideAvailabilityPage() {
                               >
                                 <span>
                                   {rule.start_time_local}-{rule.end_time_local}
+                                  {rule.effective_from && rule.effective_to && rule.effective_from === rule.effective_to ? (
+                                    <span style={{ display: 'block', fontSize: 10, color: '#7c3aed', marginTop: 1 }}>
+                                      單日：{rule.effective_from}
+                                    </span>
+                                  ) : null}
                                   {rule.activity_plans?.name ? (
                                     <span style={{ display: 'block', fontSize: 10, color: '#6b7280', marginTop: 1 }}>
                                       {rule.activity_plans.name}
