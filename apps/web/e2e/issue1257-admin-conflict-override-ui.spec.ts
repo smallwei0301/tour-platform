@@ -261,32 +261,41 @@ test('GH-1257 RED: blocked conflict slot exposes exception modal, validates requ
   await page.waitForLoadState('domcontentloaded');
   await expect(page.getByRole('heading', { name: '導遊時間管理' })).toBeVisible();
 
+  // The 例外開放此場 CTA only renders for a blocked slot once a preview plan is
+  // selected (it needs previewPlanId/previewActivity/previewPlan to build the
+  // override payload). The original spec was authored before #1273 ran it in a
+  // real browser, so this required step was missing.
+  await page.getByLabel('預覽方案篩選').selectOption(PLAN_ID);
+
   await expect(page.getByText('既有衝突')).toBeVisible();
   await expect(page.getByRole('button', { name: '例外開放此場' })).toBeVisible();
 
   await page.getByRole('button', { name: '例外開放此場' }).click();
 
-  await expect(page.getByRole('heading', { name: '例外開放衝突時段' })).toBeVisible();
-  await expect(page.getByText(GUIDE_NAME)).toBeVisible();
-  await expect(page.getByText(ACTIVITY_TITLE)).toBeVisible();
-  await expect(page.getByText(PLAN_NAME)).toBeVisible();
-  await expect(page.getByText('這不是一般新增場次')).toBeVisible();
-  await expect(page.getByLabel('例外開放原因')).toBeVisible();
-  await expect(page.getByLabel('需要助手')).toBeVisible();
-  await expect(page.getByLabel('助手狀態')).toBeVisible();
-  await expect(page.getByLabel('導遊可見備註')).toBeVisible();
-  await expect(page.getByLabel('內部管理備註')).toBeVisible();
+  // Scope to the dialog: guide/activity/plan names and 需要助手 also appear in
+  // the page header + preview slot card, so unscoped getByText is ambiguous.
+  const dialog = page.getByRole('dialog', { name: '例外開放衝突時段' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText(GUIDE_NAME)).toBeVisible();
+  await expect(dialog.getByText(ACTIVITY_TITLE)).toBeVisible();
+  await expect(dialog.getByText(PLAN_NAME)).toBeVisible();
+  await expect(dialog.getByText('這不是一般新增場次')).toBeVisible();
+  await expect(dialog.getByLabel('例外開放原因')).toBeVisible();
+  await expect(dialog.getByLabel('需要助手')).toBeVisible();
+  await expect(dialog.getByLabel('助手狀態')).toBeVisible();
+  await expect(dialog.getByLabel('導遊可見備註')).toBeVisible();
+  await expect(dialog.getByLabel('內部管理備註')).toBeVisible();
 
-  await page.getByRole('button', { name: '確認例外開放' }).click();
-  await expect(page.getByText('請先填寫例外開放原因')).toBeVisible();
+  await dialog.getByRole('button', { name: '確認例外開放' }).click();
+  await expect(dialog.getByText('請先填寫例外開放原因')).toBeVisible();
   expect(api.conflictOverridePosts).toHaveLength(0);
 
-  await page.getByLabel('例外開放原因').fill('VIP 客訴補救');
-  await page.getByLabel('需要助手').check();
-  await page.getByLabel('助手狀態').selectOption('required');
-  await page.getByLabel('導遊可見備註').fill('導遊已知悉');
-  await page.getByLabel('內部管理備註').fill('後台核准');
-  await page.getByRole('button', { name: '確認例外開放' }).click();
+  await dialog.getByLabel('例外開放原因').fill('VIP 客訴補救');
+  await dialog.getByLabel('需要助手').check();
+  await dialog.getByLabel('助手狀態').selectOption('required');
+  await dialog.getByLabel('導遊可見備註').fill('導遊已知悉');
+  await dialog.getByLabel('內部管理備註').fill('後台核准');
+  await dialog.getByRole('button', { name: '確認例外開放' }).click();
 
   await expect.poll(() => api.conflictOverridePosts.length).toBe(1);
   expect(api.conflictOverridePosts[0]).toMatchObject({
