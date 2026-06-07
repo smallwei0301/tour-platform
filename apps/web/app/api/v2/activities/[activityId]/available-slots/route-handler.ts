@@ -27,6 +27,7 @@ import {
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import { buildActivityPlanNotFoundResponse } from '../../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
+import { serializeConflictOverrideForPublic } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
 import type { ActivityPlanSeason } from '../../../../../../src/lib/availability-v2/effective-availability-resolver.ts';
 import { buildDateAvailabilitySummary } from '../../../../../../src/lib/availability-v2/date-availability-summary.ts';
@@ -578,6 +579,15 @@ export async function getAvailableSlots(
       groupedRuleFailuresByDate: availability.diagnostics.groupedRuleFailuresByDate,
     });
 
+    // Strip admin-only conflict override fields at the PUBLIC API boundary.
+    // The evaluator core returns the full internal snapshot (needed for draft/audit paths);
+    // we strip here so travelers never see adminNote / createdByAdminEmail.
+    const publicSlots = availability.slots.map((slot) =>
+      slot.conflictOverride != null
+        ? { ...slot, conflictOverride: serializeConflictOverrideForPublic(slot.conflictOverride as any) }
+        : slot
+    );
+
     // Return response per API spec
     return Response.json(
       successV2({
@@ -594,7 +604,7 @@ export async function getAvailableSlots(
           minParticipants: planData.min_participants,
           maxParticipants: planData.max_participants,
         },
-        slots: availability.slots,
+        slots: publicSlots,
         dateAvailability,
         dates: dateAvailability,
         reason: availability.reasonCode,

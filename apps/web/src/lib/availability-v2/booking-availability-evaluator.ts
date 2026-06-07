@@ -17,7 +17,7 @@ import {
 } from './effective-availability-resolver.ts';
 import {
   findMatchingConflictOverride,
-  serializeConflictOverrideForPublic,
+  serializeConflictOverrideForClient,
   type GuideSlotConflictOverride,
 } from './conflict-override.ts';
 import {
@@ -296,7 +296,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
             bookingType: input.plan.booking_type,
             isAvailable: true,
             canonicalState: 'allowed_with_admin_override',
-            conflictOverride: serializeConflictOverrideForPublic(matchedConflictOverride),
+            conflictOverride: serializeConflictOverrideForClient(matchedConflictOverride),
           },
         ];
       } else {
