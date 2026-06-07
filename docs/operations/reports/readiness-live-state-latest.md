@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-07T00:58:16.847Z -->
+<!-- query_timestamp: 2026-06-07T07:29:31.418Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-07T00:58:16.847Z  
-**Commit SHA:** `6fe49caa99f31e5859e0dd44f04e359ca5d9ee1b`
+**Query timestamp:** 2026-06-07T07:29:31.418Z  
+**Commit SHA:** `5ca2b8aed93a12a5c3fcb0da916b1b8d277d13fd`
 
 ---
 
@@ -28,9 +28,9 @@ _none_
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1277 | [[Security/Privacy] Public available-slots leaks admin-only conflict-override fields (adminNote, createdByAdminEmail)](https://github.com/smallwei0301/tour-platform/issues/1277) | triaged, type:bug, priority:P1 |
 | #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
 | #1267 | [[QA] Daily test checklist for recent merged PRs 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1267) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra |
-| #1263 | [[QA] Verify post-#1262 Admin conflict exception opening flow](https://github.com/smallwei0301/tour-platform/issues/1263) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2, admin |
 | #1260 | [[QA] Verify late 2026-06-05 merged PRs after #1236 cutoff](https://github.com/smallwei0301/tour-platform/issues/1260) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, admin |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:blocked, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, traveler-booking, launch:post-first-payment |
