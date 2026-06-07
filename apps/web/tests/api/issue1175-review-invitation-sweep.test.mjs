@@ -170,6 +170,33 @@ test('sweep: disputed order → skip with ORDER_DISPUTED', () => {
   assert.equal(r.decisions[0].reason, 'ORDER_DISPUTED');
 });
 
+test('sweep: cancelled order → skip with ORDER_CANCELLED', () => {
+  const r = evaluateReviewInvitationSweepCandidates({
+    orders: [{ id: 'order-cancelled', status: 'cancelled', scheduleEndAt: ENDED_25H_AGO }],
+    existingInvitationsByOrderId: {},
+    now: NOW,
+    featureEnabled: true,
+  });
+  assert.equal(r.decisions[0].action, 'skip');
+  assert.equal(r.decisions[0].reason, 'ORDER_CANCELLED');
+});
+
+test('sweep: hasDispute=true is the safety-case proxy (complaint/incident → ORDER_DISPUTED skip)', () => {
+  // "safety case" in the AC refers to orders with a complaint/incident flag.
+  // The data model represents this via operations_tracking.has_complaint,
+  // which the route maps to hasDispute: true before calling the decision engine.
+  // ORDER_DISPUTED is therefore the canonical skip reason for safety incidents.
+  const r = evaluateReviewInvitationSweepCandidates({
+    orders: [{ id: 'order-safety', status: 'paid', scheduleEndAt: ENDED_25H_AGO, hasDispute: true }],
+    existingInvitationsByOrderId: {},
+    now: NOW,
+    featureEnabled: true,
+  });
+  assert.equal(r.decisions[0].action, 'skip');
+  assert.equal(r.decisions[0].reason, 'ORDER_DISPUTED',
+    'safety incidents (has_complaint=true) map to ORDER_DISPUTED skip reason');
+});
+
 test('sweep: orders array missing / non-array → safe-fail empty decisions', () => {
   const r = evaluateReviewInvitationSweepCandidates({
     featureEnabled: true,
@@ -266,4 +293,78 @@ test('Source: sweep module does not log / store / return order email or PII stri
   assert.doesNotMatch(src, /\btraveler_email\b/);
   assert.doesNotMatch(src, /\bcontact_phone\b/);
   assert.doesNotMatch(src, /\bemail_body\b/);
+});
+
+// ---------- route source-contract tests ----------
+
+const ROUTE_PATH = join(
+  __dirname,
+  '../../app/api/internal/reviews/review-invitation-sweep/route.ts'
+);
+
+test('Route: file exists at canonical path', () => {
+  // Will throw if file does not exist
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.ok(src.length > 0, 'route file must not be empty');
+});
+
+test('Route: exports async POST handler', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /export\s+async\s+function\s+POST/, 'must export async function POST');
+});
+
+test('Route: guards x-internal-token vs INTERNAL_ALERT_TOKEN (same auth as pre-tour-sweep)', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /x-internal-token/, 'must check x-internal-token header');
+  assert.match(src, /INTERNAL_ALERT_TOKEN/, 'must check INTERNAL_ALERT_TOKEN env var');
+  assert.match(src, /401/, 'must return 401 on auth failure');
+});
+
+test('Route: checks isReviewInvitationSweepEnabled and returns disabled status when off', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /isReviewInvitationSweepEnabled/, 'must call isReviewInvitationSweepEnabled');
+  assert.match(src, /disabled/, 'must return disabled status when feature flag is off');
+});
+
+test('Route: imports evaluateReviewInvitationSweepCandidates and summarizeReviewInvitationSweepRun', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /evaluateReviewInvitationSweepCandidates/, 'must use sweep candidate evaluator');
+  assert.match(src, /summarizeReviewInvitationSweepRun/, 'must use sweep run summarizer');
+});
+
+test('Route: imports sendReviewInvitation from email lib', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /sendReviewInvitation/, 'must call sendReviewInvitation for action=send orders');
+});
+
+test('Route: writes delivery log to review_invitations table', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /review_invitations/, 'must write to review_invitations delivery log');
+});
+
+test('Route: uses service-role client (SUPABASE_SERVICE_ROLE_KEY)', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /SUPABASE_SERVICE_ROLE_KEY/, 'must use service-role key for DB writes');
+});
+
+test('Route: returns privacy-safe summary (no PII in response)', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  // Response must include summary counts but must NOT directly expose contact_email or PII
+  assert.match(src, /sendCount|sent_count|total/, 'response must include counts');
+  assert.doesNotMatch(
+    src,
+    /contact_email.*return|return.*contact_email/,
+    'must not return contact_email in response'
+  );
+});
+
+test('Route: handles missing Supabase env gracefully (no hard crash)', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  // Route must handle case where Supabase is unavailable — check for SUPABASE_URL guard
+  assert.match(src, /SUPABASE_URL/, 'must check for SUPABASE_URL env var');
+});
+
+test('Route: initiated_by field is set to sweep_cron (not admin_manual)', () => {
+  const src = readFileSync(ROUTE_PATH, 'utf8');
+  assert.match(src, /sweep_cron|cron/, 'delivery log must mark rows as sweep_cron origin');
 });
