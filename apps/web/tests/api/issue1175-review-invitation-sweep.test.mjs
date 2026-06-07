@@ -170,6 +170,33 @@ test('sweep: disputed order → skip with ORDER_DISPUTED', () => {
   assert.equal(r.decisions[0].reason, 'ORDER_DISPUTED');
 });
 
+test('sweep: cancelled order → skip with ORDER_CANCELLED', () => {
+  const r = evaluateReviewInvitationSweepCandidates({
+    orders: [{ id: 'order-cancelled', status: 'cancelled', scheduleEndAt: ENDED_25H_AGO }],
+    existingInvitationsByOrderId: {},
+    now: NOW,
+    featureEnabled: true,
+  });
+  assert.equal(r.decisions[0].action, 'skip');
+  assert.equal(r.decisions[0].reason, 'ORDER_CANCELLED');
+});
+
+test('sweep: hasDispute=true is the safety-case proxy (complaint/incident → ORDER_DISPUTED skip)', () => {
+  // "safety case" in the AC refers to orders with a complaint/incident flag.
+  // The data model represents this via operations_tracking.has_complaint,
+  // which the route maps to hasDispute: true before calling the decision engine.
+  // ORDER_DISPUTED is therefore the canonical skip reason for safety incidents.
+  const r = evaluateReviewInvitationSweepCandidates({
+    orders: [{ id: 'order-safety', status: 'paid', scheduleEndAt: ENDED_25H_AGO, hasDispute: true }],
+    existingInvitationsByOrderId: {},
+    now: NOW,
+    featureEnabled: true,
+  });
+  assert.equal(r.decisions[0].action, 'skip');
+  assert.equal(r.decisions[0].reason, 'ORDER_DISPUTED',
+    'safety incidents (has_complaint=true) map to ORDER_DISPUTED skip reason');
+});
+
 test('sweep: orders array missing / non-array → safe-fail empty decisions', () => {
   const r = evaluateReviewInvitationSweepCandidates({
     featureEnabled: true,
