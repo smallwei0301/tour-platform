@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import {
   findMatchingConflictOverride,
   serializeConflictOverrideForClient,
+  serializeConflictOverrideForPublic,
 } from '../../src/lib/availability-v2/conflict-override.ts';
 import {
   applyBookingConflictOverrideColumnFallback,
@@ -237,7 +238,7 @@ test('GH-1067 RED: disabled/wrong override does not weaken conflict block', () =
   assert.equal(wrongTime.reasonCode, 'BOOKING_CONFLICT');
 });
 
-test('GH-1067 RED: serializeConflictOverrideForClient preserves complete override metadata for draft snapshots', () => {
+test('GH-1067: serializeConflictOverrideForClient (internal) preserves complete override metadata for draft/audit snapshots', () => {
   const out = serializeConflictOverrideForClient(overrideRecord());
   assert.deepEqual(out, {
     id: 'ovr-1',
@@ -372,4 +373,73 @@ test('GH-1067 RED: migration source contract formalizes override table, booking 
   assert.match(migration, /alter table public\.bookings[\s\S]*add column if not exists conflict_override_snapshot\s+jsonb/i);
   assert.match(migration, /comment on table public\.guide_slot_conflict_overrides/i);
   assert.match(migration, /must not be treated as ordinary availability/i);
+});
+
+// GH-1277 regression tests — public available-slots must NOT expose admin-only fields
+test('GH-1277 RED: serializeConflictOverrideForPublic MUST NOT include adminNote or createdByAdminEmail', () => {
+  const out = serializeConflictOverrideForPublic(overrideRecord());
+  assert.ok(!('adminNote' in out), 'adminNote must not be present in public output');
+  assert.ok(!('createdByAdminEmail' in out), 'createdByAdminEmail must not be present in public output');
+});
+
+test('GH-1277 RED: serializeConflictOverrideForPublic preserves traveler-safe fields', () => {
+  const out = serializeConflictOverrideForPublic(overrideRecord());
+  assert.equal(out.id, 'ovr-1');
+  assert.equal(out.reason, 'VIP 客訴補救，主管核准此場例外開放');
+  assert.equal(out.requiresHelper, true);
+  assert.equal(out.helperStatus, 'required');
+  assert.equal(out.guideNote, '導遊已知悉需協調半日衝突');
+});
+
+// GH-1277-v2 regression tests — strip ONLY at public boundary, evaluator core must preserve full fields
+test('GH-1277-v2 RED: evaluator core produces FULL conflict override snapshot (adminNote + createdByAdminEmail preserved for draft/audit)', () => {
+  // This test verifies the evaluator returns the COMPLETE override so the internal draft/audit
+  // path can write conflict_override_snapshot with all admin-only fields intact.
+  // On commit ac376e55 this FAILS because the evaluator calls serializeConflictOverrideForPublic (strips adminNote/createdByAdminEmail).
+  const out = evaluateBookingAvailability(
+    baseInput({
+      conflictOverrides: [overrideRecord()],
+    }),
+  );
+
+  assert.equal(out.slots.length, 1, 'expected exactly one allowed_with_admin_override slot');
+  assert.equal(out.slots[0].canonicalState, 'allowed_with_admin_override');
+
+  const co = out.slots[0].conflictOverride;
+  assert.ok(co !== null && co !== undefined, 'conflictOverride must be present on the slot');
+  // These fields MUST be present at the evaluator-output level for draft/audit snapshot integrity.
+  assert.ok('adminNote' in co, 'adminNote must be present in evaluator output (needed for conflict_override_snapshot)');
+  assert.ok('createdByAdminEmail' in co, 'createdByAdminEmail must be present in evaluator output (needed for conflict_override_snapshot)');
+  assert.equal(co.adminNote, '後台人工核准', 'adminNote must match the stored override value');
+  assert.equal(co.createdByAdminEmail, 'admin@example.com', 'createdByAdminEmail must match the stored override value');
+});
+
+test('GH-1277-v2: source contract — evaluator uses full (client) serializer; public route-handler applies strip', () => {
+  const evaluatorSrc = readFileSync(
+    join(REPO_ROOT, 'src/lib/availability-v2/booking-availability-evaluator.ts'),
+    'utf8',
+  );
+  const publicRouteSrc = readFileSync(
+    AVAILABLE_SLOTS_ROUTE,
+    'utf8',
+  );
+
+  // Evaluator must use the FULL serializer so internal draft/audit paths get complete fields.
+  assert.match(
+    evaluatorSrc,
+    /serializeConflictOverrideForClient/,
+    'evaluator must use the full (client) serializer to preserve admin fields for draft/audit',
+  );
+  assert.doesNotMatch(
+    evaluatorSrc,
+    /serializeConflictOverrideForPublic/,
+    'evaluator must NOT call the public (stripped) serializer — strip happens at the boundary, not in the core',
+  );
+
+  // Public route-handler must be the one applying the strip at the API boundary.
+  assert.match(
+    publicRouteSrc,
+    /serializeConflictOverrideForPublic/,
+    'public available-slots route-handler must apply the strip at the public API boundary',
+  );
 });
