@@ -34,6 +34,15 @@ export interface ConflictOverrideClientSnapshot {
   createdByAdminEmail?: string | null;
 }
 
+/** Public (traveler-visible) snapshot — admin-only fields stripped. */
+export interface ConflictOverridePublicSnapshot {
+  id: string;
+  reason: string;
+  requiresHelper: boolean;
+  helperStatus: ConflictOverrideHelperStatus;
+  guideNote?: string | null;
+}
+
 export function isActiveConflictOverride(
   override: Pick<GuideSlotConflictOverride, 'status'> | null | undefined,
 ): boolean {
@@ -75,5 +84,22 @@ export function serializeConflictOverrideForClient(
     adminNote: override.admin_note ?? null,
     createdAt: override.created_at ?? null,
     createdByAdminEmail: override.created_by_admin_email ?? null,
+  };
+}
+
+/**
+ * Public serializer for traveler-visible available-slots output.
+ * Strips admin-only fields (adminNote, createdByAdminEmail) that must not
+ * be exposed to unauthenticated travelers.
+ */
+export function serializeConflictOverrideForPublic(
+  override: GuideSlotConflictOverride,
+): ConflictOverridePublicSnapshot {
+  return {
+    id: override.id,
+    reason: override.reason,
+    requiresHelper: Boolean(override.requires_helper),
+    helperStatus: override.helper_status,
+    guideNote: override.guide_note ?? null,
   };
 }

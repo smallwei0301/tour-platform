@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import {
   findMatchingConflictOverride,
   serializeConflictOverrideForClient,
+  serializeConflictOverrideForPublic,
 } from '../../src/lib/availability-v2/conflict-override.ts';
 import {
   applyBookingConflictOverrideColumnFallback,
@@ -237,7 +238,7 @@ test('GH-1067 RED: disabled/wrong override does not weaken conflict block', () =
   assert.equal(wrongTime.reasonCode, 'BOOKING_CONFLICT');
 });
 
-test('GH-1067 RED: serializeConflictOverrideForClient preserves complete override metadata for draft snapshots', () => {
+test('GH-1067: serializeConflictOverrideForClient (internal) preserves complete override metadata for draft/audit snapshots', () => {
   const out = serializeConflictOverrideForClient(overrideRecord());
   assert.deepEqual(out, {
     id: 'ovr-1',
@@ -372,4 +373,33 @@ test('GH-1067 RED: migration source contract formalizes override table, booking 
   assert.match(migration, /alter table public\.bookings[\s\S]*add column if not exists conflict_override_snapshot\s+jsonb/i);
   assert.match(migration, /comment on table public\.guide_slot_conflict_overrides/i);
   assert.match(migration, /must not be treated as ordinary availability/i);
+});
+
+// GH-1277 regression tests — public available-slots must NOT expose admin-only fields
+test('GH-1277 RED: serializeConflictOverrideForPublic MUST NOT include adminNote or createdByAdminEmail', () => {
+  const out = serializeConflictOverrideForPublic(overrideRecord());
+  assert.ok(!('adminNote' in out), 'adminNote must not be present in public output');
+  assert.ok(!('createdByAdminEmail' in out), 'createdByAdminEmail must not be present in public output');
+});
+
+test('GH-1277 RED: serializeConflictOverrideForPublic preserves traveler-safe fields', () => {
+  const out = serializeConflictOverrideForPublic(overrideRecord());
+  assert.equal(out.id, 'ovr-1');
+  assert.equal(out.reason, 'VIP 客訴補救，主管核准此場例外開放');
+  assert.equal(out.requiresHelper, true);
+  assert.equal(out.helperStatus, 'required');
+  assert.equal(out.guideNote, '導遊已知悉需協調半日衝突');
+});
+
+test('GH-1277 RED: public available-slots evaluator uses stripped serializer (source contract)', () => {
+  const src = readFileSync(
+    join(REPO_ROOT, 'src/lib/availability-v2/booking-availability-evaluator.ts'),
+    'utf8',
+  );
+  assert.match(src, /serializeConflictOverrideForPublic/, 'evaluator must use the public (stripped) serializer');
+  assert.doesNotMatch(
+    src,
+    /serializeConflictOverrideForClient/,
+    'evaluator must NOT use the internal (full) serializer for public output',
+  );
 });
