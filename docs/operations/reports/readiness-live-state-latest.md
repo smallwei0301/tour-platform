@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-07T07:29:31.418Z -->
+<!-- query_timestamp: 2026-06-07T12:38:32.548Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-07T07:29:31.418Z  
-**Commit SHA:** `5ca2b8aed93a12a5c3fcb0da916b1b8d277d13fd`
+**Query timestamp:** 2026-06-07T12:38:32.548Z  
+**Commit SHA:** `0fb193ea2a5130d61f744c97df32ccda94bc5686`
 
 ---
 
@@ -28,7 +28,7 @@ _none_
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1277 | [[Security/Privacy] Public available-slots leaks admin-only conflict-override fields (adminNote, createdByAdminEmail)](https://github.com/smallwei0301/tour-platform/issues/1277) | triaged, type:bug, priority:P1 |
+| #1279 | [[QA] Verify post-#1278 available-slots conflict-override privacy boundary](https://github.com/smallwei0301/tour-platform/issues/1279) | triaged, priority:P1, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
 | #1267 | [[QA] Daily test checklist for recent merged PRs 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1267) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra |
 | #1260 | [[QA] Verify late 2026-06-05 merged PRs after #1236 cutoff](https://github.com/smallwei0301/tour-platform/issues/1260) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, admin |
@@ -72,6 +72,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1278 | [fix(security): strip admin-only conflict-override fields at public available-slots boundary (Closes #1277)](https://github.com/smallwei0301/tour-platform/pull/1278) | 2026-06-07 |
 | #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | 2026-06-06 |
 | #1271 | [feat(admin): GH-1257 slice F — single-day opening in admin availability (TZ-safe)](https://github.com/smallwei0301/tour-platform/pull/1271) | 2026-06-06 |
 | #1270 | [feat(guide): GH-1257 slice D — surface conflict override warning in guide booking views](https://github.com/smallwei0301/tour-platform/pull/1270) | 2026-06-06 |
@@ -81,7 +82,6 @@ _none_
 | #1258 | [perf(activities/[region]): drop force-dynamic + add SSR initial data (follow-up to #1249)](https://github.com/smallwei0301/tour-platform/pull/1258) | 2026-06-05 |
 | #1255 | [docs(ops): refresh current issue priority routing](https://github.com/smallwei0301/tour-platform/pull/1255) | 2026-06-05 |
 | #1253 | [fix(admin/seasons): add missing name column + map PGRST204 to actionable error (closes #1238)](https://github.com/smallwei0301/tour-platform/pull/1253) | 2026-06-05 |
-| #1252 | [perf(activities): SSR initial data + CDN cache + lazy prefetch (closes #1249)](https://github.com/smallwei0301/tour-platform/pull/1252) | 2026-06-05 |
 
 ---
 
