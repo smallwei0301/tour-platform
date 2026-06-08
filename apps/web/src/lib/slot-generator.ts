@@ -91,7 +91,7 @@ export interface SerializedSlot {
 
 export interface SlotGeneratorInput {
   guideId: string;
-  activityPlanId: string;
+  activityPlanId: string | null;
   dateFrom: string; // "YYYY-MM-DD"
   dateTo: string; // "YYYY-MM-DD"
   timezone: string;
@@ -287,6 +287,38 @@ export function formatDateWithTimezone(date: Date, timezone: string): string {
   }
 
   return `${year}-${month}-${day}T${hour}:${minute}:${second}${offset}`;
+}
+
+/**
+ * Format a time slot as a human-readable range label in the given timezone.
+ *
+ * GH-1289: Shared helper reusable by Slice B (guide UI) and any consumer that
+ * needs a localised "HH:MM – HH:MM" display string.
+ *
+ * Examples (Asia/Taipei, UTC+8):
+ *   slot 01:00-03:00 UTC → "09:00 – 10:30" for Asia/Taipei, durationMinutes=90
+ *
+ * @param startAt  UTC Date (or ISO string) for the slot start
+ * @param endAt    UTC Date (or ISO string) for the slot end
+ * @param timezone IANA timezone identifier (e.g. "Asia/Taipei"). Defaults to "Asia/Taipei".
+ * @returns        "HH:MM – HH:MM" formatted in the target timezone, using 24-hour clock.
+ */
+export function formatSlotRangeLabel(
+  startAt: Date | string,
+  endAt: Date | string,
+  timezone: string = 'Asia/Taipei'
+): string {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const startDate = typeof startAt === 'string' ? new Date(startAt) : startAt;
+  const endDate = typeof endAt === 'string' ? new Date(endAt) : endAt;
+  const startStr = fmt.format(startDate).replace(/^24:/, '00:');
+  const endStr = fmt.format(endDate).replace(/^24:/, '00:');
+  return `${startStr} – ${endStr}`;
 }
 
 /**

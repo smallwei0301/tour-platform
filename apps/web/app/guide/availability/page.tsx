@@ -9,6 +9,7 @@ import {
   describeRuleSeasonConflict,
   type UiActiveSeasonSummary,
 } from '../../../src/lib/availability-v2/canonical-availability-ui';
+import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -55,6 +56,7 @@ type GuideActivityPlanOption = {
   activityTitle: string;
   planId: string;
   planName: string;
+  durationMinutes: number | null;
   minParticipants: number | null;
   maxParticipants: number | null;
   isYearRound?: boolean | null;
@@ -83,6 +85,8 @@ export default function GuideAvailabilityPage() {
   const [editingBlackout, setEditingBlackout] = useState<BlackoutDate | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // AC1: track whether guide manually edited the interval (to avoid overwriting on plan switch)
+  const [intervalManuallyEdited, setIntervalManuallyEdited] = useState(false);
 
   // Rule form state
   const [ruleForm, setRuleForm] = useState({
@@ -176,6 +180,7 @@ export default function GuideAvailabilityPage() {
       const selectedPlan = activityPlanOptions.find((opt) => opt.planId === (rule.activity_plan_id || ''));
       const isSingleDay = Boolean(rule.effective_from && rule.effective_to && rule.effective_from === rule.effective_to);
       setEditingRule(rule);
+      setIntervalManuallyEdited(false); // existing rule: treat saved value as the baseline
       setRuleForm({
         activity_id: selectedPlan?.activityId || '',
         activity_plan_id: rule.activity_plan_id || '',
@@ -194,6 +199,7 @@ export default function GuideAvailabilityPage() {
       });
     } else {
       setEditingRule(null);
+      setIntervalManuallyEdited(false); // new rule: not manually edited yet
       setRuleForm({
         activity_id: '',
         activity_plan_id: '',
@@ -390,6 +396,24 @@ export default function GuideAvailabilityPage() {
     return acc;
   }, {} as Record<string, PreviewSlot[]>);
 
+  // AC3: derive buffer note from rules matching the preview plan (section-level hint)
+  const previewBufferNote = (() => {
+    const matchingRules = rules.filter((r) =>
+      r.is_active && (r.activity_plan_id === null || r.activity_plan_id === previewPlanId || !previewPlanId)
+    );
+    const maxBuffer = matchingRules.reduce((max, r) => {
+      const b = Math.max(r.buffer_before_minutes || 0, r.buffer_after_minutes || 0);
+      return b > max ? b : max;
+    }, 0);
+    if (maxBuffer === 0) return null;
+    const beforeMax = matchingRules.reduce((max, r) => Math.max(max, r.buffer_before_minutes || 0), 0);
+    const afterMax = matchingRules.reduce((max, r) => Math.max(max, r.buffer_after_minutes || 0), 0);
+    if (beforeMax === afterMax && beforeMax > 0) return `前後${beforeMax}分鐘緩衝`;
+    if (beforeMax > 0 && afterMax > 0) return `前${beforeMax}分鐘、後${afterMax}分鐘緩衝`;
+    if (beforeMax > 0) return `前${beforeMax}分鐘緩衝`;
+    return `後${afterMax}分鐘緩衝`;
+  })();
+
   const btn = (bg: string, color: string, border = 'none') =>
     ({
       padding: '8px 16px',
@@ -562,7 +586,18 @@ export default function GuideAvailabilityPage() {
             <select
               aria-label="方案"
               value={ruleForm.activity_plan_id}
-              onChange={(e) => setRuleForm({ ...ruleForm, activity_plan_id: e.target.value })}
+              onChange={(e) => {
+                const newPlanId = e.target.value;
+                const planOption = activityPlanOptions.find((opt) => opt.planId === newPlanId);
+                // AC1: for new rules, auto-default interval to plan's durationMinutes if not manually edited
+                const shouldDefaultInterval =
+                  !editingRule && !intervalManuallyEdited && planOption?.durationMinutes != null;
+                setRuleForm({
+                  ...ruleForm,
+                  activity_plan_id: newPlanId,
+                  ...(shouldDefaultInterval ? { slot_interval_minutes: planOption!.durationMinutes! } : {}),
+                });
+              }}
               style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
               disabled={!ruleForm.activity_id}
             >
@@ -661,7 +696,10 @@ export default function GuideAvailabilityPage() {
                 min="15"
                 step="15"
                 value={ruleForm.slot_interval_minutes}
-                onChange={(e) => setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) })}
+                onChange={(e) => {
+                  setIntervalManuallyEdited(true); // AC1: guide manually set interval — do not auto-override on plan switch
+                  setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) });
+                }}
                 style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
               />
             </div>
@@ -684,6 +722,13 @@ export default function GuideAvailabilityPage() {
               />
             </div>
           </FormGrid>
+          {/* AC2: existing-rule mismatch warning */}
+          {editingRule && selectedRulePlan?.durationMinutes != null &&
+            ruleForm.slot_interval_minutes !== selectedRulePlan.durationMinutes && (
+            <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', color: '#92400e', fontSize: 13 }}>
+              ⚠️ 注意：目前設定的時段間隔（{ruleForm.slot_interval_minutes} 分鐘）與方案時長（{selectedRulePlan.durationMinutes} 分鐘）不一致。若要對齊方案時長，請手動更新間隔。
+            </div>
+          )}
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
             <input
               type="checkbox"
@@ -1020,6 +1065,9 @@ export default function GuideAvailabilityPage() {
                 {previewPlan && (
                   <div style={{ marginBottom: 10, fontSize: 12, color: '#374151' }}>
                     預覽方案：{previewPlan.planName}（{formatParticipants(previewPlan.minParticipants, previewPlan.maxParticipants)}）
+                    {previewBufferNote && (
+                      <span style={{ marginLeft: 8, color: '#6b7280' }}>・{previewBufferNote}</span>
+                    )}
                   </div>
                 )}
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
@@ -1059,7 +1107,8 @@ export default function GuideAvailabilityPage() {
                                   fontWeight: 500,
                                 }}
                               >
-                                {new Date(slot.startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}
+                                {/* AC3: show full range using formatSlotRangeLabel (e.g. 09:00 – 15:00) */}
+                                {formatSlotRangeLabel(slot.startAt, slot.endAt, 'Asia/Taipei')}
                                 {slot.minParticipants && `・${slot.minParticipants}人成團`}
                               </div>
                             ))}

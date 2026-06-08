@@ -10,6 +10,7 @@ import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
 import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
 import { track } from '../../../src/lib/track';
+import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
 
 // ── 型別 ──────────────────────────────────────────────────────
 interface Schedule {
@@ -1086,7 +1087,17 @@ function BookingInnerV2FlagShell() {
               <div style={{ minHeight: 44, display: 'flex', alignItems: 'center', marginBottom: 12, padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, fontSize: 14 }}>
                 {slotsLoading && '載入中…'}
                 {!slotsLoading && slots.length === 0 && `${selectedDate}（此日期目前無可預約名額）`}
-                {!slotsLoading && slots.length > 0 && `${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
+                {!slotsLoading && slots.length > 0 && (
+                  <>
+                    {`${selectedDate}（可預約，剩餘 ${selectedCapacityLeft}）`}
+                    {/* AC4: show range label parity with guide preview using formatSlotRangeLabel */}
+                    {selectedSlot?.endAt && (
+                      <span style={{ marginLeft: 8, fontWeight: 600, color: 'var(--tp-primary)' }}>
+                        {formatSlotRangeLabel(selectedSlot.startAt, selectedSlot.endAt)}
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
               {!slotsLoading && isOverCapacity && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
