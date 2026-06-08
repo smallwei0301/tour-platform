@@ -1,33 +1,33 @@
-<!-- query_timestamp: 2026-06-07T18:31:56.280Z -->
+<!-- query_timestamp: 2026-06-08T00:58:51.329Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-07T18:31:56.280Z  
-**Commit SHA:** `672af99e57a9e4927901041acc8cb0a0027a6a00`
+**Query timestamp:** 2026-06-08T00:58:51.329Z  
+**Commit SHA:** `f47333c377180c2fcfe7e57a2d500a8bd419a505`
 
 ---
 
-## Open PRs (3)
+## Open PRs (2)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1274 | [test(e2e): run GH-1257 browser E2E — conflict-override + guide-warning + single-day opening (#1273)](https://github.com/smallwei0301/tour-platform/pull/1274) | `claude/issue-1273-gh1257-e2e` |
-| #1272 | [chore(test): GH-1257 — remove unused dead-code helpers tzSafeWeekday & noonAnchorWeekday](https://github.com/smallwei0301/tour-platform/pull/1272) | `chore/issue-1257-remove-dead-helpers` |
+| #1285 | [fix(guide-payout): align guide-facing payout estimates with settlement hold guards (GH-1284)](https://github.com/smallwei0301/tour-platform/pull/1285) | `kanban/issue-1284-guide-payout-hold-alignment` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (25 total)
+## Open Issues (26 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (10)
+### P1 (11)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1284 | [[Guide Payout] Align guide-facing payout estimates with settlement hold guards](https://github.com/smallwei0301/tour-platform/issues/1284) | triaged, type:bug, priority:P1, qa, guide-dashboard, owner:ai-agent, status:ready, payments |
 | #1283 | [[QA] Verify post-#1282 review invitation sweep manual smoke](https://github.com/smallwei0301/tour-platform/issues/1283) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, orders, notifications, infra, launch:post-first-payment |
 | #1279 | [[QA] Verify post-#1278 available-slots conflict-override privacy boundary](https://github.com/smallwei0301/tour-platform/issues/1279) | triaged, priority:P1, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
@@ -77,13 +77,13 @@ _none_
 | #1282 | [feat(post-trip): automate review invitation sweep (closes #1175)](https://github.com/smallwei0301/tour-platform/pull/1282) | 2026-06-07 |
 | #1278 | [fix(security): strip admin-only conflict-override fields at public available-slots boundary (Closes #1277)](https://github.com/smallwei0301/tour-platform/pull/1278) | 2026-06-07 |
 | #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | 2026-06-06 |
+| #1274 | [test(e2e): run GH-1257 browser E2E — conflict-override + guide-warning + single-day opening (#1273)](https://github.com/smallwei0301/tour-platform/pull/1274) | 2026-06-08 |
+| #1272 | [chore(test): GH-1257 — remove unused dead-code helpers tzSafeWeekday & noonAnchorWeekday](https://github.com/smallwei0301/tour-platform/pull/1272) | 2026-06-08 |
 | #1271 | [feat(admin): GH-1257 slice F — single-day opening in admin availability (TZ-safe)](https://github.com/smallwei0301/tour-platform/pull/1271) | 2026-06-06 |
 | #1270 | [feat(guide): GH-1257 slice D — surface conflict override warning in guide booking views](https://github.com/smallwei0301/tour-platform/pull/1270) | 2026-06-06 |
 | #1268 | [fix(booking-v2): align Step 3 payment UI with ECPay-only checkout + post-merge QA report](https://github.com/smallwei0301/tour-platform/pull/1268) | 2026-06-06 |
 | #1262 | [feat(admin): add conflict exception opening flow](https://github.com/smallwei0301/tour-platform/pull/1262) | 2026-06-05 |
 | #1259 | [fix(admin): recover post-trip summary API](https://github.com/smallwei0301/tour-platform/pull/1259) | 2026-06-05 |
-| #1258 | [perf(activities/[region]): drop force-dynamic + add SSR initial data (follow-up to #1249)](https://github.com/smallwei0301/tour-platform/pull/1258) | 2026-06-05 |
-| #1255 | [docs(ops): refresh current issue priority routing](https://github.com/smallwei0301/tour-platform/pull/1255) | 2026-06-05 |
 
 ---
 
