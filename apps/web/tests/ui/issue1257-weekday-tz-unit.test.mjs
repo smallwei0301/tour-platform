@@ -15,66 +15,6 @@ function oldGetDay(single_date) {
   return new Date(`${single_date}T00:00:00+08:00`).getDay();
 }
 
-/**
- * NEW (TZ-safe) derivation — must match resolver's getWeekdayInTimezone.
- * Uses noon-anchor to avoid midnight rollover regardless of host TZ.
- */
-function tzSafeWeekday(single_date) {
-  const d = new Date(`${single_date}T12:00:00+08:00`);
-  const day = parseInt(
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Taipei',
-      weekday: 'short',
-    }).format(d) === 'Sun' ? '0' :
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Taipei',
-      weekday: 'long',
-    }).format(d) === 'Monday' ? '1' :
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Taipei',
-      weekday: 'long',
-    }).format(d) === 'Tuesday' ? '2' :
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Taipei',
-      weekday: 'long',
-    }).format(d) === 'Wednesday' ? '3' :
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Taipei',
-      weekday: 'long',
-    }).format(d) === 'Thursday' ? '4' :
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Taipei',
-      weekday: 'long',
-    }).format(d) === 'Friday' ? '5' : '6',
-    10
-  );
-  return day;
-}
-
-/**
- * FINAL TZ-safe derivation — simpler, matches exactly what page.tsx will use:
- * new Date(`${single_date}T12:00:00+08:00`).getDay()
- * This is safe because noon in +08:00 is still the same calendar day in UTC
- * (noon +08:00 = 04:00 UTC, no rollover).
- */
-function noonAnchorWeekday(single_date) {
-  // Use Intl for determinism regardless of process TZ
-  const d = new Date(`${single_date}T12:00:00+08:00`);
-  const shortDay = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Taipei',
-    weekday: 'narrow',
-  }).format(d);
-  // Map to 0-6 as JS getDay() does
-  return ['S', 'M', 'T', 'W', 'T', 'F', 'S'].indexOf(shortDay) === -1
-    ? (() => { throw new Error(`Unexpected weekday narrow: ${shortDay}`); })()
-    : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].indexOf(
-        new Intl.DateTimeFormat('en-US', {
-          timeZone: 'Asia/Taipei',
-          weekday: 'short',
-        }).format(d)
-      );
-}
-
 // ── Known test date ──────────────────────────────────────────────────────────
 // 2025-01-06 is a Monday in Asia/Taipei → expected weekday = 1
 const TEST_DATE = '2025-01-06';
