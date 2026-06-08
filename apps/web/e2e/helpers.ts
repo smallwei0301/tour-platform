@@ -97,6 +97,27 @@ async function ensureLoggedIn(page: Page) {
   }
 }
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://127.0.0.1:3333';
+
+/**
+ * Helper: mint a *format-valid* guide session for browser-layer specs (#1273).
+ *
+ * Edge middleware (`verifyGuideSessionMiddleware`) only does a lightweight
+ * format check for `/guide/*` pages — token shaped `guideId:version:signature`
+ * with a 64-char signature, plus a matching `guide_id` cookie. Full HMAC
+ * verification happens exclusively in the real `/api/guide/*` routes, which
+ * guide UI specs mock via `page.route(...)`. So a fake 64-char signature is
+ * enough to render the page without ever touching real auth or weakening it —
+ * the security contract still lives in the API routes and their unit tests.
+ */
+async function setGuideSession(page: Page, guideId: string): Promise<void> {
+  const fakeSignature = 'a'.repeat(64);
+  await page.context().addCookies([
+    { name: 'guide_token', value: `${guideId}:1:${fakeSignature}`, url: BASE_URL },
+    { name: 'guide_id', value: guideId, url: BASE_URL },
+  ]);
+}
+
 /** Fixture: authenticated page + isMobile flag */
 const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   authedPage: async ({ page }, use) => {
@@ -109,4 +130,4 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin, ensureLoggedIn };
+export { test, expect, adminLogin, ensureLoggedIn, setGuideSession };
