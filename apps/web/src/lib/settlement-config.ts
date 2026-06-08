@@ -97,6 +97,116 @@ export type SweepPayoutItem = {
   rules_version: string
 }
 
+// ── Guide-facing payout estimate (Issue #1284) ─────────────────────────────────
+
+/** Privacy-safe hold reason enum (shown to guide, no PII / incident detail). */
+export type GuidePayoutHoldReason =
+  | 'payment_dispute'
+  | 'safety_review'
+  | 'complaint_under_review'
+  | 'oversell_investigation'
+  | null
+
+export type GuidePayoutEstimate = {
+  totalTwd: number
+  refundAmountTwd: number
+  effectiveTwd: number
+  commissionTwd: number
+  /** Net after commission. Included for transparency even when on hold. */
+  netTwd: number
+  /**
+   * 0 when order is on hold or fully refunded.
+   * Use this for totals / expectedPayout aggregation.
+   */
+  payableNetTwd: number
+  /** Privacy-safe hold reason, or null when no hold. */
+  payoutHoldReason: GuidePayoutHoldReason
+  /** True when manual admin review is required before payout can be released. */
+  needsManualReview: boolean
+}
+
+/**
+ * Canonical guide-facing payout estimate for a single order.
+ *
+ * Alignment contract (Issue #1284):
+ * - Calls isPayoutOnHold with refundAmountTwd:0, exactly mirroring
+ *   computeSweepPayoutItem L124-130 so hold semantics are identical.
+ * - Partial refund without hold produces a reduced (non-zero) payableNetTwd
+ *   — preserving Issue #847 behaviour.
+ * - Any hold or full refund → payableNetTwd = 0 (excluded from totals).
+ * - effective/net always computed for guide transparency, even when held.
+ *
+ * @param order         Object with total_twd (number|null).
+ * @param opsTracking   operations_tracking row with refund + four hold flags.
+ * @param config        Settlement config with commission_rate.
+ */
+export function computeGuidePayoutEstimate(
+  order: { total_twd: number | null },
+  opsTracking: SweepPayoutItemOpsTracking,
+  config: Pick<SettlementConfig, 'commission_rate'>,
+): GuidePayoutEstimate {
+  const totalTwd = Number(order.total_twd) || 0
+  const refundAmountTwd = Number(opsTracking?.refund_amount_twd ?? 0) || 0
+  const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd)
+
+  // Compute commission + net for transparency even when on hold / fully refunded.
+  const commissionTwd = effectiveTwd > 0
+    ? Math.floor(effectiveTwd * config.commission_rate)
+    : 0
+  const netTwd = effectiveTwd > 0
+    ? Math.floor(effectiveTwd * (1 - config.commission_rate))
+    : 0
+
+  // Full refund — not payable, but no hold reason (it's a refund, not a hold).
+  if (effectiveTwd <= 0) {
+    return {
+      totalTwd,
+      refundAmountTwd,
+      effectiveTwd,
+      commissionTwd: 0,
+      netTwd: 0,
+      payableNetTwd: 0,
+      payoutHoldReason: null,
+      needsManualReview: false,
+    }
+  }
+
+  // #1284 — align hold check with computeSweepPayoutItem (L124-130):
+  // pass refundAmountTwd:0 so refund does not double-count as refund_pending hold
+  // (refund is already captured by effective-gmv; #847 partial-refund is preserved).
+  const holdReason: GuidePayoutHoldReason = isPayoutOnHold({
+    refundAmountTwd: 0,
+    hasComplaint: opsTracking?.has_complaint === true,
+    hasOversellIssue: opsTracking?.has_oversell_issue === true,
+    isDisputed: opsTracking?.is_disputed === true,
+    isSafetyCase: opsTracking?.is_safety_case === true,
+  }) as GuidePayoutHoldReason
+
+  if (holdReason) {
+    return {
+      totalTwd,
+      refundAmountTwd,
+      effectiveTwd,
+      commissionTwd,
+      netTwd,
+      payableNetTwd: 0,
+      payoutHoldReason: holdReason,
+      needsManualReview: true,
+    }
+  }
+
+  return {
+    totalTwd,
+    refundAmountTwd,
+    effectiveTwd,
+    commissionTwd,
+    netTwd,
+    payableNetTwd: netTwd,
+    payoutHoldReason: null,
+    needsManualReview: false,
+  }
+}
+
 /**
  * Compute a payout-item row from an eligible order, applying the v1 policy
  * (docs/05-business/06-payment-plan/03-settlement-rules.md §4):

@@ -1,5 +1,5 @@
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
-import { getSettlementConfig } from '../../../../../../src/lib/settlement-config';
+import { getSettlementConfig, computeGuidePayoutEstimate } from '../../../../../../src/lib/settlement-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
     return new Response('month must be YYYY-MM', { status: 400 });
   }
 
-  const csvHeader = '行程,出團日,訂單金額(NT$),已退款(NT$),實付扣退款(NT$),平台抽成(NT$),預計入帳(NT$)\n';
+  const csvHeader = '行程,出團日,訂單金額(NT$),已退款(NT$),實付扣退款(NT$),平台抽成(NT$),預計入帳(NT$),審核狀態\n';
 
   if (!process.env.SUPABASE_URL) {
     const emptyCsv = csvHeader + `合計,,,,0,0,0\n`;
@@ -92,43 +92,66 @@ export async function GET(req: Request) {
   }
 
   const orderIds = (monthOrders ?? []).map((o: { id: string }) => o.id);
-  let refundAmountByOrderId: Record<string, number> = {};
+  // #1284: fetch hold flags alongside refund so computeGuidePayoutEstimate can align with sweep
+  let opsByOrderId: Record<string, { refund_amount_twd: number; has_complaint: boolean; has_oversell_issue: boolean; is_disputed: boolean; is_safety_case: boolean }> = {};
   if (orderIds.length > 0) {
-    const { data: refundRows } = await supabase
+    const { data: opsRows } = await supabase
       .from('operations_tracking')
-      .select('order_id, refund_amount_twd')
+      .select('order_id, refund_amount_twd, has_complaint, has_oversell_issue, is_disputed, is_safety_case')
       .in('order_id', orderIds);
-    refundAmountByOrderId = Object.fromEntries(
-      (refundRows ?? []).map((r: { order_id: string; refund_amount_twd: number | null }) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+    opsByOrderId = Object.fromEntries(
+      (opsRows ?? []).map((r: { order_id: string; refund_amount_twd: number | null; has_complaint: boolean | null; has_oversell_issue: boolean | null; is_disputed: boolean | null; is_safety_case: boolean | null }) => [
+        r.order_id,
+        {
+          refund_amount_twd: Number(r.refund_amount_twd ?? 0),
+          has_complaint: r.has_complaint === true,
+          has_oversell_issue: r.has_oversell_issue === true,
+          is_disputed: r.is_disputed === true,
+          is_safety_case: r.is_safety_case === true,
+        },
+      ])
     );
   }
 
   const orders = (monthOrders ?? []).map((o: { id: string; activity_id: string; schedule_id?: string | null; total_twd: number | null; created_at: string }) => {
-    const totalTwd = o.total_twd ?? 0;
-    const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
-    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
-    const commissionTwd = Math.floor(effectiveTwd * settlementConfig.commission_rate);
-    const netTwd = effectiveTwd - commissionTwd;
+    const opsTracking = opsByOrderId[o.id] ?? null;
+    // #1284: use canonical helper so hold semantics align with settlement sweep
+    const estimate = computeGuidePayoutEstimate(
+      { total_twd: o.total_twd },
+      opsTracking,
+      settlementConfig,
+    );
     const activityTitle = activityMap[o.activity_id] ?? '';
     const scheduleDate = (o.schedule_id && scheduleDates[o.schedule_id])
       ? scheduleDates[o.schedule_id]
       : 'needs_manual_review';
-    return { activityTitle, scheduleDate, totalTwd, refundAmountTwd, effectiveTwd, commissionTwd, netTwd };
+    return {
+      activityTitle,
+      scheduleDate,
+      totalTwd: estimate.totalTwd,
+      refundAmountTwd: estimate.refundAmountTwd,
+      effectiveTwd: estimate.effectiveTwd,
+      commissionTwd: estimate.commissionTwd,
+      netTwd: estimate.netTwd,
+      payableNetTwd: estimate.payableNetTwd,
+      payoutHoldReason: estimate.payoutHoldReason,
+    };
   });
 
   const gmvTwd = orders.reduce((sum: number, o: { effectiveTwd: number }) => sum + o.effectiveTwd, 0);
   const totalCommission = orders.reduce((sum: number, o: { commissionTwd: number }) => sum + o.commissionTwd, 0);
-  const totalNet = orders.reduce((sum: number, o: { netTwd: number }) => sum + o.netTwd, 0);
+  // #1284: sum payableNetTwd only — on-hold orders contribute 0
+  const totalPayableNet = orders.reduce((sum: number, o: { payableNetTwd: number }) => sum + o.payableNetTwd, 0);
 
-  const rows = orders.map((o: { activityTitle: string; scheduleDate: string; totalTwd: number; refundAmountTwd: number; effectiveTwd: number; commissionTwd: number; netTwd: number }) =>
-    `${o.activityTitle},${o.scheduleDate},${o.totalTwd},${o.refundAmountTwd},${o.effectiveTwd},${o.commissionTwd},${o.netTwd}`
+  const rows = orders.map((o: { activityTitle: string; scheduleDate: string; totalTwd: number; refundAmountTwd: number; effectiveTwd: number; commissionTwd: number; payableNetTwd: number; payoutHoldReason: string | null }) =>
+    `${o.activityTitle},${o.scheduleDate},${o.totalTwd},${o.refundAmountTwd},${o.effectiveTwd},${o.commissionTwd},${o.payableNetTwd},${o.payoutHoldReason ?? ''}`
   );
 
   const csvContent =
     csvHeader +
     rows.join('\n') +
     (rows.length > 0 ? '\n' : '') +
-    `合計,,,,${gmvTwd},${totalCommission},${totalNet}\n`;
+    `合計,,,,${gmvTwd},${totalCommission},${totalPayableNet},\n`;
 
   return new Response(csvContent, {
     headers: {

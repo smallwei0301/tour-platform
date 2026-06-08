@@ -12,9 +12,11 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROUTE_PATH = resolve(__dirname, '../../app/api/guide/dashboard/route.ts');
 const PAGE_PATH = resolve(__dirname, '../../app/guide/dashboard/page.tsx');
+const SETTLEMENT_CONFIG_PATH = resolve(__dirname, '../../src/lib/settlement-config.ts');
 
 const routeSrc = readFileSync(ROUTE_PATH, 'utf8');
 const pageSrc = readFileSync(PAGE_PATH, 'utf8');
+const settlementConfigSrc = readFileSync(SETTLEMENT_CONFIG_PATH, 'utf8');
 
 describe('issue #454 — guide dashboard settlement wire', () => {
   describe('route.ts imports', () => {
@@ -108,10 +110,21 @@ describe('issue #454 — guide dashboard settlement wire', () => {
       );
     });
 
-    it('uses commission_rate from settlementConfig for payout calculation', () => {
+    it('uses commission_rate from settlementConfig for payout calculation via canonical helper', () => {
+      // route delegates payout math to computeGuidePayoutEstimate (canonical helper);
+      // commission_rate calculation lives in settlement-config.ts, not inline in route.ts.
       assert.ok(
-        routeSrc.includes('settlementConfig.commission_rate'),
-        'route.ts must use settlementConfig.commission_rate'
+        routeSrc.includes('computeGuidePayoutEstimate'),
+        'route.ts must delegate payout calculation to computeGuidePayoutEstimate'
+      );
+      assert.ok(
+        routeSrc.includes('settlementConfig'),
+        'route.ts must pass settlementConfig to the canonical helper'
+      );
+      assert.match(
+        settlementConfigSrc,
+        /effectiveTwd \* config\.commission_rate/,
+        'canonical helper (settlement-config.ts) must apply commission_rate to effectiveTwd'
       );
     });
 

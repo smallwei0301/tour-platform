@@ -1,6 +1,6 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
-import { getSettlementConfig } from '../../../../src/lib/settlement-config';
+import { getSettlementConfig, computeGuidePayoutEstimate } from '../../../../src/lib/settlement-config';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -137,14 +137,29 @@ export async function GET(req: Request) {
     .lt('created_at', gmvMonthEnd.toISOString());
 
   const monthOrderIds = (monthOrders ?? []).map((o: any) => o.id);
+  // #1284: also fetch hold flags so expectedPayoutTwd can use computeGuidePayoutEstimate
+  let monthOpsByOrderId: Record<string, { refund_amount_twd: number; has_complaint: boolean; has_oversell_issue: boolean; is_disputed: boolean; is_safety_case: boolean }> = {};
+  // Keep legacy map for GMV reduce (unchanged — GMV counts effective, not payable)
   let monthRefundAmountByOrderId: Record<string, number> = {};
   if (monthOrderIds.length > 0) {
-    const { data: monthRefundRows } = await supabase
+    const { data: monthOpsRows } = await supabase
       .from('operations_tracking')
-      .select('order_id, refund_amount_twd')
+      .select('order_id, refund_amount_twd, has_complaint, has_oversell_issue, is_disputed, is_safety_case')
       .in('order_id', monthOrderIds);
+    monthOpsByOrderId = Object.fromEntries(
+      (monthOpsRows ?? []).map((r: any) => [
+        r.order_id,
+        {
+          refund_amount_twd: Number(r.refund_amount_twd ?? 0),
+          has_complaint: r.has_complaint === true,
+          has_oversell_issue: r.has_oversell_issue === true,
+          is_disputed: r.is_disputed === true,
+          is_safety_case: r.is_safety_case === true,
+        },
+      ])
+    );
     monthRefundAmountByOrderId = Object.fromEntries(
-      (monthRefundRows ?? []).map((r: any) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+      Object.entries(monthOpsByOrderId).map(([id, ops]) => [id, ops.refund_amount_twd])
     );
   }
 
@@ -209,12 +224,16 @@ export async function GET(req: Request) {
     ? new Date((latestScheduleRows[0] as { start_at: string }).start_at)
     : null;
 
+  // #1284: use canonical helper so hold semantics align with settlement sweep
+  // On-hold orders contribute 0 to expectedPayoutTwd (payableNetTwd = 0 for held orders)
   const expectedPayoutTwd = (monthOrders ?? []).reduce((sum: number, o: any) => {
-    const totalTwd = o.total_twd ?? 0;
-    const refundAmountTwd = monthRefundAmountByOrderId[o.id] ?? 0;
-    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
-    const commissionTwd = Math.floor(effectiveTwd * settlementConfig.commission_rate);
-    return sum + (effectiveTwd - commissionTwd);
+    const opsTracking = monthOpsByOrderId[o.id] ?? null;
+    const estimate = computeGuidePayoutEstimate(
+      { total_twd: o.total_twd },
+      opsTracking,
+      settlementConfig,
+    );
+    return sum + estimate.payableNetTwd;
   }, 0);
   const nextPayoutDateObj = latestCompletedTourDate
     ? new Date(latestCompletedTourDate.getTime() + settlementConfig.t_days * 24 * 60 * 60 * 1000)

@@ -6,7 +6,9 @@ import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROUTE_PATH = resolve(__dirname, '../../app/api/guide/dashboard/route.ts');
+const SETTLEMENT_CONFIG_PATH = resolve(__dirname, '../../src/lib/settlement-config.ts');
 const routeSrc = readFileSync(ROUTE_PATH, 'utf8');
+const settlementConfigSrc = readFileSync(SETTLEMENT_CONFIG_PATH, 'utf8');
 
 test('issue631: refund source is operations_tracking, not orders.refund_amount_twd', () => {
   assert.match(routeSrc, /\.from\('operations_tracking'\)/, 'must query operations_tracking as refund source of truth');
@@ -29,21 +31,34 @@ test('issue631: expectedPayoutTwd uses row-sum policy, not aggregate floor', () 
   );
 });
 
-test('issue631: row policy handles partial refunds with effective_twd and floor commission', () => {
+test('issue631: row policy handles partial refunds with effective_twd and floor commission via canonical helper', () => {
+  // Since GH-1284, dashboard route delegates row-level commission math to
+  // computeGuidePayoutEstimate in settlement-config.ts (canonical helper).
+  // The route passes opsTracking + settlementConfig; the helper computes
+  // effectiveTwd, commissionTwd (Math.floor), and payableNetTwd.
+  assert.ok(
+    routeSrc.includes('computeGuidePayoutEstimate'),
+    'route must delegate per-row commission math to computeGuidePayoutEstimate'
+  );
   assert.match(
     routeSrc,
+    /const estimate = computeGuidePayoutEstimate\(/,
+    'route must call computeGuidePayoutEstimate per order row'
+  );
+  assert.match(
+    settlementConfigSrc,
     /effectiveTwd\s*=\s*Math\.max\(0,\s*totalTwd\s*-\s*refundAmountTwd\)/,
-    'row policy must compute effective_twd = total_twd - refund_amount_twd'
+    'canonical helper must compute effectiveTwd = total_twd - refund_amount_twd'
   );
   assert.match(
-    routeSrc,
-    /commissionTwd\s*=\s*Math\.floor\(effectiveTwd \* settlementConfig\.commission_rate\)/,
-    'row policy must floor commission per row using settlementConfig commission_rate'
+    settlementConfigSrc,
+    /commissionTwd\s*=\s*(effectiveTwd > 0\s*\n\s*\?)?\s*Math\.floor\(effectiveTwd \* config\.commission_rate\)/,
+    'canonical helper must floor commission per row using commission_rate'
   );
   assert.match(
-    routeSrc,
-    /return sum \+ \(effectiveTwd - commissionTwd\)/,
-    'row policy must sum guide_payout_twd row by row'
+    settlementConfigSrc,
+    /payableNetTwd:\s*netTwd/,
+    'canonical helper must return payableNetTwd (guide net after commission)'
   );
 });
 

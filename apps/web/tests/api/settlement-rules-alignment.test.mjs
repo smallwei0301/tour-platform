@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const SETTLEMENT_CONFIG_PATH = resolve(__dirname, '../../src/lib/settlement-config.ts');
+const settlementConfigSrc = readFileSync(SETTLEMENT_CONFIG_PATH, 'utf8');
 
 function src(path) {
   return readFileSync(path, 'utf8');
@@ -46,8 +52,22 @@ describe('settlement rules alignment', () => {
       const route = src(path);
       assert.match(route, /refund_amount_twd/, `${path} must query refund amounts`);
       assert.match(route, /effectiveTwd/, `${path} must compute effectiveTwd`);
-      assert.match(route, /Math\.max\(0,\s*totalTwd\s*-\s*refundAmountTwd\)/, `${path} must deduct refunds before commission`);
-      assert.match(route, /effectiveTwd \* settlementConfig\.commission_rate/, `${path} must calculate commission from effectiveTwd using DB-backed settlementConfig`);
+      // Since GH-1284, routes delegate per-row math to computeGuidePayoutEstimate (canonical helper).
+      // refund deduction and commission_rate application live in settlement-config.ts.
+      assert.ok(
+        route.includes('computeGuidePayoutEstimate'),
+        `${path} must delegate row-level payout math to computeGuidePayoutEstimate`
+      );
+      assert.match(
+        settlementConfigSrc,
+        /Math\.max\(0,\s*totalTwd\s*-\s*refundAmountTwd\)/,
+        'canonical helper must deduct refunds before commission'
+      );
+      assert.match(
+        settlementConfigSrc,
+        /effectiveTwd \* config\.commission_rate/,
+        'canonical helper must calculate commission from effectiveTwd using DB-backed commission_rate'
+      );
       assert.doesNotMatch(route, /totalTwd \* settlementConfig\.commission_rate/, `${path} must not calculate commission from gross totalTwd`);
       assert.doesNotMatch(route, /SETTLEMENT_COMMISSION_RATE/, `${path} must not use static SETTLEMENT_COMMISSION_RATE constant`);
     }
@@ -59,6 +79,16 @@ describe('settlement rules alignment', () => {
     assert.match(route, /effectiveMonthGmvTwd/, 'dashboard must compute effective monthly GMV');
     assert.match(route, /const monthGmvTwd = \(monthOrders \?\? \[\]\)\.reduce\(/);
     assert.match(route, /const expectedPayoutTwd = \(monthOrders \?\? \[\]\)\.reduce\(/);
-    assert.match(route, /commissionTwd\s*=\s*Math\.floor\(effectiveTwd \* settlementConfig\.commission_rate\)/);
+    // Since GH-1284, dashboard delegates per-row commission math to computeGuidePayoutEstimate.
+    // commissionTwd calculation lives in settlement-config.ts canonical helper.
+    assert.ok(
+      route.includes('computeGuidePayoutEstimate'),
+      'dashboard must delegate per-row commission math to computeGuidePayoutEstimate'
+    );
+    assert.match(
+      settlementConfigSrc,
+      /commissionTwd\s*=[\s\S]{1,60}Math\.floor\(effectiveTwd \* config\.commission_rate\)/,
+      'canonical helper must floor commission using settlementConfig.commission_rate'
+    );
   });
 });
