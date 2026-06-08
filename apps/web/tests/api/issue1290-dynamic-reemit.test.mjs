@@ -1,6 +1,9 @@
 /**
  * TDD tests for GH-1290 per-rule dynamic buffer re-emit
  *
+ * Count note: the focused GH-1290 + GH-1289 regression command covers 56 tests;
+ * adding tests/slot-generator.test.mjs brings the broader slot regression total to 72+.
+ *
  * Tests verify:
  * - OFF (default): behaviour == #1289 (fixed grid, buffer-filtered, no re-emit)
  * - ON: after a conflicting booking, next candidate starts at booking_end + buffer_after
