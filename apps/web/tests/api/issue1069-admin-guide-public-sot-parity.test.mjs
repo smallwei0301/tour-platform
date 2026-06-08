@@ -17,7 +17,8 @@ test('GH-1069 RED: guide availability preview must disclose local preview source
 
   assert.match(source, /availabilitySource/, 'guide preview response must expose availabilitySource for SOT parity auditing');
   assert.match(source, /previewReasonCode|reasonCode/, 'guide preview response must expose reason code contract');
-  assert.match(source, /legacy_local_preview|effective_booking_availability/, 'guide preview source should explicitly identify local legacy preview vs effective evaluator');
+  assert.match(source, /canonical_slot_generator/, 'guide preview must disclose canonical slot generator as availability source');
+  assert.match(source, /CANONICAL_GENERATOR|LEGACY_FALLBACK_NO_PLAN/, 'guide preview reason code must distinguish canonical generation vs no-plan legacy fallback disclosure');
 });
 
 test('GH-1069: guide/public traveler bookable plan filters are canonical activity_plans only', () => {
