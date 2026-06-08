@@ -1,33 +1,33 @@
-<!-- query_timestamp: 2026-06-08T00:58:51.329Z -->
+<!-- query_timestamp: 2026-06-08T07:50:08.310Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-08T00:58:51.329Z  
-**Commit SHA:** `f47333c377180c2fcfe7e57a2d500a8bd419a505`
+**Query timestamp:** 2026-06-08T07:50:08.310Z  
+**Commit SHA:** `e6f12d1e233cf4e2f18adf32bc768b92298b8b90`
 
 ---
 
-## Open PRs (2)
+## Open PRs (1)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1285 | [fix(guide-payout): align guide-facing payout estimates with settlement hold guards (GH-1284)](https://github.com/smallwei0301/tour-platform/pull/1285) | `kanban/issue-1284-guide-payout-hold-alignment` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (26 total)
+## Open Issues (27 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (11)
+### P1 (12)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1284 | [[Guide Payout] Align guide-facing payout estimates with settlement hold guards](https://github.com/smallwei0301/tour-platform/issues/1284) | triaged, type:bug, priority:P1, qa, guide-dashboard, owner:ai-agent, status:ready, payments |
+| #1289 | [[Booking V2] Consolidate guide availability and traveler slot picker semantics](https://github.com/smallwei0301/tour-platform/issues/1289) | type:bug, priority:P1, guide-dashboard, agent:next, owner:ai-agent, status:ready, traveler-booking, booking-v2 |
+| #1288 | [[Guide Dashboard] Fix availability preview timezone shift showing 17:00–00:00 for 09:00–17:00 rules](https://github.com/smallwei0301/tour-platform/issues/1288) | type:bug, priority:P1, guide-dashboard, agent:next, owner:ai-agent, status:ready, booking-v2 |
 | #1283 | [[QA] Verify post-#1282 review invitation sweep manual smoke](https://github.com/smallwei0301/tour-platform/issues/1283) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, orders, notifications, infra, launch:post-first-payment |
 | #1279 | [[QA] Verify post-#1278 available-slots conflict-override privacy boundary](https://github.com/smallwei0301/tour-platform/issues/1279) | triaged, priority:P1, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
@@ -74,6 +74,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1287 | [Prepare GH-1286 production migration drift safeguards](https://github.com/smallwei0301/tour-platform/pull/1287) | 2026-06-08 |
+| #1285 | [fix(guide-payout): align guide-facing payout estimates with settlement hold guards (GH-1284)](https://github.com/smallwei0301/tour-platform/pull/1285) | 2026-06-08 |
 | #1282 | [feat(post-trip): automate review invitation sweep (closes #1175)](https://github.com/smallwei0301/tour-platform/pull/1282) | 2026-06-07 |
 | #1278 | [fix(security): strip admin-only conflict-override fields at public available-slots boundary (Closes #1277)](https://github.com/smallwei0301/tour-platform/pull/1278) | 2026-06-07 |
 | #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | 2026-06-06 |
@@ -82,8 +84,6 @@ _none_
 | #1271 | [feat(admin): GH-1257 slice F — single-day opening in admin availability (TZ-safe)](https://github.com/smallwei0301/tour-platform/pull/1271) | 2026-06-06 |
 | #1270 | [feat(guide): GH-1257 slice D — surface conflict override warning in guide booking views](https://github.com/smallwei0301/tour-platform/pull/1270) | 2026-06-06 |
 | #1268 | [fix(booking-v2): align Step 3 payment UI with ECPay-only checkout + post-merge QA report](https://github.com/smallwei0301/tour-platform/pull/1268) | 2026-06-06 |
-| #1262 | [feat(admin): add conflict exception opening flow](https://github.com/smallwei0301/tour-platform/pull/1262) | 2026-06-05 |
-| #1259 | [fix(admin): recover post-trip summary API](https://github.com/smallwei0301/tour-platform/pull/1259) | 2026-06-05 |
 
 ---
 
