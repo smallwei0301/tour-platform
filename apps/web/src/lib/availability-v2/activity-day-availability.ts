@@ -1,5 +1,5 @@
 import {
-  buildCandidateSlots,
+  buildCandidateSlotsForRule,
   formatDateWithTimezone,
   getWeekdayInTimezone,
   rangesOverlap,
@@ -83,6 +83,7 @@ function normalizeRuleRow(row: any): AvailabilityRule {
     effective_from: row.effective_from,
     effective_to: row.effective_to,
     is_active: row.is_active,
+    use_dynamic_reemit: row.use_dynamic_reemit ?? false,
   };
 }
 
@@ -306,7 +307,7 @@ export async function getV2ActivityAvailability(
       const rulesForDay = scopedRules.filter((rule) => rule.weekday === weekday);
 
       for (const rule of rulesForDay) {
-        const candidates = buildCandidateSlots(rule, plan.duration_minutes, date);
+        const candidates = buildCandidateSlotsForRule(rule, scopedBookings, plan.duration_minutes, date);
         for (const candidate of candidates) {
           if (slotConflictsWithBlackout(candidate, blackouts)) continue;
 
