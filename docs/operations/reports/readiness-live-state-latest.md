@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-08T13:33:24.712Z -->
+<!-- query_timestamp: 2026-06-08T18:54:39.332Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-08T13:33:24.712Z  
-**Commit SHA:** `3589d945c84d001739457d0d78b7ada81f48138a`
+**Query timestamp:** 2026-06-08T18:54:39.332Z  
+**Commit SHA:** `6c360d1b2e6184e5385f052e2db30e6b6fbc6990`
 
 ---
 
@@ -16,16 +16,17 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (29 total)
+## Open Issues (30 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (13)
+### P1 (14)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1297 | [[QA] Verify post-#1285 guide payout estimate hold parity](https://github.com/smallwei0301/tour-platform/issues/1297) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, payments, launch:post-first-payment |
 | #1294 | [[QA] Verify post-#1291 Booking V2 guide/traveler slot range semantics in browser](https://github.com/smallwei0301/tour-platform/issues/1294) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1293 | [[Ops] Add production migration apply ledger and verified release gate after #1286 drift](https://github.com/smallwei0301/tour-platform/issues/1293) | triaged, type:optimization, priority:P1, agent:backlog, owner:mixed, status:needs-decision, database, infra, docs |
 | #1292 | [[QA] Post-#1286 production migration apply functional smoke for plan archive + guide availability](https://github.com/smallwei0301/tour-platform/issues/1292) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:mixed, status:ready, type:qa, database, infra |
