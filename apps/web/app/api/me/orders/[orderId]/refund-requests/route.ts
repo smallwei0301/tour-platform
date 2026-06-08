@@ -6,6 +6,7 @@ import { sendRefundRequested, sendRefundExecuted } from '../../../../../../src/l
 import type { OrderEmailData } from '../../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../../src/lib/line-notify';
 import { notifyRefundRequest, notifyRefundExecuted } from '../../../../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
 import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
@@ -171,10 +172,22 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         reason: body?.reason,
         note: body?.note,
       };
+      const travelerPushBase = {
+        orderId,
+        activityTitle: notifyData.activityTitle,
+        scheduleDate: notifyData.scheduleDate,
+        peopleCount: notifyData.peopleCount,
+        totalTwd: notifyData.totalTwd,
+        reason: body?.reason,
+        userId: user.id,
+        contactEmail: user.email,
+      };
       if (autoExecuted) {
         // Auto-execute succeeded — send '退款已完成' notification
         void sendRefundExecuted(notifyData).catch(() => {});
         notifyRefundExecuted(notifyData).catch(() => {});
+        // 旅客退款完成推播（未綁定/未開旗標時自動 skip）
+        void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_executed' }).catch(() => {});
       } else {
         // Normal flow — admin will process
         void sendRefundRequested(notifyData).then((emailResult) => {
@@ -187,6 +200,8 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
           }
         });
         notifyRefundRequest(notifyData).catch(() => {});
+        // 旅客退款申請推播（未綁定/未開旗標時自動 skip）
+        void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_requested' }).catch(() => {});
       }
     }
 

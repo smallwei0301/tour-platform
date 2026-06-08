@@ -4292,3 +4292,116 @@ export async function updateGuideProfileByGuideId(guideId, fields) {
   if (error) throw new Error(error.message);
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// LINE user binding (line_user_mapping) — Supabase path.
+// In-memory fallback lives in line-binding.mjs (which only calls these when
+// hasSupabaseEnv() is true). Resolution mirrors listMyOrdersDb's user_id-first,
+// contact_email-fallback convention.
+// ---------------------------------------------------------------------------
+
+function mapLineMappingRow(row) {
+  if (!row) return null;
+  return {
+    lineUserId: row.line_user_id,
+    userId: row.user_id ?? null,
+    contactEmail: row.contact_email ?? null,
+    displayName: row.display_name ?? null,
+    isBlocked: !!row.is_blocked,
+    boundAt: row.bound_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+export async function upsertLineMappingDb({ lineUserId, userId, contactEmail, displayName } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const now = new Date().toISOString();
+  const row = { line_user_id: lineUserId, updated_at: now };
+  if (userId !== undefined) row.user_id = userId ?? null;
+  if (contactEmail !== undefined) {
+    row.contact_email = contactEmail ? String(contactEmail).trim().toLowerCase() : null;
+  }
+  if (displayName !== undefined) row.display_name = displayName ?? null;
+  const { data, error } = await supabase
+    .from('line_user_mapping')
+    .upsert(row, { onConflict: 'line_user_id' })
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapLineMappingRow(data);
+}
+
+export async function getLineMappingByLineUserIdDb(lineUserId) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('line_user_mapping')
+    .select('*')
+    .eq('line_user_id', lineUserId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapLineMappingRow(data);
+}
+
+export async function setLineBlockedDb(lineUserId, blocked) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('line_user_mapping')
+    .update({ is_blocked: !!blocked, updated_at: new Date().toISOString() })
+    .eq('line_user_id', lineUserId)
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapLineMappingRow(data);
+}
+
+export async function markLineWebhookEventDb(webhookEventId, meta = {}) {
+  if (!hasSupabaseEnv()) return { firstTime: true };
+  const supabase = await getSupabase();
+  // Insert; a unique-violation on the PK means we've already seen this event.
+  const { error } = await supabase
+    .from('line_webhook_events')
+    .insert({
+      webhook_event_id: webhookEventId,
+      event_type: meta.eventType ?? null,
+      line_user_id: meta.lineUserId ?? null,
+    });
+  if (error) {
+    // 23505 = unique_violation (duplicate delivery)
+    if (error.code === '23505') return { firstTime: false };
+    throw new Error(error.message);
+  }
+  return { firstTime: true };
+}
+
+export async function getLineUserIdForOrderDb(order) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const userId = order?.userId ?? order?.user_id ?? null;
+  const email = (order?.contactEmail ?? order?.contact_email ?? '').toString().trim().toLowerCase();
+
+  // user_id is the primary key; contact_email is the guest fallback.
+  if (userId) {
+    const { data, error } = await supabase
+      .from('line_user_mapping')
+      .select('line_user_id')
+      .eq('user_id', userId)
+      .eq('is_blocked', false)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data?.line_user_id) return data.line_user_id;
+  }
+  if (email) {
+    const { data, error } = await supabase
+      .from('line_user_mapping')
+      .select('line_user_id')
+      .eq('contact_email', email)
+      .eq('is_blocked', false)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data?.line_user_id) return data.line_user_id;
+  }
+  return null;
+}
