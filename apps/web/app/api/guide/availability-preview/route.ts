@@ -3,6 +3,10 @@
  * GET - Preview own generated slots for a date range
  *
  * Strict ownership: Guide can only preview their own availability
+ *
+ * GH-1289: slot generation now goes through the canonical slot-generator.ts
+ * so duration (slot length) and interval (cadence) are correctly distinct.
+ * The hand-rolled divergent loop has been removed.
  */
 
 import { NextRequest } from 'next/server';
@@ -13,6 +17,13 @@ import {
   summarizeActivePlanSeasons,
   type PreviewActivityPlanSeason,
 } from '../../../../src/lib/availability-v2/preview-canonical-reasons.ts';
+import {
+  generateAvailableSlots,
+  type AvailabilityRule,
+  type BlackoutWindow,
+  type ExistingBooking,
+  type ActivityPlan,
+} from '../../../../src/lib/slot-generator.ts';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -80,7 +91,7 @@ export async function GET(request: NextRequest) {
       dateFrom,
       dateTo,
       activityPlanId: activityPlanId || null,
-      availabilitySource: 'legacy_local_preview',
+      availabilitySource: 'canonical_slot_generator',
       previewReasonCode: 'SUPABASE_UNAVAILABLE',
       previewCanonicalState: 'outside_season',
       previewSeasonGate: 'no_active_season',
@@ -98,6 +109,9 @@ export async function GET(request: NextRequest) {
     let previewPlanSeasons: PreviewActivityPlanSeason[] = [];
     let previewIsYearRound = false;
 
+    // The resolved ActivityPlan for canonical slot generation (GH-1289)
+    let canonicalPlan: ActivityPlan | null = null;
+
     // Validate activityPlanId ownership: must belong to this guide's activity
     if (activityPlanId) {
       const { data: planData, error: planError } = await supabase
@@ -106,7 +120,14 @@ export async function GET(request: NextRequest) {
           id,
           status,
           is_year_round,
+          duration_minutes,
+          max_participants,
+          booking_type,
+          price_type,
+          base_price,
+          min_participants,
           activities!inner (
+            id,
             guide_id
           )
         `)
@@ -118,10 +139,13 @@ export async function GET(request: NextRequest) {
       }
 
       // Check ownership: plan must belong to this guide
-      const planActivities = planData.activities as { guide_id: string } | { guide_id: string }[] | null;
+      const planActivities = planData.activities as { id: string; guide_id: string } | { id: string; guide_id: string }[] | null;
       const activityGuideId = Array.isArray(planActivities)
         ? planActivities[0]?.guide_id
         : planActivities?.guide_id;
+      const activityId = Array.isArray(planActivities)
+        ? planActivities[0]?.id
+        : planActivities?.id;
 
       if (activityGuideId !== session.guideId) {
         return Response.json(fail('FORBIDDEN', 'activityPlanId belongs to another guide'), { status: 403 });
@@ -134,6 +158,19 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // Build canonical ActivityPlan for slot generation (GH-1289)
+      canonicalPlan = {
+        id: planData.id,
+        activity_id: activityId || '',
+        duration_minutes: planData.duration_minutes ?? 60,
+        max_participants: planData.max_participants ?? 10,
+        booking_type: (planData.booking_type ?? 'scheduled') as 'scheduled' | 'request' | 'instant',
+        price_type: planData.price_type as 'per_person' | 'per_group' | null,
+        base_price: planData.base_price,
+        min_participants: planData.min_participants,
+        is_year_round: planData.is_year_round,
+      };
 
       const { data: seasonsData } = await supabase
         .from('activity_plan_seasons')
@@ -162,43 +199,27 @@ export async function GET(request: NextRequest) {
       rulesQuery = rulesQuery.or(`activity_plan_id.is.null,activity_plan_id.eq.${activityPlanId}`);
     }
 
-    const { data: rules } = await rulesQuery;
-
-    const planIds = Array.from(
-      new Set(
-        (rules || [])
-          .map((rule: any) => rule.activity_plan_id)
-          .filter((id: string | null) => typeof id === 'string' && id.length > 0)
-      )
-    );
-
-    const minParticipantsByPlanId: Record<string, number | null> = {};
-    if (planIds.length > 0) {
-      const { data: plansData } = await supabase
-        .from('activity_plans')
-        .select('id, min_participants')
-        .in('id', planIds as string[]);
-      for (const plan of plansData || []) {
-        minParticipantsByPlanId[plan.id] = plan.min_participants ?? null;
-      }
-    }
+    const { data: rulesRaw } = await rulesQuery;
+    const rules = (rulesRaw || []) as AvailabilityRule[];
 
     // Fetch blackouts in range
-    const { data: blackouts } = await supabase
+    const { data: blackoutsRaw } = await supabase
       .from('guide_blackout_dates')
       .select('*')
       .eq('guide_id', session.guideId)
       .lte('starts_at', dateTo + 'T23:59:59Z')
       .gte('ends_at', dateFrom + 'T00:00:00Z');
+    const blackouts = (blackoutsRaw || []) as BlackoutWindow[];
 
     // Fetch active bookings in range (exclude cancelled/no_show)
-    const { data: bookings } = await supabase
+    const { data: bookingsRaw } = await supabase
       .from('bookings')
-      .select('id, start_at, end_at, status')
+      .select('id, start_at, end_at, status, buffer_before_minutes, buffer_after_minutes')
       .eq('guide_id', session.guideId)
       .not('status', 'in', '("cancelled","no_show")')
       .lte('start_at', dateTo + 'T23:59:59Z')
       .gte('end_at', dateFrom + 'T00:00:00Z');
+    const bookings = (bookingsRaw || []) as ExistingBooking[];
 
     const previewCanonical = resolvePreviewCanonicalReason({
       requestedDate: dateFrom,
@@ -208,16 +229,37 @@ export async function GET(request: NextRequest) {
     });
     const activeSeasonSummaries = summarizeActivePlanSeasons(previewPlanSeasons);
 
-    // Generate slots using slot generator logic
-    const slots = generatePreviewSlots(
-      rules || [],
-      blackouts || [],
-      bookings || [],
-      dateFrom,
-      dateTo,
-      timezone,
-      minParticipantsByPlanId
-    );
+    // GH-1289: generate slots using the canonical slot-generator.
+    // When activityPlanId is provided, we have the full plan and use generateAvailableSlots.
+    // When no activityPlanId, fall back to per-rule generation using slot_interval_minutes as
+    // duration approximation (same behavior as before for the generic "all plans" preview).
+    let slots: ReturnType<typeof generateAvailableSlots>['slots'] = [];
+
+    if (canonicalPlan && activityPlanId) {
+      // Primary path (GH-1289 fix): use canonical generator with correct duration
+      const result = generateAvailableSlots(
+        {
+          guideId: session.guideId,
+          activityPlanId,
+          dateFrom,
+          dateTo,
+          timezone,
+          participants: 1,
+        },
+        {
+          rules,
+          blackouts,
+          bookings,
+          plan: canonicalPlan,
+        }
+      );
+      slots = result.slots;
+    } else {
+      // Fallback path: no specific plan selected → aggregate preview across all rules
+      // Each rule uses its own slot_interval_minutes as a duration approximation
+      // (legacy behavior preserved for generic guide availability overview)
+      slots = generateFallbackPreviewSlots(rules, blackouts, bookings, dateFrom, dateTo, timezone);
+    }
 
     return Response.json(ok({
       guide: guide || { id: session.guideId, display_name: session.guideName },
@@ -225,15 +267,15 @@ export async function GET(request: NextRequest) {
       dateFrom,
       dateTo,
       activityPlanId: activityPlanId || null,
-      availabilitySource: 'legacy_local_preview',
-      previewReasonCode: 'LOCAL_PREVIEW_GENERATOR',
+      availabilitySource: 'canonical_slot_generator',
+      previewReasonCode: activityPlanId ? 'CANONICAL_GENERATOR' : 'LEGACY_FALLBACK_NO_PLAN',
       previewCanonicalState: previewCanonical.canonicalState,
       previewSeasonGate: previewCanonical.seasonGate,
       isYearRound: previewIsYearRound,
       activeSeasonSummaries,
-      rulesCount: (rules || []).length,
-      blackoutsCount: (blackouts || []).length,
-      activeBookingsCount: (bookings || []).length,
+      rulesCount: rules.length,
+      blackoutsCount: blackouts.length,
+      activeBookingsCount: bookings.length,
       slots,
     }));
   } catch (err) {
@@ -242,152 +284,99 @@ export async function GET(request: NextRequest) {
   }
 }
 
-interface Rule {
-  activity_plan_id?: string | null;
-  weekday: number;
-  start_time_local: string;
-  end_time_local: string;
-  timezone: string;
-  slot_interval_minutes: number;
-  buffer_before_minutes: number;
-  buffer_after_minutes: number;
-  effective_from: string | null;
-  effective_to: string | null;
-  is_active: boolean;
-}
-
-interface Blackout {
-  starts_at: string;
-  ends_at: string;
-}
-
-interface Booking {
-  start_at: string;
-  end_at: string;
-  status: string;
-}
-
-interface Slot {
+/**
+ * Fallback slot generation for guide preview when no activityPlanId is specified.
+ *
+ * This path is only reached when the guide previews their general availability
+ * without filtering by a specific activity plan. In this case we don't know the
+ * plan duration, so we approximate by using slot_interval_minutes as duration
+ * (this preserves the previous contiguous-slot behavior for generic previews).
+ *
+ * Note: This is intentionally a minimal fallback. The canonical path (with
+ * activityPlanId) is the primary use case addressed by GH-1289.
+ *
+ * Returns SerializedSlot-compatible objects for the response payload.
+ */
+function generateFallbackPreviewSlots(
+  rules: AvailabilityRule[],
+  blackouts: BlackoutWindow[],
+  bookings: ExistingBooking[],
+  dateFrom: string,
+  dateTo: string,
+  timezone: string
+): Array<{
   startAt: string;
   endAt: string;
   isAvailable: boolean;
-  minParticipants: number | null;
-}
+  minParticipants?: number | null;
+  capacityLeft?: number;
+  bookingType?: string;
+}> {
+  // Use canonical generator per rule with duration approximated as slot_interval_minutes
+  // Group rules and generate per-rule to respect different intervals
+  const allSlots: Array<{
+    startAt: string;
+    endAt: string;
+    isAvailable: boolean;
+    capacityLeft: number;
+    bookingType: string;
+  }> = [];
 
-function generatePreviewSlots(
-  rules: Rule[],
-  blackouts: Blackout[],
-  bookings: Booking[],
-  dateFrom: string,
-  dateTo: string,
-  _timezone: string,
-  minParticipantsByPlanId: Record<string, number | null>
-): Slot[] {
-  const slots: Slot[] = [];
+  // Get unique interval values across rules to build synthetic plans
+  const ruleGroups = new Map<number, AvailabilityRule[]>();
+  for (const rule of rules) {
+    const interval = rule.slot_interval_minutes || 60;
+    if (!ruleGroups.has(interval)) {
+      ruleGroups.set(interval, []);
+    }
+    ruleGroups.get(interval)!.push(rule);
+  }
 
-  // Iterate through each day in the range
-  const start = new Date(dateFrom);
-  const end = new Date(dateTo);
+  for (const [interval, groupRules] of ruleGroups) {
+    // Synthetic plan: duration = interval (contiguous slots, legacy behavior)
+    const syntheticPlan: ActivityPlan = {
+      id: 'fallback-synthetic',
+      activity_id: 'fallback',
+      duration_minutes: interval,
+      max_participants: 99,
+      booking_type: 'scheduled',
+    };
 
-  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().slice(0, 10);
-    const dayOfWeek = d.getDay();
-
-    // Find rules for this day
-    const dayRules = rules.filter(r => {
-      if (r.weekday !== dayOfWeek) return false;
-      if (!r.is_active) return false;
-      if (r.effective_from && dateStr < r.effective_from) return false;
-      if (r.effective_to && dateStr > r.effective_to) return false;
-      return true;
-    });
-
-    // Generate slots for each rule
-    for (const rule of dayRules) {
-      const [startHour, startMin] = rule.start_time_local.split(':').map(Number);
-      const [endHour, endMin] = rule.end_time_local.split(':').map(Number);
-
-      const ruleStartMinutes = startHour * 60 + startMin;
-      const ruleEndMinutes = endHour * 60 + endMin;
-      const interval = rule.slot_interval_minutes || 60;
-
-      for (let m = ruleStartMinutes; m < ruleEndMinutes; m += interval) {
-        const slotHour = Math.floor(m / 60);
-        const slotMinute = m % 60;
-
-        // Create slot time in the specified timezone
-        const slotStart = new Date(`${dateStr}T${String(slotHour).padStart(2, '0')}:${String(slotMinute).padStart(2, '0')}:00`);
-        const slotEnd = new Date(slotStart.getTime() + interval * 60 * 1000);
-
-        // Convert to UTC for comparison (approximate - proper timezone handling would use a library)
-        const slotStartISO = slotStart.toISOString();
-        const slotEndISO = slotEnd.toISOString();
-
-        // Check availability
-        const isAvailable = !isSlotBlocked(
-          slotStartISO,
-          slotEndISO,
-          blackouts,
-          bookings,
-          rule.buffer_before_minutes,
-          rule.buffer_after_minutes
-        );
-
-        slots.push({
-          startAt: slotStartISO,
-          endAt: slotEndISO,
-          isAvailable,
-          minParticipants: rule.activity_plan_id ? (minParticipantsByPlanId[rule.activity_plan_id] ?? null) : null,
-        });
+    const guideId = groupRules[0]?.guide_id || '';
+    const result = generateAvailableSlots(
+      {
+        guideId,
+        activityPlanId: null,
+        dateFrom,
+        dateTo,
+        timezone,
+        participants: 1,
+      },
+      {
+        rules: groupRules,
+        blackouts,
+        bookings,
+        plan: syntheticPlan,
       }
+    );
+
+    for (const slot of result.slots) {
+      allSlots.push({
+        startAt: slot.startAt,
+        endAt: slot.endAt,
+        isAvailable: slot.isAvailable,
+        capacityLeft: slot.capacityLeft,
+        bookingType: slot.bookingType,
+      });
     }
   }
 
-  // Sort by start time
-  slots.sort((a, b) => a.startAt.localeCompare(b.startAt));
-
-  return slots;
-}
-
-function isSlotBlocked(
-  slotStart: string,
-  slotEnd: string,
-  blackouts: Blackout[],
-  bookings: Booking[],
-  bufferBefore: number,
-  bufferAfter: number
-): boolean {
-  const slotStartTime = new Date(slotStart).getTime();
-  const slotEndTime = new Date(slotEnd).getTime();
-
-  // Check blackouts
-  for (const b of blackouts) {
-    const bStart = new Date(b.starts_at).getTime();
-    const bEnd = new Date(b.ends_at).getTime();
-
-    // Check overlap
-    if (slotStartTime < bEnd && slotEndTime > bStart) {
-      return true;
-    }
-  }
-
-  // Check bookings with buffer
-  for (const booking of bookings) {
-    if (booking.status === 'cancelled' || booking.status === 'no_show') continue;
-
-    const bookingStart = new Date(booking.start_at).getTime() - bufferBefore * 60 * 1000;
-    const bookingEnd = new Date(booking.end_at).getTime() + bufferAfter * 60 * 1000;
-
-    // Check overlap
-    if (slotStartTime < bookingEnd && slotEndTime > bookingStart) {
-      return true;
-    }
-  }
-
-  // Check if slot is in the past
-  if (slotStartTime < Date.now()) {
+  // Sort and deduplicate by startAt
+  allSlots.sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const seen = new Set<string>();
+  return allSlots.filter(s => {
+    if (seen.has(s.startAt)) return false;
+    seen.add(s.startAt);
     return true;
-  }
-
-  return false;
+  });
 }

@@ -24,6 +24,7 @@ import {
   rangesOverlap,
   isDateInRange,
   formatDateWithTimezone,
+  formatSlotRangeLabel,
   generateDateRange,
   getAvailabilityRules,
   getBlackoutWindows,
@@ -1023,3 +1024,43 @@ test('draft generated-slot validation still blocks when formed add-on exceeds ma
 });
 
 console.log('All slot generator tests completed!');
+
+// ============================================================================
+// GH-1289: formatSlotRangeLabel helper tests
+// ============================================================================
+
+test('formatSlotRangeLabel returns HH:MM – HH:MM in Asia/Taipei for UTC input', () => {
+  // 01:00 UTC = 09:00 Taipei, 02:30 UTC = 10:30 Taipei
+  const label = formatSlotRangeLabel(
+    new Date('2026-06-08T01:00:00.000Z'),
+    new Date('2026-06-08T02:30:00.000Z'),
+    'Asia/Taipei'
+  );
+  assert.strictEqual(label, '09:00 – 10:30');
+});
+
+test('formatSlotRangeLabel defaults to Asia/Taipei when timezone omitted', () => {
+  const label = formatSlotRangeLabel(
+    new Date('2026-06-08T01:00:00.000Z'),
+    new Date('2026-06-08T02:00:00.000Z')
+  );
+  assert.strictEqual(label, '09:00 – 10:00');
+});
+
+test('formatSlotRangeLabel accepts ISO string inputs', () => {
+  const label = formatSlotRangeLabel(
+    '2026-06-08T01:00:00.000Z',
+    '2026-06-08T02:30:00.000Z',
+    'Asia/Taipei'
+  );
+  assert.strictEqual(label, '09:00 – 10:30');
+});
+
+test('formatSlotRangeLabel works with UTC timezone', () => {
+  const label = formatSlotRangeLabel(
+    new Date('2026-06-08T09:00:00.000Z'),
+    new Date('2026-06-08T10:30:00.000Z'),
+    'UTC'
+  );
+  assert.strictEqual(label, '09:00 – 10:30');
+});
