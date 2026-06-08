@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-08T07:50:08.310Z -->
+<!-- query_timestamp: 2026-06-08T13:33:24.712Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-08T07:50:08.310Z  
-**Commit SHA:** `e6f12d1e233cf4e2f18adf32bc768b92298b8b90`
+**Query timestamp:** 2026-06-08T13:33:24.712Z  
+**Commit SHA:** `3589d945c84d001739457d0d78b7ada81f48138a`
 
 ---
 
@@ -16,18 +16,19 @@
 |---|-------|--------|
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (27 total)
+## Open Issues (29 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (12)
+### P1 (13)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1289 | [[Booking V2] Consolidate guide availability and traveler slot picker semantics](https://github.com/smallwei0301/tour-platform/issues/1289) | type:bug, priority:P1, guide-dashboard, agent:next, owner:ai-agent, status:ready, traveler-booking, booking-v2 |
-| #1288 | [[Guide Dashboard] Fix availability preview timezone shift showing 17:00–00:00 for 09:00–17:00 rules](https://github.com/smallwei0301/tour-platform/issues/1288) | type:bug, priority:P1, guide-dashboard, agent:next, owner:ai-agent, status:ready, booking-v2 |
+| #1294 | [[QA] Verify post-#1291 Booking V2 guide/traveler slot range semantics in browser](https://github.com/smallwei0301/tour-platform/issues/1294) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
+| #1293 | [[Ops] Add production migration apply ledger and verified release gate after #1286 drift](https://github.com/smallwei0301/tour-platform/issues/1293) | triaged, type:optimization, priority:P1, agent:backlog, owner:mixed, status:needs-decision, database, infra, docs |
+| #1292 | [[QA] Post-#1286 production migration apply functional smoke for plan archive + guide availability](https://github.com/smallwei0301/tour-platform/issues/1292) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:mixed, status:ready, type:qa, database, infra |
 | #1283 | [[QA] Verify post-#1282 review invitation sweep manual smoke](https://github.com/smallwei0301/tour-platform/issues/1283) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, orders, notifications, infra, launch:post-first-payment |
 | #1279 | [[QA] Verify post-#1278 available-slots conflict-override privacy boundary](https://github.com/smallwei0301/tour-platform/issues/1279) | triaged, priority:P1, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
@@ -39,10 +40,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (14)
+### P2 (15)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1290 | [[Booking V2] Opt-in dynamic buffer-aware slot re-emit (toggle, does not replace fixed-candidate)](https://github.com/smallwei0301/tour-platform/issues/1290) | type:feature, priority:P2, guide-dashboard, booking-v2 |
 | #1281 | [[Test Infra] Fix local child-process specs failing to resolve Next.js](https://github.com/smallwei0301/tour-platform/issues/1281) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, test-infra |
 | #1280 | [[Decision] Decide fate and slicing plan for stale LINE/LIFF PR #920 before further drift](https://github.com/smallwei0301/tour-platform/issues/1280) | triaged, priority:P2, agent:backlog, owner:mixed, status:needs-decision, type:decision, auth, notifications, infra |
 | #1275 | [[Test Infra] Add focused Playwright E2E CI smoke for launch-critical browser regressions](https://github.com/smallwei0301/tour-platform/issues/1275) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, test-infra |
@@ -74,6 +76,9 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1296 | [docs(qa): #1279 available-slots 衝突例外隱私邊界驗收（post-#1278）](https://github.com/smallwei0301/tour-platform/pull/1296) | 2026-06-08 |
+| #1295 | [test(e2e): 補 #1257 旅客端衝突例外開放下單 E2E](https://github.com/smallwei0301/tour-platform/pull/1295) | 2026-06-08 |
+| #1291 | [GH-1289: Booking V2 guide availability + traveler slot semantics consolidation (Slice A+B)](https://github.com/smallwei0301/tour-platform/pull/1291) | 2026-06-08 |
 | #1287 | [Prepare GH-1286 production migration drift safeguards](https://github.com/smallwei0301/tour-platform/pull/1287) | 2026-06-08 |
 | #1285 | [fix(guide-payout): align guide-facing payout estimates with settlement hold guards (GH-1284)](https://github.com/smallwei0301/tour-platform/pull/1285) | 2026-06-08 |
 | #1282 | [feat(post-trip): automate review invitation sweep (closes #1175)](https://github.com/smallwei0301/tour-platform/pull/1282) | 2026-06-07 |
@@ -81,9 +86,6 @@ _none_
 | #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | 2026-06-06 |
 | #1274 | [test(e2e): run GH-1257 browser E2E — conflict-override + guide-warning + single-day opening (#1273)](https://github.com/smallwei0301/tour-platform/pull/1274) | 2026-06-08 |
 | #1272 | [chore(test): GH-1257 — remove unused dead-code helpers tzSafeWeekday & noonAnchorWeekday](https://github.com/smallwei0301/tour-platform/pull/1272) | 2026-06-08 |
-| #1271 | [feat(admin): GH-1257 slice F — single-day opening in admin availability (TZ-safe)](https://github.com/smallwei0301/tour-platform/pull/1271) | 2026-06-06 |
-| #1270 | [feat(guide): GH-1257 slice D — surface conflict override warning in guide booking views](https://github.com/smallwei0301/tour-platform/pull/1270) | 2026-06-06 |
-| #1268 | [fix(booking-v2): align Step 3 payment UI with ECPay-only checkout + post-merge QA report](https://github.com/smallwei0301/tour-platform/pull/1268) | 2026-06-06 |
 
 ---
 
