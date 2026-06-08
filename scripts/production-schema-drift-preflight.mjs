@@ -339,10 +339,10 @@ const CHECK_DEFINITIONS = [
       'id',
       'status',
     ],
-    // Filter with eq('archived') to confirm the CHECK constraint allows 'archived';
-    // a missing constraint or invalid enum will surface as a PostgREST error.
+    // Column-existence probe: verifies 'id' and 'status' columns are present.
+    // The archived CHECK constraint behaviour is covered by verify-migration-1286.mjs
+    // and the canonical SQL in the approved migration.
     select: 'id, status',
-    filter: { column: 'status', op: 'eq', value: 'archived' },
     tags: ['gh-1286-drift', 'gh-1286'],
   },
 ];
