@@ -19,6 +19,7 @@ import {
 } from '../../../../src/lib/availability-v2/preview-canonical-reasons.ts';
 import {
   generateAvailableSlots,
+  type SerializedSlot,
   type AvailabilityRule,
   type BlackoutWindow,
   type ExistingBooking,
@@ -304,14 +305,7 @@ function generateFallbackPreviewSlots(
   dateFrom: string,
   dateTo: string,
   timezone: string
-): Array<{
-  startAt: string;
-  endAt: string;
-  isAvailable: boolean;
-  minParticipants?: number | null;
-  capacityLeft?: number;
-  bookingType?: string;
-}> {
+): SerializedSlot[] {
   // Use canonical generator per rule with duration approximated as slot_interval_minutes
   // Group rules and generate per-rule to respect different intervals
   const allSlots: Array<{
@@ -319,7 +313,7 @@ function generateFallbackPreviewSlots(
     endAt: string;
     isAvailable: boolean;
     capacityLeft: number;
-    bookingType: string;
+    bookingType: 'scheduled' | 'request' | 'instant';
   }> = [];
 
   // Get unique interval values across rules to build synthetic plans

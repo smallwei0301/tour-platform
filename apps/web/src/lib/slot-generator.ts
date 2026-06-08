@@ -91,7 +91,7 @@ export interface SerializedSlot {
 
 export interface SlotGeneratorInput {
   guideId: string;
-  activityPlanId: string;
+  activityPlanId: string | null;
   dateFrom: string; // "YYYY-MM-DD"
   dateTo: string; // "YYYY-MM-DD"
   timezone: string;
