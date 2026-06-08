@@ -1,6 +1,6 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
-import { getSettlementConfig } from '../../../../../src/lib/settlement-config';
+import { getSettlementConfig, computeGuidePayoutEstimate } from '../../../../../src/lib/settlement-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -81,41 +81,57 @@ export async function GET(req: Request) {
   }
 
   const orderIds = (monthOrders ?? []).map((o: { id: string }) => o.id);
-  let refundAmountByOrderId: Record<string, number> = {};
+  // #1284: also fetch hold flags from operations_tracking
+  let opsByOrderId: Record<string, { refund_amount_twd: number; has_complaint: boolean; has_oversell_issue: boolean; is_disputed: boolean; is_safety_case: boolean }> = {};
   if (orderIds.length > 0) {
-    const { data: refundRows } = await supabase
+    const { data: opsRows } = await supabase
       .from('operations_tracking')
-      .select('order_id, refund_amount_twd')
+      .select('order_id, refund_amount_twd, has_complaint, has_oversell_issue, is_disputed, is_safety_case')
       .in('order_id', orderIds);
-    refundAmountByOrderId = Object.fromEntries(
-      (refundRows ?? []).map((r: { order_id: string; refund_amount_twd: number | null }) => [r.order_id, Number(r.refund_amount_twd ?? 0)])
+    opsByOrderId = Object.fromEntries(
+      (opsRows ?? []).map((r: { order_id: string; refund_amount_twd: number | null; has_complaint: boolean | null; has_oversell_issue: boolean | null; is_disputed: boolean | null; is_safety_case: boolean | null }) => [
+        r.order_id,
+        {
+          refund_amount_twd: Number(r.refund_amount_twd ?? 0),
+          has_complaint: r.has_complaint === true,
+          has_oversell_issue: r.has_oversell_issue === true,
+          is_disputed: r.is_disputed === true,
+          is_safety_case: r.is_safety_case === true,
+        },
+      ])
     );
   }
 
   const orders = (monthOrders ?? []).map((o: { id: string; activity_id: string; schedule_id?: string | null; total_twd: number | null; created_at: string }) => {
-    const totalTwd = o.total_twd ?? 0;
-    const refundAmountTwd = refundAmountByOrderId[o.id] ?? 0;
-    const effectiveTwd = Math.max(0, totalTwd - refundAmountTwd);
-    const commissionTwd = Math.floor(effectiveTwd * settlementConfig.commission_rate);
-    const netTwd = effectiveTwd - commissionTwd;
+    const opsTracking = opsByOrderId[o.id] ?? null;
     const scheduleDate = (o.schedule_id && scheduleDates[o.schedule_id]) ? scheduleDates[o.schedule_id] : null;
+    // #1284: use canonical helper so hold semantics align with settlement sweep
+    const estimate = computeGuidePayoutEstimate(
+      { total_twd: o.total_twd },
+      opsTracking,
+      settlementConfig,
+    );
     return {
       orderId: o.id,
       activityId: o.activity_id,
       activityTitle: activityMap[o.activity_id] ?? '',
       scheduleDate,
-      needsManualReview: !o.schedule_id || !scheduleDates[o.schedule_id],
-      totalTwd,
-      refundAmountTwd,
-      effectiveTwd,
-      commissionTwd,
-      netTwd,
+      // #1284: OR with hold-based needsManualReview (preserve existing schedule-missing logic)
+      needsManualReview: !o.schedule_id || !scheduleDates[o.schedule_id] || estimate.needsManualReview,
+      totalTwd: estimate.totalTwd,
+      refundAmountTwd: estimate.refundAmountTwd,
+      effectiveTwd: estimate.effectiveTwd,
+      commissionTwd: estimate.commissionTwd,
+      netTwd: estimate.netTwd,
+      payableNetTwd: estimate.payableNetTwd,
+      payoutHoldReason: estimate.payoutHoldReason,
     };
   });
 
   const gmvTwd = orders.reduce((sum: number, o: { effectiveTwd: number }) => sum + o.effectiveTwd, 0);
   const commissionTwd = orders.reduce((sum: number, o: { commissionTwd: number }) => sum + o.commissionTwd, 0);
-  const netTwd = orders.reduce((sum: number, o: { netTwd: number }) => sum + o.netTwd, 0);
+  // #1284: totals.netTwd uses payableNetTwd — held/fully-refunded orders are not counted
+  const netTwd = orders.reduce((sum: number, o: { payableNetTwd: number }) => sum + o.payableNetTwd, 0);
 
   return Response.json(ok({
     month,
