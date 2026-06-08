@@ -13,6 +13,7 @@ const ROOT = path.resolve(__dirname, '../..');
 
 const JSON_ROUTE = path.join(ROOT, 'app/api/guide/payout/monthly/route.ts');
 const CSV_ROUTE = path.join(ROOT, 'app/api/guide/payout/monthly/csv/route.ts');
+const SETTLEMENT_CONFIG = path.join(ROOT, 'src/lib/settlement-config.ts');
 
 const routes = [
   { label: 'JSON route', file: JSON_ROUTE },
@@ -40,11 +41,27 @@ for (const { label, file } of routes) {
     assert.match(src, /getSettlementConfig\(supabase\)/, `${label}: getSettlementConfig(supabase) call not found`);
   });
 
-  // ── Both routes: use settlementConfig.commission_rate in Math.floor ──
+  // ── Both routes: commission_rate applied in canonical helper ──
 
-  test(`${label} uses settlementConfig.commission_rate in commission calculation`, () => {
+  test(`${label} delegates commission_rate calculation to canonical helper (settlement-config.ts)`, () => {
     const src = readFileSync(file, 'utf8');
-    assert.match(src, /effectiveTwd \* settlementConfig\.commission_rate/, `${label}: commission_rate from settlementConfig not used`);
+    const helperSrc = readFileSync(SETTLEMENT_CONFIG, 'utf8');
+    // Since GH-1284, monthly payout routes delegate per-row math to computeGuidePayoutEstimate.
+    // The route calls the helper with settlementConfig; commission_rate math lives in the helper.
+    assert.ok(
+      src.includes('computeGuidePayoutEstimate'),
+      `${label}: must delegate commission math to computeGuidePayoutEstimate`
+    );
+    assert.match(
+      src,
+      /computeGuidePayoutEstimate\(/,
+      `${label}: computeGuidePayoutEstimate call not found`
+    );
+    assert.match(
+      helperSrc,
+      /effectiveTwd \* config\.commission_rate/,
+      'canonical helper must apply commission_rate from settlementConfig to effectiveTwd'
+    );
   });
 
   // ── Both routes: refund/effective-amount guard is still present ──
