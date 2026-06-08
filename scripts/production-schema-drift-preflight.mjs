@@ -226,6 +226,125 @@ const CHECK_DEFINITIONS = [
     ],
     select: 'id, payment_id, order_id, event_type, payload, trade_no, created_at',
   },
+  // -------------------------------------------------------------------------
+  // GH-1286: 7 production migration drift items — added 2026-06-08
+  // These tables/columns were merged in main but never applied to production.
+  // -------------------------------------------------------------------------
+  {
+    feature_area: 'guide activity plans — year-round flag',
+    impacted_feature: 'guide activities-with-plans API (GH-1067 drift)',
+    table: 'activity_plans',
+    required_columns: [
+      'id',
+      'is_year_round',
+    ],
+    select: 'id, is_year_round',
+    tags: ['gh-1286-drift', 'gh-1067'],
+  },
+  {
+    feature_area: 'guide activity plan seasons',
+    impacted_feature: 'season-gated availability (GH-1067 drift)',
+    table: 'activity_plan_seasons',
+    required_columns: [
+      'id',
+      'activity_plan_id',
+      'start_month',
+      'start_day',
+      'end_month',
+      'end_day',
+      'timezone',
+      'is_active',
+      'created_at',
+      'updated_at',
+    ],
+    select:
+      'id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active, created_at, updated_at',
+    tags: ['gh-1286-drift', 'gh-1067'],
+  },
+  {
+    feature_area: 'guide slot conflict overrides',
+    impacted_feature: 'admin conflict override for blocked guide slots (GH-1067 drift)',
+    table: 'guide_slot_conflict_overrides',
+    required_columns: [
+      'id',
+      'guide_id',
+      'activity_id',
+      'activity_plan_id',
+      'start_at',
+      'end_at',
+      'reason',
+      'requires_helper',
+      'helper_status',
+      'status',
+      'created_at',
+    ],
+    select:
+      'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, status, created_at',
+    tags: ['gh-1286-drift', 'gh-1067'],
+  },
+  {
+    feature_area: 'guide trip reports',
+    impacted_feature: 'guide trip-report submission storage (GH-1171 drift)',
+    table: 'guide_trip_reports',
+    required_columns: [
+      'id',
+      'booking_id',
+      'guide_id',
+      'status',
+      'trip_completed',
+      'traveler_no_show',
+      'submitted_at',
+      'created_at',
+      'updated_at',
+    ],
+    select:
+      'id, booking_id, guide_id, status, trip_completed, traveler_no_show, submitted_at, created_at, updated_at',
+    tags: ['gh-1286-drift', 'gh-1171'],
+  },
+  {
+    feature_area: 'review invitations',
+    impacted_feature: 'review invitation delivery log (GH-1174 drift)',
+    table: 'review_invitations',
+    required_columns: [
+      'id',
+      'order_id',
+      'invitation_kind',
+      'channel',
+      'status',
+      'initiated_by',
+      'eligibility_snapshot',
+      'created_at',
+      'updated_at',
+    ],
+    select:
+      'id, order_id, invitation_kind, channel, status, initiated_by, eligibility_snapshot, created_at, updated_at',
+    tags: ['gh-1286-drift', 'gh-1174'],
+  },
+  {
+    feature_area: 'bookings — conflict override audit column',
+    impacted_feature: 'admin conflict override audit link (GH-1067 drift)',
+    table: 'bookings',
+    required_columns: [
+      'id',
+      'conflict_override_id',
+    ],
+    select: 'id, conflict_override_id',
+    tags: ['gh-1286-drift', 'gh-1067'],
+  },
+  {
+    feature_area: 'activity_plans — archived status support',
+    impacted_feature: 'plan archival / soft-delete (GH-1286 drift)',
+    table: 'activity_plans',
+    required_columns: [
+      'id',
+      'status',
+    ],
+    // Column-existence probe: verifies 'id' and 'status' columns are present.
+    // The archived CHECK constraint behaviour is covered by verify-migration-1286.mjs
+    // and the canonical SQL in the approved migration.
+    select: 'id, status',
+    tags: ['gh-1286-drift', 'gh-1286'],
+  },
 ];
 
 function parseArgs(argv) {

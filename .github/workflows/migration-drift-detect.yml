@@ -1,0 +1,166 @@
+name: migration-drift-detect
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/production-schema-drift-preflight.mjs'
+      - 'scripts/verify-migration-*.mjs'
+      - '.github/workflows/migration-drift-detect.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'scripts/production-schema-drift-preflight.mjs'
+  schedule:
+    - cron: '0 4 * * *'   # Daily 04:00 UTC — catch drift from direct DB changes
+  workflow_dispatch: {}
+
+# Only one run per ref at a time; cancel stale runs on new pushes.
+concurrency:
+  group: migration-drift-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    name: Migration source-contract tests (static, no DB)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        run: npm install
+
+      - name: Run GH-1286 source-contract tests
+        run: |
+          cd apps/web
+          NODE_OPTIONS=--max-old-space-size=512 \
+          node --test --test-concurrency=1 \
+            tests/api/issue1286-migration-drift-source-contract.test.mjs
+
+  drift-detect:
+    name: Production schema drift detection
+    runs-on: ubuntu-latest
+    # Only run when credentials are available (secrets cannot be exposed for
+    # untrusted PR forks — drift detection is best-effort on forks).
+    needs: source-contract
+    steps:
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.SUPABASE_URL != '' }}
+          HAS_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_KEY" != "true" ]; then
+            echo "HOLD: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not configured."
+            echo "   Skipping live drift detection — set secrets in repo Settings → Secrets → Actions."
+            mkdir -p /tmp/drift-detect
+            echo '{"overall_status":"hold","reason":"missing_secrets","timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}' \
+              > /tmp/drift-detect/drift-report.json
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Write HOLD summary
+        if: steps.check-secrets.outputs.skip == 'true'
+        run: |
+          echo "## Migration Drift Detection — HOLD" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** HOLD — secrets not configured" >> $GITHUB_STEP_SUMMARY
+          echo "Set \`SUPABASE_URL\` and \`SUPABASE_SERVICE_ROLE_KEY\` in repo Settings → Secrets → Actions." >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload HOLD artifact
+        if: steps.check-secrets.outputs.skip == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report-${{ github.run_id }}
+          path: /tmp/drift-detect/drift-report.json
+          retention-days: 30
+
+      - name: Checkout
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        if: steps.check-secrets.outputs.skip != 'true'
+        run: npm install
+
+      - name: Run production-schema-drift-preflight (all checks including GH-1286 items)
+        if: steps.check-secrets.outputs.skip != 'true'
+        id: drift-preflight
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          mkdir -p /tmp/drift-detect
+          node scripts/production-schema-drift-preflight.mjs \
+            --json \
+            --output /tmp/drift-detect/preflight-report.json
+          preflight_code=$?
+          echo "preflight_exit=${preflight_code}" >> "$GITHUB_OUTPUT"
+          exit ${preflight_code}
+        continue-on-error: true
+
+      - name: Run GH-1286 verify script
+        if: steps.check-secrets.outputs.skip != 'true'
+        id: verify-1286
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node scripts/verify-migration-1286.mjs --json \
+            > /tmp/drift-detect/verify-1286-report.json
+          verify_code=$?
+          echo "verify_exit=${verify_code}" >> "$GITHUB_OUTPUT"
+          exit ${verify_code}
+        continue-on-error: true
+
+      - name: Write step summary
+        if: steps.check-secrets.outputs.skip != 'true'
+        run: |
+          echo "## Migration Drift Detection Result" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f /tmp/drift-detect/preflight-report.json ]; then
+            STATUS=$(node -e "const d=require('/tmp/drift-detect/preflight-report.json'); console.log(d.summary?.overall_status || d.overall_status || 'unknown')" 2>/dev/null || echo "unknown")
+            echo "### Production Schema Preflight: $STATUS" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -f /tmp/drift-detect/verify-1286-report.json ]; then
+            STATUS=$(node -e "const d=require('/tmp/drift-detect/verify-1286-report.json'); console.log(d.summary?.overall_status || 'unknown')" 2>/dev/null || echo "unknown")
+            echo "### GH-1286 Drift Verify: $STATUS" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_See uploaded artifacts for full JSON reports._" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload drift reports
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-report-${{ github.run_id }}
+          path: /tmp/drift-detect/
+          retention-days: 30
+
+      - name: Fail if GH-1286 verify found missing schema items
+        if: >
+          steps.check-secrets.outputs.skip != 'true' &&
+          steps.verify-1286.outputs.verify_exit != '0'
+        run: |
+          echo "ERROR: GH-1286 migration drift verify FAILED — some production schema items are missing."
+          echo "Apply the canonical SQL per docs/operations/GH-1286-prod-apply-runbook.md"
+          echo "after the owner approval gate before re-running this workflow."
+          exit 1
