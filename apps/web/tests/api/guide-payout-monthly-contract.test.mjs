@@ -64,11 +64,23 @@ test('route uses verifyGuideSession for auth', () => {
   assert.match(src, /UNAUTHORIZED|401/, 'UNAUTHORIZED/401 auth guard not found in route');
 });
 
-// ── Route: per-order commission calculation ──────────────────────────────────
+// ── Canonical helper: commission calculation with Math.floor ─────────────────
+// GH-1284: Math.floor commission logic was moved to computeGuidePayoutEstimate
+// in settlement-config.ts (canonical helper). Route delegates to this helper;
+// asserting Math.floor in the route would force the logic back out of the helper.
+// This test now verifies the contract at the canonical source of truth.
 
-test('route calculates commissionTwd with Math.floor', () => {
+const SETTLEMENT_CONFIG = path.join(ROOT, 'src/lib/settlement-config.ts');
+
+test('canonical helper computeGuidePayoutEstimate uses Math.floor for commission (GH-1284)', () => {
+  const helperSrc = readFileSync(SETTLEMENT_CONFIG, 'utf8');
+  assert.match(helperSrc, /computeGuidePayoutEstimate/, 'computeGuidePayoutEstimate not found in settlement-config');
+  assert.match(helperSrc, /Math\.floor/, 'Math.floor not used in settlement-config canonical helper');
+});
+
+test('route delegates commission calculation to canonical helper and returns commissionTwd/netTwd', () => {
   const src = readFileSync(PAYOUT_ROUTE, 'utf8');
-  assert.match(src, /Math\.floor/, 'Math.floor not used for commission calculation');
+  assert.match(src, /computeGuidePayoutEstimate/, 'route must delegate to computeGuidePayoutEstimate helper');
   assert.match(src, /commissionTwd/, 'commissionTwd not in route response');
   assert.match(src, /netTwd/, 'netTwd not in route response');
 });
