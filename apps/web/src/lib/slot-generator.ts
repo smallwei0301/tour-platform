@@ -29,6 +29,8 @@ export interface AvailabilityRule {
   effective_from: string | null; // "YYYY-MM-DD" or null
   effective_to: string | null; // "YYYY-MM-DD" or null
   is_active: boolean;
+  /** GH-1290: per-rule dynamic buffer re-emit toggle (DB DEFAULT FALSE) */
+  use_dynamic_reemit?: boolean;
 }
 
 export interface BlackoutWindow {
@@ -456,6 +458,75 @@ export function buildCandidateSlots(
 }
 
 /**
+ * GH-1290: Build candidate slots for a single rule+day, optionally re-emitting
+ * a new candidate start immediately after booking_end + buffer_after when
+ * use_dynamic_reemit is true.
+ *
+ * This is the canonical shared helper called by BOTH:
+ *  - generateAvailableSlots()  (guide preview path)
+ *  - getV2ActivityAvailability() loop (traveler available-slots path)
+ *
+ * When use_dynamic_reemit is false (the default), behaviour is identical to
+ * calling buildCandidateSlots() directly (no re-emit, no new candidates added).
+ *
+ * @param rule            AvailabilityRule for this day
+ * @param bookings        Active bookings in scope (for re-emit calculation only;
+ *                        conflict filtering happens downstream)
+ * @param durationMinutes Plan duration in minutes
+ * @param dateStr         "YYYY-MM-DD"
+ */
+export function buildCandidateSlotsForRule(
+  rule: AvailabilityRule,
+  bookings: ExistingBooking[],
+  durationMinutes: number,
+  dateStr: string
+): TimeSlot[] {
+  // Base grid from original function
+  const baseCandidates = buildCandidateSlots(rule, durationMinutes, dateStr);
+
+  if (!rule.use_dynamic_reemit) {
+    return baseCandidates;
+  }
+
+  // Build re-emit candidates: for every active booking on this day, emit a new
+  // candidate starting at booking_end + buffer_after.
+  const dayStart = createDateInTimezone(dateStr, rule.start_time_local, rule.timezone);
+  const dayEnd = createDateInTimezone(dateStr, rule.end_time_local, rule.timezone);
+
+  const reemitSet = new Set<number>(); // dedup by ms timestamp
+  const reemitSlots: TimeSlot[] = [];
+
+  for (const booking of bookings) {
+    const bookingEnd = new Date(booking.end_at);
+    const bufferAfter = rule.buffer_after_minutes;
+    const reemitStart = addMinutes(bookingEnd, bufferAfter);
+    const reemitEnd = addMinutes(reemitStart, durationMinutes);
+
+    // Must be within the availability window
+    if (reemitStart < dayStart || reemitEnd > dayEnd) continue;
+
+    const ts = reemitStart.getTime();
+    if (reemitSet.has(ts)) continue;
+    reemitSet.add(ts);
+
+    reemitSlots.push({ startAt: reemitStart, endAt: reemitEnd });
+  }
+
+  if (reemitSlots.length === 0) return baseCandidates;
+
+  // Merge base candidates with re-emit candidates, deduplicate by startAt, sort
+  const allStarts = new Set<number>(baseCandidates.map((s) => s.startAt.getTime()));
+  const merged = [...baseCandidates];
+  for (const slot of reemitSlots) {
+    if (!allStarts.has(slot.startAt.getTime())) {
+      merged.push(slot);
+    }
+  }
+  merged.sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+  return merged;
+}
+
+/**
  * Check if a slot conflicts with a blackout window
  */
 export function slotConflictsWithBlackout(
@@ -614,7 +685,7 @@ export function generateAvailableSlots(
     const rulesForDay = applicableRules.filter((r) => r.weekday === weekday);
 
     for (const rule of rulesForDay) {
-      const candidates = buildCandidateSlots(rule, plan.duration_minutes, dateStr);
+      const candidates = buildCandidateSlotsForRule(rule, relevantBookings, plan.duration_minutes, dateStr);
       allCandidates.push(...candidates);
     }
   }

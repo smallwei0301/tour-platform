@@ -79,6 +79,7 @@ interface UpdateRuleBody {
   effective_from?: string | null;
   effective_to?: string | null;
   is_active?: boolean;
+  use_dynamic_reemit?: boolean;
 }
 
 export async function PUT(
@@ -162,6 +163,7 @@ export async function PUT(
     if (body.effective_from !== undefined) updateData.effective_from = body.effective_from;
     if (body.effective_to !== undefined) updateData.effective_to = body.effective_to;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.use_dynamic_reemit !== undefined) updateData.use_dynamic_reemit = body.use_dynamic_reemit;
 
     // Validate start/end times after merge
     const startTime = (updateData.start_time_local as string) || existing.start_time_local;
