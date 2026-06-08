@@ -320,6 +320,31 @@ const CHECK_DEFINITIONS = [
       'id, order_id, invitation_kind, channel, status, initiated_by, eligibility_snapshot, created_at, updated_at',
     tags: ['gh-1286-drift', 'gh-1174'],
   },
+  {
+    feature_area: 'bookings — conflict override audit column',
+    impacted_feature: 'admin conflict override audit link (GH-1067 drift)',
+    table: 'bookings',
+    required_columns: [
+      'id',
+      'conflict_override_id',
+    ],
+    select: 'id, conflict_override_id',
+    tags: ['gh-1286-drift', 'gh-1067'],
+  },
+  {
+    feature_area: 'activity_plans — archived status support',
+    impacted_feature: 'plan archival / soft-delete (GH-1286 drift)',
+    table: 'activity_plans',
+    required_columns: [
+      'id',
+      'status',
+    ],
+    // Filter with eq('archived') to confirm the CHECK constraint allows 'archived';
+    // a missing constraint or invalid enum will surface as a PostgREST error.
+    select: 'id, status',
+    filter: { column: 'status', op: 'eq', value: 'archived' },
+    tags: ['gh-1286-drift', 'gh-1286'],
+  },
 ];
 
 function parseArgs(argv) {

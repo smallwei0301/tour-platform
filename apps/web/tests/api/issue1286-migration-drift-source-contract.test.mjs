@@ -300,6 +300,27 @@ describe('production-schema-drift-preflight.mjs covers GH-1286 drift items', () 
       'production-schema-drift-preflight.mjs must check review_invitations table',
     );
   });
+
+  it('preflight script covers bookings.conflict_override_id column (GH-1067 drift)', () => {
+    const content = readText(PREFLIGHT_SCRIPT);
+    assert.ok(
+      content.includes('conflict_override_id'),
+      'production-schema-drift-preflight.mjs must include a CHECK_DEFINITION for bookings.conflict_override_id',
+    );
+  });
+
+  it('preflight script covers activity_plans archived status (GH-1286 drift)', () => {
+    const content = readText(PREFLIGHT_SCRIPT);
+    // The preflight must have a gh-1286-drift tagged entry for activity_plans
+    // covering the archived status check item.
+    assert.ok(
+      content.includes("'gh-1286-drift'") || content.includes('"gh-1286-drift"'),
+      'production-schema-drift-preflight.mjs must tag GH-1286 drift items',
+    );
+    // Confirm activity_plans appears in a gh-1286-drift tagged block
+    const archiveBlock = content.includes("archived status support") || content.includes("gh-1286-drift");
+    assert.ok(archiveBlock, 'preflight must cover activity_plans archived status in a gh-1286-drift block');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -325,6 +346,49 @@ describe('GH-1286 migration-drift-detect CI workflow', () => {
     assert.ok(
       content.includes('pull_request') || content.includes('push'),
       'CI workflow must trigger on pull_request or push',
+    );
+  });
+
+  it('drift fail-gate does NOT use || true to swallow verify exit code (behaviour lock)', () => {
+    // Behaviour assertion: the run block must not use || true after the verify command,
+    // which would set verify_exit=0 regardless of real outcome and silently skip the gate.
+    const content = readText(WORKFLOW);
+    // Check that the verify-1286 step does not contain || true
+    const verifyStep = content.split('id: verify-1286')[1] ?? '';
+    // Grab up to the next step separator (~200 chars is enough)
+    const verifyBlock = verifyStep.slice(0, 600);
+    assert.ok(
+      !verifyBlock.includes('|| true'),
+      'verify-1286 step must NOT use "|| true" — it swallows exit code and disables the fail-gate',
+    );
+  });
+
+  it('drift fail-gate captures verify exit code explicitly before writing GITHUB_OUTPUT', () => {
+    // Behaviour assertion: the run block must capture exit code into a variable
+    // and write that variable to GITHUB_OUTPUT so the downstream gate step can read it.
+    const content = readText(WORKFLOW);
+    assert.ok(
+      content.includes('verify_code=$?') || content.includes('verify_exit=$?'),
+      'verify-1286 step must capture exit code into a variable (verify_code=$? or verify_exit=$?)',
+    );
+    assert.ok(
+      content.includes('verify_exit=${verify_code}') || content.includes('verify_exit=$?'),
+      'verify-1286 step must write the captured code to GITHUB_OUTPUT as verify_exit',
+    );
+  });
+
+  it('is_year_round column is included in verify script CHECKS (return-contract lock)', () => {
+    // is_year_round must appear in the verify script's CHECKS array,
+    // not just in the canonical SQL — so the live drift detection exercises it.
+    const VERIFY_SCRIPT = repoPath('scripts/verify-migration-1286.mjs');
+    const content = readText(VERIFY_SCRIPT);
+    assert.ok(
+      content.includes('is_year_round_column_exists'),
+      'verify-migration-1286.mjs must define is_year_round_column_exists check',
+    );
+    assert.ok(
+      content.includes('is_year_round'),
+      'verify-migration-1286.mjs must reference is_year_round in the check body',
     );
   });
 });

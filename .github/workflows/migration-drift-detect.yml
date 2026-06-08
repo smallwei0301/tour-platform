@@ -108,9 +108,10 @@ jobs:
           mkdir -p /tmp/drift-detect
           node scripts/production-schema-drift-preflight.mjs \
             --json \
-            --output /tmp/drift-detect/preflight-report.json \
-            || true
-          echo "preflight_exit=$?" >> "$GITHUB_OUTPUT"
+            --output /tmp/drift-detect/preflight-report.json
+          preflight_code=$?
+          echo "preflight_exit=${preflight_code}" >> "$GITHUB_OUTPUT"
+          exit ${preflight_code}
         continue-on-error: true
 
       - name: Run GH-1286 verify script
@@ -121,9 +122,10 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           node scripts/verify-migration-1286.mjs --json \
-            > /tmp/drift-detect/verify-1286-report.json \
-            || true
-          echo "verify_exit=$?" >> "$GITHUB_OUTPUT"
+            > /tmp/drift-detect/verify-1286-report.json
+          verify_code=$?
+          echo "verify_exit=${verify_code}" >> "$GITHUB_OUTPUT"
+          exit ${verify_code}
         continue-on-error: true
 
       - name: Write step summary
