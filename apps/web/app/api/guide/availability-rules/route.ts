@@ -94,6 +94,7 @@ export async function GET(request: NextRequest) {
         effective_from,
         effective_to,
         is_active,
+        use_dynamic_reemit,
         created_at,
         updated_at,
         activity_plans (
@@ -131,6 +132,7 @@ interface CreateRuleBody {
   effective_from?: string | null;
   effective_to?: string | null;
   is_active?: boolean;
+  use_dynamic_reemit?: boolean;
 }
 
 export async function POST(request: NextRequest) {
@@ -193,6 +195,7 @@ export async function POST(request: NextRequest) {
       effective_from: body.effective_from || null,
       effective_to: body.effective_to || null,
       is_active: body.is_active ?? true,
+      use_dynamic_reemit: body.use_dynamic_reemit ?? false,
     };
 
     const { data, error } = await supabase

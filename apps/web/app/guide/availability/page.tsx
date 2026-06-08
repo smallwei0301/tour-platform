@@ -28,6 +28,7 @@ type AvailabilityRule = {
   effective_from: string | null;
   effective_to: string | null;
   is_active: boolean;
+  use_dynamic_reemit: boolean;
   activity_plans?: { id: string; name: string } | null;
 };
 
@@ -104,6 +105,7 @@ export default function GuideAvailabilityPage() {
     effective_from: '',
     effective_to: '',
     is_active: true,
+    use_dynamic_reemit: false,
   });
 
   // Blackout form state
@@ -196,6 +198,7 @@ export default function GuideAvailabilityPage() {
         effective_from: rule.effective_from || '',
         effective_to: rule.effective_to || '',
         is_active: rule.is_active,
+        use_dynamic_reemit: rule.use_dynamic_reemit ?? false,
       });
     } else {
       setEditingRule(null);
@@ -215,6 +218,7 @@ export default function GuideAvailabilityPage() {
         effective_from: '',
         effective_to: '',
         is_active: true,
+        use_dynamic_reemit: false,
       });
     }
     setError('');
@@ -729,6 +733,14 @@ export default function GuideAvailabilityPage() {
               ⚠️ 注意：目前設定的時段間隔（{ruleForm.slot_interval_minutes} 分鐘）與方案時長（{selectedRulePlan.durationMinutes} 分鐘）不一致。若要對齊方案時長，請手動更新間隔。
             </div>
           )}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+            <input
+              type="checkbox"
+              checked={ruleForm.use_dynamic_reemit}
+              onChange={(e) => setRuleForm({ ...ruleForm, use_dynamic_reemit: e.target.checked })}
+            />
+            啟用動態時段（根據上次預訂結束時間自動補發可用時段）
+          </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
             <input
               type="checkbox"
