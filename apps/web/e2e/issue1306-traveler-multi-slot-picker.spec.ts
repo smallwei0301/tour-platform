@@ -163,3 +163,32 @@ test('single-slot day: no picker rendered (no UI regression for the common case)
   await expect(page.locator('text=可預約，剩餘')).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId('traveler-slot-picker')).toHaveCount(0);
 });
+
+// Issue #1306 acceptance #5 — when the server returns a mix of available and
+// unavailable slots for the date, the picker must only render the available
+// ones. This keeps #1289's fixed-candidate conflict filtering honest at the
+// client edge too: even if a stale unavailable slot leaks past the server,
+// the client's `.filter(slot.isAvailable)` step hides it from the picker.
+test('mixed availability day: only isAvailable=true slots reach the picker (#1306 acceptance #5)', async ({ page }) => {
+  const date = '2026-06-17';
+  // 6 slots: 3 available (09:00, 11:00, 13:00) interleaved with 3 unavailable
+  // (10:00, 12:00, 14:00). The picker must show only the 3 available ones.
+  const slots = [
+    { ...buildSlot(`${date}T01:00:00.000Z`, `${date}T02:00:00.000Z`), isAvailable: true },
+    { ...buildSlot(`${date}T02:00:00.000Z`, `${date}T03:00:00.000Z`), isAvailable: false },
+    { ...buildSlot(`${date}T03:00:00.000Z`, `${date}T04:00:00.000Z`), isAvailable: true },
+    { ...buildSlot(`${date}T04:00:00.000Z`, `${date}T05:00:00.000Z`), isAvailable: false },
+    { ...buildSlot(`${date}T05:00:00.000Z`, `${date}T06:00:00.000Z`), isAvailable: true },
+    { ...buildSlot(`${date}T06:00:00.000Z`, `${date}T07:00:00.000Z`), isAvailable: false },
+  ];
+  await stubAvailableSlots(page, slots, date);
+  await page.goto(`/booking/${ACTIVITY_FIXTURE.slug}?plan=${PLAN_ID}&date=${date}`, { waitUntil: 'domcontentloaded' });
+
+  await expect(page.getByTestId('traveler-slot-picker')).toBeVisible({ timeout: 15_000 });
+  const options = page.getByTestId('traveler-slot-option');
+  // Only the 3 isAvailable=true slots, never the 3 isAvailable=false ones.
+  await expect(options).toHaveCount(3);
+  await expect(options.nth(0)).toContainText('09:00');
+  await expect(options.nth(1)).toContainText('11:00');
+  await expect(options.nth(2)).toContainText('13:00');
+});
