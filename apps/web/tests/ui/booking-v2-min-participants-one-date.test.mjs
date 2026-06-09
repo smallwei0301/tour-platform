@@ -55,13 +55,25 @@ test('v2 shell uses selected plan base price from available-slots selectedPlan m
   assert.match(src, /const total = effectivePlanMeta\?\.priceType === 'per_group' \? unitPrice : unitPrice \* guests/);
 });
 
-test('v2 shell uses date-level availability UI and removes multi-time dropdown', async () => {
+test('v2 shell uses date-level availability UI and a multi-slot picker (#1306 restored multi-time selection)', async () => {
+  // Issue #1306 reverted the "remove multi-time dropdown" decision: the
+  // V2 API returns N available slots per date and the traveler must be
+  // able to pick from them. The single-line date summary stays for the
+  // common single-slot case; an additional `role=radiogroup` picker is
+  // rendered only when slots.length > 1. The legacy `<select>` dropdown
+  // is still gone — the new picker uses buttons + aria-checked.
   const src = await readBookingSource();
 
+  // Date-level summary still present.
   assert.match(src, /可預約日期/);
   assert.match(src, /selectedDate}（可預約，剩餘/);
-  assert.doesNotMatch(src, /可預約時段/);
+
+  // Legacy native-select dropdown stays removed.
   assert.doesNotMatch(src, /<select className="tp-input" value=\{selectedSlotStartAt\}/);
+
+  // New multi-slot picker (#1306) is present and gated by slots.length > 1.
+  assert.match(src, /data-testid=["']traveler-slot-picker["']/);
+  assert.match(src, /slots\.length\s*>\s*1\s*&&/);
 });
 
 test('v2 shell uses evaluator capacityLeft from selected slot in booking summary displays', async () => {
