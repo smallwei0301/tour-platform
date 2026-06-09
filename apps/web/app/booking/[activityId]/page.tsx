@@ -711,7 +711,17 @@ function BookingInnerV2FlagShell() {
             }
           : null;
         const canonicalSelectedSlot = selectedSlotFromDateEntry || selectedDateSlots[0] || fallbackSlot;
-        const nextSlots = canonicalSelectedSlot ? [canonicalSelectedSlot] : [];
+        // Issue #1306: when the API returns multiple `isAvailable` slots
+        // for the selected date, the traveler must be able to pick from
+        // all of them — previously this line collapsed `selectedDateSlots`
+        // to `[canonicalSelectedSlot]` (a single entry), hiding the rest.
+        // Now we keep every available slot the API gave us; only fall back
+        // to the canonical/fallback single entry when there are none.
+        const nextSlots = selectedDateSlots.length > 0
+          ? selectedDateSlots
+          : canonicalSelectedSlot
+            ? [canonicalSelectedSlot]
+            : [];
         const resolvedPlanCandidate = json.data?.planId || v2PlanKey;
         const selectedPlan = json.data?.selectedPlan;
         if (selectedPlan && Number.isFinite(Number(selectedPlan.basePrice))) {
@@ -1099,6 +1109,59 @@ function BookingInnerV2FlagShell() {
                   </>
                 )}
               </div>
+              {/* Issue #1306: when the API returns multiple available slots
+                  for the picked date, render a picker so travellers can
+                  choose which start time. Single-slot days keep the
+                  existing summary line above and omit the picker entirely
+                  (no behaviour change for those). Times use Asia/Taipei
+                  per the issue's parity requirement with guide preview. */}
+              {!slotsLoading && slots.length > 1 && (
+                <div
+                  role="radiogroup"
+                  aria-label="選擇可預約時段"
+                  data-testid="traveler-slot-picker"
+                  style={{
+                    display: 'flex', flexWrap: 'wrap', gap: 8,
+                    marginBottom: 12,
+                  }}
+                >
+                  {slots.map((slot) => {
+                    const isSelected = slot.startAt === selectedSlotStartAt;
+                    const start = new Date(slot.startAt).toLocaleTimeString('zh-TW', {
+                      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone,
+                    });
+                    const end = new Date(slot.endAt).toLocaleTimeString('zh-TW', {
+                      hour: '2-digit', minute: '2-digit', hour12: false, timeZone: timezone,
+                    });
+                    return (
+                      <button
+                        key={slot.startAt}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSelectedSlotStartAt(slot.startAt)}
+                        data-testid="traveler-slot-option"
+                        style={{
+                          padding: '8px 14px',
+                          borderRadius: 8,
+                          border: `1px solid ${isSelected ? 'var(--tp-primary)' : 'var(--tp-border)'}`,
+                          background: isSelected ? 'var(--tp-primary-soft, #eef2ff)' : '#fff',
+                          color: isSelected ? 'var(--tp-primary)' : 'var(--tp-text)',
+                          fontWeight: isSelected ? 700 : 500,
+                          fontSize: 14,
+                          cursor: 'pointer',
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        {start}–{end}
+                        <span style={{ display: 'block', fontSize: 11, color: 'var(--tp-muted)', fontWeight: 400 }}>
+                          剩餘 {slot.capacityLeft}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {!slotsLoading && isOverCapacity && (
                 <p style={{ margin: '0 0 12px', color: 'var(--tp-danger)', fontSize: 13 }}>
                   參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。
