@@ -482,6 +482,9 @@ export async function getAvailableSlots(
       effective_from: row.effective_from,
       effective_to: row.effective_to,
       is_active: row.is_active,
+      // GH-1301: propagate use_dynamic_reemit so the slot generator can
+      // emit post-buffer re-start candidates when the flag is true.
+      use_dynamic_reemit: row.use_dynamic_reemit ?? false,
     }));
 
     const blackouts: BlackoutWindow[] = (blackoutsData || []).map((row) => ({

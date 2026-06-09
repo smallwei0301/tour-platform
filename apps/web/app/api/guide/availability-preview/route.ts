@@ -212,10 +212,14 @@ export async function GET(request: NextRequest) {
       .gte('ends_at', dateFrom + 'T00:00:00Z');
     const blackouts = (blackoutsRaw || []) as BlackoutWindow[];
 
-    // Fetch active bookings in range (exclude cancelled/no_show)
+    // Fetch active bookings in range (exclude cancelled/no_show).
+    // GH-1301: include guide_id so slot-generator.getExistingBookings() can
+    // filter by guide_id (it filters out rows where booking.guide_id !== guideId).
+    // Without guide_id, all bookings were silently invisible to the generator,
+    // causing dynamic re-emit to never trigger even when use_dynamic_reemit=true.
     const { data: bookingsRaw } = await supabase
       .from('bookings')
-      .select('id, start_at, end_at, status, buffer_before_minutes, buffer_after_minutes')
+      .select('id, guide_id, start_at, end_at, status, buffer_before_minutes, buffer_after_minutes')
       .eq('guide_id', session.guideId)
       .not('status', 'in', '("cancelled","no_show")')
       .lte('start_at', dateTo + 'T23:59:59Z')
