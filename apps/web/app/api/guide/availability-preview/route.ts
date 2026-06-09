@@ -217,13 +217,30 @@ export async function GET(request: NextRequest) {
     // filter by guide_id (it filters out rows where booking.guide_id !== guideId).
     // Without guide_id, all bookings were silently invisible to the generator,
     // causing dynamic re-emit to never trigger even when use_dynamic_reemit=true.
-    const { data: bookingsRaw } = await supabase
+    // GH-1290 (v2): filter by activity_plan_id when previewing a specific plan
+    // to avoid cross-plan booking contamination (e.g., Plan B's bookings should not
+    // affect Plan A's slot generation).
+    let bookingsQuery = supabase
       .from('bookings')
       .select('id, guide_id, start_at, end_at, status, buffer_before_minutes, buffer_after_minutes')
       .eq('guide_id', session.guideId)
       .not('status', 'in', '("cancelled","no_show")')
       .lte('start_at', dateTo + 'T23:59:59Z')
       .gte('end_at', dateFrom + 'T00:00:00Z');
+
+    // GH-1290: filter by activity_plan_id when previewing a specific plan
+    if (activityPlanId) {
+      bookingsQuery = bookingsQuery.or(`activity_plan_id.is.null,activity_plan_id.eq.${activityPlanId}`);
+    }
+
+    const { data: bookingsRaw, error: bookingsError } = await bookingsQuery;
+
+    // GH-1290: capture and report Supabase query errors instead of silently treating as zero bookings
+    if (bookingsError) {
+      console.error('Guide availability preview: bookings query error:', bookingsError);
+      return Response.json(fail('BOOKING_QUERY_ERROR', `Bookings query failed: ${bookingsError.message}`), { status: 500 });
+    }
+
     const bookings = (bookingsRaw || []) as ExistingBooking[];
 
     const previewCanonical = resolvePreviewCanonicalReason({

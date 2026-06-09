@@ -25,7 +25,6 @@ import {
   FORMED_GROUP_BOOKING_STATUSES,
   calculateExistingParticipantsForGroup,
   evaluateGroupBookingRule,
-  excludeSameActivityPlanDateRangeBookings,
 } from './group-booking-rule.ts';
 
 export type SelectedScheduleAuthority = 'authoritative' | 'fallback' | 'generated' | 'none';
@@ -94,19 +93,10 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     participants: input.participants,
   };
 
-  const nonGroupConflictBookings = excludeSameActivityPlanDateRangeBookings({
-    bookings: input.bookings,
-    activityId: input.activityId,
-    planId: input.planId,
-    dateFrom: input.dateFrom,
-    dateTo: input.dateTo,
-    timezone: input.timezone,
-  });
-
   const deps: SlotGeneratorDeps = {
     rules: input.rules,
     blackouts: input.blackouts,
-    bookings: nonGroupConflictBookings,
+    bookings: input.bookings, // GH-1290: pass ALL bookings to generator for re-emit, not filtered
     plan: input.plan,
   };
 
