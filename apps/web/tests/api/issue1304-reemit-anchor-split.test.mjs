@@ -10,6 +10,15 @@
  * Fix: Add reemitAnchorBookings?: ExistingBooking[] to SlotGeneratorDeps,
  * so buildCandidateSlotsForRule receives full bookings (re-emit anchors)
  * while filterConflicts continues using nonGroupConflictBookings (conflict blocker).
+ *
+ * GH-1316 addendum: cover the actual #1304 acceptance scenarios (group add-on):
+ *   - same-plan booking within max → 09:00 slot is still available for new joiners,
+ *   - same-plan booking at max → 09:00 (and all slots) blocked by CAPACITY_EXCEEDED,
+ *   - different-plan booking → 09:00 IS blocked (conflict-blocker still applies).
+ * The original it#2 below was misleading: its title said "does NOT block availability"
+ * but its assertion only checked 10:30 (a #1290 re-emit concern) and the inline
+ * comment claimed 09:00 "should not appear as available" — the opposite of #1304's
+ * group add-on goal. Re-stated below as `same-plan booking does NOT block 09:00`.
  */
 
 import assert from 'node:assert/strict';
@@ -113,22 +122,47 @@ describe('GH-1304: re-emit anchor vs conflict-blocker split', () => {
     );
   });
 
-  it('same-plan booking does NOT block availability (conflict-blocker excludes it)', () => {
-    // The SAME_PLAN_BOOKING should not create a "conflict" that blocks the 09:00 slot
-    // from being offered to someone else (because the rule scopes to this plan only,
-    // and same-plan bookings are for capacity tracking, not conflict blocking).
-    //
-    // In this case, since we have a same-plan booking at 09:00-10:00,
-    // the 09:00 slot should not be marked conflicted (only capacity-reduced).
-    // For travelers adding to the same plan (group booking), this is expected.
-
+  it('same-plan booking within max → 09:00 stays AVAILABLE for new joiners (group add-on)', () => {
+    // GH-1304 acceptance core: the same-plan booking (2 people, plan max=4)
+    // must NOT block the 09:00 slot — a new traveler asking for 1 seat brings
+    // the total to 3, still within max. This is exactly what
+    // excludeSameActivityPlanDateRangeBookings is for.
     const result = evaluateBookingAvailability({
       guideId: 'guide-1',
       activityId: ACTIVITY.id,
       planId: PLAN.id,
       rules: [RULE],
       blackouts: [],
-      bookings: [SAME_PLAN_BOOKING],
+      bookings: [SAME_PLAN_BOOKING], // 2 participants
+      plan: PLAN,
+      dateFrom: DATE_STR,
+      dateTo: DATE_STR,
+      timezone: 'UTC',
+      participants: 1, // 2 + 1 = 3, still within max=4
+    });
+
+    assert.strictEqual(result.available, true, 'group add-on within max must yield available=true');
+    const slot09 = result.slots.find((s) => s.startAt.slice(11, 16) === '09:00');
+    assert.ok(slot09, `09:00 slot must exist even when a same-plan booking sits on it; got: ${result.slots.map((s) => s.startAt).join(', ')}`);
+    assert.strictEqual(slot09.isAvailable, true, '09:00 slot must be marked isAvailable for group add-on');
+    // serializeSlots reports capacityLeft = max_participants - requested; that
+    // value can vary as the API evolves, but it must always have headroom (>0)
+    // when a new joiner can fit within the group ceiling.
+    assert.ok(slot09.capacityLeft >= 1, `09:00 capacityLeft must be >=1 (got ${slot09.capacityLeft})`);
+  });
+
+  it('same-plan booking at capacity → all slots blocked by CAPACITY_EXCEEDED', () => {
+    // GH-1304 acceptance #2: when the same-plan booking already fills the
+    // group (4/4), a new request must be rejected — not because of conflict
+    // blocking, but because the capacity rule fails.
+    const FULL_SAME_PLAN = { ...SAME_PLAN_BOOKING, id: 'same-plan-full', participants: 4 };
+    const result = evaluateBookingAvailability({
+      guideId: 'guide-1',
+      activityId: ACTIVITY.id,
+      planId: PLAN.id,
+      rules: [RULE],
+      blackouts: [],
+      bookings: [FULL_SAME_PLAN],
       plan: PLAN,
       dateFrom: DATE_STR,
       dateTo: DATE_STR,
@@ -136,15 +170,38 @@ describe('GH-1304: re-emit anchor vs conflict-blocker split', () => {
       participants: 1,
     });
 
-    // The 09:00-10:00 slot should not appear as available
-    // (conflicted by same-plan booking occupying the time)
-    const slot09Exists = result.slots.some((s) => s.startAt.slice(11, 16) === '09:00');
+    assert.strictEqual(result.available, false, 'capacity-full day must yield available=false');
+    assert.strictEqual(result.reasonCode, 'CAPACITY_EXCEEDED', `expected CAPACITY_EXCEEDED reason; got ${result.reasonCode}`);
+    assert.strictEqual(result.slots.length, 0, 'no slot should survive when capacity is full');
+  });
 
-    // Note: depending on isAvailable flag logic, this might be: slot exists but isAvailable=false
-    // For this test, we just verify that 10:30 is the key re-emit slot that exists
+  it('different-plan booking still blocks 09:00 (conflict-blocker only excludes same-plan)', () => {
+    // GH-1304 acceptance #3: the conflict-blocker exclusion is scoped to
+    // SAME activity_plan_id. A different plan's booking at 09:00-10:00 must
+    // still block 09:00 for a traveler picking THIS plan — group add-on is
+    // a per-plan concept, not a cross-plan one.
+    const DIFF_PLAN_BOOKING = { ...SAME_PLAN_BOOKING, id: 'diff-plan-1', activity_plan_id: 'other-plan' };
+    const result = evaluateBookingAvailability({
+      guideId: 'guide-1',
+      activityId: ACTIVITY.id,
+      planId: PLAN.id,
+      rules: [RULE],
+      blackouts: [],
+      bookings: [DIFF_PLAN_BOOKING],
+      plan: PLAN,
+      dateFrom: DATE_STR,
+      dateTo: DATE_STR,
+      timezone: 'UTC',
+      participants: 1,
+    });
+
+    const slot09 = result.slots.find((s) => s.startAt.slice(11, 16) === '09:00');
+    assert.strictEqual(slot09, undefined, `09:00 must be filtered out by the cross-plan conflict; got: ${result.slots.map((s) => s.startAt).join(', ')}`);
+    // 10:30 re-emit anchor must still fire (different plan booking is still a
+    // valid anchor when use_dynamic_reemit is on).
     assert.ok(
       result.slots.some((s) => s.startAt.slice(11, 16) === '10:30'),
-      `10:30 re-emit slot must exist even with same-plan booking`
+      '10:30 re-emit must still emit from cross-plan anchor',
     );
   });
 
