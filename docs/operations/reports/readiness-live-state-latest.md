@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-09T00:51:35.292Z -->
+<!-- query_timestamp: 2026-06-09T07:20:39.342Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-09T00:51:35.292Z  
-**Commit SHA:** `144b8ab057a6921de878a01a568c919d66fdf1ea`
+**Query timestamp:** 2026-06-09T07:20:39.342Z  
+**Commit SHA:** `e748ff3eb1f3b13016ae312c317ed843ee14595e`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1302 | [[Fix][GH-1301/GH-1290] Dynamic re-emit runtime mapping + guide preview booking query](https://github.com/smallwei0301/tour-platform/pull/1302) | `kanban/issue-1290-runtime-reemit-smoke-fix` |
+| #1309 | [fix(guide-preview): aggregate fallback season gate across rule-linked plans (closes #1307)](https://github.com/smallwei0301/tour-platform/pull/1309) | `claude/new-session-4ra75` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (33 total)
@@ -23,10 +23,12 @@
 
 _none_
 
-### P1 (16)
+### P1 (17)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1307 | [[Guide Dashboard] Fix availability preview falsely showing 尚未設定開放季節 in default (no-plan) view](https://github.com/smallwei0301/tour-platform/issues/1307) | type:bug, priority:P1, guide-dashboard, agent:queued, owner:ai-agent, status:ready, booking-v2, regression |
+| #1306 | [[Traveler Booking] Fix booking page collapsing multiple available slots into a single date/slot](https://github.com/smallwei0301/tour-platform/issues/1306) | type:bug, priority:P1, agent:next, owner:ai-agent, status:ready, traveler-booking, booking-v2, regression |
 | #1301 | [[GH-1290][CloseGate] Runtime smoke does not re-emit 10:30 after migration apply](https://github.com/smallwei0301/tour-platform/issues/1301) | triaged, type:bug, priority:P1, guide-dashboard, owner:ai-agent, status:ready, traveler-booking, booking-v2, regression |
 | #1299 | [[QA] Daily test checklist for recent merged PRs 2026-06-09](https://github.com/smallwei0301/tour-platform/issues/1299) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, database |
 | #1297 | [[QA] Verify post-#1285 guide payout estimate hold parity](https://github.com/smallwei0301/tour-platform/issues/1297) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, payments, launch:post-first-payment |
@@ -34,7 +36,6 @@ _none_
 | #1293 | [[Ops] Add production migration apply ledger and verified release gate after #1286 drift](https://github.com/smallwei0301/tour-platform/issues/1293) | triaged, type:optimization, priority:P1, agent:backlog, owner:mixed, status:needs-decision, database, infra, docs |
 | #1292 | [[QA] Post-#1286 production migration apply functional smoke for plan archive + guide availability](https://github.com/smallwei0301/tour-platform/issues/1292) | triaged, priority:P1, qa, guide-dashboard, agent:queued, owner:mixed, status:ready, type:qa, database, infra |
 | #1283 | [[QA] Verify post-#1282 review invitation sweep manual smoke](https://github.com/smallwei0301/tour-platform/issues/1283) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, orders, notifications, infra, launch:post-first-payment |
-| #1279 | [[QA] Verify post-#1278 available-slots conflict-override privacy boundary](https://github.com/smallwei0301/tour-platform/issues/1279) | triaged, priority:P1, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, booking-v2 |
 | #1269 | [[QA] Verify post-#1268 Booking V2 ECPay-only payment UI](https://github.com/smallwei0301/tour-platform/issues/1269) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, booking-v2 |
 | #1267 | [[QA] Daily test checklist for recent merged PRs 2026-06-06](https://github.com/smallwei0301/tour-platform/issues/1267) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, infra |
 | #1260 | [[QA] Verify late 2026-06-05 merged PRs after #1236 cutoff](https://github.com/smallwei0301/tour-platform/issues/1260) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, admin |
@@ -44,12 +45,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (16)
+### P2 (15)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1298 | [[Ops] Fix recurring stale readiness live-state snapshot after #1081](https://github.com/smallwei0301/tour-platform/issues/1298) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, docs |
-| #1290 | [[Booking V2] Opt-in dynamic buffer-aware slot re-emit (toggle, does not replace fixed-candidate)](https://github.com/smallwei0301/tour-platform/issues/1290) | type:feature, priority:P2, guide-dashboard, booking-v2 |
 | #1281 | [[Test Infra] Fix local child-process specs failing to resolve Next.js](https://github.com/smallwei0301/tour-platform/issues/1281) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, test-infra |
 | #1280 | [[Decision] Decide fate and slicing plan for stale LINE/LIFF PR #920 before further drift](https://github.com/smallwei0301/tour-platform/issues/1280) | triaged, priority:P2, agent:backlog, owner:mixed, status:needs-decision, type:decision, auth, notifications, infra |
 | #1275 | [[Test Infra] Add focused Playwright E2E CI smoke for launch-critical browser regressions](https://github.com/smallwei0301/tour-platform/issues/1275) | triaged, type:optimization, priority:P2, qa, agent:backlog, owner:ai-agent, status:ready, infra, test-infra |
@@ -81,16 +81,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1308 | [[Fix][GH-1304] Separate re-emit anchor from conflict-blocker in evaluateBookingAvailability](https://github.com/smallwei0301/tour-platform/pull/1308) | 2026-06-09 |
+| #1305 | [[GH-1301] Hotfix: remove non-existent buffer columns from bookings query](https://github.com/smallwei0301/tour-platform/pull/1305) | 2026-06-09 |
+| #1303 | [[Fix][GH-1301/GH-1290] Repair remaining dynamic re-emit runtime smoke gap](https://github.com/smallwei0301/tour-platform/pull/1303) | 2026-06-09 |
+| #1302 | [[Fix][GH-1301/GH-1290] Dynamic re-emit runtime mapping + guide preview booking query](https://github.com/smallwei0301/tour-platform/pull/1302) | 2026-06-09 |
 | #1300 | [feat(GH-1290): add opt-in dynamic buffer re-emit](https://github.com/smallwei0301/tour-platform/pull/1300) | 2026-06-08 |
 | #1296 | [docs(qa): #1279 available-slots 衝突例外隱私邊界驗收（post-#1278）](https://github.com/smallwei0301/tour-platform/pull/1296) | 2026-06-08 |
 | #1295 | [test(e2e): 補 #1257 旅客端衝突例外開放下單 E2E](https://github.com/smallwei0301/tour-platform/pull/1295) | 2026-06-08 |
 | #1291 | [GH-1289: Booking V2 guide availability + traveler slot semantics consolidation (Slice A+B)](https://github.com/smallwei0301/tour-platform/pull/1291) | 2026-06-08 |
 | #1287 | [Prepare GH-1286 production migration drift safeguards](https://github.com/smallwei0301/tour-platform/pull/1287) | 2026-06-08 |
 | #1285 | [fix(guide-payout): align guide-facing payout estimates with settlement hold guards (GH-1284)](https://github.com/smallwei0301/tour-platform/pull/1285) | 2026-06-08 |
-| #1282 | [feat(post-trip): automate review invitation sweep (closes #1175)](https://github.com/smallwei0301/tour-platform/pull/1282) | 2026-06-07 |
-| #1278 | [fix(security): strip admin-only conflict-override fields at public available-slots boundary (Closes #1277)](https://github.com/smallwei0301/tour-platform/pull/1278) | 2026-06-07 |
-| #1276 | [docs(claude): set Traditional Chinese as the primary output language](https://github.com/smallwei0301/tour-platform/pull/1276) | 2026-06-06 |
-| #1274 | [test(e2e): run GH-1257 browser E2E — conflict-override + guide-warning + single-day opening (#1273)](https://github.com/smallwei0301/tour-platform/pull/1274) | 2026-06-08 |
 
 ---
 
