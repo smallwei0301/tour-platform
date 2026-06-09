@@ -14,6 +14,7 @@ import {
 import {
   resolveCanonicalAvailabilityState,
   type ActivityPlanSeason,
+  type CanonicalAvailabilityState,
 } from './effective-availability-resolver.ts';
 import {
   findMatchingConflictOverride,
@@ -65,6 +66,14 @@ export interface BookingAvailabilityEvaluation {
   available: boolean;
   reasonCode?: string;
   messageZh?: string;
+  /**
+   * #1212 — canonical state describing WHY the request was rejected,
+   * surfaced so the route boundary can render the unified
+   * getCanonicalReasonCopy() copy (matching Admin + Guide). Only set
+   * for the selectedSchedule path today; legacy reasonCode + messageZh
+   * are unchanged.
+   */
+  canonicalReasonState?: CanonicalAvailabilityState;
   capacityLeft?: number;
   selectedScheduleAuthority: SelectedScheduleAuthority;
   slots: SerializedSlot[];
@@ -171,6 +180,10 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
   let selectedScheduleAuthority: SelectedScheduleAuthority = filteredSlots.length > 0 ? 'generated' : 'none';
   let capacityLeft: number | undefined;
   let schedulePresentInGeneratedSlots = false;
+  // #1212 — captured from canonicalSelectedSchedule.state inside the
+  // selectedSchedule branch and read after the block to derive the
+  // unified traveler-facing canonical reason copy at the route boundary.
+  let canonicalSelectedScheduleState: CanonicalAvailabilityState | undefined;
 
   const selectedSchedule = input.selectedSchedule ?? null;
   if (selectedSchedule) {
@@ -271,13 +284,22 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
         selectedScheduleRule.allowed &&
         !insufficient,
       slotUnavailableReason:
-        selectedSchedule.status !== 'open' || selectedScheduleMissingFromGeneratedSlots
-          ? 'BOOKING_CONFLICT'
-          : selectedScheduleBaseValidation.reason,
+        // #1212 — preserve BLACKOUT_CONFLICT precision: the slot generator
+        // also drops blacked-out slots, so the legacy fallback used to
+        // coerce BLACKOUT into BOOKING_CONFLICT (collapsing canonical
+        // 'blackout' into 'blocked_by_conflict'). Prefer the explicit
+        // blackout signal when present so the canonical resolver returns
+        // 'blackout' and the route boundary renders the matching copy.
+        selectedScheduleBaseValidation.reason === 'BLACKOUT_CONFLICT'
+          ? 'BLACKOUT_CONFLICT'
+          : selectedSchedule.status !== 'open' || selectedScheduleMissingFromGeneratedSlots
+            ? 'BOOKING_CONFLICT'
+            : selectedScheduleBaseValidation.reason,
       capacityAvailable: !insufficient,
       conflictOverrides: input.conflictOverrides,
     });
     const selectedScheduleOutsideSeason = canonicalSelectedSchedule.state === 'outside_season';
+    canonicalSelectedScheduleState = canonicalSelectedSchedule.state;
 
     if (
       selectedScheduleOutsideSeason ||
@@ -360,10 +382,20 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     ? selectedScheduleRuleFailure?.messageZh ?? firstRuleFailure?.messageZh
     : undefined;
 
+  // #1212 — bridge: when selectedSchedule path produced a canonical
+  // state (computed at line resolveCanonicalAvailabilityState above)
+  // and the request was rejected (slots empty, no admin override), surface
+  // that state so the route boundary can render the unified canonical
+  // helper copy. Bulk path (no selectedSchedule) intentionally left
+  // undefined for now — that path keeps the richer capacity-numbers copy.
+  const canonicalReasonState: CanonicalAvailabilityState | undefined =
+    slots.length === 0 ? canonicalSelectedScheduleState : undefined;
+
   return {
     available: slots.length > 0,
     reasonCode,
     messageZh,
+    canonicalReasonState,
     capacityLeft,
     selectedScheduleAuthority,
     slots,

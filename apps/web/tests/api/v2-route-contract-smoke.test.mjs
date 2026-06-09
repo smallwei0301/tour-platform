@@ -25,7 +25,11 @@ test('available-slots route contract smoke: has validation + success/error envel
   assert.match(src, /successV2\(/);
   assert.match(src, /slots:\s*availability\.slots/);
   assert.match(src, /reason:\s*availability\.reasonCode/);
-  assert.match(src, /messageZh:\s*availability\.messageZh/);
+  // #1212 — messageZh now routes through getCanonicalReasonCopy at the
+  // boundary so Traveler matches Admin + Guide; fallback to the raw
+  // evaluator messageZh is preserved.
+  assert.match(src, /messageZh:\s*responseMessageZh/);
+  assert.match(src, /getCanonicalReasonCopy\(/);
 });
 
 test('booking draft route contract smoke: has validation + stateful errors + success envelope', async () => {
