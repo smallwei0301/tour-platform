@@ -26,6 +26,7 @@ import {
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import { buildActivityPlanNotFoundResponse } from '../../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
+import { getCanonicalReasonCopy } from '../../../../../../src/lib/availability-v2/canonical-reason-copy.ts';
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { serializeConflictOverrideForPublic } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
 import { loadConflictOverridesWithSchemaFallback } from '../../../../../../src/lib/conflict-override-schema-compat.mjs';
@@ -591,6 +592,25 @@ export async function getAvailableSlots(
         : slot
     );
 
+    // #1212 — for canonical states where the helper's copy is strictly
+    // better (matches Admin + Guide, no informational loss vs the
+    // evaluator's generic string), render via getCanonicalReasonCopy at
+    // the boundary. For states where the evaluator embeds richer detail
+    // (e.g. CAPACITY_EXCEEDED with seat counts, MIN_PARTICIPANTS_NOT_MET
+    // with the required group size), fall back to the evaluator's
+    // legacy messageZh — preserves AC #5 ("no copy weakening").
+    const CANONICAL_STATES_WITH_HELPER_OVERRIDE = new Set([
+      'outside_season',
+      'blackout',
+      'blocked_by_conflict',
+    ]);
+    const canonicalReasonCopy =
+      availability.canonicalReasonState &&
+      CANONICAL_STATES_WITH_HELPER_OVERRIDE.has(availability.canonicalReasonState)
+        ? getCanonicalReasonCopy(availability.canonicalReasonState)
+        : null;
+    const responseMessageZh = canonicalReasonCopy?.bodyZh ?? availability.messageZh;
+
     // Return response per API spec
     return Response.json(
       successV2({
@@ -611,7 +631,8 @@ export async function getAvailableSlots(
         dateAvailability,
         dates: dateAvailability,
         reason: availability.reasonCode,
-        messageZh: availability.messageZh,
+        messageZh: responseMessageZh,
+        canonicalReasonState: availability.canonicalReasonState ?? null,
       })
     );
   } catch (err) {
