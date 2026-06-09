@@ -4,6 +4,7 @@ import {
   type BookingAvailabilityEvaluatorInput,
 } from './booking-availability-evaluator.ts';
 import { resolveCanonicalAvailabilityState } from './effective-availability-resolver.ts';
+import { getCanonicalReasonCopy } from './canonical-reason-copy.ts';
 import type { SerializedSlot } from '../slot-generator.ts';
 
 export interface EffectiveBookingAvailabilityResult {
@@ -86,11 +87,18 @@ export function resolveEffectiveBookingAvailabilityForStartAt(params: {
       ? canonical.state
       : params.evaluation.reasonCode ?? 'BOOKING_CONFLICT';
 
+  // Issue #1212 partial wiring: when the evaluator did not produce a
+  // dynamic message (e.g. capacity-aware "剩餘 N 人" string), fall back
+  // to the canonical zh-TW copy for the resolved CanonicalAvailabilityState
+  // so admin / guide / traveler share the same body text on the fallback
+  // path. The dynamic evaluator-supplied messageZh still takes precedence
+  // (acceptance #4 — "no copy weakening"); only the previously hard-coded
+  // generic "此時段已無可用名額…" fallback is replaced.
   return {
     available: false,
     reasonCode: canonicalReasonCode,
     canonicalState: canonical.state,
-    messageZh: params.evaluation.messageZh ?? '此時段已無可用名額，請重新選擇時段',
+    messageZh: params.evaluation.messageZh ?? getCanonicalReasonCopy(canonical.state).bodyZh,
     evaluation: params.evaluation,
   };
 }
