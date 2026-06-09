@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
     // affect Plan A's slot generation).
     let bookingsQuery = supabase
       .from('bookings')
-      .select('id, guide_id, start_at, end_at, status, buffer_before_minutes, buffer_after_minutes')
+      .select('id, guide_id, start_at, end_at, status')
       .eq('guide_id', session.guideId)
       .not('status', 'in', '("cancelled","no_show")')
       .lte('start_at', dateTo + 'T23:59:59Z')
