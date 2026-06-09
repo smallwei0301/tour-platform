@@ -68,3 +68,34 @@ test('picker times honour the page timezone (no Asia/Taipei vs UTC mismatch — 
     `expected the slot picker to thread timezone into BOTH start and end formatting; saw ${tzMatches.length} occurrences`,
   );
 });
+
+// Issue #1306 acceptance #2 — the slot the traveler picks must end up in the
+// booking-draft request body verbatim. Without this contract a future refactor
+// that decoupled `selectedSlotStartAt` from the draft POST would silently
+// re-introduce the original bug: "picker shows N options but checkout always
+// uses the first one".
+test('selectedSlotStartAt is the value passed to /api/v2/bookings/draft (#1306 acceptance #2)', () => {
+  // The POST body must spell `startAt: selectedSlotStartAt` — using a
+  // different field name, or hard-coding `slots[0].startAt`, would let the
+  // picker selection drift away from what the server actually books.
+  assert.match(
+    src,
+    /fetch\(\s*['"]\/api\/v2\/bookings\/draft['"][\s\S]*?startAt:\s*selectedSlotStartAt/,
+    'draft POST body must include `startAt: selectedSlotStartAt` so the picker choice survives into the draft',
+  );
+});
+
+// Issue #1306 acceptance #5 — the picker must keep #1289's fixed-candidate
+// conflict filtering intact. Server pre-filters slots, but the client also
+// filters `slot.isAvailable` so a future server bug can't slip a stale,
+// already-conflicting slot into the picker.
+test('client also filters slot.isAvailable before populating the picker (#1306 acceptance #5)', () => {
+  // The slots populated into the picker must come from a chain that filters
+  // by `slot.isAvailable` — otherwise a regression in the server could
+  // surface unavailable times as selectable picker entries.
+  assert.match(
+    src,
+    /\.filter\(\(slot\)\s*=>\s*slot\.isAvailable\)/,
+    'client must double-check slot.isAvailable so stale/conflicting slots cannot reach the picker',
+  );
+});
