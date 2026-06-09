@@ -646,6 +646,7 @@ export interface SlotGeneratorDeps {
   blackouts: BlackoutWindow[];
   bookings: ExistingBooking[];
   plan: ActivityPlan;
+  reemitAnchorBookings?: ExistingBooking[];
 }
 
 /**
@@ -658,7 +659,7 @@ export function generateAvailableSlots(
   deps: SlotGeneratorDeps
 ): SlotGeneratorResult {
   const { guideId, activityPlanId, dateFrom, dateTo, timezone, participants = 1 } = input;
-  const { rules, blackouts, bookings, plan } = deps;
+  const { rules, blackouts, bookings, plan, reemitAnchorBookings } = deps;
 
   // Filter rules for this guide and plan
   const applicableRules = getAvailabilityRules(rules, guideId, activityPlanId);
@@ -670,6 +671,13 @@ export function generateAvailableSlots(
   // Get blackouts and bookings in range
   const relevantBlackouts = getBlackoutWindows(blackouts, guideId, rangeStart, rangeEnd);
   const relevantBookings = getExistingBookings(bookings, guideId, rangeStart, rangeEnd);
+  // GH-1304: Use reemitAnchorBookings (full bookings) for re-emit anchor logic, falling back to bookings if not provided
+  const anchorBookings = getExistingBookings(
+    reemitAnchorBookings ?? bookings,
+    guideId,
+    rangeStart,
+    rangeEnd
+  );
 
   // Generate all dates in the range
   const dates = generateDateRange(dateFrom, dateTo);
@@ -685,7 +693,7 @@ export function generateAvailableSlots(
     const rulesForDay = applicableRules.filter((r) => r.weekday === weekday);
 
     for (const rule of rulesForDay) {
-      const candidates = buildCandidateSlotsForRule(rule, relevantBookings, plan.duration_minutes, dateStr);
+      const candidates = buildCandidateSlotsForRule(rule, anchorBookings, plan.duration_minutes, dateStr);
       allCandidates.push(...candidates);
     }
   }

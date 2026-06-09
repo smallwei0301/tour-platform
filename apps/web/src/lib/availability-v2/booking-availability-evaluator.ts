@@ -108,6 +108,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
     blackouts: input.blackouts,
     bookings: nonGroupConflictBookings,
     plan: input.plan,
+    reemitAnchorBookings: input.bookings,
   };
 
   const generated = generateAvailableSlots(slotInput, deps);
