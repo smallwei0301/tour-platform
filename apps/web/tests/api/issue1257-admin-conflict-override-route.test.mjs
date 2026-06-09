@@ -431,3 +431,70 @@ test('GH-1257 RED: duplicate exact active override returns deterministic existin
     delete process.env.ADMIN_EMAIL_ALLOWLIST;
   }
 });
+
+// ---------------------------------------------------------------------------
+// GH-1316 follow-up: lock the "must have a real overlapping booking" safety
+// guard — `route.ts:189-194`. Without this guard, an admin could create an
+// override on a slot that has no actual conflict, which violates the issue's
+// design ("admin override is only for breaking ties on a REAL conflict, not
+// for arbitrarily unblocking slots"). The behaviour was implemented in
+// PR #1262 but no test attached, so a future refactor could silently delete
+// the guard without CI noticing.
+// ---------------------------------------------------------------------------
+
+test('GH-1257 safety guard: empty bookings list → 409 CONFLICT_NOT_FOUND and no insert', async () => {
+  const db = await importDbModule();
+  // No bookings at all for this guide — the override target slot has nothing
+  // to override against.
+  const supabase = createSupabaseMock({ bookings: [] });
+  db.__setSupabaseClientForTest(supabase);
+  process.env.ADMIN_ACCESS_TOKEN = ADMIN_TOKEN;
+  process.env.ADMIN_EMAIL_ALLOWLIST = ADMIN_EMAIL;
+
+  try {
+    const route = await importRoute();
+    const response = await route.POST(createRequest(validBody()), {
+      params: Promise.resolve({ guideId: GUIDE_ID }),
+    });
+    const json = await response.json();
+
+    assert.equal(response.status, 409, `expected 409 when there are no overlapping bookings; got ${response.status}`);
+    assert.equal(json?.error?.code, 'CONFLICT_NOT_FOUND');
+    assert.equal(supabase.state.inserts.length, 0, 'no override row may be inserted when the guard rejects the request');
+  } finally {
+    db.__setSupabaseClientForTest(null);
+    delete process.env.ADMIN_ACCESS_TOKEN;
+    delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  }
+});
+
+test('GH-1257 safety guard: bookings exist but none overlap the target slot → 409 CONFLICT_NOT_FOUND', async () => {
+  const db = await importDbModule();
+  // The booking is for a completely different day — same guide, valid status,
+  // but no time overlap with the override target START_AT/END_AT.
+  const nonOverlappingBooking = activeConflictBooking({
+    id: 'booking-no-overlap',
+    start_at: '2030-01-15T08:00:00+08:00',
+    end_at: '2030-01-15T17:00:00+08:00',
+  });
+  const supabase = createSupabaseMock({ bookings: [nonOverlappingBooking] });
+  db.__setSupabaseClientForTest(supabase);
+  process.env.ADMIN_ACCESS_TOKEN = ADMIN_TOKEN;
+  process.env.ADMIN_EMAIL_ALLOWLIST = ADMIN_EMAIL;
+
+  try {
+    const route = await importRoute();
+    const response = await route.POST(createRequest(validBody()), {
+      params: Promise.resolve({ guideId: GUIDE_ID }),
+    });
+    const json = await response.json();
+
+    assert.equal(response.status, 409, `non-overlapping bookings must still trip the guard; got ${response.status}`);
+    assert.equal(json?.error?.code, 'CONFLICT_NOT_FOUND');
+    assert.equal(supabase.state.inserts.length, 0);
+  } finally {
+    db.__setSupabaseClientForTest(null);
+    delete process.env.ADMIN_ACCESS_TOKEN;
+    delete process.env.ADMIN_EMAIL_ALLOWLIST;
+  }
+});
