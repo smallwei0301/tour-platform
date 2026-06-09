@@ -25,6 +25,7 @@ import {
   type ExistingBooking,
   type ActivityPlan,
 } from '../../../../src/lib/slot-generator.ts';
+import { aggregateFallbackSeasonGate } from '../../../../src/lib/availability-v2/aggregate-fallback-season-gate.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -202,6 +203,48 @@ export async function GET(request: NextRequest) {
 
     const { data: rulesRaw } = await rulesQuery;
     const rules = (rulesRaw || []) as AvailabilityRule[];
+
+    const planIds = Array.from(
+      new Set(
+        rules
+          .map((rule) => (rule as { activity_plan_id?: string | null }).activity_plan_id)
+          .filter((id): id is string => typeof id === 'string' && id.length > 0)
+      )
+    );
+
+    const minParticipantsByPlanId: Record<string, number | null> = {};
+    const isYearRoundByPlanId: Record<string, boolean> = {};
+    if (planIds.length > 0) {
+      const { data: plansData } = await supabase
+        .from('activity_plans')
+        .select('id, min_participants, is_year_round')
+        .in('id', planIds as string[]);
+      for (const plan of plansData || []) {
+        minParticipantsByPlanId[plan.id] = plan.min_participants ?? null;
+        isYearRoundByPlanId[plan.id] = Boolean(plan.is_year_round);
+      }
+    }
+
+    // #1307: when the guide opens the preview without selecting a
+    // specific plan, the route used to skip the season query entirely
+    // and resolvePreviewCanonicalReason then collapsed to
+    // outside_season. Aggregate seasons across every plan referenced
+    // by the guide's active rules instead, so a year-round (or
+    // season-covered) plan opens the gate.
+    if (!activityPlanId && planIds.length > 0) {
+      const { data: aggregatedSeasonsData } = await supabase
+        .from('activity_plan_seasons')
+        .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+        .in('activity_plan_id', planIds as string[]);
+      const aggregated = aggregateFallbackSeasonGate({
+        plansById: Object.fromEntries(
+          Object.entries(isYearRoundByPlanId).map(([id, isYearRound]) => [id, { is_year_round: isYearRound }]),
+        ),
+        seasons: aggregatedSeasonsData ?? [],
+      });
+      previewPlanSeasons = aggregated.seasons as PreviewActivityPlanSeason[];
+      previewIsYearRound = aggregated.isYearRound;
+    }
 
     // Fetch blackouts in range
     const { data: blackoutsRaw } = await supabase
