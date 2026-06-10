@@ -44,11 +44,14 @@ test('詳情 API：查 guide_profiles miss 後 fallback 查 guide_applications',
 
 test('詳情 API：application fallback 用 canonical 欄位（full_name 等，無 name/slug）', () => {
   const src = readFileSync(DETAIL_ROUTE, 'utf8');
-  const appSelect = src.match(/from\(\s*['"]guide_applications['"]\s*\)\s*\.select\(\s*['"]([^'"]+)['"]/);
-  assert.ok(appSelect, 'guide_applications 查詢必須有明確 select');
+  // select 以 appBaseSelect / appRichSelect 變數組裝（含 drift guard）。
+  const baseDef = src.match(/appBaseSelect\s*=\s*['"`]([^'"`]+)['"`]/);
+  assert.ok(baseDef, 'guide_applications 查詢必須有明確 base select 定義');
   for (const col of ['full_name', 'phone', 'email', 'city', 'bio', 'status', 'created_at']) {
-    assert.match(appSelect[1], new RegExp(`\\b${col}\\b`), `application select 必須含 ${col}`);
+    assert.match(baseDef[1], new RegExp(`\\b${col}\\b`), `application select 必須含 ${col}`);
   }
+  assert.doesNotMatch(baseDef[1], /(^|,\s*)name(\s*,|$)/, 'name 欄位不存在於 schema');
+  assert.doesNotMatch(baseDef[1], /\bslug\b/, 'slug 欄位不存在於 guide_applications schema');
 });
 
 test('詳情 API：回應帶 kind 區分 profile / application', () => {
@@ -75,11 +78,11 @@ test('詳情頁：依 kind 渲染申請詳情視圖（含審核階段說明）',
 
 test('promote route：不得對 guide_applications select 不存在的 name/slug 欄位', () => {
   const src = readFileSync(PROMOTE_ROUTE, 'utf8');
-  const appSelect = src.match(/from\(\s*['"]guide_applications['"]\s*\)\s*\.select\(\s*['"]([^'"]+)['"]/);
-  assert.ok(appSelect, 'promote 必須查 guide_applications');
-  assert.match(appSelect[1], /\bfull_name\b/, '必須用 canonical 的 full_name');
-  assert.doesNotMatch(appSelect[1], /(^|,\s*)name(\s*,|$)/, 'name 欄位不存在於 schema');
-  assert.doesNotMatch(appSelect[1], /\bslug\b/, 'slug 欄位不存在於 guide_applications schema');
+  const baseDef = src.match(/appBaseSelect\s*=\s*['"`]([^'"`]+)['"`]/);
+  assert.ok(baseDef, 'promote 必須有明確 base select 定義');
+  assert.match(baseDef[1], /\bfull_name\b/, '必須用 canonical 的 full_name');
+  assert.doesNotMatch(baseDef[1], /(^|,\s*)name(\s*,|$)/, 'name 欄位不存在於 schema');
+  assert.doesNotMatch(baseDef[1], /\bslug\b/, 'slug 欄位不存在於 guide_applications schema');
 });
 
 test('promote route：profile slug 由申請 id 決定性導出（可重複 promote 冪等）', () => {

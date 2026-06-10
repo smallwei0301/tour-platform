@@ -24,11 +24,24 @@ export async function POST(req: Request) {
   // Fetch the application. Canonical guide_applications schema has
   // full_name (NOT name) and no slug column — selecting the old
   // name/slug columns errored on every promote against the real schema.
-  const { data: app, error: appErr } = await supabase
+  // Rich profile fields (bio/city/specialties/languages) ride along so
+  // 上線 can seed the public guide profile instead of a name-only shell.
+  const appBaseSelect = 'id, full_name, email, phone, status, city, bio';
+  const appRichSelect = `${appBaseSelect}, specialties, languages`;
+  let { data: app, error: appErr } = await supabase
     .from('guide_applications')
-    .select('id, full_name, email, phone, status')
+    .select(appRichSelect)
     .eq('id', applicationId)
     .single();
+  // Schema drift guard: rich columns ship with
+  // 20260610_guide_applications_profile_fields; fall back when absent.
+  if (appErr && (appErr.code === '42703' || /column .*does not exist/i.test(appErr.message || ''))) {
+    ({ data: app, error: appErr } = await supabase
+      .from('guide_applications')
+      .select(appBaseSelect)
+      .eq('id', applicationId)
+      .single());
+  }
 
   if (appErr || !app) {
     return NextResponse.json(errorV2('NOT_FOUND', '申請資料不存在'), { status: 404 });
@@ -67,6 +80,11 @@ export async function POST(req: Request) {
         display_name: app.full_name,
         slug: profileSlug,
         verification_status: 'approved',
+        // 申請資料自動帶入公開導遊檔案；導遊上線後可在後台自行調整。
+        bio: app.bio || null,
+        region: app.city || null,
+        languages: Array.isArray((app as Record<string, unknown>).languages) ? (app as Record<string, unknown>).languages : [],
+        specialties: Array.isArray((app as Record<string, unknown>).specialties) ? (app as Record<string, unknown>).specialties : [],
         // guide_email will be set separately by admin
       })
       .select('id')

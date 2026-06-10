@@ -10,6 +10,11 @@ type GuideApplicationDetail = {
   email?: string | null;
   city?: string | null;
   bio?: string | null;
+  specialties?: string[];
+  languages?: string[];
+  regions?: string[];
+  certifications?: string[];
+  paymentMethod?: string | null;
   status: string;
   adminNote?: string | null;
   createdAt?: string | null;
@@ -140,6 +145,26 @@ export default function AdminGuideDetailPage() {
                 </div>
               )}
             </div>
+            {/* 申請人自填的專長/語言/服務地區/證照 — 上線時自動帶入導遊檔案 */}
+            {([
+              { label: '專長', items: guide.application.specialties },
+              { label: '語言', items: guide.application.languages },
+              { label: '服務地區', items: guide.application.regions },
+              { label: '證照（自述，僅供審核參考）', items: guide.application.certifications },
+            ] as Array<{ label: string; items?: string[] }>).map((section) =>
+              section.items && section.items.length > 0 ? (
+                <div key={section.label} style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{section.label}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {section.items.map((item) => (
+                      <span key={item} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#eef2ff', color: '#3730a3' }}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
             {guide.application.bio && (
               <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>個人簡介</div>

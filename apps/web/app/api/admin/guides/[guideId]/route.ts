@@ -45,12 +45,24 @@ export async function GET(
       return NextResponse.json({ ok: true, data: { kind: 'profile', ...profile } });
     }
 
-    const { data: application } = await supabase
+    const appBaseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
+    const appRichSelect = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method`;
+    let { data: application, error: appError } = await supabase
       .from('guide_applications')
-      .select('id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at')
+      .select(appRichSelect)
       .eq('id', guideId)
       .maybeSingle();
+    // Schema drift guard: rich columns ship with
+    // 20260610_guide_applications_profile_fields; fall back when absent.
+    if (appError && (appError.code === '42703' || /column .*does not exist/i.test(appError.message || ''))) {
+      ({ data: application, error: appError } = await supabase
+        .from('guide_applications')
+        .select(appBaseSelect)
+        .eq('id', guideId)
+        .maybeSingle());
+    }
     if (application) {
+      const arr = (value: unknown) => (Array.isArray(value) ? value : []);
       return NextResponse.json({
         ok: true,
         data: {
@@ -63,6 +75,11 @@ export async function GET(
             email: application.email,
             city: application.city,
             bio: application.bio,
+            specialties: arr(application.specialties),
+            languages: arr(application.languages),
+            regions: arr(application.regions),
+            certifications: arr(application.certifications),
+            paymentMethod: application.payment_method ?? null,
             status: application.status,
             adminNote: application.admin_note,
             createdAt: application.created_at,

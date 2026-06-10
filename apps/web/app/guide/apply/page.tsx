@@ -88,7 +88,7 @@ export default function GuideApplyPage() {
 
       <ol className="tp-stepper" aria-label="申請步驟">
         <li className={step >= 1 ? 'active' : ''} aria-current={step === 1 ? 'step' : undefined}>1 基本資料</li>
-        <li className={step >= 2 ? 'active' : ''} aria-current={step === 2 ? 'step' : undefined}>2 上傳證件</li>
+        <li className={step >= 2 ? 'active' : ''} aria-current={step === 2 ? 'step' : undefined}>2 證件與照片</li>
         <li className={step >= 3 ? 'active' : ''} aria-current={step === 3 ? 'step' : undefined}>3 審核送出</li>
       </ol>
 
@@ -190,15 +190,22 @@ export default function GuideApplyPage() {
           </div>
 
           <div className="tp-step-actions">
-            <button className="tp-btn tp-btn-primary" onClick={() => setStep(2)}>下一步：上傳證件</button>
+            <button className="tp-btn tp-btn-primary" onClick={() => setStep(2)}>下一步：證件與照片</button>
           </div>
         </section>
       )}
 
       {step === 2 && (
         <section className="tp-step-card">
-          <label htmlFor="apply-id-doc">身分證件上傳*<input id="apply-id-doc" type="file" accept="image/*,application/pdf" /></label>
-          <label htmlFor="apply-photo">個人照片上傳*<input id="apply-photo" type="file" accept="image/*" /></label>
+          {/* 證件屬敏感個資，不在公開表單收檔案；照片於上線後由導遊後台上傳。
+              先前此處的 file input 並未真正上傳（submit 不含檔案），屬誤導 UI。 */}
+          <h2 style={{ marginTop: 0 }}>證件與照片</h2>
+          <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: '#166534' }}>
+            <p style={{ margin: 0, fontWeight: 700 }}>身分證件核驗</p>
+            <p style={{ margin: '4px 0 12px' }}>送出申請後，審核人員將以您留下的 Email／電話與您聯繫，進行身分證件與證照核驗。請勿在表單中提供證件影本。</p>
+            <p style={{ margin: 0, fontWeight: 700 }}>個人照片</p>
+            <p style={{ margin: '4px 0 0' }}>申請通過並開通帳號後，您可以在「導遊後台 → 個人檔案」自行上傳個人照片與相簿，旅客將在您的導遊頁面看到這些內容。</p>
+          </div>
           <div className="tp-step-actions">
             <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)}>上一步</button>
             <button className="tp-btn tp-btn-primary" onClick={() => setStep(3)}>下一步：審核送出</button>

@@ -1861,6 +1861,13 @@ export async function createGuideApplicationDb(input = {}) {
   const email = String(input?.email || '').trim();
   const city = String(input?.city || '').trim();
   const bio = String(input?.bio || '').trim();
+  const toStringArray = (value) =>
+    Array.isArray(value) ? value.map((v) => String(v || '').trim()).filter(Boolean) : [];
+  const specialties = toStringArray(input?.specialties);
+  const languages = toStringArray(input?.languages);
+  const regions = toStringArray(input?.regions);
+  const certifications = toStringArray(input?.certs ?? input?.certifications);
+  const paymentMethod = String(input?.payment ?? input?.paymentMethod ?? '').trim() || null;
 
   if (!fullName) throw new Error('fullName is required');
   if (!phone) throw new Error('phone is required');
@@ -1870,7 +1877,7 @@ export async function createGuideApplicationDb(input = {}) {
 
   const supabase = await getSupabase();
 
-  const payload = {
+  const basePayload = {
     id: crypto.randomUUID(),
     full_name: fullName,
     phone,
@@ -1879,26 +1886,60 @@ export async function createGuideApplicationDb(input = {}) {
     bio,
     status: 'pending'
   };
+  const richPayload = {
+    ...basePayload,
+    specialties,
+    languages,
+    regions,
+    certifications,
+    payment_method: paymentMethod,
+  };
 
-  const { data, error } = await supabase
+  const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
+  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method`;
+
+  let { data, error } = await supabase
     .from('guide_applications')
-    .insert(payload)
-    .select('id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at')
+    .insert(richPayload)
+    .select(richSelect)
     .single();
+
+  // Schema drift guard: production may not have applied
+  // 20260610_guide_applications_profile_fields yet (error 42703 /
+  // "column ... does not exist"). Fall back to the legacy column set so
+  // applications are never lost — the rich fields are dropped only in
+  // that degraded mode.
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    ({ data, error } = await supabase
+      .from('guide_applications')
+      .insert(basePayload)
+      .select(baseSelect)
+      .single());
+  }
 
   if (error || !data) throw new Error(error?.message || 'guide application create failed');
 
+  return mapGuideApplicationRow(data);
+}
+
+function mapGuideApplicationRow(r) {
+  const arr = (value) => (Array.isArray(value) ? value : []);
   return {
-    id: data.id,
-    fullName: data.full_name,
-    phone: data.phone,
-    email: data.email,
-    city: data.city,
-    bio: data.bio,
-    status: data.status,
-    adminNote: data.admin_note,
-    createdAt: data.created_at,
-    updatedAt: data.updated_at
+    id: r.id,
+    fullName: r.full_name,
+    phone: r.phone,
+    email: r.email,
+    city: r.city,
+    bio: r.bio,
+    specialties: arr(r.specialties),
+    languages: arr(r.languages),
+    regions: arr(r.regions),
+    certifications: arr(r.certifications),
+    paymentMethod: r.payment_method ?? null,
+    status: r.status,
+    adminNote: r.admin_note,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at
   };
 }
 
@@ -1908,28 +1949,26 @@ export async function listGuideApplicationsDb(input = {}) {
   const status = String(input?.status || '').trim();
   const supabase = await getSupabase();
 
-  let query = supabase
-    .from('guide_applications')
-    .select('id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at')
-    .order('created_at', { ascending: false });
+  const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
+  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method`;
 
-  if (status) query = query.eq('status', status);
+  const buildQuery = (selectClause) => {
+    let q = supabase
+      .from('guide_applications')
+      .select(selectClause)
+      .order('created_at', { ascending: false });
+    if (status) q = q.eq('status', status);
+    return q;
+  };
 
-  const { data, error } = await query;
+  let { data, error } = await buildQuery(richSelect);
+  // Schema drift guard: see createGuideApplicationDb.
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    ({ data, error } = await buildQuery(baseSelect));
+  }
   if (error) throw new Error(error.message);
 
-  return (data || []).map((r) => ({
-    id: r.id,
-    fullName: r.full_name,
-    phone: r.phone,
-    email: r.email,
-    city: r.city,
-    bio: r.bio,
-    status: r.status,
-    adminNote: r.admin_note,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at
-  }));
+  return (data || []).map(mapGuideApplicationRow);
 }
 
 export async function updateGuideApplicationStatusDb(input = {}) {

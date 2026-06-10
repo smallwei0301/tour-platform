@@ -26,6 +26,11 @@ const APPLICATION_DETAIL = {
       email: 'fang@example.com',
       city: '高雄市',
       bio: '熟悉柴山步道與生態導覽。',
+      specialties: ['山林健行', '文化走讀'],
+      languages: ['中文', '英文'],
+      regions: ['高雄', '屏東'],
+      certifications: ['急救證照'],
+      paymentMethod: 'bank',
       status: 'pending',
       adminNote: null,
       createdAt: '2026-06-09T08:00:00Z',
@@ -74,6 +79,11 @@ test('點申請者名字 → 詳情頁渲染「申請詳情」視圖（不再 40
   await expect(card.getByText('待審核')).toBeVisible();
   await expect(card.getByText('尚未建立正式導遊檔案')).toBeVisible();
   await expect(card.getByText('fang@example.com')).toBeVisible();
+  // 申請人自填的專長/語言/地區/證照必須呈現給審核者
+  await expect(card.getByText('山林健行')).toBeVisible();
+  await expect(card.getByText('英文')).toBeVisible();
+  await expect(card.getByText('屏東')).toBeVisible();
+  await expect(card.getByText('急救證照')).toBeVisible();
   // 不得出現舊錯誤
   await expect(page.getByText('找不到導遊資料')).toHaveCount(0);
 });
