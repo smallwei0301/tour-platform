@@ -20,6 +20,7 @@
 | 🏷️ **Logo 使用** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 02 · Logo System |
 | 📝 **命名系統** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 01 · Naming Architecture |
 | 📱 **社群 Bio / Email** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 05-08 |
+| ⚡ **前端效能（提 PR 前必讀）** | [docs/04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md](./docs/04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md) → preload 洩漏 / Suspense fallback / CJK 字體 / SSR re-fetch 反模式 |
 
 ### ✅ 最新品牌應用
 
