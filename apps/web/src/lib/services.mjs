@@ -258,6 +258,9 @@ export function createGuideApplication(input = {}) {
   const existing = guideApplications.find((a) => a.email === email && ['pending', 'approved'].includes(a.status));
   if (existing) throw new Error('application already exists');
 
+  const toStringArray = (value) =>
+    Array.isArray(value) ? value.map((v) => String(v || '').trim()).filter(Boolean) : [];
+
   const row = {
     id: `ga_${String(guideApplications.length + 1).padStart(6, '0')}`,
     fullName,
@@ -265,6 +268,11 @@ export function createGuideApplication(input = {}) {
     email,
     city,
     bio,
+    specialties: toStringArray(input?.specialties),
+    languages: toStringArray(input?.languages),
+    regions: toStringArray(input?.regions),
+    certifications: toStringArray(input?.certs ?? input?.certifications),
+    paymentMethod: normalizeSlug(input?.payment ?? input?.paymentMethod) || null,
     status: 'pending',
     adminNote: null,
     createdAt: new Date().toISOString(),

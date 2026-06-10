@@ -4,7 +4,27 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../src/components/admin/ui';
 
+type GuideApplicationDetail = {
+  fullName: string;
+  phone?: string | null;
+  email?: string | null;
+  city?: string | null;
+  bio?: string | null;
+  specialties?: string[];
+  languages?: string[];
+  regions?: string[];
+  certifications?: string[];
+  paymentMethod?: string | null;
+  status: string;
+  adminNote?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+};
+
 type GuideDetail = {
+  // 雙實體：同一條 URL 可能解析到正式導遊檔案（profile）或導遊申請
+  // （application，尚未建檔）。kind 由 API 判定。
+  kind?: 'profile' | 'application';
   id: string;
   display_name: string;
   slug: string;
@@ -17,6 +37,14 @@ type GuideDetail = {
   bio?: string | null;
   specialty?: string | null;
   created_at?: string | null;
+  application?: GuideApplicationDetail;
+};
+
+const APPLICATION_STATUS_LABELS: Record<string, { label: string; bg: string; color: string }> = {
+  pending: { label: '待審核', bg: '#fef3c7', color: '#92400e' },
+  approved: { label: '已通過', bg: '#d1fae5', color: '#065f46' },
+  rejected: { label: '已拒絕', bg: '#fee2e2', color: '#dc2626' },
+  suspended: { label: '已停權', bg: '#fee2e2', color: '#dc2626' },
 };
 
 export default function AdminGuideDetailPage() {
@@ -80,7 +108,79 @@ export default function AdminGuideDetailPage() {
           </Card>
         )}
 
-        {!loading && guide && (
+        {/* 申請詳情視圖：此 ID 是 guide_applications（尚未建立正式導遊檔案） */}
+        {!loading && guide && guide.kind === 'application' && guide.application && (
+          <Card data-testid="admin-guide-application-detail" style={{ padding: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#111' }}>{guide.application.fullName}</h2>
+              {(() => {
+                const s = APPLICATION_STATUS_LABELS[guide.application.status] || { label: guide.application.status, bg: '#f3f4f6', color: '#6b7280' };
+                return (
+                  <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: s.bg, color: s.color }}>
+                    {s.label}
+                  </span>
+                );
+              })()}
+            </div>
+            <p style={{ margin: '8px 0 16px', fontSize: 13, color: '#92400e', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px' }}>
+              此為導遊「申請資料」，尚未建立正式導遊檔案。請於導遊管理列表完成審核；申請通過並按「上線」後，系統才會建立正式導遊檔案。
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 220px), 1fr))', gap: 12 }}>
+              <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>電子信箱</div>
+                <div style={{ fontSize: 14, color: '#374151', fontFamily: 'monospace' }}>{guide.application.email || <span style={{ color: '#9ca3af' }}>未提供</span>}</div>
+              </div>
+              <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>電話</div>
+                <div style={{ fontSize: 14, color: '#374151' }}>{guide.application.phone || <span style={{ color: '#9ca3af' }}>未提供</span>}</div>
+              </div>
+              <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>城市</div>
+                <div style={{ fontSize: 14, color: '#374151' }}>📍 {guide.application.city || '未提供'}</div>
+              </div>
+              {guide.application.createdAt && (
+                <div style={{ background: '#f9fafb', borderRadius: 8, padding: '12px 16px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>申請日期</div>
+                  <div style={{ fontSize: 14, color: '#374151' }}>🗓️ {new Date(guide.application.createdAt).toLocaleDateString('zh-TW')}</div>
+                </div>
+              )}
+            </div>
+            {/* 申請人自填的專長/語言/服務地區/證照 — 上線時自動帶入導遊檔案 */}
+            {([
+              { label: '專長', items: guide.application.specialties },
+              { label: '語言', items: guide.application.languages },
+              { label: '服務地區', items: guide.application.regions },
+              { label: '證照（自述，僅供審核參考）', items: guide.application.certifications },
+            ] as Array<{ label: string; items?: string[] }>).map((section) =>
+              section.items && section.items.length > 0 ? (
+                <div key={section.label} style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{section.label}</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {section.items.map((item) => (
+                      <span key={item} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600, background: '#eef2ff', color: '#3730a3' }}>
+                        {item}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            )}
+            {guide.application.bio && (
+              <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>個人簡介</div>
+                <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.7 }}>{guide.application.bio}</p>
+              </div>
+            )}
+            {guide.application.adminNote && (
+              <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>管理員備註</div>
+                <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.7 }}>{guide.application.adminNote}</p>
+              </div>
+            )}
+          </Card>
+        )}
+
+        {!loading && guide && guide.kind !== 'application' && (
           <Card style={{ padding: 28 }}>
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
               {/* Avatar */}
