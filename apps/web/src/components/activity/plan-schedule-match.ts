@@ -143,3 +143,35 @@ export function getPlanScheduleForDate(
   // No schedule for this date + plan → not open
   return { schedule: null, remaining: 0, isFull: false, isOpen: false, isNotOpen: true };
 }
+
+/**
+ * Plan-first flow: returns the schedule rows visible to one plan's own date
+ * picker — rows bound to that plan plus planId=null (all-plan) rows.
+ *
+ * Same #839 ID-space defense as getPlanScheduleForDate: when every schedule
+ * planId is non-null and foreign to the known plan-ID set (e.g. V2 UUIDs vs
+ * legacy slugs), the mismatch is an ID-space divergence rather than a genuine
+ * "no slots for this plan" — fall back to returning all rows so dates are not
+ * incorrectly grayed out.
+ */
+export function filterSchedulesForPlan(
+  schedules: ScheduleLike[],
+  planId: string,
+  knownPlanIds: string[] = [],
+): ScheduleLike[] {
+  const matched = schedules.filter((s) => {
+    const sPlanId = s.planId ?? s.plan_id ?? null;
+    return sPlanId === null || sPlanId === planId;
+  });
+  if (matched.length > 0) return matched;
+
+  if (knownPlanIds.length > 0 && schedules.length > 0) {
+    const allForeignIds = schedules.every((s) => {
+      const sPlanId = s.planId ?? s.plan_id ?? null;
+      return sPlanId !== null && !knownPlanIds.includes(sPlanId);
+    });
+    if (allForeignIds) return schedules;
+  }
+
+  return matched;
+}
