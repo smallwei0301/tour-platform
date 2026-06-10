@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-10T13:17:18.252Z -->
+<!-- query_timestamp: 2026-06-10T18:58:27.794Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-10T13:17:18.252Z  
-**Commit SHA:** `efc35000604bd9bb3da564b4cec1cba908edcc16`
+**Query timestamp:** 2026-06-10T18:58:27.794Z  
+**Commit SHA:** `98436e7a8791a3802bca2dae8b0095b74bcb371c`
 
 ---
 
@@ -64,6 +64,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1362 | [perf(activities): enable AVIF + lower quality 75→60 to cut cover image bytes (refs #1344)](https://github.com/smallwei0301/tour-platform/pull/1362) | 2026-06-10 |
 | #1361 | [test(e2e): verify admin 出款管理 (/admin/payouts) full flow with mock data (#1360)](https://github.com/smallwei0301/tour-platform/pull/1361) | 2026-06-10 |
 | #1359 | [docs(perf): 新增前端效能反模式 SOP + README 導航（refs #1357 #1345 #1344）](https://github.com/smallwei0301/tour-platform/pull/1359) | 2026-06-10 |
 | #1358 | [fix(activities): SSR preload 第一張卡 cover 縮短 mobile LCP 鏈（refs #1344 round 3）](https://github.com/smallwei0301/tour-platform/pull/1358) | 2026-06-10 |
@@ -73,7 +74,6 @@ _none_
 | #1354 | [fix(activities): 補 loading.tsx 讓 region 頁 streaming fallback 真正渲染（refs #1345 part 5）](https://github.com/smallwei0301/tour-platform/pull/1354) | 2026-06-10 |
 | #1353 | [test(post-trip): lock the unified post-trip workflow as one verifiable contract (#1106)](https://github.com/smallwei0301/tour-platform/pull/1353) | 2026-06-10 |
 | #1352 | [docs(claude): 新增 session branch hygiene 段落（patch-id 驗證 + force-push-with-lease SOP）](https://github.com/smallwei0301/tour-platform/pull/1352) | 2026-06-10 |
-| #1351 | [fix(activities): skeleton min-height 對齊 real card 解 region page CLS（refs #1345 part 4）](https://github.com/smallwei0301/tour-platform/pull/1351) | 2026-06-10 |
 
 ---
 
