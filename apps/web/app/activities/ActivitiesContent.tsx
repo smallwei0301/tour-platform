@@ -1,7 +1,7 @@
 'use client';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
 import { isActivityTypeMatch, isActivityTypeKeywordMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
@@ -64,6 +64,15 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const [loading, setLoading] = useState(initialActivities === undefined);
   const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
 
+  // Issue #1345 — when SSR already hydrated the card list via
+  // `initialActivities`, the first run of the fetch effect below would
+  // otherwise re-request `/api/activities` and call `setActivities` with
+  // a (possibly differently-ordered) result, re-rendering every card.
+  // That layout pass is what drove CLS to 0.76–1.43 in #1317 round-4
+  // Lighthouse. Skip the initial fetch when SSR data is fresh; let any
+  // query change after mount fall through normally.
+  const skipInitialFetch = useRef(initialActivities !== undefined);
+
   // Sync URL → state on mount
   useEffect(() => {
     setQuery(searchParams.get('q') || '');
@@ -85,6 +94,13 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
 
   // Fetch from API
   useEffect(() => {
+    // Issue #1345 — skip the mount-time fetch when SSR already shipped
+    // the cards. Filter/search interactions after mount still fall
+    // through and re-fetch normally.
+    if (skipInitialFetch.current) {
+      skipInitialFetch.current = false;
+      return;
+    }
     setLoading(true);
     const params = new URLSearchParams();
     if (query) params.set('q', query);
