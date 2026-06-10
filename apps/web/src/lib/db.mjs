@@ -2808,6 +2808,17 @@ export async function getActivityBySlugDb(slug, options = {}) {
     error = retryRes.error;
   }
 
+  // GH-1332: archived activities must be invisible on every traveler-facing
+  // surface. The listing path already filters status='published'; this is
+  // the single detail gateway behind /api/activities/[slug] and the
+  // activity pages, so one guard here covers both the primary and the
+  // retry query above. Guard instead of `.neq('status','archived')` in the
+  // queries because `.single()` + `.neq` reports PGRST116 and would depend
+  // on the error-path classification below.
+  if (act && String(act.status).toLowerCase() === 'archived') {
+    return null;
+  }
+
   if (error || !act) {
     if (primaryQueryTimedOut && requirePrimaryResult) {
       const timeoutMessage =
