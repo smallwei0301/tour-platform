@@ -30,6 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 export default function AdminOrdersPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [detail, setDetail] = useState<Row | null>(null);
@@ -49,15 +50,27 @@ export default function AdminOrdersPage() {
 
   async function load() {
     setLoading(true);
+    setLoadError(null);
     try {
       const q = status ? `?status=${encodeURIComponent(status)}` : '';
       const res = await fetch(`/api/admin/orders${q}`, { cache: 'no-store' });
-      const j = await res.json();
-      setRows(j.data || []);
+      const j = await res.json().catch(() => null);
+      // 「讀取失敗」與「沒有訂單」必須可分辨：失敗時不得靜默渲染空表，
+      // 否則會被誤讀為訂單全部消失。
+      if (!res.ok || !j?.ok || !Array.isArray(j?.data)) {
+        const code = j?.error?.code ? `（${j.error.code}）` : `（HTTP ${res.status}）`;
+        setRows([]);
+        setLoadError(`訂單資料載入失敗${code}，目前清單非即時狀態，請重試或稍後再試。`);
+        return;
+      }
+      setRows(j.data);
+    } catch {
+      setRows([]);
+      setLoadError('訂單資料載入失敗（網路錯誤），請重試或稍後再試。');
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { load().catch(() => setRows([])); }, [status]);
+  useEffect(() => { void load(); }, [status]);
 
   useEffect(() => {
     if (!selectedId) { setDetail(null); setTimeline([]); return; }
@@ -177,6 +190,24 @@ export default function AdminOrdersPage() {
           <span className="admin-toolbar-meta" style={{ fontSize: 13, color: '#9ca3af' }}>共 {filtered.length} 筆</span>
         </Card>
 
+        {/* 讀取失敗：明確告知並提供重試，避免被誤讀為「沒有訂單」 */}
+        {!loading && loadError && (
+          <Card
+            data-testid="admin-orders-load-error"
+            style={{ padding: '14px 18px', border: '1px solid #fecaca', background: '#fef2f2' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ color: '#b91c1c', fontSize: 14, fontWeight: 600 }}>{loadError}</div>
+              <button
+                onClick={() => { void load(); }}
+                style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: '#b91c1c', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                重試
+              </button>
+            </div>
+          </Card>
+        )}
+
         <div className="admin-split-grid">
           {/* Table */}
           <Card data-guide="order-table">
@@ -188,7 +219,7 @@ export default function AdminOrdersPage() {
               selectedKey={selectedId}
               loading={loading}
               loadingRows={8}
-              emptyMessage="沒有訂單資料"
+              emptyMessage={loadError ? '載入失敗，訂單資料暫時無法顯示，請點上方「重試」' : '沒有訂單資料'}
             />
           </Card>
 

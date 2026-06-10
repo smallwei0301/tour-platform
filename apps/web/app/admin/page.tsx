@@ -17,6 +17,10 @@ const STATUS_LABELS: Record<string, string> = {
 export default function AdminDashboardPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  // 「讀取失敗」必須與「範圍內沒有資料」可分辨：API 失敗時不得把畫面
+  // 靜默渲染成 0 卡片（會被誤讀為訂單全部消失）。
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [preset, setPreset] = useState<Preset>('7d');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -35,11 +39,24 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     setLoading(true);
+    setLoadError(null);
     fetch(`/api/admin/dashboard/summary?${query}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => setData(j?.data || null))
+      .then(async (r) => {
+        const j = await r.json().catch(() => null);
+        if (!r.ok || !j?.ok || !j?.data) {
+          const code = j?.error?.code ? `（${j.error.code}）` : `（HTTP ${r.status}）`;
+          setData(null);
+          setLoadError(`儀表板資料載入失敗${code}，目前顯示非即時狀態，請重試或稍後再試。`);
+          return;
+        }
+        setData(j.data);
+      })
+      .catch(() => {
+        setData(null);
+        setLoadError('儀表板資料載入失敗（網路錯誤），請重試或稍後再試。');
+      })
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [query, reloadKey]);
 
   const kpi = data?.kpi || {};
   const trends: any[] = Array.isArray(data?.trends) ? data.trends : [];
@@ -107,6 +124,38 @@ export default function AdminDashboardPage() {
           </div>
         </Card>
 
+        {/* 讀取失敗：明確告知並提供重試，絕不渲染成 0 卡片 */}
+        {!loading && loadError && (
+          <Card
+            data-testid="admin-dashboard-load-error"
+            style={{ padding: '16px 20px', border: '1px solid #fecaca', background: '#fef2f2' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ color: '#b91c1c', fontSize: 14, fontWeight: 600 }}>{loadError}</div>
+              <button
+                onClick={() => setReloadKey((k) => k + 1)}
+                style={{ padding: '6px 16px', borderRadius: 8, border: 'none', background: '#b91c1c', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+              >
+                重試
+              </button>
+            </div>
+          </Card>
+        )}
+
+        {/* 範圍語意提示：資料載入成功但此範圍 0 訂單 ≠ 訂單消失 */}
+        {!loading && !loadError && data && Number(kpi.totalOrders || 0) === 0 && (
+          <Card
+            data-testid="admin-dashboard-zero-range-hint"
+            style={{ padding: '12px 20px', border: '1px solid #bfdbfe', background: '#eff6ff' }}
+          >
+            <span style={{ color: '#1d4ed8', fontSize: 13 }}>
+              此時間範圍內沒有訂單（統計依「訂單建立時間」計算）。較早的訂單請切換「近 30 日」或「自訂」範圍，或前往
+              <Link href="/admin/orders" style={{ margin: '0 4px', color: '#1d4ed8', fontWeight: 700, textDecoration: 'underline' }}>訂單管理</Link>
+              查看全部訂單。
+            </span>
+          </Card>
+        )}
+
         {/* KPI Cards */}
         {loading ? (
           <div className="admin-stat-grid">
@@ -114,7 +163,7 @@ export default function AdminDashboardPage() {
               <div key={i} style={{ height: 88, borderRadius: 12, background: 'linear-gradient(90deg,#f3f4f6,#e5e7eb,#f3f4f6)' }} />
             ))}
           </div>
-        ) : (
+        ) : loadError ? null : (
           <div data-guide="kpi-cards" className="admin-stat-grid">
             {KPI_CARDS.map((c) => (
               <Link key={c.label} href={c.href} style={{ textDecoration: 'none' }}>
@@ -150,7 +199,8 @@ export default function AdminDashboardPage() {
           </details>
         )}
 
-        {/* Trend Chart */}
+        {/* Trend Chart — 讀取失敗時隱藏，避免空圖被誤讀為「無資料」 */}
+        {!loadError && (
         <Card data-guide="trend-chart">
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
             <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#111' }}>趨勢圖</h3>
@@ -187,8 +237,10 @@ export default function AdminDashboardPage() {
             )}
           </div>
         </Card>
+        )}
 
-        {/* Queues */}
+        {/* Queues — 同上，失敗時不渲染成「🎉 無待處理」空狀態 */}
+        {!loadError && (
         <div data-guide="pending-orders" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 16 }}>
           {[
             { title: '待處理訂單', items: data?.queues?.orders || [], href: '/admin/orders', renderItem: (o: any) => `${o.id} · ${STATUS_LABELS[o.status] ?? o.status}`, empty: '🎉 無待處理訂單' },
@@ -218,6 +270,7 @@ export default function AdminDashboardPage() {
             </Card>
           ))}
         </div>
+        )}
 
         {/* Quick Links */}
         <Card style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
