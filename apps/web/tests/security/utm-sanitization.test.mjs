@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnNodeEsm } from '../helpers/spawn-node.mjs';
 
 const modulePath = new URL('../../src/lib/utm.ts', import.meta.url).pathname;
 
@@ -36,11 +36,7 @@ function runUtmCase({ mode, search = '', presetStorageJson = null }) {
     console.log('JSON_RESULT:' + JSON.stringify(payload));
   `;
 
-  const run = spawnSync(
-    process.execPath,
-    ['--experimental-strip-types', '--input-type=module', '-e', script],
-    { encoding: 'utf8', env: process.env }
-  );
+  const run = spawnNodeEsm(script, { env: process.env });
 
   assert.equal(run.status, 0, run.stderr || run.stdout);
   const line = run.stdout

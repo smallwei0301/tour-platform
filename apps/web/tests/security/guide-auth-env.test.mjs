@@ -1,20 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnNodeEsm } from '../helpers/spawn-node.mjs';
 
 const modulePath = new URL('../../src/lib/guide-auth.ts', import.meta.url).pathname;
 
 function runImport(envOverrides = {}) {
-  return spawnSync(
-    process.execPath,
-    ['--experimental-strip-types', '--input-type=module', '-e', `await import(${JSON.stringify(modulePath)}); console.log('IMPORT_OK');`],
-    {
-      env: {
-        ...process.env,
-        ...envOverrides,
-      },
-      encoding: 'utf8',
-    }
+  return spawnNodeEsm(
+    `await import(${JSON.stringify(modulePath)}); console.log('IMPORT_OK');`,
+    { env: { ...process.env, ...envOverrides } },
   );
 }
 
