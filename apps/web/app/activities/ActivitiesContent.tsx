@@ -7,6 +7,7 @@ import { buildActivityHref } from '../../src/lib/activity-url';
 import { isActivityTypeMatch, isActivityTypeKeywordMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
+import { resolveCoverSrc, CARD_IMAGE_SIZES } from './cover-image';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
 const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
@@ -266,24 +267,21 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                   <article className="tp-card" key={a.slug} data-testid="activity-card" data-activity-slug={a.slug}>
                     <div style={{ position: 'relative' }}>
                       <Image
-                        src={a.coverImageUrl || 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80'}
+                        // Issue #1344 — src fallback 與 sizes 抽到
+                        // cover-image.ts 共用常數,跟 page 層 SSR preload
+                        // 的 imagesrcset / imagesizes 保證一致,否則
+                        // preload 的 URL 對不上 srcset → double download。
+                        src={resolveCoverSrc(a.coverImageUrl)}
                         alt={a.title}
                         className="tp-card-img"
                         style={{ background: 'none' }}
-                        // Issue #1344 — `.tp-card-grid-activities` renders
-                        // 2 cols by default and 1 col under 768px. That
-                        // means the first 2 cards are above-the-fold on
-                        // desktop AND the first card alone is above-the-
-                        // fold on mobile. Priority both so the mobile
-                        // LCP image isn't lazy-loaded behind the offscreen
-                        // row.
+                        // `.tp-card-grid-activities` renders 2 cols by
+                        // default and 1 col under 768px → first 2 cards
+                        // are above-the-fold on desktop AND the first
+                        // alone on mobile.
                         priority={idx < 2}
                         loading={idx < 2 ? 'eager' : 'lazy'}
-                        // Tell next/image which variant to fetch for each
-                        // breakpoint: mobile 1-col → full viewport, ≥768
-                        // 2-col → half. Matches the
-                        // `.tp-card-grid-activities` rules in globals.css.
-                        sizes="(max-width: 768px) 100vw, 50vw"
+                        sizes={CARD_IMAGE_SIZES}
                         width={1200} height={675} />
                       <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{

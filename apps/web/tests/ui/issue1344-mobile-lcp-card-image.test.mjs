@@ -56,12 +56,69 @@ test('activity card cover image priorities the first 2 cards (above-the-fold for
 });
 
 test('activity card cover image carries a responsive `sizes` hint matching the 768px breakpoint', async () => {
+  // Round 2 — sizes / fallback 抽到 cover-image.ts 共用常數,跟 page 層
+  // SSR preload 保證一致。鎖常數內容 + 卡片引用。
+  const shared = await readSrc('app/activities/cover-image.ts');
+  assert.match(
+    shared,
+    /CARD_IMAGE_SIZES\s*=\s*['"]\(max-width:\s*768px\)\s*100vw,\s*50vw['"]/,
+    'cover-image.ts 的 CARD_IMAGE_SIZES 必須對齊 .tp-card-grid-activities 的 768px 斷點',
+  );
   const src = await readSrc('app/activities/ActivitiesContent.tsx');
-  // `.tp-card-grid-activities` is 2-col default, 1-col under 768px.
   assert.match(
     src,
-    /sizes=["']\(max-width:\s*768px\)\s*100vw,\s*50vw["']/,
-    'cover image must declare sizes matching .tp-card-grid-activities (768px split)',
+    /sizes=\{\s*CARD_IMAGE_SIZES\s*\}/,
+    '卡片 <Image> 必須引用共用 CARD_IMAGE_SIZES（不可 inline 字串,否則跟 SSR preload 漂移）',
+  );
+  assert.match(
+    src,
+    /src=\{\s*resolveCoverSrc\(\s*a\.coverImageUrl\s*\)\s*\}/,
+    '卡片 <Image> src 必須走 resolveCoverSrc 共用 fallback',
+  );
+});
+
+test('SSR preload：/activities 與 /activities/[region] 都 preload 第一張卡 cover（#1344 round 2）', async () => {
+  // LCP element 是第一張卡 cover,但卡片由 client component render,
+  // 圖片下載要等 JS bundle → hydrate。SSR head preload 讓 HTML parse
+  // 階段就開抓。imagesrcset 必須由 buildCardImageSrcSet 產生,跟
+  // next/image 的 srcset 一致才會 cache-hit。
+  for (const rel of ['app/activities/page.tsx', 'app/activities/[region]/page.tsx']) {
+    const src = await readSrc(rel);
+    assert.match(
+      src,
+      /resolveCoverSrc\(\s*initialActivities\[0\]\.coverImageUrl\s*\)/,
+      `${rel} 必須從 initialActivities[0] 解析第一張卡 cover`,
+    );
+    assert.match(
+      src,
+      /imageSrcSet=\{\s*buildCardImageSrcSet\(\s*firstCover\s*\)\s*\}/,
+      `${rel} 的 preload 必須用 buildCardImageSrcSet 產生 imagesrcset`,
+    );
+    assert.match(
+      src,
+      /imageSizes=\{\s*CARD_IMAGE_SIZES\s*\}/,
+      `${rel} 的 preload imagesizes 必須用共用 CARD_IMAGE_SIZES`,
+    );
+    assert.match(
+      src,
+      /fetchPriority=["']high["']/,
+      `${rel} 的 preload 必須 fetchPriority=high`,
+    );
+  }
+});
+
+test('buildCardImageSrcSet 產生跟 next/image 一致的 /_next/image 變體序列', async () => {
+  const shared = await readSrc('app/activities/cover-image.ts');
+  // 實測 production srcset 的 w 序列；q 固定 75。
+  assert.match(
+    shared,
+    /CARD_IMAGE_WIDTHS\s*=\s*\[384,\s*640,\s*750,\s*828,\s*1080,\s*1200,\s*1920,\s*2048,\s*3840\]/,
+    'CARD_IMAGE_WIDTHS 必須鏡射 next/image 實際 srcset（384–3840）',
+  );
+  assert.match(
+    shared,
+    /\/_next\/image\?url=\$\{encodeURIComponent\(src\)\}&w=\$\{w\}&q=75/,
+    'srcset 項目格式必須是 /_next/image?url=<enc>&w=<w>&q=75（跟 next/image 一致才 cache-hit）',
   );
 });
 

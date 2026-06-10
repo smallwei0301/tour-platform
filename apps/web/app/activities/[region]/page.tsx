@@ -5,6 +5,7 @@ import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedAct
 import { getRegionBySlug, isKnownRegionSlug } from '../../../src/lib/region-slugs.mjs';
 import ActivitiesContent from '../ActivitiesContent';
 import ActivitiesSkeleton from '../ActivitiesSkeleton';
+import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from '../cover-image';
 
 // Same posture as the parent /activities listing (PR #1252): let Vercel's
 // edge cache absorb anonymous region-page traffic for 60s. `revalidate`
@@ -84,8 +85,21 @@ export default async function ActivitiesRegionPage({ params }: { params: Promise
       q: '',
     }).catch(() => undefined);
 
+    // Issue #1344 — SSR preload 第一張卡 cover(同 /activities 根頁的
+    // 理由:卡片是 client render,圖片下載鏈太長)。
+    const firstCover = initialActivities?.[0] ? resolveCoverSrc(initialActivities[0].coverImageUrl) : null;
+
     return (
       <>
+        {firstCover && (
+          <link
+            rel="preload"
+            as="image"
+            imageSrcSet={buildCardImageSrcSet(firstCover)}
+            imageSizes={CARD_IMAGE_SIZES}
+            fetchPriority="high"
+          />
+        )}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbLd) }} />
         {/* Issue #1345 — same-footprint skeleton so streamed-in real
             cards do not push main-content's height (CLS). */}
