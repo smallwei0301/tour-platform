@@ -10,7 +10,17 @@ All web copy, colors, and tone are governed by `BRAND_BOOK.md` — consult it be
 
 ## Language / 語言
 
-**繁體中文（Traditional Chinese）是本專案的主要輸出語言。** 預設用繁體中文進行：與使用者的對話回覆、寫入 repo 的維運／QA 文件、commit 說明，以及面向使用者的文案（後者仍以 `BRAND_BOOK.md` 為準）。技術識別字保留原文——程式碼、指令、檔名、API／欄位名稱、錯誤碼、log 訊息等不翻譯。程式碼註解沿用所在檔案的既有語言風格。使用者明確要求其他語言時，從其要求。
+**繁體中文（Traditional Chinese）是本專案的主要輸出語言，與使用者的所有對話回覆一律使用繁體中文。** 同樣預設用繁體中文：寫入 repo 的維運／QA 文件、commit 說明，以及面向使用者的文案（後者仍以 `BRAND_BOOK.md` 為準）。技術識別字保留原文——程式碼、指令、檔名、API／欄位名稱、錯誤碼、log 訊息等不翻譯。程式碼註解沿用所在檔案的既有語言風格。使用者明確要求其他語言時，從其要求。
+
+## QA 驗收標準（QA verification standards）
+
+驗收 QA issue 時，務必遵守：
+
+1. **實際達成 issue 列出的測試驗證項目。** 把 issue 的 Acceptance criteria 逐條跑出**綠燈／實測證據**，不得只靠推測或臆斷當作通過。能跑的就跑（focused `node --test`、Playwright、authenticated API smoke），不要用契約測試「代替」其實做得到的實測。
+2. **進行真實 browser smoke。** 凡牽涉使用者可見頁面／流程（traveler、guide、admin），務必用**真實瀏覽器**驗證：優先 Playwright E2E（必要時用 `e2e/helpers.ts` 的 `adminLogin`／`setGuideSession`、或對 preview 實際登入），不得只做 source-contract 而宣稱前端已驗。本環境資源足以跑 `next dev` + Playwright；若真的被環境阻擋，需在報告明確標 `NOT_AUTOMATABLE`／`NOT_VERIFIED-live` 並附最接近的安全替代與 blocker 原因。
+3. **只有在確實無法安全執行時**（例如需要 operator-only secret、會寄真實信件／動到正式付款或營運資料）才標 `NOT_VERIFIED-live`／`NOT_PROD_EXECUTED`，並說明 blocker、替代證據與下一步；不得用未驗證結果當 pass。
+4. **驗收文件用繁體中文**寫入 `docs/operations/qa-reports/`，記錄環境 URL、deploy/commit SHA、Asia/Taipei 時間、逐條 AC 證據、判定（PASS／HOLD／FAIL），且不得含密鑰／cookie／token／service-role key／完整付款 payload／未遮蔽 PII。
+5. **標準流程:** 開 PR → 盯 CI → merge → 逐條檢查 AC 清單 → 留 sign-off 留言 → 關閉 issue → 挑下一個 QA issue。
 
 ## Commands
 
