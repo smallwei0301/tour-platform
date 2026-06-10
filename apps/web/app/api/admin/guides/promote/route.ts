@@ -21,10 +21,12 @@ export async function POST(req: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
-  // Fetch the application
+  // Fetch the application. Canonical guide_applications schema has
+  // full_name (NOT name) and no slug column — selecting the old
+  // name/slug columns errored on every promote against the real schema.
   const { data: app, error: appErr } = await supabase
     .from('guide_applications')
-    .select('id, name, slug, email, phone, status')
+    .select('id, full_name, email, phone, status')
     .eq('id', applicationId)
     .single();
 
@@ -36,12 +38,17 @@ export async function POST(req: Request) {
     return NextResponse.json(errorV2('INVALID_STATUS', '只有已通過審核的申請才能上線'), { status: 400 });
   }
 
+  // Applications carry no slug; derive a deterministic one from the
+  // application id so repeated promotes resolve to the same profile
+  // (idempotency anchor for the existing-profile lookup below).
+  const profileSlug = `guide-${String(app.id).replace(/-/g, '').slice(0, 12)}`;
+
   // Check if guide_profiles already exists for this application (by slug)
   const { data: existing } = await supabase
     .from('guide_profiles')
     .select('id, display_name')
-    .eq('slug', app.slug)
-    .single();
+    .eq('slug', profileSlug)
+    .maybeSingle();
 
   let guideId: string;
 
@@ -57,8 +64,8 @@ export async function POST(req: Request) {
     const { data: newProfile, error: insertErr } = await supabase
       .from('guide_profiles')
       .insert({
-        display_name: app.name,
-        slug: app.slug,
+        display_name: app.full_name,
+        slug: profileSlug,
         verification_status: 'approved',
         // guide_email will be set separately by admin
       })
@@ -86,7 +93,7 @@ export async function POST(req: Request) {
     ok: true,
     data: {
       guideId,
-      guideName: app.name,
+      guideName: app.full_name,
       inviteUrl,
       token,
       expiresAt,
