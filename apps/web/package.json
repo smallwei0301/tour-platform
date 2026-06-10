@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "ESLINT_USE_FLAT_CONFIG=false eslint app src --ignore-pattern '.next/**'",
+    "lint": "node ../../scripts/check-lint-node.mjs && ESLINT_USE_FLAT_CONFIG=false eslint app src --ignore-pattern '.next/**'",
     "test": "node --test tests/**/*.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
