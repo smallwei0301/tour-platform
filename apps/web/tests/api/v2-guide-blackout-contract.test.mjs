@@ -46,10 +46,14 @@ test('guide availability preview contract smoke: preview includes blackout + boo
   assert.match(src, /Invalid timezone/);
   assert.match(src, /from\('guide_blackout_dates'\)/);
   assert.match(src, /from\('bookings'\)/);
-  assert.match(src, /generateAvailableSlots\(input, deps\)/);
+  // #1307 follow-up: the plan-scoped path still uses the canonical generator,
+  // while the no-plan path goes through the shared fallback helper so
+  // plan-bound rules are no longer dropped. Both must stay wired.
+  assert.match(src, /generateAvailableSlots\(/);
+  assert.match(src, /generateFallbackPreviewSlots\(/);
   assert.match(src, /blackoutsCount: blackouts\.length/);
   assert.match(src, /activeBookingsCount: bookings\.length/);
-  assert.match(src, /slots: result\.slots/);
+  assert.match(src, /slots,\s*\n\s*\}\)\)/);
 });
 
 test('booking routes still consult guide blackout dates during draft + available-slots flows', async () => {
