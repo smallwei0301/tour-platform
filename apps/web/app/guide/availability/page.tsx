@@ -14,6 +14,18 @@ import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
+// guide_availability_rules.start_time_local / end_time_local are Postgres
+// `time` columns that round-trip with seconds ("09:00:00"). A native
+// <input type="time"> (and the rule card) expect HH:MM, so defensively trim
+// seconds before binding/displaying — the API normalizes too, but legacy
+// rows or cached state can still carry the seconds.
+const toHhMm = (value: string | null | undefined): string => {
+  if (!value) return '';
+  const match = /^(\d{1,2}):(\d{2})/.exec(value.trim());
+  if (!match) return value;
+  return `${match[1].padStart(2, '0')}:${match[2]}`;
+};
+
 type AvailabilityRule = {
   id: string;
   guide_id: string;
@@ -189,8 +201,8 @@ export default function GuideAvailabilityPage() {
         rule_mode: isSingleDay ? 'single-day' : 'weekly',
         single_date: isSingleDay ? (rule.effective_from || '') : '',
         weekday: rule.weekday,
-        start_time_local: rule.start_time_local,
-        end_time_local: rule.end_time_local,
+        start_time_local: toHhMm(rule.start_time_local),
+        end_time_local: toHhMm(rule.end_time_local),
         timezone: rule.timezone,
         slot_interval_minutes: rule.slot_interval_minutes,
         buffer_before_minutes: rule.buffer_before_minutes,
@@ -483,7 +495,7 @@ export default function GuideAvailabilityPage() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
           <span style={{ fontWeight: 600 }}>
-            {rule.start_time_local}-{rule.end_time_local}
+            {toHhMm(rule.start_time_local)}-{toHhMm(rule.end_time_local)}
           </span>
         </div>
         <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>

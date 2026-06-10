@@ -8,6 +8,7 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import { assertPlanBelongsToGuide } from '../../../../../../../src/lib/availability-v2/assert-plan-belongs-to-guide';
+import { normalizeTimeLocal } from '../../../../../../../src/lib/availability-v2/time-local.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -20,9 +21,6 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
-function isValidTimeString(time: string): boolean {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-}
 
 export async function GET(
   _request: NextRequest,
@@ -72,7 +70,14 @@ export async function GET(
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch rules'), { status: 500 });
     }
 
-    return Response.json(successV2({ rules: data || [] }));
+    // Postgres `time` returns "HH:MM:SS"; normalize to HH:MM for the client.
+    const rules = (data || []).map((rule) => ({
+      ...rule,
+      start_time_local: normalizeTimeLocal(rule.start_time_local) ?? rule.start_time_local,
+      end_time_local: normalizeTimeLocal(rule.end_time_local) ?? rule.end_time_local,
+    }));
+
+    return Response.json(successV2({ rules }));
   } catch (err) {
     console.error('Availability rules API error:', err);
     return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
@@ -115,14 +120,16 @@ export async function POST(
   if (body.weekday === undefined || body.weekday < 0 || body.weekday > 6) {
     return Response.json(errorV2('VALIDATION_ERROR', 'weekday must be 0-6'), { status: 400 });
   }
-  if (!body.start_time_local || !isValidTimeString(body.start_time_local)) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid start_time_local (HH:MM)'), { status: 400 });
+  const startTimeLocal = normalizeTimeLocal(body.start_time_local);
+  if (!startTimeLocal) {
+    return Response.json(errorV2('VALIDATION_ERROR', '開始時間格式不正確，請使用 24 小時制 HH:MM（例如 09:00）'), { status: 400 });
   }
-  if (!body.end_time_local || !isValidTimeString(body.end_time_local)) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid end_time_local (HH:MM)'), { status: 400 });
+  const endTimeLocal = normalizeTimeLocal(body.end_time_local);
+  if (!endTimeLocal) {
+    return Response.json(errorV2('VALIDATION_ERROR', '結束時間格式不正確，請使用 24 小時制 HH:MM（例如 17:00）'), { status: 400 });
   }
-  if (body.start_time_local >= body.end_time_local) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'start_time must be before end_time'), { status: 400 });
+  if (startTimeLocal >= endTimeLocal) {
+    return Response.json(errorV2('VALIDATION_ERROR', '開始時間必須早於結束時間'), { status: 400 });
   }
   if (!body.timezone || !isValidTimezone(body.timezone)) {
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid timezone'), { status: 400 });
@@ -163,8 +170,8 @@ export async function POST(
     const insertData = {
       guide_id: guideId,
       weekday: body.weekday,
-      start_time_local: body.start_time_local,
-      end_time_local: body.end_time_local,
+      start_time_local: startTimeLocal,
+      end_time_local: endTimeLocal,
       timezone: body.timezone,
       activity_plan_id: body.activity_plan_id || null,
       slot_interval_minutes: body.slot_interval_minutes ?? 60,
