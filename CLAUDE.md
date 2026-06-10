@@ -30,7 +30,7 @@ Root scripts proxy to the `@tour/web` workspace:
 
 - `npm run dev` — Next.js dev server
 - `npm run build` — production build (CI also runs this)
-- `npm run lint` — ESLint (flat config disabled via `ESLINT_USE_FLAT_CONFIG=false`)
+- `npm run lint` — ESLint (flat config disabled via `ESLINT_USE_FLAT_CONFIG=false`). **Run on Node 22**: a pre-lint guard (`scripts/check-lint-node.mjs`) fails fast on Node ≥24, where ESLint 9.x + `eslint-config-next` crash with an upstream circular-config error (env-only; CI uses Node 22 and stays green).
 - `npm run typecheck` — `tsc --noEmit`
 - `npm test` — unit/integration tests
 
