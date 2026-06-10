@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
 import { getRegionBySlug, isKnownRegionSlug } from '../../../src/lib/region-slugs.mjs';
 import ActivitiesContent from '../ActivitiesContent';
+import ActivitiesSkeleton from '../ActivitiesSkeleton';
 
 // Same posture as the parent /activities listing (PR #1252): let Vercel's
 // edge cache absorb anonymous region-page traffic for 60s. `revalidate`
@@ -86,7 +87,9 @@ export default async function ActivitiesRegionPage({ params }: { params: Promise
     return (
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbLd) }} />
-        <Suspense fallback={null}>
+        {/* Issue #1345 — same-footprint skeleton so streamed-in real
+            cards do not push main-content's height (CLS). */}
+        <Suspense fallback={<ActivitiesSkeleton />}>
           <ActivitiesContent initialRegion={entry.dbValue} initialActivities={initialActivities} />
         </Suspense>
       </>

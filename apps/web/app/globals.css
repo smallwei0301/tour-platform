@@ -272,6 +272,22 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* Card hover effect */
+/* Issue #1345 — Suspense fallback skeleton, same footprint as real cards
+   so streamed-in real cards do not push main-content's height. */
+.tp-card-skeleton {
+  pointer-events: none;
+}
+.tp-card-img-skeleton {
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+  /* aspect-ratio + width 100% already on .tp-card-img */
+}
+.tp-card-skeleton-line {
+  height: 14px;
+  margin: 8px 0;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+}
+
 .tp-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
