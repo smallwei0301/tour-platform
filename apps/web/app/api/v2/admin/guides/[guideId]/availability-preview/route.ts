@@ -17,9 +17,13 @@ import {
   type BlackoutWindow,
   type ExistingBooking,
   type ActivityPlan,
-  type SlotGeneratorInput,
-  type SlotGeneratorDeps,
+  type SerializedSlot,
 } from '../../../../../../../src/lib/slot-generator';
+import { aggregateFallbackSeasonGate } from '../../../../../../../src/lib/availability-v2/aggregate-fallback-season-gate.mjs';
+import {
+  generateFallbackPreviewSlots,
+  type FallbackPlanMeta,
+} from '../../../../../../../src/lib/availability-v2/fallback-preview-slots.ts';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -139,11 +143,13 @@ export async function GET(
       status: row.status,
     }));
 
-    // Use real plan if activityPlanId provided, otherwise use mock plan for preview
-    let plan: ActivityPlan;
-    let resolvedPlanId: string;
+    // Use real plan if activityPlanId provided, otherwise aggregate across
+    // the plans referenced by the guide's rules (#1307 follow-up parity with
+    // the guide-side preview: plan-bound rules must not be dropped, and the
+    // season gate must aggregate instead of false-reporting outside_season).
     let previewPlanSeasons: PreviewActivityPlanSeason[] = [];
     let previewIsYearRound = false;
+    let slots: SerializedSlot[] = [];
 
     if (activityPlanId && UUID_REGEX.test(activityPlanId)) {
       const { data: planData, error: planError } = await supabase
@@ -164,7 +170,7 @@ export async function GET(
       previewPlanSeasons = (seasonsData || []) as PreviewActivityPlanSeason[];
       previewIsYearRound = Boolean(planData.is_year_round);
 
-      plan = {
+      const plan: ActivityPlan = {
         id: planData.id,
         activity_id: planData.activity_id,
         duration_minutes: planData.duration_minutes,
@@ -172,17 +178,60 @@ export async function GET(
         booking_type: planData.booking_type,
         is_year_round: planData.is_year_round,
       };
-      resolvedPlanId = planData.id;
+
+      const result = generateAvailableSlots(
+        { guideId, activityPlanId: planData.id, dateFrom, dateTo, timezone, participants: 1 },
+        { rules, blackouts, bookings, plan },
+      );
+      slots = result.slots;
     } else {
-      // Mock activity plan for preview (60 min duration)
-      plan = {
-        id: 'preview',
-        activity_id: 'preview',
-        duration_minutes: 60,
-        max_participants: 10,
-        booking_type: 'scheduled',
-      };
-      resolvedPlanId = 'preview';
+      // No plan selected: thread each rule's own activity_plan_id through the
+      // generator (the old mock 'preview' plan id dropped every plan-bound rule).
+      const planIds = Array.from(
+        new Set(rules.map((rule) => rule.activity_plan_id).filter((id): id is string => Boolean(id)))
+      );
+
+      const planMetaByPlanId: Record<string, FallbackPlanMeta> = {};
+      const isYearRoundByPlanId: Record<string, boolean> = {};
+      if (planIds.length > 0) {
+        const { data: plansData } = await supabase
+          .from('activity_plans')
+          .select('id, min_participants, is_year_round, duration_minutes, max_participants, booking_type')
+          .in('id', planIds);
+        for (const plan of plansData || []) {
+          isYearRoundByPlanId[plan.id] = Boolean(plan.is_year_round);
+          planMetaByPlanId[plan.id] = {
+            duration_minutes: plan.duration_minutes ?? null,
+            max_participants: plan.max_participants ?? null,
+            booking_type: plan.booking_type ?? null,
+            min_participants: plan.min_participants ?? null,
+          };
+        }
+
+        const { data: aggregatedSeasonsData } = await supabase
+          .from('activity_plan_seasons')
+          .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
+          .in('activity_plan_id', planIds);
+        const aggregated = aggregateFallbackSeasonGate({
+          plansById: Object.fromEntries(
+            Object.entries(isYearRoundByPlanId).map(([id, isYearRound]) => [id, { is_year_round: isYearRound }]),
+          ),
+          seasons: aggregatedSeasonsData ?? [],
+        });
+        previewPlanSeasons = aggregated.seasons as PreviewActivityPlanSeason[];
+        previewIsYearRound = aggregated.isYearRound;
+      }
+
+      slots = generateFallbackPreviewSlots({
+        guideId,
+        rules,
+        blackouts,
+        bookings,
+        dateFrom,
+        dateTo,
+        timezone,
+        planMetaById: planMetaByPlanId,
+      });
     }
 
     const previewCanonical = resolvePreviewCanonicalReason({
@@ -193,27 +242,9 @@ export async function GET(
     });
     const activeSeasonSummaries = summarizeActivePlanSeasons(previewPlanSeasons);
 
-    const input: SlotGeneratorInput = {
-      guideId,
-      activityPlanId: resolvedPlanId,
-      dateFrom,
-      dateTo,
-      timezone,
-      participants: 1,
-    };
-
-    const deps: SlotGeneratorDeps = {
-      rules,
-      blackouts,
-      bookings,
-      plan,
-    };
-
-    const result = generateAvailableSlots(input, deps);
-
     return Response.json(successV2({
       guide: { id: guide.id, display_name: guide.display_name },
-      timezone: result.timezone,
+      timezone,
       dateFrom,
       dateTo,
       activityPlanId: activityPlanId || null,
@@ -224,7 +255,7 @@ export async function GET(
       rulesCount: rules.length,
       blackoutsCount: blackouts.length,
       activeBookingsCount: bookings.length,
-      slots: result.slots,
+      slots,
     }));
   } catch (err) {
     console.error('Availability preview API error:', err);

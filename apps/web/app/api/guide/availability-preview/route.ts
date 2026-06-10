@@ -26,6 +26,10 @@ import {
   type ActivityPlan,
 } from '../../../../src/lib/slot-generator.ts';
 import { aggregateFallbackSeasonGate } from '../../../../src/lib/availability-v2/aggregate-fallback-season-gate.mjs';
+import {
+  generateFallbackPreviewSlots,
+  type FallbackPlanMeta,
+} from '../../../../src/lib/availability-v2/fallback-preview-slots.ts';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -212,16 +216,21 @@ export async function GET(request: NextRequest) {
       )
     );
 
-    const minParticipantsByPlanId: Record<string, number | null> = {};
+    const planMetaByPlanId: Record<string, FallbackPlanMeta> = {};
     const isYearRoundByPlanId: Record<string, boolean> = {};
     if (planIds.length > 0) {
       const { data: plansData } = await supabase
         .from('activity_plans')
-        .select('id, min_participants, is_year_round')
+        .select('id, min_participants, is_year_round, duration_minutes, max_participants, booking_type')
         .in('id', planIds as string[]);
       for (const plan of plansData || []) {
-        minParticipantsByPlanId[plan.id] = plan.min_participants ?? null;
         isYearRoundByPlanId[plan.id] = Boolean(plan.is_year_round);
+        planMetaByPlanId[plan.id] = {
+          duration_minutes: plan.duration_minutes ?? null,
+          max_participants: plan.max_participants ?? null,
+          booking_type: plan.booking_type ?? null,
+          min_participants: plan.min_participants ?? null,
+        };
       }
     }
 
@@ -296,9 +305,10 @@ export async function GET(request: NextRequest) {
 
     // GH-1289: generate slots using the canonical slot-generator.
     // When activityPlanId is provided, we have the full plan and use generateAvailableSlots.
-    // When no activityPlanId, fall back to per-rule generation using slot_interval_minutes as
-    // duration approximation (same behavior as before for the generic "all plans" preview).
-    let slots: ReturnType<typeof generateAvailableSlots>['slots'] = [];
+    // When no activityPlanId, the shared fallback helper threads each rule's own
+    // activity_plan_id through the generator — plan-bound rules used to be silently
+    // dropped here (#1307 follow-up), leaving the default preview permanently empty.
+    let slots: Array<SerializedSlot & { minParticipants?: number | null; activityPlanId?: string | null }> = [];
 
     if (canonicalPlan && activityPlanId) {
       // Primary path (GH-1289 fix): use canonical generator with correct duration
@@ -318,12 +328,22 @@ export async function GET(request: NextRequest) {
           plan: canonicalPlan,
         }
       );
-      slots = result.slots;
+      slots = result.slots.map((slot) => ({
+        ...slot,
+        minParticipants: canonicalPlan!.min_participants ?? null,
+        activityPlanId,
+      }));
     } else {
-      // Fallback path: no specific plan selected → aggregate preview across all rules
-      // Each rule uses its own slot_interval_minutes as a duration approximation
-      // (legacy behavior preserved for generic guide availability overview)
-      slots = generateFallbackPreviewSlots(rules, blackouts, bookings, dateFrom, dateTo, timezone);
+      slots = generateFallbackPreviewSlots({
+        guideId: session.guideId,
+        rules,
+        blackouts,
+        bookings,
+        dateFrom,
+        dateTo,
+        timezone,
+        planMetaById: planMetaByPlanId,
+      });
     }
 
     return Response.json(ok({
@@ -349,92 +369,3 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * Fallback slot generation for guide preview when no activityPlanId is specified.
- *
- * This path is only reached when the guide previews their general availability
- * without filtering by a specific activity plan. In this case we don't know the
- * plan duration, so we approximate by using slot_interval_minutes as duration
- * (this preserves the previous contiguous-slot behavior for generic previews).
- *
- * Note: This is intentionally a minimal fallback. The canonical path (with
- * activityPlanId) is the primary use case addressed by GH-1289.
- *
- * Returns SerializedSlot-compatible objects for the response payload.
- */
-function generateFallbackPreviewSlots(
-  rules: AvailabilityRule[],
-  blackouts: BlackoutWindow[],
-  bookings: ExistingBooking[],
-  dateFrom: string,
-  dateTo: string,
-  timezone: string
-): SerializedSlot[] {
-  // Use canonical generator per rule with duration approximated as slot_interval_minutes
-  // Group rules and generate per-rule to respect different intervals
-  const allSlots: Array<{
-    startAt: string;
-    endAt: string;
-    isAvailable: boolean;
-    capacityLeft: number;
-    bookingType: 'scheduled' | 'request' | 'instant';
-  }> = [];
-
-  // Get unique interval values across rules to build synthetic plans
-  const ruleGroups = new Map<number, AvailabilityRule[]>();
-  for (const rule of rules) {
-    const interval = rule.slot_interval_minutes || 60;
-    if (!ruleGroups.has(interval)) {
-      ruleGroups.set(interval, []);
-    }
-    ruleGroups.get(interval)!.push(rule);
-  }
-
-  for (const [interval, groupRules] of ruleGroups) {
-    // Synthetic plan: duration = interval (contiguous slots, legacy behavior)
-    const syntheticPlan: ActivityPlan = {
-      id: 'fallback-synthetic',
-      activity_id: 'fallback',
-      duration_minutes: interval,
-      max_participants: 99,
-      booking_type: 'scheduled',
-    };
-
-    const guideId = groupRules[0]?.guide_id || '';
-    const result = generateAvailableSlots(
-      {
-        guideId,
-        activityPlanId: null,
-        dateFrom,
-        dateTo,
-        timezone,
-        participants: 1,
-      },
-      {
-        rules: groupRules,
-        blackouts,
-        bookings,
-        plan: syntheticPlan,
-      }
-    );
-
-    for (const slot of result.slots) {
-      allSlots.push({
-        startAt: slot.startAt,
-        endAt: slot.endAt,
-        isAvailable: slot.isAvailable,
-        capacityLeft: slot.capacityLeft,
-        bookingType: slot.bookingType,
-      });
-    }
-  }
-
-  // Sort and deduplicate by startAt
-  allSlots.sort((a, b) => a.startAt.localeCompare(b.startAt));
-  const seen = new Set<string>();
-  return allSlots.filter(s => {
-    if (seen.has(s.startAt)) return false;
-    seen.add(s.startAt);
-    return true;
-  });
-}
