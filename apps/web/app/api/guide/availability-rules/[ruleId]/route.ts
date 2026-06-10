@@ -10,6 +10,7 @@ import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../../src/lib/api';
 import { validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
+import { normalizeTimeLocal } from '../../../../../src/lib/availability-v2/time-local.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -63,9 +64,6 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
-function isValidTimeString(time: string): boolean {
-  return /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
-}
 
 interface UpdateRuleBody {
   weekday?: number;
@@ -111,11 +109,23 @@ export async function PUT(
   if (body.weekday !== undefined && (body.weekday < 0 || body.weekday > 6)) {
     return Response.json(fail('VALIDATION_ERROR', 'weekday must be 0-6'), { status: 400 });
   }
-  if (body.start_time_local && !isValidTimeString(body.start_time_local)) {
-    return Response.json(fail('VALIDATION_ERROR', 'Invalid start_time_local (HH:MM)'), { status: 400 });
+  // Accept HH:MM and HH:MM:SS, normalizing to canonical HH:MM. Only the
+  // provided fields are validated (partial update).
+  let startTimeLocal: string | undefined;
+  if (body.start_time_local !== undefined) {
+    const normalized = normalizeTimeLocal(body.start_time_local);
+    if (!normalized) {
+      return Response.json(fail('VALIDATION_ERROR', '開始時間格式不正確，請使用 24 小時制 HH:MM（例如 09:00）'), { status: 400 });
+    }
+    startTimeLocal = normalized;
   }
-  if (body.end_time_local && !isValidTimeString(body.end_time_local)) {
-    return Response.json(fail('VALIDATION_ERROR', 'Invalid end_time_local (HH:MM)'), { status: 400 });
+  let endTimeLocal: string | undefined;
+  if (body.end_time_local !== undefined) {
+    const normalized = normalizeTimeLocal(body.end_time_local);
+    if (!normalized) {
+      return Response.json(fail('VALIDATION_ERROR', '結束時間格式不正確，請使用 24 小時制 HH:MM（例如 17:00）'), { status: 400 });
+    }
+    endTimeLocal = normalized;
   }
   if (body.timezone && !isValidTimezone(body.timezone)) {
     return Response.json(fail('VALIDATION_ERROR', 'Invalid timezone'), { status: 400 });
@@ -153,8 +163,8 @@ export async function PUT(
     // Build update object with only provided fields
     const updateData: Record<string, unknown> = {};
     if (body.weekday !== undefined) updateData.weekday = body.weekday;
-    if (body.start_time_local) updateData.start_time_local = body.start_time_local;
-    if (body.end_time_local) updateData.end_time_local = body.end_time_local;
+    if (startTimeLocal !== undefined) updateData.start_time_local = startTimeLocal;
+    if (endTimeLocal !== undefined) updateData.end_time_local = endTimeLocal;
     if (body.timezone) updateData.timezone = body.timezone;
     if (body.activity_plan_id !== undefined) updateData.activity_plan_id = body.activity_plan_id;
     if (body.slot_interval_minutes !== undefined) updateData.slot_interval_minutes = body.slot_interval_minutes;
@@ -165,11 +175,12 @@ export async function PUT(
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
     if (body.use_dynamic_reemit !== undefined) updateData.use_dynamic_reemit = body.use_dynamic_reemit;
 
-    // Validate start/end times after merge
-    const startTime = (updateData.start_time_local as string) || existing.start_time_local;
-    const endTime = (updateData.end_time_local as string) || existing.end_time_local;
+    // Validate start/end ordering after merge. Existing DB values come back
+    // as HH:MM:SS, so normalize both sides before the lexical comparison.
+    const startTime = startTimeLocal ?? normalizeTimeLocal(existing.start_time_local);
+    const endTime = endTimeLocal ?? normalizeTimeLocal(existing.end_time_local);
     if (startTime && endTime && startTime >= endTime) {
-      return Response.json(fail('VALIDATION_ERROR', 'start_time must be before end_time'), { status: 400 });
+      return Response.json(fail('VALIDATION_ERROR', '開始時間必須早於結束時間'), { status: 400 });
     }
 
     const { data, error } = await supabase
