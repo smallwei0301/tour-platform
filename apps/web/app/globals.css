@@ -273,9 +273,13 @@ a { color: inherit; text-decoration: none; }
 
 /* Card hover effect */
 /* Issue #1345 — Suspense fallback skeleton, same footprint as real cards
-   so streamed-in real cards do not push main-content's height. */
+   so streamed-in real cards do not push main-content's height.
+   Part 4 — measured real card height on production = 441-462px (Playwright
+   getBoundingClientRect). Reserve 460px so each skeleton card matches
+   the real card's vertical footprint within ~5px. */
 .tp-card-skeleton {
   pointer-events: none;
+  min-height: 460px;
 }
 .tp-card-img-skeleton {
   background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
