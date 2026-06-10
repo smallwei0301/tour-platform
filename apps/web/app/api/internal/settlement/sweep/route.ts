@@ -55,7 +55,10 @@ export async function POST(req: NextRequest) {
     // - status = 'completed' only (refund_pending / refunded are out by definition)
     // - use booking.start_at as canonical cutoff for V2-linked rows,
     //   and fallback to activity_schedules.start_at for legacy rows
-    // - join operations_tracking.refund_amount_twd for effective-amount math
+    // - join operations_tracking.refund_amount_twd for effective-amount math,
+    //   plus has_complaint / has_oversell_issue so computeSweepPayoutItem's
+    //   #1221 payout-hold gate can actually fire (#1106: completed orders with
+    //   an open complaint / oversell investigation must NOT be auto-settled).
     // - not yet present in payout_items
     const { data: orders, error: ordersError } = await supabase
       .from('orders')
@@ -66,7 +69,7 @@ export async function POST(req: NextRequest) {
         activities!inner(guide_id),
         bookings(start_at, end_at, activity_plan_id, activity_id, guide_id),
         activity_schedules(start_at),
-        operations_tracking(refund_amount_twd)
+        operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
       `)
       .eq('status', 'completed')
       .not('id', 'in', `(SELECT order_id FROM payout_items)`);
@@ -89,7 +92,10 @@ export async function POST(req: NextRequest) {
       activities: { guide_id: string } | { guide_id: string }[];
       bookings?: { start_at?: string | null } | { start_at?: string | null }[] | null;
       activity_schedules?: { start_at: string } | { start_at: string }[] | null;
-      operations_tracking?: { refund_amount_twd?: number | null } | { refund_amount_twd?: number | null }[] | null;
+      operations_tracking?:
+        | { refund_amount_twd?: number | null; has_complaint?: boolean | null; has_oversell_issue?: boolean | null }
+        | { refund_amount_twd?: number | null; has_complaint?: boolean | null; has_oversell_issue?: boolean | null }[]
+        | null;
     };
 
     const eligibleOrders = (orders as Order[]).filter((order) => {
