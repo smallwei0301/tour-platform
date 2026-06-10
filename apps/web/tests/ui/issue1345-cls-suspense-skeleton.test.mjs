@@ -1,0 +1,109 @@
+/**
+ * Issue #1345 part 3 — Suspense fallback streaming shift.
+ *
+ * Parts 1 + 2 (PR #1347 / #1349) closed the SSR-then-client setActivities
+ * re-render and the CJK font swap. Lighthouse against the deployed
+ * `258f964` still showed CLS 0.43–0.94. Playwright PerformanceObserver
+ * (sources field) pinned the remaining shift on `<div id="main-content">`
+ * + `<footer>`: the Suspense fallback was a single-line "載入中⋯" string
+ * (or `null` on /activities/[region]), and when the real
+ * `<ActivitiesContent>` streamed in, main-content grew from ~60 px to
+ * ~1500 px in a single chunk.
+ *
+ * Production HTML confirms — `data-testid="activity-card"` count is 0
+ * in the initial SSR document; the cards arrive only on the streamed
+ * RSC chunk, hence the height jump.
+ *
+ * Fix: a same-footprint skeleton (6 fake cards in the same grid) so
+ * the stream-in replaces same-sized boxes — shift distance ≈ 0.
+ */
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const WEB_ROOT = path.resolve(__dirname, '../..');
+
+async function readSrc(rel) {
+  return readFile(path.join(WEB_ROOT, rel), 'utf8');
+}
+
+test('/activities Suspense 用 ActivitiesSkeleton 而不是 「載入中⋯」單行 fallback', async () => {
+  const src = await readSrc('app/activities/page.tsx');
+  assert.match(
+    src,
+    /import\s+ActivitiesSkeleton\s+from\s+['"]\.\/ActivitiesSkeleton['"]/,
+    '/activities 必須 import ActivitiesSkeleton',
+  );
+  assert.match(
+    src,
+    /<Suspense\s+fallback=\{<ActivitiesSkeleton\s*\/>\}>/,
+    'Suspense fallback 必須是 <ActivitiesSkeleton />，不能再用「載入中⋯」字串',
+  );
+  // The string-based fallback must be gone.
+  assert.doesNotMatch(
+    src,
+    /Suspense\s+fallback=\{\s*<div[^>]*>\s*載入中/,
+    '舊的 "載入中⋯" 單行 fallback 不能再殘留',
+  );
+});
+
+test('/activities/[region] Suspense 也用 ActivitiesSkeleton（不再是 null）', async () => {
+  const src = await readSrc('app/activities/[region]/page.tsx');
+  assert.match(
+    src,
+    /import\s+ActivitiesSkeleton\s+from\s+['"]\.\.\/ActivitiesSkeleton['"]/,
+    '/activities/[region] 必須 import ActivitiesSkeleton',
+  );
+  assert.match(
+    src,
+    /<Suspense\s+fallback=\{<ActivitiesSkeleton\s*\/>\}>/,
+    'Suspense fallback 必須是 <ActivitiesSkeleton />',
+  );
+  assert.doesNotMatch(
+    src,
+    /Suspense\s+fallback=\{\s*null\s*\}/,
+    '舊的 fallback={null} 不能再殘留',
+  );
+});
+
+test('ActivitiesSkeleton 渲染 6 張 same-footprint 卡片在相同 grid', async () => {
+  const src = await readSrc('app/activities/ActivitiesSkeleton.tsx');
+  // 同樣的 grid container class，這樣 streaming 替換時 grid 高度不變。
+  assert.match(
+    src,
+    /className=["']tp-card-grid\s+tp-card-grid-activities["']/,
+    'skeleton 必須用 tp-card-grid + tp-card-grid-activities 跟真實 listing 同 grid',
+  );
+  // Array.from length 至少 6，確保視覺上 above-the-fold 都填滿。
+  assert.match(
+    src,
+    /Array\.from\(\{\s*length:\s*6\s*\}\)/,
+    'skeleton 必須 render 6 張卡片佔位（above-the-fold 兩列 × 2-3 欄）',
+  );
+  // Skeleton 對 a11y / SEO 不可見。
+  assert.match(
+    src,
+    /aria-hidden=["']true["']/,
+    'skeleton 卡片必須 aria-hidden 讓 screen reader / SEO 略過',
+  );
+});
+
+test('globals.css 有 .tp-card-skeleton 跟 .tp-card-img-skeleton 樣式（reserve 空間）', async () => {
+  const css = await readSrc('app/globals.css');
+  assert.match(
+    css,
+    /\.tp-card-skeleton\s*\{/,
+    '.tp-card-skeleton 樣式必須存在',
+  );
+  assert.match(
+    css,
+    /\.tp-card-img-skeleton\s*\{/,
+    '.tp-card-img-skeleton 樣式必須存在（佔住卡片圖片區的 aspect-ratio）',
+  );
+  // tp-card-img CSS 既有的 aspect-ratio + width:100% 由 #1345 part 1
+  // 鎖過,這裡只追加 skeleton 樣式不重複鎖。
+});

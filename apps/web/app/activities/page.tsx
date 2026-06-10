@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import ActivitiesContent from './ActivitiesContent';
+import ActivitiesSkeleton from './ActivitiesSkeleton';
 import { listPublishedActivitiesDb } from '../../src/lib/db.mjs';
 import type { Metadata } from 'next';
 
@@ -56,9 +57,15 @@ export default async function ActivitiesPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(activitiesJsonLd) }} />
-      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666' }}>載入中⋯</div>}>
+      {/* Issue #1345 — Suspense fallback 過去只 render 一行「載入中⋯」,
+          當 ActivitiesContent 串流進來時 main-content 高度從 ~60px 暴增
+          到 ~1500px,造成 CLS 0.93。改成跟真實卡片 grid 同骨架的 skeleton
+          (6 張固定尺寸的 placeholder),fallback → cards 替換時整塊
+          main-content 高度幾乎不變,shift 距離趨近 0。 */}
+      <Suspense fallback={<ActivitiesSkeleton />}>
         <ActivitiesContent initialActivities={initialActivities} />
       </Suspense>
     </>
   );
 }
+
