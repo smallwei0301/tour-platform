@@ -108,6 +108,28 @@ test('globals.css 有 .tp-card-skeleton 跟 .tp-card-img-skeleton 樣式（reser
   // 鎖過,這裡只追加 skeleton 樣式不重複鎖。
 });
 
+test('loading.tsx 存在於 /activities 與 /activities/[region]（page-level streaming fallback）', async () => {
+  // Part 5 — async page 的 await 在 JSX return 之前,dynamic rendering
+  // 時外層 boundary 的 fallback 是 loading.tsx 不是 page JSX 內的
+  // <Suspense>。region 頁實測過缺 loading.tsx 時 fallback 全空 →
+  // footer 從視窗頂端被推下 ~1300px → CLS 0.52。
+  const regionLoading = await readSrc('app/activities/[region]/loading.tsx');
+  assert.match(
+    regionLoading,
+    /import\s+ActivitiesSkeleton\s+from\s+['"]\.\.\/ActivitiesSkeleton['"]/,
+    '[region]/loading.tsx 必須 render ActivitiesSkeleton',
+  );
+  assert.match(regionLoading, /<ActivitiesSkeleton\s*\/>/);
+
+  const rootLoading = await readSrc('app/activities/loading.tsx');
+  assert.match(
+    rootLoading,
+    /import\s+ActivitiesSkeleton\s+from\s+['"]\.\/ActivitiesSkeleton['"]/,
+    '/activities/loading.tsx 必須 render ActivitiesSkeleton（防未來轉 dynamic rendering）',
+  );
+  assert.match(rootLoading, /<ActivitiesSkeleton\s*\/>/);
+});
+
 test('.tp-card-skeleton 設 min-height ≈ real card 高度（防 region page 等小集合的 CLS）', async () => {
   const css = await readSrc('app/globals.css');
   // Part 4 — Playwright getBoundingClientRect 量到 production real card
