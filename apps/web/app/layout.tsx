@@ -6,10 +6,20 @@ import { Footer } from '../src/components/layout/Footer';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
+// Issue #1345 — Noto Sans TC is a large CJK font family; on slow mobile
+// links the swap from the fallback (sans-serif) to the real font lands
+// well after first paint, jumping every line-height and inflating CLS
+// (round-4 Lighthouse measured 0.76–1.43, still 0.4–0.9 after part 1).
+// next/font auto-generates a metric-matched fallback for Latin fonts
+// but NOT for CJK families, so the swap is visually large.
+// `display: 'optional'` tells the browser to skip the swap entirely if
+// the font is not in the cache within ~100ms — first-time visitors see
+// the system fallback for the whole session, repeat visitors get the
+// real font on the next navigation. This kills the swap-shift entirely.
 const notoSans = Noto_Sans_TC({
   subsets: ['latin'],
   weight: ['400', '500', '700', '900'],
-  display: 'swap',
+  display: 'optional',
   variable: '--font-noto-sans-tc',
 });
 
