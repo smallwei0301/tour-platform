@@ -270,8 +270,21 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                         alt={a.title}
                         className="tp-card-img"
                         style={{ background: 'none' }}
-                        priority={idx === 0}
-                        loading={idx === 0 ? 'eager' : 'lazy'} width={1200} height={675} />
+                        // Issue #1344 — `.tp-card-grid-activities` renders
+                        // 2 cols by default and 1 col under 768px. That
+                        // means the first 2 cards are above-the-fold on
+                        // desktop AND the first card alone is above-the-
+                        // fold on mobile. Priority both so the mobile
+                        // LCP image isn't lazy-loaded behind the offscreen
+                        // row.
+                        priority={idx < 2}
+                        loading={idx < 2 ? 'eager' : 'lazy'}
+                        // Tell next/image which variant to fetch for each
+                        // breakpoint: mobile 1-col → full viewport, ≥768
+                        // 2-col → half. Matches the
+                        // `.tp-card-grid-activities` rules in globals.css.
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        width={1200} height={675} />
                       <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{
                         position: 'absolute', top: 10, left: 10,
