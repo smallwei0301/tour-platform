@@ -33,12 +33,17 @@ test('#1344 next.config includes AVIF in image formats', () => {
   );
 });
 
-test('#1344 next.config image quality is 60 (not the 75 default)', () => {
-  const src = read('apps/web/next.config.mjs');
+test('#1344 cover Image has quality={60} (Next 15 — per-Image, not next.config)', () => {
+  // Next 15 next.config.images does not accept a top-level `quality` field
+  // (build fails with "Unrecognized key(s) in object"). The quality must
+  // ride on each <Image>, and it must match the q=60 baked into
+  // buildCardImageSrcSet so the SSR preload URL still cache-hits the
+  // <img srcset> request.
+  const src = read('apps/web/app/activities/ActivitiesContent.tsx');
   assert.match(
     src,
-    /quality\s*:\s*60\b/,
-    'next.config must set images.quality to 60 to reduce cover-image byte size'
+    /quality=\{60\}/,
+    'cover <Image> must declare quality={60} (must match cover-image.ts q=60 to keep preload cache-hit)'
   );
 });
 

@@ -271,6 +271,9 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                         // cover-image.ts 共用常數,跟 page 層 SSR preload
                         // 的 imagesrcset / imagesizes 保證一致,否則
                         // preload 的 URL 對不上 srcset → double download。
+                        // quality=60 對應 buildCardImageSrcSet 的 q=60;
+                        // Next 15 next.config 不支援 images.quality 全域
+                        // 設定,必須在這裡跟著 preload URL 設值。
                         src={resolveCoverSrc(a.coverImageUrl)}
                         alt={a.title}
                         className="tp-card-img"
@@ -282,6 +285,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                         priority={idx < 2}
                         loading={idx < 2 ? 'eager' : 'lazy'}
                         sizes={CARD_IMAGE_SIZES}
+                        quality={60}
                         width={1200} height={675} />
                       <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
                       <span style={{

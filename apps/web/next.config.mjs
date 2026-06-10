@@ -29,7 +29,6 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.supabase.co' },
     ],
     formats: ['image/avif', 'image/webp'],
-    quality: 60,
   },
   typescript: {
     ignoreBuildErrors: false,
