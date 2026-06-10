@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import ActivitiesContent from './ActivitiesContent';
 import ActivitiesSkeleton from './ActivitiesSkeleton';
+import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from './cover-image';
 import { listPublishedActivitiesDb } from '../../src/lib/db.mjs';
 import type { Metadata } from 'next';
 
@@ -54,8 +55,24 @@ export default async function ActivitiesPage() {
   // Fail soft: any error here just falls back to client-only fetch.
   const initialActivities = await listPublishedActivitiesDb({ region: '', category: '', q: '' }).catch(() => undefined);
 
+  // Issue #1344 — LCP element 是第一張卡的 cover 圖,但卡片由 client
+  // component render,圖片要等 JS bundle → hydrate → render 完才開始
+  // 下載(slow-4G 實測 t≈6s)。在 SSR head 直接 preload 第一張卡的
+  // responsive 變體(imagesrcset 跟 next/image 產生的 srcset 一致,
+  // cache-hit),讓瀏覽器 HTML parse 階段就開抓圖。
+  const firstCover = initialActivities?.[0] ? resolveCoverSrc(initialActivities[0].coverImageUrl) : null;
+
   return (
     <>
+      {firstCover && (
+        <link
+          rel="preload"
+          as="image"
+          imageSrcSet={buildCardImageSrcSet(firstCover)}
+          imageSizes={CARD_IMAGE_SIZES}
+          fetchPriority="high"
+        />
+      )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(activitiesJsonLd) }} />
       {/* Issue #1345 — Suspense fallback 過去只 render 一行「載入中⋯」,
           當 ActivitiesContent 串流進來時 main-content 高度從 ~60px 暴增
