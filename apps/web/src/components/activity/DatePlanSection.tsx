@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
 import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
-import { getPlanScheduleForDate } from './plan-schedule-match';
+import { getPlanScheduleForDate, filterSchedulesForPlan } from './plan-schedule-match';
 import { useSelectedPlan } from './SelectedPlanContext';
 import { resolveDatePlanPresentation } from '../../lib/date-plan-source.mjs';
 
@@ -161,12 +161,14 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   const [showAllPlans, setShowAllPlans] = useState(false);
   const [liveSchedules, setLiveSchedules] = useState<Schedule[] | null>(null);
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+  const [availabilityFetching, setAvailabilityFetching] = useState(false);
   const [availabilityNotice, setAvailabilityNotice] = useState<string | null>(null);
   const [planConfigState, setPlanConfigState] = useState<'ok' | 'no_active_plans' | 'no_plans' | null>(null);
 
   async function ensureLiveAvailability() {
     if (availabilityLoaded) return;
     setAvailabilityLoaded(true);
+    setAvailabilityFetching(true);
     try {
       const endpoint = useBookingV2
         ? `/api/activities/${encodeURIComponent(activity.slug)}/availability?v2=1`
@@ -208,6 +210,8 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
       if (useBookingV2) {
         setAvailabilityNotice('目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。');
       }
+    } finally {
+      setAvailabilityFetching(false);
     }
   }
 
@@ -220,35 +224,19 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   });
   const PLANS: PlanConfig[] = resolvedPlans as PlanConfig[];
   const VISIBLE_PLANS = showAllPlans ? PLANS : PLANS.slice(0, 2);
-  const selectedOrVisiblePlanIds: string[] = selectedPlan ? [selectedPlan] : VISIBLE_PLANS.map((p: PlanConfig) => p.id);
-  const datePickerSchedules = effectiveSchedules.filter((s) => {
-    const planId = s.planId ?? s.plan_id ?? null;
-    return planId === null || selectedOrVisiblePlanIds.includes(planId);
-  });
+  const KNOWN_PLAN_IDS: string[] = PLANS.map((p: PlanConfig) => p.id);
 
   return (
   <>
     <div>
-      {/* Date picker */}
-      <div style={{ marginBottom: 28 }}>
-        <div className="kkd-section-label-row">
-          <span className="kkd-section-label">出發日期</span>
-        </div>
-        <DatePicker
-          schedules={datePickerSchedules}
-          selectedDate={selectedDate}
-          onSelect={(date) => {
-            void ensureLiveAvailability();
-            setSelectedDate(date);
-          }}
-          price={activity.priceTwd ?? activity.price ?? 0}
-        />
-        {availabilityNotice && (
-          <p style={{ marginTop: 8, color: '#b45309', fontSize: 13 }} role="status">
-            {availabilityNotice}
-          </p>
-        )}
-      </div>
+      {/* Plan-first flow: no top-level date strip. Availability is fetched
+          once when a plan is selected; that plan's own available dates render
+          inside its card (see per-plan DatePicker below). */}
+      {availabilityNotice && (
+        <p style={{ margin: '0 0 12px', color: '#b45309', fontSize: 13 }} role="status">
+          {availabilityNotice}
+        </p>
+      )}
 
       {/* Plan cards */}
       <div className="kkd-section-label-row" style={{ marginBottom: 12 }}>
@@ -288,11 +276,16 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
               const origPrice = Math.round(planPrice * 1.25);
               const isSelected = selectedPlan === plan.id;
 
-              // 取得該方案在選中日期的可用性（傳入 knownPlanIds 以防 V2 UUID↔legacy slug ID 空間不一致）
-              const planAvail = getPlanScheduleForDate(effectiveSchedules, selectedDate, plan.id, PLANS.map((p: PlanConfig) => p.id));
-              const showFull = selectedDate && planAvail.isFull;
-              const showNotOpen = selectedDate && planAvail.isNotOpen;
-              const canBook = !selectedDate || planAvail.isOpen;
+              // Plan-first flow: the selected date lives in the selected
+              // plan's context, so date-dependent badges/CTA states only
+              // apply to the selected card. Other cards stay clickable —
+              // selecting them resets the date.
+              // （傳入 knownPlanIds 以防 V2 UUID↔legacy slug ID 空間不一致）
+              const planAvail = getPlanScheduleForDate(effectiveSchedules, isSelected ? selectedDate : null, plan.id, KNOWN_PLAN_IDS);
+              const dateChosen = isSelected && selectedDate;
+              const showFull = dateChosen && planAvail.isFull;
+              const showNotOpen = dateChosen && planAvail.isNotOpen;
+              const canBook = !dateChosen || planAvail.isOpen;
 
               return (
                 <div
@@ -306,6 +299,9 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                   onClick={() => {
                     if (!canBook) return;
                     void ensureLiveAvailability();
+                    // Dates belong to a plan's own context — switching plans
+                    // resets the previous plan's date selection.
+                    if (selectedPlan !== plan.id) setSelectedDate(null);
                     setSelectedPlan(plan.id);
                     // #919: surface selection to the page-level bottom CTA
                     setSharedSelectedPlan({
@@ -313,11 +309,10 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                       label: plan.label,
                       price: planPrice,
                       priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
-                      date: selectedDate || undefined,
-                      scheduleId: planAvail.schedule?.id || undefined,
+                      date: selectedPlan === plan.id ? (selectedDate || undefined) : undefined,
+                      scheduleId: selectedPlan === plan.id ? (planAvail.schedule?.id || undefined) : undefined,
                     });
                   }}
-                  style={(!canBook && selectedDate) ? { opacity: 0.55, pointerEvents: 'none' as const } : undefined}
                 >
                   <div className="kkd-plan-header">
                     <div>
@@ -345,7 +340,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                         }}>未開放</span>
                       )}
                       {/* 剩餘名額 */}
-                      {selectedDate && planAvail.isOpen && (
+                      {dateChosen && planAvail.isOpen && (
                         <span style={{
                           background: planAvail.remaining <= 3 ? '#fef9c3' : '#dcfce7',
                           color: planAvail.remaining <= 3 ? '#854d0e' : '#166534',
@@ -354,9 +349,9 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                           剩 {planAvail.remaining} 位
                         </span>
                       )}
-                      {selectedDate && (
+                      {dateChosen && (
                         <span className="kkd-plan-date-tag">
-                          {selectedDate.slice(5).replace('-', '/')}
+                          {selectedDate!.slice(5).replace('-', '/')}
                         </span>
                       )}
                     </div>
@@ -380,6 +375,43 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                   >
                     {plan.detailsLinkText || '查看方案詳情 ›'}
                   </button>
+
+                  {/* Plan-first flow: the selected plan shows its OWN bookable
+                      dates here (its planId rows + planId=null global rows). */}
+                  {isSelected && (
+                    <div
+                      style={{ marginBottom: 14 }}
+                      data-testid={`plan-date-picker-${plan.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="kkd-section-label-row" style={{ marginBottom: 8 }}>
+                        <span className="kkd-section-label">選擇日期</span>
+                      </div>
+                      {availabilityFetching && (
+                        <p style={{ margin: '0 0 8px', color: 'var(--tp-muted)', fontSize: 13 }} role="status">
+                          載入可預約日期中…
+                        </p>
+                      )}
+                      <DatePicker
+                        schedules={filterSchedulesForPlan(effectiveSchedules, plan.id, KNOWN_PLAN_IDS)}
+                        selectedDate={selectedDate}
+                        onSelect={(date) => {
+                          void ensureLiveAvailability();
+                          setSelectedDate(date);
+                          // keep the bottom CTA in sync with the chosen date
+                          setSharedSelectedPlan({
+                            id: plan.id,
+                            label: plan.label,
+                            price: planPrice,
+                            priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
+                            date,
+                            scheduleId: getPlanScheduleForDate(effectiveSchedules, date, plan.id, KNOWN_PLAN_IDS).schedule?.id || undefined,
+                          });
+                        }}
+                        price={planPrice}
+                      />
+                    </div>
+                  )}
 
                   <div className="kkd-plan-footer">
                     <div className="kkd-plan-price-block">
@@ -406,13 +438,14 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                         href={resolvePlanBookingHref({
                           activitySlug: activity.slug,
                           planId: plan.id,
-                          date: selectedDate || undefined,
-                          scheduleId: planAvail.schedule?.id || undefined,
+                          date: dateChosen ? selectedDate! : undefined,
+                          scheduleId: dateChosen ? (planAvail.schedule?.id || undefined) : undefined,
                           useBookingV2,
                         })}
                         className="tp-btn tp-btn-primary kkd-plan-select-btn"
                         onClick={() => {
                           void ensureLiveAvailability();
+                          if (selectedPlan !== plan.id) setSelectedDate(null);
                           setSelectedPlan(plan.id);
                           // #919: surface selection so the bottom CTA reflects it on quick re-entry
                           setSharedSelectedPlan({
@@ -420,8 +453,8 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                             label: plan.label,
                             price: planPrice,
                             priceType: plan.priceType === 'per_group' ? 'per_group' : 'per_person',
-                            date: selectedDate || undefined,
-                            scheduleId: planAvail.schedule?.id || undefined,
+                            date: dateChosen ? selectedDate! : undefined,
+                            scheduleId: dateChosen ? (planAvail.schedule?.id || undefined) : undefined,
                           });
                         }}
                       >

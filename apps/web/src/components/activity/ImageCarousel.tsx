@@ -97,7 +97,7 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
                 src={url}
                 alt={`${alt} ${i + 1}`}
                 priority={i === 0}
-                loading="lazy"
+                loading={i === 0 ? undefined : 'lazy'}
                 onError={() => handleImageError(i)} width={1200} height={675} />
             )}
           </div>

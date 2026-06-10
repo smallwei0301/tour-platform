@@ -63,13 +63,15 @@ test('V2 mode requests v2 availability source and exposes explicit fallback noti
   assert.match(src, /目前無法即時載入 V2 可預約名額/);
 });
 
-test('date picker availability is scoped to selected or visible plans plus global schedules', async () => {
+test('plan-first flow: per-plan date picker is scoped to that plan plus global schedules', async () => {
+  // Plan-first redesign: the top-level date strip is gone; each selected
+  // plan card renders its OWN DatePicker filtered by filterSchedulesForPlan
+  // (plan rows + planId=null rows, with #839 foreign-ID-space fallback).
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
-  assert.match(src, /const selectedOrVisiblePlanIds[^=]*= selectedPlan \? \[selectedPlan\] : VISIBLE_PLANS\.map\(\((?:p|plan)(?::[^)]*)?\) => (?:p|plan)\.id\);/);
-  assert.match(src, /const datePickerSchedules = effectiveSchedules\.filter\(\((?:s|schedule)(?::[^)]*)?\) => \{/);
-  assert.match(src, /return planId === null \|\| selectedOrVisiblePlanIds\.includes\(planId\);/);
-  assert.match(src, /<DatePicker\s+[\s\S]*schedules=\{datePickerSchedules\}/);
+  assert.doesNotMatch(src, /出發日期/);
+  assert.match(src, /filterSchedulesForPlan\(effectiveSchedules, plan\.id, KNOWN_PLAN_IDS\)/);
+  assert.match(src, /<DatePicker\s+[\s\S]*schedules=\{filterSchedulesForPlan\(/);
 });
 
 test('V2 not-open schedule does not collapse into full badge state', async () => {
@@ -81,7 +83,7 @@ test('V2 not-open schedule does not collapse into full badge state', async () =>
   assert.match(matchSrc, /if \(status === 'not-open'\) hasNotOpen = true;/);
   assert.match(matchSrc, /isFull: !hasOpen && !hasNotOpen,/);
   assert.match(matchSrc, /isNotOpen: !hasOpen && hasNotOpen,/);
-  assert.match(planSrc, /const showNotOpen = selectedDate && planAvail\.isNotOpen;/);
+  assert.match(planSrc, /const showNotOpen = dateChosen && planAvail\.isNotOpen;/);
 });
 
 test('date key extraction avoids UTC midnight rollback for +08 fallback timestamps', async () => {
