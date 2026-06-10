@@ -10,8 +10,8 @@
  *   3. `/activities/[region]/page.tsx` 同上
  *
  * `CARD_IMAGE_WIDTHS` 鏡射 Next.js 預設 deviceSizes ∪ 本卡片會用到的
- * imageSizes（實測 production srcset：384–3840、q=75）。若未來
- * next.config 自訂 deviceSizes，這裡要同步改。
+ * imageSizes（實測 production srcset：384–3840、q=60）。若未來
+ * next.config 自訂 deviceSizes 或 quality，這裡要同步改。
  */
 
 export const FALLBACK_COVER_URL =
@@ -20,7 +20,7 @@ export const FALLBACK_COVER_URL =
 /** 跟 `.tp-card-grid-activities`（2 欄 / ≤768px 1 欄）一致的 sizes。 */
 export const CARD_IMAGE_SIZES = '(max-width: 768px) 100vw, 50vw';
 
-/** 實測 production next/image srcset 的 w 序列（q=75）。 */
+/** 實測 production next/image srcset 的 w 序列（q=60，對應 next.config images.quality）。 */
 export const CARD_IMAGE_WIDTHS = [384, 640, 750, 828, 1080, 1200, 1920, 2048, 3840];
 
 export function resolveCoverSrc(coverImageUrl?: string | null): string {
@@ -34,6 +34,6 @@ export function resolveCoverSrc(coverImageUrl?: string | null): string {
  */
 export function buildCardImageSrcSet(src: string): string {
   return CARD_IMAGE_WIDTHS
-    .map((w) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=75 ${w}w`)
+    .map((w) => `/_next/image?url=${encodeURIComponent(src)}&w=${w}&q=60 ${w}w`)
     .join(', ');
 }

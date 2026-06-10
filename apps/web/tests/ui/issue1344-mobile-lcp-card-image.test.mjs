@@ -109,7 +109,7 @@ test('SSR preload：/activities 與 /activities/[region] 都 preload 第一張�
 
 test('buildCardImageSrcSet 產生跟 next/image 一致的 /_next/image 變體序列', async () => {
   const shared = await readSrc('app/activities/cover-image.ts');
-  // 實測 production srcset 的 w 序列；q 固定 75。
+  // 實測 production srcset 的 w 序列；q 固定 60（next.config images.quality）。
   assert.match(
     shared,
     /CARD_IMAGE_WIDTHS\s*=\s*\[384,\s*640,\s*750,\s*828,\s*1080,\s*1200,\s*1920,\s*2048,\s*3840\]/,
@@ -117,8 +117,8 @@ test('buildCardImageSrcSet 產生跟 next/image 一致的 /_next/image 變體序
   );
   assert.match(
     shared,
-    /\/_next\/image\?url=\$\{encodeURIComponent\(src\)\}&w=\$\{w\}&q=75/,
-    'srcset 項目格式必須是 /_next/image?url=<enc>&w=<w>&q=75（跟 next/image 一致才 cache-hit）',
+    /\/_next\/image\?url=\$\{encodeURIComponent\(src\)\}&w=\$\{w\}&q=60/,
+    'srcset 項目格式必須是 /_next/image?url=<enc>&w=<w>&q=60（對應 next.config images.quality:60，跟 next/image 一致才 cache-hit）',
   );
 });
 
