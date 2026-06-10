@@ -41,6 +41,7 @@ Tests use the **Node built-in test runner** on `.mjs` files (not Jest/Vitest):
 - By name: `node --test --test-name-pattern='Blackout' apps/web/tests/slot-generator.test.mjs`
 - Targeted smoke suites are defined as scripts in `apps/web/package.json` (e.g. `test:smoke:v2-core`, `test:smoke:guide-blackout`, `test:smoke:admin-pos-line`).
 - E2E (Playwright): `npm run test:e2e -w @tour/web` (also `:ui`, `:headed`).
+- E2E smoke lane (CI): `npm run test:e2e:smoke -w @tour/web` runs a bounded, backend-mocked allowlist via the `e2e-smoke` workflow (`.github/workflows/e2e-smoke.yml`) on `workflow_dispatch` + daily schedule + path-filtered PRs (booking/guide/e2e). Add a launch-critical browser spec to the lane by appending it to the `test:e2e:smoke` script (only specs that mock the backend via `page.route()` and need no real Supabase/payment/PII). `ci.yml` stays lint → typecheck → node test → build → preflight (no Playwright).
 
 CI (`.github/workflows/ci.yml`) runs, in order: lint → typecheck → test → build → `scripts/preflight-check.sh`. The build runs with `NODE_ENV=production`, so security-env guards require strong non-default secrets (CI injects `GUIDE_SESSION_SECRET` / `ADMIN_ACCESS_TOKEN`).
 
