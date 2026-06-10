@@ -106,3 +106,16 @@ Pages under `apps/web/app/**`, client components, navigation, filters, forms, fe
 
 ### Hybrid tasks
 Fix the backend layer with TDD, then add a Playwright E2E spec that exercises the visible behavior end-to-end. Don't skip the E2E spec just because the unit tests pass — the regression that gets users is almost always at the seam between layers.
+
+## Session branch hygiene
+
+Session work branches (e.g. `claude/<session-slug>`) are ephemeral scratch space, not long-lived feature branches.
+
+1. **開工先對齊 main**：`git fetch origin main && git reset --hard origin/main` 後再開始改。session branch 不保留歷史包袱，diff 永遠等於「最新 main + 本輪修正」。
+2. **Push 被拒、遠端有未在本地的 commit 時，不要先 rebase**：先用 `git patch-id` 比對那些遠端 commit 與 main 上的 squash-merge commit 是否同 patch：
+   ```bash
+   git show <remote-commit> | git patch-id
+   git show <suspect-main-commit> | git patch-id
+   ```
+   patch-id 相同代表內容已被 squash 進 main，遠端那份是無價值的 pre-squash 殘留 — 此時 `git push --force-with-lease` 是安全的（需先取得使用者授權，因為 force-push 屬於 hard-to-reverse 動作）。patch-id 不同才真的 rebase 保留。
+3. **絕不對 `main` force-push**，也不對非 session-owned branch force-push；force-push-with-lease 只動 session branch 自己的 ref，不影響 `main` 或他人 branch。
