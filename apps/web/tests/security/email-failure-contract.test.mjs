@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnNodeEsm } from '../helpers/spawn-node.mjs';
 
 const modulePath = new URL('../../src/lib/email.ts', import.meta.url).pathname;
 
@@ -35,14 +35,7 @@ function runCase(mode, env = {}) {
     console.log('JSON_RESULT:' + JSON.stringify(result));
   `;
 
-  const result = spawnSync(
-    process.execPath,
-    ['--experimental-strip-types', '--input-type=module', '-e', script],
-    {
-      env: { ...process.env, ...env },
-      encoding: 'utf8',
-    }
-  );
+  const result = spawnNodeEsm(script, { env: { ...process.env, ...env } });
 
   return result;
 }

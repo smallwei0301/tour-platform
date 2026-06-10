@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnNodeEsm } from '../helpers/spawn-node.mjs';
 
 const middlewarePath = new URL('../../middleware.ts', import.meta.url).pathname;
 
@@ -22,10 +22,7 @@ function runMiddleware({ url, method = 'PATCH', cookie = '', csrfHeader = '' }) 
     console.log(res.status);
   `;
 
-  return spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', script], {
-    env: { ...process.env, ADMIN_ACCESS_TOKEN: 'test-token' },
-    encoding: 'utf8',
-  });
+  return spawnNodeEsm(script, { env: { ...process.env, ADMIN_ACCESS_TOKEN: 'test-token' } });
 }
 
 test('guide mutation route rejects missing csrf token (negative)', () => {
