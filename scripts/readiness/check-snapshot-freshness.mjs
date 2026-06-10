@@ -23,13 +23,11 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, '..', '..');
-const SNAPSHOT_PATH = resolve(
-  REPO_ROOT,
-  'docs',
-  'operations',
-  'reports',
-  'readiness-live-state-latest.md'
-);
+// Path can be overridden via READINESS_SNAPSHOT_PATH (used by the freshness
+// guard test to point at fresh/stale fixtures); defaults to the committed file.
+const SNAPSHOT_PATH = process.env.READINESS_SNAPSHOT_PATH
+  ? resolve(process.env.READINESS_SNAPSHOT_PATH)
+  : resolve(REPO_ROOT, 'docs', 'operations', 'reports', 'readiness-live-state-latest.md');
 
 // stale threshold: 12h — snapshot older than this triggers exit code 1
 const FRESHNESS_THRESHOLD_HOURS = 12;

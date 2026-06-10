@@ -51,4 +51,8 @@ jobs:
       - name: Verify freshness & drift
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm run readiness:check || true
+        # #1298: do NOT swallow the result with `|| true`. If the snapshot is
+        # stale (the refresh step produced no fresh file → no commit) the check
+        # exits non-zero and this job fails VISIBLY, surfacing silent staleness
+        # instead of reporting green while the committed file drifts.
+        run: npm run readiness:check
