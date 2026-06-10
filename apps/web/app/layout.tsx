@@ -67,13 +67,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.pexels.com" />
         <link rel="dns-prefetch" href="https://images.pexels.com" />
-        {/* Preload hero background image to improve homepage LCP */}
-        <link
-          rel="preload"
-          as="image"
-          href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
-          fetchPriority="high"
-        />
+        {/* Issue #1344 — 首頁 hero 大圖的 preload 過去放在這裡，導致
+            「每一頁」的 head 都帶著一張 w=1600 (~數百 KB) 的首頁專用圖,
+            在 slow 4G 上跟當頁的 LCP 圖搶頻寬(/activities mobile LCP
+            實測 8.8s 的元兇之一)。首頁自己的 preload 在 app/page.tsx
+            內,首頁 LCP 不受影響。Root layout 僅保留 preconnect。 */}
       </head>
       <body className={`${notoSans.variable} ${inter.variable}`}>
         <a href="#main-content" className="tp-skip-link">跳至主要內容</a>
