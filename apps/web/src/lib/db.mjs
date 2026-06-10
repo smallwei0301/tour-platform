@@ -2033,10 +2033,25 @@ export async function adminDashboardSummaryDb(input = {}) {
   const exceptionRate = Number(((countExceptionOrders / rateBase) * 100).toFixed(1));
   const healthyOrderRate = Number(((countHealthyOrders / rateBase) * 100).toFixed(1));
 
-  const trendMap = new Map();
+  // 趨勢圖桶必須跟隨選擇的時間範圍（preset / 自訂），不得寫死近 7 日 —
+  // 否則 KPI 卡片換了範圍、趨勢圖卻停在 7 天，呈現互相矛盾。
+  // 無任何範圍時維持近 7 日預設；桶數上限 90（保留最近的日子）防爆量。
+  const TREND_MAX_BUCKETS = 90;
   const now = new Date();
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+  let trendEnd = rangeTo
+    ? new Date(new Date(rangeTo).getTime() - 1)
+    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (trendEnd > now) trendEnd = now;
+  let trendStart = rangeFrom
+    ? new Date(rangeFrom)
+    : new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate() - 6);
+  trendStart = new Date(trendStart.getFullYear(), trendStart.getMonth(), trendStart.getDate());
+  trendEnd = new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate());
+  const minStart = new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate() - (TREND_MAX_BUCKETS - 1));
+  if (trendStart < minStart) trendStart = minStart;
+
+  const trendMap = new Map();
+  for (let d = new Date(trendStart); d <= trendEnd; d.setDate(d.getDate() + 1)) {
     const key = d.toISOString().slice(0, 10);
     trendMap.set(key, { date: key, orders: 0, refunds: 0, guides: 0, gmv: 0 });
   }
