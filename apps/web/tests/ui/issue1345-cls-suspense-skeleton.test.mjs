@@ -107,3 +107,14 @@ test('globals.css 有 .tp-card-skeleton 跟 .tp-card-img-skeleton 樣式（reser
   // tp-card-img CSS 既有的 aspect-ratio + width:100% 由 #1345 part 1
   // 鎖過,這裡只追加 skeleton 樣式不重複鎖。
 });
+
+test('.tp-card-skeleton 設 min-height ≈ real card 高度（防 region page 等小集合的 CLS）', async () => {
+  const css = await readSrc('app/globals.css');
+  // Part 4 — Playwright getBoundingClientRect 量到 production real card
+  // 高度 441–462px。skeleton 設 min-height >=420 即可把高度差距收進
+  // CLS 0.1 budget。
+  const m = css.match(/\.tp-card-skeleton\s*\{[^}]*min-height:\s*(\d+)px/);
+  assert.ok(m, '.tp-card-skeleton 必須設 min-height 反映 real card 真實高度');
+  const v = parseInt(m[1], 10);
+  assert.ok(v >= 420 && v <= 500, `.tp-card-skeleton min-height 應在 420–500px 區間（real card ≈ 441-462px）；目前 ${v}px`);
+});
