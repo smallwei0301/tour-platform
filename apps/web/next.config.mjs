@@ -9,12 +9,33 @@ const repoRoot = path.resolve(appDir, '../..');
 // Single authority startup ENV validation (issue #60)
 assertStartupEnv(process.env);
 
+// #1375 — CSP 先以 Report-Only 試行（違規只回報不阻擋，避免誤擋 ECPay 金流跳轉）。
+// 來源盤點：ECPay 付款跳轉（form-action）、Supabase REST/Realtime（connect-src）、
+// Sentry（tunnel /monitoring 為同源；無 tunnel 時走 *.sentry.io）、Vercel Analytics /
+// Speed Insights、Unsplash/Pexels/Supabase 圖源。'unsafe-inline'/'unsafe-eval' 為
+// Next.js hydration 與 dev runtime 所需；enforce 切換另開 follow-up issue 附觀察證據。
+const cspReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co",
+  "font-src 'self' data:",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+  "form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw",
+  "frame-ancestors 'self'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+].join('; ');
+
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+  { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
 ];
 
 /** @type {import('next').NextConfig} */
