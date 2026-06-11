@@ -80,6 +80,16 @@ export default function OrderDetailPage() {
   const [reviewErr, setReviewErr] = useState<string | null>(null);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
+  // #1383 — Reschedule state
+  const [showRescheduleForm, setShowRescheduleForm] = useState(false);
+  const [rescheduleOptions, setRescheduleOptions] = useState<Array<{ id: string; startAt: string; endAt: string; capacityLeft: number | null }>>([]);
+  const [rescheduleTarget, setRescheduleTarget] = useState('');
+  const [rescheduleRequestKey] = useState(() => crypto.randomUUID());
+  const [activeRescheduleId, setActiveRescheduleId] = useState<string | null>(null);
+  const [submittingReschedule, setSubmittingReschedule] = useState(false);
+  const [rescheduleErr, setRescheduleErr] = useState<string | null>(null);
+  const [rescheduleDone, setRescheduleDone] = useState(false);
+
   // Refund state
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState('');
@@ -124,6 +134,60 @@ export default function OrderDetailPage() {
       setOrder(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // #1383 — 改期
+  const openRescheduleForm = async () => {
+    setRescheduleErr(null);
+    setShowRescheduleForm(true);
+    try {
+      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/reschedule-options`, { cache: 'no-store' });
+      const j = await res.json();
+      setRescheduleOptions(Array.isArray(j?.data) ? j.data : []);
+    } catch {
+      setRescheduleOptions([]);
+    }
+  };
+
+  const handleSubmitReschedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rescheduleTarget) return;
+    setSubmittingReschedule(true);
+    setRescheduleErr(null);
+    try {
+      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/reschedule-requests`, {
+        method: 'POST',
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ requestId: rescheduleRequestKey, toScheduleId: rescheduleTarget }),
+      });
+      const j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error?.message || '改期申請失敗');
+      setActiveRescheduleId(j.data?.id ?? null);
+      setRescheduleDone(true);
+      setShowRescheduleForm(false);
+      await loadOrder();
+    } catch (error) {
+      setRescheduleErr(error instanceof Error ? error.message : '改期申請失敗，請稍後再試');
+    } finally {
+      setSubmittingReschedule(false);
+    }
+  };
+
+  const handleWithdrawReschedule = async () => {
+    if (!activeRescheduleId) return;
+    try {
+      const res = await fetch(
+        `/api/me/orders/${encodeURIComponent(orderId)}/reschedule-requests/${encodeURIComponent(activeRescheduleId)}`,
+        { method: 'DELETE', headers: csrfHeaders() }
+      );
+      const j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error?.message || '撤回失敗');
+      setRescheduleDone(false);
+      setActiveRescheduleId(null);
+      await loadOrder();
+    } catch (error) {
+      setRescheduleErr(error instanceof Error ? error.message : '撤回失敗，請稍後再試');
     }
   };
 
@@ -313,6 +377,65 @@ export default function OrderDetailPage() {
       {status !== 'completed' && !isTerminal && (
         <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
           <p style={{ fontSize: 13, color: '#0369a1', margin: 0 }}>行程完成後即可撰寫評價</p>
+        </div>
+      )}
+
+      {/* #1383 — Reschedule section（paid/confirmed 可申請；窗口由 API 把關） */}
+      {['paid', 'confirmed'].includes(status) && (
+        <div style={{ marginBottom: 16 }}>
+          {!showRescheduleForm ? (
+            <button
+              data-testid="reschedule-open-btn"
+              onClick={() => void openRescheduleForm()}
+              style={{ ...btnSecondary, width: '100%' }}
+            >
+              申請改期（同行程改其他場次）
+            </button>
+          ) : (
+            <form onSubmit={handleSubmitReschedule} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
+              <label htmlFor="reschedule-target" style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
+                選擇新場次（同行程、同方案、金額不變；需嚮導確認）
+              </label>
+              <select
+                id="reschedule-target"
+                data-testid="reschedule-target-select"
+                value={rescheduleTarget}
+                onChange={(e) => setRescheduleTarget(e.target.value)}
+                style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+              >
+                <option value="">請選擇場次</option>
+                {rescheduleOptions.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {String(o.startAt).replace('T', ' ').slice(0, 16)}
+                    {o.capacityLeft != null ? `（剩 ${o.capacityLeft} 位）` : ''}
+                  </option>
+                ))}
+              </select>
+              {rescheduleOptions.length === 0 && (
+                <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>目前沒有可改的場次。</p>
+              )}
+              {rescheduleErr && <p style={{ color: 'crimson', fontSize: 13, marginBottom: 12 }}>{rescheduleErr}</p>}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="submit" data-testid="reschedule-submit-btn" style={btnPrimary} disabled={submittingReschedule || !rescheduleTarget}>
+                  {submittingReschedule ? '送出中…' : '送出改期申請'}
+                </button>
+                <button type="button" style={btnSecondary} onClick={() => setShowRescheduleForm(false)}>取消</button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+      {status === 'reschedule_requested' && (
+        <div data-testid="reschedule-pending" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: '#92400e', margin: 0 }}>
+            改期申請處理中 — 等待嚮導確認（72 小時內），期間訂單暫停其他操作。
+          </p>
+          {rescheduleDone && activeRescheduleId && (
+            <button data-testid="reschedule-withdraw-btn" onClick={() => void handleWithdrawReschedule()} style={{ ...btnSecondary, marginTop: 8 }}>
+              撤回申請
+            </button>
+          )}
+          {rescheduleErr && <p style={{ color: 'crimson', fontSize: 13, marginTop: 8 }}>{rescheduleErr}</p>}
         </div>
       )}
 
