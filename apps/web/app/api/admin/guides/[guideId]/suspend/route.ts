@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 
 /**
  * PATCH /api/admin/guides/:guideId/suspend
  * Suspend (suspend=true) or reactivate (suspend=false) a guide.
- * Suspend also bumps guide_session_version to force logout.
+ * Suspend also bumps guide_session_version to force logout, and hides the
+ * guide everywhere public: 認識導遊 list/detail + their activities all gate
+ * on verification_status='approved' (see getGuideBySlugDb /
+ * listPublishedActivitiesDb / getActivityBySlugDb). On-demand revalidation
+ * below flushes the statically-cached public pages so suspend/reactivate
+ * takes effect on the next traveler refresh, not the next deploy.
  * Auth via middleware.
  */
 export async function PATCH(
@@ -20,10 +26,10 @@ export async function PATCH(
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
-  // Get current profile
+  // Get current profile (slug drives on-demand revalidation of the public pages)
   const { data: profile } = await supabase
     .from('guide_profiles')
-    .select('id, display_name, guide_session_version')
+    .select('id, display_name, slug, guide_session_version')
     .eq('id', guideId)
     .single();
 
@@ -47,6 +53,18 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json({ ok: false, error: { code: 'SERVER_ERROR', message: error.message } }, { status: 500 });
+  }
+
+  // Flush statically-cached public surfaces so suspend/reactivate is visible
+  // on the next refresh. Activity detail pages are force-dynamic (always
+  // fresh); 認識導遊 list + the guide's page are on-demand only, so revalidate
+  // them explicitly. /activities list is ISR — refresh it too for immediacy.
+  try {
+    revalidatePath('/guides');
+    if (profile.slug) revalidatePath(`/guides/${profile.slug}`);
+    revalidatePath('/activities');
+  } catch {
+    // revalidation 失敗不影響停權結果本身。
   }
 
   return NextResponse.json({

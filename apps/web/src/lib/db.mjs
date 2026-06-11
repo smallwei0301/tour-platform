@@ -2461,13 +2461,21 @@ export async function listPublishedActivitiesDb(filters = {}) {
   if (guideIds.length > 0) {
     const { data: guides, error: guidesError } = await supabase
       .from('guide_profiles')
-      .select('id, slug, display_name, profile_photo_url, rating_avg, review_count')
+      .select('id, slug, display_name, profile_photo_url, rating_avg, review_count, verification_status')
       .in('id', guideIds);
     if (guidesError) throw new Error(guidesError.message);
     guideMap = new Map((guides || []).map((g) => [g.id, g]));
   }
 
-  return (data || []).map(r => {
+  return (data || [])
+    // 下架（停權）導遊的行程一併隱藏：有導遊且該導遊非 approved → 排除。
+    // 無導遊的平台行程（guide_id 為 null）不受影響。
+    .filter(r => {
+      if (!r.guide_id) return true;
+      const guide = guideMap.get(r.guide_id);
+      return guide ? guide.verification_status === 'approved' : true;
+    })
+    .map(r => {
     const guide = guideMap.get(r.guide_id) || null;
     return {
       id: r.id, slug: r.slug, title: r.title, tagline: r.tagline,
@@ -2987,12 +2995,18 @@ export async function getActivityBySlugDb(slug, options = {}) {
     const { data: gp } = await withActivityDetailTimeout(
       supabase
         .from('guide_profiles')
-        .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls')
+        .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, rating_avg, review_count, gallery_urls, verification_status')
         .eq('id', act.guide_id)
         .maybeSingle(),
       { timeoutMs: queryTimeoutMs, label: 'guide-profile' }
     ).catch(() => ({ data: null, error: null }));
     guideProfile = gp || null;
+  }
+  // 下架（停權）導遊的行程詳情一併隱藏：成功讀到導遊且其非 approved →
+  // 整筆行程回 null（404）。讀取失敗（guideProfile 為 null）時 fail-open，
+  // 不因暫時性 DB 問題誤藏有效行程。
+  if (guideProfile && guideProfile.verification_status && guideProfile.verification_status !== 'approved') {
+    return null;
   }
 
   const [scheduleRes, reviewsRes, formalPlansRes] = await Promise.all([
@@ -3195,6 +3209,9 @@ export async function getGuideBySlugDb(slug) {
     .single();
 
   if (error || !gp) return null;
+  // 下架（停權）導遊對外全隱藏：非 approved（即 suspended）→ 詳情頁 404。
+  // approved-但未公開（is_published=false）仍可預覽，不在此擋。
+  if (gp.verification_status !== 'approved') return null;
 
   const { data: acts } = await supabase
     .from('activities')
