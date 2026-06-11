@@ -1,6 +1,11 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { isAdminAuthorized } from '../../../../../src/lib/admin-auth.mjs';
-import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../src/lib/admin-session.mjs';
+import {
+  getAdminSecurityState,
+  getRequiredAdminToken,
+  createAdminSessionCookies,
+  clearAdminSessionCookies,
+} from '../../../../../src/lib/admin-session.mjs';
 import { adminLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 function parseCookie(req: Request, key: string) {
@@ -68,19 +73,14 @@ export async function POST(request: Request) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   const headers = new Headers({ 'content-type': 'application/json' });
-  headers.append('set-cookie', `admin_token=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`);
-  headers.append('set-cookie', `admin_email=${encodeURIComponent(email)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`);
-  headers.append('set-cookie', `admin_session_expires_at=${encodeURIComponent(expiresAt)}; Path=/; SameSite=Lax; Max-Age=604800`);
-  headers.append('set-cookie', `admin_session_version=${security.sessionVersion}; Path=/; SameSite=Lax; Max-Age=604800`);
+  createAdminSessionCookies({ token, email, expiresAt, sessionVersion: security.sessionVersion })
+    .forEach((c) => headers.append('set-cookie', c));
 
   return new Response(JSON.stringify(ok({ created: true, expiresAt, sessionVersion: security.sessionVersion })), { status: 200, headers });
 }
 
 export async function DELETE() {
   const headers = new Headers({ 'content-type': 'application/json' });
-  headers.append('set-cookie', 'admin_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
-  headers.append('set-cookie', 'admin_email=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0');
-  headers.append('set-cookie', 'admin_session_expires_at=; Path=/; SameSite=Lax; Max-Age=0');
-  headers.append('set-cookie', 'admin_session_version=; Path=/; SameSite=Lax; Max-Age=0');
+  clearAdminSessionCookies().forEach((c) => headers.append('set-cookie', c));
   return new Response(JSON.stringify(ok({ cleared: true })), { status: 200, headers });
 }

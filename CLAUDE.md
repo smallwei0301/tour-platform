@@ -118,4 +118,6 @@ Session work branches (e.g. `claude/<session-slug>`) are ephemeral scratch space
    git show <suspect-main-commit> | git patch-id
    ```
    patch-id 相同代表內容已被 squash 進 main，遠端那份是無價值的 pre-squash 殘留 — 此時 `git push --force-with-lease` 是安全的（需先取得使用者授權，因為 force-push 屬於 hard-to-reverse 動作）。patch-id 不同才真的 rebase 保留。
-3. **絕不對 `main` force-push**，也不對非 session-owned branch force-push；force-push-with-lease 只動 session branch 自己的 ref，不影響 `main` 或他人 branch。
+3. **force-push 不可用時的替代流程**（remote execution 環境的權限系統可能直接擋下 `--force-with-lease`）：先驗證 `git diff origin/<session-branch> origin/main --stat` 為空（殘留內容已全進 main），然後 `git merge origin/<session-branch> --no-edit` 把殘留歷史收回本地，再正常 `git push`。merge-base 會落在最新 main，PR diff 不會混入已 merge 的舊變更；之後每輪 squash-merge 後改用 `git merge origin/main --no-edit` 同步（取代第 1 點的 reset --hard），全程不需 force-push。
+4. **絕不對 `main` force-push**，也不對非 session-owned branch force-push；force-push-with-lease 只動 session branch 自己的 ref，不影響 `main` 或他人 branch。
+5. **fresh container 注意**：開工先在 repo root 跑 `npm install`（tests 依賴 `typescript` 套件做 transpile-import，沒裝會整套紅）；`npm install` 可能動到根目錄 `yarn.lock`，該檔改動不要 commit（`git checkout -- yarn.lock`）。
