@@ -411,3 +411,71 @@ export async function sendReviewInvitation(data: ReviewInvitationData): Promise<
     orderId: data.orderId,
   });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #1383 — 改期通知（交易類，不受行銷 opt-out 影響）
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RescheduleRequestNoticeData {
+  to: string;
+  activityTitle: string;
+  contactName?: string;
+  orderId: string;
+  fromStartAt?: string | null;
+  toStartAt?: string | null;
+}
+
+function formatSlotTime(iso?: string | null): string {
+  if (!iso) return '—';
+  return String(iso).replace('T', ' ').slice(0, 16);
+}
+
+/** 旅客送出改期申請 → 通知嚮導。 */
+export async function sendRescheduleRequestNotice(data: RescheduleRequestNoticeData): Promise<EmailDeliveryResult> {
+  const subject = `改期申請待確認 — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">有旅客申請改期 🔄</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      旅客 ${data.contactName || ''} 希望將「${data.activityTitle}」改期：
+    </p>
+    <p style="font-size:14px;color:#374151;margin:0 0 4px;">原場次：${formatSlotTime(data.fromStartAt)}</p>
+    <p style="font-size:14px;color:#374151;margin:0 0 16px;">新場次：${formatSlotTime(data.toStartAt)}</p>
+    <p style="font-size:13px;color:#6b7280;margin:0;">
+      請於 72 小時內至嚮導後台確認或婉拒，逾時申請將自動失效、訂單維持原場次。
+    </p>
+  `);
+  return sendEmailWithContract({ fn: 'sendRescheduleRequestNotice', to: data.to, subject, html, orderId: data.orderId });
+}
+
+export interface RescheduleDecisionNoticeData {
+  to: string;
+  activityTitle: string;
+  contactName?: string;
+  orderId: string;
+  approved: boolean;
+  toStartAt?: string | null;
+  note?: string;
+}
+
+/** 嚮導確認/婉拒 → 通知旅客。 */
+export async function sendRescheduleDecisionNotice(data: RescheduleDecisionNoticeData): Promise<EmailDeliveryResult> {
+  const subject = data.approved
+    ? `改期完成 — ${data.activityTitle}`
+    : `改期未能成立 — ${data.activityTitle}`;
+  const body = data.approved
+    ? `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">改期完成 ✅</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      嗨 ${data.contactName || '旅客'}，您的「${data.activityTitle}」已改至新場次：
+    </p>
+    <p style="font-size:15px;font-weight:700;color:#111827;margin:0 0 16px;">${formatSlotTime(data.toStartAt)}</p>
+    <p style="font-size:13px;color:#6b7280;margin:0;">訂單金額與內容不變，期待與您見面！</p>`
+    : `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">改期未能成立</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      嗨 ${data.contactName || '旅客'}，很抱歉，這次的改期申請未能成立${data.note ? `（${data.note}）` : ''}。
+      您的訂單維持原場次，亦可於政策時限內申請退款。
+    </p>`;
+  const html = wrapEmail(subject, body);
+  return sendEmailWithContract({ fn: 'sendRescheduleDecisionNotice', to: data.to, subject, html, orderId: data.orderId });
+}

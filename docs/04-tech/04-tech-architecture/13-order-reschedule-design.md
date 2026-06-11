@@ -1,6 +1,8 @@
 # 訂單改期設計（#1383）— 草案待 review
 
-> 狀態：**DRAFT — 待 owner review 後才開始實作**（issue #1383 AC1）。
+> 狀態：**已定案（owner review 2026-06-11）並完成第一期實作。**
+> 開放問題拍板：改期上限每訂單 1 次；guide 72h lazy-expire（無 cron）；
+> schema 預留 `amount_delta_twd`（第二期跨價方案）。
 > 原子性與鎖序依據：`12-payment-callback-atomicity.md`（#1384 複核）。
 
 ## 1. 範圍與約束
