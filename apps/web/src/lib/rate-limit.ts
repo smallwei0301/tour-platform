@@ -74,6 +74,40 @@ export class RateLimiter {
   }
 
   /**
+   * Read-only check: does NOT increment the counter.
+   * Used by login routes that only count *failed* attempts (see peek/record pair).
+   */
+  peek(identifier: string): RateLimitResult {
+    const now = Date.now();
+    const entry = this.store.get(this.getClientKey(identifier));
+
+    if (!entry || entry.resetAt <= now) {
+      return {
+        allowed: true,
+        remaining: this.maxRequests,
+        resetAt: now + this.windowMs,
+        maxRequests: this.maxRequests,
+      };
+    }
+
+    return {
+      allowed: entry.count < this.maxRequests,
+      remaining: Math.max(0, this.maxRequests - entry.count),
+      resetAt: entry.resetAt,
+      maxRequests: this.maxRequests,
+    };
+  }
+
+  /**
+   * Increment the counter without gating — pair with peek().
+   * Login routes call record() only on failed attempts so successful
+   * logins (e2e fixtures, legit users) never consume quota.
+   */
+  record(identifier: string): RateLimitResult {
+    return this.check(identifier);
+  }
+
+  /**
    * Get client IP from request
    */
   static getClientIp(request: Request): string {
@@ -94,6 +128,12 @@ export const limiters = {
 
   // /api/events — 50 requests per minute
   events: new RateLimiter(50, 60 * 1000),
+
+  // /api/admin/auth/session POST — 10 *failed* attempts per minute per IP (#1373)
+  adminLogin: new RateLimiter(10, 60 * 1000),
+
+  // /api/guide/auth/session POST — 10 *failed* attempts per minute per IP (#1373)
+  guideLogin: new RateLimiter(10, 60 * 1000),
 };
 
 // Named exports for convenience
@@ -101,10 +141,43 @@ export const ordersLimiter = limiters.orders;
 export const ecpayCallbackLimiter = limiters.ecpayCallback;
 export const myOrdersLimiter = limiters.userOrders;
 export const eventsLimiter = limiters.events;
+export const adminLoginLimiter = limiters.adminLogin;
+export const guideLoginLimiter = limiters.guideLogin;
 
 /**
  * Middleware helper: Returns 429 if limit exceeded
  */
+/**
+ * Login-route variant (#1373): same 429 semantics but the body follows the
+ * unified fail() envelope and stays generic — it must not reveal whether the
+ * email/account exists. Inlined (not imported from src/lib/api) so this module
+ * keeps zero non-.mjs imports and stays transpile-importable from tests.
+ */
+export function createLoginRateLimitResponse(result: RateLimitResult): Response | null {
+  if (result.allowed) {
+    return null;
+  }
+
+  const retryAfter = Math.ceil((result.resetAt - Date.now()) / 1000);
+
+  return new Response(
+    JSON.stringify({
+      ok: false,
+      error: { code: 'RATE_LIMITED', message: '嘗試次數過多，請稍後再試' },
+    }),
+    {
+      status: 429,
+      headers: {
+        'content-type': 'application/json',
+        'Retry-After': String(retryAfter),
+        'X-RateLimit-Limit': String(result.maxRequests),
+        'X-RateLimit-Remaining': String(result.remaining),
+        'X-RateLimit-Reset': String(result.resetAt),
+      },
+    }
+  );
+}
+
 export function createRateLimitResponse(
   result: ReturnType<RateLimiter['check']>
 ): Response | null {
