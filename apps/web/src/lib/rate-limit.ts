@@ -134,6 +134,9 @@ export const limiters = {
 
   // /api/guide/auth/session POST — 10 *failed* attempts per minute per IP (#1373)
   guideLogin: new RateLimiter(10, 60 * 1000),
+
+  // /api/reviews POST — 5 submissions per minute per IP (#1379)
+  reviewSubmit: new RateLimiter(5, 60 * 1000),
 };
 
 // Named exports for convenience
@@ -143,6 +146,7 @@ export const myOrdersLimiter = limiters.userOrders;
 export const eventsLimiter = limiters.events;
 export const adminLoginLimiter = limiters.adminLogin;
 export const guideLoginLimiter = limiters.guideLogin;
+export const reviewSubmitLimiter = limiters.reviewSubmit;
 
 /**
  * Middleware helper: Returns 429 if limit exceeded

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../src/lib/api';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '../../../src/lib/supabase/server';
-import { isReviewSubmissionAuthorized } from '../../../src/lib/review-ownership.mjs';
+import { evaluateReviewSubmission } from '../../../src/lib/review-ownership.mjs';
+import { reviewSubmitLimiter, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 
 function getServiceClient() {
   return createServiceClient(
@@ -13,6 +14,11 @@ function getServiceClient() {
 }
 
 export async function POST(req: NextRequest) {
+  // #1379: 評論提交 rate limit（5 次/分鐘/IP）
+  const rateResult = reviewSubmitLimiter.check(`review-submit:${RateLimiter.getClientIp(req)}`);
+  const rateLimited = createRateLimitResponse(rateResult);
+  if (rateLimited) return rateLimited;
+
   // AC3 + AC7: Require authenticated user (browser session cookie)
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -35,17 +41,8 @@ export async function POST(req: NextRequest) {
     reviewText?: unknown;
   };
 
-  // Validate rating
   const ratingNum = Number(rating);
-  if (!rating || ratingNum < 1 || ratingNum > 5) {
-    return NextResponse.json(fail('INVALID_RATING', 'rating must be 1-5'), { status: 400 });
-  }
-
-  // Validate reviewText
   const reviewTextStr = typeof reviewText === 'string' ? reviewText.trim() : '';
-  if (!reviewTextStr) {
-    return NextResponse.json(fail('EMPTY_TEXT', 'review text required'), { status: 400 });
-  }
 
   const adminSupabase = getServiceClient();
 
@@ -63,8 +60,6 @@ export async function POST(req: NextRequest) {
     .eq('id', reviewTargetId)
     .maybeSingle();
 
-  const bookingOwned = Boolean(booking && booking.traveler_id === user.id);
-
   let order;
   if (!booking) {
     ({ data: order } = await adminSupabase
@@ -74,17 +69,16 @@ export async function POST(req: NextRequest) {
       .maybeSingle());
   }
 
-  const orderOwned = !booking && order?.user_id === user.id;
-  const isOwned = isReviewSubmissionAuthorized({
+  // #1379: 統一守門 — 欄位驗證 + ownership + completed gate（行程完成後才能評論）
+  const verdict = evaluateReviewSubmission({
     booking,
     order,
     userId: user.id,
-    bookingOwned,
-    orderOwned,
+    rating,
+    reviewText: reviewTextStr,
   });
-
-  if (!isOwned) {
-    return NextResponse.json(fail('FORBIDDEN', 'booking not owned by user'), { status: 403 });
+  if (!verdict.ok) {
+    return NextResponse.json(fail(verdict.code, verdict.message), { status: verdict.status });
   }
 
   // AC3: Idempotency — check if review already exists for this (user_id, booking_id)
@@ -113,6 +107,8 @@ export async function POST(req: NextRequest) {
       review_date: new Date().toISOString().split('T')[0],
       author: user.email || user.id,
       guide_slug: '',
+      // #1379: 一律來自本人完成訂單 → 驗證購買標章
+      is_verified: true,
     })
     .select()
     .single();
