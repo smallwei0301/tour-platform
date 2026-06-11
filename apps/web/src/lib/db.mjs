@@ -1868,6 +1868,9 @@ export async function createGuideApplicationDb(input = {}) {
   const regions = toStringArray(input?.regions);
   const certifications = toStringArray(input?.certs ?? input?.certifications);
   const paymentMethod = String(input?.payment ?? input?.paymentMethod ?? '').trim() || null;
+  const profilePhotoUrl = String(input?.profilePhotoUrl || '').trim() || null;
+  const heroImageUrl = String(input?.heroImageUrl || '').trim() || null;
+  const galleryUrls = toStringArray(input?.galleryUrls).slice(0, 12);
 
   if (!fullName) throw new Error('fullName is required');
   if (!phone) throw new Error('phone is required');
@@ -1893,10 +1896,13 @@ export async function createGuideApplicationDb(input = {}) {
     regions,
     certifications,
     payment_method: paymentMethod,
+    profile_photo_url: profilePhotoUrl,
+    hero_image_url: heroImageUrl,
+    gallery_urls: galleryUrls,
   };
 
   const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method`;
+  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
 
   let { data, error } = await supabase
     .from('guide_applications')
@@ -1936,6 +1942,9 @@ function mapGuideApplicationRow(r) {
     regions: arr(r.regions),
     certifications: arr(r.certifications),
     paymentMethod: r.payment_method ?? null,
+    profilePhotoUrl: r.profile_photo_url ?? r.profilePhotoUrl ?? null,
+    heroImageUrl: r.hero_image_url ?? r.heroImageUrl ?? null,
+    galleryUrls: arr(r.gallery_urls ?? r.galleryUrls),
     status: r.status,
     adminNote: r.admin_note,
     createdAt: r.created_at,
@@ -1950,7 +1959,7 @@ export async function listGuideApplicationsDb(input = {}) {
   const supabase = await getSupabase();
 
   const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method`;
+  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
 
   const buildQuery = (selectClause) => {
     let q = supabase

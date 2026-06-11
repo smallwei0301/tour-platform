@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   // Rich profile fields (bio/city/specialties/languages) ride along so
   // 上線 can seed the public guide profile instead of a name-only shell.
   const appBaseSelect = 'id, full_name, email, phone, status, city, bio';
-  const appRichSelect = `${appBaseSelect}, specialties, languages`;
+  const appRichSelect = `${appBaseSelect}, specialties, languages, profile_photo_url, hero_image_url, gallery_urls`;
   let { data: app, error: appErr } = await supabase
     .from('guide_applications')
     .select(appRichSelect)
@@ -85,6 +85,10 @@ export async function POST(req: Request) {
         region: app.city || null,
         languages: Array.isArray((app as Record<string, unknown>).languages) ? (app as Record<string, unknown>).languages : [],
         specialties: Array.isArray((app as Record<string, unknown>).specialties) ? (app as Record<string, unknown>).specialties : [],
+        // 申請時上傳的照片直接成為導遊檔案初始照片，首次登入後台即可見。
+        profile_photo_url: (app as Record<string, unknown>).profile_photo_url || null,
+        hero_image_url: (app as Record<string, unknown>).hero_image_url || null,
+        gallery_urls: Array.isArray((app as Record<string, unknown>).gallery_urls) ? (app as Record<string, unknown>).gallery_urls : [],
         // guide_email will be set separately by admin
       })
       .select('id')
