@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-10T18:58:27.794Z -->
+<!-- query_timestamp: 2026-06-11T00:57:24.223Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-10T18:58:27.794Z  
-**Commit SHA:** `98436e7a8791a3802bca2dae8b0095b74bcb371c`
+**Query timestamp:** 2026-06-11T00:57:24.223Z  
+**Commit SHA:** `bde814a0610cf7546c5c16a65dc575d696c89e40`
 
 ---
 
@@ -64,6 +64,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1364 | [feat(guides): 申請即收照片並全鏈帶入 — 表單真上傳→審核可見→上線自動建檔](https://github.com/smallwei0301/tour-platform/pull/1364) | 2026-06-11 |
+| #1363 | [fix(admin): 導遊詳情雙實體 resolver + 申請→上線資料完整串接](https://github.com/smallwei0301/tour-platform/pull/1363) | 2026-06-10 |
 | #1362 | [perf(activities): enable AVIF + lower quality 75→60 to cut cover image bytes (refs #1344)](https://github.com/smallwei0301/tour-platform/pull/1362) | 2026-06-10 |
 | #1361 | [test(e2e): verify admin 出款管理 (/admin/payouts) full flow with mock data (#1360)](https://github.com/smallwei0301/tour-platform/pull/1361) | 2026-06-10 |
 | #1359 | [docs(perf): 新增前端效能反模式 SOP + README 導航（refs #1357 #1345 #1344）](https://github.com/smallwei0301/tour-platform/pull/1359) | 2026-06-10 |
@@ -72,8 +74,6 @@ _none_
 | #1356 | [chore(lint): add pre-lint Node 22 guard with actionable message on Node ≥24 (#1335)](https://github.com/smallwei0301/tour-platform/pull/1356) | 2026-06-10 |
 | #1355 | [docs(ops): refresh routing doc + add source-contract test (closes #1265)](https://github.com/smallwei0301/tour-platform/pull/1355) | 2026-06-10 |
 | #1354 | [fix(activities): 補 loading.tsx 讓 region 頁 streaming fallback 真正渲染（refs #1345 part 5）](https://github.com/smallwei0301/tour-platform/pull/1354) | 2026-06-10 |
-| #1353 | [test(post-trip): lock the unified post-trip workflow as one verifiable contract (#1106)](https://github.com/smallwei0301/tour-platform/pull/1353) | 2026-06-10 |
-| #1352 | [docs(claude): 新增 session branch hygiene 段落（patch-id 驗證 + force-push-with-lease SOP）](https://github.com/smallwei0301/tour-platform/pull/1352) | 2026-06-10 |
 
 ---
 
