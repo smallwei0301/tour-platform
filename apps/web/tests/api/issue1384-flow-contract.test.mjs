@@ -155,3 +155,16 @@ test('複核文件: payment callback 原子性結論已文件化', () => {
   assert.match(doc, /FOR UPDATE/);
   assert.match(doc, /20260423194000_issue195_callback_booking_status_loop\.sql/);
 });
+
+// ── #1401: reject 依付款狀態回 paid / pending_payment（兩後端一致）─────────────
+
+test('contract/refund-reject: Supabase 分支依 paid_at 決定 hasPaidAt（#1401 修復）', () => {
+  const fnStart = dbSrc.indexOf('export async function updateAdminRefundStatusDb');
+  const fnSrc = dbSrc.slice(fnStart, fnStart + 4000);
+  assert.match(fnSrc, /select\('paid_at'\)/, '應查訂單 paid_at');
+  assert.match(
+    fnSrc,
+    /hasPaidAt:\s*Boolean\(orderRow\?\.paid_at\)/,
+    'reject 不得再固定 hasPaidAt:true（未付款訂單會被誤標 paid）'
+  );
+});

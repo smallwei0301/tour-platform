@@ -148,3 +148,15 @@ Tabletop rehearsal: narrate each step aloud without executing. Confirm:
 - [ ] You can describe verification steps without looking at this runbook
 
 **Target**: complete narration in < 5 minutes. If > 5 minutes, add the blocker to the operator-handoff issues.
+
+---
+
+## 8) Legacy booking 退役時間表（#1386，owner 拍板 2026-06-11）
+
+| 階段 | 內容 | 生效條件 | 狀態 |
+|---|---|---|---|
+| 一、凍結 | legacy booking 路徑只修 P0 bug，新功能一律 V2（CLAUDE.md 已明文） | **owner 拍板即日生效（2026-06-11）** | ✅ 生效中 |
+| 二、移除入口 | 移除 `NEXT_PUBLIC_BOOKING_V2_ENABLED=0` 的 fallback UI 與 legacy 入口；本 runbook 的 flag 回滾段落保留一個版本週期後標 deprecated | V2 連續 14 天：零未解 P0、callback 成功率不低於既有水位、未動用回滾 | 執行 issue 已拆（見 #1386 連結） |
+| 三、刪碼 | 刪 legacy routes（~108 檔）與對應測試（先清點：哪些隨碼刪、哪些行為測試遷移 V2）；feature flag 退場 | 入口移除滿 4 週，且 production log／Sentry 證實 legacy endpoints **連續 14 天零流量** | 執行 issue 已拆（見 #1386 連結） |
+
+> 凍結期間的例外：P0（資料正確性／金流／安全）修復可動 legacy，PR 需註明 P0 理由。

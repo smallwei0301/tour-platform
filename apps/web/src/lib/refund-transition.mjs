@@ -2,9 +2,8 @@
  * Issue #1385 — admin refund 動作的狀態機（純函式，離線可單測）。
  * db.mjs（Supabase）與 admin.mjs（in-memory fallback）共用同一份轉移規則。
  *
- * 已知分歧（保持零行為變更，另開 issue 追蹤）：reject 時 fallback 依
- * hasPaidAt 回 'paid' 或 'pending_payment'，Supabase 分支歷史行為固定傳
- * hasPaidAt:true（一律回 'paid'）— 未付款訂單在 production 會被誤標 paid。
+ * reject 時依 hasPaidAt 回 'paid' 或 'pending_payment'——兩後端皆傳入訂單
+ * 實際付款狀態（#1401 已修正 Supabase 分支早期固定 true 的誤標問題）。
  */
 
 /**

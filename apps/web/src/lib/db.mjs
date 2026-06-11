@@ -1291,11 +1291,16 @@ export async function updateAdminRefundStatusDb(input = {}) {
 
   if (reqError || !req) throw new Error('refund request not found');
 
+  // #1401: reject 必須依訂單實際付款狀態回 paid / pending_payment（與 fallback 一致）
+  const { data: orderRow } = await supabase
+    .from('orders')
+    .select('paid_at')
+    .eq('id', req.order_id)
+    .maybeSingle();
+
   const now = new Date().toISOString();
-  // #1385: 狀態機集中於 refund-transition.mjs（與 admin.mjs fallback 共用）。
-  // hasPaidAt 固定 true 保持本分支歷史行為（reject 一律回 'paid'）— 與 fallback
-  // 的 paidAt 分歧已另開 issue 追蹤，不在本次零行為變更範圍內。
-  const transition = resolveAdminRefundTransition(action, { now, hasPaidAt: true });
+  // #1385: 狀態機集中於 refund-transition.mjs（與 admin.mjs fallback 共用）
+  const transition = resolveAdminRefundTransition(action, { now, hasPaidAt: Boolean(orderRow?.paid_at) });
   const nextStatus = transition.refundStatus;
   const orderStatus = transition.orderStatus;
   const patch = { admin_note: adminNote, updated_at: now, ...transition.refundPatch };
