@@ -86,6 +86,8 @@ Logic that must be importable by edge middleware or run without TS compilation (
 
 **Match the test style to the layer being changed. Always reuse existing fixtures/helpers before writing new ones.**
 
+**新增或修改 `db.mjs` gateway 函式時，必須同步 in-memory fallback 並補契約測試**（「同輸入 → 同輸出 shape／同狀態轉移」，範本：`tests/api/issue1384-flow-contract.test.mjs`）— fallback 與 Supabase 實作沒有契約測試時，測試綠燈不代表 production 正確（#1376 即實例）。payment callback 的原子性假設見 `docs/04-tech/04-tech-architecture/12-payment-callback-atomicity.md`（新 RPC 鎖序必須遵循 orders → bookings → activity_schedules）。
+
 ### Backend tasks → TDD with `node --test`
 Server routes, `src/lib/**` helpers, DB gateways, evaluators, validators, schedulers, payment/refund pipelines, anything that doesn't render a DOM.
 
