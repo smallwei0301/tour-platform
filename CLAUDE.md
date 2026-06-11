@@ -74,7 +74,7 @@ The platform is mid-migration from a static-schedule model to an availability/sl
 Logic that must be importable by edge middleware or run without TS compilation (auth, sessions, soft-launch, store) is authored as `.mjs`; the rest is `.ts`. TypeScript `strict` is on but full strictness is still being expanded across booking-critical modules (issue #68) — match the style of the file you are editing.
 
 ### Database migrations
-`supabase/migrations/` — early ones are numbered (`001_…`–`022_…`), newer ones are timestamped (`20260409…`). For the canonical migration and rollback procedure, see `docs/operations/booking-v2-rollback-runbook.md`. The root-level scripts (`apply_migrations.sh`, `execute-migrations.*`, `auto-migrate.*`) are legacy one-shot scratch scripts and should not be treated as the authoritative workflow.
+`supabase/migrations/` — early ones are numbered (`001_…`–`022_…`), newer ones are timestamped (`20260409…`); **new migrations must use the timestamp naming scheme**（見 `supabase/migrations/README.md`）. For the canonical migration and rollback procedure, see `docs/operations/booking-v2-rollback-runbook.md`. （Root 目錄的 legacy one-shot scratch scripts 已於 #1377 移除。）
 
 ## Conventions
 
