@@ -31,6 +31,12 @@ const APPLICATION_DETAIL = {
       regions: ['高雄', '屏東'],
       certifications: ['急救證照'],
       paymentMethod: 'bank',
+      profilePhotoUrl: 'https://cdn.example.com/guides/applications/a/avatar-1.jpg',
+      heroImageUrl: 'https://cdn.example.com/guides/applications/a/hero-1.jpg',
+      galleryUrls: [
+        'https://cdn.example.com/guides/applications/a/gallery-1.jpg',
+        'https://cdn.example.com/guides/applications/a/gallery-2.jpg',
+      ],
       status: 'pending',
       adminNote: null,
       createdAt: '2026-06-09T08:00:00Z',
@@ -84,6 +90,10 @@ test('點申請者名字 → 詳情頁渲染「申請詳情」視圖（不再 40
   await expect(card.getByText('英文')).toBeVisible();
   await expect(card.getByText('屏東')).toBeVisible();
   await expect(card.getByText('急救證照')).toBeVisible();
+  // 申請者上傳的照片必須呈現給審核者
+  await expect(card.getByTestId('application-avatar')).toBeVisible();
+  await expect(card.getByTestId('application-hero')).toBeVisible();
+  await expect(card.getByTestId('application-gallery').locator('img')).toHaveCount(2);
   // 不得出現舊錯誤
   await expect(page.getByText('找不到導遊資料')).toHaveCount(0);
 });

@@ -138,9 +138,11 @@ test('promote：已存在 profile 時不覆寫導遊自編資料（僅更新 ver
 
 // ---------- 申請表單誠實化 ----------
 
-test('申請表單：移除假檔案上傳欄位，改為誠實流程說明', () => {
+test('申請表單：照片為真上傳（打 upload API），證件仍人工核驗', () => {
   const src = readFileSync(APPLY_PAGE, 'utf8');
-  assert.doesNotMatch(src, /type="file"/, '送不出去的 file input 必須移除');
+  // 照片串接改版：file input 恢復且必須真的上傳（詳細契約見
+  // guide-application-photos.test.mjs 與 issue1093 測試）。
+  assert.match(src, /\/api\/guide-applications\/upload/, '照片必須經 upload API 真上傳');
   assert.match(src, /審核|核驗/, '需說明證件核驗流程');
-  assert.match(src, /導遊後台/, '需說明照片於上線後在導遊後台上傳');
+  assert.match(src, /導遊後台/, '需說明上線後可於導遊後台管理照片');
 });

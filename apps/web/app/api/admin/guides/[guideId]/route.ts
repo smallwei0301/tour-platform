@@ -46,7 +46,7 @@ export async function GET(
     }
 
     const appBaseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-    const appRichSelect = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method`;
+    const appRichSelect = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
     let { data: application, error: appError } = await supabase
       .from('guide_applications')
       .select(appRichSelect)
@@ -80,6 +80,9 @@ export async function GET(
             regions: arr(application.regions),
             certifications: arr(application.certifications),
             paymentMethod: application.payment_method ?? null,
+            profilePhotoUrl: application.profile_photo_url ?? null,
+            heroImageUrl: application.hero_image_url ?? null,
+            galleryUrls: arr(application.gallery_urls),
             status: application.status,
             adminNote: application.admin_note,
             createdAt: application.created_at,

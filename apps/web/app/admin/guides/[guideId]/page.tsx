@@ -15,6 +15,9 @@ type GuideApplicationDetail = {
   regions?: string[];
   certifications?: string[];
   paymentMethod?: string | null;
+  profilePhotoUrl?: string | null;
+  heroImageUrl?: string | null;
+  galleryUrls?: string[];
   status: string;
   adminNote?: string | null;
   createdAt?: string | null;
@@ -111,7 +114,18 @@ export default function AdminGuideDetailPage() {
         {/* 申請詳情視圖：此 ID 是 guide_applications（尚未建立正式導遊檔案） */}
         {!loading && guide && guide.kind === 'application' && guide.application && (
           <Card data-testid="admin-guide-application-detail" style={{ padding: 28 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6 }}>
+              {guide.application.profilePhotoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  data-testid="application-avatar"
+                  src={guide.application.profilePhotoUrl}
+                  alt={guide.application.fullName}
+                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid #e5e7eb', flexShrink: 0 }}
+                />
+              ) : (
+                <div data-testid="application-avatar-placeholder" style={{ width: 72, height: 72, borderRadius: '50%', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#9ca3af', flexShrink: 0 }}>👤</div>
+              )}
               <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#111' }}>{guide.application.fullName}</h2>
               {(() => {
                 const s = APPLICATION_STATUS_LABELS[guide.application.status] || { label: guide.application.status, bg: '#f3f4f6', color: '#6b7280' };
@@ -169,6 +183,35 @@ export default function AdminGuideDetailPage() {
               <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>個人簡介</div>
                 <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.7 }}>{guide.application.bio}</p>
+              </div>
+            )}
+            {/* 申請者上傳的照片 — 上線時自動帶入導遊檔案 */}
+            {guide.application.heroImageUrl && (
+              <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>個人封面</div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  data-testid="application-hero"
+                  src={guide.application.heroImageUrl}
+                  alt={`${guide.application.fullName} 個人封面`}
+                  style={{ width: '100%', maxWidth: 480, borderRadius: 8, objectFit: 'cover', aspectRatio: '16 / 9', border: '1px solid #e5e7eb' }}
+                />
+              </div>
+            )}
+            {(guide.application.galleryUrls?.length ?? 0) > 0 && (
+              <div style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>活動照片（{guide.application.galleryUrls!.length} 張）</div>
+                <div data-testid="application-gallery" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {guide.application.galleryUrls!.map((url, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={url}
+                      src={url}
+                      alt={`活動照片 ${i + 1}`}
+                      style={{ width: 140, height: 94, borderRadius: 6, objectFit: 'cover', border: '1px solid #e5e7eb' }}
+                    />
+                  ))}
+                </div>
               </div>
             )}
             {guide.application.adminNote && (
