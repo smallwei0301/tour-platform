@@ -1,23 +1,24 @@
-<!-- query_timestamp: 2026-06-11T07:47:59.677Z -->
+<!-- query_timestamp: 2026-06-11T13:25:48.085Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-11T07:47:59.677Z  
-**Commit SHA:** `00ee048ac7a05a8302f4a33e9d3742f1adfc7a32`
+**Query timestamp:** 2026-06-11T13:25:48.085Z  
+**Commit SHA:** `70045e8678170f311923a7366a1e7185afbe5d3d`
 
 ---
 
-## Open PRs (2)
+## Open PRs (3)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1409 | [feat(growth): 會員回購起步版 — review invitation 信掛老客專屬碼 (#1408)](https://github.com/smallwei0301/tour-platform/pull/1409) | `claude/repo-audit-optimization-l7ovi8` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
-## Open Issues (18 total)
+## Open Issues (23 total)
 
 ### P0 (0)
 
@@ -35,10 +36,15 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (10)
+### P2 (15)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1408 | [[Growth][P2] 會員回購起步版 — 完成訂單自動發老客專屬碼（掛在評論邀請信）](https://github.com/smallwei0301/tour-platform/issues/1408) | type:optimization, priority:P2, agent:backlog, owner:ai-agent, traveler-booking |
+| #1407 | [[Booking][P2] Legacy 退役階段三 — 刪除 legacy routes 與測試清點、flag 退場](https://github.com/smallwei0301/tour-platform/issues/1407) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
+| #1406 | [[Booking][P2] Legacy 退役階段二 — 移除 flag fallback UI 與 legacy 入口](https://github.com/smallwei0301/tour-platform/issues/1406) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
+| #1388 | [[Growth][P2] 成長基礎 backlog 總綱 — i18n 英文版、站內訊息、會員回購（Phase 12 對齊）](https://github.com/smallwei0301/tour-platform/issues/1388) | type:optimization, priority:P2, agent:backlog, owner:mixed, traveler-booking |
+| #1383 | [[Traveler][P2] 訂單改期 — 取消之外的第二條路（避免可挽回訂單變成退款流失）](https://github.com/smallwei0301/tour-platform/issues/1383) | type:optimization, priority:P2, agent:backlog, owner:ai-agent, traveler-booking, status:awaiting-implementation, booking-v2 |
 | #1365 | [[Ops][需 Operator] 出款 pipeline 無自動排程 — 補 settlement cron + admin 出款管理手動操作 fallback（未達門檻餘額可見、可手動產生/調整出款）](https://github.com/smallwei0301/tour-platform/issues/1365) | priority:P2, agent:backlog, owner:mixed, infra, status:awaiting-implementation |
 | #1344 | [[Perf][P2] Mobile LCP regression on /activities — 10–12s vs 2s desktop](https://github.com/smallwei0301/tour-platform/issues/1344) | type:bug, priority:P2, owner:ai-agent, traveler-booking, performance |
 | #1336 | [[Ops/Infra] 設定 INTERNAL_ALERT_TOKEN 並啟用 6 個 internal cron sweep endpoints](https://github.com/smallwei0301/tour-platform/issues/1336) | triaged, priority:P2, infra, launch:post-first-payment |
@@ -66,16 +72,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1371 | [fix(settlement): sweep 移除 PostgREST 不支援的 raw subquery，改 JS 過濾已結算 order_id (#1365)](https://github.com/smallwei0301/tour-platform/pull/1371) | 2026-06-11 |
-| #1370 | [feat(admin): 下架（停權）導遊連帶隱藏其導遊頁與所有行程](https://github.com/smallwei0301/tour-platform/pull/1370) | 2026-06-11 |
-| #1369 | [feat(ops): settlement pipeline 自動排程 — 每日 sweep → generate-payouts cron（#1365 缺口 1）](https://github.com/smallwei0301/tour-platform/pull/1369) | 2026-06-11 |
-| #1368 | [feat(guides): 導遊自主發佈 + on-demand revalidation（取代定時 ISR）](https://github.com/smallwei0301/tour-platform/pull/1368) | 2026-06-11 |
-| #1367 | [feat(admin/payouts): 出款管理手動操作 fallback — 餘額清單（含未達門檻）+ 手動產生/取消出款單（#1365 缺口 2）](https://github.com/smallwei0301/tour-platform/pull/1367) | 2026-06-11 |
-| #1366 | [fix(guides): 認識導遊頁加 ISR revalidate — 新核可導遊不再要等 deploy 才出現](https://github.com/smallwei0301/tour-platform/pull/1366) | 2026-06-11 |
-| #1364 | [feat(guides): 申請即收照片並全鏈帶入 — 表單真上傳→審核可見→上線自動建檔](https://github.com/smallwei0301/tour-platform/pull/1364) | 2026-06-11 |
-| #1363 | [fix(admin): 導遊詳情雙實體 resolver + 申請→上線資料完整串接](https://github.com/smallwei0301/tour-platform/pull/1363) | 2026-06-10 |
-| #1362 | [perf(activities): enable AVIF + lower quality 75→60 to cut cover image bytes (refs #1344)](https://github.com/smallwei0301/tour-platform/pull/1362) | 2026-06-10 |
-| #1361 | [test(e2e): verify admin 出款管理 (/admin/payouts) full flow with mock data (#1360)](https://github.com/smallwei0301/tour-platform/pull/1361) | 2026-06-10 |
+| #1405 | [fix(refund): reject 依 paid_at 回正確狀態 (#1401) + legacy 凍結政策生效 (#1386)](https://github.com/smallwei0301/tour-platform/pull/1405) | 2026-06-11 |
+| #1404 | [docs(architecture): 訂單改期設計草案 — #1383 第一階段交付物（待 review）](https://github.com/smallwei0301/tour-platform/pull/1404) | 2026-06-11 |
+| #1403 | [feat(me): 旅客 profile 編輯與通知偏好（最小版）+ checkout 聯絡資訊預填 (#1387)](https://github.com/smallwei0301/tour-platform/pull/1403) | 2026-06-11 |
+| #1402 | [refactor(db): strangler 第一步 — audit-log 單一實作 + refund 狀態機抽純函式 (#1385)](https://github.com/smallwei0301/tour-platform/pull/1402) | 2026-06-11 |
+| #1400 | [test(contract): in-memory/Supabase 三流程契約測試 + payment callback 原子性複核 (#1384)](https://github.com/smallwei0301/tour-platform/pull/1400) | 2026-06-11 |
+| #1399 | [feat(activities): 活動頁推薦區塊（同地區/同類型）＋最近瀏覽 (#1382)](https://github.com/smallwei0301/tour-platform/pull/1399) | 2026-06-11 |
+| #1398 | [feat(promo): promo code 旅客端曝光 — 公開碼 API、活動頁 banner、checkout 一鍵套用 (#1381)](https://github.com/smallwei0301/tour-platform/pull/1398) | 2026-06-11 |
+| #1397 | [feat(activities): 列表加日期可訂篩選與價格區間 (#1380)](https://github.com/smallwei0301/tour-platform/pull/1397) | 2026-06-11 |
+| #1396 | [feat(reviews): 旅客評論提交補 completed gate、驗證購買標章與 rate limit (#1379)](https://github.com/smallwei0301/tour-platform/pull/1396) | 2026-06-11 |
+| #1395 | [feat(seo): 活動詳情頁加 Product JSON-LD，metadata/OG 改用真實活動資料 (#1378)](https://github.com/smallwei0301/tour-platform/pull/1395) | 2026-06-11 |
 
 ---
 
