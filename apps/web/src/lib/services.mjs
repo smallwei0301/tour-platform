@@ -1,16 +1,6 @@
 import { experiences, orders, payments, refundRequests, guideApplications, auditLogs } from './store.mjs';
-
-function appendAuditLog({ orderId = null, actor = 'system', action, metadata = {} }) {
-  if (!action) return;
-  auditLogs.push({
-    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
-    orderId: orderId || null,
-    actor,
-    action,
-    metadata,
-    createdAt: new Date().toISOString(),
-  });
-}
+// #1385: audit log 單一實作於 audit-log.mjs
+import { appendAuditLog } from './audit-log.mjs';
 
 function normalizeSlug(slug) {
   return String(slug || '').trim();

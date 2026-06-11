@@ -67,18 +67,10 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
   }
 }
 
-async function insertAuditLogDb(supabase, { orderId = null, actor = 'admin', action, metadata = {} }) {
-  if (!action) return;
-  const payload = {
-    order_id: orderId || null,
-    actor,
-    action,
-    metadata,
-    created_at: new Date().toISOString()
-  };
-  const { error } = await supabase.from('audit_logs').insert(payload);
-  if (error) throw new Error(error.message);
-}
+// #1385: audit log 單一實作於 audit-log.mjs（admin.mjs/services.mjs 亦共用）；
+// refund 狀態機集中於 refund-transition.mjs（ESM import 會被 hoist，置此保留原始碼位置脈絡）
+import { insertAuditLogDb } from './audit-log.mjs';
+import { resolveAdminRefundTransition } from './refund-transition.mjs';
 
 export async function listExperiencesDb() {
   if (!hasSupabaseEnv()) return listInMemory();
@@ -1300,27 +1292,13 @@ export async function updateAdminRefundStatusDb(input = {}) {
   if (reqError || !req) throw new Error('refund request not found');
 
   const now = new Date().toISOString();
-  let nextStatus = req.status;
-  let orderStatus = 'refund_pending';
-  let patch = { admin_note: adminNote, updated_at: now };
-
-  if (action === 'approve') {
-    nextStatus = 'approved';
-    patch = { ...patch, status: 'approved', approved_at: now };
-    orderStatus = 'refund_pending';
-  } else if (action === 'reject') {
-    nextStatus = 'rejected';
-    patch = { ...patch, status: 'rejected' };
-    orderStatus = 'paid';
-  } else if (action === 'process') {
-    nextStatus = 'processing';
-    patch = { ...patch, status: 'processing' };
-    orderStatus = 'refund_pending';
-  } else if (action === 'complete') {
-    nextStatus = 'refunded';
-    patch = { ...patch, status: 'refunded', refunded_at: now };
-    orderStatus = 'refunded';
-  }
+  // #1385: 狀態機集中於 refund-transition.mjs（與 admin.mjs fallback 共用）。
+  // hasPaidAt 固定 true 保持本分支歷史行為（reject 一律回 'paid'）— 與 fallback
+  // 的 paidAt 分歧已另開 issue 追蹤，不在本次零行為變更範圍內。
+  const transition = resolveAdminRefundTransition(action, { now, hasPaidAt: true });
+  const nextStatus = transition.refundStatus;
+  const orderStatus = transition.orderStatus;
+  const patch = { admin_note: adminNote, updated_at: now, ...transition.refundPatch };
 
   const { error: reqUpdateError } = await supabase
     .from('refund_requests')

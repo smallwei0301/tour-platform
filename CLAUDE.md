@@ -86,6 +86,8 @@ Logic that must be importable by edge middleware or run without TS compilation (
 
 **Match the test style to the layer being changed. Always reuse existing fixtures/helpers before writing new ones.**
 
+**db.mjs strangler 準則（#1385）**：之後凡修改 `db.mjs` 某函式，順手把其中可獨立的業務邏輯（狀態機、金額計算、資格判斷）抽到 `src/lib/` 純函式並補單測 — 不開大重構 PR，逐函式漸進。audit log 寫入一律用 `src/lib/audit-log.mjs`（單一實作）；refund 狀態機在 `src/lib/refund-transition.mjs`。
+
 **新增或修改 `db.mjs` gateway 函式時，必須同步 in-memory fallback 並補契約測試**（「同輸入 → 同輸出 shape／同狀態轉移」，範本：`tests/api/issue1384-flow-contract.test.mjs`）— fallback 與 Supabase 實作沒有契約測試時，測試綠燈不代表 production 正確（#1376 即實例）。payment callback 的原子性假設見 `docs/04-tech/04-tech-architecture/12-payment-callback-atomicity.md`（新 RPC 鎖序必須遵循 orders → bookings → activity_schedules）。
 
 ### Backend tasks → TDD with `node --test`

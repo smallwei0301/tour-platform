@@ -1,16 +1,9 @@
 import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory, payments, paymentEvents } from './store.mjs';
+import { appendAuditLog as appendSharedAuditLog } from './audit-log.mjs';
+import { resolveAdminRefundTransition } from './refund-transition.mjs';
 
-function appendAuditLog({ orderId = null, actor = 'admin', action, metadata = {} }) {
-  if (!action) return;
-  auditLogs.push({
-    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
-    orderId: orderId || null,
-    actor,
-    action,
-    metadata,
-    createdAt: new Date().toISOString()
-  });
-}
+// #1385: audit log 單一實作於 audit-log.mjs；此 adapter 僅保留本檔歷史預設 actor='admin'
+const appendAuditLog = (entry) => appendSharedAuditLog({ actor: 'admin', ...entry });
 
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
@@ -311,19 +304,15 @@ export function applyAdminOrderExceptionFallback(input = {}) {
     order.updatedAt = now;
   }
 
-  const log = {
-    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
+  const log = appendAuditLog({
     orderId: order.id,
-    actor: 'admin',
     action,
     metadata: {
       targetScheduleId: input?.targetScheduleId || null,
       newCapacity: input?.newCapacity ?? null,
       adminNote
     },
-    createdAt: now
-  };
-  auditLogs.push(log);
+  });
 
   if (adminNote) order.adminNote = adminNote;
 
@@ -379,21 +368,14 @@ export function updateAdminRefundStatusFallback(input = {}) {
   const now = new Date().toISOString();
   const previousRefundStatus = req.status;
 
-  if (action === 'approve') {
-    req.status = 'approved';
-    req.approvedAt = now;
-    order.status = 'refund_pending';
-  } else if (action === 'reject') {
-    req.status = 'rejected';
-    order.status = order.paidAt ? 'paid' : 'pending_payment';
-  } else if (action === 'process') {
-    req.status = 'processing';
-    order.status = 'refund_pending';
-  } else if (action === 'complete') {
-    req.status = 'refunded';
-    req.refundedAt = now;
-    order.status = 'refunded';
+  // #1385: 狀態機集中於 refund-transition.mjs（與 db.mjs Supabase 分支共用）
+  const transition = resolveAdminRefundTransition(action, { now, hasPaidAt: Boolean(order.paidAt) });
+  req.status = transition.refundStatus;
+  if (transition.refundPatch.approved_at) req.approvedAt = now;
+  if (transition.refundPatch.refunded_at) req.refundedAt = now;
+  order.status = transition.orderStatus;
 
+  if (transition.completesPayment) {
     let payment = payments.find((p) => p.orderId === order.id);
     if (!payment) {
       payment = {
@@ -673,10 +655,8 @@ export function updateOperationsTrackingFallback(input = {}) {
 
   ops.updatedAt = new Date().toISOString();
 
-  const log = {
-    id: `aud_${String(auditLogs.length + 1).padStart(6, '0')}`,
+  appendAuditLog({
     orderId: order.id,
-    actor: 'admin',
     action: 'operations_tracking_update',
     metadata: {
       manualMinutes: ops.manualMinutes,
@@ -690,8 +670,7 @@ export function updateOperationsTrackingFallback(input = {}) {
       note: ops.note
     },
     createdAt: ops.updatedAt
-  };
-  auditLogs.push(log);
+  });
 
   return listOperationsTrackingFallback().find((r) => r.orderId === orderId);
 }
