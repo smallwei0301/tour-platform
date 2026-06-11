@@ -3128,11 +3128,23 @@ export async function listPublishedGuidesDb() {
   }
 
   const supabase = await getSupabase();
-  const { data, error } = await supabase
-    .from('guide_profiles')
-    .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
-    .eq('verification_status', 'approved')
-    .order('display_name');
+  const baseSelect = 'id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status';
+  const richSelect = `${baseSelect}, is_published`;
+  // 認識導遊只顯示導遊自己「公開」的檔案。schema drift guard：production
+  // 若尚未跑 20260611_guide_profiles_is_published，欄位不存在會 42703 —
+  // 退回僅以 verification_status 過濾的舊行為，避免整批導遊消失。
+  const buildQuery = (withPublishFilter) => {
+    let q = supabase
+      .from('guide_profiles')
+      .select(withPublishFilter ? richSelect : baseSelect)
+      .eq('verification_status', 'approved');
+    if (withPublishFilter) q = q.eq('is_published', true);
+    return q.order('display_name');
+  };
+  let { data, error } = await buildQuery(true);
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    ({ data, error } = await buildQuery(false));
+  }
 
   if (error) throw new Error(error.message);
   return (data || []).map(g => ({
@@ -3142,7 +3154,8 @@ export async function listPublishedGuidesDb() {
     profilePhotoUrl: g.profile_photo_url, heroImageUrl: g.hero_image_url,
     galleryUrls: g.gallery_urls || [],
     ratingAvg: g.rating_avg, reviewCount: g.review_count, serviceCount: g.service_count,
-    verificationStatus: g.verification_status
+    verificationStatus: g.verification_status,
+    isPublished: g.is_published ?? true
   }));
 }
 

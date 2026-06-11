@@ -74,25 +74,40 @@ export async function POST(req: Request) {
     guideId = existing.id;
   } else {
     // Create new guide_profiles entry
-    const { data: newProfile, error: insertErr } = await supabase
+    const newProfilePayload: Record<string, unknown> = {
+      display_name: app.full_name,
+      slug: profileSlug,
+      verification_status: 'approved',
+      // 上線即建檔但「不公開」：導遊登入後到公開頁調整內容、按「儲存
+      // 並公開」才會出現在認識導遊列表。
+      is_published: false,
+      // 申請資料自動帶入公開導遊檔案；導遊上線後可在後台自行調整。
+      bio: app.bio || null,
+      region: app.city || null,
+      languages: Array.isArray((app as Record<string, unknown>).languages) ? (app as Record<string, unknown>).languages : [],
+      specialties: Array.isArray((app as Record<string, unknown>).specialties) ? (app as Record<string, unknown>).specialties : [],
+      // 申請時上傳的照片直接成為導遊檔案初始照片，首次登入後台即可見。
+      profile_photo_url: (app as Record<string, unknown>).profile_photo_url || null,
+      hero_image_url: (app as Record<string, unknown>).hero_image_url || null,
+      gallery_urls: Array.isArray((app as Record<string, unknown>).gallery_urls) ? (app as Record<string, unknown>).gallery_urls : [],
+      // guide_email will be set separately by admin
+    };
+    let { data: newProfile, error: insertErr } = await supabase
       .from('guide_profiles')
-      .insert({
-        display_name: app.full_name,
-        slug: profileSlug,
-        verification_status: 'approved',
-        // 申請資料自動帶入公開導遊檔案；導遊上線後可在後台自行調整。
-        bio: app.bio || null,
-        region: app.city || null,
-        languages: Array.isArray((app as Record<string, unknown>).languages) ? (app as Record<string, unknown>).languages : [],
-        specialties: Array.isArray((app as Record<string, unknown>).specialties) ? (app as Record<string, unknown>).specialties : [],
-        // 申請時上傳的照片直接成為導遊檔案初始照片，首次登入後台即可見。
-        profile_photo_url: (app as Record<string, unknown>).profile_photo_url || null,
-        hero_image_url: (app as Record<string, unknown>).hero_image_url || null,
-        gallery_urls: Array.isArray((app as Record<string, unknown>).gallery_urls) ? (app as Record<string, unknown>).gallery_urls : [],
-        // guide_email will be set separately by admin
-      })
+      .insert(newProfilePayload)
       .select('id')
       .single();
+    // Schema drift guard: is_published ships with
+    // 20260611_guide_profiles_is_published; if production hasn't migrated
+    // yet, drop it and retry so promote never hard-fails on the new column.
+    if (insertErr && (insertErr.code === '42703' || /column .*does not exist/i.test(insertErr.message || ''))) {
+      delete newProfilePayload.is_published;
+      ({ data: newProfile, error: insertErr } = await supabase
+        .from('guide_profiles')
+        .insert(newProfilePayload)
+        .select('id')
+        .single());
+    }
 
     if (insertErr || !newProfile) {
       return NextResponse.json(errorV2('SERVER_ERROR', insertErr?.message || '建立導遊資料失敗'), { status: 500 });

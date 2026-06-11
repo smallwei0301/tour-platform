@@ -97,7 +97,9 @@ function GuideLoginForm() {
       const json = await res.json();
 
       if (json?.data?.created) {
-        router.push(safeNext);
+        // 首次（驗證碼）登入：先導向公開頁編輯，引導導遊調整資料並自行
+        // 發佈（預設未公開）。後續登入照常依 next 參數。
+        router.push(isFirstTime ? '/guide/profile' : safeNext);
       } else {
         const code = json?.error?.code || '';
         if (code === 'TOKEN_EXPIRED') setError('邀請碼已過期，請聯絡管理員重新產生');

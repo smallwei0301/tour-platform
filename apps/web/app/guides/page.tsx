@@ -4,11 +4,10 @@ import type { Metadata } from 'next';
 import { listPublishedGuidesDb } from '../../src/lib/db.mjs';
 import GuidesContent from './GuidesContent';
 
-// ISR：認識導遊列表直接讀 Supabase（非 fetch），若不宣告 revalidate，
-// Next.js 15 會在 build/deploy 當下靜態定型，新核可（promote）的導遊
-// 要等下次 deploy 才出現。60s 與 activities 列表慣例一致，確保剛上架
-// 的導遊在一分鐘內即可在列表看到。
-export const revalidate = 60;
+// On-demand revalidation（非定時 ISR）：認識導遊列表直接讀 Supabase，
+// 平時維持靜態快取、零背景運算；當導遊在後台「儲存並公開」時，
+// /api/guide/profile 會 revalidatePath('/guides') 精準失效，旅客下次
+// 刷新即見最新資料。導遊資料變動不頻繁，這比定時 ISR 更省資源。
 
 export const metadata: Metadata = {
   title: '認識導遊 | Midao 祕島',

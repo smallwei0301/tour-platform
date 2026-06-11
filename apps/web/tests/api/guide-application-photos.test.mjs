@@ -127,10 +127,11 @@ test('admin 詳情頁：渲染申請者個人照片/封面/活動照片', () => 
 
 test('promote：建檔自動帶 profile_photo_url / hero_image_url / gallery_urls', () => {
   const src = readFileSync(PROMOTE_ROUTE, 'utf8');
-  const insert = src.match(/\.insert\(\{([\s\S]*?)\}\)/);
-  assert.ok(insert, 'promote 需有 guide_profiles insert');
+  // promote 以 newProfilePayload 變數組裝 insert（含 schema drift guard）。
+  const payload = src.match(/newProfilePayload[^=]*=\s*\{([\s\S]*?)\};/);
+  assert.ok(payload, 'promote 需有 guide_profiles insert payload');
   for (const field of ['profile_photo_url', 'hero_image_url', 'gallery_urls']) {
-    assert.match(insert[1], new RegExp(field), `建檔需帶 ${field}`);
+    assert.match(payload[1], new RegExp(field), `建檔需帶 ${field}`);
   }
 });
 

@@ -1,3 +1,4 @@
+import { revalidatePath } from 'next/cache';
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
@@ -17,6 +18,7 @@ const EDITABLE_FIELDS = [
   'profile_photo_url',
   'hero_image_url',
   'gallery_urls',
+  'is_published',
 ] as const;
 type EditableField = typeof EDITABLE_FIELDS[number];
 
@@ -30,15 +32,27 @@ export async function GET(req: Request) {
     return Response.json(ok({
       display_name: '', bio: '', region: '', languages: [], specialties: [], headline: '',
       profile_photo_url: null, hero_image_url: null, gallery_urls: [], slug: null,
+      is_published: false,
     }));
   }
 
   const supabase = await getSupabase();
-  const { data: gp, error } = await supabase
+  const baseSelect = 'id, slug, display_name, bio, region, languages, specialties, headline, profile_photo_url, hero_image_url, gallery_urls';
+  const richSelect = `${baseSelect}, is_published`;
+  // Schema drift guard: is_published ships with
+  // 20260611_guide_profiles_is_published; fall back when absent.
+  let { data: gp, error } = await supabase
     .from('guide_profiles')
-    .select('id, slug, display_name, bio, region, languages, specialties, headline, profile_photo_url, hero_image_url, gallery_urls')
+    .select(richSelect)
     .eq('id', session.guideId)
     .single();
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    ({ data: gp, error } = await supabase
+      .from('guide_profiles')
+      .select(baseSelect)
+      .eq('id', session.guideId)
+      .single());
+  }
 
   if (error || !gp) return Response.json(fail('NOT_FOUND', 'guide profile not found'), { status: 404 });
 
@@ -53,6 +67,7 @@ export async function GET(req: Request) {
     hero_image_url: gp.hero_image_url ?? null,
     gallery_urls: gp.gallery_urls ?? [],
     slug: gp.slug ?? null,
+    is_published: gp.is_published ?? false,
   }));
 }
 
@@ -88,6 +103,9 @@ export async function PATCH(req: Request) {
   if (update.specialties !== undefined && !Array.isArray(update.specialties)) {
     return Response.json(fail('BAD_REQUEST', 'specialties must be an array'), { status: 400 });
   }
+  if (update.is_published !== undefined && typeof update.is_published !== 'boolean') {
+    return Response.json(fail('BAD_REQUEST', 'is_published must be a boolean'), { status: 400 });
+  }
   // Image URLs: accept string (set) or null (clear); reject other shapes.
   for (const f of ['profile_photo_url', 'hero_image_url'] as const) {
     if (update[f] !== undefined && update[f] !== null && typeof update[f] !== 'string') {
@@ -116,22 +134,46 @@ export async function PATCH(req: Request) {
 
   const supabase = await getSupabase();
 
-  // Verify guide owns this profile
+  // Verify guide owns this profile; slug drives on-demand revalidation below.
   const { data: gp, error: gpErr } = await supabase
     .from('guide_profiles')
-    .select('id')
+    .select('id, slug')
     .eq('id', session.guideId)
     .single();
 
   if (gpErr || !gp) return Response.json(fail('NOT_FOUND', 'guide profile not found'), { status: 404 });
 
   const dbUpdate: Record<string, unknown> = { ...update, updated_at: new Date().toISOString() };
-  const { error: updateErr } = await supabase
+  let { error: updateErr } = await supabase
     .from('guide_profiles')
     .update(dbUpdate)
     .eq('id', session.guideId);
+  // Schema drift guard: is_published ships with
+  // 20260611_guide_profiles_is_published. If production hasn't migrated yet
+  // the column is missing (42703) — strip it and retry so content edits
+  // still save (the publish toggle simply no-ops until the migration runs).
+  if (updateErr && (updateErr.code === '42703' || /column .*does not exist/i.test(updateErr.message || '')) && 'is_published' in dbUpdate) {
+    delete dbUpdate.is_published;
+    if (Object.keys(dbUpdate).length > 1) {
+      ({ error: updateErr } = await supabase
+        .from('guide_profiles')
+        .update(dbUpdate)
+        .eq('id', session.guideId));
+    } else {
+      updateErr = null;
+    }
+  }
 
   if (updateErr) return Response.json(fail('INTERNAL_ERROR', updateErr.message), { status: 500 });
+
+  // On-demand revalidation (事件觸發，非定時 ISR)：導遊存檔/發佈後精準
+  // 失效公開頁，旅客下次刷新即見最新資料，平時零背景運算。
+  try {
+    revalidatePath('/guides');
+    if (gp.slug) revalidatePath(`/guides/${gp.slug}`);
+  } catch {
+    // revalidation 失敗不應讓存檔失敗（例如非請求情境）。
+  }
 
   return Response.json(ok({ updated: true }));
 }

@@ -122,10 +122,11 @@ test('admin 詳情頁：渲染專長/語言/服務地區/證照', () => {
 
 test('promote：建檔帶 bio/region/languages/specialties（不再只有姓名）', () => {
   const src = readFileSync(PROMOTE_ROUTE, 'utf8');
-  const insert = src.match(/\.insert\(\{([\s\S]*?)\}\)/);
-  assert.ok(insert, 'promote 需有 guide_profiles insert');
+  // promote 以 newProfilePayload 變數組裝 insert（含 schema drift guard）。
+  const payload = src.match(/newProfilePayload[^=]*=\s*\{([\s\S]*?)\};/);
+  assert.ok(payload, 'promote 需有 guide_profiles insert payload');
   for (const field of ['bio', 'region', 'languages', 'specialties']) {
-    assert.match(insert[1], new RegExp(`\\b${field}\\b`), `建檔需帶 ${field}`);
+    assert.match(payload[1], new RegExp(`\\b${field}\\b`), `建檔需帶 ${field}`);
   }
 });
 

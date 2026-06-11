@@ -16,6 +16,7 @@ type Profile = {
   hero_image_url: string | null;
   gallery_urls: string[];
   slug: string | null;
+  is_published: boolean;
 };
 
 const EMPTY: Profile = {
@@ -23,6 +24,7 @@ const EMPTY: Profile = {
   languages: [], specialties: [],
   profile_photo_url: null, hero_image_url: null, gallery_urls: [],
   slug: null,
+  is_published: false,
 };
 
 const GALLERY_MAX = 12;
@@ -50,9 +52,11 @@ export default function GuideProfileEditPage() {
   const [profile, setProfile] = useState<Profile>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isNew, setIsNew] = useState(false);
   const [message, setMessage] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
   useEffect(() => {
+    if (typeof document !== 'undefined') setIsNew(document.cookie.includes('guide_is_new=1'));
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
     fetch('/api/guide/profile')
       .then((r) => r.json())
@@ -70,14 +74,15 @@ export default function GuideProfileEditPage() {
             hero_image_url: d.hero_image_url ?? null,
             gallery_urls: Array.isArray(d.gallery_urls) ? d.gallery_urls : [],
             slug: d.slug ?? null,
+            is_published: d.is_published ?? false,
           });
         }
       })
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleSave(e: FormEvent) {
-    e.preventDefault();
+  // nextPublished：發佈目標狀態。儲存成功後同步本地狀態並清除首次引導。
+  async function save(nextPublished: boolean) {
     setSaving(true);
     setMessage(null);
     try {
@@ -92,16 +97,39 @@ export default function GuideProfileEditPage() {
           languages: profile.languages,
           specialties: profile.specialties,
           gallery_urls: profile.gallery_urls,
+          is_published: nextPublished,
         }),
       });
       const json = await res.json();
-      if (json?.ok) setMessage({ kind: 'ok', text: '儲存成功！' });
-      else setMessage({ kind: 'err', text: `儲存失敗：${json?.error?.message ?? '未知錯誤'}` });
+      if (json?.ok) {
+        update('is_published', nextPublished);
+        setMessage({
+          kind: 'ok',
+          text: nextPublished
+            ? '已儲存並公開！旅客重新整理「認識導遊」即可看到你的最新資訊。'
+            : profile.is_published
+              ? '已儲存並取消公開，你的頁面暫時不會出現在認識導遊。'
+              : '已儲存（尚未公開）。',
+        });
+        if (isNew) {
+          setIsNew(false);
+          document.cookie = 'guide_is_new=; Path=/guide; Max-Age=0';
+          document.cookie = 'guide_is_new=; Path=/; Max-Age=0';
+        }
+      } else {
+        setMessage({ kind: 'err', text: `儲存失敗：${json?.error?.message ?? '未知錯誤'}` });
+      }
     } catch (err) {
       setMessage({ kind: 'err', text: `儲存失敗：${err instanceof Error ? err.message : '網路錯誤'}` });
     } finally {
       setSaving(false);
     }
+  }
+
+  // 表單預設提交：維持目前發佈狀態（純存檔）。
+  function handleSave(e: FormEvent) {
+    e.preventDefault();
+    void save(profile.is_published);
   }
 
   function update<K extends keyof Profile>(key: K, value: Profile[K]) {
@@ -114,6 +142,23 @@ export default function GuideProfileEditPage() {
 
   return (
     <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 首次登入引導：說明先調整、再公開 */}
+      {isNew && (
+        <div
+          data-testid="guide-profile-onboarding"
+          style={{
+            background: PURPLE_SOFT, border: `1px solid #ddd6fe`, borderRadius: 12,
+            padding: '14px 16px', fontSize: 14, lineHeight: 1.8, color: '#5b21b6',
+          }}
+        >
+          <p style={{ margin: 0, fontWeight: 700 }}>👋 歡迎加入！先完善你的公開頁吧</p>
+          <p style={{ margin: '4px 0 0' }}>
+            你的導遊頁目前<strong>尚未公開</strong>。調整下方的照片與介紹後，按「儲存並公開」，
+            旅客就能在「認識導遊」看到你。隨時可以再回來修改或取消公開。
+          </p>
+        </div>
+      )}
+
       {/* Top bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
         <div>
@@ -257,7 +302,7 @@ export default function GuideProfileEditPage() {
           />
         </section>
 
-        {/* Footer */}
+        {/* Footer：發佈狀態 + 公開/取消公開動作 */}
         <div style={{
           position: 'sticky', bottom: 0, zIndex: 5,
           background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(6px)',
@@ -265,22 +310,80 @@ export default function GuideProfileEditPage() {
           padding: '12px 0',
           display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap',
         }}>
-          {message ? (
-            <p style={{ margin: 0, fontSize: 13, color: message.kind === 'ok' ? '#16a34a' : '#dc2626' }}>{message.text}</p>
-          ) : <span />}
-          <button
-            type="submit"
-            disabled={saving}
-            style={{
-              padding: '9px 22px', borderRadius: 8, border: 'none',
-              fontSize: 14, fontWeight: 700, color: '#fff',
-              background: saving ? '#a78bfa' : PURPLE,
-              cursor: saving ? 'not-allowed' : 'pointer',
-              flexShrink: 0,
-            }}
-          >
-            {saving ? '儲存中…' : '儲存變更'}
-          </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <span
+              data-testid="guide-publish-status"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 700,
+                color: profile.is_published ? '#16a34a' : '#b45309',
+              }}
+            >
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: profile.is_published ? '#16a34a' : '#f59e0b' }} />
+              {profile.is_published ? '公開中（認識導遊頁可見）' : '尚未公開（旅客看不到）'}
+            </span>
+            {message && (
+              <p style={{ margin: 0, fontSize: 13, color: message.kind === 'ok' ? '#16a34a' : '#dc2626' }}>{message.text}</p>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', flexShrink: 0 }}>
+            {profile.is_published ? (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save(false)}
+                  style={{
+                    padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb',
+                    fontSize: 14, fontWeight: 600, color: '#b45309', background: '#fff',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  取消公開
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    padding: '9px 22px', borderRadius: 8, border: 'none',
+                    fontSize: 14, fontWeight: 700, color: '#fff',
+                    background: saving ? '#a78bfa' : PURPLE,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {saving ? '儲存中…' : '儲存變更'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save(false)}
+                  style={{
+                    padding: '9px 18px', borderRadius: 8, border: '1px solid #e5e7eb',
+                    fontSize: 14, fontWeight: 600, color: '#374151', background: '#fff',
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  僅儲存（暫不公開）
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void save(true)}
+                  style={{
+                    padding: '9px 22px', borderRadius: 8, border: 'none',
+                    fontSize: 14, fontWeight: 700, color: '#fff',
+                    background: saving ? '#a78bfa' : PURPLE,
+                    cursor: saving ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {saving ? '儲存中…' : '儲存並公開'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </form>
     </div>
