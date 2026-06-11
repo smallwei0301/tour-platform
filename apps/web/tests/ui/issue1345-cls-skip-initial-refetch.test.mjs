@@ -45,10 +45,12 @@ test('ActivitiesContent imports useRef and tracks `skipInitialFetch` keyed off i
     'useRef must be imported from react so the skip-initial-fetch flag exists',
   );
   // The ref must be initialised true exactly when SSR shipped cards.
+  // #1380: SSR initialActivities 不含 date/price 過濾，URL 帶這些參數時
+  // 不可 skip 首次 fetch — 條件擴充為 initialActivities 存在「且」無 server-side 過濾參數。
   assert.match(
     src,
-    /const\s+skipInitialFetch\s*=\s*useRef\(\s*initialActivities\s*!==\s*undefined\s*\)/,
-    'skipInitialFetch must default to `initialActivities !== undefined` so SSR fresh data short-circuits the first refetch',
+    /const\s+skipInitialFetch\s*=\s*useRef\(\s*\n?\s*initialActivities\s*!==\s*undefined[\s\S]*?searchParams\.get\('date'\)[\s\S]*?searchParams\.get\('priceMin'\)[\s\S]*?searchParams\.get\('priceMax'\)[\s\S]*?\)/,
+    'skipInitialFetch must be keyed off initialActivities AND absence of date/price URL filters (#1380)',
   );
 });
 
@@ -70,12 +72,13 @@ test('subsequent query changes still trigger /api/activities — guard is one-sh
     /fetch\(\s*[`'"]\/api\/activities/,
     'the fetch on /api/activities must remain so post-mount filter/search interactions still refresh the list',
   );
-  // And the effect must still depend on [query] (a refactor to [] would
-  // freeze the list at SSR data — wrong direction).
+  // And the effect must still depend on query (a refactor that drops it would
+  // freeze the list at SSR data — wrong direction). #1380 extends the deps to
+  // [query, dateFilter, priceMin, priceMax] — query must remain the first dep.
   assert.match(
     src,
-    /\}, \[query\]\);/,
-    'fetch effect must keep [query] as its dependency so search re-runs the fetch',
+    /\}, \[query, dateFilter, priceMin, priceMax\]\);/,
+    'fetch effect must depend on query + #1380 filters so all server-side filters re-run the fetch',
   );
 });
 
