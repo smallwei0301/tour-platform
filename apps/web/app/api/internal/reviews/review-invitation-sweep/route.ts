@@ -25,6 +25,7 @@ import {
   isReviewInvitationSweepEnabled,
 } from '../../../../../src/lib/post-trip/review-invitation-sweep.mjs';
 import { sendReviewInvitation } from '../../../../../src/lib/email';
+import { fetchReturningPromoEmailBlock } from '../../../../../src/lib/returning-promo.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
       status: string;
       contact_email: string | null;
       contact_name: string | null;
+      user_id: string | null;
       activity_schedules:
         | { end_at: string | null; start_at: string | null }[]
         | { end_at: string | null; start_at: string | null }
@@ -93,6 +95,7 @@ export async function POST(req: NextRequest) {
           status,
           contact_email,
           contact_name,
+          user_id,
           activity_schedules(end_at, start_at),
           activities(title),
           operations_tracking(has_complaint)
@@ -140,6 +143,7 @@ export async function POST(req: NextRequest) {
         // Keep PII fields here only — they do NOT flow into decisions/summary
         _contactEmail: order.contact_email,
         _contactName: order.contact_name,
+        _userId: order.user_id,
         _activityTitle: (
           Array.isArray(order.activities)
             ? order.activities[0]?.title
@@ -171,6 +175,14 @@ export async function POST(req: NextRequest) {
 
       const reviewUrl = `${siteUrl}/me/orders/${decision.orderId}?review=1`;
 
+      // #1408 — 老客專屬碼區塊（env RETURNING_CUSTOMER_PROMO_CODE 控制；fail-safe null）
+      const returningPromo = srClient
+        ? await fetchReturningPromoEmailBlock(srClient, {
+            userId: order._userId ?? null,
+            configuredCode: process.env.RETURNING_CUSTOMER_PROMO_CODE,
+          })
+        : null;
+
       try {
         await sendReviewInvitation({
           contactEmail: order._contactEmail,
@@ -178,6 +190,7 @@ export async function POST(req: NextRequest) {
           activityTitle: order._activityTitle,
           orderId: decision.orderId,
           reviewUrl,
+          returningPromoHtml: returningPromo?.html,
         });
 
         sentCount += 1;

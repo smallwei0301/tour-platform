@@ -380,6 +380,8 @@ export interface ReviewInvitationData {
   activityTitle: string;
   orderId: string;
   reviewUrl: string;
+  /** #1408 — 老客專屬碼區塊（行銷性質，呼叫端已依 opt-in 過濾；空值不渲染） */
+  returningPromoHtml?: string;
 }
 
 export async function sendReviewInvitation(data: ReviewInvitationData): Promise<EmailDeliveryResult> {
@@ -395,6 +397,7 @@ export async function sendReviewInvitation(data: ReviewInvitationData): Promise<
        style="display:inline-block;background:#7c3aed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:700;font-size:14px;margin-bottom:20px;">
       立即評價 →
     </a>
+    ${data.returningPromoHtml || ''}
     <p style="font-size:12px;color:#9ca3af;margin:0;">
       如果您不希望收到此類通知，請忽略此信。您的訂單編號：${data.orderId.slice(0, 8).toUpperCase()}
     </p>
