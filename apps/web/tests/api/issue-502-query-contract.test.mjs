@@ -46,8 +46,17 @@ describe('Issue #502 query contract', () => {
     assert.notEqual(end, -1, 'next function boundary must exist');
     const fnBody = src.slice(start, end);
 
-    assert.ok(!fnBody.includes('rating_avg, review_count,'), 'must not select rating fields from activities table');
-    assert.match(fnBody, /\.from\('guide_profiles'\)[\s\S]*\.select\('id, slug, display_name, profile_photo_url, rating_avg, review_count'\)/, 'guide profile query must include rating_avg/review_count');
+    // Intent: ratings come from guide_profiles, never the activities table.
+    // Check the *activities* select block specifically (the guide select now
+    // also carries rating_avg/review_count + verification_status, so a blanket
+    // substring check would false-positive).
+    const activitiesSelect = fnBody.slice(
+      fnBody.indexOf(".from('activities')"),
+      fnBody.indexOf(".from('guide_profiles')"),
+    );
+    assert.ok(!activitiesSelect.includes('rating_avg'), 'activities select must not include rating_avg');
+    assert.ok(!activitiesSelect.includes('review_count'), 'activities select must not include review_count');
+    assert.match(fnBody, /\.from\('guide_profiles'\)[\s\S]*\.select\('id, slug, display_name, profile_photo_url, rating_avg, review_count, verification_status'\)/, 'guide profile query must include rating_avg/review_count (+ verification_status for suspend hiding)');
     assert.match(fnBody, /ratingAvg:\s*guide\?\.rating_avg\s*\?\?\s*null/, 'ratingAvg should map from guide_profiles.rating_avg');
     assert.match(fnBody, /reviewCount:\s*guide\?\.review_count\s*\?\?\s*0/, 'reviewCount should map from guide_profiles.review_count');
   });
