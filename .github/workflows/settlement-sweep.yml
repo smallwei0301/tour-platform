@@ -1,0 +1,79 @@
+name: settlement-sweep
+
+# Issue #1365 缺口 1 — settlement pipeline 自動排程。
+#
+# 兩支 internal endpoint 原本無任何排程 caller（completed 訂單因此永遠不會
+# 進入 guide_balances / payouts，admin 出款管理永遠為空）。此 workflow 每日
+# 串行執行：
+#   1. settlement/sweep      — 將 completed + 過 T 天的訂單結算進 payout_items，
+#                              累積 guide_balances
+#   2. generate-payouts      — 對餘額達 min_withdrawal_twd 的導遊產生 pending payout
+#
+# 順序不可顛倒：generate-payouts 讀的是 sweep 寫入的 guide_balances。
+# sweep 失敗即中止，不執行 generate-payouts（避免用過期餘額產生出款單）。
+#
+# Auth：兩支 endpoint 皆以 x-internal-token = INTERNAL_ALERT_TOKEN 為唯一守門。
+# Secrets 缺失時 graceful skip（無 POST、無誤產），對齊 review-invitation-sweep。
+
+on:
+  schedule:
+    # Daily at 02:00 UTC (10:00 Taiwan time) — settlement runs in low-traffic
+    # morning window, separate from review-invitation-sweep (10:00 UTC).
+    - cron: '0 2 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  settlement:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL != '' }}
+          HAS_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_TOKEN" != "true" ]; then
+            echo "⚠️ NEXT_PUBLIC_VERCEL_URL or INTERNAL_ALERT_TOKEN secrets not configured."
+            echo "   Set them in GitHub repo Settings → Secrets → Actions to enable settlement."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Step 1 — settlement sweep (completed orders → guide_balances)
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/sweep-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/settlement/sweep" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}")
+          echo "HTTP status: $RESPONSE"
+          cat /tmp/sweep-response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Settlement sweep returned non-200 status: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Settlement sweep completed successfully."
+
+      - name: Step 2 — generate payouts (guide_balances ≥ threshold → pending payout)
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/generate-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/settlement/generate-payouts" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}")
+          echo "HTTP status: $RESPONSE"
+          cat /tmp/generate-response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Generate-payouts returned non-200 status: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Generate-payouts completed successfully."
