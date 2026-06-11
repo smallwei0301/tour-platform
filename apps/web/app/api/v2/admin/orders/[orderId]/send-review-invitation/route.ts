@@ -18,6 +18,7 @@ import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { isReviewInvitationEligible } from '../../../../../../../src/lib/post-trip-eligibility.mjs';
 import { evaluateReviewInvitationIdempotency } from '../../../../../../../src/lib/post-trip/review-invitation.mjs';
 import { sendReviewInvitation } from '../../../../../../../src/lib/email';
+import { fetchReturningPromoEmailBlock } from '../../../../../../../src/lib/returning-promo.mjs';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -40,7 +41,7 @@ export async function POST(
         id, status,
         activity_schedules(id, start_at, end_at),
         operations_tracking(refund_amount_twd, has_complaint),
-        users(email, raw_user_meta_data),
+        users(id, email, raw_user_meta_data),
         activities(title)
       `)
       .eq('id', orderId)
@@ -144,12 +145,21 @@ export async function POST(
       process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tour-platform-nine.vercel.app';
     const reviewUrl = `${siteUrl}/me/orders/${orderId}?review=1`;
 
+    // #1408 — 老客專屬碼區塊（env RETURNING_CUSTOMER_PROMO_CODE 控制；fail-safe null）
+    const returningPromo = srClient
+      ? await fetchReturningPromoEmailBlock(srClient, {
+          userId: user?.id ?? null,
+          configuredCode: process.env.RETURNING_CUSTOMER_PROMO_CODE,
+        })
+      : null;
+
     const result = await sendReviewInvitation({
       contactEmail,
       contactName,
       activityTitle,
       orderId,
       reviewUrl,
+      returningPromoHtml: returningPromo?.html,
     });
 
     if (!result.ok) {
