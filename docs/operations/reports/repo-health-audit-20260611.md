@@ -146,34 +146,35 @@
 
 ---
 
-## 第三部分：優化路線圖
+## 第三部分：優化路線圖（已切分為 GitHub issues，2026-06-11 建立）
 
 ### 立即（quick wins，各 ≤ 1 天）
-1. login endpoints 加 rate limit（資安 HIGH）
-2. admin cookie 補 `Secure` flag（資安 HIGH）
-3. `next.config.mjs` 加 HSTS
-4. 移除 `packages/ui`＋root legacy scratch scripts
-5. 收斂 `faq-route-helpers` 雙檔
-6. 活動詳情頁補 Product JSON-LD（含 AggregateRating/Offer）
+1. login endpoints 加 rate limit（資安 HIGH）— **#1373**
+2. admin cookie 補 `Secure` flag（資安 HIGH）— **#1374**
+3. `next.config.mjs` 加 HSTS＋CSP report-only — **#1375**
+4. 收斂 `faq-route-helpers` 雙檔 — **#1376**
+5. 移除 `packages/ui`＋root legacy scratch scripts — **#1377**
+6. 活動詳情頁補 Product JSON-LD＋OG image 動態化 — **#1378**
 
 ### 短期（1–2 週，轉換率優先）
-7. 旅客評論撰寫（P0-1）
-8. 搜尋篩選升級：日期可訂＋價格區間（P0-2）
-9. Promo code 旅客端曝光（P0-3）
-10. 活動 OG image 動態化
-11. fallback/Supabase 契約測試（關鍵三流程）
+7. 旅客評論撰寫（P0-1）— **#1379**
+8. 搜尋篩選升級：日期可訂＋價格區間（P0-2）— **#1380**
+9. Promo code 旅客端曝光（P0-3）— **#1381**
+10. fallback/Supabase 契約測試＋payment callback 原子性複核 — **#1384**
 
 ### 中期（1–2 月）
-12. `db.mjs` service-layer 漸進抽離（strangler）
-13. Legacy booking 退役計畫（凍結→移除入口→刪碼）
-14. 訂單改期（P1-5）
-15. 推薦／最近瀏覽（P1-4）
-16. CSP report-only 試行→enforce
+11. 推薦／最近瀏覽（P1-4）— **#1382**
+12. 訂單改期（P1-5）— **#1383**
+13. `db.mjs` service-layer 漸進抽離（strangler）— **#1385**
+14. Legacy booking 退役計畫（決策，凍結→移除入口→刪碼）— **#1386**
+15. 旅客 profile 編輯與通知偏好（P1-6）— **#1387**
 
-### 長期（Phase 12 對齊）
-17. i18n 英文版＋hreflang
-18. 站內訊息／行前溝通
-19. 會員回購機制
+### 長期（Phase 12 對齊，總綱 **#1388**）
+16. i18n 英文版＋hreflang
+17. 站內訊息／行前溝通
+18. 會員回購機制
+
+> 既有追蹤不重複開：TS strict 缺口 → #68；mobile LCP → #1344；憑證輪替 → #1121；V2 觀察窗 → #642。
 
 ---
 
