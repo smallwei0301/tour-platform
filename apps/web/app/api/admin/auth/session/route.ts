@@ -1,6 +1,7 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { isAdminAuthorized } from '../../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../src/lib/admin-session.mjs';
+import { adminLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 function parseCookie(req: Request, key: string) {
   const cookie = req.headers.get('cookie') || '';
@@ -39,6 +40,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // #1373 — 只計「失敗」嘗試：成功登入不消耗額度，暴力破解在 10 次失敗/分鐘/IP 後被擋
+  const rateKey = `admin-login:${RateLimiter.getClientIp(request)}`;
+  const limited = createLoginRateLimitResponse(adminLoginLimiter.peek(rateKey));
+  if (limited) return limited;
+
   const body = await request.json().catch(() => ({}));
   const token = String(body?.token || '');
   const email = String(body?.email || '');
@@ -55,6 +61,7 @@ export async function POST(request: Request) {
   });
 
   if (!auth.ok) {
+    adminLoginLimiter.record(rateKey);
     return Response.json(fail('UNAUTHORIZED', auth.reason || 'unauthorized'), { status: 401 });
   }
 

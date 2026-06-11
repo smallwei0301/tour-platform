@@ -9,6 +9,7 @@ import {
 } from '../../../../../src/lib/guide-auth';
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../src/lib/guide-auth-session-supabase';
+import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 
 type GuideSessionInviteProfile = {
   id: string;
@@ -69,6 +70,12 @@ export async function GET(req: Request) {
 
 /** POST — login (first-time via invite token, or password login) */
 export async function POST(req: Request) {
+  // #1373 — 只計「失敗」嘗試：成功登入不消耗額度，暴力破解在 10 次失敗/分鐘/IP 後被擋
+  const rateKey = `guide-login:${RateLimiter.getClientIp(req)}`;
+  const limited = createLoginRateLimitResponse(guideLoginLimiter.peek(rateKey));
+  if (limited) return limited;
+  const recordGuideLoginFailure = () => guideLoginLimiter.record(rateKey);
+
   const csrfError = validateCsrf(req);
   if (csrfError) return csrfError;
 
@@ -97,10 +104,12 @@ export async function POST(req: Request) {
       );
 
       if (error || !guide) {
+        recordGuideLoginFailure();
         return Response.json(fail('INVALID_TOKEN', '邀請碼無效或已使用'), { status: 401 });
       }
 
       if (!guide.invite_token_expires_at || isInviteTokenExpired(guide.invite_token_expires_at)) {
+        recordGuideLoginFailure();
         return Response.json(fail('TOKEN_EXPIRED', '邀請碼已過期，請聯絡管理員重新產生'), { status: 401 });
       }
 
@@ -138,6 +147,7 @@ export async function POST(req: Request) {
       );
 
       if (error || !guide) {
+        recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
 
@@ -146,6 +156,7 @@ export async function POST(req: Request) {
       }
 
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+        recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
 
@@ -169,6 +180,7 @@ export async function POST(req: Request) {
       );
 
       if (error || !guide) {
+        recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
 
@@ -177,6 +189,7 @@ export async function POST(req: Request) {
       }
 
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
+        recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
 
