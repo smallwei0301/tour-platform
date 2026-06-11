@@ -68,6 +68,38 @@ function persistStateBestEffort() {
 // Kick off one-time async hydration on module load.
 hydrateStateFromDbBestEffort();
 
+const ADMIN_SESSION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+
+// #1374 — production 一律帶 Secure（比照 guide-auth.ts pattern），dev http 不強制
+function adminCookieSecurePart() {
+  return process.env.NODE_ENV === 'production' ? '; Secure' : '';
+}
+
+export function createAdminSessionCookies({ token, email, expiresAt, sessionVersion }) {
+  const securePart = adminCookieSecurePart();
+  const base = `; Path=/; HttpOnly; SameSite=Lax; Max-Age=${ADMIN_SESSION_MAX_AGE_SECONDS}${securePart}`;
+  // expires_at / session_version are read by client JS for UI display only (not HttpOnly)
+  const publicBase = `; Path=/; SameSite=Lax; Max-Age=${ADMIN_SESSION_MAX_AGE_SECONDS}${securePart}`;
+  return [
+    `admin_token=${encodeURIComponent(token)}${base}`,
+    `admin_email=${encodeURIComponent(email)}${base}`,
+    `admin_session_expires_at=${encodeURIComponent(expiresAt)}${publicBase}`,
+    `admin_session_version=${sessionVersion}${publicBase}`,
+  ];
+}
+
+export function clearAdminSessionCookies() {
+  const securePart = adminCookieSecurePart();
+  const expire = `; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${securePart}`;
+  const publicExpire = `; Path=/; SameSite=Lax; Max-Age=0${securePart}`;
+  return [
+    `admin_token=${expire}`,
+    `admin_email=${expire}`,
+    `admin_session_expires_at=${publicExpire}`,
+    `admin_session_version=${publicExpire}`,
+  ];
+}
+
 export function getAdminSecurityState() {
   hydrateStateFromDbBestEffort();
   return { ...state };
