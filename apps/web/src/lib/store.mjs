@@ -151,6 +151,7 @@ export const payments = [];
 
 // #1383 — 改期申請（in-memory fallback）
 export const rescheduleRequests = [];
+export const orderMessages = [];
 export const paymentEvents = [];
 
 export const refundRequests = [

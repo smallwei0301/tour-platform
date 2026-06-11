@@ -479,3 +479,50 @@ export async function sendRescheduleDecisionNotice(data: RescheduleDecisionNotic
   const html = wrapEmail(subject, body);
   return sendEmailWithContract({ fn: 'sendRescheduleDecisionNotice', to: data.to, subject, html, orderId: data.orderId });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #1411 — 訂單留言通知（交易類，不受行銷 opt-out 影響）
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface OrderMessageNoticeData {
+  to: string;
+  activityTitle: string;
+  orderId: string;
+  /** 顯示在信件中的發送者稱呼（例：旅客 王小明、您的嚮導） */
+  senderLabel: string;
+  /** 留言預覽（純文字，模板會做 HTML escape） */
+  preview: string;
+  /** 收件者點擊後前往的留言串路徑（traveler/guide 各異） */
+  threadPath: string;
+}
+
+/** 留言 preview 為使用者輸入 → 進 HTML 模板前必須 escape。 */
+function escapeHtmlText(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** 訂單留言串有新訊息 → 通知對方（traveler ↔ guide 共用）。 */
+export async function sendOrderMessageNotice(data: OrderMessageNoticeData): Promise<EmailDeliveryResult> {
+  const subject = `新訊息 — ${data.activityTitle}`;
+  const preview = escapeHtmlText(String(data.preview || '').slice(0, 120));
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app';
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">您有一則新訊息 💬</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      ${escapeHtmlText(data.senderLabel)} 在「${escapeHtmlText(data.activityTitle)}」的訂單留言串留下了新訊息：
+    </p>
+    <blockquote style="font-size:14px;color:#374151;margin:0 0 16px;padding:10px 14px;border-left:3px solid #0f766e;background:#f0fdfa;border-radius:0 8px 8px 0;">
+      ${preview}
+    </blockquote>
+    <p style="font-size:14px;margin:0 0 16px;">
+      <a href="${baseUrl}${data.threadPath}" style="color:#0f766e;font-weight:700;">前往查看與回覆 →</a>
+    </p>
+    <p style="font-size:13px;color:#6b7280;margin:0;">行前的疑問與細節，直接在留言串裡聊最快。</p>
+  `);
+  return sendEmailWithContract({ fn: 'sendOrderMessageNotice', to: data.to, subject, html, orderId: data.orderId });
+}

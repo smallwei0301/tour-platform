@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/guide/availability', label: '時間管理', icon: '🕐' },
   { href: '/guide/schedules', label: '場次管理', icon: '📅' },
   { href: '/guide/bookings', label: '訂單查看', icon: '📋' },
+  { href: '/guide/messages', label: '旅客訊息', icon: '💬' },
   { href: '/guide/profile', label: '公開頁面', icon: '👤' },
 ];
 

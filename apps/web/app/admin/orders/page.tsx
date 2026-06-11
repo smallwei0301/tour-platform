@@ -47,6 +47,8 @@ export default function AdminOrdersPage() {
   const [isExecutingRefund, setIsExecutingRefund] = useState(false);
   const [refundExecuted, setRefundExecuted] = useState(false);
   const [refundError, setRefundError] = useState('');
+  // #1411 — 訂單留言串（admin 第一期唯讀）
+  const [orderMessages, setOrderMessages] = useState<any[]>([]);
 
   async function load() {
     setLoading(true);
@@ -83,6 +85,8 @@ export default function AdminOrdersPage() {
       .then(r => r.json()).then(j => setAuditLogs(j.data||[])).catch(() => setAuditLogs([]));
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/timeline`, { cache: 'no-store' })
       .then(r => r.json()).then(j => setTimeline(j.data?.timeline||[])).catch(() => setTimeline([]));
+    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/messages`, { cache: 'no-store' })
+      .then(r => r.json()).then(j => setOrderMessages(j.data?.messages||[])).catch(() => setOrderMessages([]));
   }, [selectedId]);
 
   const filtered = useMemo(() => rows, [rows]);
@@ -274,6 +278,28 @@ export default function AdminOrdersPage() {
                     </button>
                   </div>
                 </details>
+
+                {/* #1411 — 留言串唯讀檢視（admin 第一期不發言） */}
+                {orderMessages.length > 0 && (
+                  <details data-guide="order-messages" style={{ marginTop: 14, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                    <summary style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                      💬 旅客 ↔ 嚮導留言（{orderMessages.length}）
+                    </summary>
+                    <ul style={{ margin: 0, padding: '8px 14px 12px', listStyle: 'none' }}>
+                      {orderMessages.map((m: any) => (
+                        <li key={m.id} data-guide="order-message-row" style={{ fontSize: 12, color: '#374151', padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                          <strong style={{ color: m.senderRole === 'guide' ? '#7c3aed' : '#0f766e' }}>
+                            {m.senderRole === 'guide' ? '嚮導' : m.senderRole === 'traveler' ? '旅客' : '客服'}
+                          </strong>
+                          <span style={{ marginLeft: 6, color: '#9ca3af' }}>
+                            {m.createdAt ? new Date(m.createdAt).toLocaleString('zh-TW') : '-'}
+                          </span>
+                          <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', marginTop: 2 }}>{m.body}</div>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
 
                 <button onClick={saveDetail} disabled={saving} style={{ ...btnStyle('primary'), marginTop: 14, width: '100%' }}>
                   {saving ? '儲存中…' : '儲存變更'}
