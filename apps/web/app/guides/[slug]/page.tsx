@@ -8,6 +8,11 @@ import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../src/components/shared/ActivityHero';
 import { GalleryImage } from '../../../src/components/shared/GalleryImage';
 
+// ISR：詳情頁直接讀 Supabase（非 fetch），不宣告 revalidate 會在首次
+// 渲染後無限期快取，剛上架或更新個人檔案的導遊頁資料會落後。60s 與
+// 列表頁一致。
+export const revalidate = 60;
+
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
 ): Promise<Metadata> {
