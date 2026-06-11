@@ -1,5 +1,5 @@
-import { test, expect } from './helpers';
-import type { Page, Route } from '@playwright/test';
+import { test, expect, setTravelerSession } from './helpers';
+import type { Route } from '@playwright/test';
 
 /**
  * Issue #1379 — 旅客評論撰寫流程（真實瀏覽器，backend 以 page.route mock）。
@@ -9,18 +9,6 @@ import type { Page, Route } from '@playwright/test';
  */
 
 const ORDER_ID = '13790000-aaaa-4bbb-8ccc-000000000001';
-const SUPABASE_COOKIE = 'sb-127-auth-token'; // ref 取自 NEXT_PUBLIC_SUPABASE_URL host 首段（127.0.0.1）
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://127.0.0.1:3333';
-
-const FAKE_USER = {
-  id: 'traveler-1379',
-  email: 'traveler1379@example.com',
-  aud: 'authenticated',
-  role: 'authenticated',
-  app_metadata: {},
-  user_metadata: {},
-  created_at: '2026-01-01T00:00:00Z',
-};
 
 function orderBody(status: string) {
   return {
@@ -38,27 +26,6 @@ function orderBody(status: string) {
       createdAt: '2026-04-01T00:00:00Z',
     },
   };
-}
-
-async function setTravelerSession(page: Page) {
-  const session = {
-    access_token: 'fake-access-token-1379',
-    token_type: 'bearer',
-    expires_in: 3600,
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-    refresh_token: 'fake-refresh-token',
-    user: FAKE_USER,
-  };
-  await page.context().addCookies([
-    { name: SUPABASE_COOKIE, value: encodeURIComponent(JSON.stringify(session)), url: BASE_URL },
-    { name: 'tp_csrf', value: 'e2e-csrf-token-1379', url: BASE_URL },
-  ]);
-  await page.route('**/auth/v1/user**', async (route: Route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(FAKE_USER) });
-  });
-  await page.route('**/api/me/csrf**', async (route: Route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
-  });
 }
 
 test.describe('issue1379 traveler review', () => {

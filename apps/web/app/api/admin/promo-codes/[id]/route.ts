@@ -83,6 +83,9 @@ export async function PATCH(
   if (body?.expires_at !== undefined) patch.expires_at = body.expires_at ?? null;
   if (body?.active !== undefined) patch.active = Boolean(body.active);
   if (body?.per_user_limit !== undefined) patch.per_user_limit = Number(body.per_user_limit);
+  // #1381: 旅客端公開曝光
+  if (body?.is_public !== undefined) patch.is_public = Boolean(body.is_public);
+  if (body?.public_label !== undefined) patch.public_label = body.public_label ? String(body.public_label) : null;
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json(fail('INVALID_REQUEST', 'no fields to update'), { status: 400 });

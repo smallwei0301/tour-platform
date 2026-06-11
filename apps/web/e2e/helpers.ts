@@ -110,6 +110,45 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://127.0.0.1:3333';
  * enough to render the page without ever touching real auth or weakening it —
  * the security contract still lives in the API routes and their unit tests.
  */
+/**
+ * Helper: 假 traveler session（#1379/#1381）。
+ *
+ * `/me/**`、checkout 等頁面以 client-side `supabase.auth.getUser()` 做登入
+ * gate。播種 `sb-127-auth-token` session cookie（ref 取自
+ * NEXT_PUBLIC_SUPABASE_URL host 首段 = 127.0.0.1）並攔截 `auth/v1/user`
+ * 回傳假 user，即可在不碰真實 Supabase 的情況下通過 gate。
+ */
+const TRAVELER_FAKE_USER = {
+  id: 'traveler-e2e',
+  email: 'traveler-e2e@example.com',
+  aud: 'authenticated',
+  role: 'authenticated',
+  app_metadata: {},
+  user_metadata: {},
+  created_at: '2026-01-01T00:00:00Z',
+};
+
+async function setTravelerSession(page: Page, user: Record<string, unknown> = TRAVELER_FAKE_USER): Promise<void> {
+  const session = {
+    access_token: 'fake-access-token-e2e',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    refresh_token: 'fake-refresh-token',
+    user,
+  };
+  await page.context().addCookies([
+    { name: 'sb-127-auth-token', value: encodeURIComponent(JSON.stringify(session)), url: BASE_URL },
+    { name: 'tp_csrf', value: 'e2e-csrf-token', url: BASE_URL },
+  ]);
+  await page.route('**/auth/v1/user**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
+  });
+  await page.route('**/api/me/csrf**', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
+  });
+}
+
 async function setGuideSession(page: Page, guideId: string): Promise<void> {
   const fakeSignature = 'a'.repeat(64);
   await page.context().addCookies([
@@ -130,4 +169,4 @@ const test = base.extend<{ authedPage: Page; isMobile: boolean }>({
   },
 });
 
-export { test, expect, adminLogin, ensureLoggedIn, setGuideSession };
+export { test, expect, adminLogin, ensureLoggedIn, setGuideSession, setTravelerSession };

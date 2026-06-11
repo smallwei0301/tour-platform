@@ -110,6 +110,9 @@ export async function POST(req: NextRequest) {
         expires_at:     body?.expires_at ?? null,
         active:         body?.active !== false,
         per_user_limit: Number.isFinite(Number(body?.per_user_limit)) ? Number(body.per_user_limit) : 1,
+        // #1381: 旅客端公開曝光
+        is_public:      Boolean(body?.is_public),
+        public_label:   body?.public_label ? String(body.public_label) : null,
       })
       .select()
       .single();
