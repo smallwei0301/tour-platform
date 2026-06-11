@@ -1,18 +1,18 @@
 /**
- * 認識導遊頁即時性：新核可（promote）的導遊必須在合理時間內出現在
- * /guides 列表，不能等到下次 deploy。
+ * 認識導遊頁即時性 — 改用 on-demand revalidation（事件觸發，非定時 ISR）。
  *
- * 事故：admin 核可導遊、導遊以驗證碼登入後，/guides 仍看不到該導遊。
- * 根因是 Next.js 15 App Router 的靜態渲染：/guides 與 /guides/[slug]
- * 透過 listPublishedGuidesDb / getGuideBySlugDb 直接讀 Supabase（非
- * fetch()），Next 無法追蹤其資料來源，整頁在 build/deploy 當下即靜態
- * 定型並無限期供應同一份 HTML —— 新資料要等下次 deploy 才會更新。
+ * 演進：先前以 export const revalidate = 60（定時 ISR）讓新核可導遊在
+ * 一分鐘內出現。導入導遊自主發佈（is_published）後改為更省資源、更貼近
+ * 「導遊儲存後才更新」的事件觸發模型：
+ *   - /guides 與 /guides/[slug] 不再宣告定時 revalidate，平時維持靜態
+ *     快取、零背景運算。
+ *   - 導遊在後台「儲存並公開」時，/api/guide/profile 以
+ *     revalidatePath('/guides') 與 revalidatePath(`/guides/<slug>`) 精準
+ *     失效公開頁，旅客下次刷新即見最新資料。
  *
- * 修法：兩頁宣告 ISR revalidate（與 activities/page.tsx 的 60s 慣例
- * 一致），讓列表與詳情在 ≤60s 內反映最新核可的導遊。
- *
- * 此為 Next 渲染指令（export const）的 source-contract，dev server 永遠
- * 即時 SSR，無法以 E2E 重現 production 靜態定型，故以原始碼契約鎖定。
+ * 此為 Next 渲染／快取契約（export 與 revalidatePath 呼叫）的
+ * source-contract；dev server 永遠即時 SSR，無法以 E2E 重現 production
+ * 快取行為。
  */
 
 import { test } from 'node:test';
@@ -25,23 +25,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = join(__dirname, '..', '..');
 const LIST_PAGE = join(APP_ROOT, 'app/guides/page.tsx');
 const DETAIL_PAGE = join(APP_ROOT, 'app/guides/[slug]/page.tsx');
+const PROFILE_ROUTE = join(APP_ROOT, 'app/api/guide/profile/route.ts');
 
-// 接受 ISR（revalidate 數字）或 force-dynamic（每次 SSR）任一，
-// 只要頁面不是無限期靜態定型即可。
-const FRESHNESS = /export const (revalidate\s*=\s*\d+|dynamic\s*=\s*['"]force-dynamic['"])/;
-
-test('/guides 列表頁宣告 freshness（revalidate 或 force-dynamic）', () => {
-  const src = readFileSync(LIST_PAGE, 'utf8');
-  assert.match(src, FRESHNESS, '認識導遊列表不得無限期靜態定型，否則新核可導遊不會出現');
+test('/guides 與 /guides/[slug] 不再用定時 ISR（改 on-demand）', () => {
+  const list = readFileSync(LIST_PAGE, 'utf8');
+  const detail = readFileSync(DETAIL_PAGE, 'utf8');
+  assert.doesNotMatch(list, /export const revalidate\s*=\s*\d/, '列表頁不應再有定時 revalidate');
+  assert.doesNotMatch(detail, /export const revalidate\s*=\s*\d/, '詳情頁不應再有定時 revalidate');
 });
 
-test('/guides 列表頁 revalidate 不過長（≤300s，確保「馬上看到」體感）', () => {
-  const src = readFileSync(LIST_PAGE, 'utf8');
-  const m = src.match(/export const revalidate\s*=\s*(\d+)/);
-  if (m) assert.ok(Number(m[1]) <= 300, `revalidate=${m[1]} 過長，新導遊上架體感不及時`);
-});
-
-test('/guides/[slug] 詳情頁宣告 freshness（revalidate 或 force-dynamic）', () => {
-  const src = readFileSync(DETAIL_PAGE, 'utf8');
-  assert.match(src, FRESHNESS, '導遊詳情頁不得無限期靜態定型，否則剛上架導遊頁資料會落後');
+test('導遊存檔／發佈時 on-demand 失效公開頁，旅客刷新即見最新資料', () => {
+  const src = readFileSync(PROFILE_ROUTE, 'utf8');
+  assert.match(src, /from\s+['"]next\/cache['"]/, '需 import next/cache');
+  assert.match(src, /revalidatePath\(\s*['"]\/guides['"]\s*\)/, '需失效認識導遊列表 /guides');
+  assert.match(src, /revalidatePath\(\s*[`'"]\/guides\/\$\{?/, '需一併失效該導遊詳情頁 /guides/<slug>');
 });
