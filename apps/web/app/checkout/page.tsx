@@ -55,6 +55,15 @@ export default function CheckoutPage() {
   const [contactEmail, setContactEmail] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [promoValidation, setPromoValidation] = useState<null | { valid: boolean; discountAmount?: number; discountedTotal?: number; reason?: string }>(null);
+  // #1381: 公開促銷碼（一鍵套用）
+  const [publicPromos, setPublicPromos] = useState<Array<{ code: string; label: string }>>([]);
+
+  useEffect(() => {
+    fetch('/api/promo-codes/public')
+      .then((r) => r.json())
+      .then((j) => setPublicPromos(Array.isArray(j?.data) ? j.data : []))
+      .catch(() => {});
+  }, []);
   const [promoLoading, setPromoLoading] = useState(false);
 
   const bookingV2Href = useMemo(() => {
@@ -125,9 +134,11 @@ export default function CheckoutPage() {
     });
   }, [activity?.id, selectedScheduleId]);
 
-  const applyPromoCode = async () => {
-    const code = promoCode.trim().toUpperCase();
+  // #1381: 公開促銷碼一鍵套用（直接帶入 codeOverride，避免 setState 後的 stale closure）
+  const applyPromoCode = async (codeOverride?: string) => {
+    const code = (codeOverride ?? promoCode).trim().toUpperCase();
     if (!code) return;
+    if (codeOverride) setPromoCode(code);
     setPromoLoading(true);
     setPromoValidation(null);
     try {
@@ -313,7 +324,7 @@ export default function CheckoutPage() {
           />
           <button
             data-testid="promo-apply-btn"
-            onClick={applyPromoCode}
+            onClick={() => applyPromoCode()}
             disabled={promoLoading || !promoCode.trim()}
             style={{
               padding: '8px 16px', background: '#6b7280', color: '#fff',
@@ -323,6 +334,25 @@ export default function CheckoutPage() {
             {promoLoading ? '套用中…' : '套用'}
           </button>
         </div>
+        {publicPromos.length > 0 && (
+          <div data-testid="public-promo-list" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+            {publicPromos.map((p) => (
+              <button
+                key={p.code}
+                type="button"
+                data-testid={`public-promo-${p.code}`}
+                onClick={() => applyPromoCode(p.code)}
+                disabled={promoLoading}
+                style={{
+                  padding: '6px 10px', background: '#fdf2f8', color: '#be185d',
+                  border: '1px dashed #f9a8d4', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+                }}
+              >
+                🎁 {p.label}
+              </button>
+            ))}
+          </div>
+        )}
         {promoValidation?.valid === true && (
           <p style={{ color: '#16a34a', fontSize: 13, marginTop: 6 }}>
             折扣 NT$ {promoValidation.discountAmount?.toLocaleString()} ✓

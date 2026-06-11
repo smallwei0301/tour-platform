@@ -18,6 +18,7 @@ import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
 import { resolveDatePlanPresentation } from '../../../../src/lib/date-plan-source.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
+import { PublicPromoBanner } from '../../../../src/components/activity/PublicPromoBanner';
 import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
 
 // Issue #502: avoid force-static/unstable_cache render lock on production cold path.
@@ -247,6 +248,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           <Link href="/activities">探索行程</Link> &gt;{' '}
           {activity.region} &gt; {activity.title}
         </div>
+        {/* #1381 — 公開促銷碼提示（無可用碼時不渲染） */}
+        <PublicPromoBanner />
       </div>
 
       {/* ── Gallery ── */}

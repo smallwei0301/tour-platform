@@ -19,6 +19,9 @@ export default function AdminNewPromoCodePage() {
     per_user_limit: '1',
     expires_at: '',
     active: true,
+    // #1381: 旅客端公開曝光
+    is_public: false,
+    public_label: '',
   });
 
   function handleChange(field: keyof typeof form, value: string | boolean) {
@@ -42,6 +45,8 @@ export default function AdminNewPromoCodePage() {
           per_user_limit: Number(form.per_user_limit),
           expires_at: form.expires_at || null,
           active: form.active,
+          is_public: form.is_public,
+          public_label: form.public_label || null,
         }),
       });
 
@@ -197,6 +202,35 @@ export default function AdminNewPromoCodePage() {
                 立即啟用
               </label>
             </div>
+
+            {/* #1381: 旅客端公開曝光 */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input
+                type="checkbox"
+                id="is_public"
+                data-testid="promo-is-public"
+                checked={form.is_public}
+                onChange={(e) => handleChange('is_public', e.target.checked)}
+                style={{ width: 16, height: 16, cursor: 'pointer' }}
+              />
+              <label htmlFor="is_public" style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>
+                公開曝光（顯示於活動頁與結帳頁）
+              </label>
+            </div>
+            {form.is_public && (
+              <div>
+                <label htmlFor="public_label" style={labelStyle}>公開顯示文案（選填，空白時自動以折扣內容組句）</label>
+                <input
+                  type="text"
+                  id="public_label"
+                  data-testid="promo-public-label"
+                  value={form.public_label}
+                  onChange={(e) => handleChange('public_label', e.target.value)}
+                  placeholder="例：新客限定 9 折"
+                  style={inputStyle}
+                />
+              </div>
+            )}
 
             {/* Submit */}
             <div style={{ display: 'flex', gap: 12, paddingTop: 8, flexWrap: 'wrap' }}>
