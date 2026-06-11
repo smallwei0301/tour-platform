@@ -4048,6 +4048,135 @@ export async function confirmPayoutDb(supabase, payoutId, confirmedBy, transferR
   return updated;
 }
 
+/**
+ * #1365 缺口 2 — admin 出款管理手動操作 fallback。
+ * List all guide balances > 0 (including below-threshold guides) with
+ * profile info and a has_pending_payout flag so the admin UI can show the
+ * settlement queue and block duplicate manual payout generation.
+ * @param {any} supabase — service-role Supabase client
+ * @returns {Promise<Array<{ guide_id, balance_twd, last_settled_at, display_name, email, has_pending_payout }>>}
+ */
+export async function listGuideBalancesWithProfilesDb(supabase) {
+  const { data: balances, error } = await supabase
+    .from('guide_balances')
+    .select('guide_id, balance_twd, last_settled_at, updated_at')
+    .gt('balance_twd', 0)
+    .order('balance_twd', { ascending: false });
+  if (error) throw new Error(error.message);
+  if (!balances || balances.length === 0) return [];
+
+  const guideIds = balances.map((b) => b.guide_id);
+
+  const { data: profiles } = await supabase
+    .from('guide_profiles')
+    .select('id, display_name, guide_email')
+    .in('id', guideIds);
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const { data: pendings } = await supabase
+    .from('payouts')
+    .select('guide_id')
+    .eq('state', 'pending')
+    .in('guide_id', guideIds);
+  const pendingGuideIds = new Set((pendings ?? []).map((p) => p.guide_id));
+
+  return balances.map((b) => {
+    const profile = profileById.get(b.guide_id);
+    return {
+      guide_id: b.guide_id,
+      balance_twd: b.balance_twd,
+      last_settled_at: b.last_settled_at ?? null,
+      updated_at: b.updated_at ?? null,
+      display_name: profile?.display_name ?? null,
+      email: profile?.guide_email ?? null,
+      has_pending_payout: pendingGuideIds.has(b.guide_id),
+    };
+  });
+}
+
+/**
+ * #1365 缺口 2 — manually create a pending payout from a guide's current
+ * balance (admin fallback while the settlement cron is not scheduled).
+ * Reuses createPayoutDb so the pending-uniqueness guard stays the single
+ * source of idempotency. Writes an audit log only when a payout is created.
+ * @param {any} supabase — service-role Supabase client
+ * @param {{ guideId: string, actor?: string }} input
+ * @returns {Promise<{ skipped: boolean, id: string, [key: string]: any }>}
+ */
+export async function generateManualPayoutDb(supabase, { guideId, actor = 'admin' } = {}) {
+  if (!guideId) throw new Error('guideId is required');
+
+  const { data: balance } = await supabase
+    .from('guide_balances')
+    .select('balance_twd')
+    .eq('guide_id', guideId)
+    .maybeSingle();
+  const balanceTwd = Number(balance?.balance_twd ?? 0);
+  if (balanceTwd <= 0) throw new Error('guide balance is empty — nothing to pay out');
+
+  const result = await createPayoutDb(supabase, guideId, balanceTwd);
+  if (result.skipped) return result;
+
+  await supabase
+    .from('audit_logs')
+    .insert({
+      actor,
+      action: 'payout_manually_generated',
+      metadata: {
+        payout_id: result.id,
+        guide_id: guideId,
+        total_twd: balanceTwd,
+        source: 'admin_manual_fallback',
+      },
+    });
+
+  return result;
+}
+
+/**
+ * #1365 缺口 2 — cancel a pending payout (pending → cancelled).
+ * The guide balance is NOT debited: cancelling releases the pending
+ * uniqueness slot so a corrected payout can be generated later.
+ * @param {any} supabase — service-role Supabase client
+ * @param {string} payoutId
+ * @param {string|null} cancelledBy — admin identifier
+ * @param {string|null} reason — optional operator note (audit only)
+ * @returns {Promise<object>} updated payout row
+ */
+export async function cancelPayoutDb(supabase, payoutId, cancelledBy, reason) {
+  const { data: payout, error: fetchErr } = await supabase
+    .from('payouts')
+    .select('*')
+    .eq('id', payoutId)
+    .single();
+  if (fetchErr || !payout) throw new Error('payout not found');
+  if (payout.state !== 'pending') throw new Error(`payout already ${payout.state}`);
+
+  const { data: updated, error: updateErr } = await supabase
+    .from('payouts')
+    .update({ state: 'cancelled' })
+    .eq('id', payoutId)
+    .select()
+    .single();
+  if (updateErr) throw updateErr;
+
+  await supabase
+    .from('audit_logs')
+    .insert({
+      actor: cancelledBy ?? 'admin',
+      action: 'payout_cancelled',
+      metadata: {
+        payout_id: payoutId,
+        guide_id: payout.guide_id,
+        total_twd: payout.total_twd,
+        cancelled_by: cancelledBy ?? 'admin',
+        reason: reason ?? null,
+      },
+    });
+
+  return updated;
+}
+
 export async function recordRefundReversalDb(supabase, { orderId, actor = 'system' }) {
   const normalizeError = (err) => {
     if (!err) return new Error('database error');
