@@ -58,6 +58,10 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
   );
   const [sort, setSort] = useState('recommended');
+  // #1380: 日期可訂 + 價格區間（server-side 過濾，狀態同步 URL 可分享）
+  const [dateFilter, setDateFilter] = useState(searchParams.get('date') || '');
+  const [priceMin, setPriceMin] = useState(searchParams.get('priceMin') || '');
+  const [priceMax, setPriceMax] = useState(searchParams.get('priceMax') || '');
   // Server-rendered initial data lets the cards render on first paint;
   // the client-side fetch below still runs whenever the search query
   // changes, so filters / search remain responsive.
@@ -72,7 +76,13 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   // That layout pass is what drove CLS to 0.76–1.43 in #1317 round-4
   // Lighthouse. Skip the initial fetch when SSR data is fresh; let any
   // query change after mount fall through normally.
-  const skipInitialFetch = useRef(initialActivities !== undefined);
+  // #1380: SSR initialActivities 不含 date/price 過濾 — URL 帶這些參數時首載必須重抓
+  const skipInitialFetch = useRef(
+    initialActivities !== undefined
+    && !searchParams.get('date')
+    && !searchParams.get('priceMin')
+    && !searchParams.get('priceMax')
+  );
 
   // Sync URL → state on mount
   useEffect(() => {
@@ -84,14 +94,19 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     const t = searchParams.get('type');
     if (t) setSelectedTypes([resolveCanonicalType(TYPES, t)]);
     else setSelectedTypes([]);
+    setDateFilter(searchParams.get('date') || '');
+    setPriceMin(searchParams.get('priceMin') || '');
+    setPriceMax(searchParams.get('priceMax') || '');
   }, [searchParams, initialRegion]);
 
-  // Update URL when text query changes (debounced 500ms for shareability)
+  // Update URL when text query / date / price inputs change (debounced 500ms for
+  // shareability). 所有輸入走同一條 debounce 管線 — 個別 onChange 不得直接
+  // router.replace，否則 mount 時排程的這顆 timer 會用舊 closure 把參數洗掉（#1380）。
   useEffect(() => {
     const t = setTimeout(() => updateUrl(query, selectedRegions, selectedTypes), 500);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, dateFilter, priceMin, priceMax]);
 
   // Fetch from API
   useEffect(() => {
@@ -105,6 +120,9 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     setLoading(true);
     const params = new URLSearchParams();
     if (query) params.set('q', query);
+    if (dateFilter) params.set('date', dateFilter);
+    if (priceMin) params.set('priceMin', priceMin);
+    if (priceMax) params.set('priceMax', priceMax);
     fetch(`/api/activities${params.toString() ? '?' + params.toString() : ''}`)
       .then(r => r.json())
       .then(json => {
@@ -112,7 +130,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [query]);
+  }, [query, dateFilter, priceMin, priceMax]);
 
   // Fetch wishlisted activity IDs for hydration.
   //
@@ -141,6 +159,9 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     if (q) params.set('q', q);
     if (regions.length === 1) params.set('region', regions[0]);
     if (types.length === 1) params.set('type', types[0]);
+    if (dateFilter) params.set('date', dateFilter);
+    if (priceMin) params.set('priceMin', priceMin);
+    if (priceMax) params.set('priceMax', priceMax);
     const qs = params.toString();
     router.replace(qs ? `/activities?${qs}` : '/activities');
   }
@@ -158,6 +179,9 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     setQuery('');
     setSelectedRegions([]);
     setSelectedTypes([]);
+    setDateFilter('');
+    setPriceMin('');
+    setPriceMax('');
     router.push('/activities');
   }
 
@@ -178,7 +202,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     return result;
   }, [activities, selectedRegions, selectedTypes, sort]);
 
-  const hasFilters = query || selectedRegions.length > 0 || selectedTypes.length > 0;
+  const hasFilters = query || selectedRegions.length > 0 || selectedTypes.length > 0 || dateFilter || priceMin || priceMax;
   const resultLabel = query
     ? `「${query}」的搜尋結果（${filtered.length} 筆）`
     : `全台灣 ${filtered.length} 個私人導遊行程`;
@@ -206,6 +230,49 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
               placeholder="行程名稱、地區⋯"
               style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
             />
+          </div>
+
+          {/* #1380: 日期可訂 */}
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="activities-date-filter" style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>出發日期（只看可訂）</label>
+            <input
+              id="activities-date-filter"
+              data-testid="activities-date-filter"
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
+            />
+          </div>
+
+          {/* #1380: 價格區間 */}
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>價格區間（NT$）</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input
+                aria-label="最低價格"
+                data-testid="activities-price-min"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={priceMin}
+                onChange={(e) => setPriceMin(e.target.value)}
+                placeholder="最低"
+                style={{ width: '50%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
+              />
+              <span style={{ color: 'var(--tp-muted)' }}>–</span>
+              <input
+                aria-label="最高價格"
+                data-testid="activities-price-max"
+                type="number"
+                min={0}
+                inputMode="numeric"
+                value={priceMax}
+                onChange={(e) => setPriceMax(e.target.value)}
+                placeholder="最高"
+                style={{ width: '50%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
+              />
+            </div>
           </div>
 
           <details open>
