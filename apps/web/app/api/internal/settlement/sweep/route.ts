@@ -51,7 +51,24 @@ export async function POST(req: NextRequest) {
     const config = await getSettlementConfig(supabase);
     const cutoffDate = new Date(Date.now() - config.t_days * 24 * 60 * 60 * 1000);
 
-    // Fetch unsettled orders (Issue #847 policy):
+    // Pre-fetch the set of already-settled order_ids. PostgREST does NOT support
+    // SQL subqueries inside in()/not.in() — passing a raw subquery string as a
+    // value makes it try to cast that literal text to uuid and 500s the whole
+    // sweep. Read the order_ids as a real query and filter in JS instead.
+    // Idempotency is still guaranteed by the upsert below
+    // (onConflict: 'order_id', ignoreDuplicates: true) — this filter is just an
+    // optimization to avoid recomputing rows that are already settled.
+    const { data: settledRows, error: settledError } = await supabase
+      .from('payout_items')
+      .select('order_id');
+
+    if (settledError) {
+      return NextResponse.json({ ok: false, error: settledError.message }, { status: 500 });
+    }
+
+    const settledOrderIds = new Set((settledRows ?? []).map((row) => row.order_id));
+
+    // Fetch candidate orders (Issue #847 policy):
     // - status = 'completed' only (refund_pending / refunded are out by definition)
     // - use booking.start_at as canonical cutoff for V2-linked rows,
     //   and fallback to activity_schedules.start_at for legacy rows
@@ -59,8 +76,7 @@ export async function POST(req: NextRequest) {
     //   plus has_complaint / has_oversell_issue so computeSweepPayoutItem's
     //   #1221 payout-hold gate can actually fire (#1106: completed orders with
     //   an open complaint / oversell investigation must NOT be auto-settled).
-    // - not yet present in payout_items
-    const { data: orders, error: ordersError } = await supabase
+    const { data: completedOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
         id,
@@ -71,14 +87,17 @@ export async function POST(req: NextRequest) {
         activity_schedules(start_at),
         operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
       `)
-      .eq('status', 'completed')
-      .not('id', 'in', `(SELECT order_id FROM payout_items)`);
+      .eq('status', 'completed');
 
     if (ordersError) {
       return NextResponse.json({ ok: false, error: ordersError.message }, { status: 500 });
     }
 
-    if (!orders || orders.length === 0) {
+    // Drop orders already present in payout_items (the JS-side equivalent of the
+    // unsupported NOT IN subquery).
+    const orders = (completedOrders ?? []).filter((order) => !settledOrderIds.has(order.id));
+
+    if (orders.length === 0) {
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
