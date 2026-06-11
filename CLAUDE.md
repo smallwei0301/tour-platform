@@ -70,6 +70,8 @@ Middleware's `applyPublicPausedGuard` reads `soft_launch_controls` (via anon cli
 ### Booking V2 vs legacy
 The platform is mid-migration from a static-schedule model to an availability/slots **Booking V2** engine (Phase 12, issue #621). Feature flags live in `apps/web/src/config/feature-flags.mjs`; `NEXT_PUBLIC_BOOKING_V2_ENABLED` **defaults ON** and `=0` rolls back to legacy. V2 API routes live under `apps/web/app/api/v2/**`; availability logic under `src/lib/availability-v2/` and `slot-generator.ts`. Booking-state and order/payment chains span three layers (booking → order → payment) that must stay consistent; ECPay callbacks must be idempotent (`checkout-idempotency.ts`, `payment-reconciliation.ts`).
 
+**Legacy booking 凍結（#1386 階段一，owner 拍板 2026-06-11 生效）**：legacy booking 路徑（非 `app/api/v2/**` 的 checkout／availability／order-state routes）**停止接受功能修改，只修 P0 bug**。新功能一律落在 V2。退役時間表與後續階段見 `docs/operations/booking-v2-rollback-runbook.md`。
+
 ### `.ts` vs `.mjs` in `src/lib`
 Logic that must be importable by edge middleware or run without TS compilation (auth, sessions, soft-launch, store) is authored as `.mjs`; the rest is `.ts`. TypeScript `strict` is on but full strictness is still being expanded across booking-critical modules (issue #68) — match the style of the file you are editing.
 
