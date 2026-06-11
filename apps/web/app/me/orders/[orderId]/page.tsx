@@ -102,6 +102,14 @@ export default function OrderDetailPage() {
     });
   }, [orderId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // #1379: 評論邀請信 CTA（/me/orders/{id}?review=1）自動展開評價表單。
+  // 用 window.location 而非 useSearchParams，避免 client page 的 Suspense 邊界需求。
+  useEffect(() => {
+    if (!order || order.status !== 'completed') return;
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get('review') === '1') setShowReviewForm(true);
+  }, [order]);
+
   const loadOrder = async () => {
     if (!orderId) { setLoading(false); return; }
     try {

@@ -268,6 +268,10 @@ describe('Issue 359 — AC7: POST /api/reviews verifies booking ownership', () =
     assert.match(src, /bookings/, 'Must query bookings table to verify ownership');
   });
 
+  // #1379: ownership 判斷集中到 src/lib/review-ownership.mjs 的
+  // evaluateReviewSubmission（route 改為單一守門呼叫）。原先鎖在 route 原始碼上的
+  // bookingOwned / !booking-fallback 形狀改鎖 helper 原始碼；行為面由
+  // review-ownership-auth.behavior.test.mjs 與 issue1379-traveler-review-submit.test.mjs 覆蓋。
   it('AC7: uses bookings.traveler_id ownership contract, with orders.user_id fallback for legacy orderId payload', () => {
     const src = readRoute('app/api/reviews/route.ts');
     assert.match(
@@ -275,14 +279,13 @@ describe('Issue 359 — AC7: POST /api/reviews verifies booking ownership', () =
       /\.from\('bookings'\)[\s\S]*\.select\(\s*['"]id,\s*traveler_id,\s*status['"]\s*\)/,
       'Must query bookings with traveler_id ownership fields'
     );
-    assert.match(src, /bookingOwned\s*=\s*Boolean\(booking\s*&&\s*booking\.traveler_id\s*===\s*user\.id\)/,
-      'Must perform primary booking owner check with traveler_id');
     assert.match(
       src,
       /\.from\('orders'\)[\s\S]*\.select\(\s*['"]id,\s*user_id,\s*status['"]\s*\)/,
       'Must support orders ownership fallback using orders.user_id'
     );
     assert.match(src, /if \(!booking\)/, 'Must use fallback order lookup only when booking lookup failed');
+    assert.match(src, /evaluateReviewSubmission\(/, 'Route must gate via evaluateReviewSubmission');
     assert.doesNotMatch(
       src,
       /\.from\('orders'\)[\s\S]*\.select\(\s*['"]id,\s*user_id,\s*status,\s*traveler_id|traveler_id\s*\]/,
@@ -290,19 +293,25 @@ describe('Issue 359 — AC7: POST /api/reviews verifies booking ownership', () =
     );
   });
 
-  it('AC7: route forbids non-owned existing booking even when fallback order belongs to another traveler', () => {
-    const src = readRoute('app/api/reviews/route.ts');
-    assert.match(src, /!booking && order\?\.user_id === user\.id/, 'Fallback gate should be coupled with !booking');
-    assert.doesNotMatch(
-      src,
-      /Boolean\(\s*order\.user_id\s*===\s*user\.id\s*\)/,
-      'Must not authorize by order owner when booking exists (must gate by !booking)'
+  it('AC7: helper forbids non-owned existing booking even when fallback order belongs to another traveler', () => {
+    const helperSrc = readRoute('src/lib/review-ownership.mjs');
+    assert.match(
+      helperSrc,
+      /bookingOwned:\s*booking\s*\?\s*booking\.traveler_id === userId\s*:\s*false/,
+      'Primary booking owner check must use traveler_id'
+    );
+    assert.match(
+      helperSrc,
+      /orderOwned:\s*!booking && order\s*\?\s*order\.user_id === userId\s*:\s*false/,
+      'Fallback gate must be coupled with !booking'
     );
   });
 
   it('AC7: returns 403 FORBIDDEN if booking not owned by user', () => {
-    const src = readRoute('app/api/reviews/route.ts');
-    assert.match(src, /FORBIDDEN/i, 'Must return FORBIDDEN if booking not owned');
-    assert.match(src, /status:\s*403/, 'Must return HTTP 403');
+    const helperSrc = readRoute('src/lib/review-ownership.mjs');
+    assert.match(helperSrc, /FORBIDDEN/, 'Helper must return FORBIDDEN if booking not owned');
+    assert.match(helperSrc, /status:\s*403/, 'Must return HTTP 403');
+    const routeSrc = readRoute('app/api/reviews/route.ts');
+    assert.match(routeSrc, /\{\s*status:\s*verdict\.status\s*\}/, 'Route must propagate verdict status');
   });
 });
