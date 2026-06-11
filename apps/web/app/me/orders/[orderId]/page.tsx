@@ -90,6 +90,16 @@ export default function OrderDetailPage() {
   const [rescheduleErr, setRescheduleErr] = useState<string | null>(null);
   const [rescheduleDone, setRescheduleDone] = useState(false);
 
+  // #1411 — Order messages state
+  const [msgThread, setMsgThread] = useState<{
+    canView: boolean;
+    canPost: boolean;
+    messages: Array<{ id: string; senderRole: string; body: string; createdAt: string | null }>;
+  } | null>(null);
+  const [msgInput, setMsgInput] = useState('');
+  const [sendingMsg, setSendingMsg] = useState(false);
+  const [msgErr, setMsgErr] = useState<string | null>(null);
+
   // Refund state
   const [showRefundForm, setShowRefundForm] = useState(false);
   const [refundReason, setRefundReason] = useState('');
@@ -130,10 +140,44 @@ export default function OrderDetailPage() {
       }
       const j = await res.json();
       setOrder(j.data || null);
+      if (j.data) void loadMessages();
     } catch {
       setOrder(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // #1411 — 留言串（canView false 時整個區塊隱藏，例如 pending_payment）
+  const loadMessages = async () => {
+    try {
+      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/messages`, { cache: 'no-store' });
+      const j = await res.json();
+      setMsgThread(j?.data ?? null);
+    } catch {
+      setMsgThread(null);
+    }
+  };
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!msgInput.trim()) return;
+    setSendingMsg(true);
+    setMsgErr(null);
+    try {
+      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/messages`, {
+        method: 'POST',
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ body: msgInput.trim() }),
+      });
+      const j = await res.json();
+      if (!res.ok || j.error) throw new Error(j.error?.message || '留言送出失敗');
+      setMsgInput('');
+      await loadMessages();
+    } catch (error) {
+      setMsgErr(error instanceof Error ? error.message : '留言送出失敗，請稍後再試');
+    } finally {
+      setSendingMsg(false);
     }
   };
 
@@ -436,6 +480,69 @@ export default function OrderDetailPage() {
             </button>
           )}
           {rescheduleErr && <p style={{ color: 'crimson', fontSize: 13, marginTop: 8 }}>{rescheduleErr}</p>}
+        </div>
+      )}
+
+      {/* #1411 — 聯絡嚮導留言串（付款後～completed+14 天可發言，之後唯讀） */}
+      {msgThread?.canView && (
+        <div data-testid="order-messages-section" style={cardStyle}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>聯絡嚮導</h2>
+          {msgThread.messages.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 12px' }}>
+              還沒有訊息 — 行前的疑問（集合地點、裝備、天氣備案）都可以直接問嚮導。
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12, maxHeight: 320, overflowY: 'auto' }}>
+              {msgThread.messages.map((m) => (
+                <div
+                  key={m.id}
+                  data-testid="order-message-item"
+                  style={{
+                    alignSelf: m.senderRole === 'traveler' ? 'flex-end' : 'flex-start',
+                    maxWidth: '85%',
+                    background: m.senderRole === 'traveler' ? '#fdf2f8' : '#f1f5f9',
+                    border: `1px solid ${m.senderRole === 'traveler' ? '#fbcfe8' : '#e2e8f0'}`,
+                    borderRadius: 12,
+                    padding: '8px 12px',
+                  }}
+                >
+                  <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 2px' }}>
+                    {m.senderRole === 'traveler' ? '我' : m.senderRole === 'guide' ? '嚮導' : '客服'}
+                    <span style={{ fontWeight: 400, marginLeft: 6 }}>
+                      {m.createdAt ? new Date(m.createdAt).toLocaleString('zh-TW') : ''}
+                    </span>
+                  </p>
+                  <p style={{ fontSize: 13, color: '#111827', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.body}</p>
+                </div>
+              ))}
+            </div>
+          )}
+          {msgThread.canPost ? (
+            <form onSubmit={handleSendMessage}>
+              <textarea
+                data-testid="order-message-input"
+                value={msgInput}
+                onChange={(e) => setMsgInput(e.target.value)}
+                placeholder="想問嚮導什麼？（最長 1000 字）"
+                rows={2}
+                maxLength={1000}
+                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+              />
+              {msgErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{msgErr}</p>}
+              <button
+                type="submit"
+                data-testid="order-message-send"
+                style={{ ...btnPrimary, marginTop: 8 }}
+                disabled={sendingMsg || !msgInput.trim()}
+              >
+                {sendingMsg ? '送出中…' : '送出訊息'}
+              </button>
+            </form>
+          ) : (
+            <p data-testid="order-messages-readonly" style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
+              此訂單的留言串已轉唯讀（行程結束 14 天後或訂單已取消/退款）。如需協助請聯絡客服。
+            </p>
+          )}
         </div>
       )}
 

@@ -137,6 +137,9 @@ export const limiters = {
 
   // /api/reviews POST — 5 submissions per minute per IP (#1379)
   reviewSubmit: new RateLimiter(5, 60 * 1000),
+
+  // order messages POST — 10 messages per 10 minutes per sender (#1411)
+  messageSend: new RateLimiter(10, 10 * 60 * 1000),
 };
 
 // Named exports for convenience
@@ -147,6 +150,7 @@ export const eventsLimiter = limiters.events;
 export const adminLoginLimiter = limiters.adminLogin;
 export const guideLoginLimiter = limiters.guideLogin;
 export const reviewSubmitLimiter = limiters.reviewSubmit;
+export const messageSendLimiter = limiters.messageSend;
 
 /**
  * Middleware helper: Returns 429 if limit exceeded

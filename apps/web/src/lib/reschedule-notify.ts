@@ -21,7 +21,8 @@ async function getServiceClient() {
   });
 }
 
-async function lookupOrderContext(orderId: string): Promise<{
+/** #1411 起由 order-message-notify.ts 共用 → export。 */
+export async function lookupOrderContext(orderId: string): Promise<{
   activityTitle: string;
   contactName?: string;
   contactEmail?: string;

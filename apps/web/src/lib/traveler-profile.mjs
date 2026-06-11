@@ -5,12 +5,13 @@
 const PHONE_RE = /^(09\d{8}|\+8869\d{8})$/;
 const DISPLAY_NAME_MAX = 50;
 
-/** 交易類信件（訂單/付款/退款/行程後評論邀請）— 不受行銷 opt-out 影響。 */
+/** 交易類信件（訂單/付款/退款/行程後評論邀請/訂單留言通知）— 不受行銷 opt-out 影響。 */
 export const TRANSACTIONAL_EMAIL_KINDS = Object.freeze([
   'order_confirmation',
   'payment_receipt',
   'refund_update',
   'review_invitation',
+  'order_message',
 ]);
 
 /**
