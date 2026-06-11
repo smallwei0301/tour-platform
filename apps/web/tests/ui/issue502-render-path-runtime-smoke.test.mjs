@@ -117,6 +117,12 @@ test('GH-502 render-path isolation: module import + metadata + component render 
       getActivityBySlugDb: async () => ({ slug: 'real-slug', regionSlug: 'taipei', region: '台北市' }),
       buildCanonicalActivityDetailPath: () => '/activities/taipei/real-slug',
     },
+    // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
+    '../../../../src/lib/activity-jsonld.mjs': {
+      buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
+      resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',
+      serialiseJsonLd: (v) => JSON.stringify(v),
+    },
     '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
     '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
     '../../../../src/lib/date-plan-source.mjs': {
@@ -144,10 +150,11 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   });
 
   const metadata = await regionModule.generateMetadata({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
-  // GH-502 + #626: generateMetadata humanizes slug (no DB lookup). Page adds brand suffix.
-  // Updated in 2026-06-03: slug is now humanized to "Real Slug | Midao 祕島" (Title Case + suffix)
-  assert.equal(metadata.title, 'Real Slug | Midao 祕島');
-  // description from layout default; generateMetadata no longer sets it per #626
+  // GH-502 + #1378: metadata 與頁面以 React cache() 共用同一次 lookup（仍只有一次 DB
+  // 查詢），成功時 title/description/og:image 反映真實活動；lookup 失敗才 fallback
+  // 回 humanized slug（見下方 timeout-behavior 測試仍鎖 fail-fast 行為）。
+  assert.equal(metadata.title, 'DB Activity Title | Midao 祕島');
+  assert.equal(metadata.description, 'Probe short description');
 
   const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
   const html = renderToStaticMarkup(element);
@@ -197,6 +204,12 @@ test('GH-502 probe safety: production-like env must not serve fake probe activit
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async () => null,
+    },
+    // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
+    '../../../../src/lib/activity-jsonld.mjs': {
+      buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
+      resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',
+      serialiseJsonLd: (v) => JSON.stringify(v),
     },
     '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
     '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
@@ -277,6 +290,12 @@ test('GH-502 render-path isolation: non-probe render path uses DB result and doe
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }),
+    },
+    // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
+    '../../../../src/lib/activity-jsonld.mjs': {
+      buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
+      resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',
+      serialiseJsonLd: (v) => JSON.stringify(v),
     },
     '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
     '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/real-slug' },

@@ -86,6 +86,12 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
       getActivityBySlugDb: async () => compatNever,
       buildCanonicalActivityDetailPath: () => '/activities/taipei/fallback-slug',
     },
+    // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
+    '../../../../src/lib/activity-jsonld.mjs': {
+      buildActivityProductJsonLd: () => ({}),
+      resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',
+      serialiseJsonLd: (v) => JSON.stringify(v),
+    },
     '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
     '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
     '../../../../src/lib/date-plan-source.mjs': {

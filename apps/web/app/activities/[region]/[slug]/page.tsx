@@ -2,7 +2,13 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
+import {
+  buildActivityProductJsonLd,
+  resolveActivityOgImage,
+  serialiseJsonLd,
+} from '../../../../src/lib/activity-jsonld.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
 import { SelectedPlanProvider } from '../../../../src/components/activity/SelectedPlanContext';
@@ -41,25 +47,47 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   }) as Promise<T>;
 }
 
+// GH-502 + #1378: metadata 與頁面共用同一次 lookup（React cache() 去重），
+// metadata 不會觸發第二次 DB 查詢、也不會比頁面本身多等 —— 失敗/逾時則
+// fallback 到 humanized slug 與預設 OG 圖，絕不擋下頁面渲染。
+const getActivityForMetadata = cache((slug: string) => getActivityBySlugDb(slug));
+
 export async function generateMetadata(
   { params }: { params: Promise<{ region: string; slug: string }> }
 ): Promise<Metadata> {
-  // GH-502: do NOT call getActivityBySlugDb here — metadata must not trigger a DB lookup
-  // to avoid render lock on cold path. Title humanizes slug; actual title is set client-side.
   const { slug } = await params;
   const humanTitle = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+  let activity: Awaited<ReturnType<typeof getActivityBySlugDb>> = null;
+  try {
+    activity = await withTimeout(
+      getActivityForMetadata(slug),
+      RENDER_ACTIVITY_TIMEOUT_MS,
+      'activity-metadata',
+    );
+  } catch {
+    activity = null;
+  }
+
+  const title = `${activity?.title || humanTitle} | Midao 祕島`;
+  const description = activity?.shortDescription
+    || '探索台灣在地特色秘境行程，與專業導遊一起發現不一樣的台灣。';
+  const ogImageUrl = resolveActivityOgImage(activity?.coverImageUrl);
+
   return {
-    title: `${humanTitle} | Midao 祕島`,
+    title,
+    description,
     openGraph: {
-      title: `${humanTitle} | Midao 祕島`,
+      title,
+      description,
       type: 'website',
-      images: [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: 'Midao 祕島 行程' }],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: activity?.title || 'Midao 祕島 行程' }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${humanTitle} | Midao 祕島`,
-      description: '探索台灣在地特色秘境行程，與專業導遊一起發現不一樣的台灣。',
-      images: ['https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80'],
+      title,
+      description,
+      images: [ogImageUrl],
     },
   };
 }
@@ -70,7 +98,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   let activity: Awaited<ReturnType<typeof getActivityBySlugDb>>;
   try {
     activity = await withTimeout(
-      getActivityBySlugDb(slug),
+      // 與 generateMetadata 共用 cache() 結果 — 每請求仍只有一次 DB lookup（GH-502）
+      getActivityForMetadata(slug),
       RENDER_ACTIVITY_TIMEOUT_MS,
       'activity-detail-render',
     );
@@ -183,6 +212,16 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               }
             } : {})
           })
+        }}
+      />
+      {/* #1378 — Product schema（Offer + AggregateRating）讓 SERP 顯示價格與星等 */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serialiseJsonLd(buildActivityProductJsonLd(
+            activityData,
+            process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app',
+          ))
         }}
       />
       {activity.faq && activity.faq.length > 0 && (
