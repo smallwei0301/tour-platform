@@ -79,6 +79,18 @@ export default function CheckoutPage() {
     createClient().auth.getUser().then(({ data }) => {
       if (data?.user?.email) setContactEmail(data.user.email);
       setAuthChecked(true);
+
+      // #1387 — prefill：登入者帶入 profile 聯絡資訊（僅填空欄位，可覆寫）
+      if (data?.user) {
+        fetch('/api/me/profile', { cache: 'no-store' })
+          .then((r) => r.json())
+          .then((j) => {
+            if (!j?.data) return;
+            if (j.data.displayName) setContactName((prev) => prev || j.data.displayName);
+            if (j.data.phone) setContactPhone((prev) => prev || j.data.phone);
+          })
+          .catch(() => {});
+      }
     });
   }, []);
 
