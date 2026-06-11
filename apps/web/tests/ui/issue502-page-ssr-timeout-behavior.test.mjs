@@ -109,6 +109,8 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
     '../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div', null, 'ActivityQASection') },
     // #1381: 公開促銷碼 banner（client component，mock 為 noop）
     '../../../../src/components/activity/PublicPromoBanner': { PublicPromoBanner: () => React.createElement('div', null, 'PublicPromoBanner') },
+    // #1382: 推薦區塊（client component，mock 為 noop）
+    '../../../../src/components/activity/ActivityRecommendations': { ActivityRecommendations: () => React.createElement('div', null, 'ActivityRecommendations') },
     '../../../../src/components/ui/PublicIcon': { PublicIcon: ({ name }) => React.createElement('span', { 'data-public-icon': name }) },
     react: React,
     'react/jsx-runtime': require('react/jsx-runtime'),

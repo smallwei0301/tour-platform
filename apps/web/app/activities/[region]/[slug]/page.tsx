@@ -19,6 +19,7 @@ import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHr
 import { resolveDatePlanPresentation } from '../../../../src/lib/date-plan-source.mjs';
 import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
 import { PublicPromoBanner } from '../../../../src/components/activity/PublicPromoBanner';
+import { ActivityRecommendations } from '../../../../src/components/activity/ActivityRecommendations';
 import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
 
 // Issue #502: avoid force-static/unstable_cache render lock on production cold path.
@@ -616,6 +617,19 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
         </div>
       </div>
+
+      {/* ── #1382 推薦（同地區/同類型）＋最近瀏覽 — client-side、不阻塞 LCP ── */}
+      <ActivityRecommendations
+        current={{
+          slug: activity.slug,
+          title: activity.title,
+          region: activity.region,
+          regionSlug: (activity as { regionSlug?: string }).regionSlug,
+          category: (activity as { category?: string }).category,
+          priceTwd: activity.priceTwd,
+          coverImageUrl: activity.coverImageUrl ?? null,
+        }}
+      />
 
       {/* ── Mobile bottom bar ── */}
       <ActivityBottomBar
