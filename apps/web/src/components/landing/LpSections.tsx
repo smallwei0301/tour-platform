@@ -16,6 +16,9 @@ export function LpHero() {
         role="img"
         aria-label="自洞穴內仰望峽谷，曙光灑落山谷與溪流"
       />
+      {/* 曙光動態：洞口暖光呼吸＋斜射光束（prefers-reduced-motion 時停用） */}
+      <div className="lp-hero-glow" aria-hidden="true" />
+      <div className="lp-hero-beam" aria-hidden="true" />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">
         <span>祕島之境</span>
@@ -196,8 +199,11 @@ export function LpGuide() {
       {/* 參考圖為單一邊框大卡：照片＋文字（左 60.5%）＋徽章 2×2（右） */}
       <div className="lp-guide-card">
         <Link href="/guides" className="lp-guide-story">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/lp/guide-portrait.jpg" alt="泰雅族在地嚮導巴勇的肖像" />
+          {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
+          <div className="lp-guide-photo">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/lp/guide-portrait.jpg" alt="泰雅族在地嚮導巴勇的肖像" />
+          </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・真實陪伴</p>
             <p className="lp-guide-name">南橫泰雅・巴勇</p>

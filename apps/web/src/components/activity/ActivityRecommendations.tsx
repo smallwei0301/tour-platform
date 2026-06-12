@@ -51,25 +51,23 @@ function CardRow({ heading, items, testId }: { heading: string; items: ActivityC
     <section data-testid={testId} style={{ marginTop: 24 }}>
       <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 12 }}>{heading}</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+        {/* 與行程列表卡同視覺：樣式收斂在 globals.css 的 .tp-rec-card（深綠卡底＋奶油字） */}
         {items.map((a) => (
           <Link
             key={a.slug}
             href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}
-            style={{
-              display: 'block', border: '1px solid var(--tp-border, #e5e7eb)', borderRadius: 12,
-              overflow: 'hidden', textDecoration: 'none', color: 'inherit', background: '#fff',
-            }}
+            className="tp-rec-card"
           >
             {a.coverImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- 推薦小卡，lazy 原生即可
-              <img src={a.coverImageUrl} alt={a.title} loading="lazy" style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover' }} />
+              <img src={a.coverImageUrl} alt={a.title} loading="lazy" className="tp-rec-card-img" />
             ) : (
-              <div style={{ width: '100%', aspectRatio: '4 / 3', background: '#f3f4f6' }} />
+              <div className="tp-rec-card-img" />
             )}
-            <div style={{ padding: '8px 10px' }}>
-              <p style={{ fontSize: 13, fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</p>
+            <div className="tp-rec-card-body">
+              <p className="tp-rec-card-title">{a.title}</p>
               {a.priceTwd != null && (
-                <p style={{ fontSize: 12, color: 'var(--tp-muted, #6b7280)', margin: '4px 0 0' }}>NT${Number(a.priceTwd).toLocaleString()} 起</p>
+                <p className="tp-rec-card-price">NT${Number(a.priceTwd).toLocaleString()} 起</p>
               )}
             </div>
           </Link>

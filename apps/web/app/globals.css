@@ -2125,6 +2125,31 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .admin-day-strip > * { scroll-snap-align: start; }
 }
 
+/* ── 行程詳情推薦小卡（○○的其他行程／你可能也喜歡／最近瀏覽） ──
+   與行程列表卡共用同一套深綠卡底＋奶油字 token，主題調整一處生效 */
+.tp-rec-card {
+  display: block;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--tp-card-bg);
+  color: var(--tp-text);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.tp-rec-card:hover { transform: translateY(-2px); border-color: rgba(190, 178, 137, 0.55); }
+.tp-rec-card-img {
+  width: 100%; aspect-ratio: 4 / 3;
+  object-fit: cover; display: block;
+  background: #232e21;
+}
+.tp-rec-card-body { padding: 8px 10px; }
+.tp-rec-card-title {
+  font-size: 13px; font-weight: 600; margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--tp-text);
+}
+.tp-rec-card-price { font-size: 12px; color: var(--tp-muted); margin: 4px 0 0; }
+
 /* ============================================================
    Midao Landing Page (祕島 LP) — 深綠×古紙×黃銅
    ============================================================ */
@@ -2136,6 +2161,49 @@ details[open] .kkd-faq-q::before { content: '- '; }
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   background-image: url('/images/lp/hero-cave.jpg');
   background-size: cover; background-position: center top;
+  /* 曙光照進山洞：慢速推近（Ken Burns），縮放原點對準洞口（上方中央偏右） */
+  transform-origin: 62% 26%;
+  animation: lpHeroZoom 26s ease-in-out infinite alternate;
+}
+@keyframes lpHeroZoom {
+  from { transform: scale(1); }
+  to { transform: scale(1.05); }
+}
+/* 洞口曙光呼吸：暖色 radial＋screen 疊色（只會變亮不會壓暗），蓋在照片區 */
+.lp-hero-glow {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  pointer-events: none;
+  background: radial-gradient(40% 30% at 60% 20%,
+    rgba(255, 219, 150, 0.5) 0%,
+    rgba(255, 203, 128, 0.18) 48%,
+    rgba(255, 203, 128, 0) 74%);
+  mix-blend-mode: screen;
+  animation: lpHeroDawn 9s ease-in-out infinite alternate;
+}
+@keyframes lpHeroDawn {
+  from { opacity: 0.25; }
+  to { opacity: 0.85; }
+}
+/* 斜射光束：自洞口往左下緩慢掃動的細光帶 */
+.lp-hero-beam {
+  position: absolute; top: -8%; right: 10%; width: 36%; height: 120%;
+  pointer-events: none;
+  background: linear-gradient(116deg,
+    rgba(255, 232, 180, 0) 40%,
+    rgba(255, 232, 180, 0.13) 48%,
+    rgba(255, 241, 205, 0.24) 52%,
+    rgba(255, 232, 180, 0.12) 57%,
+    rgba(255, 232, 180, 0) 66%);
+  filter: blur(8px);
+  mix-blend-mode: screen;
+  animation: lpHeroBeam 13s ease-in-out infinite alternate;
+}
+@keyframes lpHeroBeam {
+  from { opacity: 0.15; transform: translateX(-14px); }
+  to { opacity: 0.7; transform: translateX(12px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-hero-photo, .lp-hero-glow, .lp-hero-beam { animation: none; }
 }
 .lp-hero-photo::before {
   content: ''; position: absolute; inset: 0;
@@ -2260,17 +2328,17 @@ details[open] .kkd-faq-q::before { content: '- '; }
   border-radius: 12px;
   overflow: hidden;
   display: grid;
-  /* 36%：字級放大後文字欄需要更多寬度，避免 footer 評價與價格互相重疊 */
-  grid-template-columns: 36% 1fr;
+  /* 手機：上圖下文堆疊 — 照片全寬 16:10，橫幅原圖（3:2）幾乎不裁切 */
+  grid-template-columns: 1fr;
   color: inherit;
 }
 .lp-feat-right { display: flex; flex-direction: column; min-width: 0; }
-.lp-feat-photo { position: relative; min-height: 158px; }
+.lp-feat-photo { position: relative; aspect-ratio: 16 / 10; }
 .lp-feat-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 /* 編輯精選書籤標籤：懸掛於照片左上（蓋過卡片上邊框） */
 .lp-feat-photo .lp-feat-badge {
-  position: absolute; top: 0; left: 10px;
-  width: 28px; height: auto; inset: auto;
+  position: absolute; top: 0; left: 12px;
+  width: 34px; height: auto; inset: auto;
   z-index: 1;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
 }
@@ -2335,7 +2403,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   transition: border-color 0.15s, transform 0.15s;
 }
 .lp-tour-card:hover { border-color: rgba(190, 178, 137, 0.55); transform: translateY(-1px); }
-.lp-tour-photo { position: relative; min-height: 86px; }
+.lp-tour-photo { position: relative; min-height: 86px; aspect-ratio: 1 / 1; }
 .lp-tour-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .lp-tour-body { padding: 10px 13px 9px; min-width: 0; }
 .lp-tour-title {
@@ -2443,22 +2511,25 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-guide-story {
   position: relative;
   min-height: 94px;
-  display: block; color: inherit;
+  display: flex; align-items: stretch; color: inherit;
 }
-.lp-guide-story img {
-  position: absolute; left: 0; top: 0; height: 100%; width: 55%;
-  object-fit: cover; object-position: center top;
+/* 照片獨立欄：固定欄寬、object-position 鎖臉部，漸層緊貼照片右緣 —
+   任何裝置寬度構圖與淡出位置一致，不再被不同程度切斷 */
+/* aspect-ratio 鎖 3:4 直幅：照片寬度跟著卡高走，任何裝置構圖一致 */
+.lp-guide-photo { position: relative; flex: 0 0 auto; aspect-ratio: 3 / 4; max-width: 45%; }
+.lp-guide-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 18%;
 }
-.lp-guide-story::before {
-  content: ''; position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(90deg, rgba(22, 31, 22, 0) 16%, rgba(22, 31, 22, 0.45) 28%, rgba(22, 31, 22, 0.95) 40%, rgba(22, 31, 22, 1) 47%);
+.lp-guide-photo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(25, 35, 26, 0) 48%, rgba(25, 35, 26, 0.6) 78%, #19231a 100%);
 }
 .lp-guide-text {
   position: relative; z-index: 2;
-  height: 100%;
+  flex: 1; min-width: 0;
   display: flex; flex-direction: column; justify-content: center;
-  /* 字級放大後文字欄左移＋留右側內距，避免貼到信任徽章框線 */
-  padding: 8px 8px 8px 40%;
+  padding: 8px 8px 8px 12px;
 }
 .lp-guide-label { margin: 0 0 5px; font-size: 11px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
 .lp-guide-name { margin: 0 0 7px; font-size: 14px; font-weight: 900; line-height: 1.2; letter-spacing: 0.03em; color: #f0ecdc; white-space: nowrap; }
@@ -2525,6 +2596,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-hero-caption::after { width: 90px; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-hero-photo { width: 52%; }
+  .lp-hero-glow { width: 52%; }
+  .lp-hero-beam { right: 11%; width: 30%; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }
@@ -2534,8 +2607,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-theme-title { font-size: 23px; }
   .lp-theme-sub { font-size: 14px; }
   .lp-featured { padding-top: 48px; }
+  /* 平板維持堆疊（照片全寬 16:10）；並排雙欄從 1024 起（見下方 @1024） */
   .lp-feat-card { border-radius: 16px; }
-  .lp-feat-photo { min-height: 300px; }
   .lp-feat-body { padding: 30px 34px 18px; }
   .lp-feat-title { font-size: 32px; margin-bottom: 10px; }
   .lp-feat-subtitle { font-size: 17px; margin-bottom: 16px; padding-bottom: 8px; }
@@ -2551,21 +2624,44 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide { padding-top: 36px; }
   .lp-guide-card { border-radius: 16px; }
   .lp-guide-story { min-height: 270px; }
-  .lp-guide-text { padding: 20px 28px 20px 46%; }
-  .lp-guide-label { font-size: 16px; margin-bottom: 10px; }
-  .lp-guide-name { font-size: 29px; margin-bottom: 12px; }
-  .lp-guide-quote { font-size: 18px; margin-bottom: 10px; line-height: 1.5; }
-  .lp-guide-link { font-size: 16px; }
+  /* 平板：中等字級、文字緊接照片（靠右與大字級到 1024 才啟用） */
+  .lp-guide-text { padding: 16px 20px; }
+  .lp-guide-label { font-size: 13px; margin-bottom: 8px; }
+  .lp-guide-name { font-size: 20px; margin-bottom: 10px; }
+  .lp-guide-quote { font-size: 14px; margin-bottom: 8px; line-height: 1.5; }
+  .lp-guide-link { font-size: 13px; }
   .lp-trust-grid2 { gap: 10px; margin: 20px 14px 20px 0; }
   .lp-trust-card { height: 84px; padding: 8px 6px; gap: 9px; border-radius: 12px; }
   .lp-trust-card svg { width: 28px; height: 28px; }
   .lp-trust-card span { font-size: 17px; line-height: 1.5; }
+  /* 更多行程：桌機兩欄卡片，照片固定 4:3 不被拉成超寬裁切 */
+  .lp-tours-list { flex-direction: row; gap: 18px; }
+  .lp-tour-card { flex: 1 1 0; grid-template-columns: 38% 1fr; }
+  .lp-tour-photo { aspect-ratio: 4 / 3; }
+  .lp-tour-body { padding: 16px 18px 14px; }
+  .lp-tour-title { font-size: 17px; }
+  .lp-tour-tagline { font-size: 13px; }
+  .lp-tour-meta { font-size: 12px; }
+  .lp-tour-price { font-size: 16px; }
+  .lp-more-link { font-size: 14px; margin-top: 18px; }
   .lp-closing { margin-top: 72px; }
   .lp-closing-edge { height: 38px; }
   .lp-closing-paper { padding: 20px 24px 76px; }
   .lp-closing-title { font-size: 36px; margin: 14px 0 18px; }
   .lp-closing-desc { font-size: 17px; margin-bottom: 30px; }
   .lp-stamp { width: 150px; height: 150px; right: 4%; top: -26px; }
+}
+
+/* ── RWD：桌機（精選卡並排雙欄） ── */
+@media (min-width: 1024px) {
+  .lp-feat-card { grid-template-columns: 41% 1fr; }
+  .lp-feat-photo { aspect-ratio: 4 / 3; min-height: 0; }
+  /* 導遊卡：桌機文字區靠右（左留白讓照片呼吸）＋大字級 */
+  .lp-guide-text { padding: 20px 28px; margin-left: 14%; flex: 0 1 auto; }
+  .lp-guide-label { font-size: 16px; margin-bottom: 10px; }
+  .lp-guide-name { font-size: 29px; margin-bottom: 12px; }
+  .lp-guide-quote { font-size: 18px; margin-bottom: 10px; line-height: 1.5; }
+  .lp-guide-link { font-size: 16px; }
 }
 
 @media (max-width: 410px) {
