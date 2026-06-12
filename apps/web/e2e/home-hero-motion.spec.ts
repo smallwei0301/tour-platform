@@ -15,7 +15,7 @@ import { test, expect } from './helpers';
  */
 
 // lp-hero-fg＝去背洞穴前景（推進拉遠）；遠景山谷 lp-hero-photo 靜止
-const LAYER_CLASSES = ['lp-hero-fg', 'lp-hero-dawn', 'lp-hero-rays', 'lp-hero-clouds', 'lp-hero-clouds2'];
+const LAYER_CLASSES = ['lp-hero-fg', 'lp-hero-dawn', 'lp-hero-rays', 'lp-hero-cloudbox', 'lp-hero-clouds', 'lp-hero-clouds2'];
 
 async function runningTargets(page: import('@playwright/test').Page): Promise<string[]> {
   // fg 推近為單程＋fill forwards：6.15s 後 playState 變 finished（仍保持定格）→ 一併接受

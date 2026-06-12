@@ -42,6 +42,13 @@ export function LpHeroMotion() {
           { opacity: 0.95, transform: 'rotate(2deg)' },
         ],
         { duration: 6000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
+      // 雲霧整體緩慢起伏（與下方水平飄移疊加 → 流體的波動感）
+      animate('.lp-hero-cloudbox',
+        [
+          { transform: 'translateY(0%) scale(1)' },
+          { transform: 'translateY(-2.2%) scale(1.03)' },
+        ],
+        { duration: 11000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
       // 雲層飄動：平移一個圖樣週期（background-size 50% → -50% 即無縫循環）
       animate('.lp-hero-clouds',
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
