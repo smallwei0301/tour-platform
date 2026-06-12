@@ -17,13 +17,16 @@ export function LpHero() {
         role="img"
         aria-label="自洞穴內仰望峽谷，曙光灑落山谷與溪流"
       />
-      {/* 曙光動態圖層：暮色罩＋洞口光束＋飄動雲層（由 LpHeroMotion 以 WAAPI 驅動） */}
-      <div className="lp-hero-dawn" aria-hidden="true" />
-      <div className="lp-hero-rays" aria-hidden="true" />
+      {/* 曙光動態圖層（由 LpHeroMotion 以 WAAPI 驅動）。
+          疊層＝物理景深：靜止遠景山谷（photo）→ 洞口飄雲 →
+          推進中的去背洞穴前景（fg）→ 暮色罩 → 丁達爾光束 */}
       <div className="lp-hero-cloudbox" aria-hidden="true">
         <div className="lp-hero-clouds" />
         <div className="lp-hero-clouds2" />
       </div>
+      <div className="lp-hero-fg" aria-hidden="true" />
+      <div className="lp-hero-dawn" aria-hidden="true" />
+      <div className="lp-hero-rays" aria-hidden="true" />
       <LpHeroMotion />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">
