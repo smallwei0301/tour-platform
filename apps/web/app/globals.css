@@ -2161,49 +2161,51 @@ details[open] .kkd-faq-q::before { content: '- '; }
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   background-image: url('/images/lp/hero-cave.jpg');
   background-size: cover; background-position: center top;
-  /* 曙光照進山洞：慢速推近（Ken Burns），縮放原點對準洞口（上方中央偏右） */
-  transform-origin: 62% 26%;
-  animation: lpHeroZoom 26s ease-in-out infinite alternate;
+  /* 曙光照進山洞①：慢速推近（Ken Burns），縮放原點對準洞口 */
+  transform-origin: 62% 24%;
+  animation: lpHeroZoom 16s ease-in-out infinite alternate;
 }
 @keyframes lpHeroZoom {
   from { transform: scale(1); }
-  to { transform: scale(1.05); }
+  to { transform: scale(1.09); }
 }
-/* 洞口曙光呼吸：暖色 radial＋screen 疊色（只會變亮不會壓暗），蓋在照片區 */
-.lp-hero-glow {
+/* 曙光照進山洞②：暮色罩由濃轉淡 — 照片像被曙光逐漸點亮。
+   radial 讓洞口（上方中央）永遠最亮、洞壁邊緣最暗，亮暗循環必定可見。
+   注意：純 alpha 疊層、不用 mix-blend-mode（跨合成層混色 iOS Safari 會失效）。 */
+.lp-hero-dawn {
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   pointer-events: none;
-  background: radial-gradient(40% 30% at 60% 20%,
-    rgba(255, 219, 150, 0.5) 0%,
-    rgba(255, 203, 128, 0.18) 48%,
-    rgba(255, 203, 128, 0) 74%);
-  mix-blend-mode: screen;
+  background: radial-gradient(62% 48% at 60% 24%,
+    rgba(9, 14, 22, 0.04) 0%,
+    rgba(9, 14, 22, 0.38) 58%,
+    rgba(9, 14, 22, 0.62) 100%);
   animation: lpHeroDawn 9s ease-in-out infinite alternate;
 }
 @keyframes lpHeroDawn {
-  from { opacity: 0.25; }
-  to { opacity: 0.85; }
+  from { opacity: 1; }
+  to { opacity: 0; }
 }
-/* 斜射光束：自洞口往左下緩慢掃動的細光帶 */
-.lp-hero-beam {
-  position: absolute; top: -8%; right: 10%; width: 36%; height: 120%;
+/* 曙光照進山洞③：洞口放射光束 — 以洞口為圓心的扇形光束緩慢擺動＋呼吸 */
+.lp-hero-rays {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   pointer-events: none;
-  background: linear-gradient(116deg,
-    rgba(255, 232, 180, 0) 40%,
-    rgba(255, 232, 180, 0.13) 48%,
-    rgba(255, 241, 205, 0.24) 52%,
-    rgba(255, 232, 180, 0.12) 57%,
-    rgba(255, 232, 180, 0) 66%);
-  filter: blur(8px);
-  mix-blend-mode: screen;
-  animation: lpHeroBeam 13s ease-in-out infinite alternate;
+  background: repeating-conic-gradient(from 132deg at 60% 22%,
+    rgba(255, 236, 190, 0) 0deg,
+    rgba(255, 236, 190, 0.3) 5deg,
+    rgba(255, 236, 190, 0) 11deg,
+    rgba(255, 236, 190, 0) 26deg);
+  -webkit-mask-image: radial-gradient(75% 80% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.45) 45%, transparent 78%);
+  mask-image: radial-gradient(75% 80% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.45) 45%, transparent 78%);
+  transform-origin: 60% 22%;
+  animation: lpHeroRays 12s ease-in-out infinite alternate;
 }
-@keyframes lpHeroBeam {
-  from { opacity: 0.15; transform: translateX(-14px); }
-  to { opacity: 0.7; transform: translateX(12px); }
+@keyframes lpHeroRays {
+  from { opacity: 0.2; transform: rotate(-3deg); }
+  to { opacity: 0.8; transform: rotate(3deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .lp-hero-photo, .lp-hero-glow, .lp-hero-beam { animation: none; }
+  .lp-hero-photo, .lp-hero-dawn, .lp-hero-rays { animation: none; }
+  .lp-hero-dawn { opacity: 0; }
 }
 .lp-hero-photo::before {
   content: ''; position: absolute; inset: 0;
@@ -2596,8 +2598,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-hero-caption::after { width: 90px; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-hero-photo { width: 52%; }
-  .lp-hero-glow { width: 52%; }
-  .lp-hero-beam { right: 11%; width: 30%; }
+  .lp-hero-dawn { width: 52%; }
+  .lp-hero-rays { width: 52%; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }

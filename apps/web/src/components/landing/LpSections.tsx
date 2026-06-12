@@ -16,9 +16,10 @@ export function LpHero() {
         role="img"
         aria-label="自洞穴內仰望峽谷，曙光灑落山谷與溪流"
       />
-      {/* 曙光動態：洞口暖光呼吸＋斜射光束（prefers-reduced-motion 時停用） */}
-      <div className="lp-hero-glow" aria-hidden="true" />
-      <div className="lp-hero-beam" aria-hidden="true" />
+      {/* 曙光動態：暮色罩亮暗循環＋洞口放射光束（純 alpha 圖層，不用
+          mix-blend-mode — 跨合成層混色在 iOS Safari 會失效導致看不到效果） */}
+      <div className="lp-hero-dawn" aria-hidden="true" />
+      <div className="lp-hero-rays" aria-hidden="true" />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">
         <span>祕島之境</span>
