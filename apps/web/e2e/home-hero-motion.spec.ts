@@ -49,6 +49,12 @@ test('hero 五層動畫 running，雲層持續飄動、暮色罩亮暗變化', a
   const bg = await page.$eval('.lp-hero-photo', (el) => getComputedStyle(el).transform);
   expect(fg).not.toBe('none');
   expect(bg).toBe('none');
+
+  // 懸浮微粒（canvas 粒子系統）：兩個時點畫面內容必須不同（粒子持續運動）
+  const dust1 = await page.$eval('[data-testid="lp-hero-dust"]', (el) => (el as HTMLCanvasElement).toDataURL());
+  await page.waitForTimeout(400);
+  const dust2 = await page.$eval('[data-testid="lp-hero-dust"]', (el) => (el as HTMLCanvasElement).toDataURL());
+  expect(dust1).not.toBe(dust2);
 });
 
 test('reduced-motion（Android 省電/移除動畫情境）下動畫照樣運作', async ({ browser, baseURL }) => {

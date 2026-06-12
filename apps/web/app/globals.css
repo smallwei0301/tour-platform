@@ -2229,6 +2229,16 @@ details[open] .kkd-faq-q::before { content: '- '; }
   mask-image: radial-gradient(95% 105% at 76% 40%, #000 0%, rgba(0, 0, 0, 0.5) 48%, transparent 76%);
   transform-origin: 76% 40%;
 }
+/* 曙光圖層②b：光束中的懸浮微粒 canvas（LpHeroDust）。
+   與 .lp-hero-rays 同一個 radial 遮罩 — 粒子只在光束照到的範圍可見 */
+.lp-hero-dust {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(95% 105% at 76% 40%, #000 0%, rgba(0, 0, 0, 0.5) 48%, transparent 76%);
+  mask-image: radial-gradient(95% 105% at 76% 40%, #000 0%, rgba(0, 0, 0, 0.5) 48%, transparent 76%);
+}
+
 /* 曙光圖層③：洞口飄動雲層 — cloudbox 以 mask 圈住洞口天空區並裁切，
    內層雲帶為週期性平鋪圖樣（background-size 50% + repeat-x），
    WAAPI translateX 一個圖樣週期即無縫循環 */

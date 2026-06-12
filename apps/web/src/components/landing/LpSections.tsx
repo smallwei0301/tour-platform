@@ -8,6 +8,7 @@ import {
 import { activities, reviews, getActivityBySlug, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
 import { LpHeroMotion } from './LpHeroMotion';
+import { LpHeroDust } from './LpHeroDust';
 
 export function LpHero() {
   return (
@@ -20,14 +21,16 @@ export function LpHero() {
       {/* 曙光動態圖層（由 LpHeroMotion 以 WAAPI 驅動）。
           疊層＝物理景深：靜止遠景山谷（photo）→ 洞口飄雲 →
           推進中的去背洞穴前景（fg）→ 暮色罩 → 丁達爾光束 */}
-      <div className="lp-hero-fg" aria-hidden="true" />
-      <div className="lp-hero-dawn" aria-hidden="true" />
-      <div className="lp-hero-rays" aria-hidden="true" />
-      {/* 白色霧團（光暈）置於最上層：霧繞著洞口與岩緣左右飄移 */}
+      {/* 白色霧團：置於遠景與前景之間 — 蓋在山景上、被洞穴岩壁遮擋 */}
       <div className="lp-hero-cloudbox" aria-hidden="true">
         <div className="lp-hero-clouds" />
         <div className="lp-hero-clouds2" />
       </div>
+      <div className="lp-hero-fg" aria-hidden="true" />
+      <div className="lp-hero-dawn" aria-hidden="true" />
+      <div className="lp-hero-rays" aria-hidden="true" />
+      {/* 丁達爾光束中的懸浮微粒（canvas 粒子系統，布朗運動＋上飄） */}
+      <LpHeroDust />
       <LpHeroMotion />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">
