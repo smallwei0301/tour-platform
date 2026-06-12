@@ -316,7 +316,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
-              <div style={{ marginBottom: 12, color: 'var(--tp-primary)' }}><PublicIcon name="search" size={40} /></div>
+              <div style={{ marginBottom: 12, color: 'var(--tp-gold-strong)' }}><PublicIcon name="search" size={40} /></div>
               <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的行程</p>
               <p style={{ fontSize: 14, marginBottom: 20 }}>試試看其他關鍵字，或清除篩選條件</p>
               <button onClick={clearAll} className="tp-btn tp-btn-primary">清除所有篩選</button>
@@ -391,7 +391,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                       </p>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--tp-primary)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
+                      <strong style={{ color: 'var(--tp-gold-strong)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
                       <Link
                         className="tp-btn tp-btn-primary"
                         href={href}

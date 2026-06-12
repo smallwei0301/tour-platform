@@ -84,7 +84,7 @@ export default function AboutPage() {
           { num: '15%', label: '平台抽成（業界最低）' },
         ].map((d, i) => (
           <div key={i} style={{ textAlign: 'center', padding: 20, border: '1px solid var(--tp-border)', borderRadius: 12 }}>
-            <p style={{ fontSize: 32, fontWeight: 800, color: 'var(--tp-primary)', margin: 0 }}>{d.num}</p>
+            <p style={{ fontSize: 32, fontWeight: 800, color: 'var(--tp-gold-strong)', margin: 0 }}>{d.num}</p>
             <p style={{ color: 'var(--tp-muted)', margin: '4px 0 0', fontSize: 14 }}>{d.label}</p>
           </div>
         ))}

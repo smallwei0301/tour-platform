@@ -108,7 +108,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
               {guide.specialties?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                   {guide.specialties.map((s: string) => (
-                    <span key={s} style={{ background: '#e6f4ed', color: 'var(--tp-primary)', padding: '3px 10px', borderRadius: 10, fontSize: 12 }}>{s}</span>
+                    <span key={s} style={{ background: '#e6f4ed', color: 'var(--tp-gold-strong)', padding: '3px 10px', borderRadius: 10, fontSize: 12 }}>{s}</span>
                   ))}
                 </div>
               )}
@@ -127,7 +127,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
               <h2>認證與資歷</h2>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {guide.verificationBadges.map((b: string) => (
-                  <span key={b} style={{ background: '#e6f4ed', color: 'var(--tp-primary)', padding: '6px 14px', borderRadius: 10, fontSize: 13 }}>✅ {b}</span>
+                  <span key={b} style={{ background: '#e6f4ed', color: 'var(--tp-gold-strong)', padding: '6px 14px', borderRadius: 10, fontSize: 13 }}>✅ {b}</span>
                 ))}
               </div>
             </section>
@@ -169,7 +169,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
                     )}
                     <h3>{a.title}</h3>
                     <p>📍 {a.region}</p>
-                    <strong style={{ color: 'var(--tp-primary)' }}>起價 NT${a.priceTwd?.toLocaleString()} / 人</strong>
+                    <strong style={{ color: 'var(--tp-gold-strong)' }}>起價 NT${a.priceTwd?.toLocaleString()} / 人</strong>
                     <Link className="tp-link" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}>查看行程 →</Link>
                   </article>
                 ))}
