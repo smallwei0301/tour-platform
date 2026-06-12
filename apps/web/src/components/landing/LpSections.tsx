@@ -27,6 +27,7 @@ export function LpHero() {
       <div className="lp-hero-fg" aria-hidden="true" />
       <div className="lp-hero-dawn" aria-hidden="true" />
       <div className="lp-hero-rays" aria-hidden="true" />
+      <div className="lp-hero-beam" aria-hidden="true" />
       <LpHeroMotion />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">

@@ -58,12 +58,20 @@ a { color: inherit; text-decoration: none; }
 .tp-navbar { position: sticky; top: 0; z-index: 40; background: var(--tp-ink); border-bottom: 1px solid rgba(176, 141, 62, 0.28); }
 /* LP 首頁：導覽列透明，浮在 hero 洞穴照上（脫離文流，hero 從頁面頂端開始） */
 .tp-navbar--transparent {
-  position: absolute;
-  left: 0; right: 0;
+  position: fixed;
+  top: 0; left: 0; right: 0;
   background: transparent;
   border-bottom: none;
   box-shadow: none;
   padding-top: 6px;
+  transition: background 0.25s ease, backdrop-filter 0.25s ease;
+}
+/* 捲動後：固定列加半透明深色底＋模糊，內容滑過時文字仍可讀 */
+.tp-navbar--transparent.tp-navbar--scrolled {
+  background: rgba(12, 20, 16, 0.88);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(176, 141, 62, 0.22);
 }
 .tp-navbar--transparent .tp-logo { font-size: 13px; }
 .tp-navbar--transparent .tp-navbar-full { padding: 0 11px; }
@@ -2221,6 +2229,20 @@ details[open] .kkd-faq-q::before { content: '- '; }
   mask-image: radial-gradient(95% 105% at 76% 40%, #000 0%, rgba(0, 0, 0, 0.5) 48%, transparent 76%);
   transform-origin: 76% 40%;
 }
+/* 曙光圖層②b：左右掃動光帶（光圈）— 斜向暖光自洞口區域左右緩慢掃動 */
+.lp-hero-beam {
+  position: absolute; inset: -10% 0;
+  pointer-events: none;
+  background: linear-gradient(112deg,
+    rgba(255, 232, 180, 0) 52%,
+    rgba(255, 232, 180, 0.12) 60%,
+    rgba(255, 241, 205, 0.26) 65%,
+    rgba(255, 232, 180, 0.12) 70%,
+    rgba(255, 232, 180, 0) 78%);
+  filter: blur(7px);
+  will-change: transform, opacity;
+}
+
 /* 曙光圖層③：洞口飄動雲層 — cloudbox 以 mask 圈住洞口天空區並裁切，
    內層雲帶為週期性平鋪圖樣（background-size 50% + repeat-x），
    WAAPI translateX 一個圖樣週期即無縫循環 */

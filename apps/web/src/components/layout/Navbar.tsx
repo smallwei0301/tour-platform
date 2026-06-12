@@ -54,11 +54,20 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
-  // LP 首頁導覽列透明，浮在 hero 洞穴照上（對齊參考圖）
+  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲動後加半透明深色底保可讀
   const isHome = pathname === '/';
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isHome) return;
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isHome]);
 
   return (
-    <header className={`tp-navbar${isHome ? ' tp-navbar--transparent' : ''}`}>
+    <header className={`tp-navbar${isHome ? ' tp-navbar--transparent' : ''}${isHome && scrolled ? ' tp-navbar--scrolled' : ''}`}>
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
         <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
