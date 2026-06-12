@@ -2175,17 +2175,37 @@ details[open] .kkd-faq-q::before { content: '- '; }
     rgba(9, 14, 22, 0.38) 58%,
     rgba(9, 14, 22, 0.62) 100%);
 }
-/* 曙光圖層②：洞口放射光束（WAAPI 擺動＋呼吸） */
+/* 曙光圖層②：丁達爾光束（WAAPI 擺動＋呼吸）。
+   物理正確性：光只能穿過洞口 — 光束限制在往左下的扇形（196°-257°，
+   其餘角度被洞壁遮擋），束寬與亮度不一、輕微模糊呈體積光感；
+   另疊一圈緊貼洞口的暖光暈。 */
 .lp-hero-rays {
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   pointer-events: none;
-  background: repeating-conic-gradient(from 132deg at 60% 22%,
-    rgba(255, 236, 190, 0) 0deg,
-    rgba(255, 236, 190, 0.3) 5deg,
-    rgba(255, 236, 190, 0) 11deg,
-    rgba(255, 236, 190, 0) 26deg);
-  -webkit-mask-image: radial-gradient(75% 80% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.45) 45%, transparent 78%);
-  mask-image: radial-gradient(75% 80% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.45) 45%, transparent 78%);
+  background:
+    radial-gradient(17% 12% at 60% 22%,
+      rgba(255, 234, 180, 0.5) 0%,
+      rgba(255, 224, 160, 0.16) 55%,
+      transparent 80%),
+    conic-gradient(from 0deg at 60% 22%,
+      transparent 0deg,
+      transparent 196deg,
+      rgba(255, 240, 200, 0.26) 200deg,
+      transparent 205deg,
+      rgba(255, 240, 200, 0.1) 209deg,
+      rgba(255, 240, 200, 0.32) 214deg,
+      transparent 219deg,
+      transparent 224deg,
+      rgba(255, 240, 200, 0.18) 228deg,
+      transparent 233deg,
+      rgba(255, 244, 210, 0.4) 240deg,
+      transparent 246deg,
+      rgba(255, 240, 200, 0.14) 251deg,
+      transparent 257deg,
+      transparent 360deg);
+  filter: blur(2px);
+  -webkit-mask-image: radial-gradient(95% 105% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.5) 48%, transparent 76%);
+  mask-image: radial-gradient(95% 105% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.5) 48%, transparent 76%);
   transform-origin: 60% 22%;
 }
 /* 曙光圖層③：洞口飄動雲層 — cloudbox 以 mask 圈住洞口天空區並裁切，
