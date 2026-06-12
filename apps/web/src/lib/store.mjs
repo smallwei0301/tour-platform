@@ -230,3 +230,12 @@ export const kpiConfigHistory = [
     createdAt: nowIso
   }
 ];
+
+// 首頁精選設定（admin 可選編輯精選與更多精選行程）— singleton，
+// 與 Supabase 的 homepage_featured_settings 表同 shape（camelCase 版）
+export const homepageFeatured = {
+  editorPickSlug: null,
+  moreFeaturedSlugs: [],
+  updatedAt: null,
+  updatedBy: null,
+};

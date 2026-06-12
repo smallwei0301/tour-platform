@@ -29,8 +29,11 @@ import {
   listKpiConfigHistoryFallback,
   revertKpiConfigFallback,
   listAdminRefundRequestsFallback,
-  updateAdminRefundStatusFallback
+  updateAdminRefundStatusFallback,
+  getHomepageFeaturedFallback,
+  setHomepageFeaturedFallback
 } from './admin.mjs';
+import { normalizeHomepageFeatured } from './homepage-featured.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -5049,4 +5052,59 @@ export async function listGuideMessageThreadsDb(input = {}) {
     if (a.needsReply !== b.needsReply) return a.needsReply ? -1 : 1;
     return String(b.lastMessage.createdAt).localeCompare(String(a.lastMessage.createdAt));
   });
+}
+
+// ── 首頁精選設定（admin 選擇編輯精選／更多精選行程） ──────────────────────
+// singleton row（id='default'），shape 契約見 tests/api/homepage-featured-contract.test.mjs
+
+export async function getHomepageFeaturedDb() {
+  if (!hasSupabaseEnv()) return getHomepageFeaturedFallback();
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('homepage_featured_settings')
+    .select('editor_pick_slug, more_featured_slugs, updated_at, updated_by')
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return { editorPickSlug: null, moreFeaturedSlugs: [], updatedAt: null, updatedBy: null };
+  return {
+    editorPickSlug: data.editor_pick_slug ?? null,
+    moreFeaturedSlugs: Array.isArray(data.more_featured_slugs) ? data.more_featured_slugs.map(String) : [],
+    updatedAt: data.updated_at ?? null,
+    updatedBy: data.updated_by ?? null,
+  };
+}
+
+export async function setHomepageFeaturedDb(input = {}) {
+  const actor = String(input?.actor || 'admin');
+  const validSlugs = Array.isArray(input?.validSlugs) ? input.validSlugs : [];
+  const { editorPickSlug, moreFeaturedSlugs, errors } = normalizeHomepageFeatured(input, validSlugs);
+  if (errors.length > 0) {
+    const err = new Error(errors.join('；'));
+    err.code = 'HOMEPAGE_FEATURED_INVALID';
+    throw err;
+  }
+
+  if (!hasSupabaseEnv()) return setHomepageFeaturedFallback({ editorPickSlug, moreFeaturedSlugs, actor });
+
+  const before = await getHomepageFeaturedDb();
+  const supabase = await getSupabase();
+  const payload = {
+    id: 'default',
+    editor_pick_slug: editorPickSlug,
+    more_featured_slugs: moreFeaturedSlugs,
+    updated_at: new Date().toISOString(),
+    updated_by: actor,
+  };
+  const { error } = await supabase.from('homepage_featured_settings').upsert(payload);
+  if (error) throw new Error(error.message);
+
+  const after = await getHomepageFeaturedDb();
+  await insertAuditLogDb(supabase, {
+    actor,
+    action: 'homepage_featured_update',
+    metadata: { actorRole: 'admin', before, after },
+  }).catch(() => {}); // audit 失敗不阻斷設定本身
+  return after;
 }

@@ -44,6 +44,7 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
       style={{
         minHeight: '100vh',
         background: '#f9fafb',
+        color: '#111827',
         // Accent palette consumed by ResponsiveTable's selected-row styles.
         // Keeps the guide subtree purple while admin keeps green via the
         // CSS-var fallback (var(--rt-accent, var(--tp-primary))).

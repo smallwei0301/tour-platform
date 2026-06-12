@@ -1,4 +1,4 @@
-import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory, payments, paymentEvents } from './store.mjs';
+import { orders, refundRequests, experiences, auditLogs, operationsTracking, kpiConfig, kpiConfigHistory, payments, paymentEvents, homepageFeatured } from './store.mjs';
 import { appendAuditLog as appendSharedAuditLog } from './audit-log.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 
@@ -710,4 +710,30 @@ export function operationsTrackingCsvFallback() {
 
   const lines = rows.map((r) => header.map((h) => esc(r[h])).join(','));
   return [header.join(','), ...lines].join('\n');
+}
+
+// ── 首頁精選設定（in-memory fallback，與 db.mjs Supabase 分支同 shape） ──
+
+export function getHomepageFeaturedFallback() {
+  return {
+    editorPickSlug: homepageFeatured.editorPickSlug,
+    moreFeaturedSlugs: [...homepageFeatured.moreFeaturedSlugs],
+    updatedAt: homepageFeatured.updatedAt,
+    updatedBy: homepageFeatured.updatedBy,
+  };
+}
+
+export function setHomepageFeaturedFallback({ editorPickSlug = null, moreFeaturedSlugs = [], actor = 'admin' } = {}) {
+  const before = getHomepageFeaturedFallback();
+  homepageFeatured.editorPickSlug = editorPickSlug;
+  homepageFeatured.moreFeaturedSlugs = [...moreFeaturedSlugs];
+  homepageFeatured.updatedAt = new Date().toISOString();
+  homepageFeatured.updatedBy = actor;
+  const after = getHomepageFeaturedFallback();
+  appendAuditLog({
+    actor,
+    action: 'homepage_featured_update',
+    metadata: { actorRole: 'admin', before, after },
+  });
+  return after;
 }

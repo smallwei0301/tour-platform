@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import {
   MountainIcon, WaveIcon, TribalIcon, TeaLeafIcon,
   HikeIcon, NightsIcon,
@@ -62,33 +63,105 @@ export function LpThemes() {
   );
 }
 
-export function LpFeatured() {
+// ── 編輯精選卡：策展文案與本地圖片（admin 於 /admin/homepage 切換行程） ──
+// 圖片一律本地快取（fixtures 的 unsplash 外連在離線/慢網環境會破圖）。
+const FEATURED_IMAGES: Record<string, string> = {
+  'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.jpg',
+  'hualien-river-trekking': '/images/lp/tour-river.jpg',
+  'dadadaocheng-walk': '/images/lp/tour-dadaocheng.jpg',
+  'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.jpg',
+};
+
+type FeaturedCopy = {
+  title: string;
+  subtitle: string;
+  desc: ReactNode;
+  tagLabel: string;
+  difficulty: number; // 1-5
+};
+
+const FEATURED_COPY: Record<string, FeaturedCopy> = {
+  'kaohsiung-chaishan-cave-experience': {
+    title: '柴山探洞・城市祕境',
+    subtitle: '走進城市邊緣的地形祕境',
+    desc: <>跟著懂路的人鑽進珊瑚礁岩的洞穴地景，<br />在城市邊緣，遇見另一個世界的高雄。</>,
+    tagLabel: '探洞',
+    difficulty: 2,
+  },
+  'hualien-river-trekking': {
+    title: '秀姑巒溪・溯溪冒險',
+    subtitle: '走進台灣最純淨的野溪',
+    desc: <>跳潭、漂流、攀上瀑布之巔，<br />用雙腳感受花蓮山與水的力量。</>,
+    tagLabel: '溯溪',
+    difficulty: 3,
+  },
+  'dadadaocheng-walk': {
+    title: '大稻埕・百年街區',
+    subtitle: '真正認識活了百年的老街',
+    desc: <>從迪化街布行、城隍廟到永樂市場，<br />把街區背後的人與歷史走成故事。</>,
+    tagLabel: '走讀',
+    difficulty: 1,
+  },
+  'taipei-night-market-food-tour': {
+    title: '台北夜市・庶民食堂',
+    subtitle: '不只吃，還要懂為什麼好吃',
+    desc: <>跟著在地吃貨鑽進巷弄攤位，<br />一口一口讀懂台北的夜。</>,
+    tagLabel: '食旅',
+    difficulty: 1,
+  },
+};
+
+/** 未策展的行程退回 fixtures 衍生（標題取「｜」前段、副標取 tagline 前段） */
+function deriveFeaturedCopy(activity: (typeof activities)[number]): FeaturedCopy {
+  return {
+    title: activity.title.split('｜')[0],
+    subtitle: activity.tagline.slice(0, 18),
+    desc: activity.shortDescription,
+    tagLabel: activity.region,
+    difficulty: 2,
+  };
+}
+
+function featuredRating(slug: string): { score: string; count: number } {
+  // 柴山維持既有行銷文案數字（4.9 / 128 則）
+  if (slug === 'kaohsiung-chaishan-cave-experience') return { score: '4.9', count: 128 };
+  const related = reviews.filter((r) => r.activitySlug === slug);
+  if (related.length === 0) return { score: '4.9', count: 128 };
+  const avg = related.reduce((sum, r) => sum + r.rating, 0) / related.length;
+  // fixtures 評價數為樣本，顯示用基數對齊行銷文案級距
+  return { score: avg.toFixed(1), count: related.length * 32 };
+}
+
+export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience' }: { slug?: string }) {
+  const activity = getActivityBySlug(slug) ?? getActivityBySlug('kaohsiung-chaishan-cave-experience')!;
+  const copy = FEATURED_COPY[activity.slug] ?? deriveFeaturedCopy(activity);
+  const photo = FEATURED_IMAGES[activity.slug] ?? activity.imageUrl;
+  const rating = featuredRating(activity.slug);
   return (
     <section className="lp-section lp-featured" aria-label="編輯精選行程">
-      <Link href="/activities/kaohsiung-chaishan-cave-experience" className="lp-feat-card">
+      <Link href={buildActivityHref(activity)} className="lp-feat-card">
         {/* 參考圖：照片佔整張卡片全高（穿過 footer 列），footer 僅在右欄下方 */}
-        {/* 照片使用柴山行程的真實內容照（fixtures imageUrl 本地快取，避免外連破圖） */}
         <div className="lp-feat-photo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/lp/feat-chaishan.jpg" alt="柴山探洞體驗山徑與洞穴地景（編輯精選）" />
+          <img src={photo} alt={`${copy.title}（編輯精選）`} />
           {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
         </div>
         <div className="lp-feat-right">
           <div className="lp-feat-body">
-            <h3 className="lp-feat-title">柴山探洞・城市祕境</h3>
-            <span className="lp-feat-subtitle">走進城市邊緣的地形祕境</span>
-            <p className="lp-feat-desc">
-              跟著懂路的人鑽進珊瑚礁岩的洞穴地景，<br />在城市邊緣，遇見另一個世界的高雄。
-            </p>
+            <h3 className="lp-feat-title">{copy.title}</h3>
+            <span className="lp-feat-subtitle">{copy.subtitle}</span>
+            <p className="lp-feat-desc">{copy.desc}</p>
             <div className="lp-feat-tags">
-              <span className="lp-tag"><HikeIcon /> 探洞</span>
-              <span className="lp-tag"><NightsIcon /> 3-4小時</span>
+              <span className="lp-tag"><HikeIcon /> {copy.tagLabel}</span>
+              <span className="lp-tag"><NightsIcon /> {activity.durationDisplay.replace(/（.*）/, '')}</span>
               <span className="lp-tag">
                 難度
-                <span className="lp-dots" aria-label="難度 5 分之 2">
-                  <i /><i /><i className="lp-dot-off" /><i className="lp-dot-off" /><i className="lp-dot-off" />
+                <span className="lp-dots" aria-label={`難度 5 分之 ${copy.difficulty}`}>
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <i key={i} className={i < copy.difficulty ? undefined : 'lp-dot-off'} />
+                  ))}
                 </span>
               </span>
             </div>
@@ -97,11 +170,11 @@ export function LpFeatured() {
             <div className="lp-feat-rating">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/images/lp/avatars.png" alt="" aria-hidden="true" />
-              <strong>4.9</strong>
-              <span className="lp-rating-count">(128則評價)</span>
+              <strong>{rating.score}</strong>
+              <span className="lp-rating-count">({rating.count}則評價)</span>
             </div>
             <div className="lp-feat-price">
-              NT$ 2,000<span className="lp-price-unit">起</span>
+              NT$ {activity.price.toLocaleString()}<span className="lp-price-unit">起</span>
             </div>
           </div>
         </div>
@@ -158,15 +231,19 @@ const DESTINATIONS = [
   { name: '澎湖', count: '29+ 行程' },
 ];
 
-/** 更多精選行程（原 FeaturedTours 資料，柴山已於上方精選卡呈現）。
+/** 更多精選行程（admin 於 /admin/homepage 選擇；未設定時為編輯精選以外的前 2 個）。
  *  圖片使用本地資產（fixtures 的 unsplash 外連在離線/慢網環境會破圖）。 */
 const TOUR_IMAGES: Record<string, string> = {
   'dadadaocheng-walk': '/images/lp/tour-dadaocheng.jpg',
   'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.jpg',
+  'hualien-river-trekking': '/images/lp/tour-river.jpg',
+  'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.jpg',
 };
 
-export function LpTours() {
-  const tours = activities.filter((a) => a.slug !== 'kaohsiung-chaishan-cave-experience').slice(0, 2);
+export function LpTours({ slugs }: { slugs?: string[] }) {
+  const tours = (slugs && slugs.length > 0
+    ? slugs.map((slug) => activities.find((a) => a.slug === slug)).filter((a): a is (typeof activities)[number] => !!a)
+    : activities.filter((a) => a.slug !== 'kaohsiung-chaishan-cave-experience').slice(0, 2));
   return (
     <section className="lp-section lp-tours" aria-label="更多精選行程">
       <h2 className="lp-eyebrow">更多精選行程</h2>
