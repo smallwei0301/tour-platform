@@ -67,9 +67,10 @@ export function LpFeatured() {
     <section className="lp-section lp-featured" aria-label="編輯精選行程">
       <Link href="/activities/kaohsiung-chaishan-cave-experience" className="lp-feat-card">
         {/* 參考圖：照片佔整張卡片全高（穿過 footer 列），footer 僅在右欄下方 */}
+        {/* 照片使用柴山行程的真實內容照（fixtures imageUrl 本地快取，避免外連破圖） */}
         <div className="lp-feat-photo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/lp/feat-mountain.jpg" alt="柴山探洞體驗山徑與洞穴地景（編輯精選）" />
+          <img src="/images/lp/feat-chaishan.jpg" alt="柴山探洞體驗山徑與洞穴地景（編輯精選）" />
           {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
