@@ -2,10 +2,11 @@
  * Issue #1383 — 訂單改期純邏輯（政策時限、資格、目標 slot、逾時失效）。
  * 設計：docs/04-tech/04-tech-architecture/13-order-reschedule-design.md
  * owner 定案（2026-06-11）：每訂單限改 1 次、guide 72h lazy-expire。
- * 申請窗：行程開始前 48h（refundRules 為展示文字非機器可讀，v1 以常數實作）。
+ * 申請窗：行程開始前 168h（7 天）才可線上自助改期；窗內或其他改期需求一律聯絡客服
+ *   （owner 2026-06-12 調整，原 48h）。refundRules 為展示文字非機器可讀，以常數實作。
  */
 
-export const RESCHEDULE_WINDOW_HOURS = 48;
+export const RESCHEDULE_WINDOW_HOURS = 168;
 export const RESCHEDULE_EXPIRE_HOURS = 72;
 export const RESCHEDULE_MAX_PER_ORDER = 1;
 
@@ -27,7 +28,7 @@ export function canRequestReschedule({ orderStatus, scheduleStartAt, now, approv
   const startMs = new Date(scheduleStartAt).getTime();
   const nowMs = new Date(now).getTime();
   if (!Number.isFinite(startMs) || startMs - nowMs < RESCHEDULE_WINDOW_HOURS * 3600_000) {
-    return { ok: false, status: 403, code: 'RESCHEDULE_WINDOW_CLOSED', message: `行程開始前 ${RESCHEDULE_WINDOW_HOURS} 小時內不可改期` };
+    return { ok: false, status: 403, code: 'RESCHEDULE_WINDOW_CLOSED', message: `距活動開始未滿 ${RESCHEDULE_WINDOW_HOURS} 小時（${RESCHEDULE_WINDOW_HOURS / 24} 天），無法線上自助改期，請聯絡客服協助安排。` };
   }
   return { ok: true };
 }

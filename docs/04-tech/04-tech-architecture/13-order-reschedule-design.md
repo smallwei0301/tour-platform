@@ -8,7 +8,7 @@
 ## 1. 範圍與約束
 
 - **第一期只支援同活動、同方案、同價的 slot 改期** — 不動金流（無補差價/退差價）。
-- 入口：traveler 訂單詳情頁（`/me/orders/[orderId]`），`status ∈ {paid, confirmed}` 且距活動開始仍在退款政策時限內。
+- 入口：traveler 訂單詳情頁（`/me/orders/[orderId]`），`status ∈ {paid, confirmed}` 且**距活動開始 > 168 小時（7 天）**才可線上自助改期；未滿 168h 或其他改期需求一律導向客服（owner 2026-06-12 由原 48h 調整，常數 `RESCHEDULE_WINDOW_HOURS`）。
 - 嚮導確認制：traveler 申請 → guide 確認/拒絕 → 完成改期（confirmed 訂單不自動轉移）。
 - booking → order → payment 三層一致：改期**不改 order 金額與 payment**，只改 booking/schedule 對應。
 
@@ -51,7 +51,7 @@ booking.status:      confirmed ──> reschedule_requested ──> confirmed（
 | GET | `/api/guide/reschedule-requests` | 嚮導待辦清單 |
 | POST | `/api/guide/reschedule-requests/[id]/decision` | approve（呼叫 RPC）/ reject |
 
-- 政策時限：沿用該活動 refundRules 的「可免費取消」窗（同一資料源，不另設）。
+- 政策時限：距活動開始 > 168h（7 天）才可線上自助改期，否則 403 `RESCHEDULE_WINDOW_CLOSED` 並提示聯絡客服（常數 `RESCHEDULE_WINDOW_HOURS`，owner 2026-06-12 由 48h 調整）。前端 `/me/orders/[orderId]` 於入口即依 `scheduleStartAt` 判斷，未滿窗則隱藏改期入口、顯示客服提示；API 仍為權威把關。
 - in-memory fallback：services.mjs 同步實作（單執行緒語意），契約測試比照 issue1384 模式。
 
 ## 5. 通知
