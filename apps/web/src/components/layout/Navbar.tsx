@@ -38,6 +38,14 @@ export function Navbar() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Drawer 開啟時鎖住背景捲動
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
   async function handleSignOut() {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -151,77 +159,96 @@ export function Navbar() {
           )}
         </nav>
 
-        {/* Hamburger (mobile only) */}
+        {/* Hamburger (mobile only) — 三線 morph 成 X */}
         <button
           className="tp-hamburger"
           onClick={() => setMenuOpen((v) => !v)}
           aria-label={menuOpen ? '關閉選單' : '開啟選單'}
           aria-expanded={menuOpen}
         >
-          {menuOpen ? (
-            <span style={{ display: 'inline-flex', lineHeight: 1 }}><PublicIcon name="close" size={20} /></span>
-          ) : (
-            <span className="tp-hamburger-icon">
-              <span />
-              <span />
-              <span />
-            </span>
-          )}
+          <span className={`tp-hamburger-icon${menuOpen ? ' is-open' : ''}`}>
+            <span />
+            <span />
+            <span />
+          </span>
         </button>
       </div>
 
-      {/* Mobile dropdown menu */}
-      {menuOpen && (
-        <nav className="tp-mobile-menu" aria-label="手機導覽">
-          <div className="tp-container">
-            <form onSubmit={handleSearch} className="tp-mobile-search">
-              <input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜尋行程、目的地⋯"
-                className="tp-search-input"
-                aria-label="搜尋行程或目的地"
-              />
-              <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }}>
-                <PublicIcon name="search" size={16} />
+      {/* Mobile drawer backdrop */}
+      <div
+        className={`tp-mobile-backdrop${menuOpen ? ' is-open' : ''}`}
+        onClick={() => setMenuOpen(false)}
+        aria-hidden="true"
+      />
+
+      {/* Mobile drawer（常駐渲染以套用滑入 transition；關閉時 inert 防止聚焦） */}
+      <nav
+        className={`tp-mobile-menu${menuOpen ? ' is-open' : ''}`}
+        aria-label="手機導覽"
+        inert={!menuOpen}
+      >
+        <div className="tp-container">
+          <form
+            onSubmit={handleSearch}
+            className="tp-mobile-search"
+            style={{ transitionDelay: menuOpen ? '110ms' : '0ms' }}
+          >
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="搜尋行程、目的地⋯"
+              className="tp-search-input"
+              aria-label="搜尋行程或目的地"
+            />
+            <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }}>
+              <PublicIcon name="search" size={16} />
+            </button>
+          </form>
+          {NAV_LINKS.map((l, i) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              className="tp-mobile-menu-item"
+              onClick={() => setMenuOpen(false)}
+              aria-current={pathname === l.href || (l.href !== '/' && pathname.startsWith(l.href)) ? 'page' : undefined}
+              style={{ transitionDelay: menuOpen ? `${170 + i * 60}ms` : '0ms' }}
+            >
+              {l.label}
+            </Link>
+          ))}
+          {user ? (
+            <>
+              <Link
+                href="/me/orders"
+                className="tp-mobile-menu-item"
+                onClick={() => setMenuOpen(false)}
+                style={{ transitionDelay: menuOpen ? '410ms' : '0ms' }}
+              >
+                我的訂單
+              </Link>
+              <button
+                onClick={() => { handleSignOut(); setMenuOpen(false); }}
+                className="tp-mobile-menu-item"
+                style={{
+                  background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: 'rgba(244,236,216,0.7)',
+                  transitionDelay: menuOpen ? '470ms' : '0ms',
+                }}
+              >
+                登出（{displayName}）
               </button>
-            </form>
-            {NAV_LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className="tp-mobile-menu-item"
-                onClick={() => setMenuOpen(false)}
-                aria-current={pathname === l.href || (l.href !== '/' && pathname.startsWith(l.href)) ? 'page' : undefined}
-              >
-                {l.label}
-              </Link>
-            ))}
-            {user ? (
-              <>
-                <Link href="/me/orders" className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
-                  我的訂單
-                </Link>
-                <button
-                  onClick={() => { handleSignOut(); setMenuOpen(false); }}
-                  className="tp-mobile-menu-item"
-                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: 'rgba(244,236,216,0.7)' }}
-                >
-                  登出（{displayName}）
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className="tp-mobile-menu-item"
-                onClick={() => setMenuOpen(false)}
-              >
-                登入 / 註冊
-              </Link>
-            )}
-          </div>
-        </nav>
-      )}
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="tp-mobile-menu-item"
+              onClick={() => setMenuOpen(false)}
+              style={{ transitionDelay: menuOpen ? '410ms' : '0ms' }}
+            >
+              登入 / 註冊
+            </Link>
+          )}
+        </div>
+      </nav>
     </header>
   );
 }
