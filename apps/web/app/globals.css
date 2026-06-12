@@ -2161,30 +2161,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   background-image: url('/images/lp/hero-cave.jpg');
   background-size: cover; background-position: center top;
-  /* 背景層：洞口外的遠端山景 — 維持靜止（第一視角推進時遠景不動） */
-}
-/* 前景層：同一張照片、以遮罩挖空洞口（透明）只留洞穴岩壁。
-   WAAPI 對它放大（原點＝洞口）→ 洞口隨之擴大、露出更多靜止的遠景，
-   形成第一視角向洞口前進的視差感。
-   動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
-   省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
-.lp-hero-fg {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
-  background-image: url('/images/lp/hero-cave.jpg');
-  background-size: cover; background-position: center top;
-  -webkit-mask-image: radial-gradient(34% 38% at 59% 26%, transparent 0%, transparent 50%, #000 78%);
-  mask-image: radial-gradient(34% 38% at 59% 26%, transparent 0%, transparent 50%, #000 78%);
-  transform-origin: 59% 26%;
+  /* 動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
+     省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
+  transform-origin: 62% 24%;
   will-change: transform;
-}
-/* 前景層左緣／下緣與頁面底色的銜接漸層（同 .lp-hero-photo 的疊層） */
-.lp-hero-fg::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, #0c1410 0%, rgba(12, 20, 16, 0.5) 12%, rgba(12, 20, 16, 0) 30%);
-}
-.lp-hero-fg::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 78%, #0c1410 100%);
 }
 /* 曙光圖層①：暮色罩（亮暗循環由 WAAPI 控制 opacity），radial 讓洞口永遠最亮 */
 .lp-hero-dawn {
@@ -2653,7 +2633,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-hero-caption::after { width: 90px; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-hero-photo { width: 52%; }
-  .lp-hero-fg, .lp-hero-dawn, .lp-hero-rays, .lp-hero-cloudbox { width: 52%; }
+  .lp-hero-dawn, .lp-hero-rays, .lp-hero-cloudbox { width: 52%; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }

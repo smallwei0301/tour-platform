@@ -14,8 +14,7 @@ import { test, expect } from './helpers';
  * reduced-motion 模擬下動畫照樣運作。
  */
 
-// lp-hero-fg＝洞穴岩壁前景（第一視角推進：只放大前景、遠景 lp-hero-photo 靜止）
-const LAYER_CLASSES = ['lp-hero-fg', 'lp-hero-dawn', 'lp-hero-rays', 'lp-hero-clouds', 'lp-hero-clouds2'];
+const LAYER_CLASSES = ['lp-hero-photo', 'lp-hero-dawn', 'lp-hero-rays', 'lp-hero-clouds', 'lp-hero-clouds2'];
 
 async function runningTargets(page: import('@playwright/test').Page): Promise<string[]> {
   return page.evaluate(() =>
@@ -42,12 +41,6 @@ test('hero 五層動畫 running，雲層持續飄動、暮色罩亮暗變化', a
   const d2 = await page.$eval('.lp-hero-dawn', (el) => getComputedStyle(el).opacity);
   expect(c1).not.toBe(c2);
   expect(d1).not.toBe(d2);
-
-  // 第一視角推進契約：前景岩壁在縮放、背景遠景必須靜止（無 transform 動畫）
-  const fg = await page.$eval('.lp-hero-fg', (el) => getComputedStyle(el).transform);
-  const bg = await page.$eval('.lp-hero-photo', (el) => getComputedStyle(el).transform);
-  expect(fg).not.toBe('none');
-  expect(bg).toBe('none');
 });
 
 test('reduced-motion（Android 省電/移除動畫情境）下動畫照樣運作', async ({ browser, baseURL }) => {

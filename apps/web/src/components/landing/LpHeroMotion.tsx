@@ -25,10 +25,9 @@ export function LpHeroMotion() {
     };
 
     const animations = [
-      // 第一視角推進：只放大「洞穴岩壁前景」（遮罩挖空洞口的 .lp-hero-fg），
-      // 背景遠景（.lp-hero-photo）靜止不動 — 洞口擴大＝向洞口走近的視差感
-      animate('.lp-hero-fg',
-        [{ transform: 'scale(1)' }, { transform: 'scale(1.14)' }],
+      // Ken Burns 慢速推近（原點對準洞口，見 .lp-hero-photo transform-origin）
+      animate('.lp-hero-photo',
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }],
         { duration: 8000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
       // 暮色罩由濃轉淡：照片像被曙光逐漸點亮
       animate('.lp-hero-dawn',
