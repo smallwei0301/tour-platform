@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-06-12T01:00:57.087Z -->
+<!-- query_timestamp: 2026-06-12T07:43:46.467Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-12T01:00:57.087Z  
-**Commit SHA:** `3686ecb6fbcf2914285a077f6586affa9bbc3672`
+**Query timestamp:** 2026-06-12T07:43:46.467Z  
+**Commit SHA:** `22280e56ea3292ae8f4a5e5724114d027d764ca0`
 
 ---
 
-## Open PRs (2)
+## Open PRs (4)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
+| #1414 | [feat(home): 祕島 LP 首頁改版＋全站套用山墨×古紙×黃銅品牌風格](https://github.com/smallwei0301/tour-platform/pull/1414) | `claude/landing-page-nextjs-dsaf0u` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
@@ -69,6 +71,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1416 | [feat(reschedule): #1383 自助改期限距活動 >168h（窗內導向客服）＋ #1411 驗收報告（AC4 實寄 PASS）](https://github.com/smallwei0301/tour-platform/pull/1416) | 2026-06-12 |
 | #1413 | [docs(qa): issue #1411 站內訊息第一期驗收報告＋AC5 rate-limit 行為補測](https://github.com/smallwei0301/tour-platform/pull/1413) | 2026-06-11 |
 | #1412 | [feat(messaging): 站內訊息第一期 — 訂單留言串（traveler ↔ guide）＋ email 通知 (#1411)](https://github.com/smallwei0301/tour-platform/pull/1412) | 2026-06-11 |
 | #1410 | [feat(booking): 訂單改期第一期 — 同活動同方案同價、嚮導確認制 (#1383)](https://github.com/smallwei0301/tour-platform/pull/1410) | 2026-06-11 |
@@ -78,7 +81,6 @@ _none_
 | #1403 | [feat(me): 旅客 profile 編輯與通知偏好（最小版）+ checkout 聯絡資訊預填 (#1387)](https://github.com/smallwei0301/tour-platform/pull/1403) | 2026-06-11 |
 | #1402 | [refactor(db): strangler 第一步 — audit-log 單一實作 + refund 狀態機抽純函式 (#1385)](https://github.com/smallwei0301/tour-platform/pull/1402) | 2026-06-11 |
 | #1400 | [test(contract): in-memory/Supabase 三流程契約測試 + payment callback 原子性複核 (#1384)](https://github.com/smallwei0301/tour-platform/pull/1400) | 2026-06-11 |
-| #1399 | [feat(activities): 活動頁推薦區塊（同地區/同類型）＋最近瀏覽 (#1382)](https://github.com/smallwei0301/tour-platform/pull/1399) | 2026-06-11 |
 
 ---
 
