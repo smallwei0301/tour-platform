@@ -18,8 +18,18 @@ export function Navbar() {
   const [query, setQuery] = useState('');
   const [user, setUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
+  const [scrolled, setScrolled] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const isHome = pathname === '/';
+
+  useEffect(() => {
+    if (!isHome) { setScrolled(false); return; }
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, [isHome]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -54,8 +64,10 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
+  const isTransparent = isHome && !scrolled && !menuOpen;
+
   return (
-    <header className="tp-navbar">
+    <header className={`tp-navbar${isTransparent ? ' tp-navbar--transparent' : ''}`}>
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
         <Link href="/" className="tp-logo">Midao 祕島</Link>

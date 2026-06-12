@@ -95,13 +95,9 @@ const homeJsonLd = {
 export default function HomePage() {
   return (
     <>
-      {/* Preload hero background image to improve LCP */}
-      <link
-        rel="preload"
-        as="image"
-        href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
-        fetchPriority="high"
-      />
+      {/* Hero 改為 motion 影片背景（hero-section-redesign）：不再 preload 大圖，
+          只 preconnect 影片 CDN 加速 TLS 握手；LCP 元素回到 hero 標題文字。 */}
+      <link rel="preconnect" href="https://d8j0ntlcm91z4.cloudfront.net" />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
