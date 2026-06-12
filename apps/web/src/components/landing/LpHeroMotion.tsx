@@ -25,12 +25,10 @@ export function LpHeroMotion() {
     };
 
     const animations = [
-      // 第一視角推進：只放大「洞窟岩壁框」前景（.lp-hero-fg，遮罩挖空整個
-      // 透視拱形），照片中的遠景（山景＋溪谷 = .lp-hero-photo）靜止不動。
-      // duration 6150ms = 原 8s 的 1.3 倍速
-      animate('.lp-hero-fg',
-        [{ transform: 'scale(1)' }, { transform: 'scale(1.14)' }],
-        { duration: 6150, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
+      // Ken Burns 慢速推近（原點對準洞口，見 .lp-hero-photo transform-origin）
+      animate('.lp-hero-photo',
+        [{ transform: 'scale(1)' }, { transform: 'scale(1.09)' }],
+        { duration: 8000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
       // 暮色罩由濃轉淡：照片像被曙光逐漸點亮
       animate('.lp-hero-dawn',
         [{ opacity: 1 }, { opacity: 0 }],

@@ -2161,35 +2161,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   background-image: url('/images/lp/hero-cave.jpg');
   background-size: cover; background-position: center top;
-  /* 背景層＝照片內容的「遠景」：透過洞口看到的山景與溪谷 — 靜止不動 */
-}
-/* 前景層＝照片內容的「近景」：深色洞窟岩壁框（左右壁、頂拱、底部地面）。
-   遮罩用與照片同座標系的 SVG 橢圓（mask-size cover + center top 與
-   background 同一套縮放規則），洞＝整個透視拱形（山景＋溪谷整段挖空），
-   任何視窗尺寸都對準照片內容 — 只有岩壁框會推進拉遠。
-   WAAPI 以洞口為原點縮放 → 第一視角向洞口前進。
-   動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
-   省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
-.lp-hero-fg {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
-  background-image: url('/images/lp/hero-cave.jpg');
-  background-size: cover; background-position: center top;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='660' height='900' viewBox='0 0 660 900'%3E%3Cdefs%3E%3CradialGradient id='g' gradientUnits='userSpaceOnUse' cx='390' cy='380' r='175' gradientTransform='translate(390 380) scale(1 1.86) translate(-390 -380)'%3E%3Cstop offset='0.62' stop-color='%23fff' stop-opacity='0'/%3E%3Cstop offset='0.95' stop-color='%23fff' stop-opacity='1'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='660' height='900' fill='url(%23g)'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='660' height='900' viewBox='0 0 660 900'%3E%3Cdefs%3E%3CradialGradient id='g' gradientUnits='userSpaceOnUse' cx='390' cy='380' r='175' gradientTransform='translate(390 380) scale(1 1.86) translate(-390 -380)'%3E%3Cstop offset='0.62' stop-color='%23fff' stop-opacity='0'/%3E%3Cstop offset='0.95' stop-color='%23fff' stop-opacity='1'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='660' height='900' fill='url(%23g)'/%3E%3C/svg%3E");
-  -webkit-mask-size: cover; mask-size: cover;
-  -webkit-mask-position: center top; mask-position: center top;
-  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
-  transform-origin: 59% 42%;
+  /* 動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
+     省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
+  transform-origin: 62% 24%;
   will-change: transform;
-}
-/* 前景層左緣／下緣與頁面底色的銜接漸層（同 .lp-hero-photo 的疊層） */
-.lp-hero-fg::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, #0c1410 0%, rgba(12, 20, 16, 0.5) 12%, rgba(12, 20, 16, 0) 30%);
-}
-.lp-hero-fg::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 78%, #0c1410 100%);
 }
 /* 曙光圖層①：暮色罩（亮暗循環由 WAAPI 控制 opacity），radial 讓洞口永遠最亮 */
 .lp-hero-dawn {
@@ -2658,7 +2633,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-hero-caption::after { width: 90px; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-hero-photo { width: 52%; }
-  .lp-hero-fg, .lp-hero-dawn, .lp-hero-rays, .lp-hero-cloudbox { width: 52%; }
+  .lp-hero-dawn, .lp-hero-rays, .lp-hero-cloudbox { width: 52%; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }
