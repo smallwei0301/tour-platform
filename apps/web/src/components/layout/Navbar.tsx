@@ -58,7 +58,7 @@ export function Navbar() {
     <header className="tp-navbar">
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
-        <Link href="/" className="tp-logo">Midao 祕島</Link>
+        <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
 
         {/* Desktop: search bar */}
         <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label="搜尋">
@@ -95,7 +95,7 @@ export function Navbar() {
               <>
                 <Link
                   href="/me/orders"
-                  style={{ fontSize: 14, color: '#374151' }}
+                  style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)' }}
                   data-testid="nav-my-orders"
                 >
                   我的訂單
@@ -111,7 +111,7 @@ export function Navbar() {
                       style={{ borderRadius: '50%', objectFit: 'cover' }} />
                   )}
                   <span
-                    style={{ fontSize: 14, color: '#374151', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                     data-testid="nav-user-name"
                   >
                     {displayName}
@@ -121,8 +121,8 @@ export function Navbar() {
                     data-testid="nav-sign-out-btn"
                     className="tp-btn"
                     style={{
-                      border: '1.5px solid #d1d5db',
-                      color: '#6b7280',
+                      border: '1.5px solid rgba(244,236,216,0.35)',
+                      color: 'rgba(244,236,216,0.7)',
                       padding: '6px 14px',
                       fontSize: 13,
                       background: 'transparent',
@@ -139,8 +139,8 @@ export function Navbar() {
                 data-testid="nav-login-btn"
                 className="tp-btn"
                 style={{
-                  border: '1.5px solid var(--tp-primary)',
-                  color: 'var(--tp-primary)',
+                  border: '1.5px solid var(--tp-brass)',
+                  color: '#f1e9d4',
                   padding: '6px 16px',
                   fontSize: 14,
                 }}
@@ -205,7 +205,7 @@ export function Navbar() {
                 <button
                   onClick={() => { handleSignOut(); setMenuOpen(false); }}
                   className="tp-mobile-menu-item"
-                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: '#6b7280' }}
+                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: 'rgba(244,236,216,0.7)' }}
                 >
                   登出（{displayName}）
                 </button>

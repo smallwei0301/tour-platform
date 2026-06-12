@@ -1,4 +1,4 @@
-import { Inter, Noto_Sans_TC } from 'next/font/google';
+import { Inter, Noto_Sans_TC, Noto_Serif_TC } from 'next/font/google';
 import type { Metadata } from 'next';
 import './globals.css';
 import { Navbar } from '../src/components/layout/Navbar';
@@ -28,6 +28,15 @@ const inter = Inter({
   weight: ['400', '500', '700'],
   display: 'swap',
   variable: '--font-inter',
+});
+
+// 祕島 LP 顯示字體 — 古籍／古地圖質感的明體（BRAND_BOOK Section 04）。
+// display:'swap'：標題層級的襯線字是品牌視覺核心，寧可短暫 fallback 再換字。
+const notoSerif = Noto_Serif_TC({
+  subsets: ['latin'],
+  weight: ['600', '700', '900'],
+  display: 'swap',
+  variable: '--font-noto-serif-tc',
 });
 
 export const metadata: Metadata = {
@@ -73,7 +82,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             實測 8.8s 的元兇之一)。首頁自己的 preload 在 app/page.tsx
             內,首頁 LCP 不受影響。Root layout 僅保留 preconnect。 */}
       </head>
-      <body className={`${notoSans.variable} ${inter.variable}`}>
+      <body className={`${notoSans.variable} ${inter.variable} ${notoSerif.variable}`}>
         <a href="#main-content" className="tp-skip-link">跳至主要內容</a>
         <Navbar />
         <div id="main-content">

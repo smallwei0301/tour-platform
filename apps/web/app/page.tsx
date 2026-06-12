@@ -1,12 +1,5 @@
 import type { Metadata } from 'next';
-import { HeroSection } from '../src/components/home/HeroSection';
-import { FeaturedTours } from '../src/components/home/FeaturedTours';
-import { ValueTrustSection } from '../src/components/home/ValueTrustSection';
-import { StoryProofSection } from '../src/components/home/StoryProofSection';
-import { DestinationsSection } from '../src/components/home/DestinationsSection';
-import { ThemeCtas } from '../src/components/home/ThemeCtas';
-import { GuideSpotlight } from '../src/components/home/GuideSpotlight';
-import { FaqSection } from '../src/components/home/FaqSection';
+import { LpHero, LpThemes, LpFeatured, LpGuide, LpClosing } from '../src/components/landing/LpSections';
 
 export const metadata: Metadata = {
   title: 'Midao 祕島｜台灣在地導遊預約平台',
@@ -99,21 +92,20 @@ export default function HomePage() {
       <link
         rel="preload"
         as="image"
-        href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
+        href="/images/lp/hero-cave.jpg"
         fetchPriority="high"
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
       />
-      <HeroSection />
-      <ThemeCtas />
-      <FeaturedTours />
-      <StoryProofSection />
-      <DestinationsSection />
-      <ValueTrustSection />
-      <GuideSpotlight />
-      <FaqSection />
+      <div className="lp-root">
+        <LpHero />
+        <LpThemes />
+        <LpFeatured />
+        <LpGuide />
+        <LpClosing />
+      </div>
     </>
   );
 }

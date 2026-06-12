@@ -61,9 +61,10 @@ test('root layout 保留 image CDN 的 preconnect（無害且加速 TLS 握手�
 
 test('首頁 page.tsx 自己的 hero preload 保留（首頁 LCP 不回歸）', async () => {
   const src = await readSrc('app/page.tsx');
+  // 祕島 LP 改版後 hero 圖改為本站資產 /images/lp/hero-cave.jpg（原 unsplash 圖已下線）
   assert.match(
     src,
-    /rel=["']preload["'][\s\S]{0,300}?1528164344705/,
+    /rel=["']preload["'][\s\S]{0,300}?\/images\/lp\/hero-cave\.jpg/,
     '首頁的 hero preload 必須留在 app/page.tsx — root layout 移除後它是唯一的首頁 LCP 加速來源',
   );
 });
