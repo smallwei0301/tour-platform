@@ -20,14 +20,14 @@ export function LpHero() {
       {/* 曙光動態圖層（由 LpHeroMotion 以 WAAPI 驅動）。
           疊層＝物理景深：靜止遠景山谷（photo）→ 洞口飄雲 →
           推進中的去背洞穴前景（fg）→ 暮色罩 → 丁達爾光束 */}
+      <div className="lp-hero-fg" aria-hidden="true" />
+      <div className="lp-hero-dawn" aria-hidden="true" />
+      <div className="lp-hero-rays" aria-hidden="true" />
+      {/* 白色霧團（光暈）置於最上層：霧繞著洞口與岩緣左右飄移 */}
       <div className="lp-hero-cloudbox" aria-hidden="true">
         <div className="lp-hero-clouds" />
         <div className="lp-hero-clouds2" />
       </div>
-      <div className="lp-hero-fg" aria-hidden="true" />
-      <div className="lp-hero-dawn" aria-hidden="true" />
-      <div className="lp-hero-rays" aria-hidden="true" />
-      <div className="lp-hero-beam" aria-hidden="true" />
       <LpHeroMotion />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">

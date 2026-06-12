@@ -42,13 +42,6 @@ export function LpHeroMotion() {
           { opacity: 0.95, transform: 'rotate(2deg)' },
         ],
         { duration: 6000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
-      // 左右掃動光帶（光圈）：自洞口區域左右緩慢掃動＋呼吸
-      animate('.lp-hero-beam',
-        [
-          { opacity: 0.25, transform: 'translateX(-6%)' },
-          { opacity: 0.75, transform: 'translateX(6%)' },
-        ],
-        { duration: 6000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
       // 雲層飄動：平移一個圖樣週期（background-size 50% → -50% 即無縫循環）
       animate('.lp-hero-clouds',
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
