@@ -11,19 +11,11 @@ export function LpHero() {
       <div
         className="lp-hero-photo"
         role="img"
-        aria-label="自洞穴內仰望峽谷，曙光灑落山谷與溪流"
-      >
-        <div className="lp-hero-photo-img" />
-        <div className="lp-hero-rays" aria-hidden="true" />
-      </div>
+        aria-label="太魯閣峽谷洞穴中透出的曙光，旁有直書「祕島之境 由在地人 帶你看見」"
+      />
       <div className="lp-hero-inner">
         <div className="lp-hero-content">
-          {/* 逐行遮罩上滑（masked line reveal），文字內容與改版前一致 */}
-          <h1>
-            <span className="lp-line"><span className="lp-line-inner">島嶼深處，</span></span>
-            <span className="lp-line"><span className="lp-line-inner">有故事的人</span></span>
-            <span className="lp-line"><span className="lp-line-inner">帶路<span className="lp-accent">。</span></span></span>
-          </h1>
+          <h1>島嶼深處，<br />有故事的人<br />帶路<span className="lp-accent">。</span></h1>
           <p className="lp-hero-sub">在地嚮導 × 深度路線 × 真實相遇</p>
           <p className="lp-hero-caption">TAIWAN. LOCAL GUIDE. REAL STORIES.</p>
           <Link href="/activities" data-testid="home-cta-explore" className="lp-btn">
