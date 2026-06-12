@@ -54,8 +54,11 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
+  // LP 首頁導覽列透明，浮在 hero 洞穴照上（對齊參考圖）
+  const isHome = pathname === '/';
+
   return (
-    <header className="tp-navbar">
+    <header className={`tp-navbar${isHome ? ' tp-navbar--transparent' : ''}`}>
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
         <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>

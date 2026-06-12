@@ -11,8 +11,17 @@ export function LpHero() {
       <div
         className="lp-hero-photo"
         role="img"
-        aria-label="太魯閣峽谷洞穴中透出的曙光，旁有直書「祕島之境 由在地人 帶你看見」"
+        aria-label="自洞穴內仰望峽谷，曙光灑落山谷與溪流"
       />
+      {/* 右側直書標語＋羅盤浮水印（對齊參考圖） */}
+      <div className="lp-hero-vert" aria-hidden="true">
+        <span>祕島之境</span>
+        <span>由在地人</span>
+        <span>帶你看見</span>
+      </div>
+      <div className="lp-hero-compass" aria-hidden="true">
+        <CompassIcon size={30} />
+      </div>
       <div className="lp-hero-inner">
         <div className="lp-hero-content">
           <h1>島嶼深處，<br />有故事的人<br />帶路<span className="lp-accent">。</span></h1>
@@ -41,7 +50,7 @@ export function LpThemes() {
       <div className="lp-themes-grid">
         {THEMES.map(({ title, sub, href, icon: Icon }) => (
           <Link key={title} href={href} className="lp-theme-card">
-            <Icon size={34} />
+            <Icon size={30} />
             <span className="lp-theme-title">{title}</span>
             <span className="lp-theme-sub">{sub}</span>
           </Link>
@@ -54,25 +63,28 @@ export function LpThemes() {
 export function LpFeatured() {
   return (
     <section className="lp-section lp-featured" aria-label="編輯精選行程">
-      <Link href="/activities" className="lp-feat-card">
+      <Link href="/activities/kaohsiung-chaishan-cave-experience" className="lp-feat-card">
         <div className="lp-feat-main">
           <div className="lp-feat-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/lp/feat-mountain.jpg" alt="能高越嶺道雲海與山徑（編輯精選）" />
+            <img src="/images/lp/feat-mountain.jpg" alt="柴山探洞體驗山徑與洞穴地景（編輯精選）" />
+            {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
           </div>
           <div className="lp-feat-body">
-            <h3 className="lp-feat-title">能高越嶺・雲之道</h3>
-            <span className="lp-feat-subtitle">走進雲與林的交界</span>
+            <h3 className="lp-feat-title">柴山探洞・城市祕境</h3>
+            <span className="lp-feat-subtitle">走進城市邊緣的地形祕境</span>
             <p className="lp-feat-desc">
-              從南投入山，穿越原始林徑與古老鐵杉，<br />在雲海翻湧之處，遇見布農的山與故事。
+              跟著懂路的人鑽進珊瑚礁岩的洞穴地景，<br />在城市邊緣，遇見另一個世界的高雄。
             </p>
             <div className="lp-feat-tags">
-              <span className="lp-tag"><HikeIcon /> 健行</span>
-              <span className="lp-tag"><NightsIcon /> 3天2夜</span>
+              <span className="lp-tag"><HikeIcon /> 探洞</span>
+              <span className="lp-tag"><NightsIcon /> 3-4小時</span>
               <span className="lp-tag">
                 難度
-                <span className="lp-dots" aria-label="難度 4 分之 3">
-                  <i /><i /><i /><i className="lp-dot-off" />
+                <span className="lp-dots" aria-label="難度 5 分之 2">
+                  <i /><i /><i className="lp-dot-off" /><i className="lp-dot-off" /><i className="lp-dot-off" />
                 </span>
               </span>
             </div>
@@ -86,7 +98,7 @@ export function LpFeatured() {
             <span className="lp-rating-count">(128則評價)</span>
           </div>
           <div className="lp-feat-price">
-            NT$ 12,800<span className="lp-price-unit">起</span>
+            NT$ 2,000<span className="lp-price-unit">起</span>
           </div>
         </div>
       </Link>

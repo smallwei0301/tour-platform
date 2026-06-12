@@ -38,10 +38,10 @@ test.describe('祕島 LP 首頁', () => {
   test('編輯精選卡顯示行程資訊', async ({ page }) => {
     await page.goto('/');
     const card = page.locator('.lp-feat-card');
-    await expect(card.locator('.lp-feat-title')).toHaveText('能高越嶺・雲之道');
-    await expect(card.locator('.lp-feat-subtitle')).toHaveText('走進雲與林的交界');
+    await expect(card.locator('.lp-feat-title')).toHaveText('柴山探洞・城市祕境');
+    await expect(card.locator('.lp-feat-subtitle')).toHaveText('走進城市邊緣的地形祕境');
     await expect(card.locator('.lp-feat-rating')).toContainText('4.9');
-    await expect(card.locator('.lp-feat-price')).toContainText('NT$ 12,800');
+    await expect(card.locator('.lp-feat-price')).toContainText('NT$ 2,000');
   });
 
   test('嚮導故事與四張信任徽章', async ({ page }) => {
