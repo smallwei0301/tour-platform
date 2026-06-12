@@ -2161,49 +2161,66 @@ details[open] .kkd-faq-q::before { content: '- '; }
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   background-image: url('/images/lp/hero-cave.jpg');
   background-size: cover; background-position: center top;
-  /* 曙光照進山洞：慢速推近（Ken Burns），縮放原點對準洞口（上方中央偏右） */
-  transform-origin: 62% 26%;
-  animation: lpHeroZoom 26s ease-in-out infinite alternate;
+  /* 動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
+     省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
+  transform-origin: 62% 24%;
+  will-change: transform;
 }
-@keyframes lpHeroZoom {
-  from { transform: scale(1); }
-  to { transform: scale(1.05); }
-}
-/* 洞口曙光呼吸：暖色 radial＋screen 疊色（只會變亮不會壓暗），蓋在照片區 */
-.lp-hero-glow {
+/* 曙光圖層①：暮色罩（亮暗循環由 WAAPI 控制 opacity），radial 讓洞口永遠最亮 */
+.lp-hero-dawn {
   position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   pointer-events: none;
-  background: radial-gradient(40% 30% at 60% 20%,
-    rgba(255, 219, 150, 0.5) 0%,
-    rgba(255, 203, 128, 0.18) 48%,
-    rgba(255, 203, 128, 0) 74%);
-  mix-blend-mode: screen;
-  animation: lpHeroDawn 9s ease-in-out infinite alternate;
+  background: radial-gradient(62% 48% at 60% 24%,
+    rgba(9, 14, 22, 0.04) 0%,
+    rgba(9, 14, 22, 0.38) 58%,
+    rgba(9, 14, 22, 0.62) 100%);
 }
-@keyframes lpHeroDawn {
-  from { opacity: 0.25; }
-  to { opacity: 0.85; }
-}
-/* 斜射光束：自洞口往左下緩慢掃動的細光帶 */
-.lp-hero-beam {
-  position: absolute; top: -8%; right: 10%; width: 36%; height: 120%;
+/* 曙光圖層②：洞口放射光束（WAAPI 擺動＋呼吸） */
+.lp-hero-rays {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
   pointer-events: none;
-  background: linear-gradient(116deg,
-    rgba(255, 232, 180, 0) 40%,
-    rgba(255, 232, 180, 0.13) 48%,
-    rgba(255, 241, 205, 0.24) 52%,
-    rgba(255, 232, 180, 0.12) 57%,
-    rgba(255, 232, 180, 0) 66%);
-  filter: blur(8px);
-  mix-blend-mode: screen;
-  animation: lpHeroBeam 13s ease-in-out infinite alternate;
+  background: repeating-conic-gradient(from 132deg at 60% 22%,
+    rgba(255, 236, 190, 0) 0deg,
+    rgba(255, 236, 190, 0.3) 5deg,
+    rgba(255, 236, 190, 0) 11deg,
+    rgba(255, 236, 190, 0) 26deg);
+  -webkit-mask-image: radial-gradient(75% 80% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.45) 45%, transparent 78%);
+  mask-image: radial-gradient(75% 80% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.45) 45%, transparent 78%);
+  transform-origin: 60% 22%;
 }
-@keyframes lpHeroBeam {
-  from { opacity: 0.15; transform: translateX(-14px); }
-  to { opacity: 0.7; transform: translateX(12px); }
+/* 曙光圖層③：洞口飄動雲層 — cloudbox 以 mask 圈住洞口天空區並裁切，
+   內層雲帶為週期性平鋪圖樣（background-size 50% + repeat-x），
+   WAAPI translateX 一個圖樣週期即無縫循環 */
+.lp-hero-cloudbox {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  overflow: hidden; pointer-events: none;
+  -webkit-mask-image: radial-gradient(50% 38% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 82%);
+  mask-image: radial-gradient(50% 38% at 60% 22%, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 82%);
 }
-@media (prefers-reduced-motion: reduce) {
-  .lp-hero-photo, .lp-hero-glow, .lp-hero-beam { animation: none; }
+.lp-hero-clouds, .lp-hero-clouds2 {
+  position: absolute; left: -30%; width: 260%;
+  background-repeat: repeat-x;
+  background-size: 50% 100%;
+  filter: blur(6px);
+  will-change: transform;
+}
+.lp-hero-clouds {
+  top: 4%; height: 34%;
+  background-image:
+    radial-gradient(16% 42% at 8% 62%, rgba(255, 253, 246, 0.6), transparent 70%),
+    radial-gradient(13% 36% at 24% 38%, rgba(255, 248, 235, 0.5), transparent 70%),
+    radial-gradient(19% 48% at 45% 64%, rgba(255, 253, 246, 0.45), transparent 70%),
+    radial-gradient(11% 32% at 64% 42%, rgba(255, 248, 235, 0.55), transparent 70%),
+    radial-gradient(15% 40% at 84% 60%, rgba(255, 253, 246, 0.48), transparent 70%);
+}
+.lp-hero-clouds2 {
+  top: 13%; height: 28%; opacity: 0.75;
+  filter: blur(9px);
+  background-image:
+    radial-gradient(18% 46% at 14% 52%, rgba(255, 251, 240, 0.5), transparent 70%),
+    radial-gradient(12% 34% at 38% 66%, rgba(255, 251, 240, 0.42), transparent 70%),
+    radial-gradient(16% 44% at 58% 44%, rgba(255, 251, 240, 0.46), transparent 70%),
+    radial-gradient(13% 36% at 80% 62%, rgba(255, 251, 240, 0.4), transparent 70%);
 }
 .lp-hero-photo::before {
   content: ''; position: absolute; inset: 0;
@@ -2596,8 +2613,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-hero-caption::after { width: 90px; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-hero-photo { width: 52%; }
-  .lp-hero-glow { width: 52%; }
-  .lp-hero-beam { right: 11%; width: 30%; }
+  .lp-hero-dawn, .lp-hero-rays, .lp-hero-cloudbox { width: 52%; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }
