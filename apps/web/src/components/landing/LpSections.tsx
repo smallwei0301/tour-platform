@@ -104,7 +104,8 @@ const TRUST_ITEMS = [
 export function LpGuide() {
   return (
     <section className="lp-section lp-guide" aria-label="在地嚮導與平台保障">
-      <div className="lp-guide-grid">
+      {/* 參考圖為單一邊框大卡：照片＋文字（左 60.5%）＋徽章 2×2（右） */}
+      <div className="lp-guide-card">
         <Link href="/guides" className="lp-guide-story">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/images/lp/guide-portrait.jpg" alt="泰雅族在地嚮導巴勇的肖像" />

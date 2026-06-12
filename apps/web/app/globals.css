@@ -2239,44 +2239,53 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-feat-price .lp-price-unit { font-size: 11px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
 
 /* ── 在地嚮導 ── */
+/* 參考圖量測（@375）：大卡 344×96、徽章卡 59/61×31 gap5、文字起點＝卡內 28.7% */
 .lp-guide { padding-top: 12px; }
-.lp-guide-grid { display: grid; grid-template-columns: 56.5% 1fr; gap: 6px; align-items: stretch; }
+.lp-guide-card {
+  display: grid; grid-template-columns: 60.5% 1fr;
+  background: linear-gradient(180deg, #1d271d 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  overflow: hidden;
+}
 .lp-guide-story {
   position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #131d15;
-  min-height: 104px;
+  min-height: 94px;
   display: block; color: inherit;
 }
 .lp-guide-story img {
-  position: absolute; left: 0; top: 0; height: 100%; width: 45%;
+  position: absolute; left: 0; top: 0; height: 100%; width: 55%;
   object-fit: cover; object-position: center top;
 }
 .lp-guide-story::before {
   content: ''; position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(90deg, rgba(19, 29, 21, 0) 25%, rgba(19, 29, 21, 0.4) 35%, rgba(19, 29, 21, 0.96) 46%, #131d15 54%);
+  background: linear-gradient(90deg, rgba(22, 31, 22, 0) 22%, rgba(22, 31, 22, 0.4) 33%, rgba(22, 31, 22, 0.95) 45%, rgba(22, 31, 22, 1) 52%);
 }
 .lp-guide-text {
   position: relative; z-index: 2;
   height: 100%;
   display: flex; flex-direction: column; justify-content: center;
-  padding: 8px 6px 8px 38%;
+  padding: 5px 4px 5px 46%;
 }
-.lp-guide-label { margin: 0 0 4px; font-size: 10.5px; line-height: 1.25; letter-spacing: 0.1em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
-.lp-guide-name { margin: 0 0 5px; font-size: 16px; font-weight: 900; line-height: 1.25; letter-spacing: 0.05em; color: #f0ecdc; white-space: nowrap; }
-.lp-guide-quote { margin: 0 0 5px; font-size: 11.5px; line-height: 1.48; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
-.lp-guide-link { font-size: 11px; line-height: 1.25; letter-spacing: 0.08em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
-.lp-trust-grid2 { display: grid; grid-template-columns: 1fr 1.08fr; grid-template-rows: 1fr 1fr; gap: 5px; }
+.lp-guide-label { margin: 0 0 5px; font-size: 9px; line-height: 1.25; letter-spacing: 0.1em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
+.lp-guide-name { margin: 0 0 7px; font-size: 12px; font-weight: 900; line-height: 1.2; letter-spacing: 0.03em; color: #f0ecdc; white-space: nowrap; }
+.lp-guide-quote { margin: 0 0 6px; font-size: 9.5px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
+.lp-guide-link { font-size: 9px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
+.lp-trust-grid2 {
+  display: grid; grid-template-columns: 1fr 1.03fr; gap: 5px;
+  align-content: center;
+  margin: 6px 10px 6px 0;
+}
 .lp-trust-card {
   display: flex; align-items: center; justify-content: center; gap: 4px;
-  background: linear-gradient(180deg, #202b1e 0%, #1a241a 100%);
-  border: 1px solid rgba(190, 178, 137, 0.28);
-  border-radius: 10px;
-  padding: 6px 2px;
+  height: 31px;
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 7px;
+  padding: 2px 2px;
 }
-.lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 18px; height: 18px; }
-.lp-trust-card span { font-size: 10.5px; line-height: 1.5; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
+.lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 17px; height: 17px; }
+.lp-trust-card span { font-size: 7.5px; line-height: 1.4; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
 
 /* ── 結尾 CTA（古紙） ── */
 .lp-closing { position: relative; margin-top: 12px; background: #18211a; }
@@ -2342,17 +2351,17 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-price { font-size: 21px; }
   .lp-feat-price .lp-price-unit { font-size: 13px; }
   .lp-guide { padding-top: 36px; }
-  .lp-guide-grid { gap: 18px; }
-  .lp-guide-story { min-height: 320px; border-radius: 16px; }
-  .lp-guide-text { padding: 24px 26px 24px 44%; }
-  .lp-guide-label { font-size: 13px; margin-bottom: 12px; }
-  .lp-guide-name { font-size: 26px; margin-bottom: 14px; }
-  .lp-guide-quote { font-size: 15px; margin-bottom: 16px; }
+  .lp-guide-card { border-radius: 16px; }
+  .lp-guide-story { min-height: 270px; }
+  .lp-guide-text { padding: 20px 16px 20px 30%; }
+  .lp-guide-label { font-size: 14px; margin-bottom: 10px; }
+  .lp-guide-name { font-size: 27px; margin-bottom: 12px; }
+  .lp-guide-quote { font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
   .lp-guide-link { font-size: 14px; }
-  .lp-trust-grid2 { gap: 16px; }
-  .lp-trust-card { padding: 18px 18px; gap: 14px; border-radius: 14px; }
-  .lp-trust-card svg { width: 34px; height: 34px; }
-  .lp-trust-card span { font-size: 15px; }
+  .lp-trust-grid2 { gap: 14px; margin: 24px 24px 24px 0; }
+  .lp-trust-card { height: 84px; padding: 8px 10px; gap: 12px; border-radius: 12px; }
+  .lp-trust-card svg { width: 32px; height: 32px; }
+  .lp-trust-card span { font-size: 15px; line-height: 1.5; }
   .lp-closing { margin-top: 72px; }
   .lp-closing-edge { height: 38px; }
   .lp-closing-paper { padding: 20px 24px 76px; }
