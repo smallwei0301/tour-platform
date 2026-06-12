@@ -134,7 +134,7 @@ export function LpClosing() {
       <div className="lp-closing-paper">
         {/* 古紙撕邊 */}
         <svg className="lp-closing-edge" viewBox="0 0 1200 26" preserveAspectRatio="none" aria-hidden="true" style={{ position: 'absolute', top: -1, left: 0, transform: 'translateY(-100%)' }}>
-          <path d="M0 26 L0 18 Q60 10 130 16 T290 12 T430 17 T580 10 T730 16 T880 11 T1030 16 T1200 12 L1200 26 Z" fill="#ecdfc0" />
+          <path d="M0 26 L0 18 Q60 10 130 16 T290 12 T430 17 T580 10 T730 16 T880 11 T1030 16 T1200 12 L1200 26 Z" fill="#e6d5bd" />
         </svg>
         <div className="lp-closing-inner">
           <h2 className="lp-closing-title">你的祕島故事，從這裡開始</h2>

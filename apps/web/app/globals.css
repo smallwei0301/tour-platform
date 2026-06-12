@@ -15,11 +15,15 @@
   --tp-brass: #b08d3e;
   --tp-paper: #f4ecd8;
   --tp-cream: #f1e9d4;
-  --tp-serif: var(--font-noto-serif-tc), 'Noto Serif TC', 'PMingLiU', Georgia, serif;
 }
 
 * { box-sizing: border-box; }
-body { margin: 0; color: var(--tp-text); background: var(--tp-bg); font-family: 'Noto Sans TC', Inter, system-ui, -apple-system, sans-serif; }
+body {
+  margin: 0; color: var(--tp-text); background: var(--tp-bg);
+  font-family: 'Noto Sans TC', Inter, system-ui, -apple-system, sans-serif;
+  /* next/font 變數掛在 body class 上，--tp-serif 必須在 body 層定義才解析得到（html 層會 IACVT 失效） */
+  --tp-serif: var(--font-noto-serif-tc, 'Noto Serif TC'), 'Noto Serif TC', 'PMingLiU', Georgia, serif;
+}
 html { overflow-x: hidden; }
 body { overflow-x: hidden; }
 a { color: inherit; text-decoration: none; }
@@ -2078,10 +2082,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* ============================================================
    Midao Landing Page (祕島 LP) — 深綠×古紙×黃銅
    ============================================================ */
-.lp-root { background: var(--tp-ink); color: var(--tp-cream); font-family: var(--tp-serif); }
+.lp-root { background: #18211a; color: var(--tp-cream); font-family: var(--tp-serif); }
 
 /* ── Hero ── */
-.lp-hero { position: relative; overflow: hidden; background: #131f17; }
+.lp-hero { position: relative; overflow: hidden; background: #0c1410; }
 .lp-hero-photo {
   position: absolute; top: 0; right: 0; bottom: 0; width: 56%;
   background-image: url('/images/lp/hero-cave.jpg');
@@ -2089,11 +2093,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-hero-photo::before {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, #131f17 0%, rgba(19, 31, 23, 0.5) 12%, rgba(19, 31, 23, 0) 30%);
+  background: linear-gradient(90deg, #0c1410 0%, rgba(12, 20, 16, 0.5) 12%, rgba(12, 20, 16, 0) 30%);
 }
 .lp-hero-photo::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(19, 31, 23, 0) 78%, #131f17 100%);
+  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 78%, #0c1410 100%);
 }
 .lp-hero-inner {
   position: relative; z-index: 1;
@@ -2123,14 +2127,14 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-family: var(--font-inter), Inter, sans-serif;
   font-size: 9.5px;
   letter-spacing: 0.22em;
-  color: rgba(176, 141, 62, 0.95);
+  color: rgba(214, 207, 184, 0.75);
   white-space: nowrap;
 }
-.lp-hero-caption::after { content: ''; width: 56px; height: 1px; background: rgba(176, 141, 62, 0.6); }
+.lp-hero-caption::after { content: ''; width: 56px; height: 1px; background: rgba(214, 207, 184, 0.4); }
 .lp-btn {
   display: inline-flex; align-items: center; gap: 10px;
-  background: #b14e27;
-  color: #f8efdc;
+  background: #a8511f;
+  color: #f6eed8;
   font-family: var(--tp-serif);
   font-size: 14px;
   font-weight: 700;
@@ -2141,7 +2145,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   transition: background 0.15s;
 }
-.lp-btn:hover { background: #c2542e; }
+.lp-btn:hover { background: #b85c28; }
 .lp-btn .lp-btn-arrow { font-family: Inter, sans-serif; letter-spacing: 0; }
 .lp-hero-content { max-width: 320px; }
 
@@ -2153,7 +2157,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.3em;
-  color: var(--tp-brass);
+  color: #cbc29d;
 }
 
 /* ── 主題探索 ── */
@@ -2162,28 +2166,28 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-theme-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 3px;
-  background: linear-gradient(180deg, #243227 0%, #1d2a20 100%);
-  border: 1px solid rgba(176, 141, 62, 0.22);
+  background: linear-gradient(180deg, #232b20 0%, #1d251c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.28);
   border-radius: 9px;
   padding: 8px 3px 7px;
   text-align: center;
   transition: border-color 0.15s, transform 0.15s;
 }
 .lp-theme-card:hover { border-color: rgba(176, 141, 62, 0.55); transform: translateY(-2px); }
-.lp-theme-card svg { display: block; color: var(--tp-brass); width: 23px; height: 23px; }
-.lp-theme-title { font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: var(--tp-paper); line-height: 1.25; }
+.lp-theme-card svg { display: block; color: #c9c0a4; width: 23px; height: 23px; }
+.lp-theme-title { font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #efe9d3; line-height: 1.25; }
 .lp-theme-sub {
   font-family: var(--font-inter), Inter, sans-serif;
   font-size: 7.5px; letter-spacing: 0; line-height: 1.2;
-  color: rgba(168, 176, 158, 0.85);
+  color: rgba(170, 175, 158, 0.8);
   white-space: nowrap;
 }
 
 /* ── 編輯精選卡 ── */
 .lp-featured { padding-top: 16px; }
 .lp-feat-card {
-  background: linear-gradient(180deg, #202e23 0%, #1a271d 100%);
-  border: 1px solid rgba(176, 141, 62, 0.28);
+  background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.3);
   border-radius: 12px;
   overflow: hidden;
   display: block;
@@ -2196,14 +2200,14 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-feat-title {
   margin: 0 0 4px;
   font-size: 16px; font-weight: 900; letter-spacing: 0.1em;
-  color: #d8b96a;
+  color: #e9e3c2;
 }
 .lp-feat-subtitle {
   display: inline-block;
   margin: 0 0 6px;
   font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em;
-  color: #d4683f;
-  border-bottom: 1px solid rgba(194, 84, 46, 0.45);
+  color: #c8744d;
+  border-bottom: 1px solid rgba(198, 111, 72, 0.4);
   padding-bottom: 4px;
 }
 .lp-feat-desc {
@@ -2218,25 +2222,25 @@ details[open] .kkd-faq-q::before { content: '- '; }
   white-space: nowrap;
 }
 .lp-feat-tags .lp-tag { display: inline-flex; align-items: center; gap: 5px; }
-.lp-feat-tags .lp-tag svg { color: rgba(176, 141, 62, 0.9); }
+.lp-feat-tags .lp-tag svg { color: rgba(201, 192, 164, 0.9); }
 .lp-feat-tags .lp-tag + .lp-tag { border-left: 1px solid rgba(244, 236, 216, 0.22); margin-left: 8px; padding-left: 8px; }
 .lp-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
 .lp-dots i { width: 6px; height: 6px; border-radius: 50%; background: #c2542e; }
 .lp-dots i.lp-dot-off { background: transparent; border: 1px solid rgba(194, 84, 46, 0.55); box-sizing: border-box; }
 .lp-feat-footer {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  border-top: 1px solid rgba(176, 141, 62, 0.25);
+  border-top: 1px solid rgba(190, 178, 137, 0.28);
   padding: 5px 13px 7px;
 }
 .lp-feat-rating { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--tp-paper); }
 .lp-feat-rating img { height: 21px; width: auto; border-radius: 13px; mix-blend-mode: lighten; }
 .lp-feat-rating .lp-rating-count { font-size: 11px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.04em; }
-.lp-feat-price { font-size: 14px; font-weight: 700; color: #d8b96a; letter-spacing: 0.04em; white-space: nowrap; }
+.lp-feat-price { font-size: 14px; font-weight: 700; color: #ded7ab; letter-spacing: 0.04em; white-space: nowrap; }
 .lp-feat-price .lp-price-unit { font-size: 11px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
 
 /* ── 在地嚮導 ── */
 .lp-guide { padding-top: 14px; }
-.lp-guide-grid { display: grid; grid-template-columns: 55% 1fr; gap: 10px; align-items: stretch; }
+.lp-guide-grid { display: grid; grid-template-columns: 58% 1fr; gap: 9px; align-items: stretch; }
 .lp-guide-story {
   position: relative;
   border-radius: 12px;
@@ -2246,40 +2250,40 @@ details[open] .kkd-faq-q::before { content: '- '; }
   display: block; color: inherit;
 }
 .lp-guide-story img {
-  position: absolute; left: 0; top: 0; height: 100%; width: 52%;
+  position: absolute; left: 0; top: 0; height: 100%; width: 42%;
   object-fit: cover; object-position: center top;
 }
 .lp-guide-story::before {
   content: ''; position: absolute; inset: 0; z-index: 1;
-  background: linear-gradient(90deg, rgba(19, 29, 21, 0) 24%, rgba(19, 29, 21, 0.45) 40%, rgba(19, 29, 21, 0.97) 52%, #131d15 60%);
+  background: linear-gradient(90deg, rgba(19, 29, 21, 0) 24%, rgba(19, 29, 21, 0.4) 34%, rgba(19, 29, 21, 0.96) 43%, #131d15 50%);
 }
 .lp-guide-text {
   position: relative; z-index: 2;
   height: 100%;
   display: flex; flex-direction: column; justify-content: center;
-  padding: 10px 8px 10px 35%;
+  padding: 10px 8px 10px 42%;
 }
-.lp-guide-label { margin: 0 0 5px; font-size: 9.5px; letter-spacing: 0.13em; color: rgba(216, 185, 106, 0.95); white-space: nowrap; }
-.lp-guide-name { margin: 0 0 6px; font-size: 15px; font-weight: 900; letter-spacing: 0.1em; color: var(--tp-paper); white-space: nowrap; }
+.lp-guide-label { margin: 0 0 5px; font-size: 9px; letter-spacing: 0.1em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
+.lp-guide-name { margin: 0 0 6px; font-size: 14px; font-weight: 900; letter-spacing: 0.05em; color: #f0ecdc; white-space: nowrap; }
 .lp-guide-quote { margin: 0 0 7px; font-size: 10px; line-height: 1.7; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
-.lp-guide-link { font-size: 10px; letter-spacing: 0.1em; color: rgba(216, 185, 106, 0.95); white-space: nowrap; }
+.lp-guide-link { font-size: 10px; letter-spacing: 0.1em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
 .lp-trust-grid2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 9px; }
 .lp-trust-card {
   display: flex; align-items: center; justify-content: center; gap: 5px;
-  background: linear-gradient(180deg, #22301f 0%, #1c281b 100%);
-  border: 1px solid rgba(176, 141, 62, 0.25);
+  background: linear-gradient(180deg, #202b1e 0%, #1a241a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.28);
   border-radius: 10px;
   padding: 8px 3px;
 }
-.lp-trust-card svg { flex-shrink: 0; color: #cdb273; width: 18px; height: 18px; }
+.lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 18px; height: 18px; }
 .lp-trust-card span { font-size: 9.5px; line-height: 1.6; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
 
 /* ── 結尾 CTA（古紙） ── */
-.lp-closing { position: relative; margin-top: 26px; background: #131f17; }
+.lp-closing { position: relative; margin-top: 26px; background: #18211a; }
 .lp-closing-edge { display: block; width: 100%; height: 26px; }
 .lp-closing-paper {
   position: relative;
-  background-color: #ecdfc0;
+  background-color: #e6d5bd;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.38 0 0 0 0 0.26 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
   padding: 6px 20px 30px;
 }
@@ -2287,13 +2291,13 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-closing-title {
   margin: 6px 0 9px;
   font-size: 18.5px; font-weight: 900; letter-spacing: 0.14em;
-  color: #2b3a25;
+  color: #20281a;
 }
 .lp-closing-desc {
   margin: 0 auto 14px;
   max-width: 520px;
   font-size: 11.5px; letter-spacing: 0.14em; line-height: 1.8;
-  color: rgba(62, 76, 50, 0.85);
+  color: rgba(50, 60, 42, 0.9);
 }
 .lp-closing .lp-btn { box-shadow: 0 3px 12px rgba(90, 60, 30, 0.35); border-color: rgba(120, 70, 30, 0.25); }
 .lp-stamp {
@@ -2340,7 +2344,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide { padding-top: 36px; }
   .lp-guide-grid { gap: 18px; }
   .lp-guide-story { min-height: 320px; border-radius: 16px; }
-  .lp-guide-text { padding: 24px 26px 24px 40%; }
+  .lp-guide-text { padding: 24px 26px 24px 44%; }
   .lp-guide-label { font-size: 13px; margin-bottom: 12px; }
   .lp-guide-name { font-size: 26px; margin-bottom: 14px; }
   .lp-guide-quote { font-size: 15px; margin-bottom: 16px; }
