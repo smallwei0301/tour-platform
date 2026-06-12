@@ -56,15 +56,17 @@ function CardRow({ heading, items, testId }: { heading: string; items: ActivityC
             key={a.slug}
             href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}
             style={{
+              // 與行程列表卡同視覺：深綠卡底＋奶油字（深色 LP 主題）
               display: 'block', border: '1px solid var(--tp-border, #e5e7eb)', borderRadius: 12,
-              overflow: 'hidden', textDecoration: 'none', color: 'inherit', background: '#fff',
+              overflow: 'hidden', textDecoration: 'none', color: 'var(--tp-text)',
+              background: 'var(--tp-card-bg, #1f2a1f)',
             }}
           >
             {a.coverImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- 推薦小卡，lazy 原生即可
               <img src={a.coverImageUrl} alt={a.title} loading="lazy" style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: '100%', aspectRatio: '4 / 3', background: '#f3f4f6' }} />
+              <div style={{ width: '100%', aspectRatio: '4 / 3', background: '#232e21' }} />
             )}
             <div style={{ padding: '8px 10px' }}>
               <p style={{ fontSize: 13, fontWeight: 600, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.title}</p>
