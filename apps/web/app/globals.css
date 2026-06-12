@@ -43,6 +43,191 @@ a { color: inherit; text-decoration: none; }
 .tp-kicker { color: var(--tp-primary); font-weight: 700; margin: 0 0 8px; }
 .tp-hero h1 { font-size: clamp(28px, 4vw, 44px); margin: 0 0 12px; max-width: 780px; }
 .tp-hero-sub { max-width: 760px; color: var(--tp-muted); line-height: 1.7; }
+/* ── Motion hero（首頁 boomerang 影片背景，hero-section-redesign）────────── */
+.tp-hero-motion {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  /* 64px = sticky navbar 高度；svh 避免行動瀏覽器網址列造成跳動 */
+  min-height: calc(100vh - 64px);
+  min-height: calc(100svh - 64px);
+  /* 影片載入前的底色，沿用原 hero 漸層避免閃白 */
+  background: linear-gradient(150deg, #eef7f2 0%, #f9f6f0 100%);
+}
+.tp-hero-motion-bg { position: absolute; inset: 0; }
+.tp-hero-motion-media { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tp-hero-motion-overlay {
+  position: absolute;
+  inset: 0;
+  /* 上方古紙色淡洗保深綠標題可讀；下方山墨漸層保白色品牌區塊可讀 */
+  background: linear-gradient(
+    180deg,
+    rgba(244, 236, 216, 0.62) 0%,
+    rgba(244, 236, 216, 0.22) 36%,
+    rgba(26, 46, 31, 0) 55%,
+    rgba(26, 46, 31, 0.28) 78%,
+    rgba(26, 46, 31, 0.52) 100%
+  );
+}
+.tp-hero-motion-inner {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 48px;
+}
+.tp-hero-motion-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: clamp(72px, 12vh, 128px) 16px 0;
+}
+.tp-hero-motion-kicker {
+  margin: 0 0 14px;
+  color: #c2542e;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 3px;
+  animation: tp-hero-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.tp-hero-motion-title {
+  margin: 0;
+  max-width: 880px;
+  color: #1a2e1f;
+  font-weight: 900;
+  font-size: clamp(32px, 5.4vw, 72px);
+  line-height: 1.18;
+  letter-spacing: 0.01em;
+  animation: tp-hero-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+.tp-hero-motion-title-accent { color: #5e7a4f; }
+.tp-hero-motion-sub {
+  margin: 22px 0 0;
+  max-width: 480px;
+  color: #44523f;
+  font-size: clamp(14px, 1.6vw, 18px);
+  line-height: 1.75;
+  animation: tp-hero-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+.tp-hero-motion-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+  padding: 0 clamp(16px, 4vw, 40px) clamp(28px, 5vh, 44px);
+  animation: tp-hero-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.38s both;
+}
+.tp-hero-motion-brand {
+  max-width: 400px;
+  color: rgba(255, 255, 255, 0.97);
+  text-shadow: 0 1px 14px rgba(26, 46, 31, 0.4);
+}
+.tp-hero-motion-brandline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.tp-hero-motion-brandline sup { font-size: 9px; font-weight: 500; }
+.tp-hero-motion-brandcopy {
+  margin: 0 0 20px;
+  max-width: 320px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  line-height: 1.7;
+}
+.tp-hero-motion-cta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.tp-hero-motion-btn-primary {
+  background: #fff;
+  color: #1a2e1f;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 26px;
+  border-radius: 999px;
+  box-shadow: 0 1px 8px rgba(26, 46, 31, 0.18);
+  transition: background-color 0.15s ease;
+}
+.tp-hero-motion-btn-primary:hover { background: rgba(255, 255, 255, 0.88); }
+.tp-hero-motion-btn-ghost {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+.tp-hero-motion-btn-ghost:hover { background: rgba(255, 255, 255, 0.22); }
+.tp-hero-motion-scrollhint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.tp-hero-motion-scrollicon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(4px);
+  animation: tp-hero-bob 2.2s ease-in-out infinite;
+}
+@keyframes tp-hero-fade-up {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tp-hero-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+}
+@media (max-width: 640px) {
+  .tp-hero-motion-footer { flex-direction: column; align-items: flex-start; }
+  .tp-hero-motion-scrollhint { display: none; }
+  .tp-hero-motion-copy { padding-top: 56px; }
+  /* 行動版影片底部偏亮，比照範例改深綠文字／深綠按鈕確保對比 */
+  .tp-hero-motion-overlay {
+    background: linear-gradient(
+      180deg,
+      rgba(244, 236, 216, 0.62) 0%,
+      rgba(244, 236, 216, 0.22) 36%,
+      rgba(244, 236, 216, 0) 55%,
+      rgba(244, 236, 216, 0.45) 100%
+    );
+  }
+  .tp-hero-motion-brand { color: #2c4030; text-shadow: none; }
+  .tp-hero-motion-brandcopy { color: rgba(44, 64, 48, 0.92); font-weight: 500; }
+  .tp-hero-motion-btn-primary { background: #2c4030; color: #fff; }
+  .tp-hero-motion-btn-primary:hover { background: #1a2e1f; }
+  .tp-hero-motion-btn-ghost {
+    color: #2c4030;
+    border-color: rgba(44, 64, 48, 0.55);
+    background: rgba(255, 255, 255, 0.35);
+  }
+  .tp-hero-motion-btn-ghost:hover { background: rgba(255, 255, 255, 0.6); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tp-hero-motion-kicker,
+  .tp-hero-motion-title,
+  .tp-hero-motion-sub,
+  .tp-hero-motion-footer,
+  .tp-hero-motion-scrollicon {
+    animation: none;
+  }
+}
+
 .tp-trust-grid { margin-top: 20px; display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .tp-trust-grid > div { background: #fff; border: 1px solid var(--tp-border); border-radius: 12px; padding: 12px; }
 .tp-cta-row { margin-top: 22px; display: flex; gap: 10px; }
