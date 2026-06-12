@@ -23,11 +23,11 @@
 - contract 測試：別人的 email → `ORDER_NOT_FOUND`（不洩漏存在性）；guide 摸非自己活動的訂單 → `FORBIDDEN`（route 層 403）；admin 不帶 ownership（service-role 路徑）可唯讀整串。
 - `tests/api/issue1411-order-messages-routes.test.mjs`：admin route 僅 export GET（無 POST/PATCH/DELETE）；Supabase 分支 source-contract 鎖定 ownership→窗口→insert 順序。
 
-### AC4 — email 通知＋15 分鐘節流＋交易類 ⚠️ PASS（寄送本體 NOT_VERIFIED-live）
+### AC4 — email 通知＋15 分鐘節流＋交易類 ✅ PASS（含實寄）
 - 節流實測：contract 測試同角色 15 分鐘內第二則 `shouldNotify=false`（留言仍寫入）、guide 回覆不受 traveler 節流影響；unit 測試含 15 分鐘邊界與 snake_case row。
 - `order_message` 已加入 `TRANSACTIONAL_EMAIL_KINDS`（`shouldSendEmailKind` 對交易類一律回 true，不受行銷 opt-out 影響）。
 - wrapper `order-message-notify.ts` 仿 `reschedule-notify.ts`（best-effort、fire-and-forget、無 email 靜默略過）；route source-contract 鎖定 `void notify…().catch`。
-- **NOT_VERIFIED-live**：未實寄真實信件（會動到真實收件人），替代證據為上列單測＋與 #1383 改期通知完全同構的 `sendEmailWithContract` 路徑；preview/production 首封實寄建議於下次營運 smoke 一併觀察 Sentry/email log。
+- **實寄驗證（2026-06-12 08:32 Asia/Taipei）**：owner 提供限權 Resend key（Sending access、事後撤銷）後，以一次性 scratch script transpile-import `src/lib/email.ts` 並呼叫 `sendOrderMessageNotice`（production 同一條路徑），實寄至 owner 信箱（sma***01@gmail.com）成功 — Resend 回傳 `ok:true, status:'sent', messageId=f31081fb-55d7-4c23-9155-940b805c467b`；收件匣到達由 owner 確認。scratch script 已刪除、key 不落地 repo。
 
 ### AC5 — rate limit 第 11 則回 429 ✅ PASS
 - `tests/unit/issue1411-message-rate-limit.test.mjs`（本報告隨附補測）：transpile `rate-limit.ts` 後行為實測 — 同 key 第 1–10 則放行、第 11 則 `allowed=false` 且 `createRateLimitResponse` 產生 status 429；視窗 ≈600s、`maxRequests=10`；不同使用者不互佔額度。2 測綠燈。
@@ -44,7 +44,7 @@
 
 ## 判定
 
-**PASS**（AC4 寄送本體標 NOT_VERIFIED-live，blocker：實寄需真實收件人；替代證據與下一步已列）。
+**PASS**（全部 AC 含 AC4 實寄均綠；無 NOT_VERIFIED-live 項目）。
 
 ## 備註
 
