@@ -15,10 +15,17 @@ import { useEffect, useRef } from 'react';
  *   canvas 再以與光束相同的 radial mask 淡出 — 光照不到的塵埃不可見
  * - 與光束同步呼吸：每幀讀 .lp-hero-rays 的 computed opacity，粉塵散射
  *   強度跟著光束明暗 — 光束最亮時粉塵最明顯、光束暗下時粉塵消失
+ * - 洞口排除：塵埃在明亮的後景山景前無對比、不可見 — 粒子落在
+ *   洞口（fg 透明區，依 cover 映射即時換算、跟隨 fg 縮放）內不繪製
  */
 
 const ORIGIN_X = 1.0; // 後景最右上角（與 .lp-hero-rays 的 conic 原點一致）
 const ORIGIN_Y = 0.0;
+// 前景洞口（影像座標，與去背橢圓一致）＋ fg 的 cover 排版參數
+const FG_ASPECT = 1.5;            // hero-cave-fg.webp 1536x1024
+const FG_POS_X = 0.82, FG_POS_Y = 0.5;   // background-position 82% 50%
+const HOLE_CX = 0.775, HOLE_CY = 0.44;   // 洞口橢圓中心（影像比例）
+const HOLE_RX = 0.165, HOLE_RY = 0.45;   // 洞口半徑（影像比例）
 const FAN_FROM = 196;  // 光束扇形角度範圍（CSS conic 角度：0°=上、順時針）
 const FAN_TO = 257;
 const COUNT = 230; // 密度 ×5
@@ -77,6 +84,29 @@ export function LpHeroDust() {
     const motes: Mote[] = Array.from({ length: COUNT }, () => spawnMote(w, h, true));
 
     const raysEl = document.querySelector('.lp-hero-rays');
+    const fgEl = document.querySelector('.lp-hero-fg');
+
+    // cover 映射：影像座標 → 元素座標（與 background-size: cover + position 同邏輯）
+    const holeInElement = () => {
+      const imgW0 = FG_ASPECT, imgH0 = 1;
+      const scale = Math.max(w / imgW0, h / imgH0);
+      const sw = imgW0 * scale, sh = imgH0 * scale;
+      const ox = (w - sw) * FG_POS_X, oy = (h - sh) * FG_POS_Y;
+      // fg 推進縮放（transform-origin 76% 43%）→ 洞口同步放大/平移
+      let fgScale = 1;
+      if (fgEl) {
+        const tr = getComputedStyle(fgEl).transform;
+        if (tr && tr.startsWith('matrix(')) fgScale = parseFloat(tr.slice(7)) || 1;
+      }
+      const tox = w * 0.76, toy = h * 0.43;
+      const cx0 = ox + HOLE_CX * sw, cy0 = oy + HOLE_CY * sh;
+      return {
+        cx: tox + (cx0 - tox) * fgScale,
+        cy: toy + (cy0 - toy) * fgScale,
+        rx: HOLE_RX * sw * fgScale,
+        ry: HOLE_RY * sh * fgScale,
+      };
+    };
 
     let raf = 0;
     let last = performance.now();
@@ -88,6 +118,7 @@ export function LpHeroDust() {
       // 與光束同步：光束 opacity 0.3（最暗）→粉塵≈0；0.95（最亮）→全強度
       const raysOpacity = raysEl ? parseFloat(getComputedStyle(raysEl).opacity) || 0 : 1;
       const beamSync = Math.min(1, Math.max(0.04, (raysOpacity - 0.3) / 0.65));
+      const hole = holeInElement();
       for (let i = 0; i < motes.length; i++) {
         const m = motes[i];
         // Ornstein–Uhlenbeck：隨機加速度（布朗擾動）＋阻尼回歸基線（0, -5）
@@ -107,7 +138,10 @@ export function LpHeroDust() {
         // 散射閃爍（隨機翻轉的不規則明滅）＋距光源越遠越淡
         const tw = 0.5 + 0.5 * Math.sin(t * m.flicker * 2 + m.phase) * Math.sin(t * 0.7 + m.phase * 1.7);
         const fall = Math.max(0, 1 - rr / (Math.hypot(w, h) * 0.95));
-        const alpha = m.baseAlpha * (0.35 + 0.65 * tw) * (0.3 + 0.7 * fall) * beamSync;
+        // 洞口排除：亮背景（後景山景）前的塵埃無對比 → 不繪製（邊緣軟過渡）
+        const he = ((m.x - hole.cx) / hole.rx) ** 2 + ((m.y - hole.cy) / hole.ry) ** 2;
+        const holeFade = Math.min(1, Math.max(0, (he - 1) / 0.35));
+        const alpha = m.baseAlpha * (0.35 + 0.65 * tw) * (0.3 + 0.7 * fall) * beamSync * holeFade;
         if (alpha <= 0.01) continue;
         ctx.beginPath();
         ctx.shadowColor = 'rgba(255, 240, 205, 0.9)';

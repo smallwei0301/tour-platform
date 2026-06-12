@@ -26,11 +26,11 @@ export function LpHeroMotion() {
 
     const animations = [
       // 第一視角推進：只放大「去背洞穴前景」（.lp-hero-fg，洞口真 alpha 透明），
-      // 遠景山谷（.lp-hero-photo）靜止不動。單程拉近 6150ms 後定住
+      // 遠景山谷（.lp-hero-photo）靜止不動。單程拉近 12300ms 後定住
       //（fill: forwards 保持結束狀態，不再來回推拉）
       animate('.lp-hero-fg',
         [{ transform: 'scale(1)' }, { transform: 'scale(1.16)' }],
-        { duration: 6150, iterations: 1, easing: 'ease-out', fill: 'forwards' }),
+        { duration: 12300, iterations: 1, easing: 'ease-out', fill: 'forwards' }),
       // 暮色罩由濃轉淡：照片像被曙光逐漸點亮
       animate('.lp-hero-dawn',
         [{ opacity: 1 }, { opacity: 0 }],
