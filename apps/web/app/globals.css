@@ -2122,7 +2122,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   margin: 0 0 6px;
   font-family: var(--tp-serif);
   font-weight: 700;
-  font-size: clamp(25px, 6.9vw, 28px);
+  font-size: clamp(28px, 7.5vw, 32px);
   line-height: 1.33;
   letter-spacing: 0.08em;
   color: var(--tp-paper);
@@ -2131,14 +2131,14 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-hero h1 .lp-accent { color: var(--tp-accent); }
 .lp-hero-sub {
   margin: 0 0 7px;
-  font-size: 9px; line-height: 1.5;
+  font-size: 11px; line-height: 1.5;
   letter-spacing: 0.14em;
   color: rgba(244, 236, 216, 0.85);
 }
 .lp-hero-caption {
   margin: 0 0 8px;
   font-family: var(--tp-serif);
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.05em;
   color: rgba(228, 219, 196, 0.85);
   white-space: nowrap;
@@ -2148,7 +2148,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   background: #a8511f;
   color: #f6eed8;
   font-family: var(--tp-serif);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: 0.18em;
   padding: 9px 30px;
@@ -2164,7 +2164,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   min-width: 202px;
   box-sizing: border-box;
   justify-content: center;
-  font-size: 10.5px;
+  font-size: 12px;
   padding: 9px 20px;
 }
 .lp-hero-vert {
@@ -2175,7 +2175,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-hero-vert span {
   font-family: var(--tp-serif);
-  font-size: 9px; line-height: 1; letter-spacing: 0.04em;
+  font-size: 11px; line-height: 1; letter-spacing: 0.04em;
   color: rgba(230, 212, 170, 0.92);
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
 }
@@ -2190,7 +2190,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-eyebrow {
   display: flex; align-items: center; gap: 10px;
   margin: 0 0 4px 6px;
-  font-size: 11px; line-height: 1.3;
+  font-size: 13px; line-height: 1.3;
   font-weight: 700;
   letter-spacing: 0.3em;
   color: #cbc29d;
@@ -2211,10 +2211,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-theme-card:hover { border-color: rgba(176, 141, 62, 0.55); transform: translateY(-2px); }
 .lp-theme-card svg { display: block; color: #c9c0a4; width: 23px; height: 23px; }
-.lp-theme-title { font-size: 13px; font-weight: 700; letter-spacing: 0.18em; color: #efe9d3; line-height: 1.25; }
+.lp-theme-title { font-size: 15px; font-weight: 700; letter-spacing: 0.18em; color: #efe9d3; line-height: 1.25; }
 .lp-theme-sub {
   font-family: var(--font-inter), Inter, sans-serif;
-  font-size: 7.5px; letter-spacing: 0; line-height: 1.2;
+  font-size: 9px; letter-spacing: 0; line-height: 1.2;
   color: rgba(170, 175, 158, 0.8);
   white-space: nowrap;
 }
@@ -2243,14 +2243,14 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-feat-body { flex: 1; padding: 12px 15px 6px; min-width: 0; }
 .lp-feat-title {
   margin: 0;
-  font-size: 16px; font-weight: 900; letter-spacing: 0.08em; line-height: 1.25;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.08em; line-height: 1.25;
   color: #e9e3c2;
 }
 .lp-feat-subtitle {
   display: block;
   width: fit-content;
   margin: 2px 0 4px;
-  font-size: 9.5px; font-weight: 700; letter-spacing: 0.16em; line-height: 1.3;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; line-height: 1.3;
   color: #c8744d;
   border-bottom: 1px solid rgba(198, 111, 72, 0.4);
   padding-bottom: 3px;
@@ -2258,12 +2258,12 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-feat-desc {
   margin: 0 0 4px;
-  font-size: 7.5px; line-height: 2; letter-spacing: 0.02em;
+  font-size: 9px; line-height: 2; letter-spacing: 0.02em;
   color: rgba(244, 236, 216, 0.78);
 }
 .lp-feat-tags {
   display: inline-flex; align-items: center; gap: 0;
-  font-size: 7px; letter-spacing: 0.02em;
+  font-size: 8.5px; letter-spacing: 0.02em;
   color: rgba(244, 236, 216, 0.85);
   white-space: nowrap;
   border: 1px solid rgba(190, 178, 137, 0.35);
@@ -2281,11 +2281,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
   border-top: 1px solid rgba(190, 178, 137, 0.28);
   padding: 12px 13px 13px 14px;
 }
-.lp-feat-rating { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--tp-paper); white-space: nowrap; }
+.lp-feat-rating { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--tp-paper); white-space: nowrap; }
 .lp-feat-rating img { height: 14px; width: auto; border-radius: 8px; mix-blend-mode: lighten; }
-.lp-feat-rating .lp-rating-count { font-size: 7.5px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.02em; }
-.lp-feat-price { font-size: 11.5px; font-weight: 700; color: #ded7ab; letter-spacing: 0.04em; white-space: nowrap; }
-.lp-feat-price .lp-price-unit { font-size: 8.5px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
+.lp-feat-rating .lp-rating-count { font-size: 9px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.02em; }
+.lp-feat-price { font-size: 13px; font-weight: 700; color: #ded7ab; letter-spacing: 0.04em; white-space: nowrap; }
+.lp-feat-price .lp-price-unit { font-size: 10px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
 
 /* ── 融合區塊：更多行程／目的地／旅人故事／FAQ（原首頁資訊，LP 視覺語言） ── */
 .lp-tours { padding-top: 22px; }
@@ -2305,26 +2305,26 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-tour-body { padding: 10px 13px 9px; min-width: 0; }
 .lp-tour-title {
   margin: 0 0 4px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.45;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.45;
   color: #e9e3c2;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .lp-tour-tagline {
   margin: 0 0 7px;
-  font-size: 8.5px; line-height: 1.7;
+  font-size: 10px; line-height: 1.7;
   color: rgba(244, 236, 216, 0.72);
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .lp-tour-meta {
   display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
-  font-size: 8.5px; color: rgba(244, 236, 216, 0.6);
+  font-size: 10px; color: rgba(244, 236, 216, 0.6);
 }
-.lp-tour-price { font-size: 11.5px; font-weight: 700; color: #ded7ab; letter-spacing: 0.03em; }
-.lp-tour-price i { font-style: normal; font-size: 8.5px; color: rgba(244, 236, 216, 0.6); margin-left: 2px; }
+.lp-tour-price { font-size: 13px; font-weight: 700; color: #ded7ab; letter-spacing: 0.03em; }
+.lp-tour-price i { font-style: normal; font-size: 10px; color: rgba(244, 236, 216, 0.6); margin-left: 2px; }
 .lp-more-link {
   display: block; width: fit-content;
   margin: 10px auto 0;
-  font-size: 10px; letter-spacing: 0.14em;
+  font-size: 12px; letter-spacing: 0.14em;
   color: #cbc29d;
 }
 .lp-more-link:hover { color: #e9e3c2; }
@@ -2341,8 +2341,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   transition: border-color 0.15s, transform 0.15s;
 }
 .lp-dest-card:hover { border-color: rgba(190, 178, 137, 0.55); transform: translateY(-1px); }
-.lp-dest-name { font-size: 12px; font-weight: 700; letter-spacing: 0.2em; color: #e9e3c2; }
-.lp-dest-count { font-family: var(--font-inter), Inter, sans-serif; font-size: 7.5px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.06em; }
+.lp-dest-name { font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: #e9e3c2; }
+.lp-dest-count { font-family: var(--font-inter), Inter, sans-serif; font-size: 9px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.06em; }
 
 .lp-stories { padding-top: 22px; }
 .lp-stories-list { display: flex; flex-direction: column; gap: 8px; }
@@ -2358,17 +2358,17 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-story-card:hover { border-color: rgba(190, 178, 137, 0.5); }
 .lp-story-quote {
   margin: 0 0 6px;
-  font-size: 9.5px; line-height: 1.75;
+  font-size: 11px; line-height: 1.75;
   color: rgba(244, 236, 216, 0.88);
 }
 .lp-story-meta {
   display: flex; align-items: center; gap: 8px;
-  font-size: 8px; color: rgba(244, 236, 216, 0.6);
+  font-size: 10px; color: rgba(244, 236, 216, 0.6);
 }
-.lp-story-stars { color: var(--tp-brass); font-size: 8px; letter-spacing: 0.1em; }
+.lp-story-stars { color: var(--tp-brass); font-size: 10px; letter-spacing: 0.1em; }
 .lp-story-activity {
   display: block; margin-top: 4px;
-  font-size: 7.5px; color: rgba(203, 194, 157, 0.75); letter-spacing: 0.04em;
+  font-size: 9px; color: rgba(203, 194, 157, 0.75); letter-spacing: 0.04em;
 }
 
 .lp-faq { padding-top: 22px; }
@@ -2377,7 +2377,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-faq-item summary {
   cursor: pointer;
   padding: 11px 4px;
-  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
   color: #e9e3c2;
   list-style: none;
   position: relative;
@@ -2391,7 +2391,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-faq-item[open] summary::after { content: '−'; }
 .lp-faq-item p {
   margin: 0; padding: 0 4px 12px;
-  font-size: 9.5px; line-height: 1.8;
+  font-size: 11px; line-height: 1.8;
   color: rgba(244, 236, 216, 0.72);
 }
 
@@ -2424,10 +2424,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
   display: flex; flex-direction: column; justify-content: center;
   padding: 5px 4px 5px 46%;
 }
-.lp-guide-label { margin: 0 0 5px; font-size: 9px; line-height: 1.25; letter-spacing: 0.1em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
-.lp-guide-name { margin: 0 0 7px; font-size: 12px; font-weight: 900; line-height: 1.2; letter-spacing: 0.03em; color: #f0ecdc; white-space: nowrap; }
-.lp-guide-quote { margin: 0 0 6px; font-size: 9.5px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
-.lp-guide-link { font-size: 9px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
+.lp-guide-label { margin: 0 0 5px; font-size: 11px; line-height: 1.25; letter-spacing: 0.1em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
+.lp-guide-name { margin: 0 0 7px; font-size: 14px; font-weight: 900; line-height: 1.2; letter-spacing: 0.03em; color: #f0ecdc; white-space: nowrap; }
+.lp-guide-quote { margin: 0 0 6px; font-size: 11px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
+.lp-guide-link { font-size: 11px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
 .lp-trust-grid2 {
   display: grid; grid-template-columns: 1fr 1.03fr; gap: 5px;
   align-content: center;
@@ -2442,7 +2442,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   padding: 2px 2px;
 }
 .lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 17px; height: 17px; }
-.lp-trust-card span { font-size: 7.5px; line-height: 1.4; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
+.lp-trust-card span { font-size: 9px; line-height: 1.4; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
 
 /* ── 結尾 CTA（古紙） ── */
 .lp-closing { position: relative; margin-top: 12px; background: #18211a; }
@@ -2456,13 +2456,13 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-closing-inner { position: relative; max-width: 1200px; margin: 0 auto; text-align: center; }
 .lp-closing-title {
   margin: 8px 0 7px;
-  font-size: 15px; font-weight: 900; letter-spacing: 0.12em; line-height: 1.35;
+  font-size: 17px; font-weight: 900; letter-spacing: 0.12em; line-height: 1.35;
   color: #20281a;
 }
 .lp-closing-desc {
   margin: 0 auto 11px;
   max-width: 520px;
-  font-size: 10px; letter-spacing: 0.12em; line-height: 1.65;
+  font-size: 12px; letter-spacing: 0.12em; line-height: 1.65;
   color: rgba(50, 60, 42, 0.9);
 }
 .lp-closing .lp-btn { box-shadow: 0 3px 12px rgba(90, 60, 30, 0.35); border-color: rgba(120, 70, 30, 0.25); font-size: 11.5px; padding: 7px 16px; }
@@ -2478,57 +2478,57 @@ details[open] .kkd-faq-q::before { content: '- '; }
 @media (min-width: 768px) {
   .lp-hero-inner { padding: 140px 24px 110px; } /* 透明導覽列浮在上方，加大頂部內距 */
   .lp-hero-content { max-width: 560px; }
-  .lp-hero h1 { font-size: clamp(40px, 4.6vw, 58px); line-height: 1.42; }
+  .lp-hero h1 { font-size: clamp(45px, 5vw, 64px); line-height: 1.42; }
   .lp-hero-vert { top: 200px; right: 56px; gap: 10px; }
-  .lp-hero-vert span { font-size: 16px; }
+  .lp-hero-vert span { font-size: 18px; }
   .lp-hero-compass { top: 320px; right: 60px; }
   .lp-hero-compass svg { width: 64px; height: 64px; }
   .lp-feat-photo .lp-feat-badge { width: 46px; left: 20px; }
-  .lp-hero-sub { font-size: 17px; margin-bottom: 14px; }
-  .lp-hero-caption { font-size: 12px; margin-bottom: 42px; }
+  .lp-hero-sub { font-size: 19px; margin-bottom: 14px; }
+  .lp-hero-caption { font-size: 14px; margin-bottom: 42px; }
   .lp-hero-caption::after { width: 90px; }
-  .lp-btn { font-size: 16px; padding: 15px 36px; }
+  .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-hero-photo { width: 52%; }
   .lp-section { padding: 0 24px; }
-  .lp-eyebrow { font-size: 18px; margin: 0 0 22px; }
+  .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }
   .lp-themes-grid { gap: 18px; }
   .lp-theme-card { padding: 30px 8px 24px; gap: 10px; border-radius: 14px; }
   .lp-theme-card svg { width: 42px; height: 42px; }
-  .lp-theme-title { font-size: 21px; }
-  .lp-theme-sub { font-size: 12px; }
+  .lp-theme-title { font-size: 23px; }
+  .lp-theme-sub { font-size: 14px; }
   .lp-featured { padding-top: 48px; }
   .lp-feat-card { border-radius: 16px; }
   .lp-feat-photo { min-height: 300px; }
   .lp-feat-body { padding: 30px 34px 18px; }
-  .lp-feat-title { font-size: 30px; margin-bottom: 10px; }
-  .lp-feat-subtitle { font-size: 15px; margin-bottom: 16px; padding-bottom: 8px; }
-  .lp-feat-desc { font-size: 15px; margin-bottom: 18px; max-width: 560px; }
-  .lp-feat-tags { font-size: 14px; }
+  .lp-feat-title { font-size: 32px; margin-bottom: 10px; }
+  .lp-feat-subtitle { font-size: 17px; margin-bottom: 16px; padding-bottom: 8px; }
+  .lp-feat-desc { font-size: 17px; margin-bottom: 18px; max-width: 560px; }
+  .lp-feat-tags { font-size: 16px; }
   .lp-feat-tags .lp-tag + .lp-tag { margin-left: 16px; padding-left: 16px; }
   .lp-feat-footer { padding: 16px 34px 18px; }
-  .lp-feat-rating { font-size: 16px; }
+  .lp-feat-rating { font-size: 18px; }
   .lp-feat-rating img { height: 34px; border-radius: 17px; }
-  .lp-feat-rating .lp-rating-count { font-size: 13px; }
-  .lp-feat-price { font-size: 21px; }
-  .lp-feat-price .lp-price-unit { font-size: 13px; }
+  .lp-feat-rating .lp-rating-count { font-size: 15px; }
+  .lp-feat-price { font-size: 23px; }
+  .lp-feat-price .lp-price-unit { font-size: 15px; }
   .lp-guide { padding-top: 36px; }
   .lp-guide-card { border-radius: 16px; }
   .lp-guide-story { min-height: 270px; }
   .lp-guide-text { padding: 20px 16px 20px 30%; }
-  .lp-guide-label { font-size: 14px; margin-bottom: 10px; }
-  .lp-guide-name { font-size: 27px; margin-bottom: 12px; }
-  .lp-guide-quote { font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
-  .lp-guide-link { font-size: 14px; }
+  .lp-guide-label { font-size: 16px; margin-bottom: 10px; }
+  .lp-guide-name { font-size: 29px; margin-bottom: 12px; }
+  .lp-guide-quote { font-size: 18px; margin-bottom: 10px; line-height: 1.5; }
+  .lp-guide-link { font-size: 16px; }
   .lp-trust-grid2 { gap: 14px; margin: 24px 24px 24px 0; }
   .lp-trust-card { height: 84px; padding: 8px 10px; gap: 12px; border-radius: 12px; }
   .lp-trust-card svg { width: 32px; height: 32px; }
-  .lp-trust-card span { font-size: 15px; line-height: 1.5; }
+  .lp-trust-card span { font-size: 17px; line-height: 1.5; }
   .lp-closing { margin-top: 72px; }
   .lp-closing-edge { height: 38px; }
   .lp-closing-paper { padding: 20px 24px 76px; }
-  .lp-closing-title { font-size: 34px; margin: 14px 0 18px; }
-  .lp-closing-desc { font-size: 15px; margin-bottom: 30px; }
+  .lp-closing-title { font-size: 36px; margin: 14px 0 18px; }
+  .lp-closing-desc { font-size: 17px; margin-bottom: 30px; }
   .lp-stamp { width: 150px; height: 150px; right: 4%; top: -26px; }
 }
 
