@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { LpHero, LpThemes, LpFeatured, LpGuide, LpClosing } from '../src/components/landing/LpSections';
+import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
 
 export const metadata: Metadata = {
   title: 'Midao 祕島｜台灣在地導遊預約平台',
@@ -104,6 +104,11 @@ export default function HomePage() {
         <LpThemes />
         <LpFeatured />
         <LpGuide />
+        {/* 原首頁資訊區塊（行程／目的地／評價／FAQ）以 LP 風格融合 */}
+        <LpTours />
+        <LpDestinations />
+        <LpStories />
+        <LpFaq />
         <LpClosing />
       </div>
     </>

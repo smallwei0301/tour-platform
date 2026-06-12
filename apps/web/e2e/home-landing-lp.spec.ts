@@ -53,6 +53,20 @@ test.describe('祕島 LP 首頁', () => {
     }
   });
 
+  test('融合區塊：更多行程／目的地／旅人故事／FAQ', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.locator('.lp-tour-card')).toHaveCount(2);
+    await expect(page.locator('.lp-tour-title').first()).toContainText('大稻埕');
+    await expect(page.locator('.lp-dest-card')).toHaveCount(8);
+    await expect(page.locator('.lp-dest-card').first()).toContainText('台北');
+    await expect(page.locator('.lp-story-card')).toHaveCount(3);
+    await expect(page.locator('.lp-faq-item')).toHaveCount(6);
+    // FAQ 展開互動
+    const firstFaq = page.locator('.lp-faq-item').first();
+    await firstFaq.locator('summary').click();
+    await expect(firstFaq.locator('p')).toBeVisible();
+  });
+
   test('古紙結尾 CTA', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('.lp-closing-title')).toHaveText('你的祕島故事，從這裡開始');
