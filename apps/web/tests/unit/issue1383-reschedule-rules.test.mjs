@@ -1,7 +1,8 @@
 /**
  * Issue #1383 — 訂單改期：純邏輯（政策時限、資格、目標 slot、逾時失效）
  * 設計：docs/04-tech/04-tech-architecture/13-order-reschedule-design.md
- * 定案參數：每訂單限改 1 次、guide 72h lazy-expire、申請窗 = 行程開始前 48h
+ * 定案參數：每訂單限改 1 次、guide 72h lazy-expire、申請窗 = 行程開始前 168h（7 天）
+ *   （owner 2026-06-12 由 48h 調整為 168h；窗內需聯絡客服）
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,8 +17,8 @@ import {
 } from '../../src/lib/reschedule.mjs';
 
 const NOW = '2026-06-11T00:00:00.000Z';
-const START_OK = '2026-06-20T09:00:00.000Z';   // 距 now 9 天 > 48h
-const START_SOON = '2026-06-12T09:00:00.000Z'; // 距 now 33h < 48h
+const START_OK = '2026-06-20T09:00:00.000Z';   // 距 now 9 天（225h）> 168h
+const START_SOON = '2026-06-17T09:00:00.000Z'; // 距 now 6.4 天（153h）< 168h
 
 const BASE = {
   orderStatus: 'paid',
@@ -27,10 +28,10 @@ const BASE = {
   hasPendingRequest: false,
 };
 
-test('定案參數鎖定：1 次上限 / 72h 失效 / 48h 申請窗', () => {
+test('定案參數鎖定：1 次上限 / 72h 失效 / 168h（7 天）申請窗', () => {
   assert.equal(RESCHEDULE_MAX_PER_ORDER, 1);
   assert.equal(RESCHEDULE_EXPIRE_HOURS, 72);
-  assert.equal(RESCHEDULE_WINDOW_HOURS, 48);
+  assert.equal(RESCHEDULE_WINDOW_HOURS, 168);
 });
 
 test('資格：paid/confirmed 在窗內可申請', () => {
@@ -47,11 +48,21 @@ test('資格：非 paid/confirmed → 403 NOT_ELIGIBLE_STATUS', () => {
   }
 });
 
-test('資格：窗外（<48h）→ 403 RESCHEDULE_WINDOW_CLOSED；已過期行程亦然', () => {
+test('資格：窗外（<168h）→ 403 RESCHEDULE_WINDOW_CLOSED 且訊息導向客服；已過期行程亦然', () => {
   const soon = canRequestReschedule({ ...BASE, scheduleStartAt: START_SOON });
+  assert.equal(soon.ok, false);
+  assert.equal(soon.status, 403);
   assert.equal(soon.code, 'RESCHEDULE_WINDOW_CLOSED');
+  assert.match(soon.message, /客服/);
   const past = canRequestReschedule({ ...BASE, scheduleStartAt: '2026-06-01T00:00:00.000Z' });
   assert.equal(past.code, 'RESCHEDULE_WINDOW_CLOSED');
+});
+
+test('資格：168h 邊界 — 恰滿 168h 可申請，差 1 分鐘即窗外', () => {
+  const exactly168 = new Date(new Date(NOW).getTime() + 168 * 3600_000).toISOString();
+  assert.equal(canRequestReschedule({ ...BASE, scheduleStartAt: exactly168 }).ok, true);
+  const justUnder = new Date(new Date(NOW).getTime() + 168 * 3600_000 - 60_000).toISOString();
+  assert.equal(canRequestReschedule({ ...BASE, scheduleStartAt: justUnder }).code, 'RESCHEDULE_WINDOW_CLOSED');
 });
 
 test('資格：已改過 1 次 → 409 RESCHEDULE_LIMIT_REACHED；已有申請中 → 409 RESCHEDULE_PENDING', () => {

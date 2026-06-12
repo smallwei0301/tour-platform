@@ -5,6 +5,7 @@ import { csrfHeaders } from '../../../../src/lib/csrf-client';
 import { useRouter, useParams } from 'next/navigation';
 import { createClient } from '../../../../src/lib/supabase/client';
 import { RefundPreviewBanner } from '../../../../src/components/orders/RefundPreviewBanner';
+import { RESCHEDULE_WINDOW_HOURS } from '../../../../src/lib/reschedule.mjs';
 
 type OrderDetail = {
   id: string;
@@ -339,6 +340,11 @@ export default function OrderDetailPage() {
   const departureNotPassed = !order.scheduleStartAt || new Date(order.scheduleStartAt) > new Date();
   const canRefund = ['paid', 'confirmed'].includes(status) && departureNotPassed;
   const isTerminal = ['cancelled_by_user', 'cancelled_by_guide', 'rejected', 'completed', 'refunded', 'refund_pending'].includes(status);
+  // #1383 — 僅距活動開始 > 168h（7 天）可線上自助改期；否則導向客服。
+  const hoursUntilDeparture = order.scheduleStartAt
+    ? (new Date(order.scheduleStartAt).getTime() - Date.now()) / 3600_000
+    : null;
+  const canSelfReschedule = hoursUntilDeparture != null && hoursUntilDeparture >= RESCHEDULE_WINDOW_HOURS;
 
   return (
     <div style={containerStyle}>
@@ -424,10 +430,20 @@ export default function OrderDetailPage() {
         </div>
       )}
 
-      {/* #1383 — Reschedule section（paid/confirmed 可申請；窗口由 API 把關） */}
+      {/* #1383 — Reschedule section（paid/confirmed 可申請；距活動開始須 > 168h 才能線上自助改期，
+          否則導向客服。窗口最終仍由 API 權威把關，這裡僅前端提早提示） */}
       {['paid', 'confirmed'].includes(status) && (
         <div style={{ marginBottom: 16 }}>
-          {!showRescheduleForm ? (
+          {!canSelfReschedule ? (
+            <div
+              data-testid="reschedule-contact-support"
+              style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '10px 14px' }}
+            >
+              <p style={{ fontSize: 13, color: '#c2410c', margin: 0 }}>
+                距活動開始未滿 {RESCHEDULE_WINDOW_HOURS / 24} 天（{RESCHEDULE_WINDOW_HOURS} 小時），無法線上自助改期。如需改期請聯絡客服協助安排。
+              </p>
+            </div>
+          ) : !showRescheduleForm ? (
             <button
               data-testid="reschedule-open-btn"
               onClick={() => void openRescheduleForm()}

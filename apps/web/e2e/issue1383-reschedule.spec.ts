@@ -10,7 +10,12 @@ import type { Route } from '@playwright/test';
 const ORDER_ID = '13830000-aaaa-4bbb-8ccc-000000000001';
 const REQ_ID = 'res_e2e_0001';
 
-function orderBody(status: string) {
+const HOUR_MS = 3600_000;
+// 相對於執行當下計算，避免寫死日期被 168h 窗口隨時間推移擋掉。
+const farFutureStart = new Date(Date.now() + 30 * 24 * HOUR_MS).toISOString();   // 30 天後 > 168h（可自助改期）
+const nearFutureStart = new Date(Date.now() + 5 * 24 * HOUR_MS).toISOString();   // 5 天後 < 168h（須聯絡客服）
+
+function orderBody(status: string, scheduleStartAt: string = farFutureStart) {
   return {
     ok: true,
     data: {
@@ -21,7 +26,7 @@ function orderBody(status: string) {
       contactName: '改期旅客',
       contactEmail: 'traveler-e2e@example.com',
       title: '高雄柴山探洞體驗',
-      scheduleStartAt: '2026-07-01T09:00:00+08:00',
+      scheduleStartAt,
       createdAt: '2026-06-01T00:00:00Z',
     },
   };
@@ -83,6 +88,19 @@ test.describe('issue1383 reschedule', () => {
 
     await page.goto(`/me/orders/${ORDER_ID}`);
     await expect(page.getByText('撰寫評價')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-testid="reschedule-open-btn"]')).toHaveCount(0);
+  });
+
+  test('traveler：距活動 <168h（7 天）→ 無改期入口、顯示聯絡客服提示', async ({ page }) => {
+    await setTravelerSession(page);
+    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('paid', nearFutureStart)) });
+    });
+
+    await page.goto(`/me/orders/${ORDER_ID}`);
+    const hint = page.locator('[data-testid="reschedule-contact-support"]');
+    await expect(hint).toBeVisible({ timeout: 10_000 });
+    await expect(hint).toContainText('聯絡客服');
     await expect(page.locator('[data-testid="reschedule-open-btn"]')).toHaveCount(0);
   });
 
