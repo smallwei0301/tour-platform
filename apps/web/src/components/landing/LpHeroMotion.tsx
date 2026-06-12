@@ -48,14 +48,14 @@ export function LpHeroMotion() {
           { transform: 'translateY(0%) scale(1)' },
           { transform: 'translateY(-2.2%) scale(1.03)' },
         ],
-        { duration: 11000, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
+        { duration: 5500, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }),
       // 雲層飄動：平移一個圖樣週期（background-size 50% → -50% 即無縫循環）
       animate('.lp-hero-clouds',
         [{ transform: 'translateX(0)' }, { transform: 'translateX(-50%)' }],
-        { duration: 27500, iterations: Infinity, easing: 'linear' }),
+        { duration: 13750, iterations: Infinity, easing: 'linear' }),
       animate('.lp-hero-clouds2',
         [{ transform: 'translateX(-50%)' }, { transform: 'translateX(0)' }],
-        { duration: 42500, iterations: Infinity, easing: 'linear' }),
+        { duration: 21250, iterations: Infinity, easing: 'linear' }),
     ];
 
     return () => {

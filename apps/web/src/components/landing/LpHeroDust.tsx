@@ -13,6 +13,8 @@ import { useEffect, useRef } from 'react';
  * - 景深：粒徑與模糊度隨機（近大遠小、失焦光斑）
  * - 只在光照範圍可見：粒子佈於光束扇形（196°–257°、原點＝右上角光源），
  *   canvas 再以與光束相同的 radial mask 淡出 — 光照不到的塵埃不可見
+ * - 與光束同步呼吸：每幀讀 .lp-hero-rays 的 computed opacity，粉塵散射
+ *   強度跟著光束明暗 — 光束最亮時粉塵最明顯、光束暗下時粉塵消失
  */
 
 const ORIGIN_X = 1.0; // 後景最右上角（與 .lp-hero-rays 的 conic 原點一致）
@@ -74,6 +76,8 @@ export function LpHeroDust() {
 
     const motes: Mote[] = Array.from({ length: COUNT }, () => spawnMote(w, h, true));
 
+    const raysEl = document.querySelector('.lp-hero-rays');
+
     let raf = 0;
     let last = performance.now();
     let t = 0;
@@ -81,6 +85,9 @@ export function LpHeroDust() {
       const dt = Math.min((now - last) / 1000, 0.05);
       last = now; t += dt;
       ctx.clearRect(0, 0, w, h);
+      // 與光束同步：光束 opacity 0.3（最暗）→粉塵≈0；0.95（最亮）→全強度
+      const raysOpacity = raysEl ? parseFloat(getComputedStyle(raysEl).opacity) || 0 : 1;
+      const beamSync = Math.min(1, Math.max(0.04, (raysOpacity - 0.3) / 0.65));
       for (let i = 0; i < motes.length; i++) {
         const m = motes[i];
         // Ornstein–Uhlenbeck：隨機加速度（布朗擾動）＋阻尼回歸基線（0, -5）
@@ -100,7 +107,7 @@ export function LpHeroDust() {
         // 散射閃爍（隨機翻轉的不規則明滅）＋距光源越遠越淡
         const tw = 0.5 + 0.5 * Math.sin(t * m.flicker * 2 + m.phase) * Math.sin(t * 0.7 + m.phase * 1.7);
         const fall = Math.max(0, 1 - rr / (Math.hypot(w, h) * 0.95));
-        const alpha = m.baseAlpha * (0.35 + 0.65 * tw) * (0.3 + 0.7 * fall);
+        const alpha = m.baseAlpha * (0.35 + 0.65 * tw) * (0.3 + 0.7 * fall) * beamSync;
         if (alpha <= 0.01) continue;
         ctx.beginPath();
         ctx.shadowColor = 'rgba(255, 240, 205, 0.9)';

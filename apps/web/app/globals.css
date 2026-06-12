@@ -2203,11 +2203,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-hero-rays {
   position: absolute; inset: 0;
   pointer-events: none;
+  /* 圓心（光源本體）在前景岩壁之外 — 不畫光暈，僅畫射入的光束 */
   background:
-    radial-gradient(22% 18% at 100% 0%,
-      rgba(255, 234, 180, 0.5) 0%,
-      rgba(255, 224, 160, 0.16) 55%,
-      transparent 80%),
     conic-gradient(from 0deg at 100% 0%,
       transparent 0deg,
       transparent 196deg,
@@ -2225,8 +2222,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
       transparent 257deg,
       transparent 360deg);
   filter: blur(2px);
-  -webkit-mask-image: radial-gradient(120% 130% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 80%);
-  mask-image: radial-gradient(120% 130% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 80%);
+  /* 近圓心淡入（光源被岩壁遮擋）→ 中段最亮 → 遠端衰減 */
+  -webkit-mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
+  mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
   transform-origin: 100% 0%;
 }
 /* 曙光圖層②b：光束中的懸浮微粒 canvas（LpHeroDust）。
@@ -2235,8 +2233,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   pointer-events: none;
-  -webkit-mask-image: radial-gradient(120% 130% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 80%);
-  mask-image: radial-gradient(120% 130% at 100% 0%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 80%);
+  -webkit-mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
+  mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
 }
 
 /* 曙光圖層③：洞口飄動雲層 — cloudbox 以 mask 圈住洞口天空區並裁切，
@@ -2258,16 +2256,16 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-hero-clouds {
   top: 14%; height: 48%;
   background-image:
-    radial-gradient(20% 50% at 8% 62%, rgba(255, 253, 246, 0.7) 0%, rgba(255, 253, 246, 0.28) 38%, transparent 62%),
-    radial-gradient(16% 42% at 22% 40%, rgba(255, 248, 235, 0.55) 0%, rgba(255, 248, 235, 0.22) 40%, transparent 64%),
-    radial-gradient(24% 56% at 44% 62%, rgba(255, 253, 246, 0.5) 0%, rgba(255, 253, 246, 0.2) 40%, transparent 63%),
-    radial-gradient(14% 38% at 58% 36%, rgba(255, 248, 235, 0.6) 0%, rgba(255, 248, 235, 0.24) 38%, transparent 62%),
-    radial-gradient(19% 48% at 72% 58%, rgba(255, 253, 246, 0.52) 0%, rgba(255, 253, 246, 0.2) 40%, transparent 64%),
-    radial-gradient(15% 40% at 88% 44%, rgba(255, 253, 246, 0.56) 0%, rgba(255, 253, 246, 0.22) 38%, transparent 62%);
+    radial-gradient(20% 50% at 8% 62%, rgba(255, 253, 246, 0.88) 0%, rgba(255, 253, 246, 0.38) 38%, transparent 62%),
+    radial-gradient(16% 42% at 22% 40%, rgba(255, 248, 235, 0.72) 0%, rgba(255, 248, 235, 0.3) 40%, transparent 64%),
+    radial-gradient(24% 56% at 44% 62%, rgba(255, 253, 246, 0.66) 0%, rgba(255, 253, 246, 0.28) 40%, transparent 63%),
+    radial-gradient(14% 38% at 58% 36%, rgba(255, 248, 235, 0.78) 0%, rgba(255, 248, 235, 0.32) 38%, transparent 62%),
+    radial-gradient(19% 48% at 72% 58%, rgba(255, 253, 246, 0.68) 0%, rgba(255, 253, 246, 0.28) 40%, transparent 64%),
+    radial-gradient(15% 40% at 88% 44%, rgba(255, 253, 246, 0.74) 0%, rgba(255, 253, 246, 0.3) 38%, transparent 62%);
   filter: blur(14px);
 }
 .lp-hero-clouds2 {
-  top: 36%; height: 38%; opacity: 0.8;
+  top: 36%; height: 38%; opacity: 0.92;
   filter: blur(18px);
   background-image:
     radial-gradient(22% 52% at 14% 52%, rgba(255, 251, 240, 0.55) 0%, rgba(255, 251, 240, 0.22) 40%, transparent 64%),
