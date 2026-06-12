@@ -18,9 +18,10 @@ import { test, expect } from './helpers';
 const LAYER_CLASSES = ['lp-hero-fg', 'lp-hero-dawn', 'lp-hero-rays', 'lp-hero-clouds', 'lp-hero-clouds2'];
 
 async function runningTargets(page: import('@playwright/test').Page): Promise<string[]> {
+  // fg 推近為單程＋fill forwards：6.15s 後 playState 變 finished（仍保持定格）→ 一併接受
   return page.evaluate(() =>
     document.getAnimations()
-      .filter((a) => a.playState === 'running')
+      .filter((a) => a.playState === 'running' || a.playState === 'finished')
       .map((a) => ((a.effect as KeyframeEffect | null)?.target as Element | null)?.className ?? ''),
   );
 }

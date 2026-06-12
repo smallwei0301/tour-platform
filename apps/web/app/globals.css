@@ -2158,7 +2158,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* ── Hero ── */
 .lp-hero { position: relative; overflow: hidden; background: #0c1410; }
 .lp-hero-photo {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  /* 全寬鋪滿：標題文字直接落在洞穴照上（左半岩壁天然深色保字） */
+  position: absolute; inset: 0;
   /* 遠景層：山谷空拍（使用者提供）— 靜止不動，透過前景洞口看見 */
   background-image: url('/images/lp/hero-mountains.jpg');
   background-size: cover; background-position: 60% 38%;
@@ -2167,24 +2168,20 @@ details[open] .kkd-faq-q::before { content: '- '; }
    動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
    省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
 .lp-hero-fg {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  position: absolute; inset: 0;
   background-image: url('/images/lp/hero-cave-fg.webp');
   background-size: cover; background-position: 82% 50%;
   transform-origin: 76% 43%;
   will-change: transform;
 }
-/* 前景層左緣／下緣與頁面底色的銜接（同遠景層的疊層） */
-.lp-hero-fg::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, #0c1410 0%, rgba(12, 20, 16, 0.5) 12%, rgba(12, 20, 16, 0) 30%);
-}
+/* 前景層下緣與頁面底色的銜接（左側不再壓深色 — 文字直接落在岩壁上） */
 .lp-hero-fg::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 78%, #0c1410 100%);
+  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 80%, #0c1410 100%);
 }
 /* 曙光圖層①：暮色罩（亮暗循環由 WAAPI 控制 opacity），radial 讓洞口永遠最亮 */
 .lp-hero-dawn {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  position: absolute; inset: 0;
   pointer-events: none;
   background: radial-gradient(58% 52% at 76% 42%,
     rgba(9, 14, 22, 0.04) 0%,
@@ -2196,7 +2193,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
    其餘角度被洞壁遮擋），束寬與亮度不一、輕微模糊呈體積光感；
    另疊一圈緊貼洞口的暖光暈。 */
 .lp-hero-rays {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  position: absolute; inset: 0;
   pointer-events: none;
   background:
     radial-gradient(17% 14% at 76% 40%,
@@ -2228,7 +2225,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
    內層雲帶為週期性平鋪圖樣（background-size 50% + repeat-x），
    WAAPI translateX 一個圖樣週期即無縫循環 */
 .lp-hero-cloudbox {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 61%;
+  position: absolute; inset: 0;
   overflow: hidden; pointer-events: none;
   -webkit-mask-image: radial-gradient(34% 46% at 76% 42%, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 82%);
   mask-image: radial-gradient(34% 46% at 76% 42%, #000 0%, rgba(0, 0, 0, 0.7) 55%, transparent 82%);
@@ -2257,10 +2254,6 @@ details[open] .kkd-faq-q::before { content: '- '; }
     radial-gradient(12% 34% at 38% 66%, rgba(255, 251, 240, 0.42), transparent 70%),
     radial-gradient(16% 44% at 58% 44%, rgba(255, 251, 240, 0.46), transparent 70%),
     radial-gradient(13% 36% at 80% 62%, rgba(255, 251, 240, 0.4), transparent 70%);
-}
-.lp-hero-photo::before {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, #0c1410 0%, rgba(12, 20, 16, 0.5) 12%, rgba(12, 20, 16, 0) 30%);
 }
 .lp-hero-photo::after {
   content: ''; position: absolute; inset: 0;
@@ -2648,8 +2641,6 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-hero-caption { font-size: 14px; margin-bottom: 42px; }
   .lp-hero-caption::after { width: 90px; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
-  .lp-hero-photo { width: 52%; }
-  .lp-hero-fg, .lp-hero-dawn, .lp-hero-rays, .lp-hero-cloudbox { width: 52%; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
   .lp-themes { padding-top: 56px; }
