@@ -273,7 +273,7 @@ export function LpGuide() {
           {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" />
+            <img src="/images/guides/andy-lee/portrait-hawk-v2.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" />
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・真實陪伴</p>
