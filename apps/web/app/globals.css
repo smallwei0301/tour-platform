@@ -2591,10 +2591,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
   min-height: 94px;
   display: flex; align-items: stretch; color: inherit;
 }
-/* 照片獨立欄：固定欄寬、object-position 鎖臉部，漸層緊貼照片右緣 —
-   任何裝置寬度構圖與淡出位置一致，不再被不同程度切斷 */
-/* aspect-ratio 鎖 3:4 直幅：照片寬度跟著卡高走，任何裝置構圖一致 */
-.lp-guide-photo { position: relative; flex: 0 0 auto; aspect-ratio: 3 / 4; max-width: 45%; }
+/* 照片獨立欄：固定欄寬、影像 object-fit cover 填滿。
+   用 align-self: stretch 讓照片高度「跟著卡片內容（文字）長高」，
+   而非用 aspect-ratio 固定高度去反過來壓縮文字欄造成文字破框。 */
+.lp-guide-photo { position: relative; flex: 0 0 40%; align-self: stretch; min-height: 100%; }
 .lp-guide-photo img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center 18%;
