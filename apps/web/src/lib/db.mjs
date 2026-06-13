@@ -34,6 +34,10 @@ import {
   setHomepageFeaturedFallback
 } from './admin.mjs';
 import { normalizeHomepageFeatured } from './homepage-featured.mjs';
+import {
+  isMissingHomepageFeaturedTable,
+  HOMEPAGE_FEATURED_TABLE_MISSING_MESSAGE,
+} from './homepage-featured-error.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -5066,7 +5070,16 @@ export async function getHomepageFeaturedDb() {
     .select('editor_pick_slug, more_featured_slugs, updated_at, updated_by')
     .limit(1)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // migration 未套用（表不存在）時 fail-open 回未設定狀態：首頁照常渲染預設，
+    // admin 頁面也能載入（儲存時才以可執行訊息提示套用 migration）。
+    if (isMissingHomepageFeaturedTable(error)) {
+      return { editorPickSlug: null, moreFeaturedSlugs: [], updatedAt: null, updatedBy: null };
+    }
+    const err = new Error(error.message);
+    err.code = error.code;
+    throw err;
+  }
   if (!data) return { editorPickSlug: null, moreFeaturedSlugs: [], updatedAt: null, updatedBy: null };
   return {
     editorPickSlug: data.editor_pick_slug ?? null,
@@ -5098,7 +5111,17 @@ export async function setHomepageFeaturedDb(input = {}) {
     updated_by: actor,
   };
   const { error } = await supabase.from('homepage_featured_settings').upsert(payload);
-  if (error) throw new Error(error.message);
+  if (error) {
+    // 表不存在（migration 未套用）→ 以可執行繁中訊息提示 operator，而非丟英文原訊息。
+    if (isMissingHomepageFeaturedTable(error)) {
+      const err = new Error(HOMEPAGE_FEATURED_TABLE_MISSING_MESSAGE);
+      err.code = 'HOMEPAGE_FEATURED_TABLE_MISSING';
+      throw err;
+    }
+    const err = new Error(error.message);
+    err.code = error.code;
+    throw err;
+  }
 
   const after = await getHomepageFeaturedDb();
   await insertAuditLogDb(supabase, {
