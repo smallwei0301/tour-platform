@@ -2698,8 +2698,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-price { font-size: 23px; }
   .lp-feat-price .lp-price-unit { font-size: 15px; }
   .lp-guide { padding-top: 36px; }
-  /* 平板起：恢復雙欄（故事 60.5% ｜ 信任徽章 39.5%） */
-  .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
+  /* 平板起：雙欄並排，故事欄加寬（66.5%）讓「在地嚮導・真實陪伴」文字區更寬，
+     信任徽章欄相應縮窄並縮小字級。 */
+  .lp-guide-card { border-radius: 16px; grid-template-columns: 66.5% 1fr; }
   .lp-guide-story { min-height: 270px; }
   /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
   .lp-guide-text { padding: 20px 20px 20px 28px; flex: 1; align-items: flex-start; text-align: left; }
@@ -2707,10 +2708,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide-name { font-size: 18px; margin-bottom: 10px; }
   .lp-guide-quote { font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
   .lp-guide-link { font-size: 12px; }
-  .lp-trust-grid2 { grid-template-columns: 1fr 1.03fr; gap: 10px; margin: 20px 14px 20px 0; }
-  .lp-trust-card { height: 84px; padding: 8px 6px; gap: 9px; border-radius: 12px; }
-  .lp-trust-card svg { width: 28px; height: 28px; }
-  .lp-trust-card span { font-size: 17px; line-height: 1.5; }
+  .lp-trust-grid2 { grid-template-columns: 1fr 1.03fr; gap: 8px; margin: 18px 12px 18px 0; }
+  .lp-trust-card { height: 70px; padding: 6px 5px; gap: 7px; border-radius: 11px; }
+  .lp-trust-card svg { width: 22px; height: 22px; }
+  .lp-trust-card span { font-size: 13px; line-height: 1.45; }
   /* 更多行程：桌機兩欄卡片，照片固定 4:3 不被拉成超寬裁切 */
   .lp-tours-list { flex-direction: row; gap: 18px; }
   .lp-tour-card { flex: 1 1 0; grid-template-columns: 38% 1fr; }
@@ -2745,6 +2746,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide-name { font-size: 26px; margin-bottom: 12px; }
   .lp-guide-quote { font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
   .lp-guide-link { font-size: 14px; }
+  /* 桌機：信任徽章字級小於導遊名，維持精緻、把寬度讓給中間文字區 */
+  .lp-trust-grid2 { gap: 9px; margin: 20px 14px 20px 0; }
+  .lp-trust-card { height: 76px; padding: 7px 6px; gap: 8px; border-radius: 12px; }
+  .lp-trust-card svg { width: 24px; height: 24px; }
+  .lp-trust-card span { font-size: 14px; line-height: 1.45; }
 }
 
 @media (max-width: 410px) {

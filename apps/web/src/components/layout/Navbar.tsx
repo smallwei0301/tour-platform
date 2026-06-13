@@ -54,13 +54,29 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
-  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲過整個 hero 區後才加半透明深色底，
-  // 因此進入／重新整理（停在 hero 內）看到的都是透明導覽列。
+  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲過整個 hero 區後才加半透明深色底。
   const isHome = pathname === '/';
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!isHome) return;
+    if (!isHome) {
+      setScrolled(false);
+      return;
+    }
+    // 關鍵：關閉瀏覽器的捲動位置還原。否則在頁面下方重新整理時，瀏覽器會
+    // 自動還原捲動位置（例如 scrollY=1200）並觸發 scroll 事件，導致導覽列在
+    // 載入瞬間就被判定為「已捲動」而套上深色底。改為 manual 後，重新整理一律
+    // 從頂端開始 → 導覽列載入即透明；僅在使用者真的向下捲過 hero 後才加深色底。
+    let prevRestoration: History['scrollRestoration'] | undefined;
+    try {
+      if ('scrollRestoration' in window.history) {
+        prevRestoration = window.history.scrollRestoration;
+        window.history.scrollRestoration = 'manual';
+      }
+    } catch {}
+    window.scrollTo(0, 0);
+    setScrolled(false);
+
     const onScroll = () => {
       const hero = document.querySelector('.lp-hero') as HTMLElement | null;
       const heroH = hero ? hero.offsetHeight : 0;
@@ -69,12 +85,16 @@ export function Navbar() {
       const threshold = Math.max(heroH > 0 ? heroH - 64 : window.innerHeight * 0.7, 200);
       setScrolled(window.scrollY > threshold);
     };
-    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', onScroll);
       window.removeEventListener('resize', onScroll);
+      try {
+        if ('scrollRestoration' in window.history && prevRestoration) {
+          window.history.scrollRestoration = prevRestoration;
+        }
+      } catch {}
     };
   }, [isHome]);
 
