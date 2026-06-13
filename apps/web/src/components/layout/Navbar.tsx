@@ -63,8 +63,10 @@ export function Navbar() {
     if (!isHome) return;
     const onScroll = () => {
       const hero = document.querySelector('.lp-hero') as HTMLElement | null;
-      // 門檻＝hero 底部減去導覽列高度；無 hero 時退回保守值
-      const threshold = hero ? hero.offsetHeight - 64 : 600;
+      const heroH = hero ? hero.offsetHeight : 0;
+      // 門檻＝hero 高度減導覽列高；hero 尚未量到（offsetHeight 0）時用視窗高
+      // 當保守值，並設下限 200px —— 避免量到 0 算出負門檻而「載入即判定已捲動」。
+      const threshold = Math.max(heroH > 0 ? heroH - 64 : window.innerHeight * 0.7, 200);
       setScrolled(window.scrollY > threshold);
     };
     onScroll();
