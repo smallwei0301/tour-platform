@@ -54,16 +54,26 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
-  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲動後加半透明深色底保可讀
+  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲過整個 hero 區後才加半透明深色底，
+  // 因此進入／重新整理（停在 hero 內）看到的都是透明導覽列。
   const isHome = pathname === '/';
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     if (!isHome) return;
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => {
+      const hero = document.querySelector('.lp-hero') as HTMLElement | null;
+      // 門檻＝hero 底部減去導覽列高度；無 hero 時退回保守值
+      const threshold = hero ? hero.offsetHeight - 64 : 600;
+      setScrolled(window.scrollY > threshold);
+    };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
   }, [isHome]);
 
   return (

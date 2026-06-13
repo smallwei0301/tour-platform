@@ -46,7 +46,7 @@ test.describe('祕島 LP 首頁', () => {
 
   test('嚮導故事與四張信任徽章', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('.lp-guide-name')).toContainText('巴勇');
+    await expect(page.locator('.lp-guide-name')).toContainText('Andy Lee');
     await expect(page.locator('.lp-trust-card')).toHaveCount(4);
     for (const t of ['身份驗證', '人工審核', '安心出行', '5星好評']) {
       await expect(page.locator('.lp-trust-card', { hasText: t })).toBeVisible();

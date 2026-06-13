@@ -214,16 +214,16 @@ export function LpGuide() {
     <section className="lp-section lp-guide" aria-label="在地嚮導與平台保障">
       {/* 參考圖為單一邊框大卡：照片＋文字（左 60.5%）＋徽章 2×2（右） */}
       <div className="lp-guide-card">
-        <Link href="/guides" className="lp-guide-story">
+        <Link href="/guides/andy-lee" className="lp-guide-story">
           {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/lp/guide-portrait.jpg" alt="泰雅族在地嚮導巴勇的肖像" />
+            <img src="/images/guides/andy-lee/avatar.jpg" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）的肖像" />
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・真實陪伴</p>
-            <p className="lp-guide-name">南橫泰雅・巴勇</p>
-            <p className="lp-guide-quote">「我帶路的地方，<br />是我世代生活的家。」</p>
+            <p className="lp-guide-name">高雄柴山・Andy Lee</p>
+            <p className="lp-guide-quote">「不是觀光打卡，<br />是懂路的人帶你走進柴山。」</p>
             <span className="lp-guide-link">認識嚮導的故事 →</span>
           </div>
         </Link>
