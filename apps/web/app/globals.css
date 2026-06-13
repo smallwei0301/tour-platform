@@ -2443,18 +2443,18 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-feat-tags {
   display: inline-flex; align-items: center; gap: 0;
-  font-size: 8.5px; letter-spacing: 0.02em;
+  font-size: 7.5px; letter-spacing: 0.01em;
   color: rgba(244, 236, 216, 0.85);
   white-space: nowrap;
   border: 1px solid rgba(190, 178, 137, 0.35);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 3px 6px;
 }
-.lp-feat-tags .lp-tag { display: inline-flex; align-items: center; gap: 5px; }
-.lp-feat-tags .lp-tag svg { color: rgba(201, 192, 164, 0.9); width: 11px; height: 11px; }
-.lp-feat-tags .lp-tag + .lp-tag { border-left: 1px solid rgba(244, 236, 216, 0.22); margin-left: 7px; padding-left: 7px; }
-.lp-dots { display: inline-flex; gap: 3px; margin-left: 2px; }
-.lp-dots i { width: 5px; height: 5px; border-radius: 50%; background: #c2542e; }
+.lp-feat-tags .lp-tag { display: inline-flex; align-items: center; gap: 4px; }
+.lp-feat-tags .lp-tag svg { color: rgba(201, 192, 164, 0.9); width: 9px; height: 9px; }
+.lp-feat-tags .lp-tag + .lp-tag { border-left: 1px solid rgba(244, 236, 216, 0.22); margin-left: 5px; padding-left: 5px; }
+.lp-dots { display: inline-flex; gap: 2px; margin-left: 2px; }
+.lp-dots i { width: 4px; height: 4px; border-radius: 50%; background: #c2542e; }
 .lp-dots i.lp-dot-off { background: transparent; border: 1px solid rgba(194, 84, 46, 0.55); box-sizing: border-box; }
 .lp-feat-footer {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -2610,10 +2610,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
   display: flex; flex-direction: column; justify-content: center;
   padding: 8px 8px 8px 12px;
 }
-.lp-guide-label { margin: 0 0 5px; font-size: 10px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
-.lp-guide-name { margin: 0 0 7px; font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
-.lp-guide-quote { margin: 0 0 6px; font-size: 10px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
-.lp-guide-link { font-size: 10px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
+.lp-guide-label { margin: 0 0 4px; font-size: 9px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
+.lp-guide-name { margin: 0 0 6px; font-size: 11px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
+.lp-guide-quote { margin: 0 0 5px; font-size: 9px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
+.lp-guide-link { font-size: 9px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
 .lp-trust-grid2 {
   display: grid; grid-template-columns: 1fr 1.03fr; gap: 6px;
   align-content: center;
