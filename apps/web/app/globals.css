@@ -2678,12 +2678,14 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-theme-title { font-size: 23px; }
   .lp-theme-sub { font-size: 14px; }
   .lp-featured { padding-top: 48px; }
-  /* 平板維持堆疊（照片全寬 16:10）；並排雙欄從 1024 起（見下方 @1024） */
-  .lp-feat-card { border-radius: 16px; }
-  .lp-feat-body { padding: 30px 34px 18px; }
+  /* 平板起即並排雙欄（照片左、文字右）— 避免堆疊時文字右半大片留白 */
+  .lp-feat-card { border-radius: 16px; grid-template-columns: 46% 1fr; }
+  .lp-feat-photo { aspect-ratio: 4 / 3; min-height: 0; }
+  /* 文字欄垂直置中：內容不再擠在頂端、footer 與本文間不留大縫 */
+  .lp-feat-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 26px 36px; }
   .lp-feat-title { font-size: 32px; margin-bottom: 10px; }
   .lp-feat-subtitle { font-size: 17px; margin-bottom: 16px; padding-bottom: 8px; }
-  .lp-feat-desc { font-size: 17px; margin-bottom: 18px; max-width: 560px; }
+  .lp-feat-desc { font-size: 17px; margin-bottom: 18px; max-width: none; }
   .lp-feat-tags { font-size: 16px; }
   .lp-feat-tags .lp-tag + .lp-tag { margin-left: 16px; padding-left: 16px; }
   .lp-feat-footer { padding: 16px 34px 18px; }
@@ -2695,8 +2697,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide { padding-top: 36px; }
   .lp-guide-card { border-radius: 16px; }
   .lp-guide-story { min-height: 270px; }
-  /* 平板：中等字級、文字緊接照片（靠右與大字級到 1024 才啟用） */
-  .lp-guide-text { padding: 16px 20px; }
+  /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
+  .lp-guide-text { padding: 20px 28px; flex: 1; align-items: center; text-align: center; }
   .lp-guide-label { font-size: 13px; margin-bottom: 8px; }
   .lp-guide-name { font-size: 20px; margin-bottom: 10px; }
   .lp-guide-quote { font-size: 14px; margin-bottom: 8px; line-height: 1.5; }
@@ -2725,10 +2727,11 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* ── RWD：桌機（精選卡並排雙欄） ── */
 @media (min-width: 1024px) {
-  .lp-feat-card { grid-template-columns: 41% 1fr; }
+  .lp-feat-card { grid-template-columns: 48% 1fr; }
   .lp-feat-photo { aspect-ratio: 4 / 3; min-height: 0; }
-  /* 導遊卡：桌機文字區靠右（左留白讓照片呼吸）＋大字級 */
-  .lp-guide-text { padding: 20px 28px; margin-left: 14%; flex: 0 1 auto; }
+  .lp-feat-body { padding: 30px 48px; }
+  /* 導遊卡桌機：文字置中於照片與徽章之間＋大字級 */
+  .lp-guide-text { padding: 24px 36px; flex: 1; align-items: center; text-align: center; }
   .lp-guide-label { font-size: 16px; margin-bottom: 10px; }
   .lp-guide-name { font-size: 29px; margin-bottom: 12px; }
   .lp-guide-quote { font-size: 18px; margin-bottom: 10px; line-height: 1.5; }
