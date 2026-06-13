@@ -242,8 +242,7 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
           </div>
           <div className="lp-feat-footer">
             <div className="lp-feat-rating">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/lp/avatars.png" alt="" aria-hidden="true" />
+              <StarIcon aria-hidden="true" />
               <strong>{ratingScore}</strong>
               {ratingCount > 0 && <span className="lp-rating-count">({ratingCount}則評價)</span>}
             </div>

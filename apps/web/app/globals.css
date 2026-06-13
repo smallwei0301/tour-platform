@@ -58,8 +58,15 @@ a { color: inherit; text-decoration: none; }
 .tp-section { padding: 56px 0; }
 
 .tp-navbar { position: sticky; top: 0; z-index: 40; background: var(--tp-ink); border-bottom: 1px solid rgba(176, 141, 62, 0.28); }
-/* LP 首頁：導覽列透明，浮在 hero 洞穴照上（脫離文流，hero 從頁面頂端開始） */
-.tp-navbar--transparent {
+/* LP 首頁：導覽列透明，浮在 hero 洞穴照上（脫離文流，hero 從頁面頂端開始）。
+   根因修正（#1428 後）：透明狀態以 body:has(.lp-root) 純 CSS 驅動，不依賴 client
+   的 usePathname()。原本用 .tp-navbar--transparent（由 usePathname===' /' 決定）在
+   production ISR 重新整理（revalidate 60s）時，server 端 usePathname 可能為 null →
+   isHome=false → 導覽列被快取成實心底；改用首頁專屬的 .lp-root 標記後，SSR／ISR／
+   client 一律正確。另保留 .tp-navbar--home（client 偵測 .lp-hero 後加上）作為不支援
+   :has() 舊瀏覽器的後備。 */
+body:has(.lp-root) .tp-navbar,
+.tp-navbar--home {
   position: fixed;
   top: 0; left: 0; right: 0;
   background: transparent;
@@ -69,16 +76,21 @@ a { color: inherit; text-decoration: none; }
   transition: background 0.25s ease, backdrop-filter 0.25s ease;
 }
 /* 捲動後：固定列加半透明深色底＋模糊，內容滑過時文字仍可讀 */
-.tp-navbar--transparent.tp-navbar--scrolled {
+body:has(.lp-root) .tp-navbar.tp-navbar--scrolled,
+.tp-navbar--home.tp-navbar--scrolled {
   background: rgba(12, 20, 16, 0.88);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(176, 141, 62, 0.22);
 }
-.tp-navbar--transparent .tp-logo { font-size: 13px; }
-.tp-navbar--transparent .tp-navbar-full { padding: 0 11px; }
-.tp-navbar--transparent .tp-logo-zh { color: var(--tp-cream); }
-.tp-navbar--transparent .tp-hamburger-icon { width: 20px; gap: 4px; }
+body:has(.lp-root) .tp-navbar .tp-logo,
+.tp-navbar--home .tp-logo { font-size: 13px; }
+body:has(.lp-root) .tp-navbar .tp-navbar-full,
+.tp-navbar--home .tp-navbar-full { padding: 0 11px; }
+body:has(.lp-root) .tp-navbar .tp-logo-zh,
+.tp-navbar--home .tp-logo-zh { color: var(--tp-cream); }
+body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
+.tp-navbar--home .tp-hamburger-icon { width: 20px; gap: 4px; }
 .tp-navbar-full { width: 100%; padding: 0 16px; box-sizing: border-box; }
 .tp-navbar-inner { min-height: 40px; display: grid; grid-template-columns: 200px 1fr auto; align-items: center; gap: 16px; }
 .tp-logo { font-family: var(--tp-serif); font-weight: 700; color: var(--tp-cream); letter-spacing: 0.3em; font-size: 14.5px; white-space: nowrap; }
@@ -2466,7 +2478,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 /* min-width:0 + overflow hidden：評價文字過長時截斷，不得壓到右側價格 */
 .lp-feat-rating { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--tp-paper); white-space: nowrap; min-width: 0; overflow: hidden; }
-.lp-feat-rating img { height: 14px; width: auto; border-radius: 8px; mix-blend-mode: lighten; }
+.lp-feat-rating svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--tp-brass); }
 .lp-feat-rating .lp-rating-count { font-size: 9px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; }
 .lp-feat-price { font-size: 13px; font-weight: 700; color: #ded7ab; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
 .lp-feat-price .lp-price-unit { font-size: 10px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
@@ -2694,7 +2706,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-tags .lp-tag + .lp-tag { margin-left: 16px; padding-left: 16px; }
   .lp-feat-footer { padding: 16px 34px 18px; }
   .lp-feat-rating { font-size: 18px; }
-  .lp-feat-rating img { height: 34px; border-radius: 17px; }
+  .lp-feat-rating svg { width: 22px; height: 22px; }
   .lp-feat-rating .lp-rating-count { font-size: 15px; }
   .lp-feat-price { font-size: 23px; }
   .lp-feat-price .lp-price-unit { font-size: 15px; }
