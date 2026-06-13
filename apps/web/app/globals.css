@@ -2583,8 +2583,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* 參考圖量測（@375）：大卡 344×96、徽章卡 59/61×31 gap5、文字起點＝卡內 28.7% */
 .lp-guide { padding-top: 12px; }
 .lp-guide-card {
-  /* 全裝置雙欄並排（故事 60.5%｜信任徽章 39.5%）；文字以換行避免溢出 */
-  display: grid; grid-template-columns: 60.5% 1fr;
+  /* 全裝置雙欄並排；故事欄加寬（66%）讓「高雄柴山・Andy Lee」文字區更寬、
+     信任徽章欄相應縮窄並縮小字級。文字以換行避免溢出 */
+  display: grid; grid-template-columns: 66% 1fr;
   background: linear-gradient(180deg, #1d271d 0%, #18221a 100%);
   border: 1px solid rgba(190, 178, 137, 0.32);
   border-radius: 10px;
@@ -2598,7 +2599,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* 照片獨立欄：固定欄寬、影像 object-fit cover 填滿。
    用 align-self: stretch 讓照片高度「跟著卡片內容（文字）長高」，
    而非用 aspect-ratio 固定高度去反過來壓縮文字欄造成文字破框。 */
-.lp-guide-photo { position: relative; flex: 0 0 48%; align-self: stretch; min-height: 100%; }
+.lp-guide-photo { position: relative; flex: 0 0 44%; align-self: stretch; min-height: 100%; }
 .lp-guide-photo img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center 18%;
@@ -2614,24 +2615,24 @@ details[open] .kkd-faq-q::before { content: '- '; }
   padding: 8px 8px 8px 12px;
 }
 .lp-guide-label { margin: 0 0 4px; font-size: 9px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
-.lp-guide-name { margin: 0 0 6px; font-size: 11px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
+.lp-guide-name { margin: 0 0 6px; font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
 .lp-guide-quote { margin: 0 0 5px; font-size: 9px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
 .lp-guide-link { font-size: 9px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
 .lp-trust-grid2 {
-  display: grid; grid-template-columns: 1fr 1.03fr; gap: 6px;
+  display: grid; grid-template-columns: 1fr 1.03fr; gap: 5px;
   align-content: center;
   margin: 8px 8px 8px 0;
 }
 .lp-trust-card {
   display: flex; align-items: center; justify-content: center; gap: 3px;
-  height: 34px;
+  height: 30px;
   background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
   border: 1px solid rgba(190, 178, 137, 0.32);
   border-radius: 7px;
   padding: 2px 1px;
 }
-.lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 15px; height: 15px; }
-.lp-trust-card span { font-size: 9px; line-height: 1.4; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
+.lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 13px; height: 13px; }
+.lp-trust-card span { font-size: 8px; line-height: 1.35; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
 
 /* ── 結尾 CTA（古紙） ── */
 .lp-closing { position: relative; margin-top: 12px; background: #18211a; }
@@ -2698,18 +2699,18 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-price { font-size: 23px; }
   .lp-feat-price .lp-price-unit { font-size: 15px; }
   .lp-guide { padding-top: 36px; }
-  /* 平板起：雙欄並排，故事欄加寬（66.5%）讓「在地嚮導・真實陪伴」文字區更寬，
-     信任徽章欄相應縮窄並縮小字級。 */
-  .lp-guide-card { border-radius: 16px; grid-template-columns: 66.5% 1fr; }
+  /* 平板起：雙欄（故事 60.5% ｜ 信任徽章 39.5%）。導遊名放大填滿文字區、
+     信任徽章字級縮小以免區域空洞。 */
+  .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
   .lp-guide-story { min-height: 270px; }
   /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
   .lp-guide-text { padding: 20px 20px 20px 28px; flex: 1; align-items: flex-start; text-align: left; }
-  .lp-guide-label { font-size: 12px; margin-bottom: 8px; }
-  .lp-guide-name { font-size: 18px; margin-bottom: 10px; }
-  .lp-guide-quote { font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
-  .lp-guide-link { font-size: 12px; }
-  .lp-trust-grid2 { grid-template-columns: 1fr 1.03fr; gap: 8px; margin: 18px 12px 18px 0; }
-  .lp-trust-card { height: 70px; padding: 6px 5px; gap: 7px; border-radius: 11px; }
+  .lp-guide-label { font-size: 13px; margin-bottom: 8px; }
+  .lp-guide-name { font-size: 23px; margin-bottom: 10px; }
+  .lp-guide-quote { font-size: 14px; margin-bottom: 8px; line-height: 1.55; }
+  .lp-guide-link { font-size: 13px; }
+  .lp-trust-grid2 { grid-template-columns: 1fr 1.03fr; gap: 9px; margin: 18px 14px 18px 0; }
+  .lp-trust-card { height: 66px; padding: 6px 6px; gap: 7px; border-radius: 11px; }
   .lp-trust-card svg { width: 22px; height: 22px; }
   .lp-trust-card span { font-size: 13px; line-height: 1.45; }
   /* 更多行程：桌機兩欄卡片，照片固定 4:3 不被拉成超寬裁切 */
@@ -2740,17 +2741,17 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-card { grid-template-columns: 42% 1fr; }
   .lp-feat-photo { min-height: 100%; }
   .lp-feat-body { padding: 30px 48px; }
-  /* 導遊卡桌機：文字置中於照片與徽章之間＋大字級 */
+  /* 導遊卡桌機：文字置中於照片與徽章之間。導遊名放大填滿文字區（避免太空），
+     信任徽章字級小於導遊名、維持精緻。 */
   .lp-guide-text { padding: 24px 28px 24px 32px; flex: 1; align-items: flex-start; text-align: left; }
-  .lp-guide-label { font-size: 14px; margin-bottom: 10px; }
-  .lp-guide-name { font-size: 26px; margin-bottom: 12px; }
-  .lp-guide-quote { font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
-  .lp-guide-link { font-size: 14px; }
-  /* 桌機：信任徽章字級小於導遊名，維持精緻、把寬度讓給中間文字區 */
-  .lp-trust-grid2 { gap: 9px; margin: 20px 14px 20px 0; }
-  .lp-trust-card { height: 76px; padding: 7px 6px; gap: 8px; border-radius: 12px; }
+  .lp-guide-label { font-size: 15px; margin-bottom: 12px; }
+  .lp-guide-name { font-size: 32px; margin-bottom: 14px; line-height: 1.2; }
+  .lp-guide-quote { font-size: 17px; margin-bottom: 12px; line-height: 1.6; }
+  .lp-guide-link { font-size: 15px; }
+  .lp-trust-grid2 { gap: 10px; margin: 22px 16px 22px 0; }
+  .lp-trust-card { height: 74px; padding: 8px 6px; gap: 8px; border-radius: 12px; }
   .lp-trust-card svg { width: 24px; height: 24px; }
-  .lp-trust-card span { font-size: 14px; line-height: 1.45; }
+  .lp-trust-card span { font-size: 15px; line-height: 1.45; }
 }
 
 @media (max-width: 410px) {

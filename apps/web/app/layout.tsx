@@ -71,6 +71,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-Hant">
       <head>
+        {/* 首頁導覽列「載入即透明」根因修正：在 hydration 前（早於瀏覽器捲動位置
+            還原時機）就把首頁的 scrollRestoration 設為 manual 並回到頂端，避免重新
+            整理時自動捲回原處而觸發 scroll 事件、使導覽列載入瞬間誤判為已捲動。
+            僅作用於首頁路徑，不影響其他頁的捲動還原。 */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{if(location.pathname==='/'){if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}}catch(e){}})();",
+          }}
+        />
         {/* Preconnect to image CDNs used by CSS background images */}
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />

@@ -277,7 +277,7 @@ export function LpGuide() {
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・真實陪伴</p>
-            <p className="lp-guide-name">高雄柴山・Andy Lee</p>
+            <p className="lp-guide-name">高雄柴山・<span className="lp-guide-name-en">Andy&nbsp;Lee</span></p>
             <p className="lp-guide-quote">「不是觀光打卡，<br />是懂路的人帶你走進柴山。」</p>
             <span className="lp-guide-link">認識嚮導的故事 →</span>
           </div>
