@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-13T12:42:06.846Z -->
+<!-- query_timestamp: 2026-06-13T18:33:40.949Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-13T12:42:06.846Z  
-**Commit SHA:** `91df155cf8eb7acd420227e43d0725c7b788242d`
+**Query timestamp:** 2026-06-13T18:33:40.949Z  
+**Commit SHA:** `846d6461b0b62a0035500bc499a938c9c0480542`
 
 ---
 
@@ -70,6 +70,9 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1429 | [fix(home): 導覽列透明改用 CSS :has 根治 ISR 實心底 + 精選卡星級 + 導遊新照](https://github.com/smallwei0301/tour-platform/pull/1429) | 2026-06-13 |
+| #1428 | [fix(home): 導覽列重新整理透明根因強化 + 嚮導卡手機/桌機字級重整](https://github.com/smallwei0301/tour-platform/pull/1428) | 2026-06-13 |
+| #1427 | [fix(home): 導覽列重新整理一律透明 + 嚮導卡信任徽章縮小讓中間文字更寬](https://github.com/smallwei0301/tour-platform/pull/1427) | 2026-06-13 |
 | #1426 | [feat(landing): 首頁收尾區與嚮導卡換用 WebP 圖片](https://github.com/smallwei0301/tour-platform/pull/1426) | 2026-06-13 |
 | #1425 | [feat(guide/apply): 成為導遊頁改用首頁山墨風並移除導遊後台外框](https://github.com/smallwei0301/tour-platform/pull/1425) | 2026-06-13 |
 | #1424 | [fix(home): 桌機精選卡標籤留白＋導覽列載入即透明](https://github.com/smallwei0301/tour-platform/pull/1424) | 2026-06-13 |
@@ -77,9 +80,6 @@ _none_
 | #1422 | [feat(admin): 首頁精選改用真實已發布行程＋可編輯卡片文案](https://github.com/smallwei0301/tour-platform/pull/1422) | 2026-06-13 |
 | #1421 | [refine(home): 精選卡難度標籤手機不貼邊＋導遊區字級縮小貼齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1421) | 2026-06-13 |
 | #1420 | [feat(login): 旅客登入頁改版山墨品牌風格並像素對齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1420) | 2026-06-13 |
-| #1419 | [fix(admin): 手機版訂單管理點擊訂單跳出詳情彈窗](https://github.com/smallwei0301/tour-platform/pull/1419) | 2026-06-13 |
-| #1418 | [fix(admin): 首頁精選表未建立時 fail-open＋可執行錯誤訊息](https://github.com/smallwei0301/tour-platform/pull/1418) | 2026-06-13 |
-| #1417 | [refine(home): hero 推進 6s＋精選/導遊區對齊設計稿＋桌機平板響應式](https://github.com/smallwei0301/tour-platform/pull/1417) | 2026-06-13 |
 
 ---
 
