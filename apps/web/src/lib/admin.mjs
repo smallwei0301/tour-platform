@@ -718,15 +718,19 @@ export function getHomepageFeaturedFallback() {
   return {
     editorPickSlug: homepageFeatured.editorPickSlug,
     moreFeaturedSlugs: [...homepageFeatured.moreFeaturedSlugs],
+    editorPickCopy: { ...(homepageFeatured.editorPickCopy || {}) },
+    moreFeaturedCopy: JSON.parse(JSON.stringify(homepageFeatured.moreFeaturedCopy || {})),
     updatedAt: homepageFeatured.updatedAt,
     updatedBy: homepageFeatured.updatedBy,
   };
 }
 
-export function setHomepageFeaturedFallback({ editorPickSlug = null, moreFeaturedSlugs = [], actor = 'admin' } = {}) {
+export function setHomepageFeaturedFallback({ editorPickSlug = null, moreFeaturedSlugs = [], editorPickCopy = {}, moreFeaturedCopy = {}, actor = 'admin' } = {}) {
   const before = getHomepageFeaturedFallback();
   homepageFeatured.editorPickSlug = editorPickSlug;
   homepageFeatured.moreFeaturedSlugs = [...moreFeaturedSlugs];
+  homepageFeatured.editorPickCopy = { ...(editorPickCopy || {}) };
+  homepageFeatured.moreFeaturedCopy = JSON.parse(JSON.stringify(moreFeaturedCopy || {}));
   homepageFeatured.updatedAt = new Date().toISOString();
   homepageFeatured.updatedBy = actor;
   const after = getHomepageFeaturedFallback();

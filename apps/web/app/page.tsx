@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
-import { getHomepageFeaturedDb } from '../src/lib/db.mjs';
-import { resolveHomepageSelection } from '../src/lib/homepage-featured.mjs';
-import { activities } from '../src/fixtures/data';
+import { getHomepageFeaturedDb, listPublishedActivitiesDb } from '../src/lib/db.mjs';
+import { resolveHomepageFeaturedView } from '../src/lib/homepage-featured-copy.mjs';
+import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../src/lib/homepage-featured.mjs';
 
 // admin 於 /admin/homepage 變更精選後，ISR 60 秒內反映到首頁（維持可快取）
 export const revalidate = 60;
@@ -92,12 +92,13 @@ const homeJsonLd = {
 };
 
 export default async function HomePage() {
-  // 讀取 admin 設定的首頁精選；任何錯誤都 fail-open 回預設（柴山＋其餘前 2）
-  const settings = await getHomepageFeaturedDb().catch(() => null);
-  const { editorPickSlug, tourSlugs } = resolveHomepageSelection(
-    settings,
-    activities.map((a) => a.slug),
-  );
+  // 讀取 admin 設定的首頁精選 + 真實已發布行程目錄；任何錯誤都 fail-open。
+  // 目錄為空（DB 不可用）時 view 為 null/空 → 元件退回 fixtures 後備卡片。
+  const [settings, catalog] = await Promise.all([
+    getHomepageFeaturedDb().catch(() => null),
+    listPublishedActivitiesDb({}).catch(() => []),
+  ]);
+  const { editorPick, tours } = resolveHomepageFeaturedView(settings, catalog, HOMEPAGE_MORE_FEATURED_LIMIT);
   return (
     <>
       {/* Preload hero background image to improve LCP */}
@@ -120,10 +121,10 @@ export default async function HomePage() {
       <div className="lp-root">
         <LpHero />
         <LpThemes />
-        <LpFeatured slug={editorPickSlug} />
+        <LpFeatured featured={editorPick ?? undefined} />
         <LpGuide />
         {/* 原首頁資訊區塊（行程／目的地／評價／FAQ）以 LP 風格融合 */}
-        <LpTours slugs={tourSlugs} />
+        <LpTours tours={tours} />
         <LpDestinations />
         <LpStories />
         <LpFaq />

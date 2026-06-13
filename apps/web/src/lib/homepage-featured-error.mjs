@@ -38,5 +38,22 @@ export function isMissingHomepageFeaturedTable(error) {
   return false;
 }
 
+/**
+ * 判斷錯誤是否為「editor_pick_copy / more_featured_copy 欄位不存在」
+ * （文案 migration 20260613090000 尚未套用）。用於讀取時 fail-open 回空 copy。
+ * @param {{ code?: string, message?: string }|null|undefined} error
+ * @returns {boolean}
+ */
+export function isMissingHomepageFeaturedCopyColumn(error) {
+  if (!error) return false;
+  const code = String(error.code ?? '').trim();
+  const msg = String(error.message ?? '').toLowerCase();
+  const mentionsCopy = msg.includes('editor_pick_copy') || msg.includes('more_featured_copy');
+  if (!mentionsCopy) return false;
+  if (code === '42703' || code === 'PGRST204') return true;
+  if (msg.includes('does not exist') || msg.includes('schema cache') || msg.includes('could not find')) return true;
+  return false;
+}
+
 export const HOMEPAGE_FEATURED_TABLE_MISSING_MESSAGE =
   '首頁精選資料表尚未建立，請先把 migration「20260612090000_homepage_featured_settings.sql」套用到此環境的 Supabase（套用後重新載入 API schema）再試。在此之前首頁會顯示預設精選。';
