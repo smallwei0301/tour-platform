@@ -30,7 +30,7 @@ export function LpHeroMotion() {
       //（fill: forwards 保持結束狀態，不再來回推拉）
       animate('.lp-hero-fg',
         [{ transform: 'scale(1)' }, { transform: 'scale(1.16)' }],
-        { duration: 8000, iterations: 1, easing: 'ease-out', fill: 'forwards' }),
+        { duration: 6000, iterations: 1, easing: 'ease-out', fill: 'forwards' }),
       // 暮色罩由濃轉淡：照片像被曙光逐漸點亮
       animate('.lp-hero-dawn',
         [{ opacity: 1 }, { opacity: 0 }],
