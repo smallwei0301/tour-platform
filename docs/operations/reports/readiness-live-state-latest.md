@@ -1,21 +1,20 @@
-<!-- query_timestamp: 2026-06-13T07:24:05.735Z -->
+<!-- query_timestamp: 2026-06-13T12:42:06.846Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-13T07:24:05.735Z  
-**Commit SHA:** `532f4c46a93b01e8ea382eacea522c41f99eb2cf`
+**Query timestamp:** 2026-06-13T12:42:06.846Z  
+**Commit SHA:** `91df155cf8eb7acd420227e43d0725c7b788242d`
 
 ---
 
-## Open PRs (4)
+## Open PRs (3)
 
 | # | Title | Branch |
 |---|-------|--------|
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
-| #1414 | [feat(home): 祕島 LP 首頁改版＋全站套用山墨×古紙×黃銅品牌風格](https://github.com/smallwei0301/tour-platform/pull/1414) | `claude/landing-page-nextjs-dsaf0u` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
@@ -71,16 +70,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1416 | [feat(reschedule): #1383 自助改期限距活動 >168h（窗內導向客服）＋ #1411 驗收報告（AC4 實寄 PASS）](https://github.com/smallwei0301/tour-platform/pull/1416) | 2026-06-12 |
-| #1413 | [docs(qa): issue #1411 站內訊息第一期驗收報告＋AC5 rate-limit 行為補測](https://github.com/smallwei0301/tour-platform/pull/1413) | 2026-06-11 |
-| #1412 | [feat(messaging): 站內訊息第一期 — 訂單留言串（traveler ↔ guide）＋ email 通知 (#1411)](https://github.com/smallwei0301/tour-platform/pull/1412) | 2026-06-11 |
-| #1410 | [feat(booking): 訂單改期第一期 — 同活動同方案同價、嚮導確認制 (#1383)](https://github.com/smallwei0301/tour-platform/pull/1410) | 2026-06-11 |
-| #1409 | [feat(growth): 會員回購起步版 — review invitation 信掛老客專屬碼 (#1408)](https://github.com/smallwei0301/tour-platform/pull/1409) | 2026-06-11 |
-| #1405 | [fix(refund): reject 依 paid_at 回正確狀態 (#1401) + legacy 凍結政策生效 (#1386)](https://github.com/smallwei0301/tour-platform/pull/1405) | 2026-06-11 |
-| #1404 | [docs(architecture): 訂單改期設計草案 — #1383 第一階段交付物（待 review）](https://github.com/smallwei0301/tour-platform/pull/1404) | 2026-06-11 |
-| #1403 | [feat(me): 旅客 profile 編輯與通知偏好（最小版）+ checkout 聯絡資訊預填 (#1387)](https://github.com/smallwei0301/tour-platform/pull/1403) | 2026-06-11 |
-| #1402 | [refactor(db): strangler 第一步 — audit-log 單一實作 + refund 狀態機抽純函式 (#1385)](https://github.com/smallwei0301/tour-platform/pull/1402) | 2026-06-11 |
-| #1400 | [test(contract): in-memory/Supabase 三流程契約測試 + payment callback 原子性複核 (#1384)](https://github.com/smallwei0301/tour-platform/pull/1400) | 2026-06-11 |
+| #1426 | [feat(landing): 首頁收尾區與嚮導卡換用 WebP 圖片](https://github.com/smallwei0301/tour-platform/pull/1426) | 2026-06-13 |
+| #1425 | [feat(guide/apply): 成為導遊頁改用首頁山墨風並移除導遊後台外框](https://github.com/smallwei0301/tour-platform/pull/1425) | 2026-06-13 |
+| #1424 | [fix(home): 桌機精選卡標籤留白＋導覽列載入即透明](https://github.com/smallwei0301/tour-platform/pull/1424) | 2026-06-13 |
+| #1423 | [refine(home): 導遊區桌機文字左對齊貼齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1423) | 2026-06-13 |
+| #1422 | [feat(admin): 首頁精選改用真實已發布行程＋可編輯卡片文案](https://github.com/smallwei0301/tour-platform/pull/1422) | 2026-06-13 |
+| #1421 | [refine(home): 精選卡難度標籤手機不貼邊＋導遊區字級縮小貼齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1421) | 2026-06-13 |
+| #1420 | [feat(login): 旅客登入頁改版山墨品牌風格並像素對齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1420) | 2026-06-13 |
+| #1419 | [fix(admin): 手機版訂單管理點擊訂單跳出詳情彈窗](https://github.com/smallwei0301/tour-platform/pull/1419) | 2026-06-13 |
+| #1418 | [fix(admin): 首頁精選表未建立時 fail-open＋可執行錯誤訊息](https://github.com/smallwei0301/tour-platform/pull/1418) | 2026-06-13 |
+| #1417 | [refine(home): hero 推進 6s＋精選/導遊區對齊設計稿＋桌機平板響應式](https://github.com/smallwei0301/tour-platform/pull/1417) | 2026-06-13 |
 
 ---
 
