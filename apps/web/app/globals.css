@@ -2954,20 +2954,3 @@ details[open] .kkd-faq-q::before { content: '- '; }
   border: 1.4px solid rgba(214,205,180,0.55);
   vertical-align: middle;
 }
-/* 工具浮鈕 */
-.login-fab {
-  position: absolute;
-  right: 22px;
-  bottom: 118px;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  background: rgba(16,24,18,0.92);
-  border: 1.5px solid rgba(176,141,62,0.55);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 3;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
-}

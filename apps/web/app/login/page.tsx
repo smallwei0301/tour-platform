@@ -92,14 +92,6 @@ function LoginContent() {
           </p>
         </div>
 
-        {/* 回到首頁浮鈕 — 山墨羅盤造型，登入頁的返家入口 */}
-        <Link href="/" className="login-fab" aria-label="回到首頁">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M12 3c2.5 3.5 4 6 4 8a4 4 0 1 1-8 0c0-2 1.5-4.5 4-8Z" fill="#e7dcbf" opacity="0.9" />
-            <path d="M5 16h14M5 20h9" stroke="#e7dcbf" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </Link>
-
         {/* 品牌結語 */}
         <div className="login-tagline">
           <p className="login-tagline-main">島嶼深處，有故事的人帶路。</p>
