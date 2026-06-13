@@ -63,10 +63,11 @@ export function Navbar() {
       setScrolled(false);
       return;
     }
-    // 關鍵：關閉瀏覽器的捲動位置還原。否則在頁面下方重新整理時，瀏覽器會
-    // 自動還原捲動位置（例如 scrollY=1200）並觸發 scroll 事件，導致導覽列在
-    // 載入瞬間就被判定為「已捲動」而套上深色底。改為 manual 後，重新整理一律
-    // 從頂端開始 → 導覽列載入即透明；僅在使用者真的向下捲過 hero 後才加深色底。
+    // 根因：在頁面下方重新整理時，瀏覽器會還原捲動位置並觸發 scroll 事件，使導覽列
+    // 在載入瞬間就被判定為「已捲動」而套上深色底。對策：首頁關閉捲動位置還原
+    // （manual）並回到頂端，確保載入一律透明；僅在使用者真的向下捲過 hero 後才加深色底。
+    // 註：另在 root layout 以 inline script 於 hydration 前就把 manual 設好（更早於瀏覽器
+    // 還原時機），此處再設一次並 scrollTo(0,0) 作為雙重保險；離開首頁時還原成 auto。
     let prevRestoration: History['scrollRestoration'] | undefined;
     try {
       if ('scrollRestoration' in window.history) {
