@@ -54,22 +54,28 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
-  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲過整個 hero 區後才加半透明深色底，
-  // 因此進入／重新整理（停在 hero 內）看到的都是透明導覽列。
+  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；「載入時一律透明」，
+  // 只有使用者實際捲動超過 hero 後才加半透明深色底。
+  // 注意：不在掛載當下同步讀取捲動位置 —— 否則瀏覽器的捲動位置還原
+  //（捲到下方時重新整理）會在載入瞬間判定已捲動而套上深色底。改為僅由
+  // scroll 事件更新狀態，確保進入／重新整理時看到的都是透明導覽列。
   const isHome = pathname === '/';
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!isHome) return;
+    if (!isHome) {
+      setScrolled(false);
+      return;
+    }
     const onScroll = () => {
       const hero = document.querySelector('.lp-hero') as HTMLElement | null;
       const heroH = hero ? hero.offsetHeight : 0;
       // 門檻＝hero 高度減導覽列高；hero 尚未排版（offsetHeight 0）時用視窗高
-      // 當保守值，並設下限 200px —— 避免量到 0 算出負門檻而「載入即判定已捲動」。
+      // 當保守值，並設下限 200px。
       const threshold = Math.max(heroH > 0 ? heroH - 64 : window.innerHeight * 0.7, 200);
       setScrolled(window.scrollY > threshold);
     };
-    onScroll();
+    // 不在掛載時呼叫 onScroll()（避免讀到還原的捲動位置）；僅監聽事件。
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll, { passive: true });
     return () => {
