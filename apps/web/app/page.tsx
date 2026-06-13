@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
-import { HeroSection } from '../src/components/home/HeroSection';
-import { FeaturedTours } from '../src/components/home/FeaturedTours';
-import { ValueTrustSection } from '../src/components/home/ValueTrustSection';
-import { StoryProofSection } from '../src/components/home/StoryProofSection';
-import { DestinationsSection } from '../src/components/home/DestinationsSection';
-import { ThemeCtas } from '../src/components/home/ThemeCtas';
-import { GuideSpotlight } from '../src/components/home/GuideSpotlight';
-import { FaqSection } from '../src/components/home/FaqSection';
+import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
+import { getHomepageFeaturedDb } from '../src/lib/db.mjs';
+import { resolveHomepageSelection } from '../src/lib/homepage-featured.mjs';
+import { activities } from '../src/fixtures/data';
+
+// admin 於 /admin/homepage 變更精選後，ISR 60 秒內反映到首頁（維持可快取）
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: 'Midao 祕島｜台灣在地導遊預約平台',
@@ -92,28 +91,44 @@ const homeJsonLd = {
   ],
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  // 讀取 admin 設定的首頁精選；任何錯誤都 fail-open 回預設（柴山＋其餘前 2）
+  const settings = await getHomepageFeaturedDb().catch(() => null);
+  const { editorPickSlug, tourSlugs } = resolveHomepageSelection(
+    settings,
+    activities.map((a) => a.slug),
+  );
   return (
     <>
       {/* Preload hero background image to improve LCP */}
       <link
         rel="preload"
         as="image"
-        href="https://images.unsplash.com/photo-1528164344705-47542687000d?w=1600&q=80"
+        href="/images/lp/hero-cave-fg.webp"
+        fetchPriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href="/images/lp/hero-mountains.jpg"
         fetchPriority="high"
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
       />
-      <HeroSection />
-      <ThemeCtas />
-      <FeaturedTours />
-      <StoryProofSection />
-      <DestinationsSection />
-      <ValueTrustSection />
-      <GuideSpotlight />
-      <FaqSection />
+      <div className="lp-root">
+        <LpHero />
+        <LpThemes />
+        <LpFeatured slug={editorPickSlug} />
+        <LpGuide />
+        {/* 原首頁資訊區塊（行程／目的地／評價／FAQ）以 LP 風格融合 */}
+        <LpTours slugs={tourSlugs} />
+        <LpDestinations />
+        <LpStories />
+        <LpFaq />
+        <LpClosing />
+      </div>
     </>
   );
 }

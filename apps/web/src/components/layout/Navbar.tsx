@@ -54,11 +54,33 @@ export function Navbar() {
 
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
+  // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲過整個 hero 區後才加半透明深色底，
+  // 因此進入／重新整理（停在 hero 內）看到的都是透明導覽列。
+  const isHome = pathname === '/';
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isHome) return;
+    const onScroll = () => {
+      const hero = document.querySelector('.lp-hero') as HTMLElement | null;
+      // 門檻＝hero 底部減去導覽列高度；無 hero 時退回保守值
+      const threshold = hero ? hero.offsetHeight - 64 : 600;
+      setScrolled(window.scrollY > threshold);
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [isHome]);
+
   return (
-    <header className="tp-navbar">
+    <header className={`tp-navbar${isHome ? ' tp-navbar--transparent' : ''}${isHome && scrolled ? ' tp-navbar--scrolled' : ''}`}>
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
-        <Link href="/" className="tp-logo">Midao 祕島</Link>
+        <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
 
         {/* Desktop: search bar */}
         <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label="搜尋">
@@ -95,7 +117,7 @@ export function Navbar() {
               <>
                 <Link
                   href="/me/orders"
-                  style={{ fontSize: 14, color: '#374151' }}
+                  style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)' }}
                   data-testid="nav-my-orders"
                 >
                   我的訂單
@@ -111,7 +133,7 @@ export function Navbar() {
                       style={{ borderRadius: '50%', objectFit: 'cover' }} />
                   )}
                   <span
-                    style={{ fontSize: 14, color: '#374151', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                     data-testid="nav-user-name"
                   >
                     {displayName}
@@ -121,8 +143,8 @@ export function Navbar() {
                     data-testid="nav-sign-out-btn"
                     className="tp-btn"
                     style={{
-                      border: '1.5px solid #d1d5db',
-                      color: '#6b7280',
+                      border: '1.5px solid rgba(244,236,216,0.35)',
+                      color: 'rgba(244,236,216,0.7)',
                       padding: '6px 14px',
                       fontSize: 13,
                       background: 'transparent',
@@ -139,8 +161,8 @@ export function Navbar() {
                 data-testid="nav-login-btn"
                 className="tp-btn"
                 style={{
-                  border: '1.5px solid var(--tp-primary)',
-                  color: 'var(--tp-primary)',
+                  border: '1.5px solid var(--tp-brass)',
+                  color: '#f1e9d4',
                   padding: '6px 16px',
                   fontSize: 14,
                 }}
@@ -205,7 +227,7 @@ export function Navbar() {
                 <button
                   onClick={() => { handleSignOut(); setMenuOpen(false); }}
                   className="tp-mobile-menu-item"
-                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: '#6b7280' }}
+                  style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: 'rgba(244,236,216,0.7)' }}
                 >
                   登出（{displayName}）
                 </button>

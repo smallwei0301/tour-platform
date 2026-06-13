@@ -128,7 +128,7 @@ export default function MeProfilePage() {
           type="submit"
           data-testid="profile-save-btn"
           disabled={saving}
-          style={{ padding: '11px 20px', background: '#ec4899', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+          style={{ padding: '11px 20px', background: '#a8511f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
         >
           {saving ? '儲存中…' : '儲存'}
         </button>

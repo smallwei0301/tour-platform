@@ -52,7 +52,7 @@ test.describe('完整訂購漏斗', () => {
 
     const cta = page.locator('[data-testid="home-cta-explore"]');
     await expect(cta).toBeVisible();
-    await expect(cta).toHaveText(/探索全部行程/);
+    await expect(cta).toHaveText(/探索祕島旅程/); // LP 改版（祕島 LP）：home CTA 文案由「探索全部行程」改為「探索祕島旅程」
 
     await cta.click();
     await page.waitForURL(/\/activities/, { timeout: 8000 });

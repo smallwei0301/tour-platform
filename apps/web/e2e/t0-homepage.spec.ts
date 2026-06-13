@@ -14,8 +14,8 @@ test('T0.2 - 首頁精選行程顯示活動卡片', async ({ page }) => {
   await page.goto('/');
   await page.waitForTimeout(1500);
   const body = await page.locator('body').textContent() || '';
-  // 應有精選行程區塊
-  expect(body.includes('精選行程') || body.includes('查看行程')).toBeTruthy();
+  // 應有精選行程區塊（祕島 LP 改版後為「編輯精選」卡片，DOM 文案為行程名）
+  expect(body.includes('柴山探洞') || body.includes('精選行程') || body.includes('查看行程')).toBeTruthy();
 });
 
 test('T0.3 - 搜尋框存在並可輸入', async ({ page }) => {

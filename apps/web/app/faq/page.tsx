@@ -89,12 +89,12 @@ export default function FaqPage() {
       </div>
 
       <h1 style={{ marginTop: 20, marginBottom: 4 }}>常見問題</h1>
-      <p style={{ color: 'var(--tp-muted)', marginBottom: 36, fontSize: 16 }}>找不到答案？歡迎<Link href="/contact" style={{ color: 'var(--tp-primary)' }}>聯絡我們</Link>。</p>
+      <p style={{ color: 'var(--tp-muted)', marginBottom: 36, fontSize: 16 }}>找不到答案？歡迎<Link href="/contact" style={{ color: 'var(--tp-gold-strong)' }}>聯絡我們</Link>。</p>
 
       <div style={{ display: 'grid', gap: 36 }}>
         {faqs.map((section) => (
           <section key={section.category}>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--tp-primary)', marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--tp-primary)' }}>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--tp-gold-strong)', marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--tp-brass)' }}>
               {section.category}
             </h2>
             <div style={{ display: 'grid', gap: 12 }}>

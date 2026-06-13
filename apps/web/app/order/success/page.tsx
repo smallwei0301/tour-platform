@@ -124,7 +124,7 @@ export default function OrderSuccessPage() {
             </div>
             <div style={{ ...rowStyle, borderBottom: 'none' }}>
               <span style={{ color: '#6b7280' }}>金額</span>
-              <span style={{ fontWeight: 800, color: '#ec4899', fontSize: 16 }}>
+              <span style={{ fontWeight: 800, color: '#a8511f', fontSize: 16 }}>
                 NT$ {(order.totalTwd ?? 0).toLocaleString()}
               </span>
             </div>
@@ -141,7 +141,7 @@ export default function OrderSuccessPage() {
           style={{
             display: 'block',
             padding: '13px 0',
-            background: '#ec4899',
+            background: '#a8511f',
             color: '#fff',
             borderRadius: 12,
             fontWeight: 700,

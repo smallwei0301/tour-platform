@@ -11,6 +11,7 @@ import { csrfHeaders, readCsrfTokenFromCookie } from '../../lib/csrf-client';
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
   { href: '/admin/activities', label: '行程管理', icon: '🗺️' },
+  { href: '/admin/homepage', label: '首頁精選', icon: '🏝️' },
   { href: '/admin/orders', label: '訂單管理', icon: '🧾' },
   { href: '/admin/refunds', label: '退款管理', icon: '↩️' },
   { href: '/admin/payouts', label: '出款管理', icon: '💸' },
@@ -123,7 +124,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f9fafb', color: '#111827' }}>
 
       {/* ── Desktop Sidebar (hidden on mobile) ── */}
       {isDesktop && (

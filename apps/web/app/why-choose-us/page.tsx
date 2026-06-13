@@ -60,7 +60,7 @@ export default function WhyChooseUsPage() {
           { icon: 'route', title: '客製行程', desc: '可依需求客製化，包團、親子、企業都行' },
         ].map((p, i) => (
           <div key={i} style={{ textAlign: 'center', padding: 20, border: '1px solid var(--tp-border)', borderRadius: 12 }}>
-            <p style={{ fontSize: 36, margin: '0 0 8px', color: 'var(--tp-primary)', display: 'flex', justifyContent: 'center' }}><PublicIcon name={p.icon as any} size={36} /></p>
+            <p style={{ fontSize: 36, margin: '0 0 8px', color: 'var(--tp-gold-strong)', display: 'flex', justifyContent: 'center' }}><PublicIcon name={p.icon as any} size={36} /></p>
             <h4 style={{ margin: '0 0 6px' }}>{p.title}</h4>
             <p style={{ color: 'var(--tp-muted)', fontSize: 14, margin: 0 }}>{p.desc}</p>
           </div>
@@ -73,9 +73,9 @@ export default function WhyChooseUsPage() {
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
             <thead>
-              <tr style={{ borderBottom: '2px solid var(--tp-primary)' }}>
+              <tr style={{ borderBottom: '2px solid var(--tp-brass)' }}>
                 <th scope="col" style={{ textAlign: 'left', padding: '12px 16px' }}></th>
-                <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-primary)', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="sparkles" size={16} /> 我們的平台</span></th>
+                <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-gold-strong)', fontWeight: 700 }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><PublicIcon name="sparkles" size={16} /> 我們的平台</span></th>
                 <th scope="col" style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-muted)' }}><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}><PublicIcon name="mountain" size={16} /> 一般跟團</span></th>
               </tr>
             </thead>
@@ -91,7 +91,7 @@ export default function WhyChooseUsPage() {
               ].map(([label, us, them], i) => (
                 <tr key={i} style={{ borderBottom: '1px solid var(--tp-border)' }}>
                   <td style={{ padding: '12px 16px', fontWeight: 600 }}>{label}</td>
-                  <td style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-primary)' }}>{us}</td>
+                  <td style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-gold-strong)' }}>{us}</td>
                   <td style={{ textAlign: 'center', padding: '12px 16px', color: 'var(--tp-muted)' }}>{them}</td>
                 </tr>
               ))}
