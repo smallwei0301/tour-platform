@@ -273,7 +273,7 @@ export function LpGuide() {
           {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/guides/andy-lee/avatar.jpg" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）的肖像" />
+            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" />
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・真實陪伴</p>
@@ -458,8 +458,7 @@ export function LpClosing() {
           <Link href="/activities" className="lp-btn">
             開始探索祕島旅程 <span className="lp-btn-arrow">→</span>
           </Link>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="lp-stamp" src="/images/lp/stamp.png" alt="" aria-hidden="true" />
+          {/* MIDAO 祕島 印章已內嵌於 closing-bg 背景圖，故不再額外疊一個 lp-stamp */}
         </div>
       </div>
     </section>
