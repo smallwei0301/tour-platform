@@ -2638,7 +2638,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-closing-paper {
   position: relative;
   background-color: #e6d5bd;
-  background-image: url("/images/lp/closing-bg.png");
+  background-image: url("/images/lp/closing-bg.webp");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
