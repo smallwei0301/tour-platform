@@ -2534,18 +2534,18 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-story-card:hover { border-color: rgba(190, 178, 137, 0.5); }
 .lp-story-quote {
-  margin: 0 0 6px;
-  font-size: 11px; line-height: 1.75;
+  margin: 0 0 8px;
+  font-size: 14px; line-height: 1.75;
   color: rgba(244, 236, 216, 0.88);
 }
 .lp-story-meta {
   display: flex; align-items: center; gap: 8px;
-  font-size: 10px; color: rgba(244, 236, 216, 0.6);
+  font-size: 12px; color: rgba(244, 236, 216, 0.6);
 }
-.lp-story-stars { color: var(--tp-brass); font-size: 10px; letter-spacing: 0.1em; }
+.lp-story-stars { color: var(--tp-brass); font-size: 12px; letter-spacing: 0.1em; }
 .lp-story-activity {
-  display: block; margin-top: 4px;
-  font-size: 9px; color: rgba(203, 194, 157, 0.75); letter-spacing: 0.04em;
+  display: block; margin-top: 5px;
+  font-size: 11px; color: rgba(203, 194, 157, 0.75); letter-spacing: 0.04em;
 }
 
 .lp-faq { padding-top: 22px; }
@@ -2576,7 +2576,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* 參考圖量測（@375）：大卡 344×96、徽章卡 59/61×31 gap5、文字起點＝卡內 28.7% */
 .lp-guide { padding-top: 12px; }
 .lp-guide-card {
-  display: grid; grid-template-columns: 60.5% 1fr;
+  /* 手機：單欄堆疊（故事在上、信任徽章在下）— 雙欄在窄螢幕會擠壓溢出 */
+  display: grid; grid-template-columns: 1fr;
   background: linear-gradient(180deg, #1d271d 0%, #18221a 100%);
   border: 1px solid rgba(190, 178, 137, 0.32);
   border-radius: 10px;
@@ -2605,14 +2606,15 @@ details[open] .kkd-faq-q::before { content: '- '; }
   display: flex; flex-direction: column; justify-content: center;
   padding: 8px 8px 8px 12px;
 }
-.lp-guide-label { margin: 0 0 5px; font-size: 10px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
-.lp-guide-name { margin: 0 0 7px; font-size: 12px; font-weight: 900; line-height: 1.2; letter-spacing: 0.03em; color: #f0ecdc; white-space: nowrap; }
+.lp-guide-label { margin: 0 0 5px; font-size: 10px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
+.lp-guide-name { margin: 0 0 7px; font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
 .lp-guide-quote { margin: 0 0 6px; font-size: 10px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
-.lp-guide-link { font-size: 10px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); white-space: nowrap; }
+.lp-guide-link { font-size: 10px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
 .lp-trust-grid2 {
-  display: grid; grid-template-columns: 1fr 1.03fr; gap: 6px;
+  /* 手機：信任徽章 2×2 置於故事下方、整列滿版 */
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
   align-content: center;
-  margin: 8px 8px 8px 0;
+  margin: 2px 12px 12px;
 }
 .lp-trust-card {
   display: flex; align-items: center; justify-content: center; gap: 3px;
@@ -2695,7 +2697,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-price { font-size: 23px; }
   .lp-feat-price .lp-price-unit { font-size: 15px; }
   .lp-guide { padding-top: 36px; }
-  .lp-guide-card { border-radius: 16px; }
+  /* 平板起：恢復雙欄（故事 60.5% ｜ 信任徽章 39.5%） */
+  .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
   .lp-guide-story { min-height: 270px; }
   /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
   .lp-guide-text { padding: 20px 28px; flex: 1; align-items: center; text-align: center; }
@@ -2703,7 +2706,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide-name { font-size: 18px; margin-bottom: 10px; }
   .lp-guide-quote { font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
   .lp-guide-link { font-size: 12px; }
-  .lp-trust-grid2 { gap: 10px; margin: 20px 14px 20px 0; }
+  .lp-trust-grid2 { grid-template-columns: 1fr 1.03fr; gap: 10px; margin: 20px 14px 20px 0; }
   .lp-trust-card { height: 84px; padding: 8px 6px; gap: 9px; border-radius: 12px; }
   .lp-trust-card svg { width: 28px; height: 28px; }
   .lp-trust-card span { font-size: 17px; line-height: 1.5; }
@@ -2717,6 +2720,13 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-tour-meta { font-size: 12px; }
   .lp-tour-price { font-size: 16px; }
   .lp-more-link { font-size: 14px; margin-top: 18px; }
+  /* 旅人故事：桌機三欄並排＋字級對齊精選卡內文（quote≈desc 17px） */
+  .lp-stories-list { flex-direction: row; gap: 16px; align-items: stretch; }
+  .lp-story-card { flex: 1 1 0; padding: 22px 24px 20px; display: flex; flex-direction: column; }
+  .lp-story-quote { font-size: 17px; line-height: 1.8; margin-bottom: 14px; flex: 1; }
+  .lp-story-meta { font-size: 14px; }
+  .lp-story-stars { font-size: 14px; }
+  .lp-story-activity { font-size: 13px; margin-top: 8px; }
   .lp-closing { margin-top: 72px; }
   .lp-closing-edge { height: 38px; }
   .lp-closing-paper { padding: 20px 24px 76px; }
