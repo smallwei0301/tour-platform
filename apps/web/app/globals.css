@@ -47,8 +47,10 @@ body {
   /* next/font 變數掛在 body class 上，--tp-serif 必須在 body 層定義才解析得到（html 層會 IACVT 失效） */
   --tp-serif: var(--font-noto-serif-tc, 'Noto Serif TC'), 'Noto Serif TC', 'PMingLiU', Georgia, serif;
 }
-html { overflow-x: hidden; }
-body { overflow-x: hidden; }
+/* overflow-x: clip 防橫向捲動，但「不」建立捲動容器 —— 用 hidden 會讓 body
+   成為捲動容器、使子層 position: sticky 的 Navbar 失效（捲動時跟著消失）。 */
+html { overflow-x: clip; }
+body { overflow-x: clip; }
 a { color: inherit; text-decoration: none; }
 
 .tp-container { width: 100%; max-width: 1200px; margin: 0 auto; padding: 0 16px; box-sizing: border-box; }
@@ -88,8 +90,9 @@ a { color: inherit; text-decoration: none; }
 .tp-nav-links > a:hover { color: var(--tp-brass); }
 
 .tp-btn { border-radius: 999px; padding: 10px 16px; border: 1px solid transparent; display: inline-block; font-weight: 700; }
-.tp-btn-primary { background: var(--tp-accent); color: #f8efdc; }
-.tp-btn-primary:hover { background: #a8431f; }
+/* 全站主要按鈕統一為首頁「探索祕島旅程」按鈕底色（#a8511f） */
+.tp-btn-primary { background: #a8511f; color: #f8efdc; }
+.tp-btn-primary:hover { background: #b85c28; }
 .tp-btn-ghost { border-color: rgba(244, 236, 216, 0.4); color: var(--tp-cream); background: transparent; }
 
 .tp-hero { padding: 72px 0; background: linear-gradient(150deg, #1d281e 0%, #18211a 100%); }
@@ -2576,8 +2579,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* 參考圖量測（@375）：大卡 344×96、徽章卡 59/61×31 gap5、文字起點＝卡內 28.7% */
 .lp-guide { padding-top: 12px; }
 .lp-guide-card {
-  /* 手機：單欄堆疊（故事在上、信任徽章在下）— 雙欄在窄螢幕會擠壓溢出 */
-  display: grid; grid-template-columns: 1fr;
+  /* 全裝置雙欄並排（故事 60.5%｜信任徽章 39.5%）；文字以換行避免溢出 */
+  display: grid; grid-template-columns: 60.5% 1fr;
   background: linear-gradient(180deg, #1d271d 0%, #18221a 100%);
   border: 1px solid rgba(190, 178, 137, 0.32);
   border-radius: 10px;
@@ -2611,10 +2614,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-guide-quote { margin: 0 0 6px; font-size: 10px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
 .lp-guide-link { font-size: 10px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
 .lp-trust-grid2 {
-  /* 手機：信任徽章 2×2 置於故事下方、整列滿版 */
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1.03fr; gap: 6px;
   align-content: center;
-  margin: 2px 12px 12px;
+  margin: 8px 8px 8px 0;
 }
 .lp-trust-card {
   display: flex; align-items: center; justify-content: center; gap: 3px;
@@ -2629,7 +2631,6 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* ── 結尾 CTA（古紙） ── */
 .lp-closing { position: relative; margin-top: 12px; background: #18211a; }
-.lp-closing-edge { display: block; width: 100%; height: 26px; }
 .lp-closing-paper {
   position: relative;
   background-color: #e6d5bd;
@@ -2728,7 +2729,6 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-story-stars { font-size: 14px; }
   .lp-story-activity { font-size: 13px; margin-top: 8px; }
   .lp-closing { margin-top: 72px; }
-  .lp-closing-edge { height: 38px; }
   .lp-closing-paper { padding: 20px 24px 76px; }
   .lp-closing-title { font-size: 36px; margin: 14px 0 18px; }
   .lp-closing-desc { font-size: 17px; margin-bottom: 30px; }

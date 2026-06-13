@@ -151,7 +151,7 @@ export default function MyOrdersPage() {
             style={{
               marginTop: 16,
               padding: '10px 24px',
-              background: '#ec4899',
+              background: '#a8511f',
               color: '#fff',
               border: 'none',
               borderRadius: 10,
@@ -189,7 +189,7 @@ export default function MyOrdersPage() {
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 13, color: '#6b7280' }}>{order.peopleCount ?? '—'} 人</span>
-            <span style={{ fontSize: 16, fontWeight: 800, color: '#ec4899' }}>
+            <span style={{ fontSize: 16, fontWeight: 800, color: '#a8511f' }}>
               NT$ {(order.totalTwd ?? 0).toLocaleString()}
             </span>
           </div>

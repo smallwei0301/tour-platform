@@ -391,7 +391,7 @@ export default function CheckoutPage() {
                 NT$ {basePrice.toLocaleString()} / 人
               </p>
             )}
-            <p style={{ fontSize: 15, fontWeight: 700, color: '#ec4899', marginBottom: 0 }}>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#a8511f', marginBottom: 0 }}>
               NT$ {displayPrice.toLocaleString()} / 人
             </p>
           </div>
@@ -404,7 +404,7 @@ export default function CheckoutPage() {
         disabled={loading || !selectedScheduleId || openSchedules.length === 0}
         style={{
           width: '100%', padding: '13px 0',
-          background: (!selectedScheduleId || openSchedules.length === 0) ? '#d1d5db' : '#ec4899',
+          background: (!selectedScheduleId || openSchedules.length === 0) ? '#d1d5db' : '#a8511f',
           color: '#fff', border: 'none', borderRadius: 10,
           fontSize: 15, fontWeight: 700, cursor: 'pointer',
         }}

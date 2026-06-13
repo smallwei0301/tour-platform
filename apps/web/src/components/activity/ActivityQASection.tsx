@@ -151,7 +151,7 @@ export function ActivityQASection({ activityId }: Props) {
                 style={{
                   alignSelf: 'flex-start',
                   padding: '10px 20px',
-                  background: '#ec4899',
+                  background: '#a8511f',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 8,
@@ -168,7 +168,7 @@ export function ActivityQASection({ activityId }: Props) {
       ) : (
         <p style={{ fontSize: 13, color: '#6b7280' }} data-testid="qa-login-prompt">
           {/* 請登入後才能提問 */}
-          請<a href="/login" style={{ color: '#ec4899', fontWeight: 600 }}>登入</a>後才能提問
+          請<a href="/login" style={{ color: '#a8511f', fontWeight: 600 }}>登入</a>後才能提問
         </p>
       )}
     </section>

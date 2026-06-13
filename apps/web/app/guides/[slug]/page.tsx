@@ -108,7 +108,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
               {guide.specialties?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
                   {guide.specialties.map((s: string) => (
-                    <span key={s} style={{ background: '#e6f4ed', color: 'var(--tp-gold-strong)', padding: '3px 10px', borderRadius: 10, fontSize: 12 }}>{s}</span>
+                    <span key={s} style={{ background: 'rgba(190, 178, 137, 0.18)', color: 'var(--tp-gold-strong)', border: '1px solid rgba(190, 178, 137, 0.45)', padding: '3px 10px', borderRadius: 10, fontSize: 12 }}>{s}</span>
                   ))}
                 </div>
               )}

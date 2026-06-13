@@ -134,7 +134,7 @@ export default function OrderPayPage() {
     padding: '14px 0',
     borderRadius: 12,
     border: 'none',
-    background: paying ? '#d1d5db' : '#ec4899',
+    background: paying ? '#d1d5db' : '#a8511f',
     color: '#fff',
     fontSize: 16,
     fontWeight: 700,
@@ -214,7 +214,7 @@ export default function OrderPayPage() {
         </div>
         <div style={{ ...rowStyle, borderBottom: 'none' }}>
           <span style={{ ...labelStyle, fontWeight: 700, color: '#111827', fontSize: 15 }}>應付金額</span>
-          <span style={{ fontSize: 20, fontWeight: 800, color: '#ec4899' }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: '#a8511f' }}>
             NT$ {(order.totalTwd ?? 0).toLocaleString()}
           </span>
         </div>

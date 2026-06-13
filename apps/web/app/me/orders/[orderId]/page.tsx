@@ -311,7 +311,7 @@ export default function OrderDetailPage() {
   const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f3f4f6', fontSize: 14 };
   const labelStyle: React.CSSProperties = { color: '#6b7280' };
   const valueStyle: React.CSSProperties = { fontWeight: 600, color: '#111827', textAlign: 'right' };
-  const btnPrimary: React.CSSProperties = { padding: '11px 20px', background: '#ec4899', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+  const btnPrimary: React.CSSProperties = { padding: '11px 20px', background: '#a8511f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
   const btnSecondary: React.CSSProperties = { padding: '11px 20px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' };
   const btnDanger: React.CSSProperties = { padding: '11px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
 
@@ -396,7 +396,7 @@ export default function OrderDetailPage() {
         )}
         <div style={{ ...rowStyle, borderBottom: 'none' }}>
           <span style={{ ...labelStyle, fontWeight: 700, fontSize: 15, color: '#111827' }}>應付金額</span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#ec4899' }}>NT$ {(order.totalTwd ?? 0).toLocaleString()}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: '#a8511f' }}>NT$ {(order.totalTwd ?? 0).toLocaleString()}</span>
         </div>
       </div>
 
