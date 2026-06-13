@@ -2703,7 +2703,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
   .lp-guide-story { min-height: 270px; }
   /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
-  .lp-guide-text { padding: 20px 28px; flex: 1; align-items: center; text-align: center; }
+  .lp-guide-text { padding: 20px 20px 20px 28px; flex: 1; align-items: flex-start; text-align: left; }
   .lp-guide-label { font-size: 12px; margin-bottom: 8px; }
   .lp-guide-name { font-size: 18px; margin-bottom: 10px; }
   .lp-guide-quote { font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
@@ -2742,7 +2742,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-photo { min-height: 100%; }
   .lp-feat-body { padding: 30px 48px; }
   /* 導遊卡桌機：文字置中於照片與徽章之間＋大字級 */
-  .lp-guide-text { padding: 24px 36px; flex: 1; align-items: center; text-align: center; }
+  .lp-guide-text { padding: 24px 28px 24px 32px; flex: 1; align-items: flex-start; text-align: left; }
   .lp-guide-label { font-size: 14px; margin-bottom: 10px; }
   .lp-guide-name { font-size: 26px; margin-bottom: 12px; }
   .lp-guide-quote { font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
