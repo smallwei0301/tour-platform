@@ -88,10 +88,15 @@ export async function PUT(req: NextRequest) {
     });
     return NextResponse.json(ok({ settings }));
   } catch (e) {
-    const isValidation = (e as { code?: string })?.code === 'HOMEPAGE_FEATURED_INVALID';
-    return NextResponse.json(
-      fail(isValidation ? 'HOMEPAGE_FEATURED_INVALID' : 'HOMEPAGE_FEATURED_WRITE_FAILED', e instanceof Error ? e.message : 'write failed'),
-      { status: isValidation ? 400 : 500 },
-    );
+    const code = (e as { code?: string })?.code;
+    const message = e instanceof Error ? e.message : 'write failed';
+    if (code === 'HOMEPAGE_FEATURED_INVALID') {
+      return NextResponse.json(fail('HOMEPAGE_FEATURED_INVALID', message), { status: 400 });
+    }
+    // 表不存在（migration 未套用）→ 503 + 可執行繁中訊息，讓 admin 知道下一步。
+    if (code === 'HOMEPAGE_FEATURED_TABLE_MISSING') {
+      return NextResponse.json(fail('HOMEPAGE_FEATURED_TABLE_MISSING', message), { status: 503 });
+    }
+    return NextResponse.json(fail('HOMEPAGE_FEATURED_WRITE_FAILED', message), { status: 500 });
   }
 }

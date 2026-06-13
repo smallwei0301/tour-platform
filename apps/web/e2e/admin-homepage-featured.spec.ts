@@ -96,3 +96,33 @@ test('儲存失敗（400 驗證錯誤）→ 顯示錯誤訊息', async ({ authed
   await page.getByTestId('homepage-featured-save').click();
   await expect(page.getByTestId('homepage-featured-save-error')).toContainText('不存在');
 });
+
+test('資料表未建立（503 HOMEPAGE_FEATURED_TABLE_MISSING）→ 顯示可執行的 migration 提示', async ({ authedPage: page }) => {
+  // migration 未套用時：GET 仍能載入（後端 fail-open 回未設定狀態），
+  // 儲存才以 503 + 可執行繁中訊息提示 operator 套用 migration。
+  await page.route('**/api/admin/homepage-featured', (r: Route) => {
+    if (r.request().method() === 'PUT') {
+      return r.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          error: {
+            code: 'HOMEPAGE_FEATURED_TABLE_MISSING',
+            message:
+              '首頁精選資料表尚未建立，請先把 migration「20260612090000_homepage_featured_settings.sql」套用到此環境的 Supabase（套用後重新載入 API schema）再試。在此之前首頁會顯示預設精選。',
+          },
+        }),
+      });
+    }
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(GET_PAYLOAD) });
+  });
+
+  await page.goto('/admin/homepage');
+  // GET fail-open：載入頁面正常，可選行程可見（不再是紅色 schema-cache 錯誤卡）
+  await expect(page.getByTestId('editor-pick-hualien-river-trekking')).toBeVisible();
+  await page.getByTestId('editor-pick-hualien-river-trekking').locator('input[type=radio]').check();
+  await page.getByTestId('homepage-featured-save').click();
+  await expect(page.getByTestId('homepage-featured-save-error')).toContainText('migration');
+  await expect(page.getByTestId('homepage-featured-save-error')).toContainText('資料表尚未建立');
+});
