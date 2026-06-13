@@ -2405,12 +2405,13 @@ details[open] .kkd-faq-q::before { content: '- '; }
   border-radius: 12px;
   overflow: hidden;
   display: grid;
-  /* 手機：上圖下文堆疊 — 照片全寬 16:10，橫幅原圖（3:2）幾乎不裁切 */
-  grid-template-columns: 1fr;
+  /* 對齊參考圖：所有裝置皆左圖右文（照片由右欄內容撐高、align stretch 填滿） */
+  grid-template-columns: 38% 1fr;
+  align-items: stretch;
   color: inherit;
 }
 .lp-feat-right { display: flex; flex-direction: column; min-width: 0; }
-.lp-feat-photo { position: relative; aspect-ratio: 16 / 10; }
+.lp-feat-photo { position: relative; min-height: 100%; }
 .lp-feat-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 /* 編輯精選書籤標籤：懸掛於照片左上（蓋過卡片上邊框） */
 .lp-feat-photo .lp-feat-badge {
@@ -2594,7 +2595,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* 照片獨立欄：固定欄寬、影像 object-fit cover 填滿。
    用 align-self: stretch 讓照片高度「跟著卡片內容（文字）長高」，
    而非用 aspect-ratio 固定高度去反過來壓縮文字欄造成文字破框。 */
-.lp-guide-photo { position: relative; flex: 0 0 40%; align-self: stretch; min-height: 100%; }
+.lp-guide-photo { position: relative; flex: 0 0 48%; align-self: stretch; min-height: 100%; }
 .lp-guide-photo img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center 18%;
@@ -2682,8 +2683,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-theme-sub { font-size: 14px; }
   .lp-featured { padding-top: 48px; }
   /* 平板起即並排雙欄（照片左、文字右）— 避免堆疊時文字右半大片留白 */
-  .lp-feat-card { border-radius: 16px; grid-template-columns: 46% 1fr; }
-  .lp-feat-photo { aspect-ratio: 4 / 3; min-height: 0; }
+  .lp-feat-card { border-radius: 16px; grid-template-columns: 40% 1fr; }
+  .lp-feat-photo { min-height: 100%; }
   /* 文字欄垂直置中：內容不再擠在頂端、footer 與本文間不留大縫 */
   .lp-feat-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 26px 36px; }
   .lp-feat-title { font-size: 32px; margin-bottom: 10px; }
@@ -2737,8 +2738,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* ── RWD：桌機（精選卡並排雙欄） ── */
 @media (min-width: 1024px) {
-  .lp-feat-card { grid-template-columns: 48% 1fr; }
-  .lp-feat-photo { aspect-ratio: 4 / 3; min-height: 0; }
+  .lp-feat-card { grid-template-columns: 42% 1fr; }
+  .lp-feat-photo { min-height: 100%; }
   .lp-feat-body { padding: 30px 48px; }
   /* 導遊卡桌機：文字置中於照片與徽章之間＋大字級 */
   .lp-guide-text { padding: 24px 36px; flex: 1; align-items: center; text-align: center; }
