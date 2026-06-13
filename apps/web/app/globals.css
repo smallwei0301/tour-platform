@@ -2589,25 +2589,25 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-guide-story {
   position: relative;
   min-height: 94px;
-  display: block; color: inherit;
+  display: flex; align-items: stretch; color: inherit;
 }
-/* 照片放大約 1.5×（佔 story ~62%）並絕對定位於底層，文字疊在其右緣上方；
-   ::after 90deg 陰影漸層讓重疊區由照片淡入卡片底色，確保文字可讀。 */
-.lp-guide-photo { position: absolute; left: 0; top: 0; bottom: 0; width: 62%; }
+/* 照片獨立欄：固定欄寬、影像 object-fit cover 填滿。
+   用 align-self: stretch 讓照片高度「跟著卡片內容（文字）長高」，
+   而非用 aspect-ratio 固定高度去反過來壓縮文字欄造成文字破框。 */
+.lp-guide-photo { position: relative; flex: 0 0 40%; align-self: stretch; min-height: 100%; }
 .lp-guide-photo img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover; object-position: center 18%;
 }
 .lp-guide-photo::after {
   content: ''; position: absolute; inset: 0;
-  background: linear-gradient(90deg, rgba(25, 35, 26, 0) 38%, rgba(25, 35, 26, 0.55) 64%, rgba(25, 35, 26, 0.92) 84%, #1a241b 100%);
+  background: linear-gradient(90deg, rgba(25, 35, 26, 0) 48%, rgba(25, 35, 26, 0.6) 78%, #19231a 100%);
 }
 .lp-guide-text {
   position: relative; z-index: 2;
-  min-width: 0;
+  flex: 1; min-width: 0;
   display: flex; flex-direction: column; justify-content: center;
-  /* 左內距 ~50% → 文字疊在照片右側淡出區（重疊＋陰影） */
-  padding: 10px 10px 10px 50%;
+  padding: 8px 8px 8px 12px;
 }
 .lp-guide-label { margin: 0 0 5px; font-size: 10px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
 .lp-guide-name { margin: 0 0 7px; font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
@@ -2702,7 +2702,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
   .lp-guide-story { min-height: 270px; }
   /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
-  .lp-guide-text { padding: 20px 24px 20px 52%; align-items: flex-start; text-align: left; }
+  .lp-guide-text { padding: 20px 28px; flex: 1; align-items: center; text-align: center; }
   .lp-guide-label { font-size: 12px; margin-bottom: 8px; }
   .lp-guide-name { font-size: 18px; margin-bottom: 10px; }
   .lp-guide-quote { font-size: 13px; margin-bottom: 8px; line-height: 1.5; }
@@ -2741,7 +2741,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-photo { aspect-ratio: 4 / 3; min-height: 0; }
   .lp-feat-body { padding: 30px 48px; }
   /* 導遊卡桌機：文字置中於照片與徽章之間＋大字級 */
-  .lp-guide-text { padding: 24px 36px 24px 52%; align-items: flex-start; text-align: left; }
+  .lp-guide-text { padding: 24px 36px; flex: 1; align-items: center; text-align: center; }
   .lp-guide-label { font-size: 14px; margin-bottom: 10px; }
   .lp-guide-name { font-size: 26px; margin-bottom: 12px; }
   .lp-guide-quote { font-size: 16px; margin-bottom: 10px; line-height: 1.5; }
