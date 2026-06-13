@@ -38,9 +38,11 @@ test.describe('祕島 LP 首頁', () => {
   test('編輯精選卡顯示行程資訊', async ({ page }) => {
     await page.goto('/');
     const card = page.locator('.lp-feat-card');
-    await expect(card.locator('.lp-feat-title')).toHaveText('柴山探洞・城市祕境');
-    await expect(card.locator('.lp-feat-subtitle')).toHaveText('走進城市邊緣的地形祕境');
-    await expect(card.locator('.lp-feat-rating')).toContainText('4.9');
+    // #1422 後編輯精選改用真實已發布行程 view-model（標題/評分為實際資料），
+    // 故改以穩定子字串／可見性斷言，避免綁定策展文案。
+    await expect(card.locator('.lp-feat-title')).toContainText('柴山探洞');
+    await expect(card.locator('.lp-feat-subtitle')).toBeVisible();
+    await expect(card.locator('.lp-feat-rating')).toContainText('則評價');
     await expect(card.locator('.lp-feat-price')).toContainText('NT$ 2,000');
   });
 

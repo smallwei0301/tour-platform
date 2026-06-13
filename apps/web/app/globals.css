@@ -2443,6 +2443,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-feat-tags {
   display: inline-flex; align-items: center; gap: 0;
+  /* 桌機 .lp-feat-body 為 flex column；align-self:flex-start 讓膠囊只取
+     內容寬（不被 stretch 拉滿整欄，避免「難度」後出現大片留白） */
+  align-self: flex-start;
   font-size: 7.5px; letter-spacing: 0.01em;
   color: rgba(244, 236, 216, 0.85);
   white-space: nowrap;
