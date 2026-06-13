@@ -28,7 +28,9 @@ test('getHomepageFeaturedDb：表不存在時 fail-open（return，不 throw）'
   const guardAt = fnSrc.indexOf('isMissingHomepageFeaturedTable(error)');
   assert.ok(guardAt > -1, 'get 必須偵測 missing-table');
   const afterGuard = fnSrc.slice(guardAt, guardAt + 200);
-  assert.match(afterGuard, /return\s*\{[^}]*editorPickSlug:\s*null/, 'missing-table 應 fail-open 回未設定狀態');
+  // fail-open 回未設定狀態（共用 HOMEPAGE_FEATURED_EMPTY 常數，editorPickSlug:null）
+  assert.match(afterGuard, /return\s*\{\s*\.\.\.HOMEPAGE_FEATURED_EMPTY\s*\}/, 'missing-table 應 fail-open 回 HOMEPAGE_FEATURED_EMPTY');
+  assert.match(dbSrc, /const HOMEPAGE_FEATURED_EMPTY\s*=\s*\{[^}]*editorPickSlug:\s*null/, 'HOMEPAGE_FEATURED_EMPTY 須含 editorPickSlug:null');
 });
 
 test('setHomepageFeaturedDb：表不存在時丟 HOMEPAGE_FEATURED_TABLE_MISSING', () => {

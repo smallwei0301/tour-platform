@@ -236,6 +236,8 @@ export const kpiConfigHistory = [
 export const homepageFeatured = {
   editorPickSlug: null,
   moreFeaturedSlugs: [],
+  editorPickCopy: {},
+  moreFeaturedCopy: {},
   updatedAt: null,
   updatedBy: null,
 };

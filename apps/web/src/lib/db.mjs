@@ -36,8 +36,10 @@ import {
 import { normalizeHomepageFeatured } from './homepage-featured.mjs';
 import {
   isMissingHomepageFeaturedTable,
+  isMissingHomepageFeaturedCopyColumn,
   HOMEPAGE_FEATURED_TABLE_MISSING_MESSAGE,
 } from './homepage-featured-error.mjs';
+import { sanitizeEditorPickCopy, sanitizeMoreFeaturedCopy } from './homepage-featured-copy.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -5061,29 +5063,48 @@ export async function listGuideMessageThreadsDb(input = {}) {
 // ── 首頁精選設定（admin 選擇編輯精選／更多精選行程） ──────────────────────
 // singleton row（id='default'），shape 契約見 tests/api/homepage-featured-contract.test.mjs
 
+const HOMEPAGE_FEATURED_EMPTY = { editorPickSlug: null, moreFeaturedSlugs: [], editorPickCopy: {}, moreFeaturedCopy: {}, updatedAt: null, updatedBy: null };
+
+function asPlainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
 export async function getHomepageFeaturedDb() {
   if (!hasSupabaseEnv()) return getHomepageFeaturedFallback();
 
   const supabase = await getSupabase();
-  const { data, error } = await supabase
+  const fullSelect = 'editor_pick_slug, more_featured_slugs, editor_pick_copy, more_featured_copy, updated_at, updated_by';
+  let { data, error } = await supabase
     .from('homepage_featured_settings')
-    .select('editor_pick_slug, more_featured_slugs, updated_at, updated_by')
+    .select(fullSelect)
     .limit(1)
     .maybeSingle();
+
+  // 文案 migration 未套用（欄位不存在）→ 退回不含 copy 的 select，回空 copy。
+  if (error && isMissingHomepageFeaturedCopyColumn(error)) {
+    ({ data, error } = await supabase
+      .from('homepage_featured_settings')
+      .select('editor_pick_slug, more_featured_slugs, updated_at, updated_by')
+      .limit(1)
+      .maybeSingle());
+  }
+
   if (error) {
     // migration 未套用（表不存在）時 fail-open 回未設定狀態：首頁照常渲染預設，
     // admin 頁面也能載入（儲存時才以可執行訊息提示套用 migration）。
     if (isMissingHomepageFeaturedTable(error)) {
-      return { editorPickSlug: null, moreFeaturedSlugs: [], updatedAt: null, updatedBy: null };
+      return { ...HOMEPAGE_FEATURED_EMPTY };
     }
     const err = new Error(error.message);
     err.code = error.code;
     throw err;
   }
-  if (!data) return { editorPickSlug: null, moreFeaturedSlugs: [], updatedAt: null, updatedBy: null };
+  if (!data) return { ...HOMEPAGE_FEATURED_EMPTY };
   return {
     editorPickSlug: data.editor_pick_slug ?? null,
     moreFeaturedSlugs: Array.isArray(data.more_featured_slugs) ? data.more_featured_slugs.map(String) : [],
+    editorPickCopy: asPlainObject(data.editor_pick_copy),
+    moreFeaturedCopy: asPlainObject(data.more_featured_copy),
     updatedAt: data.updated_at ?? null,
     updatedBy: data.updated_by ?? null,
   };
@@ -5099,7 +5120,11 @@ export async function setHomepageFeaturedDb(input = {}) {
     throw err;
   }
 
-  if (!hasSupabaseEnv()) return setHomepageFeaturedFallback({ editorPickSlug, moreFeaturedSlugs, actor });
+  // 文案覆寫：清洗後僅保留有效欄位/slug（更多精選 copy 限定本次選取的 slug）。
+  const editorPickCopy = editorPickSlug ? sanitizeEditorPickCopy(input?.editorPickCopy) : {};
+  const moreFeaturedCopy = sanitizeMoreFeaturedCopy(input?.moreFeaturedCopy, moreFeaturedSlugs);
+
+  if (!hasSupabaseEnv()) return setHomepageFeaturedFallback({ editorPickSlug, moreFeaturedSlugs, editorPickCopy, moreFeaturedCopy, actor });
 
   const before = await getHomepageFeaturedDb();
   const supabase = await getSupabase();
@@ -5107,10 +5132,19 @@ export async function setHomepageFeaturedDb(input = {}) {
     id: 'default',
     editor_pick_slug: editorPickSlug,
     more_featured_slugs: moreFeaturedSlugs,
+    editor_pick_copy: editorPickCopy,
+    more_featured_copy: moreFeaturedCopy,
     updated_at: new Date().toISOString(),
     updated_by: actor,
   };
-  const { error } = await supabase.from('homepage_featured_settings').upsert(payload);
+  let { error } = await supabase.from('homepage_featured_settings').upsert(payload);
+
+  // 文案 migration 未套用（copy 欄位不存在）→ 退回只寫 slug 欄位，仍能儲存選取。
+  if (error && isMissingHomepageFeaturedCopyColumn(error)) {
+    const { editor_pick_copy, more_featured_copy, ...slugOnly } = payload;
+    ({ error } = await supabase.from('homepage_featured_settings').upsert(slugOnly));
+  }
+
   if (error) {
     // 表不存在（migration 未套用）→ 以可執行繁中訊息提示 operator，而非丟英文原訊息。
     if (isMissingHomepageFeaturedTable(error)) {

@@ -7,6 +7,7 @@ import {
 } from './LpIcons';
 import { activities, reviews, getActivityBySlug, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
+import { formatDurationDisplay } from '../../lib/homepage-featured-copy.mjs';
 import { LpHeroMotion } from './LpHeroMotion';
 import { LpHeroDust } from './LpHeroDust';
 
@@ -151,35 +152,89 @@ function featuredRating(slug: string): { score: string; count: number } {
   return { score: avg.toFixed(1), count: related.length * 32 };
 }
 
-export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience' }: { slug?: string }) {
-  const activity = getActivityBySlug(slug) ?? getActivityBySlug('kaohsiung-chaishan-cave-experience')!;
-  const copy = FEATURED_COPY[activity.slug] ?? deriveFeaturedCopy(activity);
-  const photo = FEATURED_IMAGES[activity.slug] ?? activity.imageUrl;
-  const rating = featuredRating(activity.slug);
+/** admin 設定的真實行程精選 view-model（page.tsx 解析後傳入）。 */
+export type FeaturedView = {
+  activity: { slug: string; region?: string; regionSlug?: string; priceTwd?: number; durationMinutes?: number; durationDisplay?: string };
+  copy: { title: string; subtitle: string; desc: string; tagLabel: string; difficulty: number; imageUrl: string; ratingScore: string; ratingCount: number };
+};
+
+/** desc 可為策展 ReactNode（fixtures）或純字串（真實行程）；字串以換行轉 <br/>。 */
+function renderFeaturedDesc(desc: ReactNode): ReactNode {
+  if (typeof desc !== 'string') return desc;
+  const lines = desc.split(/\n+/).filter(Boolean);
+  return lines.map((line, i) => (
+    <span key={i}>{line}{i < lines.length - 1 ? <br /> : null}</span>
+  ));
+}
+
+export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featured }: { slug?: string; featured?: FeaturedView }) {
+  // 優先用真實行程 view-model；無則退回 fixtures（DB 不可用時 fail-open）。
+  let href: string;
+  let photo: string;
+  let title: string;
+  let subtitle: string;
+  let desc: ReactNode;
+  let tagLabel: string;
+  let difficulty: number;
+  let durationDisplay: string;
+  let price: number;
+  let ratingScore: string;
+  let ratingCount: number;
+
+  if (featured) {
+    const { activity, copy } = featured;
+    href = buildActivityHref(activity);
+    photo = copy.imageUrl || '/images/lp/feat-chaishan.jpg';
+    title = copy.title;
+    subtitle = copy.subtitle;
+    desc = copy.desc;
+    tagLabel = copy.tagLabel;
+    difficulty = copy.difficulty || 2;
+    durationDisplay = activity.durationDisplay || formatDurationDisplay(activity.durationMinutes);
+    price = activity.priceTwd ?? 0;
+    ratingScore = copy.ratingScore || '5.0';
+    ratingCount = copy.ratingCount || 0;
+  } else {
+    const activity = getActivityBySlug(slug) ?? getActivityBySlug('kaohsiung-chaishan-cave-experience')!;
+    const copy = FEATURED_COPY[activity.slug] ?? deriveFeaturedCopy(activity);
+    const rating = featuredRating(activity.slug);
+    href = buildActivityHref(activity);
+    photo = FEATURED_IMAGES[activity.slug] ?? activity.imageUrl;
+    title = copy.title;
+    subtitle = copy.subtitle;
+    desc = copy.desc;
+    tagLabel = copy.tagLabel;
+    difficulty = copy.difficulty;
+    durationDisplay = activity.durationDisplay.replace(/（.*）/, '');
+    price = activity.price;
+    ratingScore = rating.score;
+    ratingCount = rating.count;
+  }
+
   return (
     <section className="lp-section lp-featured" aria-label="編輯精選行程">
-      <Link href={buildActivityHref(activity)} className="lp-feat-card">
+      <Link href={href} className="lp-feat-card">
         {/* 參考圖：照片佔整張卡片全高（穿過 footer 列），footer 僅在右欄下方 */}
         <div className="lp-feat-photo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo} alt={`${copy.title}（編輯精選）`} />
+          <img src={photo} alt={`${title}（編輯精選）`} />
           {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
         </div>
         <div className="lp-feat-right">
           <div className="lp-feat-body">
-            <h3 className="lp-feat-title">{copy.title}</h3>
-            <span className="lp-feat-subtitle">{copy.subtitle}</span>
-            <p className="lp-feat-desc">{copy.desc}</p>
+            <h3 className="lp-feat-title">{title}</h3>
+            {subtitle && <span className="lp-feat-subtitle">{subtitle}</span>}
+            <p className="lp-feat-desc">{renderFeaturedDesc(desc)}</p>
             <div className="lp-feat-tags">
-              <span className="lp-tag"><HikeIcon /> {copy.tagLabel}</span>
-              <span className="lp-tag"><NightsIcon /> {activity.durationDisplay.replace(/（.*）/, '')}</span>
+              {tagLabel && <span className="lp-tag"><HikeIcon /> {tagLabel}</span>}
+              {durationDisplay && <span className="lp-tag"><NightsIcon /> {durationDisplay}</span>}
               <span className="lp-tag">
                 難度
-                <span className="lp-dots" aria-label={`難度 5 分之 ${copy.difficulty}`}>
+                <span className="lp-dots" aria-label={`難度 5 分之 ${difficulty}`}>
                   {Array.from({ length: 5 }, (_, i) => (
-                    <i key={i} className={i < copy.difficulty ? undefined : 'lp-dot-off'} />
+                    <i key={i} className={i < difficulty ? undefined : 'lp-dot-off'} />
                   ))}
                 </span>
               </span>
@@ -189,11 +244,11 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience' }: { sl
             <div className="lp-feat-rating">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/images/lp/avatars.png" alt="" aria-hidden="true" />
-              <strong>{rating.score}</strong>
-              <span className="lp-rating-count">({rating.count}則評價)</span>
+              <strong>{ratingScore}</strong>
+              {ratingCount > 0 && <span className="lp-rating-count">({ratingCount}則評價)</span>}
             </div>
             <div className="lp-feat-price">
-              NT$ {activity.price.toLocaleString()}<span className="lp-price-unit">起</span>
+              NT$ {price.toLocaleString()}<span className="lp-price-unit">起</span>
             </div>
           </div>
         </div>
@@ -262,25 +317,52 @@ const TOUR_IMAGES: Record<string, string> = {
   'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.jpg',
 };
 
-export function LpTours({ slugs }: { slugs?: string[] }) {
-  const tours = (slugs && slugs.length > 0
-    ? slugs.map((slug) => activities.find((a) => a.slug === slug)).filter((a): a is (typeof activities)[number] => !!a)
-    : activities.filter((a) => a.slug !== 'kaohsiung-chaishan-cave-experience').slice(0, 2));
+/** admin 設定的真實行程「更多精選」view-model（page.tsx 解析後傳入）。 */
+export type TourView = {
+  activity: { slug: string; region?: string; regionSlug?: string; priceTwd?: number; durationMinutes?: number; durationDisplay?: string };
+  copy: { title: string; tagline: string; imageUrl: string };
+};
+
+type TourItem = { slug: string; href: string; image: string; title: string; tagline: string; region: string; durationDisplay: string; price: number };
+
+export function LpTours({ slugs, tours }: { slugs?: string[]; tours?: TourView[] }) {
+  // 優先用真實行程 view-model；無則退回 fixtures（DB 不可用時 fail-open）。
+  let items: TourItem[];
+  if (tours && tours.length > 0) {
+    items = tours.map(({ activity, copy }) => ({
+      slug: activity.slug,
+      href: buildActivityHref(activity),
+      image: copy.imageUrl || '/images/lp/tour-river.jpg',
+      title: copy.title,
+      tagline: copy.tagline,
+      region: activity.region ?? '',
+      durationDisplay: activity.durationDisplay || formatDurationDisplay(activity.durationMinutes),
+      price: activity.priceTwd ?? 0,
+    }));
+  } else {
+    const fixtures = (slugs && slugs.length > 0
+      ? slugs.map((slug) => activities.find((a) => a.slug === slug)).filter((a): a is (typeof activities)[number] => !!a)
+      : activities.filter((a) => a.slug !== 'kaohsiung-chaishan-cave-experience').slice(0, 2));
+    items = fixtures.map((a) => ({
+      slug: a.slug, href: buildActivityHref(a), image: TOUR_IMAGES[a.slug] ?? a.imageUrl,
+      title: a.title, tagline: a.tagline, region: a.region, durationDisplay: a.durationDisplay, price: a.price,
+    }));
+  }
   return (
     <section className="lp-section lp-tours" aria-label="更多精選行程">
       <h2 className="lp-eyebrow">更多精選行程</h2>
       <div className="lp-tours-list">
-        {tours.map((a) => (
-          <Link key={a.slug} href={buildActivityHref(a)} className="lp-tour-card">
+        {items.map((a) => (
+          <Link key={a.slug} href={a.href} className="lp-tour-card">
             <div className="lp-tour-photo">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={TOUR_IMAGES[a.slug] ?? a.imageUrl} alt={a.title} loading="lazy" />
+              <img src={a.image} alt={a.title} loading="lazy" />
             </div>
             <div className="lp-tour-body">
               <h3 className="lp-tour-title">{a.title}</h3>
               <p className="lp-tour-tagline">{a.tagline}</p>
               <div className="lp-tour-meta">
-                <span>{a.region}・{a.durationDisplay}</span>
+                <span>{a.region}{a.durationDisplay ? `・${a.durationDisplay}` : ''}</span>
                 <span className="lp-tour-price">NT$ {a.price.toLocaleString()}<i>起</i></span>
               </div>
             </div>

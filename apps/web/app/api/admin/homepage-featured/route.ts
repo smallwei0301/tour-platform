@@ -9,9 +9,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../../src/lib/api';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
-import { getHomepageFeaturedDb, setHomepageFeaturedDb } from '../../../../src/lib/db.mjs';
-import { HOMEPAGE_DEFAULT_EDITOR_PICK, HOMEPAGE_MORE_FEATURED_LIMIT } from '../../../../src/lib/homepage-featured.mjs';
-import { activities } from '../../../../src/fixtures/data';
+import { getHomepageFeaturedDb, setHomepageFeaturedDb, listPublishedActivitiesDb } from '../../../../src/lib/db.mjs';
+import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../../../../src/lib/homepage-featured.mjs';
+import { formatDurationDisplay } from '../../../../src/lib/homepage-featured-copy.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,15 +30,34 @@ function checkAdminAuth(req: NextRequest): { ok: boolean; reason?: string } {
   });
 }
 
-// 首頁模板目前以 fixtures 目錄渲染（與 LP 文案/本地圖片資產對應），
-// 因此可選清單以 fixtures 為準 — 與首頁實際可渲染的範圍一致。
-function listChoices() {
-  return activities.map((a) => ({
+type ActivityRow = {
+  slug: string;
+  title: string;
+  tagline?: string;
+  shortDescription?: string;
+  region: string;
+  priceTwd?: number;
+  durationMinutes?: number;
+  durationDisplay?: string;
+  coverImageUrl?: string;
+  ratingAvg?: number;
+  reviewCount?: number;
+};
+
+// 可選清單＝真實「已發布」行程（admin 從自己的行程目錄挑選首頁精選）。
+async function listChoices() {
+  const rows = (await listPublishedActivitiesDb({})) as ActivityRow[];
+  return rows.map((a) => ({
     slug: a.slug,
     title: a.title,
+    tagline: a.tagline ?? '',
+    shortDescription: a.shortDescription ?? '',
     region: a.region,
-    price: a.price,
-    durationDisplay: a.durationDisplay,
+    price: a.priceTwd ?? 0,
+    durationDisplay: a.durationDisplay || formatDurationDisplay(a.durationMinutes),
+    coverImageUrl: a.coverImageUrl ?? '',
+    ratingAvg: a.ratingAvg ?? 0,
+    reviewCount: a.reviewCount ?? 0,
   }));
 }
 
@@ -49,12 +68,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const settings = await getHomepageFeaturedDb();
+    const [settings, choices] = await Promise.all([getHomepageFeaturedDb(), listChoices()]);
     return NextResponse.json(ok({
       settings,
-      choices: listChoices(),
+      choices,
       defaults: {
-        editorPickSlug: HOMEPAGE_DEFAULT_EDITOR_PICK,
+        editorPickSlug: choices[0]?.slug ?? null,
         moreFeaturedLimit: HOMEPAGE_MORE_FEATURED_LIMIT,
       },
     }));
@@ -77,13 +96,21 @@ export async function PUT(req: NextRequest) {
   }
 
   const { email } = pickAdminCredentials(req);
-  const input = (body ?? {}) as { editorPickSlug?: string | null; moreFeaturedSlugs?: string[] };
+  const input = (body ?? {}) as {
+    editorPickSlug?: string | null;
+    moreFeaturedSlugs?: string[];
+    editorPickCopy?: Record<string, unknown>;
+    moreFeaturedCopy?: Record<string, unknown>;
+  };
 
   try {
+    const choices = await listChoices();
     const settings = await setHomepageFeaturedDb({
       editorPickSlug: input.editorPickSlug ?? null,
       moreFeaturedSlugs: Array.isArray(input.moreFeaturedSlugs) ? input.moreFeaturedSlugs : [],
-      validSlugs: activities.map((a) => a.slug),
+      editorPickCopy: input.editorPickCopy ?? {},
+      moreFeaturedCopy: input.moreFeaturedCopy ?? {},
+      validSlugs: choices.map((a) => a.slug),
       actor: email || 'admin',
     });
     return NextResponse.json(ok({ settings }));
