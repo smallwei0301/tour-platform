@@ -2227,6 +2227,15 @@ details[open] .kkd-faq-q::before { content: '- '; }
   mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
   transform-origin: 100% 0%;
 }
+/* 光束＋粉塵的共同裁切容器：洞穴右半部前景岩壁遮蔽光束 —
+   光束只從洞口照入左半部（右緣 76%→92% 漸層淡出） */
+.lp-hero-raybox {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 76%, transparent 92%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 76%, transparent 92%);
+}
+
 /* 曙光圖層②b：光束中的懸浮微粒 canvas（LpHeroDust）。
    與 .lp-hero-rays 同一個 radial 遮罩 — 粒子只在光束照到的範圍可見 */
 .lp-hero-dust {
@@ -2254,7 +2263,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   will-change: transform;
 }
 .lp-hero-clouds {
-  top: 14%; height: 48%;
+  top: 14%; height: 48%; opacity: 0.8;
   background-image:
     radial-gradient(20% 50% at 8% 62%, rgba(255, 253, 246, 0.88) 0%, rgba(255, 253, 246, 0.38) 38%, transparent 62%),
     radial-gradient(16% 42% at 22% 40%, rgba(255, 248, 235, 0.72) 0%, rgba(255, 248, 235, 0.3) 40%, transparent 64%),
@@ -2265,7 +2274,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   filter: blur(14px);
 }
 .lp-hero-clouds2 {
-  top: 36%; height: 38%; opacity: 0.92;
+  top: 36%; height: 38%; opacity: 0.74;
   filter: blur(18px);
   background-image:
     radial-gradient(22% 52% at 14% 52%, rgba(255, 251, 240, 0.55) 0%, rgba(255, 251, 240, 0.22) 40%, transparent 64%),

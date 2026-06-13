@@ -26,11 +26,26 @@ export function LpHeroMotion() {
 
     const animations = [
       // 第一視角推進：只放大「去背洞穴前景」（.lp-hero-fg，洞口真 alpha 透明），
-      // 遠景山谷（.lp-hero-photo）靜止不動。單程拉近 12300ms 後定住
+      // 遠景山谷（.lp-hero-photo）靜止不動。單程拉近 8s 後定住
       //（fill: forwards 保持結束狀態，不再來回推拉）
       animate('.lp-hero-fg',
         [{ transform: 'scale(1)' }, { transform: 'scale(1.16)' }],
-        { duration: 12300, iterations: 1, easing: 'ease-out', fill: 'forwards' }),
+        { duration: 8000, iterations: 1, easing: 'ease-out', fill: 'forwards' }),
+      // 步行視角：推進期間鏡頭微幅上下晃動（步伐節奏、接近時幅度漸小），
+      // composite: 'add' 疊加在縮放動畫上，結束回到 0 不留殘留
+      animate('.lp-hero-fg',
+        [
+          { transform: 'translateY(0)', offset: 0 },
+          { transform: 'translateY(-6px)', offset: 0.12 },
+          { transform: 'translateY(1px)', offset: 0.25 },
+          { transform: 'translateY(-5px)', offset: 0.37 },
+          { transform: 'translateY(1px)', offset: 0.5 },
+          { transform: 'translateY(-4px)', offset: 0.62 },
+          { transform: 'translateY(0)', offset: 0.75 },
+          { transform: 'translateY(-2px)', offset: 0.87 },
+          { transform: 'translateY(0)', offset: 1 },
+        ],
+        { duration: 8000, iterations: 1, easing: 'ease-in-out', composite: 'add' }),
       // 暮色罩由濃轉淡：照片像被曙光逐漸點亮
       animate('.lp-hero-dawn',
         [{ opacity: 1 }, { opacity: 0 }],

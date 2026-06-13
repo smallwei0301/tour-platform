@@ -28,9 +28,12 @@ export function LpHero() {
       </div>
       <div className="lp-hero-fg" aria-hidden="true" />
       <div className="lp-hero-dawn" aria-hidden="true" />
-      <div className="lp-hero-rays" aria-hidden="true" />
-      {/* 丁達爾光束中的懸浮微粒（canvas 粒子系統，布朗運動＋上飄） */}
-      <LpHeroDust />
+      {/* 光束＋粉塵：raybox 裁切 — 右半部被前景岩壁遮蔽，只照入洞穴左半部 */}
+      <div className="lp-hero-raybox" aria-hidden="true">
+        <div className="lp-hero-rays" />
+        {/* 丁達爾光束中的懸浮微粒（canvas 粒子系統，布朗運動＋上飄） */}
+        <LpHeroDust />
+      </div>
       <LpHeroMotion />
       {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">
