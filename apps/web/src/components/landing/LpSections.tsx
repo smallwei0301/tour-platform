@@ -458,8 +458,7 @@ export function LpClosing() {
           <Link href="/activities" className="lp-btn">
             開始探索祕島旅程 <span className="lp-btn-arrow">→</span>
           </Link>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="lp-stamp" src="/images/lp/stamp.png" alt="" aria-hidden="true" />
+          {/* MIDAO 祕島 印章已內嵌於 closing-bg 背景圖，故不再額外疊一個 lp-stamp */}
         </div>
       </div>
     </section>
