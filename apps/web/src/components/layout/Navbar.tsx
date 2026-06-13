@@ -55,19 +55,25 @@ export function Navbar() {
   const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || '用戶';
 
   // LP 首頁導覽列透明、fixed 浮在 hero 洞穴照上；捲過整個 hero 區後才加半透明深色底。
-  const isHome = pathname === '/';
+  // 重要：是否為首頁「不」以 usePathname() 判定 —— production ISR（revalidate）重新整理時
+  // server 端 usePathname 可能回 null 使導覽列被快取成實心底。透明狀態改由 CSS
+  // body:has(.lp-root) 驅動（SSR/ISR/client 皆正確）；此處僅以 DOM（.lp-hero）在 client
+  // 偵測首頁來掛載捲動邏輯，並加 .tp-navbar--home 作為不支援 :has() 舊瀏覽器的後備。
+  const [isHome, setIsHome] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!isHome) {
+    const hero = document.querySelector('.lp-hero') as HTMLElement | null;
+    const onHome = !!hero;
+    setIsHome(onHome);
+    if (!onHome) {
       setScrolled(false);
       return;
     }
     // 根因：在頁面下方重新整理時，瀏覽器會還原捲動位置並觸發 scroll 事件，使導覽列
-    // 在載入瞬間就被判定為「已捲動」而套上深色底。對策：首頁關閉捲動位置還原
-    // （manual）並回到頂端，確保載入一律透明；僅在使用者真的向下捲過 hero 後才加深色底。
-    // 註：另在 root layout 以 inline script 於 hydration 前就把 manual 設好（更早於瀏覽器
-    // 還原時機），此處再設一次並 scrollTo(0,0) 作為雙重保險；離開首頁時還原成 auto。
+    // 載入瞬間就被判定為「已捲動」而套上深色底。對策：首頁關閉捲動位置還原（manual）
+    // 並回到頂端，確保載入一律透明；僅在使用者真的向下捲過 hero 後才加深色底。
+    // 另在 root layout 以 inline script 於 hydration 前就把 manual 設好作為雙重保險。
     let prevRestoration: History['scrollRestoration'] | undefined;
     try {
       if ('scrollRestoration' in window.history) {
@@ -79,7 +85,6 @@ export function Navbar() {
     setScrolled(false);
 
     const onScroll = () => {
-      const hero = document.querySelector('.lp-hero') as HTMLElement | null;
       const heroH = hero ? hero.offsetHeight : 0;
       // 門檻＝hero 高度減導覽列高；hero 尚未排版（offsetHeight 0）時用視窗高
       // 當保守值，並設下限 200px —— 避免量到 0 算出負門檻而「載入即判定已捲動」。
@@ -97,10 +102,10 @@ export function Navbar() {
         }
       } catch {}
     };
-  }, [isHome]);
+  }, [pathname]);
 
   return (
-    <header className={`tp-navbar${isHome ? ' tp-navbar--transparent' : ''}${isHome && scrolled ? ' tp-navbar--scrolled' : ''}`}>
+    <header className={`tp-navbar${isHome ? ' tp-navbar--home' : ''}${isHome && scrolled ? ' tp-navbar--scrolled' : ''}`}>
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
         <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
