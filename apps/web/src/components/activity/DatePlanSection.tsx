@@ -373,7 +373,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                   <button
                     type="button"
                     className="kkd-link-sm"
-                    style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 700 }}
                     onClick={() => setModalPlan(plan)}
                   >
                     {plan.detailsLinkText || '查看方案詳情 ›'}
