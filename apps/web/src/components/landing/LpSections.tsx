@@ -242,9 +242,9 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
           </div>
           <div className="lp-feat-footer">
             <div className="lp-feat-rating">
-              <StarIcon aria-hidden="true" />
+              <StarIcon filled aria-hidden="true" />
               <strong>{ratingScore}</strong>
-              {ratingCount > 0 && <span className="lp-rating-count">({ratingCount}則評價)</span>}
+              {ratingCount > 0 && <span className="lp-rating-count">共 {ratingCount} 則評論</span>}
             </div>
             <div className="lp-feat-price">
               NT$ {price.toLocaleString()}<span className="lp-price-unit">起</span>
@@ -275,7 +275,7 @@ export function LpGuide() {
             <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" />
           </div>
           <div className="lp-guide-text">
-            <p className="lp-guide-label">在地嚮導・真實陪伴</p>
+            <p className="lp-guide-label">在地嚮導・深度旅遊</p>
             <p className="lp-guide-name">高雄柴山・<span className="lp-guide-name-en">Andy&nbsp;Lee</span></p>
             <p className="lp-guide-quote">「不是觀光打卡，<br />是懂路的人帶你走進柴山。」</p>
             <span className="lp-guide-link">認識嚮導的故事 →</span>
@@ -422,6 +422,7 @@ export function LpStories() {
 
 /** 常見問題（原 FaqSection，與 page.tsx 的 FAQPage JSON-LD 同步） */
 const FAQS = [
+  { q: '為什麼這種旅遊方式更值得？', a: '看清楚再選，不賭人品——導遊資料、評論、專長一眼看清，幾分鐘選對人；走進回憶，而不是趕行程——看到的是「適合誰」「會記住什麼」，不只是地點；有在地人帶路，少花冤枉時間——熟悉地方的導遊，幫你避開陷阱、走穩定路線。' },
   { q: '什麼是私人導遊行程？', a: '私人導遊行程是由平台認證的在地導遊帶領的小團體驗，行程由導遊設計，旅客可以按照自己的節奏探索，不需要配合大團行程表。' },
   { q: '如何確保導遊品質與安全？', a: '所有導遊都經過實名認證（KYC），部分導遊另有急救認證、環境教育講師等專業資歷。平台也提供緊急熱線 30 分鐘回應服務。' },
   { q: '付款安全嗎？', a: '所有付款透過 ECPay 或 LINE Pay 加密處理，你的信用卡資料不會經過本站。' },

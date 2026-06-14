@@ -1979,6 +1979,20 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-size: 12px;
   color: var(--tp-muted);
 }
+/* 方案 meta 列：時長 · 成行人數 同列對齊、可換行不黏在一起 */
+.kkd-plan-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.kkd-plan-meta-sep {
+  font-size: 12px;
+  color: var(--tp-muted);
+  opacity: 0.6;
+}
+/* 換行時隱藏多餘的分隔點（避免行首孤點） */
+.kkd-plan-meta { row-gap: 2px; }
 .kkd-plan-date-tag {
   background: var(--tp-tint);
   color: var(--tp-gold-strong);

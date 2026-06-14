@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
+import { resolveActivityReviewStats } from '../../../../src/lib/activity-review-stats.mjs';
 import {
   buildActivityProductJsonLd,
   resolveActivityOgImage,
@@ -120,6 +121,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   };
   const guide = activity.guide;
   const actReviews = activity.reviews || [];
+  // 評價統計（真實評論 + 暖場留言）—— 與首頁精選卡共用同一實作
+  const reviewStats = resolveActivityReviewStats(activityData);
   const displayedSchedules = activity.schedules || [];
   const useBookingV2 = isBookingV2Enabled();
   const firstSchedulableEntry = displayedSchedules.find((s: any) => {
@@ -173,6 +176,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   return (
     <SelectedPlanProvider>
     <main className="kkd-detail-page" style={{ paddingBottom: 100 }}>
+      {/* Preload LCP image (first carousel photo) to reduce Largest Contentful Paint */}
+      {imageUrls[0] && (
+        <link rel="preload" as="image" href={imageUrls[0]} fetchPriority="high" />
+      )}
       {/* ── Structured data (JSON-LD) for SEO/GEO/AEO — issue #637 ── */}
       <script
         type="application/ld+json"
@@ -256,7 +263,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       {/* ── Gallery ── */}
       {imageUrls.length > 0 && (
         <div className="tp-container">
-          <ImageCarousel images={imageUrls} alt={activity.title} />
+          <ImageCarousel images={imageUrls} alt={activity.title} sizes="(min-width: 768px) 0vw, 100vw" />
         </div>
       )}
 
@@ -379,20 +386,21 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <section id="section-reviews" className="kkd-scroll-section">
               <h2 className="kkd-section-title"><PublicIcon name="star" size={18} /> 旅客評價</h2>
               <div className="kkd-reviews-summary">
-                <span className="kkd-reviews-score"><PublicIcon name="star" size={20} /> {activityData.ratingAvg != null ? activityData.ratingAvg.toFixed(1) : (guide?.ratingAvg?.toFixed(1) || '5.0')}</span>
-                <span className="kkd-reviews-total">共 {actReviews.length} 則評價</span>
+                <span className="kkd-reviews-score"><PublicIcon name="star" size={20} /> {reviewStats.score.toFixed(1)}</span>
+                <span className="kkd-reviews-total">共 {reviewStats.count} 則評論</span>
               </div>
 
-              {/* Social proof quote chips */}
-              {activityData.socialProofQuotes && activityData.socialProofQuotes.length > 0 && (
-                <div className="kkd-quote-chips">
-                  {activityData.socialProofQuotes.map((q: string, i: number) => (
-                    <span key={i} className="kkd-quote-chip"><PublicIcon name="chat" size={13} /> {q}</span>
-                  ))}
-                </div>
-              )}
-
               <div className="kkd-review-list">
+                {/* 行程自設暖場留言：改以旅客評價卡片樣式呈現（與真實評論一致） */}
+                {(activityData.socialProofQuotes || []).map((q: string, i: number) => (
+                  <div key={`warm-${i}`} className="kkd-review-card">
+                    <div className="kkd-review-header">
+                      <strong className="kkd-reviewer">旅客回饋</strong>
+                    </div>
+                    <div className="kkd-stars">{'★'.repeat(5)}</div>
+                    <p className="kkd-review-text">{q}</p>
+                  </div>
+                ))}
                 {actReviews.map((r: any) => (
                   <div key={r.id} className="kkd-review-card">
                     <div className="kkd-review-header">
@@ -496,7 +504,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     src={guide.profilePhotoUrl || (guide as {avatarUrl?: string}).avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}
                     alt={guide.displayName}
                     loading="lazy"
-                    className="kkd-guide-avatar" width={1200} height={675} />
+                    sizes="72px"
+                    className="kkd-guide-avatar" width={72} height={72} />
                   <div className="kkd-guide-info">
                     <strong className="kkd-guide-name">{guide.displayName}</strong>
                     <span className="kkd-guide-verified"><PublicIcon name="badgeCheck" size={15} /> 實名已驗證</span>

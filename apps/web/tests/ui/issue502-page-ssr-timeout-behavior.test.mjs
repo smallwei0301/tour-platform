@@ -86,6 +86,9 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
       getActivityBySlugDb: async () => compatNever,
       buildCanonicalActivityDetailPath: () => '/activities/taipei/fallback-slug',
     },
+    '../../../../src/lib/activity-review-stats.mjs': {
+      resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
+    },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({}),
