@@ -54,7 +54,7 @@ export interface Activity {
   refundRules: string[];
   safetyNotice: string;
   faq: { question: string; answer: string }[];
-  socialProofQuotes: string[];
+  socialProofQuotes: Array<string | { author?: string; rating?: number; text?: string }>;
   trustPoints: string[];
   imageUrl: string;
   galleryUrls: string[];
@@ -186,7 +186,12 @@ export const activities: Activity[] = [
       { question: '下雨天還會出團嗎？', answer: '若遇天候不佳或路線安全疑慮，活動可能延期或調整。' },
       { question: '可以包團或客製化嗎？', answer: '可以，親子團、學校團、企業團與外國旅客團體皆可洽詢客製安排。' },
     ],
-    socialProofQuotes: ['大人小人都開心😍', '奇幻的探洞之旅', '謝謝 Andy 的導覽，會想再參加一次', '很棒、下次再去'],
+    socialProofQuotes: [
+      { author: '陳小姐', rating: 5, text: '大人小孩都開心😍' },
+      { author: '日本旅客 Yuki', rating: 4, text: '奇幻的探洞之旅，城市旁竟有這種地形' },
+      '謝謝 Andy 的導覽，會想再參加一次',
+      '很棒、下次再去',
+    ],
     trustPoints: ['多元客群：親子、教師、外國遊客、研究生', '有實際帶團與環境教育背景', '具壽山巡守與保育志工信任背書'],
     imageUrl: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
     galleryUrls: [

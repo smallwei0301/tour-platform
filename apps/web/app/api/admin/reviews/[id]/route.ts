@@ -73,7 +73,9 @@ export async function PATCH(
       );
     }
 
-    // AC5: On approve, recompute rating_avg and review_count on activities table
+    // AC5: On approve, recompute rating_avg and review_count from REAL approved reviews only.
+    // 社群口碑語錄（暖場）只在前台頁面整合呈現，不進 Google 結構化資料/列表評分，
+    // 避免被視為假評價（沿用 #1378 的 Google 結構化資料安全準則）。
     if (newStatus === 'approved') {
       const { data: reviews } = await supabase
         .from('activity_reviews')

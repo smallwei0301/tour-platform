@@ -9,6 +9,9 @@ import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/r
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
+import { normalizeSocialProofQuotes } from '../../../../../src/lib/social-proof-quotes.mjs';
+
+type SocialProofQuoteRow = { author: string; rating: number; text: string };
 import { addMinutesToHHMM } from '../../../../../src/lib/hhmm';
 
 // ── V2 方案型別（schedule modal 專用）─────────────────────
@@ -700,7 +703,7 @@ export default function AdminActivityEditPage() {
   const [refundRules,        setRefundRules]        = useState('');
   const [safetyNotice,       setSafetyNotice]       = useState('');
   const [goodFor,            setGoodFor]            = useState('');
-  const [socialProofQuotes,  setSocialProofQuotes]  = useState('');
+  const [socialProofQuotes,  setSocialProofQuotes]  = useState<SocialProofQuoteRow[]>([]);
   const [faq,                setFaq]                = useState<Array<{q:string;a:string}>>([]);
   const [itinerary,          setItinerary]          = useState<Array<{step:number;title:string;description:string;duration:string;icon:string}>>([]);
   const [status,             setStatus]             = useState('draft');
@@ -710,7 +713,6 @@ export default function AdminActivityEditPage() {
   // persist the placeholder into activities.plans JSONB.
   const [plansTouched,       setPlansTouched]       = useState(false);
   const [ratingAvg,          setRatingAvg]          = useState('');
-  const [reviewCount,        setReviewCount]        = useState('0');
   const [activitySlug,       setActivitySlug]       = useState('');
   const [importErrors,       setImportErrors]       = useState<string[]>([]);
   const [importDiff,         setImportDiff]         = useState<Array<{field:string;before:string;after:string}>>([]);
@@ -746,11 +748,10 @@ export default function AdminActivityEditPage() {
         setRefundRules((d.refundRules || []).join('\n'));
         setSafetyNotice(d.safetyNotice || '');
         setGoodFor((d.goodFor || []).join('\n'));
-        setSocialProofQuotes((d.socialProofQuotes || []).join('\n'));
+        setSocialProofQuotes(normalizeSocialProofQuotes(d.socialProofQuotes));
         setFaq(d.faq || []);
         setItinerary(d.itinerary || []);
         setRatingAvg(d.ratingAvg != null ? String(d.ratingAvg) : '');
-        setReviewCount(String(d.reviewCount ?? 0));
         setStatus(d.status || 'draft');
         // plans: use DB value if exists, otherwise default
         if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
@@ -827,7 +828,7 @@ export default function AdminActivityEditPage() {
     setRefundRules((d.refundRules || []).join('\n'));
     setSafetyNotice(d.safetyNotice || '');
     setGoodFor((d.goodFor || []).join('\n'));
-    setSocialProofQuotes((d.socialProofQuotes || []).join('\n'));
+    setSocialProofQuotes(normalizeSocialProofQuotes(d.socialProofQuotes));
     setFaq(Array.isArray(d.faq) ? d.faq : []);
     setItinerary(Array.isArray(d.itinerary) ? d.itinerary : []);
     if (Array.isArray(d.plans) && d.plans.length) {
@@ -1085,11 +1086,14 @@ export default function AdminActivityEditPage() {
           notices: toArray(notices), refundRules: toArray(refundRules),
           safetyNotice: safetyNotice.trim() || undefined,
           goodFor: toArray(goodFor),
-          socialProofQuotes: toArray(socialProofQuotes),
+          // 社群口碑語錄：結構化（人名／星數／內容），空內容項目過濾掉
+          socialProofQuotes: socialProofQuotes
+            .map(q => ({ author: q.author.trim(), rating: q.rating, text: q.text.trim() }))
+            .filter(q => q.text.length > 0),
           faq, itinerary,
           imageUrls,
           ratingAvg: ratingAvg !== '' ? Number(ratingAvg) : null,
-          reviewCount: Number(reviewCount) || 0,
+          // reviewCount 已移除手動輸入：由後端以「口碑語錄 + 已核准評論」自動對齊
           // #917: persist plans so imported/edited plans reach 方案管理 (activity_plans).
           // Guarded by plansTouched so a plan-less activity never saves the DEFAULT_PLANS placeholder.
           ...(plansTouched ? { plans } : {}),
@@ -1100,6 +1104,17 @@ export default function AdminActivityEditPage() {
       else setError(json.error?.message || '更新失敗');
     } catch { setError('網路錯誤'); }
     finally { setSaving(false); }
+  }
+
+  // ── 社群口碑語錄（結構化）編輯 ──
+  function addQuote() {
+    setSocialProofQuotes(prev => [...prev, { author: '', rating: 5, text: '' }]);
+  }
+  function updateQuote(index: number, patch: Partial<SocialProofQuoteRow>) {
+    setSocialProofQuotes(prev => prev.map((q, i) => (i === index ? { ...q, ...patch } : q)));
+  }
+  function removeQuote(index: number) {
+    setSocialProofQuotes(prev => prev.filter((_, i) => i !== index));
   }
 
   async function handleStatusChange(newStatus: string) {
@@ -1378,12 +1393,64 @@ export default function AdminActivityEditPage() {
               適合對象（每行一項）
               <textarea value={goodFor} onChange={e => setGoodFor(e.target.value)} rows={3} style={fieldStyle} placeholder={'喜愛歷史文化\n家庭親子旅遊\n銀髮族友善'} />
             </label>
-            <label style={labelStyle}>
-              社群口碑語錄（每行一句）
-              <textarea value={socialProofQuotes} onChange={e => setSocialProofQuotes(e.target.value)} rows={3} style={fieldStyle} placeholder={'超值行程，CP值超高！\n導遊非常專業親切'} />
-            </label>
+            <div style={labelStyle}>
+              社群口碑語錄（可編輯人名、星數、評價內容）
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+                {socialProofQuotes.length === 0 && (
+                  <span style={{ fontSize: 12, color: '#9ca3af' }}>尚無口碑語錄，點下方按鈕新增。</span>
+                )}
+                {socialProofQuotes.map((q, i) => (
+                  <div
+                    key={i}
+                    style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}
+                  >
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <input
+                        value={q.author}
+                        onChange={e => updateQuote(i, { author: e.target.value })}
+                        placeholder="人名（留空顯示「旅客回饋」）"
+                        aria-label="評論人名"
+                        style={{ ...fieldStyle, flex: '1 1 180px', margin: 0 }}
+                      />
+                      <select
+                        value={q.rating}
+                        onChange={e => updateQuote(i, { rating: Number(e.target.value) })}
+                        aria-label="評論星數"
+                        style={{ ...fieldStyle, flex: '0 0 130px', margin: 0 }}
+                      >
+                        {[5, 4, 3, 2, 1].map(n => (
+                          <option key={n} value={n}>{'★'.repeat(n)}（{n}）</option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => removeQuote(i)}
+                        style={{ flex: '0 0 auto', background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontSize: 13 }}
+                      >
+                        刪除
+                      </button>
+                    </div>
+                    <textarea
+                      value={q.text}
+                      onChange={e => updateQuote(i, { text: e.target.value })}
+                      rows={2}
+                      placeholder="評價內容"
+                      aria-label="評價內容"
+                      style={{ ...fieldStyle, margin: 0 }}
+                    />
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addQuote}
+                  style={{ alignSelf: 'flex-start', background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', fontSize: 13 }}
+                >
+                  ＋ 新增一則口碑
+                </button>
+              </div>
+            </div>
 
-            <h3 style={sectionTitle}>⭐ 評分信任信號（暖場用）</h3>
+            <h3 style={sectionTitle}>⭐ 評分信任信號</h3>
             <FormGrid cols={2} gap={16}>
               <label style={labelStyle}>
                 初始評分（0–5）
@@ -1394,18 +1461,15 @@ export default function AdminActivityEditPage() {
                   style={fieldStyle}
                   placeholder="例：4.8"
                 />
-                <span style={{ fontSize: 11, color: '#6b7280', marginTop: 4, display: 'block' }}>未來由評論系統（#301）自動計算；留空表示尚無評價</span>
+                <span style={{ fontSize: 11, color: '#6b7280', marginTop: 4, display: 'block' }}>留空＝自動以「口碑語錄星數＋已核准旅客評論」平均計算</span>
               </label>
-              <label style={labelStyle}>
-                初始評論數
-                <input
-                  type="number" min="0"
-                  value={reviewCount}
-                  onChange={e => setReviewCount(e.target.value)}
-                  style={fieldStyle}
-                  placeholder="0"
-                />
-              </label>
+              <div style={labelStyle}>
+                目前評論數（自動對齊）
+                <div style={{ ...fieldStyle, display: 'flex', alignItems: 'center', background: '#f9fafb', color: '#374151' }}>
+                  {socialProofQuotes.length} 則口碑語錄＋已核准旅客評論
+                </div>
+                <span style={{ fontSize: 11, color: '#6b7280', marginTop: 4, display: 'block' }}>評論數已改為自動對齊（口碑語錄＋已核准評論），無需手動輸入</span>
+              </div>
             </FormGrid>
 
             <div style={{ display: 'flex', gap: 12, marginTop: 24, flexWrap: 'wrap' }}>
