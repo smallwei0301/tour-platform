@@ -42,7 +42,7 @@ test.describe('祕島 LP 首頁', () => {
     // 故改以穩定子字串／可見性斷言，避免綁定策展文案。
     await expect(card.locator('.lp-feat-title')).toContainText('柴山探洞');
     await expect(card.locator('.lp-feat-subtitle')).toBeVisible();
-    await expect(card.locator('.lp-feat-rating')).toContainText('則評價');
+    await expect(card.locator('.lp-feat-rating')).toContainText('則評論');
     await expect(card.locator('.lp-feat-price')).toContainText('NT$ 2,000');
   });
 
@@ -62,7 +62,7 @@ test.describe('祕島 LP 首頁', () => {
     await expect(page.locator('.lp-dest-card')).toHaveCount(8);
     await expect(page.locator('.lp-dest-card').first()).toContainText('台北');
     await expect(page.locator('.lp-story-card')).toHaveCount(3);
-    await expect(page.locator('.lp-faq-item')).toHaveCount(6);
+    await expect(page.locator('.lp-faq-item')).toHaveCount(7);
     // FAQ 展開互動
     const firstFaq = page.locator('.lp-faq-item').first();
     await firstFaq.locator('summary').click();
