@@ -415,6 +415,25 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
   background: linear-gradient(135deg, #243024, #1c261c);
 }
 
+/* 活動詳情頁 loading.tsx 骨架（見該檔註解）。深色漸層塊 + 輕微 pulse，
+   footprint 對齊真實版面（hero 16/9 + 標題/價格行）避免 streamed-in 位移。 */
+.kkd-skel {
+  background: linear-gradient(135deg, #243024, #1c261c);
+  border-radius: 8px;
+  animation: kkd-skel-pulse 1.4s ease-in-out infinite;
+}
+.kkd-skel-breadcrumb { height: 16px; width: 40%; margin: 14px 0; border-radius: 4px; }
+.kkd-skel-hero { width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; }
+.kkd-detail-skel-title { margin-top: 18px; }
+.kkd-skel-line { border-radius: 4px; margin: 10px 0; }
+@keyframes kkd-skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kkd-skel { animation: none; }
+}
+
 .tp-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
