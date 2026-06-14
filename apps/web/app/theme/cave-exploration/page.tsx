@@ -84,7 +84,7 @@ export default function CaveExplorationPage() {
           <Link href="/">首頁</Link> &gt; <Link href="/activities">探索行程</Link> &gt; 柴山探洞
         </div>
       </div>
-      <section className="tp-theme-hero tp-theme-cave">
+      <section className="tp-theme-hero tp-theme-cave-hero">
         <div className="tp-container">
           <h1>鑽進高雄的秘密地下世界</h1>
           <p>柴山的石灰岩洞穴藏著億萬年的地質故事，讓在地導遊帶你安全深入探索。</p>
