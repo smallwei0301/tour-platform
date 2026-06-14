@@ -16,26 +16,39 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 // the font is not in the cache within ~100ms — first-time visitors see
 // the system fallback for the whole session, repeat visitors get the
 // real font on the next navigation. This kills the swap-shift entirely.
+//
+// 效能（手機 Lighthouse round-5）— Noto Sans/Serif TC 為 CJK 家族，
+// next/font 會替「每個字重」切出 ~105 個 unicode-range 子檔；中文 body
+// 文字會跨字重觸發下載，實測一頁就抓 ~30 個子檔共 ~2.1MB，是 slow-4G
+// 下 FCP 14.7s / LCP 18.9s 的主因。對策：
+//   1. 字重砍到實際需要的（body 只留 400/700；500/900 由瀏覽器就近對應），
+//      每砍一個 CJK 字重就少掉一整組 unicode-range 子檔。
+//   2. `preload: false` — 不在 <head> 注入高優先 preload，CJK 字型改為
+//      隨 CSS 用到才低優先下載，不與當頁 LCP 圖／關鍵 CSS 搶頻寬。
 const notoSans = Noto_Sans_TC({
   subsets: ['latin'],
-  weight: ['400', '500', '700', '900'],
+  weight: ['400', '700'],
   display: 'optional',
+  preload: false,
   variable: '--font-noto-sans-tc',
 });
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '500', '700'],
+  weight: ['400', '700'],
   display: 'swap',
   variable: '--font-inter',
 });
 
 // 祕島 LP 顯示字體 — 古籍／古地圖質感的明體（BRAND_BOOK Section 04）。
 // display:'swap'：標題層級的襯線字是品牌視覺核心，寧可短暫 fallback 再換字。
+// 標題字數少 → 觸發的 unicode-range 子檔遠少於 body，但仍逐字重計費，
+// 故只保留品牌標題實際用到的 700／900（600 就近對應到 700）並關閉 preload。
 const notoSerif = Noto_Serif_TC({
   subsets: ['latin'],
-  weight: ['600', '700', '900'],
+  weight: ['700', '900'],
   display: 'swap',
+  preload: false,
   variable: '--font-noto-serif-tc',
 });
 

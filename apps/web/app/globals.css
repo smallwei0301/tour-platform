@@ -1614,7 +1614,9 @@ img { max-width: 100%; height: auto; }
 }
 .kkd-reviewer { font-size: 14px; }
 .kkd-review-date { color: var(--tp-muted); font-size: 12px; }
-.kkd-stars { color: #f5a623; margin-bottom: 6px; font-size: 14px; }
+.kkd-stars { margin-bottom: 6px; font-size: 14px; letter-spacing: 1px; }
+.kkd-stars-on { color: #f5a623; }
+.kkd-stars-off { color: rgba(238, 230, 205, 0.28); }
 .kkd-review-text {
   font-size: 14px;
   line-height: 1.75;

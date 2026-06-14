@@ -38,6 +38,21 @@ function parseActivityLookupTimeout() {
 
 const RENDER_ACTIVITY_TIMEOUT_MS = parseActivityLookupTimeout();
 
+const REVIEW_STAR_MAX = 5;
+
+// 旅客評價星等：固定顯示 5 顆星，達標的顯示品牌金色、未達標的顯示灰色，
+// 讓 4 星評價也能呈現「4 金 + 1 灰」而非只畫 4 顆。
+function StarRating({ value }: { value?: number | null }) {
+  const filled = Math.max(0, Math.min(REVIEW_STAR_MAX, Math.round(Number(value) || 0)));
+  const empty = REVIEW_STAR_MAX - filled;
+  return (
+    <div className="kkd-stars" role="img" aria-label={`${filled} 顆星，滿分 ${REVIEW_STAR_MAX} 顆`}>
+      {filled > 0 && <span className="kkd-stars-on">{'★'.repeat(filled)}</span>}
+      {empty > 0 && <span className="kkd-stars-off">{'★'.repeat(empty)}</span>}
+    </div>
+  );
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutRef: ReturnType<typeof setTimeout> | null = null;
   const timeoutPromise = new Promise<T>((_, reject) => {
@@ -405,9 +420,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                       <strong className="kkd-reviewer">{r.author}（{r.city || 'TW'}）</strong>
                       <span className="kkd-review-date">{r.date || new Date().toLocaleDateString('zh-TW')}</span>
                     </div>
-                    {r.rating && (
-                      <div className="kkd-stars">{'★'.repeat(r.rating)}</div>
-                    )}
+                    {r.rating && <StarRating value={r.rating} />}
                     <p className="kkd-review-text">{r.text}</p>
                   </div>
                 ))}
@@ -416,7 +429,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     <div className="kkd-review-header">
                       <strong className="kkd-reviewer">{resolveSocialProofAuthor(q.author)}</strong>
                     </div>
-                    <div className="kkd-stars">{'★'.repeat(q.rating)}</div>
+                    <StarRating value={q.rating} />
                     <p className="kkd-review-text">{q.text}</p>
                   </div>
                 ))}

@@ -21,14 +21,21 @@ test.describe('社群口碑語錄 × 真實評論整合', () => {
     const reviewSection = page.locator('#section-reviews');
     await expect(reviewSection).toBeVisible();
 
-    // 結構化口碑語錄：自訂人名 + 對應星數
+    // 結構化口碑語錄：自訂人名 + 對應星數。
+    // 星等固定顯示 5 顆：達標金色（.kkd-stars-on）、未達標灰色（.kkd-stars-off）。
     const namedCard = reviewSection.locator('.kkd-review-card', { hasText: '陳小姐' });
     await expect(namedCard).toBeVisible();
+    // 5 星：5 金 + 0 灰
     await expect(namedCard.locator('.kkd-stars')).toHaveText('★★★★★');
+    await expect(namedCard.locator('.kkd-stars-on')).toHaveText('★★★★★');
+    await expect(namedCard.locator('.kkd-stars-off')).toHaveCount(0);
 
     const yukiCard = reviewSection.locator('.kkd-review-card', { hasText: '日本旅客 Yuki' });
     await expect(yukiCard).toBeVisible();
-    await expect(yukiCard.locator('.kkd-stars')).toHaveText('★★★★');
+    // 4 星：固定 5 顆（4 金 + 1 灰），而非只畫 4 顆
+    await expect(yukiCard.locator('.kkd-stars')).toHaveText('★★★★★');
+    await expect(yukiCard.locator('.kkd-stars-on')).toHaveText('★★★★');
+    await expect(yukiCard.locator('.kkd-stars-off')).toHaveText('★');
 
     // 真實評論卡片仍正常呈現（與口碑語錄同樣式）
     await expect(reviewSection.locator('.kkd-review-card', { hasText: '小美' })).toBeVisible();
