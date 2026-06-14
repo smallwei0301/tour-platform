@@ -57,6 +57,25 @@ export function deriveEditorPickCopy(activity = {}) {
   };
 }
 
+/**
+ * 取「行程頁內照片」做首頁編輯精選大卡的輪播來源。
+ * 優先用行程的相片集（image_urls，與行程詳情頁同一份），去重後依序輪播；
+ * 相片集為空時退回封面（coverImageUrl ／ fixtures 的 imageUrl），確保至少一張。
+ */
+export function resolveEditorPickPhotos(activity = {}) {
+  const gallery = Array.isArray(activity.imageUrls) ? activity.imageUrls : [];
+  const photos = [];
+  for (const url of gallery) {
+    const u = trimStr(url, LIMITS.imageUrl);
+    if (u && !photos.includes(u)) photos.push(u);
+  }
+  if (photos.length === 0) {
+    const cover = trimStr(activity.coverImageUrl ?? activity.imageUrl, LIMITS.imageUrl);
+    if (cover) photos.push(cover);
+  }
+  return photos;
+}
+
 /** 從真實行程自動帶入「更多精選」卡片預設文案。 */
 export function deriveMoreFeaturedCopy(activity = {}) {
   return {

@@ -10,6 +10,7 @@ import { buildActivityHref } from '../../lib/activity-url';
 import { formatDurationDisplay } from '../../lib/homepage-featured-copy.mjs';
 import { LpHeroMotion } from './LpHeroMotion';
 import { LpHeroDust } from './LpHeroDust';
+import { LpFeaturedCarousel } from './LpFeaturedCarousel';
 
 export function LpHero() {
   return (
@@ -155,7 +156,8 @@ function featuredRating(slug: string): { score: string; count: number } {
 /** admin 設定的真實行程精選 view-model（page.tsx 解析後傳入）。 */
 export type FeaturedView = {
   activity: { slug: string; region?: string; regionSlug?: string; priceTwd?: number; durationMinutes?: number; durationDisplay?: string };
-  copy: { title: string; subtitle: string; desc: string; tagLabel: string; difficulty: number; imageUrl: string; ratingScore: string; ratingCount: number };
+  // imageUrls＝「行程頁內照片」（行程相片集），供大卡輪播；缺漏時退回單張 imageUrl。
+  copy: { title: string; subtitle: string; desc: string; tagLabel: string; difficulty: number; imageUrl: string; imageUrls?: string[]; ratingScore: string; ratingCount: number };
 };
 
 /** desc 可為策展 ReactNode（fixtures）或純字串（真實行程）；字串以換行轉 <br/>。 */
@@ -171,6 +173,7 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
   // 優先用真實行程 view-model；無則退回 fixtures（DB 不可用時 fail-open）。
   let href: string;
   let photo: string;
+  let photos: string[];
   let title: string;
   let subtitle: string;
   let desc: ReactNode;
@@ -185,6 +188,8 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
     const { activity, copy } = featured;
     href = buildActivityHref(activity);
     photo = copy.imageUrl || '/images/lp/feat-chaishan.jpg';
+    // 行程頁內照片（相片集）優先做輪播；缺漏時退回單張封面。
+    photos = copy.imageUrls && copy.imageUrls.length > 0 ? copy.imageUrls : [photo];
     title = copy.title;
     subtitle = copy.subtitle;
     desc = copy.desc;
@@ -200,6 +205,8 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
     const rating = featuredRating(activity.slug);
     href = buildActivityHref(activity);
     photo = FEATURED_IMAGES[activity.slug] ?? activity.imageUrl;
+    // fixtures 後備（DB 不可用）：維持單張本地快取圖（外連相片集離線會破圖）。
+    photos = [photo];
     title = copy.title;
     subtitle = copy.subtitle;
     desc = copy.desc;
@@ -216,8 +223,8 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
       <Link href={href} className="lp-feat-card">
         {/* 參考圖：照片佔整張卡片全高（穿過 footer 列），footer 僅在右欄下方 */}
         <div className="lp-feat-photo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo} alt={`${title}（編輯精選）`} />
+          {/* 行程頁內照片以輪播呈現（單張時等同靜態照片） */}
+          <LpFeaturedCarousel images={photos} alt={title} />
           {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
