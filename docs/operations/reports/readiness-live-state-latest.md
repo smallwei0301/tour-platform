@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-06-14T07:41:44.736Z -->
+<!-- query_timestamp: 2026-06-14T12:44:43.195Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-14T07:41:44.736Z  
-**Commit SHA:** `84cf32770beeac5e638605a327f3246bffdcb763`
+**Query timestamp:** 2026-06-14T12:44:43.195Z  
+**Commit SHA:** `a0f57e8aa462668ccbd383d4fd3cb86af199b20b`
 
 ---
 
-## Open PRs (3)
+## Open PRs (4)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1434 | [fix(activity): 評價星等固定 5 顆（未達標灰色）+ 詳情頁載入效能優化](https://github.com/smallwei0301/tour-platform/pull/1434) | `claude/rating-display-performance-xfxvlj` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 | #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
