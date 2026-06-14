@@ -4,13 +4,15 @@ import Link from 'next/link';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
-import { isActivityTypeMatch, isActivityTypeKeywordMatch, resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
+import { resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
+import { ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../src/lib/activity-themes.mjs';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
 import { resolveCoverSrc, CARD_IMAGE_SIZES } from './cover-image';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
-const TYPES = ['文化歷史', '美食體驗', '戶外冒險', '柴山探洞 🔦', '溯溪 🌊'];
+// #mobile-categories：行程主題與 footer／各主題介紹頁統一為五大主題（單一來源）。
+const TYPES = ACTIVITY_THEME_LABELS;
 
 interface Activity {
   id: string;
@@ -192,9 +194,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     }
     if (selectedTypes.length > 0) {
       result = result.filter((a) =>
-        selectedTypes.some((t) =>
-          isActivityTypeMatch(a.category, t) || isActivityTypeKeywordMatch(a, t)
-        )
+        selectedTypes.some((t) => isActivityInTheme(a, t))
       );
     }
     if (sort === 'price-asc') result.sort((a, b) => a.priceTwd - b.priceTwd);

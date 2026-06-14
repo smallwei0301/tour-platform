@@ -297,6 +297,9 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
 .tp-theme-hero h1 { margin: 0 0 10px; font-size: clamp(30px, 4vw, 46px); }
 .tp-theme-hero p { max-width: 760px; line-height: 1.7; margin: 0 0 18px; opacity: .95; }
 .tp-theme-river-hero { background: linear-gradient(140deg,#1a4a6b,#2d8b6e); }
+.tp-theme-culture-hero { background: linear-gradient(140deg,#5a3a1e,#a8763a); }
+.tp-theme-food-hero { background: linear-gradient(140deg,#8a3a1c,#c2542e); }
+.tp-theme-wilderness-hero { background: linear-gradient(140deg,#27402b,#4a6f48); }
 .tp-feature-3col { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 .tp-feature-3col article { border: 1px solid var(--tp-border); border-radius: 12px; padding: 14px; background: var(--tp-card-bg); line-height: 1.7; }
 
@@ -2442,7 +2445,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 /* ── 主題探索 ── */
-.lp-themes { padding-top: 2px; }
+/* 手機版：與上方 hero 之間需有明確留白，避免標題緊貼洞穴主視覺（#mobile-theme-spacing）。 */
+.lp-themes { padding-top: 26px; }
 .lp-themes-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 0 6px; }
 .lp-theme-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center;

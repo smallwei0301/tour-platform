@@ -60,10 +60,10 @@ export function LpHero() {
 }
 
 const THEMES = [
-  { title: '山徑', sub: 'Into the Mountains', href: '/activities?category=hiking', icon: MountainIcon },
-  { title: '海岸', sub: 'By the Coast', href: '/activities?category=water', icon: WaveIcon },
-  { title: '部落', sub: 'Tribal Culture', href: '/activities?category=culture', icon: TribalIcon },
-  { title: '茶香', sub: 'Tea Journey', href: '/activities?category=food', icon: TeaLeafIcon },
+  { title: '山徑', sub: 'Into the Mountains', href: '/theme/mountain-wilderness', icon: MountainIcon },
+  { title: '野溪', sub: 'Wild Streams', href: '/theme/river-trekking', icon: WaveIcon },
+  { title: '文化', sub: 'Local Culture', href: '/theme/culture-history', icon: TribalIcon },
+  { title: '美食', sub: 'Local Food', href: '/theme/food-tour', icon: TeaLeafIcon },
 ];
 
 export function LpThemes() {
