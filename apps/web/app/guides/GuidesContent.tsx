@@ -214,7 +214,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {/* Region */}
         {regions.length > 0 && (
-          <details open>
+          <details>
             <summary>縣市</summary>
             {regions.map((r) => (
               <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -231,7 +231,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {/* Language */}
         {languages.length > 0 && (
-          <details open>
+          <details>
             <summary>語言</summary>
             {languages.map((l) => (
               <label key={l} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -248,7 +248,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {/* Specialty */}
         {specialties.length > 0 && (
-          <details open>
+          <details>
             <summary>主題專長</summary>
             {specialties.map((s) => (
               <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
