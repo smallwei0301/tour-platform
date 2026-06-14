@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-14T00:59:51.366Z -->
+<!-- query_timestamp: 2026-06-14T07:41:44.736Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-14T00:59:51.366Z  
-**Commit SHA:** `8956bc7043a1dc75e64b54f428c446e685640bae`
+**Query timestamp:** 2026-06-14T07:41:44.736Z  
+**Commit SHA:** `84cf32770beeac5e638605a327f3246bffdcb763`
 
 ---
 
@@ -70,16 +70,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1433 | [feat(guides): 認識導遊列表卡片重設計 + 篩選區塊預設收合](https://github.com/smallwei0301/tour-platform/pull/1433) | 2026-06-14 |
+| #1432 | [feat(reviews): 社群口碑語錄結構化（人名/星數/內容）+ 與真實評論前台整合 + 評論數自動對齊](https://github.com/smallwei0301/tour-platform/pull/1432) | 2026-06-14 |
+| #1431 | [fix(activity): 方案詳情 Modal 與相關按鈕改用品牌深色配色](https://github.com/smallwei0301/tour-platform/pull/1431) | 2026-06-14 |
+| #1430 | [feat(lp+activity): 精選卡實心星/評論數、暖場留言卡片、FAQ、方案 meta 排版、LCP 優化](https://github.com/smallwei0301/tour-platform/pull/1430) | 2026-06-14 |
 | #1429 | [fix(home): 導覽列透明改用 CSS :has 根治 ISR 實心底 + 精選卡星級 + 導遊新照](https://github.com/smallwei0301/tour-platform/pull/1429) | 2026-06-13 |
 | #1428 | [fix(home): 導覽列重新整理透明根因強化 + 嚮導卡手機/桌機字級重整](https://github.com/smallwei0301/tour-platform/pull/1428) | 2026-06-13 |
 | #1427 | [fix(home): 導覽列重新整理一律透明 + 嚮導卡信任徽章縮小讓中間文字更寬](https://github.com/smallwei0301/tour-platform/pull/1427) | 2026-06-13 |
 | #1426 | [feat(landing): 首頁收尾區與嚮導卡換用 WebP 圖片](https://github.com/smallwei0301/tour-platform/pull/1426) | 2026-06-13 |
 | #1425 | [feat(guide/apply): 成為導遊頁改用首頁山墨風並移除導遊後台外框](https://github.com/smallwei0301/tour-platform/pull/1425) | 2026-06-13 |
 | #1424 | [fix(home): 桌機精選卡標籤留白＋導覽列載入即透明](https://github.com/smallwei0301/tour-platform/pull/1424) | 2026-06-13 |
-| #1423 | [refine(home): 導遊區桌機文字左對齊貼齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1423) | 2026-06-13 |
-| #1422 | [feat(admin): 首頁精選改用真實已發布行程＋可編輯卡片文案](https://github.com/smallwei0301/tour-platform/pull/1422) | 2026-06-13 |
-| #1421 | [refine(home): 精選卡難度標籤手機不貼邊＋導遊區字級縮小貼齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1421) | 2026-06-13 |
-| #1420 | [feat(login): 旅客登入頁改版山墨品牌風格並像素對齊設計稿](https://github.com/smallwei0301/tour-platform/pull/1420) | 2026-06-13 |
 
 ---
 
