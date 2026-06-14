@@ -1,4 +1,4 @@
-import { Inter, Noto_Serif_TC } from 'next/font/google';
+import { Inter, Noto_Sans_TC, Noto_Serif_TC } from 'next/font/google';
 import type { Metadata } from 'next';
 import './globals.css';
 import { Navbar } from '../src/components/layout/Navbar';
@@ -6,37 +6,36 @@ import { Footer } from '../src/components/layout/Footer';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 
-// 字型效能策略（手機 Lighthouse round-5，owner 拍板 2026-06-14）——
-// Noto Sans/Serif TC 為 CJK 家族，next/font 會替「每個字重」切出 ~105 個
-// unicode-range 子檔；中文 body 文字會跨字重觸發下載，實測一頁就抓 ~2.1MB
-// 字型（內文 Noto Sans TC ~1.2MB + 標題 Noto Serif TC ~0.8MB）。`display:'optional'`
-// 只是「不阻塞 render / 不 swap」，**並不會阻止背景下載**（實測 optional 仍下載
-// 2MB 並與 LCP 圖搶頻寬），真實 slow-4G 實測 FCP 3.8s / LCP 4.4s。
-//
-// 對策：
-//   1. 內文（body）改用系統中文字（PingFang TC／微軟正黑／Noto Sans CJK），
-//      不再引用 Noto Sans TC webfont —— 該家族整組 @font-face 不再產生，
-//      手機端省 ~1.2MB 下載且 render-blocking CSS 大幅縮小。系統字本來就是
-//      #1345 把內文設 display:'optional' 後「首訪」實際看到的字，視覺一致。
-//   2. 標題（品牌襯線）維持 Noto Serif TC 但改 display:'optional' + preload:false：
-//      首訪用系統襯線（PMingLiU/Georgia，不阻塞、無 CLS swap-shift），
-//      回訪自快取換回品牌字。
+// Issue #1345 — Noto Sans TC is a large CJK font family; on slow mobile
+// links the swap from the fallback (sans-serif) to the real font lands
+// well after first paint, jumping every line-height and inflating CLS
+// (round-4 Lighthouse measured 0.76–1.43, still 0.4–0.9 after part 1).
+// next/font auto-generates a metric-matched fallback for Latin fonts
+// but NOT for CJK families, so the swap is visually large.
+// `display: 'optional'` tells the browser to skip the swap entirely if
+// the font is not in the cache within ~100ms — first-time visitors see
+// the system fallback for the whole session, repeat visitors get the
+// real font on the next navigation. This kills the swap-shift entirely.
+const notoSans = Noto_Sans_TC({
+  subsets: ['latin'],
+  weight: ['400', '500', '700', '900'],
+  display: 'optional',
+  variable: '--font-noto-sans-tc',
+});
 
 const inter = Inter({
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['400', '500', '700'],
   display: 'swap',
   variable: '--font-inter',
 });
 
-// 祕島 LP／標題 顯示字體 — 古籍／古地圖質感的明體（BRAND_BOOK Section 04）。
-// 只保留品牌標題實際用到的 700／900（600 就近對應到 700），display:'optional'
-// 讓首訪不被字型下載阻塞、無 swap-shift，回訪用快取的品牌字。
+// 祕島 LP 顯示字體 — 古籍／古地圖質感的明體（BRAND_BOOK Section 04）。
+// display:'swap'：標題層級的襯線字是品牌視覺核心，寧可短暫 fallback 再換字。
 const notoSerif = Noto_Serif_TC({
   subsets: ['latin'],
-  weight: ['700', '900'],
-  display: 'optional',
-  preload: false,
+  weight: ['600', '700', '900'],
+  display: 'swap',
   variable: '--font-noto-serif-tc',
 });
 
@@ -93,7 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             實測 8.8s 的元兇之一)。首頁自己的 preload 在 app/page.tsx
             內,首頁 LCP 不受影響。Root layout 僅保留 preconnect。 */}
       </head>
-      <body className={`${inter.variable} ${notoSerif.variable}`}>
+      <body className={`${notoSans.variable} ${inter.variable} ${notoSerif.variable}`}>
         <a href="#main-content" className="tp-skip-link">跳至主要內容</a>
         <Navbar />
         <div id="main-content">
