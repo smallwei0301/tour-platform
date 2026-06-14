@@ -117,6 +117,9 @@ test('GH-502 render-path isolation: module import + metadata + component render 
       getActivityBySlugDb: async () => ({ slug: 'real-slug', regionSlug: 'taipei', region: '台北市' }),
       buildCanonicalActivityDetailPath: () => '/activities/taipei/real-slug',
     },
+    '../../../../src/lib/activity-review-stats.mjs': {
+      resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
+    },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
@@ -209,6 +212,9 @@ test('GH-502 probe safety: production-like env must not serve fake probe activit
     '../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async () => null,
     },
+    '../../../../src/lib/activity-review-stats.mjs': {
+      resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
+    },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
@@ -298,6 +304,9 @@ test('GH-502 render-path isolation: non-probe render path uses DB result and doe
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }),
+    },
+    '../../../../src/lib/activity-review-stats.mjs': {
+      resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
     },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {

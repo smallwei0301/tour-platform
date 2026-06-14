@@ -90,9 +90,9 @@ export function BadgeShieldIcon({ size = 26 }: IconProps) {
   );
 }
 
-export function StarIcon({ size = 26 }: IconProps) {
+export function StarIcon({ size = 26, filled = false }: IconProps & { filled?: boolean }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width={size} height={size} viewBox="0 0 32 32" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={filled ? 0 : 1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M16 4l3.7 7.6 8.3 1.2-6 5.9 1.4 8.3L16 23l-7.4 4 1.4-8.3-6-5.9 8.3-1.2z" />
     </svg>
   );

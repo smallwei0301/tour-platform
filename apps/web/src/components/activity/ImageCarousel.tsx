@@ -6,6 +6,7 @@ import { useRef, useState, useEffect } from 'react';
 interface ImageCarouselProps {
   images: string[];
   alt: string;
+  sizes?: string;
 }
 
 /**
@@ -15,7 +16,7 @@ interface ImageCarouselProps {
  * - Mobile: swipeable carousel
  * - Desktop: 3:1 grid layout
  */
-export function ImageCarousel({ images, alt }: ImageCarouselProps) {
+export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [errorImages, setErrorImages] = useState<Set<number>>(new Set());
@@ -98,6 +99,7 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
                 alt={`${alt} ${i + 1}`}
                 priority={i === 0}
                 loading={i === 0 ? undefined : 'lazy'}
+                sizes={sizes ?? '100vw'}
                 onError={() => handleImageError(i)} width={1200} height={675} />
             )}
           </div>
@@ -124,6 +126,7 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
             alt={alt}
             className="kkd-gallery-main"
             priority
+            sizes="(min-width: 768px) 75vw, 100vw"
             onError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
         )}
         {validImages.length > 1 && (
@@ -135,6 +138,7 @@ export function ImageCarousel({ images, alt }: ImageCarouselProps) {
                 alt={`${alt} ${i + 2}`}
                 className="kkd-gallery-thumb"
                 loading="lazy"
+                sizes="(min-width: 768px) 25vw, 0vw"
                 onError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
             ))}
           </div>

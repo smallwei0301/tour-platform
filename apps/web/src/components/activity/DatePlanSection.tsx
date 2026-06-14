@@ -317,13 +317,16 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                   <div className="kkd-plan-header">
                     <div>
                       <span className="kkd-plan-name">{plan.label}</span>
-                      <span className="kkd-plan-duration">
-                        {ICONS.clock}
-                        {plan.duration}
-                      </span>
-                      <span className="kkd-plan-duration" style={{ marginTop: 4 }}>
-                        {formatPlanParticipantText(plan)}
-                      </span>
+                      <div className="kkd-plan-meta">
+                        <span className="kkd-plan-duration">
+                          {ICONS.clock}
+                          {plan.duration}
+                        </span>
+                        <span className="kkd-plan-meta-sep" aria-hidden="true">·</span>
+                        <span className="kkd-plan-duration">
+                          {formatPlanParticipantText(plan)}
+                        </span>
+                      </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       {/* 額滿 / 未開放 badge */}

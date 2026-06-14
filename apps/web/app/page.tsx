@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
-import { getHomepageFeaturedDb, listPublishedActivitiesDb } from '../src/lib/db.mjs';
+import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityBySlugDb } from '../src/lib/db.mjs';
 import { resolveHomepageFeaturedView } from '../src/lib/homepage-featured-copy.mjs';
+import { resolveActivityReviewStats } from '../src/lib/activity-review-stats.mjs';
 import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../src/lib/homepage-featured.mjs';
 
 // admin 於 /admin/homepage 變更精選後，ISR 60 秒內反映到首頁（維持可快取）
@@ -58,6 +59,11 @@ const homeJsonLd = {
       mainEntity: [
         {
           '@type': 'Question',
+          name: '為什麼這種旅遊方式更值得？',
+          acceptedAnswer: { '@type': 'Answer', text: '看清楚再選，不賭人品——導遊資料、評論、專長一眼看清，幾分鐘選對人；走進回憶，而不是趕行程——看到的是「適合誰」「會記住什麼」，不只是地點；有在地人帶路，少花冤枉時間——熟悉地方的導遊，幫你避開陷阱、走穩定路線。' },
+        },
+        {
+          '@type': 'Question',
           name: '什麼是私人導遊行程？',
           acceptedAnswer: { '@type': 'Answer', text: '私人導遊行程是由平台認證的在地導遊帶領的小團體驗，行程由導遊設計，旅客可以按照自己的節奏探索，不需要配合大團行程表。' },
         },
@@ -99,6 +105,15 @@ export default async function HomePage() {
     listPublishedActivitiesDb({}).catch(() => []),
   ]);
   const { editorPick, tours } = resolveHomepageFeaturedView(settings, catalog, HOMEPAGE_MORE_FEATURED_LIMIT);
+  // 精選卡評分以「真實行程平均 + 真實評論 + 暖場留言」覆寫顯示值（與行程詳情頁一致）。
+  if (editorPick?.activity?.slug) {
+    const full = await getActivityBySlugDb(editorPick.activity.slug).catch(() => null);
+    if (full) {
+      const stats = resolveActivityReviewStats(full);
+      editorPick.copy.ratingScore = stats.score.toFixed(1);
+      editorPick.copy.ratingCount = stats.count;
+    }
+  }
   return (
     <>
       {/* Preload hero background image to improve LCP */}
