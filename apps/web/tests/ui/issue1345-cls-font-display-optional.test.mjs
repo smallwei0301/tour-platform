@@ -39,19 +39,26 @@ test('內文不再引用 Noto Sans TC webfont（改系統字，零下載、零 s
   );
 
   const css = await readSrc('app/globals.css');
-  const bodyBlock = css.match(/\bbody\s*\{([\s\S]*?)\}/);
-  assert.ok(bodyBlock, 'globals.css 應有 body { ... } 區塊');
-  const fontFamily = (bodyBlock[1].match(/font-family:\s*([^;]+);/) || [])[1] || '';
+  // 內文系統字堆疊抽成 --tp-sans 變數（body 與 landing .lp-root 共用）。
+  const sansDef = (css.match(/--tp-sans:\s*([^;]+);/) || [])[1] || '';
+  assert.ok(sansDef, 'globals.css 應定義 --tp-sans 系統字堆疊');
   // 系統字（system-ui / -apple-system / PingFang / 微軟正黑）必須排在
   // 任何 'Noto Sans TC' 之前，確保不觸發 webfont 下載。
-  assert.match(fontFamily, /system-ui|-apple-system|PingFang|JhengHei/i,
-    '內文 font-family 必須以系統中文字為主');
-  const idxSystem = fontFamily.search(/system-ui|-apple-system|PingFang|JhengHei/i);
-  const idxNoto = fontFamily.search(/Noto Sans/i);
+  assert.match(sansDef, /system-ui|-apple-system|PingFang|JhengHei/i,
+    '--tp-sans 必須以系統中文字為主');
+  const idxSystem = sansDef.search(/system-ui|-apple-system|PingFang|JhengHei/i);
+  const idxNoto = sansDef.search(/Noto Sans/i);
   if (idxNoto >= 0) {
     assert.ok(idxSystem < idxNoto,
       "'Noto Sans TC/CJK' 若保留只能當本機字型 fallback，必須排在系統字之後");
   }
+
+  // body 內文必須實際套用系統字（直接列出系統字，或透過 --tp-sans 變數）。
+  const bodyBlock = css.match(/\bbody\s*\{([\s\S]*?)\}/);
+  assert.ok(bodyBlock, 'globals.css 應有 body { ... } 區塊');
+  const fontFamily = (bodyBlock[1].match(/font-family:\s*([^;]+);/) || [])[1] || '';
+  assert.match(fontFamily, /--tp-sans|system-ui|PingFang|JhengHei/i,
+    '內文 font-family 必須套用系統字（var(--tp-sans) 或直接系統字）');
 });
 
 test('品牌標題襯線 Noto_Serif_TC 用 display:optional（首訪不阻塞、無 swap-shift）', async () => {

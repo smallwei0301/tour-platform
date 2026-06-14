@@ -217,10 +217,10 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
         {/* 參考圖：照片佔整張卡片全高（穿過 footer 列），footer 僅在右欄下方 */}
         <div className="lp-feat-photo">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={photo} alt={`${title}（編輯精選）`} />
+          <img src={photo} alt={`${title}（編輯精選）`} loading="lazy" />
           {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
+          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" loading="lazy" />
         </div>
         <div className="lp-feat-right">
           <div className="lp-feat-body">
@@ -272,7 +272,7 @@ export function LpGuide() {
           {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" />
+            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" loading="lazy" />
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・深度旅遊</p>

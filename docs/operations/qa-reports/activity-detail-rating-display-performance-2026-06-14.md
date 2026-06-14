@@ -69,14 +69,44 @@
 
 ---
 
+## 二之二、跨頁面 Lighthouse 與首頁優化
+
+字型修正在 root layout，全站受惠。實測各頁（真實套用節流）：行程列表 `/activities` **84**、導遊 `/guides` **83**、活動詳情 **56**，但**首頁 `/` 僅 48**（最差、且為流量入口）。
+
+首頁主因：
+- **字型 1774kB**：Landing 的 `.lp-root` 讓整頁文字（含內文、區塊標籤）都繼承品牌襯線 Noto Serif TC。
+- **圖片 668kB**：hero 遠景 `hero-mountains.jpg`（200KB JPG，preload high）等。
+
+首頁對策（Round 4）：
+1. `.lp-root` 內文改系統字（抽 `--tp-sans` 變數與 body 共用）；品牌**大標題**（`.lp-hero h1`、`.lp-feat-title`、`.lp-tour-title`、`.lp-closing-title`、`.lp-guide-name`、`.lp-btn`）明確保留 `--tp-serif`，視覺核心不變。
+2. hero `hero-mountains.jpg` 200KB → **webp 105KB**（sharp q72），CSS background 與 page.tsx preload 同步改 webp，刪除舊 jpg。
+3. 三張首屏以下 `<img>`（編輯精選照片／徽章／嚮導肖像）加 `loading="lazy"`。
+
+首頁量測（before → Round 4）：
+
+| 量測情境 | 指標 | Before | Round 4 |
+|---|---|---|---|
+| 首頁（真實套用節流） | LCP | 5.1s | **3.8s** |
+| 首頁（真實套用節流） | FCP | 4.6s | **3.7s** |
+| 首頁（模擬 4G） | Performance | — | 56 |
+| 首頁（desktop） | Performance | — | **84** |
+| 首頁 | 字型下載 | 1774kB | **1073kB** |
+| 首頁 | 圖片下載 | 668kB | **577kB**（首屏，其餘 lazy） |
+| 首頁 | 總下載 | 2756kB | **1963kB** |
+
+> 測量備註：本機同時跑 server + Lighthouse，devtools（真實套用）節流的 TBT 受同機 CPU 競爭影響波動大（同設定下 560ms↔2800ms），composite 分數不穩定；FCP/LCP/資源量為穩定可信指標。
+>
+> 剩餘 1073kB 為**品牌大標題的 Noto Serif TC**（依 owner 決策保留）；CJK 襯線切片即使只用於標題仍跨多個 unicode-range。若願讓行程卡標題（`.lp-tour-title`）也改系統字，首頁可再往 80+/手機更佳。
+
 ## 三、回歸驗證
 
 - `npm run typecheck`：通過
 - `npm run lint`：通過（僅 eslintrc deprecation warning）
-- `npm test`：3339 tests，**0 fail**（含更新後的 `tests/ui/issue1345-cls-font-display-optional.test.mjs`，依新字型策略改寫並 3 pass）
+- `npm test`：3339 tests，**0 fail**（含依新字型策略改寫的 `issue1345-cls-font-display-optional.test.mjs`、與更新 hero preload 改 webp 的 `issue1344-no-global-hero-preload.test.mjs`）
 - `npm run build`：成功（`@font-face` 443 → 232，notoSans 整組移除）
 - E2E `issue-social-proof-reviews.spec.ts`：3 passed（dev webServer，帶 Supabase env）
-- 真實瀏覽器截圖：系統字內文 + 4 星「4 金 + 1 灰」呈現正常
+- 真實瀏覽器截圖：詳情頁系統字內文 + 4 星「4 金 + 1 灰」、首頁系統字內文 + 品牌襯線大標題，皆正常
+- 首頁字型/圖片改動不影響功能：本機 `home-landing-lp.spec.ts` 既有 2 個失敗（`.lp-feat-rating` 期待「則評價」但內容為「則評論」、`.lp-faq-item` 期待 6 個但 7 個）**為 origin/main 既有的內容/資料不符**，與本次 diff（僅字型/圖片/lazy）無關。
 
 > 備註：用無 `NEXT_PUBLIC_SUPABASE_*` 的本地 production build 跑 E2E 會因 client Supabase 初始化拋錯觸發 error boundary（環境問題，非程式碼回歸；SSR HTML 內容完整）；E2E 應走 Playwright 內建 dev webServer（已注入 dummy Supabase env）。
 

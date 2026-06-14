@@ -45,8 +45,10 @@ body {
   margin: 0; color: var(--tp-text); background: var(--tp-bg);
   /* 內文用系統中文字（零下載）：iOS/macOS 取 PingFang TC、Windows 取微軟正黑、
      Android/Linux 取 Noto Sans CJK；不再引用 Noto Sans TC webfont（省 ~1.2MB / 手機）。
-     'Noto Sans TC'/'Noto Sans CJK TC' 留在末段僅對應「本機已安裝」字型，不觸發下載。 */
-  font-family: var(--font-inter), Inter, system-ui, -apple-system, 'Segoe UI', 'PingFang TC', 'PingFang SC', 'Microsoft JhengHei', 'Noto Sans TC', 'Noto Sans CJK TC', sans-serif;
+     'Noto Sans TC'/'Noto Sans CJK TC' 留在末段僅對應「本機已安裝」字型，不觸發下載。
+     抽成 --tp-sans 變數以便 landing（.lp-root）內文共用同一系統字堆疊。 */
+  --tp-sans: var(--font-inter), Inter, system-ui, -apple-system, 'Segoe UI', 'PingFang TC', 'PingFang SC', 'Microsoft JhengHei', 'Noto Sans TC', 'Noto Sans CJK TC', sans-serif;
+  font-family: var(--tp-sans);
   /* next/font 變數掛在 body class 上，--tp-serif 必須在 body 層定義才解析得到（html 層會 IACVT 失效） */
   --tp-serif: var(--font-noto-serif-tc, 'Noto Serif TC'), 'Noto Serif TC', 'PMingLiU', Georgia, serif;
 }
@@ -2236,7 +2238,10 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* ============================================================
    Midao Landing Page (祕島 LP) — 深綠×古紙×黃銅
    ============================================================ */
-.lp-root { background: #18211a; color: var(--tp-cream); font-family: var(--tp-serif); }
+/* Landing 內文改系統字（--tp-sans，零下載）：原本 .lp-root 讓整頁繼承 --tp-serif，
+   使所有段落／內文都拉 Noto Serif TC 切片（手機實測字型 ~1774kB / LCP 5.1s）。
+   品牌大標題仍明確保留 --tp-serif（見下方 .lp-feat-title 等），維持視覺核心。 */
+.lp-root { background: #18211a; color: var(--tp-cream); font-family: var(--tp-sans); }
 
 /* ── Hero ── */
 .lp-hero { position: relative; overflow: hidden; background: #0c1410; }
@@ -2244,7 +2249,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   /* 全寬鋪滿：標題文字直接落在洞穴照上（左半岩壁天然深色保字） */
   position: absolute; inset: 0;
   /* 遠景層：山谷空拍（使用者提供）— 靜止不動，透過前景洞口看見 */
-  background-image: url('/images/lp/hero-mountains.jpg');
+  background-image: url('/images/lp/hero-mountains.webp');
   background-size: cover; background-position: 60% 38%;
 }
 /* 前景層：去背洞穴（洞口為真 alpha 透明）。WAAPI 以洞口為原點推進拉遠。
@@ -2495,6 +2500,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-feat-body { flex: 1; padding: 12px 15px 6px; min-width: 0; }
 .lp-feat-title {
   margin: 0;
+  font-family: var(--tp-serif); /* 品牌大標題保留襯線（.lp-root 已改系統字） */
   font-size: 18px; font-weight: 900; letter-spacing: 0.08em; line-height: 1.25;
   color: #e9e3c2;
 }
@@ -2561,6 +2567,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-tour-body { padding: 10px 13px 9px; min-width: 0; }
 .lp-tour-title {
   margin: 0 0 4px;
+  font-family: var(--tp-serif); /* 品牌標題保留襯線（.lp-root 已改系統字） */
   font-size: 14px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.45;
   color: #e9e3c2;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -2687,7 +2694,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   padding: 8px 8px 8px 12px;
 }
 .lp-guide-label { margin: 0 0 4px; font-size: 9px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
-.lp-guide-name { margin: 0 0 6px; font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
+.lp-guide-name { margin: 0 0 6px; font-family: var(--tp-serif); font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
 .lp-guide-quote { margin: 0 0 5px; font-size: 9px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
 .lp-guide-link { font-size: 9px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
 .lp-trust-grid2 {
@@ -2720,6 +2727,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-closing-inner { position: relative; max-width: 1200px; margin: 0 auto; text-align: center; }
 .lp-closing-title {
   margin: 8px 0 7px;
+  font-family: var(--tp-serif); /* 品牌大標題保留襯線（.lp-root 已改系統字） */
   font-size: 17px; font-weight: 900; letter-spacing: 0.12em; line-height: 1.35;
   color: #20281a;
 }
