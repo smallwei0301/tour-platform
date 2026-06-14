@@ -12,13 +12,27 @@ test('count = 真實評論 + 暖場留言；score 取 ratingAvg', () => {
   assert.equal(r.score, 4.8);
 });
 
-test('ratingAvg 缺漏時由真實評論平均', () => {
+test('ratingAvg 缺漏時由真實評論 + 口碑語錄星數一併平均', () => {
   const r = resolveActivityReviewStats({
     reviews: [{ rating: 5 }, { rating: 4 }],
-    socialProofQuotes: ['x'],
+    socialProofQuotes: ['x'], // 舊字串 → 預設 5 星
   });
   assert.equal(r.count, 3);
-  assert.equal(r.score, 4.5);
+  // (5 + 4 + 5) / 3 = 4.666… → 4.7
+  assert.equal(r.score, 4.7);
+});
+
+test('ratingAvg 缺漏時，結構化口碑語錄的星數會納入平均', () => {
+  const r = resolveActivityReviewStats({
+    reviews: [],
+    socialProofQuotes: [
+      { author: '小明', rating: 4, text: 'a' },
+      { author: '小華', rating: 2, text: 'b' },
+    ],
+  });
+  assert.equal(r.count, 2);
+  // (4 + 2) / 2 = 3.0
+  assert.equal(r.score, 3.0);
 });
 
 test('完全無資料 → score 5.0、count 0', () => {

@@ -79,6 +79,7 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 // #1385: audit log 單一實作於 audit-log.mjs（admin.mjs/services.mjs 亦共用）；
 // refund 狀態機集中於 refund-transition.mjs（ESM import 會被 hoist，置此保留原始碼位置脈絡）
 import { insertAuditLogDb } from './audit-log.mjs';
+import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 // #1383 — 訂單改期（fallback 實作 + 純規則）
 import {
@@ -2810,6 +2811,9 @@ export async function getActivityBySlugDb(slug, options = {}) {
       inclusions: a.inclusions || [], exclusions: a.exclusions || [],
       notices: a.notices || [], refundRules: a.refundRules || [],
       safetyNotice: a.safetyNotice, faq: a.faq || [],
+      itinerary: a.itinerary || [], goodFor: a.goodFor || [],
+      // 社群口碑語錄（結構化或舊純文字皆可）—— 前台會 normalize 後與真實評論整合呈現
+      socialProofQuotes: a.socialProofQuotes || [],
       status: 'published',
       guide: guide ? {
         id: guide.slug, slug: guide.slug, displayName: guide.displayName,
@@ -2824,7 +2828,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
       })),
       reviews: reviews.map(r => ({
         id: r.id, author: r.author, city: r.city, rating: r.rating,
-        comment: r.text, date: r.date
+        text: r.text, comment: r.text, date: r.date
       }))
     };
   }
@@ -3208,7 +3212,7 @@ export async function getGuideBySlugDb(slug) {
       })),
       reviews: reviews.map(r => ({
         id: r.id, author: r.author, city: r.city, rating: r.rating,
-        comment: r.text, date: r.date
+        text: r.text, comment: r.text, date: r.date
       }))
     };
   }
@@ -3475,7 +3479,47 @@ export async function updateActivityDb(id, input = {}) {
   if (input.safetyNotice !== undefined) patch.safety_notice = input.safetyNotice || null;
   if (input.faq !== undefined) patch.faq = Array.isArray(input.faq) ? input.faq : [];
   if (input.itinerary !== undefined) patch.itinerary = Array.isArray(input.itinerary) ? input.itinerary : [];
-  if (input.socialProofQuotes !== undefined) patch.social_proof_quotes = toJsonbArray(input.socialProofQuotes);
+  if (input.socialProofQuotes !== undefined) {
+    // 結構化 {author,rating,text}[]（舊純文字陣列也相容，normalize 會升級為物件）
+    patch.social_proof_quotes = normalizeSocialProofQuotes(input.socialProofQuotes);
+  }
+
+  // 評論數／評分自動對齊「真實已核准評論」（移除 admin 手填初始評論數）。
+  // 社群口碑語錄（暖場）只在前台頁面整合呈現，不進 review_count/rating_avg —
+  // 後者供 Google 結構化資料與列表評分使用，須保持真實，避免假評價（#1378 準則）。
+  // 任一查詢失敗都 fail-soft，不阻擋本次儲存。
+  try {
+    const ratingBlank =
+      input.ratingAvg === undefined || input.ratingAvg === null || !(Number(input.ratingAvg) > 0);
+    const { data: current } = await supabase
+      .from('activities')
+      .select('slug')
+      .eq('id', id)
+      .single();
+    const slug = current?.slug;
+    let approvedRatings = [];
+    if (slug) {
+      const { data: approved } = await supabase
+        .from('activity_reviews')
+        .select('rating')
+        .eq('activity_slug', slug)
+        .eq('status', 'approved');
+      approvedRatings = (approved || [])
+        .map((r) => Number(r.rating))
+        .filter((n) => Number.isFinite(n));
+    }
+    // 評論數 = 真實已核准評論數（不含暖場口碑語錄）
+    patch.review_count = approvedRatings.length;
+    // 初始評分留空時，自動以真實評論星數平均回填（無真實評論則 null）
+    if (ratingBlank) {
+      patch.rating_avg =
+        approvedRatings.length > 0
+          ? Number((approvedRatings.reduce((s, n) => s + n, 0) / approvedRatings.length).toFixed(2))
+          : null;
+    }
+  } catch {
+    // fail-soft：對齊失敗不阻擋儲存
+  }
 
   // Re-resolve guide_id if guideSlug changed
   if (input.guideSlug) {

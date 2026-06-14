@@ -120,6 +120,10 @@ test('GH-502 render-path isolation: module import + metadata + component render 
     '../../../../src/lib/activity-review-stats.mjs': {
       resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
     },
+    '../../../../src/lib/social-proof-quotes.mjs': {
+      normalizeSocialProofQuotes: () => [],
+      resolveSocialProofAuthor: (a) => a || '旅客回饋',
+    },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
@@ -215,6 +219,10 @@ test('GH-502 probe safety: production-like env must not serve fake probe activit
     '../../../../src/lib/activity-review-stats.mjs': {
       resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
     },
+    '../../../../src/lib/social-proof-quotes.mjs': {
+      normalizeSocialProofQuotes: () => [],
+      resolveSocialProofAuthor: (a) => a || '旅客回饋',
+    },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
@@ -307,6 +315,10 @@ test('GH-502 render-path isolation: non-probe render path uses DB result and doe
     },
     '../../../../src/lib/activity-review-stats.mjs': {
       resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
+    },
+    '../../../../src/lib/social-proof-quotes.mjs': {
+      normalizeSocialProofQuotes: () => [],
+      resolveSocialProofAuthor: (a) => a || '旅客回饋',
     },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
     '../../../../src/lib/activity-jsonld.mjs': {

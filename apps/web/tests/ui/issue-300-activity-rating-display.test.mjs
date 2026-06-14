@@ -67,7 +67,16 @@ test('AC5: admin edit page ratingAvg flows into PUT body', async () => {
   assert.match(src, /JSON\.stringify\(\{[\s\S]*ratingAvg[\s\S]*\}\)/, 'PUT body should include ratingAvg');
 });
 
-test('AC5: admin edit page has reviewCount input', async () => {
+// 評論整合：評論數改為「口碑語錄＋已核准評論」自動對齊，移除手動輸入欄位
+test('AC5: admin edit page 不再有手動評論數輸入（改自動對齊）', async () => {
   const src = await readSource('app/admin/activities/[id]/edit/page.tsx');
-  assert.match(src, /reviewCount/, 'Admin form should have reviewCount state/input');
+  assert.doesNotMatch(src, /setReviewCount/, '不應再有手動 reviewCount 狀態/輸入');
+  assert.match(src, /自動對齊/, '應顯示評論數自動對齊的說明');
+});
+
+test('AC5: admin edit page 社群口碑語錄可編輯人名/星數/內容', async () => {
+  const src = await readSource('app/admin/activities/[id]/edit/page.tsx');
+  assert.match(src, /SocialProofQuoteRow/, '應使用結構化口碑語錄型別');
+  assert.match(src, /updateQuote\(/, '應有逐則編輯 helper');
+  assert.match(src, /評論星數/, '應有星數選擇器');
 });

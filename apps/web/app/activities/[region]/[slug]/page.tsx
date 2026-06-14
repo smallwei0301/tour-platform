@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
 import { resolveActivityReviewStats } from '../../../../src/lib/activity-review-stats.mjs';
+import { normalizeSocialProofQuotes, resolveSocialProofAuthor } from '../../../../src/lib/social-proof-quotes.mjs';
 import {
   buildActivityProductJsonLd,
   resolveActivityOgImage,
@@ -116,13 +117,15 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     ratingAvg?: number | null;
     reviewCount?: number;
     itinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string }>;
-    socialProofQuotes?: string[];
+    socialProofQuotes?: Array<string | { author?: string; rating?: number; text?: string }>;
     goodFor?: string[];
   };
   const guide = activity.guide;
   const actReviews = activity.reviews || [];
-  // 評價統計（真實評論 + 暖場留言）—— 與首頁精選卡共用同一實作
+  // 評價統計（真實評論 + 社群口碑語錄）—— 與首頁精選卡共用同一實作（單一真實來源）
   const reviewStats = resolveActivityReviewStats(activityData);
+  // 社群口碑語錄正規化為 { author, rating, text }（相容舊純文字資料）
+  const warmQuotes = normalizeSocialProofQuotes(activityData.socialProofQuotes);
   const displayedSchedules = activity.schedules || [];
   const useBookingV2 = isBookingV2Enabled();
   const firstSchedulableEntry = displayedSchedules.find((s: any) => {
@@ -228,6 +231,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: serialiseJsonLd(buildActivityProductJsonLd(
+            // SERP 星等只用真實已核准評論（activityData.ratingAvg/reviewCount），
+            // 暖場口碑語錄不進 Google 結構化資料（#1378 安全準則）
             activityData,
             process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app',
           ))
@@ -277,8 +282,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
           <div className="kkd-meta-row">
             <span className="kkd-rating" data-testid="activity-detail-rating">
-              {activityData.ratingAvg != null ? (
-                <>★ {activityData.ratingAvg.toFixed(1)}<span className="kkd-review-count">（{activityData.reviewCount ?? 0} 則評價）</span></>
+              {/* 評分/評論數採整合後單一真實來源 reviewStats（真實評論 + 社群口碑語錄）；
+                  activityData.ratingAvg 為後台暖場初始值，已併入 reviewStats 計算 */}
+              {reviewStats.count > 0 ? (
+                <>★ {reviewStats.score.toFixed(1)}<span className="kkd-review-count">（{reviewStats.count} 則評價）</span></>
               ) : (
                 <span style={{ color: 'var(--tp-muted)', fontSize: 13 }}>尚無評價</span>
               )}
@@ -391,16 +398,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               </div>
 
               <div className="kkd-review-list">
-                {/* 行程自設暖場留言：改以旅客評價卡片樣式呈現（與真實評論一致） */}
-                {(activityData.socialProofQuotes || []).map((q: string, i: number) => (
-                  <div key={`warm-${i}`} className="kkd-review-card">
-                    <div className="kkd-review-header">
-                      <strong className="kkd-reviewer">旅客回饋</strong>
-                    </div>
-                    <div className="kkd-stars">{'★'.repeat(5)}</div>
-                    <p className="kkd-review-text">{q}</p>
-                  </div>
-                ))}
+                {/* 真實旅客評論（已核准）與後台社群口碑語錄整合呈現，使用相同卡片樣式 */}
                 {actReviews.map((r: any) => (
                   <div key={r.id} className="kkd-review-card">
                     <div className="kkd-review-header">
@@ -411,6 +409,15 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                       <div className="kkd-stars">{'★'.repeat(r.rating)}</div>
                     )}
                     <p className="kkd-review-text">{r.text}</p>
+                  </div>
+                ))}
+                {warmQuotes.map((q, i) => (
+                  <div key={`warm-${i}`} className="kkd-review-card">
+                    <div className="kkd-review-header">
+                      <strong className="kkd-reviewer">{resolveSocialProofAuthor(q.author)}</strong>
+                    </div>
+                    <div className="kkd-stars">{'★'.repeat(q.rating)}</div>
+                    <p className="kkd-review-text">{q.text}</p>
                   </div>
                 ))}
               </div>

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import type { Activity, Review } from '../../fixtures/data';
 import { DatePicker } from './DatePicker';
 import { PlanCard } from './PlanCard';
+import { normalizeSocialProofQuotes, resolveSocialProofAuthor } from '../../lib/social-proof-quotes.mjs';
 
 interface Schedule {
   startAt?: string;
@@ -102,9 +103,9 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
               <span style={{ color: '#f5a623', fontSize: 20, fontWeight: 700 }}>★ 5.0</span>
               <span style={{ color: 'var(--tp-muted)', marginLeft: 8 }}>共 {reviews.length} 則評價</span>
             </p>
-            {activity.socialProofQuotes.length > 0 && (
+            {normalizeSocialProofQuotes(activity.socialProofQuotes).length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
-                {activity.socialProofQuotes.map((q, i) => (
+                {normalizeSocialProofQuotes(activity.socialProofQuotes).map((q, i) => (
                   <span
                     key={i}
                     style={{
@@ -115,7 +116,7 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
                       fontSize: 13,
                     }}
                   >
-                    💬 {q}
+                    💬 {resolveSocialProofAuthor(q.author)}：{q.text}（{'★'.repeat(q.rating)}）
                   </span>
                 ))}
               </div>
