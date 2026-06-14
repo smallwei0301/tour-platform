@@ -443,7 +443,14 @@ test('activity routes should avoid dynamic-segment name conflict and keep runtim
   assert.equal(legacyCompatExists, false, 'legacy /activities/[slug] route should be removed');
   assert.equal(canonicalSrc.includes('preferFixtureFirst: true'), false);
   assert.equal(compatSrc.includes('preferFixtureFirst: true'), false);
-  assert.equal(canonicalSrc.includes("dynamic = 'force-dynamic'"), true);
+  // #502 後續：canonical 詳情頁從緊急 force-dynamic 改回 on-demand ISR
+  // （revalidate=60 + generateStaticParams()→[] + fetchCache，導航 TTFB 大降）。
+  // #502 真正的安全護欄不變：仍「禁 force-static、禁 unstable_cache」——這兩者
+  // 才是當年 cold-path render lock 的元兇；本做法 build 不預渲染任何頁、亦不
+  // 包 unstable_cache，故無 build-time hang 風險。
+  assert.equal(canonicalSrc.includes("dynamic = 'force-dynamic'"), false);
+  assert.equal(canonicalSrc.includes('export const revalidate = 60'), true);
+  assert.equal(/generateStaticParams\s*\(/.test(canonicalSrc), true);
   assert.equal(compatSrc.includes("dynamic = 'force-dynamic'"), true);
   assert.equal(canonicalSrc.includes("dynamic = 'force-static'"), false);
   assert.equal(compatSrc.includes("dynamic = 'force-static'"), false);

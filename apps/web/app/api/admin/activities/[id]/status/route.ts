@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../../../src/lib/api';
 import { updateActivityStatusDb } from '../../../../../../src/lib/db.mjs';
+import { revalidateActivityPaths } from '../../../../../../src/lib/revalidate-activity.mjs';
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -16,6 +17,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   try {
     const data = await updateActivityStatusDb(id, status);
     if (!data) return Response.json(fail('NOT_FOUND', 'activity not found'), { status: 404 });
+    // 上下架會改變公開可見性 → 立即刷新詳情頁與列表 ISR 快取（#502 後續）。
+    revalidateActivityPaths({ region: data.region, slug: data.slug });
     return Response.json(ok(data));
   } catch (err: any) {
     if (err?.code === 'BOOKING_READINESS_FAILED') {

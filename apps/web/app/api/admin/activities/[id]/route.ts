@@ -3,6 +3,7 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { getAdminActivityByIdDb, updateActivityDb, deleteActivityDb } from '../../../../../src/lib/db.mjs';
 import { buildFaqPatch } from '../../../../../src/lib/faq-route-helpers';
 import { getFaqRevalidationTag } from '../../../../../src/lib/faq-validate.mjs';
+import { revalidateActivityPaths } from '../../../../../src/lib/revalidate-activity.mjs';
 
 export async function GET(_request: Request, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params;
@@ -38,6 +39,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     if (data.slug) {
       revalidateTag(getFaqRevalidationTag(data.slug));
     }
+    // 詳情頁改 ISR（#502 後續）：編輯後立即刷新該頁與列表的 CDN 快取，
+    // 不必等 60s revalidate window，admin 改完即時可見。
+    revalidateActivityPaths({ region: data.region, slug: data.slug });
 
     return Response.json(ok(data));
   } catch (err) {
@@ -50,6 +54,11 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
   const { id } = await context.params;
   try {
     const result = await deleteActivityDb(id);
+    // 刪除後刷新列表與（若有）該行程詳情頁的 ISR 快取，避免殘留 410/舊頁。
+    revalidateActivityPaths({
+      region: (result as { region?: string } | null)?.region,
+      slug: (result as { slug?: string } | null)?.slug,
+    });
     return Response.json(ok(result));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
