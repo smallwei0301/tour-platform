@@ -43,7 +43,10 @@
 * { box-sizing: border-box; }
 body {
   margin: 0; color: var(--tp-text); background: var(--tp-bg);
-  font-family: 'Noto Sans TC', Inter, system-ui, -apple-system, sans-serif;
+  /* 內文用系統中文字（零下載）：iOS/macOS 取 PingFang TC、Windows 取微軟正黑、
+     Android/Linux 取 Noto Sans CJK；不再引用 Noto Sans TC webfont（省 ~1.2MB / 手機）。
+     'Noto Sans TC'/'Noto Sans CJK TC' 留在末段僅對應「本機已安裝」字型，不觸發下載。 */
+  font-family: var(--font-inter), Inter, system-ui, -apple-system, 'Segoe UI', 'PingFang TC', 'PingFang SC', 'Microsoft JhengHei', 'Noto Sans TC', 'Noto Sans CJK TC', sans-serif;
   /* next/font 變數掛在 body class 上，--tp-serif 必須在 body 層定義才解析得到（html 層會 IACVT 失效） */
   --tp-serif: var(--font-noto-serif-tc, 'Noto Serif TC'), 'Noto Serif TC', 'PMingLiU', Georgia, serif;
 }

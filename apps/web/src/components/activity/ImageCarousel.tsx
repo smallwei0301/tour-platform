@@ -126,7 +126,10 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
             alt={alt}
             className="kkd-gallery-main"
             priority
-            sizes="(min-width: 768px) 75vw, 100vw"
+            // 桌面 gallery 在手機為 display:none；mobile 用 0vw 避免 next/image 在
+            // 手機端 priority-preload 這張隱藏主圖（否則會與手機輪播首圖搶頻寬、
+            // 重複下載同一張圖）。桌面維持 75vw 作為 LCP 主圖。
+            sizes="(min-width: 768px) 75vw, 0vw"
             onError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
         )}
         {validImages.length > 1 && (
