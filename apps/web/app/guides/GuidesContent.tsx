@@ -214,7 +214,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {/* Region */}
         {regions.length > 0 && (
-          <details open>
+          <details>
             <summary>縣市</summary>
             {regions.map((r) => (
               <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -231,7 +231,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {/* Language */}
         {languages.length > 0 && (
-          <details open>
+          <details>
             <summary>語言</summary>
             {languages.map((l) => (
               <label key={l} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -248,7 +248,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
 
         {/* Specialty */}
         {specialties.length > 0 && (
-          <details open>
+          <details>
             <summary>主題專長</summary>
             {specialties.map((s) => (
               <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -289,71 +289,49 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
             </button>
           </div>
         ) : (
-          <div className="tp-card-grid tp-card-grid-activities">
+          <div className="tp-guide-list-grid">
             {filtered.map((g: any, idx: number) => (
-              <article className="tp-card" key={g.slug}>
-                <div style={{ position: 'relative' }}>
+              <article className="tp-guide-list-card" key={g.slug}>
+                <div className="tp-guide-list-thumb">
                   <Image
                     src={
                       g.profilePhotoUrl ||
                       'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'
                     }
                     alt={g.displayName}
-                    style={{
-                      width: '100%',
-                      aspectRatio: '3/4',
-                      objectFit: 'cover',
-                      borderRadius: 10,
-                    }}
                     priority={idx === 0}
                     loading={idx === 0 ? undefined : 'lazy'}
-                    width={1200}
-                    height={675}
+                    width={224}
+                    height={224}
                   />
-                  <span
-                    style={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      background: '#27ae60',
-                      color: '#fff',
-                      padding: '3px 8px',
-                      borderRadius: 6,
-                      fontSize: 12,
-                    }}
-                  >
-                    ✅ 已驗證
-                  </span>
+                  <span className="tp-guide-list-verified">✅ 已驗證</span>
                 </div>
-                <h3 style={{ marginTop: 10 }}>{g.displayName}</h3>
-                <p>
-                  ⭐ {g.ratingAvg?.toFixed(1) || '5.0'}（{g.reviewCount || 0} 則評價）
-                </p>
-                <p>📍 {g.region}</p>
-                {g.languages?.length > 0 && (
-                  <p>🌍 {g.languages.slice(0, 3).join('、')}</p>
-                )}
-                {g.specialties?.length > 0 && (
-                  <p style={{ fontSize: 13 }}>{g.specialties.slice(0, 3).join(' · ')}</p>
-                )}
-                {g.headline && (
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: 'var(--tp-muted)',
-                      fontStyle: 'italic',
-                      margin: '6px 0',
-                    }}
-                  >
-                    「{g.headline.length > 40 ? g.headline.slice(0, 40) + '...' : g.headline}」
+                <div className="tp-guide-list-body">
+                  <h3>{g.displayName}</h3>
+                  <p className="tp-guide-list-meta">
+                    <span className="tp-guide-list-rating">
+                      ⭐ {g.ratingAvg?.toFixed(1) || '5.0'}
+                    </span>
+                    （{g.reviewCount || 0} 則評價） · 📍 {g.region}
                   </p>
-                )}
-                <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>
-                  {g.serviceCount || 0} 次服務
-                </p>
-                <Link className="tp-link" href={`/guides/${g.slug}`}>
-                  查看導遊簡介 →
-                </Link>
+                  {g.languages?.length > 0 && (
+                    <p className="tp-guide-list-meta">🌍 {g.languages.slice(0, 3).join('、')}</p>
+                  )}
+                  {g.specialties?.length > 0 && (
+                    <p className="tp-guide-list-tags">{g.specialties.slice(0, 3).join(' · ')}</p>
+                  )}
+                  {g.headline && (
+                    <p className="tp-guide-list-headline">
+                      「{g.headline.length > 40 ? g.headline.slice(0, 40) + '...' : g.headline}」
+                    </p>
+                  )}
+                  <div className="tp-guide-list-foot">
+                    <span className="tp-guide-list-count">{g.serviceCount || 0} 次服務</span>
+                    <Link className="tp-link" href={`/guides/${g.slug}`}>
+                      查看導遊簡介 →
+                    </Link>
+                  </div>
+                </div>
               </article>
             ))}
           </div>

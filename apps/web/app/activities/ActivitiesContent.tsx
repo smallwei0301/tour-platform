@@ -275,7 +275,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
             </div>
           </div>
 
-          <details open>
+          <details>
             <summary>地區</summary>
             {REGIONS.map((r) => (
               <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -284,7 +284,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
               </label>
             ))}
           </details>
-          <details open>
+          <details>
             <summary>行程主題</summary>
             {TYPES.map((t) => (
               <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
