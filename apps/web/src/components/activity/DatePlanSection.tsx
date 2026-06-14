@@ -373,7 +373,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                   <button
                     type="button"
                     className="kkd-link-sm"
-                    style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 'inherit', color: 'inherit' }}
+                    style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
                     onClick={() => setModalPlan(plan)}
                   >
                     {plan.detailsLinkText || '查看方案詳情 ›'}
@@ -471,16 +471,13 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           </div>
 
           {PLANS.length > 2 && (
-            <div style={{ marginTop: 14, textAlign: 'center' }}>
+            <div style={{ marginTop: 16, textAlign: 'center' }}>
               <button
                 type="button"
+                className="kkd-more-dates-btn"
                 onClick={() => setShowAllPlans(v => !v)}
-                style={{
-                  background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer',
-                  fontSize: 14, fontWeight: 600,
-                }}
               >
-                {showAllPlans ? '收合方案' : `查看更多方案（還有 ${PLANS.length - 2} 個）`}
+                {showAllPlans ? '收合方案' : `查看更多方案（還有 ${PLANS.length - 2} 個）›`}
               </button>
             </div>
           )}
