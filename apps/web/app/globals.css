@@ -2841,7 +2841,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .login-bg {
   position: absolute;
   inset: 0;
-  background-image: url(/images/lp/login-bg.jpg);
+  background-image: url(/images/lp/login-bg.webp);
   background-size: cover;
   background-position: center top;
   z-index: 0;
