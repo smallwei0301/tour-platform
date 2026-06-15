@@ -66,6 +66,17 @@ test.describe('會員中心：問答回覆 + 個人資料區域', () => {
     expect(box!.x + box!.width).toBeLessThanOrEqual(390);
   });
 
+  test('效能：問答回覆不被 client getUser 序列擋住（僅 API 即可渲染）', async ({ page }) => {
+    // 刻意「不」設 traveler session、不 mock /auth/v1/user：舊版會先等 client getUser
+    // 拿不到 user → 轉去 /login；優化後改成直接打 API、靠 401 才導登入，因此這裡能直接渲染。
+    await page.route('**/api/me/qa**', (r: Route) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: QA }) }),
+    );
+    await page.goto('/me/qa');
+    await expect(page.getByTestId('qa-item').first()).toBeVisible({ timeout: 8_000 });
+    expect(page.url()).not.toMatch(/\/login/);
+  });
+
   test('問答回覆：空狀態顯示 CTA', async ({ page }) => {
     await setTravelerSession(page);
     await page.route('**/api/me/qa**', (r: Route) =>

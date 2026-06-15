@@ -4159,23 +4159,27 @@ export async function listMyQaDb(input) {
 
   // region/region_slug 一併取出：mapMyQaRows 需要 region segment 才能組出
   // canonical 詳情頁連結 /activities/<region>/<slug>（避免 [region] 相容轉址）。
+  // 三組查詢（依 id 的行程／依 slug 的行程／導遊）彼此獨立 → 並行，省掉序列等待。
   const toQaActivity = (a) => ({ id: a.id, title: a.title, slug: a.slug, region: a.region, regionSlug: a.region_slug });
+  const [byIdRes, bySlugRes, guideRes] = await Promise.all([
+    activityIds.length > 0
+      ? supabase.from('activities').select('id, title, slug, region, region_slug').in('id', activityIds)
+      : Promise.resolve({ data: [] }),
+    activitySlugs.length > 0
+      ? supabase.from('activities').select('id, title, slug, region, region_slug').in('slug', activitySlugs)
+      : Promise.resolve({ data: [] }),
+    guideIds.length > 0
+      ? supabase.from('guide_profiles').select('id, slug, display_name').in('id', guideIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
   const activityById = new Map();
-  if (activityIds.length > 0) {
-    const { data } = await supabase.from('activities').select('id, title, slug, region, region_slug').in('id', activityIds);
-    for (const a of data || []) activityById.set(a.id, toQaActivity(a));
-  }
-  if (activitySlugs.length > 0) {
-    const { data } = await supabase.from('activities').select('id, title, slug, region, region_slug').in('slug', activitySlugs);
-    // sentinel ref 是 slug 時，map key 用 slug 對回
-    for (const a of data || []) activityById.set(a.slug, toQaActivity(a));
-  }
+  for (const a of byIdRes.data || []) activityById.set(a.id, toQaActivity(a));
+  // sentinel ref 是 slug 時，map key 用 slug 對回
+  for (const a of bySlugRes.data || []) activityById.set(a.slug, toQaActivity(a));
 
   const guideById = new Map();
-  if (guideIds.length > 0) {
-    const { data } = await supabase.from('guide_profiles').select('id, slug, display_name').in('id', guideIds);
-    for (const g of data || []) guideById.set(g.id, g);
-  }
+  for (const g of guideRes.data || []) guideById.set(g.id, g);
 
   return mapMyQaRows(rows, { activityById, guideById });
 }

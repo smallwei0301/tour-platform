@@ -79,23 +79,18 @@ export default function MyOrdersPage() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authChecking, setAuthChecking] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
 
   useEffect(() => {
-    const supabase = createClient();
-
-    supabase.auth.getUser().then(({ data }) => {
+    // 直接打 API（route 端已驗證 auth），401 才導去登入 —— 不再用 client getUser 擋住資料載入，
+    // 省掉「client getUser → 再 server getUser」的序列雙重往返。
+    fetchOrders();
+    // 問候語用的名稱在背景取得，不阻塞列表渲染。
+    createClient().auth.getUser().then(({ data }) => {
       const user = data.user;
-      if (!user) {
-        router.replace(`/login?next=${encodeURIComponent('/me/orders')}`);
-        return;
-      }
-      setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
-      setAuthChecking(false);
-      fetchOrders();
-    });
+      if (user) setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
+    }).catch(() => {});
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchOrders = async () => {
@@ -116,14 +111,6 @@ export default function MyOrdersPage() {
       setLoading(false);
     }
   };
-
-  if (authChecking) {
-    return (
-      <main className="tp-container" style={{ ...pageStyle, textAlign: 'center', paddingTop: 80 }}>
-        <p style={{ color: 'var(--tp-muted)' }}>驗證登入中…</p>
-      </main>
-    );
-  }
 
   return (
     <main className="tp-container" style={pageStyle}>

@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../../src/lib/supabase/client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
 
 type QaItem = {
@@ -62,19 +61,11 @@ export default function MyQaPage() {
   const router = useRouter();
   const [items, setItems] = useState<QaItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [authChecking, setAuthChecking] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        router.replace(`/login?next=${encodeURIComponent('/me/qa')}`);
-        return;
-      }
-      setAuthChecking(false);
-      fetchQa();
-    });
+    // 直接打 API（route 端已驗證 auth），401 才導去登入 —— 省掉 client getUser 的序列往返。
+    fetchQa();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchQa = async () => {
@@ -95,14 +86,6 @@ export default function MyQaPage() {
       setLoading(false);
     }
   };
-
-  if (authChecking) {
-    return (
-      <main className="tp-container" style={{ ...pageStyle, textAlign: 'center', paddingTop: 80 }}>
-        <p style={{ color: 'var(--tp-muted)' }}>驗證登入中…</p>
-      </main>
-    );
-  }
 
   return (
     <main className="tp-container" style={pageStyle}>

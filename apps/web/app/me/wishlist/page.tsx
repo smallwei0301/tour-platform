@@ -4,7 +4,6 @@ import Link from 'next/link';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../../src/lib/supabase/client';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
 import { buildActivityHref } from '../../../src/lib/activity-url';
@@ -72,16 +71,9 @@ export default function WishlistPage() {
   }, [router]);
 
   useEffect(() => {
-    (async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push(`/login?next=${encodeURIComponent('/me/wishlist')}`);
-        return;
-      }
-      await fetchWishlist();
-    })();
-  }, [router, fetchWishlist]);
+    // 直接打 API（route 端已驗證 auth），401 才導去登入 —— 省掉 client getUser 的序列往返。
+    void fetchWishlist();
+  }, [fetchWishlist]);
 
   async function handleRemove(activityId: string) {
     setRemovingId(activityId);
