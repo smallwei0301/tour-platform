@@ -6,12 +6,32 @@
 //
 // PII: only lineUserId + event type are persisted (for dedupe). No message text.
 
-import { verifyLineSignature } from './line-messaging.ts';
+import { verifyLineSignature, replyMessage } from './line-messaging.ts';
 import {
   upsertLineMapping,
   setLineBlocked,
   markWebhookEventProcessed,
 } from './line-binding.mjs';
+import {
+  parseGuideBindCode,
+  redeemGuideBindCode,
+  setGuideLineBlocked,
+} from './guide-line-binding.mjs';
+
+// Try to redeem a guide BIND code from a text message. Returns true when the
+// message was a binding code (handled here → skip the traveler upsert).
+async function tryGuideBinding(ev, lineUserId) {
+  if (ev?.message?.type !== 'text') return false;
+  const code = parseGuideBindCode(ev.message.text);
+  if (!code) return false;
+  const result = await redeemGuideBindCode(code, { lineUserId });
+  // Best-effort ack (no-op unless LINE_MESSAGING_ENABLED + access token set).
+  const text = result.ok
+    ? '✅ 已完成 LINE 通知綁定，之後您負責的訂單通知會傳到這裡。'
+    : '⚠️ 綁定碼無效或已過期，請回後台重新產生綁定連結。';
+  await replyMessage(ev?.replyToken, { type: 'text', text }).catch(() => {});
+  return true;
+}
 
 async function handleEvent(ev) {
   const lineUserId = ev?.source?.userId;
@@ -30,15 +50,19 @@ async function handleEvent(ev) {
     case 'follow':
       await upsertLineMapping({ lineUserId });
       await setLineBlocked(lineUserId, false);
+      await setGuideLineBlocked(lineUserId, false); // re-follow unblocks a guide binding too
       break;
     case 'unfollow':
       await setLineBlocked(lineUserId, true);
+      await setGuideLineBlocked(lineUserId, true);
       break;
     case 'message':
-    case 'postback':
-      // Register the lineUserId; traveler correlation happens via LIFF verify.
-      await upsertLineMapping({ lineUserId });
+    case 'postback': {
+      // A guide binding code takes precedence; otherwise register as traveler.
+      const bound = await tryGuideBinding(ev, lineUserId);
+      if (!bound) await upsertLineMapping({ lineUserId });
       break;
+    }
     default:
       break;
   }

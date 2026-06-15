@@ -162,6 +162,14 @@ export const lineUserMappings = [];
 // Each entry: { webhookEventId, eventType, lineUserId, receivedAt }
 export const lineWebhookEvents = [];
 
+// Guide ↔ LINE binding (in-memory fallback for guide_line_mapping).
+// Each entry: { guideId, lineUserId, displayName, isBlocked, boundAt, updatedAt }
+export const guideLineMappings = [];
+
+// One-time guide binding codes (in-memory fallback for guide_line_bind_code).
+// Each entry: { code, guideId, expiresAt, createdAt }
+export const guideLineBindCodes = [];
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',

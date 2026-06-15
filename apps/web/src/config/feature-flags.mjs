@@ -47,6 +47,14 @@ export function isLinePushEnabled(env = process.env) {
 }
 
 /**
+ * Per-guide LINE push (notify the assigned guide on their own LINE).
+ * Default: OFF. Requires LINE_MESSAGING_ENABLED + a guide_line_mapping binding.
+ */
+export function isLineGuidePushEnabled(env = process.env) {
+  return isTruthy(env.LINE_GUIDE_PUSH_ENABLED);
+}
+
+/**
  * Real LIFF login on the /booking/line entry (idToken verification + binding).
  * Default: OFF — flag off keeps the legacy query-param handoff for instant rollback.
  */

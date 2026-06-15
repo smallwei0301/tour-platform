@@ -5322,3 +5322,114 @@ export async function getLineUserIdForOrderDb(order) {
   }
   return null;
 }
+
+// ---------------------------------------------------------------------------
+// Guide ↔ LINE binding (guide_line_mapping + guide_line_bind_code) — Supabase.
+// In-memory fallback lives in guide-line-binding.mjs. Used for per-guide push.
+// ---------------------------------------------------------------------------
+
+function mapGuideLineRow(row) {
+  if (!row) return null;
+  return {
+    guideId: row.guide_id,
+    lineUserId: row.line_user_id,
+    displayName: row.display_name ?? null,
+    isBlocked: !!row.is_blocked,
+    boundAt: row.bound_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+/** Upsert the guide's LINE binding (idempotent on guide_id). */
+export async function upsertGuideLineMappingDb({ guideId, lineUserId, displayName } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const now = new Date().toISOString();
+  const row = {
+    guide_id: guideId,
+    line_user_id: lineUserId,
+    is_blocked: false,
+    updated_at: now,
+  };
+  if (displayName !== undefined) row.display_name = displayName ?? null;
+  const { data, error } = await supabase
+    .from('guide_line_mapping')
+    .upsert(row, { onConflict: 'guide_id' })
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapGuideLineRow(data);
+}
+
+/** Resolve a guide to their LINE userId, or null if unbound/blocked. */
+export async function getLineUserIdForGuideDb(guideId) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_line_mapping')
+    .select('line_user_id')
+    .eq('guide_id', guideId)
+    .eq('is_blocked', false)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.line_user_id ?? null;
+}
+
+/** Fetch the guide's binding row (for console status). */
+export async function getGuideBindingDb(guideId) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_line_mapping')
+    .select('*')
+    .eq('guide_id', guideId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapGuideLineRow(data);
+}
+
+/** Flag a guide binding blocked/unblocked by line_user_id. */
+export async function setGuideLineBlockedDb(lineUserId, blocked) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_line_mapping')
+    .update({ is_blocked: !!blocked, updated_at: new Date().toISOString() })
+    .eq('line_user_id', lineUserId)
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapGuideLineRow(data);
+}
+
+/** Store a one-time guide binding code (replaces the guide's prior codes). */
+export async function createGuideBindCodeDb({ code, guideId, expiresAt } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  // Clear outstanding codes for this guide so only the latest is valid.
+  await supabase.from('guide_line_bind_code').delete().eq('guide_id', guideId);
+  const { error } = await supabase
+    .from('guide_line_bind_code')
+    .insert({ code, guide_id: guideId, expires_at: expiresAt });
+  if (error) throw new Error(error.message);
+  return { code, guideId, expiresAt };
+}
+
+/**
+ * Atomically consume a binding code: returns { guideId, expired } or null when
+ * the code does not exist. The row is always deleted (single-use).
+ */
+export async function consumeGuideBindCodeDb(code) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('guide_line_bind_code')
+    .delete()
+    .eq('code', code)
+    .select('guide_id, expires_at')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const expired = new Date(data.expires_at).getTime() <= Date.now();
+  return { guideId: data.guide_id, expired };
+}
