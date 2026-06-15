@@ -30,11 +30,27 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 function StatusBadge({ status, label }: { status: string; label: string }) {
   const s = STATUS_COLORS[status] || STATUS_COLORS.pending_moderation;
   return (
-    <span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>
+    <span style={{ background: s.bg, color: s.color, borderRadius: 999, padding: '3px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
       {label}
     </span>
   );
 }
+
+// 卡片標題：flex:1 + minWidth:0 讓其在 flex 容器中可收縮，2 行截斷 + 斷詞避免長標題破框。
+const cardTitleStyle: React.CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  fontSize: 13,
+  fontWeight: 700,
+  textDecoration: 'none',
+  lineHeight: 1.4,
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 2,
+  overflow: 'hidden',
+  overflowWrap: 'anywhere',
+  wordBreak: 'break-word',
+};
 
 const pageStyle: React.CSSProperties = { paddingTop: 32, paddingBottom: 56, minHeight: '70vh' };
 const titleStyle: React.CSSProperties = {
@@ -114,31 +130,31 @@ export default function MyQaPage() {
         <div style={{ display: 'grid', gap: 12 }}>
           {items.map((item) => (
             <div key={item.id} data-testid="qa-item" data-qa-status={item.status} className="tp-card" style={{ padding: 18 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
                 {item.targetHref ? (
-                  <Link href={item.targetHref} style={{ fontSize: 13, fontWeight: 700, color: 'var(--tp-gold-strong)', textDecoration: 'none', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Link href={item.targetHref} style={{ ...cardTitleStyle, color: 'var(--tp-gold-strong)' }}>
                     {item.targetKind === 'guide' ? '✉️ ' : '🧭 '}{item.targetTitle}
                   </Link>
                 ) : (
-                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--tp-muted)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ ...cardTitleStyle, color: 'rgba(237,228,203,0.82)' }}>
                     {item.targetTitle}
                   </span>
                 )}
                 <StatusBadge status={item.status} label={item.statusLabel} />
               </div>
 
-              <p style={{ margin: '0 0 10px', color: 'var(--tp-text)', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                <span style={{ fontWeight: 800, color: 'var(--tp-muted)', marginRight: 6 }}>Q</span>{item.question}
+              <p style={{ margin: '0 0 10px', color: 'var(--tp-text)', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                <span style={{ fontWeight: 800, color: 'rgba(237,228,203,0.78)', marginRight: 6 }}>Q</span>{item.question}
               </p>
 
               {item.answer ? (
                 <div data-testid="qa-answer" style={{ background: 'var(--tp-tint)', border: '1px solid var(--tp-border)', borderRadius: 10, padding: '10px 12px' }}>
-                  <p style={{ margin: 0, color: 'var(--tp-text)', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  <p style={{ margin: 0, color: 'var(--tp-text)', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                     <span style={{ fontWeight: 800, color: 'var(--tp-gold-strong)', marginRight: 6 }}>A</span>{item.answer}
                   </p>
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--tp-muted)' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'rgba(237,228,203,0.78)' }}>
                   {item.status === 'rejected' ? '此提問未通過審核。' : '導遊尚未回覆，回覆後會顯示在這裡。'}
                 </p>
               )}

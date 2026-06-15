@@ -41,6 +41,31 @@ test.describe('會員中心：問答回覆 + 個人資料區域', () => {
     await expect(pending.getByTestId('qa-answer')).toHaveCount(0);
   });
 
+  test('問答回覆：手機視窗長標題不破框（無水平溢出）且狀態膠囊仍可見', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setTravelerSession(page);
+    const longTitle = '高雄柴山探洞體驗｜跟著 Andy Lee 走進城市邊緣的地心秘境一日深度導覽行程';
+    await page.route('**/api/me/qa**', (r: Route) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [
+        { id: 'q1', question: '安安', answer: null, status: 'pending_moderation', statusLabel: '審核中', answered: false, targetKind: 'activity', targetTitle: longTitle, targetHref: '/activities/chaishan', createdAt: '2026-06-01T00:00:00Z', updatedAt: '2026-06-01T00:00:00Z' },
+      ] }) }),
+    );
+
+    await page.goto('/me/qa');
+    await expect(page.getByTestId('qa-item')).toHaveCount(1, { timeout: 10_000 });
+
+    // 不得出現水平捲動（破框）
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow).toBeLessThanOrEqual(1);
+
+    // 狀態膠囊未被長標題擠出畫面，仍在視窗內可見
+    const badge = page.getByTestId('qa-item').getByText('審核中');
+    await expect(badge).toBeVisible();
+    const box = await badge.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+  });
+
   test('問答回覆：空狀態顯示 CTA', async ({ page }) => {
     await setTravelerSession(page);
     await page.route('**/api/me/qa**', (r: Route) =>
