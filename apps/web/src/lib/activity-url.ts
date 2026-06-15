@@ -1,30 +1,10 @@
-const REGION_SLUG_MAP: Record<string, string> = {
-  '台北市': 'taipei',
-  '台北': 'taipei',
-  '新北市': 'new-taipei',
-  '桃園市': 'taoyuan',
-  '台中市': 'taichung',
-  '台南市': 'tainan',
-  '高雄市': 'kaohsiung',
-  '高雄': 'kaohsiung',
-  '花蓮縣': 'hualien',
-  '花蓮': 'hualien',
-};
+// 地區→slug 正規化的單一真相來源在 `region-slug.mjs`，避免多份對照表 drift
+// 導致 revalidate 路徑與實際快取路徑對不上（#1440）。
+import { normalizeRegionForActivityPath } from './region-slug.mjs';
 
 export function normalizeRegionSlug(region?: string, regionSlug?: string): string {
   if (regionSlug && regionSlug.trim()) return regionSlug.trim();
-  if (!region) return 'taiwan';
-
-  const byMap = REGION_SLUG_MAP[region.trim()];
-  if (byMap) return byMap;
-
-  const asciiSlug = region
-    .trim()
-    .toLowerCase()
-    .replace(/[^\w]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return asciiSlug || 'taiwan';
+  return normalizeRegionForActivityPath(region);
 }
 
 export function buildActivityHref(params: { slug?: string; region?: string; regionSlug?: string }): string {
