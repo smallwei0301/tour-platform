@@ -12,6 +12,7 @@ test('ecpay callback line notify contract: gate notify by source_channel=line', 
 
   assert.match(src, /select\('source_channel'\)/);
   assert.match(src, /if \(sourceChannel === 'line'\)/);
-  // Migrated off LINE Notify (#302b): ops notify + per-traveler push via Messaging API.
-  assert.match(src, /per-traveler push via Messaging API/);
+  // Migrated off LINE Notify (#302b): ops notify via Messaging API, gated on LINE source.
+  assert.match(src, /notifyPaymentReceived/);
+  assert.match(src, /ops notify via Messaging API/);
 });

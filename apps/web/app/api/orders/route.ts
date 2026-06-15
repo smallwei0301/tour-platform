@@ -106,20 +106,18 @@ export async function POST(request: Request) {
     // LINE 通知管理員/導遊（ops push）
     notifyNewOrder(notifyData).catch(() => {});
 
-    // 旅客預約確認推播：僅限 LINE 來源訂單，且未綁定/未開旗標時自動 skip
-    const orderSourceChannel = body?.sourceChannel ?? body?.source ?? body?.source_channel;
-    if (orderSourceChannel === 'line') {
-      void pushTravelerOrderEvent({
-        kind: 'booking_confirmed',
-        orderId: order.id,
-        activityTitle: notifyData.activityTitle,
-        scheduleDate: notifyData.scheduleDate,
-        peopleCount: notifyData.peopleCount,
-        totalTwd: notifyData.totalTwd,
-        userId: userId ?? undefined,
-        contactEmail: order.contactEmail ?? undefined,
-      }).catch(() => {});
-    }
+    // 旅客預約確認推播：凡綁定 LINE 者都推（any bound traveler，不限 source_channel；
+    // 未綁定 → no_line_binding、未開 LINE_PUSH_ENABLED → push_disabled，皆自動 skip）
+    void pushTravelerOrderEvent({
+      kind: 'booking_confirmed',
+      orderId: order.id,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      userId: userId ?? undefined,
+      contactEmail: order.contactEmail ?? undefined,
+    }).catch(() => {});
 
     return Response.json(ok(order));
   } catch (err) {
