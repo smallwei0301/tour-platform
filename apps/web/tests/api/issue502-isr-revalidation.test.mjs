@@ -21,11 +21,12 @@ test('詳情頁走 on-demand ISR：移除 force-dynamic、保留 revalidate=60 +
   assert.doesNotMatch(src, /unstable_cache\(/);
 });
 
-test('helper revalidateActivityPaths 失效列表＋region＋詳情三個路徑（用正規化 region slug）', async () => {
+test('helper revalidateActivityPaths 失效首頁＋列表＋region＋詳情路徑（用正規化 region slug）', async () => {
   const { activityRevalidationPaths } = await import('../../src/lib/region-slug.mjs');
   // #1440 回歸：中文地區必須正規化成英文 slug，才會命中實際被快取的詳情頁路徑。
+  // '/'：首頁精選與自動行程清單來自已發布行程，上下架／編輯後一併失效。
   const paths = activityRevalidationPaths({ region: '高雄市', slug: 'test-2' });
-  assert.deepEqual(paths, ['/activities', '/activities/kaohsiung', '/activities/kaohsiung/test-2']);
+  assert.deepEqual(paths, ['/', '/activities', '/activities/kaohsiung', '/activities/kaohsiung/test-2']);
   // 不得再用 raw 中文地區直接拼路徑（會打不到快取）。
   const src = await read('src/lib/revalidate-activity.mjs');
   assert.doesNotMatch(src, /\/activities\/\$\{region\}/, '不得用未正規化的 raw region 拼路徑');
