@@ -7,6 +7,7 @@ import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { recordIncident } from '../../../../../src/lib/incidents';
@@ -361,6 +362,17 @@ export async function POST(request: Request) {
       totalTwd: notifyData.totalTwd,
       userId: (order?.user_id as string | undefined) ?? undefined,
       contactEmail: notifyData.contactEmail,
+    }).catch(() => {});
+
+    // 導遊推播：通知負責該團的導遊（未綁定 / 未開 LINE_GUIDE_PUSH_ENABLED 自動 skip）
+    void pushGuideOrderEvent({
+      kind: 'guide_payment_received',
+      orderId,
+      activityId: (order?.activity_id as string | undefined) ?? undefined,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
     }).catch(() => {});
 
     // ECPay 正式回調期望回覆 "1|OK" 格式

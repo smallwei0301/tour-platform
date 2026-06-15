@@ -6,6 +6,7 @@ import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 
 export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -82,6 +83,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           totalTwd: notifyData.totalTwd,
           userId: user.id,
           contactEmail: user.email,
+        }).catch(() => {});
+        // 導遊推播：通知負責該團的導遊（未綁定 / 未開旗標自動 skip）
+        void pushGuideOrderEvent({
+          kind: 'guide_order_cancelled',
+          orderId,
+          experienceId: orderBefore.experienceId,
+          activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate,
+          peopleCount: notifyData.peopleCount,
+          totalTwd: notifyData.totalTwd,
         }).catch(() => {});
       }
 

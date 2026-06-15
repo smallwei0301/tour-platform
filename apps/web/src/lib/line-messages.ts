@@ -110,3 +110,90 @@ export function buildTravelerMessage(kind: TravelerEventKind, data: TravelerMess
 
   return [{ type: 'text', text }];
 }
+
+// ---------------------------------------------------------------------------
+// Guide-facing composers (per-guide push: notify the guide who owns the order).
+// ---------------------------------------------------------------------------
+
+export type GuideEventKind =
+  | 'guide_new_order'
+  | 'guide_payment_received'
+  | 'guide_order_cancelled'
+  | 'guide_refund_requested'
+  | 'guide_refund_executed';
+
+/** Build the guide message(s) for an order event on one of their activities. */
+export function buildGuideMessage(kind: GuideEventKind, data: TravelerMessageData): LineMessage[] {
+  const title = data.activityTitle || '行程';
+  const id = shortId(data.orderId);
+  const date = data.scheduleDate || '待確認';
+  const people = `${data.peopleCount || 1} 人`;
+
+  let text: string;
+  switch (kind) {
+    case 'guide_new_order':
+      text = lines([
+        '🆕 有新的預約（待付款）',
+        '',
+        `🗺️ 行程：${title}`,
+        `📅 日期：${date}`,
+        `👥 人數：${people}`,
+        `📋 訂單編號：${id}`,
+        '',
+        '旅客完成付款後會再通知你。',
+      ]);
+      break;
+    case 'guide_payment_received':
+      text = lines([
+        '💰 訂單已付款確認',
+        '',
+        `🗺️ 行程：${title}`,
+        `📅 日期：${date}`,
+        `👥 人數：${people}`,
+        `💵 金額：${amount(data.totalTwd)}`,
+        `📋 訂單編號：${id}`,
+        '',
+        '名額已確認，記得安排出團準備。',
+      ]);
+      break;
+    case 'guide_order_cancelled':
+      text = lines([
+        '❌ 有一筆訂單被取消',
+        '',
+        `🗺️ 行程：${title}`,
+        `📅 日期：${date}`,
+        `👥 人數：${people}`,
+        `📋 訂單編號：${id}`,
+        '',
+        '名額已釋出，請更新你的出團名單。',
+      ]);
+      break;
+    case 'guide_refund_requested':
+      text = lines([
+        '🔄 有一筆退款申請',
+        '',
+        `🗺️ 行程：${title}`,
+        `💵 金額：${amount(data.totalTwd)}`,
+        `📋 訂單編號：${id}`,
+        data.reason ? `📝 原因：${data.reason}` : null,
+        '',
+        '平台將進行審核，結果會再通知你。',
+      ]);
+      break;
+    case 'guide_refund_executed':
+      text = lines([
+        '✅ 一筆退款已完成',
+        '',
+        `🗺️ 行程：${title}`,
+        `💵 金額：${amount(data.totalTwd)}`,
+        `📋 訂單編號：${id}`,
+        '',
+        '該名額已正式結案。',
+      ]);
+      break;
+    default:
+      text = `訂單 ${id} 狀態已更新。`;
+  }
+
+  return [{ type: 'text', text }];
+}

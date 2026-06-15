@@ -48,3 +48,17 @@ test('refund-requests route: pushes refund notices to the traveler', async () =>
   assert.match(src, /pushTravelerOrderEvent/);
   assert.match(src, /refund_requested|refund_executed/);
 });
+
+test('per-guide push is wired into all four order hooks', async () => {
+  const sites = [
+    ['app/api/orders/route.ts', /guide_new_order/],
+    ['app/api/payments/ecpay/callback/route.ts', /guide_payment_received/],
+    ['app/api/me/orders/[orderId]/route.ts', /guide_order_cancelled/],
+    ['app/api/me/orders/[orderId]/refund-requests/route.ts', /guide_refund_requested|guide_refund_executed/],
+  ];
+  for (const [rel, kindRe] of sites) {
+    const src = await read(rel);
+    assert.match(src, /pushGuideOrderEvent/, `${rel} should call pushGuideOrderEvent`);
+    assert.match(src, kindRe, `${rel} should send the right guide kind`);
+  }
+});

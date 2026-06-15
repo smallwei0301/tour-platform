@@ -5,6 +5,7 @@ import type { OrderEmailData } from '../../../src/lib/email';
 import type { OrderNotifyData } from '../../../src/lib/line-notify';
 import { notifyNewOrder } from '../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../src/lib/line-guide-push.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 import { createClient } from '../../../src/lib/supabase/server';
 
@@ -117,6 +118,17 @@ export async function POST(request: Request) {
       totalTwd: notifyData.totalTwd,
       userId: userId ?? undefined,
       contactEmail: order.contactEmail ?? undefined,
+    }).catch(() => {});
+
+    // 導遊推播：通知負責該團的導遊（未綁定 / 未開 LINE_GUIDE_PUSH_ENABLED 自動 skip）
+    void pushGuideOrderEvent({
+      kind: 'guide_new_order',
+      orderId: order.id,
+      experienceId: order.experienceId,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
     }).catch(() => {});
 
     return Response.json(ok(order));

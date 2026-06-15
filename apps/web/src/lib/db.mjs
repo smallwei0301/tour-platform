@@ -5433,3 +5433,16 @@ export async function consumeGuideBindCodeDb(code) {
   const expired = new Date(data.expires_at).getTime() <= Date.now();
   return { guideId: data.guide_id, expired };
 }
+
+/** Resolve an order's activity → owning guide_id (for per-guide push). */
+export async function getGuideIdForOrderDb({ activityId } = {}) {
+  if (!hasSupabaseEnv() || !activityId) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activities')
+    .select('guide_id')
+    .eq('id', activityId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.guide_id ?? null;
+}

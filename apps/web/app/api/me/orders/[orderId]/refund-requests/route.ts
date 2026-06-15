@@ -7,6 +7,7 @@ import type { OrderEmailData } from '../../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../../src/lib/line-notify';
 import { notifyRefundRequest, notifyRefundExecuted } from '../../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
 import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
@@ -182,12 +183,23 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         userId: user.id,
         contactEmail: user.email,
       };
+      // 導遊推播 base：通知負責該團的導遊（未綁定 / 未開 LINE_GUIDE_PUSH_ENABLED 自動 skip）
+      const guidePushBase = {
+        orderId,
+        experienceId: order.experienceId,
+        activityTitle: notifyData.activityTitle,
+        scheduleDate: notifyData.scheduleDate,
+        peopleCount: notifyData.peopleCount,
+        totalTwd: notifyData.totalTwd,
+        reason: body?.reason,
+      };
       if (autoExecuted) {
         // Auto-execute succeeded — send '退款已完成' notification
         void sendRefundExecuted(notifyData).catch(() => {});
         notifyRefundExecuted(notifyData).catch(() => {});
         // 旅客退款完成推播（未綁定/未開旗標時自動 skip）
         void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_executed' }).catch(() => {});
+        void pushGuideOrderEvent({ ...guidePushBase, kind: 'guide_refund_executed' }).catch(() => {});
       } else {
         // Normal flow — admin will process
         void sendRefundRequested(notifyData).then((emailResult) => {
@@ -202,6 +214,7 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         notifyRefundRequest(notifyData).catch(() => {});
         // 旅客退款申請推播（未綁定/未開旗標時自動 skip）
         void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_requested' }).catch(() => {});
+        void pushGuideOrderEvent({ ...guidePushBase, kind: 'guide_refund_requested' }).catch(() => {});
       }
     }
 
