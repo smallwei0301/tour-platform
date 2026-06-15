@@ -24,21 +24,30 @@ describe('GH-297 traveler plan itinerary display', () => {
     }
   });
 
-  it('detail page renders PlanItinerarySection driven by selected plan, not static itinerary', () => {
+  it('detail page renders PlanItinerarySection with selected-plan source and page-level fallback', () => {
     const source = read('app/activities/[region]/[slug]/page.tsx');
     assert.match(source, /import \{ PlanItinerarySection \}/, '應 import PlanItinerarySection');
-    assert.match(source, /<PlanItinerarySection\s+plans=\{datePlanPresentation\.plans/, '應以所選方案來源 datePlanPresentation.plans 餵入');
-    // 舊的頁面級靜態行程渲染已移除
+    assert.match(source, /<PlanItinerarySection[\s\S]*plans=\{datePlanPresentation\.plans/, '應以所選方案來源 datePlanPresentation.plans 餵入');
+    assert.match(source, /fallbackItinerary=\{activityData\.itinerary\}/, '頁面級行程需作為退回來源傳入');
+    // 舊的頁面級靜態行程渲染已移除（不再於頁面直接 map）
     assert.doesNotMatch(source, /activityData\.itinerary\.map/, '不應再直接渲染頁面級 activityData.itinerary');
   });
 
-  it('PlanItinerarySection reads selected plan from context and renders the timeline with images', () => {
+  it('PlanItinerarySection prompts when unselected, suffixes plan name, and falls back to page itinerary', () => {
     const source = read('src/components/activity/PlanItinerarySection.tsx');
     assert.match(source, /useSelectedPlan/, '需從 SelectedPlanContext 讀取所選方案');
     assert.match(source, /planItinerary/, '需讀取方案的 planItinerary');
     assert.match(source, /id="section-itinerary"/, '需維持 section-itinerary 錨點');
     assert.match(source, /kkd-itinerary/, '需沿用 kkd-itinerary 時間表樣式');
     assert.match(source, /kkd-itinerary-img/, '需支援每站點圖片');
+    // 未選方案提示
+    assert.match(source, /請選擇上方的方案，以獲取行程詳細資訊/, '未選方案時需顯示提示文字');
+    // 標題後標上方案名稱
+    assert.match(source, /titleSuffix/, '需於標題後標上所選方案名稱');
+    assert.match(source, /selected\?\.label/, '方案名稱優先取自 context 的 label');
+    // 方案未填行程介紹時退回頁面級
+    assert.match(source, /fallbackItinerary/, '需支援頁面級行程退回');
+    assert.match(source, /fallbackSteps/, '方案未填時需退回頁面級行程');
     // 站點欄位（與後台站點時間表對齊）
     for (const field of ['icon', 'title', 'duration', 'description', 'imageUrl']) {
       assert.match(source, new RegExp(`step\\.${field}`), `站點需處理欄位：${field}`);
