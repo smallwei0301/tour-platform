@@ -2,6 +2,8 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { getAdminOrderDetailDb, updateAdminOrderDb } from '../../../../../src/lib/db.mjs';
 import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify.mjs';
 import { adminStatusToTelegramKind } from '../../../../../src/lib/admin-order-event-kind.mjs';
+import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 
 const LOCKED_STATUSES = ['refunded', 'refund_pending', 'completed', 'cancelled_by_user', 'cancelled_by_guide'] as const;
 
@@ -47,6 +49,26 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
         totalTwd: result?.totalTwd,
         experienceId: result?.experienceId || undefined,
         contactEmail: result?.contactEmail || undefined,
+      }).catch(() => {});
+
+      // 🔔 同步派送 LINE（旅客 + 導遊）；皆受後台通知矩陣與綁定/總開關約束，
+      // 未綁定 / 旗標關 / 該格關閉皆自動 skip。
+      void pushTravelerOrderEvent({
+        kind,
+        orderId,
+        activityTitle: result?.title || undefined,
+        peopleCount: result?.peopleCount,
+        totalTwd: result?.totalTwd,
+        userId: result?.userId || undefined,
+        contactEmail: result?.contactEmail || undefined,
+      }).catch(() => {});
+      void pushGuideOrderEvent({
+        kind: `guide_${kind}`,
+        orderId,
+        experienceId: result?.experienceId || undefined,
+        activityTitle: result?.title || undefined,
+        peopleCount: result?.peopleCount,
+        totalTwd: result?.totalTwd,
       }).catch(() => {});
     }
 

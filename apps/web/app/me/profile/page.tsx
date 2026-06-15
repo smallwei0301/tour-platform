@@ -184,8 +184,16 @@ export default function MeProfilePage() {
           交易類通知（訂單成立、付款、退款進度）為服務必要通知，不受此開關影響。
         </p>
 
-        <div style={{ marginBottom: 16 }} data-testid="me-notification-binding">
-          <label style={{ ...labelStyle, marginBottom: 6 }}>Telegram 訂單通知（可選）</label>
+        <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }} data-testid="me-notification-binding">
+          <label style={{ ...labelStyle, marginBottom: 0 }}>訂單通知綁定（可選）</label>
+          <NotificationBindingButton
+            endpoint="/api/me/line-binding"
+            channel="line"
+            title="LINE 通知"
+            description="綁定後，訂單成立／付款／取消／退款也會傳到你的 LINE。"
+            accent="#06c755"
+            tone="dark"
+          />
           <NotificationBindingButton
             endpoint="/api/me/telegram-binding"
             channel="telegram"

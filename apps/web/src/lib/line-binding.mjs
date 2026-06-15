@@ -8,7 +8,9 @@
 //
 // PII note: only line_user_id + the keys needed to resolve an order are stored.
 
-import { lineUserMappings, lineWebhookEvents } from './store.mjs';
+import crypto from 'node:crypto';
+
+import { lineUserMappings, lineWebhookEvents, lineBindCodes } from './store.mjs';
 
 function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -151,9 +153,93 @@ export async function markWebhookEventProcessed(webhookEventId, meta = {}) {
   return { firstTime: true };
 }
 
+// ---------------------------------------------------------------------------
+// Traveler LINE binding by one-time code (mirrors the guide BIND-XXXXXX flow).
+// The /me console mints a code; the traveler sends it to the bot; the webhook
+// redeems it → upsertLineMapping with this traveler's user_id / contact_email.
+// This gives a binding path outside LIFF (which only works inside the LINE app).
+// ---------------------------------------------------------------------------
+
+const TRAVELER_CODE_PREFIX = 'TBIND-';
+// Unambiguous alphabet (no 0/O/1/I) so a code can be read aloud / retyped.
+const TRAVELER_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const TRAVELER_CODE_BODY_LEN = 6;
+const TRAVELER_CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function generateTravelerCode() {
+  let body = '';
+  const bytes = crypto.randomBytes(TRAVELER_CODE_BODY_LEN);
+  for (let i = 0; i < TRAVELER_CODE_BODY_LEN; i += 1) {
+    body += TRAVELER_CODE_ALPHABET[bytes[i] % TRAVELER_CODE_ALPHABET.length];
+  }
+  return `${TRAVELER_CODE_PREFIX}${body}`;
+}
+
+/** Extract a TBIND code from arbitrary LINE message text (case-insensitive). */
+export function parseTravelerLineBindCode(text) {
+  const match = String(text || '').toUpperCase().match(/TBIND-[A-Z0-9]{6}/);
+  return match ? match[0] : null;
+}
+
+/** Mint a one-time traveler binding code (invalidates the traveler's prior codes). */
+export async function createTravelerLineBindCode({ userId, contactEmail } = {}, { ttlMs = TRAVELER_CODE_TTL_MS } = {}) {
+  const uid = userId ? String(userId).trim() : null;
+  const email = normalizeEmail(contactEmail);
+  if (!uid && !email) throw new Error('createTravelerLineBindCode: userId or contactEmail required');
+  const code = generateTravelerCode();
+  const expiresAt = new Date(Date.now() + ttlMs).toISOString();
+  if (hasSupabaseEnv()) {
+    const { createLineBindCodeDb } = await import('./db.mjs');
+    await createLineBindCodeDb({ code, userId: uid, contactEmail: email, expiresAt });
+    return { code, expiresAt };
+  }
+  // Drop any outstanding codes for this traveler, then store the new one.
+  for (let i = lineBindCodes.length - 1; i >= 0; i -= 1) {
+    const c = lineBindCodes[i];
+    if ((uid && c.userId === uid) || (email && c.contactEmail === email)) lineBindCodes.splice(i, 1);
+  }
+  lineBindCodes.push({ code, userId: uid, contactEmail: email, expiresAt, createdAt: new Date().toISOString() });
+  return { code, expiresAt };
+}
+
+/**
+ * Redeem a traveler binding code captured from the webhook.
+ * @returns {Promise<{ ok: true, userId: string|null } | { ok: false, reason: string }>}
+ */
+export async function redeemTravelerLineBindCode(code, { lineUserId, displayName } = {}) {
+  const normalized = parseTravelerLineBindCode(code);
+  const luid = String(lineUserId || '').trim();
+  if (!normalized) return { ok: false, reason: 'invalid_code' };
+  if (!luid) return { ok: false, reason: 'no_line_user_id' };
+
+  if (hasSupabaseEnv()) {
+    const { consumeLineBindCodeDb } = await import('./db.mjs');
+    const consumed = await consumeLineBindCodeDb(normalized);
+    if (!consumed) return { ok: false, reason: 'invalid_code' };
+    if (consumed.expired) return { ok: false, reason: 'expired' };
+    await upsertLineMapping({ lineUserId: luid, userId: consumed.userId, contactEmail: consumed.contactEmail, displayName });
+    return { ok: true, userId: consumed.userId ?? null };
+  }
+
+  const idx = lineBindCodes.findIndex((c) => c.code === normalized);
+  if (idx === -1) return { ok: false, reason: 'invalid_code' };
+  const entry = lineBindCodes[idx];
+  lineBindCodes.splice(idx, 1); // single-use: consume regardless of outcome
+  if (new Date(entry.expiresAt).getTime() <= Date.now()) {
+    return { ok: false, reason: 'expired' };
+  }
+  await upsertLineMapping({ lineUserId: luid, userId: entry.userId, contactEmail: entry.contactEmail, displayName });
+  return { ok: true, userId: entry.userId ?? null };
+}
+
 /** Test-only: clear the in-memory mapping store. */
 export function __resetLineMappingsForTest() {
   lineUserMappings.length = 0;
+}
+
+/** Test-only: clear the in-memory traveler bind-code store. */
+export function __resetLineBindCodesForTest() {
+  lineBindCodes.length = 0;
 }
 
 /** Test-only: clear the in-memory webhook idempotency store. */

@@ -5436,6 +5436,38 @@ export async function getLineUserIdForOrderDb(order) {
   return null;
 }
 
+/** Mint a one-time traveler LINE bind code (clears the traveler's prior codes). */
+export async function createLineBindCodeDb({ code, userId, contactEmail, expiresAt } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  if (userId) await supabase.from('line_bind_code').delete().eq('user_id', userId);
+  if (contactEmail) await supabase.from('line_bind_code').delete().eq('contact_email', contactEmail);
+  const { error } = await supabase
+    .from('line_bind_code')
+    .insert({ code, user_id: userId ?? null, contact_email: contactEmail ?? null, expires_at: expiresAt });
+  if (error) throw new Error(error.message);
+  return { code, userId: userId ?? null, contactEmail: contactEmail ?? null, expiresAt };
+}
+
+/**
+ * Atomically consume a traveler bind code: returns { userId, contactEmail, expired }
+ * or null when the code does not exist. The row is always deleted (single-use).
+ */
+export async function consumeLineBindCodeDb(code) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('line_bind_code')
+    .delete()
+    .eq('code', code)
+    .select('user_id, contact_email, expires_at')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const expired = new Date(data.expires_at).getTime() <= Date.now();
+  return { userId: data.user_id ?? null, contactEmail: data.contact_email ?? null, expired };
+}
+
 // ---------------------------------------------------------------------------
 // Guide ↔ LINE binding (guide_line_mapping + guide_line_bind_code) — Supabase.
 // In-memory fallback lives in guide-line-binding.mjs. Used for per-guide push.
@@ -5684,4 +5716,51 @@ export async function markTelegramUpdateDb(updateId) {
     throw new Error(error.message);
   }
   return { firstTime: true };
+}
+
+// ---------------------------------------------------------------------------
+// Notification matrix (notification_event_settings) — Supabase singleton row.
+// Stores a sparse override map { "event:recipient:channel": boolean } in a
+// JSONB column; absence of a key means "use default" (= enabled). In-memory
+// fallback lives in notification-settings.mjs / store.mjs.
+// ---------------------------------------------------------------------------
+
+const NOTIFICATION_SETTINGS_SINGLETON_ID = 'singleton';
+
+/** Read the sparse override map; returns {} when unset / no DB. */
+export async function getNotificationOverridesDb() {
+  if (!hasSupabaseEnv()) return {};
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('notification_event_settings')
+    .select('overrides')
+    .eq('id', NOTIFICATION_SETTINGS_SINGLETON_ID)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const overrides = data?.overrides;
+  return overrides && typeof overrides === 'object' ? overrides : {};
+}
+
+/** Merge cell toggles into the override map (idempotent upsert of the singleton). */
+export async function setNotificationCellsDb(cells = [], { actor = 'admin' } = {}) {
+  if (!hasSupabaseEnv()) return {};
+  const supabase = await getSupabase();
+  const current = await getNotificationOverridesDb();
+  const next = { ...current };
+  for (const cell of cells) {
+    next[`${cell.event}:${cell.recipient}:${cell.channel}`] = !!cell.enabled;
+  }
+  const { error } = await supabase
+    .from('notification_event_settings')
+    .upsert(
+      {
+        id: NOTIFICATION_SETTINGS_SINGLETON_ID,
+        overrides: next,
+        updated_by: actor,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+  if (error) throw new Error(error.message);
+  return next;
 }

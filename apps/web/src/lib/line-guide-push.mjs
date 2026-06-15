@@ -13,8 +13,15 @@
 import { experiences } from './store.mjs';
 import { isLineGuidePushEnabled } from '../config/feature-flags.mjs';
 import { getLineUserIdForGuide } from './guide-line-binding.mjs';
+import { isNotifyEnabled } from './notification-settings.mjs';
 import { pushMessage } from './line-messaging.ts';
 import { buildGuideMessage } from './line-messages.ts';
+
+// Guide order-event kinds map onto the base order event for matrix lookup
+// (e.g. 'guide_refund_executed' → 'refund_executed').
+function baseEventKind(kind) {
+  return String(kind || '').replace(/^guide_/, '');
+}
 
 function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -46,6 +53,10 @@ export async function getGuideIdForOrder(input = {}) {
 export async function pushGuideOrderEvent(input = {}) {
   if (!isLineGuidePushEnabled()) {
     return { status: 'skipped', reason: 'guide_push_disabled' };
+  }
+  // Admin back-office matrix: guide×LINE for this event.
+  if (!(await isNotifyEnabled(baseEventKind(input.kind), 'guide', 'line'))) {
+    return { status: 'skipped', reason: 'matrix_disabled' };
   }
 
   const guideId = await getGuideIdForOrder(input);
