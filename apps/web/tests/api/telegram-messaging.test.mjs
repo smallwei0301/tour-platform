@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { sendTelegramMessage, pushTelegramToAdmin } from '../../src/lib/telegram-messaging.ts';
+import { sendTelegramMessage, sendTelegramTransactional, pushTelegramToAdmin } from '../../src/lib/telegram-messaging.ts';
 import { buildOrderEventTelegramText } from '../../src/lib/telegram-messages.ts';
 
 const KEYS = ['TELEGRAM_NOTIFY_ENABLED', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_ORDER_CHAT_ID'];
@@ -72,6 +72,25 @@ test('pushTelegramToAdmin: sends to TELEGRAM_ORDER_CHAT_ID', async () => {
     const r = await pushTelegramToAdmin('ops msg');
     assert.equal(r.status, 'sent');
     assert.equal(JSON.parse(calls[0].init.body).chat_id, '-100777');
+  });
+});
+
+test('sendTelegramTransactional: kill-switch OFF + token → still sends (transactional)', async () => {
+  await withEnv({ TELEGRAM_BOT_TOKEN: 'BOTTOKEN' }, async (calls) => {
+    const r = await sendTelegramTransactional('555', 'binding ack');
+    assert.equal(r.status, 'sent');
+    assert.equal(calls.length, 1);
+    assert.match(calls[0].url, /api\.telegram\.org\/botBOTTOKEN\/sendMessage/);
+    assert.equal(JSON.parse(calls[0].init.body).chat_id, '555');
+  });
+});
+
+test('sendTelegramTransactional: no bot token → skipped(no_bot_token), no network', async () => {
+  await withEnv({}, async (calls) => {
+    const r = await sendTelegramTransactional('555', 'binding ack');
+    assert.equal(r.status, 'skipped');
+    assert.equal(r.reason, 'no_bot_token');
+    assert.equal(calls.length, 0);
   });
 });
 
