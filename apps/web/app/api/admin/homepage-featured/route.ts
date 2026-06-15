@@ -6,6 +6,7 @@
  * Mutation 受 middleware 的 double-submit CSRF 保護（/api/admin/**）。
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { ok, fail } from '../../../../src/lib/api';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
@@ -113,6 +114,13 @@ export async function PUT(req: NextRequest) {
       validSlugs: choices.map((a) => a.slug),
       actor: email || 'admin',
     });
+    // 首頁（/）走 revalidate=60 的 ISR；精選大卡／輪播相片改完立即失效，
+    // 不必等 60s window（#1444 同類：mutation 後主動 revalidate）。
+    try {
+      revalidatePath('/');
+    } catch {
+      // best-effort：快取刷新失敗不影響資料已寫入的結果
+    }
     return NextResponse.json(ok({ settings }));
   } catch (e) {
     const code = (e as { code?: string })?.code;
