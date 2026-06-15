@@ -3218,22 +3218,30 @@ export async function getGuideBySlugDb(slug) {
   }
 
   const supabase = await getSupabase();
-  const { data: gp, error } = await supabase
-    .from('guide_profiles')
-    .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
-    .eq('slug', slug)
-    .single();
+  // guide_profiles 與 activities 都只用 slug 過濾、彼此不相依（activities 是
+  // .eq('guide_slug', slug)，不需要先拿到 guide id），故平行發兩個查詢，把
+  // 2 個串行 round-trip 併成 1 個 —— 這是詳情頁 ISR cache-miss 首訪的延遲來源。
+  // 導遊無效（找不到/停權）時 acts 直接丟棄，成本可忽略。
+  const [gpResult, actsResult] = await Promise.all([
+    supabase
+      .from('guide_profiles')
+      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
+      .eq('slug', slug)
+      .single(),
+    supabase
+      .from('activities')
+      .select('id, slug, title, category, region, price_twd, cover_image_url, status')
+      .eq('guide_slug', slug)
+      .eq('status', 'published'),
+  ]);
 
+  const { data: gp, error } = gpResult;
   if (error || !gp) return null;
   // 下架（停權）導遊對外全隱藏：非 approved（即 suspended）→ 詳情頁 404。
   // approved-但未公開（is_published=false）仍可預覽，不在此擋。
   if (gp.verification_status !== 'approved') return null;
 
-  const { data: acts } = await supabase
-    .from('activities')
-    .select('id, slug, title, category, region, price_twd, cover_image_url, status')
-    .eq('guide_slug', slug)
-    .eq('status', 'published');
+  const acts = actsResult.data;
 
   return {
     id: gp.id, slug: gp.slug, displayName: gp.display_name,
