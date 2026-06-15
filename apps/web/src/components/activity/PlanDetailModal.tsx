@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 
 import { useEffect, useRef, useState } from 'react';
 
@@ -17,7 +16,7 @@ export interface PlanDetail {
   freeCancelDays?: number;
   planInclusions?: string[];
   planExclusions?: string[];
-  planItinerary?: Array<{ text: string; imageUrl?: string }>;
+  planItinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string; imageUrl?: string; text?: string }>;
   meetingPointName?: string;
   meetingAddress?: string;
   experiencePointName?: string;
@@ -74,10 +73,11 @@ const ICONS = {
   ),
 };
 
+// #297 行程介紹（plan itinerary）已從方案詳情 Modal 移除，改於行程頁「詳細行程」區段
+// 依所選方案呈現；此處不再提供「行程介紹」分頁。
 const TABS = [
   { id: 'highlights',  label: '方案亮點' },
   { id: 'cost',        label: '費用資訊' },
-  { id: 'itinerary',   label: '行程介紹' },
   { id: 'meeting',     label: '集合地點' },
   { id: 'experience',  label: '體驗地點' },
   { id: 'notices',     label: '購買須知' },
@@ -310,33 +310,6 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
               )}
               {(!plan.planInclusions?.length && !plan.planExclusions?.length) && (
                 <p style={emptyStyle}>請在後台填寫費用包含／不包含資訊</p>
-              )}
-            </div>
-          )}
-
-          {/* ── 行程介紹 ── */}
-          {activeTab === 'itinerary' && (
-            <div>
-              {plan.duration && (
-                <p style={{ fontSize: 14, color: C.text, marginBottom: 16 }}>行程時間：{plan.duration}</p>
-              )}
-              {plan.planItinerary && plan.planItinerary.length > 0 ? (
-                <ul style={{ listStyle: 'disc', paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 16, color: C.text }}>
-                  {plan.planItinerary.map((item, i) => (
-                    <li key={i} style={{ fontSize: 14, lineHeight: 1.6, color: C.text }}>
-                      {item.text}
-                      {item.imageUrl && (
-                        <Image
-                          src={item.imageUrl}
-                          alt=""
-                          loading="lazy"
-                          style={{ display: 'block', marginTop: 10, width: '100%', maxWidth: 360, borderRadius: 8, objectFit: 'cover' }} width={360} height={240} />
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p style={emptyStyle}>請在後台填寫行程介紹</p>
               )}
             </div>
           )}

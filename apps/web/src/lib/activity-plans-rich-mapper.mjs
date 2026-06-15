@@ -24,11 +24,24 @@ function toPlanItinerary(value, fallbackImageUrl = null) {
           return text ? { text } : null;
         }
         if (!step || typeof step !== 'object') return null;
+        // 站點分區編輯（站點時間表）：icon／title／duration／description／imageUrl，
+        // 同時相容舊版 { text, imageUrl } 單行格式。
         const text = toNullableTrimmedString(step.text);
+        const title = toNullableTrimmedString(step.title);
+        const duration = toNullableTrimmedString(step.duration);
+        const description = toNullableTrimmedString(step.description);
+        const icon = toNullableTrimmedString(step.icon);
         const imageUrl = toNullableTrimmedString(step.imageUrl ?? step.image_url);
-        if (!text && !imageUrl) return null;
-        if (!text) return null;
-        return imageUrl ? { text, imageUrl } : { text };
+        // 至少要有一項文字內容或圖片才視為有效站點（單獨的 icon／duration 不足以成站）
+        if (!text && !title && !description && !imageUrl) return null;
+        const normalized = {};
+        if (text) normalized.text = text;
+        if (title) normalized.title = title;
+        if (duration) normalized.duration = duration;
+        if (description) normalized.description = description;
+        if (icon) normalized.icon = icon;
+        if (imageUrl) normalized.imageUrl = imageUrl;
+        return normalized;
       })
       .filter(Boolean);
     return arr.length > 0 ? arr : [];

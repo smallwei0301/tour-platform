@@ -1,0 +1,47 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(__dirname, '../..');
+const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+
+// #297 旅客前台：
+//  1. 「查看方案詳情」Modal 取消「行程介紹」分頁。
+//  2. 「詳細行程」改為依所選方案，顯示該方案後台「行程介紹」（plan_itinerary）站點時間表。
+describe('GH-297 traveler plan itinerary display', () => {
+  it('PlanDetailModal no longer exposes the 行程介紹 tab', () => {
+    const source = read('src/components/activity/PlanDetailModal.tsx');
+    // 分頁定義不得再包含 itinerary／行程介紹
+    const tabsBlock = source.slice(source.indexOf('const TABS'), source.indexOf('export function PlanDetailModal'));
+    assert.doesNotMatch(tabsBlock, /行程介紹/, 'TABS 不應再有「行程介紹」分頁');
+    assert.doesNotMatch(tabsBlock, /id:\s*'itinerary'/, 'TABS 不應再有 itinerary 分頁');
+    // 既有分頁仍在
+    for (const label of ['方案亮點', '費用資訊', '集合地點', '體驗地點', '購買須知', '取消政策']) {
+      assert.match(tabsBlock, new RegExp(label), `分頁應保留：${label}`);
+    }
+  });
+
+  it('detail page renders PlanItinerarySection driven by selected plan, not static itinerary', () => {
+    const source = read('app/activities/[region]/[slug]/page.tsx');
+    assert.match(source, /import \{ PlanItinerarySection \}/, '應 import PlanItinerarySection');
+    assert.match(source, /<PlanItinerarySection\s+plans=\{datePlanPresentation\.plans/, '應以所選方案來源 datePlanPresentation.plans 餵入');
+    // 舊的頁面級靜態行程渲染已移除
+    assert.doesNotMatch(source, /activityData\.itinerary\.map/, '不應再直接渲染頁面級 activityData.itinerary');
+  });
+
+  it('PlanItinerarySection reads selected plan from context and renders the timeline with images', () => {
+    const source = read('src/components/activity/PlanItinerarySection.tsx');
+    assert.match(source, /useSelectedPlan/, '需從 SelectedPlanContext 讀取所選方案');
+    assert.match(source, /planItinerary/, '需讀取方案的 planItinerary');
+    assert.match(source, /id="section-itinerary"/, '需維持 section-itinerary 錨點');
+    assert.match(source, /kkd-itinerary/, '需沿用 kkd-itinerary 時間表樣式');
+    assert.match(source, /kkd-itinerary-img/, '需支援每站點圖片');
+    // 站點欄位（與後台站點時間表對齊）
+    for (const field of ['icon', 'title', 'duration', 'description', 'imageUrl']) {
+      assert.match(source, new RegExp(`step\\.${field}`), `站點需處理欄位：${field}`);
+    }
+  });
+});

@@ -87,7 +87,8 @@ interface CreatePlanBody {
   free_cancel_days?: number;
   plan_inclusions?: string[];
   plan_exclusions?: string[];
-  plan_itinerary?: Array<{ text: string; imageUrl?: string }>;
+  // #297 站點時間表（icon／title／duration／description／imageUrl）；相容舊版 { text, imageUrl }
+  plan_itinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string; imageUrl?: string; text?: string }>;
   plan_itinerary_image_url?: string;
   meeting_point_name?: string;
   meeting_address?: string;
