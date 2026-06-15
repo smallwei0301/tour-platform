@@ -12,6 +12,8 @@
 | 3 | `supabase/migrations/20260529_line302_reminder_line_push_channel.sql` | `tour_reminder_log` CHECK 加 `line_push` | pre-tour 提醒新增 LINE 推播 channel | LINE 提醒啟用時 |
 | 4 | `supabase/migrations/20260615_line302b_guide_line_mapping.sql` | `guide_line_mapping`、`guide_line_bind_code` | 導遊個人 LINE 綁定（BIND-XXXXXX 一次性碼） | 導遊 LINE 綁定啟用時 |
 | 5 | `supabase/migrations/20260615_line302c_telegram_binding.sql` | `telegram_chat_mapping`、`telegram_bind_code`、`telegram_webhook_events` | **Telegram 綁定（導遊/旅客）+ 一次性碼 + webhook 冪等** | **是（綁定流程已上線）** |
+| 6 | `supabase/migrations/20260615_line302b_line_bind_code.sql` | `line_bind_code` | **旅客 LINE console 綁定一次性碼（TBIND-XXXXXX，非 LIFF）** | 旅客 LINE console 綁定啟用時 |
+| 7 | `supabase/migrations/20260615_notify920_notification_event_settings.sql` | `notification_event_settings`、`notification_event_settings_audit` | **後台通知矩陣（事件×對象×通道勾選）單列設定 + 稽核** | 後台通知矩陣啟用時（未套用時 fallback 視為全開，不致報錯） |
 
 - 每個 migration 皆附 `*.rollback.sql`（同目錄、同檔名）。
 - 全部為**冪等 DDL**（`CREATE TABLE IF NOT EXISTS` / `CREATE POLICY IF NOT EXISTS` 模式），重跑安全。
@@ -35,7 +37,8 @@ SELECT table_name FROM information_schema.tables
 WHERE table_name IN (
   'line_user_mapping','line_webhook_events',
   'guide_line_mapping','guide_line_bind_code',
-  'telegram_chat_mapping','telegram_bind_code','telegram_webhook_events'
+  'telegram_chat_mapping','telegram_bind_code','telegram_webhook_events',
+  'line_bind_code','notification_event_settings','notification_event_settings_audit'
 ) ORDER BY table_name;
 
 -- tour_reminder_log 接受 line_push

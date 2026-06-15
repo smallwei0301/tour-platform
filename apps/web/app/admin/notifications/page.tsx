@@ -116,9 +116,9 @@ export default function NotificationSettingsPage() {
             <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
               <thead>
                 <tr>
-                  <th style={TH_LEFT} rowSpan={2}>訂單事件</th>
+                  <th scope="col" style={TH_LEFT} rowSpan={2}>訂單事件</th>
                   {dims.channels.map((ch) => (
-                    <th key={ch} style={TH_GROUP} colSpan={dims.recipients.length}>
+                    <th scope="col" key={ch} style={TH_GROUP} colSpan={dims.recipients.length}>
                       {CHANNEL_LABELS[ch] || ch}
                     </th>
                   ))}
@@ -126,7 +126,7 @@ export default function NotificationSettingsPage() {
                 <tr>
                   {dims.channels.map((ch) =>
                     dims.recipients.map((rc) => (
-                      <th key={`${ch}-${rc}`} style={TH_CELL}>
+                      <th scope="col" key={`${ch}-${rc}`} style={TH_CELL}>
                         {RECIPIENT_LABELS[rc] || rc}
                       </th>
                     )),
