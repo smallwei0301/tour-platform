@@ -87,18 +87,25 @@
 
 > 導遊另有 reschedule 專屬 email（`sendRescheduleRequestNotice`），但**核心五事件導遊完全收不到 email**。
 
-### 3.2 落差（依目標架構需補）
+### 3.2 落差 → ✅ 已補齊（commit `5fa54b1`）
 
-- **導遊 Email：五事件全缺** ← 最大落差。需用 `guide_profiles.guide_email`（`reschedule-notify.ts` 已有 `lookupOrderContext` 可參考）補齊。
-- **管理員 Email：只有付款**，缺「取消 / 退款申請 / 退款完成」。
+- ~~導遊 Email：五事件全缺~~ → 新增 `sendGuideOrderNotification` + `dispatchOrderEventEmails`，四個 order hooks 都會寄；guide email 由 `lookupOrderContext` 解析，無 email 自動 skip。
+- ~~管理員 Email：只有付款~~ → 新增 `sendAdminOrderNotification`，補「建單 / 取消 / 退款申請 / 退款完成」；付款仍走既有 `sendAdminPaymentNotification`（`includeAdmin:false` 避免重複）。
+
+**現況矩陣（補齊後）**：旅客五事件、導遊五事件、管理員五事件，皆有 Email（導遊需 `guide_profiles.guide_email`）。
 
 ---
 
 ## 4. Telegram 現況與目標
 
-**現況**：`src/lib/telegram-notify.ts` 已存在，但**僅用於系統錯誤告警**（`notifySystemError`，env `TELEGRAM_ALERT_BOT_TOKEN` / `TELEGRAM_ALERT_CHAT_ID`，#1215）。**尚未用於訂單事件通知**。
+**系統告警（既有）**：`src/lib/telegram-notify.ts`，env `TELEGRAM_ALERT_BOT_TOKEN` / `TELEGRAM_ALERT_CHAT_ID`（#1215）。與訂單通知**分開的 bot**。
 
-**目標**：新增與 Email 平行的訂單事件 Telegram 管道，覆蓋三類對象：
+**訂單通知 — 管理員群組：✅ 已完成（commit `04ff92b`）**：
+- `telegram-messaging.ts`（`sendTelegramMessage` / `pushTelegramToAdmin`，用 `TELEGRAM_BOT_TOKEN`）+ `telegram-messages.ts`（三對象文案）。
+- `dispatchOrderEventTelegram` 接到四個 order hooks → 五事件都通知 `TELEGRAM_ORDER_CHAT_ID`。
+- 旗標 `TELEGRAM_NOTIFY_ENABLED`（預設 OFF）；403（被封鎖）視為 skip。
+
+**訂單通知 — 導遊/旅客個人：⏳ 待做（下一個 increment）**，覆蓋：
 
 | 對象 | Telegram 綁定方式（規劃） |
 |---|---|
@@ -117,10 +124,10 @@
 
 ## 5. 後續橋接路線圖
 
-1. **（本次）** 文件化 + 暫停 LINE 事件 push（§2，旗標已 OFF）。
-2. **補 Email 落差**：導遊五事件 email + 管理員缺漏事件 email。
-3. **Telegram 基礎**：messaging client + schema + webhook + 綁定碼。
-4. **Telegram 接線**：四 order-event hooks + 提醒 channel；三對象旗標 gated。
-5. **導遊/旅客綁定 UI**：後台「綁定 Telegram」按鈕（鏡像 LINE 綁定）。
+1. ✅ 文件化 + 暫停 LINE 事件 push（§2，旗標已 OFF）。
+2. ✅ 補 Email 落差：導遊五事件 + 管理員缺漏事件（`5fa54b1`）。
+3. ✅ Telegram messaging client + 管理員群組通知（`04ff92b`）。
+4. ⏳ **Telegram 導遊/旅客個人綁定**：webhook（`/api/telegram/webhook`，`secret_token` 驗證、冪等）+ `/start <code>` 深連結綁定 + `telegram_chat_mapping` schema（鏡像 LINE 綁定碼）+ 個人 push 接到四 hooks（`TELEGRAM_GUIDE_NOTIFY_ENABLED` / `TELEGRAM_TRAVELER_NOTIFY_ENABLED` gated）。
+5. ⏳ **綁定 UI**：後台「綁定 LINE / Telegram」按鈕（鏡像，呼叫 `/api/guide/line-binding` 等端點）。
 
 > 所有新管道一律 **feature flag 預設 OFF**、**fire-and-forget 不阻塞 API**、**PII 不落地**（沿用 LINE 既有準則）。
