@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 
 type Profile = {
   display_name: string;
@@ -300,6 +301,32 @@ export default function GuideProfileEditPage() {
             urls={profile.gallery_urls}
             onChange={(next) => update('gallery_urls', next)}
           />
+        </section>
+
+        {/* 通知綁定：把訂單通知接到你的 LINE / Telegram */}
+        <section style={CARD} data-testid="guide-notification-binding">
+          <header style={{ marginBottom: 4 }}>
+            <h2 style={SECTION_TITLE}>訂單通知綁定</h2>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
+              綁定後，你負責的行程有新訂單／付款／取消／退款時，會推送到你的個人帳號。
+            </p>
+          </header>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <NotificationBindingButton
+              endpoint="/api/guide/line-binding"
+              channel="line"
+              title="LINE 通知"
+              description="點按產生綁定連結，於 LINE 送出即可完成。"
+              accent="#06c755"
+            />
+            <NotificationBindingButton
+              endpoint="/api/guide/telegram-binding"
+              channel="telegram"
+              title="Telegram 通知"
+              description="點按開啟 Telegram bot，按 START 即完成。"
+              accent="#229ED9"
+            />
+          </div>
         </section>
 
         {/* Footer：發佈狀態 + 公開/取消公開動作 */}
