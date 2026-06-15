@@ -17,14 +17,25 @@ interface Props {
   title: string;
   description?: string;
   accent?: string;
+  /**
+   * 卡片配色基調：'light'（預設，給白底的導遊後台）／'dark'（給深綠的旅客會員中心）。
+   * dark 套用主題 token，標題與說明文字才不會在深底上糊掉。
+   */
+  tone?: 'light' | 'dark';
 }
+
+const PALETTE = {
+  light: { border: '#e5e7eb', title: '#111', desc: '#6b7280', resultBg: '#f9fafb', resultBorder: '#e5e7eb', instruction: '#374151' },
+  dark: { border: 'var(--tp-border)', title: 'var(--tp-text)', desc: 'rgba(237,228,203,0.82)', resultBg: 'var(--tp-tint)', resultBorder: 'var(--tp-border)', instruction: 'var(--tp-text)' },
+} as const;
 
 /**
  * Reusable "綁定 LINE / Telegram" button. GET on mount to show status; POST on
  * click to mint a one-time code + deep link the user taps to finish binding.
  * Backend self-skips when flags are off; this is purely the console affordance.
  */
-export default function NotificationBindingButton({ endpoint, channel, title, description, accent = '#7c3aed' }: Props) {
+export default function NotificationBindingButton({ endpoint, channel, title, description, accent = '#7c3aed', tone = 'light' }: Props) {
+  const c = PALETTE[tone];
   const [bound, setBound] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [rechecking, setRechecking] = useState(false);
@@ -91,12 +102,12 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
   return (
     <div
       data-testid={`binding-${channel}`}
-      style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}
+      style={{ border: `1px solid ${c.border}`, borderRadius: 10, padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
         <div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: '#111' }}>{title}</div>
-          {description && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{description}</div>}
+          <div style={{ fontSize: 14, fontWeight: 700, color: c.title }}>{title}</div>
+          {description && <div style={{ fontSize: 12, color: c.desc, marginTop: 2 }}>{description}</div>}
         </div>
         <span
           data-testid={`binding-${channel}-status`}
@@ -121,9 +132,9 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
       {result && (
         <div
           data-testid={`binding-${channel}-result`}
-          style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}
+          style={{ background: c.resultBg, border: `1px solid ${c.resultBorder}`, borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}
         >
-          {result.instruction && <p style={{ margin: 0, fontSize: 12, color: '#374151' }}>{result.instruction}</p>}
+          {result.instruction && <p style={{ margin: 0, fontSize: 12, color: c.instruction }}>{result.instruction}</p>}
           {result.deepLink ? (
             <a
               data-testid={`binding-${channel}-link`}
@@ -135,7 +146,7 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
               開啟 {channelName} 完成綁定
             </a>
           ) : (
-            <code data-testid={`binding-${channel}-code`} style={{ fontSize: 13, fontWeight: 700 }}>{result.code}</code>
+            <code data-testid={`binding-${channel}-code`} style={{ fontSize: 13, fontWeight: 700, color: c.instruction }}>{result.code}</code>
           )}
           <button
             type="button"

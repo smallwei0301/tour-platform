@@ -136,7 +136,7 @@ export default function MyQaPage() {
                     {item.targetKind === 'guide' ? '✉️ ' : '🧭 '}{item.targetTitle}
                   </Link>
                 ) : (
-                  <span style={{ ...cardTitleStyle, color: 'rgba(237,228,203,0.82)' }}>
+                  <span style={{ ...cardTitleStyle, color: 'var(--tp-muted)' }}>
                     {item.targetTitle}
                   </span>
                 )}
@@ -144,7 +144,7 @@ export default function MyQaPage() {
               </div>
 
               <p style={{ margin: '0 0 10px', color: 'var(--tp-text)', fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
-                <span style={{ fontWeight: 800, color: 'rgba(237,228,203,0.78)', marginRight: 6 }}>Q</span>{item.question}
+                <span style={{ fontWeight: 800, color: 'var(--tp-muted)', marginRight: 6 }}>Q</span>{item.question}
               </p>
 
               {item.answer ? (
@@ -154,7 +154,7 @@ export default function MyQaPage() {
                   </p>
                 </div>
               ) : (
-                <p style={{ margin: 0, fontSize: 13, color: 'rgba(237,228,203,0.78)' }}>
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--tp-muted)' }}>
                   {item.status === 'rejected' ? '此提問未通過審核。' : '導遊尚未回覆，回覆後會顯示在這裡。'}
                 </p>
               )}

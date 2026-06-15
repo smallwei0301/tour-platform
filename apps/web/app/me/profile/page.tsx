@@ -169,6 +169,7 @@ export default function MeProfilePage() {
             title="Telegram 通知"
             description="綁定後，訂單成立／付款／取消／退款也會傳到你的 Telegram。"
             accent="#229ED9"
+            tone="dark"
           />
         </div>
         {err && <p style={{ color: 'var(--tp-accent)', fontSize: 13, marginBottom: 12 }}>{err}</p>}
