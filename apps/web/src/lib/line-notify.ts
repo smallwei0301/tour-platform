@@ -17,6 +17,7 @@
  */
 
 import { pushToOps, type PushStatus } from './line-messaging';
+import { isNotifyEnabled } from './notification-settings.mjs';
 
 // ── 通知類型 ───────────────────────────────────────────────────────────────────
 
@@ -43,7 +44,18 @@ function logNotify(entry: NotifyLogEntry): void {
 
 // ── ops 推播 helper ──────────────────────────────────────────────────────────
 
-async function notifyOps(fn: string, message: string, orderId?: string): Promise<void> {
+async function notifyOps(
+  fn: string,
+  message: string,
+  orderId?: string,
+  event?: string,
+): Promise<void> {
+  // Admin back-office matrix: admin×LINE for this order event. System alerts
+  // (no event) are not modelled in the matrix and always go through.
+  if (event && !(await isNotifyEnabled(event, 'admin', 'line'))) {
+    logNotify({ fn, orderId, status: 'skipped', reason: 'matrix_disabled', ts: new Date().toISOString() });
+    return;
+  }
   const result = await pushToOps(message);
   logNotify({ fn, orderId, status: result.status, reason: result.reason, error: result.error, ts: new Date().toISOString() });
 }
@@ -82,7 +94,7 @@ export async function notifyNewOrder(data: OrderNotifyData): Promise<void> {
 
 請登入管理後台查看詳情`;
 
-  await notifyOps('notifyNewOrder', message, data.orderId);
+  await notifyOps('notifyNewOrder', message, data.orderId, 'new_order');
 }
 
 /**
@@ -103,7 +115,7 @@ export async function notifyPaymentReceived(data: OrderNotifyData): Promise<void
 
 請聯絡旅客確認行程細節`;
 
-  await notifyOps('notifyPaymentReceived', message, data.orderId);
+  await notifyOps('notifyPaymentReceived', message, data.orderId, 'payment_received');
 }
 
 /**
@@ -122,7 +134,7 @@ export async function notifyOrderCancelled(data: OrderNotifyData): Promise<void>
 
 席位已自動釋放`;
 
-  await notifyOps('notifyOrderCancelled', message, data.orderId);
+  await notifyOps('notifyOrderCancelled', message, data.orderId, 'order_cancelled');
 }
 
 /**
@@ -143,7 +155,7 @@ ${data.note ? `💬 備註: ${data.note}` : ''}
 
 請登入管理後台審核`;
 
-  await notifyOps('notifyRefundRequest', message, data.orderId);
+  await notifyOps('notifyRefundRequest', message, data.orderId, 'refund_requested');
 }
 
 /**
@@ -158,7 +170,7 @@ export async function notifyRefundExecuted(data: OrderNotifyData): Promise<void>
 
 款項將於 3-5 個工作天退回至原付款工具。`;
 
-  await notifyOps('notifyRefundExecuted', message, data.orderId);
+  await notifyOps('notifyRefundExecuted', message, data.orderId, 'refund_executed');
 }
 
 /**

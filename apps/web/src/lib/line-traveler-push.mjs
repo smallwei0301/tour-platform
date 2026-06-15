@@ -11,6 +11,7 @@
 
 import { isLinePushEnabled } from '../config/feature-flags.mjs';
 import { getLineUserIdForOrder } from './line-binding.mjs';
+import { isNotifyEnabled } from './notification-settings.mjs';
 import { pushMessage } from './line-messaging.ts';
 import { buildTravelerMessage } from './line-messages.ts';
 
@@ -24,6 +25,10 @@ export async function pushTravelerOrderEvent(input = {}) {
   const { kind } = input;
   if (!isLinePushEnabled()) {
     return { status: 'skipped', reason: 'push_disabled' };
+  }
+  // Admin back-office matrix: traveler×LINE for this event.
+  if (!(await isNotifyEnabled(kind, 'traveler', 'line'))) {
+    return { status: 'skipped', reason: 'matrix_disabled' };
   }
 
   const lineUserId = await getLineUserIdForOrder({
