@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
+import { parseGuideContactGuideId } from '../../../../../src/lib/guide-contact-qa.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 function getServiceClient() {
@@ -58,15 +59,25 @@ export async function PATCH(
       );
     }
 
-    const { data: activity, error: activityError } = await supabase
-      .from('activities')
-      .select('id')
-      .eq('id', qa.activity_id)
-      .eq('guide_id', session.guideId)
-      .single();
+    // 導遊頁訊息（sentinel activity_id = guide:<guideId>）不對應任何 activities 列，
+    // 以 sentinel 內嵌的 guideId 直接比對 session.guideId 判定擁有權；
+    // 一般行程問答仍走 activities.guide_id 比對。
+    const contactGuideId = parseGuideContactGuideId(qa.activity_id);
+    if (contactGuideId !== null) {
+      if (contactGuideId !== session.guideId) {
+        return Response.json(fail('FORBIDDEN', '無權更新此問題'), { status: 403 });
+      }
+    } else {
+      const { data: activity, error: activityError } = await supabase
+        .from('activities')
+        .select('id')
+        .eq('id', qa.activity_id)
+        .eq('guide_id', session.guideId)
+        .single();
 
-    if (activityError || !activity) {
-      return Response.json(fail('FORBIDDEN', '無權更新此問題'), { status: 403 });
+      if (activityError || !activity) {
+        return Response.json(fail('FORBIDDEN', '無權更新此問題'), { status: 403 });
+      }
     }
 
     const { data: updatedQa, error: updateError } = await supabase

@@ -1,88 +1,102 @@
 /**
- * 「詢問導遊」按鈕修復 — 認識導遊頁（/guides/[slug]）的傳訊息按鈕原為死按鈕
- * （無 handler，且 server component 無法掛 onClick）。站上訂單前的諮詢管道＝
- * 行程詳情頁的旅客問答（activity_qa / ActivityQASection / /api/qa），綁定單一行程。
+ * 「詢問導遊」inline 訊息 — 認識導遊頁（/guides/[slug]）。
  *
- * 本測試鎖定 wiring：
- *  1. 導遊頁按鈕改為 <Link>，導向導遊主行程的問答區塊（#section-qa）。
- *  2. href 由真實 fixture 導遊資料 + buildActivityHref 計算，驗證可解析的行程 URL。
- *  3. 行程詳情頁的「詢問導遊」改為錨點連結 #section-qa（同一機制的入口）。
+ * 需求：按下 sidebar「詢問導遊」先判斷旅客是否登入；已登入即就地展開和行程 QA
+ * 一樣的輸入框與送出功能。訊息不綁定任何行程，重用 activity_qa（activity_id 帶
+ * sentinel `guide:<guideId>`），流進導遊後台同一個收件匣，後台卡片改顯示「導遊頁面」。
+ *
+ * 本測試鎖定 wiring（source-contract）：
+ *  1. 導遊頁渲染 GuideContactQASection（client component），不再是死按鈕／靜態 Link。
+ *  2. 元件以 sentinel activity_id POST /api/qa。
+ *  3. /api/guide/qa 一併查 sentinel；/api/guide/qa/[id] 處理 sentinel 擁有權。
+ *  4. 導遊後台對 sentinel 顯示「導遊頁面」而非行程 ID。
+ *  5. 行程詳情頁的「詢問導遊」仍是錨定 #section-qa 的連結（既有機制不退化）。
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { getActivitiesByGuide } from '../../src/fixtures/data.ts';
-import { buildActivityHref } from '../../src/lib/activity-url.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const guidePageSrc = readFileSync(resolve(here, '../../app/guides/[slug]/page.tsx'), 'utf8');
-const activityPageSrc = readFileSync(
-  resolve(here, '../../app/activities/[region]/[slug]/page.tsx'),
-  'utf8',
-);
+const read = (rel) => readFileSync(resolve(here, rel), 'utf8');
+
+const guidePageSrc = read('../../app/guides/[slug]/page.tsx');
+const componentSrc = read('../../src/components/guide/GuideContactQASection.tsx');
+const guideQaRouteSrc = read('../../app/api/guide/qa/route.ts');
+const guideQaIdRouteSrc = read('../../app/api/guide/qa/[id]/route.ts');
+const dashboardSrc = read('../../app/guide/dashboard/page.tsx');
+const activityPageSrc = read('../../app/activities/[region]/[slug]/page.tsx');
 
 test('導遊頁不再有死的「傳訊息給導遊」按鈕', () => {
-  // 舊版：<button ...>傳訊息給導遊</button>，無 onClick，按下去沒反應。
   assert.ok(
     !/<button[^>]*>\s*傳訊息給導遊/.test(guidePageSrc),
     '不應再有死的 <button>傳訊息給導遊',
   );
 });
 
-test('導遊頁「詢問導遊」是導向 #section-qa 的 Link', () => {
-  // 計算出 contactGuideHref 並用在 primary CTA 的 <Link href={...}>。
+test('導遊頁渲染 GuideContactQASection（帶 guideId / guideName）', () => {
+  assert.match(guidePageSrc, /import\s*\{\s*GuideContactQASection\s*\}/, '應 import GuideContactQASection');
   assert.match(
     guidePageSrc,
-    /const contactGuideHref =/,
-    '應計算 contactGuideHref',
+    /<GuideContactQASection[^>]*guideId=\{guide\.id\}[^>]*guideName=\{guide\.displayName\}/,
+    'sidebar 應渲染 GuideContactQASection 並帶 guide.id / guide.displayName',
   );
-  assert.match(
-    guidePageSrc,
-    /#section-qa/,
-    'href 應錨定到旅客問答區塊 #section-qa',
-  );
-  assert.match(
-    guidePageSrc,
-    /<Link[^>]*href=\{contactGuideHref\}[^>]*>[^<]*詢問導遊/,
-    'primary CTA 應是 href={contactGuideHref} 的 Link',
-  );
-});
-
-test('contactGuideHref 由真實 fixture 導遊資料解析為有效行程問答 URL', () => {
-  // andy-lee 在 fixtures 有一筆上架行程（kaohsiung-chaishan-cave-experience）。
-  // 對應 getGuideBySlugDb fixture 分支：activities = getActivitiesByGuide(slug)。
-  const primary = getActivitiesByGuide('andy-lee')[0];
-  assert.ok(primary, '導遊應至少有一筆行程');
-
-  const expected = `${buildActivityHref({
-    slug: primary.slug,
-    region: primary.region,
-    regionSlug: primary.regionSlug,
-  })}#section-qa`;
-
-  // 形狀：/activities/<region>/<slug>#section-qa
-  assert.match(expected, /^\/activities\/[^/]+\/[^/#]+#section-qa$/);
-  assert.ok(expected.includes(primary.slug), 'URL 應含行程 slug');
-});
-
-test('導遊無上架行程時 fallback 到 /activities（仍非死按鈕）', () => {
-  assert.match(
-    guidePageSrc,
-    /primaryActivity\s*\?[\s\S]*?:\s*'\/activities'/,
-    '無 primaryActivity 時應退回 /activities',
-  );
-});
-
-test('行程詳情頁「詢問導遊」是錨定 #section-qa 的連結（非死按鈕）', () => {
+  // 不再把「詢問導遊」做成導向行程的靜態 Link
   assert.ok(
-    !/<button[^>]*>\s*✉️ 詢問導遊\s*<\/button>/.test(activityPageSrc),
-    '不應再有死的 <button>✉️ 詢問導遊',
+    !/contactGuideHref/.test(guidePageSrc),
+    '不應再用 contactGuideHref 靜態導向',
   );
+});
+
+test('元件先判斷登入再展開輸入框，未登入顯示登入提示', () => {
+  assert.match(componentSrc, /supabase\.auth\.getUser\(\)/, '應檢查登入狀態');
+  assert.match(componentSrc, /aria-expanded=\{open\}/, '按鈕應有展開狀態');
+  assert.match(componentSrc, /guide-qa-login-prompt/, '未登入應有登入提示');
+  assert.match(componentSrc, /<textarea/, '登入後應展開輸入框');
+});
+
+test('元件以 sentinel activity_id POST /api/qa', () => {
+  assert.match(componentSrc, /buildGuideContactActivityId/, '應用 helper 組 sentinel activity_id');
+  assert.match(
+    componentSrc,
+    /fetch\('\/api\/qa',\s*\{[\s\S]*method:\s*'POST'/,
+    '應 POST /api/qa（重用行程 QA pipeline）',
+  );
+  assert.match(componentSrc, /activityId,\s*question:/, 'body 應帶 activityId + question');
+});
+
+test('/api/guide/qa 一併查 sentinel（導遊無行程也收得到導遊頁訊息）', () => {
+  assert.match(guideQaRouteSrc, /buildGuideContactActivityId/, '應 import/用 sentinel helper');
+  assert.match(
+    guideQaRouteSrc,
+    /queryActivityIds\s*=\s*\[\s*\.\.\.activityIds,\s*guideContactActivityId\s*\]/,
+    '查詢 id 清單應含 sentinel',
+  );
+  assert.ok(
+    !/if \(activityIds\.length === 0\) \{\s*return Response\.json\(ok\(\{ data: \[\] \}\)\);\s*\}\s*\n\s*\/\/ Fetch Q&A/.test(guideQaRouteSrc),
+    'activityIds 為空時不應提早 return（否則收不到導遊頁訊息）',
+  );
+});
+
+test('/api/guide/qa/[id] 以 sentinel 內嵌 guideId 判定擁有權', () => {
+  assert.match(guideQaIdRouteSrc, /parseGuideContactGuideId/, '應用 helper 解析 sentinel guideId');
+  assert.match(
+    guideQaIdRouteSrc,
+    /contactGuideId !== session\.guideId/,
+    '導遊頁訊息應比對 session.guideId 判定擁有權',
+  );
+});
+
+test('導遊後台對 sentinel 顯示「導遊頁面」而非行程 ID', () => {
+  assert.match(dashboardSrc, /isGuideContactActivityId/, '應用 helper 辨識 sentinel');
+  assert.match(dashboardSrc, /導遊頁面/, 'sentinel 應顯示「導遊頁面」');
+});
+
+test('行程詳情頁「詢問導遊」仍是錨定 #section-qa 的連結（不退化）', () => {
   assert.match(
     activityPageSrc,
     /<a[^>]*href="#section-qa"[\s\S]*?詢問導遊/,
-    '應改為 <a href="#section-qa"> 的錨點連結',
+    '行程詳情頁應維持 <a href="#section-qa"> 錨點連結',
   );
 });
