@@ -61,6 +61,31 @@ test('telegram webhook: user blocking the bot (my_chat_member kicked) blocks the
   assert.equal(await getTelegramChatForGuide('guide-tg-4'), null);
 });
 
+test('telegram webhook: successful bind sends the ack even with TELEGRAM_NOTIFY_ENABLED off', async () => {
+  __resetTelegramForTest();
+  const savedToken = process.env.TELEGRAM_BOT_TOKEN;
+  const savedNotify = process.env.TELEGRAM_NOTIFY_ENABLED;
+  const savedFetch = global.fetch;
+  const calls = [];
+  process.env.TELEGRAM_BOT_TOKEN = 'BOTTOKEN';
+  delete process.env.TELEGRAM_NOTIFY_ENABLED; // order-notify kill-switch OFF
+  global.fetch = async (url, init) => { calls.push({ url: String(url), init }); return { ok: true, status: 200, json: async () => ({ ok: true }) }; };
+  try {
+    const { code } = await createTelegramBindCode({ role: 'guide', subjectId: 'guide-tg-ack' });
+    await processTelegramUpdate(update({ update_id: 30, message: { text: `/start ${code}`, chat: { id: 6030 } } }), SECRET);
+    assert.equal(String(await getTelegramChatForGuide('guide-tg-ack')), '6030');
+    const ack = calls.find((c) => c.url.includes('/sendMessage'));
+    assert.ok(ack, 'expected the binding ack to be delivered despite the kill-switch');
+    const body = JSON.parse(ack.init.body);
+    assert.equal(body.chat_id, '6030');
+    assert.match(body.text, /綁定成功/);
+  } finally {
+    global.fetch = savedFetch;
+    if (savedToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN; else process.env.TELEGRAM_BOT_TOKEN = savedToken;
+    if (savedNotify === undefined) delete process.env.TELEGRAM_NOTIFY_ENABLED; else process.env.TELEGRAM_NOTIFY_ENABLED = savedNotify;
+  }
+});
+
 test('telegram webhook: a plain message is not a binding', async () => {
   __resetTelegramForTest();
   await createTelegramBindCode({ role: 'guide', subjectId: 'guide-tg-5' });
