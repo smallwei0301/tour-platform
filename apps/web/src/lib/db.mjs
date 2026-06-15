@@ -40,6 +40,7 @@ import {
   HOMEPAGE_FEATURED_TABLE_MISSING_MESSAGE,
 } from './homepage-featured-error.mjs';
 import { sanitizeEditorPickCopy, sanitizeMoreFeaturedCopy } from './homepage-featured-copy.mjs';
+import { isMissingTableError } from './missing-table-error.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -5727,7 +5728,7 @@ export async function markTelegramUpdateDb(updateId) {
 
 const NOTIFICATION_SETTINGS_SINGLETON_ID = 'singleton';
 
-/** Read the sparse override map; returns {} when unset / no DB. */
+/** Read the sparse override map; returns {} when unset / no DB / table absent. */
 export async function getNotificationOverridesDb() {
   if (!hasSupabaseEnv()) return {};
   const supabase = await getSupabase();
@@ -5736,7 +5737,12 @@ export async function getNotificationOverridesDb() {
     .select('overrides')
     .eq('id', NOTIFICATION_SETTINGS_SINGLETON_ID)
     .maybeSingle();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Fail-open before the migration is applied: a missing table = no overrides
+    // = matrix defaults all-on (the documented pre-migration behaviour).
+    if (isMissingTableError(error)) return {};
+    throw new Error(error.message);
+  }
   const overrides = data?.overrides;
   return overrides && typeof overrides === 'object' ? overrides : {};
 }
@@ -5761,6 +5767,13 @@ export async function setNotificationCellsDb(cells = [], { actor = 'admin' } = {
       },
       { onConflict: 'id' },
     );
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Unlike reads, writes can't fail-open — the toggle can't persist without
+    // the table. Surface an actionable, taggable error for the API to map.
+    if (isMissingTableError(error)) {
+      throw new Error('notification_settings_migration_missing: notification_event_settings 表尚未建立，請先套用 migration（見 docs/operations/line-telegram-prod-migrations.md）');
+    }
+    throw new Error(error.message);
+  }
   return next;
 }
