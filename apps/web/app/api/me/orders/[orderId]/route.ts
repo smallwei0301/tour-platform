@@ -5,6 +5,10 @@ import { sendOrderCancellation } from '../../../../../src/lib/email';
 import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
+import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
+import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify.mjs';
 
 export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -71,6 +75,49 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           }
         });
         notifyOrderCancelled(notifyData).catch(() => {});
+        // 旅客取消推播（未綁定/未開旗標時自動 skip）
+        void pushTravelerOrderEvent({
+          kind: 'order_cancelled',
+          orderId,
+          activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate,
+          peopleCount: notifyData.peopleCount,
+          totalTwd: notifyData.totalTwd,
+          userId: user.id,
+          contactEmail: user.email,
+        }).catch(() => {});
+        // 導遊推播：通知負責該團的導遊（未綁定 / 未開旗標自動 skip）
+        void pushGuideOrderEvent({
+          kind: 'guide_order_cancelled',
+          orderId,
+          experienceId: orderBefore.experienceId,
+          activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate,
+          peopleCount: notifyData.peopleCount,
+          totalTwd: notifyData.totalTwd,
+        }).catch(() => {});
+
+        // 導遊 + 管理員事件 Email
+        void dispatchOrderEventEmails({
+          orderId,
+          kind: 'order_cancelled',
+          activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate,
+          peopleCount: notifyData.peopleCount,
+          totalTwd: notifyData.totalTwd,
+        }).catch(() => {});
+        // 管理員 + 導遊 + 旅客 Telegram 事件通知
+        void dispatchOrderEventTelegram({
+          orderId,
+          kind: 'order_cancelled',
+          activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate,
+          peopleCount: notifyData.peopleCount,
+          totalTwd: notifyData.totalTwd,
+          experienceId: orderBefore.experienceId,
+          userId: user.id,
+          contactEmail: user.email,
+        }).catch(() => {});
       }
 
       return Response.json(ok(result));

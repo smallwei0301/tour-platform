@@ -4,6 +4,10 @@ import { sendOrderConfirmation } from '../../../src/lib/email';
 import type { OrderEmailData } from '../../../src/lib/email';
 import type { OrderNotifyData } from '../../../src/lib/line-notify';
 import { notifyNewOrder } from '../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../src/lib/line-guide-push.mjs';
+import { dispatchOrderEventEmails } from '../../../src/lib/order-email-notify';
+import { dispatchOrderEventTelegram } from '../../../src/lib/order-telegram-notify.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 import { createClient } from '../../../src/lib/supabase/server';
 
@@ -102,8 +106,55 @@ export async function POST(request: Request) {
       });
     }
 
-    // LINE Notify 通知管理員/導遊
+    // LINE 通知管理員/導遊（ops push）
     notifyNewOrder(notifyData).catch(() => {});
+
+    // 旅客預約確認推播：凡綁定 LINE 者都推（any bound traveler，不限 source_channel；
+    // 未綁定 → no_line_binding、未開 LINE_PUSH_ENABLED → push_disabled，皆自動 skip）
+    void pushTravelerOrderEvent({
+      kind: 'booking_confirmed',
+      orderId: order.id,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      userId: userId ?? undefined,
+      contactEmail: order.contactEmail ?? undefined,
+    }).catch(() => {});
+
+    // 導遊推播：通知負責該團的導遊（未綁定 / 未開 LINE_GUIDE_PUSH_ENABLED 自動 skip）
+    void pushGuideOrderEvent({
+      kind: 'guide_new_order',
+      orderId: order.id,
+      experienceId: order.experienceId,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+    }).catch(() => {});
+
+    // 導遊 + 管理員事件 Email（導遊無 email 自動 skip）
+    void dispatchOrderEventEmails({
+      orderId: order.id,
+      kind: 'new_order',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+    }).catch(() => {});
+
+    // 管理員 Telegram 事件通知（未設定/未開 TELEGRAM_NOTIFY_ENABLED 自動 skip）
+    void dispatchOrderEventTelegram({
+      orderId: order.id,
+      kind: 'new_order',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      experienceId: order.experienceId,
+      userId: userId ?? undefined,
+      contactEmail: order.contactEmail ?? undefined,
+    }).catch(() => {});
 
     return Response.json(ok(order));
   } catch (err) {

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 
 export default function MeProfilePage() {
   const router = useRouter();
@@ -122,6 +123,17 @@ export default function MeProfilePage() {
         <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>
           交易類通知（訂單成立、付款、退款進度）為服務必要通知，不受此開關影響。
         </p>
+
+        <div style={{ marginBottom: 16 }} data-testid="me-notification-binding">
+          <label style={{ ...labelStyle, marginBottom: 6 }}>Telegram 訂單通知（可選）</label>
+          <NotificationBindingButton
+            endpoint="/api/me/telegram-binding"
+            channel="telegram"
+            title="Telegram 通知"
+            description="綁定後，訂單成立／付款／取消／退款也會傳到你的 Telegram。"
+            accent="#229ED9"
+          />
+        </div>
         {err && <p style={{ color: 'crimson', fontSize: 13, marginBottom: 12 }}>{err}</p>}
         {saved && <p data-testid="profile-saved" style={{ color: '#16a34a', fontSize: 13, marginBottom: 12 }}>已儲存 ✓</p>}
         <button
