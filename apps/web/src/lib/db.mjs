@@ -3178,6 +3178,34 @@ export async function getActivityBySlugDb(slug, options = {}) {
   return mapActivityDetailRow(act, schedules, reviews, guideProfile, formalPlans);
 }
 
+/**
+ * 輕量查詢：只取某行程的相片集（image_urls）欄位，供首頁編輯精選大卡輪播用。
+ * 首頁原本呼叫 getActivityBySlugDb（連帶撈 guide_profiles／schedules／reviews／plans，
+ * 約 4 個序列 round-trip）只為了拿相片集——那是首頁渲染 critical path 的主要延遲來源。
+ * 評分（reviews/ratingAvg/quotes）改由 catalog（listPublishedActivitiesDb）直接取得，
+ * 相片集則用本函式單一查詢，渲染從 ~6-7 個序列查詢降到 catalog + 1。
+ * @param {string} slug
+ * @returns {Promise<string[]>} 相片集 URL 陣列（查無/未發布 → 空陣列）
+ */
+export async function getActivityGalleryBySlugDb(slug) {
+  const s = String(slug || '').trim();
+  if (!s) return [];
+  if (!hasSupabaseEnv()) {
+    const { activities } = await import('../fixtures/data').catch(() => ({ activities: [] }));
+    const a = (activities || []).find((x) => x.slug === s);
+    return a && Array.isArray(a.galleryUrls) ? a.galleryUrls : [];
+  }
+
+  const supabase = await getSupabase();
+  const { data } = await supabase
+    .from('activities')
+    .select('image_urls')
+    .eq('slug', s)
+    .eq('status', 'published')
+    .maybeSingle();
+  return data && Array.isArray(data.image_urls) ? data.image_urls : [];
+}
+
 export async function listPublishedGuidesDb() {
   if (!hasSupabaseEnv()) {
     const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
