@@ -923,6 +923,7 @@ export async function listAdminOrdersDb(input = {}) {
       costTwd,
       marginTwd: r.total_twd - costTwd,
       title: activityMap.get(r.activity_id)?.title || null,
+      experienceId: r.activity_id || null,
       experienceSlug: activityMap.get(r.activity_id)?.slug || null,
       peopleCount: r.people_count,
       scheduleId: r.schedule_id,
