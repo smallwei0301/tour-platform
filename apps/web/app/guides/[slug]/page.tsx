@@ -7,6 +7,7 @@ import { buildActivityHref } from '../../../src/lib/activity-url';
 import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../src/components/shared/ActivityHero';
 import { GalleryImage } from '../../../src/components/shared/GalleryImage';
+import { GuideContactQASection } from '../../../src/components/guide/GuideContactQASection';
 
 // On-demand revalidation（非定時 ISR）：導遊在後台儲存後，
 // /api/guide/profile 會 revalidatePath(`/guides/<slug>`) 精準失效本頁，
@@ -47,6 +48,10 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
   const guideActivities = guide.activities || [];
   const guideReviews = guide.reviews || [];
 
+  // 「詢問導遊」＝認識導遊頁的 inline 訊息（GuideContactQASection）。按下後先判斷
+  // 旅客是否登入，已登入即就地展開輸入框送訊息給導遊。訊息不綁定任何行程，重用
+  // activity_qa pipeline（activity_id 帶 sentinel `guide:<guideId>`），流進導遊
+  // 後台同一個收件匣，後台卡片以「導遊頁面」標示來源。
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const guideJsonLd = {
     '@context': 'https://schema.org',
@@ -211,7 +216,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
             </div>
             <p style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>{guide.displayName}</p>
             <p style={{ color: 'var(--tp-muted)' }}>⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則）</p>
-            <button className="tp-btn tp-btn-primary" style={{ width: '100%', marginTop: 12 }}>傳訊息給導遊</button>
+            <GuideContactQASection guideId={guide.id} guideName={guide.displayName} />
             <Link className="tp-btn tp-btn-ghost" href="/activities" style={{ width: '100%', display: 'block', marginTop: 8 }}>查看行程</Link>
           </div>
         </aside>

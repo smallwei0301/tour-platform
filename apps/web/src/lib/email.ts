@@ -526,3 +526,40 @@ export async function sendOrderMessageNotice(data: OrderMessageNoticeData): Prom
   `);
   return sendEmailWithContract({ fn: 'sendOrderMessageNotice', to: data.to, subject, html, orderId: data.orderId });
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 旅客提問通知導遊（行程旅客問答 + 認識導遊頁訊息共用，交易類）
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface GuideQuestionNoticeData {
+  /** 導遊 email */
+  to: string;
+  /** 導遊稱呼 */
+  guideName: string;
+  /** 提問來源：行程名稱，或「導遊頁面」 */
+  sourceLabel: string;
+  /** 旅客提問內容（使用者輸入，模板會做 HTML escape） */
+  question: string;
+}
+
+/** 旅客送出提問／訊息 → 通知導遊到後台回覆（無導遊 email 時靜默略過）。 */
+export async function sendGuideQuestionNotice(data: GuideQuestionNoticeData): Promise<EmailDeliveryResult> {
+  const subject = `有旅客向您提問 — ${data.sourceLabel}`;
+  const preview = escapeHtmlText(String(data.question || '').slice(0, 200));
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app';
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">您有一則新提問 💬</h1>
+    <p style="font-size:14px;color:#6b7280;margin:0 0 4px;">嗨 ${escapeHtmlText(data.guideName || '導遊')}，</p>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      有旅客在「${escapeHtmlText(data.sourceLabel)}」向您提問：
+    </p>
+    <blockquote style="font-size:14px;color:#374151;margin:0 0 16px;padding:10px 14px;border-left:3px solid #7c3aed;background:#f5f3ff;border-radius:0 8px 8px 0;">
+      ${preview}
+    </blockquote>
+    <p style="font-size:14px;margin:0 0 16px;">
+      <a href="${baseUrl}/guide/dashboard" style="color:#7c3aed;font-weight:700;">前往後台回覆 →</a>
+    </p>
+    <p style="font-size:13px;color:#6b7280;margin:0;">回答並發布後，旅客即可在頁面上看到您的回覆。</p>
+  `);
+  return sendEmailWithContract({ fn: 'sendGuideQuestionNotice', to: data.to, subject, html });
+}

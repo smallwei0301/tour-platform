@@ -645,9 +645,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                   立即預約
                 </Link>
               )}
-              <button className="tp-btn tp-btn-ghost" style={{ width: '100%', marginTop: 8 }}>
+              <a href="#section-qa" className="tp-btn tp-btn-ghost" style={{ width: '100%', display: 'block', textAlign: 'center', marginTop: 8 }}>
                 ✉️ 詢問導遊
-              </button>
+              </a>
 
               <div className="kkd-booking-trust">
                 <p>🔒 安全付款（ECPay 信用卡）</p>

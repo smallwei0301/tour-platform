@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { isGuideContactActivityId } from '../../../src/lib/guide-contact-qa.mjs';
 import { ResponsiveTable, ResponsiveModal, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 
 type QAEntry = {
@@ -472,7 +473,18 @@ export default function GuideDashboardPage() {
                 borderRadius: 10,
               }}>
                 <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>
-                  行程 ID：<span style={{ fontFamily: 'monospace', fontSize: 12 }}>{q.activity_id}</span>
+                  {isGuideContactActivityId(q.activity_id) ? (
+                    <span style={{
+                      background: 'rgba(124, 58, 237, 0.1)',
+                      color: '#7c3aed',
+                      fontSize: 12,
+                      fontWeight: 600,
+                      padding: '2px 8px',
+                      borderRadius: 6,
+                    }}>👤 導遊頁面</span>
+                  ) : (
+                    <>行程 ID：<span style={{ fontFamily: 'monospace', fontSize: 12 }}>{q.activity_id}</span></>
+                  )}
                   <span style={{ marginLeft: 12, color: '#9ca3af', fontSize: 11 }}>
                     {new Date(q.created_at).toLocaleDateString('zh-TW')}
                   </span>

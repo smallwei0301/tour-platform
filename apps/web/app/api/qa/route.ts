@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../src/lib/api';
+import { notifyGuideOfQuestion } from '../../../src/lib/guide-question-notify';
 import { createClient } from '@supabase/supabase-js';
 
 function getAnonClient() {
@@ -112,6 +113,13 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json(fail('DB_ERROR', error.message), { status: 500 });
   }
+
+  // 旅客送出提問 → best-effort 通知導遊到後台回覆（行程問答 + 導遊頁訊息共用）。
+  // notifyGuideOfQuestion 永不 throw（自帶 service-role client 解析導遊 email）。
+  await notifyGuideOfQuestion({
+    activityId: activityIdStr,
+    question: questionStr,
+  });
 
   return NextResponse.json(ok(qa), { status: 201 });
 }
