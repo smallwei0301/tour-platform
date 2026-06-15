@@ -16,6 +16,7 @@ import { ActivityBottomBar } from '../../../../src/components/activity/ActivityB
 import { SelectedPlanProvider } from '../../../../src/components/activity/SelectedPlanContext';
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
+import { ReviewPhotos } from '../../../../src/components/activity/ReviewPhotos';
 import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
 import { resolveDatePlanPresentation } from '../../../../src/lib/date-plan-source.mjs';
@@ -437,14 +438,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     {r.rating && <StarRating value={r.rating} />}
                     <p className="kkd-review-text">{r.text}</p>
                     {Array.isArray(r.photos) && r.photos.length > 0 && (
-                      <div className="kkd-review-photos" data-testid="review-photos">
-                        {r.photos.map((src: string, pi: number) => (
-                          <a key={pi} href={src} target="_blank" rel="noopener noreferrer" className="kkd-review-photo">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={src} alt={`${r.author} 的評價照片 ${pi + 1}`} loading="lazy" />
-                          </a>
-                        ))}
-                      </div>
+                      <ReviewPhotos photos={r.photos} authorLabel={r.author} />
                     )}
                   </div>
                 ))}
@@ -456,14 +450,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     <StarRating value={q.rating} />
                     <p className="kkd-review-text">{q.text}</p>
                     {Array.isArray(q.photos) && q.photos.length > 0 && (
-                      <div className="kkd-review-photos" data-testid="review-photos">
-                        {q.photos.map((src: string, pi: number) => (
-                          <a key={pi} href={src} target="_blank" rel="noopener noreferrer" className="kkd-review-photo">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={src} alt={`${resolveSocialProofAuthor(q.author)} 的評價照片 ${pi + 1}`} loading="lazy" />
-                          </a>
-                        ))}
-                      </div>
+                      <ReviewPhotos photos={q.photos} authorLabel={resolveSocialProofAuthor(q.author)} />
                     )}
                   </div>
                 ))}

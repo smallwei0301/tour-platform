@@ -1684,6 +1684,11 @@ img { max-width: 100%; height: auto; }
   scroll-snap-align: start;
   display: block;
   line-height: 0;
+  /* 由 <a> 改為 <button>（點擊彈 in-page 燈箱）：清掉按鈕預設樣式。 */
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
 }
 .kkd-review-photo img {
   width: 120px;
@@ -1691,9 +1696,98 @@ img { max-width: 100%; height: auto; }
   object-fit: cover;
   border-radius: 8px;
   border: 1px solid var(--tp-border);
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
+.kkd-review-photo:hover img,
+.kkd-review-photo:focus-visible img { opacity: 0.88; transform: scale(1.02); }
+.kkd-review-photo:focus-visible { outline: 2px solid var(--tp-brass, #b08d3e); outline-offset: 2px; border-radius: 8px; }
 @media (max-width: 480px) {
   .kkd-review-photo img { width: 104px; height: 104px; }
+}
+
+/* 評價照片燈箱（in-page 放大檢視，不另開分頁；響應式 contain，手機到桌機皆不溢出） */
+.kkd-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: env(safe-area-inset-top, 0) 12px env(safe-area-inset-bottom, 0);
+  background: rgba(10, 12, 14, 0.86);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  animation: kkd-lightbox-in 0.14s ease-out;
+}
+@keyframes kkd-lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+.kkd-lightbox-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 92vw;
+  max-height: 86vh;
+}
+.kkd-lightbox-figure img {
+  max-width: 92vw;
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.kkd-lightbox-counter {
+  color: rgba(238, 230, 205, 0.92);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.kkd-lightbox-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kkd-lightbox-close:hover { background: rgba(255, 255, 255, 0.26); }
+.kkd-lightbox-nav {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kkd-lightbox-nav:hover { background: rgba(255, 255, 255, 0.26); }
+@media (max-width: 480px) {
+  .kkd-lightbox-nav {
+    position: absolute;
+    bottom: max(18px, env(safe-area-inset-bottom, 0));
+    width: 48px;
+    height: 48px;
+  }
+  .kkd-lightbox-prev { left: 18px; }
+  .kkd-lightbox-next { right: 18px; }
+  .kkd-lightbox-figure img { max-height: 74vh; }
 }
 
 /* Detail blocks */
