@@ -5,7 +5,8 @@ export const metadata: Metadata = {
 };
 
 export default function MeLayout({ children }: { children: React.ReactNode }) {
-  // 交易／會員頁 inline 深灰文字設計，深色 LP 主題下以古紙淺色面板呈現
-  // （.tp-light-page 同時把 --tp-* 變數覆寫回淺色值）
-  return <div className="tp-light-page">{children}</div>;
+  // 會員中心列表頁（我的訂單／我的最愛）改為與主站一致的深綠主題（全站預設）。
+  // 訂單詳情頁與個人資料頁仍以「古紙淺色面板」承載交易資訊（各自包 .tp-light-page），
+  // 故此 layout 不再強制 light，改為透傳。
+  return <>{children}</>;
 }
