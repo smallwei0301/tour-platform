@@ -11,6 +11,8 @@ import {
   upsertLineMapping,
   setLineBlocked,
   markWebhookEventProcessed,
+  parseTravelerLineBindCode,
+  redeemTravelerLineBindCode,
 } from './line-binding.mjs';
 import {
   parseGuideBindCode,
@@ -29,6 +31,20 @@ async function tryGuideBinding(ev, lineUserId) {
   const text = result.ok
     ? '✅ 已完成 LINE 通知綁定，之後您負責的訂單通知會傳到這裡。'
     : '⚠️ 綁定碼無效或已過期，請回後台重新產生綁定連結。';
+  await replyMessage(ev?.replyToken, { type: 'text', text }).catch(() => {});
+  return true;
+}
+
+// Try to redeem a traveler TBIND code. Returns true when the message was a
+// traveler binding code (handled here → skip the bare upsert).
+async function tryTravelerBinding(ev, lineUserId) {
+  if (ev?.message?.type !== 'text') return false;
+  const code = parseTravelerLineBindCode(ev.message.text);
+  if (!code) return false;
+  const result = await redeemTravelerLineBindCode(code, { lineUserId });
+  const text = result.ok
+    ? '✅ 已完成 LINE 通知綁定，之後您的訂單成立／付款／取消／退款通知會傳到這裡。'
+    : '⚠️ 綁定碼無效或已過期，請回「我的帳號」重新產生綁定連結。';
   await replyMessage(ev?.replyToken, { type: 'text', text }).catch(() => {});
   return true;
 }
@@ -58,9 +74,11 @@ async function handleEvent(ev) {
       break;
     case 'message':
     case 'postback': {
-      // A guide binding code takes precedence; otherwise register as traveler.
-      const bound = await tryGuideBinding(ev, lineUserId);
-      if (!bound) await upsertLineMapping({ lineUserId });
+      // Binding codes take precedence: guide code first, then traveler code;
+      // otherwise register the bare lineUserId (LIFF/idToken can enrich later).
+      if (await tryGuideBinding(ev, lineUserId)) break;
+      if (await tryTravelerBinding(ev, lineUserId)) break;
+      await upsertLineMapping({ lineUserId });
       break;
     }
     default:

@@ -162,6 +162,10 @@ export const lineUserMappings = [];
 // Each entry: { webhookEventId, eventType, lineUserId, receivedAt }
 export const lineWebhookEvents = [];
 
+// One-time traveler LINE binding codes (in-memory fallback for line_bind_code).
+// Each entry: { code, userId, contactEmail, expiresAt, createdAt }
+export const lineBindCodes = [];
+
 // Guide ↔ LINE binding (in-memory fallback for guide_line_mapping).
 // Each entry: { guideId, lineUserId, displayName, isBlocked, boundAt, updatedAt }
 export const guideLineMappings = [];

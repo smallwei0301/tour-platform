@@ -5432,6 +5432,38 @@ export async function getLineUserIdForOrderDb(order) {
   return null;
 }
 
+/** Mint a one-time traveler LINE bind code (clears the traveler's prior codes). */
+export async function createLineBindCodeDb({ code, userId, contactEmail, expiresAt } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  if (userId) await supabase.from('line_bind_code').delete().eq('user_id', userId);
+  if (contactEmail) await supabase.from('line_bind_code').delete().eq('contact_email', contactEmail);
+  const { error } = await supabase
+    .from('line_bind_code')
+    .insert({ code, user_id: userId ?? null, contact_email: contactEmail ?? null, expires_at: expiresAt });
+  if (error) throw new Error(error.message);
+  return { code, userId: userId ?? null, contactEmail: contactEmail ?? null, expiresAt };
+}
+
+/**
+ * Atomically consume a traveler bind code: returns { userId, contactEmail, expired }
+ * or null when the code does not exist. The row is always deleted (single-use).
+ */
+export async function consumeLineBindCodeDb(code) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('line_bind_code')
+    .delete()
+    .eq('code', code)
+    .select('user_id, contact_email, expires_at')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const expired = new Date(data.expires_at).getTime() <= Date.now();
+  return { userId: data.user_id ?? null, contactEmail: data.contact_email ?? null, expired };
+}
+
 // ---------------------------------------------------------------------------
 // Guide ↔ LINE binding (guide_line_mapping + guide_line_bind_code) — Supabase.
 // In-memory fallback lives in guide-line-binding.mjs. Used for per-guide push.
