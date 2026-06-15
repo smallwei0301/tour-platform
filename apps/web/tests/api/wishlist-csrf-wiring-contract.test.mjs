@@ -193,8 +193,9 @@ describe('AC4: Wiring locations fetch /api/me/wishlist/ids', () => {
 describe('AC5: WishlistToggle redirects to /login when not logged in', () => {
   it('calls router.push("/login") or redirect("/login") when user is not logged in', () => {
     const src = readFile('src/components/WishlistToggle.tsx');
-    const hasLoginRedirect = /router\.push\(['"]\/login['"]\)/.test(src)
-      || /redirect\(['"]\/login['"]\)/.test(src);
+    // 允許帶 ?next= 回導參數的登入導向（template literal 或字串皆可）。
+    const hasLoginRedirect = /router\.push\(\s*[`'"]\/login/.test(src)
+      || /redirect\(\s*[`'"]\/login/.test(src);
     assert.ok(hasLoginRedirect, 'WishlistToggle must redirect to /login for unauthenticated users');
   });
 

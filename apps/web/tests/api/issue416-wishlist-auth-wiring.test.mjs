@@ -80,8 +80,8 @@ test('AC5: WishlistToggle still redirects unauthenticated users to /login', () =
   );
   assert.match(
     wishlistToggleSrc,
-    /router\.push\s*\(\s*['"]\/login['"]\s*\)/,
-    'WishlistToggle must still redirect to /login when not logged in'
+    /router\.push\s*\(\s*[`'"]\/login/,
+    'WishlistToggle must still redirect to /login when not logged in (with optional ?next= return param)'
   );
 });
 

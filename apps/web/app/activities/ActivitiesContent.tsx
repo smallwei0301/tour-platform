@@ -7,6 +7,7 @@ import { buildActivityHref } from '../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
 import { ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../src/lib/activity-themes.mjs';
 import { resolveActivityReviewStats } from '../../src/lib/activity-review-stats.mjs';
+import { useTravelerAuth } from '../../src/lib/use-traveler-auth';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
 import { resolveCoverSrc, CARD_IMAGE_SIZES } from './cover-image';
@@ -75,7 +76,10 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const [activities, setActivities] = useState<Activity[]>(initialActivities ?? []);
   const [loading, setLoading] = useState(initialActivities === undefined);
   const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // 登入判斷以 supabase.auth.getUser() 為準（取代 cookie sniff，後者對 httpOnly／
+  // 分段 cookie 會誤判未登入，導致收藏愛心一律跳登入頁）。
+  const { authed } = useTravelerAuth();
+  const isLoggedIn = authed === true;
 
   // Issue #1345 — when SSR already hydrated the card list via
   // `initialActivities`, the first run of the fetch effect below would
@@ -140,28 +144,17 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
       .finally(() => setLoading(false));
   }, [query, dateFilter, priceMin, priceMax]);
 
-  // Fetch wishlisted activity IDs for hydration.
-  //
-  // Issue #1249 — short-circuit anonymous visitors so we don't pay the
-  // ~500–800ms supabase.auth.getUser() round-trip just to confirm there's
-  // no session. The wishlist API itself already returns `{ data: [] }`
-  // for logged-out users; this just avoids the request. The default
-  // empty `wishlistedIds` Set already renders the "unhearted" UI state
-  // correctly.
-  //
-  // This effect is intentionally non-blocking — `loading` is owned by
-  // the activities fetch effect above, so wishlist hydration can never
-  // delay the first useful render of the cards.
+  // Fetch wishlisted activity IDs for hydration once we know the visitor is
+  // logged in (authed === true). 登入判斷由 useTravelerAuth（getUser）提供，取代
+  // 先前 cookie sniff（對 httpOnly／分段 cookie 會誤判，連帶讓愛心點擊跳登入頁）。
+  // 非阻塞：`loading` 由上面的 activities fetch 擁有，收藏 hydration 不會延後首屏。
   useEffect(() => {
-    if (typeof document === 'undefined') return;
-    const hasSupabaseSession = /(^|;\s*)sb-[^=]+-auth-token=/.test(document.cookie);
-    if (!hasSupabaseSession) return;
-    setIsLoggedIn(true);
+    if (!authed) return;
     fetch('/api/me/wishlist/ids')
       .then(r => r.json())
       .then(({ data }) => setWishlistedIds(new Set(data ?? [])))
       .catch(() => {}); // Silently handle — user will see unhearted state
-  }, []);
+  }, [authed]);
 
   function updateUrl(q: string, regions: string[], types: string[]) {
     const params = new URLSearchParams();
