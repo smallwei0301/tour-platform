@@ -38,8 +38,10 @@ test('availability API response payload keeps only UI-required fields', async ()
 test('activity detail page keeps ISR shell and does not couple availability to page-level re-render', async () => {
   const src = await readSource('app/activities/[region]/[slug]/page.tsx');
 
-  // Issue #502: force-dynamic with revalidate=60 avoids render lock on cold path
-  assert.match(src, /export const dynamic = 'force-dynamic';/);
+  // Issue #502 後續：詳情頁從緊急 force-dynamic 改回 ISR（revalidate=60，由 CDN 供應，
+  // 導航 TTFB ~1-2s → ~50ms）。事故主因（關聯 embed）已移除、保留 8s timeout guard，
+  // 即時庫存仍由 client 端另抓。force-dynamic 不得再出現；ISR revalidate 必須保留。
+  assert.doesNotMatch(src, /export const dynamic = 'force-dynamic';/);
   assert.match(src, /export const revalidate = 60;/);
   assert.match(src, /DatePlanSection activity=\{activity\} schedules=\{displayedSchedules\} useBookingV2=\{useBookingV2\} \/>/);
 });

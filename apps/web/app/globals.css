@@ -415,6 +415,25 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
   background: linear-gradient(135deg, #243024, #1c261c);
 }
 
+/* 活動詳情頁 loading.tsx 骨架（見該檔註解）。深色漸層塊 + 輕微 pulse，
+   footprint 對齊真實版面（hero 16/9 + 標題/價格行）避免 streamed-in 位移。 */
+.kkd-skel {
+  background: linear-gradient(135deg, #243024, #1c261c);
+  border-radius: 8px;
+  animation: kkd-skel-pulse 1.4s ease-in-out infinite;
+}
+.kkd-skel-breadcrumb { height: 16px; width: 40%; margin: 14px 0; border-radius: 4px; }
+.kkd-skel-hero { width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; }
+.kkd-detail-skel-title { margin-top: 18px; }
+.kkd-skel-line { border-radius: 4px; margin: 10px 0; }
+@keyframes kkd-skel-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kkd-skel { animation: none; }
+}
+
 .tp-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
@@ -1614,7 +1633,9 @@ img { max-width: 100%; height: auto; }
 }
 .kkd-reviewer { font-size: 14px; }
 .kkd-review-date { color: var(--tp-muted); font-size: 12px; }
-.kkd-stars { color: #f5a623; margin-bottom: 6px; font-size: 14px; }
+.kkd-stars { margin-bottom: 6px; font-size: 14px; letter-spacing: 1px; }
+.kkd-stars-on { color: #f5a623; }
+.kkd-stars-off { color: rgba(238, 230, 205, 0.28); }
 .kkd-review-text {
   font-size: 14px;
   line-height: 1.75;
@@ -2239,7 +2260,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   /* 全寬鋪滿：標題文字直接落在洞穴照上（左半岩壁天然深色保字） */
   position: absolute; inset: 0;
   /* 遠景層：山谷空拍（使用者提供）— 靜止不動，透過前景洞口看見 */
-  background-image: url('/images/lp/hero-mountains.jpg');
+  background-image: url('/images/lp/hero-mountains.webp');
   background-size: cover; background-position: 60% 38%;
 }
 /* 前景層：去背洞穴（洞口為真 alpha 透明）。WAAPI 以洞口為原點推進拉遠。
@@ -2839,7 +2860,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .login-bg {
   position: absolute;
   inset: 0;
-  background-image: url(/images/lp/login-bg.jpg);
+  background-image: url(/images/lp/login-bg.webp);
   background-size: cover;
   background-position: center top;
   z-index: 0;

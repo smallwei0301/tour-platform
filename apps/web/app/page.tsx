@@ -126,7 +126,7 @@ export default async function HomePage() {
       <link
         rel="preload"
         as="image"
-        href="/images/lp/hero-mountains.jpg"
+        href="/images/lp/hero-mountains.webp"
         fetchPriority="high"
       />
       <script

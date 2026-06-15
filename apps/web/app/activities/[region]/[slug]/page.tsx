@@ -24,10 +24,24 @@ import { PublicPromoBanner } from '../../../../src/components/activity/PublicPro
 import { ActivityRecommendations } from '../../../../src/components/activity/ActivityRecommendations';
 import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
 
-// Issue #502: avoid force-static/unstable_cache render lock on production cold path.
-// Keep volatile availability on client intent fetch; detail page stays runtime-rendered.
-export const dynamic = 'force-dynamic';
+// Issue #502 背景：詳情頁曾因 force-static/unstable_cache + 關聯查詢在 cold path
+// render lock（hang/500），緊急以 force-dynamic + withTimeout 止血。事故主因已移除
+// （無關聯 embed、有 8s timeout、容錯 fallback），且即時庫存改由 client 端另抓，
+// 故改回 ISR（revalidate=60）：HTML 由 CDN 邊緣供應，導航 TTFB ~1-2s → ~50ms。
+// 內容平時最多 60s 更新；admin 編輯/刪除/上下架時以 revalidatePath 立即刷新
+// （見 app/api/admin/activities/[id]/route.ts 與 .../status/route.ts）。
 export const revalidate = 60;
+// Next 15 預設 fetch 不快取 → 會把整條路由判為 dynamic、revalidate 失效。
+// force-cache 讓 activity lookup 的 fetch 可被 ISR 快取（每 60s 或 on-demand 失效）。
+// 比 #502 出事的 force-static 溫和：只快取 fetch、不強制整頁 static-at-build。
+export const fetchCache = 'force-cache';
+// 動態 segment 沒有 generateStaticParams 時，Next 預設走 dynamic、不會 ISR 快取。
+// 回傳 []：build 階段「不預渲染任何頁」（避開 #502 build-time cold-path hang），
+// 但開啟「on-demand ISR」——首次請求才生成並快取，之後由 CDN 邊緣供應。
+export const dynamicParams = true;
+export function generateStaticParams() {
+  return [] as Array<{ region: string; slug: string }>;
+}
 
 const DEFAULT_ACTIVITY_LOOKUP_TIMEOUT_MS = 8_000;
 
@@ -37,6 +51,21 @@ function parseActivityLookupTimeout() {
 }
 
 const RENDER_ACTIVITY_TIMEOUT_MS = parseActivityLookupTimeout();
+
+const REVIEW_STAR_MAX = 5;
+
+// 旅客評價星等：固定顯示 5 顆星，達標的顯示品牌金色、未達標的顯示灰色，
+// 讓 4 星評價也能呈現「4 金 + 1 灰」而非只畫 4 顆。
+function StarRating({ value }: { value?: number | null }) {
+  const filled = Math.max(0, Math.min(REVIEW_STAR_MAX, Math.round(Number(value) || 0)));
+  const empty = REVIEW_STAR_MAX - filled;
+  return (
+    <div className="kkd-stars" role="img" aria-label={`${filled} 顆星，滿分 ${REVIEW_STAR_MAX} 顆`}>
+      {filled > 0 && <span className="kkd-stars-on">{'★'.repeat(filled)}</span>}
+      {empty > 0 && <span className="kkd-stars-off">{'★'.repeat(empty)}</span>}
+    </div>
+  );
+}
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutRef: ReturnType<typeof setTimeout> | null = null;
@@ -405,9 +434,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                       <strong className="kkd-reviewer">{r.author}（{r.city || 'TW'}）</strong>
                       <span className="kkd-review-date">{r.date || new Date().toLocaleDateString('zh-TW')}</span>
                     </div>
-                    {r.rating && (
-                      <div className="kkd-stars">{'★'.repeat(r.rating)}</div>
-                    )}
+                    {r.rating && <StarRating value={r.rating} />}
                     <p className="kkd-review-text">{r.text}</p>
                   </div>
                 ))}
@@ -416,7 +443,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     <div className="kkd-review-header">
                       <strong className="kkd-reviewer">{resolveSocialProofAuthor(q.author)}</strong>
                     </div>
-                    <div className="kkd-stars">{'★'.repeat(q.rating)}</div>
+                    <StarRating value={q.rating} />
                     <p className="kkd-review-text">{q.text}</p>
                   </div>
                 ))}
