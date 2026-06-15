@@ -2527,8 +2527,30 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-feat-photo .lp-feat-badge {
   position: absolute; top: 0; left: 12px;
   width: 34px; height: auto; inset: auto;
-  z-index: 1;
+  z-index: 2;
   filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+}
+/* 編輯精選輪播：行程頁內照片淡入淡出輪播（卡片本身為連結，圓點僅作視覺指示） */
+.lp-feat-carousel { position: absolute; inset: 0; overflow: hidden; }
+.lp-feat-carousel img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  opacity: 0; transition: opacity 900ms ease;
+}
+.lp-feat-carousel img.is-active { opacity: 1; }
+.lp-feat-dots {
+  position: absolute; left: 0; right: 0; bottom: 10px; z-index: 1;
+  display: flex; justify-content: center; gap: 6px;
+}
+.lp-feat-dots i {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: width 240ms ease, background 240ms ease;
+}
+.lp-feat-dots i.is-active { width: 16px; background: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-feat-carousel img { transition: none; }
 }
 .lp-feat-body { flex: 1; padding: 12px 15px 6px; min-width: 0; }
 .lp-feat-title {

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
 import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityBySlugDb } from '../src/lib/db.mjs';
-import { resolveHomepageFeaturedView } from '../src/lib/homepage-featured-copy.mjs';
+import { resolveHomepageFeaturedView, resolveEditorPickPhotos } from '../src/lib/homepage-featured-copy.mjs';
 import { resolveActivityReviewStats } from '../src/lib/activity-review-stats.mjs';
 import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../src/lib/homepage-featured.mjs';
 
@@ -112,6 +112,9 @@ export default async function HomePage() {
       const stats = resolveActivityReviewStats(full);
       editorPick.copy.ratingScore = stats.score.toFixed(1);
       editorPick.copy.ratingCount = stats.count;
+      // 編輯精選大卡照片改吃「行程頁內照片」（相片集），於首頁輪播呈現。
+      const photos = resolveEditorPickPhotos(full);
+      if (photos.length > 0) editorPick.copy.imageUrls = photos;
     }
   }
   return (
