@@ -1,23 +1,22 @@
-<!-- query_timestamp: 2026-06-15T01:01:56.837Z -->
+<!-- query_timestamp: 2026-06-15T08:08:35.037Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-15T01:01:56.837Z  
-**Commit SHA:** `9ecafaebedcb094106789d3d80ad95357b6a12bd`
+**Query timestamp:** 2026-06-15T08:08:35.037Z  
+**Commit SHA:** `e0f07d93dbf56cf07799293c70b5d0a1c9df745f`
 
 ---
 
-## Open PRs (4)
+## Open PRs (3)
 
 | # | Title | Branch |
 |---|-------|--------|
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
-| #920 | [feat(line): 接上 LINE Login/LIFF 綁定、webhook、Messaging API 旅客推播（全鏈路，flag 預設 OFF）](https://github.com/smallwei0301/tour-platform/pull/920) | `claude/line-integration-plan-a26p7` |
 
 ## Open Issues (21 total)
 
@@ -71,16 +70,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1436 | [feat(home): 編輯精選大卡照片改為輪播行程頁內相片集](https://github.com/smallwei0301/tour-platform/pull/1436) | 2026-06-15 |
-| #1435 | [修正手機版主題探索間距、調整分類並統一五大行程主題](https://github.com/smallwei0301/tour-platform/pull/1435) | 2026-06-15 |
-| #1434 | [fix(activity): 評價星等固定 5 顆（未達標灰色）+ 詳情頁載入/導航效能優化（ISR）](https://github.com/smallwei0301/tour-platform/pull/1434) | 2026-06-15 |
-| #1433 | [feat(guides): 認識導遊列表卡片重設計 + 篩選區塊預設收合](https://github.com/smallwei0301/tour-platform/pull/1433) | 2026-06-14 |
-| #1432 | [feat(reviews): 社群口碑語錄結構化（人名/星數/內容）+ 與真實評論前台整合 + 評論數自動對齊](https://github.com/smallwei0301/tour-platform/pull/1432) | 2026-06-14 |
-| #1431 | [fix(activity): 方案詳情 Modal 與相關按鈕改用品牌深色配色](https://github.com/smallwei0301/tour-platform/pull/1431) | 2026-06-14 |
-| #1430 | [feat(lp+activity): 精選卡實心星/評論數、暖場留言卡片、FAQ、方案 meta 排版、LCP 優化](https://github.com/smallwei0301/tour-platform/pull/1430) | 2026-06-14 |
-| #1429 | [fix(home): 導覽列透明改用 CSS :has 根治 ISR 實心底 + 精選卡星級 + 導遊新照](https://github.com/smallwei0301/tour-platform/pull/1429) | 2026-06-13 |
-| #1428 | [fix(home): 導覽列重新整理透明根因強化 + 嚮導卡手機/桌機字級重整](https://github.com/smallwei0301/tour-platform/pull/1428) | 2026-06-13 |
-| #1427 | [fix(home): 導覽列重新整理一律透明 + 嚮導卡信任徽章縮小讓中間文字更寬](https://github.com/smallwei0301/tour-platform/pull/1427) | 2026-06-13 |
+| #1448 | [feat(me): Navbar 單一「我的行程」入口 + 訂單詳情頁統一深綠主題](https://github.com/smallwei0301/tour-platform/pull/1448) | 2026-06-15 |
+| #1447 | [feat(activity): 評價照片改 in-page 燈箱檢視（不另開分頁）+ 響應式](https://github.com/smallwei0301/tour-platform/pull/1447) | 2026-06-15 |
+| #1446 | [feat(me): 我的訂單／我的最愛 UI 重做，與主站深綠主題一致](https://github.com/smallwei0301/tour-platform/pull/1446) | 2026-06-15 |
+| #1445 | [fix(isr): 補上評論審核與首頁精選 mutation 後的 ISR 失效（#1444 同類擴大檢查）](https://github.com/smallwei0301/tour-platform/pull/1445) | 2026-06-15 |
+| #1444 | [fix(activity): 修正後台改輪播照片／暖場評論照片後前台不更新（ISR revalidate 路徑對不上）](https://github.com/smallwei0301/tour-platform/pull/1444) | 2026-06-15 |
+| #1443 | [feat(nav): 旅客導覽列加「我的最愛」入口連到 /me/wishlist](https://github.com/smallwei0301/tour-platform/pull/1443) | 2026-06-15 |
+| #1442 | [fix(wishlist): 收藏愛心改以 getUser 判斷登入，修「點擊一律跳登入頁」](https://github.com/smallwei0301/tour-platform/pull/1442) | 2026-06-15 |
+| #1441 | [perf(guides): 導遊詳情頁 on-demand ISR + 並行化查詢 + 移除孤兒 API](https://github.com/smallwei0301/tour-platform/pull/1441) | 2026-06-15 |
+| #1440 | [fix(activity): 收藏愛心顯示修復 + 列表真實星數 + 旅客評價照片上傳](https://github.com/smallwei0301/tour-platform/pull/1440) | 2026-06-15 |
+| #1439 | [feat(guides): 認識導遊頁「詢問導遊」inline 訊息 + 旅客提問 email 通知導遊](https://github.com/smallwei0301/tour-platform/pull/1439) | 2026-06-15 |
 
 ---
 
