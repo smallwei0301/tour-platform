@@ -28,6 +28,7 @@ interface DayInfo {
   remaining: number;
   price?: number;
   hasSchedule?: boolean;
+  isPast?: boolean;
 }
 
 function toDateKey(rawStartAt: string): string | null {
@@ -72,7 +73,7 @@ function buildMonthDays(year: number, month: number, availMap: Map<string, { ava
     const isPast = dayDate < today;
     const info = availMap.get(dateKey);
     const available = !isPast && !!info?.available;
-    cells.push({ dateKey, day: d, available, remaining: info?.remaining ?? 0, price });
+    cells.push({ dateKey, day: d, available, remaining: info?.remaining ?? 0, price, hasSchedule: !!info, isPast });
   }
   return cells;
 }
@@ -204,7 +205,9 @@ function CalendarModal({
             const isSun = new Date(cell.dateKey).getDay() === 0;
             const isSat = new Date(cell.dateKey).getDay() === 6;
             const [y, m, d] = cell.dateKey.split('-');
-            const ariaLabel = `${y}年${Number(m)}月${Number(d)}日，${cell.available ? `可預約，剩餘 ${cell.remaining} 位` : (cell.remaining === 0 && cell.hasSchedule ? '已額滿' : '不可預約')}`;
+            // 未來的不可預約日期一律視為「額滿」；過去的日期維持「不可預約」。
+            const showFull = !cell.available && !cell.isPast;
+            const ariaLabel = `${y}年${Number(m)}月${Number(d)}日，${cell.available ? `可預約，剩餘 ${cell.remaining} 位` : (showFull ? '已額滿' : '不可預約')}`;
             return (
               <button
                 key={cell.dateKey}
@@ -225,7 +228,7 @@ function CalendarModal({
                     {(price / 1000).toFixed(1)}k
                   </span>
                 )}
-                {!cell.available && cell.remaining === 0 && cell.hasSchedule && (
+                {showFull && (
                   <span className="kkd-cal-day-full">額滿</span>
                 )}
               </button>
@@ -278,9 +281,9 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
       <div className="tp-date-picker-scroll">
         {pills.map((p) => {
           const isSelected = selectedDate === p.dateKey;
-          const isFull = p.hasSchedule && !p.available;
-          const noSchedule = !p.hasSchedule;
-          const disabled = isFull || noSchedule;
+          // 任何不可預約的日期（已額滿或無場次）對旅客一律呈現「額滿」，
+          // 不再用「—」區分無場次／額滿——兩者對旅客都是「此日不可預約」。
+          const disabled = !p.available;
           return (
             <button
               key={p.dateKey}
@@ -290,14 +293,13 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
                 'tp-date-pill',
                 isSelected ? 'selected' : '',
                 disabled ? 'disabled' : '',
-                isFull ? 'full' : '',
+                disabled ? 'full' : '',
               ].filter(Boolean).join(' ')}
-              title={isFull ? '此日期已額滿' : noSchedule ? '此日期無場次' : `剩餘 ${p.remaining} 位`}
+              title={disabled ? '此日期已額滿' : `剩餘 ${p.remaining} 位`}
             >
               <span className="tp-date-pill-month">{p.month}/{p.day}</span>
               <span className="tp-date-pill-week">週{p.weekDay}</span>
-              {isFull && <span className="tp-date-pill-full">額滿</span>}
-              {noSchedule && <span className="tp-date-pill-na">—</span>}
+              {disabled && <span className="tp-date-pill-full">額滿</span>}
             </button>
           );
         })}

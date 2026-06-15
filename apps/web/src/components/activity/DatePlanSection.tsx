@@ -195,13 +195,11 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         return;
       }
 
-      if (useBookingV2 && json?.data?.source === 'legacy_fallback') {
-        setAvailabilityNotice('目前可預約資料為 Legacy 備援（fallback）結果，可能延遲，建議稍後再試。');
-      } else if (useBookingV2 && json?.data?.source !== 'v2') {
-        setAvailabilityNotice('目前可預約資料來源非 V2 聚合結果，顯示可能延遲，請稍後重試。');
-      } else {
-        setAvailabilityNotice(null);
-      }
+      // 旅客前台不顯示資料來源的內部技術提示：即使資料來自 legacy 快照，那份資料仍是
+      // 有效且可預約的，對旅客提示來源差異只會造成誤解（owner 拍板 2026-06-15：對旅客隱藏）。
+      // 來源偵測仍保留在後端（availability route 的 source 欄位與 x-availability-source
+      // header）供維運觀測；前台只在「真的載入失敗」時才提示（見 catch / !res.ok 分支）。
+      setAvailabilityNotice(null);
 
       setPlanConfigState(null);
       setLiveSchedules(json.data.schedules as Schedule[]);

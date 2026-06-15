@@ -55,11 +55,18 @@ test('live availability refresh is only wired to high-intent actions', async () 
   assert.match(src, /className="tp-btn tp-btn-primary kkd-plan-select-btn"[\s\S]*?onClick=\{\(\) => \{\s*void ensureLiveAvailability\(\);/s);
 });
 
-test('V2 mode requests v2 availability source and exposes explicit fallback notice', async () => {
+test('V2 mode requests v2 availability source but hides internal source/fallback notice from travelers', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
+  // 仍以 v2=1 contract endpoint 取得 availability。
   assert.match(src, /availability\?v2=1/);
-  assert.match(src, /json\?\.data\?\.source !== 'v2'/);
+
+  // owner 拍板（2026-06-15）：旅客前台不再因「資料來源非 v2 / legacy_fallback」而顯示提示，
+  // legacy 快照是有效且可預約的資料；來源差異改由後端 source 欄位 + header 觀測。
+  assert.doesNotMatch(src, /json\?\.data\?\.source !== 'v2'/);
+  assert.doesNotMatch(src, /json\?\.data\?\.source === 'legacy_fallback'/);
+
+  // 「真的載入失敗」（!res.ok / fetch throw）時仍提示，這是有意義的錯誤態，須保留。
   assert.match(src, /目前無法即時載入 V2 可預約名額/);
 });
 

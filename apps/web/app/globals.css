@@ -1008,12 +1008,6 @@ img { max-width: 100%; height: auto; }
   line-height: 1;
 }
 .tp-date-pill.selected .tp-date-pill-full { color: #fbb; }
-.tp-date-pill-na {
-  font-size: 12px;
-  color: #bbb;
-  margin-top: 2px;
-  line-height: 1;
-}
 .tp-date-pill.disabled .tp-date-pill-month,
 .tp-date-pill.disabled .tp-date-pill-week {
   color: #999;
