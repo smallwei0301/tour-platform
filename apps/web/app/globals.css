@@ -1902,6 +1902,63 @@ details[open] .kkd-faq-q::before { content: '- '; }
   margin: 10px 0 0;
 }
 
+/* 旅客問答 Q&A — 沿用「常見問題」的深綠卡片＋黃銅配色與字級 */
+.kkd-qa-list { display: grid; gap: 8px; margin-bottom: 24px; }
+.kkd-qa-item {
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: var(--tp-card-bg);
+}
+.kkd-qa-q {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tp-text);
+  line-height: 1.6;
+}
+.kkd-qa-a {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.8;
+}
+.kkd-qa-q b, .kkd-qa-a b { color: var(--tp-gold-strong); font-weight: 700; }
+.kkd-qa-empty { color: var(--tp-muted); font-size: 14px; }
+.kkd-qa-form { display: flex; flex-direction: column; gap: 10px; }
+.kkd-qa-form-label { font-size: 13px; font-weight: 600; color: var(--tp-text); }
+.kkd-qa-textarea {
+  width: 100%;
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+  resize: vertical;
+  background: var(--tp-bg-soft);
+  color: var(--tp-text);
+  font-family: inherit;
+  line-height: 1.6;
+}
+.kkd-qa-textarea::placeholder { color: var(--tp-muted); }
+.kkd-qa-textarea:focus { outline: none; border-color: var(--tp-brass); }
+.kkd-qa-submit {
+  align-self: flex-start;
+  padding: 10px 22px;
+  background: #a8511f;
+  color: #f8efdc;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.kkd-qa-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.kkd-qa-success { font-size: 14px; color: var(--tp-gold-strong); font-weight: 600; }
+.kkd-qa-error { color: #e8927c; font-size: 13px; margin: 0; }
+.kkd-qa-login { font-size: 14px; color: var(--tp-muted); }
+.kkd-qa-login a { color: var(--tp-gold-strong); font-weight: 600; }
+
 /* Booking sidebar */
 .kkd-booking-side {
   position: sticky;

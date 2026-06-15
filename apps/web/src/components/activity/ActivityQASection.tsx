@@ -81,30 +81,19 @@ export function ActivityQASection({ activityId }: Props) {
 
       {/* Approved Q&A list */}
       {loadingQA ? (
-        <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>載入問答中…</p>
+        <p className="kkd-qa-empty">載入問答中…</p>
       ) : approvedQA.length === 0 ? (
-        <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>尚無問答，歡迎率先提問！</p>
+        <p className="kkd-qa-empty">尚無問答，歡迎率先提問！</p>
       ) : (
-        <div className="kkd-qa-list" style={{ marginBottom: 24 }}>
+        <div className="kkd-qa-list">
           {approvedQA.map(qa => (
-            <div
-              key={qa.id}
-              data-testid="qa-item"
-              className="kkd-qa-item"
-              style={{
-                background: '#f9fafb',
-                border: '1px solid #e5e7eb',
-                borderRadius: 10,
-                padding: '12px 16px',
-                marginBottom: 10,
-              }}
-            >
-              <p style={{ margin: '0 0 6px', fontSize: 14, color: '#111827' }}>
-                <strong>Q：</strong>{qa.question}
+            <div key={qa.id} data-testid="qa-item" className="kkd-qa-item">
+              <p className="kkd-qa-q">
+                <b>Q：</b>{qa.question}
               </p>
               {qa.answer && (
-                <p style={{ margin: 0, fontSize: 14, color: '#374151' }}>
-                  <strong>A：</strong>{qa.answer}
+                <p className="kkd-qa-a">
+                  <b>A：</b>{qa.answer}
                 </p>
               )}
             </div>
@@ -116,49 +105,31 @@ export function ActivityQASection({ activityId }: Props) {
       {!authChecked ? null : user ? (
         <div className="kkd-qa-form-wrap">
           {questionSubmitted ? (
-            <p style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>
+            <p className="kkd-qa-success">
               問題已送出，等候審核
             </p>
           ) : (
-            <form onSubmit={handleSubmitQuestion} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label htmlFor="qa-question-input" style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+            <form onSubmit={handleSubmitQuestion} className="kkd-qa-form">
+              <label htmlFor="qa-question-input" className="kkd-qa-form-label">
                 有疑問嗎？歡迎提問
               </label>
               <textarea
                 id="qa-question-input"
                 name="question"
+                className="kkd-qa-textarea"
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
                 placeholder="有疑問嗎？歡迎提問..."
                 rows={3}
                 required
-                style={{
-                  width: '100%',
-                  border: '1px solid #d1d5db',
-                  borderRadius: 8,
-                  padding: '8px 10px',
-                  fontSize: 13,
-                  boxSizing: 'border-box',
-                  resize: 'vertical',
-                }}
               />
               {submitError && (
-                <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>{submitError}</p>
+                <p className="kkd-qa-error">{submitError}</p>
               )}
               <button
                 type="submit"
+                className="kkd-qa-submit"
                 disabled={submitting}
-                style={{
-                  alignSelf: 'flex-start',
-                  padding: '10px 20px',
-                  background: '#a8511f',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 8,
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: submitting ? 'not-allowed' : 'pointer',
-                }}
               >
                 {submitting ? '送出中…' : '送出問題'}
               </button>
@@ -166,9 +137,9 @@ export function ActivityQASection({ activityId }: Props) {
           )}
         </div>
       ) : (
-        <p style={{ fontSize: 13, color: '#6b7280' }} data-testid="qa-login-prompt">
+        <p className="kkd-qa-login" data-testid="qa-login-prompt">
           {/* 請登入後才能提問 */}
-          請<a href="/login" style={{ color: '#a8511f', fontWeight: 600 }}>登入</a>後才能提問
+          請<a href="/login">登入</a>後才能提問
         </p>
       )}
     </section>
