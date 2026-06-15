@@ -34,6 +34,17 @@ test('/guides 與 /guides/[slug] 不再用定時 ISR（改 on-demand）', () => 
   assert.doesNotMatch(detail, /export const revalidate\s*=\s*\d/, '詳情頁不應再有定時 revalidate');
 });
 
+test('/guides/[slug] 詳情頁須真正進 on-demand ISR 快取（否則退回 dynamic、每次重 SSR 變慢）', () => {
+  // 動態 segment 沒有 generateStaticParams 時 Next 預設走 dynamic（線上實測
+  // x-vercel-cache: MISS、TTFB ~1.2-1.5s）。下列設定缺一就會悄悄退回 dynamic，
+  // 鎖住以防回歸：generateStaticParams()→[] 開啟 on-demand ISR、fetchCache 讓
+  // Supabase 查詢可被快取；仍維持「不宣告數字 revalidate」的純 on-demand 模型。
+  const detail = readFileSync(DETAIL_PAGE, 'utf8');
+  assert.match(detail, /generateStaticParams\s*\(/, '需 generateStaticParams()→[] 才會啟用 on-demand ISR 快取');
+  assert.match(detail, /fetchCache\s*=\s*['"]force-cache['"]/, '需 fetchCache=force-cache 讓查詢結果可被 ISR 快取');
+  assert.doesNotMatch(detail, /dynamic\s*=\s*['"]force-dynamic['"]/, 'force-dynamic 會關掉快取，不得出現');
+});
+
 test('導遊存檔／發佈時 on-demand 失效公開頁，旅客刷新即見最新資料', () => {
   const src = readFileSync(PROFILE_ROUTE, 'utf8');
   assert.match(src, /from\s+['"]next\/cache['"]/, '需 import next/cache');
