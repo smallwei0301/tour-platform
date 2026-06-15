@@ -73,6 +73,7 @@ export interface Review {
   rating: number;
   text: string;
   date: string;
+  photos?: string[];
 }
 
 // ============================================================
@@ -349,7 +350,7 @@ export const activities: Activity[] = [
 // ============================================================
 
 export const reviews: Review[] = [
-  { id: 'r1', activitySlug: 'kaohsiung-chaishan-cave-experience', guideSlug: 'andy-lee', author: '小美', city: '台北', rating: 5, text: '大人小人都開心😍 Andy 很有耐心，路線比想像中刺激但又很安全！', date: '2026-03-15' },
+  { id: 'r1', activitySlug: 'kaohsiung-chaishan-cave-experience', guideSlug: 'andy-lee', author: '小美', city: '台北', rating: 5, text: '大人小人都開心😍 Andy 很有耐心，路線比想像中刺激但又很安全！', date: '2026-03-15', photos: ['https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&q=70', 'https://images.unsplash.com/photo-1504858700536-882c978a3464?w=600&q=70'] },
   { id: 'r2', activitySlug: 'kaohsiung-chaishan-cave-experience', guideSlug: 'andy-lee', author: 'David K.', city: '香港', rating: 5, text: '奇幻的探洞之旅，完全不像在高雄市區旁邊！Andy 的德語解說也很棒。', date: '2026-03-08' },
   { id: 'r3', activitySlug: 'kaohsiung-chaishan-cave-experience', guideSlug: 'andy-lee', author: '阿翔', city: '台中', rating: 5, text: '謝謝 Andy 的導覽，會想再參加一次。帶小朋友去也很適合。', date: '2026-02-28' },
   { id: 'r4', activitySlug: 'kaohsiung-chaishan-cave-experience', guideSlug: 'andy-lee', author: '陳老師', city: '高雄', rating: 5, text: '帶學生去的戶外教學，孩子們超興奮，學到很多地質知識。', date: '2026-02-14' },

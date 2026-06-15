@@ -436,6 +436,16 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     </div>
                     {r.rating && <StarRating value={r.rating} />}
                     <p className="kkd-review-text">{r.text}</p>
+                    {Array.isArray(r.photos) && r.photos.length > 0 && (
+                      <div className="kkd-review-photos" data-testid="review-photos">
+                        {r.photos.map((src: string, pi: number) => (
+                          <a key={pi} href={src} target="_blank" rel="noopener noreferrer" className="kkd-review-photo">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt={`${r.author} 的評價照片 ${pi + 1}`} loading="lazy" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 {warmQuotes.map((q, i) => (

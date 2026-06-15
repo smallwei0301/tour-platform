@@ -34,15 +34,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(fail('INVALID_REQUEST', 'invalid JSON body'), { status: 400 });
   }
 
-  const { activityId, bookingId, rating, reviewText } = body as {
+  const { activityId, bookingId, rating, reviewText, photoUrls } = body as {
     activityId?: unknown;
     bookingId?: unknown;
     rating?: unknown;
     reviewText?: unknown;
+    photoUrls?: unknown;
   };
 
   const ratingNum = Number(rating);
   const reviewTextStr = typeof reviewText === 'string' ? reviewText.trim() : '';
+
+  // 評價照片（選填）：只接受本平台 review-photos bucket 的 public URL，最多 5 張，
+  // 避免被當成任意外連圖床（SSRF/濫用）。順序保留旅客上傳順序。
+  const REVIEW_PHOTO_MAX = 5;
+  const storagePublicPrefix = '/storage/v1/object/public/review-photos/';
+  const photoUrlList = Array.isArray(photoUrls)
+    ? photoUrls
+        .filter((u): u is string => typeof u === 'string' && u.includes(storagePublicPrefix))
+        .slice(0, REVIEW_PHOTO_MAX)
+    : [];
 
   const adminSupabase = getServiceClient();
 
@@ -94,7 +105,7 @@ export async function POST(req: NextRequest) {
   }
 
   // AC3: Insert pending review
-  const { data: review, error } = await adminSupabase
+  let { data: review, error } = await adminSupabase
     .from('activity_reviews')
     .insert({
       id: crypto.randomUUID(),
@@ -107,11 +118,34 @@ export async function POST(req: NextRequest) {
       review_date: new Date().toISOString().split('T')[0],
       author: user.email || user.id,
       guide_slug: '',
+      photo_urls: photoUrlList,
       // #1379: 一律來自本人完成訂單 → 驗證購買標章
       is_verified: true,
     })
     .select()
     .single();
+
+  // schema-drift guard：photo_urls 欄位若尚未 migrate（42703）→ 退回不含照片的插入，
+  // 評論本體不因照片欄位缺失而整筆失敗。
+  if (error && (error.code === '42703' || /column .*photo_urls.* does not exist/i.test(error.message || ''))) {
+    ({ data: review, error } = await adminSupabase
+      .from('activity_reviews')
+      .insert({
+        id: crypto.randomUUID(),
+        activity_slug: String(activityId || ''),
+        rating: ratingNum,
+        review_text: reviewTextStr,
+        user_id: user.id,
+        booking_id: reviewTargetId,
+        status: 'pending',
+        review_date: new Date().toISOString().split('T')[0],
+        author: user.email || user.id,
+        guide_slug: '',
+        is_verified: true,
+      })
+      .select()
+      .single());
+  }
 
   if (error) {
     return NextResponse.json(fail('DB_ERROR', error.message), { status: 500 });

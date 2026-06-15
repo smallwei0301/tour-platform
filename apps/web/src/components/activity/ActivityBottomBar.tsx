@@ -89,7 +89,7 @@ export function ActivityBottomBar({
           )}
         </div>
         <div className="tp-bottom-bar-actions">
-          <WishlistToggle activityId={activityId} initialWishlisted={initialWishlisted} isLoggedIn={isLoggedIn} />
+          <WishlistToggle activityId={activityId} initialWishlisted={initialWishlisted} isLoggedIn={isLoggedIn} variant="inline" />
           {bookingUnavailable ? (
             <span
               className="tp-btn tp-bottom-bar-cta"

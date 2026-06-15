@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
 import { ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../src/lib/activity-themes.mjs';
+import { resolveActivityReviewStats } from '../../src/lib/activity-review-stats.mjs';
 import WishlistToggle from '../../src/components/WishlistToggle';
 import { PublicIcon } from '../../src/components/ui/PublicIcon';
 import { resolveCoverSrc, CARD_IMAGE_SIZES } from './cover-image';
@@ -34,6 +35,10 @@ interface Activity {
   guideAvatarUrl?: string;
   ratingAvg?: number;
   reviewCount?: number;
+  // #收藏星數：與詳情頁共用 resolveActivityReviewStats 的輸入（真實評論 + 社群口碑語錄），
+  // 讓列表卡顯示與詳情頁一致的真實星數／評論數。
+  reviews?: Array<{ rating?: number }>;
+  socialProofQuotes?: Array<string | { author?: string; rating?: number; text?: string }>;
 }
 
 interface ActivitiesContentProps {
@@ -70,6 +75,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const [activities, setActivities] = useState<Activity[]>(initialActivities ?? []);
   const [loading, setLoading] = useState(initialActivities === undefined);
   const [wishlistedIds, setWishlistedIds] = useState<Set<string>>(new Set());
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Issue #1345 — when SSR already hydrated the card list via
   // `initialActivities`, the first run of the fetch effect below would
@@ -150,6 +156,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     if (typeof document === 'undefined') return;
     const hasSupabaseSession = /(^|;\s*)sb-[^=]+-auth-token=/.test(document.cookie);
     if (!hasSupabaseSession) return;
+    setIsLoggedIn(true);
     fetch('/api/me/wishlist/ids')
       .then(r => r.json())
       .then(({ data }) => setWishlistedIds(new Set(data ?? [])))
@@ -354,7 +361,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                         sizes={CARD_IMAGE_SIZES}
                         quality={60}
                         width={1200} height={675} />
-                      <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} />
+                      <WishlistToggle activityId={a.id} initialWishlisted={wishlistedIds.has(a.id)} isLoggedIn={isLoggedIn} />
                       <span style={{
                         position: 'absolute', top: 10, left: 10,
                         background: 'var(--tp-accent)', color: '#fff',
@@ -370,21 +377,28 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                       </div>
                     )}
                     <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
-                    <div data-testid="activity-card-rating" style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 2px', fontSize: 13 }}>
-                      {a.ratingAvg != null ? (
-                        <>
-                          <span style={{ color: '#f59e0b', display: 'inline-flex' }}><PublicIcon name="star" size={14} /></span>
-                          <span>{a.ratingAvg.toFixed(1)}</span>
-                          <span style={{ color: 'var(--tp-muted)' }}>({a.reviewCount ?? 0}則)</span>
-                          <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span style={{ color: 'var(--tp-muted)' }} className="text-xs">尚無評價</span>
-                          <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
-                        </>
-                      )}
-                    </div>
+                    {(() => {
+                      // 與詳情頁同一真實來源（resolveActivityReviewStats）：count>0 才顯示星數/則數，
+                      // 否則顯示「尚無評價」，避免出現「5.0 (0則)」這種與詳情頁不一致的假數據。
+                      const stats = resolveActivityReviewStats(a);
+                      return (
+                        <div data-testid="activity-card-rating" style={{ display: 'flex', alignItems: 'center', gap: 4, margin: '0 0 2px', fontSize: 13 }}>
+                          {stats.count > 0 ? (
+                            <>
+                              <span style={{ color: '#f59e0b', display: 'inline-flex' }}><PublicIcon name="star" size={14} /></span>
+                              <span>{stats.score.toFixed(1)}</span>
+                              <span style={{ color: 'var(--tp-muted)' }}>({stats.count}則)</span>
+                              <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span style={{ color: 'var(--tp-muted)' }} className="text-xs">尚無評價</span>
+                              <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                     {durationDisplay && (
                       <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="clock" size={13} /> {durationDisplay}</span> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="users" size={13} /> {a.minParticipants}~{a.maxParticipants} 人</span>
