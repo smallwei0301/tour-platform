@@ -62,4 +62,13 @@ export function isLineLiffEnabled(env = process.env) {
   return isTruthy(env.NEXT_PUBLIC_LINE_LIFF_ENABLED);
 }
 
+/**
+ * Telegram order-event notifications (admin group + guide/traveler push).
+ * Default: OFF. Uses the order-notification bot (TELEGRAM_BOT_TOKEN), separate
+ * from the system-alert bot (TELEGRAM_ALERT_*).
+ */
+export function isTelegramNotifyEnabled(env = process.env) {
+  return isTruthy(env.TELEGRAM_NOTIFY_ENABLED);
+}
+
 export const __internal = { isTruthy };

@@ -28,3 +28,16 @@ test('payment hook does not double-email admins (includeAdmin: false)', async ()
   // and the fan-out opts out of the admin email for the payment event
   assert.match(src, /includeAdmin:\s*false/);
 });
+
+test('admin Telegram order notify is dispatched from all four order hooks', async () => {
+  const sites = [
+    'app/api/orders/route.ts',
+    'app/api/payments/ecpay/callback/route.ts',
+    'app/api/me/orders/[orderId]/route.ts',
+    'app/api/me/orders/[orderId]/refund-requests/route.ts',
+  ];
+  for (const rel of sites) {
+    const src = await read(rel);
+    assert.match(src, /dispatchOrderEventTelegram/, `${rel} should call dispatchOrderEventTelegram`);
+  }
+});

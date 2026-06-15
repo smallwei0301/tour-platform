@@ -9,6 +9,7 @@ import { notifyRefundRequest, notifyRefundExecuted } from '../../../../../../src
 import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../../../../src/lib/order-email-notify';
+import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify';
 import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
@@ -205,6 +206,10 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
           orderId, kind: 'refund_executed', activityTitle: notifyData.activityTitle,
           scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
         }).catch(() => {});
+        void dispatchOrderEventTelegram({
+          orderId, kind: 'refund_executed', activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
+        }).catch(() => {});
       } else {
         // Normal flow — admin will process
         void sendRefundRequested(notifyData).then((emailResult) => {
@@ -221,6 +226,10 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_requested' }).catch(() => {});
         void pushGuideOrderEvent({ ...guidePushBase, kind: 'guide_refund_requested' }).catch(() => {});
         void dispatchOrderEventEmails({
+          orderId, kind: 'refund_requested', activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
+        }).catch(() => {});
+        void dispatchOrderEventTelegram({
           orderId, kind: 'refund_requested', activityTitle: notifyData.activityTitle,
           scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
         }).catch(() => {});

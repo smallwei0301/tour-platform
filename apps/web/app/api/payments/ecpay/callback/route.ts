@@ -9,6 +9,7 @@ import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
+import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { recordIncident } from '../../../../../src/lib/incidents';
@@ -385,6 +386,16 @@ export async function POST(request: Request) {
       peopleCount: notifyData.peopleCount,
       totalTwd: notifyData.totalTwd,
       includeAdmin: false,
+    }).catch(() => {});
+
+    // 管理員 Telegram 事件通知
+    void dispatchOrderEventTelegram({
+      orderId,
+      kind: 'payment_received',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
     }).catch(() => {});
 
     // ECPay 正式回調期望回覆 "1|OK" 格式

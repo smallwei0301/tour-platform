@@ -7,6 +7,7 @@ import { notifyNewOrder } from '../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../src/lib/order-email-notify';
+import { dispatchOrderEventTelegram } from '../../../src/lib/order-telegram-notify';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 import { createClient } from '../../../src/lib/supabase/server';
 
@@ -134,6 +135,16 @@ export async function POST(request: Request) {
 
     // 導遊 + 管理員事件 Email（導遊無 email 自動 skip）
     void dispatchOrderEventEmails({
+      orderId: order.id,
+      kind: 'new_order',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+    }).catch(() => {});
+
+    // 管理員 Telegram 事件通知（未設定/未開 TELEGRAM_NOTIFY_ENABLED 自動 skip）
+    void dispatchOrderEventTelegram({
       orderId: order.id,
       kind: 'new_order',
       activityTitle: notifyData.activityTitle,
