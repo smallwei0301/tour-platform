@@ -20,7 +20,8 @@
 | 行程前 QA 會**寄通知信給導遊**嗎？ | **不會** | `app/api/qa/route.ts` POST（line 51–117）只 INSERT `activity_qa`，全程無任何 email／notify／resend 呼叫；`src/lib/email.ts` 也無 QA 相關通知函式。導遊需自行登入後台才看得到。 |
 | 行程前 QA 會**記錄到導遊後台**嗎？ | **會** | 旅客 POST `/api/qa` → `activity_qa`（`status=pending_moderation`）；導遊後台 `/guide/dashboard`「❓ 待回答的問題」載入時呼叫 `/api/guide/qa?status=pending_moderation`（撈該導遊行程的 QA）並可回答發布（PATCH `/api/guide/qa/[id]`）。 |
 
-> 備註：目前**沒有**任何 QA email 通知（行程 QA 與本次新增的導遊頁訊息皆然）。若需在旅客送出時主動通知導遊，是另一條 follow-up（需接 `src/lib/email.ts` 寄信管道）。
+> 備註：原本**沒有**任何 QA email 通知（行程 QA 與導遊頁訊息皆然）。本次已補上——
+> 旅客送出提問時主動寄信通知導遊（見下節「旅客提問通知導遊」）。
 
 ## 變更（導遊頁 inline 訊息）
 
@@ -34,18 +35,36 @@
 - `app/api/guide/qa/[id]/route.ts`：PATCH 擁有權判定改為——sentinel 訊息以內嵌 guideId 比對 `session.guideId`；一般行程 QA 仍走 `activities.guide_id`。
 - `app/guide/dashboard/page.tsx`：卡片對 sentinel `activity_id` 顯示「👤 導遊頁面」標籤而非「行程 ID」。
 
+## 變更（旅客提問通知導遊 email）
+
+補上「旅客送訊息時 email 通知導遊」——行程旅客問答與認識導遊頁訊息共用同一條通知。
+
+- `src/lib/email.ts`：新增 `sendGuideQuestionNotice`（交易信；主旨帶來源標籤、內文含提問
+  preview 並做 HTML escape、CTA 連到 `/guide/dashboard`）。沿用既有 single-failure
+  contract（`RESEND_API_KEY` 未設則 skip、寄送失敗不 throw）。
+- `src/lib/guide-question-notify.ts`（新，best-effort wrapper，永不 throw）：
+  - 導遊頁訊息（sentinel）→ 以內嵌 guideId 直查 `guide_profiles` 取 email，來源＝「導遊頁面」。
+  - 行程問答 → `activities.guide_id` → `guide_profiles` 取 email，來源＝行程名稱。
+  - 自帶 service-role client（對齊 `reschedule-notify.ts` / `order-message-notify.ts`）；
+    無 Supabase env／無導遊 email 皆靜默略過。
+- `app/api/qa/route.ts`：POST insert 成功後呼叫 `notifyGuideOfQuestion(...)`。
+
+> 通知範圍：因兩種提問都走 `/api/qa`，本次同時補上**行程旅客問答**與**導遊頁訊息**的導遊
+> email 通知（即一併修補了調查中發現「行程前 QA 不寄信給導遊」的缺口）。
+
 ## 逐項證據
 
 | 驗證項目 | 方式 | 結果 |
 | --- | --- | --- |
 | sentinel helper（build/parse/detect、round-trip） | `tests/unit/guide-contact-qa.test.mjs` | 5/5 PASS |
+| 導遊提問通知 email（行為 + escape + wrapper/route wiring） | `tests/unit/guide-question-notify.test.mjs` | 6/6 PASS |
 | 頁面／路由／後台 wiring（含 sentinel 查詢、擁有權、後台顯示「導遊頁面」） | `tests/ui/guide-profile-contact-qa.test.mjs`（source-contract） | 8/8 PASS |
 | 未登入點「詢問導遊」→ 展開登入提示、不顯示輸入框 | Playwright（真實 chromium） | PASS |
 | 已登入點「詢問導遊」→ 展開輸入框 → 送出 → 等候回覆，且 POST body `activityId` 帶 `guide:` 前綴 | Playwright（真實 chromium） | PASS |
 | 行程詳情頁「詢問導遊」錨點仍滾動到 `#section-qa`（不退化） | Playwright（真實 chromium） | PASS |
 | `npm run typecheck` | tsc --noEmit | PASS |
 | `npm run lint` | eslint | PASS（無 error） |
-| `npm test`（全套） | node --test | 3364 pass / 0 fail / 3 skip（既有） |
+| `npm test`（全套） | node --test | 3370 pass / 0 fail / 3 skip（既有） |
 
 ## 備註
 
