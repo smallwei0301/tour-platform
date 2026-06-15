@@ -23,11 +23,8 @@ export interface TelegramSendResult {
   error?: string;
 }
 
-/** Send a plain-text Telegram message to a chat id. Honours the kill-switch. */
-export async function sendTelegramMessage(chatId: string, text: string): Promise<TelegramSendResult> {
-  if (!isTelegramNotifyEnabled()) {
-    return { status: 'skipped', reason: 'telegram_disabled' };
-  }
+/** Core delivery — POST to the Bot API. NOT gated by the kill-switch. */
+async function deliverTelegram(chatId: string, text: string): Promise<TelegramSendResult> {
   const token = process.env.TELEGRAM_BOT_TOKEN || '';
   if (!token) {
     return { status: 'skipped', reason: 'no_bot_token' };
@@ -49,6 +46,27 @@ export async function sendTelegramMessage(chatId: string, text: string): Promise
   } catch (err) {
     return { status: 'failed', error: err instanceof Error ? err.message : String(err) };
   }
+}
+
+/**
+ * Send an order-event notification. Honours the order-notify kill-switch
+ * (TELEGRAM_NOTIFY_ENABLED) — use for outbound order/event pushes.
+ */
+export async function sendTelegramMessage(chatId: string, text: string): Promise<TelegramSendResult> {
+  if (!isTelegramNotifyEnabled()) {
+    return { status: 'skipped', reason: 'telegram_disabled' };
+  }
+  return deliverTelegram(chatId, text);
+}
+
+/**
+ * Send a transactional message that is NOT gated by the order-notify kill-switch.
+ * Use for direct responses to a user-initiated action (e.g. the /start binding
+ * ack): these must work as soon as binding is functional and the bot token is
+ * set, independent of whether order-event push has been switched on.
+ */
+export async function sendTelegramTransactional(chatId: string, text: string): Promise<TelegramSendResult> {
+  return deliverTelegram(chatId, text);
 }
 
 /** Push a plain-text notification to the admin/ops order group. */

@@ -18,7 +18,7 @@ import {
   setTelegramBlocked,
   markTelegramUpdateProcessed,
 } from './telegram-binding.mjs';
-import { sendTelegramMessage } from './telegram-messaging.ts';
+import { sendTelegramTransactional } from './telegram-messaging.ts';
 
 /** Constant-time comparison of the webhook secret. */
 function verifySecret(secretToken) {
@@ -57,8 +57,10 @@ async function handleUpdate(update) {
   const ack = result.ok
     ? '✅ 綁定成功！之後相關訂單通知會傳到這裡。'
     : '⚠️ 綁定碼無效或已過期，請回後台重新產生綁定連結。';
-  // Best-effort ack (no-op unless TELEGRAM_NOTIFY_ENABLED + bot token set).
-  await sendTelegramMessage(String(chatId), ack).catch(() => {});
+  // Transactional ack: a direct reply to the user's /start. Fires whenever the
+  // bot token is set — independent of the order-notify kill-switch — so binding
+  // confirmation works even before order-event push is switched on.
+  await sendTelegramTransactional(String(chatId), ack).catch(() => {});
   return true;
 }
 
