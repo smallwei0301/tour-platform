@@ -146,16 +146,9 @@ export function Navbar() {
                 <Link
                   href="/me/orders"
                   style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)' }}
-                  data-testid="nav-my-orders"
+                  data-testid="nav-my-trips"
                 >
-                  我的訂單
-                </Link>
-                <Link
-                  href="/me/wishlist"
-                  style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)' }}
-                  data-testid="nav-my-wishlist"
-                >
-                  我的最愛
+                  我的行程
                 </Link>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {user.user_metadata?.avatar_url && (
@@ -256,11 +249,8 @@ export function Navbar() {
             ))}
             {user ? (
               <>
-                <Link href="/me/orders" className="tp-mobile-menu-item" onClick={() => setMenuOpen(false)}>
-                  我的訂單
-                </Link>
-                <Link href="/me/wishlist" className="tp-mobile-menu-item" data-testid="nav-mobile-my-wishlist" onClick={() => setMenuOpen(false)}>
-                  我的最愛
+                <Link href="/me/orders" className="tp-mobile-menu-item" data-testid="nav-mobile-my-trips" onClick={() => setMenuOpen(false)}>
+                  我的行程
                 </Link>
                 <button
                   onClick={() => { handleSignOut(); setMenuOpen(false); }}

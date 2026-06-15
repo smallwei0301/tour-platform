@@ -352,18 +352,19 @@ export default function OrderDetailPage() {
     }
   };
 
-  // Styles
-  const containerStyle: React.CSSProperties = { maxWidth: 560, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif' };
-  const cardStyle: React.CSSProperties = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', marginBottom: 16 };
-  const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', padding: '9px 0', borderBottom: '1px solid #f3f4f6', fontSize: 14 };
-  const labelStyle: React.CSSProperties = { color: '#6b7280' };
-  const valueStyle: React.CSSProperties = { fontWeight: 600, color: '#111827', textAlign: 'right' };
-  const btnPrimary: React.CSSProperties = { padding: '11px 20px', background: '#a8511f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
-  const btnSecondary: React.CSSProperties = { padding: '11px 20px', background: '#f1f5f9', color: '#374151', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' };
-  const btnDanger: React.CSSProperties = { padding: '11px 20px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+  // Styles — 深綠主題（與主站一致）
+  const containerStyle: React.CSSProperties = { maxWidth: 600, margin: '0 auto', padding: '32px 16px 56px', minHeight: '70vh' };
+  const cardStyle: React.CSSProperties = { background: 'var(--tp-card-bg)', border: '1px solid var(--tp-border)', borderRadius: 16, padding: 24, marginBottom: 16 };
+  const formCardStyle: React.CSSProperties = { background: 'var(--tp-card-bg)', border: '1px solid var(--tp-border)', borderRadius: 12, padding: 16 };
+  const rowStyle: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderBottom: '1px solid var(--tp-border)', fontSize: 14 };
+  const labelStyle: React.CSSProperties = { color: 'var(--tp-muted)' };
+  const valueStyle: React.CSSProperties = { fontWeight: 600, color: 'var(--tp-text)', textAlign: 'right' };
+  const btnPrimary: React.CSSProperties = { padding: '11px 20px', background: '#a8511f', color: '#f8efdc', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
+  const btnSecondary: React.CSSProperties = { padding: '11px 20px', background: 'rgba(244,236,216,0.08)', color: 'var(--tp-text)', border: '1px solid var(--tp-border)', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' };
+  const btnDanger: React.CSSProperties = { padding: '11px 20px', background: '#b3402f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' };
 
   if (authChecking || loading) {
-    return <div style={containerStyle}><p style={{ color: '#9ca3af', textAlign: 'center', marginTop: 60 }}>載入中…</p></div>;
+    return <div style={containerStyle}><p style={{ color: 'var(--tp-muted)', textAlign: 'center', marginTop: 60 }}>載入中…</p></div>;
   }
 
   if (!order) {
@@ -399,7 +400,7 @@ export default function OrderDetailPage() {
         ← 返回訂單列表
       </button>
 
-      <h1 style={{ fontSize: 20, fontWeight: 800, color: '#111827', marginBottom: 4 }}>訂單詳情</h1>
+      <h1 style={{ fontFamily: 'var(--tp-serif)', fontSize: 'clamp(22px, 5vw, 26px)', fontWeight: 700, color: 'var(--tp-text)', letterSpacing: '0.02em', margin: '0 0 12px' }}>訂單詳情</h1>
 
       {/* Status banner */}
       <div style={{
@@ -414,12 +415,12 @@ export default function OrderDetailPage() {
             {statusLabel}
           </span>
         </div>
-        <p style={{ fontSize: 13, color: '#374151', margin: 0 }}>{statusDesc}</p>
+        <p style={{ fontSize: 13, color: 'var(--tp-text)', margin: 0 }}>{statusDesc}</p>
       </div>
 
       {/* Order info */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>訂單資訊</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tp-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>訂單資訊</h2>
         <div style={rowStyle}>
           <span style={labelStyle}>訂單編號</span>
           <span style={{ ...valueStyle, fontSize: 11, fontFamily: 'monospace', maxWidth: 220, wordBreak: 'break-all' }}>{order.id}</span>
@@ -447,14 +448,14 @@ export default function OrderDetailPage() {
           </div>
         )}
         <div style={{ ...rowStyle, borderBottom: 'none' }}>
-          <span style={{ ...labelStyle, fontWeight: 700, fontSize: 15, color: '#111827' }}>應付金額</span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: '#a8511f' }}>NT$ {(order.totalTwd ?? 0).toLocaleString()}</span>
+          <span style={{ ...labelStyle, fontWeight: 700, fontSize: 15, color: 'var(--tp-text)' }}>應付金額</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--tp-gold-strong)' }}>NT$ {(order.totalTwd ?? 0).toLocaleString()}</span>
         </div>
       </div>
 
       {/* Contact info */}
       <div style={cardStyle}>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>聯絡資訊</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tp-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>聯絡資訊</h2>
         <div style={rowStyle}>
           <span style={labelStyle}>姓名</span>
           <span style={valueStyle}>{order.contactName || '—'}</span>
@@ -471,8 +472,8 @@ export default function OrderDetailPage() {
 
       {/* Review hint — shown for non-completed, non-terminal orders */}
       {status !== 'completed' && !isTerminal && (
-        <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
-          <p style={{ fontSize: 13, color: '#0369a1', margin: 0 }}>行程完成後即可撰寫評價</p>
+        <div style={{ background: 'rgba(86,116,76,0.16)', border: '1px solid var(--tp-border)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--tp-text)', margin: 0 }}>行程完成後即可撰寫評價</p>
         </div>
       )}
 
@@ -483,9 +484,9 @@ export default function OrderDetailPage() {
           {!canSelfReschedule ? (
             <div
               data-testid="reschedule-contact-support"
-              style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '10px 14px' }}
+              style={{ background: 'rgba(194,84,46,0.14)', border: '1px solid rgba(194,84,46,0.4)', borderRadius: 10, padding: '10px 14px' }}
             >
-              <p style={{ fontSize: 13, color: '#c2410c', margin: 0 }}>
+              <p style={{ fontSize: 13, color: '#e3a07f', margin: 0 }}>
                 距活動開始未滿 {RESCHEDULE_WINDOW_HOURS / 24} 天（{RESCHEDULE_WINDOW_HOURS} 小時），無法線上自助改期。如需改期請聯絡客服協助安排。
               </p>
             </div>
@@ -498,8 +499,8 @@ export default function OrderDetailPage() {
               申請改期（同行程改其他場次）
             </button>
           ) : (
-            <form onSubmit={handleSubmitReschedule} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-              <label htmlFor="reschedule-target" style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
+            <form onSubmit={handleSubmitReschedule} style={formCardStyle}>
+              <label htmlFor="reschedule-target" style={{ fontSize: 13, fontWeight: 700, color: 'var(--tp-text)', display: 'block', marginBottom: 8 }}>
                 選擇新場次（同行程、同方案、金額不變；需嚮導確認）
               </label>
               <select
@@ -507,7 +508,7 @@ export default function OrderDetailPage() {
                 data-testid="reschedule-target-select"
                 value={rescheduleTarget}
                 onChange={(e) => setRescheduleTarget(e.target.value)}
-                style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, marginBottom: 12 }}
+                style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--tp-border)', background: 'rgba(244,236,216,0.06)', color: 'var(--tp-text)', borderRadius: 8, fontSize: 14, marginBottom: 12 }}
               >
                 <option value="">請選擇場次</option>
                 {rescheduleOptions.map((o) => (
@@ -518,7 +519,7 @@ export default function OrderDetailPage() {
                 ))}
               </select>
               {rescheduleOptions.length === 0 && (
-                <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 12 }}>目前沒有可改的場次。</p>
+                <p style={{ fontSize: 13, color: 'var(--tp-muted)', marginBottom: 12 }}>目前沒有可改的場次。</p>
               )}
               {rescheduleErr && <p style={{ color: 'crimson', fontSize: 13, marginBottom: 12 }}>{rescheduleErr}</p>}
               <div style={{ display: 'flex', gap: 8 }}>
@@ -532,8 +533,8 @@ export default function OrderDetailPage() {
         </div>
       )}
       {status === 'reschedule_requested' && (
-        <div data-testid="reschedule-pending" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
-          <p style={{ fontSize: 13, color: '#92400e', margin: 0 }}>
+        <div data-testid="reschedule-pending" style={{ background: 'rgba(176,141,62,0.16)', border: '1px solid rgba(176,141,62,0.45)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+          <p style={{ fontSize: 13, color: 'var(--tp-gold-strong)', margin: 0 }}>
             改期申請處理中 — 等待嚮導確認（72 小時內），期間訂單暫停其他操作。
           </p>
           {rescheduleDone && activeRescheduleId && (
@@ -548,9 +549,9 @@ export default function OrderDetailPage() {
       {/* #1411 — 聯絡嚮導留言串（付款後～completed+14 天可發言，之後唯讀） */}
       {msgThread?.canView && (
         <div data-testid="order-messages-section" style={cardStyle}>
-          <h2 style={{ fontSize: 14, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>聯絡嚮導</h2>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tp-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>聯絡嚮導</h2>
           {msgThread.messages.length === 0 ? (
-            <p style={{ fontSize: 13, color: '#9ca3af', margin: '0 0 12px' }}>
+            <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 12px' }}>
               還沒有訊息 — 行前的疑問（集合地點、裝備、天氣備案）都可以直接問嚮導。
             </p>
           ) : (
@@ -562,19 +563,19 @@ export default function OrderDetailPage() {
                   style={{
                     alignSelf: m.senderRole === 'traveler' ? 'flex-end' : 'flex-start',
                     maxWidth: '85%',
-                    background: m.senderRole === 'traveler' ? '#fdf2f8' : '#f1f5f9',
-                    border: `1px solid ${m.senderRole === 'traveler' ? '#fbcfe8' : '#e2e8f0'}`,
+                    background: m.senderRole === 'traveler' ? 'var(--tp-tint)' : 'rgba(244,236,216,0.06)',
+                    border: '1px solid var(--tp-border)',
                     borderRadius: 12,
                     padding: '8px 12px',
                   }}
                 >
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', margin: '0 0 2px' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: 'var(--tp-muted)', margin: '0 0 2px' }}>
                     {m.senderRole === 'traveler' ? '我' : m.senderRole === 'guide' ? '嚮導' : '客服'}
                     <span style={{ fontWeight: 400, marginLeft: 6 }}>
                       {m.createdAt ? new Date(m.createdAt).toLocaleString('zh-TW') : ''}
                     </span>
                   </p>
-                  <p style={{ fontSize: 13, color: '#111827', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.body}</p>
+                  <p style={{ fontSize: 13, color: 'var(--tp-text)', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.body}</p>
                 </div>
               ))}
             </div>
@@ -588,7 +589,7 @@ export default function OrderDetailPage() {
                 placeholder="想問嚮導什麼？（最長 1000 字）"
                 rows={2}
                 maxLength={1000}
-                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+                style={{ width: '100%', border: '1px solid var(--tp-border)', background: 'rgba(244,236,216,0.06)', color: 'var(--tp-text)', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
               />
               {msgErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{msgErr}</p>}
               <button
@@ -601,7 +602,7 @@ export default function OrderDetailPage() {
               </button>
             </form>
           ) : (
-            <p data-testid="order-messages-readonly" style={{ fontSize: 12, color: '#9ca3af', margin: 0 }}>
+            <p data-testid="order-messages-readonly" style={{ fontSize: 12, color: 'var(--tp-muted)', margin: 0 }}>
               此訂單的留言串已轉唯讀（行程結束 14 天後或訂單已取消/退款）。如需協助請聯絡客服。
             </p>
           )}
@@ -623,8 +624,8 @@ export default function OrderDetailPage() {
               撰寫評價
             </button>
           ) : (
-            <form onSubmit={handleSubmitReview} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
+            <form onSubmit={handleSubmitReview} style={formCardStyle}>
+              <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--tp-text)', display: 'block', marginBottom: 8 }}>
                 評分
               </label>
               {/* star-rating: 1-5 rating buttons */}
@@ -645,7 +646,7 @@ export default function OrderDetailPage() {
                   </button>
                 ))}
               </div>
-              <label htmlFor="order-review-text" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              <label htmlFor="order-review-text" style={{ fontSize: 13, fontWeight: 600, color: 'var(--tp-text)', display: 'block', marginBottom: 6 }}>
                 行程評價
               </label>
               <textarea
@@ -655,11 +656,11 @@ export default function OrderDetailPage() {
                 onChange={e => setReviewText(e.target.value)}
                 placeholder="分享您的行程體驗..."
                 rows={4}
-                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+                style={{ width: '100%', border: '1px solid var(--tp-border)', background: 'rgba(244,236,216,0.06)', color: 'var(--tp-text)', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
               />
 
               {/* 評價照片上傳（選填，最多 5 張，手機可左右滑動瀏覽） */}
-              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', margin: '12px 0 6px' }}>
+              <label style={{ fontSize: 13, fontWeight: 600, color: 'var(--tp-text)', display: 'block', margin: '12px 0 6px' }}>
                 上傳照片（選填，最多 {REVIEW_PHOTO_MAX} 張）
               </label>
               <div
@@ -690,9 +691,9 @@ export default function OrderDetailPage() {
                 {reviewPhotos.length < REVIEW_PHOTO_MAX && (
                   <label
                     style={{
-                      flex: '0 0 auto', width: 88, height: 88, borderRadius: 8, border: '1px dashed #d1d5db',
+                      flex: '0 0 auto', width: 88, height: 88, borderRadius: 8, border: '1px dashed var(--tp-border)',
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                      cursor: photoUploading ? 'default' : 'pointer', color: '#6b7280', fontSize: 12, gap: 2,
+                      cursor: photoUploading ? 'default' : 'pointer', color: 'var(--tp-muted)', fontSize: 12, gap: 2,
                       scrollSnapAlign: 'start',
                     }}
                   >
@@ -734,8 +735,8 @@ export default function OrderDetailPage() {
           )}
 
           {['paid', 'confirmed'].includes(status) && !departureNotPassed && (
-            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '10px 14px' }}>
-              <p style={{ fontSize: 13, color: '#c2410c', margin: 0 }}>行程已開始/結束，無法線上申請退款，請聯絡客服</p>
+            <div style={{ background: 'rgba(194,84,46,0.14)', border: '1px solid rgba(194,84,46,0.4)', borderRadius: 10, padding: '10px 14px' }}>
+              <p style={{ fontSize: 13, color: '#e3a07f', margin: 0 }}>行程已開始/結束，無法線上申請退款，請聯絡客服</p>
             </div>
           )}
 
@@ -752,14 +753,14 @@ export default function OrderDetailPage() {
           )}
 
           {showRefundForm && (
-            <form onSubmit={handleRefund} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 16 }}>
-              <label htmlFor="order-refund-reason" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>取消／退款原因</label>
+            <form onSubmit={handleRefund} style={formCardStyle}>
+              <label htmlFor="order-refund-reason" style={{ fontSize: 13, fontWeight: 600, color: 'var(--tp-text)', display: 'block', marginBottom: 6 }}>取消／退款原因</label>
               <select
                 id="order-refund-reason"
                 required
                 value={refundReason}
                 onChange={e => setRefundReason(e.target.value)}
-                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', marginBottom: 10 }}
+                style={{ width: '100%', border: '1px solid var(--tp-border)', background: 'rgba(244,236,216,0.06)', color: 'var(--tp-text)', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', marginBottom: 10 }}
               >
                 <option value="">請選擇原因</option>
                 <option value="schedule_conflict">行程衝突</option>
@@ -767,14 +768,14 @@ export default function OrderDetailPage() {
                 <option value="health_issue">健康因素</option>
                 <option value="other">其他</option>
               </select>
-              <label htmlFor="order-refund-note" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>補充說明（選填）</label>
+              <label htmlFor="order-refund-note" style={{ fontSize: 13, fontWeight: 600, color: 'var(--tp-text)', display: 'block', marginBottom: 6 }}>補充說明（選填）</label>
               <textarea
                 id="order-refund-note"
                 value={refundNote}
                 onChange={e => setRefundNote(e.target.value)}
                 placeholder="如有其他說明請填寫…"
                 rows={2}
-                style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
+                style={{ width: '100%', border: '1px solid var(--tp-border)', background: 'rgba(244,236,216,0.06)', color: 'var(--tp-text)', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
               />
               {refundErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{refundErr}</p>}
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
@@ -797,12 +798,12 @@ export default function OrderDetailPage() {
       {/* Cancel dialog */}
       {showCancelDialog && (
         <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50,
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16,
         }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title" style={{ background: '#fff', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-dialog-title" style={{ background: 'var(--tp-bg-soft)', border: '1px solid var(--tp-border)', color: 'var(--tp-text)', borderRadius: 16, padding: 28, maxWidth: 360, width: '90%' }}>
             <h3 id="cancel-dialog-title" style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>確認取消訂單？</h3>
-            <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 20 }}>取消後無法恢復，席位將自動釋出。</p>
+            <p style={{ fontSize: 13, color: 'var(--tp-muted)', marginBottom: 20 }}>取消後無法恢復，席位將自動釋出。</p>
             {cancelErr && <p style={{ color: '#ef4444', fontSize: 12, marginBottom: 10 }}>{cancelErr}</p>}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={handleCancel} disabled={cancelling} style={btnDanger}>
