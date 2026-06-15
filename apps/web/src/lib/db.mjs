@@ -4121,6 +4121,57 @@ export async function listWishlistDb(input) {
   });
 }
 
+/**
+ * 列出某旅客自己提過的所有 activity_qa（不限狀態），附行程／導遊標題與連結。
+ * 供 /me/qa「問答回覆」收件匣使用。映射邏輯抽到純函式 mapMyQaRows（離線可測）。
+ * 無 Supabase env（本地/測試）→ 回空陣列（route 不致 crash；UI 由 E2E mock 覆蓋）。
+ * @param {{ userId: string }} input
+ * @returns {Promise<Array<object>>}
+ */
+export async function listMyQaDb(input) {
+  const userId = String(input?.userId || '').trim();
+  if (!userId) throw new Error('userId is required');
+  if (!hasSupabaseEnv()) return [];
+
+  const { mapMyQaRows } = await import('./my-qa.mjs');
+  const supabase = await getSupabase();
+
+  const { data: rows, error } = await supabase
+    .from('activity_qa')
+    .select('id, activity_id, question, answer, status, created_at, updated_at')
+    .eq('user_id', userId)
+    .order('updated_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+
+  const refs = [...new Set((rows || []).map((r) => String(r.activity_id || '').trim()).filter(Boolean))];
+  const guideIds = refs.filter((r) => r.startsWith('guide:')).map((r) => r.slice('guide:'.length)).filter(Boolean);
+  const activityRefs = refs.filter((r) => !r.startsWith('guide:'));
+
+  const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const activityIds = activityRefs.filter((r) => uuidLike.test(r));
+  const activitySlugs = activityRefs.filter((r) => !uuidLike.test(r));
+
+  const activityById = new Map();
+  if (activityIds.length > 0) {
+    const { data } = await supabase.from('activities').select('id, title, slug').in('id', activityIds);
+    for (const a of data || []) activityById.set(a.id, a);
+  }
+  if (activitySlugs.length > 0) {
+    const { data } = await supabase.from('activities').select('id, title, slug').in('slug', activitySlugs);
+    // sentinel ref 是 slug 時，map key 用 slug 對回
+    for (const a of data || []) activityById.set(a.slug, a);
+  }
+
+  const guideById = new Map();
+  if (guideIds.length > 0) {
+    const { data } = await supabase.from('guide_profiles').select('id, slug, display_name').in('id', guideIds);
+    for (const g of data || []) guideById.set(g.id, g);
+  }
+
+  return mapMyQaRows(rows, { activityById, guideById });
+}
+
 // ── Issue #448: Payouts — generate + confirm ───────────────────────────────────
 
 /**

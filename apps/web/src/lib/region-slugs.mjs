@@ -28,4 +28,9 @@ export function isKnownRegionSlug(slug) {
   return getRegionBySlug(slug) !== null;
 }
 
+/** 下拉選單用：回傳 [{ slug, displayName }]（依 registry 順序）。 */
+export function listRegionOptions() {
+  return Object.values(REGION_REGISTRY).map(({ slug, displayName }) => ({ slug, displayName }));
+}
+
 export { REGION_REGISTRY };

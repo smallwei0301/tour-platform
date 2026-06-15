@@ -10,6 +10,8 @@ import { usePathname } from 'next/navigation';
 const TABS = [
   { href: '/me/orders', label: '我的訂單' },
   { href: '/me/wishlist', label: '我的最愛' },
+  { href: '/me/qa', label: '問答回覆' },
+  { href: '/me/profile', label: '個人資料' },
 ];
 
 export function MemberTabs() {
