@@ -12,6 +12,22 @@ import { GuideContactQASection } from '../../../src/components/guide/GuideContac
 // On-demand revalidation（非定時 ISR）：導遊在後台儲存後，
 // /api/guide/profile 會 revalidatePath(`/guides/<slug>`) 精準失效本頁，
 // 旅客下次刷新即見最新資料；平時維持靜態快取、零背景運算。
+//
+// 但動態 segment `[slug]` 原本「沒有」下列設定，Next 預設走 dynamic（每次重 SSR，
+// 線上實測 x-vercel-cache: MISS、TTFB ~1.2-1.5s），上面「靜態快取」其實沒生效。
+// 補設定讓它真正進 on-demand ISR：
+//   - generateStaticParams()→[]：build 不預渲染任何頁，首次請求才 on-demand 生成
+//     後快取，由 CDN 邊緣供應（~50ms）。
+//   - fetchCache='force-cache'：讓 Supabase 查詢結果可被 ISR 快取。
+//   - 不宣告數字 revalidate（預設永久快取）：維持「純 on-demand 失效」設計——
+//     只有導遊存檔（/api/guide/profile 的 revalidatePath）才更新，無定時背景重算、
+//     也無新核可導遊的延遲窗（見 tests/ui/guides-listing-freshness.test.mjs）。
+// 與活動詳情頁 #502 後續同手法，差別在活動頁用定時 revalidate、導遊頁用純 on-demand。
+export const fetchCache = 'force-cache';
+export const dynamicParams = true;
+export function generateStaticParams() {
+  return [] as Array<{ slug: string }>;
+}
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
