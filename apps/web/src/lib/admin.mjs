@@ -24,6 +24,7 @@ export function listAdminOrdersFallback(input = {}) {
         costTwd,
         marginTwd: o.totalTwd - costTwd,
         title: exp?.title || o.experienceSlug || null,
+        experienceId: o.experienceId || null,
         experienceSlug: o.experienceSlug,
         peopleCount: o.peopleCount || 1,
         scheduleStartAt: o.scheduleStartAt || null,
