@@ -182,6 +182,12 @@ export const telegramBindCodes = [];
 // Each entry: { updateId, receivedAt }
 export const telegramWebhookEvents = [];
 
+// Notification matrix (in-memory fallback for notification_event_settings).
+// Sparse overrides keyed by `${event}:${recipient}:${channel}` → boolean.
+// A missing key means "use default" (= enabled). The admin back-office writes
+// here when toggling a cell off/on; absence preserves the all-on default.
+export const notificationSettings = { overrides: {} };
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',

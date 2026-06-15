@@ -5681,3 +5681,50 @@ export async function markTelegramUpdateDb(updateId) {
   }
   return { firstTime: true };
 }
+
+// ---------------------------------------------------------------------------
+// Notification matrix (notification_event_settings) — Supabase singleton row.
+// Stores a sparse override map { "event:recipient:channel": boolean } in a
+// JSONB column; absence of a key means "use default" (= enabled). In-memory
+// fallback lives in notification-settings.mjs / store.mjs.
+// ---------------------------------------------------------------------------
+
+const NOTIFICATION_SETTINGS_SINGLETON_ID = 'singleton';
+
+/** Read the sparse override map; returns {} when unset / no DB. */
+export async function getNotificationOverridesDb() {
+  if (!hasSupabaseEnv()) return {};
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('notification_event_settings')
+    .select('overrides')
+    .eq('id', NOTIFICATION_SETTINGS_SINGLETON_ID)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  const overrides = data?.overrides;
+  return overrides && typeof overrides === 'object' ? overrides : {};
+}
+
+/** Merge cell toggles into the override map (idempotent upsert of the singleton). */
+export async function setNotificationCellsDb(cells = [], { actor = 'admin' } = {}) {
+  if (!hasSupabaseEnv()) return {};
+  const supabase = await getSupabase();
+  const current = await getNotificationOverridesDb();
+  const next = { ...current };
+  for (const cell of cells) {
+    next[`${cell.event}:${cell.recipient}:${cell.channel}`] = !!cell.enabled;
+  }
+  const { error } = await supabase
+    .from('notification_event_settings')
+    .upsert(
+      {
+        id: NOTIFICATION_SETTINGS_SINGLETON_ID,
+        overrides: next,
+        updated_by: actor,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+  if (error) throw new Error(error.message);
+  return next;
+}
