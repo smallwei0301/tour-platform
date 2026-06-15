@@ -179,12 +179,14 @@ test('AC8: pre-tour-reminder.ts exports sendReminder with channel parameter', ()
   // Export sendReminder
   assert.match(src, /export.*function sendReminder|export.*const sendReminder|export.*async.*sendReminder/, 'Must export sendReminder');
 
-  // Channel parameter
-  assert.match(src, /channel.*['"]email['"].*['"]line_notify_admin['"]|channel.*:.*'email'\s*\|.*'line_notify_admin'/, 'sendReminder must accept channel: email | line_notify_admin');
+  // Channel type alias covers email + line_notify_admin (#302b adds line_push)
+  assert.match(src, /ReminderChannel\s*=\s*'email'\s*\|\s*'line_notify_admin'\s*\|\s*'line_push'/, 'ReminderChannel must include email | line_notify_admin | line_push');
+  assert.match(src, /channel:\s*ReminderChannel/, 'sendReminder must accept channel: ReminderChannel');
 
-  // Routes to email and LINE
+  // Routes to email, ops LINE, and per-traveler LINE push
   assert.match(src, /channel\s*===\s*['"]email['"]|channel.*email/, 'Must route email channel');
   assert.match(src, /channel\s*===\s*['"]line_notify_admin['"]|channel.*line_notify_admin/, 'Must route line_notify_admin channel');
+  assert.match(src, /channel\s*===\s*['"]line_push['"]/, 'Must route line_push channel');
 });
 
 // ── AC9: GitHub Actions workflow ──────────────────────────────────────────────

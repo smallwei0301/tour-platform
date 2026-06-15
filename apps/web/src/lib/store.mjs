@@ -154,6 +154,34 @@ export const rescheduleRequests = [];
 export const orderMessages = [];
 export const paymentEvents = [];
 
+// LINE user binding (in-memory fallback for line_user_mapping).
+// Each entry: { lineUserId, userId, contactEmail, displayName, isBlocked, boundAt, updatedAt }
+export const lineUserMappings = [];
+
+// LINE webhook event idempotency (in-memory fallback for line_webhook_events).
+// Each entry: { webhookEventId, eventType, lineUserId, receivedAt }
+export const lineWebhookEvents = [];
+
+// Guide ↔ LINE binding (in-memory fallback for guide_line_mapping).
+// Each entry: { guideId, lineUserId, displayName, isBlocked, boundAt, updatedAt }
+export const guideLineMappings = [];
+
+// One-time guide binding codes (in-memory fallback for guide_line_bind_code).
+// Each entry: { code, guideId, expiresAt, createdAt }
+export const guideLineBindCodes = [];
+
+// Telegram chat binding (in-memory fallback for telegram_chat_mapping).
+// Each entry: { role, subjectId, contactEmail, chatId, displayName, isBlocked, boundAt, updatedAt }
+export const telegramChatMappings = [];
+
+// One-time Telegram binding codes (in-memory fallback for telegram_bind_code).
+// Each entry: { code, role, subjectId, contactEmail, expiresAt, createdAt }
+export const telegramBindCodes = [];
+
+// Telegram webhook update idempotency (in-memory fallback for telegram_webhook_events).
+// Each entry: { updateId, receivedAt }
+export const telegramWebhookEvents = [];
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',

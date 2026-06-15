@@ -11,7 +11,7 @@
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type ReminderKind = 'h24' | 'h1';
-export type ReminderChannel = 'email' | 'line_notify_admin';
+export type ReminderChannel = 'email' | 'line_notify_admin' | 'line_push';
 
 export interface ReminderOrder {
   contact_name: string;
@@ -33,6 +33,8 @@ export interface ReminderPayload {
   to?: string;
   subject?: string;
   body: string;
+  /** Target LINE userId for channel='line_push'. */
+  lineUserId?: string;
 }
 
 // ── Timezone helper ───────────────────────────────────────────────────────────
@@ -115,12 +117,11 @@ export function composePreTourReminder(
  * sendReminder — channel abstraction allowing future channel substitution.
  *
  * channel='email'              → sends via Resend email lib
- * channel='line_notify_admin'  → sends via LINE Notify (admin broadcast)
- *
- * Future: channel='line_push' → LINE Messaging API push (302b)
+ * channel='line_notify_admin'  → sends ops alert via Messaging API (notifySystemError)
+ * channel='line_push'          → per-traveler LINE Messaging API push (#302b)
  */
 export async function sendReminder(
-  channel: 'email' | 'line_notify_admin',
+  channel: ReminderChannel,
   payload: ReminderPayload
 ): Promise<void> {
   if (channel === 'email') {
@@ -149,6 +150,14 @@ export async function sendReminder(
       payload.body,
       {}
     );
+    return;
+  }
+
+  if (channel === 'line_push') {
+    // Per-traveler push; no-op without a resolved recipient.
+    if (!payload.lineUserId) return;
+    const { pushMessage } = await import('./line-messaging.ts');
+    await pushMessage(payload.lineUserId, [{ type: 'text', text: payload.body }]);
     return;
   }
 }

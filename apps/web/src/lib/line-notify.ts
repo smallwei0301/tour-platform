@@ -1,25 +1,30 @@
 /**
- * LINE Notify 通知服務
- * Phase 10 — Tour Platform
+ * 訂單/系統 ops 通知服務
+ * Phase 10 → #302b — Tour Platform
  *
- * LINE Notify 是免費的 LINE 通知服務，用於發送重要訂單通知給管理員/導遊
+ * ⚠️ LINE Notify 已於 2025-03-31 被 LINE 官方關閉，原本的 Notify 推播端點
+ * 已失效。本模組現改用 LINE Messaging API 將通知推送到 ops/admin 群組
+ * （LINE_OPS_GROUP_ID），由 line-messaging.ts 統一處理 kill-switch
+ * （LINE_MESSAGING_ENABLED，預設 OFF）與 fire-and-forget 語意。
+ *
+ * 對外函式名稱與 OrderNotifyData 維持不變，呼叫端無需改動。
  *
  * 設置方法：
- * 1. 前往 https://notify-bot.line.me/my/
- * 2. 登入 LINE 帳號
- * 3. 點擊「發行權杖」
- * 4. 選擇要接收通知的群組或個人聊天室
- * 5. 將權杖設置到環境變量 LINE_NOTIFY_ACCESS_TOKEN
- *
- * 注意：所有函數都是 fire-and-forget，不會阻塞 API 回應
+ * 1. 於 LINE Developers 建立 Messaging API channel，取得 channel access token。
+ * 2. 將 bot 加入 ops/admin 群組，取得 groupId。
+ * 3. 設置環境變數 LINE_CHANNEL_ACCESS_TOKEN / LINE_OPS_GROUP_ID，
+ *    並開啟 LINE_MESSAGING_ENABLED。
  */
+
+import { pushToOps, type PushStatus } from './line-messaging';
 
 // ── 通知類型 ───────────────────────────────────────────────────────────────────
 
 interface NotifyLogEntry {
   fn: string;
-  status: 'sent' | 'failed' | 'skipped';
+  status: PushStatus;
   orderId?: string;
+  reason?: string;
   error?: string;
   ts: string;
 }
@@ -30,37 +35,17 @@ function logNotify(entry: NotifyLogEntry): void {
   if (entry.status === 'sent') {
     console.log(`${base} | orderId=${entry.orderId ?? '-'}`);
   } else if (entry.status === 'skipped') {
-    console.log(`${base} | reason=no_access_token`);
+    console.log(`${base} | reason=${entry.reason ?? 'skipped'}`);
   } else {
     console.error(`${base} | error=${entry.error}`);
   }
 }
 
-// ── LINE Notify API ─────────────────────────────────────────────────────────────
+// ── ops 推播 helper ──────────────────────────────────────────────────────────
 
-const LINE_NOTIFY_API = 'https://notify-api.line.me/api/notify';
-
-async function sendLineNotify(message: string): Promise<boolean> {
-  const token = process.env.LINE_NOTIFY_ACCESS_TOKEN;
-
-  if (!token) {
-    return false;
-  }
-
-  const response = await fetch(LINE_NOTIFY_API, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: new URLSearchParams({ message }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`LINE Notify API error: ${response.status} ${response.statusText}`);
-  }
-
-  return true;
+async function notifyOps(fn: string, message: string, orderId?: string): Promise<void> {
+  const result = await pushToOps(message);
+  logNotify({ fn, orderId, status: result.status, reason: result.reason, error: result.error, ts: new Date().toISOString() });
 }
 
 // ── 訂單通知資料類型 ─────────────────────────────────────────────────────────────
@@ -97,17 +82,7 @@ export async function notifyNewOrder(data: OrderNotifyData): Promise<void> {
 
 請登入管理後台查看詳情`;
 
-  try {
-    const sent = await sendLineNotify(message);
-    if (!sent) {
-      logNotify({ fn: 'notifyNewOrder', orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-      return;
-    }
-    logNotify({ fn: 'notifyNewOrder', orderId: data.orderId, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logNotify({ fn: 'notifyNewOrder', orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  await notifyOps('notifyNewOrder', message, data.orderId);
 }
 
 /**
@@ -128,17 +103,7 @@ export async function notifyPaymentReceived(data: OrderNotifyData): Promise<void
 
 請聯絡旅客確認行程細節`;
 
-  try {
-    const sent = await sendLineNotify(message);
-    if (!sent) {
-      logNotify({ fn: 'notifyPaymentReceived', orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-      return;
-    }
-    logNotify({ fn: 'notifyPaymentReceived', orderId: data.orderId, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logNotify({ fn: 'notifyPaymentReceived', orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  await notifyOps('notifyPaymentReceived', message, data.orderId);
 }
 
 /**
@@ -157,17 +122,7 @@ export async function notifyOrderCancelled(data: OrderNotifyData): Promise<void>
 
 席位已自動釋放`;
 
-  try {
-    const sent = await sendLineNotify(message);
-    if (!sent) {
-      logNotify({ fn: 'notifyOrderCancelled', orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-      return;
-    }
-    logNotify({ fn: 'notifyOrderCancelled', orderId: data.orderId, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logNotify({ fn: 'notifyOrderCancelled', orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  await notifyOps('notifyOrderCancelled', message, data.orderId);
 }
 
 /**
@@ -188,17 +143,7 @@ ${data.note ? `💬 備註: ${data.note}` : ''}
 
 請登入管理後台審核`;
 
-  try {
-    const sent = await sendLineNotify(message);
-    if (!sent) {
-      logNotify({ fn: 'notifyRefundRequest', orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-      return;
-    }
-    logNotify({ fn: 'notifyRefundRequest', orderId: data.orderId, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logNotify({ fn: 'notifyRefundRequest', orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  await notifyOps('notifyRefundRequest', message, data.orderId);
 }
 
 /**
@@ -213,17 +158,7 @@ export async function notifyRefundExecuted(data: OrderNotifyData): Promise<void>
 
 款項將於 3-5 個工作天退回至原付款工具。`;
 
-  try {
-    const sent = await sendLineNotify(message);
-    if (!sent) {
-      logNotify({ fn: 'notifyRefundExecuted', orderId: data.orderId, status: 'skipped', ts: new Date().toISOString() });
-      return;
-    }
-    logNotify({ fn: 'notifyRefundExecuted', orderId: data.orderId, status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const error = err instanceof Error ? err.message : String(err);
-    logNotify({ fn: 'notifyRefundExecuted', orderId: data.orderId, status: 'failed', error, ts: new Date().toISOString() });
-  }
+  await notifyOps('notifyRefundExecuted', message, data.orderId);
 }
 
 /**
@@ -240,15 +175,5 @@ export async function notifySystemError(context: string, error: string, details?
 
 請儘速檢查`;
 
-  try {
-    const sent = await sendLineNotify(message);
-    if (!sent) {
-      logNotify({ fn: 'notifySystemError', status: 'skipped', ts: new Date().toISOString() });
-      return;
-    }
-    logNotify({ fn: 'notifySystemError', status: 'sent', ts: new Date().toISOString() });
-  } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    logNotify({ fn: 'notifySystemError', status: 'failed', error: errMsg, ts: new Date().toISOString() });
-  }
+  await notifyOps('notifySystemError', message);
 }

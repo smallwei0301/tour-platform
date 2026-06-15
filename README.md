@@ -335,6 +335,7 @@ Phase 14 正式營運                     ░░░░░░░░░░░░  
 - [`docs/05-business/07-operations-plan/02-customer-service-sop.md`](./docs/05-business/07-operations-plan/02-customer-service-sop.md)
 - [`docs/05-business/07-operations-plan/03-quality-control.md`](./docs/05-business/07-operations-plan/03-quality-control.md)
 - [`docs/05-business/07-operations-plan/04-incident-response.md`](./docs/05-business/07-operations-plan/04-incident-response.md)
+- [`docs/operations/notifications-line-telegram-email.md`](./docs/operations/notifications-line-telegram-email.md)（通知系統現況：LINE/Email/Telegram、覆蓋率落差、目標架構 — LINE 事件 push 目前**暫停**，旗標預設 OFF）
 
 ### 安全 / 收斂
 - [`docs/security/issue-119-evidence-2026-04-20.md`](./docs/security/issue-119-evidence-2026-04-20.md)

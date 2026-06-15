@@ -6,6 +6,10 @@ import { sendPaymentSuccess, sendAdminPaymentNotification } from '../../../../..
 import type { OrderEmailData } from '../../../../../src/lib/email';
 import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
+import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
+import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
+import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify.mjs';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { recordIncident } from '../../../../../src/lib/incidents';
@@ -343,11 +347,59 @@ export async function POST(request: Request) {
     // 管理員付款通知（所有渠道）
     void sendAdminPaymentNotification(notifyData);
 
-    // LINE-only booking success notify: keep shared V2 core channel-agnostic.
-    // Truthful scope: current implementation uses LINE Notify (not Messaging API push/reply).
+    // Ops notify (admin/guide group) stays LINE-source only: keep shared V2 core
+    // channel-agnostic. ops notify via Messaging API (LINE_MESSAGING_ENABLED).
     if (sourceChannel === 'line') {
       notifyPaymentReceived(notifyData).catch(() => {});
     }
+
+    // 旅客付款成功推播：凡綁定 LINE 者都推（any bound traveler，不限 source_channel；
+    // 未綁定 → no_line_binding、未開 LINE_PUSH_ENABLED → push_disabled，皆自動 skip）
+    void pushTravelerOrderEvent({
+      kind: 'payment_received',
+      orderId,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      userId: (order?.user_id as string | undefined) ?? undefined,
+      contactEmail: notifyData.contactEmail,
+    }).catch(() => {});
+
+    // 導遊推播：通知負責該團的導遊（未綁定 / 未開 LINE_GUIDE_PUSH_ENABLED 自動 skip）
+    void pushGuideOrderEvent({
+      kind: 'guide_payment_received',
+      orderId,
+      activityId: (order?.activity_id as string | undefined) ?? undefined,
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+    }).catch(() => {});
+
+    // 導遊事件 Email（管理員付款 email 已由 sendAdminPaymentNotification 覆蓋 → includeAdmin: false）
+    void dispatchOrderEventEmails({
+      orderId,
+      kind: 'payment_received',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      includeAdmin: false,
+    }).catch(() => {});
+
+    // 管理員 + 導遊 + 旅客 Telegram 事件通知
+    void dispatchOrderEventTelegram({
+      orderId,
+      kind: 'payment_received',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      activityId: (order?.activity_id as string | undefined) ?? undefined,
+      userId: (order?.user_id as string | undefined) ?? undefined,
+      contactEmail: notifyData.contactEmail,
+    }).catch(() => {});
 
     // ECPay 正式回調期望回覆 "1|OK" 格式
     // 模擬付款（JSON 請求）則回覆 JSON 格式以便前端處理
