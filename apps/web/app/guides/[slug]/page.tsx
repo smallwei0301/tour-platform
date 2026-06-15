@@ -47,6 +47,14 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
   const guideActivities = guide.activities || [];
   const guideReviews = guide.reviews || [];
 
+  // 「詢問導遊」導向：站上訂單前的諮詢管道＝行程詳情頁的旅客問答（activity_qa，
+  // 見 ActivityQASection / /api/qa）。Q&A 綁定單一行程，故導向導遊主行程的問答區塊；
+  // 導遊尚無上架行程時退回行程總覽。
+  const primaryActivity = guideActivities[0];
+  const contactGuideHref = primaryActivity
+    ? `${buildActivityHref({ slug: primaryActivity.slug, region: primaryActivity.region, regionSlug: primaryActivity.regionSlug })}#section-qa`
+    : '/activities';
+
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const guideJsonLd = {
     '@context': 'https://schema.org',
@@ -211,7 +219,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
             </div>
             <p style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>{guide.displayName}</p>
             <p style={{ color: 'var(--tp-muted)' }}>⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則）</p>
-            <button className="tp-btn tp-btn-primary" style={{ width: '100%', marginTop: 12 }}>傳訊息給導遊</button>
+            <Link className="tp-btn tp-btn-primary" href={contactGuideHref} style={{ width: '100%', display: 'block', textAlign: 'center', marginTop: 12 }}>✉️ 詢問導遊</Link>
             <Link className="tp-btn tp-btn-ghost" href="/activities" style={{ width: '100%', display: 'block', marginTop: 8 }}>查看行程</Link>
           </div>
         </aside>
