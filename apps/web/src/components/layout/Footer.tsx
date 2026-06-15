@@ -38,9 +38,10 @@ export function Footer() {
             <ul>
               <li><Link href="/activities">全部行程</Link></li>
               <li><Link href="/theme/cave-exploration">柴山探洞</Link></li>
-              <li><Link href="/theme/river-trekking">野外溯溪</Link></li>
-              <li><Link href="/activities?category=food">美食導覽</Link></li>
-              <li><Link href="/activities?category=hiking">登山健行</Link></li>
+              <li><Link href="/theme/river-trekking">野外溪流</Link></li>
+              <li><Link href="/theme/culture-history">文化歷史</Link></li>
+              <li><Link href="/theme/food-tour">美食導覽</Link></li>
+              <li><Link href="/theme/mountain-wilderness">山野秘境</Link></li>
             </ul>
           </section>
 

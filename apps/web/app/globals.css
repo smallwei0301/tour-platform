@@ -296,7 +296,28 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
 .tp-theme-hero { color: #fff; padding: 88px 0; }
 .tp-theme-hero h1 { margin: 0 0 10px; font-size: clamp(30px, 4vw, 46px); }
 .tp-theme-hero p { max-width: 760px; line-height: 1.7; margin: 0 0 18px; opacity: .95; }
-.tp-theme-river-hero { background: linear-gradient(140deg,#1a4a6b,#2d8b6e); }
+/* 五大主題 hero 背景圖：照片打底＋深色漸層罩，確保左對齊白字可讀（#mobile-categories）。
+   漸層由左側較暗（文字區）漸淡到右側，露出照片主體。 */
+.tp-theme-hero[class*="-hero"] {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.tp-theme-cave-hero {
+  background-image: linear-gradient(100deg, rgba(12,18,14,0.82) 0%, rgba(12,18,14,0.55) 55%, rgba(12,18,14,0.35) 100%), url('/images/theme/cave-exploration.webp');
+}
+.tp-theme-river-hero {
+  background-image: linear-gradient(100deg, rgba(10,30,38,0.80) 0%, rgba(10,30,38,0.50) 55%, rgba(10,30,38,0.30) 100%), url('/images/theme/river-trekking.webp');
+}
+.tp-theme-culture-hero {
+  background-image: linear-gradient(100deg, rgba(30,18,10,0.82) 0%, rgba(30,18,10,0.52) 55%, rgba(30,18,10,0.32) 100%), url('/images/theme/culture-history.webp');
+}
+.tp-theme-food-hero {
+  background-image: linear-gradient(100deg, rgba(20,12,8,0.84) 0%, rgba(20,12,8,0.55) 55%, rgba(20,12,8,0.35) 100%), url('/images/theme/food-tour.webp');
+}
+.tp-theme-wilderness-hero {
+  background-image: linear-gradient(100deg, rgba(12,22,14,0.80) 0%, rgba(12,22,14,0.50) 55%, rgba(12,22,14,0.30) 100%), url('/images/theme/mountain-wilderness.webp');
+}
 .tp-feature-3col { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
 .tp-feature-3col article { border: 1px solid var(--tp-border); border-radius: 12px; padding: 14px; background: var(--tp-card-bg); line-height: 1.7; }
 
@@ -2463,7 +2484,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 /* ── 主題探索 ── */
-.lp-themes { padding-top: 2px; }
+/* 手機版：與上方 hero 之間需有明確留白，避免標題緊貼洞穴主視覺（#mobile-theme-spacing）。 */
+.lp-themes { padding-top: 26px; }
 .lp-themes-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 0 6px; }
 .lp-theme-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
