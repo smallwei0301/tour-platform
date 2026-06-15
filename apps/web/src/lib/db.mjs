@@ -2423,7 +2423,7 @@ export async function processRefundCallbackDb(supabase, { merchantTradeNo, trade
 export async function listPublishedActivitiesDb(filters = {}) {
   if (!hasSupabaseEnv()) {
     // fallback: return fixtures data shaped like DB rows
-    const { activities, guides } = await import('../fixtures/data').catch(() => ({ activities: [], guides: [] }));
+    const { activities, guides, getReviewsByActivity } = await import('../fixtures/data').catch(() => ({ activities: [], guides: [] }));
     let result = activities || [];
     if (filters.region) result = result.filter(a => a.region === filters.region);
     if (filters.category) result = result.filter(a => a.category === filters.category);
@@ -2437,6 +2437,9 @@ export async function listPublishedActivitiesDb(filters = {}) {
     }
     return result.map(a => {
       const guide = (guides || []).find(g => g.slug === a.guideSlug);
+      // #收藏星數：帶上行程自身的真實評論 + 社群口碑語錄，供列表卡用
+      // resolveActivityReviewStats 算出與詳情頁一致的星數/則數（單一真實來源）。
+      const actReviews = getReviewsByActivity ? getReviewsByActivity(a.slug) : [];
       return {
         id: a.slug, slug: a.slug, title: a.title, tagline: a.tagline,
         shortDescription: a.shortDescription, region: a.region, regionSlug: a.regionSlug,
@@ -2445,7 +2448,10 @@ export async function listPublishedActivitiesDb(filters = {}) {
         maxParticipants: a.maxParticipants, coverImageUrl: a.imageUrl,
         status: 'published', guideName: guide?.displayName || '',
         guideSlug: a.guideSlug, guideAvatarUrl: guide?.avatarUrl || '',
-        ratingAvg: guide?.rating || 5.0, reviewCount: guide?.reviewCount || 0
+        ratingAvg: a.ratingAvg ?? null,
+        reviewCount: (actReviews || []).length,
+        reviews: (actReviews || []).map(r => ({ rating: r.rating })),
+        socialProofQuotes: a.socialProofQuotes || [],
       };
     });
   }
@@ -2457,6 +2463,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
       id, slug, title, tagline, short_description, region, region_slug, category,
       price_twd, duration_minutes, min_participants, max_participants,
       cover_image_url, status, published_at,
+      rating_avg, social_proof_quotes,
       guide_id, guide_slug
     `)
     .eq('status', 'published')
@@ -2466,8 +2473,43 @@ export async function listPublishedActivitiesDb(filters = {}) {
   if (filters.category) query = query.eq('category', filters.category);
   if (filters.q) query = query.ilike('title', `%${filters.q}%`);
 
-  const { data, error } = await query;
+  let { data, error } = await query;
+  // schema-drift guard：rating_avg／social_proof_quotes 在部分環境可能尚未存在，
+  // 欄位不存在（42703）時退回精簡 select，避免整個列表頁 500。
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    let retry = supabase
+      .from('activities')
+      .select(`
+        id, slug, title, tagline, short_description, region, region_slug, category,
+        price_twd, duration_minutes, min_participants, max_participants,
+        cover_image_url, status, published_at,
+        guide_id, guide_slug
+      `)
+      .eq('status', 'published')
+      .order('published_at', { ascending: false });
+    if (filters.region) retry = retry.eq('region', filters.region);
+    if (filters.category) retry = retry.eq('category', filters.category);
+    if (filters.q) retry = retry.ilike('title', `%${filters.q}%`);
+    ({ data, error } = await retry);
+  }
   if (error) throw new Error(error.message);
+
+  // #收藏星數：批次撈出所有行程的「已核准」真實評論星數，依 activity_slug 分組，
+  // 供列表卡用 resolveActivityReviewStats 算出與詳情頁一致的星數/則數。
+  const slugs = [...new Set((data || []).map(r => r.slug).filter(Boolean))];
+  const reviewsBySlug = new Map();
+  if (slugs.length > 0) {
+    const { data: reviewRows } = await supabase
+      .from('activity_reviews')
+      .select('activity_slug, rating')
+      .in('activity_slug', slugs)
+      .eq('status', 'approved');
+    for (const row of reviewRows || []) {
+      const list = reviewsBySlug.get(row.activity_slug) || [];
+      list.push({ rating: row.rating });
+      reviewsBySlug.set(row.activity_slug, list);
+    }
+  }
 
   const guideIds = [...new Set((data || []).map((r) => r.guide_id).filter(Boolean))];
   let guideMap = new Map();
@@ -2490,6 +2532,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
     })
     .map(r => {
     const guide = guideMap.get(r.guide_id) || null;
+    const actReviews = reviewsBySlug.get(r.slug) || [];
     return {
       id: r.id, slug: r.slug, title: r.title, tagline: r.tagline,
       shortDescription: r.short_description, region: r.region, regionSlug: r.region_slug,
@@ -2499,8 +2542,11 @@ export async function listPublishedActivitiesDb(filters = {}) {
       guideName: guide?.display_name || '',
       guideSlug: r.guide_slug || guide?.slug || '',
       guideAvatarUrl: guide?.profile_photo_url || '',
-      ratingAvg: guide?.rating_avg ?? null,
-      reviewCount: guide?.review_count ?? 0
+      // 行程自身的評分（後台暖場初始值）優先；併入 reviews/socialProofQuotes 後由前台統一計算。
+      ratingAvg: r.rating_avg ?? null,
+      reviewCount: actReviews.length,
+      reviews: actReviews,
+      socialProofQuotes: Array.isArray(r.social_proof_quotes) ? r.social_proof_quotes : [],
     };
   });
 }
@@ -2828,7 +2874,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
       })),
       reviews: reviews.map(r => ({
         id: r.id, author: r.author, city: r.city, rating: r.rating,
-        text: r.text, comment: r.text, date: r.date
+        text: r.text, comment: r.text, date: r.date, photos: r.photos || []
       }))
     };
   }
@@ -2997,6 +3043,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
               rating: r.rating,
               text: r.text || r.comment,
               date: r.date || r.reviewDate,
+              photos: r.photos || [],
             })),
           };
         }
@@ -3037,20 +3084,35 @@ export async function getActivityBySlugDb(slug, options = {}) {
     ).catch(() => ({ data: [], error: null })),
     (async () => {
       try {
-        const { data: dbReviews, error: reviewErr } = await withActivityDetailTimeout(
+        const reviewSelect = 'id, author, city, rating, review_text, review_date, is_verified, photo_urls';
+        let { data: dbReviews, error: reviewErr } = await withActivityDetailTimeout(
           supabase
             .from('activity_reviews')
-            .select('id, author, city, rating, review_text, review_date, is_verified')
+            .select(reviewSelect)
             .eq('activity_slug', act.slug)
             .eq('status', 'approved')
             .order('review_date', { ascending: false })
             .limit(20),
           { timeoutMs: queryTimeoutMs, label: 'activity-reviews' }
         );
+        // schema-drift guard：photo_urls 欄位若尚未 migrate（42703）→ 退回不含照片的 select。
+        if (reviewErr && (reviewErr.code === '42703' || /column .*does not exist/i.test(reviewErr.message || ''))) {
+          ({ data: dbReviews, error: reviewErr } = await withActivityDetailTimeout(
+            supabase
+              .from('activity_reviews')
+              .select('id, author, city, rating, review_text, review_date, is_verified')
+              .eq('activity_slug', act.slug)
+              .eq('status', 'approved')
+              .order('review_date', { ascending: false })
+              .limit(20),
+            { timeoutMs: queryTimeoutMs, label: 'activity-reviews-retry' }
+          ));
+        }
         if (!reviewErr && dbReviews && dbReviews.length > 0) {
           return dbReviews.map(r => ({
             id: r.id, author: r.author, city: r.city, rating: r.rating,
-            text: r.review_text, date: r.review_date, isVerified: r.is_verified
+            text: r.review_text, date: r.review_date, isVerified: r.is_verified,
+            photos: Array.isArray(r.photo_urls) ? r.photo_urls : []
           }));
         }
       } catch {}
@@ -3059,7 +3121,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
         const fixtureReviews = getReviewsByActivity ? getReviewsByActivity(act.slug) : [];
         return (fixtureReviews || []).slice(0, 20).map(r => ({
           id: r.id, author: r.author, city: r.city, rating: r.rating,
-          text: r.text, date: r.date
+          text: r.text, date: r.date, photos: r.photos || []
         }));
       } catch {
         return [];
@@ -3212,7 +3274,7 @@ export async function getGuideBySlugDb(slug) {
       })),
       reviews: reviews.map(r => ({
         id: r.id, author: r.author, city: r.city, rating: r.rating,
-        text: r.text, comment: r.text, date: r.date
+        text: r.text, comment: r.text, date: r.date, photos: r.photos || []
       }))
     };
   }

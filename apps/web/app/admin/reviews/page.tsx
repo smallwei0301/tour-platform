@@ -23,6 +23,7 @@ type Review = {
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
   booking_id: string;
+  photo_urls?: string[];
 };
 
 export default function AdminReviewsPage() {
@@ -120,6 +121,22 @@ export default function AdminReviewsPage() {
     {
       key: 'text', header: '評價內容', mobileLabel: '內容',
       cell: (r) => <span style={{ fontSize: 12, color: '#374151' }}>{truncate(r.review_text)}</span>,
+      tdStyle: { maxWidth: 200 },
+    },
+    {
+      key: 'photos', header: '照片', mobileLabel: '照片',
+      cell: (r) => (
+        Array.isArray(r.photo_urls) && r.photo_urls.length > 0 ? (
+          <div style={{ display: 'flex', gap: 4, overflowX: 'auto', maxWidth: 180 }}>
+            {r.photo_urls.map((src, i) => (
+              <a key={i} href={src} target="_blank" rel="noopener noreferrer" style={{ flex: '0 0 auto', lineHeight: 0 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`照片 ${i + 1}`} style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid #e5e7eb' }} />
+              </a>
+            ))}
+          </div>
+        ) : <span style={{ fontSize: 12, color: '#9ca3af' }}>—</span>
+      ),
       tdStyle: { maxWidth: 200 },
     },
     {

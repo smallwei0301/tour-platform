@@ -12,9 +12,12 @@ async function readSource(relPath) {
 }
 
 // AC1: ActivitiesContent.tsx listing card
-test('AC1: ActivitiesContent listing card shows activity ratingAvg.toFixed(1)', async () => {
+// 更新（#收藏星數）：列表卡改用與詳情頁同一真實來源 resolveActivityReviewStats，
+// 顯示聚合後的 score（真實評論 + 社群口碑語錄），保留一位小數。
+test('AC1: ActivitiesContent listing card formats rating score with toFixed(1) via shared stats helper', async () => {
   const src = await readSource('app/activities/ActivitiesContent.tsx');
-  assert.match(src, /ratingAvg\.toFixed\(1\)/, 'Should format ratingAvg with toFixed(1)');
+  assert.match(src, /resolveActivityReviewStats/, 'Should use shared resolveActivityReviewStats (single source with detail page)');
+  assert.match(src, /\.score\.toFixed\(1\)/, 'Should format aggregated score with toFixed(1)');
 });
 
 test('AC1: ActivitiesContent listing card shows reviewCount', async () => {

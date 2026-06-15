@@ -80,6 +80,10 @@ export default function OrderDetailPage() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewErr, setReviewErr] = useState<string | null>(null);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  // 評價照片（選填，最多 5 張）
+  const [reviewPhotos, setReviewPhotos] = useState<string[]>([]);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const REVIEW_PHOTO_MAX = 5;
 
   // #1383 — Reschedule state
   const [showRescheduleForm, setShowRescheduleForm] = useState(false);
@@ -279,6 +283,46 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleReviewPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    // input 允許重複挑同一張，清空 value 讓 onChange 能再次觸發。
+    e.target.value = '';
+    if (files.length === 0) return;
+    setReviewErr(null);
+
+    const remaining = REVIEW_PHOTO_MAX - reviewPhotos.length;
+    if (remaining <= 0) {
+      setReviewErr(`最多上傳 ${REVIEW_PHOTO_MAX} 張照片`);
+      return;
+    }
+
+    setPhotoUploading(true);
+    try {
+      for (const file of files.slice(0, remaining)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/reviews/upload-photo', {
+          method: 'POST',
+          headers: csrfHeaders(),
+          body: fd,
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || j.error) {
+          throw new Error(j.error?.message || '照片上傳失敗');
+        }
+        setReviewPhotos((prev) => (prev.length < REVIEW_PHOTO_MAX ? [...prev, j.data.url] : prev));
+      }
+    } catch (err) {
+      setReviewErr(err instanceof Error ? err.message : '照片上傳失敗，請稍後再試');
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const removeReviewPhoto = (url: string) => {
+    setReviewPhotos((prev) => prev.filter((u) => u !== url));
+  };
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewText.trim()) return;
@@ -293,12 +337,14 @@ export default function OrderDetailPage() {
           bookingId: orderId,
           rating: reviewRating,
           reviewText: reviewText.trim(),
+          photoUrls: reviewPhotos,
         }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '評價送出失敗');
       setReviewSubmitted(true);
       setShowReviewForm(false);
+      setReviewPhotos([]);
     } catch (e) {
       setReviewErr(e instanceof Error ? e.message : '評價送出失敗，請稍後再試');
     } finally {
@@ -611,9 +657,62 @@ export default function OrderDetailPage() {
                 rows={4}
                 style={{ width: '100%', border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 10px', fontSize: 13, boxSizing: 'border-box', resize: 'vertical' }}
               />
+
+              {/* 評價照片上傳（選填，最多 5 張，手機可左右滑動瀏覽） */}
+              <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', margin: '12px 0 6px' }}>
+                上傳照片（選填，最多 {REVIEW_PHOTO_MAX} 張）
+              </label>
+              <div
+                data-testid="review-photo-strip"
+                style={{
+                  display: 'flex', gap: 8, overflowX: 'auto', WebkitOverflowScrolling: 'touch',
+                  scrollSnapType: 'x mandatory', paddingBottom: 4,
+                }}
+              >
+                {reviewPhotos.map((url) => (
+                  <div key={url} style={{ position: 'relative', flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={url} alt="評價照片" style={{ width: 88, height: 88, objectFit: 'cover', borderRadius: 8, border: '1px solid #e5e7eb', display: 'block' }} />
+                    <button
+                      type="button"
+                      onClick={() => removeReviewPhoto(url)}
+                      aria-label="移除照片"
+                      style={{
+                        position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: '50%',
+                        border: 'none', background: 'rgba(17,24,39,0.85)', color: '#fff', cursor: 'pointer',
+                        fontSize: 13, lineHeight: '22px', padding: 0,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+                {reviewPhotos.length < REVIEW_PHOTO_MAX && (
+                  <label
+                    style={{
+                      flex: '0 0 auto', width: 88, height: 88, borderRadius: 8, border: '1px dashed #d1d5db',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                      cursor: photoUploading ? 'default' : 'pointer', color: '#6b7280', fontSize: 12, gap: 2,
+                      scrollSnapAlign: 'start',
+                    }}
+                  >
+                    <span style={{ fontSize: 20, lineHeight: 1 }}>{photoUploading ? '…' : '+'}</span>
+                    <span>{photoUploading ? '上傳中' : '新增'}</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={handleReviewPhotoChange}
+                      disabled={photoUploading}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
+              </div>
+
               {reviewErr && <p style={{ color: '#ef4444', fontSize: 12, marginTop: 6 }}>{reviewErr}</p>}
               <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <button type="submit" style={btnPrimary} disabled={submittingReview}>
+                <button type="submit" style={btnPrimary} disabled={submittingReview || photoUploading}>
                   {submittingReview ? '送出中…' : '提交評價'}
                 </button>
                 <button type="button" onClick={() => { setShowReviewForm(false); setReviewErr(null); }} style={btnSecondary}>

@@ -1663,6 +1663,38 @@ img { max-width: 100%; height: auto; }
   color: rgba(238, 230, 205, 0.85);
   margin: 0;
 }
+/* 旅客評價照片：多張時手機可左右滑動（scroll-snap），桌機亦同一橫向卷軸。 */
+.kkd-review-photos {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+.kkd-review-photos::-webkit-scrollbar { height: 6px; }
+.kkd-review-photos::-webkit-scrollbar-thumb {
+  background: rgba(238, 230, 205, 0.25);
+  border-radius: 999px;
+}
+.kkd-review-photo {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: block;
+  line-height: 0;
+}
+.kkd-review-photo img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--tp-border);
+}
+@media (max-width: 480px) {
+  .kkd-review-photo img { width: 104px; height: 104px; }
+}
 
 /* Detail blocks */
 .kkd-detail-block { margin-bottom: 20px; }
@@ -1731,7 +1763,8 @@ img { max-width: 100%; height: auto; }
 }
 .kkd-guide-verified {
   font-size: 12px;
-  color: var(--tp-gold-strong);
+  /* 導遊認證標章採平台主配色黃金色（黃銅 #b08d3e，與 logo「祕島」同色）。 */
+  color: var(--tp-brass);
   display: block;
   margin-bottom: 6px;
 }

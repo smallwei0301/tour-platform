@@ -85,7 +85,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const rawSlug = (formData.get('slug') as string) || id;
-    const type = (formData.get('type') as string) || 'cover'; // 'cover' | 'gallery'
+    const type = (formData.get('type') as string) || 'cover'; // 'cover' | 'gallery' | 'review'
+    // 暖場評論（社群口碑語錄）照片：與旅客評價照片共用 review-photos 桶，
+    // 不限制長寬比（評論照片本來就各種比例），其餘（type、auth、CSRF）沿用。
+    const isReview = type === 'review';
+    const bucket = isReview ? 'review-photos' : BUCKET;
 
     if (!file) {
       return Response.json(fail('INVALID_REQUEST', 'file is required'), { status: 400 });
@@ -103,10 +107,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return Response.json(fail('FILE_TOO_LARGE', `檔案大小不能超過 ${maxMB}MB`), { status: 400 });
     }
 
-    // Validate image dimensions and aspect ratio
-    const validation = await validateImageDimensions(file, type as 'cover' | 'gallery');
-    if (!validation.valid) {
-      return Response.json(fail('INVALID_DIMENSIONS', validation.error ?? '尺寸驗證失敗'), { status: 400 });
+    // Validate image dimensions and aspect ratio（評論照片不限比例，略過）
+    if (!isReview) {
+      const validation = await validateImageDimensions(file, type as 'cover' | 'gallery');
+      if (!validation.valid) {
+        return Response.json(fail('INVALID_DIMENSIONS', validation.error ?? '尺寸驗證失敗'), { status: 400 });
+      }
     }
 
     // Sanitize slug: keep alphanumeric, hyphen, underscore only
@@ -119,16 +125,17 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const timestamp = Date.now();
     const ext = file.type === 'image/webp' ? 'webp' : (file.type === 'image/png' ? 'png' : 'jpg');
 
-    // Naming: cover → hero-{timestamp}.ext, gallery → gallery-{timestamp}.ext
-    const prefix = type === 'cover' ? 'hero' : 'gallery';
+    // Naming: cover → hero-{timestamp}.ext, gallery → gallery-{timestamp}.ext, review → quote-{timestamp}.ext
+    const prefix = isReview ? 'quote' : type === 'cover' ? 'hero' : 'gallery';
     const filename = `${prefix}-${timestamp}.${ext}`;
-    const path = `activities/${slug}/${filename}`;
+    // 評論照片放 review-photos 桶的 reviews/{slug}/ 路徑；其餘維持 activities/{slug}/。
+    const path = isReview ? `reviews/${slug}/${filename}` : `activities/${slug}/${filename}`;
 
     const arrayBuffer = await file.arrayBuffer();
 
     // Upload to Supabase Storage
     const uploadRes = await fetch(
-      `${SUPABASE_URL}/storage/v1/object/${BUCKET}/${path}`,
+      `${SUPABASE_URL}/storage/v1/object/${bucket}/${path}`,
       {
         method: 'POST',
         headers: {
@@ -147,7 +154,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return Response.json(fail('UPLOAD_ERROR', errText), { status: 500 });
     }
 
-    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`;
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/${bucket}/${path}`;
 
     return Response.json(ok({
       url: publicUrl,
