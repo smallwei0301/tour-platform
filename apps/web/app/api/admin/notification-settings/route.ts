@@ -108,6 +108,10 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(ok({ matrix, dimensions: DIMENSIONS }));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
+    // Migration not yet applied → actionable 503 instead of an opaque 500.
+    if (message.startsWith('notification_settings_migration_missing:')) {
+      return NextResponse.json(fail('MIGRATION_REQUIRED', message), { status: 503 });
+    }
     return NextResponse.json(fail('SERVER_ERROR', message), { status: 500 });
   }
 }
