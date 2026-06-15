@@ -31,11 +31,12 @@ const inter = Inter({
 });
 
 // 祕島 LP 顯示字體 — 古籍／古地圖質感的明體（BRAND_BOOK Section 04）。
-// display:'swap'：標題層級的襯線字是品牌視覺核心，寧可短暫 fallback 再換字。
+// display:'optional'：CJK 明體字包很大，慢速網路先用相近系統明體，
+// 避免字體晚到時替換造成首頁首屏跳動；快取命中/後續導覽仍可呈現品牌字。
 const notoSerif = Noto_Serif_TC({
   subsets: ['latin'],
   weight: ['600', '700', '900'],
-  display: 'swap',
+  display: 'optional',
   variable: '--font-noto-serif-tc',
 });
 

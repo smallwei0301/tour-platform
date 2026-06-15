@@ -43,9 +43,9 @@
 * { box-sizing: border-box; }
 body {
   margin: 0; color: var(--tp-text); background: var(--tp-bg);
-  font-family: 'Noto Sans TC', Inter, system-ui, -apple-system, sans-serif;
+  font-family: var(--font-noto-sans-tc), var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
   /* next/font 變數掛在 body class 上，--tp-serif 必須在 body 層定義才解析得到（html 層會 IACVT 失效） */
-  --tp-serif: var(--font-noto-serif-tc, 'Noto Serif TC'), 'Noto Serif TC', 'PMingLiU', Georgia, serif;
+  --tp-serif: var(--font-noto-serif-tc), 'Noto Serif TC', 'PMingLiU', 'Songti TC', Georgia, serif;
 }
 /* overflow-x: clip 防橫向捲動，但「不」建立捲動容器 —— 用 hidden 會讓 body
    成為捲動容器、使子層 position: sticky 的 Navbar 失效（捲動時跟著消失）。 */
@@ -145,10 +145,13 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
 .tp-faq summary { cursor: pointer; font-weight: 700; }
 .tp-faq p { margin: 8px 0 0; color: var(--tp-muted); }
 
-/* 首頁視覺語言延伸：旅客頁面標題一律襯線字 */
-.tp-container h1, .tp-container h2, .tp-container h3,
-.tp-section-head h2, .kkd-title, .kkd-section-title,
-.tp-footer-logo, .tp-footer h4 {
+/* 品牌明體只保留在首頁 LP 與 Logo/頁尾等品牌識別區，
+   避免所有一般內容標題都要求大型 CJK Serif webfont，降低首頁首屏與內頁載入成本。 */
+body:has(.lp-root) .tp-logo,
+.tp-navbar--home .tp-logo,
+.tp-footer-logo, .tp-footer h4,
+.lp-root h1, .lp-root h2, .lp-root h3,
+.lp-root .lp-eyebrow, .lp-root .lp-btn {
   font-family: var(--tp-serif);
   letter-spacing: 0.04em;
 }
