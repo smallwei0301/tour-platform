@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-06-15T14:12:49.923Z -->
+<!-- query_timestamp: 2026-06-15T19:23:37.951Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-15T14:12:49.923Z  
-**Commit SHA:** `b15cb4c6300cbfe6bf5c6feb34c72558a9fa51d1`
+**Query timestamp:** 2026-06-15T19:23:37.951Z  
+**Commit SHA:** `cbac580544b2198953d3231a68b935a853b49810`
 
 ---
 
-## Open PRs (4)
+## Open PRs (3)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1460 | [feat(activity): 行程介紹改為依方案呈現，後台行程介紹改站點時間表 (#297)](https://github.com/smallwei0301/tour-platform/pull/1460) | `claude/traveler-itinerary-display-297tpn` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
@@ -72,16 +71,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1463 | [fix(notify): 通知矩陣表未建立時 fail-open（讀）+ 503 可操作錯誤（寫）](https://github.com/smallwei0301/tour-platform/pull/1463) | 2026-06-15 |
+| #1462 | [perf(home): 首頁移除 critical path 重量級查詢 + 改 on-demand ISR（儲存即時反映）](https://github.com/smallwei0301/tour-platform/pull/1462) | 2026-06-15 |
+| #1461 | [feat(notify): 後台可勾選的通知矩陣 + 旅客 LINE 綁定 + admin 路由補 LINE push](https://github.com/smallwei0301/tour-platform/pull/1461) | 2026-06-15 |
+| #1460 | [feat(activity): 行程介紹改為依方案呈現，後台行程介紹改站點時間表 (#297)](https://github.com/smallwei0301/tour-platform/pull/1460) | 2026-06-15 |
 | #1459 | [perf(me): 會員中心分頁加入 SWR client 快取，切回分頁瞬開](https://github.com/smallwei0301/tour-platform/pull/1459) | 2026-06-15 |
 | #1458 | [perf(me): 旅客會員中心移除序列雙重 auth 往返 + 並行 QA 查詢；補套用 runbook](https://github.com/smallwei0301/tour-platform/pull/1458) | 2026-06-15 |
 | #1457 | [fix(me/profile): region 欄位 schema-drift guard — 旅客儲存不再整筆失敗](https://github.com/smallwei0301/tour-platform/pull/1457) | 2026-06-15 |
 | #1456 | [feat(telegram): 管理員後台訂單操作也派送 Telegram 通知](https://github.com/smallwei0301/tour-platform/pull/1456) | 2026-06-15 |
 | #1455 | [fix(activity): 旅客問答改用站內品牌配色字體，與常見問題一致](https://github.com/smallwei0301/tour-platform/pull/1455) | 2026-06-15 |
 | #1454 | [perf(me): 旅客後台問答/最愛連結改用 canonical 詳情頁路徑（消除相容轉址延遲）](https://github.com/smallwei0301/tour-platform/pull/1454) | 2026-06-15 |
-| #1453 | [fix(me/profile): Telegram 綁定區深底文字對比修正（復原問答頁誤加的對比微調）](https://github.com/smallwei0301/tour-platform/pull/1453) | 2026-06-15 |
-| #1452 | [fix(me/qa): 問答回覆頁手機長標題破框 + 提示文字對比修正](https://github.com/smallwei0301/tour-platform/pull/1452) | 2026-06-15 |
-| #1451 | [feat(telegram): 綁定確認改交易性發送 + production migration 檢查清單](https://github.com/smallwei0301/tour-platform/pull/1451) | 2026-06-15 |
-| #1450 | [feat(me): 問答回覆收件匣 + 個人資料區域設定（會員中心四分頁）](https://github.com/smallwei0301/tour-platform/pull/1450) | 2026-06-15 |
 
 ---
 
