@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
+import { buildGuideContactActivityId } from '../../../../src/lib/guide-contact-qa.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 function getServiceClient() {
@@ -39,15 +40,17 @@ export async function GET(req: Request) {
 
     const activityIds = (activities || []).map((a: { id: string }) => a.id);
 
-    if (activityIds.length === 0) {
-      return Response.json(ok({ data: [] }));
-    }
+    // 「認識導遊」頁的 inline 訊息以 sentinel activity_id（guide:<guideId>）儲存，
+    // 不綁定任何行程，但仍須流進此導遊的收件匣 — 故一併查詢該 sentinel。
+    // 即使導遊尚無上架行程，也要能收到導遊頁訊息（不可在 activityIds 為空時提早 return）。
+    const guideContactActivityId = buildGuideContactActivityId(session.guideId);
+    const queryActivityIds = [...activityIds, guideContactActivityId];
 
-    // Fetch Q&A entries for guide's activities filtered by status
+    // Fetch Q&A entries for guide's activities + guide-page messages, filtered by status
     const { data: qaList, error: qaError } = await supabase
       .from('activity_qa')
       .select('id, activity_id, question, answer, status, created_at, user_id')
-      .in('activity_id', activityIds)
+      .in('activity_id', queryActivityIds)
       .eq('status', status)
       .order('created_at', { ascending: false });
 
