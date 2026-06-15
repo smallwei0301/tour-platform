@@ -8,6 +8,7 @@ import type { OrderNotifyData } from '../../../../../src/lib/line-notify';
 import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
+import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { recordIncident } from '../../../../../src/lib/incidents';
@@ -373,6 +374,17 @@ export async function POST(request: Request) {
       scheduleDate: notifyData.scheduleDate,
       peopleCount: notifyData.peopleCount,
       totalTwd: notifyData.totalTwd,
+    }).catch(() => {});
+
+    // 導遊事件 Email（管理員付款 email 已由 sendAdminPaymentNotification 覆蓋 → includeAdmin: false）
+    void dispatchOrderEventEmails({
+      orderId,
+      kind: 'payment_received',
+      activityTitle: notifyData.activityTitle,
+      scheduleDate: notifyData.scheduleDate,
+      peopleCount: notifyData.peopleCount,
+      totalTwd: notifyData.totalTwd,
+      includeAdmin: false,
     }).catch(() => {});
 
     // ECPay 正式回調期望回覆 "1|OK" 格式

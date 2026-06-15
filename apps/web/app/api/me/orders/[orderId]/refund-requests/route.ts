@@ -8,6 +8,7 @@ import type { OrderNotifyData } from '../../../../../../src/lib/line-notify';
 import { notifyRefundRequest, notifyRefundExecuted } from '../../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
+import { dispatchOrderEventEmails } from '../../../../../../src/lib/order-email-notify';
 import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
@@ -200,6 +201,10 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         // 旅客退款完成推播（未綁定/未開旗標時自動 skip）
         void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_executed' }).catch(() => {});
         void pushGuideOrderEvent({ ...guidePushBase, kind: 'guide_refund_executed' }).catch(() => {});
+        void dispatchOrderEventEmails({
+          orderId, kind: 'refund_executed', activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
+        }).catch(() => {});
       } else {
         // Normal flow — admin will process
         void sendRefundRequested(notifyData).then((emailResult) => {
@@ -215,6 +220,10 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         // 旅客退款申請推播（未綁定/未開旗標時自動 skip）
         void pushTravelerOrderEvent({ ...travelerPushBase, kind: 'refund_requested' }).catch(() => {});
         void pushGuideOrderEvent({ ...guidePushBase, kind: 'guide_refund_requested' }).catch(() => {});
+        void dispatchOrderEventEmails({
+          orderId, kind: 'refund_requested', activityTitle: notifyData.activityTitle,
+          scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
+        }).catch(() => {});
       }
     }
 

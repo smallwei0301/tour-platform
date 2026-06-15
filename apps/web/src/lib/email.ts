@@ -22,7 +22,7 @@ interface EmailLogEntry {
   ts: string;
 }
 
-export type EmailFailureCode = 'EMAIL_PROVIDER_NOT_CONFIGURED' | 'EMAIL_SEND_FAILED';
+export type EmailFailureCode = 'EMAIL_PROVIDER_NOT_CONFIGURED' | 'EMAIL_SEND_FAILED' | 'NO_GUIDE_EMAIL';
 
 export interface EmailDeliveryResult {
   ok: boolean;
@@ -284,6 +284,71 @@ export async function sendAdminPaymentNotification(data: OrderEmailData): Promis
       html,
       orderId: data.orderId,
     }).catch(() => {});
+  }
+}
+
+// ── Guide / Admin order-event notifications (#302b notification architecture) ──
+// Guides receive NO email on core order events today; admins only on payment.
+// These fill that gap (target architecture: every audience gets event email).
+
+export type OrderEventEmailKind =
+  | 'new_order'
+  | 'payment_received'
+  | 'order_cancelled'
+  | 'refund_requested'
+  | 'refund_executed';
+
+const ORDER_EVENT_COPY: Record<OrderEventEmailKind, { label: string; emoji: string; note: string }> = {
+  new_order: { label: '新預約（待付款）', emoji: '🆕', note: '旅客完成付款後會再通知。' },
+  payment_received: { label: '訂單已付款確認', emoji: '💰', note: '名額已確認，請安排出團準備。' },
+  order_cancelled: { label: '訂單已取消', emoji: '❌', note: '名額已釋出，請更新出團名單。' },
+  refund_requested: { label: '退款申請', emoji: '🔄', note: '平台將進行審核，結果會再通知。' },
+  refund_executed: { label: '退款已完成', emoji: '✅', note: '該名額已正式結案。' },
+};
+
+/**
+ * 導遊訂單事件通知 email（無 guide email 時靜默略過）。
+ * `data.to` = 導遊 email；其餘為訂單欄位。
+ */
+export async function sendGuideOrderNotification(
+  data: OrderEmailData & { to: string; kind: OrderEventEmailKind },
+): Promise<EmailDeliveryResult> {
+  const to = String(data.to || '').trim();
+  const copy = ORDER_EVENT_COPY[data.kind] ?? ORDER_EVENT_COPY.new_order;
+  if (!to) {
+    return { fn: 'sendGuideOrderNotification', to: '', subject: '', ok: false, status: 'skipped',
+      errorCode: 'NO_GUIDE_EMAIL', errorMessage: 'guide email not available', retriable: false };
+  }
+  const subject = `[Midao 祕島｜導遊通知] ${copy.label} — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">${copy.emoji} ${copy.label}</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 16px;">你負責的行程有訂單動態。</p>
+    ${orderInfoBlock(data)}
+    <div style="background:#eef2ff;border-left:4px solid #6366f1;border-radius:8px;padding:12px 16px;margin-top:16px;">
+      <p style="margin:0;font-size:13px;color:#3730a3;">${copy.note}</p>
+    </div>
+  `);
+  return sendEmailWithContract({ fn: 'sendGuideOrderNotification', to, subject, html, orderId: data.orderId });
+}
+
+/**
+ * 管理員訂單事件通知 email（寄給 ADMIN_EMAIL_ALLOWLIST 全員）。
+ * 付款事件已由 sendAdminPaymentNotification 覆蓋，這裡補其餘事件。
+ */
+export async function sendAdminOrderNotification(
+  data: OrderEmailData & { kind: OrderEventEmailKind },
+): Promise<void> {
+  const adminEmails = (process.env.ADMIN_EMAIL_ALLOWLIST || '').split(',').map((e) => e.trim()).filter(Boolean);
+  if (adminEmails.length === 0) return;
+  const copy = ORDER_EVENT_COPY[data.kind] ?? ORDER_EVENT_COPY.new_order;
+  const subject = `[Midao 祕島｜營運] ${copy.label} — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">${copy.emoji} ${copy.label}</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 16px;">以下訂單有狀態變更，請做後續安排。</p>
+    ${orderInfoBlock(data)}
+  `);
+  for (const adminEmail of adminEmails) {
+    await sendEmailWithContract({ fn: 'sendAdminOrderNotification', to: adminEmail, subject, html, orderId: data.orderId }).catch(() => {});
   }
 }
 
