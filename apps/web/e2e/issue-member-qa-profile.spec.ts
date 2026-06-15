@@ -77,6 +77,31 @@ test.describe('會員中心：問答回覆 + 個人資料區域', () => {
     expect(page.url()).not.toMatch(/\/login/);
   });
 
+  test('效能：切回分頁用快取瞬開（第二次造訪不等待慢速 API）', async ({ page }) => {
+    await setTravelerSession(page);
+    let calls = 0;
+    await page.route('**/api/me/qa**', async (r: Route) => {
+      calls += 1;
+      // 第二次起故意變慢 3s：若無快取就會卡在「載入問答中」；有快取則項目立即出現。
+      if (calls >= 2) await new Promise((res) => setTimeout(res, 3000));
+      await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: QA }) });
+    });
+    await page.route('**/api/me/orders**', (r: Route) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) }),
+    );
+
+    await page.goto('/me/qa');
+    await expect(page.getByTestId('qa-item').first()).toBeVisible({ timeout: 10_000 });
+
+    // 以分頁 Link 切去訂單再切回問答（SPA 導覽，保留 module 快取）。
+    await page.getByTestId('member-tab-orders').click();
+    await expect(page).toHaveURL(/\/me\/orders/);
+    await page.getByTestId('member-tab-qa').click();
+
+    // 即使第二次 /api/me/qa 慢 3s，快取也讓項目在 1.5s 內就出現。
+    await expect(page.getByTestId('qa-item').first()).toBeVisible({ timeout: 1500 });
+  });
+
   test('問答回覆：空狀態顯示 CTA', async ({ page }) => {
     await setTravelerSession(page);
     await page.route('**/api/me/qa**', (r: Route) =>

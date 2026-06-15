@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
+import { useMeResource } from '../../../src/lib/use-me-resource';
 
 type Order = {
   id: string;
@@ -77,40 +78,20 @@ const titleStyle: React.CSSProperties = {
 
 export default function MyOrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('');
+  // stale-while-revalidate：切回本分頁時用快取瞬開，背景更新。401 才導登入。
+  const { data, loading, error: err } = useMeResource<Order[]>('/api/me/orders', {
+    onUnauthorized: () => router.replace(`/login?next=${encodeURIComponent('/me/orders')}`),
+  });
+  const orders = data ?? [];
 
   useEffect(() => {
-    // 直接打 API（route 端已驗證 auth），401 才導去登入 —— 不再用 client getUser 擋住資料載入，
-    // 省掉「client getUser → 再 server getUser」的序列雙重往返。
-    fetchOrders();
     // 問候語用的名稱在背景取得，不阻塞列表渲染。
-    createClient().auth.getUser().then(({ data }) => {
-      const user = data.user;
+    createClient().auth.getUser().then(({ data: u }) => {
+      const user = u.user;
       if (user) setUserName(user.user_metadata?.full_name || user.email?.split('@')[0] || '');
     }).catch(() => {});
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchOrders = async () => {
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await fetch('/api/me/orders', { cache: 'no-store' });
-      if (res.status === 401) {
-        router.replace(`/login?next=${encodeURIComponent('/me/orders')}`);
-        return;
-      }
-      const j = await res.json();
-      setOrders(j.data || []);
-    } catch {
-      setErr('查詢失敗，請稍後再試');
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   return (
     <main className="tp-container" style={pageStyle}>
