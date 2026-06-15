@@ -13,6 +13,16 @@ import { validateTravelerProfileInput } from '../../../../src/lib/traveler-profi
 
 const EMPTY_PROFILE = { displayName: '', phone: '', region: '', marketingEmailOptIn: true };
 
+// schema-drift guard：region 欄位（#region migration）若尚未套用到此環境，PostgREST 會回
+// 42703（undefined_column）或 PGRST204（schema cache 找不到欄位）。偵測到才退回不含 region
+// 的讀寫，避免新欄位缺失讓整個 profile 讀取／儲存失敗（migration 套用後即恢復完整行為）。
+function isMissingRegionColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const msg = error.message || '';
+  const code = error.code || '';
+  return (code === '42703' || code === 'PGRST204' || /does not exist|schema cache/i.test(msg)) && /region/i.test(msg);
+}
+
 async function getAuthedUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -37,11 +47,19 @@ export async function GET() {
   }
 
   const supabase = await getServiceClient();
-  const { data } = await supabase
+  let { data, error } = await supabase
     .from('traveler_profiles')
     .select('display_name, phone, region, marketing_email_opt_in')
     .eq('user_id', user.id)
     .maybeSingle();
+
+  if (error && isMissingRegionColumn(error)) {
+    ({ data, error } = await supabase
+      .from('traveler_profiles')
+      .select('display_name, phone, marketing_email_opt_in')
+      .eq('user_id', user.id)
+      .maybeSingle());
+  }
 
   return NextResponse.json(ok({
     displayName: data?.display_name ?? '',
@@ -80,29 +98,43 @@ export async function PATCH(req: NextRequest) {
   }
 
   const supabase = await getServiceClient();
-  const { data, error } = await supabase
+  const baseRow = {
+    user_id: user.id,
+    display_name: verdict.value.displayName,
+    phone: verdict.value.phone,
+    ...(verdict.value.marketingEmailOptIn === null
+      ? {}
+      : { marketing_email_opt_in: verdict.value.marketingEmailOptIn }),
+    updated_at: new Date().toISOString(),
+  };
+  const rowWithRegion =
+    verdict.value.region === null ? baseRow : { ...baseRow, region: verdict.value.region };
+
+  let { data, error } = await supabase
     .from('traveler_profiles')
-    .upsert({
-      user_id: user.id,
-      display_name: verdict.value.displayName,
-      phone: verdict.value.phone,
-      ...(verdict.value.region === null ? {} : { region: verdict.value.region }),
-      ...(verdict.value.marketingEmailOptIn === null
-        ? {}
-        : { marketing_email_opt_in: verdict.value.marketingEmailOptIn }),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id' })
+    .upsert(rowWithRegion, { onConflict: 'user_id' })
     .select('display_name, phone, region, marketing_email_opt_in')
     .single();
 
-  if (error) {
+  // region 欄位尚未 migrate → 不寫 region 重試，核心 profile（名稱／電話／通知偏好）仍可儲存。
+  if (error && isMissingRegionColumn(error)) {
+    ({ data, error } = await supabase
+      .from('traveler_profiles')
+      .upsert(baseRow, { onConflict: 'user_id' })
+      .select('display_name, phone, marketing_email_opt_in')
+      .single());
+  }
+
+  if (error || !data) {
+    // 只記錄非 PII 的錯誤碼以利診斷（不得 log 名稱／電話）。
+    console.error('[me/profile] upsert failed', error?.code || 'no-data');
     return NextResponse.json(fail('DB_ERROR', 'profile save failed'), { status: 500 });
   }
 
   return NextResponse.json(ok({
     displayName: data.display_name,
     phone: data.phone,
-    region: data.region ?? '',
+    region: data.region ?? verdict.value.region ?? '',
     marketingEmailOptIn: data.marketing_email_opt_in,
     email: user.email ?? '',
   }));
