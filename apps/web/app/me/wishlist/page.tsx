@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
+import { buildActivityHref } from '../../../src/lib/activity-url';
 
 type WishlistItem = {
   id: string;
@@ -16,6 +17,8 @@ type WishlistItem = {
   slug: string;
   priceTwd: number;
   coverImageUrl: string | null;
+  region: string | null;
+  regionSlug: string | null;
 };
 
 const pageStyle: React.CSSProperties = {
@@ -126,7 +129,7 @@ export default function WishlistPage() {
               style={{ display: 'flex', gap: 14, alignItems: 'center', padding: 12 }}
             >
               <Link
-                href={`/activities/${item.slug}`}
+                href={buildActivityHref({ slug: item.slug, region: item.region ?? undefined, regionSlug: item.regionSlug ?? undefined })}
                 aria-label={item.title}
                 style={{ flex: '0 0 auto', lineHeight: 0 }}
               >
@@ -154,7 +157,7 @@ export default function WishlistPage() {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <Link
-                  href={`/activities/${item.slug}`}
+                  href={buildActivityHref({ slug: item.slug, region: item.region ?? undefined, regionSlug: item.regionSlug ?? undefined })}
                   style={{
                     color: 'var(--tp-text)',
                     fontWeight: 700,

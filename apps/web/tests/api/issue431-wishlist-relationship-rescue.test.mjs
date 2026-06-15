@@ -26,13 +26,13 @@ test('listWishlistDb does not use relationship embed query shape', () => {
 test('listWishlistDb resolves activity details via explicit activities queries', () => {
   assert.match(
     dbSrc,
-    /from\('activities'\)[\s\S]{0,300}select\('id,\s*title,\s*slug,\s*price_twd,\s*cover_image_url'\)[\s\S]{0,250}\.in\('id',\s*activityIds\)/,
-    'listWishlistDb must query activities by id explicitly'
+    /from\('activities'\)[\s\S]{0,300}select\('id,\s*title,\s*slug,\s*price_twd,\s*cover_image_url,\s*region,\s*region_slug'\)[\s\S]{0,250}\.in\('id',\s*activityIds\)/,
+    'listWishlistDb must query activities by id explicitly（含 region/region_slug 供 canonical 連結）'
   );
   assert.match(
     dbSrc,
-    /from\('activities'\)[\s\S]{0,300}select\('id,\s*title,\s*slug,\s*price_twd,\s*cover_image_url'\)[\s\S]{0,250}\.in\('slug',\s*activitySlugs\)/,
-    'listWishlistDb must query activities by slug explicitly for drifted text activity_id rows'
+    /from\('activities'\)[\s\S]{0,300}select\('id,\s*title,\s*slug,\s*price_twd,\s*cover_image_url,\s*region,\s*region_slug'\)[\s\S]{0,250}\.in\('slug',\s*activitySlugs\)/,
+    'listWishlistDb must query activities by slug explicitly for drifted text activity_id rows（含 region/region_slug）'
   );
 });
 

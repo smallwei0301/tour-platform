@@ -21,6 +21,7 @@ import { createClient } from '@supabase/supabase-js';
 import { executeRefund, executeEcpayReversal } from '../../../../../../src/lib/refund-execute';
 import { recordRefundReversalDb } from '../../../../../../src/lib/db.mjs';
 import { recordIncident } from '../../../../../../src/lib/incidents';
+import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
 
 function getServiceClient() {
   return createClient(
@@ -365,6 +366,19 @@ export async function POST(
         await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
       },
     });
+
+  // 🔔 Fire-and-forget：退款成功時派送 Telegram（管理員群組 + 導遊 + 旅客）。
+  // 只在本次真的執行退款成功（200）時發送；前面的修復/冪等重放路徑已提前 return。
+  if (outcome.status === 200) {
+    void dispatchOrderEventTelegram({
+      orderId,
+      kind: 'refund_executed',
+      peopleCount: order.people_count ?? undefined,
+      totalTwd: order.total_twd ?? undefined,
+      experienceId: order.activity_id ?? undefined,
+      contactEmail: order.contact_email ?? undefined,
+    }).catch(() => {});
+  }
 
   return Response.json(outcome.body, { status: outcome.status });
 }

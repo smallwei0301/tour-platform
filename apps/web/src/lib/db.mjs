@@ -923,6 +923,7 @@ export async function listAdminOrdersDb(input = {}) {
       costTwd,
       marginTwd: r.total_twd - costTwd,
       title: activityMap.get(r.activity_id)?.title || null,
+      experienceId: r.activity_id || null,
       experienceSlug: activityMap.get(r.activity_id)?.slug || null,
       peopleCount: r.people_count,
       scheduleId: r.schedule_id,
@@ -4089,7 +4090,7 @@ export async function listWishlistDb(input) {
   if (activityIds.length > 0) {
     const { data: activitiesById, error: activityByIdError } = await supabase
       .from('activities')
-      .select('id, title, slug, price_twd, cover_image_url')
+      .select('id, title, slug, price_twd, cover_image_url, region, region_slug')
       .in('id', activityIds);
 
     if (activityByIdError) throw new Error(activityByIdError.message);
@@ -4099,7 +4100,7 @@ export async function listWishlistDb(input) {
   if (activitySlugs.length > 0) {
     const { data: activitiesBySlug, error: activityBySlugError } = await supabase
       .from('activities')
-      .select('id, title, slug, price_twd, cover_image_url')
+      .select('id, title, slug, price_twd, cover_image_url, region, region_slug')
       .in('slug', activitySlugs);
 
     if (activityBySlugError) throw new Error(activityBySlugError.message);
@@ -4117,6 +4118,10 @@ export async function listWishlistDb(input) {
       slug: activity?.slug || '',
       priceTwd: activity?.price_twd || 0,
       coverImageUrl: activity?.cover_image_url || null,
+      // region/regionSlug 供 UI 組 canonical 詳情頁連結 /activities/<region>/<slug>
+      // （少了 region 會經 [region] 相容頁多一次查詢 + 轉址，點擊載入過久）。
+      region: activity?.region || null,
+      regionSlug: activity?.region_slug || null,
     };
   });
 }
@@ -4152,15 +4157,18 @@ export async function listMyQaDb(input) {
   const activityIds = activityRefs.filter((r) => uuidLike.test(r));
   const activitySlugs = activityRefs.filter((r) => !uuidLike.test(r));
 
+  // region/region_slug 一併取出：mapMyQaRows 需要 region segment 才能組出
+  // canonical 詳情頁連結 /activities/<region>/<slug>（避免 [region] 相容轉址）。
+  const toQaActivity = (a) => ({ id: a.id, title: a.title, slug: a.slug, region: a.region, regionSlug: a.region_slug });
   const activityById = new Map();
   if (activityIds.length > 0) {
-    const { data } = await supabase.from('activities').select('id, title, slug').in('id', activityIds);
-    for (const a of data || []) activityById.set(a.id, a);
+    const { data } = await supabase.from('activities').select('id, title, slug, region, region_slug').in('id', activityIds);
+    for (const a of data || []) activityById.set(a.id, toQaActivity(a));
   }
   if (activitySlugs.length > 0) {
-    const { data } = await supabase.from('activities').select('id, title, slug').in('slug', activitySlugs);
+    const { data } = await supabase.from('activities').select('id, title, slug, region, region_slug').in('slug', activitySlugs);
     // sentinel ref 是 slug 時，map key 用 slug 對回
-    for (const a of data || []) activityById.set(a.slug, a);
+    for (const a of data || []) activityById.set(a.slug, toQaActivity(a));
   }
 
   const guideById = new Map();

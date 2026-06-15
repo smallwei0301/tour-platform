@@ -4,6 +4,7 @@ import {
   cancelOrderAdminDb,
   createAdminPosRefundEntryDb,
 } from '../../../../../../src/lib/db.mjs';
+import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 // AC5: statuses that lock the order against cancellation
@@ -74,6 +75,17 @@ export async function POST(
         });
       }
     } catch {/* best-effort */}
+
+    // 🔔 Fire-and-forget：管理員取消訂單 → Telegram（管理員群組 + 導遊 + 旅客）。
+    void dispatchOrderEventTelegram({
+      orderId,
+      kind: 'order_cancelled',
+      activityTitle: order.title || undefined,
+      peopleCount: order.peopleCount,
+      totalTwd: order.totalTwd,
+      experienceId: order.experienceId || undefined,
+      contactEmail: order.contactEmail || undefined,
+    }).catch(() => {});
 
     return Response.json(
       ok({
