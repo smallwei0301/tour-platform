@@ -15,6 +15,12 @@ import { isNotifyEnabled } from './notification-settings.mjs';
 import { pushMessage } from './line-messaging.ts';
 import { buildTravelerMessage } from './line-messages.ts';
 
+// Traveler message kinds map onto matrix events; the booking-confirmation
+// message uses 'booking_confirmed' but corresponds to the 'new_order' event.
+function matrixEventForTravelerKind(kind) {
+  return kind === 'booking_confirmed' ? 'new_order' : kind;
+}
+
 /**
  * @param {{ kind: string, orderId: string, activityTitle?: string,
  *   scheduleDate?: string|null, peopleCount?: number, totalTwd?: number,
@@ -27,7 +33,7 @@ export async function pushTravelerOrderEvent(input = {}) {
     return { status: 'skipped', reason: 'push_disabled' };
   }
   // Admin back-office matrix: traveler×LINE for this event.
-  if (!(await isNotifyEnabled(kind, 'traveler', 'line'))) {
+  if (!(await isNotifyEnabled(matrixEventForTravelerKind(kind), 'traveler', 'line'))) {
     return { status: 'skipped', reason: 'matrix_disabled' };
   }
 

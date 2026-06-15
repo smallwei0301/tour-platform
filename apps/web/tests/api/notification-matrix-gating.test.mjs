@@ -72,6 +72,21 @@ test('matrix off (traveler/line) → traveler LINE push skipped matrix_disabled,
   });
 });
 
+test('matrix off (new_order/traveler/line) suppresses booking_confirmed push', async () => {
+  // The booking-confirmation message uses kind 'booking_confirmed' but must be
+  // gated by the 'new_order' matrix cell.
+  __resetLineMappingsForTest();
+  __resetNotificationSettingsForTest();
+  await upsertLineMapping({ lineUserId: 'Utrav', userId: 'u-1' });
+  await setNotificationCells([{ event: 'new_order', recipient: 'traveler', channel: 'line', enabled: false }]);
+  await withEnv(LINE_ON, async (calls) => {
+    const res = await pushTravelerOrderEvent({ kind: 'booking_confirmed', orderId: 'o1', userId: 'u-1', activityTitle: 'X' });
+    assert.equal(res.status, 'skipped');
+    assert.equal(res.reason, 'matrix_disabled');
+    assert.equal(calls.length, 0);
+  });
+});
+
 test('matrix on (traveler/line) → traveler LINE push still fires', async () => {
   __resetLineMappingsForTest();
   __resetNotificationSettingsForTest();
