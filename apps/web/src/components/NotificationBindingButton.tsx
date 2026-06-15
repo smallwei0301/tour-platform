@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { csrfHeaders } from '../lib/csrf-client';
 
@@ -27,19 +27,48 @@ interface Props {
 export default function NotificationBindingButton({ endpoint, channel, title, description, accent = '#7c3aed' }: Props) {
   const [bound, setBound] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
+  const [rechecking, setRechecking] = useState(false);
   const [result, setResult] = useState<BindingResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const channelName = channel === 'line' ? 'LINE' : 'Telegram';
 
+  // Binding completes out-of-band (the user finishes inside the LINE/Telegram
+  // app), so the on-mount status goes stale. Re-fetch on mount, when the window
+  // regains focus, and on an explicit "我已完成" recheck.
+  const refreshStatus = useCallback(async (): Promise<boolean | null> => {
+    try {
+      const r = await fetch(endpoint, { cache: 'no-store' });
+      const j = await r.json();
+      if (j?.ok) {
+        const next = !!j.data?.bound;
+        setBound(next);
+        return next;
+      }
+    } catch {
+      // leave previous status untouched on transient errors
+    }
+    return null;
+  }, [endpoint]);
+
   useEffect(() => {
     let active = true;
-    fetch(endpoint, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => { if (active && j?.ok) setBound(!!j.data?.bound); })
-      .catch(() => {});
-    return () => { active = false; };
-  }, [endpoint]);
+    void refreshStatus().then(() => { if (!active) return; });
+    const onFocus = () => { void refreshStatus(); };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      active = false;
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [refreshStatus]);
+
+  async function recheck() {
+    setRechecking(true);
+    const next = await refreshStatus();
+    // Once confirmed bound, collapse the minted code/link — it is single-use.
+    if (next) setResult(null);
+    setRechecking(false);
+  }
 
   async function bind() {
     setLoading(true);
@@ -108,6 +137,15 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
           ) : (
             <code data-testid={`binding-${channel}-code`} style={{ fontSize: 13, fontWeight: 700 }}>{result.code}</code>
           )}
+          <button
+            type="button"
+            data-testid={`binding-${channel}-recheck`}
+            onClick={recheck}
+            disabled={rechecking}
+            style={{ alignSelf: 'flex-start', padding: '6px 12px', background: 'transparent', color: accent, border: `1px solid ${accent}`, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: rechecking ? 0.6 : 1 }}
+          >
+            {rechecking ? '檢查中…' : '我已完成，重新檢查狀態'}
+          </button>
         </div>
       )}
     </div>

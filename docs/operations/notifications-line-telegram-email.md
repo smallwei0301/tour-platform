@@ -133,6 +133,8 @@
 2. ✅ 補 Email 落差：導遊五事件 + 管理員缺漏事件（`5fa54b1`）。
 3. ✅ Telegram messaging client + 管理員群組通知（`04ff92b`）。
 4. ✅ **Telegram 導遊/旅客個人綁定**：webhook + `/start <code>` 深連結 + `telegram_chat_mapping` schema + 個人 push 接四 hooks（`TELEGRAM_GUIDE_NOTIFY_ENABLED` / `TELEGRAM_TRAVELER_NOTIFY_ENABLED` gated）+ mint 端點。
-5. ⏳ **綁定 UI**：後台「綁定 LINE / Telegram」按鈕（鏡像，呼叫 `/api/guide/{line,telegram}-binding`、`/api/me/telegram-binding`）。
+5. ✅ **綁定 UI**：後台「綁定 LINE / Telegram」按鈕（`NotificationBindingButton`，呼叫 `/api/guide/{line,telegram}-binding`、`/api/me/telegram-binding`）。guide profile 有 LINE + Telegram 兩面板、traveler profile 有 Telegram；GET 顯示狀態、POST 產生一次性碼 + 深連結。綁定在 app 內 out-of-band 完成，面板於**視窗 refocus** 與「我已完成，重新檢查狀態」按鈕重新查詢狀態，確認綁定後收合一次性碼。Playwright：`issue302b-guide-binding-panel.spec.ts`、`issue302b-traveler-telegram-binding.spec.ts`。
+
+> **正式環境啟用前置**（Vercel env，PR #920 部署後生效）：`TELEGRAM_BOT_TOKEN`、`TELEGRAM_WEBHOOK_SECRET`、`TELEGRAM_BOT_USERNAME=Midao2026bot`（深連結用）；並以 Telegram `setWebhook` 指向 `/api/telegram/webhook` 帶 `secret_token`。push 旗標（`TELEGRAM_*_NOTIFY_ENABLED`）預設 OFF，驗證後再開。
 
 > 所有新管道一律 **feature flag 預設 OFF**、**fire-and-forget 不阻塞 API**、**PII 不落地**（沿用 LINE 既有準則）。
