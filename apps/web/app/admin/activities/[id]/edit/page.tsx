@@ -11,7 +11,7 @@ import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 import { normalizeSocialProofQuotes } from '../../../../../src/lib/social-proof-quotes.mjs';
 
-type SocialProofQuoteRow = { author: string; rating: number; text: string };
+type SocialProofQuoteRow = { author: string; rating: number; text: string; photos?: string[] };
 import { addMinutesToHHMM } from '../../../../../src/lib/hhmm';
 
 // ── V2 方案型別（schedule modal 專用）─────────────────────
@@ -1088,7 +1088,7 @@ export default function AdminActivityEditPage() {
           goodFor: toArray(goodFor),
           // 社群口碑語錄：結構化（人名／星數／內容），空內容項目過濾掉
           socialProofQuotes: socialProofQuotes
-            .map(q => ({ author: q.author.trim(), rating: q.rating, text: q.text.trim() }))
+            .map(q => ({ author: q.author.trim(), rating: q.rating, text: q.text.trim(), photos: (q.photos ?? []).filter(Boolean).slice(0, QUOTE_PHOTO_MAX) }))
             .filter(q => q.text.length > 0),
           faq, itinerary,
           imageUrls,
@@ -1108,13 +1108,54 @@ export default function AdminActivityEditPage() {
 
   // ── 社群口碑語錄（結構化）編輯 ──
   function addQuote() {
-    setSocialProofQuotes(prev => [...prev, { author: '', rating: 5, text: '' }]);
+    setSocialProofQuotes(prev => [...prev, { author: '', rating: 5, text: '', photos: [] }]);
   }
   function updateQuote(index: number, patch: Partial<SocialProofQuoteRow>) {
     setSocialProofQuotes(prev => prev.map((q, i) => (i === index ? { ...q, ...patch } : q)));
   }
   function removeQuote(index: number) {
     setSocialProofQuotes(prev => prev.filter((_, i) => i !== index));
+  }
+
+  // 暖場評論照片上傳：與旅客評價照片共用 review-photos 桶（admin upload-image type=review，
+  // 不限比例），最多 5 張。上傳後把 public URL append 進該則口碑的 photos。
+  const QUOTE_PHOTO_MAX = 5;
+  const [quotePhotoUploading, setQuotePhotoUploading] = useState<number | null>(null);
+  async function uploadQuotePhotos(index: number, startCount: number, files: File[]) {
+    if (files.length === 0) return;
+    const remaining = QUOTE_PHOTO_MAX - startCount;
+    if (remaining <= 0) return;
+    setQuotePhotoUploading(index);
+    try {
+      for (const file of files.slice(0, remaining)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('type', 'review');
+        fd.append('slug', activitySlug || activityId);
+        const res = await fetch(`/api/admin/activities/${activityId}/upload-image`, {
+          method: 'POST',
+          headers: csrfHeaders(),
+          body: fd,
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok || j.error) throw new Error(j.error?.message || '照片上傳失敗');
+        setSocialProofQuotes(prev => prev.map((q, i) => {
+          if (i !== index) return q;
+          const photos = [...(q.photos ?? [])];
+          if (photos.length < QUOTE_PHOTO_MAX) photos.push(j.data.url);
+          return { ...q, photos };
+        }));
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : '照片上傳失敗');
+    } finally {
+      setQuotePhotoUploading(null);
+    }
+  }
+  function removeQuotePhoto(index: number, url: string) {
+    setSocialProofQuotes(prev => prev.map((q, i) => (
+      i === index ? { ...q, photos: (q.photos ?? []).filter(u => u !== url) } : q
+    )));
   }
 
   async function handleStatusChange(newStatus: string) {
@@ -1438,6 +1479,44 @@ export default function AdminActivityEditPage() {
                       aria-label="評價內容"
                       style={{ ...fieldStyle, margin: 0 }}
                     />
+                    {/* 暖場評論照片（選填，最多 5 張，與旅客評價照片同樣式：手機可橫向滑動） */}
+                    <div>
+                      <span style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 4 }}>
+                        照片（選填，最多 {QUOTE_PHOTO_MAX} 張）
+                      </span>
+                      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, scrollSnapType: 'x mandatory' }}>
+                        {(q.photos ?? []).map((url) => (
+                          <div key={url} style={{ position: 'relative', flex: '0 0 auto', scrollSnapAlign: 'start' }}>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={url} alt="暖場評論照片" style={{ width: 72, height: 72, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb', display: 'block' }} />
+                            <button
+                              type="button"
+                              onClick={() => removeQuotePhoto(i, url)}
+                              aria-label="移除照片"
+                              style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', border: 'none', background: 'rgba(17,24,39,0.85)', color: '#fff', cursor: 'pointer', fontSize: 12, lineHeight: '20px', padding: 0 }}
+                            >×</button>
+                          </div>
+                        ))}
+                        {(q.photos ?? []).length < QUOTE_PHOTO_MAX && (
+                          <label style={{ flex: '0 0 auto', width: 72, height: 72, borderRadius: 6, border: '1px dashed #d1d5db', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: quotePhotoUploading === i ? 'default' : 'pointer', color: '#6b7280', fontSize: 11, gap: 2, scrollSnapAlign: 'start' }}>
+                            <span style={{ fontSize: 18, lineHeight: 1 }}>{quotePhotoUploading === i ? '…' : '+'}</span>
+                            <span>{quotePhotoUploading === i ? '上傳中' : '新增'}</span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              multiple
+                              disabled={quotePhotoUploading === i}
+                              onChange={e => {
+                                const files = Array.from(e.target.files ?? []);
+                                e.target.value = '';
+                                uploadQuotePhotos(i, (q.photos ?? []).length, files);
+                              }}
+                              style={{ display: 'none' }}
+                            />
+                          </label>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 ))}
                 <button

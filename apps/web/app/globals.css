@@ -1763,7 +1763,8 @@ img { max-width: 100%; height: auto; }
 }
 .kkd-guide-verified {
   font-size: 12px;
-  color: var(--tp-gold-strong);
+  /* 導遊認證標章採平台主配色黃金色（黃銅 #b08d3e，與 logo「祕島」同色）。 */
+  color: var(--tp-brass);
   display: block;
   margin-bottom: 6px;
 }

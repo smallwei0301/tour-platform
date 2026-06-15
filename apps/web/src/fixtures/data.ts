@@ -54,7 +54,7 @@ export interface Activity {
   refundRules: string[];
   safetyNotice: string;
   faq: { question: string; answer: string }[];
-  socialProofQuotes: Array<string | { author?: string; rating?: number; text?: string }>;
+  socialProofQuotes: Array<string | { author?: string; rating?: number; text?: string; photos?: string[] }>;
   trustPoints: string[];
   imageUrl: string;
   galleryUrls: string[];
@@ -188,7 +188,7 @@ export const activities: Activity[] = [
       { question: '可以包團或客製化嗎？', answer: '可以，親子團、學校團、企業團與外國旅客團體皆可洽詢客製安排。' },
     ],
     socialProofQuotes: [
-      { author: '陳小姐', rating: 5, text: '大人小孩都開心😍' },
+      { author: '陳小姐', rating: 5, text: '大人小孩都開心😍', photos: ['https://images.unsplash.com/photo-1533577116850-9cc66cad8a9b?w=600&q=70', 'https://images.unsplash.com/photo-1526772662000-3f88f10405ff?w=600&q=70'] },
       { author: '日本旅客 Yuki', rating: 4, text: '奇幻的探洞之旅，城市旁竟有這種地形' },
       '謝謝 Andy 的導覽，會想再參加一次',
       '很棒、下次再去',

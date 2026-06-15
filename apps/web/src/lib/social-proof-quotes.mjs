@@ -17,7 +17,7 @@ export const SOCIAL_PROOF_DEFAULT_AUTHOR = '旅客回饋';
  * 將單筆口碑語錄（字串或物件）正規化為 { author, rating, text }。
  * 無有效文字時回傳 null（由 normalizeSocialProofQuotes 過濾）。
  * @param {unknown} item
- * @returns {{ author: string, rating: number, text: string } | null}
+ * @returns {{ author: string, rating: number, text: string, photos: string[] } | null}
  */
 export function normalizeSocialProofQuote(item) {
   if (item == null) return null;
@@ -25,7 +25,7 @@ export function normalizeSocialProofQuote(item) {
   if (typeof item === 'string') {
     const text = item.trim();
     if (!text) return null;
-    return { author: '', rating: 5, text };
+    return { author: '', rating: 5, text, photos: [] };
   }
 
   if (typeof item === 'object') {
@@ -35,7 +35,11 @@ export function normalizeSocialProofQuote(item) {
     let rating = Number(item.rating);
     if (!Number.isFinite(rating)) rating = 5;
     rating = Math.min(5, Math.max(1, Math.round(rating)));
-    return { author, rating, text };
+    // 暖場評論照片（選填，最多 5 張）：只保留字串 URL。
+    const photos = Array.isArray(item.photos)
+      ? item.photos.filter((u) => typeof u === 'string' && u.trim()).slice(0, 5)
+      : [];
+    return { author, rating, text, photos };
   }
 
   return null;
@@ -44,7 +48,7 @@ export function normalizeSocialProofQuote(item) {
 /**
  * 正規化整個口碑語錄陣列；過濾無效（空文字）項目。
  * @param {unknown} quotes
- * @returns {Array<{ author: string, rating: number, text: string }>}
+ * @returns {Array<{ author: string, rating: number, text: string, photos: string[] }>}
  */
 export function normalizeSocialProofQuotes(quotes) {
   if (!Array.isArray(quotes)) return [];

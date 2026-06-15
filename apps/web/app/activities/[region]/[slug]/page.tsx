@@ -455,6 +455,16 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                     </div>
                     <StarRating value={q.rating} />
                     <p className="kkd-review-text">{q.text}</p>
+                    {Array.isArray(q.photos) && q.photos.length > 0 && (
+                      <div className="kkd-review-photos" data-testid="review-photos">
+                        {q.photos.map((src: string, pi: number) => (
+                          <a key={pi} href={src} target="_blank" rel="noopener noreferrer" className="kkd-review-photo">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={src} alt={`${resolveSocialProofAuthor(q.author)} 的評價照片 ${pi + 1}`} loading="lazy" />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -542,7 +552,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {/* 導遊介紹 */}
             {guide && (
               <section className="kkd-scroll-section">
-                <h2 className="kkd-section-title"><PublicIcon name="badgeCheck" size={18} /> 關於你的導遊</h2>
+                <h2 className="kkd-section-title"><span style={{ color: 'var(--tp-brass)', display: 'inline-flex' }}><PublicIcon name="badgeCheck" size={18} /></span> 關於你的導遊</h2>
                 <div className="kkd-guide-card">
                   <Image
                     src={guide.profilePhotoUrl || (guide as {avatarUrl?: string}).avatarUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&q=80'}

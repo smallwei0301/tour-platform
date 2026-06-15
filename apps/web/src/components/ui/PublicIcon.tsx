@@ -41,7 +41,7 @@ const common = {
   strokeLinejoin: 'round' as const,
 };
 
-function wrap(paths: ReactNode, size: number, className?: string, style?: CSSProperties, title?: string) {
+function wrap(paths: ReactNode, size: number, className?: string, style?: CSSProperties, title?: string, solid?: boolean) {
   return (
     <svg
       width={size}
@@ -52,6 +52,8 @@ function wrap(paths: ReactNode, size: number, className?: string, style?: CSSPro
       className={className}
       style={style}
       {...common}
+      // 實心圖示（如評分星星）：以 currentColor 填滿、保留細描邊讓邊角圓潤。
+      {...(solid ? { fill: 'currentColor' } : {})}
     >
       {title ? <title>{title}</title> : null}
       {paths}
@@ -70,7 +72,8 @@ export function PublicIcon({ name, size = 18, className, style, title }: PublicI
     case 'route':
       return wrap(<><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 17c5 0 3-8 8-8"/></>, size, className, style, title);
     case 'star':
-      return wrap(<path d="m12 3.8 2.5 5.1 5.7.8-4.1 4 1 5.7L12 16.7 6.9 19.4l1-5.7-4.1-4 5.7-.8z"/>, size, className, style, title);
+      // 實心星星（評分用）：填滿 currentColor。
+      return wrap(<path d="m12 3.8 2.5 5.1 5.7.8-4.1 4 1 5.7L12 16.7 6.9 19.4l1-5.7-4.1-4 5.7-.8z"/>, size, className, style, title, true);
     case 'chat':
       return wrap(<><path d="M5 6.5a3.5 3.5 0 0 1 3.5-3.5h7A3.5 3.5 0 0 1 19 6.5v5A3.5 3.5 0 0 1 15.5 15H11l-4 4v-4H8.5A3.5 3.5 0 0 1 5 11.5z"/></>, size, className, style, title);
     case 'document':
