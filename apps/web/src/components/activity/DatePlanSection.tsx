@@ -43,7 +43,7 @@ interface PlanConfig {
   freeCancelDays?: number;
   planInclusions?: string[];
   planExclusions?: string[];
-  planItinerary?: Array<{ text: string; imageUrl?: string }>;
+  planItinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string; imageUrl?: string; text?: string }>;
   meetingPointName?: string;
   meetingAddress?: string;
   experiencePointName?: string;

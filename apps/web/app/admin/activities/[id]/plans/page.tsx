@@ -6,6 +6,33 @@ import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
 import { ResponsiveModal, ResponsiveTable, FormGrid, type ResponsiveColumn } from '../../../../../src/components/admin/responsive';
 import { useTablistKeyboard } from '../../../../../src/lib/use-tablist-keyboard';
+import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
+
+// #297 方案詳情「行程介紹」改為站點時間表（參考編輯行程的「詳細行程時間表」設計），
+// 每個站點可分區編輯 icon／站名／時長／描述，並可填圖片 URL 或後台上傳。
+// 同時相容舊版單行格式 { text, imageUrl }。
+type ItineraryStep = {
+  icon: string;
+  title: string;
+  duration: string;
+  description: string;
+  imageUrl: string;
+};
+type StoredItineraryStep = {
+  icon?: string | null;
+  title?: string | null;
+  duration?: string | null;
+  description?: string | null;
+  imageUrl?: string | null;
+  text?: string | null;
+};
+const createEmptyItineraryStep = (): ItineraryStep => ({
+  icon: '📍',
+  title: '',
+  duration: '',
+  description: '',
+  imageUrl: '',
+});
 
 type ReadinessCheck = {
   readinessOk: boolean;
@@ -50,7 +77,7 @@ type ActivityPlan = {
   free_cancel_days?: number | null;
   plan_inclusions?: string[] | null;
   plan_exclusions?: string[] | null;
-  plan_itinerary?: Array<{ text: string; imageUrl?: string | null }> | null;
+  plan_itinerary?: StoredItineraryStep[] | null;
   meeting_point_name?: string | null;
   meeting_address?: string | null;
   experience_point_name?: string | null;
@@ -173,7 +200,7 @@ export default function ActivityPlansPage() {
     free_cancel_days: '',
     plan_inclusions: '',
     plan_exclusions: '',
-    plan_itinerary: '',
+    plan_itinerary: [] as ItineraryStep[],
     meeting_point_name: '',
     meeting_address: '',
     experience_point_name: '',
@@ -185,32 +212,33 @@ export default function ActivityPlansPage() {
   const [form, setForm] = useState(createDefaultForm());
 
   const listToTextarea = (value?: string[] | null) => (Array.isArray(value) ? value.join('\n') : '');
-  const itineraryToTextarea = (value?: Array<{ text: string; imageUrl?: string | null }> | null) =>
+
+  // 將後台儲存的行程介紹（新版站點 or 舊版 { text, imageUrl }）轉為可編輯的站點清單。
+  // 舊版單行的 text 視為站名（title），讓既有資料在新站點編輯器中不流失。
+  const itineraryToForm = (value?: StoredItineraryStep[] | null): ItineraryStep[] =>
     Array.isArray(value)
-      ? value
-          .map((step) => {
-            const text = (step?.text || '').trim();
-            const imageUrl = (step?.imageUrl || '').trim();
-            if (!text && !imageUrl) return '';
-            return imageUrl ? `${text} | ${imageUrl}` : text;
-          })
-          .filter(Boolean)
-          .join('\n')
-      : '';
+      ? value.map((step) => ({
+          icon: (step?.icon || '📍').trim() || '📍',
+          title: (step?.title || step?.text || '').trim(),
+          duration: (step?.duration || '').trim(),
+          description: (step?.description || '').trim(),
+          imageUrl: (step?.imageUrl || '').trim(),
+        }))
+      : [];
+
+  // 送出前清掉完全空白的站點；其餘交由後端 normalizeRichPlanPayload 正規化。
+  const itineraryForPayload = (steps: ItineraryStep[]) =>
+    (Array.isArray(steps) ? steps : [])
+      .map((step) => ({
+        icon: step.icon.trim(),
+        title: step.title.trim(),
+        duration: step.duration.trim(),
+        description: step.description.trim(),
+        imageUrl: step.imageUrl.trim(),
+      }))
+      .filter((step) => step.title || step.description || step.imageUrl);
 
   const parseLineList = (value: string) => value.split('\n').map((x) => x.trim()).filter(Boolean);
-  const parseItineraryLines = (value: string) =>
-    value
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line) => {
-        const [textPart, ...imageParts] = line.split('|');
-        const text = (textPart || '').trim();
-        const imageUrl = imageParts.join('|').trim();
-        return imageUrl ? { text, imageUrl } : { text };
-      })
-      .filter((step) => step.text.length > 0);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -278,7 +306,7 @@ export default function ActivityPlansPage() {
         free_cancel_days: plan.free_cancel_days == null ? '' : String(plan.free_cancel_days),
         plan_inclusions: listToTextarea(plan.plan_inclusions),
         plan_exclusions: listToTextarea(plan.plan_exclusions),
-        plan_itinerary: itineraryToTextarea(plan.plan_itinerary),
+        plan_itinerary: itineraryToForm(plan.plan_itinerary),
         meeting_point_name: plan.meeting_point_name || '',
         meeting_address: plan.meeting_address || '',
         experience_point_name: plan.experience_point_name || '',
@@ -321,7 +349,7 @@ export default function ActivityPlansPage() {
         highlights: parseLineList(form.highlights),
         plan_inclusions: parseLineList(form.plan_inclusions),
         plan_exclusions: parseLineList(form.plan_exclusions),
-        plan_itinerary: parseItineraryLines(form.plan_itinerary),
+        plan_itinerary: itineraryForPayload(form.plan_itinerary),
         plan_notices: parseLineList(form.plan_notices),
         plan_refund_rules: parseLineList(form.plan_refund_rules),
         confirm_by_days: form.confirm_by_days === '' ? undefined : Number(form.confirm_by_days),
@@ -739,9 +767,112 @@ export default function ActivityPlansPage() {
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用不包含（每行一項）
                     <textarea rows={3} value={form.plan_exclusions} onChange={(e) => setForm({ ...form, plan_exclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
                   </label>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>行程介紹（每行一個步驟，格式：文字 或 文字 | 圖片URL）
-                    <textarea rows={4} value={form.plan_itinerary} onChange={(e) => setForm({ ...form, plan_itinerary: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
+                  <div>
+                    <span style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+                      行程介紹（站點時間表）— 每個站點可分區編輯，並可填圖片 URL 或後台上傳
+                    </span>
+                    {form.plan_itinerary.map((step, i) => (
+                      <div
+                        key={i}
+                        style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#fff' }}
+                      >
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                          <input
+                            aria-label={`站點 ${i + 1} 圖示`}
+                            value={step.icon}
+                            onChange={(e) => {
+                              const s = [...form.plan_itinerary];
+                              s[i] = { ...s[i], icon: e.target.value };
+                              setForm({ ...form, plan_itinerary: s });
+                            }}
+                            style={{ width: 48, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20 }}
+                            placeholder="📍"
+                          />
+                          <input
+                            aria-label={`站點 ${i + 1} 名稱`}
+                            value={step.title}
+                            onChange={(e) => {
+                              const s = [...form.plan_itinerary];
+                              s[i] = { ...s[i], title: e.target.value };
+                              setForm({ ...form, plan_itinerary: s });
+                            }}
+                            style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }}
+                            placeholder="站點名稱"
+                          />
+                          <input
+                            aria-label={`站點 ${i + 1} 時長`}
+                            value={step.duration}
+                            onChange={(e) => {
+                              const s = [...form.plan_itinerary];
+                              s[i] = { ...s[i], duration: e.target.value };
+                              setForm({ ...form, plan_itinerary: s });
+                            }}
+                            style={{ width: 90, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px' }}
+                            placeholder="60分鐘"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`移除站點 ${i + 1}`}
+                            onClick={() => setForm({ ...form, plan_itinerary: form.plan_itinerary.filter((_, j) => j !== i) })}
+                            style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <textarea
+                          aria-label={`站點 ${i + 1} 描述`}
+                          rows={2}
+                          value={step.description}
+                          onChange={(e) => {
+                            const s = [...form.plan_itinerary];
+                            s[i] = { ...s[i], description: e.target.value };
+                            setForm({ ...form, plan_itinerary: s });
+                          }}
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb', boxSizing: 'border-box' }}
+                          placeholder="站點描述（選填）"
+                        />
+                        <div style={{ marginTop: 8 }}>
+                          <input
+                            aria-label={`站點 ${i + 1} 圖片網址`}
+                            type="url"
+                            value={step.imageUrl}
+                            onChange={(e) => {
+                              const s = [...form.plan_itinerary];
+                              s[i] = { ...s[i], imageUrl: e.target.value };
+                              setForm({ ...form, plan_itinerary: s });
+                            }}
+                            style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb', boxSizing: 'border-box' }}
+                            placeholder="圖片 URL（可貼網址，或用下方按鈕上傳）"
+                          />
+                          {step.imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={step.imageUrl}
+                              alt={`站點 ${i + 1} 圖片預覽`}
+                              style={{ marginTop: 8, width: '100%', maxWidth: 240, aspectRatio: '3 / 2', objectFit: 'cover', borderRadius: 8, background: '#f3f4f6' }}
+                            />
+                          )}
+                          <ImageUpload
+                            activityId={activityId}
+                            activitySlug={activityId}
+                            type="gallery"
+                            onUploaded={(url) => {
+                              const s = [...form.plan_itinerary];
+                              s[i] = { ...s[i], imageUrl: url };
+                              setForm({ ...form, plan_itinerary: s });
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setForm({ ...form, plan_itinerary: [...form.plan_itinerary, createEmptyItineraryStep()] })}
+                      style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%' }}
+                    >
+                      + 新增站點
+                    </button>
+                  </div>
                   <FormGrid cols={2} gap={10}>
                     <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地點名稱
                       <input type="text" value={form.meeting_point_name} onChange={(e) => setForm({ ...form, meeting_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />

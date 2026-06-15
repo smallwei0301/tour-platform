@@ -1348,6 +1348,7 @@ img { max-width: 100%; height: auto; }
 .kkd-itinerary-title { font-size: 15px; font-weight: 600; }
 .kkd-itinerary-duration { font-size: 12px; color: var(--tp-muted); background: rgba(244, 236, 216, 0.1); padding: 2px 8px; border-radius: 10px; }
 .kkd-itinerary-desc { font-size: 14px; color: var(--tp-muted); margin-top: 4px; line-height: 1.6; }
+.kkd-itinerary-img { display: block; margin-top: 10px; width: 100%; max-width: 360px; height: auto; border-radius: 8px; object-fit: cover; }
 .kkd-itinerary-connector { position: absolute; left: 21px; top: 44px; width: 2px; height: calc(100% - 4px); background: rgba(190, 178, 137, 0.25); }
 
 /* Title block */

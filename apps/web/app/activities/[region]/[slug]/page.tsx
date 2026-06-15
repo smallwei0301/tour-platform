@@ -12,6 +12,7 @@ import {
   serialiseJsonLd,
 } from '../../../../src/lib/activity-jsonld.mjs';
 import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
+import { PlanItinerarySection } from '../../../../src/components/activity/PlanItinerarySection';
 import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
 import { SelectedPlanProvider } from '../../../../src/components/activity/SelectedPlanContext';
 import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
@@ -397,27 +398,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <DatePlanSection activity={activity} schedules={displayedSchedules} useBookingV2={useBookingV2} />
             </section>
 
-            {/* SECTION 1.5: 詳細行程時間表 */}
-            {activityData.itinerary && activityData.itinerary.length > 0 && (
-              <section id="section-itinerary" className="kkd-scroll-section">
-                <h2 className="kkd-section-title"><PublicIcon name="route" size={18} /> 詳細行程</h2>
-                <div className="kkd-itinerary">
-                  {activityData.itinerary.map((step: { icon?: string; title?: string; duration?: string; description?: string }, i: number) => (
-                    <div key={i} className="kkd-itinerary-step">
-                      <div className="kkd-itinerary-icon"><PublicIcon name="pin" size={18} /></div>
-                      <div className="kkd-itinerary-content">
-                        <div className="kkd-itinerary-header">
-                          <strong className="kkd-itinerary-title">{step.title}</strong>
-                          {step.duration && <span className="kkd-itinerary-duration">{step.duration}</span>}
-                        </div>
-                        {step.description && <p className="kkd-itinerary-desc">{step.description}</p>}
-                      </div>
-                      {i < activityData.itinerary!.length - 1 && <div className="kkd-itinerary-connector" />}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+            {/* SECTION 1.5: 詳細行程 — #297 依所選方案顯示該方案後台「行程介紹」站點時間表；
+                未選方案顯示提示，方案未填則退回頁面級 activityData.itinerary */}
+            <PlanItinerarySection
+              plans={datePlanPresentation.plans as Array<{ id: string; label?: string; planItinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string; imageUrl?: string; text?: string }> }>}
+              fallbackItinerary={activityData.itinerary}
+            />
+
 
             {/* SECTION 2: 旅客評價 */}
             <section id="section-reviews" className="kkd-scroll-section">
