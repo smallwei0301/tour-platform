@@ -7,7 +7,6 @@
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '../../../src/lib/supabase/client';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
@@ -29,18 +28,19 @@ export default function MeProfilePage() {
   const [marketingOptIn, setMarketingOptIn] = useState(true);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) {
-        router.replace(`/login?next=${encodeURIComponent('/me/profile')}`);
-        return;
-      }
-      void fetch('/api/me/csrf', { cache: 'no-store' });
+    // CSRF token 先取（儲存時需要），與 profile 載入並行。
+    void fetch('/api/me/csrf', { cache: 'no-store' });
+    // 直接打 profile API（route 端已驗證 auth），401 才導去登入 —— 省掉 client getUser 的序列往返。
+    (async () => {
       try {
         const res = await fetch('/api/me/profile', { cache: 'no-store' });
+        if (res.status === 401) {
+          router.replace(`/login?next=${encodeURIComponent('/me/profile')}`);
+          return;
+        }
         const j = await res.json();
         if (j?.data) {
-          setEmail(j.data.email || data.user.email || '');
+          setEmail(j.data.email || '');
           setDisplayName(j.data.displayName || '');
           setPhone(j.data.phone || '');
           setRegion(j.data.region || '');
@@ -51,7 +51,7 @@ export default function MeProfilePage() {
       } finally {
         setLoading(false);
       }
-    });
+    })();
   }, [router]);
 
   const handleSave = async (e: React.FormEvent) => {
