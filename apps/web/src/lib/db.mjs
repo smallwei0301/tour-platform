@@ -80,6 +80,7 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 // refund 狀態機集中於 refund-transition.mjs（ESM import 會被 hoist，置此保留原始碼位置脈絡）
 import { insertAuditLogDb } from './audit-log.mjs';
 import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
+import { normalizeRegionForActivityPath } from './region-slug.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 // #1383 — 訂單改期（fallback 實作 + 純規則）
 import {
@@ -2551,35 +2552,6 @@ export async function listPublishedActivitiesDb(filters = {}) {
   });
 }
 
-function normalizeRegionForActivityPath(region) {
-  if (!region || typeof region !== 'string') return 'taiwan';
-  const regionTrimmed = region.trim();
-  if (!regionTrimmed) return 'taiwan';
-
-  const map = {
-    '台北市': 'taipei',
-    '台北': 'taipei',
-    '新北市': 'new-taipei',
-    '桃園市': 'taoyuan',
-    '台中市': 'taichung',
-    '台南市': 'tainan',
-    '高雄市': 'kaohsiung',
-    '高雄': 'kaohsiung',
-    '花蓮縣': 'hualien',
-    '花蓮': 'hualien',
-  };
-
-  const mapped = map[regionTrimmed];
-  if (mapped) return mapped;
-
-  const asciiSlug = regionTrimmed
-    .toLowerCase()
-    .replace(/[^\w]+/g, '-')
-    .replace(/^-+|-+$/g, '');
-
-  return asciiSlug || 'taiwan';
-}
-
 export function buildCanonicalActivityDetailPath(activity = {}) {
   const slug = typeof activity.slug === 'string' ? activity.slug.trim() : '';
   if (!slug) return '/activities';
@@ -3935,10 +3907,10 @@ export async function deleteActivityDb(id) {
   if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
   const supabase = await getSupabaseServiceRole();
 
-  // 1. 取得行程資料（slug + 圖片 URLs）
+  // 1. 取得行程資料（slug + region + 圖片 URLs）
   const { data: act } = await supabase
     .from('activities')
-    .select('id, slug, cover_image_url, image_urls')
+    .select('id, slug, region, region_slug, cover_image_url, image_urls')
     .eq('id', id)
     .single();
 
@@ -3971,7 +3943,15 @@ export async function deleteActivityDb(id) {
   const { error } = await supabase.from('activities').delete().eq('id', id);
   if (error) throw new Error(error.message);
 
-  return { deleted: true, id, imagesDeleted: pathsToDelete.length };
+  // 回傳 slug/region/regionSlug 讓呼叫端能精準 revalidate 該行程詳情頁（#1440）。
+  return {
+    deleted: true,
+    id,
+    slug: act.slug,
+    region: act.region,
+    regionSlug: act.region_slug,
+    imagesDeleted: pathsToDelete.length,
+  };
 }
 
 async function getSupabaseServiceRole() {

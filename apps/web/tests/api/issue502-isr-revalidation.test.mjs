@@ -21,11 +21,14 @@ test('詳情頁走 on-demand ISR：移除 force-dynamic、保留 revalidate=60 +
   assert.doesNotMatch(src, /unstable_cache\(/);
 });
 
-test('helper revalidateActivityPaths 失效列表＋region＋詳情三個路徑', async () => {
+test('helper revalidateActivityPaths 失效列表＋region＋詳情三個路徑（用正規化 region slug）', async () => {
+  const { activityRevalidationPaths } = await import('../../src/lib/region-slug.mjs');
+  // #1440 回歸：中文地區必須正規化成英文 slug，才會命中實際被快取的詳情頁路徑。
+  const paths = activityRevalidationPaths({ region: '高雄市', slug: 'test-2' });
+  assert.deepEqual(paths, ['/activities', '/activities/kaohsiung', '/activities/kaohsiung/test-2']);
+  // 不得再用 raw 中文地區直接拼路徑（會打不到快取）。
   const src = await read('src/lib/revalidate-activity.mjs');
-  assert.match(src, /revalidatePath\(['"]\/activities['"]\)/);
-  assert.match(src, /revalidatePath\(`\/activities\/\$\{region\}`\)/);
-  assert.match(src, /revalidatePath\(`\/activities\/\$\{region\}\/\$\{slug\}`\)/);
+  assert.doesNotMatch(src, /\/activities\/\$\{region\}/, '不得用未正規化的 raw region 拼路徑');
   // best-effort：失敗不得擋下 admin 操作
   assert.match(src, /try\s*\{[\s\S]*catch/);
 });
@@ -38,5 +41,7 @@ test('admin 活動更新/刪除/上下架路由都呼叫 revalidateActivityPaths
     const src = await read(rel);
     assert.match(src, /import \{ revalidateActivityPaths \} from .*revalidate-activity\.mjs/, `${rel} 應 import helper`);
     assert.match(src, /revalidateActivityPaths\(/, `${rel} 應呼叫 revalidateActivityPaths`);
+    // #1440：必須帶 regionSlug，否則 revalidate 會打到「raw 中文地區」路徑、對不上快取。
+    assert.match(src, /revalidateActivityPaths\(\{[\s\S]*regionSlug:/, `${rel} 應把 regionSlug 一起傳給 revalidate`);
   }
 });

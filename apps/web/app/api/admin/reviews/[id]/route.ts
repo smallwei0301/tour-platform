@@ -1,6 +1,7 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../../src/lib/admin-session.mjs';
+import { revalidateActivityPaths } from '../../../../../src/lib/revalidate-activity.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 function getServiceClient() {
@@ -97,6 +98,20 @@ export async function PATCH(
         })
         .eq('slug', review.activity_slug);
     }
+
+    // 審核通過/退回都會改變詳情頁顯示的評論清單、星等與評論照片；詳情頁走
+    // ISR + fetchCache='force-cache'，不主動失效就看不到變更（#1444 同類）。
+    // 需帶正規化的 region segment，否則 revalidatePath 打不到實際被快取的頁面。
+    const { data: activity } = await supabase
+      .from('activities')
+      .select('region, region_slug')
+      .eq('slug', review.activity_slug)
+      .single();
+    revalidateActivityPaths({
+      region: activity?.region,
+      regionSlug: activity?.region_slug,
+      slug: review.activity_slug,
+    });
 
     return Response.json(ok({ id, status: newStatus, review }));
   } catch (err) {
