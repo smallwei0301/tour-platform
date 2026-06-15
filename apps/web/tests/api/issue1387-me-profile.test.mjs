@@ -45,6 +45,25 @@ test('validate: displayName 長度上限 50、不得只剩空白', () => {
   assert.equal(r.value.displayName, '', '全空白視為清空');
 });
 
+test('validate: region 未帶 → null（不更新）；空字串 → 清空；已知 slug → 通過；未知 → 拒', () => {
+  // 未帶 region
+  const none = validateTravelerProfileInput({ displayName: 'a' });
+  assert.equal(none.ok, true);
+  assert.equal(none.value.region, null, '未帶 region 應為 null（不更新）');
+  // 空字串清空
+  const cleared = validateTravelerProfileInput({ region: '' });
+  assert.equal(cleared.ok, true);
+  assert.equal(cleared.value.region, '');
+  // 已知 slug
+  const ok = validateTravelerProfileInput({ region: 'taipei' });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.value.region, 'taipei');
+  // 未知 slug
+  const bad = validateTravelerProfileInput({ region: 'atlantis' });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.error.code, 'INVALID_REGION');
+});
+
 // ── 通知偏好（交易類不可關）─────────────────────────────────────────────────
 
 test('email kinds: 交易類不受 opt-out 影響；行銷類遵守 opt-in', () => {

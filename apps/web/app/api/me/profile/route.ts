@@ -11,7 +11,7 @@ import { createClient } from '../../../../src/lib/supabase/server';
 import { hasSupabaseEnv } from '../../../../src/lib/db.mjs';
 import { validateTravelerProfileInput } from '../../../../src/lib/traveler-profile.mjs';
 
-const EMPTY_PROFILE = { displayName: '', phone: '', marketingEmailOptIn: true };
+const EMPTY_PROFILE = { displayName: '', phone: '', region: '', marketingEmailOptIn: true };
 
 async function getAuthedUser() {
   const supabase = await createClient();
@@ -39,13 +39,14 @@ export async function GET() {
   const supabase = await getServiceClient();
   const { data } = await supabase
     .from('traveler_profiles')
-    .select('display_name, phone, marketing_email_opt_in')
+    .select('display_name, phone, region, marketing_email_opt_in')
     .eq('user_id', user.id)
     .maybeSingle();
 
   return NextResponse.json(ok({
     displayName: data?.display_name ?? '',
     phone: data?.phone ?? '',
+    region: data?.region ?? '',
     marketingEmailOptIn: data?.marketing_email_opt_in ?? true,
     email: user.email ?? '',
   }));
@@ -72,6 +73,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(ok({
       displayName: verdict.value.displayName,
       phone: verdict.value.phone,
+      region: verdict.value.region ?? '',
       marketingEmailOptIn: verdict.value.marketingEmailOptIn ?? true,
       email: user.email ?? '',
     }));
@@ -84,12 +86,13 @@ export async function PATCH(req: NextRequest) {
       user_id: user.id,
       display_name: verdict.value.displayName,
       phone: verdict.value.phone,
+      ...(verdict.value.region === null ? {} : { region: verdict.value.region }),
       ...(verdict.value.marketingEmailOptIn === null
         ? {}
         : { marketing_email_opt_in: verdict.value.marketingEmailOptIn }),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
-    .select('display_name, phone, marketing_email_opt_in')
+    .select('display_name, phone, region, marketing_email_opt_in')
     .single();
 
   if (error) {
@@ -99,6 +102,7 @@ export async function PATCH(req: NextRequest) {
   return NextResponse.json(ok({
     displayName: data.display_name,
     phone: data.phone,
+    region: data.region ?? '',
     marketingEmailOptIn: data.marketing_email_opt_in,
     email: user.email ?? '',
   }));

@@ -1,14 +1,19 @@
 'use client';
 
 /**
- * /me/profile — 旅客個人資料與通知偏好（#1387，最小版）。
- * email 由 Supabase auth 管理（唯讀）；交易類通知（訂單/付款/退款）不可關閉。
+ * /me/profile — 旅客個人資料與通知偏好（#1387）。
+ * 深綠主題（與會員中心一致）。email 由 Supabase auth 管理（唯讀）；
+ * 交易類通知（訂單/付款/退款）不可關閉。暱稱（顯示名稱）＋區域為公開顯示用。
  */
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
+import { MemberTabs } from '../../../src/components/me/MemberTabs';
+
+const REGION_OPTIONS = listRegionOptions();
 
 export default function MeProfilePage() {
   const router = useRouter();
@@ -20,6 +25,7 @@ export default function MeProfilePage() {
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
+  const [region, setRegion] = useState('');
   const [marketingOptIn, setMarketingOptIn] = useState(true);
 
   useEffect(() => {
@@ -37,6 +43,7 @@ export default function MeProfilePage() {
           setEmail(j.data.email || data.user.email || '');
           setDisplayName(j.data.displayName || '');
           setPhone(j.data.phone || '');
+          setRegion(j.data.region || '');
           setMarketingOptIn(j.data.marketingEmailOptIn !== false);
         }
       } catch {
@@ -56,7 +63,7 @@ export default function MeProfilePage() {
       const res = await fetch('/api/me/profile', {
         method: 'PATCH',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ displayName, phone, marketingEmailOptIn: marketingOptIn }),
+        body: JSON.stringify({ displayName, phone, region, marketingEmailOptIn: marketingOptIn }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '儲存失敗');
@@ -68,32 +75,62 @@ export default function MeProfilePage() {
     }
   };
 
+  const pageStyle: React.CSSProperties = { paddingTop: 32, paddingBottom: 56, minHeight: '70vh' };
+  const titleStyle: React.CSSProperties = {
+    fontFamily: 'var(--tp-serif)', fontSize: 'clamp(22px, 5vw, 28px)', fontWeight: 700,
+    color: 'var(--tp-text)', margin: '0 0 4px', letterSpacing: '0.02em',
+  };
+  const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: 'var(--tp-text)', display: 'block', marginBottom: 6 };
+  const inputStyle: React.CSSProperties = {
+    width: '100%', padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 8,
+    fontSize: 14, boxSizing: 'border-box', background: 'rgba(244,236,216,0.06)', color: 'var(--tp-text)',
+  };
+
   if (loading) {
-    return <main style={{ maxWidth: 560, margin: '40px auto', padding: '0 16px' }}><p>載入中⋯</p></main>;
+    return (
+      <main className="tp-container" style={{ ...pageStyle, textAlign: 'center', paddingTop: 80 }}>
+        <p style={{ color: 'var(--tp-muted)' }}>載入中⋯</p>
+      </main>
+    );
   }
 
-  const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 };
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' };
-
   return (
-    <main style={{ maxWidth: 560, margin: '40px auto', padding: '0 16px', fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 16 }}>個人資料</h1>
-      <form onSubmit={handleSave} style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: 24 }}>
+    <main className="tp-container" style={pageStyle}>
+      <h1 style={titleStyle}>個人資料</h1>
+      <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 20px' }}>設定公開顯示的暱稱與區域，以及通知偏好。</p>
+      <MemberTabs />
+
+      <form onSubmit={handleSave} className="tp-card" style={{ padding: 24 }}>
         <div style={{ marginBottom: 16 }}>
           <label style={labelStyle}>Email（由登入帳號管理，無法於此修改）</label>
-          <input value={email} readOnly disabled style={{ ...inputStyle, background: '#f9fafb', color: '#6b7280' }} />
+          <input value={email} readOnly disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="profile-display-name" style={labelStyle}>顯示名稱</label>
+          <label htmlFor="profile-display-name" style={labelStyle}>暱稱（顯示名稱）</label>
           <input
             id="profile-display-name"
             data-testid="profile-display-name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={50}
-            placeholder="訂單聯絡人預設姓名"
+            placeholder="評論與訂單聯絡人預設顯示名稱"
             style={inputStyle}
           />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label htmlFor="profile-region" style={labelStyle}>區域</label>
+          <select
+            id="profile-region"
+            data-testid="profile-region"
+            value={region}
+            onChange={(e) => setRegion(e.target.value)}
+            style={inputStyle}
+          >
+            <option value="">不指定</option>
+            {REGION_OPTIONS.map((r) => (
+              <option key={r.slug} value={r.slug}>{r.displayName}</option>
+            ))}
+          </select>
         </div>
         <div style={{ marginBottom: 16 }}>
           <label htmlFor="profile-phone" style={labelStyle}>聯絡電話</label>
@@ -120,7 +157,7 @@ export default function MeProfilePage() {
             接收優惠與行程推薦通知
           </label>
         </div>
-        <p style={{ fontSize: 12, color: '#9ca3af', marginBottom: 16 }}>
+        <p style={{ fontSize: 12, color: 'var(--tp-muted)', marginBottom: 16 }}>
           交易類通知（訂單成立、付款、退款進度）為服務必要通知，不受此開關影響。
         </p>
 
@@ -134,13 +171,13 @@ export default function MeProfilePage() {
             accent="#229ED9"
           />
         </div>
-        {err && <p style={{ color: 'crimson', fontSize: 13, marginBottom: 12 }}>{err}</p>}
-        {saved && <p data-testid="profile-saved" style={{ color: '#16a34a', fontSize: 13, marginBottom: 12 }}>已儲存 ✓</p>}
+        {err && <p style={{ color: 'var(--tp-accent)', fontSize: 13, marginBottom: 12 }}>{err}</p>}
+        {saved && <p data-testid="profile-saved" style={{ color: '#34d399', fontSize: 13, marginBottom: 12 }}>已儲存 ✓</p>}
         <button
           type="submit"
           data-testid="profile-save-btn"
           disabled={saving}
-          style={{ padding: '11px 20px', background: '#a8511f', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+          style={{ padding: '11px 20px', background: '#a8511f', color: '#f8efdc', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
         >
           {saving ? '儲存中…' : '儲存'}
         </button>

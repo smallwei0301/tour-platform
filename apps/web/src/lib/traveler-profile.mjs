@@ -2,6 +2,8 @@
  * Issue #1387 — 旅客 profile 驗證與通知偏好（純函式，離線可測）。
  */
 
+import { isKnownRegionSlug } from './region-slugs.mjs';
+
 const PHONE_RE = /^(09\d{8}|\+8869\d{8})$/;
 const DISPLAY_NAME_MAX = 50;
 
@@ -15,8 +17,8 @@ export const TRANSACTIONAL_EMAIL_KINDS = Object.freeze([
 ]);
 
 /**
- * @param {{ displayName?: unknown, phone?: unknown, marketingEmailOptIn?: unknown }} input
- * @returns {{ ok: true, value: { displayName: string, phone: string, marketingEmailOptIn: boolean|null } }
+ * @param {{ displayName?: unknown, phone?: unknown, region?: unknown, marketingEmailOptIn?: unknown }} input
+ * @returns {{ ok: true, value: { displayName: string, phone: string, region: string|null, marketingEmailOptIn: boolean|null } }
  *          | { ok: false, error: { code: string, message: string } }}
  */
 export function validateTravelerProfileInput(input = {}) {
@@ -30,11 +32,22 @@ export function validateTravelerProfileInput(input = {}) {
     return { ok: false, error: { code: 'INVALID_PHONE', message: '電話格式須為 09xxxxxxxx 或 +8869xxxxxxxx' } };
   }
 
+  // region：未帶（undefined）→ null（不更新）；空字串 → 清除；其餘須為已知地區 slug。
+  let region = null;
+  if (input.region !== undefined) {
+    const r = String(input.region ?? '').trim();
+    if (r && !isKnownRegionSlug(r)) {
+      return { ok: false, error: { code: 'INVALID_REGION', message: '區域不在可選清單' } };
+    }
+    region = r;
+  }
+
   return {
     ok: true,
     value: {
       displayName,
       phone: rawPhone,
+      region,
       marketingEmailOptIn:
         input.marketingEmailOptIn === undefined ? null : Boolean(input.marketingEmailOptIn),
     },
