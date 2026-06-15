@@ -9,7 +9,7 @@ import { notifyRefundRequest, notifyRefundExecuted } from '../../../../../../src
 import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../../../../src/lib/order-email-notify';
-import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify';
+import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
 import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
@@ -209,6 +209,7 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         void dispatchOrderEventTelegram({
           orderId, kind: 'refund_executed', activityTitle: notifyData.activityTitle,
           scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
+          experienceId: order.experienceId, userId: user.id, contactEmail: user.email,
         }).catch(() => {});
       } else {
         // Normal flow — admin will process
@@ -232,6 +233,7 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         void dispatchOrderEventTelegram({
           orderId, kind: 'refund_requested', activityTitle: notifyData.activityTitle,
           scheduleDate: notifyData.scheduleDate, peopleCount: notifyData.peopleCount, totalTwd: notifyData.totalTwd,
+          experienceId: order.experienceId, userId: user.id, contactEmail: user.email,
         }).catch(() => {});
       }
     }

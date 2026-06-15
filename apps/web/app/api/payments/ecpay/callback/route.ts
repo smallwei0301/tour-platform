@@ -9,7 +9,7 @@ import { notifyPaymentReceived } from '../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
-import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify';
+import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify.mjs';
 import { verifyCheckMacValue, getECPayCredentials } from '../../../../../src/lib/ecpay';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { recordIncident } from '../../../../../src/lib/incidents';
@@ -388,7 +388,7 @@ export async function POST(request: Request) {
       includeAdmin: false,
     }).catch(() => {});
 
-    // 管理員 Telegram 事件通知
+    // 管理員 + 導遊 + 旅客 Telegram 事件通知
     void dispatchOrderEventTelegram({
       orderId,
       kind: 'payment_received',
@@ -396,6 +396,9 @@ export async function POST(request: Request) {
       scheduleDate: notifyData.scheduleDate,
       peopleCount: notifyData.peopleCount,
       totalTwd: notifyData.totalTwd,
+      activityId: (order?.activity_id as string | undefined) ?? undefined,
+      userId: (order?.user_id as string | undefined) ?? undefined,
+      contactEmail: notifyData.contactEmail,
     }).catch(() => {});
 
     // ECPay 正式回調期望回覆 "1|OK" 格式

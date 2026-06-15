@@ -52,6 +52,15 @@ export function assertRuntimeSecretPolicy(env = process.env) {
     }
   }
 
+  // Telegram webhook secret must be strong once notifications are enabled (the
+  // webhook is a public endpoint; the secret is its only authenticity guard).
+  const telegramNotifyOn = ['1', 'true', 'yes', 'on'].includes(
+    String(env.TELEGRAM_NOTIFY_ENABLED || '').trim().toLowerCase(),
+  );
+  if (telegramNotifyOn && isWeakSecret(env.TELEGRAM_WEBHOOK_SECRET, 16)) {
+    violations.push('TELEGRAM_WEBHOOK_SECRET missing/weak/default (>=16 chars required when TELEGRAM_NOTIFY_ENABLED)');
+  }
+
   if (violations.length) {
     throw new Error(`[SECURITY_ENV_BLOCK] ${violations.join('; ')}`);
   }

@@ -8,7 +8,7 @@ import { notifyOrderCancelled } from '../../../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
-import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify';
+import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify.mjs';
 
 export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -106,7 +106,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           peopleCount: notifyData.peopleCount,
           totalTwd: notifyData.totalTwd,
         }).catch(() => {});
-        // 管理員 Telegram 事件通知
+        // 管理員 + 導遊 + 旅客 Telegram 事件通知
         void dispatchOrderEventTelegram({
           orderId,
           kind: 'order_cancelled',
@@ -114,6 +114,9 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
           scheduleDate: notifyData.scheduleDate,
           peopleCount: notifyData.peopleCount,
           totalTwd: notifyData.totalTwd,
+          experienceId: orderBefore.experienceId,
+          userId: user.id,
+          contactEmail: user.email,
         }).catch(() => {});
       }
 

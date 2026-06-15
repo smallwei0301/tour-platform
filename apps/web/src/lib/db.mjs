@@ -5446,3 +5446,129 @@ export async function getGuideIdForOrderDb({ activityId } = {}) {
   if (error) throw new Error(error.message);
   return data?.guide_id ?? null;
 }
+
+// ---------------------------------------------------------------------------
+// Telegram chat binding (telegram_chat_mapping + telegram_bind_code +
+// telegram_webhook_events) — Supabase. In-memory fallback in telegram-binding.mjs.
+// ---------------------------------------------------------------------------
+
+function mapTelegramRow(row) {
+  if (!row) return null;
+  return {
+    role: row.role,
+    subjectId: row.subject_id ?? null,
+    contactEmail: row.contact_email ?? null,
+    chatId: row.chat_id,
+    displayName: row.display_name ?? null,
+    isBlocked: !!row.is_blocked,
+    boundAt: row.bound_at ?? null,
+    updatedAt: row.updated_at ?? null,
+  };
+}
+
+/** Upsert a Telegram binding (idempotent on (role, subject_id)). */
+export async function upsertTelegramMappingDb({ role, subjectId, contactEmail, chatId, displayName } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const now = new Date().toISOString();
+  const row = { role, subject_id: subjectId ?? null, chat_id: chatId, is_blocked: false, updated_at: now };
+  if (contactEmail !== undefined) row.contact_email = contactEmail ? String(contactEmail).trim().toLowerCase() : null;
+  if (displayName !== undefined) row.display_name = displayName ?? null;
+  const { data, error } = await supabase
+    .from('telegram_chat_mapping')
+    .upsert(row, { onConflict: 'role,subject_id' })
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapTelegramRow(data);
+}
+
+export async function getTelegramChatForGuideDb(guideId) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('telegram_chat_mapping')
+    .select('chat_id')
+    .eq('role', 'guide').eq('subject_id', guideId).eq('is_blocked', false)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data?.chat_id ?? null;
+}
+
+export async function getTelegramChatForTravelerDb({ userId, contactEmail } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  if (userId) {
+    const { data, error } = await supabase
+      .from('telegram_chat_mapping')
+      .select('chat_id')
+      .eq('role', 'traveler').eq('subject_id', userId).eq('is_blocked', false)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data?.chat_id) return data.chat_id;
+  }
+  if (contactEmail) {
+    const { data, error } = await supabase
+      .from('telegram_chat_mapping')
+      .select('chat_id')
+      .eq('role', 'traveler').eq('contact_email', contactEmail).eq('is_blocked', false)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (data?.chat_id) return data.chat_id;
+  }
+  return null;
+}
+
+export async function setTelegramBlockedDb(chatId, blocked) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('telegram_chat_mapping')
+    .update({ is_blocked: !!blocked, updated_at: new Date().toISOString() })
+    .eq('chat_id', chatId)
+    .select()
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return mapTelegramRow(data);
+}
+
+/** Store a one-time Telegram binding code (replaces the subject's prior codes). */
+export async function createTelegramBindCodeDb({ code, role, subjectId, contactEmail, expiresAt } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  let del = supabase.from('telegram_bind_code').delete().eq('role', role);
+  del = subjectId == null ? del.is('subject_id', null) : del.eq('subject_id', subjectId);
+  await del;
+  const { error } = await supabase
+    .from('telegram_bind_code')
+    .insert({ code, role, subject_id: subjectId ?? null, contact_email: contactEmail ?? null, expires_at: expiresAt });
+  if (error) throw new Error(error.message);
+  return { code };
+}
+
+/** Atomically consume a Telegram bind code (single-use). */
+export async function consumeTelegramBindCodeDb(code) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('telegram_bind_code')
+    .delete()
+    .eq('code', code)
+    .select('role, subject_id, contact_email, expires_at')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const expired = new Date(data.expires_at).getTime() <= Date.now();
+  return { role: data.role, subjectId: data.subject_id, contactEmail: data.contact_email, expired };
+}
+
+export async function markTelegramUpdateDb(updateId) {
+  if (!hasSupabaseEnv()) return { firstTime: true };
+  const supabase = await getSupabase();
+  const { error } = await supabase.from('telegram_webhook_events').insert({ update_id: String(updateId) });
+  if (error) {
+    if (error.code === '23505') return { firstTime: false };
+    throw new Error(error.message);
+  }
+  return { firstTime: true };
+}

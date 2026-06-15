@@ -7,7 +7,7 @@ import { notifyNewOrder } from '../../../src/lib/line-notify';
 import { pushTravelerOrderEvent } from '../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../src/lib/order-email-notify';
-import { dispatchOrderEventTelegram } from '../../../src/lib/order-telegram-notify';
+import { dispatchOrderEventTelegram } from '../../../src/lib/order-telegram-notify.mjs';
 import { limiters, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
 import { createClient } from '../../../src/lib/supabase/server';
 
@@ -151,6 +151,9 @@ export async function POST(request: Request) {
       scheduleDate: notifyData.scheduleDate,
       peopleCount: notifyData.peopleCount,
       totalTwd: notifyData.totalTwd,
+      experienceId: order.experienceId,
+      userId: userId ?? undefined,
+      contactEmail: order.contactEmail ?? undefined,
     }).catch(() => {});
 
     return Response.json(ok(order));

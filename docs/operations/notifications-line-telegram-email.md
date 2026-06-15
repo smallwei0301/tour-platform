@@ -105,20 +105,25 @@
 - `dispatchOrderEventTelegram` 接到四個 order hooks → 五事件都通知 `TELEGRAM_ORDER_CHAT_ID`。
 - 旗標 `TELEGRAM_NOTIFY_ENABLED`（預設 OFF）；403（被封鎖）視為 skip。
 
-**訂單通知 — 導遊/旅客個人：⏳ 待做（下一個 increment）**，覆蓋：
+**訂單通知 — 導遊/旅客個人：✅ 已完成（綁定 increment）**：
 
-| 對象 | Telegram 綁定方式（規劃） |
+| 對象 | Telegram 綁定方式 |
 |---|---|
-| 管理員 | 單一群組 chat id（env，沿用既有 bot 模式） |
-| 導遊 | 個人綁定：`https://t.me/<bot>?start=<code>` 深連結 → bot 收 `/start` → 綁定 chat_id ↔ guide（鏡像 LINE 綁定碼） |
-| 旅客（可選） | 同上，個人綁定後才發 |
+| 管理員 | 單一群組 chat id（`TELEGRAM_ORDER_CHAT_ID`） |
+| 導遊 | 深連結 `https://t.me/Midao2026bot?start=<code>` → bot 收 `/start <code>` → webhook 兌換 → 綁定 chat_id ↔ guide_id（鏡像 LINE 綁定碼） |
+| 旅客（可選） | 同上，role=traveler（subject=user_id，contact_email 備援） |
 
-**所需新建（規劃，尚未實作）**：
-- `telegram-messaging.ts`（送訊息 client，抽共用 `sendMessage`）+ `telegram-messages`（事件文案）。
-- `telegram_chat_mapping` schema（traveler/guide ↔ chat_id）+ 綁定碼表 + in-memory fallback。
-- `/api/telegram/webhook`（接 `/start` 綁定、`secret_token` 驗證、冪等）。
-- 旗標：`TELEGRAM_NOTIFY_ENABLED`（總開關）、`TELEGRAM_GUIDE_NOTIFY_ENABLED`、`TELEGRAM_TRAVELER_NOTIFY_ENABLED`，預設 OFF。
-- 把 Telegram push 接到既有四個 order-event hooks（與 email / LINE 並列；per-route inline，目前無中央 fanout）。
+**已建檔案**：
+- `telegram-messaging.ts`（send client）+ `telegram-messages.ts`（三對象文案）。
+- `telegram-binding.mjs`（綁定/兌換/解析 `/start`/idempotency）+ `db.mjs` Supabase helpers + in-memory fallback。
+- `telegram-webhook.mjs` + `/api/telegram/webhook`（`X-Telegram-Bot-Api-Secret-Token` 常數時間驗證、`update_id` 冪等、`my_chat_member` 封鎖處理）。
+- `order-telegram-notify.mjs`（admin + guide + traveler fan-out）接到四個 order hooks。
+- mint 端點：`/api/guide/telegram-binding`、`/api/me/telegram-binding`。
+- schema：`20260615_line302c_telegram_binding.sql`（+rollback）：`telegram_chat_mapping` / `telegram_bind_code` / `telegram_webhook_events`。
+- 旗標：`TELEGRAM_NOTIFY_ENABLED` / `TELEGRAM_GUIDE_NOTIFY_ENABLED` / `TELEGRAM_TRAVELER_NOTIFY_ENABLED`（預設 OFF）。
+- env 守門：`startup-env`（notify 開時要 `TELEGRAM_BOT_TOKEN` + `TELEGRAM_WEBHOOK_SECRET`）、`security-env`（webhook secret 弱密鑰檢查）。
+
+**設定（Step 0）**：BotFather 開 bot（username `Midao2026bot`）→ `TELEGRAM_BOT_TOKEN`（存 Vercel/.env，勿 commit）；`TELEGRAM_BOT_USERNAME=Midao2026bot`；設 `TELEGRAM_WEBHOOK_SECRET` 並用 Telegram `setWebhook`（指向 `/api/telegram/webhook`、帶 `secret_token`）；bot 拉進 ops 群組取 `TELEGRAM_ORDER_CHAT_ID`；開 `TELEGRAM_NOTIFY_ENABLED=1`。
 
 ---
 
@@ -127,7 +132,7 @@
 1. ✅ 文件化 + 暫停 LINE 事件 push（§2，旗標已 OFF）。
 2. ✅ 補 Email 落差：導遊五事件 + 管理員缺漏事件（`5fa54b1`）。
 3. ✅ Telegram messaging client + 管理員群組通知（`04ff92b`）。
-4. ⏳ **Telegram 導遊/旅客個人綁定**：webhook（`/api/telegram/webhook`，`secret_token` 驗證、冪等）+ `/start <code>` 深連結綁定 + `telegram_chat_mapping` schema（鏡像 LINE 綁定碼）+ 個人 push 接到四 hooks（`TELEGRAM_GUIDE_NOTIFY_ENABLED` / `TELEGRAM_TRAVELER_NOTIFY_ENABLED` gated）。
-5. ⏳ **綁定 UI**：後台「綁定 LINE / Telegram」按鈕（鏡像，呼叫 `/api/guide/line-binding` 等端點）。
+4. ✅ **Telegram 導遊/旅客個人綁定**：webhook + `/start <code>` 深連結 + `telegram_chat_mapping` schema + 個人 push 接四 hooks（`TELEGRAM_GUIDE_NOTIFY_ENABLED` / `TELEGRAM_TRAVELER_NOTIFY_ENABLED` gated）+ mint 端點。
+5. ⏳ **綁定 UI**：後台「綁定 LINE / Telegram」按鈕（鏡像，呼叫 `/api/guide/{line,telegram}-binding`、`/api/me/telegram-binding`）。
 
 > 所有新管道一律 **feature flag 預設 OFF**、**fire-and-forget 不阻塞 API**、**PII 不落地**（沿用 LINE 既有準則）。

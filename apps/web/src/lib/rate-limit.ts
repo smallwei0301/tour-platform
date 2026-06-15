@@ -146,6 +146,9 @@ export const limiters = {
 
   // /api/line/auth/verify — 20 requests per minute per IP
   lineAuth: new RateLimiter(20, 60 * 1000),
+
+  // /api/telegram/webhook — 60 requests per minute (Telegram delivers in bursts)
+  telegramWebhook: new RateLimiter(60, 60 * 1000),
 };
 
 // Named exports for convenience

@@ -71,4 +71,14 @@ export function isTelegramNotifyEnabled(env = process.env) {
   return isTruthy(env.TELEGRAM_NOTIFY_ENABLED);
 }
 
+/** Per-guide Telegram order push (requires TELEGRAM_NOTIFY_ENABLED + a binding). Default OFF. */
+export function isTelegramGuideNotifyEnabled(env = process.env) {
+  return isTruthy(env.TELEGRAM_GUIDE_NOTIFY_ENABLED);
+}
+
+/** Per-traveler (optional) Telegram order push (requires a binding). Default OFF. */
+export function isTelegramTravelerNotifyEnabled(env = process.env) {
+  return isTruthy(env.TELEGRAM_TRAVELER_NOTIFY_ENABLED);
+}
+
 export const __internal = { isTruthy };

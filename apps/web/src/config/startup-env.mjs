@@ -55,6 +55,14 @@ function requiredRules(profile, env = process.env) {
       );
     }
 
+    // Telegram order notifications need the bot token + webhook secret once enabled.
+    if (isTruthy(env.TELEGRAM_NOTIFY_ENABLED)) {
+      rules.push(
+        { key: 'TELEGRAM_BOT_TOKEN', check: hasValue, reason: 'required when TELEGRAM_NOTIFY_ENABLED', envScope: 'required when Telegram notifications are enabled' },
+        { key: 'TELEGRAM_WEBHOOK_SECRET', check: (v) => hasValue(v) && String(v).trim().length >= 16, reason: 'must be >=16 chars when TELEGRAM_NOTIFY_ENABLED', envScope: 'required when Telegram notifications are enabled' },
+      );
+    }
+
     return rules;
   }
 

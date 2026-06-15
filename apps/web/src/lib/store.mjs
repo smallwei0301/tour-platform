@@ -170,6 +170,18 @@ export const guideLineMappings = [];
 // Each entry: { code, guideId, expiresAt, createdAt }
 export const guideLineBindCodes = [];
 
+// Telegram chat binding (in-memory fallback for telegram_chat_mapping).
+// Each entry: { role, subjectId, contactEmail, chatId, displayName, isBlocked, boundAt, updatedAt }
+export const telegramChatMappings = [];
+
+// One-time Telegram binding codes (in-memory fallback for telegram_bind_code).
+// Each entry: { code, role, subjectId, contactEmail, expiresAt, createdAt }
+export const telegramBindCodes = [];
+
+// Telegram webhook update idempotency (in-memory fallback for telegram_webhook_events).
+// Each entry: { updateId, receivedAt }
+export const telegramWebhookEvents = [];
+
 export const refundRequests = [
   {
     id: 'ref_mock_001',
