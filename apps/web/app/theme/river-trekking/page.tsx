@@ -3,16 +3,16 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: '野外溯溪行程 | Midao 祕島',
+  title: '野外溪流行程 | Midao 祕島',
   description: '走進台灣最純淨的野溪，感受花蓮溪谷的力量。小團深度溯溪體驗，在地導遊全程帶領。',
   openGraph: {
-    title: '野外溯溪 — 花蓮秘境野溪體驗 | Midao 祕島',
+    title: '野外溪流 — 花蓮秘境野溪體驗 | Midao 祕島',
     description: '不只是戲水。跟著懂溪的導遊，走進花蓮最美的溪谷。',
-    images: [{ url: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200', width: 1200, height: 630, alt: '野外溯溪 | Midao 祕島' }],
+    images: [{ url: 'https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200', width: 1200, height: 630, alt: '野外溪流 | Midao 祕島' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: '野外溯溪 — 花蓮秘境野溪體驗 | Midao 祕島',
+    title: '野外溪流 — 花蓮秘境野溪體驗 | Midao 祕島',
     description: '不只是戲水。跟著懂溪的導遊，走進花蓮最美的溪谷。',
     images: ['https://images.pexels.com/photos/2325446/pexels-photo-2325446.jpeg?auto=compress&cs=tinysrgb&w=1200'],
   },
@@ -49,7 +49,7 @@ const riverJsonLd = {
       itemListElement: [
         { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
         { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-        { '@type': 'ListItem', position: 3, name: '野外溯溪', item: `${baseUrl}/theme/river-trekking` },
+        { '@type': 'ListItem', position: 3, name: '野外溪流', item: `${baseUrl}/theme/river-trekking` },
       ],
     },
     {
@@ -81,14 +81,14 @@ export default function RiverTrekkingPage() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(riverJsonLd) }} />
       <div className="tp-container">
         <div className="tp-breadcrumb" style={{ paddingTop: 16 }}>
-          <Link href="/">首頁</Link> &gt; <Link href="/activities">探索行程</Link> &gt; 野外溯溪
+          <Link href="/">首頁</Link> &gt; <Link href="/activities">探索行程</Link> &gt; 野外溪流
         </div>
       </div>
       <section className="tp-theme-hero tp-theme-river-hero">
         <div className="tp-container">
           <h1>走進台灣最純淨的野溪</h1>
           <p>不靠纜車、不靠觀光車，靠雙腳和懂山的人，體驗台灣最真實的水路風景。</p>
-          <Link className="tp-btn tp-btn-primary" href="/activities?theme=river-trekking">探索溯溪行程</Link>
+          <Link className="tp-btn tp-btn-primary" href="/activities?type=%E9%87%8E%E5%A4%96%E6%BA%AA%E6%B5%81">探索溯溪行程</Link>
         </div>
       </section>
 
@@ -102,7 +102,7 @@ export default function RiverTrekkingPage() {
 
       <section className="tp-section">
         <div className="tp-container">
-          <h2>野外溯溪精選行程</h2>
+          <h2>野外溪流精選行程</h2>
           <div className="tp-card-grid tp-card-grid-activities">
             {riverTours.map((t) => (
               <article className="tp-card" key={t.slug + t.title}>

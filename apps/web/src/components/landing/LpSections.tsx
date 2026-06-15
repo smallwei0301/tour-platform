@@ -61,10 +61,10 @@ export function LpHero() {
 }
 
 const THEMES = [
-  { title: '山徑', sub: 'Into the Mountains', href: '/activities?category=hiking', icon: MountainIcon },
-  { title: '海岸', sub: 'By the Coast', href: '/activities?category=water', icon: WaveIcon },
-  { title: '部落', sub: 'Tribal Culture', href: '/activities?category=culture', icon: TribalIcon },
-  { title: '茶香', sub: 'Tea Journey', href: '/activities?category=food', icon: TeaLeafIcon },
+  { title: '山徑', sub: 'Into the Mountains', href: '/theme/mountain-wilderness', icon: MountainIcon },
+  { title: '野溪', sub: 'Wild Streams', href: '/theme/river-trekking', icon: WaveIcon },
+  { title: '文化', sub: 'Local Culture', href: '/theme/culture-history', icon: TribalIcon },
+  { title: '美食', sub: 'Local Food', href: '/theme/food-tour', icon: TeaLeafIcon },
 ];
 
 export function LpThemes() {
@@ -87,10 +87,10 @@ export function LpThemes() {
 // ── 編輯精選卡：策展文案與本地圖片（admin 於 /admin/homepage 切換行程） ──
 // 圖片一律本地快取（fixtures 的 unsplash 外連在離線/慢網環境會破圖）。
 const FEATURED_IMAGES: Record<string, string> = {
-  'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.jpg',
-  'hualien-river-trekking': '/images/lp/tour-river.jpg',
-  'dadadaocheng-walk': '/images/lp/tour-dadaocheng.jpg',
-  'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.jpg',
+  'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.webp',
+  'hualien-river-trekking': '/images/lp/tour-river.webp',
+  'dadadaocheng-walk': '/images/lp/tour-dadaocheng.webp',
+  'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.webp',
 };
 
 type FeaturedCopy = {
@@ -187,7 +187,7 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
   if (featured) {
     const { activity, copy } = featured;
     href = buildActivityHref(activity);
-    photo = copy.imageUrl || '/images/lp/feat-chaishan.jpg';
+    photo = copy.imageUrl || '/images/lp/feat-chaishan.webp';
     // 行程頁內照片（相片集）優先做輪播；缺漏時退回單張封面。
     photos = copy.imageUrls && copy.imageUrls.length > 0 ? copy.imageUrls : [photo];
     title = copy.title;
@@ -227,7 +227,7 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
           <LpFeaturedCarousel images={photos} alt={title} />
           {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.png" alt="編輯精選" />
+          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.webp" alt="編輯精選" loading="lazy" />
         </div>
         <div className="lp-feat-right">
           <div className="lp-feat-body">
@@ -279,7 +279,7 @@ export function LpGuide() {
           {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" />
+            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" loading="lazy" />
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">在地嚮導・深度旅遊</p>
@@ -317,10 +317,10 @@ const DESTINATIONS = [
 /** 更多精選行程（admin 於 /admin/homepage 選擇；未設定時為編輯精選以外的前 2 個）。
  *  圖片使用本地資產（fixtures 的 unsplash 外連在離線/慢網環境會破圖）。 */
 const TOUR_IMAGES: Record<string, string> = {
-  'dadadaocheng-walk': '/images/lp/tour-dadaocheng.jpg',
-  'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.jpg',
-  'hualien-river-trekking': '/images/lp/tour-river.jpg',
-  'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.jpg',
+  'dadadaocheng-walk': '/images/lp/tour-dadaocheng.webp',
+  'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.webp',
+  'hualien-river-trekking': '/images/lp/tour-river.webp',
+  'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.webp',
 };
 
 /** admin 設定的真實行程「更多精選」view-model（page.tsx 解析後傳入）。 */
@@ -338,7 +338,7 @@ export function LpTours({ slugs, tours }: { slugs?: string[]; tours?: TourView[]
     items = tours.map(({ activity, copy }) => ({
       slug: activity.slug,
       href: buildActivityHref(activity),
-      image: copy.imageUrl || '/images/lp/tour-river.jpg',
+      image: copy.imageUrl || '/images/lp/tour-river.webp',
       title: copy.title,
       tagline: copy.tagline,
       region: activity.region ?? '',

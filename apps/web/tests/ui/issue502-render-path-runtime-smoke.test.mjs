@@ -191,7 +191,9 @@ test('GH-502 render-path isolation: module import + metadata + component render 
     assert.equal(compatModule.revalidate, 60);
   }
 
-  assert.equal(regionModule.dynamic, 'force-dynamic');
+  // Issue #502 後續：詳情頁改回 ISR（移除緊急 force-dynamic，保留 revalidate=60）。
+  // 事故主因已移除、保留 8s timeout guard；force-dynamic 不得再宣告。
+  assert.notEqual(regionModule.dynamic, 'force-dynamic');
   assert.equal(regionModule.revalidate, 60);
 });
 

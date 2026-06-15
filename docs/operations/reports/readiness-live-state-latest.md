@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-06-14T12:44:43.195Z -->
+<!-- query_timestamp: 2026-06-14T18:35:00.429Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-14T12:44:43.195Z  
-**Commit SHA:** `a0f57e8aa462668ccbd383d4fd3cb86af199b20b`
+**Query timestamp:** 2026-06-14T18:35:00.429Z  
+**Commit SHA:** `4518540119e78735da882fe239553077d636089b`
 
 ---
 
-## Open PRs (4)
+## Open PRs (6)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1436 | [feat(home): 編輯精選大卡照片改為輪播行程頁內相片集](https://github.com/smallwei0301/tour-platform/pull/1436) | `claude/homepage-featured-itinerary-photos-q3hbzb` |
+| #1435 | [修正手機版主題探索間距、調整分類並統一五大行程主題](https://github.com/smallwei0301/tour-platform/pull/1435) | `claude/theme-exploration-mobile-categories-mwr0ip` |
 | #1434 | [fix(activity): 評價星等固定 5 顆（未達標灰色）+ 詳情頁載入效能優化](https://github.com/smallwei0301/tour-platform/pull/1434) | `claude/rating-display-performance-xfxvlj` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
