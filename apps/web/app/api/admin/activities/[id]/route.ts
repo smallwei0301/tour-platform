@@ -41,7 +41,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     }
     // 詳情頁改 ISR（#502 後續）：編輯後立即刷新該頁與列表的 CDN 快取，
     // 不必等 60s revalidate window，admin 改完即時可見。
-    revalidateActivityPaths({ region: data.region, slug: data.slug });
+    // 需帶 regionSlug：詳情頁 URL 的地區 segment 是正規化 slug，少帶會打錯路徑（#1440）。
+    revalidateActivityPaths({ region: data.region, regionSlug: data.regionSlug, slug: data.slug });
 
     return Response.json(ok(data));
   } catch (err) {
@@ -57,6 +58,7 @@ export async function DELETE(_request: Request, context: { params: Promise<{ id:
     // 刪除後刷新列表與（若有）該行程詳情頁的 ISR 快取，避免殘留 410/舊頁。
     revalidateActivityPaths({
       region: (result as { region?: string } | null)?.region,
+      regionSlug: (result as { regionSlug?: string } | null)?.regionSlug,
       slug: (result as { slug?: string } | null)?.slug,
     });
     return Response.json(ok(result));
