@@ -8,11 +8,20 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { readMeCache, writeMeCache } from '../../../src/lib/use-me-resource';
 import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
 
 const REGION_OPTIONS = listRegionOptions();
+
+type ProfileData = {
+  email?: string;
+  displayName?: string;
+  phone?: string;
+  region?: string;
+  marketingEmailOptIn?: boolean;
+};
 
 export default function MeProfilePage() {
   const router = useRouter();
@@ -30,7 +39,22 @@ export default function MeProfilePage() {
   useEffect(() => {
     // CSRF token 先取（儲存時需要），與 profile 載入並行。
     void fetch('/api/me/csrf', { cache: 'no-store' });
-    // 直接打 profile API（route 端已驗證 auth），401 才導去登入 —— 省掉 client getUser 的序列往返。
+
+    const applyToForm = (d: ProfileData) => {
+      setEmail(d.email || '');
+      setDisplayName(d.displayName || '');
+      setPhone(d.phone || '');
+      setRegion(d.region || '');
+      setMarketingOptIn(d.marketingEmailOptIn !== false);
+    };
+
+    // 有快取 → 立即回填（切回分頁瞬開），背景靜默更新快取但不覆蓋表單（避免蓋掉編輯中的值）。
+    const cached = readMeCache<ProfileData>('/api/me/profile');
+    if (cached) {
+      applyToForm(cached);
+      setLoading(false);
+    }
+
     (async () => {
       try {
         const res = await fetch('/api/me/profile', { cache: 'no-store' });
@@ -40,14 +64,11 @@ export default function MeProfilePage() {
         }
         const j = await res.json();
         if (j?.data) {
-          setEmail(j.data.email || '');
-          setDisplayName(j.data.displayName || '');
-          setPhone(j.data.phone || '');
-          setRegion(j.data.region || '');
-          setMarketingOptIn(j.data.marketingEmailOptIn !== false);
+          writeMeCache('/api/me/profile', j.data as ProfileData);
+          if (!cached) applyToForm(j.data as ProfileData); // 僅首次（無快取）寫入表單
         }
       } catch {
-        setErr('載入失敗，請重新整理');
+        if (!cached) setErr('載入失敗，請重新整理');
       } finally {
         setLoading(false);
       }
@@ -67,6 +88,8 @@ export default function MeProfilePage() {
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || '儲存失敗');
+      // 更新快取，切回個人資料分頁顯示最新值。
+      if (j?.data) writeMeCache('/api/me/profile', j.data as ProfileData);
       setSaved(true);
     } catch (error) {
       setErr(error instanceof Error ? error.message : '儲存失敗，請稍後再試');

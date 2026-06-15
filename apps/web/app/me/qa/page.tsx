@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
+import { useMeResource } from '../../../src/lib/use-me-resource';
 
 type QaItem = {
   id: string;
@@ -59,33 +59,11 @@ const titleStyle: React.CSSProperties = {
 
 export default function MyQaPage() {
   const router = useRouter();
-  const [items, setItems] = useState<QaItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    // 直接打 API（route 端已驗證 auth），401 才導去登入 —— 省掉 client getUser 的序列往返。
-    fetchQa();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchQa = async () => {
-    setLoading(true);
-    setErr(null);
-    try {
-      const res = await fetch('/api/me/qa', { cache: 'no-store' });
-      if (res.status === 401) {
-        router.replace(`/login?next=${encodeURIComponent('/me/qa')}`);
-        return;
-      }
-      const j = await res.json();
-      setItems(j.data || []);
-    } catch {
-      setErr('查詢失敗，請稍後再試');
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // stale-while-revalidate：切回本分頁時用快取瞬開，背景更新。
+  const { data, loading, error: err } = useMeResource<QaItem[]>('/api/me/qa', {
+    onUnauthorized: () => router.replace(`/login?next=${encodeURIComponent('/me/qa')}`),
+  });
+  const items = data ?? [];
 
   return (
     <main className="tp-container" style={pageStyle}>

@@ -2,10 +2,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
+import { useMeResource } from '../../../src/lib/use-me-resource';
 import { buildActivityHref } from '../../../src/lib/activity-url';
 
 type WishlistItem = {
@@ -43,44 +44,20 @@ const subtitleStyle: React.CSSProperties = {
 
 export default function WishlistPage() {
   const router = useRouter();
-  const [items, setItems] = useState<WishlistItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-
-  const fetchWishlist = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch('/api/me/wishlist');
-      const json = await res.json();
-      if (!json.ok) {
-        if (res.status === 401) {
-          router.push(`/login?next=${encodeURIComponent('/me/wishlist')}`);
-          return;
-        }
-        setError(json.error?.message || '載入失敗');
-      } else {
-        setItems(json.data || []);
-      }
-    } catch {
-      setError('網路錯誤，請稍後再試');
-    } finally {
-      setLoading(false);
-    }
-  }, [router]);
-
-  useEffect(() => {
-    // 直接打 API（route 端已驗證 auth），401 才導去登入 —— 省掉 client getUser 的序列往返。
-    void fetchWishlist();
-  }, [fetchWishlist]);
+  // stale-while-revalidate：切回本分頁時用快取瞬開，背景更新。401 才導登入。
+  const { data, loading, error, setData } = useMeResource<WishlistItem[]>('/api/me/wishlist', {
+    onUnauthorized: () => router.push(`/login?next=${encodeURIComponent('/me/wishlist')}`),
+  });
+  const items = data ?? [];
 
   async function handleRemove(activityId: string) {
     setRemovingId(activityId);
     try {
       const res = await fetch(`/api/me/wishlist/${activityId}`, { method: 'DELETE', headers: csrfHeaders() });
       if (res.ok) {
-        setItems((prev) => prev.filter((item) => item.activityId !== activityId));
+        // 同步更新快取，切回分頁不會看到已移除的項目又冒出來。
+        setData(items.filter((item) => item.activityId !== activityId));
       }
     } finally {
       setRemovingId(null);
