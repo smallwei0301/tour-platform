@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { csrfHeaders, ensureCsrfToken } from '../lib/csrf-client';
+import { useTravelerAuth, invalidateTravelerAuth } from '../lib/use-traveler-auth';
 
 interface WishlistToggleProps {
   activityId: string;
@@ -15,10 +16,18 @@ interface WishlistToggleProps {
   variant?: 'overlay' | 'inline';
 }
 
+/** 取得目前頁面路徑（含 query），登入後可導回原頁。 */
+function currentPath(): string {
+  if (typeof window === 'undefined') return '/';
+  return window.location.pathname + window.location.search;
+}
+
 /**
  * Heart icon toggle for adding/removing an activity from the user's wishlist.
- * - Authenticated users: toggles optimistically via /api/me/wishlist (with CSRF headers)
- * - Unauthenticated users: redirects to /login
+ *
+ * 登入判斷以 `supabase.auth.getUser()` 為唯一真實來源（透過 useTravelerAuth），
+ * 不再依賴父層傳入或 cookie sniff —— 因此在列表卡、首頁卡、詳情頁底部列都一致可用。
+ * `isLoggedIn` 僅作為初始提示以避免閃爍；最終以 getUser + API 401 為準。
  *
  * 註：本專案沒有設定 Tailwind（全站走 inline style / globals.css），
  * 因此這顆按鈕一律用 inline style，避免 utility class 失效導致愛心
@@ -31,16 +40,25 @@ export function WishlistToggle({
   variant = 'overlay',
 }: WishlistToggleProps) {
   const router = useRouter();
+  // isLoggedIn=true 才當作已確定登入的提示；否則 null（未知）→ 點擊前 await getUser。
+  const { authed, ensureAuthed } = useTravelerAuth(isLoggedIn ? true : null);
   const [wishlisted, setWishlisted] = useState(initialWishlisted);
   const [loading, setLoading] = useState(false);
+
+  function redirectToLogin() {
+    router.push(`/login?next=${encodeURIComponent(currentPath())}`);
+  }
 
   async function handleToggle(e: React.MouseEvent) {
     // 卡片整片覆蓋著 .tp-card-link-overlay，點愛心不應觸發整卡導頁。
     e.preventDefault();
     e.stopPropagation();
+    if (loading) return;
 
-    if (!isLoggedIn) {
-      router.push('/login');
+    // 登入判斷以 getUser 為準（authed 尚未解析時 await ensureAuthed）。
+    const loggedIn = authed ?? (await ensureAuthed());
+    if (!loggedIn) {
+      redirectToLogin();
       return;
     }
 
@@ -52,24 +70,23 @@ export function WishlistToggle({
     try {
       await ensureCsrfToken();
 
-      if (!wishlisted) {
-        // Add to wishlist
-        const res = await fetch('/api/me/wishlist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
-          body: JSON.stringify({ activityId }),
-        });
-        if (!res.ok) {
-          setWishlisted(prev); // rollback on failure
-        }
-      } else {
-        // Remove from wishlist
-        const res = await fetch(`/api/me/wishlist/${activityId}`, {
-          method: 'DELETE',
-          headers: { ...csrfHeaders() },
-        });
-        if (!res.ok) {
-          setWishlisted(prev); // rollback on failure
+      const res = !prev
+        ? await fetch('/api/me/wishlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+            body: JSON.stringify({ activityId }),
+          })
+        : await fetch(`/api/me/wishlist/${activityId}`, {
+            method: 'DELETE',
+            headers: { ...csrfHeaders() },
+          });
+
+      if (!res.ok) {
+        setWishlisted(prev); // rollback on failure
+        // session 過期 / 提示有誤 → 以 API 為準，導去登入。
+        if (res.status === 401) {
+          invalidateTravelerAuth(false);
+          redirectToLogin();
         }
       }
     } catch {
