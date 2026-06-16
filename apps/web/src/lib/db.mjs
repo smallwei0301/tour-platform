@@ -40,6 +40,7 @@ import {
   HOMEPAGE_FEATURED_TABLE_MISSING_MESSAGE,
 } from './homepage-featured-error.mjs';
 import { sanitizeEditorPickCopy, sanitizeMoreFeaturedCopy } from './homepage-featured-copy.mjs';
+import { isMissingTableError } from './missing-table-error.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -3178,6 +3179,34 @@ export async function getActivityBySlugDb(slug, options = {}) {
   return mapActivityDetailRow(act, schedules, reviews, guideProfile, formalPlans);
 }
 
+/**
+ * 輕量查詢：只取某行程的相片集（image_urls）欄位，供首頁編輯精選大卡輪播用。
+ * 首頁原本呼叫 getActivityBySlugDb（連帶撈 guide_profiles／schedules／reviews／plans，
+ * 約 4 個序列 round-trip）只為了拿相片集——那是首頁渲染 critical path 的主要延遲來源。
+ * 評分（reviews/ratingAvg/quotes）改由 catalog（listPublishedActivitiesDb）直接取得，
+ * 相片集則用本函式單一查詢，渲染從 ~6-7 個序列查詢降到 catalog + 1。
+ * @param {string} slug
+ * @returns {Promise<string[]>} 相片集 URL 陣列（查無/未發布 → 空陣列）
+ */
+export async function getActivityGalleryBySlugDb(slug) {
+  const s = String(slug || '').trim();
+  if (!s) return [];
+  if (!hasSupabaseEnv()) {
+    const { activities } = await import('../fixtures/data').catch(() => ({ activities: [] }));
+    const a = (activities || []).find((x) => x.slug === s);
+    return a && Array.isArray(a.galleryUrls) ? a.galleryUrls : [];
+  }
+
+  const supabase = await getSupabase();
+  const { data } = await supabase
+    .from('activities')
+    .select('image_urls')
+    .eq('slug', s)
+    .eq('status', 'published')
+    .maybeSingle();
+  return data && Array.isArray(data.image_urls) ? data.image_urls : [];
+}
+
 export async function listPublishedGuidesDb() {
   if (!hasSupabaseEnv()) {
     const { guides } = await import('../fixtures/data').catch(() => ({ guides: [] }));
@@ -5436,6 +5465,38 @@ export async function getLineUserIdForOrderDb(order) {
   return null;
 }
 
+/** Mint a one-time traveler LINE bind code (clears the traveler's prior codes). */
+export async function createLineBindCodeDb({ code, userId, contactEmail, expiresAt } = {}) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  if (userId) await supabase.from('line_bind_code').delete().eq('user_id', userId);
+  if (contactEmail) await supabase.from('line_bind_code').delete().eq('contact_email', contactEmail);
+  const { error } = await supabase
+    .from('line_bind_code')
+    .insert({ code, user_id: userId ?? null, contact_email: contactEmail ?? null, expires_at: expiresAt });
+  if (error) throw new Error(error.message);
+  return { code, userId: userId ?? null, contactEmail: contactEmail ?? null, expiresAt };
+}
+
+/**
+ * Atomically consume a traveler bind code: returns { userId, contactEmail, expired }
+ * or null when the code does not exist. The row is always deleted (single-use).
+ */
+export async function consumeLineBindCodeDb(code) {
+  if (!hasSupabaseEnv()) return null;
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('line_bind_code')
+    .delete()
+    .eq('code', code)
+    .select('user_id, contact_email, expires_at')
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  const expired = new Date(data.expires_at).getTime() <= Date.now();
+  return { userId: data.user_id ?? null, contactEmail: data.contact_email ?? null, expired };
+}
+
 // ---------------------------------------------------------------------------
 // Guide ↔ LINE binding (guide_line_mapping + guide_line_bind_code) — Supabase.
 // In-memory fallback lives in guide-line-binding.mjs. Used for per-guide push.
@@ -5684,4 +5745,63 @@ export async function markTelegramUpdateDb(updateId) {
     throw new Error(error.message);
   }
   return { firstTime: true };
+}
+
+// ---------------------------------------------------------------------------
+// Notification matrix (notification_event_settings) — Supabase singleton row.
+// Stores a sparse override map { "event:recipient:channel": boolean } in a
+// JSONB column; absence of a key means "use default" (= enabled). In-memory
+// fallback lives in notification-settings.mjs / store.mjs.
+// ---------------------------------------------------------------------------
+
+const NOTIFICATION_SETTINGS_SINGLETON_ID = 'singleton';
+
+/** Read the sparse override map; returns {} when unset / no DB / table absent. */
+export async function getNotificationOverridesDb() {
+  if (!hasSupabaseEnv()) return {};
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('notification_event_settings')
+    .select('overrides')
+    .eq('id', NOTIFICATION_SETTINGS_SINGLETON_ID)
+    .maybeSingle();
+  if (error) {
+    // Fail-open before the migration is applied: a missing table = no overrides
+    // = matrix defaults all-on (the documented pre-migration behaviour).
+    if (isMissingTableError(error)) return {};
+    throw new Error(error.message);
+  }
+  const overrides = data?.overrides;
+  return overrides && typeof overrides === 'object' ? overrides : {};
+}
+
+/** Merge cell toggles into the override map (idempotent upsert of the singleton). */
+export async function setNotificationCellsDb(cells = [], { actor = 'admin' } = {}) {
+  if (!hasSupabaseEnv()) return {};
+  const supabase = await getSupabase();
+  const current = await getNotificationOverridesDb();
+  const next = { ...current };
+  for (const cell of cells) {
+    next[`${cell.event}:${cell.recipient}:${cell.channel}`] = !!cell.enabled;
+  }
+  const { error } = await supabase
+    .from('notification_event_settings')
+    .upsert(
+      {
+        id: NOTIFICATION_SETTINGS_SINGLETON_ID,
+        overrides: next,
+        updated_by: actor,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    );
+  if (error) {
+    // Unlike reads, writes can't fail-open — the toggle can't persist without
+    // the table. Surface an actionable, taggable error for the API to map.
+    if (isMissingTableError(error)) {
+      throw new Error('notification_settings_migration_missing: notification_event_settings 表尚未建立，請先套用 migration（見 docs/operations/line-telegram-prod-migrations.md）');
+    }
+    throw new Error(error.message);
+  }
+  return next;
 }

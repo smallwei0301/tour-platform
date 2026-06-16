@@ -162,6 +162,10 @@ export const lineUserMappings = [];
 // Each entry: { webhookEventId, eventType, lineUserId, receivedAt }
 export const lineWebhookEvents = [];
 
+// One-time traveler LINE binding codes (in-memory fallback for line_bind_code).
+// Each entry: { code, userId, contactEmail, expiresAt, createdAt }
+export const lineBindCodes = [];
+
 // Guide ↔ LINE binding (in-memory fallback for guide_line_mapping).
 // Each entry: { guideId, lineUserId, displayName, isBlocked, boundAt, updatedAt }
 export const guideLineMappings = [];
@@ -181,6 +185,12 @@ export const telegramBindCodes = [];
 // Telegram webhook update idempotency (in-memory fallback for telegram_webhook_events).
 // Each entry: { updateId, receivedAt }
 export const telegramWebhookEvents = [];
+
+// Notification matrix (in-memory fallback for notification_event_settings).
+// Sparse overrides keyed by `${event}:${recipient}:${channel}` → boolean.
+// A missing key means "use default" (= enabled). The admin back-office writes
+// here when toggling a cell off/on; absence preserves the all-on default.
+export const notificationSettings = { overrides: {} };
 
 export const refundRequests = [
   {

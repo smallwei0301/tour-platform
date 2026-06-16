@@ -5,6 +5,8 @@ import {
   createAdminPosRefundEntryDb,
 } from '../../../../../../src/lib/db.mjs';
 import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
+import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 // AC5: statuses that lock the order against cancellation
@@ -85,6 +87,25 @@ export async function POST(
       totalTwd: order.totalTwd,
       experienceId: order.experienceId || undefined,
       contactEmail: order.contactEmail || undefined,
+    }).catch(() => {});
+
+    // 🔔 同步派送 LINE（旅客 + 導遊）；受後台通知矩陣與綁定/總開關約束，自動 skip。
+    void pushTravelerOrderEvent({
+      kind: 'order_cancelled',
+      orderId,
+      activityTitle: order.title || undefined,
+      peopleCount: order.peopleCount,
+      totalTwd: order.totalTwd,
+      userId: order.userId || undefined,
+      contactEmail: order.contactEmail || undefined,
+    }).catch(() => {});
+    void pushGuideOrderEvent({
+      kind: 'guide_order_cancelled',
+      orderId,
+      experienceId: order.experienceId || undefined,
+      activityTitle: order.title || undefined,
+      peopleCount: order.peopleCount,
+      totalTwd: order.totalTwd,
     }).catch(() => {});
 
     return Response.json(

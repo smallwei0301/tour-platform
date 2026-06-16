@@ -22,6 +22,8 @@ import { executeRefund, executeEcpayReversal } from '../../../../../../src/lib/r
 import { recordRefundReversalDb } from '../../../../../../src/lib/db.mjs';
 import { recordIncident } from '../../../../../../src/lib/incidents';
 import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
+import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
+import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
 
 function getServiceClient() {
   return createClient(
@@ -377,6 +379,23 @@ export async function POST(
       totalTwd: order.total_twd ?? undefined,
       experienceId: order.activity_id ?? undefined,
       contactEmail: order.contact_email ?? undefined,
+    }).catch(() => {});
+
+    // 🔔 同步派送 LINE（旅客 + 導遊）；受後台通知矩陣與綁定/總開關約束，自動 skip。
+    void pushTravelerOrderEvent({
+      kind: 'refund_executed',
+      orderId,
+      peopleCount: order.people_count ?? undefined,
+      totalTwd: order.total_twd ?? undefined,
+      userId: order.user_id ?? undefined,
+      contactEmail: order.contact_email ?? undefined,
+    }).catch(() => {});
+    void pushGuideOrderEvent({
+      kind: 'guide_refund_executed',
+      orderId,
+      experienceId: order.activity_id ?? undefined,
+      peopleCount: order.people_count ?? undefined,
+      totalTwd: order.total_twd ?? undefined,
     }).catch(() => {});
   }
 

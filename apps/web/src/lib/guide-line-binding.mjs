@@ -33,9 +33,11 @@ function generateCode() {
   return `${CODE_PREFIX}${body}`;
 }
 
-/** Extract a BIND code from arbitrary LINE message text (case-insensitive). */
+/** Extract a BIND code from arbitrary LINE message text (case-insensitive).
+ *  The negative lookbehind keeps a traveler code (TBIND-XXXXXX) from matching
+ *  the guide pattern as a substring. */
 export function parseGuideBindCode(text) {
-  const match = String(text || '').toUpperCase().match(/BIND-[A-Z0-9]{6}/);
+  const match = String(text || '').toUpperCase().match(/(?<![A-Z])BIND-[A-Z0-9]{6}/);
   return match ? match[0] : null;
 }
 

@@ -1,12 +1,16 @@
 import type { Metadata } from 'next';
 import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
-import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityBySlugDb } from '../src/lib/db.mjs';
+import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityGalleryBySlugDb } from '../src/lib/db.mjs';
 import { resolveHomepageFeaturedView, resolveEditorPickPhotos } from '../src/lib/homepage-featured-copy.mjs';
 import { resolveActivityReviewStats } from '../src/lib/activity-review-stats.mjs';
 import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../src/lib/homepage-featured.mjs';
 
-// admin 於 /admin/homepage 變更精選後，ISR 60 秒內反映到首頁（維持可快取）
-export const revalidate = 60;
+// 首頁採「on-demand 失效為主」的 ISR：admin 於 /admin/homepage 儲存精選時，
+// PUT /api/admin/homepage-featured 會 revalidatePath('/') 立即重生（變更即時可見）；
+// 行程上下架／編輯也會 revalidatePath('/')（見 activityRevalidationPaths）。
+// 因此不靠短 timer 冷重生，改用長 revalidate 當安全網（最多每日自我修復一次），
+// 大幅減少低流量時使用者踩到冷重生的 ~數秒延遲。
+export const revalidate = 86400;
 
 export const metadata: Metadata = {
   title: 'Midao 祕島｜台灣在地導遊預約平台',
@@ -106,16 +110,17 @@ export default async function HomePage() {
   ]);
   const { editorPick, tours } = resolveHomepageFeaturedView(settings, catalog, HOMEPAGE_MORE_FEATURED_LIMIT);
   // 精選卡評分以「真實行程平均 + 真實評論 + 暖場留言」覆寫顯示值（與行程詳情頁一致）。
+  // 評分所需的 reviews/ratingAvg/socialProofQuotes 已包含在 catalog（listPublishedActivitiesDb
+  // 批次撈出），editorPick.activity 即為 catalog row → 直接計算，不必再打詳情查詢。
   if (editorPick?.activity?.slug) {
-    const full = await getActivityBySlugDb(editorPick.activity.slug).catch(() => null);
-    if (full) {
-      const stats = resolveActivityReviewStats(full);
-      editorPick.copy.ratingScore = stats.score.toFixed(1);
-      editorPick.copy.ratingCount = stats.count;
-      // 編輯精選大卡照片改吃「行程頁內照片」（相片集），於首頁輪播呈現。
-      const photos = resolveEditorPickPhotos(full);
-      if (photos.length > 0) editorPick.copy.imageUrls = photos;
-    }
+    const stats = resolveActivityReviewStats(editorPick.activity);
+    editorPick.copy.ratingScore = stats.score.toFixed(1);
+    editorPick.copy.ratingCount = stats.count;
+    // 編輯精選大卡照片吃「行程頁內照片」（相片集）。只有相片集 catalog 沒有，
+    // 用單一輕量查詢取得（取代整套行程詳情抓取，省約 4 個序列查詢）。
+    const gallery = await getActivityGalleryBySlugDb(editorPick.activity.slug).catch(() => []);
+    const photos = resolveEditorPickPhotos({ imageUrls: gallery, coverImageUrl: editorPick.activity.coverImageUrl });
+    if (photos.length > 0) editorPick.copy.imageUrls = photos;
   }
   return (
     <>

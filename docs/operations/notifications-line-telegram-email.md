@@ -44,7 +44,9 @@
 | LIFF | `/api/line/auth/verify`（idToken `aud` 驗證）＋真 LIFF 登入入口 | ✅ |
 | 旅客 push | 建單/付款/取消/退款 → 旅客個人 LINE（凡綁定者都推） | ✅ |
 | 導遊綁定 | `guide_line_mapping` + 綁定碼（深連結 `BIND-XXXXXX`）+ webhook 兌換 + `/api/guide/line-binding` | ✅ |
+| 旅客綁定（console） | `line_bind_code` 一次性碼 `TBIND-XXXXXX` + webhook 兌換 + `/api/me/line-binding` + `/me/profile` 按鈕（非 LIFF，官網下單者也能綁） | ✅ |
 | 導遊 push | 四事件 → 該團導遊個人 LINE | ✅ |
+| admin 後台 push | 後台改/取消/退款訂單也派送 LINE（旅客+導遊），與 Telegram 對稱 | ✅ |
 | 提醒 | pre-tour-sweep `line_push` channel | ✅ |
 
 **對應檔案**：`src/lib/line-messaging.ts`、`line-messages.ts`、`line-binding.mjs`、`line-webhook.mjs`、`line-liff-verify.mjs`、`line-traveler-push.mjs`、`line-guide-push.mjs`、`guide-line-binding.mjs`；routes 在 `app/api/line/**`、`app/api/guide/line-binding/`。
@@ -57,6 +59,39 @@
 | `LINE_PUSH_ENABLED` | 旅客個人 push | `0` |
 | `LINE_GUIDE_PUSH_ENABLED` | 導遊個人 push | `0` |
 | `NEXT_PUBLIC_LINE_LIFF_ENABLED` | 真 LIFF 登入（off = legacy query-param 回退） | `0` |
+
+---
+
+## 1.5 後台通知矩陣（admin-controllable，#920 owner 需求）
+
+管理者可在後台 **`/admin/notifications`「通知設定」** 頁，逐格勾選每個訂單事件要不要通知，維度為 **5 事件 × 3 對象（旅客／導遊／管理者群組）× 2 通道（LINE／Telegram）= 30 格**。
+
+**分層（三層皆需通過才送出）**：
+1. **通道環境總開關**（基礎設施層）：`LINE_MESSAGING_ENABLED` / `TELEGRAM_NOTIFY_ENABLED` 等——這個 deploy 有沒有設好 token、有沒有開。
+2. **後台矩陣**（業務層）：管理者在 `/admin/notifications` 勾選的那一格。**預設全開**，所以未動過設定＝沿用既有全派送行為。
+3. **對象綁定**：旅客／導遊要有可解析的 LINE userId／Telegram chat。
+
+**實作**：`src/lib/notification-settings.mjs`（gateway：`isNotifyEnabled(event, recipient, channel)` / `getNotificationMatrix` / `setNotificationCells`）；單列 JSONB 設定表 `notification_event_settings`（+ audit）；API `GET/PATCH /api/admin/notification-settings`；UI `app/admin/notifications/page.tsx`。矩陣已接進全部 6 條派送腿（LINE 旅客/導遊/管理群 ops、Telegram 三腿），任一格關閉 → 該腿回 `skipped(matrix_disabled)`。
+
+> 關閉某格只「不發那一格」；其餘格不受影響。系統告警（非訂單事件）不在矩陣內，照常發送。
+
+---
+
+## 1.6 LINE 正式環境設定 checklist（external，operator 操作）
+
+程式碼已全數就緒，要實際送出 LINE 還缺以下**外部設定**（在 LINE Developers / Vercel 操作，不在 repo）：
+
+- [ ] **建立 Messaging API channel**（LINE Developers Console）→ 取得 `LINE_CHANNEL_ACCESS_TOKEN`（長期 token，≥32 字元）與 `LINE_CHANNEL_SECRET`（≥24 字元）。
+- [ ] **註冊 webhook URL**：channel 設定填 `https://<正式網域>/api/line/webhook` 並「啟用 webhook」、關閉自動回覆。
+- [ ] **bot 加入 ops/admin 群組** → 取群組 `groupId` 設 `LINE_OPS_GROUP_ID`（未設＝管理群 ops 一律 skip `no_ops_group`）。
+- [ ] **官方帳號 Basic ID** 設 `LINE_BOT_BASIC_ID`（綁定深連結 `line.me/R/oaMessage/<id>/?<code>` 用；未設則綁定改顯示「手動貼碼」指示，仍可運作）。
+- [ ] **LINE Login channel + LIFF app**（若要開 LIFF 進場）→ `LINE_LOGIN_CHANNEL_ID`（idToken `aud` 驗證）、`NEXT_PUBLIC_LIFF_ID`。
+- [ ] **Vercel env** 填入上述變數（勿 commit）；production build 的 `startup-env` 守門會驗 LINE 必要 secret 強度。
+- [ ] **依 SOP 分階段開旗標**（見 `issue-179-line-liff-rollout-support-sop.md` L0–L3）：先 `LINE_MESSAGING_ENABLED=1` 驗 ops，再 `LINE_PUSH_ENABLED` / `LINE_GUIDE_PUSH_ENABLED`，最後 `NEXT_PUBLIC_LINE_LIFF_ENABLED`。
+- [ ] **後台矩陣**（§1.5）確認各事件×對象×LINE 的勾選符合營運期望（預設全開）。
+- [ ] 舊 `LINE_NOTIFY_ACCESS_TOKEN`（LINE Notify，2025-03-31 已停用）可從正式環境移除。
+
+> migration（`line_user_mapping` / `line_webhook_events` / `line_bind_code` / `notification_event_settings` 等）套用步驟見 `docs/operations/line-telegram-prod-migrations.md`。
 
 ---
 
