@@ -19,6 +19,33 @@ const REGION_REGISTRY = Object.freeze({
   matsu: { slug: 'matsu', displayName: '馬祖', dbValue: '連江縣' },
 });
 
+// 反查表：把任意形式的地區值（英文 slug／中文短名 displayName／DB 全名 dbValue）
+// 都對應回「DB 規範值」（含「市／縣」後綴的全名，例如 '高雄市'）。
+// footer／熱門目的地等連結用短名（'高雄'），但 DB／admin 表單存的是全名（'高雄市'），
+// 過去地區篩選用字串精確比對 → '高雄' !== '高雄市' → 永遠 0 筆。統一經由本表正規化。
+const DB_VALUE_BY_ALIAS = Object.freeze(
+  Object.values(REGION_REGISTRY).reduce((map, entry) => {
+    map[entry.slug] = entry.dbValue;
+    map[entry.displayName] = entry.dbValue;
+    map[entry.dbValue] = entry.dbValue;
+    return map;
+  }, Object.create(null)),
+);
+
+/**
+ * 把任意形式的地區值正規化成「DB 規範值」（含「市／縣」後綴的中文全名）。
+ * 命中 registry（slug／短名／全名皆可）→ 回傳對應 dbValue；
+ * 未知值原樣 trim 回傳（不丟棄外部輸入）；空值／非字串回傳 ''。
+ * @param {unknown} value
+ * @returns {string}
+ */
+export function normalizeRegionToDbValue(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return DB_VALUE_BY_ALIAS[trimmed] ?? trimmed;
+}
+
 export function getRegionBySlug(slug) {
   if (typeof slug !== 'string' || slug.length === 0) return null;
   return REGION_REGISTRY[slug] ?? null;

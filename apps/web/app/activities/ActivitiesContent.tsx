@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { buildActivityHref } from '../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../src/lib/activity-type-filter.mjs';
+import { normalizeRegionToDbValue } from '../../src/lib/region-slugs.mjs';
 import { ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../src/lib/activity-themes.mjs';
 import { resolveActivityReviewStats } from '../../src/lib/activity-review-stats.mjs';
 import { useTravelerAuth } from '../../src/lib/use-traveler-auth';
@@ -55,13 +56,13 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const router = useRouter();
 
   const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [selectedRegions, setSelectedRegions] = useState<string[]>(
-    searchParams.get('region')
-      ? [searchParams.get('region')!]
-      : initialRegion
-        ? [initialRegion]
-        : []
-  );
+  // 地區一律正規化成 DB 規範值（'高雄' / 'kaohsiung' → '高雄市'），讓 footer／熱門目的地
+  // 用短名連結（?region=高雄）也能與以全名儲存的資料、側欄全名 checkbox 對得上（#footer 高雄篩選）。
+  const [selectedRegions, setSelectedRegions] = useState<string[]>(() => {
+    const raw = searchParams.get('region') || initialRegion || '';
+    const normalized = normalizeRegionToDbValue(raw);
+    return normalized ? [normalized] : [];
+  });
   const [selectedTypes, setSelectedTypes] = useState<string[]>(
     searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
   );
@@ -99,9 +100,8 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   // Sync URL → state on mount
   useEffect(() => {
     setQuery(searchParams.get('q') || '');
-    const r = searchParams.get('region');
+    const r = normalizeRegionToDbValue(searchParams.get('region') || initialRegion || '');
     if (r) setSelectedRegions([r]);
-    else if (initialRegion) setSelectedRegions([initialRegion]);
     else setSelectedRegions([]);
     const t = searchParams.get('type');
     if (t) setSelectedTypes([resolveCanonicalType(TYPES, t)]);
@@ -190,7 +190,8 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const filtered = useMemo(() => {
     let result = [...activities];
     if (selectedRegions.length > 0) {
-      result = result.filter((a) => selectedRegions.includes(a.region));
+      // 比對前把卡片的 region 也正規化成 DB 規範值，涵蓋資料端混用短名／全名的情況。
+      result = result.filter((a) => selectedRegions.includes(normalizeRegionToDbValue(a.region)));
     }
     if (selectedTypes.length > 0) {
       result = result.filter((a) =>
