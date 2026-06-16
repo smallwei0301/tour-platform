@@ -27,6 +27,87 @@ const STATUS_LABELS: Record<string, string> = {
   refunded: '已退款',
 };
 
+// 狀態連動標記（依「後台手動切換狀態」實際觸發的真實 API 連動標註）。
+//  💬 影響 LINE／Telegram 通知發送
+//      （src/lib/admin-order-event-kind.mjs → adminStatusToTelegramKind；
+//       PATCH /api/admin/orders/[orderId] 會 fan-out 旅客＋導遊＋管理群組）
+//  💰 觸發自動推進下一步／出帳結算
+//      （src/lib/post-trip/payout-eligibility.mjs → 僅 completed 進入 settlement sweep）
+// 其他連動以圖標標註，圖例見 STATUS_MARK_LEGEND。
+const STATUS_MARK_LEGEND =
+  '標記說明： 💬 影響 LINE／Telegram 通知　💰 觸發出帳／結算　🔒 切換後鎖定不可再編輯　💳 連動付款狀態　📊 計入 GMV 統計　💸 退款連動　⭐ 觸發行程後評價邀請';
+
+const STATUS_MARKS: Record<string, string> = {
+  pending_payment: '💳',
+  paid: '💬 💳 📊',
+  confirmed: '📊',
+  rejected: '💬',
+  cancelled_by_user: '💬 🔒',
+  cancelled_by_guide: '💬 🔒',
+  completed: '💰 🔒 ⭐',
+  refund_pending: '💬 🔒 💸',
+  refunded: '💬 🔒 💸',
+};
+
+// 每個狀態切換後的真實連動說明（顯示於訂單詳情，協助維運判斷後果）。
+const STATUS_EFFECTS: Record<string, string> = {
+  pending_payment:
+    '訂單初始狀態：占用名額等待付款。' +
+    '\n💳 付款狀態同步：payment_status 重置為 pending、清除 paid_at 時間戳。' +
+    '\n⚠️ 無法手動切換到此狀態；若目前是 locked 狀態（已完成、已取消、退款中等）無法編輯。',
+
+  paid:
+    '💬 LINE／Telegram 通知：發送「已付款」給旅客、導遊、管理群組（受綁定＋通知矩陣開關約束）。' +
+    '\n💳 付款狀態同步：payment_status → paid，paid_at 設為系統當前時間。' +
+    '\n📊 GMV 統計：金額計入平台 GMV 與導遊 30 日回收額計算。' +
+    '\n✏️ 可繼續編輯狀態、備註、聯絡方式、人數等欄位。尚未進入出帳。',
+
+  confirmed:
+    '已確認名額，可標記完成的前置狀態。' +
+    '\n💳 付款狀態：不影響 payment_status（保持現有值）。' +
+    '\n📊 GMV 統計：金額已計入。' +
+    '\n✏️ 可繼續編輯。不發送任何 LINE／Telegram 通知。',
+
+  rejected:
+    '訂單被拒絕。' +
+    '\n💬 LINE／Telegram 通知：發送「訂單已取消」給旅客、導遊、管理群組。' +
+    '\n💳 付款狀態：不變更。' +
+    '\n❌ 不列入行程後評價邀請。' +
+    '\n✏️ 訂單保持可編輯。',
+
+  cancelled_by_user:
+    '旅客取消訂單。' +
+    '\n💬 LINE／Telegram 通知：發送「訂單已取消」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再編輯狀態、備註、聯絡方式、人數。' +
+    '\n❌ 拒絕名額釋放與自動退款：此下拉只改狀態，不會自動釋放名額或建立退款 entry。請使用「取消＋退款」按鈕或專用 API。',
+
+  cancelled_by_guide:
+    '導遊取消訂單。' +
+    '\n💬 LINE／Telegram 通知：發送「訂單已取消」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再編輯。' +
+    '\n❌ 拒絕名額釋放與自動退款：此下拉只改狀態。釋放名額並建立全額退款 entry 需由專用「取消＋退款」API 完成。',
+
+  completed:
+    '行程已完成，最後一個「活躍」狀態。' +
+    '\n💰 出帳資格：唯一被結算 sweep（/api/internal/settlement/sweep）納入候選的狀態。需滿足：無退款、無投訴、無安全等 hold 才能實際出帳；滿足條件後導遊 payout = (總額 - 已退款) × 85%。' +
+    '\n⭐ 評價邀請：觸發「行程後評價邀請」流程（需活動已結束、無爭議／投訴／退款）。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再改狀態、備註、聯絡方式、人數。' +
+    '\n💬 不發送即時 LINE／Telegram 通知。',
+
+  refund_pending:
+    '退款申請中，進入退款流程。' +
+    '\n💬 LINE／Telegram 通知：發送「退款申請中」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再編輯。' +
+    '\n💸 Payout Hold：該筆訂單的 payout 立即進入 hold（refund_pending）狀態，結算 sweep 會排除。' +
+    '\n🔓 解鎖「執行退款」按鈕：允許維運在訂單詳情下方點擊執行 ECPay 全額退款（或手動標記現金退款）。',
+
+  refunded:
+    '退款已完成，最終狀態。' +
+    '\n💬 LINE／Telegram 通知：發送「退款完成」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：完全 terminal，無法再編輯。' +
+    '\n💸 Payout 反向沖銷：已出帳部分以有效金額（總額 - 已退款）反向沖銷；全額退款則整筆排除於出帳，導遊零 payout。',
+};
+
 export default function AdminOrdersPage() {
   const isMobile = useIsMobile(768);
   const [rows, setRows] = useState<Row[]>([]);
@@ -203,8 +284,30 @@ export default function AdminOrdersPage() {
 
       <label htmlFor="admin-order-status" style={labelStyle}>狀態</label>
       <Select id="admin-order-status" value={editStatus} onChange={setEditStatus}>
-        {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
+        {ORDER_STATUSES.map(s => (
+          <option key={s} value={s}>
+            {STATUS_LABELS[s] ?? s}{STATUS_MARKS[s] ? `　${STATUS_MARKS[s]}` : ''}
+          </option>
+        ))}
       </Select>
+
+      {/* 選定狀態的真實連動說明 — 切換前先看清楚會觸發什麼（通知／出帳／鎖定…）。 */}
+      {STATUS_EFFECTS[editStatus] && (
+        <div
+          data-guide="order-status-effect"
+          style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, fontSize: 12, color: '#075985', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+        >
+          {STATUS_EFFECTS[editStatus]}
+        </div>
+      )}
+
+      {/* 圖標標記圖例 — #／$／其他連動的統一說明。 */}
+      <details data-guide="order-status-legend" style={{ marginTop: 8, border: '1px solid #e5e7eb', borderRadius: 8 }}>
+        <summary style={{ padding: '8px 12px', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#6b7280' }}>ℹ️ 狀態標記說明</summary>
+        <div style={{ padding: '8px 12px', borderTop: '1px solid #f0f0f0', fontSize: 12, color: '#6b7280', lineHeight: 1.9 }}>
+          {STATUS_MARK_LEGEND}
+        </div>
+      </details>
 
       <label htmlFor="admin-order-note" style={labelStyle}>Admin Note</label>
       <textarea id="admin-order-note" value={editNote} onChange={e => setEditNote(e.target.value)} rows={3}
