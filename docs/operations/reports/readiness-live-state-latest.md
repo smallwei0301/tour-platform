@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-16T01:07:05.904Z -->
+<!-- query_timestamp: 2026-06-16T08:04:45.578Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-16T01:07:05.904Z  
-**Commit SHA:** `926586a15b7af918710175fc0d877c3e1f85f17d`
+**Query timestamp:** 2026-06-16T08:04:45.578Z  
+**Commit SHA:** `d01de7aeb82e6cae1e3f62cd9af913a7a8ecd1b7`
 
 ---
 
@@ -71,6 +71,9 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1466 | [fix(activities): footer 依地區選高雄等短名可正常篩選](https://github.com/smallwei0301/tour-platform/pull/1466) | 2026-06-16 |
+| #1465 | [feat(admin-orders): 訂單狀態加上連動標記與詳細說明](https://github.com/smallwei0301/tour-platform/pull/1465) | 2026-06-16 |
+| #1464 | [fix(admin): 方案/行程編輯 UI 改善與活動層級人數限制移除 (#297)](https://github.com/smallwei0301/tour-platform/pull/1464) | 2026-06-16 |
 | #1463 | [fix(notify): 通知矩陣表未建立時 fail-open（讀）+ 503 可操作錯誤（寫）](https://github.com/smallwei0301/tour-platform/pull/1463) | 2026-06-15 |
 | #1462 | [perf(home): 首頁移除 critical path 重量級查詢 + 改 on-demand ISR（儲存即時反映）](https://github.com/smallwei0301/tour-platform/pull/1462) | 2026-06-15 |
 | #1461 | [feat(notify): 後台可勾選的通知矩陣 + 旅客 LINE 綁定 + admin 路由補 LINE push](https://github.com/smallwei0301/tour-platform/pull/1461) | 2026-06-15 |
@@ -78,9 +81,6 @@ _none_
 | #1459 | [perf(me): 會員中心分頁加入 SWR client 快取，切回分頁瞬開](https://github.com/smallwei0301/tour-platform/pull/1459) | 2026-06-15 |
 | #1458 | [perf(me): 旅客會員中心移除序列雙重 auth 往返 + 並行 QA 查詢；補套用 runbook](https://github.com/smallwei0301/tour-platform/pull/1458) | 2026-06-15 |
 | #1457 | [fix(me/profile): region 欄位 schema-drift guard — 旅客儲存不再整筆失敗](https://github.com/smallwei0301/tour-platform/pull/1457) | 2026-06-15 |
-| #1456 | [feat(telegram): 管理員後台訂單操作也派送 Telegram 通知](https://github.com/smallwei0301/tour-platform/pull/1456) | 2026-06-15 |
-| #1455 | [fix(activity): 旅客問答改用站內品牌配色字體，與常見問題一致](https://github.com/smallwei0301/tour-platform/pull/1455) | 2026-06-15 |
-| #1454 | [perf(me): 旅客後台問答/最愛連結改用 canonical 詳情頁路徑（消除相容轉址延遲）](https://github.com/smallwei0301/tour-platform/pull/1454) | 2026-06-15 |
 
 ---
 
