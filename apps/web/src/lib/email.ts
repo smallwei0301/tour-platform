@@ -352,6 +352,68 @@ export async function sendAdminOrderNotification(
   }
 }
 
+// ── 導遊新行程投稿通知（給管理者的 AI 提示詞） ───────────────────────────────────
+
+export interface GuideActivityIntakeEmailData {
+  /** 行程名稱 */
+  title: string;
+  /** 已組裝好、可直接複製貼給 AI 的完整提示詞 */
+  prompt: string;
+  /** 導遊姓名（顯示用，可空） */
+  guideName?: string;
+  /** 導遊聯絡 email（顯示用，可空） */
+  guideContactEmail?: string;
+}
+
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * 導遊投稿新行程後，寄給 ADMIN_EMAIL_ALLOWLIST 全員。
+ * 信件主體是一段可整段複製、貼給 AI 即可產出可匯入 JSON 的提示詞。
+ * 回傳每位管理者的寄送結果（無管理者時回空陣列）。
+ */
+export async function sendGuideActivityIntakeNotification(
+  data: GuideActivityIntakeEmailData,
+): Promise<EmailDeliveryResult[]> {
+  const adminEmails = (process.env.ADMIN_EMAIL_ALLOWLIST || '').split(',').map((e) => e.trim()).filter(Boolean);
+  if (adminEmails.length === 0) return [];
+
+  const subject = `[Midao 祕島｜新行程投稿] ${data.title}`;
+  const guideLine = data.guideName || data.guideContactEmail
+    ? `<p style="font-size:13px;color:#6b7280;margin:0 0 16px;">投稿導遊：${escapeHtml(data.guideName || '（未具名）')}${data.guideContactEmail ? `（${escapeHtml(data.guideContactEmail)}）` : ''}</p>`
+    : '';
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">🗺️ 有導遊投稿新行程</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 4px;">行程名稱：<strong>${escapeHtml(data.title)}</strong></p>
+    ${guideLine}
+    <div style="background:#eef2ff;border-left:4px solid #6366f1;border-radius:8px;padding:12px 16px;margin:0 0 16px;">
+      <p style="margin:0;font-size:13px;color:#3730a3;font-weight:600;">📋 使用方式</p>
+      <p style="margin:4px 0 0;font-size:13px;color:#3730a3;">將下方整段提示詞複製，貼給 AI，AI 會回傳可匯入的行程 JSON；再到後台「行程編輯 → 匯入 JSON」貼上、檢查 diff 後儲存。</p>
+    </div>
+    <pre style="white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.55;color:#111827;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:16px;margin:0;">${escapeHtml(data.prompt)}</pre>
+  `);
+
+  const results: EmailDeliveryResult[] = [];
+  for (const adminEmail of adminEmails) {
+    const result = await sendEmailWithContract({
+      fn: 'sendGuideActivityIntakeNotification',
+      to: adminEmail,
+      subject,
+      html,
+    }).catch((): EmailDeliveryResult => ({
+      fn: 'sendGuideActivityIntakeNotification', to: adminEmail, subject,
+      ok: false, status: 'failed', errorCode: 'EMAIL_SEND_FAILED', retriable: true,
+    }));
+    results.push(result);
+  }
+  return results;
+}
+
 /**
  * 訂單取消 email
  */

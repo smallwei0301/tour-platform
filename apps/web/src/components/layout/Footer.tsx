@@ -52,6 +52,7 @@ export function Footer() {
               <li><Link href="/about">關於我們</Link></li>
               <li><Link href="/guides">認識導遊</Link></li>
               <li><Link href="/guide/apply">成為導遊</Link></li>
+              <li><Link href="/guide/new-activity">投稿新行程</Link></li>
               <li><Link href="/blog">旅遊指南</Link></li>
               <li><Link href="/why-choose-us">為什麼選擇我們</Link></li>
               <li><Link href="/contact">聯絡我們</Link></li>
