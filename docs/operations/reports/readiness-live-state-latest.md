@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-16T08:04:45.578Z -->
+<!-- query_timestamp: 2026-06-16T13:54:53.154Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-16T08:04:45.578Z  
-**Commit SHA:** `d01de7aeb82e6cae1e3f62cd9af913a7a8ecd1b7`
+**Query timestamp:** 2026-06-16T13:54:53.154Z  
+**Commit SHA:** `25c2cc0b7ed179f37f457442335944d06281417f`
 
 ---
 
@@ -71,6 +71,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1467 | [feat: 導遊新行程投稿頁＋AI 提示詞產生器（含 Unsplash 圖片搜尋）](https://github.com/smallwei0301/tour-platform/pull/1467) | 2026-06-16 |
 | #1466 | [fix(activities): footer 依地區選高雄等短名可正常篩選](https://github.com/smallwei0301/tour-platform/pull/1466) | 2026-06-16 |
 | #1465 | [feat(admin-orders): 訂單狀態加上連動標記與詳細說明](https://github.com/smallwei0301/tour-platform/pull/1465) | 2026-06-16 |
 | #1464 | [fix(admin): 方案/行程編輯 UI 改善與活動層級人數限制移除 (#297)](https://github.com/smallwei0301/tour-platform/pull/1464) | 2026-06-16 |
@@ -80,7 +81,6 @@ _none_
 | #1460 | [feat(activity): 行程介紹改為依方案呈現，後台行程介紹改站點時間表 (#297)](https://github.com/smallwei0301/tour-platform/pull/1460) | 2026-06-15 |
 | #1459 | [perf(me): 會員中心分頁加入 SWR client 快取，切回分頁瞬開](https://github.com/smallwei0301/tour-platform/pull/1459) | 2026-06-15 |
 | #1458 | [perf(me): 旅客會員中心移除序列雙重 auth 往返 + 並行 QA 查詢；補套用 runbook](https://github.com/smallwei0301/tour-platform/pull/1458) | 2026-06-15 |
-| #1457 | [fix(me/profile): region 欄位 schema-drift guard — 旅客儲存不再整筆失敗](https://github.com/smallwei0301/tour-platform/pull/1457) | 2026-06-15 |
 
 ---
 
