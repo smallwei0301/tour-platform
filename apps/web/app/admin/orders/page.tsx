@@ -28,25 +28,25 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 // 狀態連動標記（依「後台手動切換狀態」實際觸發的真實 API 連動標註）。
-//  #  影響 LINE／Telegram 通知發送
+//  💬 影響 LINE／Telegram 通知發送
 //      （src/lib/admin-order-event-kind.mjs → adminStatusToTelegramKind；
 //       PATCH /api/admin/orders/[orderId] 會 fan-out 旅客＋導遊＋管理群組）
-//  $  觸發自動推進下一步／出帳結算
+//  💰 觸發自動推進下一步／出帳結算
 //      （src/lib/post-trip/payout-eligibility.mjs → 僅 completed 進入 settlement sweep）
 // 其他連動以圖標標註，圖例見 STATUS_MARK_LEGEND。
 const STATUS_MARK_LEGEND =
-  '標記說明： # 影響 LINE／Telegram 通知　$ 觸發出帳／結算　🔒 切換後鎖定不可再編輯　💳 連動付款狀態　📊 計入 GMV 統計　💸 退款連動　⭐ 觸發行程後評價邀請';
+  '標記說明： 💬 影響 LINE／Telegram 通知　💰 觸發出帳／結算　🔒 切換後鎖定不可再編輯　💳 連動付款狀態　📊 計入 GMV 統計　💸 退款連動　⭐ 觸發行程後評價邀請';
 
 const STATUS_MARKS: Record<string, string> = {
   pending_payment: '💳',
-  paid: '# 💳 📊',
+  paid: '💬 💳 📊',
   confirmed: '📊',
-  rejected: '#',
-  cancelled_by_user: '# 🔒',
-  cancelled_by_guide: '# 🔒',
-  completed: '$ 🔒 ⭐',
-  refund_pending: '# 🔒 💸',
-  refunded: '# 🔒 💸',
+  rejected: '💬',
+  cancelled_by_user: '💬 🔒',
+  cancelled_by_guide: '💬 🔒',
+  completed: '💰 🔒 ⭐',
+  refund_pending: '💬 🔒 💸',
+  refunded: '💬 🔒 💸',
 };
 
 // 每個狀態切換後的真實連動說明（顯示於訂單詳情，協助維運判斷後果）。
@@ -54,21 +54,21 @@ const STATUS_EFFECTS: Record<string, string> = {
   pending_payment:
     '訂單初始狀態：占用名額等待付款。💳 切到此狀態會把付款狀態重置為 pending、清除付款時間；手動切換不發送任何通知，也不會出帳。',
   paid:
-    '# 發送 LINE／Telegram「已付款」通知（旅客＋導遊＋管理群組）。💳 同步設定付款狀態為 paid 與付款時間。📊 金額計入 GMV 統計。尚未進入出帳。',
+    '💬 發送 LINE／Telegram「已付款」通知（旅客＋導遊＋管理群組）。💳 同步設定付款狀態為 paid 與付款時間。📊 金額計入 GMV 統計。尚未進入出帳。',
   confirmed:
     '已確認名額。📊 計入 GMV 統計，並是「可標記完成」的前置狀態。手動切換不發送通知，尚未進入出帳。',
   rejected:
-    '# 發送 LINE／Telegram「訂單已取消」通知（旅客＋導遊＋管理群組）。不列入行程後評價邀請。',
+    '💬 發送 LINE／Telegram「訂單已取消」通知（旅客＋導遊＋管理群組）。不列入行程後評價邀請。',
   cancelled_by_user:
-    '# 發送 LINE／Telegram「訂單已取消」通知。🔒 切換後訂單鎖定，無法再於後台編輯。注意：此下拉只改狀態，釋放名額＋自動建立退款請以「取消＋退款」流程處理。',
+    '💬 發送 LINE／Telegram「訂單已取消」通知。🔒 切換後訂單鎖定，無法再於後台編輯。注意：此下拉只改狀態，釋放名額＋自動建立退款請以「取消＋退款」流程處理。',
   cancelled_by_guide:
-    '# 發送 LINE／Telegram「訂單已取消」通知。🔒 切換後訂單鎖定。注意：此下拉只改狀態；釋放名額並自動建立全額退款 entry 由專用「取消＋退款」API 完成。',
+    '💬 發送 LINE／Telegram「訂單已取消」通知。🔒 切換後訂單鎖定。注意：此下拉只改狀態；釋放名額並自動建立全額退款 entry 由專用「取消＋退款」API 完成。',
   completed:
-    '$ 唯一會被結算 sweep 納入「可出帳」的狀態（completed 且無退款／投訴／安全等 hold）。⭐ 觸發行程後評價邀請流程。🔒 切換後鎖定。手動切換不發送即時通知。',
+    '💰 唯一會被結算 sweep 納入「可出帳」的狀態（completed 且無退款／投訴／安全等 hold）。⭐ 觸發行程後評價邀請流程。🔒 切換後鎖定。手動切換不發送即時通知。',
   refund_pending:
-    '# 發送 LINE／Telegram「退款申請中」通知。🔒 切換後鎖定。💸 解鎖訂單詳情的「執行退款」按鈕，並讓該筆 payout 進入 hold（暫不出帳）。',
+    '💬 發送 LINE／Telegram「退款申請中」通知。🔒 切換後鎖定。💸 解鎖訂單詳情的「執行退款」按鈕，並讓該筆 payout 進入 hold（暫不出帳）。',
   refunded:
-    '# 發送 LINE／Telegram「退款完成」通知。🔒 切換後鎖定。💸 payout 以有效金額（總額扣退款）反向沖銷；全額退款則整筆排除於出帳之外。',
+    '💬 發送 LINE／Telegram「退款完成」通知。🔒 切換後鎖定。💸 payout 以有效金額（總額扣退款）反向沖銷；全額退款則整筆排除於出帳之外。',
 };
 
 export default function AdminOrdersPage() {

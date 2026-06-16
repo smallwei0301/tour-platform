@@ -1,7 +1,7 @@
 // 鎖定「後台訂單詳情狀態下拉」的連動標記與真實 API 行為一致（防漂移）。
 //
-//  #  ↔ adminStatusToTelegramKind(status) !== null（會發 LINE／Telegram）
-//  $  ↔ evaluatePayoutEligibility 只認 completed（會進入出帳 sweep）
+//  💬 ↔ adminStatusToTelegramKind(status) !== null（會發 LINE／Telegram）
+//  💰 ↔ evaluatePayoutEligibility 只認 completed（會進入出帳 sweep）
 //
 // 這是 source-contract 測試：讀 app/admin/orders/page.tsx 的 STATUS_MARKS／
 // STATUS_EFFECTS，逐狀態比對它們是否與 src/lib 的純函式判定相符。
@@ -46,23 +46,23 @@ test('每個狀態都有標記與連動說明', () => {
   }
 });
 
-test('# 標記 ⇔ 真的會發 LINE／Telegram（adminStatusToTelegramKind）', () => {
+test('💬 標記 ⇔ 真的會發 LINE／Telegram（adminStatusToTelegramKind）', () => {
   for (const s of STATUSES) {
     const sendsNotify = adminStatusToTelegramKind(s) !== null;
-    const hasHash = MARKS[s].includes('#');
-    assert.equal(hasHash, sendsNotify, `${s}: # 標記(${hasHash}) 與通知連動(${sendsNotify}) 不一致`);
+    const hasChat = MARKS[s].includes('💬');
+    assert.equal(hasChat, sendsNotify, `${s}: 💬 標記(${hasChat}) 與通知連動(${sendsNotify}) 不一致`);
   }
 });
 
-test('$ 標記 ⇔ 真的會進入出帳 sweep（evaluatePayoutEligibility）', () => {
+test('💰 標記 ⇔ 真的會進入出帳 sweep（evaluatePayoutEligibility）', () => {
   for (const s of STATUSES) {
     // 排除其他 hold 因素後，只看「狀態」是否可出帳。
     const payable = evaluatePayoutEligibility({ orderStatus: s }).eligible === true;
-    const hasDollar = MARKS[s].includes('$');
-    assert.equal(hasDollar, payable, `${s}: $ 標記(${hasDollar}) 與出帳資格(${payable}) 不一致`);
+    const hasMoney = MARKS[s].includes('💰');
+    assert.equal(hasMoney, payable, `${s}: 💰 標記(${hasMoney}) 與出帳資格(${payable}) 不一致`);
   }
   // 防呆：唯一可出帳的是 completed。
-  assert.equal(MARKS.completed.includes('$'), true);
+  assert.equal(MARKS.completed.includes('💰'), true);
   assert.equal(evaluatePayoutEligibility({ orderStatus: 'completed' }).eligible, true);
 });
 
