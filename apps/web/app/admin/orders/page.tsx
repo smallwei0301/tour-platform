@@ -52,23 +52,60 @@ const STATUS_MARKS: Record<string, string> = {
 // 每個狀態切換後的真實連動說明（顯示於訂單詳情，協助維運判斷後果）。
 const STATUS_EFFECTS: Record<string, string> = {
   pending_payment:
-    '訂單初始狀態：占用名額等待付款。💳 切到此狀態會自動重置付款狀態為 pending、清除付款時間戳。無法手動切換到此狀態；若目前是 locked 狀態（已完成、已取消、退款中等）無法編輯。',
+    '訂單初始狀態：占用名額等待付款。' +
+    '\n💳 付款狀態同步：payment_status 重置為 pending、清除 paid_at 時間戳。' +
+    '\n⚠️ 無法手動切換到此狀態；若目前是 locked 狀態（已完成、已取消、退款中等）無法編輯。',
+
   paid:
-    '💬 發送 LINE／Telegram「已付款」通知（旅客＋導遊＋管理群組）。💳 同步自動設定付款狀態為 paid 與付款時間戳（系統當前時間）。📊 金額計入 GMV 統計。尚未進入出帳；訂單仍可編輯狀態、備註、聯絡方式、人數。',
+    '💬 LINE／Telegram 通知：發送「已付款」給旅客、導遊、管理群組（受綁定＋通知矩陣開關約束）。' +
+    '\n💳 付款狀態同步：payment_status → paid，paid_at 設為系統當前時間。' +
+    '\n📊 GMV 統計：金額計入平台 GMV 與導遊 30 日回收額計算。' +
+    '\n✏️ 可繼續編輯狀態、備註、聯絡方式、人數等欄位。尚未進入出帳。',
+
   confirmed:
-    '已確認名額。📊 計入 GMV 統計，並是「可標記完成」的前置狀態。手動切換不發送通知，不影響付款狀態。訂單仍可編輯（狀態、備註、聯絡方式、人數）。',
+    '已確認名額，可標記完成的前置狀態。' +
+    '\n💳 付款狀態：不影響 payment_status（保持現有值）。' +
+    '\n📊 GMV 統計：金額已計入。' +
+    '\n✏️ 可繼續編輯。不發送任何 LINE／Telegram 通知。',
+
   rejected:
-    '💬 發送 LINE／Telegram「訂單已取消」通知（旅客＋導遊＋管理群組）。訂單保持可編輯狀態，不發送付款狀態變更。不列入行程後評價邀請。',
+    '訂單被拒絕。' +
+    '\n💬 LINE／Telegram 通知：發送「訂單已取消」給旅客、導遊、管理群組。' +
+    '\n💳 付款狀態：不變更。' +
+    '\n❌ 不列入行程後評價邀請。' +
+    '\n✏️ 訂單保持可編輯。',
+
   cancelled_by_user:
-    '💬 發送 LINE／Telegram「訂單已取消」通知。🔒 切換後訂單立即鎖定，無法再編輯狀態、備註、聯絡資訊、人數等任何欄位。注意：此下拉只改狀態；釋放名額＋自動建立退款請使用「取消＋退款」按鈕或專用 API 處理。',
+    '旅客取消訂單。' +
+    '\n💬 LINE／Telegram 通知：發送「訂單已取消」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再編輯狀態、備註、聯絡方式、人數。' +
+    '\n❌ 拒絕名額釋放與自動退款：此下拉只改狀態，不會自動釋放名額或建立退款 entry。請使用「取消＋退款」按鈕或專用 API。',
+
   cancelled_by_guide:
-    '💬 發送 LINE／Telegram「訂單已取消」通知。🔒 切換後訂單立即鎖定，無法再編輯。注意：此下拉只改狀態；釋放名額並自動建立全額退款 entry 由專用「取消＋退款」API 完成。',
+    '導遊取消訂單。' +
+    '\n💬 LINE／Telegram 通知：發送「訂單已取消」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再編輯。' +
+    '\n❌ 拒絕名額釋放與自動退款：此下拉只改狀態。釋放名額並建立全額退款 entry 需由專用「取消＋退款」API 完成。',
+
   completed:
-    '💰 唯一會被結算 sweep 納入「可出帳」的狀態（completed 且無退款／投訴／安全等 hold）。⭐ 觸發行程後評價邀請流程。🔒 切換後訂單立即鎖定，無法再改狀態、備註或聯絡方式。手動切換不發送即時通知。',
+    '行程已完成，最後一個「活躍」狀態。' +
+    '\n💰 出帳資格：唯一被結算 sweep（/api/internal/settlement/sweep）納入候選的狀態。需滿足：無退款、無投訴、無安全等 hold 才能實際出帳；滿足條件後導遊 payout = (總額 - 已退款) × 85%。' +
+    '\n⭐ 評價邀請：觸發「行程後評價邀請」流程（需活動已結束、無爭議／投訴／退款）。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再改狀態、備註、聯絡方式、人數。' +
+    '\n💬 不發送即時 LINE／Telegram 通知。',
+
   refund_pending:
-    '💬 發送 LINE／Telegram「退款申請中」通知。🔒 切換後訂單立即鎖定，無法再編輯。💸 解鎖訂單詳情下方的「執行退款」按鈕，並讓該筆 payout 進入 hold（暫不出帳）。此狀態已排除於出帳候選。',
+    '退款申請中，進入退款流程。' +
+    '\n💬 LINE／Telegram 通知：發送「退款申請中」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：切換後立即進入 terminal 狀態，無法再編輯。' +
+    '\n💸 Payout Hold：該筆訂單的 payout 立即進入 hold（refund_pending）狀態，結算 sweep 會排除。' +
+    '\n🔓 解鎖「執行退款」按鈕：允許維運在訂單詳情下方點擊執行 ECPay 全額退款（或手動標記現金退款）。',
+
   refunded:
-    '💬 發送 LINE／Telegram「退款完成」通知。🔒 切換後訂單立即鎖定，無法再編輯。💸 payout 以有效金額（總額扣除已退款部分）反向沖銷；全額退款則整筆排除於出帳之外。',
+    '退款已完成，最終狀態。' +
+    '\n💬 LINE／Telegram 通知：發送「退款完成」給旅客、導遊、管理群組。' +
+    '\n🔒 訂單鎖定：完全 terminal，無法再編輯。' +
+    '\n💸 Payout 反向沖銷：已出帳部分以有效金額（總額 - 已退款）反向沖銷；全額退款則整筆排除於出帳，導遊零 payout。',
 };
 
 export default function AdminOrdersPage() {
@@ -258,7 +295,7 @@ export default function AdminOrdersPage() {
       {STATUS_EFFECTS[editStatus] && (
         <div
           data-guide="order-status-effect"
-          style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, fontSize: 12, color: '#075985', lineHeight: 1.7 }}
+          style={{ marginTop: 8, padding: '8px 12px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: 8, fontSize: 12, color: '#075985', lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
         >
           {STATUS_EFFECTS[editStatus]}
         </div>
