@@ -30,7 +30,13 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
 
   // 公開頁面（登入、成為導遊申請）不套用導遊後台外框（top nav / bottom tabbar）。
   // 「成為導遊」是對外招募頁，應沿用站台首頁風格，而非後台導覽。
-  if (pathname === '/guide/login' || pathname === '/guide/apply' || pathname.startsWith('/guide/apply/')) {
+  if (
+    pathname === '/guide/login' ||
+    pathname === '/guide/apply' ||
+    pathname.startsWith('/guide/apply/') ||
+    pathname === '/guide/new-activity' ||
+    pathname.startsWith('/guide/new-activity/')
+  ) {
     return <>{children}</>;
   }
 
