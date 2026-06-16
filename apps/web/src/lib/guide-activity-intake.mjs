@@ -138,7 +138,11 @@ export function buildActivityIntakePrompt(answers) {
 ## 輸出格式要求（務必遵守）
 - 只輸出**一個** JSON 物件，包在單一 \`\`\`json 程式碼區塊中，前後不要任何說明文字。
 - 欄位名稱、型別必須完全比照下方 schema，不可增減或改名。
-- 圖片欄位一律留空：\`coverImageUrl\` 設為 ""、\`imageUrls\` 設為 []（管理者稍後於後台上傳）。
+- 圖片欄位請至 **Unsplash**（https://unsplash.com）搜尋與行程主題、地點、氣氛相符的高品質照片，填入完整圖片直連 URL（格式：https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=80 ）。
+  - coverImageUrl：1 張封面圖
+  - imageUrls：5 張不同角度的 Gallery 圖（封面圖可列入第一張）
+  - 每個 planItinerary 步驟的 imageUrl：與該步驟場景相符的圖片
+  - 若某圖片找不到完全相符的可留 ""，不要捏造不存在的 URL。
 - \`durationMinutes\` 請把導遊填的時長文字換算成整數分鐘（例：「4.5 小時」→ 270）。
 - \`region\` 必須原樣輸出導遊填的中文地區；\`category\` 必須是代碼（outdoor / culture / food / nature）。
 - \`refundRules\` 與每個方案的 \`planRefundRules\` 一律使用下方「平台標準退款規則」，不要自創。
@@ -158,8 +162,8 @@ export function buildActivityIntakePrompt(answers) {
   "durationMinutes": 0,
   "meetingPoint": "string",
   "meetingPointMapUrl": "string（可留空）",
-  "coverImageUrl": "",
-  "imageUrls": [],
+  "coverImageUrl": "https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=80",
+  "imageUrls": ["url1", "url2", "url3", "url4", "url5"],
   "tagline": "一句話副標",
   "shortDescription": "2-3 句短描述",
   "description": "完整描述（可多段，用 \\n 分段）",
@@ -187,7 +191,7 @@ export function buildActivityIntakePrompt(answers) {
     "freeCancelDays": 7,
     "planInclusions": ["string"],
     "planExclusions": ["string"],
-    "planItinerary": [{ "text": "string", "imageUrl": "" }],
+    "planItinerary": [{ "text": "string", "imageUrl": "https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=80" }],
     "meetingPointName": "string",
     "meetingAddress": "string",
     "experiencePointName": "string",
