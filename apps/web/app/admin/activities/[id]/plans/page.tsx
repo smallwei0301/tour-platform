@@ -776,7 +776,7 @@ export default function ActivityPlansPage() {
                         key={i}
                         style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#fff' }}
                       >
-                        <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8, alignItems: 'center' }}>
                           <input
                             aria-label={`站點 ${i + 1} 圖示`}
                             value={step.icon}
@@ -785,7 +785,7 @@ export default function ActivityPlansPage() {
                               s[i] = { ...s[i], icon: e.target.value };
                               setForm({ ...form, plan_itinerary: s });
                             }}
-                            style={{ width: 48, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20 }}
+                            style={{ width: 44, flexShrink: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20, boxSizing: 'border-box' }}
                             placeholder="📍"
                           />
                           <input
@@ -796,7 +796,7 @@ export default function ActivityPlansPage() {
                               s[i] = { ...s[i], title: e.target.value };
                               setForm({ ...form, plan_itinerary: s });
                             }}
-                            style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }}
+                            style={{ flex: '1 1 140px', minWidth: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', boxSizing: 'border-box' }}
                             placeholder="站點名稱"
                           />
                           <input
@@ -807,14 +807,14 @@ export default function ActivityPlansPage() {
                               s[i] = { ...s[i], duration: e.target.value };
                               setForm({ ...form, plan_itinerary: s });
                             }}
-                            style={{ width: 90, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px' }}
+                            style={{ flex: '0 0 84px', width: 84, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', boxSizing: 'border-box' }}
                             placeholder="60分鐘"
                           />
                           <button
                             type="button"
                             aria-label={`移除站點 ${i + 1}`}
                             onClick={() => setForm({ ...form, plan_itinerary: form.plan_itinerary.filter((_, j) => j !== i) })}
-                            style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}
+                            style={{ flexShrink: 0, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}
                           >
                             ✕
                           </button>

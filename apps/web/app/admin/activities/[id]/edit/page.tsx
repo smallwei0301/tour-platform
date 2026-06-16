@@ -688,8 +688,8 @@ export default function AdminActivityEditPage() {
   const [category,           setCategory]           = useState('');
   const [priceTwd,           setPriceTwd]           = useState('');
   const [durationMinutes,    setDurationMinutes]    = useState('');
-  const [minParticipants,    setMinParticipants]    = useState('1');
-  const [maxParticipants,    setMaxParticipants]    = useState('10');
+  // #297 人數限制（最少／最多人數）以「方案」為唯一真實來源（旅客下單與導遊後台
+  // 皆讀方案層級），活動層級輸入已移除；改於「方案管理」各方案設定。
   const [meetingPoint,       setMeetingPoint]       = useState('');
   const [meetingPointMapUrl, setMeetingPointMapUrl] = useState('');
   const [coverImageUrl,      setCoverImageUrl]      = useState('');
@@ -733,8 +733,6 @@ export default function AdminActivityEditPage() {
         setCategory(d.category || '');
         setPriceTwd(String(d.priceTwd || ''));
         setDurationMinutes(String(d.durationMinutes || ''));
-        setMinParticipants(String(d.minParticipants || 1));
-        setMaxParticipants(String(d.maxParticipants || 10));
         setMeetingPoint(d.meetingPoint || '');
         setMeetingPointMapUrl(d.meetingPointMapUrl || '');
         setCoverImageUrl(d.coverImageUrl || '');
@@ -813,8 +811,6 @@ export default function AdminActivityEditPage() {
     setCategory(d.category || '');
     setPriceTwd(String(d.priceTwd || ''));
     setDurationMinutes(String(d.durationMinutes || ''));
-    setMinParticipants(String(d.minParticipants || 1));
-    setMaxParticipants(String(d.maxParticipants || 10));
     setMeetingPoint(d.meetingPoint || '');
     setMeetingPointMapUrl(d.meetingPointMapUrl || '');
     setCoverImageUrl(d.coverImageUrl || '');
@@ -881,8 +877,6 @@ export default function AdminActivityEditPage() {
         category: '類別代碼：outdoor / culture / food / nature。',
         priceTwd: '基礎售價（每人 TWD）。對應後台「價格/人」。',
         durationMinutes: '整體活動分鐘數。對應後台「行程時長（分鐘）」。',
-        minParticipants: '最少成團人數。',
-        maxParticipants: '最多可報名人數。',
         meetingPoint: '集合地點文字。',
         meetingPointMapUrl: 'Google Maps 或其他地圖 URL。',
         coverImageUrl: '封面圖片 URL。也可改用後台上傳。',
@@ -930,8 +924,6 @@ export default function AdminActivityEditPage() {
       category: 'outdoor',
       priceTwd: 1800,
       durationMinutes: 270,
-      minParticipants: 4,
-      maxParticipants: 10,
       meetingPoint: '柴山壽山動物園停車場旁（龍門亭入口）',
       meetingPointMapUrl: 'https://www.google.com/maps/search/?api=1&query=%E9%AB%98%E9%9B%84%E5%B8%82%E9%BC%93%E5%B1%B1%E5%8D%80%E8%BF%B4%E9%BE%8D%E8%B7%AF+%E6%9F%B4%E5%B1%B1',
       coverImageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80',
@@ -1078,8 +1070,7 @@ export default function AdminActivityEditPage() {
           category,
           priceTwd: Number(priceTwd),
           durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
-          minParticipants: Number(minParticipants) || 1,
-          maxParticipants: Number(maxParticipants) || 10,
+          // #297 不再送活動層級人數限制：以方案層級為準（payload 省略時 updateActivityDb 保留既有值）
           meetingPoint, meetingPointMapUrl, coverImageUrl,
           description, shortDescription, tagline,
           inclusions: toArray(inclusions), exclusions: toArray(exclusions),
@@ -1326,24 +1317,19 @@ export default function AdminActivityEditPage() {
             </label>
 
             <h3 style={sectionTitle}>💰 定價與容量</h3>
-            <FormGrid cols={3} gap={16}>
+            <FormGrid cols={2} gap={16}>
               <label style={labelStyle}>
                 價格/人 (TWD) *
                 <input type="number" value={priceTwd} onChange={e => setPriceTwd(e.target.value)} min={0} style={fieldStyle} required aria-required="true" />
               </label>
               <label style={labelStyle}>
-                最少人數
-                <input type="number" value={minParticipants} onChange={e => setMinParticipants(e.target.value)} min={1} style={fieldStyle} />
-              </label>
-              <label style={labelStyle}>
-                最多人數
-                <input type="number" value={maxParticipants} onChange={e => setMaxParticipants(e.target.value)} min={1} style={fieldStyle} />
+                行程時長（分鐘）
+                <input type="number" value={durationMinutes} onChange={e => setDurationMinutes(e.target.value)} min={0} style={fieldStyle} />
               </label>
             </FormGrid>
-            <label style={labelStyle}>
-              行程時長（分鐘）
-              <input type="number" value={durationMinutes} onChange={e => setDurationMinutes(e.target.value)} min={0} style={fieldStyle} />
-            </label>
+            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 13, lineHeight: 1.6 }}>
+              👥 人數限制（最少／最多人數）改於「方案管理」各方案設定 — 旅客下單與導遊後台皆以方案的人數限制為準。
+            </p>
 
             <h3 style={sectionTitle}>📍 集合地點</h3>
             <label style={labelStyle}>
@@ -1570,25 +1556,29 @@ export default function AdminActivityEditPage() {
         </Card>
 
         {/* ── 正式方案改由專屬頁管理 ── */}
-        <Card style={{ marginTop: 24, border: '1px solid #86efac', background: '#f0fdf4' }}>
-          <h3 style={{ ...sectionTitle, marginBottom: 8 }}>📋 正式方案編輯入口</h3>
-          <p style={{ color: '#166534', margin: 0, lineHeight: 1.6 }}>
+        <Card style={{ marginTop: 24, padding: 20, border: '1px solid #86efac', background: '#f0fdf4' }}>
+          <h3 style={{ ...sectionTitle, marginTop: 0, marginBottom: 10 }}>📋 正式方案編輯入口</h3>
+          <p style={{ color: '#166534', margin: '0 0 8px', lineHeight: 1.7 }}>
             正式方案（rich contract）已移至專屬頁集中管理，避免與活動主編輯頁重複維護。
           </p>
-          <p style={{ color: '#166534', marginTop: 8, marginBottom: 8 }}>
+          <p style={{ color: '#166534', margin: '0 0 8px', lineHeight: 1.7 }}>
             目前 legacy plans 筆數：{plans.length}
           </p>
-          <p style={{ color: '#166534', marginTop: 0, marginBottom: 12 }}>
+          <p style={{ color: '#166534', margin: '0 0 16px', lineHeight: 1.7 }}>
             方案欄位統一在專屬頁維護，這裡僅保留預設值/fallback 提示。
           </p>
           <a
             href={`/admin/activities/${activityId}/plans`}
             style={{
-              display: 'inline-block',
+              display: 'block',
+              width: '100%',
+              maxWidth: 280,
+              boxSizing: 'border-box',
+              textAlign: 'center',
               background: '#16a34a',
               color: '#fff',
               textDecoration: 'none',
-              padding: '10px 14px',
+              padding: '12px 16px',
               borderRadius: 8,
               fontWeight: 700,
             }}
@@ -1597,47 +1587,58 @@ export default function AdminActivityEditPage() {
           </a>
         </Card>
 
-        {/* ── 行程時間表 Editor ── */}
-        <Card style={{ marginTop: 24 }}>
-          <h3 style={sectionTitle}>🗺 詳細行程時間表</h3>
-          {itinerary.map((step, i) => (
-            <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#f9fafb' }}>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                <input value={step.icon} onChange={e => { const s=[...itinerary]; s[i]={...s[i],icon:e.target.value}; setItinerary(s); }}
-                  style={{ width: 48, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20 }} placeholder="📍" />
-                <input value={step.title} onChange={e => { const s=[...itinerary]; s[i]={...s[i],title:e.target.value}; setItinerary(s); }}
-                  style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px' }} placeholder="地點名稱" />
-                <input value={step.duration} onChange={e => { const s=[...itinerary]; s[i]={...s[i],duration:e.target.value}; setItinerary(s); }}
-                  style={{ width: 90, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px' }} placeholder="60分鐘" />
-                <button type="button" aria-label="移除行程點" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
-                  style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
-              </div>
-              <textarea value={step.description} onChange={e => { const s=[...itinerary]; s[i]={...s[i],description:e.target.value}; setItinerary(s); }}
-                rows={2} style={{ ...fieldStyle, width: '100%' }} placeholder="景點描述（選填）" />
+        {/* ── 行程時間表 Editor（備援區，預設收合）──
+            #297：詳細行程時間表為「備援區」。前台「詳細行程」優先顯示所選方案於
+            「方案管理」填寫的行程介紹；此區僅在方案未填行程介紹時作為退回來源。
+            一般修改請從「方案管理」進入，故預設收合避免誤改。 */}
+        <Card style={{ marginTop: 24, padding: 20 }}>
+          <details>
+            <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16, color: '#111827', listStyle: 'revert' }}>
+              🗺 詳細行程時間表（備援區，點擊展開）
+            </summary>
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px', margin: '12px 0', color: '#92400e', fontSize: 13, lineHeight: 1.7 }}>
+              ⚠️ 此區為<strong>備援區</strong>：前台「詳細行程」會優先顯示旅客所選方案於「方案管理」填寫的行程介紹，
+              僅在該方案未填時才退回顯示此處內容。一般修改請從<strong>「方案管理」</strong>進入編輯各方案的行程介紹。
             </div>
-          ))}
-          <button type="button" onClick={() => setItinerary([...itinerary, { step: itinerary.length+1, title:'', description:'', duration:'', icon:'📍' }])}
-            style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%', marginBottom: 16 }}>
-            + 新增行程點
-          </button>
-          {itinerary.length > 0 && (
-            <button type="button" onClick={async () => {
-              const res = await fetch(`/api/admin/activities/${activityId}`, {
-                method: 'PUT', headers: csrfHeaders({ 'Content-Type': 'application/json' }),
-                body: JSON.stringify({ itinerary }),
-              });
-              const json = await res.json();
-              if (json.ok) alert('✅ 行程時間表已儲存');
-              else alert('❌ 儲存失敗');
-            }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-              💾 儲存行程時間表
+            {itinerary.map((step, i) => (
+              <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#f9fafb' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                  <input value={step.icon} onChange={e => { const s=[...itinerary]; s[i]={...s[i],icon:e.target.value}; setItinerary(s); }}
+                    style={{ width: 44, flexShrink: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20, boxSizing: 'border-box' }} placeholder="📍" />
+                  <input value={step.title} onChange={e => { const s=[...itinerary]; s[i]={...s[i],title:e.target.value}; setItinerary(s); }}
+                    style={{ flex: '1 1 140px', minWidth: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', boxSizing: 'border-box' }} placeholder="地點名稱" />
+                  <input value={step.duration} onChange={e => { const s=[...itinerary]; s[i]={...s[i],duration:e.target.value}; setItinerary(s); }}
+                    style={{ flex: '0 0 84px', width: 84, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', boxSizing: 'border-box' }} placeholder="60分鐘" />
+                  <button type="button" aria-label="移除行程點" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
+                    style={{ flexShrink: 0, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
+                </div>
+                <textarea value={step.description} onChange={e => { const s=[...itinerary]; s[i]={...s[i],description:e.target.value}; setItinerary(s); }}
+                  rows={2} style={{ ...fieldStyle, width: '100%', boxSizing: 'border-box' }} placeholder="景點描述（選填）" />
+              </div>
+            ))}
+            <button type="button" onClick={() => setItinerary([...itinerary, { step: itinerary.length+1, title:'', description:'', duration:'', icon:'📍' }])}
+              style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%', marginBottom: 16, boxSizing: 'border-box' }}>
+              + 新增行程點
             </button>
-          )}
+            {itinerary.length > 0 && (
+              <button type="button" onClick={async () => {
+                const res = await fetch(`/api/admin/activities/${activityId}`, {
+                  method: 'PUT', headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                  body: JSON.stringify({ itinerary }),
+                });
+                const json = await res.json();
+                if (json.ok) alert('✅ 行程時間表已儲存');
+                else alert('❌ 儲存失敗');
+              }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
+                💾 儲存行程時間表
+              </button>
+            )}
+          </details>
         </Card>
 
         {/* ── FAQ Editor ── */}
-        <Card style={{ marginTop: 24 }}>
-          <h3 style={sectionTitle}>❓ 常見問題</h3>
+        <Card style={{ marginTop: 24, padding: 20 }}>
+          <h3 style={{ ...sectionTitle, marginTop: 0 }}>❓ 常見問題</h3>
           {faq.map((item, i) => (
             <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#f9fafb' }}>
               <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>

@@ -198,14 +198,23 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     defaultPlans: [],
   });
   const hidePublicBookingCta = Boolean(useBookingV2 && datePlanPresentation.showMissingCanonicalMessage);
-  const hasFormalPlanRangeVariance = formalPlans.length > 0 && formalPlans.some((plan) => {
-    const min = Number(plan?.minParticipants ?? plan?.min_participants ?? activity.minParticipants);
-    const max = Number(plan?.maxParticipants ?? plan?.max_participants ?? activity.maxParticipants);
-    return Number.isFinite(min) && Number.isFinite(max) && (min !== activity.minParticipants || max !== activity.maxParticipants);
-  });
-  const participantSummaryLabel = hasFormalPlanRangeVariance
-    ? '最少人數依方案而定'
-    : `${activity.minParticipants}~${activity.maxParticipants} 人`;
+  // #297 人數限制以「方案」為唯一真實來源（活動層級輸入已移除）。前台摘要改由方案推導：
+  // 各方案範圍一致 → 顯示該範圍；不一致 → 「最少人數依方案而定」；無方案 → 退回活動既有值。
+  const planParticipantRanges = formalPlans
+    .map((plan) => ({
+      min: Number(plan?.minParticipants ?? plan?.min_participants),
+      max: Number(plan?.maxParticipants ?? plan?.max_participants),
+    }))
+    .filter((r) => Number.isFinite(r.min) && Number.isFinite(r.max));
+  let participantSummaryLabel: string;
+  if (planParticipantRanges.length > 0) {
+    const mins = planParticipantRanges.map((r) => r.min);
+    const maxs = planParticipantRanges.map((r) => r.max);
+    const uniform = mins.every((m) => m === mins[0]) && maxs.every((m) => m === maxs[0]);
+    participantSummaryLabel = uniform ? `${mins[0]}~${maxs[0]} 人` : '最少人數依方案而定';
+  } else {
+    participantSummaryLabel = `${activity.minParticipants}~${activity.maxParticipants} 人`;
+  }
 
   return (
     <SelectedPlanProvider>
