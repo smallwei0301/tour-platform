@@ -82,6 +82,7 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 import { insertAuditLogDb } from './audit-log.mjs';
 import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { normalizeRegionForActivityPath } from './region-slug.mjs';
+import { normalizeRegionToDbValue } from './region-slugs.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 // #1383 — 訂單改期（fallback 實作 + 純規則）
 import {
@@ -2428,7 +2429,12 @@ export async function listPublishedActivitiesDb(filters = {}) {
     // fallback: return fixtures data shaped like DB rows
     const { activities, guides, getReviewsByActivity } = await import('../fixtures/data').catch(() => ({ activities: [], guides: [] }));
     let result = activities || [];
-    if (filters.region) result = result.filter(a => a.region === filters.region);
+    if (filters.region) {
+      // 地區比對一律正規化兩端（'高雄' / 'kaohsiung' / '高雄市' 視為同一地區），
+      // 避免連結用短名、資料存全名時精確比對失配（footer 高雄篩選 0 筆的根因）。
+      const wantRegion = normalizeRegionToDbValue(filters.region);
+      result = result.filter(a => normalizeRegionToDbValue(a.region) === wantRegion);
+    }
     if (filters.category) result = result.filter(a => a.category === filters.category);
     if (filters.q) {
       const q = filters.q.toLowerCase();
@@ -2460,6 +2466,9 @@ export async function listPublishedActivitiesDb(filters = {}) {
   }
 
   const supabase = await getSupabase();
+  // 地區篩選正規化成 DB 規範值（'高雄' → '高雄市'）後再 .eq()，讓 footer／熱門目的地
+  // 用短名連結也能命中以全名儲存的資料（admin 表單存全名）。
+  const regionFilter = filters.region ? normalizeRegionToDbValue(filters.region) : '';
   let query = supabase
     .from('activities')
     .select(`
@@ -2472,7 +2481,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
     .eq('status', 'published')
     .order('published_at', { ascending: false });
 
-  if (filters.region) query = query.eq('region', filters.region);
+  if (regionFilter) query = query.eq('region', regionFilter);
   if (filters.category) query = query.eq('category', filters.category);
   if (filters.q) query = query.ilike('title', `%${filters.q}%`);
 
@@ -2490,7 +2499,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
       `)
       .eq('status', 'published')
       .order('published_at', { ascending: false });
-    if (filters.region) retry = retry.eq('region', filters.region);
+    if (regionFilter) retry = retry.eq('region', regionFilter);
     if (filters.category) retry = retry.eq('category', filters.category);
     if (filters.q) retry = retry.ilike('title', `%${filters.q}%`);
     ({ data, error } = await retry);
