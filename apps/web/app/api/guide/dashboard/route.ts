@@ -13,7 +13,13 @@ export async function GET(req: Request) {
 
   if (!process.env.SUPABASE_URL) {
     return Response.json(ok({
+      todayBookings: 0,
+      weeklySchedules: 0,
+      pendingConfirmationOrders: 0,
+      pendingPaymentOrders: 0,
       monthlyBookings: 0,
+      averageRating: null,
+      exposureClicks: 0,
       pendingBookings: [],
       upcomingSchedules: [],
       monthGmvTwd: 0,
@@ -27,6 +33,7 @@ export async function GET(req: Request) {
       pendingPayoutTwd: null,
       settlementRulesVersion: 'env-fallback',
       pendingSettlementOrders: [],
+      reportTier: 'free',
     }));
   }
 
@@ -46,7 +53,13 @@ export async function GET(req: Request) {
 
   if (activityIds.length === 0) {
     return Response.json(ok({
+      todayBookings: 0,
+      weeklySchedules: 0,
+      pendingConfirmationOrders: 0,
+      pendingPaymentOrders: 0,
       monthlyBookings: 0,
+      averageRating: null,
+      exposureClicks: 0,
       pendingBookings: [],
       upcomingSchedules: [],
       monthGmvTwd: 0,
@@ -60,6 +73,7 @@ export async function GET(req: Request) {
       pendingPayoutTwd: null,
       settlementRulesVersion: settlementConfig.version ?? 'v1',
       pendingSettlementOrders: [],
+      reportTier: 'free',
     }));
   }
 
@@ -67,6 +81,29 @@ export async function GET(req: Request) {
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
+
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const { count: todayBookings } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .in('activity_id', activityIds)
+    .gte('created_at', todayStart.toISOString())
+    .lt('created_at', tomorrowStart.toISOString());
+
+  const { count: pendingConfirmationOrders } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .in('activity_id', activityIds)
+    .in('status', ['pending_confirmation', 'pending']);
+
+  const { count: pendingPaymentOrders } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .in('activity_id', activityIds)
+    .eq('status', 'pending_payment');
 
   const { count: monthlyBookings } = await supabase
     .from('orders')
@@ -114,6 +151,21 @@ export async function GET(req: Request) {
     maxCapacity: s.capacity,
     status: s.status,
   }));
+  const weeklySchedules = upcomingSchedules.length;
+
+  const activitySlugs = (activities || []).map((a: any) => a.slug).filter(Boolean);
+  const { data: reviewRows } = await supabase
+    .from('activity_reviews')
+    .select('rating')
+    .in('activity_slug', activitySlugs)
+    .eq('status', 'approved');
+  const averageRating = (reviewRows ?? []).length > 0
+    ? Number(((reviewRows ?? []).reduce((sum: number, r: any) => sum + Number(r.rating ?? 0), 0) / (reviewRows ?? []).length).toFixed(1))
+    : null;
+
+  // Exposure/click telemetry is not guaranteed in older deployments yet.
+  // Keep the dashboard contract stable and report zero until an analytics table is wired.
+  const exposureClicks = 0;
 
   // 5. Monthly GMV (Asia/Taipei month boundary) — AC1, AC3
   const taipeiOffset = 8 * 60; // UTC+8 minutes
@@ -288,7 +340,13 @@ export async function GET(req: Request) {
   }));
 
   return Response.json(ok({
+    todayBookings: todayBookings || 0,
+    weeklySchedules,
+    pendingConfirmationOrders: pendingConfirmationOrders || 0,
+    pendingPaymentOrders: pendingPaymentOrders || 0,
     monthlyBookings: monthlyBookings || 0,
+    averageRating,
+    exposureClicks,
     pendingBookings,
     upcomingSchedules,
     monthGmvTwd,
@@ -303,5 +361,6 @@ export async function GET(req: Request) {
     pendingPayoutTwd: pendingPayouts && pendingPayouts.length > 0 ? pendingPayoutTwd : null,
     settlementRulesVersion: settlementConfig.version ?? 'v1',
     pendingSettlementOrders,
+    reportTier: process.env.GUIDE_DASHBOARD_REPORT_TIER === 'paid' ? 'paid' : 'free',
   }));
 }
