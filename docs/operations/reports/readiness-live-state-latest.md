@@ -1,21 +1,20 @@
-<!-- query_timestamp: 2026-06-17T01:01:13.539Z -->
+<!-- query_timestamp: 2026-06-17T07:57:59.493Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-17T01:01:13.539Z  
-**Commit SHA:** `b8a8f9a563070fcb9d39038722b329bb3b1655fa`
+**Query timestamp:** 2026-06-17T07:57:59.493Z  
+**Commit SHA:** `c4acf8a9d9f72e81ce2f63d60015d8dcd55f98ab`
 
 ---
 
-## Open PRs (5)
+## Open PRs (4)
 
 | # | Title | Branch |
 |---|-------|--------|
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
-| #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | `codex/evaluate-platform-type-transition-options` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
@@ -73,6 +72,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1470 | [fix(admin): 修復「取消＋退款」流程並新增後台正規退款入口與說明](https://github.com/smallwei0301/tour-platform/pull/1470) | 2026-06-17 |
+| #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | 2026-06-17 |
 | #1467 | [feat: 導遊新行程投稿頁＋AI 提示詞產生器（含 Unsplash 圖片搜尋）](https://github.com/smallwei0301/tour-platform/pull/1467) | 2026-06-16 |
 | #1466 | [fix(activities): footer 依地區選高雄等短名可正常篩選](https://github.com/smallwei0301/tour-platform/pull/1466) | 2026-06-16 |
 | #1465 | [feat(admin-orders): 訂單狀態加上連動標記與詳細說明](https://github.com/smallwei0301/tour-platform/pull/1465) | 2026-06-16 |
@@ -81,8 +82,6 @@ _none_
 | #1462 | [perf(home): 首頁移除 critical path 重量級查詢 + 改 on-demand ISR（儲存即時反映）](https://github.com/smallwei0301/tour-platform/pull/1462) | 2026-06-15 |
 | #1461 | [feat(notify): 後台可勾選的通知矩陣 + 旅客 LINE 綁定 + admin 路由補 LINE push](https://github.com/smallwei0301/tour-platform/pull/1461) | 2026-06-15 |
 | #1460 | [feat(activity): 行程介紹改為依方案呈現，後台行程介紹改站點時間表 (#297)](https://github.com/smallwei0301/tour-platform/pull/1460) | 2026-06-15 |
-| #1459 | [perf(me): 會員中心分頁加入 SWR client 快取，切回分頁瞬開](https://github.com/smallwei0301/tour-platform/pull/1459) | 2026-06-15 |
-| #1458 | [perf(me): 旅客會員中心移除序列雙重 auth 往返 + 並行 QA 查詢；補套用 runbook](https://github.com/smallwei0301/tour-platform/pull/1458) | 2026-06-15 |
 
 ---
 
