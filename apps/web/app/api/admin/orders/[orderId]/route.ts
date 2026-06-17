@@ -81,6 +81,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ order
         `cannot edit order in current status (locked: ${LOCKED_STATUSES.join(', ')})`
       ), { status: 409 });
     }
+    // 防呆：不得手動把狀態改成終端狀態（須走專用流程）→ 409
+    if (message.startsWith('manual_status_change_blocked:')) {
+      const target = message.split(':')[1] || '';
+      return Response.json(fail('MANUAL_STATUS_CHANGE_BLOCKED',
+        `不可手動將訂單狀態改為「${target}」。退款請用「取消＋退款」按鈕（進行中訂單）或「執行退款」按鈕（已是退款中）；取消請用「取消＋退款」。`
+      ), { status: 409 });
+    }
     // AC1.1: capacity check → 400
     if (message.startsWith('capacity insufficient')) {
       return Response.json(fail('CAPACITY_INSUFFICIENT', message), { status: 400 });

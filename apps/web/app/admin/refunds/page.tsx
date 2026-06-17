@@ -116,6 +116,42 @@ export default function AdminRefundsPage() {
       <PageHeader title="退款管理" subtitle="審核退款申請、追蹤退款進度" />
 
       <div className="admin-page">
+        {/* ECPay vs 現金 退款流程說明（維運速查；完整說明見金流／退款處理說明頁） */}
+        <details data-guide="refund-flow-help" style={{ marginBottom: 16, border: '1px solid #bae6fd', borderRadius: 10, background: '#f0f9ff' }}>
+          <summary style={{ padding: '12px 16px', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#075985' }}>
+            ℹ️ ECPay 與現金的退款管理流程說明（點開）
+          </summary>
+          <div style={{ padding: '4px 16px 16px', fontSize: 13, color: '#0c4a6e', lineHeight: 1.85 }}>
+            <p style={{ margin: '0 0 8px' }}>
+              本頁列出的是<strong>退款申請（refund_requests）</strong>。每筆申請走「<strong>通過 → 處理中 → 完成</strong>」（或「拒絕」）。
+              「完成」後系統會把訂單設為 <strong>已退款</strong>、付款狀態設為 refunded，並補上退款付款事件。
+            </p>
+
+            <p style={{ margin: '10px 0 4px', fontWeight: 700 }}>💳 ECPay 線上付款訂單（有 trade_no）</p>
+            <ol style={{ margin: 0, paddingLeft: 20 }}>
+              <li>退款金流需向 ECPay 沖銷／退刷（全額）。建議在<strong>訂單詳情</strong>用「執行退款」按鈕，系統會自動呼叫 ECPay 全額沖銷後結案。</li>
+              <li>若在本頁直接按「完成」：僅標記訂單／申請為已退款並補事件，<strong>不會</strong>實際呼叫 ECPay。請確認 ECPay 端的退刷已另行完成，避免帳務不一致。</li>
+            </ol>
+
+            <p style={{ margin: '10px 0 4px', fontWeight: 700 }}>💵 現金／線下訂單（無 trade_no）</p>
+            <ol style={{ margin: 0, paddingLeft: 20 }}>
+              <li>金錢於線下退還。線下退款後，在本頁按「完成」把申請與訂單結案為已退款（系統只記錄狀態）。</li>
+              <li>或於訂單詳情用「執行退款」按鈕（現金需填退款原因）標記為已退款。</li>
+            </ol>
+
+            <p style={{ margin: '10px 0 4px', fontWeight: 700 }}>⚠️ 部分退款</p>
+            <p style={{ margin: 0 }}>
+              目前所有執行入口都退<strong>全額</strong>；部分退款需於 ECPay 廠商後台或線下處理，並在訂單 Admin Note 記錄實退金額。詳見下方說明頁。
+            </p>
+
+            <p style={{ margin: '12px 0 0' }}>
+              <a href="/admin/help/payments-refunds" target="_blank" rel="noopener noreferrer" style={{ color: '#1d4ed8', fontWeight: 600, textDecoration: 'none' }}>
+                📖 開啟完整「金流／退款處理說明」
+              </a>
+            </p>
+          </div>
+        </details>
+
         <Card data-guide="refund-list">
           <ResponsiveTable
             columns={refundColumns}

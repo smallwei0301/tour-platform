@@ -18,6 +18,10 @@ const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancell
 // 可執行「取消＋退款」的訂單狀態（與後端 cancelOrderAdminDb 的 CANCELLABLE 一致）。
 const CANCELLABLE_STATUSES = ['pending_payment', 'paid', 'confirmed', 'rejected'];
 
+// 防呆：這些終端狀態不得由「狀態下拉」手動設定（與後端 updateAdminOrderDb 一致）。
+// 取消／退款須走「取消＋退款」按鈕、退款執行或旅客退款申請等專用流程。
+const MANUAL_BLOCKED_STATUSES = ['cancelled_by_user', 'cancelled_by_guide', 'refund_pending', 'refunded'];
+
 // 金流／退款處理使用說明頁（ECPay vs 現金、正常流程與異常處理）。
 const PAYMENTS_REFUNDS_GUIDE_HREF = '/admin/help/payments-refunds';
 
@@ -139,6 +143,7 @@ export default function AdminOrdersPage() {
   const [editStatus, setEditStatus] = useState('');
   const [editNote, setEditNote] = useState('');
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [exceptionAction, setExceptionAction] = useState<'reschedule'|'adjust_capacity'|'oversell_fix'>('reschedule');
   const [targetScheduleId, setTargetScheduleId] = useState('');
   const [newCapacity, setNewCapacity] = useState('');
@@ -185,6 +190,7 @@ export default function AdminOrdersPage() {
     setRefundReason('');
     setRefundExecuted(false);
     setRefundError('');
+    setSaveError('');
     setCancelRefundBusy(false);
     setCancelRefundError('');
     setCancelRefundDone(false);
@@ -285,14 +291,25 @@ export default function AdminOrdersPage() {
   async function saveDetail() {
     if (!selectedId) return;
     setSaving(true);
+    setSaveError('');
     try {
-      await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, {
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, {
         method: 'PATCH', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ status: editStatus, adminNote: editNote }),
       });
+      const j = await res.json().catch(() => null);
+      if (!res.ok || j?.ok === false) {
+        // 防呆：把後端的擋下原因（如 MANUAL_STATUS_CHANGE_BLOCKED）顯示出來。
+        setSaveError(j?.error?.message || `儲存失敗（HTTP ${res.status}）`);
+        return;
+      }
       await load();
-      const res = await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' });
-      setDetail((await res.json()).data||null);
+      const dr = await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' });
+      const dj = await dr.json();
+      setDetail(dj.data || null);
+      setEditStatus(dj.data?.status || '');
+    } catch {
+      setSaveError('儲存失敗：網路錯誤，請重試。');
     } finally { setSaving(false); }
   }
 
@@ -360,12 +377,19 @@ export default function AdminOrdersPage() {
 
       <label htmlFor="admin-order-status" style={labelStyle}>狀態</label>
       <Select id="admin-order-status" value={editStatus} onChange={setEditStatus}>
-        {ORDER_STATUSES.map(s => (
-          <option key={s} value={s}>
-            {STATUS_LABELS[s] ?? s}{STATUS_MARKS[s] ? `　${STATUS_MARKS[s]}` : ''}
-          </option>
-        ))}
+        {ORDER_STATUSES.map(s => {
+          const blocked = MANUAL_BLOCKED_STATUSES.includes(s);
+          return (
+            <option key={s} value={s} disabled={blocked}>
+              {STATUS_LABELS[s] ?? s}{STATUS_MARKS[s] ? `　${STATUS_MARKS[s]}` : ''}{blocked ? '（不可手動設定）' : ''}
+            </option>
+          );
+        })}
       </Select>
+      {/* 防呆說明：取消／退款相關狀態不可由下拉手動設定。 */}
+      <p data-guide="manual-status-blocked-hint" style={{ margin: '6px 0 0', fontSize: 12, color: '#92400e', lineHeight: 1.6 }}>
+        ⚠️ 「用戶取消／導遊取消／退款中／已退款」不可由此下拉設定（已停用）。取消或退款請用下方「<strong>取消＋退款</strong>」按鈕，或退款中訂單的「執行退款」。
+      </p>
 
       {/* 選定狀態的真實連動說明 — 切換前先看清楚會觸發什麼（通知／出帳／鎖定…）。 */}
       {STATUS_EFFECTS[editStatus] && (
@@ -433,6 +457,7 @@ export default function AdminOrdersPage() {
       <button onClick={saveDetail} disabled={saving} style={{ ...btnStyle('primary'), marginTop: 14, width: '100%' }}>
         {saving ? '儲存中…' : '儲存變更'}
       </button>
+      {saveError && <p data-guide="save-error" style={{ margin: '8px 0 0', fontSize: 12, color: '#dc2626' }}>{saveError}</p>}
 
       {/* 取消＋退款：一次性正規流程（取消→釋放名額→建立全額退款 entry）。
           僅對「進行中」狀態（pending_payment/paid/confirmed/rejected）顯示；

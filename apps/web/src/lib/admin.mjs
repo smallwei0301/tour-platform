@@ -95,6 +95,12 @@ export function updateAdminOrderFallback(input = {}) {
     throw new Error(`order_edit_locked:${order.status}`);
   }
 
+  // 防呆：終端狀態只能由專用流程到達，不得由「狀態下拉」手動設定（與 db.mjs 對齊）。
+  const MANUAL_BLOCKED_STATUSES = ['cancelled_by_user', 'cancelled_by_guide', 'refund_pending', 'refunded'];
+  if (status && MANUAL_BLOCKED_STATUSES.includes(status)) {
+    throw new Error(`manual_status_change_blocked:${status}`);
+  }
+
   const previousStatus = order.status;
   const previousPaymentStatus = order.paymentStatus || null;
   const previousPaidAt = order.paidAt || null;
