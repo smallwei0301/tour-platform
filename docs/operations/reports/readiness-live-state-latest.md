@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-17T13:21:45.961Z -->
+<!-- query_timestamp: 2026-06-17T18:54:48.774Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-17T13:21:45.961Z  
-**Commit SHA:** `ff0c91aa2d9706ab5f29f8177d3860d2a6bfab2f`
+**Query timestamp:** 2026-06-17T18:54:48.774Z  
+**Commit SHA:** `0b4271e3e90044411a059da7c6761efbbfdd8e4a`
 
 ---
 
@@ -19,7 +19,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (22 total)
+## Open Issues (23 total)
 
 ### P0 (0)
 
@@ -37,10 +37,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (13)
+### P2 (14)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1472 | [[Auto Check] main healthcheck failed at / (status=N/A)](https://github.com/smallwei0301/tour-platform/issues/1472) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #1407 | [[Booking][P2] Legacy 退役階段三 — 刪除 legacy routes 與測試清點、flag 退場](https://github.com/smallwei0301/tour-platform/issues/1407) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
 | #1406 | [[Booking][P2] Legacy 退役階段二 — 移除 flag fallback UI 與 legacy 入口](https://github.com/smallwei0301/tour-platform/issues/1406) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
 | #1388 | [[Growth][P2] 成長基礎 backlog 總綱 — i18n 英文版、站內訊息、會員回購（Phase 12 對齊）](https://github.com/smallwei0301/tour-platform/issues/1388) | type:optimization, priority:P2, agent:backlog, owner:mixed, traveler-booking |
@@ -72,6 +73,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1471 | [feat(admin): 訂單狀態防呆 + 部分退款／退款流程說明](https://github.com/smallwei0301/tour-platform/pull/1471) | 2026-06-17 |
 | #1470 | [fix(admin): 修復「取消＋退款」流程並新增後台正規退款入口與說明](https://github.com/smallwei0301/tour-platform/pull/1470) | 2026-06-17 |
 | #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | 2026-06-17 |
 | #1467 | [feat: 導遊新行程投稿頁＋AI 提示詞產生器（含 Unsplash 圖片搜尋）](https://github.com/smallwei0301/tour-platform/pull/1467) | 2026-06-16 |
@@ -81,7 +83,6 @@ _none_
 | #1463 | [fix(notify): 通知矩陣表未建立時 fail-open（讀）+ 503 可操作錯誤（寫）](https://github.com/smallwei0301/tour-platform/pull/1463) | 2026-06-15 |
 | #1462 | [perf(home): 首頁移除 critical path 重量級查詢 + 改 on-demand ISR（儲存即時反映）](https://github.com/smallwei0301/tour-platform/pull/1462) | 2026-06-15 |
 | #1461 | [feat(notify): 後台可勾選的通知矩陣 + 旅客 LINE 綁定 + admin 路由補 LINE push](https://github.com/smallwei0301/tour-platform/pull/1461) | 2026-06-15 |
-| #1460 | [feat(activity): 行程介紹改為依方案呈現，後台行程介紹改站點時間表 (#297)](https://github.com/smallwei0301/tour-platform/pull/1460) | 2026-06-15 |
 
 ---
 
