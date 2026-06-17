@@ -1005,6 +1005,9 @@ export async function updateAdminOrderDb(input = {}) {
   // AC5: locked statuses cannot be edited
   const lockedStatuses = ['refunded', 'refund_pending', 'completed', 'cancelled_by_user', 'cancelled_by_guide'];
 
+  // 防呆：不得手動切換到的終端狀態（須走專用流程）。
+  const MANUAL_BLOCKED_STATUSES = ['cancelled_by_user', 'cancelled_by_guide', 'refund_pending', 'refunded'];
+
   const patch = { updated_at: new Date().toISOString() };
   if (status) {
     if (!validStatuses.includes(status)) throw new Error('invalid order status');
@@ -1036,6 +1039,12 @@ export async function updateAdminOrderDb(input = {}) {
   // AC5: reject edits on locked orders
   if (lockedStatuses.includes(beforeOrder.status)) {
     throw new Error(`order_edit_locked:${beforeOrder.status}`);
+  }
+
+  // 防呆：這些終端狀態只能由專用流程到達（取消＋退款、退款執行、旅客退款申請），
+  // 不得由訂單詳情「狀態下拉」手動設定 — 否則會造成不釋放名額／無退款記錄的孤兒訂單。
+  if (status && MANUAL_BLOCKED_STATUSES.includes(status)) {
+    throw new Error(`manual_status_change_blocked:${status}`);
   }
 
   // AC1.1 / AC1.2 / AC1.3: handle peopleCount change

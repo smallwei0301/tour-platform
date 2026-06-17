@@ -102,15 +102,65 @@ export default function PaymentsRefundsGuidePage() {
           </section>
         </Card>
 
+        {/* 3.5 部分退款機制（現況） */}
+        <Card style={{ padding: 20, marginBottom: 16 }}>
+          <section style={sectionStyle}>
+            <h2 style={h2Style}>④ 部分退款機制（目前現況）</h2>
+
+            <div style={noteBox('#fffbeb', '#fde68a', '#92400e')}>
+              <strong>一句話：平台目前「有部分退款的政策計算與預覽，但執行端一律退全額」。</strong>
+              需要部分退款時，請見下方維運處置。
+            </div>
+
+            <p style={{ ...pStyle, fontWeight: 600, color: '#111827' }}>① 退款政策（會算出部分比例）</p>
+            <p style={pStyle}>
+              系統有分層退款政策（資料表 <span style={codeStyle}>refund_policies</span>，欄位 <span style={codeStyle}>tiers</span>），
+              依「距出發剩餘時數」決定可退比例（<span style={codeStyle}>refund_pct</span>）。例如：愈早取消退愈多、接近出發退較少或不退。
+              計算函式為 <span style={codeStyle}>calculateRefundAmount()</span>，回傳 <span style={codeStyle}>refundable_amount</span>（部分金額）。
+            </p>
+
+            <p style={{ ...pStyle, fontWeight: 600, color: '#111827' }}>② 旅客預覽與快照</p>
+            <ul style={{ margin: '0 0 8px', paddingLeft: 20 }}>
+              <li style={liStyle}>旅客申請退款前，會透過退款預覽（refund-preview）看到「預計可退金額／比例」。</li>
+              <li style={liStyle}>送出申請當下，會把該比例快照寫入 <span style={codeStyle}>refund_requests.policy_snapshot</span>（保存當時報價）。</li>
+            </ul>
+
+            <div style={noteBox('#fef2f2', '#fecaca', '#991b1b')}>
+              <strong>⚠️ 重要落差：實際「執行退款」目前一律退全額（{`total_twd`}）。</strong>
+              不論是 ECPay 全額沖銷（AllRefund）、現金結案、或「取消＋退款」，都是退全額；
+              <strong>政策算出的 <span style={codeStyle}>refundable_amount</span>（部分比例）目前不會被執行端採用</strong>
+              （即使開啟自動退款 <span style={codeStyle}>REFUND_AUTO_EXECUTE</span>，該值也只用來判斷「是否可退／是否大於 0」，實退仍為全額）。
+              因此「部分退款」目前<strong>尚未有端到端的自動執行能力</strong>。
+            </div>
+
+            <p style={{ ...pStyle, fontWeight: 600, color: '#111827' }}>③ 需要部分退款時的維運處置</p>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              <li style={liStyle}><strong>暫不要</strong>用「取消＋退款」或「執行退款」按鈕（那會退全額）。</li>
+              <li style={liStyle}>
+                <strong>ECPay 訂單</strong>：ECPay 的 DoAction 退款 API 技術上支援指定金額，但本平台目前固定帶全額。
+                需部分退款請先於 <strong>ECPay 廠商後台</strong>手動執行指定金額退刷，再於本後台該訂單 <strong>Admin Note</strong> 記錄實退金額與原因（保留稽核）。
+              </li>
+              <li style={liStyle}>
+                <strong>現金訂單</strong>：於線下退還部分金額後，同樣在 Admin Note 記錄實退金額與原因。
+              </li>
+              <li style={liStyle}>
+                出帳結算公式為 <span style={codeStyle}>(總額 − 已退款) × 85%</span>，已支援部分金額；但目前沒有寫入「部分 <span style={codeStyle}>refunded_amount</span>」的入口，
+                若部分退款需正確反映導遊出帳，請聯繫工程協助調整 <span style={codeStyle}>refunded_amount</span>。
+              </li>
+            </ul>
+          </section>
+        </Card>
+
         {/* 4. 異常處理 */}
         <Card style={{ padding: 20, marginBottom: 16 }}>
           <section style={sectionStyle}>
-            <h2 style={h2Style}>④ 異常處理與常見問題</h2>
+            <h2 style={h2Style}>⑤ 異常處理與常見問題</h2>
 
             <div style={noteBox('#fef2f2', '#fecaca', '#991b1b')}>
-              <strong>請勿用「狀態下拉」手動改成「取消／退款中」來退款。</strong>
-              下拉只改訂單狀態，<strong>不會</strong>釋放名額、<strong>不會</strong>建立退款申請；
-              改完後訂單還會被鎖定，造成「退款管理看不到、執行退款也失敗」的孤兒訂單。請改用「取消＋退款」按鈕。
+              <strong>「狀態下拉」已停用「取消／退款中／已退款」等終端狀態（防呆）。</strong>
+              這些狀態若用下拉手動設定，只會改狀態、<strong>不會</strong>釋放名額也<strong>不會</strong>建立退款申請，
+              會造成「退款管理看不到、執行退款也失敗」的孤兒訂單；因此前端已停用、後端也會擋下（回 409）。
+              退款一律改用「<strong>取消＋退款</strong>」按鈕或退款中訂單的「執行退款」。
             </div>
 
             <p style={{ ...pStyle, fontWeight: 600, color: '#111827' }}>鎖定（terminal）狀態</p>
