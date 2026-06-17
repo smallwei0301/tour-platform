@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-06-16T19:17:06.286Z -->
+<!-- query_timestamp: 2026-06-17T01:01:13.539Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-16T19:17:06.286Z  
-**Commit SHA:** `794838d38d734c2eb179aa44b8184875eaef701f`
+**Query timestamp:** 2026-06-17T01:01:13.539Z  
+**Commit SHA:** `b8a8f9a563070fcb9d39038722b329bb3b1655fa`
 
 ---
 
-## Open PRs (3)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
+| #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | `codex/evaluate-platform-type-transition-options` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
