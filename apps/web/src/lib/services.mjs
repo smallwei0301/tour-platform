@@ -175,7 +175,11 @@ export function createRefundRequest(input = {}) {
     throw new Error('order not found');
   }
 
-  if (['cancelled_by_user', 'cancelled_by_guide', 'refunded'].includes(order.status)) {
+  // 與 db.mjs createRefundRequestDb 對齊：allowAdminCancelled 時放行 cancelled_by_guide。
+  const blockedStatuses = input?.allowAdminCancelled
+    ? ['cancelled_by_user', 'refunded']
+    : ['cancelled_by_user', 'cancelled_by_guide', 'refunded'];
+  if (blockedStatuses.includes(order.status)) {
     throw new Error('order cannot request refund in current status');
   }
 
