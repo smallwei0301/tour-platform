@@ -17,6 +17,9 @@
 ### 專案總覽
 - `../README.md` - repo 根總覽
 
+### 轉型規劃 / 新商業模式
+- `07-transformation/midao-travel-hotcake-transformation-plan.md` — 祕島轉型為旅遊業 Hotcake：免費導遊管理工具、付費工具功能、前台曝光商業模式與 10/10 執行計畫
+
 ### 當前主線：Booking V2 上線 / 觀察視窗
 - `../README.md` - repo 根總覽
 - `NEXT_PHASE_PLAN.md` - 當前下一步與就緒判斷
