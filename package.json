@@ -25,7 +25,8 @@
     "readiness:check": "node scripts/readiness/check-snapshot-freshness.mjs",
     "taxonomy:check": "node scripts/taxonomy/check-labels.mjs",
     "audit:public-booking": "node scripts/audit-public-booking-v2.mjs",
-    "repair:booking-plans:dry-run": "node --env-file=.env scripts/admin/audit-or-repair-booking-plans.mjs"
+    "repair:booking-plans:dry-run": "node --env-file=.env scripts/admin/audit-or-repair-booking-plans.mjs",
+    "qa:auth-env:check": "node --env-file=qa-test-secrets/.env.qa.local scripts/qa/validate-auth-env.mjs --target=production"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
