@@ -15,6 +15,26 @@ type Row = {
 
 const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancelled_by_user','cancelled_by_guide','completed','refund_pending','refunded'];
 
+// 可執行「取消＋退款」的訂單狀態（與後端 cancelOrderAdminDb 的 CANCELLABLE 一致）。
+const CANCELLABLE_STATUSES = ['pending_payment', 'paid', 'confirmed', 'rejected'];
+
+// 金流／退款處理使用說明頁（ECPay vs 現金、正常流程與異常處理）。
+const PAYMENTS_REFUNDS_GUIDE_HREF = '/admin/help/payments-refunds';
+
+// 退款執行錯誤碼 → 維運看得懂的說明（refund-execute route 回傳的 error.code）。
+const REFUND_ERROR_HINTS: Record<string, string> = {
+  INVALID_STATUS: '訂單目前狀態無法執行退款（需為「退款中」，或已有退款／沖銷記錄）。',
+  NOT_FOUND: '找不到此訂單。',
+  REASON_REQUIRED: '現金訂單必須填寫退款原因。',
+  PAYMENT_NOT_REVERSIBLE: '找不到可沖銷的付款紀錄，或有多筆無法判定（請改用「退款管理」人工處理）。',
+  ECPAY_QUERY_FAILED: '向 ECPay 查詢交易狀態失敗，請稍後再試或改走人工退款。',
+  ECPAY_STATE_UNKNOWN: 'ECPay 交易狀態不明／不一致，已擋下自動沖銷以免重複退款。',
+  ECPAY_REVERSAL_FAILED: 'ECPay 沖銷失敗，請稍後再試或改走人工退款。',
+  ECPAY_REFUND_FAILED: 'ECPay 退款失敗，請稍後再試或改走人工退款。',
+  DB_UPDATE_FAILED: '資料庫寫入失敗，退款未完成，請重試。',
+  UNAUTHORIZED: '登入已逾期或權限不足，請重新登入後再試。',
+};
+
 const STATUS_LABELS: Record<string, string> = {
   pending_payment: '待付款',
   paid: '已付款',
@@ -129,6 +149,10 @@ export default function AdminOrdersPage() {
   const [isExecutingRefund, setIsExecutingRefund] = useState(false);
   const [refundExecuted, setRefundExecuted] = useState(false);
   const [refundError, setRefundError] = useState('');
+  // 取消＋退款（一次性：取消訂單→釋放名額→建立全額退款 entry）
+  const [cancelRefundBusy, setCancelRefundBusy] = useState(false);
+  const [cancelRefundError, setCancelRefundError] = useState('');
+  const [cancelRefundDone, setCancelRefundDone] = useState(false);
   // #1411 — 訂單留言串（admin 第一期唯讀）
   const [orderMessages, setOrderMessages] = useState<any[]>([]);
 
@@ -161,6 +185,9 @@ export default function AdminOrdersPage() {
     setRefundReason('');
     setRefundExecuted(false);
     setRefundError('');
+    setCancelRefundBusy(false);
+    setCancelRefundError('');
+    setCancelRefundDone(false);
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' })
       .then(r => r.json()).then(j => { setDetail(j.data||null); setEditStatus(j.data?.status||''); setEditNote(j.data?.adminNote||''); }).catch(() => setDetail(null));
     fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
@@ -183,18 +210,57 @@ export default function AdminOrdersPage() {
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
       });
-      if (res.ok) {
+      const j = await res.json().catch(() => null);
+      if (res.ok && j?.ok !== false) {
         setRefundExecuted(true);
         await load();
         const dr = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
         setDetail((await dr.json()).data || null);
       } else {
-        setRefundError('退款執行失敗');
+        // 防呆：顯示真正的錯誤碼／訊息，而非死的「退款執行失敗」。
+        const code = j?.error?.code as string | undefined;
+        const hint = code ? REFUND_ERROR_HINTS[code] : undefined;
+        const detailMsg = j?.error?.message ? `（${j.error.message}）` : `（HTTP ${res.status}）`;
+        setRefundError(`退款執行失敗：${hint || code || '未知錯誤'}${detailMsg}`);
       }
     } catch {
-      setRefundError('退款執行失敗');
+      setRefundError('退款執行失敗：網路錯誤，請重試。');
     } finally {
       setIsExecutingRefund(false);
+    }
+  }
+
+  // 取消＋退款：一次完成「取消訂單→釋放名額→建立全額退款 entry（refunded）」。
+  // 對應 POST /api/admin/orders/:orderId/cancel，避免維運手動改狀態造成孤兒訂單。
+  async function cancelAndRefund(orderId: string) {
+    if (!window.confirm('確定要「取消並全額退款」這筆訂單？\n此操作會釋放名額、建立退款記錄並把訂單設為已退款，無法復原。')) {
+      return;
+    }
+    setCancelRefundBusy(true);
+    setCancelRefundError('');
+    try {
+      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/cancel`, {
+        method: 'POST',
+        headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ adminNote: editNote || 'admin cancel + refund' }),
+      });
+      const j = await res.json().catch(() => null);
+      if (res.ok && j?.ok !== false) {
+        setCancelRefundDone(true);
+        await load();
+        const dr = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+        const dj = await dr.json();
+        setDetail(dj.data || null);
+        setEditStatus(dj.data?.status || '');
+      } else {
+        const code = j?.error?.code as string | undefined;
+        const msg = j?.error?.message ? `（${j.error.message}）` : `（HTTP ${res.status}）`;
+        setCancelRefundError(`取消＋退款失敗：${code || '未知錯誤'}${msg}`);
+      }
+    } catch {
+      setCancelRefundError('取消＋退款失敗：網路錯誤，請重試。');
+    } finally {
+      setCancelRefundBusy(false);
     }
   }
 
@@ -282,6 +348,16 @@ export default function AdminOrdersPage() {
         <div><strong>付款：</strong>{detail.paidAt ? new Date(detail.paidAt).toLocaleString('zh-TW') : '-'}</div>
       </div>
 
+      <a
+        data-guide="payments-refunds-guide-link"
+        href={PAYMENTS_REFUNDS_GUIDE_HREF}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#1d4ed8', textDecoration: 'none', marginBottom: 4 }}
+      >
+        📖 金流／退款處理說明（ECPay vs 現金、正常與異常流程）
+      </a>
+
       <label htmlFor="admin-order-status" style={labelStyle}>狀態</label>
       <Select id="admin-order-status" value={editStatus} onChange={setEditStatus}>
         {ORDER_STATUSES.map(s => (
@@ -357,6 +433,34 @@ export default function AdminOrdersPage() {
       <button onClick={saveDetail} disabled={saving} style={{ ...btnStyle('primary'), marginTop: 14, width: '100%' }}>
         {saving ? '儲存中…' : '儲存變更'}
       </button>
+
+      {/* 取消＋退款：一次性正規流程（取消→釋放名額→建立全額退款 entry）。
+          僅對「進行中」狀態（pending_payment/paid/confirmed/rejected）顯示；
+          避免維運用上方狀態下拉手動改成取消／退款中而造成孤兒訂單。 */}
+      {CANCELLABLE_STATUSES.includes(detail.status) && !cancelRefundDone && (
+        <div data-guide="cancel-refund-section" style={{ marginTop: 14, padding: '12px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#b91c1c', marginBottom: 6 }}>取消＋退款（一次完成）</div>
+          <p style={{ margin: '0 0 8px', fontSize: 12, color: '#7f1d1d', lineHeight: 1.7 }}>
+            正規退款入口：自動釋放名額、建立全額退款記錄（會出現在「退款管理」）並把訂單設為已退款。
+            <br />請勿用上方狀態下拉手動改成「取消／退款中」——那只改狀態、不會釋放名額也不會建立退款記錄。
+          </p>
+          <button
+            data-guide="cancel-refund-btn"
+            onClick={() => cancelAndRefund(detail.id)}
+            disabled={cancelRefundBusy}
+            style={{ ...btnStyle('danger'), width: '100%', opacity: cancelRefundBusy ? 0.5 : 1, cursor: cancelRefundBusy ? 'not-allowed' : 'pointer' }}
+          >
+            {cancelRefundBusy ? '處理中…' : '取消並全額退款'}
+          </button>
+          {cancelRefundError && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#dc2626' }}>{cancelRefundError}</p>}
+        </div>
+      )}
+
+      {cancelRefundDone && (
+        <div data-guide="cancel-refund-done" style={{ marginTop: 14, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, fontSize: 13, color: '#15803d', fontWeight: 600 }}>
+          已取消並完成退款 ✓
+        </div>
+      )}
 
       {/* Refund Timeline — AC1/AC2/AC5 */}
       {timeline.filter((e: any) => /refund/.test(e.type || '')).length > 0 && (

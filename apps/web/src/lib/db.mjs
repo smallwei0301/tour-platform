@@ -595,7 +595,12 @@ export async function createRefundRequestDb(input = {}) {
     throw new Error('order not found');
   }
 
-  if (['cancelled_by_user', 'cancelled_by_guide', 'refunded'].includes(order.status)) {
+  // admin POS 「取消＋退款」會先把訂單設成 cancelled_by_guide 再建退款 entry，
+  // 因此 allowAdminCancelled 時放行 cancelled_by_guide（仍擋 user 取消與已退款）。
+  const blockedStatuses = input?.allowAdminCancelled
+    ? ['cancelled_by_user', 'refunded']
+    : ['cancelled_by_user', 'cancelled_by_guide', 'refunded'];
+  if (blockedStatuses.includes(order.status)) {
     throw new Error('order cannot request refund in current status');
   }
 
@@ -719,15 +724,27 @@ export async function cancelOrderAdminDb(input = {}) {
   const CANCELLABLE = ['pending_payment', 'paid', 'confirmed', 'rejected'];
 
   if (!hasSupabaseEnv()) {
-    // In-memory fallback: update order status directly
-    const { getOrders, setOrders } = await import('./store.mjs');
-    const orders = getOrders();
-    const order = orders.find(o => o.id === orderId);
+    // In-memory fallback: store.mjs exports the mutable `orders`/`experiences`
+    // arrays directly (no getOrders/setOrders accessors), so mutate in place.
+    const { orders, experiences } = await import('./store.mjs');
+    const order = orders.find((o) => o.id === orderId);
     if (!order) throw new Error('order not found');
     if (!CANCELLABLE.includes(order.status)) throw new Error(`order_cancel_locked:${order.status}`);
+    const previousStatus = order.status;
     order.status = 'cancelled_by_guide';
-    setOrders(orders);
-    return { id: orderId, status: 'cancelled_by_guide' };
+    order.updatedAt = new Date().toISOString();
+    // Release booked seats — mirror the Supabase path's seat release.
+    if (order.scheduleId && order.peopleCount) {
+      const exp = experiences.find((e) => e.id === order.experienceId);
+      const schedule = exp?.schedules?.find((s) => s.id === order.scheduleId);
+      if (schedule) {
+        schedule.bookedCount = Math.max(0, (schedule.bookedCount || 0) - order.peopleCount);
+        if (schedule.status) {
+          schedule.status = schedule.bookedCount < schedule.capacity ? 'open' : 'full';
+        }
+      }
+    }
+    return { id: orderId, status: 'cancelled_by_guide', previousStatus };
   }
 
   const supabase = await getSupabase();
@@ -791,6 +808,8 @@ export async function createAdminPosRefundEntryDb(input = {}) {
       requestId,
       reason: 'admin_pos_refund_entry',
       note: adminNote,
+      // 允許對已被後台取消（cancelled_by_guide）的訂單建立退款 entry
+      allowAdminCancelled: true,
     });
   } catch (error) {
     if (!(error instanceof Error) || !error.message.includes('order cannot request refund in current status')) {
