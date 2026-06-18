@@ -57,6 +57,13 @@ export interface ExecuteRefundInput {
    * (the field guide payout settlement actually reads).
    */
   refundAmount?: number | string | null;
+  /**
+   * Target order status for a PARTIAL refund (see resolvePartialRefundStatus).
+   * The order must land on a settleable status so the non-refunded portion still
+   * settles to the guide. Ignored for full refunds (those stay `refunded`).
+   * When omitted, partial refunds fall back to `completed`.
+   */
+  partialTargetStatus?: string | null;
 }
 
 export interface RefundExecutionOutcome {
@@ -134,6 +141,37 @@ export interface ResolvedRefundAmount {
   amount: number;
   /** true when the resolved amount is strictly less than the order total */
   partial: boolean;
+}
+
+/**
+ * Order statuses that let the guide-payout pipeline pick up an order — the
+ * settlement sweep settles `completed` orders, and the guide dashboard counts
+ * `paid`/`confirmed`/`completed` toward GMV. A PARTIALLY-refunded order MUST
+ * land on one of these so the non-refunded portion still settles
+ * (settlement-rules §4「扣除已退款部分後」/ #847). Setting it to `refunded`
+ * (as a full refund does) excludes the whole order from settlement.
+ */
+export const SETTLEABLE_ORDER_STATUSES = ['paid', 'confirmed', 'completed'] as const;
+
+/**
+ * Resolve the order status a PARTIALLY-refunded order should land on.
+ *
+ * A partial refund keeps the booking active (the traveler still attends, the
+ * guide is still owed the non-refunded portion), so the order must return to a
+ * settleable status — its pre-refund status, recorded in audit_logs as
+ * `previousOrderStatus` when the order entered `refund_pending`. When that prior
+ * status is unknown or itself non-settleable, fall back to `completed`: this
+ * keeps the order in the settlement pool while the sweep's T+7 time gate still
+ * guards against premature payout.
+ *
+ * Full refunds do NOT use this — they correctly stay `refunded` (effective
+ * GMV is 0, so there is nothing to settle).
+ */
+export function resolvePartialRefundStatus(previousStatus?: string | null): string {
+  if (previousStatus && (SETTLEABLE_ORDER_STATUSES as readonly string[]).includes(previousStatus)) {
+    return previousStatus;
+  }
+  return 'completed';
 }
 
 export interface RefundAmountError {
@@ -217,8 +255,10 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
     // orders 真實 schema 只有 status + payment_status；refunded_amount / refunded_at /
     // ecpay_refund_trade_no 皆不存在（無 migration 建立、亦無讀取點），寫入會 500。
     // 退款明細（時間/金額/trade_no）落在 payments / payment_events / operations_tracking。
+    // 部分退款：保持「可結算」狀態（還原退款前狀態），讓未退部分仍撥款給導遊；
+    // 全額退款：維持 refunded（effective=0，本就不撥款）。
     const { error, data, count } = await updateOrder(order.id, {
-      status: 'refunded',
+      status: resolvedAmount.partial ? resolvePartialRefundStatus(input.partialTargetStatus) : 'refunded',
       payment_status: resolvedAmount.partial ? 'partially_refunded' : 'refunded',
       updated_at: now(),
     });
@@ -271,8 +311,9 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
 
   const ecpayTradeNo =
     result.ecpayTradeNo || order.ecpay_refund_trade_no || order.merchant_trade_no || order.id;
+  // 部分退款保持可結算狀態（見上方現金路徑說明）；全額退款維持 refunded。
   const { error, data, count } = await updateOrder(order.id, {
-    status: 'refunded',
+    status: resolvedAmount.partial ? resolvePartialRefundStatus(input.partialTargetStatus) : 'refunded',
     payment_status: resolvedAmount.partial ? 'partially_refunded' : 'refunded',
     updated_at: now(),
   });
