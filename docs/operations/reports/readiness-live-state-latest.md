@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-18T07:47:43.902Z -->
+<!-- query_timestamp: 2026-06-18T13:16:33.392Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-18T07:47:43.902Z  
-**Commit SHA:** `072cf06bfb4fc26973b9d870799c76e0d8d6c83d`
+**Query timestamp:** 2026-06-18T13:16:33.392Z  
+**Commit SHA:** `68ca9cae42116923827fe44e47898cf8e68c8b9a`
 
 ---
 
@@ -75,16 +75,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1485 | [fix(shop): 會員入口按鈕提升可見度（實心深綠膠囊）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1485) | 2026-06-18 |
+| #1484 | [feat(shop): 首頁封面照+會員入口、商店頁隱藏 footer、換步驟回頂部 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1484) | 2026-06-18 |
+| #1483 | [perf(shop): 商店 API 60 秒邊緣快取 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1483) | 2026-06-18 |
+| #1482 | [perf+ui(shop): 並行查詢降冷啟動 + 月曆日期選擇器 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1482) | 2026-06-18 |
+| #1481 | [perf(shop): getGuideShopDb 內嵌關聯單一 round-trip (#1475)](https://github.com/smallwei0301/tour-platform/pull/1481) | 2026-06-18 |
+| #1480 | [fix(shop): 修正商店預約頁無可預約時段 + 載入過慢 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1480) | 2026-06-18 |
+| #1479 | [fix(shop): client component 字面量讀旗標，修復商店連結卡片不顯示 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1479) | 2026-06-18 |
 | #1478 | [fix(guide): 導遊公開頁存檔 + 可用時段預覽跨多週 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1478) | 2026-06-18 |
 | #1477 | [feat(shop): 導遊商店預約流程 + 匯款付款方式（手動查帳）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1477) | 2026-06-18 |
 | #1476 | [fix(payments): 修復 payments/payment_events service-role 權限，解決付款流程「Failed to check existing payment」](https://github.com/smallwei0301/tour-platform/pull/1476) | 2026-06-18 |
-| #1471 | [feat(admin): 訂單狀態防呆 + 部分退款／退款流程說明](https://github.com/smallwei0301/tour-platform/pull/1471) | 2026-06-17 |
-| #1470 | [fix(admin): 修復「取消＋退款」流程並新增後台正規退款入口與說明](https://github.com/smallwei0301/tour-platform/pull/1470) | 2026-06-17 |
-| #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | 2026-06-17 |
-| #1467 | [feat: 導遊新行程投稿頁＋AI 提示詞產生器（含 Unsplash 圖片搜尋）](https://github.com/smallwei0301/tour-platform/pull/1467) | 2026-06-16 |
-| #1466 | [fix(activities): footer 依地區選高雄等短名可正常篩選](https://github.com/smallwei0301/tour-platform/pull/1466) | 2026-06-16 |
-| #1465 | [feat(admin-orders): 訂單狀態加上連動標記與詳細說明](https://github.com/smallwei0301/tour-platform/pull/1465) | 2026-06-16 |
-| #1464 | [fix(admin): 方案/行程編輯 UI 改善與活動層級人數限制移除 (#297)](https://github.com/smallwei0301/tour-platform/pull/1464) | 2026-06-16 |
 
 ---
 
