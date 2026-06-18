@@ -16,7 +16,8 @@ test('GH-860 contract: step2 creates draft before payment step and carries sched
   assert.match(src, /scheduleId:\s*activeScheduleId\s*\|\|\s*undefined/, 'draft payload should include scheduleId mapped from activeScheduleId source-of-truth');
   assert.doesNotMatch(src, /activeScheduleId:\s*activeScheduleId\s*\|\|\s*undefined/, 'draft payload must not use activeScheduleId as the only schedule key');
   assert.match(src, /const canConfirmPayment\s*=\s*Boolean\(createdBookingId\s*&&\s*canSubmit\)/, 'payment confirmation must require created booking/order id');
-  assert.match(src, /disabled=\{loading\s*\|\|\s*!canConfirmPayment\}/, 'final payment button must stay disabled when order id is missing');
+  // #1475 起 disabled 條件後面再串接匯款未設定的防呆；contract 仍要求含 loading || !canConfirmPayment。
+  assert.match(src, /disabled=\{loading\s*\|\|\s*!canConfirmPayment\b/, 'final payment button must stay disabled when order id is missing');
   assert.doesNotMatch(src, /onClick=\{\(\)\s*=>\s*setStep\(3\)\}/, 'legacy direct jump to payment step should be removed');
 });
 

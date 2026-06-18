@@ -18,6 +18,10 @@ type Profile = {
   gallery_urls: string[];
   slug: string | null;
   is_published: boolean;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  transfer_note: string;
 };
 
 const EMPTY: Profile = {
@@ -26,6 +30,7 @@ const EMPTY: Profile = {
   profile_photo_url: null, hero_image_url: null, gallery_urls: [],
   slug: null,
   is_published: false,
+  bank_name: '', account_name: '', account_number: '', transfer_note: '',
 };
 
 const GALLERY_MAX = 12;
@@ -76,6 +81,10 @@ export default function GuideProfileEditPage() {
             gallery_urls: Array.isArray(d.gallery_urls) ? d.gallery_urls : [],
             slug: d.slug ?? null,
             is_published: d.is_published ?? false,
+            bank_name: d.bank_name ?? '',
+            account_name: d.account_name ?? '',
+            account_number: d.account_number ?? '',
+            transfer_note: d.transfer_note ?? '',
           });
         }
       })
@@ -99,6 +108,10 @@ export default function GuideProfileEditPage() {
           specialties: profile.specialties,
           gallery_urls: profile.gallery_urls,
           is_published: nextPublished,
+          bank_name: profile.bank_name,
+          account_name: profile.account_name,
+          account_number: profile.account_number,
+          transfer_note: profile.transfer_note,
         }),
       });
       const json = await res.json();
@@ -301,6 +314,64 @@ export default function GuideProfileEditPage() {
             urls={profile.gallery_urls}
             onChange={(next) => update('gallery_urls', next)}
           />
+        </section>
+
+        {/* ── 匯款資訊（#1475，不公開）── */}
+        <section style={CARD} data-testid="guide-transfer-info">
+          <header style={{ marginBottom: 16 }}>
+            <h2 style={SECTION_TITLE}>匯款資訊</h2>
+            <p style={SECTION_HINT}>
+              此資訊<strong>不會公開</strong>，僅當旅客在付款時選擇「自行匯款」才會顯示給該筆訂單的旅客。
+              收到款項後，請於後台確認入帳。
+            </p>
+          </header>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label htmlFor="bank_name" style={LABEL}>銀行（含分行）</label>
+              <input
+                id="bank_name"
+                type="text"
+                value={profile.bank_name}
+                onChange={(e) => update('bank_name', e.target.value)}
+                placeholder="例：國泰世華銀行 三民分行（700）"
+                style={INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="account_name" style={LABEL}>戶名</label>
+              <input
+                id="account_name"
+                type="text"
+                value={profile.account_name}
+                onChange={(e) => update('account_name', e.target.value)}
+                placeholder="例：吳洛晴"
+                style={INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="account_number" style={LABEL}>帳號</label>
+              <input
+                id="account_number"
+                type="text"
+                inputMode="numeric"
+                value={profile.account_number}
+                onChange={(e) => update('account_number', e.target.value)}
+                placeholder="例：0123456789012"
+                style={INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="transfer_note" style={LABEL}>匯款備註（選填）</label>
+              <textarea
+                id="transfer_note"
+                rows={3}
+                value={profile.transfer_note}
+                onChange={(e) => update('transfer_note', e.target.value)}
+                placeholder="例：請於 24 小時內完成匯款，並保留收據；帳號末五碼將用於核帳。"
+                style={{ ...INPUT, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
         </section>
 
         {/* 通知綁定：把訂單通知接到你的 LINE / Telegram */}

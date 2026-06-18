@@ -40,12 +40,18 @@ test('booking page Step 3 explains the ECPay hand-off instead of advertising uns
   assert.match(src, /付款由 ECPay 加密處理/);
 });
 
-test('V2 checkout submit still posts the ecpay provider that the API accepts', async () => {
+// #1475 起：付款方式新增「自行匯款（transfer）」選項，但以 isTransferPaymentEnabled()
+// flag 控管（預設 OFF）。flag off 時行為等同 #1261 的 ECPay-only；flag on 才顯示匯款選項。
+test('V2 checkout submit posts the selected payment method (預設 ecpay)', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
-  assert.match(src, /provider:\s*'ecpay'/);
+  // 改為送出使用者選擇的付款方式；payMethod 預設為 'ecpay'。
+  assert.match(src, /provider:\s*payMethod/);
+  assert.match(src, /useState<'ecpay' \| 'transfer'>\('ecpay'\)/);
 });
 
-test('checkout API contract still accepts only the ecpay provider', async () => {
+test('checkout API contract accepts ecpay + transfer（transfer 受 flag 控管）', async () => {
   const src = await readSource('app/api/v2/bookings/[bookingId]/checkout/route.ts');
-  assert.match(src, /const VALID_PROVIDERS = \['ecpay'\] as const;/);
+  assert.match(src, /const VALID_PROVIDERS = \['ecpay', 'transfer'\] as const;/);
+  // transfer 必須先過 feature flag
+  assert.match(src, /provider === 'transfer' && !isTransferPaymentEnabled\(\)/);
 });
