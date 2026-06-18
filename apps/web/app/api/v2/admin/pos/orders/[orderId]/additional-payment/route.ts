@@ -65,6 +65,16 @@ export async function POST(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return Response.json(errorV2('UNAUTHORIZED', 'Unauthorized'), { status: 401 });
 
+    // Service-role client for payments / payment_events writes — those tables
+    // are service_role-only after issue #614 (REVOKE from anon/authenticated),
+    // so inserting through the anon client raises "permission denied for table
+    // payments". Authorization stays above on the Supabase-auth client.
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const paymentDb = createServiceClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select('id, status, payment_status, total_twd')
@@ -88,7 +98,7 @@ export async function POST(
     const paidAt = new Date().toISOString();
     const tradeNo = buildAdditionalPaymentTradeNo(orderId);
 
-    const { data: payment, error: paymentError } = await supabase
+    const { data: payment, error: paymentError } = await paymentDb
       .from('payments')
       .insert({
         order_id: order.id,
@@ -114,7 +124,7 @@ export async function POST(
       });
     }
 
-    await supabase.from('payment_events').insert({
+    await paymentDb.from('payment_events').insert({
       payment_id: payment.id,
       event_type: 'additional_payment',
       payload: {

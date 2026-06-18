@@ -19,6 +19,16 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
   try {
     const supabase = await createClient();
 
+    // Service-role client for payments / payment_events — those tables are
+    // service_role-only after issue #614 (REVOKE from anon/authenticated).
+    // The anon client reads them as empty, silently dropping payment history
+    // from the admin timeline; route those reads through paymentDb instead.
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const paymentDb = createServiceClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     // Find booking for this order
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -31,7 +41,7 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
     }
 
     const [paymentsRes, refundsRes, auditRes] = await Promise.all([
-      supabase.from('payments').select('id, provider, trade_no, amount_twd, status, paid_at, created_at').eq('order_id', orderId).order('created_at', { ascending: true }),
+      paymentDb.from('payments').select('id, provider, trade_no, amount_twd, status, paid_at, created_at').eq('order_id', orderId).order('created_at', { ascending: true }),
       supabase.from('refund_requests').select('id, request_id, reason, note, status, requested_at, approved_at, refunded_at, admin_note').eq('order_id', orderId).order('requested_at', { ascending: true }),
       supabase.from('audit_logs').select('id, action, actor, metadata, created_at').eq('target_id', orderId).order('created_at', { ascending: true }),
     ]);
@@ -39,7 +49,7 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
     const paymentIds = new Set((paymentsRes.data || []).map((p) => p.id));
     let paymentEvents: { id: string; payment_id: string; event_type: string; payload: unknown; created_at: string }[] = [];
     if (paymentIds.size > 0) {
-      const { data: eventsData } = await supabase
+      const { data: eventsData } = await paymentDb
         .from('payment_events')
         .select('id, payment_id, event_type, payload, created_at')
         .in('payment_id', [...paymentIds])
