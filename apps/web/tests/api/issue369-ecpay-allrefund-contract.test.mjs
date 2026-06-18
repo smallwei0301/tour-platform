@@ -219,7 +219,7 @@ test('AC3a: helper updates refunded status on success', async () => {
   assert.strictEqual(updated.payload.status, 'refunded');
 });
 
-test('AC3b: helper sets refunded_amount on success', async () => {
+test('AC3b: helper sets payment_status=refunded on full-refund success', async () => {
   const updated = { payload: null };
   const order = {
     id: 'order-id-6',
@@ -244,7 +244,8 @@ test('AC3b: helper sets refunded_amount on success', async () => {
     },
   });
 
-  assert.strictEqual(updated.payload.refunded_amount, 450);
+  assert.strictEqual(updated.payload.payment_status, 'refunded');
+  assert.ok(!('refunded_amount' in updated.payload), 'orders.refunded_amount 欄位不存在於 schema，不應寫入');
 });
 
 test('AC3c: helper sets refunded_at to now() on success', async () => {

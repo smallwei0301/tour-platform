@@ -33,6 +33,51 @@ function getServiceClient() {
   );
 }
 
+/**
+ * 把本次退款金額記入 operations_tracking.refund_amount_twd —— 這是導遊出帳結算
+ * （settlement-config.ts / settlement sweep / guide payout）真正讀取的「已退款」欄位，
+ * 部分退款必須寫到這裡才會反映到導遊撥款（effective GMV = total − refund_amount_twd）。
+ *
+ * 採針對性 upsert：只覆寫 refund_amount_twd，保留 ops 既有欄位（manual_minutes、
+ * has_complaint、holds 等），避免清空人工輸入。失敗不阻斷退款回應（provider 端已退成功），
+ * 改記 incident 供補登。
+ */
+async function recordOperationsRefundAmount(
+  supabase: ReturnType<typeof getServiceClient>,
+  orderId: string,
+  refundAmountTwd: number,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const now = new Date().toISOString();
+    const { data: existing, error: selectErr } = await supabase
+      .from('operations_tracking')
+      .select('id')
+      .eq('order_id', orderId)
+      .limit(1);
+
+    if (selectErr) {
+      return { ok: false, error: selectErr.message || 'failed to read operations_tracking' };
+    }
+
+    if (Array.isArray(existing) && existing.length > 0) {
+      const { error } = await supabase
+        .from('operations_tracking')
+        .update({ refund_amount_twd: refundAmountTwd, updated_at: now })
+        .eq('order_id', orderId);
+      if (error) return { ok: false, error: error.message || 'failed to update operations_tracking' };
+    } else {
+      const { error } = await supabase
+        .from('operations_tracking')
+        .insert({ id: crypto.randomUUID(), order_id: orderId, refund_amount_twd: refundAmountTwd, updated_at: now });
+      if (error) return { ok: false, error: error.message || 'failed to insert operations_tracking' };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'operations_tracking write failed' };
+  }
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ orderId: string }> }
@@ -195,6 +240,7 @@ export async function POST(
         providerStatus,
         reversedTradeNo,
         refundedAmountTwd,
+        partial,
       }) => {
         const now = new Date().toISOString();
 
@@ -325,9 +371,16 @@ export async function POST(
           .from('orders')
           .update({
             status: 'refunded',
-            payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
+            // partial Action=R → partially_refunded；void/full → voided/refunded。
+            // 不再寫 orders.refunded_amount（schema 無此欄、且無讀取點）；部分退款
+            // 金額改記入 operations_tracking.refund_amount_twd（出帳真正讀的欄位）。
+            payment_status:
+              eventType === 'authorization_voided'
+                ? 'voided'
+                : partial
+                ? 'partially_refunded'
+                : 'refunded',
             refunded_at: now,
-            refunded_amount: refundedAmountTwd ?? 0,
             ecpay_refund_trade_no: reversedTradeNo,
           })
           .eq('id', targetOrderId)
@@ -374,6 +427,34 @@ export async function POST(
         await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
       },
     });
+
+  // 出帳同步：把本次退款金額寫入 operations_tracking.refund_amount_twd，讓導遊撥款
+  // 反映（含部分退款）。冪等重放（alreadyRefunded）不覆寫；void 視為全額退款記 total。
+  if (outcome.status === 200 && outcome.body && (outcome.body as { ok?: boolean }).ok) {
+    const data = ((outcome.body as { data?: Record<string, unknown> }).data) ?? {};
+    if (!data.alreadyRefunded) {
+      let opsRefundTwd: number | null = null;
+      if (typeof data.refundedAmount === 'number') {
+        opsRefundTwd = data.refundedAmount;
+      } else if (data.mode === 'authorization_voided') {
+        // 授權尚未請款的全額 void：等同全額退款，記入訂單總額。
+        opsRefundTwd = Number(order.total_twd) || 0;
+      }
+
+      if (opsRefundTwd != null) {
+        const result = await recordOperationsRefundAmount(supabase, orderId, opsRefundTwd);
+        if (!result.ok) {
+          void recordIncident({
+            source: 'admin_refund_execute',
+            severity: 'error',
+            category: 'payment',
+            message: 'refund executed but operations_tracking.refund_amount_twd write failed (payout may not reflect refund)',
+            metadata: { orderId, refundAmountTwd: opsRefundTwd, error: result.error },
+          });
+        }
+      }
+    }
+  }
 
   // 🔔 Fire-and-forget：退款成功時派送 Telegram（管理員群組 + 導遊 + 旅客）。
   // 只在本次真的執行退款成功（200）時發送；前面的修復/冪等重放路徑已提前 return。

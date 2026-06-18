@@ -48,7 +48,7 @@ test('resolveRefundAmount: 超過訂單總額 → REFUND_AMOUNT_EXCEEDS_TOTAL', 
 
 // ── executeRefund：現金訂單 ───────────────────────────────────────────────────
 
-test('executeRefund 現金：部分金額寫入 refunded_amount，body 標記 partial', async () => {
+test('executeRefund 現金：部分退款 → payment_status=partially_refunded，body 標記 partial', async () => {
   const captured = { payload: null };
   const outcome = await executeRefund({
     order: { id: 'cash-1', status: 'refund_pending', total_twd: 1500 },
@@ -59,7 +59,8 @@ test('executeRefund 現金：部分金額寫入 refunded_amount，body 標記 pa
   });
 
   assert.equal(outcome.status, 200);
-  assert.equal(captured.payload.refunded_amount, 500);
+  assert.equal(captured.payload.payment_status, 'partially_refunded');
+  assert.ok(!('refunded_amount' in captured.payload), '不再寫入不存在的 orders.refunded_amount 欄位');
   assert.equal(outcome.body.data.partial, true);
   assert.equal(outcome.body.data.refundedAmount, 500);
 });
@@ -74,7 +75,7 @@ test('executeRefund 現金：留空 → 全額退款（向後相容）', async (
   });
 
   assert.equal(outcome.status, 200);
-  assert.equal(captured.payload.refunded_amount, 900);
+  assert.equal(captured.payload.payment_status, 'refunded');
   assert.equal(outcome.body.data.partial, false);
 });
 
@@ -108,7 +109,7 @@ test('executeRefund：金額超過總額 → 400 REFUND_AMOUNT_EXCEEDS_TOTAL', a
 
 // ── executeRefund：ECPay AllRefund ────────────────────────────────────────────
 
-test('executeRefund ECPay：部分金額傳給 requestAllRefund(totalAmount) 且寫入 refunded_amount', async () => {
+test('executeRefund ECPay：部分金額傳給 requestAllRefund(totalAmount) 且 payment_status=partially_refunded', async () => {
   const ecpay = { totalAmount: null };
   const captured = { payload: null };
   const outcome = await executeRefund({
@@ -121,7 +122,8 @@ test('executeRefund ECPay：部分金額傳給 requestAllRefund(totalAmount) 且
 
   assert.equal(outcome.status, 200);
   assert.equal(ecpay.totalAmount, 600, 'ECPay 退刷金額應為部分金額');
-  assert.equal(captured.payload.refunded_amount, 600);
+  assert.equal(captured.payload.payment_status, 'partially_refunded');
+  assert.ok(!('refunded_amount' in captured.payload), '不再寫入不存在的 orders.refunded_amount 欄位');
   assert.equal(outcome.body.data.partial, true);
   assert.equal(outcome.body.data.refundedAmount, 600);
 });
@@ -147,7 +149,7 @@ function reversiblePayment() {
 
 test('executeEcpayReversal Action=R：部分金額傳給 DoAction(totalAmount) 且 persist refundedAmountTwd', async () => {
   const doAction = { totalAmount: null, action: null };
-  const persisted = { refundedAmountTwd: undefined };
+  const persisted = { refundedAmountTwd: undefined, partial: undefined };
   const outcome = await executeEcpayReversal({
     order: { id: 'ec-r', total_twd: 1200, trade_no: 'TN-R', merchant_trade_no: 'MTN-R' },
     body: {},
@@ -155,7 +157,7 @@ test('executeEcpayReversal Action=R：部分金額傳給 DoAction(totalAmount) �
     resolveLatestReversiblePayment: async () => ({ payment: reversiblePayment(), ambiguous: false }),
     queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '1', tradeNo: 'TN-R', raw: { PaymentType: 'Credit_CreditCard', CaptureAMT: '1200' } }),
     requestDoAction: async (p) => { doAction.totalAmount = p.totalAmount; doAction.action = p.action; return { ok: true, rtnCode: '1', rtnMsg: 'ok', ecpayTradeNo: 'EC-R-1' }; },
-    persistReversal: async (args) => { persisted.refundedAmountTwd = args.refundedAmountTwd; return { error: null, data: [{ id: 'ec-r' }], count: 1 }; },
+    persistReversal: async (args) => { persisted.refundedAmountTwd = args.refundedAmountTwd; persisted.partial = args.partial; return { error: null, data: [{ id: 'ec-r' }], count: 1 }; },
     recordIncident: () => {},
   });
 
@@ -163,6 +165,7 @@ test('executeEcpayReversal Action=R：部分金額傳給 DoAction(totalAmount) �
   assert.equal(doAction.action, 'R');
   assert.equal(doAction.totalAmount, 400, 'DoAction 退刷金額應為部分金額');
   assert.equal(persisted.refundedAmountTwd, 400);
+  assert.equal(persisted.partial, true, 'persistReversal 應收到 partial=true（出帳/payment_status 依此區分）');
   assert.equal(outcome.body.data.partial, true);
   assert.equal(outcome.body.data.refundedAmount, 400);
 });
@@ -199,7 +202,7 @@ test('executeEcpayReversal Action=N + 留空（全額）→ 仍正常全額取�
     resolveLatestReversiblePayment: async () => ({ payment: { ...uncapturedPayment(), id: 'pay-n2', order_id: 'ec-n2' }, ambiguous: false }),
     queryTradeInfo: async () => ({ ok: true, rtnCode: '1', rtnMsg: 'ok', tradeStatus: '0', tradeNo: 'TN-N2', raw: { PaymentType: 'Credit_CreditCard' } }),
     requestDoAction: async (p) => { doAction.action = p.action; return { ok: true, rtnCode: '1', rtnMsg: 'ok', ecpayTradeNo: 'EC-N2-1' }; },
-    persistReversal: async (args) => { assert.equal(args.refundedAmountTwd, null, 'void 不記退款金額'); return { error: null, data: [{ id: 'ec-n2' }], count: 1 }; },
+    persistReversal: async (args) => { assert.equal(args.refundedAmountTwd, null, 'void 不記退款金額'); assert.equal(args.partial, false, 'void 一律全額，partial=false'); return { error: null, data: [{ id: 'ec-n2' }], count: 1 }; },
     recordIncident: () => {},
   });
 

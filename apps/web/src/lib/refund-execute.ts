@@ -53,7 +53,8 @@ export interface ExecuteRefundInput {
    * Optional partial-refund amount (TWD). When omitted/null/empty the order's
    * full `total_twd` is refunded (backward compatible). When provided it must be
    * a positive integer ≤ total_twd; the resolved amount is what gets sent to
-   * ECPay (AllRefund TotalAmount) and persisted to `refunded_amount`.
+   * ECPay (AllRefund TotalAmount) and recorded to operations_tracking.refund_amount_twd
+   * (the field guide payout settlement actually reads).
    */
   refundAmount?: number | string | null;
 }
@@ -87,6 +88,8 @@ export interface ExecuteEcpayReversalInput {
     providerStatus: string;
     reversedTradeNo: string | null;
     refundedAmountTwd: number | null;
+    /** true when a captured-card refund (Action=R) settled less than the order total */
+    partial: boolean;
   }) => Promise<UpdateOrderResult>;
   recordIncident?: (args: { message: string; metadata?: Record<string, unknown> }) => void;
   /**
@@ -213,7 +216,10 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
 
     const { error, data, count } = await updateOrder(order.id, {
       status: 'refunded',
-      refunded_amount: refundAmount,
+      // 出帳實際讀 operations_tracking.refund_amount_twd（見 settlement-config.ts）；
+      // orders 只記 payment_status 區分全額/部分退款。orders.refunded_amount 在 schema
+      // 不存在且無任何讀取點，故不再寫入（避免 DB_UPDATE_FAILED）。
+      payment_status: resolvedAmount.partial ? 'partially_refunded' : 'refunded',
       refunded_at: now(),
     });
 
@@ -267,7 +273,7 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
     result.ecpayTradeNo || order.ecpay_refund_trade_no || order.merchant_trade_no || order.id;
   const { error, data, count } = await updateOrder(order.id, {
     status: 'refunded',
-    refunded_amount: refundAmount,
+    payment_status: resolvedAmount.partial ? 'partially_refunded' : 'refunded',
     refunded_at: now(),
     ecpay_refund_trade_no: ecpayTradeNo,
   });
@@ -437,6 +443,7 @@ export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Pr
     providerStatus: query.tradeStatus || payment.provider_status || '',
     reversedTradeNo: reversalResult.ecpayTradeNo || query.tradeNo || payment.trade_no,
     refundedAmountTwd: action === 'R' ? refundAmount : null,
+    partial: action === 'R' ? resolvedAmount.partial : false,
   });
 
   if (!hasPersisted(persist)) {
