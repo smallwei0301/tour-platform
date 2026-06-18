@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-18T01:00:02.937Z -->
+<!-- query_timestamp: 2026-06-18T07:47:43.902Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-18T01:00:02.937Z  
-**Commit SHA:** `7deeec531766684b3a8b82bee9001b3c48e9b8d5`
+**Query timestamp:** 2026-06-18T07:47:43.902Z  
+**Commit SHA:** `072cf06bfb4fc26973b9d870799c76e0d8d6c83d`
 
 ---
 
@@ -75,6 +75,9 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1478 | [fix(guide): 導遊公開頁存檔 + 可用時段預覽跨多週 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1478) | 2026-06-18 |
+| #1477 | [feat(shop): 導遊商店預約流程 + 匯款付款方式（手動查帳）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1477) | 2026-06-18 |
+| #1476 | [fix(payments): 修復 payments/payment_events service-role 權限，解決付款流程「Failed to check existing payment」](https://github.com/smallwei0301/tour-platform/pull/1476) | 2026-06-18 |
 | #1471 | [feat(admin): 訂單狀態防呆 + 部分退款／退款流程說明](https://github.com/smallwei0301/tour-platform/pull/1471) | 2026-06-17 |
 | #1470 | [fix(admin): 修復「取消＋退款」流程並新增後台正規退款入口與說明](https://github.com/smallwei0301/tour-platform/pull/1470) | 2026-06-17 |
 | #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | 2026-06-17 |
@@ -82,9 +85,6 @@ _none_
 | #1466 | [fix(activities): footer 依地區選高雄等短名可正常篩選](https://github.com/smallwei0301/tour-platform/pull/1466) | 2026-06-16 |
 | #1465 | [feat(admin-orders): 訂單狀態加上連動標記與詳細說明](https://github.com/smallwei0301/tour-platform/pull/1465) | 2026-06-16 |
 | #1464 | [fix(admin): 方案/行程編輯 UI 改善與活動層級人數限制移除 (#297)](https://github.com/smallwei0301/tour-platform/pull/1464) | 2026-06-16 |
-| #1463 | [fix(notify): 通知矩陣表未建立時 fail-open（讀）+ 503 可操作錯誤（寫）](https://github.com/smallwei0301/tour-platform/pull/1463) | 2026-06-15 |
-| #1462 | [perf(home): 首頁移除 critical path 重量級查詢 + 改 on-demand ISR（儲存即時反映）](https://github.com/smallwei0301/tour-platform/pull/1462) | 2026-06-15 |
-| #1461 | [feat(notify): 後台可勾選的通知矩陣 + 旅客 LINE 綁定 + admin 路由補 LINE push](https://github.com/smallwei0301/tour-platform/pull/1461) | 2026-06-15 |
 
 ---
 
