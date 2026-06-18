@@ -40,6 +40,16 @@ export async function POST(
   try {
     const supabase = await createClient();
 
+    // Service-role client for payments / payment_events writes — those tables
+    // are service_role-only after issue #614 (REVOKE from anon/authenticated),
+    // so inserting through the anon client raises "permission denied for table
+    // payments". Booking/order reads stay on the anon client below.
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const paymentDb = createServiceClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('id, booking_no, status, order_id')
@@ -92,7 +102,7 @@ export async function POST(
     const paidAt = new Date().toISOString();
     const tradeNo = buildManualTradeNo(bookingId);
 
-    const { data: payment, error: paymentError } = await supabase
+    const { data: payment, error: paymentError } = await paymentDb
       .from('payments')
       .insert({
         order_id: order.id,
@@ -116,7 +126,7 @@ export async function POST(
       });
     }
 
-    await supabase.from('payment_events').insert({
+    await paymentDb.from('payment_events').insert({
       payment_id: payment.id,
       event_type: 'paid',
       payload: {
