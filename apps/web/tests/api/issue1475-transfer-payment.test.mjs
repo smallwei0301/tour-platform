@@ -26,7 +26,7 @@ test('checkout 路由：VALID_PROVIDERS 含 transfer，且 transfer 分支不產
   // transfer 分支建立 pending 付款記錄、不回傳付款表單
   const branchStart = src.indexOf("if (provider === 'transfer')");
   assert.ok(branchStart > 0, '應有 transfer 分支');
-  const branch = src.slice(branchStart, branchStart + 2500);
+  const branch = src.slice(branchStart, branchStart + 3500);
   assert.match(branch, /provider:\s*'transfer'/);
   assert.match(branch, /status:\s*'pending'/);
   assert.match(branch, /paymentFormHtml:\s*null/);

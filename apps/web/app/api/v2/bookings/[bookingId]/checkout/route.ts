@@ -217,7 +217,8 @@ export async function POST(
     // order 維持 pending_payment、booking 維持 draft，等待後台以既有 manual-payment
     // API 人工核帳後才轉 paid / pending_confirmation。回傳不含 paymentFormHtml。
     if (provider === 'transfer') {
-      const { data: existingTransfers } = await supabase
+      // payments / payment_events 為 service_role-only（#614），必須走 paymentDb。
+      const { data: existingTransfers } = await paymentDb
         .from('payments')
         .select('id, trade_no, status')
         .eq('order_id', order.id)
@@ -230,7 +231,7 @@ export async function POST(
       const transferTradeNo = reusableTransfer?.trade_no ?? generateMerchantTradeNo(bookingId);
 
       if (!transferPaymentId) {
-        const { data: tp, error: tpErr } = await supabase
+        const { data: tp, error: tpErr } = await paymentDb
           .from('payments')
           .insert({
             order_id: order.id,
@@ -250,7 +251,7 @@ export async function POST(
         transferPaymentId = tp.id;
       }
 
-      await supabase.from('payment_events').insert({
+      await paymentDb.from('payment_events').insert({
         payment_id: transferPaymentId,
         event_type: reusableTransfer ? 'initiated_reused' : 'initiated',
         payload: {
