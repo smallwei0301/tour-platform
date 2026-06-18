@@ -90,6 +90,7 @@ export default function GuideAvailabilityPage() {
   const [activityPlanOptions, setActivityPlanOptions] = useState<GuideActivityPlanOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   // Modal states
   const [showRuleModal, setShowRuleModal] = useState(false);
@@ -166,6 +167,7 @@ export default function GuideAvailabilityPage() {
       const res = await fetch(`/api/guide/availability-preview?${query.toString()}`);
       const json = await res.json();
       if (json.ok) {
+        setPreviewError(null);
         setPreviewSource(json.data?.availabilitySource || 'legacy_local_preview');
         setPreviewReasonCode(json.data?.previewReasonCode || null);
         setPreviewCanonicalState(json.data?.previewCanonicalState || null);
@@ -176,7 +178,18 @@ export default function GuideAvailabilityPage() {
           ...slot,
           minParticipants: slot.minParticipants ?? null,
         })));
+      } else {
+        // 不要靜默吞掉錯誤（例如超過預覽天數上限）：清掉舊資料並顯示原因，
+        // 否則畫面會殘留上一次的預覽，讓人誤以為「只產生一天」。
+        const msg = json?.error?.message || '預覽載入失敗';
+        setPreviewError(
+          /92 days/i.test(msg) ? '預覽範圍最多 92 天，請縮小日期區間後再試。' : msg,
+        );
+        setPreviewSlots([]);
       }
+    } catch {
+      setPreviewError('預覽載入失敗，請稍後再試。');
+      setPreviewSlots([]);
     } finally {
       setPreviewLoading(false);
     }
@@ -1061,6 +1074,14 @@ export default function GuideAvailabilityPage() {
                 </div>
               </div>
               <div style={{ padding: 20 }}>
+                {previewError && (
+                  <div
+                    data-testid="guide-availability-preview-error"
+                    style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: 13 }}
+                  >
+                    ⚠️ {previewError}
+                  </div>
+                )}
                 <div
                   data-testid="guide-availability-preview-contract"
                   style={{
