@@ -94,6 +94,19 @@ test('getGuideShopDb 不再對每個行程逐一呼叫 getActivityBySlugDb（避
   assert.match(body, /selectPublicActivityDetailPlans\(/);
 });
 
+test('shop 路由：成功回應加 s-maxage=60 邊緣快取', () => {
+  const src = readFileSync(join(webRoot, 'app/api/guides/[slug]/shop/route.ts'), 'utf8');
+  assert.match(src, /s-maxage=60/);
+  assert.match(src, /stale-while-revalidate/);
+  // 快取只掛在成功回應（ok(data)）上
+  assert.match(src, /Response\.json\(ok\(data\),\s*\{\s*headers:\s*\{\s*'Cache-Control'/);
+});
+
+test('book wizard 取商店資料不帶 no-store（讓 CDN 邊緣快取生效）', () => {
+  const src = readFileSync(join(webRoot, 'app/guides/[slug]/shop/book/page.tsx'), 'utf8');
+  assert.doesNotMatch(src, /\/api\/guides\/\$\{slug\}\/shop`,\s*\{\s*cache:\s*'no-store'/);
+});
+
 test('db：getGuideBySlugDb 公開查詢不 select 匯款欄位', () => {
   const src = readFileSync(join(webRoot, 'src/lib/db.mjs'), 'utf8');
   const fnStart = src.indexOf('export async function getGuideBySlugDb');
