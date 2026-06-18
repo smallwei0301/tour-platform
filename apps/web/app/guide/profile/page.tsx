@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
+import { isGuideShopEnabled } from '../../../src/config/feature-flags.mjs';
 
 type Profile = {
   display_name: string;
@@ -194,6 +195,9 @@ export default function GuideProfileEditPage() {
           </Link>
         )}
       </div>
+
+      {/* 預約商店連結（#1475）：可一鍵複製分享給旅客 */}
+      {isGuideShopEnabled() && profile.slug && <ShopLinkCard slug={profile.slug} />}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* ── Section 1: Imagery ── */}
@@ -489,6 +493,88 @@ export default function GuideProfileEditPage() {
 }
 
 // ────────────────────────────── helpers ──────────────────────────────
+
+// 預約商店連結卡：顯示完整網址 + 一鍵複製（#1475）
+function ShopLinkCard({ slug }: { slug: string }) {
+  const path = `/guides/${slug}/shop`;
+  const [origin, setOrigin] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setOrigin(window.location.origin);
+  }, []);
+
+  const fullUrl = `${origin}${path}`;
+
+  async function copy() {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullUrl);
+      } else {
+        // 後備：以隱藏 textarea + execCommand 複製
+        const ta = document.createElement('textarea');
+        ta.value = fullUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <section style={CARD} data-testid="guide-shop-link">
+      <header style={{ marginBottom: 12 }}>
+        <h2 style={SECTION_TITLE}>預約商店連結</h2>
+        <p style={SECTION_HINT}>把這個連結分享給旅客，他們即可直接向你線上預約。</p>
+      </header>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          type="text"
+          readOnly
+          aria-label="預約商店連結"
+          data-testid="guide-shop-link-url"
+          value={fullUrl}
+          onFocus={(e) => e.currentTarget.select()}
+          style={{ ...INPUT, flex: '1 1 240px', background: '#f9fafb', color: '#374151' }}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            data-testid="guide-shop-link-copy"
+            onClick={copy}
+            style={{
+              padding: '9px 16px', borderRadius: 8, border: 'none',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              background: copied ? '#16a34a' : PURPLE, cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            {copied ? '✓ 已複製' : '複製連結'}
+          </button>
+          <Link
+            href={path}
+            target="_blank"
+            className=""
+            style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '9px 14px', fontSize: 14, fontWeight: 600,
+              borderRadius: 8, border: '1px solid #ddd6fe',
+              background: PURPLE_SOFT, color: PURPLE, textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+          >
+            開啟
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /**
  * Chip-style multi-value input. Enter / 半形/全形逗號 commits; Backspace
