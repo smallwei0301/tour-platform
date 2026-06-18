@@ -90,6 +90,18 @@ export async function POST(
   try {
     const supabase = await createClient();
 
+    // Service-role client for privileged payment tables.
+    // `payments` / `payment_events` had their anon/authenticated grants revoked
+    // in issue #614 (migration 20260519120000) and are now service_role-only.
+    // The anon SSR `supabase` client above stays in charge of traveler-scoped
+    // authorization (RLS on bookings/orders); payment-table reads/writes must go
+    // through `paymentDb` or Postgres returns "permission denied for table payments".
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const paymentDb = createServiceClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     // 1. Fetch booking and verify status
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -161,9 +173,8 @@ export async function POST(
 
     // Soft-launch guard
     {
-      const { createClient: createServiceClient } = await import('@supabase/supabase-js');
       const { getControls, isWhitelisted } = await import('../../../../../../src/lib/soft-launch.mjs');
-      const svc = createServiceClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const svc = paymentDb;
       const controls = await getControls(svc);
       if (controls.new_booking_paused) {
         const { data: { user } } = await supabase.auth.getUser().catch(() => ({ data: { user: null } }));
@@ -195,7 +206,7 @@ export async function POST(
       `checkout-${bookingId}`;
 
     // 3. Reuse existing pending payment if available (idempotent checkout)
-    const { data: existingPayments, error: existingPaymentError } = await supabase
+    const { data: existingPayments, error: existingPaymentError } = await paymentDb
       .from('payments')
       .select('id, trade_no, status')
       .eq('order_id', order.id)
@@ -231,7 +242,7 @@ export async function POST(
       merchantTradeNo = generateMerchantTradeNo(bookingId);
 
       // 6. Create payment record
-      const { data: payment, error: paymentError } = await supabase
+      const { data: payment, error: paymentError } = await paymentDb
         .from('payments')
         .insert({
           order_id: order.id,
@@ -334,7 +345,7 @@ export async function POST(
 `.trim();
 
     // 10. Create payment_event (initiated)
-    await supabase.from('payment_events').insert({
+    await paymentDb.from('payment_events').insert({
       payment_id: paymentId,
       event_type: shouldReusePayment ? 'initiated_reused' : 'initiated',
       payload: {
