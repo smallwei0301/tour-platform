@@ -20,6 +20,7 @@ import { successV2, errorV2 } from '../../../../../../src/lib/api';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../../src/lib/ecpay';
 import { findReusableCheckoutPayment } from '../../../../../../src/lib/checkout-idempotency';
+import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
 
 // Validation helpers
 function isValidUuid(str: string): boolean {
@@ -28,7 +29,8 @@ function isValidUuid(str: string): boolean {
   return uuidRegex.test(str);
 }
 
-const VALID_PROVIDERS = ['ecpay'] as const;
+// 'transfer' = 自行匯款（手動查帳，#1475）：不走線上金流，建立 pending 付款記錄後等待後台人工核帳。
+const VALID_PROVIDERS = ['ecpay', 'transfer'] as const;
 type PaymentProvider = (typeof VALID_PROVIDERS)[number];
 
 type CheckoutBooking = {
@@ -86,6 +88,11 @@ export async function POST(
     body.provider && VALID_PROVIDERS.includes(body.provider as PaymentProvider)
       ? (body.provider as PaymentProvider)
       : 'ecpay';
+
+  // 匯款付款需 feature flag 開啟（#1475）
+  if (provider === 'transfer' && !isTransferPaymentEnabled()) {
+    return Response.json(errorV2('VALIDATION_ERROR', '匯款付款目前未開放'), { status: 400 });
+  }
 
   try {
     const supabase = await createClient();
@@ -193,6 +200,88 @@ export async function POST(
       (typeof draftMetadata?.correlationId === 'string' && draftMetadata.correlationId) ||
       request.headers.get('x-correlation-id')?.trim() ||
       `checkout-${bookingId}`;
+
+    // ── 匯款（手動查帳）分支（#1475）──────────────────────────────
+    // 不走 ECPay：建立／重用一筆 provider='transfer'、status='pending' 的付款記錄，
+    // order 維持 pending_payment、booking 維持 draft，等待後台以既有 manual-payment
+    // API 人工核帳後才轉 paid / pending_confirmation。回傳不含 paymentFormHtml。
+    if (provider === 'transfer') {
+      const { data: existingTransfers } = await supabase
+        .from('payments')
+        .select('id, trade_no, status')
+        .eq('order_id', order.id)
+        .eq('provider', 'transfer')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      const reusableTransfer = findReusableCheckoutPayment(existingTransfers);
+
+      let transferPaymentId: string | null = reusableTransfer?.id ?? null;
+      const transferTradeNo = reusableTransfer?.trade_no ?? generateMerchantTradeNo(bookingId);
+
+      if (!transferPaymentId) {
+        const { data: tp, error: tpErr } = await supabase
+          .from('payments')
+          .insert({
+            order_id: order.id,
+            provider: 'transfer',
+            trade_no: transferTradeNo,
+            amount_twd: order.total_twd,
+            status: 'pending',
+          })
+          .select('id')
+          .single();
+        if (tpErr || !tp) {
+          console.error('Error creating transfer payment:', tpErr);
+          return Response.json(errorV2('INTERNAL_ERROR', 'Failed to create transfer payment'), {
+            status: 500,
+          });
+        }
+        transferPaymentId = tp.id;
+      }
+
+      await supabase.from('payment_events').insert({
+        payment_id: transferPaymentId,
+        event_type: reusableTransfer ? 'initiated_reused' : 'initiated',
+        payload: {
+          bookingId,
+          orderId: order.id,
+          merchantTradeNo: transferTradeNo,
+          amount: order.total_twd,
+          provider: 'transfer',
+          sourceChannel,
+          correlationId,
+          auditSignal: 'transfer_payment_init',
+        },
+      });
+
+      await supabase.from('booking_status_logs').insert({
+        booking_id: bookingId,
+        from_status: 'draft',
+        to_status: 'draft',
+        actor_role: 'system',
+        reason: 'Transfer checkout initiated (awaiting manual reconciliation)',
+        metadata: {
+          paymentId: transferPaymentId,
+          merchantTradeNo: transferTradeNo,
+          provider: 'transfer',
+          sourceChannel,
+          correlationId,
+          auditSignal: 'transfer_payment_init',
+        },
+      });
+
+      return Response.json(
+        successV2({
+          provider: 'transfer',
+          paymentId: transferPaymentId,
+          merchantTradeNo: transferTradeNo,
+          correlationId,
+          sourceChannel,
+          paymentFormHtml: null,
+          awaitingManualPayment: true,
+        })
+      );
+    }
 
     // 3. Reuse existing pending payment if available (idempotent checkout)
     const { data: existingPayments, error: existingPaymentError } = await supabase
