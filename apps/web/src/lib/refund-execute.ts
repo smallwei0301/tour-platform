@@ -214,13 +214,13 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
       };
     }
 
+    // orders 真實 schema 只有 status + payment_status；refunded_amount / refunded_at /
+    // ecpay_refund_trade_no 皆不存在（無 migration 建立、亦無讀取點），寫入會 500。
+    // 退款明細（時間/金額/trade_no）落在 payments / payment_events / operations_tracking。
     const { error, data, count } = await updateOrder(order.id, {
       status: 'refunded',
-      // 出帳實際讀 operations_tracking.refund_amount_twd（見 settlement-config.ts）；
-      // orders 只記 payment_status 區分全額/部分退款。orders.refunded_amount 在 schema
-      // 不存在且無任何讀取點，故不再寫入（避免 DB_UPDATE_FAILED）。
       payment_status: resolvedAmount.partial ? 'partially_refunded' : 'refunded',
-      refunded_at: now(),
+      updated_at: now(),
     });
 
     if (!hasPersisted({ error, data, count })) {
@@ -274,8 +274,7 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
   const { error, data, count } = await updateOrder(order.id, {
     status: 'refunded',
     payment_status: resolvedAmount.partial ? 'partially_refunded' : 'refunded',
-    refunded_at: now(),
-    ecpay_refund_trade_no: ecpayTradeNo,
+    updated_at: now(),
   });
 
   if (!hasPersisted({ error, data, count })) {

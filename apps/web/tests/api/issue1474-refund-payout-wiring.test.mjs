@@ -32,18 +32,20 @@ const routeSrc = readFileSync(
 );
 const helperSrc = readFileSync(join(repoRoot, 'src/lib/refund-execute.ts'), 'utf8');
 
-test('route：不再寫入幽靈欄位 orders.refunded_amount（schema 無此欄）', () => {
-  assert.ok(
-    !/refunded_amount:\s/.test(routeSrc),
-    'route.ts 不應再有 `refunded_amount:` 寫入（只允許 payments.refunded_amount_twd）',
-  );
+// orders 真實 schema 僅有 status + payment_status（+ 原始欄位）；
+// refunded_amount / refunded_at / ecpay_refund_trade_no 皆未經任何 migration 建立，
+// 寫入會回 500 DB_UPDATE_FAILED。退款明細落在 payments / payment_events（以 `.prop =`
+// 賦值，非物件字面 `prop:`）與 operations_tracking。故以下鎖定物件字面寫入已移除。
+test('route：不再以物件字面寫入幽靈 orders 欄位（refunded_amount/refunded_at/ecpay_refund_trade_no）', () => {
+  assert.ok(!/refunded_amount:\s/.test(routeSrc), 'route.ts 不應有 `refunded_amount:` 寫入');
+  assert.ok(!/refunded_at:\s/.test(routeSrc), 'route.ts orders 不應寫 `refunded_at:`（payments 以賦值寫）');
+  assert.ok(!/ecpay_refund_trade_no:\s/.test(routeSrc), 'route.ts orders 不應寫 `ecpay_refund_trade_no:`');
 });
 
-test('helper：executeRefund/executeEcpayReversal 不再寫入 orders.refunded_amount', () => {
-  assert.ok(
-    !/refunded_amount:\s/.test(helperSrc),
-    'refund-execute.ts 不應再有 `refunded_amount:` 寫入',
-  );
+test('helper：executeRefund/executeEcpayReversal 不再寫入幽靈 orders 欄位', () => {
+  assert.ok(!/refunded_amount:\s/.test(helperSrc), 'refund-execute.ts 不應有 `refunded_amount:` 寫入');
+  assert.ok(!/refunded_at:\s/.test(helperSrc), 'refund-execute.ts 不應有 `refunded_at:` 寫入');
+  assert.ok(!/ecpay_refund_trade_no:\s/.test(helperSrc), 'refund-execute.ts 不應有 `ecpay_refund_trade_no:` 寫入');
 });
 
 test('route：退款成功時寫入 operations_tracking.refund_amount_twd（出帳真正讀的欄位）', () => {

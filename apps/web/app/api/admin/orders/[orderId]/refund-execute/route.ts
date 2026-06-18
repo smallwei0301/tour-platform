@@ -367,21 +367,22 @@ export async function POST(
           };
         }
 
+        // orders 真實 schema 只有 status + payment_status；refunded_amount / refunded_at /
+        // ecpay_refund_trade_no 皆不存在（無 migration、無讀取點），寫入會 500。退款明細
+        // （時間/trade_no/金額）已寫入 payments + payment_events；部分退款金額另記入
+        // operations_tracking.refund_amount_twd（出帳真正讀的欄位）。
         const orderResult = await supabase
           .from('orders')
           .update({
             status: 'refunded',
             // partial Action=R → partially_refunded；void/full → voided/refunded。
-            // 不再寫 orders.refunded_amount（schema 無此欄、且無讀取點）；部分退款
-            // 金額改記入 operations_tracking.refund_amount_twd（出帳真正讀的欄位）。
             payment_status:
               eventType === 'authorization_voided'
                 ? 'voided'
                 : partial
                 ? 'partially_refunded'
                 : 'refunded',
-            refunded_at: now,
-            ecpay_refund_trade_no: reversedTradeNo,
+            updated_at: now,
           })
           .eq('id', targetOrderId)
           .select('id');
