@@ -1,25 +1,26 @@
-<!-- query_timestamp: 2026-06-17T18:54:48.774Z -->
+<!-- query_timestamp: 2026-06-18T01:00:02.937Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-17T18:54:48.774Z  
-**Commit SHA:** `0b4271e3e90044411a059da7c6761efbbfdd8e4a`
+**Query timestamp:** 2026-06-18T01:00:02.937Z  
+**Commit SHA:** `7deeec531766684b3a8b82bee9001b3c48e9b8d5`
 
 ---
 
-## Open PRs (4)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1473 | [部分退款功能：後台手動輸入金額、ECPay/現金實際退指定金額](https://github.com/smallwei0301/tour-platform/pull/1473) | `claude/order-status-annotations-8da27n` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (23 total)
+## Open Issues (24 total)
 
 ### P0 (0)
 
@@ -60,10 +61,11 @@ _none_
 
 _none_
 
-### Other (2)
+### Other (3)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1474 | [QA：PR #1473 部分退款功能 — Staging 實測（ECPay 測試卡）](https://github.com/smallwei0301/tour-platform/issues/1474) | qa, refund |
 | #1449 | [[ops] 套用 LINE/Telegram 通知 migration 到 production Supabase（#920 後續）](https://github.com/smallwei0301/tour-platform/issues/1449) | database, ops |
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — 正式上線前執行](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, security, owner:mixed, status:needs-decision, launch:post-first-payment |
 
