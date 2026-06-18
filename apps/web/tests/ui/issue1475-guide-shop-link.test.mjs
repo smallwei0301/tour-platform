@@ -11,8 +11,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const PAGE = join(__dirname, '..', '..', 'app/guide/profile/page.tsx');
 const src = readFileSync(PAGE, 'utf8');
 
-test('卡片以 isGuideShopEnabled() + slug 控管渲染', () => {
-  assert.match(src, /isGuideShopEnabled\(\)\s*&&\s*profile\.slug\s*&&\s*<ShopLinkCard slug=\{profile\.slug\}\s*\/>/);
+test('卡片以 client-safe 旗標 + slug 控管渲染（字面量 process.env，非 env 參數間接讀取）', () => {
+  // client component 必須用字面量 process.env.NEXT_PUBLIC_* 才會被 Next build 內嵌
+  assert.match(src, /process\.env\.NEXT_PUBLIC_GUIDE_SHOP_ENABLED/);
+  assert.match(src, /SHOP_ENABLED\s*&&\s*profile\.slug\s*&&\s*<ShopLinkCard slug=\{profile\.slug\}\s*\/>/);
+  // 不可再用會在 client bundle 失效的 isGuideShopEnabled() 間接讀取
+  assert.doesNotMatch(src, /isGuideShopEnabled\(\)/);
 });
 
 test('ShopLinkCard 組出 /guides/[slug]/shop 完整網址', () => {

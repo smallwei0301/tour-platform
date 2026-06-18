@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityByIdOrSlug, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
-import { isBookingV2ShellEnabled, isTransferPaymentEnabled } from '../../../src/config/feature-flags.mjs';
+import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
+
+// Client component：用字面量 process.env.NEXT_PUBLIC_* 讓 Next build 內嵌（透過 env 參數
+// 間接讀取在 client bundle 不會被替換 → 永遠 undefined）。#1475 匯款付款選項旗標。
+const TRANSFER_PAYMENT_ENABLED =
+  process.env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED === '1' ||
+  process.env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED === 'true';
 import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
 import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
@@ -593,7 +599,7 @@ function BookingInnerV2FlagShell() {
     configured: boolean; guideName?: string; bankName?: string; accountName?: string; accountNumber?: string; transferNote?: string | null;
   }>(null);
   const [transferSubmitted, setTransferSubmitted] = useState(false);
-  const transferEnabled = isTransferPaymentEnabled();
+  const transferEnabled = TRANSFER_PAYMENT_ENABLED;
   const canRunV2PlanFlow = Boolean(v2PlanKey);
 
   useEffect(() => {
