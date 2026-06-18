@@ -186,7 +186,8 @@ export default function GuideShopBookingPage() {
   useEffect(() => {
     if (authState !== 'authed') return;
     let mounted = true;
-    fetch(`/api/guides/${slug}/shop`, { cache: 'no-store' })
+    // 不帶 no-store：讓 Vercel CDN 的 s-maxage 邊緣快取生效（商店資料可接受 ~60s 延遲）。
+    fetch(`/api/guides/${slug}/shop`)
       .then((r) => r.json())
       .then((j) => {
         if (!mounted) return;
