@@ -1,9 +1,11 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb } from '../../../../src/lib/db.mjs';
 import { isGuideShopEnabled } from '../../../../src/config/feature-flags.mjs';
 import { GuideAvatar } from '../../../../src/components/shared/GuideAvatar';
+import { ShopMemberButton } from './ShopMemberButton';
 
 // 與導遊公開頁一致的 on-demand ISR（導遊存檔後 revalidatePath 失效）。
 export const fetchCache = 'force-cache';
@@ -33,22 +35,37 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
 
   return (
     <main className="tp-light-page tp-container" style={{ paddingBottom: 96, maxWidth: 560 }}>
-      {/* 標題列 + 會員專區 */}
+      {/* 標題列 + 會員入口（登入／會員專區） */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18 }}>
         <h1 style={{ margin: 0, fontSize: 22 }}>線上預約</h1>
-        <Link
-          href={`/guides/${slug}/shop/orders`}
-          className="tp-btn tp-btn-ghost"
-          style={{ fontSize: 14, padding: '6px 14px' }}
-        >
-          會員專區
-        </Link>
+        <ShopMemberButton slug={slug} />
       </div>
+
+      {/* 導遊封面照（個人資料封面） */}
+      {guide.heroImageUrl && (
+        <div
+          data-testid="shop-hero"
+          style={{
+            position: 'relative', width: '100%', aspectRatio: '16 / 9',
+            marginTop: 16, borderRadius: 16, overflow: 'hidden',
+            border: '1px solid var(--tp-border)',
+          }}
+        >
+          <Image
+            src={guide.heroImageUrl}
+            alt={`${guide.displayName} 封面照`}
+            fill
+            priority
+            sizes="(max-width: 560px) 100vw, 560px"
+            style={{ objectFit: 'cover' }}
+          />
+        </div>
+      )}
 
       {/* 店家卡片 */}
       <section
         className="tp-card"
-        style={{ marginTop: 18, display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}
+        style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}
       >
         <GuideAvatar photoUrl={guide.profilePhotoUrl} name={guide.displayName} size={72} showBorder />
         <div>
