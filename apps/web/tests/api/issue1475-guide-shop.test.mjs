@@ -77,6 +77,23 @@ test('shop 路由：flag off → 404；flag on → 委派 getGuideShopDb', () =>
   assert.match(src, /getGuideShopDb\(/);
 });
 
+test('book wizard 取可預約時段的視窗 ≤31 天（available-slots API 上限）', () => {
+  const src = readFileSync(join(webRoot, 'app/guides/[slug]/shop/book/page.tsx'), 'utf8');
+  // 不可再用 60 天（會被 available-slots 的 31 天上限擋下 →「無可預約日期」）
+  assert.doesNotMatch(src, /60 \* 86400000/);
+  assert.match(src, /30 \* 86400000/);
+});
+
+test('getGuideShopDb 不再對每個行程逐一呼叫 getActivityBySlugDb（避免 N+1）', () => {
+  const src = readFileSync(join(webRoot, 'src/lib/db.mjs'), 'utf8');
+  const fnStart = src.indexOf('export async function getGuideShopDb');
+  const fnEnd = src.indexOf('export async function getGuideTransferInfoForBookingDb');
+  const body = src.slice(fnStart, fnEnd);
+  // Supabase 路徑用批次 activity_plans 查詢
+  assert.match(body, /from\('activity_plans'\)[\s\S]*\.in\('activity_id'/);
+  assert.match(body, /selectPublicActivityDetailPlans\(/);
+});
+
 test('db：getGuideBySlugDb 公開查詢不 select 匯款欄位', () => {
   const src = readFileSync(join(webRoot, 'src/lib/db.mjs'), 'utf8');
   const fnStart = src.indexOf('export async function getGuideBySlugDb');
