@@ -5,7 +5,13 @@ import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
-import { isGuideShopEnabled } from '../../../src/config/feature-flags.mjs';
+
+// Client component 必須用「字面量」process.env.NEXT_PUBLIC_* 才會被 Next 於 build 內嵌；
+// 透過 feature-flags.mjs 的 env 參數間接讀取（env.NEXT_PUBLIC_*）在 client bundle 不會被
+// 替換 → 永遠 undefined → 旗標誤判為關閉（這就是商店連結卡片先前不顯示的原因）。
+const SHOP_ENABLED =
+  process.env.NEXT_PUBLIC_GUIDE_SHOP_ENABLED === '1' ||
+  process.env.NEXT_PUBLIC_GUIDE_SHOP_ENABLED === 'true';
 
 type Profile = {
   display_name: string;
@@ -197,7 +203,7 @@ export default function GuideProfileEditPage() {
       </div>
 
       {/* 預約商店連結（#1475）：可一鍵複製分享給旅客 */}
-      {isGuideShopEnabled() && profile.slug && <ShopLinkCard slug={profile.slug} />}
+      {SHOP_ENABLED && profile.slug && <ShopLinkCard slug={profile.slug} />}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* ── Section 1: Imagery ── */}
