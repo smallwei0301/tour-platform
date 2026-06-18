@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
+import { isMissingColumnError } from '../../../../src/lib/schema-drift.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -55,7 +56,7 @@ export async function GET(req: Request) {
     .select(richSelect)
     .eq('id', session.guideId)
     .single();
-  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+  if (error && isMissingColumnError(error)) {
     ({ data: gp, error } = await supabase
       .from('guide_profiles')
       .select(baseSelect)
@@ -170,7 +171,7 @@ export async function PATCH(req: Request) {
   // Schema drift guard: 較新欄位（is_published、#1475 匯款欄位）可能尚未在 production
   // migrate；缺欄位時 update 會回 42703。把這些 optional 欄位剝除後重試，讓其他內容
   // 仍能存檔（被剝除的欄位於 migration 套用前 no-op）。
-  if (updateErr && (updateErr.code === '42703' || /column .*does not exist/i.test(updateErr.message || ''))) {
+  if (updateErr && isMissingColumnError(updateErr)) {
     let stripped = false;
     for (const f of DRIFT_OPTIONAL_FIELDS) {
       if (f in dbUpdate) {

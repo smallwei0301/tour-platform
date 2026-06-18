@@ -78,13 +78,14 @@ export async function GET(request: NextRequest) {
     return Response.json(fail('VALIDATION_ERROR', 'Invalid activityPlanId format'), { status: 400 });
   }
 
-  // Limit preview range to 14 days
+  // Limit preview range to 92 days (約一季)：原本 14 天上限導致導遊無法預覽跨多週的
+  // 週期性排程（例如「每週一」連續數週只會看到一天），#1475 後放寬到一季。
   const fromDate = new Date(dateFrom);
   const toDate = new Date(dateTo);
   const daysDiff = Math.ceil((toDate.getTime() - fromDate.getTime()) / (1000 * 60 * 60 * 24));
 
-  if (daysDiff > 14) {
-    return Response.json(fail('VALIDATION_ERROR', 'Preview range limited to 14 days'), { status: 400 });
+  if (daysDiff > 92) {
+    return Response.json(fail('VALIDATION_ERROR', 'Preview range limited to 92 days'), { status: 400 });
   }
   if (daysDiff < 0) {
     return Response.json(fail('VALIDATION_ERROR', 'dateFrom must be before dateTo'), { status: 400 });
