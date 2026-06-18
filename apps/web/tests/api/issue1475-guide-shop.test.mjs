@@ -70,6 +70,33 @@ test('getGuideShopDb 委派 buildGuideShopView，找不到導遊回 null', async
   assert.match(src, /return buildGuideShopView\(guide, details\)/);
 });
 
+test('全站 footer 在商店頁隱藏（FooterGate 接 usePathname）', () => {
+  const layout = readFileSync(join(webRoot, 'app/layout.tsx'), 'utf8');
+  assert.match(layout, /<FooterGate \/>/);
+  assert.doesNotMatch(layout, /<Footer \/>/);
+  const gate = readFileSync(join(webRoot, 'src/components/layout/FooterGate.tsx'), 'utf8');
+  assert.match(gate, /usePathname/);
+  assert.match(gate, /\\\/guides\\\/\[\^\/\]\+\\\/shop/); // 隱藏 /guides/[slug]/shop**
+});
+
+test('商店首頁：封面照 + 會員入口（登入／會員專區）', () => {
+  const page = readFileSync(join(webRoot, 'app/guides/[slug]/shop/page.tsx'), 'utf8');
+  assert.match(page, /guide\.heroImageUrl/);
+  assert.match(page, /data-testid="shop-hero"/);
+  assert.match(page, /<ShopMemberButton slug=\{slug\}/);
+  const btn = readFileSync(join(webRoot, 'app/guides/[slug]/shop/ShopMemberButton.tsx'), 'utf8');
+  assert.match(btn, /會員專區/);
+  assert.match(btn, /會員登入/);
+  assert.match(btn, /auth\.getUser\(\)/);
+  assert.match(btn, /\/shop\/orders/);
+});
+
+test('預約 wizard：切換步驟回到頁面最上方', () => {
+  const src = readFileSync(join(webRoot, 'app/guides/[slug]/shop/book/page.tsx'), 'utf8');
+  assert.match(src, /window\.scrollTo\(\{ top: 0[^}]*\}\)/);
+  assert.match(src, /\}, \[step\]\);/);
+});
+
 test('shop 路由：flag off → 404；flag on → 委派 getGuideShopDb', () => {
   const src = readFileSync(join(webRoot, 'app/api/guides/[slug]/shop/route.ts'), 'utf8');
   assert.match(src, /isGuideShopEnabled\(\)/);

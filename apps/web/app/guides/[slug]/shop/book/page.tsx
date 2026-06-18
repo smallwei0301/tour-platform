@@ -259,6 +259,11 @@ export default function GuideShopBookingPage() {
     [dates]
   );
 
+  // 切換步驟時回到頁面最上方（避免停在上一步底部 CTA 的位置）。
+  useEffect(() => {
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' });
+  }, [step]);
+
   // ── 建立草稿訂單 ─────────────────────────────────────────
   async function createDraft() {
     if (!selectedActivity || !selectedPlan || !selectedSlotStartAt) return;
