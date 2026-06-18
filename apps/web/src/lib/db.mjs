@@ -3377,11 +3377,10 @@ export async function getGuideBySlugDb(slug) {
  * in-memory fallback（無 Supabase）資料量小，沿用逐行程 getActivityBySlugDb。
  */
 export async function getGuideShopDb(slug) {
-  const guide = await getGuideBySlugDb(slug);
-  if (!guide) return null;
-
   // in-memory / fixture：沿用逐行程（無網路、資料量小）。
   if (!hasSupabaseEnv()) {
+    const guide = await getGuideBySlugDb(slug);
+    if (!guide) return null;
     const details = [];
     for (const a of guide.activities || []) {
       if (a.status && a.status !== 'published') continue;
@@ -3403,19 +3402,24 @@ export async function getGuideShopDb(slug) {
     return buildGuideShopView(guide, details);
   }
 
-  // Supabase：單一 round-trip —— 用 PostgREST 內嵌關聯一次取回 activities + activity_plans，
-  // 並與 getGuideBySlugDb 並行（兩者各自的 query 同時發出），把載入時間從 ~3s（兩段式）
-  // 再壓到 ~1 個 round-trip。embed 不可用時退回兩段式查詢（safe fallback）。
+  // Supabase：把 guide 與 activities+plans 兩個查詢「並行」發出（Promise.all），
+  // 牆鐘只剩 1 個 round-trip —— 先前是 await getGuideBySlugDb 之後才查 activities（兩段
+  // 序列），這正是冷啟動偏久的主因。activities 用 PostgREST 內嵌關聯一次取回方案；
+  // embed 不可用時退回兩段式（safe fallback）。
   const supabase = await getSupabase();
   const PLAN_COLS = 'activity_id, id, slug, legacy_plan_id, name, duration_minutes, price_type, base_price, min_participants, max_participants, status';
 
-  let acts = null;
-  const embedRes = await supabase
-    .from('activities')
-    .select(`id, slug, title, region, region_slug, plans, status, activity_plans(${PLAN_COLS})`)
-    .eq('guide_slug', slug)
-    .eq('status', 'published');
+  const [guide, embedRes] = await Promise.all([
+    getGuideBySlugDb(slug),
+    supabase
+      .from('activities')
+      .select(`id, slug, title, region, region_slug, plans, status, activity_plans(${PLAN_COLS})`)
+      .eq('guide_slug', slug)
+      .eq('status', 'published'),
+  ]);
+  if (!guide) return null;
 
+  let acts = null;
   if (!embedRes.error) {
     acts = embedRes.data || [];
   } else {
