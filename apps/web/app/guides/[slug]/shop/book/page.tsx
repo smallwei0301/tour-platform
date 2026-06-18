@@ -34,6 +34,87 @@ function fmtSlot(startAt: string): string {
   return new Date(startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false });
 }
 
+// ── 月曆日期選擇器（對齊 PM 參考圖：整月格、可預約日可點、過去/無空檔灰階）──
+const CAL_WEEK = ['一', '二', '三', '四', '五', '六', '日']; // 週一起始
+const CAL_MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+
+function dateKey(y: number, m: number, d: number): string {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+}
+
+function MonthCalendar({
+  availableDates, selected, onSelect,
+}: { availableDates: Set<string>; selected: string; onSelect: (d: string) => void }) {
+  const today = new Date();
+  const todayKey = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
+  // 最早一個可預約日（用來把預設檢視月份帶到「有空檔的月份」）
+  const firstAvail = useMemo(() => {
+    let min = '';
+    for (const d of availableDates) if (!min || d < min) min = d;
+    return min;
+  }, [availableDates]);
+  const [vy, setVy] = useState(today.getFullYear());
+  const [vm, setVm] = useState(today.getMonth());
+  useEffect(() => {
+    if (firstAvail) {
+      setVy(Number(firstAvail.slice(0, 4)));
+      setVm(Number(firstAvail.slice(5, 7)) - 1);
+    }
+  }, [firstAvail]);
+
+  const firstDow = (new Date(vy, vm, 1).getDay() + 6) % 7; // 週一=0
+  const daysInMonth = new Date(vy, vm + 1, 0).getDate();
+  const cells: (string | null)[] = [...Array(firstDow).fill(null)];
+  for (let d = 1; d <= daysInMonth; d++) cells.push(dateKey(vy, vm, d));
+
+  const prev = () => { if (vm === 0) { setVy(vy - 1); setVm(11); } else { setVm(vm - 1); } };
+  const next = () => { if (vm === 11) { setVy(vy + 1); setVm(0); } else { setVm(vm + 1); } };
+  const goToday = () => { setVy(today.getFullYear()); setVm(today.getMonth()); };
+
+  return (
+    <div className="tp-card" style={{ padding: 14 }} data-testid="shop-calendar">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+        <button type="button" aria-label="上個月" onClick={prev}
+          style={{ border: 'none', background: 'transparent', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--tp-text)', padding: '2px 8px' }}>‹</button>
+        <span style={{ fontWeight: 700, fontSize: 16 }}>{vy} 年 {CAL_MONTHS[vm]}</span>
+        <button type="button" aria-label="下個月" onClick={next}
+          style={{ border: 'none', background: 'transparent', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--tp-text)', padding: '2px 8px' }}>›</button>
+        <button type="button" onClick={goToday}
+          style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--tp-primary)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>今天</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', color: 'var(--tp-muted)', fontSize: 13, marginBottom: 6 }}>
+        {CAL_WEEK.map((w) => <span key={w}>{w}</span>)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {cells.map((c, i) => {
+          if (!c) return <span key={`e${i}`} />;
+          const day = Number(c.slice(-2));
+          const isAvail = availableDates.has(c);
+          const isSelected = selected === c;
+          const isToday = c === todayKey;
+          return (
+            <button key={c} type="button" data-testid={isAvail ? 'shop-date' : undefined}
+              disabled={!isAvail}
+              onClick={() => isAvail && onSelect(c)}
+              aria-label={`${c}${isAvail ? ' 可預約' : ' 不可預約'}`}
+              style={{
+                aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: 'none', borderRadius: '50%', fontSize: 15,
+                cursor: isAvail ? 'pointer' : 'default',
+                background: isSelected ? 'var(--tp-primary)' : 'transparent',
+                color: isSelected ? '#fff' : isAvail ? 'var(--tp-text)' : '#cbd5e1',
+                fontWeight: isAvail ? 600 : 400,
+                boxShadow: isToday && !isSelected ? 'inset 0 0 0 1px var(--tp-primary)' : 'none',
+              }}>
+              {day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function GuideShopBookingPage() {
   const params = useParams();
   const router = useRouter();
@@ -171,6 +252,11 @@ export default function GuideShopBookingPage() {
       .filter((s) => new Date(s.startAt).toLocaleDateString('sv-SE', { timeZone: TZ }) === selectedDate)
       .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
   }, [slots, selectedDate]);
+
+  const availableDateSet = useMemo(
+    () => new Set(dates.filter((d) => d.state === 'available').map((d) => d.date)),
+    [dates]
+  );
 
   // ── 建立草稿訂單 ─────────────────────────────────────────
   async function createDraft() {
@@ -372,25 +458,16 @@ export default function GuideShopBookingPage() {
           <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>選擇日期</p>
           {slotsLoading && <p style={{ color: 'var(--tp-muted)' }}>載入可預約日期中…</p>}
           {!slotsLoading && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 8 }}>
-              {dates.filter((d) => d.state === 'available').map((d) => (
-                <button key={d.date} type="button" data-testid="shop-date"
-                  onClick={() => { setSelectedDate(d.date); setSelectedSlotStartAt(''); }}
-                  className="tp-card"
-                  style={{ padding: '8px 0', cursor: 'pointer', textAlign: 'center', fontSize: 13,
-                    border: selectedDate === d.date ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
-                  {d.date.slice(5)}
-                </button>
-              ))}
-              {dates.filter((d) => d.state === 'available').length === 0 && (
-                <p style={{ color: 'var(--tp-muted)', gridColumn: '1 / -1' }}>近期沒有可預約日期。</p>
-              )}
-            </div>
+            <MonthCalendar
+              availableDates={availableDateSet}
+              selected={selectedDate}
+              onSelect={(d) => { setSelectedDate(d); setSelectedSlotStartAt(''); }}
+            />
           )}
 
           {selectedDate && (
             <>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>{selectedDate} 可預約時間</p>
+              <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>{selectedDate.slice(5).replace('-', '/')} 可預約時間</p>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
                 {slotsForSelectedDate.map((s) => (
                   <button key={s.startAt} type="button" data-testid="shop-slot"
