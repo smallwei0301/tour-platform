@@ -140,7 +140,8 @@ export default function GuideShopBookingPage() {
         setSlotsLoading(true);
         setError('');
         const today = new Date().toISOString().slice(0, 10);
-        const end = new Date(Date.now() + 60 * 86400000).toISOString().slice(0, 10);
+        // available-slots API 上限為 31 天，取 30 天視窗（原本 60 天會被擋下 →「無可預約日期」）。
+        const end = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
         const url = `/api/v2/activities/${selectedActivity.id}/available-slots?planId=${encodeURIComponent(selectedPlan.id)}&dateFrom=${today}&dateTo=${end}&timezone=${encodeURIComponent(TZ)}&participants=${guests}`;
         const r = await fetch(url, { cache: 'no-store' });
         const j = await r.json();

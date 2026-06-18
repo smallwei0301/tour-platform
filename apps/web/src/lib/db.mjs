@@ -3369,34 +3369,77 @@ export async function getGuideBySlugDb(slug) {
 
 /**
  * 回傳導遊商店頁所需資料：導遊公開資訊 + 各（已發佈）行程的 active 方案，依地區分組。
- * 重用 getGuideBySlugDb（僅公開欄位，不含匯款資訊）與 getActivityBySlugDb（方案），
- * 因此 in-memory fallback 自動沿用 fixtures。沒有任何 active 方案的行程會被略過。
+ * 不含任何不公開匯款資訊。沒有任何 active 方案的行程會被略過。
+ *
+ * 效能（#1475）：Supabase 路徑用「批次」查詢避免 N+1 —— 早期版本對每個行程各打一次
+ * getActivityBySlugDb（內含 activity + activity_plans + schedules/reviews 多次 round-trip），
+ * 6 個行程 → 商店頁載入 4–6s。改為 1 次 activities + 1 次 activity_plans（並行）。
+ * in-memory fallback（無 Supabase）資料量小，沿用逐行程 getActivityBySlugDb。
  */
 export async function getGuideShopDb(slug) {
   const guide = await getGuideBySlugDb(slug);
   if (!guide) return null;
 
-  const details = [];
-  for (const a of guide.activities || []) {
-    if (a.status && a.status !== 'published') continue;
-    let detail = null;
-    try {
-      detail = await getActivityBySlugDb(a.slug, { required: false });
-    } catch {
-      detail = null;
+  // in-memory / fixture：沿用逐行程（無網路、資料量小）。
+  if (!hasSupabaseEnv()) {
+    const details = [];
+    for (const a of guide.activities || []) {
+      if (a.status && a.status !== 'published') continue;
+      let detail = null;
+      try {
+        detail = await getActivityBySlugDb(a.slug, { required: false });
+      } catch {
+        detail = null;
+      }
+      details.push({
+        summary: {
+          id: a.id, slug: a.slug, title: a.title, region: a.region,
+          regionSlug: detail?.regionSlug || a.regionSlug || null,
+          status: a.status || 'published',
+        },
+        plans: detail?.plans || [],
+      });
     }
-    details.push({
-      summary: {
-        id: a.id,
-        slug: a.slug,
-        title: a.title,
-        region: a.region,
-        regionSlug: detail?.regionSlug || a.regionSlug || null,
-        status: a.status || 'published',
-      },
-      plans: detail?.plans || [],
-    });
+    return buildGuideShopView(guide, details);
   }
+
+  // Supabase：批次查詢（activities + activity_plans 並行），用既有的方案正規化器。
+  const supabase = await getSupabase();
+  const actIds = (guide.activities || [])
+    .filter((a) => !a.status || a.status === 'published')
+    .map((a) => a.id);
+
+  const [actsRes, plansRes] = await Promise.all([
+    supabase
+      .from('activities')
+      .select('id, slug, title, region, region_slug, plans, status')
+      .eq('guide_slug', slug)
+      .eq('status', 'published'),
+    actIds.length
+      ? supabase
+          .from('activity_plans')
+          .select('activity_id, id, slug, legacy_plan_id, name, duration_minutes, price_type, base_price, min_participants, max_participants, status')
+          .in('activity_id', actIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const plansByActivity = {};
+  for (const p of plansRes.data || []) {
+    const st = p?.status;
+    if (!(st === null || st === undefined || st === 'active')) continue;
+    (plansByActivity[p.activity_id] ||= []).push(p);
+  }
+
+  const details = (actsRes.data || []).map((a) => ({
+    summary: {
+      id: a.id, slug: a.slug, title: a.title, region: a.region,
+      regionSlug: a.region_slug || null, status: a.status || 'published',
+    },
+    plans: selectPublicActivityDetailPlans({
+      formalPlans: plansByActivity[a.id] || [],
+      legacyPlans: a.plans || null,
+    }) || [],
+  }));
 
   // 純函式做過濾／投影／分組（單測見 tests/api/issue1475-guide-shop.test.mjs）。
   return buildGuideShopView(guide, details);
