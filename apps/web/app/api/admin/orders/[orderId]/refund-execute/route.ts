@@ -148,6 +148,10 @@ export async function POST(
     // body is optional for ECPay orders
   }
 
+  // Optional partial-refund amount (TWD). Omitted → full total_twd (back-compat).
+  // Validation (positive integer ≤ total) is enforced inside the executors.
+  const refundAmount = body?.refundAmount as number | string | null | undefined;
+
   const resolveLatestReversiblePayment = async (targetOrderId: string) => {
     const { data, error } = await supabase
       .from('payments')
@@ -173,6 +177,7 @@ export async function POST(
     ? await executeEcpayReversal({
       order: order as any,
       body,
+      refundAmount,
       resolveLatestReversiblePayment: async () => latestReversiblePayment,
       queryTradeInfo: async (merchantTradeNo) => queryEcpayTradeInfo({ merchantTradeNo }),
       requestDoAction: async ({ merchantTradeNo, tradeNo, totalAmount, reason, action }) => requestEcpayDoAction({
@@ -355,6 +360,7 @@ export async function POST(
     : await executeRefund({
       order: order as any,
       body,
+      refundAmount,
       requestAllRefund,
       updateOrder: async (targetOrderId, payload) => {
         const { data, error, count } = await supabase

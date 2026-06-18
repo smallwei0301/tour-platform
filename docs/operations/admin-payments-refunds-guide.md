@@ -49,23 +49,24 @@
 
 ## ④ 部分退款機制（目前現況）
 
-> **一句話：平台目前「有部分退款的政策計算與預覽，但執行端一律退全額」。**
+> **一句話：後台「執行退款」已支援手動輸入部分金額，ECPay 訂單會以該金額實際向 ECPay 退刷、現金訂單記錄為實退金額。**（旅客自助／自動退款與「取消＋退款」按鈕仍為全額。）
 
-### ① 退款政策（會算出部分比例）
-分層退款政策（資料表 `refund_policies`，欄位 `tiers`），依「距出發剩餘時數」決定可退比例 `refund_pct`（愈早取消退愈多）。計算函式 `calculateRefundAmount()` 回傳 `refundable_amount`（部分金額）。
+### ① 怎麼做部分退款（推薦流程）
+1. 訂單需為 `refund_pending`（退款中）。詳情下方「退款執行」區塊有 **「退款金額（NT$）」** 輸入框（`data-guide="refund-amount-input"`）。
+2. **留空＝全額退款**；填入較小的整數金額（≤ 訂單總額）即為部分退款。前端先擋「>0 整數、≤ 訂單總額」，後端 `resolveRefundAmount()` 再驗一次。
+3. **ECPay 訂單**：系統以你填的金額向 ECPay 送出退刷（`requestEcpayDoAction` 的 `TotalAmount`），成功後 `orders.refunded_amount` 記為該金額、訂單轉 `refunded`。
+4. **現金訂單**：需填退款原因；按下後 `refunded_amount` 記為你填的金額（金錢於線下退還）。
 
-### ② 旅客預覽與快照
-- 旅客申請退款前，透過退款預覽（`/api/v2/orders/[orderId]/refund-preview` + `RefundPreviewBanner`）看到「預計可退金額／比例」。
-- 送出申請當下，把比例快照寫入 `refund_requests.policy_snapshot`。
+> **⚠️ 授權未請款（信用卡尚未請款）只能全額取消授權。** 此情況走 ECPay `DoAction Action=N`（取消授權，全有或全無）；若填入部分金額會被擋下並回 `PARTIAL_REFUND_UNSUPPORTED`（409）。需部分退款請先完成請款後再退刷。
 
-### ⚠️ 重要落差：執行端目前一律退全額
-不論 ECPay 全額沖銷（`requestAllRefund` / AllRefund）、現金結案（`executeRefund`）、或「取消＋退款」（`createAdminPosRefundEntryDb`），都退**全額 `total_twd`**。政策算出的 `policy_snapshot.refundable_amount`（部分比例）**目前不被執行端採用**；即使開啟 `REFUND_AUTO_EXECUTE`，該值也只用於「是否可退／是否大於 0」的判斷，實退仍為全額。**因此部分退款目前尚無端到端自動執行能力。**
+### ② 退款政策仍會算出建議比例（供參考）
+分層退款政策（資料表 `refund_policies`，欄位 `tiers`），依「距出發剩餘時數」決定可退比例 `refund_pct`（愈早取消退愈多）。計算函式 `calculateRefundAmount()` 回傳 `refundable_amount`，並於旅客申請時快照到 `refund_requests.policy_snapshot`。維運可**參考**此建議金額填入退款金額欄。旅客申請退款前也會透過退款預覽（`/api/v2/orders/[orderId]/refund-preview` + `RefundPreviewBanner`）看到「預計可退金額／比例」。
 
-### 需要部分退款時的維運處置
-- **暫不要**用「取消＋退款」或「執行退款」按鈕（會退全額）。
-- **ECPay 訂單**：ECPay DoAction 退款 API 技術上支援指定金額，但本平台固定帶全額；請於 **ECPay 廠商後台**手動執行指定金額退刷，再於本後台訂單 **Admin Note** 記錄實退金額與原因。
-- **現金訂單**：線下退還部分金額後，同樣在 Admin Note 記錄。
-- 出帳公式 `(總額 − 已退款) × 85%` 已支援部分金額，但目前沒有寫入「部分 `refunded_amount`」的入口；若部分退款需正確反映導遊出帳，請聯繫工程調整 `refunded_amount`。
+### 仍為全額的入口
+旅客自助退款、自動退款（`REFUND_AUTO_EXECUTE`）、以及「取消＋退款」按鈕（`createAdminPosRefundEntryDb`）目前仍退**全額 `total_twd`**；`policy_snapshot.refundable_amount` 尚未被這些入口自動採用。需部分退款時請改用退款中訂單的「執行退款」並手動填金額。
+
+### ③ 出帳結算
+出帳公式 `(總額 − 已退款) × 85%` 已支援部分金額。透過「執行退款」輸入部分金額時，`refunded_amount` 會正確寫入，導遊出帳即自動反映部分退款。
 
 ---
 

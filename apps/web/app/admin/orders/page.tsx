@@ -37,6 +37,9 @@ const REFUND_ERROR_HINTS: Record<string, string> = {
   ECPAY_REFUND_FAILED: 'ECPay 退款失敗，請稍後再試或改走人工退款。',
   DB_UPDATE_FAILED: '資料庫寫入失敗，退款未完成，請重試。',
   UNAUTHORIZED: '登入已逾期或權限不足，請重新登入後再試。',
+  INVALID_REFUND_AMOUNT: '退款金額需為大於 0 的整數（新台幣）。',
+  REFUND_AMOUNT_EXCEEDS_TOTAL: '退款金額不可超過訂單總額。',
+  PARTIAL_REFUND_UNSUPPORTED: '此筆為授權未請款，只能全額取消授權；部分退款需先完成請款。請改填全額或改走人工處理。',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -151,6 +154,8 @@ export default function AdminOrdersPage() {
   const [timeline, setTimeline] = useState<any[]>([]);
   const [exceptionBusy, setExceptionBusy] = useState(false);
   const [refundReason, setRefundReason] = useState('');
+  // 部分退款：留空＝全額退款；可填較小金額（≤ 訂單總額）做部分退款。
+  const [refundAmount, setRefundAmount] = useState('');
   const [isExecutingRefund, setIsExecutingRefund] = useState(false);
   const [refundExecuted, setRefundExecuted] = useState(false);
   const [refundError, setRefundError] = useState('');
@@ -188,6 +193,7 @@ export default function AdminOrdersPage() {
   useEffect(() => {
     if (!selectedId) { setDetail(null); setTimeline([]); return; }
     setRefundReason('');
+    setRefundAmount('');
     setRefundExecuted(false);
     setRefundError('');
     setSaveError('');
@@ -207,10 +213,28 @@ export default function AdminOrdersPage() {
   const filtered = useMemo(() => rows, [rows]);
 
   async function executeRefund(orderId: string) {
+    // 部分退款：前端先做基本驗證（>0 整數、≤ 訂單總額），錯誤即時提示、不打 API。
+    const total = Number(detail?.totalTwd ?? 0);
+    const trimmedAmount = refundAmount.trim();
+    let parsedAmount: number | undefined;
+    if (trimmedAmount) {
+      const n = Number(trimmedAmount);
+      if (!Number.isInteger(n) || n <= 0) {
+        setRefundError('退款金額需為大於 0 的整數（新台幣）。留空＝全額退款。');
+        return;
+      }
+      if (total > 0 && n > total) {
+        setRefundError(`退款金額不可超過訂單總額 NT$${total.toLocaleString()}。`);
+        return;
+      }
+      parsedAmount = n;
+    }
+
     setIsExecutingRefund(true);
     setRefundError('');
     try {
-      const body = detail?.trade_no ? {} : { reason: refundReason };
+      const body: Record<string, unknown> = detail?.trade_no ? {} : { reason: refundReason };
+      if (parsedAmount !== undefined) body.refundAmount = parsedAmount;
       const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/refund-execute`, {
         method: 'POST',
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
@@ -543,6 +567,25 @@ export default function AdminOrdersPage() {
       {detail.status === 'refund_pending' && !refundExecuted && (
         <div data-guide="refund-execute-section" style={{ marginTop: 14, padding: '12px 14px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: '#9a3412', marginBottom: 8 }}>退款執行</div>
+          {/* 部分退款金額：留空＝全額退款；可填較小金額（≤ 訂單總額）做部分退款。
+              ECPay 訂單會以此金額向 ECPay 送出退刷（DoAction TotalAmount）；現金訂單則記錄為實退金額。 */}
+          <label style={{ display: 'block', fontSize: 12, color: '#9a3412', marginBottom: 4 }}>
+            退款金額（NT$）
+          </label>
+          <input
+            data-guide="refund-amount-input"
+            type="number"
+            min={1}
+            max={Number(detail.totalTwd ?? 0) || undefined}
+            step={1}
+            value={refundAmount}
+            onChange={e => setRefundAmount(e.target.value)}
+            placeholder={`留空＝全額退款 NT$${Number(detail.totalTwd ?? 0).toLocaleString()}`}
+            style={{ ...inputStyle, marginBottom: 4 }}
+          />
+          <p style={{ margin: '0 0 8px', fontSize: 11, color: '#b45309', lineHeight: 1.6 }}>
+            留空為全額退款。填較小金額即為<strong>部分退款</strong>（ECPay 訂單會以此金額向 ECPay 送出退刷；授權未請款者僅能全額取消）。
+          </p>
           {/* AC3: cash orders (no trade_no) require reason textarea */}
           {!detail.trade_no && (
             <textarea

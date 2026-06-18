@@ -139,9 +139,11 @@ export default function AdminRefundsPage() {
               <li>或於訂單詳情用「執行退款」按鈕（現金需填退款原因）標記為已退款。</li>
             </ol>
 
-            <p style={{ margin: '10px 0 4px', fontWeight: 700 }}>⚠️ 部分退款</p>
+            <p style={{ margin: '10px 0 4px', fontWeight: 700 }}>💠 部分退款</p>
             <p style={{ margin: 0 }}>
-              目前所有執行入口都退<strong>全額</strong>；部分退款需於 ECPay 廠商後台或線下處理，並在訂單 Admin Note 記錄實退金額。詳見下方說明頁。
+              需部分退款時，請到<strong>訂單詳情</strong>、退款中訂單的「執行退款」區塊，於「退款金額（NT$）」欄填入金額（留空＝全額）：
+              ECPay 訂單會以該金額實際向 ECPay 退刷、現金訂單記錄為實退金額。
+              （本頁「完成」與「取消＋退款」按鈕仍為全額；授權未請款只能全額取消授權。）詳見下方說明頁。
             </p>
 
             <p style={{ margin: '12px 0 0' }}>

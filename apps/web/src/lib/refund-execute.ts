@@ -49,6 +49,13 @@ export interface ExecuteRefundInput {
   now?: () => string;
   /** Optional hook called after successful refund. Failures are non-blocking. */
   postRefundHook?: (orderId: string) => Promise<void>;
+  /**
+   * Optional partial-refund amount (TWD). When omitted/null/empty the order's
+   * full `total_twd` is refunded (backward compatible). When provided it must be
+   * a positive integer ≤ total_twd; the resolved amount is what gets sent to
+   * ECPay (AllRefund TotalAmount) and persisted to `refunded_amount`.
+   */
+  refundAmount?: number | string | null;
 }
 
 export interface RefundExecutionOutcome {
@@ -82,6 +89,13 @@ export interface ExecuteEcpayReversalInput {
     refundedAmountTwd: number | null;
   }) => Promise<UpdateOrderResult>;
   recordIncident?: (args: { message: string; metadata?: Record<string, unknown> }) => void;
+  /**
+   * Optional partial-refund amount (TWD). Only honoured for captured-credit-card
+   * refunds (Action=R); an authorization void (Action=N) is all-or-nothing, so a
+   * partial amount on an un-captured authorization is rejected with
+   * PARTIAL_REFUND_UNSUPPORTED. Omitted/null/empty → full `total_twd`.
+   */
+  refundAmount?: number | string | null;
 }
 
 export function getFailureResult(code: string, message: string): RefundExecutionOutcome {
@@ -113,6 +127,62 @@ function failPersist(message: string) {
   return getFailureResult('DB_UPDATE_FAILED', `failed to persist refund result: ${message}`);
 }
 
+export interface ResolvedRefundAmount {
+  amount: number;
+  /** true when the resolved amount is strictly less than the order total */
+  partial: boolean;
+}
+
+export interface RefundAmountError {
+  error: { code: string; message: string };
+}
+
+/**
+ * Normalise the requested refund amount against the order total.
+ *
+ * - undefined / null / '' → full refund (`{ amount: total, partial: false }`)
+ * - positive integer ≤ total → partial/full refund as requested
+ * - anything else → `{ error }` (caller maps to a 400 response)
+ *
+ * Amounts must be whole TWD (ECPay rejects fractional amounts).
+ */
+export function resolveRefundAmount(
+  requested: unknown,
+  totalAmount: number,
+): ResolvedRefundAmount | RefundAmountError {
+  if (requested === undefined || requested === null || requested === '') {
+    return { amount: totalAmount, partial: false };
+  }
+
+  const value = typeof requested === 'number' ? requested : Number(String(requested).trim());
+
+  if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
+    return {
+      error: {
+        code: 'INVALID_REFUND_AMOUNT',
+        message: 'refundAmount must be a positive integer (TWD)',
+      },
+    };
+  }
+
+  if (value > totalAmount) {
+    return {
+      error: {
+        code: 'REFUND_AMOUNT_EXCEEDS_TOTAL',
+        message: `refundAmount ${value} exceeds order total ${totalAmount}`,
+      },
+    };
+  }
+
+  return { amount: value, partial: value < totalAmount };
+}
+
+function isRefundAmountError(
+  resolved: ResolvedRefundAmount | RefundAmountError,
+): resolved is RefundAmountError {
+  return 'error' in resolved;
+}
+
 export async function executeRefund(input: ExecuteRefundInput): Promise<RefundExecutionOutcome> {
   const { order, body, requestAllRefund, updateOrder, now = () => new Date().toISOString(), postRefundHook } = input;
 
@@ -126,6 +196,12 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
     };
   }
 
+  const resolvedAmount = resolveRefundAmount(input.refundAmount, order.total_twd);
+  if (isRefundAmountError(resolvedAmount)) {
+    return { status: 400, body: fail(resolvedAmount.error.code, resolvedAmount.error.message) };
+  }
+  const refundAmount = resolvedAmount.amount;
+
   if (!order.trade_no) {
     const reason = String(body?.reason ?? '').trim();
     if (!reason) {
@@ -137,7 +213,7 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
 
     const { error, data, count } = await updateOrder(order.id, {
       status: 'refunded',
-      refunded_amount: order.total_twd,
+      refunded_amount: refundAmount,
       refunded_at: now(),
     });
 
@@ -159,6 +235,8 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
       body: ok({
         refunded: true,
         cashOrder: true,
+        refundedAmount: refundAmount,
+        partial: resolvedAmount.partial,
       }),
     };
   }
@@ -168,7 +246,7 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
     result = await requestAllRefund({
       merchantTradeNo: order.merchant_trade_no ?? order.id,
       tradeNo: order.trade_no,
-      totalAmount: order.total_twd,
+      totalAmount: refundAmount,
       reason: String(body?.reason ?? '').trim() || undefined,
     });
   } catch (err) {
@@ -189,7 +267,7 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
     result.ecpayTradeNo || order.ecpay_refund_trade_no || order.merchant_trade_no || order.id;
   const { error, data, count } = await updateOrder(order.id, {
     status: 'refunded',
-    refunded_amount: order.total_twd,
+    refunded_amount: refundAmount,
     refunded_at: now(),
     ecpay_refund_trade_no: ecpayTradeNo,
   });
@@ -209,7 +287,13 @@ export async function executeRefund(input: ExecuteRefundInput): Promise<RefundEx
 
   return {
     status: 200,
-    body: ok({ refunded: true, rtnCode: result.rtnCode, ecpayRefundTradeNo: ecpayTradeNo }),
+    body: ok({
+      refunded: true,
+      rtnCode: result.rtnCode,
+      ecpayRefundTradeNo: ecpayTradeNo,
+      refundedAmount: refundAmount,
+      partial: resolvedAmount.partial,
+    }),
   };
 }
 
@@ -269,6 +353,12 @@ export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Pr
   const { order, body, resolveLatestReversiblePayment, queryTradeInfo, requestDoAction, persistReversal, recordIncident } = input;
   const reason = String(body?.reason ?? '').trim() || undefined;
 
+  const resolvedAmount = resolveRefundAmount(input.refundAmount, order.total_twd);
+  if (isRefundAmountError(resolvedAmount)) {
+    return { status: 400, body: fail(resolvedAmount.error.code, resolvedAmount.error.message) };
+  }
+  const refundAmount = resolvedAmount.amount;
+
   const resolved = await resolveLatestReversiblePayment(order.id);
   if (resolved.ambiguous || !resolved.payment) {
     recordIncident?.({
@@ -306,10 +396,26 @@ export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Pr
     return { status: 409, body: fail('ECPAY_STATE_UNKNOWN', 'provider state unknown/inconsistent; reversal blocked') };
   }
 
+  // Action=N voids the full authorization (all-or-nothing); a partial amount only
+  // makes sense for a captured-card refund (Action=R). Block the impossible combo.
+  if (resolvedAmount.partial && action === 'N') {
+    recordIncident?.({
+      message: 'refund-execute blocked: partial refund requested on un-captured authorization (void only)',
+      metadata: { orderId: order.id, refundAmount, totalAmount: order.total_twd },
+    });
+    return {
+      status: 409,
+      body: fail(
+        'PARTIAL_REFUND_UNSUPPORTED',
+        'authorization not captured; only a full void is possible (partial refund requires a captured payment)',
+      ),
+    };
+  }
+
   const reversalResult = await requestDoAction({
     merchantTradeNo: payment.merchant_trade_no,
     tradeNo: query.tradeNo || payment.trade_no || order.trade_no || '',
-    totalAmount: order.total_twd,
+    totalAmount: refundAmount,
     reason,
     action,
   });
@@ -330,7 +436,7 @@ export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Pr
     eventType,
     providerStatus: query.tradeStatus || payment.provider_status || '',
     reversedTradeNo: reversalResult.ecpayTradeNo || query.tradeNo || payment.trade_no,
-    refundedAmountTwd: action === 'R' ? order.total_twd : null,
+    refundedAmountTwd: action === 'R' ? refundAmount : null,
   });
 
   if (!hasPersisted(persist)) {
@@ -339,6 +445,12 @@ export async function executeEcpayReversal(input: ExecuteEcpayReversalInput): Pr
 
   return {
     status: 200,
-    body: ok({ reversed: true, mode: eventType, rtnCode: reversalResult.rtnCode }),
+    body: ok({
+      reversed: true,
+      mode: eventType,
+      rtnCode: reversalResult.rtnCode,
+      refundedAmount: action === 'R' ? refundAmount : null,
+      partial: action === 'R' ? resolvedAmount.partial : false,
+    }),
   };
 }
