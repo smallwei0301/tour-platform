@@ -13,6 +13,7 @@ import {
 } from './services.mjs';
 import { calculateDiscount } from './promo-discount.ts';
 import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
+import { buildGuideShopView } from './guide-shop.mjs';
 import { applyUpsertWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
 import {
   listAdminOrdersFallback,
@@ -3363,6 +3364,87 @@ export async function getGuideBySlugDb(slug) {
 }
 
 // ---------------------------------------------------------------
+// 導遊商店頁聚合（Guide Shop，#1475）
+// ---------------------------------------------------------------
+
+/**
+ * 回傳導遊商店頁所需資料：導遊公開資訊 + 各（已發佈）行程的 active 方案，依地區分組。
+ * 重用 getGuideBySlugDb（僅公開欄位，不含匯款資訊）與 getActivityBySlugDb（方案），
+ * 因此 in-memory fallback 自動沿用 fixtures。沒有任何 active 方案的行程會被略過。
+ */
+export async function getGuideShopDb(slug) {
+  const guide = await getGuideBySlugDb(slug);
+  if (!guide) return null;
+
+  const details = [];
+  for (const a of guide.activities || []) {
+    if (a.status && a.status !== 'published') continue;
+    let detail = null;
+    try {
+      detail = await getActivityBySlugDb(a.slug, { required: false });
+    } catch {
+      detail = null;
+    }
+    details.push({
+      summary: {
+        id: a.id,
+        slug: a.slug,
+        title: a.title,
+        region: a.region,
+        regionSlug: detail?.regionSlug || a.regionSlug || null,
+        status: a.status || 'published',
+      },
+      plans: detail?.plans || [],
+    });
+  }
+
+  // 純函式做過濾／投影／分組（單測見 tests/api/issue1475-guide-shop.test.mjs）。
+  return buildGuideShopView(guide, details);
+}
+
+/**
+ * 取得某筆預約對應導遊的不公開匯款資訊（#1475）。
+ * 僅供付款步驟使用——回傳 order 狀態與下單者 email 供路由層做「本人 + pending_payment」授權，
+ * db 層不做授權判斷（與既有 gateway 慣例一致）。找不到 booking 回 null。
+ * in-memory fallback 無真實匯款資料，回傳 null（fixture 模式不揭露）。
+ */
+export async function getGuideTransferInfoForBookingDb(bookingId) {
+  if (!hasSupabaseEnv() || !bookingId) return null;
+  const supabase = await getSupabase();
+  const { data: booking, error: bErr } = await supabase
+    .from('bookings')
+    .select('id, guide_id, order_id')
+    .eq('id', bookingId)
+    .maybeSingle();
+  if (bErr) throw new Error(bErr.message);
+  if (!booking || !booking.order_id) return null;
+
+  const [{ data: order, error: oErr }, { data: gp, error: gErr }] = await Promise.all([
+    supabase.from('orders').select('id, status, contact_email').eq('id', booking.order_id).maybeSingle(),
+    booking.guide_id
+      ? supabase
+          .from('guide_profiles')
+          .select('display_name, bank_name, account_name, account_number, transfer_note')
+          .eq('id', booking.guide_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (oErr) throw new Error(oErr.message);
+  if (gErr) throw new Error(gErr.message);
+  if (!order) return null;
+
+  return {
+    orderStatus: order.status,
+    contactEmail: order.contact_email ?? null,
+    guideName: gp?.display_name ?? null,
+    bankName: gp?.bank_name ?? null,
+    accountName: gp?.account_name ?? null,
+    accountNumber: gp?.account_number ?? null,
+    transferNote: gp?.transfer_note ?? null,
+  };
+}
+
+// ---------------------------------------------------------------
 // Admin — activities CRUD
 // ---------------------------------------------------------------
 
@@ -4739,12 +4821,16 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
 }
 
 export async function updateGuideProfileByGuideId(guideId, fields) {
-  // fields: allowed subset only — display_name, bio, region, languages, specialties, headline
+  // fields: allowed subset only — display_name, bio, region, languages, specialties, headline,
+  // 以及不公開匯款資訊（#1475）：bank_name, account_name, account_number, transfer_note。
   if (!hasSupabaseEnv()) {
     return { ok: true }; // no-op in fixture mode
   }
   const supabase = await getSupabase();
-  const allowed = ['display_name', 'bio', 'region', 'languages', 'specialties', 'headline'];
+  const allowed = [
+    'display_name', 'bio', 'region', 'languages', 'specialties', 'headline',
+    'bank_name', 'account_name', 'account_number', 'transfer_note',
+  ];
   const update = {};
   for (const k of allowed) {
     if (Object.prototype.hasOwnProperty.call(fields, k)) {
