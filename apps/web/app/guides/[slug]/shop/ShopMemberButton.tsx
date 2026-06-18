@@ -29,8 +29,12 @@ export function ShopMemberButton({ slug }: { slug: string }) {
     <Link
       href={href}
       data-testid="shop-member-button"
-      className="tp-btn tp-btn-ghost"
-      style={{ fontSize: 14, padding: '6px 14px', whiteSpace: 'nowrap' }}
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 4,
+        fontSize: 14, fontWeight: 700, padding: '8px 16px', whiteSpace: 'nowrap',
+        borderRadius: 999, background: 'var(--tp-primary)', color: '#fff',
+        textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
+      }}
     >
       {isMember ? '會員專區' : '會員登入'}
     </Link>
