@@ -45,7 +45,7 @@ export async function generateMetadata(
       type: 'profile',
       images: guide?.profilePhotoUrl
         ? [{ url: guide.profilePhotoUrl }]
-        : [{ url: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80', width: 1200, height: 630, alt: `${name} | Midao 祕島` }],
+        : [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: `${name} | Midao 祕島` }],
     },
     twitter: {
       card: 'summary',
