@@ -18,7 +18,7 @@ import {
 } from '../../../../../../src/lib/admin-session.mjs';
 import { requestAllRefund, requestEcpayDoAction, queryEcpayTradeInfo } from '../../../../../../src/lib/ecpay';
 import { createClient } from '@supabase/supabase-js';
-import { executeRefund, executeEcpayReversal } from '../../../../../../src/lib/refund-execute';
+import { executeRefund, executeEcpayReversal, resolvePartialRefundStatus } from '../../../../../../src/lib/refund-execute';
 import { recordRefundReversalDb } from '../../../../../../src/lib/db.mjs';
 import { recordIncident } from '../../../../../../src/lib/incidents';
 import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
@@ -31,6 +31,51 @@ function getServiceClient() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
+}
+
+/**
+ * 把本次退款金額記入 operations_tracking.refund_amount_twd —— 這是導遊出帳結算
+ * （settlement-config.ts / settlement sweep / guide payout）真正讀取的「已退款」欄位，
+ * 部分退款必須寫到這裡才會反映到導遊撥款（effective GMV = total − refund_amount_twd）。
+ *
+ * 採針對性 upsert：只覆寫 refund_amount_twd，保留 ops 既有欄位（manual_minutes、
+ * has_complaint、holds 等），避免清空人工輸入。失敗不阻斷退款回應（provider 端已退成功），
+ * 改記 incident 供補登。
+ */
+async function recordOperationsRefundAmount(
+  supabase: ReturnType<typeof getServiceClient>,
+  orderId: string,
+  refundAmountTwd: number,
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const now = new Date().toISOString();
+    const { data: existing, error: selectErr } = await supabase
+      .from('operations_tracking')
+      .select('id')
+      .eq('order_id', orderId)
+      .limit(1);
+
+    if (selectErr) {
+      return { ok: false, error: selectErr.message || 'failed to read operations_tracking' };
+    }
+
+    if (Array.isArray(existing) && existing.length > 0) {
+      const { error } = await supabase
+        .from('operations_tracking')
+        .update({ refund_amount_twd: refundAmountTwd, updated_at: now })
+        .eq('order_id', orderId);
+      if (error) return { ok: false, error: error.message || 'failed to update operations_tracking' };
+    } else {
+      const { error } = await supabase
+        .from('operations_tracking')
+        .insert({ id: crypto.randomUUID(), order_id: orderId, refund_amount_twd: refundAmountTwd, updated_at: now });
+      if (error) return { ok: false, error: error.message || 'failed to insert operations_tracking' };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'operations_tracking write failed' };
+  }
 }
 
 export async function POST(
@@ -148,6 +193,10 @@ export async function POST(
     // body is optional for ECPay orders
   }
 
+  // Optional partial-refund amount (TWD). Omitted → full total_twd (back-compat).
+  // Validation (positive integer ≤ total) is enforced inside the executors.
+  const refundAmount = body?.refundAmount as number | string | null | undefined;
+
   const resolveLatestReversiblePayment = async (targetOrderId: string) => {
     const { data, error } = await supabase
       .from('payments')
@@ -166,6 +215,26 @@ export async function POST(
     return { payment: rows[0] as any, ambiguous: false };
   };
 
+  // 部分退款須把訂單還原成「可結算」狀態（見 resolvePartialRefundStatus）。退款前狀態
+  // 在訂單進入 refund_pending 時記入 audit_logs.metadata.previousOrderStatus；讀回最近一筆
+  // refund_requested log 還原之，讓未退部分仍撥款給導遊。讀失敗則 fallback completed。
+  let previousOrderStatus: string | null = null;
+  try {
+    const { data: refundLog } = await supabase
+      .from('audit_logs')
+      .select('metadata')
+      .eq('order_id', order.id)
+      .eq('action', 'refund_requested')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const prev = (refundLog?.metadata as { previousOrderStatus?: unknown } | null)?.previousOrderStatus;
+    previousOrderStatus = typeof prev === 'string' ? prev : null;
+  } catch {
+    previousOrderStatus = null;
+  }
+  const partialTargetStatus = resolvePartialRefundStatus(previousOrderStatus);
+
   const latestReversiblePayment = await resolveLatestReversiblePayment(order.id);
   const shouldUseEcpayReversal = Boolean(latestReversiblePayment.payment) || latestReversiblePayment.ambiguous || Boolean(order.trade_no);
 
@@ -173,6 +242,7 @@ export async function POST(
     ? await executeEcpayReversal({
       order: order as any,
       body,
+      refundAmount,
       resolveLatestReversiblePayment: async () => latestReversiblePayment,
       queryTradeInfo: async (merchantTradeNo) => queryEcpayTradeInfo({ merchantTradeNo }),
       requestDoAction: async ({ merchantTradeNo, tradeNo, totalAmount, reason, action }) => requestEcpayDoAction({
@@ -190,6 +260,7 @@ export async function POST(
         providerStatus,
         reversedTradeNo,
         refundedAmountTwd,
+        partial,
       }) => {
         const now = new Date().toISOString();
 
@@ -316,14 +387,27 @@ export async function POST(
           };
         }
 
+        // orders 真實 schema 只有 status + payment_status；refunded_amount / refunded_at /
+        // ecpay_refund_trade_no 皆不存在（無 migration、無讀取點），寫入會 500。退款明細
+        // （時間/trade_no/金額）已寫入 payments + payment_events；部分退款金額另記入
+        // operations_tracking.refund_amount_twd（出帳真正讀的欄位）。
+        // status：部分退刷（Action=R + partial）保持可結算狀態（還原退款前狀態），讓未退
+        // 部分仍撥款給導遊；全額退款 / void（授權未請款，一律全額）維持 refunded。
         const orderResult = await supabase
           .from('orders')
           .update({
-            status: 'refunded',
-            payment_status: eventType === 'authorization_voided' ? 'voided' : 'refunded',
-            refunded_at: now,
-            refunded_amount: refundedAmountTwd ?? 0,
-            ecpay_refund_trade_no: reversedTradeNo,
+            status:
+              eventType !== 'authorization_voided' && partial
+                ? partialTargetStatus
+                : 'refunded',
+            // partial Action=R → partially_refunded；void/full → voided/refunded。
+            payment_status:
+              eventType === 'authorization_voided'
+                ? 'voided'
+                : partial
+                ? 'partially_refunded'
+                : 'refunded',
+            updated_at: now,
           })
           .eq('id', targetOrderId)
           .select('id');
@@ -355,6 +439,8 @@ export async function POST(
     : await executeRefund({
       order: order as any,
       body,
+      refundAmount,
+      partialTargetStatus,
       requestAllRefund,
       updateOrder: async (targetOrderId, payload) => {
         const { data, error, count } = await supabase
@@ -368,6 +454,34 @@ export async function POST(
         await recordRefundReversalDb(supabase, { orderId: refundedOrderId, actor: 'refund-execute' });
       },
     });
+
+  // 出帳同步：把本次退款金額寫入 operations_tracking.refund_amount_twd，讓導遊撥款
+  // 反映（含部分退款）。冪等重放（alreadyRefunded）不覆寫；void 視為全額退款記 total。
+  if (outcome.status === 200 && outcome.body && (outcome.body as { ok?: boolean }).ok) {
+    const data = ((outcome.body as { data?: Record<string, unknown> }).data) ?? {};
+    if (!data.alreadyRefunded) {
+      let opsRefundTwd: number | null = null;
+      if (typeof data.refundedAmount === 'number') {
+        opsRefundTwd = data.refundedAmount;
+      } else if (data.mode === 'authorization_voided') {
+        // 授權尚未請款的全額 void：等同全額退款，記入訂單總額。
+        opsRefundTwd = Number(order.total_twd) || 0;
+      }
+
+      if (opsRefundTwd != null) {
+        const result = await recordOperationsRefundAmount(supabase, orderId, opsRefundTwd);
+        if (!result.ok) {
+          void recordIncident({
+            source: 'admin_refund_execute',
+            severity: 'error',
+            category: 'payment',
+            message: 'refund executed but operations_tracking.refund_amount_twd write failed (payout may not reflect refund)',
+            metadata: { orderId, refundAmountTwd: opsRefundTwd, error: result.error },
+          });
+        }
+      }
+    }
+  }
 
   // 🔔 Fire-and-forget：退款成功時派送 Telegram（管理員群組 + 導遊 + 旅客）。
   // 只在本次真的執行退款成功（200）時發送；前面的修復/冪等重放路徑已提前 return。

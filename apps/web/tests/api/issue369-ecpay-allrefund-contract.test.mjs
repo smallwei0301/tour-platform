@@ -219,7 +219,7 @@ test('AC3a: helper updates refunded status on success', async () => {
   assert.strictEqual(updated.payload.status, 'refunded');
 });
 
-test('AC3b: helper sets refunded_amount on success', async () => {
+test('AC3b: helper sets payment_status=refunded on full-refund success', async () => {
   const updated = { payload: null };
   const order = {
     id: 'order-id-6',
@@ -244,10 +244,11 @@ test('AC3b: helper sets refunded_amount on success', async () => {
     },
   });
 
-  assert.strictEqual(updated.payload.refunded_amount, 450);
+  assert.strictEqual(updated.payload.payment_status, 'refunded');
+  assert.ok(!('refunded_amount' in updated.payload), 'orders.refunded_amount 欄位不存在於 schema，不應寫入');
 });
 
-test('AC3c: helper sets refunded_at to now() on success', async () => {
+test('AC3c: helper bumps updated_at to now() on success（orders 無 refunded_at 欄）', async () => {
   const now = '2026-01-01T00:00:00.000Z';
   const updated = { payload: null };
   const order = {
@@ -274,10 +275,11 @@ test('AC3c: helper sets refunded_at to now() on success', async () => {
     now: () => now,
   });
 
-  assert.strictEqual(updated.payload.refunded_at, now);
+  assert.strictEqual(updated.payload.updated_at, now);
+  assert.ok(!('refunded_at' in updated.payload), 'orders 無 refunded_at 欄位，不應寫入');
 });
 
-test('AC3d: helper sets ecpay_refund_trade_no on success', async () => {
+test('AC3d: helper returns ecpayRefundTradeNo（orders 無此欄，回應仍帶 trade_no）', async () => {
   const updated = { payload: null };
   const order = {
     id: 'order-id-8',
@@ -287,7 +289,7 @@ test('AC3d: helper sets ecpay_refund_trade_no on success', async () => {
     merchant_trade_no: 'M888',
   };
 
-  await executeRefund({
+  const outcome = await executeRefund({
     order,
     body: {},
     requestAllRefund: async () => ({
@@ -302,7 +304,9 @@ test('AC3d: helper sets ecpay_refund_trade_no on success', async () => {
     },
   });
 
-  assert.strictEqual(updated.payload.ecpay_refund_trade_no, 'RF-888');
+  // orders schema 無 ecpay_refund_trade_no 欄位 → 不寫入；trade_no 改由回應/payments 承載。
+  assert.ok(!('ecpay_refund_trade_no' in updated.payload), 'orders 不應寫 ecpay_refund_trade_no');
+  assert.strictEqual(outcome.body.data.ecpayRefundTradeNo, 'RF-888');
 });
 
 // ── AC4: idempotency — already refunded returns 200 alreadyRefunded ───────────
@@ -457,8 +461,10 @@ test('AC5d: helper persists ecpay refund trade number from ECPay response, not r
   });
 
   assert.strictEqual(outcome.status, 200);
-  assert.strictEqual(updated.payload.ecpay_refund_trade_no, 'RF-TRADENO');
-  assert.notStrictEqual(updated.payload.ecpay_refund_trade_no, '1');
+  // orders schema 無 ecpay_refund_trade_no 欄位 → trade_no 改由回應承載（取自 ECPay 回應，非 rtnCode）。
+  assert.ok(!('ecpay_refund_trade_no' in updated.payload), 'orders 不應寫 ecpay_refund_trade_no');
+  assert.strictEqual(outcome.body.data.ecpayRefundTradeNo, 'RF-TRADENO');
+  assert.notStrictEqual(outcome.body.data.ecpayRefundTradeNo, '1');
 });
 
 
