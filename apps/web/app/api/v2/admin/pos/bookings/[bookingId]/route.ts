@@ -23,6 +23,16 @@ export async function GET(_: Request, context: { params: Promise<{ bookingId: st
   try {
     const supabase = await createClient();
 
+    // Service-role client for payments / payment_events — those tables are
+    // service_role-only after issue #614 (REVOKE from anon/authenticated). The
+    // anon client reads them as empty, silently dropping payment rows from the
+    // POS booking timeline; route those reads through paymentDb instead.
+    const { createClient: createServiceClient } = await import('@supabase/supabase-js');
+    const paymentDb = createServiceClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
       .select('id, booking_no, status, order_id, activity_id, schedule_id, selected_date, qty, customer_name, customer_email, created_at, updated_at')
@@ -41,8 +51,8 @@ export async function GET(_: Request, context: { params: Promise<{ bookingId: st
     const [orderRes, logsRes, paymentsRes, paymentEventsRes, refundsRes, auditRes] = await Promise.all([
       supabase.from('orders').select('id, order_no, status, payment_status, total_twd, created_at, updated_at').eq('id', orderId).single(),
       supabase.from('booking_status_logs').select('id, from_status, to_status, action, actor_role, actor_user_id, metadata, created_at').eq('booking_id', bookingId).order('created_at', { ascending: true }),
-      supabase.from('payments').select('id, provider, trade_no, amount_twd, status, paid_at, created_at, raw_payload').eq('order_id', orderId).order('created_at', { ascending: true }),
-      supabase.from('payment_events').select('id, payment_id, event_type, payload, created_at').order('created_at', { ascending: true }),
+      paymentDb.from('payments').select('id, provider, trade_no, amount_twd, status, paid_at, created_at, raw_payload').eq('order_id', orderId).order('created_at', { ascending: true }),
+      paymentDb.from('payment_events').select('id, payment_id, event_type, payload, created_at').order('created_at', { ascending: true }),
       supabase.from('refund_requests').select('id, request_id, reason, note, status, requested_at, approved_at, refunded_at, admin_note').eq('order_id', orderId).order('requested_at', { ascending: true }),
       supabase.from('audit_logs').select('id, action, actor, metadata, created_at').eq('target_id', orderId).order('created_at', { ascending: true }),
     ]);

@@ -6,6 +6,12 @@ import { useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { createOrder, fetchActivityByIdOrSlug, fetchActivityBySlug, submitEcpayCallback } from '../../../src/lib/client-api';
 import { isBookingV2ShellEnabled } from '../../../src/config/feature-flags.mjs';
+
+// Client component：用字面量 process.env.NEXT_PUBLIC_* 讓 Next build 內嵌（透過 env 參數
+// 間接讀取在 client bundle 不會被替換 → 永遠 undefined）。#1475 匯款付款選項旗標。
+const TRANSFER_PAYMENT_ENABLED =
+  process.env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED === '1' ||
+  process.env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED === 'true';
 import { inferPlanIdForBookingUrl } from '../../../src/lib/booking-entry.mjs';
 import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta-state.mjs';
 import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
@@ -587,6 +593,13 @@ function BookingInnerV2FlagShell() {
   const [agreed, setAgreed] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState('');
   const [step, setStep] = useState(1);
+  // 付款方式（#1475）：ecpay（信用卡）或 transfer（自行匯款，人工查帳）
+  const [payMethod, setPayMethod] = useState<'ecpay' | 'transfer'>('ecpay');
+  const [transferInfo, setTransferInfo] = useState<null | {
+    configured: boolean; guideName?: string; bankName?: string; accountName?: string; accountNumber?: string; transferNote?: string | null;
+  }>(null);
+  const [transferSubmitted, setTransferSubmitted] = useState(false);
+  const transferEnabled = TRANSFER_PAYMENT_ENABLED;
   const canRunV2PlanFlow = Boolean(v2PlanKey);
 
   useEffect(() => {
@@ -756,6 +769,25 @@ function BookingInnerV2FlagShell() {
     fetchSlots();
   }, [activity?.id, canRunV2PlanFlow, v2PlanKey, selectedDate, timezone, useLegacyFallback, selectedSlotStartAt, effectiveMinParticipants, activeScheduleId]);
 
+  // 選擇匯款時載入該筆預約的匯款資訊（#1475）。訪客以 contactEmail 授權。
+  useEffect(() => {
+    if (step !== 3 || payMethod !== 'transfer' || !createdBookingId) return;
+    let mounted = true;
+    (async () => {
+      try {
+        const q = contactEmail ? `?contactEmail=${encodeURIComponent(contactEmail)}` : '';
+        const res = await fetch(`/api/v2/bookings/${createdBookingId}/transfer-info${q}`, { cache: 'no-store' });
+        const json = await res.json();
+        if (!mounted) return;
+        if (res.ok && json?.success) setTransferInfo(json.data);
+        else setTransferInfo({ configured: false });
+      } catch {
+        if (mounted) setTransferInfo({ configured: false });
+      }
+    })();
+    return () => { mounted = false; };
+  }, [step, payMethod, createdBookingId, contactEmail]);
+
   async function handleCreateDraftBookingAndGoPayment() {
     if (!resolvedActivityId || !resolvedPlanId || !selectedSlotStartAt || !canGoStep3) return;
     try {
@@ -829,13 +861,19 @@ function BookingInnerV2FlagShell() {
           'Content-Type': 'application/json',
           ...(correlationId ? { 'x-correlation-id': correlationId } : {}),
         },
-        body: JSON.stringify({ provider: 'ecpay' }),
+        body: JSON.stringify({ provider: payMethod }),
       });
       const checkoutJson = await checkoutRes.json();
       if (!checkoutRes.ok || !checkoutJson?.success) {
         throw new Error(
           checkoutJson?.error?.messageZh || checkoutJson?.error?.message || '此場次目前無法預約，請重新整理或選擇其他日期。'
         );
+      }
+
+      // 匯款（#1475）：不導向 ECPay，改顯示「已送出、等待人工查帳」確認。
+      if (payMethod === 'transfer') {
+        setTransferSubmitted(true);
+        return;
       }
 
       const paymentFormHtml = checkoutJson?.data?.paymentFormHtml;
@@ -1284,34 +1322,75 @@ function BookingInnerV2FlagShell() {
           {step === 3 && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>付款確認（建立預約後）</h3>
-              <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, border: '2px solid var(--tp-primary)', borderRadius: 10, padding: 12 }}>
-                  💳 信用卡（Visa / Mastercard / JCB）
+
+              {transferSubmitted ? (
+                <div data-testid="booking-transfer-submitted" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 16 }}>
+                  <p style={{ margin: 0, fontWeight: 700, color: '#15803d' }}>✅ 已送出匯款預約</p>
+                  <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--tp-muted)' }}>
+                    請依匯款資訊完成轉帳，我們將人工核對入帳後為您確認預約。可至「我的訂單」查看狀態。
+                  </p>
+                  <Link className="tp-link" href="/me/orders" style={{ display: 'inline-block', marginTop: 10 }}>前往我的訂單 →</Link>
                 </div>
-                <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: 0 }}>
-                  確認後將前往 ECPay 安全付款頁，實際可用付款方式以付款頁顯示為準。
-                </p>
-              </div>
-              <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
-              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>🔒 付款由 ECPay 加密處理，資料不經本站</p>
-              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>完成本步驟後才會啟動付款提供商流程。</p>
-              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdBookingId || '尚未建立'}</p>
-              {!createdBookingId && (
-                <p style={{ fontSize: 13, color: 'var(--tp-danger)', marginTop: 4 }}>
-                  請先回上一步建立訂單後，再進行付款確認。
-                </p>
+              ) : (
+                <>
+                  {/* 付款方式選擇 */}
+                  <div style={{ display: 'grid', gap: 10, marginBottom: 16 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, border: `2px solid ${payMethod === 'ecpay' ? 'var(--tp-primary)' : 'var(--tp-border)'}`, borderRadius: 10, padding: 12, cursor: 'pointer' }}>
+                      <input type="radio" name="payMethod" checked={payMethod === 'ecpay'} onChange={() => setPayMethod('ecpay')} />
+                      💳 信用卡（Visa / Mastercard / JCB）
+                    </label>
+                    {transferEnabled && (
+                      <label data-testid="booking-pay-transfer" style={{ display: 'flex', alignItems: 'center', gap: 10, border: `2px solid ${payMethod === 'transfer' ? 'var(--tp-primary)' : 'var(--tp-border)'}`, borderRadius: 10, padding: 12, cursor: 'pointer' }}>
+                        <input type="radio" name="payMethod" checked={payMethod === 'transfer'} onChange={() => setPayMethod('transfer')} />
+                        🏦 自行匯款（人工核帳）
+                      </label>
+                    )}
+                  </div>
+
+                  {payMethod === 'ecpay' && (
+                    <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 8px' }}>
+                      確認後將前往 ECPay 安全付款頁，實際可用付款方式以付款頁顯示為準。🔒 付款由 ECPay 加密處理，資料不經本站。
+                    </p>
+                  )}
+
+                  {payMethod === 'transfer' && (
+                    <div data-testid="booking-transfer-info" style={{ border: '1px solid var(--tp-border)', borderRadius: 10, padding: 14, marginBottom: 12, background: 'var(--tp-bg-soft, #f9fafb)' }}>
+                      {transferInfo == null && <p style={{ color: 'var(--tp-muted)', margin: 0 }}>載入匯款資訊中…</p>}
+                      {transferInfo && !transferInfo.configured && (
+                        <p style={{ color: 'var(--tp-danger)', margin: 0 }}>此導遊尚未提供匯款資訊，請改用信用卡付款。</p>
+                      )}
+                      {transferInfo?.configured && (
+                        <div style={{ fontSize: 14, lineHeight: 1.9 }}>
+                          <p style={{ margin: 0 }}>銀行：{transferInfo.bankName}</p>
+                          <p style={{ margin: 0 }}>戶名：{transferInfo.accountName}</p>
+                          <p style={{ margin: 0 }}>帳號：{transferInfo.accountNumber}</p>
+                          {transferInfo.transferNote && <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)' }}>{transferInfo.transferNote}</p>}
+                          <p style={{ margin: '8px 0 0', color: 'var(--tp-muted)', fontSize: 13 }}>請完成匯款後按下方按鈕送出，我們將人工核對入帳。</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <p style={{ fontSize: 18, fontWeight: 700 }}>總計：NT${total.toLocaleString()}</p>
+                  <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>訂單編號：{createdBookingId || '尚未建立'}</p>
+                  {!createdBookingId && (
+                    <p style={{ fontSize: 13, color: 'var(--tp-danger)', marginTop: 4 }}>
+                      請先回上一步建立訂單後，再進行付款確認。
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                    <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)} disabled={loading}>← 上一步</button>
+                    <button
+                      className="tp-btn tp-btn-primary"
+                      style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
+                      onClick={handleV2Checkout}
+                      disabled={loading || !canConfirmPayment || (payMethod === 'transfer' && transferInfo != null && !transferInfo.configured)}
+                    >
+                      {loading ? '處理中…' : payMethod === 'transfer' ? '我已匯款，送出訂單' : `確認付款 NT$${total.toLocaleString()}`}
+                    </button>
+                  </div>
+                </>
               )}
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button className="tp-btn tp-btn-ghost" onClick={() => setStep(2)} disabled={loading}>← 上一步</button>
-                <button
-                  className="tp-btn tp-btn-primary"
-                  style={{ flex: 1, padding: '14px 0', fontSize: 16, opacity: loading ? 0.7 : 1 }}
-                  onClick={handleV2Checkout}
-                  disabled={loading || !canConfirmPayment}
-                >
-                  {loading ? '付款處理中…' : `確認付款 NT$${total.toLocaleString()}`}
-                </button>
-              </div>
             </div>
           )}
         </div>

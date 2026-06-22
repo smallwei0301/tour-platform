@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
+import { isMissingColumnError } from '../../../../src/lib/schema-drift.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -19,8 +20,16 @@ const EDITABLE_FIELDS = [
   'hero_image_url',
   'gallery_urls',
   'is_published',
+  // #1475 不公開匯款資訊（僅付款步驟揭露）
+  'bank_name',
+  'account_name',
+  'account_number',
+  'transfer_note',
 ] as const;
 type EditableField = typeof EDITABLE_FIELDS[number];
+
+// 較新且可能尚未在 production migrate 的欄位（42703 drift 時於 GET/PATCH 自動降級）。
+const DRIFT_OPTIONAL_FIELDS = ['is_published', 'bank_name', 'account_name', 'account_number', 'transfer_note'] as const;
 
 const GALLERY_MAX = 12;
 
@@ -33,12 +42,13 @@ export async function GET(req: Request) {
       display_name: '', bio: '', region: '', languages: [], specialties: [], headline: '',
       profile_photo_url: null, hero_image_url: null, gallery_urls: [], slug: null,
       is_published: false,
+      bank_name: '', account_name: '', account_number: '', transfer_note: '',
     }));
   }
 
   const supabase = await getSupabase();
   const baseSelect = 'id, slug, display_name, bio, region, languages, specialties, headline, profile_photo_url, hero_image_url, gallery_urls';
-  const richSelect = `${baseSelect}, is_published`;
+  const richSelect = `${baseSelect}, is_published, bank_name, account_name, account_number, transfer_note`;
   // Schema drift guard: is_published ships with
   // 20260611_guide_profiles_is_published; fall back when absent.
   let { data: gp, error } = await supabase
@@ -46,7 +56,7 @@ export async function GET(req: Request) {
     .select(richSelect)
     .eq('id', session.guideId)
     .single();
-  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+  if (error && isMissingColumnError(error)) {
     ({ data: gp, error } = await supabase
       .from('guide_profiles')
       .select(baseSelect)
@@ -68,6 +78,10 @@ export async function GET(req: Request) {
     gallery_urls: gp.gallery_urls ?? [],
     slug: gp.slug ?? null,
     is_published: gp.is_published ?? false,
+    bank_name: gp.bank_name ?? '',
+    account_name: gp.account_name ?? '',
+    account_number: gp.account_number ?? '',
+    transfer_note: gp.transfer_note ?? '',
   }));
 }
 
@@ -123,6 +137,12 @@ export async function PATCH(req: Request) {
       return Response.json(fail('BAD_REQUEST', 'gallery_urls must contain only strings'), { status: 400 });
     }
   }
+  // #1475 匯款資訊：接受字串（含空字串＝清空）或 null，拒絕其他型別。
+  for (const f of ['bank_name', 'account_name', 'account_number', 'transfer_note'] as const) {
+    if (update[f] !== undefined && update[f] !== null && typeof update[f] !== 'string') {
+      return Response.json(fail('BAD_REQUEST', `${f} must be a string or null`), { status: 400 });
+    }
+  }
 
   if (Object.keys(update).length === 0) {
     return Response.json(fail('BAD_REQUEST', 'no editable fields provided'), { status: 400 });
@@ -148,18 +168,23 @@ export async function PATCH(req: Request) {
     .from('guide_profiles')
     .update(dbUpdate)
     .eq('id', session.guideId);
-  // Schema drift guard: is_published ships with
-  // 20260611_guide_profiles_is_published. If production hasn't migrated yet
-  // the column is missing (42703) — strip it and retry so content edits
-  // still save (the publish toggle simply no-ops until the migration runs).
-  if (updateErr && (updateErr.code === '42703' || /column .*does not exist/i.test(updateErr.message || '')) && 'is_published' in dbUpdate) {
-    delete dbUpdate.is_published;
-    if (Object.keys(dbUpdate).length > 1) {
+  // Schema drift guard: 較新欄位（is_published、#1475 匯款欄位）可能尚未在 production
+  // migrate；缺欄位時 update 會回 42703。把這些 optional 欄位剝除後重試，讓其他內容
+  // 仍能存檔（被剝除的欄位於 migration 套用前 no-op）。
+  if (updateErr && isMissingColumnError(updateErr)) {
+    let stripped = false;
+    for (const f of DRIFT_OPTIONAL_FIELDS) {
+      if (f in dbUpdate) {
+        delete dbUpdate[f];
+        stripped = true;
+      }
+    }
+    if (stripped && Object.keys(dbUpdate).length > 1) {
       ({ error: updateErr } = await supabase
         .from('guide_profiles')
         .update(dbUpdate)
         .eq('id', session.guideId));
-    } else {
+    } else if (stripped) {
       updateErr = null;
     }
   }

@@ -6,6 +6,13 @@ import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 
+// Client component 必須用「字面量」process.env.NEXT_PUBLIC_* 才會被 Next 於 build 內嵌；
+// 透過 feature-flags.mjs 的 env 參數間接讀取（env.NEXT_PUBLIC_*）在 client bundle 不會被
+// 替換 → 永遠 undefined → 旗標誤判為關閉（這就是商店連結卡片先前不顯示的原因）。
+const SHOP_ENABLED =
+  process.env.NEXT_PUBLIC_GUIDE_SHOP_ENABLED === '1' ||
+  process.env.NEXT_PUBLIC_GUIDE_SHOP_ENABLED === 'true';
+
 type Profile = {
   display_name: string;
   headline: string;
@@ -18,6 +25,10 @@ type Profile = {
   gallery_urls: string[];
   slug: string | null;
   is_published: boolean;
+  bank_name: string;
+  account_name: string;
+  account_number: string;
+  transfer_note: string;
 };
 
 const EMPTY: Profile = {
@@ -26,6 +37,7 @@ const EMPTY: Profile = {
   profile_photo_url: null, hero_image_url: null, gallery_urls: [],
   slug: null,
   is_published: false,
+  bank_name: '', account_name: '', account_number: '', transfer_note: '',
 };
 
 const GALLERY_MAX = 12;
@@ -76,6 +88,10 @@ export default function GuideProfileEditPage() {
             gallery_urls: Array.isArray(d.gallery_urls) ? d.gallery_urls : [],
             slug: d.slug ?? null,
             is_published: d.is_published ?? false,
+            bank_name: d.bank_name ?? '',
+            account_name: d.account_name ?? '',
+            account_number: d.account_number ?? '',
+            transfer_note: d.transfer_note ?? '',
           });
         }
       })
@@ -99,6 +115,10 @@ export default function GuideProfileEditPage() {
           specialties: profile.specialties,
           gallery_urls: profile.gallery_urls,
           is_published: nextPublished,
+          bank_name: profile.bank_name,
+          account_name: profile.account_name,
+          account_number: profile.account_number,
+          transfer_note: profile.transfer_note,
         }),
       });
       const json = await res.json();
@@ -181,6 +201,9 @@ export default function GuideProfileEditPage() {
           </Link>
         )}
       </div>
+
+      {/* 預約商店連結（#1475）：可一鍵複製分享給旅客 */}
+      {SHOP_ENABLED && profile.slug && <ShopLinkCard slug={profile.slug} />}
 
       <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* ── Section 1: Imagery ── */}
@@ -303,6 +326,64 @@ export default function GuideProfileEditPage() {
           />
         </section>
 
+        {/* ── 匯款資訊（#1475，不公開）── */}
+        <section style={CARD} data-testid="guide-transfer-info">
+          <header style={{ marginBottom: 16 }}>
+            <h2 style={SECTION_TITLE}>匯款資訊</h2>
+            <p style={SECTION_HINT}>
+              此資訊<strong>不會公開</strong>，僅當旅客在付款時選擇「自行匯款」才會顯示給該筆訂單的旅客。
+              收到款項後，請於後台確認入帳。
+            </p>
+          </header>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label htmlFor="bank_name" style={LABEL}>銀行（含分行）</label>
+              <input
+                id="bank_name"
+                type="text"
+                value={profile.bank_name}
+                onChange={(e) => update('bank_name', e.target.value)}
+                placeholder="例：國泰世華銀行 三民分行（700）"
+                style={INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="account_name" style={LABEL}>戶名</label>
+              <input
+                id="account_name"
+                type="text"
+                value={profile.account_name}
+                onChange={(e) => update('account_name', e.target.value)}
+                placeholder="例：吳洛晴"
+                style={INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="account_number" style={LABEL}>帳號</label>
+              <input
+                id="account_number"
+                type="text"
+                inputMode="numeric"
+                value={profile.account_number}
+                onChange={(e) => update('account_number', e.target.value)}
+                placeholder="例：0123456789012"
+                style={INPUT}
+              />
+            </div>
+            <div>
+              <label htmlFor="transfer_note" style={LABEL}>匯款備註（選填）</label>
+              <textarea
+                id="transfer_note"
+                rows={3}
+                value={profile.transfer_note}
+                onChange={(e) => update('transfer_note', e.target.value)}
+                placeholder="例：請於 24 小時內完成匯款，並保留收據；帳號末五碼將用於核帳。"
+                style={{ ...INPUT, resize: 'vertical', fontFamily: 'inherit' }}
+              />
+            </div>
+          </div>
+        </section>
+
         {/* 通知綁定：把訂單通知接到你的 LINE / Telegram */}
         <section style={CARD} data-testid="guide-notification-binding">
           <header style={{ marginBottom: 4 }}>
@@ -418,6 +499,88 @@ export default function GuideProfileEditPage() {
 }
 
 // ────────────────────────────── helpers ──────────────────────────────
+
+// 預約商店連結卡：顯示完整網址 + 一鍵複製（#1475）
+function ShopLinkCard({ slug }: { slug: string }) {
+  const path = `/guides/${slug}/shop`;
+  const [origin, setOrigin] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') setOrigin(window.location.origin);
+  }, []);
+
+  const fullUrl = `${origin}${path}`;
+
+  async function copy() {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(fullUrl);
+      } else {
+        // 後備：以隱藏 textarea + execCommand 複製
+        const ta = document.createElement('textarea');
+        ta.value = fullUrl;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <section style={CARD} data-testid="guide-shop-link">
+      <header style={{ marginBottom: 12 }}>
+        <h2 style={SECTION_TITLE}>預約商店連結</h2>
+        <p style={SECTION_HINT}>把這個連結分享給旅客，他們即可直接向你線上預約。</p>
+      </header>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          type="text"
+          readOnly
+          aria-label="預約商店連結"
+          data-testid="guide-shop-link-url"
+          value={fullUrl}
+          onFocus={(e) => e.currentTarget.select()}
+          style={{ ...INPUT, flex: '1 1 240px', background: '#f9fafb', color: '#374151' }}
+        />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            type="button"
+            data-testid="guide-shop-link-copy"
+            onClick={copy}
+            style={{
+              padding: '9px 16px', borderRadius: 8, border: 'none',
+              fontSize: 14, fontWeight: 700, color: '#fff',
+              background: copied ? '#16a34a' : PURPLE, cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          >
+            {copied ? '✓ 已複製' : '複製連結'}
+          </button>
+          <Link
+            href={path}
+            target="_blank"
+            className=""
+            style={{
+              display: 'inline-flex', alignItems: 'center',
+              padding: '9px 14px', fontSize: 14, fontWeight: 600,
+              borderRadius: 8, border: '1px solid #ddd6fe',
+              background: PURPLE_SOFT, color: PURPLE, textDecoration: 'none', whiteSpace: 'nowrap',
+            }}
+          >
+            開啟
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /**
  * Chip-style multi-value input. Enter / 半形/全形逗號 commits; Backspace

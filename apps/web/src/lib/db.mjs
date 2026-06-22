@@ -13,6 +13,7 @@ import {
 } from './services.mjs';
 import { calculateDiscount } from './promo-discount.ts';
 import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
+import { buildGuideShopView } from './guide-shop.mjs';
 import { applyUpsertWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
 import {
   listAdminOrdersFallback,
@@ -3363,6 +3364,142 @@ export async function getGuideBySlugDb(slug) {
 }
 
 // ---------------------------------------------------------------
+// 導遊商店頁聚合（Guide Shop，#1475）
+// ---------------------------------------------------------------
+
+/**
+ * 回傳導遊商店頁所需資料：導遊公開資訊 + 各（已發佈）行程的 active 方案，依地區分組。
+ * 不含任何不公開匯款資訊。沒有任何 active 方案的行程會被略過。
+ *
+ * 效能（#1475）：Supabase 路徑用「批次」查詢避免 N+1 —— 早期版本對每個行程各打一次
+ * getActivityBySlugDb（內含 activity + activity_plans + schedules/reviews 多次 round-trip），
+ * 6 個行程 → 商店頁載入 4–6s。改為 1 次 activities + 1 次 activity_plans（並行）。
+ * in-memory fallback（無 Supabase）資料量小，沿用逐行程 getActivityBySlugDb。
+ */
+export async function getGuideShopDb(slug) {
+  // in-memory / fixture：沿用逐行程（無網路、資料量小）。
+  if (!hasSupabaseEnv()) {
+    const guide = await getGuideBySlugDb(slug);
+    if (!guide) return null;
+    const details = [];
+    for (const a of guide.activities || []) {
+      if (a.status && a.status !== 'published') continue;
+      let detail = null;
+      try {
+        detail = await getActivityBySlugDb(a.slug, { required: false });
+      } catch {
+        detail = null;
+      }
+      details.push({
+        summary: {
+          id: a.id, slug: a.slug, title: a.title, region: a.region,
+          regionSlug: detail?.regionSlug || a.regionSlug || null,
+          status: a.status || 'published',
+        },
+        plans: detail?.plans || [],
+      });
+    }
+    return buildGuideShopView(guide, details);
+  }
+
+  // Supabase：把 guide 與 activities+plans 兩個查詢「並行」發出（Promise.all），
+  // 牆鐘只剩 1 個 round-trip —— 先前是 await getGuideBySlugDb 之後才查 activities（兩段
+  // 序列），這正是冷啟動偏久的主因。activities 用 PostgREST 內嵌關聯一次取回方案；
+  // embed 不可用時退回兩段式（safe fallback）。
+  const supabase = await getSupabase();
+  const PLAN_COLS = 'activity_id, id, slug, legacy_plan_id, name, duration_minutes, price_type, base_price, min_participants, max_participants, status';
+
+  const [guide, embedRes] = await Promise.all([
+    getGuideBySlugDb(slug),
+    supabase
+      .from('activities')
+      .select(`id, slug, title, region, region_slug, plans, status, activity_plans(${PLAN_COLS})`)
+      .eq('guide_slug', slug)
+      .eq('status', 'published'),
+  ]);
+  if (!guide) return null;
+
+  let acts = null;
+  if (!embedRes.error) {
+    acts = embedRes.data || [];
+  } else {
+    // Fallback：embed 失敗時退回 activities + activity_plans 兩段式。
+    const a2 = await supabase
+      .from('activities')
+      .select('id, slug, title, region, region_slug, plans, status')
+      .eq('guide_slug', slug)
+      .eq('status', 'published');
+    acts = a2.data || [];
+    const ids = acts.map((a) => a.id);
+    const p2 = ids.length
+      ? await supabase.from('activity_plans').select(PLAN_COLS).in('activity_id', ids)
+      : { data: [] };
+    const byAct = {};
+    for (const p of p2.data || []) (byAct[p.activity_id] ||= []).push(p);
+    acts = acts.map((a) => ({ ...a, activity_plans: byAct[a.id] || [] }));
+  }
+
+  const details = (acts || []).map((a) => {
+    const formal = (a.activity_plans || []).filter((p) => {
+      const st = p?.status;
+      return st === null || st === undefined || st === 'active';
+    });
+    return {
+      summary: {
+        id: a.id, slug: a.slug, title: a.title, region: a.region,
+        regionSlug: a.region_slug || null, status: a.status || 'published',
+      },
+      plans: selectPublicActivityDetailPlans({ formalPlans: formal, legacyPlans: a.plans || null }) || [],
+    };
+  });
+
+  // 純函式做過濾／投影／分組（單測見 tests/api/issue1475-guide-shop.test.mjs）。
+  return buildGuideShopView(guide, details);
+}
+
+/**
+ * 取得某筆預約對應導遊的不公開匯款資訊（#1475）。
+ * 僅供付款步驟使用——回傳 order 狀態與下單者 email 供路由層做「本人 + pending_payment」授權，
+ * db 層不做授權判斷（與既有 gateway 慣例一致）。找不到 booking 回 null。
+ * in-memory fallback 無真實匯款資料，回傳 null（fixture 模式不揭露）。
+ */
+export async function getGuideTransferInfoForBookingDb(bookingId) {
+  if (!hasSupabaseEnv() || !bookingId) return null;
+  const supabase = await getSupabase();
+  const { data: booking, error: bErr } = await supabase
+    .from('bookings')
+    .select('id, guide_id, order_id')
+    .eq('id', bookingId)
+    .maybeSingle();
+  if (bErr) throw new Error(bErr.message);
+  if (!booking || !booking.order_id) return null;
+
+  const [{ data: order, error: oErr }, { data: gp, error: gErr }] = await Promise.all([
+    supabase.from('orders').select('id, status, contact_email').eq('id', booking.order_id).maybeSingle(),
+    booking.guide_id
+      ? supabase
+          .from('guide_profiles')
+          .select('display_name, bank_name, account_name, account_number, transfer_note')
+          .eq('id', booking.guide_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+  if (oErr) throw new Error(oErr.message);
+  if (gErr) throw new Error(gErr.message);
+  if (!order) return null;
+
+  return {
+    orderStatus: order.status,
+    contactEmail: order.contact_email ?? null,
+    guideName: gp?.display_name ?? null,
+    bankName: gp?.bank_name ?? null,
+    accountName: gp?.account_name ?? null,
+    accountNumber: gp?.account_number ?? null,
+    transferNote: gp?.transfer_note ?? null,
+  };
+}
+
+// ---------------------------------------------------------------
 // Admin — activities CRUD
 // ---------------------------------------------------------------
 
@@ -4739,12 +4876,16 @@ export async function recordRefundReversalDb(supabase, { orderId, actor = 'syste
 }
 
 export async function updateGuideProfileByGuideId(guideId, fields) {
-  // fields: allowed subset only — display_name, bio, region, languages, specialties, headline
+  // fields: allowed subset only — display_name, bio, region, languages, specialties, headline,
+  // 以及不公開匯款資訊（#1475）：bank_name, account_name, account_number, transfer_note。
   if (!hasSupabaseEnv()) {
     return { ok: true }; // no-op in fixture mode
   }
   const supabase = await getSupabase();
-  const allowed = ['display_name', 'bio', 'region', 'languages', 'specialties', 'headline'];
+  const allowed = [
+    'display_name', 'bio', 'region', 'languages', 'specialties', 'headline',
+    'bank_name', 'account_name', 'account_number', 'transfer_note',
+  ];
   const update = {};
   for (const k of allowed) {
     if (Object.prototype.hasOwnProperty.call(fields, k)) {

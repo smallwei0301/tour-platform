@@ -81,4 +81,22 @@ export function isTelegramTravelerNotifyEnabled(env = process.env) {
   return isTruthy(env.TELEGRAM_TRAVELER_NOTIFY_ENABLED);
 }
 
+/**
+ * 導遊商店預約流程（Guide Shop，issue #1475）。
+ * 商店三頁（/guides/[slug]/shop、/shop/book、/shop/orders）在 flag off 時 notFound()。
+ * Default: OFF — 上線前先以 NEXT_PUBLIC_GUIDE_SHOP_ENABLED=1 開啟。
+ */
+export function isGuideShopEnabled(env = process.env) {
+  return isTruthy(env.NEXT_PUBLIC_GUIDE_SHOP_ENABLED);
+}
+
+/**
+ * 匯款（手動查帳）付款方式（issue #1475）。
+ * 控制付款步驟是否顯示「自行匯款」選項與 checkout provider='transfer' 分支。
+ * Default: OFF。
+ */
+export function isTransferPaymentEnabled(env = process.env) {
+  return isTruthy(env.NEXT_PUBLIC_TRANSFER_PAYMENT_ENABLED);
+}
+
 export const __internal = { isTruthy };

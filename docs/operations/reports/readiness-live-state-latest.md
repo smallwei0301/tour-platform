@@ -1,25 +1,26 @@
-<!-- query_timestamp: 2026-06-17T07:57:59.493Z -->
+<!-- query_timestamp: 2026-06-21T18:36:10.370Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-17T07:57:59.493Z  
-**Commit SHA:** `c4acf8a9d9f72e81ce2f63d60015d8dcd55f98ab`
+**Query timestamp:** 2026-06-21T18:36:10.370Z  
+**Commit SHA:** `f7b9820b525284f2737644b64f3cb8fb24c8e187`
 
 ---
 
-## Open PRs (4)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1473 | [部分退款功能：後台手動輸入金額、ECPay/現金實際退指定金額](https://github.com/smallwei0301/tour-platform/pull/1473) | `claude/order-status-annotations-8da27n` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (22 total)
+## Open Issues (24 total)
 
 ### P0 (0)
 
@@ -37,10 +38,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (13)
+### P2 (14)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1472 | [[Auto Check] main healthcheck failed at / (status=N/A)](https://github.com/smallwei0301/tour-platform/issues/1472) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #1407 | [[Booking][P2] Legacy 退役階段三 — 刪除 legacy routes 與測試清點、flag 退場](https://github.com/smallwei0301/tour-platform/issues/1407) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
 | #1406 | [[Booking][P2] Legacy 退役階段二 — 移除 flag fallback UI 與 legacy 入口](https://github.com/smallwei0301/tour-platform/issues/1406) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
 | #1388 | [[Growth][P2] 成長基礎 backlog 總綱 — i18n 英文版、站內訊息、會員回購（Phase 12 對齊）](https://github.com/smallwei0301/tour-platform/issues/1388) | type:optimization, priority:P2, agent:backlog, owner:mixed, traveler-booking |
@@ -59,10 +61,11 @@ _none_
 
 _none_
 
-### Other (2)
+### Other (3)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1474 | [QA：PR #1473 部分退款功能 — Staging 實測（ECPay 測試卡）](https://github.com/smallwei0301/tour-platform/issues/1474) | qa, refund |
 | #1449 | [[ops] 套用 LINE/Telegram 通知 migration 到 production Supabase（#920 後續）](https://github.com/smallwei0301/tour-platform/issues/1449) | database, ops |
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — 正式上線前執行](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, security, owner:mixed, status:needs-decision, launch:post-first-payment |
 
@@ -72,16 +75,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1470 | [fix(admin): 修復「取消＋退款」流程並新增後台正規退款入口與說明](https://github.com/smallwei0301/tour-platform/pull/1470) | 2026-06-17 |
-| #1468 | [Add MIDAO Hotcake transformation plan and reference from docs index](https://github.com/smallwei0301/tour-platform/pull/1468) | 2026-06-17 |
-| #1467 | [feat: 導遊新行程投稿頁＋AI 提示詞產生器（含 Unsplash 圖片搜尋）](https://github.com/smallwei0301/tour-platform/pull/1467) | 2026-06-16 |
-| #1466 | [fix(activities): footer 依地區選高雄等短名可正常篩選](https://github.com/smallwei0301/tour-platform/pull/1466) | 2026-06-16 |
-| #1465 | [feat(admin-orders): 訂單狀態加上連動標記與詳細說明](https://github.com/smallwei0301/tour-platform/pull/1465) | 2026-06-16 |
-| #1464 | [fix(admin): 方案/行程編輯 UI 改善與活動層級人數限制移除 (#297)](https://github.com/smallwei0301/tour-platform/pull/1464) | 2026-06-16 |
-| #1463 | [fix(notify): 通知矩陣表未建立時 fail-open（讀）+ 503 可操作錯誤（寫）](https://github.com/smallwei0301/tour-platform/pull/1463) | 2026-06-15 |
-| #1462 | [perf(home): 首頁移除 critical path 重量級查詢 + 改 on-demand ISR（儲存即時反映）](https://github.com/smallwei0301/tour-platform/pull/1462) | 2026-06-15 |
-| #1461 | [feat(notify): 後台可勾選的通知矩陣 + 旅客 LINE 綁定 + admin 路由補 LINE push](https://github.com/smallwei0301/tour-platform/pull/1461) | 2026-06-15 |
-| #1460 | [feat(activity): 行程介紹改為依方案呈現，後台行程介紹改站點時間表 (#297)](https://github.com/smallwei0301/tour-platform/pull/1460) | 2026-06-15 |
+| #1485 | [fix(shop): 會員入口按鈕提升可見度（實心深綠膠囊）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1485) | 2026-06-18 |
+| #1484 | [feat(shop): 首頁封面照+會員入口、商店頁隱藏 footer、換步驟回頂部 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1484) | 2026-06-18 |
+| #1483 | [perf(shop): 商店 API 60 秒邊緣快取 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1483) | 2026-06-18 |
+| #1482 | [perf+ui(shop): 並行查詢降冷啟動 + 月曆日期選擇器 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1482) | 2026-06-18 |
+| #1481 | [perf(shop): getGuideShopDb 內嵌關聯單一 round-trip (#1475)](https://github.com/smallwei0301/tour-platform/pull/1481) | 2026-06-18 |
+| #1480 | [fix(shop): 修正商店預約頁無可預約時段 + 載入過慢 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1480) | 2026-06-18 |
+| #1479 | [fix(shop): client component 字面量讀旗標，修復商店連結卡片不顯示 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1479) | 2026-06-18 |
+| #1478 | [fix(guide): 導遊公開頁存檔 + 可用時段預覽跨多週 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1478) | 2026-06-18 |
+| #1477 | [feat(shop): 導遊商店預約流程 + 匯款付款方式（手動查帳）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1477) | 2026-06-18 |
+| #1476 | [fix(payments): 修復 payments/payment_events service-role 權限，解決付款流程「Failed to check existing payment」](https://github.com/smallwei0301/tour-platform/pull/1476) | 2026-06-18 |
 
 ---
 
