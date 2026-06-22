@@ -5,9 +5,14 @@
  * <script type="application/ld+json">，與既有 TouristAttraction/FAQPage 並列。
  */
 
-/** 與 generateMetadata 既有預設 OG 圖一致的 fallback。 */
-export const DEFAULT_ACTIVITY_OG_IMAGE =
-  'https://images.unsplash.com/photo-1528164344705-47542687000d?w=1200&q=80';
+/**
+ * 與 generateMetadata 既有預設 OG 圖一致的 fallback。
+ * 分享縮圖（IG／私訊／FB 連結預覽）一律走站內 og-default 圖；
+ * 此常數需為絕對 URL（部分爬蟲不解析 metadataBase，JSON-LD 亦需絕對路徑）。
+ */
+export const DEFAULT_ACTIVITY_OG_IMAGE = `${
+  process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'
+}/images/og-default.png`;
 
 /**
  * @param {string | null | undefined} coverImageUrl
