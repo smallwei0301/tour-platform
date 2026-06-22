@@ -1775,7 +1775,7 @@ export async function listOperationsTrackingDb() {
   const supabase = await getSupabase();
   const { data: rows, error } = await supabase
     .from('operations_tracking')
-    .select('id, order_id, manual_minutes, manual_cost_twd, refund_amount_twd, subsidy_twd, is_rescheduled, has_complaint, has_guide_adjustment, has_oversell_issue, note, updated_at')
+    .select('id, order_id, manual_minutes, manual_cost_twd, refund_amount_twd, subsidy_twd, is_rescheduled, has_complaint, has_guide_adjustment, has_oversell_issue, is_disputed, is_safety_case, note, updated_at')
     .order('updated_at', { ascending: false });
 
   if (error) throw new Error(error.message);
@@ -1796,7 +1796,7 @@ export async function listOperationsTrackingDb() {
     const manualCostTwd = Number(ops.manual_cost_twd || 0);
     const subsidyTwd = Number(ops.subsidy_twd || 0);
     const finalContributionTwd = commissionTwd - paymentFeeTwd - manualCostTwd - subsidyTwd;
-    const hasException = Boolean(refundAmountTwd > 0 || ops.is_rescheduled || ops.has_complaint || ops.has_guide_adjustment || ops.has_oversell_issue);
+    const hasException = Boolean(refundAmountTwd > 0 || ops.is_rescheduled || ops.has_complaint || ops.has_guide_adjustment || ops.has_oversell_issue || ops.is_disputed || ops.is_safety_case);
     const isHealthyOrder = cfg.healthyAllowException
       ? finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0)
       : finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0) && !hasException;
@@ -1821,6 +1821,8 @@ export async function listOperationsTrackingDb() {
       hasComplaint: !!r.has_complaint,
       hasGuideAdjustment: !!r.has_guide_adjustment,
       hasOversellIssue: !!r.has_oversell_issue,
+      isDisputed: !!r.is_disputed,
+      isSafetyCase: !!r.is_safety_case,
       note: r.note || null,
       updatedAt: r.updated_at,
       ...calc(order, r)
@@ -1851,6 +1853,8 @@ export async function updateOperationsTrackingDb(input = {}) {
     has_complaint: !!input?.hasComplaint,
     has_guide_adjustment: !!input?.hasGuideAdjustment,
     has_oversell_issue: !!input?.hasOversellIssue,
+    is_disputed: !!input?.isDisputed,
+    is_safety_case: !!input?.isSafetyCase,
     note: input?.note ? String(input.note) : null,
     updated_at: new Date().toISOString()
   };

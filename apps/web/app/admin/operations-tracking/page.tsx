@@ -33,7 +33,7 @@ type Row = {
   manualCostTwd: number; refundAmountTwd: number; subsidyTwd: number;
   hasException: boolean; finalContributionTwd: number; isHealthyOrder: boolean;
   isRescheduled?: boolean; hasComplaint?: boolean; hasGuideAdjustment?: boolean;
-  hasOversellIssue?: boolean; note?: string | null;
+  hasOversellIssue?: boolean; isDisputed?: boolean; isSafetyCase?: boolean; note?: string | null;
 };
 
 export default function OperationsTrackingPage() {
@@ -185,6 +185,8 @@ export default function OperationsTrackingPage() {
                     { key: 'hasComplaint', label: '⚠️ 客訴' },
                     { key: 'hasGuideAdjustment', label: '🧭 導遊臨時調整' },
                     { key: 'hasOversellIssue', label: '❌ 超賣/場次異常' },
+                    { key: 'isDisputed', label: '⚖️ 付款爭議（暫停撥款）' },
+                    { key: 'isSafetyCase', label: '🛡️ 安全事件（暫停撥款）' },
                   ].map(item => (
                     <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151', cursor: 'pointer' }}>
                       <input type="checkbox" checked={!!(selected as any)[item.key]}

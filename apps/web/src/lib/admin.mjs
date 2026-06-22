@@ -566,6 +566,8 @@ function findOrCreateOpsRow(order) {
       hasComplaint: false,
       hasGuideAdjustment: false,
       hasOversellIssue: false,
+      isDisputed: false,
+      isSafetyCase: false,
       note: null,
       updatedAt: new Date().toISOString()
     };
@@ -593,7 +595,9 @@ function buildOpsContribution(order, ops) {
     ops.isRescheduled ||
     ops.hasComplaint ||
     ops.hasGuideAdjustment ||
-    ops.hasOversellIssue
+    ops.hasOversellIssue ||
+    ops.isDisputed ||
+    ops.isSafetyCase
   );
   const isHealthyOrder = cfg.healthyAllowException
     ? finalContributionTwd >= Number(cfg.healthyMinContributionTwd || 0)
@@ -658,6 +662,8 @@ export function updateOperationsTrackingFallback(input = {}) {
   if (input.hasComplaint != null) ops.hasComplaint = Boolean(input.hasComplaint);
   if (input.hasGuideAdjustment != null) ops.hasGuideAdjustment = Boolean(input.hasGuideAdjustment);
   if (input.hasOversellIssue != null) ops.hasOversellIssue = Boolean(input.hasOversellIssue);
+  if (input.isDisputed != null) ops.isDisputed = Boolean(input.isDisputed);
+  if (input.isSafetyCase != null) ops.isSafetyCase = Boolean(input.isSafetyCase);
   if (input.note != null) ops.note = String(input.note || '').trim() || null;
 
   ops.updatedAt = new Date().toISOString();
@@ -674,6 +680,8 @@ export function updateOperationsTrackingFallback(input = {}) {
       hasComplaint: ops.hasComplaint,
       hasGuideAdjustment: ops.hasGuideAdjustment,
       hasOversellIssue: ops.hasOversellIssue,
+      isDisputed: ops.isDisputed,
+      isSafetyCase: ops.isSafetyCase,
       note: ops.note
     },
     createdAt: ops.updatedAt
