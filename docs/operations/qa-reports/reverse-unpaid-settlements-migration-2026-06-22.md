@@ -6,7 +6,7 @@
 - **Migration**：
   - `supabase/migrations/20260622120000_reverse_unpaid_completed_settlements.sql`
   - `supabase/migrations/20260622120000_reverse_unpaid_completed_settlements.rollback.sql`
-- **判定**：**PASS（SQL 已用真 Postgres 16 實測）**；**prod 套用：HOLD — blocker 見下方第 4 節**
+- **判定**：**PASS（SQL 已用真 Postgres 16 實測）**；**prod 已套用 — 2026-06-22 16:58 CST，證據見下方第 4 節**
 
 ## 1. 背景
 
@@ -64,29 +64,50 @@ sweep 舊版只用 `status='completed'` 當結算資格，未付款的 completed
 | B2 餘額 | 6120−6120=0 | 0 | ✅ |
 | B3 索引 | compound unique 存在、舊 `payout_items_order_unique` 移除 | 只剩 `payout_items_order_kind_unique` + pkey | ✅ |
 
-## 4. Prod 套用 blocker（HOLD 原因）
+## 4. Prod 套用紀錄（已執行）
 
-owner 拍板由 Claude 代跑 `supabase db push`，但**本 remote 執行環境沒有 supabase CLI、
-也沒有任何 prod 憑證**（`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` / `SUPABASE_DB_URL` /
-`SUPABASE_ACCESS_TOKEN` / `SUPABASE_PROJECT_REF` / `SUPABASE_DB_PASSWORD` 皆 unset），
-故**無法在此 container 內對 prod 執行寫入**，標 `NOT_PROD_EXECUTED`。
+- **環境**：正式專案 `tour platform`，ref `pyoderxmpeyqjwkeliiu`，region `ap-northeast-1`，狀態 `ACTIVE_HEALTHY`。
+- **套用時間**：2026-06-22 16:58 CST（Asia/Taipei）。
+- **授權**：owner 於 session 內明確同意執行（AskUserQuestion「確認執行」）。
+- **套用方式**：owner 提供 access token，於 remote session 安裝 supabase CLI 2.107.0。
+  因本環境網路政策**封鎖對外 5432**（pooler / 直連 Postgres 連線 timeout），
+  無法用 `supabase db push`；改以 **Supabase Management API `POST /v1/projects/{ref}/database/query`**
+  （走 443）執行整支 migration SQL（檔內 `BEGIN…COMMIT`，單一交易原子套用，回應 HTTP 201）。
+- **重要 caveat**：此路徑**不會寫入 `supabase_migrations.schema_migrations` 版本紀錄**。
+  本 migration 全冪等（schema 用 `IF NOT EXISTS` / `DROP … IF EXISTS`，data 步驟只挑「尚無
+  reversal 列」的 settlement），故日後 operator 補跑 `supabase db push` 重套為 no-op，安全。
+  若要對齊版本表，operator 可日後 `supabase db push`（會 no-op 套用並登錄 version）。
 
-**Operator 套用方式**（canonical 見 `docs/operations/booking-v2-rollback-runbook.md`）：
+### 套用前 baseline（實測）
 
-```bash
-# 於有 prod 憑證的環境
-supabase link --project-ref <PROJECT_REF>
-supabase db push    # 套用所有 pending migration，含本支
+| 項目 | 值 |
+|---|---|
+| 遠端 schema 狀態 | 狀態 A：`settlement_kind` 欄已存在（#449 已套用） |
+| 待回沖 anomaly | 1 筆 — order `1158aa21…`、net 6120、guide `963a3e13…` |
+| 目標 settlement 列 | id `16f95431…`、gmv 7200 / commission 1080 / net 6120、order `completed`、`paid_at = NULL` |
+| 導遊 `963a3e13…` 餘額 | 14136 |
+| 既有 `payout_items_order_unique` | 真 constraint（`UNIQUE(order_id)`）→ step-0 `DROP CONSTRAINT` 會正確移除 |
+| 本 migration audit | 0（確認未跑過） |
 
-# 套用後驗證（應為 0 列）
-#   SELECT pi.order_id, pi.net_twd
-#   FROM payout_items pi JOIN orders o ON o.id=pi.order_id
-#   WHERE pi.settlement_kind='settlement' AND o.paid_at IS NULL
-#     AND NOT EXISTS (SELECT 1 FROM payout_items r
-#                     WHERE r.order_id=pi.order_id AND r.settlement_kind='reversal');
+### 套用後驗證（逐條實測，皆 PASS）
+
+| 驗證項 | 期望 | 實測 | 結果 |
+|---|---|---|---|
+| V1 anomaly recheck | 0 列 | `[]` | ✅ |
+| V2 該訂單 payout_items | settlement +6120 與 reversal −6120（gmv ±7200 / commission ±1080）並存 | 完全相符 | ✅ |
+| V3 導遊餘額 | 14136 − 6120 = 8016 | 8016 | ✅ |
+| V4 migration audit | `payout_reversal_created`=1、`guide_balance_debited_reversal`=1 | 1 / 1 | ✅ |
+| V5 schema | 舊 `payout_items_order_unique` 移除；只剩 `payout_items_pkey` 約束 + `payout_items_order_kind_unique` 索引 | 完全相符 | ✅ |
+
+### Rollback（如需）
+
+```sql
+-- 套用 supabase/migrations/20260622120000_reverse_unpaid_completed_settlements.rollback.sql
+-- 會補回餘額、刪除本 migration 的 reversal 列與 audit 標記（schema 變更刻意保留）。
 ```
 
-若要由 Claude 代跑，需在 session 環境注入上述憑證 / CLI 後再執行。
+> 安全提醒：本次 owner 將 access token / DB 密碼貼於 session 對話，憑證已留存於 transcript，
+> 已建議 owner 事後於 Supabase 後台 **rotate access token 與 DB 密碼**。
 
 ## 5. 不含敏感資訊聲明
 
