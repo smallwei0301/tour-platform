@@ -76,6 +76,7 @@
 吳威宏 Wayne Wu  
 祕島共同創辦人 · MIDAO  
 0972-046-785  
+smallwei0301@gmail.com  
 *An island, untold.*
 
 ---
