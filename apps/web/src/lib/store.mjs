@@ -244,10 +244,10 @@ export const auditLogs = [
 ];
 
 export const operationsTracking = [
-  { orderId: 'ord_mock_001', manualMinutes: 15, manualCostTwd: 75, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
-  { orderId: 'ord_mock_002', manualMinutes: 10, manualCostTwd: 50, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
-  { orderId: 'ord_mock_003', manualMinutes: 45, manualCostTwd: 225, refundAmountTwd: 6000, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: '退款處理中' },
-  { orderId: 'ord_mock_005', manualMinutes: 0, manualCostTwd: 0, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, note: null },
+  { orderId: 'ord_mock_001', manualMinutes: 15, manualCostTwd: 75, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, isDisputed: false, isSafetyCase: false, note: null },
+  { orderId: 'ord_mock_002', manualMinutes: 10, manualCostTwd: 50, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, isDisputed: false, isSafetyCase: false, note: null },
+  { orderId: 'ord_mock_003', manualMinutes: 45, manualCostTwd: 225, refundAmountTwd: 6000, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, isDisputed: false, isSafetyCase: false, note: '退款處理中' },
+  { orderId: 'ord_mock_005', manualMinutes: 0, manualCostTwd: 0, refundAmountTwd: 0, subsidyTwd: 0, isRescheduled: false, hasComplaint: false, hasGuideAdjustment: false, hasOversellIssue: false, isDisputed: false, isSafetyCase: false, note: null },
 ];
 export const kpiConfig = {
   commissionRate: 0.15,

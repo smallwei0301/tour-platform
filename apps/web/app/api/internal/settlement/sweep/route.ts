@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { computeSweepPayoutItem, getSettlementConfig } from '../../../../../src/lib/settlement-config';
 import { isOrderEligibleForSettlement, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
+import { isSettlementPaymentCollected } from '../../../../../src/lib/post-trip/payout-eligibility.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
         id,
         booking_id,
         total_twd,
+        paid_at,
         activities!inner(guide_id),
         bookings(start_at, end_at, activity_plan_id, activity_id, guide_id),
         activity_schedules(start_at),
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
       id: string;
       booking_id?: string | null;
       total_twd: number;
+      paid_at?: string | null;
       activities: { guide_id: string } | { guide_id: string }[];
       bookings?: { start_at?: string | null } | { start_at?: string | null }[] | null;
       activity_schedules?: { start_at: string } | { start_at: string }[] | null;
@@ -118,6 +121,10 @@ export async function POST(req: NextRequest) {
     };
 
     const eligibleOrders = (orders as Order[]).filter((order) => {
+      // Payment-collected gate (owner 2026-06-22): never settle an order that has
+      // not actually collected money. status='completed' alone is insufficient —
+      // a completed order with paid_at IS NULL was never paid and must be skipped.
+      if (!isSettlementPaymentCollected(order.paid_at ?? null)) return false;
       const booking = Array.isArray(order.bookings) ? order.bookings[0] : order.bookings;
       const schedule = Array.isArray(order.activity_schedules)
         ? order.activity_schedules[0]
