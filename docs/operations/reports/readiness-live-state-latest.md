@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-22T01:00:43.872Z -->
+<!-- query_timestamp: 2026-06-22T08:10:34.090Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-22T01:00:43.872Z  
-**Commit SHA:** `35600eadcb858bbcf2b98e0bf6eb17c0ee1a1e62`
+**Query timestamp:** 2026-06-22T08:10:34.090Z  
+**Commit SHA:** `32145d6bbf3f81ae4c1a3fa92a871c79e422aee3`
 
 ---
 
@@ -74,6 +74,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1487 | [fix(settlement): 結算付款 gate + 回沖未付款卻已結算的 payout_items](https://github.com/smallwei0301/tour-platform/pull/1487) | 2026-06-22 |
+| #1486 | [feat(seo): 分享縮圖改用站內 og-default 圖](https://github.com/smallwei0301/tour-platform/pull/1486) | 2026-06-22 |
 | #1485 | [fix(shop): 會員入口按鈕提升可見度（實心深綠膠囊）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1485) | 2026-06-18 |
 | #1484 | [feat(shop): 首頁封面照+會員入口、商店頁隱藏 footer、換步驟回頂部 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1484) | 2026-06-18 |
 | #1483 | [perf(shop): 商店 API 60 秒邊緣快取 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1483) | 2026-06-18 |
@@ -82,8 +84,6 @@ _none_
 | #1480 | [fix(shop): 修正商店預約頁無可預約時段 + 載入過慢 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1480) | 2026-06-18 |
 | #1479 | [fix(shop): client component 字面量讀旗標，修復商店連結卡片不顯示 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1479) | 2026-06-18 |
 | #1478 | [fix(guide): 導遊公開頁存檔 + 可用時段預覽跨多週 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1478) | 2026-06-18 |
-| #1477 | [feat(shop): 導遊商店預約流程 + 匯款付款方式（手動查帳）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1477) | 2026-06-18 |
-| #1476 | [fix(payments): 修復 payments/payment_events service-role 權限，解決付款流程「Failed to check existing payment」](https://github.com/smallwei0301/tour-platform/pull/1476) | 2026-06-18 |
 
 ---
 
