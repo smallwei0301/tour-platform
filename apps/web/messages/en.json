@@ -160,6 +160,153 @@
       "mountain-wilderness": "Mountain Wilds"
     }
   },
+  "theme": {
+    "caveExploration": {
+      "metaTitle": "Chaishan Caving Tours | Midao",
+      "metaDescription": "Follow a local guide deep into Chaishan's hidden underground world in Kaohsiung and explore limestone caves shaped over millions of years. Small-group, in-depth experiences led by ID-verified guides.",
+      "ogTitle": "Chaishan Caving — Kaohsiung's Hidden Underground | Midao",
+      "ogDescription": "A different side of Kaohsiung: follow a local into the Chaishan caves and see a Taiwan no map points you to.",
+      "breadcrumb": "Chaishan Caving",
+      "heroTitle": "Into Kaohsiung's hidden underground",
+      "heroSubtitle": "Chaishan's limestone caves hold millions of years of geological stories — let a local guide take you safely into the depths.",
+      "heroCta": "Explore Chaishan tours",
+      "feature1a": "Gear included",
+      "feature1b": "Headlamp, helmet and gloves fully provided",
+      "feature2a": "Ecology talks",
+      "feature2b": "Your guide introduces the cave's ecology and terrain",
+      "feature3a": "Safety-certified guide",
+      "feature3b": "Holds relevant mountain and outdoor-safety certifications",
+      "toursHeading": "Featured Chaishan caving tours",
+      "viewTour": "View tour →",
+      "faqHeading": "What to know before you go caving",
+      "tours": [
+        { "title": "Chaishan Nature Park Caving Half-Day Tour", "meta": "🕐 3-4 hrs · 👥 4–12 people · NT$2,000" },
+        { "title": "Chaishan Limestone Cave Geology Exploration", "meta": "🕐 3 hrs · 👥 4–10 people · NT$2,200" },
+        { "title": "Chaishan Family-Friendly Safe Caving Experience", "meta": "🕐 2.5 hrs · 👥 4–8 people · NT$1,800" }
+      ],
+      "faq": [
+        { "q": "Do I need rock-climbing experience?", "a": "No — the MVP routes focus on beginner-to-intermediate, safe exploration." },
+        { "q": "What ages can join?", "a": "Recommended for ages 10 and up, subject to each tour's notes and the guide's assessment." },
+        { "q": "What should I wear on the day?", "a": "We recommend non-slip shoes, long trousers and a flexible top — avoid sandals." }
+      ]
+    },
+    "cultureHistory": {
+      "metaTitle": "Culture & History Tours | Midao",
+      "metaDescription": "Step into Taiwan's old streets, temple plazas and indigenous communities, and let a local guide turn the stories behind a district and its people into living memories. Small-group, in-depth cultural experiences led by ID-verified guides.",
+      "ogTitle": "Culture & History — Stories of Taiwan's Districts and Communities | Midao",
+      "ogDescription": "Not a quick walk-through. Follow someone who knows the stories and truly get to know a district that has lived a hundred years — and its people.",
+      "breadcrumb": "Culture & History",
+      "heroTitle": "Into districts and communities that have lived a century",
+      "heroSubtitle": "Not a check-in, walk-through tour — follow a local who knows the stories, and turn the people and history behind old streets, temple plazas and communities into memories you can truly feel.",
+      "heroCta": "Explore culture tours",
+      "feature1a": "A local's perspective",
+      "feature1b": "People who live here help you read the place",
+      "feature2a": "Slow walking tours",
+      "feature2b": "A gentle pace, great for families and three generations together",
+      "feature3a": "Guides with a cultural-history background",
+      "feature3b": "Skilled in local history and guided interpretation",
+      "toursHeading": "Featured culture & history tours",
+      "viewTour": "View tour →",
+      "faqHeading": "Culture-walk FAQ",
+      "tours": [
+        { "title": "Dadaocheng Century-Old Street In-Depth Walk", "meta": "🕐 3 hrs · 👥 1–8 people · NT$1,500" },
+        { "title": "Lukang Heritage & Faith Culture Tour", "meta": "🕐 3.5 hrs · 👥 2–10 people · NT$1,600" },
+        { "title": "Indigenous Culture & Traditional Crafts Half-Day Experience", "meta": "🕐 4 hrs · 👥 2–8 people · NT$1,900" }
+      ],
+      "faq": [
+        { "q": "Do I need to do homework to follow along?", "a": "No — the guide brings you into the history through everyday life and people, so you can engage even with no background." },
+        { "q": "Is there a lot of walking?", "a": "It's mostly a slow walking tour, with stops and breaks along the way — suitable for most fitness levels." },
+        { "q": "Is it suitable for elders and children together?", "a": "Yes — the gentle pace and high interaction make it a great choice for families and three generations traveling together." }
+      ]
+    },
+    "foodTour": {
+      "metaTitle": "Food Tours | Midao",
+      "metaDescription": "Follow a local guide who knows how to eat into night markets and alley stalls to find truly local flavors. Small-group food walks — not just eating, but understanding why it's good.",
+      "ogTitle": "Food Tours — Eat Your Way Into Taiwan With a Local | Midao",
+      "ogDescription": "Not just eating, but understanding why it's good. Follow a foodie guide and read a city one bite at a time.",
+      "breadcrumb": "Food Tours",
+      "heroTitle": "Eat your way into a city with a local",
+      "heroSubtitle": "Not just eating, but understanding why it's good. Follow a foodie guide into night markets and alley stalls, and read Taiwan's flavors one bite at a time.",
+      "heroCta": "Explore food tours",
+      "feature1a": "Many stalls, small portions",
+      "feature1b": "Taste more local flavors in one go",
+      "feature2a": "Insider alley know-how",
+      "feature2b": "Your guide helps you skip tourist stalls and find the truly good ones",
+      "feature3a": "A local who knows how to eat",
+      "feature3b": "Familiar with local food culture and the stories behind the ingredients",
+      "toursHeading": "Featured food tours",
+      "viewTour": "View tour →",
+      "faqHeading": "Food-walk FAQ",
+      "tours": [
+        { "title": "Taipei Night Market Food Culture Exploration", "meta": "🕐 3 hrs · 👥 2–8 people · NT$1,800" },
+        { "title": "Tainan Alley Street-Food In-Depth Walk", "meta": "🕐 3.5 hrs · 👥 2–8 people · NT$1,900" },
+        { "title": "Local Market Breakfast & Ingredients Tour", "meta": "🕐 2.5 hrs · 👥 2–10 people · NT$1,500" }
+      ],
+      "faq": [
+        { "q": "Will I get really full?", "a": "The tour is built around many stalls and small portions, so you taste a wider variety without getting too stuffed — come with a little room to spare." },
+        { "q": "Can I join with a vegetarian or other dietary restriction?", "a": "Yes — let us know when you book and the guide will adjust the stalls and dishes." },
+        { "q": "Are food costs included in the price?", "a": "It depends on each tour's notes — some include tasting costs and some are charged separately. See each tour page for details." }
+      ]
+    },
+    "mountainWilderness": {
+      "metaTitle": "Mountain Wilds Tours | Midao",
+      "metaDescription": "Hidden 100-peak trails, forest bathing and Taiwan's grand ridgeline views — follow a local guide who knows the mountains deep into the wilds on foot. Small-group hiking led by safety-certified guides.",
+      "ogTitle": "Mountain Wilds — Deep Into Taiwan's Mountains and Forests | Midao",
+      "ogDescription": "No cable cars, no tour buses — just your own feet and someone who knows the mountains, walking into mountain trails no map points you to.",
+      "breadcrumb": "Mountain Wilds",
+      "heroTitle": "Deep into Taiwan's mountains and forests",
+      "heroSubtitle": "Hidden 100-peak trails, forest bathing and grand ridgeline views. No cable cars, no tour buses — just your own feet and someone who knows the mountains, walking into a Taiwan no map points you to.",
+      "heroCta": "Explore mountain tours",
+      "feature1a": "Graded by difficulty",
+      "feature1b": "From gentle trails to ridgeline traverses — choose by your fitness",
+      "feature2a": "Forest and ecology",
+      "feature2b": "Your guide introduces the vegetation and mountain stories along the way",
+      "feature3a": "Safety-certified guide",
+      "feature3b": "Holds mountain-guiding and outdoor-safety certifications",
+      "toursHeading": "Featured mountain wilds tours",
+      "viewTour": "View tour →",
+      "faqHeading": "Hiking FAQ",
+      "tours": [
+        { "title": "Chaishan Ridgeline Hike & Hidden Terrain", "meta": "🏔️ Beginner · 👥 4–12 people · NT$2,000" },
+        { "title": "Mid-Level Mountain Forest-Bathing Day Hike", "meta": "🏔️ Intermediate · 👥 4–8 people · NT$2,800" },
+        { "title": "Hidden 100-Peak Ridgeline Traverse Experience", "meta": "🏔️ Challenge · 👥 4–6 people · NT$4,500" }
+      ],
+      "faq": [
+        { "q": "Can I join with no hiking experience?", "a": "Yes — beginner routes focus on gentle trails, and the guide gives a pre-trip briefing and gear check first." },
+        { "q": "Do I need to bring my own gear?", "a": "We recommend bringing your own hiking shoes, water and rain gear; some tours provide trekking poles and other gear — see the tour page for details." },
+        { "q": "Will the tour run if it rains?", "a": "It depends on the day's weather and mountain-safety conditions — the guide will assess whether to adjust the route or reschedule." }
+      ]
+    },
+    "riverTrekking": {
+      "metaTitle": "Wild River Tours | Midao",
+      "metaDescription": "Step into Taiwan's purest wild streams and feel the power of Hualien's valleys. Small-group, in-depth river-trekking experiences led from start to finish by local guides.",
+      "ogTitle": "Wild Rivers — Hidden Wild-Stream Experiences in Hualien | Midao",
+      "ogDescription": "More than splashing around. Follow a guide who knows the streams into Hualien's most beautiful valleys.",
+      "breadcrumb": "Wild Rivers",
+      "heroTitle": "Into Taiwan's purest wild streams",
+      "heroSubtitle": "No cable cars, no tour buses — just your own feet and someone who knows the mountains, for the most authentic water-trail scenery in Taiwan.",
+      "heroCta": "Explore river-trekking tours",
+      "feature1a": "Gear rental",
+      "feature1b": "Safety shoes, helmet and protective gear all provided",
+      "feature2a": "Three difficulty levels",
+      "feature2b": "From Level 1 beginner to Level 3 advanced",
+      "feature3a": "Certified guides",
+      "feature3b": "Backed by outdoor-teaching and safety-training experience",
+      "toursHeading": "Featured wild river tours",
+      "viewTour": "View tour →",
+      "faqHeading": "River-trekking FAQ",
+      "tours": [
+        { "title": "Hualien Xiuguluan River Full-Day River-Trekking Adventure", "meta": "🌊 Level 2 · 👥 4–8 people · NT$3,200" },
+        { "title": "Nan'ao Wild-Stream Beginner Route", "meta": "🌊 Level 1 · 👥 4–8 people · NT$2,400" },
+        { "title": "Taitung Valley Canyoning Challenge", "meta": "🌊 Level 3 · 👥 4–6 people · NT$4,200" }
+      ],
+      "faq": [
+        { "q": "Can I join if I can't swim?", "a": "You can join Level 1 routes — the guide gives a safety briefing and gear check first." },
+        { "q": "Which months are best for river trekking?", "a": "Late spring through autumn is more stable, but it always depends on the day's water and safety conditions." },
+        { "q": "What's the difference between Level 1 and Level 3?", "a": "Mainly the terrain difficulty, fitness demands and the technical skill needed to get through." }
+      ]
+    }
+  },
   "availability": {
     "available": { "title": "Available", "body": "This time slot is currently available to book." },
     "full": { "title": "Fully booked", "body": "This time slot is full. Please choose another time or date." },

@@ -36,11 +36,14 @@ function stripLocalePrefix(pathname: string): string {
 }
 
 /**
- * PoC 階段只有首頁與 /activities 搬進 [locale]。其餘公開頁（about/blog/booking…）
- * 仍是 root 層 static route，不交給 next-intl（交了會被 rewrite 成 /zh-Hant/* 而 404）。
+ * 已搬進 app/[locale] 的公開頁交給 next-intl 處理 locale rewrite；其餘 root 層頁面
+ * （about/blog/booking…尚未搬遷）不交給 next-intl（交了會被 rewrite 成 /zh-Hant/* 而 404）。
+ * 全面搬遷進行中：首頁、/activities、/theme/* 已完成。
  */
 function isLocalizedPublicPath(rest: string): boolean {
-  return rest === '/' || rest === '/activities' || rest.startsWith('/activities/');
+  return rest === '/'
+    || rest === '/activities' || rest.startsWith('/activities/')
+    || rest === '/theme' || rest.startsWith('/theme/');
 }
 
 function pickToken(req: NextRequest): string {
@@ -416,6 +419,7 @@ export const config = {
     // Public routes subject to public_paused soft-launch guard (issue #805).
     '/',
     '/activities/:path*',
+    '/theme/:path*',
     '/booking/:path*',
     '/checkout/:path*',
     '/order/success/:path*',
