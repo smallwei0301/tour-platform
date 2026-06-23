@@ -101,6 +101,12 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
 .tp-nav-links { display: flex; gap: 14px; font-size: 14px; color: rgba(244, 236, 216, 0.82); align-items: center; }
 .tp-nav-links > a:hover { color: var(--tp-brass); }
 
+/* Language switcher (#multilingual Phase 0.5 PoC) — 精簡語言切換鈕 */
+.tp-lang-switch { display: inline-flex; align-items: center; gap: 2px; border: 1px solid rgba(244, 236, 216, 0.35); border-radius: 999px; padding: 2px; }
+.tp-lang-switch-btn { background: transparent; border: none; cursor: pointer; color: rgba(244, 236, 216, 0.82); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; line-height: 1; }
+.tp-lang-switch-btn:hover { color: var(--tp-brass); }
+.tp-lang-switch-btn.is-active { background: var(--tp-brass); color: #2a1c0c; }
+
 .tp-btn { border-radius: 999px; padding: 10px 16px; border: 1px solid transparent; display: inline-block; font-weight: 700; }
 /* 全站主要按鈕統一為首頁「探索祕島旅程」按鈕底色（#a8511f） */
 .tp-btn-primary { background: #a8511f; color: #f8efdc; }

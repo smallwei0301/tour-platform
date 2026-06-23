@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { PublicIcon } from '../ui/PublicIcon';
+import { LanguageSwitcher } from './LanguageSwitcher';
 
 const NAV_LINKS = [
   { label: '探索行程', href: '/activities' },
@@ -140,6 +141,8 @@ export function Navbar() {
             </Link>
           ))}
 
+          <LanguageSwitcher className="tp-lang-switch--desktop" />
+
           {!loadingUser && (
             user ? (
               <>
@@ -247,6 +250,9 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
+            <div className="tp-mobile-menu-item" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <LanguageSwitcher />
+            </div>
             {user ? (
               <>
                 <Link href="/me/orders" className="tp-mobile-menu-item" data-testid="nav-mobile-my-trips" onClick={() => setMenuOpen(false)}>
