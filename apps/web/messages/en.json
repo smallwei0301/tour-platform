@@ -21,6 +21,145 @@
     "defaultTitle": "Midao — Hidden Taiwan, by those who know",
     "defaultDescription": "Book real local guides and the routes no guidebook tells you. Discover hidden Taiwan, book directly, pay securely."
   },
+  "home": {
+    "hero": {
+      "sectionLabel": "Hero",
+      "photoAlt": "Looking up at a canyon from inside a cave, dawn light pouring over the valley and stream",
+      "vertical1": "Land of Midao",
+      "vertical2": "shown to you",
+      "vertical3": "by locals",
+      "titleA": "Deep in the island,",
+      "titleB": "the people with stories",
+      "titleC": "lead the way",
+      "accent": ".",
+      "sub": "Local guides × Deep routes × Real encounters",
+      "caption": "TAIWAN. LOCAL GUIDE. REAL STORIES.",
+      "cta": "Explore Midao journeys"
+    },
+    "themes": {
+      "eyebrow": "Explore by Theme",
+      "mountainTitle": "Mountains",
+      "riverTitle": "Wild Streams",
+      "cultureTitle": "Culture",
+      "foodTitle": "Food"
+    },
+    "featured": {
+      "sectionLabel": "Editor's pick",
+      "badge": "Editor's pick",
+      "difficulty": "Difficulty",
+      "difficultyAria": "Difficulty {n} out of 5",
+      "reviewCount": "{count} reviews",
+      "priceUnit": "from"
+    },
+    "guide": {
+      "sectionLabel": "Local guides & traveler protection",
+      "label": "Local guide · In-depth travel",
+      "name": "Chaishan, Kaohsiung · ",
+      "quoteA": "“Not a tourist checklist —",
+      "quoteB": "someone who knows the way takes you into Chaishan.”",
+      "link": "Meet the guide's story →",
+      "portraitAlt": "Andy Lee, a local guide of Chaishan in Kaohsiung, with his hawk in the forest",
+      "verifyA": "ID verified", "verifyB": "passed",
+      "reviewA": "Local guides", "reviewB": "hand-reviewed",
+      "protectA": "Traveler", "protectB": "protection",
+      "ratingA": "Real reviews", "ratingB": "5-star rated"
+    },
+    "tours": {
+      "eyebrow": "More featured tours",
+      "more": "See all tours →",
+      "priceUnit": "from"
+    },
+    "destinations": {
+      "eyebrow": "Explore Destinations",
+      "count": "{n}+ tours",
+      "taipei": "Taipei",
+      "hualien": "Hualien",
+      "kaohsiung": "Kaohsiung",
+      "tainan": "Tainan",
+      "kenting": "Kenting",
+      "taichung": "Taichung",
+      "yilan": "Yilan",
+      "penghu": "Penghu"
+    },
+    "stories": {
+      "eyebrow": "Traveler Stories",
+      "guideFallback": "Local guide",
+      "starsAria": "{n} stars"
+    },
+    "faq": {
+      "eyebrow": "FAQ",
+      "items": [
+        { "q": "Why is this way of traveling worth it?", "a": "Choose with clarity, not by luck — guide profiles, reviews and specialties are laid out so you pick the right person in minutes. Travel into memories, not a rushed itinerary — you see who a trip suits and what you'll remember, not just the spots. With a local leading the way, you waste less time — a guide who knows the area helps you avoid traps and stick to reliable routes." },
+        { "q": "What is a private guided tour?", "a": "A private guided tour is a small-group experience led by a platform-verified local guide. The guide designs the itinerary, and travelers explore at their own pace without following a big-group schedule." },
+        { "q": "How do you ensure guide quality and safety?", "a": "Every guide is identity-verified (KYC); some also hold first-aid certification, environmental-education credentials and other professional qualifications. The platform also offers an emergency hotline with a 30-minute response." },
+        { "q": "Is payment secure?", "a": "All payments are encrypted via ECPay or LINE Pay — your credit card details never pass through this site." },
+        { "q": "Can I cancel a booking?", "a": "Yes. Every tour has a clear refund policy. Most tours are fully refundable up to 168 hours before departure, and 70% refundable between 72 and 168 hours before. See each tour page for details." },
+        { "q": "Is it suitable for children?", "a": "It depends on the tour. Every tour page notes who it suits and who it may not suit — please check before booking. Some tours have a family-friendly tag." },
+        { "q": "How do I become a guide?", "a": "Click “Become a Guide” and fill out the application. Once reviewed by the platform, you can list your tours. We welcome guides with local character and professional backgrounds." }
+      ]
+    },
+    "closing": {
+      "sectionLabel": "Start exploring",
+      "title": "Your Midao story starts here",
+      "desc": "Let a local take you deep into Taiwan and meet the real beauty of it.",
+      "cta": "Start exploring Midao journeys"
+    },
+    "featuredCopy": {
+      "kaohsiung-chaishan-cave-experience": { "title": "Chaishan Caves · Urban Hidden Gem", "subtitle": "Step into a landscape secret at the city's edge", "desc": "Follow someone who knows the way into the coral-reef cave landscape,\nand meet another world of Kaohsiung at the city's edge.", "tagLabel": "Caving" },
+      "hualien-river-trekking": { "title": "Xiuguluan River · Trekking Adventure", "subtitle": "Into Taiwan's purest wild streams", "desc": "Leap into pools, drift downstream and climb to the top of a waterfall —\nfeel the power of Hualien's mountains and water on foot.", "tagLabel": "River trekking" },
+      "dadadaocheng-walk": { "title": "Dadaocheng · A Century-Old District", "subtitle": "Truly get to know a street that has lived a hundred years", "desc": "From the Dihua Street fabric shops and the City God Temple to Yongle Market,\nwalk the people and history behind the district into a story.", "tagLabel": "Walking tour" },
+      "taipei-night-market-food-tour": { "title": "Taipei Night Market · Street Eats", "subtitle": "Not just eating — understanding why it's good", "desc": "Follow a local foodie into the alley stalls,\nand read Taipei's night one bite at a time.", "tagLabel": "Food tour" }
+    }
+  },
+  "activities": {
+    "breadcrumbHome": "Home",
+    "breadcrumbActivities": "Explore Routes",
+    "breadcrumbSearch": "Search: {q}",
+    "filterTitle": "Filters",
+    "filterAria": "Filters",
+    "clearAll": "Clear all",
+    "keyword": "Keyword search",
+    "keywordPlaceholder": "Tour name, area…",
+    "dateLabel": "Departure date (bookable only)",
+    "priceLabel": "Price range (NT$)",
+    "priceMinAria": "Minimum price",
+    "priceMaxAria": "Maximum price",
+    "priceMin": "Min",
+    "priceMax": "Max",
+    "regionFilter": "Region",
+    "themeFilter": "Tour theme",
+    "sortAria": "Sort",
+    "sortRecommended": "Recommended",
+    "sortPriceAsc": "Price: low to high",
+    "sortPriceDesc": "Price: high to low",
+    "loading": "Loading…",
+    "emptyTitle": "No tours match your filters",
+    "emptyDesc": "Try other keywords, or clear your filters",
+    "emptyClear": "Clear all filters",
+    "resultSearch": "Search results for “{q}” ({n})",
+    "resultAll": "{n} private guided tours across Taiwan",
+    "noRating": "No reviews yet",
+    "reviewCount": "({n})",
+    "people": "{min}–{max} people",
+    "perPerson": "NT${price} / person",
+    "viewActivity": "View tour",
+    "durHoursMinutes": "{h}h {m}m",
+    "durHours": "{h}h",
+    "durMinutes": "{m} min",
+    "region": {
+      "taipeiCity": "Taipei City",
+      "kaohsiungCity": "Kaohsiung City",
+      "hualienCounty": "Hualien County",
+      "tainanCity": "Tainan City"
+    },
+    "theme": {
+      "cave-exploration": "Chaishan Caving",
+      "river-trekking": "Wild Rivers",
+      "culture-history": "Culture & History",
+      "food-tour": "Food Tours",
+      "mountain-wilderness": "Mountain Wilds"
+    }
+  },
   "availability": {
     "available": { "title": "Available", "body": "This time slot is currently available to book." },
     "full": { "title": "Fully booked", "body": "This time slot is full. Please choose another time or date." },

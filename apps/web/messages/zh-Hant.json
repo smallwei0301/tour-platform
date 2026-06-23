@@ -21,6 +21,145 @@
     "defaultTitle": "Midao 祕島 — 找到懂路的人，帶你走進台灣最有故事的地方",
     "defaultDescription": "台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。"
   },
+  "home": {
+    "hero": {
+      "sectionLabel": "祕島主視覺",
+      "photoAlt": "自洞穴內仰望峽谷，曙光灑落山谷與溪流",
+      "vertical1": "祕島之境",
+      "vertical2": "由在地人",
+      "vertical3": "帶你看見",
+      "titleA": "島嶼深處，",
+      "titleB": "有故事的人",
+      "titleC": "帶路",
+      "accent": "。",
+      "sub": "在地嚮導 × 深度路線 × 真實相遇",
+      "caption": "TAIWAN. LOCAL GUIDE. REAL STORIES.",
+      "cta": "探索祕島旅程"
+    },
+    "themes": {
+      "eyebrow": "主題探索",
+      "mountainTitle": "山徑",
+      "riverTitle": "野溪",
+      "cultureTitle": "文化",
+      "foodTitle": "美食"
+    },
+    "featured": {
+      "sectionLabel": "編輯精選行程",
+      "badge": "編輯精選",
+      "difficulty": "難度",
+      "difficultyAria": "難度 5 分之 {n}",
+      "reviewCount": "共 {count} 則評論",
+      "priceUnit": "起"
+    },
+    "guide": {
+      "sectionLabel": "在地嚮導與平台保障",
+      "label": "在地嚮導・深度旅遊",
+      "name": "高雄柴山・",
+      "quoteA": "「不是觀光打卡，",
+      "quoteB": "是懂路的人帶你走進柴山。」",
+      "link": "認識嚮導的故事 →",
+      "portraitAlt": "高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像",
+      "verifyA": "身份驗證", "verifyB": "已通過",
+      "reviewA": "在地嚮導", "reviewB": "人工審核",
+      "protectA": "旅客保障", "protectB": "安心出行",
+      "ratingA": "評價真實", "ratingB": "5星好評"
+    },
+    "tours": {
+      "eyebrow": "更多精選行程",
+      "more": "查看全部行程 →",
+      "priceUnit": "起"
+    },
+    "destinations": {
+      "eyebrow": "探索目的地",
+      "count": "{n}+ 行程",
+      "taipei": "台北",
+      "hualien": "花蓮",
+      "kaohsiung": "高雄",
+      "tainan": "台南",
+      "kenting": "墾丁",
+      "taichung": "台中",
+      "yilan": "宜蘭",
+      "penghu": "澎湖"
+    },
+    "stories": {
+      "eyebrow": "旅人故事",
+      "guideFallback": "在地導遊",
+      "starsAria": "{n} 顆星"
+    },
+    "faq": {
+      "eyebrow": "常見問題",
+      "items": [
+        { "q": "為什麼這種旅遊方式更值得？", "a": "看清楚再選，不賭人品——導遊資料、評論、專長一眼看清，幾分鐘選對人；走進回憶，而不是趕行程——看到的是「適合誰」「會記住什麼」，不只是地點；有在地人帶路，少花冤枉時間——熟悉地方的導遊，幫你避開陷阱、走穩定路線。" },
+        { "q": "什麼是私人導遊行程？", "a": "私人導遊行程是由平台認證的在地導遊帶領的小團體驗，行程由導遊設計，旅客可以按照自己的節奏探索，不需要配合大團行程表。" },
+        { "q": "如何確保導遊品質與安全？", "a": "所有導遊都經過實名認證（KYC），部分導遊另有急救認證、環境教育講師等專業資歷。平台也提供緊急熱線 30 分鐘回應服務。" },
+        { "q": "付款安全嗎？", "a": "所有付款透過 ECPay 或 LINE Pay 加密處理，你的信用卡資料不會經過本站。" },
+        { "q": "可以取消預約嗎？", "a": "可以。每個行程都有明確的退款政策，大部分行程在出團 168 小時前（含）以上可全額退款，出團前 超過 72 小時且少於 168 小時可退 70%。詳細規則請見各行程頁面。" },
+        { "q": "適合帶小孩參加嗎？", "a": "依行程而定。每個行程頁面都有標註「適合對象」與「不太適合」的說明，選擇前請先確認。部分行程有親子友善標籤。" },
+        { "q": "如何成為導遊？", "a": "點擊「成為導遊」填寫申請表，經過平台審核後即可上架行程。我們歡迎有在地特色、專業背景的導遊加入。" }
+      ]
+    },
+    "closing": {
+      "sectionLabel": "開始探索",
+      "title": "你的祕島故事，從這裡開始",
+      "desc": "讓在地人帶你走進台灣的深處，遇見真實的美好。",
+      "cta": "開始探索祕島旅程"
+    },
+    "featuredCopy": {
+      "kaohsiung-chaishan-cave-experience": { "title": "柴山探洞・城市祕境", "subtitle": "走進城市邊緣的地形祕境", "desc": "跟著懂路的人鑽進珊瑚礁岩的洞穴地景，\n在城市邊緣，遇見另一個世界的高雄。", "tagLabel": "探洞" },
+      "hualien-river-trekking": { "title": "秀姑巒溪・溯溪冒險", "subtitle": "走進台灣最純淨的野溪", "desc": "跳潭、漂流、攀上瀑布之巔，\n用雙腳感受花蓮山與水的力量。", "tagLabel": "溯溪" },
+      "dadadaocheng-walk": { "title": "大稻埕・百年街區", "subtitle": "真正認識活了百年的老街", "desc": "從迪化街布行、城隍廟到永樂市場，\n把街區背後的人與歷史走成故事。", "tagLabel": "走讀" },
+      "taipei-night-market-food-tour": { "title": "台北夜市・庶民食堂", "subtitle": "不只吃，還要懂為什麼好吃", "desc": "跟著在地吃貨鑽進巷弄攤位，\n一口一口讀懂台北的夜。", "tagLabel": "食旅" }
+    }
+  },
+  "activities": {
+    "breadcrumbHome": "首頁",
+    "breadcrumbActivities": "探索行程",
+    "breadcrumbSearch": "搜尋：{q}",
+    "filterTitle": "篩選條件",
+    "filterAria": "篩選條件",
+    "clearAll": "清除全部",
+    "keyword": "關鍵字搜尋",
+    "keywordPlaceholder": "行程名稱、地區⋯",
+    "dateLabel": "出發日期（只看可訂）",
+    "priceLabel": "價格區間（NT$）",
+    "priceMinAria": "最低價格",
+    "priceMaxAria": "最高價格",
+    "priceMin": "最低",
+    "priceMax": "最高",
+    "regionFilter": "地區",
+    "themeFilter": "行程主題",
+    "sortAria": "排序",
+    "sortRecommended": "推薦排序",
+    "sortPriceAsc": "價格：低到高",
+    "sortPriceDesc": "價格：高到低",
+    "loading": "載入中⋯",
+    "emptyTitle": "找不到符合條件的行程",
+    "emptyDesc": "試試看其他關鍵字，或清除篩選條件",
+    "emptyClear": "清除所有篩選",
+    "resultSearch": "「{q}」的搜尋結果（{n} 筆）",
+    "resultAll": "全台灣 {n} 個私人導遊行程",
+    "noRating": "尚無評價",
+    "reviewCount": "({n}則)",
+    "people": "{min}~{max} 人",
+    "perPerson": "NT${price} / 人",
+    "viewActivity": "查看行程",
+    "durHoursMinutes": "{h} 小時 {m} 分",
+    "durHours": "{h} 小時",
+    "durMinutes": "{m} 分鐘",
+    "region": {
+      "taipeiCity": "台北市",
+      "kaohsiungCity": "高雄市",
+      "hualienCounty": "花蓮縣",
+      "tainanCity": "台南市"
+    },
+    "theme": {
+      "cave-exploration": "柴山探洞",
+      "river-trekking": "野外溪流",
+      "culture-history": "文化歷史",
+      "food-tour": "美食導覽",
+      "mountain-wilderness": "山野秘境"
+    }
+  },
   "availability": {
     "available": { "title": "可預約", "body": "此時段目前可預約。" },
     "full": { "title": "已額滿", "body": "此時段名額已滿，請選擇其他時段或日期。" },

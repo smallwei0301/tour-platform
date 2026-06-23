@@ -3,19 +3,28 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { buildActivityHref } from '../../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../../src/lib/activity-type-filter.mjs';
 import { normalizeRegionToDbValue } from '../../../src/lib/region-slugs.mjs';
-import { ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../../src/lib/activity-themes.mjs';
+import { ACTIVITY_THEMES, ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../../src/lib/activity-themes.mjs';
 import { resolveActivityReviewStats } from '../../../src/lib/activity-review-stats.mjs';
 import { useTravelerAuth } from '../../../src/lib/use-traveler-auth';
 import WishlistToggle from '../../../src/components/WishlistToggle';
 import { PublicIcon } from '../../../src/components/ui/PublicIcon';
 import { resolveCoverSrc, CARD_IMAGE_SIZES } from './cover-image';
 
-const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市'];
+// 地區篩選：value＝DB 規範值（比對／URL 用，維持中文），labelKey＝顯示用 i18n key。
+const REGIONS = [
+  { value: '台北市', labelKey: 'taipeiCity' },
+  { value: '高雄市', labelKey: 'kaohsiungCity' },
+  { value: '花蓮縣', labelKey: 'hualienCounty' },
+  { value: '台南市', labelKey: 'tainanCity' },
+] as const;
 // #mobile-categories：行程主題與 footer／各主題介紹頁統一為五大主題（單一來源）。
+// value＝theme label（isActivityInTheme/resolveCanonicalType 用），slug＝顯示 i18n key。
 const TYPES = ACTIVITY_THEME_LABELS;
+const TYPE_ITEMS = ACTIVITY_THEMES.map((th: { label: string; slug: string }) => ({ value: th.label, slug: th.slug }));
 
 interface Activity {
   id: string;
@@ -54,6 +63,7 @@ interface ActivitiesContentProps {
 export default function ActivitiesContent({ initialRegion, initialActivities }: ActivitiesContentProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations('activities');
 
   const [query, setQuery] = useState(searchParams.get('q') || '');
   // 地區一律正規化成 DB 規範值（'高雄' / 'kaohsiung' → '高雄市'），讓 footer／熱門目的地
@@ -205,37 +215,37 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
 
   const hasFilters = query || selectedRegions.length > 0 || selectedTypes.length > 0 || dateFilter || priceMin || priceMax;
   const resultLabel = query
-    ? `「${query}」的搜尋結果（${filtered.length} 筆）`
-    : `全台灣 ${filtered.length} 個私人導遊行程`;
+    ? t('resultSearch', { q: query, n: filtered.length })
+    : t('resultAll', { n: filtered.length });
 
   return (
     <main className="tp-container tp-activities" style={{ paddingBottom: 40 }}>
-      <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; <Link href="/activities">探索行程</Link>{query ? ` &gt; 搜尋：${query}` : ''}</div>
+      <div className="tp-breadcrumb"><Link href="/">{t('breadcrumbHome')}</Link> &gt; <Link href="/activities">{t('breadcrumbActivities')}</Link>{query ? ` > ${t('breadcrumbSearch', { q: query })}` : ''}</div>
 
       <section className="tp-activities-layout">
         {/* 篩選側欄 */}
-        <aside className="tp-filter" aria-label="篩選條件">
+        <aside className="tp-filter" aria-label={t('filterAria')}>
           <div className="tp-filter-head">
-            <h3>篩選條件</h3>
-            {hasFilters && <button onClick={clearAll} style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}>清除全部</button>}
+            <h3>{t('filterTitle')}</h3>
+            {hasFilters && <button onClick={clearAll} style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}>{t('clearAll')}</button>}
           </div>
 
           {/* 關鍵字搜尋 */}
           <div style={{ marginBottom: 16 }}>
-            <label htmlFor="activities-search" style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>關鍵字搜尋</label>
+            <label htmlFor="activities-search" style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>{t('keyword')}</label>
             <input
               id="activities-search"
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="行程名稱、地區⋯"
+              placeholder={t('keywordPlaceholder')}
               style={{ width: '100%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
             />
           </div>
 
           {/* #1380: 日期可訂 */}
           <div style={{ marginBottom: 16 }}>
-            <label htmlFor="activities-date-filter" style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>出發日期（只看可訂）</label>
+            <label htmlFor="activities-date-filter" style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>{t('dateLabel')}</label>
             <input
               id="activities-date-filter"
               data-testid="activities-date-filter"
@@ -248,49 +258,49 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
 
           {/* #1380: 價格區間 */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>價格區間（NT$）</label>
+            <label style={{ fontWeight: 600, fontSize: 13, display: 'block', marginBottom: 6 }}>{t('priceLabel')}</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <input
-                aria-label="最低價格"
+                aria-label={t('priceMinAria')}
                 data-testid="activities-price-min"
                 type="number"
                 min={0}
                 inputMode="numeric"
                 value={priceMin}
                 onChange={(e) => setPriceMin(e.target.value)}
-                placeholder="最低"
+                placeholder={t('priceMin')}
                 style={{ width: '50%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
               />
               <span style={{ color: 'var(--tp-muted)' }}>–</span>
               <input
-                aria-label="最高價格"
+                aria-label={t('priceMaxAria')}
                 data-testid="activities-price-max"
                 type="number"
                 min={0}
                 inputMode="numeric"
                 value={priceMax}
                 onChange={(e) => setPriceMax(e.target.value)}
-                placeholder="最高"
+                placeholder={t('priceMax')}
                 style={{ width: '50%', padding: '8px 10px', border: '1px solid var(--tp-border)', borderRadius: 8, fontSize: 13 }}
               />
             </div>
           </div>
 
           <details>
-            <summary>地區</summary>
+            <summary>{t('regionFilter')}</summary>
             {REGIONS.map((r) => (
-              <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="checkbox" checked={selectedRegions.includes(r)} onChange={() => toggleRegion(r)} />
-                {r}
+              <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input type="checkbox" checked={selectedRegions.includes(r.value)} onChange={() => toggleRegion(r.value)} />
+                {t(`region.${r.labelKey}`)}
               </label>
             ))}
           </details>
           <details>
-            <summary>行程主題</summary>
-            {TYPES.map((t) => (
-              <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="checkbox" checked={selectedTypes.includes(t)} onChange={() => toggleType(t)} />
-                {t}
+            <summary>{t('themeFilter')}</summary>
+            {TYPE_ITEMS.map((item) => (
+              <label key={item.value} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input type="checkbox" checked={selectedTypes.includes(item.value)} onChange={() => toggleType(item.value)} />
+                {t(`theme.${item.slug}`)}
               </label>
             ))}
           </details>
@@ -304,23 +314,23 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
           </div>
           <div className="tp-result-head">
             <h1>{resultLabel}</h1>
-            <select aria-label="排序" value={sort} onChange={(e) => setSort(e.target.value)}>
-              <option value="recommended">推薦排序</option>
-              <option value="price-asc">價格：低到高</option>
-              <option value="price-desc">價格：高到低</option>
+            <select aria-label={t('sortAria')} value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="recommended">{t('sortRecommended')}</option>
+              <option value="price-asc">{t('sortPriceAsc')}</option>
+              <option value="price-desc">{t('sortPriceDesc')}</option>
             </select>
           </div>
 
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
-              <p style={{ fontSize: 14 }}>載入中⋯</p>
+              <p style={{ fontSize: 14 }}>{t('loading')}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
               <div style={{ marginBottom: 12, color: 'var(--tp-gold-strong)' }}><PublicIcon name="search" size={40} /></div>
-              <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的行程</p>
-              <p style={{ fontSize: 14, marginBottom: 20 }}>試試看其他關鍵字，或清除篩選條件</p>
-              <button onClick={clearAll} className="tp-btn tp-btn-primary">清除所有篩選</button>
+              <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{t('emptyTitle')}</p>
+              <p style={{ fontSize: 14, marginBottom: 20 }}>{t('emptyDesc')}</p>
+              <button onClick={clearAll} className="tp-btn tp-btn-primary">{t('emptyClear')}</button>
             </div>
           ) : (
             <div className="tp-card-grid tp-card-grid-activities">
@@ -328,8 +338,10 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                 const href = buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug });
                 const durationDisplay = a.durationMinutes
                   ? a.durationMinutes >= 60
-                    ? `${Math.floor(a.durationMinutes / 60)}${a.durationMinutes % 60 ? ` 小時 ${a.durationMinutes % 60} 分` : ' 小時'}`
-                    : `${a.durationMinutes} 分鐘`
+                    ? a.durationMinutes % 60
+                      ? t('durHoursMinutes', { h: Math.floor(a.durationMinutes / 60), m: a.durationMinutes % 60 })
+                      : t('durHours', { h: Math.floor(a.durationMinutes / 60) })
+                    : t('durMinutes', { m: a.durationMinutes })
                   : '';
                 return (
                   <article className="tp-card" key={a.slug} data-testid="activity-card" data-activity-slug={a.slug}>
@@ -381,12 +393,12 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                             <>
                               <span style={{ color: '#f59e0b', display: 'inline-flex' }}><PublicIcon name="star" size={14} /></span>
                               <span>{stats.score.toFixed(1)}</span>
-                              <span style={{ color: 'var(--tp-muted)' }}>({stats.count}則)</span>
+                              <span style={{ color: 'var(--tp-muted)' }}>{t('reviewCount', { n: stats.count })}</span>
                               <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
                             </>
                           ) : (
                             <>
-                              <span style={{ color: 'var(--tp-muted)' }} className="text-xs">尚無評價</span>
+                              <span style={{ color: 'var(--tp-muted)' }} className="text-xs">{t('noRating')}</span>
                               <span style={{ color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>· <PublicIcon name="pin" size={13} /> {a.region}</span>
                             </>
                           )}
@@ -395,11 +407,11 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                     })()}
                     {durationDisplay && (
                       <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="clock" size={13} /> {durationDisplay}</span> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="users" size={13} /> {a.minParticipants}~{a.maxParticipants} 人</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="clock" size={13} /> {durationDisplay}</span> · <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><PublicIcon name="users" size={13} /> {t('people', { min: a.minParticipants ?? 0, max: a.maxParticipants ?? 0 })}</span>
                       </p>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ color: 'var(--tp-gold-strong)' }}>NT${a.priceTwd?.toLocaleString()} / 人</strong>
+                      <strong style={{ color: 'var(--tp-gold-strong)' }}>{t('perPerson', { price: a.priceTwd?.toLocaleString() ?? '0' })}</strong>
                       <Link
                         className="tp-btn tp-btn-primary"
                         href={href}
@@ -412,7 +424,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                         data-testid="activity-card-link"
                         style={{ fontSize: 13, padding: '6px 14px' }}
                       >
-                        查看行程
+                        {t('viewActivity')}
                       </Link>
                     </div>
                   </article>

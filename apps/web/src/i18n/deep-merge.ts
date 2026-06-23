@@ -5,7 +5,8 @@
  * 確保畫面永遠不會出現空字串或裸鍵（`nav.explore` 之類）。純函式、不依賴
  * next-intl runtime，方便用 node --test 直接驗證。
  */
-export type MessageTree = { [key: string]: string | MessageTree };
+export type MessageValue = string | MessageTree | Array<string | MessageTree>;
+export type MessageTree = { [key: string]: MessageValue };
 
 function isPlainObject(value: unknown): value is MessageTree {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

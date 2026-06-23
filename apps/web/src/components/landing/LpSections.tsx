@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   MountainIcon, WaveIcon, TribalIcon, TeaLeafIcon,
   HikeIcon, NightsIcon,
@@ -12,47 +13,47 @@ import { LpHeroMotion } from './LpHeroMotion';
 import { LpHeroDust } from './LpHeroDust';
 import { LpFeaturedCarousel } from './LpFeaturedCarousel';
 
+// #multilingual 全面搬遷：首頁區塊改用 useTranslations('home')。next-intl 的
+// useTranslations 在 server component 亦可同步使用（本檔皆 server component）。
+// 內部連結維持 next/link（不加 locale 前綴）：未搬進 [locale] 的路徑（/theme、
+// /guides…）若被前綴會 404；已搬進的 /、/activities 靠 sticky NEXT_LOCALE cookie，
+// middleware localeDetection 會把無前綴請求導回目前語言，語言連續性不受影響。
+
 export function LpHero() {
+  const t = useTranslations('home.hero');
   return (
-    <section className="lp-hero" aria-label="祕島主視覺">
+    <section className="lp-hero" aria-label={t('sectionLabel')}>
       <div
         className="lp-hero-photo"
         role="img"
-        aria-label="自洞穴內仰望峽谷，曙光灑落山谷與溪流"
+        aria-label={t('photoAlt')}
       />
-      {/* 曙光動態圖層（由 LpHeroMotion 以 WAAPI 驅動）。
-          疊層＝物理景深：靜止遠景山谷（photo）→ 洞口飄雲 →
-          推進中的去背洞穴前景（fg）→ 暮色罩 → 丁達爾光束 */}
-      {/* 白色霧團：置於遠景與前景之間 — 蓋在山景上、被洞穴岩壁遮擋 */}
       <div className="lp-hero-cloudbox" aria-hidden="true">
         <div className="lp-hero-clouds" />
         <div className="lp-hero-clouds2" />
       </div>
       <div className="lp-hero-fg" aria-hidden="true" />
       <div className="lp-hero-dawn" aria-hidden="true" />
-      {/* 光束＋粉塵：raybox 裁切 — 右半部被前景岩壁遮蔽，只照入洞穴左半部 */}
       <div className="lp-hero-raybox" aria-hidden="true">
         <div className="lp-hero-rays" />
-        {/* 丁達爾光束中的懸浮微粒（canvas 粒子系統，布朗運動＋上飄） */}
         <LpHeroDust />
       </div>
       <LpHeroMotion />
-      {/* 右側橫排三行標語＋羅盤浮水印（對齊參考圖） */}
       <div className="lp-hero-vert" aria-hidden="true">
-        <span>祕島之境</span>
-        <span>由在地人</span>
-        <span>帶你看見</span>
+        <span>{t('vertical1')}</span>
+        <span>{t('vertical2')}</span>
+        <span>{t('vertical3')}</span>
       </div>
       <div className="lp-hero-compass" aria-hidden="true">
         <CompassIcon size={30} />
       </div>
       <div className="lp-hero-inner">
         <div className="lp-hero-content">
-          <h1>島嶼深處，<br />有故事的人<br />帶路<span className="lp-accent">。</span></h1>
-          <p className="lp-hero-sub">在地嚮導 × 深度路線 × 真實相遇</p>
-          <p className="lp-hero-caption">TAIWAN. LOCAL GUIDE. REAL STORIES.</p>
+          <h1>{t('titleA')}<br />{t('titleB')}<br />{t('titleC')}<span className="lp-accent">{t('accent')}</span></h1>
+          <p className="lp-hero-sub">{t('sub')}</p>
+          <p className="lp-hero-caption">{t('caption')}</p>
           <Link href="/activities" data-testid="home-cta-explore" className="lp-btn">
-            探索祕島旅程 <span className="lp-btn-arrow">→</span>
+            {t('cta')} <span className="lp-btn-arrow">→</span>
           </Link>
         </div>
       </div>
@@ -61,21 +62,22 @@ export function LpHero() {
 }
 
 const THEMES = [
-  { title: '山徑', sub: 'Into the Mountains', href: '/theme/mountain-wilderness', icon: MountainIcon },
-  { title: '野溪', sub: 'Wild Streams', href: '/theme/river-trekking', icon: WaveIcon },
-  { title: '文化', sub: 'Local Culture', href: '/theme/culture-history', icon: TribalIcon },
-  { title: '美食', sub: 'Local Food', href: '/theme/food-tour', icon: TeaLeafIcon },
-];
+  { titleKey: 'mountainTitle', sub: 'Into the Mountains', href: '/theme/mountain-wilderness', icon: MountainIcon },
+  { titleKey: 'riverTitle', sub: 'Wild Streams', href: '/theme/river-trekking', icon: WaveIcon },
+  { titleKey: 'cultureTitle', sub: 'Local Culture', href: '/theme/culture-history', icon: TribalIcon },
+  { titleKey: 'foodTitle', sub: 'Local Food', href: '/theme/food-tour', icon: TeaLeafIcon },
+] as const;
 
 export function LpThemes() {
+  const t = useTranslations('home.themes');
   return (
-    <section className="lp-section lp-themes" aria-label="主題探索">
-      <h2 className="lp-eyebrow">主題探索</h2>
+    <section className="lp-section lp-themes" aria-label={t('eyebrow')}>
+      <h2 className="lp-eyebrow">{t('eyebrow')}</h2>
       <div className="lp-themes-grid">
-        {THEMES.map(({ title, sub, href, icon: Icon }) => (
-          <Link key={title} href={href} className="lp-theme-card">
+        {THEMES.map(({ titleKey, sub, href, icon: Icon }) => (
+          <Link key={titleKey} href={href} className="lp-theme-card">
             <Icon size={30} />
-            <span className="lp-theme-title">{title}</span>
+            <span className="lp-theme-title">{t(titleKey)}</span>
             <span className="lp-theme-sub">{sub}</span>
           </Link>
         ))}
@@ -84,14 +86,23 @@ export function LpThemes() {
   );
 }
 
-// ── 編輯精選卡：策展文案與本地圖片（admin 於 /admin/homepage 切換行程） ──
-// 圖片一律本地快取（fixtures 的 unsplash 外連在離線/慢網環境會破圖）。
+// ── 編輯精選卡：策展圖片與難度（admin 於 /admin/homepage 切換行程） ──
 const FEATURED_IMAGES: Record<string, string> = {
   'kaohsiung-chaishan-cave-experience': '/images/lp/feat-chaishan.webp',
   'hualien-river-trekking': '/images/lp/tour-river.webp',
   'dadadaocheng-walk': '/images/lp/tour-dadaocheng.webp',
   'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.webp',
 };
+
+// 策展行程難度（文案已移至 messages 的 home.featuredCopy）。
+const FEATURED_DIFFICULTY: Record<string, number> = {
+  'kaohsiung-chaishan-cave-experience': 2,
+  'hualien-river-trekking': 3,
+  'dadadaocheng-walk': 1,
+  'taipei-night-market-food-tour': 1,
+};
+
+const CURATED_SLUGS = new Set(Object.keys(FEATURED_IMAGES));
 
 type FeaturedCopy = {
   title: string;
@@ -101,66 +112,22 @@ type FeaturedCopy = {
   difficulty: number; // 1-5
 };
 
-const FEATURED_COPY: Record<string, FeaturedCopy> = {
-  'kaohsiung-chaishan-cave-experience': {
-    title: '柴山探洞・城市祕境',
-    subtitle: '走進城市邊緣的地形祕境',
-    desc: <>跟著懂路的人鑽進珊瑚礁岩的洞穴地景，<br />在城市邊緣，遇見另一個世界的高雄。</>,
-    tagLabel: '探洞',
-    difficulty: 2,
-  },
-  'hualien-river-trekking': {
-    title: '秀姑巒溪・溯溪冒險',
-    subtitle: '走進台灣最純淨的野溪',
-    desc: <>跳潭、漂流、攀上瀑布之巔，<br />用雙腳感受花蓮山與水的力量。</>,
-    tagLabel: '溯溪',
-    difficulty: 3,
-  },
-  'dadadaocheng-walk': {
-    title: '大稻埕・百年街區',
-    subtitle: '真正認識活了百年的老街',
-    desc: <>從迪化街布行、城隍廟到永樂市場，<br />把街區背後的人與歷史走成故事。</>,
-    tagLabel: '走讀',
-    difficulty: 1,
-  },
-  'taipei-night-market-food-tour': {
-    title: '台北夜市・庶民食堂',
-    subtitle: '不只吃，還要懂為什麼好吃',
-    desc: <>跟著在地吃貨鑽進巷弄攤位，<br />一口一口讀懂台北的夜。</>,
-    tagLabel: '食旅',
-    difficulty: 1,
-  },
-};
-
-/** 未策展的行程退回 fixtures 衍生（標題取「｜」前段、副標取 tagline 前段） */
-function deriveFeaturedCopy(activity: (typeof activities)[number]): FeaturedCopy {
-  return {
-    title: activity.title.split('｜')[0],
-    subtitle: activity.tagline.slice(0, 18),
-    desc: activity.shortDescription,
-    tagLabel: activity.region,
-    difficulty: 2,
-  };
-}
-
 function featuredRating(slug: string): { score: string; count: number } {
   // 柴山維持既有行銷文案數字（4.9 / 128 則）
   if (slug === 'kaohsiung-chaishan-cave-experience') return { score: '4.9', count: 128 };
   const related = reviews.filter((r) => r.activitySlug === slug);
   if (related.length === 0) return { score: '4.9', count: 128 };
   const avg = related.reduce((sum, r) => sum + r.rating, 0) / related.length;
-  // fixtures 評價數為樣本，顯示用基數對齊行銷文案級距
   return { score: avg.toFixed(1), count: related.length * 32 };
 }
 
 /** admin 設定的真實行程精選 view-model（page.tsx 解析後傳入）。 */
 export type FeaturedView = {
   activity: { slug: string; region?: string; regionSlug?: string; priceTwd?: number; durationMinutes?: number; durationDisplay?: string };
-  // imageUrls＝「行程頁內照片」（行程相片集），供大卡輪播；缺漏時退回單張 imageUrl。
   copy: { title: string; subtitle: string; desc: string; tagLabel: string; difficulty: number; imageUrl: string; imageUrls?: string[]; ratingScore: string; ratingCount: number };
 };
 
-/** desc 可為策展 ReactNode（fixtures）或純字串（真實行程）；字串以換行轉 <br/>。 */
+/** desc 可為策展 ReactNode 或純字串；字串以換行轉 <br/>。 */
 function renderFeaturedDesc(desc: ReactNode): ReactNode {
   if (typeof desc !== 'string') return desc;
   const lines = desc.split(/\n+/).filter(Boolean);
@@ -170,6 +137,8 @@ function renderFeaturedDesc(desc: ReactNode): ReactNode {
 }
 
 export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featured }: { slug?: string; featured?: FeaturedView }) {
+  const t = useTranslations('home.featured');
+  const tc = useTranslations('home.featuredCopy');
   // 優先用真實行程 view-model；無則退回 fixtures（DB 不可用時 fail-open）。
   let href: string;
   let photo: string;
@@ -188,7 +157,6 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
     const { activity, copy } = featured;
     href = buildActivityHref(activity);
     photo = copy.imageUrl || '/images/lp/feat-chaishan.webp';
-    // 行程頁內照片（相片集）優先做輪播；缺漏時退回單張封面。
     photos = copy.imageUrls && copy.imageUrls.length > 0 ? copy.imageUrls : [photo];
     title = copy.title;
     subtitle = copy.subtitle;
@@ -201,17 +169,31 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
     ratingCount = copy.ratingCount || 0;
   } else {
     const activity = getActivityBySlug(slug) ?? getActivityBySlug('kaohsiung-chaishan-cave-experience')!;
-    const copy = FEATURED_COPY[activity.slug] ?? deriveFeaturedCopy(activity);
     const rating = featuredRating(activity.slug);
     href = buildActivityHref(activity);
     photo = FEATURED_IMAGES[activity.slug] ?? activity.imageUrl;
-    // fixtures 後備（DB 不可用）：維持單張本地快取圖（外連相片集離線會破圖）。
     photos = [photo];
-    title = copy.title;
-    subtitle = copy.subtitle;
-    desc = copy.desc;
-    tagLabel = copy.tagLabel;
-    difficulty = copy.difficulty;
+    // 策展行程文案取自 messages（可切語言）；非策展退回 fixtures 衍生（資料端原文）。
+    if (CURATED_SLUGS.has(activity.slug)) {
+      title = tc(`${activity.slug}.title`);
+      subtitle = tc(`${activity.slug}.subtitle`);
+      desc = tc(`${activity.slug}.desc`);
+      tagLabel = tc(`${activity.slug}.tagLabel`);
+      difficulty = FEATURED_DIFFICULTY[activity.slug] ?? 2;
+    } else {
+      const derived: FeaturedCopy = {
+        title: activity.title.split('｜')[0],
+        subtitle: activity.tagline.slice(0, 18),
+        desc: activity.shortDescription,
+        tagLabel: activity.region,
+        difficulty: 2,
+      };
+      title = derived.title;
+      subtitle = derived.subtitle;
+      desc = derived.desc;
+      tagLabel = derived.tagLabel;
+      difficulty = derived.difficulty;
+    }
     durationDisplay = activity.durationDisplay.replace(/（.*）/, '');
     price = activity.price;
     ratingScore = rating.score;
@@ -219,15 +201,12 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
   }
 
   return (
-    <section className="lp-section lp-featured" aria-label="編輯精選行程">
+    <section className="lp-section lp-featured" aria-label={t('sectionLabel')}>
       <Link href={href} className="lp-feat-card">
-        {/* 參考圖：照片佔整張卡片全高（穿過 footer 列），footer 僅在右欄下方 */}
         <div className="lp-feat-photo">
-          {/* 行程頁內照片以輪播呈現（單張時等同靜態照片） */}
           <LpFeaturedCarousel images={photos} alt={title} />
-          {/* 編輯精選書籤標籤（去背後懸掛於照片左上） */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.webp" alt="編輯精選" loading="lazy" />
+          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.webp" alt={t('badge')} loading="lazy" />
         </div>
         <div className="lp-feat-right">
           <div className="lp-feat-body">
@@ -238,8 +217,8 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
               {tagLabel && <span className="lp-tag"><HikeIcon /> {tagLabel}</span>}
               {durationDisplay && <span className="lp-tag"><NightsIcon /> {durationDisplay}</span>}
               <span className="lp-tag">
-                難度
-                <span className="lp-dots" aria-label={`難度 5 分之 ${difficulty}`}>
+                {t('difficulty')}
+                <span className="lp-dots" aria-label={t('difficultyAria', { n: difficulty })}>
                   {Array.from({ length: 5 }, (_, i) => (
                     <i key={i} className={i < difficulty ? undefined : 'lp-dot-off'} />
                   ))}
@@ -251,10 +230,10 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
             <div className="lp-feat-rating">
               <StarIcon filled aria-hidden="true" />
               <strong>{ratingScore}</strong>
-              {ratingCount > 0 && <span className="lp-rating-count">共 {ratingCount} 則評論</span>}
+              {ratingCount > 0 && <span className="lp-rating-count">{t('reviewCount', { count: ratingCount })}</span>}
             </div>
             <div className="lp-feat-price">
-              NT$ {price.toLocaleString()}<span className="lp-price-unit">起</span>
+              NT$ {price.toLocaleString()}<span className="lp-price-unit">{t('priceUnit')}</span>
             </div>
           </div>
         </div>
@@ -264,35 +243,34 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
 }
 
 const TRUST_ITEMS = [
-  { icon: ShieldCheckIcon, text: <>身份驗證<br />已通過</> },
-  { icon: CompassIcon, text: <>在地嚮導<br />人工審核</> },
-  { icon: BadgeShieldIcon, text: <>旅客保障<br />安心出行</> },
-  { icon: StarIcon, text: <>評價真實<br />5星好評</> },
-];
+  { icon: ShieldCheckIcon, a: 'verifyA', b: 'verifyB' },
+  { icon: CompassIcon, a: 'reviewA', b: 'reviewB' },
+  { icon: BadgeShieldIcon, a: 'protectA', b: 'protectB' },
+  { icon: StarIcon, a: 'ratingA', b: 'ratingB' },
+] as const;
 
 export function LpGuide() {
+  const t = useTranslations('home.guide');
   return (
-    <section className="lp-section lp-guide" aria-label="在地嚮導與平台保障">
-      {/* 參考圖為單一邊框大卡：照片＋文字（左 60.5%）＋徽章 2×2（右） */}
+    <section className="lp-section lp-guide" aria-label={t('sectionLabel')}>
       <div className="lp-guide-card">
         <Link href="/guides/andy-lee" className="lp-guide-story">
-          {/* 照片獨立欄：固定欄寬＋右緣漸層，任何裝置同樣構圖（文字欄不壓圖） */}
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt="高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像" loading="lazy" />
+            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt={t('portraitAlt')} loading="lazy" />
           </div>
           <div className="lp-guide-text">
-            <p className="lp-guide-label">在地嚮導・深度旅遊</p>
-            <p className="lp-guide-name">高雄柴山・<span className="lp-guide-name-en">Andy&nbsp;Lee</span></p>
-            <p className="lp-guide-quote">「不是觀光打卡，<br />是懂路的人帶你走進柴山。」</p>
-            <span className="lp-guide-link">認識嚮導的故事 →</span>
+            <p className="lp-guide-label">{t('label')}</p>
+            <p className="lp-guide-name">{t('name')}<span className="lp-guide-name-en">Andy&nbsp;Lee</span></p>
+            <p className="lp-guide-quote">{t('quoteA')}<br />{t('quoteB')}</p>
+            <span className="lp-guide-link">{t('link')}</span>
           </div>
         </Link>
         <div className="lp-trust-grid2">
-          {TRUST_ITEMS.map(({ icon: Icon, text }, i) => (
+          {TRUST_ITEMS.map(({ icon: Icon, a, b }, i) => (
             <div key={i} className="lp-trust-card">
               <Icon size={26} />
-              <span>{text}</span>
+              <span>{t(a)}<br />{t(b)}</span>
             </div>
           ))}
         </div>
@@ -303,19 +281,19 @@ export function LpGuide() {
 
 // ─── 原首頁資訊區塊（以 LP 視覺語言重新呈現） ───
 
+// region＝連結用的 DB 規範值（保持中文，?region= query 需對得上資料）；
+// nameKey＝顯示名稱的 i18n key；n＝行程數。
 const DESTINATIONS = [
-  { name: '台北', count: '120+ 行程' },
-  { name: '花蓮', count: '85+ 行程' },
-  { name: '高雄', count: '72+ 行程' },
-  { name: '台南', count: '96+ 行程' },
-  { name: '墾丁', count: '44+ 行程' },
-  { name: '台中', count: '58+ 行程' },
-  { name: '宜蘭', count: '37+ 行程' },
-  { name: '澎湖', count: '29+ 行程' },
-];
+  { nameKey: 'taipei', region: '台北', n: 120 },
+  { nameKey: 'hualien', region: '花蓮', n: 85 },
+  { nameKey: 'kaohsiung', region: '高雄', n: 72 },
+  { nameKey: 'tainan', region: '台南', n: 96 },
+  { nameKey: 'kenting', region: '墾丁', n: 44 },
+  { nameKey: 'taichung', region: '台中', n: 58 },
+  { nameKey: 'yilan', region: '宜蘭', n: 37 },
+  { nameKey: 'penghu', region: '澎湖', n: 29 },
+] as const;
 
-/** 更多精選行程（admin 於 /admin/homepage 選擇；未設定時為編輯精選以外的前 2 個）。
- *  圖片使用本地資產（fixtures 的 unsplash 外連在離線/慢網環境會破圖）。 */
 const TOUR_IMAGES: Record<string, string> = {
   'dadadaocheng-walk': '/images/lp/tour-dadaocheng.webp',
   'taipei-night-market-food-tour': '/images/lp/tour-nightmarket.webp',
@@ -332,6 +310,7 @@ export type TourView = {
 type TourItem = { slug: string; href: string; image: string; title: string; tagline: string; region: string; durationDisplay: string; price: number };
 
 export function LpTours({ slugs, tours }: { slugs?: string[]; tours?: TourView[] }) {
+  const t = useTranslations('home.tours');
   // 優先用真實行程 view-model；無則退回 fixtures（DB 不可用時 fail-open）。
   let items: TourItem[];
   if (tours && tours.length > 0) {
@@ -355,8 +334,8 @@ export function LpTours({ slugs, tours }: { slugs?: string[]; tours?: TourView[]
     }));
   }
   return (
-    <section className="lp-section lp-tours" aria-label="更多精選行程">
-      <h2 className="lp-eyebrow">更多精選行程</h2>
+    <section className="lp-section lp-tours" aria-label={t('eyebrow')}>
+      <h2 className="lp-eyebrow">{t('eyebrow')}</h2>
       <div className="lp-tours-list">
         {items.map((a) => (
           <Link key={a.slug} href={a.href} className="lp-tour-card">
@@ -369,27 +348,28 @@ export function LpTours({ slugs, tours }: { slugs?: string[]; tours?: TourView[]
               <p className="lp-tour-tagline">{a.tagline}</p>
               <div className="lp-tour-meta">
                 <span>{a.region}{a.durationDisplay ? `・${a.durationDisplay}` : ''}</span>
-                <span className="lp-tour-price">NT$ {a.price.toLocaleString()}<i>起</i></span>
+                <span className="lp-tour-price">NT$ {a.price.toLocaleString()}<i>{t('priceUnit')}</i></span>
               </div>
             </div>
           </Link>
         ))}
       </div>
-      <Link href="/activities" className="lp-more-link">查看全部行程 →</Link>
+      <Link href="/activities" className="lp-more-link">{t('more')}</Link>
     </section>
   );
 }
 
 /** 探索目的地（原 DestinationsSection 資料） */
 export function LpDestinations() {
+  const t = useTranslations('home.destinations');
   return (
-    <section className="lp-section lp-dests" aria-label="探索目的地">
-      <h2 className="lp-eyebrow">探索目的地</h2>
+    <section className="lp-section lp-dests" aria-label={t('eyebrow')}>
+      <h2 className="lp-eyebrow">{t('eyebrow')}</h2>
       <div className="lp-dests-grid">
         {DESTINATIONS.map((d) => (
-          <Link key={d.name} href={`/activities?region=${encodeURIComponent(d.name)}`} className="lp-dest-card">
-            <span className="lp-dest-name">{d.name}</span>
-            <span className="lp-dest-count">{d.count}</span>
+          <Link key={d.nameKey} href={`/activities?region=${encodeURIComponent(d.region)}`} className="lp-dest-card">
+            <span className="lp-dest-name">{t(d.nameKey)}</span>
+            <span className="lp-dest-count">{t('count', { n: d.n })}</span>
           </Link>
         ))}
       </div>
@@ -403,9 +383,10 @@ const STORY_REVIEWS = Array.from(
 ).slice(0, 3);
 
 export function LpStories() {
+  const t = useTranslations('home.stories');
   return (
-    <section className="lp-section lp-stories" aria-label="旅人故事">
-      <h2 className="lp-eyebrow">旅人故事</h2>
+    <section className="lp-section lp-stories" aria-label={t('eyebrow')}>
+      <h2 className="lp-eyebrow">{t('eyebrow')}</h2>
       <div className="lp-stories-list">
         {STORY_REVIEWS.map((r) => {
           const activity = getActivityBySlug(r.activitySlug);
@@ -415,10 +396,10 @@ export function LpStories() {
             <Link key={r.id} href={buildActivityHref(activity)} className="lp-story-card">
               <p className="lp-story-quote">「{r.text}」</p>
               <div className="lp-story-meta">
-                <span className="lp-story-stars" aria-label={`${r.rating} 顆星`}>{'★'.repeat(r.rating)}</span>
+                <span className="lp-story-stars" aria-label={t('starsAria', { n: r.rating })}>{'★'.repeat(r.rating)}</span>
                 <span>{r.author}・{r.city}</span>
               </div>
-              <span className="lp-story-activity">{activity.title}｜{guide?.displayName ?? '在地導遊'}</span>
+              <span className="lp-story-activity">{activity.title}｜{guide?.displayName ?? t('guideFallback')}</span>
             </Link>
           );
         })}
@@ -428,22 +409,14 @@ export function LpStories() {
 }
 
 /** 常見問題（原 FaqSection，與 page.tsx 的 FAQPage JSON-LD 同步） */
-const FAQS = [
-  { q: '為什麼這種旅遊方式更值得？', a: '看清楚再選，不賭人品——導遊資料、評論、專長一眼看清，幾分鐘選對人；走進回憶，而不是趕行程——看到的是「適合誰」「會記住什麼」，不只是地點；有在地人帶路，少花冤枉時間——熟悉地方的導遊，幫你避開陷阱、走穩定路線。' },
-  { q: '什麼是私人導遊行程？', a: '私人導遊行程是由平台認證的在地導遊帶領的小團體驗，行程由導遊設計，旅客可以按照自己的節奏探索，不需要配合大團行程表。' },
-  { q: '如何確保導遊品質與安全？', a: '所有導遊都經過實名認證（KYC），部分導遊另有急救認證、環境教育講師等專業資歷。平台也提供緊急熱線 30 分鐘回應服務。' },
-  { q: '付款安全嗎？', a: '所有付款透過 ECPay 或 LINE Pay 加密處理，你的信用卡資料不會經過本站。' },
-  { q: '可以取消預約嗎？', a: '可以。每個行程都有明確的退款政策，大部分行程在出團 168 小時前（含）以上可全額退款，出團前 超過 72 小時且少於 168 小時可退 70%。詳細規則請見各行程頁面。' },
-  { q: '適合帶小孩參加嗎？', a: '依行程而定。每個行程頁面都有標註「適合對象」與「不太適合」的說明，選擇前請先確認。部分行程有親子友善標籤。' },
-  { q: '如何成為導遊？', a: '點擊「成為導遊」填寫申請表，經過平台審核後即可上架行程。我們歡迎有在地特色、專業背景的導遊加入。' },
-];
-
 export function LpFaq() {
+  const t = useTranslations('home.faq');
+  const items = t.raw('items') as Array<{ q: string; a: string }>;
   return (
-    <section className="lp-section lp-faq" aria-label="常見問題">
-      <h2 className="lp-eyebrow">常見問題</h2>
+    <section className="lp-section lp-faq" aria-label={t('eyebrow')}>
+      <h2 className="lp-eyebrow">{t('eyebrow')}</h2>
       <div className="lp-faq-list">
-        {FAQS.map((f, i) => (
+        {items.map((f, i) => (
           <details key={i} className="lp-faq-item">
             <summary>{f.q}</summary>
             <p>{f.a}</p>
@@ -455,17 +428,16 @@ export function LpFaq() {
 }
 
 export function LpClosing() {
+  const t = useTranslations('home.closing');
   return (
-    <section className="lp-closing" aria-label="開始探索">
+    <section className="lp-closing" aria-label={t('sectionLabel')}>
       <div className="lp-closing-paper">
-        {/* 切齊直邊（不再使用波浪撕邊） */}
         <div className="lp-closing-inner">
-          <h2 className="lp-closing-title">你的祕島故事，從這裡開始</h2>
-          <p className="lp-closing-desc">讓在地人帶你走進台灣的深處，遇見真實的美好。</p>
+          <h2 className="lp-closing-title">{t('title')}</h2>
+          <p className="lp-closing-desc">{t('desc')}</p>
           <Link href="/activities" className="lp-btn">
-            開始探索祕島旅程 <span className="lp-btn-arrow">→</span>
+            {t('cta')} <span className="lp-btn-arrow">→</span>
           </Link>
-          {/* MIDAO 祕島 印章已內嵌於 closing-bg 背景圖，故不再額外疊一個 lp-stamp */}
         </div>
       </div>
     </section>
