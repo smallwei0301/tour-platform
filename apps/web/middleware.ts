@@ -46,7 +46,9 @@ function isLocalizedPublicPath(rest: string): boolean {
     || rest === '/theme' || rest.startsWith('/theme/')
     // /guides 只有列表頁搬進 [locale]；/guides/[slug] 與 /shop 仍在 root（中文），
     // 故僅 exact match，避免 /guides/xxx 被導去不存在的 [locale]/guides/[slug] 而 404。
-    || rest === '/guides';
+    || rest === '/guides'
+    // 純靜態資訊頁（單頁、無動態子路由）。
+    || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact';
 }
 
 function pickToken(req: NextRequest): string {
@@ -427,6 +429,10 @@ export const config = {
     '/activities/:path*',
     '/theme/:path*',
     '/guides',
+    '/about',
+    '/why-choose-us',
+    '/faq',
+    '/contact',
     '/booking/:path*',
     '/checkout/:path*',
     '/order/success/:path*',

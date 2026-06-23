@@ -47,9 +47,18 @@
     "regionsTitle": "Explore by region",
     "copy": "© 2026 Midao 祕島 · Taiwan · All rights reserved",
     "region": {
-      "taipei": "Taipei", "newTaipei": "New Taipei", "taoyuan": "Taoyuan", "taichung": "Taichung",
-      "tainan": "Tainan", "kaohsiung": "Kaohsiung", "hualien": "Hualien", "taitung": "Taitung",
-      "yilan": "Yilan", "pingtung": "Pingtung", "penghu": "Penghu", "kinmen": "Kinmen"
+      "taipei": "Taipei",
+      "newTaipei": "New Taipei",
+      "taoyuan": "Taoyuan",
+      "taichung": "Taichung",
+      "tainan": "Tainan",
+      "kaohsiung": "Kaohsiung",
+      "hualien": "Hualien",
+      "taitung": "Taitung",
+      "yilan": "Yilan",
+      "pingtung": "Pingtung",
+      "penghu": "Penghu",
+      "kinmen": "Kinmen"
     }
   },
   "guides": {
@@ -126,10 +135,14 @@
       "quoteB": "someone who knows the way takes you into Chaishan.”",
       "link": "Meet the guide's story →",
       "portraitAlt": "Andy Lee, a local guide of Chaishan in Kaohsiung, with his hawk in the forest",
-      "verifyA": "ID verified", "verifyB": "passed",
-      "reviewA": "Local guides", "reviewB": "hand-reviewed",
-      "protectA": "Traveler", "protectB": "protection",
-      "ratingA": "Real reviews", "ratingB": "5-star rated"
+      "verifyA": "ID verified",
+      "verifyB": "passed",
+      "reviewA": "Local guides",
+      "reviewB": "hand-reviewed",
+      "protectA": "Traveler",
+      "protectB": "protection",
+      "ratingA": "Real reviews",
+      "ratingB": "5-star rated"
     },
     "tours": {
       "eyebrow": "More featured tours",
@@ -156,13 +169,34 @@
     "faq": {
       "eyebrow": "FAQ",
       "items": [
-        { "q": "Why is this way of traveling worth it?", "a": "Choose with clarity, not by luck — guide profiles, reviews and specialties are laid out so you pick the right person in minutes. Travel into memories, not a rushed itinerary — you see who a trip suits and what you'll remember, not just the spots. With a local leading the way, you waste less time — a guide who knows the area helps you avoid traps and stick to reliable routes." },
-        { "q": "What is a private guided tour?", "a": "A private guided tour is a small-group experience led by a platform-verified local guide. The guide designs the itinerary, and travelers explore at their own pace without following a big-group schedule." },
-        { "q": "How do you ensure guide quality and safety?", "a": "Every guide is identity-verified (KYC); some also hold first-aid certification, environmental-education credentials and other professional qualifications. The platform also offers an emergency hotline with a 30-minute response." },
-        { "q": "Is payment secure?", "a": "All payments are encrypted via ECPay or LINE Pay — your credit card details never pass through this site." },
-        { "q": "Can I cancel a booking?", "a": "Yes. Every tour has a clear refund policy. Most tours are fully refundable up to 168 hours before departure, and 70% refundable between 72 and 168 hours before. See each tour page for details." },
-        { "q": "Is it suitable for children?", "a": "It depends on the tour. Every tour page notes who it suits and who it may not suit — please check before booking. Some tours have a family-friendly tag." },
-        { "q": "How do I become a guide?", "a": "Click “Become a Guide” and fill out the application. Once reviewed by the platform, you can list your tours. We welcome guides with local character and professional backgrounds." }
+        {
+          "q": "Why is this way of traveling worth it?",
+          "a": "Choose with clarity, not by luck — guide profiles, reviews and specialties are laid out so you pick the right person in minutes. Travel into memories, not a rushed itinerary — you see who a trip suits and what you'll remember, not just the spots. With a local leading the way, you waste less time — a guide who knows the area helps you avoid traps and stick to reliable routes."
+        },
+        {
+          "q": "What is a private guided tour?",
+          "a": "A private guided tour is a small-group experience led by a platform-verified local guide. The guide designs the itinerary, and travelers explore at their own pace without following a big-group schedule."
+        },
+        {
+          "q": "How do you ensure guide quality and safety?",
+          "a": "Every guide is identity-verified (KYC); some also hold first-aid certification, environmental-education credentials and other professional qualifications. The platform also offers an emergency hotline with a 30-minute response."
+        },
+        {
+          "q": "Is payment secure?",
+          "a": "All payments are encrypted via ECPay or LINE Pay — your credit card details never pass through this site."
+        },
+        {
+          "q": "Can I cancel a booking?",
+          "a": "Yes. Every tour has a clear refund policy. Most tours are fully refundable up to 168 hours before departure, and 70% refundable between 72 and 168 hours before. See each tour page for details."
+        },
+        {
+          "q": "Is it suitable for children?",
+          "a": "It depends on the tour. Every tour page notes who it suits and who it may not suit — please check before booking. Some tours have a family-friendly tag."
+        },
+        {
+          "q": "How do I become a guide?",
+          "a": "Click “Become a Guide” and fill out the application. Once reviewed by the platform, you can list your tours. We welcome guides with local character and professional backgrounds."
+        }
       ]
     },
     "closing": {
@@ -172,10 +206,30 @@
       "cta": "Start exploring Midao journeys"
     },
     "featuredCopy": {
-      "kaohsiung-chaishan-cave-experience": { "title": "Chaishan Caves · Urban Hidden Gem", "subtitle": "Step into a landscape secret at the city's edge", "desc": "Follow someone who knows the way into the coral-reef cave landscape,\nand meet another world of Kaohsiung at the city's edge.", "tagLabel": "Caving" },
-      "hualien-river-trekking": { "title": "Xiuguluan River · Trekking Adventure", "subtitle": "Into Taiwan's purest wild streams", "desc": "Leap into pools, drift downstream and climb to the top of a waterfall —\nfeel the power of Hualien's mountains and water on foot.", "tagLabel": "River trekking" },
-      "dadadaocheng-walk": { "title": "Dadaocheng · A Century-Old District", "subtitle": "Truly get to know a street that has lived a hundred years", "desc": "From the Dihua Street fabric shops and the City God Temple to Yongle Market,\nwalk the people and history behind the district into a story.", "tagLabel": "Walking tour" },
-      "taipei-night-market-food-tour": { "title": "Taipei Night Market · Street Eats", "subtitle": "Not just eating — understanding why it's good", "desc": "Follow a local foodie into the alley stalls,\nand read Taipei's night one bite at a time.", "tagLabel": "Food tour" }
+      "kaohsiung-chaishan-cave-experience": {
+        "title": "Chaishan Caves · Urban Hidden Gem",
+        "subtitle": "Step into a landscape secret at the city's edge",
+        "desc": "Follow someone who knows the way into the coral-reef cave landscape,\nand meet another world of Kaohsiung at the city's edge.",
+        "tagLabel": "Caving"
+      },
+      "hualien-river-trekking": {
+        "title": "Xiuguluan River · Trekking Adventure",
+        "subtitle": "Into Taiwan's purest wild streams",
+        "desc": "Leap into pools, drift downstream and climb to the top of a waterfall —\nfeel the power of Hualien's mountains and water on foot.",
+        "tagLabel": "River trekking"
+      },
+      "dadadaocheng-walk": {
+        "title": "Dadaocheng · A Century-Old District",
+        "subtitle": "Truly get to know a street that has lived a hundred years",
+        "desc": "From the Dihua Street fabric shops and the City God Temple to Yongle Market,\nwalk the people and history behind the district into a story.",
+        "tagLabel": "Walking tour"
+      },
+      "taipei-night-market-food-tour": {
+        "title": "Taipei Night Market · Street Eats",
+        "subtitle": "Not just eating — understanding why it's good",
+        "desc": "Follow a local foodie into the alley stalls,\nand read Taipei's night one bite at a time.",
+        "tagLabel": "Food tour"
+      }
     }
   },
   "activities": {
@@ -247,14 +301,32 @@
       "viewTour": "View tour →",
       "faqHeading": "What to know before you go caving",
       "tours": [
-        { "title": "Chaishan Nature Park Caving Half-Day Tour", "meta": "🕐 3-4 hrs · 👥 4–12 people · NT$2,000" },
-        { "title": "Chaishan Limestone Cave Geology Exploration", "meta": "🕐 3 hrs · 👥 4–10 people · NT$2,200" },
-        { "title": "Chaishan Family-Friendly Safe Caving Experience", "meta": "🕐 2.5 hrs · 👥 4–8 people · NT$1,800" }
+        {
+          "title": "Chaishan Nature Park Caving Half-Day Tour",
+          "meta": "🕐 3-4 hrs · 👥 4–12 people · NT$2,000"
+        },
+        {
+          "title": "Chaishan Limestone Cave Geology Exploration",
+          "meta": "🕐 3 hrs · 👥 4–10 people · NT$2,200"
+        },
+        {
+          "title": "Chaishan Family-Friendly Safe Caving Experience",
+          "meta": "🕐 2.5 hrs · 👥 4–8 people · NT$1,800"
+        }
       ],
       "faq": [
-        { "q": "Do I need rock-climbing experience?", "a": "No — the MVP routes focus on beginner-to-intermediate, safe exploration." },
-        { "q": "What ages can join?", "a": "Recommended for ages 10 and up, subject to each tour's notes and the guide's assessment." },
-        { "q": "What should I wear on the day?", "a": "We recommend non-slip shoes, long trousers and a flexible top — avoid sandals." }
+        {
+          "q": "Do I need rock-climbing experience?",
+          "a": "No — the MVP routes focus on beginner-to-intermediate, safe exploration."
+        },
+        {
+          "q": "What ages can join?",
+          "a": "Recommended for ages 10 and up, subject to each tour's notes and the guide's assessment."
+        },
+        {
+          "q": "What should I wear on the day?",
+          "a": "We recommend non-slip shoes, long trousers and a flexible top — avoid sandals."
+        }
       ]
     },
     "cultureHistory": {
@@ -276,14 +348,32 @@
       "viewTour": "View tour →",
       "faqHeading": "Culture-walk FAQ",
       "tours": [
-        { "title": "Dadaocheng Century-Old Street In-Depth Walk", "meta": "🕐 3 hrs · 👥 1–8 people · NT$1,500" },
-        { "title": "Lukang Heritage & Faith Culture Tour", "meta": "🕐 3.5 hrs · 👥 2–10 people · NT$1,600" },
-        { "title": "Indigenous Culture & Traditional Crafts Half-Day Experience", "meta": "🕐 4 hrs · 👥 2–8 people · NT$1,900" }
+        {
+          "title": "Dadaocheng Century-Old Street In-Depth Walk",
+          "meta": "🕐 3 hrs · 👥 1–8 people · NT$1,500"
+        },
+        {
+          "title": "Lukang Heritage & Faith Culture Tour",
+          "meta": "🕐 3.5 hrs · 👥 2–10 people · NT$1,600"
+        },
+        {
+          "title": "Indigenous Culture & Traditional Crafts Half-Day Experience",
+          "meta": "🕐 4 hrs · 👥 2–8 people · NT$1,900"
+        }
       ],
       "faq": [
-        { "q": "Do I need to do homework to follow along?", "a": "No — the guide brings you into the history through everyday life and people, so you can engage even with no background." },
-        { "q": "Is there a lot of walking?", "a": "It's mostly a slow walking tour, with stops and breaks along the way — suitable for most fitness levels." },
-        { "q": "Is it suitable for elders and children together?", "a": "Yes — the gentle pace and high interaction make it a great choice for families and three generations traveling together." }
+        {
+          "q": "Do I need to do homework to follow along?",
+          "a": "No — the guide brings you into the history through everyday life and people, so you can engage even with no background."
+        },
+        {
+          "q": "Is there a lot of walking?",
+          "a": "It's mostly a slow walking tour, with stops and breaks along the way — suitable for most fitness levels."
+        },
+        {
+          "q": "Is it suitable for elders and children together?",
+          "a": "Yes — the gentle pace and high interaction make it a great choice for families and three generations traveling together."
+        }
       ]
     },
     "foodTour": {
@@ -305,14 +395,32 @@
       "viewTour": "View tour →",
       "faqHeading": "Food-walk FAQ",
       "tours": [
-        { "title": "Taipei Night Market Food Culture Exploration", "meta": "🕐 3 hrs · 👥 2–8 people · NT$1,800" },
-        { "title": "Tainan Alley Street-Food In-Depth Walk", "meta": "🕐 3.5 hrs · 👥 2–8 people · NT$1,900" },
-        { "title": "Local Market Breakfast & Ingredients Tour", "meta": "🕐 2.5 hrs · 👥 2–10 people · NT$1,500" }
+        {
+          "title": "Taipei Night Market Food Culture Exploration",
+          "meta": "🕐 3 hrs · 👥 2–8 people · NT$1,800"
+        },
+        {
+          "title": "Tainan Alley Street-Food In-Depth Walk",
+          "meta": "🕐 3.5 hrs · 👥 2–8 people · NT$1,900"
+        },
+        {
+          "title": "Local Market Breakfast & Ingredients Tour",
+          "meta": "🕐 2.5 hrs · 👥 2–10 people · NT$1,500"
+        }
       ],
       "faq": [
-        { "q": "Will I get really full?", "a": "The tour is built around many stalls and small portions, so you taste a wider variety without getting too stuffed — come with a little room to spare." },
-        { "q": "Can I join with a vegetarian or other dietary restriction?", "a": "Yes — let us know when you book and the guide will adjust the stalls and dishes." },
-        { "q": "Are food costs included in the price?", "a": "It depends on each tour's notes — some include tasting costs and some are charged separately. See each tour page for details." }
+        {
+          "q": "Will I get really full?",
+          "a": "The tour is built around many stalls and small portions, so you taste a wider variety without getting too stuffed — come with a little room to spare."
+        },
+        {
+          "q": "Can I join with a vegetarian or other dietary restriction?",
+          "a": "Yes — let us know when you book and the guide will adjust the stalls and dishes."
+        },
+        {
+          "q": "Are food costs included in the price?",
+          "a": "It depends on each tour's notes — some include tasting costs and some are charged separately. See each tour page for details."
+        }
       ]
     },
     "mountainWilderness": {
@@ -334,14 +442,32 @@
       "viewTour": "View tour →",
       "faqHeading": "Hiking FAQ",
       "tours": [
-        { "title": "Chaishan Ridgeline Hike & Hidden Terrain", "meta": "🏔️ Beginner · 👥 4–12 people · NT$2,000" },
-        { "title": "Mid-Level Mountain Forest-Bathing Day Hike", "meta": "🏔️ Intermediate · 👥 4–8 people · NT$2,800" },
-        { "title": "Hidden 100-Peak Ridgeline Traverse Experience", "meta": "🏔️ Challenge · 👥 4–6 people · NT$4,500" }
+        {
+          "title": "Chaishan Ridgeline Hike & Hidden Terrain",
+          "meta": "🏔️ Beginner · 👥 4–12 people · NT$2,000"
+        },
+        {
+          "title": "Mid-Level Mountain Forest-Bathing Day Hike",
+          "meta": "🏔️ Intermediate · 👥 4–8 people · NT$2,800"
+        },
+        {
+          "title": "Hidden 100-Peak Ridgeline Traverse Experience",
+          "meta": "🏔️ Challenge · 👥 4–6 people · NT$4,500"
+        }
       ],
       "faq": [
-        { "q": "Can I join with no hiking experience?", "a": "Yes — beginner routes focus on gentle trails, and the guide gives a pre-trip briefing and gear check first." },
-        { "q": "Do I need to bring my own gear?", "a": "We recommend bringing your own hiking shoes, water and rain gear; some tours provide trekking poles and other gear — see the tour page for details." },
-        { "q": "Will the tour run if it rains?", "a": "It depends on the day's weather and mountain-safety conditions — the guide will assess whether to adjust the route or reschedule." }
+        {
+          "q": "Can I join with no hiking experience?",
+          "a": "Yes — beginner routes focus on gentle trails, and the guide gives a pre-trip briefing and gear check first."
+        },
+        {
+          "q": "Do I need to bring my own gear?",
+          "a": "We recommend bringing your own hiking shoes, water and rain gear; some tours provide trekking poles and other gear — see the tour page for details."
+        },
+        {
+          "q": "Will the tour run if it rains?",
+          "a": "It depends on the day's weather and mountain-safety conditions — the guide will assess whether to adjust the route or reschedule."
+        }
       ]
     },
     "riverTrekking": {
@@ -363,27 +489,324 @@
       "viewTour": "View tour →",
       "faqHeading": "River-trekking FAQ",
       "tours": [
-        { "title": "Hualien Xiuguluan River Full-Day River-Trekking Adventure", "meta": "🌊 Level 2 · 👥 4–8 people · NT$3,200" },
-        { "title": "Nan'ao Wild-Stream Beginner Route", "meta": "🌊 Level 1 · 👥 4–8 people · NT$2,400" },
-        { "title": "Taitung Valley Canyoning Challenge", "meta": "🌊 Level 3 · 👥 4–6 people · NT$4,200" }
+        {
+          "title": "Hualien Xiuguluan River Full-Day River-Trekking Adventure",
+          "meta": "🌊 Level 2 · 👥 4–8 people · NT$3,200"
+        },
+        {
+          "title": "Nan'ao Wild-Stream Beginner Route",
+          "meta": "🌊 Level 1 · 👥 4–8 people · NT$2,400"
+        },
+        {
+          "title": "Taitung Valley Canyoning Challenge",
+          "meta": "🌊 Level 3 · 👥 4–6 people · NT$4,200"
+        }
       ],
       "faq": [
-        { "q": "Can I join if I can't swim?", "a": "You can join Level 1 routes — the guide gives a safety briefing and gear check first." },
-        { "q": "Which months are best for river trekking?", "a": "Late spring through autumn is more stable, but it always depends on the day's water and safety conditions." },
-        { "q": "What's the difference between Level 1 and Level 3?", "a": "Mainly the terrain difficulty, fitness demands and the technical skill needed to get through." }
+        {
+          "q": "Can I join if I can't swim?",
+          "a": "You can join Level 1 routes — the guide gives a safety briefing and gear check first."
+        },
+        {
+          "q": "Which months are best for river trekking?",
+          "a": "Late spring through autumn is more stable, but it always depends on the day's water and safety conditions."
+        },
+        {
+          "q": "What's the difference between Level 1 and Level 3?",
+          "a": "Mainly the terrain difficulty, fitness demands and the technical skill needed to get through."
+        }
       ]
     }
   },
   "availability": {
-    "available": { "title": "Available", "body": "This time slot is currently available to book." },
-    "full": { "title": "Fully booked", "body": "This time slot is full. Please choose another time or date." },
-    "closed": { "title": "Closed", "body": "This slot was closed by the guide or an administrator. Please choose another time." },
-    "blackout": { "title": "Guide unavailable", "body": "The guide marked this slot as unavailable. Please choose another time or date." },
-    "inactive_plan": { "title": "Plan inactive", "body": "This plan is currently inactive and cannot be booked. Please pick a plan again from the activity page." },
-    "outside_rule": { "title": "Outside booking hours", "body": "The guide has not opened this slot for booking. Please choose another time." },
-    "outside_season": { "title": "Out of season", "body": "This plan is outside its open season. Please choose another date." },
-    "blocked_by_conflict": { "title": "Time conflict", "body": "This slot conflicts with an existing booking and is unavailable by default." },
-    "allowed_with_admin_override": { "title": "Admin override", "body": "This slot conflicts with an existing booking but was opened by an administrator. Please confirm the arrangement." },
-    "fallback": { "title": "Unavailable", "body": "This slot is currently unavailable. Please try again later or contact support." }
+    "available": {
+      "title": "Available",
+      "body": "This time slot is currently available to book."
+    },
+    "full": {
+      "title": "Fully booked",
+      "body": "This time slot is full. Please choose another time or date."
+    },
+    "closed": {
+      "title": "Closed",
+      "body": "This slot was closed by the guide or an administrator. Please choose another time."
+    },
+    "blackout": {
+      "title": "Guide unavailable",
+      "body": "The guide marked this slot as unavailable. Please choose another time or date."
+    },
+    "inactive_plan": {
+      "title": "Plan inactive",
+      "body": "This plan is currently inactive and cannot be booked. Please pick a plan again from the activity page."
+    },
+    "outside_rule": {
+      "title": "Outside booking hours",
+      "body": "The guide has not opened this slot for booking. Please choose another time."
+    },
+    "outside_season": {
+      "title": "Out of season",
+      "body": "This plan is outside its open season. Please choose another date."
+    },
+    "blocked_by_conflict": {
+      "title": "Time conflict",
+      "body": "This slot conflicts with an existing booking and is unavailable by default."
+    },
+    "allowed_with_admin_override": {
+      "title": "Admin override",
+      "body": "This slot conflicts with an existing booking but was opened by an administrator. Please confirm the arrangement."
+    },
+    "fallback": {
+      "title": "Unavailable",
+      "body": "This slot is currently unavailable. Please try again later or contact support."
+    }
+  },
+  "about": {
+    "metaTitle": "About Us | Midao 祕島",
+    "metaDescription": "Midao isn't an invented place. It's the Taiwan that's already out there — just waiting for you to see it. Get to know the story and beliefs behind Midao 祕島.",
+    "ogTitle": "About Us | Midao 祕島",
+    "ogDescription": "Locals who've truly walked these mountains and forests, leading you into the most storied corners of Taiwan.",
+    "ogImageAlt": "About Midao 祕島",
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "About Us",
+    "heroTitle": "About Us",
+    "heroSubtitle": "We believe the best travel isn't rushing through sights with a tour group — it's finding someone who knows the way, who leads you into places with a real story to tell.",
+    "storyHeading": "What is Midao?",
+    "storyP1": "Midao isn't an invented place. It's the Taiwan that's already out there — just waiting for you to see it.",
+    "storyP2a": "Here you'll find locals who have truly walked these mountains and forests. No scripts, no rushing — they simply take you, once, to that one trail, that one peak, that one stream valley they know best.",
+    "storyP2b": "We believe the value of travel isn't in how many places you've been, but in whether you've truly stepped inside.",
+    "storyP3": "What Midao does is simple: let great local guides be seen, and let travelers book directly, pay with confidence, and enjoy a quality experience. We start with the most distinctive journeys — cave exploration on Chaishan in Kaohsiung, the old streets of Taipei, river tracing in Hualien — and grow across all of Taiwan from there.",
+    "numbers": [
+      {
+        "num": "3+",
+        "label": "Partner guides"
+      },
+      {
+        "num": "4+",
+        "label": "Curated journeys"
+      },
+      {
+        "num": "22",
+        "label": "Counties covered (goal)"
+      },
+      {
+        "num": "15%",
+        "label": "Platform fee (lowest in the industry)"
+      }
+    ],
+    "ctaHeading": "Let's bring Taiwan's great guides into the light, together",
+    "ctaGuide": "Become a guide",
+    "ctaExplore": "Explore journeys"
+  },
+  "whyChooseUs": {
+    "metaTitle": "Why Choose Us | Midao 祕島",
+    "metaDescription": "A private local guide vs. a standard group tour: flexibility, verified guides, refund protection, and depth — compared side by side.",
+    "ogTitle": "Why choose a private local guide? | Midao 祕島",
+    "ogDescription": "No group tours, no rushing. Find someone who knows the way, and get to know Taiwan at your own pace.",
+    "ogImageAlt": "Midao 祕島 — private local guides",
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "Why Choose Us",
+    "heroTitle": "Why choose a private local guide?",
+    "heroSubtitle": "Rush through an itinerary with a group — or let someone who truly knows the way take you slowly?",
+    "promises": [
+      {
+        "title": "ID verified",
+        "desc": "Every guide passes KYC identity verification and review"
+      },
+      {
+        "title": "Refund protection",
+        "desc": "Clear refund policy, full refund within the stated window"
+      },
+      {
+        "title": "Emergency hotline",
+        "desc": "Trouble on the day? A response within 30 minutes"
+      },
+      {
+        "title": "Custom journeys",
+        "desc": "Tailored to you — private groups, families, and companies all welcome"
+      }
+    ],
+    "comparisonHeading": "Our platform vs. a standard group tour",
+    "comparisonUs": "Our platform",
+    "comparisonThem": "Standard group tour",
+    "comparisonRows": [
+      {
+        "label": "Group size",
+        "us": "Just you (or your small group)",
+        "them": "10–40 people"
+      },
+      {
+        "label": "Itinerary flexibility",
+        "us": "Fully custom",
+        "them": "Fixed route"
+      },
+      {
+        "label": "Guide's attention",
+        "us": "Focused on you the whole time",
+        "them": "Split across the whole group"
+      },
+      {
+        "label": "Refund protection",
+        "us": "Clear policy, full refund 48hr before",
+        "them": "Not guaranteed"
+      },
+      {
+        "label": "Verified guides",
+        "us": "✅ All verified",
+        "them": "Not guaranteed"
+      },
+      {
+        "label": "Emergency contact",
+        "us": "Response within 30 minutes",
+        "them": "Not offered"
+      },
+      {
+        "label": "Depth of experience",
+        "us": "Local hidden gems + stories",
+        "them": "Checking off tourist spots"
+      }
+    ],
+    "testimonialsHeading": "What travelers say",
+    "testimonials": [
+      {
+        "author": "Mei (Taipei)",
+        "text": "Both grown-ups and kids loved it 😍 Andy was so patient — the route was more thrilling than I expected, yet completely safe!",
+        "activity": "Chaishan Cave Exploration"
+      },
+      {
+        "author": "Vivian C. (Taipei)",
+        "text": "I thought it would just be a regular heritage tour, but Jianzhi walked us right into an old house kitchen. More exciting than any guidebook!",
+        "activity": "Dadaocheng Old Street"
+      },
+      {
+        "author": "Qi (Hsinchu)",
+        "text": "Bucket-list checked! A-Ming was incredibly professional and I felt safe the whole way. The best experience in Hualien, hands down!",
+        "activity": "Hualien River Tracing"
+      }
+    ],
+    "ctaHeading": "Ready to go?",
+    "ctaSubtitle": "Find someone who knows the way, and get to know Taiwan at your own pace.",
+    "ctaButton": "Explore journeys now"
+  },
+  "faq": {
+    "metaTitle": "FAQ | Midao 祕島",
+    "metaDescription": "Answers to common questions about booking, payment, cancellation and refunds, guide quality, and safety.",
+    "ogTitle": "FAQ | Midao 祕島",
+    "ogDescription": "How do you book a private guide? Is payment secure? Can you cancel? Every question, answered.",
+    "ogImageAlt": "Midao 祕島 FAQ",
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "FAQ",
+    "heroTitle": "Frequently Asked Questions",
+    "introA": "Can't find an answer? Feel free to ",
+    "introLink": "contact us",
+    "introB": ".",
+    "sections": [
+      {
+        "category": "Booking & Payment",
+        "items": [
+          {
+            "q": "How do I book a guided journey?",
+            "a": "Choose a journey, tap \"Book now,\" fill in your contact details, and complete payment. We support credit cards and LINE Pay."
+          },
+          {
+            "q": "How soon do I get confirmation after paying?",
+            "a": "Once payment succeeds, the system instantly sends a confirmation email. Your guide will usually reach out within 24 hours to confirm the details."
+          },
+          {
+            "q": "Can I hold a journey and pay later?",
+            "a": "For now, a booking is only confirmed once payment is complete. We suggest finalizing your order after your departure time is set, so you don’t miss out if spots fill up."
+          }
+        ]
+      },
+      {
+        "category": "Refunds & Cancellations",
+        "items": [
+          {
+            "q": "What is the refund policy?",
+            "a": "Cancel 168 hours or more before departure for a full refund; cancel more than 72 but less than 168 hours before for a 70% refund. Cancellations within 72 hours of departure are, as a rule, non-refundable. For force majeure or organizer cancellations, travelers may choose a full refund or one free reschedule. Refund processing fees are absorbed by the platform — travelers pay nothing extra."
+          },
+          {
+            "q": "What if the guide cancels the journey?",
+            "a": "If a cancellation is due to the guide or the platform, you receive a full refund, and we help you rearrange or recommend an alternative journey."
+          },
+          {
+            "q": "Can I cancel due to bad weather?",
+            "a": "If weather conditions threaten safety, the guide may cancel and issue a full refund. Please confirm the weather with your guide before departure."
+          }
+        ]
+      },
+      {
+        "category": "About the Guides",
+        "items": [
+          {
+            "q": "Are all guides verified?",
+            "a": "Every guide must pass real-name KYC identity verification and platform review, confirming their guiding credentials and background."
+          },
+          {
+            "q": "Can I request a guide language?",
+            "a": "Each guide’s page lists their service languages. Today most guides offer service in Traditional Chinese, and some can guide in English."
+          },
+          {
+            "q": "How do I review a guide?",
+            "a": "After the activity ends, you’ll receive a review invitation. We encourage travelers to share honest experiences to help others make better choices."
+          }
+        ]
+      },
+      {
+        "category": "Other",
+        "items": [
+          {
+            "q": "Can I book a private group (company or family)?",
+            "a": "Absolutely! Reach out via the \"Contact Us\" page or contact a guide directly, and we’ll tailor a private-group journey for you."
+          },
+          {
+            "q": "What if something happens during the journey?",
+            "a": "If there’s an emergency on the day, contact your guide directly. The platform emergency hotline also responds within 30 minutes."
+          },
+          {
+            "q": "How do I apply to become a guide?",
+            "a": "Head to the \"Become a Guide\" page and fill out the application form. Once approved, you can list your journeys."
+          }
+        ]
+      }
+    ],
+    "questionPrefix": "Q: ",
+    "answerPrefix": "A: ",
+    "footerHeading": "Still have questions?",
+    "footerSubtitle": "Our support team replies within 1–2 business days",
+    "footerButton": "Contact us"
+  },
+  "contact": {
+    "metaTitle": "Contact Us | Midao 祕島",
+    "metaDescription": "Have a question, a partnership idea, or feedback? Contact Midao 祕島 and we’ll reply within 1–2 business days.",
+    "ogTitle": "Contact Us | Midao 祕島",
+    "ogDescription": "Reach us via the form, email, or our support hotline.",
+    "ogImageAlt": "Contact Midao 祕島",
+    "breadcrumbHome": "Home",
+    "breadcrumbCurrent": "Contact Us",
+    "heading": "Contact Us",
+    "intro": "Have a question, a partnership idea, or feedback? Reach us through the form below. We’ll reply within 1–2 business days.",
+    "nameLabel": "Name *",
+    "namePlaceholder": "Your name",
+    "emailLabel": "Email *",
+    "emailPlaceholder": "you@example.com",
+    "subjectLabel": "Subject",
+    "subjectOptions": [
+      "General inquiry",
+      "Order issue",
+      "Guide partnership",
+      "Corporate group booking",
+      "Media partnership",
+      "Other"
+    ],
+    "messageLabel": "Message *",
+    "messagePlaceholder": "Type your message…",
+    "submitButton": "Send message",
+    "emailCardTitle": "📧 Email",
+    "emailCardValue": "hello@midao.tw",
+    "hotlineCardTitle": "📞 Support hotline",
+    "hotlineCardValue": "0800-XXX-XXX (weekdays 9:00–18:00)",
+    "hoursCardTitle": "⏰ Response time",
+    "hoursCardLine1": "General inquiries: 1–2 business days",
+    "hoursCardLine2": "Urgent issues (day of activity): within 30 minutes"
   }
 }

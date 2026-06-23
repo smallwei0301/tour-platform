@@ -1,23 +1,29 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: '常見問題 | Midao 祕島',
-  description: '關於預訂、付款、取消退款、導遊品質與安全保障的常見問題解答。',
-  openGraph: {
-    title: '常見問題 | Midao 祕島',
-    description: '私人導遊行程怎麼預訂？付款安全嗎？可以取消嗎？一次解答所有疑問。',
-    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: 'Midao 祕島 常見問題' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: '常見問題 | Midao 祕島',
-    description: '私人導遊行程怎麼預訂？付款安全嗎？可以取消嗎？一次解答所有疑問。',
-    images: ['/images/og-default.png'],
-  },
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'faq' });
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    openGraph: {
+      title: t('ogTitle'),
+      description: t('ogDescription'),
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: t('ogImageAlt') }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('ogTitle'),
+      description: t('ogDescription'),
+      images: ['/images/og-default.png'],
+    },
+  };
+}
 
-const faqs = [
+// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
+const faqsJsonLdSource = [
   {
     category: '預訂與付款',
     items: [
@@ -59,7 +65,7 @@ const faqJsonLd = {
   '@graph': [
     {
       '@type': 'FAQPage',
-      mainEntity: faqs.flatMap((section) =>
+      mainEntity: faqsJsonLdSource.flatMap((section) =>
         section.items.map((item) => ({
           '@type': 'Question',
           name: item.q,
@@ -77,7 +83,12 @@ const faqJsonLd = {
   ],
 };
 
-export default function FaqPage() {
+export default async function FaqPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'faq' });
+  const sections = t.raw('sections') as Array<{ category: string; items: Array<{ q: string; a: string }> }>;
+
   return (
     <main className="tp-container" style={{ paddingBottom: 56 }}>
       <script
@@ -85,14 +96,14 @@ export default function FaqPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
-        <Link href="/">首頁</Link> &gt; 常見問題
+        <Link href="/">{t('breadcrumbHome')}</Link> &gt; {t('breadcrumbCurrent')}
       </div>
 
-      <h1 style={{ marginTop: 20, marginBottom: 4 }}>常見問題</h1>
-      <p style={{ color: 'var(--tp-muted)', marginBottom: 36, fontSize: 16 }}>找不到答案？歡迎<Link href="/contact" style={{ color: 'var(--tp-gold-strong)' }}>聯絡我們</Link>。</p>
+      <h1 style={{ marginTop: 20, marginBottom: 4 }}>{t('heroTitle')}</h1>
+      <p style={{ color: 'var(--tp-muted)', marginBottom: 36, fontSize: 16 }}>{t('introA')}<Link href="/contact" style={{ color: 'var(--tp-gold-strong)' }}>{t('introLink')}</Link>{t('introB')}</p>
 
       <div style={{ display: 'grid', gap: 36 }}>
-        {faqs.map((section) => (
+        {sections.map((section) => (
           <section key={section.category}>
             <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--tp-gold-strong)', marginBottom: 14, paddingBottom: 8, borderBottom: '2px solid var(--tp-brass)' }}>
               {section.category}
@@ -100,8 +111,8 @@ export default function FaqPage() {
             <div style={{ display: 'grid', gap: 12 }}>
               {section.items.map((item, i) => (
                 <div key={i} style={{ background: 'var(--tp-bg-soft)', borderRadius: 10, padding: '16px 18px', border: '1px solid var(--tp-border)' }}>
-                  <p style={{ fontWeight: 700, margin: '0 0 6px', fontSize: 15 }}>Q：{item.q}</p>
-                  <p style={{ color: 'var(--tp-muted)', margin: 0, lineHeight: 1.8, fontSize: 14 }}>A：{item.a}</p>
+                  <p style={{ fontWeight: 700, margin: '0 0 6px', fontSize: 15 }}>{t('questionPrefix')}{item.q}</p>
+                  <p style={{ color: 'var(--tp-muted)', margin: 0, lineHeight: 1.8, fontSize: 14 }}>{t('answerPrefix')}{item.a}</p>
                 </div>
               ))}
             </div>
@@ -110,9 +121,9 @@ export default function FaqPage() {
       </div>
 
       <div style={{ marginTop: 40, textAlign: 'center', padding: '28px 20px', background: 'var(--tp-bg-soft)', borderRadius: 12, border: '1px solid var(--tp-border)' }}>
-        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 8px' }}>還有其他問題？</p>
-        <p style={{ color: 'var(--tp-muted)', margin: '0 0 14px', fontSize: 14 }}>我們的客服團隊在 1–2 個工作天內回覆</p>
-        <Link href="/contact" className="tp-btn tp-btn-primary" style={{ padding: '10px 28px' }}>聯絡我們</Link>
+        <p style={{ fontWeight: 700, fontSize: 16, margin: '0 0 8px' }}>{t('footerHeading')}</p>
+        <p style={{ color: 'var(--tp-muted)', margin: '0 0 14px', fontSize: 14 }}>{t('footerSubtitle')}</p>
+        <Link href="/contact" className="tp-btn tp-btn-primary" style={{ padding: '10px 28px' }}>{t('footerButton')}</Link>
       </div>
     </main>
   );

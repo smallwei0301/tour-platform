@@ -15,11 +15,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(__dirname, '../../app');
 
 const PAGES_WITH_BREADCRUMBS = [
-  'about/page.tsx',
+  '[locale]/about/page.tsx',
   'blog/page.tsx',
-  'contact/page.tsx',
-  'faq/page.tsx',
-  'why-choose-us/page.tsx',
+  '[locale]/contact/page.tsx',
+  '[locale]/faq/page.tsx',
+  '[locale]/why-choose-us/page.tsx',
   'guides/[slug]/page.tsx',
   'blog/[slug]/page.tsx',
   'experiences/[slug]/page.tsx',
