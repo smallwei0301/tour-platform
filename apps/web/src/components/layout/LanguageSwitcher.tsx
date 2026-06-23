@@ -1,5 +1,5 @@
 'use client';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   routing,
   VISIBLE_LOCALES,
@@ -15,6 +15,11 @@ import {
  * `useTranslations()`／`createNavigation` hooks（會抓不到 provider context）。
  * 改用純 `next/navigation`，依 routing config（`localePrefix: 'as-needed'`）自行
  * 解析／替換網址前綴：預設 `zh-Hant` 無前綴、`en` 走 `/en`。
+ *
+ * 註：query string 在點擊時才從 `window.location.search` 讀取（client-only），
+ * 刻意**不用 `useSearchParams()`**——本元件在 root layout 每頁皆渲染（含靜態
+ * 預渲的 `/_not-found`），用該 hook 會觸發 CSR bailout 而要求 Suspense 邊界、
+ * 導致 production build 失敗。
  *
  * PoC 範圍：只露出 `VISIBLE_LOCALES`（繁中＋英文）；只有首頁與 /activities 已搬進
  * `[locale]`，切到其他頁的英文版前要等全面搬遷。
@@ -51,7 +56,6 @@ function pathForLocale(pathname: string, target: AppLocale): string {
 export function LanguageSwitcher({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname() || '/';
-  const searchParams = useSearchParams();
   const active = detectLocale(pathname);
 
   function switchTo(target: AppLocale) {
@@ -59,8 +63,8 @@ export function LanguageSwitcher({ className }: { className?: string }) {
     // 寫 next-intl 預設讀取的 NEXT_LOCALE cookie，讓選擇 sticky；否則 middleware 的
     // localeDetection 會用舊 cookie/Accept-Language 把無前綴的預設語言路徑又導回 /en。
     document.cookie = `NEXT_LOCALE=${target};path=/;max-age=31536000;samesite=lax`;
-    const query = searchParams?.toString();
-    const href = pathForLocale(pathname, target) + (query ? `?${query}` : '');
+    const query = typeof window !== 'undefined' ? window.location.search : '';
+    const href = pathForLocale(pathname, target) + query;
     router.push(href);
     router.refresh();
   }
