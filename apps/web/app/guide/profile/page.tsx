@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
+import { compressImage } from '../../../src/lib/client-image-compress';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 
 const REGION_OPTIONS = listRegionOptions().map((r) => r.displayName);
@@ -978,42 +979,5 @@ function GalleryEditor({ urls, onChange }: { urls: string[]; onChange: (next: st
   );
 }
 
-// ─── client-side center-crop + WebP compress ────────────────────────
-type ImageKind = 'avatar' | 'hero' | 'gallery';
-async function compressImage(file: File, kind: ImageKind): Promise<File> {
-  const config = {
-    avatar:  { ratio: 1,        w: 400,  h: 400  },
-    hero:    { ratio: 16 / 9,   w: 1920, h: 1080 },
-    gallery: { ratio: 3 / 2,    w: 1200, h: 800  },
-  }[kind];
-
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const { width, height } = img;
-      const srcRatio = width / height;
-      let cropW = width, cropH = height, cropX = 0, cropY = 0;
-      if (srcRatio > config.ratio) {
-        cropW = height * config.ratio;
-        cropX = (width - cropW) / 2;
-      } else {
-        cropH = width / config.ratio;
-        cropY = (height - cropH) / 2;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = config.w;
-      canvas.height = config.h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('無法建立 canvas context')); return; }
-      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, config.w, config.h);
-      canvas.toBlob((blob) => {
-        if (!blob) { reject(new Error('壓縮失敗')); return; }
-        resolve(new File([blob], `${kind}.webp`, { type: 'image/webp' }));
-      }, 'image/webp', 0.85);
-    };
-    img.onerror = () => reject(new Error('圖片載入失敗'));
-    img.src = url;
-  });
-}
+// client-side center-crop + WebP compress 已抽到 src/lib/client-image-compress.ts
+// （申請表單與導遊後台共用，避免重複實作）。

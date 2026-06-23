@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
+import { compressImage } from '../../../src/lib/client-image-compress';
 
 export default function GuideApplyPage() {
   const [step, setStep] = useState(1);
@@ -35,9 +36,12 @@ export default function GuideApplyPage() {
   const GALLERY_MAX = 6;
 
   async function uploadPhoto(kind: 'avatar' | 'hero' | 'gallery', file: File): Promise<string> {
+    // 先在瀏覽器壓成小張 WebP 再上傳：手機原圖常 3–12MB，會撞到 Vercel function
+    // 約 4.5MB 的 request body 上限（FUNCTION_PAYLOAD_TOO_LARGE），導致「上傳失敗」。
+    const compressed = await compressImage(file, kind);
     const fd = new FormData();
     fd.append('kind', kind);
-    fd.append('file', file);
+    fd.append('file', compressed);
     const res = await fetch('/api/guide-applications/upload', { method: 'POST', body: fd });
     const json = await res.json().catch(() => null);
     if (!json?.ok) throw new Error(json?.error?.message || '照片上傳失敗，請稍後再試');
