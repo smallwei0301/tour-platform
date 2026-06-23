@@ -13,6 +13,10 @@ const EDITABLE_FIELDS = [
   'display_name',
   'bio',
   'region',
+  // 熟悉區域（複選）／專業證照／收款方式（複選）— 申請帶入、導遊可自行修改（20260623）。
+  'regions',
+  'certifications',
+  'payment_methods',
   'languages',
   'specialties',
   'headline',
@@ -29,7 +33,12 @@ const EDITABLE_FIELDS = [
 type EditableField = typeof EDITABLE_FIELDS[number];
 
 // 較新且可能尚未在 production migrate 的欄位（42703 drift 時於 GET/PATCH 自動降級）。
-const DRIFT_OPTIONAL_FIELDS = ['is_published', 'bank_name', 'account_name', 'account_number', 'transfer_note'] as const;
+const DRIFT_OPTIONAL_FIELDS = [
+  'is_published', 'bank_name', 'account_name', 'account_number', 'transfer_note',
+  'regions', 'certifications', 'payment_methods',
+] as const;
+// 陣列型可編輯欄位（PATCH 型別檢查與 GET 預設值共用）。
+const ARRAY_FIELDS = ['languages', 'specialties', 'regions', 'certifications', 'payment_methods'] as const;
 
 const GALLERY_MAX = 12;
 
@@ -40,6 +49,7 @@ export async function GET(req: Request) {
   if (!process.env.SUPABASE_URL) {
     return Response.json(ok({
       display_name: '', bio: '', region: '', languages: [], specialties: [], headline: '',
+      regions: [], certifications: [], payment_methods: [],
       profile_photo_url: null, hero_image_url: null, gallery_urls: [], slug: null,
       is_published: false,
       bank_name: '', account_name: '', account_number: '', transfer_note: '',
@@ -48,14 +58,21 @@ export async function GET(req: Request) {
 
   const supabase = await getSupabase();
   const baseSelect = 'id, slug, display_name, bio, region, languages, specialties, headline, profile_photo_url, hero_image_url, gallery_urls';
-  const richSelect = `${baseSelect}, is_published, bank_name, account_name, account_number, transfer_note`;
-  // Schema drift guard: is_published ships with
-  // 20260611_guide_profiles_is_published; fall back when absent.
+  const richSelectV1 = `${baseSelect}, is_published, bank_name, account_name, account_number, transfer_note`;
+  const richSelectV2 = `${richSelectV1}, regions, certifications, payment_methods`;
+  // Schema drift guard（三層）：熟悉區域等（20260623）→ is_published／匯款（20260611+）→ base。
   let { data: gp, error } = await supabase
     .from('guide_profiles')
-    .select(richSelect)
+    .select(richSelectV2)
     .eq('id', session.guideId)
     .single();
+  if (error && isMissingColumnError(error)) {
+    ({ data: gp, error } = await supabase
+      .from('guide_profiles')
+      .select(richSelectV1)
+      .eq('id', session.guideId)
+      .single());
+  }
   if (error && isMissingColumnError(error)) {
     ({ data: gp, error } = await supabase
       .from('guide_profiles')
@@ -66,10 +83,14 @@ export async function GET(req: Request) {
 
   if (error || !gp) return Response.json(fail('NOT_FOUND', 'guide profile not found'), { status: 404 });
 
+  const arr = (v: unknown) => (Array.isArray(v) ? v : []);
   return Response.json(ok({
     display_name: gp.display_name ?? '',
     bio: gp.bio ?? '',
     region: gp.region ?? '',
+    regions: arr(gp.regions),
+    certifications: arr(gp.certifications),
+    payment_methods: arr(gp.payment_methods),
     languages: gp.languages ?? [],
     specialties: gp.specialties ?? [],
     headline: gp.headline ?? '',
@@ -111,11 +132,14 @@ export async function PATCH(req: Request) {
   if (update.display_name !== undefined && (typeof update.display_name !== 'string' || (update.display_name as string).trim().length === 0)) {
     return Response.json(fail('BAD_REQUEST', 'display_name must be a non-empty string'), { status: 400 });
   }
-  if (update.languages !== undefined && !Array.isArray(update.languages)) {
-    return Response.json(fail('BAD_REQUEST', 'languages must be an array'), { status: 400 });
-  }
-  if (update.specialties !== undefined && !Array.isArray(update.specialties)) {
-    return Response.json(fail('BAD_REQUEST', 'specialties must be an array'), { status: 400 });
+  for (const f of ARRAY_FIELDS) {
+    if (update[f] === undefined) continue;
+    if (!Array.isArray(update[f])) {
+      return Response.json(fail('BAD_REQUEST', `${f} must be an array`), { status: 400 });
+    }
+    if (!(update[f] as unknown[]).every((v) => typeof v === 'string')) {
+      return Response.json(fail('BAD_REQUEST', `${f} must contain only strings`), { status: 400 });
+    }
   }
   if (update.is_published !== undefined && typeof update.is_published !== 'boolean') {
     return Response.json(fail('BAD_REQUEST', 'is_published must be a boolean'), { status: 400 });

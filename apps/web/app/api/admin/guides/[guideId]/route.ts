@@ -46,15 +46,24 @@ export async function GET(
     }
 
     const appBaseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-    const appRichSelect = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+    const appRichSelectV1 = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+    const appRichSelectV2 = `${appRichSelectV1}, payment_methods`;
+    const isMissingColumn = (e: { code?: string; message?: string } | null) =>
+      !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+    // Schema drift guard（三層）：payment_methods（20260623）→ 其餘 rich（20260610）→ base。
     let { data: application, error: appError } = await supabase
       .from('guide_applications')
-      .select(appRichSelect)
+      .select(appRichSelectV2)
       .eq('id', guideId)
       .maybeSingle();
-    // Schema drift guard: rich columns ship with
-    // 20260610_guide_applications_profile_fields; fall back when absent.
-    if (appError && (appError.code === '42703' || /column .*does not exist/i.test(appError.message || ''))) {
+    if (isMissingColumn(appError)) {
+      ({ data: application, error: appError } = await supabase
+        .from('guide_applications')
+        .select(appRichSelectV1)
+        .eq('id', guideId)
+        .maybeSingle());
+    }
+    if (isMissingColumn(appError)) {
       ({ data: application, error: appError } = await supabase
         .from('guide_applications')
         .select(appBaseSelect)
@@ -80,6 +89,11 @@ export async function GET(
             regions: arr(application.regions),
             certifications: arr(application.certifications),
             paymentMethod: application.payment_method ?? null,
+            paymentMethods: (() => {
+              const list = arr((application as Record<string, unknown>).payment_methods);
+              if (list.length) return list;
+              return application.payment_method ? [application.payment_method] : [];
+            })(),
             profilePhotoUrl: application.profile_photo_url ?? null,
             heroImageUrl: application.hero_image_url ?? null,
             galleryUrls: arr(application.gallery_urls),

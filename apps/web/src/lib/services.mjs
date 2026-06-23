@@ -266,7 +266,15 @@ export function createGuideApplication(input = {}) {
     languages: toStringArray(input?.languages),
     regions: toStringArray(input?.regions),
     certifications: toStringArray(input?.certs ?? input?.certifications),
-    paymentMethod: normalizeSlug(input?.payment ?? input?.paymentMethod) || null,
+    // 收款方式由單選改可複選：優先 payments/paymentMethods 陣列，向後相容單一 payment。
+    // paymentMethod（單選）保留作向後相容＝首個選項，與 db.mjs Supabase 路徑一致。
+    ...(() => {
+      const paymentMethods = Array.isArray(input?.payments ?? input?.paymentMethods)
+        ? toStringArray(input?.payments ?? input?.paymentMethods)
+        : toStringArray([input?.payment ?? input?.paymentMethod]);
+      const single = normalizeSlug(input?.payment ?? input?.paymentMethod) || paymentMethods[0] || null;
+      return { paymentMethod: single, paymentMethods };
+    })(),
     profilePhotoUrl: String(input?.profilePhotoUrl || '').trim() || null,
     heroImageUrl: String(input?.heroImageUrl || '').trim() || null,
     galleryUrls: toStringArray(input?.galleryUrls).slice(0, 12),

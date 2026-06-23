@@ -27,15 +27,24 @@ export async function POST(req: Request) {
   // Rich profile fields (bio/city/specialties/languages) ride along so
   // 上線 can seed the public guide profile instead of a name-only shell.
   const appBaseSelect = 'id, full_name, email, phone, status, city, bio';
-  const appRichSelect = `${appBaseSelect}, specialties, languages, profile_photo_url, hero_image_url, gallery_urls`;
+  const appRichSelectV1 = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const appRichSelectV2 = `${appRichSelectV1}, payment_methods`;
+  const isMissingColumn = (e: { code?: string; message?: string } | null) =>
+    !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+  // Schema drift guard（三層）：payment_methods（20260623）→ 其餘 rich（20260610）→ base。
   let { data: app, error: appErr } = await supabase
     .from('guide_applications')
-    .select(appRichSelect)
+    .select(appRichSelectV2)
     .eq('id', applicationId)
     .single();
-  // Schema drift guard: rich columns ship with
-  // 20260610_guide_applications_profile_fields; fall back when absent.
-  if (appErr && (appErr.code === '42703' || /column .*does not exist/i.test(appErr.message || ''))) {
+  if (isMissingColumn(appErr)) {
+    ({ data: app, error: appErr } = await supabase
+      .from('guide_applications')
+      .select(appRichSelectV1)
+      .eq('id', applicationId)
+      .single());
+  }
+  if (isMissingColumn(appErr)) {
     ({ data: app, error: appErr } = await supabase
       .from('guide_applications')
       .select(appBaseSelect)
@@ -74,6 +83,11 @@ export async function POST(req: Request) {
     guideId = existing.id;
   } else {
     // Create new guide_profiles entry
+    const appRecord = app as Record<string, unknown>;
+    const appRegions = Array.isArray(appRecord.regions) ? appRecord.regions as string[] : [];
+    const appPaymentMethods = Array.isArray(appRecord.payment_methods)
+      ? appRecord.payment_methods as string[]
+      : (appRecord.payment_method ? [appRecord.payment_method as string] : []);
     const newProfilePayload: Record<string, unknown> = {
       display_name: app.full_name,
       slug: profileSlug,
@@ -83,25 +97,39 @@ export async function POST(req: Request) {
       is_published: false,
       // 申請資料自動帶入公開導遊檔案；導遊上線後可在後台自行調整。
       bio: app.bio || null,
-      region: app.city || null,
-      languages: Array.isArray((app as Record<string, unknown>).languages) ? (app as Record<string, unknown>).languages : [],
-      specialties: Array.isArray((app as Record<string, unknown>).specialties) ? (app as Record<string, unknown>).specialties : [],
+      // 熟悉區域：優先帶申請複選的 regions；單一文字 region 取首個以維持向後相容顯示。
+      region: appRegions[0] || app.city || null,
+      regions: appRegions,
+      languages: Array.isArray(appRecord.languages) ? appRecord.languages : [],
+      specialties: Array.isArray(appRecord.specialties) ? appRecord.specialties : [],
+      certifications: Array.isArray(appRecord.certifications) ? appRecord.certifications : [],
+      payment_methods: appPaymentMethods,
       // 申請時上傳的照片直接成為導遊檔案初始照片，首次登入後台即可見。
-      profile_photo_url: (app as Record<string, unknown>).profile_photo_url || null,
-      hero_image_url: (app as Record<string, unknown>).hero_image_url || null,
-      gallery_urls: Array.isArray((app as Record<string, unknown>).gallery_urls) ? (app as Record<string, unknown>).gallery_urls : [],
+      profile_photo_url: appRecord.profile_photo_url || null,
+      hero_image_url: appRecord.hero_image_url || null,
+      gallery_urls: Array.isArray(appRecord.gallery_urls) ? appRecord.gallery_urls : [],
       // guide_email will be set separately by admin
     };
+    // Schema drift guard（依 migration 由新到舊分批剝除）：
+    //   regions/certifications/payment_methods → 20260623
+    //   is_published → 20260611
+    // production 尚未跑對應 migration 時剝掉該批欄位重試，promote 永不因新欄位 hard-fail。
+    const DRIFT_OPTIONAL_BATCHES = [
+      ['regions', 'certifications', 'payment_methods'],
+      ['is_published'],
+    ];
     let { data: newProfile, error: insertErr } = await supabase
       .from('guide_profiles')
       .insert(newProfilePayload)
       .select('id')
       .single();
-    // Schema drift guard: is_published ships with
-    // 20260611_guide_profiles_is_published; if production hasn't migrated
-    // yet, drop it and retry so promote never hard-fails on the new column.
-    if (insertErr && (insertErr.code === '42703' || /column .*does not exist/i.test(insertErr.message || ''))) {
-      delete newProfilePayload.is_published;
+    for (const batch of DRIFT_OPTIONAL_BATCHES) {
+      if (!isMissingColumn(insertErr)) break;
+      let stripped = false;
+      for (const col of batch) {
+        if (col in newProfilePayload) { delete newProfilePayload[col]; stripped = true; }
+      }
+      if (!stripped) continue;
       ({ data: newProfile, error: insertErr } = await supabase
         .from('guide_profiles')
         .insert(newProfilePayload)

@@ -1917,7 +1917,11 @@ export async function createGuideApplicationDb(input = {}) {
   const languages = toStringArray(input?.languages);
   const regions = toStringArray(input?.regions);
   const certifications = toStringArray(input?.certs ?? input?.certifications);
-  const paymentMethod = String(input?.payment ?? input?.paymentMethod ?? '').trim() || null;
+  // 收款方式由單選改可複選：優先讀陣列 payments/paymentMethods，向後相容單一 payment 字串。
+  const paymentMethods = Array.isArray(input?.payments ?? input?.paymentMethods)
+    ? toStringArray(input?.payments ?? input?.paymentMethods)
+    : toStringArray([input?.payment ?? input?.paymentMethod]);
+  const paymentMethod = paymentMethods[0] || null;
   const profilePhotoUrl = String(input?.profilePhotoUrl || '').trim() || null;
   const heroImageUrl = String(input?.heroImageUrl || '').trim() || null;
   const galleryUrls = toStringArray(input?.galleryUrls).slice(0, 12);
@@ -1939,7 +1943,10 @@ export async function createGuideApplicationDb(input = {}) {
     bio,
     status: 'pending'
   };
-  const richPayload = {
+  // payment_methods 為較新欄位（20260623_guide_profile_familiar_regions）；其餘 rich
+  // 欄位（specialties…payment_method）由 20260610 加入。分三層 payload 以對應不同
+  // migration 進度，確保部分 migrate 的環境不會連帶丟掉舊 rich 欄位。
+  const richPayloadV1 = {
     ...basePayload,
     specialties,
     languages,
@@ -1950,22 +1957,33 @@ export async function createGuideApplicationDb(input = {}) {
     hero_image_url: heroImageUrl,
     gallery_urls: galleryUrls,
   };
+  const richPayloadV2 = { ...richPayloadV1, payment_methods: paymentMethods };
 
   const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV1 = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV2 = `${richSelectV1}, payment_methods`;
 
+  const isMissingColumn = (e) =>
+    e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+
+  // Tier 1：完整欄位（含 payment_methods）。
   let { data, error } = await supabase
     .from('guide_applications')
-    .insert(richPayload)
-    .select(richSelect)
+    .insert(richPayloadV2)
+    .select(richSelectV2)
     .single();
 
-  // Schema drift guard: production may not have applied
-  // 20260610_guide_applications_profile_fields yet (error 42703 /
-  // "column ... does not exist"). Fall back to the legacy column set so
-  // applications are never lost — the rich fields are dropped only in
-  // that degraded mode.
-  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+  // Tier 2：缺 payment_methods（跑了 20260610、未跑 20260623）→ 退回 V1，保住其餘 rich 欄位。
+  if (isMissingColumn(error)) {
+    ({ data, error } = await supabase
+      .from('guide_applications')
+      .insert(richPayloadV1)
+      .select(richSelectV1)
+      .single());
+  }
+
+  // Tier 3：連 20260610 都沒跑 → 退回 base，至少不遺失申請本體。
+  if (isMissingColumn(error)) {
     ({ data, error } = await supabase
       .from('guide_applications')
       .insert(basePayload)
@@ -1992,6 +2010,12 @@ function mapGuideApplicationRow(r) {
     regions: arr(r.regions),
     certifications: arr(r.certifications),
     paymentMethod: r.payment_method ?? null,
+    paymentMethods: (() => {
+      const list = arr(r.payment_methods ?? r.paymentMethods);
+      if (list.length) return list;
+      // 向後相容：尚無 payment_methods 欄位時，由單選 payment_method 推出單元素陣列。
+      return r.payment_method ? [r.payment_method] : [];
+    })(),
     profilePhotoUrl: r.profile_photo_url ?? r.profilePhotoUrl ?? null,
     heroImageUrl: r.hero_image_url ?? r.heroImageUrl ?? null,
     galleryUrls: arr(r.gallery_urls ?? r.galleryUrls),
@@ -2009,7 +2033,8 @@ export async function listGuideApplicationsDb(input = {}) {
   const supabase = await getSupabase();
 
   const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV1 = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV2 = `${richSelectV1}, payment_methods`;
 
   const buildQuery = (selectClause) => {
     let q = supabase
@@ -2020,11 +2045,13 @@ export async function listGuideApplicationsDb(input = {}) {
     return q;
   };
 
-  let { data, error } = await buildQuery(richSelect);
-  // Schema drift guard: see createGuideApplicationDb.
-  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
-    ({ data, error } = await buildQuery(baseSelect));
-  }
+  const isMissingColumn = (e) =>
+    e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+
+  // Schema drift guard（三層，見 createGuideApplicationDb）：payment_methods → 其餘 rich → base。
+  let { data, error } = await buildQuery(richSelectV2);
+  if (isMissingColumn(error)) ({ data, error } = await buildQuery(richSelectV1));
+  if (isMissingColumn(error)) ({ data, error } = await buildQuery(baseSelect));
   if (error) throw new Error(error.message);
 
   return (data || []).map(mapGuideApplicationRow);
@@ -3305,6 +3332,9 @@ export async function getGuideBySlugDb(slug) {
     return {
       id: g.slug, slug: g.slug, displayName: g.displayName,
       headline: g.headline, bio: g.longBio, region: g.region,
+      regions: g.regions || (g.region ? [g.region] : []),
+      certifications: g.certifications || [],
+      paymentMethods: g.paymentMethods || [],
       languages: g.languages || [], specialties: g.specialties || [],
       verificationBadges: g.verificationBadges || [],
       profilePhotoUrl: g.avatarUrl, heroImageUrl: g.heroImageUrl,
@@ -3328,10 +3358,12 @@ export async function getGuideBySlugDb(slug) {
   // .eq('guide_slug', slug)，不需要先拿到 guide id），故平行發兩個查詢，把
   // 2 個串行 round-trip 併成 1 個 —— 這是詳情頁 ISR cache-miss 首訪的延遲來源。
   // 導遊無效（找不到/停權）時 acts 直接丟棄，成本可忽略。
+  const baseGuideSelect = 'id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status';
+  const richGuideSelect = `${baseGuideSelect}, regions, certifications, payment_methods`;
   const [gpResult, actsResult] = await Promise.all([
     supabase
       .from('guide_profiles')
-      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
+      .select(richGuideSelect)
       .eq('slug', slug)
       .single(),
     supabase
@@ -3341,7 +3373,15 @@ export async function getGuideBySlugDb(slug) {
       .eq('status', 'published'),
   ]);
 
-  const { data: gp, error } = gpResult;
+  let { data: gp, error } = gpResult;
+  // Schema drift guard：熟悉區域等欄位（20260623）未 migrate 時退回 base，公開頁不致 404。
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    ({ data: gp, error } = await supabase
+      .from('guide_profiles')
+      .select(baseGuideSelect)
+      .eq('slug', slug)
+      .single());
+  }
   if (error || !gp) return null;
   // 下架（停權）導遊對外全隱藏：非 approved（即 suspended）→ 詳情頁 404。
   // approved-但未公開（is_published=false）仍可預覽，不在此擋。
@@ -3352,6 +3392,9 @@ export async function getGuideBySlugDb(slug) {
   return {
     id: gp.id, slug: gp.slug, displayName: gp.display_name,
     headline: gp.headline, bio: gp.bio, region: gp.region,
+    regions: Array.isArray(gp.regions) && gp.regions.length ? gp.regions : (gp.region ? [gp.region] : []),
+    certifications: Array.isArray(gp.certifications) ? gp.certifications : [],
+    paymentMethods: Array.isArray(gp.payment_methods) ? gp.payment_methods : [],
     languages: gp.languages || [], specialties: gp.specialties || [],
     verificationBadges: [],
     profilePhotoUrl: gp.profile_photo_url, heroImageUrl: gp.hero_image_url,
