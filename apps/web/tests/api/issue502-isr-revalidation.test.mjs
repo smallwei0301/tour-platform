@@ -12,7 +12,7 @@ const WEB_ROOT = path.resolve(__dirname, '../..');
 const read = (rel) => readFile(path.join(WEB_ROOT, rel), 'utf8');
 
 test('詳情頁走 on-demand ISR：移除 force-dynamic、保留 revalidate=60 + generateStaticParams', async () => {
-  const src = await read('app/activities/[region]/[slug]/page.tsx');
+  const src = await read('app/[locale]/activities/[region]/[slug]/page.tsx');
   assert.doesNotMatch(src, /dynamic\s*=\s*['"]force-dynamic['"]/, 'force-dynamic 會關掉 CDN 快取，不得再出現');
   assert.match(src, /export const revalidate = 60/);
   assert.match(src, /generateStaticParams\s*\(/, '需 generateStaticParams()→[] 才會啟用 on-demand ISR');

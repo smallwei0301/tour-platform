@@ -25,7 +25,7 @@ describe('GH-297 traveler plan itinerary display', () => {
   });
 
   it('detail page renders PlanItinerarySection with selected-plan source and page-level fallback', () => {
-    const source = read('app/activities/[region]/[slug]/page.tsx');
+    const source = read('app/[locale]/activities/[region]/[slug]/page.tsx');
     assert.match(source, /import \{ PlanItinerarySection \}/, '應 import PlanItinerarySection');
     assert.match(source, /<PlanItinerarySection[\s\S]*plans=\{datePlanPresentation\.plans/, '應以所選方案來源 datePlanPresentation.plans 餵入');
     assert.match(source, /fallbackItinerary=\{activityData\.itinerary\}/, '頁面級行程需作為退回來源傳入');

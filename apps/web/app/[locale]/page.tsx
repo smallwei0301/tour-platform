@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
-import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../src/components/landing/LpSections';
-import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityGalleryBySlugDb } from '../src/lib/db.mjs';
-import { resolveHomepageFeaturedView, resolveEditorPickPhotos } from '../src/lib/homepage-featured-copy.mjs';
-import { resolveActivityReviewStats } from '../src/lib/activity-review-stats.mjs';
-import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../src/lib/homepage-featured.mjs';
+import { LpHero, LpThemes, LpFeatured, LpGuide, LpTours, LpDestinations, LpStories, LpFaq, LpClosing } from '../../src/components/landing/LpSections';
+import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityGalleryBySlugDb } from '../../src/lib/db.mjs';
+import { resolveHomepageFeaturedView, resolveEditorPickPhotos } from '../../src/lib/homepage-featured-copy.mjs';
+import { resolveActivityReviewStats } from '../../src/lib/activity-review-stats.mjs';
+import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../../src/lib/homepage-featured.mjs';
 
 // 首頁採「on-demand 失效為主」的 ISR：admin 於 /admin/homepage 儲存精選時，
 // PUT /api/admin/homepage-featured 會 revalidatePath('/') 立即重生（變更即時可見）；

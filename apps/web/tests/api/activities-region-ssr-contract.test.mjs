@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PAGE = join(__dirname, '../../app/activities/[region]/page.tsx');
+const PAGE = join(__dirname, '../../app/[locale]/activities/[region]/page.tsx');
 
 const src = readFileSync(PAGE, 'utf8');
 

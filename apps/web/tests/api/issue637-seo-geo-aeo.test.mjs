@@ -36,7 +36,7 @@ test('seo-geo-aeo launch checklist covers structured data (JSON-LD)', () => {
 // ── AC#2: Activity detail page has application/ld+json ─────────────────────
 
 test('activity detail page contains application/ld+json script element', () => {
-  const pagePath = join(REPO_ROOT, 'apps/web/app/activities/[region]/[slug]/page.tsx');
+  const pagePath = join(REPO_ROOT, 'apps/web/app/[locale]/activities/[region]/[slug]/page.tsx');
   assert.ok(existsSync(pagePath), `Expected ${pagePath} to exist`);
   const source = readFileSync(pagePath, 'utf8');
   assert.ok(
@@ -48,7 +48,7 @@ test('activity detail page contains application/ld+json script element', () => {
 // ── AC#3: JSON-LD uses TouristAttraction schema ─────────────────────────────
 
 test('activity detail page JSON-LD references TouristAttraction schema type', () => {
-  const pagePath = join(REPO_ROOT, 'apps/web/app/activities/[region]/[slug]/page.tsx');
+  const pagePath = join(REPO_ROOT, 'apps/web/app/[locale]/activities/[region]/[slug]/page.tsx');
   const source = readFileSync(pagePath, 'utf8');
   assert.ok(
     source.includes('TouristAttraction'),
@@ -57,7 +57,7 @@ test('activity detail page JSON-LD references TouristAttraction schema type', ()
 });
 
 test('activity detail page JSON-LD includes address with addressCountry TW', () => {
-  const pagePath = join(REPO_ROOT, 'apps/web/app/activities/[region]/[slug]/page.tsx');
+  const pagePath = join(REPO_ROOT, 'apps/web/app/[locale]/activities/[region]/[slug]/page.tsx');
   const source = readFileSync(pagePath, 'utf8');
   assert.ok(
     source.includes('PostalAddress'),
@@ -70,7 +70,7 @@ test('activity detail page JSON-LD includes address with addressCountry TW', () 
 });
 
 test('activity detail page JSON-LD includes priceRange field', () => {
-  const pagePath = join(REPO_ROOT, 'apps/web/app/activities/[region]/[slug]/page.tsx');
+  const pagePath = join(REPO_ROOT, 'apps/web/app/[locale]/activities/[region]/[slug]/page.tsx');
   const source = readFileSync(pagePath, 'utf8');
   assert.ok(
     source.includes('priceRange'),

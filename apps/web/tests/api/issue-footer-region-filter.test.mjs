@@ -106,7 +106,7 @@ test('Source contract: Footer 用 /activities?region= 連到地區篩選', () =>
 });
 
 test('Source contract: ActivitiesContent 以 normalizeRegionToDbValue 正規化地區比對', () => {
-  const src = readFileSync(join(REPO_ROOT, 'app/activities/ActivitiesContent.tsx'), 'utf8');
+  const src = readFileSync(join(REPO_ROOT, 'app/[locale]/activities/ActivitiesContent.tsx'), 'utf8');
   assert.match(
     src,
     /normalizeRegionToDbValue/,

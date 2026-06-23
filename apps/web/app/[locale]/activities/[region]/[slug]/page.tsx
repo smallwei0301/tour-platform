@@ -3,28 +3,28 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cache } from 'react';
-import { getActivityBySlugDb } from '../../../../src/lib/db.mjs';
-import { resolveActivityReviewStats } from '../../../../src/lib/activity-review-stats.mjs';
-import { normalizeSocialProofQuotes, resolveSocialProofAuthor } from '../../../../src/lib/social-proof-quotes.mjs';
+import { getActivityBySlugDb } from '../../../../../src/lib/db.mjs';
+import { resolveActivityReviewStats } from '../../../../../src/lib/activity-review-stats.mjs';
+import { normalizeSocialProofQuotes, resolveSocialProofAuthor } from '../../../../../src/lib/social-proof-quotes.mjs';
 import {
   buildActivityProductJsonLd,
   resolveActivityOgImage,
   serialiseJsonLd,
-} from '../../../../src/lib/activity-jsonld.mjs';
-import { DatePlanSection } from '../../../../src/components/activity/DatePlanSection';
-import { PlanItinerarySection } from '../../../../src/components/activity/PlanItinerarySection';
-import { ActivityBottomBar } from '../../../../src/components/activity/ActivityBottomBar';
-import { SelectedPlanProvider } from '../../../../src/components/activity/SelectedPlanContext';
-import { SectionAnchorNav } from '../../../../src/components/activity/SectionAnchorNav';
-import { ImageCarousel } from '../../../../src/components/activity/ImageCarousel';
-import { ReviewPhotos } from '../../../../src/components/activity/ReviewPhotos';
-import { isBookingV2Enabled } from '../../../../src/config/feature-flags.mjs';
-import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../src/lib/booking-entry.mjs';
-import { resolveDatePlanPresentation } from '../../../../src/lib/date-plan-source.mjs';
-import { ActivityQASection } from '../../../../src/components/activity/ActivityQASection';
-import { PublicPromoBanner } from '../../../../src/components/activity/PublicPromoBanner';
-import { ActivityRecommendations } from '../../../../src/components/activity/ActivityRecommendations';
-import { PublicIcon } from '../../../../src/components/ui/PublicIcon';
+} from '../../../../../src/lib/activity-jsonld.mjs';
+import { DatePlanSection } from '../../../../../src/components/activity/DatePlanSection';
+import { PlanItinerarySection } from '../../../../../src/components/activity/PlanItinerarySection';
+import { ActivityBottomBar } from '../../../../../src/components/activity/ActivityBottomBar';
+import { SelectedPlanProvider } from '../../../../../src/components/activity/SelectedPlanContext';
+import { SectionAnchorNav } from '../../../../../src/components/activity/SectionAnchorNav';
+import { ImageCarousel } from '../../../../../src/components/activity/ImageCarousel';
+import { ReviewPhotos } from '../../../../../src/components/activity/ReviewPhotos';
+import { isBookingV2Enabled } from '../../../../../src/config/feature-flags.mjs';
+import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../../src/lib/booking-entry.mjs';
+import { resolveDatePlanPresentation } from '../../../../../src/lib/date-plan-source.mjs';
+import { ActivityQASection } from '../../../../../src/components/activity/ActivityQASection';
+import { PublicPromoBanner } from '../../../../../src/components/activity/PublicPromoBanner';
+import { ActivityRecommendations } from '../../../../../src/components/activity/ActivityRecommendations';
+import { PublicIcon } from '../../../../../src/components/ui/PublicIcon';
 
 // Issue #502 背景：詳情頁曾因 force-static/unstable_cache + 關聯查詢在 cold path
 // render lock（hang/500），緊急以 force-dynamic + withTimeout 止血。事故主因已移除

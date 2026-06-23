@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, '../..');
 
 test('GH-502 render path guard: activity detail page must fail fast when activity lookup hangs', async () => {
   const root = ROOT;
-  const pagePath = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
+  const pagePath = path.join(root, 'app/[locale]/activities/[region]/[slug]/page.tsx');
   const src = await fs.readFile(pagePath, 'utf8');
 
   // generateMetadata should stay independent from DB calls.
@@ -28,7 +28,7 @@ test('GH-502 render path guard: activity detail page must fail fast when activit
   );
 
   // Compat route (/activities/[slug]) check — optional, may not exist if consolidated into [region]/[slug]
-  const compatPagePath = path.join(root, 'app/activities/[slug]/page.tsx');
+  const compatPagePath = path.join(root, 'app/[locale]/activities/[slug]/page.tsx');
   let compatSrc = null;
   try { compatSrc = await fs.readFile(compatPagePath, 'utf8'); } catch { /* compat route removed */ }
   if (compatSrc) {

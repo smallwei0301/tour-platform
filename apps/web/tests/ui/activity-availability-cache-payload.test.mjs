@@ -36,7 +36,7 @@ test('availability API response payload keeps only UI-required fields', async ()
 });
 
 test('activity detail page keeps ISR shell and does not couple availability to page-level re-render', async () => {
-  const src = await readSource('app/activities/[region]/[slug]/page.tsx');
+  const src = await readSource('app/[locale]/activities/[region]/[slug]/page.tsx');
 
   // Issue #502 後續：詳情頁從緊急 force-dynamic 改回 ISR（revalidate=60，由 CDN 供應，
   // 導航 TTFB ~1-2s → ~50ms）。事故主因（關聯 embed）已移除、保留 8s timeout guard，

@@ -20,7 +20,7 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
-const DETAIL_PAGE = 'app/activities/[region]/[slug]/page.tsx';
+const DETAIL_PAGE = 'app/[locale]/activities/[region]/[slug]/page.tsx';
 const QA_COMPONENT = 'src/components/activity/ActivityQASection.tsx';
 
 // ─── AC1: Approved Q&A section display ───────────────────────────────────────

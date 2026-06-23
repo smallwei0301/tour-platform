@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const pageSource = readFileSync(
-  resolve(import.meta.dirname, '../../app/activities/[region]/[slug]/page.tsx'),
+  resolve(import.meta.dirname, '../../app/[locale]/activities/[region]/[slug]/page.tsx'),
   'utf8'
 );
 

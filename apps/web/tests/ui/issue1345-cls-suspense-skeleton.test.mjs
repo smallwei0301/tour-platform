@@ -32,7 +32,7 @@ async function readSrc(rel) {
 }
 
 test('/activities Suspense 用 ActivitiesSkeleton 而不是 「載入中⋯」單行 fallback', async () => {
-  const src = await readSrc('app/activities/page.tsx');
+  const src = await readSrc('app/[locale]/activities/page.tsx');
   assert.match(
     src,
     /import\s+ActivitiesSkeleton\s+from\s+['"]\.\/ActivitiesSkeleton['"]/,
@@ -52,7 +52,7 @@ test('/activities Suspense 用 ActivitiesSkeleton 而不是 「載入中⋯」�
 });
 
 test('/activities/[region] Suspense 也用 ActivitiesSkeleton（不再是 null）', async () => {
-  const src = await readSrc('app/activities/[region]/page.tsx');
+  const src = await readSrc('app/[locale]/activities/[region]/page.tsx');
   assert.match(
     src,
     /import\s+ActivitiesSkeleton\s+from\s+['"]\.\.\/ActivitiesSkeleton['"]/,
@@ -71,7 +71,7 @@ test('/activities/[region] Suspense 也用 ActivitiesSkeleton（不再是 null�
 });
 
 test('ActivitiesSkeleton 渲染 6 張 same-footprint 卡片在相同 grid', async () => {
-  const src = await readSrc('app/activities/ActivitiesSkeleton.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivitiesSkeleton.tsx');
   // 同樣的 grid container class，這樣 streaming 替換時 grid 高度不變。
   assert.match(
     src,
@@ -113,7 +113,7 @@ test('loading.tsx 存在於 /activities 與 /activities/[region]（page-level st
   // 時外層 boundary 的 fallback 是 loading.tsx 不是 page JSX 內的
   // <Suspense>。region 頁實測過缺 loading.tsx 時 fallback 全空 →
   // footer 從視窗頂端被推下 ~1300px → CLS 0.52。
-  const regionLoading = await readSrc('app/activities/[region]/loading.tsx');
+  const regionLoading = await readSrc('app/[locale]/activities/[region]/loading.tsx');
   assert.match(
     regionLoading,
     /import\s+ActivitiesSkeleton\s+from\s+['"]\.\.\/ActivitiesSkeleton['"]/,
@@ -121,7 +121,7 @@ test('loading.tsx 存在於 /activities 與 /activities/[region]（page-level st
   );
   assert.match(regionLoading, /<ActivitiesSkeleton\s*\/>/);
 
-  const rootLoading = await readSrc('app/activities/loading.tsx');
+  const rootLoading = await readSrc('app/[locale]/activities/loading.tsx');
   assert.match(
     rootLoading,
     /import\s+ActivitiesSkeleton\s+from\s+['"]\.\/ActivitiesSkeleton['"]/,

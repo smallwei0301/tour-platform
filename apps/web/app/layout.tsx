@@ -78,7 +78,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{if(location.pathname==='/'){if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}}catch(e){}})();",
+              "(function(){try{var p=location.pathname;if(p==='/'||p==='/en'||p==='/ja'||p==='/ko'){if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}}catch(e){}})();",
           }}
         />
         {/* Preconnect to image CDNs used by CSS background images */}

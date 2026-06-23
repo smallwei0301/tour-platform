@@ -31,14 +31,14 @@ const OLD_OG_URL = 'https://images.unsplash.com/photo-1528164344705-47542687000d
 // 預設分享縮圖落地的檔案（openGraph／twitter metadata）。
 const SHARE_THUMBNAIL_FILES = [
   'app/layout.tsx',
-  'app/page.tsx',
+  'app/[locale]/page.tsx',
   'app/about/page.tsx',
   'app/why-choose-us/page.tsx',
   'app/faq/page.tsx',
   'app/guides/page.tsx',
   'app/guides/[slug]/page.tsx',
   'app/contact/page.tsx',
-  'app/activities/page.tsx',
+  'app/[locale]/activities/page.tsx',
   'app/experiences/[slug]/page.tsx',
   'app/guide/apply/layout.tsx',
   'app/blog/page.tsx',

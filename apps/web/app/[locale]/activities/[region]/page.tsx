@@ -1,8 +1,8 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
-import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
-import { getRegionBySlug, isKnownRegionSlug } from '../../../src/lib/region-slugs.mjs';
+import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedActivitiesDb } from '../../../../src/lib/db.mjs';
+import { getRegionBySlug, isKnownRegionSlug } from '../../../../src/lib/region-slugs.mjs';
 import ActivitiesContent from '../ActivitiesContent';
 import ActivitiesSkeleton from '../ActivitiesSkeleton';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from '../cover-image';

@@ -428,9 +428,9 @@ test('buildCanonicalActivityDetailPath falls back to normalized region when regi
 
 test('activity routes should avoid dynamic-segment name conflict and keep runtime rendering constraints', async () => {
   const root = ROOT;
-  const canonicalPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
-  const compatPage = path.join(root, 'app/activities/[region]/page.tsx');
-  const legacyCompatPage = path.join(root, 'app/activities/[slug]/page.tsx');
+  const canonicalPage = path.join(root, 'app/[locale]/activities/[region]/[slug]/page.tsx');
+  const compatPage = path.join(root, 'app/[locale]/activities/[region]/page.tsx');
+  const legacyCompatPage = path.join(root, 'app/[locale]/activities/[slug]/page.tsx');
   const dbFile = path.join(root, 'src/lib/db.mjs');
 
   const [canonicalSrc, compatSrc, dbSrc, legacyCompatExists] = await Promise.all([

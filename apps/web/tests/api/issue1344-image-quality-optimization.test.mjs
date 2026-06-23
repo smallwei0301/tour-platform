@@ -39,7 +39,7 @@ test('#1344 cover Image has quality={60} (Next 15 — per-Image, not next.config
   // ride on each <Image>, and it must match the q=60 baked into
   // buildCardImageSrcSet so the SSR preload URL still cache-hits the
   // <img srcset> request.
-  const src = read('apps/web/app/activities/ActivitiesContent.tsx');
+  const src = read('apps/web/app/[locale]/activities/ActivitiesContent.tsx');
   assert.match(
     src,
     /quality=\{60\}/,
@@ -50,7 +50,7 @@ test('#1344 cover Image has quality={60} (Next 15 — per-Image, not next.config
 // ── cover-image.ts ────────────────────────────────────────────────────────────
 
 test('#1344 buildCardImageSrcSet uses q=60 to match config quality', () => {
-  const src = read('apps/web/app/activities/cover-image.ts');
+  const src = read('apps/web/app/[locale]/activities/cover-image.ts');
   assert.match(
     src,
     /q=60\b/,
@@ -66,12 +66,12 @@ test('#1344 buildCardImageSrcSet uses q=60 to match config quality', () => {
 // ── ActivitiesContent.tsx ─────────────────────────────────────────────────────
 
 test('#1344 cover Image has priority={idx < 2} for above-the-fold preload', () => {
-  const src = read('apps/web/app/activities/ActivitiesContent.tsx');
+  const src = read('apps/web/app/[locale]/activities/ActivitiesContent.tsx');
   assert.match(src, /priority=\{idx\s*<\s*2\}/, 'first 2 cover images must be priority-loaded');
 });
 
 test('#1344 cover Image uses CARD_IMAGE_SIZES constant (not a hardcoded string)', () => {
-  const src = read('apps/web/app/activities/ActivitiesContent.tsx');
+  const src = read('apps/web/app/[locale]/activities/ActivitiesContent.tsx');
   assert.match(
     src,
     /sizes=\{CARD_IMAGE_SIZES\}/,

@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import ActivitiesContent from './ActivitiesContent';
 import ActivitiesSkeleton from './ActivitiesSkeleton';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from './cover-image';
-import { listPublishedActivitiesDb } from '../../src/lib/db.mjs';
+import { listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
 import type { Metadata } from 'next';
 
 // Issue #1249 — match the `/api/activities` cache window so the SSR HTML

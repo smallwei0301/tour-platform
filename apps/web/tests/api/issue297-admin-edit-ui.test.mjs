@@ -42,7 +42,7 @@ describe('GH-297 admin edit/plans UI adjustments', () => {
   });
 
   it('traveler detail page derives participant summary from plans, not the removed activity input', () => {
-    const detailSrc = read('app/activities/[region]/[slug]/page.tsx');
+    const detailSrc = read('app/[locale]/activities/[region]/[slug]/page.tsx');
     assert.match(detailSrc, /planParticipantRanges/, '前台摘要需改由方案推導');
     assert.doesNotMatch(detailSrc, /min !== activity\.minParticipants/, '不應再以活動層級值作為比較基準');
   });

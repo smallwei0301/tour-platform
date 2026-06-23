@@ -25,7 +25,7 @@ test('activity date-plan UI does not trigger mount-time live availability fetch'
 });
 
 test('activity primary CTA in V2 uses plan/date-aware booking href when schedule context exists', async () => {
-  const src = await readSource('app/activities/[region]/[slug]/page.tsx');
+  const src = await readSource('app/[locale]/activities/[region]/[slug]/page.tsx');
 
   assert.match(src, /const directBookingHref = firstSchedulableEntry/);
   assert.match(src, /resolvePlanBookingHref\(\{/);
@@ -33,7 +33,7 @@ test('activity primary CTA in V2 uses plan/date-aware booking href when schedule
 });
 
 test('activity page hides public booking CTAs when V2 has no canonical plans', async () => {
-  const pageSrc = await readSource('app/activities/[region]/[slug]/page.tsx');
+  const pageSrc = await readSource('app/[locale]/activities/[region]/[slug]/page.tsx');
   const bottomBarSrc = await readSource('src/components/activity/ActivityBottomBar.tsx');
 
   assert.match(pageSrc, /const hidePublicBookingCta = Boolean\(useBookingV2 && datePlanPresentation\.showMissingCanonicalMessage\)/);
