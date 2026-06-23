@@ -1,0 +1,36 @@
+{
+  "common": {
+    "currency": "NT$",
+    "loading": "載入中⋯",
+    "retry": "重新整理",
+    "search": "搜尋",
+    "searchPlaceholder": "搜尋行程、目的地⋯"
+  },
+  "nav": {
+    "explore": "探索行程",
+    "guides": "認識導遊",
+    "becomeGuide": "成為導遊",
+    "blog": "旅遊指南",
+    "login": "登入 / 註冊",
+    "logout": "登出",
+    "myTrips": "我的行程"
+  },
+  "seo": {
+    "siteName": "Midao 祕島",
+    "titleTemplate": "%s | Midao 祕島 — 台灣在地導遊",
+    "defaultTitle": "Midao 祕島 — 找到懂路的人，帶你走進台灣最有故事的地方",
+    "defaultDescription": "台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。"
+  },
+  "availability": {
+    "available": { "title": "可預約", "body": "此時段目前可預約。" },
+    "full": { "title": "已額滿", "body": "此時段名額已滿，請選擇其他時段或日期。" },
+    "closed": { "title": "已關閉", "body": "此時段已被導遊或管理者關閉，請選擇其他時段。" },
+    "blackout": { "title": "導遊不可服務", "body": "導遊在此時段標記為不可服務，請選擇其他時段或日期。" },
+    "inactive_plan": { "title": "方案未啟用", "body": "此方案目前未啟用，無法預約。請從活動頁重新選擇方案。" },
+    "outside_rule": { "title": "不在可預約時段", "body": "導遊未在此時段開放可預約時間，請選擇其他時段。" },
+    "outside_season": { "title": "不在開放季節", "body": "此方案目前不在開放季節範圍內，請選擇其他日期。" },
+    "blocked_by_conflict": { "title": "時段衝突", "body": "此時段與既有預約衝突，預設不可預約。" },
+    "allowed_with_admin_override": { "title": "管理者例外開放", "body": "此時段與既有預約衝突，但已被管理者例外開放，請確認助手安排。" },
+    "fallback": { "title": "無法預約", "body": "此時段目前無法預約，請稍後再試或聯絡客服。" }
+  }
+}

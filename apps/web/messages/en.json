@@ -1,0 +1,36 @@
+{
+  "common": {
+    "currency": "NT$",
+    "loading": "Loading…",
+    "retry": "Reload",
+    "search": "Search",
+    "searchPlaceholder": "Search routes, destinations…"
+  },
+  "nav": {
+    "explore": "Explore Routes",
+    "guides": "Meet the Guides",
+    "becomeGuide": "Become a Guide",
+    "blog": "Travel Journal",
+    "login": "Log in / Sign up",
+    "logout": "Log out",
+    "myTrips": "My Trips"
+  },
+  "seo": {
+    "siteName": "Midao 祕島",
+    "titleTemplate": "%s | Midao — Local Guides in Taiwan",
+    "defaultTitle": "Midao — Hidden Taiwan, by those who know",
+    "defaultDescription": "Book real local guides and the routes no guidebook tells you. Discover hidden Taiwan, book directly, pay securely."
+  },
+  "availability": {
+    "available": { "title": "Available", "body": "This time slot is currently available to book." },
+    "full": { "title": "Fully booked", "body": "This time slot is full. Please choose another time or date." },
+    "closed": { "title": "Closed", "body": "This slot was closed by the guide or an administrator. Please choose another time." },
+    "blackout": { "title": "Guide unavailable", "body": "The guide marked this slot as unavailable. Please choose another time or date." },
+    "inactive_plan": { "title": "Plan inactive", "body": "This plan is currently inactive and cannot be booked. Please pick a plan again from the activity page." },
+    "outside_rule": { "title": "Outside booking hours", "body": "The guide has not opened this slot for booking. Please choose another time." },
+    "outside_season": { "title": "Out of season", "body": "This plan is outside its open season. Please choose another date." },
+    "blocked_by_conflict": { "title": "Time conflict", "body": "This slot conflicts with an existing booking and is unavailable by default." },
+    "allowed_with_admin_override": { "title": "Admin override", "body": "This slot conflicts with an existing booking but was opened by an administrator. Please confirm the arrangement." },
+    "fallback": { "title": "Unavailable", "body": "This slot is currently unavailable. Please try again later or contact support." }
+  }
+}
