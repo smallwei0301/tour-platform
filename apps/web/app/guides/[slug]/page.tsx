@@ -3,6 +3,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
+import { paymentMethodLabels } from '../../../src/lib/guide-payment-options.mjs';
 import { buildActivityHref } from '../../../src/lib/activity-url';
 import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../src/components/shared/ActivityHero';
@@ -63,6 +64,13 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
 
   const guideActivities = guide.activities || [];
   const guideReviews = guide.reviews || [];
+  // 熟悉區域：優先用 regions 陣列，向後相容單一 region。收款方式 id → 顯示文字。
+  const guideRegions: string[] = Array.isArray(guide.regions) && guide.regions.length
+    ? guide.regions
+    : (guide.region ? [guide.region] : []);
+  const guideCertifications: string[] = Array.isArray(guide.certifications) ? guide.certifications : [];
+  const guidePaymentLabels: string[] = paymentMethodLabels(guide.paymentMethods);
+  const regionSummary = guideRegions.join('、') || guide.region;
 
   // 「詢問導遊」＝認識導遊頁的 inline 訊息（GuideContactQASection）。按下後先判斷
   // 旅客是否登入，已登入即就地展開輸入框送訊息給導遊。訊息不綁定任何行程，重用
@@ -123,7 +131,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
             <div>
               <h1 style={{ margin: 0 }}>{guide.displayName}</h1>
               <p style={{ margin: '4px 0', color: 'var(--tp-muted)' }}>
-                ✅ 已驗證 · ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則評價，{guide.serviceCount || 0} 次服務） · 📍 {guide.region}
+                ✅ 已驗證 · ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則評價，{guide.serviceCount || 0} 次服務） · 📍 {regionSummary}
                 {guide.languages?.length > 0 && ` · 🌍 ${guide.languages.slice(0, 4).join('、')}`}
               </p>
               {guide.specialties?.length > 0 && (
@@ -141,6 +149,45 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
             <h2>關於我</h2>
             <p style={{ lineHeight: 1.8, whiteSpace: 'pre-line' }}>{guide.bio}</p>
           </section>
+
+          {/* 服務資訊：熟悉區域 / 專業證照 / 收款方式（皆來自導遊申請與後台維護） */}
+          {(guideRegions.length > 0 || guideCertifications.length > 0 || guidePaymentLabels.length > 0) && (
+            <section className="tp-detail-block" data-testid="guide-service-info" style={{ marginBottom: 28 }}>
+              <h2>服務資訊</h2>
+              <div style={{ display: 'grid', gap: 16 }}>
+                {guideRegions.length > 0 && (
+                  <div data-testid="guide-regions">
+                    <p style={{ margin: '0 0 6px', fontWeight: 700, color: 'var(--tp-muted)' }}>熟悉區域</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {guideRegions.map((r) => (
+                        <span key={r} style={{ background: 'rgba(190, 178, 137, 0.18)', color: 'var(--tp-gold-strong)', border: '1px solid rgba(190, 178, 137, 0.45)', padding: '3px 10px', borderRadius: 10, fontSize: 13 }}>📍 {r}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {guideCertifications.length > 0 && (
+                  <div data-testid="guide-certifications">
+                    <p style={{ margin: '0 0 6px', fontWeight: 700, color: 'var(--tp-muted)' }}>專業證照</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {guideCertifications.map((c) => (
+                        <span key={c} style={{ background: '#e6f4ed', color: 'var(--tp-gold-strong)', padding: '4px 12px', borderRadius: 10, fontSize: 13 }}>🎖️ {c}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {guidePaymentLabels.length > 0 && (
+                  <div data-testid="guide-payment-methods">
+                    <p style={{ margin: '0 0 6px', fontWeight: 700, color: 'var(--tp-muted)' }}>收款方式</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {guidePaymentLabels.map((p) => (
+                        <span key={p} style={{ background: 'rgba(124, 58, 237, 0.10)', color: '#6d28d9', border: '1px solid rgba(124, 58, 237, 0.35)', padding: '4px 12px', borderRadius: 10, fontSize: 13 }}>💳 {p}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Verification badges */}
           {guide.verificationBadges?.length > 0 && (
