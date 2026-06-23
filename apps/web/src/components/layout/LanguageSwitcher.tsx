@@ -1,11 +1,7 @@
 'use client';
 import { useRouter, usePathname } from 'next/navigation';
-import {
-  routing,
-  VISIBLE_LOCALES,
-  isAppLocale,
-  type AppLocale,
-} from '../../i18n/routing';
+import { VISIBLE_LOCALES, type AppLocale } from '../../i18n/routing';
+import { detectLocale, pathForLocale } from '../../i18n/locale-path';
 
 /**
  * 最小語言切換器（#multilingual Phase 0.5 PoC）。
@@ -13,8 +9,9 @@ import {
  * 重要：Navbar 渲染於「根」`app/layout.tsx`，位在 `app/[locale]/layout.tsx` 的
  * NextIntlClientProvider **之外**，因此這裡**不能**用 next-intl 的 `useLocale()`／
  * `useTranslations()`／`createNavigation` hooks（會抓不到 provider context）。
- * 改用純 `next/navigation`，依 routing config（`localePrefix: 'as-needed'`）自行
- * 解析／替換網址前綴：預設 `zh-Hant` 無前綴、`en` 走 `/en`。
+ * 改用純 `next/navigation` + `locale-path` 工具，依 routing config
+ * （`localePrefix: 'as-needed'`）自行解析／替換網址前綴：預設 `zh-Hant` 無前綴、
+ * `en` 走 `/en`。
  *
  * 註：query string 在點擊時才從 `window.location.search` 讀取（client-only），
  * 刻意**不用 `useSearchParams()`**——本元件在 root layout 每頁皆渲染（含靜態
@@ -32,26 +29,6 @@ const SHORT_LABELS: Record<AppLocale, string> = {
   ja: 'JA',
   ko: 'KO',
 };
-
-/** 從實際瀏覽器 pathname 推斷目前 locale（無前綴＝預設 locale）。 */
-function detectLocale(pathname: string): AppLocale {
-  const seg = pathname.split('/')[1];
-  return isAppLocale(seg) ? seg : routing.defaultLocale;
-}
-
-/** 把目前 pathname 換成 target locale 的對應網址（as-needed：預設不加前綴）。 */
-function pathForLocale(pathname: string, target: AppLocale): string {
-  const current = detectLocale(pathname);
-  // 先去掉目前的前綴，取得「內部 pathname」。
-  let rest = pathname;
-  if (current !== routing.defaultLocale) {
-    rest = pathname.slice(`/${current}`.length) || '/';
-  }
-  if (target === routing.defaultLocale) {
-    return rest || '/';
-  }
-  return rest === '/' ? `/${target}` : `/${target}${rest}`;
-}
 
 export function LanguageSwitcher({ className }: { className?: string }) {
   const router = useRouter();

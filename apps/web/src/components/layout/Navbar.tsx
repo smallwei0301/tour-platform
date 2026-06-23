@@ -6,13 +6,8 @@ import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { PublicIcon } from '../ui/PublicIcon';
 import { LanguageSwitcher } from './LanguageSwitcher';
-
-const NAV_LINKS = [
-  { label: '探索行程', href: '/activities' },
-  { label: '認識導遊', href: '/guides' },
-  { label: '成為導遊', href: '/guide/apply' },
-  { label: '旅遊指南', href: '/blog' },
-];
+import { detectLocale } from '../../i18n/locale-path';
+import { getNavMessages } from '../../i18n/client-nav-messages';
 
 export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -21,6 +16,17 @@ export function Navbar() {
   const [loadingUser, setLoadingUser] = useState(true);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Navbar 在 NextIntlClientProvider 之外 → 依 pathname 前綴自行決定 locale 與文案。
+  // 切換器 router.push('/en') 後 pathname 變動，此處重算 → 導覽列文字立即切語言。
+  const locale = detectLocale(pathname || '/');
+  const m = getNavMessages(locale);
+  const NAV_LINKS = [
+    { label: m.nav.explore, href: '/activities' },
+    { label: m.nav.guides, href: '/guides' },
+    { label: m.nav.becomeGuide, href: '/guide/apply' },
+    { label: m.nav.blog, href: '/blog' },
+  ];
 
   useEffect(() => {
     const supabase = createClient();
@@ -46,10 +52,13 @@ export function Navbar() {
     router.refresh();
   }
 
+  // 搜尋導去 /activities 時保留目前 locale 前綴（en → /en/activities）。
+  const activitiesBase = locale === 'zh-Hant' ? '/activities' : `/${locale}/activities`;
+
   function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const q = query.trim();
-    router.push(q ? `/activities?q=${encodeURIComponent(q)}` : '/activities');
+    router.push(q ? `${activitiesBase}?q=${encodeURIComponent(q)}` : activitiesBase);
     setMenuOpen(false);
   }
 
@@ -112,13 +121,13 @@ export function Navbar() {
         <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
 
         {/* Desktop: search bar */}
-        <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label="搜尋">
+        <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label={m.common.search}>
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜尋行程、目的地⋯"
+            placeholder={m.common.searchPlaceholder}
             className="tp-search-input"
-            aria-label="搜尋行程或目的地"
+            aria-label={m.common.searchPlaceholder}
           />
           <button
             type="submit"
@@ -151,7 +160,7 @@ export function Navbar() {
                   style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)' }}
                   data-testid="nav-my-trips"
                 >
-                  我的行程
+                  {m.nav.myTrips}
                 </Link>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {user.user_metadata?.avatar_url && (
@@ -182,7 +191,7 @@ export function Navbar() {
                       cursor: 'pointer',
                     }}
                   >
-                    登出
+                    {m.nav.logout}
                   </button>
                 </div>
               </>
@@ -198,7 +207,7 @@ export function Navbar() {
                   fontSize: 14,
                 }}
               >
-                登入 / 註冊
+                {m.nav.login}
               </Link>
             )
           )}
@@ -231,9 +240,9 @@ export function Navbar() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜尋行程、目的地⋯"
+                placeholder={m.common.searchPlaceholder}
                 className="tp-search-input"
-                aria-label="搜尋行程或目的地"
+                aria-label={m.common.searchPlaceholder}
               />
               <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }}>
                 <PublicIcon name="search" size={16} />
@@ -256,14 +265,14 @@ export function Navbar() {
             {user ? (
               <>
                 <Link href="/me/orders" className="tp-mobile-menu-item" data-testid="nav-mobile-my-trips" onClick={() => setMenuOpen(false)}>
-                  我的行程
+                  {m.nav.myTrips}
                 </Link>
                 <button
                   onClick={() => { handleSignOut(); setMenuOpen(false); }}
                   className="tp-mobile-menu-item"
                   style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer', color: 'rgba(244,236,216,0.7)' }}
                 >
-                  登出（{displayName}）
+                  {m.nav.logout}（{displayName}）
                 </button>
               </>
             ) : (
@@ -272,7 +281,7 @@ export function Navbar() {
                 className="tp-mobile-menu-item"
                 onClick={() => setMenuOpen(false)}
               >
-                登入 / 註冊
+                {m.nav.login}
               </Link>
             )}
           </div>
