@@ -43,7 +43,10 @@ function stripLocalePrefix(pathname: string): string {
 function isLocalizedPublicPath(rest: string): boolean {
   return rest === '/'
     || rest === '/activities' || rest.startsWith('/activities/')
-    || rest === '/theme' || rest.startsWith('/theme/');
+    || rest === '/theme' || rest.startsWith('/theme/')
+    // /guides 只有列表頁搬進 [locale]；/guides/[slug] 與 /shop 仍在 root（中文），
+    // 故僅 exact match，避免 /guides/xxx 被導去不存在的 [locale]/guides/[slug] 而 404。
+    || rest === '/guides';
 }
 
 function pickToken(req: NextRequest): string {
@@ -298,7 +301,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Guide routes ───────────────────────────────────────────────────────────
-  const isGuidePage = pathname.startsWith('/guide');
+  // 注意：用精確比對，避免 `/guides`（旅客「認識導遊」公開頁）被當成 guide realm
+  // 而誤導去 /guide/login。先前 /guides 不在 middleware matcher 內所以無感；本輪把
+  // /guides 列表搬進 [locale] 並加入 matcher 後，這個 startsWith 的鬆散比對才暴露。
+  const isGuidePage = pathname === '/guide' || pathname.startsWith('/guide/');
   const isGuideApi = pathname.startsWith('/api/guide');
 
   if (isGuidePage || isGuideApi) {
@@ -420,6 +426,7 @@ export const config = {
     '/',
     '/activities/:path*',
     '/theme/:path*',
+    '/guides',
     '/booking/:path*',
     '/checkout/:path*',
     '/order/success/:path*',

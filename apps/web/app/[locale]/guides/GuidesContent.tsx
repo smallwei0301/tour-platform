@@ -3,7 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { PublicIcon } from '../../src/components/ui/PublicIcon';
+import { useTranslations } from 'next-intl';
+import { PublicIcon } from '../../../src/components/ui/PublicIcon';
 
 interface Guide {
   slug: string;
@@ -25,6 +26,7 @@ interface GuidesContentProps {
 export default function GuidesContent({ guides }: GuidesContentProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations('guides');
 
   // Derive filter options from actual guide data
   const { regions, languages, specialties } = useMemo(() => {
@@ -178,29 +180,29 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
   return (
     <section className="tp-activities-layout">
       {/* Filter sidebar */}
-      <aside className="tp-filter" aria-label="篩選條件">
+      <aside className="tp-filter" aria-label={t('filterAria')}>
         <div className="tp-filter-head">
-          <h3>導遊篩選</h3>
+          <h3>{t('filterTitle')}</h3>
           {hasFilters && (
             <button
               onClick={clearAll}
               style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}
             >
-              清除全部
+              {t('clearAll')}
             </button>
           )}
         </div>
 
         {/* Text search */}
         <div style={{ marginBottom: 12 }}>
-          <label htmlFor="guide-search" style={{ display: 'none' }}>搜尋導遊</label>
+          <label htmlFor="guide-search" style={{ display: 'none' }}>{t('searchLabel')}</label>
           <input
             id="guide-search"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜尋導遊名稱、地區、專長…"
-            aria-label="搜尋導遊"
+            placeholder={t('searchPlaceholder')}
+            aria-label={t('searchLabel')}
             style={{
               width: '100%',
               padding: '8px 12px',
@@ -215,7 +217,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
         {/* Region */}
         {regions.length > 0 && (
           <details>
-            <summary>縣市</summary>
+            <summary>{t('regionFilter')}</summary>
             {regions.map((r) => (
               <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <input
@@ -232,7 +234,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
         {/* Language */}
         {languages.length > 0 && (
           <details>
-            <summary>語言</summary>
+            <summary>{t('languageFilter')}</summary>
             {languages.map((l) => (
               <label key={l} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <input
@@ -249,7 +251,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
         {/* Specialty */}
         {specialties.length > 0 && (
           <details>
-            <summary>主題專長</summary>
+            <summary>{t('specialtyFilter')}</summary>
             {specialties.map((s) => (
               <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <input
@@ -268,24 +270,24 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       <section>
         {/* aria-live announces filter result count changes to screen readers */}
         <div aria-live="polite" aria-atomic="true" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap' }}>
-          {hasFilters ? `篩選結果：${filtered.length} 位導遊` : ''}
+          {hasFilters ? t('resultAria', { n: filtered.length }) : ''}
         </div>
         <div className="tp-result-head">
-          <h1>全台灣 {filtered.length} 位在地導遊</h1>
-          <select aria-label="排序" value={sort} onChange={(e) => handleSort(e.target.value)}>
-            <option value="recommended">推薦排序</option>
-            <option value="rating-desc">評分高到低</option>
-            <option value="reviews-desc">評價多到少</option>
+          <h1>{t('resultCount', { n: filtered.length })}</h1>
+          <select aria-label={t('sortAria')} value={sort} onChange={(e) => handleSort(e.target.value)}>
+            <option value="recommended">{t('sortRecommended')}</option>
+            <option value="rating-desc">{t('sortRatingDesc')}</option>
+            <option value="reviews-desc">{t('sortReviewsDesc')}</option>
           </select>
         </div>
 
         {filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--tp-muted)' }}>
             <div style={{ marginBottom: 12, color: 'var(--tp-gold-strong)' }}><PublicIcon name="search" size={40} /></div>
-            <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>找不到符合條件的導遊</p>
-            <p style={{ fontSize: 14, marginBottom: 20 }}>試試看其他篩選條件，或清除現有篩選</p>
+            <p style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>{t('emptyTitle')}</p>
+            <p style={{ fontSize: 14, marginBottom: 20 }}>{t('emptyDesc')}</p>
             <button onClick={clearAll} className="tp-btn tp-btn-primary">
-              清除所有篩選
+              {t('emptyClear')}
             </button>
           </div>
         ) : (
@@ -304,7 +306,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
                     width={224}
                     height={224}
                   />
-                  <span className="tp-guide-list-verified">✅ 已驗證</span>
+                  <span className="tp-guide-list-verified">✅ {t('verified')}</span>
                 </div>
                 <div className="tp-guide-list-body">
                   <h3>{g.displayName}</h3>
@@ -312,7 +314,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
                     <span className="tp-guide-list-rating">
                       ⭐ {g.ratingAvg?.toFixed(1) || '5.0'}
                     </span>
-                    （{g.reviewCount || 0} 則評價） · 📍 {g.region}
+                    {t('reviewCount', { n: g.reviewCount || 0 })} · 📍 {g.region}
                   </p>
                   {g.languages?.length > 0 && (
                     <p className="tp-guide-list-meta">🌍 {g.languages.slice(0, 3).join('、')}</p>
@@ -326,9 +328,9 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
                     </p>
                   )}
                   <div className="tp-guide-list-foot">
-                    <span className="tp-guide-list-count">{g.serviceCount || 0} 次服務</span>
+                    <span className="tp-guide-list-count">{t('serviceCount', { n: g.serviceCount || 0 })}</span>
                     <Link className="tp-link" href={`/guides/${g.slug}`}>
-                      查看導遊簡介 →
+                      {t('viewProfile')}
                     </Link>
                   </div>
                 </div>

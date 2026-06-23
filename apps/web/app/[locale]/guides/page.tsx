@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { listPublishedGuidesDb } from '../../src/lib/db.mjs';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { listPublishedGuidesDb } from '../../../src/lib/db.mjs';
 import GuidesContent from './GuidesContent';
 
 // On-demand revalidation（非定時 ISR）：認識導遊列表直接讀 Supabase，
@@ -9,26 +10,35 @@ import GuidesContent from './GuidesContent';
 // /api/guide/profile 會 revalidatePath('/guides') 精準失效，旅客下次
 // 刷新即見最新資料。導遊資料變動不頻繁，這比定時 ISR 更省資源。
 
-export const metadata: Metadata = {
-  title: '認識導遊 | Midao 祕島',
-  description: '認識 Midao 祕島平台上的在地導遊。每位導遊都經過實名認證，帶你走進台灣最有故事的地方。',
-  openGraph: {
-    title: '認識導遊 | Midao 祕島',
-    description: '找到屬於你的引路人——認識台灣各地在地導遊的專長與故事。',
-    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '台灣在地導遊 | Midao 祕島' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: '認識導遊 | Midao 祕島',
-    description: '找到屬於你的引路人——認識台灣各地在地導遊的專長與故事。',
-    images: ['/images/og-default.png'],
-  },
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'guides' });
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    openGraph: {
+      title: t('ogTitle'),
+      description: t('ogDescription'),
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: t('ogAlt') }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('ogTitle'),
+      description: t('ogDescription'),
+      images: ['/images/og-default.png'],
+    },
+  };
+}
 
-export default async function GuidesPage() {
+export default async function GuidesPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'guides' });
+  const ta = await getTranslations({ locale, namespace: 'activities' });
   const guides = await listPublishedGuidesDb().catch((): unknown[] => []);
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  // JSON-LD 結構化資料維持 zh（非可見 SEO，全面搬遷後再分批 localize）。
   const guidesJsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
@@ -61,8 +71,8 @@ export default async function GuidesPage() {
   return (
     <main className="tp-container tp-guides-page" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guidesJsonLd) }} />
-      <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; <Link href="/guides">認識導遊</Link></div>
-      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666' }}>載入中⋯</div>}>
+      <div className="tp-breadcrumb"><Link href="/">{ta('breadcrumbHome')}</Link> &gt; <Link href="/guides">{t('breadcrumb')}</Link></div>
+      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666' }}>{t('loading')}</div>}>
         <GuidesContent guides={guides as any[]} />
       </Suspense>
     </main>
