@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-06-23T07:21:07.426Z -->
+<!-- query_timestamp: 2026-06-23T13:04:00.534Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-23T07:21:07.426Z  
-**Commit SHA:** `22b5a7a5ec86d810b21a376698821b2266da90ce`
+**Query timestamp:** 2026-06-23T13:04:00.534Z  
+**Commit SHA:** `5855110bebe979051c903f303f6d4f98d95bdde0`
 
 ---
 
-## Open PRs (4)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1488 | [feat(i18n): 多語言網站基礎建設 + [locale] 路由 PoC（首頁 + /activities）](https://github.com/smallwei0301/tour-platform/pull/1488) | `claude/multilingual-website-plan-1xb9ny` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
