@@ -8,6 +8,9 @@ export const FORMED_GROUP_BOOKING_STATUSES = [
 
 export const CAPACITY_HOLD_BOOKING_STATUSES = [
   'draft',
+  // 外部佔位（導遊登記的 OTA／電話／走客已售座位）佔用容量但不算「成團」，
+  // 因此計入 capacity hold、不計入 FORMED_GROUP_BOOKING_STATUSES。
+  'external_hold',
   ...FORMED_GROUP_BOOKING_STATUSES,
 ] as const;
 
