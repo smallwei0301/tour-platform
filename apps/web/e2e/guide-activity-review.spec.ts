@@ -73,7 +73,8 @@ test.describe('導遊行程編輯與送審', () => {
     await page.goto(`/guide/activities/${ACTIVITY_ID}/edit`);
     await expect(page.getByRole('heading', { name: '編輯行程' })).toBeVisible();
 
-    const titleInput = page.locator('input').first();
+    // 用唯一 placeholder 鎖定行程名稱欄位，避開全站 header 的搜尋框。
+    const titleInput = page.getByPlaceholder('例：龜山島賞鯨一日遊');
     await expect(titleInput).toHaveValue('龜山島賞鯨');
     await titleInput.fill('龜山島賞鯨一日遊');
 
@@ -117,7 +118,8 @@ test.describe('管理者審核', () => {
     });
 
     await page.goto('/admin/activity-reviews');
-    await expect(page.getByText('待審行程')).toBeVisible();
+    // 頁面標題 h1 與側欄連結同字，鎖定 heading 角色避開 strict-mode 衝突。
+    await expect(page.getByRole('heading', { name: '待審行程' })).toBeVisible();
     await page.getByRole('button', { name: /龜山島賞鯨/ }).click();
     await expect(page.getByText('行程名稱')).toBeVisible();
     await expect(page.getByText('龜山島賞鯨一日遊')).toBeVisible();

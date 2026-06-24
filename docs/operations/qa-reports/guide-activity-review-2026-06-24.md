@@ -5,7 +5,8 @@
 - **驗收時間**：2026-06-24 10:14 Asia/Taipei
 - **Commit SHA**：`3e9aac1`（HEAD，本輪 3 個 feature commit 之頂）
 - **環境**：本地 Node 22.22.2 + npm workspaces；無連線 production Supabase（gateway 走 `hasSupabaseEnv()` 真實分支需 Supabase，本地以單測／source-contract 驗證）。
-- **判定**：**PASS（後端 / 型別 / 建置 / 單測）；live browser smoke 標 NOT_VERIFIED-live（環境阻擋，見下）。**
+- **判定**：**PASS（後端 / 型別 / 建置 / 單測 / live browser smoke 全綠）。**
+- **Browser smoke 補測**：2026-06-24 11:46 Asia/Taipei，本地 `npm run dev`（PORT=3333, NODE_ENV=development）+ Playwright chromium（v1208）真實瀏覽器，`apps/web/e2e/guide-activity-review.spec.ts` → **3/3 passed**。
 
 ## 範圍（Phase 1）
 - 導遊可編輯自己既有行程、亦可從零建立新行程草稿並送審。
@@ -26,7 +27,7 @@
 | 8 | Lint（Node 22） | ✅ PASS | `npm run lint` 0 error（僅 eslintrc 棄用警告） |
 | 9 | 全套單測無回歸 | ✅ PASS | `npm test` → 3729 pass / 0 fail / 3 skip（2721 top-level subtests，299 suites） |
 | 10 | production 建置 | ✅ PASS | `npm run build`（NODE_ENV=production＋強密鑰）成功；新路由皆入 manifest（見下） |
-| 11 | live browser smoke（導遊送審→管理者 diff/核准/退回） | ⚠️ NOT_VERIFIED-live | Playwright chromium 下載被本環境網路政策阻擋（`Failed to download Chrome for Testing … Download failure`）。E2E spec 已寫並提交：`apps/web/e2e/guide-activity-review.spec.ts`（全程 page.route mock）。最接近的安全替代：上述 31 項單測／source-contract + 建置綠燈。下一步：於可連網的 e2e 環境（或 CI e2e lane）執行該 spec。 |
+| 11 | live browser smoke（導遊行程列表徽章／導遊編輯→送審→審核中橫幅／管理者 diff＋核准） | ✅ PASS | Playwright chromium 真實瀏覽器 `apps/web/e2e/guide-activity-review.spec.ts` → **3/3 passed**（全程 `page.route` mock backend，符合 CLAUDE.md）。涵蓋：(a) 我的行程列表顯示「審核中／已退回，請修改＋退回原因」徽章；(b) 導遊改標題→送出審核→出現「已送出審核」+「前台仍顯示原本已上架的內容」橫幅、`/submit` 被呼叫；(c) 管理者待審頁顯示 title diff（龜山島賞鯨→龜山島賞鯨一日遊）並可核准。修正本輪 spec 兩處脆弱選擇器（標題欄改鎖 placeholder、admin 標題改鎖 heading role），非產品缺陷。 |
 
 ### 建置 manifest 驗證（新路由）
 ```
