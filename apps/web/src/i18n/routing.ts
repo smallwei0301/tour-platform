@@ -16,6 +16,10 @@ export const routing = defineRouting({
   locales: ['zh-Hant', 'en', 'ja', 'ko'],
   defaultLocale: 'zh-Hant',
   localePrefix: 'as-needed',
+  // zh-first：關閉 next-intl 內建偵測（Accept-Language／cookie）。新訪客一律落在預設
+  // 繁中、不因瀏覽器語言自動跳到 /en（台灣品牌，主要受眾為中文）。使用者選過的語言
+  // 由 middleware 依 NEXT_LOCALE cookie 做 sticky redirect（見 middleware.ts）。
+  localeDetection: false,
 });
 
 export type AppLocale = (typeof routing.locales)[number];

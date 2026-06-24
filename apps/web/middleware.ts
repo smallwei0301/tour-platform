@@ -397,6 +397,19 @@ export async function middleware(req: NextRequest) {
   // （soft-launch / CSRF 已在前面跑過；這些路徑非 admin/guide，故不影響三 realm。）
   const restPath = stripLocalePrefix(pathname);
   if (isLocalizedPublicPath(restPath)) {
+    // zh-first + sticky（#multilingual）：localeDetection 已於 routing 關閉，新訪客一律
+    // 預設繁中、不依瀏覽器語言自動切換。但若使用者曾用切換器選過非預設語言（寫入
+    // NEXT_LOCALE cookie），在「未帶前綴」的請求上 sticky redirect 到該語言前綴，維持
+    // 站內無前綴連結的語言連續性。已帶前綴（/en…）的請求不在此處理，避免重導迴圈。
+    const isUnprefixed = restPath === pathname;
+    if (isUnprefixed) {
+      const cookieLocale = req.cookies.get('NEXT_LOCALE')?.value;
+      if (cookieLocale && (LOCALE_PREFIXES as readonly string[]).includes(cookieLocale)) {
+        const url = req.nextUrl.clone();
+        url.pathname = pathname === '/' ? `/${cookieLocale}` : `/${cookieLocale}${pathname}`;
+        return NextResponse.redirect(url);
+      }
+    }
     const intlMiddleware = await getIntlMiddleware();
     return intlMiddleware(req);
   }
