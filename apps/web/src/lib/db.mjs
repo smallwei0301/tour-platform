@@ -14,7 +14,7 @@ import {
 import { calculateDiscount } from './promo-discount.ts';
 import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
 import { buildGuideShopView } from './guide-shop.mjs';
-import { applyUpsertWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
+import { applyUpsertWithMissingColumnFallback, applyWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
 import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
@@ -88,6 +88,9 @@ import { resolveAdminRefundTransition } from './refund-transition.mjs';
 import { resolveActivityReviewTransition } from './activity-review-transition.mjs';
 import { applyPendingOverlay, buildPendingDiff } from './activity-pending-overlay.mjs';
 import { pickGuideEditableFields } from './guide-editable-activity-fields.mjs';
+import { pickGuideEditablePlanFields, validateGuidePlanCreate } from './guide-editable-plan-fields.mjs';
+import { buildPlanColumnPatch } from './plan-column-patch.mjs';
+import { generatePlanSlug } from './activity-plan-slugs.mjs';
 // #1383 — 訂單改期（fallback 實作 + 純規則）
 import {
   createRescheduleRequestInMemory,
@@ -4172,6 +4175,328 @@ export async function resolveActivityReviewDb(activityId, { action, adminNote = 
     metadata: { activityId, adminNote: adminNote || null },
   });
   return getActivityReviewDetailDb(activityId);
+}
+
+// ─────────────────────────────────────────────
+// Phase 2 — 導遊方案（activity_plans）自助編輯 + 審核
+// 與行程相同的 pending overlay 模型；方案以 snake_case 欄位貫穿（與 v2 admin plan route 同 shape）。
+// ─────────────────────────────────────────────
+
+/** 確認 activity 屬於該導遊（回傳 guide_slug 供顯示）；非擁有者回 null。 */
+async function loadOwnedActivity(supabase, activityId, guideId) {
+  const { data } = await supabase
+    .from('activities')
+    .select('id, guide_id, title, slug, guide_slug')
+    .eq('id', activityId)
+    .single();
+  if (!data || !data.guide_id || data.guide_id !== guideId) return null;
+  return data;
+}
+
+/** 導遊載入某行程底下自己的方案清單（含審核狀態，套 pending overlay 供顯示）。 */
+export async function listGuidePlansDb(activityId, guideId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const activity = await loadOwnedActivity(supabase, activityId, guideId);
+  if (!activity) return null; // 非擁有者或不存在 → route 轉 404
+  const { data, error } = await supabase
+    .from('activity_plans')
+    .select('*')
+    .eq('activity_id', activityId)
+    .neq('status', 'archived')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []).map((row) => {
+    const merged = applyPendingOverlay(row, row.pending_changes);
+    return {
+      id: row.id,
+      name: merged.name,
+      base_price: merged.base_price,
+      price_type: merged.price_type,
+      duration_minutes: merged.duration_minutes,
+      status: row.status,
+      reviewState: row.review_state || null,
+      reviewAdminNote: row.review_admin_note || null,
+      isNewPlan: !!row.pending_new_plan,
+      hasPendingChanges: !!row.pending_changes && Object.keys(row.pending_changes).length > 0,
+      pendingSubmittedAt: row.pending_submitted_at || null,
+      updatedAt: row.updated_at,
+    };
+  });
+}
+
+/** 導遊載入單一自己的方案（ownership 檢查），回傳 row 疊上 pending_changes 供編輯器顯示。 */
+export async function getGuidePlanByIdDb(planId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('*, activities(guide_id)')
+    .eq('id', planId)
+    .single();
+  if (!row) return null;
+  if (activityId && row.activity_id !== activityId) return null;
+  const owner = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  if (!owner || owner.guide_id !== guideId) return null;
+  if (row.status === 'archived') return null;
+  const merged = applyPendingOverlay(row, row.pending_changes);
+  delete merged.activities;
+  return {
+    ...merged,
+    status: row.status, // status 永遠以 live 為準（不被 pending 蓋）
+    reviewState: row.review_state || null,
+    reviewAdminNote: row.review_admin_note || null,
+    isNewPlan: !!row.pending_new_plan,
+    hasPendingChanges: !!row.pending_changes && Object.keys(row.pending_changes).length > 0,
+  };
+}
+
+/**
+ * 導遊新建方案：以 status='inactive' + pending_new_plan=true 落地（不對外售票），
+ * 核准後才轉 active 上架。回傳 { ok, code?, message?, plan? }。
+ */
+export async function createGuidePlanDb(activityId, guideId, input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const activity = await loadOwnedActivity(supabase, activityId, guideId);
+  if (!activity) return { ok: false, code: 'ACTIVITY_NOT_FOUND' };
+
+  const valid = validateGuidePlanCreate(input);
+  if (!valid.ok) return { ok: false, code: 'VALIDATION_ERROR', message: valid.message };
+
+  const editable = pickGuideEditablePlanFields(input);
+  const slug = generatePlanSlug({ name: input.name });
+  const insertData = {
+    activity_id: activityId,
+    slug,
+    status: 'inactive',
+    review_state: null,
+    pending_new_plan: true,
+    min_participants: 1,
+    max_participants: 10,
+    booking_type: 'scheduled',
+    ...buildPlanColumnPatch(editable),
+  };
+
+  const { data, error } = await applyWithMissingColumnFallback(
+    (payload) => supabase.from('activity_plans').insert(payload).select().single(),
+    insertData,
+  );
+  if (error) throw new Error(error.message || 'create plan failed');
+
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_create',
+    metadata: { activityId, planId: data?.id, guideId },
+  });
+  return { ok: true, plan: data };
+}
+
+/**
+ * 導遊存檔方案：
+ *   - 已上架（active）方案 → 寫入 pending_changes（保護 live，不影響前台售票）。
+ *   - 未上架（inactive 新方案）→ 直接寫 row（尚未對外，無需 overlay 保護）。
+ */
+export async function savePlanPendingChangesDb(planId, guideId, input = {}, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const result = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!result.ok) return result;
+  const plan = result.plan;
+
+  const editable = pickGuideEditablePlanFields(input);
+  if (plan.status === 'active') {
+    const nextPending = { ...(plan.pending_changes || {}), ...editable };
+    const { error } = await supabase
+      .from('activity_plans')
+      .update({ pending_changes: nextPending })
+      .eq('id', planId);
+    if (error) throw new Error(error.message);
+  } else {
+    const patch = buildPlanColumnPatch(editable);
+    if (Object.keys(patch).length > 0) {
+      const { error } = await applyWithMissingColumnFallback(
+        (payload) => supabase.from('activity_plans').update(payload).eq('id', planId),
+        { ...patch, updated_at: new Date().toISOString() },
+      );
+      if (error) throw new Error(error.message || 'save plan failed');
+    }
+  }
+  return { ok: true };
+}
+
+/** 共用：載入並驗證方案可被該導遊編輯（active/inactive 允許、archived/非擁有者擋）。 */
+async function assertPlanEditable(supabase, planId, guideId, activityId) {
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('id, activity_id, status, review_state, pending_changes, pending_new_plan, updated_at, activities(guide_id)')
+    .eq('id', planId)
+    .single();
+  if (!row) return { ok: false, code: 'PLAN_NOT_FOUND' };
+  if (activityId && row.activity_id !== activityId) return { ok: false, code: 'PLAN_NOT_FOUND' };
+  const owner = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  if (!owner || owner.guide_id !== guideId) return { ok: false, code: 'PLAN_WRONG_GUIDE' };
+  if (row.status === 'archived') return { ok: false, code: 'PLAN_ARCHIVED' };
+  return { ok: true, plan: row };
+}
+
+/** 導遊送審方案：review_state → pending，記錄送審時間與 base updated_at（衝突偵測用）。 */
+export async function submitPlanForReviewDb(planId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const result = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!result.ok) return result;
+  const plan = result.plan;
+
+  const hasPending = !!plan.pending_changes && Object.keys(plan.pending_changes).length > 0;
+  if (!plan.pending_new_plan && !hasPending) {
+    return { ok: false, code: 'NOTHING_TO_SUBMIT' };
+  }
+
+  const now = new Date().toISOString();
+  const t = resolveActivityReviewTransition('submit', { now });
+  const { error } = await supabase
+    .from('activity_plans')
+    .update({
+      review_state: t.reviewState,
+      pending_submitted_by_guide_id: guideId,
+      pending_submitted_at: now,
+      pending_base_updated_at: plan.updated_at,
+      review_admin_note: null,
+    })
+    .eq('id', planId);
+  if (error) throw new Error(error.message);
+
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_submit',
+    metadata: { planId, activityId: plan.activity_id, guideId },
+  });
+  return { ok: true };
+}
+
+/** 管理者「待審方案」清單（review_state='pending'），含新方案旗標與衝突旗標。 */
+export async function listPendingPlanReviewsDb() {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activity_plans')
+    .select(`
+      id, name, status, review_state, pending_changes, pending_new_plan,
+      pending_submitted_at, pending_base_updated_at, updated_at,
+      activities(id, title, slug, guide_slug)
+    `)
+    .eq('review_state', 'pending')
+    .order('pending_submitted_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []).map((r) => {
+    const activity = Array.isArray(r.activities) ? r.activities[0] : r.activities;
+    const merged = applyPendingOverlay(r, r.pending_changes);
+    return {
+      id: r.id,
+      name: merged.name,
+      activityId: activity?.id || null,
+      activityTitle: activity?.title || '',
+      activitySlug: activity?.slug || '',
+      guideName: activity?.guide_slug || '',
+      status: r.status,
+      reviewState: r.review_state,
+      isNewPlan: !!r.pending_new_plan,
+      pendingSubmittedAt: r.pending_submitted_at,
+      hasConflict:
+        !r.pending_new_plan &&
+        !!r.pending_base_updated_at &&
+        !!r.updated_at &&
+        new Date(r.updated_at).getTime() > new Date(r.pending_base_updated_at).getTime(),
+    };
+  });
+}
+
+/** 管理者方案審核明細：live row + pending_changes + 逐欄 diff（新方案則整張為新內容）。 */
+export async function getPlanReviewDetailDb(planId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('*, activities(id, title, slug, region, region_slug)')
+    .eq('id', planId)
+    .single();
+  if (!row) return null;
+  const activity = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  const live = { ...row };
+  delete live.activities;
+  const merged = applyPendingOverlay(live, row.pending_changes);
+  return {
+    plan: { ...merged, activity: activity || null },
+    reviewState: row.review_state || null,
+    reviewAdminNote: row.review_admin_note || null,
+    pendingChanges: row.pending_changes || null,
+    pendingSubmittedAt: row.pending_submitted_at || null,
+    isNewPlan: !!row.pending_new_plan,
+    hasConflict:
+      !row.pending_new_plan &&
+      !!row.pending_base_updated_at &&
+      !!row.updated_at &&
+      new Date(row.updated_at).getTime() > new Date(row.pending_base_updated_at).getTime(),
+    diff: buildPendingDiff(live, row.pending_changes),
+  };
+}
+
+/**
+ * 管理者核准/退回方案。
+ *   - approve：套用 pending_changes（若有）；新方案（pending_new_plan）轉 status='active'；
+ *              清空 pending、review_state 歸 null。
+ *   - reject：保留 pending_changes，review_state → changes_requested、寫入退回備註。
+ * 只能對 review_state='pending' 的方案操作。
+ * @param {string} planId
+ * @param {{ action: 'approve'|'reject', adminNote?: string|null }} [opts]
+ */
+export async function resolvePlanReviewDb(planId, { action, adminNote = null } = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  if (!['approve', 'reject'].includes(action)) throw new Error('invalid review action');
+  const supabase = await getSupabase();
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('review_state, pending_changes, pending_new_plan')
+    .eq('id', planId)
+    .single();
+  if (!row) return null;
+  if (row.review_state !== 'pending') {
+    const err = new Error('NOT_PENDING_REVIEW');
+    err.code = 'NOT_PENDING_REVIEW';
+    throw err;
+  }
+
+  const now = new Date().toISOString();
+  const t = resolveActivityReviewTransition(action, { now });
+  const updateData = { review_state: t.reviewState, review_admin_note: adminNote || null, updated_at: now };
+
+  if (action === 'approve') {
+    if (row.pending_changes && Object.keys(row.pending_changes).length > 0) {
+      Object.assign(updateData, buildPlanColumnPatch(row.pending_changes));
+    }
+    if (row.pending_new_plan) {
+      updateData.status = 'active';
+      updateData.pending_new_plan = false;
+    }
+    updateData.pending_changes = null;
+    updateData.pending_submitted_at = null;
+    updateData.pending_submitted_by_guide_id = null;
+    updateData.pending_base_updated_at = null;
+  }
+
+  const { error } = await applyWithMissingColumnFallback(
+    (payload) => supabase.from('activity_plans').update(payload).eq('id', planId),
+    updateData,
+  );
+  if (error) throw new Error(error.message || 'resolve plan review failed');
+
+  await safeActivityAudit(supabase, {
+    actor: 'admin',
+    action: action === 'approve' ? 'plan_approve' : 'plan_reject',
+    metadata: { planId, adminNote: adminNote || null },
+  });
+  return getPlanReviewDetailDb(planId);
 }
 
 // ─────────────────────────────────────────────

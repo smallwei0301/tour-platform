@@ -198,9 +198,17 @@ export default function GuideActivityEditPage() {
       )}
 
       <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 4 }}>編輯行程</h1>
-      <p style={{ color: '#64748b', fontSize: 13, marginBottom: 20 }}>
-        儲存只會存成草稿；按「送出審核」後交由管理者核准。場次與方案目前由管理者設定。
+      <p style={{ color: '#64748b', fontSize: 13, marginBottom: 12 }}>
+        儲存只會存成草稿；按「送出審核」後交由管理者核准。方案與每方案價格請至「方案管理」編輯（同樣經審核生效）；場次與可預約時段請至「時間管理」設定。
       </p>
+      <div style={{ marginBottom: 20 }}>
+        <button
+          onClick={() => router.push(`/guide/activities/${id}/plans`)}
+          style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#7c3aed', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
+        >
+          🧩 管理方案與價格 ›
+        </button>
+      </div>
 
       {error && <div style={{ background: '#fee2e2', color: '#991b1b', padding: 12, borderRadius: 8, marginBottom: 16 }} role="alert">{error}</div>}
       {notice && <div style={{ background: '#dcfce7', color: '#166534', padding: 12, borderRadius: 8, marginBottom: 16 }}>{notice}</div>}
