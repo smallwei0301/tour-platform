@@ -113,8 +113,8 @@ export default async function ExperiencePage({ params }: { params: Promise<{ loc
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-          { '@type': 'ListItem', position: 2, name: '體驗', item: `${baseUrl}/experiences` },
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbExperiences'), item: `${baseUrl}/experiences` },
           { '@type': 'ListItem', position: 3, name: experience.title },
         ],
       },

@@ -31,42 +31,6 @@ const wildernessTours = [
   { slug: 'kaohsiung-chaishan-cave-experience', region: 'kaohsiung', imageUrl: 'https://images.pexels.com/photos/733162/pexels-photo-733162.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const wildernessJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-        { '@type': 'ListItem', position: 3, name: '山野秘境', item: `${baseUrl}/theme/mountain-wilderness` },
-      ],
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: '沒有登山經驗可以參加嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '可以，入門路線以平緩步道為主，導遊會先做行前說明與裝備檢查。' },
-        },
-        {
-          '@type': 'Question',
-          name: '需要自己準備裝備嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '建議自備登山鞋、飲水與雨具，部分行程提供登山杖等裝備，詳見行程頁面。' },
-        },
-        {
-          '@type': 'Question',
-          name: '遇到下雨會出團嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '以當日天氣與山況安全為準，導遊會評估是否調整路線或改期。' },
-        },
-      ],
-    },
-  ],
-};
 
 export default async function MountainWildernessPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -75,6 +39,29 @@ export default async function MountainWildernessPage({ params }: { params: Promi
   const tCrumb = await getTranslations({ locale, namespace: 'activities' });
   const tours = t.raw('tours') as Array<{ title: string; meta: string }>;
   const faq = t.raw('faq') as Array<{ q: string; a: string }>;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const wildernessJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: tCrumb('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: tCrumb('breadcrumbActivities'), item: `${baseUrl}/activities` },
+          { '@type': 'ListItem', position: 3, name: t('breadcrumb'), item: `${baseUrl}/theme/mountain-wilderness` },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: faq.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
 
   return (
     <main>

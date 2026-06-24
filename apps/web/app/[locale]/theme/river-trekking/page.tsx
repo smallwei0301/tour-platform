@@ -31,42 +31,6 @@ const riverTours = [
   { slug: 'hualien-river-trekking', imageUrl: 'https://images.pexels.com/photos/125510/pexels-photo-125510.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const riverJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-        { '@type': 'ListItem', position: 3, name: '野外溪流', item: `${baseUrl}/theme/river-trekking` },
-      ],
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: '不會游泳可以參加嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '可參加 Level 1 路線，導遊會先做安全說明與裝備檢查。' },
-        },
-        {
-          '@type': 'Question',
-          name: '幾月份最適合溯溪？',
-          acceptedAnswer: { '@type': 'Answer', text: '春末到秋季較穩定，但仍以當日水況與安全為準。' },
-        },
-        {
-          '@type': 'Question',
-          name: 'Level 1 與 Level 3 差在哪？',
-          acceptedAnswer: { '@type': 'Answer', text: '主要差在地形難度、體能需求與通過技術。' },
-        },
-      ],
-    },
-  ],
-};
 
 export default async function RiverTrekkingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -75,6 +39,29 @@ export default async function RiverTrekkingPage({ params }: { params: Promise<{ 
   const tCrumb = await getTranslations({ locale, namespace: 'activities' });
   const tours = t.raw('tours') as Array<{ title: string; meta: string }>;
   const faq = t.raw('faq') as Array<{ q: string; a: string }>;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const riverJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: tCrumb('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: tCrumb('breadcrumbActivities'), item: `${baseUrl}/activities` },
+          { '@type': 'ListItem', position: 3, name: t('breadcrumb'), item: `${baseUrl}/theme/river-trekking` },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: faq.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
 
   return (
     <main>

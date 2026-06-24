@@ -90,8 +90,8 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ l
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-          { '@type': 'ListItem', position: 2, name: '導遊', item: `${baseUrl}/guides` },
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbGuides'), item: `${baseUrl}/guides` },
           { '@type': 'ListItem', position: 3, name: guide.displayName },
         ],
       },

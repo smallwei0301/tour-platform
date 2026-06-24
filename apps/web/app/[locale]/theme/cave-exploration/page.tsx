@@ -31,42 +31,6 @@ const caveTours = [
   { slug: 'kaohsiung-chaishan-cave-experience', imageUrl: 'https://images.pexels.com/photos/3763814/pexels-photo-3763814.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const caveJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-        { '@type': 'ListItem', position: 3, name: '柴山探洞', item: `${baseUrl}/theme/cave-exploration` },
-      ],
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: '需要有攀岩經驗嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '不需要，MVP 路線以初中階安全探索為主。' },
-        },
-        {
-          '@type': 'Question',
-          name: '適合幾歲的人參加？',
-          acceptedAnswer: { '@type': 'Answer', text: '建議 10 歲以上，實際依行程標示與導遊評估。' },
-        },
-        {
-          '@type': 'Question',
-          name: '當天要穿什麼？',
-          acceptedAnswer: { '@type': 'Answer', text: '建議防滑鞋、長褲、可活動上衣，避免拖鞋。' },
-        },
-      ],
-    },
-  ],
-};
 
 export default async function CaveExplorationPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -75,6 +39,29 @@ export default async function CaveExplorationPage({ params }: { params: Promise<
   const tCrumb = await getTranslations({ locale, namespace: 'activities' });
   const tours = t.raw('tours') as Array<{ title: string; meta: string }>;
   const faq = t.raw('faq') as Array<{ q: string; a: string }>;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const caveJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: tCrumb('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: tCrumb('breadcrumbActivities'), item: `${baseUrl}/activities` },
+          { '@type': 'ListItem', position: 3, name: t('breadcrumb'), item: `${baseUrl}/theme/cave-exploration` },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: faq.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
 
   return (
     <main>

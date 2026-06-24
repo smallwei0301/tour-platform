@@ -49,41 +49,42 @@ const posts = [
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 
-const blogJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'ItemList',
-      name: '旅遊指南 | Midao 祕島',
-      url: `${baseUrl}/blog`,
-      itemListElement: posts.map((p, i) => ({
-        '@type': 'ListItem',
-        position: i + 1,
-        item: {
-          '@type': 'Article',
-          headline: p.title,
-          url: `${baseUrl}/blog/${p.slug}`,
-          datePublished: p.date,
-          dateModified: p.date,
-          image: p.imageUrl,
-          inLanguage: 'zh-TW',
-        },
-      })),
-    },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '旅遊指南', item: `${baseUrl}/blog` },
-      ],
-    },
-  ],
-};
-
 export default async function BlogPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'blog' });
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
+
+  const blogJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'ItemList',
+        name: tSeo('blogItemListName'),
+        url: `${baseUrl}/blog`,
+        itemListElement: posts.map((p, i) => ({
+          '@type': 'ListItem',
+          position: i + 1,
+          item: {
+            '@type': 'Article',
+            headline: p.title,
+            url: `${baseUrl}/blog/${p.slug}`,
+            datePublished: p.date,
+            dateModified: p.date,
+            image: p.imageUrl,
+            inLanguage: 'zh-TW',
+          },
+        })),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbBlog'), item: `${baseUrl}/blog` },
+        ],
+      },
+    ],
+  };
 
   const featured = posts.find((p) => p.featured);
   const rest = posts.filter((p) => !p.featured);

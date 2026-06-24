@@ -11,21 +11,20 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const jsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-    { '@type': 'ListItem', position: 2, name: '退款政策', item: `${baseUrl}/legal/refund` },
-  ],
-};
-
 export default async function RefundPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'legalRefund' });
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: t('breadcrumbLeaf'), item: `${baseUrl}/legal/refund` },
+    ],
+  };
 
   return (
     <main className="tp-container tp-static-page">

@@ -24,31 +24,31 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const contactJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'ContactPage',
-      url: `${baseUrl}/contact`,
-      name: '聯絡我們 | Midao 祕島',
-      description: '有任何問題、合作提案或回饋？聯絡 Midao 祕島，我們會在 1-2 個工作天內回覆。',
-    },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '聯絡我們', item: `${baseUrl}/contact` },
-      ],
-    },
-  ],
-};
-
 export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'contact' });
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
   const subjectOptions = t.raw('subjectOptions') as Array<string>;
+
+  const contactJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'ContactPage',
+        url: `${baseUrl}/contact`,
+        name: tSeo('contactPageName'),
+        description: tSeo('contactPageDescription'),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbCurrent'), item: `${baseUrl}/contact` },
+        ],
+      },
+    ],
+  };
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>

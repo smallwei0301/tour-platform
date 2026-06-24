@@ -37,14 +37,14 @@ export default async function GuidesPage({ params }: { params: Promise<{ locale:
   const ta = await getTranslations({ locale, namespace: 'activities' });
   const guides = await listPublishedGuidesDb().catch((): unknown[] => []);
 
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-  // JSON-LD 結構化資料維持 zh（非可見 SEO，全面搬遷後再分批 localize）。
   const guidesJsonLd = {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'ItemList',
-        name: '台灣在地導遊 | Midao 祕島',
+        name: tSeo('guidesItemListName'),
         url: `${baseUrl}/guides`,
         numberOfItems: guides.length,
         itemListElement: (guides as Array<{ slug: string; displayName: string; region?: string }>).map((g, i) => ({
@@ -61,8 +61,8 @@ export default async function GuidesPage({ params }: { params: Promise<{ locale:
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-          { '@type': 'ListItem', position: 2, name: '認識導遊', item: `${baseUrl}/guides` },
+          { '@type': 'ListItem', position: 1, name: ta('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumb'), item: `${baseUrl}/guides` },
         ],
       },
     ],

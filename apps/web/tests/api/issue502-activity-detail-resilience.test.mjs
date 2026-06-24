@@ -460,8 +460,10 @@ test('activity routes should avoid dynamic-segment name conflict and keep runtim
   assert.equal(canonicalSrc.includes('getActivityBySlugDb('), true);
   assert.equal(canonicalSrc.includes('const { locale, slug } = await params;'), true);
   assert.equal(canonicalSrc.includes('generateMetadata') && canonicalSrc.includes('getActivityBySlugDb('), true);
-  assert.equal(compatSrc.includes('params }: { params: Promise<{ region: string }> }'), true);
-  assert.equal(compatSrc.includes('const { region } = await params;'), true);
+  // #i18n JSON-LD localization：compat 頁加上 locale 以 localize BreadcrumbList，
+  // 但仍以 region 走 redirect/lookup 邏輯（契約不變，僅 params shape 多了 locale）。
+  assert.equal(compatSrc.includes('params }: { params: Promise<{ locale: string; region: string }> }'), true);
+  assert.equal(compatSrc.includes('const { locale, region } = await params;'), true);
   assert.equal(compatSrc.includes('getActivityBySlugDb(region)'), true);
 
   // Metadata guard: metadata should not trigger DB lookup.

@@ -3,6 +3,7 @@ import ActivitiesContent from './ActivitiesContent';
 import ActivitiesSkeleton from './ActivitiesSkeleton';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from './cover-image';
 import { listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
 
 // Issue #1249 — match the `/api/activities` cache window so the SSR HTML
@@ -27,27 +28,32 @@ export const metadata: Metadata = {
 };
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-const activitiesJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'CollectionPage',
-      name: '探索行程 | Midao 祕島',
-      description: '瀏覽台灣全島私人導遊行程。',
-      url: `${baseUrl}/activities`,
-      publisher: { '@type': 'Organization', name: 'Midao 祕島', url: baseUrl },
-    },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-      ],
-    },
-  ],
-};
 
-export default async function ActivitiesPage() {
+export default async function ActivitiesPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'activities' });
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
+  const activitiesJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'CollectionPage',
+        name: tSeo('activitiesCollectionName'),
+        description: tSeo('activitiesCollectionDescription'),
+        url: `${baseUrl}/activities`,
+        publisher: { '@type': 'Organization', name: tSeo('siteName'), url: baseUrl },
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbActivities'), item: `${baseUrl}/activities` },
+        ],
+      },
+    ],
+  };
+
   // Issue #1249 — server-side fetch so the first paint has cards. We
   // hand the full unfiltered list to the client; client-side filters and
   // search re-fetch through `/api/activities` as the operator types, but

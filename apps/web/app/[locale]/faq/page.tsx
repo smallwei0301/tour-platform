@@ -22,72 +22,38 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const faqsJsonLdSource = [
-  {
-    category: '預訂與付款',
-    items: [
-      { q: '如何預約導遊行程？', a: '選擇行程後點擊「立即預約」，填寫聯絡資訊並完成付款即可。我們支援信用卡與 LINE Pay。' },
-      { q: '付款後多久會收到確認？', a: '付款成功後系統會立即發送確認信到您的 Email。導遊通常會在 24 小時內聯繫您確認細節。' },
-      { q: '可以先預留行程、之後再付款嗎？', a: '目前需完成付款才算確認預約。建議您在確定出發時間後再完成訂單，避免因名額已滿而無法預約。' },
-    ],
-  },
-  {
-    category: '退款與取消',
-    items: [
-      { q: '退款政策是什麼？', a: '出團 168 小時前（含）以上取消，全額退款；出團前 超過 72 小時且少於 168 小時取消，退款 70%。出團前 72 小時內（含）取消，原則上不予退款。不可抗力或主辦方取消，旅客可選擇全額退款或 1 次免費改期。退款手續費由平台吸收，旅客不另負擔。' },
-      { q: '如果導遊取消行程怎麼辦？', a: '若因導遊或平台原因取消，將全額退款，並協助您重新安排或推薦替代行程。' },
-      { q: '遇到惡劣天氣可以取消嗎？', a: '若天氣條件危及安全，導遊有權取消並全額退款。請在出發前與導遊確認天氣狀況。' },
-    ],
-  },
-  {
-    category: '關於導遊',
-    items: [
-      { q: '導遊都有認證嗎？', a: '所有導遊都需通過實名 KYC 身份認證與平台審核，確認其導覽資格與背景。' },
-      { q: '可以指定導遊語言嗎？', a: '每位導遊的頁面上都會標示服務語言。目前多數導遊提供中文（繁體）服務，部分導遊可提供英文服務。' },
-      { q: '如何評價導遊？', a: '活動結束後您會收到評價邀請。我們鼓勵旅客分享真實體驗，幫助其他旅客做出更好的選擇。' },
-    ],
-  },
-  {
-    category: '其他',
-    items: [
-      { q: '可以包場（企業、家族包團）嗎？', a: '可以！請透過「聯絡我們」頁面或直接聯繫導遊，我們可以為您量身規劃包場行程。' },
-      { q: '行程中發生意外怎麼辦？', a: '活動當天如有緊急狀況，請直接聯繫導遊。平台緊急熱線也會在 30 分鐘內回應。' },
-      { q: '想成為導遊怎麼申請？', a: '請前往「成為導遊」頁面填寫申請表，審核通過後即可上架行程。' },
-    ],
-  },
-];
-
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-
-const faqJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'FAQPage',
-      mainEntity: faqsJsonLdSource.flatMap((section) =>
-        section.items.map((item) => ({
-          '@type': 'Question',
-          name: item.q,
-          acceptedAnswer: { '@type': 'Answer', text: item.a },
-        }))
-      ),
-    },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '常見問題', item: `${baseUrl}/faq` },
-      ],
-    },
-  ],
-};
 
 export default async function FaqPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'faq' });
   const sections = t.raw('sections') as Array<{ category: string; items: Array<{ q: string; a: string }> }>;
+
+  // JSON-LD FAQPage maps the SAME catalog `sections` array as the visible FAQ,
+  // so structured data and on-page content stay in sync in every locale.
+  const faqJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'FAQPage',
+        mainEntity: sections.flatMap((section) =>
+          section.items.map((item) => ({
+            '@type': 'Question',
+            name: item.q,
+            acceptedAnswer: { '@type': 'Answer', text: item.a },
+          }))
+        ),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbCurrent'), item: `${baseUrl}/faq` },
+        ],
+      },
+    ],
+  };
 
   return (
     <main className="tp-container" style={{ paddingBottom: 56 }}>

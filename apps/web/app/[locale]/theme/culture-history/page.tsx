@@ -31,42 +31,6 @@ const cultureTours = [
   { slug: 'dadadaocheng-walk', region: 'taipei', imageUrl: 'https://images.pexels.com/photos/3214958/pexels-photo-3214958.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const cultureJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-        { '@type': 'ListItem', position: 3, name: '文化歷史', item: `${baseUrl}/theme/culture-history` },
-      ],
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: '需要先做功課才聽得懂嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '不需要，導遊會從生活與人的角度帶你進入歷史，沒有背景也能投入。' },
-        },
-        {
-          '@type': 'Question',
-          name: '會走很多路嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '以慢步走讀為主，沿途有停留與休息，適合多數體能。' },
-        },
-        {
-          '@type': 'Question',
-          name: '適合長輩與小孩一起參加嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '適合，節奏緩和、互動性高，是親子與三代同遊的好選擇。' },
-        },
-      ],
-    },
-  ],
-};
 
 export default async function CultureHistoryPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -75,6 +39,29 @@ export default async function CultureHistoryPage({ params }: { params: Promise<{
   const tCrumb = await getTranslations({ locale, namespace: 'activities' });
   const tours = t.raw('tours') as Array<{ title: string; meta: string }>;
   const faq = t.raw('faq') as Array<{ q: string; a: string }>;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const cultureJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: tCrumb('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: tCrumb('breadcrumbActivities'), item: `${baseUrl}/activities` },
+          { '@type': 'ListItem', position: 3, name: t('breadcrumb'), item: `${baseUrl}/theme/culture-history` },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: faq.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
 
   return (
     <main>

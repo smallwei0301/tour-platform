@@ -144,8 +144,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ local
       {
         '@type': 'BreadcrumbList',
         itemListElement: [
-          { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-          { '@type': 'ListItem', position: 2, name: '旅遊指南', item: `${baseUrl}/blog` },
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbBlog'), item: `${baseUrl}/blog` },
           { '@type': 'ListItem', position: 3, name: article.title },
         ],
       },

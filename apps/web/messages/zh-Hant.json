@@ -116,7 +116,14 @@
     "siteName": "Midao 祕島",
     "titleTemplate": "%s | Midao 祕島 — 台灣在地導遊",
     "defaultTitle": "Midao 祕島 — 找到懂路的人，帶你走進台灣最有故事的地方",
-    "defaultDescription": "台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。"
+    "defaultDescription": "台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。",
+    "orgDescription": "台灣在地導遊預約平台 — 連結旅客與在地導遊，提供深度文化體驗。",
+    "activitiesCollectionName": "探索行程 | Midao 祕島",
+    "activitiesCollectionDescription": "瀏覽台灣全島私人導遊行程。",
+    "guidesItemListName": "台灣在地導遊 | Midao 祕島",
+    "blogItemListName": "旅遊指南 | Midao 祕島",
+    "contactPageName": "聯絡我們 | Midao 祕島",
+    "contactPageDescription": "有任何問題、合作提案或回饋？聯絡 Midao 祕島，我們會在 1-2 個工作天內回覆。"
   },
   "home": {
     "hero": {
@@ -886,6 +893,7 @@
     "noRating": "尚無評價",
     "priceUnit": "起 / 人",
     "priceLabelBottom": "NT${price} / 人",
+    "jsonLdPriceRange": "NT${price}起",
     "policyCertifiedGuide": "認證導遊",
     "transportWalk": "步行",
     "participants": "{min}~{max} 人",

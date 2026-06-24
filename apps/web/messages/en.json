@@ -116,7 +116,14 @@
     "siteName": "Midao 祕島",
     "titleTemplate": "%s | Midao — Local Guides in Taiwan",
     "defaultTitle": "Midao — Hidden Taiwan, by those who know",
-    "defaultDescription": "Book real local guides and the routes no guidebook tells you. Discover hidden Taiwan, book directly, pay securely."
+    "defaultDescription": "Book real local guides and the routes no guidebook tells you. Discover hidden Taiwan, book directly, pay securely.",
+    "orgDescription": "Taiwan local-guide booking platform — connecting travelers with local guides for in-depth cultural experiences.",
+    "activitiesCollectionName": "Explore Routes | Midao 祕島",
+    "activitiesCollectionDescription": "Browse private local-guide tours across Taiwan.",
+    "guidesItemListName": "Local Guides in Taiwan | Midao 祕島",
+    "blogItemListName": "Travel Guide | Midao 祕島",
+    "contactPageName": "Contact Us | Midao 祕島",
+    "contactPageDescription": "Questions, partnership ideas, or feedback? Contact Midao 祕島 and we'll reply within 1–2 business days."
   },
   "home": {
     "hero": {
@@ -886,6 +893,7 @@
     "noRating": "No reviews yet",
     "priceUnit": "from / person",
     "priceLabelBottom": "NT${price} / person",
+    "jsonLdPriceRange": "From NT${price}",
     "policyCertifiedGuide": "Certified guide",
     "transportWalk": "Walking",
     "participants": "{min}–{max} people",

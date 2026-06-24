@@ -24,32 +24,32 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const aboutJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'Organization',
-      name: 'Midao 祕島',
-      url: baseUrl,
-      description: '台灣在地導遊預約平台 — 連結旅客與在地導遊，提供深度文化體驗。',
-      sameAs: [`${baseUrl}/about`],
-    },
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '關於我們', item: `${baseUrl}/about` },
-      ],
-    },
-  ],
-};
-
 export default async function AboutPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'about' });
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
   const numbers = t.raw('numbers') as Array<{ num: string; label: string }>;
+
+  const aboutJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        name: tSeo('siteName'),
+        url: baseUrl,
+        description: tSeo('orgDescription'),
+        sameAs: [`${baseUrl}/about`],
+      },
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: t('breadcrumbCurrent'), item: `${baseUrl}/about` },
+        ],
+      },
+    ],
+  };
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>

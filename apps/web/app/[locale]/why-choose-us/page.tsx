@@ -25,16 +25,6 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const whyChooseJsonLd = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-    { '@type': 'ListItem', position: 2, name: '為什麼選擇我們', item: `${baseUrl}/why-choose-us` },
-  ],
-};
-
 // Icon names stay in source; localized title/desc come from the catalog `promises` array (same order).
 const promiseIcons = ['badgeCheck', 'shieldCheck', 'phone', 'route'];
 
@@ -42,6 +32,16 @@ export default async function WhyChooseUsPage({ params }: { params: Promise<{ lo
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'whyChooseUs' });
+
+  const whyChooseJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: t('breadcrumbCurrent'), item: `${baseUrl}/why-choose-us` },
+    ],
+  };
+
   const promises = t.raw('promises') as Array<{ title: string; desc: string }>;
   const comparisonRows = t.raw('comparisonRows') as Array<{ label: string; us: string; them: string }>;
   const testimonials = t.raw('testimonials') as Array<{ author: string; text: string; activity: string }>;

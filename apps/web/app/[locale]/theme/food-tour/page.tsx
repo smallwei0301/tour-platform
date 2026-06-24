@@ -31,42 +31,6 @@ const foodTours = [
   { slug: 'taipei-night-market-food-tour', region: 'taipei', imageUrl: 'https://images.pexels.com/photos/2253643/pexels-photo-2253643.jpeg?auto=compress&cs=tinysrgb&w=1200' },
 ];
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-
-// JSON-LD structured data stays in zh-Hant for now (non-visible SEO; localization deferred).
-const foodJsonLd = {
-  '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
-        { '@type': 'ListItem', position: 3, name: '美食導覽', item: `${baseUrl}/theme/food-tour` },
-      ],
-    },
-    {
-      '@type': 'FAQPage',
-      mainEntity: [
-        {
-          '@type': 'Question',
-          name: '會吃到很飽嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '行程安排多攤少量，讓你嘗到更多種類又不會太撐，建議出發前留點胃口。' },
-        },
-        {
-          '@type': 'Question',
-          name: '有素食或飲食限制可以參加嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '可以，預約時先告知，導遊會調整攤位與品項。' },
-        },
-        {
-          '@type': 'Question',
-          name: '餐費包含在費用裡嗎？',
-          acceptedAnswer: { '@type': 'Answer', text: '依行程標示為準，部分含品嘗費用、部分另計，請見各行程頁面。' },
-        },
-      ],
-    },
-  ],
-};
 
 export default async function FoodTourPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -75,6 +39,29 @@ export default async function FoodTourPage({ params }: { params: Promise<{ local
   const tCrumb = await getTranslations({ locale, namespace: 'activities' });
   const tours = t.raw('tours') as Array<{ title: string; meta: string }>;
   const faq = t.raw('faq') as Array<{ q: string; a: string }>;
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
+  const foodJsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: tCrumb('breadcrumbHome'), item: baseUrl },
+          { '@type': 'ListItem', position: 2, name: tCrumb('breadcrumbActivities'), item: `${baseUrl}/activities` },
+          { '@type': 'ListItem', position: 3, name: t('breadcrumb'), item: `${baseUrl}/theme/food-tour` },
+        ],
+      },
+      {
+        '@type': 'FAQPage',
+        mainEntity: faq.map((item) => ({
+          '@type': 'Question',
+          name: item.q,
+          acceptedAnswer: { '@type': 'Answer', text: item.a },
+        })),
+      },
+    ],
+  };
 
   return (
     <main>

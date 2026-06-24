@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound, redirect } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedActivitiesDb } from '../../../../src/lib/db.mjs';
 import { getRegionBySlug, isKnownRegionSlug } from '../../../../src/lib/region-slugs.mjs';
 import ActivitiesContent from '../ActivitiesContent';
@@ -61,18 +62,20 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   }) as Promise<T>;
 }
 
-export default async function ActivitiesRegionPage({ params }: { params: Promise<{ region: string }> }) {
-  const { region } = await params;
+export default async function ActivitiesRegionPage({ params }: { params: Promise<{ locale: string; region: string }> }) {
+  const { locale, region } = await params;
 
   if (isKnownRegionSlug(region)) {
+    setRequestLocale(locale);
+    const t = await getTranslations({ locale, namespace: 'activities' });
     const entry = getRegionBySlug(region)!;
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
     const regionBreadcrumbLd = {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: '首頁', item: baseUrl },
-        { '@type': 'ListItem', position: 2, name: '探索行程', item: `${baseUrl}/activities` },
+        { '@type': 'ListItem', position: 1, name: t('breadcrumbHome'), item: baseUrl },
+        { '@type': 'ListItem', position: 2, name: t('breadcrumbActivities'), item: `${baseUrl}/activities` },
         { '@type': 'ListItem', position: 3, name: entry.displayName, item: `${baseUrl}/activities/${region}` },
       ],
     };

@@ -235,8 +235,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             "itemListElement": [
-              { "@type": "ListItem", "position": 1, "name": "首頁", "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}` },
-              { "@type": "ListItem", "position": 2, "name": "探索行程", "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}/activities` },
+              { "@type": "ListItem", "position": 1, "name": t('breadcrumbHome'), "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}` },
+              { "@type": "ListItem", "position": 2, "name": t('breadcrumbActivities'), "item": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}/activities` },
               { "@type": "ListItem", "position": 3, "name": activity.title },
             ],
           })
@@ -252,7 +252,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             "description": activity.shortDescription || activity.title,
             "url": `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'}/activities/${activity.region}/${activity.slug}`,
             "image": activity.coverImageUrl || undefined,
-            "priceRange": `NT$${activity.priceTwd}起`,
+            "priceRange": t('jsonLdPriceRange', { price: activity.priceTwd }),
             "address": {
               "@type": "PostalAddress",
               "addressRegion": activity.region,
