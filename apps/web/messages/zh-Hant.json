@@ -1129,5 +1129,26 @@
   "promoBanner": {
     "limitedOffer": "🎁 限時優惠",
     "promoEntry": "{label}（結帳輸入 <strong>{code}</strong>）"
+  },
+  "experienceDetail": {
+    "metaTitle": "{name} | 體驗行程 | Midao 祕島",
+    "metaTitleShort": "{name} | Midao 祕島",
+    "metaDescription": "預約台灣在地體驗行程：{name}。實名認證導遊帶路，小團深度探索。",
+    "ogDescription": "跟著懂路的在地導遊，探索台灣最有故事的地方。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbExperiences": "體驗",
+    "badgeInstant": "可立即預約",
+    "badgeEvoucher": "電子憑證",
+    "introHeading": "體驗介紹",
+    "highlightsHeading": "行程亮點",
+    "bookingHeading": "預訂說明",
+    "bookingNote1": "建議提前預約，熱門時段容易額滿。",
+    "bookingNote2": "完成下單後可於付款頁完成金流。",
+    "bookingNote3": "若需客服協助，請於訂單頁查看聯絡資訊。",
+    "pricePerPerson": "每人價格",
+    "ctaBook": "立即預約",
+    "ctaOtherTours": "查看其他行程",
+    "sideNote": "此頁為體驗詳情頁。若要直接完成預約，請點「立即預約」進入結帳流程。",
+    "metaSeparator": " ・ "
   }
 }

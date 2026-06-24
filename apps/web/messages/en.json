@@ -1129,5 +1129,26 @@
   "promoBanner": {
     "limitedOffer": "🎁 Limited-time offer",
     "promoEntry": "{label} (enter <strong>{code}</strong> at checkout)"
+  },
+  "experienceDetail": {
+    "metaTitle": "{name} | Experience | Midao 祕島",
+    "metaTitleShort": "{name} | Midao 祕島",
+    "metaDescription": "Book a local experience in Taiwan: {name}. Led by an identity-verified local guide, small-group and in-depth.",
+    "ogDescription": "Follow a local guide who knows the way and explore Taiwan's most storied places.",
+    "breadcrumbHome": "Home",
+    "breadcrumbExperiences": "Experiences",
+    "badgeInstant": "Instant booking",
+    "badgeEvoucher": "E-voucher",
+    "introHeading": "About this experience",
+    "highlightsHeading": "Highlights",
+    "bookingHeading": "Booking notes",
+    "bookingNote1": "Book early — popular time slots fill up fast.",
+    "bookingNote2": "After ordering, complete payment on the checkout page.",
+    "bookingNote3": "Need help? Find contact details on your order page.",
+    "pricePerPerson": "Price per person",
+    "ctaBook": "Book now",
+    "ctaOtherTours": "Browse other tours",
+    "sideNote": "This is the experience detail page. To book directly, click “Book now” to enter checkout.",
+    "metaSeparator": " · "
   }
 }

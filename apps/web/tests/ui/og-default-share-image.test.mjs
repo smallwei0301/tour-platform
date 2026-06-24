@@ -39,7 +39,7 @@ const SHARE_THUMBNAIL_FILES = [
   'app/[locale]/guides/[slug]/page.tsx',
   'app/[locale]/contact/page.tsx',
   'app/[locale]/activities/page.tsx',
-  'app/experiences/[slug]/page.tsx',
+  'app/[locale]/experiences/[slug]/page.tsx',
   'app/guide/apply/layout.tsx',
   'app/[locale]/blog/page.tsx',
 ];

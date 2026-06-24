@@ -1,24 +1,26 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ locale: string; slug: string }> }
 ): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  const t = await getTranslations({ locale, namespace: 'experienceDetail' });
   const readable = slug.replace(/-/g, ' ');
   return {
-    title: `${readable} | 體驗行程 | Midao 祕島`,
-    description: `預約台灣在地體驗行程：${readable}。實名認證導遊帶路，小團深度探索。`,
+    title: t('metaTitle', { name: readable }),
+    description: t('metaDescription', { name: readable }),
     openGraph: {
-      title: `${readable} | Midao 祕島`,
-      description: `跟著懂路的在地導遊，探索台灣最有故事的地方。`,
+      title: t('metaTitleShort', { name: readable }),
+      description: t('ogDescription'),
       type: 'website',
-      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: `${readable} | Midao 祕島` }],
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: t('metaTitleShort', { name: readable }) }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${readable} | Midao 祕島`,
-      description: `跟著懂路的在地導遊，探索台灣最有故事的地方。`,
+      title: t('metaTitleShort', { name: readable }),
+      description: t('ogDescription'),
       images: ['/images/og-default.png'],
     },
   };
@@ -50,8 +52,10 @@ function fallbackExperience(slug: string): Experience {
   };
 }
 
-export default async function ExperiencePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function ExperiencePage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'experienceDetail' });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const response = await fetch(`${baseUrl}/api/experiences`, { cache: 'no-store' }).catch((): null => null);
@@ -121,7 +125,7 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
     <main className="tp-detail">
       <div className="tp-container">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(experienceJsonLd) }} />
-        <div className="tp-breadcrumb"><Link href="/">首頁</Link> &gt; 體驗 &gt; {experience.title}</div>
+        <div className="tp-breadcrumb"><Link href="/">{t('breadcrumbHome')}</Link> &gt; {t('breadcrumbExperiences')} &gt; {experience.title}</div>
 
         <section className="tp-detail-layout">
           <article className="tp-detail-main">
@@ -132,17 +136,17 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
 
             <div className="tp-badges">
               <span>{experience.levelLabel}</span>
-              <span>可立即預約</span>
-              <span>電子憑證</span>
+              <span>{t('badgeInstant')}</span>
+              <span>{t('badgeEvoucher')}</span>
             </div>
 
             <section className="tp-detail-block">
-              <h2>體驗介紹</h2>
+              <h2>{t('introHeading')}</h2>
               <p>{experience.description}</p>
             </section>
 
             <section className="tp-detail-block">
-              <h2>行程亮點</h2>
+              <h2>{t('highlightsHeading')}</h2>
               <ul className="tp-timeline">
                 {(experience.highlightBullets || []).map((h, idx) => (
                   <li key={`${experience.slug}-highlight-${idx}`}>{h}</li>
@@ -151,29 +155,29 @@ export default async function ExperiencePage({ params }: { params: Promise<{ slu
             </section>
 
             <section className="tp-detail-block">
-              <h2>預訂說明</h2>
+              <h2>{t('bookingHeading')}</h2>
               <ul className="tp-timeline">
-                <li>建議提前預約，熱門時段容易額滿。</li>
-                <li>完成下單後可於付款頁完成金流。</li>
-                <li>若需客服協助，請於訂單頁查看聯絡資訊。</li>
+                <li>{t('bookingNote1')}</li>
+                <li>{t('bookingNote2')}</li>
+                <li>{t('bookingNote3')}</li>
               </ul>
             </section>
           </article>
 
           <aside className="tp-booking-side">
             <div className="tp-booking-card">
-              <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>每人價格</p>
+              <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>{t('pricePerPerson')}</p>
               <p className="tp-price">NT$ {experience.priceTwd.toLocaleString()}</p>
 
               <Link className="tp-btn tp-btn-primary tp-full" href={`/checkout?slug=${encodeURIComponent(experience.slug)}`}>
-                立即預約
+                {t('ctaBook')}
               </Link>
               <Link className="tp-btn tp-btn-ghost tp-full" href={`/activities`}>
-                查看其他行程
+                {t('ctaOtherTours')}
               </Link>
 
               <p className="tp-booking-note">
-                此頁為體驗詳情頁。若要直接完成預約，請點「立即預約」進入結帳流程。
+                {t('sideNote')}
               </p>
             </div>
           </aside>

@@ -13,7 +13,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appDir = resolve(__dirname, '../../app');
 
 const blogSlugSrc = readFileSync(resolve(appDir, '[locale]/blog/[slug]/page.tsx'), 'utf8');
-const experienceSlugSrc = readFileSync(resolve(appDir, 'experiences/[slug]/page.tsx'), 'utf8');
+const experienceSlugSrc = readFileSync(resolve(appDir, '[locale]/experiences/[slug]/page.tsx'), 'utf8');
 
 describe('issue #948/#960 — proper 404 for missing blog articles', () => {
   test('blog/[slug]/page.tsx imports notFound from next/navigation', () => {

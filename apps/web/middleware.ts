@@ -53,7 +53,9 @@ function isLocalizedPublicPath(rest: string): boolean {
     || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact'
     // blog（含 [slug]）與 legal（privacy/terms/refund）整棵子樹搬進 [locale]。
     || rest === '/blog' || rest.startsWith('/blog/')
-    || rest === '/legal' || rest.startsWith('/legal/');
+    || rest === '/legal' || rest.startsWith('/legal/')
+    // experiences/[slug] 體驗詳情頁。
+    || rest === '/experiences' || rest.startsWith('/experiences/');
 }
 
 function pickToken(req: NextRequest): string {
@@ -441,6 +443,7 @@ export const config = {
     '/contact',
     '/blog/:path*',
     '/legal/:path*',
+    '/experiences/:path*',
     '/booking/:path*',
     '/checkout/:path*',
     '/order/success/:path*',
