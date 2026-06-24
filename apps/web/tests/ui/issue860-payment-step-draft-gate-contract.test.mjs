@@ -13,7 +13,10 @@ test('GH-860 contract: step2 creates draft before payment step and carries sched
 
   assert.match(src, /async function handleCreateDraftBookingAndGoPayment\(\)/, 'step2 should create draft booking before entering payment step');
   assert.match(src, /onClick=\{handleCreateDraftBookingAndGoPayment\}/, 'step2 primary CTA should run draft creation instead of direct setStep(3)');
-  assert.match(src, /scheduleId:\s*activeScheduleId\s*\|\|\s*undefined/, 'draft payload should include scheduleId mapped from activeScheduleId source-of-truth');
+  // 排程預約（scheduled）起，scheduleId 以「選取的場次」為 source-of-truth，
+  // 再退回 URL 帶入的 activeScheduleId。
+  assert.match(src, /const draftScheduleId\s*=\s*selectedSlot\?\.scheduleId\s*\|\|\s*activeScheduleId\s*\|\|\s*undefined/, 'draft scheduleId should derive from the selected slot, falling back to activeScheduleId');
+  assert.match(src, /scheduleId:\s*draftScheduleId/, 'draft payload should carry the resolved draftScheduleId');
   assert.doesNotMatch(src, /activeScheduleId:\s*activeScheduleId\s*\|\|\s*undefined/, 'draft payload must not use activeScheduleId as the only schedule key');
   assert.match(src, /const canConfirmPayment\s*=\s*Boolean\(createdBookingId\s*&&\s*canSubmit\)/, 'payment confirmation must require created booking/order id');
   // #1475 起 disabled 條件後面再串接匯款未設定的防呆；contract 仍要求含 loading || !canConfirmPayment。

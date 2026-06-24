@@ -456,6 +456,8 @@ interface V2Slot {
   capacityLeft: number;
   bookingType: 'scheduled' | 'request' | 'instant';
   isAvailable: boolean;
+  // 排程預約（scheduled）方案的固定場次 id；動態時段為 null。
+  scheduleId?: string | null;
 }
 
 interface V2DateAvailability {
@@ -817,6 +819,11 @@ function BookingInnerV2FlagShell() {
         page_path: `/booking/${activitySlug}`,
       });
 
+      // 排程預約（scheduled）：每個可選時段帶有自己的固定場次 scheduleId，
+      // 以選取的時段為準；其餘模式沿用 URL 帶入的 activeScheduleId。
+      const selectedSlot = slots.find((s) => s.startAt === selectedSlotStartAt);
+      const draftScheduleId = selectedSlot?.scheduleId || activeScheduleId || undefined;
+
       const draftRes = await fetch('/api/v2/bookings/draft', {
         method: 'POST',
         headers: {
@@ -826,7 +833,7 @@ function BookingInnerV2FlagShell() {
         body: JSON.stringify({
           activityId: resolvedActivityId,
           planId: resolvedPlanId,
-          scheduleId: activeScheduleId || undefined,
+          scheduleId: draftScheduleId,
           startAt: selectedSlotStartAt,
           timezone,
           participants: Math.max(guests, effectiveMinParticipants),

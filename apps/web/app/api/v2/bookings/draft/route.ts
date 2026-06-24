@@ -304,6 +304,11 @@ async function isSlotInGeneratedV2Availability(
     is_year_round: payload.planIsYearRound,
   };
 
+  // scheduled（排程預約）：固定場次是唯一可預約來源，動態規則不適用，因此不把
+  // availability rules 餵進 evaluator —— 與 available-slots 列表行為一致，避免
+  // 「方案同時有規則但場次時間不在規則內」時把合法固定場次誤判為不可預約。
+  const effectiveRules = payload.planBookingType === 'scheduled' ? [] : rules;
+
   const availability = evaluateEffectiveBookingAvailability({
     guideId: payload.guideId,
     activityId: payload.activityId,
@@ -314,7 +319,7 @@ async function isSlotInGeneratedV2Availability(
     dateTo: payload.slotDate,
     requestedStartAt: payload.startAt,
     minParticipants: payload.minParticipants,
-    rules,
+    rules: effectiveRules,
     blackouts,
     bookings,
     plan,
@@ -807,6 +812,23 @@ export async function POST(request: NextRequest) {
         errorV2(planScheduleMismatch.reasonCode, planScheduleMismatch.messageZh),
         { status: 422 },
       );
+    }
+
+    // 排程預約（scheduled）enforcement：固定場次是唯一可預約來源。必須解析到一個
+    // 有效的 activity_schedule，否則拒絕 —— 旅客不得以動態規則時段預約此類方案。
+    if (planData.booking_type === 'scheduled') {
+      if (!selectedScheduleForAvailability) {
+        return Response.json(
+          errorV2('SCHEDULE_REQUIRED', '此方案僅開放預設場次預約，請選擇可預約的場次'),
+          { status: 409 },
+        );
+      }
+      if (selectedScheduleValidation?.available !== true) {
+        return Response.json(
+          errorV2('SLOT_UNAVAILABLE', '此場次已無可用名額，請重新選擇場次'),
+          { status: 409 },
+        );
+      }
     }
 
     const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
