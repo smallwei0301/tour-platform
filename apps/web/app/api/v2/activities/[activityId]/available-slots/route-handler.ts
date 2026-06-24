@@ -626,6 +626,8 @@ export async function getAvailableSlots(
           basePrice: planData.base_price,
           minParticipants: planData.min_participants,
           maxParticipants: planData.max_participants,
+          // 三種預約模式：供前端依此切換預約流程文案（即時/排程/申請）。
+          bookingType: planData.booking_type,
         },
         slots: publicSlots,
         dateAvailability,

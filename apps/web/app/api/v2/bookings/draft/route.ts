@@ -43,6 +43,11 @@ import {
   applyBookingConflictOverrideColumnFallback,
   loadConflictOverridesWithSchemaFallback,
 } from '../../../../../src/lib/conflict-override-schema-compat.mjs';
+import {
+  initialApprovalStatusForBookingType,
+  normalizeBookingType,
+  requiresGuideApproval,
+} from '../../../../../src/lib/booking-type-flow.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -962,6 +967,8 @@ export async function POST(request: NextRequest) {
       timezone: data.timezone,
       participants: data.participants,
       status: 'draft',
+      // request plan → 'pending'（先審核後付款）；instant/scheduled → 'not_required'.
+      guide_approval_status: initialApprovalStatusForBookingType(planData.booking_type),
       customer_note: data.customerNote || null,
       conflict_override_id: conflictOverrideId,
       conflict_override_snapshot: conflictOverrideSnapshot,
@@ -1083,6 +1090,9 @@ export async function POST(request: NextRequest) {
         orderStatus: 'pending_payment',
         amount: totalAmount,
         currency: 'TWD',
+        // 三種預約模式：前端依此分流（request → 顯示「送出申請」、不進付款）。
+        bookingType: normalizeBookingType(planData.booking_type),
+        requiresApproval: requiresGuideApproval(planData.booking_type),
       })
     );
   } catch (err) {

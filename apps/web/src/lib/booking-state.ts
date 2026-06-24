@@ -33,7 +33,10 @@ export const TERMINAL_STATUSES: BookingStatus[] = ['completed', 'cancelled', 'no
 // Valid state transitions
 // Key: current status, Value: array of valid next statuses
 export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
-  draft: ['pending_confirmation', 'cancelled'],
+  // draft → confirmed supports instant/scheduled auto-confirm on payment
+  // (三種預約模式 booking_type); draft → pending_confirmation remains for the
+  // legacy pay-then-confirm path.
+  draft: ['pending_confirmation', 'confirmed', 'cancelled'],
   pending_confirmation: ['confirmed', 'cancelled', 'reschedule_requested'],
   confirmed: ['completed', 'cancelled', 'no_show', 'reschedule_requested'],
   reschedule_requested: ['confirmed', 'cancelled'],
@@ -45,6 +48,7 @@ export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
 // Transition actions (human-readable names for common transitions)
 export type TransitionAction =
   | 'confirm'
+  | 'auto_confirm'
   | 'complete'
   | 'cancel'
   | 'reschedule_request'
@@ -55,6 +59,9 @@ export type TransitionAction =
 // Map actions to their target statuses
 export const ACTION_TO_STATUS: Record<TransitionAction, BookingStatus> = {
   confirm: 'confirmed',
+  // auto_confirm: instant/scheduled (or already-approved request) confirm
+  // directly on payment success without stopping at pending_confirmation.
+  auto_confirm: 'confirmed',
   complete: 'completed',
   cancel: 'cancelled',
   reschedule_request: 'reschedule_requested',
@@ -311,6 +318,14 @@ export class BookingStateService {
    */
   async confirm(bookingId: string, context: TransitionContext): Promise<TransitionResult> {
     return this.performAction(bookingId, 'confirm', context);
+  }
+
+  /**
+   * Auto-confirm a booking on payment success (draft → confirmed) for
+   * instant/scheduled or already-approved request bookings.
+   */
+  async autoConfirm(bookingId: string, context: TransitionContext): Promise<TransitionResult> {
+    return this.performAction(bookingId, 'auto_confirm', context);
   }
 
   /**
