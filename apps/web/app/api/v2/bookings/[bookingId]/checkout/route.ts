@@ -21,6 +21,7 @@ import { createClient } from '../../../../../../src/lib/supabase/server';
 import { generateCheckMacValue, getECPayCredentials } from '../../../../../../src/lib/ecpay';
 import { findReusableCheckoutPayment } from '../../../../../../src/lib/checkout-idempotency';
 import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
+import { canCheckout } from '../../../../../../src/lib/booking-type-flow.mjs';
 
 // Validation helpers
 function isValidUuid(str: string): boolean {
@@ -117,6 +118,7 @@ export async function POST(
         id,
         booking_no,
         status,
+        guide_approval_status,
         order_id,
         activity_id,
         activity_plan_id,
@@ -127,7 +129,8 @@ export async function POST(
           title
         ),
         activity_plans (
-          name
+          name,
+          booking_type
         )
       `
       )
@@ -146,6 +149,17 @@ export async function POST(
         ),
         { status: 400 }
       );
+    }
+
+    // 三種預約模式：request plan 須導遊審核通過才能進付款（先審核後付款）。
+    {
+      const planRel = (booking as { activity_plans?: { booking_type?: string } | { booking_type?: string }[] }).activity_plans;
+      const planBookingType = Array.isArray(planRel) ? planRel[0]?.booking_type : planRel?.booking_type;
+      const approvalStatus = (booking as { guide_approval_status?: string }).guide_approval_status;
+      const gate = canCheckout(planBookingType, approvalStatus);
+      if (!gate.allowed) {
+        return Response.json(errorV2(gate.code, gate.messageZh), { status: 409 });
+      }
     }
 
     if (!booking.order_id) {

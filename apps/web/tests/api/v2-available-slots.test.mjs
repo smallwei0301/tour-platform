@@ -811,8 +811,10 @@ test('selected-plan metadata from issue-910 fixture appears in successful respon
   assert.equal(selectedPlan?.displayName, 'Test');
   assert.equal(selectedPlan?.basePrice, 20);
   assert.notEqual(selectedPlan?.basePrice, 1800);
+  assert.equal(selectedPlan?.bookingType, 'scheduled');
   assert.deepStrictEqual(Object.keys(selectedPlan).sort(), [
     'basePrice',
+    'bookingType',
     'displayName',
     'id',
     'label',

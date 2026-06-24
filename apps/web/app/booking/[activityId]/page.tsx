@@ -483,6 +483,7 @@ interface V2AvailableSlotsResponse {
       basePrice?: number;
       minParticipants?: number;
       maxParticipants?: number;
+      bookingType?: 'scheduled' | 'request' | 'instant';
     };
     slots?: V2Slot[];
     dateAvailability?: V2DateAvailability[];
@@ -578,6 +579,7 @@ function BookingInnerV2FlagShell() {
     basePrice: number;
     minParticipants: number;
     maxParticipants: number | null;
+    bookingType: 'scheduled' | 'request' | 'instant';
   } | null>(null);
   const initialPlanMetaFromActivity = useMemo(
     () => derivePlanMetaFromActivityPlans(activity?.plans, v2PlanKey),
@@ -592,6 +594,8 @@ function BookingInnerV2FlagShell() {
   const [note, setNote] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [createdBookingId, setCreatedBookingId] = useState('');
+  // 三種預約模式：request plan 送出申請後（先審核後付款）為 true，step 3 顯示審核中而非付款。
+  const [submittedAsRequest, setSubmittedAsRequest] = useState(false);
   const [step, setStep] = useState(1);
   // 付款方式（#1475）：ecpay（信用卡）或 transfer（自行匯款，人工查帳）
   const [payMethod, setPayMethod] = useState<'ecpay' | 'transfer'>('ecpay');
@@ -747,6 +751,10 @@ function BookingInnerV2FlagShell() {
             basePrice: Number(selectedPlan.basePrice),
             minParticipants: Number.isFinite(Number(selectedPlan.minParticipants)) ? Math.max(1, Number(selectedPlan.minParticipants)) : 1,
             maxParticipants: Number.isFinite(Number(selectedPlan.maxParticipants)) ? Number(selectedPlan.maxParticipants) : null,
+            bookingType:
+              selectedPlan.bookingType === 'request' || selectedPlan.bookingType === 'scheduled'
+                ? selectedPlan.bookingType
+                : 'instant',
           });
         }
         setResolvedActivityId(json.data?.activityId || activity?.id || '');
@@ -836,6 +844,7 @@ function BookingInnerV2FlagShell() {
         );
       }
       setCreatedBookingId(draftJson.data.bookingId);
+      setSubmittedAsRequest(Boolean(draftJson.data.requiresApproval));
       setStep(3);
     } catch (err) {
       const msg = err instanceof Error ? err.message : '此場次目前無法預約，請重新整理或選擇其他日期。';
@@ -929,6 +938,9 @@ function BookingInnerV2FlagShell() {
   const recoveryHref = activity ? `/activities/${encodeURIComponent(activity.region)}/${encodeURIComponent(activity.slug)}#section-plan` : '/activities';
   const selectedSlot = slots.find((slot) => slot.startAt === selectedSlotStartAt) || slots[0] || null;
   const selectedCapacityLeft = selectedSlot?.capacityLeft ?? 0;
+  // 三種預約模式：request plan 走「先審核後付款」——step 2 改為送出申請、step 3 顯示審核中。
+  const planBookingType = selectedPlanMeta?.bookingType ?? selectedSlot?.bookingType ?? 'instant';
+  const isRequestBooking = planBookingType === 'request';
   const isOverCapacity = slots.length > 0 && guests > selectedCapacityLeft;
   const step1CtaState = getBookingV2Step1CtaState({
     slotsLoading,
@@ -1305,6 +1317,11 @@ function BookingInnerV2FlagShell() {
                 <input type="checkbox" name="agreement" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                 我已閱讀並同意<Link href="/legal/terms" className="tp-link">服務條款</Link>與<Link href="/legal/refund" className="tp-link">退款政策</Link>
               </label>
+              {isRequestBooking && (
+                <p data-testid="booking-request-hint" style={{ fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 12px', margin: '0 0 12px' }}>
+                  此行程採「申請預約」：送出申請後由導遊審核，通過後將通知你前往付款，此步驟尚不會收費。
+                </p>
+              )}
               <div style={{ display: 'flex', gap: 12 }}>
                 <button className="tp-btn tp-btn-ghost" onClick={() => setStep(1)} disabled={loading}>← 上一步</button>
                 <button
@@ -1313,13 +1330,29 @@ function BookingInnerV2FlagShell() {
                   onClick={handleCreateDraftBookingAndGoPayment}
                   disabled={loading || !canGoStep3}
                 >
-                  {loading ? '建立訂單中…' : '建立訂單並前往付款 →'}
+                  {loading
+                    ? (isRequestBooking ? '送出申請中…' : '建立訂單中…')
+                    : (isRequestBooking ? '送出預約申請 →' : '建立訂單並前往付款 →')}
                 </button>
               </div>
             </div>
           )}
 
-          {step === 3 && (
+          {step === 3 && submittedAsRequest && (
+            <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
+              <h3 style={{ marginTop: 0 }}>申請已送出（待導遊審核）</h3>
+              <div data-testid="booking-request-submitted" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: 16 }}>
+                <p style={{ margin: 0, fontWeight: 700, color: '#92400e' }}>✅ 已送出預約申請</p>
+                <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--tp-muted)' }}>
+                  導遊審核通過後，我們會以 Email 通知你前往付款；此步驟尚未收費。可至「我的訂單」查看狀態。
+                </p>
+                <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--tp-muted)' }}>申請編號：{createdBookingId}</p>
+                <Link className="tp-link" href="/me/orders" style={{ display: 'inline-block', marginTop: 10 }}>前往我的訂單 →</Link>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && !submittedAsRequest && (
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>付款確認（建立預約後）</h3>
 
