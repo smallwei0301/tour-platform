@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-23T18:47:20.769Z -->
+<!-- query_timestamp: 2026-06-24T00:49:25.201Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-23T18:47:20.769Z  
-**Commit SHA:** `72ba4b5b3715627a47446295e9e4fc71662546e3`
+**Query timestamp:** 2026-06-24T00:49:25.201Z  
+**Commit SHA:** `3ced0f71fe744c2eb20aa7d990ab5d8185ecff6f`
 
 ---
 
@@ -75,6 +75,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1490 | [fix(guide): 申請表單照片上傳前先壓縮，修正 Vercel 4.5MB 上限導致的上傳失敗](https://github.com/smallwei0301/tour-platform/pull/1490) | 2026-06-23 |
+| #1489 | [feat(guide): 熟悉區域全台化、申請資料導入公開頁可自編、收款方式可複選](https://github.com/smallwei0301/tour-platform/pull/1489) | 2026-06-23 |
 | #1487 | [fix(settlement): 結算付款 gate + 回沖未付款卻已結算的 payout_items](https://github.com/smallwei0301/tour-platform/pull/1487) | 2026-06-22 |
 | #1486 | [feat(seo): 分享縮圖改用站內 og-default 圖](https://github.com/smallwei0301/tour-platform/pull/1486) | 2026-06-22 |
 | #1485 | [fix(shop): 會員入口按鈕提升可見度（實心深綠膠囊）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1485) | 2026-06-18 |
@@ -83,8 +85,6 @@ _none_
 | #1482 | [perf+ui(shop): 並行查詢降冷啟動 + 月曆日期選擇器 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1482) | 2026-06-18 |
 | #1481 | [perf(shop): getGuideShopDb 內嵌關聯單一 round-trip (#1475)](https://github.com/smallwei0301/tour-platform/pull/1481) | 2026-06-18 |
 | #1480 | [fix(shop): 修正商店預約頁無可預約時段 + 載入過慢 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1480) | 2026-06-18 |
-| #1479 | [fix(shop): client component 字面量讀旗標，修復商店連結卡片不顯示 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1479) | 2026-06-18 |
-| #1478 | [fix(guide): 導遊公開頁存檔 + 可用時段預覽跨多週 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1478) | 2026-06-18 |
 
 ---
 
