@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
+// 純資料：用於月曆運算（getDay()/月份索引），顯示用文字一律改走 i18n（見 t('weekdays')/t('months')）。
 const WEEK_DAYS = ['日', '一', '二', '三', '四', '五', '六'];
-const MONTH_NAMES = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
 interface Schedule {
   startAt?: string;
@@ -114,6 +115,9 @@ function CalendarModal({
   onClose: () => void;
   price?: number;
 }) {
+  const t = useTranslations('datePicker');
+  const weekdayLabels = t.raw('weekdays') as string[];
+  const monthLabels = t.raw('months') as string[];
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -185,16 +189,16 @@ function CalendarModal({
 
   return (
     <div className="kkd-cal-overlay" onClick={onClose}>
-      <div ref={calendarRef} className="kkd-cal-modal" role="dialog" aria-modal="true" aria-label="選擇日期" aria-labelledby="calendar-title" tabIndex={-1} onClick={e => e.stopPropagation()}>
+      <div ref={calendarRef} className="kkd-cal-modal" role="dialog" aria-modal="true" aria-label={t('calendarLabel')} aria-labelledby="calendar-title" tabIndex={-1} onClick={e => e.stopPropagation()}>
         <div className="kkd-cal-header">
-          <button className="kkd-cal-nav" onClick={prevMonth} aria-label="上個月">‹</button>
-          <span id="calendar-title" className="kkd-cal-title">{viewYear} 年 {MONTH_NAMES[viewMonth]}</span>
-          <button className="kkd-cal-nav" onClick={nextMonth} aria-label="下個月">›</button>
-          <button className="kkd-cal-close" onClick={onClose} aria-label="關閉">✕</button>
+          <button className="kkd-cal-nav" onClick={prevMonth} aria-label={t('prevMonth')}>‹</button>
+          <span id="calendar-title" className="kkd-cal-title">{t('calendarTitle', { year: viewYear, month: monthLabels[viewMonth] })}</span>
+          <button className="kkd-cal-nav" onClick={nextMonth} aria-label={t('nextMonth')}>›</button>
+          <button className="kkd-cal-close" onClick={onClose} aria-label={t('close')}>✕</button>
         </div>
 
         <div className="kkd-cal-weekdays">
-          {WEEK_DAYS.map(w => <span key={w} className="kkd-cal-weekday">{w}</span>)}
+          {weekdayLabels.map((w, wi) => <span key={wi} className="kkd-cal-weekday">{w}</span>)}
         </div>
 
         <div className="kkd-cal-grid">
@@ -204,7 +208,11 @@ function CalendarModal({
             const isSun = new Date(cell.dateKey).getDay() === 0;
             const isSat = new Date(cell.dateKey).getDay() === 6;
             const [y, m, d] = cell.dateKey.split('-');
-            const ariaLabel = `${y}年${Number(m)}月${Number(d)}日，${cell.available ? `可預約，剩餘 ${cell.remaining} 位` : (cell.remaining === 0 && cell.hasSchedule ? '已額滿' : '不可預約')}`;
+            const ariaLabel = cell.available
+              ? t('ariaDayAvailable', { year: y, month: Number(m), day: Number(d), remaining: cell.remaining })
+              : cell.remaining === 0 && cell.hasSchedule
+                ? t('ariaDayFull', { year: y, month: Number(m), day: Number(d) })
+                : t('ariaDayUnavailable', { year: y, month: Number(m), day: Number(d) });
             return (
               <button
                 key={cell.dateKey}
@@ -226,7 +234,7 @@ function CalendarModal({
                   </span>
                 )}
                 {!cell.available && cell.remaining === 0 && cell.hasSchedule && (
-                  <span className="kkd-cal-day-full">額滿</span>
+                  <span className="kkd-cal-day-full">{t('dayFull')}</span>
                 )}
               </button>
             );
@@ -234,13 +242,13 @@ function CalendarModal({
         </div>
 
         <div className="kkd-cal-legend">
-          <span className="kkd-cal-legend-item available">● 可預約</span>
-          <span className="kkd-cal-legend-item unavailable">● 額滿／不可預約</span>
+          <span className="kkd-cal-legend-item available">{t('legendAvailable')}</span>
+          <span className="kkd-cal-legend-item unavailable">{t('legendUnavailable')}</span>
         </div>
 
         {selectedDate && (
           <div className="kkd-cal-selected-summary">
-            已選：{selectedDate.slice(5).replace('-', '/')}（{WEEK_DAYS[new Date(selectedDate).getDay()]}）
+            {t('selectedSummary', { date: selectedDate.slice(5).replace('-', '/'), weekday: weekdayLabels[new Date(selectedDate).getDay()] })}
           </div>
         )}
       </div>
@@ -249,6 +257,8 @@ function CalendarModal({
 }
 
 export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePickerProps) {
+  const t = useTranslations('datePicker');
+  const weekdayLabels = t.raw('weekdays') as string[];
   const [showCalendar, setShowCalendar] = useState(false);
   const availMap = useMemo(() => buildAvailMap(schedules), [schedules]);
   const pills = useMemo(() => buildNext30Days(availMap), [availMap]);
@@ -256,9 +266,9 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
   if (pills.length === 0) {
     return (
       <div>
-        <p style={{ color: 'var(--tp-muted)', fontSize: 14 }}>目前尚無可預約場次，請稍後再查詢。</p>
+        <p style={{ color: 'var(--tp-muted)', fontSize: 14 }}>{t('noSchedules')}</p>
         <button className="kkd-more-dates-btn" onClick={() => setShowCalendar(true)}>
-          查看更多日期 ›
+          {t('moreDates')}
         </button>
         {showCalendar && (
           <CalendarModal
@@ -292,11 +302,11 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
                 disabled ? 'disabled' : '',
                 isFull ? 'full' : '',
               ].filter(Boolean).join(' ')}
-              title={isFull ? '此日期已額滿' : noSchedule ? '此日期無場次' : `剩餘 ${p.remaining} 位`}
+              title={isFull ? t('titleFull') : noSchedule ? t('titleNoSchedule') : t('titleRemaining', { n: p.remaining })}
             >
               <span className="tp-date-pill-month">{p.month}/{p.day}</span>
-              <span className="tp-date-pill-week">週{p.weekDay}</span>
-              {isFull && <span className="tp-date-pill-full">額滿</span>}
+              <span className="tp-date-pill-week">{t('weekPrefix', { weekday: weekdayLabels[new Date(p.dateKey).getDay()] })}</span>
+              {isFull && <span className="tp-date-pill-full">{t('pillFull')}</span>}
               {noSchedule && <span className="tp-date-pill-na">—</span>}
             </button>
           );
@@ -304,7 +314,7 @@ export function DatePicker({ schedules, selectedDate, onSelect, price }: DatePic
       </div>
 
       <button className="kkd-more-dates-btn" onClick={() => setShowCalendar(true)}>
-        查看更多日期 ›
+        {t('moreDates')}
       </button>
 
       {showCalendar && (

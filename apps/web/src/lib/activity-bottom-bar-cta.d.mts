@@ -17,8 +17,12 @@ export interface ResolveBottomBarCtaArgs {
   planSectionId?: string;
 }
 
+// labelKey：i18n message key（bottomBar.ctaBook / ctaSelectPlan）。label 維持中文供
+// 既有 #919 純函式契約；UI 改以 labelKey 透過 next-intl 取對應語言文字（#multilingual）。
+export type BottomBarCtaLabelKey = 'ctaBook' | 'ctaSelectPlan';
+
 export type BottomBarCta =
-  | { mode: 'book'; href: string; label: string; selected: BottomBarCtaSelected | null }
-  | { mode: 'scroll'; targetId: string; label: string; selected: null };
+  | { mode: 'book'; href: string; label: string; labelKey: BottomBarCtaLabelKey; selected: BottomBarCtaSelected | null }
+  | { mode: 'scroll'; targetId: string; label: string; labelKey: BottomBarCtaLabelKey; selected: null };
 
 export function resolveBottomBarCta(args: ResolveBottomBarCtaArgs): BottomBarCta;

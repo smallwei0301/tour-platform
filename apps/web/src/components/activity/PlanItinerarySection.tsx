@@ -14,6 +14,7 @@
 //   - 舊版單行格式：  { text, imageUrl? }
 
 import Image from 'next/image';
+import { useTranslations } from 'next-intl';
 import { PublicIcon } from '../ui/PublicIcon';
 import { useSelectedPlan } from './SelectedPlanContext';
 
@@ -53,6 +54,7 @@ function normalizeSteps(steps?: PlanItineraryStep[]): PlanItineraryStep[] {
 }
 
 function ItineraryTimeline({ steps }: { steps: PlanItineraryStep[] }) {
+  const t = useTranslations('planItinerary');
   return (
     <div className="kkd-itinerary">
       {steps.map((step, i) => {
@@ -73,7 +75,7 @@ function ItineraryTimeline({ steps }: { steps: PlanItineraryStep[] }) {
               {step.imageUrl && (
                 <Image
                   src={step.imageUrl}
-                  alt={heading || '行程站點圖片'}
+                  alt={heading || t('imageAlt')}
                   loading="lazy"
                   className="kkd-itinerary-img"
                   width={480}
@@ -90,6 +92,7 @@ function ItineraryTimeline({ steps }: { steps: PlanItineraryStep[] }) {
 }
 
 export function PlanItinerarySection({ plans, fallbackItinerary }: PlanItinerarySectionProps) {
+  const t = useTranslations('planItinerary');
   const { selected } = useSelectedPlan();
 
   const safePlans = Array.isArray(plans) ? plans : [];
@@ -111,7 +114,7 @@ export function PlanItinerarySection({ plans, fallbackItinerary }: PlanItinerary
     } else {
       body = (
         <p className="kkd-itinerary-empty" style={{ color: 'var(--tp-muted)', fontSize: 14, margin: 0 }} role="status">
-          請選擇上方的方案，以獲取行程詳細資訊
+          {t('selectPlanPrompt')}
         </p>
       );
     }
@@ -124,7 +127,7 @@ export function PlanItinerarySection({ plans, fallbackItinerary }: PlanItinerary
     } else {
       body = (
         <p className="kkd-itinerary-empty" style={{ color: 'var(--tp-muted)', fontSize: 14, margin: 0 }} role="status">
-          此方案尚未提供詳細行程資訊
+          {t('planNoItinerary')}
         </p>
       );
     }
@@ -133,7 +136,7 @@ export function PlanItinerarySection({ plans, fallbackItinerary }: PlanItinerary
   return (
     <section id="section-itinerary" className="kkd-scroll-section">
       <h2 className="kkd-section-title">
-        <PublicIcon name="route" size={18} /> 詳細行程
+        <PublicIcon name="route" size={18} /> {t('title')}
         {titleSuffix && (
           <span style={{ marginLeft: 8, fontSize: 14, fontWeight: 600, color: 'var(--tp-muted)' }}>
             {titleSuffix}

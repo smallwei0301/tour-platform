@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import type { Activity } from '../../fixtures/data';
 
 interface Schedule {
@@ -20,6 +21,7 @@ interface PlanCardProps {
 }
 
 export function PlanCard({ activity, selectedDate, schedules }: PlanCardProps) {
+  const t = useTranslations('planCard');
   const originalPrice = Math.round(activity.price * 1.25);
 
   // Find earliest available booking date
@@ -63,10 +65,10 @@ export function PlanCard({ activity, selectedDate, schedules }: PlanCardProps) {
   return (
     <div className="tp-plan-card">
       <div className="tp-plan-card-header">
-        <h4 className="tp-plan-card-title">標準方案</h4>
+        <h4 className="tp-plan-card-title">{t('title')}</h4>
         {selectedDate && selectedSchedule && (
           <span className="tp-plan-date-tag">
-            已選：{selectedDate.slice(5).replace('-', '/')}
+            {t('selectedPrefix', { date: selectedDate.slice(5).replace('-', '/') })}
           </span>
         )}
       </div>
@@ -75,7 +77,7 @@ export function PlanCard({ activity, selectedDate, schedules }: PlanCardProps) {
         {earliestDate && (
           <div className="tp-plan-detail-row">
             <span className="tp-plan-check">✅</span>
-            <span>最早可預訂日期：{earliestDate}</span>
+            <span>{t('earliestDate', { date: earliestDate })}</span>
           </div>
         )}
         {freeCancelRule && (
@@ -86,15 +88,15 @@ export function PlanCard({ activity, selectedDate, schedules }: PlanCardProps) {
         )}
         <div className="tp-plan-detail-row">
           <span className="tp-plan-check">✅</span>
-          <span>實名認證導遊帶領</span>
+          <span>{t('guideLed')}</span>
         </div>
         <div className="tp-plan-detail-row">
           <span className="tp-plan-check">✅</span>
-          <span>電子憑證，出發前確認即可</span>
+          <span>{t('eVoucher')}</span>
         </div>
       </div>
 
-      <span className="tp-plan-detail-link">查看方案詳情 &gt;</span>
+      <span className="tp-plan-detail-link">{t('viewDetails')}</span>
 
       <div className="tp-plan-card-footer">
         <div className="tp-plan-price-block">
@@ -102,10 +104,10 @@ export function PlanCard({ activity, selectedDate, schedules }: PlanCardProps) {
           <span className="tp-plan-price">
             NT${activity.price.toLocaleString()}
           </span>
-          <span className="tp-plan-price-label">起 / 人</span>
+          <span className="tp-plan-price-label">{t('priceFromPerson')}</span>
         </div>
         <Link href={bookingHref} className="tp-btn tp-plan-select-btn">
-          選擇
+          {t('select')}
         </Link>
       </div>
     </div>

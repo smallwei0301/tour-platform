@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { buildActivityHref } from '../../lib/activity-url';
 import {
   pushRecentlyViewed,
@@ -46,6 +47,7 @@ function writeRecent(list: ActivityCard[]) {
 }
 
 function CardRow({ heading, items, testId }: { heading: string; items: ActivityCard[]; testId: string }) {
+  const t = useTranslations('recommendations');
   if (items.length === 0) return null;
   return (
     <section data-testid={testId} style={{ marginTop: 24 }}>
@@ -67,7 +69,7 @@ function CardRow({ heading, items, testId }: { heading: string; items: ActivityC
             <div className="tp-rec-card-body">
               <p className="tp-rec-card-title">{a.title}</p>
               {a.priceTwd != null && (
-                <p className="tp-rec-card-price">NT${Number(a.priceTwd).toLocaleString()} 起</p>
+                <p className="tp-rec-card-price">{t('priceFrom', { price: Number(a.priceTwd).toLocaleString() })}</p>
               )}
             </div>
           </Link>
@@ -78,6 +80,7 @@ function CardRow({ heading, items, testId }: { heading: string; items: ActivityC
 }
 
 export function ActivityRecommendations({ current }: { current: ActivityCard }) {
+  const t = useTranslations('recommendations');
   const [sameRegion, setSameRegion] = useState<ActivityCard[]>([]);
   const [sameCategory, setSameCategory] = useState<ActivityCard[]>([]);
   const [recent, setRecent] = useState<ActivityCard[]>([]);
@@ -117,9 +120,9 @@ export function ActivityRecommendations({ current }: { current: ActivityCard }) 
 
   return (
     <div className="tp-container" style={{ paddingBottom: 24 }}>
-      <CardRow heading={`${current.region || ''} 的其他行程`} items={sameRegion} testId="recs-same-region" />
-      <CardRow heading="你可能也喜歡" items={sameCategory} testId="recs-same-category" />
-      <CardRow heading="最近瀏覽" items={recent} testId="recs-recently-viewed" />
+      <CardRow heading={t('sameRegion', { region: current.region || '' })} items={sameRegion} testId="recs-same-region" />
+      <CardRow heading={t('youMayLike')} items={sameCategory} testId="recs-same-category" />
+      <CardRow heading={t('recentlyViewed')} items={recent} testId="recs-recently-viewed" />
     </div>
   );
 }

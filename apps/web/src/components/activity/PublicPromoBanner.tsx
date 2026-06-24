@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 /**
  * #1381 — 活動頁公開促銷碼提示。
  * 撈 /api/promo-codes/public（過期/用罄的碼後端已排除），無可用碼時不渲染。
  */
 export function PublicPromoBanner() {
+  const t = useTranslations('promoBanner');
   const [promos, setPromos] = useState<Array<{ code: string; label: string }>>([]);
 
   useEffect(() => {
@@ -33,10 +35,14 @@ export function PublicPromoBanner() {
         gap: 8,
       }}
     >
-      <span style={{ fontSize: 13, fontWeight: 700, color: '#be185d' }}>🎁 限時優惠</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#be185d' }}>{t('limitedOffer')}</span>
       {promos.map((p) => (
         <span key={p.code} style={{ fontSize: 13, color: '#9d174d' }}>
-          {p.label}（結帳輸入 <strong>{p.code}</strong>）
+          {t.rich('promoEntry', {
+            label: p.label,
+            code: p.code,
+            strong: (chunks) => <strong>{chunks}</strong>,
+          })}
         </span>
       ))}
     </div>

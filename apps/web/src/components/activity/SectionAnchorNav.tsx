@@ -2,20 +2,21 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface Section {
   id: string;
   label: string;
 }
 
-const DEFAULT_SECTIONS: Section[] = [
-  { id: 'section-plan', label: '方案' },
-  { id: 'section-reviews', label: '評價' },
-  { id: 'section-details', label: '商品說明' },
-  { id: 'section-policy', label: '購買須知' },
-];
-
 export function SectionAnchorNav({ sections }: { sections?: Section[] }) {
+  const t = useTranslations('anchorNav');
+  const DEFAULT_SECTIONS: Section[] = [
+    { id: 'section-plan', label: t('sectionPlan') },
+    { id: 'section-reviews', label: t('sectionReviews') },
+    { id: 'section-details', label: t('sectionDetails') },
+    { id: 'section-policy', label: t('sectionPolicy') },
+  ];
   const SECTIONS = sections || DEFAULT_SECTIONS;
   const [active, setActive] = useState(SECTIONS[0]?.id || 'section-plan');
 
@@ -73,7 +74,7 @@ export function SectionAnchorNav({ sections }: { sections?: Section[] }) {
   };
 
   return (
-    <nav className="kkd-anchor-nav" aria-label="頁面錨點導覽" role="tablist">
+    <nav className="kkd-anchor-nav" aria-label={t('navLabel')} role="tablist">
       {SECTIONS.map(({ id, label }, index) => (
         <button
           id={`anchor-tab-${id}`}

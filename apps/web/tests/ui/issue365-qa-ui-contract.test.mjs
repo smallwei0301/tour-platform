@@ -16,8 +16,13 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
+// #multilingual：可見文案已抽進 messages（activityQa namespace）。source-contract
+// 測試同時讀「元件 source ＋ zh-Hant catalog」，讓中文文案斷言比對 catalog、結構斷言
+// （class／testid／t() 呼叫）比對 source。
 async function readSource(relPath) {
-  return readFile(path.join(ROOT, relPath), 'utf8');
+  const src = await readFile(path.join(ROOT, relPath), 'utf8');
+  const catalog = await readFile(path.join(ROOT, 'messages/zh-Hant.json'), 'utf8');
+  return `${src}\n/* messages */\n${catalog}`;
 }
 
 const DETAIL_PAGE = 'app/[locale]/activities/[region]/[slug]/page.tsx';

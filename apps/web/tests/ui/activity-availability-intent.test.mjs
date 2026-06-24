@@ -60,7 +60,10 @@ test('V2 mode requests v2 availability source and exposes explicit fallback noti
 
   assert.match(src, /availability\?v2=1/);
   assert.match(src, /json\?\.data\?\.source !== 'v2'/);
-  assert.match(src, /目前無法即時載入 V2 可預約名額/);
+  // #multilingual：fallback notice 文字抽進 messages.datePlan.availabilityNoticeV2LoadFail
+  assert.match(src, /availabilityNoticeV2LoadFail/, 'source 應以 t(\'availabilityNoticeV2LoadFail\') 顯示 V2 fallback 通知');
+  const datePlan = JSON.parse(await readFile(path.join(ROOT, 'messages/zh-Hant.json'), 'utf8')).datePlan;
+  assert.match(datePlan.availabilityNoticeV2LoadFail, /目前無法即時載入 V2 可預約名額/);
 });
 
 test('plan-first flow: per-plan date picker is scoped to that plan plus global schedules', async () => {

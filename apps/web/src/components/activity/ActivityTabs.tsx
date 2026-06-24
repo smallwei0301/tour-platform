@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import type { Activity, Review } from '../../fixtures/data';
 import { DatePicker } from './DatePicker';
 import { PlanCard } from './PlanCard';
@@ -27,8 +28,15 @@ interface ActivityTabsProps {
 
 const TABS = ['方案', '評價', '商品說明', '購買須知'] as const;
 type TabKey = (typeof TABS)[number];
+const TAB_LABEL_KEYS: Record<TabKey, string> = {
+  '方案': 'tabPlan',
+  '評價': 'tabReviews',
+  '商品說明': 'tabDetails',
+  '購買須知': 'tabPolicy',
+};
 
 export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps) {
+  const t = useTranslations('activityTabs');
   const [activeTab, setActiveTab] = useState<TabKey>('方案');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
@@ -45,7 +53,7 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
   return (
     <div className="tp-activity-tabs-wrap">
       {/* Tab Nav */}
-      <div className="tp-activity-tab-nav" role="tablist" aria-label="行程詳情分頁">
+      <div className="tp-activity-tab-nav" role="tablist" aria-label={t('tablistLabel')}>
         {TABS.map((tab, idx) => (
           <button
             key={tab}
@@ -58,7 +66,7 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
             onClick={() => setActiveTab(tab)}
             onKeyDown={(e) => handleTabKeyDown(e, idx)}
           >
-            {tab}
+            {t(TAB_LABEL_KEYS[tab])}
           </button>
         ))}
       </div>
@@ -75,8 +83,8 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
             {/* Date Picker */}
             <div className="tp-tab-section">
               <div className="tp-tab-section-head">
-                <h3>出發日期</h3>
-                <Link href="/activities" className="tp-link" style={{ fontSize: 13 }}>更多日期 &gt;</Link>
+                <h3>{t('departureDate')}</h3>
+                <Link href="/activities" className="tp-link" style={{ fontSize: 13 }}>{t('moreDates')}</Link>
               </div>
               <DatePicker
                 schedules={schedules}
@@ -87,7 +95,7 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
 
             {/* Plan Cards */}
             <div className="tp-tab-section" style={{ marginTop: 24 }}>
-              <h3>選擇方案</h3>
+              <h3>{t('selectPlan')}</h3>
               <PlanCard
                 activity={activity}
                 selectedDate={selectedDate}
@@ -101,7 +109,7 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
           <div>
             <p style={{ marginBottom: 16 }}>
               <span style={{ color: '#f5a623', fontSize: 20, fontWeight: 700 }}>★ 5.0</span>
-              <span style={{ color: 'var(--tp-muted)', marginLeft: 8 }}>共 {reviews.length} 則評價</span>
+              <span style={{ color: 'var(--tp-muted)', marginLeft: 8 }}>{t('reviewsTotal', { count: reviews.length })}</span>
             </p>
             {normalizeSocialProofQuotes(activity.socialProofQuotes).length > 0 && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -156,19 +164,19 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
 
         {activeTab === '商品說明' && (
           <div style={{ lineHeight: 1.8, color: 'var(--tp-muted)' }}>
-            <h3>行程包含</h3>
+            <h3>{t('detailIncludes')}</h3>
             <ul style={{ paddingLeft: 18 }}>
               {activity.inclusions.map((item, i) => (
                 <li key={i}>✅ {item}</li>
               ))}
             </ul>
-            <h3 style={{ marginTop: 16 }}>行程不含</h3>
+            <h3 style={{ marginTop: 16 }}>{t('detailExcludes')}</h3>
             <ul style={{ paddingLeft: 18 }}>
               {activity.exclusions.map((item, i) => (
                 <li key={i}>❌ {item}</li>
               ))}
             </ul>
-            <h3 style={{ marginTop: 16 }}>適合對象</h3>
+            <h3 style={{ marginTop: 16 }}>{t('detailGoodFor')}</h3>
             <ul style={{ paddingLeft: 18 }}>
               {activity.goodFor.map((item, i) => (
                 <li key={i}>👍 {item}</li>
@@ -179,19 +187,19 @@ export function ActivityTabs({ activity, reviews, schedules }: ActivityTabsProps
 
         {activeTab === '購買須知' && (
           <div style={{ lineHeight: 1.8 }}>
-            <h3>注意事項</h3>
+            <h3>{t('policyNotices')}</h3>
             <ul style={{ paddingLeft: 18, color: 'var(--tp-muted)' }}>
               {activity.notices.map((n, i) => (
                 <li key={i}>{n}</li>
               ))}
             </ul>
-            <h3 style={{ marginTop: 16 }}>取消與退款政策</h3>
+            <h3 style={{ marginTop: 16 }}>{t('policyRefund')}</h3>
             <ul style={{ paddingLeft: 18, color: 'var(--tp-muted)' }}>
               {activity.refundRules.map((r, i) => (
                 <li key={i}>{r}</li>
               ))}
             </ul>
-            <h3 style={{ marginTop: 16 }}>安全說明</h3>
+            <h3 style={{ marginTop: 16 }}>{t('policySafety')}</h3>
             <p style={{ color: 'var(--tp-muted)' }}>{activity.safetyNotice}</p>
           </div>
         )}
