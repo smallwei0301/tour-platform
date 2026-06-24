@@ -3,6 +3,33 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../../src/lib/csrf-client';
+import { ImageUpload } from '../../../../../../src/components/admin/ImageUpload';
+
+type ItineraryStep = { icon: string; title: string; duration: string; description: string; imageUrl: string };
+
+function createEmptyStep(): ItineraryStep {
+  return { icon: '', title: '', duration: '', description: '', imageUrl: '' };
+}
+function toItinerary(value: unknown): ItineraryStep[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((s: Record<string, unknown>) => ({
+    icon: String(s?.icon ?? ''),
+    // 相容舊版單行 { text } → 映射為 title
+    title: String(s?.title ?? s?.text ?? ''),
+    duration: String(s?.duration ?? ''),
+    description: String(s?.description ?? ''),
+    imageUrl: String(s?.imageUrl ?? s?.image_url ?? ''),
+  }));
+}
+function itineraryForPayload(steps: ItineraryStep[]) {
+  return steps
+    .map((s) => ({
+      icon: s.icon.trim(), title: s.title.trim(), duration: s.duration.trim(),
+      description: s.description.trim(), imageUrl: s.imageUrl.trim(),
+    }))
+    // 完全空白的站點丟棄（至少要有 title / description / imageUrl 其一）
+    .filter((s) => s.title || s.description || s.imageUrl);
+}
 
 const PRICE_TYPES = [
   { value: 'per_person', label: '每人計價' },
@@ -28,12 +55,14 @@ type PlanForm = {
   plan_exclusions: string;
   plan_notices: string;
   plan_refund_rules: string;
+  plan_itinerary: ItineraryStep[];
 };
 
 const EMPTY: PlanForm = {
   name: '', description: '', price_type: 'per_person', base_price: '', duration_minutes: '',
   min_participants: '1', max_participants: '10', booking_type: 'scheduled',
   highlights: '', plan_inclusions: '', plan_exclusions: '', plan_notices: '', plan_refund_rules: '',
+  plan_itinerary: [],
 };
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#334155' };
@@ -93,6 +122,7 @@ export default function GuidePlanEditPage() {
           plan_exclusions: toLines(d.plan_exclusions),
           plan_notices: toLines(d.plan_notices),
           plan_refund_rules: toLines(d.plan_refund_rules),
+          plan_itinerary: toItinerary(d.plan_itinerary),
         });
       })
       .catch(() => setError('載入失敗'))
@@ -114,6 +144,7 @@ export default function GuidePlanEditPage() {
       plan_exclusions: fromLines(form.plan_exclusions),
       plan_notices: fromLines(form.plan_notices),
       plan_refund_rules: fromLines(form.plan_refund_rules),
+      plan_itinerary: itineraryForPayload(form.plan_itinerary),
     };
   }
 
@@ -265,10 +296,88 @@ export default function GuidePlanEditPage() {
         ] as Array<[keyof PlanForm, string]>).map(([key, label]) => (
           <div key={key} style={{ marginBottom: 14 }}>
             <label style={labelStyle}>{label}（每行一項）</label>
-            <textarea style={{ ...fieldStyle, minHeight: 70 }} value={form[key]} onChange={(e) => set(key, e.target.value)} />
+            <textarea style={{ ...fieldStyle, minHeight: 70 }} value={form[key] as string} onChange={(e) => set(key, e.target.value as never)} />
           </div>
         ))}
       </section>
+
+      {/* 站點時間表（隨方案送審；新方案存草稿後可編） */}
+      {!isNew && (
+        <section style={sectionStyle}>
+          <div style={sectionTitle}>站點時間表</div>
+          <p style={{ color: '#64748b', fontSize: 13, marginTop: -8, marginBottom: 14 }}>
+            一站一張卡，可填圖示、站名、停留時間、說明與照片。與方案內容一起送審。
+          </p>
+          {form.plan_itinerary.map((step, i) => (
+            <div key={i} style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input
+                  style={{ ...fieldStyle, width: 56, textAlign: 'center' }}
+                  placeholder="📍"
+                  value={step.icon}
+                  onChange={(e) => set('plan_itinerary', form.plan_itinerary.map((x, j) => (j === i ? { ...x, icon: e.target.value } : x)))}
+                />
+                <input
+                  style={{ ...fieldStyle, flex: 1 }}
+                  placeholder="站名（例：烏石港集合）"
+                  value={step.title}
+                  onChange={(e) => set('plan_itinerary', form.plan_itinerary.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
+                />
+                <input
+                  style={{ ...fieldStyle, width: 110 }}
+                  placeholder="60分鐘"
+                  value={step.duration}
+                  onChange={(e) => set('plan_itinerary', form.plan_itinerary.map((x, j) => (j === i ? { ...x, duration: e.target.value } : x)))}
+                />
+                <button
+                  onClick={() => set('plan_itinerary', form.plan_itinerary.filter((_, j) => j !== i))}
+                  aria-label="刪除站點"
+                  style={{ background: 'none', border: 'none', color: '#991b1b', cursor: 'pointer', fontSize: 18 }}
+                >
+                  ✕
+                </button>
+              </div>
+              <textarea
+                style={{ ...fieldStyle, minHeight: 56, marginBottom: 8 }}
+                placeholder="站點說明"
+                value={step.description}
+                onChange={(e) => set('plan_itinerary', form.plan_itinerary.map((x, j) => (j === i ? { ...x, description: e.target.value } : x)))}
+              />
+              {step.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- 站點縮圖預覽，尺寸不固定，用原生 img 即可
+                <img src={step.imageUrl} alt="站點照片" style={{ maxWidth: 240, aspectRatio: '3 / 2', objectFit: 'cover', borderRadius: 6, display: 'block', marginBottom: 8 }} />
+              )}
+              <ImageUpload
+                activityId={activityId}
+                activitySlug={activityId}
+                type="gallery"
+                uploadApiBase="/api/guide/activities"
+                onUploaded={(url) => set('plan_itinerary', form.plan_itinerary.map((x, j) => (j === i ? { ...x, imageUrl: url } : x)))}
+              />
+            </div>
+          ))}
+          <button
+            onClick={() => set('plan_itinerary', [...form.plan_itinerary, createEmptyStep()])}
+            style={{ width: '100%', background: '#f5f3ff', border: '1px dashed #c4b5fd', borderRadius: 8, padding: '10px', color: '#7c3aed', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}
+          >
+            ＋ 新增站點
+          </button>
+        </section>
+      )}
+      {!isNew && (
+        <section style={{ ...sectionStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>季節供應</div>
+            <div style={{ color: '#64748b', fontSize: 13 }}>設定方案在一年中可預約的日期（即時生效，不需審核）。</div>
+          </div>
+          <button
+            onClick={() => router.push(`/guide/activities/${activityId}/plans/${planId}/seasons`)}
+            style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', color: '#7c3aed', borderRadius: 8, padding: '8px 14px', fontWeight: 600, cursor: 'pointer', fontSize: 14, whiteSpace: 'nowrap' }}
+          >
+            📅 管理季節供應 ›
+          </button>
+        </section>
+      )}
 
       {/* 動作列 */}
       <div style={{ display: 'flex', gap: 12, position: 'sticky', bottom: 0, background: '#f9fafb', padding: '16px 0' }}>

@@ -21,7 +21,6 @@ export const GUIDE_EDITABLE_PLAN_FIELDS = [
   'min_participants',
   'max_participants',
   'booking_type',
-  'is_year_round',
   // 顯示與規則（rich fields）
   'details_link_text',
   'booking_btn_text',

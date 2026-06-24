@@ -91,6 +91,13 @@ import { pickGuideEditableFields } from './guide-editable-activity-fields.mjs';
 import { pickGuideEditablePlanFields, validateGuidePlanCreate } from './guide-editable-plan-fields.mjs';
 import { buildPlanColumnPatch } from './plan-column-patch.mjs';
 import { generatePlanSlug } from './activity-plan-slugs.mjs';
+import {
+  ACTIVITY_PLAN_SEASON_SELECT_COLUMNS,
+  validateCreateActivityPlanSeasonPayload,
+  validateUpdateActivityPlanSeasonPayload,
+  shapeActivityPlanSeason,
+  sortActivityPlanSeasons,
+} from './activity-plan-seasons.ts';
 // #1383 — 訂單改期（fallback 實作 + 純規則）
 import {
   createRescheduleRequestInMemory,
@@ -4497,6 +4504,135 @@ export async function resolvePlanReviewDb(planId, { action, adminNote = null } =
     metadata: { planId, adminNote: adminNote || null },
   });
   return getPlanReviewDetailDb(planId);
+}
+
+// ─────────────────────────────────────────────
+// Phase 2.5 — 導遊方案「季節供應」（activity_plan_seasons）即時管理
+// 季節供應＝方案在一年中哪些日期可預約，性質同 availability（場次）→ 即時生效、不送審。
+// is_year_round（全年供應）亦由此即時管理（已移出送審白名單）。
+// ─────────────────────────────────────────────
+
+/** 導遊載入方案的季節供應設定（全年開關 + 啟用中的季節窗口）。非擁有者回 null。 */
+export async function listGuidePlanSeasonsDb(planId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return null;
+
+  const { data: planRow } = await supabase
+    .from('activity_plans')
+    .select('is_year_round')
+    .eq('id', planId)
+    .single();
+  const { data, error } = await supabase
+    .from('activity_plan_seasons')
+    .select(ACTIVITY_PLAN_SEASON_SELECT_COLUMNS)
+    .eq('activity_plan_id', planId)
+    .eq('is_active', true);
+  if (error) throw new Error(error.message);
+  return {
+    isYearRound: !!planRow?.is_year_round,
+    seasons: sortActivityPlanSeasons(data || []).map(shapeActivityPlanSeason),
+  };
+}
+
+/** 導遊即時設定方案「全年供應」開關。 */
+export async function setGuidePlanYearRoundDb(planId, guideId, isYearRound, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const { error } = await supabase
+    .from('activity_plans')
+    .update({ is_year_round: !!isYearRound, updated_at: new Date().toISOString() })
+    .eq('id', planId);
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_year_round_set',
+    metadata: { planId, guideId, isYearRound: !!isYearRound },
+  });
+  return { ok: true };
+}
+
+/** 導遊即時新增季節供應窗口。 */
+export async function createGuidePlanSeasonDb(planId, guideId, input = {}, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const v = validateCreateActivityPlanSeasonPayload(input);
+  if (!v.ok) return { ok: false, code: 'VALIDATION_ERROR', message: v.message };
+
+  const { data, error } = await supabase
+    .from('activity_plan_seasons')
+    .insert({ activity_plan_id: planId, ...v.value })
+    .select(ACTIVITY_PLAN_SEASON_SELECT_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_season_create',
+    metadata: { planId, guideId, seasonId: data?.id },
+  });
+  return { ok: true, season: shapeActivityPlanSeason(data) };
+}
+
+/** 導遊即時更新季節供應窗口（季節須屬於該方案）。 */
+export async function updateGuidePlanSeasonDb(planId, seasonId, guideId, input = {}, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const { data: existing } = await supabase
+    .from('activity_plan_seasons')
+    .select('id, activity_plan_id, start_month, start_day, end_month, end_day')
+    .eq('id', seasonId)
+    .single();
+  if (!existing || existing.activity_plan_id !== planId) return { ok: false, code: 'SEASON_NOT_FOUND' };
+
+  const v = validateUpdateActivityPlanSeasonPayload(input, existing);
+  if (!v.ok) return { ok: false, code: 'VALIDATION_ERROR', message: v.message };
+
+  const { data, error } = await supabase
+    .from('activity_plan_seasons')
+    .update({ ...v.value, updated_at: new Date().toISOString() })
+    .eq('id', seasonId)
+    .select(ACTIVITY_PLAN_SEASON_SELECT_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_season_update',
+    metadata: { planId, guideId, seasonId },
+  });
+  return { ok: true, season: shapeActivityPlanSeason(data) };
+}
+
+/** 導遊即時移除季節供應窗口（soft-delete：is_active=false）。 */
+export async function deleteGuidePlanSeasonDb(planId, seasonId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const { data: existing } = await supabase
+    .from('activity_plan_seasons')
+    .select('id, activity_plan_id')
+    .eq('id', seasonId)
+    .single();
+  if (!existing || existing.activity_plan_id !== planId) return { ok: false, code: 'SEASON_NOT_FOUND' };
+
+  const { error } = await supabase
+    .from('activity_plan_seasons')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', seasonId);
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_season_delete',
+    metadata: { planId, guideId, seasonId },
+  });
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────

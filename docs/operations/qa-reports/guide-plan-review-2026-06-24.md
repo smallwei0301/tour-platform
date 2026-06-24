@@ -56,5 +56,39 @@
 - 方案的「下架／封存（active→inactive/archived）」仍為管理者操作；導遊端僅新增＋編輯內容＋送審。若要開放導遊自助下架，建議獨立小 PR（涉及售票中方案的退場流程）。
 - DB migration `20260624010000_guide_plan_review_overlay.sql` 需於部署環境套用（含 rollback 檔）。`pending_new_plan` 預設 false，對既有方案無影響。
 
+---
+
+## Phase 2.5 增補：站點時間表（送審）+ 季節供應（即時）
+
+- **增補時間**：2026-06-24 16:30 Asia/Taipei
+- **範圍**：依 owner 拍板，把方案的兩項進階欄位開放給導遊：
+  1. **站點時間表（`plan_itinerary`）**：方案內容 → **走現有方案審核**（與價格/內容同一送審流程）。
+  2. **季節供應（`activity_plan_seasons` + `activity_plans.is_year_round`）**：方案的可預約日期窗口，性質同場次/時間管理 → **即時生效、不送審**。`is_year_round` 因此移出送審白名單，改由即時的季節管理掌控。
+
+### 逐條 AC 證據（增補）
+| # | 驗收項目 | 結果 | 證據 |
+|---|---------|------|------|
+| 10 | 站點時間表：導遊在方案編輯器新增站點（icon/站名/時長/說明/照片）→ 隨方案送審；後端白名單＋`buildPlanColumnPatch` 已支援 | ✅ PASS | E2E `e2e/guide-plan-seasons-itinerary.spec.ts` →「新增站點並送審，PUT 帶 plan_itinerary」passed（真實瀏覽器，斷言 PUT body `plan_itinerary[0].title`） |
+| 11 | 季節供應即時：全年供應開關 + 季節窗口 CRUD，皆即時呼叫 API、不經審核 | ✅ PASS | 同 spec「新增季節窗口與切換全年供應，皆即時呼叫對應 API」passed |
+| 12 | season gateway/route 接線：ownership(assertPlanEditable)、CSRF、驗證器複用、soft-delete、audit、is_year_round 移出白名單 | ✅ PASS | `tests/api/guide-plan-seasons-contract.test.mjs` → 5/5 綠 |
+| 13 | 型別 / Lint / 全套單測 / 建置無回歸 | ✅ PASS | typecheck 0 error；lint 0 error；`npm test` 3757 pass / 0 fail / 3 skip；`npm run build` 成功，新 season routes 入 manifest |
+| 14 | 全套 guide E2E 無回歸 | ✅ PASS | `guide-activity-review`(3) + `guide-plan-review`(4) + `guide-plan-seasons-itinerary`(2) → **9/9 真實瀏覽器 passed** |
+
+### 新增路由（建置 manifest）
+```
+ƒ /api/guide/activities/[id]/plans/[planId]/seasons
+ƒ /api/guide/activities/[id]/plans/[planId]/seasons/[seasonId]
+ƒ /guide/activities/[id]/plans/[planId]/seasons        2.86 kB
+```
+
+### 設計重點
+- 站點時間表複用既有 `ImageUpload`（`uploadApiBase="/api/guide/activities"`、type=gallery 3:2），每站一張卡可增刪；空站點於送審時過濾。
+- 季節供應採與場次一致的「即時自助」：gateway 全部先過 `assertPlanEditable`（ownership + archived 擋），驗證複用 `activity-plan-seasons.ts` 既有 validators，刪除為 soft-delete（`is_active=false`），全程寫 audit（`plan_season_create/update/delete`、`plan_year_round_set`）。
+- `is_year_round` 移出送審白名單，避免「即時季節管理」與「送審改方案」兩條路徑改同一欄位造成衝突。
+
+### Phase 2.5 已知限制
+- 季節窗口的「啟用/停用」未在導遊 UI 單獨開放（建立=啟用、移除=soft-delete），與 admin 的 is_active 切換等價；如需暫停而不刪除，後續再加。
+- 季節窗口的「編輯」gateway/route（PUT [seasonId]）已實作並測試，導遊 UI 目前以「移除＋重建」操作為主，編輯表單可後續補上。
+
 ## 不含
 本報告不含任何密鑰／cookie／token／service-role key／完整付款 payload／未遮蔽 PII。
