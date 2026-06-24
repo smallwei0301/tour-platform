@@ -20,7 +20,7 @@ const PAGES_WITH_BREADCRUMBS = [
   '[locale]/contact/page.tsx',
   '[locale]/faq/page.tsx',
   '[locale]/why-choose-us/page.tsx',
-  'guides/[slug]/page.tsx',
+  '[locale]/guides/[slug]/page.tsx',
   '[locale]/blog/[slug]/page.tsx',
   'experiences/[slug]/page.tsx',
   'booking/[activityId]/page.tsx',

@@ -2,12 +2,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getGuideBySlugDb } from '../../../src/lib/db.mjs';
-import { buildActivityHref } from '../../../src/lib/activity-url';
-import { GuideAvatar } from '../../../src/components/shared/GuideAvatar';
-import { ActivityHero } from '../../../src/components/shared/ActivityHero';
-import { GalleryImage } from '../../../src/components/shared/GalleryImage';
-import { GuideContactQASection } from '../../../src/components/guide/GuideContactQASection';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { getGuideBySlugDb } from '../../../../src/lib/db.mjs';
+import { buildActivityHref } from '../../../../src/lib/activity-url';
+import { GuideAvatar } from '../../../../src/components/shared/GuideAvatar';
+import { ActivityHero } from '../../../../src/components/shared/ActivityHero';
+import { GalleryImage } from '../../../../src/components/shared/GalleryImage';
+import { GuideContactQASection } from '../../../../src/components/guide/GuideContactQASection';
 
 // On-demand revalidation（非定時 ISR）：導遊在後台儲存後，
 // /api/guide/profile 會 revalidatePath(`/guides/<slug>`) 精準失效本頁，
@@ -30,34 +31,37 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ locale: string; slug: string }> }
 ): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
+  const t = await getTranslations({ locale, namespace: 'guideProfile' });
   const guide = await getGuideBySlugDb(slug).catch((): null => null);
   const name = guide?.displayName ?? slug;
-  const description = guide?.bio ? guide.bio.slice(0, 140).replace(/\n/g, ' ') : `${name} 是 Midao 祕島平台上的在地導遊，提供台灣深度旅遊體驗。`;
+  const description = guide?.bio ? guide.bio.slice(0, 140).replace(/\n/g, ' ') : t('metaDescFallback', { name });
   return {
-    title: `${name} | 導遊 | Midao 祕島`,
+    title: t('metaTitle', { name }),
     description,
     openGraph: {
-      title: `${name} | Midao 祕島`,
+      title: t('metaTitleShort', { name }),
       description,
       type: 'profile',
       images: guide?.profilePhotoUrl
         ? [{ url: guide.profilePhotoUrl }]
-        : [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: `${name} | Midao 祕島` }],
+        : [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: t('metaTitleShort', { name }) }],
     },
     twitter: {
       card: 'summary',
-      title: `${name} | Midao 祕島`,
+      title: t('metaTitleShort', { name }),
       description,
       ...(guide?.profilePhotoUrl ? { images: [guide.profilePhotoUrl] } : {}),
     },
   };
 }
 
-export default async function GuideProfilePage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function GuideProfilePage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'guideProfile' });
   const guide = await getGuideBySlugDb(slug).catch((): null => null);
   if (!guide) return notFound();
 
@@ -98,7 +102,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
     <main className="tp-container tp-guide-detail" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guideJsonLd) }} />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
-        <Link href="/">首頁</Link> &gt; <Link href="/guides">認識導遊</Link> &gt; {guide.displayName}
+        <Link href="/">{t('breadcrumbHome')}</Link> &gt; <Link href="/guides">{t('breadcrumbGuides')}</Link> &gt; {guide.displayName}
       </div>
       {/* Hero cover with placeholder fallback */}
       <div style={{ marginTop: 12 }}>
@@ -123,7 +127,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
             <div>
               <h1 style={{ margin: 0 }}>{guide.displayName}</h1>
               <p style={{ margin: '4px 0', color: 'var(--tp-muted)' }}>
-                ✅ 已驗證 · ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則評價，{guide.serviceCount || 0} 次服務） · 📍 {guide.region}
+                ✅ {t('verified')} · ⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}{t('statsLine', { reviews: guideReviews.length, services: guide.serviceCount || 0 })} · 📍 {guide.region}
                 {guide.languages?.length > 0 && ` · 🌍 ${guide.languages.slice(0, 4).join('、')}`}
               </p>
               {guide.specialties?.length > 0 && (
@@ -138,14 +142,14 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
 
           {/* About */}
           <section className="tp-detail-block" style={{ marginBottom: 28 }}>
-            <h2>關於我</h2>
+            <h2>{t('about')}</h2>
             <p style={{ lineHeight: 1.8, whiteSpace: 'pre-line' }}>{guide.bio}</p>
           </section>
 
           {/* Verification badges */}
           {guide.verificationBadges?.length > 0 && (
             <section className="tp-detail-block" style={{ marginBottom: 28 }}>
-              <h2>認證與資歷</h2>
+              <h2>{t('credentials')}</h2>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {guide.verificationBadges.map((b: string) => (
                   <span key={b} style={{ background: '#e6f4ed', color: 'var(--tp-gold-strong)', padding: '6px 14px', borderRadius: 10, fontSize: 13 }}>✅ {b}</span>
@@ -156,11 +160,11 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
 
           {/* Gallery */}
           <section className="tp-detail-block" style={{ marginBottom: 28 }}>
-            <h2>照片集</h2>
+            <h2>{t('gallery')}</h2>
             {guide.galleryUrls?.length > 0 ? (
               <div className="tp-guide-profile-gallery" style={{ display: 'grid', gap: 8 }}>
                 {guide.galleryUrls.map((url: string, i: number) => (
-                  <GalleryImage key={i} url={url} alt={`${guide.displayName} 照片 ${i + 1}`} />
+                  <GalleryImage key={i} url={url} alt={t('galleryAlt', { name: guide.displayName, i: i + 1 })} />
                 ))}
               </div>
             ) : (
@@ -173,7 +177,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
                 color: '#9ca3af',
               }}>
                 <span style={{ fontSize: 32, display: 'block', marginBottom: 8 }}>📷</span>
-                <span style={{ fontSize: 14 }}>暫無照片</span>
+                <span style={{ fontSize: 14 }}>{t('noPhotos')}</span>
               </div>
             )}
           </section>
@@ -181,7 +185,7 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
           {/* Activities */}
           {guideActivities.length > 0 && (
             <section className="tp-detail-block" style={{ marginBottom: 28 }}>
-              <h2>我的行程</h2>
+              <h2>{t('myTours')}</h2>
               <div className="tp-card-grid tp-card-grid-activities">
                 {guideActivities.map((a: any) => (
                   <article className="tp-card" key={a.slug}>
@@ -190,8 +194,8 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
                     )}
                     <h3>{a.title}</h3>
                     <p>📍 {a.region}</p>
-                    <strong style={{ color: 'var(--tp-gold-strong)' }}>起價 NT${a.priceTwd?.toLocaleString()} / 人</strong>
-                    <Link className="tp-link" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}>查看行程 →</Link>
+                    <strong style={{ color: 'var(--tp-gold-strong)' }}>{t('priceFrom', { price: a.priceTwd?.toLocaleString() ?? '0' })}</strong>
+                    <Link className="tp-link" href={buildActivityHref({ slug: a.slug, region: a.region, regionSlug: a.regionSlug })}>{t('viewTour')}</Link>
                   </article>
                 ))}
               </div>
@@ -201,8 +205,8 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
           {/* Reviews */}
           {guideReviews.length > 0 && (
             <section className="tp-detail-block">
-              <h2>旅客評價</h2>
-              <p style={{ marginBottom: 14 }}>⭐ {guide.ratingAvg?.toFixed(1) || '5.0'} · 共 {guideReviews.length} 則評價</p>
+              <h2>{t('reviewsHeading')}</h2>
+              <p style={{ marginBottom: 14 }}>{t('reviewsSummary', { score: guide.ratingAvg?.toFixed(1) || '5.0', n: guideReviews.length })}</p>
               <div style={{ display: 'grid', gap: 12 }}>
                 {guideReviews.map((r: any) => (
                   <div key={r.id} style={{ background: 'var(--tp-bg-soft)', border: '1px solid var(--tp-border)', borderRadius: 10, padding: 14 }}>
@@ -231,9 +235,9 @@ export default async function GuideProfilePage({ params }: { params: Promise<{ s
               />
             </div>
             <p style={{ fontSize: 20, fontWeight: 700, marginTop: 8 }}>{guide.displayName}</p>
-            <p style={{ color: 'var(--tp-muted)' }}>⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}（{guideReviews.length} 則）</p>
+            <p style={{ color: 'var(--tp-muted)' }}>⭐ {guide.ratingAvg?.toFixed(1) || '5.0'}{t('sidebarReviews', { n: guideReviews.length })}</p>
             <GuideContactQASection guideId={guide.id} guideName={guide.displayName} />
-            <Link className="tp-btn tp-btn-ghost" href="/activities" style={{ width: '100%', display: 'block', marginTop: 8 }}>查看行程</Link>
+            <Link className="tp-btn tp-btn-ghost" href="/activities" style={{ width: '100%', display: 'block', marginTop: 8 }}>{t('viewActivitiesBtn')}</Link>
           </div>
         </aside>
       </section>

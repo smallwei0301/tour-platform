@@ -21,7 +21,7 @@ import { dirname, resolve } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const read = (rel) => readFileSync(resolve(here, rel), 'utf8');
 
-const guidePageSrc = read('../../app/guides/[slug]/page.tsx');
+const guidePageSrc = read('../../app/[locale]/guides/[slug]/page.tsx');
 const componentSrc = read('../../src/components/guide/GuideContactQASection.tsx');
 const guideQaRouteSrc = read('../../app/api/guide/qa/route.ts');
 const guideQaIdRouteSrc = read('../../app/api/guide/qa/[id]/route.ts');

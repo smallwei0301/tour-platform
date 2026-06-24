@@ -26,7 +26,7 @@ const PROFILE_PAGE = join(APP_ROOT, 'app/guide/profile/page.tsx');
 const LOGIN_PAGE = join(APP_ROOT, 'app/guide/login/page.tsx');
 const PROMOTE_ROUTE = join(APP_ROOT, 'app/api/admin/guides/promote/route.ts');
 const LIST_PAGE = join(APP_ROOT, 'app/[locale]/guides/page.tsx');
-const DETAIL_PAGE = join(APP_ROOT, 'app/guides/[slug]/page.tsx');
+const DETAIL_PAGE = join(APP_ROOT, 'app/[locale]/guides/[slug]/page.tsx');
 const MIGRATION = join(REPO_ROOT, 'supabase/migrations/20260611_guide_profiles_is_published.sql');
 
 // ---------- migration ----------

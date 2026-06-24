@@ -44,9 +44,11 @@ function isLocalizedPublicPath(rest: string): boolean {
   return rest === '/'
     || rest === '/activities' || rest.startsWith('/activities/')
     || rest === '/theme' || rest.startsWith('/theme/')
-    // /guides 只有列表頁搬進 [locale]；/guides/[slug] 與 /shop 仍在 root（中文），
-    // 故僅 exact match，避免 /guides/xxx 被導去不存在的 [locale]/guides/[slug] 而 404。
+    // /guides 列表頁與 /guides/[slug] 個人頁已搬進 [locale]；但 /guides/[slug]/shop
+    // （app 化的訂房流程）仍在 root。故 localize 列表（exact）與「只有一段 slug」的
+    // 個人頁（`/guides/<slug>`），但排除任何更深的 shop 子路徑。
     || rest === '/guides'
+    || /^\/guides\/[^/]+$/.test(rest)
     // 純靜態資訊頁（單頁、無動態子路由）。
     || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact'
     // blog（含 [slug]）與 legal（privacy/terms/refund）整棵子樹搬進 [locale]。
@@ -432,6 +434,7 @@ export const config = {
     '/activities/:path*',
     '/theme/:path*',
     '/guides',
+    '/guides/:slug',
     '/about',
     '/why-choose-us',
     '/faq',

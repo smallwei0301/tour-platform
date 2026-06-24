@@ -91,6 +91,27 @@
     "serviceCount": "{n} 次服務",
     "viewProfile": "查看導遊簡介 →"
   },
+  "guideProfile": {
+    "metaTitle": "{name} | 導遊 | Midao 祕島",
+    "metaTitleShort": "{name} | Midao 祕島",
+    "metaDescFallback": "{name} 是 Midao 祕島平台上的在地導遊，提供台灣深度旅遊體驗。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbGuides": "認識導遊",
+    "verified": "已驗證",
+    "statsLine": "（{reviews} 則評價，{services} 次服務）",
+    "about": "關於我",
+    "credentials": "認證與資歷",
+    "gallery": "照片集",
+    "noPhotos": "暫無照片",
+    "galleryAlt": "{name} 照片 {i}",
+    "myTours": "我的行程",
+    "priceFrom": "起價 NT${price} / 人",
+    "viewTour": "查看行程 →",
+    "reviewsHeading": "旅客評價",
+    "reviewsSummary": "⭐ {score} · 共 {n} 則評價",
+    "sidebarReviews": "（{n} 則）",
+    "viewActivitiesBtn": "查看行程"
+  },
   "seo": {
     "siteName": "Midao 祕島",
     "titleTemplate": "%s | Midao 祕島 — 台灣在地導遊",

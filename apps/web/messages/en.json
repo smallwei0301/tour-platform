@@ -91,6 +91,27 @@
     "serviceCount": "{n} services",
     "viewProfile": "View guide profile →"
   },
+  "guideProfile": {
+    "metaTitle": "{name} | Guide | Midao 祕島",
+    "metaTitleShort": "{name} | Midao 祕島",
+    "metaDescFallback": "{name} is a local guide on Midao, offering in-depth travel experiences across Taiwan.",
+    "breadcrumbHome": "Home",
+    "breadcrumbGuides": "Meet the Guides",
+    "verified": "Verified",
+    "statsLine": "({reviews} reviews, {services} services)",
+    "about": "About me",
+    "credentials": "Certifications & credentials",
+    "gallery": "Photos",
+    "noPhotos": "No photos yet",
+    "galleryAlt": "{name} photo {i}",
+    "myTours": "My tours",
+    "priceFrom": "From NT${price} / person",
+    "viewTour": "View tour →",
+    "reviewsHeading": "Traveler reviews",
+    "reviewsSummary": "⭐ {score} · {n} reviews",
+    "sidebarReviews": "({n})",
+    "viewActivitiesBtn": "View tours"
+  },
   "seo": {
     "siteName": "Midao 祕島",
     "titleTemplate": "%s | Midao — Local Guides in Taiwan",
