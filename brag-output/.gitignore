@@ -1,0 +1,9 @@
+# Rendered output — re-render with `npx hyperframes render` (see README.md)
+brag.mp4
+*.mp4
+
+# Vendored / generated assets (fonts ~17MB, images dup public/, synth audio, gsap) — see README.md
+composition/assets/
+
+# Render scratch
+work-*/
