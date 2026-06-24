@@ -41,7 +41,7 @@ const SHARE_THUMBNAIL_FILES = [
   'app/[locale]/activities/page.tsx',
   'app/experiences/[slug]/page.tsx',
   'app/guide/apply/layout.tsx',
-  'app/blog/page.tsx',
+  'app/[locale]/blog/page.tsx',
 ];
 
 async function readSrc(rel) {

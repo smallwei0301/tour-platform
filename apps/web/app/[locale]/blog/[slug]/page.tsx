@@ -2,7 +2,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
+// Blog articles are user-authored content — kept in Traditional Chinese (same policy as activity names).
 const articles: Record<string, { title: string; category: string; date: string; readTime: string; imageUrl: string; content: string }> = {
   'why-private-guide': {
     title: '為什麼在台灣旅行要找私人導遊，而不是跟團？',
@@ -83,38 +85,45 @@ export function generateStaticParams() {
 }
 
 export async function generateMetadata(
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ locale: string; slug: string }> }
 ): Promise<Metadata> {
-  const { slug } = await params;
+  const { locale, slug } = await params;
   const article = articles[slug];
   if (!article) {
     notFound();
   }
+  const t = await getTranslations({ locale, namespace: 'blog' });
+  // Title/description derive from the post's Chinese content (user-authored); only the brand suffix is localized.
+  const title = `${article.title} ${t('metaTitleSuffix')}`;
+  const description = article.content.slice(0, 120).replace(/\n/g, ' ');
   return {
-    title: `${article.title} | Midao 祕島`,
-    description: article.content.slice(0, 120).replace(/\n/g, ' '),
+    title,
+    description,
     openGraph: {
-      title: `${article.title} | Midao 祕島`,
-      description: article.content.slice(0, 120).replace(/\n/g, ' '),
-      images: article.imageUrl ? [{ url: article.imageUrl, width: 1200, height: 630, alt: `${article.title} — 旅遊指南封面圖` }] : [],
+      title,
+      description,
+      images: article.imageUrl ? [{ url: article.imageUrl, width: 1200, height: 630, alt: `${article.title} ${t('coverAltSuffix')}` }] : [],
       type: 'article',
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${article.title} | Midao 祕島`,
-      description: article.content.slice(0, 120).replace(/\n/g, ' '),
+      title,
+      description,
       ...(article.imageUrl ? { images: [article.imageUrl] } : {}),
     },
   };
 }
 
-export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { slug } = await params;
+export default async function BlogPostPage({ params }: { params: Promise<{ locale: string; slug: string }> }) {
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const article = articles[slug];
 
   if (!article) {
     notFound();
   }
+
+  const t = await getTranslations({ locale, namespace: 'blog' });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const articleJsonLd = {
@@ -150,14 +159,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
       <div className="tp-breadcrumb" style={{ marginTop: 18 }}>
-        <Link href="/">首頁</Link> &gt; <Link href="/blog">旅遊指南</Link> &gt; {article.title}
+        <Link href="/">{t('breadcrumbHome')}</Link> &gt; <Link href="/blog">{t('breadcrumbBlog')}</Link> &gt; {article.title}
       </div>
 
       <Image src={article.imageUrl} alt={article.title} priority style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: 14, marginTop: 12 }} width={1200} height={675} />
 
       <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12, display: 'inline-block', marginTop: 16 }}>{article.category}</span>
       <h1 style={{ margin: '12px 0 6px' }}>{article.title}</h1>
-      <p style={{ color: 'var(--tp-muted)', fontSize: 14, marginBottom: 24 }}>{article.date} · 閱讀約 {article.readTime}</p>
+      <p style={{ color: 'var(--tp-muted)', fontSize: 14, marginBottom: 24 }}>{article.date} · {t('readTimePrefix')} {article.readTime}</p>
 
       <div style={{ lineHeight: 1.9, fontSize: 16, color: 'var(--tp-text)' }}>
         {article.content.split('\n\n').map((para, i) => {
@@ -176,8 +185,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
       {/* CTA */}
       <div style={{ background: 'var(--tp-bg-soft)', border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20, marginTop: 32, textAlign: 'center' }}>
-        <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>🗺️ 準備好出發了嗎？</p>
-        <Link href="/activities" className="tp-btn tp-btn-primary" style={{ padding: '10px 24px' }}>探索行程 →</Link>
+        <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px' }}>{t('ctaTitle')}</p>
+        <Link href="/activities" className="tp-btn tp-btn-primary" style={{ padding: '10px 24px' }}>{t('ctaButton')}</Link>
       </div>
     </main>
   );

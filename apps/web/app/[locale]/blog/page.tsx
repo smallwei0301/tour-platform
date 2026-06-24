@@ -1,23 +1,29 @@
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 
-export const metadata: Metadata = {
-  title: '旅遊指南 | Midao 祕島',
-  description: '台灣各地旅遊攻略、導遊推薦、活動體驗分享。從柴山探洞到花蓮溯溪，讓我們帶你深度認識台灣。',
-  openGraph: {
-    title: '旅遊指南 | Midao 祕島',
-    description: '台灣各地旅遊攻略與在地體驗分享。',
-    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '台灣旅遊指南 | Midao 祕島' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: '旅遊指南 | Midao 祕島',
-    description: '台灣各地旅遊攻略與在地體驗分享。',
-    images: ['/images/og-default.png'],
-  },
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'blog' });
+  return {
+    title: t('metaTitle'),
+    description: t('metaDescription'),
+    openGraph: {
+      title: t('ogTitle'),
+      description: t('ogDescription'),
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: t('ogImageAlt') }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: t('ogTitle'),
+      description: t('ogDescription'),
+      images: ['/images/og-default.png'],
+    },
+  };
+}
 
+// Blog articles are user-authored content — kept in Traditional Chinese (same policy as activity names).
 const posts = [
   {
     slug: 'why-private-guide',
@@ -74,15 +80,19 @@ const blogJsonLd = {
   ],
 };
 
-export default function BlogPage() {
+export default async function BlogPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: 'blog' });
+
   const featured = posts.find((p) => p.featured);
   const rest = posts.filter((p) => !p.featured);
 
   return (
     <main className="tp-container" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(blogJsonLd) }} />
-      <div className="tp-breadcrumb" style={{ marginTop: 18 }}><Link href="/">首頁</Link> &gt; 旅遊指南</div>
-      <h1>旅遊指南</h1>
+      <div className="tp-breadcrumb" style={{ marginTop: 18 }}><Link href="/">{t('breadcrumbHome')}</Link> &gt; {t('breadcrumbBlog')}</div>
+      <h1>{t('heading')}</h1>
 
       {/* Featured */}
       {featured && (
@@ -93,7 +103,7 @@ export default function BlogPage() {
               <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12 }}>{featured.category}</span>
               <h2 style={{ margin: '12px 0 8px' }}>{featured.title}</h2>
               <p style={{ color: 'var(--tp-muted)', lineHeight: 1.7 }}>{featured.excerpt}</p>
-              <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{featured.date} · 閱讀約 {featured.readTime}</p>
+              <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{featured.date} · {t('readTimePrefix')} {featured.readTime}</p>
             </div>
           </article>
         </Link>

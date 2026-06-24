@@ -16,16 +16,16 @@ const APP = resolve(__dirname, '../../app');
 
 const PAGES_WITH_BREADCRUMBS = [
   '[locale]/about/page.tsx',
-  'blog/page.tsx',
+  '[locale]/blog/page.tsx',
   '[locale]/contact/page.tsx',
   '[locale]/faq/page.tsx',
   '[locale]/why-choose-us/page.tsx',
   'guides/[slug]/page.tsx',
-  'blog/[slug]/page.tsx',
+  '[locale]/blog/[slug]/page.tsx',
   'experiences/[slug]/page.tsx',
   'booking/[activityId]/page.tsx',
   'guide/apply/page.tsx',
-  'legal/privacy/page.tsx',
+  '[locale]/legal/privacy/page.tsx',
 ];
 
 describe('Global: pages with visual breadcrumbs must have BreadcrumbList JSON-LD', () => {

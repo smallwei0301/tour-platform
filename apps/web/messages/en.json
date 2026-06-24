@@ -808,5 +808,50 @@
     "hoursCardTitle": "⏰ Response time",
     "hoursCardLine1": "General inquiries: 1–2 business days",
     "hoursCardLine2": "Urgent issues (day of activity): within 30 minutes"
+  },
+  "blog": {
+    "metaTitle": "Travel Guide | Midao",
+    "metaDescription": "Travel tips, guide recommendations, and experience stories from across Taiwan. From Chaishan cave exploration to Hualien river tracing, let us help you get to know Taiwan in depth.",
+    "ogTitle": "Travel Guide | Midao",
+    "ogDescription": "Taiwan travel tips and local experience stories.",
+    "ogImageAlt": "Taiwan Travel Guide | Midao",
+    "breadcrumbHome": "Home",
+    "breadcrumbBlog": "Travel Guide",
+    "heading": "Travel Guide",
+    "readTimePrefix": "About",
+    "metaTitleSuffix": "| Midao",
+    "coverAltSuffix": "— Travel Guide cover image",
+    "ctaTitle": "🗺️ Ready to set off?",
+    "ctaButton": "Explore tours →"
+  },
+  "legalPrivacy": {
+    "metaTitle": "Privacy Policy | Midao",
+    "metaDescription": "Midao's personal data protection policy, explaining the scope of data collection, how it is used, and user rights.",
+    "breadcrumbHome": "Home",
+    "breadcrumbLeaf": "Privacy Policy",
+    "heading": "Privacy Policy (Draft)",
+    "para1": "We only collect data within the scope necessary to provide our services (orders, contact details, and payment-related information).",
+    "para2": "All personal data is processed in accordance with relevant Taiwan regulations, and we provide channels for users to request access to and deletion of their data."
+  },
+  "legalTerms": {
+    "metaTitle": "Terms of Service | Midao",
+    "metaDescription": "Midao's terms of service, explaining the nature of the platform, the booking process, and the rights and obligations of travelers.",
+    "breadcrumbHome": "Home",
+    "breadcrumbLeaf": "Terms of Service",
+    "heading": "Terms of Service (Draft)",
+    "para1": "The platform provides local-guide matching and order management services; it is not a travel agency group-tour service.",
+    "para2": "Before booking, users should confirm the itinerary details, cancellation policy, and risk disclosures."
+  },
+  "legalRefund": {
+    "metaTitle": "Refund Policy | Midao",
+    "metaDescription": "Midao's refund policy: full refund 168 hours before departure, 70% refund with more than 72 hours' notice, and free rescheduling for force majeure.",
+    "breadcrumbHome": "Home",
+    "breadcrumbLeaf": "Refund Policy",
+    "heading": "Refund Policy",
+    "para1": "Cancellation 168 hours or more before departure: 100% refund.",
+    "para2": "Cancellation more than 72 hours but less than 168 hours before departure: 70% refund.",
+    "para3": "Cancellation within 72 hours of departure (inclusive): generally non-refundable.",
+    "para4": "Force majeure or cancellation by the organizer: travelers may choose a 100% refund or one free reschedule.",
+    "para5": "Processing fees: the platform does not deduct any additional processing fee from travelers on refunds; such costs are absorbed by the platform."
   }
 }

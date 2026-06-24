@@ -808,5 +808,50 @@
     "hoursCardTitle": "⏰ 回覆時間",
     "hoursCardLine1": "一般詢問：1-2 個工作天",
     "hoursCardLine2": "緊急問題（活動當天）：30 分鐘內"
+  },
+  "blog": {
+    "metaTitle": "旅遊指南 | Midao 祕島",
+    "metaDescription": "台灣各地旅遊攻略、導遊推薦、活動體驗分享。從柴山探洞到花蓮溯溪，讓我們帶你深度認識台灣。",
+    "ogTitle": "旅遊指南 | Midao 祕島",
+    "ogDescription": "台灣各地旅遊攻略與在地體驗分享。",
+    "ogImageAlt": "台灣旅遊指南 | Midao 祕島",
+    "breadcrumbHome": "首頁",
+    "breadcrumbBlog": "旅遊指南",
+    "heading": "旅遊指南",
+    "readTimePrefix": "閱讀約",
+    "metaTitleSuffix": "| Midao 祕島",
+    "coverAltSuffix": "— 旅遊指南封面圖",
+    "ctaTitle": "🗺️ 準備好出發了嗎？",
+    "ctaButton": "探索行程 →"
+  },
+  "legalPrivacy": {
+    "metaTitle": "隱私政策 | Midao 祕島",
+    "metaDescription": "Midao 祕島平台的個人資料保護政策，說明資料蒐集範圍、使用方式與用戶權利。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbLeaf": "隱私政策",
+    "heading": "隱私政策（草案）",
+    "para1": "我們僅在提供服務必要範圍內蒐集資料（訂單、聯絡方式、付款相關資訊）。",
+    "para2": "所有個資處理依台灣相關法規辦理，並提供用戶查詢與刪除申請管道。"
+  },
+  "legalTerms": {
+    "metaTitle": "服務條款 | Midao 祕島",
+    "metaDescription": "Midao 祕島平台服務條款，說明平台性質、預約流程與旅客權利義務。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbLeaf": "服務條款",
+    "heading": "服務條款（草案）",
+    "para1": "平台提供在地導遊媒合與訂單管理服務，非旅行社包團服務。",
+    "para2": "用戶預約前應確認行程內容、取消政策與風險揭露事項。"
+  },
+  "legalRefund": {
+    "metaTitle": "退款政策 | Midao 祕島",
+    "metaDescription": "Midao 祕島退款政策說明：出團前 168 小時全額退款、72 小時以上退 70%，不可抗力免費改期。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbLeaf": "退款政策",
+    "heading": "退款政策",
+    "para1": "出團 168 小時前（含）取消：100% 退款。",
+    "para2": "出團前 超過 72 小時且少於 168 小時取消：70% 退款。",
+    "para3": "出團前 72 小時內（含）取消：原則上不予退款。",
+    "para4": "不可抗力或主辦方取消：旅客可選擇 100% 退款，或 1 次免費改期。",
+    "para5": "手續費：退款時平台不另向旅客扣除手續費，相關費用由平台吸收。"
   }
 }

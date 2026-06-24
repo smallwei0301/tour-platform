@@ -48,7 +48,10 @@ function isLocalizedPublicPath(rest: string): boolean {
     // 故僅 exact match，避免 /guides/xxx 被導去不存在的 [locale]/guides/[slug] 而 404。
     || rest === '/guides'
     // 純靜態資訊頁（單頁、無動態子路由）。
-    || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact';
+    || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact'
+    // blog（含 [slug]）與 legal（privacy/terms/refund）整棵子樹搬進 [locale]。
+    || rest === '/blog' || rest.startsWith('/blog/')
+    || rest === '/legal' || rest.startsWith('/legal/');
 }
 
 function pickToken(req: NextRequest): string {
@@ -433,6 +436,8 @@ export const config = {
     '/why-choose-us',
     '/faq',
     '/contact',
+    '/blog/:path*',
+    '/legal/:path*',
     '/booking/:path*',
     '/checkout/:path*',
     '/order/success/:path*',
