@@ -4128,6 +4128,8 @@ export async function getActivityReviewDetailDb(activityId) {
  *              清空 pending、review_state 歸 null。上架仍由既有 status 流程處理（不在此自動上架）。
  *   - reject：保留 pending_changes，review_state → changes_requested、寫入退回備註。
  * 只能對 review_state='pending' 的行程操作。
+ * @param {string} activityId
+ * @param {{ action: 'approve'|'reject', adminNote?: string|null }} [opts]
  */
 export async function resolveActivityReviewDb(activityId, { action, adminNote = null } = {}) {
   if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
