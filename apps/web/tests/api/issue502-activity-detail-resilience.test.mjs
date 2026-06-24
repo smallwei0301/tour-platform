@@ -458,7 +458,7 @@ test('activity routes should avoid dynamic-segment name conflict and keep runtim
   assert.equal(compatSrc.includes('unstable_cache('), false);
   assert.equal(canonicalSrc.includes('generateMetadata'), true);
   assert.equal(canonicalSrc.includes('getActivityBySlugDb('), true);
-  assert.equal(canonicalSrc.includes('const { slug } = await params;'), true);
+  assert.equal(canonicalSrc.includes('const { locale, slug } = await params;'), true);
   assert.equal(canonicalSrc.includes('generateMetadata') && canonicalSrc.includes('getActivityBySlugDb('), true);
   assert.equal(compatSrc.includes('params }: { params: Promise<{ region: string }> }'), true);
   assert.equal(compatSrc.includes('const { region } = await params;'), true);

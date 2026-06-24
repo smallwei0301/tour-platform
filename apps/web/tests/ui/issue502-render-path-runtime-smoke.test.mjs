@@ -13,6 +13,30 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const require = createRequire(import.meta.url);
 
+// #multilingual：詳情頁改用 next-intl server API（getTranslations/setRequestLocale）。
+// render-path 隔離測試在 VM 沙箱內渲染頁面、不在 next-intl request context 中，故 mock
+// 掉這兩支：用真實 zh-Hant catalog 做最小 ICU 取值＋`{x}` 內插（metadata 標題等需要
+// 內插出 DB 標題），t.raw 回原始陣列／物件，setRequestLocale no-op。
+const intlMessages = require('../../messages/zh-Hant.json');
+function lookupMessage(namespace, key) {
+  const node = `${namespace}.${key}`.split('.').reduce((o, k) => (o == null ? o : o[k]), intlMessages);
+  return node;
+}
+function makeT(namespace = 'activityDetail') {
+  const t = (key, params) => {
+    let s = lookupMessage(namespace, key);
+    if (typeof s !== 'string') return key;
+    if (params) for (const [k, v] of Object.entries(params)) s = s.split(`{${k}}`).join(String(v));
+    return s;
+  };
+  t.raw = (key) => lookupMessage(namespace, key);
+  return t;
+}
+const nextIntlServerMock = {
+  getTranslations: async (opts = {}) => makeT(opts.namespace),
+  setRequestLocale: () => {},
+};
+
 function transpileTsxToCjs(source, fileName) {
   const out = ts.transpileModule(source, {
     compilerOptions: {
@@ -109,6 +133,7 @@ test('GH-502 render-path isolation: module import + metadata + component render 
 
   const mockMap = {
     'next/navigation': nextNavigationMock,
+    'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }),
@@ -216,6 +241,7 @@ test('GH-502 probe safety: production-like env must not serve fake probe activit
 
   const mockMap = {
     'next/navigation': nextNavigationMock,
+    'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async () => null,
@@ -315,6 +341,7 @@ test('GH-502 render-path isolation: non-probe render path uses DB result and doe
 
   const mockMap = {
     'next/navigation': nextNavigationMock,
+    'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
     '../../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }),

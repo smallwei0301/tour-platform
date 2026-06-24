@@ -12,6 +12,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const require = createRequire(import.meta.url);
 
+// #multilingual：詳情頁改用 next-intl server API。VM 沙箱渲染不在 request context，
+// mock 掉 getTranslations/setRequestLocale（用真實 zh-Hant catalog 做最小取值＋內插）。
+const intlMessages = require('../../messages/zh-Hant.json');
+function makeIntlT(namespace = 'activityDetail') {
+  const lookup = (key) => `${namespace}.${key}`.split('.').reduce((o, k) => (o == null ? o : o[k]), intlMessages);
+  const t = (key, params) => {
+    let s = lookup(key);
+    if (typeof s !== 'string') return key;
+    if (params) for (const [k, v] of Object.entries(params)) s = s.split(`{${k}}`).join(String(v));
+    return s;
+  };
+  t.raw = lookup;
+  return t;
+}
+const nextIntlServerMock = {
+  getTranslations: async (opts = {}) => makeIntlT(opts.namespace),
+  setRequestLocale: () => {},
+};
+
 function transpileTsxToCjs(source, fileName) {
   const out = ts.transpileModule(source, {
     compilerOptions: {
@@ -70,6 +89,7 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
   const compatNever = createNeverResolving();
 
   const mockMap = {
+    'next-intl/server': nextIntlServerMock,
     'next/navigation': {
       notFound: () => {
         throw new Error('NOT_FOUND_CALLED');

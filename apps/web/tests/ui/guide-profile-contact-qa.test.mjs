@@ -94,9 +94,11 @@ test('導遊後台對 sentinel 顯示「導遊頁面」而非行程 ID', () => {
 });
 
 test('行程詳情頁「詢問導遊」仍是錨定 #section-qa 的連結（不退化）', () => {
+  // #multilingual：可見文字「詢問導遊」已抽進 messages 的 activityDetail.askGuide；
+  // 此處改驗結構契約 —— #section-qa 錨點連結 + t('askGuide') 仍在。
   assert.match(
     activityPageSrc,
-    /<a[^>]*href="#section-qa"[\s\S]*?詢問導遊/,
-    '行程詳情頁應維持 <a href="#section-qa"> 錨點連結',
+    /<a[^>]*href="#section-qa"[\s\S]*?t\('askGuide'\)/,
+    '行程詳情頁應維持 <a href="#section-qa"> 錨點連結（文字改用 t(\'askGuide\')）',
   );
 });
