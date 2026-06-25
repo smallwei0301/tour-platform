@@ -608,6 +608,49 @@ export async function sendRescheduleDecisionNotice(data: RescheduleDecisionNotic
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// 三種預約模式 — request plan 導遊審核結果通知（先審核後付款）
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface BookingApprovalNoticeData {
+  to: string;
+  activityTitle: string;
+  contactName?: string;
+  orderId?: string;
+  note?: string;
+}
+
+/** 導遊審核通過 → 通知旅客前往付款。 */
+export async function sendBookingApprovalApproved(data: BookingApprovalNoticeData): Promise<EmailDeliveryResult> {
+  const subject = `預約已通過審核，請完成付款 — ${data.activityTitle}`;
+  const payUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/me/orders`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">導遊已確認你的預約 ✅</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      嗨 ${data.contactName || '旅客'}，「${data.activityTitle}」的預約申請已通過導遊審核。
+      請於時限內完成付款以確認名額。
+    </p>
+    <a href="${payUrl}"
+       style="display:inline-block;background:#0f766e;color:#fff;font-weight:700;padding:10px 18px;border-radius:8px;text-decoration:none;">
+      前往付款 →
+    </a>
+  `);
+  return sendEmailWithContract({ fn: 'sendBookingApprovalApproved', to: data.to, subject, html, orderId: data.orderId });
+}
+
+/** 導遊婉拒 → 通知旅客。 */
+export async function sendBookingApprovalRejected(data: BookingApprovalNoticeData): Promise<EmailDeliveryResult> {
+  const subject = `預約申請未能成立 — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">預約申請未能成立</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      嗨 ${data.contactName || '旅客'}，很抱歉，「${data.activityTitle}」這次的預約申請未能成立${data.note ? `（${data.note}）` : ''}。
+      這筆申請尚未付款，不會產生任何費用，歡迎再挑選其他日期或行程。
+    </p>
+  `);
+  return sendEmailWithContract({ fn: 'sendBookingApprovalRejected', to: data.to, subject, html, orderId: data.orderId });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // #1411 — 訂單留言通知（交易類，不受行銷 opt-out 影響）
 // ─────────────────────────────────────────────────────────────────────────────
 

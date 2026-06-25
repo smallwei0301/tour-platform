@@ -134,6 +134,8 @@ test('issue787 behavior: status-null formal plan legacy_plan_id fallback returns
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
     { terminal: 'in', table: 'bookings', data: [] },
+    // scheduled 方案：available-slots 會列出固定場次（此測試聚焦 plan 解析，給空清單即可）。
+    { terminal: 'or', table: 'activity_schedules', data: [] },
   ]);
 
   const response = await getAvailableSlots(
@@ -184,6 +186,8 @@ test('issue838 behavior: full-day-complete falls back to same-activity derived s
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
     { terminal: 'in', table: 'bookings', data: [] },
+    // scheduled 方案：available-slots 會列出固定場次（此測試聚焦 plan 解析，給空清單即可）。
+    { terminal: 'or', table: 'activity_schedules', data: [] },
   ]);
 
   const response = await getAvailableSlots(
@@ -239,7 +243,7 @@ test('issue787 behavior: ambiguous active plans returns 200 empty slots with AMB
   supabase.assertAllConsumed();
 });
 
-test('issue787 behavior: stale scheduleId is ignored and falls back to date-range availability generation', async () => {
+test('issue787 behavior: stale scheduleId on a scheduled plan lists the plan fixed sessions (empty when none open)', async () => {
   const activityId = '11111111-1111-1111-1111-111111111111';
   const scheduleId = '22222222-2222-2222-2222-222222222222';
   const planId = '33333333-3333-4333-8333-333333333333';
@@ -252,6 +256,8 @@ test('issue787 behavior: stale scheduleId is ignored and falls back to date-rang
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
     { terminal: 'in', table: 'bookings', data: [] },
+    // scheduled 方案無 selectedSchedule → 改列出固定場次（此處無開放場次，回空清單）。
+    { terminal: 'or', table: 'activity_schedules', data: [] },
   ]);
 
   const response = await getAvailableSlots(

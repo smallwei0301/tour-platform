@@ -1,5 +1,12 @@
 const OVERRIDE_TABLE = 'guide_slot_conflict_overrides';
-const BOOKING_OVERRIDE_COLUMNS = new Set(['conflict_override_id', 'conflict_override_snapshot']);
+// Optional booking columns the draft insert can gracefully drop when the
+// production schema lags behind a migration (deploy-ordering safety). Includes
+// the conflict-override columns and guide_approval_status (三種預約模式).
+const BOOKING_OVERRIDE_COLUMNS = new Set([
+  'conflict_override_id',
+  'conflict_override_snapshot',
+  'guide_approval_status',
+]);
 
 function errorMessage(error) {
   return String(error?.message || '');

@@ -3,14 +3,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { ResponsiveTable, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
+import { csrfHeaders, ensureCsrfToken } from '../../../src/lib/csrf-client';
 
+// 三種預約模式：'pending_approval' 是 request plan 的「待審核」分頁，資料源與其他分頁
+// 不同（查 bookings 而非 orders），故以 sentinel value 區分渲染。
+const PENDING_APPROVAL_TAB = 'pending_approval';
 const BOOKINGS_STATUS_TABS = [
   { value: '', label: '全部' },
+  { value: PENDING_APPROVAL_TAB, label: '待審核' },
   { value: 'confirmed', label: '已確認' },
   { value: 'pending_payment', label: '待付款' },
   { value: 'cancelled', label: '已取消' },
 ] as const;
 const BOOKINGS_STATUS_VALUES = BOOKINGS_STATUS_TABS.map((t) => t.value);
+
+type PendingApproval = {
+  bookingId: string; bookingNo: string; tourTitle: string; planName: string;
+  guestName: string; startAt: string | null; partySize: number | null;
+  totalTwd: number | null; createdAt: string | null;
+};
 
 type Booking = {
   id: string; guestName: string; maskedEmail: string; scheduleDate: string | null;
@@ -125,6 +136,11 @@ export default function GuideBookingsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const tabKb = useTablistKeyboard(BOOKINGS_STATUS_VALUES, statusFilter, setStatusFilter);
+  // 三種預約模式：待審核（request plan）
+  const [pendingApprovals, setPendingApprovals] = useState<PendingApproval[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [actingApproval, setActingApproval] = useState<string>('');
+  const [approvalError, setApprovalError] = useState<string>('');
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -136,7 +152,46 @@ export default function GuideBookingsPage() {
       .then((r) => r.json())
       .then((json) => setBookings(json?.data || []))
       .finally(() => setLoading(false));
+    void ensureCsrfToken();
   }, []);
+
+  async function loadPendingApprovals() {
+    setPendingLoading(true);
+    setApprovalError('');
+    try {
+      const res = await fetch('/api/guide/bookings/pending-approval', { cache: 'no-store' });
+      const json = await res.json();
+      setPendingApprovals(Array.isArray(json?.data) ? json.data : []);
+    } catch {
+      setApprovalError('載入待審核清單失敗，請重試');
+    } finally {
+      setPendingLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (statusFilter === PENDING_APPROVAL_TAB) void loadPendingApprovals();
+  }, [statusFilter]);
+
+  async function decideApproval(bookingId: string, action: 'approve' | 'reject') {
+    if (action === 'reject' && !confirm('確定婉拒這筆預約申請？申請將被取消，旅客會收到通知。')) return;
+    setActingApproval(bookingId);
+    setApprovalError('');
+    try {
+      const res = await fetch(`/api/guide/bookings/${encodeURIComponent(bookingId)}/approval`, {
+        method: 'POST',
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ action }),
+      });
+      const json = await res.json();
+      if (!res.ok || json?.error) throw new Error(json?.error?.message || '操作失敗');
+      await loadPendingApprovals();
+    } catch (error) {
+      setApprovalError(error instanceof Error ? error.message : '操作失敗，請重試');
+    } finally {
+      setActingApproval('');
+    }
+  }
 
   async function openDetail(id: string, trigger?: HTMLElement | null) {
     if (trigger) triggerRef.current = trigger;
@@ -277,6 +332,55 @@ export default function GuideBookingsPage() {
     },
   ];
 
+  const pendingColumns: ResponsiveColumn<PendingApproval>[] = [
+    {
+      key: 'guest',
+      header: '旅客',
+      mobilePriority: 'title',
+      cell: (r) => <div style={{ fontWeight: 600 }}>{r.guestName}</div>,
+    },
+    { key: 'tour', header: '行程', cell: (r) => <span>{r.tourTitle}{r.planName ? `／${r.planName}` : ''}</span> },
+    {
+      key: 'date',
+      header: '預約時段',
+      cell: (r) => (
+        <span style={{ fontSize: 13 }}>
+          {r.startAt ? new Date(r.startAt).toLocaleString('zh-TW', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-'}
+        </span>
+      ),
+    },
+    { key: 'party', header: '人數', cell: (r) => `${r.partySize ?? '-'}` },
+    {
+      key: 'amount',
+      header: '金額',
+      align: 'right',
+      cell: (r) => <span style={{ fontWeight: 600 }}>{r.totalTwd != null ? `NT$ ${r.totalTwd.toLocaleString()}` : '-'}</span>,
+    },
+    {
+      key: 'action',
+      header: '審核',
+      align: 'right',
+      cell: (r) => (
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => decideApproval(r.bookingId, 'approve')}
+            disabled={actingApproval === r.bookingId}
+            style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: actingApproval === r.bookingId ? 0.6 : 1 }}
+          >
+            {actingApproval === r.bookingId ? '處理中…' : '批准'}
+          </button>
+          <button
+            onClick={() => decideApproval(r.bookingId, 'reject')}
+            disabled={actingApproval === r.bookingId}
+            style={{ padding: '5px 12px', borderRadius: 6, border: '1px solid #fecaca', background: '#fff', color: '#dc2626', fontSize: 12, fontWeight: 600, cursor: 'pointer', opacity: actingApproval === r.bookingId ? 0.6 : 1 }}
+          >
+            婉拒
+          </button>
+        </div>
+      ),
+    },
+  ];
+
   return (
     <div>
       <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單查看</h1>
@@ -303,16 +407,34 @@ export default function GuideBookingsPage() {
         ))}
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
-        <ResponsiveTable<Booking>
-          columns={columns}
-          rows={filtered}
-          getRowKey={(b) => b.id}
-          onRowClick={(b) => openDetail(b.id)}
-          loading={loading}
-          emptyMessage="無訂單資料"
-        />
-      </div>
+      {statusFilter === PENDING_APPROVAL_TAB ? (
+        <div>
+          <p style={{ fontSize: 13, color: '#6b7280', margin: '0 0 12px' }}>
+            「申請預約」行程的待審核申請。通過後旅客才會收到付款通知；婉拒則取消申請、通知旅客（此階段尚未收費）。
+          </p>
+          {approvalError && <p style={{ color: 'crimson', fontSize: 13 }}>{approvalError}</p>}
+          <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+            <ResponsiveTable<PendingApproval>
+              columns={pendingColumns}
+              rows={pendingApprovals}
+              getRowKey={(r) => r.bookingId}
+              loading={pendingLoading}
+              emptyMessage="目前沒有待審核的預約申請"
+            />
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #f3f4f6', overflow: 'hidden' }}>
+          <ResponsiveTable<Booking>
+            columns={columns}
+            rows={filtered}
+            getRowKey={(b) => b.id}
+            onRowClick={(b) => openDetail(b.id)}
+            loading={loading}
+            emptyMessage="無訂單資料"
+          />
+        </div>
+      )}
 
       {/* Detail Modal — kept as a hand-rolled dialog because PR #1066's
           source-grep a11y tests assert on the literal markup (dialogRef,
