@@ -35,25 +35,37 @@ for (const c of LEGAL) {
   });
 }
 
-test('blog 列表：預設中文 vs /en chrome 切換', async ({ page }) => {
+test('blog 列表：chrome 與文章標題／摘要實際 zh↔en 切換', async ({ page }) => {
   await setLocaleCookie(page, 'zh-Hant');
   await page.goto('/blog');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('旅遊指南');
+  await expect(page.getByText('為什麼在台灣旅行要找私人導遊')).toBeVisible();
 
   await setLocaleCookie(page, 'en');
   await page.goto('/en/blog');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Travel Guide');
+  // 文章標題／摘要實際英文，舊中文標題消失
+  await expect(page.getByText('Why hire a private guide in Taiwan')).toBeVisible();
+  await expect(page.getByText('為什麼在台灣旅行要找私人導遊')).toHaveCount(0);
 });
 
-test('blog 文章頁 chrome 英文化（本文維持中文內容）', async ({ page }) => {
+test('blog 文章頁 chrome＋本文皆英文化（/en）', async ({ page }) => {
   await setLocaleCookie(page, 'en');
-  // 從英文列表抓第一篇文章連結
-  await page.goto('/en/blog');
-  const firstPost = page.locator('a[href*="/blog/"]').first();
-  await expect(firstPost).toBeVisible();
-  const href = await firstPost.getAttribute('href');
-  const resp = await page.goto(href!);
+  const resp = await page.goto('/en/blog/why-private-guide');
   expect(resp?.status()).toBeLessThan(400);
-  // breadcrumb chrome 英文（麵包屑含 Travel Guide）
+  // breadcrumb chrome 英文
   await expect(page.getByText('Travel Guide').first()).toBeVisible();
+  // H1 與本文英文
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Why hire a private guide in Taiwan');
+  await expect(page.getByRole('heading', { name: 'What a private guide changes' })).toBeVisible();
+  await expect(page.getByText('You control the pace')).toBeVisible();
+  // 中文本文已不在
+  await expect(page.getByText('大多數人對旅行團的印象')).toHaveCount(0);
+});
+
+test('blog 文章頁 預設中文本文維持中文', async ({ page }) => {
+  await setLocaleCookie(page, 'zh-Hant');
+  const resp = await page.goto('/blog/why-private-guide');
+  expect(resp?.status()).toBeLessThan(400);
+  await expect(page.getByRole('heading', { name: '私人導遊帶來的改變' })).toBeVisible();
 });

@@ -23,25 +23,18 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   };
 }
 
-// Blog articles are user-authored content — kept in Traditional Chinese (same policy as activity names).
+// 文章內容（標題／摘要／分類／閱讀時間）為靜態 inline 文案，已抽進 messages 的
+// blogPosts namespace 並提供英文版（#multilingual）；此處僅保留結構欄位。
 const posts = [
   {
     slug: 'why-private-guide',
-    title: '為什麼在台灣旅行要找私人導遊，而不是跟團？',
-    excerpt: '從效率到深度體驗，兩種旅行方式的根本差距。當你不再被行程表綁架，才能真正認識一個地方。',
-    category: '台灣旅遊',
     date: '2026-03-20',
-    readTime: '5 分鐘',
     imageUrl: 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=800&q=80',
     featured: true,
   },
   {
     slug: 'chaishan-cave-guide',
-    title: '高雄柴山探洞完全攻略：第一次就上手',
-    excerpt: '裝備怎麼準備？路線怎麼選？帶小孩可以嗎？一篇搞懂柴山探洞的所有眉角。',
-    category: '戶外冒險',
     date: '2026-03-15',
-    readTime: '7 分鐘',
     imageUrl: '/images/activities/chaishan/main.jpg',
     featured: false,
   },
@@ -54,6 +47,8 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: 'blog' });
   const tSeo = await getTranslations({ locale, namespace: 'seo' });
+  const tp = await getTranslations({ locale, namespace: 'blogPosts' });
+  const inLanguage = locale === 'zh-Hant' ? 'zh-TW' : locale;
 
   const blogJsonLd = {
     '@context': 'https://schema.org',
@@ -67,12 +62,12 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
           position: i + 1,
           item: {
             '@type': 'Article',
-            headline: p.title,
+            headline: tp(`${p.slug}.title`),
             url: `${baseUrl}/blog/${p.slug}`,
             datePublished: p.date,
             dateModified: p.date,
             image: p.imageUrl,
-            inLanguage: 'zh-TW',
+            inLanguage,
           },
         })),
       },
@@ -99,12 +94,12 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
       {featured && (
         <Link href={`/blog/${featured.slug}`} style={{ display: 'block', marginBottom: 30 }}>
           <article className="tp-blog-featured">
-            <Image src={featured.imageUrl} alt={featured.title} priority className="tp-blog-featured-img" width={1200} height={675} />
+            <Image src={featured.imageUrl} alt={tp(`${featured.slug}.title`)} priority className="tp-blog-featured-img" width={1200} height={675} />
             <div className="tp-blog-featured-body">
-              <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12 }}>{featured.category}</span>
-              <h2 style={{ margin: '12px 0 8px' }}>{featured.title}</h2>
-              <p style={{ color: 'var(--tp-muted)', lineHeight: 1.7 }}>{featured.excerpt}</p>
-              <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{featured.date} · {t('readTimePrefix')} {featured.readTime}</p>
+              <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '3px 10px', borderRadius: 6, fontSize: 12 }}>{tp(`${featured.slug}.category`)}</span>
+              <h2 style={{ margin: '12px 0 8px' }}>{tp(`${featured.slug}.title`)}</h2>
+              <p style={{ color: 'var(--tp-muted)', lineHeight: 1.7 }}>{tp(`${featured.slug}.excerpt`)}</p>
+              <p style={{ color: 'var(--tp-muted)', fontSize: 13 }}>{featured.date} · {t('readTimePrefix')} {tp(`${featured.slug}.readTime`)}</p>
             </div>
           </article>
         </Link>
@@ -115,11 +110,11 @@ export default async function BlogPage({ params }: { params: Promise<{ locale: s
         {rest.map((p) => (
           <Link href={`/blog/${p.slug}`} key={p.slug} style={{ display: 'block' }}>
             <article className="tp-card">
-              <Image src={p.imageUrl} alt={p.title} className="tp-card-img" style={{ background: 'none' }} loading="lazy" width={1200} height={675} />
-              <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '2px 8px', borderRadius: 6, fontSize: 11, display: 'inline-block', marginBottom: 6 }}>{p.category}</span>
-              <h3>{p.title}</h3>
-              <p style={{ fontSize: 14, lineHeight: 1.6 }}>{p.excerpt}</p>
-              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{p.date} · {p.readTime}</p>
+              <Image src={p.imageUrl} alt={tp(`${p.slug}.title`)} className="tp-card-img" style={{ background: 'none' }} loading="lazy" width={1200} height={675} />
+              <span style={{ background: 'var(--tp-accent)', color: '#fff', padding: '2px 8px', borderRadius: 6, fontSize: 11, display: 'inline-block', marginBottom: 6 }}>{tp(`${p.slug}.category`)}</span>
+              <h3>{tp(`${p.slug}.title`)}</h3>
+              <p style={{ fontSize: 14, lineHeight: 1.6 }}>{tp(`${p.slug}.excerpt`)}</p>
+              <p style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{p.date} · {tp(`${p.slug}.readTime`)}</p>
             </article>
           </Link>
         ))}
