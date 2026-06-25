@@ -6,7 +6,7 @@ import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { PublicIcon } from '../ui/PublicIcon';
 import { LanguageSwitcher } from './LanguageSwitcher';
-import { detectLocale } from '../../i18n/locale-path';
+import { useChromeLocale } from '../../i18n/use-client-locale';
 import { getNavMessages } from '../../i18n/client-nav-messages';
 
 export function Navbar() {
@@ -17,9 +17,10 @@ export function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Navbar 在 NextIntlClientProvider 之外 → 依 pathname 前綴自行決定 locale 與文案。
-  // 切換器 router.push('/en') 後 pathname 變動，此處重算 → 導覽列文字立即切語言。
-  const locale = detectLocale(pathname || '/');
+  // Navbar 在 NextIntlClientProvider 之外 → 依 pathname 前綴（SEO 頁）或 NEXT_LOCALE
+  // cookie（無前綴的 /me/* 個人頁）決定 locale 與文案。切換器 router.push('/en') 後
+  // pathname 變動，此處重算 → 導覽列文字立即切語言。
+  const locale = useChromeLocale(pathname || '/');
   const m = getNavMessages(locale);
   const NAV_LINKS = [
     { label: m.nav.explore, href: '/activities' },

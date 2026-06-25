@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { detectLocale } from '../../i18n/locale-path';
+import { useChromeLocale } from '../../i18n/use-client-locale';
 import { getFooterMessages } from '../../i18n/client-nav-messages';
 
 // Footer 在 NextIntlClientProvider 之外（root layout 經 FooterGate 渲染），故與
@@ -18,7 +18,7 @@ const FOOTER_REGIONS = [
 
 export function Footer() {
   const pathname = usePathname() || '/';
-  const m = getFooterMessages(detectLocale(pathname));
+  const m = getFooterMessages(useChromeLocale(pathname));
   return (
     <footer className="tp-footer">
       <div className="tp-container">

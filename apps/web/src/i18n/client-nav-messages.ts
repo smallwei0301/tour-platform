@@ -39,3 +39,14 @@ const FOOTER_CATALOGS: Partial<Record<AppLocale, FooterMessages>> = {
 export function getFooterMessages(locale: AppLocale): FooterMessages {
   return FOOTER_CATALOGS[locale] ?? zhHant.footer;
 }
+
+// 泛用 client namespace 取值：供 provider 之外、依 cookie 決定語言的 client 頁面
+// （/me/** 個人頁、MemberTabs 等）取任一 namespace。ja/ko 無 catalog → fallback 繁中。
+const FULL_CATALOGS: Partial<Record<AppLocale, typeof zhHant>> = {
+  'zh-Hant': zhHant,
+  en: en as typeof zhHant,
+};
+
+export function getClientNamespace<K extends keyof typeof zhHant>(locale: AppLocale, ns: K): (typeof zhHant)[K] {
+  return (FULL_CATALOGS[locale] ?? zhHant)[ns];
+}

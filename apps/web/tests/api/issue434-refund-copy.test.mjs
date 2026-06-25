@@ -18,6 +18,9 @@ const ORDER_DETAIL_PAGE = join(
   __dirname,
   '../../app/me/orders/[orderId]/page.tsx'
 );
+// #multilingual: 狀態描述文案已從 page 的 STATUS_DESCRIPTIONS 移到
+// messages/zh-Hant.json 的 orderDetail.statusDesc namespace。文案內容契約改讀繁中 catalog。
+const ZH_MESSAGES = join(__dirname, '../../messages/zh-Hant.json');
 
 let src;
 try {
@@ -26,16 +29,22 @@ try {
   src = null;
 }
 
+let statusDescBlock;
+try {
+  statusDescBlock = JSON.stringify(
+    JSON.parse(readFileSync(ZH_MESSAGES, 'utf8')).orderDetail.statusDesc
+  );
+} catch {
+  statusDescBlock = null;
+}
+
 test('order detail page source exists', () => {
   assert.ok(src !== null, `order detail page should exist at ${ORDER_DETAIL_PAGE}`);
 });
 
-// Extract the STATUS_DESCRIPTIONS block for targeted assertions
-function extractStatusDescriptions(source) {
-  const start = source.indexOf('STATUS_DESCRIPTIONS');
-  if (start === -1) return source;
-  const blockEnd = source.indexOf('};', start);
-  return blockEnd === -1 ? source.slice(start) : source.slice(start, blockEnd + 2);
+// Status descriptions now live in messages/zh-Hant.json → orderDetail.statusDesc.
+function extractStatusDescriptions() {
+  return statusDescBlock ?? '';
 }
 
 test('refunded copy does NOT contain 等待人工審核', () => {
