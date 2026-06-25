@@ -14,7 +14,7 @@ import {
 import { calculateDiscount } from './promo-discount.ts';
 import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
 import { buildGuideShopView } from './guide-shop.mjs';
-import { applyUpsertWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
+import { applyUpsertWithMissingColumnFallback, applyWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
 import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
@@ -42,6 +42,7 @@ import {
 } from './homepage-featured-error.mjs';
 import { sanitizeEditorPickCopy, sanitizeMoreFeaturedCopy } from './homepage-featured-copy.mjs';
 import { isMissingTableError } from './missing-table-error.mjs';
+import { decideApproval } from './booking-type-flow.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -85,6 +86,19 @@ import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { normalizeRegionForActivityPath } from './region-slug.mjs';
 import { normalizeRegionToDbValue } from './region-slugs.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
+import { resolveActivityReviewTransition } from './activity-review-transition.mjs';
+import { applyPendingOverlay, buildPendingDiff } from './activity-pending-overlay.mjs';
+import { pickGuideEditableFields } from './guide-editable-activity-fields.mjs';
+import { pickGuideEditablePlanFields, validateGuidePlanCreate } from './guide-editable-plan-fields.mjs';
+import { buildPlanColumnPatch } from './plan-column-patch.mjs';
+import { generatePlanSlug } from './activity-plan-slugs.mjs';
+import {
+  ACTIVITY_PLAN_SEASON_SELECT_COLUMNS,
+  validateCreateActivityPlanSeasonPayload,
+  validateUpdateActivityPlanSeasonPayload,
+  shapeActivityPlanSeason,
+  sortActivityPlanSeasons,
+} from './activity-plan-seasons.ts';
 // #1383 — 訂單改期（fallback 實作 + 純規則）
 import {
   createRescheduleRequestInMemory,
@@ -1917,7 +1931,11 @@ export async function createGuideApplicationDb(input = {}) {
   const languages = toStringArray(input?.languages);
   const regions = toStringArray(input?.regions);
   const certifications = toStringArray(input?.certs ?? input?.certifications);
-  const paymentMethod = String(input?.payment ?? input?.paymentMethod ?? '').trim() || null;
+  // 收款方式由單選改可複選：優先讀陣列 payments/paymentMethods，向後相容單一 payment 字串。
+  const paymentMethods = Array.isArray(input?.payments ?? input?.paymentMethods)
+    ? toStringArray(input?.payments ?? input?.paymentMethods)
+    : toStringArray([input?.payment ?? input?.paymentMethod]);
+  const paymentMethod = paymentMethods[0] || null;
   const profilePhotoUrl = String(input?.profilePhotoUrl || '').trim() || null;
   const heroImageUrl = String(input?.heroImageUrl || '').trim() || null;
   const galleryUrls = toStringArray(input?.galleryUrls).slice(0, 12);
@@ -1939,7 +1957,10 @@ export async function createGuideApplicationDb(input = {}) {
     bio,
     status: 'pending'
   };
-  const richPayload = {
+  // payment_methods 為較新欄位（20260623_guide_profile_familiar_regions）；其餘 rich
+  // 欄位（specialties…payment_method）由 20260610 加入。分三層 payload 以對應不同
+  // migration 進度，確保部分 migrate 的環境不會連帶丟掉舊 rich 欄位。
+  const richPayloadV1 = {
     ...basePayload,
     specialties,
     languages,
@@ -1950,22 +1971,33 @@ export async function createGuideApplicationDb(input = {}) {
     hero_image_url: heroImageUrl,
     gallery_urls: galleryUrls,
   };
+  const richPayloadV2 = { ...richPayloadV1, payment_methods: paymentMethods };
 
   const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV1 = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV2 = `${richSelectV1}, payment_methods`;
 
+  const isMissingColumn = (e) =>
+    e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+
+  // Tier 1：完整欄位（含 payment_methods）。
   let { data, error } = await supabase
     .from('guide_applications')
-    .insert(richPayload)
-    .select(richSelect)
+    .insert(richPayloadV2)
+    .select(richSelectV2)
     .single();
 
-  // Schema drift guard: production may not have applied
-  // 20260610_guide_applications_profile_fields yet (error 42703 /
-  // "column ... does not exist"). Fall back to the legacy column set so
-  // applications are never lost — the rich fields are dropped only in
-  // that degraded mode.
-  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+  // Tier 2：缺 payment_methods（跑了 20260610、未跑 20260623）→ 退回 V1，保住其餘 rich 欄位。
+  if (isMissingColumn(error)) {
+    ({ data, error } = await supabase
+      .from('guide_applications')
+      .insert(richPayloadV1)
+      .select(richSelectV1)
+      .single());
+  }
+
+  // Tier 3：連 20260610 都沒跑 → 退回 base，至少不遺失申請本體。
+  if (isMissingColumn(error)) {
     ({ data, error } = await supabase
       .from('guide_applications')
       .insert(basePayload)
@@ -1992,6 +2024,12 @@ function mapGuideApplicationRow(r) {
     regions: arr(r.regions),
     certifications: arr(r.certifications),
     paymentMethod: r.payment_method ?? null,
+    paymentMethods: (() => {
+      const list = arr(r.payment_methods ?? r.paymentMethods);
+      if (list.length) return list;
+      // 向後相容：尚無 payment_methods 欄位時，由單選 payment_method 推出單元素陣列。
+      return r.payment_method ? [r.payment_method] : [];
+    })(),
     profilePhotoUrl: r.profile_photo_url ?? r.profilePhotoUrl ?? null,
     heroImageUrl: r.hero_image_url ?? r.heroImageUrl ?? null,
     galleryUrls: arr(r.gallery_urls ?? r.galleryUrls),
@@ -2009,7 +2047,8 @@ export async function listGuideApplicationsDb(input = {}) {
   const supabase = await getSupabase();
 
   const baseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
-  const richSelect = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV1 = `${baseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
+  const richSelectV2 = `${richSelectV1}, payment_methods`;
 
   const buildQuery = (selectClause) => {
     let q = supabase
@@ -2020,11 +2059,13 @@ export async function listGuideApplicationsDb(input = {}) {
     return q;
   };
 
-  let { data, error } = await buildQuery(richSelect);
-  // Schema drift guard: see createGuideApplicationDb.
-  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
-    ({ data, error } = await buildQuery(baseSelect));
-  }
+  const isMissingColumn = (e) =>
+    e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+
+  // Schema drift guard（三層，見 createGuideApplicationDb）：payment_methods → 其餘 rich → base。
+  let { data, error } = await buildQuery(richSelectV2);
+  if (isMissingColumn(error)) ({ data, error } = await buildQuery(richSelectV1));
+  if (isMissingColumn(error)) ({ data, error } = await buildQuery(baseSelect));
   if (error) throw new Error(error.message);
 
   return (data || []).map(mapGuideApplicationRow);
@@ -3305,6 +3346,9 @@ export async function getGuideBySlugDb(slug) {
     return {
       id: g.slug, slug: g.slug, displayName: g.displayName,
       headline: g.headline, bio: g.longBio, region: g.region,
+      regions: g.regions || (g.region ? [g.region] : []),
+      certifications: g.certifications || [],
+      paymentMethods: g.paymentMethods || [],
       languages: g.languages || [], specialties: g.specialties || [],
       verificationBadges: g.verificationBadges || [],
       profilePhotoUrl: g.avatarUrl, heroImageUrl: g.heroImageUrl,
@@ -3328,10 +3372,12 @@ export async function getGuideBySlugDb(slug) {
   // .eq('guide_slug', slug)，不需要先拿到 guide id），故平行發兩個查詢，把
   // 2 個串行 round-trip 併成 1 個 —— 這是詳情頁 ISR cache-miss 首訪的延遲來源。
   // 導遊無效（找不到/停權）時 acts 直接丟棄，成本可忽略。
+  const baseGuideSelect = 'id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status';
+  const richGuideSelect = `${baseGuideSelect}, regions, certifications, payment_methods`;
   const [gpResult, actsResult] = await Promise.all([
     supabase
       .from('guide_profiles')
-      .select('id, slug, display_name, headline, bio, region, languages, specialties, profile_photo_url, hero_image_url, gallery_urls, rating_avg, review_count, service_count, verification_status')
+      .select(richGuideSelect)
       .eq('slug', slug)
       .single(),
     supabase
@@ -3341,7 +3387,15 @@ export async function getGuideBySlugDb(slug) {
       .eq('status', 'published'),
   ]);
 
-  const { data: gp, error } = gpResult;
+  let { data: gp, error } = gpResult;
+  // Schema drift guard：熟悉區域等欄位（20260623）未 migrate 時退回 base，公開頁不致 404。
+  if (error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''))) {
+    ({ data: gp, error } = await supabase
+      .from('guide_profiles')
+      .select(baseGuideSelect)
+      .eq('slug', slug)
+      .single());
+  }
   if (error || !gp) return null;
   // 下架（停權）導遊對外全隱藏：非 approved（即 suspended）→ 詳情頁 404。
   // approved-但未公開（is_published=false）仍可預覽，不在此擋。
@@ -3352,6 +3406,9 @@ export async function getGuideBySlugDb(slug) {
   return {
     id: gp.id, slug: gp.slug, displayName: gp.display_name,
     headline: gp.headline, bio: gp.bio, region: gp.region,
+    regions: Array.isArray(gp.regions) && gp.regions.length ? gp.regions : (gp.region ? [gp.region] : []),
+    certifications: Array.isArray(gp.certifications) ? gp.certifications : [],
+    paymentMethods: Array.isArray(gp.payment_methods) ? gp.payment_methods : [],
     languages: gp.languages || [], specialties: gp.specialties || [],
     verificationBadges: [],
     profilePhotoUrl: gp.profile_photo_url, heroImageUrl: gp.hero_image_url,
@@ -3855,6 +3912,728 @@ export async function updateActivityStatusDb(id, status) {
   if (error) throw new Error(error.message);
 
   return getAdminActivityByIdDb(id);
+}
+
+// ─────────────────────────────────────────────
+// 導遊共用行程編輯 + 管理者審核（pending overlay 模型，見計劃核心架構決策 #3）
+//
+// pending_changes 以「編輯表單 camelCase shape」儲存 —— 與 getAdminActivityByIdDb 的
+// DTO、updateActivityDb 的 input 同 shape，故 overlay 顯示／核准套用三處共用既有映射，
+// 不另寫一套欄位轉換。所有 guide 函式都先驗 guide_id 歸屬。
+// ─────────────────────────────────────────────
+
+// audit log 失敗不阻擋核心狀態變更（審核動作對使用者可見，logging 為次要）。
+async function safeActivityAudit(supabase, entry) {
+  try {
+    await insertAuditLogDb(supabase, entry);
+  } catch (e) {
+    console.warn('[activity-review] audit log failed', e?.message || e);
+  }
+}
+
+/** 導遊「我的行程」列表：只列出 guide_id 等於自己的行程，含審核狀態。 */
+export async function listGuideActivitiesDb(guideId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  if (!guideId) return [];
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activities')
+    .select(`
+      id, slug, title, region, category, price_twd, status,
+      review_state, review_admin_note, pending_changes, pending_submitted_at,
+      published_at, created_at, updated_at
+    `)
+    .eq('guide_id', guideId)
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data || []).map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    region: r.region,
+    category: r.category,
+    priceTwd: r.price_twd,
+    status: r.status,
+    reviewState: r.review_state || null,
+    reviewAdminNote: r.review_admin_note || null,
+    hasPendingChanges: !!r.pending_changes && Object.keys(r.pending_changes).length > 0,
+    pendingSubmittedAt: r.pending_submitted_at || null,
+    publishedAt: r.published_at,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  }));
+}
+
+/**
+ * 導遊載入單一自己的行程（ownership 檢查）；回傳 live DTO 疊上 pending_changes，
+ * 讓編輯器顯示導遊「進行中」的內容。非擁有者回 null。
+ */
+export async function getGuideActivityByIdDb(activityId, guideId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: owner } = await supabase
+    .from('activities')
+    .select('guide_id, review_state, review_admin_note, pending_changes')
+    .eq('id', activityId)
+    .single();
+  if (!owner || !owner.guide_id || owner.guide_id !== guideId) return null;
+
+  const base = await getAdminActivityByIdDb(activityId);
+  if (!base) return null;
+  const merged = applyPendingOverlay(base, owner.pending_changes);
+  return {
+    ...merged,
+    reviewState: owner.review_state || null,
+    reviewAdminNote: owner.review_admin_note || null,
+    hasPendingChanges: !!owner.pending_changes && Object.keys(owner.pending_changes).length > 0,
+  };
+}
+
+/** 導遊從零建立行程：強制 guide_id 歸屬、status=draft（草稿不公開）。 */
+export async function createGuideActivityDb(guideId, input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  if (!guideId) throw new Error('guideId required');
+  const supabase = await getSupabase();
+  const { data: gp } = await supabase
+    .from('guide_profiles')
+    .select('slug')
+    .eq('id', guideId)
+    .single();
+  // 複用 createActivityDb（會生成 slug、設 status=draft）；只保留白名單欄位 + 強制歸屬。
+  return createActivityDb({
+    ...pickGuideEditableFields(input),
+    title: String(input.title || '').trim() || '未命名行程',
+    guideId,
+    guideSlug: gp?.slug || null,
+  });
+}
+
+/**
+ * 導遊存檔：只寫入 pending_changes（白名單欄位），不碰 live 欄位。
+ * 多次存檔累積合併。回傳 { ok, code? }。
+ */
+export async function saveActivityPendingChangesDb(activityId, guideId, input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: owner } = await supabase
+    .from('activities')
+    .select('guide_id, pending_changes')
+    .eq('id', activityId)
+    .single();
+  if (!owner) return { ok: false, code: 'ACTIVITY_NOT_FOUND' };
+  if (!owner.guide_id || owner.guide_id !== guideId) return { ok: false, code: 'ACTIVITY_WRONG_GUIDE' };
+
+  const editable = pickGuideEditableFields(input);
+  const nextPending = { ...(owner.pending_changes || {}), ...editable };
+  const { error } = await supabase
+    .from('activities')
+    .update({ pending_changes: nextPending })
+    .eq('id', activityId);
+  if (error) throw new Error(error.message);
+  return { ok: true };
+}
+
+/**
+ * 導遊送審：review_state → pending，記錄送審時間與 base updated_at（衝突偵測用）。
+ * 沒有任何 pending_changes 時不可送審。
+ */
+export async function submitActivityForReviewDb(activityId, guideId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: owner } = await supabase
+    .from('activities')
+    .select('guide_id, pending_changes, updated_at')
+    .eq('id', activityId)
+    .single();
+  if (!owner) return { ok: false, code: 'ACTIVITY_NOT_FOUND' };
+  if (!owner.guide_id || owner.guide_id !== guideId) return { ok: false, code: 'ACTIVITY_WRONG_GUIDE' };
+  if (!owner.pending_changes || Object.keys(owner.pending_changes).length === 0) {
+    return { ok: false, code: 'NOTHING_TO_SUBMIT' };
+  }
+
+  const now = new Date().toISOString();
+  const t = resolveActivityReviewTransition('submit', { now });
+  const { error } = await supabase
+    .from('activities')
+    .update({
+      review_state: t.reviewState,
+      pending_submitted_by_guide_id: guideId,
+      pending_submitted_at: now,
+      pending_base_updated_at: owner.updated_at,
+      review_admin_note: null,
+    })
+    .eq('id', activityId);
+  if (error) throw new Error(error.message);
+
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'activity_submit',
+    metadata: { activityId, guideId },
+  });
+  return { ok: true };
+}
+
+/** 管理者「待審行程」清單（review_state='pending'），含衝突旗標。 */
+export async function listPendingActivityReviewsDb() {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activities')
+    .select(`
+      id, slug, title, status, review_state,
+      pending_submitted_at, pending_base_updated_at, updated_at,
+      guide_slug,
+      guide_profiles!activities_guide_id_fkey(display_name)
+    `)
+    .eq('review_state', 'pending')
+    .order('pending_submitted_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []).map((r) => ({
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    status: r.status,
+    reviewState: r.review_state,
+    guideName: r.guide_profiles?.display_name || r.guide_slug || '',
+    pendingSubmittedAt: r.pending_submitted_at,
+    // 衝突：送審後 live 又被（管理者）改過（計劃邊角案例 #1）
+    hasConflict:
+      !!r.pending_base_updated_at &&
+      !!r.updated_at &&
+      new Date(r.updated_at).getTime() > new Date(r.pending_base_updated_at).getTime(),
+  }));
+}
+
+/** 管理者審核明細：live DTO + pending_changes + 逐欄 diff。 */
+export async function getActivityReviewDetailDb(activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: meta } = await supabase
+    .from('activities')
+    .select(`
+      review_state, review_admin_note, pending_changes,
+      pending_submitted_at, pending_base_updated_at, updated_at
+    `)
+    .eq('id', activityId)
+    .single();
+  if (!meta) return null;
+  const live = await getAdminActivityByIdDb(activityId);
+  if (!live) return null;
+  return {
+    activity: live,
+    reviewState: meta.review_state || null,
+    reviewAdminNote: meta.review_admin_note || null,
+    pendingChanges: meta.pending_changes || null,
+    pendingSubmittedAt: meta.pending_submitted_at || null,
+    hasConflict:
+      !!meta.pending_base_updated_at &&
+      !!meta.updated_at &&
+      new Date(meta.updated_at).getTime() > new Date(meta.pending_base_updated_at).getTime(),
+    diff: buildPendingDiff(live, meta.pending_changes),
+  };
+}
+
+/**
+ * 管理者核准/退回。
+ *   - approve：把 pending_changes 套用進 live（複用 updateActivityDb 映射與驗證），
+ *              清空 pending、review_state 歸 null。上架仍由既有 status 流程處理（不在此自動上架）。
+ *   - reject：保留 pending_changes，review_state → changes_requested、寫入退回備註。
+ * 只能對 review_state='pending' 的行程操作。
+ * @param {string} activityId
+ * @param {{ action: 'approve'|'reject', adminNote?: string|null }} [opts]
+ */
+export async function resolveActivityReviewDb(activityId, { action, adminNote = null } = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  if (!['approve', 'reject'].includes(action)) throw new Error('invalid review action');
+  const supabase = await getSupabase();
+  const { data: meta } = await supabase
+    .from('activities')
+    .select('review_state, pending_changes')
+    .eq('id', activityId)
+    .single();
+  if (!meta) return null;
+  if (meta.review_state !== 'pending') {
+    const err = new Error('NOT_PENDING_REVIEW');
+    err.code = 'NOT_PENDING_REVIEW';
+    throw err;
+  }
+
+  const now = new Date().toISOString();
+  const t = resolveActivityReviewTransition(action, { now });
+
+  if (t.applyPending && meta.pending_changes && Object.keys(meta.pending_changes).length > 0) {
+    // 複用 updateActivityDb：camelCase→欄位映射、FAQ/itinerary 正規化、評分對齊都共用一套。
+    // pending_changes 不含 plans/guideSlug（白名單已剔除），故不會觸發 plan 同步或改歸屬。
+    await updateActivityDb(activityId, meta.pending_changes);
+  }
+
+  const patch = { review_state: t.reviewState, review_admin_note: adminNote || null, updated_at: now };
+  if (t.clearPending) {
+    patch.pending_changes = null;
+    patch.pending_submitted_at = null;
+    patch.pending_submitted_by_guide_id = null;
+    patch.pending_base_updated_at = null;
+  }
+  const { error } = await supabase.from('activities').update(patch).eq('id', activityId);
+  if (error) throw new Error(error.message);
+
+  await safeActivityAudit(supabase, {
+    actor: 'admin',
+    action: action === 'approve' ? 'activity_approve' : 'activity_reject',
+    metadata: { activityId, adminNote: adminNote || null },
+  });
+  return getActivityReviewDetailDb(activityId);
+}
+
+// ─────────────────────────────────────────────
+// Phase 2 — 導遊方案（activity_plans）自助編輯 + 審核
+// 與行程相同的 pending overlay 模型；方案以 snake_case 欄位貫穿（與 v2 admin plan route 同 shape）。
+// ─────────────────────────────────────────────
+
+/** 確認 activity 屬於該導遊（回傳 guide_slug 供顯示）；非擁有者回 null。 */
+async function loadOwnedActivity(supabase, activityId, guideId) {
+  const { data } = await supabase
+    .from('activities')
+    .select('id, guide_id, title, slug, guide_slug')
+    .eq('id', activityId)
+    .single();
+  if (!data || !data.guide_id || data.guide_id !== guideId) return null;
+  return data;
+}
+
+/** 導遊載入某行程底下自己的方案清單（含審核狀態，套 pending overlay 供顯示）。 */
+export async function listGuidePlansDb(activityId, guideId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const activity = await loadOwnedActivity(supabase, activityId, guideId);
+  if (!activity) return null; // 非擁有者或不存在 → route 轉 404
+  const { data, error } = await supabase
+    .from('activity_plans')
+    .select('*')
+    .eq('activity_id', activityId)
+    .neq('status', 'archived')
+    .order('created_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []).map((row) => {
+    const merged = applyPendingOverlay(row, row.pending_changes);
+    return {
+      id: row.id,
+      name: merged.name,
+      base_price: merged.base_price,
+      price_type: merged.price_type,
+      duration_minutes: merged.duration_minutes,
+      status: row.status,
+      reviewState: row.review_state || null,
+      reviewAdminNote: row.review_admin_note || null,
+      isNewPlan: !!row.pending_new_plan,
+      hasPendingChanges: !!row.pending_changes && Object.keys(row.pending_changes).length > 0,
+      pendingSubmittedAt: row.pending_submitted_at || null,
+      updatedAt: row.updated_at,
+    };
+  });
+}
+
+/** 導遊載入單一自己的方案（ownership 檢查），回傳 row 疊上 pending_changes 供編輯器顯示。 */
+export async function getGuidePlanByIdDb(planId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('*, activities(guide_id)')
+    .eq('id', planId)
+    .single();
+  if (!row) return null;
+  if (activityId && row.activity_id !== activityId) return null;
+  const owner = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  if (!owner || owner.guide_id !== guideId) return null;
+  if (row.status === 'archived') return null;
+  const merged = applyPendingOverlay(row, row.pending_changes);
+  delete merged.activities;
+  return {
+    ...merged,
+    status: row.status, // status 永遠以 live 為準（不被 pending 蓋）
+    reviewState: row.review_state || null,
+    reviewAdminNote: row.review_admin_note || null,
+    isNewPlan: !!row.pending_new_plan,
+    hasPendingChanges: !!row.pending_changes && Object.keys(row.pending_changes).length > 0,
+  };
+}
+
+/**
+ * 導遊新建方案：以 status='inactive' + pending_new_plan=true 落地（不對外售票），
+ * 核准後才轉 active 上架。回傳 { ok, code?, message?, plan? }。
+ */
+export async function createGuidePlanDb(activityId, guideId, input = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const activity = await loadOwnedActivity(supabase, activityId, guideId);
+  if (!activity) return { ok: false, code: 'ACTIVITY_NOT_FOUND' };
+
+  const valid = validateGuidePlanCreate(input);
+  if (!valid.ok) return { ok: false, code: 'VALIDATION_ERROR', message: valid.message };
+
+  const editable = pickGuideEditablePlanFields(input);
+  const slug = generatePlanSlug({ name: input.name });
+  const insertData = {
+    activity_id: activityId,
+    slug,
+    status: 'inactive',
+    review_state: null,
+    pending_new_plan: true,
+    min_participants: 1,
+    max_participants: 10,
+    booking_type: 'scheduled',
+    ...buildPlanColumnPatch(editable),
+  };
+
+  const { data, error } = await applyWithMissingColumnFallback(
+    (payload) => supabase.from('activity_plans').insert(payload).select().single(),
+    insertData,
+  );
+  if (error) throw new Error(error.message || 'create plan failed');
+
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_create',
+    metadata: { activityId, planId: data?.id, guideId },
+  });
+  return { ok: true, plan: data };
+}
+
+/**
+ * 導遊存檔方案：
+ *   - 已上架（active）方案 → 寫入 pending_changes（保護 live，不影響前台售票）。
+ *   - 未上架（inactive 新方案）→ 直接寫 row（尚未對外，無需 overlay 保護）。
+ */
+export async function savePlanPendingChangesDb(planId, guideId, input = {}, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const result = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!result.ok) return result;
+  const plan = result.plan;
+
+  const editable = pickGuideEditablePlanFields(input);
+  if (plan.status === 'active') {
+    const nextPending = { ...(plan.pending_changes || {}), ...editable };
+    const { error } = await supabase
+      .from('activity_plans')
+      .update({ pending_changes: nextPending })
+      .eq('id', planId);
+    if (error) throw new Error(error.message);
+  } else {
+    const patch = buildPlanColumnPatch(editable);
+    if (Object.keys(patch).length > 0) {
+      const { error } = await applyWithMissingColumnFallback(
+        (payload) => supabase.from('activity_plans').update(payload).eq('id', planId),
+        { ...patch, updated_at: new Date().toISOString() },
+      );
+      if (error) throw new Error(error.message || 'save plan failed');
+    }
+  }
+  return { ok: true };
+}
+
+/** 共用：載入並驗證方案可被該導遊編輯（active/inactive 允許、archived/非擁有者擋）。 */
+async function assertPlanEditable(supabase, planId, guideId, activityId) {
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('id, activity_id, status, review_state, pending_changes, pending_new_plan, updated_at, activities(guide_id)')
+    .eq('id', planId)
+    .single();
+  if (!row) return { ok: false, code: 'PLAN_NOT_FOUND' };
+  if (activityId && row.activity_id !== activityId) return { ok: false, code: 'PLAN_NOT_FOUND' };
+  const owner = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  if (!owner || owner.guide_id !== guideId) return { ok: false, code: 'PLAN_WRONG_GUIDE' };
+  if (row.status === 'archived') return { ok: false, code: 'PLAN_ARCHIVED' };
+  return { ok: true, plan: row };
+}
+
+/** 導遊送審方案：review_state → pending，記錄送審時間與 base updated_at（衝突偵測用）。 */
+export async function submitPlanForReviewDb(planId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const result = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!result.ok) return result;
+  const plan = result.plan;
+
+  const hasPending = !!plan.pending_changes && Object.keys(plan.pending_changes).length > 0;
+  if (!plan.pending_new_plan && !hasPending) {
+    return { ok: false, code: 'NOTHING_TO_SUBMIT' };
+  }
+
+  const now = new Date().toISOString();
+  const t = resolveActivityReviewTransition('submit', { now });
+  const { error } = await supabase
+    .from('activity_plans')
+    .update({
+      review_state: t.reviewState,
+      pending_submitted_by_guide_id: guideId,
+      pending_submitted_at: now,
+      pending_base_updated_at: plan.updated_at,
+      review_admin_note: null,
+    })
+    .eq('id', planId);
+  if (error) throw new Error(error.message);
+
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_submit',
+    metadata: { planId, activityId: plan.activity_id, guideId },
+  });
+  return { ok: true };
+}
+
+/** 管理者「待審方案」清單（review_state='pending'），含新方案旗標與衝突旗標。 */
+export async function listPendingPlanReviewsDb() {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('activity_plans')
+    .select(`
+      id, name, status, review_state, pending_changes, pending_new_plan,
+      pending_submitted_at, pending_base_updated_at, updated_at,
+      activities(id, title, slug, guide_slug)
+    `)
+    .eq('review_state', 'pending')
+    .order('pending_submitted_at', { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data || []).map((r) => {
+    const activity = Array.isArray(r.activities) ? r.activities[0] : r.activities;
+    const merged = applyPendingOverlay(r, r.pending_changes);
+    return {
+      id: r.id,
+      name: merged.name,
+      activityId: activity?.id || null,
+      activityTitle: activity?.title || '',
+      activitySlug: activity?.slug || '',
+      guideName: activity?.guide_slug || '',
+      status: r.status,
+      reviewState: r.review_state,
+      isNewPlan: !!r.pending_new_plan,
+      pendingSubmittedAt: r.pending_submitted_at,
+      hasConflict:
+        !r.pending_new_plan &&
+        !!r.pending_base_updated_at &&
+        !!r.updated_at &&
+        new Date(r.updated_at).getTime() > new Date(r.pending_base_updated_at).getTime(),
+    };
+  });
+}
+
+/** 管理者方案審核明細：live row + pending_changes + 逐欄 diff（新方案則整張為新內容）。 */
+export async function getPlanReviewDetailDb(planId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('*, activities(id, title, slug, region, region_slug)')
+    .eq('id', planId)
+    .single();
+  if (!row) return null;
+  const activity = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+  const live = { ...row };
+  delete live.activities;
+  const merged = applyPendingOverlay(live, row.pending_changes);
+  return {
+    plan: { ...merged, activity: activity || null },
+    reviewState: row.review_state || null,
+    reviewAdminNote: row.review_admin_note || null,
+    pendingChanges: row.pending_changes || null,
+    pendingSubmittedAt: row.pending_submitted_at || null,
+    isNewPlan: !!row.pending_new_plan,
+    hasConflict:
+      !row.pending_new_plan &&
+      !!row.pending_base_updated_at &&
+      !!row.updated_at &&
+      new Date(row.updated_at).getTime() > new Date(row.pending_base_updated_at).getTime(),
+    diff: buildPendingDiff(live, row.pending_changes),
+  };
+}
+
+/**
+ * 管理者核准/退回方案。
+ *   - approve：套用 pending_changes（若有）；新方案（pending_new_plan）轉 status='active'；
+ *              清空 pending、review_state 歸 null。
+ *   - reject：保留 pending_changes，review_state → changes_requested、寫入退回備註。
+ * 只能對 review_state='pending' 的方案操作。
+ * @param {string} planId
+ * @param {{ action: 'approve'|'reject', adminNote?: string|null }} [opts]
+ */
+export async function resolvePlanReviewDb(planId, { action, adminNote = null } = {}) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  if (!['approve', 'reject'].includes(action)) throw new Error('invalid review action');
+  const supabase = await getSupabase();
+  const { data: row } = await supabase
+    .from('activity_plans')
+    .select('review_state, pending_changes, pending_new_plan')
+    .eq('id', planId)
+    .single();
+  if (!row) return null;
+  if (row.review_state !== 'pending') {
+    const err = new Error('NOT_PENDING_REVIEW');
+    err.code = 'NOT_PENDING_REVIEW';
+    throw err;
+  }
+
+  const now = new Date().toISOString();
+  const t = resolveActivityReviewTransition(action, { now });
+  const updateData = { review_state: t.reviewState, review_admin_note: adminNote || null, updated_at: now };
+
+  if (action === 'approve') {
+    if (row.pending_changes && Object.keys(row.pending_changes).length > 0) {
+      Object.assign(updateData, buildPlanColumnPatch(row.pending_changes));
+    }
+    if (row.pending_new_plan) {
+      updateData.status = 'active';
+      updateData.pending_new_plan = false;
+    }
+    updateData.pending_changes = null;
+    updateData.pending_submitted_at = null;
+    updateData.pending_submitted_by_guide_id = null;
+    updateData.pending_base_updated_at = null;
+  }
+
+  const { error } = await applyWithMissingColumnFallback(
+    (payload) => supabase.from('activity_plans').update(payload).eq('id', planId),
+    updateData,
+  );
+  if (error) throw new Error(error.message || 'resolve plan review failed');
+
+  await safeActivityAudit(supabase, {
+    actor: 'admin',
+    action: action === 'approve' ? 'plan_approve' : 'plan_reject',
+    metadata: { planId, adminNote: adminNote || null },
+  });
+  return getPlanReviewDetailDb(planId);
+}
+
+// ─────────────────────────────────────────────
+// Phase 2.5 — 導遊方案「季節供應」（activity_plan_seasons）即時管理
+// 季節供應＝方案在一年中哪些日期可預約，性質同 availability（場次）→ 即時生效、不送審。
+// is_year_round（全年供應）亦由此即時管理（已移出送審白名單）。
+// ─────────────────────────────────────────────
+
+/** 導遊載入方案的季節供應設定（全年開關 + 啟用中的季節窗口）。非擁有者回 null。 */
+export async function listGuidePlanSeasonsDb(planId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return null;
+
+  const { data: planRow } = await supabase
+    .from('activity_plans')
+    .select('is_year_round')
+    .eq('id', planId)
+    .single();
+  const { data, error } = await supabase
+    .from('activity_plan_seasons')
+    .select(ACTIVITY_PLAN_SEASON_SELECT_COLUMNS)
+    .eq('activity_plan_id', planId)
+    .eq('is_active', true);
+  if (error) throw new Error(error.message);
+  return {
+    isYearRound: !!planRow?.is_year_round,
+    seasons: sortActivityPlanSeasons(data || []).map(shapeActivityPlanSeason),
+  };
+}
+
+/** 導遊即時設定方案「全年供應」開關。 */
+export async function setGuidePlanYearRoundDb(planId, guideId, isYearRound, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const { error } = await supabase
+    .from('activity_plans')
+    .update({ is_year_round: !!isYearRound, updated_at: new Date().toISOString() })
+    .eq('id', planId);
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_year_round_set',
+    metadata: { planId, guideId, isYearRound: !!isYearRound },
+  });
+  return { ok: true };
+}
+
+/** 導遊即時新增季節供應窗口。 */
+export async function createGuidePlanSeasonDb(planId, guideId, input = {}, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const v = validateCreateActivityPlanSeasonPayload(input);
+  if (!v.ok) return { ok: false, code: 'VALIDATION_ERROR', message: v.message };
+
+  const { data, error } = await supabase
+    .from('activity_plan_seasons')
+    .insert({ activity_plan_id: planId, ...v.value })
+    .select(ACTIVITY_PLAN_SEASON_SELECT_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_season_create',
+    metadata: { planId, guideId, seasonId: data?.id },
+  });
+  return { ok: true, season: shapeActivityPlanSeason(data) };
+}
+
+/** 導遊即時更新季節供應窗口（季節須屬於該方案）。 */
+export async function updateGuidePlanSeasonDb(planId, seasonId, guideId, input = {}, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const { data: existing } = await supabase
+    .from('activity_plan_seasons')
+    .select('id, activity_plan_id, start_month, start_day, end_month, end_day')
+    .eq('id', seasonId)
+    .single();
+  if (!existing || existing.activity_plan_id !== planId) return { ok: false, code: 'SEASON_NOT_FOUND' };
+
+  const v = validateUpdateActivityPlanSeasonPayload(input, existing);
+  if (!v.ok) return { ok: false, code: 'VALIDATION_ERROR', message: v.message };
+
+  const { data, error } = await supabase
+    .from('activity_plan_seasons')
+    .update({ ...v.value, updated_at: new Date().toISOString() })
+    .eq('id', seasonId)
+    .select(ACTIVITY_PLAN_SEASON_SELECT_COLUMNS)
+    .single();
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_season_update',
+    metadata: { planId, guideId, seasonId },
+  });
+  return { ok: true, season: shapeActivityPlanSeason(data) };
+}
+
+/** 導遊即時移除季節供應窗口（soft-delete：is_active=false）。 */
+export async function deleteGuidePlanSeasonDb(planId, seasonId, guideId, activityId) {
+  if (!hasSupabaseEnv()) throw new Error('Supabase not configured');
+  const supabase = await getSupabase();
+  const owned = await assertPlanEditable(supabase, planId, guideId, activityId);
+  if (!owned.ok) return owned;
+  const { data: existing } = await supabase
+    .from('activity_plan_seasons')
+    .select('id, activity_plan_id')
+    .eq('id', seasonId)
+    .single();
+  if (!existing || existing.activity_plan_id !== planId) return { ok: false, code: 'SEASON_NOT_FOUND' };
+
+  const { error } = await supabase
+    .from('activity_plan_seasons')
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq('id', seasonId);
+  if (error) throw new Error(error.message);
+  await safeActivityAudit(supabase, {
+    actor: 'guide',
+    action: 'plan_season_delete',
+    metadata: { planId, guideId, seasonId },
+  });
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────
@@ -5272,6 +6051,224 @@ export async function listGuideRescheduleRequestsDb(input = {}) {
     result.push({
       ...mapRescheduleRow(row, order),
       activityTitle: activity?.title ?? null,
+    });
+  }
+  return result;
+}
+
+// ── 三種預約模式：request plan 的導遊審核（先審核後付款） ──────────────────────
+//
+// guide_approval_status 是與 booking.status 正交的審核維度。request plan 的 draft
+// booking 帶 guide_approval_status='pending'；導遊 approve → 'approved'（放行付款，
+// booking 維持 draft），reject → 'rejected' 且 booking draft→cancelled、連動 order
+// 取消（cancelled_by_guide）。決策合法性由純函式 decideApproval 統一判定。
+
+// In-memory V2 booking registry（feature-scoped；無 Supabase 時的 fallback 與契約測試用）。
+const v2BookingApprovalStore = new Map();
+
+export function __seedV2BookingForTest(booking = {}) {
+  const id = String(booking.id || `bk_${v2BookingApprovalStore.size + 1}`);
+  const row = {
+    id,
+    booking_no: booking.booking_no ?? `BK-${id}`,
+    guide_id: booking.guide_id ?? null,
+    order_id: booking.order_id ?? null,
+    status: booking.status ?? 'draft',
+    guide_approval_status: booking.guide_approval_status ?? 'pending',
+    booking_type: booking.booking_type ?? 'request',
+    order_status: booking.order_status ?? 'pending_payment',
+    guide_approval_note: null,
+    guide_approval_decided_at: null,
+  };
+  v2BookingApprovalStore.set(id, row);
+  return row;
+}
+
+export function __resetV2BookingStoreForTest() {
+  v2BookingApprovalStore.clear();
+}
+
+function decideBookingApprovalInMemory(input = {}) {
+  const bookingId = String(input?.bookingId || '').trim();
+  const guideId = String(input?.guideId || '').trim();
+  const action = String(input?.action || '').trim();
+  const note = String(input?.note || '').trim();
+
+  const row = v2BookingApprovalStore.get(bookingId);
+  if (!row) throw new Error('BOOKING_NOT_FOUND: booking not found');
+  // ownership：不洩漏存在性
+  if (guideId && row.guide_id && row.guide_id !== guideId) {
+    throw new Error('BOOKING_NOT_FOUND: booking not found');
+  }
+
+  const decision = decideApproval({
+    bookingStatus: row.status,
+    guideApprovalStatus: row.guide_approval_status,
+    bookingType: row.booking_type,
+    action,
+  });
+  if (!decision.ok) throw new Error(`${decision.code}: ${decision.messageZh}`);
+
+  row.guide_approval_status = decision.nextGuideApprovalStatus;
+  row.guide_approval_note = note || null;
+  row.guide_approval_decided_at = new Date().toISOString();
+  row.status = decision.nextBookingStatus;
+  if (decision.nextBookingStatus === 'cancelled') {
+    row.order_status = 'cancelled_by_guide';
+  }
+  v2BookingApprovalStore.set(bookingId, row);
+
+  return {
+    bookingId,
+    bookingNo: row.booking_no,
+    orderId: row.order_id ?? null,
+    status: row.status,
+    guideApprovalStatus: row.guide_approval_status,
+    action,
+  };
+}
+
+export async function decideBookingApprovalDb(input = {}) {
+  if (!hasSupabaseEnv()) return decideBookingApprovalInMemory(input);
+
+  const bookingId = String(input?.bookingId || '').trim();
+  const guideId = String(input?.guideId || '').trim();
+  const action = String(input?.action || '').trim();
+  const note = String(input?.note || '').trim();
+  if (!['approve', 'reject'].includes(action)) throw new Error('BAD_REQUEST: invalid action');
+
+  const supabase = await getSupabase();
+  const { data: booking, error } = await supabase
+    .from('bookings')
+    .select('id, booking_no, guide_id, order_id, status, guide_approval_status, activity_plan_id, activity_plans(booking_type)')
+    .eq('id', bookingId)
+    .maybeSingle();
+  if (error || !booking) throw new Error('BOOKING_NOT_FOUND: booking not found');
+
+  // ownership：不洩漏存在性
+  if (guideId && booking.guide_id && booking.guide_id !== guideId) {
+    throw new Error('BOOKING_NOT_FOUND: booking not found');
+  }
+
+  const planRel = Array.isArray(booking.activity_plans)
+    ? booking.activity_plans[0]
+    : booking.activity_plans;
+  const bookingType = planRel?.booking_type;
+
+  const decision = decideApproval({
+    bookingStatus: booking.status,
+    guideApprovalStatus: booking.guide_approval_status,
+    bookingType,
+    action,
+  });
+  if (!decision.ok) throw new Error(`${decision.code}: ${decision.messageZh}`);
+
+  const now = new Date();
+  const updatePayload = {
+    guide_approval_status: decision.nextGuideApprovalStatus,
+    guide_approval_decided_at: now.toISOString(),
+    guide_approval_note: note || null,
+    updated_at: now.toISOString(),
+  };
+  if (decision.nextBookingStatus === 'cancelled') {
+    updatePayload.status = 'cancelled';
+    updatePayload.cancelled_at = now.toISOString();
+  }
+
+  // optimistic guard：只在仍為 pending 時更新，避免雙重決策 race
+  const { error: updError } = await supabase
+    .from('bookings')
+    .update(updatePayload)
+    .eq('id', bookingId)
+    .eq('guide_approval_status', 'pending');
+  if (updError) throw new Error(updError.message);
+
+  await supabase.from('booking_status_logs').insert({
+    booking_id: bookingId,
+    from_status: booking.status,
+    to_status: decision.nextBookingStatus,
+    actor_user_id: null,
+    actor_role: 'guide',
+    reason: action === 'approve' ? 'guide_approved' : 'guide_rejected',
+    metadata: { guideId, note, bookingType },
+  });
+
+  // reject → 連動取消 order（僅未付款的 pending_payment）
+  if (decision.nextBookingStatus === 'cancelled' && booking.order_id) {
+    await supabase
+      .from('orders')
+      .update({ status: 'cancelled_by_guide', updated_at: now.toISOString() })
+      .eq('id', booking.order_id)
+      .eq('status', 'pending_payment');
+  }
+
+  return {
+    bookingId,
+    bookingNo: booking.booking_no,
+    orderId: booking.order_id ?? null,
+    status: decision.nextBookingStatus,
+    guideApprovalStatus: decision.nextGuideApprovalStatus,
+    action,
+  };
+}
+
+/**
+ * 導遊「待審核」清單：request plan 仍為 draft + guide_approval_status='pending'。
+ */
+export async function listGuidePendingApprovalsDb(input = {}) {
+  if (!hasSupabaseEnv()) return listGuidePendingApprovalsInMemory(input);
+
+  const guideId = String(input?.guideId || '').trim();
+  const supabase = await getSupabase();
+
+  const { data: rows, error } = await supabase
+    .from('bookings')
+    .select(
+      'id, booking_no, start_at, participants, guide_approval_status, status, created_at, ' +
+        'activity_id, order_id, activities(title), activity_plans(name), ' +
+        'orders(contact_name, total_twd)'
+    )
+    .eq('guide_id', guideId)
+    .eq('guide_approval_status', 'pending')
+    .eq('status', 'draft')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw new Error(error.message);
+
+  return (rows ?? []).map((row) => {
+    const activity = Array.isArray(row.activities) ? row.activities[0] : row.activities;
+    const plan = Array.isArray(row.activity_plans) ? row.activity_plans[0] : row.activity_plans;
+    const order = Array.isArray(row.orders) ? row.orders[0] : row.orders;
+    return {
+      bookingId: row.id,
+      bookingNo: row.booking_no,
+      tourTitle: activity?.title ?? '',
+      planName: plan?.name ?? '',
+      guestName: order?.contact_name ?? '未知',
+      startAt: row.start_at,
+      partySize: row.participants,
+      totalTwd: order?.total_twd ?? null,
+      createdAt: row.created_at,
+    };
+  });
+}
+
+function listGuidePendingApprovalsInMemory(input = {}) {
+  const guideId = String(input?.guideId || '').trim();
+  const result = [];
+  for (const row of v2BookingApprovalStore.values()) {
+    if (row.guide_approval_status !== 'pending' || row.status !== 'draft') continue;
+    if (guideId && row.guide_id && row.guide_id !== guideId) continue;
+    result.push({
+      bookingId: row.id,
+      bookingNo: row.booking_no,
+      tourTitle: row.tour_title ?? '',
+      planName: row.plan_name ?? '',
+      guestName: row.guest_name ?? '未知',
+      startAt: row.start_at ?? null,
+      partySize: row.party_size ?? null,
+      totalTwd: row.total_twd ?? null,
+      createdAt: row.created_at ?? null,
     });
   }
   return result;

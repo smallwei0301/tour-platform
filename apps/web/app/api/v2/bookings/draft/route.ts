@@ -39,10 +39,16 @@ import {
   shouldRejectDraftByLegacySlotAvailability,
 } from '../../../../../src/lib/availability-v2/effective-booking-availability';
 import type { GuideSlotConflictOverride } from '../../../../../src/lib/availability-v2/conflict-override';
+import { evaluateOverrideDynamicSlots } from '../../../../../src/lib/availability-v2/override-dynamic-slots';
 import {
   applyBookingConflictOverrideColumnFallback,
   loadConflictOverridesWithSchemaFallback,
 } from '../../../../../src/lib/conflict-override-schema-compat.mjs';
+import {
+  initialApprovalStatusForBookingType,
+  normalizeBookingType,
+  requiresGuideApproval,
+} from '../../../../../src/lib/booking-type-flow.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -299,6 +305,11 @@ async function isSlotInGeneratedV2Availability(
     is_year_round: payload.planIsYearRound,
   };
 
+  // scheduled（排程預約）：固定場次是唯一可預約來源，動態規則不適用，因此不把
+  // availability rules 餵進 evaluator —— 與 available-slots 列表行為一致，避免
+  // 「方案同時有規則但場次時間不在規則內」時把合法固定場次誤判為不可預約。
+  const effectiveRules = payload.planBookingType === 'scheduled' ? [] : rules;
+
   const availability = evaluateEffectiveBookingAvailability({
     guideId: payload.guideId,
     activityId: payload.activityId,
@@ -309,7 +320,7 @@ async function isSlotInGeneratedV2Availability(
     dateTo: payload.slotDate,
     requestedStartAt: payload.startAt,
     minParticipants: payload.minParticipants,
-    rules,
+    rules: effectiveRules,
     blackouts,
     bookings,
     plan,
@@ -321,6 +332,40 @@ async function isSlotInGeneratedV2Availability(
   });
 
   if (!availability.available) {
+    // instant／request 動態方案:該時段被既有預約擋住,但若管理者已對此時段加開
+    // conflict override,則放行並帶回 override 快照供寫入 booking。scheduled 與
+    // scheduleId 直連已於 evaluator selectedSchedule 分支處理,不走這裡。
+    if (
+      payload.planBookingType !== 'scheduled' &&
+      !payload.selectedSchedule &&
+      conflictOverrides.length > 0
+    ) {
+      const overrideSlots = evaluateOverrideDynamicSlots(
+        {
+          guideId: payload.guideId,
+          activityId: payload.activityId,
+          planId: payload.planId,
+          timezone: payload.timezone,
+          participants: payload.participants,
+          dateFrom: payload.slotDate,
+          dateTo: payload.slotDate,
+          minParticipants: payload.minParticipants,
+          blackouts,
+          bookings,
+          plan,
+          seasons,
+          planStatus: 'active',
+        },
+        conflictOverrides,
+      );
+      const requestedMs = new Date(payload.startAt).getTime();
+      const overrideMatch = overrideSlots.find(
+        (slot) => new Date(slot.startAt).getTime() === requestedMs,
+      );
+      if (overrideMatch) {
+        return { available: true, conflictOverride: overrideMatch.conflictOverride };
+      }
+    }
     return {
       available: false,
       reasonCode: availability.reasonCode,
@@ -804,36 +849,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 排程預約（scheduled）enforcement：固定場次是唯一可預約來源。必須解析到一個
+    // 有效的 activity_schedule，否則拒絕 —— 旅客不得以動態規則時段預約此類方案。
+    if (planData.booking_type === 'scheduled') {
+      if (!selectedScheduleForAvailability) {
+        return Response.json(
+          errorV2('SCHEDULE_REQUIRED', '此方案僅開放預設場次預約，請選擇可預約的場次'),
+          { status: 409 },
+        );
+      }
+      if (selectedScheduleValidation?.available !== true) {
+        return Response.json(
+          errorV2('SLOT_UNAVAILABLE', '此場次已無可用名額，請重新選擇場次'),
+          { status: 409 },
+        );
+      }
+    }
+
     const scheduleValidatedBySourceOfTruth = selectedScheduleValidation?.available === true;
-    if (
-      shouldRejectDraftByLegacySlotAvailability({
-        hasActiveAvailabilityRules: (rulesData?.length ?? 0) > 0,
-        scheduleValidatedBySourceOfTruth,
-        slotValidation,
-      })
-    ) {
-      const errorMessages: Record<string, string> = {
-        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
-        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
-        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
-      };
-      return Response.json(
-        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
-        { status: 409 }
-      );
-    }
 
-    if (
-      shouldRejectDraftWhenSelectedScheduleInvalid({
-        hasScheduleId: Boolean(data.scheduleId),
-        selectedScheduleValidation,
-      })
-    ) {
-      return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
-        status: 409,
-      });
-    }
-
+    // V2 權威驗證(含 admin conflict override 對 instant／request 動態時段的例外開放)
+    // 先跑;若它放行(含 override),下方 legacy 與 selectedSchedule-invalid 阻擋就跳過,
+    // 避免被既有預約衝突的 legacy 檢查擋掉已被管理者例外開放的時段。
     let generatedSlotValidation: {
       available: boolean;
       reasonCode?: string;
@@ -872,6 +909,37 @@ export async function POST(request: NextRequest) {
       console.error('Error generating slot availability', error);
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to validate slot availability'), {
         status: 500,
+      });
+    }
+
+    if (
+      !generatedSlotValidation.available &&
+      shouldRejectDraftByLegacySlotAvailability({
+        hasActiveAvailabilityRules: (rulesData?.length ?? 0) > 0,
+        scheduleValidatedBySourceOfTruth,
+        slotValidation,
+      })
+    ) {
+      const errorMessages: Record<string, string> = {
+        SLOT_IN_PAST: '所選時段已過期，請重新選擇時段',
+        BLACKOUT_CONFLICT: '該時段暫停開放預約，請選擇其他時段',
+        BOOKING_CONFLICT: '該時段已無可用名額，請選擇其他時段',
+      };
+      return Response.json(
+        errorV2('SLOT_UNAVAILABLE', errorMessages[slotValidation.reason!] || '此時段已無可用名額，請重新選擇時段'),
+        { status: 409 }
+      );
+    }
+
+    if (
+      !generatedSlotValidation.available &&
+      shouldRejectDraftWhenSelectedScheduleInvalid({
+        hasScheduleId: Boolean(data.scheduleId),
+        selectedScheduleValidation,
+      })
+    ) {
+      return Response.json(errorV2('SLOT_UNAVAILABLE', '此時段已無可用名額，請重新選擇時段'), {
+        status: 409,
       });
     }
 
@@ -962,6 +1030,8 @@ export async function POST(request: NextRequest) {
       timezone: data.timezone,
       participants: data.participants,
       status: 'draft',
+      // request plan → 'pending'（先審核後付款）；instant/scheduled → 'not_required'.
+      guide_approval_status: initialApprovalStatusForBookingType(planData.booking_type),
       customer_note: data.customerNote || null,
       conflict_override_id: conflictOverrideId,
       conflict_override_snapshot: conflictOverrideSnapshot,
@@ -1083,6 +1153,9 @@ export async function POST(request: NextRequest) {
         orderStatus: 'pending_payment',
         amount: totalAmount,
         currency: 'TWD',
+        // 三種預約模式：前端依此分流（request → 顯示「送出申請」、不進付款）。
+        bookingType: normalizeBookingType(planData.booking_type),
+        requiresApproval: requiresGuideApproval(planData.booking_type),
       })
     );
   } catch (err) {

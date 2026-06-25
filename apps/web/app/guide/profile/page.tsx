@@ -4,7 +4,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
+import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
+import { compressImage } from '../../../src/lib/client-image-compress';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
+
+const REGION_OPTIONS = listRegionOptions().map((r) => r.displayName);
 
 // Client component 必須用「字面量」process.env.NEXT_PUBLIC_* 才會被 Next 於 build 內嵌；
 // 透過 feature-flags.mjs 的 env 參數間接讀取（env.NEXT_PUBLIC_*）在 client bundle 不會被
@@ -18,6 +23,9 @@ type Profile = {
   headline: string;
   bio: string;
   region: string;
+  regions: string[];
+  certifications: string[];
+  payment_methods: string[];
   languages: string[];
   specialties: string[];
   profile_photo_url: string | null;
@@ -33,6 +41,7 @@ type Profile = {
 
 const EMPTY: Profile = {
   display_name: '', headline: '', bio: '', region: '',
+  regions: [], certifications: [], payment_methods: [],
   languages: [], specialties: [],
   profile_photo_url: null, hero_image_url: null, gallery_urls: [],
   slug: null,
@@ -81,6 +90,9 @@ export default function GuideProfileEditPage() {
             headline: d.headline ?? '',
             bio: d.bio ?? '',
             region: d.region ?? '',
+            regions: Array.isArray(d.regions) ? d.regions : [],
+            certifications: Array.isArray(d.certifications) ? d.certifications : [],
+            payment_methods: Array.isArray(d.payment_methods) ? d.payment_methods : [],
             languages: Array.isArray(d.languages) ? d.languages : [],
             specialties: Array.isArray(d.specialties) ? d.specialties : [],
             profile_photo_url: d.profile_photo_url ?? null,
@@ -110,7 +122,10 @@ export default function GuideProfileEditPage() {
           display_name: profile.display_name,
           headline: profile.headline,
           bio: profile.bio,
-          region: profile.region,
+          region: profile.regions[0] ?? profile.region,
+          regions: profile.regions,
+          certifications: profile.certifications,
+          payment_methods: profile.payment_methods,
           languages: profile.languages,
           specialties: profile.specialties,
           gallery_urls: profile.gallery_urls,
@@ -260,15 +275,14 @@ export default function GuideProfileEditPage() {
             </div>
 
             <div>
-              <label htmlFor="region" style={LABEL}>服務地區</label>
-              <input
-                id="region"
-                type="text"
-                value={profile.region}
-                onChange={(e) => update('region', e.target.value)}
-                placeholder="例：高雄"
-                style={INPUT}
+              <span style={LABEL}>熟悉區域</span>
+              <ToggleChips
+                ariaLabel="熟悉區域"
+                options={REGION_OPTIONS.map((r) => ({ id: r, label: r }))}
+                values={profile.regions}
+                onChange={(next) => update('regions', next)}
               />
+              <p style={HINT}>申請時選的區域已自動帶入，可自行勾選增減</p>
             </div>
 
             <div>
@@ -291,6 +305,28 @@ export default function GuideProfileEditPage() {
                 placeholder="例：歷史導覽、美食探訪"
               />
               <p style={HINT}>按 Enter 或逗號新增；點 ✕ 移除</p>
+            </div>
+
+            <div>
+              <span style={LABEL}>專業證照</span>
+              <ChipsInput
+                ariaLabel="專業證照"
+                values={profile.certifications}
+                onChange={(next) => update('certifications', next)}
+                placeholder="例：導遊證、急救證照"
+              />
+              <p style={HINT}>申請時填寫的證照已自動帶入；按 Enter 或逗號新增、點 ✕ 移除</p>
+            </div>
+
+            <div>
+              <span style={LABEL}>收款方式</span>
+              <ToggleChips
+                ariaLabel="收款方式"
+                options={GUIDE_PAYMENT_OPTIONS as unknown as Array<{ id: string; label: string }>}
+                values={profile.payment_methods}
+                onChange={(next) => update('payment_methods', next)}
+              />
+              <p style={HINT}>可複選；會顯示在你的公開頁，讓旅客知道可接受的付款方式</p>
             </div>
 
             <div>
@@ -648,6 +684,41 @@ function ChipsInput({
   );
 }
 
+/**
+ * 固定選項的多選 chips（熟悉區域、收款方式）。點選切換、已選高亮。
+ */
+function ToggleChips({
+  options, values, onChange, ariaLabel,
+}: { options: Array<{ id: string; label: string }>; values: string[]; onChange: (next: string[]) => void; ariaLabel: string }) {
+  function toggle(id: string) {
+    onChange(values.includes(id) ? values.filter((v) => v !== id) : [...values, id]);
+  }
+  return (
+    <div role="group" aria-label={ariaLabel} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+      {options.map((opt) => {
+        const active = values.includes(opt.id);
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            aria-pressed={active}
+            onClick={() => toggle(opt.id)}
+            style={{
+              padding: '6px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+              border: active ? `1px solid ${PURPLE}` : '1px solid #d1d5db',
+              background: active ? PURPLE_SOFT : '#fff',
+              color: active ? '#6d28d9' : '#374151',
+            }}
+          >
+            {active ? '✓ ' : ''}{opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Hero (16:9 cover) upload field ──────────────────────────────────
 function HeroField({ currentUrl, onUploaded }: { currentUrl: string | null; onUploaded: (url: string) => void }) {
   const [busy, setBusy] = useState(false);
@@ -908,42 +979,5 @@ function GalleryEditor({ urls, onChange }: { urls: string[]; onChange: (next: st
   );
 }
 
-// ─── client-side center-crop + WebP compress ────────────────────────
-type ImageKind = 'avatar' | 'hero' | 'gallery';
-async function compressImage(file: File, kind: ImageKind): Promise<File> {
-  const config = {
-    avatar:  { ratio: 1,        w: 400,  h: 400  },
-    hero:    { ratio: 16 / 9,   w: 1920, h: 1080 },
-    gallery: { ratio: 3 / 2,    w: 1200, h: 800  },
-  }[kind];
-
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const { width, height } = img;
-      const srcRatio = width / height;
-      let cropW = width, cropH = height, cropX = 0, cropY = 0;
-      if (srcRatio > config.ratio) {
-        cropW = height * config.ratio;
-        cropX = (width - cropW) / 2;
-      } else {
-        cropH = width / config.ratio;
-        cropY = (height - cropH) / 2;
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = config.w;
-      canvas.height = config.h;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('無法建立 canvas context')); return; }
-      ctx.drawImage(img, cropX, cropY, cropW, cropH, 0, 0, config.w, config.h);
-      canvas.toBlob((blob) => {
-        if (!blob) { reject(new Error('壓縮失敗')); return; }
-        resolve(new File([blob], `${kind}.webp`, { type: 'image/webp' }));
-      }, 'image/webp', 0.85);
-    };
-    img.onerror = () => reject(new Error('圖片載入失敗'));
-    img.src = url;
-  });
-}
+// client-side center-crop + WebP compress 已抽到 src/lib/client-image-compress.ts
+// （申請表單與導遊後台共用，避免重複實作）。

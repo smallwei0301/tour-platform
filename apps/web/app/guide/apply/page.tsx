@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
+import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
+import { compressImage } from '../../../src/lib/client-image-compress';
 
 export default function GuideApplyPage() {
   const [step, setStep] = useState(1);
@@ -15,7 +18,7 @@ export default function GuideApplyPage() {
   const [regions, setRegions] = useState<string[]>([]);
   const [certs, setCerts] = useState<string[]>([]);
   const [otherCert, setOtherCert] = useState('');
-  const [payment, setPayment] = useState('bank');
+  const [payments, setPayments] = useState<string[]>(['bank']);
   const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const [heroImageUrl, setHeroImageUrl] = useState('');
   const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
@@ -33,9 +36,12 @@ export default function GuideApplyPage() {
   const GALLERY_MAX = 6;
 
   async function uploadPhoto(kind: 'avatar' | 'hero' | 'gallery', file: File): Promise<string> {
+    // 先在瀏覽器壓成小張 WebP 再上傳：手機原圖常 3–12MB，會撞到 Vercel function
+    // 約 4.5MB 的 request body 上限（FUNCTION_PAYLOAD_TOO_LARGE），導致「上傳失敗」。
+    const compressed = await compressImage(file, kind);
     const fd = new FormData();
     fd.append('kind', kind);
-    fd.append('file', file);
+    fd.append('file', compressed);
     const res = await fetch('/api/guide-applications/upload', { method: 'POST', body: fd });
     const json = await res.json().catch(() => null);
     if (!json?.ok) throw new Error(json?.error?.message || '照片上傳失敗，請稍後再試');
@@ -68,13 +74,10 @@ export default function GuideApplyPage() {
 
   const specialtyOptions = ['文化走讀', '美食導覽', '山林健行', '水上活動', '單車行程'];
   const languageOptions = ['中文', '英文', '日文', '韓文', '泰文'];
-  const regionOptions = ['台北', '桃園', '台中', '台南', '高雄', '花蓮', '台東'];
+  // 全台地區（含嘉義、屏東等）統一取自平台正規地區清單，與活動地區同源。
+  const regionOptions = listRegionOptions().map((r) => r.displayName);
   const certOptions = ['急救證照', '登山證照', '潛水證照', '導遊證', '領隊證'];
-  const paymentOptions = [
-    { id: 'bank', label: '銀行轉帳' },
-    { id: 'linepay', label: 'LINE Pay' },
-    { id: 'transfer', label: '第三方金流' },
-  ];
+  const paymentOptions = GUIDE_PAYMENT_OPTIONS;
 
   const perks = [
     { strong: '導遊實拿 85%', label: '平台抽成 15%' },
@@ -99,7 +102,7 @@ export default function GuideApplyPage() {
           languages,
           regions,
           certs: otherCert ? [...certs, otherCert] : certs,
-          payment,
+          payments,
           profilePhotoUrl,
           heroImageUrl: heroImageUrl || null,
           galleryUrls,
@@ -252,15 +255,14 @@ export default function GuideApplyPage() {
             </div>
 
             <div>
-              <p className="lp-apply-group-label">收款方式*</p>
+              <p className="lp-apply-group-label">收款方式*（可複選）</p>
               <div className="lp-apply-chips">
                 {paymentOptions.map((option) => (
                   <label key={option.id} className="lp-apply-chip">
                     <input
-                      type="radio"
-                      name="payment"
-                      checked={payment === option.id}
-                      onChange={() => setPayment(option.id)}
+                      type="checkbox"
+                      checked={payments.includes(option.id)}
+                      onChange={() => toggleList(option.id, payments, setPayments)}
                     />
                     {option.label}
                   </label>
@@ -395,7 +397,7 @@ export default function GuideApplyPage() {
               <p>語言：{languages.length ? languages.join('、') : '—'}</p>
               <p>區域：{regions.length ? regions.join('、') : '—'}</p>
               <p>證照：{[...certs, otherCert].filter(Boolean).length ? [...certs, otherCert].filter(Boolean).join('、') : '—'}</p>
-              <p>收款方式：{paymentOptions.find((item) => item.id === payment)?.label || '—'}</p>
+              <p>收款方式：{payments.length ? payments.map((id) => paymentOptions.find((item) => item.id === id)?.label || id).join('、') : '—'}</p>
               <div className="lp-apply-summary-photo">
                 <span>個人照片：</span>
                 {profilePhotoUrl ? (

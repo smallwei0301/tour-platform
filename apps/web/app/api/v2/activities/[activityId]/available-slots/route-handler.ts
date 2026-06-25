@@ -24,7 +24,9 @@ import {
   type ExistingBooking,
   type ActivityPlan,
 } from '../../../../../../src/lib/slot-generator.ts';
-import { evaluateBookingAvailability } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import { evaluateBookingAvailability, type EvaluatorSchedule } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
+import { evaluateScheduledPlanSlots } from '../../../../../../src/lib/availability-v2/scheduled-plan-slots.ts';
+import { evaluateOverrideDynamicSlots } from '../../../../../../src/lib/availability-v2/override-dynamic-slots.ts';
 import { buildActivityPlanNotFoundResponse } from '../../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
 import { getCanonicalReasonCopy } from '../../../../../../src/lib/availability-v2/canonical-reason-copy.ts';
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
@@ -551,27 +553,140 @@ export async function getAvailableSlots(
         ? Number((planData as { min_participants?: unknown }).min_participants)
         : 1;
 
+    // scheduled（排程預約）方案：固定場次是唯一可預約來源，動態規則不適用，
+    // 因此一律不把 availability rules 餵進 evaluator。instant/request 維持原本行為。
+    const effectiveRules = plan.booking_type === 'scheduled' ? [] : rules;
+    const isScheduledListing = plan.booking_type === 'scheduled' && !selectedSchedule;
+
     // Preserve canonical slot states from evaluator, including allowed_with_admin_override
     // when a guide_slot_conflict_overrides record explicitly re-opens a conflicting slot.
-    const availability = evaluateBookingAvailability({
-      guideId,
-      activityId: params.activityId,
-      planId: params.planId,
-      timezone: params.timezone,
-      participants: params.participants,
-      dateFrom: params.dateFrom,
-      dateTo: params.dateTo,
-      minParticipants,
-      rules,
-      blackouts,
-      bookings,
-      plan,
-      seasons,
-      conflictOverrides,
-      planStatus: planData.status,
-      selectedSchedule,
-      selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
-    });
+    let availability;
+    if (isScheduledListing) {
+      // 列出該方案在查詢區間內的所有開放固定場次，逐一驗證收集為可預約 slots。
+      const { data: planSchedules, error: planSchedulesError } = await supabase
+        .from('activity_schedules')
+        .select('id, activity_id, plan_id, start_at, end_at, capacity, booked_count, status')
+        .eq('activity_id', params.activityId)
+        .or(`plan_id.is.null,plan_id.eq.${params.planId}`);
+
+      if (planSchedulesError) {
+        console.error('Error fetching activity schedules:', planSchedulesError);
+        return Response.json(errorV2('INTERNAL_ERROR', 'Failed to fetch activity schedules'), {
+          status: 500,
+        });
+      }
+
+      const openSchedules: EvaluatorSchedule[] = (planSchedules || [])
+        .filter((s) => s.status === 'open')
+        .filter((s) => {
+          const localDate = getDateStringInTimezone(new Date(s.start_at), params.timezone);
+          return localDate >= params.dateFrom && localDate <= params.dateTo;
+        })
+        .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+
+      const scheduledResult = evaluateScheduledPlanSlots(
+        {
+          guideId,
+          activityId: params.activityId,
+          planId: params.planId,
+          timezone: params.timezone,
+          participants: params.participants,
+          dateFrom: params.dateFrom,
+          dateTo: params.dateTo,
+          minParticipants,
+          blackouts,
+          bookings,
+          plan,
+          seasons,
+          conflictOverrides,
+          planStatus: planData.status,
+        },
+        openSchedules,
+      );
+
+      availability = {
+        available: scheduledResult.slots.length > 0,
+        reasonCode: scheduledResult.reasonCode,
+        messageZh: scheduledResult.messageZh,
+        canonicalReasonState: undefined,
+        capacityLeft: undefined,
+        selectedScheduleAuthority: 'authoritative' as const,
+        slots: scheduledResult.slots,
+        diagnostics: {
+          generatedSlotCount: scheduledResult.slots.length,
+          filteredSlotCount: scheduledResult.slots.length,
+          schedulePresentInGeneratedSlots: scheduledResult.slots.length > 0,
+          hasRules: false,
+          groupedRuleFailuresByDate: {},
+          rules: [],
+          blackouts,
+          bookings,
+          seasons,
+          seasonGateEnabled: seasons !== undefined,
+          isYearRound: Boolean(plan.is_year_round),
+          planStatus: planData.status ?? 'active',
+        },
+      };
+    } else {
+      availability = evaluateBookingAvailability({
+        guideId,
+        activityId: params.activityId,
+        planId: params.planId,
+        timezone: params.timezone,
+        participants: params.participants,
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+        minParticipants,
+        rules: effectiveRules,
+        blackouts,
+        bookings,
+        plan,
+        seasons,
+        conflictOverrides,
+        planStatus: planData.status,
+        selectedSchedule,
+        selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
+      });
+    }
+
+    // instant／request 動態方案:把管理者加開的 conflict override 時段(被既有預約
+    // 擋住、admin 例外開放者)併入動態結果,讓旅客也能預約。scheduled 走固定場次
+    // 路徑、scheduleId 直連走 evaluator selectedSchedule 分支,兩者已各自處理 override。
+    if (!selectedSchedule && plan.booking_type !== 'scheduled' && conflictOverrides.length > 0) {
+      const overrideSlots = evaluateOverrideDynamicSlots(
+        {
+          guideId,
+          activityId: params.activityId,
+          planId: params.planId,
+          timezone: params.timezone,
+          participants: params.participants,
+          dateFrom: params.dateFrom,
+          dateTo: params.dateTo,
+          minParticipants,
+          blackouts,
+          bookings,
+          plan,
+          seasons,
+          conflictOverrides,
+          planStatus: planData.status,
+        },
+        conflictOverrides,
+      );
+      if (overrideSlots.length > 0) {
+        const existingStarts = new Set(availability.slots.map((s) => s.startAt));
+        const mergedSlots = [
+          ...availability.slots,
+          ...overrideSlots.filter((s) => !existingStarts.has(s.startAt)),
+        ].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+        availability = {
+          ...availability,
+          slots: mergedSlots,
+          available: mergedSlots.length > 0,
+          reasonCode: mergedSlots.length > 0 ? undefined : availability.reasonCode,
+          messageZh: mergedSlots.length > 0 ? undefined : availability.messageZh,
+        };
+      }
+    }
 
     const dateAvailability = buildDateAvailabilitySummary({
       dateFrom: params.dateFrom,
@@ -626,6 +741,8 @@ export async function getAvailableSlots(
           basePrice: planData.base_price,
           minParticipants: planData.min_participants,
           maxParticipants: planData.max_participants,
+          // 三種預約模式：供前端依此切換預約流程文案（即時/排程/申請）。
+          bookingType: planData.booking_type,
         },
         slots: publicSlots,
         dateAvailability,

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../src/components/admin/ui';
+import { paymentMethodLabels } from '../../../../src/lib/guide-payment-options.mjs';
 
 type GuideApplicationDetail = {
   fullName: string;
@@ -15,6 +16,7 @@ type GuideApplicationDetail = {
   regions?: string[];
   certifications?: string[];
   paymentMethod?: string | null;
+  paymentMethods?: string[];
   profilePhotoUrl?: string | null;
   heroImageUrl?: string | null;
   galleryUrls?: string[];
@@ -159,12 +161,13 @@ export default function AdminGuideDetailPage() {
                 </div>
               )}
             </div>
-            {/* 申請人自填的專長/語言/服務地區/證照 — 上線時自動帶入導遊檔案 */}
+            {/* 申請人自填的專長/語言/熟悉區域/證照/收款方式 — 上線時自動帶入導遊檔案 */}
             {([
               { label: '專長', items: guide.application.specialties },
               { label: '語言', items: guide.application.languages },
-              { label: '服務地區', items: guide.application.regions },
+              { label: '熟悉區域', items: guide.application.regions },
               { label: '證照（自述，僅供審核參考）', items: guide.application.certifications },
+              { label: '收款方式', items: paymentMethodLabels(guide.application.paymentMethods) },
             ] as Array<{ label: string; items?: string[] }>).map((section) =>
               section.items && section.items.length > 0 ? (
                 <div key={section.label} style={{ marginTop: 12, background: '#f9fafb', borderRadius: 8, padding: 16 }}>
@@ -318,6 +321,18 @@ export default function AdminGuideDetailPage() {
                   }}
                 >
                   📅 時間管理
+                </a>
+                <a
+                  href="/admin/help/conflict-override"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    padding: '9px 16px', borderRadius: 8, border: '1px solid #c4b5fd',
+                    background: '#f5f3ff', color: '#6d28d9', fontSize: 13, fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  📖 例外開放衝突時段說明
                 </a>
               </div>
             </div>

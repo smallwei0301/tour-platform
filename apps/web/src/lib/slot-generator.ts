@@ -78,6 +78,14 @@ export interface SerializedSlot {
   capacityLeft: number;
   bookingType: 'scheduled' | 'request' | 'instant';
   isAvailable: boolean;
+  /**
+   * The pre-set activity_schedule this slot is derived from, when the slot
+   * comes from a fixed schedule (booking_type='scheduled' listing or a
+   * selectedSchedule deep-link). null for dynamically rule-generated slots.
+   * Threaded through so the traveler can pick a specific session and the
+   * draft carries its scheduleId.
+   */
+  scheduleId?: string | null;
   canonicalState?: string;
   conflictOverride?: {
     id: string;
@@ -634,6 +642,7 @@ export function serializeSlots(
     capacityLeft: Math.max(0, cap - participants),
     bookingType: plan.booking_type,
     isAvailable: true,
+    scheduleId: null,
   }));
 }
 

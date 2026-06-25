@@ -11,6 +11,7 @@ import { csrfHeaders, readCsrfTokenFromCookie } from '../../lib/csrf-client';
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: '📊', exact: true },
   { href: '/admin/activities', label: '行程管理', icon: '🗺️' },
+  { href: '/admin/activity-reviews', label: '待審行程', icon: '📝' },
   { href: '/admin/homepage', label: '首頁精選', icon: '🏝️' },
   { href: '/admin/orders', label: '訂單管理', icon: '🧾' },
   { href: '/admin/refunds', label: '退款管理', icon: '↩️' },

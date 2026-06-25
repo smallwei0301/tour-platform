@@ -7,9 +7,12 @@ import { useTablistKeyboard } from '../../../src/lib/use-tablist-keyboard';
 
 const SCHEDULE_FILTERS = ['upcoming', 'all', 'past'] as const;
 
+type ExternalHold = { id: string; participants: number; note: string | null };
+
 type Schedule = {
   id: string; activityId: string; tourTitle: string; planName: string; date: string; endAt?: string;
   capacity: number; bookedCount: number; status: string; guideNote: string | null;
+  externalHoldCount?: number; externalHolds?: ExternalHold[];
 };
 
 type Filter = 'all' | 'upcoming' | 'past';
@@ -21,6 +24,9 @@ export default function GuideSchedulesPage() {
   const tabKb = useTablistKeyboard(SCHEDULE_FILTERS, filter, setFilter);
   const [editingCap, setEditingCap] = useState<string | null>(null);
   const [capValue, setCapValue] = useState('');
+  const [editingHold, setEditingHold] = useState<string | null>(null);
+  const [holdValue, setHoldValue] = useState('');
+  const [holdBusy, setHoldBusy] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -76,6 +82,44 @@ export default function GuideSchedulesPage() {
     } else {
       alert(json?.error?.message || '更新失敗');
     }
+  }
+
+  async function addExternalHold(id: string) {
+    const count = Number(holdValue);
+    if (isNaN(count) || count < 1) { alert('請輸入有效的外部佔位人數（至少 1 人）'); return; }
+    setHoldBusy(true);
+    try {
+      const res = await fetch(`/api/guide/schedules/${id}/external-holds`, {
+        method: 'POST',
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
+        body: JSON.stringify({ participants: count }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setEditingHold(null);
+        setHoldValue('');
+        load();
+      } else {
+        alert(json?.error?.message || '登記外部佔位失敗');
+      }
+    } finally { setHoldBusy(false); }
+  }
+
+  async function releaseExternalHold(scheduleId: string, holdId: string) {
+    if (!confirm('確定要釋放這筆外部佔位嗎？釋放後名額會重新開放給線上預訂。')) return;
+    setHoldBusy(true);
+    try {
+      const res = await fetch(`/api/guide/schedules/${scheduleId}/external-holds/${holdId}`, {
+        method: 'DELETE',
+        headers: csrfHeaders({ 'content-type': 'application/json' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        load();
+      } else {
+        alert(json?.error?.message || '釋放外部佔位失敗');
+      }
+    } finally { setHoldBusy(false); }
   }
 
   return (
@@ -184,6 +228,72 @@ export default function GuideSchedulesPage() {
                 </div>
               )
             ),
+          },
+          {
+            key: 'externalHold', header: '外部佔位',
+            cell: (s) => {
+              const holds = s.externalHolds || [];
+              const count = s.externalHoldCount || 0;
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span title="外部通路（OTA／電話／走客）已售、佔用名額的座位數" style={{ fontWeight: 600, color: count > 0 ? '#b45309' : '#9ca3af' }}>
+                      {count > 0 ? `🔒 ${count} 人` : '—'}
+                    </span>
+                    {editingHold === s.id ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <input
+                          value={holdValue}
+                          onChange={(e) => setHoldValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') addExternalHold(s.id); if (e.key === 'Escape') setEditingHold(null); }}
+                          autoFocus
+                          type="number"
+                          min={1}
+                          placeholder="人數"
+                          style={{ width: 56, padding: '4px 6px', borderRadius: 6, border: '1.5px solid #b45309', fontSize: 14, textAlign: 'center' }}
+                        />
+                        <button
+                          onClick={() => addExternalHold(s.id)}
+                          disabled={holdBusy}
+                          title="登記外部佔位"
+                          style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#b45309', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={() => setEditingHold(null)}
+                          title="取消"
+                          style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 13, fontWeight: 700, cursor: 'pointer', lineHeight: 1 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => { setEditingHold(s.id); setHoldValue(''); }}
+                        title="登記外部已售座位（佔用平台名額）"
+                        style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid #fcd34d', background: '#fffbeb', color: '#b45309', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}
+                      >
+                        ＋ 登記
+                      </button>
+                    )}
+                  </div>
+                  {holds.map((h) => (
+                    <div key={h.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#92400e' }}>
+                      <span>· {h.participants} 人</span>
+                      <button
+                        onClick={() => releaseExternalHold(s.id, h.id)}
+                        disabled={holdBusy}
+                        title="釋放此外部佔位"
+                        style={{ padding: '1px 6px', borderRadius: 4, border: '1px solid #e5e7eb', background: '#fff', color: '#6b7280', fontSize: 10, cursor: 'pointer' }}
+                      >
+                        釋放
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              );
+            },
           },
           {
             key: 'status', header: '狀態', align: 'right', mobilePriority: 'subtitle',

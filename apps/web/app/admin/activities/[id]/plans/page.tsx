@@ -695,7 +695,10 @@ export default function ActivityPlansPage() {
                   />
                 </div>
                 <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>預約方式</label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+                    預約方式
+                    <a href="/admin/help/booking-types" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 500, color: '#1d4ed8', textDecoration: 'none' }}>📖 說明</a>
+                  </label>
                   <select
                     aria-label="預約方式"
                     value={form.booking_type}

@@ -14,6 +14,8 @@ interface ImageUploadProps {
   onGalleryUpdate?: (urls: string[]) => void;
   currentUrl?: string;
   currentUrls?: string[];
+  // 上傳端點 base（預設 admin）；guide 編輯器傳入 `/api/guide/activities` 共用同一元件。
+  uploadApiBase?: string;
 }
 
 /**
@@ -92,6 +94,7 @@ export function ImageUpload({
   onGalleryUpdate,
   currentUrl,
   currentUrls,
+  uploadApiBase = '/api/admin/activities',
 }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState('');
@@ -123,7 +126,7 @@ export function ImageUpload({
         fd.append('type', type);
 
         const res = await fetch(
-          `/api/admin/activities/${activityId}/upload-image`,
+          `${uploadApiBase}/${activityId}/upload-image`,
           { method: 'POST', headers: csrfHeaders(), body: fd }
         );
         const json = await res.json();
@@ -154,7 +157,7 @@ export function ImageUpload({
         setUploading(false);
       }
     },
-    [activityId, activitySlug, type, onUploaded, onUpload, onGalleryUpdate, currentUrls]
+    [activityId, activitySlug, type, onUploaded, onUpload, onGalleryUpdate, currentUrls, uploadApiBase]
   );
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {

@@ -318,6 +318,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
             capacityLeft,
             bookingType: input.plan.booking_type,
             isAvailable: true,
+            scheduleId: selectedSchedule.id,
             canonicalState: 'allowed_with_admin_override',
             conflictOverride: serializeConflictOverrideForClient(matchedConflictOverride),
           },
@@ -370,6 +371,7 @@ export function evaluateBookingAvailability(input: BookingAvailabilityEvaluatorI
           capacityLeft,
           bookingType: input.plan.booking_type,
           isAvailable: true,
+          scheduleId: selectedSchedule.id,
         },
       ];
     }
