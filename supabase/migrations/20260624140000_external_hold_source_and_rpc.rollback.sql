@@ -1,5 +1,5 @@
 -- =============================================================
--- Rollback for 20260624120000_external_hold_source_and_rpc.sql
+-- Rollback for 20260624140000_external_hold_source_and_rpc.sql
 --
 -- 前置：執行前須確認沒有殘留的外部佔位，否則回收約束會失敗或留下無法釋放的列。
 --   SELECT count(*) FROM bookings WHERE source_channel = 'external' OR status = 'external_hold';

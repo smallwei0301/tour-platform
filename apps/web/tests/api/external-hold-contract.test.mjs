@@ -15,7 +15,7 @@ async function readRepo(relPath) {
   return readFile(path.join(REPO_ROOT, relPath), 'utf8');
 }
 
-const MIGRATION = 'supabase/migrations/20260624120000_external_hold_source_and_rpc.sql';
+const MIGRATION = 'supabase/migrations/20260624140000_external_hold_source_and_rpc.sql';
 
 test('capacity-hold 狀態集合納入 external_hold，但不算 formed', async () => {
   const src = await readWeb('src/lib/availability-v2/group-booking-rule.ts');

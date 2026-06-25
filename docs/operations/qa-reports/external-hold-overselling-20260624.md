@@ -24,7 +24,7 @@
 ## 二、變更清單
 
 **新增**
-- `supabase/migrations/20260624120000_external_hold_source_and_rpc.sql`（＋ `.rollback.sql`）：放寬 `bookings`／`orders` 的 `source_channel`（加 `external`）、`bookings.status`（加 `external_hold`）、`bookings` 新增 nullable `schedule_id` FK；新增 `fn_create_external_hold` / `fn_release_external_hold` RPC。
+- `supabase/migrations/20260624140000_external_hold_source_and_rpc.sql`（＋ `.rollback.sql`）：放寬 `bookings`／`orders` 的 `source_channel`（加 `external`）、`bookings.status`（加 `external_hold`）、`bookings` 新增 nullable `schedule_id` FK；新增 `fn_create_external_hold` / `fn_release_external_hold` RPC。
 - `apps/web/src/lib/availability-v2/external-hold-rule.ts`：純函式 `evaluateExternalHoldRequest`，鏡像 `fn_book_schedule` 容量語意（#1376 防線）。
 - `apps/web/app/api/guide/schedules/[scheduleId]/external-holds/route.ts`（POST）、`[holdId]/route.ts`（DELETE）。
 - 測試：`tests/unit/external-hold-rule.test.mjs`、`tests/api/external-hold-contract.test.mjs`、`e2e/external-hold-guide.spec.ts`。
