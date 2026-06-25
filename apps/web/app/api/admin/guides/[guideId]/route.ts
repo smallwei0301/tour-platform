@@ -36,11 +36,26 @@ export async function GET(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
-    const { data: profile } = await supabase
+    const isMissingColumn = (e: { code?: string; message?: string } | null) =>
+      !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
+
+    // guide_profiles：rich select 含 bio/specialties；若欄位漂移則退回 base select，
+    // 避免整筆查詢因單一缺欄而失敗、被誤判成「找不到導遊」而 404。
+    // （#fix：原本 select 了不存在的單數 `specialty`，導致所有已上線導遊詳情頁 404。）
+    const profileRichSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, bio, specialties, created_at';
+    const profileBaseSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, created_at';
+    let { data: profile, error: profileError } = await supabase
       .from('guide_profiles')
-      .select('id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, bio, specialty, created_at')
+      .select(profileRichSelect)
       .eq('id', guideId)
       .maybeSingle();
+    if (isMissingColumn(profileError)) {
+      ({ data: profile } = await supabase
+        .from('guide_profiles')
+        .select(profileBaseSelect)
+        .eq('id', guideId)
+        .maybeSingle());
+    }
     if (profile) {
       return NextResponse.json({ ok: true, data: { kind: 'profile', ...profile } });
     }
@@ -48,8 +63,6 @@ export async function GET(
     const appBaseSelect = 'id, full_name, phone, email, city, bio, status, admin_note, created_at, updated_at';
     const appRichSelectV1 = `${appBaseSelect}, specialties, languages, regions, certifications, payment_method, profile_photo_url, hero_image_url, gallery_urls`;
     const appRichSelectV2 = `${appRichSelectV1}, payment_methods`;
-    const isMissingColumn = (e: { code?: string; message?: string } | null) =>
-      !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
     // Schema drift guard（三層）：payment_methods（20260623）→ 其餘 rich（20260610）→ base。
     let { data: application, error: appError } = await supabase
       .from('guide_applications')
