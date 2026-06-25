@@ -405,15 +405,6 @@ export default function AdminGuidesPage() {
                       >
                         📅 時間管理
                       </a>
-                      {/* Row 1.6: conflict-override help */}
-                      <a
-                        href="/admin/help/conflict-override"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{ display: 'block', padding: '8px 0', borderRadius: 8, border: '1px solid #c4b5fd', background: '#f5f3ff', color: '#6d28d9', fontSize: 13, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}
-                      >
-                        📖 例外開放衝突時段說明
-                      </a>
                       {/* Row 2: suspend / reactivate */}
                       <button
                         onClick={() => suspendGuide(p.id, !isSuspended)}

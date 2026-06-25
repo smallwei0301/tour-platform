@@ -985,7 +985,12 @@ export default function GuideAvailabilityPage() {
               <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
                 <div>
                   <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>時段預覽</h2>
-                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>預覽系統將產生的可預約時段</p>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>
+                    預覽系統將產生的可預約時段{' '}
+                    <a href="/admin/help/conflict-override" target="_blank" rel="noopener noreferrer" style={{ color: '#6d28d9', fontWeight: 600, textDecoration: 'none' }}>
+                      · 📖 例外開放衝突時段說明
+                    </a>
+                  </p>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                   {v2Activities.length > 0 && (
