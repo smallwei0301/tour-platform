@@ -9,6 +9,18 @@ const SCHEDULE_FILTERS = ['upcoming', 'all', 'past'] as const;
 
 type ExternalHold = { id: string; participants: number; note: string | null };
 
+type ExternalHoldHistoryEntry = {
+  id: string; action: 'created' | 'released'; participants: number;
+  scheduleId: string | null; note: string | null; createdAt: string | null;
+};
+
+function fmtDateTime(dt?: string | null): string {
+  if (!dt) return '-';
+  const d = new Date(dt);
+  if (Number.isNaN(d.getTime())) return '-';
+  return d.toLocaleString('zh-TW', { timeZone: 'Asia/Taipei', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 type Schedule = {
   id: string; activityId: string; tourTitle: string; planName: string; date: string; endAt?: string;
   capacity: number; bookedCount: number; status: string; guideNote: string | null;
@@ -27,6 +39,24 @@ export default function GuideSchedulesPage() {
   const [editingHold, setEditingHold] = useState<string | null>(null);
   const [holdValue, setHoldValue] = useState('');
   const [holdBusy, setHoldBusy] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [history, setHistory] = useState<ExternalHoldHistoryEntry[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  async function loadHistory() {
+    setHistoryLoaded(false);
+    try {
+      const res = await fetch('/api/guide/external-holds/history', { cache: 'no-store' });
+      const json = await res.json().catch(() => null);
+      setHistory(Array.isArray(json?.data) ? json.data : []);
+    } finally { setHistoryLoaded(true); }
+  }
+
+  function toggleHistory() {
+    const next = !historyOpen;
+    setHistoryOpen(next);
+    if (next && !historyLoaded) void loadHistory();
+  }
 
   async function load() {
     setLoading(true);
@@ -140,6 +170,50 @@ export default function GuideSchedulesPage() {
           管理正式的可售時段來源（source of truth）。
         </p>
       </div>
+
+      {/* 外部佔位彙總 + 登記/釋放歷史（#1501） */}
+      {(() => {
+        const totalHold = schedules.reduce((sum, s) => sum + (Number(s.externalHoldCount) || 0), 0);
+        const activeSchedules = schedules.filter((s) => (Number(s.externalHoldCount) || 0) > 0).length;
+        return (
+          <div data-testid="external-hold-summary" style={{ margin: '0 0 16px', border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 10, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 13, color: '#92400e', fontWeight: 700 }}>
+                🔒 外部佔位彙總：目前共 {totalHold} 人，分布於 {activeSchedules} 個場次
+              </span>
+              <button
+                onClick={toggleHistory}
+                data-testid="external-hold-history-toggle"
+                style={{ padding: '4px 10px', borderRadius: 6, border: '1px solid #fcd34d', background: '#fff', color: '#b45309', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                {historyOpen ? '收合紀錄' : '登記/釋放紀錄'}
+              </button>
+            </div>
+            {historyOpen && (
+              <div data-testid="external-hold-history" style={{ marginTop: 10, borderTop: '1px dashed #fcd34d', paddingTop: 8 }}>
+                {!historyLoaded ? (
+                  <p style={{ margin: 0, fontSize: 12, color: '#92400e' }}>載入中…</p>
+                ) : history.length === 0 ? (
+                  <p style={{ margin: 0, fontSize: 12, color: '#92400e' }}>尚無外部佔位紀錄。</p>
+                ) : (
+                  <ul style={{ margin: 0, paddingLeft: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {history.map((h) => (
+                      <li key={h.id} style={{ fontSize: 12, color: '#78350f', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontWeight: 700, color: h.action === 'created' ? '#b45309' : '#6b7280' }}>
+                          {h.action === 'created' ? '＋ 登記' : '－ 釋放'}
+                        </span>
+                        <span>{h.participants} 人</span>
+                        {h.note ? <span style={{ color: '#9ca3af' }}>· {h.note}</span> : null}
+                        <span style={{ marginLeft: 'auto', color: '#9ca3af' }}>{fmtDateTime(h.createdAt)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Filter Tabs */}
       <div role="tablist" aria-label="場次篩選" style={{ display: 'flex', gap: 8, marginBottom: 16 }}>

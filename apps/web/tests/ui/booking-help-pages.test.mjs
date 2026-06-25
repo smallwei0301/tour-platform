@@ -54,8 +54,17 @@ test('guide plan form links to booking-types help', () => {
   assert.match(read('app/guide/activities/[id]/plans/[planId]/page.tsx'), /\/guide\/help\/booking-types/);
 });
 
-test('admin guide detail links to conflict-override help', () => {
-  assert.match(read('app/admin/guides/[guideId]/page.tsx'), /\/admin\/help\/conflict-override/);
+test('conflict-override help is linked from the availability page (single canonical location)', () => {
+  // 連結只放在時段預覽頁(例外開放流程所在地),不放列表卡片與導遊詳情頁。
+  const availSrc = read('app/admin/guides/[guideId]/availability/page.tsx');
+  assert.match(availSrc, /\/admin\/help\/conflict-override/);
+  const helpIdx = availSrc.indexOf('/admin/help/conflict-override');
+  const previewIdx = availSrc.indexOf('時段預覽');
+  assert.ok(helpIdx > -1 && previewIdx > -1 && Math.abs(helpIdx - previewIdx) < 800, 'help link near 時段預覽');
+
+  // 不應再出現在列表卡片或導遊詳情頁(避免重複入口)。
+  assert.doesNotMatch(read('app/admin/guides/page.tsx'), /\/admin\/help\/conflict-override/);
+  assert.doesNotMatch(read('app/admin/guides/[guideId]/page.tsx'), /\/admin\/help\/conflict-override/);
 });
 
 test('conflict-override help documents the key steps and limits', () => {
