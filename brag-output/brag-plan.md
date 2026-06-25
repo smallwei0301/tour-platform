@@ -41,8 +41,8 @@ Midao（祕島）是台灣在地導遊預約平台——旅客直接預約「真
 島嶼裡，還有一座島。Midao 祕島——預約真正走過這條路的在地引路人，走進沒被寫進手冊的台灣。⛰️
 
 ## Audio direction
-- Role: cinematic 低限氛圍 bed（破曉山風＋低頻 drone），非節奏型
-- Music: 自製 `assets/audio/bed.mp3`（98/147Hz 五度 drone + pink-noise 山風 + 緩起緩落 + 空間殘響）。bundled「business moves」上揚節奏與品牌衝突，故不用。
+- Role: cinematic 暖調持續和弦 pad（A 大調開放五度＋八度＋三度），非節奏型
+- Music: 自製 `assets/audio/bed.mp3`（純和弦 pad：sub 55Hz + A2/E3/A3/C#4/E4，微離調＋低通 2.6kHz＋空間殘響＋緩慢呼吸）。**已移除原 pink-noise 山風層**（單獨聽像沙沙雜訊）。bundled「business moves」與此片不用。
 - Music treatment: 全程低音量 bed，0–2.5s 淡入、17.5s 起 3s 淡出收在 logo
 - Music cue guidance: 無節拍 grid（氛圍 bed）；視覺節奏由幕與動畫驅動，不對拍
 - Audio-reactive treatment: none（保持克制）
