@@ -24,8 +24,12 @@ const read = (rel) => readFileSync(join(repoRoot, rel), 'utf8');
 function extractFn(src, name) {
   const start = src.indexOf(`export async function ${name}`);
   assert.notEqual(start, -1, `找不到函式 ${name}`);
-  const after = src.indexOf('\nexport ', start + 1);
-  return src.slice(start, after === -1 ? src.length : after);
+  // 邊界取「下一個 export」或「下一個 JSDoc 區塊（下一個函式的註解）」較近者，
+  // 避免把下一個函式的 JSDoc 一併圈入造成誤判。
+  const candidates = [src.indexOf('\nexport ', start + 1), src.indexOf('\n/**', start + 1)]
+    .filter((i) => i !== -1);
+  const end = candidates.length ? Math.min(...candidates) : src.length;
+  return src.slice(start, end);
 }
 
 const DB = read('apps/web/src/lib/db.mjs');

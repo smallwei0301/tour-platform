@@ -44,6 +44,12 @@ export function listAdminOrdersFallback(input = {}) {
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 }
 
+// #1501 — external_hold 為 RPC-only（無 in-memory 建立路徑），故無 Supabase
+// 環境下從未建立任何外部佔位，列表回 [] 與此一致。
+export function listExternalHoldsFallback() {
+  return [];
+}
+
 export function getAdminOrderDetailFallback(input = {}) {
   const orderId = String(input?.orderId || '').trim();
   if (!orderId) throw new Error('orderId is required');
