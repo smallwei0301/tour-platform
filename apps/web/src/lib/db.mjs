@@ -909,10 +909,11 @@ export async function listAdminOrdersDb(input = {}) {
 
   const status = String(input?.status || '').trim();
   const contactEmail = String(input?.contactEmail || '').trim();
+  const sourceChannel = String(input?.sourceChannel || '').trim();
   const supabase = await getSupabase();
 
-  const selectWithTradeNo = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at';
-  const selectWithoutTradeNo = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at';
+  const selectWithTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at';
+  const selectWithoutTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at';
 
   const buildQuery = (selectClause) => {
     let q = supabase
@@ -922,6 +923,7 @@ export async function listAdminOrdersDb(input = {}) {
 
     if (status) q = q.eq('status', status);
     if (contactEmail) q = q.eq('contact_email', contactEmail);
+    if (sourceChannel) q = q.eq('source_channel', sourceChannel);
     return q;
   };
 
@@ -955,6 +957,7 @@ export async function listAdminOrdersDb(input = {}) {
     return {
       id: r.id,
       status: r.status,
+      sourceChannel: r.source_channel || 'web',
       totalTwd: r.total_twd,
       costTwd,
       marginTwd: r.total_twd - costTwd,

@@ -8,10 +8,12 @@ const appendAuditLog = (entry) => appendSharedAuditLog({ actor: 'admin', ...entr
 export function listAdminOrdersFallback(input = {}) {
   const status = String(input?.status || '').trim();
   const contactEmail = String(input?.contactEmail || '').trim();
+  const sourceChannel = String(input?.sourceChannel || '').trim();
 
   return orders
     .filter((o) => (status ? o.status === status : true))
     .filter((o) => (contactEmail ? o.contactEmail === contactEmail : true))
+    .filter((o) => (sourceChannel ? (o.sourceChannel || 'web') === sourceChannel : true))
     .map((o) => {
       const cfg = getKpiConfigFallback();
       const guidePayoutRate = Number(cfg.guidePayoutRate ?? 0.85);
@@ -20,6 +22,7 @@ export function listAdminOrdersFallback(input = {}) {
       return {
         id: o.id,
         status: o.status,
+        sourceChannel: o.sourceChannel || 'web',
         totalTwd: o.totalTwd,
         costTwd,
         marginTwd: o.totalTwd - costTwd,
