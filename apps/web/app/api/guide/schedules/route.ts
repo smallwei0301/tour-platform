@@ -36,10 +36,32 @@ export async function GET(req: Request) {
 
   if (error) return Response.json(fail('SERVER_ERROR', error.message), { status: 500 });
 
+  // 取出各場次的「外部佔位」（external_hold）以便後台呈現與釋放。
+  // booked_count 已含外部佔位；這裡額外帶出明細，讓導遊看得到「其中 N 為外部佔位」。
+  const scheduleIds = (schedules || []).map((s: any) => s.id);
+  const holdsBySchedule: Record<string, Array<{ id: string; participants: number; note: string | null }>> = {};
+  if (scheduleIds.length > 0) {
+    const { data: holds } = await supabase
+      .from('bookings')
+      .select('id, schedule_id, participants, internal_note')
+      .eq('status', 'external_hold')
+      .in('schedule_id', scheduleIds);
+    for (const h of holds || []) {
+      if (!h.schedule_id) continue;
+      (holdsBySchedule[h.schedule_id] ||= []).push({
+        id: h.id,
+        participants: Number(h.participants) || 0,
+        note: h.internal_note ?? null,
+      });
+    }
+  }
+
   const result = (schedules || []).map((s: any) => {
     const act = activityMap[s.activity_id] || {};
     const plans = act.plans || [];
     const plan = plans.find((p: any) => p.id === s.plan_id);
+    const externalHolds = holdsBySchedule[s.id] || [];
+    const externalHoldCount = externalHolds.reduce((sum, h) => sum + h.participants, 0);
     return {
       id: s.id,
       activityId: s.activity_id,
@@ -51,6 +73,8 @@ export async function GET(req: Request) {
       endAt: s.end_at,
       capacity: s.capacity,
       bookedCount: s.booked_count,
+      externalHoldCount,
+      externalHolds,
       status: s.status,
       guideNote: s.guide_note,
     };
