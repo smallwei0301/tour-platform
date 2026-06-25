@@ -71,7 +71,7 @@ test('guide can register an external hold and see remaining capacity drop', asyn
 
   // 初始：已訂 2/10，外部佔位為 —
   await expect(page.getByText('蘭嶼夜觀角鴞')).toBeVisible();
-  await expect(page.getByText('2', { exact: false })).toBeVisible();
+  await expect(page.getByText('2', { exact: true })).toBeVisible();
 
   // 登記 3 位外部佔位
   await page.getByRole('button', { name: '＋ 登記' }).click();
@@ -80,7 +80,7 @@ test('guide can register an external hold and see remaining capacity drop', asyn
 
   // 重新載入後：外部佔位顯示 🔒 3 人，已訂變 5/10
   await expect(page.getByText('🔒 3 人')).toBeVisible();
-  await expect(page.getByText('5', { exact: false })).toBeVisible();
+  await expect(page.getByText('5', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: '釋放' })).toBeVisible();
 });
 
