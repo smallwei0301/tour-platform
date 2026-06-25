@@ -26,6 +26,7 @@ import {
 } from '../../../../../../src/lib/slot-generator.ts';
 import { evaluateBookingAvailability, type EvaluatorSchedule } from '../../../../../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import { evaluateScheduledPlanSlots } from '../../../../../../src/lib/availability-v2/scheduled-plan-slots.ts';
+import { evaluateOverrideDynamicSlots } from '../../../../../../src/lib/availability-v2/override-dynamic-slots.ts';
 import { buildActivityPlanNotFoundResponse } from '../../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
 import { getCanonicalReasonCopy } from '../../../../../../src/lib/availability-v2/canonical-reason-copy.ts';
 import type { GuideSlotConflictOverride } from '../../../../../../src/lib/availability-v2/conflict-override.ts';
@@ -646,6 +647,45 @@ export async function getAvailableSlots(
         selectedSchedule,
         selectedScheduleAuthority: params.scheduleId ? (selectedSchedule ? 'authoritative' : 'fallback') : undefined,
       });
+    }
+
+    // instant／request 動態方案:把管理者加開的 conflict override 時段(被既有預約
+    // 擋住、admin 例外開放者)併入動態結果,讓旅客也能預約。scheduled 走固定場次
+    // 路徑、scheduleId 直連走 evaluator selectedSchedule 分支,兩者已各自處理 override。
+    if (!selectedSchedule && plan.booking_type !== 'scheduled' && conflictOverrides.length > 0) {
+      const overrideSlots = evaluateOverrideDynamicSlots(
+        {
+          guideId,
+          activityId: params.activityId,
+          planId: params.planId,
+          timezone: params.timezone,
+          participants: params.participants,
+          dateFrom: params.dateFrom,
+          dateTo: params.dateTo,
+          minParticipants,
+          blackouts,
+          bookings,
+          plan,
+          seasons,
+          conflictOverrides,
+          planStatus: planData.status,
+        },
+        conflictOverrides,
+      );
+      if (overrideSlots.length > 0) {
+        const existingStarts = new Set(availability.slots.map((s) => s.startAt));
+        const mergedSlots = [
+          ...availability.slots,
+          ...overrideSlots.filter((s) => !existingStarts.has(s.startAt)),
+        ].sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+        availability = {
+          ...availability,
+          slots: mergedSlots,
+          available: mergedSlots.length > 0,
+          reasonCode: mergedSlots.length > 0 ? undefined : availability.reasonCode,
+          messageZh: mergedSlots.length > 0 ? undefined : availability.messageZh,
+        };
+      }
     }
 
     const dateAvailability = buildDateAvailabilitySummary({
