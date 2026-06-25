@@ -62,7 +62,7 @@ test('REGION_REGISTRY is frozen (single source of truth, no mutation)', () => {
 
 test('Source contract: ActivitiesContent.tsx accepts optional initialRegion prop', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/activities/ActivitiesContent.tsx'),
+    join(REPO_ROOT, 'app/[locale]/activities/ActivitiesContent.tsx'),
     'utf8',
   );
   assert.match(
@@ -79,7 +79,7 @@ test('Source contract: ActivitiesContent.tsx accepts optional initialRegion prop
 
 test('Source contract: [region]/page.tsx imports region-slugs helper and renders ActivitiesContent for known region', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/activities/[region]/page.tsx'),
+    join(REPO_ROOT, 'app/[locale]/activities/[region]/page.tsx'),
     'utf8',
   );
   assert.match(
@@ -101,7 +101,7 @@ test('Source contract: [region]/page.tsx imports region-slugs helper and renders
 
 test('Source contract: [region]/page.tsx retains legacy activity-slug fallback for unknown regions', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/activities/[region]/page.tsx'),
+    join(REPO_ROOT, 'app/[locale]/activities/[region]/page.tsx'),
     'utf8',
   );
   assert.match(

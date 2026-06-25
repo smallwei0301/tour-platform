@@ -428,9 +428,9 @@ test('buildCanonicalActivityDetailPath falls back to normalized region when regi
 
 test('activity routes should avoid dynamic-segment name conflict and keep runtime rendering constraints', async () => {
   const root = ROOT;
-  const canonicalPage = path.join(root, 'app/activities/[region]/[slug]/page.tsx');
-  const compatPage = path.join(root, 'app/activities/[region]/page.tsx');
-  const legacyCompatPage = path.join(root, 'app/activities/[slug]/page.tsx');
+  const canonicalPage = path.join(root, 'app/[locale]/activities/[region]/[slug]/page.tsx');
+  const compatPage = path.join(root, 'app/[locale]/activities/[region]/page.tsx');
+  const legacyCompatPage = path.join(root, 'app/[locale]/activities/[slug]/page.tsx');
   const dbFile = path.join(root, 'src/lib/db.mjs');
 
   const [canonicalSrc, compatSrc, dbSrc, legacyCompatExists] = await Promise.all([
@@ -458,10 +458,12 @@ test('activity routes should avoid dynamic-segment name conflict and keep runtim
   assert.equal(compatSrc.includes('unstable_cache('), false);
   assert.equal(canonicalSrc.includes('generateMetadata'), true);
   assert.equal(canonicalSrc.includes('getActivityBySlugDb('), true);
-  assert.equal(canonicalSrc.includes('const { slug } = await params;'), true);
+  assert.equal(canonicalSrc.includes('const { locale, slug } = await params;'), true);
   assert.equal(canonicalSrc.includes('generateMetadata') && canonicalSrc.includes('getActivityBySlugDb('), true);
-  assert.equal(compatSrc.includes('params }: { params: Promise<{ region: string }> }'), true);
-  assert.equal(compatSrc.includes('const { region } = await params;'), true);
+  // #i18n JSON-LD localization：compat 頁加上 locale 以 localize BreadcrumbList，
+  // 但仍以 region 走 redirect/lookup 邏輯（契約不變，僅 params shape 多了 locale）。
+  assert.equal(compatSrc.includes('params }: { params: Promise<{ locale: string; region: string }> }'), true);
+  assert.equal(compatSrc.includes('const { locale, region } = await params;'), true);
   assert.equal(compatSrc.includes('getActivityBySlugDb(region)'), true);
 
   // Metadata guard: metadata should not trigger DB lookup.

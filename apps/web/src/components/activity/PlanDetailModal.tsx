@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTranslations } from 'next-intl';
 
 export interface PlanDetail {
   id: string;
@@ -76,15 +77,16 @@ const ICONS = {
 // #297 行程介紹（plan itinerary）已從方案詳情 Modal 移除，改於行程頁「詳細行程」區段
 // 依所選方案呈現；此處不再提供「行程介紹」分頁。
 const TABS = [
-  { id: 'highlights',  label: '方案亮點' },
-  { id: 'cost',        label: '費用資訊' },
-  { id: 'meeting',     label: '集合地點' },
-  { id: 'experience',  label: '體驗地點' },
-  { id: 'notices',     label: '購買須知' },
-  { id: 'refund',      label: '取消政策' },
+  { id: 'highlights',  labelKey: 'tabHighlights' },
+  { id: 'cost',        labelKey: 'tabCost' },
+  { id: 'meeting',     labelKey: 'tabMeeting' },
+  { id: 'experience',  labelKey: 'tabExperience' },
+  { id: 'notices',     labelKey: 'tabNotices' },
+  { id: 'refund',      labelKey: 'tabRefund' },
 ];
 
 export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalProps) {
+  const t = useTranslations('planModal');
   const [activeTab, setActiveTab] = useState('highlights');
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -180,8 +182,8 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px 12px', borderBottom: `1px solid ${C.border}`, flexShrink: 0,
         }}>
-          <h2 id="plan-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.gold }}>方案詳情</h2>
-          <button onClick={onClose} aria-label="關閉" style={{
+          <h2 id="plan-modal-title" style={{ margin: 0, fontSize: 18, fontWeight: 700, color: C.gold }}>{t('title')}</h2>
+          <button onClick={onClose} aria-label={t('close')} style={{
             background: 'none', border: 'none', cursor: 'pointer',
             fontSize: 22, color: C.muted, padding: '4px 8px', lineHeight: 1,
           }}>×</button>
@@ -190,7 +192,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
         {/* Tab nav */}
         <div
           role="tablist"
-          aria-label="方案詳情分頁"
+          aria-label={t('tablistLabel')}
           style={{
             display: 'flex', gap: 0, overflowX: 'auto', flexShrink: 0,
             borderBottom: `1px solid ${C.border}`, padding: '0 20px',
@@ -223,7 +225,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                 transition: 'all 0.15s',
               }}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -253,25 +255,25 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                 {plan.duration && (
                   <div style={infoRowStyle}>
                     <span style={iconStyle}>{ICONS.clock}</span>
-                    <span>行程時間：{plan.duration}</span>
+                    <span>{t('tripDuration', { duration: plan.duration })}</span>
                   </div>
                 )}
                 {plan.earliestDeparture && (
                   <div style={infoRowStyle}>
                     <span style={iconStyle}>{ICONS.calendar}</span>
-                    <span>最早可出發日：{plan.earliestDeparture}</span>
+                    <span>{t('earliestDeparture', { date: plan.earliestDeparture })}</span>
                   </div>
                 )}
                 {plan.confirmByDays != null && (
                   <div style={infoRowStyle}>
                     <span style={iconStyle}>{ICONS.check}</span>
-                    <span>最晚於出發前 {plan.confirmByDays} 天回覆訂購結果</span>
+                    <span>{t('confirmByDays', { n: plan.confirmByDays })}</span>
                   </div>
                 )}
                 {plan.freeCancelDays != null && (
                   <div style={infoRowStyle}>
                     <span style={iconStyle}>{ICONS.refresh}</span>
-                    <span>{plan.freeCancelDays} 天前可免費取消</span>
+                    <span>{t('freeCancelDays', { n: plan.freeCancelDays })}</span>
                   </div>
                 )}
               </div>
@@ -281,10 +283,10 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           {/* ── 費用資訊 ── */}
           {activeTab === 'cost' && (
             <div>
-              <h3 style={sectionHeadStyle}>費用包含／不包含</h3>
+              <h3 style={sectionHeadStyle}>{t('costHeading')}</h3>
               {plan.planInclusions && plan.planInclusions.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
-                  <p style={subHeadStyle}>費用包含</p>
+                  <p style={subHeadStyle}>{t('inclusionsHeading')}</p>
                   <ul style={listStyle}>
                     {plan.planInclusions.map((item, i) => (
                       <li key={i} style={listItemStyle}>
@@ -297,7 +299,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
               )}
               {plan.planExclusions && plan.planExclusions.length > 0 && (
                 <div>
-                  <p style={subHeadStyle}>費用不包含</p>
+                  <p style={subHeadStyle}>{t('exclusionsHeading')}</p>
                   <ul style={listStyle}>
                     {plan.planExclusions.map((item, i) => (
                       <li key={i} style={listItemStyle}>
@@ -309,7 +311,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                 </div>
               )}
               {(!plan.planInclusions?.length && !plan.planExclusions?.length) && (
-                <p style={emptyStyle}>請在後台填寫費用包含／不包含資訊</p>
+                <p style={emptyStyle}>{t('costEmpty')}</p>
               )}
             </div>
           )}
@@ -317,18 +319,18 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           {/* ── 集合地點 ── */}
           {activeTab === 'meeting' && (
             <div>
-              <h3 style={sectionHeadStyle}>集合地點</h3>
+              <h3 style={sectionHeadStyle}>{t('meetingHeading')}</h3>
               {plan.meetingPointName || plan.meetingAddress ? (
                 <div style={locationCardStyle}>
                   {plan.meetingPointName && (
-                    <p style={{ fontWeight: 600, marginBottom: 4, color: C.text }}>地點名稱：{plan.meetingPointName}</p>
+                    <p style={{ fontWeight: 600, marginBottom: 4, color: C.text }}>{t('locationName', { name: plan.meetingPointName })}</p>
                   )}
                   {plan.meetingAddress && (
-                    <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>地址：{plan.meetingAddress}</p>
+                    <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>{t('locationAddress', { address: plan.meetingAddress })}</p>
                   )}
                 </div>
               ) : (
-                <p style={emptyStyle}>請在後台填寫集合地點資訊</p>
+                <p style={emptyStyle}>{t('meetingEmpty')}</p>
               )}
             </div>
           )}
@@ -336,18 +338,18 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           {/* ── 體驗地點 ── */}
           {activeTab === 'experience' && (
             <div>
-              <h3 style={sectionHeadStyle}>體驗地點</h3>
+              <h3 style={sectionHeadStyle}>{t('experienceHeading')}</h3>
               {plan.experiencePointName || plan.experienceAddress ? (
                 <div style={locationCardStyle}>
                   {plan.experiencePointName && (
-                    <p style={{ fontWeight: 600, marginBottom: 4, color: C.text }}>地點名稱：{plan.experiencePointName}</p>
+                    <p style={{ fontWeight: 600, marginBottom: 4, color: C.text }}>{t('locationName', { name: plan.experiencePointName })}</p>
                   )}
                   {plan.experienceAddress && (
-                    <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>地址：{plan.experienceAddress}</p>
+                    <p style={{ fontSize: 14, color: C.muted, margin: 0 }}>{t('locationAddress', { address: plan.experienceAddress })}</p>
                   )}
                 </div>
               ) : (
-                <p style={emptyStyle}>請在後台填寫體驗地點資訊</p>
+                <p style={emptyStyle}>{t('experienceEmpty')}</p>
               )}
             </div>
           )}
@@ -355,7 +357,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           {/* ── 購買須知 ── */}
           {activeTab === 'notices' && (
             <div>
-              <h3 style={sectionHeadStyle}>購買須知</h3>
+              <h3 style={sectionHeadStyle}>{t('noticesHeading')}</h3>
               {plan.planNotices && plan.planNotices.length > 0 ? (
                 <ul style={listStyle}>
                   {plan.planNotices.map((n, i) => (
@@ -363,7 +365,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                   ))}
                 </ul>
               ) : (
-                <p style={emptyStyle}>請在後台填寫購買須知</p>
+                <p style={emptyStyle}>{t('noticesEmpty')}</p>
               )}
             </div>
           )}
@@ -371,10 +373,10 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
           {/* ── 取消政策 ── */}
           {activeTab === 'refund' && (
             <div>
-              <h3 style={sectionHeadStyle}>取消政策</h3>
-              <p style={subHeadStyle}>手續費收取方式</p>
-              <p style={{ fontSize: 14, marginBottom: 16, color: C.text }}>指定手續費</p>
-              <p style={subHeadStyle}>政策內容</p>
+              <h3 style={sectionHeadStyle}>{t('refundHeading')}</h3>
+              <p style={subHeadStyle}>{t('refundFeeSubHead')}</p>
+              <p style={{ fontSize: 14, marginBottom: 16, color: C.text }}>{t('refundFeeValue')}</p>
+              <p style={subHeadStyle}>{t('refundPolicySubHead')}</p>
               {plan.planRefundRules && plan.planRefundRules.length > 0 ? (
                 <ul style={listStyle}>
                   {plan.planRefundRules.map((r, i) => (
@@ -382,7 +384,7 @@ export function PlanDetailModal({ plan, basePrice, onClose }: PlanDetailModalPro
                   ))}
                 </ul>
               ) : (
-                <p style={emptyStyle}>請在後台填寫取消政策</p>
+                <p style={emptyStyle}>{t('refundEmpty')}</p>
               )}
             </div>
           )}

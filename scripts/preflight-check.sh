@@ -16,7 +16,7 @@ check_file() {
 
 echo "== File checks =="
 check_file "apps/web/package.json"
-check_file "apps/web/app/page.tsx"
+check_file "apps/web/app/[locale]/page.tsx"
 check_file "apps/web/app/api/orders/route.ts"
 check_file "supabase/migrations/001_mvp_core.sql"
 check_file "scripts/demo-smoke.sh"

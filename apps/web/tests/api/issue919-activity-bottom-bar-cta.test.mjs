@@ -18,7 +18,7 @@ const datePlanSectionSrc = readFileSync(
   'utf-8',
 );
 const detailPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/activities/[region]/[slug]/page.tsx'),
+  path.resolve(ROOT, 'app/[locale]/activities/[region]/[slug]/page.tsx'),
   'utf-8',
 );
 

@@ -2,6 +2,7 @@
 import Image from 'next/image';
 
 import { useRef, useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 
 interface ImageCarouselProps {
   images: string[];
@@ -17,6 +18,7 @@ interface ImageCarouselProps {
  * - Desktop: 3:1 grid layout
  */
 export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
+  const t = useTranslations('imageCarousel');
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [errorImages, setErrorImages] = useState<Set<number>>(new Set());
@@ -66,7 +68,7 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
           }}
         >
           <span style={{ fontSize: 48, marginBottom: 8 }}>📷</span>
-          <span style={{ fontSize: 14 }}>暫無照片</span>
+          <span style={{ fontSize: 14 }}>{t('noPhotos')}</span>
         </div>
       </div>
     );
@@ -91,7 +93,7 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
                   fontSize: 14,
                 }}
               >
-                無法載入
+                {t('loadFailed')}
               </div>
             ) : (
               <Image

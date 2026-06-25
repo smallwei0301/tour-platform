@@ -107,7 +107,7 @@ test('AC4: serialiseJsonLd 跳脫 </script>，注入點安全且 JSON 等價', (
 // ── source-contract：頁面接線 ────────────────────────────────────────────────
 
 const pageSrc = readFileSync(
-  path.resolve('app/activities/[region]/[slug]/page.tsx'),
+  path.resolve('app/[locale]/activities/[region]/[slug]/page.tsx'),
   'utf8'
 );
 

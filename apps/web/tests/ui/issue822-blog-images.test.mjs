@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, '../..');
 
 const KNOWN_BROKEN_UNSPLASH_IDS = ['1504699439244-a9a8618cafc6'];
 
-const FILES = ['app/blog/page.tsx', 'src/components/home/ThemeCtas.tsx'];
+const FILES = ['app/[locale]/blog/page.tsx', 'src/components/home/ThemeCtas.tsx'];
 
 test('issue #822: blog and theme do not reference known-broken Unsplash photo IDs', async () => {
   for (const rel of FILES) {
@@ -24,7 +24,7 @@ test('issue #822: blog and theme do not reference known-broken Unsplash photo ID
 });
 
 test('issue #822: blog featured card uses responsive class instead of inline two-column grid', async () => {
-  const src = await readFile(path.join(ROOT, 'app/blog/page.tsx'), 'utf8');
+  const src = await readFile(path.join(ROOT, 'app/[locale]/blog/page.tsx'), 'utf8');
   assert.match(src, /className="tp-blog-featured"/, 'featured article should use .tp-blog-featured class');
   assert.ok(
     !/gridTemplateColumns:\s*['"]1\.2fr 1fr['"]/.test(src),

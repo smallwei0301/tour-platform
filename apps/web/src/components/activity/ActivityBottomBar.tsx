@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import WishlistToggle from '../WishlistToggle';
 import { createClient } from '../../lib/supabase/client';
 import { useSelectedPlan } from './SelectedPlanContext';
@@ -29,6 +30,7 @@ export function ActivityBottomBar({
   planSectionId = 'section-plan',
   bookingUnavailable = false,
 }: ActivityBottomBarProps) {
+  const t = useTranslations('bottomBar');
   const [initialWishlisted, setInitialWishlisted] = useState(initialWishlistedProp);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { selected } = useSelectedPlan();
@@ -68,7 +70,7 @@ export function ActivityBottomBar({
   });
 
   const showSelectedSnapshot = Boolean(selected && cta.mode === 'book');
-  const unitLabel = selected?.priceType === 'per_group' ? '組' : '人';
+  const unitLabel = selected?.priceType === 'per_group' ? t('perGroup') : t('perPerson');
 
   return (
     <div className="tp-activity-bottom-bar">
@@ -83,7 +85,7 @@ export function ActivityBottomBar({
             </>
           ) : (
             <>
-              <span className="tp-bottom-bar-price-label">起價</span>
+              <span className="tp-bottom-bar-price-label">{t('priceFrom')}</span>
               <strong className="tp-bottom-bar-price-value">{priceLabel}</strong>
             </>
           )}
@@ -97,11 +99,11 @@ export function ActivityBottomBar({
               data-testid="activity-bottom-bar-unavailable"
               style={{ background: '#e5e7eb', color: '#6b7280', cursor: 'not-allowed' }}
             >
-              目前無可預約方案
+              {t('bookingUnavailable')}
             </span>
           ) : cta.mode === 'book' ? (
             <Link href={cta.href!} className="tp-btn tp-btn-primary tp-bottom-bar-cta">
-              {cta.label}
+              {t(cta.labelKey)}
             </Link>
           ) : (
             <button
@@ -116,7 +118,7 @@ export function ActivityBottomBar({
                 window.scrollTo({ top: y, behavior: 'smooth' });
               }}
             >
-              {cta.label}
+              {t(cta.labelKey)}
             </button>
           )}
         </div>

@@ -23,8 +23,8 @@ import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = join(__dirname, '..', '..');
-const LIST_PAGE = join(APP_ROOT, 'app/guides/page.tsx');
-const DETAIL_PAGE = join(APP_ROOT, 'app/guides/[slug]/page.tsx');
+const LIST_PAGE = join(APP_ROOT, 'app/[locale]/guides/page.tsx');
+const DETAIL_PAGE = join(APP_ROOT, 'app/[locale]/guides/[slug]/page.tsx');
 const PROFILE_ROUTE = join(APP_ROOT, 'app/api/guide/profile/route.ts');
 
 test('/guides 與 /guides/[slug] 不再用定時 ISR（改 on-demand）', () => {

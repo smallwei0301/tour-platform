@@ -1,7 +1,13 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import createNextIntlPlugin from 'next-intl/plugin';
+
 import { assertStartupEnv } from './src/config/startup-env.mjs';
+
+// 多語言（#multilingual Phase 0）：把 next-intl request config 接進 build。
+// 與既有 withSentryConfig / 頂部 assertStartupEnv 共存——僅在最外層再包一層。
+const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(appDir, '../..');
@@ -101,4 +107,4 @@ if (!disableSentryBuild) {
   });
 }
 
-export default exportedConfig;
+export default withNextIntl(exportedConfig);

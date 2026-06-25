@@ -1,0 +1,1312 @@
+{
+  "common": {
+    "currency": "NT$",
+    "loading": "載入中⋯",
+    "retry": "重新整理",
+    "search": "搜尋",
+    "searchPlaceholder": "搜尋行程、目的地⋯"
+  },
+  "nav": {
+    "explore": "探索行程",
+    "guides": "認識導遊",
+    "becomeGuide": "成為導遊",
+    "blog": "旅遊指南",
+    "login": "登入 / 註冊",
+    "logout": "登出",
+    "myTrips": "我的行程"
+  },
+  "footer": {
+    "tagline1": "台灣在地導遊交易平台",
+    "tagline2": "找到懂路的人，帶你走進台灣最有故事的地方。",
+    "exploreHeading": "探索行程",
+    "allActivities": "全部行程",
+    "themeCave": "柴山探洞",
+    "themeRiver": "野外溪流",
+    "themeCulture": "文化歷史",
+    "themeFood": "美食導覽",
+    "themeMountain": "山野秘境",
+    "platformHeading": "平台資訊",
+    "about": "關於我們",
+    "guides": "認識導遊",
+    "becomeGuide": "成為導遊",
+    "submitActivity": "投稿新行程",
+    "blog": "旅遊指南",
+    "whyUs": "為什麼選擇我們",
+    "contact": "聯絡我們",
+    "backstageHeading": "後台入口",
+    "guideDashboard": "導遊後台",
+    "adminConsole": "Admin 後台",
+    "supportHeading": "客戶支援",
+    "faq": "常見問題",
+    "orderLookup": "訂單查詢",
+    "customerService": "客服聯絡",
+    "legalHeading": "法律",
+    "privacy": "隱私政策",
+    "terms": "服務條款",
+    "refund": "退款政策",
+    "regionsTitle": "依地區探索",
+    "copy": "© 2026 Midao 祕島 · 台灣 · 保留一切權利",
+    "region": {
+      "taipei": "台北",
+      "newTaipei": "新北",
+      "taoyuan": "桃園",
+      "taichung": "台中",
+      "tainan": "台南",
+      "kaohsiung": "高雄",
+      "hualien": "花蓮",
+      "taitung": "台東",
+      "yilan": "宜蘭",
+      "pingtung": "屏東",
+      "penghu": "澎湖",
+      "kinmen": "金門"
+    }
+  },
+  "guides": {
+    "metaTitle": "認識導遊 | Midao 祕島",
+    "metaDescription": "認識 Midao 祕島平台上的在地導遊。每位導遊都經過實名認證，帶你走進台灣最有故事的地方。",
+    "ogTitle": "認識導遊 | Midao 祕島",
+    "ogDescription": "找到屬於你的引路人——認識台灣各地在地導遊的專長與故事。",
+    "ogAlt": "台灣在地導遊 | Midao 祕島",
+    "breadcrumb": "認識導遊",
+    "loading": "載入中⋯",
+    "filterTitle": "導遊篩選",
+    "filterAria": "篩選條件",
+    "clearAll": "清除全部",
+    "searchLabel": "搜尋導遊",
+    "searchPlaceholder": "搜尋導遊名稱、地區、專長…",
+    "regionFilter": "縣市",
+    "languageFilter": "語言",
+    "specialtyFilter": "主題專長",
+    "resultCount": "全台灣 {n} 位在地導遊",
+    "resultAria": "篩選結果：{n} 位導遊",
+    "sortAria": "排序",
+    "sortRecommended": "推薦排序",
+    "sortRatingDesc": "評分高到低",
+    "sortReviewsDesc": "評價多到少",
+    "emptyTitle": "找不到符合條件的導遊",
+    "emptyDesc": "試試看其他篩選條件，或清除現有篩選",
+    "emptyClear": "清除所有篩選",
+    "verified": "已驗證",
+    "reviewCount": "（{n} 則評價）",
+    "serviceCount": "{n} 次服務",
+    "viewProfile": "查看導遊簡介 →"
+  },
+  "guideProfile": {
+    "metaTitle": "{name} | 導遊 | Midao 祕島",
+    "metaTitleShort": "{name} | Midao 祕島",
+    "metaDescFallback": "{name} 是 Midao 祕島平台上的在地導遊，提供台灣深度旅遊體驗。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbGuides": "認識導遊",
+    "verified": "已驗證",
+    "statsLine": "（{reviews} 則評價，{services} 次服務）",
+    "about": "關於我",
+    "serviceInfo": "服務資訊",
+    "regionsLabel": "熟悉區域",
+    "certificationsLabel": "專業證照",
+    "paymentMethodsLabel": "收款方式",
+    "credentials": "認證與資歷",
+    "gallery": "照片集",
+    "noPhotos": "暫無照片",
+    "galleryAlt": "{name} 照片 {i}",
+    "myTours": "我的行程",
+    "priceFrom": "起價 NT${price} / 人",
+    "viewTour": "查看行程 →",
+    "reviewsHeading": "旅客評價",
+    "reviewsSummary": "⭐ {score} · 共 {n} 則評價",
+    "sidebarReviews": "（{n} 則）",
+    "viewActivitiesBtn": "查看行程"
+  },
+  "seo": {
+    "siteName": "Midao 祕島",
+    "titleTemplate": "%s | Midao 祕島 — 台灣在地導遊",
+    "defaultTitle": "Midao 祕島 — 找到懂路的人，帶你走進台灣最有故事的地方",
+    "defaultDescription": "台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。",
+    "orgDescription": "台灣在地導遊預約平台 — 連結旅客與在地導遊，提供深度文化體驗。",
+    "activitiesCollectionName": "探索行程 | Midao 祕島",
+    "activitiesCollectionDescription": "瀏覽台灣全島私人導遊行程。",
+    "guidesItemListName": "台灣在地導遊 | Midao 祕島",
+    "blogItemListName": "旅遊指南 | Midao 祕島",
+    "contactPageName": "聯絡我們 | Midao 祕島",
+    "contactPageDescription": "有任何問題、合作提案或回饋？聯絡 Midao 祕島，我們會在 1-2 個工作天內回覆。"
+  },
+  "home": {
+    "hero": {
+      "sectionLabel": "祕島主視覺",
+      "photoAlt": "自洞穴內仰望峽谷，曙光灑落山谷與溪流",
+      "vertical1": "祕島之境",
+      "vertical2": "由在地人",
+      "vertical3": "帶你看見",
+      "titleA": "島嶼深處，",
+      "titleB": "有故事的人",
+      "titleC": "帶路",
+      "accent": "。",
+      "sub": "在地嚮導 × 深度路線 × 真實相遇",
+      "caption": "TAIWAN. LOCAL GUIDE. REAL STORIES.",
+      "cta": "探索祕島旅程"
+    },
+    "themes": {
+      "eyebrow": "主題探索",
+      "mountainTitle": "山徑",
+      "riverTitle": "野溪",
+      "cultureTitle": "文化",
+      "foodTitle": "美食"
+    },
+    "featured": {
+      "sectionLabel": "編輯精選行程",
+      "badge": "編輯精選",
+      "difficulty": "難度",
+      "difficultyAria": "難度 5 分之 {n}",
+      "reviewCount": "共 {count} 則評論",
+      "priceUnit": "起"
+    },
+    "guide": {
+      "sectionLabel": "在地嚮導與平台保障",
+      "label": "在地嚮導・深度旅遊",
+      "name": "高雄柴山・",
+      "quoteA": "「不是觀光打卡，",
+      "quoteB": "是懂路的人帶你走進柴山。」",
+      "link": "認識嚮導的故事 →",
+      "portraitAlt": "高雄柴山在地嚮導 Andy Lee（李衍錫）與獵鷹在山林間的肖像",
+      "verifyA": "身份驗證",
+      "verifyB": "已通過",
+      "reviewA": "在地嚮導",
+      "reviewB": "人工審核",
+      "protectA": "旅客保障",
+      "protectB": "安心出行",
+      "ratingA": "評價真實",
+      "ratingB": "5星好評"
+    },
+    "tours": {
+      "eyebrow": "更多精選行程",
+      "more": "查看全部行程 →",
+      "priceUnit": "起"
+    },
+    "destinations": {
+      "eyebrow": "探索目的地",
+      "count": "{n}+ 行程",
+      "taipei": "台北",
+      "hualien": "花蓮",
+      "kaohsiung": "高雄",
+      "tainan": "台南",
+      "kenting": "墾丁",
+      "taichung": "台中",
+      "yilan": "宜蘭",
+      "penghu": "澎湖"
+    },
+    "stories": {
+      "eyebrow": "旅人故事",
+      "guideFallback": "在地導遊",
+      "starsAria": "{n} 顆星"
+    },
+    "faq": {
+      "eyebrow": "常見問題",
+      "items": [
+        {
+          "q": "為什麼這種旅遊方式更值得？",
+          "a": "看清楚再選，不賭人品——導遊資料、評論、專長一眼看清，幾分鐘選對人；走進回憶，而不是趕行程——看到的是「適合誰」「會記住什麼」，不只是地點；有在地人帶路，少花冤枉時間——熟悉地方的導遊，幫你避開陷阱、走穩定路線。"
+        },
+        {
+          "q": "什麼是私人導遊行程？",
+          "a": "私人導遊行程是由平台認證的在地導遊帶領的小團體驗，行程由導遊設計，旅客可以按照自己的節奏探索，不需要配合大團行程表。"
+        },
+        {
+          "q": "如何確保導遊品質與安全？",
+          "a": "所有導遊都經過實名認證（KYC），部分導遊另有急救認證、環境教育講師等專業資歷。平台也提供緊急熱線 30 分鐘回應服務。"
+        },
+        {
+          "q": "付款安全嗎？",
+          "a": "所有付款透過 ECPay 或 LINE Pay 加密處理，你的信用卡資料不會經過本站。"
+        },
+        {
+          "q": "可以取消預約嗎？",
+          "a": "可以。每個行程都有明確的退款政策，大部分行程在出團 168 小時前（含）以上可全額退款，出團前 超過 72 小時且少於 168 小時可退 70%。詳細規則請見各行程頁面。"
+        },
+        {
+          "q": "適合帶小孩參加嗎？",
+          "a": "依行程而定。每個行程頁面都有標註「適合對象」與「不太適合」的說明，選擇前請先確認。部分行程有親子友善標籤。"
+        },
+        {
+          "q": "如何成為導遊？",
+          "a": "點擊「成為導遊」填寫申請表，經過平台審核後即可上架行程。我們歡迎有在地特色、專業背景的導遊加入。"
+        }
+      ]
+    },
+    "closing": {
+      "sectionLabel": "開始探索",
+      "title": "你的祕島故事，從這裡開始",
+      "desc": "讓在地人帶你走進台灣的深處，遇見真實的美好。",
+      "cta": "開始探索祕島旅程"
+    },
+    "featuredCopy": {
+      "kaohsiung-chaishan-cave-experience": {
+        "title": "柴山探洞・城市祕境",
+        "subtitle": "走進城市邊緣的地形祕境",
+        "desc": "跟著懂路的人鑽進珊瑚礁岩的洞穴地景，\n在城市邊緣，遇見另一個世界的高雄。",
+        "tagLabel": "探洞"
+      },
+      "hualien-river-trekking": {
+        "title": "秀姑巒溪・溯溪冒險",
+        "subtitle": "走進台灣最純淨的野溪",
+        "desc": "跳潭、漂流、攀上瀑布之巔，\n用雙腳感受花蓮山與水的力量。",
+        "tagLabel": "溯溪"
+      },
+      "dadadaocheng-walk": {
+        "title": "大稻埕・百年街區",
+        "subtitle": "真正認識活了百年的老街",
+        "desc": "從迪化街布行、城隍廟到永樂市場，\n把街區背後的人與歷史走成故事。",
+        "tagLabel": "走讀"
+      },
+      "taipei-night-market-food-tour": {
+        "title": "台北夜市・庶民食堂",
+        "subtitle": "不只吃，還要懂為什麼好吃",
+        "desc": "跟著在地吃貨鑽進巷弄攤位，\n一口一口讀懂台北的夜。",
+        "tagLabel": "食旅"
+      }
+    }
+  },
+  "activities": {
+    "breadcrumbHome": "首頁",
+    "breadcrumbActivities": "探索行程",
+    "breadcrumbSearch": "搜尋：{q}",
+    "filterTitle": "篩選條件",
+    "filterAria": "篩選條件",
+    "clearAll": "清除全部",
+    "keyword": "關鍵字搜尋",
+    "keywordPlaceholder": "行程名稱、地區⋯",
+    "dateLabel": "出發日期（只看可訂）",
+    "priceLabel": "價格區間（NT$）",
+    "priceMinAria": "最低價格",
+    "priceMaxAria": "最高價格",
+    "priceMin": "最低",
+    "priceMax": "最高",
+    "regionFilter": "地區",
+    "themeFilter": "行程主題",
+    "sortAria": "排序",
+    "sortRecommended": "推薦排序",
+    "sortPriceAsc": "價格：低到高",
+    "sortPriceDesc": "價格：高到低",
+    "loading": "載入中⋯",
+    "emptyTitle": "找不到符合條件的行程",
+    "emptyDesc": "試試看其他關鍵字，或清除篩選條件",
+    "emptyClear": "清除所有篩選",
+    "resultSearch": "「{q}」的搜尋結果（{n} 筆）",
+    "resultAll": "全台灣 {n} 個私人導遊行程",
+    "noRating": "尚無評價",
+    "reviewCount": "({n}則)",
+    "people": "{min}~{max} 人",
+    "perPerson": "NT${price} / 人",
+    "viewActivity": "查看行程",
+    "durHoursMinutes": "{h} 小時 {m} 分",
+    "durHours": "{h} 小時",
+    "durMinutes": "{m} 分鐘",
+    "region": {
+      "taipeiCity": "台北市",
+      "kaohsiungCity": "高雄市",
+      "hualienCounty": "花蓮縣",
+      "tainanCity": "台南市"
+    },
+    "theme": {
+      "cave-exploration": "柴山探洞",
+      "river-trekking": "野外溪流",
+      "culture-history": "文化歷史",
+      "food-tour": "美食導覽",
+      "mountain-wilderness": "山野秘境"
+    }
+  },
+  "theme": {
+    "caveExploration": {
+      "metaTitle": "柴山探洞行程 | Midao 祕島",
+      "metaDescription": "跟著在地導遊鑽進高雄柴山的秘密地下世界，探索億萬年石灰岩洞穴。小團深度體驗，實名認證導遊帶路。",
+      "ogTitle": "柴山探洞 — 高雄秘境地下世界 | Midao 祕島",
+      "ogDescription": "不一樣的高雄旅行：跟著在地人鑽進柴山洞穴，看見你在景點地圖上找不到的台灣。",
+      "breadcrumb": "柴山探洞",
+      "heroTitle": "鑽進高雄的秘密地下世界",
+      "heroSubtitle": "柴山的石灰岩洞穴藏著億萬年的地質故事，讓在地導遊帶你安全深入探索。",
+      "heroCta": "探索柴山行程",
+      "feature1a": "裝備全包",
+      "feature1b": "頭燈、安全帽、手套完整配發",
+      "feature2a": "生態解說",
+      "feature2b": "導遊帶你認識洞穴生態與地形",
+      "feature3a": "安全認證嚮導",
+      "feature3b": "具山林與戶外安全相關認證",
+      "toursHeading": "柴山探洞精選行程",
+      "viewTour": "查看行程 →",
+      "faqHeading": "探洞前你需要知道",
+      "tours": [
+        {
+          "title": "高雄柴山自然公園探洞半日遊",
+          "meta": "🕐 3-4小時 · 👥 4~12人 · NT$2,000"
+        },
+        {
+          "title": "柴山石灰岩洞穴地質探索",
+          "meta": "🕐 3小時 · 👥 4~10人 · NT$2,200"
+        },
+        {
+          "title": "柴山親子安全探洞體驗",
+          "meta": "🕐 2.5小時 · 👥 4~8人 · NT$1,800"
+        }
+      ],
+      "faq": [
+        {
+          "q": "需要有攀岩經驗嗎？",
+          "a": "不需要，MVP 路線以初中階安全探索為主。"
+        },
+        {
+          "q": "適合幾歲的人參加？",
+          "a": "建議 10 歲以上，實際依行程標示與導遊評估。"
+        },
+        {
+          "q": "當天要穿什麼？",
+          "a": "建議防滑鞋、長褲、可活動上衣，避免拖鞋。"
+        }
+      ]
+    },
+    "cultureHistory": {
+      "metaTitle": "文化歷史行程 | Midao 祕島",
+      "metaDescription": "走進台灣的老街、廟埕與部落，跟著在地導遊把街區與族群背後的故事走成記憶。小團深度文化體驗，實名認證導遊帶路。",
+      "ogTitle": "文化歷史 — 台灣街區與部落的故事 | Midao 祕島",
+      "ogDescription": "不是走馬看花。跟著懂故事的人，認識一個活了百年的街區與它的人。",
+      "breadcrumb": "文化歷史",
+      "heroTitle": "走進活了百年的街區與部落",
+      "heroSubtitle": "不是打卡式走馬看花，而是跟著懂故事的在地人，把老街、廟埕與族群背後的人與歷史走成真正可感受的記憶。",
+      "heroCta": "探索文化行程",
+      "feature1a": "在地觀點",
+      "feature1b": "由生活在這裡的人帶你讀懂地方",
+      "feature2a": "慢步走讀",
+      "feature2b": "節奏緩和，適合親子與三代同遊",
+      "feature3a": "文史背景嚮導",
+      "feature3b": "具地方文史或導覽解說專業",
+      "toursHeading": "文化歷史精選行程",
+      "viewTour": "查看行程 →",
+      "faqHeading": "文化走讀常見問題",
+      "tours": [
+        {
+          "title": "大稻埕百年老街深度漫步",
+          "meta": "🕐 3小時 · 👥 1~8人 · NT$1,500"
+        },
+        {
+          "title": "鹿港古蹟與信仰文化導覽",
+          "meta": "🕐 3.5小時 · 👥 2~10人 · NT$1,600"
+        },
+        {
+          "title": "部落文化與傳統工藝半日體驗",
+          "meta": "🕐 4小時 · 👥 2~8人 · NT$1,900"
+        }
+      ],
+      "faq": [
+        {
+          "q": "需要先做功課才聽得懂嗎？",
+          "a": "不需要，導遊會從生活與人的角度帶你進入歷史，沒有背景也能投入。"
+        },
+        {
+          "q": "會走很多路嗎？",
+          "a": "以慢步走讀為主，沿途有停留與休息，適合多數體能。"
+        },
+        {
+          "q": "適合長輩與小孩一起參加嗎？",
+          "a": "適合，節奏緩和、互動性高，是親子與三代同遊的好選擇。"
+        }
+      ]
+    },
+    "foodTour": {
+      "metaTitle": "美食導覽行程 | Midao 祕島",
+      "metaDescription": "跟著懂吃的在地導遊鑽進夜市與巷弄攤位，找到真正的在地味道。小團美食走讀，不只吃，還要懂為什麼好吃。",
+      "ogTitle": "美食導覽 — 跟著在地人吃懂台灣 | Midao 祕島",
+      "ogDescription": "不只吃，還要懂為什麼好吃。跟著懂吃的導遊，一口一口讀懂一座城市。",
+      "breadcrumb": "美食導覽",
+      "heroTitle": "跟著在地人，吃懂一座城市",
+      "heroSubtitle": "不只吃，還要懂為什麼好吃。跟著懂吃的導遊鑽進夜市與巷弄攤位，一口一口讀懂台灣的味道。",
+      "heroCta": "探索美食行程",
+      "feature1a": "多攤少量",
+      "feature1b": "一次嘗到更多在地味道",
+      "feature2a": "巷弄門路",
+      "feature2b": "導遊帶你避開觀光攤、找到真正好吃的",
+      "feature3a": "懂吃的在地人",
+      "feature3b": "熟悉地方飲食文化與食材故事",
+      "toursHeading": "美食導覽精選行程",
+      "viewTour": "查看行程 →",
+      "faqHeading": "美食走讀常見問題",
+      "tours": [
+        {
+          "title": "台北夜市美食文化探索",
+          "meta": "🕐 3小時 · 👥 2~8人 · NT$1,800"
+        },
+        {
+          "title": "台南巷弄小吃深度走讀",
+          "meta": "🕐 3.5小時 · 👥 2~8人 · NT$1,900"
+        },
+        {
+          "title": "在地市場早餐與食材導覽",
+          "meta": "🕐 2.5小時 · 👥 2~10人 · NT$1,500"
+        }
+      ],
+      "faq": [
+        {
+          "q": "會吃到很飽嗎？",
+          "a": "行程安排多攤少量，讓你嘗到更多種類又不會太撐，建議出發前留點胃口。"
+        },
+        {
+          "q": "有素食或飲食限制可以參加嗎？",
+          "a": "可以，預約時先告知，導遊會調整攤位與品項。"
+        },
+        {
+          "q": "餐費包含在費用裡嗎？",
+          "a": "依行程標示為準，部分含品嘗費用、部分另計，請見各行程頁面。"
+        }
+      ]
+    },
+    "mountainWilderness": {
+      "metaTitle": "山野秘境行程 | Midao 祕島",
+      "metaDescription": "百岳秘徑、森林浴與稜線上的台灣壯景，跟著懂山的在地嚮導用雙腳走進山林深處。小團登山健行，安全認證帶路。",
+      "ogTitle": "山野秘境 — 走進台灣的山林深處 | Midao 祕島",
+      "ogDescription": "不靠纜車、不靠觀光車，靠雙腳和懂山的人，走進地圖上找不到的台灣山徑。",
+      "breadcrumb": "山野秘境",
+      "heroTitle": "走進台灣的山林深處",
+      "heroSubtitle": "百岳秘徑、森林浴與稜線上的壯景。不靠纜車、不靠觀光車，靠雙腳和懂山的人，走進地圖上找不到的台灣。",
+      "heroCta": "探索山野行程",
+      "feature1a": "難度分級",
+      "feature1b": "從平緩步道到稜線縱走，依體能挑選",
+      "feature2a": "森林與生態",
+      "feature2b": "導遊帶你認識沿途植被與山林故事",
+      "feature3a": "安全認證嚮導",
+      "feature3b": "具登山嚮導與戶外安全相關認證",
+      "toursHeading": "山野秘境精選行程",
+      "viewTour": "查看行程 →",
+      "faqHeading": "登山健行常見問題",
+      "tours": [
+        {
+          "title": "柴山稜線健行與地形秘境",
+          "meta": "🏔️ 入門 · 👥 4~12人 · NT$2,000"
+        },
+        {
+          "title": "中級山森林浴一日健行",
+          "meta": "🏔️ 進階 · 👥 4~8人 · NT$2,800"
+        },
+        {
+          "title": "百岳秘徑稜線縱走體驗",
+          "meta": "🏔️ 挑戰 · 👥 4~6人 · NT$4,500"
+        }
+      ],
+      "faq": [
+        {
+          "q": "沒有登山經驗可以參加嗎？",
+          "a": "可以，入門路線以平緩步道為主，導遊會先做行前說明與裝備檢查。"
+        },
+        {
+          "q": "需要自己準備裝備嗎？",
+          "a": "建議自備登山鞋、飲水與雨具，部分行程提供登山杖等裝備，詳見行程頁面。"
+        },
+        {
+          "q": "遇到下雨會出團嗎？",
+          "a": "以當日天氣與山況安全為準，導遊會評估是否調整路線或改期。"
+        }
+      ]
+    },
+    "riverTrekking": {
+      "metaTitle": "野外溪流行程 | Midao 祕島",
+      "metaDescription": "走進台灣最純淨的野溪，感受花蓮溪谷的力量。小團深度溯溪體驗，在地導遊全程帶領。",
+      "ogTitle": "野外溪流 — 花蓮秘境野溪體驗 | Midao 祕島",
+      "ogDescription": "不只是戲水。跟著懂溪的導遊，走進花蓮最美的溪谷。",
+      "breadcrumb": "野外溪流",
+      "heroTitle": "走進台灣最純淨的野溪",
+      "heroSubtitle": "不靠纜車、不靠觀光車，靠雙腳和懂山的人，體驗台灣最真實的水路風景。",
+      "heroCta": "探索溯溪行程",
+      "feature1a": "裝備租借",
+      "feature1b": "安全鞋、頭盔、防護裝備齊全",
+      "feature2a": "難度分三級",
+      "feature2b": "Level 1 初階到 Level 3 進階",
+      "feature3a": "嚮導認證",
+      "feature3b": "具戶外教學與安全訓練背景",
+      "toursHeading": "野外溪流精選行程",
+      "viewTour": "查看行程 →",
+      "faqHeading": "溯溪常見問題",
+      "tours": [
+        {
+          "title": "花蓮秀姑巒溪溯溪全日冒險",
+          "meta": "🌊 Level 2 · 👥 4~8人 · NT$3,200"
+        },
+        {
+          "title": "南澳野溪溯溪入門路線",
+          "meta": "🌊 Level 1 · 👥 4~8人 · NT$2,400"
+        },
+        {
+          "title": "台東山谷溪降挑戰",
+          "meta": "🌊 Level 3 · 👥 4~6人 · NT$4,200"
+        }
+      ],
+      "faq": [
+        {
+          "q": "不會游泳可以參加嗎？",
+          "a": "可參加 Level 1 路線，導遊會先做安全說明與裝備檢查。"
+        },
+        {
+          "q": "幾月份最適合溯溪？",
+          "a": "春末到秋季較穩定，但仍以當日水況與安全為準。"
+        },
+        {
+          "q": "Level 1 與 Level 3 差在哪？",
+          "a": "主要差在地形難度、體能需求與通過技術。"
+        }
+      ]
+    }
+  },
+  "availability": {
+    "available": {
+      "title": "可預約",
+      "body": "此時段目前可預約。"
+    },
+    "full": {
+      "title": "已額滿",
+      "body": "此時段名額已滿，請選擇其他時段或日期。"
+    },
+    "closed": {
+      "title": "已關閉",
+      "body": "此時段已被導遊或管理者關閉，請選擇其他時段。"
+    },
+    "blackout": {
+      "title": "導遊不可服務",
+      "body": "導遊在此時段標記為不可服務，請選擇其他時段或日期。"
+    },
+    "inactive_plan": {
+      "title": "方案未啟用",
+      "body": "此方案目前未啟用，無法預約。請從活動頁重新選擇方案。"
+    },
+    "outside_rule": {
+      "title": "不在可預約時段",
+      "body": "導遊未在此時段開放可預約時間，請選擇其他時段。"
+    },
+    "outside_season": {
+      "title": "不在開放季節",
+      "body": "此方案目前不在開放季節範圍內，請選擇其他日期。"
+    },
+    "blocked_by_conflict": {
+      "title": "時段衝突",
+      "body": "此時段與既有預約衝突，預設不可預約。"
+    },
+    "allowed_with_admin_override": {
+      "title": "管理者例外開放",
+      "body": "此時段與既有預約衝突，但已被管理者例外開放，請確認助手安排。"
+    },
+    "fallback": {
+      "title": "無法預約",
+      "body": "此時段目前無法預約，請稍後再試或聯絡客服。"
+    }
+  },
+  "about": {
+    "metaTitle": "關於我們 | Midao 祕島",
+    "metaDescription": "祕島不是發明的地方。是已經在那裡，只是還沒被你看見的台灣。認識 Midao 祕島的故事與理念。",
+    "ogTitle": "關於我們 | Midao 祕島",
+    "ogDescription": "真正在山林裡走過的在地人，帶你走進台灣最有故事的地方。",
+    "ogImageAlt": "關於 Midao 祕島",
+    "breadcrumbHome": "首頁",
+    "breadcrumbCurrent": "關於我們",
+    "heroTitle": "關於我們",
+    "heroSubtitle": "我們相信，最好的旅行不是跟團趕景點，而是找到一個懂路的人，帶你走進真正有故事的地方。",
+    "storyHeading": "祕島是什麼？",
+    "storyP1": "祕島不是發明的地方。是已經在那裡，只是還沒被你看見的台灣。",
+    "storyP2a": "這裡有真正在山林裡走過的在地人。他們不講套路、不趕路線，只把自己最熟悉的那條徑、那座峰、那片溪谷，帶你去看一次。",
+    "storyP2b": "我們相信，旅行的價值不在於去過多少地方，而在於是不是真的進去過。",
+    "storyP3": "祕島做的事很簡單：讓好的在地導遊被看見，讓旅客可以直接預約、安心付款、享受一段有品質的體驗。我們先從高雄柴山探洞、台北老街、花蓮溯溪這些最有特色的行程開始，再逐步拓展到全台灣。",
+    "numbers": [
+      {
+        "num": "3+",
+        "label": "合作導遊"
+      },
+      {
+        "num": "4+",
+        "label": "精選行程"
+      },
+      {
+        "num": "22",
+        "label": "涵蓋縣市（目標）"
+      },
+      {
+        "num": "15%",
+        "label": "平台抽成（業界最低）"
+      }
+    ],
+    "ctaHeading": "一起讓台灣的好導遊被看見",
+    "ctaGuide": "成為導遊",
+    "ctaExplore": "探索行程"
+  },
+  "whyChooseUs": {
+    "metaTitle": "為什麼選擇我們 | Midao 祕島",
+    "metaDescription": "私人在地導遊 vs 一般跟團：行程彈性、導遊認證、退款保障、深度體驗一次比較清楚。",
+    "ogTitle": "為什麼選擇私人在地導遊？ | Midao 祕島",
+    "ogDescription": "不跟團、不趕路。找到懂路的人，用你的節奏認識台灣。",
+    "ogImageAlt": "Midao 祕島 — 私人在地導遊",
+    "breadcrumbHome": "首頁",
+    "breadcrumbCurrent": "為什麼選擇我們",
+    "heroTitle": "為什麼選擇私人在地導遊？",
+    "heroSubtitle": "跟團趕行程，還是找一個真正懂路的人帶你慢慢走？",
+    "promises": [
+      {
+        "title": "實名認證",
+        "desc": "每位導遊都經過 KYC 身分驗證與審核"
+      },
+      {
+        "title": "退款保障",
+        "desc": "明確退款政策，依規定時間內全額退款"
+      },
+      {
+        "title": "緊急熱線",
+        "desc": "活動當天有問題，30 分鐘內回應"
+      },
+      {
+        "title": "客製行程",
+        "desc": "可依需求客製化，包團、親子、企業都行"
+      }
+    ],
+    "comparisonHeading": "我們的平台 vs 一般跟團",
+    "comparisonUs": "我們的平台",
+    "comparisonThem": "一般跟團",
+    "comparisonRows": [
+      {
+        "label": "同行人數",
+        "us": "只有你（或你的小團）",
+        "them": "10~40 人"
+      },
+      {
+        "label": "行程彈性",
+        "us": "完全客製",
+        "them": "固定路線"
+      },
+      {
+        "label": "導遊注意力",
+        "us": "全程專注你",
+        "them": "分散給全團"
+      },
+      {
+        "label": "退款保障",
+        "us": "明確政策，48hr 前全退",
+        "them": "不一定"
+      },
+      {
+        "label": "導遊實名認證",
+        "us": "✅ 全員認證",
+        "them": "不一定"
+      },
+      {
+        "label": "緊急聯繫",
+        "us": "30 分鐘回應",
+        "them": "不提供"
+      },
+      {
+        "label": "深度體驗",
+        "us": "在地秘境 + 故事",
+        "them": "觀光景點打卡"
+      }
+    ],
+    "testimonialsHeading": "旅客怎麼說",
+    "testimonials": [
+      {
+        "author": "小美（台北）",
+        "text": "大人小人都開心😍 Andy 很有耐心，路線比想像中刺激但又很安全！",
+        "activity": "柴山探洞"
+      },
+      {
+        "author": "Vivian C.（台北）",
+        "text": "本來以為只是一般古蹟導覽，沒想到建志帶我們走進了老屋廚房。比任何旅遊書都精彩！",
+        "activity": "大稻埕老街"
+      },
+      {
+        "author": "小琪（新竹）",
+        "text": "人生清單打勾！阿明超專業，全程很安心。花蓮最棒的體驗沒有之一！",
+        "activity": "花蓮溯溪"
+      }
+    ],
+    "ctaHeading": "準備好了嗎？",
+    "ctaSubtitle": "找到懂路的人，用你的節奏認識台灣。",
+    "ctaButton": "立即探索行程"
+  },
+  "faq": {
+    "metaTitle": "常見問題 | Midao 祕島",
+    "metaDescription": "關於預訂、付款、取消退款、導遊品質與安全保障的常見問題解答。",
+    "ogTitle": "常見問題 | Midao 祕島",
+    "ogDescription": "私人導遊行程怎麼預訂？付款安全嗎？可以取消嗎？一次解答所有疑問。",
+    "ogImageAlt": "Midao 祕島 常見問題",
+    "breadcrumbHome": "首頁",
+    "breadcrumbCurrent": "常見問題",
+    "heroTitle": "常見問題",
+    "introA": "找不到答案？歡迎",
+    "introLink": "聯絡我們",
+    "introB": "。",
+    "sections": [
+      {
+        "category": "預訂與付款",
+        "items": [
+          {
+            "q": "如何預約導遊行程？",
+            "a": "選擇行程後點擊「立即預約」，填寫聯絡資訊並完成付款即可。我們支援信用卡與 LINE Pay。"
+          },
+          {
+            "q": "付款後多久會收到確認？",
+            "a": "付款成功後系統會立即發送確認信到您的 Email。導遊通常會在 24 小時內聯繫您確認細節。"
+          },
+          {
+            "q": "可以先預留行程、之後再付款嗎？",
+            "a": "目前需完成付款才算確認預約。建議您在確定出發時間後再完成訂單，避免因名額已滿而無法預約。"
+          }
+        ]
+      },
+      {
+        "category": "退款與取消",
+        "items": [
+          {
+            "q": "退款政策是什麼？",
+            "a": "出團 168 小時前（含）以上取消，全額退款；出團前 超過 72 小時且少於 168 小時取消，退款 70%。出團前 72 小時內（含）取消，原則上不予退款。不可抗力或主辦方取消，旅客可選擇全額退款或 1 次免費改期。退款手續費由平台吸收，旅客不另負擔。"
+          },
+          {
+            "q": "如果導遊取消行程怎麼辦？",
+            "a": "若因導遊或平台原因取消，將全額退款，並協助您重新安排或推薦替代行程。"
+          },
+          {
+            "q": "遇到惡劣天氣可以取消嗎？",
+            "a": "若天氣條件危及安全，導遊有權取消並全額退款。請在出發前與導遊確認天氣狀況。"
+          }
+        ]
+      },
+      {
+        "category": "關於導遊",
+        "items": [
+          {
+            "q": "導遊都有認證嗎？",
+            "a": "所有導遊都需通過實名 KYC 身份認證與平台審核，確認其導覽資格與背景。"
+          },
+          {
+            "q": "可以指定導遊語言嗎？",
+            "a": "每位導遊的頁面上都會標示服務語言。目前多數導遊提供中文（繁體）服務，部分導遊可提供英文服務。"
+          },
+          {
+            "q": "如何評價導遊？",
+            "a": "活動結束後您會收到評價邀請。我們鼓勵旅客分享真實體驗，幫助其他旅客做出更好的選擇。"
+          }
+        ]
+      },
+      {
+        "category": "其他",
+        "items": [
+          {
+            "q": "可以包場（企業、家族包團）嗎？",
+            "a": "可以！請透過「聯絡我們」頁面或直接聯繫導遊，我們可以為您量身規劃包場行程。"
+          },
+          {
+            "q": "行程中發生意外怎麼辦？",
+            "a": "活動當天如有緊急狀況，請直接聯繫導遊。平台緊急熱線也會在 30 分鐘內回應。"
+          },
+          {
+            "q": "想成為導遊怎麼申請？",
+            "a": "請前往「成為導遊」頁面填寫申請表，審核通過後即可上架行程。"
+          }
+        ]
+      }
+    ],
+    "questionPrefix": "Q：",
+    "answerPrefix": "A：",
+    "footerHeading": "還有其他問題？",
+    "footerSubtitle": "我們的客服團隊在 1–2 個工作天內回覆",
+    "footerButton": "聯絡我們"
+  },
+  "contact": {
+    "metaTitle": "聯絡我們 | Midao 祕島",
+    "metaDescription": "有任何問題、合作提案或回饋？聯絡 Midao 祕島，我們會在 1-2 個工作天內回覆。",
+    "ogTitle": "聯絡我們 | Midao 祕島",
+    "ogDescription": "歡迎透過表單、Email 或客服熱線與我們聯繫。",
+    "ogImageAlt": "聯絡 Midao 祕島",
+    "breadcrumbHome": "首頁",
+    "breadcrumbCurrent": "聯絡我們",
+    "heading": "聯絡我們",
+    "intro": "有任何問題、合作提案或回饋？歡迎透過以下表單與我們聯繫。我們會在 1-2 個工作天內回覆。",
+    "nameLabel": "姓名 *",
+    "namePlaceholder": "您的姓名",
+    "emailLabel": "電子信箱 *",
+    "emailPlaceholder": "you@example.com",
+    "subjectLabel": "主題",
+    "subjectOptions": [
+      "一般詢問",
+      "訂單問題",
+      "導遊合作",
+      "企業包團",
+      "媒體合作",
+      "其他"
+    ],
+    "messageLabel": "訊息 *",
+    "messagePlaceholder": "請輸入您的訊息⋯",
+    "submitButton": "送出訊息",
+    "emailCardTitle": "📧 Email",
+    "emailCardValue": "hello@midao.tw",
+    "hotlineCardTitle": "📞 客服熱線",
+    "hotlineCardValue": "0800-XXX-XXX（平日 9:00-18:00）",
+    "hoursCardTitle": "⏰ 回覆時間",
+    "hoursCardLine1": "一般詢問：1-2 個工作天",
+    "hoursCardLine2": "緊急問題（活動當天）：30 分鐘內"
+  },
+  "blog": {
+    "metaTitle": "旅遊指南 | Midao 祕島",
+    "metaDescription": "台灣各地旅遊攻略、導遊推薦、活動體驗分享。從柴山探洞到花蓮溯溪，讓我們帶你深度認識台灣。",
+    "ogTitle": "旅遊指南 | Midao 祕島",
+    "ogDescription": "台灣各地旅遊攻略與在地體驗分享。",
+    "ogImageAlt": "台灣旅遊指南 | Midao 祕島",
+    "breadcrumbHome": "首頁",
+    "breadcrumbBlog": "旅遊指南",
+    "heading": "旅遊指南",
+    "readTimePrefix": "閱讀約",
+    "metaTitleSuffix": "| Midao 祕島",
+    "coverAltSuffix": "— 旅遊指南封面圖",
+    "ctaTitle": "🗺️ 準備好出發了嗎？",
+    "ctaButton": "探索行程 →"
+  },
+  "legalPrivacy": {
+    "metaTitle": "隱私政策 | Midao 祕島",
+    "metaDescription": "Midao 祕島平台的個人資料保護政策，說明資料蒐集範圍、使用方式與用戶權利。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbLeaf": "隱私政策",
+    "heading": "隱私政策（草案）",
+    "para1": "我們僅在提供服務必要範圍內蒐集資料（訂單、聯絡方式、付款相關資訊）。",
+    "para2": "所有個資處理依台灣相關法規辦理，並提供用戶查詢與刪除申請管道。"
+  },
+  "legalTerms": {
+    "metaTitle": "服務條款 | Midao 祕島",
+    "metaDescription": "Midao 祕島平台服務條款，說明平台性質、預約流程與旅客權利義務。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbLeaf": "服務條款",
+    "heading": "服務條款（草案）",
+    "para1": "平台提供在地導遊媒合與訂單管理服務，非旅行社包團服務。",
+    "para2": "用戶預約前應確認行程內容、取消政策與風險揭露事項。"
+  },
+  "legalRefund": {
+    "metaTitle": "退款政策 | Midao 祕島",
+    "metaDescription": "Midao 祕島退款政策說明：出團前 168 小時全額退款、72 小時以上退 70%，不可抗力免費改期。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbLeaf": "退款政策",
+    "heading": "退款政策",
+    "para1": "出團 168 小時前（含）取消：100% 退款。",
+    "para2": "出團前 超過 72 小時且少於 168 小時取消：70% 退款。",
+    "para3": "出團前 72 小時內（含）取消：原則上不予退款。",
+    "para4": "不可抗力或主辦方取消：旅客可選擇 100% 退款，或 1 次免費改期。",
+    "para5": "手續費：退款時平台不另向旅客扣除手續費，相關費用由平台吸收。"
+  },
+  "activityDetail": {
+    "metaTitleSuffix": "{title} | Midao 祕島",
+    "metaDescFallback": "探索台灣在地特色秘境行程，與專業導遊一起發現不一樣的台灣。",
+    "ogImageAlt": "Midao 祕島 行程",
+    "breadcrumbHome": "首頁",
+    "breadcrumbActivities": "探索行程",
+    "starAria": "{filled} 顆星，滿分 {max} 顆",
+    "reviewCountInline": "（{count} 則評價）",
+    "noRating": "尚無評價",
+    "priceUnit": "起 / 人",
+    "priceLabelBottom": "NT${price} / 人",
+    "jsonLdPriceRange": "NT${price}起",
+    "policyCertifiedGuide": "認證導遊",
+    "transportWalk": "步行",
+    "participants": "{min}~{max} 人",
+    "participantsVaries": "最少人數依方案而定",
+    "policyConfirm": "最晚出發前 3 天確認",
+    "policyEvoucher": "電子憑證",
+    "policySecurePay": "安全付款",
+    "anchorPlan": "方案",
+    "anchorItinerary": "行程",
+    "anchorReviews": "評價",
+    "anchorDetails": "商品說明",
+    "anchorPolicy": "購買須知",
+    "anchorQa": "問答",
+    "sectionSelectPlan": "選擇方案",
+    "sectionReviews": "旅客評價",
+    "sectionDetails": "商品說明",
+    "sectionPolicy": "購買須知",
+    "sectionGuide": "關於你的導遊",
+    "sectionFaq": "常見問題",
+    "reviewsTotal": "共 {count} 則評論",
+    "reviewAuthor": "{author}（{city}）",
+    "reviewCityFallback": "TW",
+    "detailIncludes": "行程包含",
+    "detailExcludes": "行程不含",
+    "detailGoodFor": "適合對象",
+    "detailDescription": "行程描述",
+    "policyNotices": "注意事項",
+    "policyRefund": "取消與退款政策",
+    "policySafety": "安全說明",
+    "guideVerified": "實名已驗證",
+    "guideServices": "（{count} 次服務）",
+    "guideViewProfile": "查看完整導遊簡介 →",
+    "weekdays": [
+      "日",
+      "一",
+      "二",
+      "三",
+      "四",
+      "五",
+      "六"
+    ],
+    "scheduleDate": "{month}/{day}（{weekday}）",
+    "scheduleTitle": "近期可預約場次",
+    "scheduleFull": "已額滿",
+    "scheduleRemaining": "剩 {count} 位",
+    "bookingUnavailable": "目前無可預約方案",
+    "bookNow": "立即預約",
+    "askGuide": "✉️ 詢問導遊",
+    "trustPay": "🔒 安全付款（ECPay 信用卡）",
+    "trustRefundPrefix": "📋 依取消時間適用退款：7天以上全額退款、3-7天退70%、72小時內不退款，",
+    "trustRefundLink": "詳見退款政策",
+    "trustHotline": "📞 緊急熱線 30 分鐘回應",
+    "trustVerified": "✅ 實名認證導遊"
+  },
+  "datePlan": {
+    "availabilityNoticeV2LoadFail": "目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。",
+    "availabilityNoticeLegacyFallback": "目前可預約資料為 Legacy 備援（fallback）結果，可能延遲，建議稍後再試。",
+    "availabilityNoticeNonV2Source": "目前可預約資料來源非 V2 聚合結果，顯示可能延遲，請稍後重試。",
+    "selectPlan": "選擇方案",
+    "planInactiveNotice": "此活動方案目前未開放預約，請稍後再查看。",
+    "noPlansNotice": "此活動尚未設定可預約方案，請稍後再查看。",
+    "noCanonicalPlanMessage": "此行程尚未設定可預約方案，請稍後再查看。",
+    "badgeFull": "額滿",
+    "badgeNotOpen": "未開放",
+    "remaining": "剩 {n} 位",
+    "viewPlanDetails": "查看方案詳情 ›",
+    "selectDate": "選擇日期",
+    "loadingDates": "載入可預約日期中…",
+    "priceFrom": "起",
+    "perPerson": "人",
+    "perGroup": "組",
+    "ctaSoldOut": "已額滿",
+    "ctaNotOpen": "未開放",
+    "ctaBook": "立即預約",
+    "collapsePlans": "收合方案",
+    "morePlans": "查看更多方案（還有 {n} 個）›",
+    "minOnePerson": "1 人可成行",
+    "minGroupSize": "最少 {n} 人成團",
+    "maxPeople": "最多 {n} 人",
+    "participantWithMax": "{minLabel} · 最多 {max} 人"
+  },
+  "planCard": {
+    "title": "標準方案",
+    "selectedPrefix": "已選：{date}",
+    "earliestDate": "最早可預訂日期：{date}",
+    "guideLed": "實名認證導遊帶領",
+    "eVoucher": "電子憑證，出發前確認即可",
+    "viewDetails": "查看方案詳情 >",
+    "priceFromPerson": "起 / 人",
+    "select": "選擇"
+  },
+  "planModal": {
+    "title": "方案詳情",
+    "close": "關閉",
+    "tablistLabel": "方案詳情分頁",
+    "tabHighlights": "方案亮點",
+    "tabCost": "費用資訊",
+    "tabMeeting": "集合地點",
+    "tabExperience": "體驗地點",
+    "tabNotices": "購買須知",
+    "tabRefund": "取消政策",
+    "tripDuration": "行程時間：{duration}",
+    "earliestDeparture": "最早可出發日：{date}",
+    "confirmByDays": "最晚於出發前 {n} 天回覆訂購結果",
+    "freeCancelDays": "{n} 天前可免費取消",
+    "costHeading": "費用包含／不包含",
+    "inclusionsHeading": "費用包含",
+    "exclusionsHeading": "費用不包含",
+    "costEmpty": "請在後台填寫費用包含／不包含資訊",
+    "meetingHeading": "集合地點",
+    "locationName": "地點名稱：{name}",
+    "locationAddress": "地址：{address}",
+    "meetingEmpty": "請在後台填寫集合地點資訊",
+    "experienceHeading": "體驗地點",
+    "experienceEmpty": "請在後台填寫體驗地點資訊",
+    "noticesHeading": "購買須知",
+    "noticesEmpty": "請在後台填寫購買須知",
+    "refundHeading": "取消政策",
+    "refundFeeSubHead": "手續費收取方式",
+    "refundFeeValue": "指定手續費",
+    "refundPolicySubHead": "政策內容",
+    "refundEmpty": "請在後台填寫取消政策"
+  },
+  "datePicker": {
+    "weekdays": [
+      "日",
+      "一",
+      "二",
+      "三",
+      "四",
+      "五",
+      "六"
+    ],
+    "months": [
+      "1月",
+      "2月",
+      "3月",
+      "4月",
+      "5月",
+      "6月",
+      "7月",
+      "8月",
+      "9月",
+      "10月",
+      "11月",
+      "12月"
+    ],
+    "calendarLabel": "選擇日期",
+    "prevMonth": "上個月",
+    "nextMonth": "下個月",
+    "close": "關閉",
+    "calendarTitle": "{year} 年 {month}",
+    "ariaDayAvailable": "{year}年{month}月{day}日，可預約，剩餘 {remaining} 位",
+    "ariaDayFull": "{year}年{month}月{day}日，已額滿",
+    "ariaDayUnavailable": "{year}年{month}月{day}日，不可預約",
+    "dayFull": "額滿",
+    "legendAvailable": "● 可預約",
+    "legendUnavailable": "● 額滿／不可預約",
+    "selectedSummary": "已選：{date}（{weekday}）",
+    "noSchedules": "目前尚無可預約場次，請稍後再查詢。",
+    "moreDates": "查看更多日期 ›",
+    "weekPrefix": "週{weekday}",
+    "pillFull": "額滿",
+    "titleFull": "此日期已額滿",
+    "titleNoSchedule": "此日期無場次",
+    "titleRemaining": "剩餘 {n} 位"
+  },
+  "planItinerary": {
+    "imageAlt": "行程站點圖片",
+    "selectPlanPrompt": "請選擇上方的方案，以獲取行程詳細資訊",
+    "planNoItinerary": "此方案尚未提供詳細行程資訊",
+    "title": "詳細行程"
+  },
+  "bottomBar": {
+    "priceFrom": "起價",
+    "bookingUnavailable": "目前無可預約方案",
+    "perPerson": "人",
+    "perGroup": "組",
+    "ctaBook": "立即預約",
+    "ctaSelectPlan": "選擇方案"
+  },
+  "anchorNav": {
+    "sectionPlan": "方案",
+    "sectionReviews": "評價",
+    "sectionDetails": "商品說明",
+    "sectionPolicy": "購買須知",
+    "navLabel": "頁面錨點導覽"
+  },
+  "imageCarousel": {
+    "noPhotos": "暫無照片",
+    "loadFailed": "無法載入"
+  },
+  "reviewPhotos": {
+    "zoomPhoto": "放大檢視 {author} 的評價照片 {n}",
+    "photoAlt": "{author} 的評價照片 {n}",
+    "lightboxLabel": "{author} 的評價照片",
+    "close": "關閉",
+    "prev": "上一張",
+    "next": "下一張"
+  },
+  "activityQa": {
+    "title": "💬 旅客問答",
+    "loading": "載入問答中…",
+    "empty": "尚無問答，歡迎率先提問！",
+    "questionPrefix": "Q：",
+    "answerPrefix": "A：",
+    "submitSuccess": "問題已送出，等候審核",
+    "formLabel": "有疑問嗎？歡迎提問",
+    "placeholder": "有疑問嗎？歡迎提問...",
+    "submitFailed": "送出失敗",
+    "submitFailedRetry": "送出失敗，請稍後再試",
+    "submitting": "送出中…",
+    "submit": "送出問題",
+    "loginBefore": "請",
+    "login": "登入",
+    "loginAfter": "後才能提問"
+  },
+  "recommendations": {
+    "sameRegion": "{region} 的其他行程",
+    "youMayLike": "你可能也喜歡",
+    "recentlyViewed": "最近瀏覽",
+    "priceFrom": "NT${price} 起"
+  },
+  "activityTabs": {
+    "tabPlan": "方案",
+    "tabReviews": "評價",
+    "tabDetails": "商品說明",
+    "tabPolicy": "購買須知",
+    "tablistLabel": "行程詳情分頁",
+    "departureDate": "出發日期",
+    "moreDates": "更多日期 >",
+    "selectPlan": "選擇方案",
+    "reviewsTotal": "共 {count} 則評價",
+    "detailIncludes": "行程包含",
+    "detailExcludes": "行程不含",
+    "detailGoodFor": "適合對象",
+    "policyNotices": "注意事項",
+    "policyRefund": "取消與退款政策",
+    "policySafety": "安全說明"
+  },
+  "promoBanner": {
+    "limitedOffer": "🎁 限時優惠",
+    "promoEntry": "{label}（結帳輸入 <strong>{code}</strong>）"
+  },
+  "experienceDetail": {
+    "metaTitle": "{name} | 體驗行程 | Midao 祕島",
+    "metaTitleShort": "{name} | Midao 祕島",
+    "metaDescription": "預約台灣在地體驗行程：{name}。實名認證導遊帶路，小團深度探索。",
+    "ogDescription": "跟著懂路的在地導遊，探索台灣最有故事的地方。",
+    "breadcrumbHome": "首頁",
+    "breadcrumbExperiences": "體驗",
+    "badgeInstant": "可立即預約",
+    "badgeEvoucher": "電子憑證",
+    "introHeading": "體驗介紹",
+    "highlightsHeading": "行程亮點",
+    "bookingHeading": "預訂說明",
+    "bookingNote1": "建議提前預約，熱門時段容易額滿。",
+    "bookingNote2": "完成下單後可於付款頁完成金流。",
+    "bookingNote3": "若需客服協助，請於訂單頁查看聯絡資訊。",
+    "pricePerPerson": "每人價格",
+    "ctaBook": "立即預約",
+    "ctaOtherTours": "查看其他行程",
+    "sideNote": "此頁為體驗詳情頁。若要直接完成預約，請點「立即預約」進入結帳流程。",
+    "metaSeparator": " ・ "
+  },
+  "blogPosts": {
+    "why-private-guide": {
+      "title": "為什麼在台灣旅行要找私人導遊，而不是跟團？",
+      "excerpt": "從效率到深度體驗，兩種旅行方式的根本差距。當你不再被行程表綁架，才能真正認識一個地方。",
+      "category": "台灣旅遊",
+      "readTime": "5 分鐘",
+      "content": "大多數人對旅行團的印象，就是一台遊覽車載著 30 個人趕景點，拍照打卡然後上車。但在台灣這樣一個文化細節豐富、巷弄比大路有趣的地方，跟團真的是最好的選擇嗎？\n\n## 私人導遊帶來的改變\n\n### 你掌控節奏\n跟團行程是固定的：幾點到哪、停幾分鐘、幾點離開。私人導遊的行程完全跟著你走——在寧夏夜市某攤排隊排久了？沒關係，後面的行程調整一下就好。\n\n### 你聽到的是故事，不是背稿\n一般導遊要照顧 30 個人，解說只能大聲喊、快速帶過。私人導遊可以跟你聊天、回答問題，甚至帶你走進一般團客不會進去的小巷子、老屋二樓。\n\n### 你得到的是記憶，不是清單\n我們平台上的導遊，很多是在地長大的人。他們帶你走的不是「旅遊景點」，而是「他們的生活」。大稻埕的布行怎麼在現代轉型、柴山的洞穴裡住著什麼生物、花蓮的溪水為什麼這麼清——這些是你在旅遊書上看不到的。\n\n## 什麼時候適合找私人導遊？\n\n- 你是第一次來台灣，想有效率地深入了解\n- 你帶著家人或小孩，需要彈性行程\n- 你對某個主題特別有興趣（美食、歷史、戶外探險）\n- 你不想跟一群陌生人擠在同一台車上\n\n## 我們的平台怎麼幫你\n\n每一位導遊都經過實名認證，行程價格透明、退款政策明確。你可以在預約前看到導遊的真實評價、行程包含什麼、以及其他旅客的回饋。\n\n不確定？先瀏覽看看，找到有興趣的行程再決定。"
+    },
+    "chaishan-cave-guide": {
+      "title": "高雄柴山探洞完全攻略：第一次就上手",
+      "excerpt": "裝備怎麼準備？路線怎麼選？帶小孩可以嗎？一篇搞懂柴山探洞的所有眉角。",
+      "category": "戶外冒險",
+      "readTime": "7 分鐘",
+      "content": "高雄柴山（壽山）隱藏著數十個石灰岩洞穴，是台灣少數可以在城市邊緣就體驗探洞的地方。這篇文章整理了第一次探洞需要知道的所有資訊。\n\n## 基本裝備\n\n探洞需要的裝備包括：\n- **頭燈**（必備，洞內完全無光）\n- **安全帽**（石灰岩洞穴頂部不規則）\n- **手套**（抓岩壁用）\n- **止滑鞋或運動鞋**（洞內潮濕）\n- **長袖長褲**（防蚊蟲與擦傷）\n\n如果你參加 Andy Lee 的行程，基本裝備都會提供。\n\n## 適合誰？\n\n柴山探洞適合 6 歲以上、有基本體能的人。不需要攀岩經驗，但需要能蹲、彎腰、偶爾側身通過窄道。如果你有嚴重幽閉恐懼症，建議先評估。\n\n## 最佳季節\n\n全年都可以探洞，但 10 月到隔年 4 月最舒適（較涼爽、少蚊蟲）。雨季（6-8 月）部分洞穴可能積水，導遊會依狀況調整路線。\n\n## 安全注意事項\n\n- 絕對不要自己進洞穴——迷路風險極高\n- 全程跟隨導遊指示\n- 洞內不要觸摸鐘乳石（數萬年形成，一碰就壞）\n- 注意腳下、頭頂\n\n## 推薦行程\n\n我們平台上 Andy Lee（李衍錫）是柴山探洞的專家，他是壽山國家自然公園巡守員，帶過數百團旅客。行程約 3-4 小時，NT$2,000/人。"
+    }
+  },
+  "memberTabs": {
+    "aria": "會員中心",
+    "orders": "我的訂單",
+    "wishlist": "我的最愛",
+    "qa": "問答回覆",
+    "profile": "個人資料"
+  },
+  "orders": {
+    "title": "我的訂單",
+    "greeting": "歡迎回來，{name}",
+    "subtitle": "查看你的所有行程訂單",
+    "loading": "載入訂單中…",
+    "empty": "目前還沒有訂單",
+    "exploreCta": "探索行程",
+    "fallbackTitle": "行程訂單",
+    "people": "{n} 人",
+    "status": {
+      "pending_payment": "待付款",
+      "paid": "已付款",
+      "confirmed": "已確認",
+      "rejected": "已拒絕",
+      "cancelled_by_user": "已取消",
+      "cancelled_by_guide": "導遊取消",
+      "completed": "已完成",
+      "refund_pending": "退款申請中",
+      "refunded": "已退款"
+    }
+  },
+  "orderDetail": {
+    "loading": "載入中…",
+    "notFound": "找不到訂單或您沒有權限查看此訂單。",
+    "backToList": "返回訂單列表",
+    "backToListArrow": "← 返回訂單列表",
+    "pageTitle": "訂單詳情",
+    "statusDesc": {
+      "pending_payment": "⏳ 訂單已建立，請完成付款以確保席位。",
+      "paid": "✅ 已收到您的付款，等待導遊確認行程。",
+      "confirmed": "🎉 行程已確認！請準時到達集合地點。",
+      "rejected": "😔 很遺憾，此行程無法成行，請聯絡客服了解詳情。",
+      "cancelled_by_user": "🚫 您已取消此訂單。",
+      "cancelled_by_guide": "😔 導遊取消了此行程，我們將協助安排退款，請聯絡客服。",
+      "completed": "⭐ 行程已完成，感謝您的參與！期待下次再見。",
+      "refund_pending": "🔄 退款申請已受理，處理中（通常 3-5 個工作天入帳）。",
+      "refunded": "💰 退款已完成，金額將退回原付款工具，通常 3-5 個工作天入帳。"
+    },
+    "orderInfoHeading": "訂單資訊",
+    "orderNumber": "訂單編號",
+    "tripName": "行程名稱",
+    "peopleCount": "預訂人數",
+    "peopleUnit": "{n} 人",
+    "departureTime": "出發時間",
+    "createdTime": "建立時間",
+    "paidTime": "付款時間",
+    "amountDue": "應付金額",
+    "contactHeading": "聯絡資訊",
+    "contactName": "姓名",
+    "contactPhone": "電話",
+    "contactEmail": "Email",
+    "reviewHint": "行程完成後即可撰寫評價",
+    "rescheduleContactSupport": "距活動開始未滿 {days} 天（{hours} 小時），無法線上自助改期。如需改期請聯絡客服協助安排。",
+    "rescheduleOpenBtn": "申請改期（同行程改其他場次）",
+    "rescheduleSelectLabel": "選擇新場次（同行程、同方案、金額不變；需嚮導確認）",
+    "rescheduleSelectPlaceholder": "請選擇場次",
+    "rescheduleCapacityLeft": "（剩 {n} 位）",
+    "rescheduleNoOptions": "目前沒有可改的場次。",
+    "rescheduleSubmitting": "送出中…",
+    "rescheduleSubmit": "送出改期申請",
+    "rescheduleCancel": "取消",
+    "reschedulePending": "改期申請處理中 — 等待嚮導確認（72 小時內），期間訂單暫停其他操作。",
+    "rescheduleWithdraw": "撤回申請",
+    "messagesHeading": "聯絡嚮導",
+    "messagesEmpty": "還沒有訊息 — 行前的疑問（集合地點、裝備、天氣備案）都可以直接問嚮導。",
+    "senderMe": "我",
+    "senderGuide": "嚮導",
+    "senderSupport": "客服",
+    "messageInputPlaceholder": "想問嚮導什麼？（最長 1000 字）",
+    "messageSending": "送出中…",
+    "messageSend": "送出訊息",
+    "messagesReadonly": "此訂單的留言串已轉唯讀（行程結束 14 天後或訂單已取消/退款）。如需協助請聯絡客服。",
+    "messageSendFailed": "留言送出失敗",
+    "messageSendFailedRetry": "留言送出失敗，請稍後再試",
+    "reviewSubmitted": "評價已送出，等候審核",
+    "reviewOpenBtn": "撰寫評價",
+    "reviewRatingLabel": "評分",
+    "reviewRatingAria": "rating {n}",
+    "reviewTextLabel": "行程評價",
+    "reviewTextPlaceholder": "分享您的行程體驗...",
+    "reviewPhotoLabel": "上傳照片（選填，最多 {max} 張）",
+    "reviewPhotoAlt": "評價照片",
+    "reviewPhotoRemoveAria": "移除照片",
+    "reviewPhotoUploading": "上傳中",
+    "reviewPhotoAdd": "新增",
+    "reviewSubmitting": "送出中…",
+    "reviewSubmit": "提交評價",
+    "reviewCancel": "取消",
+    "reviewPhotoMaxError": "最多上傳 {max} 張照片",
+    "reviewPhotoUploadFailed": "照片上傳失敗",
+    "reviewPhotoUploadFailedRetry": "照片上傳失敗，請稍後再試",
+    "reviewSubmitFailed": "評價送出失敗",
+    "reviewSubmitFailedRetry": "評價送出失敗，請稍後再試",
+    "goToPay": "前往付款",
+    "departurePassedNoRefund": "行程已開始/結束，無法線上申請退款，請聯絡客服",
+    "applyRefund": "申請取消/退款",
+    "refundSuccess": "✅ 退款申請已送出，金額將退回原付款工具（通常 3-5 個工作天）",
+    "refundReasonLabel": "取消／退款原因",
+    "refundReasonPlaceholder": "請選擇原因",
+    "refundReasonScheduleConflict": "行程衝突",
+    "refundReasonPersonalReason": "個人因素",
+    "refundReasonHealthIssue": "健康因素",
+    "refundReasonOther": "其他",
+    "refundNoteLabel": "補充說明（選填）",
+    "refundNotePlaceholder": "如有其他說明請填寫…",
+    "refundSubmitting": "送出中…",
+    "refundSubmit": "送出申請",
+    "refundCancel": "取消",
+    "refundFailed": "退款申請失敗",
+    "refundFailedRetry": "退款申請失敗，請稍後再試",
+    "cancelOrder": "取消訂單",
+    "cancelDialogTitle": "確認取消訂單？",
+    "cancelDialogBody": "取消後無法恢復，席位將自動釋出。",
+    "cancelDialogCancelling": "取消中…",
+    "cancelDialogConfirm": "確認取消",
+    "cancelDialogBack": "返回",
+    "cancelFailed": "取消失敗",
+    "cancelFailedRetry": "取消失敗，請稍後再試",
+    "rescheduleFailed": "改期申請失敗",
+    "rescheduleFailedRetry": "改期申請失敗，請稍後再試",
+    "withdrawFailed": "撤回失敗",
+    "withdrawFailedRetry": "撤回失敗，請稍後再試"
+  }
+}

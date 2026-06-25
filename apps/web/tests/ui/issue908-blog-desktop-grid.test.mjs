@@ -7,7 +7,7 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
-const blogPage = readFileSync(path.join(ROOT, 'app/blog/page.tsx'), 'utf8');
+const blogPage = readFileSync(path.join(ROOT, 'app/[locale]/blog/page.tsx'), 'utf8');
 const globalsCss = readFileSync(path.join(ROOT, 'app/globals.css'), 'utf8');
 
 test('blog card grid uses tp-blog-grid modifier class', () => {

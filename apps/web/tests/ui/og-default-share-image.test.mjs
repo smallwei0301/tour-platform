@@ -31,17 +31,17 @@ const OLD_OG_URL = 'https://images.unsplash.com/photo-1528164344705-47542687000d
 // 預設分享縮圖落地的檔案（openGraph／twitter metadata）。
 const SHARE_THUMBNAIL_FILES = [
   'app/layout.tsx',
-  'app/page.tsx',
-  'app/about/page.tsx',
-  'app/why-choose-us/page.tsx',
-  'app/faq/page.tsx',
-  'app/guides/page.tsx',
-  'app/guides/[slug]/page.tsx',
-  'app/contact/page.tsx',
-  'app/activities/page.tsx',
-  'app/experiences/[slug]/page.tsx',
+  'app/[locale]/page.tsx',
+  'app/[locale]/about/page.tsx',
+  'app/[locale]/why-choose-us/page.tsx',
+  'app/[locale]/faq/page.tsx',
+  'app/[locale]/guides/page.tsx',
+  'app/[locale]/guides/[slug]/page.tsx',
+  'app/[locale]/contact/page.tsx',
+  'app/[locale]/activities/page.tsx',
+  'app/[locale]/experiences/[slug]/page.tsx',
   'app/guide/apply/layout.tsx',
-  'app/blog/page.tsx',
+  'app/[locale]/blog/page.tsx',
 ];
 
 async function readSrc(rel) {

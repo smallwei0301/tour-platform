@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslations } from 'next-intl';
 
 /**
  * 評價照片縮圖列 + 點擊放大的 in-page lightbox（口碑評論／旅客評論共用）。
@@ -11,6 +12,7 @@ import { createPortal } from 'react-dom';
  * （圖片以 contain 限制在 92vw × 86vh 內，手機到桌機都不溢出）。
  */
 export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; authorLabel: string }) {
+  const t = useTranslations('reviewPhotos');
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -58,10 +60,10 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
             type="button"
             className="kkd-review-photo"
             onClick={() => setOpenIndex(pi)}
-            aria-label={`放大檢視 ${authorLabel} 的評價照片 ${pi + 1}`}
+            aria-label={t('zoomPhoto', { author: authorLabel, n: pi + 1 })}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={`${authorLabel} 的評價照片 ${pi + 1}`} loading="lazy" />
+            <img src={src} alt={t('photoAlt', { author: authorLabel, n: pi + 1 })} loading="lazy" />
           </button>
         ))}
       </div>
@@ -72,7 +74,7 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
               className="kkd-lightbox"
               role="dialog"
               aria-modal="true"
-              aria-label={`${authorLabel} 的評價照片`}
+              aria-label={t('lightboxLabel', { author: authorLabel })}
               data-testid="review-lightbox"
               onClick={close}
             >
@@ -80,7 +82,7 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
                 type="button"
                 className="kkd-lightbox-close"
                 onClick={close}
-                aria-label="關閉"
+                aria-label={t('close')}
                 data-testid="review-lightbox-close"
               >
                 ×
@@ -94,7 +96,7 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
                     e.stopPropagation();
                     showPrev();
                   }}
-                  aria-label="上一張"
+                  aria-label={t('prev')}
                 >
                   ‹
                 </button>
@@ -105,7 +107,7 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={photos[openIndex]}
-                  alt={`${authorLabel} 的評價照片 ${openIndex + 1}`}
+                  alt={t('photoAlt', { author: authorLabel, n: openIndex + 1 })}
                   data-testid="review-lightbox-img"
                 />
                 {hasMultiple && (
@@ -123,7 +125,7 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
                     e.stopPropagation();
                     showNext();
                   }}
-                  aria-label="下一張"
+                  aria-label={t('next')}
                 >
                   ›
                 </button>

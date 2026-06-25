@@ -234,7 +234,7 @@ describe('Issue 305 Wishlist — /me/wishlist page contract', () => {
 describe('Issue 305 Wishlist — activity detail heart toggle contract', () => {
   it('WishlistToggle component file exists', () => {
     const exists = routeExists('src/components/WishlistToggle.tsx')
-      || routeExists('app/activities/[slug]/WishlistToggle.tsx')
+      || routeExists('app/[locale]/activities/[slug]/WishlistToggle.tsx')
       || routeExists('src/components/wishlist-toggle.tsx');
     assert.ok(exists,
       'Must have WishlistToggle component at src/components/WishlistToggle.tsx');
@@ -247,7 +247,7 @@ describe('Issue 305 Wishlist — activity detail heart toggle contract', () => {
     } else if (routeExists('src/components/wishlist-toggle.tsx')) {
       src = readRoute('src/components/wishlist-toggle.tsx');
     } else {
-      src = readRoute('app/activities/[slug]/WishlistToggle.tsx');
+      src = readRoute('app/[locale]/activities/[slug]/WishlistToggle.tsx');
     }
     const hasApiCall = /\/api\/me\/wishlist/.test(src);
     assert.ok(hasApiCall, 'WishlistToggle must call /api/me/wishlist endpoint');

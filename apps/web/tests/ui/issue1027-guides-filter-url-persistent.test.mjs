@@ -6,8 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const guidesContentSrc = readFileSync(path.join(ROOT, 'app/guides/GuidesContent.tsx'), 'utf8');
-const guidePageSrc = readFileSync(path.join(ROOT, 'app/guides/page.tsx'), 'utf8');
+const guidesContentSrc = readFileSync(path.join(ROOT, 'app/[locale]/guides/GuidesContent.tsx'), 'utf8');
+const guidePageSrc = readFileSync(path.join(ROOT, 'app/[locale]/guides/page.tsx'), 'utf8');
 
 describe('issue #1027 — guides listing filter URL persistence', () => {
   test('GuidesContent.tsx uses useSearchParams and useRouter', () => {

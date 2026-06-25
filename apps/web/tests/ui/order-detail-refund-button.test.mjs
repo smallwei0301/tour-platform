@@ -20,6 +20,14 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
+// #multilingual: 面向使用者的文案（按鈕標籤、成功訊息）已移到
+// messages/zh-Hant.json 的 orderDetail namespace。文案內容契約改讀（page + 繁中 catalog）。
+async function readPageAndCopy() {
+  const page = await readSource('app/me/orders/[orderId]/page.tsx');
+  const zh = await readSource('messages/zh-Hant.json');
+  return page + '\n' + zh;
+}
+
 // ─── AC#1: departure-aware button visibility ──────────────────────────────────
 
 test('OrderDetail type includes scheduleStartAt for departure-date check', async () => {
@@ -60,7 +68,7 @@ test('refund form has a reason select/input AND a note textarea', async () => {
 });
 
 test('success message is auto-execute aware (not customer-service specific)', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readPageAndCopy();
   // Updated in #459: neutral copy that works for both auto-execute and manual paths
   assert.match(src, /退款申請已送出|退回原付款工具/,
     'success copy must be auto-execute aware, not "客服將於 2 個工作天"');
@@ -81,7 +89,7 @@ test('refund_pending status is treated as terminal (button hidden)', async () =>
 });
 
 test('申請取消/退款 is the button label', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readPageAndCopy();
   assert.match(src, /申請取消\/退款|申請取消.退款/,
     'button label must be "申請取消/退款"');
 });

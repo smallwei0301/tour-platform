@@ -22,7 +22,7 @@ import { getActivityGalleryBySlugDb } from '../../src/lib/db.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = join(__dirname, '..', '..');
-const PAGE = readFileSync(join(APP_ROOT, 'app/page.tsx'), 'utf8');
+const PAGE = readFileSync(join(APP_ROOT, 'app/[locale]/page.tsx'), 'utf8');
 const DB_MJS = readFileSync(join(APP_ROOT, 'src/lib/db.mjs'), 'utf8');
 
 test('getActivityGalleryBySlugDb：空 slug / 查無 → 空陣列（不丟錯）', async () => {

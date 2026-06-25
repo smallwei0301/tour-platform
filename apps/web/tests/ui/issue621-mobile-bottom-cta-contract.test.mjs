@@ -12,7 +12,7 @@ async function readSource(relPath) {
 }
 
 test('issue621 mobile bottom CTA consumes plan/date-aware href from page contract', async () => {
-  const pageSrc = await readSource('app/activities/[region]/[slug]/page.tsx');
+  const pageSrc = await readSource('app/[locale]/activities/[region]/[slug]/page.tsx');
   const bottomBarSrc = await readSource('src/components/activity/ActivityBottomBar.tsx');
 
   assert.match(

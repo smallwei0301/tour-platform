@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { DatePicker } from './DatePicker';
 import { PlanDetailModal } from './PlanDetailModal';
 import { resolvePlanBookingHref } from '../../lib/booking-entry.mjs';
@@ -125,12 +126,12 @@ function getIconForHighlight(text: string) {
   return ICONS.check;
 }
 
-function formatPlanParticipantText(plan: PlanConfig) {
+function formatPlanParticipantText(plan: PlanConfig, t: ReturnType<typeof useTranslations>) {
   const min = Number.isFinite(Number(plan.minParticipants)) ? Number(plan.minParticipants) : 1;
   const max = Number.isFinite(Number(plan.maxParticipants)) ? Number(plan.maxParticipants) : null;
-  const minLabel = min <= 1 ? '1 人可成行' : `最少 ${min} 人成團`;
+  const minLabel = min <= 1 ? t('minOnePerson') : t('minGroupSize', { n: min });
   if (max && max > 0) {
-    return `${minLabel} · 最多 ${max} 人`;
+    return t('participantWithMax', { minLabel, max });
   }
   return minLabel;
 }
@@ -154,6 +155,7 @@ interface DatePlanSectionProps {
 }
 
 export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanSectionProps) {
+  const t = useTranslations('datePlan');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -189,16 +191,16 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
 
       if (!res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) {
         if (useBookingV2) {
-          setAvailabilityNotice('目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。');
+          setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
         }
         setAvailabilityLoaded(false);
         return;
       }
 
       if (useBookingV2 && json?.data?.source === 'legacy_fallback') {
-        setAvailabilityNotice('目前可預約資料為 Legacy 備援（fallback）結果，可能延遲，建議稍後再試。');
+        setAvailabilityNotice(t('availabilityNoticeLegacyFallback'));
       } else if (useBookingV2 && json?.data?.source !== 'v2') {
-        setAvailabilityNotice('目前可預約資料來源非 V2 聚合結果，顯示可能延遲，請稍後重試。');
+        setAvailabilityNotice(t('availabilityNoticeNonV2Source'));
       } else {
         setAvailabilityNotice(null);
       }
@@ -208,7 +210,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
     } catch {
       setAvailabilityLoaded(false);
       if (useBookingV2) {
-        setAvailabilityNotice('目前無法即時載入 V2 可預約名額，暫以頁面資料顯示，請稍後重試。');
+        setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
       }
     } finally {
       setAvailabilityFetching(false);
@@ -240,7 +242,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
 
       {/* Plan cards */}
       <div className="kkd-section-label-row" style={{ marginBottom: 12 }}>
-        <span className="kkd-section-label">選擇方案</span>
+        <span className="kkd-section-label">{t('selectPlan')}</span>
       </div>
 
       {/* Inactive-plan state: plan exists but is not active — do not show plan cards */}
@@ -250,7 +252,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           role="status"
           data-testid="plan-inactive-notice"
         >
-          此活動方案目前未開放預約，請稍後再查看。
+          {t('planInactiveNotice')}
         </p>
       )}
       {planConfigState === 'no_plans' && (
@@ -259,13 +261,13 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           role="status"
           data-testid="plan-no-plans-notice"
         >
-          此活動尚未設定可預約方案，請稍後再查看。
+          {t('noPlansNotice')}
         </p>
       )}
 
       {showMissingCanonicalMessage ? (
         <p style={{ margin: '0 0 12px', color: '#b42318', fontSize: 14 }} role="status" data-testid="v2-no-canonical-plan-message">
-          此行程尚未設定可預約方案，請稍後再查看。
+          {t('noCanonicalPlanMessage')}
         </p>
       ) : planConfigState === 'no_active_plans' || planConfigState === 'no_plans' ? null : (
         <>
@@ -324,7 +326,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                         </span>
                         <span className="kkd-plan-meta-sep" aria-hidden="true">·</span>
                         <span className="kkd-plan-duration">
-                          {formatPlanParticipantText(plan)}
+                          {formatPlanParticipantText(plan, t)}
                         </span>
                       </div>
                     </div>
@@ -334,13 +336,13 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                         <span style={{
                           background: '#fee2e2', color: '#991b1b', padding: '2px 10px',
                           borderRadius: 20, fontSize: 12, fontWeight: 700,
-                        }}>額滿</span>
+                        }}>{t('badgeFull')}</span>
                       )}
                       {showNotOpen && (
                         <span style={{
                           background: '#f3f4f6', color: '#6b7280', padding: '2px 10px',
                           borderRadius: 20, fontSize: 12, fontWeight: 600,
-                        }}>未開放</span>
+                        }}>{t('badgeNotOpen')}</span>
                       )}
                       {/* 剩餘名額 */}
                       {dateChosen && planAvail.isOpen && (
@@ -349,7 +351,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                           color: planAvail.remaining <= 3 ? '#854d0e' : '#166534',
                           padding: '2px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
                         }}>
-                          剩 {planAvail.remaining} 位
+                          {t('remaining', { n: planAvail.remaining })}
                         </span>
                       )}
                       {dateChosen && (
@@ -376,7 +378,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                     style={{ display: 'inline-block', marginBottom: 14, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontWeight: 700 }}
                     onClick={() => setModalPlan(plan)}
                   >
-                    {plan.detailsLinkText || '查看方案詳情 ›'}
+                    {plan.detailsLinkText || t('viewPlanDetails')}
                   </button>
 
                   {/* Plan-first flow: the selected plan shows its OWN bookable
@@ -388,11 +390,11 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                       onClick={(e) => e.stopPropagation()}
                     >
                       <div className="kkd-section-label-row" style={{ marginBottom: 8 }}>
-                        <span className="kkd-section-label">選擇日期</span>
+                        <span className="kkd-section-label">{t('selectDate')}</span>
                       </div>
                       {availabilityFetching && (
                         <p style={{ margin: '0 0 8px', color: 'var(--tp-muted)', fontSize: 13 }} role="status">
-                          載入可預約日期中…
+                          {t('loadingDates')}
                         </p>
                       )}
                       <DatePicker
@@ -420,21 +422,21 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                     <div className="kkd-plan-price-block">
                       <span className="kkd-plan-orig-price">NT${origPrice.toLocaleString()}</span>
                       <strong className="kkd-plan-price">NT${planPrice.toLocaleString()}</strong>
-                      <span className="kkd-plan-per"> 起 / {plan.priceType === 'per_group' ? '組' : '人'}</span>
+                      <span className="kkd-plan-per"> {t('priceFrom')} / {plan.priceType === 'per_group' ? t('perGroup') : t('perPerson')}</span>
                     </div>
                     {showFull ? (
                       <span
                         className="tp-btn kkd-plan-select-btn"
                         style={{ background: '#d1d5db', color: '#6b7280', cursor: 'not-allowed', pointerEvents: 'auto' }}
                       >
-                        已額滿
+                        {t('ctaSoldOut')}
                       </span>
                     ) : showNotOpen ? (
                       <span
                         className="tp-btn kkd-plan-select-btn"
                         style={{ background: '#e5e7eb', color: '#9ca3af', cursor: 'not-allowed', pointerEvents: 'auto' }}
                       >
-                        未開放
+                        {t('ctaNotOpen')}
                       </span>
                     ) : (
                       <Link
@@ -461,7 +463,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                           });
                         }}
                       >
-                        {plan.bookingBtnText || '立即預約'}
+                        {plan.bookingBtnText || t('ctaBook')}
                       </Link>
                     )}
                   </div>
@@ -477,7 +479,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                 className="kkd-more-dates-btn"
                 onClick={() => setShowAllPlans(v => !v)}
               >
-                {showAllPlans ? '收合方案' : `查看更多方案（還有 ${PLANS.length - 2} 個）›`}
+                {showAllPlans ? t('collapsePlans') : t('morePlans', { n: PLANS.length - 2 })}
               </button>
             </div>
           )}

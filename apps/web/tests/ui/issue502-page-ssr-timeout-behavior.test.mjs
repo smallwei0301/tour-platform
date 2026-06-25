@@ -12,6 +12,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const require = createRequire(import.meta.url);
 
+// #multilingual：詳情頁改用 next-intl server API。VM 沙箱渲染不在 request context，
+// mock 掉 getTranslations/setRequestLocale（用真實 zh-Hant catalog 做最小取值＋內插）。
+const intlMessages = require('../../messages/zh-Hant.json');
+function makeIntlT(namespace = 'activityDetail') {
+  const lookup = (key) => `${namespace}.${key}`.split('.').reduce((o, k) => (o == null ? o : o[k]), intlMessages);
+  const t = (key, params) => {
+    let s = lookup(key);
+    if (typeof s !== 'string') return key;
+    if (params) for (const [k, v] of Object.entries(params)) s = s.split(`{${k}}`).join(String(v));
+    return s;
+  };
+  t.raw = lookup;
+  return t;
+}
+const nextIntlServerMock = {
+  getTranslations: async (opts = {}) => makeIntlT(opts.namespace),
+  setRequestLocale: () => {},
+};
+
 function transpileTsxToCjs(source, fileName) {
   const out = ts.transpileModule(source, {
     compilerOptions: {
@@ -59,8 +78,8 @@ function createNeverResolving() {
 }
 
 test('GH-502: render-path activity lookup fails fast when DB promise hangs', async () => {
-  const regionPagePath = path.join(ROOT, 'app/activities/[region]/[slug]/page.tsx');
-  const compatPagePath = path.join(ROOT, 'app/activities/[slug]/page.tsx');
+  const regionPagePath = path.join(ROOT, 'app/[locale]/activities/[region]/[slug]/page.tsx');
+  const compatPagePath = path.join(ROOT, 'app/[locale]/activities/[slug]/page.tsx');
   const regionSrc = await fs.readFile(regionPagePath, 'utf8');
   // compat route may not exist if consolidated into [region]/[slug] only
   let compatSrc = null;
@@ -70,6 +89,7 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
   const compatNever = createNeverResolving();
 
   const mockMap = {
+    'next-intl/server': nextIntlServerMock,
     'next/navigation': {
       notFound: () => {
         throw new Error('NOT_FOUND_CALLED');
@@ -79,48 +99,48 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
       },
     },
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
-    '../../../../src/lib/db.mjs': {
+    '../../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async () => regionNever,
     },
-    '../../../src/lib/db.mjs': {
+    '../../../../src/lib/db.mjs': {
       getActivityBySlugDb: async () => compatNever,
       buildCanonicalActivityDetailPath: () => '/activities/taipei/fallback-slug',
     },
-    '../../../../src/lib/activity-review-stats.mjs': {
+    '../../../../../src/lib/activity-review-stats.mjs': {
       resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }),
     },
-    '../../../../src/lib/social-proof-quotes.mjs': {
+    '../../../../../src/lib/social-proof-quotes.mjs': {
       normalizeSocialProofQuotes: () => [],
       resolveSocialProofAuthor: (a) => a || '旅客回饋',
     },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
-    '../../../../src/lib/activity-jsonld.mjs': {
+    '../../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({}),
       resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',
       serialiseJsonLd: (v) => JSON.stringify(v),
     },
-    '../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
-    '../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
-    '../../../../src/lib/date-plan-source.mjs': {
+    '../../../../../src/config/feature-flags.mjs': { isBookingV2Enabled: () => false },
+    '../../../../../src/lib/booking-entry.mjs': { resolveBookingEntryHref: () => '/booking/__render_probe__' },
+    '../../../../../src/lib/date-plan-source.mjs': {
       resolveDatePlanPresentation: () => ({
         source: 'legacy',
         selectedDatePlan: null,
         datePlanCards: [],
       }),
     },
-    '../../../../src/components/activity/DatePlanSection': { DatePlanSection: () => React.createElement('div', null, 'DatePlanSection') },
-    '../../../../src/components/activity/PlanItinerarySection': { PlanItinerarySection: () => React.createElement('div', null, 'PlanItinerarySection') },
-    '../../../../src/components/activity/ActivityBottomBar': { ActivityBottomBar: () => React.createElement('div', null, 'BottomBar') },
-    '../../../../src/components/activity/SectionAnchorNav': { SectionAnchorNav: () => React.createElement('div', null, 'SectionAnchorNav') },
-    '../../../../src/components/activity/SelectedPlanContext': { SelectedPlanProvider: ({ children }) => React.createElement(React.Fragment, null, children), useSelectedPlan: () => ({ selected: null, setSelected: () => {} }) },
-    '../../../../src/components/activity/ImageCarousel': { ImageCarousel: () => React.createElement('div', null, 'ImageCarousel') },
-    '../../../../src/components/activity/ReviewPhotos': { ReviewPhotos: () => React.createElement('div', null, 'ReviewPhotos') },
-    '../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div', null, 'ActivityQASection') },
+    '../../../../../src/components/activity/DatePlanSection': { DatePlanSection: () => React.createElement('div', null, 'DatePlanSection') },
+    '../../../../../src/components/activity/PlanItinerarySection': { PlanItinerarySection: () => React.createElement('div', null, 'PlanItinerarySection') },
+    '../../../../../src/components/activity/ActivityBottomBar': { ActivityBottomBar: () => React.createElement('div', null, 'BottomBar') },
+    '../../../../../src/components/activity/SectionAnchorNav': { SectionAnchorNav: () => React.createElement('div', null, 'SectionAnchorNav') },
+    '../../../../../src/components/activity/SelectedPlanContext': { SelectedPlanProvider: ({ children }) => React.createElement(React.Fragment, null, children), useSelectedPlan: () => ({ selected: null, setSelected: () => {} }) },
+    '../../../../../src/components/activity/ImageCarousel': { ImageCarousel: () => React.createElement('div', null, 'ImageCarousel') },
+    '../../../../../src/components/activity/ReviewPhotos': { ReviewPhotos: () => React.createElement('div', null, 'ReviewPhotos') },
+    '../../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div', null, 'ActivityQASection') },
     // #1381: 公開促銷碼 banner（client component，mock 為 noop）
-    '../../../../src/components/activity/PublicPromoBanner': { PublicPromoBanner: () => React.createElement('div', null, 'PublicPromoBanner') },
+    '../../../../../src/components/activity/PublicPromoBanner': { PublicPromoBanner: () => React.createElement('div', null, 'PublicPromoBanner') },
     // #1382: 推薦區塊（client component，mock 為 noop）
-    '../../../../src/components/activity/ActivityRecommendations': { ActivityRecommendations: () => React.createElement('div', null, 'ActivityRecommendations') },
-    '../../../../src/components/ui/PublicIcon': { PublicIcon: ({ name }) => React.createElement('span', { 'data-public-icon': name }) },
+    '../../../../../src/components/activity/ActivityRecommendations': { ActivityRecommendations: () => React.createElement('div', null, 'ActivityRecommendations') },
+    '../../../../../src/components/ui/PublicIcon': { PublicIcon: ({ name }) => React.createElement('span', { 'data-public-icon': name }) },
     react: React,
     'react/jsx-runtime': require('react/jsx-runtime'),
   };

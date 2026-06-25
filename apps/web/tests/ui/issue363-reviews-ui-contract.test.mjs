@@ -20,6 +20,14 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
+// #multilingual: 訂單詳情頁面向使用者的文案已移到 messages/zh-Hant.json 的 orderDetail namespace。
+// 文案內容契約改讀（page + 繁中 catalog）。
+async function readOrderDetailCopy() {
+  const page = await readSource('app/me/orders/[orderId]/page.tsx');
+  const zh = await readSource('messages/zh-Hant.json');
+  return page + '\n' + zh;
+}
+
 // ─── AC1: Admin reviews page ─────────────────────────────────────────────────
 
 test('AC1: admin/reviews/page.tsx exists', async () => {
@@ -66,7 +74,7 @@ test('AC1: AdminShell NAV_ITEMS contains 評價管理 link', async () => {
 // ─── AC2: /me/orders review button for completed orders ───────────────────────
 
 test('AC2: orderId page has 撰寫評價 button', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readOrderDetailCopy();
   assert.match(src, /撰寫評價/, 'must have 撰寫評價 button text');
 });
 
@@ -126,6 +134,6 @@ test('AC3: review POST body includes activityId, bookingId, rating, reviewText',
 // ─── AC4: Success state ───────────────────────────────────────────────────────
 
 test('AC4: success state shows 評價已送出，等候審核', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readOrderDetailCopy();
   assert.match(src, /評價已送出，等候審核/, 'must show success message 評價已送出，等候審核');
 });

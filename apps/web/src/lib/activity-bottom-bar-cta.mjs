@@ -44,12 +44,14 @@ export function resolveBottomBarCta({
       scheduleId: selected.scheduleId || undefined,
       useBookingV2,
     });
-    return { mode: 'book', href, label: '立即預約', selected };
+    // #multilingual：label 維持中文（既有 #919 純函式契約／單測），UI 改用 labelKey
+    // 透過 next-intl 取對應語言文字（messages 的 bottomBar.ctaBook / ctaSelectPlan）。
+    return { mode: 'book', href, label: '立即預約', labelKey: 'ctaBook', selected };
   }
 
   if (hrefHasPlanParam(directBookingHref)) {
-    return { mode: 'book', href: directBookingHref, label: '選擇方案', selected: null };
+    return { mode: 'book', href: directBookingHref, label: '選擇方案', labelKey: 'ctaSelectPlan', selected: null };
   }
 
-  return { mode: 'scroll', targetId: planSectionId, label: '選擇方案', selected: null };
+  return { mode: 'scroll', targetId: planSectionId, label: '選擇方案', labelKey: 'ctaSelectPlan', selected: null };
 }

@@ -15,17 +15,17 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(__dirname, '../../app');
 
 const PAGES_WITH_BREADCRUMBS = [
-  'about/page.tsx',
-  'blog/page.tsx',
-  'contact/page.tsx',
-  'faq/page.tsx',
-  'why-choose-us/page.tsx',
-  'guides/[slug]/page.tsx',
-  'blog/[slug]/page.tsx',
-  'experiences/[slug]/page.tsx',
+  '[locale]/about/page.tsx',
+  '[locale]/blog/page.tsx',
+  '[locale]/contact/page.tsx',
+  '[locale]/faq/page.tsx',
+  '[locale]/why-choose-us/page.tsx',
+  '[locale]/guides/[slug]/page.tsx',
+  '[locale]/blog/[slug]/page.tsx',
+  '[locale]/experiences/[slug]/page.tsx',
   'booking/[activityId]/page.tsx',
   'guide/apply/page.tsx',
-  'legal/privacy/page.tsx',
+  '[locale]/legal/privacy/page.tsx',
 ];
 
 describe('Global: pages with visual breadcrumbs must have BreadcrumbList JSON-LD', () => {

@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
 import { useMeResource } from '../../../src/lib/use-me-resource';
+import { useClientLocale } from '../../../src/i18n/use-client-locale';
+import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
 
 type Order = {
   id: string;
@@ -17,18 +19,6 @@ type Order = {
   createdAt?: string | null;
   paidAt?: string | null;
   scheduleId?: string | null;
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending_payment: '待付款',
-  paid: '已付款',
-  confirmed: '已確認',
-  rejected: '已拒絕',
-  cancelled_by_user: '已取消',
-  cancelled_by_guide: '導遊取消',
-  completed: '已完成',
-  refund_pending: '退款申請中',
-  refunded: '已退款',
 };
 
 // 狀態膠囊維持語意化淺底色票（在深綠卡片上仍清晰），與訂單詳情頁一致。
@@ -46,6 +36,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
 
 function StatusBadge({ status }: { status: string }) {
   const style = STATUS_COLORS[status] || { bg: '#e5e7eb', color: '#374151' };
+  const statusLabels = getClientNamespace(useClientLocale(), 'orders').status as Record<string, string>;
   return (
     <span style={{
       background: style.bg,
@@ -56,7 +47,7 @@ function StatusBadge({ status }: { status: string }) {
       fontWeight: 700,
       whiteSpace: 'nowrap',
     }}>
-      {STATUS_LABELS[status] || status}
+      {statusLabels[status] || status}
     </span>
   );
 }
@@ -78,6 +69,9 @@ const titleStyle: React.CSSProperties = {
 
 export default function MyOrdersPage() {
   const router = useRouter();
+  const locale = useClientLocale();
+  const m = getClientNamespace(locale, 'orders');
+  const dateLocale = locale === 'zh-Hant' ? 'zh-TW' : 'en-US';
   const [userName, setUserName] = useState<string>('');
   // stale-while-revalidate：切回本分頁時用快取瞬開，背景更新。401 才導登入。
   const { data, loading, error: err } = useMeResource<Order[]>('/api/me/orders', {
@@ -95,22 +89,22 @@ export default function MyOrdersPage() {
 
   return (
     <main className="tp-container" style={pageStyle}>
-      <h1 style={titleStyle} data-testid="my-orders-title">我的訂單</h1>
+      <h1 style={titleStyle} data-testid="my-orders-title">{m.title}</h1>
       <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 20px' }}>
-        {userName ? `歡迎回來，${userName}` : '查看你的所有行程訂單'}
+        {userName ? m.greeting.replace('{name}', userName) : m.subtitle}
       </p>
       <MemberTabs />
 
       {err && <p style={{ color: 'var(--tp-accent)', fontSize: 13, marginBottom: 16 }}>{err}</p>}
 
-      {loading && <p style={{ color: 'var(--tp-muted)', textAlign: 'center', padding: '40px 0' }}>載入訂單中…</p>}
+      {loading && <p style={{ color: 'var(--tp-muted)', textAlign: 'center', padding: '40px 0' }}>{m.loading}</p>}
 
       {!loading && orders.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--tp-muted)' }} data-testid="orders-empty">
           <div style={{ fontSize: 40, marginBottom: 10, opacity: 0.85 }}>🧭</div>
-          <p style={{ fontSize: 14, margin: '0 0 18px' }}>目前還沒有訂單</p>
+          <p style={{ fontSize: 14, margin: '0 0 18px' }}>{m.empty}</p>
           <Link href="/activities" className="tp-btn tp-btn-primary" style={{ fontSize: 14 }}>
-            探索行程
+            {m.exploreCta}
           </Link>
         </div>
       )}
@@ -145,16 +139,16 @@ export default function MyOrdersPage() {
                       lineHeight: 1.4,
                     }}
                   >
-                    {order.title || '行程訂單'}
+                    {order.title || m.fallbackTitle}
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--tp-muted)' }}>
-                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString('zh-TW') : '—'}
+                    {order.createdAt ? new Date(order.createdAt).toLocaleDateString(dateLocale) : '—'}
                   </div>
                 </div>
                 <StatusBadge status={order.status} />
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, borderTop: '1px solid var(--tp-border)', paddingTop: 12 }}>
-                <span style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{order.peopleCount ?? '—'} 人</span>
+                <span style={{ fontSize: 13, color: 'var(--tp-muted)' }}>{m.people.replace('{n}', String(order.peopleCount ?? '—'))}</span>
                 <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--tp-gold-strong)' }}>
                   NT$ {(order.totalTwd ?? 0).toLocaleString()}
                 </span>

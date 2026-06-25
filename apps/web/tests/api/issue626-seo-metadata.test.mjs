@@ -93,24 +93,24 @@ describe('issue #626 — SEO: layout.tsx metadata', () => {
 
 describe('issue #626 — SEO: activity detail generateMetadata', () => {
   it('generateMetadata fetches activity and returns openGraph', () => {
-    const src = readFile('activities/[region]/[slug]/page.tsx');
+    const src = readFile('[locale]/activities/[region]/[slug]/page.tsx');
     assert.ok(src.includes('openGraph'), 'activity page generateMetadata should include openGraph');
   });
 
   it('generateMetadata includes twitter card', () => {
-    const src = readFile('activities/[region]/[slug]/page.tsx');
+    const src = readFile('[locale]/activities/[region]/[slug]/page.tsx');
     assert.ok(src.includes('twitter'), 'activity page generateMetadata should include twitter metadata');
   });
 
   it('generateMetadata does not call DB (GH-502 guard)', () => {
     // Per GH-502: generateMetadata must not trigger getActivityBySlugDb to avoid render lock
-    const src = readFile('activities/[region]/[slug]/page.tsx');
+    const src = readFile('[locale]/activities/[region]/[slug]/page.tsx');
     const metaBlock = src.split('export async function generateMetadata')[1]?.split('export default async function')[0] ?? '';
     assert.ok(!metaBlock.includes('getActivityBySlugDb('), 'generateMetadata must not call getActivityBySlugDb (GH-502)');
   });
 
   it('generateMetadata uses slug for title', () => {
-    const src = readFile('activities/[region]/[slug]/page.tsx');
+    const src = readFile('[locale]/activities/[region]/[slug]/page.tsx');
     const metaBlock = src.split('export async function generateMetadata')[1]?.split('export default async function')[0] ?? '';
     assert.ok(metaBlock.includes('slug'), 'generateMetadata should use slug for title');
   });

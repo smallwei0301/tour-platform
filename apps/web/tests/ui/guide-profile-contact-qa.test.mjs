@@ -21,12 +21,12 @@ import { dirname, resolve } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const read = (rel) => readFileSync(resolve(here, rel), 'utf8');
 
-const guidePageSrc = read('../../app/guides/[slug]/page.tsx');
+const guidePageSrc = read('../../app/[locale]/guides/[slug]/page.tsx');
 const componentSrc = read('../../src/components/guide/GuideContactQASection.tsx');
 const guideQaRouteSrc = read('../../app/api/guide/qa/route.ts');
 const guideQaIdRouteSrc = read('../../app/api/guide/qa/[id]/route.ts');
 const dashboardSrc = read('../../app/guide/dashboard/page.tsx');
-const activityPageSrc = read('../../app/activities/[region]/[slug]/page.tsx');
+const activityPageSrc = read('../../app/[locale]/activities/[region]/[slug]/page.tsx');
 
 test('導遊頁不再有死的「傳訊息給導遊」按鈕', () => {
   assert.ok(
@@ -94,9 +94,11 @@ test('導遊後台對 sentinel 顯示「導遊頁面」而非行程 ID', () => {
 });
 
 test('行程詳情頁「詢問導遊」仍是錨定 #section-qa 的連結（不退化）', () => {
+  // #multilingual：可見文字「詢問導遊」已抽進 messages 的 activityDetail.askGuide；
+  // 此處改驗結構契約 —— #section-qa 錨點連結 + t('askGuide') 仍在。
   assert.match(
     activityPageSrc,
-    /<a[^>]*href="#section-qa"[\s\S]*?詢問導遊/,
-    '行程詳情頁應維持 <a href="#section-qa"> 錨點連結',
+    /<a[^>]*href="#section-qa"[\s\S]*?t\('askGuide'\)/,
+    '行程詳情頁應維持 <a href="#section-qa"> 錨點連結（文字改用 t(\'askGuide\')）',
   );
 });

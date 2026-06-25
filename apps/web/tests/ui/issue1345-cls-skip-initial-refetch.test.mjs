@@ -37,7 +37,7 @@ async function readSrc(rel) {
 }
 
 test('ActivitiesContent imports useRef and tracks `skipInitialFetch` keyed off initialActivities', async () => {
-  const src = await readSrc('app/activities/ActivitiesContent.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivitiesContent.tsx');
   // useRef must be imported alongside the other React hooks.
   assert.match(
     src,
@@ -55,7 +55,7 @@ test('ActivitiesContent imports useRef and tracks `skipInitialFetch` keyed off i
 });
 
 test('fetch effect short-circuits on the first run when SSR data is fresh', async () => {
-  const src = await readSrc('app/activities/ActivitiesContent.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivitiesContent.tsx');
   // The guard pattern: consume the ref and return early.
   assert.match(
     src,
@@ -65,7 +65,7 @@ test('fetch effect short-circuits on the first run when SSR data is fresh', asyn
 });
 
 test('subsequent query changes still trigger /api/activities — guard is one-shot', async () => {
-  const src = await readSrc('app/activities/ActivitiesContent.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivitiesContent.tsx');
   // The fetch call must still exist (the guard short-circuits only once).
   assert.match(
     src,

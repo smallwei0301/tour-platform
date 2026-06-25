@@ -5,6 +5,58 @@ import type { NextRequest } from 'next/server.js';
 import { isAdminAuthorized } from './src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from './src/lib/admin-session.mjs';
 import { getControls, isWhitelisted } from './src/lib/soft-launch.mjs';
+import { routing } from './src/i18n/routing.ts';
+
+// 多語言（#multilingual Phase 0.5 PoC）：next-intl middleware 處理 locale 偵測、
+// NEXT_LOCALE cookie 與 as-needed 內部 rewrite（zh-Hant 不加前綴）。只對「已搬進
+// app/[locale] 的公開頁」委派；admin/guide/api/auth 永不帶前綴、行為 0 變動。
+//
+// 注意：next-intl/middleware 內部以 bundler 解析 import `next/server`（無副檔名），
+// 在 node --test 直接載入 middleware.ts 時會解不了。改用 lazy dynamic import + 記憶化，
+// 讓非 localized 路徑（admin/guide/api 等既有測試）載入 middleware.ts 時完全不觸碰
+// next-intl，維持既有測試綠燈；首次 localized 請求才載入並快取 handler。
+let intlMiddlewarePromise: Promise<(req: NextRequest) => NextResponse | Promise<NextResponse>> | null = null;
+function getIntlMiddleware() {
+  if (!intlMiddlewarePromise) {
+    intlMiddlewarePromise = import('next-intl/middleware').then(({ default: create }) => create(routing));
+  }
+  return intlMiddlewarePromise;
+}
+
+// 非預設 locale 的 URL 前綴（zh-Hant 為預設、無前綴）。
+const LOCALE_PREFIXES = ['en', 'ja', 'ko'] as const;
+
+/** 去掉 locale 前綴，回傳內部 pathname（供既有 startsWith 比對沿用）。 */
+function stripLocalePrefix(pathname: string): string {
+  for (const l of LOCALE_PREFIXES) {
+    if (pathname === `/${l}`) return '/';
+    if (pathname.startsWith(`/${l}/`)) return pathname.slice(l.length + 1);
+  }
+  return pathname;
+}
+
+/**
+ * 已搬進 app/[locale] 的公開頁交給 next-intl 處理 locale rewrite；其餘 root 層頁面
+ * （about/blog/booking…尚未搬遷）不交給 next-intl（交了會被 rewrite 成 /zh-Hant/* 而 404）。
+ * 全面搬遷進行中：首頁、/activities、/theme/* 已完成。
+ */
+function isLocalizedPublicPath(rest: string): boolean {
+  return rest === '/'
+    || rest === '/activities' || rest.startsWith('/activities/')
+    || rest === '/theme' || rest.startsWith('/theme/')
+    // /guides 列表頁與 /guides/[slug] 個人頁已搬進 [locale]；但 /guides/[slug]/shop
+    // （app 化的訂房流程）仍在 root。故 localize 列表（exact）與「只有一段 slug」的
+    // 個人頁（`/guides/<slug>`），但排除任何更深的 shop 子路徑。
+    || rest === '/guides'
+    || /^\/guides\/[^/]+$/.test(rest)
+    // 純靜態資訊頁（單頁、無動態子路由）。
+    || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact'
+    // blog（含 [slug]）與 legal（privacy/terms/refund）整棵子樹搬進 [locale]。
+    || rest === '/blog' || rest.startsWith('/blog/')
+    || rest === '/legal' || rest.startsWith('/legal/')
+    // experiences/[slug] 體驗詳情頁。
+    || rest === '/experiences' || rest.startsWith('/experiences/');
+}
 
 function pickToken(req: NextRequest): string {
   // Security: never read admin credentials from URL query params.
@@ -258,7 +310,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── Guide routes ───────────────────────────────────────────────────────────
-  const isGuidePage = pathname.startsWith('/guide');
+  // 注意：用精確比對，避免 `/guides`（旅客「認識導遊」公開頁）被當成 guide realm
+  // 而誤導去 /guide/login。先前 /guides 不在 middleware matcher 內所以無感；本輪把
+  // /guides 列表搬進 [locale] 並加入 matcher 後，這個 startsWith 的鬆散比對才暴露。
+  const isGuidePage = pathname === '/guide' || pathname.startsWith('/guide/');
   const isGuideApi = pathname.startsWith('/api/guide');
 
   if (isGuidePage || isGuideApi) {
@@ -337,15 +392,35 @@ export async function middleware(req: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // ── Localized public pages → next-intl ──────────────────────────────────────
+  // 首頁與 /activities 已搬進 app/[locale]；交給 next-intl 處理 locale rewrite。
+  // （soft-launch / CSRF 已在前面跑過；這些路徑非 admin/guide，故不影響三 realm。）
+  const restPath = stripLocalePrefix(pathname);
+  if (isLocalizedPublicPath(restPath)) {
+    // zh-first + sticky（#multilingual）：localeDetection 已於 routing 關閉，新訪客一律
+    // 預設繁中、不依瀏覽器語言自動切換。但若使用者曾用切換器選過非預設語言（寫入
+    // NEXT_LOCALE cookie），在「未帶前綴」的請求上 sticky redirect 到該語言前綴，維持
+    // 站內無前綴連結的語言連續性。已帶前綴（/en…）的請求不在此處理，避免重導迴圈。
+    const isUnprefixed = restPath === pathname;
+    if (isUnprefixed) {
+      const cookieLocale = req.cookies.get('NEXT_LOCALE')?.value;
+      if (cookieLocale && (LOCALE_PREFIXES as readonly string[]).includes(cookieLocale)) {
+        const url = req.nextUrl.clone();
+        url.pathname = pathname === '/' ? `/${cookieLocale}` : `/${cookieLocale}${pathname}`;
+        return NextResponse.redirect(url);
+      }
+    }
+    const intlMiddleware = await getIntlMiddleware();
+    return intlMiddleware(req);
+  }
+
   // ── Traveler routes ───────────────────────────────────────────────────────
   const isTravelerPublicPath =
-    pathname.startsWith('/activities') ||
     pathname.startsWith('/booking') ||
     pathname.startsWith('/checkout') ||
     pathname.startsWith('/order/success') ||
     pathname.startsWith('/api/activities') ||
-    pathname.startsWith('/api/orders') ||
-    pathname === '/';
+    pathname.startsWith('/api/orders');
 
   // Public pages use only static content / no-auth DB reads.
   if (isTravelerPublicPath) return NextResponse.next();
@@ -372,10 +447,27 @@ export const config = {
     // Public routes subject to public_paused soft-launch guard (issue #805).
     '/',
     '/activities/:path*',
+    '/theme/:path*',
+    '/guides',
+    '/guides/:slug',
+    '/about',
+    '/why-choose-us',
+    '/faq',
+    '/contact',
+    '/blog/:path*',
+    '/legal/:path*',
+    '/experiences/:path*',
     '/booking/:path*',
     '/checkout/:path*',
     '/order/success/:path*',
     '/api/activities/:path*',
     '/api/orders/:path*',
+    // 多語言（#multilingual Phase 0.5）：locale 前綴的公開頁也要進 middleware。
+    '/en',
+    '/en/:path*',
+    '/ja',
+    '/ja/:path*',
+    '/ko',
+    '/ko/:path*',
   ],
 };

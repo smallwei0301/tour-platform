@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { createClient } from '../../lib/supabase/client';
 
 type QAItem = {
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export function ActivityQASection({ activityId }: Props) {
+  const t = useTranslations('activityQa');
   const [approvedQA, setApprovedQA] = useState<QAItem[]>([]);
   const [loadingQA, setLoadingQA] = useState(true);
 
@@ -65,11 +67,11 @@ export function ActivityQASection({ activityId }: Props) {
         body: JSON.stringify({ activityId, question: question.trim() }),
       });
       const j = await res.json();
-      if (!res.ok || j.error) throw new Error(j.error?.message || '送出失敗');
+      if (!res.ok || j.error) throw new Error(j.error?.message || t('submitFailed'));
       setQuestionSubmitted(true);
       setQuestion('');
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '送出失敗，請稍後再試');
+      setSubmitError(err instanceof Error ? err.message : t('submitFailedRetry'));
     } finally {
       setSubmitting(false);
     }
@@ -77,23 +79,23 @@ export function ActivityQASection({ activityId }: Props) {
 
   return (
     <section className="kkd-scroll-section" id="section-qa">
-      <h2 className="kkd-section-title">💬 旅客問答</h2>
+      <h2 className="kkd-section-title">{t('title')}</h2>
 
       {/* Approved Q&A list */}
       {loadingQA ? (
-        <p className="kkd-qa-empty">載入問答中…</p>
+        <p className="kkd-qa-empty">{t('loading')}</p>
       ) : approvedQA.length === 0 ? (
-        <p className="kkd-qa-empty">尚無問答，歡迎率先提問！</p>
+        <p className="kkd-qa-empty">{t('empty')}</p>
       ) : (
         <div className="kkd-qa-list">
           {approvedQA.map(qa => (
             <div key={qa.id} data-testid="qa-item" className="kkd-qa-item">
               <p className="kkd-qa-q">
-                <b>Q：</b>{qa.question}
+                <b>{t('questionPrefix')}</b>{qa.question}
               </p>
               {qa.answer && (
                 <p className="kkd-qa-a">
-                  <b>A：</b>{qa.answer}
+                  <b>{t('answerPrefix')}</b>{qa.answer}
                 </p>
               )}
             </div>
@@ -106,12 +108,12 @@ export function ActivityQASection({ activityId }: Props) {
         <div className="kkd-qa-form-wrap">
           {questionSubmitted ? (
             <p className="kkd-qa-success">
-              問題已送出，等候審核
+              {t('submitSuccess')}
             </p>
           ) : (
             <form onSubmit={handleSubmitQuestion} className="kkd-qa-form">
               <label htmlFor="qa-question-input" className="kkd-qa-form-label">
-                有疑問嗎？歡迎提問
+                {t('formLabel')}
               </label>
               <textarea
                 id="qa-question-input"
@@ -119,7 +121,7 @@ export function ActivityQASection({ activityId }: Props) {
                 className="kkd-qa-textarea"
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
-                placeholder="有疑問嗎？歡迎提問..."
+                placeholder={t('placeholder')}
                 rows={3}
                 required
               />
@@ -131,7 +133,7 @@ export function ActivityQASection({ activityId }: Props) {
                 className="kkd-qa-submit"
                 disabled={submitting}
               >
-                {submitting ? '送出中…' : '送出問題'}
+                {submitting ? t('submitting') : t('submit')}
               </button>
             </form>
           )}
@@ -139,7 +141,7 @@ export function ActivityQASection({ activityId }: Props) {
       ) : (
         <p className="kkd-qa-login" data-testid="qa-login-prompt">
           {/* 請登入後才能提問 */}
-          請<a href="/login">登入</a>後才能提問
+          {t('loginBefore')}<a href="/login">{t('login')}</a>{t('loginAfter')}
         </p>
       )}
     </section>
