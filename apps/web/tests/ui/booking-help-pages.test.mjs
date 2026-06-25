@@ -58,6 +58,14 @@ test('admin guide detail links to conflict-override help', () => {
   assert.match(read('app/admin/guides/[guideId]/page.tsx'), /\/admin\/help\/conflict-override/);
 });
 
+test('admin guides list cards link to conflict-override help (next to 時間管理)', () => {
+  const src = read('app/admin/guides/page.tsx');
+  assert.match(src, /\/admin\/help\/conflict-override/);
+  const helpIdx = src.indexOf('/admin/help/conflict-override');
+  const timeIdx = src.indexOf('📅 時間管理');
+  assert.ok(helpIdx > -1 && timeIdx > -1 && Math.abs(helpIdx - timeIdx) < 600, 'help link near 時間管理');
+});
+
 test('conflict-override help documents the key steps and limits', () => {
   const src = read('app/admin/help/conflict-override/page.tsx');
   assert.match(src, /例外開放此場/);
