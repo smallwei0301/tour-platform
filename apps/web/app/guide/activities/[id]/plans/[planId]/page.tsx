@@ -273,7 +273,10 @@ export default function GuidePlanEditPage() {
           </div>
         </div>
         <div>
-          <label style={labelStyle}>預約方式</label>
+          <label style={labelStyle}>
+            預約方式{' '}
+            <a href="/guide/help/booking-types" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 500, color: '#7c3aed', textDecoration: 'none', fontSize: 12 }}>📖 說明</a>
+          </label>
           <select style={fieldStyle} value={form.booking_type} onChange={(e) => set('booking_type', e.target.value)}>
             {BOOKING_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
           </select>
