@@ -39,11 +39,11 @@ export function BookingTypesGuide() {
           <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 640 }}>
             <thead>
               <tr style={{ background: '#f9fafb' }}>
-                <th style={{ ...thtd, fontWeight: 700 }}>預約方式</th>
-                <th style={{ ...thtd, fontWeight: 700 }}>時段從哪來</th>
-                <th style={{ ...thtd, fontWeight: 700 }}>付款前關卡</th>
-                <th style={{ ...thtd, fontWeight: 700 }}>成立方式</th>
-                <th style={{ ...thtd, fontWeight: 700 }}>適合情境</th>
+                <th scope="col" style={{ ...thtd, fontWeight: 700 }}>預約方式</th>
+                <th scope="col" style={{ ...thtd, fontWeight: 700 }}>時段從哪來</th>
+                <th scope="col" style={{ ...thtd, fontWeight: 700 }}>付款前關卡</th>
+                <th scope="col" style={{ ...thtd, fontWeight: 700 }}>成立方式</th>
+                <th scope="col" style={{ ...thtd, fontWeight: 700 }}>適合情境</th>
               </tr>
             </thead>
             <tbody>
