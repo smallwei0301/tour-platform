@@ -12,6 +12,8 @@ import { readMeCache, writeMeCache } from '../../../src/lib/use-me-resource';
 import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
+import { useClientLocale } from '../../../src/i18n/use-client-locale';
+import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
 
 const REGION_OPTIONS = listRegionOptions();
 
@@ -25,6 +27,8 @@ type ProfileData = {
 
 export default function MeProfilePage() {
   const router = useRouter();
+  const locale = useClientLocale();
+  const m = getClientNamespace(locale, 'profile');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -68,12 +72,12 @@ export default function MeProfilePage() {
           if (!cached) applyToForm(j.data as ProfileData); // 僅首次（無快取）寫入表單
         }
       } catch {
-        if (!cached) setErr('載入失敗，請重新整理');
+        if (!cached) setErr(m.loadFailed);
       } finally {
         setLoading(false);
       }
     })();
-  }, [router]);
+  }, [router, m.loadFailed]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +91,12 @@ export default function MeProfilePage() {
         body: JSON.stringify({ displayName, phone, region, marketingEmailOptIn: marketingOptIn }),
       });
       const j = await res.json();
-      if (!res.ok || j.error) throw new Error(j.error?.message || '儲存失敗');
+      if (!res.ok || j.error) throw new Error(j.error?.message || m.saveFailed);
       // 更新快取，切回個人資料分頁顯示最新值。
       if (j?.data) writeMeCache('/api/me/profile', j.data as ProfileData);
       setSaved(true);
     } catch (error) {
-      setErr(error instanceof Error ? error.message : '儲存失敗，請稍後再試');
+      setErr(error instanceof Error ? error.message : m.saveFailedRetry);
     } finally {
       setSaving(false);
     }
@@ -112,36 +116,36 @@ export default function MeProfilePage() {
   if (loading) {
     return (
       <main className="tp-container" style={{ ...pageStyle, textAlign: 'center', paddingTop: 80 }}>
-        <p style={{ color: 'var(--tp-muted)' }}>載入中⋯</p>
+        <p style={{ color: 'var(--tp-muted)' }}>{m.loading}</p>
       </main>
     );
   }
 
   return (
     <main className="tp-container" style={pageStyle}>
-      <h1 style={titleStyle}>個人資料</h1>
-      <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 20px' }}>設定公開顯示的暱稱與區域，以及通知偏好。</p>
+      <h1 style={titleStyle}>{m.title}</h1>
+      <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 20px' }}>{m.subtitle}</p>
       <MemberTabs />
 
       <form onSubmit={handleSave} className="tp-card" style={{ padding: 24 }}>
         <div style={{ marginBottom: 16 }}>
-          <label style={labelStyle}>Email（由登入帳號管理，無法於此修改）</label>
+          <label style={labelStyle}>{m.emailLabel}</label>
           <input value={email} readOnly disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="profile-display-name" style={labelStyle}>暱稱（顯示名稱）</label>
+          <label htmlFor="profile-display-name" style={labelStyle}>{m.displayNameLabel}</label>
           <input
             id="profile-display-name"
             data-testid="profile-display-name"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             maxLength={50}
-            placeholder="評論與訂單聯絡人預設顯示名稱"
+            placeholder={m.displayNamePlaceholder}
             style={inputStyle}
           />
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="profile-region" style={labelStyle}>區域</label>
+          <label htmlFor="profile-region" style={labelStyle}>{m.regionLabel}</label>
           <select
             id="profile-region"
             data-testid="profile-region"
@@ -149,20 +153,20 @@ export default function MeProfilePage() {
             onChange={(e) => setRegion(e.target.value)}
             style={inputStyle}
           >
-            <option value="">不指定</option>
+            <option value="">{m.regionUnspecified}</option>
             {REGION_OPTIONS.map((r) => (
               <option key={r.slug} value={r.slug}>{r.displayName}</option>
             ))}
           </select>
         </div>
         <div style={{ marginBottom: 16 }}>
-          <label htmlFor="profile-phone" style={labelStyle}>聯絡電話</label>
+          <label htmlFor="profile-phone" style={labelStyle}>{m.phoneLabel}</label>
           <input
             id="profile-phone"
             data-testid="profile-phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="09xxxxxxxx"
+            placeholder={m.phonePlaceholder}
             inputMode="tel"
             style={inputStyle}
           />
@@ -177,41 +181,43 @@ export default function MeProfilePage() {
             style={{ width: 16, height: 16, cursor: 'pointer' }}
           />
           <label htmlFor="profile-marketing" style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>
-            接收優惠與行程推薦通知
+            {m.marketingLabel}
           </label>
         </div>
         <p style={{ fontSize: 12, color: 'var(--tp-muted)', marginBottom: 16 }}>
-          交易類通知（訂單成立、付款、退款進度）為服務必要通知，不受此開關影響。
+          {m.marketingHelper}
         </p>
 
         <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 12 }} data-testid="me-notification-binding">
-          <label style={{ ...labelStyle, marginBottom: 0 }}>訂單通知綁定（可選）</label>
+          <label style={{ ...labelStyle, marginBottom: 0 }}>{m.notificationHeading}</label>
           <NotificationBindingButton
             endpoint="/api/me/line-binding"
             channel="line"
-            title="LINE 通知"
-            description="綁定後，訂單成立／付款／取消／退款也會傳到你的 LINE。"
+            title={m.lineTitle}
+            description={m.lineDesc}
             accent="#06c755"
             tone="dark"
+            locale={locale}
           />
           <NotificationBindingButton
             endpoint="/api/me/telegram-binding"
             channel="telegram"
-            title="Telegram 通知"
-            description="綁定後，訂單成立／付款／取消／退款也會傳到你的 Telegram。"
+            title={m.telegramTitle}
+            description={m.telegramDesc}
             accent="#229ED9"
             tone="dark"
+            locale={locale}
           />
         </div>
         {err && <p style={{ color: 'var(--tp-accent)', fontSize: 13, marginBottom: 12 }}>{err}</p>}
-        {saved && <p data-testid="profile-saved" style={{ color: '#34d399', fontSize: 13, marginBottom: 12 }}>已儲存 ✓</p>}
+        {saved && <p data-testid="profile-saved" style={{ color: '#34d399', fontSize: 13, marginBottom: 12 }}>{m.saved}</p>}
         <button
           type="submit"
           data-testid="profile-save-btn"
           disabled={saving}
           style={{ padding: '11px 20px', background: '#a8511f', color: '#f8efdc', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
         >
-          {saving ? '儲存中…' : '儲存'}
+          {saving ? m.saving : m.save}
         </button>
       </form>
     </main>

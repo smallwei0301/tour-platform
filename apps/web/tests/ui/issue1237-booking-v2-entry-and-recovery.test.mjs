@@ -41,10 +41,15 @@ test('GH-1237 RED: booking page maps raw missing-plan English errors to traveler
 
   assert.match(src, /function\s+getBookingV2RecoveryMessage\s*\(/);
   assert.match(src, /Activity plan not found/);
-  assert.match(src, /找不到此方案，請回到行程頁重新選擇。/);
+  // #multilingual: 繁中 recovery 文案移到 bookingFlow.v2PlanRecovery / v2RecoveryLink；
+  // 頁面用 m.<key> 引用。內容類斷言改讀繁中 catalog + 驗 m.<key> 引用。
+  const zh = JSON.parse(await readSource('messages/zh-Hant.json'));
+  assert.match(zh.bookingFlow.v2PlanRecovery, /找不到此方案，請回到行程頁重新選擇。/);
+  assert.match(src, /planRecovery: m\.v2PlanRecovery/);
   assert.match(src, /setV2Error\(getBookingV2RecoveryMessage\(/);
   assert.match(src, /data-testid="booking-v2-recovery-link"/);
-  assert.match(src, /回到行程頁重新選擇方案/);
+  assert.match(zh.bookingFlow.v2RecoveryLink, /回到行程頁重新選擇方案/);
+  assert.match(src, /\{m\.v2RecoveryLink\}/);
   assert.match(src, /#section-plan/);
   assert.doesNotMatch(src, />\s*Activity plan not found\s*</);
 });

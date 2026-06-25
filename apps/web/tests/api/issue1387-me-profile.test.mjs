@@ -122,5 +122,9 @@ test('/me/profile 頁面存在且為 client component（auth gate）', () => {
   const src = readFileSync(p, 'utf8');
   assert.match(src, /'use client'/);
   assert.match(src, /router\.replace\(`?\/login/, '未登入應導向登入');
-  assert.match(src, /交易/, '應說明交易通知不可關');
+  // #multilingual: 「交易通知不可關」說明已移到 profile.marketingHelper catalog；
+  // 頁面改引用 m.marketingHelper，內容類斷言改讀繁中 catalog。
+  assert.match(src, /m\.marketingHelper/, '頁面應引用 m.marketingHelper');
+  const zh = JSON.parse(readFileSync(path.resolve('messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.profile.marketingHelper, /交易/, 'profile.marketingHelper 應說明交易通知不可關');
 });

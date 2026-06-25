@@ -27,15 +27,24 @@ test('GH-860 contract: step2 creates draft before payment step and carries sched
 test('GH-860 contract: V2 error fallback prefers messageZh and keeps Traditional Chinese fallback', async () => {
   const src = await readFile(BOOKING_PAGE_PATH, 'utf8');
 
+  // #multilingual: zh-TW actionable fallback 文案移到 bookingFlow.errSlotUnavailable；
+  // fallback chain 改為 messageZh || message || m.errSlotUnavailable。內容類斷言改讀繁中 catalog。
+  const zh = JSON.parse(await readFile(path.join(ROOT, 'messages/zh-Hant.json'), 'utf8'));
   assert.match(
-    src,
-    /draftJson\?\.error\?\.messageZh\s*\|\|\s*draftJson\?\.error\?\.message\s*\|\|\s*'此場次目前無法預約，請重新整理或選擇其他日期。'/,
-    'draft error fallback should prefer messageZh and keep zh-TW actionable fallback'
+    zh.bookingFlow.errSlotUnavailable,
+    /此場次目前無法預約，請重新整理或選擇其他日期。/,
+    'bookingFlow.errSlotUnavailable must hold the zh-TW actionable fallback copy'
   );
 
   assert.match(
     src,
-    /checkoutJson\?\.error\?\.messageZh\s*\|\|\s*checkoutJson\?\.error\?\.message\s*\|\|\s*'此場次目前無法預約，請重新整理或選擇其他日期。'/,
-    'checkout error fallback should prefer messageZh and keep zh-TW actionable fallback'
+    /draftJson\?\.error\?\.messageZh\s*\|\|\s*draftJson\?\.error\?\.message\s*\|\|\s*m\.errSlotUnavailable/,
+    'draft error fallback should prefer messageZh and keep the actionable fallback (m.errSlotUnavailable)'
+  );
+
+  assert.match(
+    src,
+    /checkoutJson\?\.error\?\.messageZh\s*\|\|\s*checkoutJson\?\.error\?\.message\s*\|\|\s*m\.errSlotUnavailable/,
+    'checkout error fallback should prefer messageZh and keep the actionable fallback (m.errSlotUnavailable)'
   );
 });

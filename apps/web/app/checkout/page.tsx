@@ -9,6 +9,8 @@ import { createClient } from '../../src/lib/supabase/client';
 import { track } from '../../src/lib/track';
 import { captureUtm, getStoredUtm } from '../../src/lib/utm';
 import { resolveInitialCheckoutSelection } from '../../src/lib/checkout-selection.mjs';
+import { useClientLocale } from '../../src/i18n/use-client-locale';
+import { getClientNamespace } from '../../src/i18n/client-nav-messages';
 
 type Schedule = {
   id: string;
@@ -39,6 +41,9 @@ type ActivityInfo = {
 export default function CheckoutPage() {
   const params = useSearchParams();
   const router = useRouter();
+  const locale = useClientLocale();
+  const m = getClientNamespace(locale, 'checkout');
+  const dateLocale = locale === 'zh-Hant' ? 'zh-TW' : 'en-US';
   const slug = params.get('slug') || 'kaohsiung-chaishan-cave-experience';
   const planId = params.get('plan') || '';
   const urlScheduleId = params.get('scheduleId') || '';
@@ -106,7 +111,7 @@ export default function CheckoutPage() {
       .then(r => r.json())
       .then(j => {
         const data = j.data;
-        if (!data) { setErr('找不到行程'); return; }
+        if (!data) { setErr(m.errActivityNotFound); return; }
         setActivity(data);
         const schedules: Schedule[] = data.schedules || [];
         const initialSelection = resolveInitialCheckoutSelection({
@@ -118,7 +123,7 @@ export default function CheckoutPage() {
         setSelectedScheduleId(initialSelection.selectedScheduleId);
         setErr(initialSelection.validationError);
       })
-      .catch(() => setErr('行程資料載入失敗'))
+      .catch(() => setErr(m.errActivityLoadFailed))
       .finally(() => setFetching(false));
   }, [slug, planId, urlScheduleId, urlDate]);
 
@@ -182,10 +187,10 @@ export default function CheckoutPage() {
   };
 
   const onSubmit = async () => {
-    if (!selectedScheduleId) { setErr('請選擇排期'); return; }
-    if (!contactName.trim()) { setErr('請填入聯絡人姓名'); return; }
-    if (!contactPhone.trim()) { setErr('請填入聯絡電話'); return; }
-    if (!contactEmail.trim() || !contactEmail.includes('@')) { setErr('請填入有效的 Email'); return; }
+    if (!selectedScheduleId) { setErr(m.errSelectSchedule); return; }
+    if (!contactName.trim()) { setErr(m.errContactName); return; }
+    if (!contactPhone.trim()) { setErr(m.errContactPhone); return; }
+    if (!contactEmail.trim() || !contactEmail.includes('@')) { setErr(m.errContactEmail); return; }
     setLoading(true);
     setErr(null);
 
@@ -234,7 +239,7 @@ export default function CheckoutPage() {
         },
         page_path: `/checkout`,
       });
-      setErr(e instanceof Error ? e.message : '建立訂單失敗');
+      setErr(e instanceof Error ? e.message : m.errCreateOrder);
     } finally {
       setLoading(false);
     }
@@ -242,42 +247,42 @@ export default function CheckoutPage() {
 
   const openSchedules = (activity?.schedules || []).filter(s => s.status === 'open');
 
-  if (fetching || !authChecked) return <main style={{ padding: 24 }}><p>載入中…</p></main>;
+  if (fetching || !authChecked) return <main style={{ padding: 24 }}><p>{m.loading}</p></main>;
 
   return (
     <main style={{ padding: 24, maxWidth: 480, fontFamily: 'system-ui, sans-serif' }}>
-      <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Checkout</h1>
+      <h1 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>{m.title}</h1>
       <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 12 }}>
-        行程：{activity?.title || slug}
+        {m.tripPrefix}{activity?.title || slug}
       </p>
 
       <section
         data-testid="checkout-legacy-notice"
         style={{ marginBottom: 16, border: '1px solid #fde68a', background: '#fffbeb', borderRadius: 10, padding: '10px 12px' }}
-        aria-label="舊版結帳入口說明"
+        aria-label={m.legacyNoticeAriaLabel}
       >
         <p style={{ margin: '0 0 6px', fontSize: 12, color: '#92400e', fontWeight: 700 }}>
-          舊版結帳入口（Legacy fallback）
+          {m.legacyNoticeTitle}
         </p>
         <p style={{ margin: '0 0 8px', fontSize: 12, color: '#78350f' }}>
-          你目前在舊版備援流程。一般旅客請改走新版 /booking 預約路徑；此頁僅保留相容與故障切換用途。
+          {m.legacyNoticeBody}
         </p>
         <Link
           href={bookingV2Href}
           style={{ color: '#7c3aed', fontSize: 12, fontWeight: 700, textDecoration: 'underline' }}
         >
-          改走新版預約流程（/booking）
+          {m.legacyNoticeLink}
         </Link>
       </section>
 
       {openSchedules.length === 0 && (
-        <p style={{ color: '#ef4444', marginBottom: 16 }}>⚠️ 此行程目前沒有可預訂的排期</p>
+        <p style={{ color: '#ef4444', marginBottom: 16 }}>{m.noSchedules}</p>
       )}
 
       {openSchedules.length > 0 && (
         <div style={{ marginBottom: 20 }}>
           <label htmlFor="schedule-select" style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-            選擇排期
+            {m.selectSchedule}
           </label>
           <select
             id="schedule-select"
@@ -291,8 +296,8 @@ export default function CheckoutPage() {
           >
             {openSchedules.map(s => (
               <option key={s.id} value={s.id}>
-                {s.startAt ? new Date(s.startAt).toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }) : s.id}
-                （剩 {s.capacity - s.bookedCount} 席）
+                {s.startAt ? new Date(s.startAt).toLocaleDateString(dateLocale, { year: 'numeric', month: '2-digit', day: '2-digit' }) : s.id}
+                {m.capacityLeft.replace('{n}', String(s.capacity - s.bookedCount))}
               </option>
             ))}
           </select>
@@ -301,11 +306,11 @@ export default function CheckoutPage() {
 
       {/* 聯絡人資料 */}
       <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>聯絡人資料</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>{m.contactHeading}</p>
         {[
-          { label: '姓名', value: contactName, setter: setContactName, placeholder: '王小明', type: 'text' },
-          { label: '電話', value: contactPhone, setter: setContactPhone, placeholder: '0912345678', type: 'tel' },
-          { label: 'Email', value: contactEmail, setter: setContactEmail, placeholder: 'email@example.com', type: 'email' },
+          { label: m.contactName, value: contactName, setter: setContactName, placeholder: m.contactNamePlaceholder, type: 'text' },
+          { label: m.contactPhone, value: contactPhone, setter: setContactPhone, placeholder: m.contactPhonePlaceholder, type: 'tel' },
+          { label: m.contactEmail, value: contactEmail, setter: setContactEmail, placeholder: m.contactEmailPlaceholder, type: 'email' },
         ].map(({ label, value, setter, placeholder, type }, index) => (
           <div key={label} style={{ marginBottom: 10 }}>
             <label htmlFor={`contact-field-${index}`} style={{ fontSize: 12, color: '#6b7280', display: 'block', marginBottom: 3 }}>{label}</label>
@@ -319,19 +324,19 @@ export default function CheckoutPage() {
             />
           </div>
         ))}
-        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>訂單確認 Email 將發送至上述地址</p>
+        <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{m.emailNotice}</p>
       </div>
 
       {/* 折扣碼 */}
       <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>折扣碼（選填）</p>
+        <p style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 8 }}>{m.promoHeading}</p>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
             data-testid="promo-code-input"
             type="text"
             value={promoCode}
             onChange={e => { setPromoCode(e.target.value); setPromoValidation(null); }}
-            placeholder="輸入折扣碼"
+            placeholder={m.promoPlaceholder}
             style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: 8, padding: '8px 12px', fontSize: 14, boxSizing: 'border-box' }}
           />
           <button
@@ -343,7 +348,7 @@ export default function CheckoutPage() {
               border: 'none', borderRadius: 8, fontSize: 14, cursor: 'pointer', whiteSpace: 'nowrap',
             }}
           >
-            {promoLoading ? '套用中…' : '套用'}
+            {promoLoading ? m.promoApplying : m.promoApply}
           </button>
         </div>
         {publicPromos.length > 0 && (
@@ -367,12 +372,12 @@ export default function CheckoutPage() {
         )}
         {promoValidation?.valid === true && (
           <p style={{ color: '#16a34a', fontSize: 13, marginTop: 6 }}>
-            折扣 NT$ {promoValidation.discountAmount?.toLocaleString()} ✓
+            {m.promoDiscount.replace('{amount}', String(promoValidation.discountAmount?.toLocaleString() ?? ''))}
           </p>
         )}
         {promoValidation?.valid === false && (
           <p style={{ color: 'crimson', fontSize: 13, marginTop: 6 }}>
-            折扣碼無效：{promoValidation.reason}
+            {m.promoInvalidPrefix}{promoValidation.reason}
           </p>
         )}
       </div>
@@ -388,11 +393,11 @@ export default function CheckoutPage() {
           <div style={{ marginBottom: 20 }}>
             {discountAmount > 0 && (
               <p style={{ fontSize: 13, color: '#9ca3af', textDecoration: 'line-through', marginBottom: 2 }}>
-                NT$ {basePrice.toLocaleString()} / 人
+                {m.pricePerPerson.replace('{amount}', basePrice.toLocaleString())}
               </p>
             )}
             <p style={{ fontSize: 15, fontWeight: 700, color: '#a8511f', marginBottom: 0 }}>
-              NT$ {displayPrice.toLocaleString()} / 人
+              {m.pricePerPerson.replace('{amount}', displayPrice.toLocaleString())}
             </p>
           </div>
         );
@@ -409,7 +414,7 @@ export default function CheckoutPage() {
           fontSize: 15, fontWeight: 700, cursor: 'pointer',
         }}
       >
-        {loading ? '建立中…' : '建立訂單'}
+        {loading ? m.creatingOrder : m.createOrder}
       </button>
 
       {err && <p style={{ color: 'crimson', marginTop: 12, fontSize: 13 }}>{err}</p>}

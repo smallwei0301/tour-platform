@@ -35,9 +35,12 @@ test('booking page no longer offers LINE Pay / ATM as selectable payment radios'
 test('booking page Step 3 explains the ECPay hand-off instead of advertising unsupported methods', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
 
-  assert.match(src, /實際可用付款方式以付款頁顯示為準/);
+  // #multilingual: ECPay hand-off 文案移到 bookingFlow.ecpayTransferNotice；頁面用 m.ecpayTransferNotice 引用。
+  const zh = JSON.parse(await readSource('messages/zh-Hant.json'));
+  assert.match(zh.bookingFlow.ecpayTransferNotice, /實際可用付款方式以付款頁顯示為準/);
   // Keep the existing security reassurance copy.
-  assert.match(src, /付款由 ECPay 加密處理/);
+  assert.match(zh.bookingFlow.ecpayTransferNotice, /付款由 ECPay 加密處理/);
+  assert.match(src, /m\.ecpayTransferNotice/, 'page must reference m.ecpayTransferNotice');
 });
 
 // #1475 起：付款方式新增「自行匯款（transfer）」選項，但以 isTransferPaymentEnabled()
