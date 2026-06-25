@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>Midao 祕島 — 導遊邀請</title>
+    <title>Midao 祕島 — 引路人召集</title>
     <script src="assets/gsap.min.js"></script>
     <style>
       @font-face { font-family: "Noto Serif TC"; src: url("assets/fonts/NotoSerifTC.ttf") format("truetype"); font-weight: 200 900; font-display: block; }
@@ -12,10 +12,7 @@
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1920px; height: 1080px; overflow: hidden; background: #1A2E1F; font-family: "Noto Serif TC", serif; }
-      :root {
-        --ink: #1A2E1F; --paper: #F4ECD8; --paper2: #EBE1C7; --alpen: #C2542E;
-        --moss: #5E7A4F; --brass: #B08D3E; --stone: #2A2422; --mist: #A8B09E;
-      }
+      :root { --ink: #1A2E1F; --paper: #F4ECD8; --paper2: #EBE1C7; --alpen: #C2542E; --moss: #5E7A4F; --brass: #B08D3E; --stone: #2A2422; --mist: #A8B09E; }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
       .scene { position: absolute; inset: 0; width: 1920px; height: 1080px; opacity: 0; will-change: opacity, transform; }
 
@@ -28,72 +25,58 @@
       .alpen-line { position: absolute; height: 3px; background: linear-gradient(90deg, transparent, var(--alpen), transparent); transform-origin: left center; }
       .compass { position: absolute; color: var(--brass); opacity: 0.16; }
 
-      /* ---------- Scene 1: stamp + hook ---------- */
-      #s1 .seal { position: absolute; top: 250px; left: 50%; margin-left: -84px; width: 168px; height: 168px; border-radius: 22px;
-        background: var(--alpen); box-shadow: inset 0 0 0 6px rgba(244,236,216,0.30); display: flex; align-items: center; justify-content: center; transform: rotate(-6deg); }
+      /* Scene 1 */
+      #s1 .seal { position: absolute; top: 250px; left: 50%; margin-left: -84px; width: 168px; height: 168px; border-radius: 22px; background: var(--alpen); box-shadow: inset 0 0 0 6px rgba(244,236,216,0.30); display: flex; align-items: center; justify-content: center; transform: rotate(-6deg); }
       #s1 .seal span { font-family: "Noto Serif TC", serif; font-weight: 900; font-size: 104px; color: var(--paper); line-height: 1; margin-top: 6px; }
-      #s1 .tagline { position: absolute; top: 504px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--ink); font-size: 92px; letter-spacing: 4px; }
-      #s1 .tagline-en { position: absolute; top: 648px; left: 0; width: 100%; text-align: center; font-family: "Fraunces", serif; font-style: italic; font-weight: 400; color: var(--alpen); font-size: 46px; letter-spacing: 2px; }
-      #s1 .s1line { top: 752px; left: 50%; width: 380px; margin-left: -190px; }
+      #s1 .tagline { position: absolute; top: 504px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--ink); font-size: 86px; letter-spacing: 4px; }
+      #s1 .tagline-en { position: absolute; top: 644px; left: 0; width: 100%; text-align: center; font-family: "Fraunces", serif; font-style: italic; font-weight: 400; color: var(--alpen); font-size: 44px; letter-spacing: 2px; }
+      #s1 .s1line { top: 746px; left: 50%; width: 380px; margin-left: -190px; }
 
-      /* ---------- Scene 2: premise over mountains ---------- */
+      /* Scene 2 */
       #s2 .s2photo { position: absolute; inset: 0; background: url("assets/images/hero-mountains.webp") center 38%/cover no-repeat; }
       #s2 .ink-veil { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(26,46,31,0.72) 0%, rgba(20,36,26,0.80) 45%, rgba(15,28,20,0.90) 100%); }
-      #s2 .cap { position: absolute; top: 366px; left: 0; width: 100%; text-align: center; font-family: "Fraunces", serif; font-weight: 500; letter-spacing: 8px; color: var(--brass); font-size: 26px; }
-      #s2 .hero { position: absolute; top: 416px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--paper); font-size: 104px; line-height: 1.34; letter-spacing: 4px; }
+      #s2 .cap { position: absolute; top: 360px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 500; letter-spacing: 6px; color: var(--brass); font-size: 30px; }
+      #s2 .hero { position: absolute; top: 414px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--paper); font-size: 96px; line-height: 1.36; letter-spacing: 3px; }
       #s2 .hero .dot { color: var(--alpen); }
 
-      /* ---------- Scene 3: guide profile (real UI) ---------- */
-      #s3 .eyebrow { position: absolute; top: 110px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--brass); font-size: 36px; letter-spacing: 4px; }
-      #s3 .card { position: absolute; top: 210px; left: 50%; margin-left: -640px; width: 1280px; height: 660px; border-radius: 28px; overflow: hidden; background: var(--paper); display: flex;
-        box-shadow: 0 40px 90px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(176,141,62,0.25); }
-      #s3 .photo { position: relative; width: 470px; height: 100%; background: url("assets/images/guide-andy.webp") center 18%/cover no-repeat, #2A2422; }
-      #s3 .photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(20,16,14,0.55) 100%); }
-      #s3 .verified-pill { position: absolute; top: 26px; left: 26px; z-index: 2; background: rgba(94,122,79,0.92); color: var(--paper);
-        font-family: "Noto Serif TC", serif; font-weight: 700; font-size: 24px; padding: 8px 18px; border-radius: 999px; letter-spacing: 1px; }
-      #s3 .body { flex: 1; padding: 56px 58px; display: flex; flex-direction: column; }
-      #s3 .gname { font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--ink); font-size: 58px; letter-spacing: 1px; }
-      #s3 .meta1 { margin-top: 22px; display: flex; align-items: center; gap: 14px; font-family: "Noto Serif TC", serif; color: var(--stone); font-size: 30px; }
-      #s3 .meta1 .star { color: var(--brass); font-size: 34px; }
-      #s3 .meta1 .sep { color: var(--mist); }
-      #s3 .meta2 { margin-top: 14px; font-family: "Noto Serif TC", serif; color: var(--moss); font-size: 28px; letter-spacing: 1px; }
-      #s3 .chips { margin-top: auto; display: flex; gap: 14px; flex-wrap: wrap; }
-      #s3 .chip { opacity: 0; font-family: "Noto Serif TC", serif; font-weight: 500; color: var(--stone); font-size: 27px;
-        background: var(--paper2); border: 1px solid rgba(94,122,79,0.4); padding: 10px 22px; border-radius: 999px; letter-spacing: 1px; }
+      /* Scene 3 — four themes */
+      #s3 .eyebrow { position: absolute; top: 116px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--brass); font-size: 38px; letter-spacing: 3px; }
+      #s3 .grid { position: absolute; top: 232px; left: 50%; margin-left: -650px; width: 1300px; height: 580px; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 24px; }
+      #s3 .tcard { position: relative; border-radius: 20px; overflow: hidden; opacity: 0; box-shadow: 0 24px 60px rgba(0,0,0,0.45); }
+      #s3 .tcard .img { position: absolute; inset: 0; background-size: cover; background-position: center; }
+      #s3 .tcard::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,24,18,0.05) 0%, transparent 35%, rgba(12,20,14,0.78) 100%); }
+      #s3 .tcard .label { position: absolute; left: 32px; bottom: 26px; z-index: 2; }
+      #s3 .tcard .cn { font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--paper); font-size: 46px; letter-spacing: 3px; }
+      #s3 .tcard .en { font-family: "Fraunces", serif; font-style: italic; font-weight: 400; color: rgba(244,236,216,0.82); font-size: 26px; letter-spacing: 1px; margin-top: 2px; }
+      #s3 .m { background-image: url("assets/images/theme-mountain.webp"); }
+      #s3 .r { background-image: url("assets/images/theme-river.webp"); }
+      #s3 .c { background-image: url("assets/images/theme-culture.webp"); }
+      #s3 .f { background-image: url("assets/images/theme-food.webp"); }
 
-      /* ---------- Scene 4: settlement (real UI) ---------- */
-      #s4 .s4title { position: absolute; top: 150px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--paper); font-size: 76px; letter-spacing: 3px; }
-      #s4 .panel { position: absolute; top: 330px; left: 50%; margin-left: -560px; width: 1120px; border-radius: 26px; padding: 50px 56px;
-        background: rgba(244,236,216,0.05); border: 1px solid rgba(176,141,62,0.4); box-shadow: 0 30px 70px rgba(0,0,0,0.4); }
-      #s4 .panel-head { font-family: "Noto Serif TC", serif; color: var(--mist); font-size: 28px; letter-spacing: 3px; margin-bottom: 26px; }
-      #s4 .big { display: flex; align-items: baseline; gap: 20px; }
-      #s4 .big .lab { font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--paper); font-size: 52px; }
-      #s4 .big .num { font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--alpen); font-size: 110px; line-height: 1; }
-      #s4 .big .num small { font-size: 56px; }
-      #s4 .stats { margin-top: 40px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
-      #s4 .stat { opacity: 0; background: rgba(26,46,31,0.4); border: 1px solid rgba(176,141,62,0.25); border-radius: 14px; padding: 22px 26px; }
-      #s4 .stat .k { font-family: "Noto Serif TC", serif; color: var(--mist); font-size: 24px; letter-spacing: 1px; }
-      #s4 .stat .v { margin-top: 8px; font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--paper); font-size: 38px; }
-      #s4 .note { margin-top: 26px; font-family: "Noto Serif TC", serif; color: var(--moss); font-size: 26px; letter-spacing: 1px; }
+      /* Scene 4 — cold-start invitation */
+      #s4 .inv { position: absolute; top: 318px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--paper); font-size: 84px; line-height: 1.42; letter-spacing: 3px; }
+      #s4 .inv .q { color: var(--alpen); }
+      #s4 .sub { position: absolute; top: 626px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 500; color: var(--brass); font-size: 36px; letter-spacing: 3px; }
+      #s4 .proof { position: absolute; top: 700px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 400; color: var(--mist); font-size: 30px; letter-spacing: 2px; }
 
-      /* ---------- Scene 5: outro / CTA ---------- */
-      #s5 .confirm { position: absolute; top: 300px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--ink); font-size: 66px; letter-spacing: 3px; }
-      #s5 .s5line { top: 440px; left: 50%; width: 460px; margin-left: -230px; }
-      #s5 .lock { position: absolute; top: 480px; left: 0; width: 100%; text-align: center; opacity: 0; }
+      /* Scene 5 — outro */
+      #s5 .confirm { position: absolute; top: 300px; left: 0; width: 100%; text-align: center; font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--ink); font-size: 64px; letter-spacing: 3px; }
+      #s5 .s5line { top: 436px; left: 50%; width: 460px; margin-left: -230px; }
+      #s5 .lock { position: absolute; top: 478px; left: 0; width: 100%; text-align: center; opacity: 0; }
       #s5 .brandmark { font-family: "Noto Serif TC", serif; font-weight: 900; color: var(--ink); font-size: 116px; letter-spacing: 14px; }
       #s5 .brandmark .en { font-family: "Fraunces", serif; font-style: normal; font-weight: 600; color: var(--alpen); letter-spacing: 10px; }
       #s5 .cta { position: absolute; top: 712px; left: 0; width: 100%; text-align: center; opacity: 0; font-family: "Noto Serif TC", serif; font-weight: 700; color: var(--paper); font-size: 36px; letter-spacing: 4px; }
       #s5 .cta span { background: var(--alpen); padding: 16px 40px; border-radius: 999px; box-shadow: 0 16px 40px rgba(194,84,46,0.4); }
       #s5 .cta .en { font-family: "Fraunces", serif; font-style: italic; font-weight: 400; font-size: 30px; }
-      #s5 .micro { position: absolute; top: 832px; left: 0; width: 100%; text-align: center; opacity: 0; font-family: "Noto Serif TC", serif; color: var(--stone); font-size: 27px; letter-spacing: 2px; }
+      #s5 .micro { position: absolute; top: 834px; left: 0; width: 100%; text-align: center; opacity: 0; font-family: "Noto Serif TC", serif; color: var(--stone); font-size: 27px; letter-spacing: 2px; }
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1920" data-height="1080">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="20.5" data-width="1920" data-height="1080">
 
-      <audio id="audio-bed"   src="assets/audio/bed.mp3"      data-start="0"   data-duration="20"  data-track-index="50" data-volume="0.8"></audio>
-      <audio id="audio-seal"  src="assets/audio/sfx-seal.mp3" data-start="0.5" data-duration="1.0" data-track-index="51" data-volume="0.7"></audio>
-      <audio id="audio-slide" src="assets/audio/sfx-slide.mp3" data-start="7.5" data-duration="1.0" data-track-index="52" data-volume="0.6"></audio>
+      <audio id="audio-bed"   src="assets/audio/bed.mp3"      data-start="0"   data-duration="20.5" data-track-index="50" data-volume="0.8"></audio>
+      <audio id="audio-seal"  src="assets/audio/sfx-seal.mp3" data-start="0.5" data-duration="1.0"  data-track-index="51" data-volume="0.7"></audio>
+      <audio id="audio-slide" src="assets/audio/sfx-slide.mp3" data-start="7.8" data-duration="1.0" data-track-index="52" data-volume="0.55"></audio>
 
       <!-- Scene 1 -->
       <div id="s1" class="scene bg-paper clip" data-start="0" data-duration="4.0" data-track-index="1">
@@ -104,66 +87,48 @@
           <path d="M8 50 L50 43 L92 50 L50 57 Z" fill="currentColor" stroke="none" opacity="0.5"/>
         </svg>
         <div class="seal"><span>徑</span></div>
-        <div class="tagline">你熟的那條路，有人想走。</div>
-        <div class="tagline-en">Someone wants to walk your trail.</div>
+        <div class="tagline">祕境不會自己出現，要有人帶你去。</div>
+        <div class="tagline-en">A secret place doesn't reveal itself.</div>
         <div class="alpen-line s1line"></div>
       </div>
 
       <!-- Scene 2 -->
-      <div id="s2" class="scene bg-ink clip" data-start="3.6" data-duration="4.2" data-track-index="2">
+      <div id="s2" class="scene bg-ink clip" data-start="3.6" data-duration="4.0" data-track-index="2">
         <div class="s2photo"></div>
         <div class="ink-veil"></div>
         <div class="vignette"></div>
-        <div class="cap">BECOME A GUIDE・在地嚮導招募</div>
-        <div class="hero">你走過的，<br/>就是別人想看的<span class="dot">。</span></div>
+        <div class="cap">我們在找理念相同的引路人</div>
+        <div class="hero">旅行不是去過幾個地方，<br/>是有沒有真的，走進去<span class="dot">。</span></div>
       </div>
 
-      <!-- Scene 3: guide profile -->
-      <div id="s3" class="scene bg-ink clip" data-start="7.4" data-duration="4.8" data-track-index="3">
+      <!-- Scene 3 — four themes -->
+      <div id="s3" class="scene bg-ink clip" data-start="7.5" data-duration="5.0" data-track-index="3">
         <div class="vignette"></div>
-        <div class="eyebrow">上架你的行程，成為引路人。</div>
-        <div class="card">
-          <div class="photo"><div class="verified-pill">✓ 已驗證</div></div>
-          <div class="body">
-            <div class="gname">Andy Lee（李衍錫）</div>
-            <div class="meta1"><span class="star">★</span><span>5.0</span><span class="sep">·</span><span>4 則評價・47 次服務</span></div>
-            <div class="meta2">高雄　·　中文 / 德語 / 粵語 / 荷蘭語</div>
-            <div class="chips">
-              <span class="chip">柴山探洞</span>
-              <span class="chip">高雄在地</span>
-              <span class="chip">地形探索</span>
-              <span class="chip">小團體驗</span>
-            </div>
-          </div>
+        <div class="eyebrow">一條稜線、一段野溪、一條老街、一桌家常——</div>
+        <div class="grid">
+          <div class="tcard"><div class="img m"></div><div class="label"><div class="cn">山徑</div><div class="en">Into the Mountains</div></div></div>
+          <div class="tcard"><div class="img r"></div><div class="label"><div class="cn">野溪</div><div class="en">Wild Streams</div></div></div>
+          <div class="tcard"><div class="img c"></div><div class="label"><div class="cn">文化</div><div class="en">Local Culture</div></div></div>
+          <div class="tcard"><div class="img f"></div><div class="label"><div class="cn">美食</div><div class="en">Local Food</div></div></div>
         </div>
       </div>
 
-      <!-- Scene 4: settlement -->
-      <div id="s4" class="scene bg-ink clip" data-start="11.8" data-duration="4.6" data-track-index="4">
+      <!-- Scene 4 — cold-start invitation -->
+      <div id="s4" class="scene bg-ink clip" data-start="12.4" data-duration="4.2" data-track-index="4">
         <div class="vignette"></div>
-        <div class="s4title">你帶路，其餘交給我們。</div>
-        <div class="panel">
-          <div class="panel-head">結算後台 · 本月</div>
-          <div class="big"><span class="lab">導遊實拿</span><span class="num" id="s4pct">0<small>%</small></span></div>
-          <div class="stats">
-            <div class="stat"><div class="k">平台抽成</div><div class="v">15%</div></div>
-            <div class="stat"><div class="k">可結算餘額</div><div class="v">NT$ <span id="s4bal">0</span></div></div>
-            <div class="stat"><div class="k">入帳週期</div><div class="v">T+7</div></div>
-          </div>
-          <div class="note">— 以旅客實付扣已退款計算，金流手續費平台吸收。</div>
-        </div>
+        <div class="inv">這座島的地圖，才剛開始畫。<br/>第一條徑，<span class="q">由你來帶？</span></div>
+        <div class="sub">祕島正在找最初的引路人 · The First Path Keepers</div>
+        <div class="proof">像 Andy——柴山地形 23 年。</div>
       </div>
 
-      <!-- Scene 5: outro -->
-      <div id="s5" class="scene bg-paper clip" data-start="16.0" data-duration="4.0" data-track-index="5">
+      <!-- Scene 5 — outro -->
+      <div id="s5" class="scene bg-paper clip" data-start="16.3" data-duration="4.2" data-track-index="5">
         <div class="vignette-paper"></div>
-        <div class="confirm">把你熟的路，分享出來。</div>
+        <div class="confirm">把你熟的路，畫進這座島。</div>
         <div class="alpen-line s5line"></div>
-        <div class="lock">
-          <div class="brandmark">祕島 <span class="en">MIDAO</span></div>
-        </div>
-        <div class="cta"><span>成為導遊 · <span class="en">Share Your Trail</span> →</span></div>
-        <div class="micro">填表 → 審核 → 上架　·　3–5 個工作天通知</div>
+        <div class="lock"><div class="brandmark">祕島 <span class="en">MIDAO</span></div></div>
+        <div class="cta"><span>成為引路人 · <span class="en">Share Your Trail</span> →</span></div>
+        <div class="micro">山徑 · 野溪 · 文化 · 美食　—　與我們一起發掘台灣</div>
       </div>
 
       <div class="grain"></div>
@@ -182,45 +147,37 @@
       scene("#s1", 0.0, 3.5);
       tl.fromTo("#s1 .seal", { scale: 1.5, opacity: 0, rotation: -22 }, { scale: 1, opacity: 1, rotation: -6, duration: 0.5, ease: "back.out(2)" }, 0.5);
       tl.fromTo("#s1 .tagline", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 1.05);
-      tl.fromTo("#s1 .tagline-en", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 1.5);
-      tl.fromTo("#s1 .s1line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.9, ease: EI }, 1.7);
+      tl.fromTo("#s1 .tagline-en", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 1.55);
+      tl.fromTo("#s1 .s1line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.9, ease: EI }, 1.75);
 
-      // S2 (3.6 - 7.4)
-      scene("#s2", 3.6, 7.3);
-      tl.fromTo("#s2 .cap", { opacity: 0, letterSpacing: "26px" }, { opacity: 1, letterSpacing: "8px", duration: 0.8, ease: E }, 3.9);
-      tl.fromTo("#s2 .hero", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 4.2);
-      tl.fromTo("#s2 .hero .dot", { color: "#F4ECD8" }, { color: "#C2542E", duration: 0.5 }, 5.3);
+      // S2 (3.6 - 7.5)
+      scene("#s2", 3.6, 7.4);
+      tl.fromTo("#s2 .cap", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 3.95);
+      tl.fromTo("#s2 .hero", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 4.25);
+      tl.fromTo("#s2 .hero .dot", { color: "#F4ECD8" }, { color: "#C2542E", duration: 0.5 }, 5.4);
 
-      // S3 (7.4 - 12.2)
-      scene("#s3", 7.4, 11.7);
-      tl.fromTo("#s3 .eyebrow", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 7.5);
-      tl.fromTo("#s3 .card", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.7, ease: E }, 7.6);
-      tl.fromTo("#s3 .verified-pill", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 8.2);
-      tl.fromTo("#s3 .meta1", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 8.4);
-      tl.fromTo("#s3 .meta2", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 8.6);
-      tl.to("#s3 .chip", { opacity: 1, y: 0, duration: 0.4, ease: E, stagger: 0.15 }, 8.9);
+      // S3 (7.5 - 12.4) — four themes stagger
+      scene("#s3", 7.6, 12.3);
+      tl.fromTo("#s3 .eyebrow", { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 7.7);
+      tl.to("#s3 .tcard", { opacity: 1, scale: 1, duration: 0.5, ease: E, stagger: 0.28 }, 7.95);
+      tl.from("#s3 .tcard .label", { opacity: 0, y: 14, duration: 0.4, ease: E, stagger: 0.28 }, 8.15);
 
-      // S4 (11.8 - 16.0)
-      scene("#s4", 11.8, 15.7);
-      tl.fromTo("#s4 .s4title", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 11.95);
-      tl.fromTo("#s4 .panel", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 12.2);
-      const pct = { p: 0 };
-      tl.to(pct, { p: 85, duration: 1.0, ease: "power1.inOut",
-        onUpdate: function () { var el = document.getElementById("s4pct"); if (el) el.innerHTML = Math.round(pct.p) + "<small>%</small>"; } }, 12.6);
-      const bal = { b: 0 };
-      tl.to(bal, { b: 38420, duration: 1.0, ease: "power1.inOut",
-        onUpdate: function () { var el = document.getElementById("s4bal"); if (el) el.textContent = Math.round(bal.b).toLocaleString(); } }, 12.8);
-      tl.to("#s4 .stat", { opacity: 1, y: 0, duration: 0.4, ease: E, stagger: 0.14 }, 13.0);
+      // S4 (12.4 - 16.3) — invitation
+      scene("#s4", 12.5, 16.2);
+      tl.fromTo("#s4 .inv", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 12.7);
+      tl.fromTo("#s4 .inv .q", { color: "#F4ECD8" }, { color: "#C2542E", duration: 0.5 }, 13.9);
+      tl.fromTo("#s4 .sub", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 14.0);
+      tl.fromTo("#s4 .proof", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: E }, 14.5);
 
-      // S5 (16.0 - 20.0)
-      scene("#s5", 16.0, null);
-      tl.fromTo("#s5 .confirm", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 16.2);
-      tl.fromTo("#s5 .s5line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.7, ease: EI }, 17.0);
-      tl.to("#s5 .confirm", { opacity: 0, y: -24, duration: 0.6, ease: EI }, 17.4);
-      tl.fromTo("#s5 .lock", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 17.7);
-      tl.fromTo("#s5 .cta", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 18.4);
-      tl.fromTo("#s5 .micro", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: E }, 18.8);
-      tl.to("#s5 .lock", { scale: 1.012, duration: 1.4, ease: "sine.inOut" }, 18.6);
+      // S5 (16.3 - 20.5) — outro
+      scene("#s5", 16.4, null);
+      tl.fromTo("#s5 .confirm", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 16.6);
+      tl.fromTo("#s5 .s5line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.7, ease: EI }, 17.4);
+      tl.to("#s5 .confirm", { opacity: 0, y: -24, duration: 0.6, ease: EI }, 17.8);
+      tl.fromTo("#s5 .lock", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 18.1);
+      tl.fromTo("#s5 .cta", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 18.8);
+      tl.fromTo("#s5 .micro", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: E }, 19.2);
+      tl.to("#s5 .lock", { scale: 1.012, duration: 1.4, ease: "sine.inOut" }, 19.0);
 
       window.__timelines["main"] = tl;
     </script>

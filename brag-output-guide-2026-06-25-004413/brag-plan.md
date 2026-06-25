@@ -1,77 +1,77 @@
-# Brag Plan: Midao 祕島 — 導遊邀請（Become a Guide）
+# Brag Plan: Midao 祕島 — 引路人召集（Founding Path Keepers）
 
 ## What is this app?
-Midao（祕島）是台灣在地導遊預約平台。這支片不是給旅客，是**給在地人的招募邀請**——對著「熟悉某條徑、某座峰、某片溪谷」的人說：把你熟的路分享出來，成為引路人。平台處理場次、接單、收款（實拿 85%），你只要帶路。
+Midao（祕島）是台灣山野秘境深度旅遊平台。這支片是**品牌故事導向的夥伴召集**——冷啟動階段，對著「和我們一樣相信台灣值得被真正走進去」的在地人說話：成為最初的引路人，帶人走你最熟的那條徑、那段溪、那條街、那桌菜。涵蓋四個主題：山徑、野溪、文化、美食。
 
 ## The angle
-寫給「懂那條路的人」的一封邀請。第二人稱、具體、不浮誇——遵 BRAND_BOOK 語氣（具體勝過抽象「23 年走柴山」、動詞勝過形容詞、承認難處、讓導遊的人說話）。靠兩個真實產品畫面贏得信任：**真實導遊頁**（你申請後長這樣）＋**真實結算後台**（抽成 15%／實拿 85%／金流手續費平台吸收）。不是空談「加入我們」，是把報酬與流程攤開講清楚。
+不是徵才、不是「實拿 85%」的交易話術，是一封**理念邀請信**。用品牌自己的故事語言當骨架（BRAND_BOOK Section 05 About／Hero／Microcopy），把篩選條件寫進文案本身：認同「旅行不是去過幾個地方，是有沒有真的走進去」的人，才是我們要找的夥伴。冷啟動的誠實也是賣點——我們承認這座島的地圖才剛開始畫，正在找最初的人一起畫。
 
 ## Hook (first 2-3 seconds)
-古紙背景、羅盤浮水印、「徑」朱印落下；主標語「你熟的那條路，／有人想走。」下方 Fraunces 斜體 *Someone wants to walk your trail.* 一道朝霞細線劃開。
+古紙、羅盤、「徑」朱印落下；品牌故事版 Hero 主標「祕境不會自己出現，／要有人帶你去。」＋ Fraunces 斜體 *A secret place doesn't reveal itself.*；朝霞細線劃開。
 
 ## Key moments (the middle)
-- **承諾（你就是引路人）**：山景（霧谷光束）為背景，大標「你走過的，／就是別人想看的。」caption「BECOME A GUIDE・在地嚮導招募」。
-- **真實 UI #1 — 導遊頁**：重建 Andy Lee 導遊頁——肖像（與獵鷹）、Andy Lee（李衍錫）、✓ 已驗證・⭐ 5（4 則評價・47 次服務）、高雄・中文/德語/粵語/荷蘭語、專長 chips（柴山探洞・高雄在地・地形探索・小團體驗）。小標「上架你的行程，成為引路人。」
-- **真實 UI #2 — 結算後台**：大標「你帶路，其餘交給我們。」＋結算卡：可結算餘額、平台抽成 15%、導遊實拿 85%（朝霞高亮）、預計入帳、「金流手續費平台吸收」。數字跳動。
+- **理念（篩選同路人）**：霧谷山景背景，大標「旅行不是去過幾個地方，／是有沒有真的，走進去。」caption「我們在找理念相同的引路人」。
+- **四主題召集**：2×2 真實主題圖卡逐一亮起——山徑 Into the Mountains、野溪 Wild Streams、文化 Local Culture、美食 Local Food；眉標「一條稜線、一段野溪、一條老街、一桌家常——」。涵蓋四種夥伴。
+- **冷啟動邀請（情緒核心）**：改寫品牌空狀態微文案「這條徑還沒有人留下足跡。第一個來看看？」→「這座島的地圖，才剛開始畫。／第一條徑，由你來帶？」副標「祕島正在找最初的引路人 · The First Path Keepers」，佐證一行「像 Andy——柴山地形 23 年。」
 
 ## Outro / punchline
-古紙背景。「把你熟的路，分享出來。」→ logo lockup「祕島 · MIDAO」＋ CTA「成為導遊 · Share Your Trail →」，微字「填表 → 審核 → 上架，3–5 個工作天通知」。最後一道朝霞光，音樂淡出。
+古紙。「把你熟的路，畫進這座島。」→ logo「祕島 · MIDAO」＋ CTA「成為引路人 · Share Your Trail →」＋微字「山徑 · 野溪 · 文化 · 美食　—　與我們一起發掘台灣」。朝霞光，音樂淡出。
 
 ## User flow worth showing
-真實導遊動線：填申請表（姓名／熟悉區域／專長／證照／收款方式）→ 身分證件核驗（3–5 工作天）→ 上架行程 → 接單、管理場次 → 結算（實拿 85%）。中段兩幕即此動線的兩個關鍵畫面：上架後的導遊頁、收款後的結算後台。
+冷啟動的真實動線是「理念對齊 → 認領一個主題 → 成為最初的引路人」。中段三幕即此：先講理念（篩選），再攤開四個可加入的主題，最後發出「第一條徑由你帶」的邀請。真實產品內容＝首頁四大主題（主題探勘）。
 
 ## Tone
-- Preset: polished（warm 第二人稱邀請）
-- Creative direction: 寫給懂那條路的人的一封邀請信
-- Interpretation: 少場次、長停留、慢溶；宋體＋留白＋一道朝霞光。語氣直接但克制，靠真實數字與真實 UI 取信，不喊口號。
+- Preset: polished（manifesto／邀請信質地）
+- Creative direction: 寫給同路人的一封邀請——這座島的地圖才剛開始畫
+- Interpretation: 少場次、長停留、慢溶；宋體＋留白＋一道朝霞光。情緒比第一版更暖、更有故事，靠真實品牌語言與四主題真實影像取信。嚴守 Voice & Tone：禁形容詞／空話／網紅口吻／驚嘆號濫用（全片 ≤1）。
 
 ## Format: landscape — 1920x1080
-## Duration: 20s（5 幕：3.6 + 4.0 + 4.4 + 4.2 + 3.8）
+## Duration: 20.5s（5 幕：3.6 + 3.9 + 4.8 + 3.9 + 4.1）
 
 ## Visual identity (from the project)
-- Background: 古紙 #F4ECD8（開場/outro）、山墨 #1A2E1F（承諾/UI 幕）
-- Accent: 朝霞 #C2542E（次：苔綠 #5E7A4F、黃銅 #B08D3E、礦石 #2A2422）
-- Display font: Noto Serif TC；Body: Fraunces（英文斜體）
-- Real images: 引路人 Andy Lee 肖像 `guide-andy.webp`、霧谷山景 `hero-mountains.webp`
-- Strongest visual: 真實導遊頁（驗證徽章＋評價＋專長 chips）、真實結算後台（85% 實拿）
+- Background: 古紙 #F4ECD8（開場/outro）、山墨 #1A2E1F（理念/主題/邀請）
+- Accent: 朝霞 #C2542E；次：苔綠 #5E7A4F、黃銅 #B08D3E
+- Display: Noto Serif TC；Body: Fraunces（英文斜體）
+- Real images: 霧谷山景、四主題真實圖（山徑/野溪/文化/美食）
+- Strongest visual: 四主題 2×2 真實圖卡 + 冷啟動邀請文案
 
 ## Share copy (draft)
-你熟的那條路，有人想走。把它分享出來，成為祕島的引路人——你帶路，場次／接單／收款交給我們，實拿 85%。成為導遊 → midao.tw ⛰
+這座島的地圖，才剛開始畫。
+
+祕境不會自己出現，要有人帶你去。我們在找理念相同的引路人——
+不管你熟的是一條稜線、一段野溪、一條老街，還是一桌家常，
+帶人真正走進去一次。山徑 · 野溪 · 文化 · 美食，第一批引路人徵集中。
+
+成為引路人 · Share Your Trail → midao.tw ⛰
 
 ## Audio direction
-- Role: cinematic 低限氛圍 bed（破曉山風＋低頻 drone），沿用首版 `assets/audio/bed.mp3`
-- Music treatment: 0–2.5s 淡入、17.5s 起 3s 淡出收在 logo；無節拍 grid
-- SFX posture: sparse — 開場印章 `sfx-seal.mp3`、導遊頁卡片滑入 `sfx-slide.mp3`
+- Role: cinematic 低限氛圍 bed（破曉山風＋低頻 drone），沿用 `assets/audio/bed.mp3`
+- Music treatment: 0–2.5s 淡入、17.5s 起 3s 淡出收 logo；無節拍 grid
+- SFX posture: sparse — 開場印章 `sfx-seal.mp3`、第一張主題卡亮起 `sfx-slide.mp3`
 - Restraint rule: 不對拍閃字、整支不超過兩個 SFX
 
 ## Storyboard
 
-### Scene 1 — 印章開場 / Hook — 3.6s
-古紙＋羅盤。「徑」朱印落下回彈；主標「你熟的那條路，有人想走。」＋ Fraunces 斜體 *Someone wants to walk your trail.*；朝霞細線劃開。
-Sequential: 印章 → 主標 → 英文 → 細線
-Audio-coupled: 印章對 `sfx-seal.mp3`
-Transition: soft 溶 → S2
+### Scene 1 — 印章開場 / 故事 Hook — 3.6s
+古紙＋羅盤。「徑」朱印落下；主標「祕境不會自己出現，要有人帶你去。」＋ Fraunces 斜體 *A secret place doesn't reveal itself.*；朝霞細線。
+Audio-coupled: 印章對 `sfx-seal.mp3`　Transition: soft 溶 → S2
 
-### Scene 2 — 你就是引路人 — 4.0s
-霧谷光束山景背景（壓暗 veil）。大標「你走過的，就是別人想看的。」caption「BECOME A GUIDE・在地嚮導招募」。
-Sequential: caption → 大標兩行
+### Scene 2 — 理念 / 篩選同路人 — 3.9s
+霧谷光束山景（壓暗）。caption「我們在找理念相同的引路人」；大標「旅行不是去過幾個地方，／是有沒有真的，走進去。」
 Transition: soft 慢溶 → S3
 
-### Scene 3 — 真實 UI：導遊頁 — 4.4s
-重建 Andy Lee 導遊頁卡：左肖像（與獵鷹），右 Andy Lee（李衍錫）、✓ 已驗證・⭐ 5（4 則評價・47 次服務）、📍高雄・中文/德語/粵語/荷蘭語、chips（柴山探洞・高雄在地・地形探索・小團體驗）。頂部小標「上架你的行程，成為引路人。」
-Sequential: 卡片滑入 → 驗證/評價 → chips 逐一彈入
-Audio-coupled: 卡片滑入對 `sfx-slide.mp3`
+### Scene 3 — 四主題召集 — 4.8s
+眉標「一條稜線、一段野溪、一條老街、一桌家常——」；2×2 真實主題圖卡逐一亮起：山徑 Into the Mountains／野溪 Wild Streams／文化 Local Culture／美食 Local Food。
+Sequential: 四卡 stagger 亮起；第一張對 `sfx-slide.mp3`
 Transition: clean 切 → S4
 
-### Scene 4 — 真實 UI：結算後台 — 4.2s
-山墨背景。大標「你帶路，其餘交給我們。」＋結算卡：可結算餘額、平台抽成 15%、導遊實拿 85%（朝霞高亮）、預計入帳、註「金流手續費平台吸收」。
-Sequential: 大標 → 結算列逐項 → 85% 數字跳動高亮
+### Scene 4 — 冷啟動邀請 — 3.9s
+山墨。大標「這座島的地圖，才剛開始畫。／第一條徑，由你來帶？」副標「祕島正在找最初的引路人 · The First Path Keepers」；佐證小字「像 Andy——柴山地形 23 年。」
 Transition: soft 溶 → S5
 
-### Scene 5 — Outro / CTA — 3.8s
-古紙。「把你熟的路，分享出來。」→ logo「祕島 · MIDAO」＋ CTA「成為導遊 · Share Your Trail →」＋微字「填表 → 審核 → 上架，3–5 個工作天通知」。
-Sequential: 微文案 → logo → CTA
+### Scene 5 — Outro / CTA — 4.1s
+古紙。「把你熟的路，畫進這座島。」→ logo「祕島 · MIDAO」＋ CTA「成為引路人 · Share Your Trail →」＋微字「山徑 · 野溪 · 文化 · 美食　—　與我們一起發掘台灣」。
 Transition: 收 → 紙
 
-**Music mood for this video:** cinematic / ambient（破曉山林）
-**Audio summary:** 沿用破曉山林氛圍 bed 從頭鋪到尾，緩起緩落；只在印章與導遊頁兩處點兩聲克制 SFX。
+**Music mood:** cinematic / ambient（破曉山林）
+**Audio summary:** 破曉山林氛圍 bed 全程鋪底、緩起緩落；印章與第一張主題卡兩處點兩聲克制 SFX。
