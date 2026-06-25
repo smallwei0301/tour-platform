@@ -322,18 +322,6 @@ export default function AdminGuideDetailPage() {
                 >
                   📅 時間管理
                 </a>
-                <a
-                  href="/admin/help/conflict-override"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    padding: '9px 16px', borderRadius: 8, border: '1px solid #c4b5fd',
-                    background: '#f5f3ff', color: '#6d28d9', fontSize: 13, fontWeight: 600,
-                    textDecoration: 'none',
-                  }}
-                >
-                  📖 例外開放衝突時段說明
-                </a>
               </div>
             </div>
           </Card>
