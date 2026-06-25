@@ -32,7 +32,8 @@ import {
   listAdminRefundRequestsFallback,
   updateAdminRefundStatusFallback,
   getHomepageFeaturedFallback,
-  setHomepageFeaturedFallback
+  setHomepageFeaturedFallback,
+  listExternalHoldsFallback
 } from './admin.mjs';
 import { normalizeHomepageFeatured } from './homepage-featured.mjs';
 import {
@@ -909,10 +910,11 @@ export async function listAdminOrdersDb(input = {}) {
 
   const status = String(input?.status || '').trim();
   const contactEmail = String(input?.contactEmail || '').trim();
+  const sourceChannel = String(input?.sourceChannel || '').trim();
   const supabase = await getSupabase();
 
-  const selectWithTradeNo = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at';
-  const selectWithoutTradeNo = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at';
+  const selectWithTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at';
+  const selectWithoutTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at';
 
   const buildQuery = (selectClause) => {
     let q = supabase
@@ -922,6 +924,7 @@ export async function listAdminOrdersDb(input = {}) {
 
     if (status) q = q.eq('status', status);
     if (contactEmail) q = q.eq('contact_email', contactEmail);
+    if (sourceChannel) q = q.eq('source_channel', sourceChannel);
     return q;
   };
 
@@ -955,6 +958,7 @@ export async function listAdminOrdersDb(input = {}) {
     return {
       id: r.id,
       status: r.status,
+      sourceChannel: r.source_channel || 'web',
       totalTwd: r.total_twd,
       costTwd,
       marginTwd: r.total_twd - costTwd,
@@ -973,6 +977,44 @@ export async function listAdminOrdersDb(input = {}) {
       updatedAt: r.updated_at
     };
   });
+}
+
+/**
+ * #1501 — 列出目前所有「外部佔位」（external_hold）供 admin 報表呈現。
+ * 外部佔位佔用名額但無金流（無 order），與營收/結算無關 —— 純粹彙整給維運看
+ * 「外部通路（OTA／電話／走客）目前佔了多少名額、在哪些活動/場次、由哪位導遊登記」。
+ *
+ * 以 bookings 為源（status='external_hold'），join 活動與場次取標題/時間/容量。
+ * external_hold 為 RPC-only（無 in-memory 建立路徑），故 fallback 回 []（一致：
+ * 無 Supabase 環境下從未建立任何外部佔位）。
+ *
+ * @returns {Promise<Array>} external hold 列表（非營收）
+ */
+export async function listExternalHoldsDb() {
+  if (!hasSupabaseEnv()) return listExternalHoldsFallback();
+
+  const supabase = await getSupabase();
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, participants, internal_note, schedule_id, activity_id, guide_id, created_at, activities!inner(title), activity_schedules!inner(start_at, capacity, booked_count)')
+    .eq('status', 'external_hold')
+    .eq('source_channel', 'external')
+    .order('created_at', { ascending: false });
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((r) => ({
+    holdId: r.id,
+    participants: r.participants,
+    note: r.internal_note || null,
+    scheduleId: r.schedule_id,
+    activityId: r.activity_id,
+    activityTitle: r.activities?.title || null,
+    guideId: r.guide_id,
+    scheduleStartAt: r.activity_schedules?.start_at || null,
+    capacity: r.activity_schedules?.capacity ?? null,
+    bookedCount: r.activity_schedules?.booked_count ?? null,
+    createdAt: r.created_at
+  }));
 }
 
 export async function getAdminOrderDetailDb(input = {}) {

@@ -7,10 +7,19 @@ import { ResponsiveTable, ResponsiveModal, useIsMobile, type ResponsiveColumn } 
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 
 type Row = {
-  id: string; status: string; totalTwd: number; costTwd: number; marginTwd: number;
+  id: string; status: string; sourceChannel?: string | null; totalTwd: number; costTwd: number; marginTwd: number;
   title?: string | null; peopleCount?: number; contactName?: string | null;
   contactEmail?: string | null; createdAt?: string | null; paidAt?: string | null; adminNote?: string | null;
   trade_no?: string | null;
+};
+
+// 訂單來源通路（含外部佔位轉成的 external 訂單；external_hold 佔位本身無 order，不在此列表）。
+const SOURCE_CHANNELS = ['web', 'line', 'admin_pos', 'external'];
+const SOURCE_LABELS: Record<string, string> = {
+  web: '官網',
+  line: 'LINE',
+  admin_pos: '後台 POS',
+  external: '外部通路',
 };
 
 const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancelled_by_user','cancelled_by_guide','completed','refund_pending','refunded'];
@@ -141,6 +150,7 @@ export default function AdminOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
+  const [sourceChannel, setSourceChannel] = useState('');
   const [selectedId, setSelectedId] = useState('');
   const [detail, setDetail] = useState<Row | null>(null);
   const [editStatus, setEditStatus] = useState('');
@@ -170,7 +180,10 @@ export default function AdminOrdersPage() {
     setLoading(true);
     setLoadError(null);
     try {
-      const q = status ? `?status=${encodeURIComponent(status)}` : '';
+      const params = new URLSearchParams();
+      if (status) params.set('status', status);
+      if (sourceChannel) params.set('sourceChannel', sourceChannel);
+      const q = params.toString() ? `?${params.toString()}` : '';
       const res = await fetch(`/api/admin/orders${q}`, { cache: 'no-store' });
       const j = await res.json().catch(() => null);
       // 「讀取失敗」與「沒有訂單」必須可分辨：失敗時不得靜默渲染空表，
@@ -188,7 +201,7 @@ export default function AdminOrdersPage() {
     } finally { setLoading(false); }
   }
 
-  useEffect(() => { void load(); }, [status]);
+  useEffect(() => { void load(); }, [status, sourceChannel]);
 
   useEffect(() => {
     if (!selectedId) { setDetail(null); setTimeline([]); return; }
@@ -353,6 +366,22 @@ export default function AdminOrdersPage() {
     {
       key: 'status', header: '狀態', mobilePriority: 'subtitle',
       cell: (r) => <StatusBadge status={r.status} />,
+    },
+    {
+      key: 'source', header: '來源', mobilePriority: 'hidden',
+      cell: (r) => {
+        const ch = r.sourceChannel || 'web';
+        const isExternal = ch === 'external';
+        return (
+          <span
+            data-testid="admin-order-source"
+            title={isExternal ? '外部通路（OTA／電話／走客）來源訂單' : undefined}
+            style={{ fontSize: 12, fontWeight: 600, color: isExternal ? '#b45309' : '#6b7280' }}
+          >
+            {SOURCE_LABELS[ch] ?? ch}
+          </span>
+        );
+      },
     },
     {
       key: 'title', header: '行程', mobilePriority: 'title',
@@ -649,6 +678,11 @@ export default function AdminOrdersPage() {
           <Select data-guide="order-filter" value={status} onChange={setStatus} style={{ minWidth: 160 }}>
             <option value="">全部狀態</option>
             {ORDER_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>)}
+          </Select>
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>來源</span>
+          <Select data-testid="admin-order-source-filter" value={sourceChannel} onChange={setSourceChannel} style={{ minWidth: 140 }}>
+            <option value="">全部來源</option>
+            {SOURCE_CHANNELS.map(s => <option key={s} value={s}>{SOURCE_LABELS[s] ?? s}</option>)}
           </Select>
           <span className="admin-toolbar-meta" style={{ fontSize: 13, color: '#9ca3af' }}>共 {filtered.length} 筆</span>
         </Card>
