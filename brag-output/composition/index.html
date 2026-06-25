@@ -299,15 +299,15 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="20" data-width="1920" data-height="1080">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="24.6" data-width="1920" data-height="1080">
 
       <!-- ===== audio (direct children of root) ===== -->
-      <audio id="audio-bed"   src="assets/audio/bed.mp3"      data-start="0"   data-duration="20"  data-track-index="50" data-volume="0.8"></audio>
+      <audio id="audio-bed"   src="assets/audio/bed.mp3"      data-start="0"   data-duration="24.6"  data-track-index="50" data-volume="0.8"></audio>
       <audio id="audio-seal"  src="assets/audio/sfx-seal.mp3" data-start="0.5" data-duration="1.0" data-track-index="51" data-volume="0.7"></audio>
-      <audio id="audio-slide" src="assets/audio/sfx-slide.mp3" data-start="7.5" data-duration="1.0" data-track-index="52" data-volume="0.6"></audio>
+      <audio id="audio-slide" src="assets/audio/sfx-slide.mp3" data-start="8.5" data-duration="1.0" data-track-index="52" data-volume="0.6"></audio>
 
       <!-- ===== Scene 1: stamp + tagline ===== -->
-      <div id="s1" class="scene bg-paper clip" data-start="0" data-duration="4.0" data-track-index="1">
+      <div id="s1" class="scene bg-paper clip" data-start="0" data-duration="4.5" data-track-index="1">
         <div class="vignette-paper"></div>
         <svg class="compass" style="top:120px;left:1560px" width="220" height="220" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="1.4">
           <circle cx="50" cy="50" r="46"/><circle cx="50" cy="50" r="36"/>
@@ -321,7 +321,7 @@
       </div>
 
       <!-- ===== Scene 2: hero promise ===== -->
-      <div id="s2" class="scene bg-ink clip" data-start="3.6" data-duration="4.2" data-track-index="2">
+      <div id="s2" class="scene bg-ink clip" data-start="4.0" data-duration="4.8" data-track-index="2">
         <div class="s2photo"></div>
         <div class="ink-veil"></div>
         <div class="vignette"></div>
@@ -332,7 +332,7 @@
       </div>
 
       <!-- ===== Scene 3: featured route card ===== -->
-      <div id="s3" class="scene bg-ink clip" data-start="7.4" data-duration="4.8" data-track-index="3">
+      <div id="s3" class="scene bg-ink clip" data-start="8.2" data-duration="6.6" data-track-index="3">
         <div class="vignette"></div>
         <div class="card">
           <div class="card-photo">
@@ -360,7 +360,7 @@
       </div>
 
       <!-- ===== Scene 4: guide + trust ===== -->
-      <div id="s4" class="scene bg-ink clip" data-start="11.8" data-duration="4.6" data-track-index="4">
+      <div id="s4" class="scene bg-ink clip" data-start="14.2" data-duration="5.8" data-track-index="4">
         <div class="vignette"></div>
         <div class="guide-card">
           <div class="portrait">
@@ -380,7 +380,7 @@
       </div>
 
       <!-- ===== Scene 5: confirmation + outro ===== -->
-      <div id="s5" class="scene bg-paper clip" data-start="16.0" data-duration="4.0" data-track-index="5">
+      <div id="s5" class="scene bg-paper clip" data-start="19.4" data-duration="5.2" data-track-index="5">
         <div class="vignette-paper"></div>
         <div class="confirm"><span class="check">✓</span>好了，引路人會在山上等你。</div>
         <div class="alpen-line s5line"></div>
@@ -405,50 +405,50 @@
         if (outAt != null) tl.to(sel, { opacity: 0, duration: 0.5, ease: EI }, outAt);
       }
 
-      // --- Scene 1 (0 - 3.6) ---
-      scene("#s1", 0.0, 3.5);
+      // --- Scene 1 (0 - 4.0) ---
+      scene("#s1", 0.0, 4.0);
       tl.fromTo("#s1 .seal", { scale: 1.5, opacity: 0, rotation: -22 },
         { scale: 1, opacity: 1, rotation: -6, duration: 0.5, ease: "back.out(2)" }, 0.5);
       tl.fromTo("#s1 .tagline", { opacity: 0, y: 36 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 1.05);
-      tl.fromTo("#s1 .tagline-en", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 1.5);
-      tl.fromTo("#s1 .s1line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.9, ease: EI }, 1.7);
+      tl.fromTo("#s1 .tagline-en", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 1.6);
+      tl.fromTo("#s1 .s1line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.9, ease: EI }, 1.85);
 
-      // --- Scene 2 (3.6 - 7.4) ---
-      scene("#s2", 3.6, 7.3);
-      tl.fromTo("#s2 .kicker", { opacity: 0, letterSpacing: "30px" }, { opacity: 1, letterSpacing: "10px", duration: 0.8, ease: E }, 3.9);
-      tl.fromTo("#s2 .hero", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 4.15);
-      tl.fromTo("#s2 .hero .dot", { color: "#F4ECD8" }, { color: "#C2542E", duration: 0.5 }, 5.0);
-      tl.fromTo("#s2 .sub", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 4.9);
-      tl.fromTo("#s2 .cap", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: E }, 5.3);
+      // --- Scene 2 (4.0 - 8.3) ---
+      scene("#s2", 4.0, 8.3);
+      tl.fromTo("#s2 .kicker", { opacity: 0, letterSpacing: "30px" }, { opacity: 1, letterSpacing: "10px", duration: 0.8, ease: E }, 4.35);
+      tl.fromTo("#s2 .hero", { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 4.7);
+      tl.fromTo("#s2 .hero .dot", { color: "#F4ECD8" }, { color: "#C2542E", duration: 0.5 }, 6.0);
+      tl.fromTo("#s2 .sub", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 5.5);
+      tl.fromTo("#s2 .cap", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: E }, 5.95);
 
-      // --- Scene 3 (7.4 - 12.2) ---
-      scene("#s3", 7.4, 11.7);
-      tl.fromTo("#s3 .card", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.7, ease: E }, 7.5);
-      tl.fromTo("#s3 .badge", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 8.0);
-      tl.to("#s3 .c-tags .tag", { opacity: 1, y: 0, duration: 0.45, ease: E, stagger: 0.18 }, 8.25);
-      tl.fromTo("#s3 .c-foot", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 9.0);
+      // --- Scene 3 (8.2 - 14.3) — dense card, longer hold ---
+      scene("#s3", 8.2, 14.3);
+      tl.fromTo("#s3 .card", { opacity: 0, x: 120 }, { opacity: 1, x: 0, duration: 0.7, ease: E }, 8.5);
+      tl.fromTo("#s3 .badge", { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.5, ease: E }, 9.0);
+      tl.to("#s3 .c-tags .tag", { opacity: 1, y: 0, duration: 0.45, ease: E, stagger: 0.22 }, 9.25);
+      tl.fromTo("#s3 .c-foot", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 10.1);
       // rating count up 4.6 -> 4.9
       const sc = { v: 4.6 };
-      tl.to(sc, { v: 4.9, duration: 0.8, ease: "power1.inOut",
-        onUpdate: function () { var el = document.getElementById("s3score"); if (el) el.textContent = sc.v.toFixed(1); } }, 9.1);
+      tl.to(sc, { v: 4.9, duration: 0.9, ease: "power1.inOut",
+        onUpdate: function () { var el = document.getElementById("s3score"); if (el) el.textContent = sc.v.toFixed(1); } }, 10.2);
 
-      // --- Scene 4 (11.8 - 16.0) ---
-      scene("#s4", 11.8, 15.7);
-      tl.fromTo("#s4 .portrait", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.7, ease: E }, 11.9);
-      tl.fromTo("#s4 .gq-label", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 12.2);
-      tl.fromTo("#s4 .gquote", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 12.4);
-      tl.to("#s4 .tcard", { opacity: 1, y: 0, duration: 0.4, ease: E, stagger: 0.16 }, 13.3);
+      // --- Scene 4 (14.2 - 19.5) — quote + 4 badges, longer hold ---
+      scene("#s4", 14.2, 19.5);
+      tl.fromTo("#s4 .portrait", { opacity: 0, x: -60 }, { opacity: 1, x: 0, duration: 0.7, ease: E }, 14.4);
+      tl.fromTo("#s4 .gq-label", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 14.7);
+      tl.fromTo("#s4 .gquote", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 14.9);
+      tl.to("#s4 .tcard", { opacity: 1, y: 0, duration: 0.42, ease: E, stagger: 0.2 }, 15.9);
 
-      // --- Scene 5 (16.0 - 20.0) ---
-      scene("#s5", 16.0, null);
-      tl.fromTo("#s5 .confirm", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 16.2);
-      tl.fromTo("#s5 .s5line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.7, ease: EI }, 17.0);
+      // --- Scene 5 (19.4 - 24.6) ---
+      scene("#s5", 19.5, null);
+      tl.fromTo("#s5 .confirm", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: E }, 19.8);
+      tl.fromTo("#s5 .s5line", { scaleX: 0, opacity: 0 }, { scaleX: 1, opacity: 1, duration: 0.7, ease: EI }, 20.6);
       // confirm rises away, lockup settles
-      tl.to("#s5 .confirm", { opacity: 0, y: -24, duration: 0.6, ease: EI }, 17.4);
-      tl.fromTo("#s5 .lock", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 17.7);
-      tl.fromTo("#s5 .cta", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 18.5);
-      // gentle final settle hold to 20s
-      tl.to("#s5 .lock", { scale: 1.012, duration: 1.4, ease: "sine.inOut" }, 18.6);
+      tl.to("#s5 .confirm", { opacity: 0, y: -24, duration: 0.6, ease: EI }, 21.0);
+      tl.fromTo("#s5 .lock", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.9, ease: E }, 21.3);
+      tl.fromTo("#s5 .cta", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: E }, 22.1);
+      // gentle final settle hold to end
+      tl.to("#s5 .lock", { scale: 1.012, duration: 1.6, ease: "sine.inOut" }, 22.3);
 
       window.__timelines["main"] = tl;
     </script>

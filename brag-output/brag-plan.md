@@ -26,7 +26,7 @@ Midao（祕島）是台灣在地導遊預約平台——旅客直接預約「真
 - Interpretation: 少場次、長停留、慢溶接；靠宋體、留白、一道朝霞光取勝。禁形容詞、禁網紅口吻、禁驚嘆號濫用（遵 BRAND_BOOK Voice & Tone）。
 
 ## Format: landscape — 1920x1080
-## Duration: 20s（5 幕：3.6 + 3.8 + 4.4 + 4.2 + 4.0）
+## Duration: 24.6s（5 幕：4.0 + 4.8 + 6.6 + 5.8 + 5.2；依文字量加長，S3 行程卡與 S4 引路人停留最久，與導遊片節奏一致）
 
 ## Visual identity (from the project)
 - Background: 古紙 #F4ECD8（開場/outro）、山墨 #1A2E1F（承諾/引路人）
