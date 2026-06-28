@@ -8,6 +8,7 @@ import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/r
 import {
   describePlanSeasonStatus,
   describePreviewReason,
+  describeRuleSeasonConflict,
   type UiActiveSeasonSummary,
 } from '../../../../../src/lib/availability-v2/canonical-availability-ui';
 
@@ -28,6 +29,7 @@ type AvailabilityRule = {
   effective_from: string | null;
   effective_to: string | null;
   is_active: boolean;
+  use_dynamic_reemit?: boolean;
   activity_plans?: { id: string; name: string } | null;
 };
 
@@ -76,6 +78,8 @@ type V2Plan = {
   status: string;
   booking_type: string;
   base_price: number;
+  minParticipants?: number | null;
+  maxParticipants?: number | null;
   isYearRound?: boolean | null;
   activeSeasonSummaries?: UiActiveSeasonSummary[];
 };
@@ -167,6 +171,7 @@ export default function GuideAvailabilityPage() {
     effective_from: '',
     effective_to: '',
     is_active: true,
+    use_dynamic_reemit: false,
     activity_id: '' as string,
     activity_plan_id: null as string | null,
   });
@@ -262,6 +267,7 @@ export default function GuideAvailabilityPage() {
         effective_from: rule.effective_from || '',
         effective_to: rule.effective_to || '',
         is_active: rule.is_active,
+        use_dynamic_reemit: rule.use_dynamic_reemit ?? false,
         activity_id: boundActivity?.id ?? '',
         activity_plan_id: rule.activity_plan_id ?? null,
       });
@@ -280,6 +286,7 @@ export default function GuideAvailabilityPage() {
         effective_from: '',
         effective_to: '',
         is_active: true,
+        use_dynamic_reemit: false,
         activity_id: '',
         activity_plan_id: null,
       });
@@ -477,6 +484,21 @@ export default function GuideAvailabilityPage() {
     isYearRound: selectedRulePlan?.isYearRound,
     activeSeasonSummaries: selectedRulePlan?.activeSeasonSummaries,
   });
+  const ruleSeasonConflict = selectedRulePlan
+    ? describeRuleSeasonConflict({
+        ruleMode: ruleForm.rule_mode,
+        effectiveFrom: ruleForm.effective_from,
+        effectiveTo: ruleForm.effective_to,
+        singleDate: ruleForm.single_date,
+        activeSeasonSummaries: selectedRulePlan.activeSeasonSummaries,
+        isYearRound: selectedRulePlan.isYearRound,
+      })
+    : null;
+  const formatParticipants = (minParticipants?: number | null, maxParticipants?: number | null) => {
+    const minText = minParticipants ?? '-';
+    const maxText = maxParticipants ?? '-';
+    return `最少 ${minText}｜最多 ${maxText}`;
+  };
   const previewPlanSeasonStatus = describePlanSeasonStatus({
     isYearRound: previewPlanId ? previewPlan?.isYearRound : previewIsYearRound,
     activeSeasonSummaries: previewPlanId ? previewPlan?.activeSeasonSummaries : previewActiveSeasonSummaries,
@@ -576,7 +598,7 @@ export default function GuideAvailabilityPage() {
                     <option value="">不限方案</option>
                     {(v2Activities.find((a) => a.id === ruleForm.activity_id)?.plans || []).map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name}
+                        {`${p.name}（${formatParticipants(p.minParticipants, p.maxParticipants)}）`}
                       </option>
                     ))}
                   </select>
@@ -586,7 +608,16 @@ export default function GuideAvailabilityPage() {
                 <div style={{ border: `1px solid ${toneStyles[rulePlanSeasonStatus.tone].border}`, background: toneStyles[rulePlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[rulePlanSeasonStatus.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{rulePlanSeasonStatus.title}</div>
                   <div style={{ fontSize: 12, lineHeight: 1.6 }}>{rulePlanSeasonStatus.description}</div>
-                  <div style={{ marginTop: 6, fontSize: 12 }}>常見提示：此方案尚未設定開放季節。</div>
+                </div>
+              )}
+              {selectedRulePlan && ruleSeasonConflict && (
+                <div style={{ border: `1px solid ${toneStyles[ruleSeasonConflict.tone].border}`, background: toneStyles[ruleSeasonConflict.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[ruleSeasonConflict.tone].color, fontSize: 12, lineHeight: 1.6 }}>
+                  {ruleSeasonConflict.message}
+                </div>
+              )}
+              {selectedRulePlan && (
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  常見提示：此方案尚未設定開放季節、你設定的日期包含方案非開放季節、這一天不在方案開放季節內。
                 </div>
               )}
               <div>
@@ -600,7 +631,7 @@ export default function GuideAvailabilityPage() {
                   </label>
                 </div>
               </div>
-              {ruleForm.rule_mode === 'single-day' && (
+              {ruleForm.rule_mode === 'single-day' ? (
                 <div>
                   <label htmlFor="admin-avail-single-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
                   <input
@@ -611,6 +642,29 @@ export default function GuideAvailabilityPage() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
                   />
                 </div>
+              ) : (
+                <FormGrid cols={2} gap={12}>
+                  <div>
+                    <label htmlFor="admin-avail-start-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
+                    <input
+                      id="admin-avail-start-date"
+                      type="date"
+                      value={ruleForm.effective_from}
+                      onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="admin-avail-end-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
+                    <input
+                      id="admin-avail-end-date"
+                      type="date"
+                      value={ruleForm.effective_to}
+                      onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </FormGrid>
               )}
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
@@ -682,6 +736,14 @@ export default function GuideAvailabilityPage() {
                   />
                 </div>
               </FormGrid>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+                <input
+                  type="checkbox"
+                  checked={ruleForm.use_dynamic_reemit}
+                  onChange={(e) => setRuleForm({ ...ruleForm, use_dynamic_reemit: e.target.checked })}
+                />
+                啟用動態時段（根據上次預訂結束時間自動補發可用時段）
+              </label>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
                 <input
                   type="checkbox"
@@ -906,13 +968,28 @@ export default function GuideAvailabilityPage() {
                                       單日：{rule.effective_from}
                                     </span>
                                   ) : null}
-                                  {rule.activity_plans?.name ? (
+                                  {rule.activity_plan_id && activityByPlanId[rule.activity_plan_id]?.title ? (
                                     <span style={{ display: 'block', fontSize: 10, color: '#6b7280', marginTop: 1 }}>
-                                      {rule.activity_plans.name}
+                                      活動：{activityByPlanId[rule.activity_plan_id].title}
                                     </span>
-                                  ) : rule.activity_plan_id ? null : (
+                                  ) : null}
+                                  {rule.activity_plan_id ? (
+                                    <span style={{ display: 'block', fontSize: 10, color: '#6b7280', marginTop: 1 }}>
+                                      方案：{planById[rule.activity_plan_id]?.name || rule.activity_plans?.name || '未指定'}
+                                    </span>
+                                  ) : (
                                     <span style={{ display: 'block', fontSize: 10, color: '#9ca3af', marginTop: 1 }}>所有方案</span>
                                   )}
+                                  {rule.activity_plan_id && planById[rule.activity_plan_id] ? (
+                                    <span style={{ display: 'block', fontSize: 10, color: '#6b7280', marginTop: 1 }}>
+                                      人數：{formatParticipants(planById[rule.activity_plan_id].minParticipants, planById[rule.activity_plan_id].maxParticipants)}
+                                    </span>
+                                  ) : null}
+                                  {(rule.effective_from || rule.effective_to) && !(rule.effective_from && rule.effective_to && rule.effective_from === rule.effective_to) ? (
+                                    <span style={{ display: 'block', fontSize: 10, color: '#9ca3af', marginTop: 1 }}>
+                                      生效：{rule.effective_from || '不限'} ~ {rule.effective_to || '不限'}
+                                    </span>
+                                  ) : null}
                                 </span>
                                 <div style={{ display: 'flex', gap: 4 }}>
                                   <button onClick={() => openRuleModal(rule)} style={smallBtn('#fff', '#374151')}>

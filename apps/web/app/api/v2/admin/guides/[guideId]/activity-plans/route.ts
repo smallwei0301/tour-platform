@@ -40,6 +40,8 @@ export async function GET(
           status,
           booking_type,
           base_price,
+          min_participants,
+          max_participants,
           is_year_round,
           activity_plan_seasons (
             id,
@@ -73,6 +75,8 @@ export async function GET(
           status: string;
           booking_type: string;
           base_price: number;
+          min_participants?: number | null;
+          max_participants?: number | null;
           is_year_round?: boolean | null;
           activity_plan_seasons?: PreviewActivityPlanSeason[] | null;
         }>) || [])
@@ -83,6 +87,8 @@ export async function GET(
             status: p.status,
             booking_type: p.booking_type,
             base_price: p.base_price,
+            minParticipants: p.min_participants ?? null,
+            maxParticipants: p.max_participants ?? null,
             isYearRound: Boolean(p.is_year_round),
             activeSeasonSummaries: summarizeActivePlanSeasons(p.activity_plan_seasons || []),
           })),
