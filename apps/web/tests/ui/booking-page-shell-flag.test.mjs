@@ -82,8 +82,13 @@ test('v2 shell renders selected plan display name and avoids showing raw UUID in
 
   assert.match(v2ShellPreRender, /selectedPlanDisplayName/);
   assert.match(v2ShellPreRender, /selectedPlan\.displayName, selectedPlan\.label, selectedPlan\.name/);
-  assert.match(src, /📋 方案：\{selectedPlanDisplayName \|\|/);
-  assert.match(src, /方案代碼 \$\{urlPlanId\.slice\(0, 8\)\}/);
+  // #multilingual: plan summary copy moved to bookingFlow.planPrefix / planCodePrefix；
+  // 頁面改用 m.<key> 引用，內容類斷言改讀繁中 catalog。
+  const zh = JSON.parse(await readSource('messages/zh-Hant.json'));
+  assert.match(zh.bookingFlow.planPrefix, /📋 方案：/);
+  assert.match(zh.bookingFlow.planCodePrefix, /方案代碼 \{code\}/);
+  assert.match(src, /\{m\.planPrefix\}\{selectedPlanDisplayName \|\|/);
+  assert.match(src, /m\.planCodePrefix\.replace\('\{code\}', urlPlanId\.slice\(0, 8\)\)/);
 });
 
 test('v2 shell keeps exact legacy booking presentation markers while retaining v2 mutation path', async () => {
@@ -94,30 +99,41 @@ test('v2 shell keeps exact legacy booking presentation markers while retaining v
 
   const v2ShellSource = src.slice(v2Start, v2End);
 
-  const legacyMarkers = [
-    '選擇可預約場次',
-    '費用明細',
-    '平台服務費',
-    '取消政策',
-    '請輸入真實姓名',
-    '0912-345-678',
-    '給導遊的備註（選填）',
-    '服務條款',
-    '退款政策',
-    '建立訂單並前往付款',
-    '信用卡（Visa / Mastercard / JCB）',
+  // #multilingual: 面向使用者的中文文案已移到 messages/zh-Hant.json 的 bookingFlow namespace；
+  // V2 shell 改用 m.<key> 引用。內容類 marker 改驗「繁中 catalog 仍含此 copy」+「V2 shell 引用對應 key」；
+  // 純結構類 marker（樣式字串）仍直接驗 source。
+  const zh = JSON.parse(await readSource('messages/zh-Hant.json'));
+  const bf = zh.bookingFlow;
+  const copyMarkers = [
+    { key: 'selectSlotLabel', copy: '選擇可預約場次' },
+    { key: 'feeDetailHeading', copy: '費用明細' },
+    { key: 'platformFee', copy: '平台服務費' },
+    { key: 'cancelPolicyHeading', copy: '取消政策' },
+    { key: 'contactNamePlaceholder', copy: '請輸入真實姓名' },
+    { key: 'contactPhonePlaceholder', copy: '0912-345-678' },
+    { key: 'noteLabel', copy: '給導遊的備註（選填）' },
+    { key: 'agreeTerms', copy: '服務條款' },
+    { key: 'agreeRefund', copy: '退款政策' },
+    { key: 'createOrderAndPay', copy: '建立訂單並前往付款' },
+    { key: 'creditCard', copy: '信用卡（Visa / Mastercard / JCB）' },
     // Issue #1261: LINE Pay / ATM 虛擬帳號 were removed because the V2 checkout
     // contract only supports the ecpay provider; advertising them as selectable
     // was misleading. The ECPay hand-off copy below replaces them.
-    '實際可用付款方式以付款頁顯示為準',
-    '付款由 ECPay 加密處理',
-    '訂單編號：',
+    { key: 'ecpayTransferNotice', copy: '實際可用付款方式以付款頁顯示為準' },
+    { key: 'ecpayTransferNotice', copy: '付款由 ECPay 加密處理' },
+    { key: 'orderNumberPrefix', copy: '訂單編號：' },
+  ];
+  for (const { key, copy } of copyMarkers) {
+    assert.match(bf[key], new RegExp(copy.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), `bookingFlow.${key} must hold copy "${copy}"`);
+    assert.match(v2ShellSource, new RegExp(`m\\.${key}\\b`), `V2 shell must reference m.${key}`);
+  }
+
+  const structuralMarkers = [
     "top: 80",
     "aspectRatio: '16/9'",
   ];
-
-  for (const marker of legacyMarkers) {
-    assert.match(v2ShellSource, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\\\$&')));
+  for (const marker of structuralMarkers) {
+    assert.match(v2ShellSource, new RegExp(marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   }
 
   // Issue #1261: no selectable LINE Pay / ATM payment radios may reappear.

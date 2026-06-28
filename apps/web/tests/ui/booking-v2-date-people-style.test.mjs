@@ -18,6 +18,7 @@ import { readFile } from 'node:fs/promises';
 // ──────────────────────────────────────────────────────────────────
 
 const pagePath = new URL('../../app/booking/[activityId]/page.tsx', import.meta.url);
+const zhCatalogPath = new URL('../../messages/zh-Hant.json', import.meta.url);
 
 test('V2 booking page no longer uses undefined className="tp-input"', async () => {
   const src = await readFile(pagePath, 'utf8');
@@ -29,8 +30,13 @@ test('V2 booking page no longer uses undefined className="tp-input"', async () =
 
 test('V2 booking page has +/- stepper buttons with aria-labels', async () => {
   const src = await readFile(pagePath, 'utf8');
-  assert.match(src, /aria-label="減少人數"/, 'Expected "減少人數" aria-label button (− stepper)');
-  assert.match(src, /aria-label="增加人數"/, 'Expected "增加人數" aria-label button (+ stepper)');
+  // #multilingual: stepper aria-label 文案移到 bookingFlow.decreaseParticipants / increaseParticipants；
+  // 頁面用 aria-label={m.<key>} 引用。內容類斷言改讀繁中 catalog。
+  const zh = JSON.parse(await readFile(zhCatalogPath, 'utf8'));
+  assert.equal(zh.bookingFlow.decreaseParticipants, '減少人數');
+  assert.equal(zh.bookingFlow.increaseParticipants, '增加人數');
+  assert.match(src, /aria-label=\{m\.decreaseParticipants\}/, 'Expected aria-label={m.decreaseParticipants} (− stepper)');
+  assert.match(src, /aria-label=\{m\.increaseParticipants\}/, 'Expected aria-label={m.increaseParticipants} (+ stepper)');
 });
 
 test('V2 booking date input uses Legacy-aligned border + radius', async () => {
@@ -67,10 +73,18 @@ test('V2 date-capacity picker is a <select> identified by data-testid and option
     'V2 date-capacity control must have data-testid="booking-v2-date-capacity-picker" on the <select>',
   );
   // 2. Option labels for available slots must use '（剩餘 N）' format (not the Legacy '（剩 N 位）' short form).
+  // #multilingual: option label 文案移到 bookingFlow.dateAvailableOption（「（剩餘 {n}）」）；
+  // 頁面用 m.dateAvailableOption.replace(...) 引用，內容類斷言改讀繁中 catalog。
+  const zh = JSON.parse(await readFile(zhCatalogPath, 'utf8'));
+  assert.match(
+    zh.bookingFlow.dateAvailableOption,
+    /（剩餘 \{n\}）/,
+    'bookingFlow.dateAvailableOption must use（剩餘 N）format — the Legacy short form（剩 N 位）must not leak into V2 picker options',
+  );
   assert.match(
     src,
-    /`\$\{entry\.date\}（剩餘 \$\{entry\.capacityLeft\}）`/,
-    'V2 picker option labels must use（剩餘 N）format with entry.capacityLeft — the Legacy short form（剩 N 位）must not leak into V2 picker options',
+    /m\.dateAvailableOption\.replace\('\{date\}', entry\.date\)\.replace\('\{n\}', String\(entry\.capacityLeft\)\)/,
+    'V2 picker must reference m.dateAvailableOption with entry.date / entry.capacityLeft interpolation',
   );
   // 3. The removed '改用舊版預約流程' legacy-fallback button must be absent.
   assert.doesNotMatch(

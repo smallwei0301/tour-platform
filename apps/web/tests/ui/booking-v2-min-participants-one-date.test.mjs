@@ -28,7 +28,10 @@ test('v2 shell clamps participants to effective minimum and never posts below-mi
 test('v2 shell shows Traditional Chinese min-participants hint for unformed group', async () => {
   const src = await readBookingSource();
 
-  assert.match(src, /此行程最少 \{baseMinParticipants\} 人成團/);
+  // #multilingual: 文案移到 bookingFlow.minParticipantsNote；頁面用 m.minParticipantsNote 引用。
+  const zh = JSON.parse(await readFile(path.join(WEB_ROOT, 'messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.bookingFlow.minParticipantsNote, /此行程最少 \{min\} 人成團/);
+  assert.match(src, /m\.minParticipantsNote\.replace\('\{min\}', String\(baseMinParticipants\)\)/);
   assert.match(src, /!allowOnePersonAddOn/);
 });
 
@@ -36,12 +39,16 @@ test('v2 shell prefers API Chinese copy and evaluator reason for blocked state m
   const src = await readBookingSource();
 
   assert.match(src, /setAvailabilityReason\(json\?\.data\?\.reason \|\| ''\)/);
-  assert.match(src, /function getBookingV2RecoveryMessage\(response: V2AvailableSlotsResponse\)/);
+  // #multilingual: getBookingV2RecoveryMessage 改收 localized messages 參數；generic fallback 改為 messages.genericError。
+  assert.match(src, /function getBookingV2RecoveryMessage\(\s*response: V2AvailableSlotsResponse/);
   assert.match(src, /response\?\.data\?\.messageZh, response\?\.error\?\.messageZh/);
-  assert.match(src, /return errorMessage \|\| BOOKING_V2_GENERIC_ERROR/);
+  assert.match(src, /return errorMessage \|\| messages\.genericError/);
   assert.match(src, /setAvailabilityReason\(selectedDateEntry\?\.reason \|\| json\.data\?\.reason \|\| ''\)/);
   assert.match(src, /!slotsLoading && slots\.length === 0 && availabilityReason/);
-  assert.match(src, /目前狀態：\{availabilityReason\}/);
+  // #multilingual: 「目前狀態：」prefix 移到 bookingFlow.currentStatusPrefix；頁面用 m.currentStatusPrefix 引用。
+  const zh = JSON.parse(await readFile(path.join(WEB_ROOT, 'messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.bookingFlow.currentStatusPrefix, /目前狀態：/);
+  assert.match(src, /\{m\.currentStatusPrefix\}\{availabilityReason\}/);
 });
 
 test('v2 shell uses selected plan base price from available-slots selectedPlan metadata', async () => {
@@ -65,8 +72,12 @@ test('v2 shell uses date-level availability UI and a multi-slot picker (#1306 re
   const src = await readBookingSource();
 
   // Date-level summary still present.
-  assert.match(src, /可預約日期/);
-  assert.match(src, /selectedDate}（可預約，剩餘/);
+  // #multilingual: 文案移到 bookingFlow（v2GenericError 含「可預約日期」、slotAvailable 含「可預約，剩餘」）；
+  // 頁面用 m.<key> 引用，內容類斷言改讀繁中 catalog + 驗 m.<key> 引用。
+  const zh = JSON.parse(await readFile(path.join(WEB_ROOT, 'messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.bookingFlow.v2GenericError, /可預約日期/);
+  assert.match(zh.bookingFlow.slotAvailable, /（可預約，剩餘/);
+  assert.match(src, /m\.slotAvailable\.replace\('\{date\}', selectedDate\)/);
 
   // Legacy native-select dropdown stays removed.
   assert.doesNotMatch(src, /<select className="tp-input" value=\{selectedSlotStartAt\}/);
@@ -81,8 +92,12 @@ test('v2 shell uses evaluator capacityLeft from selected slot in booking summary
 
   assert.match(src, /const selectedSlot = slots\.find\(\(slot\) => slot\.startAt === selectedSlotStartAt\) \|\| slots\[0\] \|\| null/);
   assert.match(src, /const selectedCapacityLeft = selectedSlot\?\.capacityLeft \?\? 0/);
-  assert.match(src, /selectedDate}（可預約，剩餘 \$\{selectedCapacityLeft\}）/);
-  assert.match(src, /可預約名額：\{selectedCapacityLeft\}/);
+  // #multilingual: slotAvailable / summaryCapacityPrefix 文案移到 catalog；頁面用 m.<key>.replace(...) 引用。
+  const zh = JSON.parse(await readFile(path.join(WEB_ROOT, 'messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.bookingFlow.slotAvailable, /（可預約，剩餘 \{n\}）/);
+  assert.match(zh.bookingFlow.summaryCapacityPrefix, /可預約名額：/);
+  assert.match(src, /m\.slotAvailable\.replace\('\{date\}', selectedDate\)\.replace\('\{n\}', String\(selectedCapacityLeft\)\)/);
+  assert.match(src, /\{m\.summaryCapacityPrefix\}\{selectedCapacityLeft\}/);
 });
 
 test('v2 shell keeps scheduleId as URL-date hint only and never re-derives schedule from local activity.schedules', async () => {
@@ -99,7 +114,10 @@ test('v2 shell keeps selected date visible when participants exceed capacity and
   const src = await readBookingSource();
 
   assert.match(src, /getBookingV2Step1CtaState\(/);
-  assert.match(src, /參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。/);
+  // #multilingual: over-capacity 文案移到 bookingFlow.overCapacity；頁面用 m.overCapacity 引用。
+  const zh = JSON.parse(await readFile(path.join(WEB_ROOT, 'messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.bookingFlow.overCapacity, /參加人數已超過此日期剩餘名額，請降低人數或選擇其他日期。/);
+  assert.match(src, /\{m\.overCapacity\}/);
   assert.match(src, /disabled=\{step1CtaState\.disabled\}/);
   assert.match(src, /const participants = effectiveMinParticipants/);
 

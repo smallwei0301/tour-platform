@@ -152,7 +152,11 @@ test('GH-1069: Step1 hard-block reason uses explicit red error color in booking 
   assert.match(src, /aria-describedby=\{step1CtaState\.disabled \? step1CtaState\.reasonId \?\? undefined : undefined\}/);
   assert.match(src, /<select\s*\n\s*data-testid="booking-v2-date-capacity-picker"/);
   assert.match(src, /<option key=\{entry\.date\} value=\{entry\.date\} disabled=\{entry\.state !== 'available'\}>/);
-  assert.match(src, /entry\.state === 'available'\s*\? `\$\{entry\.date\}（剩餘 \$\{entry\.capacityLeft\}）`/);
+  // #multilingual: date-option 文案移到 bookingFlow.dateAvailableOption（「（剩餘 {n}）」）；
+  // 頁面用 m.dateAvailableOption.replace(...) 引用，內容類斷言改讀繁中 catalog。
+  const zh = JSON.parse(await readFile(path.join(__dirname, '../../messages/zh-Hant.json'), 'utf8'));
+  assert.match(zh.bookingFlow.dateAvailableOption, /（剩餘 \{n\}）/);
+  assert.match(src, /entry\.state === 'available'\s*\?\s*m\.dateAvailableOption\.replace\('\{date\}', entry\.date\)\.replace\('\{n\}', String\(entry\.capacityLeft\)\)/);
   assert.doesNotMatch(src, /<button\s*\n\s*key=\{entry\.date\}/);
   assert.doesNotMatch(src, /改用舊版預約流程/);
   assert.doesNotMatch(src, /setV2Error\(selectedDateEntry\?\.messageZh \|\| json\.data\?\.messageZh \|\| ''\)/);

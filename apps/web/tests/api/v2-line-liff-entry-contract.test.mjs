@@ -46,7 +46,10 @@ test('line continuation fallback is explicit and testable without silently dropp
 
   assert.match(src, /data-testid="booking-v2-line-fallback-state"/);
   assert.match(src, /data-testid="booking-v2-line-retry-btn"/);
-  assert.match(src, /LINE LIFF 延續流程維持 shared checkout\/payment-init；不切換舊版流程/);
+  // #multilingual: LINE 延續 fallback 文案移到 bookingFlow.lineRetryFallback；頁面用 m.lineRetryFallback 引用。
+  const zh = JSON.parse(await read('messages/zh-Hant.json'));
+  assert.match(zh.bookingFlow.lineRetryFallback, /LINE LIFF 延續流程維持 shared checkout\/payment-init；不切換舊版流程/);
+  assert.match(src, /\{m\.lineRetryFallback\}/, 'page must reference m.lineRetryFallback');
 });
 
 test('checkout route keeps line source + correlation continuity in payment-init audit payload', async () => {

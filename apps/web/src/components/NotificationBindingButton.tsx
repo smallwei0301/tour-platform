@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { csrfHeaders } from '../lib/csrf-client';
+import type { AppLocale } from '../i18n/routing';
+import { getClientNamespace } from '../i18n/client-nav-messages';
 
 interface BindingResult {
   code: string;
@@ -22,6 +24,11 @@ interface Props {
    * dark 套用主題 token，標題與說明文字才不會在深底上糊掉。
    */
   tone?: 'light' | 'dark';
+  /**
+   * UI 文案語言（#multilingual）。預設 'zh-Hant' — 導遊後台不傳即維持繁中（零變動）；
+   * 旅客 /me/profile 傳入 useClientLocale() 後內部狀態／按鈕文字跟著切英文。
+   */
+  locale?: AppLocale;
 }
 
 const PALETTE = {
@@ -34,8 +41,9 @@ const PALETTE = {
  * click to mint a one-time code + deep link the user taps to finish binding.
  * Backend self-skips when flags are off; this is purely the console affordance.
  */
-export default function NotificationBindingButton({ endpoint, channel, title, description, accent = '#7c3aed', tone = 'light' }: Props) {
+export default function NotificationBindingButton({ endpoint, channel, title, description, accent = '#7c3aed', tone = 'light', locale = 'zh-Hant' }: Props) {
   const c = PALETTE[tone];
+  const t = getClientNamespace(locale, 'notificationBinding');
   const [bound, setBound] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(false);
   const [rechecking, setRechecking] = useState(false);
@@ -88,12 +96,12 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
       const res = await fetch(endpoint, { method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }) });
       const j = await res.json();
       if (!res.ok || !j?.ok) {
-        setError('產生綁定連結失敗，請稍後再試。');
+        setError(t.mintFailed);
         return;
       }
       setResult({ code: j.data.code, deepLink: j.data.deepLink ?? null, instruction: j.data.instruction });
     } catch {
-      setError('網路錯誤，請稍後再試。');
+      setError(t.networkError);
     } finally {
       setLoading(false);
     }
@@ -113,7 +121,7 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
           data-testid={`binding-${channel}-status`}
           style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', color: bound ? '#16a34a' : '#b45309' }}
         >
-          {bound === null ? '—' : bound ? '已綁定 ✓' : '未綁定'}
+          {bound === null ? '—' : bound ? t.statusBound : t.statusUnbound}
         </span>
       </div>
 
@@ -124,7 +132,7 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
         disabled={loading}
         style={{ alignSelf: 'flex-start', padding: '9px 16px', background: accent, color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: loading ? 0.6 : 1 }}
       >
-        {loading ? '產生中…' : bound ? `重新綁定 ${channelName}` : `綁定 ${channelName}`}
+        {loading ? t.generating : bound ? t.rebind.replace('{channel}', channelName) : t.bind.replace('{channel}', channelName)}
       </button>
 
       {error && <p style={{ color: 'crimson', fontSize: 12, margin: 0 }}>{error}</p>}
@@ -143,7 +151,7 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
               rel="noreferrer"
               style={{ alignSelf: 'flex-start', padding: '8px 14px', background: '#111827', color: '#fff', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}
             >
-              開啟 {channelName} 完成綁定
+              {t.openToComplete.replace('{channel}', channelName)}
             </a>
           ) : (
             <code data-testid={`binding-${channel}-code`} style={{ fontSize: 13, fontWeight: 700, color: c.instruction }}>{result.code}</code>
@@ -155,7 +163,7 @@ export default function NotificationBindingButton({ endpoint, channel, title, de
             disabled={rechecking}
             style={{ alignSelf: 'flex-start', padding: '6px 12px', background: 'transparent', color: accent, border: `1px solid ${accent}`, borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer', opacity: rechecking ? 0.6 : 1 }}
           >
-            {rechecking ? '檢查中…' : '我已完成，重新檢查狀態'}
+            {rechecking ? t.rechecking : t.recheckDone}
           </button>
         </div>
       )}

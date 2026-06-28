@@ -31,7 +31,7 @@ describe('GH-903 Booking V2 surfaces Traditional-Chinese error messageZh on fail
     // Lock the exact ordering so a future refactor cannot silently flip it back.
     assert.match(
       bookingPageSrc,
-      /function getBookingV2RecoveryMessage\(response: V2AvailableSlotsResponse\)/,
+      /function getBookingV2RecoveryMessage\(\s*response: V2AvailableSlotsResponse/,
       'expected available-slots failures to flow through getBookingV2RecoveryMessage',
     );
     assert.match(
@@ -39,10 +39,14 @@ describe('GH-903 Booking V2 surfaces Traditional-Chinese error messageZh on fail
       /response\?\.data\?\.messageZh, response\?\.error\?\.messageZh/,
       'expected recovery helper to inspect data.messageZh before error.messageZh',
     );
+    // #multilingual: generic fallback 文案移到 bookingFlow.v2GenericError，透過 messages 參數注入；
+    // helper 末段改為 `return errorMessage || messages.genericError`。內容類斷言改讀繁中 catalog。
+    const zh = JSON.parse(readFileSync(path.resolve(ROOT, 'messages/zh-Hant.json'), 'utf-8'));
+    assert.match(zh.bookingFlow.v2GenericError, /目前無法載入可預約日期，請稍後再試。/);
     assert.match(
       bookingPageSrc,
-      /return errorMessage \|\| BOOKING_V2_GENERIC_ERROR/,
-      'expected recovery helper to fall back from error.message to the generic Traditional-Chinese copy',
+      /return errorMessage \|\| messages\.genericError/,
+      'expected recovery helper to fall back from error.message to the generic copy (messages.genericError)',
     );
   });
 

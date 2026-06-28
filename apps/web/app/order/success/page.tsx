@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useClientLocale } from '../../../src/i18n/use-client-locale';
+import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
 
 type OrderDetail = {
   id: string;
@@ -12,18 +14,6 @@ type OrderDetail = {
   peopleCount?: number;
   contactName?: string | null;
   contactEmail?: string | null;
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  pending_payment: '待付款',
-  paid: '已付款 ✓',
-  confirmed: '已確認 🎉',
-  cancelled_by_user: '已取消',
-  cancelled_by_guide: '導遊取消',
-  rejected: '已拒絕',
-  completed: '已完成 ⭐',
-  refund_pending: '退款申請中',
-  refunded: '已退款',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -40,6 +30,9 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function OrderSuccessPage() {
   const params = useSearchParams();
+  const locale = useClientLocale();
+  const m = getClientNamespace(locale, 'orderSuccess');
+  const statusLabels = m.status as Record<string, string>;
   const orderId = params.get('orderId') || '';
   const email = params.get('email') || '';
 
@@ -83,17 +76,17 @@ export default function OrderSuccessPage() {
 
   const status = order?.status || '';
   const statusColor = STATUS_COLORS[status] || '#6b7280';
-  const statusLabel = STATUS_LABELS[status] || status;
+  const statusLabel = statusLabels[status] || status;
 
   return (
     <div style={containerStyle}>
       <div style={{ fontSize: 56, marginBottom: 8 }}>🎊</div>
       <h1 style={{ fontSize: 24, fontWeight: 800, color: '#111827', marginBottom: 4 }}>
-        訂單建立成功
+        {m.title}
       </h1>
 
       {loading ? (
-        <p style={{ color: '#9ca3af', marginTop: 16 }}>載入訂單資訊…</p>
+        <p style={{ color: '#9ca3af', marginTop: 16 }}>{m.loading}</p>
       ) : order ? (
         <>
           <div style={{
@@ -111,19 +104,19 @@ export default function OrderSuccessPage() {
 
           <div style={cardStyle}>
             <div style={rowStyle}>
-              <span style={{ color: '#6b7280' }}>訂單編號</span>
+              <span style={{ color: '#6b7280' }}>{m.orderNumber}</span>
               <span data-testid="order-id" style={{ fontWeight: 600, fontSize: 12, wordBreak: 'break-all' }}>{order.id}</span>
             </div>
             <div style={rowStyle}>
-              <span style={{ color: '#6b7280' }}>行程</span>
+              <span style={{ color: '#6b7280' }}>{m.trip}</span>
               <span style={{ fontWeight: 600 }}>{order.title || '—'}</span>
             </div>
             <div style={rowStyle}>
-              <span style={{ color: '#6b7280' }}>人數</span>
-              <span style={{ fontWeight: 600 }}>{order.peopleCount ?? '—'} 人</span>
+              <span style={{ color: '#6b7280' }}>{m.people}</span>
+              <span style={{ fontWeight: 600 }}>{m.peopleUnit.replace('{n}', String(order.peopleCount ?? '—'))}</span>
             </div>
             <div style={{ ...rowStyle, borderBottom: 'none' }}>
-              <span style={{ color: '#6b7280' }}>金額</span>
+              <span style={{ color: '#6b7280' }}>{m.amount}</span>
               <span style={{ fontWeight: 800, color: '#a8511f', fontSize: 16 }}>
                 NT$ {(order.totalTwd ?? 0).toLocaleString()}
               </span>
@@ -131,7 +124,7 @@ export default function OrderSuccessPage() {
           </div>
         </>
       ) : (
-        <p data-testid="order-id" style={{ color: '#9ca3af', marginTop: 16 }}>訂單編號：{orderId || 'N/A'}</p>
+        <p data-testid="order-id" style={{ color: '#9ca3af', marginTop: 16 }}>{m.orderNumberPrefix}{orderId || 'N/A'}</p>
       )}
 
       <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -149,7 +142,7 @@ export default function OrderSuccessPage() {
             textDecoration: 'none',
           }}
         >
-          查看我的訂單
+          {m.viewOrders}
         </Link>
         <Link
           href="/activities"
@@ -164,7 +157,7 @@ export default function OrderSuccessPage() {
             textDecoration: 'none',
           }}
         >
-          繼續探索行程
+          {m.exploreMore}
         </Link>
       </div>
     </div>
