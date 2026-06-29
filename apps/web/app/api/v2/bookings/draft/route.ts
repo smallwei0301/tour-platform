@@ -1069,6 +1069,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 7. Create order (pending_payment status)
+    // #1493 付款期限：instant/scheduled 自建立起算 24h；request 待審核 → null，
+    // 審核通過時才於 approval gateway 起算。
+    const paymentDeadlineAt = initialPaymentDeadlineForBookingType(
+      planData.booking_type,
+      new Date().toISOString(),
+    );
     const { data: orderInsert, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -1084,12 +1090,7 @@ export async function POST(request: NextRequest) {
         total_twd: totalAmount,
         source_channel: data.sourceChannel,
         discount_amount: 0,
-        // #1493 付款期限：instant/scheduled 自建立起算 24h；request 待審核 → null，
-        // 審核通過時才於 approval gateway 起算。
-        payment_deadline_at: initialPaymentDeadlineForBookingType(
-          planData.booking_type,
-          new Date().toISOString(),
-        ),
+        payment_deadline_at: paymentDeadlineAt,
       })
       .select('id, status')
       .single();
@@ -1105,6 +1106,16 @@ export async function POST(request: NextRequest) {
 
     // 8. Update booking with order_id
     await supabase.from('bookings').update({ order_id: orderInsert.id }).eq('id', bookingInsert.id);
+
+    // #1493 instant/scheduled：建立即起算付款期限 → 主動寄付款連結+截止時間（best-effort）。
+    if (paymentDeadlineAt) {
+      void import('../../../../../src/lib/payment-deadline-notify')
+        .then(({ notifyPaymentDeadlineSet }) =>
+          notifyPaymentDeadlineSet({ orderId: orderInsert.id, paymentDeadlineAt }))
+        .catch((err) => {
+          console.error('[payment-deadline-notify] draft fire-and-forget failed:', err);
+        });
+    }
 
     // 9. Create order_item
     const activityTitle = activities?.title ?? '行程預訂';

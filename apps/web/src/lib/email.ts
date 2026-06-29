@@ -353,6 +353,16 @@ function formatTaipeiRange(startAt: string, endAt: string): string {
   return `${fmt(startAt)} ~ ${fmt(endAt)}`;
 }
 
+// #1493 — 單一時間點的台灣時間格式（付款期限顯示用）。
+function formatTaipeiDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(d);
+}
+
 /**
  * #1497 — 管理者「例外開放衝突時段」後通知導遊（無 guide email 時靜默略過）。
  * 隱私：只含導遊可見的 reason / guideNote，不含 admin_note / created_by_admin_email。
@@ -676,6 +686,7 @@ export interface BookingApprovalNoticeData {
   contactName?: string;
   orderId?: string;
   note?: string;
+  paymentDeadlineAt?: string | null; // #1493：審核通過後的 24h 付款期限
 }
 
 /** 導遊審核通過 → 通知旅客前往付款。 */
@@ -688,6 +699,7 @@ export async function sendBookingApprovalApproved(data: BookingApprovalNoticeDat
       嗨 ${data.contactName || '旅客'}，「${data.activityTitle}」的預約申請已通過導遊審核。
       請於時限內完成付款以確認名額。
     </p>
+    ${data.paymentDeadlineAt ? `<p style="font-size:14px;color:#b45309;margin:0 0 12px;">付款期限：${escapeHtml(formatTaipeiDateTime(data.paymentDeadlineAt))}（台灣時間），逾時將自動取消。</p>` : ''}
     <a href="${payUrl}"
        style="display:inline-block;background:#0f766e;color:#fff;font-weight:700;padding:10px 18px;border-radius:8px;text-decoration:none;">
       前往付款 →
@@ -707,6 +719,62 @@ export async function sendBookingApprovalRejected(data: BookingApprovalNoticeDat
     </p>
   `);
   return sendEmailWithContract({ fn: 'sendBookingApprovalRejected', to: data.to, subject, html, orderId: data.orderId });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #1493 — 未付款訂單付款期限通知 / 逾時取消通知
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PaymentDeadlineNoticeData {
+  to: string;
+  activityTitle: string;
+  contactName?: string;
+  orderId?: string;
+  paymentDeadlineAt: string;
+}
+
+/** 建立訂單／開放付款時：通知旅客付款連結與截止時間。 */
+export async function sendPaymentDeadlineNotice(data: PaymentDeadlineNoticeData): Promise<EmailDeliveryResult> {
+  const subject = `請於期限內完成付款 — ${data.activityTitle}`;
+  const payUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/me/orders`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">預約已建立，請完成付款 🕐</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      嗨 ${escapeHtml(data.contactName || '旅客')}，「${escapeHtml(data.activityTitle)}」的預約已建立。
+      請於 <strong>${escapeHtml(formatTaipeiDateTime(data.paymentDeadlineAt))}（台灣時間）</strong> 前完成付款，
+      逾時系統將自動取消並釋出名額。
+    </p>
+    <a href="${payUrl}"
+       style="display:inline-block;background:#0f766e;color:#fff;font-weight:700;padding:10px 18px;border-radius:8px;text-decoration:none;">
+      前往付款 →
+    </a>
+  `);
+  return sendEmailWithContract({ fn: 'sendPaymentDeadlineNotice', to: data.to, subject, html, orderId: data.orderId });
+}
+
+export interface UnpaidOrderCancelledData {
+  to: string;
+  activityTitle: string;
+  contactName?: string;
+  orderId?: string;
+}
+
+/** 逾時自動取消後：通知旅客訂單已取消、名額已釋出。 */
+export async function sendUnpaidOrderCancelledNotice(data: UnpaidOrderCancelledData): Promise<EmailDeliveryResult> {
+  const subject = `訂單已逾時自動取消 — ${data.activityTitle}`;
+  const browseUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tour-platform.vercel.app'}/activities`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">訂單已逾時自動取消</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 12px;">
+      嗨 ${escapeHtml(data.contactName || '旅客')}，「${escapeHtml(data.activityTitle)}」這筆預約因未於付款期限內完成付款，
+      已自動取消、名額已釋出。此筆未付款，不會產生任何費用，歡迎再挑選其他日期或行程。
+    </p>
+    <a href="${browseUrl}"
+       style="display:inline-block;background:#0f766e;color:#fff;font-weight:700;padding:10px 18px;border-radius:8px;text-decoration:none;">
+      重新挑選行程 →
+    </a>
+  `);
+  return sendEmailWithContract({ fn: 'sendUnpaidOrderCancelledNotice', to: data.to, subject, html, orderId: data.orderId });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
