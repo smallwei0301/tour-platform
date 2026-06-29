@@ -50,6 +50,7 @@ import {
   requiresGuideApproval,
 } from '../../../../../src/lib/booking-type-flow.mjs';
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
+import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -184,13 +185,16 @@ async function isSlotInGeneratedV2Availability(
   const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
   const { data: bookingsData, error: bookingsError } = await supabase
     .from('bookings')
-    .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
+    .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id, order_id')
     .eq('guide_id', payload.guideId)
     .in('status', activeStatuses);
 
   if (bookingsError) {
     throw new Error('Failed to fetch bookings');
   }
+
+  // #1493 讀取時過濾：逾時未付款 draft 佔位即時釋放（不必等排程取消）。
+  const liveBookings = await dropExpiredUnpaidHolds(supabase, bookingsData || [], new Date().toISOString());
 
   const { data: seasonsData, error: seasonsError } = await supabase
     .from('activity_plan_seasons')
@@ -256,7 +260,7 @@ async function isSlotInGeneratedV2Availability(
     source: isManualOrSystemSource(row.source) ? row.source : 'manual',
   }));
 
-  const bookings: ExistingBooking[] = (bookingsData || []).map((row: any) => ({
+  const bookings: ExistingBooking[] = (liveBookings as any[]).map((row: any) => ({
     id: row.id,
     guide_id: row.guide_id,
     start_at: row.start_at,
@@ -651,7 +655,7 @@ export async function POST(request: NextRequest) {
     const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
     const { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
-      .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
+      .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id, order_id')
       .eq('guide_id', guideId)
       .in('status', activeStatuses);
 
@@ -661,6 +665,9 @@ export async function POST(request: NextRequest) {
         status: 500,
       });
     }
+
+    // #1493 讀取時過濾：逾時未付款 draft 佔位即時釋放（不必等排程取消）。
+    const liveBookings = await dropExpiredUnpaidHolds(supabase, bookingsData || [], new Date().toISOString());
 
     // Fetch availability rules for buffer info
     const { data: rulesData } = await supabase
@@ -683,7 +690,7 @@ export async function POST(request: NextRequest) {
       source: isManualOrSystemSource(row.source) ? row.source : 'manual',
     }));
 
-    const bookings: ExistingBooking[] = (bookingsData || []).map((row) => ({
+    const bookings: ExistingBooking[] = liveBookings.map((row) => ({
       id: row.id,
       guide_id: row.guide_id,
       start_at: row.start_at,

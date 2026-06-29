@@ -81,9 +81,20 @@ test('checkout route 惰性守門：逾期擋下結帳', () => {
   assert.match(src, /PAYMENT_DEADLINE_PASSED/);
 });
 
-test('GitHub Actions workflow 排程存在（每 30 分鐘）', () => {
+test('GitHub Actions workflow 降為每日兜底（不再每 30 分）', () => {
   const yml = read('../../.github/workflows/unpaid-expiry-sweep.yml');
   assert.match(yml, /unpaid-expiry-sweep/);
-  assert.match(yml, /cron: '\*\/30 \* \* \* \*'/);
   assert.match(yml, /x-internal-token/);
+  // 名額釋放改讀取時過濾後，排程降為每日一次（省 GitHub 分鐘）。
+  assert.match(yml, /cron: '0 18 \* \* \*'/);
+  assert.doesNotMatch(yml, /\*\/30 \* \* \* \*/);
+});
+
+test('讀取時過濾：available-slots 與 draft 載入 booking 後濾掉逾時未付款佔位', () => {
+  const handler = read('app/api/v2/activities/[activityId]/available-slots/route-handler.ts');
+  assert.match(handler, /dropExpiredUnpaidHolds/);
+  assert.match(handler, /order_id/); // booking select 需帶 order_id 供反查
+  const draft = read('app/api/v2/bookings/draft/route.ts');
+  assert.match(draft, /dropExpiredUnpaidHolds/);
+  assert.match(draft, /order_id/);
 });
