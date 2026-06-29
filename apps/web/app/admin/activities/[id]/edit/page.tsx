@@ -174,6 +174,12 @@ function AddScheduleModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
+  // 固定場次只適用「排程預約」方案;即時／申請預約走導遊動態可預約規則,
+  // 不該建立固定場次(會看不到又無效)。選到這類方案時擋下並提示。
+  const planNotScheduled = Boolean(
+    selectedPlan && selectedPlan.booking_type && selectedPlan.booking_type !== 'scheduled',
+  );
+
   function toggleDate(date: string) {
     setSelectedDates(prev =>
       prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date].sort()
@@ -203,6 +209,7 @@ function AddScheduleModal({
     if (selectedDates.length === 0) return setErr('請選擇至少一個日期');
     // Require explicit plan selection when ≥2 active plans
     if (availablePlans.length >= 2 && !planId) return setErr('方案有多個，請選擇適用方案');
+    if (planNotScheduled) return setErr('固定場次僅適用「排程預約」方案。即時／申請預約請改用導遊可預約時段規則。');
     setSaving(true); setErr(''); setProgress('');
 
     let ok = 0; let fail = 0;
@@ -395,6 +402,18 @@ function AddScheduleModal({
             </label>
           )}
 
+          {planNotScheduled && (
+            <div
+              data-testid="schedule-booking-type-warning"
+              style={{
+                background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca',
+                padding: '10px 14px', borderRadius: 8, fontSize: 13, margin: '0 0 16px', lineHeight: 1.8,
+              }}
+            >
+              固定場次僅適用「<strong>排程預約</strong>」方案。此方案為「{selectedPlan?.booking_type === 'request' ? '申請預約' : '即時預約'}」，請改用導遊「時間管理」的可預約時段規則，不需建立固定場次。
+            </div>
+          )}
+
           <FormGrid cols={2} gap={12}>
             <label style={labelStyle}>
               開始時間
@@ -425,7 +444,7 @@ function AddScheduleModal({
           {/* Issue #1196: explain field precedence — plan provides defaults,
               schedule can override per-date. */}
           <p style={{ fontSize: 12, color: '#6b7280', margin: '4px 0 0' }}>
-            預設取自方案<span style={{ fontWeight: 600 }}>{selectedPlan ? `「${selectedPlan.name}」` : ''}</span>；如需單日不同容量或最低成團，在此調整即會覆蓋該日場次的設定。
+            容量預設取自方案<span style={{ fontWeight: 600 }}>{selectedPlan ? `「${selectedPlan.name}」` : ''}</span>的最多人數；如需單日不同容量或最低成團，在此調整即會覆蓋該日場次設定，導遊亦可於後台「場次管理」調整例外容量。
           </p>
 
           <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -434,13 +453,13 @@ function AddScheduleModal({
               style={{ padding: '9px 20px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', cursor: 'pointer', fontSize: 14 }}>
               取消
             </button>
-            <button type="submit" disabled={saving || selectedDates.length === 0 || availablePlans.length === 0}
+            <button type="submit" disabled={saving || selectedDates.length === 0 || availablePlans.length === 0 || planNotScheduled}
               style={{
                 padding: '9px 20px', borderRadius: 8, border: 'none',
                 background: 'var(--tp-primary, #16a34a)', color: '#fff',
                 fontWeight: 700, fontSize: 14,
-                cursor: (saving || selectedDates.length === 0 || availablePlans.length === 0) ? 'not-allowed' : 'pointer',
-                opacity: (saving || selectedDates.length === 0 || availablePlans.length === 0) ? 0.6 : 1,
+                cursor: (saving || selectedDates.length === 0 || availablePlans.length === 0 || planNotScheduled) ? 'not-allowed' : 'pointer',
+                opacity: (saving || selectedDates.length === 0 || availablePlans.length === 0 || planNotScheduled) ? 0.6 : 1,
               }}>
               {saving ? progress || '新增中⋯' : `確認新增 ${selectedDates.length > 0 ? `(${selectedDates.length} 天)` : ''}`}
             </button>

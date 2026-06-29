@@ -58,7 +58,7 @@ export async function POST(
 
   const { data: activePlans, error: plansError } = await supabase
     .from('activity_plans')
-    .select('id, activity_id, status, max_participants, min_participants')
+    .select('id, activity_id, status, max_participants, min_participants, booking_type')
     .eq('activity_id', activityId)
     .eq('status', 'active');
 
@@ -77,6 +77,20 @@ export async function POST(
   if (!resolved.ok) {
     return Response.json(
       errorV2(resolved.code as string, resolved.messageZh as string),
+      { status: 422 },
+    );
+  }
+
+  // 固定場次只適用「排程預約(scheduled)」方案。即時／申請預約走導遊動態可預約
+  // 規則,不該建立固定場次(否則旅客看不到、又無效)。最終防線,不只靠前端。
+  const resolvedPlan = (activePlans || []).find((p) => p.id === resolved.planId);
+  const resolvedBookingType = (resolvedPlan as { booking_type?: string } | undefined)?.booking_type;
+  if (resolvedBookingType && resolvedBookingType !== 'scheduled') {
+    return Response.json(
+      errorV2(
+        'SCHEDULE_NOT_APPLICABLE_FOR_BOOKING_TYPE',
+        '固定場次僅適用「排程預約」方案。即時／申請預約請改用導遊可預約時段規則。',
+      ),
       { status: 422 },
     );
   }
