@@ -79,8 +79,8 @@ test('ecpay-query.mjs supports sandbox and prod URLs', () => {
 // Workflow contract checks
 // ---------------------------------------------------------------------------
 
-test('workflow has */15 cron schedule', () => {
-  assert.match(workflow, /\*\/15 \* \* \* \*/);
+test('workflow has hourly cron schedule（降頻省 GitHub 分鐘；主路徑為即時 callback，本為補漏）', () => {
+  assert.match(workflow, /cron:\s*'0 \* \* \* \*'/);
 });
 
 test('workflow has workflow_dispatch trigger', () => {

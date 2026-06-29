@@ -2,8 +2,10 @@ name: pre-tour-reminder-sweep
 
 on:
   schedule:
-    # Every 30 minutes — h24 and h1 windows both checked per run
-    - cron: '*/30 * * * *'
+    # 每小時一次（省 GitHub 分鐘）。h1 提醒視窗為 60 分鐘寬 [now+30m, now+90m)，與每小時
+    # 間隔等寬、半開區間相接，故仍完整涵蓋、無缺口；提醒最多比理想晚約 1 小時，可接受。
+    # h24 視窗 120 分鐘更寬，重疊安全；UNIQUE(order_id,reminder_kind,channel) 確保不重送。
+    - cron: '0 * * * *'
   workflow_dispatch: {}
 
 jobs:
