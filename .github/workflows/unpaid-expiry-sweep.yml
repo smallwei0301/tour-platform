@@ -2,8 +2,11 @@ name: unpaid-expiry-sweep
 
 on:
   schedule:
-    # Every 30 minutes — cancel unpaid orders past their payment deadline (#1493)
-    - cron: '*/30 * * * *'
+    # #1493：名額釋放已改由「讀取時過濾」即時處理（available-slots / draft 會把逾時
+    # 未付款的 draft 佔位濾掉），不再依賴此排程。此處保留為**每日一次**的低頻兜底，
+    # 只負責補做「實體取消 + 寄逾時取消信 + 標記 cancelled_unpaid」。
+    # 每日一次 ≈ 30 分鐘/月（GitHub Actions 計費以分鐘進位），免費額度內可忽略。
+    - cron: '0 18 * * *' # 02:00 Asia/Taipei daily
   workflow_dispatch: {}
 
 jobs:

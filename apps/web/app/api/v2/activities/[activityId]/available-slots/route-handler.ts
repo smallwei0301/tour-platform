@@ -39,6 +39,7 @@ import {
   CAPACITY_HOLD_BOOKING_STATUSES,
   normalizeBookingParticipants,
 } from '../../../../../../src/lib/availability-v2/group-booking-rule.ts';
+import { dropExpiredUnpaidHolds } from '../../../../../../src/lib/expired-hold-filter.mjs';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -414,7 +415,7 @@ export async function getAvailableSlots(
     const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
     const { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
-      .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id')
+      .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id, order_id')
       .eq('guide_id', guideId)
       .in('status', activeStatuses);
 
@@ -424,6 +425,9 @@ export async function getAvailableSlots(
         status: 500,
       });
     }
+
+    // #1493 讀取時過濾：逾時未付款的 draft 佔位即時釋放（不必等排程取消）。
+    const liveBookings = await dropExpiredUnpaidHolds(supabase, bookingsData || [], new Date().toISOString());
 
     const { data: seasonsData, error: seasonsError } = await supabase
       .from('activity_plan_seasons')
@@ -499,7 +503,7 @@ export async function getAvailableSlots(
       source: isManualOrSystemSource(row.source) ? row.source : 'manual',
     }));
 
-    const bookings: ExistingBooking[] = (bookingsData || []).map((row) => ({
+    const bookings: ExistingBooking[] = liveBookings.map((row) => ({
       id: row.id,
       guide_id: row.guide_id,
       start_at: row.start_at,
