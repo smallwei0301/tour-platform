@@ -5,12 +5,23 @@ import { useEffect, useMemo, useState } from 'react';
 import { Card, PageHeader, StatusBadge, Select } from '../../../src/components/admin/ui';
 import { ResponsiveTable, ResponsiveModal, useIsMobile, type ResponsiveColumn } from '../../../src/components/admin/responsive';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
+import { describePaymentRemaining } from '../../../src/lib/payment-deadline.mjs';
+
+// #1493 未付款付款期限顯示（剩餘時間 / 已逾時）。
+function renderDeadlineText(deadlineAt?: string | null): string {
+  if (!deadlineAt) return '';
+  const r = describePaymentRemaining(deadlineAt, new Date().toISOString());
+  const when = new Date(deadlineAt).toLocaleString('zh-TW');
+  if (!r.hasDeadline) return '';
+  if (r.isOverdue) return `${when}（已逾時）`;
+  return `${when}（剩 ${r.hours} 小時 ${r.minutes} 分）`;
+}
 
 type Row = {
   id: string; status: string; sourceChannel?: string | null; totalTwd: number; costTwd: number; marginTwd: number;
   title?: string | null; peopleCount?: number; contactName?: string | null;
   contactEmail?: string | null; createdAt?: string | null; paidAt?: string | null; adminNote?: string | null;
-  trade_no?: string | null;
+  trade_no?: string | null; paymentDeadlineAt?: string | null;
 };
 
 // 訂單來源通路（含外部佔位轉成的 external 訂單；external_hold 佔位本身無 order，不在此列表）。
@@ -22,7 +33,7 @@ const SOURCE_LABELS: Record<string, string> = {
   external: '外部通路',
 };
 
-const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancelled_by_user','cancelled_by_guide','completed','refund_pending','refunded'];
+const ORDER_STATUSES = ['pending_payment','paid','confirmed','rejected','cancelled_by_user','cancelled_by_guide','cancelled_unpaid','completed','refund_pending','refunded'];
 
 // 可執行「取消＋退款」的訂單狀態（與後端 cancelOrderAdminDb 的 CANCELLABLE 一致）。
 const CANCELLABLE_STATUSES = ['pending_payment', 'paid', 'confirmed', 'rejected'];
@@ -416,6 +427,12 @@ export default function AdminOrdersPage() {
         <div><strong>總額：</strong>NT${Number(detail.totalTwd||0).toLocaleString()}</div>
         <div><strong>建立：</strong>{detail.createdAt ? new Date(detail.createdAt).toLocaleString('zh-TW') : '-'}</div>
         <div><strong>付款：</strong>{detail.paidAt ? new Date(detail.paidAt).toLocaleString('zh-TW') : '-'}</div>
+        {detail.status === 'pending_payment' && detail.paymentDeadlineAt && (
+          <div data-testid="admin-order-payment-deadline"><strong>付款期限：</strong>{renderDeadlineText(detail.paymentDeadlineAt)}</div>
+        )}
+        {detail.status === 'cancelled_unpaid' && (
+          <div style={{ color: '#b91c1c' }}><strong>取消原因：</strong>已逾時自動取消</div>
+        )}
       </div>
 
       <a

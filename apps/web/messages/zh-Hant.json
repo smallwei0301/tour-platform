@@ -1195,6 +1195,10 @@
     "exploreCta": "探索行程",
     "fallbackTitle": "行程訂單",
     "people": "{n} 人",
+    "deadlinePrefix": "請於",
+    "deadlineRemaining": "剩 {h} 小時 {m} 分",
+    "deadlineOverdue": "付款期限已過，訂單即將自動取消",
+    "resumePayment": "前往付款",
     "status": {
       "pending_payment": "待付款",
       "paid": "已付款",
@@ -1202,6 +1206,7 @@
       "rejected": "已拒絕",
       "cancelled_by_user": "已取消",
       "cancelled_by_guide": "導遊取消",
+      "cancelled_unpaid": "已逾時自動取消",
       "completed": "已完成",
       "refund_pending": "退款申請中",
       "refunded": "已退款"
@@ -1220,6 +1225,7 @@
       "rejected": "😔 很遺憾，此行程無法成行，請聯絡客服了解詳情。",
       "cancelled_by_user": "🚫 您已取消此訂單。",
       "cancelled_by_guide": "😔 導遊取消了此行程，我們將協助安排退款，請聯絡客服。",
+      "cancelled_unpaid": "⏰ 此訂單因未於付款期限內完成付款，已自動取消、名額已釋出。",
       "completed": "⭐ 行程已完成，感謝您的參與！期待下次再見。",
       "refund_pending": "🔄 退款申請已受理，處理中（通常 3-5 個工作天入帳）。",
       "refunded": "💰 退款已完成，金額將退回原付款工具，通常 3-5 個工作天入帳。"
@@ -1363,6 +1369,7 @@
       "confirmed": "已確認 🎉",
       "cancelled_by_user": "已取消",
       "cancelled_by_guide": "導遊取消",
+      "cancelled_unpaid": "已逾時自動取消",
       "rejected": "已拒絕",
       "completed": "已完成 ⭐",
       "refund_pending": "退款申請中",
