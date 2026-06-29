@@ -65,14 +65,13 @@ test.describe('行程主題篩選統一為五大主題', () => {
     }
   });
 
-  test('勾選「自然生態」會以生態關鍵字過濾（種子無生態行程 → 過濾掉非生態行程）', async ({ page }) => {
-    // 行程主題為純 client 端過濾 SSR 種子；種子目前無生態行程，故勾選「自然生態」
-    // 後非生態的種子行程（柴山／大稻埕）都應被濾掉，證明新主題已正確接上篩選。
+  test('勾選「自然生態」只顯示生態行程', async ({ page }) => {
     await page.goto('/activities');
     await expect(page.getByText('高雄柴山探洞體驗')).toBeVisible({ timeout: 10_000 });
     const themeFilter = page.locator('details', { hasText: '行程主題' });
     await themeFilter.locator('summary').click();
     await themeFilter.getByText('自然生態', { exact: true }).click();
+    await expect(page.getByText('花蓮東海岸潮間帶與賞鳥生態之旅')).toBeVisible();
     await expect(page.getByText('高雄柴山探洞體驗')).toHaveCount(0);
     await expect(page.getByText('大稻埕百年老街深度漫步')).toHaveCount(0);
   });

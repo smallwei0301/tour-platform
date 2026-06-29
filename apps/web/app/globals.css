@@ -318,9 +318,8 @@ body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
 .tp-theme-culture-hero {
   background-image: linear-gradient(100deg, rgba(30,18,10,0.82) 0%, rgba(30,18,10,0.52) 55%, rgba(30,18,10,0.32) 100%), url('/images/theme/culture-history.webp');
 }
-/* 自然生態主題 hero：暫用既有山林影像，待補上專屬生態圖（賞鳥／濕地）後替換 url 即可。 */
 .tp-theme-ecology-hero {
-  background-image: linear-gradient(100deg, rgba(12,24,16,0.82) 0%, rgba(12,24,16,0.52) 55%, rgba(12,24,16,0.32) 100%), url('/images/theme/mountain-wilderness.webp');
+  background-image: linear-gradient(100deg, rgba(12,24,16,0.82) 0%, rgba(12,24,16,0.52) 55%, rgba(12,24,16,0.32) 100%), url('/images/theme/ecology.webp');
 }
 .tp-theme-wilderness-hero {
   background-image: linear-gradient(100deg, rgba(12,22,14,0.80) 0%, rgba(12,22,14,0.50) 55%, rgba(12,22,14,0.30) 100%), url('/images/theme/mountain-wilderness.webp');

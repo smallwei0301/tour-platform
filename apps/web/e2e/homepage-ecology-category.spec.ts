@@ -35,6 +35,10 @@ test.describe('行程卡 badge 標籤化為四大分類', () => {
     const cultureCard = page.locator('[data-testid="activity-card"]', { hasText: '大稻埕百年老街深度漫步' });
     await expect(cultureCard.getByText('文化', { exact: true })).toBeVisible();
 
+    // 花蓮潮間帶賞鳥（category ecology）→ 生態
+    const ecologyCard = page.locator('[data-testid="activity-card"]', { hasText: '花蓮東海岸潮間帶與賞鳥生態之旅' });
+    await expect(ecologyCard.getByText('生態', { exact: true })).toBeVisible();
+
     // 不應再出現原始英文 category 值
     for (const raw of ['outdoor', 'food', 'nature', 'culture']) {
       await expect(page.getByText(raw, { exact: true })).toHaveCount(0);
