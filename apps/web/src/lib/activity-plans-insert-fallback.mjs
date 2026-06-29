@@ -14,6 +14,9 @@ export function extractMissingColumn(error) {
   // Postgres alt: column "foo" does not exist
   const m3 = msg.match(/column\s+"([^"]+)"\s+does not exist/i);
   if (m3) return m3[1];
+  // PostgREST/Supabase unquoted, optionally table-qualified: column orders.trade_no does not exist
+  const m4 = msg.match(/column\s+(?:[\w]+\.)?([\w]+)\s+does not exist/i);
+  if (m4) return m4[1];
   return null;
 }
 

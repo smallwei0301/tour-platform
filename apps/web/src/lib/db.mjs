@@ -46,6 +46,7 @@ import { sanitizeEditorPickCopy, sanitizeMoreFeaturedCopy } from './homepage-fea
 import { isMissingTableError } from './missing-table-error.mjs';
 import { decideApproval } from './booking-type-flow.mjs';
 import { computePaymentDeadline } from './payment-deadline.mjs';
+import { selectWithOptionalColumnFallback } from './optional-column-fallback.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -306,20 +307,24 @@ export async function listMyOrdersDb(input = {}) {
   const userId = input?.userId || null;
   const supabase = await getSupabase();
 
-  let query = supabase
-    .from('orders')
-    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, payment_deadline_at, user_id')
-    .order('created_at', { ascending: false });
-
-  // 🔐 Phase 9: 優先使用 user_id 查詢，fallback 到 contactEmail（向後相容舊訂單）
-  if (userId) {
-    // 查詢此用戶的所有訂單（包括 user_id 綁定的 + email 相符的舊訂單）
-    query = query.or(`user_id.eq.${userId},contact_email.eq.${contactEmail}`);
-  } else if (contactEmail) {
-    query = query.eq('contact_email', contactEmail);
-  }
-
-  const { data, error } = await query;
+  // #1493 部署順序安全：payment_deadline_at 萬一還沒套到正式 DB，退到不含該欄位的
+  // select，讓「我的訂單」不致整頁 500（缺欄位時 paymentDeadlineAt 視為 null）。
+  const selectWithDeadline = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, payment_deadline_at, user_id';
+  const selectWithoutDeadline = 'id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, user_id';
+  const runMyOrdersSelect = (sel) => {
+    let query = supabase.from('orders').select(sel).order('created_at', { ascending: false });
+    // 🔐 Phase 9: 優先使用 user_id 查詢，fallback 到 contactEmail（向後相容舊訂單）
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},contact_email.eq.${contactEmail}`);
+    } else if (contactEmail) {
+      query = query.eq('contact_email', contactEmail);
+    }
+    return query;
+  };
+  const { data, error } = await selectWithOptionalColumnFallback(runMyOrdersSelect, [
+    selectWithDeadline,
+    selectWithoutDeadline,
+  ]);
   if (error) throw new Error(error.message);
 
   const activityIds = [...new Set((data || []).map((r) => r.activity_id).filter(Boolean))];
@@ -973,8 +978,16 @@ export async function listAdminOrdersDb(input = {}) {
   const sourceChannel = String(input?.sourceChannel || '').trim();
   const supabase = await getSupabase();
 
-  const selectWithTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, payment_deadline_at, admin_note, updated_at';
-  const selectWithoutTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, payment_deadline_at, admin_note, updated_at';
+  // 部署順序安全：trade_no（#1290 前）與 payment_deadline_at（#1493 前）可能尚未套到
+  // 正式 DB；依序退到不含缺欄位的 select，避免後台訂單列表整頁 500。
+  const baseCols = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email';
+  const adminOrdersSelect = (opts) => [
+    baseCols,
+    opts.tradeNo ? 'trade_no' : null,
+    'created_at, paid_at',
+    opts.deadline ? 'payment_deadline_at' : null,
+    'admin_note, updated_at',
+  ].filter(Boolean).join(', ');
 
   const buildQuery = (selectClause) => {
     let q = supabase
@@ -988,12 +1001,12 @@ export async function listAdminOrdersDb(input = {}) {
     return q;
   };
 
-  let { data, error } = await buildQuery(selectWithTradeNo);
-
-  // Schema drift guard: some environments may not yet have orders.trade_no.
-  if (error?.message?.includes('column orders.trade_no does not exist')) {
-    ({ data, error } = await buildQuery(selectWithoutTradeNo));
-  }
+  const { data, error } = await selectWithOptionalColumnFallback(buildQuery, [
+    adminOrdersSelect({ tradeNo: true, deadline: true }),
+    adminOrdersSelect({ tradeNo: false, deadline: true }),
+    adminOrdersSelect({ tradeNo: true, deadline: false }),
+    adminOrdersSelect({ tradeNo: false, deadline: false }),
+  ]);
 
   if (error) throw new Error(error.message);
 

@@ -51,6 +51,7 @@ import {
 } from '../../../../../src/lib/booking-type-flow.mjs';
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
+import { applyWithOptionalColumnFallback } from '../../../../../src/lib/optional-column-fallback.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -1082,9 +1083,11 @@ export async function POST(request: NextRequest) {
       planData.booking_type,
       new Date().toISOString(),
     );
-    const { data: orderInsert, error: orderError } = await supabase
-      .from('orders')
-      .insert({
+    // #1493 部署順序安全：payment_deadline_at 萬一還沒套到正式 DB，剝除該欄位仍能建單
+    // （退化為無期限，等同 legacy；不致整個下單流程 500）。
+    const { data: orderInsert, error: orderError } = await applyWithOptionalColumnFallback(
+      (p: any) => supabase.from('orders').insert(p).select('id, status').single(),
+      {
         booking_id: bookingInsert.id,
         activity_id: data.activityId,
         user_id: travelerId,
@@ -1098,9 +1101,9 @@ export async function POST(request: NextRequest) {
         source_channel: data.sourceChannel,
         discount_amount: 0,
         payment_deadline_at: paymentDeadlineAt,
-      })
-      .select('id, status')
-      .single();
+      },
+      ['payment_deadline_at'],
+    );
 
     if (orderError || !orderInsert) {
       console.error('Error creating order:', orderError);

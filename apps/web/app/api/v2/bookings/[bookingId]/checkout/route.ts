@@ -23,6 +23,7 @@ import { findReusableCheckoutPayment } from '../../../../../../src/lib/checkout-
 import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
 import { canCheckout } from '../../../../../../src/lib/booking-type-flow.mjs';
 import { isPaymentExpired } from '../../../../../../src/lib/payment-deadline.mjs';
+import { selectWithOptionalColumnFallback } from '../../../../../../src/lib/optional-column-fallback.mjs';
 
 // Validation helpers
 function isValidUuid(str: string): boolean {
@@ -170,11 +171,15 @@ export async function POST(
     }
 
     // 2. Fetch order and verify status
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .select('id, status, payment_status, total_twd, contact_name, contact_email, payment_deadline_at')
-      .eq('id', booking.order_id)
-      .single();
+    // #1493 部署順序安全：payment_deadline_at 萬一還沒套到正式 DB，退到不含該欄位的
+    // select（缺欄位時視為無期限、不擋結帳），避免付款流程整個 500。
+    const { data: order, error: orderError } = await selectWithOptionalColumnFallback(
+      (sel: string) => supabase.from('orders').select(sel).eq('id', booking.order_id as string).single(),
+      [
+        'id, status, payment_status, total_twd, contact_name, contact_email, payment_deadline_at',
+        'id, status, payment_status, total_twd, contact_name, contact_email',
+      ],
+    );
 
     if (orderError || !order) {
       return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
