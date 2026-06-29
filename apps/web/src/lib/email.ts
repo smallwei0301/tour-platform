@@ -331,6 +331,65 @@ export async function sendGuideOrderNotification(
   return sendEmailWithContract({ fn: 'sendGuideOrderNotification', to, subject, html, orderId: data.orderId });
 }
 
+export interface ConflictOverrideNoticeData {
+  to: string; // 導遊 email
+  activityTitle: string;
+  startAt: string;
+  endAt: string;
+  reason: string;
+  requiresHelper: boolean;
+  guideNote?: string | null;
+}
+
+function formatTaipeiRange(startAt: string, endAt: string): string {
+  const fmt = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return new Intl.DateTimeFormat('zh-TW', {
+      timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(d);
+  };
+  return `${fmt(startAt)} ~ ${fmt(endAt)}`;
+}
+
+/**
+ * #1497 — 管理者「例外開放衝突時段」後通知導遊（無 guide email 時靜默略過）。
+ * 隱私：只含導遊可見的 reason / guideNote，不含 admin_note / created_by_admin_email。
+ */
+export async function sendGuideConflictOverrideNotice(
+  data: ConflictOverrideNoticeData,
+): Promise<EmailDeliveryResult> {
+  const to = String(data.to || '').trim();
+  if (!to) {
+    return { fn: 'sendGuideConflictOverrideNotice', to: '', subject: '', ok: false, status: 'skipped',
+      errorCode: 'NO_GUIDE_EMAIL', errorMessage: 'guide email not available', retriable: false };
+  }
+  const subject = `[Midao 祕島｜導遊通知] 時段例外開放 — ${data.activityTitle}`;
+  const html = wrapEmail(subject, `
+    <h1 style="font-size:20px;font-weight:800;color:#111827;margin:0 0 8px;">⚠️ 時段例外開放通知</h1>
+    <p style="font-size:14px;color:#374151;margin:0 0 16px;">管理者已為你的行程例外開放一個原本與既有預約衝突的時段。</p>
+    <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:8px;padding:12px 16px;margin:0 0 16px;">
+      <p style="font-weight:700;color:#166534;margin:0 0 8px;">${escapeHtml(data.activityTitle)}</p>
+      <p style="margin:0;font-size:13px;color:#15803d;line-height:1.7;">
+        時段：${escapeHtml(formatTaipeiRange(data.startAt, data.endAt))}（台灣時間）<br/>
+        原因：${escapeHtml(data.reason)}
+      </p>
+    </div>
+    ${data.requiresHelper ? `
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;padding:12px 16px;margin:0 0 16px;">
+        <p style="font-weight:700;color:#b45309;margin:0 0 4px;">需要幫手</p>
+        <p style="margin:0;font-size:13px;color:#92400e;line-height:1.7;">此時段需協調幫手，請至導遊後台「待確認幫手」確認或婉拒。</p>
+      </div>` : ''}
+    ${data.guideNote ? `
+      <div style="background:#eff6ff;border-left:4px solid #3b82f6;border-radius:8px;padding:12px 16px;">
+        <p style="font-weight:700;color:#1e40af;margin:0 0 4px;">管理者備註</p>
+        <p style="margin:0;font-size:13px;color:#1e3a8a;line-height:1.7;">${escapeHtml(data.guideNote)}</p>
+      </div>` : ''}
+  `);
+  return sendEmailWithContract({ fn: 'sendGuideConflictOverrideNotice', to, subject, html });
+}
+
 /**
  * 管理員訂單事件通知 email（寄給 ADMIN_EMAIL_ALLOWLIST 全員）。
  * 付款事件已由 sendAdminPaymentNotification 覆蓋，這裡補其餘事件。
