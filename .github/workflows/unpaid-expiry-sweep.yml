@@ -1,0 +1,45 @@
+name: unpaid-expiry-sweep
+
+on:
+  schedule:
+    # Every 30 minutes — cancel unpaid orders past their payment deadline (#1493)
+    - cron: '*/30 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL != '' }}
+          HAS_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_TOKEN" != "true" ]; then
+            echo "⚠️ NEXT_PUBLIC_VERCEL_URL or INTERNAL_ALERT_TOKEN secrets not configured."
+            echo "   Set them in GitHub repo Settings → Secrets → Actions to enable the unpaid-expiry sweep."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: POST to unpaid-expiry-sweep endpoint
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/sweep-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/bookings/unpaid-expiry-sweep" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}" \
+            -d '{}')
+          echo "HTTP status: $RESPONSE"
+          cat /tmp/sweep-response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Sweep returned non-200 status: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Unpaid-expiry sweep completed successfully."

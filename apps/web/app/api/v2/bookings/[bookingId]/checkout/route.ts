@@ -22,6 +22,7 @@ import { generateCheckMacValue, getECPayCredentials } from '../../../../../../sr
 import { findReusableCheckoutPayment } from '../../../../../../src/lib/checkout-idempotency';
 import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
 import { canCheckout } from '../../../../../../src/lib/booking-type-flow.mjs';
+import { isPaymentExpired } from '../../../../../../src/lib/payment-deadline.mjs';
 
 // Validation helpers
 function isValidUuid(str: string): boolean {
@@ -171,7 +172,7 @@ export async function POST(
     // 2. Fetch order and verify status
     const { data: order, error: orderError } = await supabase
       .from('orders')
-      .select('id, status, payment_status, total_twd, contact_name, contact_email')
+      .select('id, status, payment_status, total_twd, contact_name, contact_email, payment_deadline_at')
       .eq('id', booking.order_id)
       .single();
 
@@ -186,6 +187,19 @@ export async function POST(
           `Order must be pending_payment to checkout (current: ${order.status})`
         ),
         { status: 400 }
+      );
+    }
+
+    // #1493 惰性守門：已過付款期限者擋下結帳（sweep 兜底取消，這裡即時阻擋）。
+    if (
+      isPaymentExpired(
+        (order as { payment_deadline_at?: string | null }).payment_deadline_at ?? null,
+        new Date().toISOString(),
+      )
+    ) {
+      return Response.json(
+        errorV2('PAYMENT_DEADLINE_PASSED', '付款期限已過，此訂單已逾時，請重新預約'),
+        { status: 409 },
       );
     }
 
