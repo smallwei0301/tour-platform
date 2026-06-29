@@ -8,6 +8,7 @@ import { MemberTabs } from '../../../src/components/me/MemberTabs';
 import { useMeResource } from '../../../src/lib/use-me-resource';
 import { useClientLocale } from '../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
+import { describePaymentRemaining } from '../../../src/lib/payment-deadline.mjs';
 
 type Order = {
   id: string;
@@ -18,6 +19,7 @@ type Order = {
   contactEmail?: string | null;
   createdAt?: string | null;
   paidAt?: string | null;
+  paymentDeadlineAt?: string | null;
   scheduleId?: string | null;
 };
 
@@ -29,6 +31,7 @@ const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
   rejected:        { bg: '#fee2e2', color: '#991b1b' },
   cancelled_by_user:  { bg: '#e5e7eb', color: '#374151' },
   cancelled_by_guide: { bg: '#e5e7eb', color: '#374151' },
+  cancelled_unpaid:   { bg: '#fee2e2', color: '#991b1b' },
   completed:       { bg: '#ede9fe', color: '#5b21b6' },
   refund_pending:  { bg: '#ffedd5', color: '#9a3412' },
   refunded:        { bg: '#e5e7eb', color: '#374151' },
@@ -153,6 +156,38 @@ export default function MyOrdersPage() {
                   NT$ {(order.totalTwd ?? 0).toLocaleString()}
                 </span>
               </div>
+
+              {order.status === 'pending_payment' && order.paymentDeadlineAt && (() => {
+                const r = describePaymentRemaining(order.paymentDeadlineAt!, new Date().toISOString());
+                const when = new Date(order.paymentDeadlineAt!).toLocaleString(dateLocale);
+                return (
+                  <div
+                    data-testid="order-payment-deadline"
+                    style={{
+                      marginTop: 12, padding: '10px 12px', borderRadius: 8,
+                      background: '#fef3c7', border: '1px solid #fde68a',
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                    }}
+                  >
+                    <span style={{ fontSize: 12.5, color: '#92400e', fontWeight: 600 }}>
+                      {r.isOverdue
+                        ? `${m.deadlineOverdue}`
+                        : `${m.deadlinePrefix} ${when}（${m.deadlineRemaining.replace('{h}', String(r.hours)).replace('{m}', String(r.minutes))}）`}
+                    </span>
+                    <Link
+                      href={`/me/orders/${order.id}`}
+                      data-testid="order-resume-payment"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        fontSize: 13, fontWeight: 700, color: '#fff', background: '#0f766e',
+                        padding: '6px 14px', borderRadius: 8, textDecoration: 'none', whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {m.resumePayment}
+                    </Link>
+                  </div>
+                );
+              })()}
             </div>
           ))}
         </div>

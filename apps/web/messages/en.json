@@ -1195,6 +1195,10 @@
     "exploreCta": "Explore tours",
     "fallbackTitle": "Tour order",
     "people": "{n} people",
+    "deadlinePrefix": "Pay before",
+    "deadlineRemaining": "{h}h {m}m left",
+    "deadlineOverdue": "Payment deadline passed; this order will be cancelled automatically",
+    "resumePayment": "Pay now",
     "status": {
       "pending_payment": "Pending payment",
       "paid": "Paid",
@@ -1202,6 +1206,7 @@
       "rejected": "Rejected",
       "cancelled_by_user": "Cancelled",
       "cancelled_by_guide": "Cancelled by guide",
+      "cancelled_unpaid": "Auto-cancelled (unpaid)",
       "completed": "Completed",
       "refund_pending": "Refund pending",
       "refunded": "Refunded"
@@ -1220,6 +1225,7 @@
       "rejected": "😔 Unfortunately, this trip can't go ahead. Please contact support for details.",
       "cancelled_by_user": "🚫 You have cancelled this order.",
       "cancelled_by_guide": "😔 The guide cancelled this trip. We'll help arrange a refund — please contact support.",
+      "cancelled_unpaid": "⏰ This order was auto-cancelled because payment wasn't completed before the deadline; the spot has been released.",
       "completed": "⭐ The trip is complete. Thank you for joining! We look forward to seeing you again.",
       "refund_pending": "🔄 Your refund request has been accepted and is being processed (usually 3-5 business days).",
       "refunded": "💰 Refund complete. The amount will be returned to your original payment method, usually within 3-5 business days."
@@ -1363,6 +1369,7 @@
       "confirmed": "Confirmed 🎉",
       "cancelled_by_user": "Cancelled",
       "cancelled_by_guide": "Cancelled by guide",
+      "cancelled_unpaid": "Auto-cancelled (unpaid)",
       "rejected": "Rejected",
       "completed": "Completed ⭐",
       "refund_pending": "Refund pending",

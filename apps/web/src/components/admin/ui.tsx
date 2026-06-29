@@ -36,6 +36,7 @@ export function StatusBadge({ status }: { status: string }) {
     rejected:             { variant: 'danger',  label: '已拒絕' },
     cancelled_by_user:    { variant: 'danger',  label: '用戶取消' },
     cancelled_by_guide:   { variant: 'danger',  label: '導遊取消' },
+    cancelled_unpaid:     { variant: 'danger',  label: '逾時自動取消' },
     suspended:            { variant: 'danger',  label: '已停權' },
   };
   const cfg = map[status] || { variant: 'default', label: status };
