@@ -13,7 +13,7 @@ function validBody(overrides = {}) {
   return {
     title: '柴山秘境之旅',
     region: '高雄市',
-    category: 'outdoor',
+    category: 'mountain',
     priceTwd: '1800',
     durationText: '4.5 小時',
     meetingPoint: '龍門亭入口',
@@ -27,7 +27,7 @@ test('normalizeIntake：完整必填 → ok 並回傳正規化值', () => {
   assert.equal(result.ok, true);
   assert.equal(result.value.title, '柴山秘境之旅');
   assert.equal(result.value.region, '高雄市');
-  assert.equal(result.value.category, 'outdoor');
+  assert.equal(result.value.category, 'mountain');
   assert.equal(result.value.priceTwd, 1800);
   assert.equal(typeof result.value.priceTwd, 'number');
 });

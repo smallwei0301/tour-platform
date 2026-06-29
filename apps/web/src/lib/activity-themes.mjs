@@ -25,9 +25,9 @@ export const ACTIVITY_THEMES = [
     keywords: ['文化', '歷史', '老街', '古蹟', '街區', '部落', '原住民', 'culture'],
   },
   {
-    label: '美食導覽',
-    slug: 'food-tour',
-    keywords: ['美食', '夜市', '小吃', '導覽', 'food'],
+    label: '自然生態',
+    slug: 'ecology',
+    keywords: ['生態', '自然', '賞鳥', '潮間帶', '濕地', '夜觀', 'nature', 'ecology'],
   },
   {
     label: '山野秘境',

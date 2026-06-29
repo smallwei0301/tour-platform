@@ -26,10 +26,10 @@ export const INTAKE_REGION_OPTIONS = [
 
 // 後台合法類別代碼（對應 CATEGORIES）
 export const INTAKE_CATEGORY_OPTIONS = [
-  { value: 'outdoor', label: '戶外冒險' },
-  { value: 'culture', label: '文化歷史' },
-  { value: 'food', label: '美食體驗' },
-  { value: 'nature', label: '自然生態' },
+  { value: 'mountain', label: '山徑' },
+  { value: 'river', label: '野溪' },
+  { value: 'culture', label: '文化' },
+  { value: 'ecology', label: '生態' },
 ];
 
 // 平台標準退款規則（提示詞內提供，AI 直接沿用，導遊不需填）
@@ -144,7 +144,7 @@ export function buildActivityIntakePrompt(answers) {
   - 每個 planItinerary 步驟的 imageUrl：與該步驟場景相符的圖片
   - 若某圖片找不到完全相符的可留 ""，不要捏造不存在的 URL。
 - \`durationMinutes\` 請把導遊填的時長文字換算成整數分鐘（例：「4.5 小時」→ 270）。
-- \`region\` 必須原樣輸出導遊填的中文地區；\`category\` 必須是代碼（outdoor / culture / food / nature）。
+- \`region\` 必須原樣輸出導遊填的中文地區；\`category\` 必須是代碼（mountain / river / culture / ecology）。
 - \`refundRules\` 與每個方案的 \`planRefundRules\` 一律使用下方「平台標準退款規則」，不要自創。
 - \`faq\` 使用 [{ "q": "...", "a": "..." }] 格式；每則 q／a 不超過 500 字。
 - \`itinerary\` 依行程內容拆成合理段落，每段 { step, title, description, duration, icon }，icon 用單一 emoji。
@@ -157,7 +157,7 @@ export function buildActivityIntakePrompt(answers) {
   "title": "string",
   "guideSlug": "string（可留空）",
   "region": "中文地區名稱",
-  "category": "outdoor | culture | food | nature",
+  "category": "mountain | river | culture | ecology",
   "priceTwd": 0,
   "durationMinutes": 0,
   "meetingPoint": "string",

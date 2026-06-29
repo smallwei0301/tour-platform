@@ -86,10 +86,10 @@ const REGION_SLUG_MAP: Record<string, string> = {
   '宜蘭縣': 'yilan',  '屏東縣': 'pingtung',
 };
 const CATEGORIES = [
-  { value: 'outdoor', label: '戶外冒險' },
-  { value: 'culture', label: '文化歷史' },
-  { value: 'food',    label: '美食體驗' },
-  { value: 'nature',  label: '自然生態' },
+  { value: 'mountain', label: '山徑' },
+  { value: 'river',    label: '野溪' },
+  { value: 'culture',  label: '文化' },
+  { value: 'ecology',  label: '生態' },
 ];
 
 const fieldStyle: React.CSSProperties = {
@@ -893,7 +893,7 @@ export default function AdminActivityEditPage() {
         title: '行程名稱。對應後台「行程名稱」。',
         guideSlug: '導遊 slug。對應後台「導遊」，例如 andy-lee。',
         region: '中文地區名稱。對應後台「地區」，例如 高雄市。',
-        category: '類別代碼：outdoor / culture / food / nature。',
+        category: '類別代碼：mountain / river / culture / ecology。',
         priceTwd: '基礎售價（每人 TWD）。對應後台「價格/人」。',
         durationMinutes: '整體活動分鐘數。對應後台「行程時長（分鐘）」。',
         meetingPoint: '集合地點文字。',
@@ -940,7 +940,7 @@ export default function AdminActivityEditPage() {
       title: '柴山秘境之旅｜龍谷、小錐麓、金瓜洞全探索',
       guideSlug: 'andy-lee',
       region: '高雄市',
-      category: 'outdoor',
+      category: 'mountain',
       priceTwd: 1800,
       durationMinutes: 270,
       meetingPoint: '柴山壽山動物園停車場旁（龍門亭入口）',

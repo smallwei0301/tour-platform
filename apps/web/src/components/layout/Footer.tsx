@@ -58,7 +58,7 @@ export function Footer() {
               <li><Link href="/theme/cave-exploration">{m.themeCave}</Link></li>
               <li><Link href="/theme/river-trekking">{m.themeRiver}</Link></li>
               <li><Link href="/theme/culture-history">{m.themeCulture}</Link></li>
-              <li><Link href="/theme/food-tour">{m.themeFood}</Link></li>
+              <li><Link href="/theme/ecology">{m.themeEcology}</Link></li>
               <li><Link href="/theme/mountain-wilderness">{m.themeMountain}</Link></li>
             </ul>
           </section>

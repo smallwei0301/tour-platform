@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { activities, guides } from '../../fixtures/data';
 import { buildActivityHref } from '../../lib/activity-url';
+import { classifyActivityCategoryTag, CATEGORY_TAG_LABELS_ZH } from '../../lib/category-tags.mjs';
 
 const recommendationNotes: Record<string, string> = {
   'kaohsiung-chaishan-cave-experience': '第一次來高雄想玩得深入又安心，這條路線最容易留下記憶點。',
@@ -75,7 +76,7 @@ export function FeaturedTours() {
                       borderRadius: 999,
                     }}
                   >
-                    {a.category}
+                    {CATEGORY_TAG_LABELS_ZH[classifyActivityCategoryTag(a)]}
                   </span>
                   <span style={{ fontSize: 12, color: 'var(--tp-muted)' }}>{a.region}</span>
                 </div>
