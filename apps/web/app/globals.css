@@ -3082,6 +3082,33 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-theme-sub { font-size: 8px; }
 }
 
+/* ── 英文版（#multilingual）：英文字串較中文長，修正 LP 首頁的版面溢出／重疊 ──
+   僅以 [data-locale="en"] 範圍化，zh 版面不受影響。 */
+/* 1) Hero 裝飾性側標（aria-hidden）在窄螢幕會被較長的英文 h1 壓到→手機隱藏，桌機保留。 */
+@media (max-width: 767px) {
+  [data-locale="en"] .lp-hero-vert,
+  [data-locale="en"] .lp-hero-compass { display: none; }
+}
+/* 2) 主題卡：英文標題本身即說明，隱藏冗餘小標；收緊字距並允許長字斷行避免破框。 */
+[data-locale="en"] .lp-theme-title {
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+[data-locale="en"] .lp-theme-sub { display: none; }
+@media (max-width: 767px) {
+  [data-locale="en"] .lp-theme-title { font-size: 12px; line-height: 1.18; }
+}
+/* 3) 信任徽章：英文較長，改為可換行＋卡片高度自適應（取代固定高 nowrap 造成的裁切）。 */
+[data-locale="en"] .lp-trust-card { height: auto; min-height: 30px; padding-top: 5px; padding-bottom: 5px; }
+[data-locale="en"] .lp-trust-card span { white-space: normal; overflow-wrap: anywhere; }
+@media (min-width: 768px) {
+  [data-locale="en"] .lp-trust-card { min-height: 66px; }
+}
+@media (min-width: 1024px) {
+  [data-locale="en"] .lp-trust-card { min-height: 74px; }
+}
+
 /* ===================== 旅客登入頁 · 山墨登入 (login) ===================== */
 .login-page {
   position: relative;

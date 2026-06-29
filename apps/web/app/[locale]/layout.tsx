@@ -3,6 +3,7 @@ import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 
 import { routing } from '../../src/i18n/routing';
+import { HtmlLangSync } from '../../src/i18n/HtmlLangSync';
 
 /**
  * [locale] 區段 layout（#multilingual Phase 0.5 PoC）。
@@ -37,7 +38,12 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      {children}
+      {/* data-locale：SSR 穩定的 locale 屬性，供 CSS 針對 en（較長文案）做版面修正
+          （hero 裝飾、主題卡標題、信任徽章），不影響 zh。display:contents 不佔版面。 */}
+      <div data-locale={locale} style={{ display: 'contents' }}>
+        <HtmlLangSync locale={locale} />
+        {children}
+      </div>
     </NextIntlClientProvider>
   );
 }
