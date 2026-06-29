@@ -38,6 +38,7 @@ export function listAdminOrdersFallback(input = {}) {
         createdAt: o.createdAt || null,
         paymentStatus: o.paymentStatus || null,
         paidAt: o.paidAt || null,
+        paymentDeadlineAt: o.paymentDeadlineAt || null,
         updatedAt: o.updatedAt || null
       };
     })

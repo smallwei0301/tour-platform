@@ -44,6 +44,7 @@ import {
 import { sanitizeEditorPickCopy, sanitizeMoreFeaturedCopy } from './homepage-featured-copy.mjs';
 import { isMissingTableError } from './missing-table-error.mjs';
 import { decideApproval } from './booking-type-flow.mjs';
+import { computePaymentDeadline } from './payment-deadline.mjs';
 
 export function hasSupabaseEnv() {
   return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -306,7 +307,7 @@ export async function listMyOrdersDb(input = {}) {
 
   let query = supabase
     .from('orders')
-    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, user_id')
+    .select('id, status, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, payment_deadline_at, user_id')
     .order('created_at', { ascending: false });
 
   // 🔐 Phase 9: 優先使用 user_id 查詢，fallback 到 contactEmail（向後相容舊訂單）
@@ -355,7 +356,8 @@ export async function listMyOrdersDb(input = {}) {
     contactPhone: r.contact_phone,
     contactEmail: r.contact_email,
     createdAt: r.created_at,
-    paidAt: r.paid_at
+    paidAt: r.paid_at,
+    paymentDeadlineAt: r.payment_deadline_at ?? null
   }));
 }
 
@@ -913,8 +915,8 @@ export async function listAdminOrdersDb(input = {}) {
   const sourceChannel = String(input?.sourceChannel || '').trim();
   const supabase = await getSupabase();
 
-  const selectWithTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, admin_note, updated_at';
-  const selectWithoutTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, admin_note, updated_at';
+  const selectWithTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, trade_no, created_at, paid_at, payment_deadline_at, admin_note, updated_at';
+  const selectWithoutTradeNo = 'id, status, source_channel, total_twd, activity_id, schedule_id, people_count, contact_name, contact_phone, contact_email, created_at, paid_at, payment_deadline_at, admin_note, updated_at';
 
   const buildQuery = (selectClause) => {
     let q = supabase
@@ -973,6 +975,7 @@ export async function listAdminOrdersDb(input = {}) {
       trade_no: r.trade_no || null,
       createdAt: r.created_at,
       paidAt: r.paid_at,
+      paymentDeadlineAt: r.payment_deadline_at ?? null,
       adminNote: r.admin_note,
       updatedAt: r.updated_at
     };
@@ -6119,6 +6122,7 @@ export function __seedV2BookingForTest(booking = {}) {
     guide_approval_status: booking.guide_approval_status ?? 'pending',
     booking_type: booking.booking_type ?? 'request',
     order_status: booking.order_status ?? 'pending_payment',
+    order_payment_deadline_at: booking.order_payment_deadline_at ?? null,
     guide_approval_note: null,
     guide_approval_decided_at: null,
   };
@@ -6158,6 +6162,12 @@ function decideBookingApprovalInMemory(input = {}) {
   if (decision.nextBookingStatus === 'cancelled') {
     row.order_status = 'cancelled_by_guide';
   }
+  // #1493 approve → 起算 24h 付款期限（與 Supabase 路徑契約一致）。
+  let paymentDeadlineAt = null;
+  if (decision.nextGuideApprovalStatus === 'approved') {
+    paymentDeadlineAt = computePaymentDeadline(row.guide_approval_decided_at);
+    row.order_payment_deadline_at = paymentDeadlineAt;
+  }
   v2BookingApprovalStore.set(bookingId, row);
 
   return {
@@ -6166,6 +6176,7 @@ function decideBookingApprovalInMemory(input = {}) {
     orderId: row.order_id ?? null,
     status: row.status,
     guideApprovalStatus: row.guide_approval_status,
+    paymentDeadlineAt,
     action,
   };
 }
@@ -6244,12 +6255,24 @@ export async function decideBookingApprovalDb(input = {}) {
       .eq('status', 'pending_payment');
   }
 
+  // #1493 approve → 開放付款，自此起算 24h 付款期限（request 建立時為 null）。
+  let paymentDeadlineAt = null;
+  if (decision.nextGuideApprovalStatus === 'approved' && booking.order_id) {
+    paymentDeadlineAt = computePaymentDeadline(now.toISOString());
+    await supabase
+      .from('orders')
+      .update({ payment_deadline_at: paymentDeadlineAt, updated_at: now.toISOString() })
+      .eq('id', booking.order_id)
+      .eq('status', 'pending_payment');
+  }
+
   return {
     bookingId,
     bookingNo: booking.booking_no,
     orderId: booking.order_id ?? null,
     status: decision.nextBookingStatus,
     guideApprovalStatus: decision.nextGuideApprovalStatus,
+    paymentDeadlineAt,
     action,
   };
 }
