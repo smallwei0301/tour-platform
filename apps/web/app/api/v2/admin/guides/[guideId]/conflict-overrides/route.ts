@@ -218,5 +218,22 @@ export async function POST(
     return Response.json(errorV2('INTERNAL_ERROR', insertError.message || 'Failed to create conflict override'), { status: 500 });
   }
 
+  // #1497 — 主動通知導遊(best-effort,fire-and-forget,不阻斷加開主流程)。
+  void import('../../../../../../../src/lib/conflict-override-notify.ts')
+    .then(({ notifyGuideConflictOverrideCreated }) =>
+      notifyGuideConflictOverrideCreated({
+        guideId,
+        activityId: parsed.data.activityId,
+        startAt: parsed.data.startAt,
+        endAt: parsed.data.endAt,
+        reason: parsed.data.reason,
+        requiresHelper: parsed.data.requiresHelper,
+        guideNote: parsed.data.guideNote,
+      }),
+    )
+    .catch((err) => {
+      console.error('[conflict-override-notify] fire-and-forget failed:', err);
+    });
+
   return Response.json(successV2({ override, duplicate: false }), { status: 201 });
 }
