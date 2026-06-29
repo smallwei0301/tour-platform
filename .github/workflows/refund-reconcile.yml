@@ -2,8 +2,9 @@ name: refund-reconcile
 
 on:
   schedule:
-    # every 15 minutes
-    - cron: '*/15 * * * *'
+    # 每小時一次（省 GitHub 分鐘）。主路徑是 ECPay 即時 callback，本對帳只是補漏，
+    # 延遲 1 小時影響很小；逐筆冪等故重跑安全。
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:

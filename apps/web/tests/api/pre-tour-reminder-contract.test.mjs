@@ -197,8 +197,8 @@ test('AC9: .github/workflows/pre-tour-reminder-sweep.yml exists with cron */30 a
 
   const src = readFileSync(workflowPath, 'utf8');
 
-  // Cron schedule every 30 minutes
-  assert.match(src, /\*\/30\s+\*\s+\*\s+\*\s+\*/, 'Must have cron: */30 * * * *');
+  // Cron schedule hourly（降頻省 GitHub 分鐘；h1 視窗 60 分鐘寬、半開相接無缺口）
+  assert.match(src, /cron:\s*'0 \* \* \* \*'/, 'Must have hourly cron: 0 * * * *');
 
   // Must POST to the sweep endpoint
   assert.match(src, /pre-tour-sweep/, 'Must reference pre-tour-sweep endpoint');
