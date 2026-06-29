@@ -128,6 +128,13 @@ jobs:
           exit ${verify_code}
         continue-on-error: true
 
+      - name: Run generic migrations-applied check (all CREATE TABLE / ADD COLUMN vs prod)
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/verify-migrations-applied.mjs
+
       - name: Write step summary
         if: steps.check-secrets.outputs.skip != 'true'
         run: |
@@ -164,3 +171,16 @@ jobs:
           echo "Apply the canonical SQL per docs/operations/GH-1286-prod-apply-runbook.md"
           echo "after the owner approval gate before re-running this workflow."
           exit 1
+
+      - name: Notify on failure (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: failure
+        run: node scripts/cron/notify-failure.mjs
