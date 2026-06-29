@@ -49,6 +49,7 @@ import {
   normalizeBookingType,
   requiresGuideApproval,
 } from '../../../../../src/lib/booking-type-flow.mjs';
+import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -1083,6 +1084,12 @@ export async function POST(request: NextRequest) {
         total_twd: totalAmount,
         source_channel: data.sourceChannel,
         discount_amount: 0,
+        // #1493 付款期限：instant/scheduled 自建立起算 24h；request 待審核 → null，
+        // 審核通過時才於 approval gateway 起算。
+        payment_deadline_at: initialPaymentDeadlineForBookingType(
+          planData.booking_type,
+          new Date().toISOString(),
+        ),
       })
       .select('id, status')
       .single();

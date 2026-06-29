@@ -1,6 +1,8 @@
 import { experiences, orders, payments, refundRequests, guideApplications, auditLogs } from './store.mjs';
 // #1385: audit log 單一實作於 audit-log.mjs
 import { appendAuditLog } from './audit-log.mjs';
+// #1493: 付款期限（legacy in-memory 流程比照 instant，自建立起算 24h）
+import { computePaymentDeadline } from './payment-deadline.mjs';
 
 function normalizeSlug(slug) {
   return String(slug || '').trim();
@@ -61,6 +63,7 @@ export function createOrder(input) {
     throw new Error('not enough seats');
   }
 
+  const createdAt = new Date().toISOString();
   const order = {
     id: `ord_${String(orders.length + 1).padStart(6, '0')}`,
     experienceId: exp.id,
@@ -74,8 +77,9 @@ export function createOrder(input) {
     contactName,
     contactPhone,
     contactEmail,
-    createdAt: new Date().toISOString(),
+    createdAt,
     paidAt: null,
+    paymentDeadlineAt: computePaymentDeadline(createdAt),
     adminNote: null,
     updatedAt: null
   };
