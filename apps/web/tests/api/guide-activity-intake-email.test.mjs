@@ -14,7 +14,7 @@ function samplePrompt() {
   const { value } = normalizeIntake({
     title: '柴山秘境之旅',
     region: '高雄市',
-    category: 'outdoor',
+    category: 'mountain',
     priceTwd: '1800',
     durationText: '4.5 小時',
     meetingPoint: '龍門亭入口',

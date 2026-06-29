@@ -8,6 +8,7 @@ import { buildActivityHref } from '../../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../../src/lib/activity-type-filter.mjs';
 import { normalizeRegionToDbValue } from '../../../src/lib/region-slugs.mjs';
 import { ACTIVITY_THEMES, ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../../src/lib/activity-themes.mjs';
+import { classifyActivityCategoryTag } from '../../../src/lib/category-tags.mjs';
 import { resolveActivityReviewStats } from '../../../src/lib/activity-review-stats.mjs';
 import { useTravelerAuth } from '../../../src/lib/use-traveler-auth';
 import WishlistToggle from '../../../src/components/WishlistToggle';
@@ -372,7 +373,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
                         position: 'absolute', top: 10, left: 10,
                         background: 'var(--tp-accent)', color: '#fff',
                         fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6,
-                      }}>{a.category}</span>
+                      }}>{t(`categoryTag.${classifyActivityCategoryTag(a)}`)}</span>
                     </div>
                     {a.guideName && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px' }}>

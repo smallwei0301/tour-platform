@@ -18,10 +18,10 @@ const CULTURE = {
   title: '大稻埕百年老街深度漫步',
   tagline: '不是走馬看花，而是真正認識一個活了百年的街區。',
 };
-const FOOD = {
-  category: 'food',
-  title: '台北夜市美食文化探索',
-  tagline: '不只吃，還要懂為什麼好吃。',
+const ECOLOGY = {
+  category: 'nature',
+  title: '關渡濕地賞鳥生態導覽',
+  tagline: '走進潮間帶，認識台灣的自然生態。',
 };
 const RIVER = {
   category: 'outdoor',
@@ -34,7 +34,7 @@ test('五大主題標籤與順序一致', () => {
     '柴山探洞',
     '野外溪流',
     '文化歷史',
-    '美食導覽',
+    '自然生態',
     '山野秘境',
   ]);
   assert.equal(ACTIVITY_THEMES.length, 5);
@@ -43,7 +43,7 @@ test('五大主題標籤與順序一致', () => {
 test('每個主題都有對應的 theme slug', () => {
   assert.deepEqual(
     ACTIVITY_THEMES.map((t) => t.slug),
-    ['cave-exploration', 'river-trekking', 'culture-history', 'food-tour', 'mountain-wilderness'],
+    ['cave-exploration', 'river-trekking', 'culture-history', 'ecology', 'mountain-wilderness'],
   );
 });
 
@@ -65,16 +65,16 @@ test('老街活動歸入「文化歷史」', () => {
   assert.equal(isActivityInTheme(CULTURE, '文化歷史'), true);
 });
 
-test('夜市活動歸入「美食導覽」', () => {
-  assert.equal(isActivityInTheme(FOOD, '美食導覽'), true);
+test('賞鳥濕地活動歸入「自然生態」', () => {
+  assert.equal(isActivityInTheme(ECOLOGY, '自然生態'), true);
 });
 
-test('中文 category 標籤也能比對（戶外冒險／美食體驗）', () => {
-  assert.equal(isActivityInTheme({ category: '美食體驗', title: '台南小吃巡禮' }, '美食導覽'), true);
+test('中文 category 標籤也能比對（自然生態／文化歷史）', () => {
+  assert.equal(isActivityInTheme({ category: '自然生態', title: '夜觀生態之旅' }, '自然生態'), true);
   assert.equal(isActivityInTheme({ category: '文化歷史', title: '鹿港古蹟導覽' }, '文化歷史'), true);
 });
 
 test('不相關主題不誤判', () => {
-  assert.equal(isActivityInTheme(CULTURE, '美食導覽'), false);
-  assert.equal(isActivityInTheme(FOOD, '柴山探洞'), false);
+  assert.equal(isActivityInTheme(CULTURE, '自然生態'), false);
+  assert.equal(isActivityInTheme(ECOLOGY, '柴山探洞'), false);
 });

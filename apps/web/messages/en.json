@@ -23,7 +23,7 @@
     "themeCave": "Chaishan Caving",
     "themeRiver": "Wild Rivers",
     "themeCulture": "Culture & History",
-    "themeFood": "Food Tours",
+    "themeEcology": "Wildlife & Nature",
     "themeMountain": "Mountain Wilds",
     "platformHeading": "Platform",
     "about": "About us",
@@ -149,7 +149,7 @@
       "mountainTitle": "Mountains",
       "riverTitle": "Wild Streams",
       "cultureTitle": "Culture",
-      "foodTitle": "Food"
+      "ecologyTitle": "Wildlife & Nature"
     },
     "featured": {
       "sectionLabel": "Editor's pick",
@@ -309,8 +309,14 @@
       "cave-exploration": "Chaishan Caving",
       "river-trekking": "Wild Rivers",
       "culture-history": "Culture & History",
-      "food-tour": "Food Tours",
+      "ecology": "Wildlife & Nature",
       "mountain-wilderness": "Mountain Wilds"
+    },
+    "categoryTag": {
+      "mountain": "Mountains",
+      "river": "Wild Streams",
+      "culture": "Culture",
+      "ecology": "Wildlife & Nature"
     }
   },
   "theme": {
@@ -408,50 +414,50 @@
         }
       ]
     },
-    "foodTour": {
-      "metaTitle": "Food Tours | Midao",
-      "metaDescription": "Follow a local guide who knows how to eat into night markets and alley stalls to find truly local flavors. Small-group food walks — not just eating, but understanding why it's good.",
-      "ogTitle": "Food Tours — Eat Your Way Into Taiwan With a Local | Midao",
-      "ogDescription": "Not just eating, but understanding why it's good. Follow a foodie guide and read a city one bite at a time.",
-      "breadcrumb": "Food Tours",
-      "heroTitle": "Eat your way into a city with a local",
-      "heroSubtitle": "Not just eating, but understanding why it's good. Follow a foodie guide into night markets and alley stalls, and read Taiwan's flavors one bite at a time.",
-      "heroCta": "Explore food tours",
-      "feature1a": "Many stalls, small portions",
-      "feature1b": "Taste more local flavors in one go",
-      "feature2a": "Insider alley know-how",
-      "feature2b": "Your guide helps you skip tourist stalls and find the truly good ones",
-      "feature3a": "A local who knows how to eat",
-      "feature3b": "Familiar with local food culture and the stories behind the ingredients",
-      "toursHeading": "Featured food tours",
+    "ecology": {
+      "metaTitle": "Wildlife & Nature Tours | Midao",
+      "metaDescription": "Follow a local nature guide into wetlands, tidal flats and forests to meet Taiwan's birds, intertidal life and woodland ecosystems. Small-group, in-depth walks led by someone who knows the land.",
+      "ogTitle": "Wildlife & Nature — Read the Land Beneath Your Feet With a Local | Midao",
+      "ogDescription": "Not just looking at scenery, but understanding the land you stand on. Follow a nature guide to meet Taiwan's birds, tidal life and woodland ecosystems.",
+      "breadcrumb": "Wildlife & Nature",
+      "heroTitle": "Read a landscape with a local",
+      "heroSubtitle": "Not just scenery, but living nature. Follow a guide who knows the wild into wetlands, tidal flats and forests, and meet the life on this island one quiet observation at a time.",
+      "heroCta": "Explore nature tours",
+      "feature1a": "A local who knows the wild",
+      "feature1b": "Recognizes the birds, tidal life and native plants",
+      "feature2a": "Slow down and look closely",
+      "feature2b": "Small groups that stop to observe instead of rushing",
+      "feature3a": "Nature-friendly",
+      "feature3b": "Low-impact principles — see the land without disturbing it",
+      "toursHeading": "Featured nature tours",
       "viewTour": "View tour →",
-      "faqHeading": "Food-walk FAQ",
+      "faqHeading": "Nature-walk FAQ",
       "tours": [
         {
-          "title": "Taipei Night Market Food Culture Exploration",
-          "meta": "🕐 3 hrs · 👥 2–8 people · NT$1,800"
+          "title": "Guandu Wetland Birdwatching Nature Tour",
+          "meta": "🕐 3 hrs · 👥 2–8 people · NT$1,500"
         },
         {
-          "title": "Tainan Alley Street-Food In-Depth Walk",
-          "meta": "🕐 3.5 hrs · 👥 2–8 people · NT$1,900"
+          "title": "Northeast Coast Tidal-Flat Life Observation",
+          "meta": "🕐 3.5 hrs · 👥 2–8 people · NT$1,700"
         },
         {
-          "title": "Local Market Breakfast & Ingredients Tour",
-          "meta": "🕐 2.5 hrs · 👥 2–10 people · NT$1,500"
+          "title": "Forest Night Walk & Firefly Ecology Tour",
+          "meta": "🕐 2.5 hrs · 👥 2–10 people · NT$1,600"
         }
       ],
       "faq": [
         {
-          "q": "Will I get really full?",
-          "a": "The tour is built around many stalls and small portions, so you taste a wider variety without getting too stuffed — come with a little room to spare."
+          "q": "Can I join with no nature background?",
+          "a": "Yes — the guide starts from scratch. What matters is looking slowly and staying curious; no prior knowledge needed."
         },
         {
-          "q": "Can I join with a vegetarian or other dietary restriction?",
-          "a": "Yes — let us know when you book and the guide will adjust the stalls and dishes."
+          "q": "What should I bring?",
+          "a": "Wear comfortable shoes, a hat and sun/insect protection; birdwatching or night-walk gear is provided by the guide as the tour requires."
         },
         {
-          "q": "Are food costs included in the price?",
-          "a": "It depends on each tour's notes — some include tasting costs and some are charged separately. See each tour page for details."
+          "q": "What happens in bad weather?",
+          "a": "Outdoor nature tours may be adjusted or rescheduled for weather — the guide confirms with you before departure, prioritizing safety and good observation conditions."
         }
       ]
     },

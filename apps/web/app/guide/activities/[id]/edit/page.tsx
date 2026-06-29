@@ -11,10 +11,10 @@ const REGION_SLUG_MAP: Record<string, string> = {
   台中市: 'taichung', 南投縣: 'nantou', 宜蘭縣: 'yilan', 屏東縣: 'pingtung',
 };
 const CATEGORIES = [
-  { value: 'outdoor', label: '戶外探索' },
-  { value: 'culture', label: '文化體驗' },
-  { value: 'food', label: '美食饗宴' },
-  { value: 'nature', label: '自然生態' },
+  { value: 'mountain', label: '山徑' },
+  { value: 'river', label: '野溪' },
+  { value: 'culture', label: '文化' },
+  { value: 'ecology', label: '生態' },
 ];
 
 type Faq = { question: string; answer: string };

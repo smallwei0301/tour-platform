@@ -24,7 +24,7 @@ test.describe('導遊新行程投稿 — /guide/new-activity', () => {
 
     await page.fill('#f-title', '柴山秘境之旅｜龍谷、小錐麓、金瓜洞全探索');
     await page.selectOption('#f-region', '高雄市');
-    await page.selectOption('#f-category', 'outdoor');
+    await page.selectOption('#f-category', 'mountain');
     await page.fill('#f-price', '1800');
     await page.fill('#f-duration', '4.5 小時');
     await page.fill('#f-meeting', '柴山壽山動物園停車場旁（龍門亭入口）');
@@ -38,7 +38,7 @@ test.describe('導遊新行程投稿 — /guide/new-activity', () => {
     expect(captured).toMatchObject({
       title: '柴山秘境之旅｜龍谷、小錐麓、金瓜洞全探索',
       region: '高雄市',
-      category: 'outdoor',
+      category: 'mountain',
       priceTwd: '1800',
       durationText: '4.5 小時',
       guideName: 'Andy Lee',
@@ -57,7 +57,7 @@ test.describe('導遊新行程投稿 — /guide/new-activity', () => {
     await page.goto('/guide/new-activity');
     await page.fill('#f-title', '測試');
     await page.selectOption('#f-region', '高雄市');
-    await page.selectOption('#f-category', 'outdoor');
+    await page.selectOption('#f-category', 'mountain');
     await page.fill('#f-price', '1800');
     await page.fill('#f-duration', '4 小時');
     await page.fill('#f-meeting', '集合點');

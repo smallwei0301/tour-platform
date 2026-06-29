@@ -65,7 +65,7 @@ const THEMES = [
   { titleKey: 'mountainTitle', sub: 'Into the Mountains', href: '/theme/mountain-wilderness', icon: MountainIcon },
   { titleKey: 'riverTitle', sub: 'Wild Streams', href: '/theme/river-trekking', icon: WaveIcon },
   { titleKey: 'cultureTitle', sub: 'Local Culture', href: '/theme/culture-history', icon: TribalIcon },
-  { titleKey: 'foodTitle', sub: 'Local Food', href: '/theme/food-tour', icon: TeaLeafIcon },
+  { titleKey: 'ecologyTitle', sub: 'Wildlife & Nature', href: '/theme/ecology', icon: TeaLeafIcon },
 ] as const;
 
 export function LpThemes() {
