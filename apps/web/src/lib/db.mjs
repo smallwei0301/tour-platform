@@ -6,6 +6,7 @@ import {
   createRefundRequest as createRefundRequestInMemory,
   listRefundRequests as listRefundRequestsInMemory,
   cancelOrder as cancelOrderInMemory,
+  expireUnpaidOrders as expireUnpaidOrdersInMemory,
   createGuideApplication as createGuideApplicationInMemory,
   listGuideApplications as listGuideApplicationsInMemory,
   updateGuideApplicationStatus as updateGuideApplicationStatusInMemory,
@@ -586,6 +587,59 @@ export async function cancelOrderDb(input = {}) {
 
   await tryRefreshAvailabilitySnapshotByOrderId(orderId);
   return { id: orderId, status: 'cancelled_by_user' };
+}
+
+/**
+ * #1493 — 逾時未付款訂單自動取消（批次）。
+ * Supabase 路徑逐筆呼叫 fn_expire_unpaid_order_atomic（鎖序 orders→bookings→schedules，
+ * 冪等：只取消仍 pending_payment 且已過期者）；in-memory fallback 比照。可重入、可重跑。
+ * @param {{ now?: string|number|Date, limit?: number }} input
+ */
+export async function expireUnpaidOrdersDb(input = {}) {
+  const nowIso = input?.now ? new Date(input.now).toISOString() : new Date().toISOString();
+  const limit = Number.isInteger(input?.limit) && input.limit > 0 ? input.limit : 200;
+
+  if (!hasSupabaseEnv()) return expireUnpaidOrdersInMemory({ nowIso, limit });
+
+  const supabase = await getSupabase();
+  const { data: due, error } = await supabase
+    .from('orders')
+    .select('id')
+    .eq('status', 'pending_payment')
+    .not('payment_deadline_at', 'is', null)
+    .lte('payment_deadline_at', nowIso)
+    .order('payment_deadline_at', { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  const results = [];
+  for (const row of due || []) {
+    const { data: rpc, error: rpcErr } = await supabase.rpc('fn_expire_unpaid_order_atomic', {
+      p_order_id: row.id,
+      p_now: nowIso,
+    });
+    if (rpcErr) {
+      results.push({ orderId: row.id, expired: false, error: rpcErr.message });
+      continue;
+    }
+    const r = Array.isArray(rpc) ? rpc[0] : rpc;
+    if (r?.expired) {
+      try {
+        await insertAuditLogDb(supabase, {
+          orderId: row.id,
+          actor: 'system',
+          action: 'order_cancelled_payment_expired',
+          metadata: { bookingId: r.booking_id ?? null, scheduleReleased: r.schedule_released ?? false },
+        });
+      } catch (auditErr) {
+        console.error('[unpaid-expiry] audit error:', auditErr?.message || auditErr);
+      }
+      await tryRefreshAvailabilitySnapshotByOrderId(row.id);
+    }
+    results.push({ orderId: row.id, expired: !!r?.expired, bookingId: r?.booking_id ?? null });
+  }
+
+  return { scanned: (due || []).length, expired: results.filter((r) => r.expired).length, results };
 }
 
 export async function createRefundRequestDb(input = {}) {

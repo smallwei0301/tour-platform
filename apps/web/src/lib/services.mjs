@@ -128,6 +128,44 @@ export function cancelOrder(input = {}) {
   return { id: order.id, status: order.status };
 }
 
+/**
+ * #1493 in-memory：逾時未付款訂單自動取消（冪等、可重跑）。
+ */
+export function expireUnpaidOrders({ nowIso, limit = 200 } = {}) {
+  const now = new Date(nowIso || new Date().toISOString()).getTime();
+  const due = orders
+    .filter((o) => o.status === 'pending_payment' && o.paymentDeadlineAt
+      && new Date(o.paymentDeadlineAt).getTime() <= now)
+    .slice(0, limit);
+
+  const results = [];
+  for (const o of due) {
+    o.status = 'cancelled_unpaid';
+    o.updatedAt = new Date(now).toISOString();
+
+    let scheduleReleased = false;
+    const exp = experiences.find((e) => e.id === o.experienceId);
+    const schedule = exp?.schedules?.find((s) => s.id === o.scheduleId);
+    if (schedule && typeof schedule.bookedCount === 'number') {
+      schedule.bookedCount = Math.max(0, schedule.bookedCount - (o.peopleCount || 1));
+      if (schedule.capacity != null && schedule.bookedCount < schedule.capacity && schedule.status === 'full') {
+        schedule.status = 'open';
+      }
+      scheduleReleased = true;
+    }
+
+    appendAuditLog({
+      orderId: o.id,
+      actor: 'system',
+      action: 'order_cancelled_payment_expired',
+      metadata: { previousStatus: 'pending_payment', scheduleReleased },
+    });
+    results.push({ orderId: o.id, expired: true, scheduleReleased });
+  }
+
+  return { scanned: due.length, expired: results.length, results };
+}
+
 export function listMyOrders(input = {}) {
   const contactEmail = String(input?.contactEmail || '').trim();
 
