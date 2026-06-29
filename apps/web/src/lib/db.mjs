@@ -635,6 +635,10 @@ export async function expireUnpaidOrdersDb(input = {}) {
         console.error('[unpaid-expiry] audit error:', auditErr?.message || auditErr);
       }
       await tryRefreshAvailabilitySnapshotByOrderId(row.id);
+      // #1493 逾時取消通知（best-effort）。
+      void import('./payment-deadline-notify')
+        .then(({ notifyUnpaidOrderCancelled }) => notifyUnpaidOrderCancelled({ orderId: row.id }))
+        .catch((err) => console.error('[unpaid-expiry] notify failed:', err?.message || err));
     }
     results.push({ orderId: row.id, expired: !!r?.expired, bookingId: r?.booking_id ?? null });
   }

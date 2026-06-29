@@ -12,6 +12,7 @@ type ApprovalResult = {
   orderId?: string | null;
   status?: string;
   guideApprovalStatus?: string;
+  paymentDeadlineAt?: string | null; // #1493
 };
 
 /** 導遊審核決定 → 通知旅客（approve：請付款；reject：婉拒）。 */
@@ -29,6 +30,7 @@ export async function notifyBookingApprovalDecided(
       activityTitle: ctx.activityTitle,
       contactName: ctx.contactName,
       orderId: result.orderId,
+      paymentDeadlineAt: result.paymentDeadlineAt ?? null,
     });
     return;
   }

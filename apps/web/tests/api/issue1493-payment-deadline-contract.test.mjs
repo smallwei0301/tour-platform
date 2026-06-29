@@ -22,8 +22,9 @@ const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
 test('draft route 以 initialPaymentDeadlineForBookingType 寫 payment_deadline_at', () => {
   const src = read('app/api/v2/bookings/draft/route.ts');
-  assert.match(src, /initialPaymentDeadlineForBookingType/);
-  assert.match(src, /payment_deadline_at:\s*initialPaymentDeadlineForBookingType/);
+  // 起算值由 initialPaymentDeadlineForBookingType 算出後寫入 order（#1493 之三 refactor 為具名變數）。
+  assert.match(src, /const paymentDeadlineAt = initialPaymentDeadlineForBookingType/);
+  assert.match(src, /payment_deadline_at:\s*paymentDeadlineAt/);
 });
 
 test('listMyOrdersDb / listAdminOrdersDb 序列化 paymentDeadlineAt 且 select 帶欄位', () => {
