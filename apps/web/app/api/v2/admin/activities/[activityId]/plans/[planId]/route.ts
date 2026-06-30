@@ -10,6 +10,7 @@ import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
 import { getSupabase } from '../../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 import { applyWithMissingColumnFallback } from '../../../../../../../../src/lib/activity-plans-insert-fallback.mjs';
+import { revalidateActivityById } from '../../../../../../../../src/lib/revalidate-activity-by-id.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -202,6 +203,10 @@ export async function PUT(
       return Response.json(errorV2('INTERNAL_ERROR', '更新方案失敗，請稍後再試或聯絡技術人員。'), { status: 500 });
     }
 
+    // 方案更新後立即失效該行程詳情頁／列表頁 ISR 快取，讓改動即時反映於前台，
+    // 避免操作者誤以為「修改在數分鐘後被還原」。best-effort，不擋下已成功的寫入。
+    await revalidateActivityById(supabase, activityId);
+
     return Response.json(successV2({ plan: data, droppedColumns }));
   } catch (err) {
     console.error('Update plan API error:', err);
@@ -273,6 +278,9 @@ export async function DELETE(
       console.error('Error confirming archived status:', readError);
       return Response.json(errorV2('INTERNAL_ERROR', 'Archive succeeded but could not confirm final status'), { status: 500 });
     }
+
+    // 封存後立即失效該行程詳情頁／列表頁 ISR 快取，避免前台仍顯示已封存方案。
+    await revalidateActivityById(supabase, activityId);
 
     const finalStatus = confirmed.status as string;
     return Response.json(successV2({ archived: finalStatus === 'archived', finalStatus }));

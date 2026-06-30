@@ -9,6 +9,7 @@ import {
   validateCreateActivityPlanSeasonPayload,
 } from '../../../../../../../../../src/lib/activity-plan-seasons.ts';
 import { mapActivityPlanSeasonInsertError } from '../../../../../../../../../src/lib/activity-plan-seasons-error.mjs';
+import { revalidateActivityById } from '../../../../../../../../../src/lib/revalidate-activity-by-id.mjs';
 
 async function ensurePlanExists(activityId: string, planId: string) {
   const supabase = await getSupabase();
@@ -116,6 +117,9 @@ export async function POST(
         { status: mapped.status }
       );
     }
+
+    // 開放季節影響前台可否預約，建立後立即失效該行程詳情頁／列表頁 ISR 快取。
+    await revalidateActivityById(plan.supabase, activityId);
 
     return Response.json(successV2({ season: shapeActivityPlanSeason(data) }), { status: 201 });
   } catch (err) {

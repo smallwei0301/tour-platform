@@ -1,7 +1,7 @@
 'use client';
-import Image from 'next/image';
-
 import { useState } from 'react';
+
+import { FallbackImage } from './FallbackImage';
 
 interface GalleryImageProps {
   url: string;
@@ -43,7 +43,7 @@ export function GalleryImage({
   }
 
   return (
-    <Image
+    <FallbackImage
       src={url}
       alt={alt}
       style={{
@@ -53,6 +53,6 @@ export function GalleryImage({
         borderRadius: 10,
       }}
       loading="lazy"
-      onError={() => setError(true)} width={1200} height={675} />
+      onFinalError={() => setError(true)} width={1200} height={675} />
   );
 }

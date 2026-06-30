@@ -1,8 +1,8 @@
 'use client';
-import Image from 'next/image';
-
 import { useRef, useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
+
+import { FallbackImage } from '../shared/FallbackImage';
 
 interface ImageCarouselProps {
   images: string[];
@@ -96,13 +96,13 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
                 {t('loadFailed')}
               </div>
             ) : (
-              <Image
+              <FallbackImage
                 src={url}
                 alt={`${alt} ${i + 1}`}
                 priority={i === 0}
                 loading={i === 0 ? undefined : 'lazy'}
                 sizes={sizes ?? '100vw'}
-                onError={() => handleImageError(i)} width={1200} height={675} />
+                onFinalError={() => handleImageError(i)} width={1200} height={675} />
             )}
           </div>
         ))}
@@ -123,7 +123,7 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
       {/* Desktop: 3:1 grid */}
       <div className="kkd-gallery-desktop">
         {validImages.length > 0 && (
-          <Image
+          <FallbackImage
             src={validImages[0]}
             alt={alt}
             className="kkd-gallery-main"
@@ -132,19 +132,19 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
             // 手機端 priority-preload 這張隱藏主圖（否則會與手機輪播首圖搶頻寬、
             // 重複下載同一張圖）。桌面維持 75vw 作為 LCP 主圖。
             sizes="(min-width: 768px) 75vw, 0vw"
-            onError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
+            onFinalError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
         )}
         {validImages.length > 1 && (
           <div className="kkd-gallery-grid">
             {validImages.slice(1, 4).map((url, i) => (
-              <Image
+              <FallbackImage
                 key={i}
                 src={url}
                 alt={`${alt} ${i + 2}`}
                 className="kkd-gallery-thumb"
                 loading="lazy"
                 sizes="(min-width: 768px) 25vw, 0vw"
-                onError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
+                onFinalError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
             ))}
           </div>
         )}
