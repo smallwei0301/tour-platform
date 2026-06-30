@@ -96,13 +96,13 @@ describe('buildOrderQueryReplyMessages（Flex 卡片）', () => {
     assert.ok(msgs[0].contents && typeof msgs[0].contents === 'object');
   });
 
-  test('未綁定的 lineUserId → 引導去綁定（含綁定碼步驟），不洩漏任何訂單', async () => {
+  test('未綁定的 lineUserId → 提供一鍵綁定(LIFF)＋綁定碼雙路徑，不洩漏任何訂單', async () => {
     const msgs = await buildOrderQueryReplyMessages({ lineUserId: 'Uunbound999' });
     assert.match(msgs[0].altText, /綁定/);
     const body = json(msgs[0]);
-    assert.match(body, /綁定/);
-    assert.match(body, /綁定碼|TBIND/); // 卡片需說明取得綁定碼的步驟
-    assert.match(body, /\/me\/profile/);
+    assert.match(body, /一鍵綁定/);
+    assert.match(body, /\/line\/bind/);       // 首選：LIFF 免碼一鍵綁定
+    assert.match(body, /\/me\/profile/);      // 退路：綁定碼流程
   });
 
   test('已綁定但查無訂單 → 友善退路 + 探索行程連結', async () => {

@@ -164,7 +164,7 @@ function orderBubble(o, ordersUrl) {
   };
 }
 
-function infoBubble({ title, body, buttonLabel, buttonUri }) {
+function infoBubble({ title, body, buttons }) {
   return {
     type: 'bubble',
     body: {
@@ -180,7 +180,8 @@ function infoBubble({ title, body, buttonLabel, buttonUri }) {
     footer: {
       type: 'box',
       layout: 'vertical',
-      contents: [linkButton(buttonLabel, buttonUri, { primary: true })],
+      spacing: 'sm',
+      contents: buttons.map((b, i) => linkButton(b.label, b.uri, { primary: i === 0 })),
     },
   };
 }
@@ -197,20 +198,19 @@ export async function buildOrderQueryReplyMessages({ lineUserId } = {}) {
   const mapping = await getLineMappingByLineUserId(lineUserId).catch(() => null);
   if (!mapping || (!mapping.userId && !mapping.contactEmail)) {
     // 綁定唯一入口：未綁定者按「我的訂單／付款」皆落到這張卡，引導完成綁定。
+    // 首選「一鍵綁定」（LIFF 免碼）；退路是「我的帳號」的綁定碼流程。
     return flex(
       '這個 LINE 帳號還沒綁定，完成綁定即可查詢訂單與付款。',
       infoBubble({
         title: '先綁定，才能查訂單',
         body: [
-          '這個 LINE 帳號還沒綁定訂單。完成綁定後，就能在這裡隨時查詢訂單狀態與付款。',
-          '',
-          '綁定方式：',
-          '1️⃣ 點下方按鈕登入「我的帳號」',
-          '2️⃣ 產生綁定碼（TBIND-…）',
-          '3️⃣ 把綁定碼貼回這個聊天室傳給我',
+          '這個 LINE 帳號還沒綁定訂單。',
+          '點「一鍵綁定」最快，幾秒就好；若無法綁定，再用「綁定碼」即可。',
         ].join('\n'),
-        buttonLabel: '前往綁定',
-        buttonUri: `${site}/me/profile`,
+        buttons: [
+          { label: '一鍵綁定', uri: `${site}/line/bind` },
+          { label: '改用綁定碼', uri: `${site}/me/profile` },
+        ],
       }),
     );
   }
@@ -232,8 +232,7 @@ export async function buildOrderQueryReplyMessages({ lineUserId } = {}) {
       infoBubble({
         title: '查無訂單',
         body: '目前查無您的訂單紀錄。想開始一趟旅程嗎？來看看我們的行程吧！',
-        buttonLabel: '探索行程',
-        buttonUri: `${site}/activities`,
+        buttons: [{ label: '探索行程', uri: `${site}/activities` }],
       }),
     );
   }

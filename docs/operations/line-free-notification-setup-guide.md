@@ -146,6 +146,15 @@ LINE_GUIDE_PUSH_ENABLED=0
 
 ---
 
+## 旅客綁定：兩種快速做法
+
+LINE 只給匿名的 `lineUserId`，要對應到「哪位旅客／哪些訂單」必須有一次身分連結。兩種都比手動貼碼快：
+
+- **A. 深連結（已內建，設個 env 即生效）**：在 Vercel 設 `LINE_BOT_BASIC_ID=@你的ID` 後，`/me/profile` 的綁定按鈕會產生 `line.me/R/oaMessage/<id>/?<綁定碼>` 連結 —— 旅客點一下就自動打開 LINE、訊息已帶入綁定碼，按送出即綁定（免複製貼上）。從網頁起頭。
+- **B. LIFF 一鍵綁定（在 LINE 對話內、免碼）**：旅客在 OA 按「我的訂單／付款」未綁定時，Reply 卡片首選按鈕「一鍵綁定」→ 開 `/line/bind`（LIFF）→ 用 idToken 內的 email 直接綁 `line_user_id ↔ contact_email`，**不需登入平台、不需貼碼**。需要 Step 4 的 LINE Login channel + LIFF，且在 LINE Login channel **開啟 email 權限**（OpenID `email` scope）讓 idToken 帶 email；email 與訂單聯絡信箱相同即自動對上。卡片同時保留「改用綁定碼」作為退路。
+
+> 兩條路徑都收斂到同一筆 `line_user_id ↔ 旅客` 對應；之後查單／（若開）推播都認得。實作：`app/line/bind/*`、`/api/line/auth/verify`、`src/lib/line-order-query.mjs`。
+
 ## 額度與省錢提醒
 
 - **免費方案 200 則/月**只在你開 `LINE_PUSH_ENABLED` 後才會被消耗；本教學的開法不消耗。
