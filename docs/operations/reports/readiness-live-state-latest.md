@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-06-30T07:24:18.562Z -->
+<!-- query_timestamp: 2026-06-30T12:46:44.709Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-30T07:24:18.562Z  
-**Commit SHA:** `f249b7e0a8faa35c276204a9b079d07e4f31ea58`
+**Query timestamp:** 2026-06-30T12:46:44.709Z  
+**Commit SHA:** `5efa39f996c678286e483a4ed4732143a0203081`
 
 ---
 
@@ -75,6 +75,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1528 | [fix(line): 綁定文案改為實況（LINE 為查詢、不發推播；通知走 Email/Telegram）](https://github.com/smallwei0301/tour-platform/pull/1528) | 2026-06-30 |
+| #1527 | [fix(line): 綁定連結用系統瀏覽器開啟，修正 Google webview OAuth 封鎖（disallowed_useragent）](https://github.com/smallwei0301/tour-platform/pull/1527) | 2026-06-30 |
 | #1525 | [feat(line): 免費 LINE 訂單查詢（Reply pull）+ Flex 卡片 + 下單成功頁 E2E + operator 教學](https://github.com/smallwei0301/tour-platform/pull/1525) | 2026-06-30 |
 | #1524 | [docs(analytics): 補 Vercel 建置 NEXT_PUBLIC_GA_ID 逐步說明](https://github.com/smallwei0301/tour-platform/pull/1524) | 2026-06-30 |
 | #1523 | [fix(ci): readiness-snapshot-refresh 補 issues: read 權限](https://github.com/smallwei0301/tour-platform/pull/1523) | 2026-06-30 |
@@ -83,8 +85,6 @@ _none_
 | #1520 | [chore(ci): 退役 synthetic-health-probe 排程（改用 UptimeRobot）+ 新增 alert-selftest](https://github.com/smallwei0301/tour-platform/pull/1520) | 2026-06-30 |
 | #1519 | [chore(ci): refund-reconcile 與 pre-tour-reminder 排程降為每小時（省 GitHub 分鐘）](https://github.com/smallwei0301/tour-platform/pull/1519) | 2026-06-29 |
 | #1518 | [fix(booking): 新欄位部署順序安全 — payment_deadline_at 缺欄位 fallback (#1493)](https://github.com/smallwei0301/tour-platform/pull/1518) | 2026-06-29 |
-| #1517 | [feat(ops): 通用 migration drift 檢查 + 排程失敗 Telegram/Email 通知](https://github.com/smallwei0301/tour-platform/pull/1517) | 2026-06-29 |
-| #1516 | [perf(booking): 未付款逾時改讀取時過濾釋放名額，排程降為每日兜底 (#1493)](https://github.com/smallwei0301/tour-platform/pull/1516) | 2026-06-29 |
 
 ---
 
