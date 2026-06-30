@@ -7,6 +7,7 @@ import {
   shapeActivityPlanSeason,
   validateUpdateActivityPlanSeasonPayload,
 } from '../../../../../../../../../../src/lib/activity-plan-seasons.ts';
+import { revalidateActivityById } from '../../../../../../../../../../src/lib/revalidate-activity-by-id.mjs';
 
 async function ensurePlanExists(activityId: string, planId: string) {
   const supabase = await getSupabase();
@@ -94,6 +95,9 @@ export async function PUT(
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to update season'), { status: 500 });
     }
 
+    // 季節區間調整影響前台可預約期間，更新後立即失效該行程 ISR 快取。
+    await revalidateActivityById(plan.supabase, activityId);
+
     return Response.json(successV2({ season: shapeActivityPlanSeason(data) }));
   } catch (err) {
     console.error('Activity plan season PUT error:', err);
@@ -141,6 +145,9 @@ export async function DELETE(
       console.error('Error disabling activity plan season:', error);
       return Response.json(errorV2('INTERNAL_ERROR', 'Failed to disable season'), { status: 500 });
     }
+
+    // 停用季節影響前台可預約期間，異動後立即失效該行程 ISR 快取。
+    await revalidateActivityById(plan.supabase, activityId);
 
     return Response.json(successV2({ season: shapeActivityPlanSeason(data) }));
   } catch (err) {

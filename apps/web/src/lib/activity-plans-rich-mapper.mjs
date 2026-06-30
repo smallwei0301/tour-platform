@@ -121,17 +121,33 @@ export function buildFormalPlanBackfillRows({ activityId, legacyPlans, existingB
     const participantRange = normalizeParticipants(legacy?.minParticipants, legacy?.maxParticipants);
     const rich = normalizeRichPlanPayload(legacy);
 
+    // V2 專屬欄位（計價方式／時長／預約方式）在舊版 activities.plans JSON 裡並不存在，
+    // 只能用 priceMultiplier 反推或寫死預設值。對「已存在於 activity_plans 的方案」，
+    // 這些欄位的真實來源是後台「方案管理」(V2)；若每次從舊 JSON 回寫都覆蓋，會把
+    // 操作者在方案管理改好的「每團計價／時長／預約方式」洗回每人／60 分鐘／scheduled
+    // （#admin-plan-revert）。故已存在的方案一律保留現值，僅新方案才用舊 JSON 推導預設。
+    const isExisting = Boolean(existing?.id);
+    const priceType = isExisting && existing.price_type != null
+      ? existing.price_type
+      : (Number(legacy?.priceMultiplier) > 1 ? 'per_group' : 'per_person');
+    const durationMinutes = isExisting && existing.duration_minutes != null
+      ? existing.duration_minutes
+      : 60;
+    const bookingType = isExisting && existing.booking_type != null
+      ? existing.booking_type
+      : 'scheduled';
+
     upserts.push({
       ...(existing?.id ? { id: existing.id } : {}),
       activity_id: activityId,
       slug: legacyId,
       name,
-      duration_minutes: 60,
-      price_type: Number(legacy?.priceMultiplier) > 1 ? 'per_group' : 'per_person',
+      duration_minutes: durationMinutes,
+      price_type: priceType,
       base_price: basePrice,
       min_participants: participantRange.min,
       max_participants: participantRange.max,
-      booking_type: 'scheduled',
+      booking_type: bookingType,
       status: 'active',
       legacy_plan_id: legacyId,
       ...rich,

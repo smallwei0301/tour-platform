@@ -9,6 +9,7 @@ import { successV2, errorV2 } from '../../../../../../../src/lib/api';
 import { getSupabase } from '../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 import { applyWithMissingColumnFallback } from '../../../../../../../src/lib/activity-plans-insert-fallback.mjs';
+import { revalidateActivityById } from '../../../../../../../src/lib/revalidate-activity-by-id.mjs';
 import {
   duplicatePlanSlugMessage,
   generatePlanSlug,
@@ -203,6 +204,10 @@ export async function POST(
       }
       return Response.json(errorV2('INTERNAL_ERROR', '建立方案失敗，請稍後再試或聯絡技術人員。'), { status: 500 });
     }
+
+    // 新方案建立後立即失效該行程詳情頁／列表頁 ISR 快取，避免前台數分鐘後才看到
+    // 變更（被誤解為「修改被還原」）。best-effort，不擋下已成功的寫入。
+    await revalidateActivityById(supabase, activityId);
 
     return Response.json(successV2({ plan: data, droppedColumns }), { status: 201 });
   } catch (err) {
