@@ -68,6 +68,25 @@ root layout（其餘 `app/**/layout.tsx` 都嵌在它底下）。因此只要在
 > 設定位置：Vercel Dashboard → Settings → Environment Variables。
 > 因為是 `NEXT_PUBLIC_` 前綴（build-time 內嵌至前端 bundle），**改值後需重新部署**才生效。
 
+### 在 Vercel 建置 `NEXT_PUBLIC_GA_ID`（逐步）
+
+> **先釐清：這個變數不是必填。** 程式碼已內建預設值 `G-26EYTQJ9RC`，就算 Vercel 完全不設這個變數，正式站一樣會用 `G-26EYTQJ9RC` 上報。它的用途是**覆寫**（換 GA 帳號）或**停用**（某環境不想上報時設空字串）。
+
+操作步驟：
+
+1. 進 Vercel → 選到本專案 → 上方 **Settings**。
+2. 左側選 **Environment Variables**。
+3. 新增一筆：
+   - **Key**：`NEXT_PUBLIC_GA_ID`
+   - **Value**：要分析就填 `G-26EYTQJ9RC`；要停用就**留空字串**。
+   - **Environments**：勾選此值要套用的環境（Production / Preview / Development 可分別給不同值——例如 Production 填 ID、Preview 與 Development 留空停用）。
+4. 按 **Save**。
+5. **重新部署**才生效：Deployments → 最新一筆 → ⋯ → **Redeploy**（`NEXT_PUBLIC_` 變數在 build 時內嵌進 bundle，不 redeploy 不會換值）。
+
+**最省事做法：** Production 不用建變數、直接走預設 `G-26EYTQJ9RC`；只在 Preview / Development 建一筆空字串來停用測試流量。
+
+> ⚠️ 因為預設值已內建，**部署上 production 即開始上報**。若尚未要開始收集資料，需在 Production 也把 `NEXT_PUBLIC_GA_ID` 設為空字串來暫時關閉。
+
 ---
 
 ## 三、CSP（Content-Security-Policy）白名單
