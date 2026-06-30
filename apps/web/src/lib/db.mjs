@@ -3962,9 +3962,12 @@ export async function updateActivityDb(id, input = {}) {
 }
 
 async function syncImportedActivityPlansDb(supabase, activityId, legacyPlans) {
+  // 需帶 price_type / duration_minutes / booking_type：這些 V2 專屬欄位在從舊版
+  // activities.plans JSON 回寫時，已存在方案要保留現值、不被反推覆寫（見
+  // buildFormalPlanBackfillRows 內說明，#admin-plan-revert）。
   const { data: existingRows, error: existingError } = await supabase
     .from('activity_plans')
-    .select('id, slug')
+    .select('id, slug, price_type, duration_minutes, booking_type')
     .eq('activity_id', activityId);
   if (existingError) throw new Error(existingError.message);
 
