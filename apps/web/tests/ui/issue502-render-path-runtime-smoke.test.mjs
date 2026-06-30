@@ -132,6 +132,8 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   };
 
   const mockMap = {
+    '../../../../../src/lib/activity-regions.mjs': { normalizeAdditionalRegions: () => [] },
+    '../../../../../src/lib/region-slug.mjs': { normalizeRegionForActivityPath: (r) => r },
     'next/navigation': nextNavigationMock,
     'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
@@ -241,6 +243,8 @@ test('GH-502 probe safety: production-like env must not serve fake probe activit
   };
 
   const mockMap = {
+    '../../../../../src/lib/activity-regions.mjs': { normalizeAdditionalRegions: () => [] },
+    '../../../../../src/lib/region-slug.mjs': { normalizeRegionForActivityPath: (r) => r },
     'next/navigation': nextNavigationMock,
     'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },
@@ -342,6 +346,8 @@ test('GH-502 render-path isolation: non-probe render path uses DB result and doe
   };
 
   const mockMap = {
+    '../../../../../src/lib/activity-regions.mjs': { normalizeAdditionalRegions: () => [] },
+    '../../../../../src/lib/region-slug.mjs': { normalizeRegionForActivityPath: (r) => r },
     'next/navigation': nextNavigationMock,
     'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },

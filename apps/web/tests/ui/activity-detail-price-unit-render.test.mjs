@@ -116,6 +116,8 @@ async function renderDetailPage({ priceUnit }) {
   const bottomBarSpy = { priceLabel: null };
 
   const mockMap = {
+    '../../../../../src/lib/activity-regions.mjs': { normalizeAdditionalRegions: () => [] },
+    '../../../../../src/lib/region-slug.mjs': { normalizeRegionForActivityPath: (r) => r },
     'next/navigation': { notFound: () => { throw new Error('NOT_FOUND'); }, redirect: () => { throw new Error('REDIRECT'); } },
     'next-intl/server': nextIntlServerMock,
     'next/link': { __esModule: true, default: ({ href, children }) => React.createElement('a', { href }, children) },

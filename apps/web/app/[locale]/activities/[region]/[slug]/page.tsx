@@ -6,6 +6,8 @@ import { cache } from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getActivityBySlugDb } from '../../../../../src/lib/db.mjs';
 import { resolveActivityReviewStats } from '../../../../../src/lib/activity-review-stats.mjs';
+import { normalizeAdditionalRegions } from '../../../../../src/lib/activity-regions.mjs';
+import { normalizeRegionForActivityPath } from '../../../../../src/lib/region-slug.mjs';
 import { normalizeSocialProofQuotes, resolveSocialProofAuthor } from '../../../../../src/lib/social-proof-quotes.mjs';
 import {
   buildActivityProductJsonLd,
@@ -155,7 +157,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     itinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string }>;
     socialProofQuotes?: Array<string | { author?: string; rating?: number; text?: string }>;
     goodFor?: string[];
+    regions?: string[];
   };
+  // 附加地區（複選）：正規化、去重、排除主要地區後顯示。行程同時涵蓋這些縣市，
+  // 旅客以任一地區搜尋都會看到此行程（篩選邏輯見 listPublishedActivitiesDb）。
+  const additionalRegions = normalizeAdditionalRegions(activityData.regions, activityData.region);
   const guide = activity.guide;
   const actReviews = activity.reviews || [];
   // 評價統計（真實評論 + 社群口碑語錄）—— 與首頁精選卡共用同一實作（單一真實來源）
@@ -263,6 +269,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               "addressRegion": activity.region,
               "addressCountry": "TW"
             },
+            // 行程涵蓋的所有地區（主要 + 附加），讓搜尋引擎理解多地區服務範圍。
+            ...(additionalRegions.length > 0 ? {
+              "areaServed": [activity.region, ...additionalRegions]
+                .filter(Boolean)
+                .map((r) => ({ "@type": "AdministrativeArea", "name": r })),
+            } : {}),
             ...(activityData.ratingAvg != null && activityData.reviewCount ? {
               "aggregateRating": {
                 "@type": "AggregateRating",
@@ -341,6 +353,19 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             </span>
             <span className="kkd-dot">·</span>
             <span className="kkd-location">📍 {activity.region}</span>
+            {additionalRegions.length > 0 && (
+              <span className="kkd-location" data-testid="activity-additional-regions" style={{ color: 'var(--tp-muted)' }}>
+                ＋
+                {additionalRegions.map((r, i) => (
+                  <span key={r}>
+                    {i > 0 && '、'}
+                    <Link href={`/activities/${normalizeRegionForActivityPath(r)}`} style={{ color: 'inherit', textDecoration: 'underline' }}>
+                      {r}
+                    </Link>
+                  </span>
+                ))}
+              </span>
+            )}
           </div>
 
           <div className="kkd-price-row">

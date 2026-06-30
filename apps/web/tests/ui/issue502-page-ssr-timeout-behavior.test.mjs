@@ -89,6 +89,8 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
   const compatNever = createNeverResolving();
 
   const mockMap = {
+    '../../../../../src/lib/activity-regions.mjs': { normalizeAdditionalRegions: () => [] },
+    '../../../../../src/lib/region-slug.mjs': { normalizeRegionForActivityPath: (r) => r },
     'next-intl/server': nextIntlServerMock,
     'next/navigation': {
       notFound: () => {

@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { buildActivityHref } from '../../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../../src/lib/activity-type-filter.mjs';
 import { normalizeRegionToDbValue } from '../../../src/lib/region-slugs.mjs';
+import { activityMatchesRegion } from '../../../src/lib/activity-regions.mjs';
 import { ACTIVITY_THEMES, ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../../src/lib/activity-themes.mjs';
 import { classifyActivityCategoryTag } from '../../../src/lib/category-tags.mjs';
 import { resolveActivityReviewStats } from '../../../src/lib/activity-review-stats.mjs';
@@ -35,6 +36,7 @@ interface Activity {
   shortDescription?: string;
   region: string;
   regionSlug?: string;
+  regions?: string[];
   category: string;
   priceTwd: number;
   durationMinutes?: number;
@@ -201,8 +203,9 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const filtered = useMemo(() => {
     let result = [...activities];
     if (selectedRegions.length > 0) {
-      // 比對前把卡片的 region 也正規化成 DB 規範值，涵蓋資料端混用短名／全名的情況。
-      result = result.filter((a) => selectedRegions.includes(normalizeRegionToDbValue(a.region)));
+      // 主要地區或附加地區（複選）任一命中即保留；activityMatchesRegion 會把兩端
+      // 正規化成 DB 規範值，涵蓋資料端混用短名／全名的情況。
+      result = result.filter((a) => selectedRegions.some((sel) => activityMatchesRegion(a, sel)));
     }
     if (selectedTypes.length > 0) {
       result = result.filter((a) =>

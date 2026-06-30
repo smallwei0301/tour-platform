@@ -109,17 +109,14 @@ test('Source contract: Footer 用 /activities?region= 連到地區篩選', () =>
   assert.match(src, /高雄/, 'Footer 地區清單應含高雄');
 });
 
-test('Source contract: ActivitiesContent 以 normalizeRegionToDbValue 正規化地區比對', () => {
+test('Source contract: ActivitiesContent 地區篩選用 activityMatchesRegion（主要或附加地區任一命中，兩端正規化）', () => {
   const src = readFileSync(join(REPO_ROOT, 'app/[locale]/activities/ActivitiesContent.tsx'), 'utf8');
+  // 複選地區後改用 activityMatchesRegion：主要地區或附加地區任一命中即保留，
+  // 其內部仍用 normalizeRegionToDbValue 正規化兩端，短名↔全名相容不破壞。
+  assert.match(src, /activityMatchesRegion/, 'ActivitiesContent 應用 activityMatchesRegion 比對地區');
   assert.match(
     src,
-    /normalizeRegionToDbValue/,
-    'ActivitiesContent 應用 normalizeRegionToDbValue 正規化地區',
-  );
-  // 篩選比對需把卡片 region 也正規化，涵蓋短名／全名混用。
-  assert.match(
-    src,
-    /selectedRegions\.includes\(normalizeRegionToDbValue\(a\.region\)\)/,
-    'filter 必須比對正規化後的 a.region',
+    /selectedRegions\.some\(\(sel\) => activityMatchesRegion\(a, sel\)\)/,
+    'filter 必須以 activityMatchesRegion 比對（含附加地區）',
   );
 });

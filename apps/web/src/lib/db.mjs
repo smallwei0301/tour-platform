@@ -2903,7 +2903,9 @@ function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = nu
   return {
     id: act.id, slug: act.slug, title: act.title, tagline: act.tagline,
     shortDescription: act.short_description, description: act.description,
-    region: act.region, regionSlug: act.region_slug, category: act.category,
+    region: act.region, regionSlug: act.region_slug,
+    regions: Array.isArray(act.regions) ? act.regions : [],
+    category: act.category,
     priceTwd: act.price_twd, priceLabel: `NT$${act.price_twd?.toLocaleString()} / 人`,
     durationMinutes: act.duration_minutes,
     durationDisplay: act.duration_minutes ? `${Math.floor(act.duration_minutes/60)} 小時` : '',
@@ -3027,7 +3029,9 @@ export async function getActivityBySlugDb(slug, options = {}) {
     return {
       id: a.slug, slug: a.slug, title: a.title, tagline: a.tagline,
       shortDescription: a.shortDescription, description: a.longDescription,
-      region: a.region, regionSlug: a.regionSlug, category: a.category,
+      region: a.region, regionSlug: a.regionSlug,
+      regions: Array.isArray(a.regions) ? a.regions : [],
+      category: a.category,
       priceTwd: a.price, priceLabel: a.priceLabel,
       durationMinutes: a.durationMinutes, durationDisplay: a.durationDisplay,
       minParticipants: a.minParticipants, maxParticipants: a.maxParticipants,
@@ -3065,7 +3069,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
   }
 
   const minimalSelect = `
-      id, slug, title, tagline, short_description, description, region, region_slug, category,
+      id, slug, title, tagline, short_description, description, region, region_slug, regions, category,
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, refund_policy_type,
@@ -3167,6 +3171,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
             description: fixture.longDescription,
             region: fixture.region,
             regionSlug: fixture.regionSlug,
+            regions: Array.isArray(fixture.regions) ? fixture.regions : [],
             category: fixture.category,
             priceTwd: fixture.price,
             priceLabel: fixture.priceLabel,
