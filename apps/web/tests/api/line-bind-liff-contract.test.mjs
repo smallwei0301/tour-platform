@@ -27,6 +27,13 @@ describe('LIFF 一鍵綁定頁 /line/bind', () => {
     assert.match(client, /\/api\/line\/auth\/verify/);
   });
 
+  test('Google-only 登入：優先綁 user_id（讀平台 session 帶給 verify）', () => {
+    // 訂單權威鍵是 user_id；email 僅作訪客備援。client 必須先試 user_id。
+    assert.match(client, /supabase\/client/);
+    assert.match(client, /auth\.getUser\(\)/);
+    assert.match(client, /\{ idToken, userId \}/);
+  });
+
   test('綁定失敗退回 /me/profile 綁定碼流程', () => {
     assert.match(client, /\/me\/profile/);
   });

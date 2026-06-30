@@ -204,8 +204,8 @@ export async function buildOrderQueryReplyMessages({ lineUserId } = {}) {
       infoBubble({
         title: '先綁定，才能查訂單',
         body: [
-          '這個 LINE 帳號還沒綁定訂單。',
-          '點「一鍵綁定」最快，幾秒就好；若無法綁定，再用「綁定碼」即可。',
+          '這個 LINE 帳號還沒綁定。完成綁定後即可在這裡查詢訂單與付款。',
+          '先試「一鍵綁定」；若查不到訂單，改用「綁定碼」綁定你的會員帳號最準。',
         ].join('\n'),
         buttons: [
           { label: '一鍵綁定', uri: `${site}/line/bind` },

@@ -146,14 +146,16 @@ LINE_GUIDE_PUSH_ENABLED=0
 
 ---
 
-## 旅客綁定：兩種快速做法
+## 旅客綁定：做法與 Google 登入注意事項
 
-LINE 只給匿名的 `lineUserId`，要對應到「哪位旅客／哪些訂單」必須有一次身分連結。兩種都比手動貼碼快：
+LINE 只給匿名的 `lineUserId`，要對應到「哪位旅客／哪些訂單」必須有一次身分連結。
 
-- **A. 深連結（已內建，設個 env 即生效）**：在 Vercel 設 `LINE_BOT_BASIC_ID=@你的ID` 後，`/me/profile` 的綁定按鈕會產生 `line.me/R/oaMessage/<id>/?<綁定碼>` 連結 —— 旅客點一下就自動打開 LINE、訊息已帶入綁定碼，按送出即綁定（免複製貼上）。從網頁起頭。
-- **B. LIFF 一鍵綁定（在 LINE 對話內、免碼）**：旅客在 OA 按「我的訂單／付款」未綁定時，Reply 卡片首選按鈕「一鍵綁定」→ 開 `/line/bind`（LIFF）→ 用 idToken 內的 email 直接綁 `line_user_id ↔ contact_email`，**不需登入平台、不需貼碼**。需要 Step 4 的 LINE Login channel + LIFF，且在 LINE Login channel **開啟 email 權限**（OpenID `email` scope）讓 idToken 帶 email；email 與訂單聯絡信箱相同即自動對上。卡片同時保留「改用綁定碼」作為退路。
+> ⚠️ **本站登入為 Google-only。訂單的權威鍵是 `user_id`**（`contact_email` 是結帳自填、未必等於 Google 或 LINE 信箱）。所以**綁到 `user_id` 才最可靠**；只靠 LINE 信箱（email）綁定有兩個風險：(1) LINE 信箱常 ≠ Google 帳號信箱、或 LINE 帳號根本沒 email；(2) Google OAuth 在 LINE 內建瀏覽器可能被擋（`disallowed_useragent`）。因此**「綁定碼／深連結」是最穩的主路徑**。
 
-> 兩條路徑都收斂到同一筆 `line_user_id ↔ 旅客` 對應；之後查單／（若開）推播都認得。實作：`app/line/bind/*`、`/api/line/auth/verify`、`src/lib/line-order-query.mjs`。
+- **A. 深連結（推薦、最穩；已內建，設個 env 即生效）**：在 Vercel 設 `LINE_BOT_BASIC_ID=@你的ID` 後，旅客在**自己平常的瀏覽器（已用 Google 登入）**開 `/me/profile`，綁定按鈕會產生 `line.me/R/oaMessage/<id>/?<綁定碼>` —— 點一下自動打開 LINE、帶入綁定碼，按送出即綁定。**綁定碼在登入狀態下產生，綁的是 `user_id`，最可靠**。
+- **B. LIFF 一鍵綁定（在 LINE 對話內）**：未綁定者按「我的訂單／付款」時，Reply 卡片首選「一鍵綁定」→ 開 `/line/bind`（LIFF）。本頁**優先綁 `user_id`**（先讀平台 session；webview 內已登入才拿得到），拿不到才退回用 idToken 內 email 綁定（僅對「LINE 信箱＝訂單聯絡信箱」的訪客有效）。需要 Step 4 的 LINE Login channel + LIFF，並在 LINE Login channel **開啟 email 權限**（OpenID `email` scope）。卡片同時保留「改用綁定碼」退路；綁完查不到訂單時，提示改用綁定碼。
+
+> 兩條路徑都收斂到同一筆 `line_user_id ↔ 旅客` 對應。**運營建議**：把「綁定 LINE」入口放在網站（`/me/profile`、下單完成頁），讓旅客在已登入的正常瀏覽器完成深連結綁定，避開 webview 的 Google 登入限制。實作：`app/line/bind/*`、`/api/line/auth/verify`、`src/lib/line-order-query.mjs`。
 
 ## 額度與省錢提醒
 
