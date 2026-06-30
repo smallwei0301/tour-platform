@@ -83,21 +83,31 @@ describe('parseOrderQueryIntent', () => {
   });
 });
 
-describe('buildOrderQueryReplyMessages', () => {
-  test('未綁定的 lineUserId → 引導去綁定，不洩漏任何訂單', async () => {
+describe('buildOrderQueryReplyMessages（Flex 卡片）', () => {
+  // 回覆改用 Flex：斷言 altText（通知預覽文字）與序列化後的 contents（卡片內容）。
+  const json = (msg) => JSON.stringify(msg.contents);
+
+  test('一律回 Flex 訊息（type=flex + altText + contents）', async () => {
     const msgs = await buildOrderQueryReplyMessages({ lineUserId: 'Uunbound999' });
     assert.equal(Array.isArray(msgs), true);
     assert.equal(msgs.length, 1);
-    assert.equal(msgs[0].type, 'text');
-    assert.match(msgs[0].text, /尚未綁定/);
-    assert.match(msgs[0].text, /\/me\/profile/);
+    assert.equal(msgs[0].type, 'flex');
+    assert.equal(typeof msgs[0].altText, 'string');
+    assert.ok(msgs[0].contents && typeof msgs[0].contents === 'object');
+  });
+
+  test('未綁定的 lineUserId → 引導去綁定，不洩漏任何訂單', async () => {
+    const msgs = await buildOrderQueryReplyMessages({ lineUserId: 'Uunbound999' });
+    assert.match(msgs[0].altText, /尚未綁定/);
+    assert.match(json(msgs[0]), /尚未綁定/);
+    assert.match(json(msgs[0]), /\/me\/profile/);
   });
 
   test('已綁定但查無訂單 → 友善退路 + 探索行程連結', async () => {
     await upsertLineMapping({ lineUserId: LINE_USER, contactEmail: SEED_EMAIL });
     const msgs = await buildOrderQueryReplyMessages({ lineUserId: LINE_USER });
-    assert.match(msgs[0].text, /查無/);
-    assert.match(msgs[0].text, /\/activities/);
+    assert.match(msgs[0].altText, /查無/);
+    assert.match(json(msgs[0]), /\/activities/);
   });
 
   test('未付款訂單 → 顯示待付款狀態並附「前往付款」連結', async () => {
@@ -105,12 +115,13 @@ describe('buildOrderQueryReplyMessages', () => {
     await upsertLineMapping({ lineUserId: LINE_USER, contactEmail: SEED_EMAIL });
 
     const msgs = await buildOrderQueryReplyMessages({ lineUserId: LINE_USER });
-    const text = msgs[0].text;
-    assert.match(text, /待付款/);
-    assert.match(text, /前往付款/);
-    assert.match(text, /\/me\/orders/);
-    assert.match(text, /NT\$\s*4,200/);
-    assert.match(text, /ORD_QUER/); // shortId = 前 8 碼大寫
+    const body = json(msgs[0]);
+    assert.match(msgs[0].altText, /待付款/);
+    assert.match(body, /待付款/);
+    assert.match(body, /前往付款/);
+    assert.match(body, /\/me\/orders/);
+    assert.match(body, /4,200/);
+    assert.match(body, /ORD_QUER/); // shortId = 前 8 碼大寫
   });
 
   test('已確認訂單 → 顯示已確認、不出現催繳付款連結', async () => {
@@ -118,9 +129,22 @@ describe('buildOrderQueryReplyMessages', () => {
     await upsertLineMapping({ lineUserId: LINE_USER, contactEmail: SEED_EMAIL });
 
     const msgs = await buildOrderQueryReplyMessages({ lineUserId: LINE_USER });
-    const text = msgs[0].text;
-    assert.match(text, /已確認/);
-    assert.doesNotMatch(text, /前往付款/);
+    const body = json(msgs[0]);
+    assert.match(body, /已確認/);
+    assert.doesNotMatch(body, /前往付款/);
+  });
+
+  test('多筆訂單 → carousel，最多 3 張卡，最新在前', async () => {
+    seedOrder({ id: 'ord_q_a', status: 'pending_payment', totalTwd: 1000, createdAt: new Date(Date.now() - 1000).toISOString() });
+    seedOrder({ id: 'ord_q_b', status: 'confirmed', totalTwd: 2000, createdAt: new Date(Date.now() - 2000).toISOString() });
+    seedOrder({ id: 'ord_q_c', status: 'completed', totalTwd: 3000, createdAt: new Date(Date.now() - 3000).toISOString() });
+    seedOrder({ id: 'ord_q_d', status: 'refunded', totalTwd: 4000, createdAt: new Date(Date.now() - 4000).toISOString() });
+    await upsertLineMapping({ lineUserId: LINE_USER, contactEmail: SEED_EMAIL });
+
+    const msgs = await buildOrderQueryReplyMessages({ lineUserId: LINE_USER });
+    assert.equal(msgs[0].contents.type, 'carousel');
+    assert.equal(msgs[0].contents.contents.length, 3); // 4 筆只顯示最近 3 筆
+    assert.match(msgs[0].altText, /共 4 筆/);
   });
 });
 
