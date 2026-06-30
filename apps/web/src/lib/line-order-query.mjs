@@ -12,6 +12,7 @@
 // PII：只用 lineUserId 反查本人綁定，回覆內容不落地。
 
 import { getLineMappingByLineUserId } from './line-binding.mjs';
+import { isLineLiffEnabled } from '../config/feature-flags.mjs';
 
 // 觸發訂單查詢的關鍵字（繁體中文，貼近 Midao / 祕島 語氣）。
 const QUERY_KEYWORDS = [
@@ -91,6 +92,13 @@ function formatDate(value) {
 
 function amount(totalTwd) {
   return `NT$ ${Number(totalTwd || 0).toLocaleString('en-US')}`;
+}
+
+// LINE 專屬：在訊息／選單連結加 openExternalBrowser=1，LINE 會用「系統瀏覽器」
+// （Chrome/Safari）開啟，而非內建 webview。需要 Google 登入的頁面（本站 Google-only
+// 登入）一定要走這個 —— Google 會擋 LINE webview 內的 OAuth（403 disallowed_useragent）。
+function externalBrowser(url) {
+  return url.includes('?') ? `${url}&openExternalBrowser=1` : `${url}?openExternalBrowser=1`;
 }
 
 function flex(altText, contents) {
@@ -197,20 +205,29 @@ export async function buildOrderQueryReplyMessages({ lineUserId } = {}) {
 
   const mapping = await getLineMappingByLineUserId(lineUserId).catch(() => null);
   if (!mapping || (!mapping.userId && !mapping.contactEmail)) {
-    // 綁定唯一入口：未綁定者按「我的訂單／付款」皆落到這張卡，引導完成綁定。
-    // 首選「一鍵綁定」（LIFF 免碼）；退路是「我的帳號」的綁定碼流程。
+    // 未綁定者按「我的訂單／付款」皆落到這張卡，引導完成綁定。
+    //
+    // 本站登入為 Google-only，而 Google 會擋 LINE 內建瀏覽器內的 OAuth
+    // （403 disallowed_useragent）。因此「綁定碼」入口 /me/profile 一律加
+    // openExternalBrowser=1，用系統瀏覽器開啟（使用者在那已 Google 登入），可正常綁定。
+    // LIFF 一鍵綁定要在 LINE 內執行（不可外開），且需 LINE Login channel；故僅在
+    // NEXT_PUBLIC_LINE_LIFF_ENABLED 開啟時才提供，否則只給可靠的綁定碼路徑。
+    const profileUrl = externalBrowser(`${site}/me/profile`);
+    const buttons = isLineLiffEnabled()
+      ? [
+          { label: '一鍵綁定', uri: `${site}/line/bind` },
+          { label: '改用綁定碼', uri: profileUrl },
+        ]
+      : [{ label: '前往綁定', uri: profileUrl }];
     return flex(
       '這個 LINE 帳號還沒綁定，完成綁定即可查詢訂單與付款。',
       infoBubble({
         title: '先綁定，才能查訂單',
         body: [
-          '這個 LINE 帳號還沒綁定。完成綁定後即可在這裡查詢訂單與付款。',
-          '先試「一鍵綁定」；若查不到訂單，改用「綁定碼」綁定你的會員帳號最準。',
+          '這個 LINE 帳號還沒綁定。',
+          '點下方按鈕會用你的瀏覽器開啟（需登入會員），完成後即可在這裡查訂單與付款。',
         ].join('\n'),
-        buttons: [
-          { label: '一鍵綁定', uri: `${site}/line/bind` },
-          { label: '改用綁定碼', uri: `${site}/me/profile` },
-        ],
+        buttons,
       }),
     );
   }

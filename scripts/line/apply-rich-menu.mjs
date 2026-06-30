@@ -46,6 +46,10 @@ const COL = 400;
 const ROW = 405;
 const cell = (cx, cy) => ({ x: cx * COL, y: cy * ROW, width: COL, height: ROW });
 
+// 需登入的頁面（本站 Google-only 登入）一定要用系統瀏覽器開 —— Google 會擋 LINE
+// 內建 webview 的 OAuth（403 disallowed_useragent）。加 openExternalBrowser=1 即可。
+const ext = (url) => (url.includes('?') ? `${url}&openExternalBrowser=1` : `${url}?openExternalBrowser=1`);
+
 const richMenu = {
   size: { width: 1200, height: 810 },
   selected: true,
@@ -58,7 +62,7 @@ const richMenu = {
     { bounds: cell(2, 0), action: { type: 'uri', uri: `${APP_URL}/activities` } },         // 探索行程
     // 下排：連結導到網站。
     { bounds: cell(0, 1), action: { type: 'uri', uri: `${APP_URL}/guide/apply` } },        // 成為導遊（招募 CTA）
-    { bounds: cell(1, 1), action: { type: 'uri', uri: `${APP_URL}/me/wishlist` } },        // 我的收藏（收藏的行程一鍵回看）
+    { bounds: cell(1, 1), action: { type: 'uri', uri: ext(`${APP_URL}/me/wishlist`) } },   // 我的收藏（需登入 → 系統瀏覽器開）
     // 常見問題：自助解答（退款／出團須知…），找不到再在 LINE 直接打字問。
     // 「聯絡客服」不需獨立按鈕 —— 旅客本就在 OA 聊天室，打字即可找客服。
     { bounds: cell(2, 1), action: { type: 'uri', uri: `${APP_URL}/faq` } },                // 常見問題
