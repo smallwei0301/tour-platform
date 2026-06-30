@@ -1,9 +1,10 @@
 name: synthetic-health-probe
 
 on:
-  schedule:
-    # Every 15 minutes
-    - cron: '*/15 * * * *'
+  # 排程已退役：改用外部免費監控 UptimeRobot（每 5 分鐘打 /，Email 告警），不再燒
+  # GitHub 分鐘（原本每 15 分鐘 ≈ 2,918 分鐘/月）。保留 workflow_dispatch，需要更深的
+  # /api/health（{ok:true}）檢查時仍可手動觸發。建議在 UptimeRobot 另加一個 monitor
+  # 指向 /api/health 以涵蓋深度檢查。
   workflow_dispatch: {}
 
 permissions:

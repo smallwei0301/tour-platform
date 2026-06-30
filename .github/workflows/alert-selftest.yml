@@ -1,0 +1,27 @@
+name: alert-selftest
+
+# 手動觸發的「告警自我測試」：到 Actions → alert-selftest → Run workflow，
+# 會用設定好的 secrets 送一封 Telegram + 一封 Email（標示為 TEST），用來驗證
+# TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID / RESEND_API_KEY / ALERT_EMAIL_TO 是否正確。
+# 不掃任何資料、不影響營運；缺哪個通道就略過哪個（log 會標示）。
+on:
+  workflow_dispatch: {}
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Send test alert (Telegram + Email)
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          WORKFLOW_NAME: alert-selftest
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: test
+        run: node scripts/cron/notify-failure.mjs
