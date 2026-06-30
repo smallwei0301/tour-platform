@@ -61,3 +61,9 @@ test('source-contract: freshness check enforces a 12h threshold and exits non-ze
   assert.match(src, /FRESHNESS_THRESHOLD_HOURS\s*=\s*12/);
   assert.match(src, /process\.exit\(isFresh \? 0 : 1\)/);
 });
+
+test('source-contract: refresh workflow grants issues: read（readiness:snapshot 用 gh issue list）', () => {
+  const wf = readFileSync(WORKFLOW, 'utf8');
+  // 宣告了 permissions 區塊就必須含 issues: read，否則 gh issue list 會 403。
+  assert.match(wf, /issues:\s*read/);
+});

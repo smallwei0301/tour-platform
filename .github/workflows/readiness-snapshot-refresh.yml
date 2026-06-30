@@ -11,6 +11,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: read   # readiness:snapshot 用 gh issue list 抓 open issues，缺此權限會 403
 
     steps:
       - name: Checkout
