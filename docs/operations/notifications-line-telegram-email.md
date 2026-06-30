@@ -103,6 +103,16 @@
 - **保留**的部分：LINE OA 作為旅客諮詢入口、webhook 綁定 ingestion、以及（未來）管理員在 OA 手動回覆。這些不依賴上述 push 旗標。
 - 程式碼**保留不刪**（flag-gated），日後若要恢復只需開旗標；目前事件通知改由 **Email + Telegram** 承擔（§3、§4）。
 
+### 2.1 免費 LINE 訂單查詢（Reply pull，零額度成本）
+
+LINE **Push API（主動推播）會計入方案額度**（免費方案 200 則/月）；**Reply API（回覆使用者主動傳來的訊息）目前免費且不限量**。因此「主動通知」走 Email/Telegram，而「LINE 上的訂單查詢」改成**使用者來查、我們免費回覆**的 pull 模式：
+
+- 旅客在 OA 傳含「我的訂單／訂單／付款／預約」等關鍵字的訊息 → webhook 用 **Reply API** 回覆其**最近 3 筆訂單**狀態、金額、訂單編號；**未付款**訂單附「前往付款」連結（`/me/orders`）。
+- 未綁定 → 回覆引導去 `/me/profile` 綁定；查無訂單 → 引導去 `/activities`。**不洩漏任何他人資料**（僅以 `lineUserId` 反查本人綁定）。
+- 實作：`src/lib/line-order-query.mjs`（`parseOrderQueryIntent` / `buildOrderQueryReplyMessages`，永不 throw、回覆內容不落地）接進 `line-webhook.mjs`（順序：guide 綁定 → traveler 綁定 → **訂單查詢** → bare upsert）。測試：`tests/api/line-order-query-reply.test.mjs`。
+- 連結用 `NEXT_PUBLIC_APP_URL` 組絕對網址。Reply 仍受 `LINE_MESSAGING_ENABLED` 總開關節制（關閉時 no-op），但**因為是 Reply 不是 Push，開啟後也不耗額度**。
+- **建議 operator 設定**：在 LINE OA 後台建一個 **Rich Menu「我的訂單／前往付款」**，按鈕送出上述關鍵字文字（或 postback），讓旅客一鍵觸發免費查詢、提高可發現性。
+
 ---
 
 ## 3. Email 覆蓋率現況與落差

@@ -19,6 +19,10 @@ import {
   redeemGuideBindCode,
   setGuideLineBlocked,
 } from './guide-line-binding.mjs';
+import {
+  parseOrderQueryIntent,
+  buildOrderQueryReplyMessages,
+} from './line-order-query.mjs';
 
 // Try to redeem a guide BIND code from a text message. Returns true when the
 // message was a binding code (handled here → skip the traveler upsert).
@@ -46,6 +50,19 @@ async function tryTravelerBinding(ev, lineUserId) {
     ? '✅ 已完成 LINE 通知綁定，之後您的訂單成立／付款／取消／退款通知會傳到這裡。'
     : '⚠️ 綁定碼無效或已過期，請回「我的帳號」重新產生綁定連結。';
   await replyMessage(ev?.replyToken, { type: 'text', text }).catch(() => {});
+  return true;
+}
+
+// Free "pull" path: a traveler asking 「我的訂單／付款」 gets their latest order
+// status + a payment link via the Reply API (no Push quota cost). Returns true
+// when the message was an order query (handled here → skip the bare upsert).
+async function tryOrderQuery(ev, lineUserId) {
+  if (ev?.message?.type !== 'text') return false;
+  if (!parseOrderQueryIntent(ev.message.text)) return false;
+  const messages = await buildOrderQueryReplyMessages({ lineUserId }).catch(() => null);
+  if (messages && messages.length) {
+    await replyMessage(ev?.replyToken, messages).catch(() => {});
+  }
   return true;
 }
 
@@ -78,6 +95,7 @@ async function handleEvent(ev) {
       // otherwise register the bare lineUserId (LIFF/idToken can enrich later).
       if (await tryGuideBinding(ev, lineUserId)) break;
       if (await tryTravelerBinding(ev, lineUserId)) break;
+      if (await tryOrderQuery(ev, lineUserId)) break;
       await upsertLineMapping({ lineUserId });
       break;
     }
