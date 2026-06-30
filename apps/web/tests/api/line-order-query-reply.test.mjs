@@ -96,13 +96,30 @@ describe('buildOrderQueryReplyMessages（Flex 卡片）', () => {
     assert.ok(msgs[0].contents && typeof msgs[0].contents === 'object');
   });
 
-  test('未綁定的 lineUserId → 提供一鍵綁定(LIFF)＋綁定碼雙路徑，不洩漏任何訂單', async () => {
+  test('未綁定（LIFF OFF）→ 綁定碼連結用系統瀏覽器開啟（避開 Google webview 封鎖）', async () => {
+    delete process.env.NEXT_PUBLIC_LINE_LIFF_ENABLED; // 預設 LIFF OFF
     const msgs = await buildOrderQueryReplyMessages({ lineUserId: 'Uunbound999' });
     assert.match(msgs[0].altText, /綁定/);
     const body = json(msgs[0]);
-    assert.match(body, /一鍵綁定/);
-    assert.match(body, /\/line\/bind/);       // 首選：LIFF 免碼一鍵綁定
-    assert.match(body, /\/me\/profile/);      // 退路：綁定碼流程
+    assert.match(body, /\/me\/profile/);
+    // Google-only 登入：/me/profile 必須加 openExternalBrowser=1 用系統瀏覽器開（否則
+    // LINE webview 內 Google OAuth 會 403 disallowed_useragent）。
+    assert.match(body, /openExternalBrowser=1/);
+    // LIFF 未開時不導向 /line/bind（會落到需登入而被擋的退路頁）。
+    assert.doesNotMatch(body, /\/line\/bind/);
+  });
+
+  test('未綁定（LIFF ON）→ 提供一鍵綁定(/line/bind)＋綁定碼退路', async () => {
+    process.env.NEXT_PUBLIC_LINE_LIFF_ENABLED = '1';
+    try {
+      const msgs = await buildOrderQueryReplyMessages({ lineUserId: 'Uunbound999' });
+      const body = json(msgs[0]);
+      assert.match(body, /\/line\/bind/);           // 一鍵綁定（LIFF 在 LINE 內執行，不外開）
+      assert.match(body, /\/me\/profile/);          // 退路綁定碼（外開瀏覽器）
+      assert.match(body, /openExternalBrowser=1/);
+    } finally {
+      delete process.env.NEXT_PUBLIC_LINE_LIFF_ENABLED;
+    }
   });
 
   test('已綁定但查無訂單 → 友善退路 + 探索行程連結', async () => {
