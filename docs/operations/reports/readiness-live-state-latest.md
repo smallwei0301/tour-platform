@@ -1,21 +1,19 @@
-<!-- query_timestamp: 2026-06-25T00:53:46.553Z -->
+<!-- query_timestamp: 2026-06-30T07:24:18.562Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-25T00:53:46.553Z  
-**Commit SHA:** `1e97782f5a9327a21dd6450442950e6905ab026e`
+**Query timestamp:** 2026-06-30T07:24:18.562Z  
+**Commit SHA:** `f249b7e0a8faa35c276204a9b079d07e4f31ea58`
 
 ---
 
-## Open PRs (6)
+## Open PRs (4)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1494 | [feat(guide): 外部佔位防超賣 — 導遊登記外部已售座位共用同一庫存池](https://github.com/smallwei0301/tour-platform/pull/1494) | `claude/tour-guide-overselling-t4nxpa` |
-| #1488 | [feat(i18n): 多語言網站 — 全旅客公開頁英文化（next-intl, zh-Hant 預設 / EN）](https://github.com/smallwei0301/tour-platform/pull/1488) | `claude/multilingual-website-plan-1xb9ny` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
@@ -39,10 +37,11 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (14)
+### P2 (15)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1526 | [[Decision][Auth] 評估加開 LINE Login 作為平台登入方式（與 LINE 通知綁定統一身分）](https://github.com/smallwei0301/tour-platform/issues/1526) | triaged, priority:P2, type:decision, auth, notifications |
 | #1472 | [[Auto Check] main healthcheck failed at / (status=N/A)](https://github.com/smallwei0301/tour-platform/issues/1472) | triaged, type:investigation, priority:P2, qa, owner:ai-agent, status:needs-repro, infra |
 | #1407 | [[Booking][P2] Legacy 退役階段三 — 刪除 legacy routes 與測試清點、flag 退場](https://github.com/smallwei0301/tour-platform/issues/1407) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
 | #1406 | [[Booking][P2] Legacy 退役階段二 — 移除 flag fallback UI 與 legacy 入口](https://github.com/smallwei0301/tour-platform/issues/1406) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
@@ -62,11 +61,10 @@ _none_
 
 _none_
 
-### Other (4)
+### Other (3)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1493 | [未付款 draft 預約：24 小時付款期限提示＋提醒信＋逾時自動取消](https://github.com/smallwei0301/tour-platform/issues/1493) | — |
 | #1474 | [QA：PR #1473 部分退款功能 — Staging 實測（ECPay 測試卡）](https://github.com/smallwei0301/tour-platform/issues/1474) | qa, refund |
 | #1449 | [[ops] 套用 LINE/Telegram 通知 migration 到 production Supabase（#920 後續）](https://github.com/smallwei0301/tour-platform/issues/1449) | database, ops |
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — 正式上線前執行](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, security, owner:mixed, status:needs-decision, launch:post-first-payment |
@@ -77,16 +75,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1492 | [feat(booking-v2): 三種預約模式 booking_type 實裝（instant／request／scheduled）](https://github.com/smallwei0301/tour-platform/pull/1492) | 2026-06-25 |
-| #1491 | [feat(guide): 導遊共用行程／方案編輯 + 管理者審核上架（含站點時間表送審、季節供應即時）](https://github.com/smallwei0301/tour-platform/pull/1491) | 2026-06-24 |
-| #1490 | [fix(guide): 申請表單照片上傳前先壓縮，修正 Vercel 4.5MB 上限導致的上傳失敗](https://github.com/smallwei0301/tour-platform/pull/1490) | 2026-06-23 |
-| #1489 | [feat(guide): 熟悉區域全台化、申請資料導入公開頁可自編、收款方式可複選](https://github.com/smallwei0301/tour-platform/pull/1489) | 2026-06-23 |
-| #1487 | [fix(settlement): 結算付款 gate + 回沖未付款卻已結算的 payout_items](https://github.com/smallwei0301/tour-platform/pull/1487) | 2026-06-22 |
-| #1486 | [feat(seo): 分享縮圖改用站內 og-default 圖](https://github.com/smallwei0301/tour-platform/pull/1486) | 2026-06-22 |
-| #1485 | [fix(shop): 會員入口按鈕提升可見度（實心深綠膠囊）(#1475)](https://github.com/smallwei0301/tour-platform/pull/1485) | 2026-06-18 |
-| #1484 | [feat(shop): 首頁封面照+會員入口、商店頁隱藏 footer、換步驟回頂部 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1484) | 2026-06-18 |
-| #1483 | [perf(shop): 商店 API 60 秒邊緣快取 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1483) | 2026-06-18 |
-| #1482 | [perf+ui(shop): 並行查詢降冷啟動 + 月曆日期選擇器 (#1475)](https://github.com/smallwei0301/tour-platform/pull/1482) | 2026-06-18 |
+| #1525 | [feat(line): 免費 LINE 訂單查詢（Reply pull）+ Flex 卡片 + 下單成功頁 E2E + operator 教學](https://github.com/smallwei0301/tour-platform/pull/1525) | 2026-06-30 |
+| #1524 | [docs(analytics): 補 Vercel 建置 NEXT_PUBLIC_GA_ID 逐步說明](https://github.com/smallwei0301/tour-platform/pull/1524) | 2026-06-30 |
+| #1523 | [fix(ci): readiness-snapshot-refresh 補 issues: read 權限](https://github.com/smallwei0301/tour-platform/pull/1523) | 2026-06-30 |
+| #1522 | [feat(analytics): 安插並橋接 GA4（gtag.js, G-26EYTQJ9RC）](https://github.com/smallwei0301/tour-platform/pull/1522) | 2026-06-30 |
+| #1521 | [fix(ops): 通知 Email 沒設 ALERT_EMAIL_FROM 時自動沿用 EMAIL_FROM](https://github.com/smallwei0301/tour-platform/pull/1521) | 2026-06-30 |
+| #1520 | [chore(ci): 退役 synthetic-health-probe 排程（改用 UptimeRobot）+ 新增 alert-selftest](https://github.com/smallwei0301/tour-platform/pull/1520) | 2026-06-30 |
+| #1519 | [chore(ci): refund-reconcile 與 pre-tour-reminder 排程降為每小時（省 GitHub 分鐘）](https://github.com/smallwei0301/tour-platform/pull/1519) | 2026-06-29 |
+| #1518 | [fix(booking): 新欄位部署順序安全 — payment_deadline_at 缺欄位 fallback (#1493)](https://github.com/smallwei0301/tour-platform/pull/1518) | 2026-06-29 |
+| #1517 | [feat(ops): 通用 migration drift 檢查 + 排程失敗 Telegram/Email 通知](https://github.com/smallwei0301/tour-platform/pull/1517) | 2026-06-29 |
+| #1516 | [perf(booking): 未付款逾時改讀取時過濾釋放名額，排程降為每日兜底 (#1493)](https://github.com/smallwei0301/tour-platform/pull/1516) | 2026-06-29 |
 
 ---
 
