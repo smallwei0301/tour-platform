@@ -8,6 +8,7 @@ import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
 import { compressImage } from '../../../src/lib/client-image-compress';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
+import ImageCropModal from '../../../src/components/ImageCropModal';
 
 const REGION_OPTIONS = listRegionOptions().map((r) => r.displayName);
 
@@ -793,17 +794,20 @@ function HeroField({ currentUrl, onUploaded }: { currentUrl: string | null; onUp
 }
 
 // ─── Avatar (1:1) upload field ──────────────────────────────────────
+// 導遊選檔後先進入裁切對話框（自選範圍與大小），確認才上傳裁好的方形 WebP。
 function AvatarField({ currentUrl, onUploaded }: { currentUrl: string | null; onUploaded: (url: string) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(file: File) {
+  // 裁切對話框已輸出 400×400 WebP，直接上傳即可（不需再 compressImage）。
+  async function uploadCropped(cropped: File) {
+    setPendingFile(null);
     setBusy(true); setError('');
     try {
-      const compressed = await compressImage(file, 'avatar');
       const fd = new FormData();
-      fd.append('file', compressed);
+      fd.append('file', cropped);
       const res = await fetch('/api/guide/profile/upload-avatar', {
         method: 'POST', headers: csrfHeaders(), body: fd,
       });
@@ -817,6 +821,19 @@ function AvatarField({ currentUrl, onUploaded }: { currentUrl: string | null; on
 
   return (
     <div>
+      {pendingFile && (
+        <ImageCropModal
+          file={pendingFile}
+          aspect={1}
+          outputWidth={400}
+          outputHeight={400}
+          round
+          title="調整頭像裁切"
+          confirmLabel="套用並上傳"
+          onCancel={() => setPendingFile(null)}
+          onConfirm={uploadCropped}
+        />
+      )}
       <span style={LABEL}>頭像（正方形，建議 400×400）</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <div
@@ -860,17 +877,18 @@ function AvatarField({ currentUrl, onUploaded }: { currentUrl: string | null; on
           >
             {currentUrl ? '更換頭像' : '上傳頭像'}
           </button>
-          <p style={{ ...HINT, marginTop: 6 }}>會自動中央裁切為正方形</p>
+          <p style={{ ...HINT, marginTop: 6 }}>可自選裁切範圍與大小，確認後上傳</p>
         </div>
       </div>
       <input
         ref={inputRef}
         type="file"
+        data-testid="avatar-file-input"
         accept="image/jpeg,image/png,image/webp"
         style={{ display: 'none' }}
         onChange={(e) => {
           const file = e.target.files?.[0];
-          if (file) handleFile(file);
+          if (file) setPendingFile(file);
           e.target.value = '';
         }}
       />
