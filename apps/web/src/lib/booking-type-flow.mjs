@@ -56,6 +56,22 @@ export function initialApprovalStatusForBookingType(bookingType) {
 }
 
 /**
+ * 動態可預約時段規則（`guide_availability_rules`）是否適用於此 booking_type？
+ *
+ * 嚴格區隔（owner 拍板）：
+ *   - scheduled：只看固定場次（`activity_schedules`），動態規則對它無效 → false。
+ *   - instant / request：只看導遊可行時間（動態規則）→ true。
+ *
+ * 引擎層早已落實此區隔；本函式是「設定守門」與「預覽正確」共用的判準，
+ * 讓 admin/guide 不會把動態規則綁到排程方案、預覽也不會誤跑動態時段。
+ * @param {unknown} bookingType
+ * @returns {boolean}
+ */
+export function isDynamicAvailabilityApplicable(bookingType) {
+  return normalizeBookingType(bookingType) !== 'scheduled';
+}
+
+/**
  * Checkout gate: request bookings cannot enter payment until a guide approves.
  * @param {unknown} bookingType
  * @param {unknown} approvalStatus

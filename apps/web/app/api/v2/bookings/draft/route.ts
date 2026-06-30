@@ -775,7 +775,11 @@ export async function POST(request: NextRequest) {
     let selectedScheduleValidation: { available: boolean; reason?: string } | null = null;
     let selectedScheduleForAvailability: ActivitySchedule | null = null;
     let selectedScheduleAuthority: 'authoritative' | 'fallback' | undefined;
-    if (data.scheduleId) {
+    // 嚴格區隔（owner 拍板）：即時／申請預約只看導遊可行時間（動態規則），不看固定場次。
+    // 因此即使前端帶入 scheduleId，instant／request 一律忽略，不解析固定場次；只有
+    // scheduled 方案才以固定場次為唯一可預約來源。下方 SCHEDULE_REQUIRED 仍會擋住
+    // scheduled 缺有效場次的情況。
+    if (data.scheduleId && planData.booking_type === 'scheduled') {
       const { data: scheduleData, error: scheduleError } = await supabase
         .from('activity_schedules')
         .select('id, activity_id, plan_id, start_at, end_at, status, capacity, booked_count')

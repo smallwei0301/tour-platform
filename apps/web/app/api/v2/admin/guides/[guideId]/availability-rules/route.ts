@@ -160,10 +160,11 @@ export async function POST(
         supabase,
       });
       if (!planCheck.ok) {
-        return Response.json(
-          errorV2(planCheck.code, '所選方案不屬於此導遊或已停用'),
-          { status: 422 }
-        );
+        const message =
+          planCheck.code === 'RULE_NOT_APPLICABLE_FOR_BOOKING_TYPE'
+            ? '排程預約方案僅使用固定場次，請改用「場次管理」；動態可預約時段規則僅適用即時／申請預約方案。'
+            : '所選方案不屬於此導遊或已停用';
+        return Response.json(errorV2(planCheck.code, message), { status: 422 });
       }
     }
 

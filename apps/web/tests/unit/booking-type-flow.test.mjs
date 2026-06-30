@@ -6,6 +6,7 @@ import {
   normalizeBookingType,
   requiresGuideApproval,
   initialApprovalStatusForBookingType,
+  isDynamicAvailabilityApplicable,
   canCheckout,
   shouldAutoConfirmOnPayment,
   decideApproval,
@@ -32,6 +33,18 @@ test('initialApprovalStatusForBookingType: request → pending, others → not_r
   assert.equal(initialApprovalStatusForBookingType('instant'), 'not_required');
   assert.equal(initialApprovalStatusForBookingType('scheduled'), 'not_required');
   assert.equal(initialApprovalStatusForBookingType(null), 'not_required');
+});
+
+test('isDynamicAvailabilityApplicable: scheduled → false, instant/request → true', () => {
+  // 排程方案只看固定場次，動態可預約時段規則對它無效。
+  assert.equal(isDynamicAvailabilityApplicable('scheduled'), false);
+  // 即時／申請只看導遊可行時間（動態規則）。
+  assert.equal(isDynamicAvailabilityApplicable('instant'), true);
+  assert.equal(isDynamicAvailabilityApplicable('request'), true);
+  // 未知值依 normalize 回退 instant → 適用動態規則。
+  assert.equal(isDynamicAvailabilityApplicable(undefined), true);
+  assert.equal(isDynamicAvailabilityApplicable(null), true);
+  assert.equal(isDynamicAvailabilityApplicable('garbage'), true);
 });
 
 test('canCheckout: request blocked until approved, others always allowed', () => {
