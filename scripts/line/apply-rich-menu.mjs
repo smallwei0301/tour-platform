@@ -55,11 +55,12 @@ const richMenu = {
     { bounds: cell(0, 0), action: { type: 'message', text: '我的訂單' } },
     { bounds: cell(1, 0), action: { type: 'message', text: '付款' } },
     // 其餘格用連結導到網站。
-    { bounds: cell(0, 1), action: { type: 'uri', uri: `${APP_URL}/activities` } },       // 探索行程
+    { bounds: cell(0, 1), action: { type: 'uri', uri: `${APP_URL}/activities` } },         // 探索行程
     { bounds: cell(1, 1), action: { type: 'uri', uri: `${APP_URL}/me/profile` } },         // 我的帳號
-    { bounds: cell(0, 2), action: { type: 'uri', uri: `${APP_URL}/activities` } },         // 最新優惠（暫導行程列表；有促銷頁再改）
-    // 聯絡客服：送出文字 → 落到 OA 收件匣，由真人/客服回覆（1 對 1 聊天免費）。
-    { bounds: cell(1, 2), action: { type: 'message', text: '聯絡客服' } },
+    { bounds: cell(0, 2), action: { type: 'uri', uri: `${APP_URL}/me/wishlist` } },        // 我的收藏（收藏的行程一鍵回看）
+    // 常見問題：自助解答（退款／出團須知…），找不到再在 LINE 直接打字問。
+    // 「聯絡客服」已不需獨立按鈕 —— 旅客本就在 OA 聊天室，打字即可找客服。
+    { bounds: cell(1, 2), action: { type: 'uri', uri: `${APP_URL}/faq` } },                // 常見問題
   ],
 };
 
