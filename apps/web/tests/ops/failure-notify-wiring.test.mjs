@@ -35,3 +35,17 @@ test('migration-drift-detect：跑通用 migrations-applied 檢查', () => {
   const y = wf('migration-drift-detect.yml');
   assert.match(y, /verify-migrations-applied\.mjs/);
 });
+
+test('alert-selftest：手動觸發、用 notify-failure 送測試告警', () => {
+  const y = wf('alert-selftest.yml');
+  assert.match(y, /workflow_dispatch/);
+  assert.match(y, /scripts\/cron\/notify-failure\.mjs/);
+  assert.match(y, /TELEGRAM_BOT_TOKEN/);
+  assert.match(y, /RESEND_API_KEY/);
+});
+
+test('synthetic-health-probe：排程已退役（改用 UptimeRobot），保留手動觸發', () => {
+  const y = wf('synthetic-health-probe.yml');
+  assert.doesNotMatch(y, /cron:/);
+  assert.match(y, /workflow_dispatch/);
+});
