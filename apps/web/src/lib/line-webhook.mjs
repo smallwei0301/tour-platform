@@ -33,7 +33,7 @@ async function tryGuideBinding(ev, lineUserId) {
   const result = await redeemGuideBindCode(code, { lineUserId });
   // Best-effort ack (no-op unless LINE_MESSAGING_ENABLED + access token set).
   const text = result.ok
-    ? '✅ 已完成 LINE 通知綁定，之後您負責的訂單通知會傳到這裡。'
+    ? '✅ 已完成 LINE 綁定。您負責的訂單通知會以 Email／Telegram 發送。'
     : '⚠️ 綁定碼無效或已過期，請回後台重新產生綁定連結。';
   await replyMessage(ev?.replyToken, { type: 'text', text }).catch(() => {});
   return true;
@@ -47,7 +47,7 @@ async function tryTravelerBinding(ev, lineUserId) {
   if (!code) return false;
   const result = await redeemTravelerLineBindCode(code, { lineUserId });
   const text = result.ok
-    ? '✅ 已完成 LINE 通知綁定，之後您的訂單成立／付款／取消／退款通知會傳到這裡。'
+    ? '✅ 已完成 LINE 綁定！之後在這裡傳「我的訂單」就能隨時查詢訂單狀態與付款。'
     : '⚠️ 綁定碼無效或已過期，請回「我的帳號」重新產生綁定連結。';
   await replyMessage(ev?.replyToken, { type: 'text', text }).catch(() => {});
   return true;

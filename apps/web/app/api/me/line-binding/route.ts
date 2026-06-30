@@ -46,7 +46,7 @@ export async function POST() {
     deepLink,
     expiresAt,
     instruction: deepLink
-      ? '點開連結後直接送出訊息即可完成 LINE 訂單通知綁定。'
+      ? '點開連結送出訊息即可完成綁定；之後在 LINE 傳「我的訂單」即可查詢訂單與付款。'
       : '請先加入官方帳號好友，然後把這組綁定碼貼到聊天室送出：' + code,
   }));
 }
