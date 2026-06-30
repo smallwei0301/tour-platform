@@ -57,7 +57,7 @@ const richMenu = {
     { bounds: cell(1, 0), action: { type: 'message', text: '付款' } },                      // 前往付款
     { bounds: cell(2, 0), action: { type: 'uri', uri: `${APP_URL}/activities` } },         // 探索行程
     // 下排：連結導到網站。
-    { bounds: cell(0, 1), action: { type: 'uri', uri: `${APP_URL}/me/profile` } },         // 我的帳號
+    { bounds: cell(0, 1), action: { type: 'uri', uri: `${APP_URL}/guide/apply` } },        // 成為導遊（招募 CTA）
     { bounds: cell(1, 1), action: { type: 'uri', uri: `${APP_URL}/me/wishlist` } },        // 我的收藏（收藏的行程一鍵回看）
     // 常見問題：自助解答（退款／出團須知…），找不到再在 LINE 直接打字問。
     // 「聯絡客服」不需獨立按鈕 —— 旅客本就在 OA 聊天室，打字即可找客服。

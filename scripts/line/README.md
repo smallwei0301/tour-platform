@@ -9,11 +9,14 @@
 | 上左 | 我的訂單 | **文字** `我的訂單` | 觸發免費 Reply 訂單查詢 |
 | 上中 | 前往付款 | **文字** `付款` | 觸發免費 Reply（未付款帶付款連結） |
 | 上右 | 探索行程 | 連結 `/activities` | — |
-| 下左 | 我的帳號 | 連結 `/me/profile` | 綁定／個資 |
+| 下左 | 成為導遊 | 連結 `/guide/apply` | 導遊招募 CTA |
 | 下中 | 我的收藏 | 連結 `/me/wishlist` | 收藏行程一鍵回看，促回訪 |
 | 下右 | 常見問題 | 連結 `/faq` | 自助解答；找不到再在 LINE 打字問客服 |
 
 > 「聯絡客服」不另設按鈕 —— 旅客本就在 OA 聊天室，要找客服直接打字即可。
+>
+> **綁定入口**：選單不放綁定按鈕；未綁定者按「我的訂單／付款」時，會由 Reply 卡片
+> 引導去 `/me/profile` 產生綁定碼並貼回聊天室（見 `src/lib/line-order-query.mjs`）。
 
 > 前兩格刻意用「文字動作」而非「連結」：使用者主動傳訊息，我們才能用**免費的 Reply** 回覆。
 > 這兩個詞由 `apps/web/src/lib/line-order-query.mjs` 的 `parseOrderQueryIntent` 命中。
@@ -39,7 +42,7 @@ node scripts/line/apply-rich-menu.mjs
 
 1. [manager.line.biz](https://manager.line.biz/) → 圖文選單 → 建立 → 版型選 **3×2 六格**。
 2. 上傳 `richmenu-midao-1200x810.png`。
-3. 逐格設動作：上左＝文字`我的訂單`、上中＝文字`付款`、上右＝連結`/activities`、下左＝連結`/me/profile`、下中＝連結`/me/wishlist`、下右＝連結`/faq`。
+3. 逐格設動作：上左＝文字`我的訂單`、上中＝文字`付款`、上右＝連結`/activities`、下左＝連結`/guide/apply`、下中＝連結`/me/wishlist`、下右＝連結`/faq`。
 4. 設為預設並發布。
 
 ## 驗證

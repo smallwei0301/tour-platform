@@ -196,11 +196,19 @@ export async function buildOrderQueryReplyMessages({ lineUserId } = {}) {
 
   const mapping = await getLineMappingByLineUserId(lineUserId).catch(() => null);
   if (!mapping || (!mapping.userId && !mapping.contactEmail)) {
+    // 綁定唯一入口：未綁定者按「我的訂單／付款」皆落到這張卡，引導完成綁定。
     return flex(
-      '這個 LINE 帳號尚未綁定訂單，請先完成綁定。',
+      '這個 LINE 帳號還沒綁定，完成綁定即可查詢訂單與付款。',
       infoBubble({
-        title: '尚未綁定訂單',
-        body: '這個 LINE 帳號目前尚未綁定任何訂單。完成綁定後即可隨時在這裡查詢訂單與付款。',
+        title: '先綁定，才能查訂單',
+        body: [
+          '這個 LINE 帳號還沒綁定訂單。完成綁定後，就能在這裡隨時查詢訂單狀態與付款。',
+          '',
+          '綁定方式：',
+          '1️⃣ 點下方按鈕登入「我的帳號」',
+          '2️⃣ 產生綁定碼（TBIND-…）',
+          '3️⃣ 把綁定碼貼回這個聊天室傳給我',
+        ].join('\n'),
         buttonLabel: '前往綁定',
         buttonUri: `${site}/me/profile`,
       }),
