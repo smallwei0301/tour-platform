@@ -119,7 +119,9 @@ test('GH-1067 RED: admin can open 開放季節 management and see existing seaso
   await expect(page.getByText('探洞季')).toBeVisible();
   await expect(page.getByText('11/1 - 4/30')).toBeVisible();
   await expect(page.getByText('Asia/Taipei')).toBeVisible();
-  await expect(page.getByText('啟用中')).toBeVisible();
+  // Scope to the status Badge (a <span>) so the assertion is unambiguous
+  // against the 「啟用中」 status-filter tab (a <button role="tab">).
+  await expect(page.locator('span').filter({ hasText: /^啟用中$/ })).toBeVisible();
 });
 
 test('GH-1067 RED: admin can create a season window with CSRF header and refreshed list', async ({
@@ -191,7 +193,7 @@ test('GH-1067 RED: admin can create a season window with CSRF header and refresh
   expect(requestHeaders[0]['x-csrf-token']).toBeTruthy();
 });
 
-test('GH-1067 RED: plan with no active seasons warns that 全年開放 persistence is still pending and keeps prior rows on API error', async ({
+test('plan with no active seasons and no year-round flag warns to set a season or enable 全年開放, and keeps prior rows on API error', async ({
   authedPage: page,
 }) => {
   const inactiveSeason: Season = {
@@ -240,8 +242,7 @@ test('GH-1067 RED: plan with no active seasons warns that 全年開放 persisten
   await mountPage(page);
 
   await page.getByRole('button', { name: '開放季節' }).click();
-  await expect(page.getByText('請先設定指定季節')).toBeVisible();
-  await expect(page.getByText('「全年開放」資料持久化仍在另一個資料契約切片處理中')).toBeVisible();
+  await expect(page.getByText('請先設定指定季節或開啟全年開放')).toBeVisible();
   await expect(page.getByText('舊季節')).toBeVisible();
 
   await page.getByRole('button', { name: '新增季節' }).click();
@@ -302,7 +303,72 @@ test('GH-1067 RED: admin can disable a season without deleting the plan', async 
   await page.getByRole('button', { name: '開放季節' }).click();
   await page.getByRole('button', { name: '停用季節' }).click();
 
-  await expect(page.getByText('已停用')).toBeVisible();
+  // Scope to the status Badge (a <span>) so the assertion is unambiguous
+  // against the 「已停用」 status-filter tab and the disable notice text.
+  await expect(page.locator('span').filter({ hasText: /^已停用$/ })).toBeVisible();
   expect(deleteCalls).toBe(1);
-  await expect(page.getByText('標準方案')).toBeVisible();
+  // ResponsiveTable renders the plan name in more than one node; .first()
+  // keeps this "plan row still present" check unambiguous.
+  await expect(page.getByText('標準方案').first()).toBeVisible();
+});
+
+test('admin can enable 全年開放 for a plan, persisting is_year_round via the plan PUT route', async ({
+  authedPage: page,
+}) => {
+  const planUpdates: unknown[] = [];
+  let yearRound = false;
+
+  // Plan list reflects the current year-round flag and re-loads after toggling.
+  await page.route(`**/api/v2/admin/activities/${ACTIVITY_ID}/plans`, async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.fallback();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: {
+          activity: activityPayload,
+          plans: [{ ...plansPayload[0], is_year_round: yearRound }],
+        },
+      }),
+    });
+  });
+
+  await page.route(`**/api/v2/admin/activities/${ACTIVITY_ID}/plans/${PLAN_ID}/seasons`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { seasons: [] } }),
+    });
+  });
+
+  await page.route(`**/api/v2/admin/activities/${ACTIVITY_ID}/plans/${PLAN_ID}`, async (route) => {
+    const body = route.request().postDataJSON() as Record<string, unknown>;
+    planUpdates.push(body);
+    yearRound = Boolean(body.is_year_round);
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { plan: { ...plansPayload[0], is_year_round: yearRound } } }),
+    });
+  });
+
+  await stubReadiness(page);
+  await page.goto(`/admin/activities/${ACTIVITY_ID}/plans`);
+
+  await page.getByRole('button', { name: '開放季節' }).click();
+
+  // Before enabling, the operator is told to set a season or turn on year-round.
+  await expect(page.getByText('請先設定指定季節或開啟全年開放')).toBeVisible();
+
+  const toggle = page.getByRole('switch', { name: '全年開放' });
+  await expect(toggle).toHaveAttribute('aria-checked', 'false');
+  await toggle.click();
+
+  await expect(page.getByText('已設定全年開放')).toBeVisible();
+  await expect(toggle).toHaveAttribute('aria-checked', 'true');
+  expect(planUpdates).toEqual([{ is_year_round: true }]);
 });

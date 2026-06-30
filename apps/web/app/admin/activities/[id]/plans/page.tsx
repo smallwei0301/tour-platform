@@ -66,6 +66,7 @@ type ActivityPlan = {
   max_participants: number;
   booking_type: 'scheduled' | 'request' | 'instant';
   status: 'active' | 'inactive' | 'archived';
+  is_year_round?: boolean | null;
   created_at: string;
   updated_at: string;
   details_link_text?: string | null;
@@ -180,6 +181,7 @@ export default function ActivityPlansPage() {
   const [seasonSaving, setSeasonSaving] = useState(false);
   const [editingSeason, setEditingSeason] = useState<ActivityPlanSeason | null>(null);
   const [seasonForm, setSeasonForm] = useState<SeasonFormState>(createDefaultSeasonForm());
+  const [yearRoundSaving, setYearRoundSaving] = useState(false);
 
   const createDefaultForm = () => ({
     name: '',
@@ -519,6 +521,35 @@ export default function ActivityPlansPage() {
     }
   };
 
+  const toggleYearRound = async (next: boolean) => {
+    if (!seasonPanelPlanId) return;
+
+    setYearRoundSaving(true);
+    setSeasonError('');
+    setSeasonNotice('');
+
+    try {
+      const res = await fetch(`/api/v2/admin/activities/${activityId}/plans/${seasonPanelPlanId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...csrfHeaders() },
+        body: JSON.stringify({ is_year_round: next }),
+      });
+      const json = await res.json();
+
+      if (!json.success) {
+        setSeasonError(json.error?.message || '更新全年開放設定失敗，請稍後再試。');
+        return;
+      }
+
+      setSeasonNotice(next ? '已設定為全年開放。' : '已關閉全年開放，改由下方季節區間決定可販售期間。');
+      await loadData();
+    } catch {
+      setSeasonError('更新全年開放設定失敗，請檢查網路或稍後再試。');
+    } finally {
+      setYearRoundSaving(false);
+    }
+  };
+
   const toggleStatus = async (plan: ActivityPlan) => {
     const newStatus = plan.status === 'active' ? 'inactive' : 'active';
 
@@ -544,6 +575,8 @@ export default function ActivityPlansPage() {
     ? plans.filter((p) => p.status === statusFilter)
     : plans;
   const hasActiveSeasons = seasons.some((season) => season.is_active);
+  const seasonPanelPlan = seasonPanelPlanId ? plans.find((plan) => plan.id === seasonPanelPlanId) : undefined;
+  const isYearRound = Boolean(seasonPanelPlan?.is_year_round);
 
   const btn = (bg: string, color: string, border = 'none') =>
     ({
@@ -1059,18 +1092,81 @@ export default function ActivityPlansPage() {
                   {seasonPanelPlanName}：管理可販售季節區間與停用狀態。
                 </p>
               </div>
-              <button onClick={() => openSeasonForm()} style={btn('#2563eb', '#fff')}>
+              <button onClick={() => openSeasonForm()} disabled={isYearRound} style={btn(isYearRound ? '#cbd5e1' : '#2563eb', '#fff')}>
                 新增季節
               </button>
             </div>
 
-            {!hasActiveSeasons && !seasonLoading && (
-              <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: '#9a3412', marginBottom: 4 }}>請先設定指定季節</div>
-                <div style={{ fontSize: 14, color: '#9a3412' }}>
-                  「全年開放」資料持久化仍在另一個資料契約切片處理中，空白季節或全部停用都不代表旅客端可全年販售。
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                flexWrap: 'wrap',
+                border: '1px solid #e5e7eb',
+                borderRadius: 12,
+                padding: '14px 16px',
+                marginBottom: 16,
+                background: isYearRound ? '#ecfdf5' : '#ffffff',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, color: '#111827' }}>全年開放</div>
+                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+                  開啟後忽略下方季節區間，此方案全年皆可販售；關閉則改由下方設定的季節區間決定可販售期間。
                 </div>
               </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={isYearRound}
+                aria-label="全年開放"
+                disabled={yearRoundSaving || seasonLoading}
+                onClick={() => void toggleYearRound(!isYearRound)}
+                style={{
+                  width: 56,
+                  height: 30,
+                  borderRadius: 999,
+                  border: 'none',
+                  cursor: yearRoundSaving || seasonLoading ? 'default' : 'pointer',
+                  background: isYearRound ? '#059669' : '#cbd5e1',
+                  position: 'relative',
+                  flexShrink: 0,
+                  transition: 'background .15s',
+                }}
+              >
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: 3,
+                    left: isYearRound ? 29 : 3,
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    background: '#fff',
+                    transition: 'left .15s',
+                  }}
+                />
+              </button>
+            </div>
+
+            {isYearRound ? (
+              <div role="status" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                <div style={{ fontWeight: 700, color: '#065f46', marginBottom: 4 }}>已設定全年開放</div>
+                <div style={{ fontSize: 14, color: '#065f46' }}>
+                  此方案目前為全年開放，旅客全年皆可預約；下方季節區間暫時不生效。若要改回指定季節販售，請關閉上方「全年開放」。
+                </div>
+              </div>
+            ) : (
+              !hasActiveSeasons && !seasonLoading && (
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
+                  <div style={{ fontWeight: 700, color: '#9a3412', marginBottom: 4 }}>請先設定指定季節或開啟全年開放</div>
+                  <div style={{ fontSize: 14, color: '#9a3412' }}>
+                    此方案尚未設定可販售的季節區間，也未開啟「全年開放」，旅客端目前無法預約。請新增季節區間，或開啟上方「全年開放」。
+                  </div>
+                </div>
+              )
             )}
 
             {seasonError && (
@@ -1175,7 +1271,7 @@ export default function ActivityPlansPage() {
               <div style={{ fontSize: 14, color: '#6b7280' }}>載入開放季節中...</div>
             ) : seasons.length === 0 ? (
               <div style={{ border: '1px dashed #cbd5e1', borderRadius: 12, padding: 20, color: '#64748b', fontSize: 14 }}>
-                尚未建立季節區間。請先新增季節，避免把空白狀態誤解為全年開放。
+                尚未建立季節區間。請先新增季節，或於上方開啟「全年開放」，避免把空白狀態誤解為全年開放。
               </div>
             ) : (
               <div style={{ display: 'grid', gap: 12 }}>
