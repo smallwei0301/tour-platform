@@ -10,6 +10,7 @@ import {
   type UiActiveSeasonSummary,
 } from '../../../src/lib/availability-v2/canonical-availability-ui';
 import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
+import { bookingTypeLabelZh, isDynamicAvailabilityApplicable } from '../../../src/lib/booking-type-flow.mjs';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -72,6 +73,7 @@ type GuideActivityPlanOption = {
   durationMinutes: number | null;
   minParticipants: number | null;
   maxParticipants: number | null;
+  bookingType?: string | null;
   isYearRound?: boolean | null;
   activeSeasonSummaries?: UiActiveSeasonSummary[];
 };
@@ -251,6 +253,11 @@ export default function GuideAvailabilityPage() {
   };
 
   const saveRule = async () => {
+    // 排程方案不得綁動態規則（後端亦回 422，前端先擋一層）。
+    if (selectedRulePlanIsScheduled) {
+      setError('排程預約方案僅使用固定場次，請改用「場次管理」。');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -384,6 +391,11 @@ export default function GuideAvailabilityPage() {
   }, {} as Record<string, GuideActivityPlanOption>);
   const previewPlan = optionByPlanId[previewPlanId] || null;
   const selectedRulePlan = optionByPlanId[ruleForm.activity_plan_id] || null;
+  // 排程方案只看固定場次，動態可預約時段規則對它無效（對稱 #1495）。選到排程方案時
+  // 警示並停用送出，引導改用「場次管理」。
+  const selectedRulePlanIsScheduled = Boolean(
+    selectedRulePlan && !isDynamicAvailabilityApplicable(selectedRulePlan.bookingType)
+  );
   const rulePlanSeasonStatus = describePlanSeasonStatus({
     isYearRound: selectedRulePlan?.isYearRound,
     activeSeasonSummaries: selectedRulePlan?.activeSeasonSummaries,
@@ -572,7 +584,11 @@ export default function GuideAvailabilityPage() {
             <button onClick={() => setShowRuleModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
               取消
             </button>
-            <button onClick={saveRule} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
+            <button
+              onClick={saveRule}
+              disabled={saving || selectedRulePlanIsScheduled}
+              style={btn(saving || selectedRulePlanIsScheduled ? '#a78bfa' : '#7c3aed', '#fff')}
+            >
               {saving ? '儲存中...' : '儲存'}
             </button>
           </>
@@ -633,11 +649,19 @@ export default function GuideAvailabilityPage() {
               <option value="">請選擇方案</option>
               {selectedActivityPlans.map((plan) => (
                 <option key={plan.planId} value={plan.planId}>
-                  {`${plan.planName}（${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
+                  {`${plan.planName}（${bookingTypeLabelZh(plan.bookingType)}・${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
                 </option>
               ))}
             </select>
           </div>
+          {selectedRulePlanIsScheduled && (
+            <div
+              data-testid="rule-booking-type-warning"
+              style={{ border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 10, padding: '10px 12px', color: '#92400e', fontSize: 13, lineHeight: 1.6 }}
+            >
+              ⚠️ 此方案為<strong>排程預約</strong>，僅使用固定場次，無法設定動態可預約時段規則。請改用「場次管理」建立固定場次；動態時段規則僅適用<strong>即時／申請</strong>預約方案。
+            </div>
+          )}
           {selectedRulePlan && (
             <div style={{ border: `1px solid ${toneStyles[rulePlanSeasonStatus.tone].border}`, background: toneStyles[rulePlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[rulePlanSeasonStatus.tone].color }}>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{rulePlanSeasonStatus.title}</div>
