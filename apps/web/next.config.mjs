@@ -18,15 +18,17 @@ assertStartupEnv(process.env);
 // #1375 — CSP 先以 Report-Only 試行（違規只回報不阻擋，避免誤擋 ECPay 金流跳轉）。
 // 來源盤點：ECPay 付款跳轉（form-action）、Supabase REST/Realtime（connect-src）、
 // Sentry（tunnel /monitoring 為同源；無 tunnel 時走 *.sentry.io）、Vercel Analytics /
-// Speed Insights、Unsplash/Pexels/Supabase 圖源。'unsafe-inline'/'unsafe-eval' 為
+// Speed Insights、Google Analytics 4（gtag.js → googletagmanager.com，beacon →
+// google-analytics.com / analytics.google.com）、Unsplash/Pexels/Supabase 圖源。
+// 'unsafe-inline'/'unsafe-eval' 為
 // Next.js hydration 與 dev runtime 所需；enforce 切換另開 follow-up issue 附觀察證據。
 const cspReportOnly = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.googletagmanager.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co",
+  "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
   "form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw",
   "frame-ancestors 'self'",
   "worker-src 'self' blob:",
