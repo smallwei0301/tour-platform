@@ -40,6 +40,34 @@ test('設定 Telegram + Email → 各送一次（best-effort）', async () => {
   assert.ok(res.find((r) => r.channel === 'email').ok);
 });
 
+test('Email 寄件人：沒設 ALERT_EMAIL_FROM 時自動沿用 EMAIL_FROM', async () => {
+  let sentBody = null;
+  const fakeFetch = async (url, opts) => {
+    if (url.includes('api.resend.com')) sentBody = JSON.parse(opts.body);
+    return { ok: true, status: 200 };
+  };
+  const env = {
+    WORKFLOW_NAME: 'w', RESEND_API_KEY: 're_x', ALERT_EMAIL_TO: 'ops@example.com',
+    EMAIL_FROM: 'Midao <noreply@verified.example>', // 無 ALERT_EMAIL_FROM
+  };
+  await notifyFailure(env, fakeFetch);
+  assert.equal(sentBody.from, 'Midao <noreply@verified.example>');
+});
+
+test('Email 寄件人：ALERT_EMAIL_FROM 優先於 EMAIL_FROM', async () => {
+  let sentBody = null;
+  const fakeFetch = async (url, opts) => {
+    if (url.includes('api.resend.com')) sentBody = JSON.parse(opts.body);
+    return { ok: true, status: 200 };
+  };
+  const env = {
+    WORKFLOW_NAME: 'w', RESEND_API_KEY: 're_x', ALERT_EMAIL_TO: 'ops@example.com',
+    ALERT_EMAIL_FROM: 'alerts@verified.example', EMAIL_FROM: 'noreply@verified.example',
+  };
+  await notifyFailure(env, fakeFetch);
+  assert.equal(sentBody.from, 'alerts@verified.example');
+});
+
 test('某通道 fetch 丟例外 → 不拋、回報 ok:false', async () => {
   const fakeFetch = async () => { throw new Error('network'); };
   const env = { WORKFLOW_NAME: 'w', TELEGRAM_BOT_TOKEN: 't', TELEGRAM_CHAT_ID: 'c' };

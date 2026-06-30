@@ -55,7 +55,9 @@ async function sendTelegram(env, text, fetchFn = globalThis.fetch) {
 async function sendEmail(env, subject, text, fetchFn = globalThis.fetch) {
   const apiKey = env.RESEND_API_KEY ?? '';
   const to = env.ALERT_EMAIL_TO ?? '';
-  const from = env.ALERT_EMAIL_FROM ?? 'onboarding@resend.dev';
+  // 沒設 ALERT_EMAIL_FROM 就沿用站台既有的已驗證寄件人 EMAIL_FROM（email.ts 同源）；
+  // 都沒有才退用 Resend 測試寄件人（只能寄給帳號本人）。用 || 讓空字串也能往下退。
+  const from = env.ALERT_EMAIL_FROM || env.EMAIL_FROM || 'onboarding@resend.dev';
   if (!apiKey || !to) return { channel: 'email', skipped: true };
   try {
     const res = await fetchFn('https://api.resend.com/emails', {
@@ -68,6 +70,10 @@ async function sendEmail(env, subject, text, fetchFn = globalThis.fetch) {
         text,
       }),
     });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      console.warn(`[notify-failure] email rejected ${res.status}: ${body.slice(0, 200)}`);
+    }
     return { channel: 'email', ok: res.ok, status: res.status };
   } catch (err) {
     console.warn('[notify-failure] email failed:', err?.message ?? err);
