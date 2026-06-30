@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { REGION_REGISTRY } from '../../../src/lib/region-slugs.mjs';
 
-const REGION_OPTIONS = ['台北市', '高雄市', '花蓮縣', '台南市', '台中市', '南投縣', '宜蘭縣', '屏東縣'];
+// 全台 18 縣市，以 region-slugs.mjs 的 REGION_REGISTRY 為單一真實來源（過去僅硬編 8 個）。
+const REGION_OPTIONS: string[] = Object.values(REGION_REGISTRY).map(r => r.dbValue);
 const CATEGORY_OPTIONS = [
   { value: 'mountain', label: '山徑' },
   { value: 'river', label: '野溪' },

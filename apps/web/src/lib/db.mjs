@@ -89,6 +89,7 @@ import { insertAuditLogDb } from './audit-log.mjs';
 import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { normalizeRegionForActivityPath } from './region-slug.mjs';
 import { normalizeRegionToDbValue } from './region-slugs.mjs';
+import { normalizeAdditionalRegions, activityMatchesRegion } from './activity-regions.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 import { resolveActivityReviewTransition } from './activity-review-transition.mjs';
 import { applyPendingOverlay, buildPendingDiff } from './activity-pending-overlay.mjs';
@@ -2622,8 +2623,8 @@ export async function listPublishedActivitiesDb(filters = {}) {
     if (filters.region) {
       // 地區比對一律正規化兩端（'高雄' / 'kaohsiung' / '高雄市' 視為同一地區），
       // 避免連結用短名、資料存全名時精確比對失配（footer 高雄篩選 0 筆的根因）。
-      const wantRegion = normalizeRegionToDbValue(filters.region);
-      result = result.filter(a => normalizeRegionToDbValue(a.region) === wantRegion);
+      // 行程支援複選地區：主要地區（region）或附加地區（regions）任一命中即算。
+      result = result.filter(a => activityMatchesRegion(a, filters.region));
     }
     if (filters.category) result = result.filter(a => a.category === filters.category);
     if (filters.q) {
@@ -2642,6 +2643,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
       return {
         id: a.slug, slug: a.slug, title: a.title, tagline: a.tagline,
         shortDescription: a.shortDescription, region: a.region, regionSlug: a.regionSlug,
+        regions: Array.isArray(a.regions) ? a.regions : [],
         category: a.category, priceTwd: a.price, durationMinutes: a.durationMinutes,
         durationDisplay: a.durationDisplay, minParticipants: a.minParticipants,
         maxParticipants: a.maxParticipants, coverImageUrl: a.imageUrl,
@@ -2662,7 +2664,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
   let query = supabase
     .from('activities')
     .select(`
-      id, slug, title, tagline, short_description, region, region_slug, category,
+      id, slug, title, tagline, short_description, region, region_slug, regions, category,
       price_twd, duration_minutes, min_participants, max_participants,
       cover_image_url, status, published_at,
       rating_avg, social_proof_quotes,
@@ -2671,7 +2673,10 @@ export async function listPublishedActivitiesDb(filters = {}) {
     .eq('status', 'published')
     .order('published_at', { ascending: false });
 
-  if (regionFilter) query = query.eq('region', regionFilter);
+  // 地區篩選：主要地區（region）或附加地區（regions jsonb 含目標值）任一命中即出現。
+  // regions 以 jsonb 陣列儲存（如 ["高雄市"]），用 cs（contains）走 GIN index。
+  // 地區值為中文無逗號／引號，放進 .or() 的 JSON 陣列字面量安全。
+  if (regionFilter) query = query.or(`region.eq.${regionFilter},regions.cs.["${regionFilter}"]`);
   if (filters.category) query = query.eq('category', filters.category);
   if (filters.q) query = query.ilike('title', `%${filters.q}%`);
 
@@ -2738,6 +2743,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
     return {
       id: r.id, slug: r.slug, title: r.title, tagline: r.tagline,
       shortDescription: r.short_description, region: r.region, regionSlug: r.region_slug,
+      regions: Array.isArray(r.regions) ? r.regions : [],
       category: r.category, priceTwd: r.price_twd, durationMinutes: r.duration_minutes,
       minParticipants: r.min_participants, maxParticipants: r.max_participants,
       coverImageUrl: r.cover_image_url, status: r.status,
@@ -3731,7 +3737,7 @@ export async function getAdminActivityByIdDb(id) {
   const { data, error } = await supabase
     .from('activities')
     .select(`
-      id, slug, title, tagline, short_description, description, region, region_slug, category,
+      id, slug, title, tagline, short_description, description, region, region_slug, regions, category,
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, safety_notice, faq,
@@ -3757,7 +3763,9 @@ export async function getAdminActivityByIdDb(id) {
   return {
     id: data.id, slug: data.slug, title: data.title, tagline: data.tagline,
     shortDescription: data.short_description, description: data.description,
-    region: data.region, regionSlug: data.region_slug, category: data.category,
+    region: data.region, regionSlug: data.region_slug,
+    regions: Array.isArray(data.regions) ? data.regions : [],
+    category: data.category,
     priceTwd: data.price_twd, durationMinutes: data.duration_minutes,
     minParticipants: data.min_participants, maxParticipants: data.max_participants,
     meetingPoint: data.meeting_point, meetingPointMapUrl: data.meeting_point_map_url,
@@ -3826,6 +3834,8 @@ export async function createActivityDb(input = {}) {
     description: input.description || null,
     region: input.region || null,
     region_slug: input.regionSlug || null,
+    // 附加地區（複選）：正規化、去重、排除主要地區；jsonb 陣列儲存。
+    regions: normalizeAdditionalRegions(input.regions, input.region),
     category: input.category || null,
     price_twd: Number(input.priceTwd || 0),
     duration_minutes: input.durationMinutes ? Number(input.durationMinutes) : null,
@@ -3898,6 +3908,11 @@ export async function updateActivityDb(id, input = {}) {
     if (input[k] !== undefined) patch[col] = toJsonbArray(input[k]);
   }
   if (input.imageUrls !== undefined) patch.image_urls = input.imageUrls;
+  // 附加地區（複選）：正規化、去重、排除主要地區。主要地區取本次 patch 的 region，
+  // 未隨本次更新時退回既有 input.region（兩者皆無則不排除）。
+  if (input.regions !== undefined) {
+    patch.regions = normalizeAdditionalRegions(input.regions, input.region ?? patch.region);
+  }
   if (input.plans !== undefined) patch.plans = input.plans;
   if (input.safetyNotice !== undefined) patch.safety_notice = input.safetyNotice || null;
   if (input.faq !== undefined) patch.faq = Array.isArray(input.faq) ? input.faq : [];

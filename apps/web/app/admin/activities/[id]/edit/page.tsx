@@ -10,6 +10,7 @@ import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 import { normalizeSocialProofQuotes } from '../../../../../src/lib/social-proof-quotes.mjs';
+import { REGION_REGISTRY } from '../../../../../src/lib/region-slugs.mjs';
 
 type SocialProofQuoteRow = { author: string; rating: number; text: string; photos?: string[] };
 import { addMinutesToHHMM } from '../../../../../src/lib/hhmm';
@@ -79,12 +80,12 @@ const DEFAULT_PLANS: PlanConfig[] = [
   },
 ];
 
-const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市', '台中市', '南投縣', '宜蘭縣', '屏東縣'];
-const REGION_SLUG_MAP: Record<string, string> = {
-  '台北市': 'taipei', '高雄市': 'kaohsiung', '花蓮縣': 'hualien',
-  '台南市': 'tainan', '台中市': 'taichung', '南投縣': 'nantou',
-  '宜蘭縣': 'yilan',  '屏東縣': 'pingtung',
-};
+// 地區清單與 slug 對照以 region-slugs.mjs 的 REGION_REGISTRY 為單一真實來源，
+// 涵蓋全台 18 縣市（過去硬編 8 個且 slug 對照另寫一份，易 drift／漏對應）。
+const REGIONS: string[] = Object.values(REGION_REGISTRY).map(r => r.dbValue);
+const REGION_SLUG_MAP: Record<string, string> = Object.fromEntries(
+  Object.values(REGION_REGISTRY).map(r => [r.dbValue, r.slug]),
+);
 const CATEGORIES = [
   { value: 'mountain', label: '山徑' },
   { value: 'river',    label: '野溪' },
@@ -704,6 +705,8 @@ export default function AdminActivityEditPage() {
   const [title,              setTitle]              = useState('');
   const [guideSlug,          setGuideSlug]          = useState('');
   const [region,             setRegion]             = useState('');
+  // 附加地區（複選）：行程除主要地區外也涵蓋的其他縣市，用於多地區篩選曝光。
+  const [additionalRegions,  setAdditionalRegions]  = useState<string[]>([]);
   const [category,           setCategory]           = useState('');
   const [priceTwd,           setPriceTwd]           = useState('');
   const [durationMinutes,    setDurationMinutes]    = useState('');
@@ -749,6 +752,7 @@ export default function AdminActivityEditPage() {
         setActivitySlug(d.slug || activityId);
         setGuideSlug(d.guideSlug || '');
         setRegion(d.region || '');
+        setAdditionalRegions(Array.isArray(d.regions) ? d.regions.filter((r: unknown): r is string => typeof r === 'string' && r.length > 0) : []);
         setCategory(d.category || '');
         setPriceTwd(String(d.priceTwd || ''));
         setDurationMinutes(String(d.durationMinutes || ''));
@@ -827,6 +831,7 @@ export default function AdminActivityEditPage() {
     setTitle(d.title || '');
     setGuideSlug(d.guideSlug || '');
     setRegion(d.region || '');
+    setAdditionalRegions(Array.isArray(d.regions) ? d.regions.filter((r: unknown): r is string => typeof r === 'string' && r.length > 0) : []);
     setCategory(d.category || '');
     setPriceTwd(String(d.priceTwd || ''));
     setDurationMinutes(String(d.durationMinutes || ''));
@@ -1086,6 +1091,8 @@ export default function AdminActivityEditPage() {
           title: title.trim(), guideSlug: guideSlug || undefined,
           region,
           regionSlug: normalizeRegionSlug(region, REGION_SLUG_MAP[region]),
+          // 附加地區（複選）：排除與主要地區重複者，後端會再正規化去重一次。
+          regions: additionalRegions.filter(r => r !== region),
           category,
           priceTwd: Number(priceTwd),
           durationMinutes: durationMinutes ? Number(durationMinutes) : undefined,
@@ -1307,7 +1314,7 @@ export default function AdminActivityEditPage() {
 
             <FormGrid cols={2} gap={16}>
               <label style={labelStyle}>
-                地區
+                主要地區
                 <select value={region} onChange={e => setRegion(e.target.value)} style={fieldStyle}>
                   <option value="">選擇地區</option>
                   {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
@@ -1321,6 +1328,34 @@ export default function AdminActivityEditPage() {
                 </select>
               </label>
             </FormGrid>
+
+            {/* 附加地區（複選）：行程也涵蓋的其他縣市；主要地區決定 URL/SEO，附加地區讓行程在多個地區篩選中出現。 */}
+            <fieldset style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, margin: 0 }}>
+              <legend style={{ ...labelStyle, padding: '0 6px' }}>附加地區（複選）</legend>
+              <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>
+                除主要地區外，這個行程還涵蓋哪些縣市？可複選；旅客用任一地區篩選時都會看到此行程。主要地區不需重複勾選。
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6 }}>
+                {REGIONS.filter(r => r !== region).map(r => {
+                  const checked = additionalRegions.includes(r);
+                  return (
+                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 400, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        value={r}
+                        checked={checked}
+                        onChange={e => {
+                          setAdditionalRegions(prev =>
+                            e.target.checked ? [...prev, r] : prev.filter(x => x !== r),
+                          );
+                        }}
+                      />
+                      {r}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
 
             <label style={labelStyle}>
               Tagline
