@@ -425,15 +425,15 @@ export default function GuideProfileEditPage() {
           <header style={{ marginBottom: 4 }}>
             <h2 style={SECTION_TITLE}>訂單通知綁定</h2>
             <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
-              綁定後，你負責的行程有新訂單／付款／取消／退款時，會推送到你的個人帳號。
+              你負責的行程有新訂單／付款／取消／退款時，會以 Email／Telegram 通知你。
             </p>
           </header>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <NotificationBindingButton
               endpoint="/api/guide/line-binding"
               channel="line"
-              title="LINE 通知"
-              description="點按產生綁定連結，於 LINE 送出即可完成。"
+              title="LINE 綁定（選填）"
+              description="綁定 LINE 官方帳號；訂單通知請改用下方 Telegram 或 Email。"
               accent="#06c755"
             />
             <NotificationBindingButton

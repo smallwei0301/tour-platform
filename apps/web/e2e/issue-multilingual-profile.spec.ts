@@ -43,7 +43,7 @@ test.describe('@multilingual /me/profile i18n', () => {
     await expect(page.getByRole('heading', { name: '個人資料' })).toBeVisible();
     await expect(page.getByText('暱稱（顯示名稱）')).toBeVisible();
     await expect(page.getByTestId('profile-save-btn')).toHaveText('儲存');
-    await expect(page.getByText('LINE 通知')).toBeVisible();
+    await expect(page.getByText('LINE 訂單查詢')).toBeVisible();
     await expect(page.getByRole('link', { name: '探索行程' })).toBeVisible();
     await page.screenshot({ path: 'test-results/profile-zh.png', fullPage: true });
   });
@@ -56,7 +56,7 @@ test.describe('@multilingual /me/profile i18n', () => {
     await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
     await expect(page.getByText('Nickname (display name)')).toBeVisible();
     await expect(page.getByTestId('profile-save-btn')).toHaveText('Save');
-    await expect(page.getByText('LINE notifications')).toBeVisible();
+    await expect(page.getByText('LINE order lookup')).toBeVisible();
     // 共用 chrome 在無前綴個人頁也跟著 cookie 切英文。
     await expect(page.getByRole('link', { name: 'Explore Routes' })).toBeVisible();
     // NotificationBindingButton 內部狀態文字也跟隨 locale。
