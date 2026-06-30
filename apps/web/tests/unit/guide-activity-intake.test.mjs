@@ -47,9 +47,38 @@ test('normalizeIntake：缺必填 → ok=false 並列出原因', () => {
 });
 
 test('normalizeIntake：非法地區 → 拒絕', () => {
-  const result = normalizeIntake(validBody({ region: '台東縣' }));
+  const result = normalizeIntake(validBody({ region: '火星' }));
   assert.equal(result.ok, false);
   assert.match(result.message, /地區必須是/);
+});
+
+test('normalizeIntake：擴充後台東縣等縣市為合法主要地區', () => {
+  const result = normalizeIntake(validBody({ region: '台東縣' }));
+  assert.equal(result.ok, true);
+  assert.equal(result.value.region, '台東縣');
+});
+
+test('normalizeIntake：附加地區（複選）正規化、去重、排除主要地區、過濾非法', () => {
+  const result = normalizeIntake(
+    validBody({ regions: ['台北市', 'taipei', '高雄市', '台中', '火星', ''] }),
+  );
+  assert.equal(result.ok, true);
+  // 高雄市=主要地區被排除；台北市去重；台中→台中市；火星/空字串被濾掉
+  assert.deepEqual(result.value.regions, ['台北市', '台中市']);
+});
+
+test('normalizeIntake：未提供 regions → 空陣列', () => {
+  const result = normalizeIntake(validBody());
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value.regions, []);
+});
+
+test('buildActivityIntakePrompt：含附加地區 schema 與導遊勾選內容', () => {
+  const { value } = normalizeIntake(validBody({ regions: ['台北市', '台中市'] }));
+  const prompt = buildActivityIntakePrompt(value);
+  assert.match(prompt, /"regions"/);
+  assert.match(prompt, /附加地區（複選）/);
+  assert.match(prompt, /台北市、台中市/);
 });
 
 test('normalizeIntake：非法類別代碼 → 拒絕', () => {
@@ -100,7 +129,9 @@ test('buildActivityIntakePrompt：選填留空時標記請 AI 生成', () => {
   assert.match(prompt, /導遊未填，請依行程內容合理生成/);
 });
 
-test('常數：地區 8 個、類別 4 個', () => {
-  assert.equal(INTAKE_REGION_OPTIONS.length, 8);
+test('常數：地區涵蓋全台 18 縣市、類別 4 個', () => {
+  assert.equal(INTAKE_REGION_OPTIONS.length, 18);
+  assert.ok(INTAKE_REGION_OPTIONS.includes('台東縣'));
+  assert.ok(INTAKE_REGION_OPTIONS.includes('屏東縣'));
   assert.equal(INTAKE_CATEGORY_OPTIONS.length, 4);
 });

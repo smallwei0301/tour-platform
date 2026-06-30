@@ -44,6 +44,8 @@ const reqMark = <span style={{ color: '#c2542e' }}> *</span>;
 export default function GuideNewActivityPage() {
   const [title, setTitle] = useState('');
   const [region, setRegion] = useState('');
+  // 附加地區（複選）：行程除主要地區外也涵蓋的其他縣市。
+  const [additionalRegions, setAdditionalRegions] = useState<string[]>([]);
   const [category, setCategory] = useState('');
   const [priceTwd, setPriceTwd] = useState('');
   const [durationText, setDurationText] = useState('');
@@ -70,7 +72,9 @@ export default function GuideNewActivityPage() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          title, region, category, priceTwd, durationText, meetingPoint, description,
+          title, region,
+          regions: additionalRegions.filter((r) => r !== region),
+          category, priceTwd, durationText, meetingPoint, description,
           noticesRaw, plansRaw, socialProofRaw, faqRaw, guideName, guideContactEmail,
         }),
       });
@@ -136,7 +140,7 @@ export default function GuideNewActivityPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div style={groupStyle}>
-              <label htmlFor="f-region" style={labelStyle}>地區{reqMark}</label>
+              <label htmlFor="f-region" style={labelStyle}>主要地區{reqMark}</label>
               <span style={hintStyle}>行程主要發生的縣市</span>
               <select id="f-region" style={fieldStyle} value={region} onChange={(e) => setRegion(e.target.value)}>
                 <option value="">請選擇</option>
@@ -150,6 +154,32 @@ export default function GuideNewActivityPage() {
                 <option value="">請選擇</option>
                 {CATEGORY_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
+            </div>
+          </div>
+
+          {/* 附加地區（複選）：行程也涵蓋的其他縣市；主要地區決定 URL/SEO，附加地區讓行程在多個地區篩選中出現。 */}
+          <div style={groupStyle}>
+            <label style={labelStyle}>附加地區（複選）</label>
+            <span style={hintStyle}>除主要地區外，這個行程還涵蓋哪些縣市？可不選；主要地區不需重複勾選。</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(96px, 1fr))', gap: 6, marginTop: 4 }}>
+              {REGION_OPTIONS.filter((r) => r !== region).map((r) => {
+                const checked = additionalRegions.includes(r);
+                return (
+                  <label key={r} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      value={r}
+                      checked={checked}
+                      onChange={(e) => {
+                        setAdditionalRegions((prev) =>
+                          e.target.checked ? [...prev, r] : prev.filter((x) => x !== r),
+                        );
+                      }}
+                    />
+                    {r}
+                  </label>
+                );
+              })}
             </div>
           </div>
 

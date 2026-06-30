@@ -53,10 +53,28 @@ test('admin 編輯頁送出 regions 並渲染複選 checkbox', () => {
   assert.match(page, /type="checkbox"/);
 });
 
-test('guide 投稿頁地區清單擴充為全台 REGION_REGISTRY', () => {
+test('guide 投稿頁地區清單擴充為全台 REGION_REGISTRY，並支援附加地區複選', () => {
   const page = read('app/guide/new-activity/page.tsx');
   assert.match(page, /import \{ REGION_REGISTRY \} from/);
   assert.match(page, /Object\.values\(REGION_REGISTRY\)\.map\(r => r\.dbValue\)/);
+  // 附加地區 state、複選 UI、送出
+  assert.match(page, /additionalRegions/);
+  assert.match(page, /type="checkbox"/);
+  assert.match(page, /regions: additionalRegions\.filter\(\(r\) => r !== region\)/);
+});
+
+test('guide intake 正規化／提示詞貫穿附加地區', () => {
+  const intake = read('src/lib/guide-activity-intake.mjs');
+  // 18 縣市來自 REGION_REGISTRY
+  assert.match(intake, /Object\.values\(REGION_REGISTRY\)\.map\(\(r\) => r\.dbValue\)/);
+  // normalizeIntake 用 normalizeAdditionalRegions + 合法過濾
+  assert.match(intake, /normalizeAdditionalRegions\(src\.regions, region\)/);
+  assert.match(intake, /INTAKE_REGION_OPTIONS\.includes\(r\)/);
+  // 回傳 value 含 regions
+  assert.match(intake, /title,\s*\n\s*region,\s*\n\s*regions,/);
+  // 提示詞 schema 與原始內容區塊含附加地區
+  assert.match(intake, /"regions":/);
+  assert.match(intake, /附加地區（複選）/);
 });
 
 test('遷移檔存在（新增 activities.regions + GIN index + rollback）', () => {
