@@ -457,8 +457,14 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 <span className="kkd-reviews-total">{t('reviewsTotal', { count: reviewStats.count })}</span>
               </div>
 
-              <div className="kkd-review-list">
-                {/* 真實旅客評論（已核准）與後台社群口碑語錄整合呈現，使用相同卡片樣式 */}
+              <div
+                className="kkd-review-list"
+                role="region"
+                aria-label={t('sectionReviews')}
+                tabIndex={0}
+              >
+                {/* 真實旅客評論（已核准）與後台社群口碑語錄整合呈現，使用相同卡片樣式；
+                    容器為橫向 scroll-snap 卷軸，旅客可左右滑動瀏覽評價 */}
                 {actReviews.map((r: any) => (
                   <div key={r.id} className="kkd-review-card">
                     <div className="kkd-review-header">
