@@ -22,6 +22,7 @@ import { ReviewPhotos } from '../../../../../src/components/activity/ReviewPhoto
 import { isBookingV2Enabled } from '../../../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../../src/lib/booking-entry.mjs';
 import { resolveDatePlanPresentation } from '../../../../../src/lib/date-plan-source.mjs';
+import { resolveActivityPriceUnit } from '../../../../../src/lib/activity-price-unit.mjs';
 import { ActivityQASection } from '../../../../../src/components/activity/ActivityQASection';
 import { PublicPromoBanner } from '../../../../../src/components/activity/PublicPromoBanner';
 import { ActivityRecommendations } from '../../../../../src/components/activity/ActivityRecommendations';
@@ -202,6 +203,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     defaultPlans: [],
   });
   const hidePublicBookingCta = Boolean(useBookingV2 && datePlanPresentation.showMissingCanonicalMessage);
+  // 活動層級起價單位跟著方案計價方式走：所有方案皆為「每團報價」時顯示每團單位，
+  // 否則維持每人（避免每團方案在 hero／側欄／底部 CTA 仍誤標「/ 人」）。
+  const activityPriceUnit = resolveActivityPriceUnit(formalPlans);
+  const isGroupPriced = activityPriceUnit === 'per_group';
   // #297 人數限制以「方案」為唯一真實來源（活動層級輸入已移除）。前台摘要改由方案推導：
   // 各方案範圍一致 → 顯示該範圍；不一致 → 「最少人數依方案而定」；無方案 → 退回活動既有值。
   const planParticipantRanges = formalPlans
@@ -341,7 +346,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           <div className="kkd-price-row">
             <span className="kkd-orig-price">NT${originalPrice.toLocaleString()}</span>
             <strong className="kkd-price">NT${activity.priceTwd.toLocaleString()}</strong>
-            <span className="kkd-price-unit">{t('priceUnit')}</span>
+            <span className="kkd-price-unit">{isGroupPriced ? t('priceUnitGroup') : t('priceUnit')}</span>
           </div>
 
           {/* Policy + activity info row */}
@@ -594,7 +599,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <div className="kkd-booking-price-block">
                 <span className="kkd-booking-orig">NT${originalPrice.toLocaleString()}</span>
                 <strong className="kkd-booking-price">
-                  NT${activity.priceTwd.toLocaleString()} <span style={{ fontSize: 14, fontWeight: 400 }}>{t('priceUnit')}</span>
+                  NT${activity.priceTwd.toLocaleString()} <span style={{ fontSize: 14, fontWeight: 400 }}>{isGroupPriced ? t('priceUnitGroup') : t('priceUnit')}</span>
                 </strong>
               </div>
 
@@ -686,7 +691,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       <ActivityBottomBar
         activitySlug={activity.slug}
         activityId={activity.id}
-        priceLabel={t('priceLabelBottom', { price: activity.priceTwd?.toLocaleString() ?? '0' })}
+        priceLabel={t(isGroupPriced ? 'priceLabelBottomGroup' : 'priceLabelBottom', { price: activity.priceTwd?.toLocaleString() ?? '0' })}
         price={activity.priceTwd || 0}
         useBookingV2={useBookingV2}
         directBookingHref={directBookingHref}
