@@ -35,6 +35,8 @@ export interface Activity {
   category: string;
   region: string;
   regionSlug: string;
+  /** 附加地區（複選，DB 規範值如「花蓮縣」）；主要地區仍由 region 決定 URL/SEO。 */
+  regions?: string[];
   tagline: string;
   shortDescription: string;
   longDescription: string;
@@ -159,6 +161,7 @@ export const activities: Activity[] = [
     category: 'outdoor',
     region: '高雄市',
     regionSlug: 'kaohsiung',
+    regions: ['花蓮縣'],
     tagline: '不是一般健行路線，而是由熟悉地形的人帶你走進平常不會自己到達的柴山探洞路線。',
     shortDescription: '如果你想看的不是一般觀光景點，而是高雄更有記憶點的一面，Andy Lee 的柴山探洞體驗，會帶你用安全、有節奏、有人帶的方式，進入城市邊緣最有特色的地形路線。',
     longDescription: '這不是一條普通的散步行程，也不是制式化的觀光路線。Andy Lee 會帶你走進高雄柴山具有地形特色的探洞體驗路線，讓你從不同角度認識這座城市邊緣最有層次、也最容易被忽略的自然地貌。整個體驗重點不在趕景點，而在於讓你真正感受到路線的變化、環境的細節，以及有人帶領時才能安全進入的探索感。對第一次接觸這類型戶外體驗的人來說，這是一種既新鮮、又具有故事感的高雄打開方式；對已經玩過一般市區景點的人來說，這會是完全不同等級的記憶點。',
