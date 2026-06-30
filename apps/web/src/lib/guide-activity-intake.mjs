@@ -12,17 +12,12 @@
  *  apps/web/app/admin/activities/[id]/edit/page.tsx (validateImport)
  */
 
-// 後台合法地區（對應 REGIONS）
-export const INTAKE_REGION_OPTIONS = [
-  '台北市',
-  '高雄市',
-  '花蓮縣',
-  '台南市',
-  '台中市',
-  '南投縣',
-  '宜蘭縣',
-  '屏東縣',
-];
+import { REGION_REGISTRY } from './region-slugs.mjs';
+import { normalizeAdditionalRegions } from './activity-regions.mjs';
+
+// 後台合法地區（對應後台 REGIONS，以 region-slugs.mjs 的 REGION_REGISTRY 為單一
+// 真實來源，涵蓋全台 18 縣市；過去僅硬編 8 個，導遊只能投稿其中少數地區）。
+export const INTAKE_REGION_OPTIONS = Object.values(REGION_REGISTRY).map((r) => r.dbValue);
 
 // 後台合法類別代碼（對應 CATEGORIES）
 export const INTAKE_CATEGORY_OPTIONS = [
@@ -86,11 +81,18 @@ export function normalizeIntake(body) {
     return { ok: false, message: errors.join('；') };
   }
 
+  // 附加地區（複選）：正規化、去重、排除主要地區，再只保留合法縣市（UI 僅提供
+  // 合法選項，過濾是防呆）。主要地區仍存於 region；附加地區存進 regions。
+  const regions = normalizeAdditionalRegions(src.regions, region).filter((r) =>
+    INTAKE_REGION_OPTIONS.includes(r),
+  );
+
   return {
     ok: true,
     value: {
       title,
       region,
+      regions,
       category,
       priceTwd,
       durationText,
@@ -144,7 +146,8 @@ export function buildActivityIntakePrompt(answers) {
   - 每個 planItinerary 步驟的 imageUrl：與該步驟場景相符的圖片
   - 若某圖片找不到完全相符的可留 ""，不要捏造不存在的 URL。
 - \`durationMinutes\` 請把導遊填的時長文字換算成整數分鐘（例：「4.5 小時」→ 270）。
-- \`region\` 必須原樣輸出導遊填的中文地區；\`category\` 必須是代碼（mountain / river / culture / ecology）。
+- \`region\` 必須原樣輸出導遊填的「主要地區」中文名稱；\`category\` 必須是代碼（mountain / river / culture / ecology）。
+- \`regions\` 為導遊勾選的「附加地區（複選）」中文名稱陣列，請原樣輸出（不要加入主要地區、不要自行增減）；導遊未勾選時輸出 \`[]\`。
 - \`refundRules\` 與每個方案的 \`planRefundRules\` 一律使用下方「平台標準退款規則」，不要自創。
 - \`faq\` 使用 [{ "q": "...", "a": "..." }] 格式；每則 q／a 不超過 500 字。
 - \`itinerary\` 依行程內容拆成合理段落，每段 { step, title, description, duration, icon }，icon 用單一 emoji。
@@ -156,7 +159,8 @@ export function buildActivityIntakePrompt(answers) {
 {
   "title": "string",
   "guideSlug": "string（可留空）",
-  "region": "中文地區名稱",
+  "region": "中文地區名稱（主要地區）",
+  "regions": ["中文地區名稱（附加地區，可為空陣列）"],
   "category": "mountain | river | culture | ecology",
   "priceTwd": 0,
   "durationMinutes": 0,
@@ -215,8 +219,11 @@ ${refundList}
 【行程名稱】
 ${a.title || ''}
 
-【地區】
+【主要地區】
 ${a.region || ''}
+
+【附加地區（複選）】
+${Array.isArray(a.regions) && a.regions.length ? a.regions.join('、') : '（導遊未勾選）'}
 
 【類別】
 ${categoryLabel(a.category)}（代碼：${a.category || ''}）

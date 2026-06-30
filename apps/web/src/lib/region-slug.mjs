@@ -10,17 +10,30 @@
 // 失效不到那一頁、前台看不到輪播照片／暖場評論照片的變更。為杜絕此類 drift，
 // 統一由本模組提供正規化邏輯。
 
+// 全台縣市 → URL slug 對照（全名 + 常見短名 alias 皆收錄）。
+// 過去僅收錄少數縣市，其餘縣市（屏東／宜蘭／台東…）會走 ASCII 化分支被轉成
+// 'taiwan'，導致這些地區的行程詳情頁 URL 與 revalidate 路徑全都錯誤。行程編輯
+// 開放全台複選後，務必把 18 縣市全部正確對應，避免 broken URL（與
+// region-slugs.mjs 的 REGION_REGISTRY 一致）。
 const REGION_SLUG_MAP = {
-  '台北市': 'taipei',
-  '台北': 'taipei',
-  '新北市': 'new-taipei',
-  '桃園市': 'taoyuan',
-  '台中市': 'taichung',
-  '台南市': 'tainan',
-  '高雄市': 'kaohsiung',
-  '高雄': 'kaohsiung',
-  '花蓮縣': 'hualien',
-  '花蓮': 'hualien',
+  '台北市': 'taipei',     '台北': 'taipei',
+  '新北市': 'new-taipei', '新北': 'new-taipei',
+  '桃園市': 'taoyuan',    '桃園': 'taoyuan',
+  '台中市': 'taichung',   '台中': 'taichung',
+  '台南市': 'tainan',     '台南': 'tainan',
+  '高雄市': 'kaohsiung',  '高雄': 'kaohsiung',
+  '基隆市': 'keelung',    '基隆': 'keelung',
+  '新竹市': 'hsinchu',    '新竹': 'hsinchu',
+  '花蓮縣': 'hualien',    '花蓮': 'hualien',
+  '台東縣': 'taitung',    '台東': 'taitung',
+  '南投縣': 'nantou',     '南投': 'nantou',
+  '宜蘭縣': 'yilan',      '宜蘭': 'yilan',
+  '屏東縣': 'pingtung',   '屏東': 'pingtung',
+  '苗栗縣': 'miaoli',     '苗栗': 'miaoli',
+  '嘉義縣': 'chiayi',     '嘉義': 'chiayi',
+  '澎湖縣': 'penghu',     '澎湖': 'penghu',
+  '金門縣': 'kinmen',     '金門': 'kinmen',
+  '連江縣': 'matsu',      '馬祖': 'matsu', '連江': 'matsu',
 };
 
 /**

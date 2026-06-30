@@ -73,10 +73,12 @@ test('Source contract: db.mjs in-memory 地區篩選正規化兩端', () => {
     /from\s+['"]\.\/region-slugs\.mjs['"]/,
     'db.mjs 應 import region-slugs 正規化器',
   );
+  // 行程複選地區後，in-memory 篩選改用 activityMatchesRegion（主要或附加地區任一
+  // 命中），其內部仍用 normalizeRegionToDbValue 正規化兩端，故短名↔全名仍相容。
   assert.match(
     src,
-    /normalizeRegionToDbValue\(a\.region\)\s*===\s*wantRegion/,
-    'in-memory fallback 必須比對正規化後的 a.region 與 wantRegion',
+    /result\.filter\(a => activityMatchesRegion\(a, filters\.region\)\)/,
+    'in-memory fallback 應以 activityMatchesRegion 比對（兩端正規化、含附加地區）',
   );
 });
 
@@ -87,10 +89,12 @@ test('Source contract: db.mjs Supabase 查詢用正規化後的 regionFilter', (
     /const\s+regionFilter\s*=\s*filters\.region\s*\?\s*normalizeRegionToDbValue\(filters\.region\)/,
     'Supabase 路徑應先把 filters.region 正規化成 regionFilter',
   );
+  // 複選地區後主查詢改用 .or()：主要地區（region.eq）或附加地區（regions 含）任一命中，
+  // 但仍以正規化後的 regionFilter 比對，短名↔全名相容不破壞。
   assert.match(
     src,
-    /query\s*=\s*query\.eq\('region',\s*regionFilter\)/,
-    "主查詢應 .eq('region', regionFilter)",
+    /query\.or\(`region\.eq\.\$\{regionFilter\},regions\.cs\.\["\$\{regionFilter\}"\]`\)/,
+    "主查詢應以 .or() 比對 region.eq.regionFilter 或 regions 包含 regionFilter",
   );
   assert.match(
     src,
