@@ -5,6 +5,7 @@ import { Navbar } from '../src/components/layout/Navbar';
 import { FooterGate } from '../src/components/layout/FooterGate';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { GoogleAnalytics } from '../src/components/analytics/GoogleAnalytics';
 
 // Issue #1345 — Noto Sans TC is a large CJK font family; on slow mobile
 // links the swap from the fallback (sans-serif) to the real font lands
@@ -71,6 +72,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="zh-Hant">
       <head>
+        {/* Google Analytics 4（gtag.js）— 緊接 <head> 之後載入，全站僅此一份。
+            root layout 包住所有頁面，故每頁都帶到且不重複。詳見元件註解。 */}
+        <GoogleAnalytics />
         {/* 首頁導覽列「載入即透明」根因修正：在 hydration 前（早於瀏覽器捲動位置
             還原時機）就把首頁的 scrollRestoration 設為 manual 並回到頂端，避免重新
             整理時自動捲回原處而觸發 scroll 事件、使導覽列載入瞬間誤判為已捲動。
