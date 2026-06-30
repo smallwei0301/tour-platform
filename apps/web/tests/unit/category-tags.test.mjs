@@ -64,6 +64,35 @@ test('生態賞鳥（nature）→ ecology', () => {
   );
 });
 
+test('明確選定的 canonical category 優先於描述關鍵字（修正：山徑被標語生態字眼蓋成生態）', () => {
+  // 導遊／後台在編輯器選「山徑」存的是 category='mountain'，是人為明確指定；
+  // 即使標語／描述含生態字眼（ecology 優先序又高於 mountain），badge 仍須顯示山徑。
+  assert.equal(
+    classifyActivityCategoryTag({
+      category: 'mountain',
+      title: '阿里山森林漫步輕旅行｜高雄出發一日專車',
+      tagline: '走進阿里山的自然生態與森林步道。',
+    }),
+    'mountain',
+  );
+  // 反向：選「生態」但標題像登山健行，也應尊重明確的 ecology。
+  assert.equal(
+    classifyActivityCategoryTag({ category: 'ecology', title: '登山健行森林步道' }),
+    'ecology',
+  );
+});
+
+test('中文 badge 標籤作為明確 category 也直接採用', () => {
+  assert.equal(
+    classifyActivityCategoryTag({ category: '山徑', title: '潮間帶賞鳥生態導覽' }),
+    'mountain',
+  );
+  assert.equal(
+    classifyActivityCategoryTag({ category: '野溪', title: '森林步道健行' }),
+    'river',
+  );
+});
+
 test('legacy category 值單獨也能映射', () => {
   assert.equal(classifyActivityCategoryTag({ category: 'outdoor' }), 'mountain');
   assert.equal(classifyActivityCategoryTag({ category: 'culture' }), 'culture');
