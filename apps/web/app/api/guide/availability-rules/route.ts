@@ -11,6 +11,7 @@ import { ok, fail } from '../../../../src/lib/api';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { normalizeTimeLocal } from '../../../../src/lib/availability-v2/time-local.mjs';
+import { isDynamicAvailabilityApplicable } from '../../../../src/lib/booking-type-flow.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -28,6 +29,7 @@ async function ensureOwnedUsablePlan(
       `
         id,
         status,
+        booking_type,
         activities!inner (
           guide_id
         )
@@ -47,6 +49,17 @@ async function ensureOwnedUsablePlan(
       status: 400,
       code: 'VALIDATION_ERROR',
       message: 'activity_plan_id is not in usable status',
+    };
+  }
+
+  // 排程方案只看固定場次（activity_schedules），動態可預約時段規則對它無效。
+  // 對稱 #1495（排程方案不得新增動態規則 / 非排程方案不得新增固定場次）。
+  if (!isDynamicAvailabilityApplicable(data.booking_type)) {
+    return {
+      ok: false,
+      status: 422,
+      code: 'RULE_NOT_APPLICABLE_FOR_BOOKING_TYPE',
+      message: '排程預約方案僅使用固定場次，請改用「場次管理」；動態可預約時段規則僅適用即時／申請預約方案。',
     };
   }
 
