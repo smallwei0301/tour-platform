@@ -55,6 +55,7 @@
 | 變數名稱 | 說明 | Secret | 用途 |
 |----------|------|--------|------|
 | `NEXT_PUBLIC_SITE_URL` | 網站公開 URL | ❌ | Email 內連結使用（未設預設 vercel.app） |
+| `NEXT_PUBLIC_GA_ID` | Google Analytics 4 評估 ID（gtag.js） | ❌ | 全站流量分析；未設預設用正式帳號 `G-26EYTQJ9RC`，設空字串即停用（preview/測試不污染報表）。詳見 `docs/06-analytics/03-ga4-gtag-setup.md` |
 
 ---
 
@@ -67,6 +68,7 @@
 | `GOOGLE_CLIENT_ID` | 同 | 同 | 同 |
 | `RESEND_API_KEY` | 可不設 | 同 production | 設定 |
 | `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` | Vercel Preview URL | 正式 domain |
+| `NEXT_PUBLIC_GA_ID` | 建議設空字串停用 | 建議設空字串停用 | `G-26EYTQJ9RC`（或留空走預設） |
 
 ---
 
