@@ -13,7 +13,7 @@ import { createRequire } from 'node:module';
 // page.route('**/api/**') 可攔截的 seam，故無法用純前端 Playwright mock plans。
 // 這支 render 測試在沙箱內以「真實頁面 JSX + 真實 zh-Hant 文案」渲染，僅 mock
 // 掉資料來源（其中 resolveActivityPriceUnit 注入 per_group / per_person），實證
-// 活動層級起價單位（hero／側欄／底部 CTA 預設）會跟著方案計價方式輸出「組／人」。
+// 活動層級起價單位（hero／側欄／底部 CTA 預設）會跟著方案計價方式輸出「團／人」。
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const require = createRequire(import.meta.url);
@@ -168,20 +168,20 @@ async function renderDetailPage({ priceUnit }) {
   return { html, bottomBarSpy };
 }
 
-test('每團報價：hero／側欄起價單位顯示「組」、底部 CTA 顯示「NT$7,500 / 組」', async () => {
+test('每團報價：hero／側欄起價單位顯示「團」、底部 CTA 顯示「NT$7,500 / 團」', async () => {
   const { html, bottomBarSpy } = await renderDetailPage({ priceUnit: 'per_group' });
-  // hero（kkd-price-row）+ 側欄（kkd-booking-price-block）兩處皆應為「起 / 組」
-  const occurrences = html.split('起 / 組').length - 1;
-  assert.ok(occurrences >= 2, `預期至少兩處「起 / 組」，實際 ${occurrences}`);
+  // hero（kkd-price-row）+ 側欄（kkd-booking-price-block）兩處皆應為「起 / 團」
+  const occurrences = html.split('起 / 團').length - 1;
+  assert.ok(occurrences >= 2, `預期至少兩處「起 / 團」，實際 ${occurrences}`);
   // 不得殘留「起 / 人」
   assert.equal(html.includes('起 / 人'), false, 'per_group 不應出現「起 / 人」');
   // 底部 CTA 預設標籤
-  assert.equal(bottomBarSpy.priceLabel, 'NT$7,500 / 組');
+  assert.equal(bottomBarSpy.priceLabel, 'NT$7,500 / 團');
 });
 
 test('每人報價（回歸）：維持「起 / 人」與「NT$7,500 / 人」', async () => {
   const { html, bottomBarSpy } = await renderDetailPage({ priceUnit: 'per_person' });
   assert.ok(html.includes('起 / 人'), 'per_person 應顯示「起 / 人」');
-  assert.equal(html.includes('起 / 組'), false, 'per_person 不應出現「起 / 組」');
+  assert.equal(html.includes('起 / 團'), false, 'per_person 不應出現「起 / 團」');
   assert.equal(bottomBarSpy.priceLabel, 'NT$7,500 / 人');
 });
