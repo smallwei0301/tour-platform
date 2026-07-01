@@ -4,7 +4,9 @@ import {
   CATEGORY_TAGS,
   CATEGORY_TAG_SLUGS,
   CATEGORY_TAG_LABELS_ZH,
+  CATEGORY_OPTIONS,
   classifyActivityCategoryTag,
+  resolveExplicitCategorySlug,
 } from '../../src/lib/category-tags.mjs';
 
 test('四大分類：數量、順序與 slug', () => {
@@ -103,6 +105,26 @@ test('legacy category 值單獨也能映射', () => {
 test('中文 category 標籤也能映射', () => {
   assert.equal(classifyActivityCategoryTag({ category: '自然生態', title: '夜觀導覽' }), 'ecology');
   assert.equal(classifyActivityCategoryTag({ category: '戶外冒險', title: '登山健行' }), 'mountain');
+});
+
+test('CATEGORY_OPTIONS：編輯器下拉四大分類（value=slug／label=中文），與 badge 同源', () => {
+  assert.deepEqual(CATEGORY_OPTIONS, [
+    { value: 'mountain', label: '山徑' },
+    { value: 'river', label: '野溪' },
+    { value: 'culture', label: '文化' },
+    { value: 'ecology', label: '生態' },
+  ]);
+});
+
+test('resolveExplicitCategorySlug：canonical 值回 slug、legacy／自由文字回 null', () => {
+  assert.equal(resolveExplicitCategorySlug('mountain'), 'mountain');
+  assert.equal(resolveExplicitCategorySlug('山徑'), 'mountain');
+  assert.equal(resolveExplicitCategorySlug('ecology'), 'ecology');
+  assert.equal(resolveExplicitCategorySlug('生態'), 'ecology');
+  assert.equal(resolveExplicitCategorySlug('outdoor'), null);
+  assert.equal(resolveExplicitCategorySlug('自然生態'), null);
+  assert.equal(resolveExplicitCategorySlug(''), null);
+  assert.equal(resolveExplicitCategorySlug(null), null);
 });
 
 test('無命中 / 空輸入 → 預設 culture', () => {

@@ -11,6 +11,8 @@ import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 import { normalizeSocialProofQuotes } from '../../../../../src/lib/social-proof-quotes.mjs';
 import { REGION_REGISTRY } from '../../../../../src/lib/region-slugs.mjs';
+// 四大分類下拉：與 badge／篩選同源（category-tags.mjs），三處編輯器共用不重複定義。
+import { CATEGORY_OPTIONS as CATEGORIES } from '../../../../../src/lib/category-tags.mjs';
 
 type SocialProofQuoteRow = { author: string; rating: number; text: string; photos?: string[] };
 import { addMinutesToHHMM } from '../../../../../src/lib/hhmm';
@@ -86,13 +88,6 @@ const REGIONS: string[] = Object.values(REGION_REGISTRY).map(r => r.dbValue);
 const REGION_SLUG_MAP: Record<string, string> = Object.fromEntries(
   Object.values(REGION_REGISTRY).map(r => [r.dbValue, r.slug]),
 );
-const CATEGORIES = [
-  { value: 'mountain', label: '山徑' },
-  { value: 'river',    label: '野溪' },
-  { value: 'culture',  label: '文化' },
-  { value: 'ecology',  label: '生態' },
-];
-
 const fieldStyle: React.CSSProperties = {
   display: 'block', width: '100%', padding: '10px 12px',
   border: '1px solid #d1d5db', borderRadius: 8, fontSize: 14, marginTop: 4,
