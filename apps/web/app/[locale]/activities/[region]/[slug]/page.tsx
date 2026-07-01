@@ -329,7 +329,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       {/* ── Gallery ── */}
       {imageUrls.length > 0 && (
         <div className="tp-container">
-          <ImageCarousel images={imageUrls} alt={activity.title} sizes="(min-width: 768px) 0vw, 100vw" />
+          <ImageCarousel images={imageUrls} alt={activity.title} sizes="(min-width: 1200px) 1168px, 100vw" />
         </div>
       )}
 
