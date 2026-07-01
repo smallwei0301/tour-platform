@@ -1104,7 +1104,9 @@
   },
   "imageCarousel": {
     "noPhotos": "暫無照片",
-    "loadFailed": "無法載入"
+    "loadFailed": "無法載入",
+    "thumbnailsLabel": "活動照片縮圖，點選可切換大圖",
+    "thumbnailItem": "第 {index} 張，共 {total} 張"
   },
   "reviewPhotos": {
     "zoomPhoto": "放大檢視 {author} 的評價照片 {n}",
