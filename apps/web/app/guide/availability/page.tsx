@@ -87,6 +87,7 @@ export default function GuideAvailabilityPage() {
   const [previewReasonCode, setPreviewReasonCode] = useState<PreviewReasonCode>(null);
   const [previewCanonicalState, setPreviewCanonicalState] = useState<string | null>(null);
   const [previewSeasonGate, setPreviewSeasonGate] = useState<string | null>(null);
+  const [previewNotice, setPreviewNotice] = useState<string | null>(null);
   const [previewIsYearRound, setPreviewIsYearRound] = useState<boolean>(false);
   const [previewActiveSeasonSummaries, setPreviewActiveSeasonSummaries] = useState<UiActiveSeasonSummary[]>([]);
   const [activityPlanOptions, setActivityPlanOptions] = useState<GuideActivityPlanOption[]>([]);
@@ -174,6 +175,7 @@ export default function GuideAvailabilityPage() {
         setPreviewReasonCode(json.data?.previewReasonCode || null);
         setPreviewCanonicalState(json.data?.previewCanonicalState || null);
         setPreviewSeasonGate(json.data?.previewSeasonGate || null);
+        setPreviewNotice(json.data?.previewNotice || null);
         setPreviewIsYearRound(Boolean(json.data?.isYearRound));
         setPreviewActiveSeasonSummaries(json.data?.activeSeasonSummaries || []);
         setPreviewSlots((json.data?.slots || []).map((slot: PreviewSlot) => ({
@@ -187,6 +189,7 @@ export default function GuideAvailabilityPage() {
         setPreviewError(
           /92 days/i.test(msg) ? '預覽範圍最多 92 天，請縮小日期區間後再試。' : msg,
         );
+        setPreviewNotice(null);
         setPreviewSlots([]);
       }
     } catch {
@@ -1053,7 +1056,7 @@ export default function GuideAvailabilityPage() {
                     <option value="">全部方案（不篩選）</option>
                     {activityPlanOptions.map((plan) => (
                       <option key={plan.planId} value={plan.planId}>
-                        {`${plan.activityTitle}・${plan.planName}（${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
+                        {`${plan.activityTitle}・${plan.planName}（${bookingTypeLabelZh(plan.bookingType)}・${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
                       </option>
                     ))}
                   </select>
@@ -1131,7 +1134,16 @@ export default function GuideAvailabilityPage() {
                     </div>
                   )}
                 </div>
-                {previewPlan && (
+                {previewNotice && (
+                  <div
+                    data-testid="preview-scheduled-notice"
+                    style={{ marginBottom: 12, border: '1px solid #c7d2fe', background: '#eef2ff', borderRadius: 10, padding: '10px 12px', color: '#3730a3' }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>排程預約方案</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewNotice}</div>
+                  </div>
+                )}
+                {previewPlan && !previewNotice && (
                   <div style={{ marginBottom: 10, fontSize: 12, color: '#374151' }}>
                     預覽方案：{previewPlan.planName}（{formatParticipants(previewPlan.minParticipants, previewPlan.maxParticipants)}）
                     {previewBufferNote && (
@@ -1139,17 +1151,25 @@ export default function GuideAvailabilityPage() {
                     )}
                   </div>
                 )}
+                {!previewNotice && (
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewPlanSeasonStatus.title}</div>
                   <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewPlanSeasonStatus.description}</div>
                 </div>
+                )}
+                {!previewNotice && (
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewReason.tone].border}`, background: toneStyles[previewReason.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewReason.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>此期間無產生可預約時段時，請先看這裡</div>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewReason.label}</div>
                   <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewReason.description}</div>
                   <div style={{ marginTop: 6, fontSize: 12 }}>可能原因包含管理員覆寫、已有衝突，或方案開放季節尚未設定。</div>
                 </div>
-                {previewSlots.length === 0 ? (
+                )}
+                {previewNotice ? (
+                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
+                    排程預約方案不套用動態時段預覽，請至「場次管理」檢視固定場次。
+                  </div>
+                ) : previewSlots.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
                     此期間無可用時段。
                     <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>{previewReason.label}</div>

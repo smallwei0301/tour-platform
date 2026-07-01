@@ -140,6 +140,7 @@ export default function GuideAvailabilityPage() {
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
   const [previewCanonicalState, setPreviewCanonicalState] = useState<string | null>(null);
   const [previewSeasonGate, setPreviewSeasonGate] = useState<string | null>(null);
+  const [previewNotice, setPreviewNotice] = useState<string | null>(null);
   const [previewIsYearRound, setPreviewIsYearRound] = useState<boolean>(false);
   const [previewActiveSeasonSummaries, setPreviewActiveSeasonSummaries] = useState<UiActiveSeasonSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -223,6 +224,7 @@ export default function GuideAvailabilityPage() {
         setPreviewSlots(json.data.slots || []);
         setPreviewCanonicalState(json.data.previewCanonicalState || null);
         setPreviewSeasonGate(json.data.previewSeasonGate || null);
+        setPreviewNotice(json.data.previewNotice || null);
         setPreviewIsYearRound(Boolean(json.data.isYearRound));
         setPreviewActiveSeasonSummaries(json.data.activeSeasonSummaries || []);
       }
@@ -1103,7 +1105,7 @@ export default function GuideAvailabilityPage() {
                       {v2Activities.flatMap((a) =>
                         a.plans.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {a.title} — {p.name}
+                            {a.title} — {p.name}（{bookingTypeLabelZh(p.booking_type)}）
                           </option>
                         ))
                       )}
@@ -1128,10 +1130,21 @@ export default function GuideAvailabilityPage() {
                 </div>
               </div>
               <div style={{ padding: 20 }}>
+                {previewNotice ? (
+                  <div
+                    data-testid="preview-scheduled-notice"
+                    style={{ marginBottom: 12, border: '1px solid #c7d2fe', background: '#eef2ff', borderRadius: 10, padding: '10px 12px', color: '#3730a3' }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>排程預約方案</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewNotice}</div>
+                  </div>
+                ) : (
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewPlanSeasonStatus.title}</div>
                   <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewPlanSeasonStatus.description}</div>
                 </div>
+                )}
+                {!previewNotice && (
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewReason.tone].border}`, background: toneStyles[previewReason.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewReason.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>此期間無產生可預約時段時，請先確認 canonical 原因</div>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewReason.label}</div>
@@ -1139,7 +1152,10 @@ export default function GuideAvailabilityPage() {
                   <div style={{ marginTop: 6, fontSize: 12 }}>可能原因包含管理員覆寫、已有衝突，或方案開放季節尚未設定。</div>
                   <div style={{ marginTop: 4, fontSize: 12 }}>previewCanonicalState：{previewCanonicalState || 'N/A'}／previewSeasonGate：{previewSeasonGate || 'N/A'}</div>
                 </div>
-                {previewSlots.length === 0 ? (
+                )}
+                {previewNotice ? (
+                  <EmptyState message="排程預約方案不套用動態時段預覽，請至「場次管理」檢視固定場次。" />
+                ) : previewSlots.length === 0 ? (
                   <EmptyState message={`此期間無可用時段：${previewReason.label}`} />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
