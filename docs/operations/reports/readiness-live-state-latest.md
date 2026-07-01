@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-01T00:57:08.189Z -->
+<!-- query_timestamp: 2026-07-01T07:36:41.971Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-01T00:57:08.189Z  
-**Commit SHA:** `3b24491badab248211083a4524be8d181ee8177f`
+**Query timestamp:** 2026-07-01T07:36:41.971Z  
+**Commit SHA:** `8a3bf4f3b75b9df1f886258af67d0abefca18d7a`
 
 ---
 
@@ -76,16 +76,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1549 | [fix: revalidatePath 帶各 locale 前綴，admin/guide 改動後前台即時更新（#1488 後續）](https://github.com/smallwei0301/tour-platform/pull/1549) | 2026-07-01 |
+| #1548 | [feat: 導遊熟悉區域儲存統一成全名（與行程地區一致）](https://github.com/smallwei0301/tour-platform/pull/1548) | 2026-07-01 |
+| #1547 | [feat: 行程頁電腦版套用手機版左右滑動樣式（相簿＋旅客評價）](https://github.com/smallwei0301/tour-platform/pull/1547) | 2026-07-01 |
+| #1546 | [feat: 全台地區統一模組化（22 現行縣市 + 短名搜尋展開）](https://github.com/smallwei0301/tour-platform/pull/1546) | 2026-07-01 |
+| #1545 | [feat(guide): 導遊申請「專長領域」選項同步為平台四大分類](https://github.com/smallwei0301/tour-platform/pull/1545) | 2026-07-01 |
+| #1544 | [refactor: 主題篩選尊重明確分類 + 三處編輯器共用分類下拉](https://github.com/smallwei0301/tour-platform/pull/1544) | 2026-07-01 |
+| #1543 | [refactor(admin): 廢除舊版方案(activities.plans)與詳細行程備援，全面導向 V2 方案管理](https://github.com/smallwei0301/tour-platform/pull/1543) | 2026-07-01 |
+| #1542 | [docs(qa) + fix(test): 排程/即時 可用時間區隔 QA 報告 + 修復過期日期時間炸彈](https://github.com/smallwei0301/tour-platform/pull/1542) | 2026-07-01 |
 | #1541 | [feat(availability): 排程方案時段預覽改回提示、不跑動態規則預覽（PR3 預覽正確性）](https://github.com/smallwei0301/tour-platform/pull/1541) | 2026-07-01 |
 | #1540 | [fix: 行程卡分類 badge 尊重編輯器明確選的分類，不被文案關鍵字蓋掉](https://github.com/smallwei0301/tour-platform/pull/1540) | 2026-07-01 |
-| #1539 | [feat(availability): 時段規則表單擋排程方案 + 方案下拉標 booking_type（PR2 設定面 UX）](https://github.com/smallwei0301/tour-platform/pull/1539) | 2026-07-01 |
-| #1538 | [feat: 行程頁旅客評價改為左右滑動輪播](https://github.com/smallwei0301/tour-platform/pull/1538) | 2026-07-01 |
-| #1537 | [feat(availability): 排程方案禁綁動態規則 + 即時預約嚴格忽略 scheduleId（PR1 後端守門）](https://github.com/smallwei0301/tour-platform/pull/1537) | 2026-06-30 |
-| #1536 | [fix(admin): 修復後台照片無法顯示、方案計價方式被舊版 JSON 回寫覆蓋](https://github.com/smallwei0301/tour-platform/pull/1536) | 2026-06-30 |
-| #1535 | [feat: 附加地區顯示到前台詳情頁，並納入地區搜尋/篩選](https://github.com/smallwei0301/tour-platform/pull/1535) | 2026-06-30 |
-| #1533 | [feat(admin): 「下載 JSON」改匯出當前編輯中行程的文案設定](https://github.com/smallwei0301/tour-platform/pull/1533) | 2026-06-30 |
-| #1532 | [feat: 行程地點支援全台縣市與複選（後台編輯 + 導遊投稿）](https://github.com/smallwei0301/tour-platform/pull/1532) | 2026-06-30 |
-| #1531 | [fix(i18n): 旅客頁每團報價單位由「組」改為「團」](https://github.com/smallwei0301/tour-platform/pull/1531) | 2026-06-30 |
 
 ---
 
