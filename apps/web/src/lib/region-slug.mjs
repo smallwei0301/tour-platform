@@ -13,8 +13,8 @@
 // 全台縣市 → URL slug 對照（全名 + 常見短名 alias 皆收錄）。
 // 過去僅收錄少數縣市，其餘縣市（屏東／宜蘭／台東…）會走 ASCII 化分支被轉成
 // 'taiwan'，導致這些地區的行程詳情頁 URL 與 revalidate 路徑全都錯誤。行程編輯
-// 開放全台複選後，務必把 18 縣市全部正確對應，避免 broken URL（與
-// region-slugs.mjs 的 REGION_REGISTRY 一致）。
+// 開放全台複選後，務必把 22 縣市全部正確對應，避免 broken URL（與
+// region-slugs.mjs 的 REGION_REGISTRY 一致；嘉義市→chiayi-city、新竹縣→hsinchu-county）。
 const REGION_SLUG_MAP = {
   '台北市': 'taipei',     '台北': 'taipei',
   '新北市': 'new-taipei', '新北': 'new-taipei',
@@ -30,7 +30,11 @@ const REGION_SLUG_MAP = {
   '宜蘭縣': 'yilan',      '宜蘭': 'yilan',
   '屏東縣': 'pingtung',   '屏東': 'pingtung',
   '苗栗縣': 'miaoli',     '苗栗': 'miaoli',
+  '彰化縣': 'changhua',   '彰化': 'changhua',
+  '雲林縣': 'yunlin',     '雲林': 'yunlin',
   '嘉義縣': 'chiayi',     '嘉義': 'chiayi',
+  '嘉義市': 'chiayi-city',
+  '新竹縣': 'hsinchu-county',
   '澎湖縣': 'penghu',     '澎湖': 'penghu',
   '金門縣': 'kinmen',     '金門': 'kinmen',
   '連江縣': 'matsu',      '馬祖': 'matsu', '連江': 'matsu',

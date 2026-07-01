@@ -11,6 +11,7 @@ import {
   describeRuleSeasonConflict,
   type UiActiveSeasonSummary,
 } from '../../../../../src/lib/availability-v2/canonical-availability-ui';
+import { bookingTypeLabelZh, isDynamicAvailabilityApplicable } from '../../../../../src/lib/booking-type-flow.mjs';
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
@@ -139,6 +140,7 @@ export default function GuideAvailabilityPage() {
   const [previewSlots, setPreviewSlots] = useState<PreviewSlot[]>([]);
   const [previewCanonicalState, setPreviewCanonicalState] = useState<string | null>(null);
   const [previewSeasonGate, setPreviewSeasonGate] = useState<string | null>(null);
+  const [previewNotice, setPreviewNotice] = useState<string | null>(null);
   const [previewIsYearRound, setPreviewIsYearRound] = useState<boolean>(false);
   const [previewActiveSeasonSummaries, setPreviewActiveSeasonSummaries] = useState<UiActiveSeasonSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -222,6 +224,7 @@ export default function GuideAvailabilityPage() {
         setPreviewSlots(json.data.slots || []);
         setPreviewCanonicalState(json.data.previewCanonicalState || null);
         setPreviewSeasonGate(json.data.previewSeasonGate || null);
+        setPreviewNotice(json.data.previewNotice || null);
         setPreviewIsYearRound(Boolean(json.data.isYearRound));
         setPreviewActiveSeasonSummaries(json.data.activeSeasonSummaries || []);
       }
@@ -296,6 +299,11 @@ export default function GuideAvailabilityPage() {
   };
 
   const saveRule = async () => {
+    // 排程方案不得綁動態規則（後端亦回 422，前端先擋一層）。
+    if (selectedRulePlanIsScheduled) {
+      setError('排程預約方案僅使用固定場次，請改用「場次管理」。');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -478,6 +486,10 @@ export default function GuideAvailabilityPage() {
   const activityByPlanId = Object.fromEntries(v2Activities.flatMap((activity) => activity.plans.map((plan) => [plan.id, activity]))) as Record<string, V2Activity>;
   const planById = Object.fromEntries(v2Activities.flatMap((activity) => activity.plans.map((plan) => [plan.id, plan]))) as Record<string, V2Plan>;
   const selectedRulePlan = ruleForm.activity_plan_id ? planById[ruleForm.activity_plan_id] : null;
+  // 排程方案只看固定場次，動態可預約時段規則對它無效（對稱 #1495）。
+  const selectedRulePlanIsScheduled = Boolean(
+    selectedRulePlan && !isDynamicAvailabilityApplicable(selectedRulePlan.booking_type)
+  );
   const previewPlan = previewPlanId ? planById[previewPlanId] : null;
   const previewActivity = previewPlanId ? activityByPlanId[previewPlanId] : null;
   const rulePlanSeasonStatus = describePlanSeasonStatus({
@@ -598,10 +610,18 @@ export default function GuideAvailabilityPage() {
                     <option value="">不限方案</option>
                     {(v2Activities.find((a) => a.id === ruleForm.activity_id)?.plans || []).map((p) => (
                       <option key={p.id} value={p.id}>
-                        {`${p.name}（${formatParticipants(p.minParticipants, p.maxParticipants)}）`}
+                        {`${p.name}（${bookingTypeLabelZh(p.booking_type)}・${formatParticipants(p.minParticipants, p.maxParticipants)}）`}
                       </option>
                     ))}
                   </select>
+                </div>
+              )}
+              {selectedRulePlanIsScheduled && (
+                <div
+                  data-testid="rule-booking-type-warning"
+                  style={{ border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 10, padding: '10px 12px', color: '#92400e', fontSize: 13, lineHeight: 1.6 }}
+                >
+                  ⚠️ 此方案為<strong>排程預約</strong>，僅使用固定場次，無法設定動態可預約時段規則。請改用「場次管理」建立固定場次；動態時段規則僅適用<strong>即時／申請</strong>預約方案。
                 </div>
               )}
               {selectedRulePlan && (
@@ -758,7 +778,11 @@ export default function GuideAvailabilityPage() {
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <button onClick={saveRule} disabled={saving} style={btn(saving ? '#a78bfa' : '#7c3aed', '#fff')}>
+                <button
+                  onClick={saveRule}
+                  disabled={saving || selectedRulePlanIsScheduled}
+                  style={btn(saving || selectedRulePlanIsScheduled ? '#a78bfa' : '#7c3aed', '#fff')}
+                >
                   {saving ? '儲存中...' : '儲存'}
                 </button>
                 <button onClick={() => setShowRuleModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
@@ -1081,7 +1105,7 @@ export default function GuideAvailabilityPage() {
                       {v2Activities.flatMap((a) =>
                         a.plans.map((p) => (
                           <option key={p.id} value={p.id}>
-                            {a.title} — {p.name}
+                            {a.title} — {p.name}（{bookingTypeLabelZh(p.booking_type)}）
                           </option>
                         ))
                       )}
@@ -1106,10 +1130,21 @@ export default function GuideAvailabilityPage() {
                 </div>
               </div>
               <div style={{ padding: 20 }}>
+                {previewNotice ? (
+                  <div
+                    data-testid="preview-scheduled-notice"
+                    style={{ marginBottom: 12, border: '1px solid #c7d2fe', background: '#eef2ff', borderRadius: 10, padding: '10px 12px', color: '#3730a3' }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>排程預約方案</div>
+                    <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewNotice}</div>
+                  </div>
+                ) : (
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewPlanSeasonStatus.title}</div>
                   <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewPlanSeasonStatus.description}</div>
                 </div>
+                )}
+                {!previewNotice && (
                 <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewReason.tone].border}`, background: toneStyles[previewReason.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewReason.tone].color }}>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>此期間無產生可預約時段時，請先確認 canonical 原因</div>
                   <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewReason.label}</div>
@@ -1117,7 +1152,10 @@ export default function GuideAvailabilityPage() {
                   <div style={{ marginTop: 6, fontSize: 12 }}>可能原因包含管理員覆寫、已有衝突，或方案開放季節尚未設定。</div>
                   <div style={{ marginTop: 4, fontSize: 12 }}>previewCanonicalState：{previewCanonicalState || 'N/A'}／previewSeasonGate：{previewSeasonGate || 'N/A'}</div>
                 </div>
-                {previewSlots.length === 0 ? (
+                )}
+                {previewNotice ? (
+                  <EmptyState message="排程預約方案不套用動態時段預覽，請至「場次管理」檢視固定場次。" />
+                ) : previewSlots.length === 0 ? (
                   <EmptyState message={`此期間無可用時段：${previewReason.label}`} />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>

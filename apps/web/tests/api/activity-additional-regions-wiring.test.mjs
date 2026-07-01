@@ -37,8 +37,13 @@ test('listPublishedActivitiesDb：fixtures 用 activityMatchesRegion 篩選', ()
   assert.match(db, /result\.filter\(a => activityMatchesRegion\(a, filters\.region\)\)/);
 });
 
-test('listPublishedActivitiesDb：Supabase 以 .or() 同時比對 region 與 regions 包含', () => {
-  assert.match(db, /\.or\(`region\.eq\.\$\{regionFilter\},regions\.cs\.\["\$\{regionFilter\}"\]`\)/);
+test('listPublishedActivitiesDb：Supabase 以展開集合組多項 .or()（region.eq 或 regions 包含）', () => {
+  // 複選/短名展開後改用 expandRegionToDbValues + orTerms.join(',')；短名（嘉義/新竹）
+  // 會展開成多個現行縣市，其餘單值。
+  assert.match(db, /expandRegionToDbValues\(filters\.region\)/);
+  assert.match(db, /region\.eq\.\$\{v\}/);
+  assert.match(db, /regions\.cs\.\["\$\{v\}"\]/);
+  assert.match(db, /orTerms\.join\(','\)/);
 });
 
 test('admin 編輯頁送出 regions 並渲染複選 checkbox', () => {

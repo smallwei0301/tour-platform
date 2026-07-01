@@ -52,11 +52,49 @@ export const CATEGORY_TAG_LABELS_ZH = {
   ecology: '生態',
 };
 
+/**
+ * 編輯器分類下拉選項（value=slug／label=中文）——後台編輯、導遊編輯、導遊投稿
+ * 三處共用同一份，避免各自複製而漂移。value 與 badge／篩選同源（四大 slug）。
+ */
+export const CATEGORY_OPTIONS = CATEGORY_TAG_SLUGS.map((slug) => ({
+  value: slug,
+  label: CATEGORY_TAG_LABELS_ZH[slug],
+}));
+
 // 歸類優先序：river／ecology 比 mountain／culture 更具識別度，先判定以免
 // 被 mountain 的 'outdoor' 或 culture 的泛用關鍵字先搶走。無命中時 fallback
 // 'culture'（都市／美食／導覽類最合適的 catch-all）。
 const CLASSIFY_PRIORITY = ['river', 'ecology', 'mountain', 'culture'];
 const DEFAULT_TAG = 'culture';
+
+// 編輯器（導遊投稿／後台）存進 category 的「明確值」直接對應四大分類：
+// canonical slug 與中文 badge 標籤都算人為指定。這類值必須原樣呈現，
+// 不可被 title／tagline／shortDescription 的關鍵字掃描（含 CLASSIFY_PRIORITY
+// 優先序）覆蓋——否則導遊選「山徑」、文案又提到生態時，badge 會被 ecology
+// 搶走（ecology 優先序高於 mountain）。legacy 英文值（outdoor/food/nature）
+// 與中文長標籤（自然生態／戶外冒險…）不在此表，仍走下方關鍵字 fallback。
+const EXPLICIT_CATEGORY_TO_SLUG = {
+  mountain: 'mountain',
+  river: 'river',
+  culture: 'culture',
+  ecology: 'ecology',
+  山徑: 'mountain',
+  野溪: 'river',
+  文化: 'culture',
+  生態: 'ecology',
+};
+
+/**
+ * 若 category 是四大分類的「明確值」（canonical slug 或中文 badge 標籤），
+ * 回傳對應 slug；否則回傳 null（legacy 英文值／中文長標籤／自由文字，交給
+ * 關鍵字歸類）。badge 與主題篩選共用，作為「明確分類優先」的單一判定點。
+ * @param {string | null | undefined} value
+ * @returns {'mountain'|'river'|'culture'|'ecology'|null}
+ */
+export function resolveExplicitCategorySlug(value) {
+  const normalized = normalizeActivityTypeForFilter(value).toLowerCase();
+  return (normalized && EXPLICIT_CATEGORY_TO_SLUG[normalized]) || null;
+}
 
 /**
  * 把行程歸到四大分類之一，回傳 slug。
@@ -65,6 +103,10 @@ const DEFAULT_TAG = 'culture';
  */
 export function classifyActivityCategoryTag(activity) {
   if (!activity) return DEFAULT_TAG;
+
+  // 明確分類優先：編輯器選定的 canonical slug／中文 badge 標籤直接採用。
+  const explicit = resolveExplicitCategorySlug(activity.category);
+  if (explicit) return explicit;
 
   const haystack = [activity.category, activity.title, activity.tagline, activity.shortDescription]
     .map((value) => normalizeActivityTypeForFilter(value))

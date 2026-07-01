@@ -4,17 +4,12 @@ import assert from 'node:assert/strict';
 import { evaluateBookingAvailability } from '../../src/lib/availability-v2/booking-availability-evaluator.ts';
 import { evaluateEffectiveBookingAvailability } from '../../src/lib/availability-v2/effective-booking-availability.ts';
 
-// #admin-plan-revert 後續：寫死 '2026-07-01' 的可預約時段會隨時鐘越過變成過去（SLOT_IN_PAST）。
-// 改用相對於「現在」的未來日期；其餘刻意的過去日期（如 2026-04-10）維持不動。
-const BOOKABLE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-
-
 const TZ = 'Asia/Taipei';
 const GUIDE_ID = 'g-1067-close-gate';
 const ACTIVITY_ID = 'a-1067-close-gate';
 const PLAN_ID = 'p-1067-close-gate';
-const REQUEST_START = `${BOOKABLE_DATE}T09:00:00+08:00`;
-const REQUEST_END = `${BOOKABLE_DATE}T12:00:00+08:00`;
+const REQUEST_START = '2037-07-01T09:00:00+08:00';
+const REQUEST_END = '2037-07-01T12:00:00+08:00';
 
 function season({ startMonth, startDay, endMonth, endDay, isActive = true }) {
   return {
@@ -85,8 +80,8 @@ function baseInput(overrides = {}) {
     planId: PLAN_ID,
     timezone: TZ,
     participants: 2,
-    dateFrom: `${BOOKABLE_DATE}`,
-    dateTo: `${BOOKABLE_DATE}`,
+    dateFrom: '2037-07-01',
+    dateTo: '2037-07-01',
     requestedStartAt: REQUEST_START,
     minParticipants: 1,
     rules: [weekdayRule()],
@@ -223,7 +218,7 @@ test('GH-1067: conflict override cannot unlock explicit outside_season selected 
             activity_id: ACTIVITY_ID,
             activity_plan_id: PLAN_ID,
             start_at: REQUEST_START,
-            end_at: `${BOOKABLE_DATE}T17:00:00+08:00`,
+            end_at: '2037-07-01T17:00:00+08:00',
             status: 'confirmed',
             participants: 2,
           },

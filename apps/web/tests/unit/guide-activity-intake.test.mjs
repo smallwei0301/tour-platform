@@ -129,9 +129,14 @@ test('buildActivityIntakePrompt：選填留空時標記請 AI 生成', () => {
   assert.match(prompt, /導遊未填，請依行程內容合理生成/);
 });
 
-test('常數：地區涵蓋全台 18 縣市、類別 4 個', () => {
-  assert.equal(INTAKE_REGION_OPTIONS.length, 18);
+test('常數：地區涵蓋全台 22 現行縣市、類別 4 個', () => {
+  assert.equal(INTAKE_REGION_OPTIONS.length, 22);
   assert.ok(INTAKE_REGION_OPTIONS.includes('台東縣'));
   assert.ok(INTAKE_REGION_OPTIONS.includes('屏東縣'));
+  // 新補齊的現行縣市（含並存的市/縣）
+  assert.ok(INTAKE_REGION_OPTIONS.includes('彰化縣'));
+  assert.ok(INTAKE_REGION_OPTIONS.includes('雲林縣'));
+  assert.ok(INTAKE_REGION_OPTIONS.includes('嘉義市'));
+  assert.ok(INTAKE_REGION_OPTIONS.includes('新竹縣'));
   assert.equal(INTAKE_CATEGORY_OPTIONS.length, 4);
 });

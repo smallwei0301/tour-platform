@@ -88,7 +88,7 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 import { insertAuditLogDb } from './audit-log.mjs';
 import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { normalizeRegionForActivityPath } from './region-slug.mjs';
-import { normalizeRegionToDbValue } from './region-slugs.mjs';
+import { expandRegionToDbValues } from './region-slugs.mjs';
 import { normalizeAdditionalRegions, activityMatchesRegion } from './activity-regions.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 import { resolveActivityReviewTransition } from './activity-review-transition.mjs';
@@ -2658,9 +2658,10 @@ export async function listPublishedActivitiesDb(filters = {}) {
   }
 
   const supabase = await getSupabase();
-  // 地區篩選正規化成 DB 規範值（'高雄' → '高雄市'）後再 .eq()，讓 footer／熱門目的地
-  // 用短名連結也能命中以全名儲存的資料（admin 表單存全名）。
-  const regionFilter = filters.region ? normalizeRegionToDbValue(filters.region) : '';
+  // 地區篩選展開成 DB 規範值集合：短名（'高雄'）→ 全名（'高雄市'）；並讓搜尋短名
+  // 涵蓋現行並存縣市（'嘉義'→[嘉義市,嘉義縣]、'新竹'→[新竹市,新竹縣]）。多數短名/
+  // 全名仍為單一值。讓 footer／熱門目的地用短名連結也命中以全名儲存的資料。
+  const regionValues = filters.region ? expandRegionToDbValues(filters.region) : [];
   let query = supabase
     .from('activities')
     .select(`
@@ -2673,10 +2674,14 @@ export async function listPublishedActivitiesDb(filters = {}) {
     .eq('status', 'published')
     .order('published_at', { ascending: false });
 
-  // 地區篩選：主要地區（region）或附加地區（regions jsonb 含目標值）任一命中即出現。
-  // regions 以 jsonb 陣列儲存（如 ["高雄市"]），用 cs（contains）走 GIN index。
-  // 地區值為中文無逗號／引號，放進 .or() 的 JSON 陣列字面量安全。
-  if (regionFilter) query = query.or(`region.eq.${regionFilter},regions.cs.["${regionFilter}"]`);
+  // 地區篩選：對展開集合中每個 dbValue，主要地區（region）或附加地區（regions jsonb
+  // 含目標值）任一命中即出現。regions 以 jsonb 陣列儲存（如 ["高雄市"]），用 cs
+  // （contains）走 GIN index。地區值為中文無逗號／引號／括號，放進 .or() 的逗號分隔
+  // 清單與 JSON 陣列字面量皆安全（沿用單值版同一保證）。以 array.join(',') 組字串。
+  if (regionValues.length > 0) {
+    const orTerms = regionValues.flatMap((v) => [`region.eq.${v}`, `regions.cs.["${v}"]`]);
+    query = query.or(orTerms.join(','));
+  }
   if (filters.category) query = query.eq('category', filters.category);
   if (filters.q) query = query.ilike('title', `%${filters.q}%`);
 
@@ -2694,7 +2699,7 @@ export async function listPublishedActivitiesDb(filters = {}) {
       `)
       .eq('status', 'published')
       .order('published_at', { ascending: false });
-    if (regionFilter) retry = retry.eq('region', regionFilter);
+    if (regionValues.length > 0) retry = retry.in('region', regionValues);
     if (filters.category) retry = retry.eq('category', filters.category);
     if (filters.q) retry = retry.ilike('title', `%${filters.q}%`);
     ({ data, error } = await retry);

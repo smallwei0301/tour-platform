@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-06-30T18:41:46.614Z -->
+<!-- query_timestamp: 2026-07-01T00:57:08.189Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-06-30T18:41:46.614Z  
-**Commit SHA:** `5001c1efbc7b813b30ebb1529f2b52906d2cbcbd`
+**Query timestamp:** 2026-07-01T00:57:08.189Z  
+**Commit SHA:** `3b24491badab248211083a4524be8d181ee8177f`
 
 ---
 
-## Open PRs (6)
+## Open PRs (5)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1537 | [feat(availability): 排程方案禁綁動態規則 + 即時預約嚴格忽略 scheduleId（PR1 後端守門）](https://github.com/smallwei0301/tour-platform/pull/1537) | `claude/plan-management-admin-options-v0d9c7` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
@@ -77,16 +76,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1541 | [feat(availability): 排程方案時段預覽改回提示、不跑動態規則預覽（PR3 預覽正確性）](https://github.com/smallwei0301/tour-platform/pull/1541) | 2026-07-01 |
+| #1540 | [fix: 行程卡分類 badge 尊重編輯器明確選的分類，不被文案關鍵字蓋掉](https://github.com/smallwei0301/tour-platform/pull/1540) | 2026-07-01 |
+| #1539 | [feat(availability): 時段規則表單擋排程方案 + 方案下拉標 booking_type（PR2 設定面 UX）](https://github.com/smallwei0301/tour-platform/pull/1539) | 2026-07-01 |
+| #1538 | [feat: 行程頁旅客評價改為左右滑動輪播](https://github.com/smallwei0301/tour-platform/pull/1538) | 2026-07-01 |
+| #1537 | [feat(availability): 排程方案禁綁動態規則 + 即時預約嚴格忽略 scheduleId（PR1 後端守門）](https://github.com/smallwei0301/tour-platform/pull/1537) | 2026-06-30 |
 | #1536 | [fix(admin): 修復後台照片無法顯示、方案計價方式被舊版 JSON 回寫覆蓋](https://github.com/smallwei0301/tour-platform/pull/1536) | 2026-06-30 |
 | #1535 | [feat: 附加地區顯示到前台詳情頁，並納入地區搜尋/篩選](https://github.com/smallwei0301/tour-platform/pull/1535) | 2026-06-30 |
 | #1533 | [feat(admin): 「下載 JSON」改匯出當前編輯中行程的文案設定](https://github.com/smallwei0301/tour-platform/pull/1533) | 2026-06-30 |
 | #1532 | [feat: 行程地點支援全台縣市與複選（後台編輯 + 導遊投稿）](https://github.com/smallwei0301/tour-platform/pull/1532) | 2026-06-30 |
 | #1531 | [fix(i18n): 旅客頁每團報價單位由「組」改為「團」](https://github.com/smallwei0301/tour-platform/pull/1531) | 2026-06-30 |
-| #1530 | [fix(activity): 行程公開頁活動層級起價依方案計價方式顯示每團/每人單位](https://github.com/smallwei0301/tour-platform/pull/1530) | 2026-06-30 |
-| #1529 | [feat(admin): 開放季節新增「全年開放」切換選項](https://github.com/smallwei0301/tour-platform/pull/1529) | 2026-06-30 |
-| #1528 | [fix(line): 綁定文案改為實況（LINE 為查詢、不發推播；通知走 Email/Telegram）](https://github.com/smallwei0301/tour-platform/pull/1528) | 2026-06-30 |
-| #1527 | [fix(line): 綁定連結用系統瀏覽器開啟，修正 Google webview OAuth 封鎖（disallowed_useragent）](https://github.com/smallwei0301/tour-platform/pull/1527) | 2026-06-30 |
-| #1525 | [feat(line): 免費 LINE 訂單查詢（Reply pull）+ Flex 卡片 + 下單成功頁 E2E + operator 教學](https://github.com/smallwei0301/tour-platform/pull/1525) | 2026-06-30 |
 
 ---
 

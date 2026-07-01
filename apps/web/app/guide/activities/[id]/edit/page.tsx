@@ -4,18 +4,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
+// 四大分類下拉：與 badge／篩選同源（category-tags.mjs），三處編輯器共用不重複定義。
+import { CATEGORY_OPTIONS as CATEGORIES } from '../../../../../src/lib/category-tags.mjs';
+// 地區下拉：與後台/投稿同源（region-slugs.mjs 全 22 縣市），不再各自硬編舊 8 個。
+import { listAllDivisions } from '../../../../../src/lib/region-slugs.mjs';
+import { normalizeRegionForActivityPath } from '../../../../../src/lib/region-slug.mjs';
 
-const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市', '台中市', '南投縣', '宜蘭縣', '屏東縣'];
-const REGION_SLUG_MAP: Record<string, string> = {
-  台北市: 'taipei', 高雄市: 'kaohsiung', 花蓮縣: 'hualien', 台南市: 'tainan',
-  台中市: 'taichung', 南投縣: 'nantou', 宜蘭縣: 'yilan', 屏東縣: 'pingtung',
-};
-const CATEGORIES = [
-  { value: 'mountain', label: '山徑' },
-  { value: 'river', label: '野溪' },
-  { value: 'culture', label: '文化' },
-  { value: 'ecology', label: '生態' },
-];
+const REGIONS: string[] = listAllDivisions().map((d) => d.dbValue);
 
 type Faq = { question: string; answer: string };
 
@@ -115,7 +110,7 @@ export default function GuideActivityEditPage() {
       shortDescription: form.shortDescription,
       description: form.description,
       region: form.region,
-      regionSlug: REGION_SLUG_MAP[form.region] || undefined,
+      regionSlug: form.region ? normalizeRegionForActivityPath(form.region) : undefined,
       category: form.category,
       priceTwd: form.priceTwd === '' ? 0 : Number(form.priceTwd),
       durationMinutes: form.durationMinutes === '' ? null : Number(form.durationMinutes),

@@ -7,6 +7,7 @@
 // 「任一關鍵字命中 category／title／tagline／shortDescription」即視為符合。
 
 import { normalizeActivityTypeForFilter } from './activity-type-filter.mjs';
+import { resolveExplicitCategorySlug } from './category-tags.mjs';
 
 export const ACTIVITY_THEMES = [
   {
@@ -39,6 +40,18 @@ export const ACTIVITY_THEMES = [
 /** 主題標籤清單（活動列表「行程主題」篩選用）。 */
 export const ACTIVITY_THEME_LABELS = ACTIVITY_THEMES.map((t) => t.label);
 
+// 五大主題各自歸屬的四大分類（單一事實來源同 category-tags.mjs）。用於「明確
+// 分類優先」：一個行程若有明確 category，只允許同分類家族的主題命中，不讓文案
+// 關鍵字把它漏進其他分類的主題（對齊行程卡 badge 的判定）。mountain 家族含
+// 柴山探洞與山野秘境兩主題，家族內仍靠關鍵字區分。
+const THEME_SLUG_TO_CATEGORY = {
+  'cave-exploration': 'mountain',
+  'river-trekking': 'river',
+  'culture-history': 'culture',
+  ecology: 'ecology',
+  'mountain-wilderness': 'mountain',
+};
+
 /** 由標籤取得主題定義（容忍 emoji／空白／編碼差異）。 */
 export function getThemeByLabel(label) {
   const normalized = normalizeActivityTypeForFilter(label);
@@ -50,6 +63,12 @@ export function getThemeByLabel(label) {
 export function isActivityInTheme(activity, themeLabel) {
   const theme = getThemeByLabel(themeLabel);
   if (!theme || !activity) return false;
+
+  // 明確分類優先：activity 有 canonical category 時，僅允許同分類家族的主題命中，
+  // 阻擋文案關鍵字把行程漏配到其他分類的主題（例：明選山徑卻因文案含生態字眼而
+  // 出現在「自然生態」）。同家族內（柴山探洞／山野秘境）仍由下方關鍵字區分。
+  const explicitSlug = resolveExplicitCategorySlug(activity.category);
+  if (explicitSlug && THEME_SLUG_TO_CATEGORY[theme.slug] !== explicitSlug) return false;
 
   const haystack = [activity.category, activity.title, activity.tagline, activity.shortDescription]
     .map((value) => normalizeActivityTypeForFilter(value))

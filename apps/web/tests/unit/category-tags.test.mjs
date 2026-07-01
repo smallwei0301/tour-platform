@@ -4,7 +4,9 @@ import {
   CATEGORY_TAGS,
   CATEGORY_TAG_SLUGS,
   CATEGORY_TAG_LABELS_ZH,
+  CATEGORY_OPTIONS,
   classifyActivityCategoryTag,
+  resolveExplicitCategorySlug,
 } from '../../src/lib/category-tags.mjs';
 
 test('四大分類：數量、順序與 slug', () => {
@@ -64,6 +66,35 @@ test('生態賞鳥（nature）→ ecology', () => {
   );
 });
 
+test('明確選定的 canonical category 優先於描述關鍵字（修正：山徑被標語生態字眼蓋成生態）', () => {
+  // 導遊／後台在編輯器選「山徑」存的是 category='mountain'，是人為明確指定；
+  // 即使標語／描述含生態字眼（ecology 優先序又高於 mountain），badge 仍須顯示山徑。
+  assert.equal(
+    classifyActivityCategoryTag({
+      category: 'mountain',
+      title: '阿里山森林漫步輕旅行｜高雄出發一日專車',
+      tagline: '走進阿里山的自然生態與森林步道。',
+    }),
+    'mountain',
+  );
+  // 反向：選「生態」但標題像登山健行，也應尊重明確的 ecology。
+  assert.equal(
+    classifyActivityCategoryTag({ category: 'ecology', title: '登山健行森林步道' }),
+    'ecology',
+  );
+});
+
+test('中文 badge 標籤作為明確 category 也直接採用', () => {
+  assert.equal(
+    classifyActivityCategoryTag({ category: '山徑', title: '潮間帶賞鳥生態導覽' }),
+    'mountain',
+  );
+  assert.equal(
+    classifyActivityCategoryTag({ category: '野溪', title: '森林步道健行' }),
+    'river',
+  );
+});
+
 test('legacy category 值單獨也能映射', () => {
   assert.equal(classifyActivityCategoryTag({ category: 'outdoor' }), 'mountain');
   assert.equal(classifyActivityCategoryTag({ category: 'culture' }), 'culture');
@@ -74,6 +105,26 @@ test('legacy category 值單獨也能映射', () => {
 test('中文 category 標籤也能映射', () => {
   assert.equal(classifyActivityCategoryTag({ category: '自然生態', title: '夜觀導覽' }), 'ecology');
   assert.equal(classifyActivityCategoryTag({ category: '戶外冒險', title: '登山健行' }), 'mountain');
+});
+
+test('CATEGORY_OPTIONS：編輯器下拉四大分類（value=slug／label=中文），與 badge 同源', () => {
+  assert.deepEqual(CATEGORY_OPTIONS, [
+    { value: 'mountain', label: '山徑' },
+    { value: 'river', label: '野溪' },
+    { value: 'culture', label: '文化' },
+    { value: 'ecology', label: '生態' },
+  ]);
+});
+
+test('resolveExplicitCategorySlug：canonical 值回 slug、legacy／自由文字回 null', () => {
+  assert.equal(resolveExplicitCategorySlug('mountain'), 'mountain');
+  assert.equal(resolveExplicitCategorySlug('山徑'), 'mountain');
+  assert.equal(resolveExplicitCategorySlug('ecology'), 'ecology');
+  assert.equal(resolveExplicitCategorySlug('生態'), 'ecology');
+  assert.equal(resolveExplicitCategorySlug('outdoor'), null);
+  assert.equal(resolveExplicitCategorySlug('自然生態'), null);
+  assert.equal(resolveExplicitCategorySlug(''), null);
+  assert.equal(resolveExplicitCategorySlug(null), null);
 });
 
 test('無命中 / 空輸入 → 預設 culture', () => {

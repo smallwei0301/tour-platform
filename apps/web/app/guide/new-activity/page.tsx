@@ -3,15 +3,11 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { REGION_REGISTRY } from '../../../src/lib/region-slugs.mjs';
+// 四大分類下拉：與 badge／篩選同源（category-tags.mjs），三處編輯器共用不重複定義。
+import { CATEGORY_OPTIONS } from '../../../src/lib/category-tags.mjs';
 
 // 全台 18 縣市，以 region-slugs.mjs 的 REGION_REGISTRY 為單一真實來源（過去僅硬編 8 個）。
 const REGION_OPTIONS: string[] = Object.values(REGION_REGISTRY).map(r => r.dbValue);
-const CATEGORY_OPTIONS = [
-  { value: 'mountain', label: '山徑' },
-  { value: 'river', label: '野溪' },
-  { value: 'culture', label: '文化' },
-  { value: 'ecology', label: '生態' },
-];
 
 const labelStyle: React.CSSProperties = {
   display: 'block',
