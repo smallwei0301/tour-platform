@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { PublicIcon } from '../../../src/components/ui/PublicIcon';
+import { listSearchRegions, resolveSearchRegionKey, expandRegionToDbValues, normalizeRegionToDbValue } from '../../../src/lib/region-slugs.mjs';
 
 interface Guide {
   slug: string;
@@ -28,26 +29,30 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
   const router = useRouter();
   const t = useTranslations('guides');
 
-  // Derive filter options from actual guide data
+  // Derive filter options from actual guide data。地區改用「短名搜尋群組」呈現（與
+  // footer／行程側欄同源 listSearchRegions），只列出實際有導遊的群組；比對時把導遊
+  // 存的全名（高雄市）與群組短名（高雄）經 expandRegionToDbValues 展開後對應。
   const { regions, languages, specialties } = useMemo(() => {
-    const regionSet = new Set<string>();
+    const regionLabelSet = new Set<string>();
     const languageSet = new Set<string>();
     const specialtySet = new Set<string>();
     for (const g of guides) {
-      if (g.region) regionSet.add(g.region);
+      if (g.region) regionLabelSet.add(resolveSearchRegionKey(g.region) || g.region);
       if (Array.isArray(g.languages)) g.languages.forEach((l: string) => languageSet.add(l));
       if (Array.isArray(g.specialties)) g.specialties.forEach((s: string) => specialtySet.add(s));
     }
+    const order = listSearchRegions().map((x) => x.label);
     return {
-      regions: Array.from(regionSet).sort(),
+      regions: Array.from(regionLabelSet).sort((a, b) => order.indexOf(a) - order.indexOf(b)),
       languages: Array.from(languageSet).sort(),
       specialties: Array.from(specialtySet).sort(),
     };
   }, [guides]);
 
-  // Initialize state from URL params
+  // Initialize state from URL params。任意輸入正規化成群組短名 label，讓 ?region=高雄
+  // 與 ?region=高雄市 都能對上 checkbox 並展開比對。
   const [selectedRegions, setSelectedRegions] = useState<string[]>(
-    () => searchParams.getAll('region')
+    () => searchParams.getAll('region').map((r) => resolveSearchRegionKey(r) || r)
   );
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>(
     () => searchParams.getAll('lang')
@@ -150,7 +155,10 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
       );
     }
     if (selectedRegions.length > 0) {
-      result = result.filter((g) => g.region && selectedRegions.includes(g.region));
+      // 導遊存全名（高雄市）；選取的群組短名（高雄）展開後比對，嘉義/新竹會涵蓋市+縣。
+      result = result.filter((g) =>
+        g.region && selectedRegions.some((sel) => expandRegionToDbValues(sel).includes(normalizeRegionToDbValue(g.region)))
+      );
     }
     if (selectedLanguages.length > 0) {
       result = result.filter((g) =>
@@ -314,7 +322,7 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
                     <span className="tp-guide-list-rating">
                       ⭐ {g.ratingAvg?.toFixed(1) || '5.0'}
                     </span>
-                    {t('reviewCount', { n: g.reviewCount || 0 })} · 📍 {g.region}
+                    {t('reviewCount', { n: g.reviewCount || 0 })} · 📍 {g.region ? (resolveSearchRegionKey(g.region) || g.region) : ''}
                   </p>
                   {g.languages?.length > 0 && (
                     <p className="tp-guide-list-meta">🌍 {g.languages.slice(0, 3).join('、')}</p>
