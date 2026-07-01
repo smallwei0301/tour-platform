@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { buildActivityHref } from '../../../src/lib/activity-url';
 import { resolveCanonicalType } from '../../../src/lib/activity-type-filter.mjs';
-import { normalizeRegionToDbValue } from '../../../src/lib/region-slugs.mjs';
+import { listSearchRegions, resolveSearchRegionKey } from '../../../src/lib/region-slugs.mjs';
 import { activityMatchesRegion } from '../../../src/lib/activity-regions.mjs';
 import { ACTIVITY_THEMES, ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../../src/lib/activity-themes.mjs';
 import { classifyActivityCategoryTag } from '../../../src/lib/category-tags.mjs';
@@ -16,13 +16,10 @@ import WishlistToggle from '../../../src/components/WishlistToggle';
 import { PublicIcon } from '../../../src/components/ui/PublicIcon';
 import { resolveCoverSrc, CARD_IMAGE_SIZES } from './cover-image';
 
-// 地區篩選：value＝DB 規範值（比對／URL 用，維持中文），labelKey＝顯示用 i18n key。
-const REGIONS = [
-  { value: '台北市', labelKey: 'taipeiCity' },
-  { value: '高雄市', labelKey: 'kaohsiungCity' },
-  { value: '花蓮縣', labelKey: 'hualienCounty' },
-  { value: '台南市', labelKey: 'tainanCity' },
-] as const;
+// 地區篩選：改由 region-slugs.mjs 的 SEARCH_REGIONS 衍生（全 20 短名群組、單一真實
+// 來源，不再硬編）。每個 checkbox 對應一個短名群組；勾「嘉義」「新竹」會一併搜到市＋縣
+// （展開見 expandRegionToDbValues）。顯示用短名 label（與 footer 一致）。
+const REGIONS = listSearchRegions();
 // #mobile-categories：行程主題與 footer／各主題介紹頁統一為五大主題（單一來源）。
 // value＝theme label（isActivityInTheme/resolveCanonicalType 用），slug＝顯示 i18n key。
 const TYPES = ACTIVITY_THEME_LABELS;
@@ -71,10 +68,12 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   const [query, setQuery] = useState(searchParams.get('q') || '');
   // 地區一律正規化成 DB 規範值（'高雄' / 'kaohsiung' → '高雄市'），讓 footer／熱門目的地
   // 用短名連結（?region=高雄）也能與以全名儲存的資料、側欄全名 checkbox 對得上（#footer 高雄篩選）。
+  // 存「原始地區輸入」（footer 短名 '高雄'、slug 頁 dbValue '嘉義市' 皆可）。比對時經
+  // activityMatchesRegion→expandRegionToDbValues 展開，與 SSR 篩選（listPublished-
+  // ActivitiesDb 同一展開）一致，避免 client 重篩結果與首屏不符。
   const [selectedRegions, setSelectedRegions] = useState<string[]>(() => {
-    const raw = searchParams.get('region') || initialRegion || '';
-    const normalized = normalizeRegionToDbValue(raw);
-    return normalized ? [normalized] : [];
+    const raw = (searchParams.get('region') || initialRegion || '').trim();
+    return raw ? [raw] : [];
   });
   const [selectedTypes, setSelectedTypes] = useState<string[]>(
     searchParams.get('type') ? [resolveCanonicalType(TYPES, searchParams.get('type')!)] : []
@@ -113,7 +112,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
   // Sync URL → state on mount
   useEffect(() => {
     setQuery(searchParams.get('q') || '');
-    const r = normalizeRegionToDbValue(searchParams.get('region') || initialRegion || '');
+    const r = (searchParams.get('region') || initialRegion || '').trim();
     if (r) setSelectedRegions([r]);
     else setSelectedRegions([]);
     const t = searchParams.get('type');
@@ -180,8 +179,13 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
     const qs = params.toString();
     router.replace(qs ? `/activities?${qs}` : '/activities');
   }
-  function toggleRegion(r: string) {
-    const next = selectedRegions.includes(r) ? selectedRegions.filter((x) => x !== r) : [...selectedRegions, r];
+  // 以「搜尋群組 label」為單位切換：不論已選的是短名/全名/slug，只要屬於同一群組即視為
+  // 已勾（resolveSearchRegionKey 正規化到群組 label 比對）；勾選時加入群組 label（廣義）。
+  function toggleRegion(label: string) {
+    const isOn = selectedRegions.some((sel) => resolveSearchRegionKey(sel) === label);
+    const next = isOn
+      ? selectedRegions.filter((sel) => resolveSearchRegionKey(sel) !== label)
+      : [...selectedRegions, label];
     setSelectedRegions(next);
     updateUrl(query, next, selectedTypes);
   }
@@ -292,12 +296,15 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
 
           <details>
             <summary>{t('regionFilter')}</summary>
-            {REGIONS.map((r) => (
-              <label key={r.value} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <input type="checkbox" checked={selectedRegions.includes(r.value)} onChange={() => toggleRegion(r.value)} />
-                {t(`region.${r.labelKey}`)}
-              </label>
-            ))}
+            {REGIONS.map((g) => {
+              const checked = selectedRegions.some((sel) => resolveSearchRegionKey(sel) === g.label);
+              return (
+                <label key={g.key} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <input type="checkbox" checked={checked} onChange={() => toggleRegion(g.label)} />
+                  {g.label}
+                </label>
+              );
+            })}
           </details>
           <details>
             <summary>{t('themeFilter')}</summary>

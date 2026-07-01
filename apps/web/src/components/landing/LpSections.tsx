@@ -288,7 +288,7 @@ const DESTINATIONS = [
   { nameKey: 'hualien', region: '花蓮', n: 85 },
   { nameKey: 'kaohsiung', region: '高雄', n: 72 },
   { nameKey: 'tainan', region: '台南', n: 96 },
-  { nameKey: 'kenting', region: '墾丁', n: 44 },
+  { nameKey: 'kenting', region: '屏東', n: 44 },
   { nameKey: 'taichung', region: '台中', n: 58 },
   { nameKey: 'yilan', region: '宜蘭', n: 37 },
   { nameKey: 'penghu', region: '澎湖', n: 29 },

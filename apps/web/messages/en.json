@@ -48,17 +48,25 @@
     "copy": "© 2026 Midao 祕島 · Taiwan · All rights reserved",
     "region": {
       "taipei": "Taipei",
-      "newTaipei": "New Taipei",
+      "new-taipei": "New Taipei",
       "taoyuan": "Taoyuan",
       "taichung": "Taichung",
       "tainan": "Tainan",
       "kaohsiung": "Kaohsiung",
+      "keelung": "Keelung",
+      "hsinchu": "Hsinchu",
+      "miaoli": "Miaoli",
+      "changhua": "Changhua",
+      "nantou": "Nantou",
+      "yunlin": "Yunlin",
+      "chiayi": "Chiayi",
+      "pingtung": "Pingtung",
+      "yilan": "Yilan",
       "hualien": "Hualien",
       "taitung": "Taitung",
-      "yilan": "Yilan",
-      "pingtung": "Pingtung",
       "penghu": "Penghu",
-      "kinmen": "Kinmen"
+      "kinmen": "Kinmen",
+      "matsu": "Matsu"
     }
   },
   "guides": {

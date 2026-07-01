@@ -33,3 +33,13 @@ test('常見短名（高雄／花蓮／屏東…）也對應正確 slug', () => 
   assert.equal(normalizeRegionForActivityPath('台東'), 'taitung');
   assert.equal(normalizeRegionForActivityPath('馬祖'), 'matsu');
 });
+
+test('新增 4 個現行 division 的全名對應到正確 slug', () => {
+  assert.equal(normalizeRegionForActivityPath('彰化縣'), 'changhua');
+  assert.equal(normalizeRegionForActivityPath('雲林縣'), 'yunlin');
+  assert.equal(normalizeRegionForActivityPath('嘉義市'), 'chiayi-city');
+  assert.equal(normalizeRegionForActivityPath('新竹縣'), 'hsinchu-county');
+  // 既有並存者維持穩定 slug（不破壞已存 region_slug / URL）
+  assert.equal(normalizeRegionForActivityPath('嘉義縣'), 'chiayi');
+  assert.equal(normalizeRegionForActivityPath('新竹市'), 'hsinchu');
+});
