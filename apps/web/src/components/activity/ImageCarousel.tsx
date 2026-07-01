@@ -142,26 +142,28 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
           </div>
         )}
         {validImages.length > 1 && (
-          <div className="kkd-gallery-thumbs" role="listbox" aria-label={t('thumbnailsLabel')}>
-            {validImages.map((url, i) => (
-              <button
-                key={i}
-                type="button"
-                role="option"
-                aria-selected={i === safeMainIndex}
-                aria-label={t('thumbnailItem', { index: i + 1, total: validImages.length })}
-                className={`kkd-gallery-thumb-btn${i === safeMainIndex ? ' active' : ''}`}
-                onClick={() => setMainIndex(i)}
-              >
-                <FallbackImage
-                  src={url}
-                  alt={`${alt} ${i + 1}`}
-                  className="kkd-gallery-thumb"
-                  loading="lazy"
-                  sizes="(min-width: 768px) 25vw, 0vw"
-                  onFinalError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
-              </button>
-            ))}
+          <div className="kkd-gallery-thumbs">
+            <div className="kkd-gallery-thumbs-inner" role="listbox" aria-label={t('thumbnailsLabel')}>
+              {validImages.map((url, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="option"
+                  aria-selected={i === safeMainIndex}
+                  aria-label={t('thumbnailItem', { index: i + 1, total: validImages.length })}
+                  className={`kkd-gallery-thumb-btn${i === safeMainIndex ? ' active' : ''}`}
+                  onClick={() => setMainIndex(i)}
+                >
+                  <FallbackImage
+                    src={url}
+                    alt={`${alt} ${i + 1}`}
+                    className="kkd-gallery-thumb"
+                    loading="lazy"
+                    sizes="(min-width: 768px) 25vw, 0vw"
+                    onFinalError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

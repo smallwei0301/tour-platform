@@ -1321,10 +1321,14 @@ img { max-width: 100%; height: auto; }
     grid-template-columns: minmax(0, 1fr) 128px;
     gap: 10px;
     margin: 12px 0 0;
+    /* stretch：縮圖列（其內容為絕對定位、不撐高列）會被拉到與大圖同高 */
+    align-items: stretch;
   }
 }
+/* 大圖維持素材 16:9 比例，object-fit: cover 幾乎不裁切（來源亦為 16:9）。
+   用 aspect-ratio 而非固定高度，避免在寬欄位被壓成寬扁比例而切掉上下。 */
 .kkd-gallery-main-wrap {
-  height: 440px;
+  aspect-ratio: 16 / 9;
   border-radius: 14px;
   overflow: hidden;
 }
@@ -1334,18 +1338,24 @@ img { max-width: 100%; height: auto; }
   object-fit: cover;
   display: block;
 }
-/* 右側縮圖列：垂直排列、超出高度即可捲動，故所有照片皆可瀏覽。 */
+/* 右側縮圖列：外層佔滿該列高度（= 大圖高度）；內層絕對定位做垂直捲動，
+   如此縮圖數量再多也不會撐高整列、大圖比例不受影響。 */
 .kkd-gallery-thumbs {
+  position: relative;
+  min-height: 0;
+}
+.kkd-gallery-thumbs-inner {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 440px;
   overflow-y: auto;
   padding-right: 4px;
   scrollbar-width: thin;
 }
-.kkd-gallery-thumbs::-webkit-scrollbar { width: 6px; }
-.kkd-gallery-thumbs::-webkit-scrollbar-thumb {
+.kkd-gallery-thumbs-inner::-webkit-scrollbar { width: 6px; }
+.kkd-gallery-thumbs-inner::-webkit-scrollbar-thumb {
   background: rgba(238, 230, 205, 0.25);
   border-radius: 999px;
 }
