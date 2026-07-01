@@ -1312,9 +1312,76 @@ img { max-width: 100%; height: auto; }
 .kkd-carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(244, 236, 216, 0.3); transition: background 0.2s; }
 .kkd-carousel-dot.active { background: var(--tp-brass); width: 16px; border-radius: 3px; }
 
-/* Desktop：沿用手機的左右滑動輪播（不再退回 3:1 grid），桌機加大高度作為主視覺。 */
+/* Desktop：左側大圖 + 右側可垂直捲動縮圖列（點縮圖切成大圖）；手機維持滑動輪播。 */
+.kkd-gallery-desktop { display: none; }
 @media (min-width: 768px) {
-  .kkd-carousel-slide { height: 440px; }
+  .kkd-carousel-track, .kkd-carousel-dots { display: none; }
+  .kkd-gallery-desktop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 128px;
+    gap: 10px;
+    margin: 12px 0 0;
+    /* stretch：縮圖列（其內容為絕對定位、不撐高列）會被拉到與大圖同高 */
+    align-items: stretch;
+  }
+}
+/* 大圖維持素材 16:9 比例，object-fit: cover 幾乎不裁切（來源亦為 16:9）。
+   用 aspect-ratio 而非固定高度，避免在寬欄位被壓成寬扁比例而切掉上下。 */
+.kkd-gallery-main-wrap {
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.kkd-gallery-main {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* 右側縮圖列：外層佔滿該列高度（= 大圖高度）；內層絕對定位做垂直捲動，
+   如此縮圖數量再多也不會撐高整列、大圖比例不受影響。 */
+.kkd-gallery-thumbs {
+  position: relative;
+  min-height: 0;
+}
+.kkd-gallery-thumbs-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.kkd-gallery-thumbs-inner::-webkit-scrollbar { width: 6px; }
+.kkd-gallery-thumbs-inner::-webkit-scrollbar-thumb {
+  background: rgba(238, 230, 205, 0.25);
+  border-radius: 999px;
+}
+.kkd-gallery-thumb-btn {
+  flex: 0 0 auto;
+  height: 82px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+  transition: border-color 0.15s, opacity 0.15s;
+  opacity: 0.75;
+}
+.kkd-gallery-thumb-btn:hover { opacity: 1; }
+.kkd-gallery-thumb-btn.active {
+  border-color: var(--tp-brass);
+  opacity: 1;
+}
+.kkd-gallery-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* ── Itinerary Timeline ── */
@@ -1634,9 +1701,7 @@ img { max-width: 100%; height: auto; }
 }
 .kkd-review-card {
   flex: 0 0 auto;
-  /* 手機與電腦一致：卡片寬 = 卷軸容器 86%，一次一張大卡並露出下一張邊緣（左右滑動）。
-     不再對電腦版加 340px 上限（原本會讓電腦一次擠出多張窄卡）。 */
-  width: 86%;
+  width: min(86%, 340px);
   scroll-snap-align: start;
   background: var(--tp-bg-soft);
   border: 1px solid var(--tp-border);
@@ -2021,6 +2086,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .kkd-booking-side { display: none; }
 }
 @media (max-width: 768px) {
+  /* 桌機相簿預設即 display:none（見上方基準規則）；此處不再重複，
+     以免與 min-width:768 在「剛好 768px」重疊而讓相簿兩邊都被隱藏（iPad 直立）。 */
   .kkd-title { font-size: 18px; }
   .kkd-price { font-size: 22px; }
   .kkd-anchor-wrap { top: 56px; }

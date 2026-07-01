@@ -14,13 +14,16 @@ interface ImageCarouselProps {
  * Image carousel with placeholder fallback
  * - Shows placeholder when no images available
  * - Handles image load errors gracefully
- * - Mobile 與桌機皆為左右滑動輪播（scroll-snap + 圓點指示），可滑覽全部照片。
- *   （原桌機 3:1 grid 只顯示前 4 張、無法滑到更多，已於此改為統一的滑動輪播。）
+ * - Mobile: swipeable carousel
+ * - Desktop: 左側大圖 + 右側可垂直捲動的縮圖列；點縮圖即把該張切成大圖
+ *   （縮圖列可捲動，故所有照片皆可瀏覽，不再受「只顯示前 4 張」限制）。
  */
 export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
   const t = useTranslations('imageCarousel');
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  // 桌機大圖顯示哪一張（點右側縮圖切換）。index 對應 validImages。
+  const [mainIndex, setMainIndex] = useState(0);
   const [errorImages, setErrorImages] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -45,6 +48,8 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
 
   // Filter out errored images
   const validImages = images.filter((_, i) => !errorImages.has(i));
+  // 大圖 index 需夾在有效範圍內（若被選中的圖之後才載入失敗、validImages 縮短時）
+  const safeMainIndex = Math.min(Math.max(mainIndex, 0), Math.max(validImages.length - 1, 0));
 
   function handleImageError(index: number) {
     setErrorImages(prev => new Set(prev).add(index));
@@ -76,7 +81,7 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
 
   return (
     <div className="kkd-carousel-wrap">
-      {/* 左右滑動輪播（mobile + desktop 共用，可滑覽全部照片） */}
+      {/* Mobile: swipeable */}
       <div className="kkd-carousel-track" ref={trackRef}>
         {images.map((url, i) => (
           <div key={i} className="kkd-carousel-slide" data-index={i}>
@@ -119,6 +124,49 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
           ))}
         </div>
       )}
+
+      {/* Desktop: 左側大圖 + 右側可捲動縮圖列（點縮圖切成大圖） */}
+      <div className="kkd-gallery-desktop">
+        {validImages.length > 0 && (
+          <div className="kkd-gallery-main-wrap">
+            <FallbackImage
+              src={validImages[safeMainIndex]}
+              alt={alt}
+              className="kkd-gallery-main"
+              priority
+              // 桌面 gallery 在手機為 display:none；mobile 用 0vw 避免 next/image 在
+              // 手機端 priority-preload 這張隱藏主圖（否則會與手機輪播首圖搶頻寬、
+              // 重複下載同一張圖）。桌面維持 75vw 作為 LCP 主圖。
+              sizes="(min-width: 768px) 75vw, 0vw"
+              onFinalError={() => handleImageError(images.indexOf(validImages[safeMainIndex]))} width={1200} height={675} />
+          </div>
+        )}
+        {validImages.length > 1 && (
+          <div className="kkd-gallery-thumbs">
+            <div className="kkd-gallery-thumbs-inner" role="listbox" aria-label={t('thumbnailsLabel')}>
+              {validImages.map((url, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  role="option"
+                  aria-selected={i === safeMainIndex}
+                  aria-label={t('thumbnailItem', { index: i + 1, total: validImages.length })}
+                  className={`kkd-gallery-thumb-btn${i === safeMainIndex ? ' active' : ''}`}
+                  onClick={() => setMainIndex(i)}
+                >
+                  <FallbackImage
+                    src={url}
+                    alt={`${alt} ${i + 1}`}
+                    className="kkd-gallery-thumb"
+                    loading="lazy"
+                    sizes="(min-width: 768px) 25vw, 0vw"
+                    onFinalError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

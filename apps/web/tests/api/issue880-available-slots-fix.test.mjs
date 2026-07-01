@@ -32,6 +32,11 @@ const handlerPath = path.resolve(
 );
 const slotGenPath = path.resolve(__dirname, '../../src/lib/slot-generator.ts');
 
+// 日期炸彈防護：時段一旦早於現在會被 slot-generator 濾掉（slot-generator.ts:
+// `if (slot.startAt < new Date())`）。需要「應回傳時段」的測試改用相對未來日期，
+// 與 issue1067 測試同一 pattern。
+const BOOKABLE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 // ── Supabase mock (mirrors issue787 fixture pattern) ─────────────────────────
 
 function createSupabaseMock(results) {
@@ -206,14 +211,14 @@ test('#880 AC4 route: scheduleId path with schedule.capacity > plan.max → capa
   const planUuid = '33333333-3333-4333-8333-333333333333';
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
-    { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: null, start_at: '2026-07-01T09:00:00.000Z', end_at: '2026-07-01T11:00:00.000Z', capacity: 11, booked_count: 0, status: 'open' } },
+    { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: SCHEDULE, activity_id: ACTIVITY, plan_id: null, start_at: `${BOOKABLE_DATE}T09:00:00.000Z`, end_at: `${BOOKABLE_DATE}T11:00:00.000Z`, capacity: 11, booked_count: 0, status: 'open' } },
     { terminal: 'single', table: 'activity_plans', data: { id: planUuid, activity_id: ACTIVITY, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', is_year_round: true, activities: { id: ACTIVITY, guide_id: '44444444-4444-4444-4444-444444444444' } } },
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
     { terminal: 'in', table: 'bookings', data: [] },
   ]);
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${planUuid}&scheduleId=${SCHEDULE}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${planUuid}&scheduleId=${SCHEDULE}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId: ACTIVITY }) },
     { createClient: async () => supabase.client },
   );

@@ -1104,7 +1104,9 @@
   },
   "imageCarousel": {
     "noPhotos": "No photos yet",
-    "loadFailed": "Failed to load"
+    "loadFailed": "Failed to load",
+    "thumbnailsLabel": "Activity photo thumbnails, click to change the main image",
+    "thumbnailItem": "Photo {index} of {total}"
   },
   "reviewPhotos": {
     "zoomPhoto": "Enlarge {author}'s review photo {n}",
