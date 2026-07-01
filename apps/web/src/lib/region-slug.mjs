@@ -10,6 +10,12 @@
 // 失效不到那一頁、前台看不到輪播照片／暖場評論照片的變更。為杜絕此類 drift，
 // 統一由本模組提供正規化邏輯。
 
+// 多語言（#1488）：公開頁搬進 app/[locale]/**，revalidatePath 必須帶 locale 才命中
+// 被快取的路由。locale 清單以 i18n/routing 為單一真實來源（與 middleware 同源）。
+import { routing } from '../i18n/routing.ts';
+
+const REVALIDATION_LOCALES = routing.locales;
+
 // 全台縣市 → URL slug 對照（全名 + 常見短名 alias 皆收錄）。
 // 過去僅收錄少數縣市，其餘縣市（屏東／宜蘭／台東…）會走 ASCII 化分支被轉成
 // 'taiwan'，導致這些地區的行程詳情頁 URL 與 revalidate 路徑全都錯誤。行程編輯
@@ -97,5 +103,30 @@ export function activityRevalidationPaths(activity = {}) {
     paths.push(`/activities/${regionSegment}`);
     if (slug) paths.push(`/activities/${regionSegment}/${slug}`);
   }
-  return [...new Set(paths)];
+  return localizeRevalidationPaths(paths);
+}
+
+/**
+ * #1488 多語言搬遷後修正：公開頁都搬進 `app/[locale]/**`，next-intl `as-needed` 會把
+ * 請求「內部 rewrite」成帶 locale 的路徑（預設 zh-Hant 也是 `/zh-Hant/...`），因此 ISR
+ * 快取鍵一律帶 locale。`revalidatePath()` 若只給「無 locale」路徑（例如
+ * `/activities/kaohsiung/xxx`），對不上實際被快取的 `[locale]` 路由，admin 改完前台不會
+ * 「即時」失效、只能等各頁 `revalidate` window（詳情頁 60s）。
+ *
+ * 故把每條路徑展開成「原路徑（相容）＋ 每個 locale 的前綴版本」。純函式，好測。
+ *
+ * @param {string[]} paths 無 locale 的基準路徑（例如 `/`, `/activities`, `/activities/kaohsiung/x`）
+ * @returns {string[]} 去重後含各 locale 版本的路徑清單
+ */
+export function localizeRevalidationPaths(paths) {
+  const out = [];
+  for (const rawPath of Array.isArray(paths) ? paths : []) {
+    const base = typeof rawPath === 'string' ? rawPath.trim() : '';
+    if (!base) continue;
+    out.push(base); // 保留無 locale 原路徑（相容/保險）
+    for (const locale of REVALIDATION_LOCALES) {
+      out.push(base === '/' ? `/${locale}` : `/${locale}${base}`);
+    }
+  }
+  return [...new Set(out)];
 }

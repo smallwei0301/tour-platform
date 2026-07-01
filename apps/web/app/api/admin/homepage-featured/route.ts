@@ -7,6 +7,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { localizeRevalidationPaths } from '../../../../src/lib/region-slug.mjs';
 import { ok, fail } from '../../../../src/lib/api';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
@@ -117,7 +118,8 @@ export async function PUT(req: NextRequest) {
     // 首頁（/）走 revalidate=60 的 ISR；精選大卡／輪播相片改完立即失效，
     // 不必等 60s window（#1444 同類：mutation 後主動 revalidate）。
     try {
-      revalidatePath('/');
+      // #1488：首頁在 app/[locale]/，需帶各 locale 前綴才命中被快取的路由。
+      for (const p of localizeRevalidationPaths(['/'])) revalidatePath(p);
     } catch {
       // best-effort：快取刷新失敗不影響資料已寫入的結果
     }

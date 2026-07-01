@@ -64,11 +64,14 @@ test('getActivityBySlugDb：行程所屬導遊已停權 → 回 null（行程詳
   );
 });
 
-test('suspend route：停權/復權後 on-demand 失效公開頁（list + 導遊頁 + 行程列表）', () => {
+test('suspend route：停權/復權後 on-demand 失效公開頁（list + 導遊頁 + 行程列表，含各 locale #1488）', () => {
   const src = readFileSync(SUSPEND_ROUTE, 'utf8');
   assert.match(src, /from\s+['"]next\/cache['"]/, '需 import next/cache');
-  assert.match(src, /revalidatePath\(\s*['"]\/guides['"]\s*\)/, '需失效認識導遊列表');
-  assert.match(src, /revalidatePath\(\s*[`'"]\/guides\/\$\{?/, '需失效該導遊詳情頁');
-  assert.match(src, /revalidatePath\(\s*['"]\/activities['"]\s*\)/, '需失效行程列表');
+  // #1488：/guides、/activities 在 app/[locale]/，需以 localizeRevalidationPaths 展開各 locale。
+  assert.match(src, /localizeRevalidationPaths/, '需以 localizeRevalidationPaths 展開各 locale');
+  assert.match(src, /['"]\/guides['"]/, '需失效認識導遊列表');
+  assert.match(src, /[`'"]\/guides\/\$\{?/, '需失效該導遊詳情頁');
+  assert.match(src, /['"]\/activities['"]/, '需失效行程列表');
+  assert.match(src, /revalidatePath\(p\)/, '需對每個 locale 版本 revalidatePath');
   assert.match(src, /select\([^)]*\bslug\b/, '需取 slug 以失效該導遊頁');
 });

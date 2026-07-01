@@ -57,15 +57,17 @@ test('首頁 revalidate 採長安全網（on-demand 為主），非短 timer 冷
   assert.ok(Number(m[1]) >= 3600, `revalidate 應為長安全網（>=3600s），實際 ${m[1]}`);
 });
 
-test('admin 儲存首頁精選的 PUT 會 revalidatePath(\'/\')（儲存即時反映的關鍵接線）', () => {
+test('admin 儲存首頁精選的 PUT 會 revalidate 首頁（含各 locale，#1488）（儲存即時反映的關鍵接線）', () => {
   const route = readFileSync(join(APP_ROOT, 'app/api/admin/homepage-featured/route.ts'), 'utf8');
   const putIdx = route.indexOf('export async function PUT');
   assert.ok(putIdx >= 0, '需有 PUT handler');
   const putBody = route.slice(putIdx);
-  assert.match(putBody, /revalidatePath\(['"]\/['"]\)/, 'PUT 寫入後需 revalidatePath(\'/\') 讓首頁即時重生');
+  // #1488：首頁在 app/[locale]/，需以 localizeRevalidationPaths(['/']) 展開各 locale 前綴。
+  assert.match(putBody, /localizeRevalidationPaths\(\s*\[\s*['"]\/['"]\s*\]\s*\)/, 'PUT 寫入後需以 localizeRevalidationPaths([\'/\']) 讓首頁各 locale 即時重生');
+  assert.match(putBody, /revalidatePath\(p\)/, '需對每個 locale 版本 revalidatePath');
   // 必須在寫入（setHomepageFeaturedDb）之後才 revalidate
   assert.ok(
-    putBody.indexOf('setHomepageFeaturedDb') < putBody.indexOf("revalidatePath('/')"),
+    putBody.indexOf('setHomepageFeaturedDb') < putBody.indexOf('localizeRevalidationPaths'),
     'revalidatePath 應在資料寫入後呼叫',
   );
 });

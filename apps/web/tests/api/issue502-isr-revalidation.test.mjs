@@ -21,12 +21,23 @@ test('詳情頁走 on-demand ISR：移除 force-dynamic、保留 revalidate=60 +
   assert.doesNotMatch(src, /unstable_cache\(/);
 });
 
-test('helper revalidateActivityPaths 失效首頁＋列表＋region＋詳情路徑（用正規化 region slug）', async () => {
+test('helper revalidateActivityPaths 失效首頁＋列表＋region＋詳情路徑（用正規化 region slug、含各 locale）', async () => {
   const { activityRevalidationPaths } = await import('../../src/lib/region-slug.mjs');
+  const { routing } = await import('../../src/i18n/routing.ts');
   // #1440 回歸：中文地區必須正規化成英文 slug，才會命中實際被快取的詳情頁路徑。
   // '/'：首頁精選與自動行程清單來自已發布行程，上下架／編輯後一併失效。
   const paths = activityRevalidationPaths({ region: '高雄市', slug: 'test-2' });
-  assert.deepEqual(paths, ['/', '/activities', '/activities/kaohsiung', '/activities/kaohsiung/test-2']);
+  // 無 locale 基準路徑（相容/保險）仍在。
+  for (const p of ['/', '/activities', '/activities/kaohsiung', '/activities/kaohsiung/test-2']) {
+    assert.ok(paths.includes(p), `缺基準路徑 ${p}`);
+  }
+  // #1488：公開頁搬進 app/[locale]/，as-needed rewrite 後快取鍵帶 locale，故每個 locale
+  // 版本都要失效，否則 admin 改完前台不會即時更新。
+  for (const locale of routing.locales) {
+    assert.ok(paths.includes(`/${locale}`), `缺 ${locale} 首頁失效路徑`);
+    assert.ok(paths.includes(`/${locale}/activities`), `缺 ${locale} 列表失效路徑`);
+    assert.ok(paths.includes(`/${locale}/activities/kaohsiung/test-2`), `缺 ${locale} 詳情頁失效路徑`);
+  }
   // 不得再用 raw 中文地區直接拼路徑（會打不到快取）。
   const src = await read('src/lib/revalidate-activity.mjs');
   assert.doesNotMatch(src, /\/activities\/\$\{region\}/, '不得用未正規化的 raw region 拼路徑');

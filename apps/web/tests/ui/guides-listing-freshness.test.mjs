@@ -48,6 +48,9 @@ test('/guides/[slug] 詳情頁須真正進 on-demand ISR 快取（否則退回 d
 test('導遊存檔／發佈時 on-demand 失效公開頁，旅客刷新即見最新資料', () => {
   const src = readFileSync(PROFILE_ROUTE, 'utf8');
   assert.match(src, /from\s+['"]next\/cache['"]/, '需 import next/cache');
-  assert.match(src, /revalidatePath\(\s*['"]\/guides['"]\s*\)/, '需失效認識導遊列表 /guides');
-  assert.match(src, /revalidatePath\(\s*[`'"]\/guides\/\$\{?/, '需一併失效該導遊詳情頁 /guides/<slug>');
+  // #1488：/guides 在 app/[locale]/，需以 localizeRevalidationPaths 展開各 locale 前綴才命中快取。
+  assert.match(src, /localizeRevalidationPaths/, '需以 localizeRevalidationPaths 展開各 locale');
+  assert.match(src, /['"]\/guides['"]/, '需失效認識導遊列表 /guides');
+  assert.match(src, /[`'"]\/guides\/\$\{?/, '需一併失效該導遊詳情頁 /guides/<slug>');
+  assert.match(src, /revalidatePath\(p\)/, '需對每個 locale 版本 revalidatePath');
 });
