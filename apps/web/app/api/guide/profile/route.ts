@@ -3,6 +3,7 @@ import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { isMissingColumnError } from '../../../../src/lib/schema-drift.mjs';
+import { normalizeRegionToDbValue } from '../../../../src/lib/region-slugs.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -188,6 +189,13 @@ export async function PATCH(req: Request) {
   if (gpErr || !gp) return Response.json(fail('NOT_FOUND', 'guide profile not found'), { status: 404 });
 
   const dbUpdate: Record<string, unknown> = { ...update, updated_at: new Date().toISOString() };
+  // 熟悉區域統一存全名（高雄→高雄市），與行程地區格式一致；即使前端傳短名也正規化落地。
+  if (Array.isArray(dbUpdate.regions)) {
+    dbUpdate.regions = [...new Set((dbUpdate.regions as unknown[]).map((r) => normalizeRegionToDbValue(r)).filter(Boolean))];
+  }
+  if (typeof dbUpdate.region === 'string' && dbUpdate.region) {
+    dbUpdate.region = normalizeRegionToDbValue(dbUpdate.region);
+  }
   let { error: updateErr } = await supabase
     .from('guide_profiles')
     .update(dbUpdate)

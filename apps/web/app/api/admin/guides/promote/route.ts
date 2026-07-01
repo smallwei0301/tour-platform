@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateInviteToken } from '../../../../../src/lib/guide-auth';
 import { errorV2 } from '../../../../../src/lib/api';
+import { normalizeRegionToDbValue } from '../../../../../src/lib/region-slugs.mjs';
 
 /**
  * POST /api/admin/guides/promote
@@ -84,7 +85,10 @@ export async function POST(req: Request) {
   } else {
     // Create new guide_profiles entry
     const appRecord = app as Record<string, unknown>;
-    const appRegions = Array.isArray(appRecord.regions) ? appRecord.regions as string[] : [];
+    // 熟悉區域統一存全名（高雄→高雄市），與行程地區格式一致；申請若存短名也正規化。
+    const appRegions = Array.isArray(appRecord.regions)
+      ? [...new Set((appRecord.regions as unknown[]).map((r) => normalizeRegionToDbValue(r)).filter(Boolean))]
+      : [];
     const appPaymentMethods = Array.isArray(appRecord.payment_methods)
       ? appRecord.payment_methods as string[]
       : (appRecord.payment_method ? [appRecord.payment_method as string] : []);

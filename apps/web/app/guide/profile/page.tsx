@@ -4,12 +4,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState, type FormEvent, type CSSProperties } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
-import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
+import { listAllDivisions, normalizeRegionToDbValue } from '../../../src/lib/region-slugs.mjs';
 import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
 import { compressImage } from '../../../src/lib/client-image-compress';
 import NotificationBindingButton from '../../../src/components/NotificationBindingButton';
 
-const REGION_OPTIONS = listRegionOptions().map((r) => r.displayName);
+// 熟悉區域：顯示短名（displayName）、儲存全名（dbValue），與行程地區格式一致。
+const REGION_OPTIONS = listAllDivisions();
 
 // Client component 必須用「字面量」process.env.NEXT_PUBLIC_* 才會被 Next 於 build 內嵌；
 // 透過 feature-flags.mjs 的 env 參數間接讀取（env.NEXT_PUBLIC_*）在 client bundle 不會被
@@ -89,8 +90,15 @@ export default function GuideProfileEditPage() {
             display_name: d.display_name ?? '',
             headline: d.headline ?? '',
             bio: d.bio ?? '',
-            region: d.region ?? '',
-            regions: Array.isArray(d.regions) ? d.regions : [],
+            // 舊資料可能存短名（高雄），載入時正規化成全名（高雄市），讓 chip 對得上並在存回時統一。
+            region: normalizeRegionToDbValue(d.region ?? ''),
+            regions: Array.isArray(d.regions)
+              ? Array.from(new Set(
+                  (d.regions as unknown[])
+                    .map((r) => normalizeRegionToDbValue(r) as string)
+                    .filter((x): x is string => Boolean(x)),
+                ))
+              : [],
             certifications: Array.isArray(d.certifications) ? d.certifications : [],
             payment_methods: Array.isArray(d.payment_methods) ? d.payment_methods : [],
             languages: Array.isArray(d.languages) ? d.languages : [],
@@ -278,7 +286,7 @@ export default function GuideProfileEditPage() {
               <span style={LABEL}>熟悉區域</span>
               <ToggleChips
                 ariaLabel="熟悉區域"
-                options={REGION_OPTIONS.map((r) => ({ id: r, label: r }))}
+                options={REGION_OPTIONS.map((d) => ({ id: d.dbValue, label: d.displayName }))}
                 values={profile.regions}
                 onChange={(next) => update('regions', next)}
               />

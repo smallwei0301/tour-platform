@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
+import { listAllDivisions } from '../../../src/lib/region-slugs.mjs';
 import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
 import { compressImage } from '../../../src/lib/client-image-compress';
 // 專長領域同步為平台四大分類（山徑／野溪／文化／生態），與行程卡 badge、
@@ -78,7 +78,8 @@ export default function GuideApplyPage() {
   const specialtyOptions = CATEGORY_OPTIONS.map((c) => c.label);
   const languageOptions = ['中文', '英文', '日文', '韓文', '泰文'];
   // 全台地區（含嘉義、屏東等）統一取自平台正規地區清單，與活動地區同源。
-  const regionOptions = listRegionOptions().map((r) => r.displayName);
+  // 熟悉區域：顯示短名（displayName）、儲存全名（dbValue），與行程地區格式一致。
+  const regionOptions = listAllDivisions();
   const certOptions = ['急救證照', '登山證照', '潛水證照', '導遊證', '領隊證'];
   const paymentOptions = GUIDE_PAYMENT_OPTIONS;
 
@@ -222,14 +223,14 @@ export default function GuideApplyPage() {
             <div>
               <p className="lp-apply-group-label">熟悉區域*</p>
               <div className="lp-apply-chips">
-                {regionOptions.map((item) => (
-                  <label key={item} className="lp-apply-chip">
+                {regionOptions.map((d) => (
+                  <label key={d.dbValue} className="lp-apply-chip">
                     <input
                       type="checkbox"
-                      checked={regions.includes(item)}
-                      onChange={() => toggleList(item, regions, setRegions)}
+                      checked={regions.includes(d.dbValue)}
+                      onChange={() => toggleList(d.dbValue, regions, setRegions)}
                     />
-                    {item}
+                    {d.displayName}
                   </label>
                 ))}
               </div>

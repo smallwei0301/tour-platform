@@ -88,7 +88,7 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 import { insertAuditLogDb } from './audit-log.mjs';
 import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { normalizeRegionForActivityPath } from './region-slug.mjs';
-import { expandRegionToDbValues } from './region-slugs.mjs';
+import { expandRegionToDbValues, normalizeRegionToDbValue } from './region-slugs.mjs';
 import { normalizeAdditionalRegions, activityMatchesRegion } from './activity-regions.mjs';
 import { resolveAdminRefundTransition } from './refund-transition.mjs';
 import { resolveActivityReviewTransition } from './activity-review-transition.mjs';
@@ -2046,7 +2046,8 @@ export async function createGuideApplicationDb(input = {}) {
     Array.isArray(value) ? value.map((v) => String(v || '').trim()).filter(Boolean) : [];
   const specialties = toStringArray(input?.specialties);
   const languages = toStringArray(input?.languages);
-  const regions = toStringArray(input?.regions);
+  // 熟悉區域統一存全名（高雄→高雄市），與行程地區格式一致；即使前端傳短名也正規化落地。
+  const regions = [...new Set(toStringArray(input?.regions).map(normalizeRegionToDbValue).filter(Boolean))];
   const certifications = toStringArray(input?.certs ?? input?.certifications);
   // 收款方式由單選改可複選：優先讀陣列 payments/paymentMethods，向後相容單一 payment 字串。
   const paymentMethods = Array.isArray(input?.payments ?? input?.paymentMethods)
