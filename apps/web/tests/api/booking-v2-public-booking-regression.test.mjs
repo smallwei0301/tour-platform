@@ -20,6 +20,11 @@ import path from 'node:path';
 import { resolveBookingPlan } from '../../src/lib/booking-plan-resolver.ts';
 import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
+// 日期炸彈防護：時段一旦早於現在會被 slot-generator 濾掉（slot-generator.ts:
+// `if (slot.startAt < new Date())`）。需要「應回傳時段」的測試改用相對未來日期，
+// 與 issue1067 測試同一 pattern。
+const BOOKABLE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Shared Supabase mock factory (mirrors #882/#880 pattern) ─────────────────
@@ -290,8 +295,8 @@ test('#885 A5: schedule.capacity(11) > plan.max_participants(10) → capacityLef
         id: SCHEDULE,
         activity_id: ACTIVITY,
         plan_id: null,
-        start_at: '2026-07-01T09:00:00.000Z',
-        end_at:   '2026-07-01T11:00:00.000Z',
+        start_at: `${BOOKABLE_DATE}T09:00:00.000Z`,
+        end_at:   `${BOOKABLE_DATE}T11:00:00.000Z`,
         capacity: 11,   // schedule raw capacity > plan max
         booked_count: 0,
         status: 'open',
@@ -318,7 +323,7 @@ test('#885 A5: schedule.capacity(11) > plan.max_participants(10) → capacityLef
     { terminal: 'then', table: 'activity_plan_seasons',    data: [] },
   ]);
   const response = await getAvailableSlots(
-    buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${PLAN_UUID}&scheduleId=${SCHEDULE}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${PLAN_UUID}&scheduleId=${SCHEDULE}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId: ACTIVITY }) },
     { createClient: async () => supabase.client },
   );
@@ -351,8 +356,8 @@ test('#885 A5: schedule.capacity(5) < plan.max_participants(10) → capacityLeft
         id: SCHEDULE,
         activity_id: ACTIVITY,
         plan_id: null,
-        start_at: '2026-07-01T09:00:00.000Z',
-        end_at:   '2026-07-01T11:00:00.000Z',
+        start_at: `${BOOKABLE_DATE}T09:00:00.000Z`,
+        end_at:   `${BOOKABLE_DATE}T11:00:00.000Z`,
         capacity: 5,    // schedule capacity is smaller
         booked_count: 0,
         status: 'open',
@@ -378,7 +383,7 @@ test('#885 A5: schedule.capacity(5) < plan.max_participants(10) → capacityLeft
     { terminal: 'then', table: 'activity_plan_seasons',    data: [] },
   ]);
   const response = await getAvailableSlots(
-    buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${PLAN_UUID}&scheduleId=${SCHEDULE}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://x.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${PLAN_UUID}&scheduleId=${SCHEDULE}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId: ACTIVITY }) },
     { createClient: async () => supabase.client },
   );
