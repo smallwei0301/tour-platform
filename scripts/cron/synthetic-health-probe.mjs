@@ -13,7 +13,8 @@
  * Optional env:
  *   TELEGRAM_BOT_TOKEN       — alert on failure
  *   TELEGRAM_CHAT_ID
- *   PROBE_TIMEOUT_MS         — per-request timeout in ms (default: 5000)
+ *   PROBE_TIMEOUT_MS         — per-request timeout in ms (default: 10000)
+ *   PROBE_MAX_ATTEMPTS       — attempts per target before reporting failure (default: 2, backoff 遞增)
  *   GITHUB_TOKEN / GH_TOKEN  — create/update GitHub issues on failure
  *   GITHUB_REPOSITORY        — "owner/repo" (e.g. "smallwei0301/tour-platform")
  *   GITHUB_REF_NAME          — branch/tag name (defaults to "staging")
@@ -355,13 +356,28 @@ async function createOrUpdateIssue({ failure, token, repo, fetchFn }) {
 // ---------------------------------------------------------------------------
 // Exports (must come before main execution guard)
 // ---------------------------------------------------------------------------
-export { buildFingerprint, sanitizeForIssueBody, buildIssueTitle, buildIssueBody, createOrUpdateIssue };
+export {
+  buildFingerprint,
+  sanitizeForIssueBody,
+  buildIssueTitle,
+  buildIssueBody,
+  createOrUpdateIssue,
+  probeWithRetry,
+  DEFAULT_PROBE_TIMEOUT_MS,
+  DEFAULT_PROBE_MAX_ATTEMPTS,
+};
 
 // ---------------------------------------------------------------------------
 // Probe helper (only used in direct execution)
 // ---------------------------------------------------------------------------
+
+// #1472：cold start 可能超過 5 秒，單次探測即告警會產生誤報 —
+// 預設 timeout 放寬到 10s，且失敗後以遞增間隔重試，全數失敗才回報。
+const DEFAULT_PROBE_TIMEOUT_MS = 10000;
+const DEFAULT_PROBE_MAX_ATTEMPTS = 2;
+
 async function probe(label, url, opts = {}) {
-  const timeoutMs = opts.timeoutMs ?? 5000;
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_PROBE_TIMEOUT_MS;
   const start = Date.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -424,6 +440,39 @@ async function probe(label, url, opts = {}) {
   return result;
 }
 
+/**
+ * Run a probe with retry-on-failure and increasing backoff.
+ * 只有連續 maxAttempts 次都失敗才視為失敗（結果帶最後一次的 error）。
+ *
+ * @param {string} label
+ * @param {string} url
+ * @param {{ maxAttempts?: number, retryDelayMs?: number, probeFn?: Function, sleepFn?: Function }} opts
+ *   （probeFn / sleepFn 供測試注入）
+ * @returns {Promise<object>} probe result + attempts
+ */
+async function probeWithRetry(label, url, opts = {}) {
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? DEFAULT_PROBE_MAX_ATTEMPTS);
+  const retryDelayMs = opts.retryDelayMs ?? 2000;
+  const probeFn = opts.probeFn ?? probe;
+  const sleepFn = opts.sleepFn ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+
+  let last = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    last = await probeFn(label, url, opts);
+    if (last.ok) {
+      return { ...last, attempts: attempt };
+    }
+    if (attempt < maxAttempts) {
+      const delay = retryDelayMs * attempt;
+      console.warn(
+        `[synthetic-health-probe] ${label} attempt ${attempt}/${maxAttempts} failed (${last.error ?? `status=${last.status}`}), retrying in ${delay}ms`,
+      );
+      await sleepFn(delay);
+    }
+  }
+  return { ...last, attempts: maxAttempts };
+}
+
 // ---------------------------------------------------------------------------
 // Main (only runs when this file is executed directly, not when imported)
 // ---------------------------------------------------------------------------
@@ -433,7 +482,8 @@ const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 
 if (isMain) {
   const BASE_URL_RAW = process.env.NEXT_PUBLIC_VERCEL_URL ?? '';
-  const PROBE_TIMEOUT_MS = Number(process.env.PROBE_TIMEOUT_MS ?? '5000');
+  const PROBE_TIMEOUT_MS = Number(process.env.PROBE_TIMEOUT_MS ?? String(DEFAULT_PROBE_TIMEOUT_MS));
+  const PROBE_MAX_ATTEMPTS = Number(process.env.PROBE_MAX_ATTEMPTS ?? String(DEFAULT_PROBE_MAX_ATTEMPTS));
 
   // Graceful skip if base URL not configured
   if (!BASE_URL_RAW) {
@@ -455,7 +505,12 @@ if (isMain) {
   const results = [];
   for (const t of targets) {
     const url = `${BASE_URL}${t.path}`;
-    const result = await probe(t.label, url, { expectJson: t.expectJson, expectJsonOk: t.expectJsonOk, timeoutMs: PROBE_TIMEOUT_MS });
+    const result = await probeWithRetry(t.label, url, {
+      expectJson: t.expectJson,
+      expectJsonOk: t.expectJsonOk,
+      timeoutMs: PROBE_TIMEOUT_MS,
+      maxAttempts: PROBE_MAX_ATTEMPTS,
+    });
     results.push(result);
   }
 
