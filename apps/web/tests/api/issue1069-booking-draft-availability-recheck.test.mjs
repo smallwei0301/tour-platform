@@ -12,9 +12,9 @@ const BASE = {
   planId: 'p-1',
   timezone: 'Asia/Taipei',
   participants: 2,
-  dateFrom: '2026-07-01',
-  dateTo: '2026-07-01',
-  requestedStartAt: '2026-07-01T09:00:00+08:00',
+  dateFrom: '2037-07-01',
+  dateTo: '2037-07-01',
+  requestedStartAt: '2037-07-01T09:00:00+08:00',
   minParticipants: 2,
   rules: [],
   blackouts: [],
@@ -62,7 +62,7 @@ test('GH-1069 RED: no-slot decision keeps evaluator reason/message for draft rej
 test('GH-1069 RED: stale schedule fallback only passes when requested startAt exists in effective slots', () => {
   const out = evaluateEffectiveBookingAvailability({
     ...BASE,
-    requestedStartAt: '2026-07-01T10:00:00+08:00',
+    requestedStartAt: '2037-07-01T10:00:00+08:00',
     rules: [ruleAtNine()],
   });
 
@@ -79,8 +79,8 @@ test('GH-1069 RED: authoritative selected schedule closed/full rejects with cano
       id: 's-closed',
       activity_id: 'a-1',
       plan_id: 'p-1',
-      start_at: '2026-07-01T09:00:00+08:00',
-      end_at: '2026-07-01T11:00:00+08:00',
+      start_at: '2037-07-01T09:00:00+08:00',
+      end_at: '2037-07-01T11:00:00+08:00',
       capacity: 6,
       booked_count: 0,
       status: 'closed',
@@ -110,7 +110,7 @@ test('GH-1069 RED: happy path keeps available=true and matched slot', () => {
   });
 
   assert.equal(out.available, true);
-  assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
+  assert.equal(out.matchedSlot?.startAt, '2037-07-01T09:00:00+08:00');
 });
 
 test('GH-1069 RED: authoritative selected schedule keeps draft parity when source-of-truth slot is open, generated rules are absent, and explicit year-round is set', () => {
@@ -127,8 +127,8 @@ test('GH-1069 RED: authoritative selected schedule keeps draft parity when sourc
       id: 's-authoritative-open',
       activity_id: 'a-1',
       plan_id: 'p-1',
-      start_at: '2026-07-01T09:00:00+08:00',
-      end_at: '2026-07-01T11:00:00+08:00',
+      start_at: '2037-07-01T09:00:00+08:00',
+      end_at: '2037-07-01T11:00:00+08:00',
       capacity: 6,
       booked_count: 0,
       status: 'open',
@@ -136,7 +136,7 @@ test('GH-1069 RED: authoritative selected schedule keeps draft parity when sourc
   });
 
   assert.equal(out.available, true);
-  assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
+  assert.equal(out.matchedSlot?.startAt, '2037-07-01T09:00:00+08:00');
   assert.equal(out.evaluation.selectedScheduleAuthority, 'authoritative');
 });
 
@@ -154,8 +154,8 @@ test('GH-1069 RED: fallback selected schedule keeps draft parity when recovered 
       id: 's-fallback-open',
       activity_id: 'a-1',
       plan_id: 'p-1',
-      start_at: '2026-07-01T09:00:00+08:00',
-      end_at: '2026-07-01T11:00:00+08:00',
+      start_at: '2037-07-01T09:00:00+08:00',
+      end_at: '2037-07-01T11:00:00+08:00',
       capacity: 6,
       booked_count: 1,
       status: 'open',
@@ -163,7 +163,7 @@ test('GH-1069 RED: fallback selected schedule keeps draft parity when recovered 
   });
 
   assert.equal(out.available, true);
-  assert.equal(out.matchedSlot?.startAt, '2026-07-01T09:00:00+08:00');
+  assert.equal(out.matchedSlot?.startAt, '2037-07-01T09:00:00+08:00');
   assert.equal(out.evaluation.selectedScheduleAuthority, 'fallback');
 });
 
@@ -189,8 +189,8 @@ test('GH-1067 RED: selected schedule parity bypass must not override active seas
         id: `s-${authority}-outside-season`,
         activity_id: 'a-1',
         plan_id: 'p-1',
-        start_at: '2026-07-01T09:00:00+08:00',
-        end_at: '2026-07-01T11:00:00+08:00',
+        start_at: '2037-07-01T09:00:00+08:00',
+        end_at: '2037-07-01T11:00:00+08:00',
         capacity: 6,
         booked_count: 0,
         status: 'open',

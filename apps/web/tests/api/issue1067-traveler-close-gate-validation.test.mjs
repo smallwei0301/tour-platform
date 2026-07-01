@@ -8,8 +8,8 @@ const TZ = 'Asia/Taipei';
 const GUIDE_ID = 'g-1067-close-gate';
 const ACTIVITY_ID = 'a-1067-close-gate';
 const PLAN_ID = 'p-1067-close-gate';
-const REQUEST_START = '2026-07-01T09:00:00+08:00';
-const REQUEST_END = '2026-07-01T12:00:00+08:00';
+const REQUEST_START = '2037-07-01T09:00:00+08:00';
+const REQUEST_END = '2037-07-01T12:00:00+08:00';
 
 function season({ startMonth, startDay, endMonth, endDay, isActive = true }) {
   return {
@@ -80,8 +80,8 @@ function baseInput(overrides = {}) {
     planId: PLAN_ID,
     timezone: TZ,
     participants: 2,
-    dateFrom: '2026-07-01',
-    dateTo: '2026-07-01',
+    dateFrom: '2037-07-01',
+    dateTo: '2037-07-01',
     requestedStartAt: REQUEST_START,
     minParticipants: 1,
     rules: [weekdayRule()],
@@ -218,7 +218,7 @@ test('GH-1067: conflict override cannot unlock explicit outside_season selected 
             activity_id: ACTIVITY_ID,
             activity_plan_id: PLAN_ID,
             start_at: REQUEST_START,
-            end_at: '2026-07-01T17:00:00+08:00',
+            end_at: '2037-07-01T17:00:00+08:00',
             status: 'confirmed',
             participants: 2,
           },
