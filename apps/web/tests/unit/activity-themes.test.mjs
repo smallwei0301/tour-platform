@@ -78,3 +78,29 @@ test('不相關主題不誤判', () => {
   assert.equal(isActivityInTheme(CULTURE, '自然生態'), false);
   assert.equal(isActivityInTheme(ECOLOGY, '柴山探洞'), false);
 });
+
+test('明確分類優先：明選山徑(mountain)不因文案生態字眼漏進「自然生態」', () => {
+  const act = {
+    category: 'mountain',
+    title: '阿里山森林漫步輕旅行',
+    tagline: '走進阿里山的自然生態與森林步道。',
+  };
+  // 跨分類阻擋：明選 mountain，不進 ecology 主題。
+  assert.equal(isActivityInTheme(act, '自然生態'), false);
+  // 同分類家族：森林／步道關鍵字命中，仍歸入山野秘境。
+  assert.equal(isActivityInTheme(act, '山野秘境'), true);
+});
+
+test('明確分類優先：同分類家族內仍由關鍵字區分（柴山探洞 vs 山野秘境）', () => {
+  const cave = { category: 'mountain', title: '高雄柴山探洞體驗', tagline: '走進柴山探洞路線。' };
+  assert.equal(isActivityInTheme(cave, '柴山探洞'), true);
+  // 明選 mountain 不會漏進 river／culture／ecology 主題。
+  assert.equal(isActivityInTheme(cave, '野外溪流'), false);
+});
+
+test('legacy 英文 category（outdoor）不受明確分類約束，維持原關鍵字行為', () => {
+  const river = { category: 'outdoor', title: '花蓮秀姑巒溪溯溪', tagline: '走進野溪，森林環繞。' };
+  assert.equal(isActivityInTheme(river, '野外溪流'), true);
+  // outdoor 非 canonical，森林關鍵字仍可命中山野秘境（不阻擋、保留多主題）。
+  assert.equal(isActivityInTheme(river, '山野秘境'), true);
+});

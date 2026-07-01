@@ -4,18 +4,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
+// 四大分類下拉：與 badge／篩選同源（category-tags.mjs），三處編輯器共用不重複定義。
+import { CATEGORY_OPTIONS as CATEGORIES } from '../../../../../src/lib/category-tags.mjs';
 
 const REGIONS = ['台北市', '高雄市', '花蓮縣', '台南市', '台中市', '南投縣', '宜蘭縣', '屏東縣'];
 const REGION_SLUG_MAP: Record<string, string> = {
   台北市: 'taipei', 高雄市: 'kaohsiung', 花蓮縣: 'hualien', 台南市: 'tainan',
   台中市: 'taichung', 南投縣: 'nantou', 宜蘭縣: 'yilan', 屏東縣: 'pingtung',
 };
-const CATEGORIES = [
-  { value: 'mountain', label: '山徑' },
-  { value: 'river', label: '野溪' },
-  { value: 'culture', label: '文化' },
-  { value: 'ecology', label: '生態' },
-];
 
 type Faq = { question: string; answer: string };
 
