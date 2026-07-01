@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { getAvailableSlots } from '../../app/api/v2/activities/[activityId]/available-slots/route-handler.ts';
 
+// #admin-plan-revert 後續：原本寫死 '2026-07-01' 的可預約時段會隨時鐘越過而變成過去
+// （SLOT_IN_PAST，全 repo 今日皆紅）。改用相對於「現在」的未來日期，測試不再隨日期到期。
+const BOOKABLE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+
 function createSupabaseMock(results) {
   const calls = [];
   let index = 0;
@@ -85,7 +90,7 @@ test('issue787 behavior: legacy plan slug + schedule fallback succeeds when sche
     { terminal: 'maybeSingle', table: 'activity_plans', data: null },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: scheduleId, plan_id: null } },
     { terminal: 'limit', table: 'activity_plans', data: [{ id: fallbackPlanId }] },
-    { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: scheduleId, activity_id: activityId, plan_id: null, start_at: '2026-07-01T09:00:00.000Z', end_at: '2026-07-01T11:00:00.000Z', capacity: 10, booked_count: 2, status: 'open' } },
+    { terminal: 'maybeSingle', table: 'activity_schedules', data: { id: scheduleId, activity_id: activityId, plan_id: null, start_at: `${BOOKABLE_DATE}T09:00:00.000Z`, end_at: `${BOOKABLE_DATE}T11:00:00.000Z`, capacity: 10, booked_count: 2, status: 'open' } },
     { terminal: 'single', table: 'activity_plans', data: { id: fallbackPlanId, activity_id: activityId, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' } } },
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
@@ -93,7 +98,7 @@ test('issue787 behavior: legacy plan slug + schedule fallback succeeds when sche
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=half-day-morning&scheduleId=${scheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=half-day-morning&scheduleId=${scheduleId}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -139,7 +144,7 @@ test('issue787 behavior: status-null formal plan legacy_plan_id fallback returns
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=full-day-complete&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=full-day-complete&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -191,7 +196,7 @@ test('issue838 behavior: full-day-complete falls back to same-activity derived s
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=full-day-complete&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=full-day-complete&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -227,7 +232,7 @@ test('issue787 behavior: ambiguous active plans returns 200 empty slots with AMB
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=half-day-morning&scheduleId=${scheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=half-day-morning&scheduleId=${scheduleId}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -261,7 +266,7 @@ test('issue787 behavior: stale scheduleId on a scheduled plan lists the plan fix
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${scheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${scheduleId}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -284,7 +289,7 @@ test('issue841 behavior: stale scheduleId falls back to matching date-range sche
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
-    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: '2026-07-01T01:00:00.000Z', end_at: '2026-07-01T03:00:00.000Z', capacity: 8, booked_count: 2, status: 'open' }] },
+    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: `${BOOKABLE_DATE}T01:00:00.000Z`, end_at: `${BOOKABLE_DATE}T03:00:00.000Z`, capacity: 8, booked_count: 2, status: 'open' }] },
     { terminal: 'single', table: 'activity_plans', data: { id: planId, activity_id: activityId, duration_minutes: 120, min_participants: 1, max_participants: 10, booking_type: 'scheduled', status: 'active', is_year_round: true, activities: { id: activityId, guide_id: '44444444-4444-4444-4444-444444444444' } } },
     { terminal: 'or', table: 'guide_availability_rules', data: [] },
     { terminal: 'then', table: 'guide_blackout_dates', data: [] },
@@ -292,7 +297,7 @@ test('issue841 behavior: stale scheduleId falls back to matching date-range sche
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=4`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=4`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -316,7 +321,7 @@ test('issue841 behavior: stale scheduleId fallback enforces schedule remaining c
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
-    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: '2026-07-01T01:00:00.000Z', end_at: '2026-07-01T03:00:00.000Z', capacity: 3, booked_count: 2, status: 'open' }] },
+    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: `${BOOKABLE_DATE}T01:00:00.000Z`, end_at: `${BOOKABLE_DATE}T03:00:00.000Z`, capacity: 3, booked_count: 2, status: 'open' }] },
     {
       terminal: 'single',
       table: 'activity_plans',
@@ -338,7 +343,7 @@ test('issue841 behavior: stale scheduleId fallback enforces schedule remaining c
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=2`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=2`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
@@ -363,7 +368,7 @@ test('issue841 behavior: stale scheduleId fallback enforces minParticipants for 
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: activityId } },
     { terminal: 'maybeSingle', table: 'activity_schedules', data: null },
-    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: '2026-07-01T01:00:00.000Z', end_at: '2026-07-01T03:00:00.000Z', capacity: 8, booked_count: 2, status: 'open' }] },
+    { terminal: 'or', table: 'activity_schedules', data: [{ id: matchedScheduleId, activity_id: activityId, plan_id: planId, start_at: `${BOOKABLE_DATE}T01:00:00.000Z`, end_at: `${BOOKABLE_DATE}T03:00:00.000Z`, capacity: 8, booked_count: 2, status: 'open' }] },
     {
       terminal: 'single',
       table: 'activity_plans',
@@ -385,7 +390,7 @@ test('issue841 behavior: stale scheduleId fallback enforces minParticipants for 
   ]);
 
   const response = await getAvailableSlots(
-    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    buildRequest(`https://example.test/api/v2/activities/${activityId}/available-slots?planId=${planId}&scheduleId=${staleScheduleId}&dateFrom=${BOOKABLE_DATE}&dateTo=${BOOKABLE_DATE}&timezone=Asia/Taipei&participants=1`),
     { params: Promise.resolve({ activityId }) },
     { createClient: async () => supabase.client }
   );
