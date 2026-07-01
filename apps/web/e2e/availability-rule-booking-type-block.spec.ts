@@ -79,11 +79,12 @@ test('admin：選即時方案 → 無警示、可送出；下拉標 booking_type
   await stubAdminPage(page);
   await openAdminRuleModal(page);
 
-  // 下拉選項標 booking_type 中文標籤。
-  await expect(page.locator('option:has-text("排程方案（排程預約")')).toBeAttached();
-  await expect(page.locator('option:has-text("即時方案（即時預約")')).toBeAttached();
+  // 下拉選項標 booking_type 中文標籤（限方案下拉，預覽下拉也含相同標籤故需 scope）。
+  const adminPlanSelect = page.locator('select[aria-label="方案"]');
+  await expect(adminPlanSelect.locator('option:has-text("排程方案（排程預約")')).toBeAttached();
+  await expect(adminPlanSelect.locator('option:has-text("即時方案（即時預約")')).toBeAttached();
 
-  await page.locator('select[aria-label="方案"]').selectOption(INSTANT_PLAN_ID);
+  await adminPlanSelect.selectOption(INSTANT_PLAN_ID);
   await expect(page.getByTestId('rule-booking-type-warning')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^儲存$|儲存中/ })).toBeEnabled();
 });
@@ -136,10 +137,11 @@ test('guide：選即時方案 → 無警示、可送出；下拉標 booking_type
   await stubGuidePage(page);
   await openGuideRuleModal(page);
 
-  await expect(page.locator('option:has-text("排程方案（排程預約")')).toBeAttached();
-  await expect(page.locator('option:has-text("即時方案（即時預約")')).toBeAttached();
+  const guidePlanSelect = page.locator('select[aria-label="方案"]');
+  await expect(guidePlanSelect.locator('option:has-text("排程方案（排程預約")')).toBeAttached();
+  await expect(guidePlanSelect.locator('option:has-text("即時方案（即時預約")')).toBeAttached();
 
-  await page.locator('select[aria-label="方案"]').selectOption(INSTANT_PLAN_ID);
+  await guidePlanSelect.selectOption(INSTANT_PLAN_ID);
   await expect(page.getByTestId('rule-booking-type-warning')).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^儲存$|儲存中/ })).toBeEnabled();
 });

@@ -24,6 +24,11 @@ import {
   generateFallbackPreviewSlots,
   type FallbackPlanMeta,
 } from '../../../../../../../src/lib/availability-v2/fallback-preview-slots.ts';
+import { isDynamicAvailabilityApplicable } from '../../../../../../../src/lib/booking-type-flow.mjs';
+
+// 排程方案的預覽提示：只看固定場次，動態規則不適用，引導去場次管理。
+const SCHEDULED_PREVIEW_NOTICE =
+  '此方案為排程預約，僅使用固定場次，請至「場次管理」檢視固定場次；此處不套用動態可預約時段規則。';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -160,6 +165,27 @@ export async function GET(
 
       if (planError || !planData) {
         return Response.json(errorV2('NOT_FOUND', 'Plan not found'), { status: 422 });
+      }
+
+      // 排程方案只看固定場次：不跑動態規則預覽，直接回提示與空時段，避免誤導。
+      if (!isDynamicAvailabilityApplicable(planData.booking_type)) {
+        return Response.json(successV2({
+          guide: { id: guide.id, display_name: guide.display_name },
+          timezone,
+          dateFrom,
+          dateTo,
+          activityPlanId,
+          previewBookingType: 'scheduled',
+          previewNotice: SCHEDULED_PREVIEW_NOTICE,
+          previewCanonicalState: null,
+          previewSeasonGate: null,
+          isYearRound: Boolean(planData.is_year_round),
+          activeSeasonSummaries: [],
+          rulesCount: rules.length,
+          blackoutsCount: blackouts.length,
+          activeBookingsCount: bookings.length,
+          slots: [],
+        }));
       }
 
       const { data: seasonsData } = await supabase

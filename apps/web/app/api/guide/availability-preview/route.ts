@@ -30,6 +30,11 @@ import {
   generateFallbackPreviewSlots,
   type FallbackPlanMeta,
 } from '../../../../src/lib/availability-v2/fallback-preview-slots.ts';
+import { isDynamicAvailabilityApplicable } from '../../../../src/lib/booking-type-flow.mjs';
+
+// 排程方案的預覽提示：只看固定場次，動態規則不適用，引導去場次管理。
+const SCHEDULED_PREVIEW_NOTICE =
+  '此方案為排程預約，僅使用固定場次，請至「場次管理」檢視固定場次；此處不套用動態可預約時段規則。';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
@@ -115,6 +120,8 @@ export async function GET(request: NextRequest) {
     const supabase = await getSupabase();
     let previewPlanSeasons: PreviewActivityPlanSeason[] = [];
     let previewIsYearRound = false;
+    // 排程方案短路旗標：選到排程方案時只回提示、不跑動態規則預覽。
+    let scheduledPlanNotice = false;
 
     // The resolved ActivityPlan for canonical slot generation (GH-1289)
     let canonicalPlan: ActivityPlan | null = null;
@@ -164,6 +171,12 @@ export async function GET(request: NextRequest) {
           fail('VALIDATION_ERROR', 'activityPlanId refers to a non-bookable plan'),
           { status: 400 }
         );
+      }
+
+      // 排程方案只看固定場次：標記後於資料載入完成前短路，不跑動態規則預覽。
+      if (!isDynamicAvailabilityApplicable(planData.booking_type)) {
+        scheduledPlanNotice = true;
+        previewIsYearRound = Boolean(planData.is_year_round);
       }
 
       // Build canonical ActivityPlan for slot generation (GH-1289)
@@ -303,6 +316,29 @@ export async function GET(request: NextRequest) {
       seasons: previewPlanSeasons,
     });
     const activeSeasonSummaries = summarizeActivePlanSeasons(previewPlanSeasons);
+
+    // 排程方案短路：只看固定場次，動態規則預覽無意義，回提示與空時段。
+    if (scheduledPlanNotice) {
+      return Response.json(ok({
+        guide: guide || { id: session.guideId, display_name: session.guideName },
+        timezone,
+        dateFrom,
+        dateTo,
+        activityPlanId: activityPlanId || null,
+        availabilitySource: 'scheduled_plan_notice',
+        previewReasonCode: 'SCHEDULED_PLAN_USES_FIXED_SESSIONS',
+        previewBookingType: 'scheduled',
+        previewNotice: SCHEDULED_PREVIEW_NOTICE,
+        previewCanonicalState: null,
+        previewSeasonGate: null,
+        isYearRound: previewIsYearRound,
+        activeSeasonSummaries: [],
+        rulesCount: rules.length,
+        blackoutsCount: blackouts.length,
+        activeBookingsCount: bookings.length,
+        slots: [],
+      }));
+    }
 
     // GH-1289: generate slots using the canonical slot-generator.
     // When activityPlanId is provided, we have the full plan and use generateAvailableSlots.
