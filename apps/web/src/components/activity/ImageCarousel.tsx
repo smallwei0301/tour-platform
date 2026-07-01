@@ -14,8 +14,8 @@ interface ImageCarouselProps {
  * Image carousel with placeholder fallback
  * - Shows placeholder when no images available
  * - Handles image load errors gracefully
- * - Mobile: swipeable carousel
- * - Desktop: 3:1 grid layout
+ * - Mobile 與桌機皆為左右滑動輪播（scroll-snap + 圓點指示），可滑覽全部照片。
+ *   （原桌機 3:1 grid 只顯示前 4 張、無法滑到更多，已於此改為統一的滑動輪播。）
  */
 export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
   const t = useTranslations('imageCarousel');
@@ -76,7 +76,7 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
 
   return (
     <div className="kkd-carousel-wrap">
-      {/* Mobile: swipeable */}
+      {/* 左右滑動輪播（mobile + desktop 共用，可滑覽全部照片） */}
       <div className="kkd-carousel-track" ref={trackRef}>
         {images.map((url, i) => (
           <div key={i} className="kkd-carousel-slide" data-index={i}>
@@ -119,36 +119,6 @@ export function ImageCarousel({ images, alt, sizes }: ImageCarouselProps) {
           ))}
         </div>
       )}
-
-      {/* Desktop: 3:1 grid */}
-      <div className="kkd-gallery-desktop">
-        {validImages.length > 0 && (
-          <FallbackImage
-            src={validImages[0]}
-            alt={alt}
-            className="kkd-gallery-main"
-            priority
-            // 桌面 gallery 在手機為 display:none；mobile 用 0vw 避免 next/image 在
-            // 手機端 priority-preload 這張隱藏主圖（否則會與手機輪播首圖搶頻寬、
-            // 重複下載同一張圖）。桌面維持 75vw 作為 LCP 主圖。
-            sizes="(min-width: 768px) 75vw, 0vw"
-            onFinalError={() => handleImageError(images.indexOf(validImages[0]))} width={1200} height={675} />
-        )}
-        {validImages.length > 1 && (
-          <div className="kkd-gallery-grid">
-            {validImages.slice(1, 4).map((url, i) => (
-              <FallbackImage
-                key={i}
-                src={url}
-                alt={`${alt} ${i + 2}`}
-                className="kkd-gallery-thumb"
-                loading="lazy"
-                sizes="(min-width: 768px) 25vw, 0vw"
-                onFinalError={() => handleImageError(images.indexOf(url))} width={1200} height={675} />
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
