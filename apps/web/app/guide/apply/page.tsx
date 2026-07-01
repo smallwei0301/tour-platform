@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { listRegionOptions } from '../../../src/lib/region-slugs.mjs';
 import { GUIDE_PAYMENT_OPTIONS } from '../../../src/lib/guide-payment-options.mjs';
 import { compressImage } from '../../../src/lib/client-image-compress';
+// 專長領域同步為平台四大分類（山徑／野溪／文化／生態），與行程卡 badge、
+// 主題篩選、活動編輯下拉同源（category-tags.mjs），避免各處標籤漂移。
+import { CATEGORY_OPTIONS } from '../../../src/lib/category-tags.mjs';
 
 export default function GuideApplyPage() {
   const [step, setStep] = useState(1);
@@ -72,7 +75,7 @@ export default function GuideApplyPage() {
     }
   }
 
-  const specialtyOptions = ['文化走讀', '美食導覽', '山林健行', '水上活動', '單車行程'];
+  const specialtyOptions = CATEGORY_OPTIONS.map((c) => c.label);
   const languageOptions = ['中文', '英文', '日文', '韓文', '泰文'];
   // 全台地區（含嘉義、屏東等）統一取自平台正規地區清單，與活動地區同源。
   const regionOptions = listRegionOptions().map((r) => r.displayName);
