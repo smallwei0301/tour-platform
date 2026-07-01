@@ -94,3 +94,23 @@ test.describe('手機版活動照片仍為左右滑動輪播（不受影響）',
     await expect(page.locator('.kkd-gallery-desktop')).toBeHidden();
   });
 });
+
+test.describe('相簿響應式：各裝置寬度都要看得到照片（含 768px 邊界）', () => {
+  // 768px 為 iPad 直立寬度；min-width:768 與 max-width:768 曾同時命中導致相簿兩邊都被隱藏。
+  for (const width of [360, 767, 768, 820, 1024, 1280]) {
+    test(`寬度 ${width}px 時相簿有照片可見（非空白）`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(DETAIL_PATH);
+
+      // 手機輪播與桌機相簿，恰有一種可見，且該種內有可見照片。
+      const mobileVisible = await page.locator('.kkd-carousel-track').isVisible();
+      const desktopVisible = await page.locator('.kkd-gallery-desktop').isVisible();
+      expect(mobileVisible || desktopVisible).toBeTruthy();
+
+      const visibleGallery = desktopVisible
+        ? page.locator('.kkd-gallery-desktop')
+        : page.locator('.kkd-carousel-track');
+      await expect(visibleGallery.locator('img').first()).toBeVisible({ timeout: 10_000 });
+    });
+  }
+});

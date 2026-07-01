@@ -2086,8 +2086,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .kkd-booking-side { display: none; }
 }
 @media (max-width: 768px) {
-  /* Mobile gallery handled by carousel — hide desktop grid rules */
-  .kkd-gallery-desktop { display: none; }
+  /* 桌機相簿預設即 display:none（見上方基準規則）；此處不再重複，
+     以免與 min-width:768 在「剛好 768px」重疊而讓相簿兩邊都被隱藏（iPad 直立）。 */
   .kkd-title { font-size: 18px; }
   .kkd-price { font-size: 22px; }
   .kkd-anchor-wrap { top: 56px; }
