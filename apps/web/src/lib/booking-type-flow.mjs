@@ -56,6 +56,23 @@ export function initialApprovalStatusForBookingType(bookingType) {
 }
 
 /**
+ * booking_type 的繁中標籤（與 BookingTypesGuide／BRAND_BOOK 文案一致）。
+ * 供方案下拉、警示框等 UI 共用，避免各處硬編不一致。
+ * @param {unknown} bookingType
+ * @returns {string}
+ */
+export function bookingTypeLabelZh(bookingType) {
+  switch (normalizeBookingType(bookingType)) {
+    case 'scheduled':
+      return '排程預約';
+    case 'request':
+      return '申請預約';
+    default:
+      return '即時預約';
+  }
+}
+
+/**
  * 動態可預約時段規則（`guide_availability_rules`）是否適用於此 booking_type？
  *
  * 嚴格區隔（owner 拍板）：

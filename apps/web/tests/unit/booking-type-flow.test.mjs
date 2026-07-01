@@ -7,6 +7,7 @@ import {
   requiresGuideApproval,
   initialApprovalStatusForBookingType,
   isDynamicAvailabilityApplicable,
+  bookingTypeLabelZh,
   canCheckout,
   shouldAutoConfirmOnPayment,
   decideApproval,
@@ -45,6 +46,14 @@ test('isDynamicAvailabilityApplicable: scheduled → false, instant/request → 
   assert.equal(isDynamicAvailabilityApplicable(undefined), true);
   assert.equal(isDynamicAvailabilityApplicable(null), true);
   assert.equal(isDynamicAvailabilityApplicable('garbage'), true);
+});
+
+test('bookingTypeLabelZh: 三種模式中文標籤，未知值回退即時預約', () => {
+  assert.equal(bookingTypeLabelZh('scheduled'), '排程預約');
+  assert.equal(bookingTypeLabelZh('request'), '申請預約');
+  assert.equal(bookingTypeLabelZh('instant'), '即時預約');
+  assert.equal(bookingTypeLabelZh(undefined), '即時預約');
+  assert.equal(bookingTypeLabelZh('garbage'), '即時預約');
 });
 
 test('canCheckout: request blocked until approved, others always allowed', () => {
