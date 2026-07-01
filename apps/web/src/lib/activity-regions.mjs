@@ -9,7 +9,7 @@
 // 本檔只放純邏輯（正規化、去重、比對），方便用 node --test 直接驗證，
 // 不依賴 Supabase。db.mjs 與前端表單共用同一套正規化避免 drift。
 
-import { normalizeRegionToDbValue } from './region-slugs.mjs';
+import { normalizeRegionToDbValue, expandRegionToDbValues } from './region-slugs.mjs';
 
 /**
  * 把「附加地區（複選）」正規化成乾淨、可持久化的 DB 規範值陣列：
@@ -52,12 +52,15 @@ export function activityRegionDbValues(activity = {}) {
 /**
  * 判斷某行程是否命中指定地區（主要或附加皆算命中）。
  * 兩端都會正規化，'高雄' / 'kaohsiung' / '高雄市' 視為同一地區。
+ * 搜尋短名會展開成多個現行縣市：'嘉義' 命中嘉義市或嘉義縣、'新竹' 命中新竹市或
+ * 新竹縣（見 expandRegionToDbValues）；其餘短名/全名維持單一 division。
  * @param {{ region?: unknown, regions?: unknown }} activity
  * @param {unknown} wantRegion 任意形式的目標地區
  * @returns {boolean}
  */
 export function activityMatchesRegion(activity, wantRegion) {
-  const want = normalizeRegionToDbValue(wantRegion);
-  if (!want) return true;
-  return activityRegionDbValues(activity).includes(want);
+  const wants = expandRegionToDbValues(wantRegion);
+  if (wants.length === 0) return true;
+  const have = new Set(activityRegionDbValues(activity));
+  return wants.some((w) => have.has(w));
 }

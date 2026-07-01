@@ -82,24 +82,25 @@ test('Source contract: db.mjs in-memory 地區篩選正規化兩端', () => {
   );
 });
 
-test('Source contract: db.mjs Supabase 查詢用正規化後的 regionFilter', () => {
+test('Source contract: db.mjs Supabase 查詢用 expandRegionToDbValues 展開集合', () => {
   const src = readFileSync(join(REPO_ROOT, 'src/lib/db.mjs'), 'utf8');
+  // 短名展開成現行 dbValue 集合（'嘉義'→[嘉義市,嘉義縣]；多數短名/全名單值），
+  // 兩端仍正規化，短名↔全名相容不破壞。
   assert.match(
     src,
-    /const\s+regionFilter\s*=\s*filters\.region\s*\?\s*normalizeRegionToDbValue\(filters\.region\)/,
-    'Supabase 路徑應先把 filters.region 正規化成 regionFilter',
+    /const\s+regionValues\s*=\s*filters\.region\s*\?\s*expandRegionToDbValues\(filters\.region\)/,
+    'Supabase 路徑應以 expandRegionToDbValues 展開 filters.region',
   );
-  // 複選地區後主查詢改用 .or()：主要地區（region.eq）或附加地區（regions 含）任一命中，
-  // 但仍以正規化後的 regionFilter 比對，短名↔全名相容不破壞。
+  // 主查詢對集合中每個 dbValue 組 region.eq / regions.cs 多項 .or()
   assert.match(
     src,
-    /query\.or\(`region\.eq\.\$\{regionFilter\},regions\.cs\.\["\$\{regionFilter\}"\]`\)/,
-    "主查詢應以 .or() 比對 region.eq.regionFilter 或 regions 包含 regionFilter",
+    /orTerms\.join\(','\)/,
+    '主查詢應以 orTerms.join(",") 組多項 .or()',
   );
   assert.match(
     src,
-    /retry\s*=\s*retry\.eq\('region',\s*regionFilter\)/,
-    "schema-drift retry 查詢也應 .eq('region', regionFilter)",
+    /retry\s*=\s*retry\.in\('region',\s*regionValues\)/,
+    "schema-drift retry 查詢應 .in('region', regionValues)",
   );
 });
 

@@ -64,3 +64,24 @@ test('activityMatchesRegion：空/未指定地區視為不篩選（命中）', (
   assert.equal(activityMatchesRegion({ region: '高雄市', regions: [] }, ''), true);
   assert.equal(activityMatchesRegion({ region: '高雄市', regions: [] }, undefined), true);
 });
+
+test('activityMatchesRegion：短名「嘉義」同時命中嘉義市與嘉義縣', () => {
+  assert.equal(activityMatchesRegion({ region: '嘉義市', regions: [] }, '嘉義'), true);
+  assert.equal(activityMatchesRegion({ region: '嘉義縣', regions: [] }, '嘉義'), true);
+});
+
+test('activityMatchesRegion：短名「新竹」同時命中新竹市與新竹縣', () => {
+  assert.equal(activityMatchesRegion({ region: '新竹市', regions: [] }, '新竹'), true);
+  assert.equal(activityMatchesRegion({ region: '新竹縣', regions: [] }, '新竹'), true);
+});
+
+test('activityMatchesRegion：全名 specific，不跨市/縣誤命中', () => {
+  // 用全名「嘉義市」篩選，只命中嘉義市，不命中嘉義縣。
+  assert.equal(activityMatchesRegion({ region: '嘉義市', regions: [] }, '嘉義市'), true);
+  assert.equal(activityMatchesRegion({ region: '嘉義縣', regions: [] }, '嘉義市'), false);
+});
+
+test('activityMatchesRegion：短名「高雄」只命中高雄市（無舊高雄縣）', () => {
+  assert.equal(activityMatchesRegion({ region: '高雄市', regions: [] }, '高雄'), true);
+  assert.equal(activityMatchesRegion({ region: '高雄縣', regions: [] }, '高雄'), false);
+});

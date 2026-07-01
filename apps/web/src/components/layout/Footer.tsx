@@ -3,18 +3,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useChromeLocale } from '../../i18n/use-client-locale';
 import { getFooterMessages } from '../../i18n/client-nav-messages';
+import { listSearchRegions } from '../../lib/region-slugs.mjs';
 
 // Footer 在 NextIntlClientProvider 之外（root layout 經 FooterGate 渲染），故與
 // Navbar 同樣依 pathname 前綴自行決定 locale 與文案（#multilingual）。內部連結維持
 // 不加前綴：未搬進 [locale] 的路徑不會 404，已搬進的靠 sticky NEXT_LOCALE cookie。
-const FOOTER_REGIONS = [
-  { key: 'taipei', region: '台北' }, { key: 'newTaipei', region: '新北' },
-  { key: 'taoyuan', region: '桃園' }, { key: 'taichung', region: '台中' },
-  { key: 'tainan', region: '台南' }, { key: 'kaohsiung', region: '高雄' },
-  { key: 'hualien', region: '花蓮' }, { key: 'taitung', region: '台東' },
-  { key: 'yilan', region: '宜蘭' }, { key: 'pingtung', region: '屏東' },
-  { key: 'penghu', region: '澎湖' }, { key: 'kinmen', region: '金門' },
-] as const;
+//
+// 地區清單改由 region-slugs.mjs 的 SEARCH_REGIONS 衍生（全 20 短名群組、單一真實
+// 來源），不再各自硬編。連結用短名 label（?region=高雄）；點「嘉義」「新竹」會一併
+// 搜到市＋縣（展開見 expandRegionToDbValues）。label 文案優先取 i18n（key＝群組 key），
+// 缺鍵時退回模組短名。
+const FOOTER_REGIONS = listSearchRegions();
 
 export function Footer() {
   const pathname = usePathname() || '/';
@@ -106,10 +105,10 @@ export function Footer() {
             {FOOTER_REGIONS.map((c) => (
               <Link
                 key={c.key}
-                href={`/activities?region=${encodeURIComponent(c.region)}`}
+                href={`/activities?region=${encodeURIComponent(c.label)}`}
                 className="tp-footer-region-link"
               >
-                {m.region[c.key]}
+                {(m.region as Record<string, string>)[c.key] ?? c.label}
               </Link>
             ))}
           </div>
