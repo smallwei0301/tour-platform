@@ -1,4 +1,5 @@
 import { revalidatePath } from 'next/cache';
+import { localizeRevalidationPaths } from '../../../../src/lib/region-slug.mjs';
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
@@ -218,8 +219,10 @@ export async function PATCH(req: Request) {
   // On-demand revalidation (事件觸發，非定時 ISR)：導遊存檔/發佈後精準
   // 失效公開頁，旅客下次刷新即見最新資料，平時零背景運算。
   try {
-    revalidatePath('/guides');
-    if (gp.slug) revalidatePath(`/guides/${gp.slug}`);
+    // #1488：/guides 在 app/[locale]/，需帶各 locale 前綴才命中被快取的路由。
+    const paths = ['/guides'];
+    if (gp.slug) paths.push(`/guides/${gp.slug}`);
+    for (const p of localizeRevalidationPaths(paths)) revalidatePath(p);
   } catch {
     // revalidation 失敗不應讓存檔失敗（例如非請求情境）。
   }

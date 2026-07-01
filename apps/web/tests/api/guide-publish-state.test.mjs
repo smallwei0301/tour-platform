@@ -58,11 +58,14 @@ test('profile API：GET 回傳 is_published、PATCH 接受 is_published', () => 
   assert.match(src, /is_published/, 'GET 回傳需含 is_published');
 });
 
-test('profile API：存檔成功後 on-demand 失效 /guides（revalidatePath）', () => {
+test('profile API：存檔成功後 on-demand 失效 /guides（含各 locale，#1488）', () => {
   const src = readFileSync(PROFILE_ROUTE, 'utf8');
   assert.match(src, /from\s+['"]next\/cache['"]/, '需 import next/cache');
-  assert.match(src, /revalidatePath\(\s*['"]\/guides['"]\s*\)/, '需 revalidatePath(\'/guides\')');
-  assert.match(src, /revalidatePath\(\s*[`'"]\/guides\/\$\{?/, '需一併失效該導遊詳情頁 /guides/<slug>');
+  // #1488：/guides 在 app/[locale]/，需以 localizeRevalidationPaths 展開各 locale 前綴。
+  assert.match(src, /localizeRevalidationPaths/, '需以 localizeRevalidationPaths 展開各 locale');
+  assert.match(src, /['"]\/guides['"]/, '需失效 /guides');
+  assert.match(src, /[`'"]\/guides\/\$\{?/, '需一併失效該導遊詳情頁 /guides/<slug>');
+  assert.match(src, /revalidatePath\(p\)/, '需對每個 locale 版本 revalidatePath');
 });
 
 // ---------- profile 頁面：發佈開關 + 引導 ----------

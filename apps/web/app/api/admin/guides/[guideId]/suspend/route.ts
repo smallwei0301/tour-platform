@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { localizeRevalidationPaths } from '../../../../../../src/lib/region-slug.mjs';
 
 /**
  * PATCH /api/admin/guides/:guideId/suspend
@@ -60,9 +61,10 @@ export async function PATCH(
   // fresh); 認識導遊 list + the guide's page are on-demand only, so revalidate
   // them explicitly. /activities list is ISR — refresh it too for immediacy.
   try {
-    revalidatePath('/guides');
-    if (profile.slug) revalidatePath(`/guides/${profile.slug}`);
-    revalidatePath('/activities');
+    // #1488：/guides、/activities 在 app/[locale]/，需帶各 locale 前綴才命中快取路由。
+    const paths = ['/guides', '/activities'];
+    if (profile.slug) paths.push(`/guides/${profile.slug}`);
+    for (const p of localizeRevalidationPaths(paths)) revalidatePath(p);
   } catch {
     // revalidation 失敗不影響停權結果本身。
   }
