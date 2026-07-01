@@ -1644,8 +1644,26 @@ img { max-width: 100%; height: auto; }
   font-size: 13px;
   color: var(--tp-muted);
 }
-.kkd-review-list { display: grid; gap: 12px; }
+/* 旅客評價：改為左右滑動的卡片輪播（scroll-snap），手機與桌機皆同一橫向卷軸。 */
+.kkd-review-list {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 2px;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+.kkd-review-list::-webkit-scrollbar { height: 6px; }
+.kkd-review-list::-webkit-scrollbar-thumb {
+  background: rgba(238, 230, 205, 0.25);
+  border-radius: 999px;
+}
 .kkd-review-card {
+  flex: 0 0 auto;
+  width: min(86%, 340px);
+  scroll-snap-align: start;
   background: var(--tp-bg-soft);
   border: 1px solid var(--tp-border);
   border-radius: 10px;
