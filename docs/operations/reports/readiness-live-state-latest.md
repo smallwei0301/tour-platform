@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-07-01T07:36:41.971Z -->
+<!-- query_timestamp: 2026-07-01T13:02:15.747Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-01T07:36:41.971Z  
-**Commit SHA:** `8a3bf4f3b75b9df1f886258af67d0abefca18d7a`
+**Query timestamp:** 2026-07-01T13:02:15.747Z  
+**Commit SHA:** `6f48237414b62f6a0dffae85b52da9799ced4484`
 
 ---
 
-## Open PRs (5)
+## Open PRs (6)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1550 | [feat: 電腦版活動照片改為大圖＋可捲動縮圖列（復原 #1547，含 16:9 比例與 768px 響應式修正）](https://github.com/smallwei0301/tour-platform/pull/1550) | `claude/itinerary-reviews-carousel-9ehj0h` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
