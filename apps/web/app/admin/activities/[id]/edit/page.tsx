@@ -35,52 +35,6 @@ interface V2ActivityPlan {
   duration_minutes?: number;
 }
 
-// ── Legacy 方案型別 ────────────────────────────────────────
-interface PlanConfig {
-  id: string;
-  label: string;
-  duration: string;
-  priceMultiplier: number;
-  price?: number;
-  highlights: string[];
-  detailsLinkText: string;
-  bookingBtnText: string;
-  // 方案詳情
-  language?: string;
-  earliestDeparture?: string;
-  confirmByDays?: number;
-  freeCancelDays?: number;
-  planInclusions?: string[];
-  planExclusions?: string[];
-  planItinerary?: Array<{ text: string; imageUrl?: string }>;
-  meetingPointName?: string;
-  meetingAddress?: string;
-  experiencePointName?: string;
-  experienceAddress?: string;
-  planNotices?: string[];
-  planRefundRules?: string[];
-}
-
-const DEFAULT_PLANS: PlanConfig[] = [
-  {
-    id: 'half-day',
-    label: 'A. 半日行程',
-    duration: '約 4 小時',
-    priceMultiplier: 1,
-    highlights: ['最早出發前 1 天可預訂', '免費取消（168 小時前（含））', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
-    detailsLinkText: '查看方案詳情 ›',
-    bookingBtnText: '立即預約',
-  },
-  {
-    id: 'full-day',
-    label: 'B. 全日行程',
-    duration: '約 8 小時',
-    priceMultiplier: 1.6,
-    highlights: ['午餐含餐（在地餐廳）', '免費取消（168 小時前（含））', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
-    detailsLinkText: '查看方案詳情 ›',
-    bookingBtnText: '立即預約',
-  },
-];
 
 // 地區清單與 slug 對照以 region-slugs.mjs 的 REGION_REGISTRY 為單一真實來源，
 // 涵蓋全台 18 縣市（過去硬編 8 個且 slug 對照另寫一份，易 drift／漏對應）。
@@ -477,7 +431,7 @@ function ScheduleSection({ activityId }: { activityId: string }) {
   const [schedOk,   setSchedOk]         = useState('');
 
   // V2 plans fetch — used exclusively for the schedule modal dropdown.
-  // Does NOT affect the legacy plans/DEFAULT_PLANS JSONB flow.
+  // 方案一律於「方案管理」(V2) 維護；本頁不再有 legacy plans 編輯流程。
   const [v2Plans, setV2Plans] = useState<V2ActivityPlan[]>([]);
   useEffect(() => {
     fetch(`/api/v2/admin/activities/${activityId}/plans`)
@@ -722,13 +676,10 @@ export default function AdminActivityEditPage() {
   const [goodFor,            setGoodFor]            = useState('');
   const [socialProofQuotes,  setSocialProofQuotes]  = useState<SocialProofQuoteRow[]>([]);
   const [faq,                setFaq]                = useState<Array<{q:string;a:string}>>([]);
-  const [itinerary,          setItinerary]          = useState<Array<{step:number;title:string;description:string;duration:string;icon:string}>>([]);
   const [status,             setStatus]             = useState('draft');
-  const [plans,              setPlans]              = useState<PlanConfig[]>(DEFAULT_PLANS);
-  // #917: only send `plans` on save when they are real (loaded from DB or imported),
-  // never the DEFAULT_PLANS placeholder — otherwise saving a plan-less activity would
-  // persist the placeholder into activities.plans JSONB.
-  const [plansTouched,       setPlansTouched]       = useState(false);
+  // 方案改由「方案管理」(V2) 維護；此頁只在「JSON 匯入」帶入 V2 方案時，暫存一次性
+  // insert-only 匯入用（送出後清空）。舊版 activities.plans 已停用（#admin-plan-revert）。
+  const [importedPlans,      setImportedPlans]      = useState<Array<Record<string, unknown>> | null>(null);
   const [ratingAvg,          setRatingAvg]          = useState('');
   const [activitySlug,       setActivitySlug]       = useState('');
   const [importErrors,       setImportErrors]       = useState<string[]>([]);
@@ -766,16 +717,8 @@ export default function AdminActivityEditPage() {
         setGoodFor((d.goodFor || []).join('\n'));
         setSocialProofQuotes(normalizeSocialProofQuotes(d.socialProofQuotes));
         setFaq(d.faq || []);
-        setItinerary(d.itinerary || []);
         setRatingAvg(d.ratingAvg != null ? String(d.ratingAvg) : '');
         setStatus(d.status || 'draft');
-        // plans: use DB value if exists, otherwise default
-        if (d.plans && Array.isArray(d.plans) && d.plans.length > 0) {
-          setPlans(d.plans);
-          setPlansTouched(true); // real plans loaded → safe to round-trip on save
-        } else {
-          setPlans(DEFAULT_PLANS);
-        }
         setLoading(false);
       })
       .catch(() => { setError('載入失敗'); setLoading(false); });
@@ -799,8 +742,7 @@ export default function AdminActivityEditPage() {
       if (d[key] != null && !Array.isArray(d[key])) errors.push(`${key} 必須是陣列`);
     }
     if (d.faq != null && !Array.isArray(d.faq)) errors.push('faq 必須是陣列');
-    if (d.itinerary != null && !Array.isArray(d.itinerary)) errors.push('itinerary 必須是陣列');
-    if (d.plans != null && !Array.isArray(d.plans)) errors.push('plans 必須是陣列');
+    if (d.activityPlans != null && !Array.isArray(d.activityPlans)) errors.push('activityPlans 必須是陣列');
     return errors;
   }
 
@@ -815,9 +757,8 @@ export default function AdminActivityEditPage() {
       ['shortDescription', shortDescription, d.shortDescription || ''],
       ['coverImageUrl', coverImageUrl, d.coverImageUrl || ''],
       ['imageUrls', imageUrls, Array.isArray(d.imageUrls) ? d.imageUrls : []],
-      ['plans', plans, Array.isArray(d.plans) ? d.plans : []],
+      ['activityPlans（V2 方案，匯入後於「方案管理」維護）', importedPlans ?? [], Array.isArray(d.activityPlans) ? d.activityPlans : []],
       ['faq', faq, Array.isArray(d.faq) ? d.faq : []],
-      ['itinerary', itinerary, Array.isArray(d.itinerary) ? d.itinerary : []],
     ].filter(([, before, after]) => JSON.stringify(before) !== JSON.stringify(after))
      .map(([field, before, after]) => ({ field: String(field), before: summarize(before), after: summarize(after) }));
   }
@@ -845,14 +786,9 @@ export default function AdminActivityEditPage() {
     setGoodFor((d.goodFor || []).join('\n'));
     setSocialProofQuotes(normalizeSocialProofQuotes(d.socialProofQuotes));
     setFaq(Array.isArray(d.faq) ? d.faq : []);
-    setItinerary(Array.isArray(d.itinerary) ? d.itinerary : []);
-    if (Array.isArray(d.plans) && d.plans.length) {
-      setPlans(d.plans);
-      setPlansTouched(true); // #917: imported plans must persist to 方案管理 on save
-    } else {
-      setPlans(DEFAULT_PLANS);
-    }
-    setSuccess('✅ 已從 JSON 樣板匯入內容，請確認後再儲存');
+    // V2 方案：匯入時只暫存，儲存時 insert-only 建立尚不存在的方案（不覆蓋既有）。
+    setImportedPlans(Array.isArray(d.activityPlans) && d.activityPlans.length ? d.activityPlans : null);
+    setSuccess('✅ 已從 JSON 匯入內容；方案將於儲存時「只新增不覆蓋」建立，後續請至「方案管理」維護');
   }
 
   function handleImportFile(file: File) {
@@ -890,7 +826,7 @@ export default function AdminActivityEditPage() {
           '1. 複製這份檔案後修改內容',
           '2. 保留欄位名稱不變，只改值',
           '3. 圖片欄位可填真實 URL，也可留空後改用後台上傳',
-          '4. plans[] 對應後台「📋 方案管理」，展開「▸ 方案詳情內容」即可編輯',
+          '4. activityPlans[] 為 V2 方案（每人／每團計價）。匯入時「只新增不覆蓋」既有方案，之後請至後台「📋 方案管理」維護',
           '5. planItinerary[].imageUrl 是方案介紹步驟的圖片，可填 URL 或後台上傳',
           '6. 匯入後請檢查 diff 預覽，確認後再按儲存'
         ],
@@ -915,14 +851,16 @@ export default function AdminActivityEditPage() {
         goodFor: '適合對象陣列。',
         socialProofQuotes: '社群口碑語錄陣列。',
         faq: 'FAQ 陣列，格式 [{ q, a }]。',
-        itinerary: '詳細行程時間表陣列，格式 [{ step, title, description, duration, icon }]。',
-        plans: '方案管理陣列；對應後台「📋 方案管理」與其中的「方案詳情內容」。',
-        plans_fields: {
-          id: '方案唯一 ID，例如 half-day。',
-          label: '方案名稱。',
-          duration: '方案顯示時長文字。',
-          priceMultiplier: '相對基礎價格倍數。',
-          price: '方案固定售價（選填，若填寫則優先顯示）。',
+        activityPlans: 'V2 方案陣列；對應後台「📋 方案管理」。匯入時「只新增不覆蓋」既有方案；後續一律於「方案管理」維護。',
+        activityPlans_fields: {
+          name: '方案名稱（必填）。',
+          slug: '方案英文代碼（選填，未填會由名稱自動產生）。',
+          priceType: '計價方式：per_person 每人 / per_group 每團。',
+          basePrice: '方案基本售價（整數 TWD）。',
+          durationMinutes: '方案時長（整數分鐘，至少 15）。',
+          bookingType: '預約方式：scheduled 排程 / request 申請 / instant 即時。',
+          minParticipants: '最低成團人數。',
+          maxParticipants: '方案最多人數。',
           highlights: '方案亮點陣列。',
           detailsLinkText: '查看詳情連結文字。',
           bookingBtnText: '預約按鈕文字。',
@@ -932,7 +870,7 @@ export default function AdminActivityEditPage() {
           freeCancelDays: '幾天前可免費取消。',
           planInclusions: '方案費用包含項目。',
           planExclusions: '方案費用不包含項目。',
-          planItinerary: '方案介紹陣列，格式 [{ text, imageUrl? }]，每一步可附圖片 URL。',
+          planItinerary: '方案「詳細行程」站點時間表，格式 [{ icon, title, duration, description, imageUrl? }]。',
           meetingPointName: '集合地點名稱。',
           meetingAddress: '集合地點地址。',
           experiencePointName: '體驗地點名稱。',
@@ -965,8 +903,25 @@ export default function AdminActivityEditPage() {
         .map(q => ({ author: q.author.trim(), rating: q.rating, text: q.text.trim(), photos: (q.photos ?? []).filter(Boolean).slice(0, QUOTE_PHOTO_MAX) }))
         .filter(q => q.text.length > 0),
       faq,
-      itinerary,
-      plans,
+      // 方案改由「方案管理」維護，此頁不再持有方案值；提供一筆 V2 範例方案作為匯入起點。
+      // 匯入時只會「新增尚不存在的方案」，不會覆蓋既有方案。
+      activityPlans: [
+        {
+          name: '範例方案（每人計價）',
+          priceType: 'per_person',
+          basePrice: priceTwd !== '' ? Number(priceTwd) : 0,
+          durationMinutes: durationMinutes ? Number(durationMinutes) : 60,
+          bookingType: 'scheduled',
+          minParticipants: 1,
+          maxParticipants: 10,
+          highlights: [],
+          planInclusions: [],
+          planExclusions: [],
+          planItinerary: [{ icon: '📍', title: '第一站', duration: '', description: '', imageUrl: '' }],
+          planNotices: [],
+          planRefundRules: [],
+        },
+      ],
     };
     const blob = new Blob([JSON.stringify(template, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1005,18 +960,22 @@ export default function AdminActivityEditPage() {
           socialProofQuotes: socialProofQuotes
             .map(q => ({ author: q.author.trim(), rating: q.rating, text: q.text.trim(), photos: (q.photos ?? []).filter(Boolean).slice(0, QUOTE_PHOTO_MAX) }))
             .filter(q => q.text.length > 0),
-          faq, itinerary,
+          faq,
           imageUrls,
           ratingAvg: ratingAvg !== '' ? Number(ratingAvg) : null,
           // reviewCount 已移除手動輸入：由後端以「口碑語錄 + 已核准評論」自動對齊
-          // #917: persist plans so imported/edited plans reach 方案管理 (activity_plans).
-          // Guarded by plansTouched so a plan-less activity never saves the DEFAULT_PLANS placeholder.
-          ...(plansTouched ? { plans } : {}),
+          // V2 方案 insert-only 匯入：僅在本次由 JSON 帶入方案時送出，後端只新增不覆蓋
+          // 既有方案（活動層級 itinerary 與舊 plans 已停寫；方案唯一來源＝方案管理）。
+          ...(importedPlans && importedPlans.length ? { activityPlans: importedPlans } : {}),
         }),
       });
       const json = await res.json();
-      if (json.ok) setSuccess('✅ 儲存成功');
-      else setError(json.error?.message || '更新失敗');
+      if (json.ok) {
+        setSuccess('✅ 儲存成功');
+        setImportedPlans(null); // 一次性匯入完成即清空，避免重複送
+      } else {
+        setError(json.error?.message || '更新失敗');
+      }
     } catch { setError('網路錯誤'); }
     finally { setSaving(false); }
   }
@@ -1507,17 +1466,14 @@ export default function AdminActivityEditPage() {
           </form>
         </Card>
 
-        {/* ── 正式方案改由專屬頁管理 ── */}
+        {/* ── 方案一律於「方案管理」(V2) 維護 ── */}
         <Card style={{ marginTop: 24, padding: 20, border: '1px solid #86efac', background: '#f0fdf4' }}>
-          <h3 style={{ ...sectionTitle, marginTop: 0, marginBottom: 10 }}>📋 正式方案編輯入口</h3>
+          <h3 style={{ ...sectionTitle, marginTop: 0, marginBottom: 10 }}>📋 方案管理</h3>
           <p style={{ color: '#166534', margin: '0 0 8px', lineHeight: 1.7 }}>
-            正式方案（rich contract）已移至專屬頁集中管理，避免與活動主編輯頁重複維護。
-          </p>
-          <p style={{ color: '#166534', margin: '0 0 8px', lineHeight: 1.7 }}>
-            目前 legacy plans 筆數：{plans.length}
+            方案（計價方式、時長、預約方式、詳細行程等）一律在「方案管理」維護，本頁不再編輯方案。
           </p>
           <p style={{ color: '#166534', margin: '0 0 16px', lineHeight: 1.7 }}>
-            方案欄位統一在專屬頁維護，這裡僅保留預設值/fallback 提示。
+            前台「詳細行程」由旅客所選方案的行程介紹（方案管理 → 方案詳情 → 行程介紹）呈現。
           </p>
           <a
             href={`/admin/activities/${activityId}/plans`}
@@ -1535,57 +1491,8 @@ export default function AdminActivityEditPage() {
               fontWeight: 700,
             }}
           >
-            前往「方案管理」完整編輯
+            前往「方案管理」
           </a>
-        </Card>
-
-        {/* ── 行程時間表 Editor（備援區，預設收合）──
-            #297：詳細行程時間表為「備援區」。前台「詳細行程」優先顯示所選方案於
-            「方案管理」填寫的行程介紹；此區僅在方案未填行程介紹時作為退回來源。
-            一般修改請從「方案管理」進入，故預設收合避免誤改。 */}
-        <Card style={{ marginTop: 24, padding: 20 }}>
-          <details>
-            <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 16, color: '#111827', listStyle: 'revert' }}>
-              🗺 詳細行程時間表（備援區，點擊展開）
-            </summary>
-            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 12px', margin: '12px 0', color: '#92400e', fontSize: 13, lineHeight: 1.7 }}>
-              ⚠️ 此區為<strong>備援區</strong>：前台「詳細行程」會優先顯示旅客所選方案於「方案管理」填寫的行程介紹，
-              僅在該方案未填時才退回顯示此處內容。一般修改請從<strong>「方案管理」</strong>進入編輯各方案的行程介紹。
-            </div>
-            {itinerary.map((step, i) => (
-              <div key={i} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#f9fafb' }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                  <input value={step.icon} onChange={e => { const s=[...itinerary]; s[i]={...s[i],icon:e.target.value}; setItinerary(s); }}
-                    style={{ width: 44, flexShrink: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20, boxSizing: 'border-box' }} placeholder="📍" />
-                  <input value={step.title} onChange={e => { const s=[...itinerary]; s[i]={...s[i],title:e.target.value}; setItinerary(s); }}
-                    style={{ flex: '1 1 140px', minWidth: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', boxSizing: 'border-box' }} placeholder="地點名稱" />
-                  <input value={step.duration} onChange={e => { const s=[...itinerary]; s[i]={...s[i],duration:e.target.value}; setItinerary(s); }}
-                    style={{ flex: '0 0 84px', width: 84, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', boxSizing: 'border-box' }} placeholder="60分鐘" />
-                  <button type="button" aria-label="移除行程點" onClick={() => setItinerary(itinerary.filter((_,j)=>j!==i))}
-                    style={{ flexShrink: 0, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}>✕</button>
-                </div>
-                <textarea value={step.description} onChange={e => { const s=[...itinerary]; s[i]={...s[i],description:e.target.value}; setItinerary(s); }}
-                  rows={2} style={{ ...fieldStyle, width: '100%', boxSizing: 'border-box' }} placeholder="景點描述（選填）" />
-              </div>
-            ))}
-            <button type="button" onClick={() => setItinerary([...itinerary, { step: itinerary.length+1, title:'', description:'', duration:'', icon:'📍' }])}
-              style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%', marginBottom: 16, boxSizing: 'border-box' }}>
-              + 新增行程點
-            </button>
-            {itinerary.length > 0 && (
-              <button type="button" onClick={async () => {
-                const res = await fetch(`/api/admin/activities/${activityId}`, {
-                  method: 'PUT', headers: csrfHeaders({ 'Content-Type': 'application/json' }),
-                  body: JSON.stringify({ itinerary }),
-                });
-                const json = await res.json();
-                if (json.ok) alert('✅ 行程時間表已儲存');
-                else alert('❌ 儲存失敗');
-              }} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
-                💾 儲存行程時間表
-              </button>
-            )}
-          </details>
         </Card>
 
         {/* ── FAQ Editor ── */}

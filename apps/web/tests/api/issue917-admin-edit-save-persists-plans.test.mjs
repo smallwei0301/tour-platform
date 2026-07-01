@@ -12,58 +12,49 @@ const editPageSrc = readFileSync(
   'utf-8',
 );
 
-describe('GH-917 admin activity editor persists plans on save', () => {
-  it('declares a plansTouched flag', () => {
-    assert.match(editPageSrc, /const\s+\[plansTouched,\s*setPlansTouched\]\s*=\s*useState\(false\)/);
+// GH-917 後續（#admin-plan-revert）：舊版 activities.plans 回寫已廢除。行程編輯不再
+// 送 legacy `plans`；改由 JSON 匯入帶入 V2 `activityPlans`，儲存時 insert-only 建立。
+describe('admin activity editor no longer round-trips legacy plans', () => {
+  it('does NOT send legacy `plans` in the save body', () => {
+    assert.doesNotMatch(editPageSrc, /\.\.\.\(plansTouched\s*\?\s*\{\s*plans\s*\}/);
+    assert.doesNotMatch(editPageSrc, /const\s+\[plansTouched/);
+    assert.doesNotMatch(editPageSrc, /const\s+DEFAULT_PLANS/);
+    assert.doesNotMatch(editPageSrc, /interface\s+PlanConfig/);
   });
 
-  it('handleSave PUT body includes plans, guarded by plansTouched', () => {
-    assert.match(editPageSrc, /\.\.\.\(plansTouched\s*\?\s*\{\s*plans\s*\}\s*:\s*\{\}\)/);
+  it('sends V2 `activityPlans` only when a JSON import carried them (insert-only)', () => {
+    assert.match(editPageSrc, /const\s+\[importedPlans,\s*setImportedPlans\]/);
+    assert.match(editPageSrc, /\.\.\.\(importedPlans\s*&&\s*importedPlans\.length\s*\?\s*\{\s*activityPlans:\s*importedPlans\s*\}/);
   });
 
-  it('sets plansTouched=true when real plans are loaded from the activity', () => {
-    // The load branch that sets real plans must also flip the flag.
-    assert.match(
-      editPageSrc,
-      /setPlans\(d\.plans\);\s*\n\s*setPlansTouched\(true\)/,
-    );
+  it('import populates importedPlans from d.activityPlans and clears after save', () => {
+    assert.match(editPageSrc, /setImportedPlans\(\s*Array\.isArray\(d\.activityPlans\)/);
+    assert.match(editPageSrc, /setImportedPlans\(null\)/);
   });
 
-  it('sets plansTouched=true when plans are imported from JSON', () => {
-    // applyImportedActivity must flip the flag when the import carries plans.
-    assert.match(
-      editPageSrc,
-      /if\s*\(Array\.isArray\(d\.plans\)\s*&&\s*d\.plans\.length\)\s*\{\s*\n\s*setPlans\(d\.plans\);\s*\n\s*setPlansTouched\(true\)/,
-    );
-  });
-
-  it('does NOT flip plansTouched in the DEFAULT_PLANS fallback branches', () => {
-    // Guard: DEFAULT_PLANS placeholder must never be treated as real (so it is not persisted).
-    // There should be no `setPlansTouched(true)` immediately tied to a `setPlans(DEFAULT_PLANS)`.
-    assert.doesNotMatch(
-      editPageSrc,
-      /setPlans\(DEFAULT_PLANS\);\s*\n\s*setPlansTouched\(true\)/,
-    );
+  it('no longer renders the legacy plan-count / 備援 itinerary editor', () => {
+    assert.doesNotMatch(editPageSrc, /legacy plans 筆數/);
+    assert.doesNotMatch(editPageSrc, /詳細行程時間表（備援區/);
+    assert.doesNotMatch(editPageSrc, /儲存行程時間表/);
   });
 });
 
-describe('GH-917 save-body guard logic', () => {
-  // Mirror of the guarded spread used in handleSave, to lock the rule independently of source text.
-  function buildSaveBody({ plansTouched, plans }) {
+describe('save-body guard logic (V2 insert-only)', () => {
+  function buildSaveBody({ importedPlans }) {
     return {
       title: 'x',
-      ...(plansTouched ? { plans } : {}),
+      ...(importedPlans && importedPlans.length ? { activityPlans: importedPlans } : {}),
     };
   }
 
-  it('includes plans only when plansTouched is true', () => {
-    const real = [{ id: 'half-day-morning', label: 'A', price: 1800 }];
-    assert.deepEqual(buildSaveBody({ plansTouched: true, plans: real }).plans, real);
+  it('includes activityPlans only when an import carried plans', () => {
+    const real = [{ name: 'A', priceType: 'per_group', basePrice: 1800 }];
+    assert.deepEqual(buildSaveBody({ importedPlans: real }).activityPlans, real);
   });
 
-  it('omits plans entirely when plansTouched is false (plan-less activity)', () => {
-    const placeholder = [{ id: 'half-day', label: 'A. 半日行程', priceMultiplier: 1 }];
-    const body = buildSaveBody({ plansTouched: false, plans: placeholder });
-    assert.ok(!('plans' in body), 'plans must be absent so the placeholder is never persisted');
+  it('omits activityPlans entirely when nothing was imported', () => {
+    const body = buildSaveBody({ importedPlans: null });
+    assert.ok(!('activityPlans' in body), 'no plans → no activityPlans field');
+    assert.ok(!('plans' in body), 'legacy plans field must never be sent');
   });
 });

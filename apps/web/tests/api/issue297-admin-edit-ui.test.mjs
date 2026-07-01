@@ -23,13 +23,13 @@ describe('GH-297 admin edit/plans UI adjustments', () => {
     assert.match(plansSrc, /boxSizing: 'border-box'/, '站點輸入需 box-sizing 防溢出');
   });
 
-  it('detailed-itinerary timetable is collapsed and annotated as a fallback area', () => {
-    assert.match(editSrc, /詳細行程時間表（備援區/, '標題需標示為備援區並可收合');
-    assert.match(editSrc, /<details>/, '需以 <details> 收合');
-    assert.match(editSrc, /此區為<strong>備援區<\/strong>/, '需註解此區為備援區');
-    assert.match(editSrc, /一般修改請從<strong>「方案管理」<\/strong>進入/, '需引導改從方案管理編輯');
-    // 備援編輯器也套用破框修正
-    assert.match(editSrc, /flexWrap: 'wrap'/, '備援站點列也需可換行避免破框');
+  it('detailed-itinerary 備援 editor is removed; edit page points to 方案管理 only (#admin-plan-revert)', () => {
+    // 活動層級「詳細行程時間表（備援區）」已廢除，改由方案的 planItinerary 呈現。
+    assert.doesNotMatch(editSrc, /詳細行程時間表（備援區/, '備援區標題應移除');
+    assert.doesNotMatch(editSrc, /儲存行程時間表/, '備援 itinerary 獨立儲存鈕應移除');
+    assert.doesNotMatch(editSrc, /const\s+\[itinerary/, '活動層級 itinerary state 應移除');
+    // 保留導向「方案管理」的 CTA。
+    assert.match(editSrc, /前往「方案管理」/, '需引導至方案管理');
   });
 
   it('activity-level min/max participant inputs are removed (plan-level is source of truth)', () => {

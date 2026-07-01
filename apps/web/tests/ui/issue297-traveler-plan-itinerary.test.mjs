@@ -26,12 +26,12 @@ describe('GH-297 traveler plan itinerary display', () => {
     }
   });
 
-  it('detail page renders PlanItinerarySection with selected-plan source and page-level fallback', () => {
+  it('detail page renders PlanItinerarySection from selected-plan source only (no activity-level fallback)', () => {
     const source = read('app/[locale]/activities/[region]/[slug]/page.tsx');
     assert.match(source, /import \{ PlanItinerarySection \}/, '應 import PlanItinerarySection');
     assert.match(source, /<PlanItinerarySection[\s\S]*plans=\{datePlanPresentation\.plans/, '應以所選方案來源 datePlanPresentation.plans 餵入');
-    assert.match(source, /fallbackItinerary=\{activityData\.itinerary\}/, '頁面級行程需作為退回來源傳入');
-    // 舊的頁面級靜態行程渲染已移除（不再於頁面直接 map）
+    // #admin-plan-revert 後續：活動層級 itinerary 備援已移除，不再傳入 fallbackItinerary。
+    assert.doesNotMatch(source, /fallbackItinerary=\{activityData\.itinerary\}/, '不應再傳入頁面級 itinerary 退回來源');
     assert.doesNotMatch(source, /activityData\.itinerary\.map/, '不應再直接渲染頁面級 activityData.itinerary');
   });
 
@@ -49,9 +49,9 @@ describe('GH-297 traveler plan itinerary display', () => {
     // 標題後標上方案名稱
     assert.match(source, /titleSuffix/, '需於標題後標上所選方案名稱');
     assert.match(source, /selected\?\.label/, '方案名稱優先取自 context 的 label');
-    // 方案未填行程介紹時退回頁面級
-    assert.match(source, /fallbackItinerary/, '需支援頁面級行程退回');
-    assert.match(source, /fallbackSteps/, '方案未填時需退回頁面級行程');
+    // #admin-plan-revert 後續：不再退回頁面級行程，方案未填時顯示 planNoItinerary。
+    assert.doesNotMatch(source, /fallbackItinerary/, '不應再支援頁面級行程退回');
+    assert.match(source, /planNoItinerary/, '方案未填行程介紹時顯示提示文字');
     // 站點欄位（與後台站點時間表對齊）
     for (const field of ['icon', 'title', 'duration', 'description', 'imageUrl']) {
       assert.match(source, new RegExp(`step\\.${field}`), `站點需處理欄位：${field}`);

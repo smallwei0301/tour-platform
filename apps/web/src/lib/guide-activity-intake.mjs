@@ -134,7 +134,7 @@ export function buildActivityIntakePrompt(answers) {
 
 ## 你的任務
 1. 將導遊的口語描述整理、擴寫成吸引旅客且真實可信的完整行程文案。
-2. 依描述自動補完導遊沒填的欄位（包含項目、不包含項目、注意事項、安全說明、適合對象、FAQ、逐段行程 itinerary 等）。
+2. 依描述自動補完導遊沒填的欄位（包含項目、不包含項目、注意事項、安全說明、適合對象、FAQ、以及各方案的行程介紹 planItinerary 等）。
 3. 嚴格輸出符合下方 schema 的單一 JSON 物件。
 
 ## 輸出格式要求（務必遵守）
@@ -150,9 +150,9 @@ export function buildActivityIntakePrompt(answers) {
 - \`regions\` 為導遊勾選的「附加地區（複選）」中文名稱陣列，請原樣輸出（不要加入主要地區、不要自行增減）；導遊未勾選時輸出 \`[]\`。
 - \`refundRules\` 與每個方案的 \`planRefundRules\` 一律使用下方「平台標準退款規則」，不要自創。
 - \`faq\` 使用 [{ "q": "...", "a": "..." }] 格式；每則 q／a 不超過 500 字。
-- \`itinerary\` 依行程內容拆成合理段落，每段 { step, title, description, duration, icon }，icon 用單一 emoji。
-- 若導遊提供多個方案，輸出多筆 \`plans\`；若沒提供方案資訊，輸出 1 筆涵蓋整體行程的預設方案。
-- 每個 plan 必須有 id（英文小寫加連字號，例 half-day）、label、duration、priceMultiplier、price、highlights、detailsLinkText（用「查看方案詳情 ›」）、bookingBtnText（用「立即預約」）。
+- 方案一律輸出到 \`activityPlans\` 陣列（V2 方案管理格式）；行程的「詳細行程」介紹只放在**各方案的 \`planItinerary\`**（站點時間表），不要輸出活動層級的 itinerary。
+- 若導遊提供多個方案，輸出多筆 \`activityPlans\`；若沒提供方案資訊，輸出 1 筆涵蓋整體行程的預設方案。
+- 每個方案必須有 name（方案名稱）、priceType（\`per_person\` 每人計價 或 \`per_group\` 每團計價）、basePrice（整數 TWD）、durationMinutes（整數分鐘，至少 15）、bookingType（\`scheduled\` 排程／\`request\` 申請／\`instant\` 即時）、minParticipants、maxParticipants、highlights、planItinerary（站點時間表）。detailsLinkText 用「查看方案詳情 ›」、bookingBtnText 用「立即預約」。
 
 ## 目標 JSON schema
 \`\`\`json
@@ -179,13 +179,14 @@ export function buildActivityIntakePrompt(answers) {
   "goodFor": ["string"],
   "socialProofQuotes": ["string 或 { author, rating, text }"],
   "faq": [{ "q": "string", "a": "string" }],
-  "itinerary": [{ "step": 1, "title": "string", "description": "string", "duration": "string", "icon": "📍" }],
-  "plans": [{
-    "id": "string",
-    "label": "string",
-    "duration": "string",
-    "priceMultiplier": 1,
-    "price": 0,
+  "activityPlans": [{
+    "name": "string（方案名稱）",
+    "priceType": "per_person | per_group",
+    "basePrice": 0,
+    "durationMinutes": 0,
+    "bookingType": "scheduled | request | instant",
+    "minParticipants": 1,
+    "maxParticipants": 10,
     "highlights": ["string"],
     "detailsLinkText": "查看方案詳情 ›",
     "bookingBtnText": "立即預約",
@@ -195,7 +196,7 @@ export function buildActivityIntakePrompt(answers) {
     "freeCancelDays": 7,
     "planInclusions": ["string"],
     "planExclusions": ["string"],
-    "planItinerary": [{ "text": "string", "imageUrl": "https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=80" }],
+    "planItinerary": [{ "icon": "📍", "title": "string", "duration": "string", "description": "string", "imageUrl": "https://images.unsplash.com/photo-XXXX?auto=format&fit=crop&w=1200&q=80" }],
     "meetingPointName": "string",
     "meetingAddress": "string",
     "experiencePointName": "string",
@@ -213,7 +214,7 @@ ${refundList}
 - 具體勝過抽象（「23 年走柴山」優於「資深嚮導」）；多用動詞（走進、踏過、鑽過）少用形容詞。
 - 用台灣口語的溫度，可誠實點出難處（「走 7 小時、有點累」）增加真實感。
 - 禁用浮誇詞：療癒、絕美、夢幻、驚艷、美呆、網美必訪、IG 打卡熱點。
-- emoji 節制使用；itinerary 的 icon 可用，內文盡量少。
+- emoji 節制使用；planItinerary 的 icon 可用，內文盡量少。
 
 ## 導遊填寫的原始內容
 【行程名稱】

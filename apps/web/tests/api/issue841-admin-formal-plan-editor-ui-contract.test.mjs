@@ -26,9 +26,10 @@ describe('GH-841 admin formal plan editor UI contract', () => {
   it('edit page no longer mounts competing plans editor and shows migration CTA', () => {
     const source = read('app/admin/activities/[id]/edit/page.tsx');
     assert.doesNotMatch(source, /<PlansSection\b/);
-    assert.match(source, /前往「方案管理」完整編輯/);
+    // #admin-plan-revert 後續：legacy 方案卡改為單純導向「方案管理」的 CTA。
+    assert.match(source, /前往「方案管理」/);
     assert.match(source, /\/admin\/activities\/\$\{activityId\}\/plans/);
-    assert.doesNotMatch(source, /\bplans,\s*imageUrls\b/);
-    assert.match(source, /預設值\/fallback/);
+    assert.doesNotMatch(source, /const\s+DEFAULT_PLANS/, 'legacy DEFAULT_PLANS 應移除');
+    assert.doesNotMatch(source, /legacy plans 筆數/, 'legacy 方案計數卡應移除');
   });
 });

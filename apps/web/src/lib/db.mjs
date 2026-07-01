@@ -13,9 +13,9 @@ import {
   processPaymentCallback as processPaymentCallbackInMemory
 } from './services.mjs';
 import { calculateDiscount } from './promo-discount.ts';
-import { buildFormalPlanBackfillRows } from './activity-plans-rich-mapper.mjs';
+import { buildV2PlanInsertRows } from './activity-plans-rich-mapper.mjs';
 import { buildGuideShopView } from './guide-shop.mjs';
-import { applyUpsertWithMissingColumnFallback, applyWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
+import { applyWithMissingColumnFallback } from './activity-plans-insert-fallback.mjs';
 import {
   listAdminOrdersFallback,
   getAdminOrderDetailFallback,
@@ -96,7 +96,7 @@ import { applyPendingOverlay, buildPendingDiff } from './activity-pending-overla
 import { pickGuideEditableFields } from './guide-editable-activity-fields.mjs';
 import { pickGuideEditablePlanFields, validateGuidePlanCreate } from './guide-editable-plan-fields.mjs';
 import { buildPlanColumnPatch } from './plan-column-patch.mjs';
-import { generatePlanSlug } from './activity-plan-slugs.mjs';
+import { generatePlanSlug, isDuplicatePlanSlugError } from './activity-plan-slugs.mjs';
 import {
   ACTIVITY_PLAN_SEASON_SELECT_COLUMNS,
   validateCreateActivityPlanSeasonPayload,
@@ -2854,7 +2854,8 @@ function normalizeActivityDetailFormalPlan(plan) {
   };
 }
 
-export function selectPublicActivityDetailPlans({ formalPlans = [], legacyPlans = null } = {}) {
+export function selectPublicActivityDetailPlans({ formalPlans = [] } = {}) {
+  // 方案唯一來源＝V2 activity_plans；舊版 activities.plans 已停用（#admin-plan-revert 後續）。
   const mappedFormalPlans = [];
 
   for (const rawPlan of formalPlans || []) {
@@ -2899,10 +2900,7 @@ function canonicalizeActivityDetailSchedulePlanId(rawPlanId, formalPlanIndex) {
 
 function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = null, formalPlans = []) {
   const gp = guideProfileOverride || act?.guide_profiles || {};
-  const selectedPlans = selectPublicActivityDetailPlans({
-    formalPlans,
-    legacyPlans: act?.plans || null,
-  });
+  const selectedPlans = selectPublicActivityDetailPlans({ formalPlans });
   const formalPlanIndex = buildActivityDetailFormalPlanIndex(formalPlans || []);
 
   return {
@@ -2921,7 +2919,8 @@ function mapActivityDetailRow(act, schedules, reviews, guideProfileOverride = nu
     notices: act.notices || [], refundRules: act.refund_rules || [],
     safetyNotice: act.safety_notice, faq: act.faq || [],
     goodFor: act.good_for || [], notGoodFor: act.not_good_for || [],
-    itinerary: act.itinerary || [], socialProofQuotes: act.social_proof_quotes || [],
+    // 活動層級 itinerary 已停用：前台「詳細行程」只讀方案的 planItinerary（#admin-plan-revert 後續）。
+    socialProofQuotes: act.social_proof_quotes || [],
     plans: selectedPlans,
     status: act.status,
     ratingAvg: act.rating_avg ?? gp.rating_avg ?? null,
@@ -3078,8 +3077,8 @@ export async function getActivityBySlugDb(slug, options = {}) {
       price_twd, duration_minutes, min_participants, max_participants,
       meeting_point, meeting_point_map_url, cover_image_url, image_urls,
       inclusions, exclusions, notices, refund_rules, refund_policy_type,
-      safety_notice, faq, good_for, not_good_for, plans, status, published_at,
-      itinerary, social_proof_quotes,
+      safety_notice, faq, good_for, not_good_for, status, published_at,
+      social_proof_quotes,
       rating_avg, review_count,
       guide_id, guide_slug
     `;
@@ -3606,7 +3605,7 @@ export async function getGuideShopDb(slug) {
     getGuideBySlugDb(slug),
     supabase
       .from('activities')
-      .select(`id, slug, title, region, region_slug, plans, status, activity_plans(${PLAN_COLS})`)
+      .select(`id, slug, title, region, region_slug, status, activity_plans(${PLAN_COLS})`)
       .eq('guide_slug', slug)
       .eq('status', 'published'),
   ]);
@@ -3619,7 +3618,7 @@ export async function getGuideShopDb(slug) {
     // Fallback：embed 失敗時退回 activities + activity_plans 兩段式。
     const a2 = await supabase
       .from('activities')
-      .select('id, slug, title, region, region_slug, plans, status')
+      .select('id, slug, title, region, region_slug, status')
       .eq('guide_slug', slug)
       .eq('status', 'published');
     acts = a2.data || [];
@@ -3642,7 +3641,7 @@ export async function getGuideShopDb(slug) {
         id: a.id, slug: a.slug, title: a.title, region: a.region,
         regionSlug: a.region_slug || null, status: a.status || 'published',
       },
-      plans: selectPublicActivityDetailPlans({ formalPlans: formal, legacyPlans: a.plans || null }) || [],
+      plans: selectPublicActivityDetailPlans({ formalPlans: formal }) || [],
     };
   });
 
@@ -3754,7 +3753,6 @@ export async function getAdminActivityByIdDb(id) {
       good_for, not_good_for, transport_mode, seo_title, seo_description,
       itinerary, social_proof_quotes,
       rating_avg, review_count,
-      plans,
       status, published_at, created_at, updated_at,
       guide_id, guide_slug,
       guide_profiles!activities_guide_id_fkey(id, slug, display_name)
@@ -3786,7 +3784,6 @@ export async function getAdminActivityByIdDb(id) {
     goodFor: data.good_for || [], notGoodFor: data.not_good_for || [],
     itinerary: data.itinerary || [], socialProofQuotes: data.social_proof_quotes || [],
     transportMode: data.transport_mode, seoTitle: data.seo_title, seoDescription: data.seo_description,
-    plans: data.plans || null,
     ratingAvg: data.rating_avg ?? null,
     reviewCount: data.review_count ?? 0,
     status: data.status, publishedAt: data.published_at,
@@ -3923,7 +3920,8 @@ export async function updateActivityDb(id, input = {}) {
   if (input.regions !== undefined) {
     patch.regions = normalizeAdditionalRegions(input.regions, input.region ?? patch.region);
   }
-  if (input.plans !== undefined) patch.plans = input.plans;
+  // legacy activities.plans JSON 已停寫（#admin-plan-revert 後續：方案唯一來源為
+  // activity_plans／「方案管理」）。方案改由 input.activityPlans 走 insert-only 匯入。
   if (input.safetyNotice !== undefined) patch.safety_notice = input.safetyNotice || null;
   if (input.faq !== undefined) patch.faq = Array.isArray(input.faq) ? input.faq : [];
   if (input.itinerary !== undefined) patch.itinerary = Array.isArray(input.itinerary) ? input.itinerary : [];
@@ -3979,54 +3977,60 @@ export async function updateActivityDb(id, input = {}) {
   const { error } = await supabase.from('activities').update(patch).eq('id', id);
   if (error) throw new Error(error.message);
 
-  if (input.plans !== undefined) {
-    await syncImportedActivityPlansDb(supabase, id, input.plans);
+  // 投稿／JSON 匯入的方案改走 V2 insert-only：只新增尚不存在的方案，絕不覆蓋操作者
+  // 在「方案管理」維護的既有方案（#admin-plan-revert 後續）。舊 `plans` 欄位已停寫，
+  // 舊客戶端若仍送 `plans` 會被忽略（安全 no-op）。
+  if (input.activityPlans !== undefined) {
+    await importActivityPlansInsertOnlyDb(supabase, id, input.activityPlans);
   }
 
   return getAdminActivityByIdDb(id);
 }
 
-async function syncImportedActivityPlansDb(supabase, activityId, legacyPlans) {
-  // 需帶 price_type / duration_minutes / booking_type：這些 V2 專屬欄位在從舊版
-  // activities.plans JSON 回寫時，已存在方案要保留現值、不被反推覆寫（見
-  // buildFormalPlanBackfillRows 內說明，#admin-plan-revert）。
+/**
+ * 由投稿／JSON 匯入建立 V2 方案（activity_plans），**只新增不覆蓋**。
+ * slug 已存在（既有或本批重複）一律跳過；schema 落後時以 applyWithMissingColumnFallback
+ * 逐欄退讓（#904）。回傳匯入摘要供呼叫端記錄。
+ */
+export async function importActivityPlansInsertOnlyDb(supabase, activityId, plans) {
   const { data: existingRows, error: existingError } = await supabase
     .from('activity_plans')
-    .select('id, slug, price_type, duration_minutes, booking_type')
+    .select('slug')
     .eq('activity_id', activityId);
   if (existingError) throw new Error(existingError.message);
 
-  const existingBySlug = new Map((existingRows || []).map((row) => [row.slug, row]));
-  const { upserts, skipped } = buildFormalPlanBackfillRows({
-    activityId,
-    legacyPlans,
-    existingBySlug,
-  });
+  const existingSlugs = new Set((existingRows || []).map((row) => row.slug).filter(Boolean));
+  const { inserts, skipped } = buildV2PlanInsertRows({ activityId, plans, existingSlugs });
 
-  if (skipped.length > 0) {
-    console.warn('[admin-activity-import] skipped invalid legacy plans while syncing activity_plans', {
+  let created = 0;
+  const droppedColumns = new Set();
+  for (const row of inserts) {
+    const { error, droppedColumns: dropped } = await applyWithMissingColumnFallback(
+      (payload) => supabase.from('activity_plans').insert(payload).select('id').single(),
+      row,
+    );
+    for (const col of dropped) droppedColumns.add(col);
+    if (error) {
+      // 併發插入撞到唯一鍵 → 視為既存、跳過；其餘錯誤才拋出。
+      if (isDuplicatePlanSlugError(error)) {
+        skipped.push({ reason: 'slug_exists', name: row.name, slug: row.slug });
+        continue;
+      }
+      throw new Error(error.message || 'insert activity_plan failed');
+    }
+    created += 1;
+  }
+
+  if (skipped.length > 0 || droppedColumns.size > 0) {
+    console.warn('[admin-activity-import] V2 plan insert-only summary', {
       activityId,
+      created,
       skipped,
+      droppedColumns: [...droppedColumns],
     });
   }
 
-  if (upserts.length === 0) return;
-
-  // Issue #904: production activity_plans may lag behind the rich-fields migration.
-  // Strip any missing rich column from every row and retry so the JSON-import path
-  // still creates the basic formal plans instead of throwing "Failed to create plan".
-  const { error, droppedColumns } = await applyUpsertWithMissingColumnFallback(
-    (rows) => supabase.from('activity_plans').upsert(rows, { onConflict: 'activity_id,slug' }),
-    upserts,
-  );
-  if (error) throw new Error(error.message);
-
-  if (droppedColumns.length > 0) {
-    console.warn('[admin-activity-import] dropped rich columns missing from schema while syncing activity_plans', {
-      activityId,
-      droppedColumns,
-    });
-  }
+  return { created, skipped, droppedColumns: [...droppedColumns] };
 }
 
 export async function updateActivityStatusDb(id, status) {

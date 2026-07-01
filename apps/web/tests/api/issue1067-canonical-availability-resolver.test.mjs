@@ -10,6 +10,11 @@ import {
 } from '../../src/lib/availability-v2/effective-booking-availability.ts';
 import { pickFallbackDraftSelectedSchedule } from '../../src/lib/booking-v2-selected-schedule.ts';
 
+// #admin-plan-revert 後續：寫死 '2026-07-01' 的可預約時段會隨時鐘越過變成過去（SLOT_IN_PAST）。
+// 改用相對於「現在」的未來日期；其餘刻意的過去日期（如 2026-04-10）維持不動。
+const BOOKABLE_DATE = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+
 const TZ = 'Asia/Taipei';
 
 const BASE_INPUT = {
@@ -316,7 +321,7 @@ test('GH-1067 RED: fallback selected schedule must keep scanning until it finds 
         id: 'too-full',
         activity_id: 'a-1',
         plan_id: 'p-1',
-        start_at: '2026-07-01T09:00:00+08:00',
+        start_at: `${BOOKABLE_DATE}T09:00:00+08:00`,
         status: 'open',
         capacity: 2,
         booked_count: 2,
@@ -325,7 +330,7 @@ test('GH-1067 RED: fallback selected schedule must keep scanning until it finds 
         id: 'exact-match',
         activity_id: 'a-1',
         plan_id: 'p-1',
-        start_at: '2026-07-01T09:00:00+08:00',
+        start_at: `${BOOKABLE_DATE}T09:00:00+08:00`,
         status: 'open',
         capacity: 10,
         booked_count: 2,
@@ -333,8 +338,8 @@ test('GH-1067 RED: fallback selected schedule must keep scanning until it finds 
     ],
     activityId: 'a-1',
     resolvedPlanId: 'p-1',
-    requestStartAt: '2026-07-01T09:00:00+08:00',
-    slotDate: '2026-07-01',
+    requestStartAt: `${BOOKABLE_DATE}T09:00:00+08:00`,
+    slotDate: `${BOOKABLE_DATE}`,
     timezone: 'Asia/Taipei',
     participants: 4,
   });

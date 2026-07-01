@@ -1,3 +1,5 @@
+import { generatePlanSlug } from './activity-plan-slugs.mjs';
+
 const DEFAULT_MIN_PARTICIPANTS = 1;
 const DEFAULT_MAX_PARTICIPANTS = 10;
 
@@ -155,4 +157,84 @@ export function buildFormalPlanBackfillRows({ activityId, legacyPlans, existingB
   }
 
   return { upserts, skipped };
+}
+
+const V2_PRICE_TYPES = new Set(['per_person', 'per_group']);
+const V2_BOOKING_TYPES = new Set(['scheduled', 'request', 'instant']);
+const DEFAULT_PLAN_DURATION_MINUTES = 60;
+const MIN_PLAN_DURATION_MINUTES = 15;
+
+function toNonNegativePriceOrNull(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return null;
+  return Math.trunc(num);
+}
+
+/**
+ * 由「投稿／JSON 匯入」的 V2 方案物件組出 activity_plans insert row（只新增、不覆蓋）。
+ *
+ * 與 buildFormalPlanBackfillRows（綁定舊版 {label, priceMultiplier}）不同：這裡吃的是
+ * 新版 V2 shape（name / priceType(每人|每團) / basePrice / durationMinutes / bookingType /
+ * min/maxParticipants + rich 欄位），slug 已存在（既有或本批已產）一律 skip，確保匯入
+ * 不會覆蓋操作者在「方案管理」的既有方案（#admin-plan-revert 後續：單一真實來源）。
+ *
+ * @param {{ activityId: string, plans: unknown[], existingSlugs?: Set<string> }} args
+ * @returns {{ inserts: object[], skipped: Array<{ reason: string, name?: string, slug?: string }> }}
+ */
+export function buildV2PlanInsertRows({ activityId, plans, existingSlugs = new Set() }) {
+  const inserts = [];
+  const skipped = [];
+  const seen = new Set(existingSlugs);
+
+  for (const plan of Array.isArray(plans) ? plans : []) {
+    const name = toNullableTrimmedString(plan?.name ?? plan?.label);
+    if (!name) {
+      skipped.push({ reason: 'missing_name', plan });
+      continue;
+    }
+
+    const basePrice = toNonNegativePriceOrNull(plan?.basePrice ?? plan?.base_price ?? plan?.price);
+    if (basePrice == null) {
+      skipped.push({ reason: 'invalid_price', name, plan });
+      continue;
+    }
+
+    const slug = generatePlanSlug({ name, slug: plan?.slug });
+    if (seen.has(slug)) {
+      // slug 已存在（既有方案或本批重複）→ 不覆蓋、跳過。
+      skipped.push({ reason: 'slug_exists', name, slug });
+      continue;
+    }
+
+    const rawPriceType = toNullableTrimmedString(plan?.priceType ?? plan?.price_type);
+    const priceType = rawPriceType && V2_PRICE_TYPES.has(rawPriceType) ? rawPriceType : 'per_person';
+
+    const rawBookingType = toNullableTrimmedString(plan?.bookingType ?? plan?.booking_type);
+    const bookingType = rawBookingType && V2_BOOKING_TYPES.has(rawBookingType) ? rawBookingType : 'scheduled';
+
+    const durationRaw = toNullableInteger(plan?.durationMinutes ?? plan?.duration_minutes);
+    const durationMinutes = durationRaw != null && durationRaw >= MIN_PLAN_DURATION_MINUTES
+      ? durationRaw
+      : DEFAULT_PLAN_DURATION_MINUTES;
+
+    const participantRange = normalizeParticipants(plan?.minParticipants, plan?.maxParticipants);
+    const rich = normalizeRichPlanPayload(plan);
+
+    inserts.push({
+      activity_id: activityId,
+      slug,
+      name,
+      duration_minutes: durationMinutes,
+      price_type: priceType,
+      base_price: basePrice,
+      min_participants: participantRange.min,
+      max_participants: participantRange.max,
+      booking_type: bookingType,
+      status: 'active',
+      ...rich,
+    });
+    seen.add(slug);
+  }
+
+  return { inserts, skipped };
 }

@@ -441,11 +441,10 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <DatePlanSection activity={activity} schedules={displayedSchedules} useBookingV2={useBookingV2} />
             </section>
 
-            {/* SECTION 1.5: 詳細行程 — #297 依所選方案顯示該方案後台「行程介紹」站點時間表；
-                未選方案顯示提示，方案未填則退回頁面級 activityData.itinerary */}
+            {/* SECTION 1.5: 詳細行程 — #297 依所選方案顯示該方案後台「行程介紹」站點時間表。
+                方案為唯一來源；活動層級 itinerary 備援已移除（#admin-plan-revert 後續）。 */}
             <PlanItinerarySection
               plans={datePlanPresentation.plans as Array<{ id: string; label?: string; planItinerary?: Array<{ icon?: string; title?: string; duration?: string; description?: string; imageUrl?: string; text?: string }> }>}
-              fallbackItinerary={activityData.itinerary}
             />
 
 
