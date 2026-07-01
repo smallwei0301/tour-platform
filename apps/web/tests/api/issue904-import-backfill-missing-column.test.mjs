@@ -1,11 +1,12 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 import {
   applyUpsertWithMissingColumnFallback,
 } from '../../src/lib/activity-plans-insert-fallback.mjs';
+import { importActivityPlansInsertOnlyDb } from '../../src/lib/db.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
@@ -84,117 +85,45 @@ describe('GH-904 applyUpsertWithMissingColumnFallback (bulk-upsert array variant
   });
 });
 
-// Mock supabase whose activity_plans upsert fails once with a missing rich column,
-// then succeeds on retry — mirrors the issue851 mock shape.
-function buildImportMockWithMissingColumn({ upsertCalls, missingColumn }) {
-  const activityRow = {
-    id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-    slug: 'demo-activity',
-    title: 'Demo',
-    plans: [],
-    status: 'draft',
-    created_at: '2026-05-28T00:00:00.000Z',
-    updated_at: '2026-05-28T00:00:00.000Z',
-    guide_id: null,
-  };
-
-  function activityPlansUpsert(rows, options) {
-    upsertCalls.push({ rows: rows.map((r) => ({ ...r })), options });
-    // Fail while the missing rich column is still present; succeed once stripped.
-    if (rows.some((r) => missingColumn in r)) {
-      return Promise.resolve({
-        error: { message: `column "${missingColumn}" of relation "activity_plans" does not exist` },
-      });
-    }
-    return Promise.resolve({ error: null });
-  }
-
-  function chain(table, ctx = {}) {
-    return {
-      select() {
-        return chain(table, ctx);
-      },
-      eq(column, value) {
-        if (table === 'activity_plans' && ctx.mode === 'selectExisting' && column === 'activity_id') {
-          return Promise.resolve({ data: [], error: null });
-        }
-        return chain(table, { ...ctx, [column]: value });
-      },
-      update() {
-        return { eq: () => Promise.resolve({ error: null }) };
-      },
-      order() {
-        return Promise.resolve({ data: [], error: null });
-      },
-      single() {
-        if (table === 'activities') return Promise.resolve({ data: activityRow, error: null });
-        return Promise.resolve({ data: null, error: { message: 'not found' } });
-      },
-      upsert(rows, options) {
-        return activityPlansUpsert(rows, options);
-      },
-    };
-  }
-
-  return {
-    from(table) {
-      if (table === 'activity_plans') {
+// #admin-plan-revert 後續：舊版 activities.plans 回寫已廢除；schema-lag 容錯改由 V2
+// insert-only 匯入（importActivityPlansInsertOnlyDb 內每筆走 applyWithMissingColumnFallback）承接。
+describe('GH-904 V2 insert-only import degrades gracefully when schema lacks rich columns', () => {
+  it('strips a missing rich column and still inserts the plan (per-row fallback)', async () => {
+    const inserted = [];
+    const sb = {
+      from() {
         return {
-          select() {
-            return chain(table, { mode: 'selectExisting' });
-          },
-          upsert(rows, options) {
-            return activityPlansUpsert(rows, options);
+          // 既有 slug 查詢：.select('slug').eq('activity_id', id)
+          select: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }),
+          // insert(payload).select('id').single()：payload 仍含 highlights 時報缺欄位，剝除後成功。
+          insert: (payload) => {
+            inserted.push({ ...payload });
+            const hasMissingRich = 'highlights' in payload;
+            return {
+              select: () => ({
+                single: () => Promise.resolve(
+                  hasMissingRich
+                    ? { data: null, error: { message: 'column "highlights" of relation "activity_plans" does not exist' } }
+                    : { data: { id: 'new' }, error: null },
+                ),
+              }),
+            };
           },
         };
-      }
-      return chain(table);
-    },
-  };
-}
+      },
+    };
 
-describe('GH-904 JSON-import backfill degrades gracefully when schema lacks rich columns', () => {
-  it('syncImportedActivityPlansDb retries without the missing rich column instead of throwing', async () => {
-    const dbMod = await import(pathToFileURL(path.resolve(ROOT, 'src/lib/db.mjs')).href);
-    const originalUrl = process.env.SUPABASE_URL;
-    const originalKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const upsertCalls = [];
+    const summary = await importActivityPlansInsertOnlyDb(sb, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', [
+      { name: '祕境半日遊', slug: 'half-day', basePrice: 3600, highlights: ['中文方案亮點'], planInclusions: ['導覽'] },
+    ]);
 
-    process.env.SUPABASE_URL = 'https://example.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-key';
-    dbMod.__setSupabaseClientForTest(buildImportMockWithMissingColumn({ upsertCalls, missingColumn: 'highlights' }));
-
-    try {
-      // Must NOT throw even though the first upsert rejects on a missing rich column.
-      await dbMod.updateActivityDb('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', {
-        plans: [
-          {
-            id: 'half-day',
-            label: '祕境半日遊',
-            price: 3600,
-            priceMultiplier: 1,
-            minParticipants: 2,
-            maxParticipants: 6,
-            highlights: ['中文方案亮點'],
-            planInclusions: ['導覽'],
-          },
-        ],
-      });
-
-      // First attempt includes highlights (fails), retry strips it (succeeds).
-      assert.ok(upsertCalls.length >= 2, 'expected an initial attempt plus at least one retry');
-      assert.ok('highlights' in upsertCalls[0].rows[0], 'first attempt should still carry highlights');
-      const last = upsertCalls[upsertCalls.length - 1];
-      assert.ok(!('highlights' in last.rows[0]), 'final retry should have stripped highlights');
-      assert.equal(last.rows[0].name, '祕境半日遊', 'basic fields preserved on retry');
-      assert.equal(last.rows[0].base_price, 3600);
-      assert.deepEqual(last.options, { onConflict: 'activity_id,slug' });
-    } finally {
-      dbMod.__setSupabaseClientForTest(null);
-      if (originalUrl === undefined) delete process.env.SUPABASE_URL;
-      else process.env.SUPABASE_URL = originalUrl;
-      if (originalKey === undefined) delete process.env.SUPABASE_SERVICE_ROLE_KEY;
-      else process.env.SUPABASE_SERVICE_ROLE_KEY = originalKey;
-    }
+    assert.equal(summary.created, 1, '剝除缺欄位後仍成功建立方案');
+    assert.deepEqual(summary.droppedColumns, ['highlights']);
+    // 兩次 insert：首次含 highlights（失敗）、剝除後成功。
+    assert.equal(inserted.length, 2);
+    assert.ok('highlights' in inserted[0], '首次嘗試仍帶 highlights');
+    assert.ok(!('highlights' in inserted[1]), '重試已剝除 highlights');
+    assert.equal(inserted[1].name, '祕境半日遊', '基本欄位保留');
+    assert.equal(inserted[1].base_price, 3600);
   });
 });

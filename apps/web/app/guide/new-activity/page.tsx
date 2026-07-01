@@ -224,7 +224,7 @@ export default function GuideNewActivityPage() {
 
           <div style={groupStyle}>
             <label htmlFor="f-plans" style={labelStyle}>方案說明</label>
-            <span style={hintStyle}>若有多種方案，描述各方案名稱、時長、價格與差異（留空＝單一方案）。</span>
+            <span style={hintStyle}>若有多種方案，描述各方案名稱、時長、價格、每人或每團計價與差異（留空＝單一方案）。方案送出後於後台「方案管理」維護。</span>
             <textarea id="f-plans" style={{ ...fieldStyle, minHeight: 90, resize: 'vertical', lineHeight: 1.6 }} value={plansRaw} onChange={(e) => setPlansRaw(e.target.value)} placeholder={'例：\nA 半日探秘：4.5 小時、1800 元\nB 全日深度：7 小時、3000 元，含在地午餐＋下午北峰砲台'} />
           </div>
 
