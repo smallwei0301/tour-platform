@@ -140,6 +140,9 @@ function shouldRequireCsrf(req: NextRequest): boolean {
   if (pathname.startsWith('/api/guide/')) return !!req.cookies.get('guide_token')?.value;
   if (pathname.startsWith('/api/me/')) return hasTravelerAuthCookie(req);
   if (pathname.startsWith('/api/reviews')) return hasTravelerAuthCookie(req);
+  // 健檢 v2 S4：/api/orders 原本只在前綴白名單、gating 段漏接 → mutation 不經 CSRF。
+  // 與 me/reviews 同型：僅對帶 traveler auth cookie 的請求要求 CSRF（匿名建單不受影響）。
+  if (pathname.startsWith('/api/orders')) return hasTravelerAuthCookie(req);
 
   return false;
 }

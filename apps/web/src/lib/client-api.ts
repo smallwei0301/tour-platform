@@ -1,4 +1,4 @@
-import { csrfHeaders } from './csrf-client';
+import { csrfHeaders, ensureCsrfToken } from './csrf-client';
 
 export async function fetchExperiences() {
   const res = await fetch('/api/experiences', { cache: 'no-store' });
@@ -17,9 +17,12 @@ export async function createOrder(payload: {
   contactEmail: string;
   promoCode?: string;
 }) {
+  // 健檢 v2 S4：middleware 對帶 traveler cookie 的 /api/orders mutation 強制 CSRF，
+  // 登入旅客建單必須帶 x-csrf-token（匿名時 csrfHeaders 為 no-op）。
+  await ensureCsrfToken();
   const res = await fetch('/api/orders', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: csrfHeaders({ 'content-type': 'application/json' }),
     body: JSON.stringify(payload)
   });
   const json = await res.json();
