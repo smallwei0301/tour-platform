@@ -15,7 +15,7 @@
 | 產品完成度 | ★★★★☆ | ★★★★☆ | 前次 P0/P1 全落地（評論、篩選、促銷、改期、留言串），新缺口移到「憑證核銷／完成鏈路漏單、金流多元化、登入方式」 |
 | 系統架構 | ★★★★☆ | ★★★☆☆ | 設計仍成熟，但 `db.mjs` 反向增長 58%、legacy 退役卡關，債務淨值變差 |
 | SEO | ★★★★☆ | ★★★☆☆ | 單語系時代的優等生；上了英文站之後 canonical/hreflang/`<html lang>` 全缺，成為最大 SEO 洞 |
-| 資安 | ★★★★☆ | ★★★★☆ | 前次 3 個補強點全修；本次深掘出密碼雜湊強度與 timing-safe 比對等新的第二層問題 |
+| 資安 | ★★★★☆ | ★★☆☆☆→★★★★☆ | **發現時 ★★☆☆☆**：Supabase connector 實測到 S0 級 RLS 外洩（anon 公開 key 可讀寫全部 orders/PII）；**修復後回升 ★★★★☆**（2026-07-02 已收斂，見 S0） |
 | 潛在 bug 防護 | ★★★★★ | ★★★★☆ | 核心防護不變；扣分來自 source-contract 測試佔比 55% 與 fallback 契約測試仍缺 |
 | 技術債 | ★★★☆☆ | ★★★☆☆ | 還了 5 筆（audit-log、faq 雙檔、殭屍套件、console.log、scratch scripts），又借了 2 筆大的（db.mjs、雙訂單頁） |
 
@@ -113,7 +113,19 @@
 
 ## 第二部分：資安健檢（v2）
 
-前次 3 個補強點（rate limit、Secure flag、HSTS/CSP）全數修復 ✅。本次深掘出第二層問題，皆已人工複核原始碼：
+前次 3 個補強點（rate limit、Secure flag、HSTS/CSP）全數修復 ✅。本次深掘出第二層問題，皆已人工複核原始碼。
+
+> **2026-07-02 補充（Supabase connector 實測）**：連上 Supabase 後以 DB advisor＋實際 `SET ROLE` 查詢，發現並修復了一個**本報告初版嚴重低估的 S0 級生產資料外洩**（見下）。初版只從 migration SQL 靜態判讀 RLS「已啟用」，未實測 policy 的實際 `roles`／`grant`，故當時給資安 ★★★★☆ 偏高。
+
+#### 🔴🔴 S0. RLS 形同虛設 — anon 公開 key 可讀寫全部 orders/users/PII（已於 2026-07-02 修復）
+- **實測事實**：以 `anon` 角色（＝前端公開 `NEXT_PUBLIC_SUPABASE_ANON_KEY`，寫在每個頁面 JS）可透過 PostgREST 讀取 **81 筆 orders、12 筆 users、8 筆 refund_requests**（含 email／電話／金流），且具 `INSERT/UPDATE/DELETE` grant → 任何人可整包下載並竄改/刪除所有訂單。
+- **根因**：早期一次性 `GRANT ALL ... TO anon, authenticated` ＋ 多數表的萬用 policy `service role full access` 被誤設成 `TO public USING(true) WITH CHECK(true)`（18 條），加上 6+ 張表 RLS-enabled 卻無 policy。三者疊加使 RLS 對所有人失效。
+- **修復（migration `20260702153000_rls_lockdown_anon_and_service_role.sql`）**：
+  1. 撤銷 `anon` 對所有表權限（白名單保留公開目錄＋kill-switch 表的 SELECT）；
+  2. 18 條萬用 policy 由 `TO public` 收斂成 `TO service_role`；無 policy 表補 service_role-only policy；
+  3. 撤敏感 SECURITY DEFINER 函式的 anon/authenticated EXECUTE。
+- **修復後實測**：`authenticated` 讀 orders/users = **0**（RLS 正確擋越權）；`activities` published 仍可讀（前台零破壞）；DB advisor 的 `rls_policy_always_true`（18）與 `rls_enabled_no_policy`（6+）**全部消除**。
+- **殘留（WARN 級，已開 issue 追蹤）**：function `search_path` 未固定（含金流 RPC，需小心處理）、storage public bucket 可 listing、`handle_auth_user_sync`/`rls_auto_enable` 仍有 PUBLIC EXECUTE、Supabase auth 洩漏密碼保護未開。
 
 ### 需補強（依嚴重度）
 
