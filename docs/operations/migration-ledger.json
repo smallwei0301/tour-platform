@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "description": "Production migration apply ledger（#1293，owner 拍板選項 B：repo 內 ledger 為 source of truth＋既有 live 探測交叉驗證）。每次 production schema apply 後必須在此補一筆 record（含經 Supabase MCP 套用者）；gate 由 scripts/check-migration-ledger.mjs 靜態比對，缺 verified record 即 HOLD。status: verified（已套用且驗證）/ pending（已套用待驗證）/ baseline（涵蓋檔名排序 <= filename 的全部歷史檔案）。SOP：docs/operations/migration-apply-ledger-sop.md。禁止記錄任何 secret/connection string/token/未遮蔽 PII。",
+  "records": [
+    {
+      "filename": "20260702_cron_job_controls.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) + Claude Code agent",
+      "applied_at": "2026-07-02T20:30:00+08:00",
+      "status": "baseline",
+      "note": "Baseline 回填：涵蓋 2026-07-02（含）以前 repo 內全部 migration 檔（001_mvp_core.sql ~ 20260702_cron_job_controls.sql，共 115 支非 rollback 檔）。歷史套用經 #1286 drift 事件與 #1560 production schema drift 大清查（#1559 修復 HEAD 探測假陰性後浮現 14 缺表 + 13 缺欄位）盤點；#1560 缺漏項由 owner 授權（2026-07-02）經 Supabase MCP apply_migration 依檔名時序補套，post-apply 以 node scripts/verify-migrations-applied.mjs 對 production 探測驗證。本 baseline 之後的新 migration 一律逐筆補 verified record，不再擴大 baseline。Refs #1293 #1560 #1286。"
+    }
+  ]
+}
