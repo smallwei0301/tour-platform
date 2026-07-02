@@ -44,7 +44,9 @@ jobs:
           NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          PROBE_TIMEOUT_MS: '5000'
+          # #1472：cold start 防誤報 — timeout 放寬 + 失敗重試（腳本內建遞增 backoff）
+          PROBE_TIMEOUT_MS: '10000'
+          PROBE_MAX_ATTEMPTS: '2'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
           GITHUB_REF_NAME: ${{ github.ref_name }}

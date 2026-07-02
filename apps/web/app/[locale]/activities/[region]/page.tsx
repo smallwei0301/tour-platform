@@ -6,6 +6,7 @@ import { getActivityBySlugDb, buildCanonicalActivityDetailPath, listPublishedAct
 import { getRegionBySlug, isKnownRegionSlug } from '../../../../src/lib/region-slugs.mjs';
 import ActivitiesContent from '../ActivitiesContent';
 import ActivitiesSkeleton from '../ActivitiesSkeleton';
+import ActivitiesFirstPaint from '../ActivitiesFirstPaint';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from '../cover-image';
 
 // Same posture as the parent /activities listing (PR #1252): let Vercel's
@@ -104,9 +105,17 @@ export default async function ActivitiesRegionPage({ params }: { params: Promise
           />
         )}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(regionBreadcrumbLd) }} />
-        {/* Issue #1345 — same-footprint skeleton so streamed-in real
-            cards do not push main-content's height (CLS). */}
-        <Suspense fallback={<ActivitiesSkeleton />}>
+        {/* Issue #1344 — 同根頁 /activities：fallback 用 SSR 資料 render
+            真卡片首屏（ActivitiesFirstPaint），LCP 圖片不再等 hydration；
+            這裡的 initialActivities 已按地區過濾，首屏與 hydration 後
+            內容一致。SSR 資料抓不到時退回 skeleton（#1345 同幾何）。 */}
+        <Suspense
+          fallback={
+            initialActivities?.length
+              ? <ActivitiesFirstPaint activities={initialActivities} locale={locale} />
+              : <ActivitiesSkeleton />
+          }
+        >
           <ActivitiesContent initialRegion={entry.dbValue} initialActivities={initialActivities} />
         </Suspense>
       </>
