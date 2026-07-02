@@ -4,6 +4,8 @@
  * Uses crypto built-in: SHA-256 + salt for passwords, HMAC for session tokens
  */
 import { createHmac, randomBytes, createHash } from 'crypto';
+// @ts-expect-error — .mjs helper without type declarations (edge-safe shared impl)
+import { constantTimeEquals } from './constant-time.mjs';
 
 function resolveGuideSessionSecret(): string {
   const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
@@ -67,13 +69,8 @@ export function verifyPassword(plain: string, stored: string): boolean {
   if (parts.length !== 2) return false;
   const [salt, expected] = parts;
   const actual = createHash('sha256').update(salt + plain).digest('hex');
-  // Constant-time comparison
-  if (actual.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < actual.length; i++) {
-    diff |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
+  // Constant-time comparison（共用 edge-safe helper，健檢 v2 S2）
+  return constantTimeEquals(actual, expected);
 }
 
 // ─── Session Cookies ─────────────────────────────────────────────────────────
@@ -161,7 +158,8 @@ export function verifyGuideSession(req: Request): GuideSessionPayload | null {
   if (isNaN(version)) return null;
 
   const expected = signToken(guideId, version);
-  if (sig !== expected) return null;
+  // 常數時間比較 HMAC 簽章，避免 timing side-channel（健檢 v2 S2）
+  if (!constantTimeEquals(sig, expected)) return null;
 
   return { guideId, guideName, isNew };
 }
