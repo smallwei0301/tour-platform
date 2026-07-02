@@ -1,0 +1,71 @@
+name: ecpay-failure-sweep
+
+# Issue #1336 殘餘缺口 — internal endpoints 中最後兩支無排程載體之一。
+#
+# `alerts/ecpay-failure-sweep`（#327）掃描近 60 分鐘的 ECPay callback
+# 失敗紀錄（audit_logs 的 payment_callback_audit / payment_callback_failed），
+# 失敗數超過門檻（3 次/60 分）即 recordIncident 觸發告警。
+#
+# 頻率：每小時（endpoint 回看窗固定 60 分鐘，跑得更疏會產生盲區）。
+# 成本先例：pre-tour-reminder-sweep 已是 hourly。
+#
+# Auth：x-internal-token = INTERNAL_ALERT_TOKEN。Secrets 缺失時 graceful
+# skip，對齊 settlement-sweep。response 僅含計數與時間戳，可直接輸出。
+
+on:
+  schedule:
+    - cron: '15 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL != '' }}
+          HAS_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_TOKEN" != "true" ]; then
+            echo "⚠️ NEXT_PUBLIC_VERCEL_URL or INTERNAL_ALERT_TOKEN secrets not configured."
+            echo "   Set them in GitHub repo Settings → Secrets → Actions to enable ecpay-failure-sweep."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ECPay failure sweep (60-min window, threshold alert)
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/sweep-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/alerts/ecpay-failure-sweep" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}")
+          echo "HTTP status: $RESPONSE"
+          cat /tmp/sweep-response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "ECPay failure sweep returned non-200 status: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ ECPay failure sweep completed successfully."
+
+      - name: Notify on failure (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: failure
+        run: node scripts/cron/notify-failure.mjs
