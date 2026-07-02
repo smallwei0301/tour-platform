@@ -207,4 +207,20 @@ describe('source contract — route／workflow／db.mjs strangler 準則', () =>
     assert.match(wf, /workflow_dispatch/);
     assert.match(wf, /INTERNAL_ALERT_TOKEN/);
   });
+
+  // 回歸鎖：#1560 為 orders 加了第二條 orders↔bookings FK（orders_booking_id_fkey），
+  // 未指名 FK 的 `bookings(...)` 嵌入在 production 會 PGRST201 → 500（in-memory 測試抓不到）。
+  // 鎖定 select 必須用具名關係 `bookings!fk_bookings_order_id(...)`，防回退。
+  it('Supabase 分支 orders↔bookings 嵌入必須指名 FK（避免 PGRST201 歧義）', () => {
+    const dbSrc = fs.readFileSync(path.join(ROOT, 'src/lib/db-auto-complete.mjs'), 'utf8');
+    assert.match(
+      dbSrc,
+      /bookings!fk_bookings_order_id\(start_at\)/,
+      'orders 的 bookings 嵌入須指名 fk_bookings_order_id，否則兩條 FK 造成 PGRST201',
+    );
+    assert.ok(
+      !/[^!]bookings\(start_at\)/.test(dbSrc),
+      '不得殘留未指名 FK 的 bookings(start_at) 嵌入',
+    );
+  });
 });
