@@ -23,6 +23,11 @@ check_file "scripts/demo-smoke.sh"
 
 echo
 
+echo "== Migration apply ledger gate (#1293) =="
+node scripts/check-migration-ledger.mjs
+
+echo
+
 echo "== Test checks =="
 npm run test -w @tour/web
 

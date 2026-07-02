@@ -6,6 +6,8 @@ on:
       - 'supabase/migrations/**'
       - 'scripts/production-schema-drift-preflight.mjs'
       - 'scripts/verify-migration-*.mjs'
+      - 'scripts/check-migration-ledger.mjs'
+      - 'docs/operations/migration-ledger.json'
       - '.github/workflows/migration-drift-detect.yml'
   push:
     branches: [main]
@@ -43,6 +45,11 @@ jobs:
           NODE_OPTIONS=--max-old-space-size=512 \
           node --test --test-concurrency=1 \
             tests/api/issue1286-migration-drift-source-contract.test.mjs
+
+      # #1293 apply ledger gate（選項 B）：純靜態、不需 secrets。
+      # 就算 live 探測 PASS，ledger 缺 verified record 仍要 fail（sign-off 才算完成）。
+      - name: Check migration apply ledger (#1293, static, no secrets)
+        run: node scripts/check-migration-ledger.mjs
 
   drift-detect:
     name: Production schema drift detection
