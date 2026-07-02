@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-01T18:43:47.444Z -->
+<!-- query_timestamp: 2026-07-02T00:53:37.269Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-01T18:43:47.444Z  
-**Commit SHA:** `cafae8eb2ed83d3d12d0e48df30d16559e6f75f3`
+**Query timestamp:** 2026-07-02T00:53:37.269Z  
+**Commit SHA:** `0a73203b82dfbaef08ddeae484b9ef1cfb970f46`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1550 | [feat: 電腦版活動照片改為大圖＋可捲動縮圖列（復原 #1547，含 16:9 比例與 768px 響應式修正）](https://github.com/smallwei0301/tour-platform/pull/1550) | `claude/itinerary-reviews-carousel-9ehj0h` |
+| #1551 | [fix(monitoring): synthetic probe 加入失敗重試與放寬 timeout，防 cold start 誤報 (#1472)](https://github.com/smallwei0301/tour-platform/pull/1551) | `claude/open-issues-review-q13ddb` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
 | #1438 | [Use next/font variables in globals, set CJK fonts to `display: optional`, and scope serif usage to LP/brand](https://github.com/smallwei0301/tour-platform/pull/1438) | `codex/improve-homepage-loading-speed` |
@@ -77,6 +77,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1550 | [feat: 電腦版活動照片改為大圖＋可捲動縮圖列（復原 #1547，含 16:9 比例與 768px 響應式修正）](https://github.com/smallwei0301/tour-platform/pull/1550) | 2026-07-01 |
 | #1549 | [fix: revalidatePath 帶各 locale 前綴，admin/guide 改動後前台即時更新（#1488 後續）](https://github.com/smallwei0301/tour-platform/pull/1549) | 2026-07-01 |
 | #1548 | [feat: 導遊熟悉區域儲存統一成全名（與行程地區一致）](https://github.com/smallwei0301/tour-platform/pull/1548) | 2026-07-01 |
 | #1547 | [feat: 行程頁電腦版套用手機版左右滑動樣式（相簿＋旅客評價）](https://github.com/smallwei0301/tour-platform/pull/1547) | 2026-07-01 |
@@ -86,7 +87,6 @@ _none_
 | #1543 | [refactor(admin): 廢除舊版方案(activities.plans)與詳細行程備援，全面導向 V2 方案管理](https://github.com/smallwei0301/tour-platform/pull/1543) | 2026-07-01 |
 | #1542 | [docs(qa) + fix(test): 排程/即時 可用時間區隔 QA 報告 + 修復過期日期時間炸彈](https://github.com/smallwei0301/tour-platform/pull/1542) | 2026-07-01 |
 | #1541 | [feat(availability): 排程方案時段預覽改回提示、不跑動態規則預覽（PR3 預覽正確性）](https://github.com/smallwei0301/tour-platform/pull/1541) | 2026-07-01 |
-| #1540 | [fix: 行程卡分類 badge 尊重編輯器明確選的分類，不被文案關鍵字蓋掉](https://github.com/smallwei0301/tour-platform/pull/1540) | 2026-07-01 |
 
 ---
 
