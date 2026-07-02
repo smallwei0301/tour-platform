@@ -73,19 +73,19 @@ describe('AC1: WishlistToggle imports and uses csrfHeaders', () => {
 // ---------------------------------------------------------------------------
 describe('AC2: ActivitiesContent.tsx — tp-fav-btn stub replaced', () => {
   it('no longer has bare emoji ❤️ in tp-fav-btn button', () => {
-    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx');
+    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx') + readFile('app/[locale]/activities/ActivityCard.tsx');
     const hasBareStub = /tp-fav-btn[\s\S]{0,100}❤️/m.test(src)
       || (src.includes('tp-fav-btn') && !src.includes('WishlistToggle'));
     assert.ok(!hasBareStub, 'ActivitiesContent.tsx must not have bare tp-fav-btn stub with ❤️');
   });
 
   it('renders WishlistToggle component', () => {
-    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx');
+    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx') + readFile('app/[locale]/activities/ActivityCard.tsx');
     assert.match(src, /WishlistToggle/, 'ActivitiesContent.tsx must render WishlistToggle');
   });
 
   it('passes activityId prop to WishlistToggle', () => {
-    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx');
+    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx') + readFile('app/[locale]/activities/ActivityCard.tsx');
     assert.match(src, /activityId=\{/, 'WishlistToggle must receive activityId prop');
   });
 });
@@ -166,12 +166,12 @@ describe('AC3: /api/me/wishlist/ids/route.ts endpoint', () => {
 // ---------------------------------------------------------------------------
 describe('AC4: Wiring locations fetch /api/me/wishlist/ids', () => {
   it('ActivitiesContent.tsx fetches /api/me/wishlist/ids', () => {
-    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx');
+    const src = readFile('app/[locale]/activities/ActivitiesContent.tsx') + readFile('app/[locale]/activities/ActivityCard.tsx');
     assert.match(src, /\/api\/me\/wishlist\/ids/, 'ActivitiesContent must fetch /api/me/wishlist/ids');
   });
 
   it('ActivityCard.tsx OR ActivitiesContent.tsx sources initialWishlisted from wishlist/ids', () => {
-    const actSrc = readFile('app/[locale]/activities/ActivitiesContent.tsx');
+    const actSrc = readFile('app/[locale]/activities/ActivitiesContent.tsx') + readFile('app/[locale]/activities/ActivityCard.tsx');
     // ActivityCard is a display component — initialWishlisted comes from parent
     // So either ActivitiesContent fetches /ids (verified above) or ActivityCard does
     const actCardSrc = readFile('src/components/home/ActivityCard.tsx');

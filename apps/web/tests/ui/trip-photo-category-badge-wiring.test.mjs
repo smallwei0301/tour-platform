@@ -15,7 +15,7 @@ const repoWebRoot = join(__dirname, '..', '..');
 const read = (rel) => readFileSync(join(repoWebRoot, rel), 'utf8');
 
 test('ActivitiesContent badge 由 classifyActivityCategoryTag 推導', () => {
-  const src = read('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = read('app/[locale]/activities/ActivityCard.tsx');
   assert.match(src, /import\s*\{\s*classifyActivityCategoryTag\s*\}\s*from\s*['"][^'"]*category-tags\.mjs['"]/);
   // badge span 直接以 classifyActivityCategoryTag(a) 取得分類 slug
   assert.match(src, /categoryTag\.\$\{classifyActivityCategoryTag\(a\)\}/);

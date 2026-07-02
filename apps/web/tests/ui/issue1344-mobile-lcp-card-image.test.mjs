@@ -38,7 +38,7 @@ async function readSrc(rel) {
 }
 
 test('activity card cover image priorities the first 2 cards (above-the-fold for 2-col desktop AND 1-col mobile)', async () => {
-  const src = await readSrc('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivityCard.tsx');
   // `.tp-card-grid-activities` renders 2 cols by default; idx < 2
   // covers the above-the-fold row across breakpoints.
   assert.match(
@@ -64,7 +64,7 @@ test('activity card cover image carries a responsive `sizes` hint matching the 7
     /CARD_IMAGE_SIZES\s*=\s*['"]\(max-width:\s*768px\)\s*100vw,\s*50vw['"]/,
     'cover-image.ts 的 CARD_IMAGE_SIZES 必須對齊 .tp-card-grid-activities 的 768px 斷點',
   );
-  const src = await readSrc('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivityCard.tsx');
   assert.match(
     src,
     /sizes=\{\s*CARD_IMAGE_SIZES\s*\}/,
@@ -137,7 +137,7 @@ test('responsive grid CSS still has the breakpoints the sizes hint targets (regr
 });
 
 test('image keeps explicit width + height (CLS guard — does not regress #1345)', async () => {
-  const src = await readSrc('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSrc('app/[locale]/activities/ActivityCard.tsx');
   // The CLS guard from #1345 lives on the intrinsic dimensions; this
   // test ensures the #1344 perf change did not strip them.
   assert.match(

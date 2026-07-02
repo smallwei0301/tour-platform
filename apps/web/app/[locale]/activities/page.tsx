@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import ActivitiesContent from './ActivitiesContent';
 import ActivitiesSkeleton from './ActivitiesSkeleton';
+import ActivitiesFirstPaint from './ActivitiesFirstPaint';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from './cover-image';
 import { listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -80,12 +81,18 @@ export default async function ActivitiesPage({ params }: { params: Promise<{ loc
         />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(activitiesJsonLd) }} />
-      {/* Issue #1345 — Suspense fallback 過去只 render 一行「載入中⋯」,
-          當 ActivitiesContent 串流進來時 main-content 高度從 ~60px 暴增
-          到 ~1500px,造成 CLS 0.93。改成跟真實卡片 grid 同骨架的 skeleton
-          (6 張固定尺寸的 placeholder),fallback → cards 替換時整塊
-          main-content 高度幾乎不變,shift 距離趨近 0。 */}
-      <Suspense fallback={<ActivitiesSkeleton />}>
+      {/* Issue #1344 — ActivitiesContent 用 useSearchParams()，ISR prerender
+          時整棵 client 樹 CSR bailout，SSR HTML 只剩這個 fallback。fallback
+          從 skeleton（#1345）升級成用 SSR 資料 render 的真卡片首屏
+          （ActivitiesFirstPaint）：LCP 圖片直接進 HTML，不再等 hydration
+          （原 render delay 佔 LCP 75%）。SSR 資料抓不到時退回 skeleton。 */}
+      <Suspense
+        fallback={
+          initialActivities?.length
+            ? <ActivitiesFirstPaint activities={initialActivities} locale={locale} />
+            : <ActivitiesSkeleton />
+        }
+      >
         <ActivitiesContent initialActivities={initialActivities} />
       </Suspense>
     </>

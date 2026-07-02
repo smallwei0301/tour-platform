@@ -15,23 +15,23 @@ async function readSource(relPath) {
 // 更新（#收藏星數）：列表卡改用與詳情頁同一真實來源 resolveActivityReviewStats，
 // 顯示聚合後的 score（真實評論 + 社群口碑語錄），保留一位小數。
 test('AC1: ActivitiesContent listing card formats rating score with toFixed(1) via shared stats helper', async () => {
-  const src = await readSource('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSource('app/[locale]/activities/ActivityCard.tsx');
   assert.match(src, /resolveActivityReviewStats/, 'Should use shared resolveActivityReviewStats (single source with detail page)');
   assert.match(src, /\.score\.toFixed\(1\)/, 'Should format aggregated score with toFixed(1)');
 });
 
 test('AC1: ActivitiesContent listing card shows reviewCount', async () => {
-  const src = await readSource('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSource('app/[locale]/activities/ActivityCard.tsx');
   assert.match(src, /reviewCount/, 'Should render reviewCount');
 });
 
 test('AC1: ActivitiesContent listing card shows 尚無評價 for null rating', async () => {
-  const src = await readSource('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSource('app/[locale]/activities/ActivityCard.tsx');
   assert.match(src, /尚無評價/, 'Should show 尚無評價 fallback when rating is null');
 });
 
 test('AC1: ActivitiesContent listing card has data-testid="activity-card-rating"', async () => {
-  const src = await readSource('app/[locale]/activities/ActivitiesContent.tsx');
+  const src = await readSource('app/[locale]/activities/ActivityCard.tsx');
   assert.match(src, /data-testid="activity-card-rating"/, 'Should have activity-card-rating testid');
 });
 
