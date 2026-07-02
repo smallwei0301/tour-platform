@@ -3,6 +3,7 @@ import {
   verifyGuideSession,
   hashPassword,
   verifyPassword,
+  needsPasswordRehash,
   isInviteTokenExpired,
   createGuideSessionCookies,
   clearGuideSessionCookies,
@@ -160,6 +161,20 @@ export async function POST(req: Request) {
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
       }
 
+      // 健檢 v2 S1：舊 SHA-256 雜湊在登入成功當下透明升級為 scrypt（best-effort，不阻斷登入）
+      if (needsPasswordRehash(guide.guide_password_hash)) {
+        try {
+          await withTimeout(
+            supabase
+              .from('guide_profiles')
+              .update({ guide_password_hash: hashPassword(password) })
+              .eq('id', guide.id)
+          );
+        } catch {
+          // 升級失敗不影響本次登入，下次登入再試
+        }
+      }
+
       const sessionVersion = guide.guide_session_version ?? 1;
       const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
       const headers = new Headers({ 'content-type': 'application/json' });
@@ -191,6 +206,20 @@ export async function POST(req: Request) {
       if (!guide.guide_password_hash || !verifyPassword(password, guide.guide_password_hash)) {
         recordGuideLoginFailure();
         return Response.json(fail('INVALID_CREDENTIALS', '帳號或密碼錯誤'), { status: 401 });
+      }
+
+      // 健檢 v2 S1：舊 SHA-256 雜湊在登入成功當下透明升級為 scrypt（best-effort，不阻斷登入）
+      if (needsPasswordRehash(guide.guide_password_hash)) {
+        try {
+          await withTimeout(
+            supabase
+              .from('guide_profiles')
+              .update({ guide_password_hash: hashPassword(password) })
+              .eq('id', guide.id)
+          );
+        } catch {
+          // 升級失敗不影響本次登入，下次登入再試
+        }
       }
 
       const sessionVersion = guide.guide_session_version ?? 1;

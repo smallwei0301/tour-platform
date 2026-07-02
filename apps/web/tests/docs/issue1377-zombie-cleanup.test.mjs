@@ -19,7 +19,10 @@ const REPO_ROOT = resolve(__dirname, '../../../..');
 
 test('AC1: packages/ui 殭屍套件已刪除', () => {
   assert.ok(!existsSync(join(REPO_ROOT, 'packages/ui')), 'packages/ui 應不存在');
-  assert.ok(existsSync(join(REPO_ROOT, 'packages/config')), 'packages/config 應保留');
+  // 健檢 v2 A6（2026-07-02）：packages/config 後續也確認為殭屍（僅剩名不符實的
+  // README、無 package.json、零引用），比照 packages/ui 移除 —— 原「應保留」斷言
+  // 依新決策反轉。
+  assert.ok(!existsSync(join(REPO_ROOT, 'packages/config')), 'packages/config 應已移除（健檢 v2 A6）');
 });
 
 test('AC2: root legacy migration scratch scripts 已移除', () => {

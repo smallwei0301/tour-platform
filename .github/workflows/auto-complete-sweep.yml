@@ -1,0 +1,64 @@
+name: auto-complete-sweep
+
+on:
+  schedule:
+    # #1554：訂單完成鏈路兜底 — 出團開始超過寬限期（48h）仍 confirmed 的訂單
+    # 自動轉 completed（否則 settlement sweep 撈不到、評論邀請不會發）。
+    # 每日一次已足夠：寬限期以「小時」計，日級延遲不影響結算正確性。
+    - cron: '30 18 * * *' # 02:30 Asia/Taipei daily（錯開 unpaid-expiry 的 02:00）
+  workflow_dispatch: {}
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL != '' }}
+          HAS_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_TOKEN" != "true" ]; then
+            echo "⚠️ NEXT_PUBLIC_VERCEL_URL or INTERNAL_ALERT_TOKEN secrets not configured."
+            echo "   Set them in GitHub repo Settings → Secrets → Actions to enable the auto-complete sweep."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: POST to auto-complete-sweep endpoint
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/sweep-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/bookings/auto-complete-sweep" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}" \
+            -d '{}')
+          echo "HTTP status: $RESPONSE"
+          cat /tmp/sweep-response.json
+          if [ "$RESPONSE" != "200" ]; then
+            echo "Sweep returned non-200 status: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ Auto-complete sweep completed successfully."
+
+      - name: Notify on failure (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: failure
+        run: node scripts/cron/notify-failure.mjs

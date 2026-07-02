@@ -1,3 +1,5 @@
+import { constantTimeEquals } from './constant-time.mjs';
+
 export function parseAllowlist(raw) {
   return String(raw || '')
     .split(',')
@@ -17,7 +19,8 @@ export function isAdminAuthorized(input = {}) {
   const expiresAtRaw = String(input.expiresAt || '').trim();
 
   if (!requiredToken) return { ok: false, reason: 'ADMIN_ACCESS_TOKEN not configured' };
-  if (!token || token !== requiredToken) return { ok: false, reason: 'invalid token' };
+  // 常數時間比較，避免 timing side-channel（健檢 v2 S2）
+  if (!token || !constantTimeEquals(token, requiredToken)) return { ok: false, reason: 'invalid token' };
 
   if (requireSession) {
     if (sessionVersion !== expectedSessionVersion) {

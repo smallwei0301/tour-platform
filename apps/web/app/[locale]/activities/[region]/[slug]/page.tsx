@@ -29,6 +29,7 @@ import { ActivityQASection } from '../../../../../src/components/activity/Activi
 import { PublicPromoBanner } from '../../../../../src/components/activity/PublicPromoBanner';
 import { ActivityRecommendations } from '../../../../../src/components/activity/ActivityRecommendations';
 import { PublicIcon } from '../../../../../src/components/ui/PublicIcon';
+import { buildAlternates } from '../../../../../src/lib/seo-alternates.ts';
 
 // Issue #502 背景：詳情頁曾因 force-static/unstable_cache + 關聯查詢在 cold path
 // render lock（hang/500），緊急以 force-dynamic + withTimeout 止血。事故主因已移除
@@ -94,7 +95,7 @@ const getActivityForMetadata = cache((slug: string) => getActivityBySlugDb(slug)
 export async function generateMetadata(
   { params }: { params: Promise<{ locale: string; region: string; slug: string }> }
 ): Promise<Metadata> {
-  const { locale, slug } = await params;
+  const { locale, region, slug } = await params;
   const t = await getTranslations({ locale, namespace: 'activityDetail' });
   const humanTitle = slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
@@ -117,6 +118,8 @@ export async function generateMetadata(
   return {
     title,
     description,
+    // 健檢 v2 SEO-1：canonical/hreflang
+    alternates: buildAlternates(`/activities/${region}/${slug}`, locale),
     openGraph: {
       title,
       description,

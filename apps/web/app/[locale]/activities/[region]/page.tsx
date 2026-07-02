@@ -8,6 +8,7 @@ import ActivitiesContent from '../ActivitiesContent';
 import ActivitiesSkeleton from '../ActivitiesSkeleton';
 import ActivitiesFirstPaint from '../ActivitiesFirstPaint';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from '../cover-image';
+import { buildAlternates } from '../../../../src/lib/seo-alternates.ts';
 
 // Same posture as the parent /activities listing (PR #1252): let Vercel's
 // edge cache absorb anonymous region-page traffic for 60s. `revalidate`
@@ -16,10 +17,10 @@ import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from '../cove
 // underlying data is the same for all anonymous visitors.
 export const revalidate = 60;
 
-type Props = { params: Promise<{ region: string }> };
+type Props = { params: Promise<{ locale: string; region: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { region } = await params;
+  const { locale, region } = await params;
   const entry = getRegionBySlug(region);
   const regionName = entry?.displayName ?? region;
   const title = `${regionName} 在地行程導覽 | Midao 祕島`;
@@ -27,6 +28,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    // 健檢 v2 SEO-1：canonical/hreflang
+    alternates: buildAlternates(`/activities/${region}`, locale),
     openGraph: {
       title,
       description,

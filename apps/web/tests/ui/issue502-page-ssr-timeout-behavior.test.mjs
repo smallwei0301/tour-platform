@@ -116,6 +116,10 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
       resolveSocialProofAuthor: (a) => a || '旅客回饋',
     },
     // #1378: 詳情頁新增 Product JSON-LD / OG helper 依賴（.mjs 無法被 require()，須 mock）
+    // #1554/健檢 v2 SEO-1：page 新增 seo-alternates import，sandbox 需 mock（.ts 無法被真 require 載入）
+    '../../../../../src/lib/seo-alternates.ts': {
+      buildAlternates: () => ({ canonical: '/x', languages: {} }),
+    },
     '../../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({}),
       resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',

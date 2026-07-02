@@ -21,7 +21,7 @@
 | 📝 **命名系統** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 01 · Naming Architecture |
 | 📱 **社群 Bio / Email** | [BRAND_BOOK.md](./BRAND_BOOK.md) → Section 05-08 |
 | ⚡ **前端效能（提 PR 前必讀）** | [docs/04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md](./docs/04-tech/04-tech-architecture/11-frontend-perf-pitfalls.md) → preload 洩漏 / Suspense fallback / CJK 字體 / SSR re-fetch 反模式 |
-| 🩺 **全 Repo 健檢與優化指南（2026-06-11）** | [docs/operations/reports/repo-health-audit-20260611.md](./docs/operations/reports/repo-health-audit-20260611.md) → KKday 視角功能缺口 / 架構技術債 / SEO / 資安 / 優化路線圖 |
+| 🩺 **全 Repo 健檢與優化指南 v2（2026-07-02）** | [docs/operations/reports/repo-health-audit-20260702.md](./docs/operations/reports/repo-health-audit-20260702.md) → 前次追蹤矩陣 / KKday 視角功能缺口 / 架構技術債 / SEO / 資安 / 優化路線圖（前次：[2026-06-11](./docs/operations/reports/repo-health-audit-20260611.md)） |
 
 ### ✅ 最新品牌應用
 
