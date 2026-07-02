@@ -181,6 +181,27 @@ describe('issue #1293 — ledger gate 合約（temp fixture）', () => {
     assert.deepEqual(result.missing, []);
   });
 
+  it('baseline 後新增的短數字前綴檔 → warn（字串比較誤涵蓋提醒）', async () => {
+    const fx = makeFixture({
+      migrations: ['021_legacy_grandfathered.sql', '099_new_numbered_after_baseline.sql', '20260702_cron_job_controls.sql'],
+      ledger: {
+        version: 1,
+        grandfatheredLegacyFiles: ['021_legacy_grandfathered.sql'],
+        records: [record('20260702_cron_job_controls.sql', 'baseline')],
+      },
+    });
+    fixtures.push(fx);
+
+    const { checkMigrationLedger } = await import(CHECK_SCRIPT);
+    const result = checkMigrationLedger({ migrationsDir: fx.migrationsDir, ledgerPath: fx.ledgerPath });
+    // 三檔皆被 baseline 字串涵蓋 → gate 仍 verified（warn 不擋）
+    assert.equal(result.status, 'verified');
+    // grandfather 的 021_ 不告警；未列入的 099_ 告警
+    const warnText = result.warnings.join('\n');
+    assert.match(warnText, /099_new_numbered_after_baseline\.sql/);
+    assert.doesNotMatch(warnText, /021_legacy_grandfathered\.sql/);
+  });
+
   it('ledger 檔缺失或壞掉 → HOLD（fail-safe，不 fail-open）', async () => {
     const fx = makeFixture({
       migrations: ['20260801000000_new_feature.sql'],

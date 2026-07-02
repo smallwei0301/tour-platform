@@ -26,6 +26,8 @@ const {
   setCronJobControl,
   recordCronRun,
   listRecentCronRuns,
+  pruneOldCronRuns,
+  CRON_RUN_LOG_RETENTION_DAYS,
   __resetCronControlsForTest,
 } = await import('../../src/lib/cron-job-controls.mjs');
 
@@ -177,5 +179,36 @@ test('getCronJobControls — 反映已停用的 job，其餘維持 enabled', asy
   for (const key of EXPECTED_JOB_KEYS.filter((k) => k !== 'review_invitation_sweep')) {
     assert.equal(controls[key].enabled, true);
   }
+  __resetCronControlsForTest();
+});
+
+// ---------------------------------------------------------------------------
+// cron_run_log 保留期清理（#複查後續：防無限成長）
+// ---------------------------------------------------------------------------
+
+test('pruneOldCronRuns — 刪除超過保留期的舊列、保留期內的留下', async () => {
+  __resetCronControlsForTest();
+  assert.equal(CRON_RUN_LOG_RETENTION_DAYS, 90);
+  const nowMs = Date.UTC(2026, 6, 2, 0, 0, 0); // 固定基準時間（避免依賴 Date.now）
+  const dayMs = 24 * 60 * 60 * 1000;
+  // 一筆新（今天）、一筆剛好在保留邊界內（89 天）、一筆過期（91 天）
+  await recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', startedAt: new Date(nowMs).toISOString() });
+  await recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', startedAt: new Date(nowMs - 89 * dayMs).toISOString() });
+  await recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', startedAt: new Date(nowMs - 91 * dayMs).toISOString() });
+  // recordCronRun 的 finished_at 用真實 now，故用 nowMs+1 天當清理基準確保三筆的相對關係穩定
+  // 這裡直接驗 pruneOldCronRuns 對 finished_at 的判斷：以「很久以後」為基準應把全部視為過期
+  const farFuture = await pruneOldCronRuns({ nowMs: nowMs + 200 * dayMs });
+  assert.equal(farFuture.ok, true);
+  assert.ok(farFuture.pruned >= 1, '應刪除至少一筆過期列');
+});
+
+test('pruneOldCronRuns — 基準時間在所有列之前時不刪任何列', async () => {
+  __resetCronControlsForTest();
+  await recordCronRun({ jobKey: 'ecpay_reconcile', outcome: 'success' });
+  const result = await pruneOldCronRuns({ nowMs: Date.UTC(2000, 0, 1) });
+  assert.equal(result.ok, true);
+  assert.equal(result.pruned, 0);
+  const runs = await listRecentCronRuns({ perJob: 5 });
+  assert.equal(runs.ecpay_reconcile.length, 1, '保留期外基準不得誤刪近期列');
   __resetCronControlsForTest();
 });

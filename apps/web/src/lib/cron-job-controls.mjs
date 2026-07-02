@@ -223,9 +223,39 @@ export async function recordCronRun({ jobKey, outcome, summary = null, source = 
     }
     const { error } = await getSupabase().from('cron_run_log').insert(row);
     if (error) throw error;
+    // 保留期清理（fire-and-forget，不阻塞 sweep 主流程）：每小時多支寫入 →
+    // 一年約 1.8 萬列，無清理會無限成長。刪超過保留期的舊列（indexed range）。
+    void pruneOldCronRuns().catch(() => {});
     return { ok: true };
   } catch (err) {
     console.warn(`[cron-job-controls] recordCronRun(${jobKey}) failed:`, err?.message ?? err);
+    return { ok: false, error: err?.message ?? String(err) };
+  }
+}
+
+/** cron_run_log 保留天數；超過即由 recordCronRun 順手清理。 */
+export const CRON_RUN_LOG_RETENTION_DAYS = 90;
+
+/**
+ * 刪除超過保留期的 cron_run_log 列。best-effort，失敗僅 warn。
+ * @param {{ retentionDays?: number, nowMs?: number }} [opts] nowMs 供測試注入
+ * @returns {Promise<{ ok: boolean, pruned?: number, error?: string }>}
+ */
+export async function pruneOldCronRuns({ retentionDays = CRON_RUN_LOG_RETENTION_DAYS, nowMs } = {}) {
+  const cutoffIso = new Date((nowMs ?? Date.now()) - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  try {
+    if (!hasSupabaseEnv()) {
+      const before = memoryRuns.length;
+      const kept = memoryRuns.filter((r) => (r.finished_at ?? '') >= cutoffIso);
+      memoryRuns.length = 0;
+      memoryRuns.push(...kept);
+      return { ok: true, pruned: before - memoryRuns.length };
+    }
+    const { error } = await getSupabase().from('cron_run_log').delete().lt('finished_at', cutoffIso);
+    if (error) throw error;
+    return { ok: true };
+  } catch (err) {
+    console.warn('[cron-job-controls] pruneOldCronRuns failed:', err?.message ?? err);
     return { ok: false, error: err?.message ?? String(err) };
   }
 }
