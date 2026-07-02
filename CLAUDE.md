@@ -72,6 +72,8 @@ The platform is mid-migration from a static-schedule model to an availability/sl
 
 **Legacy booking 凍結（#1386 階段一，owner 拍板 2026-06-11 生效）**：legacy booking 路徑（非 `app/api/v2/**` 的 checkout／availability／order-state routes）**停止接受功能修改，只修 P0 bug**。新功能一律落在 V2。退役時間表與後續階段見 `docs/operations/booking-v2-rollback-runbook.md`。
 
+**可用性文案跨介面一致性（#1321 owner 拍板 2026-07-02 選項 C）**：Traveler 的動態 `messageZh`（`booking-availability-evaluator.ts`）與 Admin/Guide 的 `getCanonicalReasonCopy` **語意一致但字面不同**，屬 by-design；Traveler 動態文案是旅客可用性 UX 的 system-of-record。稽核見「Traveler 未字面套 canonical」時**不得 re-flag**，依 `docs/04-tech/04-tech-architecture/14-availability-copy-cross-surface-decision.md`。
+
 ### `.ts` vs `.mjs` in `src/lib`
 Logic that must be importable by edge middleware or run without TS compilation (auth, sessions, soft-launch, store) is authored as `.mjs`; the rest is `.ts`. TypeScript `strict` is on but full strictness is still being expanded across booking-critical modules (issue #68) — match the style of the file you are editing.
 
