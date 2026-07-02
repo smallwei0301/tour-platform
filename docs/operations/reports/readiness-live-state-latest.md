@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-02T07:13:09.315Z -->
+<!-- query_timestamp: 2026-07-02T12:43:32.763Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-02T07:13:09.315Z  
-**Commit SHA:** `5ccf5d247d2cd12455ddcaa4cdf9e47a803a883b`
+**Query timestamp:** 2026-07-02T12:43:32.763Z  
+**Commit SHA:** `1e83ef488e6e550f981860caf41937a36a8fb7b0`
 
 ---
 
@@ -20,19 +20,17 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (22 total)
+## Open Issues (19 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (8)
+### P1 (6)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1554 | [[Booking][P1] 訂單完成鏈路無自動化 — confirmed 永久卡住導致結算/評論漏單：補自動完成 sweep＋對帳告警](https://github.com/smallwei0301/tour-platform/issues/1554) | type:bug, priority:P1, agent:backlog, owner:ai-agent, traveler-booking |
 | #1317 | [[Production Smoke] Owner-only acceptance verification gaps from recent close-gate sweep (#1306 / #1289 / #1290 OFF / #1286 UI / #1307 TZ)](https://github.com/smallwei0301/tour-platform/issues/1317) | priority:P1, type:qa, owner:human, production-smoke, post-merge |
-| #1293 | [[Ops] Add production migration apply ledger and verified release gate after #1286 drift](https://github.com/smallwei0301/tour-platform/issues/1293) | triaged, type:optimization, priority:P1, agent:backlog, owner:mixed, status:needs-decision, database, infra, docs |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:blocked, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[需 Operator][Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:backlog, owner:mixed, status:ready, traveler-booking, launch:post-first-payment |
 | #605 | [[Launch Content] Strict Andy Lee listing content gate before public exposure](https://github.com/smallwei0301/tour-platform/issues/605) | triaged, type:investigation, priority:P1, qa, agent:backlog, owner:mixed, type:docs, docs, status:awaiting-implementation, launch:first-payment-blocker |
@@ -59,12 +57,11 @@ _none_
 
 _none_
 
-### Other (3)
+### Other (2)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1474 | [QA：PR #1473 部分退款功能 — Staging 實測（ECPay 測試卡）](https://github.com/smallwei0301/tour-platform/issues/1474) | qa, refund |
-| #1449 | [[ops] 套用 LINE/Telegram 通知 migration 到 production Supabase（#920 後續）](https://github.com/smallwei0301/tour-platform/issues/1449) | database, ops |
 | #1121 | [[Security] Rotate all credentials exposed in git history (service_role JWT × 7, sbp_ PAT × 5, admin token × 10, anon JWT × 4) — 正式上線前執行](https://github.com/smallwei0301/tour-platform/issues/1121) | type:bug, security, owner:mixed, status:needs-decision, launch:post-first-payment |
 
 ---
@@ -73,16 +70,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1561 | [feat(ops): migration apply ledger 與 release gate（#1293 選項 B）](https://github.com/smallwei0301/tour-platform/pull/1561) | 2026-07-02 |
+| #1559 | [fix(drift): 缺表探測改 GET+limit(0)，修復 HEAD 探測永遠假陰性的盲區](https://github.com/smallwei0301/tour-platform/pull/1559) | 2026-07-02 |
+| #1558 | [feat(activities): 列表「評價最高」排序＋無限捲動 (#1557)](https://github.com/smallwei0301/tour-platform/pull/1558) | 2026-07-02 |
+| #1556 | [健檢 v2 立即批次：資安 timing-safe／CSRF／scrypt＋SEO hreflang＋依賴對齊＋訂單自動完成 sweep (#1554)](https://github.com/smallwei0301/tour-platform/pull/1556) | 2026-07-02 |
 | #1555 | [feat(admin): 排程工作流控制台 — go-no-go 後台顯示結果、開關、排程時間](https://github.com/smallwei0301/tour-platform/pull/1555) | 2026-07-02 |
 | #1553 | [ci(cron): 補齊 ecpay-reconcile 與 ecpay-failure-sweep 排程載體（#1336 殘餘缺口）](https://github.com/smallwei0301/tour-platform/pull/1553) | 2026-07-02 |
 | #1552 | [feat: 方案卡片依螢幕寬度多欄並排（非手機），修正大螢幕單欄留白](https://github.com/smallwei0301/tour-platform/pull/1552) | 2026-07-02 |
 | #1551 | [fix(monitoring)+perf(activities): probe 重試防誤報 (#1472)、SSR 首屏真卡片消除 LCP render delay (#1344)](https://github.com/smallwei0301/tour-platform/pull/1551) | 2026-07-02 |
 | #1550 | [feat: 電腦版活動照片改為大圖＋可捲動縮圖列（復原 #1547，含 16:9 比例與 768px 響應式修正）](https://github.com/smallwei0301/tour-platform/pull/1550) | 2026-07-01 |
 | #1549 | [fix: revalidatePath 帶各 locale 前綴，admin/guide 改動後前台即時更新（#1488 後續）](https://github.com/smallwei0301/tour-platform/pull/1549) | 2026-07-01 |
-| #1548 | [feat: 導遊熟悉區域儲存統一成全名（與行程地區一致）](https://github.com/smallwei0301/tour-platform/pull/1548) | 2026-07-01 |
-| #1547 | [feat: 行程頁電腦版套用手機版左右滑動樣式（相簿＋旅客評價）](https://github.com/smallwei0301/tour-platform/pull/1547) | 2026-07-01 |
-| #1546 | [feat: 全台地區統一模組化（22 現行縣市 + 短名搜尋展開）](https://github.com/smallwei0301/tour-platform/pull/1546) | 2026-07-01 |
-| #1545 | [feat(guide): 導遊申請「專長領域」選項同步為平台四大分類](https://github.com/smallwei0301/tour-platform/pull/1545) | 2026-07-01 |
 
 ---
 
