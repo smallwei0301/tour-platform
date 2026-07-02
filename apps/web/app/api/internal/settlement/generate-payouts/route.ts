@@ -12,6 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { getSettlementConfig } from '../../../../../src/lib/settlement-config';
+import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,14 @@ export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Admin kill-switch (#go-no-go) — no-op when the job is disabled in back office
+  const cronGate = await isCronJobEnabled('settlement_generate_payouts');
+  if (!cronGate.enabled) {
+    void recordCronRun({ jobKey: 'settlement_generate_payouts', outcome: 'skipped_by_admin' });
+    return NextResponse.json({ ok: true, skipped_by_admin: true });
+  }
+  const cronStartedAt = new Date().toISOString();
 
   try {
     const { createClient } = await import('@supabase/supabase-js');
@@ -49,6 +58,7 @@ export async function POST(req: NextRequest) {
     const eligibleGuides = await getGuideBalancesAboveThresholdDb(supabase, minTwd);
 
     if (!eligibleGuides || eligibleGuides.length === 0) {
+      void recordCronRun({ jobKey: 'settlement_generate_payouts', outcome: 'success', summary: { generated: 0, skipped: 0 }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: true, generated: 0, skipped: 0, message: 'no eligible guides' });
     }
 
@@ -64,9 +74,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    void recordCronRun({ jobKey: 'settlement_generate_payouts', outcome: 'success', summary: { generated, skipped }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: true, generated, skipped });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
+    void recordCronRun({ jobKey: 'settlement_generate_payouts', outcome: 'error', summary: { error: message.slice(0, 200) }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

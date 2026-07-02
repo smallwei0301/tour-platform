@@ -9,6 +9,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server';
 import { expireUnpaidOrdersDb } from '../../../../../src/lib/db.mjs';
+import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 
 function isAuthorized(req: NextRequest): boolean {
   const token = req.headers.get('x-internal-token');
@@ -22,6 +23,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Admin kill-switch (#go-no-go) — no-op when the job is disabled in back office
+  const cronGate = await isCronJobEnabled('unpaid_expiry_sweep');
+  if (!cronGate.enabled) {
+    void recordCronRun({ jobKey: 'unpaid_expiry_sweep', outcome: 'skipped_by_admin' });
+    return NextResponse.json({ ok: true, skipped_by_admin: true });
+  }
+  const cronStartedAt = new Date().toISOString();
+
   let limit = 200;
   try {
     const body = await req.json();
@@ -33,6 +42,12 @@ export async function POST(req: NextRequest) {
   try {
     const now = new Date().toISOString();
     const result = await expireUnpaidOrdersDb({ now, limit });
+    void recordCronRun({
+      jobKey: 'unpaid_expiry_sweep',
+      outcome: 'success',
+      summary: { scanned: result.scanned, expired: result.expired },
+      startedAt: cronStartedAt,
+    });
     return NextResponse.json({
       ok: true,
       scanned: result.scanned,
@@ -42,6 +57,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
     console.error('[unpaid-expiry-sweep] error:', message);
+    void recordCronRun({ jobKey: 'unpaid_expiry_sweep', outcome: 'error', summary: { error: message.slice(0, 200) }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

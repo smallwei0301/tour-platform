@@ -31,6 +31,7 @@ import {
 } from '../../../../../src/lib/internal-sweep-time-source';
 import { isLinePushEnabled } from '../../../../../src/config/feature-flags.mjs';
 import { getLineUserIdForOrder } from '../../../../../src/lib/line-binding.mjs';
+import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,14 @@ export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Admin kill-switch (#go-no-go) — no-op when the job is disabled in back office
+  const cronGate = await isCronJobEnabled('pre_tour_reminder_sweep');
+  if (!cronGate.enabled) {
+    void recordCronRun({ jobKey: 'pre_tour_reminder_sweep', outcome: 'skipped_by_admin' });
+    return NextResponse.json({ ok: true, skipped_by_admin: true });
+  }
+  const cronStartedAt = new Date().toISOString();
 
   try {
     const { createClient } = await import('@supabase/supabase-js');
@@ -266,6 +275,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    void recordCronRun({
+      jobKey: 'pre_tour_reminder_sweep',
+      outcome: 'success',
+      summary: { sent: totalSent, skipped: totalSkipped, failed: totalFailed },
+      startedAt: cronStartedAt,
+    });
     return NextResponse.json({
       ok: true,
       sent: totalSent,
@@ -284,6 +299,7 @@ export async function POST(req: NextRequest) {
       message: `Pre-tour reminder sweep unexpected error: ${message}`,
       metadata: { sweep_time: new Date().toISOString() },
     });
+    void recordCronRun({ jobKey: 'pre_tour_reminder_sweep', outcome: 'error', summary: { error: message.slice(0, 200) }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

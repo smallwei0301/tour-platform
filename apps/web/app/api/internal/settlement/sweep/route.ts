@@ -23,6 +23,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { computeSweepPayoutItem, getSettlementConfig } from '../../../../../src/lib/settlement-config';
 import { isOrderEligibleForSettlement, pickEffectiveStartAt } from '../../../../../src/lib/internal-sweep-time-source';
 import { isSettlementPaymentCollected } from '../../../../../src/lib/post-trip/payout-eligibility.mjs';
+import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,14 @@ export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Admin kill-switch (#go-no-go) — no-op when the job is disabled in back office
+  const cronGate = await isCronJobEnabled('settlement_sweep');
+  if (!cronGate.enabled) {
+    void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'skipped_by_admin' });
+    return NextResponse.json({ ok: true, skipped_by_admin: true });
+  }
+  const cronStartedAt = new Date().toISOString();
 
   try {
     const { createClient } = await import('@supabase/supabase-js');
@@ -64,6 +73,7 @@ export async function POST(req: NextRequest) {
       .select('order_id');
 
     if (settledError) {
+      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: settledError.message.slice(0, 200) }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: false, error: settledError.message }, { status: 500 });
     }
 
@@ -92,6 +102,7 @@ export async function POST(req: NextRequest) {
       .eq('status', 'completed');
 
     if (ordersError) {
+      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: ordersError.message.slice(0, 200) }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: false, error: ordersError.message }, { status: 500 });
     }
 
@@ -100,6 +111,7 @@ export async function POST(req: NextRequest) {
     const orders = (completedOrders ?? []).filter((order) => !settledOrderIds.has(order.id));
 
     if (orders.length === 0) {
+      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', summary: { settled: 0 }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
@@ -134,6 +146,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (eligibleOrders.length === 0) {
+      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', summary: { settled: 0 }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
@@ -155,6 +168,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (payoutItems.length === 0) {
+      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'success', summary: { settled: 0 }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
@@ -165,6 +179,7 @@ export async function POST(req: NextRequest) {
       .upsert(payoutItems, { onConflict: 'order_id', ignoreDuplicates: true });
 
     if (insertError) {
+      void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: insertError.message.slice(0, 200) }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: false, error: insertError.message }, { status: 500 });
     }
 
@@ -190,10 +205,17 @@ export async function POST(req: NextRequest) {
         );
 
       if (balError) {
+        void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: balError.message.slice(0, 200) }, startedAt: cronStartedAt });
         return NextResponse.json({ ok: false, error: balError.message }, { status: 500 });
       }
     }
 
+    void recordCronRun({
+      jobKey: 'settlement_sweep',
+      outcome: 'success',
+      summary: { settled: payoutItems.length, guides_updated: Object.keys(balanceDeltas).length },
+      startedAt: cronStartedAt,
+    });
     return NextResponse.json({
       ok: true,
       settled: payoutItems.length,
@@ -203,6 +225,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
+    void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: message.slice(0, 200) }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

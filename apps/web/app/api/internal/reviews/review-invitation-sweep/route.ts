@@ -26,6 +26,7 @@ import {
 } from '../../../../../src/lib/post-trip/review-invitation-sweep.mjs';
 import { sendReviewInvitation } from '../../../../../src/lib/email';
 import { fetchReturningPromoEmailBlock } from '../../../../../src/lib/returning-promo.mjs';
+import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,14 @@ export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ ok: false, error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Admin kill-switch (#go-no-go) — no-op when the job is disabled in back office
+  const cronGate = await isCronJobEnabled('review_invitation_sweep');
+  if (!cronGate.enabled) {
+    void recordCronRun({ jobKey: 'review_invitation_sweep', outcome: 'skipped_by_admin' });
+    return NextResponse.json({ ok: true, skipped_by_admin: true });
+  }
+  const cronStartedAt = new Date().toISOString();
 
   // Kill-switch — feature flag must be explicitly enabled
   if (!isReviewInvitationSweepEnabled()) {
@@ -103,6 +112,7 @@ export async function POST(req: NextRequest) {
         .in('status', ['paid', 'confirmed', 'completed']);
 
       if (error) {
+        void recordCronRun({ jobKey: 'review_invitation_sweep', outcome: 'error', summary: { error: `DB query failed: ${error.message}`.slice(0, 200) }, startedAt: cronStartedAt });
         return NextResponse.json(
           { ok: false, error: `DB query failed: ${error.message}` },
           { status: 500 }
@@ -228,6 +238,12 @@ export async function POST(req: NextRequest) {
     // ── Build privacy-safe summary ────────────────────────────────────────────
     const summary = summarizeReviewInvitationSweepRun({ decisions, featureEnabled });
 
+    void recordCronRun({
+      jobKey: 'review_invitation_sweep',
+      outcome: 'success',
+      summary: { total: summary.total, sent: sentCount, failed: failedCount },
+      startedAt: cronStartedAt,
+    });
     return NextResponse.json({
       ok: true,
       status: 'completed',
@@ -241,6 +257,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
+    void recordCronRun({ jobKey: 'review_invitation_sweep', outcome: 'error', summary: { error: message.slice(0, 200) }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

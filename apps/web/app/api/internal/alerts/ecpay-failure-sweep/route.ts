@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { recordIncident } from '../../../../../src/lib/incidents';
 import { shouldAlertEcpayFailures } from '../../../../../src/lib/alerting/thresholds';
+import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -30,6 +31,14 @@ export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Admin kill-switch (#go-no-go) — no-op when the job is disabled in back office
+  const cronGate = await isCronJobEnabled('ecpay_failure_sweep');
+  if (!cronGate.enabled) {
+    void recordCronRun({ jobKey: 'ecpay_failure_sweep', outcome: 'skipped_by_admin' });
+    return NextResponse.json({ ok: true, skipped_by_admin: true });
+  }
+  const cronStartedAt = new Date().toISOString();
 
   try {
     // Query audit_logs for recent ECPay payment_callback_audit failures
@@ -60,6 +69,7 @@ export async function POST(req: NextRequest) {
         message: `ECPay failure sweep DB query error: ${queryError.message}`,
         metadata: { sweep_time: new Date().toISOString(), error: queryError.message },
       });
+      void recordCronRun({ jobKey: 'ecpay_failure_sweep', outcome: 'error', summary: { error: queryError.message.slice(0, 200) }, startedAt: cronStartedAt });
       return NextResponse.json({ ok: false, error: 'db_query_failed' }, { status: 500 });
     }
 
@@ -87,6 +97,12 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    void recordCronRun({
+      jobKey: 'ecpay_failure_sweep',
+      outcome: 'success',
+      summary: { failure_count: events.length, alerted: shouldAlert },
+      startedAt: cronStartedAt,
+    });
     return NextResponse.json({
       ok: true,
       failure_count: events.length,
@@ -102,6 +118,7 @@ export async function POST(req: NextRequest) {
       message: `ECPay failure sweep unexpected error: ${message}`,
       metadata: { sweep_time: new Date().toISOString() },
     });
+    void recordCronRun({ jobKey: 'ecpay_failure_sweep', outcome: 'error', summary: { error: message.slice(0, 200) }, startedAt: cronStartedAt });
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

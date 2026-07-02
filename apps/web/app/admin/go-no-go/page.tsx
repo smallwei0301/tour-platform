@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, PageHeader } from '../../../src/components/admin/ui';
+import CronJobsPanel from './CronJobsPanel';
 
 type ReadinessStatus = 'pass' | 'warning' | 'fail' | 'manual' | 'evidence_required' | (string & {});
 
@@ -364,6 +365,9 @@ export default function GoNoGoPage() {
             </div>
           </Card>
         )}
+
+        {/* 排程工作流控制台（結果／開關／唯讀排程時間） */}
+        <CronJobsPanel />
 
       </div>
     </div>
