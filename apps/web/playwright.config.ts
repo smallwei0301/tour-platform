@@ -23,6 +23,12 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
+    // 沙盒/CI 若預裝的 Chromium build 與 @playwright/test pin 的版本不符，
+    // 可用 PW_EXECUTABLE_PATH 指向現成二進位，免去 `playwright install` 下載。
+    // 未設時為 no-op（Playwright 走預設解析）。
+    ...(process.env.PW_EXECUTABLE_PATH
+      ? { launchOptions: { executablePath: process.env.PW_EXECUTABLE_PATH } }
+      : {}),
   },
   projects: [
     {
