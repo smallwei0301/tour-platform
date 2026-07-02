@@ -3,7 +3,7 @@
  * Guide session utilities (mirrors admin-auth pattern)
  * Uses crypto built-in: SHA-256 + salt for passwords, HMAC for session tokens
  */
-import { createHmac, randomBytes, createHash } from 'crypto';
+import { createHmac, randomBytes, createHash, scryptSync } from 'crypto';
 // @ts-expect-error — .mjs helper without type declarations (edge-safe shared impl)
 import { constantTimeEquals } from './constant-time.mjs';
 
@@ -55,17 +55,55 @@ export function isInviteTokenExpired(expiresAt: string): boolean {
 }
 
 // ─── Password ────────────────────────────────────────────────────────────────
+// 健檢 v2 S1（docs/operations/reports/repo-health-audit-20260702.md）：
+// 單輪 SHA-256 → scrypt 慢雜湊。舊格式（`salt:hash`）仍可驗證，登入成功時由
+// session route 以 needsPasswordRehash() 透明升級，導遊無感、不強制重設。
 
-/** Hash a password: returns `${salt}:${hash}` */
+const SCRYPT_N = 16384;
+const SCRYPT_R = 8;
+const SCRYPT_P = 1;
+const SCRYPT_KEYLEN = 64;
+// N=16384, r=8 → 128*N*r = 16MB，低於 Node scrypt 預設 maxmem(32MB)
+
+/** Hash a password: returns `scrypt$N$r$p$salt$hash` */
 export function hashPassword(plain: string): string {
   const salt = randomBytes(16).toString('hex');
-  const hash = createHash('sha256').update(salt + plain).digest('hex');
-  return `${salt}:${hash}`;
+  const hash = scryptSync(plain, salt, SCRYPT_KEYLEN, {
+    N: SCRYPT_N,
+    r: SCRYPT_R,
+    p: SCRYPT_P,
+  }).toString('hex');
+  return `scrypt$${SCRYPT_N}$${SCRYPT_R}$${SCRYPT_P}$${salt}$${hash}`;
 }
 
-/** Verify a plain password against a stored `${salt}:${hash}` */
+/** 舊格式（單輪 SHA-256 `salt:hash`）→ true，應在下次登入成功時透明升級 */
+export function needsPasswordRehash(stored: string | null | undefined): boolean {
+  return !String(stored || '').startsWith('scrypt$');
+}
+
+/** Verify a plain password against stored hash（scrypt 新格式＋SHA-256 舊格式相容） */
 export function verifyPassword(plain: string, stored: string): boolean {
-  const parts = stored.split(':');
+  const s = String(stored || '');
+
+  if (s.startsWith('scrypt$')) {
+    const parts = s.split('$'); // ['scrypt', N, r, p, salt, hash]
+    if (parts.length !== 6) return false;
+    const [, nStr, rStr, pStr, salt, expected] = parts;
+    const N = Number(nStr);
+    const r = Number(rStr);
+    const p = Number(pStr);
+    if (!Number.isInteger(N) || !Number.isInteger(r) || !Number.isInteger(p)) return false;
+    if (!salt || !expected || expected.length % 2 !== 0) return false;
+    try {
+      const actual = scryptSync(plain, salt, expected.length / 2, { N, r, p }).toString('hex');
+      return constantTimeEquals(actual, expected);
+    } catch {
+      return false; // 參數超界（maxmem 等）→ 視為驗證失敗，不丟錯
+    }
+  }
+
+  // Legacy: `${salt}:${hash}`（單輪 SHA-256）
+  const parts = s.split(':');
   if (parts.length !== 2) return false;
   const [salt, expected] = parts;
   const actual = createHash('sha256').update(salt + plain).digest('hex');

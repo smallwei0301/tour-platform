@@ -1,12 +1,7 @@
 import { NextResponse } from 'next/server';
-import { randomBytes, createHash } from 'crypto';
 import { errorV2 } from '../../../../../src/lib/api';
-
-function hashPassword(password: string): string {
-  const salt = randomBytes(16).toString('hex');
-  const hash = createHash('sha256').update(salt + password).digest('hex');
-  return `${salt}:${hash}`;
-}
+// 健檢 v2 S1：收斂本地複製的 SHA-256 hashPassword → 共用 guide-auth 的 scrypt 實作
+import { hashPassword } from '../../../../../src/lib/guide-auth';
 
 /**
  * GET /api/admin/guides/:guideId
