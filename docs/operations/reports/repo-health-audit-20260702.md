@@ -209,15 +209,15 @@
 
 > 按可直接開票的粒度撰寫；是否開 GitHub issues 待 owner 決定。既有追蹤不重複開：#1121（輪替）、#1526（LINE Login）、#1406/#1407（legacy 退役）、#68（TS strict）、#1344（mobile LCP）、#1365（出款排程）、#1336（internal cron）。
 
-### 立即（quick wins，各 ≤1 天）
-1. 【資安】admin token／guide HMAC 改 `timingSafeEqual`（S2）
-2. 【資安】修 `/api/orders` CSRF gating 落空＋middleware 單測（S4）
-3. 【SEO】全站 canonical＋hreflang helper＋sitemap 語系變體（SEO-1/3）
-4. 【資安】guide 密碼雜湊改 scrypt＋透明升級遷移（S1，含測試約 1 天）
-5. 【債】TS 版本對齊＋`@types/node` 降版＋`packages/config` 處置（A6）
+### 立即（quick wins，各 ≤1 天）— **✅ 全數已於 2026-07-02 實作**
+1. ✅ 【資安】admin token／guide HMAC 改常數時間比較（S2）— `src/lib/constant-time.mjs`＋`tests/security/timing-safe-compare.test.mjs`
+2. ✅ 【資安】修 `/api/orders` CSRF gating 落空＋middleware 單測（S4）— 含 `client-api.ts` createOrder 補 csrf header
+3. ✅ 【SEO】全站 canonical＋hreflang helper＋sitemap 語系變體（SEO-1/3）— `src/lib/seo-alternates.ts`，六個核心頁＋sitemap 已接
+4. ✅ 【資安】guide 密碼雜湊改 scrypt＋透明升級遷移（S1）— 舊格式相容、登入時無感升級、admin route 重複實作一併收斂
+5. ✅ 【債】TS 版本對齊（root 6.0.2）＋`@types/node` ^22＋`packages/config` 移除（A6）
 
 ### 短期（1–2 週，轉換率與合規優先）
-6. 【產品 P0＋🔴 修漏單】電子憑證 QR＋導遊掃碼核銷＋**自動完成 sweep cron＋漏單對帳告警**（P0-1；完成鏈路備援三道防線）
+6. 【產品 P0＋🔴 修漏單】電子憑證 QR＋導遊掃碼核銷（P0-1 主體）；**✅ 自動完成 sweep cron＋漏單對帳告警已實作（#1554，2026-07-02）**— `db-auto-complete.mjs`＋`/api/internal/bookings/auto-complete-sweep`＋每日 workflow
 7. 【產品 P0】Supabase Email OTP 登入（P0-2 前半；LINE Login 走 #1526）
 9. 【產品 P1】活動列表無限捲動＋「評價最高」排序（P1-6）
 10. 【資安】S3 header-token session 政策決策＋文件化；**#1121 憑證輪替排期執行**

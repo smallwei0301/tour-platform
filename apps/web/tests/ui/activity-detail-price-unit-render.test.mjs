@@ -125,6 +125,10 @@ async function renderDetailPage({ priceUnit }) {
     '../../../../../src/lib/db.mjs': { getActivityBySlugDb: async (slug) => ({ ...activityFixture, slug }) },
     '../../../../../src/lib/activity-review-stats.mjs': { resolveActivityReviewStats: () => ({ score: 5.0, count: 0 }) },
     '../../../../../src/lib/social-proof-quotes.mjs': { normalizeSocialProofQuotes: () => [], resolveSocialProofAuthor: (a) => a || '旅客' },
+    // #1554/健檢 v2 SEO-1：page 新增 seo-alternates import，sandbox 需 mock（.ts 無法被真 require 載入）
+    '../../../../../src/lib/seo-alternates.ts': {
+      buildAlternates: () => ({ canonical: '/x', languages: {} }),
+    },
     '../../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({ '@type': 'Product' }),
       resolveActivityOgImage: (url) => url || 'https://example.com/og.jpg',
