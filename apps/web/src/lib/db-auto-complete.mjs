@@ -50,9 +50,13 @@ export async function autoCompleteConfirmedOrdersDb(input = {}) {
   }
 
   const supabase = await getSupabase();
+  // #1560 後 orders↔bookings 有兩條 FK（fk_bookings_order_id: bookings.order_id→orders；
+  // orders_booking_id_fkey: orders.booking_id→bookings），未指名時 PostgREST 回 PGRST201
+  // 「found more than one relationship」→ 500。指名 fk_bookings_order_id（bookings 屬於此
+  // order 的方向，且 orders.booking_id 對舊單多為 NULL），與加第二條 FK 前的行為一致。
   const { data: candidates, error } = await supabase
     .from('orders')
-    .select('id, status, created_at, bookings(start_at), activity_schedules(start_at)')
+    .select('id, status, created_at, bookings!fk_bookings_order_id(start_at), activity_schedules(start_at)')
     .eq('status', 'confirmed')
     .order('created_at', { ascending: true })
     .limit(limit);
