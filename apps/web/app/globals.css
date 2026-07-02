@@ -2276,6 +2276,30 @@ details[open] .kkd-faq-q::before { content: '- '; }
   display: grid;
   gap: 14px;
 }
+/* 手機（收合狀態）：只顯示前 2 個方案，其餘由「查看更多方案」展開（.show-all）。 */
+@media (max-width: 767.98px) {
+  .kkd-plans-list:not(.show-all) > .kkd-plan-card:nth-child(n+3) { display: none; }
+}
+/* 非手機：依螢幕寬度多欄並排（auto-fill），全部方案直接顯示、不需展開；
+   卡片頂端對齊（某張選取展開日曆時，同列其它卡不被拉高留白）。 */
+@media (min-width: 768px) {
+  .kkd-plans-list {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    align-items: start;
+  }
+  /* 窄欄卡片：價格與 CTA 改為上下排列、按鈕滿版，避免同列擠壓溢出。 */
+  .kkd-plans-list .kkd-plan-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .kkd-plans-list .kkd-plan-select-btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+  /* 非手機全部方案已直接顯示，隱藏「查看更多／收合」切換鈕。 */
+  .kkd-plans-more-btn-wrap { display: none; }
+}
 .kkd-plan-card {
   border: 1.5px solid var(--tp-border);
   border-radius: 12px;
