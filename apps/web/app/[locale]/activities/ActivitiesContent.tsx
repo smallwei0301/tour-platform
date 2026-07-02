@@ -7,6 +7,7 @@ import { resolveCanonicalType } from '../../../src/lib/activity-type-filter.mjs'
 import { listSearchRegions, resolveSearchRegionKey } from '../../../src/lib/region-slugs.mjs';
 import { activityMatchesRegion } from '../../../src/lib/activity-regions.mjs';
 import { ACTIVITY_THEMES, ACTIVITY_THEME_LABELS, isActivityInTheme } from '../../../src/lib/activity-themes.mjs';
+import { sortActivities } from '../../../src/lib/activity-list-sort.mjs';
 import { useTravelerAuth } from '../../../src/lib/use-traveler-auth';
 import { PublicIcon } from '../../../src/components/ui/PublicIcon';
 import ActivityCard, { type Activity } from './ActivityCard';
@@ -19,6 +20,9 @@ const REGIONS = listSearchRegions();
 // value＝theme label（isActivityInTheme/resolveCanonicalType 用），slug＝顯示 i18n key。
 const TYPES = ACTIVITY_THEME_LABELS;
 const TYPE_ITEMS = ACTIVITY_THEMES.map((th: { label: string; slug: string }) => ({ value: th.label, slug: th.slug }));
+
+// #1557：無限捲動每批筆數
+const PAGE_SIZE = 12;
 
 // Activity 型別移到 ActivityCard.tsx（單一來源），這裡 re-export 供既有 import 使用。
 export type { Activity } from './ActivityCard';
@@ -187,10 +191,31 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
         selectedTypes.some((t) => isActivityInTheme(a, t))
       );
     }
-    if (sort === 'price-asc') result.sort((a, b) => a.priceTwd - b.priceTwd);
-    if (sort === 'price-desc') result.sort((a, b) => b.priceTwd - a.priceTwd);
-    return result;
+    // #1557：排序（含「評價最高」）抽到共用純函式，rating 與卡片星數同源
+    return sortActivities(result, sort);
   }, [activities, selectedRegions, selectedTypes, sort]);
+
+  // #1557：無限捲動 — 初始只渲染前 PAGE_SIZE 筆，觸底再追加一批。
+  // 篩選/搜尋/排序改變（filtered 換 reference）時重置回第一頁。
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [filtered]);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const visible = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const hasMore = visibleCount < filtered.length;
+  useEffect(() => {
+    if (!hasMore) return;
+    const el = sentinelRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setVisibleCount((c) => c + PAGE_SIZE);
+      }
+    }, { rootMargin: '400px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [hasMore, filtered]);
 
   const hasFilters = query || selectedRegions.length > 0 || selectedTypes.length > 0 || dateFilter || priceMin || priceMax;
   const resultLabel = query
@@ -298,6 +323,7 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
             <h1>{resultLabel}</h1>
             <select aria-label={t('sortAria')} value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="recommended">{t('sortRecommended')}</option>
+              <option value="rating">{t('sortRating')}</option>
               <option value="price-asc">{t('sortPriceAsc')}</option>
               <option value="price-desc">{t('sortPriceDesc')}</option>
             </select>
@@ -315,19 +341,30 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
               <button onClick={clearAll} className="tp-btn tp-btn-primary">{t('emptyClear')}</button>
             </div>
           ) : (
-            <div className="tp-card-grid tp-card-grid-activities">
-              {/* Issue #1344 — 卡片 markup 抽到 ActivityCard，與 page 層
-                  Suspense fallback（SSR 首屏）共用，避免兩份 markup 漂移。 */}
-              {filtered.map((a, idx) => (
-                <ActivityCard
-                  key={a.slug}
-                  a={a}
-                  idx={idx}
-                  wishlisted={wishlistedIds.has(a.id)}
-                  isLoggedIn={isLoggedIn}
+            <>
+              <div className="tp-card-grid tp-card-grid-activities">
+                {/* Issue #1344 — 卡片 markup 抽到 ActivityCard，與 page 層
+                    Suspense fallback（SSR 首屏）共用，避免兩份 markup 漂移。
+                    #1557 — 只渲染 visible 切片，其餘捲動觸底再載入。 */}
+                {visible.map((a, idx) => (
+                  <ActivityCard
+                    key={a.slug}
+                    a={a}
+                    idx={idx}
+                    wishlisted={wishlistedIds.has(a.id)}
+                    isLoggedIn={isLoggedIn}
+                  />
+                ))}
+              </div>
+              {hasMore && (
+                <div
+                  ref={sentinelRef}
+                  data-testid="activities-load-more-sentinel"
+                  aria-hidden="true"
+                  style={{ height: 1 }}
                 />
-              ))}
-            </div>
+              )}
+            </>
           )}
         </section>
       </section>
