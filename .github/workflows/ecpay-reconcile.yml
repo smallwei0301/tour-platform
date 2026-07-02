@@ -1,0 +1,78 @@
+name: ecpay-reconcile
+
+# Issue #1336 殘餘缺口 — internal endpoints 中最後兩支無排程載體之一。
+#
+# `payments/ecpay-reconcile` 對 pending 中的 ECPay 付款做對帳
+# （reconcileEcpayPendingPayments，預設 limit=20），把「callback 漏接／
+# 狀態卡住」的訂單補正。無排程時只能靠人工手動觸發，漏單會無限期卡住。
+#
+# 頻率：每日一次（03:30 UTC = 11:30 Asia/Taipei），錯開 settlement-sweep
+# （02:00 UTC）與 review-invitation-sweep（10:00 UTC）。對帳本身冪等，
+# 重複執行安全。
+#
+# Auth：x-internal-token = INTERNAL_ALERT_TOKEN。Secrets 缺失時 graceful
+# skip（無 POST、無誤產），對齊 settlement-sweep。
+#
+# Log 安全：response 只輸出 processed 數與 outcome summary，不輸出
+# results 明細（內含訂單識別碼，遵守「不落付款 payload」慣例）。
+
+on:
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL != '' }}
+          HAS_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_TOKEN" != "true" ]; then
+            echo "⚠️ NEXT_PUBLIC_VERCEL_URL or INTERNAL_ALERT_TOKEN secrets not configured."
+            echo "   Set them in GitHub repo Settings → Secrets → Actions to enable ecpay-reconcile."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: ECPay pending-payment reconcile
+        if: steps.check-secrets.outputs.skip != 'true'
+        env:
+          NEXT_PUBLIC_VERCEL_URL: ${{ secrets.NEXT_PUBLIC_VERCEL_URL }}
+          INTERNAL_ALERT_TOKEN: ${{ secrets.INTERNAL_ALERT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s -o /tmp/reconcile-response.json -w "%{http_code}" \
+            -X POST \
+            "https://${NEXT_PUBLIC_VERCEL_URL}/api/internal/payments/ecpay-reconcile" \
+            -H "Content-Type: application/json" \
+            -H "x-internal-token: ${INTERNAL_ALERT_TOKEN}" \
+            -d '{"limit":20}')
+          echo "HTTP status: $RESPONSE"
+          # 只輸出彙總欄位，不輸出 results 明細（訂單識別碼不落 log）
+          python3 -c "import json; d=json.load(open('/tmp/reconcile-response.json')); print(json.dumps({'ok': d.get('ok'), 'processed': d.get('processed'), 'summary': d.get('summary')}, ensure_ascii=False))" || true
+          if [ "$RESPONSE" != "200" ]; then
+            echo "ECPay reconcile returned non-200 status: $RESPONSE"
+            exit 1
+          fi
+          echo "✅ ECPay reconcile completed successfully."
+
+      - name: Notify on failure (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: failure
+        run: node scripts/cron/notify-failure.mjs
