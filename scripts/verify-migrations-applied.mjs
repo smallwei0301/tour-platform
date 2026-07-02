@@ -115,8 +115,12 @@ async function main() {
   const missingColumns = [];
   const missingTableSet = new Set();
 
+  // 探測不可用 HEAD：HEAD 回應無 body，PostgREST 的 42P01/PGRST205 錯誤碼
+  // 帶不回來（實測缺表回 error:null, status:204 — 永遠假陰性，#1449 缺表
+  // 一個月未被抓到即此因）。改用 GET + limit(0)：存在回 200 []、缺表回
+  // PGRST205、缺欄位回 42703，且不撈任何資料列。
   for (const t of tables) {
-    const { error } = await client.from(t).select('*', { head: true, count: 'exact' }).limit(1);
+    const { error } = await client.from(t).select('*').limit(0);
     if (isMissingTableError(error)) {
       missingTables.push(t);
       missingTableSet.add(t);
@@ -125,7 +129,7 @@ async function main() {
 
   for (const { table, column } of columns) {
     if (missingTableSet.has(table)) continue; // 表都沒有就不重複報欄位
-    const { error } = await client.from(table).select(column, { head: true }).limit(1);
+    const { error } = await client.from(table).select(column).limit(0);
     if (isMissingColumnError(error)) {
       missingColumns.push(`${table}.${column}`);
     }
