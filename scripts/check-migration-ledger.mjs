@@ -115,6 +115,12 @@ export function checkMigrationLedger({
     }
   }
 
+  // baseline 邊界為「檔名字串比較」，短數字前綴檔（如 021_）字串上 < 日期前綴 baseline，
+  // 會被 baseline「意外涵蓋」而不要求 verified record（漏擋）。新檔一律用 8+ 位日期/時間戳
+  // 前綴（見 supabase/migrations/README.md）；偵測到「非日期前綴且不在 grandfather 清單」
+  // 的新檔即 warn（既有 001–022 legacy 已列入 ledger.grandfatheredLegacyFiles，不誤報）。
+  const DATE_PREFIX = /^\d{8,}_/;
+  const grandfathered = new Set(Array.isArray(ledger.grandfatheredLegacyFiles) ? ledger.grandfatheredLegacyFiles : []);
   for (const file of files) {
     const record = recordByFile.get(file);
     if (record && record.status === 'verified') {
@@ -123,6 +129,12 @@ export function checkMigrationLedger({
     }
     if (baselineBoundary !== null && file <= baselineBoundary) {
       result.coveredByBaseline += 1;
+      // baseline 之後新增、卻用短數字前綴命名的檔，會被字串比較誤涵蓋 → 提醒改名
+      if (!DATE_PREFIX.test(file) && !grandfathered.has(file)) {
+        result.warnings.push(
+          `migration 檔名非日期前綴且未列入 grandfather（${file}）— 字串比較可能被 baseline 誤涵蓋，請改用日期/時間戳前綴命名`,
+        );
+      }
       continue;
     }
     if (record) {
