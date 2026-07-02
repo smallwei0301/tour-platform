@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { listPublishedGuidesDb } from '../../../src/lib/db.mjs';
 import GuidesContent from './GuidesContent';
+import { buildAlternates } from '../../../src/lib/seo-alternates.ts';
 
 // On-demand revalidation（非定時 ISR）：認識導遊列表直接讀 Supabase，
 // 平時維持靜態快取、零背景運算；當導遊在後台「儲存並公開」時，
@@ -16,6 +17,8 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title: t('metaTitle'),
     description: t('metaDescription'),
+    // 健檢 v2 SEO-1：canonical/hreflang
+    alternates: buildAlternates('/guides', locale),
     openGraph: {
       title: t('ogTitle'),
       description: t('ogDescription'),

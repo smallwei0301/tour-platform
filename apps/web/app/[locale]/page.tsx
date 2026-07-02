@@ -5,6 +5,7 @@ import { getHomepageFeaturedDb, listPublishedActivitiesDb, getActivityGalleryByS
 import { resolveHomepageFeaturedView, resolveEditorPickPhotos } from '../../src/lib/homepage-featured-copy.mjs';
 import { resolveActivityReviewStats } from '../../src/lib/activity-review-stats.mjs';
 import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../../src/lib/homepage-featured.mjs';
+import { buildAlternates } from '../../src/lib/seo-alternates.ts';
 
 // 首頁採「on-demand 失效為主」的 ISR：admin 於 /admin/homepage 儲存精選時，
 // PUT /api/admin/homepage-featured 會 revalidatePath('/') 立即重生（變更即時可見）；
@@ -13,21 +14,28 @@ import { HOMEPAGE_MORE_FEATURED_LIMIT } from '../../src/lib/homepage-featured.mj
 // 大幅減少低流量時使用者踩到冷重生的 ~數秒延遲。
 export const revalidate = 86400;
 
-export const metadata: Metadata = {
-  title: 'Midao 祕島｜台灣在地導遊預約平台',
-  description: '找到懂路的人，帶你走進台灣最有故事的地方。柴山探洞、大稻埕老街、花蓮溯溪⋯⋯ 預約實名認證在地導遊，安全透明。',
-  openGraph: {
+// 健檢 v2 SEO-1：static metadata → generateMetadata，補 canonical/hreflang（buildAlternates）
+export async function generateMetadata(
+  { params }: { params: Promise<{ locale: string }> }
+): Promise<Metadata> {
+  const { locale } = await params;
+  return {
     title: 'Midao 祕島｜台灣在地導遊預約平台',
-    description: '找到懂路的人，帶你走進台灣最有故事的地方。',
-    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: 'Midao 祕島｜台灣在地導遊預約平台' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'Midao 祕島｜台灣在地導遊預約平台',
-    description: '找到懂路的人，帶你走進台灣最有故事的地方。',
-    images: ['/images/og-default.png'],
-  },
-};
+    description: '找到懂路的人，帶你走進台灣最有故事的地方。柴山探洞、大稻埕老街、花蓮溯溪⋯⋯ 預約實名認證在地導遊，安全透明。',
+    alternates: buildAlternates('/', locale),
+    openGraph: {
+      title: 'Midao 祕島｜台灣在地導遊預約平台',
+      description: '找到懂路的人，帶你走進台灣最有故事的地方。',
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: 'Midao 祕島｜台灣在地導遊預約平台' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Midao 祕島｜台灣在地導遊預約平台',
+      description: '找到懂路的人，帶你走進台灣最有故事的地方。',
+      images: ['/images/og-default.png'],
+    },
+  };
+}
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 

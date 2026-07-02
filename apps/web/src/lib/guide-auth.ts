@@ -4,7 +4,6 @@
  * Uses crypto built-in: SHA-256 + salt for passwords, HMAC for session tokens
  */
 import { createHmac, randomBytes, createHash, scryptSync } from 'crypto';
-// @ts-expect-error — .mjs helper without type declarations (edge-safe shared impl)
 import { constantTimeEquals } from './constant-time.mjs';
 
 function resolveGuideSessionSecret(): string {

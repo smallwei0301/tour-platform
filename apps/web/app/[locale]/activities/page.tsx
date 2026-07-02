@@ -6,27 +6,35 @@ import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from './cover
 import { listPublishedActivitiesDb } from '../../../src/lib/db.mjs';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import type { Metadata } from 'next';
+import { buildAlternates } from '../../../src/lib/seo-alternates.ts';
 
 // Issue #1249 — match the `/api/activities` cache window so the SSR HTML
 // for `/activities` is served from the edge cache for anonymous visitors
 // instead of round-tripping Supabase on every render.
 export const revalidate = 60;
 
-export const metadata: Metadata = {
-  title: '探索行程 | Midao 祕島',
-  description: '瀏覽台灣全島私人導遊行程。柴山探洞、大稻埕老街、花蓮溯溪等在地體驗，依地區、主題自由篩選。',
-  openGraph: {
+// 健檢 v2 SEO-1：static metadata → generateMetadata，補 canonical/hreflang（buildAlternates）
+export async function generateMetadata(
+  { params }: { params: Promise<{ locale: string }> }
+): Promise<Metadata> {
+  const { locale } = await params;
+  return {
     title: '探索行程 | Midao 祕島',
-    description: '台灣私人導遊行程，實名認證、透明定價、安全付款。',
-    images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '台灣在地導遊行程 | Midao 祕島' }],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: '探索行程 | Midao 祕島',
-    description: '台灣私人導遊行程，實名認證、透明定價、安全付款。',
-    images: ['/images/og-default.png'],
-  },
-};
+    description: '瀏覽台灣全島私人導遊行程。柴山探洞、大稻埕老街、花蓮溯溪等在地體驗，依地區、主題自由篩選。',
+    alternates: buildAlternates('/activities', locale),
+    openGraph: {
+      title: '探索行程 | Midao 祕島',
+      description: '台灣私人導遊行程，實名認證、透明定價、安全付款。',
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '台灣在地導遊行程 | Midao 祕島' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: '探索行程 | Midao 祕島',
+      description: '台灣私人導遊行程，實名認證、透明定價、安全付款。',
+      images: ['/images/og-default.png'],
+    },
+  };
+}
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
 
