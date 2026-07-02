@@ -1,5 +1,4 @@
 'use client';
-import Image from 'next/image';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
@@ -8,6 +7,7 @@ import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui'
 import { ResponsiveModal, FormGrid } from '../../../../../src/components/admin/responsive';
 import { GuideSearch } from '../../../../../src/components/admin/GuideSearch';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
+import { GalleryReorder } from '../../../../../src/components/admin/GalleryReorder';
 import { buildActivityHref, normalizeRegionSlug } from '../../../../../src/lib/activity-url';
 import { normalizeSocialProofQuotes } from '../../../../../src/lib/social-proof-quotes.mjs';
 import { REGION_REGISTRY } from '../../../../../src/lib/region-slugs.mjs';
@@ -1283,8 +1283,12 @@ export default function AdminActivityEditPage() {
               onUpload={() => {}}
               onGalleryUpdate={setImageUrls}
             />
-            <div style={{ marginTop: 12, marginBottom: 16 }}>
-              <label htmlFor="activity-edit-gallery-urls" style={{ ...labelStyle, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>或直接貼上活動照片 URL（每行一張）</label>
+            <div style={{ marginTop: 12 }}>
+              <GalleryReorder urls={imageUrls} onChange={setImageUrls} />
+            </div>
+            <details style={{ marginTop: 12, marginBottom: 16 }}>
+              <summary style={{ fontSize: 12, color: '#6b7280', cursor: 'pointer' }}>進階：直接編輯活動照片 URL（每行一張）</summary>
+              <label htmlFor="activity-edit-gallery-urls" style={{ ...labelStyle, marginTop: 8, marginBottom: 4, fontSize: 12, color: '#6b7280' }}>每行一張，順序即顯示順序</label>
               <textarea
                 id="activity-edit-gallery-urls"
                 value={imageUrls.join('\n')}
@@ -1293,18 +1297,7 @@ export default function AdminActivityEditPage() {
                 style={{ ...fieldStyle, fontSize: 13 }}
                 placeholder={'https://example.com/a.webp\nhttps://example.com/b.webp'}
               />
-              {imageUrls.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
-                  {imageUrls.map((url, i) => (
-                    <div key={url + i} style={{ display: 'flex', alignItems: 'center', gap: 10, border: '1px solid #e5e7eb', borderRadius: 8, padding: 8, background: '#fff' }}>
-                      <Image src={url} alt={`活動圖片 ${i + 1} 預覽`} style={{ width: 96, height: 64, objectFit: 'cover', borderRadius: 6, background: '#f3f4f6' }} width={96} height={64} />
-                      <div style={{ flex: 1, fontSize: 12, color: '#4b5563', wordBreak: 'break-all' }}>{url}</div>
-                      <button type="button" onClick={() => setImageUrls(imageUrls.filter((_, idx) => idx !== i))} style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer' }}>移除</button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            </details>
 
             <h3 style={sectionTitle}>📋 行程詳情</h3>
             <label style={labelStyle}>
