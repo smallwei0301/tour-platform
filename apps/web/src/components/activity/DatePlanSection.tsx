@@ -225,7 +225,8 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
     defaultPlans: DEFAULT_PLANS,
   });
   const PLANS: PlanConfig[] = resolvedPlans as PlanConfig[];
-  const VISIBLE_PLANS = showAllPlans ? PLANS : PLANS.slice(0, 2);
+  // 全部方案都 render 進 DOM；手機收合時由 CSS 只顯示前 2 個（.kkd-plans-list:not(.show-all)），
+  // 非手機則依螢幕寬度多欄並排、全部直接顯示（見 globals.css 的 .kkd-plans-list 響應式規則）。
   const KNOWN_PLAN_IDS: string[] = PLANS.map((p: PlanConfig) => p.id);
 
   return (
@@ -271,8 +272,8 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
         </p>
       ) : planConfigState === 'no_active_plans' || planConfigState === 'no_plans' ? null : (
         <>
-          <div className="kkd-plans-list">
-            {VISIBLE_PLANS.map((plan: PlanConfig) => {
+          <div className={`kkd-plans-list${showAllPlans ? ' show-all' : ''}`}>
+            {PLANS.map((plan: PlanConfig) => {
               const basePrice = activity.priceTwd ?? activity.price ?? 0;
               const planPrice = resolvePlanPrice(plan, basePrice, 1);
               const origPrice = Math.round(planPrice * 1.25);
@@ -473,7 +474,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
           </div>
 
           {PLANS.length > 2 && (
-            <div style={{ marginTop: 16, textAlign: 'center' }}>
+            <div className="kkd-plans-more-btn-wrap" style={{ marginTop: 16, textAlign: 'center' }}>
               <button
                 type="button"
                 className="kkd-more-dates-btn"
