@@ -12,7 +12,7 @@
 
 | 面向 | 前次 | 本次 | 一句話結論 |
 |---|---|---|---|
-| 產品完成度 | ★★★★☆ | ★★★★☆ | 前次 P0/P1 全落地（評論、篩選、促銷、改期、留言串），新缺口移到「憑證核銷、金流多元化、發票合規」 |
+| 產品完成度 | ★★★★☆ | ★★★★☆ | 前次 P0/P1 全落地（評論、篩選、促銷、改期、留言串），新缺口移到「憑證核銷／完成鏈路漏單、金流多元化、登入方式」 |
 | 系統架構 | ★★★★☆ | ★★★☆☆ | 設計仍成熟，但 `db.mjs` 反向增長 58%、legacy 退役卡關，債務淨值變差 |
 | SEO | ★★★★☆ | ★★★☆☆ | 單語系時代的優等生；上了英文站之後 canonical/hreflang/`<html lang>` 全缺，成為最大 SEO 洞 |
 | 資安 | ★★★★☆ | ★★★★☆ | 前次 3 個補強點全修；本次深掘出密碼雜湊強度與 timing-safe 比對等新的第二層問題 |
@@ -60,10 +60,29 @@
 
 ### P0 — 轉換與合規（KKday 使用者最有感的新落差）
 
-#### 1. 電子憑證 QR code（核銷體驗缺席）
+#### 1. 電子憑證 QR code（核銷體驗缺席）＋ 完成鏈路漏單風險（本輪重大發現）
 - **現況**：活動頁的「電子憑證」只是信任徽章文字（`policyEvoucher`）；全 repo 無任何 QR 產生（grep `QRCode/toDataURL/qr_code` 僅命中一支無關 e2e）。旅客出示方式停留在「打開訂單頁給導遊看」。
-- **KKday 視角**：付款完成 → 拿到帶 QR 的憑證（可存手機、可離線）是 OTA 的基本安心感；導遊端掃碼核銷也讓「已使用」狀態有真實依據。
-- **建議**：訂單 confirmed 後產生簽章 QR（訂單號＋HMAC，複用 `guide-auth.ts` 的簽章模式），旅客訂單頁顯示＋附進通知 email；導遊端加掃碼/輸碼核銷把訂單推進 completed。這同時修正另一個隱性問題：completed 目前缺乏明確觸發者。
+- **🔴 連帶發現（已複核）— 訂單「完成」目前純人工，無任何自動化**：
+  - `booking-state.ts` 的 `complete()` 方法在 `app/`／`src/` **無任何 production 呼叫者**（僅測試呼叫）。
+  - 4 個 cron sweep（`unpaid-expiry`／`pre-tour-reminder`／`review-invitation`／`settlement`）**沒有一個會把 `confirmed` 轉 `completed`**。
+  - `settlement/sweep` 只結算「已是 completed」的訂單（`app/api/internal/settlement/sweep/route.ts:92` `.eq('status','completed')`）。
+  - 唯一推進 `completed` 的路徑＝**admin 後台手動改狀態**（`app/api/admin/orders/[orderId]/route.ts` → `updateAdminOrderDb`）。
+  - **後果**：只要沒人手動按完成，訂單永遠卡在 `confirmed` → 導遊帶完團卻結算不到款、completed 才觸發的評論邀請也不會發。這是**現存**漏單風險，非 QR 上線後才有。
+- **KKday 視角**：付款完成 → 拿到帶 QR 的憑證（可存手機、可離線）是 OTA 的基本安心感；導遊掃碼核銷同時解決「completed 缺明確觸發者」。
+
+- **建議（憑證＋漏單備援一併設計，核心原則：憑證永不是唯一證據，DB 訂單才是 source of truth）**：
+
+  **第一層 — 憑證出示/掃描失效仍能核對**
+  1. 同一份簽章資料多重呈現：QR 只是「訂單簽章 token（訂單號＋HMAC，複用 `guide-auth.ts` 簽章）」的一種畫法，訂單頁同時顯示人類可讀短碼＋姓名＋活動＋時間。
+  2. 導遊當日出團名冊為權威 fallback：憑證系統整組失效，導遊仍可用短碼/姓名比對名冊放行。
+  3. 離線可用：token 自帶簽章、不依賴掃描當下連線；截圖可出示。驗證失敗只擋「自動核銷」，不擋「人工放行」。
+
+  **第二層 — 完成狀態備援（三道防線，皆冪等、共用同一 `complete` 轉移，重複處理為 no-op）**
+  1. **自動完成 sweep（新 cron，仿 `unpaid-expiry-sweep`）**：`confirmed` 且 `scheduleEndAt < now − 寬限期`（建議 24–48h）且無 pending refund → 自動轉 `completed`。掃碼核銷＝提前、明確路徑；此 sweep 為兜底，確保結算/評論不靜默卡死。
+  2. **漏單對帳告警**：查詢「出團結束超過寬限期仍停 `confirmed`」的訂單 → 經既有 `recordIncident`（`src/lib/incidents.ts`，含 PII 遮罩＋Telegram/email）通知營運。自動完成 cron 本身出錯時人也會被 ping。
+  3. **admin 手動覆寫**：保留為終極人工 fallback。
+
+  優先序：**掃碼核銷（最佳）→ 自動完成 sweep（兜底）→ 對帳告警（保險）→ admin 手動（終極）**，任一層失效由下一層接住。
 
 #### 2. 登入方式單一（只有 Google OAuth）
 - **現況**：`app/login/page.tsx` 僅 `signInWithOAuth({ provider: 'google' })`。無 Email/密碼、無 LINE Login、無 Apple。
@@ -75,10 +94,7 @@
 - **KKday 視角**：LINE Pay／Apple Pay／超商代碼／ATM 是台灣 OTA 標配；高單價深度行程（數千～上萬）沒有分期，會直接掉單。
 - **建議**：ECPay 本身支援 ATM/超商/分期，屬同一金流商的 ChoosePayment 參數擴充，邊際成本低——優先開 ATM＋超商代碼；LINE Pay 第二波。
 
-#### 4. 電子發票欄位（統編／載具／捐贈碼）
-- **現況**：checkout 與會員頁皆無發票相關欄位（grep 無 traveler 端 invoice/統編/載具 UI）。
-- **KKday 視角**：台灣電商的合規基本盤；公司行號報帳需要統編，個人要載具。正式開賣前必須有解（即使第一版只是「發票由平台統一開立、需統編請聯絡客服」的明確揭露）。
-- **建議**：結帳 Step2 加發票類型選擇（個人載具／統編／捐贈），先落庫存欄位＋後台顯示，串 ECPay 電子發票加值服務為第二階段。
+> ~~電子發票欄位~~：**已由 owner 於 2026-07-02 拍板取消**——平台目前不經手發票，故不列為缺口，後續路線圖亦不實作。
 
 ### P1 — 體驗完整度
 
@@ -201,9 +217,8 @@
 5. 【債】TS 版本對齊＋`@types/node` 降版＋`packages/config` 處置（A6）
 
 ### 短期（1–2 週，轉換率與合規優先）
-6. 【產品 P0】電子憑證 QR＋導遊掃碼核銷（P0-1）
-7. 【產品 P0】結帳發票欄位（統編/載具/捐贈）第一階段落庫（P0-4）
-8. 【產品 P0】Supabase Email OTP 登入（P0-2 前半；LINE Login 走 #1526）
+6. 【產品 P0＋🔴 修漏單】電子憑證 QR＋導遊掃碼核銷＋**自動完成 sweep cron＋漏單對帳告警**（P0-1；完成鏈路備援三道防線）
+7. 【產品 P0】Supabase Email OTP 登入（P0-2 前半；LINE Login 走 #1526）
 9. 【產品 P1】活動列表無限捲動＋「評價最高」排序（P1-6）
 10. 【資安】S3 header-token session 政策決策＋文件化；**#1121 憑證輪替排期執行**
 11. 【SEO】`<html lang>` 隨 locale 修正（root layout 重構）
@@ -239,5 +254,7 @@
 | V2 flag 三變數 | `apps/web/src/config/feature-flags.mjs`、`app/api/orders/route.ts:23-50` |
 | 登入單一方式 | `apps/web/app/login/page.tsx` |
 | 憑證徽章（無 QR） | 活動頁 `policyEvoucher` 文案（`app/[locale]/activities/[region]/[slug]/page.tsx`） |
+| 完成狀態純人工（漏單源） | `booking-state.ts:332`（`complete()` 無 production 呼叫者）、`app/api/admin/orders/[orderId]/route.ts`（唯一觸發）、`app/api/internal/settlement/sweep/route.ts:92`（只結算已 completed） |
+| guide 密碼強度下限偏低 | `app/api/guide/auth/session/route.ts:94`（`password.length < 6`） |
 | Rate limiter | `apps/web/src/lib/rate-limit.ts` |
 | 事故上報單點 | `apps/web/src/lib/incidents.ts` |
