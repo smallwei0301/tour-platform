@@ -19,7 +19,7 @@ export default function GlobalError({
   }, [error]);
 
   return (
-    <html lang="zh-TW">
+    <html lang="zh-Hant">
       <body style={{ fontFamily: 'sans-serif', padding: '2rem', textAlign: 'center' }}>
         <h2 style={{ color: '#e85d9b' }}>系統發生錯誤</h2>
         <p style={{ color: '#666' }}>我們已記錄此問題，請稍後再試。</p>
