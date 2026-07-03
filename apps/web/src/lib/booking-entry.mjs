@@ -7,23 +7,22 @@ function uniqueTrimmedValues(rawValues) {
   return Array.from(values);
 }
 
+// Legacy 退役階段二（#1406，owner 拍板 2026-07-02 務實派解鎖）：
+// 移除 legacy `/checkout` 入口。booking entry 一律導向 Booking V2 `/booking/[slug]`，
+// 即使 `NEXT_PUBLIC_BOOKING_V2_ENABLED=0` 也不再產生可達 legacy checkout 的連結。
+// `useBookingV2` 參數保留以維持既有呼叫端簽章相容，但不再影響輸出（一律走 V2）。
+// flag 本身於階段三才退場（見 docs/operations/booking-v2-rollback-runbook.md）。
 export function resolveBookingEntryHref({ activitySlug, useBookingV2 }) {
+  void useBookingV2;
   const slug = encodeURIComponent(String(activitySlug || '').trim());
   if (!slug) return '/activities';
-  return useBookingV2 ? `/booking/${slug}` : `/checkout?slug=${slug}`;
+  return `/booking/${slug}`;
 }
 
 export function resolvePlanBookingHref({ activitySlug, planId, date, scheduleId, useBookingV2 }) {
+  void useBookingV2;
   const slug = encodeURIComponent(String(activitySlug || '').trim());
   if (!slug) return '/activities';
-
-  if (!useBookingV2) {
-    const params = new URLSearchParams({ slug: String(activitySlug || '').trim() });
-    if (planId) params.set('plan', String(planId));
-    if (date) params.set('date', String(date));
-    if (scheduleId) params.set('scheduleId', String(scheduleId));
-    return `/checkout?${params.toString()}`;
-  }
 
   const params = new URLSearchParams();
   if (planId) params.set('plan', String(planId));
