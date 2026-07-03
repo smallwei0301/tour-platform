@@ -18,6 +18,12 @@
 - Solution：走正門——AskUserQuestion 取得使用者明確授權後再寫 override 檔並引用授權原文
 - 適用範圍：一切 P0-OVERRIDE 情境；分類器是協議之外的第二道真實防線，別試圖說服它
 
+## [2026-07-03] commit-gate-vs-compound-git-add
+- Context：純 docs 變更（.cursor/、docs/）想一行 `git add X && git commit -m ...` 提交
+- Error：被 bash-guard 擋「測試證據已過期」——明明是 docs-only 該豁免。原因：hook 在整條複合指令執行「前」評估，此時 `git add` 尚未生效、暫存區是空的，docs 豁免判斷不到檔案，落到證據 gate
+- Solution：**先 `git add`（獨立一次）再 `git commit`（獨立一次）**；commit 時暫存區已有 docs 檔，豁免正常生效
+- 適用範圍：所有靠 `git diff --cached` 判斷的 commit gate 情境；code commit 不受影響（本來就要證據）
+
 ## [2026-07-03] npm-install-supabase-postinstall-403
 - Context：fresh container 依 CLAUDE.md 跑 `npm install`
 - Error：`supabase` 套件 postinstall 從 github.com/supabase/cli releases 下載執行檔被代理擋（`403 Forbidden` → `Z_DATA_ERROR`/`incorrect header check`），整個 install 失敗
