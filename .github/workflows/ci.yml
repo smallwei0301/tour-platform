@@ -37,5 +37,10 @@ jobs:
       - name: Web build
         run: npm run build -w @tour/web
 
+      # ISR on-demand 靜態生成實測（#1585）— dev server 與瀏覽器 E2E lane 測不到
+      # ISR render 誤用 dynamic API 的 500，只有 production build + next start 能重現。
+      - name: ISR smoke
+        run: bash scripts/isr-smoke.sh
+
       - name: Preflight
         run: bash scripts/preflight-check.sh
