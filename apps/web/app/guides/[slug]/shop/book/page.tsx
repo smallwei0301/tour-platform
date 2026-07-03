@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../src/lib/supabase/client';
+import styles from '../shop-booking.module.css';
 
 type ShopPlan = {
   id: string;
@@ -24,6 +25,33 @@ type V2Slot = { startAt: string; endAt: string; capacityLeft: number; isAvailabl
 type V2DateAvailability = { date: string; state: 'available' | 'blocked' | 'no_slots'; capacityLeft: number };
 
 const TZ = 'Asia/Taipei';
+const BOOKING_STEPS = [
+  { id: 1, label: '選路線' },
+  { id: 2, label: '留時段' },
+  { id: 3, label: '付款' },
+] as const;
+
+const STEP_COPY = {
+  1: {
+    eyebrow: 'Route',
+    title: '先選一條想走的徑',
+    intro: '每個方案都由引路人自己開出。先確認路線、人數與預估費用，再進下一步。',
+  },
+  2: {
+    eyebrow: 'Date',
+    title: '替這趟旅程留時間',
+    intro: '月曆只亮出可預約日。選好日期後，再留下導遊出發前需要聯絡你的資訊。',
+  },
+  3: {
+    eyebrow: 'Payment',
+    title: '確認與付款',
+    intro: '最後核對路線、日期與金額。付款完成後，你可以在會員專區追蹤訂單。',
+  },
+} as const;
+
+function cx(...classes: Array<string | false | null | undefined>): string {
+  return classes.filter(Boolean).join(' ');
+}
 
 function priceOf(plan: ShopPlan, guests: number): number {
   const base = plan.basePrice ?? 0;
@@ -34,7 +62,11 @@ function fmtSlot(startAt: string): string {
   return new Date(startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false });
 }
 
-// ── 月曆日期選擇器（對齊 PM 參考圖：整月格、可預約日可點、過去/無空檔灰階）──
+function fmtPrice(amount: number | null): string {
+  return `NT$${(amount ?? 0).toLocaleString()}`;
+}
+
+// ── 月曆日期選擇器（對齊 Midao 古紙／山墨視覺語言）──
 const CAL_WEEK = ['一', '二', '三', '四', '五', '六', '日']; // 週一起始
 const CAL_MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
@@ -72,20 +104,17 @@ function MonthCalendar({
   const goToday = () => { setVy(today.getFullYear()); setVm(today.getMonth()); };
 
   return (
-    <div className="tp-card" style={{ padding: 14 }} data-testid="shop-calendar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <button type="button" aria-label="上個月" onClick={prev}
-          style={{ border: 'none', background: 'transparent', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--tp-text)', padding: '2px 8px' }}>‹</button>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>{vy} 年 {CAL_MONTHS[vm]}</span>
-        <button type="button" aria-label="下個月" onClick={next}
-          style={{ border: 'none', background: 'transparent', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--tp-text)', padding: '2px 8px' }}>›</button>
-        <button type="button" onClick={goToday}
-          style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--tp-primary)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>今天</button>
+    <div className={styles.calendar} data-testid="shop-calendar">
+      <div className={styles.calendarHead}>
+        <button type="button" aria-label="上個月" onClick={prev} className={styles.calendarNav}>‹</button>
+        <span className={styles.calendarTitle}>{vy} 年 {CAL_MONTHS[vm]}</span>
+        <button type="button" aria-label="下個月" onClick={next} className={styles.calendarNav}>›</button>
+        <button type="button" onClick={goToday} className={styles.todayButton}>今天</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', color: 'var(--tp-muted)', fontSize: 13, marginBottom: 6 }}>
+      <div className={styles.calendarWeek}>
         {CAL_WEEK.map((w) => <span key={w}>{w}</span>)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div className={styles.calendarGrid}>
         {cells.map((c, i) => {
           if (!c) return <span key={`e${i}`} />;
           const day = Number(c.slice(-2));
@@ -93,19 +122,20 @@ function MonthCalendar({
           const isSelected = selected === c;
           const isToday = c === todayKey;
           return (
-            <button key={c} type="button" data-testid={isAvail ? 'shop-date' : undefined}
+            <button
+              key={c}
+              type="button"
+              data-testid={isAvail ? 'shop-date' : undefined}
               disabled={!isAvail}
               onClick={() => isAvail && onSelect(c)}
               aria-label={`${c}${isAvail ? ' 可預約' : ' 不可預約'}`}
-              style={{
-                aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: 'none', borderRadius: '50%', fontSize: 15,
-                cursor: isAvail ? 'pointer' : 'default',
-                background: isSelected ? 'var(--tp-primary)' : 'transparent',
-                color: isSelected ? '#fff' : isAvail ? 'var(--tp-text)' : '#cbd5e1',
-                fontWeight: isAvail ? 600 : 400,
-                boxShadow: isToday && !isSelected ? 'inset 0 0 0 1px var(--tp-primary)' : 'none',
-              }}>
+              className={cx(
+                styles.calendarDay,
+                isAvail && styles.calendarDayAvailable,
+                isToday && styles.calendarDayToday,
+                isSelected && styles.calendarDaySelected
+              )}
+            >
               {day}
             </button>
           );
@@ -355,56 +385,87 @@ export default function GuideShopBookingPage() {
   // ── 畫面 ─────────────────────────────────────────────────
   if (authState !== 'authed') {
     return (
-      <main className="tp-light-page tp-container" style={{ padding: '60px 0', textAlign: 'center', maxWidth: 560 }}>
-        <p style={{ color: 'var(--tp-muted)' }}>{authState === 'checking' ? '確認登入狀態中…' : '請先登入會員'}</p>
+      <main className={`tp-light-page tp-container ${styles.shell}`}>
+        <div className={styles.statePanel}>
+          <p className={styles.loadingText}>{authState === 'checking' ? '正在確認會員狀態…' : '請先登入會員'}</p>
+        </div>
       </main>
     );
   }
   if (loadError) {
     return (
-      <main className="tp-light-page tp-container" style={{ padding: '60px 0', textAlign: 'center', maxWidth: 560 }}>
-        <p style={{ color: 'var(--tp-danger)' }}>{loadError}</p>
-        <Link className="tp-link" href={`/guides/${slug}/shop`}>返回商店首頁</Link>
+      <main className={`tp-light-page tp-container ${styles.shell}`}>
+        <div className={styles.statePanel}>
+          <p className={styles.errorBanner}>{loadError}</p>
+          <Link className="tp-link" href={`/guides/${slug}/shop`}>返回商店首頁</Link>
+        </div>
       </main>
     );
   }
   if (!shop) {
     return (
-      <main className="tp-light-page tp-container" style={{ padding: '60px 0', textAlign: 'center', maxWidth: 560 }}>
-        <p style={{ color: 'var(--tp-muted)' }}>載入中…</p>
+      <main className={`tp-light-page tp-container ${styles.shell}`}>
+        <div className={styles.statePanel}>
+          <p className={styles.loadingText}>正在打開祕境...</p>
+        </div>
       </main>
     );
   }
 
   const total = selectedPlan ? priceOf(selectedPlan, guests) : 0;
+  const stepCopy = STEP_COPY[step];
+  const stepOneDisabled = !selectedPlan;
+  const stepTwoDisabled = !selectedSlotStartAt || busy || !contactName || !contactPhone;
+  const stepThreeDisabled = busy || (payMethod === 'transfer' && !transferInfo?.configured);
 
   return (
-    <main className="tp-light-page tp-container" style={{ paddingBottom: 110, maxWidth: 560 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 18 }}>
+    <main className={`tp-light-page tp-container ${styles.shell}`}>
+      <div className={styles.backRow}>
         {step === 1 ? (
-          <Link href={`/guides/${slug}/shop`} className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }}>取消預約</Link>
+          <Link href={`/guides/${slug}/shop`} className={styles.subtleButton}>取消預約</Link>
         ) : (
-          <button className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }} onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>← 上一步</button>
+          <button type="button" className={styles.subtleButton} onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>← 上一步</button>
         )}
-        <span style={{ color: 'var(--tp-muted)', fontSize: 13 }}>目前選擇：{shop.guide.displayName}</span>
+        <span className={styles.currentGuide}>引路人 · {shop.guide.displayName}</span>
       </div>
 
+      <section className={styles.fieldHeader}>
+        <p className={styles.eyebrow}>{stepCopy.eyebrow}</p>
+        <h1 className={styles.pageTitle}>{stepCopy.title}</h1>
+        <p className={styles.pageIntro}>{stepCopy.intro}</p>
+        <ol className={styles.stepper} aria-label="預約進度">
+          {BOOKING_STEPS.map((item) => (
+            <li
+              key={item.id}
+              className={cx(
+                styles.stepPill,
+                step === item.id && styles.stepPillCurrent,
+                step > item.id && styles.stepPillDone
+              )}
+            >
+              <span>{item.id}</span>
+              {item.label}
+            </li>
+          ))}
+        </ol>
+      </section>
+
       {error && (
-        <div data-testid="shop-error" style={{ marginTop: 14, background: '#fff4f4', border: '1px solid #f5c2c2', color: '#b42318', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>
-          ⚠️ {error}
+        <div data-testid="shop-error" className={styles.errorBanner}>
+          {error}
         </div>
       )}
 
       {/* ── Step1：選方案 ── */}
       {step === 1 && (
-        <div style={{ marginTop: 16 }}>
+        <div className={styles.bookContent}>
           {shop.activitiesByRegion.length === 0 && (
-            <p style={{ color: 'var(--tp-muted)' }}>此導遊目前沒有可預約的行程。</p>
+            <p className={styles.emptyText}>此導遊目前沒有可預約的行程。</p>
           )}
           {shop.activitiesByRegion.map((group) => (
-            <section key={group.region} style={{ marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, margin: '0 0 10px' }}>{group.region}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <section key={group.region} className={styles.regionSection}>
+              <h2 className={styles.regionTitle}>{group.region}</h2>
+              <div className={styles.optionStack}>
                 {group.activities.flatMap((activity) =>
                   activity.plans.map((plan) => {
                     const active = selectedPlanId === plan.id;
@@ -414,18 +475,18 @@ export default function GuideShopBookingPage() {
                         type="button"
                         data-testid="shop-plan-card"
                         onClick={() => selectPlan(activity, plan)}
-                        className="tp-card"
-                        style={{
-                          textAlign: 'left', cursor: 'pointer', padding: 16,
-                          border: active ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)',
-                        }}
+                        className={cx(styles.optionCard, active && styles.optionCardActive)}
                       >
-                        <p style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{activity.title}</p>
-                        <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14 }}>
-                          {plan.duration ? `🕐 ${plan.duration}　` : ''}💲 NT${(plan.basePrice ?? 0).toLocaleString()}
-                          {plan.priceType === 'per_group' ? ' / 組' : ' / 人'}
-                        </p>
-                        <p style={{ margin: '6px 0 0', color: 'var(--tp-primary)', fontSize: 13, fontWeight: 600 }}>#{plan.name}</p>
+                        <span className={styles.optionHead}>
+                          <span className={styles.optionKicker}>{activity.region || group.region}</span>
+                          <span className={styles.optionMarker}>{active ? '已選' : '選這條'}</span>
+                        </span>
+                        <span className={styles.optionTitle}>{activity.title}</span>
+                        <span className={styles.optionMeta}>
+                          {plan.duration && <span>{plan.duration}</span>}
+                          <span>{fmtPrice(plan.basePrice)}{plan.priceType === 'per_group' ? ' / 組' : ' / 人'}</span>
+                        </span>
+                        <span className={styles.optionTag}>#{plan.name}</span>
                       </button>
                     );
                   })
@@ -436,20 +497,36 @@ export default function GuideShopBookingPage() {
 
           {/* 人數 */}
           {selectedPlan && (
-            <section style={{ marginTop: 8 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>👥 參加人數</p>
-              <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>
-                <button type="button" aria-label="減少人數" disabled={guests <= (selectedPlan.minParticipants || 1)}
-                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}
-                  style={{ padding: '8px 16px', border: 'none', background: '#f9fafb', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>−</button>
-                <span data-testid="shop-guests" style={{ padding: '8px 20px', minWidth: 40, textAlign: 'center' }}>{guests}</span>
-                <button type="button" aria-label="增加人數" disabled={selectedPlan.maxParticipants != null && guests >= selectedPlan.maxParticipants}
-                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}
-                  style={{ padding: '8px 16px', border: 'none', background: '#f9fafb', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>+</button>
+            <section className={styles.counterCard}>
+              <div className={styles.counterRow}>
+                <div>
+                  <p className={styles.sectionLabel}>同行人數</p>
+                  <p className={styles.counterHint}>
+                    最少 {selectedPlan.minParticipants || 1} 人{selectedPlan.maxParticipants ? `，最多 ${selectedPlan.maxParticipants} 人` : ''}
+                  </p>
+                </div>
+                <div className={styles.counter}>
+                  <button
+                    type="button"
+                    aria-label="減少人數"
+                    disabled={guests <= (selectedPlan.minParticipants || 1)}
+                    onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}
+                    className={styles.counterButton}
+                  >
+                    −
+                  </button>
+                  <span data-testid="shop-guests" className={styles.counterValue}>{guests}</span>
+                  <button
+                    type="button"
+                    aria-label="增加人數"
+                    disabled={selectedPlan.maxParticipants != null && guests >= selectedPlan.maxParticipants}
+                    onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}
+                    className={styles.counterButton}
+                  >
+                    +
+                  </button>
+                </div>
               </div>
-              <p style={{ marginTop: 6, color: 'var(--tp-muted)', fontSize: 13 }}>
-                最少 {selectedPlan.minParticipants || 1} 人{selectedPlan.maxParticipants ? `，最多 ${selectedPlan.maxParticipants} 人` : ''}
-              </p>
             </section>
           )}
         </div>
@@ -457,126 +534,168 @@ export default function GuideShopBookingPage() {
 
       {/* ── Step2：選日期與時間 ── */}
       {step === 2 && selectedPlan && (
-        <div style={{ marginTop: 16 }}>
-          <h2 style={{ fontSize: 18, margin: '0 0 6px' }}>{selectedActivity?.title}</h2>
-          <p style={{ color: 'var(--tp-muted)', fontSize: 14, marginTop: 0 }}>#{selectedPlan.name}・{guests} 人</p>
+        <div className={styles.bookContent}>
+          <div className={styles.selectedRoute}>
+            <h2>{selectedActivity?.title}</h2>
+            <p>#{selectedPlan.name}・{guests} 人</p>
+          </div>
 
-          <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>選擇日期</p>
-          {slotsLoading && <p style={{ color: 'var(--tp-muted)' }}>載入可預約日期中…</p>}
-          {!slotsLoading && (
-            <MonthCalendar
-              availableDates={availableDateSet}
-              selected={selectedDate}
-              onSelect={(d) => { setSelectedDate(d); setSelectedSlotStartAt(''); }}
-            />
-          )}
+          <section className={styles.regionSection}>
+            <h3 className={styles.sectionLabel}>選擇日期</h3>
+            {slotsLoading && <p className={styles.loadingText}>正在載入可預約日期…</p>}
+            {!slotsLoading && (
+              <MonthCalendar
+                availableDates={availableDateSet}
+                selected={selectedDate}
+                onSelect={(d) => { setSelectedDate(d); setSelectedSlotStartAt(''); }}
+              />
+            )}
+          </section>
 
           {selectedDate && (
-            <>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>{selectedDate.slice(5).replace('-', '/')} 可預約時間</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+            <section className={styles.regionSection}>
+              <h3 className={styles.sectionLabel}>{selectedDate.slice(5).replace('-', '/')} 可預約時間</h3>
+              <div className={styles.slotGrid}>
                 {slotsForSelectedDate.map((s) => (
-                  <button key={s.startAt} type="button" data-testid="shop-slot"
+                  <button
+                    key={s.startAt}
+                    type="button"
+                    data-testid="shop-slot"
                     onClick={() => setSelectedSlotStartAt(s.startAt)}
-                    className="tp-card"
-                    style={{ padding: '10px 0', cursor: 'pointer', textAlign: 'center', fontWeight: 600,
-                      border: selectedSlotStartAt === s.startAt ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
+                    className={cx(styles.slotButton, selectedSlotStartAt === s.startAt && styles.slotButtonSelected)}
+                  >
                     {fmtSlot(s.startAt)}
                   </button>
                 ))}
-                {slotsForSelectedDate.length === 0 && <p style={{ color: 'var(--tp-muted)', gridColumn: '1 / -1' }}>此日期沒有可預約時段。</p>}
+                {slotsForSelectedDate.length === 0 && <p className={styles.emptyText}>此日期沒有可預約時段。</p>}
               </div>
-            </>
+            </section>
           )}
 
           {/* 聯絡資訊（draft 必填，預填自會員資料）*/}
-          <section style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <p style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>聯絡資訊</p>
-            <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="姓名"
-              style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
-            <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="電話" inputMode="tel"
-              style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
-            <input value={contactEmail} readOnly placeholder="電子信箱"
-              style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, background: '#f3f4f6' }} />
+          <section className={styles.formCard}>
+            <h3 className={styles.sectionLabel}>聯絡資訊</h3>
+            <div className={styles.fieldStack}>
+              <input
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                placeholder="姓名"
+                aria-label="姓名"
+                className={styles.input}
+              />
+              <input
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                placeholder="電話"
+                aria-label="電話"
+                inputMode="tel"
+                className={styles.input}
+              />
+              <input
+                value={contactEmail}
+                readOnly
+                placeholder="電子信箱"
+                aria-label="電子信箱"
+                className={styles.input}
+              />
+            </div>
           </section>
         </div>
       )}
 
       {/* ── Step3：付款 ── */}
       {step === 3 && selectedPlan && (
-        <div style={{ marginTop: 16 }}>
-          <h2 style={{ fontSize: 18, margin: '0 0 12px' }}>確認與付款</h2>
-          <div className="tp-card" style={{ padding: 16, marginBottom: 16 }}>
-            <p style={{ margin: 0, fontWeight: 700 }}>{selectedActivity?.title}　#{selectedPlan.name}</p>
-            <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14 }}>
+        <div className={styles.bookContent}>
+          <div className={styles.paymentSummary}>
+            <p className={styles.paymentTitle}>{selectedActivity?.title}　#{selectedPlan.name}</p>
+            <p className={styles.paymentMeta}>
               {selectedDate} {selectedSlotStartAt ? fmtSlot(selectedSlotStartAt) : ''}・{guests} 人
             </p>
-            <p style={{ margin: '8px 0 0', fontWeight: 700, fontSize: 18 }}>總計 NT${total.toLocaleString()}</p>
+            <p className={styles.totalText}>總計 NT${total.toLocaleString()}</p>
           </div>
 
-          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>付款方式</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label className="tp-card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer',
-              border: payMethod === 'ecpay' ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
-              <input type="radio" name="pay" checked={payMethod === 'ecpay'} onChange={() => setPayMethod('ecpay')} />
-              💳 信用卡（ECPay 安全付款）
-            </label>
-            <label className="tp-card" data-testid="shop-pay-transfer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer',
-              border: payMethod === 'transfer' ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
-              <input type="radio" name="pay" checked={payMethod === 'transfer'} onChange={() => setPayMethod('transfer')} />
-              🏦 自行匯款（人工核帳）
-            </label>
-          </div>
-
-          {payMethod === 'transfer' && (
-            <div data-testid="shop-transfer-info" className="tp-card" style={{ marginTop: 12, padding: 16, background: 'var(--tp-bg-soft, #f9fafb)' }}>
-              {transferInfo == null && <p style={{ color: 'var(--tp-muted)', margin: 0 }}>載入匯款資訊中…</p>}
-              {transferInfo && !transferInfo.configured && (
-                <p style={{ color: 'var(--tp-danger)', margin: 0 }}>此導遊尚未提供匯款資訊，請改用信用卡付款。</p>
-              )}
-              {transferInfo?.configured && (
-                <div style={{ fontSize: 14, lineHeight: 1.9 }}>
-                  <p style={{ margin: 0 }}>銀行：{transferInfo.bankName}</p>
-                  <p style={{ margin: 0 }}>戶名：{transferInfo.accountName}</p>
-                  <p style={{ margin: 0 }}>帳號：{transferInfo.accountNumber}</p>
-                  {transferInfo.transferNote && <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)' }}>{transferInfo.transferNote}</p>}
-                  <p style={{ margin: '8px 0 0', color: 'var(--tp-muted)', fontSize: 13 }}>
-                    請完成匯款後按下方按鈕送出，我們將人工核對入帳後為您確認預約。
-                  </p>
-                </div>
-              )}
+          <section className={styles.regionSection}>
+            <h2 className={styles.sectionLabel}>付款方式</h2>
+            <div className={styles.paymentStack}>
+              <label className={cx(styles.paymentOption, payMethod === 'ecpay' && styles.paymentOptionActive)}>
+                <input type="radio" name="pay" checked={payMethod === 'ecpay'} onChange={() => setPayMethod('ecpay')} />
+                <span className={styles.paymentText}>
+                  <strong>信用卡</strong>
+                  <span>ECPay 安全付款，付款完成後自動確認。</span>
+                </span>
+              </label>
+              <label className={cx(styles.paymentOption, payMethod === 'transfer' && styles.paymentOptionActive)} data-testid="shop-pay-transfer">
+                <input type="radio" name="pay" checked={payMethod === 'transfer'} onChange={() => setPayMethod('transfer')} />
+                <span className={styles.paymentText}>
+                  <strong>自行匯款</strong>
+                  <span>送出後由導遊人工核帳。</span>
+                </span>
+              </label>
             </div>
-          )}
+
+            {payMethod === 'transfer' && (
+              <div data-testid="shop-transfer-info" className={styles.transferCard}>
+                {transferInfo == null && <p className={styles.loadingText}>載入匯款資訊中…</p>}
+                {transferInfo && !transferInfo.configured && (
+                  <p className={styles.errorBanner}>此導遊尚未提供匯款資訊，請改用信用卡付款。</p>
+                )}
+                {transferInfo?.configured && (
+                  <div className={styles.paymentMeta}>
+                    <p>銀行：{transferInfo.bankName}</p>
+                    <p>戶名：{transferInfo.accountName}</p>
+                    <p>帳號：{transferInfo.accountNumber}</p>
+                    {transferInfo.transferNote && <p>{transferInfo.transferNote}</p>}
+                    <p>請完成匯款後按下方按鈕送出，我們將人工核對入帳後為您確認預約。</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </section>
         </div>
       )}
 
       {/* ── 固定底部 CTA ── */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px', background: 'var(--tp-card-bg, #fff)', borderTop: '1px solid var(--tp-border)', zIndex: 20 }}>
-        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div className={styles.stickyCta}>
+        <div className={styles.stickyInner}>
           {step === 1 && (
             <>
-              <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                {selectedPlan ? `已選擇 1 項 / ${selectedPlan.duration || '—'} / NT$${total.toLocaleString()}` : '請選擇一個方案'}
+              <p className={styles.stickySummary}>
+                {selectedPlan ? `已選擇 1 項 / ${selectedPlan.duration || '時間待確認'} / NT$${total.toLocaleString()}` : '請先選一條路線。'}
               </p>
-              <button className="tp-btn tp-btn-primary" disabled={!selectedPlan} onClick={() => { setStep(2); }}
-                style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedPlan ? 1 : 0.5 }}>
+              <button
+                className={`tp-btn tp-btn-primary ${styles.primaryCta}`}
+                disabled={stepOneDisabled}
+                onClick={() => { setStep(2); }}
+              >
                 選擇日期和時間 →
               </button>
             </>
           )}
           {step === 2 && (
-            <button className="tp-btn tp-btn-primary" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
-              style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5 }}>
-              {busy ? '處理中…' : '完成預約 →'}
-            </button>
+            <>
+              <p className={styles.stickySummary}>
+                {selectedSlotStartAt ? `${selectedDate} ${fmtSlot(selectedSlotStartAt)} / ${guests} 人 / NT$${total.toLocaleString()}` : '選好日期後，再挑一個可預約時段。'}
+              </p>
+              <button
+                className={`tp-btn tp-btn-primary ${styles.primaryCta}`}
+                disabled={stepTwoDisabled}
+                onClick={createDraft}
+              >
+                {busy ? '處理中…' : '確認這個時段 →'}
+              </button>
+            </>
           )}
           {step === 3 && (
-            <button className="tp-btn tp-btn-primary"
-              disabled={busy || (payMethod === 'transfer' && !transferInfo?.configured)}
-              onClick={confirmPayment}
-              style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: busy || (payMethod === 'transfer' && !transferInfo?.configured) ? 0.5 : 1 }}>
-              {busy ? '處理中…' : payMethod === 'transfer' ? '我已匯款，送出訂單' : `前往付款 NT$${total.toLocaleString()}`}
-            </button>
+            <>
+              <p className={styles.stickySummary}>總計 NT${total.toLocaleString()}</p>
+              <button
+                className={`tp-btn tp-btn-primary ${styles.primaryCta}`}
+                disabled={stepThreeDisabled}
+                onClick={confirmPayment}
+              >
+                {busy ? '處理中…' : payMethod === 'transfer' ? '我已匯款，送出訂單' : `前往付款 NT$${total.toLocaleString()}`}
+              </button>
+            </>
           )}
         </div>
       </div>
