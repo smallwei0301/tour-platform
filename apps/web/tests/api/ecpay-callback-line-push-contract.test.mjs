@@ -28,14 +28,8 @@ test('ecpay callback: ops notify stays gated on source_channel=line, but travele
     'pushTravelerOrderEvent(payment_received) must be ungated, after the ops block');
 });
 
-test('orders route: traveler booking confirmation push is ungated (any bound traveler)', async () => {
-  const src = await read('app/api/orders/route.ts');
-  assert.match(src, /凡綁定 LINE 者都推|any bound traveler/);
-  assert.match(src, /pushTravelerOrderEvent/);
-  assert.match(src, /booking_confirmed/);
-  // must not re-introduce a source-channel gate wrapping the traveler push
-  assert.doesNotMatch(src, /if \(orderSourceChannel === 'line'\) \{[\s\S]*?pushTravelerOrderEvent/);
-});
+// legacy orders route 的建單 hook 已隨 #1407 刪除（該 route 在 prod 早被 410 gate 擋死，
+// 建單通知實際未派發）；V2 鏈的建單/付款通知由 ecpay callback 統一派發，V2 建單即時通知另案追蹤。
 
 test('cancel route: pushes cancellation to the traveler', async () => {
   const src = await read('app/api/me/orders/[orderId]/route.ts');
@@ -49,9 +43,8 @@ test('refund-requests route: pushes refund notices to the traveler', async () =>
   assert.match(src, /refund_requested|refund_executed/);
 });
 
-test('per-guide push is wired into all four order hooks', async () => {
+test('per-guide push is wired into all order hooks (post-#1407: callback/cancel/refund)', async () => {
   const sites = [
-    ['app/api/orders/route.ts', /guide_new_order/],
     ['app/api/payments/ecpay/callback/route.ts', /guide_payment_received/],
     ['app/api/me/orders/[orderId]/route.ts', /guide_order_cancelled/],
     ['app/api/me/orders/[orderId]/refund-requests/route.ts', /guide_refund_requested|guide_refund_executed/],

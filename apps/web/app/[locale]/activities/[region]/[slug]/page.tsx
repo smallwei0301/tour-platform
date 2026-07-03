@@ -21,7 +21,6 @@ import { SelectedPlanProvider } from '../../../../../src/components/activity/Sel
 import { SectionAnchorNav } from '../../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../../src/components/activity/ImageCarousel';
 import { ReviewPhotos } from '../../../../../src/components/activity/ReviewPhotos';
-import { isBookingV2Enabled } from '../../../../../src/config/feature-flags.mjs';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../../src/lib/booking-entry.mjs';
 import { resolveDatePlanPresentation } from '../../../../../src/lib/date-plan-source.mjs';
 import { resolveActivityPriceUnit } from '../../../../../src/lib/activity-price-unit.mjs';
@@ -172,7 +171,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   // 社群口碑語錄正規化為 { author, rating, text }（相容舊純文字資料）
   const warmQuotes = normalizeSocialProofQuotes(activityData.socialProofQuotes);
   const displayedSchedules = activity.schedules || [];
-  const useBookingV2 = isBookingV2Enabled();
   const firstSchedulableEntry = displayedSchedules.find((s: any) => {
     const status = String(s?.status || '').toLowerCase();
     const capacity = Number(s?.capacity ?? 0);
@@ -199,19 +197,16 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           ?? firstSchedulableEntry?.schedule_id
           ?? firstSchedulableEntry?.id
           ?? undefined,
-        useBookingV2,
       })
-    : resolveBookingEntryHref({ activitySlug: activity.slug, useBookingV2 });
+    : resolveBookingEntryHref({ activitySlug: activity.slug });
 
   const imageUrls: string[] = activity.imageUrls?.length ? activity.imageUrls : (activity.coverImageUrl ? [activity.coverImageUrl] : []);
   const originalPrice = Math.round(activity.priceTwd * 1.25);
   const formalPlans = Array.isArray((activity as { plans?: unknown[] }).plans) ? ((activity as { plans?: any[] }).plans || []) : [];
   const datePlanPresentation = resolveDatePlanPresentation({
-    useBookingV2,
     canonicalPlans: formalPlans,
-    defaultPlans: [],
   });
-  const hidePublicBookingCta = Boolean(useBookingV2 && datePlanPresentation.showMissingCanonicalMessage);
+  const hidePublicBookingCta = datePlanPresentation.showMissingCanonicalMessage;
   // 活動層級起價單位跟著方案計價方式走：所有方案皆為「每團報價」時顯示每團單位，
   // 否則維持每人（避免每團方案在 hero／側欄／底部 CTA 仍誤標「/ 人」）。
   const activityPriceUnit = resolveActivityPriceUnit(formalPlans);
@@ -441,7 +436,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             {/* SECTION 1: 方案 (DatePlanSection) */}
             <section id="section-plan" className="kkd-scroll-section">
               <h2 className="kkd-section-title"><PublicIcon name="calendar" size={18} /> {t('sectionSelectPlan')}</h2>
-              <DatePlanSection activity={activity} schedules={displayedSchedules} useBookingV2={useBookingV2} />
+              <DatePlanSection activity={activity} schedules={displayedSchedules} />
             </section>
 
             {/* SECTION 1.5: 詳細行程 — #297 依所選方案顯示該方案後台「行程介紹」站點時間表。
@@ -726,7 +721,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         activityId={activity.id}
         priceLabel={t(isGroupPriced ? 'priceLabelBottomGroup' : 'priceLabelBottom', { price: activity.priceTwd?.toLocaleString() ?? '0' })}
         price={activity.priceTwd || 0}
-        useBookingV2={useBookingV2}
         directBookingHref={directBookingHref}
         bookingUnavailable={hidePublicBookingCta}
       />

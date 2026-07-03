@@ -43,5 +43,5 @@ test('activity detail page keeps ISR shell and does not couple availability to p
   // 即時庫存仍由 client 端另抓。force-dynamic 不得再出現；ISR revalidate 必須保留。
   assert.doesNotMatch(src, /export const dynamic = 'force-dynamic';/);
   assert.match(src, /export const revalidate = 60;/);
-  assert.match(src, /DatePlanSection activity=\{activity\} schedules=\{displayedSchedules\} useBookingV2=\{useBookingV2\} \/>/);
+  assert.match(src, /DatePlanSection activity=\{activity\} schedules=\{displayedSchedules\} \/>/);
 });

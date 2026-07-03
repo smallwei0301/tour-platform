@@ -62,26 +62,8 @@ interface Activity {
   plans?: PlanConfig[] | null;
 }
 
-const DEFAULT_PLANS: PlanConfig[] = [
-  {
-    id: 'half-day',
-    label: 'A. 半日行程',
-    duration: '約 4 小時',
-    priceMultiplier: 1,
-    highlights: ['最早出發前 1 天可預訂', '免費取消（168 小時前（含））', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
-    detailsLinkText: '查看方案詳情 ›',
-    bookingBtnText: '立即預約',
-  },
-  {
-    id: 'full-day',
-    label: 'B. 全日行程',
-    duration: '約 8 小時',
-    priceMultiplier: 1.6,
-    highlights: ['午餐含餐（在地餐廳）', '免費取消（168 小時前（含））', '實名認證導遊帶領', '電子憑證，出發前確認即可'],
-    detailsLinkText: '查看方案詳情 ›',
-    bookingBtnText: '立即預約',
-  },
-];
+// DEFAULT_PLANS（legacy 展示用假方案）已隨 #1407 退役刪除：
+// 無 canonical 方案時顯示「尚未開放線上預約」訊息，不再以展示方案充數。
 
 // 簡單 SVG 圖示（純黑線條，無填色）
 const ICONS = {
@@ -151,10 +133,9 @@ function resolvePlanPrice(plan: PlanConfig, activityBasePrice: number, guests = 
 interface DatePlanSectionProps {
   activity: Activity;
   schedules: Schedule[];
-  useBookingV2: boolean;
 }
 
-export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanSectionProps) {
+export function DatePlanSection({ activity, schedules }: DatePlanSectionProps) {
   const t = useTranslations('datePlan');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [modalPlan, setModalPlan] = useState<PlanConfig | null>(null);
@@ -172,16 +153,15 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
     setAvailabilityLoaded(true);
     setAvailabilityFetching(true);
     try {
-      const endpoint = useBookingV2
-        ? `/api/activities/${encodeURIComponent(activity.slug)}/availability?v2=1`
-        : `/api/activities/${encodeURIComponent(activity.slug)}/availability`;
+      // #1407 退役後 route 只剩 V2 引擎（資料面 fallback 於 route 內部處理）
+      const endpoint = `/api/activities/${encodeURIComponent(activity.slug)}/availability`;
       const res = await fetch(endpoint);
       const json = await res.json().catch((): null => null);
 
       // Handle explicit inactive-plan state from V2: planConfigState='no_active_plans'|'no_plans'
       // The API returns schedules:[] with an availabilityNotice — surface it directly.
       // This check must run BEFORE the !Array.isArray(schedules) guard since schedules:[] is valid here.
-      if (useBookingV2 && json?.ok && json?.data?.planConfigState && json.data.planConfigState !== 'ok') {
+      if (json?.ok && json?.data?.planConfigState && json.data.planConfigState !== 'ok') {
         const state = json.data.planConfigState as 'no_active_plans' | 'no_plans';
         setPlanConfigState(state);
         setAvailabilityNotice(json.data.availabilityNotice ?? null);
@@ -190,16 +170,14 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
       }
 
       if (!res.ok || !json?.ok || !Array.isArray(json?.data?.schedules)) {
-        if (useBookingV2) {
-          setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
-        }
+        setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
         setAvailabilityLoaded(false);
         return;
       }
 
-      if (useBookingV2 && json?.data?.source === 'legacy_fallback') {
+      if (json?.data?.source === 'legacy_fallback') {
         setAvailabilityNotice(t('availabilityNoticeLegacyFallback'));
-      } else if (useBookingV2 && json?.data?.source !== 'v2') {
+      } else if (json?.data?.source !== 'v2') {
         setAvailabilityNotice(t('availabilityNoticeNonV2Source'));
       } else {
         setAvailabilityNotice(null);
@@ -209,9 +187,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
       setLiveSchedules(json.data.schedules as Schedule[]);
     } catch {
       setAvailabilityLoaded(false);
-      if (useBookingV2) {
-        setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
-      }
+      setAvailabilityNotice(t('availabilityNoticeV2LoadFail'));
     } finally {
       setAvailabilityFetching(false);
     }
@@ -220,9 +196,7 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
   const effectiveSchedules = liveSchedules && liveSchedules.length > 0 ? liveSchedules : schedules;
 
   const { plans: resolvedPlans, showMissingCanonicalMessage } = resolveDatePlanPresentation({
-    useBookingV2,
     canonicalPlans: activity.plans,
-    defaultPlans: DEFAULT_PLANS,
   });
   const PLANS: PlanConfig[] = resolvedPlans as PlanConfig[];
   // 全部方案都 render 進 DOM；手機收合時由 CSS 只顯示前 2 個（.kkd-plans-list:not(.show-all)），
@@ -446,7 +420,6 @@ export function DatePlanSection({ activity, schedules, useBookingV2 }: DatePlanS
                           planId: plan.id,
                           date: dateChosen ? selectedDate! : undefined,
                           scheduleId: dateChosen ? (planAvail.schedule?.id || undefined) : undefined,
-                          useBookingV2,
                         })}
                         className="tp-btn tp-btn-primary kkd-plan-select-btn"
                         onClick={() => {

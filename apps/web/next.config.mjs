@@ -96,6 +96,21 @@ const nextConfig = {
       },
     ];
   },
+  // #1407 legacy 退役：舊 checkout／orders 頁面刪除後以 301 導向現行路徑，
+  // 保護外部書籤與搜尋引擎既有索引（next.config redirects 先於 middleware 執行）。
+  async redirects() {
+    return [
+      {
+        source: '/checkout',
+        has: [{ type: 'query', key: 'slug', value: '(?<slug>.+)' }],
+        destination: '/booking/:slug',
+        permanent: true,
+      },
+      { source: '/checkout', destination: '/activities', permanent: true },
+      { source: '/orders', destination: '/me/orders', permanent: true },
+      { source: '/orders/:orderId', destination: '/me/orders/:orderId', permanent: true },
+    ];
+  },
 };
 
 // Avoid loading Sentry's build wrapper in local/dev smoke runs. A disabled

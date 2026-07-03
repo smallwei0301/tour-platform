@@ -13,8 +13,8 @@ test('issue621 date-plan section requests v2 availability and renders explicit s
 
   assert.match(
     src,
-    /\/availability\?v2=1/,
-    'when useBookingV2=true, date-plan availability fetch must hit v2-mode contract endpoint'
+    /\/availability`/,
+    'post-#1407: date-plan availability fetch hits the v2-only endpoint (no ?v2=1 param needed)'
   );
 
   assert.match(
