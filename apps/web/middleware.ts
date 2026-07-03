@@ -363,6 +363,10 @@ export async function middleware(req: NextRequest) {
     const security = getAdminSecurityState();
     const hasHeaderToken = !!req.headers.get('x-admin-token');
 
+    // #1567（by-design）：帶 x-admin-token header 的請求跳過 session-version/到期檢查
+    // （supply automation/script 呼叫 admin API）。撤銷 header-token 存取的唯一方法是
+    // 輪換 ADMIN_ACCESS_TOKEN 本身 —— forceLogoutAllSessions() 只使 cookie session 失效、
+    // 對 header 路徑無效。撤銷 SOP 見 docs/operations/credential-rotation-runbook.md Step 3。
     const result = isAdminAuthorized({
       token: pickToken(req),
       email: pickEmail(req),
