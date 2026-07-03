@@ -2878,7 +2878,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
       itinerary: a.itinerary || [], goodFor: a.goodFor || [],
       // 社群口碑語錄（結構化或舊純文字皆可）—— 前台會 normalize 後與真實評論整合呈現
       socialProofQuotes: a.socialProofQuotes || [],
-      status: 'published',
+      status: 'published', plans: a.plans || null, // fallback 補齊 Supabase 分支的 plans 契約（mapActivityDetailRow）
       guide: guide ? {
         id: guide.slug, slug: guide.slug, displayName: guide.displayName,
         headline: guide.headline, bio: guide.shortBio, region: guide.region,

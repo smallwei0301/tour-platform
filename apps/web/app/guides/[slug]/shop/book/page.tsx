@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../src/lib/supabase/client';
+import { track } from '../../../../../src/lib/track';
 
 type ShopPlan = {
   id: string;
@@ -24,6 +25,13 @@ type V2Slot = { startAt: string; endAt: string; capacityLeft: number; isAvailabl
 type V2DateAvailability = { date: string; state: 'available' | 'blocked' | 'no_slots'; capacityLeft: number };
 
 const TZ = 'Asia/Taipei';
+
+// 延後登入：匿名可瀏覽方案／日期，登入前把精靈選擇存進 sessionStorage，
+// 登入回跳後還原（OAuth 全頁跳轉會回到同分頁，sessionStorage 存活）。
+const BOOK_STATE_TTL_MS = 30 * 60 * 1000;
+function bookStateKey(slug: string): string {
+  return `tp_shop_book_state:${slug}`;
+}
 
 function priceOf(plan: ShopPlan, guests: number): number {
   const base = plan.basePrice ?? 0;
@@ -150,7 +158,7 @@ export default function GuideShopBookingPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  // ── 登入 gate（預約必須先登入）─────────────────────────────
+  // ── 登入狀態（延後登入：匿名可瀏覽 step 1–2，建立訂單前才要求登入）──
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -160,14 +168,12 @@ export default function GuideShopBookingPage() {
         if (!mounted) return;
         const user = data?.user;
         if (!user) {
-          const next = `/guides/${slug}/shop/book`;
-          router.replace(`/login?next=${encodeURIComponent(next)}`);
           setAuthState('anon');
           return;
         }
         setContactEmail(user.email ?? '');
         setAuthState('authed');
-        // 預填姓名/電話
+        // 預填姓名/電話（只在已登入時打）
         try {
           const r = await fetch('/api/me/profile', { cache: 'no-store' });
           const j = await r.json().catch(() => null);
@@ -180,11 +186,19 @@ export default function GuideShopBookingPage() {
       }
     })();
     return () => { mounted = false; };
-  }, [slug, router]);
+  }, [slug]);
 
-  // ── 載入商店資料 ─────────────────────────────────────────
+  // 進入預約流程事件（涵蓋商店 CTA、方案卡深連結、直連三種入口）
   useEffect(() => {
-    if (authState !== 'authed') return;
+    const sp = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    track({
+      event_name: 'shop_begin_booking',
+      properties: { guide_slug: slug, plan_preselected: Boolean(sp?.get('planId')) },
+    });
+  }, [slug]);
+
+  // ── 載入商店資料（公開 API，不需登入）───────────────────────
+  useEffect(() => {
     let mounted = true;
     // 不帶 no-store：讓 Vercel CDN 的 s-maxage 邊緣快取生效（商店資料可接受 ~60s 延遲）。
     fetch(`/api/guides/${slug}/shop`)
@@ -196,7 +210,7 @@ export default function GuideShopBookingPage() {
       })
       .catch(() => mounted && setLoadError('載入失敗，請稍後再試'));
     return () => { mounted = false; };
-  }, [authState, slug]);
+  }, [slug]);
 
   const allActivities = useMemo(
     () => (shop?.activitiesByRegion || []).flatMap((g) => g.activities),
@@ -211,6 +225,62 @@ export default function GuideShopBookingPage() {
     setGuests(Math.max(1, plan.minParticipants || 1));
     setSelectedDate('');
     setSelectedSlotStartAt('');
+  }
+
+  // ── 還原精靈狀態（登入回跳）／深連結預選 ─────────────────────
+  // 優先序：sessionStorage 還原 > ?activityId&planId 預選。逐項驗證方案仍存在；
+  // 還原的日期/時段由 step2 的 slots 載入後再驗（見下方清理 effect），draft API 為最終防線。
+  const [restoreDone, setRestoreDone] = useState(false);
+  useEffect(() => {
+    if (!shop || restoreDone) return;
+    setRestoreDone(true);
+    const activities = (shop.activitiesByRegion || []).flatMap((g) => g.activities);
+    try {
+      const raw = sessionStorage.getItem(bookStateKey(slug));
+      if (raw) {
+        sessionStorage.removeItem(bookStateKey(slug)); // 一次性：還原即消費
+        const saved = JSON.parse(raw) as {
+          activityId?: string; planId?: string; guests?: number;
+          date?: string; slotStartAt?: string; savedAt?: number;
+        } | null;
+        if (saved?.savedAt && Date.now() - saved.savedAt <= BOOK_STATE_TTL_MS) {
+          const activity = activities.find((a) => a.id === saved.activityId) || null;
+          const plan = activity?.plans.find((p) => p.id === saved.planId) || null;
+          if (activity && plan) {
+            setSelectedActivityId(activity.id);
+            setSelectedPlanId(plan.id);
+            const min = Math.max(1, plan.minParticipants || 1);
+            const max = plan.maxParticipants ?? Infinity;
+            setGuests(Math.min(Math.max(min, Number(saved.guests) || min), max));
+            if (saved.date) setSelectedDate(saved.date);
+            if (saved.slotStartAt) setSelectedSlotStartAt(saved.slotStartAt);
+            setStep(2);
+            return;
+          }
+        }
+      }
+    } catch { /* 還原失敗 → 靜默退回從頭選 */ }
+    try {
+      const sp = new URLSearchParams(window.location.search);
+      const qActivityId = sp.get('activityId');
+      const qPlanId = sp.get('planId');
+      if (qActivityId && qPlanId) {
+        const activity = activities.find((a) => a.id === qActivityId) || null;
+        const plan = activity?.plans.find((p) => p.id === qPlanId) || null;
+        if (activity && plan) selectPlan(activity, plan);
+      }
+    } catch { /* 預選失敗不阻擋流程 */ }
+  }, [shop, restoreDone, slug]);
+
+  // 存下目前選擇並前往登入（登入回跳後由上方還原 effect 接手）
+  function goLoginPreservingState() {
+    try {
+      sessionStorage.setItem(bookStateKey(slug), JSON.stringify({
+        activityId: selectedActivityId, planId: selectedPlanId, guests,
+        date: selectedDate, slotStartAt: selectedSlotStartAt, savedAt: Date.now(),
+      }));
+    } catch { /* 存不進去就退回重選，不阻擋登入 */ }
+    router.push(`/login?next=${encodeURIComponent(`/guides/${slug}/shop/book`)}`);
   }
 
   // ── Step2：載入可預約日期/時段 ───────────────────────────
@@ -258,6 +328,27 @@ export default function GuideShopBookingPage() {
     () => new Set(dates.filter((d) => d.state === 'available').map((d) => d.date)),
     [dates]
   );
+
+  // 還原的日期/時段驗證：slots 載入後，選中的日期已不可約或時段被訂走 → 清掉讓使用者重選。
+  useEffect(() => {
+    if (step !== 2 || slotsLoading || dates.length === 0) return;
+    if (selectedDate && !availableDateSet.has(selectedDate)) {
+      setSelectedDate('');
+      setSelectedSlotStartAt('');
+      return;
+    }
+    if (selectedSlotStartAt && !slots.some((s) => s.startAt === selectedSlotStartAt)) {
+      setSelectedSlotStartAt('');
+    }
+  }, [step, slotsLoading, dates, slots, selectedDate, selectedSlotStartAt, availableDateSet]);
+
+  // 防衛：匿名者理論上到不了 step 3（draft 前已 gate），若真的到了就走同一登入流程。
+  useEffect(() => {
+    if (step === 3 && authState === 'anon') {
+      goLoginPreservingState();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, authState]);
 
   // 切換步驟時回到頁面最上方（避免停在上一步底部 CTA 的位置）。
   useEffect(() => {
@@ -352,14 +443,7 @@ export default function GuideShopBookingPage() {
     }
   }
 
-  // ── 畫面 ─────────────────────────────────────────────────
-  if (authState !== 'authed') {
-    return (
-      <main className="tp-light-page tp-container" style={{ padding: '60px 0', textAlign: 'center', maxWidth: 560 }}>
-        <p style={{ color: 'var(--tp-muted)' }}>{authState === 'checking' ? '確認登入狀態中…' : '請先登入會員'}</p>
-      </main>
-    );
-  }
+  // ── 畫面（匿名與登入者都渲染精靈；登入要求延後到完成預約前）──
   if (loadError) {
     return (
       <main className="tp-light-page tp-container" style={{ padding: '60px 0', textAlign: 'center', maxWidth: 560 }}>
@@ -382,7 +466,8 @@ export default function GuideShopBookingPage() {
     <main className="tp-light-page tp-container" style={{ paddingBottom: 110, maxWidth: 560 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 18 }}>
         {step === 1 ? (
-          <Link href={`/guides/${slug}/shop`} className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }}>取消預約</Link>
+          <Link href={`/guides/${slug}/shop`} className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }}
+            onClick={() => { try { sessionStorage.removeItem(bookStateKey(slug)); } catch { /* noop */ } }}>取消預約</Link>
         ) : (
           <button className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }} onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>← 上一步</button>
         )}
@@ -489,16 +574,25 @@ export default function GuideShopBookingPage() {
             </>
           )}
 
-          {/* 聯絡資訊（draft 必填，預填自會員資料）*/}
-          <section style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <p style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>聯絡資訊</p>
-            <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="姓名"
-              style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
-            <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="電話" inputMode="tel"
-              style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
-            <input value={contactEmail} readOnly placeholder="電子信箱"
-              style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, background: '#f3f4f6' }} />
-          </section>
+          {/* 聯絡資訊（draft 必填，預填自會員資料）；匿名者改顯示登入卡 */}
+          {authState === 'authed' ? (
+            <section style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>聯絡資訊</p>
+              <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="姓名"
+                style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
+              <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="電話" inputMode="tel"
+                style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
+              <input value={contactEmail} readOnly placeholder="電子信箱"
+                style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, background: '#f3f4f6' }} />
+            </section>
+          ) : (
+            <section data-testid="shop-login-card" className="tp-card" style={{ marginTop: 20, padding: 16 }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>預約需要會員帳號</p>
+              <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14, lineHeight: 1.7 }}>
+                用 Email 或 LINE 登入後即可完成預約，你選的日期與時段會保留。
+              </p>
+            </section>
+          )}
         </div>
       )}
 
@@ -564,10 +658,18 @@ export default function GuideShopBookingPage() {
               </button>
             </>
           )}
-          {step === 2 && (
+          {step === 2 && authState === 'authed' && (
             <button className="tp-btn tp-btn-primary" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
               style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5 }}>
               {busy ? '處理中…' : '完成預約 →'}
+            </button>
+          )}
+          {step === 2 && authState !== 'authed' && (
+            <button className="tp-btn tp-btn-primary" data-testid="shop-login-cta"
+              disabled={!selectedSlotStartAt || authState === 'checking'}
+              onClick={goLoginPreservingState}
+              style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedSlotStartAt && authState === 'anon' ? 1 : 0.5 }}>
+              登入以完成預約 →
             </button>
           )}
           {step === 3 && (

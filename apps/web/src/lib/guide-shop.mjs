@@ -62,6 +62,12 @@ export function buildGuideShopView(guide, activityDetails = []) {
       heroImageUrl: guide.heroImageUrl,
       ratingAvg: guide.ratingAvg,
       reviewCount: guide.reviewCount,
+      // 信任列欄位（皆為導遊公開頁既已公開的資訊）
+      languages: Array.isArray(guide.languages) ? guide.languages : [],
+      specialties: Array.isArray(guide.specialties) ? guide.specialties : [],
+      certifications: Array.isArray(guide.certifications) ? guide.certifications : [],
+      verificationStatus: guide.verificationStatus ?? null,
+      serviceCount: Number.isFinite(Number(guide.serviceCount)) ? Number(guide.serviceCount) : null,
     },
     activitiesByRegion,
   };

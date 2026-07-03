@@ -29,6 +29,9 @@ const VALID_EVENTS: EventName[] = [
   'refund_succeeded',
   'booking_page_view',
   'booking_v2_fallback_clicked',
+  'shop_view',
+  'shop_begin_booking',
+  'shop_share',
   'error',
 ];
 

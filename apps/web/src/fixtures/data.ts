@@ -60,6 +60,18 @@ export interface Activity {
   trustPoints: string[];
   imageUrl: string;
   galleryUrls: string[];
+  /** V2 方案（camelCase，同 mapActivityDetailRow 的 plans 契約）；未定義代表無 V2 方案。 */
+  plans?: Array<{
+    id: string;
+    label: string;
+    duration: string;
+    priceType: 'per_person' | 'per_group';
+    basePrice: number;
+    minParticipants?: number;
+    maxParticipants?: number;
+    highlights: string[];
+    status: 'active' | 'archived';
+  }>;
   schedules: Schedule[];
   transportMode: string;
   seoTitle: string;
@@ -203,6 +215,10 @@ export const activities: Activity[] = [
       'https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=80',
       'https://images.unsplash.com/photo-1448375240586-882707db888b?w=800&q=80',
       'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=80',
+    ],
+    plans: [
+      { id: 'chaishan-cave-half-day', label: '半日探洞（基本裝備）', duration: '約 4 小時', priceType: 'per_person', basePrice: 2000, minParticipants: 4, maxParticipants: 12, highlights: ['含頭燈、手套、安全帽', '活動紀錄照'], status: 'active' },
+      { id: 'chaishan-cave-private', label: '私人包團（1-6 人）', duration: '約 4 小時', priceType: 'per_group', basePrice: 9600, minParticipants: 1, maxParticipants: 6, highlights: ['時間可協調', '路線依成員體力調整'], status: 'active' },
     ],
     schedules: [
       { startAt: '2026-04-01T09:00:00+08:00', endAt: '2026-04-01T13:00:00+08:00', capacity: 12, bookedCount: 1, status: 'open' },

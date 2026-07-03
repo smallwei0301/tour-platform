@@ -36,13 +36,18 @@ const scriptSrc = isProd
   ? "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://www.googletagmanager.com"
   : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.googletagmanager.com";
 
+// 僅 dev/preview 放行本地 Supabase（127.0.0.1:54321）：Playwright e2e 的 traveler-session
+// pattern（helpers.setTravelerSession）靠攔截 auth/v1/user mock 登入，#1568 enforce 後
+// 沒有這條會在瀏覽器層被 CSP 擋下（production 不受影響，仍只允許 *.supabase.co）。
+const connectSrcLocalDev = isProd ? '' : ' http://127.0.0.1:54321 ws://127.0.0.1:54321';
+
 const csp = [
   "default-src 'self'",
   scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com",
+  `connect-src 'self'${connectSrcLocalDev} https://*.supabase.co wss://*.supabase.co https://*.sentry.io https://vitals.vercel-insights.com https://va.vercel-scripts.com https://www.googletagmanager.com https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com`,
   "form-action 'self' https://payment.ecpay.com.tw https://payment-stage.ecpay.com.tw",
   "frame-ancestors 'self'",
   "worker-src 'self' blob:",

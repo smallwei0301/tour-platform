@@ -3653,3 +3653,152 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-apply-actions { flex-direction: column-reverse; }
   .lp-apply-actions .lp-apply-btn { width: 100%; }
 }
+
+/* ═══════════════ /for-guides 導遊開店 landing（lp-fg-*）═══════════════
+   沿 lp-apply 深色主題（山墨底、古紙字），朝霞 #C2542E 只用在主要 CTA。 */
+.lp-fg-hero-cta {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.lp-fg-btn-primary {
+  display: inline-block;
+  padding: 12px 26px;
+  border-radius: 999px;
+  background: #c2542e;
+  color: #f4ecd8;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+.lp-fg-btn-primary:hover { background: #a8431f; }
+.lp-fg-btn-ghost {
+  display: inline-block;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(190, 178, 137, 0.45);
+  color: #cbc29d;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.lp-fg-btn-ghost:hover { color: #ded7ab; border-color: rgba(190, 178, 137, 0.7); }
+.lp-fg-section { margin-top: 40px; }
+.lp-fg-heading {
+  font-family: var(--tp-serif);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #f4ecd8;
+  margin: 0 0 16px;
+}
+.lp-fg-benefit { min-width: 200px; }
+.lp-fg-benefit span { font-size: 13px; line-height: 1.7; }
+.lp-fg-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.lp-fg-steps li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.lp-fg-step-num {
+  font-family: var(--tp-serif);
+  font-size: 20px;
+  font-weight: 900;
+  color: #b08d3e;
+  line-height: 1.2;
+}
+.lp-fg-steps strong { color: #f0ecdc; font-size: 15px; }
+.lp-fg-steps p { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: rgba(244, 236, 216, 0.7); }
+.lp-fg-pricing {
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(176, 141, 62, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: rgba(244, 236, 216, 0.85);
+}
+.lp-fg-pricing p { margin: 0 0 6px; }
+.lp-fg-price strong { font-family: var(--tp-serif); font-size: 22px; color: #f4ecd8; }
+.lp-fg-price-note { color: #cbc29d; }
+.lp-fg-preview {
+  max-width: 360px;
+  margin: 0 auto;
+  background: #f4ecd8;
+  color: #1a2e1f;
+  border-radius: 14px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.lp-fg-preview-header { display: flex; align-items: center; gap: 12px; }
+.lp-fg-preview-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #5e7a4f;
+  color: #f4ecd8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.lp-fg-preview-name { margin: 0; font-weight: 700; font-size: 15px; }
+.lp-fg-preview-sub { margin: 2px 0 0; font-size: 12px; color: #5e7a4f; }
+.lp-fg-preview-card {
+  border: 1px solid rgba(26, 46, 31, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #ebe1c7;
+}
+.lp-fg-preview-title { margin: 0; font-weight: 700; font-size: 14px; }
+.lp-fg-preview-meta { margin: 3px 0 0; font-size: 12px; color: rgba(26, 46, 31, 0.65); }
+.lp-fg-preview-price { margin: 6px 0 0; font-weight: 700; font-size: 14px; }
+.lp-fg-preview-cta {
+  text-align: center;
+  background: #1a2e1f;
+  color: #f4ecd8;
+  border-radius: 999px;
+  padding: 10px 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+.lp-fg-preview-caption {
+  max-width: 360px;
+  margin: 10px auto 0;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(244, 236, 216, 0.7);
+}
+.lp-fg-faq { display: grid; gap: 10px; }
+.lp-fg-faq details {
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.lp-fg-faq summary { cursor: pointer; font-weight: 700; color: #f0ecdc; font-size: 14px; }
+.lp-fg-faq p { margin: 10px 0 0; font-size: 13px; line-height: 1.8; color: rgba(244, 236, 216, 0.75); }
+.lp-fg-closing { text-align: center; padding-bottom: 24px; }
+.lp-fg-closing-title {
+  font-family: var(--tp-serif);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #f4ecd8;
+  margin: 0 0 10px;
+}
+.lp-fg-closing p { color: rgba(244, 236, 216, 0.75); font-size: 14px; margin: 0 0 18px; }
