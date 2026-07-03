@@ -22,8 +22,13 @@
 - 2026-07-03 `run-checks.sh --all --typecheck` 綠（4330 tests、0 fail、3 skipped）。
 - 2026-07-03 等價性/延遲驗證：假 PostgREST harness 實跑新舊兩版 route，回應 JSON deepEqual 一致；23 支序列查詢 → 13 支 3 階段，模擬延遲 837ms → 111ms（-86.7%）。
 
+- 2026-07-03 開 PR #1611（https://github.com/smallwei0301/tour-platform/pull/1611），rebase 撞牆改用 merge origin/main（f527650 #1407/#1606 legacy 退役，不衝突）納入最新 main。CI 綠燈：
+  - scan：success（https://github.com/smallwei0301/tour-platform/actions/runs/28687408196/job/85082504492）
+  - test：success（https://github.com/smallwei0301/tour-platform/actions/runs/28687408204/job/85082504477）
+  - `mergeable_state: clean`，無 review comments（僅 Vercel bot 自動化部署通知，Ready）。
+
 ## 下一步
-- 開 PR → 盯 CI conclusion=success → merge → 部署後以 Vercel runtime logs 對照 `/api/guide/dashboard` duration → 真瀏覽器 QA `/guide/dashboard` → sign-off 關 issue。
+- CI conclusion=success 已確認 → merge PR #1611 → 部署後以 Vercel runtime logs 對照 `/api/guide/dashboard` duration → 真瀏覽器 QA `/guide/dashboard` → sign-off 關 issue。
 - 後續 optional（另開 issue）：`/api/guide/qa` 的 activity_qa 查詢加 limit；dashboard 前端 SWR/短 TTL 快取（等生產實測數字再評估）；`tests/api/settlement-config.test.js` pre-existing 2 紅修正。
 
 ## 絕不重做（Do-NOT-redo）
