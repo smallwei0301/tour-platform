@@ -9,7 +9,11 @@ fp=$(echo "$input" | jq -r '.tool_input.file_path // empty')
 [[ -z "$fp" ]] && exit 0
 
 root="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null)}"
-[[ -z "$root" ]] && exit 0
+if [[ -z "$root" ]]; then
+  # fail-closed：定位不到 repo root 時凍結守衛無法判斷，寧可全擋
+  echo "⛔ HARNESS BLOCK [file-guard]: 無法定位 repo root（CLAUDE_PROJECT_DIR 未設且不在 git repo 內），凍結守衛失效風險，一律攔截。請回到 repo 目錄操作。" >&2
+  exit 2
+fi
 rel="${fp#"$root"/}"
 
 override_ok() {
@@ -59,7 +63,7 @@ case "$rel" in
     echo "⛔ HARNESS BLOCK [file-guard]: yarn.lock 不得改動（npm install 副作用檔，改動一律 git checkout -- yarn.lock 丟棄）。此檔無 override。" >&2
     exit 2
     ;;
-  CLAUDE.md|.claude/settings.json|.claude/hooks/*)
+  CLAUDE.md|.claude/settings.json|.claude/settings.local.json|.claude/hooks/*)
     override_ok "$rel" || block "harness 治理檔，模型不得自改（.cursor/harness/05_maintenance.md）。需要調整請在 issue 留言向使用者提案。"
     ;;
   .cursor/harness/*)

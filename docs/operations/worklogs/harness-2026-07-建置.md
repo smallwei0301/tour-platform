@@ -14,9 +14,20 @@
 - [x] F `05_maintenance.md`
 - [x] G `06_manifesto.md`
 - [x] `00_INDEX.md`、`lessons.md`（3 則種子教訓）、worklogs README
-- [ ] 對抗審查（fresh-context subagent）＋修正
-- [ ] read-back 唯讀驗證
-- [ ] commit＋push 至 `claude/code-workflow-architecture-mmm4ba`
+- [x] 對抗審查（fresh-context subagent）：REQUEST_CHANGES，1×P0＋5×P1＋4×P2，全數修復並回歸測試（34 case 全綠）
+- [x] read-back 唯讀驗證（20 檔完整、語法/編碼合格）
+- [x] commit＋push 至 `claude/code-workflow-architecture-mmm4ba`（738fcac＋審查修正 commit）
+
+## 對抗審查 findings 與修復（2026-07-03）
+- P0 run-checks.sh 零匹配 glob 產假綠燈 → 零匹配/零測試一律 exit 1
+- P1 bash-guard：`git -C`/`+refspec` 繞過 force-push 與 commit gate → regex 改 `\bgit\b[^|;&]*\b(push|commit)\b`＋refspec 偵測
+- P1 受保護 e2e spec 可被 shell 側 sed/redirect/mv 改弱 → FROZEN_RE 補 e2e 保護 pattern＋rm 規則擴及 mv
+- P1 `.claude/settings.local.json` 未凍結 → file-guard＋FROZEN_RE 補上
+- P1 deny 清單與 live 工具面脫節 → 補 deny `actions_run_trigger`；健檢（05 §5）新增 deny 對照項
+- P1 override 整包解鎖無撤銷 → 協議改消耗式（用畢即刪，見 01 §4 第 4 點）
+- P2 sql-guard：SELECT 包裝危險函式／EXPLAIN ANALYZE 誤傷 → 重寫（前綴白名單＋語境正規化＋危險函式黑名單）；自訂 volatile function 為已知極限（01 §5.2b）
+- P2 file-guard root 空值 fail-open → 改 fail-closed
+- P2 commit gate json 豁免過寬 → 移除泛用 `*.json` 豁免
 
 ## 已完成（附證據）
 - 2026-07-03 hooks 實測即時生效：bash-guard 曾攔下含敏感字樣之測試指令；file-guard 曾攔下未授權之 harness 檔寫入；auto-mode 分類器攔下模型自建 override（詳 lessons.md 三則）

@@ -37,13 +37,26 @@ if (( run_all )); then
   cmd_desc="npm test"
   (cd "$root" && npm test) 2>&1 | tee -a "$logfile" || status=$?
 else
-  # 展開 glob（呼叫方若用引號包住 pattern，這裡補展開）
+  # 展開 glob（呼叫方若用引號包住 pattern，這裡補展開）；零匹配 = 硬失敗，防假綠燈
   expanded=()
   for a in "${args[@]}"; do
-    while IFS= read -r f; do [[ -n "$f" ]] && expanded+=("$f"); done < <(cd "$root" && compgen -G "$a" || echo "$a")
+    if matches=$(cd "$root" && compgen -G "$a"); then
+      while IFS= read -r f; do [[ -n "$f" ]] && expanded+=("$f"); done <<< "$matches"
+    elif [[ -f "$root/$a" || -f "$a" ]]; then
+      expanded+=("$a")
+    else
+      echo "❌ 找不到測試檔：'$a'（pattern 零匹配）。檢查路徑/檔名——模板裡的 issueNNNN 要換成實際號碼。不產生證據。" >&2
+      exit 1
+    fi
   done
   cmd_desc="node --test ${expanded[*]}"
   (cd "$root" && node --test "${expanded[@]}") 2>&1 | tee -a "$logfile" || status=$?
+  # node --test 對 0 個測試回 exit 0——0 個測試不是綠燈，是沒測
+  ran=$(grep -oE '^# tests [0-9]+' "$logfile" | tail -1 | grep -oE '[0-9]+')
+  if [[ "$status" == "0" && ( -z "$ran" || "$ran" == "0" ) ]]; then
+    echo "❌ 實際執行了 0 個測試（# tests 0）。零測試不構成綠燈證據。" >&2
+    status=1
+  fi
 fi
 
 if (( do_type )) && (( status == 0 )); then

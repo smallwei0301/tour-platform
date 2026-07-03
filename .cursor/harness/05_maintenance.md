@@ -46,4 +46,4 @@
 
 ## 5. 定期健檢（每月一次或使用者要求時）
 
-自主可做（唯讀）：檢查 harness 各檔的路徑引用是否仍存在（檔案改名/搬家會讓規則失效）、lessons.md 是否觸發精簡、worklogs 中反覆出現的 blocker 模式。產出：一頁健檢報告放 `docs/operations/reports/`，異常項按 §3 提案。
+自主可做（唯讀）：檢查 harness 各檔的路徑引用是否仍存在（檔案改名/搬家會讓規則失效）、`settings.json` deny 清單與**當前 live MCP 工具列表**的對照（server 版本更迭會長出新的寫入工具——列出「存在但未 deny 的寫入型工具」）、lessons.md 是否觸發精簡、worklogs 中反覆出現的 blocker 模式。產出：一頁健檢報告放 `docs/operations/reports/`，異常項按 §3 提案。

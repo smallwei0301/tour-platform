@@ -24,7 +24,7 @@
 - Token 面：100+ 工具 schema 的試錯循環（帶錯 `project_id` → 報錯 → 重試 → 再報錯）是長 session 最大的無效消耗之一，且每次重試都把錯誤訊息灌回 context，加速失焦。
 
 **阻斷方案（已落地）：**
-1. `.claude/settings.json` → `permissions.deny` 直接下架所有生產寫入工具（migration／deploy／branch 操作／GitHub 直寫檔案）。被 deny 的工具**連試錯的機會都沒有**，錯誤循環從源頭切斷。
+1. `.claude/settings.json` → `permissions.deny` 下架**已盤點到的**生產寫入工具（migration／deploy／branch 操作／GitHub 直寫檔案／workflow 觸發）。被 deny 的工具**連試錯的機會都沒有**，錯誤循環從源頭切斷。注意：MCP server 的工具面會隨版本變動，deny 清單需在每月健檢（`05_maintenance.md` §5）對照 live 工具列表重新盤點——**deny 是補丁，資料庫/平台端的唯讀憑證與 branch protection 才是牆**（`06_manifesto.md`）。
 2. `execute_sql` 屬雙用途（查證有用），改由 PreToolUse hook `.claude/hooks/sql-guard.sh` 做語句掃描：**只放行唯讀查詢**，任何 DML/DDL 關鍵字一律 exit 2 並回吐「走 migration PR」的正確路徑。
 3. schema/資料變更唯一合法路徑：migration 檔（時間戳命名）→ PR → CI → **人工**依 `docs/operations/migration-apply-ledger-sop.md` 套用。
 
@@ -91,7 +91,8 @@
 1. 模型撞到 file-guard 攔截時，**不得自行解鎖**。先在對話（或 issue）中向使用者說明：要改哪個凍結檔、為什麼是 P0、diff 預估多大。
 2. 使用者在對話中回覆一句含 `P0-OVERRIDE: <路徑>` 的明確授權。
 3. 模型把該路徑與**使用者原話、授權時間**寫入 `.claude/state/p0-override`（一行一路徑；60 分鐘內有效，過期重批）。
-4. 完成後在 worklog 記錄 override 使用紀錄，供使用者抽查。
+4. **消耗式授權**：一張授權只服務「當次對話中使用者批准的那一件事」。該編輯完成後**立刻刪除 override 檔**，不留著給下一個任務用；換任務＝重新請示。
+5. 完成後在 worklog 記錄 override 使用紀錄（路徑＋授權原文＋起訖時間），供使用者抽查。
 
 ## 5. ⚖️ 誠實條款：這套 harness 的能力極限
 
@@ -100,6 +101,7 @@
 **擋不住的（已知殘洞，按風險排序）：**
 1. **P0-OVERRIDE 的最後一哩是 honor system——但實測有第二道防線**：hook 讀不到對話內容，只能驗證 override 檔存在與新鮮度。不過本 harness 建置時實測：模型在「未取得使用者明確授權」的情況下嘗試寫 override 檔，被 Claude Code 的 auto-mode 安全分類器直接攔下（辨識為 self-authorization），直到使用者在對話中明確授權後才放行。緩解疊加：分類器＋檔案格式要求引用使用者授權原文＋worklog 審計＋使用者抽查（見 `06_manifesto.md` 腐化清單）。
 2. **證據檔可被偽造**——模型可以直接手寫 `last-checks.json`。緩解：`run-checks.sh` 會寫入輸出摘要（偽造需編造測試輸出，成本高）；隔離驗收 subagent 必須**重跑**測試而非只讀證據檔；file-guard 不擋 `.claude/state/`（它是 runtime 區），這是刻意取捨。
+2b. **經 SELECT 呼叫的 volatile function 攔不全**——sql-guard 已黑名單 `setval`/`pg_terminate_backend` 等已知危險函式並強制查詢型前綴，但任意自訂函式（如 `select some_admin_rpc()`）regex 無法窮舉。**真正的牆是 Supabase MCP 掛唯讀憑證**（`06_manifesto.md` 第 1 件事）。
 3. **非常規寫檔路徑**——`python -c 'open(...).write(...)'`、node inline script 等可繞過 bash-guard 的 regex。緩解：bash-guard 已涵蓋最常見的 `sed -i`/redirect/`tee`/`rm`；殘洞靠 CI（受保護 spec 刪改會讓 e2e-smoke／ci.yml 變紅）與 PR review 兜底。
 4. **`merge_pull_request` 是 allow 的**——無人值守佇列需要它，紅燈亂 merge 只有 rubric 擋。**唯一不依賴模型自律的解法是 GitHub branch protection，需使用者到 repo settings 設定**（本 harness 無權代設）。
 5. **hooks 對長指令有誤傷率**——實測 hooks 寫入 settings.json 後即時生效（含當前 session）。bash-guard 以「整條指令字串」做 regex 掃描，一條複合指令若同時含 `rm` 與受保護路徑字樣（即使兩者無關）會被誤擋。這是刻意的 fail-closed 取捨：被誤擋時把指令拆小、或把多步驟寫成 scratchpad 腳本再執行。

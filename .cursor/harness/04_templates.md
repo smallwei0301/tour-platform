@@ -1,6 +1,7 @@
 # 04 — 標準化派工 Prompt 模板＋worklog 模板
 
 > 用法：複製對應模板 → 把 `{…}` 全部填實 → 作為 Agent 工具的 prompt 發出。**空著的 `{…}` 等於沒派工。**
+> ⚠️ 特別注意 `issueNNNN`／`issue{NNNN}` 必須替換成實際 issue 號碼——留著字面 NNNN 會導致測試 pattern 零匹配（run-checks.sh 會對零匹配硬失敗，但別浪費那一輪）。
 > 所有模板都內建 02 §2 的三件套（背景／AC／回報格式）。
 > 治理等級：🔒 鎖定檔（`05_maintenance.md`）。
 
