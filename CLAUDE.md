@@ -1,129 +1,71 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本檔是所有 Claude Code session 的主入口。**開工順序：讀完本檔 → 讀 `.cursor/harness/00_INDEX.md` → 建立或接續 `docs/operations/worklogs/issueNNNN.md`。**（改版前全文備份：`CLAUDE.md.bak`）
 
-## What this is
+## 🔒 十條鐵律（由 hooks 強制執行；違反任一條 = 本輪工作無效）
 
-Tour Platform (brand: **Midao / 祕島**) — a Taiwan local-guide tour marketplace. Travelers browse activities, book slots, pay (ECPay), and manage orders; guides manage availability and bookings; admins run a back-office POS/order/refund console. Most product/operations docs and code comments are in Traditional Chinese.
+1. **語言**：對話回覆、維運/QA 文件、commit 說明一律繁體中文；程式碼、指令、檔名、API/欄位名、錯誤碼、log 不翻譯。使用者文案以 `BRAND_BOOK.md` 為準。
+2. **生產資料庫唯讀**：Supabase MCP 只准 SELECT/EXPLAIN 查證（sql-guard 強制）。schema/資料變更唯一路徑＝新增時間戳 migration 檔 → PR → CI → 人工套用（`docs/operations/migration-apply-ledger-sop.md`）。
+3. **凍結區不碰**（file-guard 強制）：`apps/web/app/api/{orders,payments}/**`、legacy availability 路徑、既有 `supabase/migrations/**`、受保護 e2e spec（`t0-*`…`t7-t8-*`、`funnel-*`、`deeplink-*`、`booking-flow-*`）、`apps/web/middleware.ts`、`src/config/{security-env,startup-env}.mjs`。新功能一律落 `app/api/v2/**`。
+4. **migration 只增不改**，新檔必為時間戳命名（`supabase/migrations/README.md`）。
+5. **沒有實跑證據不得宣稱完成**：commit 觸碰程式碼前必須 `.claude/hooks/run-checks.sh <targeted tests>` 綠燈（bash-guard 強制擋無證據 commit）。「應該會過」＝未完成。
+6. **紅燈絕不 merge**：merge PR 前必須確認 CI conclusion=success，並把 check-run 連結記入 worklog。
+7. **記憶錨點雙寫**：每個里程碑把狀態寫回 GitHub issue 留言＋`docs/operations/worklogs/issueNNNN.md`（模板見 harness/04）。**永遠以 worklog 為準，不信任自己的上下文記憶**；context 被壓縮或恢復後，第一件事是重讀 worklog。
+8. **同一錯誤連續兩次修不動就停**：按 `.cursor/harness/03_rubrics.md` 熔斷/換路徑，不在錯誤代碼上盲目疊改。
+9. **不改 harness 治理檔**（本檔、`.claude/**`、`.cursor/harness/0*.md`）；唯一可自行追加的是 `.cursor/harness/lessons.md`。凍結區 P0 修復需使用者在對話中回覆 `P0-OVERRIDE: <路徑>` 授權（協議見 harness/01 §4）。
+10. **`yarn.lock` 改動不 commit；force-push 一律禁止**（替代流程見 harness/08）。
 
-All web copy, colors, and tone are governed by `BRAND_BOOK.md` — consult it before writing user-facing strings.
+## 這是什麼專案
 
-## Language / 語言
+Tour Platform（品牌 **Midao／祕島**）——台灣在地嚮導旅遊市集。旅人瀏覽活動、訂位、付款（ECPay）、管理訂單；嚮導管理檔期與預約；管理員操作後台 POS/訂單/退款。目前**冷啟動：生產環境已連線、尚未收正式訂單**。多數文件與註解為繁體中文。
 
-**繁體中文（Traditional Chinese）是本專案的主要輸出語言，與使用者的所有對話回覆一律使用繁體中文。** 同樣預設用繁體中文：寫入 repo 的維運／QA 文件、commit 說明，以及面向使用者的文案（後者仍以 `BRAND_BOOK.md` 為準）。技術識別字保留原文——程式碼、指令、檔名、API／欄位名稱、錯誤碼、log 訊息等不翻譯。程式碼註解沿用所在檔案的既有語言風格。使用者明確要求其他語言時，從其要求。
+## Commands（Node 22 固定；fresh container 先 `npm install`——遠端環境用 `npm install --ignore-scripts`，見 lessons.md，裝完丟棄 yarn.lock 改動）
 
-## QA 驗收標準（QA verification standards）
+Root scripts 代理到 `@tour/web` workspace：
 
-驗收 QA issue 時，務必遵守：
+- `npm run dev` / `npm run build` / `npm run lint`（Node 22 上跑）/ `npm run typecheck` / `npm test`
+- 測試用 **Node 內建 test runner**（`.mjs`，非 Jest/Vitest）；單檔：`node --test apps/web/tests/api/xxx.test.mjs`
+- **commit 證據**：`.claude/hooks/run-checks.sh <test 檔…>`（`--typecheck`／`--all`）
+- E2E：`npm run test:e2e -w @tour/web`（需另開 `npm run dev`）；CI smoke lane：`test:e2e:smoke`
+- `npm run readiness:snapshot` 重生 readiness 報告（live 數字不手寫）
+- 完整測試/QA 細節 → `.cursor/harness/07_testing_playbook.md`
 
-1. **實際達成 issue 列出的測試驗證項目。** 把 issue 的 Acceptance criteria 逐條跑出**綠燈／實測證據**，不得只靠推測或臆斷當作通過。能跑的就跑（focused `node --test`、Playwright、authenticated API smoke），不要用契約測試「代替」其實做得到的實測。
-2. **進行真實 browser smoke。** 凡牽涉使用者可見頁面／流程（traveler、guide、admin），務必用**真實瀏覽器**驗證：優先 Playwright E2E（必要時用 `e2e/helpers.ts` 的 `adminLogin`／`setGuideSession`、或對 preview 實際登入），不得只做 source-contract 而宣稱前端已驗。本環境資源足以跑 `next dev` + Playwright；若真的被環境阻擋，需在報告明確標 `NOT_AUTOMATABLE`／`NOT_VERIFIED-live` 並附最接近的安全替代與 blocker 原因。
-3. **只有在確實無法安全執行時**（例如需要 operator-only secret、會寄真實信件／動到正式付款或營運資料）才標 `NOT_VERIFIED-live`／`NOT_PROD_EXECUTED`，並說明 blocker、替代證據與下一步；不得用未驗證結果當 pass。
-4. **驗收文件用繁體中文**寫入 `docs/operations/qa-reports/`，記錄環境 URL、deploy/commit SHA、Asia/Taipei 時間、逐條 AC 證據、判定（PASS／HOLD／FAIL），且不得含密鑰／cookie／token／service-role key／完整付款 payload／未遮蔽 PII。
-5. **標準流程:** 開 PR → 盯 CI → merge → 逐條檢查 AC 清單 → 留 sign-off 留言 → 關閉 issue → 挑下一個 QA issue。
+## 架構速覽
 
-## Commands
+- **Monorepo**：npm workspaces——`apps/web`（整個 Next.js 15 App Router + React 19 app）、`packages/{config,ui}`。Stack：TypeScript、Supabase（Postgres）、Sentry、Vercel。
+- **Data layer**：`apps/web/src/lib/db.mjs` 是資料 gateway；`hasSupabaseEnv()` 無環境變數時 fallback 到 in-memory store（`store.mjs`/`services.mjs`/`admin.mjs`）——測試靠這個 seam。改 gateway 函式必須同步 fallback＋契約測試（harness/07 §3）。
+- **三個 auth realms**（`apps/web/middleware.ts` 是唯一前門）：Traveler＝Supabase cookies（SSR anon client）；Guide＝`guide_token` HMAC cookie（edge 只做格式檢查，完整驗證在 API 的 `verifyGuideSession()`）；Admin＝token＋email allowlist＋session-version。CSRF：`tp_csrf` cookie vs `x-csrf-token` header 雙提交。
+- **Soft-launch kill-switch**：middleware 讀 `soft_launch_controls`，`public_paused` 時非豁免請求 503/redirect `/maintenance`，fail-open。
+- **Booking V2 vs legacy**：平台處於 availability/slots V2 遷移（Phase 12，#621）。`NEXT_PUBLIC_BOOKING_V2_ENABLED` 預設 ON、`=0` 回滾 legacy（flags 在 `src/config/feature-flags.mjs`）。V2 routes 在 `app/api/v2/**`，availability 邏輯在 `src/lib/availability-v2/`＋`slot-generator.ts`。booking→order→payment 三層鏈必須一致；ECPay callback 必須冪等（`checkout-idempotency.ts`、`payment-reconciliation.ts`）。**Legacy 凍結（#1386）**：非 v2 的 checkout/availability/order-state routes 只修 P0。
+- **`.ts` vs `.mjs`**：要被 edge middleware import 或免編譯執行的（auth、sessions、soft-launch、store）是 `.mjs`，其餘 `.ts`。strict 開啟但覆蓋仍在擴張（#68）——跟隨所在檔案風格。
+- **Migrations**：`supabase/migrations/`，新檔一律時間戳命名；套用/回滾程序見 `docs/operations/booking-v2-rollback-runbook.md`。
 
-Node 22 is required and pinned (`.nvmrc` + `engines`). Run `npm install` once at the repo root (npm workspaces).
+## 檔案路由表（先查表，再開檔）
 
-Root scripts proxy to the `@tour/web` workspace:
+| 主題 | 檔案 |
+|---|---|
+| Harness 總覽／session 開機順序 | `.cursor/harness/00_INDEX.md` |
+| 防線設計與能力極限 | `.cursor/harness/01_diagnostics.md` |
+| 派工、升降級、隔離驗證 | `.cursor/harness/02_orchestration.md` |
+| 換路徑／完成定義／熔斷檢核表 | `.cursor/harness/03_rubrics.md` |
+| 派工與 worklog 模板 | `.cursor/harness/04_templates.md` |
+| harness 自我維護規則 | `.cursor/harness/05_maintenance.md` |
+| 交接信＋腐化預防 | `.cursor/harness/06_manifesto.md` |
+| 測試/QA playbook（完整版） | `.cursor/harness/07_testing_playbook.md` |
+| branch 衛生（完整版） | `.cursor/harness/08_branch_hygiene.md` |
+| 踩坑教訓（可追加） | `.cursor/harness/lessons.md` |
+| V2 API 契約 | `docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md` |
+| payment callback 原子性 | `docs/04-tech/04-tech-architecture/12-payment-callback-atomicity.md` |
+| V2 回滾 runbook | `docs/operations/booking-v2-rollback-runbook.md` |
+| migration 套用 SOP | `docs/operations/migration-apply-ledger-sop.md` |
+| 品牌文案/色彩/語氣 | `BRAND_BOOK.md` |
 
-- `npm run dev` — Next.js dev server
-- `npm run build` — production build (CI also runs this)
-- `npm run lint` — ESLint (flat config disabled via `ESLINT_USE_FLAT_CONFIG=false`). **Run on Node 22**: a pre-lint guard (`scripts/check-lint-node.mjs`) fails fast on Node ≥24, where ESLint 9.x + `eslint-config-next` crash with an upstream circular-config error (env-only; CI uses Node 22 and stays green).
-- `npm run typecheck` — `tsc --noEmit`
-- `npm test` — unit/integration tests
+## QA 驗收（摘要；完整標準＝harness/07 §1，逐條照辦）
 
-Tests use the **Node built-in test runner** on `.mjs` files (not Jest/Vitest):
-
-- All tests: `npm test` → `node --test tests/**/*.test.mjs`
-- Single file: `node --test apps/web/tests/api/booking-state.test.mjs`
-- By name: `node --test --test-name-pattern='Blackout' apps/web/tests/slot-generator.test.mjs`
-- Targeted smoke suites are defined as scripts in `apps/web/package.json` (e.g. `test:smoke:v2-core`, `test:smoke:guide-blackout`, `test:smoke:admin-pos-line`).
-- E2E (Playwright): `npm run test:e2e -w @tour/web` (also `:ui`, `:headed`).
-- E2E smoke lane (CI): `npm run test:e2e:smoke -w @tour/web` runs a bounded, backend-mocked allowlist via the `e2e-smoke` workflow (`.github/workflows/e2e-smoke.yml`) on `workflow_dispatch` + daily schedule + path-filtered PRs (booking/guide/e2e). Add a launch-critical browser spec to the lane by appending it to the `test:e2e:smoke` script (only specs that mock the backend via `page.route()` and need no real Supabase/payment/PII). `ci.yml` stays lint → typecheck → node test → build → preflight (no Playwright).
-
-CI (`.github/workflows/ci.yml`) runs, in order: lint → typecheck → test → build → `scripts/preflight-check.sh`. The build runs with `NODE_ENV=production`, so security-env guards require strong non-default secrets (CI injects `GUIDE_SESSION_SECRET` / `ADMIN_ACCESS_TOKEN`).
-
-`npm run readiness:snapshot` regenerates `docs/operations/reports/readiness-live-state-latest.md` (live issue/PR state is intentionally NOT hand-written into the README — it auto-refreshes every 6h via CI).
-
-## Architecture
-
-**Monorepo:** npm workspaces — `apps/web` (the entire Next.js app), `packages/config`, `packages/ui`. Almost all real code lives in `apps/web`.
-
-**Stack:** Next.js 15 (App Router) + React 19, TypeScript, Supabase (Postgres) backend, Sentry, deployed on Vercel.
-
-### Data layer with in-memory fallback
-`apps/web/src/lib/db.mjs` is the data gateway. `hasSupabaseEnv()` checks for `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`; when absent (local dev / tests) it falls back to an in-memory store (`store.mjs`, `services.mjs`, `admin.mjs`). This is why much code is written so it works with no database — tests rely on the fallback. The service-role Supabase client is for server/admin work; traveler-facing auth uses the SSR anon client (`src/lib/supabase/{server,client}.ts`).
-
-### Three auth realms (see `apps/web/middleware.ts`)
-Edge middleware is the single front door and routes by path prefix:
-- **Traveler** — Supabase auth cookies; middleware refreshes the session (with a timeout, fail-open). Marketing/activity pages stay public and cacheable.
-- **Guide** — `guide_token` HMAC cookie. Middleware does a *lightweight format check only* (edge has no Node crypto); full HMAC verification happens in API routes via `verifyGuideSession()`.
-- **Admin** — token + email allowlist + session-version check (`isAdminAuthorized`). Credentials are never read from URL query params.
-
-CSRF: double-submit token (`tp_csrf` cookie vs `x-csrf-token` header) is enforced in middleware for cookie-authenticated mutations on `/api/{admin,guide,me,orders,reviews}` (issuance/login endpoints exempt).
-
-### Soft-launch / kill-switch
-Middleware's `applyPublicPausedGuard` reads `soft_launch_controls` (via anon client). When `public_paused` is set, non-exempt requests get a 503 (API) or redirect to `/maintenance` (pages), unless whitelisted. Fail-open on any error. Admin/guide/auth routes are always exempt.
-
-### Booking V2 vs legacy
-The platform is mid-migration from a static-schedule model to an availability/slots **Booking V2** engine (Phase 12, issue #621). Feature flags live in `apps/web/src/config/feature-flags.mjs`; `NEXT_PUBLIC_BOOKING_V2_ENABLED` **defaults ON** and `=0` rolls back to legacy. V2 API routes live under `apps/web/app/api/v2/**`; availability logic under `src/lib/availability-v2/` and `slot-generator.ts`. Booking-state and order/payment chains span three layers (booking → order → payment) that must stay consistent; ECPay callbacks must be idempotent (`checkout-idempotency.ts`, `payment-reconciliation.ts`).
-
-**Legacy booking 凍結（#1386 階段一，owner 拍板 2026-06-11 生效）**：legacy booking 路徑（非 `app/api/v2/**` 的 checkout／availability／order-state routes）**停止接受功能修改，只修 P0 bug**。新功能一律落在 V2。退役時間表與後續階段見 `docs/operations/booking-v2-rollback-runbook.md`。
-
-### `.ts` vs `.mjs` in `src/lib`
-Logic that must be importable by edge middleware or run without TS compilation (auth, sessions, soft-launch, store) is authored as `.mjs`; the rest is `.ts`. TypeScript `strict` is on but full strictness is still being expanded across booking-critical modules (issue #68) — match the style of the file you are editing.
-
-### Database migrations
-`supabase/migrations/` — early ones are numbered (`001_…`–`022_…`), newer ones are timestamped (`20260409…`); **new migrations must use the timestamp naming scheme**（見 `supabase/migrations/README.md`）. For the canonical migration and rollback procedure, see `docs/operations/booking-v2-rollback-runbook.md`. （Root 目錄的 legacy one-shot scratch scripts 已於 #1377 移除。）
+實測綠燈才算過（不得推測）；使用者可見流程必跑真實瀏覽器（Playwright）；無法安全執行才標 `NOT_VERIFIED-live` 並附 blocker；驗收報告繁中寫入 `docs/operations/qa-reports/`（含 URL、SHA、Asia/Taipei 時間、逐條 AC 證據，不含密鑰/PII）；流程＝開 PR → 盯 CI → merge → 逐條 AC → sign-off → 關 issue。
 
 ## Conventions
 
-- New API work should target the `v2` routes/contracts unless fixing legacy behavior; check `docs/04-tech/04-tech-architecture/10-api-spec-v2-booking-pos.md` for the V2 contract.
-- Keep readiness/ops docs in sync with real state via `npm run readiness:snapshot` rather than editing live counts by hand.
-- Secrets are guarded at startup (`src/config/security-env.mjs`, `startup-env.mjs`) and by a CI secret-scan workflow — never commit real secrets or weaken these guards.
-
-## Testing policy
-
-**Match the test style to the layer being changed. Always reuse existing fixtures/helpers before writing new ones.**
-
-**db.mjs strangler 準則（#1385）**：之後凡修改 `db.mjs` 某函式，順手把其中可獨立的業務邏輯（狀態機、金額計算、資格判斷）抽到 `src/lib/` 純函式並補單測 — 不開大重構 PR，逐函式漸進。audit log 寫入一律用 `src/lib/audit-log.mjs`（單一實作）；refund 狀態機在 `src/lib/refund-transition.mjs`。
-
-**新增或修改 `db.mjs` gateway 函式時，必須同步 in-memory fallback 並補契約測試**（「同輸入 → 同輸出 shape／同狀態轉移」，範本：`tests/api/issue1384-flow-contract.test.mjs`）— fallback 與 Supabase 實作沒有契約測試時，測試綠燈不代表 production 正確（#1376 即實例）。payment callback 的原子性假設見 `docs/04-tech/04-tech-architecture/12-payment-callback-atomicity.md`（新 RPC 鎖序必須遵循 orders → bookings → activity_schedules）。
-
-### Backend tasks → TDD with `node --test`
-Server routes, `src/lib/**` helpers, DB gateways, evaluators, validators, schedulers, payment/refund pipelines, anything that doesn't render a DOM.
-
-1. **Red first**: write `apps/web/tests/{api,unit,services}/issueNNNN-*.test.mjs` covering the new behavior; run it and see it fail.
-2. **Green**: write the minimum code to make the test pass. Prefer extracting pure helpers under `src/lib/` so the unit can be tested without Supabase — the in-memory fallback (`hasSupabaseEnv()` false branch) is the existing seam.
-3. **Refactor + regression**: rerun the targeted file (`node --test apps/web/tests/api/issueNNNN-*.test.mjs`) and then `npm test` for the whole suite before committing.
-4. **Source-contract tests** (read source via `fs.readFileSync` + regex) are acceptable for locking down route wiring (import order, `.eq('status', …)` shape, helper-call-before-`.insert(`). Recent examples: `tests/api/issue1072-admin-qa-status-helper.test.mjs`, `tests/api/issue1110-plan-schedule-mismatch.test.mjs`.
-
-### Frontend / frontend-interaction tasks → Playwright E2E
-Pages under `apps/web/app/**`, client components, navigation, filters, forms, fee detail / price rendering, anything users see or click.
-
-1. **Add a spec under `apps/web/e2e/issueNNNN-*.spec.ts`** following the existing file naming (`issue1072-admin-qa-pending-tab.spec.ts`, `issue1073-activities-region-listing.spec.ts` are the templates).
-2. **Reuse `apps/web/e2e/helpers.ts`** — it already provides `adminLogin()` and the `authedPage` fixture for admin-authed pages. Don't re-implement auth; extend `helpers.ts` only if a shared concept is genuinely missing (e.g. a new auth realm, a new shared fixture). Traveler-authed pages（`/me/**`，client-side `supabase.auth.getUser()` gate）的可用 pattern：假 `sb-127-auth-token` session cookie + `page.route('**/auth/v1/user**')` 攔截回傳 user — 範本見 `e2e/issue1379-traveler-review.spec.ts` 的 `setTravelerSession`；第二個 spec 需要時請把它抽進 `helpers.ts`。
-3. **Mock backend via `page.route('**/api/**', …)`** so tests don't depend on Supabase seed. See `e2e/issue1073-activities-region-listing.spec.ts` for the pattern (mocked `/api/activities` + `/api/me/wishlist/ids`).
-4. **Always keep the new spec file committed.** Do not delete or rewrite existing specs (`t0-*.spec.ts` … `t7-t8-*.spec.ts`, `funnel-*.spec.ts`, deeplink/booking-flow suites). If an existing spec needs to change to match a new contract, update assertions surgically and explain why in the PR.
-5. **Run locally** with `npm run test:e2e -w @tour/web -- e2e/issueNNNN-…spec.ts` against the dev server (`npm run dev` in another terminal — the config has no `webServer` block and assumes one is running).
-6. **Pair with backend unit tests** when the frontend bug is driven by a backend behavior — e.g. issue #1108 ships both `tests/ui/issue1108-…` source-contract tests (locking the helper integration) and the page change.
-
-### Hybrid tasks
-Fix the backend layer with TDD, then add a Playwright E2E spec that exercises the visible behavior end-to-end. Don't skip the E2E spec just because the unit tests pass — the regression that gets users is almost always at the seam between layers.
-
-## Session branch hygiene
-
-Session work branches (e.g. `claude/<session-slug>`) are ephemeral scratch space, not long-lived feature branches.
-
-1. **開工先對齊 main**：`git fetch origin main && git reset --hard origin/main` 後再開始改。session branch 不保留歷史包袱，diff 永遠等於「最新 main + 本輪修正」。
-2. **Push 被拒、遠端有未在本地的 commit 時，不要先 rebase**：先用 `git patch-id` 比對那些遠端 commit 與 main 上的 squash-merge commit 是否同 patch：
-   ```bash
-   git show <remote-commit> | git patch-id
-   git show <suspect-main-commit> | git patch-id
-   ```
-   patch-id 相同代表內容已被 squash 進 main，遠端那份是無價值的 pre-squash 殘留 — 此時 `git push --force-with-lease` 是安全的（需先取得使用者授權，因為 force-push 屬於 hard-to-reverse 動作）。patch-id 不同才真的 rebase 保留。
-3. **force-push 不可用時的替代流程**（remote execution 環境的權限系統可能直接擋下 `--force-with-lease`）：先驗證 `git diff origin/<session-branch> origin/main --stat` 為空（殘留內容已全進 main），然後 `git merge origin/<session-branch> --no-edit` 把殘留歷史收回本地，再正常 `git push`。merge-base 會落在最新 main，PR diff 不會混入已 merge 的舊變更；之後每輪 squash-merge 後改用 `git merge origin/main --no-edit` 同步（取代第 1 點的 reset --hard），全程不需 force-push。
-4. **絕不對 `main` force-push**，也不對非 session-owned branch force-push；force-push-with-lease 只動 session branch 自己的 ref，不影響 `main` 或他人 branch。
-5. **fresh container 注意**：開工先在 repo root 跑 `npm install`（tests 依賴 `typescript` 套件做 transpile-import，沒裝會整套紅）；`npm install` 可能動到根目錄 `yarn.lock`，該檔改動不要 commit（`git checkout -- yarn.lock`）。
+- 新 API 一律 v2 routes/contracts，除非是修 legacy 行為。
+- readiness/ops 文件用 `npm run readiness:snapshot` 同步，不手改 live 數字。
+- Secrets 由 `src/config/security-env.mjs`、`startup-env.mjs` 與 CI secret-scan 守護——不 commit 真秘密、不弱化 guard。
