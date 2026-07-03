@@ -27,3 +27,6 @@ docs/operations/reports/issue*-tmp-*/
 # Supabase CLI scratch (linked-project.json, pooler-url, project-ref, version
 # pins). Contains project ref + pooler hostname; should not be committed.
 supabase/.temp/
+
+# Claude Code harness runtime state（證據檔/override 檔，不入版控）
+.claude/state/
