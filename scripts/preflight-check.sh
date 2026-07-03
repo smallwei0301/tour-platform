@@ -17,7 +17,8 @@ check_file() {
 echo "== File checks =="
 check_file "apps/web/package.json"
 check_file "apps/web/app/[locale]/page.tsx"
-check_file "apps/web/app/api/orders/route.ts"
+# legacy /api/orders 已隨 #1407 退役刪除；錨點改為 Booking V2 checkout route
+check_file "apps/web/app/api/v2/bookings/[bookingId]/checkout/route.ts"
 check_file "supabase/migrations/001_mvp_core.sql"
 check_file "scripts/demo-smoke.sh"
 
