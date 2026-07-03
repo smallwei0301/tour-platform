@@ -6,6 +6,8 @@ import { FooterGate } from '../src/components/layout/FooterGate';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { GoogleAnalytics } from '../src/components/analytics/GoogleAnalytics';
+import { getLocale } from 'next-intl/server';
+import { HTML_LANG, isAppLocale } from '../src/i18n/routing';
 
 // Issue #1345 — Noto Sans TC is a large CJK font family; on slow mobile
 // links the swap from the fallback (sans-serif) to the real font lands
@@ -68,9 +70,13 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // #1569：<html lang> 隨 locale 正確輸出（en 頁不再誤標 zh-Hant）。
+  // getLocale() 讀 next-intl 協商後的語系；未知值 fallback 預設繁中。
+  const locale = await getLocale();
+  const htmlLang = isAppLocale(locale) ? HTML_LANG[locale] : 'zh-Hant';
   return (
-    <html lang="zh-Hant">
+    <html lang={htmlLang}>
       <head>
         {/* Google Analytics 4（gtag.js）— 緊接 <head> 之後載入，全站僅此一份。
             root layout 包住所有頁面，故每頁都帶到且不重複。詳見元件註解。 */}

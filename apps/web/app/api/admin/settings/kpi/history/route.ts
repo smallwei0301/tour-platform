@@ -1,5 +1,5 @@
 import { ok, fail } from '../../../../../../src/lib/api';
-import { listKpiConfigHistoryDb } from '../../../../../../src/lib/db.mjs';
+import { listKpiConfigHistoryDb } from '../../../../../../src/lib/db-kpi.mjs';
 
 export async function GET() {
   try {

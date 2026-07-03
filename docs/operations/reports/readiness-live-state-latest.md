@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-02T18:34:37.335Z -->
+<!-- query_timestamp: 2026-07-03T07:10:12.898Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-02T18:34:37.335Z  
-**Commit SHA:** `f11f4143844973becbc6c69a891fc13155daeabd`
+**Query timestamp:** 2026-07-03T07:10:12.898Z  
+**Commit SHA:** `cbf8287c27885ecc4c99e03105435d3cfd8490c1`
 
 ---
 
@@ -20,7 +20,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (19 total)
+## Open Issues (16 total)
 
 ### P0 (0)
 
@@ -37,16 +37,13 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (11)
+### P2 (8)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1526 | [[Decision][Auth] 評估加開 LINE Login 作為平台登入方式（與 LINE 通知綁定統一身分）](https://github.com/smallwei0301/tour-platform/issues/1526) | triaged, priority:P2, type:decision, auth, notifications |
 | #1407 | [[Booking][P2] Legacy 退役階段三 — 刪除 legacy routes 與測試清點、flag 退場](https://github.com/smallwei0301/tour-platform/issues/1407) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
-| #1406 | [[Booking][P2] Legacy 退役階段二 — 移除 flag fallback UI 與 legacy 入口](https://github.com/smallwei0301/tour-platform/issues/1406) | priority:P2, agent:backlog, owner:ai-agent, status:blocked, traveler-booking, booking-v2 |
 | #1388 | [[Growth][P2] 成長基礎 backlog 總綱 — i18n 英文版、站內訊息、會員回購（Phase 12 對齊）](https://github.com/smallwei0301/tour-platform/issues/1388) | type:optimization, priority:P2, agent:backlog, owner:mixed, traveler-booking |
 | #1344 | [[Perf][P2] Mobile LCP regression on /activities — 10–12s vs 2s desktop](https://github.com/smallwei0301/tour-platform/issues/1344) | type:bug, priority:P2, owner:ai-agent, traveler-booking, performance |
-| #1321 | [[#1212 follow-up] AC#2 vs AC#4 tension — Traveler dynamic-interpolation messageZh wiring needs product decision](https://github.com/smallwei0301/tour-platform/issues/1321) | priority:P2, type:decision, booking-v2, owner:human, ux-copy |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
 | #797 | [[Compliance] Internal conservative incident reporting playbook for soft launch](https://github.com/smallwei0301/tour-platform/issues/797) | triaged, priority:P2, security, owner:ai-agent, infra, docs, status:awaiting-implementation |
 | #724 | [[Ops] Execute Supabase live restore drill within 7 days after soft launch](https://github.com/smallwei0301/tour-platform/issues/724) | triaged, type:investigation, priority:P2, agent:backlog, owner:mixed, database, infra, status:awaiting-implementation, launch:post-first-payment |
@@ -70,16 +67,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1561 | [feat(ops): migration apply ledger 與 release gate（#1293 選項 B）](https://github.com/smallwei0301/tour-platform/pull/1561) | 2026-07-02 |
-| #1559 | [fix(drift): 缺表探測改 GET+limit(0)，修復 HEAD 探測永遠假陰性的盲區](https://github.com/smallwei0301/tour-platform/pull/1559) | 2026-07-02 |
-| #1558 | [feat(activities): 列表「評價最高」排序＋無限捲動 (#1557)](https://github.com/smallwei0301/tour-platform/pull/1558) | 2026-07-02 |
-| #1556 | [健檢 v2 立即批次：資安 timing-safe／CSRF／scrypt＋SEO hreflang＋依賴對齊＋訂單自動完成 sweep (#1554)](https://github.com/smallwei0301/tour-platform/pull/1556) | 2026-07-02 |
-| #1555 | [feat(admin): 排程工作流控制台 — go-no-go 後台顯示結果、開關、排程時間](https://github.com/smallwei0301/tour-platform/pull/1555) | 2026-07-02 |
-| #1553 | [ci(cron): 補齊 ecpay-reconcile 與 ecpay-failure-sweep 排程載體（#1336 殘餘缺口）](https://github.com/smallwei0301/tour-platform/pull/1553) | 2026-07-02 |
-| #1552 | [feat: 方案卡片依螢幕寬度多欄並排（非手機），修正大螢幕單欄留白](https://github.com/smallwei0301/tour-platform/pull/1552) | 2026-07-02 |
-| #1551 | [fix(monitoring)+perf(activities): probe 重試防誤報 (#1472)、SSR 首屏真卡片消除 LCP render delay (#1344)](https://github.com/smallwei0301/tour-platform/pull/1551) | 2026-07-02 |
-| #1550 | [feat: 電腦版活動照片改為大圖＋可捲動縮圖列（復原 #1547，含 16:9 比例與 768px 響應式修正）](https://github.com/smallwei0301/tour-platform/pull/1550) | 2026-07-01 |
-| #1549 | [fix: revalidatePath 帶各 locale 前綴，admin/guide 改動後前台即時更新（#1488 後續）](https://github.com/smallwei0301/tour-platform/pull/1549) | 2026-07-01 |
+| #1584 | [feat(security): CSP 由 Report-Only 轉 enforce＋HSTS preload (#1568)](https://github.com/smallwei0301/tour-platform/pull/1584) | 2026-07-03 |
+| #1583 | [feat(voucher): 電子憑證 QR＋導遊掃碼核銷 (#1565)](https://github.com/smallwei0301/tour-platform/pull/1583) | 2026-07-03 |
+| #1582 | [feat(auth): Email OTP（magic link）登入入口 (#1566)](https://github.com/smallwei0301/tour-platform/pull/1582) | 2026-07-03 |
+| #1581 | [docs(security): 文件化 admin header-token 存取的撤銷語意 (#1567)](https://github.com/smallwei0301/tour-platform/pull/1581) | 2026-07-03 |
+| #1580 | [test(contract): createOrder/paymentCallback/refund 三鏈路強化契約測試 (#1571)](https://github.com/smallwei0301/tour-platform/pull/1580) | 2026-07-03 |
+| #1579 | [fix(sweep): orders↔bookings 嵌入指名 fk_bookings_order_id，修 settlement sweep PGRST201 500](https://github.com/smallwei0301/tour-platform/pull/1579) | 2026-07-03 |
+| #1578 | [refactor(db): db.mjs strangler 硬規則 — 抽 KPI 領域檔＋CI 行數 guard (#1570)](https://github.com/smallwei0301/tour-platform/pull/1578) | 2026-07-03 |
+| #1577 | [feat(auth): LINE Login（後端 idToken 橋接，flag 預設 OFF）(#1526)](https://github.com/smallwei0301/tour-platform/pull/1577) | 2026-07-03 |
+| #1576 | [fix(seo): &lt;html lang&gt; 隨 locale 正確輸出，en 頁不再誤標 zh-Hant (#1569)](https://github.com/smallwei0301/tour-platform/pull/1576) | 2026-07-03 |
+| #1575 | [feat(booking): legacy 退役階段二 — 移除 flag fallback UI 與 legacy 入口（#1406）](https://github.com/smallwei0301/tour-platform/pull/1575) | 2026-07-03 |
 
 ---
 

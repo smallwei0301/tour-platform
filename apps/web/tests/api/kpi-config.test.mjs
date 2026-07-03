@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getKpiConfigDb, updateKpiConfigDb, listKpiConfigHistoryDb, revertKpiConfigDb, createOrderDb, listOperationsTrackingDb } from '../../src/lib/db.mjs';
+import { getKpiConfigDb, updateKpiConfigDb, listKpiConfigHistoryDb, revertKpiConfigDb } from '../../src/lib/db-kpi.mjs';
+import { createOrderDb, listOperationsTrackingDb } from '../../src/lib/db.mjs';
 
 test('kpi config read/update works in fallback', async () => {
   const before = await getKpiConfigDb();

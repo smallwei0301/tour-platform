@@ -9,6 +9,7 @@ import { pushTravelerOrderEvent } from '../../../../../src/lib/line-traveler-pus
 import { pushGuideOrderEvent } from '../../../../../src/lib/line-guide-push.mjs';
 import { dispatchOrderEventEmails } from '../../../../../src/lib/order-email-notify';
 import { dispatchOrderEventTelegram } from '../../../../../src/lib/order-telegram-notify.mjs';
+import { signVoucherToken, shortCodeForOrder, resolveVoucherSecret } from '../../../../../src/lib/voucher-token.mjs';
 
 export async function GET(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -27,6 +28,12 @@ export async function GET(request: Request, context: { params: Promise<{ orderId
     }
 
     const row = await getMyOrderDetailDb({ orderId, contactEmail });
+    // #1565：confirmed 訂單附電子憑證（簽章 QR token＋人類可讀短碼）供旅客出示/導遊核銷。
+    // token 於 server 端簽發，client 只渲染 QR、不接觸 secret。
+    if (row && row.status === 'confirmed') {
+      row.voucherToken = signVoucherToken(orderId, resolveVoucherSecret());
+      row.voucherShortCode = shortCodeForOrder(orderId);
+    }
     return Response.json(ok(row));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

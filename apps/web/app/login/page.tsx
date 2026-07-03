@@ -3,12 +3,54 @@
 import Link from 'next/link';
 import { createClient } from '../../src/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
+import { isLineLoginEnabled } from '../../src/config/feature-flags.mjs';
+
+// #1566：Email OTP 送出後的客戶端冷卻秒數（防誤觸連按；Supabase 另有伺服器端 OTP 限流）。
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
   const next = searchParams.get('next') ?? searchParams.get('redirectTo') ?? '/';
+  // #1526：LINE Login flag（NEXT_PUBLIC_*，client bundle 可讀）；OFF 時完全不顯示。
+  const lineLoginEnabled = isLineLoginEnabled();
+
+  // #1566：Email OTP（magic link）登入狀態
+  const [email, setEmail] = useState('');
+  const [otpStatus, setOtpStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [otpError, setOtpError] = useState('');
+
+  async function handleEmailOtp(e: React.FormEvent) {
+    e.preventDefault();
+    const addr = email.trim();
+    if (!EMAIL_RE.test(addr)) {
+      setOtpStatus('error');
+      setOtpError('請輸入有效的 Email');
+      return;
+    }
+    setOtpStatus('sending');
+    setOtpError('');
+    try {
+      const supabase = createClient();
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: addr,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        },
+      });
+      if (otpErr) {
+        setOtpStatus('error');
+        // 常見：寄送頻率過高（Supabase 伺服器端限流）
+        setOtpError(/rate|too many|429/i.test(otpErr.message) ? '寄送太頻繁，請稍後再試' : '寄送失敗，請稍後再試');
+        return;
+      }
+      setOtpStatus('sent');
+    } catch {
+      setOtpStatus('error');
+      setOtpError('寄送失敗，請稍後再試');
+    }
+  }
 
   async function handleGoogleLogin() {
     const supabase = createClient();
@@ -18,6 +60,22 @@ function LoginContent() {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
+  }
+
+  // #1526：瀏覽器 LINE OAuth 起手 — 導向 LINE authorize，callback 走
+  // /auth/line/callback（server 端以 channel secret 換 id_token → issueLineSession）。
+  function handleLineLogin() {
+    const channelId = process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID ?? '';
+    if (!channelId) return;
+    const redirectUri = `${window.location.origin}/auth/line/callback`;
+    const state = encodeURIComponent(JSON.stringify({ next }));
+    const url =
+      'https://access.line.me/oauth2/v2.1/authorize?response_type=code' +
+      `&client_id=${encodeURIComponent(channelId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${state}` +
+      '&scope=' + encodeURIComponent('openid profile email');
+    window.location.href = url;
   }
 
   return (
@@ -65,6 +123,56 @@ function LoginContent() {
             </svg>
             使用 Google 帳號登入
           </button>
+
+          {/* LINE 登入（#1526，flag OFF 時不顯示；Google 登入不受影響） */}
+          {lineLoginEnabled && (
+            <button
+              onClick={handleLineLogin}
+              data-testid="line-login-btn"
+              className="login-google-btn"
+              style={{ marginTop: 10, background: '#06C755', color: '#fff' }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M12 2C6.48 2 2 5.64 2 10.13c0 4.02 3.58 7.39 8.42 8.02.33.07.77.22.88.5.1.26.07.66.03.92l-.14.85c-.04.26-.2 1.02.9.56 1.1-.46 5.9-3.48 8.05-5.96C21.4 13.3 22 11.8 22 10.13 22 5.64 17.52 2 12 2z" />
+              </svg>
+              使用 LINE 帳號登入
+            </button>
+          )}
+
+          {/* Email magic-link 登入（#1566）— 無 Google/LINE 帳號者的入口 */}
+          {otpStatus === 'sent' ? (
+            <div className="login-otp-sent" data-testid="otp-sent-message" role="status"
+                 style={{ marginTop: 12, padding: '12px 14px', borderRadius: 10, background: 'rgba(120,180,140,0.14)', color: '#dfeaf2', fontSize: 14, lineHeight: 1.6 }}>
+              ✉️ 登入連結已寄至 <strong>{email.trim()}</strong>，請至信箱點擊連結完成登入（可能在垃圾郵件匣）。
+            </div>
+          ) : (
+            <form onSubmit={handleEmailOtp} data-testid="email-otp-form" style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(ev) => setEmail(ev.target.value)}
+                placeholder="或用 Email 收登入連結"
+                aria-label="Email"
+                data-testid="email-otp-input"
+                style={{ padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(244,236,216,0.3)', background: 'rgba(0,0,0,0.2)', color: '#f4ecd8', fontSize: 15 }}
+              />
+              {otpStatus === 'error' && (
+                <div data-testid="otp-error" style={{ color: '#f0a0b8', fontSize: 13 }}>⚠️ {otpError}</div>
+              )}
+              <button
+                type="submit"
+                data-testid="email-otp-btn"
+                disabled={otpStatus === 'sending'}
+                className="login-google-btn"
+                style={{ opacity: otpStatus === 'sending' ? 0.6 : 1 }}
+              >
+                {otpStatus === 'sending' ? '寄送中⋯' : '寄送登入連結'}
+              </button>
+            </form>
+          )}
 
           {/* 分隔線 */}
           <div className="login-divider">

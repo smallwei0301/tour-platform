@@ -63,6 +63,25 @@ export function isLineLiffEnabled(env = process.env) {
 }
 
 /**
+ * LINE Login 作為平台登入方式（#1526，C′ 後端 idToken 橋接）。
+ * Default: OFF — flag off 時登入頁不顯示「用 LINE 登入」、`/api/auth/line` 回停用，
+ * 現有 Google 登入完全不受影響（即時 rollback）。開啟前 operator 需在 Supabase
+ * Dashboard 確認 provider／設 LINE channel callback／Vercel env 設
+ * LINE_LOGIN_CHANNEL_ID/SECRET（見 docs/operations/line-login-setup.md）。
+ */
+export function isLineLoginEnabled(env = process.env) {
+  return isTruthy(env.NEXT_PUBLIC_LINE_LOGIN_ENABLED);
+}
+
+/**
+ * 自動連結「LINE 已驗證 email」到既有同 email 帳號（#1526 合併策略第 3 點）。
+ * Default: OFF — 首發只記 log 不自動併帳，防搶號；觀察誤併率後再開。
+ */
+export function isLineLoginAutoLinkEmailEnabled(env = process.env) {
+  return isTruthy(env.LINE_LOGIN_AUTOLINK_VERIFIED_EMAIL);
+}
+
+/**
  * Telegram order-event notifications (admin group + guide/traveler push).
  * Default: OFF. Uses the order-notification bot (TELEGRAM_BOT_TOKEN), separate
  * from the system-alert bot (TELEGRAM_ALERT_*).

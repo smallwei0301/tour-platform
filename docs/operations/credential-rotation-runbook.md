@@ -75,6 +75,16 @@ source .env && curl -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
 - ADMIN_ACCESS_TOKEN 最短 16 字元（但建議 32+）
 - 不要使用舊洩漏的 11 字元值 `@Wei3362499`
 
+### ⚠️ header-token 存取的撤銷語意（#1567，by-design）
+
+`middleware.ts` 對帶 `x-admin-token` header 的請求刻意 `requireSession: false`（見 `requireSession: !hasHeaderToken`）——供 automation／script 以 header 呼叫 admin API，不需互動式 session cookie。
+
+**因此撤銷 header-token 存取的唯一方法是「輪換 `ADMIN_ACCESS_TOKEN` 本身」（本 Step 3）。**
+
+- `forceLogoutAllSessions()` / session-version 提升**只會使 cookie session 失效，不會使 header-token 呼叫失效**（header 路徑跳過 session-version 檢查）。
+- 若懷疑 `ADMIN_ACCESS_TOKEN` 外洩（如 #1121），**必須執行本 Step 3 輪換**才算真正斷開 header-token 存取；單純 forceLogout 不足。
+- 決策（owner）：目前維持 header-token by-design（automation 需求）。若日後要求 header 也受 session-version 管控，改 `middleware.ts` 的 `requireSession: true`，並為 automation 另配可獨立撤銷的機器憑證。
+
 ---
 
 ## Step 4：Supabase anon JWT 輪換（P2）

@@ -2,17 +2,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../src/lib/booking-entry.mjs';
 
-test('resolveBookingEntryHref keeps legacy checkout when flag is off', () => {
-  const href = resolveBookingEntryHref({ activitySlug: 'kaohsiung-cave', useBookingV2: false });
-  assert.equal(href, '/checkout?slug=kaohsiung-cave');
+// Legacy 退役階段二（#1406）：移除 legacy `/checkout` 入口。
+// booking entry 一律導向 Booking V2 `/booking/[slug]`，`useBookingV2` 參數（含 false）不再產生 legacy 連結。
+test('resolveBookingEntryHref always routes to V2 booking page (flag off no longer reaches legacy /checkout)', () => {
+  assert.equal(resolveBookingEntryHref({ activitySlug: 'kaohsiung-cave', useBookingV2: false }), '/booking/kaohsiung-cave');
+  assert.equal(resolveBookingEntryHref({ activitySlug: 'kaohsiung-cave', useBookingV2: true }), '/booking/kaohsiung-cave');
 });
 
-test('resolveBookingEntryHref routes to booking page when flag is on', () => {
-  const href = resolveBookingEntryHref({ activitySlug: 'kaohsiung-cave', useBookingV2: true });
-  assert.equal(href, '/booking/kaohsiung-cave');
-});
-
-test('resolvePlanBookingHref carries v2 params only when flag is on', () => {
+test('resolvePlanBookingHref carries plan params to V2 booking page regardless of flag (no legacy /checkout)', () => {
   const v2Href = resolvePlanBookingHref({
     activitySlug: 'kaohsiung-cave',
     planId: 'half-day',
@@ -22,14 +19,15 @@ test('resolvePlanBookingHref carries v2 params only when flag is on', () => {
   });
   assert.equal(v2Href, '/booking/kaohsiung-cave?plan=half-day&date=2026-05-01&scheduleId=sch_1');
 
-  const legacyHref = resolvePlanBookingHref({
+  // flag off 亦導向 V2（階段二退役後不再回退 legacy /checkout）
+  const flagOffHref = resolvePlanBookingHref({
     activitySlug: 'kaohsiung-cave',
     planId: 'half-day',
     date: '2026-05-01',
     scheduleId: 'sch_1',
     useBookingV2: false,
   });
-  assert.equal(legacyHref, '/checkout?slug=kaohsiung-cave&plan=half-day&date=2026-05-01&scheduleId=sch_1');
+  assert.equal(flagOffHref, '/booking/kaohsiung-cave?plan=half-day&date=2026-05-01&scheduleId=sch_1');
 });
 
 test('inferPlanIdForBookingUrl returns explicit plan first', () => {

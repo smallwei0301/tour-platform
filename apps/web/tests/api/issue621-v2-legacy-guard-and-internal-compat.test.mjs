@@ -49,7 +49,9 @@ test('issue621 internal sweeps should prefer V2 booking start_at with legacy sch
   assert.match(reminderSrc, /booking_id/, 'reminder sweep query should read orders.booking_id for V2-linked orders');
   assert.match(
     reminderSrc,
-    /bookings\s*\([^)]*start_at/s,
+    // (?:!\w+)? — orders↔bookings 雙 FK 後嵌入需指名關係（PGRST201），FK 命名由
+    // tests/api/orders-bookings-embed-fk-disambiguation.test.mjs 鎖定，此處只鎖 payload。
+    /bookings(?:!\w+)?\s*\([^)]*start_at/s,
     'reminder sweep should include bookings.start_at join payload for V2 canonical time source'
   );
   assert.match(
@@ -66,7 +68,7 @@ test('issue621 internal sweeps should prefer V2 booking start_at with legacy sch
   assert.match(settlementSrc, /booking_id/, 'settlement sweep query should read orders.booking_id for V2-linked orders');
   assert.match(
     settlementSrc,
-    /bookings\s*\([^)]*start_at/s,
+    /bookings(?:!\w+)?\s*\([^)]*start_at/s,
     'settlement sweep should include bookings.start_at join payload for V2 canonical time source'
   );
   assert.match(

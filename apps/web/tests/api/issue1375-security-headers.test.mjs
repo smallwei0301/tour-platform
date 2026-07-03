@@ -15,21 +15,32 @@ import path from 'node:path';
 
 const configSrc = readFileSync(path.resolve('next.config.mjs'), 'utf8');
 
-test('AC1: securityHeaders 含 Strict-Transport-Security（一年 + includeSubDomains）', () => {
+test('AC1: securityHeaders 含 Strict-Transport-Security（一年 + includeSubDomains + preload #1568）', () => {
   assert.match(configSrc, /Strict-Transport-Security/, '應有 HSTS header 條目');
   assert.match(
     configSrc,
-    /max-age=31536000;?\s*includeSubDomains/,
-    'HSTS 值應為 max-age=31536000; includeSubDomains'
+    /max-age=31536000;?\s*includeSubDomains;?\s*preload/,
+    'HSTS 值應為 max-age=31536000; includeSubDomains; preload'
   );
 });
 
-test('AC2: 含 Content-Security-Policy-Report-Only（report-only，不直接 enforce）', () => {
-  assert.match(configSrc, /Content-Security-Policy-Report-Only/, '應為 Report-Only 模式');
+test('AC2（#1568）: CSP 為 enforce（Content-Security-Policy，非 Report-Only）', () => {
+  assert.match(configSrc, /key:\s*'Content-Security-Policy'/, 'CSP 應 enforce');
   assert.ok(
-    !/key:\s*'Content-Security-Policy'(?!-)/.test(configSrc),
-    '不得直接 enforce CSP（避免擋掉金流跳轉）'
+    !/Content-Security-Policy-Report-Only/.test(configSrc),
+    '不應再是 Report-Only（#1568 已轉 enforce）'
   );
+});
+
+test('AC2（#1568）: production 不含 unsafe-eval（僅 dev 保留）', () => {
+  // production 分支的 script-src 字面不得含 unsafe-eval；dev 分支保留
+  assert.match(configSrc, /isProd\s*\?/, 'script-src 應依 isProd 條件分支');
+  assert.match(
+    configSrc,
+    /"script-src 'self' 'unsafe-inline' https:\/\/va\.vercel-scripts\.com https:\/\/www\.googletagmanager\.com"/,
+    'production 分支 script-src 不得含 unsafe-eval'
+  );
+  assert.match(configSrc, /"script-src 'self' 'unsafe-inline' 'unsafe-eval' https:\/\/va/, 'dev 分支保留 unsafe-eval');
 });
 
 test('AC2: CSP policy 涵蓋 ECPay form-action（production + stage）', () => {
