@@ -8,6 +8,7 @@ import { RefundPreviewBanner } from '../../../../src/components/orders/RefundPre
 import { RESCHEDULE_WINDOW_HOURS } from '../../../../src/lib/reschedule.mjs';
 import { useClientLocale } from '../../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../../src/i18n/client-nav-messages';
+import { QRCodeSVG } from 'qrcode.react';
 
 type OrderDetail = {
   id: string;
@@ -22,6 +23,9 @@ type OrderDetail = {
   paidAt?: string | null;
   scheduleId?: string | null;
   scheduleStartAt?: string | null;
+  // #1565 電子憑證（server 於 confirmed 訂單簽發）
+  voucherToken?: string | null;
+  voucherShortCode?: string | null;
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -400,6 +404,24 @@ export default function OrderDetailPage() {
         </div>
         <p style={{ fontSize: 13, color: 'var(--tp-text)', margin: 0 }}>{statusDesc}</p>
       </div>
+
+      {/* #1565 電子憑證：confirmed 訂單顯示 QR＋短碼供出發當日出示/導遊核銷 */}
+      {status === 'confirmed' && order.voucherToken && (
+        <div data-testid="voucher-card" style={{ ...cardStyle, textAlign: 'center' }}>
+          <h2 style={{ fontSize: 14, fontWeight: 700, color: 'var(--tp-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>電子憑證</h2>
+          <div style={{ display: 'inline-block', background: '#fff', padding: 12, borderRadius: 12 }}>
+            <QRCodeSVG value={order.voucherToken} size={168} level="M" data-testid="voucher-qr" />
+          </div>
+          {order.voucherShortCode && (
+            <p style={{ marginTop: 12, fontSize: 20, fontWeight: 800, letterSpacing: '0.12em', color: 'var(--tp-text)' }} data-testid="voucher-shortcode">
+              {order.voucherShortCode}
+            </p>
+          )}
+          <p style={{ fontSize: 12, color: 'var(--tp-muted)', margin: '6px 0 0' }}>
+            出發當日向導遊出示此 QR 或短碼；無法掃描時，導遊可用短碼＋姓名於名冊核對。
+          </p>
+        </div>
+      )}
 
       {/* Order info */}
       <div style={cardStyle}>
