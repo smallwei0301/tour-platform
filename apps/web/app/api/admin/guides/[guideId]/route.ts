@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
-import { errorV2 } from '../../../../../src/lib/api';
+import { revalidatePath } from 'next/cache';
+import { errorV2, ok } from '../../../../../src/lib/api';
 // 健檢 v2 S1：收斂本地複製的 SHA-256 hashPassword → 共用 guide-auth 的 scrypt 實作
 import { hashPassword } from '../../../../../src/lib/guide-auth';
+import { classifyGuideAccountUpdateError } from '../../../../../src/lib/guide-account-error.mjs';
+import {
+  deleteGuideProfileDb,
+  deleteGuideApplicationDb,
+} from '../../../../../src/lib/db-guide-delete.mjs';
+import { localizeRevalidationPaths } from '../../../../../src/lib/region-slug.mjs';
+import { revalidateActivityPaths } from '../../../../../src/lib/revalidate-activity.mjs';
 
 /**
  * GET /api/admin/guides/:guideId
@@ -164,7 +172,7 @@ export async function PATCH(
     // Verify guide exists and is approved
     const { data: guide, error: fetchError } = await supabase
       .from('guide_profiles')
-      .select('id, display_name, guide_email, verification_status')
+      .select('id, display_name, guide_email, verification_status, guide_session_version')
       .eq('id', guideId)
       .single();
 
@@ -179,10 +187,11 @@ export async function PATCH(
     }
     if (password) {
       updates.guide_password_hash = hashPassword(password);
-      // Bump session version to invalidate existing sessions
-      updates.guide_session_version = (guide as Record<string, unknown>).guide_session_version
-        ? Number((guide as Record<string, unknown>).guide_session_version) + 1
-        : 2;
+      // Bump session version to invalidate existing sessions.
+      // 先前的 fetch 沒 select guide_session_version，導致這裡永遠讀到
+      // undefined、每次都被重設成 2（無法真正遞增）。改為 select 出來後 +1。
+      const currentVersion = Number((guide as Record<string, unknown>).guide_session_version) || 1;
+      updates.guide_session_version = currentVersion + 1;
     }
 
     const { error: updateError } = await supabase
@@ -203,14 +212,73 @@ export async function PATCH(
       }
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'SERVER_ERROR';
-    // Unique constraint violation on email
-    if (msg.includes('unique') || msg.includes('duplicate')) {
+    // Supabase 的 PostgrestError 是純物件（非 Error 實例），過去直接
+    // `err instanceof Error ? err.message : 'SERVER_ERROR'` 會吞掉真正訊息、
+    // 也讓 unique(email) 衝突無法被辨識成 EMAIL_TAKEN。改用共用分類器。
+    const { code, message, status } = classifyGuideAccountUpdateError(err);
+    return NextResponse.json(errorV2(code, message), { status });
+  }
+}
+
+/**
+ * DELETE /api/admin/guides/:guideId
+ * 雙實體解析（鏡射 GET）：先試 guide_profiles、NOT_FOUND 再試 guide_applications。
+ * profile 有訂單／撥款紀錄時回 409 GUIDE_HAS_RECORDS（附各表筆數），
+ * 建議改用停權 — 對應 DB 層 RESTRICT 外鍵的友善化。
+ * Auth + CSRF via middleware（DELETE 已在 mutation 清單，middleware.ts:114）。
+ */
+export async function DELETE(
+  _req: Request,
+  context: { params: Promise<{ guideId: string }> }
+) {
+  const { guideId } = await context.params;
+  if (!guideId) {
+    return NextResponse.json(errorV2('BAD_REQUEST', 'guideId is required'), { status: 400 });
+  }
+
+  try {
+    const profileRes = await deleteGuideProfileDb(guideId);
+
+    if (profileRes.ok && profileRes.deleted) {
+      const deleted = profileRes.deleted;
+      // Revalidate 公開頁（仿 suspend route）：導遊列表／個人頁＋每個被刪活動頁。
+      try {
+        const paths = ['/guides', '/activities'];
+        if (deleted.slug) paths.push(`/guides/${deleted.slug}`);
+        for (const p of localizeRevalidationPaths(paths)) revalidatePath(p);
+        for (const a of deleted.activities) {
+          revalidateActivityPaths({ region: a.region, regionSlug: a.regionSlug, slug: a.slug });
+        }
+      } catch (revalidateErr) {
+        console.warn('[guide-delete] revalidate failed:', revalidateErr);
+      }
+      return NextResponse.json(ok({ kind: 'profile', ...deleted }));
+    }
+
+    if (profileRes.code === 'GUIDE_HAS_RECORDS') {
+      // 標準 errorV2 envelope（error-envelope-phase1 規範）＋ 附 counts 供 UI 顯示筆數。
+      const envelope = errorV2(
+        'GUIDE_HAS_RECORDS',
+        '此導遊已有訂單或撥款紀錄，無法刪除。建議改用「停權帳號」，保留歷史紀錄。'
+      );
       return NextResponse.json(
-        errorV2('EMAIL_TAKEN', '此 Email 已被使用'),
+        { ...envelope, error: { ...envelope.error, counts: profileRes.counts } },
         { status: 409 }
       );
     }
+
+    // profile NOT_FOUND → 試 application（兩表 id 空間分離，見 GET 註解）。
+    const appRes = await deleteGuideApplicationDb(guideId);
+    if (appRes.ok) {
+      return NextResponse.json(ok({ kind: 'application', ...appRes.deleted }));
+    }
+
+    return NextResponse.json(
+      errorV2('NOT_FOUND', '找不到導遊資料：此 ID 不屬於任何導遊檔案或導遊申請'),
+      { status: 404 }
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'SERVER_ERROR';
     return NextResponse.json(errorV2('SERVER_ERROR', msg), { status: 500 });
   }
 }

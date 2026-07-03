@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { AdminSessionBar } from './AdminSessionBar';
-import { AdminGuide } from './AdminGuide';
 import { useIsMobile } from './responsive';
 import { csrfHeaders, readCsrfTokenFromCookie } from '../../lib/csrf-client';
 
@@ -185,7 +184,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <main style={{ flex: 1, overflow: 'auto' }}>
           {children}
         </main>
-        <AdminGuide pathname={pathname} />
+        {/* 移除固定在右下角的「?」導覽 FAB（AdminGuide）：z-index 9999 的
+            浮動按鈕會蓋住 modal（如「編輯導遊帳號」的儲存鈕），手機上尤其明顯。 */}
       </div>
     </div>
   );
