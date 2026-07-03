@@ -169,7 +169,8 @@ export default async function ExperiencePage({ params }: { params: Promise<{ loc
               <p style={{ margin: 0, color: 'var(--tp-muted)', fontSize: 14 }}>{t('pricePerPerson')}</p>
               <p className="tp-price">NT$ {experience.priceTwd.toLocaleString()}</p>
 
-              <Link className="tp-btn tp-btn-primary tp-full" href={`/checkout?slug=${encodeURIComponent(experience.slug)}`}>
+              {/* Legacy 退役階段二（#1406）：預約 CTA 改導向 Booking V2 入口，不再進 legacy /checkout。 */}
+              <Link className="tp-btn tp-btn-primary tp-full" href={`/booking/${encodeURIComponent(experience.slug)}`}>
                 {t('ctaBook')}
               </Link>
               <Link className="tp-btn tp-btn-ghost tp-full" href={`/activities`}>

@@ -23,28 +23,24 @@ test('booking page shell allows explicit legacy fallback only through NEXT_PUBLI
   assert.equal(isBookingV2ShellEnabled({ NEXT_PUBLIC_BOOKING_V2_ENABLED: 'false' }), false);
 });
 
-test('booking page uses deployable shell flag helper instead of runtime-only fallback helper', async () => {
+// Legacy 退役階段二（#1406）：/booking 殼層一律走 Booking V2；flag fallback UI 已移除。
+// 頁面不再讀 shell flag 分支，也不再保留 BookingInnerLegacy / useLegacyFallback 降級路徑。
+test('booking page always renders the V2 shell and no longer branches into a legacy fallback', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
 
-  assert.match(src, /isBookingV2ShellEnabled\(/);
-  assert.doesNotMatch(src, /isBookingV2Enabled\(/);
-});
-
-test('missing-plan fallback can actually render legacy shell by checking branch order', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
-
-  const useLegacyIndex = src.indexOf('if (useLegacyFallback) {');
-  const missingPlanIndex = src.indexOf('if (!canRunV2PlanFlow) {');
-
-  assert.ok(useLegacyIndex >= 0, 'expected useLegacyFallback branch');
-  assert.ok(missingPlanIndex >= 0, 'expected missing-plan branch');
-  assert.ok(useLegacyIndex < missingPlanIndex, 'legacy fallback branch should be checked before missing-plan branch');
+  // 只渲染 V2 shell；不得再有 legacy fallback 元件或 flag 分支
+  assert.match(src, /<BookingInnerV2FlagShell \/>/, 'default export must render the V2 shell');
+  assert.doesNotMatch(src, /BookingInnerLegacy/, 'legacy booking component must be removed (階段二退役)');
+  assert.doesNotMatch(src, /useLegacyFallback/, 'legacy fallback branch/state must be removed');
+  // 不得再有降級到 legacy checkout 的舊版下單/付款呼叫
+  assert.doesNotMatch(src, /createOrder\(/, 'legacy createOrder() path must be gone');
+  assert.doesNotMatch(src, /submitEcpayCallback\(/, 'legacy mock-payment path must be gone');
 });
 
 test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead of legacy createOrder(/api/orders)', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
-  const v2End = src.indexOf('if (useLegacyFallback) {');
+  const v2End = src.indexOf('// ── 外層包 Suspense');
   assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');
 
   const v2ShellSource = src.slice(v2Start, v2End);
@@ -61,7 +57,7 @@ test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead
 test('v2 shell posts resolved UUID activityId and planId from available-slots response into draft payload', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
-  const v2End = src.indexOf('if (useLegacyFallback) {');
+  const v2End = src.indexOf('// ── 外層包 Suspense');
   assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');
 
   const v2ShellSource = src.slice(v2Start, v2End);
@@ -75,7 +71,7 @@ test('v2 shell posts resolved UUID activityId and planId from available-slots re
 test('v2 shell renders selected plan display name and avoids showing raw UUID in plan summary', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
-  const v2FallbackBranch = src.indexOf('if (useLegacyFallback) {');
+  const v2FallbackBranch = src.indexOf('// ── 外層包 Suspense');
   assert.ok(v2Start >= 0 && v2FallbackBranch > v2Start, 'expected bounded V2 shell source range');
 
   const v2ShellPreRender = src.slice(v2Start, v2FallbackBranch);

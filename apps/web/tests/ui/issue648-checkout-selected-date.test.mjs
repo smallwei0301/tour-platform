@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { resolvePlanBookingHref } from '../../src/lib/booking-entry.mjs';
 import { resolveInitialCheckoutSelection } from '../../src/lib/checkout-selection.mjs';
 
-test('resolvePlanBookingHref preserves selected date for legacy checkout flow', () => {
+// Legacy 退役階段二（#1406）：resolvePlanBookingHref 不再回退 legacy /checkout；
+// 選取日期改保留在 Booking V2 /booking 入口（flag off 亦同）。
+test('resolvePlanBookingHref preserves selected date on the V2 booking entry (no legacy /checkout)', () => {
   const href = resolvePlanBookingHref({
     activitySlug: 'activity-1775040922554',
     planId: 'half-day-morning',
@@ -14,7 +16,7 @@ test('resolvePlanBookingHref preserves selected date for legacy checkout flow', 
 
   assert.equal(
     href,
-    '/checkout?slug=activity-1775040922554&plan=half-day-morning&date=2026-05-24'
+    '/booking/activity-1775040922554?plan=half-day-morning&date=2026-05-24'
   );
 });
 
