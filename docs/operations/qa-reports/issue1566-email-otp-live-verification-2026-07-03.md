@@ -31,10 +31,10 @@ Body: {"email":"<owner 信箱>","create_user":true,"gotrue_meta_security":{}}
 | magic link 信件實際寄出 | ✅ | auth log：`{"event":"mail.send","mail_from":"noreply@mail.app.supabase.io","mail_to":"<owner>","mail_type":"magic_link","time":"2026-07-03T09:05:29Z"}` |
 | 屬既有帳號登入（非誤建新戶） | ✅ | auth log：`action:"user_recovery_requested"`，actor 為既有 Google 帳號使用者 |
 | `redirect_to`（正式站 callback）被接受 | ✅ | 帶白名單內 redirect 仍回 200；未觸發 redirect 拒絕 |
+| 收信＋點擊連結完成 `/auth/callback` 交換 | ✅ | owner 截圖：收到「Your Magic Link」信（寄件時間 17:05，與 log `mail.send` 時間戳一致）；點擊 Log In 後成功跳轉回正式站首頁，無 Supabase redirect 錯誤頁 |
+| 登入態實際生效 | ✅ | owner 目視確認：登入後可看到自己的訂單列表（`/me/orders`），非被導回登入頁 |
 
-## 待人工完成的最後一哩（非阻擋）
-
-- **點擊信中連結驗證 `/auth/callback` 交換**：需真實瀏覽器 session（持有 PKCE code_verifier cookie）點擊完成，只有 owner 在自己裝置上能執行。已請 owner 於收件匣確認可跳回網站並登入。此步不影響本報告對「寄送鏈路已通」的 PASS 判定。
+全鏈路（Dashboard 設定→OTP 寄信→收信→點擊→callback 交換→登入態→訂單頁）皆已由 owner 於正式站真人實測，**全數 PASS，無殘留待辦**。
 
 ## 已知限制（非本 issue 缺陷）
 
