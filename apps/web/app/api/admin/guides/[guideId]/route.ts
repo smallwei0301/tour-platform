@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { errorV2 } from '../../../../../src/lib/api';
 // 健檢 v2 S1：收斂本地複製的 SHA-256 hashPassword → 共用 guide-auth 的 scrypt 實作
 import { hashPassword } from '../../../../../src/lib/guide-auth';
+import { classifyGuideAccountUpdateError } from '../../../../../src/lib/guide-account-error.mjs';
 
 /**
  * GET /api/admin/guides/:guideId
@@ -164,7 +165,7 @@ export async function PATCH(
     // Verify guide exists and is approved
     const { data: guide, error: fetchError } = await supabase
       .from('guide_profiles')
-      .select('id, display_name, guide_email, verification_status')
+      .select('id, display_name, guide_email, verification_status, guide_session_version')
       .eq('id', guideId)
       .single();
 
@@ -179,10 +180,11 @@ export async function PATCH(
     }
     if (password) {
       updates.guide_password_hash = hashPassword(password);
-      // Bump session version to invalidate existing sessions
-      updates.guide_session_version = (guide as Record<string, unknown>).guide_session_version
-        ? Number((guide as Record<string, unknown>).guide_session_version) + 1
-        : 2;
+      // Bump session version to invalidate existing sessions.
+      // 先前的 fetch 沒 select guide_session_version，導致這裡永遠讀到
+      // undefined、每次都被重設成 2（無法真正遞增）。改為 select 出來後 +1。
+      const currentVersion = Number((guide as Record<string, unknown>).guide_session_version) || 1;
+      updates.guide_session_version = currentVersion + 1;
     }
 
     const { error: updateError } = await supabase
@@ -203,14 +205,10 @@ export async function PATCH(
       }
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'SERVER_ERROR';
-    // Unique constraint violation on email
-    if (msg.includes('unique') || msg.includes('duplicate')) {
-      return NextResponse.json(
-        errorV2('EMAIL_TAKEN', '此 Email 已被使用'),
-        { status: 409 }
-      );
-    }
-    return NextResponse.json(errorV2('SERVER_ERROR', msg), { status: 500 });
+    // Supabase 的 PostgrestError 是純物件（非 Error 實例），過去直接
+    // `err instanceof Error ? err.message : 'SERVER_ERROR'` 會吞掉真正訊息、
+    // 也讓 unique(email) 衝突無法被辨識成 EMAIL_TAKEN。改用共用分類器。
+    const { code, message, status } = classifyGuideAccountUpdateError(err);
+    return NextResponse.json(errorV2(code, message), { status });
   }
 }
