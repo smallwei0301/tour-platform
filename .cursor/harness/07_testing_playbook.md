@@ -40,7 +40,9 @@ CI（`ci.yml`）順序：lint → typecheck → test → build → `scripts/pref
 4. **Source-contract tests**（`fs.readFileSync` + regex 讀 source）可用於鎖 route wiring（import 順序、`.eq('status', …)` shape、helper 先於 `.insert(`）。範例：`tests/api/issue1072-admin-qa-status-helper.test.mjs`、`tests/api/issue1110-plan-schedule-mismatch.test.mjs`。
 
 ### db.mjs 特別條款
-- **strangler 準則（#1385）**：改 `db.mjs` 某函式時，順手把可獨立的業務邏輯（狀態機、金額計算、資格判斷）抽到 `src/lib/` 純函式並補單測——逐函式漸進，不開大重構 PR。audit log 一律用 `src/lib/audit-log.mjs`；refund 狀態機在 `src/lib/refund-transition.mjs`。
+- **strangler 硬規則（#1385／#1570）**：新的資料存取函式**禁止寫進 `db.mjs`**，一律開領域檔（`db-kpi.mjs`、`db-auto-complete.mjs`、`db-settlement.mjs`…），caller 直接 import 領域檔（不經 db.mjs re-export）。領域檔的 Supabase 分支＋in-memory fallback 要同步、並補契約測試。
+- **CI 行數天花板 guard**（`tests/unit/db-mjs-size-guard.test.mjs`）：`db.mjs` 只能降不能升。每次抽出一塊後把該檔 `CEILING` 下修到新值鎖住成果。因修 P0 bug 必須在既有函式內加行而超標，是唯一該調高 CEILING 的理由，且須在 PR 說明。
+- 改 `db.mjs` 既有函式時，順手把可獨立的業務邏輯（狀態機、金額計算、資格判斷）抽到 `src/lib/` 純函式並補單測——逐函式漸進，不開大重構 PR。audit log 一律用 `src/lib/audit-log.mjs`；refund 狀態機在 `src/lib/refund-transition.mjs`。
 - **新增/修改 gateway 函式必須同步 in-memory fallback 並補契約測試**（同輸入→同輸出 shape／同狀態轉移；範本 `tests/api/issue1384-flow-contract.test.mjs`）。fallback 與 Supabase 實作沒有契約測試時，綠燈不代表 production 正確（#1376 實例）。
 - payment callback 原子性假設見 `docs/04-tech/04-tech-architecture/12-payment-callback-atomicity.md`；新 RPC 鎖序必須遵循 orders → bookings → activity_schedules。
 
