@@ -15,16 +15,30 @@ const repoRoot = path.resolve(appDir, '../..');
 // Single authority startup ENV validation (issue #60)
 assertStartupEnv(process.env);
 
-// #1375 — CSP 先以 Report-Only 試行（違規只回報不阻擋，避免誤擋 ECPay 金流跳轉）。
+// #1568 — CSP 由 Report-Only 轉為 enforce（實際阻擋）。
 // 來源盤點：ECPay 付款跳轉（form-action）、Supabase REST/Realtime（connect-src）、
 // Sentry（tunnel /monitoring 為同源；無 tunnel 時走 *.sentry.io）、Vercel Analytics /
 // Speed Insights、Google Analytics 4（gtag.js → googletagmanager.com，beacon →
 // google-analytics.com / analytics.google.com）、Unsplash/Pexels/Supabase 圖源。
-// 'unsafe-inline'/'unsafe-eval' 為
-// Next.js hydration 與 dev runtime 所需；enforce 切換另開 follow-up issue 附觀察證據。
-const cspReportOnly = [
+//
+// enforce 後實際生效的防護：default-src 'self'、object-src 'none'（擋 Flash/plugin XSS）、
+// base-uri 'self'（擋 <base> 注入）、frame-ancestors 'self'（clickjacking）、
+// form-action 白名單（擋未授權表單外送，僅放行 ECPay）、connect/img 白名單（擋資料外送到未授權主機）。
+//
+// script-src 保留 'unsafe-inline'：本站大量頁面為 SSG/ISR（#1344 效能），
+// nonce-based CSP 需 per-request dynamic rendering，會回歸該效能；改用 nonce/hash
+// 移除 'unsafe-inline' 屬架構取捨，另立 follow-up（需 static→dynamic 決策）。
+// 'unsafe-eval' 僅 dev 保留（Next dev runtime 需要）；production 移除以縮小攻擊面。
+const isProd = process.env.NODE_ENV === 'production';
+// production 移除 'unsafe-eval'（Next prod 不需 eval）；dev 保留（Next dev runtime 需要）。
+// 兩分支皆把 script-src ... googletagmanager 放同一字串字面（GA4 source-contract 需要）。
+const scriptSrc = isProd
+  ? "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com https://www.googletagmanager.com"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.googletagmanager.com";
+
+const csp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://www.googletagmanager.com",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com https://images.pexels.com https://*.supabase.co https://www.googletagmanager.com https://www.google-analytics.com",
   "font-src 'self' data:",
@@ -42,8 +56,9 @@ const securityHeaders = [
   { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
-  { key: 'Content-Security-Policy-Report-Only', value: cspReportOnly },
+  { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains; preload' },
+  // #1568：enforce（非 Report-Only）
+  { key: 'Content-Security-Policy', value: csp },
 ];
 
 /** @type {import('next').NextConfig} */
