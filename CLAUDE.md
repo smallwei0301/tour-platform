@@ -90,7 +90,11 @@ Logic that must be importable by edge middleware or run without TS compilation (
 
 **Match the test style to the layer being changed. Always reuse existing fixtures/helpers before writing new ones.**
 
-**db.mjs strangler 準則（#1385）**：之後凡修改 `db.mjs` 某函式，順手把其中可獨立的業務邏輯（狀態機、金額計算、資格判斷）抽到 `src/lib/` 純函式並補單測 — 不開大重構 PR，逐函式漸進。audit log 寫入一律用 `src/lib/audit-log.mjs`（單一實作）；refund 狀態機在 `src/lib/refund-transition.mjs`。
+**db.mjs strangler 硬規則（#1385／#1570）**：
+- **新的資料存取函式禁止寫進 `db.mjs`**，一律開領域檔（`db-kpi.mjs`、`db-auto-complete.mjs`、`db-settlement.mjs`…），caller 直接 import 領域檔（不經 db.mjs re-export）。領域檔的 Supabase 分支＋in-memory fallback 要同步、並補契約測試。
+- **CI 有行數天花板 guard**（`tests/unit/db-mjs-size-guard.test.mjs`）：`db.mjs` 只能降不能升。每次抽出一塊後把該檔 `CEILING` 下修到新值以鎖住成果。因修 P0 bug 必須在既有函式內加行而超標，是唯一該調高 CEILING 的理由，且須在 PR 說明。
+- 凡修改 `db.mjs` 某函式，順手把其中可獨立的業務邏輯（狀態機、金額計算、資格判斷）抽到 `src/lib/` 純函式並補單測 — 逐函式漸進、不開大重構 PR。
+- audit log 寫入一律用 `src/lib/audit-log.mjs`（單一實作）；refund 狀態機在 `src/lib/refund-transition.mjs`。
 
 **新增或修改 `db.mjs` gateway 函式時，必須同步 in-memory fallback 並補契約測試**（「同輸入 → 同輸出 shape／同狀態轉移」，範本：`tests/api/issue1384-flow-contract.test.mjs`）— fallback 與 Supabase 實作沒有契約測試時，測試綠燈不代表 production 正確（#1376 即實例）。payment callback 的原子性假設見 `docs/04-tech/04-tech-architecture/12-payment-callback-atomicity.md`（新 RPC 鎖序必須遵循 orders → bookings → activity_schedules）。
 
