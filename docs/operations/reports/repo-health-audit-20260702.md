@@ -228,22 +228,22 @@
 4. ✅ 【資安】guide 密碼雜湊改 scrypt＋透明升級遷移（S1）— 舊格式相容、登入時無感升級、admin route 重複實作一併收斂
 5. ✅ 【債】TS 版本對齊（root 6.0.2）＋`@types/node` ^22＋`packages/config` 移除（A6）
 
-### 短期（1–2 週，轉換率與合規優先）
-6. 【產品 P0＋🔴 修漏單】電子憑證 QR＋導遊掃碼核銷（P0-1 主體）；**✅ 自動完成 sweep cron＋漏單對帳告警已實作（#1554，2026-07-02）**— `db-auto-complete.mjs`＋`/api/internal/bookings/auto-complete-sweep`＋每日 workflow
-7. 【產品 P0】Supabase Email OTP 登入（P0-2 前半；LINE Login 走 #1526）
-9. 【產品 P1】活動列表無限捲動＋「評價最高」排序（P1-6）
-10. 【資安】S3 header-token session 政策決策＋文件化；**#1121 憑證輪替排期執行**
-11. 【SEO】`<html lang>` 隨 locale 修正（root layout 重構）
+### 短期（1–2 週，轉換率與合規優先）— **✅ 骨幹已於 2026-07-02～03 實作**
+6. ✅ 【產品 P0＋🔴 修漏單】電子憑證 QR＋導遊掃碼核銷（P0-1）— **#1565**（`voucher-token.mjs`＋`db-redeem.mjs`＋`/api/v2/guide/orders/[orderId]/redeem`＋旅客訂單頁 QR）；**自動完成 sweep cron＋漏單對帳告警（#1554）**
+7. ✅ 【產品 P0】Supabase Email OTP 登入（P0-2 前半）— **#1566**；Dashboard 設定已於 2026-07-03 啟用並 **live 驗證 magic link 實際寄出**（見 `qa-reports/issue1566-email-otp-live-verification-2026-07-03.md`）。LINE Login 續走 #1526
+9. ✅ 【產品 P1】活動列表無限捲動＋「評價最高」排序（P1-6）— **#1557**（`activity-list-sort.mjs`）
+10. ✅ 【資安】S3 header-token session 政策文件化 — **#1567**（`credential-rotation-runbook.md`）；⚠️ **#1121 憑證輪替仍待 owner 執行（git 歷史，上線 blocker）**
+11. ✅ 【SEO】`<html lang>` 隨 locale 修正 — **#1569**（root layout 重構）
 
-### 中期（1–2 月）
-12. 【產品】ECPay 付款方式擴充：ATM＋超商代碼（P0-3 第一波）；分期與 LINE Pay 評估
-13. 【產品】加購（add-on）資料模型＋結帳整合（P1-5）
-14. 【產品】評分分佈＋照片篩選＋導遊回覆（P1-7）
-15. 【債】db.mjs strangler 硬規則：新函式禁入＋行數上限 CI 鎖＋首批領域檔拆分（A1）
-16. 【債】三鏈路雙實作契約測試（createOrder/paymentCallback/refund）（A4）
-17. 【債】`.mjs` 核心檔 `@ts-check` 漸進納管（A3）
-18. 【資安】CSP enforce 時程（report 收斂→nonce→enforce）；rate limiter 共享儲存評估（S5）
-19. 【債】V2 flag 三變數收斂＋`/orders`→`/me/orders` redirect（A2 先手棋）
+### 中期（1–2 月）— 技術債與資安骨幹已提前完成，產品擴充仍待排期
+12. ⬜ 【產品】ECPay 付款方式擴充：ATM＋超商代碼（P0-3 第一波）；分期與 LINE Pay 評估
+13. ⬜ 【產品】加購（add-on）資料模型＋結帳整合（P1-5）
+14. ⬜ 【產品】評分分佈＋照片篩選＋導遊回覆（P1-7）
+15. ✅ 【債】db.mjs strangler 硬規則：新函式禁入＋行數上限 CI 鎖＋首批領域檔拆分（A1）— **#1570**（`db-kpi.mjs` 抽出、`db-mjs-size-guard.test.mjs` 天花板）
+16. ✅ 【債】三鏈路雙實作契約測試（createOrder/paymentCallback/refund）（A4）— **#1571**（`issue1571-three-chain-contract.test.mjs`）
+17. ⬜ 【債】`.mjs` 核心檔 `@ts-check` 漸進納管（A3）
+18. ✅ 【資安】CSP enforce（#1568，report-only→enforce＋prod 移除 unsafe-eval＋HSTS preload）；⬜ rate limiter 共享儲存評估（S5）
+19. ⬜ 【債】V2 flag 三變數收斂＋`/orders`→`/me/orders` redirect（A2 先手棋）
 
 ### 長期（成長基礎，接 #1388）
 20. 站內通知中心（P1-8）
@@ -270,3 +270,37 @@
 | guide 密碼強度下限偏低 | `app/api/guide/auth/session/route.ts:94`（`password.length < 6`） |
 | Rate limiter | `apps/web/src/lib/rate-limit.ts` |
 | 事故上報單點 | `apps/web/src/lib/incidents.ts` |
+
+---
+
+## 收尾狀態（2026-07-03 更新）
+
+本輪健檢的 **P0 止血 + 立即/短期 資安·SEO·資料完整性骨幹 + 中期技術債硬規則** 已全數落地。逐 issue 收斂：
+
+| Issue | 主題 | 狀態 |
+|---|---|---|
+| #1563 | P0 RLS 外洩緊急止血（REVOKE anon＋policy→service_role） | ✅ merged，prod 實測 anon 讀 orders/users = 0 |
+| #1564 | RLS 殘留加固（search_path×21、SECURITY DEFINER PUBLIC EXECUTE 撤銷、storage 列舉移除） | ✅ merged + prod applied；advisor rls 系列歸零 |
+| #1565 | 電子憑證 QR＋導遊掃碼核銷 | ✅ merged（#1583） |
+| #1566 | Email OTP 登入 | ✅ merged（#1582）；Dashboard 設定啟用並 **live 驗證寄信成功** |
+| #1567 | admin header-token 撤銷語意文件化 | ✅ merged（#1581） |
+| #1568 | CSP report-only → enforce＋HSTS preload | ✅ merged（#1584） |
+| #1569 | `<html lang>` 隨 locale | ✅ merged（#1579） |
+| #1570 | db.mjs strangler 硬規則＋行數天花板 guard | ✅ merged（#1578），db.mjs 7,155 → 6,985 行 |
+| #1571 | 三鏈路契約測試 | ✅ merged（#1580） |
+
+### 刻意保留 / 需 owner 處理（非本輪程式碼可收）
+
+| 項目 | 原因 | 下一步 |
+|---|---|---|
+| **Leaked Password Protection**（#1564 延伸） | Supabase **免費版不支援**（HaveIBeenPwned 檢查需 Pro plan；owner 實測 Save 回 `available on Pro Plans and up`） | **決策：不升級，風險已知接受**。密碼登入本走 Supabase Auth 內建 bcrypt 雜湊，本項僅為「額外」擋已知外洩密碼；升級 Pro 後一鍵開啟 |
+| **#1121 憑證輪替** | git 歷史外洩憑證需輪替，屬 owner 帳號級操作 | 上線前執行輪替 SOP（`credential-rotation-runbook.md`） |
+| Email magic link 寄信量 | 免費版內建 SMTP 有每小時上限 | 量大時換自有 SMTP（Resend/SendGrid） |
+| 先前對話貼出的 Vercel Token / GitHub PAT | 已明碼外洩 | owner 於各後台撤銷重簽 |
+
+### 尚未動工（依原路線圖排期，非缺陷）
+
+- **產品擴充**：ATM/超商金流（#12）、加購模型（#13）、評分分佈/導遊回覆（#14）、通知中心/點數/ja·ko/即時客服（長期 #20–23）
+- **技術債續辦**：`.mjs` `@ts-check` 漸進納管（#17）、rate limiter 共享儲存（S5）、V2 flag 三變數收斂＋`/orders` redirect（#19）、legacy 退役 #1406/#1407（`status:blocked`）
+
+**結論**：本健檢報告作為交付物**已可收尾**——所有「發現→開票→修復→驗收」閉環的資安/SEO/資料完整性/技術債硬規則項目均已 merged 並關票；剩餘為刻意延後的產品路線圖與 owner-only 動作，已在上表明確標記負責歸屬與觸發時機。
