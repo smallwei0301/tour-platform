@@ -4,11 +4,14 @@ import {
   createOrderDb,
   createRefundRequestDb,
   updateAdminRefundStatusDb,
-  listOrderAuditLogsDb,
+  listOrderAuditLogsDb
+} from '../../src/lib/db.mjs';
+// #1570：KPI 設定已抽到 db-kpi.mjs
+import {
   updateKpiConfigDb,
   listKpiConfigHistoryDb,
   revertKpiConfigDb
-} from '../../src/lib/db.mjs';
+} from '../../src/lib/db-kpi.mjs';
 import { auditLogs } from '../../src/lib/store.mjs';
 
 test('refund admin actions write audit_logs rows with metadata', async () => {

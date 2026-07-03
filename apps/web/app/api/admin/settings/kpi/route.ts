@@ -1,5 +1,5 @@
 import { ok, fail } from '../../../../../src/lib/api';
-import { getKpiConfigDb, updateKpiConfigDb } from '../../../../../src/lib/db.mjs';
+import { getKpiConfigDb, updateKpiConfigDb } from '../../../../../src/lib/db-kpi.mjs';
 
 export async function GET() {
   try {
