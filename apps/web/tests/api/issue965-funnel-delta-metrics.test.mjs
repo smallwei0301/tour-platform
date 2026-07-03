@@ -30,40 +30,12 @@ mkdirSync(REPORTS_DIR, { recursive: true });
 const dashboardSrc = readFileSync(path.join(SCRIPTS, 'booking-v2-dashboard.mjs'), 'utf8');
 const goNoGoSrc = readFileSync(path.join(SCRIPTS, 'booking-v2-go-no-go.mjs'), 'utf8');
 
-// ── Checkout page source assertions ────────────────────────────────────────────
-
-const checkoutPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/checkout/page.tsx'),
-  'utf8',
-);
+// legacy checkout 頁的 funnel 斷言已隨 #1407 頁面刪除移除（V2 殼層見下方 describe）。
 
 const bookingPageSrc = readFileSync(
   path.resolve(ROOT, 'app/booking/[activityId]/page.tsx'),
   'utf8',
 );
-
-describe('issue #965 — checkout/page.tsx source contract', () => {
-  test('legacy checkout page emits rollout_variant: legacy on begin_checkout', () => {
-    // The begin_checkout track() call in checkout/page.tsx must include rollout_variant: 'legacy'
-    const beginCheckoutIdx = checkoutPageSrc.indexOf("event_name: 'begin_checkout'");
-    assert.ok(beginCheckoutIdx !== -1, "checkout page must have begin_checkout track call");
-    const snippet = checkoutPageSrc.slice(beginCheckoutIdx, beginCheckoutIdx + 400);
-    assert.ok(
-      snippet.includes("rollout_variant: 'legacy'"),
-      "begin_checkout in checkout/page.tsx must emit rollout_variant: 'legacy'"
-    );
-  });
-
-  test('legacy checkout page emits rollout_variant: legacy on purchase_intent', () => {
-    const purchaseIntentIdx = checkoutPageSrc.indexOf("event_name: 'purchase_intent'");
-    assert.ok(purchaseIntentIdx !== -1, "checkout page must have purchase_intent track call");
-    const snippet = checkoutPageSrc.slice(purchaseIntentIdx, purchaseIntentIdx + 400);
-    assert.ok(
-      snippet.includes("rollout_variant: 'legacy'"),
-      "purchase_intent in checkout/page.tsx must emit rollout_variant: 'legacy'"
-    );
-  });
-});
 
 describe('issue #965 — booking/[activityId]/page.tsx source contract (V2)', () => {
   test('v2 booking page emits rollout_variant: v2 on begin_checkout', () => {

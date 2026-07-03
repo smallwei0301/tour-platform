@@ -13,7 +13,6 @@ interface ActivityBottomBarProps {
   activityId: string;
   priceLabel: string;
   price: number;
-  useBookingV2: boolean;
   directBookingHref?: string;
   initialWishlisted?: boolean;
   planSectionId?: string;
@@ -24,7 +23,6 @@ export function ActivityBottomBar({
   activitySlug,
   activityId,
   priceLabel,
-  useBookingV2,
   directBookingHref,
   initialWishlisted: initialWishlistedProp = false,
   planSectionId = 'section-plan',
@@ -65,7 +63,6 @@ export function ActivityBottomBar({
     selected,
     directBookingHref,
     activitySlug,
-    useBookingV2,
     planSectionId,
   });
 

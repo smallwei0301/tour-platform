@@ -14,29 +14,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = path.resolve(__dirname, '../..');
 const SUPABASE_MIGRATIONS = path.resolve(__dirname, '../../../../supabase/migrations');
 
-test('issue621 /api/orders legacy guard only hard-blocks under explicit BOOKING_V2_PRIMARY mode', async () => {
-  const src = await readFile(path.join(WEB_ROOT, 'app/api/orders/route.ts'), 'utf8');
-
-  assert.match(src, /BOOKING_V2_PRIMARY/, 'orders route must use explicit BOOKING_V2_PRIMARY hard-block gate');
-
-  assert.doesNotMatch(
-    src,
-    /BOOKING_V2_PRIMARY\s*\?\?\s*process\.env\.BOOKING_V2/,
-    'orders route must not auto-hard-block legacy /api/orders under broad BOOKING_V2 shell flag'
-  );
-
-  assert.match(
-    src,
-    /legacy|x-order-path-mode|x-order-route-mode/,
-    'orders route must keep explicit legacy opt-in signal and diagnostic header for observability'
-  );
-
-  assert.match(
-    src,
-    /LEGACY_ONLY|ORDER_ROUTE_LEGACY_ONLY|status:\s*410|status:\s*403/,
-    'orders route must reject normal traffic with explicit legacy-only error contract under V2 primary mode'
-  );
-});
+// legacy /api/orders 的 410 guard 測試已隨 #1407 route 刪除移除。
 
 test('issue621 internal sweeps should prefer V2 booking start_at with legacy schedule fallback and truthful policy diagnostics', async () => {
   const reminderSrc = await readFile(path.join(WEB_ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts'), 'utf8');

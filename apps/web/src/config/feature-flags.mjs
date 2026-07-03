@@ -4,31 +4,9 @@ function isTruthy(value) {
   return normalized === '1' || normalized === 'true' || normalized === 'yes' || normalized === 'on';
 }
 
-/**
- * Booking V2 rollout flag used by entry routing and non-client contracts.
- * Default: ON (aligns with isBookingV2ShellEnabled). Set NEXT_PUBLIC_BOOKING_V2_ENABLED=0 to roll back.
- */
-export function isBookingV2Enabled(env = process.env) {
-  if (Object.prototype.hasOwnProperty.call(env, 'NEXT_PUBLIC_BOOKING_V2_ENABLED')) {
-    return isTruthy(env.NEXT_PUBLIC_BOOKING_V2_ENABLED);
-  }
-  if (Object.prototype.hasOwnProperty.call(env, 'BOOKING_V2')) {
-    return isTruthy(env.BOOKING_V2);
-  }
-  return true;
-}
-
-/**
- * Booking page shell contract for client bundle:
- * - default traveler path is V2
- * - explicit legacy fallback uses public deployable flag only
- */
-export function isBookingV2ShellEnabled(env = process.env) {
-  if (!Object.prototype.hasOwnProperty.call(env, 'NEXT_PUBLIC_BOOKING_V2_ENABLED')) {
-    return true;
-  }
-  return isTruthy(env.NEXT_PUBLIC_BOOKING_V2_ENABLED);
-}
+// Booking V2 flags（isBookingV2Enabled / isBookingV2ShellEnabled）已於 #1407 階段三退場：
+// legacy booking 已退役，V2 為唯一路徑，不再有 flag 可回滾（退役紀錄見
+// docs/operations/booking-v2-rollback-runbook.md）。
 
 /**
  * LINE Messaging API for ops/admin notifications (migrated off the retired LINE Notify).

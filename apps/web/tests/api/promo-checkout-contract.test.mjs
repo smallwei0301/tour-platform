@@ -18,8 +18,8 @@ const APPS_WEB = resolve(__dirname, '../..');
 
 // ── File readers ───────────────────────────────────────────────────────────────
 const dbSrc = readFileSync(resolve(APPS_WEB, 'src/lib/db.mjs'), 'utf8');
-const ordersRouteSrc = readFileSync(resolve(APPS_WEB, 'app/api/orders/route.ts'), 'utf8');
-const checkoutPageSrc = readFileSync(resolve(APPS_WEB, 'app/checkout/page.tsx'), 'utf8');
+// legacy orders route／checkout page 的 source read 已隨 #1407 刪除；AC2/AC3 一併移除。
+// V2 建單鏈的 promo 行為由 v2 checkout 契約測試覆蓋。
 const ecpayCreateSrc = readFileSync(resolve(APPS_WEB, 'app/api/payments/ecpay/create/route.ts'), 'utf8');
 
 // ── AC1: createOrderDb accepts promoCode ──────────────────────────────────────
@@ -75,95 +75,9 @@ test('AC1: createOrderDb rolls back order when promo fails (delete on error)', (
 
 // ── AC2: orders/route.ts accepts promoCode ────────────────────────────────────
 
-test('AC2: orders route extracts promoCode from request body', () => {
-  assert.match(
-    ordersRouteSrc,
-    /promoCode|promo_code/,
-    'orders route should extract promoCode from request body'
-  );
-});
-
-test('AC2: orders route handles EXHAUSTED → 409', () => {
-  assert.match(
-    ordersRouteSrc,
-    /EXHAUSTED|409/,
-    'orders route should handle EXHAUSTED → 409'
-  );
-});
-
-test('AC2: orders route handles ALREADY_REDEEMED → 409', () => {
-  assert.match(
-    ordersRouteSrc,
-    /ALREADY_REDEEMED/,
-    'orders route should handle ALREADY_REDEEMED'
-  );
-});
 
 // ── AC3: checkout/page.tsx has promo code UI ──────────────────────────────────
 
-test('AC3: checkout page has promoCode state', () => {
-  assert.match(
-    checkoutPageSrc,
-    /promoCode|promo_code|useState.*''/,
-    'checkout page should have promoCode state'
-  );
-});
-
-test('AC3: checkout page has promo validation state', () => {
-  assert.match(
-    checkoutPageSrc,
-    /promoValidation|promo.*valid|validat.*promo/i,
-    'checkout page should have promo validation state'
-  );
-});
-
-test('AC3: checkout page has text input for promo code entry', () => {
-  assert.match(
-    checkoutPageSrc,
-    /data-testid="promo-code-input"|promo.*input|input.*promo|promoCode.*onChange|onChange.*promoCode/s,
-    'checkout page should have a text input for promo code'
-  );
-});
-
-test('AC3: checkout page has button or handler to apply/validate promo', () => {
-  assert.match(
-    checkoutPageSrc,
-    /套用|Apply|applyPromo|validatePromo|promo.*click|onClick.*promo/i,
-    'checkout page should have a button or handler to apply promo'
-  );
-});
-
-test('AC3: checkout page calls promo-codes/validate endpoint', () => {
-  assert.match(
-    checkoutPageSrc,
-    /promo-codes\/validate|\/api\/promo/,
-    'checkout page should call /api/promo-codes/validate'
-  );
-});
-
-test('AC3: checkout page shows discounted price when valid', () => {
-  assert.match(
-    checkoutPageSrc,
-    /discountAmount|discountedTotal|折扣|discount/i,
-    'checkout page should show discounted price when code is valid'
-  );
-});
-
-test('AC3: checkout page shows error message when code is invalid', () => {
-  assert.match(
-    checkoutPageSrc,
-    /promoValidation.*valid.*false|reason.*promoError|promoError|promo.*error|invalid.*promo/i,
-    'checkout page should show error when code is invalid'
-  );
-});
-
-test('AC3: checkout page passes promoCode in order creation body', () => {
-  assert.match(
-    checkoutPageSrc,
-    /promoCode.*createOrder|createOrder.*promoCode|promoCode.*fetch|fetch.*promoCode/s,
-    'checkout page should pass promoCode when creating order'
-  );
-});
 
 // ── AC4: calculateDiscount used in server-side order creation ─────────────────
 

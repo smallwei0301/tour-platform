@@ -36,7 +36,8 @@ test('activity page hides public booking CTAs when V2 has no canonical plans', a
   const pageSrc = await readSource('app/[locale]/activities/[region]/[slug]/page.tsx');
   const bottomBarSrc = await readSource('src/components/activity/ActivityBottomBar.tsx');
 
-  assert.match(pageSrc, /const hidePublicBookingCta = Boolean\(useBookingV2 && datePlanPresentation\.showMissingCanonicalMessage\)/);
+  // #1407 退役後無 flag：缺 canonical 方案即隱藏公開預約 CTA（無條件 V2 語意）
+  assert.match(pageSrc, /const hidePublicBookingCta = datePlanPresentation\.showMissingCanonicalMessage/);
   assert.match(pageSrc, /data-testid="begin-checkout-unavailable"/);
   assert.match(pageSrc, /bookingUnavailable=\{hidePublicBookingCta\}/);
   assert.match(bottomBarSrc, /data-testid="activity-bottom-bar-unavailable"/);
@@ -58,7 +59,9 @@ test('live availability refresh is only wired to high-intent actions', async () 
 test('V2 mode requests v2 availability source and exposes explicit fallback notice', async () => {
   const src = await readSource('src/components/activity/DatePlanSection.tsx');
 
-  assert.match(src, /availability\?v2=1/);
+  // #1407 退役後 route 一律 V2 引擎，?v2=1 參數已移除
+  assert.match(src, /\/availability`/);
+  assert.doesNotMatch(src, /availability\?v2=1/);
   assert.match(src, /json\?\.data\?\.source !== 'v2'/);
   // #multilingual：fallback notice 文字抽進 messages.datePlan.availabilityNoticeV2LoadFail
   assert.match(src, /availabilityNoticeV2LoadFail/, 'source 應以 t(\'availabilityNoticeV2LoadFail\') 顯示 V2 fallback 通知');

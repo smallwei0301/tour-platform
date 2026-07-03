@@ -11,11 +11,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '../../');
 const guideAvailabilityPage = resolve(appRoot, 'app/guide/availability/page.tsx');
 
-const DEFAULT_PLANS = [
-  { id: 'half-day', label: 'A. 半日行程', bookingBtnText: '立即預約' },
-  { id: 'full-day', label: 'B. 全日行程', bookingBtnText: '立即預約' },
-];
-
 const MISSING_CANONICAL_MESSAGE = '此行程尚未設定可預約方案，請稍後再查看。';
 
 function deriveVisiblePlanLabels(presentation) {
@@ -27,11 +22,8 @@ function deriveVisibleCtas(presentation) {
 }
 
 test('GH-1069: Booking V2 missing canonical plans does not expose fallback plans/CTAs and should show message state', () => {
-  const presentation = resolveDatePlanPresentation({
-    useBookingV2: true,
-    canonicalPlans: [],
-    defaultPlans: DEFAULT_PLANS,
-  });
+  // #1407 退役後 resolveDatePlanPresentation 只吃 canonicalPlans（V2 語意無條件）
+  const presentation = resolveDatePlanPresentation({ canonicalPlans: [] });
 
   const labels = deriveVisiblePlanLabels(presentation);
   const ctas = deriveVisibleCtas(presentation);
@@ -45,21 +37,7 @@ test('GH-1069: Booking V2 missing canonical plans does not expose fallback plans
   assert.equal(MISSING_CANONICAL_MESSAGE, '此行程尚未設定可預約方案，請稍後再查看。');
 });
 
-test('GH-1069: non-V2 keeps intentional legacy fallback plans', () => {
-  const presentation = resolveDatePlanPresentation({
-    useBookingV2: false,
-    canonicalPlans: [],
-    defaultPlans: DEFAULT_PLANS,
-  });
-
-  const labels = deriveVisiblePlanLabels(presentation);
-  const ctas = deriveVisibleCtas(presentation);
-
-  assert.equal(presentation.showMissingCanonicalMessage, false);
-  assert.equal(labels.includes('A. 半日行程'), true);
-  assert.equal(labels.includes('B. 全日行程'), true);
-  assert.equal(ctas.includes('立即預約'), true);
-});
+// 「non-V2 legacy fallback plans」情境已隨 #1407 退役刪除（無 legacy 展示模式）。
 
 test('GH-1069: Step1 disabled reason matrix returns exact zh-TW copy and accessibility metadata', () => {
   const loading = getBookingV2Step1CtaState({

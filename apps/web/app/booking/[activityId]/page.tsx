@@ -1061,9 +1061,8 @@ function BookingInnerV2FlagShell() {
 }
 
 // ── 外層包 Suspense（useSearchParams 需要）───────────────────
-// Legacy 退役階段二（#1406）：移除 flag fallback UI。預約殼層一律走 Booking V2；
-// `NEXT_PUBLIC_BOOKING_V2_ENABLED=0` 不再降級到 legacy 三步驟流程（該分支已刪除）。
-// flag 本身於階段三才退場（見 docs/operations/booking-v2-rollback-runbook.md §8）。
+// Legacy 已全面退役（#1406 階段二移除入口、#1407 階段三刪碼＋flag 退場）：
+// 預約殼層一律走 Booking V2，無 flag、無 legacy 分支。
 export default function BookingPage() {
   const locale = useClientLocale();
   const m = getClientNamespace(locale, 'bookingFlow');
