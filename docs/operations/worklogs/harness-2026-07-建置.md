@@ -17,6 +17,9 @@
 - [x] 對抗審查（fresh-context subagent）：REQUEST_CHANGES，1×P0＋5×P1＋4×P2，全數修復並回歸測試（34 case 全綠）
 - [x] read-back 唯讀驗證（20 檔完整、語法/編碼合格）
 - [x] commit＋push 至 `claude/code-workflow-architecture-mmm4ba`（738fcac＋審查修正 commit）
+- [x] 開機清單加煙霧測試（00_INDEX.md，7120676）＋lessons 補 commit-gate/複合 git add 坑（bc01ce8）
+- [x] 併入最新 origin/main（14 PR），手動解 CLAUDE.md 衝突並同步 07_testing_playbook.md（dc3e971）
+- [x] PR #1586 開出＋CI 綠燈＋merge 完成
 
 ## 對抗審查 findings 與修復（2026-07-03）
 - P0 run-checks.sh 零匹配 glob 產假綠燈 → 零匹配/零測試一律 exit 1
@@ -32,13 +35,21 @@
 ## 已完成（附證據）
 - 2026-07-03 hooks 實測即時生效：bash-guard 曾攔下含敏感字樣之測試指令；file-guard 曾攔下未授權之 harness 檔寫入；auto-mode 分類器攔下模型自建 override（詳 lessons.md 三則）
 - 2026-07-03 使用者以 AskUserQuestion 回覆「P0-OVERRIDE：授權施工清單（推薦）」授權本次施工，override 檔引用之
+- 2026-07-03 使用者確認完成 Supabase read-only MCP 改動（06_manifesto.md 第一件事之一）
+- 2026-07-03 PR https://github.com/smallwei0301/tour-platform/pull/1586 開出：
+  - merge 前驗證：`npm run lint`／`npm run typecheck` 綠、`npm test` 4289/4292 pass 0 fail（merge 後補裝 `qrcode.react` 新依賴）
+  - CI check-runs：`test` conclusion=success（https://github.com/smallwei0301/tour-platform/actions/runs/28650946028/job/84968549340）、`scan` conclusion=success（https://github.com/smallwei0301/tour-platform/actions/runs/28650946065/job/84968549995）
+  - merged_by: smallwei0301，merged_at: 2026-07-03T09:23:05Z，merge commit head sha f5fb393
 
 ## 下一步
-- 使用者側（見 06_manifesto.md 第一節）：①開 GitHub branch protection（required checks）②Supabase MCP 改唯讀憑證 ③冷啟動演練清單
+- 使用者側（見 06_manifesto.md 第一節）：①開 GitHub branch protection（required checks，尚待確認是否已設定）②~~Supabase MCP 改唯讀憑證~~（已完成）③冷啟動演練清單
+- harness 建置本身已完成並 merge；後續維護走 `05_maintenance.md` 的提案流程，不再需要本 worklog 追蹤新項目（歷史保留，不刪除）
 
 ## 絕不重做（Do-NOT-redo）
 - 三支 guard hooks 已通過完整模擬測試，勿因單次誤攔就弱化 regex（誤攔的標準解法在 lessons.md 第一則）
 - CLAUDE.md 舊版全文在 `CLAUDE.md.bak`，不需要從 git 歷史挖
 
 ## P0-OVERRIDE 使用紀錄
-- 2026-07-03 施工清單（CLAUDE.md、.cursor/harness/00–08、.claude/hooks/*、.claude/settings.json）｜使用者授權：AskUserQuestion 選項「P0-OVERRIDE：授權施工清單（推薦）」
+- 2026-07-03 施工清單（CLAUDE.md、.cursor/harness/00–08、.claude/hooks/*、.claude/settings.json）｜使用者授權：AskUserQuestion 選項「P0-OVERRIDE：授權施工清單（推薦）」｜用畢即刪
+- 2026-07-03 00_INDEX.md（開機清單加煙霧測試）｜使用者授權原話：「好，寫進開機清單。」｜用畢即刪
+- 2026-07-03 CLAUDE.md＋07_testing_playbook.md（合併 origin/main 衝突解決＋同步 db.mjs 條款）｜使用者授權原話：「授權解衝突」｜用畢即刪
