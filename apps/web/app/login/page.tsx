@@ -4,11 +4,14 @@ import Link from 'next/link';
 import { createClient } from '../../src/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { isLineLoginEnabled } from '../../src/config/feature-flags.mjs';
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const error = searchParams.get('error');
   const next = searchParams.get('next') ?? searchParams.get('redirectTo') ?? '/';
+  // #1526：LINE Login flag（NEXT_PUBLIC_*，client bundle 可讀）；OFF 時完全不顯示。
+  const lineLoginEnabled = isLineLoginEnabled();
 
   async function handleGoogleLogin() {
     const supabase = createClient();
@@ -18,6 +21,22 @@ function LoginContent() {
         redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
       },
     });
+  }
+
+  // #1526：瀏覽器 LINE OAuth 起手 — 導向 LINE authorize，callback 走
+  // /auth/line/callback（server 端以 channel secret 換 id_token → issueLineSession）。
+  function handleLineLogin() {
+    const channelId = process.env.NEXT_PUBLIC_LINE_LOGIN_CHANNEL_ID ?? '';
+    if (!channelId) return;
+    const redirectUri = `${window.location.origin}/auth/line/callback`;
+    const state = encodeURIComponent(JSON.stringify({ next }));
+    const url =
+      'https://access.line.me/oauth2/v2.1/authorize?response_type=code' +
+      `&client_id=${encodeURIComponent(channelId)}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&state=${state}` +
+      '&scope=' + encodeURIComponent('openid profile email');
+    window.location.href = url;
   }
 
   return (
@@ -65,6 +84,21 @@ function LoginContent() {
             </svg>
             使用 Google 帳號登入
           </button>
+
+          {/* LINE 登入（#1526，flag OFF 時不顯示；Google 登入不受影響） */}
+          {lineLoginEnabled && (
+            <button
+              onClick={handleLineLogin}
+              data-testid="line-login-btn"
+              className="login-google-btn"
+              style={{ marginTop: 10, background: '#06C755', color: '#fff' }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M12 2C6.48 2 2 5.64 2 10.13c0 4.02 3.58 7.39 8.42 8.02.33.07.77.22.88.5.1.26.07.66.03.92l-.14.85c-.04.26-.2 1.02.9.56 1.1-.46 5.9-3.48 8.05-5.96C21.4 13.3 22 11.8 22 10.13 22 5.64 17.52 2 12 2z" />
+              </svg>
+              使用 LINE 帳號登入
+            </button>
+          )}
 
           {/* 分隔線 */}
           <div className="login-divider">
