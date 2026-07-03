@@ -32,6 +32,18 @@ type EditState = {
 
 type InviteResult = { inviteUrl: string; expiresAt: string; guideName: string } | null;
 
+type DeleteBlockedCounts = { bookings: number; payouts: number; payoutItems: number; experiences: number };
+
+type DeleteState = {
+  id: string;
+  name: string;
+  kind: 'application' | 'profile';
+  phase: 'precheck' | 'ready' | 'deleting' | 'blocked';
+  activityCount: number;
+  blocked: DeleteBlockedCounts | null;
+  error: string;
+};
+
 export default function AdminGuidesPage() {
   const [rows, setRows] = useState<GuideApp[]>([]);
   const [status, setStatus] = useState('');
@@ -44,6 +56,7 @@ export default function AdminGuidesPage() {
   const [inviteLoading, setInviteLoading] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [suspendLoading, setSuspendLoading] = useState<string | null>(null);
+  const [deleteState, setDeleteState] = useState<DeleteState | null>(null);
 
   async function loadApplications() {
     setLoading(true);
@@ -127,6 +140,51 @@ export default function AdminGuidesPage() {
         alert(json?.error?.message || '操作失敗');
       }
     } finally { setSuspendLoading(null); }
+  }
+
+  /** 開啟刪除確認 modal，先打 precheck 顯示後果（活動數／被擋原因） */
+  async function openDeleteModal(kind: 'application' | 'profile', id: string, name: string) {
+    setDeleteState({ id, name, kind, phase: 'precheck', activityCount: 0, blocked: null, error: '' });
+    try {
+      const res = await fetch(`/api/admin/guides/${id}/delete-precheck`, { cache: 'no-store' });
+      const json = await res.json();
+      if (json.ok) {
+        const { activityCount, blocked } = json.data;
+        setDeleteState(s => s ? {
+          ...s,
+          phase: blocked ? 'blocked' : 'ready',
+          activityCount: activityCount || 0,
+          blocked: blocked || null,
+        } : null);
+      } else {
+        setDeleteState(s => s ? { ...s, phase: 'ready', error: json?.error?.message || '預檢失敗，仍可嘗試刪除' } : null);
+      }
+    } catch {
+      setDeleteState(s => s ? { ...s, phase: 'ready', error: '預檢失敗，仍可嘗試刪除' } : null);
+    }
+  }
+
+  /** 執行刪除（DELETE 端點內部仍會權威重查訂單／撥款紀錄） */
+  async function confirmDelete() {
+    if (!deleteState || deleteState.phase === 'deleting') return;
+    const { id, kind } = deleteState;
+    setDeleteState(s => s ? { ...s, phase: 'deleting', error: '' } : null);
+    try {
+      const res = await fetch(`/api/admin/guides/${id}`, { method: 'DELETE', headers: csrfHeaders() });
+      const json = await res.json();
+      if (json.ok) {
+        setDeleteState(null);
+        if (kind === 'application') await loadApplications();
+        else await loadProfiles();
+      } else if (json?.error?.code === 'GUIDE_HAS_RECORDS') {
+        // precheck 之後才殺進紀錄（race）— 轉為被擋畫面。
+        setDeleteState(s => s ? { ...s, phase: 'blocked', blocked: json.error.counts || null } : null);
+      } else {
+        setDeleteState(s => s ? { ...s, phase: 'ready', error: json?.error?.message || '刪除失敗' } : null);
+      }
+    } catch {
+      setDeleteState(s => s ? { ...s, phase: 'ready', error: '刪除失敗，請稍後再試' } : null);
+    }
   }
 
   async function handleEditSave() {
@@ -261,6 +319,77 @@ export default function AdminGuidesPage() {
         )}
       </ResponsiveModal>
 
+      {/* ── Delete Guide Confirm Modal ── */}
+      <ResponsiveModal
+        open={!!deleteState}
+        onClose={() => { if (deleteState?.phase !== 'deleting') setDeleteState(null); }}
+        size="sm"
+        title="🗑️ 刪除導遊"
+      >
+        {deleteState && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {deleteState.phase === 'precheck' ? (
+              <div style={{ padding: '20px 0', textAlign: 'center', color: '#9ca3af', fontSize: 14 }}>檢查中…</div>
+            ) : deleteState.phase === 'blocked' ? (
+              <>
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '12px 14px', color: '#92400e', fontSize: 13, lineHeight: 1.7 }}>
+                  ⚠️ 無法刪除「<strong>{deleteState.name}</strong>」：已有
+                  {deleteState.blocked ? (
+                    <>
+                      {deleteState.blocked.bookings > 0 && <> {deleteState.blocked.bookings} 筆訂單</>}
+                      {deleteState.blocked.payouts > 0 && <> {deleteState.blocked.payouts} 筆撥款</>}
+                      {deleteState.blocked.payoutItems > 0 && <> {deleteState.blocked.payoutItems} 筆撥款明細</>}
+                      {deleteState.blocked.experiences > 0 && <> {deleteState.blocked.experiences} 筆舊版行程</>}
+                    </>
+                  ) : ' 訂單或撥款'}
+                  紀錄。刪除會使歷史訂單與財務資料失去對象，系統已擋下。
+                  <br />建議改用「🚫 停權帳號」：導遊無法登入、前台完全隱藏，且保留所有歷史紀錄。
+                </div>
+                <button onClick={() => setDeleteState(null)} style={{ padding: '10px 0', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>
+                  關閉
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', color: '#991b1b', fontSize: 13, lineHeight: 1.7 }}>
+                  {deleteState.kind === 'profile' ? (
+                    <>
+                      此操作將<strong>永久刪除</strong>導遊「<strong>{deleteState.name}</strong>」的帳號、頭像與所有可用時段設定
+                      {deleteState.activityCount > 0 && <>，並一併刪除其 <strong>{deleteState.activityCount} 個活動</strong>（含活動照片）</>}
+                      ，<strong>無法復原</strong>。
+                    </>
+                  ) : (
+                    <>
+                      此操作將<strong>永久刪除</strong>「<strong>{deleteState.name}</strong>」的申請紀錄，<strong>無法復原</strong>。
+                      若此導遊已上線，導遊帳號需在「已上線導遊」分頁另行刪除。
+                    </>
+                  )}
+                </div>
+                {deleteState.error && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>⚠️ {deleteState.error}</div>
+                )}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deleteState.phase === 'deleting'}
+                    style={{ flex: '1 1 160px', padding: '10px 0', borderRadius: 8, border: 'none', background: deleteState.phase === 'deleting' ? '#f87171' : '#dc2626', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+                  >
+                    {deleteState.phase === 'deleting' ? '刪除中…' : '永久刪除'}
+                  </button>
+                  <button
+                    onClick={() => setDeleteState(null)}
+                    disabled={deleteState.phase === 'deleting'}
+                    style={{ padding: '10px 16px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer', fontSize: 14 }}
+                  >
+                    取消
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </ResponsiveModal>
+
       <div className="admin-page" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Tabs */}
         <Card style={{ padding: '10px 14px', display: 'flex', gap: 8, flexWrap: 'wrap' }} role="tablist" aria-label="導遊管理分頁">
@@ -326,6 +455,12 @@ export default function AdminGuidesPage() {
                       {r.status === 'rejected' && (
                         <button onClick={() => appAction(r.id, 'approve')} style={btn('#fff', '#6b7280')}>↩ 重新通過</button>
                       )}
+                      <button
+                        onClick={() => openDeleteModal('application', r.id, r.fullName)}
+                        style={btn('#dc2626', '#fff', '1px solid #fecaca')}
+                      >
+                        🗑️ 刪除
+                      </button>
                     </div>
                     {r.status === 'approved' && (
                       <p style={{ margin: 0, fontSize: 11, color: '#9ca3af', background: '#f9fafb', padding: '6px 10px', borderRadius: 6 }}>
@@ -419,6 +554,17 @@ export default function AdminGuidesPage() {
                         }}
                       >
                         {suspendLoading === p.id ? '處理中…' : isSuspended ? '✅ 恢復帳號' : '🚫 停權帳號'}
+                      </button>
+                      {/* Row 3: delete */}
+                      <button
+                        onClick={() => openDeleteModal('profile', p.id, p.display_name)}
+                        style={{
+                          width: '100%', padding: '7px 0', borderRadius: 8,
+                          border: '1px solid #fca5a5', background: '#fef2f2',
+                          color: '#b91c1c', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                        }}
+                      >
+                        🗑️ 刪除帳號
                       </button>
                     </Card>
                   );

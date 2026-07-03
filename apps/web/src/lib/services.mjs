@@ -357,6 +357,15 @@ export function updateGuideApplicationStatus(input = {}) {
   return row;
 }
 
+export function deleteGuideApplication(input = {}) {
+  const applicationId = normalizeSlug(input?.applicationId);
+  if (!applicationId) throw new Error('applicationId is required');
+
+  const idx = guideApplications.findIndex((a) => a.id === applicationId);
+  if (idx === -1) return null;
+  return guideApplications.splice(idx, 1)[0];
+}
+
 export function processPaymentCallback(input) {
   const orderId = normalizeSlug(input?.orderId);
   if (!orderId) throw new Error('orderId is required');
