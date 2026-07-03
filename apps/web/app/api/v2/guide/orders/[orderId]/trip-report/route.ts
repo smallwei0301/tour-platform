@@ -85,7 +85,7 @@ export async function POST(
         id,
         status,
         booking_id,
-        bookings(
+        bookings!fk_bookings_order_id(
           id,
           guide_id,
           is_refunded,
