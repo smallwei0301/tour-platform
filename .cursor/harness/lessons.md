@@ -24,6 +24,12 @@
 - Solution：**先 `git add`（獨立一次）再 `git commit`（獨立一次）**；commit 時暫存區已有 docs 檔，豁免正常生效
 - 適用範圍：所有靠 `git diff --cached` 判斷的 commit gate 情境；code commit 不受影響（本來就要證據）
 
+## [2026-07-03] edit-tool-does-not-auto-stage
+- Context：解 merge 衝突時用 Edit 工具改了 `.cursor/harness/07_testing_playbook.md`（P0-OVERRIDE 授權範圍內），隨後直接 `git commit`（未先 `git add` 該檔）
+- Error：merge commit 完成、push 上去後，`git status` 仍顯示該檔 modified——Edit 工具只寫工作目錄，不會自動 `git add`；commit 時只包進了當時已 staged 的內容，這次編輯被漏掉
+- Solution：**任何 Edit/Write 之後、commit 之前，養成先 `git status`／`git diff --cached --name-only` 核對「這次改的檔案都在 staged 清單裡」的習慣**，尤其是合併衝突多檔案一起處理時
+- 適用範圍：所有「編輯多個檔案後才一次 commit」的流程，尤其是 merge/rebase 期間
+
 ## [2026-07-03] npm-install-supabase-postinstall-403
 - Context：fresh container 依 CLAUDE.md 跑 `npm install`
 - Error：`supabase` 套件 postinstall 從 github.com/supabase/cli releases 下載執行檔被代理擋（`403 Forbidden` → `Z_DATA_ERROR`/`incorrect header check`），整個 install 失敗
