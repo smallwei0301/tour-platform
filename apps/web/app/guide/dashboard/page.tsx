@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { isGuideContactActivityId } from '../../../src/lib/guide-contact-qa.mjs';
@@ -22,6 +23,13 @@ type RevenueTrendItem = {
 };
 
 type DashboardData = {
+  todayBookings: number;
+  weeklySchedules: number;
+  pendingConfirmationOrders: number;
+  pendingPaymentOrders: number;
+  averageRating: number | null;
+  exposureClicks: number;
+  reportTier: 'free' | 'paid';
   monthlyBookings: number;
   pendingBookings: Array<{
     id: string; guestName: string; partySize: number;
@@ -243,11 +251,23 @@ export default function GuideDashboardPage() {
         </div>
       )}
 
-      {/* Stats */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 700 }}>Dashboard 首頁</div>
+          <h2 style={{ margin: '4px 0 0', fontSize: 24, color: '#111827' }}>今天要先處理的事</h2>
+        </div>
+        <span style={{ fontSize: 12, color: '#6b7280', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 999, padding: '6px 10px' }}>
+          {data?.reportTier === 'paid' ? '付費版：已開啟進階報表' : '免費版：顯示基礎指標'}
+        </span>
+      </div>
+
+      {/* Priority Stats */}
       <div className="admin-stat-grid-3">
-        <StatCard label="本月預訂數" value={data?.monthlyBookings ?? 0} icon="📦" />
-        <StatCard label="近期訂單" value={data?.pendingBookings?.length ?? 0} icon="📋" />
-        <StatCard label="本週場次" value={data?.upcomingSchedules?.length ?? 0} icon="📅" />
+        <StatCard label="今日預約" value={data?.todayBookings ?? 0} icon="🗓️" href="/guide/bookings" />
+        <StatCard label="本週出團" value={data?.weeklySchedules ?? data?.upcomingSchedules?.length ?? 0} icon="🧭" href="/guide/schedules" />
+        <StatCard label="待確認訂單" value={data?.pendingConfirmationOrders ?? 0} icon="✅" href="/guide/bookings?status=pending_confirmation" />
+        <StatCard label="待付款訂單" value={data?.pendingPaymentOrders ?? 0} icon="💳" href="/guide/bookings?status=pending_payment" />
+        <StatCard label="待回覆詢問" value={pendingQa.length} icon="💬" href="/guide/messages" />
       </div>
 
       {/* Revenue Stats */}
@@ -257,6 +277,28 @@ export default function GuideDashboardPage() {
           value={`NT$ ${(data?.monthGmvTwd ?? 0).toLocaleString()}`}
           subtext={`共 ${data?.monthGmvOrderCount ?? 0} 筆訂單`}
           icon="💰"
+          href="/guide/bookings"
+        />
+        <RevenueCard
+          label="本月預約數"
+          value={`${data?.monthlyBookings ?? 0}`}
+          subtext="點擊查看訂單列表"
+          icon="📦"
+          href="/guide/bookings"
+        />
+        <RevenueCard
+          label="平均評分"
+          value={data?.averageRating != null ? `${data.averageRating.toFixed(1)} ★` : '--'}
+          subtext="點擊查看公開評價"
+          icon="⭐"
+          href="/guide/profile"
+        />
+        <RevenueCard
+          label="曝光點擊數"
+          value={(data?.exposureClicks ?? 0).toLocaleString()}
+          subtext="點擊管理公開行程"
+          icon="👀"
+          href="/guide/profile"
         />
         <RevenueCard
           label="本月預計入帳"
@@ -342,8 +384,10 @@ export default function GuideDashboardPage() {
       )}
 
       {/* 6-Month Revenue Trend */}
-      <Section title="📈 近 6 個月營收趨勢">
-        {(!data?.revenueTrend6m?.length) ? (
+      <Section title="📈 近 6 個月營收趨勢（付費版）">
+        {data?.reportTier !== 'paid' ? (
+          <UpgradeNotice />
+        ) : (!data?.revenueTrend6m?.length) ? (
           <Empty text="暫無趨勢資料" />
         ) : (
           <div>
@@ -701,8 +745,9 @@ export default function GuideDashboardPage() {
   );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: number; icon: string }) {
+function StatCard({ label, value, icon, href }: { label: string; value: number; icon: string; href: string }) {
   return (
+    <Link href={href} style={{ textDecoration: 'none', color: 'inherit' }}>
     <div style={{
       background: '#fff',
       borderRadius: 14,
@@ -718,13 +763,14 @@ function StatCard({ label, value, icon }: { label: string; value: number; icon: 
         <div style={{ fontSize: 28 }}>{icon}</div>
       </div>
     </div>
+    </Link>
   );
 }
 
-function RevenueCard({ label, value, subtext, icon, muted, onClick }: {
-  label: string; value: string; subtext: string; icon: string; muted?: boolean; onClick?: () => void;
+function RevenueCard({ label, value, subtext, icon, muted, onClick, href }: {
+  label: string; value: string; subtext: string; icon: string; muted?: boolean; onClick?: () => void; href?: string;
 }) {
-  return (
+  const content = (
     <div
       onClick={onClick}
       style={{
@@ -743,6 +789,18 @@ function RevenueCard({ label, value, subtext, icon, muted, onClick }: {
           <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{subtext}</div>
         </div>
         <div style={{ fontSize: 24, opacity: muted ? 0.4 : 1 }}>{icon}</div>
+      </div>
+    </div>
+  );
+  return href ? <Link href={href} style={{ textDecoration: 'none', color: 'inherit' }}>{content}</Link> : content;
+}
+
+function UpgradeNotice() {
+  return (
+    <div style={{ padding: 18, borderRadius: 12, background: '#faf5ff', border: '1px solid #ddd6fe', color: '#5b21b6' }}>
+      <div style={{ fontWeight: 800, marginBottom: 6 }}>🔒 升級付費版後開放</div>
+      <div style={{ fontSize: 13, lineHeight: 1.7 }}>
+        免費版保留今日預約、訂單、詢問、營收等基礎指標；付費版可查看趨勢圖、CSV 明細與進階報表，幫你判斷哪個行程最值得加開。
       </div>
     </div>
   );

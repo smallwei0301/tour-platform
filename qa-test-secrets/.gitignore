@@ -1,0 +1,5 @@
+# Keep real QA secrets local only. Commit README and templates, never values.
+*
+!.gitignore
+!README.md
+!.env.qa.example
