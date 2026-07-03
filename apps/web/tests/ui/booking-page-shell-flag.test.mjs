@@ -4,8 +4,6 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { isBookingV2ShellEnabled } from '../../src/config/feature-flags.mjs';
-
 // Use import.meta.url so paths are portable regardless of cwd (works from repo root or apps/web/)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = path.resolve(__dirname, '../..');
@@ -14,16 +12,7 @@ async function readSource(relPath) {
   return readFile(path.join(WEB_ROOT, relPath), 'utf8');
 }
 
-test('booking page shell defaults to V2 when NEXT_PUBLIC flag is not set', () => {
-  assert.equal(isBookingV2ShellEnabled({}), true);
-});
-
-test('booking page shell allows explicit legacy fallback only through NEXT_PUBLIC flag', () => {
-  assert.equal(isBookingV2ShellEnabled({ NEXT_PUBLIC_BOOKING_V2_ENABLED: '0' }), false);
-  assert.equal(isBookingV2ShellEnabled({ NEXT_PUBLIC_BOOKING_V2_ENABLED: 'false' }), false);
-});
-
-// Legacy 退役階段二（#1406）：/booking 殼層一律走 Booking V2；flag fallback UI 已移除。
+// Legacy 已退役（#1406 階段二＋#1407 階段三 flag 退場）：/booking 殼層一律走 Booking V2。
 // 頁面不再讀 shell flag 分支，也不再保留 BookingInnerLegacy / useLegacyFallback 降級路徑。
 test('booking page always renders the V2 shell and no longer branches into a legacy fallback', async () => {
   const src = await readSource('app/booking/[activityId]/page.tsx');

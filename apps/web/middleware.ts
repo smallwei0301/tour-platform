@@ -119,7 +119,6 @@ function shouldRequireCsrf(req: NextRequest): boolean {
     pathname.startsWith('/api/v2/admin/') ||
     pathname.startsWith('/api/guide/') ||
     pathname.startsWith('/api/me/') ||
-    pathname.startsWith('/api/orders') ||
     pathname.startsWith('/api/reviews')
   )) {
     return false;
@@ -140,9 +139,7 @@ function shouldRequireCsrf(req: NextRequest): boolean {
   if (pathname.startsWith('/api/guide/')) return !!req.cookies.get('guide_token')?.value;
   if (pathname.startsWith('/api/me/')) return hasTravelerAuthCookie(req);
   if (pathname.startsWith('/api/reviews')) return hasTravelerAuthCookie(req);
-  // 健檢 v2 S4：/api/orders 原本只在前綴白名單、gating 段漏接 → mutation 不經 CSRF。
-  // 與 me/reviews 同型：僅對帶 traveler auth cookie 的請求要求 CSRF（匿名建單不受影響）。
-  if (pathname.startsWith('/api/orders')) return hasTravelerAuthCookie(req);
+  // legacy /api/orders 的 CSRF gating（健檢 v2 S4）已隨 #1407 route 刪除一併移除。
 
   return false;
 }
@@ -424,10 +421,8 @@ export async function middleware(req: NextRequest) {
   // ── Traveler routes ───────────────────────────────────────────────────────
   const isTravelerPublicPath =
     pathname.startsWith('/booking') ||
-    pathname.startsWith('/checkout') ||
     pathname.startsWith('/order/success') ||
-    pathname.startsWith('/api/activities') ||
-    pathname.startsWith('/api/orders');
+    pathname.startsWith('/api/activities');
 
   // Public pages use only static content / no-auth DB reads.
   if (isTravelerPublicPath) return NextResponse.next();
@@ -446,9 +441,7 @@ export const config = {
     '/api/guide/:path*',
     // Traveler auth/session refresh only where needed; keep public marketing + activity pages fully cacheable.
     '/me/:path*',
-    '/orders/:path*',
     '/api/me/:path*',
-    '/api/orders/:path*',
     '/api/reviews',
     '/api/reviews/:path*',
     // Public routes subject to public_paused soft-launch guard (issue #805).
@@ -465,10 +458,8 @@ export const config = {
     '/legal/:path*',
     '/experiences/:path*',
     '/booking/:path*',
-    '/checkout/:path*',
     '/order/success/:path*',
     '/api/activities/:path*',
-    '/api/orders/:path*',
     // 多語言（#multilingual Phase 0.5）：locale 前綴的公開頁也要進 middleware。
     '/en',
     '/en/:path*',

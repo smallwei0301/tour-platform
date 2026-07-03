@@ -35,27 +35,10 @@ async function getSupabaseAdmin() {
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
-function isV2AvailabilityMode(url: URL): boolean {
-  const explicitSource = url.searchParams.get('source');
-  const explicitMode = url.searchParams.get('mode');
-  if (explicitSource === 'legacy' || explicitMode === 'legacy') return false;
-
-  // BOOKING_V2=0 or BOOKING_V2=false allows env-level rollback to legacy
-  const bookingV2 = process.env.BOOKING_V2;
-  if (bookingV2 === '0' || bookingV2 === 'false') return false;
-
-  return true;
-}
-
-function requestedAvailabilityMode(url: URL): 'v2' | 'legacy' | 'auto' {
-  const explicitSource = url.searchParams.get('source');
-  const explicitMode = url.searchParams.get('mode');
-  if (explicitSource === 'legacy' || explicitMode === 'legacy') return 'legacy';
-
-  const query = url.searchParams.get('v2');
-  if (query === '1' || query === 'true') return 'v2';
-  return 'auto';
-}
+// #1407 legacy 退役：`?source=legacy`／`?mode=legacy` 請求模式與 `BOOKING_V2` env
+// 回滾檢查已刪除——一律走 V2 引擎。保留（刻意，非殘留）：V2 無生成 slots 或引擎錯誤時
+// 內部 fallback 到 legacy 資料 snapshot（#839/#1133 資料安全網，待全活動 V2 slots
+// 回填完成後另案移除；fallback 流量可由 x-availability-source header 觀測）。
 
 function normalizeParticipants(url: URL): number {
   const raw = url.searchParams.get('participants');
@@ -145,8 +128,9 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
     }
 
     const requestUrl = new URL(req.url);
-    const requestedMode = requestedAvailabilityMode(requestUrl);
-    if (isV2AvailabilityMode(requestUrl)) {
+    // 退役後唯一模式；header 保留固定值供既有 dashboard/監測查詢相容
+    const requestedMode = 'v2';
+    {
       const timezone = requestUrl.searchParams.get('timezone') || 'Asia/Taipei';
       const dateFrom = requestUrl.searchParams.get('dateFrom') || undefined;
       const dateTo = requestUrl.searchParams.get('dateTo') || undefined;
@@ -244,18 +228,6 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
         });
       }
     }
-
-    const schedules = await loadLegacySchedules(supabase, activityRow.id, slug);
-    const sMaxAge = resolveCacheTierSeconds(schedules);
-
-    return Response.json(ok({ schedules, source: 'legacy' }), {
-      headers: {
-        'cache-control': `public, s-maxage=${sMaxAge}, stale-while-revalidate=${Math.max(30, sMaxAge * 2)}`,
-        'x-availability-cache-tier': String(sMaxAge),
-        'x-availability-source': 'legacy',
-        'x-availability-requested-mode': requestedMode,
-      },
-    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'unknown error';
     if (message === 'legacy_schedules_not_found') {

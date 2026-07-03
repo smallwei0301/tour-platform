@@ -15,19 +15,21 @@ test('issue621 availability route exposes explicit v2/legacy/fallback source con
   assert.match(src, /x-availability-source': 'v2'/, 'v2 branch must expose v2 source header');
   assert.match(src, /source: 'v2'/, 'v2 branch must expose source=v2 in response body');
 
-  assert.match(src, /source: 'legacy'/, 'legacy path must expose source=legacy in response body');
-  assert.match(src, /x-availability-source': 'legacy'/, 'legacy path must expose legacy source header');
-
+  // #1407 退役後：`?source=legacy`／`?mode=legacy` 請求模式與 pure-legacy 分支已刪除，
+  // route 一律走 V2 引擎——但「資料面」fallback（V2 無生成 slots／引擎錯誤 → legacy
+  // snapshot）刻意保留為 #839/#1133 安全網，必須維持可觀測標記。
   assert.match(
     src,
     /source:\s*'legacy_fallback'|x-availability-source': 'legacy-fallback'/,
     'v2 generation failure fallback must be explicitly marked as fallback source'
   );
-
-  assert.match(
-    src,
-    /explicitSource\s*===\s*'legacy'|explicitMode\s*===\s*'legacy'/,
-    'route must support explicit legacy mode override signal (source=legacy or mode=legacy)'
+  assert.ok(
+    !/explicitSource\s*===\s*'legacy'|explicitMode\s*===\s*'legacy'/.test(src),
+    'retired: explicit legacy request mode must NOT come back (#1407)'
+  );
+  assert.ok(
+    !/source: 'legacy'[^_]/.test(src),
+    'retired: pure-legacy response source must NOT come back (#1407)'
   );
 
   assert.match(

@@ -1,4 +1,4 @@
-import { csrfHeaders, ensureCsrfToken } from './csrf-client';
+import { csrfHeaders } from './csrf-client';
 
 export async function fetchExperiences() {
   const res = await fetch('/api/experiences', { cache: 'no-store' });
@@ -7,28 +7,8 @@ export async function fetchExperiences() {
   return json.data;
 }
 
-export async function createOrder(payload: {
-  experienceSlug: string;
-  scheduleId: string;
-  planId?: string;
-  peopleCount: number;
-  contactName: string;
-  contactPhone: string;
-  contactEmail: string;
-  promoCode?: string;
-}) {
-  // 健檢 v2 S4：middleware 對帶 traveler cookie 的 /api/orders mutation 強制 CSRF，
-  // 登入旅客建單必須帶 x-csrf-token（匿名時 csrfHeaders 為 no-op）。
-  await ensureCsrfToken();
-  const res = await fetch('/api/orders', {
-    method: 'POST',
-    headers: csrfHeaders({ 'content-type': 'application/json' }),
-    body: JSON.stringify(payload)
-  });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to create order');
-  return json.data;
-}
+// Legacy createOrder（POST /api/orders）已隨 #1407 階段三退役刪除——
+// 建單一律走 Booking V2：POST /api/v2/bookings → /api/v2/bookings/[id]/checkout。
 
 export async function fetchMyOrders(contactEmail = '') {
   const q = contactEmail ? `?contactEmail=${encodeURIComponent(contactEmail)}` : '';

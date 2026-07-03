@@ -19,6 +19,8 @@ Last updated: 2026-07-03 (Issue #1406 — 退役階段二：flag fallback UI 與
 > **因此本 runbook 第 2）～7）節描述的「flag 翻轉即回到 legacy CTA/legacy booking 契約」不再成立。** 若需緊急退場 Booking V2，唯一有效手段是 **Method B（Vercel Promote 前一個 good deployment / git revert 到階段二之前）**，不是翻 env 旗標。
 >
 > 旗標本身於 **退役階段三**（#1386）才隨 legacy 碼刪除一併退場。本段與下方 flag-rollback 章節依 #1386 決策 **保留一個版本週期供稽核查考**，屆時連同 legacy routes 一併清除。
+>
+> **【終局，2026-07-03】階段三（#1407）已完成**：flags 與 legacy routes 皆已刪除。本 runbook 全文自此為**歷史稽核文件**——如需退場 Booking V2，唯一手段是 Method B（Vercel Promote 前一個 good deployment / git revert），env 旗標已不存在。
 
 ---
 
@@ -172,6 +174,6 @@ Tabletop rehearsal: narrate each step aloud without executing. Confirm:
 |---|---|---|---|
 | 一、凍結 | legacy booking 路徑只修 P0 bug，新功能一律 V2（CLAUDE.md 已明文） | **owner 拍板即日生效（2026-06-11）** | ✅ 生效中 |
 | 二、移除入口 | 移除 `NEXT_PUBLIC_BOOKING_V2_ENABLED=0` 的 fallback UI 與 legacy 入口；本 runbook 的 flag 回滾段落保留一個版本週期後標 deprecated | V2 連續 14 天：零未解 P0、callback 成功率不低於既有水位、未動用回滾 | ✅ **已完成（#1406，2026-07-03）** — booking-entry legacy href / `/booking` legacy 殼層 / `/experiences` legacy CTA 皆移除；本 runbook flag 回滾段落已標 deprecated（見文件頂部）；flag 本身留待階段三退場。殘留：standalone `/checkout` 頁（僅直接 URL 可達，無 UI 連結）待階段三隨 legacy routes 一併刪除 |
-| 三、刪碼 | 刪 legacy routes（~108 檔）與對應測試（先清點：哪些隨碼刪、哪些行為測試遷移 V2）；feature flag 退場 | 入口移除滿 4 週，且 production log／Sentry 證實 legacy endpoints **連續 14 天零流量** | 執行 issue 已拆（見 #1386 連結） |
+| 三、刪碼 | 刪 legacy routes 與對應測試；feature flag 退場 | ~~入口移除滿 4 週＋零流量證據~~ → **owner 2026-07-03 拍板「直接退役」豁免觀察期** | ✅ **已完成（#1407，2026-07-03）** — 刪除 `/api/orders`、`/checkout`、`/orders` 頁與 `/api/v2/feature-flags` 診斷端點；`isBookingV2Enabled`／`isBookingV2ShellEnabled` 與 `NEXT_PUBLIC_BOOKING_V2_ENABLED`／`BOOKING_V2`／`BOOKING_V2_PRIMARY` 全數退場；舊路徑 301 導向（next.config redirects）。**唯一保留**：availability route 內部資料 snapshot fallback（#839/#1133 安全網，待 V2 slots 全量回填另案移除）。殘留守門：`tests/api/issue1407-legacy-retirement-residue-guard.test.mjs` |
 
 > 凍結期間的例外：P0（資料正確性／金流／安全）修復可動 legacy，PR 需註明 P0 理由。

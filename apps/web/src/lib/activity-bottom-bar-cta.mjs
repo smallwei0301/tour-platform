@@ -33,7 +33,6 @@ export function resolveBottomBarCta({
   selected,
   directBookingHref,
   activitySlug,
-  useBookingV2 = true,
   planSectionId = DEFAULT_PLAN_SECTION_ID,
 } = {}) {
   if (selected && typeof selected.id === 'string' && selected.id.trim().length > 0) {
@@ -42,7 +41,6 @@ export function resolveBottomBarCta({
       planId: selected.id,
       date: selected.date || undefined,
       scheduleId: selected.scheduleId || undefined,
-      useBookingV2,
     });
     // #multilingual：label 維持中文（既有 #919 純函式契約／單測），UI 改用 labelKey
     // 透過 next-intl 取對應語言文字（messages 的 bottomBar.ctaBook / ctaSelectPlan）。
