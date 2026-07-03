@@ -87,6 +87,8 @@ export async function POST(req: NextRequest) {
     //   plus has_complaint / has_oversell_issue so computeSweepPayoutItem's
     //   #1221 payout-hold gate can actually fire (#1106: completed orders with
     //   an open complaint / oversell investigation must NOT be auto-settled).
+    // - bookings 嵌入必須指名 fk_bookings_order_id：#1560 後 orders↔bookings 有兩條
+    //   FK，未指名時 PostgREST 回 PGRST201 歧義 → 整個 sweep 500（同 #1554 修法）。
     const { data: completedOrders, error: ordersError } = await supabase
       .from('orders')
       .select(`
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest) {
         total_twd,
         paid_at,
         activities!inner(guide_id),
-        bookings(start_at, end_at, activity_plan_id, activity_id, guide_id),
+        bookings!fk_bookings_order_id(start_at, end_at, activity_plan_id, activity_id, guide_id),
         activity_schedules(start_at),
         operations_tracking(refund_amount_twd, has_complaint, has_oversell_issue)
       `)

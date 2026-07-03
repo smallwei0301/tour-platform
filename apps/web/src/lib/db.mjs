@@ -6225,7 +6225,7 @@ export async function listGuidePendingApprovalsDb(input = {}) {
     .select(
       'id, booking_no, start_at, participants, guide_approval_status, status, created_at, ' +
         'activity_id, order_id, activities(title), activity_plans(name), ' +
-        'orders(contact_name, total_twd)'
+        'orders!fk_bookings_order_id(contact_name, total_twd)'
     )
     .eq('guide_id', guideId)
     .eq('guide_approval_status', 'pending')

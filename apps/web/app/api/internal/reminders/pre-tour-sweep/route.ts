@@ -99,6 +99,8 @@ export async function POST(req: NextRequest) {
       // Query: orders JOIN bookings + activity_schedules + activities.
       // Eligibility window is computed in runtime by preferring bookings.start_at,
       // then falling back to activity_schedules.start_at for legacy rows.
+      // bookings 嵌入必須指名 fk_bookings_order_id：#1560 後 orders↔bookings 有兩條
+      // FK，未指名時 PostgREST 回 PGRST201 歧義，查詢錯誤會被 continue 吃掉、提醒靜默漏發。
       const { data: rows, error: queryError } = await supabase
         .from('orders')
         .select(`
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest) {
           contact_email,
           user_id,
           status,
-          bookings (
+          bookings!fk_bookings_order_id (
             id,
             start_at,
             end_at,
