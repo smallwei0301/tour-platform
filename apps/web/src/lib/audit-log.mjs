@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Issue #1385 — audit log 單一實作。
  * 先前 db.mjs（Supabase insert）、admin.mjs、services.mjs 各有一份複本，
@@ -5,7 +6,11 @@
  */
 import { auditLogs } from './store.mjs';
 
-/** in-memory fallback 寫入（admin.mjs / services.mjs 共用）。 */
+/**
+ * in-memory fallback 寫入（admin.mjs / services.mjs 共用）。
+ * @param {{ orderId?: string | null, actor?: string, action?: string, metadata?: Record<string, unknown>, createdAt?: string | null }} entry
+ * @returns {Record<string, unknown> | null}
+ */
 export function appendAuditLog({ orderId = null, actor = 'system', action, metadata = {}, createdAt = null }) {
   if (!action) return null;
   const log = {
@@ -16,11 +21,17 @@ export function appendAuditLog({ orderId = null, actor = 'system', action, metad
     metadata,
     createdAt: createdAt || new Date().toISOString(),
   };
-  auditLogs.push(log);
+  // auditLogs 為 in-memory store 陣列（store.mjs 由 seed 推得較窄型別）；此處寬鬆推入。
+  auditLogs.push(/** @type {any} */ (log));
   return log;
 }
 
-/** Supabase 寫入（db.mjs 共用）。 */
+/**
+ * Supabase 寫入（db.mjs 共用）。
+ * @param {any} supabase - Supabase client（loosely typed；插入 audit_logs 表）
+ * @param {{ orderId?: string | null, actor?: string, action?: string, metadata?: Record<string, unknown> }} entry
+ * @returns {Promise<void>}
+ */
 export async function insertAuditLogDb(supabase, { orderId = null, actor = 'admin', action, metadata = {} }) {
   if (!action) return;
   const payload = {

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Constant-time string comparison (edge-safe, pure JS).
  *
@@ -8,6 +9,11 @@
  * 引用（middleware.ts），edge runtime 沒有 Node crypto。此純 JS XOR 迴圈在
  * edge 與 Node 皆可用；長度不同時仍走完整迴圈（以較長者為準），僅回傳前才
  * 反映長度差異。
+ */
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ * @returns {boolean}
  */
 export function constantTimeEquals(a, b) {
   const strA = typeof a === 'string' ? a : String(a ?? '');
