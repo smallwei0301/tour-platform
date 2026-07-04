@@ -36,6 +36,7 @@ export function buildGuideShopView(guide, activityDetails = []) {
       title: s.title,
       region: s.region,
       regionSlug: s.regionSlug || null,
+      coverImageUrl: s.coverImageUrl || null,
       plans,
     });
   }

@@ -62,7 +62,7 @@ async function reachPaymentStep(page: import('@playwright/test').Page) {
   await expect(page.getByTestId('shop-plan-summary')).toBeVisible();
   await page.getByTestId('shop-date').first().click();
   await page.getByTestId('shop-slot').first().click();
-  await page.getByRole('button', { name: /完成預約/ }).click();
+  await page.getByRole('button', { name: /確認這個時段/ }).click();
 }
 
 test('信用卡付款：走到付款步驟並送出 ecpay checkout', async ({ page }) => {

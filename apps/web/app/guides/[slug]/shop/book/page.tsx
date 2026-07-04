@@ -1,10 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../src/lib/supabase/client';
 import { track } from '../../../../../src/lib/track';
+import { ArrowRight, CtaMountain, MountainCircleLogo, PersonIcon } from '../sib-icons';
 
 type ShopPlan = {
   id: string;
@@ -15,7 +17,7 @@ type ShopPlan = {
   minParticipants: number;
   maxParticipants: number | null;
 };
-type ShopActivity = { id: string; slug: string; title: string; region: string; regionSlug: string | null; plans: ShopPlan[] };
+type ShopActivity = { id: string; slug: string; title: string; region: string; regionSlug: string | null; coverImageUrl: string | null; plans: ShopPlan[] };
 type ShopData = {
   guide: { id: string; slug: string; displayName: string; region: string };
   activitiesByRegion: Array<{ region: string; activities: ShopActivity[] }>;
@@ -42,8 +44,8 @@ function fmtSlot(startAt: string): string {
   return new Date(startAt).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', timeZone: TZ, hour12: false });
 }
 
-// ── 月曆日期選擇器（對齊 PM 參考圖：整月格、可預約日可點、過去/無空檔灰階）──
-const CAL_WEEK = ['一', '二', '三', '四', '五', '六', '日']; // 週一起始
+// ── 月曆日期選擇器（對齊 Midao mockup：日起始、可預約日金點、選中綠圈金環）──
+const CAL_WEEK = ['日', '一', '二', '三', '四', '五', '六']; // 週日起始（同 mockup）
 const CAL_MONTHS = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
 
 function dateKey(y: number, m: number, d: number): string {
@@ -70,50 +72,35 @@ function MonthCalendar({
     }
   }, [firstAvail]);
 
-  const firstDow = (new Date(vy, vm, 1).getDay() + 6) % 7; // 週一=0
+  const firstDow = new Date(vy, vm, 1).getDay(); // 週日=0
   const daysInMonth = new Date(vy, vm + 1, 0).getDate();
   const cells: (string | null)[] = [...Array(firstDow).fill(null)];
   for (let d = 1; d <= daysInMonth; d++) cells.push(dateKey(vy, vm, d));
 
   const prev = () => { if (vm === 0) { setVy(vy - 1); setVm(11); } else { setVm(vm - 1); } };
   const next = () => { if (vm === 11) { setVy(vy + 1); setVm(0); } else { setVm(vm + 1); } };
-  const goToday = () => { setVy(today.getFullYear()); setVm(today.getMonth()); };
 
   return (
-    <div className="tp-card" style={{ padding: 14 }} data-testid="shop-calendar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <button type="button" aria-label="上個月" onClick={prev}
-          style={{ border: 'none', background: 'transparent', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--tp-text)', padding: '2px 8px' }}>‹</button>
-        <span style={{ fontWeight: 700, fontSize: 16 }}>{vy} 年 {CAL_MONTHS[vm]}</span>
-        <button type="button" aria-label="下個月" onClick={next}
-          style={{ border: 'none', background: 'transparent', fontSize: 22, lineHeight: 1, cursor: 'pointer', color: 'var(--tp-text)', padding: '2px 8px' }}>›</button>
-        <button type="button" onClick={goToday}
-          style={{ marginLeft: 'auto', border: 'none', background: 'transparent', color: 'var(--tp-primary)', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>今天</button>
+    <div className="sib-cal" data-testid="shop-calendar">
+      <div className="sib-cal-head">
+        <button type="button" aria-label="上個月" className="sib-cal-nav" onClick={prev}>‹</button>
+        <span className="m">{vy} 年 {CAL_MONTHS[vm]}</span>
+        <button type="button" aria-label="下個月" className="sib-cal-nav" onClick={next}>›</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', color: 'var(--tp-muted)', fontSize: 13, marginBottom: 6 }}>
-        {CAL_WEEK.map((w) => <span key={w}>{w}</span>)}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div className="sib-cal-wk">{CAL_WEEK.map((w) => <span key={w}>{w}</span>)}</div>
+      <div className="sib-cal-grid">
         {cells.map((c, i) => {
           if (!c) return <span key={`e${i}`} />;
           const day = Number(c.slice(-2));
           const isAvail = availableDates.has(c);
           const isSelected = selected === c;
-          const isToday = c === todayKey;
+          const cls = ['sib-cal-day', isAvail ? 'avail' : 'dim', isSelected ? 'sel' : ''].filter(Boolean).join(' ');
+          void todayKey;
           return (
             <button key={c} type="button" data-testid={isAvail ? 'shop-date' : undefined}
-              disabled={!isAvail}
+              disabled={!isAvail} className={cls}
               onClick={() => isAvail && onSelect(c)}
-              aria-label={`${c}${isAvail ? ' 可預約' : ' 不可預約'}`}
-              style={{
-                aspectRatio: '1 / 1', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: 'none', borderRadius: '50%', fontSize: 15,
-                cursor: isAvail ? 'pointer' : 'default',
-                background: isSelected ? 'var(--tp-primary)' : 'transparent',
-                color: isSelected ? '#fff' : isAvail ? 'var(--tp-text)' : '#cbd5e1',
-                fontWeight: isAvail ? 600 : 400,
-                boxShadow: isToday && !isSelected ? 'inset 0 0 0 1px var(--tp-primary)' : 'none',
-              }}>
+              aria-label={`${c}${isAvail ? ' 可預約' : ' 不可預約'}`}>
               {day}
             </button>
           );
@@ -474,79 +461,94 @@ export default function GuideShopBookingPage() {
 
   const total = selectedPlan ? priceOf(selectedPlan, guests) : 0;
 
+  const STEP_LABELS = ['選擇行程', '選擇日期與時間', '填寫聯絡資料'];
+
   return (
-    <main className="tp-light-page tp-container" style={{ paddingBottom: 110, maxWidth: 560 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 18 }}>
+    <main className="sib sib-book">
+      <div className="sib-topbar">
         {step === 1 ? (
-          <Link href={`/guides/${slug}/shop`} className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }}
-            onClick={() => { try { sessionStorage.removeItem(bookStateKey(slug)); } catch { /* noop */ } }}>取消預約</Link>
+          <Link href={`/guides/${slug}/shop`} className="sib-back"
+            onClick={() => { try { sessionStorage.removeItem(bookStateKey(slug)); } catch { /* noop */ } }}>‹ 取消預約</Link>
         ) : (
-          <button className="tp-btn tp-btn-ghost" style={{ fontSize: 14, padding: '6px 12px' }} onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>← 上一步</button>
+          <button className="sib-back" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>‹ 上一步</button>
         )}
-        <span style={{ color: 'var(--tp-muted)', fontSize: 13 }}>目前選擇：{shop.guide.displayName}</span>
+        <span className="sib-current">目前選擇：{shop.guide.displayName}<PersonIcon size={16} /></span>
+      </div>
+
+      {/* 步驟指示器 1—2—3 */}
+      <div className="sib-ind">
+        <span className="sib-ind-line sib-ind-line--1" />
+        <span className="sib-ind-line sib-ind-line--2" />
+        {STEP_LABELS.map((lbl, i) => (
+          <div key={lbl} className={`sib-ind-item${step >= i + 1 ? ' on' : ''}`}>
+            <span className="sib-ind-dot">{i + 1}</span>
+            <span className="sib-ind-lbl">{lbl}</span>
+          </div>
+        ))}
       </div>
 
       {error && (
-        <div data-testid="shop-error" style={{ marginTop: 14, background: '#fff4f4', border: '1px solid #f5c2c2', color: '#b42318', borderRadius: 10, padding: '10px 14px', fontSize: 14 }}>
+        <div data-testid="shop-error" style={{ marginTop: 8, background: '#fbeae4', border: '1px solid #e0a58c', color: '#a3401f', borderRadius: 12, padding: '10px 14px', fontSize: 14 }}>
           ⚠️ {error}
         </div>
       )}
 
-      {/* ── Step1：選方案 ── */}
+      {/* ── Step1：選一條想走的徑 ── */}
       {step === 1 && (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 6 }}>
+          <h1 className="sib-book-h1">選一條想走的徑</h1>
           {shop.activitiesByRegion.length === 0 && (
-            <p style={{ color: 'var(--tp-muted)' }}>此導遊目前沒有可預約的行程。</p>
+            <p style={{ color: 'var(--sib-muted)', marginTop: 16 }}>此導遊目前沒有可預約的行程。</p>
           )}
           {shop.activitiesByRegion.map((group) => (
-            <section key={group.region} style={{ marginBottom: 20 }}>
-              <h2 style={{ fontSize: 18, margin: '0 0 10px' }}>{group.region}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {group.activities.flatMap((activity) =>
-                  activity.plans.map((plan) => {
-                    const active = selectedPlanId === plan.id;
-                    return (
-                      <button
-                        key={plan.id}
-                        type="button"
-                        data-testid="shop-plan-card"
-                        onClick={() => selectPlan(activity, plan)}
-                        className="tp-card"
-                        style={{
-                          textAlign: 'left', cursor: 'pointer', padding: 16,
-                          border: active ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)',
-                        }}
-                      >
-                        <p style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{activity.title}</p>
-                        <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14 }}>
-                          {plan.duration ? `🕐 ${plan.duration}　` : ''}💲 NT${(plan.basePrice ?? 0).toLocaleString()}
-                          {plan.priceType === 'per_group' ? ' / 組' : ' / 人'}
-                        </p>
-                        <p style={{ margin: '6px 0 0', color: 'var(--tp-primary)', fontSize: 13, fontWeight: 600 }}>#{plan.name}</p>
-                      </button>
-                    );
-                  })
-                )}
-              </div>
+            <section key={group.region}>
+              <p className="sib-region">📍 {group.region}</p>
+              {group.activities.flatMap((activity) =>
+                activity.plans.map((plan) => {
+                  const active = selectedPlanId === plan.id;
+                  const cap = plan.maxParticipants ? `${plan.minParticipants}–${plan.maxParticipants} 人` : `${plan.minParticipants} 人起`;
+                  return (
+                    <button key={plan.id} type="button" data-testid="shop-plan-card"
+                      onClick={() => selectPlan(activity, plan)}
+                      className={`sib-plan-rcard${active ? ' on' : ''}`}>
+                      <span className="sib-plan-thumb">
+                        {activity.coverImageUrl && (
+                          <Image src={activity.coverImageUrl} alt={activity.title} width={118} height={108} />
+                        )}
+                      </span>
+                      <span className="sib-plan-info">
+                        <h3>{activity.title}</h3>
+                        {plan.duration && (
+                          <span className="sib-plan-line">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" strokeLinecap="round" /></svg>
+                            約 {plan.duration.replace(/^約\s*/, '')}
+                          </span>
+                        )}
+                        <span className="sib-plan-line">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M20 12l-8 8-8-8 8-8z" /><circle cx="12" cy="9" r="1.4" fill="currentColor" /></svg>
+                          NT${(plan.basePrice ?? 0).toLocaleString()} / {plan.priceType === 'per_group' ? '組' : '人'}
+                        </span>
+                        <span className="sib-plan-tag">#{plan.name}　·　{cap}</span>
+                      </span>
+                      <span className="sib-radio" />
+                    </button>
+                  );
+                })
+              )}
             </section>
           ))}
 
-          {/* 人數 */}
+          {/* 同行人數 */}
           {selectedPlan && (
-            <section style={{ marginTop: 8 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>👥 參加人數</p>
-              <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>
+            <section className="sib-guests-card">
+              <span className="lbl"><PersonIcon size={22} /> 同行人數</span>
+              <span className="sib-stepper">
                 <button type="button" aria-label="減少人數" disabled={guests <= (selectedPlan.minParticipants || 1)}
-                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}
-                  style={{ padding: '8px 16px', border: 'none', background: '#f9fafb', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>−</button>
-                <span data-testid="shop-guests" style={{ padding: '8px 20px', minWidth: 40, textAlign: 'center' }}>{guests}</span>
+                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}>−</button>
+                <span className="val" data-testid="shop-guests">{guests} 人</span>
                 <button type="button" aria-label="增加人數" disabled={selectedPlan.maxParticipants != null && guests >= selectedPlan.maxParticipants}
-                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}
-                  style={{ padding: '8px 16px', border: 'none', background: '#f9fafb', fontSize: 18, fontWeight: 700, cursor: 'pointer' }}>+</button>
-              </div>
-              <p style={{ marginTop: 6, color: 'var(--tp-muted)', fontSize: 13 }}>
-                最少 {selectedPlan.minParticipants || 1} 人{selectedPlan.maxParticipants ? `，最多 ${selectedPlan.maxParticipants} 人` : ''}
-              </p>
+                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}>+</button>
+              </span>
             </section>
           )}
         </div>
@@ -554,44 +556,38 @@ export default function GuideShopBookingPage() {
 
       {/* ── Step2：選日期與時間 ── */}
       {step === 2 && selectedPlan && (
-        <div style={{ marginTop: 16 }}>
-          {/* 方案摘要卡：深連結直落 step 2 時，這裡就是「已選方案」的確認點——
-              可直接改人數（自動重抓時段）或更換方案，不用倒回方案列表重選。 */}
-          <section data-testid="shop-plan-summary" className="tp-card" style={{ padding: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-              <div>
-                <h2 style={{ fontSize: 17, margin: 0 }}>{selectedActivity?.title}</h2>
-                <p style={{ color: 'var(--tp-muted)', fontSize: 14, margin: '4px 0 0' }}>
-                  #{selectedPlan.name}
-                  {selectedPlan.duration ? `・${selectedPlan.duration}` : ''}
-                  ・NT${(selectedPlan.basePrice ?? 0).toLocaleString()}{selectedPlan.priceType === 'per_group' ? ' / 組' : ' / 人'}
-                </p>
-              </div>
+        <div style={{ marginTop: 6 }}>
+          {/* 標題（活動 | 方案）＋ tag；shop-plan-summary 保留（深連結直落此步的確認錨點） */}
+          <section data-testid="shop-plan-summary">
+            <div className="sib-title-row">
+              <h1>{selectedActivity?.title}</h1>
+            </div>
+            <p className="sib-title-tag">
+              #{selectedPlan.name}　·　{guests} 人
               <button type="button" data-testid="shop-change-plan" onClick={() => setStep(1)}
-                style={{ border: '1px solid var(--tp-border)', background: 'transparent', borderRadius: 999,
-                  padding: '6px 12px', fontSize: 13, fontWeight: 700, color: 'var(--tp-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                style={{ marginLeft: 10, border: 'none', background: 'transparent', color: 'var(--sib-gold)', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
                 更換方案
               </button>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
-              <span style={{ fontSize: 14, fontWeight: 700 }}>👥 人數</span>
-              <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+              <span className="sib-stepper">
                 <button type="button" aria-label="減少人數" disabled={guests <= (selectedPlan.minParticipants || 1)}
-                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}
-                  style={{ padding: '6px 14px', border: 'none', background: '#f9fafb', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>−</button>
-                <span data-testid="shop-guests-step2" style={{ padding: '6px 16px', minWidth: 36, textAlign: 'center' }}>{guests}</span>
+                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}>−</button>
+                <span className="val" data-testid="shop-guests-step2">{guests}</span>
                 <button type="button" aria-label="增加人數" disabled={selectedPlan.maxParticipants != null && guests >= selectedPlan.maxParticipants}
-                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}
-                  style={{ padding: '6px 14px', border: 'none', background: '#f9fafb', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>+</button>
-              </div>
-              <span style={{ color: 'var(--tp-muted)', fontSize: 12 }}>
-                {selectedPlan.minParticipants || 1} 人起{selectedPlan.maxParticipants ? `，至多 ${selectedPlan.maxParticipants} 人` : ''}
+                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}>+</button>
               </span>
+              <span style={{ color: 'var(--sib-muted)', fontSize: 12 }}>可調整同行人數</span>
             </div>
           </section>
 
-          <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>選擇日期</p>
-          {slotsLoading && <p style={{ color: 'var(--tp-muted)' }}>載入可預約日期中…</p>}
+          {/* 選擇日期 */}
+          <div className="sib-sec-head">
+            <MountainCircleLogo style={{ width: 26, height: 26, color: 'var(--sib-gold)' }} />
+            <span className="t">選擇日期</span>
+            <span className="line" />
+          </div>
+          {slotsLoading && <p style={{ color: 'var(--sib-muted)' }}>載入可預約日期中…</p>}
           {!slotsLoading && (
             <MonthCalendar
               availableDates={availableDateSet}
@@ -602,83 +598,101 @@ export default function GuideShopBookingPage() {
 
           {selectedDate && (
             <>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>{selectedDate.slice(5).replace('-', '/')} 可預約時間</p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 8 }}>
+              <p style={{ fontWeight: 700, fontSize: 14, margin: '18px 0 10px', color: 'var(--sib-ink)' }}>{selectedDate.slice(5).replace('-', '/')} 可預約時間</p>
+              <div className="sib-slot-grid">
                 {slotsForSelectedDate.map((s) => (
                   <button key={s.startAt} type="button" data-testid="shop-slot"
                     onClick={() => setSelectedSlotStartAt(s.startAt)}
-                    className="tp-card"
-                    style={{ padding: '10px 0', cursor: 'pointer', textAlign: 'center', fontWeight: 600,
-                      border: selectedSlotStartAt === s.startAt ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
+                    className={`sib-slot${selectedSlotStartAt === s.startAt ? ' on' : ''}`}>
                     {fmtSlot(s.startAt)}
                   </button>
                 ))}
-                {slotsForSelectedDate.length === 0 && <p style={{ color: 'var(--tp-muted)', gridColumn: '1 / -1' }}>此日期沒有可預約時段。</p>}
+                {slotsForSelectedDate.length === 0 && <p style={{ color: 'var(--sib-muted)', gridColumn: '1 / -1' }}>此日期沒有可預約時段。</p>}
               </div>
             </>
           )}
 
-          {/* 聯絡資訊（draft 必填，預填自會員資料）；匿名者改顯示登入卡 */}
+          {/* 聯絡資訊 */}
+          <div className="sib-sec-head">
+            <PersonIcon size={24} />
+            <span className="t">聯絡資訊</span>
+            <span className="line" />
+          </div>
           {authState === 'authed' ? (
-            <section style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <p style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>聯絡資訊</p>
-              <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="姓名"
-                style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
-              <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="電話" inputMode="tel"
-                style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10 }} />
-              <input value={contactEmail} readOnly placeholder="電子信箱"
-                style={{ padding: '10px 12px', border: '1px solid var(--tp-border)', borderRadius: 10, background: '#f3f4f6' }} />
-            </section>
+            <div>
+              <div className="sib-field">
+                <PersonIcon size={20} /><span className="lbl">姓名</span>
+                <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請填寫姓名" />
+              </div>
+              <div className="sib-field">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 5c0 9 6 15 15 15l2-3-4-2-2 2c-3-1.5-5.5-4-7-7l2-2-2-4z" strokeLinejoin="round" /></svg>
+                <span className="lbl">電話</span>
+                <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="請填寫電話" inputMode="tel" />
+              </div>
+              <div className="sib-field">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M4 7l8 6 8-6" /></svg>
+                <span className="lbl">電子信箱</span>
+                <input value={contactEmail} readOnly placeholder="電子信箱" />
+              </div>
+            </div>
           ) : (
-            <section data-testid="shop-login-card" className="tp-card" style={{ marginTop: 20, padding: 16 }}>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>預約需要會員帳號</p>
-              <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14, lineHeight: 1.7 }}>
+            <section data-testid="shop-login-card" className="sib-field" style={{ display: 'block', padding: 16 }}>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: 'var(--sib-ink)' }}>預約需要會員帳號</p>
+              <p style={{ margin: '6px 0 0', color: 'var(--sib-muted)', fontSize: 14, lineHeight: 1.7 }}>
                 用 Email 或 LINE 登入後即可完成預約，你選的日期與時段會保留。
               </p>
             </section>
+          )}
+
+          {/* 已選時段缺口卡 */}
+          {selectedSlotStartAt && (
+            <div className="sib-picked">
+              <span className="sib-picked-badge"><MountainCircleLogo style={{ width: 26, height: 26 }} /></span>
+              <p>已選擇 {selectedDate.replace(/-/g, ' / ')}　·　{fmtSlot(selectedSlotStartAt)} 出發</p>
+            </div>
           )}
         </div>
       )}
 
       {/* ── Step3：付款 ── */}
       {step === 3 && selectedPlan && (
-        <div style={{ marginTop: 16 }}>
-          <h2 style={{ fontSize: 18, margin: '0 0 12px' }}>確認與付款</h2>
-          <div className="tp-card" style={{ padding: 16, marginBottom: 16 }}>
-            <p style={{ margin: 0, fontWeight: 700 }}>{selectedActivity?.title}　#{selectedPlan.name}</p>
-            <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)', fontSize: 14 }}>
+        <div style={{ marginTop: 6 }}>
+          <h1 className="sib-book-h1" style={{ fontSize: 26 }}>確認與付款</h1>
+          <div style={{ background: 'var(--sib-card)', border: '1px solid var(--sib-gold-line)', borderRadius: 16, padding: 16, margin: '10px 0 18px' }}>
+            <p style={{ margin: 0, fontFamily: 'var(--tp-serif)', fontWeight: 800, fontSize: 16, color: 'var(--sib-ink)' }}>{selectedActivity?.title}　#{selectedPlan.name}</p>
+            <p style={{ margin: '6px 0 0', color: 'var(--sib-muted)', fontSize: 14 }}>
               {selectedDate} {selectedSlotStartAt ? fmtSlot(selectedSlotStartAt) : ''}・{guests} 人
             </p>
-            <p style={{ margin: '8px 0 0', fontWeight: 700, fontSize: 18 }}>總計 NT${total.toLocaleString()}</p>
+            <p style={{ margin: '10px 0 0', fontFamily: 'var(--tp-serif)', fontWeight: 800, fontSize: 20, color: 'var(--sib-ink)' }}>總計 NT${total.toLocaleString()}</p>
           </div>
 
-          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>付款方式</p>
+          <div className="sib-sec-head"><span className="t" style={{ fontSize: 18 }}>付款方式</span><span className="line" /></div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label className="tp-card" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer',
-              border: payMethod === 'ecpay' ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer', borderRadius: 14,
+              background: 'var(--sib-card)', border: payMethod === 'ecpay' ? '1.5px solid var(--sib-green)' : '1px solid var(--sib-gold-line)' }}>
               <input type="radio" name="pay" checked={payMethod === 'ecpay'} onChange={() => setPayMethod('ecpay')} />
               💳 信用卡（ECPay 安全付款）
             </label>
-            <label className="tp-card" data-testid="shop-pay-transfer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer',
-              border: payMethod === 'transfer' ? '2px solid var(--tp-primary)' : '1px solid var(--tp-border)' }}>
+            <label data-testid="shop-pay-transfer" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 14, cursor: 'pointer', borderRadius: 14,
+              background: 'var(--sib-card)', border: payMethod === 'transfer' ? '1.5px solid var(--sib-green)' : '1px solid var(--sib-gold-line)' }}>
               <input type="radio" name="pay" checked={payMethod === 'transfer'} onChange={() => setPayMethod('transfer')} />
               🏦 自行匯款（人工核帳）
             </label>
           </div>
 
           {payMethod === 'transfer' && (
-            <div data-testid="shop-transfer-info" className="tp-card" style={{ marginTop: 12, padding: 16, background: 'var(--tp-bg-soft, #f9fafb)' }}>
-              {transferInfo == null && <p style={{ color: 'var(--tp-muted)', margin: 0 }}>載入匯款資訊中…</p>}
+            <div data-testid="shop-transfer-info" style={{ marginTop: 12, padding: 16, borderRadius: 14, background: 'var(--sib-card)', border: '1px solid var(--sib-gold-line)' }}>
+              {transferInfo == null && <p style={{ color: 'var(--sib-muted)', margin: 0 }}>載入匯款資訊中…</p>}
               {transferInfo && !transferInfo.configured && (
-                <p style={{ color: 'var(--tp-danger)', margin: 0 }}>此導遊尚未提供匯款資訊，請改用信用卡付款。</p>
+                <p style={{ color: '#a3401f', margin: 0 }}>此導遊尚未提供匯款資訊，請改用信用卡付款。</p>
               )}
               {transferInfo?.configured && (
-                <div style={{ fontSize: 14, lineHeight: 1.9 }}>
+                <div style={{ fontSize: 14, lineHeight: 1.9, color: 'var(--sib-ink-soft)' }}>
                   <p style={{ margin: 0 }}>銀行：{transferInfo.bankName}</p>
                   <p style={{ margin: 0 }}>戶名：{transferInfo.accountName}</p>
                   <p style={{ margin: 0 }}>帳號：{transferInfo.accountNumber}</p>
-                  {transferInfo.transferNote && <p style={{ margin: '6px 0 0', color: 'var(--tp-muted)' }}>{transferInfo.transferNote}</p>}
-                  <p style={{ margin: '8px 0 0', color: 'var(--tp-muted)', fontSize: 13 }}>
+                  {transferInfo.transferNote && <p style={{ margin: '6px 0 0', color: 'var(--sib-muted)' }}>{transferInfo.transferNote}</p>}
+                  <p style={{ margin: '8px 0 0', color: 'var(--sib-muted)', fontSize: 13 }}>
                     請完成匯款後按下方按鈕送出，我們將人工核對入帳後為您確認預約。
                   </p>
                 </div>
@@ -689,39 +703,46 @@ export default function GuideShopBookingPage() {
       )}
 
       {/* ── 固定底部 CTA ── */}
-      <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, padding: '10px 16px', background: 'var(--tp-card-bg, #fff)', borderTop: '1px solid var(--tp-border)', zIndex: 20 }}>
-        <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      <div className="sib-cta-bar-fx">
+        <div>
           {step === 1 && (
             <>
-              <p style={{ margin: '0 0 8px', fontSize: 13, color: 'var(--tp-muted)' }}>
-                {selectedPlan ? `已選擇 1 項 / ${selectedPlan.duration || '—'} / NT$${total.toLocaleString()}` : '請選擇一個方案'}
-              </p>
-              <button className="tp-btn tp-btn-primary" disabled={!selectedPlan} onClick={() => { setStep(2); }}
-                style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedPlan ? 1 : 0.5 }}>
-                選擇日期和時間 →
+              {selectedPlan && (
+                <div className="sib-sumbar">
+                  <span className="thumb">{selectedActivity?.coverImageUrl && <Image src={selectedActivity.coverImageUrl} alt="" width={52} height={52} />}</span>
+                  <span className="info"><b>{selectedActivity?.title.split('｜')[0]}</b><p>#{selectedPlan.name}　·　{guests} 人</p></span>
+                  <span className="price"><span>小計</span><b>NT${total.toLocaleString()}</b></span>
+                </div>
+              )}
+              {!selectedPlan && <p className="sib-cta-hint">請選擇一個方案</p>}
+              <button className="sib-cta" disabled={!selectedPlan} onClick={() => { setStep(2); }}
+                style={{ opacity: selectedPlan ? 1 : 0.5, fontSize: 19 }}>
+                <CtaMountain className="sib-cta-ico" />選擇日期和時間
+                <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
               </button>
             </>
           )}
           {step === 2 && authState === 'authed' && (
-            <button className="tp-btn tp-btn-primary" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
-              style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5 }}>
-              {busy ? '處理中…' : `完成預約 · NT$${total.toLocaleString()} →`}
+            <button className="sib-cta" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
+              style={{ opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5, fontSize: 19 }}>
+              {busy ? '處理中…' : '確認這個時段'}
+              <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
             </button>
           )}
           {step === 2 && authState !== 'authed' && (
-            <button className="tp-btn tp-btn-primary" data-testid="shop-login-cta"
-              disabled={!selectedSlotStartAt || authState === 'checking'}
-              onClick={goLoginPreservingState}
-              style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedSlotStartAt && authState === 'anon' ? 1 : 0.5 }}>
-              登入以完成預約 →
+            <button className="sib-cta" data-testid="shop-login-cta"
+              disabled={!selectedSlotStartAt || authState === 'checking'} onClick={goLoginPreservingState}
+              style={{ opacity: selectedSlotStartAt && authState === 'anon' ? 1 : 0.5, fontSize: 19 }}>
+              登入以完成預約
+              <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
             </button>
           )}
           {step === 3 && (
-            <button className="tp-btn tp-btn-primary"
-              disabled={busy || (payMethod === 'transfer' && !transferInfo?.configured)}
-              onClick={confirmPayment}
-              style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: busy || (payMethod === 'transfer' && !transferInfo?.configured) ? 0.5 : 1 }}>
+            <button className="sib-cta"
+              disabled={busy || (payMethod === 'transfer' && !transferInfo?.configured)} onClick={confirmPayment}
+              style={{ opacity: busy || (payMethod === 'transfer' && !transferInfo?.configured) ? 0.5 : 1, fontSize: 19 }}>
               {busy ? '處理中…' : payMethod === 'transfer' ? '我已匯款，送出訂單' : `前往付款 NT$${total.toLocaleString()}`}
+              <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
             </button>
           )}
         </div>

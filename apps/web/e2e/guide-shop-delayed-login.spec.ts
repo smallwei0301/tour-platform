@@ -115,16 +115,16 @@ test('登入回跳：sessionStorage 還原 → 直接落在 step 2 並可完成 
 
   await page.goto(`/guides/${SLUG}/shop/book`);
 
-  // 直接落在 step 2：月曆可見、時段已選、聯絡資訊（已登入）可見。
+  // 直接落在 step 2：月曆可見、時段已選（sib-slot on）、聯絡資訊（已登入）可見。
   await expect(page.getByTestId('shop-calendar')).toBeVisible();
-  await expect(page.getByTestId('shop-slot')).toHaveCSS('border-width', '2px'); // 已選中的時段有 2px primary 邊框
-  await expect(page.getByPlaceholder('姓名')).toHaveValue('王小明');
+  await expect(page.getByTestId('shop-slot')).toHaveClass(/\bon\b/); // 已選中的時段標記 on
+  await expect(page.getByPlaceholder('請填寫姓名')).toHaveValue('王小明');
 
   // 一次性消費：還原後 sessionStorage 已清。
   expect(await page.evaluate((key) => sessionStorage.getItem(key), STATE_KEY)).toBeNull();
 
-  // 可直接完成預約（draft 成功 → step 3 確認與付款）。
-  await page.getByRole('button', { name: /完成預約/ }).click();
+  // 可直接完成預約（draft 成功 → step 3 確認與付款）。CTA 依 mockup 為「確認這個時段」。
+  await page.getByRole('button', { name: /確認這個時段/ }).click();
   await expect(page.getByText('確認與付款')).toBeVisible();
 });
 

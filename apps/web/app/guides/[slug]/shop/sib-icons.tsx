@@ -3,9 +3,9 @@ import type { CSSProperties } from 'react';
 
 const S = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
 
-export function MountainCircleLogo({ className }: { className?: string }) {
+export function MountainCircleLogo({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
-    <svg className={className} viewBox="0 0 56 56" aria-hidden>
+    <svg className={className} style={style} viewBox="0 0 56 56" aria-hidden>
       <circle cx="28" cy="28" r="26" {...S} strokeWidth={1.4} />
       <path d="M12 36l8-11 6 7 4-6 8 10z" {...S} />
       <path d="M10 40h36" {...S} />
