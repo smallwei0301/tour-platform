@@ -17,8 +17,9 @@ import { dirname, resolve } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_MJS = resolve(__dirname, '../../src/lib/db.mjs');
 
-// 天花板：2026-07-03 首批抽出 KPI 領域檔（db-kpi.mjs）後為 6,986 行。只能降不能升。
-const CEILING = 6986;
+// 天花板只能降不能升。沿革：2026-07-03 抽 db-kpi.mjs 後 6,986；
+// 2026-07-04 抽 supabase-env.mjs（#1613 解 db.mjs⇄db-* 循環）後降到 6,973。
+const CEILING = 6973;
 
 test('db.mjs 行數不得超過天花板（strangler 硬規則：只能降）', () => {
   const lines = readFileSync(DB_MJS, 'utf8').split('\n').length;

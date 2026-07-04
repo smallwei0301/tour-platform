@@ -43,23 +43,10 @@ import { isMissingTableError } from './missing-table-error.mjs';
 import { decideApproval } from './booking-type-flow.mjs';
 import { computePaymentDeadline } from './payment-deadline.mjs';
 import { selectWithOptionalColumnFallback } from './optional-column-fallback.mjs';
-
-export function hasSupabaseEnv() {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
-}
-
-let supabaseClient = null;
-
-export function __setSupabaseClientForTest(client = null) {
-  supabaseClient = client;
-}
-
-export async function getSupabase() {
-  if (supabaseClient) return supabaseClient;
-  const { createClient } = await import('@supabase/supabase-js');
-  supabaseClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-  return supabaseClient;
-}
+// #1613 strangler P1 第 0 步：Supabase client 存取抽到 supabase-env.mjs，解除 db.mjs ⇄ db-*.mjs 循環。
+// db.mjs 內部沿用同名 binding，並 re-export 讓既有 caller 與測試（__setSupabaseClientForTest）零改動。
+import { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest } from './supabase-env.mjs';
+export { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest };
 
 async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
   if (!hasSupabaseEnv()) return;
@@ -82,8 +69,8 @@ async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
 // #1385: audit log 單一實作於 audit-log.mjs（admin.mjs/services.mjs 亦共用）；
 // refund 狀態機集中於 refund-transition.mjs（ESM import 會被 hoist，置此保留原始碼位置脈絡）
 import { insertAuditLogDb } from './audit-log.mjs';
-// #1570 strangler：KPI 設定已抽到 db-kpi.mjs；db.mjs 內部（settlement/operations）仍需讀取，
-// 由領域檔 import 回來。ESM 函式循環引用在 runtime 呼叫時 binding 已就緒（同 db-auto-complete 模式）。
+// #1570 strangler：KPI 設定已抽到 db-kpi.mjs；db.mjs 內部（settlement/operations）仍需讀取，由領域檔 import 回來。
+// （#1613：db-kpi.mjs 的 Supabase client 已改走 supabase-env.mjs，此 import 不再形成 env 循環。）
 import { getKpiConfigDb } from './db-kpi.mjs';
 import { normalizeSocialProofQuotes } from './social-proof-quotes.mjs';
 import { normalizeRegionForActivityPath } from './region-slug.mjs';

@@ -113,9 +113,12 @@ test('app/api 直接 import @supabase/* 的檔案數不得增加', () => {
 
 // ---------------------------------------------------------------------------
 // 3) 直讀 process.env 的檔案數（src/config、src/test-support、src/fixtures 之外）。
-//    2026-07-04 現值 159。新程式的 env 讀取一律經 src/config/*。
+//    基準 159（2026-07-04）→ 160（#1613 抽 supabase-env.mjs，把 SUPABASE_URL/
+//    SERVICE_ROLE_KEY 的**既有**讀取從 db.mjs 相對搬到新檔，非新增 env 面）。
+//    P4（#1616）會把這些讀取改走 src/config 存取器，屆時新檔不再含 process.env、
+//    天花板應降回。新程式的 env 讀取一律經 src/config/*。
 // ---------------------------------------------------------------------------
-const PROCESS_ENV_FILE_CEILING = 159;
+const PROCESS_ENV_FILE_CEILING = 160;
 const ENV_EXEMPT_PREFIXES = ['src/config/', 'src/test-support/', 'src/fixtures/'];
 
 test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）', () => {
@@ -132,10 +135,12 @@ test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）'
 });
 
 // ---------------------------------------------------------------------------
-// 4) src/lib 頂層攤平檔案數。2026-07-04 現值 156。
-//    新領域請開子資料夾（如 availability-v2/）或 db-<domain> 檔集中，不再往頂層堆。
+// 4) src/lib 頂層攤平檔案數。基準 156（2026-07-04）→ 157（#1613 抽 supabase-env.mjs）。
+//    此天花板擋的是「無正當理由的新散檔」；strangler 從 db.mjs 拆出領域檔屬**淨降雜亂**的
+//    sanctioned 例外——拆一個檔會使頂層 +1，允許隨拆遷 PR 逐次上調（PR 須說明）。
+//    一般新領域仍請開子資料夾（如 availability-v2/），不要往頂層堆。
 // ---------------------------------------------------------------------------
-const LIB_TOP_LEVEL_FILE_CEILING = 156;
+const LIB_TOP_LEVEL_FILE_CEILING = 157;
 
 test('src/lib 頂層檔案數不得增加（新領域請開子資料夾）', () => {
   const count = readdirSync(join(WEB_ROOT, 'src/lib')).filter((entry) =>
