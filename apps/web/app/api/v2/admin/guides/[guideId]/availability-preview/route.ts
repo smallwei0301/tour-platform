@@ -5,6 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import {
   resolvePreviewCanonicalReason,
@@ -284,7 +285,6 @@ export async function GET(
       slots,
     }));
   } catch (err) {
-    console.error('Availability preview API error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/guides/guide/availability-preview' });
   }
 }

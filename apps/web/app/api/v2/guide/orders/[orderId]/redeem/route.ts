@@ -11,6 +11,7 @@
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../../../src/lib/guide-auth';
 import { ok, fail } from '../../../../../../../src/lib/api';
+import { reportRouteError } from '../../../../../../../src/lib/route-error';
 import { verifyVoucherToken, resolveVoucherSecret } from '../../../../../../../src/lib/voucher-token.mjs';
 import { redeemVoucherDb } from '../../../../../../../src/lib/db-redeem.mjs';
 
@@ -59,8 +60,7 @@ export async function POST(
     }
     return Response.json(ok({ redeemed: true, alreadyRedeemed: false, status: 'completed' }), { status: 200 });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown error';
-    console.error('[voucher-redeem] error:', message);
+    await reportRouteError(err, { route: 'v2/guide/orders/redeem' });
     return Response.json(fail('INTERNAL_ERROR', '核銷失敗，請稍後再試'), { status: 500 });
   }
 }
