@@ -14,6 +14,8 @@ import { ok, fail } from '../../../../../../../src/lib/api';
 import { reportRouteError } from '../../../../../../../src/lib/route-error';
 import { verifyVoucherToken, resolveVoucherSecret } from '../../../../../../../src/lib/voucher-token.mjs';
 import { redeemVoucherDb } from '../../../../../../../src/lib/db-redeem.mjs';
+import { parseBody } from '../../../../../../../src/lib/validation/parse-body';
+import { RedeemBodySchema } from '../../../../../../../src/lib/validation/payment-schemas';
 
 export async function POST(
   request: Request,
@@ -29,14 +31,12 @@ export async function POST(
 
   const { orderId } = await params;
 
-  let body: { token?: string } = {};
-  try {
-    body = await request.json();
-  } catch {
-    // token 也可缺（純輸短碼流程可另設計）；此處要求 token
-  }
+  // #1600：body 驗證改走 zod parseBody（token 為必填非空字串）；malformed JSON／缺 token
+  // → 400 INVALID_REQUEST。verifyVoucherToken 仍負責驗簽與跨單綁定。
+  const parsed = await parseBody(request, RedeemBodySchema);
+  if (!parsed.ok) return parsed.response;
+  const { token } = parsed.data;
 
-  const token = typeof body?.token === 'string' ? body.token : '';
   // 驗證 voucher token 並確認其綁定的 orderId 與路徑一致（防跨單核銷）
   const tokenOrderId = verifyVoucherToken(token, resolveVoucherSecret());
   if (!tokenOrderId || tokenOrderId !== orderId) {
