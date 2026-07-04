@@ -25,9 +25,14 @@ assertStartupEnv(process.env);
 // base-uri 'self'（擋 <base> 注入）、frame-ancestors 'self'（clickjacking）、
 // form-action 白名單（擋未授權表單外送，僅放行 ECPay）、connect/img 白名單（擋資料外送到未授權主機）。
 //
-// script-src 保留 'unsafe-inline'：本站大量頁面為 SSG/ISR（#1344 效能），
-// nonce-based CSP 需 per-request dynamic rendering，會回歸該效能；改用 nonce/hash
-// 移除 'unsafe-inline' 屬架構取捨，另立 follow-up（需 static→dynamic 決策）。
+// script-src 保留 'unsafe-inline'（#1601 有意識決策，非漂移）：
+//  - hash 化不可行：Next App Router 每頁注入逐頁變動的 RSC flight data inline script
+//    （self.__next_f.push(...)），無法靜態 hash；
+//  - nonce 化雙重阻擋：需 per-request dynamic rendering（回歸 #1344 ISR/SSG 效能）＋需在
+//    middleware.ts 注入 nonce（鐵律 3 凍結區不可改）。
+// 殘餘風險已由 enforce CSP（object-src/base-uri/frame-ancestors/form-action 白名單）＋
+// 「無 inline-script 注入面」（JSON-LD 轉義、零使用者輸入直注）緩解。完整評估與未來路徑
+// （選項 C 混合 nonce）見 docs/04-tech/04-tech-architecture/15-csp-unsafe-inline-decision.md。
 // 'unsafe-eval' 僅 dev 保留（Next dev runtime 需要）；production 移除以縮小攻擊面。
 const isProd = process.env.NODE_ENV === 'production';
 // production 移除 'unsafe-eval'（Next prod 不需 eval）；dev 保留（Next dev runtime 需要）。
