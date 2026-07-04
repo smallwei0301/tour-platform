@@ -27,7 +27,11 @@ async function mockShopBackend(page: Page) {
           activitiesByRegion: [
             { region: '高雄', activities: [
               { id: ACTIVITY_ID, slug: 'power', title: '力量', region: '高雄', regionSlug: 'kaohsiung',
-                plans: [{ id: PLAN_ID, name: '漂漂', basePrice: 610, priceType: 'per_person', duration: '1小時10分鐘', minParticipants: 1, maxParticipants: 4 }] },
+                plans: [
+                  { id: PLAN_ID, name: '漂漂', basePrice: 610, priceType: 'per_person', duration: '1小時10分鐘', minParticipants: 1, maxParticipants: 4 },
+                  // 第二個方案：讓「無預選」路徑仍走 step 1 方案瀏覽（單一方案會自動跳 step 2）
+                  { id: 'p2-other', name: '進階', basePrice: 990, priceType: 'per_person', duration: '2小時', minParticipants: 1, maxParticipants: 4 },
+                ] },
             ] },
           ],
         },
@@ -124,17 +128,24 @@ test('登入回跳：sessionStorage 還原 → 直接落在 step 2 並可完成 
   await expect(page.getByText('確認與付款')).toBeVisible();
 });
 
-test('方案卡深連結 ?activityId&planId → step 1 預選方案並回報 plan_preselected', async ({ page }) => {
+test('方案卡深連結 ?activityId&planId → 直接落在 step 2（商店首頁已完成選方案）', async ({ page }) => {
   await setTravelerSession(page);
   await mockShopBackend(page);
   const events = collectEvents(page);
 
   await page.goto(`/guides/${SLUG}/shop/book?activityId=${ACTIVITY_ID}&planId=${PLAN_ID}`);
 
-  // 方案已預選（卡片 2px primary 邊框、CTA 可按）。
-  await expect(page.getByTestId('shop-plan-card')).toHaveCSS('border-width', '2px');
-  await expect(page.getByRole('button', { name: /選擇日期和時間/ })).toBeEnabled();
+  // 不再重列方案：直接見月曆＋方案摘要卡（含方案名、人數 stepper）。
+  await expect(page.getByTestId('shop-calendar')).toBeVisible();
+  await expect(page.getByTestId('shop-plan-summary')).toContainText('漂漂');
+  await expect(page.getByTestId('shop-guests-step2')).toHaveText('1');
+  await page.getByRole('button', { name: '增加人數' }).click();
+  await expect(page.getByTestId('shop-guests-step2')).toHaveText('2');
 
   const begin = events.find((e) => e.event_name === 'shop_begin_booking');
   expect(begin?.properties?.plan_preselected).toBe(true);
+
+  // 「更換方案」→ 回 step 1 見全部方案卡。
+  await page.getByTestId('shop-change-plan').click();
+  await expect(page.getByTestId('shop-plan-card')).toHaveCount(2);
 });

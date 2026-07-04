@@ -49,10 +49,9 @@ test('未登入 → 可瀏覽方案與日期；點「登入以完成預約」才
 
   await page.goto(`/guides/${SLUG}/shop/book`);
 
-  // 匿名不再被 redirect，step 1 方案卡可見可選。
+  // 匿名不再被 redirect；mock 全店僅一方案 → 自動預選並直接落在 step 2（月曆）。
   await expect(page).toHaveURL(new RegExp(`/guides/${SLUG}/shop/book`));
-  await page.getByTestId('shop-plan-card').first().click();
-  await page.getByRole('button', { name: /選擇日期和時間/ }).click();
+  await expect(page.getByTestId('shop-plan-summary')).toBeVisible();
 
   // step 2：月曆與時段照常可選，聯絡欄位換成登入卡。
   await page.getByTestId('shop-date').first().click();

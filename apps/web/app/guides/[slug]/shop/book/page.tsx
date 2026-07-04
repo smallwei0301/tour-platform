@@ -261,15 +261,27 @@ export default function GuideShopBookingPage() {
       }
     } catch { /* 還原失敗 → 靜默退回從頭選 */ }
     try {
+      // 商店首頁的方案卡已完成「選方案」，深連結進來直接落在日期/時段
+      //（step 2 摘要卡可改人數、可更換方案），不再重列一次方案。
       const sp = new URLSearchParams(window.location.search);
       const qActivityId = sp.get('activityId');
       const qPlanId = sp.get('planId');
       if (qActivityId && qPlanId) {
         const activity = activities.find((a) => a.id === qActivityId) || null;
         const plan = activity?.plans.find((p) => p.id === qPlanId) || null;
-        if (activity && plan) selectPlan(activity, plan);
+        if (activity && plan) {
+          selectPlan(activity, plan);
+          setStep(2);
+          return;
+        }
       }
     } catch { /* 預選失敗不阻擋流程 */ }
+    // 全店只有一個方案：沒什麼好選，直接進日期/時段（小商店最常見情境）。
+    const onlyPlans = activities.flatMap((a) => a.plans.map((p) => ({ activity: a, plan: p })));
+    if (onlyPlans.length === 1) {
+      selectPlan(onlyPlans[0].activity, onlyPlans[0].plan);
+      setStep(2);
+    }
   }, [shop, restoreDone, slug]);
 
   // 存下目前選擇並前往登入（登入回跳後由上方還原 effect 接手）
@@ -543,8 +555,40 @@ export default function GuideShopBookingPage() {
       {/* ── Step2：選日期與時間 ── */}
       {step === 2 && selectedPlan && (
         <div style={{ marginTop: 16 }}>
-          <h2 style={{ fontSize: 18, margin: '0 0 6px' }}>{selectedActivity?.title}</h2>
-          <p style={{ color: 'var(--tp-muted)', fontSize: 14, marginTop: 0 }}>#{selectedPlan.name}・{guests} 人</p>
+          {/* 方案摘要卡：深連結直落 step 2 時，這裡就是「已選方案」的確認點——
+              可直接改人數（自動重抓時段）或更換方案，不用倒回方案列表重選。 */}
+          <section data-testid="shop-plan-summary" className="tp-card" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+              <div>
+                <h2 style={{ fontSize: 17, margin: 0 }}>{selectedActivity?.title}</h2>
+                <p style={{ color: 'var(--tp-muted)', fontSize: 14, margin: '4px 0 0' }}>
+                  #{selectedPlan.name}
+                  {selectedPlan.duration ? `・${selectedPlan.duration}` : ''}
+                  ・NT${(selectedPlan.basePrice ?? 0).toLocaleString()}{selectedPlan.priceType === 'per_group' ? ' / 組' : ' / 人'}
+                </p>
+              </div>
+              <button type="button" data-testid="shop-change-plan" onClick={() => setStep(1)}
+                style={{ border: '1px solid var(--tp-border)', background: 'transparent', borderRadius: 999,
+                  padding: '6px 12px', fontSize: 13, fontWeight: 700, color: 'var(--tp-primary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                更換方案
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>👥 人數</span>
+              <div style={{ display: 'inline-flex', alignItems: 'center', border: '1px solid var(--tp-border)', borderRadius: 10, overflow: 'hidden' }}>
+                <button type="button" aria-label="減少人數" disabled={guests <= (selectedPlan.minParticipants || 1)}
+                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}
+                  style={{ padding: '6px 14px', border: 'none', background: '#f9fafb', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>−</button>
+                <span data-testid="shop-guests-step2" style={{ padding: '6px 16px', minWidth: 36, textAlign: 'center' }}>{guests}</span>
+                <button type="button" aria-label="增加人數" disabled={selectedPlan.maxParticipants != null && guests >= selectedPlan.maxParticipants}
+                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}
+                  style={{ padding: '6px 14px', border: 'none', background: '#f9fafb', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>+</button>
+              </div>
+              <span style={{ color: 'var(--tp-muted)', fontSize: 12 }}>
+                {selectedPlan.minParticipants || 1} 人起{selectedPlan.maxParticipants ? `，至多 ${selectedPlan.maxParticipants} 人` : ''}
+              </span>
+            </div>
+          </section>
 
           <p style={{ fontWeight: 700, fontSize: 14, margin: '16px 0 8px' }}>選擇日期</p>
           {slotsLoading && <p style={{ color: 'var(--tp-muted)' }}>載入可預約日期中…</p>}
@@ -661,7 +705,7 @@ export default function GuideShopBookingPage() {
           {step === 2 && authState === 'authed' && (
             <button className="tp-btn tp-btn-primary" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
               style={{ width: '100%', padding: '14px 0', fontSize: 16, opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5 }}>
-              {busy ? '處理中…' : '完成預約 →'}
+              {busy ? '處理中…' : `完成預約 · NT$${total.toLocaleString()} →`}
             </button>
           )}
           {step === 2 && authState !== 'authed' && (
