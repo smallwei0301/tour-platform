@@ -34,6 +34,14 @@
       "applied_at": "2026-07-02T20:30:00+08:00",
       "status": "baseline",
       "note": "Baseline 回填：涵蓋 2026-07-02（含）以前 repo 內全部 migration 檔（001_mvp_core.sql ~ 20260702_cron_job_controls.sql，共 115 支非 rollback 檔）。歷史套用經 #1286 drift 事件與 #1560 production schema drift 大清查（#1559 修復 HEAD 探測假陰性後浮現 14 缺表 + 13 缺欄位）盤點；#1560 缺漏項由 owner 授權（2026-07-02）經 Supabase MCP apply_migration 依檔名時序補套，post-apply 以 node scripts/verify-migrations-applied.mjs 對 production 探測驗證。本 baseline 之後的新 migration 一律逐筆補 verified record，不再擴大 baseline。Refs #1293 #1560 #1286。"
+    },
+    {
+      "filename": "20260704121000_guide_profiles_contact_phone_1596.sql",
+      "environment": "production",
+      "operator": "Claude Code agent (awaiting owner apply)",
+      "applied_at": null,
+      "status": "pending",
+      "note": "#1596 行前導遊聯絡：guide_profiles 增 contact_phone / contact_phone_visible。尚未套用——owner 依 migration-apply SOP 套用 production 後把 status 改 verified 並補 applied_at。gate 於套用前 HOLD（by design）。"
     }
   ]
 }
