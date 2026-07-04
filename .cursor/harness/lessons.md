@@ -35,3 +35,9 @@
 - Error：`supabase` 套件 postinstall 從 github.com/supabase/cli releases 下載執行檔被代理擋（`403 Forbidden` → `Z_DATA_ERROR`/`incorrect header check`），整個 install 失敗
 - Solution：改跑 `npm install --ignore-scripts`（單元測試只需套件本體＋typescript，不需 supabase CLI 執行檔）；install 後記得 `git checkout -- yarn.lock`
 - 適用範圍：本遠端環境（CCR）所有 fresh container；本地開發機不受限
+
+## [2026-07-04] architecture-ratchet-guard-exists
+- Context：架構健檢（docs/04-tech/04-tech-architecture/15-architecture-modularity-review.md）後新增 `apps/web/tests/unit/architecture-ratchet-guard.test.mjs`，把四項雜亂度指標鎖成「只能降不能升」的天花板：巨型檔案逐檔行數、app/api 直接 import @supabase/* 檔數（20）、直讀 process.env 檔數（159）、src/lib 頂層檔數（156）
+- Error：（預防性條目）未來 session 改到白名單內的大檔（如 booking page、admin activities edit）多加幾行就會踩紅這個 guard，直覺反應可能是「調高天花板讓測試過」
+- Solution：**先查報告 §2 的擺放規則速查表**——正解是把新邏輯放進子元件／領域檔／src/config，而不是放寬天花板；只有 P0 修復可調高且須在 PR 說明（與 db-mjs-size-guard 同協議）。行數語意＝`split('\n').length`（比 `wc -l` 多 1）
+- 適用範圍：所有觸碰 apps/web/app、apps/web/src 的程式碼變更
