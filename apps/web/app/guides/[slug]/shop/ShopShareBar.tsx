@@ -49,9 +49,9 @@ export function ShopShareBar({ slug, displayName }: { slug: string; displayName:
   }
 
   const btnStyle: React.CSSProperties = {
-    padding: '8px 14px', borderRadius: 999, border: '1px solid var(--tp-border)',
-    fontSize: 13, fontWeight: 700, background: 'var(--tp-card-bg, #fff)',
-    color: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
+    padding: '8px 16px', borderRadius: 999, border: '1px solid #b08d3e',
+    fontSize: 13, fontWeight: 700, background: '#f7f0dd',
+    color: '#1a2e1f', cursor: 'pointer', whiteSpace: 'nowrap',
   };
 
   return (

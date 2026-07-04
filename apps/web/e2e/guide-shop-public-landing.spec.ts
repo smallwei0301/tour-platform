@@ -14,9 +14,9 @@ test('商店首頁：方案卡 server-rendered＋信任列＋分享列＋QR', as
 
   await page.goto(`/guides/${SLUG}/shop`);
 
-  // 個人化 H1 與審核徽章
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('的祕島預約頁');
-  await expect(page.getByTestId('shop-trust-row')).toContainText('祕島審核導遊');
+  // H1「線上預約」＋引路人徽章（Midao mockup 版面）
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('線上預約');
+  await expect(page.getByText('祕島引路人').first()).toBeVisible();
 
   // 方案卡由 server 直出（fixtures 有兩個 active 方案），深連結帶預選參數
   const cards = page.getByTestId('shop-landing-plan-card');

@@ -32,9 +32,9 @@ test('快取：revalidate = 60 兜底（revalidatePath 打不到 /shop）', () =
   assert.match(pageSource, /export const revalidate = 60/);
 });
 
-test('個人化：H1 與 metadata 用「◯◯ 的祕島預約頁」', () => {
-  assert.match(pageSource, /\{guide\.displayName\} 的祕島預約頁/, 'H1 應個人化');
-  assert.match(pageSource, /的祕島預約頁 \| Midao 祕島/, 'metadata title 應同步');
+test('標題：H1「線上預約」（對齊 Midao mockup），metadata 仍個人化', () => {
+  assert.match(pageSource, /線上預約/, 'H1 應為「線上預約」（mockup 版面）');
+  assert.match(pageSource, /的祕島預約頁 \| Midao 祕島/, 'metadata title 仍個人化');
   assert.match(pageSource, /robots: \{ index: false \}/, '商店頁維持 noindex');
 });
 
@@ -44,9 +44,9 @@ test('方案卡：testid＋深連結帶 activityId/planId', () => {
   assert.match(pageSource, /planId=/, '深連結需帶 planId');
 });
 
-test('信任列與政策區塊存在', () => {
-  assert.match(pageSource, /data-testid="shop-trust-row"/);
-  assert.match(pageSource, /祕島審核導遊/);
+test('引路人徽章與政策區塊存在', () => {
+  assert.match(pageSource, /祕島引路人/, '引路人卡應有徽章');
+  assert.match(pageSource, /sib-guide-badge/, '徽章用 sib 樣式');
   assert.match(pageSource, /data-testid="shop-policy"/);
   assert.match(pageSource, /\/legal\/refund/, '政策區應連退款政策');
 });
