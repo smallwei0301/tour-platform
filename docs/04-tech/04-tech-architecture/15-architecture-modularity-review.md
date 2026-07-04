@@ -80,13 +80,13 @@
 
 每完成一批清理，把對應天花板下修鎖住成果；只有 P0 修復可調高且須在 PR 說明（與 `db-mjs-size-guard` 同協議）。
 
-## 4. 分批改善路線圖（後續另開 issue，非本輪範圍)
+## 4. 分批改善路線圖（已開票追蹤：P1=#1613、P2=#1614、P3=#1615、P4=#1616、P5=#1617）
 
-- **P1｜繼續 strangler `db.mjs`**：每次挑一個領域整塊搬到 `db-<domain>`，搬完下修 `db-mjs-size-guard` 天花板。先抽 `supabase-env.mjs`（`hasSupabaseEnv`／`getSupabase`）解掉 `db.mjs ⇄ db-kpi.mjs` 循環 import，讓之後每個領域檔都不必回頭依賴單體。
-- **P2｜共用 API 回應 helper＋驗證層**：`jsonOk`/`jsonError`（回傳 `NextResponse`）＋輸入驗證 helper；**只強制新 v2 route 採用**，舊 route 隨改隨換，逐步消化 216 處手刻回應。
-- **P3｜拆 4 個 1,200 行級 god-page**：admin activities edit／plans、admin 與 guide 的 availability（後兩者疑似近重複，優先抽共用元件）；拆完逐檔下修 ratchet 天花板。
-- **P4｜env 集中回 `src/config`**：以 ratchet 驅動，改到哪收斂到哪，目標把 159 檔降到個位數。
-- **P5｜倉庫清理（需 owner 決定）**：`packages/` 空殼 workspaces 宣告、根目錄歷史報告檔、巢狀 `tour-platform/supabase` 目錄的去留；CLAUDE.md 架構描述同步修正（鐵律 9，需 owner 授權）。
+- **P1｜繼續 strangler `db.mjs`**（#1613）：每次挑一個領域整塊搬到 `db-<domain>`，搬完下修 `db-mjs-size-guard` 天花板。先抽 `supabase-env.mjs`（`hasSupabaseEnv`／`getSupabase`）解掉 `db.mjs ⇄ db-kpi.mjs` 循環 import，讓之後每個領域檔都不必回頭依賴單體。
+- **P2｜共用 API 回應 helper＋驗證層**（#1614；輸入驗證另見 #1600、catch 錯誤處理另見 #1598）：`jsonOk`/`jsonError`（回傳 `NextResponse`）＋輸入驗證 helper；**只強制新 v2 route 採用**，舊 route 隨改隨換，逐步消化 216 處手刻回應。
+- **P3｜拆 4 個 1,200 行級 god-page**（#1615）：admin activities edit／plans、admin 與 guide 的 availability（後兩者疑似近重複，優先抽共用元件）；拆完逐檔下修 ratchet 天花板。
+- **P4｜env 集中回 `src/config`**（#1616）：以 ratchet 驅動，改到哪收斂到哪，目標把 159 檔降到個位數。
+- **P5｜倉庫清理（需 owner 決定）**（#1617）：`packages/` 空殼 workspaces 宣告、根目錄歷史報告檔、巢狀 `tour-platform/supabase` 目錄的去留；CLAUDE.md 架構描述同步修正（鐵律 9，需 owner 授權）。
 
 ## 5. 本輪產出
 
