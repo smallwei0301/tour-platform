@@ -27,8 +27,10 @@
   - test：success（https://github.com/smallwei0301/tour-platform/actions/runs/28687408204/job/85082504477）
   - `mergeable_state: clean`，無 review comments（僅 Vercel bot 自動化部署通知，Ready）。
 
+- 2026-07-03 PR #1611 已 squash-merge 進 `main`（merge commit `1d84bab6d0ebd661117f95cd5876b7af0a5812b8`）。CI 綠燈確認後 merge，issue #1605 留言收尾並關閉。
+
 ## 下一步
-- CI conclusion=success 已確認 → merge PR #1611 → 部署後以 Vercel runtime logs 對照 `/api/guide/dashboard` duration → 真瀏覽器 QA `/guide/dashboard` → sign-off 關 issue。
+- 部署後以 Vercel runtime logs 對照 `/api/guide/dashboard` 實際 duration；真瀏覽器 QA `/guide/dashboard`（營收卡、6 個月趨勢、待對帳區）確認與重構前一致。
 - 後續 optional（另開 issue）：`/api/guide/qa` 的 activity_qa 查詢加 limit；dashboard 前端 SWR/短 TTL 快取（等生產實測數字再評估）；`tests/api/settlement-config.test.js` pre-existing 2 紅修正。
 
 ## 絕不重做（Do-NOT-redo）
