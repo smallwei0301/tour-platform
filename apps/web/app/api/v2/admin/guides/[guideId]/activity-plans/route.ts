@@ -7,6 +7,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import {
   summarizeActivePlanSeasons,
@@ -97,7 +98,6 @@ export async function GET(
 
     return Response.json(successV2({ activities }));
   } catch (err) {
-    console.error('Guide activity-plans API error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/guides/guide/activity-plans' });
   }
 }

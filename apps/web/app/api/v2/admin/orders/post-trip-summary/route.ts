@@ -1,4 +1,5 @@
 import { successV2, errorV2 } from '../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { buildAdminPostTripSummary } from '../../../../../../src/lib/admin-post-trip-summary.mjs';
 
@@ -81,7 +82,6 @@ export async function GET(req: Request) {
       })
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/orders/post-trip-summary' });
   }
 }

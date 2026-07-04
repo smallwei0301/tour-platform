@@ -27,6 +27,7 @@ import {
 } from '../../../../../../../src/lib/post-trip/guide-trip-report.mjs';
 import { ok, fail } from '../../../../../../../src/lib/api';
 
+import { reportRouteError } from '../../../../../../../src/lib/route-error';
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
@@ -205,7 +206,7 @@ export async function POST(
       { status: 201 },
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return Response.json(fail('SERVER_ERROR', message), { status: 500 });
+    await reportRouteError(err, { route: 'v2/guide/orders/trip-report' });
+    return Response.json(fail('SERVER_ERROR', 'Server error'), { status: 500 });
   }
 }

@@ -6,6 +6,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../../src/lib/supabase/server';
 import { assertPlanBelongsToGuide } from '../../../../../../../../src/lib/availability-v2/assert-plan-belongs-to-guide';
 import { normalizeTimeLocal } from '../../../../../../../../src/lib/availability-v2/time-local.mjs';
@@ -151,8 +152,7 @@ export async function PUT(
 
     return Response.json(successV2({ rule: data }));
   } catch (err) {
-    console.error('Update rule API error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/guides/guide/availability-rules/rule' });
   }
 }
 

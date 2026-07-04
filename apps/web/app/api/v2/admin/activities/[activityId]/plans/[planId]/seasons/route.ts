@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../../src/lib/api.ts';
+import { handleRouteError } from '../../../../../../../../../src/lib/route-error.ts';
 import { getSupabase } from '../../../../../../../../../src/lib/db.mjs';
 import {
   ACTIVITY_PLAN_SEASON_SELECT_COLUMNS,
@@ -64,8 +65,7 @@ export async function GET(
     const seasons = sortActivityPlanSeasons((data || []).map(shapeActivityPlanSeason));
     return Response.json(successV2({ seasons }));
   } catch (err) {
-    console.error('Activity plan seasons GET error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/activities/activity/plans/plan/seasons' });
   }
 }
 
