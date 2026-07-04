@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Issue #1385 — admin refund 動作的狀態機（純函式，離線可單測）。
  * db.mjs（Supabase）與 admin.mjs（in-memory fallback）共用同一份轉移規則。

@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Issue #1565 — 電子憑證 QR token（HMAC 簽章，純函式）。
  *
@@ -12,13 +13,23 @@ import { createHmac, createHash, timingSafeEqual } from 'crypto';
 
 const VERSION = 'v1';
 
+/**
+ * @param {string} orderId
+ * @param {string} secret
+ * @returns {string}
+ */
 export function signVoucherToken(orderId, secret) {
   const id = String(orderId || '');
   const sig = createHmac('sha256', String(secret || '')).update(`${VERSION}:${id}`).digest('hex');
   return `${VERSION}.${id}.${sig}`;
 }
 
-/** 驗證 token；成功回 orderId，失敗回 null（不丟錯）。簽章比對為常數時間。 */
+/**
+ * 驗證 token；成功回 orderId，失敗回 null（不丟錯）。簽章比對為常數時間。
+ * @param {unknown} token
+ * @param {string} secret
+ * @returns {string | null}
+ */
 export function verifyVoucherToken(token, secret) {
   const raw = typeof token === 'string' ? token : '';
   const parts = raw.split('.');
@@ -38,7 +49,11 @@ export function verifyVoucherToken(token, secret) {
 // 去除易混字元（0/O/1/I）的 base32-ish 字母表
 const ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
-/** 人類可讀短碼（非機密，供無法掃碼時對名冊核對）。對同 orderId 穩定。 */
+/**
+ * 人類可讀短碼（非機密，供無法掃碼時對名冊核對）。對同 orderId 穩定。
+ * @param {string} orderId
+ * @returns {string}
+ */
 export function shortCodeForOrder(orderId) {
   const hash = createHash('sha256').update(String(orderId || '')).digest();
   let out = '';
