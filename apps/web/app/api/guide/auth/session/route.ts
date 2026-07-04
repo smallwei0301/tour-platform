@@ -11,6 +11,10 @@ import {
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../src/lib/guide-auth-session-supabase';
 import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
+import { peekDistributed, recordDistributed } from '../../../../../src/lib/rate-limit-distributed';
+
+// #1599：登入限流跨實例層（記憶體版擋單實例、分散式版 provision 後擋跨實例）。皆 fail-open。
+const LOGIN_RATE_CFG = { maxRequests: 10, windowMs: 60 * 1000 };
 
 type GuideSessionInviteProfile = {
   id: string;
@@ -73,9 +77,14 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   // #1373 — 只計「失敗」嘗試：成功登入不消耗額度，暴力破解在 10 次失敗/分鐘/IP 後被擋
   const rateKey = `guide-login:${RateLimiter.getClientIp(req)}`;
-  const limited = createLoginRateLimitResponse(guideLoginLimiter.peek(rateKey));
+  const limited =
+    createLoginRateLimitResponse(guideLoginLimiter.peek(rateKey))
+    ?? createLoginRateLimitResponse(await peekDistributed(rateKey, LOGIN_RATE_CFG));
   if (limited) return limited;
-  const recordGuideLoginFailure = () => guideLoginLimiter.record(rateKey);
+  const recordGuideLoginFailure = () => {
+    guideLoginLimiter.record(rateKey);
+    void recordDistributed(rateKey, LOGIN_RATE_CFG); // 跨實例 best-effort，fail-open
+  };
 
   const csrfError = validateCsrf(req);
   if (csrfError) return csrfError;

@@ -7,6 +7,11 @@ import {
   clearAdminSessionCookies,
 } from '../../../../../src/lib/admin-session.mjs';
 import { adminLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
+import { peekDistributed, recordDistributed } from '../../../../../src/lib/rate-limit-distributed';
+
+// #1599：登入限流的跨實例層。記憶體版（adminLoginLimiter）擋單實例；分散式版（Upstash）
+// 在 provision 後擋跨實例稀釋。兩者皆 fail-open；deny 條件為任一層超額。
+const LOGIN_RATE_CFG = { maxRequests: 10, windowMs: 60 * 1000 };
 
 function parseCookie(req: Request, key: string) {
   const cookie = req.headers.get('cookie') || '';
@@ -47,7 +52,9 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   // #1373 — 只計「失敗」嘗試：成功登入不消耗額度，暴力破解在 10 次失敗/分鐘/IP 後被擋
   const rateKey = `admin-login:${RateLimiter.getClientIp(request)}`;
-  const limited = createLoginRateLimitResponse(adminLoginLimiter.peek(rateKey));
+  const limited =
+    createLoginRateLimitResponse(adminLoginLimiter.peek(rateKey))
+    ?? createLoginRateLimitResponse(await peekDistributed(rateKey, LOGIN_RATE_CFG));
   if (limited) return limited;
 
   const body = await request.json().catch(() => ({}));
@@ -67,6 +74,7 @@ export async function POST(request: Request) {
 
   if (!auth.ok) {
     adminLoginLimiter.record(rateKey);
+    void recordDistributed(rateKey, LOGIN_RATE_CFG); // 跨實例 best-effort，fail-open
     return Response.json(fail('UNAUTHORIZED', auth.reason || 'unauthorized'), { status: 401 });
   }
 
