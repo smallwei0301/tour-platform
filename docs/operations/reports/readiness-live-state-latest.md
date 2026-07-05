@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-07-04T07:04:38.239Z -->
+<!-- query_timestamp: 2026-07-05T12:32:31.929Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-04T07:04:38.239Z  
-**Commit SHA:** `6de8a3abd7e8c88004b14f328f8190374437450f`
+**Query timestamp:** 2026-07-05T12:32:31.929Z  
+**Commit SHA:** `944c2cad98cfa3aef27e029e1945e9cc368a86b0`
 
 ---
 
-## Open PRs (7)
+## Open PRs (8)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1626 | [架構模組化清理：db.mjs strangler、API 回應 helper、god-page 拆解、env 收斂（#1613–#1617）](https://github.com/smallwei0301/tour-platform/pull/1626) | `claude/code-architecture-review-t6p1px` |
 | #1610 | [feat(guide-shop): 導遊開店第 1 週改版 — /for-guides landing、商店首頁方案卡、預約延後登入](https://github.com/smallwei0301/tour-platform/pull/1610) | `claude/plan-evaluation-shop-page-09krqv` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
@@ -22,17 +23,16 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (37 total)
+## Open Issues (25 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (7)
+### P1 (6)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1590 | [[Payment][P1] ECPay 付款方式擴充第一波 — ATM 轉帳＋超商代碼（健檢 v2 P0-3）](https://github.com/smallwei0301/tour-platform/issues/1590) | type:optimization, priority:P1, agent:backlog, owner:ai-agent, traveler-booking |
 | #1317 | [[Production Smoke] Owner-only acceptance verification gaps from recent close-gate sweep (#1306 / #1289 / #1290 OFF / #1286 UI / #1307 TZ)](https://github.com/smallwei0301/tour-platform/issues/1317) | priority:P1, type:qa, owner:human, production-smoke, post-merge |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:blocked, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[需 Operator][Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:backlog, owner:mixed, status:ready, traveler-booking, launch:post-first-payment |
@@ -40,7 +40,7 @@ _none_
 | #319 | [[Ops] Run customer support SOP first-case drill follow-through](https://github.com/smallwei0301/tour-platform/issues/319) | triaged, priority:P1, qa, agent:backlog, owner:mixed, status:ready, type:qa |
 | #318 | [[Ops] Run Andy Lee first-guide onboarding demo and retrospective scope](https://github.com/smallwei0301/tour-platform/issues/318) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:ready, admin-guides |
 
-### P2 (22)
+### P2 (11)
 
 | # | Title | Labels |
 |---|-------|--------|
@@ -48,17 +48,6 @@ _none_
 | #1615 | [[TechDebt][P2] 拆解 4 個 1,200 行級 god-page — admin/guide availability 先抽共用元件（架構健檢 2026-07 路線圖 P3）](https://github.com/smallwei0301/tour-platform/issues/1615) | type:optimization, priority:P2, agent:backlog, owner:ai-agent |
 | #1614 | [[TechDebt][P2] 共用 API 回應 helper（jsonOk/jsonError 回傳 NextResponse）— 新 v2 route 一律採用（架構健檢 2026-07 路線圖 P2）](https://github.com/smallwei0301/tour-platform/issues/1614) | type:optimization, priority:P2, agent:backlog, owner:ai-agent |
 | #1613 | [[TechDebt][P2] db.mjs strangler 續拆 — 先解 db-* 循環 import，再逐領域整塊搬遷（架構健檢 2026-07 路線圖 P1）](https://github.com/smallwei0301/tour-platform/issues/1613) | type:optimization, priority:P2, agent:backlog, owner:ai-agent |
-| #1601 | [[Security][P2] CSP 移除 unsafe-inline — nonce/hash 化決策與實作（#1568 follow-up）](https://github.com/smallwei0301/tour-platform/issues/1601) | priority:P2, security, agent:backlog, owner:mixed, status:needs-decision |
-| #1600 | [[Security][P2] zod schema validation 導入 — v2 routes 先行（健檢 v2 S5）](https://github.com/smallwei0301/tour-platform/issues/1600) | priority:P2, security, agent:backlog, owner:ai-agent |
-| #1599 | [[Security][P2] Rate limiter 共享儲存（Upstash Redis）— serverless 多實例防護補洞（健檢 v2 S5）](https://github.com/smallwei0301/tour-platform/issues/1599) | priority:P2, security, agent:backlog, owner:mixed |
-| #1598 | [[Observability][P2] v2 routes catch-all 統一過 recordIncident — 消滅靜默失敗（健檢 v2 A5）](https://github.com/smallwei0301/tour-platform/issues/1598) | type:optimization, priority:P2, agent:backlog, owner:ai-agent |
-| #1597 | [[TechDebt][P2] `.mjs` 核心檔 `@ts-check` 漸進納管 — 錢流程式碼脫離型別盲區（健檢 v2 A3）](https://github.com/smallwei0301/tour-platform/issues/1597) | type:optimization, priority:P2, agent:backlog, owner:ai-agent |
-| #1596 | [[Support][P2] 行前即時聯絡 — 出發前 24h 訂單頁顯示導遊聯絡方式（健檢 v2 P2-11 第一步）](https://github.com/smallwei0301/tour-platform/issues/1596) | type:optimization, priority:P2, agent:backlog, owner:ai-agent, traveler-booking |
-| #1595 | [[i18n][P2] ja/ko 開站準備 — 未開放 locale 的 noindex/404 guard 先行（健檢 v2 P2-10）](https://github.com/smallwei0301/tour-platform/issues/1595) | type:optimization, priority:P2, agent:backlog, owner:ai-agent |
-| #1594 | [[Growth][P2] 點數／會員等級最小可行設計（健檢 v2 P2-9，接 #1388）](https://github.com/smallwei0301/tour-platform/issues/1594) | type:optimization, priority:P2, agent:backlog, owner:mixed, status:needs-decision |
-| #1593 | [[Growth][P2] 站內通知中心（鈴鐺）第一版（健檢 v2 P1-8，接 #1388）](https://github.com/smallwei0301/tour-platform/issues/1593) | type:optimization, priority:P2, agent:backlog, owner:ai-agent, traveler-booking |
-| #1592 | [[Reviews][P2] 評論互動強化 — 評分分佈長條＋附照片篩選＋導遊公開回覆（健檢 v2 P1-7）](https://github.com/smallwei0301/tour-platform/issues/1592) | type:optimization, priority:P2, agent:backlog, owner:ai-agent, traveler-booking |
-| #1591 | [[Product][P2] 加購（add-on）資料模型＋結帳整合（健檢 v2 P1-5）](https://github.com/smallwei0301/tour-platform/issues/1591) | type:optimization, priority:P2, agent:backlog, owner:ai-agent, traveler-booking |
 | #1388 | [[Growth][P2] 成長基礎 backlog 總綱 — i18n 英文版、站內訊息、會員回購（Phase 12 對齊）](https://github.com/smallwei0301/tour-platform/issues/1388) | type:optimization, priority:P2, agent:backlog, owner:mixed, traveler-booking |
 | #1344 | [[Perf][P2] Mobile LCP regression on /activities — 10–12s vs 2s desktop](https://github.com/smallwei0301/tour-platform/issues/1344) | type:bug, priority:P2, owner:ai-agent, traveler-booking, performance |
 | #926 | [[Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920](https://github.com/smallwei0301/tour-platform/issues/926) | triaged, priority:P2, qa, agent:backlog, owner:mixed, status:blocked, type:qa, auth, notifications, infra |
@@ -90,16 +79,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1625 | [fix(settlement): sweep upsert onConflict 對齊 (order_id, settlement_kind) 複合冪等鍵](https://github.com/smallwei0301/tour-platform/pull/1625) | 2026-07-05 |
+| #1624 | [健檢 v2 剩餘 backlog：#1596 #1590 #1592 #1591 #1593 #1594（6 issue 後端全交付，需 owner 套 5 支 migration）](https://github.com/smallwei0301/tour-platform/pull/1624) | 2026-07-05 |
+| #1623 | [docs(security): CSP unsafe-inline 移除評估與決策（暫不移除，記錄不可行證據）(#1601)](https://github.com/smallwei0301/tour-platform/pull/1623) | 2026-07-04 |
+| #1622 | [feat(security): 登入限流疊加分散式（Upstash Redis）跨實例層 (#1599)](https://github.com/smallwei0301/tour-platform/pull/1622) | 2026-07-04 |
+| #1621 | [refactor(types): .mjs 核心檔 @ts-check 第一批納管 (#1597)](https://github.com/smallwei0301/tour-platform/pull/1621) | 2026-07-04 |
+| #1620 | [feat(validation): 導入 zod＋parseBody helper，redeem 首發（v2 金流輸入面）(#1600)](https://github.com/smallwei0301/tour-platform/pull/1620) | 2026-07-04 |
+| #1619 | [feat(observability): v2 routes 統一事故上報，消滅靜默失敗 (#1598)](https://github.com/smallwei0301/tour-platform/pull/1619) | 2026-07-04 |
+| #1618 | [feat(i18n): 未開站 locale（ja/ko）noindex guard＋新語系上線 checklist (#1595)](https://github.com/smallwei0301/tour-platform/pull/1618) | 2026-07-04 |
 | #1612 | [docs(worklog): 補記 issue1605 PR #1611 merge commit 資訊](https://github.com/smallwei0301/tour-platform/pull/1612) | 2026-07-04 |
 | #1611 | [perf(guide): 導遊後台儀表板 API 查詢平行化 — 25 個序列 DB round-trip 降為 3 階段](https://github.com/smallwei0301/tour-platform/pull/1611) | 2026-07-04 |
-| #1606 | [feat(booking)!: legacy 全面退役 — 刪 legacy routes/pages、flags 退場、301 redirects (#1407)](https://github.com/smallwei0301/tour-platform/pull/1606) | 2026-07-03 |
-| #1589 | [fix(admin): 修正編輯導遊帳號 SERVER_ERROR、移除擋 UI 的「?」FAB、新增後台刪除導遊](https://github.com/smallwei0301/tour-platform/pull/1589) | 2026-07-03 |
-| #1588 | [docs(health-audit): v2 健檢收尾狀態＋#1566 Email OTP live 驗證 QA 報告](https://github.com/smallwei0301/tour-platform/pull/1588) | 2026-07-03 |
-| #1587 | [fix(isr): 修 production 全部 ISR 頁 500 — root layout 移除 getLocale()，lang 改 client 端補正 (#1585)](https://github.com/smallwei0301/tour-platform/pull/1587) | 2026-07-03 |
-| #1586 | [chore(harness): 建立弱模型防錯 Claude Code Harness](https://github.com/smallwei0301/tour-platform/pull/1586) | 2026-07-03 |
-| #1584 | [feat(security): CSP 由 Report-Only 轉 enforce＋HSTS preload (#1568)](https://github.com/smallwei0301/tour-platform/pull/1584) | 2026-07-03 |
-| #1583 | [feat(voucher): 電子憑證 QR＋導遊掃碼核銷 (#1565)](https://github.com/smallwei0301/tour-platform/pull/1583) | 2026-07-03 |
-| #1582 | [feat(auth): Email OTP（magic link）登入入口 (#1566)](https://github.com/smallwei0301/tour-platform/pull/1582) | 2026-07-03 |
 
 ---
 

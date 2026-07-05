@@ -1694,11 +1694,11 @@ export async function getUnsettledOrdersDb(supabase, tDays) {
 export async function recordSettlementDb(supabase, items) {
   if (!items || items.length === 0) return
 
-  // 1. Upsert payout_items — ON CONFLICT DO NOTHING (idempotency via UNIQUE order_id)
-  // Supabase upsert with ignoreDuplicates=true maps to ON CONFLICT DO NOTHING in PostgREST
+  // 1. Upsert payout_items — ON CONFLICT DO NOTHING。onConflict 對齊 #449 後的
+  // UNIQUE INDEX (order_id, settlement_kind)（舊單欄 UNIQUE(order_id) 已 DROP）；未帶者預設 settlement。
   const { error: piError } = await supabase
     .from('payout_items')
-    .upsert(items, { onConflict: 'order_id', ignoreDuplicates: true })
+    .upsert(items.map((it) => ({ settlement_kind: 'settlement', ...it })), { onConflict: 'order_id,settlement_kind', ignoreDuplicates: true })
   if (piError) throw piError
 
   // 2. Accumulate net_twd per guide
