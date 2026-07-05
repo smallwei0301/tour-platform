@@ -10,7 +10,7 @@
  *   200 ok({ configured:false })  — 導遊尚未設定匯款資訊
  *   400 / 403 / 404 — 參數錯誤 / 非本人或非待付款 / 找不到
  */
-import { successV2, errorV2 } from '../../../../../../src/lib/api';
+import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { getGuideTransferInfoForBookingDb } from '../../../../../../src/lib/db.mjs';
 import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
@@ -25,20 +25,20 @@ function norm(v: string | null | undefined): string {
 
 export async function GET(request: Request, context: { params: Promise<{ bookingId: string }> }) {
   if (!isTransferPaymentEnabled()) {
-    return Response.json(errorV2('NOT_FOUND', 'transfer payment disabled'), { status: 404 });
+    return jsonError('NOT_FOUND', 'transfer payment disabled', 404);
   }
   const { bookingId } = await context.params;
   if (!bookingId || !isValidUuid(bookingId)) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid bookingId'), { status: 400 });
+    return jsonError('VALIDATION_ERROR', 'Invalid bookingId', 400);
   }
 
   try {
     const info = await getGuideTransferInfoForBookingDb(bookingId);
     if (!info) {
-      return Response.json(errorV2('NOT_FOUND', 'Booking not found'), { status: 404 });
+      return jsonError('NOT_FOUND', 'Booking not found', 404);
     }
     if (info.orderStatus !== 'pending_payment') {
-      return Response.json(errorV2('FORBIDDEN', '此訂單已非待付款狀態'), { status: 403 });
+      return jsonError('FORBIDDEN', '此訂單已非待付款狀態', 403);
     }
 
     // 授權：登入者 email 或 ?contactEmail= 需與訂單 contact_email 相符。
@@ -54,25 +54,23 @@ export async function GET(request: Request, context: { params: Promise<{ booking
     const orderEmail = norm(info.contactEmail);
     const authorized = Boolean(orderEmail) && (callerEmail === orderEmail || queryEmail === orderEmail);
     if (!authorized) {
-      return Response.json(errorV2('FORBIDDEN', '無權檢視此訂單的匯款資訊'), { status: 403 });
+      return jsonError('FORBIDDEN', '無權檢視此訂單的匯款資訊', 403);
     }
 
     const configured = Boolean(info.bankName && info.accountNumber);
     if (!configured) {
-      return Response.json(successV2({ configured: false, guideName: info.guideName }));
+      return jsonOk({ configured: false, guideName: info.guideName });
     }
-    return Response.json(
-      successV2({
+    return jsonOk({
         configured: true,
         guideName: info.guideName,
         bankName: info.bankName,
         accountName: info.accountName,
         accountNumber: info.accountNumber,
         transferNote: info.transferNote,
-      })
-    );
+      });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';
-    return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    return jsonError('INTERNAL_ERROR', message, 500);
   }
 }

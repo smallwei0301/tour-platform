@@ -12,18 +12,20 @@ async function readOrderRoute() {
   return readFile(full, 'utf8');
 }
 
+// #1614：route 已改用 jsonOk/jsonError（envelope 與 successV2/errorV2 逐欄一致，
+// 見 tests/unit/issue1614-api-response-helper.test.mjs），regex 同步鎖新寫法。
 test('order detail route enforces unauthenticated access as 401', async () => {
   const src = await readOrderRoute();
 
-  assert.match(src, /if \(!user\?\.id && !user\?\.email\)\s*\{[\s\S]*status:\s*401/);
-  assert.match(src, /errorV2\('UNAUTHORIZED',\s*'Please login first'\)/);
+  assert.match(src, /if \(!user\?\.id && !user\?\.email\)\s*\{[\s\S]*?401\)/);
+  assert.match(src, /jsonError\('UNAUTHORIZED',\s*'Please login first',\s*401\)/);
 });
 
 test('order detail route denies non-owner with 403 and no success payload leakage', async () => {
   const src = await readOrderRoute();
 
   assert.match(src, /const hasAccess = isOrderOwner\(typedOrder,\s*\{[\s\S]*\}\);/);
-  assert.match(src, /if \(!hasAccess\)\s*\{[\s\S]*errorV2\('FORBIDDEN',[\s\S]*status:\s*403/);
+  assert.match(src, /if \(!hasAccess\)\s*\{[\s\S]*jsonError\('FORBIDDEN',[\s\S]*403/);
 
   const forbiddenBlock = src.match(/if \(!hasAccess\)\s*\{([\s\S]*?)\n\s*\}/);
   assert.ok(forbiddenBlock, 'FORBIDDEN block should exist');
@@ -33,7 +35,7 @@ test('order detail route denies non-owner with 403 and no success payload leakag
 test('order detail route owner success payload includes expected fields', async () => {
   const src = await readOrderRoute();
 
-  assert.match(src, /return Response\.json\(successV2\(\{/);
+  assert.match(src, /return jsonOk\(\{/);
   assert.match(src, /id:\s*order\.id/);
   assert.match(src, /status:\s*order\.status/);
   assert.match(src, /paymentStatus:\s*order\.payment_status/);
