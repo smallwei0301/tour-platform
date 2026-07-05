@@ -15,6 +15,7 @@ import { createHash } from 'crypto';
 import type { EventInsert, EventName } from '../../../src/lib/events';
 import type { UtmParams } from '../../../src/lib/utm';
 import { eventsLimiter, createRateLimitResponse, RateLimiter } from '../../../src/lib/rate-limit';
+import { getSupabaseServiceRoleKey } from '../../../src/config/supabase-service-env.mjs';
 
 const VALID_EVENTS: EventName[] = [
   'page_view',
@@ -39,7 +40,7 @@ function hashIp(ip: string): string {
 
 function getSupabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const key = getSupabaseServiceRoleKey()!;
   if (!url || !key) throw new Error('Supabase env vars missing');
   return createClient(url, key, { auth: { persistSession: false } });
 }

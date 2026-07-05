@@ -14,13 +14,14 @@
 // 同 notification-settings.mjs 模式。
 
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 function hasSupabaseEnv() {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return createClient(getSupabaseUrl(), getSupabaseServiceRoleKey());
 }
 
 // ---------------------------------------------------------------------------

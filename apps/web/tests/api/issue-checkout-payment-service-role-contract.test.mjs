@@ -43,7 +43,7 @@ for (const rel of ROUTES) {
   test(`${rel}: constructs a service-role Supabase client`, () => {
     assert.match(
       src,
-      /createServiceClient\(\s*process\.env\.SUPABASE_URL!?\s*,\s*process\.env\.SUPABASE_SERVICE_ROLE_KEY!?\s*\)/,
+      /createServiceClient\(\s*getSupabaseUrl\(\)!?\s*,\s*getSupabaseServiceRoleKey\(\)!?\s*\)/,
       'expected a createServiceClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY) call'
     );
   });

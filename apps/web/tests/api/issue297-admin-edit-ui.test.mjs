@@ -14,7 +14,10 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 //  3. 編輯行程移除活動層級「最少／最多人數」輸入（人數限制以方案為準）。
 describe('GH-297 admin edit/plans UI adjustments', () => {
   const editSrc = read('app/admin/activities/[id]/edit/page.tsx');
-  const plansSrc = read('app/admin/activities/[id]/plans/page.tsx');
+  // #1615 拆檔：方案表單 Modal（含站點時間表編輯器）移至 PlanFormModal 元件，
+  // 合併兩檔原始碼做等價斷言（斷言意圖不變）。
+  const plansSrc = read('app/admin/activities/[id]/plans/page.tsx') +
+    read('src/components/admin/activity-plans/PlanFormModal.tsx');
 
   it('plans station-timeline editor wraps to avoid 破框 (overflow)', () => {
     // 站點列改用 flexWrap + box-sizing，避免窄螢幕水平溢出

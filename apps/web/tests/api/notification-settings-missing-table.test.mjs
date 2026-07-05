@@ -30,7 +30,7 @@ test('db.mjs getNotificationOverridesDb fails open on missing table (source-cont
   const { fileURLToPath } = await import('node:url');
   const { dirname, join } = await import('node:path');
   const here = dirname(fileURLToPath(import.meta.url));
-  const src = readFileSync(join(here, '..', '..', 'src', 'lib', 'db.mjs'), 'utf8');
+  const src = readFileSync(join(here, '..', '..', 'src', 'lib', 'db-messaging-bindings.mjs'), 'utf8'); // #1613 strangler 後實作所在
   assert.match(src, /isMissingTableError/, 'db.mjs should import the missing-table guard');
   // the read helper must return {} (not throw) when the table is absent
   assert.match(src, /isMissingTableError\(error\)\)\s*return \{\}/);

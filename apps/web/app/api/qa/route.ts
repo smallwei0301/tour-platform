@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../src/lib/api';
 import { notifyGuideOfQuestion } from '../../../src/lib/guide-question-notify';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServiceRoleKey } from '../../../src/config/supabase-service-env.mjs';
 
 function getAnonClient() {
   return createClient(
@@ -19,7 +20,7 @@ function getAnonClient() {
 function getServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

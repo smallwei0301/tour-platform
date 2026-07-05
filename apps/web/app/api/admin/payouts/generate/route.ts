@@ -8,6 +8,7 @@
  * the UI can surface the conflict instead of silently doing nothing.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 export async function POST(req: NextRequest) {
   try {
@@ -19,8 +20,8 @@ export async function POST(req: NextRequest) {
 
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     const { generateManualPayoutDb } = await import('../../../../../src/lib/db.mjs');

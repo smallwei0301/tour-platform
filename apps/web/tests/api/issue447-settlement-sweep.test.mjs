@@ -178,7 +178,7 @@ describe('Issue 447 — settlement sweep route structural checks', () => {
 // ── db.mjs: new helper exports ─────────────────────────────────────────────────
 
 describe('Issue 447 — db.mjs new settlement helpers', () => {
-  const dbPath = join(__dirname, '../../src/lib/db.mjs')
+  const dbPath = join(__dirname, '../../src/lib/db-settlement-ops.mjs') // #1613 strangler 後實作所在
 
   it('getUnsettledOrdersDb is exported', () => {
     const src = readFileSync(dbPath, 'utf8')

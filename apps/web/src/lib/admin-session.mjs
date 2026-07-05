@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 const state = {
   tokenOverride: '',
@@ -12,7 +13,7 @@ let hydrateStarted = false;
 
 function getAdminSecurityClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = getSupabaseServiceRoleKey();
   if (!url || !serviceRoleKey) return null;
   return createClient(url, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false }

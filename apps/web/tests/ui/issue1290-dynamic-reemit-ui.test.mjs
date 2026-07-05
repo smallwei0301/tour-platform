@@ -20,10 +20,25 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
+// #1615：guide availability 頁已拆出 src/components/availability/** 子元件
+//（純結構搬移、零行為變更）——AvailabilityRule 型別在 guide-sections、
+// checkbox 在共用 rule-form-fields；來源契約改讀「頁面＋其子元件」串接
+// 內容，斷言意圖不變。
+const GUIDE_AVAILABILITY_SOURCES = [
+  'app/guide/availability/page.tsx',
+  'src/components/availability/guide-sections.tsx',
+  'src/components/availability/rule-form-fields.tsx',
+];
+
+async function readGuideAvailabilitySource() {
+  const parts = await Promise.all(GUIDE_AVAILABILITY_SOURCES.map(readSource));
+  return parts.join('\n');
+}
+
 // ── AC1: Guide form checkbox ──────────────────────────────────────────────────
 
 test('GH-1290 AC1: AvailabilityRule type includes use_dynamic_reemit field', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
   assert.match(
     src,
     /use_dynamic_reemit\s*:\s*boolean/,
@@ -32,7 +47,7 @@ test('GH-1290 AC1: AvailabilityRule type includes use_dynamic_reemit field', asy
 });
 
 test('GH-1290 AC1: ruleForm initial state defaults use_dynamic_reemit to false', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
   // Both new-rule reset and initial state must have use_dynamic_reemit: false
   const matches = [...src.matchAll(/use_dynamic_reemit\s*:\s*false/g)];
   assert.ok(
@@ -42,7 +57,7 @@ test('GH-1290 AC1: ruleForm initial state defaults use_dynamic_reemit to false',
 });
 
 test('GH-1290 AC1: guide form has checkbox bound to use_dynamic_reemit', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
   assert.match(
     src,
     /use_dynamic_reemit.*checked|checked.*use_dynamic_reemit/,
@@ -51,7 +66,7 @@ test('GH-1290 AC1: guide form has checkbox bound to use_dynamic_reemit', async (
 });
 
 test('GH-1290 AC1: checkbox label mentions dynamic time slots in Chinese', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
   assert.match(
     src,
     /動態時段|啟用動態|use_dynamic_reemit/,
@@ -62,7 +77,7 @@ test('GH-1290 AC1: checkbox label mentions dynamic time slots in Chinese', async
 // ── AC2: Form state carries use_dynamic_reemit through to payload ─────────────
 
 test('GH-1290 AC2: openRuleModal reads use_dynamic_reemit from existing rule', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
   // When editing, must load rule.use_dynamic_reemit into ruleForm
   assert.match(
     src,
@@ -72,7 +87,7 @@ test('GH-1290 AC2: openRuleModal reads use_dynamic_reemit from existing rule', a
 });
 
 test('GH-1290 AC2: payload spread includes use_dynamic_reemit via ruleForm', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
   // The payload uses ...ruleForm spread — verify ruleForm contains use_dynamic_reemit
   // and payload is built via spread
   assert.match(

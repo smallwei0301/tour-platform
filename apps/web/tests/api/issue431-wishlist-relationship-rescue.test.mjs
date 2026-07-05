@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { listWishlistDb, __setSupabaseClientForTest } from '../../src/lib/db.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbSrc = readFileSync(resolve(__dirname, '../../src/lib/db.mjs'), 'utf8');
+const dbSrc = readFileSync(resolve(__dirname, '../../src/lib/db-wishlist.mjs'), 'utf8'); // #1613 strangler 後實作所在
 
 test('listWishlistDb does not use relationship embed query shape', () => {
   assert.doesNotMatch(
@@ -39,8 +39,8 @@ test('listWishlistDb resolves activity details via explicit activities queries',
 test('listWishlistDb activities query is RLS-safe: uses service-role client (bypasses RLS)', () => {
   assert.match(
     dbSrc,
-    /SUPABASE_SERVICE_ROLE_KEY/,
-    'getSupabase() must use SUPABASE_SERVICE_ROLE_KEY so activities RLS does not apply to wishlist fetches'
+    /from '\.\/supabase-env\.mjs'/,
+    'wishlist 需經 supabase-env 的 service-role client（RLS bypass；#1616 後 key 走 config getter）'
   );
   const listWishlistSection = dbSrc.slice(dbSrc.indexOf('export async function listWishlistDb'));
   assert.doesNotMatch(

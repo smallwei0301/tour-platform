@@ -27,6 +27,7 @@ import {
 import { sendReviewInvitation } from '../../../../../src/lib/email';
 import { fetchReturningPromoEmailBlock } from '../../../../../src/lib/returning-promo.mjs';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+    const SUPABASE_URL = getSupabaseUrl();
+const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
 
     // Build Supabase service-role client when env is configured
     let srClient: SupabaseClient | null = null;

@@ -16,7 +16,8 @@
 // 重跑同一刪除即可補完（逐活動冪等）；storage I/O 本無法交易，不硬包 transaction。
 //
 // 函式契約：預期中的結果（含擋刪）回結果物件、不 throw；只有基礎設施錯誤才 throw。
-import { hasSupabaseEnv, getSupabase, deleteActivityDb } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
+import { deleteActivityDb } from './db.mjs';
 import { insertAuditLogDb, appendAuditLog } from './audit-log.mjs';
 import { listGuideApplications, deleteGuideApplication } from './services.mjs';
 

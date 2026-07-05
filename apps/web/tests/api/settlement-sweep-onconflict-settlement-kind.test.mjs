@@ -57,7 +57,8 @@ describe('settlement sweep upsert onConflict 必須對齊 (order_id, settlement_
   });
 
   it('db.mjs recordSettlementDb upsert 同樣對齊複合鍵（避免未來 caller 踩同一雷）', () => {
-    const dbSrc = read('src/lib/db.mjs');
+    // #1613 strangler：recordSettlementDb 已搬至 db-settlement-ops.mjs（db.mjs 僅 re-export）
+    const dbSrc = read('src/lib/db-settlement-ops.mjs');
     const fnStart = dbSrc.indexOf('export async function recordSettlementDb');
     assert.ok(fnStart !== -1, 'recordSettlementDb 必須存在');
     const fnEnd = dbSrc.indexOf('\nexport ', fnStart + 1);

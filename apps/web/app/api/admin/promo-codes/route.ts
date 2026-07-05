@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../../src/lib/api';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 // ── Auth guard ─────────────────────────────────────────────────────────────────
 
@@ -33,8 +34,8 @@ function checkAdminAuth(req: NextRequest): { ok: boolean; reason?: string } {
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!
   );
 }
 

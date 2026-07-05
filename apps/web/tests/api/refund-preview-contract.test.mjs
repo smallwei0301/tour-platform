@@ -14,7 +14,7 @@ test('route exports GET handler', () => {
 
 test('route uses SUPABASE_URL (not NEXT_PUBLIC_SUPABASE_URL)', () => {
   // Must reference SUPABASE_URL (the private env var)
-  assert.match(routeSrc, /process\.env\.SUPABASE_URL/);
+  assert.match(routeSrc, /getSupabaseUrl\(\)/); // #1616 env 走 config getter
   // Must NOT use NEXT_PUBLIC_SUPABASE_URL for the primary DB client
   // (it may reference it as a fallback for anon key but not for the service client URL)
   const serviceClientLines = routeSrc

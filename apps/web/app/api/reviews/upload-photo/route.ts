@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ok, fail } from '../../../../src/lib/api';
 import { createClient } from '../../../../src/lib/supabase/server';
 import { reviewSubmitLimiter, RateLimiter, createRateLimitResponse } from '../../../../src/lib/rate-limit';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 const BUCKET = 'review-photos';
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
@@ -23,8 +24,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(fail('UNAUTHORIZED', 'login required'), { status: 401 });
   }
 
-  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = getSupabaseUrl() || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SUPABASE_SERVICE_KEY = getSupabaseServiceRoleKey();
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     return NextResponse.json(fail('NOT_CONFIGURED', 'supabase storage not configured'), { status: 503 });
   }

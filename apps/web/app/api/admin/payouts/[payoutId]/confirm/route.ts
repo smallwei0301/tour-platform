@@ -3,6 +3,7 @@
  * Issue #448 — Confirm a pending payout: debit guide_balances + mark paid + audit log.
  */
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ payoutId: string }> }) {
   const { payoutId } = await params;
@@ -10,8 +11,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     const { confirmPayoutDb } = await import('../../../../../../src/lib/db.mjs');

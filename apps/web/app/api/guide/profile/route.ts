@@ -5,10 +5,11 @@ import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { isMissingColumnError } from '../../../../src/lib/schema-drift.mjs';
 import { normalizeRegionToDbValue } from '../../../../src/lib/region-slugs.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 const EDITABLE_FIELDS = [
@@ -52,7 +53,7 @@ export async function GET(req: Request) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({
       display_name: '', bio: '', region: '', languages: [], specialties: [], headline: '',
       regions: [], certifications: [], payment_methods: [],
@@ -196,7 +197,7 @@ export async function PATCH(req: Request) {
     return Response.json(fail('BAD_REQUEST', 'no editable fields provided'), { status: 400 });
   }
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({ updated: true }));
   }
 

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { successV2, errorV2 } from '../../../../../src/lib/api';
+import { jsonOk, jsonError } from '../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../src/lib/route-error';
 import { createClient } from '../../../../../src/lib/supabase/server';
 
@@ -39,7 +39,7 @@ export async function GET(
   const { bookingId } = await context.params;
 
   if (!bookingId || !isValidUuid(bookingId)) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid bookingId'), { status: 400 });
+    return jsonError('VALIDATION_ERROR', 'Invalid bookingId', 400);
   }
 
   try {
@@ -51,7 +51,7 @@ export async function GET(
       .single();
 
     if (bookingError || !booking) {
-      return Response.json(errorV2('NOT_FOUND', 'Booking not found'), { status: 404 });
+      return jsonError('NOT_FOUND', 'Booking not found', 404);
     }
 
     const typedBooking = booking as BookingRow;
@@ -59,7 +59,7 @@ export async function GET(
     const plans = normalizeSingleRelation(typedBooking.activity_plans);
     const orders = normalizeSingleRelation(typedBooking.orders);
 
-    return Response.json(successV2({
+    return jsonOk({
       id: booking.id,
       bookingNo: booking.booking_no,
       status: booking.status,
@@ -71,7 +71,7 @@ export async function GET(
       activity: activities ? { id: activities.id, title: activities.title, slug: activities.slug } : null,
       plan: plans ? { id: plans.id, name: plans.name, slug: plans.slug } : null,
       order: orders ? { id: orders.id, status: orders.status, paymentStatus: orders.payment_status, totalTwd: orders.total_twd } : null,
-    }));
+    });
   } catch (err) {
     return handleRouteError(err, { route: 'v2/bookings/detail' });
   }

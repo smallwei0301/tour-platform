@@ -36,7 +36,8 @@ async function readSrc(rel) {
 }
 
 test('admin schedule editor still tells operators NOT to bypass conflicts and to use 例外開放此場 (refs #1257 slice E)', async () => {
-  const src = await readSrc('app/admin/activities/[id]/edit/page.tsx');
+  // #1615 拆檔：場次 Modal（含守門文案）移至 ScheduleSection 元件（斷言意圖不變）
+  const src = await readSrc('src/components/admin/activity-form/ScheduleSection.tsx');
 
   // Core guard phrasing — "不會略過導遊／資源衝突" is the literal warning.
   assert.match(

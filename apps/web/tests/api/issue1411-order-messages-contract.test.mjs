@@ -21,7 +21,7 @@ import {
   listGuideMessageThreadsDb,
 } from '../../src/lib/db.mjs';
 
-const dbSrc = readFileSync(path.resolve('src/lib/db.mjs'), 'utf8');
+const dbSrc = readFileSync(new URL('../../src/lib/db-order-messages.mjs', import.meta.url), 'utf8'); // #1613 strangler 後實作所在（以測試檔為錨點，任何 cwd 皆可跑）
 
 // 兩邊實作都必須提供的留言欄位（shape 契約）
 const MESSAGE_SHAPE_KEYS = ['id', 'orderId', 'senderRole', 'senderId', 'body', 'createdAt'];

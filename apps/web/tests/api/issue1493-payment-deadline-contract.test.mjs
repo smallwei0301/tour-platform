@@ -34,7 +34,7 @@ test('listMyOrdersDb / listAdminOrdersDb 序列化 paymentDeadlineAt 且 select 
 });
 
 test('approval gateway（Supabase 路徑）approve 時 update orders.payment_deadline_at', () => {
-  const src = read('src/lib/db.mjs');
+  const src = read('src/lib/db-booking-approvals.mjs'); // #1613 strangler 後實作所在
   assert.match(src, /decision\.nextGuideApprovalStatus === 'approved' && booking\.order_id/);
   assert.match(src, /payment_deadline_at: paymentDeadlineAt/);
   // 仍只動仍為 pending_payment 的 order（避免覆蓋已付款）。

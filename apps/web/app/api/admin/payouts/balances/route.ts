@@ -7,13 +7,14 @@
  * min_withdrawal_twd so the UI can mark 達門檻 / 未達門檻.
  */
 import { NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 export async function GET() {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     const { listGuideBalancesWithProfilesDb } = await import('../../../../../src/lib/db.mjs');

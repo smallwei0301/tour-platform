@@ -3,13 +3,14 @@
  * Issue #448 — List payout queue (most recent first, limit 50).
  */
 import { NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 export async function GET() {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     const { data, error } = await supabase

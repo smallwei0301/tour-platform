@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../../../src/lib/api';
 import { createClient } from '../../../../../../src/lib/supabase/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 type TimelineItem = {
   at: string;
@@ -25,8 +26,8 @@ export async function GET(_request: Request, context: { params: Promise<{ orderI
     // from the admin timeline; route those reads through paymentDb instead.
     const { createClient: createServiceClient } = await import('@supabase/supabase-js');
     const paymentDb = createServiceClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     // Find booking for this order

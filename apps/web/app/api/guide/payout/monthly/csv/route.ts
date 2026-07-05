@@ -1,11 +1,12 @@
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
 import { getSettlementConfig, computeGuidePayoutEstimate } from '../../../../../../src/lib/settlement-config';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 export const dynamic = 'force-dynamic';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 export async function GET(req: Request) {
@@ -23,7 +24,7 @@ export async function GET(req: Request) {
 
   const csvHeader = '行程,出團日,訂單金額(NT$),已退款(NT$),實付扣退款(NT$),平台抽成(NT$),預計入帳(NT$),審核狀態\n';
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     const emptyCsv = csvHeader + `合計,,,,0,0,0\n`;
     return new Response(emptyCsv, {
       headers: {

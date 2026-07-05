@@ -37,7 +37,7 @@ describe('admin guide detail — all verification statuses', () => {
 
   it('GET handler uses service_role key (admin access)', () => {
     const getBody = routeSource.split('export async function PATCH')[0];
-    assert.ok(getBody.includes('SUPABASE_SERVICE_ROLE_KEY'), 'must use service_role');
+    assert.ok(getBody.includes('getSupabaseServiceRoleKey()'), 'must use service_role');
   });
 
   it('page fetches from /api/admin/guides/{guideId} not /approved', () => {

@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { recordIncident } from '../../../../../src/lib/incidents';
 import { shouldAlertEcpayFailures } from '../../../../../src/lib/alerting/thresholds';
 import { isCronJobEnabled, recordCronRun } from '../../../../../src/lib/cron-job-controls.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 // ── Auth guard ────────────────────────────────────────────────────────────────
 
@@ -45,8 +46,8 @@ export async function POST(req: NextRequest) {
     // Dynamically import supabase to avoid bundling issues in test environments
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     // Look back 60 minutes for ECPay callback failures recorded in payment_callback_audit

@@ -11,10 +11,23 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
-const ADMIN_PAGE = 'app/admin/guides/[guideId]/availability/page.tsx';
+// #1615：admin availability 頁已拆出 src/components/availability/** 子元件
+//（純結構搬移、零行為變更）——單日/每週表單欄位在共用 rule-form-fields、
+// 規則清單卡片在 admin-sections；來源契約改讀「頁面＋其子元件」串接內容，
+// 斷言意圖不變。
+const ADMIN_PAGE_SOURCES = [
+  'app/admin/guides/[guideId]/availability/page.tsx',
+  'src/components/availability/admin-sections.tsx',
+  'src/components/availability/rule-form-fields.tsx',
+];
+
+async function readAdminAvailabilitySource() {
+  const parts = await Promise.all(ADMIN_PAGE_SOURCES.map(readSource));
+  return parts.join('\n');
+}
 
 test('admin availability ruleForm has rule_mode (weekly|single-day) and single_date fields', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // ruleForm must declare rule_mode with 'weekly' default
   assert.match(src, /rule_mode.*'weekly'/, 'ruleForm must have rule_mode defaulting to weekly');
   // single_date field must exist in ruleForm
@@ -22,7 +35,7 @@ test('admin availability ruleForm has rule_mode (weekly|single-day) and single_d
 });
 
 test('admin availability modal has single-day radio and weekly radio buttons', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // Must render single-day radio input
   assert.match(src, /type="radio"[\s\S]{0,200}single-day|single-day[\s\S]{0,200}type="radio"/, 'modal must have single-day radio button');
   // Must render weekly radio input
@@ -30,19 +43,19 @@ test('admin availability modal has single-day radio and weekly radio buttons', a
 });
 
 test('admin availability modal has date input for single-day mode', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // Must have a date type input linked to single_date
   assert.match(src, /type="date"[\s\S]{0,100}single_date|single_date[\s\S]{0,100}type="date"/, 'modal must have a type=date input for single_date');
 });
 
 test('admin availability weekday select is disabled in single-day mode', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // weekday select must be disabled when rule_mode === 'single-day'
   assert.match(src, /disabled=\{ruleForm\.rule_mode\s*===\s*['"]single-day['"]\}/, 'weekday select must be disabled when rule_mode is single-day');
 });
 
 test('admin handleSaveRule derives weekday from single_date when single-day mode (TZ-safe)', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // Must use TZ-safe weekday derivation: noon-anchor (T12:00:00+08:00) with Intl.DateTimeFormat Asia/Taipei
   // This replaces the TZ-fragile `new Date(T00:00:00+08:00).getDay()` that produced wrong weekday
   // under non-Taiwan host TZ (UTC/America/Los_Angeles), causing 0 slots on the target date (AC2 bug).
@@ -65,7 +78,7 @@ test('admin handleSaveRule derives weekday from single_date when single-day mode
 });
 
 test('admin openRuleModal detects single-day from effective_from===effective_to and populates form', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // Must have isSingleDay check using effective_from === effective_to (possibly with rule. prefix)
   assert.match(
     src,
@@ -87,7 +100,7 @@ test('admin openRuleModal detects single-day from effective_from===effective_to 
 });
 
 test('admin availability rules list renders single-day label for single-day rules', async () => {
-  const src = await readSource(ADMIN_PAGE);
+  const src = await readAdminAvailabilitySource();
   // Rules display should show a readable single-day label like 單日:YYYY-MM-DD
   assert.match(
     src,

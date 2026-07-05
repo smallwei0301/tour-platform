@@ -12,6 +12,7 @@ import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } fro
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../src/lib/guide-auth-session-supabase';
 import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { peekDistributed, recordDistributed } from '../../../../../src/lib/rate-limit-distributed';
+import { getSupabaseUrl } from '../../../../../src/config/supabase-service-env.mjs';
 
 // #1599：登入限流跨實例層（記憶體版擋單實例、分散式版 provision 後擋跨實例）。皆 fail-open。
 const LOGIN_RATE_CFG = { maxRequests: 10, windowMs: 60 * 1000 };
@@ -93,7 +94,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { token, password, guideId: loginGuideId } = body as Record<string, string>;
 
-    if (!process.env.SUPABASE_URL) {
+    if (!getSupabaseUrl()) {
       return Response.json(fail('NOT_AVAILABLE', 'Auth not configured'), { status: 503 });
     }
 

@@ -10,10 +10,11 @@ import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../src/lib/api';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 export async function GET(request: NextRequest) {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     return Response.json(fail('UNAUTHORIZED', 'Guide session required'), { status: 401 });
   }
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({ blackouts: [] }));
   }
 
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
     return Response.json(fail('VALIDATION_ERROR', 'starts_at must be before ends_at'), { status: 400 });
   }
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(fail('SERVER_ERROR', 'Database not configured'), { status: 500 });
   }
 

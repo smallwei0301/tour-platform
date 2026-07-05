@@ -32,7 +32,7 @@ Root scripts 代理到 `@tour/web` workspace：
 
 ## 架構速覽
 
-- **Monorepo**：npm workspaces——`apps/web`（整個 Next.js 15 App Router + React 19 app）、`packages/{config,ui}`。Stack：TypeScript、Supabase（Postgres）、Sentry、Vercel。
+- **單一 app（npm workspaces 骨架）**：`package.json` 宣告 `workspaces: ["apps/*"]`，實際只有 `apps/web`（整個 Next.js 15 App Router + React 19 app，package 名 `@tour/web`）。共用 config／i18n 住在 `apps/web/src/{config,i18n}`，**不存在 `packages/` 目錄**（#1617 已移除歷史遺留的 `packages/*` 空殼宣告；若日後真要抽共用套件再另建）。Stack：TypeScript、Supabase（Postgres）、Sentry、Vercel。
 - **Data layer**：`apps/web/src/lib/db.mjs` 是資料 gateway；`hasSupabaseEnv()` 無環境變數時 fallback 到 in-memory store（`store.mjs`/`services.mjs`/`admin.mjs`）——測試靠這個 seam。**strangler 硬規則（#1385／#1570）**：新的資料存取函式禁止寫進 `db.mjs`，一律開領域檔（`db-kpi.mjs`、`db-auto-complete.mjs`…）；CI 有行數天花板 guard（`tests/unit/db-mjs-size-guard.test.mjs`，只能降不能升）。改 gateway 函式必須同步 fallback＋契約測試（harness/07 §3 完整條款）。
 - **三個 auth realms**（`apps/web/middleware.ts` 是唯一前門）：Traveler＝Supabase cookies（SSR anon client）；Guide＝`guide_token` HMAC cookie（edge 只做格式檢查，完整驗證在 API 的 `verifyGuideSession()`）；Admin＝token＋email allowlist＋session-version。CSRF：`tp_csrf` cookie vs `x-csrf-token` header 雙提交。
 - **Soft-launch kill-switch**：middleware 讀 `soft_launch_controls`，`public_paused` 時非豁免請求 503/redirect `/maintenance`，fail-open。

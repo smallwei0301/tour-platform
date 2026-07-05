@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { successV2, errorV2 } from '../../../../../src/lib/api';
+import { jsonOk, jsonError } from '../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../src/lib/route-error';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { isOrderOwner } from '../../../../../src/lib/v2-order-authz';
@@ -40,7 +40,7 @@ export async function GET(
   const { orderId } = await context.params;
 
   if (!orderId || !isValidUuid(orderId)) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid orderId'), { status: 400 });
+    return jsonError('VALIDATION_ERROR', 'Invalid orderId', 400);
   }
 
   try {
@@ -48,7 +48,7 @@ export async function GET(
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user?.id && !user?.email) {
-      return Response.json(errorV2('UNAUTHORIZED', 'Please login first'), { status: 401 });
+      return jsonError('UNAUTHORIZED', 'Please login first', 401);
     }
 
     const { data: order, error: orderError } = await supabase
@@ -58,7 +58,7 @@ export async function GET(
       .single();
 
     if (orderError || !order) {
-      return Response.json(errorV2('NOT_FOUND', 'Order not found'), { status: 404 });
+      return jsonError('NOT_FOUND', 'Order not found', 404);
     }
 
     const typedOrder = order as OrderRow;
@@ -68,13 +68,11 @@ export async function GET(
     });
 
     if (!hasAccess) {
-      return Response.json(errorV2('FORBIDDEN', 'You are not allowed to access this order'), {
-        status: 403,
-      });
+      return jsonError('FORBIDDEN', 'You are not allowed to access this order', 403);
     }
 
     const items = typedOrder.order_items ?? [];
-    return Response.json(successV2({
+    return jsonOk({
       id: order.id,
       status: order.status,
       paymentStatus: order.payment_status,
@@ -86,7 +84,7 @@ export async function GET(
       sourceChannel: order.source_channel,
       createdAt: order.created_at,
       items: items || [],
-    }));
+    });
   } catch (err) {
     return handleRouteError(err, { route: 'v2/orders/detail' });
   }

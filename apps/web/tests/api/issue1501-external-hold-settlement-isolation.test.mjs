@@ -32,7 +32,7 @@ function extractFn(src, name) {
   return src.slice(start, end);
 }
 
-const DB = read('apps/web/src/lib/db.mjs');
+const DB = read('apps/web/src/lib/db.mjs') + read('apps/web/src/lib/db-settlement-ops.mjs'); // #1613：settlement 已拆出
 const MIGRATION = read('supabase/migrations/20260624140000_external_hold_source_and_rpc.sql');
 const RULE = read('apps/web/src/lib/availability-v2/group-booking-rule.ts');
 

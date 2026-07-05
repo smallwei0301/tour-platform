@@ -9,6 +9,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 import {
   reviews as fixtureReviews,
   getReviewsByActivity as fixtureGetByActivity,
@@ -20,7 +21,7 @@ import {
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = getSupabaseServiceRoleKey() ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false } });
 }

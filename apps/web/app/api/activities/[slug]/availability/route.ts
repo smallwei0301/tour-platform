@@ -1,5 +1,6 @@
 import { ok, fail } from '../../../../../src/lib/api';
 import { getV2ActivityAvailability, v2HasGeneratedSlots } from '../../../../../src/lib/availability-v2/activity-day-availability';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,7 @@ function resolveCacheTierSeconds(schedules: AvailabilitySchedule[]): 15 | 30 | 6
 
 async function getSupabaseAdmin() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 // #1407 legacy 退役：`?source=legacy`／`?mode=legacy` 請求模式與 `BOOKING_V2` env
@@ -109,7 +110,7 @@ export async function GET(req: Request, context: { params: Promise<{ slug: strin
     return Response.json(fail('INVALID_SLUG', 'slug is required'), { status: 400 });
   }
 
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  if (!getSupabaseUrl() || !getSupabaseServiceRoleKey()) {
     return Response.json(fail('SUPABASE_DISABLED', 'availability requires supabase env'), { status: 503 });
   }
 

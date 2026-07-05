@@ -12,6 +12,7 @@ import { validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
 import { resolveConflictOverrideHelperTransition } from '../../../../../src/lib/conflict-override-transition.mjs';
 import { insertAuditLogDb } from '../../../../../src/lib/audit-log.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -22,7 +23,7 @@ interface DecisionBody {
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -52,7 +53,7 @@ export async function PATCH(
   const action = String(body.action || '').trim();
   const guideNote = body.guideNote == null ? null : String(body.guideNote).trim() || null;
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(fail('SERVER_ERROR', 'Database not configured'), { status: 500 });
   }
 

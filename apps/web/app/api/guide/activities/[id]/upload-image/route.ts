@@ -3,10 +3,11 @@ import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../../../src/lib/csrf.mjs';
 import { assertActivityBelongsToGuide } from '../../../../../../src/lib/assert-activity-belongs-to-guide';
 import { uploadActivityImage, type UploadImageType } from '../../../../../../src/lib/activity-image-upload';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 /**

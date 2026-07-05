@@ -9,7 +9,7 @@
  * 對外 API（4 個 *Db 函式簽章／回傳 shape）不變，caller 改由本檔 import。
  */
 import { randomUUID } from 'node:crypto';
-import { hasSupabaseEnv, getSupabase } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
 import { insertAuditLogDb } from './audit-log.mjs';
 import {
   getKpiConfigFallback,

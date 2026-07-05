@@ -1,7 +1,8 @@
 import { ok, fail } from '../../../../../../src/lib/api';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const SUPABASE_URL = getSupabaseUrl()!;
+const SUPABASE_SERVICE_KEY = getSupabaseServiceRoleKey()!;
 const BUCKET = 'guides';
 
 /**

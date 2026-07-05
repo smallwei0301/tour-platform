@@ -9,7 +9,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PAGE = path.resolve(__dirname, '../../app/admin/activities/[id]/edit/page.tsx');
+// #1615 拆檔：AddScheduleModal 移至 ScheduleSection 元件（斷言意圖不變）
+const PAGE = path.resolve(__dirname, '../../src/components/admin/activity-form/ScheduleSection.tsx');
 
 test('V2ActivityPlan carries duration_minutes (so the modal can seed endHH)', async () => {
   const src = await readFile(PAGE, 'utf8');

@@ -16,6 +16,7 @@ import { getLineUserIdForGuide } from './guide-line-binding.mjs';
 import { isNotifyEnabled } from './notification-settings.mjs';
 import { pushMessage } from './line-messaging.ts';
 import { buildGuideMessage } from './line-messages.ts';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 // Guide order-event kinds map onto the base order event for matrix lookup
 // (e.g. 'guide_refund_executed' → 'refund_executed').
@@ -24,7 +25,7 @@ function baseEventKind(kind) {
 }
 
 function hasSupabaseEnv() {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 /**

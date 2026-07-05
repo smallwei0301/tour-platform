@@ -14,12 +14,13 @@
 import { hasSupabaseEnv } from './db.mjs';
 import { sendGuideQuestionNotice } from './email';
 import { isGuideContactActivityId, parseGuideContactGuideId } from './guide-contact-qa.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 async function getServiceClient() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }

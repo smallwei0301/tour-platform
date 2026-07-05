@@ -7,11 +7,12 @@
  */
 import { ok, fail } from '../../../../../../src/lib/api';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 function getServiceClient() {
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

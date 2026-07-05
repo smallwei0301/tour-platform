@@ -28,7 +28,7 @@
 - **2026-04-27**
   - ✅ Hero Section 文案改寫（Commit: `9e641f1`）
   - ✅ ValueTrustSection 文案精煉（Commit: `6e535a0`）
-  - ✅ [完整 PR 文檔](./PR_BRAND_IDENTITY.md)
+  - ✅ [完整 PR 文檔](./docs/99-archive/PR_BRAND_IDENTITY.md)
 
 ---
 

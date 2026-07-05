@@ -42,7 +42,8 @@ test('admin + guide booking-types pages render the shared guide component', () =
 });
 
 test('admin plan form links to booking-types help next to the selector', () => {
-  const src = read('app/admin/activities/[id]/plans/page.tsx');
+  // #1615 拆檔：方案表單（含預約方式下拉與說明連結）移至 PlanFormModal 元件（斷言意圖不變）
+  const src = read('src/components/admin/activity-plans/PlanFormModal.tsx');
   assert.match(src, /\/admin\/help\/booking-types/);
   // Link sits near the 預約方式 selector.
   const linkIdx = src.indexOf('/admin/help/booking-types');
@@ -56,11 +57,16 @@ test('guide plan form links to booking-types help', () => {
 
 test('conflict-override help is linked from the availability page (single canonical location)', () => {
   // 連結只放在時段預覽頁(例外開放流程所在地),不放列表卡片與導遊詳情頁。
-  const availSrc = read('app/admin/guides/[guideId]/availability/page.tsx');
+  // #1615 拆檔：時段預覽卡片移至 AdminSlotPreviewSection（純結構搬移），
+  // 連結與「時段預覽」標題仍同在該元件內，斷言意圖不變。
+  const availSrc = read('src/components/availability/admin-sections.tsx');
   assert.match(availSrc, /\/admin\/help\/conflict-override/);
   const helpIdx = availSrc.indexOf('/admin/help/conflict-override');
-  const previewIdx = availSrc.indexOf('時段預覽');
-  assert.ok(helpIdx > -1 && previewIdx > -1 && Math.abs(helpIdx - previewIdx) < 800, 'help link near 時段預覽');
+  // 檔內「時段預覽」出現多次（含檔頭註解）——取「距連結最近的一次」量距離，
+  // 錨定實際 <h2> 標題就在連結旁的意圖不變。
+  const previewIdxs = [...availSrc.matchAll(/時段預覽/g)].map((m) => m.index);
+  const nearestDist = Math.min(...previewIdxs.map((i) => Math.abs(helpIdx - i)));
+  assert.ok(helpIdx > -1 && previewIdxs.length > 0 && nearestDist < 800, 'help link near 時段預覽');
 
   // 不應再出現在列表卡片或導遊詳情頁(避免重複入口)。
   assert.doesNotMatch(read('app/admin/guides/page.tsx'), /\/admin\/help\/conflict-override/);

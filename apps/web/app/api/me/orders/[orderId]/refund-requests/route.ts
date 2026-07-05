@@ -14,6 +14,7 @@ import { calculateRefundAmount } from '../../../../../../src/lib/refund-policy';
 import type { RefundPolicy, RefundResult } from '../../../../../../src/lib/refund-policy';
 import { REFUND_AUTO_EXECUTE, executeRefund } from '../../../../../../src/lib/refund-execute';
 import { requestAllRefund } from '../../../../../../src/lib/ecpay';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 export async function GET(_request: Request, context: { params: Promise<{ orderId: string }> }) {
   const { orderId } = await context.params;
@@ -94,8 +95,8 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
       try {
         const refundableAmount = policySnapshot?.refundable_amount ?? null;
         const svcClient = createServiceClient(
-          process.env.SUPABASE_URL!,
-          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          getSupabaseUrl()!,
+          getSupabaseServiceRoleKey()!,
           { auth: { persistSession: false, autoRefreshToken: false } }
         );
         const { data: orderRow, error: fetchErr } = await svcClient

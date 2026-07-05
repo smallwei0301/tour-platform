@@ -2,12 +2,13 @@ import { ok, fail } from '../../../../src/lib/api';
 import { adminDashboardSummaryDb } from '../../../../src/lib/db.mjs';
 import { createClient } from '@supabase/supabase-js';
 import { getControls } from '../../../../src/lib/soft-launch.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 export const dynamic = 'force-dynamic';
 
 function getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceRoleKey();
   if (!url || !key) return null;
   return createClient(url, key);
 }

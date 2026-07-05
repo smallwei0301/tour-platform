@@ -208,7 +208,7 @@ test('窗外（<168h）申請 → RESCHEDULE_WINDOW_CLOSED', async () => {
 // ── Supabase 分支 source-contract（NOT_VERIFIED-live）────────────────────────
 
 test('Supabase 分支：gateway 以 hasSupabaseEnv 分流，approve 走 atomic RPC', () => {
-  const dbSrc = readFileSync(path.resolve('src/lib/db.mjs'), 'utf8');
+  const dbSrc = readFileSync(new URL('../../src/lib/db-reschedule.mjs', import.meta.url), 'utf8');
   for (const fn of ['createRescheduleRequestDb', 'listRescheduleOptionsDb', 'decideRescheduleRequestDb', 'listGuideRescheduleRequestsDb', 'withdrawRescheduleRequestDb']) {
     assert.match(dbSrc, new RegExp(`export async function ${fn}`), `db.mjs 應有 ${fn}`);
   }
@@ -216,7 +216,7 @@ test('Supabase 分支：gateway 以 hasSupabaseEnv 分流，approve 走 atomic R
 });
 
 test('migration：reschedule_requests 表 + RPC 鎖序 orders → bookings → activity_schedules', () => {
-  const p = path.resolve('../../supabase/migrations/20260611_issue1383_reschedule_requests.sql');
+  const p = new URL('../../../../supabase/migrations/20260611_issue1383_reschedule_requests.sql', import.meta.url);
   assert.ok(existsSync(p), 'migration 應存在（timestamp 制）');
   const sql = readFileSync(p, 'utf8');
   assert.match(sql, /CREATE TABLE IF NOT EXISTS.*reschedule_requests/s);

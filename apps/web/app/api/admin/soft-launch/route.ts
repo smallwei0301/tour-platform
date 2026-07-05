@@ -11,6 +11,7 @@ import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/adm
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
 import { getControls, setControl } from '../../../../src/lib/soft-launch.mjs';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,8 +37,8 @@ function checkAdminAuth(req: NextRequest): { ok: boolean; reason?: string } {
 
 function getSupabase() {
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

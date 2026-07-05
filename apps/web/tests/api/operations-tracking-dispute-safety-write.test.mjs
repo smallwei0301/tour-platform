@@ -63,7 +63,7 @@ test('updateOperationsTrackingDb 可清除 isDisputed / isSafetyCase', async () 
 });
 
 test('源碼契約：db.mjs 與 fallback 的 payload 都含 is_disputed / is_safety_case', () => {
-  const dbSrc = readFileSync(join(repoRoot, 'src/lib/db.mjs'), 'utf8');
+  const dbSrc = readFileSync(join(repoRoot, 'src/lib/db-settlement-ops.mjs'), 'utf8'); // #1613 strangler 後實作所在
   assert.match(dbSrc, /is_disputed:\s*!!input\?\.isDisputed/, 'db.mjs payload 需寫 is_disputed');
   assert.match(dbSrc, /is_safety_case:\s*!!input\?\.isSafetyCase/, 'db.mjs payload 需寫 is_safety_case');
   assert.match(dbSrc, /is_disputed,\s*is_safety_case|is_disputed, is_safety_case/, 'listOperationsTrackingDb select 需含兩欄');

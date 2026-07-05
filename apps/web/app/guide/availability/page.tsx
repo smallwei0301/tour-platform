@@ -1,81 +1,59 @@
 'use client';
 
+// #1615 第一批：本頁原為 1,218 行 god-page，已拆解為「頁面＝狀態＋handler＋組裝」，
+// 共用/專屬 UI 區塊移至 src/components/availability/**（純結構搬移、零行為變更）。
+
 import { useEffect, useState, useCallback } from 'react';
 import { csrfHeaders } from '../../../src/lib/csrf-client';
-import { ResponsiveModal, FormGrid, useIsMobile } from '../../../src/components/admin/responsive';
+import { ResponsiveModal, useIsMobile } from '../../../src/components/admin/responsive';
 import {
   describePlanSeasonStatus,
   describePreviewReason,
   describeRuleSeasonConflict,
   type UiActiveSeasonSummary,
 } from '../../../src/lib/availability-v2/canonical-availability-ui';
-import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
 import { bookingTypeLabelZh, isDynamicAvailabilityApplicable } from '../../../src/lib/booking-type-flow.mjs';
+import {
+  toHhMm,
+  btn,
+  cardStyle,
+  formatParticipants,
+  type BlackoutDate,
+} from '../../../src/components/availability/shared';
+import {
+  RuleSeasonNotices,
+  RuleScheduleFields,
+  RuleActivationToggles,
+  FormErrorNote,
+} from '../../../src/components/availability/rule-form-fields';
+import { BlackoutFields } from '../../../src/components/availability/blackout-form-fields';
+import {
+  GuideWeeklyRulesSection,
+  GuideBlackoutSection,
+  GuideSlotPreviewSection,
+  type AvailabilityRule,
+  type PreviewSlot,
+  type PreviewSource,
+  type PreviewReasonCode,
+  type GuideActivityPlanOption,
+} from '../../../src/components/availability/guide-sections';
 
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-const WEEKDAY_LABELS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
-
-// guide_availability_rules.start_time_local / end_time_local are Postgres
-// `time` columns that round-trip with seconds ("09:00:00"). A native
-// <input type="time"> (and the rule card) expect HH:MM, so defensively trim
-// seconds before binding/displaying — the API normalizes too, but legacy
-// rows or cached state can still carry the seconds.
-const toHhMm = (value: string | null | undefined): string => {
-  if (!value) return '';
-  const match = /^(\d{1,2}):(\d{2})/.exec(value.trim());
-  if (!match) return value;
-  return `${match[1].padStart(2, '0')}:${match[2]}`;
+// input id 常數：沿用既有 label htmlFor／input id 關聯（PR #1063），
+// 供共用表單元件注入，e2e 與 a11y 選擇器不變。
+const GUIDE_RULE_FIELD_IDS = {
+  singleDate: 'avail-single-date',
+  startDate: 'avail-start-date',
+  endDate: 'avail-end-date',
+  startTime: 'avail-start-time',
+  endTime: 'avail-end-time',
+  interval: 'avail-interval-minutes',
+  buffer: 'avail-buffer-minutes',
 };
 
-type AvailabilityRule = {
-  id: string;
-  guide_id: string;
-  activity_plan_id: string | null;
-  weekday: number;
-  start_time_local: string;
-  end_time_local: string;
-  timezone: string;
-  slot_interval_minutes: number;
-  buffer_before_minutes: number;
-  buffer_after_minutes: number;
-  effective_from: string | null;
-  effective_to: string | null;
-  is_active: boolean;
-  use_dynamic_reemit: boolean;
-  activity_plans?: { id: string; name: string } | null;
-};
-
-type BlackoutDate = {
-  id: string;
-  guide_id: string;
-  starts_at: string;
-  ends_at: string;
-  reason: string | null;
-  source: 'manual' | 'system';
-};
-
-type PreviewSlot = {
-  startAt: string;
-  endAt: string;
-  isAvailable: boolean;
-  minParticipants?: number | null;
-};
-
-type PreviewSource = 'legacy_local_preview' | 'effective_booking_availability' | string;
-
-type PreviewReasonCode = string | null;
-
-type GuideActivityPlanOption = {
-  activityId: string;
-  activityTitle: string;
-  planId: string;
-  planName: string;
-  durationMinutes: number | null;
-  minParticipants: number | null;
-  maxParticipants: number | null;
-  bookingType?: string | null;
-  isYearRound?: boolean | null;
-  activeSeasonSummaries?: UiActiveSeasonSummary[];
+const GUIDE_BLACKOUT_FIELD_IDS = {
+  startsAt: 'avail-blackout-starts-at',
+  endsAt: 'avail-blackout-ends-at',
+  reason: 'avail-blackout-reason',
 };
 
 export default function GuideAvailabilityPage() {
@@ -374,13 +352,7 @@ export default function GuideAvailabilityPage() {
     await loadPreview();
   };
 
-  // ── Group rules by weekday ──
-  const rulesByWeekday = rules.reduce((acc, rule) => {
-    if (!acc[rule.weekday]) acc[rule.weekday] = [];
-    acc[rule.weekday].push(rule);
-    return acc;
-  }, {} as Record<number, AvailabilityRule[]>);
-
+  // ── 衍生資料（供 Modal 與各區塊子元件使用） ──
   const plansByActivity = activityPlanOptions.reduce((acc, option) => {
     if (!acc[option.activityId]) acc[option.activityId] = [];
     acc[option.activityId].push(option);
@@ -421,141 +393,6 @@ export default function GuideAvailabilityPage() {
     previewCanonicalState,
     previewSeasonGate,
   });
-  const formatParticipants = (minParticipants: number | null, maxParticipants: number | null) => {
-    const minText = minParticipants ?? '-';
-    const maxText = maxParticipants ?? '-';
-    return `最少 ${minText}｜最多 ${maxText}`;
-  };
-  const toneStyles = {
-    success: { border: '#bbf7d0', background: '#f0fdf4', color: '#166534' },
-    info: { border: '#bfdbfe', background: '#eff6ff', color: '#1d4ed8' },
-    warning: { border: '#fcd34d', background: '#fffbeb', color: '#92400e' },
-  } as const;
-
-  // ── Group preview slots by date ──
-  const slotsByDate = previewSlots.reduce((acc, slot) => {
-    const date = slot.startAt.slice(0, 10);
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(slot);
-    return acc;
-  }, {} as Record<string, PreviewSlot[]>);
-
-  // AC3: derive buffer note from rules matching the preview plan (section-level hint)
-  const previewBufferNote = (() => {
-    const matchingRules = rules.filter((r) =>
-      r.is_active && (r.activity_plan_id === null || r.activity_plan_id === previewPlanId || !previewPlanId)
-    );
-    const maxBuffer = matchingRules.reduce((max, r) => {
-      const b = Math.max(r.buffer_before_minutes || 0, r.buffer_after_minutes || 0);
-      return b > max ? b : max;
-    }, 0);
-    if (maxBuffer === 0) return null;
-    const beforeMax = matchingRules.reduce((max, r) => Math.max(max, r.buffer_before_minutes || 0), 0);
-    const afterMax = matchingRules.reduce((max, r) => Math.max(max, r.buffer_after_minutes || 0), 0);
-    if (beforeMax === afterMax && beforeMax > 0) return `前後${beforeMax}分鐘緩衝`;
-    if (beforeMax > 0 && afterMax > 0) return `前${beforeMax}分鐘、後${afterMax}分鐘緩衝`;
-    if (beforeMax > 0) return `前${beforeMax}分鐘緩衝`;
-    return `後${afterMax}分鐘緩衝`;
-  })();
-
-  const btn = (bg: string, color: string, border = 'none') =>
-    ({
-      padding: '8px 16px',
-      borderRadius: 8,
-      border,
-      background: bg,
-      color,
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: 'pointer',
-    }) as React.CSSProperties;
-
-  const smallBtn = (bg: string, color: string) =>
-    ({
-      padding: '4px 10px',
-      borderRadius: 6,
-      border: 'none',
-      background: bg,
-      color,
-      fontSize: 12,
-      fontWeight: 600,
-      cursor: 'pointer',
-    }) as React.CSSProperties;
-
-  const cardStyle: React.CSSProperties = {
-    background: '#fff',
-    borderRadius: 14,
-    border: '1px solid #e5e7eb',
-    overflow: 'hidden',
-  };
-
-  const badgeStyle = (variant: 'warning' | 'default'): React.CSSProperties => ({
-    display: 'inline-block',
-    padding: '2px 8px',
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: 600,
-    marginTop: 4,
-    background: variant === 'warning' ? '#fef3c7' : '#f3f4f6',
-    color: variant === 'warning' ? '#d97706' : '#6b7280',
-  });
-
-  // Single rule card — shared by desktop 7-col grid and mobile stacked list.
-  function RuleCard({
-    rule,
-    optionByPlanId: opts,
-    onEdit,
-    onDelete,
-  }: {
-    rule: AvailabilityRule;
-    optionByPlanId: Record<string, GuideActivityPlanOption>;
-    onEdit: (rule: AvailabilityRule) => void;
-    onDelete: (id: string) => void;
-  }) {
-    return (
-      <div
-        style={{
-          background: rule.is_active ? '#dcfce7' : '#f3f4f6',
-          borderRadius: 6,
-          padding: '6px 10px',
-          fontSize: 12,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <span style={{ fontWeight: 600 }}>
-            {toHhMm(rule.start_time_local)}-{toHhMm(rule.end_time_local)}
-          </span>
-        </div>
-        <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
-          活動：{opts[rule.activity_plan_id || '']?.activityTitle || '未指定'}
-        </div>
-        <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
-          方案：{opts[rule.activity_plan_id || '']?.planName || rule.activity_plans?.name || '未指定'}
-        </div>
-        {rule.activity_plan_id && opts[rule.activity_plan_id] && (
-          <div style={{ fontSize: 11, color: '#374151', marginBottom: 4 }}>
-            人數：{formatParticipants(
-              opts[rule.activity_plan_id]?.minParticipants ?? null,
-              opts[rule.activity_plan_id]?.maxParticipants ?? null
-            )}
-          </div>
-        )}
-        {(rule.effective_from || rule.effective_to) && (
-          <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 4 }}>
-            生效：{rule.effective_from || '不限'} ~ {rule.effective_to || '不限'}
-          </div>
-        )}
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button onClick={() => onEdit(rule)} style={smallBtn('#fff', '#374151')}>
-            編輯
-          </button>
-          <button onClick={() => onDelete(rule.id)} style={smallBtn('#fee2e2', '#dc2626')}>
-            刪除
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
@@ -657,127 +494,22 @@ export default function GuideAvailabilityPage() {
               ))}
             </select>
           </div>
-          {selectedRulePlanIsScheduled && (
-            <div
-              data-testid="rule-booking-type-warning"
-              style={{ border: '1px solid #fcd34d', background: '#fffbeb', borderRadius: 10, padding: '10px 12px', color: '#92400e', fontSize: 13, lineHeight: 1.6 }}
-            >
-              ⚠️ 此方案為<strong>排程預約</strong>，僅使用固定場次，無法設定動態可預約時段規則。請改用「場次管理」建立固定場次；動態時段規則僅適用<strong>即時／申請</strong>預約方案。
-            </div>
-          )}
-          {selectedRulePlan && (
-            <div style={{ border: `1px solid ${toneStyles[rulePlanSeasonStatus.tone].border}`, background: toneStyles[rulePlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[rulePlanSeasonStatus.tone].color }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{rulePlanSeasonStatus.title}</div>
-              <div style={{ fontSize: 12, lineHeight: 1.6 }}>{rulePlanSeasonStatus.description}</div>
-            </div>
-          )}
-          {selectedRulePlan && ruleSeasonConflict && (
-            <div style={{ border: `1px solid ${toneStyles[ruleSeasonConflict.tone].border}`, background: toneStyles[ruleSeasonConflict.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[ruleSeasonConflict.tone].color, fontSize: 12, lineHeight: 1.6 }}>
-              {ruleSeasonConflict.message}
-            </div>
-          )}
-          {selectedRulePlan && (
-            <div style={{ fontSize: 12, color: '#6b7280' }}>
-              常見提示：此方案尚未設定開放季節、你設定的日期包含方案非開放季節、這一天不在方案開放季節內。
-            </div>
-          )}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開放模式</label>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'weekly'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'weekly' })} /> 每週重複</label>
-              <label style={{ fontSize: 13 }}><input type="radio" checked={ruleForm.rule_mode === 'single-day'} onChange={() => setRuleForm({ ...ruleForm, rule_mode: 'single-day' })} /> 單日開放</label>
-            </div>
-          </div>
-          {ruleForm.rule_mode === 'single-day' ? (
-            <div>
-              <label htmlFor="avail-single-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>單日日期（台灣時間）</label>
-              <input id="avail-single-date" type="date" value={ruleForm.single_date} onChange={(e) => setRuleForm({ ...ruleForm, single_date: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
-            </div>
-          ) : (
-            <FormGrid cols={2}>
-              <div>
-                <label htmlFor="avail-start-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效起日（可空）</label>
-                <input id="avail-start-date" type="date" value={ruleForm.effective_from} onChange={(e) => setRuleForm({ ...ruleForm, effective_from: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label htmlFor="avail-end-date" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>生效迄日（可空）</label>
-                <input id="avail-end-date" type="date" value={ruleForm.effective_to} onChange={(e) => setRuleForm({ ...ruleForm, effective_to: e.target.value })} style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }} />
-              </div>
-            </FormGrid>
-          )}
-          <div>
-            <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>星期</label>
-            <select
-              aria-label="星期"
-              value={ruleForm.weekday}
-              onChange={(e) => setRuleForm({ ...ruleForm, weekday: Number(e.target.value) })}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-              disabled={ruleForm.rule_mode === 'single-day'}
-            >
-              {WEEKDAY_LABELS.map((label, i) => (
-                <option key={i} value={i}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <FormGrid cols={2}>
-            <div>
-              <label htmlFor="avail-start-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
-              <input
-                id="avail-start-time"
-                type="time"
-                value={ruleForm.start_time_local}
-                onChange={(e) => setRuleForm({ ...ruleForm, start_time_local: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label htmlFor="avail-end-time" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
-              <input
-                id="avail-end-time"
-                type="time"
-                value={ruleForm.end_time_local}
-                onChange={(e) => setRuleForm({ ...ruleForm, end_time_local: e.target.value })}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-              />
-            </div>
-          </FormGrid>
-          <FormGrid cols={2}>
-            <div>
-              <label htmlFor="avail-interval-minutes" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時段間隔 (分鐘)</label>
-              <input
-                id="avail-interval-minutes"
-                type="number"
-                min="15"
-                step="15"
-                value={ruleForm.slot_interval_minutes}
-                onChange={(e) => {
-                  setIntervalManuallyEdited(true); // AC1: guide manually set interval — do not auto-override on plan switch
-                  setRuleForm({ ...ruleForm, slot_interval_minutes: Number(e.target.value) });
-                }}
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-              />
-            </div>
-            <div>
-              <label htmlFor="avail-buffer-minutes" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>緩衝時間 (分鐘)</label>
-              <input
-                id="avail-buffer-minutes"
-                type="number"
-                min="0"
-                step="5"
-                value={ruleForm.buffer_before_minutes}
-                onChange={(e) =>
-                  setRuleForm({
-                    ...ruleForm,
-                    buffer_before_minutes: Number(e.target.value),
-                    buffer_after_minutes: Number(e.target.value),
-                  })
-                }
-                style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-              />
-            </div>
-          </FormGrid>
+          <RuleSeasonNotices
+            selectedRulePlanIsScheduled={selectedRulePlanIsScheduled}
+            hasSelectedRulePlan={Boolean(selectedRulePlan)}
+            rulePlanSeasonStatus={rulePlanSeasonStatus}
+            ruleSeasonConflict={ruleSeasonConflict}
+          />
+          <RuleScheduleFields
+            ruleForm={ruleForm}
+            ids={GUIDE_RULE_FIELD_IDS}
+            onModeChange={(mode) => setRuleForm({ ...ruleForm, rule_mode: mode })}
+            onPatch={(patch) => setRuleForm({ ...ruleForm, ...patch })}
+            onIntervalChange={(value) => {
+              setIntervalManuallyEdited(true); // AC1: guide manually set interval — do not auto-override on plan switch
+              setRuleForm({ ...ruleForm, slot_interval_minutes: value });
+            }}
+          />
           {/* AC2: existing-rule mismatch warning */}
           {editingRule && selectedRulePlan?.durationMinutes != null &&
             ruleForm.slot_interval_minutes !== selectedRulePlan.durationMinutes && (
@@ -785,27 +517,11 @@ export default function GuideAvailabilityPage() {
               ⚠️ 注意：目前設定的時段間隔（{ruleForm.slot_interval_minutes} 分鐘）與方案時長（{selectedRulePlan.durationMinutes} 分鐘）不一致。若要對齊方案時長，請手動更新間隔。
             </div>
           )}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={ruleForm.use_dynamic_reemit}
-              onChange={(e) => setRuleForm({ ...ruleForm, use_dynamic_reemit: e.target.checked })}
-            />
-            啟用動態時段（根據上次預訂結束時間自動補發可用時段）
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={ruleForm.is_active}
-              onChange={(e) => setRuleForm({ ...ruleForm, is_active: e.target.checked })}
-            />
-            啟用此規則
-          </label>
-          {error && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
-              {error}
-            </div>
-          )}
+          <RuleActivationToggles
+            ruleForm={ruleForm}
+            onPatch={(patch) => setRuleForm({ ...ruleForm, ...patch })}
+          />
+          <FormErrorNote error={error} />
         </div>
       </ResponsiveModal>
 
@@ -827,42 +543,12 @@ export default function GuideAvailabilityPage() {
         }
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div>
-            <label htmlFor="avail-blackout-starts-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>開始時間</label>
-            <input
-              id="avail-blackout-starts-at"
-              type="datetime-local"
-              value={blackoutForm.starts_at}
-              onChange={(e) => setBlackoutForm({ ...blackoutForm, starts_at: e.target.value })}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
-            <label htmlFor="avail-blackout-ends-at" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>結束時間</label>
-            <input
-              id="avail-blackout-ends-at"
-              type="datetime-local"
-              value={blackoutForm.ends_at}
-              onChange={(e) => setBlackoutForm({ ...blackoutForm, ends_at: e.target.value })}
-              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-            />
-          </div>
-          <div>
-            <label htmlFor="avail-blackout-reason" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>原因 (選填)</label>
-            <input
-              id="avail-blackout-reason"
-              type="text"
-              value={blackoutForm.reason}
-              onChange={(e) => setBlackoutForm({ ...blackoutForm, reason: e.target.value })}
-              placeholder="例：私人行程"
-              style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-            />
-          </div>
-          {error && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
-              {error}
-            </div>
-          )}
+          <BlackoutFields
+            blackoutForm={blackoutForm}
+            ids={GUIDE_BLACKOUT_FIELD_IDS}
+            onPatch={(patch) => setBlackoutForm({ ...blackoutForm, ...patch })}
+          />
+          <FormErrorNote error={error} />
         </div>
       </ResponsiveModal>
 
@@ -894,321 +580,41 @@ export default function GuideAvailabilityPage() {
           <div style={{ ...cardStyle, padding: 40, textAlign: 'center', color: '#9ca3af' }}>載入中...</div>
         ) : (
           <>
-            {/* ── Weekly Rules ── */}
-            <div style={cardStyle}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>每週可預約時段</h2>
-                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定您每週的固定可預約時間</p>
-                </div>
-                <button onClick={() => openRuleModal()} style={btn('#7c3aed', '#fff')}>
-                  + 新增時段
-                </button>
-              </div>
-              <div style={{ padding: 20 }}>
-                {rules.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>尚未設定可預約時段</div>
-                ) : isMobile ? (
-                  // Mobile: weekdays stacked vertically; weekday header + full-width
-                  // rule cards. Skip weekdays with no rules to avoid 7 tall empty blocks.
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {[0, 1, 2, 3, 4, 5, 6].map((day) => {
-                      const dayRules = rulesByWeekday[day] || [];
-                      if (dayRules.length === 0) return null;
-                      return (
-                        <div key={day}>
-                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: day === 0 || day === 6 ? '#dc2626' : '#111' }}>
-                            {WEEKDAY_LABELS[day]}
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {dayRules.map((rule) => (
-                              <RuleCard key={rule.id} rule={rule} optionByPlanId={optionByPlanId} onEdit={openRuleModal} onDelete={deleteRule} />
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                    {[0, 1, 2, 3, 4, 5, 6].every((day) => !(rulesByWeekday[day]?.length)) && (
-                      <div style={{ textAlign: 'center', padding: 24, color: '#9ca3af' }}>尚未設定可預約時段</div>
-                    )}
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
-                    {[0, 1, 2, 3, 4, 5, 6].map((day) => (
-                      <div key={day} style={{ background: '#f9fafb', borderRadius: 12, padding: 12, minHeight: 100 }}>
-                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: day === 0 || day === 6 ? '#dc2626' : '#111' }}>
-                          {WEEKDAY_LABELS[day]}
-                        </div>
-                        {rulesByWeekday[day]?.length > 0 ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {rulesByWeekday[day].map((rule) => (
-                              <RuleCard key={rule.id} rule={rule} optionByPlanId={optionByPlanId} onEdit={openRuleModal} onDelete={deleteRule} />
-                            ))}
-                          </div>
-                        ) : (
-                          <div style={{ fontSize: 12, color: '#9ca3af' }}>無時段</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ── Blackout Dates ── */}
-            <div style={cardStyle}>
-              <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>休假/不可預約時段</h2>
-                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>設定特定日期的休假或不可接單時間</p>
-                </div>
-                <button onClick={() => openBlackoutModal()} style={btn('#dc2626', '#fff')}>
-                  + 新增休假
-                </button>
-              </div>
-              <div style={{ padding: 20 }}>
-                {blackouts.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>尚無休假設定</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {blackouts.map((b) => (
-                      <div
-                        key={b.id}
-                        style={{
-                          background: '#fef2f2',
-                          borderRadius: 8,
-                          padding: '12px 16px',
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                          gap: 8,
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 14 }}>
-                            {new Date(b.starts_at).toLocaleString('zh-TW')} ~ {new Date(b.ends_at).toLocaleString('zh-TW')}
-                          </div>
-                          {b.reason && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>{b.reason}</div>}
-                          <span style={badgeStyle(b.source === 'manual' ? 'warning' : 'default')}>
-                            {b.source === 'manual' ? '手動設定' : '系統設定'}
-                          </span>
-                        </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={() => openBlackoutModal(b)} style={smallBtn('#fff', '#7c3aed')}>
-                            編輯
-                          </button>
-                          <button onClick={() => deleteBlackout(b.id)} style={smallBtn('#fff', '#dc2626')}>
-                            刪除
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* ── Slot Preview ── */}
-            <div style={cardStyle}>
-              <div
-                style={{
-                  padding: '16px 20px',
-                  borderBottom: '1px solid #f0f0f0',
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
-                  justifyContent: 'space-between',
-                  alignItems: isMobile ? 'stretch' : 'center',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>時段預覽</h2>
-                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#6b7280' }}>預覽系統將產生的可預約時段</p>
-                </div>
-                {/* On mobile, stack each control on its own row so the native
-                    date picker can be tapped without overflowing the viewport. */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: isMobile ? 'column' : 'row',
-                    alignItems: isMobile ? 'stretch' : 'center',
-                    gap: 8,
-                    flexWrap: 'wrap',
-                  }}
-                >
-                  <select
-                    aria-label="篩選方案"
-                    value={previewPlanId}
-                    onChange={(e) => setPreviewPlanId(e.target.value)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      border: '1px solid #e5e7eb',
-                      fontSize: 13,
-                      minWidth: 0,
-                      flex: isMobile ? undefined : '1 1 240px',
-                      width: isMobile ? '100%' : undefined,
-                      boxSizing: 'border-box',
-                    }}
-                  >
-                    <option value="">全部方案（不篩選）</option>
-                    {activityPlanOptions.map((plan) => (
-                      <option key={plan.planId} value={plan.planId}>
-                        {`${plan.activityTitle}・${plan.planName}（${bookingTypeLabelZh(plan.bookingType)}・${formatParticipants(plan.minParticipants, plan.maxParticipants)}）`}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="date"
-                    aria-label="預覽起日"
-                    value={previewDateFrom}
-                    onChange={(e) => setPreviewDateFrom(e.target.value)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      border: '1px solid #e5e7eb',
-                      fontSize: 13,
-                      minWidth: 0,
-                      width: isMobile ? '100%' : undefined,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                  <span style={{ display: isMobile ? 'none' : 'inline' }}>~</span>
-                  <input
-                    type="date"
-                    aria-label="預覽迄日"
-                    value={previewDateTo}
-                    onChange={(e) => setPreviewDateTo(e.target.value)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      border: '1px solid #e5e7eb',
-                      fontSize: 13,
-                      minWidth: 0,
-                      width: isMobile ? '100%' : undefined,
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                  <button
-                    onClick={loadPreview}
-                    disabled={previewLoading}
-                    style={{ ...smallBtn('#7c3aed', '#fff'), width: isMobile ? '100%' : undefined }}
-                  >
-                    {previewLoading ? '載入中...' : '更新預覽'}
-                  </button>
-                </div>
-              </div>
-              <div style={{ padding: 20 }}>
-                {previewError && (
-                  <div
-                    data-testid="guide-availability-preview-error"
-                    style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontSize: 13 }}
-                  >
-                    ⚠️ {previewError}
-                  </div>
-                )}
-                <div
-                  data-testid="guide-availability-preview-contract"
-                  style={{
-                    marginBottom: 12,
-                    padding: '10px 12px',
-                    borderRadius: 8,
-                    border: '1px solid #e5e7eb',
-                    background: '#f9fafb',
-                    fontSize: 12,
-                    color: '#374151',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                  }}
-                >
-                  <div data-testid="guide-preview-source-label">預覽來源：{previewSource}</div>
-                  <div data-testid="guide-preview-reason-label">原因代碼：{previewReasonCode || 'N/A'}</div>
-                  <div>previewCanonicalState：{previewCanonicalState || 'N/A'}</div>
-                  <div>previewSeasonGate：{previewSeasonGate || 'N/A'}</div>
-                  {previewSource === 'legacy_local_preview' && (
-                    <div data-testid="guide-preview-legacy-warning" style={{ color: '#92400e' }}>
-                      注意：目前為 local/legacy 預覽，僅供排班參考，不代表旅客端最終可訂狀態。
-                    </div>
-                  )}
-                </div>
-                {previewNotice && (
-                  <div
-                    data-testid="preview-scheduled-notice"
-                    style={{ marginBottom: 12, border: '1px solid #c7d2fe', background: '#eef2ff', borderRadius: 10, padding: '10px 12px', color: '#3730a3' }}
-                  >
-                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>排程預約方案</div>
-                    <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewNotice}</div>
-                  </div>
-                )}
-                {previewPlan && !previewNotice && (
-                  <div style={{ marginBottom: 10, fontSize: 12, color: '#374151' }}>
-                    預覽方案：{previewPlan.planName}（{formatParticipants(previewPlan.minParticipants, previewPlan.maxParticipants)}）
-                    {previewBufferNote && (
-                      <span style={{ marginLeft: 8, color: '#6b7280' }}>・{previewBufferNote}</span>
-                    )}
-                  </div>
-                )}
-                {!previewNotice && (
-                <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewPlanSeasonStatus.tone].border}`, background: toneStyles[previewPlanSeasonStatus.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewPlanSeasonStatus.tone].color }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewPlanSeasonStatus.title}</div>
-                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewPlanSeasonStatus.description}</div>
-                </div>
-                )}
-                {!previewNotice && (
-                <div style={{ marginBottom: 12, border: `1px solid ${toneStyles[previewReason.tone].border}`, background: toneStyles[previewReason.tone].background, borderRadius: 10, padding: '10px 12px', color: toneStyles[previewReason.tone].color }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>此期間無產生可預約時段時，請先看這裡</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{previewReason.label}</div>
-                  <div style={{ fontSize: 12, lineHeight: 1.6 }}>{previewReason.description}</div>
-                  <div style={{ marginTop: 6, fontSize: 12 }}>可能原因包含管理員覆寫、已有衝突，或方案開放季節尚未設定。</div>
-                </div>
-                )}
-                {previewNotice ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                    排程預約方案不套用動態時段預覽，請至「場次管理」檢視固定場次。
-                  </div>
-                ) : previewSlots.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}>
-                    此期間無可用時段。
-                    <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>{previewReason.label}</div>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {Object.entries(slotsByDate).map(([date, slots]) => {
-                      const dayOfWeek = new Date(date).getDay();
-                      return (
-                        <div key={date}>
-                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: dayOfWeek === 0 || dayOfWeek === 6 ? '#dc2626' : '#111' }}>
-                            {date} ({WEEKDAYS[dayOfWeek]})
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                            {slots.map((slot, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  background: slot.isAvailable ? '#dcfce7' : '#f3f4f6',
-                                  color: slot.isAvailable ? '#166534' : '#9ca3af',
-                                  padding: '4px 10px',
-                                  borderRadius: 6,
-                                  fontSize: 12,
-                                  fontWeight: 500,
-                                }}
-                              >
-                                {/* AC3: show full range using formatSlotRangeLabel (e.g. 09:00 – 15:00) */}
-                                {formatSlotRangeLabel(slot.startAt, slot.endAt, 'Asia/Taipei')}
-                                {slot.minParticipants && `・${slot.minParticipants}人成團`}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
+            <GuideWeeklyRulesSection
+              isMobile={isMobile}
+              rules={rules}
+              optionByPlanId={optionByPlanId}
+              openRuleModal={openRuleModal}
+              deleteRule={deleteRule}
+            />
+            <GuideBlackoutSection
+              blackouts={blackouts}
+              openBlackoutModal={openBlackoutModal}
+              deleteBlackout={deleteBlackout}
+            />
+            <GuideSlotPreviewSection
+              isMobile={isMobile}
+              rules={rules}
+              activityPlanOptions={activityPlanOptions}
+              previewPlanId={previewPlanId}
+              setPreviewPlanId={setPreviewPlanId}
+              previewDateFrom={previewDateFrom}
+              setPreviewDateFrom={setPreviewDateFrom}
+              previewDateTo={previewDateTo}
+              setPreviewDateTo={setPreviewDateTo}
+              loadPreview={loadPreview}
+              previewLoading={previewLoading}
+              previewError={previewError}
+              previewSource={previewSource}
+              previewReasonCode={previewReasonCode}
+              previewCanonicalState={previewCanonicalState}
+              previewSeasonGate={previewSeasonGate}
+              previewNotice={previewNotice}
+              previewPlan={previewPlan}
+              previewPlanSeasonStatus={previewPlanSeasonStatus}
+              previewReason={previewReason}
+              previewSlots={previewSlots}
+            />
           </>
         )}
       </div>

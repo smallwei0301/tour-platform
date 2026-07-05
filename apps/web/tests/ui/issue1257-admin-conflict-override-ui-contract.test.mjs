@@ -6,15 +6,23 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const GUIDE_AVAILABILITY_PAGE = path.join(ROOT, 'app/admin/guides/[guideId]/availability/page.tsx');
-const ACTIVITY_EDIT_PAGE = path.join(ROOT, 'app/admin/activities/[id]/edit/page.tsx');
+// #1615 拆檔：admin availability 頁的例外開放 CTA 移至 admin-sections、
+// Modal 內容移至 admin-conflict-override-modal（純結構搬移、零行為變更）；
+// 來源契約改讀「頁面＋其子元件」串接內容，斷言意圖不變。
+const GUIDE_AVAILABILITY_SOURCES = [
+  'app/admin/guides/[guideId]/availability/page.tsx',
+  'src/components/availability/admin-sections.tsx',
+  'src/components/availability/admin-conflict-override-modal.tsx',
+].map((rel) => path.join(ROOT, rel));
+// #1615 拆檔：admin edit 的場次 Modal（含 helper copy）移至 ScheduleSection 元件
+const ACTIVITY_EDIT_PAGE = path.join(ROOT, 'src/components/admin/activity-form/ScheduleSection.tsx');
 
 async function readSource(filePath) {
   return readFile(filePath, 'utf8');
 }
 
 test('guide availability page renders conflict-override CTA, modal copy, and POST wiring for issue1257', async () => {
-  const src = await readSource(GUIDE_AVAILABILITY_PAGE);
+  const src = (await Promise.all(GUIDE_AVAILABILITY_SOURCES.map(readSource))).join('\n');
 
   assert.match(src, /例外開放此場/, 'blocked conflict slot should expose the conflict-override CTA');
   assert.match(src, /例外開放衝突時段/, 'modal title should explain this is a conflict override');
