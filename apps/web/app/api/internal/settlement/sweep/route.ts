@@ -66,8 +66,8 @@ export async function POST(req: NextRequest) {
     // value makes it try to cast that literal text to uuid and 500s the whole
     // sweep. Read the order_ids as a real query and filter in JS instead.
     // Idempotency is still guaranteed by the upsert below
-    // (onConflict: 'order_id', ignoreDuplicates: true) — this filter is just an
-    // optimization to avoid recomputing rows that are already settled.
+    // (onConflict: 'order_id,settlement_kind', ignoreDuplicates: true) — this filter
+    // is just an optimization to avoid recomputing rows that are already settled.
     const { data: settledRows, error: settledError } = await supabase
       .from('payout_items')
       .select('order_id');
@@ -166,7 +166,10 @@ export async function POST(req: NextRequest) {
         opsTracking ?? null,
         { commission_rate: config.commission_rate, version: config.version ?? 'v1' },
       );
-      return item ? [{ ...item, settled_at: now }] : [];
+      // 顯式帶 settlement_kind='settlement'：#449 後 payout_items 的冪等鍵是
+      // UNIQUE(order_id, settlement_kind)，正結算列與紅沖列（settlement_kind='reversal'）
+      // 靠這欄區分。不帶則無法正確走複合鍵 index inference。
+      return item ? [{ ...item, settled_at: now, settlement_kind: 'settlement' }] : [];
     });
 
     if (payoutItems.length === 0) {
@@ -174,11 +177,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true, settled: 0, message: 'no orders to settle' });
     }
 
-    // Upsert payout_items — ON CONFLICT DO NOTHING (idempotent via UNIQUE order_id)
+    // Upsert payout_items — ON CONFLICT DO NOTHING（冪等）。
+    // onConflict 必須對齊 #449 後的 UNIQUE INDEX (order_id, settlement_kind)：
+    // 舊的單欄 UNIQUE(order_id) 已被 20260513_issue449 migration DROP，若沿用單欄
+    // 冪等鍵會讓 Postgres 回「no unique or exclusion constraint matching the
+    // ON CONFLICT specification」→ sweep 500（#1365 排上 cron 後首次暴露）。
     // Supabase upsert with ignoreDuplicates=true maps to ON CONFLICT DO NOTHING in PostgREST
     const { error: insertError } = await supabase
       .from('payout_items')
-      .upsert(payoutItems, { onConflict: 'order_id', ignoreDuplicates: true });
+      .upsert(payoutItems, { onConflict: 'order_id,settlement_kind', ignoreDuplicates: true });
 
     if (insertError) {
       void recordCronRun({ jobKey: 'settlement_sweep', outcome: 'error', summary: { error: insertError.message.slice(0, 200) }, startedAt: cronStartedAt });
