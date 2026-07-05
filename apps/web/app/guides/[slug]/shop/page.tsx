@@ -53,7 +53,7 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
 
       {/* 標題列 */}
       <div className="sib-toprow">
-        <h1 className="sib-h1" style={{ fontSize: 34 }}>線上預約</h1>
+        <h1 className="sib-h1" style={{ fontSize: 30 }}>線上預約</h1>
         <ShopMemberButton slug={slug} />
       </div>
 
