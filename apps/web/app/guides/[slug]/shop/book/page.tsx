@@ -488,7 +488,7 @@ export default function GuideShopBookingPage() {
         ) : (
           <button className="sib-back" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}><BackIcon size={13} /> 上一步</button>
         )}
-        <span className="sib-current">目前選擇：{shop.guide.displayName}<PersonIcon size={16} /></span>
+        <span className="sib-current">目前選擇：{String(shop.guide.displayName || '').replace(/[（(].*?[）)]/g, '').trim()}<PersonIcon size={16} /></span>
       </div>
 
       {error && (

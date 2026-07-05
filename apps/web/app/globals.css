@@ -3862,7 +3862,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-guide-card {
   position: relative; margin-top: -22px; background: var(--sib-card);
   border: 1px solid var(--sib-gold-line); border-radius: 16px;
-  padding: 15px 18px; display: flex; gap: 14px; align-items: flex-start;
+  padding: 26px 18px; display: flex; gap: 14px; align-items: flex-start;
   box-shadow: 0 6px 20px rgba(26, 46, 31, 0.06);
 }
 .sib-guide-card::before {
@@ -3880,7 +3880,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-guide-bio { margin: 7px 0 0; color: var(--sib-ink-soft); font-size: 14px; line-height: 1.7; }
 
 /* 章節標題：◆ ─── 標題 ─── ◆ */
-.sib-section-title { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 18px 0 14px; }
+.sib-section-title { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 12px; }
 .sib-section-title span { font-family: var(--tp-serif); font-size: 24px; font-weight: 700; letter-spacing: 0.18em; color: var(--sib-ink); }
 .sib-orn { flex: 1; height: 1px; background: var(--sib-gold-line); max-width: 90px; position: relative; }
 .sib-orn::after { content: '◆'; position: absolute; top: -8px; color: var(--sib-gold); font-size: 9px; }
@@ -3918,8 +3918,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-cta {
   max-width: 480px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 14px;
   background: linear-gradient(180deg, #cb5a31 0%, #b8481f 100%); color: #f6ecd9;
-  border: none; border-radius: 16px; padding: 20px 22px; width: 100%;
-  font-family: var(--tp-serif); font-size: 21px; font-weight: 800; letter-spacing: 0.16em;
+  border: none; border-radius: 16px; padding: 13px 22px; width: 100%;
+  font-family: var(--tp-serif); font-size: 21px; font-weight: 700; letter-spacing: 0.16em;
   text-decoration: none; box-shadow: 0 8px 20px rgba(176, 60, 30, 0.32); position: relative;
 }
 .sib-cta-ico { position: absolute; left: 22px; width: 40px; height: 30px; opacity: 0.85; }
@@ -3945,7 +3945,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-back { border: none; background: transparent; color: var(--sib-ink-soft);
   padding: 4px 2px; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
 .sib-back img { display: inline-block; }
-.sib-current { margin-left: auto; color: var(--sib-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; }
+.sib-current { margin-left: auto; color: var(--sib-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 
 /* 步驟指示器 1—2—3 */
 .sib-ind { display: flex; align-items: flex-start; justify-content: space-between; margin: 22px 4px 8px; position: relative; }
@@ -3976,7 +3976,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* 行程 radio 卡（step1） */
 .sib-plan-rcard { display: flex; gap: 14px; align-items: stretch; width: 100%; text-align: left; cursor: pointer;
-  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 16px; padding: 12px; margin-bottom: 12px; position: relative; }
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 16px; padding: 10px; margin-bottom: 11px; position: relative; }
 .sib-plan-rcard.on { border: 1.5px solid var(--sib-gold); box-shadow: 0 4px 14px rgba(176,141,62,0.12); }
 .sib-plan-thumb { flex: 0 0 104px; width: 104px; height: 96px; border-radius: 12px; overflow: hidden; background: #e6ddc6; }
 .sib-plan-thumb img { width: 100%; height: 100%; object-fit: cover; }
