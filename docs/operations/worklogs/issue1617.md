@@ -10,7 +10,7 @@
 - [x] README.md 連結同步；issue1189 歸檔守門測試綠
 - [x] 巢狀 tour-platform/supabase 刪除 — owner 於 2026-07-05 17:08 回覆
       `P0-OVERRIDE: tour-platform/` 授權後以 git rm 移除 3 個舊編號 SQL 殘留
-- [ ] CLAUDE.md 的 packages/{config,ui} 描述修正 — 治理檔（鐵律 9），需 owner 親改或授權
+- [x] CLAUDE.md 的 packages/{config,ui} 描述修正 — owner 2026-07-05 17:46 授權後改第 35 行
 
 ## 已完成（附證據）
 - 07-05 歸檔＋workspaces＋README（commits 524e256、030a10d｜issue1189 守門綠）
@@ -26,3 +26,4 @@
 
 ## P0-OVERRIDE 使用紀錄
 - 2026-07-05 17:08（Asia/Taipei）｜路徑：tour-platform/｜使用者授權原文：「P0-OVERRIDE: tour-platform/」｜用途：git rm 巢狀 tour-platform/supabase 3 個舊編號 SQL 殘留｜override 檔用畢即刪（消耗式）
+- 2026-07-05 17:46（Asia/Taipei）｜路徑：CLAUDE.md｜使用者授權原文：「授權」（回應「packages 描述修正需親改或授權」之提問）｜用途：Edit 第 35 行修正 packages/{config,ui} 不實描述｜override 檔用畢即刪（消耗式）
