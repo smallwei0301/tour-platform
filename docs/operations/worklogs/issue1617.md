@@ -8,8 +8,8 @@
 - [x] 7 個根目錄歷史報告檔 git mv → docs/99-archive/（附索引 README）
 - [x] package.json workspaces 移除 packages/*；npm install --ignore-scripts 重驗綠
 - [x] README.md 連結同步；issue1189 歸檔守門測試綠
-- [ ] 巢狀 tour-platform/supabase 刪除 — **被 bash-guard migrations 路徑保護擋下，
-      待 owner 在對話回覆 `P0-OVERRIDE: tour-platform/` 授權後執行**
+- [x] 巢狀 tour-platform/supabase 刪除 — owner 於 2026-07-05 17:08 回覆
+      `P0-OVERRIDE: tour-platform/` 授權後以 git rm 移除 3 個舊編號 SQL 殘留
 - [ ] CLAUDE.md 的 packages/{config,ui} 描述修正 — 治理檔（鐵律 9），需 owner 親改或授權
 
 ## 已完成（附證據）
@@ -23,3 +23,6 @@
   全庫僅被同批歸檔的 MIGRATION-012-013-GUIDE.md 引用——不需再盤（只差授權）
 - bash-guard 對整條指令字串做 grep：commit 訊息含「mv」＋受保護路徑字樣會誤中，
   訊息措辭避開即可（不是 staged 內容的問題）
+
+## P0-OVERRIDE 使用紀錄
+- 2026-07-05 17:08（Asia/Taipei）｜路徑：tour-platform/｜使用者授權原文：「P0-OVERRIDE: tour-platform/」｜用途：git rm 巢狀 tour-platform/supabase 3 個舊編號 SQL 殘留｜override 檔用畢即刪（消耗式）
