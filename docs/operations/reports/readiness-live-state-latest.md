@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-04T18:24:15.286Z -->
+<!-- query_timestamp: 2026-07-05T00:45:47.365Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-04T18:24:15.286Z  
-**Commit SHA:** `5dcd2bbcb22d8088a493a16d67007a2e0e261390`
+**Query timestamp:** 2026-07-05T00:45:47.365Z  
+**Commit SHA:** `1e290153eb91c30e9ef7b065c0129bf1012bc1f5`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1624 | [feat(support): 行前 24h 導遊聯絡（資格＋同意雙閘，PII 安全）(#1596) [需 owner 套 migration]](https://github.com/smallwei0301/tour-platform/pull/1624) | `claude/repo-audit-optimization-m4s8os` |
+| #1624 | [健檢 v2 剩餘 backlog：#1596 #1590 #1592 #1591 #1593 #1594（6 issue 後端全交付，需 owner 套 5 支 migration）](https://github.com/smallwei0301/tour-platform/pull/1624) | `claude/repo-audit-optimization-m4s8os` |
 | #1610 | [feat(guide-shop): 導遊開店第 1 週改版 — /for-guides landing、商店首頁方案卡、預約延後登入](https://github.com/smallwei0301/tour-platform/pull/1610) | `claude/plan-evaluation-shop-page-09krqv` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
