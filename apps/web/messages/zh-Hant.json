@@ -13,7 +13,8 @@
     "blog": "旅遊指南",
     "login": "登入 / 註冊",
     "logout": "登出",
-    "myTrips": "我的行程"
+    "myTrips": "我的行程",
+    "notifications": "站內通知"
   },
   "footer": {
     "tagline1": "台灣在地導遊交易平台",
@@ -1210,6 +1211,7 @@
     "orders": "我的訂單",
     "wishlist": "我的最愛",
     "qa": "問答回覆",
+    "notifications": "站內通知",
     "profile": "個人資料"
   },
   "orders": {

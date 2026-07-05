@@ -6,6 +6,7 @@ import { createClient } from '../../lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { PublicIcon } from '../ui/PublicIcon';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { NotificationBell } from './NotificationBell';
 import { useChromeLocale } from '../../i18n/use-client-locale';
 import { getNavMessages } from '../../i18n/client-nav-messages';
 
@@ -156,6 +157,7 @@ export function Navbar() {
           {!loadingUser && (
             user ? (
               <>
+                <NotificationBell />
                 <Link
                   href="/me/orders"
                   style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)' }}
@@ -265,6 +267,9 @@ export function Navbar() {
             </div>
             {user ? (
               <>
+                <Link href="/me/notifications" className="tp-mobile-menu-item" data-testid="nav-mobile-notifications" onClick={() => setMenuOpen(false)}>
+                  {m.nav.notifications}
+                </Link>
                 <Link href="/me/orders" className="tp-mobile-menu-item" data-testid="nav-mobile-my-trips" onClick={() => setMenuOpen(false)}>
                   {m.nav.myTrips}
                 </Link>

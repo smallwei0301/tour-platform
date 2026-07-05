@@ -7,6 +7,7 @@ import {
 import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-telegram-notify.mjs';
 import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
+import { createNotification } from '../../../../../../src/lib/db-notifications.mjs';
 import { createClient } from '@supabase/supabase-js';
 
 // AC5: statuses that lock the order against cancellation
@@ -107,6 +108,17 @@ export async function POST(
       peopleCount: order.peopleCount,
       totalTwd: order.totalTwd,
     }).catch(() => {});
+
+    // 🔔 #1593 站內通知（best-effort，createNotification 永不 throw）
+    if (order.userId) {
+      void createNotification({
+        userId: order.userId,
+        type: 'order_status',
+        title: '訂單已取消',
+        body: `「${order.title || '您的訂單'}」已由平台取消，退款將依原付款方式處理。`,
+        linkPath: `/me/orders/${orderId}`,
+      }).catch(() => {});
+    }
 
     return Response.json(
       ok({

@@ -5,6 +5,7 @@
  */
 import { lookupOrderContext } from './reschedule-notify';
 import { sendOrderMessageNotice } from './email';
+import { createNotification } from './db-notifications.mjs';
 
 type OrderMessageResult = {
   message: { orderId: string; senderRole: string; body: string };
@@ -26,11 +27,22 @@ export async function notifyGuideOfOrderMessage(result: OrderMessageResult): Pro
   });
 }
 
-/** guide 回覆 → 通知旅客。 */
+/** guide 回覆 → 通知旅客（email＋#1593 站內通知）。 */
 export async function notifyTravelerOfOrderMessage(result: OrderMessageResult): Promise<void> {
   if (!result.shouldNotify) return;
   const ctx = await lookupOrderContext(result.message.orderId);
-  if (!ctx?.contactEmail) return;
+  if (!ctx) return;
+  // #1593 站內通知（best-effort，createNotification 永不 throw）
+  if (ctx.travelerUserId) {
+    await createNotification({
+      userId: ctx.travelerUserId,
+      type: 'message_reply',
+      title: '嚮導回覆了您的訊息',
+      body: `「${ctx.activityTitle}」：${result.message.body}`.slice(0, 200),
+      linkPath: `/me/orders/${result.message.orderId}`,
+    });
+  }
+  if (!ctx.contactEmail) return;
   await sendOrderMessageNotice({
     to: ctx.contactEmail,
     activityTitle: ctx.activityTitle,

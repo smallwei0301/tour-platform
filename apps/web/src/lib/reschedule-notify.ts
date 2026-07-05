@@ -4,6 +4,7 @@
  */
 import { hasSupabaseEnv } from './db.mjs';
 import { sendRescheduleRequestNotice, sendRescheduleDecisionNotice } from './email';
+import { createNotification } from './db-notifications.mjs';
 
 type RescheduleResult = {
   id: string;
@@ -21,12 +22,13 @@ async function getServiceClient() {
   });
 }
 
-/** #1411 起由 order-message-notify.ts 共用 → export。 */
+/** #1411 起由 order-message-notify.ts 共用 → export。#1593 加 travelerUserId 供站內通知。 */
 export async function lookupOrderContext(orderId: string): Promise<{
   activityTitle: string;
   contactName?: string;
   contactEmail?: string;
   guideEmail?: string;
+  travelerUserId?: string;
 } | null> {
   if (!hasSupabaseEnv()) {
     // in-memory：fixtures 無嚮導 email；旅客 email 從 store 取得
@@ -39,13 +41,14 @@ export async function lookupOrderContext(orderId: string): Promise<{
       contactName: order.contactName ? String(order.contactName) : undefined,
       contactEmail: order.contactEmail ? String(order.contactEmail) : undefined,
       guideEmail: undefined,
+      travelerUserId: order.userId ? String(order.userId) : (order.user_id ? String(order.user_id) : undefined),
     };
   }
 
   const supabase = await getServiceClient();
   const { data: order } = await supabase
     .from('orders')
-    .select('id, contact_name, contact_email, activities(title, guide_id, guide_profiles(guide_email))')
+    .select('id, user_id, contact_name, contact_email, activities(title, guide_id, guide_profiles(guide_email))')
     .eq('id', orderId)
     .maybeSingle();
   if (!order) return null;
@@ -58,6 +61,7 @@ export async function lookupOrderContext(orderId: string): Promise<{
     contactName: order.contact_name ?? undefined,
     contactEmail: order.contact_email ?? undefined,
     guideEmail: guideProfile?.guide_email ?? undefined,
+    travelerUserId: order.user_id ?? undefined,
   };
 }
 
@@ -75,16 +79,28 @@ export async function notifyRescheduleRequested(result: RescheduleResult): Promi
   });
 }
 
-/** 嚮導決定 → 通知旅客。 */
+/** 嚮導決定 → 通知旅客（email＋#1593 站內通知）。 */
 export async function notifyRescheduleDecided(result: RescheduleResult, action: string): Promise<void> {
   const ctx = await lookupOrderContext(result.orderId);
-  if (!ctx?.contactEmail) return;
+  if (!ctx) return;
+  const approved = action === 'approve';
+  // #1593 站內通知（best-effort，createNotification 永不 throw）
+  if (ctx.travelerUserId) {
+    await createNotification({
+      userId: ctx.travelerUserId,
+      type: 'reschedule_result',
+      title: approved ? '改期申請已通過' : '改期申請未通過',
+      body: `「${ctx.activityTitle}」的改期${approved ? '已確認' : '未被接受'}${result.note ? `：${result.note}` : ''}`,
+      linkPath: `/me/orders/${result.orderId}`,
+    });
+  }
+  if (!ctx.contactEmail) return;
   await sendRescheduleDecisionNotice({
     to: ctx.contactEmail,
     activityTitle: ctx.activityTitle,
     contactName: ctx.contactName,
     orderId: result.orderId,
-    approved: action === 'approve',
+    approved,
     toStartAt: result.toStartAt,
     note: result.note,
   });

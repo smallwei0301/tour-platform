@@ -13,7 +13,8 @@
     "blog": "Travel Journal",
     "login": "Log in / Sign up",
     "logout": "Log out",
-    "myTrips": "My Trips"
+    "myTrips": "My Trips",
+    "notifications": "Notifications"
   },
   "footer": {
     "tagline1": "Taiwan's local-guide marketplace",
@@ -1210,6 +1211,7 @@
     "orders": "My Orders",
     "wishlist": "Favorites",
     "qa": "Q&A replies",
+    "notifications": "Notifications",
     "profile": "Profile"
   },
   "orders": {
