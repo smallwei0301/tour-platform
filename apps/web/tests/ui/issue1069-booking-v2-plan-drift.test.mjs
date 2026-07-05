@@ -142,7 +142,9 @@ test('GH-1069: Step1 hard-block reason uses explicit red error color in booking 
 });
 
 test('GH-1069 RED: guide availability preview UI must expose source/reason parity labels to avoid traveler-bookability confusion', () => {
-  const source = readFileSync(guideAvailabilityPage, 'utf8');
+  // #1615 拆檔：預覽 UI 移至 guide-sections.tsx，合併掃描（斷言意圖不變）
+  const source = readFileSync(guideAvailabilityPage, 'utf8')
+    + readFileSync(resolve(appRoot, 'src/components/availability/guide-sections.tsx'), 'utf8');
 
   assert.match(source, /預覽來源/, 'guide preview UI should show source label from API contract');
   assert.match(source, /availabilitySource/, 'guide preview UI should read availabilitySource field from preview response');

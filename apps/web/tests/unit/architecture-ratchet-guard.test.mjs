@@ -57,11 +57,9 @@ function countLines(relPath) {
 //    拆完一個檔請把該檔天花板下修（或整列刪除，讓它回到 800 行一般上限）。
 // ---------------------------------------------------------------------------
 // 行數以 split('\n').length 計（與 db-mjs-size-guard 同語意，比 wc -l 多 1）。
+// 2026-07-05 #1615：admin activities edit（1538→721）/plans（1306→639）、
+// admin/guide availability（1221→631／1218→623）四頁拆解完成、脫離白名單。
 const GOD_FILE_CEILINGS = new Map([
-  ['app/admin/activities/[id]/edit/page.tsx', 1538],
-  ['app/admin/activities/[id]/plans/page.tsx', 1306],
-  ['app/admin/guides/[guideId]/availability/page.tsx', 1221],
-  ['app/guide/availability/page.tsx', 1218],
   ['app/api/v2/bookings/draft/route.ts', 1200], // +1：#1616 env getter import 行
   ['app/booking/[activityId]/page.tsx', 1080],
   ['app/guide/profile/page.tsx', 992],

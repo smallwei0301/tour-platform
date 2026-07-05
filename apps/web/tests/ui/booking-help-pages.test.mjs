@@ -62,8 +62,11 @@ test('conflict-override help is linked from the availability page (single canoni
   const availSrc = read('src/components/availability/admin-sections.tsx');
   assert.match(availSrc, /\/admin\/help\/conflict-override/);
   const helpIdx = availSrc.indexOf('/admin/help/conflict-override');
-  const previewIdx = availSrc.indexOf('時段預覽');
-  assert.ok(helpIdx > -1 && previewIdx > -1 && Math.abs(helpIdx - previewIdx) < 800, 'help link near 時段預覽');
+  // 檔內「時段預覽」出現多次（含檔頭註解）——取「距連結最近的一次」量距離，
+  // 錨定實際 <h2> 標題就在連結旁的意圖不變。
+  const previewIdxs = [...availSrc.matchAll(/時段預覽/g)].map((m) => m.index);
+  const nearestDist = Math.min(...previewIdxs.map((i) => Math.abs(helpIdx - i)));
+  assert.ok(helpIdx > -1 && previewIdxs.length > 0 && nearestDist < 800, 'help link near 時段預覽');
 
   // 不應再出現在列表卡片或導遊詳情頁(避免重複入口)。
   assert.doesNotMatch(read('app/admin/guides/page.tsx'), /\/admin\/help\/conflict-override/);

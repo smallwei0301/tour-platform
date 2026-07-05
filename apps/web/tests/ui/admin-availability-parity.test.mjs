@@ -12,8 +12,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = join(__dirname, '../..');
 const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
-const ADMIN = read('app/admin/guides/[guideId]/availability/page.tsx');
-const GUIDE = read('app/guide/availability/page.tsx');
+// #1615：兩頁已拆出 src/components/availability/** 子元件（純結構搬移、零行為
+// 變更）——表單欄位/提示區塊改為共用元件，parity 由「同一元件」直接保證；
+// 來源契約改讀「頁面＋其子元件」串接內容，斷言意圖不變。
+const SHARED_FORM_SOURCES = [
+  'src/components/availability/rule-form-fields.tsx',
+  'src/components/availability/blackout-form-fields.tsx',
+  'src/components/availability/shared.ts',
+];
+const ADMIN = [
+  'app/admin/guides/[guideId]/availability/page.tsx',
+  'src/components/availability/admin-sections.tsx',
+  'src/components/availability/admin-conflict-override-modal.tsx',
+  ...SHARED_FORM_SOURCES,
+].map(read).join('\n');
+const GUIDE = [
+  'app/guide/availability/page.tsx',
+  'src/components/availability/guide-sections.tsx',
+  ...SHARED_FORM_SOURCES,
+].map(read).join('\n');
 const PLANS_API = read('app/api/v2/admin/guides/[guideId]/activity-plans/route.ts');
 
 test('admin form imports the same season-conflict helper as the guide form', () => {

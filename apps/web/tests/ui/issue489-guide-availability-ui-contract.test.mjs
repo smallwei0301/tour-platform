@@ -11,8 +11,24 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
+// #1615：guide availability 頁已拆出 src/components/availability/** 子元件
+//（純結構搬移、零行為變更），來源契約改讀「頁面＋其子元件」串接內容，
+// 斷言意圖不變（這些 UI 仍由該頁組裝渲染）。
+const GUIDE_AVAILABILITY_SOURCES = [
+  'app/guide/availability/page.tsx',
+  'src/components/availability/guide-sections.tsx',
+  'src/components/availability/rule-form-fields.tsx',
+  'src/components/availability/blackout-form-fields.tsx',
+  'src/components/availability/shared.ts',
+];
+
+async function readGuideAvailabilitySource() {
+  const parts = await Promise.all(GUIDE_AVAILABILITY_SOURCES.map((rel) => readSource(rel)));
+  return parts.join('\n');
+}
+
 test('availability page fetches guide-owned activity+plan options and sends activity_plan_id/effective dates in payload', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
 
   assert.match(src, /fetch\('\/api\/guide\/activities-with-plans'\)/, 'must fetch /api/guide/activities-with-plans for guide-owned options');
   assert.match(src, /activity_plan_id/, 'rule payload must include activity_plan_id');
@@ -22,7 +38,7 @@ test('availability page fetches guide-owned activity+plan options and sends acti
 });
 
 test('availability rules list renders human-readable activity/plan labels and Taiwan timezone text', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
 
   assert.match(src, /activityTitle|activity_name/, 'list should render activity name label');
   assert.match(src, /planName|plan_name|activity_plans\?\.name/, 'list should render plan name label');
@@ -30,7 +46,7 @@ test('availability rules list renders human-readable activity/plan labels and Ta
 });
 
 test('guide availability surfaces formal plan min/max participant context in option/rule/preview labels', async () => {
-  const src = await readSource('app/guide/availability/page.tsx');
+  const src = await readGuideAvailabilitySource();
 
   assert.match(src, /minParticipants|maxParticipants/, 'page should consume plan min/max metadata from API options');
   assert.match(src, /最少\s*\$\{[^}]+\}\s*[｜|]\s*最多\s*\$\{[^}]+\}/, 'plan dropdown label should include min/max participants');

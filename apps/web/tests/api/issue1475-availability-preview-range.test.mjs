@@ -59,7 +59,9 @@ test('guide availability-preview 上限放寬到 92 天', () => {
 });
 
 test('前端預覽不再靜默吞掉錯誤（清空舊資料並顯示原因）', () => {
-  const src = readFileSync(join(webRoot, 'app/guide/availability/page.tsx'), 'utf8');
+  // #1615 拆檔：預覽錯誤 UI 移至 guide-sections.tsx，state 仍在頁面層——合併掃兩檔（斷言意圖不變）
+  const src = readFileSync(join(webRoot, 'app/guide/availability/page.tsx'), 'utf8')
+    + readFileSync(join(webRoot, 'src/components/availability/guide-sections.tsx'), 'utf8');
   assert.match(src, /setPreviewError\(/);
   assert.match(src, /setPreviewSlots\(\[\]\)/);
   assert.match(src, /data-testid="guide-availability-preview-error"/);
