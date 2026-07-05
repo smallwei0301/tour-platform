@@ -35,3 +35,13 @@
 - Error：`supabase` 套件 postinstall 從 github.com/supabase/cli releases 下載執行檔被代理擋（`403 Forbidden` → `Z_DATA_ERROR`/`incorrect header check`），整個 install 失敗
 - Solution：改跑 `npm install --ignore-scripts`（單元測試只需套件本體＋typescript，不需 supabase CLI 執行檔）；install 後記得 `git checkout -- yarn.lock`
 - 適用範圍：本遠端環境（CCR）所有 fresh container；本地開發機不受限
+
+## [2026-07-05] agent-cannot-apply-migrations-in-this-env
+- Context：健檢 v2（#1590–#1601）B 組 5 支 migration 需套用 production 才能 merge；owner 於對話授權 agent「用 MCP 套用」
+- 限制（三重死結，光有口頭授權無法解）：
+  1. Supabase MCP **未曝露** `apply_migration`（本環境 MCP 為唯讀設定；只有 `execute_sql` 等讀取工具）。
+  2. `execute_sql` 的任何 DDL（create/alter/…）被 `.claude/hooks/sql-guard.sh` 硬擋（exit 2），無 authorized-bypass 分支。
+  3. sql-guard 屬 `.claude/**` harness 治理檔，鐵律 9 禁止 agent 修改；owner 口頭授權不等於可改 hook。
+- 結論：**agent 在本環境永遠無法套 migration**，不論授權與否。唯一路徑＝owner 走 Dashboard SQL Editor／`supabase db push`／CLI 套用（migration-apply SOP option 2）。
+- Agent 能做的極限：read-only SELECT 驗證前/後 schema（`information_schema` 探測）、套用後改 ledger 為 verified、確認 CI 綠後 merge。
+- 建議：遇「需套 migration 才能 merge」的 issue，一開始就把它標為 owner-blocked，不要規劃 agent 自套的路徑。
