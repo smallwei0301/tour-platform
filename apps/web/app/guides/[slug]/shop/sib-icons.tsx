@@ -1,58 +1,60 @@
-// 祕島 shop 重設計用的線條圖示（server-safe，純 SVG）。
+// 祕島 shop 圖示：使用使用者附件切割出的真實 icon 資產（/public/shop-icons/*）。
+// 少數純裝飾線條（葉子/CTA 山線/箭頭）保留輕量 SVG。
 import type { CSSProperties } from 'react';
 
-const S = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
-
-export function MountainCircleLogo({ className, style }: { className?: string; style?: CSSProperties }) {
+// 單一 <img> 包裝（decorative icons；lint 對 <img> 的規則於此處統一停用）。
+function Img({ src, w, h, alt = '', style, className }:
+  { src: string; w: number; h: number; alt?: string; style?: CSSProperties; className?: string }) {
   return (
-    <svg className={className} style={style} viewBox="0 0 56 56" aria-hidden>
-      <circle cx="28" cy="28" r="26" {...S} strokeWidth={1.4} />
-      <path d="M12 36l8-11 6 7 4-6 8 10z" {...S} />
-      <path d="M10 40h36" {...S} />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} width={w} height={h} alt={alt} aria-hidden={alt === '' || undefined}
+      className={className} style={{ objectFit: 'contain', display: 'block', ...style }} />
   );
 }
 
+const B = '/shop-icons';
+
+// —— hero / 章節：山中圓徽 —— //
+export function MountainCircleLogo({ className, style }: { className?: string; style?: CSSProperties }) {
+  const s = (style?.width as number) || 52;
+  return <Img src={`${B}/logo-mountain.png`} w={s} h={s} className={className} style={style} />;
+}
+
+// —— 三步驟圖示 —— //
+export function StepMountain() { return <Img src={`${B}/step-trip.png`} w={38} h={30} />; }
+export function StepCalendar() { return <Img src={`${B}/step-date.png`} w={36} h={32} />; }
+export function StepClipboard() { return <Img src={`${B}/step-contact.png`} w={32} h={38} />; }
+
+// —— 人物 / 聯絡 —— //
+export function PersonIcon({ size = 18 }: { size?: number }) { return <Img src={`${B}/c-person.png`} w={size} h={size} />; }
+export function PersonCircleIcon({ size = 20 }: { size?: number }) { return <Img src={`${B}/person.png`} w={size} h={size} />; }
+export function PhoneIcon({ size = 20 }: { size?: number }) { return <Img src={`${B}/c-phone.png`} w={size} h={size} />; }
+export function MailIcon({ size = 20 }: { size?: number }) { return <Img src={`${B}/c-mail.png`} w={size} h={size} />; }
+export function PeopleIcon({ size = 22 }: { size?: number }) { return <Img src={`${B}/people.png`} w={size} h={size} />; }
+
+// —— 行程卡 —— //
+export function ClockIcon({ size = 15 }: { size?: number }) { return <Img src={`${B}/clock.png`} w={size} h={size} />; }
+export function TagIcon({ size = 15 }: { size?: number }) { return <Img src={`${B}/tag.png`} w={size} h={size} />; }
+export function PinIcon({ size = 18 }: { size?: number }) { return <Img src={`${B}/pin.png`} w={size} h={size} />; }
+export function RadioIcon({ on, size = 22 }: { on: boolean; size?: number }) {
+  return <Img src={`${B}/${on ? 'radio-on' : 'radio-off'}.png`} w={size} h={size} />;
+}
+
+// —— 日曆 nav / 返回 / 鎖 —— //
+export function CalPrev({ size = 22 }: { size?: number }) { return <Img src={`${B}/cal-prev.png`} w={size} h={size} />; }
+export function CalNext({ size = 22 }: { size?: number }) { return <Img src={`${B}/cal-next.png`} w={size} h={size} />; }
+export function BackIcon({ size = 16 }: { size?: number }) { return <Img src={`${B}/back.png`} w={size} h={size} />; }
+export function LockIcon({ size = 15 }: { size?: number }) { return <Img src={`${B}/lock.png`} w={size} h={size} />; }
+
+// —— 純裝飾線條（保留 SVG）—— //
 export function LeafIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden>
-      <path d="M4 16C4 9 9 4 16 4c0 7-5 12-12 12z" {...S} stroke="#d9c98f" />
-      <path d="M6 14L15 5" {...S} stroke="#d9c98f" />
+      <path d="M4 16C4 9 9 4 16 4c0 7-5 12-12 12z" fill="none" stroke="#d9c98f" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M6 14L15 5" fill="none" stroke="#d9c98f" strokeWidth="1.4" strokeLinecap="round" />
     </svg>
   );
 }
-
-export function StepMountain() {
-  return (
-    <svg viewBox="0 0 48 48" aria-hidden>
-      <circle cx="33" cy="15" r="5" {...S} stroke="#c9a94e" />
-      <path d="M6 40l11-16 8 10 5-7 12 13z" {...S} />
-    </svg>
-  );
-}
-
-export function StepCalendar() {
-  return (
-    <svg viewBox="0 0 48 48" aria-hidden>
-      <rect x="8" y="11" width="32" height="28" rx="3" {...S} />
-      <path d="M8 19h32M16 8v6M32 8v6" {...S} />
-      <circle cx="32" cy="30" r="7" {...S} />
-      <path d="M32 26v4l3 2" {...S} />
-    </svg>
-  );
-}
-
-export function StepClipboard() {
-  return (
-    <svg viewBox="0 0 48 48" aria-hidden>
-      <rect x="11" y="9" width="26" height="32" rx="3" {...S} />
-      <path d="M18 9a6 6 0 0112 0" {...S} />
-      <path d="M17 20h10M17 26h8" {...S} />
-      <path d="M28 32l7-7 3 3-7 7-3.5.5z" {...S} stroke="#c9a94e" />
-    </svg>
-  );
-}
-
 export function CtaMountain({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 40 30" aria-hidden>
@@ -60,20 +62,10 @@ export function CtaMountain({ className }: { className?: string }) {
     </svg>
   );
 }
-
 export function ArrowRight({ style }: { style?: CSSProperties }) {
   return (
     <svg viewBox="0 0 24 24" style={style} aria-hidden>
-      <path d="M5 12h13M13 6l6 6-6 6" {...S} stroke="currentColor" strokeWidth={1.8} />
-    </svg>
-  );
-}
-
-export function PersonIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
-      <circle cx="12" cy="8" r="4" {...S} />
-      <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" {...S} />
+      <path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

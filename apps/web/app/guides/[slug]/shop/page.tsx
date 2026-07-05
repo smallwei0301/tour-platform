@@ -6,27 +6,10 @@ import { getGuideBySlugDb, getGuideShopDb } from '../../../../src/lib/db.mjs';
 import { isGuideShopEnabled } from '../../../../src/config/feature-flags.mjs';
 import { ShopMemberButton } from './ShopMemberButton';
 import { ShopViewTracker } from './ShopViewTracker';
-import { ShopShareBar } from './ShopShareBar';
 import {
   MountainCircleLogo, LeafIcon, StepMountain, StepCalendar, StepClipboard,
-  CtaMountain, ArrowRight,
+  CtaMountain, ArrowRight, LockIcon,
 } from './sib-icons';
-
-type ShopPlan = {
-  id: string; name: string; basePrice: number | null;
-  priceType: 'per_person' | 'per_group'; duration: string;
-  minParticipants: number; maxParticipants: number | null;
-};
-type ShopActivity = { id: string; slug: string; title: string; region: string; plans: ShopPlan[] };
-
-function planMeta(plan: ShopPlan): string {
-  const cap = plan.maxParticipants ? `${plan.minParticipants}–${plan.maxParticipants} 人` : `${plan.minParticipants} 人起`;
-  return [plan.name, plan.duration, cap].filter(Boolean).join('　·　');
-}
-function planPrice(plan: ShopPlan): string {
-  if (!Number.isFinite(Number(plan.basePrice))) return '價格請洽導遊';
-  return `NT$${Number(plan.basePrice).toLocaleString()} / ${plan.priceType === 'per_group' ? '組' : '人'}`;
-}
 
 // 與導遊公開頁一致的 on-demand ISR；另加 time-based revalidate 兜底（存檔 revalidatePath 打不到本頁）。
 export const fetchCache = 'force-cache';
@@ -60,11 +43,8 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
   const { slug } = await params;
   const shop = await getGuideShopDb(slug).catch((): null => null);
   if (!shop) return notFound();
-  const { guide, activitiesByRegion } = shop;
-  const groups = activitiesByRegion as Array<{ region: string; activities: ShopActivity[] }>;
-  const hasPlans = groups.some((g) => g.activities.length > 0);
+  const { guide } = shop;
   const bio = String(guide.bio || '土生土長的在地人，用在地的眼睛，帶你看見祕境也看見生活。').trim();
-  // 商店卡標題用精簡名（去括號別名），與 mockup 一致並避免換行撐高卡片
   const shortName = String(guide.displayName || '').replace(/[（(].*?[）)]/g, '').trim();
 
   return (
@@ -106,41 +86,6 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
         </div>
       </section>
 
-      {/* 可預約行程（保留方案卡；點卡片帶預選進預約流程） */}
-      {hasPlans && (
-        <>
-          <div className="sib-section-title">
-            <span className="sib-orn sib-orn--l" />
-            <span>可預約行程</span>
-            <span className="sib-orn sib-orn--r" />
-          </div>
-          <div className="sib-plan-list">
-            {groups.map((group) => (
-              <div key={group.region}>
-                {groups.length > 1 && <p className="sib-plan-region">📍 {group.region}</p>}
-                {group.activities.flatMap((activity) =>
-                  activity.plans.map((plan) => (
-                    <Link
-                      key={`${activity.id}-${plan.id}`}
-                      data-testid="shop-landing-plan-card"
-                      href={`/guides/${slug}/shop/book?activityId=${encodeURIComponent(activity.id)}&planId=${encodeURIComponent(plan.id)}`}
-                      className="sib-plan-card"
-                    >
-                      <p className="sib-plan-t">{activity.title}</p>
-                      <p className="sib-plan-meta">{planMeta(plan)}</p>
-                      <p className="sib-plan-price">{planPrice(plan)}</p>
-                    </Link>
-                  ))
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* 分享列：複製連結／LINE／QR */}
-          <ShopShareBar slug={slug} displayName={guide.displayName} />
-        </>
-      )}
-
       {/* 預約三步驟 */}
       <div className="sib-section-title">
         <span className="sib-orn sib-orn--l" />
@@ -168,17 +113,8 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
         <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
       </Link>
 
-      {/* 付款與取消政策 */}
-      <section data-testid="shop-policy" style={{ marginTop: 20, fontSize: 13, color: 'var(--sib-muted)', lineHeight: 1.9 }}>
-        <p style={{ margin: 0 }}>線上付款經 ECPay 加密交易，付款方式以結帳頁顯示為準。</p>
-        <p style={{ margin: '2px 0 0' }}>
-          行程異動與退款依平台退款規範辦理，詳見
-          <Link href="/legal/refund" style={{ marginLeft: 4, color: 'var(--sib-gold)' }}>退款政策</Link>。
-        </p>
-      </section>
-
       {/* 保護提示 */}
-      <p className="sib-guard">🔒 您的資料將受到妥善保護，僅用於預約聯繫</p>
+      <p className="sib-guard"><LockIcon size={14} /> 您的資料將受到妥善保護，僅用於預約聯繫</p>
     </main>
   );
 }

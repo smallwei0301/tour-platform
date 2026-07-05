@@ -3845,7 +3845,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* Hero：大圖＋詩句 overlay */
 .sib-hero {
-  position: relative; width: 100%; aspect-ratio: 1.6 / 1;
+  position: relative; width: 100%; aspect-ratio: 1.72 / 1;
   margin-top: 16px; border-radius: 18px; overflow: hidden;
   border: 1px solid var(--sib-gold-line);
 }
@@ -3899,8 +3899,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
   width: 26px; height: 26px; border-radius: 50%; background: var(--sib-green); color: #efe6c6;
   font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;
 }
-.sib-step-ico { height: 26px; margin: 2px auto 5px; color: var(--sib-gold); display: flex; align-items: center; justify-content: center; }
-.sib-step-ico svg { width: 26px; height: 26px; }
+.sib-step-ico { height: 30px; margin: 1px auto 5px; color: var(--sib-gold); display: flex; align-items: flex-end; justify-content: center; }
+.sib-step-ico svg { width: 28px; height: 28px; }
+.sib-step-ico img { width: auto; height: 29px; }
 .sib-step-t { font-family: var(--tp-serif); font-size: 13.5px; font-weight: 800; color: var(--sib-ink); margin: 0 0 4px; letter-spacing: 0; }
 .sib-step-divider { border: none; border-top: 1px dashed var(--sib-gold-line); margin: 0 0 5px; }
 .sib-step-d { font-size: 10.5px; line-height: 1.45; color: var(--sib-muted); margin: 0; }
@@ -3942,16 +3943,17 @@ details[open] .kkd-faq-q::before { content: '- '; }
 /* ═══════════════ 祕島 Shop 預約流程（book step1/2/3）═══════════════ */
 .sib-book { padding-bottom: 118px; }
 .sib-topbar { display: flex; align-items: center; gap: 12px; padding-top: 16px; }
-.sib-back { border: 1px solid var(--sib-gold-line); background: transparent; color: var(--sib-ink-soft);
-  border-radius: 999px; padding: 6px 14px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; }
+.sib-back { border: none; background: transparent; color: var(--sib-ink-soft);
+  padding: 4px 2px; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+.sib-back img { display: inline-block; }
 .sib-current { margin-left: auto; color: var(--sib-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; }
 
 /* 步驟指示器 1—2—3 */
 .sib-ind { display: flex; align-items: flex-start; justify-content: space-between; margin: 22px 4px 8px; position: relative; }
 .sib-ind-item { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; width: 92px; text-align: center; z-index: 1; }
-.sib-ind-dot { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-size: 15px; font-weight: 700; border: 1.5px solid var(--sib-gold-line); background: var(--sib-paper); color: var(--sib-muted); }
-.sib-ind-item.on .sib-ind-dot { background: var(--sib-green); color: #efe6c6; border-color: var(--sib-green); }
+.sib-ind-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--tp-serif); font-size: 17px; font-weight: 800; border: 1.5px solid var(--sib-gold); background: var(--sib-paper); color: var(--sib-gold); }
+.sib-ind-item.on .sib-ind-dot { background: var(--sib-green); color: var(--sib-gold-strong, #d9c98f); border: 1.5px solid var(--sib-gold); box-shadow: 0 0 0 1px var(--sib-paper) inset; }
 .sib-ind-lbl { font-size: 12.5px; color: var(--sib-muted); line-height: 1.3; }
 .sib-ind-item.on .sib-ind-lbl { color: var(--sib-ink); font-weight: 700; }
 .sib-ind-line { position: absolute; top: 17px; height: 1.5px; background: var(--sib-gold-line); z-index: 0; }
@@ -3959,7 +3961,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-ind-line--2 { left: 50%; right: 22%; }
 
 /* 大標（book） */
-.sib-book-h1 { font-family: var(--tp-serif); font-size: 34px; font-weight: 900; letter-spacing: 0.1em; color: var(--sib-ink); margin: 8px 0 4px; }
+.sib-book-h1 { font-family: var(--tp-serif); font-size: 30px; font-weight: 900; letter-spacing: 0.08em; color: var(--sib-ink); margin: 10px 0 6px; }
 .sib-title-row { display: flex; align-items: baseline; gap: 14px; margin: 6px 0 2px; }
 .sib-title-row h1 { font-family: var(--tp-serif); font-size: 26px; font-weight: 900; letter-spacing: 0.08em; margin: 0; color: var(--sib-ink); }
 .sib-title-row .bar { width: 1px; align-self: stretch; background: var(--sib-gold); }
@@ -3980,13 +3982,12 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-plan-thumb { flex: 0 0 118px; width: 118px; height: 108px; border-radius: 12px; overflow: hidden; background: #e6ddc6; }
 .sib-plan-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .sib-plan-info { flex: 1; min-width: 0; padding-right: 26px; }
-.sib-plan-info h3 { font-family: var(--tp-serif); font-size: 16px; font-weight: 800; color: var(--sib-ink); margin: 2px 0 8px; line-height: 1.35; letter-spacing: 0.02em; }
+.sib-plan-info h3 { font-family: var(--tp-serif); font-size: 16px; font-weight: 800; color: var(--sib-ink); margin: 2px 0 8px; line-height: 1.35; letter-spacing: 0.02em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sib-plan-line { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--sib-ink-soft); margin: 3px 0; }
 .sib-plan-line svg { width: 15px; height: 15px; color: var(--sib-gold); flex: 0 0 auto; }
 .sib-plan-tag { color: var(--sib-muted); font-size: 13px; }
-.sib-radio { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--sib-gold-line); }
-.sib-plan-rcard.on .sib-radio { border-color: var(--sib-green); }
-.sib-plan-rcard.on .sib-radio::after { content: ''; position: absolute; inset: 4px; border-radius: 50%; background: var(--sib-green); }
+.sib-radio-slot { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; }
 
 /* 同行人數卡 / stepper */
 .sib-guests-card { display: flex; align-items: center; justify-content: space-between; background: var(--sib-card);

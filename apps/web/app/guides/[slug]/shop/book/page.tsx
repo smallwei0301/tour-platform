@@ -6,7 +6,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../src/lib/supabase/client';
 import { track } from '../../../../../src/lib/track';
-import { ArrowRight, CtaMountain, MountainCircleLogo, PersonIcon } from '../sib-icons';
+import {
+  ArrowRight, CtaMountain, MountainCircleLogo, PersonIcon, PeopleIcon,
+  ClockIcon, TagIcon, RadioIcon, PinIcon, CalPrev, CalNext, PhoneIcon, MailIcon, BackIcon,
+} from '../sib-icons';
 
 type ShopPlan = {
   id: string;
@@ -83,9 +86,9 @@ function MonthCalendar({
   return (
     <div className="sib-cal" data-testid="shop-calendar">
       <div className="sib-cal-head">
-        <button type="button" aria-label="上個月" className="sib-cal-nav" onClick={prev}>‹</button>
+        <button type="button" aria-label="上個月" className="sib-cal-nav" onClick={prev}><CalPrev size={20} /></button>
         <span className="m">{vy} 年 {CAL_MONTHS[vm]}</span>
-        <button type="button" aria-label="下個月" className="sib-cal-nav" onClick={next}>›</button>
+        <button type="button" aria-label="下個月" className="sib-cal-nav" onClick={next}><CalNext size={20} /></button>
       </div>
       <div className="sib-cal-wk">{CAL_WEEK.map((w) => <span key={w}>{w}</span>)}</div>
       <div className="sib-cal-grid">
@@ -462,29 +465,30 @@ export default function GuideShopBookingPage() {
   const total = selectedPlan ? priceOf(selectedPlan, guests) : 0;
 
   const STEP_LABELS = ['選擇行程', '選擇日期與時間', '填寫聯絡資料'];
+  // 步驟指示器（mockup 順序：標題 → 指示器 → 內容）
+  const stepIndicator = (
+    <div className="sib-ind">
+      <span className="sib-ind-line sib-ind-line--1" />
+      <span className="sib-ind-line sib-ind-line--2" />
+      {STEP_LABELS.map((lbl, i) => (
+        <div key={lbl} className={`sib-ind-item${step >= i + 1 ? ' on' : ''}`}>
+          <span className="sib-ind-dot">{i + 1}</span>
+          <span className="sib-ind-lbl">{lbl}</span>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <main className="sib sib-book">
       <div className="sib-topbar">
         {step === 1 ? (
           <Link href={`/guides/${slug}/shop`} className="sib-back"
-            onClick={() => { try { sessionStorage.removeItem(bookStateKey(slug)); } catch { /* noop */ } }}>‹ 取消預約</Link>
+            onClick={() => { try { sessionStorage.removeItem(bookStateKey(slug)); } catch { /* noop */ } }}><BackIcon size={13} /> 取消預約</Link>
         ) : (
-          <button className="sib-back" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}>‹ 上一步</button>
+          <button className="sib-back" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}><BackIcon size={13} /> 上一步</button>
         )}
         <span className="sib-current">目前選擇：{shop.guide.displayName}<PersonIcon size={16} /></span>
-      </div>
-
-      {/* 步驟指示器 1—2—3 */}
-      <div className="sib-ind">
-        <span className="sib-ind-line sib-ind-line--1" />
-        <span className="sib-ind-line sib-ind-line--2" />
-        {STEP_LABELS.map((lbl, i) => (
-          <div key={lbl} className={`sib-ind-item${step >= i + 1 ? ' on' : ''}`}>
-            <span className="sib-ind-dot">{i + 1}</span>
-            <span className="sib-ind-lbl">{lbl}</span>
-          </div>
-        ))}
       </div>
 
       {error && (
@@ -497,12 +501,13 @@ export default function GuideShopBookingPage() {
       {step === 1 && (
         <div style={{ marginTop: 6 }}>
           <h1 className="sib-book-h1">選一條想走的徑</h1>
+          {stepIndicator}
           {shop.activitiesByRegion.length === 0 && (
             <p style={{ color: 'var(--sib-muted)', marginTop: 16 }}>此導遊目前沒有可預約的行程。</p>
           )}
           {shop.activitiesByRegion.map((group) => (
             <section key={group.region}>
-              <p className="sib-region">📍 {group.region}</p>
+              <p className="sib-region"><PinIcon size={18} /> {group.region}</p>
               {group.activities.flatMap((activity) =>
                 activity.plans.map((plan) => {
                   const active = selectedPlanId === plan.id;
@@ -519,18 +524,12 @@ export default function GuideShopBookingPage() {
                       <span className="sib-plan-info">
                         <h3>{activity.title}</h3>
                         {plan.duration && (
-                          <span className="sib-plan-line">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" strokeLinecap="round" /></svg>
-                            約 {plan.duration.replace(/^約\s*/, '')}
-                          </span>
+                          <span className="sib-plan-line"><ClockIcon size={15} />約 {plan.duration.replace(/^約\s*/, '')}</span>
                         )}
-                        <span className="sib-plan-line">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M20 12l-8 8-8-8 8-8z" /><circle cx="12" cy="9" r="1.4" fill="currentColor" /></svg>
-                          NT${(plan.basePrice ?? 0).toLocaleString()} / {plan.priceType === 'per_group' ? '組' : '人'}
-                        </span>
+                        <span className="sib-plan-line"><TagIcon size={15} />NT${(plan.basePrice ?? 0).toLocaleString()} / {plan.priceType === 'per_group' ? '組' : '人'}</span>
                         <span className="sib-plan-tag">#{plan.name}　·　{cap}</span>
                       </span>
-                      <span className="sib-radio" />
+                      <span className="sib-radio-slot" data-testid="shop-plan-radio"><RadioIcon on={active} size={24} /></span>
                     </button>
                   );
                 })
@@ -541,7 +540,7 @@ export default function GuideShopBookingPage() {
           {/* 同行人數 */}
           {selectedPlan && (
             <section className="sib-guests-card">
-              <span className="lbl"><PersonIcon size={22} /> 同行人數</span>
+              <span className="lbl"><PeopleIcon size={22} /> 同行人數</span>
               <span className="sib-stepper">
                 <button type="button" aria-label="減少人數" disabled={guests <= (selectedPlan.minParticipants || 1)}
                   onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}>−</button>
@@ -580,6 +579,8 @@ export default function GuideShopBookingPage() {
               <span style={{ color: 'var(--sib-muted)', fontSize: 12 }}>可調整同行人數</span>
             </div>
           </section>
+
+          {stepIndicator}
 
           {/* 選擇日期 */}
           <div className="sib-sec-head">
@@ -625,13 +626,11 @@ export default function GuideShopBookingPage() {
                 <input value={contactName} onChange={(e) => setContactName(e.target.value)} placeholder="請填寫姓名" />
               </div>
               <div className="sib-field">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 5c0 9 6 15 15 15l2-3-4-2-2 2c-3-1.5-5.5-4-7-7l2-2-2-4z" strokeLinejoin="round" /></svg>
-                <span className="lbl">電話</span>
+                <PhoneIcon size={20} /><span className="lbl">電話</span>
                 <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} placeholder="請填寫電話" inputMode="tel" />
               </div>
               <div className="sib-field">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="5" width="18" height="14" rx="2" /><path d="M4 7l8 6 8-6" /></svg>
-                <span className="lbl">電子信箱</span>
+                <MailIcon size={20} /><span className="lbl">電子信箱</span>
                 <input value={contactEmail} readOnly placeholder="電子信箱" />
               </div>
             </div>
@@ -658,6 +657,7 @@ export default function GuideShopBookingPage() {
       {step === 3 && selectedPlan && (
         <div style={{ marginTop: 6 }}>
           <h1 className="sib-book-h1" style={{ fontSize: 26 }}>確認與付款</h1>
+          {stepIndicator}
           <div style={{ background: 'var(--sib-card)', border: '1px solid var(--sib-gold-line)', borderRadius: 16, padding: 16, margin: '10px 0 18px' }}>
             <p style={{ margin: 0, fontFamily: 'var(--tp-serif)', fontWeight: 800, fontSize: 16, color: 'var(--sib-ink)' }}>{selectedActivity?.title}　#{selectedPlan.name}</p>
             <p style={{ margin: '6px 0 0', color: 'var(--sib-muted)', fontSize: 14 }}>

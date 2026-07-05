@@ -8,31 +8,24 @@ import { test, expect } from './helpers';
 
 const SLUG = 'andy-lee';
 
-test('商店首頁：方案卡 server-rendered＋信任列＋分享列＋QR', async ({ page }) => {
+test('商店首頁（Midao mockup 圖3）：hero＋引路人卡＋預約三步驟＋CTA', async ({ page }) => {
   const probe = await page.request.get(`/guides/${SLUG}/shop`);
   test.skip(probe.status() === 404, 'NEXT_PUBLIC_GUIDE_SHOP_ENABLED 未開，商店頁 404 — 本 smoke 需 flag-on server');
 
   await page.goto(`/guides/${SLUG}/shop`);
 
-  // H1「線上預約」＋引路人徽章（Midao mockup 版面）
+  // H1「線上預約」＋ hero ＋ 引路人徽章
   await expect(page.getByRole('heading', { level: 1 })).toContainText('線上預約');
+  await expect(page.getByTestId('shop-hero')).toBeVisible();
   await expect(page.getByText('祕島引路人').first()).toBeVisible();
 
-  // 方案卡由 server 直出（fixtures 有兩個 active 方案），深連結帶預選參數
-  const cards = page.getByTestId('shop-landing-plan-card');
-  await expect(cards.first()).toBeVisible();
-  expect(await cards.count()).toBeGreaterThanOrEqual(1);
-  await expect(cards.first()).toHaveAttribute('href', /shop\/book\?activityId=.+&planId=.+/);
+  // 預約三步驟區塊＋三個真實圖示（附件資產）
+  await expect(page.getByText('預約三步驟')).toBeVisible();
+  await expect(page.locator('.sib-step')).toHaveCount(3);
+  await expect(page.locator('.sib-step-ico img').first()).toBeVisible();
 
-  // 政策區塊
-  await expect(page.getByTestId('shop-policy')).toContainText('ECPay');
-
-  // 分享列：複製回饋＋QR toggle
-  await page.getByTestId('shop-share-copy').click();
-  await expect(page.getByTestId('shop-share-copy')).toContainText('已複製');
-  await page.getByTestId('shop-share-qr').click();
-  await expect(page.getByTestId('shop-share-qr-panel').locator('svg')).toBeVisible();
-
-  // LINE 分享為純連結
-  await expect(page.getByTestId('shop-share-line')).toHaveAttribute('href', /line\.me\/R\/msg\/text\//);
+  // CTA「替我留一個位置」→ /shop/book
+  const cta = page.getByRole('link', { name: /替我留一個位置/ });
+  await expect(cta).toBeVisible();
+  await expect(cta).toHaveAttribute('href', new RegExp(`/guides/${SLUG}/shop/book`));
 });
