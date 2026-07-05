@@ -142,6 +142,7 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
     '../../../../../src/components/activity/SelectedPlanContext': { SelectedPlanProvider: ({ children }) => React.createElement(React.Fragment, null, children), useSelectedPlan: () => ({ selected: null, setSelected: () => {} }) },
     '../../../../../src/components/activity/ImageCarousel': { ImageCarousel: () => React.createElement('div', null, 'ImageCarousel') },
     '../../../../../src/components/activity/ReviewPhotos': { ReviewPhotos: () => React.createElement('div', null, 'ReviewPhotos') },
+    '../../../../../src/components/activity/ActivityReviewsPanel': { ActivityReviewsPanel: () => React.createElement('div', null, 'ActivityReviewsPanel') },
     '../../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div', null, 'ActivityQASection') },
     // #1381: 公開促銷碼 banner（client component，mock 為 noop）
     '../../../../../src/components/activity/PublicPromoBanner': { PublicPromoBanner: () => React.createElement('div', null, 'PublicPromoBanner') },
