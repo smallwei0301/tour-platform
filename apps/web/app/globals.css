@@ -1727,6 +1727,35 @@ img { max-width: 100%; height: auto; }
   color: rgba(238, 230, 205, 0.85);
   margin: 0;
 }
+/* #1592 評分分佈長條 + 星等/有照片篩選 + 導遊回覆 */
+.kkd-review-dist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.kkd-review-dist-row {
+  display: flex; align-items: center; gap: 10px;
+  background: none; border: none; padding: 4px 6px; border-radius: 8px;
+  cursor: pointer; color: inherit; text-align: left; width: 100%;
+}
+.kkd-review-dist-row:hover { background: rgba(238, 230, 205, 0.06); }
+.kkd-review-dist-row.is-active { background: rgba(245, 166, 35, 0.14); }
+.kkd-review-dist-label { flex: 0 0 auto; width: 44px; font-size: 13px; color: rgba(238, 230, 205, 0.85); }
+.kkd-review-dist-track { flex: 1 1 auto; height: 8px; border-radius: 999px; background: rgba(238, 230, 205, 0.14); overflow: hidden; }
+.kkd-review-dist-fill { display: block; height: 100%; background: #f5a623; border-radius: 999px; }
+.kkd-review-dist-count { flex: 0 0 auto; width: 32px; text-align: right; font-size: 12px; color: var(--tp-muted); }
+.kkd-review-filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.kkd-review-chip {
+  background: none; border: 1px solid var(--tp-border); color: rgba(238, 230, 205, 0.85);
+  border-radius: 999px; padding: 5px 14px; font-size: 13px; cursor: pointer;
+}
+.kkd-review-chip.is-active { background: #f5a623; border-color: #f5a623; color: #1a2e1f; font-weight: 600; }
+.kkd-review-empty { flex: 0 0 auto; color: var(--tp-muted); font-size: 14px; padding: 20px 4px; }
+.kkd-review-guide-reply {
+  margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+  background: rgba(238, 230, 205, 0.06); border-left: 3px solid #5e7a4f;
+}
+.kkd-review-guide-reply-label {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: #9db98a; margin-bottom: 4px;
+}
+.kkd-review-guide-reply-text { margin: 0; font-size: 13px; line-height: 1.6; color: rgba(238, 230, 205, 0.82); }
 /* 旅客評價照片：多張時手機可左右滑動（scroll-snap），桌機亦同一橫向卷軸。 */
 .kkd-review-photos {
   display: flex;

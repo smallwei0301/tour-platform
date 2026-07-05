@@ -53,6 +53,7 @@ import {
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { applyWithOptionalColumnFallback } from '../../../../../src/lib/optional-column-fallback.mjs';
+import { applyOrderExtras } from '../../../../../src/lib/checkout/order-extras.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -1122,6 +1123,13 @@ export async function POST(request: NextRequest) {
 
     // 8. Update booking with order_id
     await supabase.from('bookings').update({ order_id: orderInsert.id }).eq('id', bookingInsert.id);
+
+    // #1591 加購＋#1594 點數折抵：server 以 DB 快照重算、fail-soft 回寫金額（見 checkout/order-extras.mjs）。
+    ({ totalAmount } = await applyOrderExtras({
+      supabase, orderId: orderInsert.id, activityId: data.activityId, participants: data.participants,
+      travelerId, totalAmount,
+      addonSelections: (body as any)?.addonSelections, redeemPoints: (body as any)?.redeemPoints,
+    }));
 
     // #1493 instant/scheduled：建立即起算付款期限 → 主動寄付款連結+截止時間（best-effort）。
     if (paymentDeadlineAt) {

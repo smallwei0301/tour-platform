@@ -13,7 +13,8 @@
     "blog": "Travel Journal",
     "login": "Log in / Sign up",
     "logout": "Log out",
-    "myTrips": "My Trips"
+    "myTrips": "My Trips",
+    "notifications": "Notifications"
   },
   "footer": {
     "tagline1": "Taiwan's local-guide marketplace",
@@ -937,6 +938,13 @@
     "reviewsTotal": "{count} reviews in total",
     "reviewAuthor": "{author} ({city})",
     "reviewCityFallback": "TW",
+    "reviewsDistributionAria": "Rating distribution",
+    "reviewsFilterGroupAria": "Filter reviews",
+    "reviewsFilterStar": "{star} stars",
+    "reviewsFilterAll": "All",
+    "reviewsFilterPhotos": "With photos",
+    "reviewsGuideReplyLabel": "Guide reply",
+    "reviewsEmptyFiltered": "No reviews match this filter",
     "detailIncludes": "What's included",
     "detailExcludes": "What's not included",
     "detailGoodFor": "Great for",
@@ -1203,6 +1211,7 @@
     "orders": "My Orders",
     "wishlist": "Favorites",
     "qa": "Q&A replies",
+    "notifications": "Notifications",
     "profile": "Profile"
   },
   "orders": {

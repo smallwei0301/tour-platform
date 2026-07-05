@@ -160,6 +160,7 @@ async function renderDetailPage({ priceUnit }) {
     '../../../../../src/components/activity/SectionAnchorNav': { SectionAnchorNav: () => React.createElement('div') },
     '../../../../../src/components/activity/ImageCarousel': { ImageCarousel: () => React.createElement('div') },
     '../../../../../src/components/activity/ReviewPhotos': { ReviewPhotos: () => React.createElement('div') },
+    '../../../../../src/components/activity/ActivityReviewsPanel': { ActivityReviewsPanel: () => React.createElement('div', { 'data-testid': 'reviews-panel' }) },
     '../../../../../src/components/activity/ActivityQASection': { ActivityQASection: () => React.createElement('div') },
     '../../../../../src/components/activity/PublicPromoBanner': { PublicPromoBanner: () => React.createElement('div') },
     '../../../../../src/components/activity/ActivityRecommendations': { ActivityRecommendations: () => React.createElement('div') },

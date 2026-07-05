@@ -16,6 +16,7 @@ import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta
 import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
 import { track } from '../../../src/lib/track';
 import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
+import { CheckoutExtrasSection, type CheckoutExtrasValue } from '../../../src/components/activity/CheckoutExtrasSection';
 import { useClientLocale } from '../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
 
@@ -187,6 +188,10 @@ function BookingInnerV2FlagShell() {
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
   const [availabilityReason, setAvailabilityReason] = useState('');
+  // #1591 加購＋#1594 點數折抵的顯示用狀態（互動邏輯在 CheckoutExtrasSection；server 重算為準）。
+  const [extras, setExtras] = useState<CheckoutExtrasValue>({
+    addonSelections: [], redeemPoints: 0, addonTotal: 0, effectiveDiscount: 0,
+  });
   const [selectedPlanMeta, setSelectedPlanMeta] = useState<{
     name: string | null;
     priceType: 'per_person' | 'per_group';
@@ -454,6 +459,10 @@ function BookingInnerV2FlagShell() {
           contactPhone,
           contactEmail,
           customerNote: note || undefined,
+          // #1591 加購（選填）：server 一律以 DB 快照重算金額，不信任前端數字。
+          addonSelections: extras.addonSelections.length > 0 ? extras.addonSelections : undefined,
+          // #1594 點數折抵（選填）：server 夾在 min(餘額, 訂單×30%) 為準。
+          redeemPoints: extras.redeemPoints > 0 ? extras.redeemPoints : undefined,
         }),
       });
       const draftJson = await draftRes.json();
@@ -565,6 +574,8 @@ function BookingInnerV2FlagShell() {
   });
   const unitPrice = effectivePlanMeta?.basePrice ?? activity.priceTwd;
   const total = effectivePlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
+  // #1591 含加購的小計；#1594 再扣點數折抵＝應付總額（顯示用；server 重算為準）。
+  const payTotal = Math.max(0, total + extras.addonTotal - extras.effectiveDiscount);
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const breadcrumbJsonLd = {
@@ -838,6 +849,14 @@ function BookingInnerV2FlagShell() {
                 </p>
               )}
 
+              {/* #1591 加購＋#1594 點數折抵（互動狀態在 CheckoutExtrasSection） */}
+              <CheckoutExtrasSection
+                activityId={resolvedActivityId}
+                peopleCount={guests}
+                baseTotal={total}
+                onChange={setExtras}
+              />
+
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>{m.feeDetailHeading}</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -848,13 +867,25 @@ function BookingInnerV2FlagShell() {
                   <span>{effectivePlanMeta?.priceType === 'per_group' ? m.perGroupPrice : m.perPersonPrice.replace('{price}', unitPrice.toLocaleString()).replace('{n}', String(guests))}</span>
                   <span>NT${total.toLocaleString()}</span>
                 </div>
+                {extras.addonTotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }} data-testid="fee-addons">
+                    <span>加購項目</span>
+                    <span>NT${extras.addonTotal.toLocaleString()}</span>
+                  </div>
+                )}
+                {extras.effectiveDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-gold-strong)' }} data-testid="fee-points-discount">
+                    <span>點數折抵</span>
+                    <span>−NT${extras.effectiveDiscount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>
                   <span>{m.platformFee}</span>
                   <span>NT$0</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: '1px solid var(--tp-border)', paddingTop: 8, marginTop: 8 }}>
                   <span>{m.total}</span>
-                  <span>NT${total.toLocaleString()}</span>
+                  <span>NT${payTotal.toLocaleString()}</span>
                 </div>
               </div>
               <div style={{ marginTop: 16 }}>

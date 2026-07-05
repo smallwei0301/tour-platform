@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: '/guide/conflict-overrides', label: '幫手確認', icon: '🤝' },
   { href: '/guide/bookings', label: '訂單查看', icon: '📋' },
   { href: '/guide/messages', label: '旅客訊息', icon: '💬' },
+  { href: '/guide/reviews', label: '評論回覆', icon: '⭐' },
   { href: '/guide/profile', label: '公開頁面', icon: '👤' },
 ];
 

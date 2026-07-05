@@ -60,8 +60,12 @@ function countLines(relPath) {
 // 2026-07-05 #1615：admin activities edit（1538→721）/plans（1306→639）、
 // admin/guide availability（1221→631／1218→623）四頁拆解完成、脫離白名單。
 const GOD_FILE_CEILINGS = new Map([
-  ['app/api/v2/bookings/draft/route.ts', 1200], // +1：#1616 env getter import 行
-  ['app/booking/[activityId]/page.tsx', 1080],
+  // 1200→1206：#1591/#1594 加購/點數折抵接線。重邏輯（驗證＋DB 快照重算＋回寫金額，約 85 行）
+  // 已抽到 src/lib/checkout/order-extras.mjs，route 只留 1 import＋1 個 fail-soft helper 呼叫。
+  ['app/api/v2/bookings/draft/route.ts', 1207],
+  // 1080→1110：#1591/#1594 加購/點數折抵接線。互動狀態＋兩個選購器已抽到
+  // src/components/activity/CheckoutExtrasSection.tsx，頁面殘留＝費用明細顯示行（加購/折抵）＋接線。
+  ['app/booking/[activityId]/page.tsx', 1111],
   ['app/guide/profile/page.tsx', 992],
   ['src/lib/email.ts', 863],
   // 827→866：merge origin/main 帶入 #1596 pre-tour-contact 顯示（上游功能，非本分支回退；後續拆頁時下修）。

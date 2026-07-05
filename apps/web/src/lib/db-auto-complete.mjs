@@ -15,6 +15,7 @@
 import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
 import { orders as memOrders } from './store.mjs';
 import { appendAuditLog, insertAuditLogDb } from './audit-log.mjs';
+import { grantCompletionRewards } from './rewards/order-completion-rewards.mjs';
 import {
   evaluateAutoCompleteEligibility,
   isStalledConfirmedOrder,
@@ -56,7 +57,7 @@ export async function autoCompleteConfirmedOrdersDb(input = {}) {
   // order 的方向，且 orders.booking_id 對舊單多為 NULL），與加第二條 FK 前的行為一致。
   const { data: candidates, error } = await supabase
     .from('orders')
-    .select('id, status, created_at, bookings!fk_bookings_order_id(start_at), activity_schedules(start_at)')
+    .select('id, status, created_at, user_id, total_twd, bookings!fk_bookings_order_id(start_at), activity_schedules(start_at)')
     .eq('status', 'confirmed')
     .order('created_at', { ascending: true })
     .limit(limit);
@@ -113,6 +114,17 @@ export async function autoCompleteConfirmedOrdersDb(input = {}) {
         });
       } catch (auditErr) {
         console.error('[auto-complete-sweep] audit error:', auditErr?.message || auditErr);
+      }
+      // #1594 完成獎勵：發點（冪等）＋站內通知，best-effort（不影響 sweep 結果）。
+      try {
+        await grantCompletionRewards({
+          userId: row.user_id,
+          orderId: row.id,
+          paidTwd: row.total_twd,
+          now: nowIso,
+        });
+      } catch (rewardErr) {
+        console.error('[auto-complete-sweep] reward error:', rewardErr?.message || rewardErr);
       }
     }
     results.push({ orderId: row.id, completed: didUpdate });

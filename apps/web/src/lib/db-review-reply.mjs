@@ -19,7 +19,7 @@ let _memReviews = [];
 let _memActivityGuide = new Map();
 
 /**
- * @param {Array<{ id: string, activity_slug: string, guide_reply_text?: string|null, guide_reply_at?: string|null }>} reviews
+ * @param {Array<{ id: string, activity_slug: string, guide_reply_text?: string|null, guide_reply_at?: string|null, author?: string, rating?: number, review_text?: string, review_date?: string }>} reviews
  * @param {Record<string, string>} activitySlugToGuideId
  */
 export function __seedMemReviews(reviews, activitySlugToGuideId = {}) {
@@ -28,6 +28,10 @@ export function __seedMemReviews(reviews, activitySlugToGuideId = {}) {
     activity_slug: String(r.activity_slug),
     guide_reply_text: r.guide_reply_text ?? null,
     guide_reply_at: r.guide_reply_at ?? null,
+    author: r.author ?? '',
+    rating: r.rating ?? null,
+    review_text: r.review_text ?? '',
+    review_date: r.review_date ?? null,
   }));
   _memActivityGuide = new Map(Object.entries(activitySlugToGuideId || {}));
 }
@@ -107,4 +111,52 @@ export async function upsertGuideReplyDb({ guideId, reviewId, replyText, now } =
     .eq('id', rid);
   if (updErr) return { ok: false, status: 500, code: 'DB_ERROR', message: updErr.message };
   return { ok: true, replied: Boolean(norm.text), replyAt };
+}
+
+/**
+ * 列出某導遊「自己活動」的已核准評論（供後台回覆用）。無 PII 外洩：只回評論本體。
+ * @param {{ guideId: string, limit?: number }} input
+ * @returns {Promise<Array<{ id: string, activitySlug: string, author: string, rating: number|null, text: string, date: string|null, guideReply: { text: string, at: string|null }|null }>>}
+ */
+export async function listGuideReviewsDb({ guideId, limit = 100 } = /** @type {any} */ ({})) {
+  const gid = String(guideId || '').trim();
+  if (!gid) return [];
+  const cap = Math.min(200, Math.max(1, Math.trunc(Number(limit) || 100)));
+
+  /** @param {any} r */
+  const shape = (r) => ({
+    id: String(r.id),
+    activitySlug: String(r.activity_slug),
+    author: r.author || '',
+    rating: r.rating ?? null,
+    text: r.review_text || '',
+    date: r.review_date ?? null,
+    guideReply: r.guide_reply_text ? { text: r.guide_reply_text, at: r.guide_reply_at ?? null } : null,
+  });
+
+  if (!hasSupabaseEnv()) {
+    const ownSlugs = new Set(
+      [..._memActivityGuide.entries()].filter(([, g]) => g === gid).map(([slug]) => slug),
+    );
+    return _memReviews.filter((r) => ownSlugs.has(r.activity_slug)).slice(0, cap).map(shape);
+  }
+
+  const supabase = await getSupabase();
+  const { data: acts, error: actErr } = await supabase
+    .from('activities')
+    .select('slug')
+    .eq('guide_id', gid);
+  if (actErr) return [];
+  const slugs = (Array.isArray(acts) ? acts : []).map((a) => a.slug).filter(Boolean);
+  if (slugs.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from('activity_reviews')
+    .select('id, activity_slug, author, rating, review_text, review_date, guide_reply_text, guide_reply_at')
+    .in('activity_slug', slugs)
+    .eq('status', 'approved')
+    .order('review_date', { ascending: false })
+    .limit(cap);
+  if (error) return [];
+  return (Array.isArray(data) ? data : []).map(shape);
 }
