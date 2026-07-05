@@ -42,6 +42,14 @@
       "applied_at": null,
       "status": "pending",
       "note": "#1596 行前導遊聯絡：guide_profiles 增 contact_phone / contact_phone_visible。尚未套用——owner 依 migration-apply SOP 套用 production 後把 status 改 verified 並補 applied_at。gate 於套用前 HOLD（by design）。"
+    },
+    {
+      "filename": "20260705100000_user_notifications_1593.sql",
+      "environment": "production",
+      "operator": "Claude Code agent (awaiting owner apply)",
+      "applied_at": null,
+      "status": "pending",
+      "note": "#1593 站內通知中心：user_notifications 表＋RLS。尚未套用——owner 依 SOP 套用後改 verified。gate 套用前 HOLD（by design）。"
     }
   ]
 }
