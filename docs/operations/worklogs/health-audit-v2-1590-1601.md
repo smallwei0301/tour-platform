@@ -24,7 +24,13 @@
 | #1593 | 站內通知中心：`db-notifications.mjs`＋`/api/me/notifications`＋`.../read`，掛點永不 throw | `20260705100000_user_notifications_1593` |
 | #1594 | 點數/會員：`points-calc.mjs`＋`db-points.mjs` append-only ledger（發點冪等、折抵 ≤min(餘額,訂單×30%)、效期 12 月）| `20260705102000_user_points_ledger_1594` |
 
-## 唯一 blocker（需 owner 決策）
+## 2026-07-05 17:56（Asia/Taipei）owner 套用 5 migration → 解除 blocker
+- owner (smallwei0301) 於 Supabase Dashboard SQL Editor 套用 5 支 migration 到 production（project pyoderxmpeyqjwkeliiu）。
+- agent 唯讀驗證：8 欄位/表 `present=true`；4 新表 `relrowsecurity=true`；`uq_points_earn_per_order` 唯一索引在；`idx_user_notifications_unread` 在；policy 數 activity_addons=2 / order_addons=1 / user_notifications=3 / user_points_ledger=2，全部符合 migration 定義。
+- ledger 5 筆 `pending`→`verified`（applied_at 2026-07-05T17:56:13+08:00），commit edf21b0 push → #1293 gate 轉綠。
+- 註：本機殘留錯表檔 `20260704120000_guide_contact_phone_1596.sql`（git-excluded、未 commit）會讓本機 gate 誤報 missing；CI 對已 commit 樹（122 檔）不受影響。bash-guard 擋 rm，維持現狀。
+
+## 唯一 blocker（已解除）
 鐵律 2（prod 唯讀，agent 不套 migration）× 鐵律 6（紅燈不 merge）× 單分支單 open PR → 上述 5 支 migration 未套用前，B 組 6 張無法 merge。CI `unstable`＝#1293 ledger-gate 對 5 支 pending 記錄 HOLD（by design）；其餘全套綠（4365/4371，2 fail 皆此 gate）。
 
 owner 二選一：
