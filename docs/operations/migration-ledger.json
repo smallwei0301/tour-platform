@@ -34,6 +34,46 @@
       "applied_at": "2026-07-02T20:30:00+08:00",
       "status": "baseline",
       "note": "Baseline 回填：涵蓋 2026-07-02（含）以前 repo 內全部 migration 檔（001_mvp_core.sql ~ 20260702_cron_job_controls.sql，共 115 支非 rollback 檔）。歷史套用經 #1286 drift 事件與 #1560 production schema drift 大清查（#1559 修復 HEAD 探測假陰性後浮現 14 缺表 + 13 缺欄位）盤點；#1560 缺漏項由 owner 授權（2026-07-02）經 Supabase MCP apply_migration 依檔名時序補套，post-apply 以 node scripts/verify-migrations-applied.mjs 對 production 探測驗證。本 baseline 之後的新 migration 一律逐筆補 verified record，不再擴大 baseline。Refs #1293 #1560 #1286。"
+    },
+    {
+      "filename": "20260704121000_guide_profiles_contact_phone_1596.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1596 行前導遊聯絡：guide_profiles 增 contact_phone / contact_phone_visible。owner 於 Supabase Dashboard SQL Editor 套用；agent 以 information_schema 探測驗證兩欄 present=true。rollback：同名 .rollback.sql。Refs #1596 #1293。"
+    },
+    {
+      "filename": "20260705100000_user_notifications_1593.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1593 站內通知中心：user_notifications 表＋RLS。owner 套用；agent 驗證 table present=true、relrowsecurity=true、3 條 policy（select_own/update_own/service_all）、idx_user_notifications_unread present。rollback：同名 .rollback.sql。Refs #1593 #1293。"
+    },
+    {
+      "filename": "20260705101000_activity_addons_1591.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1591 加購：activity_addons/order_addons 兩表＋RLS。owner 套用；agent 驗證兩表 present=true、relrowsecurity=true、policy 數 activity_addons=2（select_active/service_all）、order_addons=1（service_all）。rollback：同名 .rollback.sql。Refs #1591 #1293。"
+    },
+    {
+      "filename": "20260705102000_user_points_ledger_1594.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1594 點數：user_points_ledger append-only 表＋冪等唯一約束＋RLS。owner 套用；agent 驗證 table present=true、relrowsecurity=true、uq_points_earn_per_order 唯一索引 present、2 條 policy（select_own/service_all）。rollback：同名 .rollback.sql。Refs #1594 #1293。"
+    },
+    {
+      "filename": "20260705103000_activity_reviews_guide_reply_1592.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1592 評論互動：activity_reviews 增 guide_reply_text / guide_reply_at（導遊回覆）。owner 套用；agent 以 information_schema 驗證兩欄 present=true。讀取端有 42703 fail-soft。rollback：同名 .rollback.sql。Refs #1592 #1293。"
     }
   ]
 }
