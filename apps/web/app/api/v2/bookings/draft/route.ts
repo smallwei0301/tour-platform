@@ -53,6 +53,7 @@ import {
 import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/payment-deadline.mjs';
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { applyWithOptionalColumnFallback } from '../../../../../src/lib/optional-column-fallback.mjs';
+import { persistOrderAddonsDb } from '../../../../../src/lib/db-addons.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -399,6 +400,8 @@ interface DraftBookingRequest {
   contactPhone: string;
   contactEmail: string;
   customerNote?: string;
+  // #1591 加購（選填）：server 一律以 DB 快照重算，不信任前端金額。
+  addonSelections?: Array<{ addonId: string; quantity: number }>;
 }
 
 type ActivitySchedule = {
@@ -512,6 +515,22 @@ function parseAndValidateBody(
   const customerNote =
     b.customerNote && typeof b.customerNote === 'string' ? b.customerNote.trim() : undefined;
 
+  // #1591 addonSelections (optional)：只取形狀正確的項目，數量夾 1..99；最多 20 項。
+  // 金額不在此處計算——一律由 persistOrderAddonsDb 以 DB 快照重算。
+  let addonSelections: Array<{ addonId: string; quantity: number }> | undefined;
+  if (b.addonSelections !== undefined) {
+    if (!Array.isArray(b.addonSelections)) {
+      return { error: { code: 'VALIDATION_ERROR', message: 'addonSelections must be an array' } };
+    }
+    addonSelections = b.addonSelections
+      .filter((s): s is { addonId: string; quantity: number } =>
+        !!s && typeof s === 'object' &&
+        typeof (s as any).addonId === 'string' && isUuidLike((s as any).addonId) &&
+        Number.isInteger((s as any).quantity))
+      .slice(0, 20)
+      .map((s) => ({ addonId: s.addonId, quantity: Math.max(1, Math.min(99, s.quantity)) }));
+  }
+
   return {
     data: {
       activityId: b.activityId,
@@ -525,6 +544,7 @@ function parseAndValidateBody(
       contactPhone,
       contactEmail,
       customerNote,
+      addonSelections,
     },
   };
 }
@@ -1121,6 +1141,27 @@ export async function POST(request: NextRequest) {
 
     // 8. Update booking with order_id
     await supabase.from('bookings').update({ order_id: orderInsert.id }).eq('id', bookingInsert.id);
+
+    // #1591 加購：以 DB 快照重算並落訂單加購快照，把成功項小計加進訂單總額。
+    // server 不信任前端金額；任何失敗 fail-soft（訂單本體不因加購失敗而中斷，
+    // 總額只計入實際落單的加購項）。ECPay checkout 讀 orders.total_twd → 此處更新即生效。
+    if (data.addonSelections && data.addonSelections.length > 0) {
+      try {
+        const addonResult = await persistOrderAddonsDb({
+          orderId: orderInsert.id,
+          activityId: data.activityId,
+          selections: data.addonSelections,
+          peopleCount: data.participants,
+        });
+        const addonTotal = Number(addonResult?.total) || 0;
+        if (addonTotal > 0) {
+          totalAmount += addonTotal;
+          await supabase.from('orders').update({ total_twd: totalAmount }).eq('id', orderInsert.id);
+        }
+      } catch (addonErr) {
+        console.error('[draft] addon persist failed (non-fatal):', addonErr);
+      }
+    }
 
     // #1493 instant/scheduled：建立即起算付款期限 → 主動寄付款連結+截止時間（best-effort）。
     if (paymentDeadlineAt) {

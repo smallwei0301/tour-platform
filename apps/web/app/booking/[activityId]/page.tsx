@@ -2,7 +2,7 @@
 import Image from 'next/image';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState, Suspense } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { fetchActivityByIdOrSlug } from '../../../src/lib/client-api';
 
@@ -16,6 +16,7 @@ import { getBookingV2Step1CtaState } from '../../../src/lib/booking-v2-step1-cta
 import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-plan-meta.mjs';
 import { track } from '../../../src/lib/track';
 import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
+import { CheckoutAddonPicker } from '../../../src/components/activity/CheckoutAddonPicker';
 import { useClientLocale } from '../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
 
@@ -187,6 +188,13 @@ function BookingInnerV2FlagShell() {
   const [resolvedActivityId, setResolvedActivityId] = useState('');
   const [resolvedPlanId, setResolvedPlanId] = useState('');
   const [availabilityReason, setAvailabilityReason] = useState('');
+  // #1591 加購：選擇與（顯示用）小計；下單時 server 以 DB 快照重算為準。
+  const [addonSelections, setAddonSelections] = useState<Array<{ addonId: string; quantity: number }>>([]);
+  const [addonTotal, setAddonTotal] = useState(0);
+  const handleAddonsChange = useCallback((sels: Array<{ addonId: string; quantity: number }>, total: number) => {
+    setAddonSelections(sels);
+    setAddonTotal(total);
+  }, []);
   const [selectedPlanMeta, setSelectedPlanMeta] = useState<{
     name: string | null;
     priceType: 'per_person' | 'per_group';
@@ -454,6 +462,8 @@ function BookingInnerV2FlagShell() {
           contactPhone,
           contactEmail,
           customerNote: note || undefined,
+          // #1591 加購（選填）：server 一律以 DB 快照重算金額，不信任前端數字。
+          addonSelections: addonSelections.length > 0 ? addonSelections : undefined,
         }),
       });
       const draftJson = await draftRes.json();
@@ -565,6 +575,8 @@ function BookingInnerV2FlagShell() {
   });
   const unitPrice = effectivePlanMeta?.basePrice ?? activity.priceTwd;
   const total = effectivePlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
+  // #1591 含加購的應付總額（顯示用；server 端下單時以 DB 快照重算為準）。
+  const grandTotal = total + addonTotal;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const breadcrumbJsonLd = {
@@ -838,6 +850,15 @@ function BookingInnerV2FlagShell() {
                 </p>
               )}
 
+              {/* #1591 加購選購（無啟用加購項時整塊不顯示） */}
+              {resolvedActivityId && (
+                <CheckoutAddonPicker
+                  activityId={resolvedActivityId}
+                  peopleCount={guests}
+                  onChange={handleAddonsChange}
+                />
+              )}
+
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>{m.feeDetailHeading}</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -848,13 +869,19 @@ function BookingInnerV2FlagShell() {
                   <span>{effectivePlanMeta?.priceType === 'per_group' ? m.perGroupPrice : m.perPersonPrice.replace('{price}', unitPrice.toLocaleString()).replace('{n}', String(guests))}</span>
                   <span>NT${total.toLocaleString()}</span>
                 </div>
+                {addonTotal > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }} data-testid="fee-addons">
+                    <span>加購項目</span>
+                    <span>NT${addonTotal.toLocaleString()}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>
                   <span>{m.platformFee}</span>
                   <span>NT$0</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: '1px solid var(--tp-border)', paddingTop: 8, marginTop: 8 }}>
                   <span>{m.total}</span>
-                  <span>NT${total.toLocaleString()}</span>
+                  <span>NT${grandTotal.toLocaleString()}</span>
                 </div>
               </div>
               <div style={{ marginTop: 16 }}>

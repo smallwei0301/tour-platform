@@ -15,7 +15,10 @@ const _memAddons = [];
 /** @type {Array<{ order_id: string, addon_id: string, quantity: number, unit_price_twd: number, subtotal_twd: number }>} */
 const _memOrderAddons = [];
 
-/** 測試用。 */
+/**
+ * 測試用。
+ * @param {Array<{ id: string, activity_id: string, name: string, price_twd: number, unit: string, stock: number|null, is_active: boolean, sort_order: number }>} rows
+ */
 export function __seedMemAddons(rows) { _memAddons.length = 0; _memAddons.push(...rows); }
 export function __getMemOrderAddons() { return _memOrderAddons.slice(); }
 export function __resetMemOrderAddons() { _memOrderAddons.length = 0; }
