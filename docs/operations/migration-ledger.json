@@ -38,42 +38,42 @@
     {
       "filename": "20260704121000_guide_profiles_contact_phone_1596.sql",
       "environment": "production",
-      "operator": "Claude Code agent (awaiting owner apply)",
-      "applied_at": null,
-      "status": "pending",
-      "note": "#1596 行前導遊聯絡：guide_profiles 增 contact_phone / contact_phone_visible。尚未套用——owner 依 migration-apply SOP 套用 production 後把 status 改 verified 並補 applied_at。gate 於套用前 HOLD（by design）。"
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1596 行前導遊聯絡：guide_profiles 增 contact_phone / contact_phone_visible。owner 於 Supabase Dashboard SQL Editor 套用；agent 以 information_schema 探測驗證兩欄 present=true。rollback：同名 .rollback.sql。Refs #1596 #1293。"
     },
     {
       "filename": "20260705100000_user_notifications_1593.sql",
       "environment": "production",
-      "operator": "Claude Code agent (awaiting owner apply)",
-      "applied_at": null,
-      "status": "pending",
-      "note": "#1593 站內通知中心：user_notifications 表＋RLS。尚未套用——owner 依 SOP 套用後改 verified。gate 套用前 HOLD（by design）。"
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1593 站內通知中心：user_notifications 表＋RLS。owner 套用；agent 驗證 table present=true、relrowsecurity=true、3 條 policy（select_own/update_own/service_all）、idx_user_notifications_unread present。rollback：同名 .rollback.sql。Refs #1593 #1293。"
     },
     {
       "filename": "20260705101000_activity_addons_1591.sql",
       "environment": "production",
-      "operator": "Claude Code agent (awaiting owner apply)",
-      "applied_at": null,
-      "status": "pending",
-      "note": "#1591 加購：activity_addons/order_addons 兩表＋RLS。尚未套用——owner 依 SOP 套用後改 verified。"
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1591 加購：activity_addons/order_addons 兩表＋RLS。owner 套用；agent 驗證兩表 present=true、relrowsecurity=true、policy 數 activity_addons=2（select_active/service_all）、order_addons=1（service_all）。rollback：同名 .rollback.sql。Refs #1591 #1293。"
     },
     {
       "filename": "20260705102000_user_points_ledger_1594.sql",
       "environment": "production",
-      "operator": "Claude Code agent (awaiting owner apply)",
-      "applied_at": null,
-      "status": "pending",
-      "note": "#1594 點數：user_points_ledger append-only 表＋冪等唯一約束＋RLS。尚未套用——owner 依 SOP 套用後改 verified。"
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1594 點數：user_points_ledger append-only 表＋冪等唯一約束＋RLS。owner 套用；agent 驗證 table present=true、relrowsecurity=true、uq_points_earn_per_order 唯一索引 present、2 條 policy（select_own/service_all）。rollback：同名 .rollback.sql。Refs #1594 #1293。"
     },
     {
       "filename": "20260705103000_activity_reviews_guide_reply_1592.sql",
       "environment": "production",
-      "operator": "Claude Code agent (awaiting owner apply)",
-      "applied_at": null,
-      "status": "pending",
-      "note": "#1592 評論互動：activity_reviews 增 guide_reply_text / guide_reply_at（導遊回覆）。尚未套用——owner 依 SOP 套用後改 verified。讀取端有 42703 fail-soft，未套用時評論仍正常顯示（無回覆欄）。"
+      "operator": "owner (smallwei0301) 套用 + Claude Code agent 驗證",
+      "applied_at": "2026-07-05T17:56:13+08:00",
+      "status": "verified",
+      "note": "#1592 評論互動：activity_reviews 增 guide_reply_text / guide_reply_at（導遊回覆）。owner 套用；agent 以 information_schema 驗證兩欄 present=true。讀取端有 42703 fail-soft。rollback：同名 .rollback.sql。Refs #1592 #1293。"
     }
   ]
 }
