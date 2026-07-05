@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
-  upsertGuideReplyDb, normalizeGuideReply, GUIDE_REPLY_MAX_CHARS,
+  upsertGuideReplyDb, normalizeGuideReply, GUIDE_REPLY_MAX_CHARS, listGuideReviewsDb,
   __seedMemReviews, __getMemReviews, __resetMemReviews,
 } from '../../src/lib/db-review-reply.mjs';
 import { filterReviews } from '../../src/lib/review-distribution.mjs';
@@ -78,5 +78,39 @@ test('T1592.4 — filterReviews：星等＋只看含照片', () => {
 
 test('T1592.5 — strangler：導遊回覆 db 不進 db.mjs', () => {
   const dbSrc = readFileSync(path.join(ROOT, 'src/lib/db.mjs'), 'utf8');
-  assert.ok(!/upsertGuideReplyDb|normalizeGuideReply/.test(dbSrc), '導遊回覆 db 不得寫進 db.mjs');
+  assert.ok(!/upsertGuideReplyDb|normalizeGuideReply|listGuideReviewsDb/.test(dbSrc), '導遊回覆 db 不得寫進 db.mjs');
+});
+
+test('T1592.6 — listGuideReviewsDb 只回自己活動的評論、含既有回覆', async () => {
+  __resetMemReviews();
+  __seedMemReviews(
+    [
+      { id: 'rev1', activity_slug: 'act-a', author: '小明', rating: 5, review_text: '很棒', review_date: '2026-07-01', guide_reply_text: '謝謝' },
+      { id: 'rev2', activity_slug: 'act-a', author: '小華', rating: 4, review_text: '不錯' },
+      { id: 'rev3', activity_slug: 'act-b', author: '別人', rating: 3, review_text: '普通' },
+    ],
+    { 'act-a': 'guide-1', 'act-b': 'guide-2' },
+  );
+  const list = await listGuideReviewsDb({ guideId: 'guide-1' });
+  assert.deepEqual(list.map((r) => r.id).sort(), ['rev1', 'rev2']);
+  const rev1 = list.find((r) => r.id === 'rev1');
+  assert.equal(rev1.author, '小明');
+  assert.equal(rev1.rating, 5);
+  assert.deepEqual(rev1.guideReply, { text: '謝謝', at: null });
+  const rev2 = list.find((r) => r.id === 'rev2');
+  assert.equal(rev2.guideReply, null);
+  // guide-2 只看得到自己的
+  assert.deepEqual((await listGuideReviewsDb({ guideId: 'guide-2' })).map((r) => r.id), ['rev3']);
+});
+
+test('T1592.7 — 導遊後台評論頁與路由/導覽已接線', () => {
+  const listRoute = readFileSync(path.join(ROOT, 'app/api/v2/guide/reviews/route.ts'), 'utf8');
+  assert.match(listRoute, /verifyGuideSession/);
+  assert.match(listRoute, /listGuideReviewsDb/);
+  const page = readFileSync(path.join(ROOT, 'app/guide/reviews/page.tsx'), 'utf8');
+  assert.match(page, /\/api\/v2\/guide\/reviews/);
+  assert.match(page, /\/reply/);
+  assert.match(page, /csrfHeaders/);
+  const layout = readFileSync(path.join(ROOT, 'app/guide/layout.tsx'), 'utf8');
+  assert.match(layout, /\/guide\/reviews/);
 });
