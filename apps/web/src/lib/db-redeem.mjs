@@ -12,7 +12,7 @@ import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
 import { orders as memOrders } from './store.mjs';
 import { appendAuditLog, insertAuditLogDb } from './audit-log.mjs';
 import { evaluateRedeemEligibility } from './redeem-eligibility.mjs';
-import { grantCompletionRewards } from './order-completion-rewards.mjs';
+import { grantCompletionRewards } from './rewards/order-completion-rewards.mjs';
 
 const AUDIT_ACTION = 'order_voucher_redeemed';
 

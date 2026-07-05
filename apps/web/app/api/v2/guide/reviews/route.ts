@@ -7,20 +7,20 @@
 
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
 import { listGuideReviewsDb } from '../../../../../src/lib/db-review-reply.mjs';
-import { ok, fail } from '../../../../../src/lib/api';
+import { jsonOk, jsonError } from '../../../../../src/lib/api-response';
 import { reportRouteError } from '../../../../../src/lib/route-error';
 
 export async function GET(request: Request) {
   const session = verifyGuideSession(request);
   if (!session) {
-    return Response.json(fail('UNAUTHORIZED', 'Guide session required'), { status: 401 });
+    return jsonError('UNAUTHORIZED', 'Guide session required', 401);
   }
 
   try {
     const items = await listGuideReviewsDb({ guideId: session.guideId, limit: 100 });
-    return Response.json(ok({ items }), { status: 200 });
+    return jsonOk({ items });
   } catch (err) {
     await reportRouteError(err, { route: 'v2/guide/reviews:list' });
-    return Response.json(fail('SERVER_ERROR', 'Server error'), { status: 500 });
+    return jsonError('SERVER_ERROR', 'Server error', 500);
   }
 }

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { grantCompletionRewards } from '../../src/lib/order-completion-rewards.mjs';
+import { grantCompletionRewards } from '../../src/lib/rewards/order-completion-rewards.mjs';
 import { getPointsBalanceDb, __resetMemLedger } from '../../src/lib/db-points.mjs';
 import { listNotificationsDb, __resetMemNotifications } from '../../src/lib/db-notifications.mjs';
 
@@ -49,12 +49,14 @@ test('T1594wire.3 — 兩個完成 seam 都掛發點（auto-complete sweep＋gui
   assert.match(redeem, /select\([^)]*user_id[^)]*total_twd/);
 });
 
-test('T1594wire.4 — draft route 收 redeemPoints → redeemPointsForOrderDb → discount_amount', () => {
-  const src = read('app/api/v2/bookings/draft/route.ts');
-  assert.match(src, /redeemPoints/);
-  assert.match(src, /import\s*\{\s*redeemPointsForOrderDb\s*\}/);
-  assert.match(src, /redeemPointsForOrderDb\(\{/);
-  assert.match(src, /discount_amount:\s*redeemed/);
+test('T1594wire.4 — draft route 經 applyOrderExtras 收 redeemPoints；折抵在 checkout/order-extras', () => {
+  const route = read('app/api/v2/bookings/draft/route.ts');
+  assert.match(route, /redeemPoints/);
+  assert.match(route, /applyOrderExtras\(\{/);
+  const helper = read('src/lib/checkout/order-extras.mjs');
+  assert.match(helper, /import\s*\{\s*redeemPointsForOrderDb\s*\}/);
+  assert.match(helper, /redeemPointsForOrderDb\(\{/);
+  assert.match(helper, /discount_amount:\s*redeemed/);
 });
 
 test('T1594wire.5 — /api/me/points＋餘額晶片＋checkout 折抵器＋booking body 接線', () => {
@@ -65,9 +67,12 @@ test('T1594wire.5 — /api/me/points＋餘額晶片＋checkout 折抵器＋booki
   const redeem = read('src/components/activity/CheckoutPointsRedeem.tsx');
   assert.match(redeem, /maxRedeemable/);
   assert.match(redeem, /\/api\/me\/points/);
+  // CheckoutPointsRedeem 由 CheckoutExtrasSection 掛載；booking 頁把 extras 送進下單 body
+  const section = read('src/components/activity/CheckoutExtrasSection.tsx');
+  assert.match(section, /<CheckoutPointsRedeem/);
   const page = read('app/booking/[activityId]/page.tsx');
-  assert.match(page, /<CheckoutPointsRedeem/);
-  assert.match(page, /redeemPoints:\s*redeemPoints\s*>\s*0/);
+  assert.match(page, /<CheckoutExtrasSection/);
+  assert.match(page, /redeemPoints:\s*extras\.redeemPoints\s*>\s*0/);
   assert.match(page, /payTotal/);
   const orders = read('app/me/orders/page.tsx');
   assert.match(orders, /<PointsBalanceChip\s*\/>/);

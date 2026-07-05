@@ -5,7 +5,7 @@
  */
 
 import { listActivityAddonsDb } from '../../../../../../src/lib/db-addons.mjs';
-import { ok, fail } from '../../../../../../src/lib/api';
+import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
 import { reportRouteError } from '../../../../../../src/lib/route-error';
 
 export async function GET(
@@ -15,9 +15,9 @@ export async function GET(
   try {
     const { activityId } = await params;
     const items = await listActivityAddonsDb(activityId);
-    return Response.json(ok({ items }), { status: 200 });
+    return jsonOk({ items });
   } catch (err) {
     await reportRouteError(err, { route: 'v2/activities/addons:list' });
-    return Response.json(fail('SERVER_ERROR', 'Server error'), { status: 500 });
+    return jsonError('SERVER_ERROR', 'Server error', 500);
   }
 }

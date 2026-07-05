@@ -6,8 +6,8 @@
  * 冪等由 earnPointsForOrderDb 的唯一約束 (order_id, reason='earn_order') 保證，
  * 故重跑 sweep / 重複完成都只發一次點；通知只在「首次真的發點」時送出。
  */
-import { earnPointsForOrderDb } from './db-points.mjs';
-import { createNotification } from './db-notifications.mjs';
+import { earnPointsForOrderDb } from '../db-points.mjs';
+import { createNotification } from '../db-notifications.mjs';
 
 /**
  * @param {{ userId?: string|null, orderId: string, paidTwd?: number|null, activityTitle?: string|null, now?: string }} input

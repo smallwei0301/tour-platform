@@ -15,7 +15,7 @@
 import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
 import { orders as memOrders } from './store.mjs';
 import { appendAuditLog, insertAuditLogDb } from './audit-log.mjs';
-import { grantCompletionRewards } from './order-completion-rewards.mjs';
+import { grantCompletionRewards } from './rewards/order-completion-rewards.mjs';
 import {
   evaluateAutoCompleteEligibility,
   isStalledConfirmedOrder,
