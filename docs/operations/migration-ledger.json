@@ -50,6 +50,22 @@
       "applied_at": null,
       "status": "pending",
       "note": "#1593 站內通知中心：user_notifications 表＋RLS。尚未套用——owner 依 SOP 套用後改 verified。gate 套用前 HOLD（by design）。"
+    },
+    {
+      "filename": "20260705101000_activity_addons_1591.sql",
+      "environment": "production",
+      "operator": "Claude Code agent (awaiting owner apply)",
+      "applied_at": null,
+      "status": "pending",
+      "note": "#1591 加購：activity_addons/order_addons 兩表＋RLS。尚未套用——owner 依 SOP 套用後改 verified。"
+    },
+    {
+      "filename": "20260705102000_user_points_ledger_1594.sql",
+      "environment": "production",
+      "operator": "Claude Code agent (awaiting owner apply)",
+      "applied_at": null,
+      "status": "pending",
+      "note": "#1594 點數：user_points_ledger append-only 表＋冪等唯一約束＋RLS。尚未套用——owner 依 SOP 套用後改 verified。"
     }
   ]
 }
