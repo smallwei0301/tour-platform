@@ -15,6 +15,11 @@ let _memSeq = 0;
 export function __resetMemLedger() { _memLedger.length = 0; _memSeq = 0; }
 export function __getMemLedger() { return _memLedger.slice(); }
 
+/**
+ * @param {string} iso
+ * @param {number} months
+ * @returns {string}
+ */
 function addMonthsIso(iso, months) {
   const d = new Date(iso);
   d.setMonth(d.getMonth() + months);

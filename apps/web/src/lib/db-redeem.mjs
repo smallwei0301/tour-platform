@@ -12,6 +12,7 @@ import { hasSupabaseEnv, getSupabase } from './db.mjs';
 import { orders as memOrders } from './store.mjs';
 import { appendAuditLog, insertAuditLogDb } from './audit-log.mjs';
 import { evaluateRedeemEligibility } from './redeem-eligibility.mjs';
+import { grantCompletionRewards } from './order-completion-rewards.mjs';
 
 const AUDIT_ACTION = 'order_voucher_redeemed';
 
@@ -27,7 +28,7 @@ export async function redeemVoucherDb({ orderId, guideId, now } = {}) {
   const supabase = await getSupabase();
   const { data: order, error } = await supabase
     .from('orders')
-    .select('id, status, bookings!fk_bookings_order_id(guide_id)')
+    .select('id, status, user_id, total_twd, bookings!fk_bookings_order_id(guide_id)')
     .eq('id', id)
     .single();
   if (error || !order) {
@@ -59,6 +60,12 @@ export async function redeemVoucherDb({ orderId, guideId, now } = {}) {
       });
     } catch (auditErr) {
       console.error('[voucher-redeem] audit error:', auditErr?.message || auditErr);
+    }
+    // #1594 完成獎勵：發點（冪等）＋站內通知，best-effort。
+    try {
+      await grantCompletionRewards({ userId: order.user_id, orderId: id, paidTwd: order.total_twd, now: nowIso });
+    } catch (rewardErr) {
+      console.error('[voucher-redeem] reward error:', rewardErr?.message || rewardErr);
     }
   }
   return { redeemed: didUpdate, alreadyRedeemed: false, status: 'completed', reason: didUpdate ? 'redeemed' : 'already_redeemed' };

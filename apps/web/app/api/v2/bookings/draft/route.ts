@@ -54,6 +54,7 @@ import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/pay
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { applyWithOptionalColumnFallback } from '../../../../../src/lib/optional-column-fallback.mjs';
 import { persistOrderAddonsDb } from '../../../../../src/lib/db-addons.mjs';
+import { redeemPointsForOrderDb } from '../../../../../src/lib/db-points.mjs';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -402,6 +403,8 @@ interface DraftBookingRequest {
   customerNote?: string;
   // #1591 加購（選填）：server 一律以 DB 快照重算，不信任前端金額。
   addonSelections?: Array<{ addonId: string; quantity: number }>;
+  // #1594 點數折抵（選填）：server 以 redeemPointsForOrderDb 夾在 min(餘額, 訂單×30%)。
+  redeemPoints?: number;
 }
 
 type ActivitySchedule = {
@@ -531,6 +534,15 @@ function parseAndValidateBody(
       .map((s) => ({ addonId: s.addonId, quantity: Math.max(1, Math.min(99, s.quantity)) }));
   }
 
+  // #1594 redeemPoints (optional)：非負整數；實際折抵上限由 server 夾。
+  let redeemPoints: number | undefined;
+  if (b.redeemPoints !== undefined) {
+    if (typeof b.redeemPoints !== 'number' || !Number.isInteger(b.redeemPoints) || b.redeemPoints < 0) {
+      return { error: { code: 'VALIDATION_ERROR', message: 'redeemPoints must be a non-negative integer' } };
+    }
+    redeemPoints = b.redeemPoints;
+  }
+
   return {
     data: {
       activityId: b.activityId,
@@ -545,6 +557,7 @@ function parseAndValidateBody(
       contactEmail,
       customerNote,
       addonSelections,
+      redeemPoints,
     },
   };
 }
@@ -1160,6 +1173,31 @@ export async function POST(request: NextRequest) {
         }
       } catch (addonErr) {
         console.error('[draft] addon persist failed (non-fatal):', addonErr);
+      }
+    }
+
+    // #1594 點數折抵：以（base＋加購後）訂單金額為基準，server 夾在 min(餘額, 訂單×30%)。
+    // 只對登入旅客生效；扣點寫入 ledger（冪等），並把折抵金額落 orders.discount_amount，
+    // 同步下修 total_twd（ECPay checkout 讀 total_twd → 少收折抵金額）。任何失敗 fail-soft。
+    if (travelerId && data.redeemPoints && data.redeemPoints > 0) {
+      try {
+        const redeemResult = await redeemPointsForOrderDb({
+          userId: travelerId,
+          orderId: orderInsert.id,
+          requestPoints: data.redeemPoints,
+          orderTwd: totalAmount,
+          now: new Date().toISOString(),
+        });
+        const redeemed = Number(redeemResult?.redeemed) || 0;
+        if (redeemed > 0) {
+          totalAmount = Math.max(0, totalAmount - redeemed);
+          await supabase
+            .from('orders')
+            .update({ total_twd: totalAmount, discount_amount: redeemed })
+            .eq('id', orderInsert.id);
+        }
+      } catch (redeemErr) {
+        console.error('[draft] points redeem failed (non-fatal):', redeemErr);
       }
     }
 

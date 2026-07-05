@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '../../../src/lib/supabase/client';
 import { MemberTabs } from '../../../src/components/me/MemberTabs';
+import { PointsBalanceChip } from '../../../src/components/me/PointsBalanceChip';
 import { useMeResource } from '../../../src/lib/use-me-resource';
 import { useClientLocale } from '../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
@@ -93,9 +94,12 @@ export default function MyOrdersPage() {
   return (
     <main className="tp-container" style={pageStyle}>
       <h1 style={titleStyle} data-testid="my-orders-title">{m.title}</h1>
-      <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: '0 0 20px' }}>
-        {userName ? m.greeting.replace('{name}', userName) : m.subtitle}
-      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '0 0 20px' }}>
+        <p style={{ fontSize: 13, color: 'var(--tp-muted)', margin: 0 }}>
+          {userName ? m.greeting.replace('{name}', userName) : m.subtitle}
+        </p>
+        <PointsBalanceChip />
+      </div>
       <MemberTabs />
 
       {err && <p style={{ color: 'var(--tp-accent)', fontSize: 13, marginBottom: 16 }}>{err}</p>}

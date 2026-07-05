@@ -17,6 +17,7 @@ import { derivePlanMetaFromActivityPlans } from '../../../src/lib/booking-v2-pla
 import { track } from '../../../src/lib/track';
 import { formatSlotRangeLabel } from '../../../src/lib/slot-generator';
 import { CheckoutAddonPicker } from '../../../src/components/activity/CheckoutAddonPicker';
+import { CheckoutPointsRedeem } from '../../../src/components/activity/CheckoutPointsRedeem';
 import { useClientLocale } from '../../../src/i18n/use-client-locale';
 import { getClientNamespace } from '../../../src/i18n/client-nav-messages';
 
@@ -194,6 +195,13 @@ function BookingInnerV2FlagShell() {
   const handleAddonsChange = useCallback((sels: Array<{ addonId: string; quantity: number }>, total: number) => {
     setAddonSelections(sels);
     setAddonTotal(total);
+  }, []);
+  // #1594 點數折抵：折抵點數與（顯示用）折抵金額；server 夾在 min(餘額, 訂單×30%) 為準。
+  const [redeemPoints, setRedeemPoints] = useState(0);
+  const [redeemDiscount, setRedeemDiscount] = useState(0);
+  const handleRedeemChange = useCallback((points: number, discount: number) => {
+    setRedeemPoints(points);
+    setRedeemDiscount(discount);
   }, []);
   const [selectedPlanMeta, setSelectedPlanMeta] = useState<{
     name: string | null;
@@ -464,6 +472,8 @@ function BookingInnerV2FlagShell() {
           customerNote: note || undefined,
           // #1591 加購（選填）：server 一律以 DB 快照重算金額，不信任前端數字。
           addonSelections: addonSelections.length > 0 ? addonSelections : undefined,
+          // #1594 點數折抵（選填）：server 夾在 min(餘額, 訂單×30%) 為準。
+          redeemPoints: redeemPoints > 0 ? redeemPoints : undefined,
         }),
       });
       const draftJson = await draftRes.json();
@@ -575,8 +585,10 @@ function BookingInnerV2FlagShell() {
   });
   const unitPrice = effectivePlanMeta?.basePrice ?? activity.priceTwd;
   const total = effectivePlanMeta?.priceType === 'per_group' ? unitPrice : unitPrice * guests;
-  // #1591 含加購的應付總額（顯示用；server 端下單時以 DB 快照重算為準）。
+  // #1591 含加購的小計；#1594 再扣點數折抵＝應付總額（顯示用；server 重算為準）。
   const grandTotal = total + addonTotal;
+  const effectiveDiscount = Math.min(redeemDiscount, grandTotal);
+  const payTotal = Math.max(0, grandTotal - effectiveDiscount);
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
   const breadcrumbJsonLd = {
@@ -859,6 +871,9 @@ function BookingInnerV2FlagShell() {
                 />
               )}
 
+              {/* #1594 點數折抵（未登入或無餘額時整塊不顯示） */}
+              <CheckoutPointsRedeem orderTwd={grandTotal} onChange={handleRedeemChange} />
+
               <div style={{ borderTop: '1px solid var(--tp-border)', paddingTop: 14, marginTop: 14 }}>
                 <h4>{m.feeDetailHeading}</h4>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -875,13 +890,19 @@ function BookingInnerV2FlagShell() {
                     <span>NT${addonTotal.toLocaleString()}</span>
                   </div>
                 )}
+                {effectiveDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-gold-strong)' }} data-testid="fee-points-discount">
+                    <span>點數折抵</span>
+                    <span>−NT${effectiveDiscount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--tp-muted)' }}>
                   <span>{m.platformFee}</span>
                   <span>NT$0</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: '1px solid var(--tp-border)', paddingTop: 8, marginTop: 8 }}>
                   <span>{m.total}</span>
-                  <span>NT${grandTotal.toLocaleString()}</span>
+                  <span>NT${payTotal.toLocaleString()}</span>
                 </div>
               </div>
               <div style={{ marginTop: 16 }}>
