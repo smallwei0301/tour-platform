@@ -78,7 +78,10 @@ test('AC5: admin edit page 不再有手動評論數輸入（改自動對齊）',
 });
 
 test('AC5: admin edit page 社群口碑語錄可編輯人名/星數/內容', async () => {
-  const src = await readSource('app/admin/activities/[id]/edit/page.tsx');
+  // #1615 拆檔：口碑語錄編輯 UI 移至 SocialProofQuotesEditor 元件（state 仍在頁面層），
+  // 合併兩檔原始碼做等價斷言（斷言意圖不變）。
+  const src = (await readSource('app/admin/activities/[id]/edit/page.tsx')) +
+    (await readSource('src/components/admin/activity-form/SocialProofQuotesEditor.tsx'));
   assert.match(src, /SocialProofQuoteRow/, '應使用結構化口碑語錄型別');
   assert.match(src, /updateQuote\(/, '應有逐則編輯 helper');
   assert.match(src, /評論星數/, '應有星數選擇器');

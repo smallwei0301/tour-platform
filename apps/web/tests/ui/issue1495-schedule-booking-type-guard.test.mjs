@@ -14,7 +14,8 @@ const APP = join(__dirname, '../..');
 const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
 const ROUTE = read('app/api/v2/admin/activities/[activityId]/schedules/route.ts');
-const EDIT = read('app/admin/activities/[id]/edit/page.tsx');
+// #1615 拆檔：新增場次 Modal 移至 ScheduleSection 元件（斷言意圖不變）
+const EDIT = read('src/components/admin/activity-form/ScheduleSection.tsx');
 
 test('schedules POST reads booking_type and rejects non-scheduled plans (422)', () => {
   assert.match(ROUTE, /booking_type/);

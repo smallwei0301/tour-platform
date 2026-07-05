@@ -42,7 +42,8 @@ test('admin + guide booking-types pages render the shared guide component', () =
 });
 
 test('admin plan form links to booking-types help next to the selector', () => {
-  const src = read('app/admin/activities/[id]/plans/page.tsx');
+  // #1615 拆檔：方案表單（含預約方式下拉與說明連結）移至 PlanFormModal 元件（斷言意圖不變）
+  const src = read('src/components/admin/activity-plans/PlanFormModal.tsx');
   assert.match(src, /\/admin\/help\/booking-types/);
   // Link sits near the 預約方式 selector.
   const linkIdx = src.indexOf('/admin/help/booking-types');
@@ -56,7 +57,9 @@ test('guide plan form links to booking-types help', () => {
 
 test('conflict-override help is linked from the availability page (single canonical location)', () => {
   // 連結只放在時段預覽頁(例外開放流程所在地),不放列表卡片與導遊詳情頁。
-  const availSrc = read('app/admin/guides/[guideId]/availability/page.tsx');
+  // #1615 拆檔：時段預覽卡片移至 AdminSlotPreviewSection（純結構搬移），
+  // 連結與「時段預覽」標題仍同在該元件內，斷言意圖不變。
+  const availSrc = read('src/components/availability/admin-sections.tsx');
   assert.match(availSrc, /\/admin\/help\/conflict-override/);
   const helpIdx = availSrc.indexOf('/admin/help/conflict-override');
   const previewIdx = availSrc.indexOf('時段預覽');

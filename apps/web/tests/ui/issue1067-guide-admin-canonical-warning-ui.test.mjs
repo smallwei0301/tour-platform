@@ -8,12 +8,27 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '../..');
 
-const GUIDE_PAGE = path.resolve(ROOT, 'app/guide/availability/page.tsx');
-const ADMIN_PAGE = path.resolve(ROOT, 'app/admin/guides/[guideId]/availability/page.tsx');
+// #1615：兩頁已拆出 src/components/availability/** 子元件（純結構搬移、零行為
+// 變更），canonical 警示文案分散在頁面與其子元件；來源契約改讀「頁面＋其
+// 子元件」串接內容，斷言意圖不變（這些警示仍由該頁組裝渲染）。
+const GUIDE_PAGE_SOURCES = [
+  'app/guide/availability/page.tsx',
+  'src/components/availability/guide-sections.tsx',
+  'src/components/availability/rule-form-fields.tsx',
+].map((rel) => path.resolve(ROOT, rel));
+const ADMIN_PAGE_SOURCES = [
+  'app/admin/guides/[guideId]/availability/page.tsx',
+  'src/components/availability/admin-sections.tsx',
+  'src/components/availability/rule-form-fields.tsx',
+].map((rel) => path.resolve(ROOT, rel));
 const UI_HELPER = path.resolve(ROOT, 'src/lib/availability-v2/canonical-availability-ui.ts');
 
 function read(pathname) {
   return readFileSync(pathname, 'utf8');
+}
+
+function readAll(pathnames) {
+  return pathnames.map(read).join('\n');
 }
 
 test('GH-1067 RED: canonical availability UI helper formats plan season status and preview labels', async () => {
@@ -120,7 +135,7 @@ test('GH-1067 RED: UI helper warns when weekly or single-day rules fall outside 
 });
 
 test('GH-1067 RED: guide availability page surfaces canonical season warnings and preview reason labels', () => {
-  const src = read(GUIDE_PAGE);
+  const src = readAll(GUIDE_PAGE_SOURCES);
 
   for (const required of [
     'isYearRound',
@@ -142,7 +157,7 @@ test('GH-1067 RED: guide availability page surfaces canonical season warnings an
 });
 
 test('GH-1067 RED: admin availability page surfaces canonical season status and blocked preview copy', () => {
-  const src = read(ADMIN_PAGE);
+  const src = readAll(ADMIN_PAGE_SOURCES);
 
   for (const required of [
     'isYearRound',

@@ -122,7 +122,7 @@ test('AC4.8 — activePlans contains null entries (defensive filter)', () => {
 
 test('Source contract: AddScheduleModal guards 0-plan case with blocking message copy', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/admin/activities/[id]/edit/page.tsx'),
+    join(REPO_ROOT, 'src/components/admin/activity-form/ScheduleSection.tsx'),  // #1615 拆檔：AddScheduleModal 移至 ScheduleSection
     'utf8',
   );
   // Must contain the blocking copy text required by AC1
@@ -135,7 +135,7 @@ test('Source contract: AddScheduleModal guards 0-plan case with blocking message
 
 test('Source contract: AddScheduleModal disables submit when 0 active plans', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/admin/activities/[id]/edit/page.tsx'),
+    join(REPO_ROOT, 'src/components/admin/activity-form/ScheduleSection.tsx'),  // #1615 拆檔：AddScheduleModal 移至 ScheduleSection
     'utf8',
   );
   // Submit must be disabled when availablePlans.length === 0
@@ -148,7 +148,7 @@ test('Source contract: AddScheduleModal disables submit when 0 active plans', ()
 
 test('Source contract: 全部方案 option is NOT shown for 0-plan case (old < 2 bug gone)', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/admin/activities/[id]/edit/page.tsx'),
+    join(REPO_ROOT, 'src/components/admin/activity-form/ScheduleSection.tsx'),  // #1615 拆檔：AddScheduleModal 移至 ScheduleSection
     'utf8',
   );
   // Old bug: rendered 全部方案 when availablePlans.length < 2 (which includes 0 plans).
