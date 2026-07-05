@@ -53,3 +53,13 @@
 - Error：playwright.config 有 `webServer`——測試自己在 port 3333 起 server（command 內只帶 NEXT_PUBLIC_SUPABASE_* 假值），spec 打的是 3333 不是你起的 3000；server 端 admin env 要靠**外層 shell export** 讓 webServer command 繼承
 - Solution：`export ADMIN_ACCESS_TOKEN=test-token-123 ADMIN_EMAIL_ALLOWLIST=admin@tour-platform.com` 後再 `npx playwright test`；自訂 browser 走訪腳本若另起 server，記得帶齊 playwright.config webServer command 的同款 NEXT_PUBLIC_* env，否則活動詳情等頁會有 @supabase/ssr client 建立 pageerror（是 env 缺料、不是回歸）
 - 適用範圍：所有需要 admin/guide 登入的 e2e 與手動 browser smoke
+
+## [2026-07-05] agent-cannot-apply-migrations-in-this-env
+- Context：健檢 v2（#1590–#1601）B 組 5 支 migration 需套用 production 才能 merge；owner 於對話授權 agent「用 MCP 套用」
+- 限制（三重死結，光有口頭授權無法解）：
+  1. Supabase MCP **未曝露** `apply_migration`（本環境 MCP 為唯讀設定；只有 `execute_sql` 等讀取工具）。
+  2. `execute_sql` 的任何 DDL（create/alter/…）被 `.claude/hooks/sql-guard.sh` 硬擋（exit 2），無 authorized-bypass 分支。
+  3. sql-guard 屬 `.claude/**` harness 治理檔，鐵律 9 禁止 agent 修改；owner 口頭授權不等於可改 hook。
+- 結論：**agent 在本環境永遠無法套 migration**，不論授權與否。唯一路徑＝owner 走 Dashboard SQL Editor／`supabase db push`／CLI 套用（migration-apply SOP option 2）。
+- Agent 能做的極限：read-only SELECT 驗證前/後 schema（`information_schema` 探測）、套用後改 ledger 為 verified、確認 CI 綠後 merge。
+- 建議：遇「需套 migration 才能 merge」的 issue，一開始就把它標為 owner-blocked，不要規劃 agent 自套的路徑。

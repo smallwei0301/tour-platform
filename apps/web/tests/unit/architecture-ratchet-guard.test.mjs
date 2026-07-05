@@ -64,7 +64,8 @@ const GOD_FILE_CEILINGS = new Map([
   ['app/booking/[activityId]/page.tsx', 1080],
   ['app/guide/profile/page.tsx', 992],
   ['src/lib/email.ts', 863],
-  ['app/me/orders/[orderId]/page.tsx', 827],
+  // 827→866：merge origin/main 帶入 #1596 pre-tour-contact 顯示（上游功能，非本分支回退；後續拆頁時下修）。
+  ['app/me/orders/[orderId]/page.tsx', 866],
 ]);
 
 const GENERAL_FILE_LINE_LIMIT = 800;
@@ -142,8 +143,10 @@ test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）'
 // 2026-07-05：#1613 批次抽出 9 個 db-* 領域檔（sanctioned 拆檔）＋#1614 共用 api-response.ts
 // （與 api.ts 並列的跨 route 基礎設施）→ 167 → merge origin/main 帶入 #1598
 // route-error.ts／#1599 rate-limit-distributed.ts／#1611 guide-dashboard-trend.mjs
-// （皆非本分支新增）→ 170。
-const LIB_TOP_LEVEL_FILE_CEILING = 170;
+// （皆非本分支新增）→ 170 → 二次 merge origin/main 帶入 #1624（#1590–#1594）9 個新檔
+// （db-addons／db-notifications／db-points／db-pre-tour-contact／db-review-reply／
+// addon-pricing／points-calc／pre-tour-contact-eligibility／review-distribution）→ 179。
+const LIB_TOP_LEVEL_FILE_CEILING = 179;
 
 test('src/lib 頂層檔案數不得增加（新領域請開子資料夾）', () => {
   const count = readdirSync(join(WEB_ROOT, 'src/lib')).filter((entry) =>

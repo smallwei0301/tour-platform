@@ -48,6 +48,9 @@ const LEGACY_HANDROLLED = new Set([
   'app/api/v2/guide/trip-reports-due/route.ts',
   'app/api/v2/line/auth/handoff/route.ts',
   'app/api/v2/orders/[orderId]/refund-preview/route.ts',
+  // merge origin/main 帶入：#1592 導遊評論回覆（上游功能，其開發時 api-response helper
+  // 尚未存在；比照白名單同性質列入，後續可另案改走 jsonOk/jsonError）。
+  'app/api/v2/guide/reviews/[reviewId]/reply/route.ts',
 ]);
 
 const HANDROLLED_RE = /(?:^|[^A-Za-z])(?:Response|NextResponse)\.json\(/;

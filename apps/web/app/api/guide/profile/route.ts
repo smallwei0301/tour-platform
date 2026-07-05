@@ -32,6 +32,9 @@ const EDITABLE_FIELDS = [
   'account_name',
   'account_number',
   'transfer_note',
+  // #1596 行前聯絡電話＋揭露同意
+  'contact_phone',
+  'contact_phone_visible',
 ] as const;
 type EditableField = typeof EDITABLE_FIELDS[number];
 
@@ -39,6 +42,7 @@ type EditableField = typeof EDITABLE_FIELDS[number];
 const DRIFT_OPTIONAL_FIELDS = [
   'is_published', 'bank_name', 'account_name', 'account_number', 'transfer_note',
   'regions', 'certifications', 'payment_methods',
+  'contact_phone', 'contact_phone_visible',
 ] as const;
 // 陣列型可編輯欄位（PATCH 型別檢查與 GET 預設值共用）。
 const ARRAY_FIELDS = ['languages', 'specialties', 'regions', 'certifications', 'payment_methods'] as const;
@@ -56,6 +60,7 @@ export async function GET(req: Request) {
       profile_photo_url: null, hero_image_url: null, gallery_urls: [], slug: null,
       is_published: false,
       bank_name: '', account_name: '', account_number: '', transfer_note: '',
+      contact_phone: '', contact_phone_visible: false,
     }));
   }
 
@@ -63,12 +68,20 @@ export async function GET(req: Request) {
   const baseSelect = 'id, slug, display_name, bio, region, languages, specialties, headline, profile_photo_url, hero_image_url, gallery_urls';
   const richSelectV1 = `${baseSelect}, is_published, bank_name, account_name, account_number, transfer_note`;
   const richSelectV2 = `${richSelectV1}, regions, certifications, payment_methods`;
+  const richSelectV3 = `${richSelectV2}, contact_phone, contact_phone_visible`; // #1596
   // Schema drift guard（三層）：熟悉區域等（20260623）→ is_published／匯款（20260611+）→ base。
   let { data: gp, error } = await supabase
     .from('guide_profiles')
-    .select(richSelectV2)
+    .select(richSelectV3)
     .eq('id', session.guideId)
     .single();
+  if (error && isMissingColumnError(error)) {
+    ({ data: gp, error } = await supabase
+      .from('guide_profiles')
+      .select(richSelectV2)
+      .eq('id', session.guideId)
+      .single());
+  }
   if (error && isMissingColumnError(error)) {
     ({ data: gp, error } = await supabase
       .from('guide_profiles')
@@ -106,6 +119,8 @@ export async function GET(req: Request) {
     account_name: gp.account_name ?? '',
     account_number: gp.account_number ?? '',
     transfer_note: gp.transfer_note ?? '',
+    contact_phone: gp.contact_phone ?? '',
+    contact_phone_visible: gp.contact_phone_visible ?? false,
   }));
 }
 
@@ -169,6 +184,13 @@ export async function PATCH(req: Request) {
     if (update[f] !== undefined && update[f] !== null && typeof update[f] !== 'string') {
       return Response.json(fail('BAD_REQUEST', `${f} must be a string or null`), { status: 400 });
     }
+  }
+  // #1596 行前聯絡：電話字串/null；揭露同意為 boolean。
+  if (update.contact_phone !== undefined && update.contact_phone !== null && typeof update.contact_phone !== 'string') {
+    return Response.json(fail('BAD_REQUEST', 'contact_phone must be a string or null'), { status: 400 });
+  }
+  if (update.contact_phone_visible !== undefined && typeof update.contact_phone_visible !== 'boolean') {
+    return Response.json(fail('BAD_REQUEST', 'contact_phone_visible must be a boolean'), { status: 400 });
   }
 
   if (Object.keys(update).length === 0) {
