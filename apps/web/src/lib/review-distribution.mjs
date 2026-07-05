@@ -43,3 +43,27 @@ export function buildRatingDistribution(reviews) {
   const avg = total > 0 ? Number((sum / total).toFixed(1)) : 0;
   return { total, avg, counts, percents };
 }
+
+/**
+ * Issue #1592 — 評論篩選（純函式）：依星等與「只看含照片」過濾。
+ * 不碰 DB；供活動頁評論區 `?rating=`／`?withPhotos=` 前端或 SSR 套用。
+ *
+ * @param {Array<{ rating?: number | string | null, photos?: unknown }>} reviews
+ * @param {{ rating?: number | string | null, withPhotos?: boolean }} [filters]
+ * @returns {Array<any>}
+ */
+export function filterReviews(reviews, filters = {}) {
+  const list = Array.isArray(reviews) ? reviews : [];
+  const wantRating = Math.round(Number(filters?.rating));
+  const hasRatingFilter = Number.isFinite(wantRating) && wantRating >= 1 && wantRating <= 5;
+  const wantPhotos = filters?.withPhotos === true;
+
+  return list.filter((r) => {
+    if (hasRatingFilter && Math.round(Number(r?.rating)) !== wantRating) return false;
+    if (wantPhotos) {
+      const photos = /** @type {any} */ (r)?.photos;
+      if (!Array.isArray(photos) || photos.length === 0) return false;
+    }
+    return true;
+  });
+}

@@ -3103,7 +3103,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
     ).catch(() => ({ data: [], error: null })),
     (async () => {
       try {
-        const reviewSelect = 'id, author, city, rating, review_text, review_date, is_verified, photo_urls';
+        const reviewSelect = 'id, author, city, rating, review_text, review_date, is_verified, photo_urls, guide_reply_text, guide_reply_at';
         let { data: dbReviews, error: reviewErr } = await withActivityDetailTimeout(
           supabase
             .from('activity_reviews')
@@ -3131,7 +3131,11 @@ export async function getActivityBySlugDb(slug, options = {}) {
           return dbReviews.map(r => ({
             id: r.id, author: r.author, city: r.city, rating: r.rating,
             text: r.review_text, date: r.review_date, isVerified: r.is_verified,
-            photos: Array.isArray(r.photo_urls) ? r.photo_urls : []
+            photos: Array.isArray(r.photo_urls) ? r.photo_urls : [],
+            // #1592 導遊回覆（migration 未套用時 42703 退回精簡 select，無此欄→ null，fail-soft）
+            guideReply: r.guide_reply_text
+              ? { text: r.guide_reply_text, at: r.guide_reply_at ?? null }
+              : null,
           }));
         }
       } catch {}
