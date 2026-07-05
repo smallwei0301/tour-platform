@@ -3,11 +3,12 @@ import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/adm
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
 import { normalizeAdminQAStatusFilter } from '../../../../src/lib/admin-qa-status.mjs';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 function getServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

@@ -19,6 +19,7 @@
 // back to the in-memory store (store.mjs notificationSettings).
 
 import { notificationSettings } from './store.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 /** Order events that fan out to notifications. */
 export const NOTIFY_EVENTS = [
@@ -36,7 +37,7 @@ export const NOTIFY_RECIPIENTS = ['traveler', 'guide', 'admin'];
 export const NOTIFY_CHANNELS = ['line', 'telegram'];
 
 function hasSupabaseEnv() {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 function cellKey(event, recipient, channel) {

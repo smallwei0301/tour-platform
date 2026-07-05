@@ -500,7 +500,7 @@ test('AC5f: route uses SUPABASE_URL (not NEXT_PUBLIC_SUPABASE_URL)', () => {
     !routeSrc.includes('NEXT_PUBLIC_SUPABASE_URL'),
     'route must use process.env.SUPABASE_URL, not NEXT_PUBLIC_SUPABASE_URL'
   );
-  assert.match(routeSrc, /SUPABASE_URL/, 'route must reference SUPABASE_URL');
+  assert.match(routeSrc, /getSupabaseUrl\(\)/, 'route must reference server-side Supabase URL via config getter (#1616)');
 });
 
 // ── AC6: credentials validation for ECPay all-refund helper ───────────────

@@ -26,11 +26,12 @@ import {
   evaluateGuideTripReportIdempotency,
 } from '../../../../../../../src/lib/post-trip/guide-trip-report.mjs';
 import { ok, fail } from '../../../../../../../src/lib/api';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
 
 import { reportRouteError } from '../../../../../../../src/lib/route-error';
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 interface TripReportBody {
@@ -69,7 +70,7 @@ export async function POST(
     typeof body?.resubmitReason === 'string' ? body.resubmitReason : '';
 
   // No Supabase in dev/test env — return success stub
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(
       ok({ reportId: null, message: 'No database configured (dev/test mode)' }),
       { status: 201 },

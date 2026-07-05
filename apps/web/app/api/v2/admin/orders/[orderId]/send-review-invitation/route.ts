@@ -20,6 +20,7 @@ import { isReviewInvitationEligible } from '../../../../../../../src/lib/post-tr
 import { evaluateReviewInvitationIdempotency } from '../../../../../../../src/lib/post-trip/review-invitation.mjs';
 import { sendReviewInvitation } from '../../../../../../../src/lib/email';
 import { fetchReturningPromoEmailBlock } from '../../../../../../../src/lib/returning-promo.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -104,7 +105,8 @@ export async function POST(
     // SupabaseClient<any> type lets us write to the new table without
     // generated-types blocking (review_invitations not yet in schema types).
     // Dynamic import matches the pre-tour-sweep/route.ts pattern.
-    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+    const SUPABASE_URL = getSupabaseUrl();
+const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
     let srClient: SupabaseClient | null = null;
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       const { createClient } = await import('@supabase/supabase-js');

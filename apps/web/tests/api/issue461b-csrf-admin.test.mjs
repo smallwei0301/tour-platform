@@ -58,7 +58,9 @@ describe('Site 1 & 2: app/admin/activities/[id]/edit/page.tsx', () => {
   });
 
   it('DELETE schedule uses csrfHeaders()', () => {
-    assertMethodHasCsrf(readFile(FILE), 'DELETE', FILE);
+    // #1615 拆檔：場次管理（含 DELETE schedule）移至 ScheduleSection 元件（斷言意圖不變）
+    const SCHEDULE_SECTION = 'src/components/admin/activity-form/ScheduleSection.tsx';
+    assertMethodHasCsrf(readFile(SCHEDULE_SECTION), 'DELETE', SCHEDULE_SECTION);
   });
 });
 

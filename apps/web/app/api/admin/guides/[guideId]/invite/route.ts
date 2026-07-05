@@ -1,11 +1,12 @@
 import { ok, fail } from '../../../../../../src/lib/api';
 import { generateInviteToken } from '../../../../../../src/lib/guide-auth';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
   return createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
   );
 }
 
@@ -16,7 +17,7 @@ export async function POST(
   const { guideId } = await context.params;
   if (!guideId) return Response.json(fail('BAD_REQUEST', 'guideId required'), { status: 400 });
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(fail('NOT_AVAILABLE', 'Supabase not configured'), { status: 503 });
   }
 

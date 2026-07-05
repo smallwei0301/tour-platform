@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
-const dbSrc = read('../../src/lib/db.mjs');
+const dbSrc = read('../../src/lib/db-homepage-featured.mjs'); // #1613 strangler 後實作所在
 const routeSrc = read('../../app/api/admin/homepage-featured/route.ts');
 
 test('db.mjs 匯入 missing-table 偵測 helper', () => {

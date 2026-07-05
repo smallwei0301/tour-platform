@@ -2,11 +2,12 @@ import { ok, fail } from '../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
 import { parseGuideContactGuideId } from '../../../../../src/lib/guide-contact-qa.mjs';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 function getServiceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

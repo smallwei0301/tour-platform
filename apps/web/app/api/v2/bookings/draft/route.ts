@@ -73,6 +73,7 @@ import {
 } from '../../../../../src/lib/availability-v2/group-booking-rule';
 import { checkPlanScheduleDurationMismatch } from '../../../../../src/lib/availability-v2/plan-schedule-mismatch.mjs';
 import { buildActivityPlanNotFoundResponse } from '../../../../../src/lib/availability-v2/activity-plan-not-found-copy.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 // Validation helpers
 function isUuidLike(str: string): boolean {
@@ -1046,7 +1047,7 @@ export async function POST(request: NextRequest) {
     {
       const { createClient: createServiceClient } = await import('@supabase/supabase-js');
       const { getControls, isWhitelisted } = await import('../../../../../src/lib/soft-launch.mjs');
-      const svc = createServiceClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const svc = createServiceClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
       const controls = await getControls(svc);
       if (controls.new_booking_paused) {
         const allowed = controls.whitelist_enabled ? await isWhitelisted(svc, { userId: travelerId ?? undefined, activityId: undefined, guideId: undefined }) : false;

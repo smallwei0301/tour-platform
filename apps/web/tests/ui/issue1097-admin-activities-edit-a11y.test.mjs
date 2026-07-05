@@ -12,11 +12,16 @@ const source = readFileSync(
   resolve(__dirname, '../../app/admin/activities/[id]/edit/page.tsx'),
   'utf8'
 );
+// #1615 拆檔：場次管理（含容量 inline 編輯）移至 ScheduleSection 元件（斷言意圖不變）
+const scheduleSource = readFileSync(
+  resolve(__dirname, '../../src/components/admin/activity-form/ScheduleSection.tsx'),
+  'utf8'
+);
 
 describe('GH-1097 — admin activities edit a11y', () => {
   test('capacity inline edit input has aria-label', () => {
     assert.ok(
-      source.includes('aria-label="容量"'),
+      scheduleSource.includes('aria-label="容量"'),
       'Inline capacity edit input must have aria-label="容量"'
     );
   });

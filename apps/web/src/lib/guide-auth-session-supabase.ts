@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 export type GuideAuthSingleResult<T> = {
   data: T | null;
@@ -32,6 +33,6 @@ export type GuideAuthSupabaseClient = {
 };
 
 export async function getGuideAuthSupabaseClient(): Promise<GuideAuthSupabaseClient> {
-  const client = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const client = createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
   return client as unknown as GuideAuthSupabaseClient;
 }

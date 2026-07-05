@@ -31,6 +31,7 @@ import {
   type FallbackPlanMeta,
 } from '../../../../src/lib/availability-v2/fallback-preview-slots.ts';
 import { isDynamicAvailabilityApplicable } from '../../../../src/lib/booking-type-flow.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 // 排程方案的預覽提示：只看固定場次，動態規則不適用，引導去場次管理。
 const SCHEDULED_PREVIEW_NOTICE =
@@ -38,7 +39,7 @@ const SCHEDULED_PREVIEW_NOTICE =
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 function isValidTimezone(tz: string): boolean {
@@ -96,7 +97,7 @@ export async function GET(request: NextRequest) {
     return Response.json(fail('VALIDATION_ERROR', 'dateFrom must be before dateTo'), { status: 400 });
   }
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({
       guide: { id: session.guideId, display_name: session.guideName },
       timezone,

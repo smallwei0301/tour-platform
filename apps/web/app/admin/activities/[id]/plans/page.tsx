@@ -4,46 +4,27 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { Card, PageHeader, Badge } from '../../../../../src/components/admin/ui';
-import { ResponsiveModal, ResponsiveTable, FormGrid, type ResponsiveColumn } from '../../../../../src/components/admin/responsive';
+import { ResponsiveTable, type ResponsiveColumn } from '../../../../../src/components/admin/responsive';
 import { useTablistKeyboard } from '../../../../../src/lib/use-tablist-keyboard';
-import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
-
-// #297 方案詳情「行程介紹」改為站點時間表（參考編輯行程的「詳細行程時間表」設計），
-// 每個站點可分區編輯 icon／站名／時長／描述，並可填圖片 URL 或後台上傳。
-// 同時相容舊版單行格式 { text, imageUrl }。
-type ItineraryStep = {
-  icon: string;
-  title: string;
-  duration: string;
-  description: string;
-  imageUrl: string;
-};
-type StoredItineraryStep = {
-  icon?: string | null;
-  title?: string | null;
-  duration?: string | null;
-  description?: string | null;
-  imageUrl?: string | null;
-  text?: string | null;
-};
-const createEmptyItineraryStep = (): ItineraryStep => ({
-  icon: '📍',
-  title: '',
-  duration: '',
-  description: '',
-  imageUrl: '',
-});
-
-type ReadinessCheck = {
-  readinessOk: boolean;
-  blockers: Array<{ code: string; messageZh: string }>;
-  warnings: string[];
-  summary: {
-    activePlansCount: number;
-    futureSchedulesCount: number;
-    openSchedulesWithNullPlan: number;
-  };
-};
+// #1615 第二批拆檔：方案表單 Modal／開放季節面板／共用型別與純函式拆至 activity-plans/，
+// 純結構搬移、零行為變更；跨區塊狀態仍在本頁（lift state）以 props 傳遞。
+import { PlanFormModal } from '../../../../../src/components/admin/activity-plans/PlanFormModal';
+import { PlanSeasonsPanel } from '../../../../../src/components/admin/activity-plans/PlanSeasonsPanel';
+import { btn, smallBtn } from '../../../../../src/components/admin/activity-plans/button-styles';
+import {
+  createDefaultForm,
+  createDefaultSeasonForm,
+  seasonToForm,
+  listToTextarea,
+  itineraryToForm,
+  itineraryForPayload,
+  parseLineList,
+  type Activity,
+  type ActivityPlan,
+  type ActivityPlanSeason,
+  type ReadinessCheck,
+  type SeasonFormState,
+} from '../../../../../src/components/admin/activity-plans/plan-types';
 
 const PLAN_STATUS_TABS = [
   { value: '', label: '全部' },
@@ -52,67 +33,6 @@ const PLAN_STATUS_TABS = [
   { value: 'archived', label: '已封存' },
 ] as const;
 const PLAN_STATUS_VALUES = PLAN_STATUS_TABS.map((t) => t.value);
-
-type ActivityPlan = {
-  id: string;
-  activity_id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  duration_minutes: number;
-  price_type: 'per_person' | 'per_group';
-  base_price: number;
-  min_participants: number;
-  max_participants: number;
-  booking_type: 'scheduled' | 'request' | 'instant';
-  status: 'active' | 'inactive' | 'archived';
-  is_year_round?: boolean | null;
-  created_at: string;
-  updated_at: string;
-  details_link_text?: string | null;
-  booking_btn_text?: string | null;
-  highlights?: string[] | null;
-  language?: string | null;
-  earliest_departure?: string | null;
-  confirm_by_days?: number | null;
-  free_cancel_days?: number | null;
-  plan_inclusions?: string[] | null;
-  plan_exclusions?: string[] | null;
-  plan_itinerary?: StoredItineraryStep[] | null;
-  meeting_point_name?: string | null;
-  meeting_address?: string | null;
-  experience_point_name?: string | null;
-  experience_address?: string | null;
-  plan_notices?: string[] | null;
-  plan_refund_rules?: string[] | null;
-};
-
-type Activity = {
-  id: string;
-  title: string;
-};
-
-type ActivityPlanSeason = {
-  id: string;
-  name: string;
-  start_month: number;
-  start_day: number;
-  end_month: number;
-  end_day: number;
-  timezone: string;
-  is_active: boolean;
-  created_at?: string;
-  updated_at?: string;
-};
-
-type SeasonFormState = {
-  name: string;
-  start_month: string;
-  start_day: string;
-  end_month: string;
-  end_day: string;
-  timezone: string;
-};
 
 const PRICE_TYPE_LABELS: Record<string, string> = {
   per_person: '每人',
@@ -130,27 +50,6 @@ const STATUS_CONFIG: Record<string, { variant: 'success' | 'warning' | 'default'
   inactive: { variant: 'warning', label: '停用' },
   archived: { variant: 'default', label: '已封存' },
 };
-
-const createDefaultSeasonForm = (): SeasonFormState => ({
-  name: '',
-  start_month: '',
-  start_day: '',
-  end_month: '',
-  end_day: '',
-  timezone: 'Asia/Taipei',
-});
-
-const seasonToForm = (season: ActivityPlanSeason): SeasonFormState => ({
-  name: season.name,
-  start_month: String(season.start_month),
-  start_day: String(season.start_day),
-  end_month: String(season.end_month),
-  end_day: String(season.end_day),
-  timezone: season.timezone,
-});
-
-const formatSeasonWindow = (season: Pick<ActivityPlanSeason, 'start_month' | 'start_day' | 'end_month' | 'end_day'>) =>
-  `${season.start_month}/${season.start_day} - ${season.end_month}/${season.end_day}`;
 
 export default function ActivityPlansPage() {
   const params = useParams();
@@ -183,64 +82,7 @@ export default function ActivityPlansPage() {
   const [seasonForm, setSeasonForm] = useState<SeasonFormState>(createDefaultSeasonForm());
   const [yearRoundSaving, setYearRoundSaving] = useState(false);
 
-  const createDefaultForm = () => ({
-    name: '',
-    description: '',
-    duration_minutes: 60,
-    price_type: 'per_person' as 'per_person' | 'per_group',
-    base_price: 0,
-    min_participants: 1,
-    max_participants: 10,
-    booking_type: 'scheduled' as 'scheduled' | 'request' | 'instant',
-    status: 'active' as 'active' | 'inactive' | 'archived',
-    details_link_text: '',
-    booking_btn_text: '',
-    highlights: '',
-    language: '',
-    earliest_departure: '',
-    confirm_by_days: '',
-    free_cancel_days: '',
-    plan_inclusions: '',
-    plan_exclusions: '',
-    plan_itinerary: [] as ItineraryStep[],
-    meeting_point_name: '',
-    meeting_address: '',
-    experience_point_name: '',
-    experience_address: '',
-    plan_notices: '',
-    plan_refund_rules: '',
-  });
-
   const [form, setForm] = useState(createDefaultForm());
-
-  const listToTextarea = (value?: string[] | null) => (Array.isArray(value) ? value.join('\n') : '');
-
-  // 將後台儲存的行程介紹（新版站點 or 舊版 { text, imageUrl }）轉為可編輯的站點清單。
-  // 舊版單行的 text 視為站名（title），讓既有資料在新站點編輯器中不流失。
-  const itineraryToForm = (value?: StoredItineraryStep[] | null): ItineraryStep[] =>
-    Array.isArray(value)
-      ? value.map((step) => ({
-          icon: (step?.icon || '📍').trim() || '📍',
-          title: (step?.title || step?.text || '').trim(),
-          duration: (step?.duration || '').trim(),
-          description: (step?.description || '').trim(),
-          imageUrl: (step?.imageUrl || '').trim(),
-        }))
-      : [];
-
-  // 送出前清掉完全空白的站點；其餘交由後端 normalizeRichPlanPayload 正規化。
-  const itineraryForPayload = (steps: ItineraryStep[]) =>
-    (Array.isArray(steps) ? steps : [])
-      .map((step) => ({
-        icon: step.icon.trim(),
-        title: step.title.trim(),
-        duration: step.duration.trim(),
-        description: step.description.trim(),
-        imageUrl: step.imageUrl.trim(),
-      }))
-      .filter((step) => step.title || step.description || step.imageUrl);
-
-  const parseLineList = (value: string) => value.split('\n').map((x) => x.trim()).filter(Boolean);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -578,30 +420,6 @@ export default function ActivityPlansPage() {
   const seasonPanelPlan = seasonPanelPlanId ? plans.find((plan) => plan.id === seasonPanelPlanId) : undefined;
   const isYearRound = Boolean(seasonPanelPlan?.is_year_round);
 
-  const btn = (bg: string, color: string, border = 'none') =>
-    ({
-      padding: '8px 16px',
-      borderRadius: 8,
-      border,
-      background: bg,
-      color,
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: 'pointer',
-    }) as React.CSSProperties;
-
-  const smallBtn = (bg: string, color: string) =>
-    ({
-      padding: '5px 12px',
-      borderRadius: 6,
-      border: 'none',
-      background: bg,
-      color,
-      fontSize: 12,
-      fontWeight: 600,
-      cursor: 'pointer',
-    }) as React.CSSProperties;
-
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
       <PageHeader
@@ -660,307 +478,17 @@ export default function ActivityPlansPage() {
       ) : null}
 
       {/* ── Modal ── */}
-      <ResponsiveModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        size="md"
-        title={editingPlan ? '編輯方案' : '新增方案'}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label htmlFor="plan-form-name" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案名稱 *</label>
-                <input
-                  id="plan-form-name"
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="例：2小時私人導覽"
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                />
-              </div>
-              <div>
-                <label htmlFor="plan-form-description" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案說明</label>
-                <textarea
-                  id="plan-form-description"
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="方案詳細說明..."
-                  rows={3}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box', resize: 'vertical' }}
-                />
-              </div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label htmlFor="plan-form-duration" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>時長 (分鐘) *</label>
-                  <input
-                    id="plan-form-duration"
-                    type="number"
-                    min="15"
-                    step="15"
-                    value={form.duration_minutes}
-                    onChange={(e) => setForm({ ...form, duration_minutes: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>計價方式</label>
-                  <select
-                    aria-label="計價方式"
-                    value={form.price_type}
-                    onChange={(e) => setForm({ ...form, price_type: e.target.value as 'per_person' | 'per_group' })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-                  >
-                    <option value="per_person">每人計價</option>
-                    <option value="per_group">每團計價</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label htmlFor="plan-form-base-price" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>基本價格 (TWD) *</label>
-                  <input
-                    id="plan-form-base-price"
-                    type="number"
-                    min="0"
-                    value={form.base_price}
-                    onChange={(e) => setForm({ ...form, base_price: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
-                    預約方式
-                    <a href="/admin/help/booking-types" target="_blank" rel="noopener noreferrer" style={{ fontWeight: 500, color: '#1d4ed8', textDecoration: 'none' }}>📖 說明</a>
-                  </label>
-                  <select
-                    aria-label="預約方式"
-                    value={form.booking_type}
-                    onChange={(e) => setForm({ ...form, booking_type: e.target.value as 'scheduled' | 'request' | 'instant' })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-                  >
-                    <option value="scheduled">排程預約</option>
-                    <option value="request">申請預約</option>
-                    <option value="instant">即時預約</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label htmlFor="plan-form-min-participants" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最低成團人數</label>
-                  <input
-                    id="plan-form-min-participants"
-                    type="number"
-                    min="1"
-                    value={form.min_participants}
-                    onChange={(e) => setForm({ ...form, min_participants: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-                <div style={{ flex: '1 1 160px' }}>
-                  <label htmlFor="plan-form-max-participants" style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>方案最多人數</label>
-                  <input
-                    id="plan-form-max-participants"
-                    type="number"
-                    min="1"
-                    value={form.max_participants}
-                    onChange={(e) => setForm({ ...form, max_participants: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14, boxSizing: 'border-box' }}
-                  />
-                </div>
-              </div>
-
-              <details style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: 12, background: '#f9fafb' }}>
-                <summary style={{ cursor: 'pointer', fontWeight: 700, color: '#2563eb' }}>方案詳情內容（點擊展開）</summary>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>語言導覽
-                    <input type="text" value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
-                  <FormGrid cols={2} gap={10}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>「查看詳情」連結文字
-                      <input type="text" value={form.details_link_text} onChange={(e) => setForm({ ...form, details_link_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>預約按鈕文字
-                      <input type="text" value={form.booking_btn_text} onChange={(e) => setForm({ ...form, booking_btn_text: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                  </FormGrid>
-                  <FormGrid cols={3} gap={10}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最早可出發日
-                      <input type="date" value={form.earliest_departure} onChange={(e) => setForm({ ...form, earliest_departure: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>最晚 N 天前確認
-                      <input type="number" min="0" value={form.confirm_by_days} onChange={(e) => setForm({ ...form, confirm_by_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>N 天前可免費取消
-                      <input type="number" min="0" value={form.free_cancel_days} onChange={(e) => setForm({ ...form, free_cancel_days: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                  </FormGrid>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>亮點（每行一項）
-                    <textarea rows={3} value={form.highlights} onChange={(e) => setForm({ ...form, highlights: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用包含（每行一項）
-                    <textarea rows={3} value={form.plan_inclusions} onChange={(e) => setForm({ ...form, plan_inclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>費用不包含（每行一項）
-                    <textarea rows={3} value={form.plan_exclusions} onChange={(e) => setForm({ ...form, plan_exclusions: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
-                  <div>
-                    <span style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
-                      行程介紹（站點時間表）— 每個站點可分區編輯，並可填圖片 URL 或後台上傳
-                    </span>
-                    {form.plan_itinerary.map((step, i) => (
-                      <div
-                        key={i}
-                        style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12, background: '#fff' }}
-                      >
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8, alignItems: 'center' }}>
-                          <input
-                            aria-label={`站點 ${i + 1} 圖示`}
-                            value={step.icon}
-                            onChange={(e) => {
-                              const s = [...form.plan_itinerary];
-                              s[i] = { ...s[i], icon: e.target.value };
-                              setForm({ ...form, plan_itinerary: s });
-                            }}
-                            style={{ width: 44, flexShrink: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', textAlign: 'center', fontSize: 20, boxSizing: 'border-box' }}
-                            placeholder="📍"
-                          />
-                          <input
-                            aria-label={`站點 ${i + 1} 名稱`}
-                            value={step.title}
-                            onChange={(e) => {
-                              const s = [...form.plan_itinerary];
-                              s[i] = { ...s[i], title: e.target.value };
-                              setForm({ ...form, plan_itinerary: s });
-                            }}
-                            style={{ flex: '1 1 140px', minWidth: 0, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 10px', boxSizing: 'border-box' }}
-                            placeholder="站點名稱"
-                          />
-                          <input
-                            aria-label={`站點 ${i + 1} 時長`}
-                            value={step.duration}
-                            onChange={(e) => {
-                              const s = [...form.plan_itinerary];
-                              s[i] = { ...s[i], duration: e.target.value };
-                              setForm({ ...form, plan_itinerary: s });
-                            }}
-                            style={{ flex: '0 0 84px', width: 84, border: '1px solid #d1d5db', borderRadius: 6, padding: '6px 8px', boxSizing: 'border-box' }}
-                            placeholder="60分鐘"
-                          />
-                          <button
-                            type="button"
-                            aria-label={`移除站點 ${i + 1}`}
-                            onClick={() => setForm({ ...form, plan_itinerary: form.plan_itinerary.filter((_, j) => j !== i) })}
-                            style={{ flexShrink: 0, background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: 6, padding: '6px 10px', cursor: 'pointer', fontWeight: 700 }}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                        <textarea
-                          aria-label={`站點 ${i + 1} 描述`}
-                          rows={2}
-                          value={step.description}
-                          onChange={(e) => {
-                            const s = [...form.plan_itinerary];
-                            s[i] = { ...s[i], description: e.target.value };
-                            setForm({ ...form, plan_itinerary: s });
-                          }}
-                          style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb', boxSizing: 'border-box' }}
-                          placeholder="站點描述（選填）"
-                        />
-                        <div style={{ marginTop: 8 }}>
-                          <input
-                            aria-label={`站點 ${i + 1} 圖片網址`}
-                            type="url"
-                            value={step.imageUrl}
-                            onChange={(e) => {
-                              const s = [...form.plan_itinerary];
-                              s[i] = { ...s[i], imageUrl: e.target.value };
-                              setForm({ ...form, plan_itinerary: s });
-                            }}
-                            style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb', boxSizing: 'border-box' }}
-                            placeholder="圖片 URL（可貼網址，或用下方按鈕上傳）"
-                          />
-                          {step.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={step.imageUrl}
-                              alt={`站點 ${i + 1} 圖片預覽`}
-                              style={{ marginTop: 8, width: '100%', maxWidth: 240, aspectRatio: '3 / 2', objectFit: 'cover', borderRadius: 8, background: '#f3f4f6' }}
-                            />
-                          )}
-                          <ImageUpload
-                            activityId={activityId}
-                            activitySlug={activityId}
-                            type="gallery"
-                            onUploaded={(url) => {
-                              const s = [...form.plan_itinerary];
-                              s[i] = { ...s[i], imageUrl: url };
-                              setForm({ ...form, plan_itinerary: s });
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => setForm({ ...form, plan_itinerary: [...form.plan_itinerary, createEmptyItineraryStep()] })}
-                      style={{ background: '#eff6ff', color: '#2563eb', border: '1px dashed #93c5fd', borderRadius: 8, padding: '8px 16px', cursor: 'pointer', width: '100%' }}
-                    >
-                      + 新增站點
-                    </button>
-                  </div>
-                  <FormGrid cols={2} gap={10}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地點名稱
-                      <input type="text" value={form.meeting_point_name} onChange={(e) => setForm({ ...form, meeting_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>集合地址
-                      <input type="text" value={form.meeting_address} onChange={(e) => setForm({ ...form, meeting_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地點名稱
-                      <input type="text" value={form.experience_point_name} onChange={(e) => setForm({ ...form, experience_point_name: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>體驗地址
-                      <input type="text" value={form.experience_address} onChange={(e) => setForm({ ...form, experience_address: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                    </label>
-                  </FormGrid>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>購買須知（每行一項）
-                    <textarea rows={3} value={form.plan_notices} onChange={(e) => setForm({ ...form, plan_notices: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>取消政策（每行一項）
-                    <textarea rows={3} value={form.plan_refund_rules} onChange={(e) => setForm({ ...form, plan_refund_rules: e.target.value })} style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid #e5e7eb' }} />
-                  </label>
-                </div>
-              </details>
-              {editingPlan && (
-                <div>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4 }}>狀態</label>
-                  <select
-                    aria-label="狀態"
-                    value={form.status}
-                    onChange={(e) => setForm({ ...form, status: e.target.value as 'active' | 'inactive' | 'archived' })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 14 }}
-                  >
-                    <option value="active">啟用</option>
-                    <option value="inactive">停用</option>
-                    <option value="archived">已封存</option>
-                  </select>
-                </div>
-              )}
-              {error && (
-                <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', color: '#dc2626', fontSize: 13 }}>
-                  {error}
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                <button onClick={savePlan} disabled={saving} style={btn(saving ? '#86efac' : '#16a34a', '#fff')}>
-                  {saving ? '儲存中...' : '儲存'}
-                </button>
-                <button onClick={() => setShowModal(false)} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
-                  取消
-                </button>
-              </div>
-            </div>
-      </ResponsiveModal>
+      <PlanFormModal
+        showModal={showModal}
+        setShowModal={setShowModal}
+        editingPlan={editingPlan}
+        form={form}
+        setForm={setForm}
+        saving={saving}
+        error={error}
+        savePlan={savePlan}
+        activityId={activityId}
+      />
 
       <div className="admin-page">
         {/* Status Filter */}
@@ -1084,220 +612,26 @@ export default function ActivityPlansPage() {
         </Card>
 
         {seasonPanelPlanId && (
-          <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 16 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 18, color: '#111827' }}>開放季節</h3>
-                <p style={{ margin: '6px 0 0', fontSize: 14, color: '#6b7280' }}>
-                  {seasonPanelPlanName}：管理可販售季節區間與停用狀態。
-                </p>
-              </div>
-              <button onClick={() => openSeasonForm()} disabled={isYearRound} style={btn(isYearRound ? '#cbd5e1' : '#2563eb', '#fff')}>
-                新增季節
-              </button>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 12,
-                flexWrap: 'wrap',
-                border: '1px solid #e5e7eb',
-                borderRadius: 12,
-                padding: '14px 16px',
-                marginBottom: 16,
-                background: isYearRound ? '#ecfdf5' : '#ffffff',
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 700, color: '#111827' }}>全年開放</div>
-                <div style={{ fontSize: 13, color: '#6b7280', marginTop: 4 }}>
-                  開啟後忽略下方季節區間，此方案全年皆可販售；關閉則改由下方設定的季節區間決定可販售期間。
-                </div>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={isYearRound}
-                aria-label="全年開放"
-                disabled={yearRoundSaving || seasonLoading}
-                onClick={() => void toggleYearRound(!isYearRound)}
-                style={{
-                  width: 56,
-                  height: 30,
-                  borderRadius: 999,
-                  border: 'none',
-                  cursor: yearRoundSaving || seasonLoading ? 'default' : 'pointer',
-                  background: isYearRound ? '#059669' : '#cbd5e1',
-                  position: 'relative',
-                  flexShrink: 0,
-                  transition: 'background .15s',
-                }}
-              >
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: 3,
-                    left: isYearRound ? 29 : 3,
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    background: '#fff',
-                    transition: 'left .15s',
-                  }}
-                />
-              </button>
-            </div>
-
-            {isYearRound ? (
-              <div role="status" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: '#065f46', marginBottom: 4 }}>已設定全年開放</div>
-                <div style={{ fontSize: 14, color: '#065f46' }}>
-                  此方案目前為全年開放，旅客全年皆可預約；下方季節區間暫時不生效。若要改回指定季節販售，請關閉上方「全年開放」。
-                </div>
-              </div>
-            ) : (
-              !hasActiveSeasons && !seasonLoading && (
-                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
-                  <div style={{ fontWeight: 700, color: '#9a3412', marginBottom: 4 }}>請先設定指定季節或開啟全年開放</div>
-                  <div style={{ fontSize: 14, color: '#9a3412' }}>
-                    此方案尚未設定可販售的季節區間，也未開啟「全年開放」，旅客端目前無法預約。請新增季節區間，或開啟上方「全年開放」。
-                  </div>
-                </div>
-              )
-            )}
-
-            {seasonError && (
-              <div role="alert" aria-live="polite" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', color: '#b91c1c', fontSize: 14, marginBottom: 16 }}>
-                {seasonError}
-              </div>
-            )}
-
-            {seasonNotice && (
-              <div role="status" aria-live="polite" style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 14px', color: '#1d4ed8', fontSize: 14, marginBottom: 16 }}>
-                {seasonNotice}
-              </div>
-            )}
-
-            {showSeasonForm && (
-              <div style={{ border: '1px solid #dbeafe', background: '#f8fbff', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-                <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 12 }}>{editingSeason ? '編輯季節' : '新增季節'}</div>
-                <div style={{ display: 'grid', gap: 12 }}>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
-                    季節名稱
-                    <input
-                      type="text"
-                      aria-label="季節名稱"
-                      value={seasonForm.name}
-                      onChange={(e) => setSeasonForm({ ...seasonForm, name: e.target.value })}
-                      style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                    />
-                  </label>
-                  <FormGrid cols={2} gap={12}>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
-                      開始月份
-                      <input
-                        type="number"
-                        min="1"
-                        max="12"
-                        aria-label="開始月份"
-                        value={seasonForm.start_month}
-                        onChange={(e) => setSeasonForm({ ...seasonForm, start_month: e.target.value })}
-                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                      />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
-                      開始日期
-                      <input
-                        type="number"
-                        min="1"
-                        max="31"
-                        aria-label="開始日期"
-                        value={seasonForm.start_day}
-                        onChange={(e) => setSeasonForm({ ...seasonForm, start_day: e.target.value })}
-                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                      />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
-                      結束月份
-                      <input
-                        type="number"
-                        min="1"
-                        max="12"
-                        aria-label="結束月份"
-                        value={seasonForm.end_month}
-                        onChange={(e) => setSeasonForm({ ...seasonForm, end_month: e.target.value })}
-                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                      />
-                    </label>
-                    <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
-                      結束日期
-                      <input
-                        type="number"
-                        min="1"
-                        max="31"
-                        aria-label="結束日期"
-                        value={seasonForm.end_day}
-                        onChange={(e) => setSeasonForm({ ...seasonForm, end_day: e.target.value })}
-                        style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                      />
-                    </label>
-                  </FormGrid>
-                  <label style={{ display: 'block', fontSize: 12, fontWeight: 600 }}>
-                    時區
-                    <input
-                      type="text"
-                      aria-label="時區"
-                      value={seasonForm.timezone}
-                      onChange={(e) => setSeasonForm({ ...seasonForm, timezone: e.target.value })}
-                      style={{ width: '100%', marginTop: 4, padding: '9px 12px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 14, boxSizing: 'border-box' }}
-                    />
-                  </label>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-                  <button onClick={saveSeason} disabled={seasonSaving} style={btn(seasonSaving ? '#93c5fd' : '#2563eb', '#fff')}>
-                    {seasonSaving ? '儲存中...' : '儲存季節'}
-                  </button>
-                  <button onClick={closeSeasonForm} disabled={seasonSaving} style={btn('#fff', '#374151', '1px solid #d1d5db')}>
-                    取消
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {seasonLoading ? (
-              <div style={{ fontSize: 14, color: '#6b7280' }}>載入開放季節中...</div>
-            ) : seasons.length === 0 ? (
-              <div style={{ border: '1px dashed #cbd5e1', borderRadius: 12, padding: 20, color: '#64748b', fontSize: 14 }}>
-                尚未建立季節區間。請先新增季節，或於上方開啟「全年開放」，避免把空白狀態誤解為全年開放。
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gap: 12 }}>
-                {seasons.map((season) => (
-                  <div key={season.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 16, background: season.is_active ? '#ffffff' : '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ fontWeight: 700, color: '#111827' }}>{season.name}</div>
-                        <div style={{ marginTop: 6, fontSize: 14, color: '#374151' }}>{formatSeasonWindow(season)}</div>
-                        <div style={{ marginTop: 4, fontSize: 13, color: '#6b7280' }}>{season.timezone}</div>
-                      </div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <Badge variant={season.is_active ? 'success' : 'default'}>{season.is_active ? '啟用中' : '已停用'}</Badge>
-                        <button onClick={() => openSeasonForm(season)} style={smallBtn('#e0f2fe', '#075985')}>編輯季節</button>
-                        {season.is_active && (
-                          <button onClick={() => void disableSeason(season)} style={smallBtn('#fee2e2', '#991b1b')}>
-                            停用季節
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          <PlanSeasonsPanel
+            seasonPanelPlanName={seasonPanelPlanName}
+            seasons={seasons}
+            seasonLoading={seasonLoading}
+            seasonError={seasonError}
+            seasonNotice={seasonNotice}
+            showSeasonForm={showSeasonForm}
+            editingSeason={editingSeason}
+            seasonForm={seasonForm}
+            setSeasonForm={setSeasonForm}
+            seasonSaving={seasonSaving}
+            yearRoundSaving={yearRoundSaving}
+            isYearRound={isYearRound}
+            hasActiveSeasons={hasActiveSeasons}
+            openSeasonForm={openSeasonForm}
+            closeSeasonForm={closeSeasonForm}
+            saveSeason={saveSeason}
+            disableSeason={disableSeason}
+            toggleYearRound={toggleYearRound}
+          />
         )}
       </div>
     </div>

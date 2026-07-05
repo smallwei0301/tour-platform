@@ -8,7 +8,7 @@
  * 冪等：compare-and-swap（eq status confirmed）；已 completed → alreadyRedeemed（非錯誤）。
  * 核銷只翻轉訂單狀態（不動容量），與 db-auto-complete 同性質。
  */
-import { hasSupabaseEnv, getSupabase } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
 import { orders as memOrders } from './store.mjs';
 import { appendAuditLog, insertAuditLogDb } from './audit-log.mjs';
 import { evaluateRedeemEligibility } from './redeem-eligibility.mjs';

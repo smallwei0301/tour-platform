@@ -31,8 +31,9 @@ const TABLE_PAGES = [
 
 const MODAL_PAGES = [
   '../../app/admin/activities/page.tsx',
-  '../../app/admin/activities/[id]/edit/page.tsx',
-  '../../app/admin/activities/[id]/plans/page.tsx',
+  // #1615 拆檔：兩頁的 modal 分別移至 ScheduleSection／PlanFormModal 元件（斷言意圖不變）
+  '../../src/components/admin/activity-form/ScheduleSection.tsx',
+  '../../src/components/admin/activity-plans/PlanFormModal.tsx',
   '../../app/admin/guides/page.tsx',
   '../../app/admin/guides/[guideId]/availability/page.tsx',
 ];

@@ -2,10 +2,11 @@ import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { getSettlementConfig, computeGuidePayoutEstimate } from '../../../../src/lib/settlement-config';
 import { groupOrdersByTaipeiMonth } from '../../../../src/lib/guide-dashboard-trend.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 // issue1605：查詢分 3 個序列階段（階段內 Promise.all 平行），
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({
       monthlyBookings: 0,
       pendingBookings: [],

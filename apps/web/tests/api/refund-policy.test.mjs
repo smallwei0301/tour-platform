@@ -123,8 +123,8 @@ test('refund-override route uses SUPABASE_URL (not NEXT_PUBLIC_SUPABASE_URL)', (
     !routeSrc.includes('NEXT_PUBLIC_SUPABASE_URL'),
     'must not use NEXT_PUBLIC_SUPABASE_URL'
   );
-  assert.match(routeSrc, /SUPABASE_URL/, 'must reference SUPABASE_URL');
-  assert.match(routeSrc, /SUPABASE_SERVICE_ROLE_KEY/, 'must reference SUPABASE_SERVICE_ROLE_KEY');
+  assert.match(routeSrc, /getSupabaseUrl\(\)/, 'must reference Supabase URL via config getter (#1616)');
+  assert.match(routeSrc, /getSupabaseServiceRoleKey\(\)/, 'must reference service-role key via config getter (#1616)');
 });
 
 test('refund-override route exports POST handler', () => {

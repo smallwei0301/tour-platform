@@ -7,6 +7,7 @@ import {
   hasOpenScheduleOn,
 } from '../../../src/lib/activities-list-filters.mjs';
 import { getV2ActivityAvailability } from '../../../src/lib/availability-v2/activity-day-availability';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../src/config/supabase-service-env.mjs';
 
 // #1380: 日期可訂過濾的逐活動評估上限 — 限制 v2 引擎查詢扇出，避免大型結果集
 // 拖垮列表回應（issue 註明可先限制在已過濾結果集；超出上限的活動 fail-open 保留）。
@@ -37,7 +38,7 @@ async function filterByDateAvailability(activities: ListedActivity[], date: stri
   }
 
   const { createClient } = await import('@supabase/supabase-js');
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  const supabase = createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 
   const evaluated = activities.slice(0, DATE_FILTER_EVAL_CAP);
   const rest = activities.slice(DATE_FILTER_EVAL_CAP);

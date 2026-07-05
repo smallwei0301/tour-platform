@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { localizeRevalidationPaths } from '../../../../../../src/lib/region-slug.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 /**
  * PATCH /api/admin/guides/:guideId/suspend
@@ -23,8 +24,8 @@ export async function PATCH(
 
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
   );
 
   // Get current profile (slug drives on-demand revalidation of the public pages)

@@ -36,6 +36,24 @@
 - Solution：改跑 `npm install --ignore-scripts`（單元測試只需套件本體＋typescript，不需 supabase CLI 執行檔）；install 後記得 `git checkout -- yarn.lock`
 - 適用範圍：本遠端環境（CCR）所有 fresh container；本地開發機不受限
 
+## [2026-07-04] architecture-ratchet-guard-exists
+- Context：架構健檢（docs/04-tech/04-tech-architecture/15-architecture-modularity-review.md）後新增 `apps/web/tests/unit/architecture-ratchet-guard.test.mjs`，把四項雜亂度指標鎖成「只能降不能升」的天花板：巨型檔案逐檔行數、app/api 直接 import @supabase/* 檔數（20）、直讀 process.env 檔數（159）、src/lib 頂層檔數（156）
+- Error：（預防性條目）未來 session 改到白名單內的大檔（如 booking page、admin activities edit）多加幾行就會踩紅這個 guard，直覺反應可能是「調高天花板讓測試過」
+- Solution：**先查報告 §2 的擺放規則速查表**——正解是把新邏輯放進子元件／領域檔／src/config，而不是放寬天花板；只有 P0 修復可調高且須在 PR 說明（與 db-mjs-size-guard 同協議）。行數語意＝`split('\n').length`（比 `wc -l` 多 1）
+- 適用範圍：所有觸碰 apps/web/app、apps/web/src 的程式碼變更
+
+## [2026-07-05] playwright-version-mismatch-symlink
+- Context：跑 `test:e2e:smoke` 時 Playwright 報 `Executable doesn't exist at /opt/pw-browsers/chromium_headless_shell-1208/...` 並提示 `npx playwright install`
+- Error：repo pin 的 @playwright/test 期望 build 1208，但遠端環境預裝的是 1194（且 PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 禁止下載）；直接跑 install 會失敗或浪費流量
+- Solution：以 symlink 對齊——`mkdir -p /opt/pw-browsers/chromium_headless_shell-1208/chrome-headless-shell-linux64 && ln -s .../chromium_headless_shell-1194/chrome-linux/headless_shell .../chrome-headless-shell`（注意兩代目錄內層結構不同：舊 chrome-linux/headless_shell、新 chrome-headless-shell-linux64/chrome-headless-shell）
+- 適用範圍：本遠端環境所有 Playwright e2e；換 Playwright 版本後 build 號會再變
+
+## [2026-07-05] e2e-webserver-owns-env
+- Context：對自起的 dev server（port 3000）跑 admin e2e spec，helpers 的 adminLogin 一直 401 "ADMIN_ACCESS_TOKEN not configured"，但 curl 同一 API 卻成功
+- Error：playwright.config 有 `webServer`——測試自己在 port 3333 起 server（command 內只帶 NEXT_PUBLIC_SUPABASE_* 假值），spec 打的是 3333 不是你起的 3000；server 端 admin env 要靠**外層 shell export** 讓 webServer command 繼承
+- Solution：`export ADMIN_ACCESS_TOKEN=test-token-123 ADMIN_EMAIL_ALLOWLIST=admin@tour-platform.com` 後再 `npx playwright test`；自訂 browser 走訪腳本若另起 server，記得帶齊 playwright.config webServer command 的同款 NEXT_PUBLIC_* env，否則活動詳情等頁會有 @supabase/ssr client 建立 pageerror（是 env 缺料、不是回歸）
+- 適用範圍：所有需要 admin/guide 登入的 e2e 與手動 browser smoke
+
 ## [2026-07-05] agent-cannot-apply-migrations-in-this-env
 - Context：健檢 v2（#1590–#1601）B 組 5 支 migration 需套用 production 才能 merge；owner 於對話授權 agent「用 MCP 套用」
 - 限制（三重死結，光有口頭授權無法解）：

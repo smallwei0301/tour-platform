@@ -7,10 +7,11 @@
 import { ok, fail } from '../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { GUIDE_ACTIONABLE_HELPER_STATUSES } from '../../../../src/lib/conflict-override-transition.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
@@ -19,7 +20,7 @@ export async function GET(req: Request) {
   const session = verifyGuideSession(req);
   if (!session) return Response.json(fail('UNAUTHORIZED', 'session required'), { status: 401 });
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     // 無 DB（本地/測試）→ 空清單，不報錯。
     return Response.json(ok({ overrides: [] }));
   }

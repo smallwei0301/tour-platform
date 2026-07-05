@@ -27,7 +27,7 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const routePath = join(__dirname, '../../app/api/internal/settlement/sweep/route.ts');
-const dbPath = join(__dirname, '../../src/lib/db.mjs');
+const dbPath = join(__dirname, '../../src/lib/db-settlement-ops.mjs'); // #1613 strangler 後實作所在
 
 // ── AC #1: eligibility predicate = completed + T+7 + no refund_pending ────────
 

@@ -20,7 +20,8 @@ import { join, dirname } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const GUIDE_AVAILABILITY_PAGE = join(__dirname, '../../app/guide/availability/page.tsx');
-const ADMIN_EDIT_PAGE = join(__dirname, '../../app/admin/activities/[id]/edit/page.tsx');
+// #1615 拆檔：admin edit 的 AddScheduleModal（含 precedence helper）移至 ScheduleSection 元件
+const ADMIN_EDIT_PAGE = join(__dirname, '../../src/components/admin/activity-form/ScheduleSection.tsx');
 
 // ── Guide availability page helper copy ─────────────────────────────────────
 

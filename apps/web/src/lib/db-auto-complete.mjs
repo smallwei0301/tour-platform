@@ -12,7 +12,7 @@
  *   本 sweep 不觸 bookings/activity_schedules）。
  * - in-memory：狀態檢查後翻轉，重跑時已 completed 者不再匹配。
  */
-import { hasSupabaseEnv, getSupabase } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from './supabase-env.mjs';
 import { orders as memOrders } from './store.mjs';
 import { appendAuditLog, insertAuditLogDb } from './audit-log.mjs';
 import { grantCompletionRewards } from './order-completion-rewards.mjs';

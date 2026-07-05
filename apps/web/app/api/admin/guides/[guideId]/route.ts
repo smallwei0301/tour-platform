@@ -10,6 +10,7 @@ import {
 } from '../../../../../src/lib/db-guide-delete.mjs';
 import { localizeRevalidationPaths } from '../../../../../src/lib/region-slug.mjs';
 import { revalidateActivityPaths } from '../../../../../src/lib/revalidate-activity.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 /**
  * GET /api/admin/guides/:guideId
@@ -36,8 +37,8 @@ export async function GET(
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
     const isMissingColumn = (e: { code?: string; message?: string } | null) =>
       !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
@@ -165,8 +166,8 @@ export async function PATCH(
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     // Verify guide exists and is approved

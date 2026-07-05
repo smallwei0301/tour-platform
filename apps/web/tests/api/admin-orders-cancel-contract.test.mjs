@@ -85,7 +85,7 @@ test('AC4b: route uses server-side SUPABASE_URL (not NEXT_PUBLIC_SUPABASE_URL)',
     !src.includes('NEXT_PUBLIC_SUPABASE_URL'),
     'route must use process.env.SUPABASE_URL, not NEXT_PUBLIC_SUPABASE_URL (client-side var not available on server)'
   );
-  assert.match(src, /SUPABASE_URL/, 'route must reference SUPABASE_URL');
+  assert.match(src, /getSupabaseUrl\(\)/, 'route must reference server-side Supabase URL via config getter (#1616)');
 });
 
 // AC5: 409 for locked statuses

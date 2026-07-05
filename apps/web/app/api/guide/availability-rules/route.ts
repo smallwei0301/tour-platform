@@ -12,10 +12,11 @@ import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../src/lib/guide-auth';
 import { normalizeTimeLocal } from '../../../../src/lib/availability-v2/time-local.mjs';
 import { isDynamicAvailabilityApplicable } from '../../../../src/lib/booking-type-flow.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 async function ensureOwnedUsablePlan(
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
     return Response.json(fail('UNAUTHORIZED', 'Guide session required'), { status: 401 });
   }
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({ rules: [] }));
   }
 
@@ -192,7 +193,7 @@ export async function POST(request: NextRequest) {
     return Response.json(fail('VALIDATION_ERROR', 'Invalid timezone'), { status: 400 });
   }
 
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(fail('SERVER_ERROR', 'Database not configured'), { status: 500 });
   }
 

@@ -10,6 +10,7 @@ import { ok, fail } from '../../../../src/lib/api';
 import { createClient } from '../../../../src/lib/supabase/server';
 import { hasSupabaseEnv } from '../../../../src/lib/db.mjs';
 import { validateTravelerProfileInput } from '../../../../src/lib/traveler-profile.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 const EMPTY_PROFILE = { displayName: '', phone: '', region: '', marketingEmailOptIn: true };
 
@@ -32,8 +33,8 @@ async function getAuthedUser() {
 async function getServiceClient() {
   const { createClient: createServiceClient } = await import('@supabase/supabase-js');
   return createServiceClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

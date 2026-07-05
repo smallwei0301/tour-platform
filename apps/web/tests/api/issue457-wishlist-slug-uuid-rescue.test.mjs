@@ -10,7 +10,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbSource = readFileSync(resolve(__dirname, '../../src/lib/db.mjs'), 'utf8');
+const dbSource = readFileSync(resolve(__dirname, '../../src/lib/db-wishlist.mjs'), 'utf8'); // #1613 strangler 後實作所在
 const routeSource = readFileSync(resolve(__dirname, '../../app/api/me/wishlist/route.ts'), 'utf8');
 
 test('db helper defines slug/uuid resolver for wishlist activity reference', () => {

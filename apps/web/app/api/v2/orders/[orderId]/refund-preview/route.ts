@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { createClient as createAnonClient } from '@supabase/supabase-js';
 import { successV2, errorV2 } from '../../../../../../src/lib/api';
 import { calculateRefundAmount, RefundPolicy } from '../../../../../../src/lib/refund-policy';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,8 +36,8 @@ export async function GET(
     return Response.json(errorV2('VALIDATION_ERROR', 'Invalid orderId'), { status: 400 });
   }
 
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = getSupabaseUrl();
+  const serviceKey = getSupabaseServiceRoleKey();
 
   if (!supabaseUrl || !serviceKey) {
     return Response.json(errorV2('INTERNAL_ERROR', 'Server misconfigured'), { status: 500 });

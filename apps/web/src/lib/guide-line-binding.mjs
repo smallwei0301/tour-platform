@@ -12,9 +12,10 @@
 import crypto from 'node:crypto';
 
 import { guideLineMappings, guideLineBindCodes } from './store.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 function hasSupabaseEnv() {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 const CODE_PREFIX = 'BIND-';

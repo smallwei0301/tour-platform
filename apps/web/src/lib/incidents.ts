@@ -8,6 +8,7 @@
 import * as Sentry from '@sentry/nextjs';
 import { createClient } from '@supabase/supabase-js';
 import { notifySystemError } from './telegram-notify';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,8 +37,8 @@ export function redactPii(metadata: Record<string, unknown>): Record<string, unk
 // ── DB helper ─────────────────────────────────────────────────────────────────
 
 function getSupabaseForIncidents() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceRoleKey();
   if (!url || !key) return null;
   return createClient(url, key);
 }
