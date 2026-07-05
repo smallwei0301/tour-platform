@@ -18,7 +18,7 @@ import {
   __resetV2BookingStoreForTest,
 } from '../../src/lib/db.mjs';
 
-const dbSrc = readFileSync(path.resolve('src/lib/db.mjs'), 'utf8');
+const dbSrc = readFileSync(new URL('../../src/lib/db-booking-approvals.mjs', import.meta.url), 'utf8');
 
 beforeEach(() => __resetV2BookingStoreForTest());
 

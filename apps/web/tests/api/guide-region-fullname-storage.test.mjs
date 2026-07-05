@@ -31,7 +31,7 @@ test('guide/apply 表單：熟悉區域 checkbox 存全名 dbValue、顯示短�
 });
 
 test('db.mjs createGuideApplicationDb：regions 以 normalizeRegionToDbValue 存全名', () => {
-  const src = read('src/lib/db.mjs');
+  const src = read('src/lib/db-guide-applications.mjs'); // #1613 strangler 後實作所在
   assert.match(src, /toStringArray\(input\?\.regions\)\.map\(normalizeRegionToDbValue\)/);
 });
 

@@ -18,8 +18,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DB_MJS = resolve(__dirname, '../../src/lib/db.mjs');
 
 // 天花板只能降不能升。沿革：2026-07-03 抽 db-kpi.mjs 後 6,986；
-// 2026-07-04 抽 supabase-env.mjs（#1613 解 db.mjs⇄db-* 循環）後降到 6,973。
-const CEILING = 6973;
+// 2026-07-04 抽 supabase-env.mjs（#1613 解 db.mjs⇄db-* 循環）後 6,973；
+// 2026-07-05 #1613 批次抽出 9 個領域檔（settlement-ops/guide-applications/wishlist/
+// payouts/reschedule/booking-approvals/order-messages/homepage-featured/
+// messaging-bindings）後降到 4,846 — 里程碑 <5,000 達成。
+const CEILING = 4846;
 
 test('db.mjs 行數不得超過天花板（strangler 硬規則：只能降）', () => {
   const lines = readFileSync(DB_MJS, 'utf8').split('\n').length;

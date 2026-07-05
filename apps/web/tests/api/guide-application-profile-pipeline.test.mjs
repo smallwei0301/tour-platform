@@ -30,7 +30,8 @@ import { createGuideApplicationDb, listGuideApplicationsDb } from '../../src/lib
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = join(__dirname, '..', '..');
 const REPO_ROOT = join(APP_ROOT, '..', '..');
-const DB_MJS = join(APP_ROOT, 'src/lib/db.mjs');
+const DB_MJS = join(APP_ROOT, 'src/lib/db-guide-applications.mjs'); // #1613 strangler 後 guide-application 實作所在
+const DB_CORE_MJS = join(APP_ROOT, 'src/lib/db.mjs'); // getGuideBySlugDb 等仍在 db.mjs 本體
 const PROMOTE_ROUTE = join(APP_ROOT, 'app/api/admin/guides/promote/route.ts');
 const DETAIL_ROUTE = join(APP_ROOT, 'app/api/admin/guides/[guideId]/route.ts');
 const DETAIL_PAGE = join(APP_ROOT, 'app/admin/guides/[guideId]/page.tsx');
@@ -180,7 +181,7 @@ test('公開導遊頁：顯示熟悉區域/專業證照/收款方式', () => {
 });
 
 test('getGuideBySlugDb：select 帶 regions/certifications/payment_methods 且具 drift guard', () => {
-  const src = readFileSync(DB_MJS, 'utf8');
+  const src = readFileSync(DB_CORE_MJS, 'utf8');
   assert.match(src, /regions, certifications, payment_methods/, 'guide 公開查詢需 select 新欄位');
 });
 

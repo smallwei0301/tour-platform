@@ -140,7 +140,9 @@ test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）'
 //    sanctioned 例外——拆一個檔會使頂層 +1，允許隨拆遷 PR 逐次上調（PR 須說明）。
 //    一般新領域仍請開子資料夾（如 availability-v2/），不要往頂層堆。
 // ---------------------------------------------------------------------------
-const LIB_TOP_LEVEL_FILE_CEILING = 157;
+// 2026-07-05：#1613 批次抽出 9 個 db-* 領域檔（sanctioned 拆檔）＋#1614 共用 api-response.ts
+// （與 api.ts 並列的跨 route 基礎設施）→ 167。
+const LIB_TOP_LEVEL_FILE_CEILING = 167;
 
 test('src/lib 頂層檔案數不得增加（新領域請開子資料夾）', () => {
   const count = readdirSync(join(WEB_ROOT, 'src/lib')).filter((entry) =>
