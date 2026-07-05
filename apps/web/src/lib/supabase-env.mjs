@@ -11,8 +11,10 @@
  * module 級 `supabaseClient` 快取是全站唯一實例；測試以 `__setSupabaseClientForTest` 注入 mock。
  */
 
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
+
 export function hasSupabaseEnv() {
-  return !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return !!(getSupabaseUrl() && getSupabaseServiceRoleKey());
 }
 
 // 刻意 `any`：本步驟（#1613）是「純搬移」，getSupabase 的對外回傳型別必須與原
@@ -29,8 +31,8 @@ export async function getSupabase() {
   if (supabaseClient) return supabaseClient;
   const { createClient } = await import('@supabase/supabase-js');
   supabaseClient = createClient(
-    /** @type {string} */ (process.env.SUPABASE_URL),
-    /** @type {string} */ (process.env.SUPABASE_SERVICE_ROLE_KEY),
+    /** @type {string} */ (getSupabaseUrl()),
+    /** @type {string} */ (getSupabaseServiceRoleKey()),
   );
   return supabaseClient;
 }

@@ -34,6 +34,6 @@ test('回傳將 reason 映射為 created/released action，並帶 participants',
 });
 
 test('無 Supabase 環境回 []（與 external_hold RPC-only 一致）', () => {
-  assert.match(ROUTE, /if \(!process\.env\.SUPABASE_URL\)/);
+  assert.match(ROUTE, /if \(!getSupabaseUrl\(\)\)/); // #1616 env 走 config getter
   assert.match(ROUTE, /ok\(\[\]\)/);
 });

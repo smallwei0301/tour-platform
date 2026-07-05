@@ -82,7 +82,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
   it('db.mjs exports getSettlementRulesDb and updateSettlementRulesDb', () => {
     const src = readFileSync(
-      join(__dirname, '../../src/lib/db.mjs'),
+      join(__dirname, '../../src/lib/db-settlement-ops.mjs'), // #1613
       'utf8'
     )
     assert.match(src, /export async function getSettlementRulesDb/)
@@ -94,7 +94,7 @@ describe('Issue 446 — settlement_rules table + admin override API', () => {
 
 describe('Issue 446 — updateSettlementRulesDb behavioral (mock)', () => {
   it('rollback path exists in updateSettlementRulesDb source', () => {
-    const src = readFileSync(join(__dirname, '../../src/lib/db.mjs'), 'utf8')
+    const src = readFileSync(join(__dirname, '../../src/lib/db-settlement-ops.mjs'), 'utf8') // #1613
     // Must capture old row id before deactivation
     assert.match(src, /oldRows/, 'must capture old active row id for rollback')
     // Must re-activate on insert failure

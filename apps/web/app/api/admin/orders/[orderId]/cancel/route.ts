@@ -8,6 +8,7 @@ import { dispatchOrderEventTelegram } from '../../../../../../src/lib/order-tele
 import { pushTravelerOrderEvent } from '../../../../../../src/lib/line-traveler-push.mjs';
 import { pushGuideOrderEvent } from '../../../../../../src/lib/line-guide-push.mjs';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 // AC5: statuses that lock the order against cancellation
 const LOCKED_STATUSES = [
@@ -19,8 +20,8 @@ const LOCKED_STATUSES = [
 ];
 
 async function getSupabaseForAudit() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url = getSupabaseUrl();
+  const key = getSupabaseServiceRoleKey();
   if (!url || !key) return null;
   return createClient(url, key);
 }

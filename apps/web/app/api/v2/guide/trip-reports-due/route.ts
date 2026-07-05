@@ -12,10 +12,11 @@ import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../../src/lib/api';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
 import { tripReportStatus } from '../../../../../src/lib/post-trip-eligibility.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 export async function GET(request: NextRequest) {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
   }
 
   // No Supabase in test/dev without env vars — return empty list
-  if (!process.env.SUPABASE_URL) {
+  if (!getSupabaseUrl()) {
     return Response.json(ok({ count: 0, tripReportsDue: [] }));
   }
 

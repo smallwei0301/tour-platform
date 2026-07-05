@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { generateInviteToken } from '../../../../../src/lib/guide-auth';
 import { errorV2 } from '../../../../../src/lib/api';
 import { normalizeRegionToDbValue } from '../../../../../src/lib/region-slugs.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
 
 /**
  * POST /api/admin/guides/promote
@@ -18,8 +19,8 @@ export async function POST(req: Request) {
 
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!,
   );
 
   // Fetch the application. Canonical guide_applications schema has

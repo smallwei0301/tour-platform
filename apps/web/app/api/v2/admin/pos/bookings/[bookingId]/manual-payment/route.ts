@@ -3,6 +3,7 @@ import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../../src/lib/supabase/server';
 import { updateAdminOrderDb } from '../../../../../../../../src/lib/db.mjs';
 import { BookingStateService } from '../../../../../../../../src/lib/booking-state';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../../src/config/supabase-service-env.mjs';
 
 function isValidUuid(str: string): boolean {
   const uuidRegex =
@@ -46,8 +47,8 @@ export async function POST(
     // payments". Booking/order reads stay on the anon client below.
     const { createClient: createServiceClient } = await import('@supabase/supabase-js');
     const paymentDb = createServiceClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     const { data: booking, error: bookingError } = await supabase

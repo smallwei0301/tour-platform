@@ -4,11 +4,12 @@ import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { createClient } from '../../../src/lib/supabase/server';
 import { evaluateReviewSubmission } from '../../../src/lib/review-ownership.mjs';
 import { reviewSubmitLimiter, RateLimiter, createRateLimitResponse } from '../../../src/lib/rate-limit';
+import { getSupabaseServiceRoleKey } from '../../../src/config/supabase-service-env.mjs';
 
 function getServiceClient() {
   return createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseServiceRoleKey()!,
     { auth: { persistSession: false, autoRefreshToken: false } }
   );
 }

@@ -3,10 +3,11 @@ import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
 import { validateCsrf } from '../../../../../../src/lib/csrf.mjs';
 import { resolveBookingPlan } from '../../../../../../src/lib/booking-plan-resolver';
 import { evaluateExternalHoldRequest } from '../../../../../../src/lib/availability-v2/external-hold-rule';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 async function getSupabase() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!);
 }
 
 // Map fn_create_external_hold error codes → HTTP status + 繁中訊息

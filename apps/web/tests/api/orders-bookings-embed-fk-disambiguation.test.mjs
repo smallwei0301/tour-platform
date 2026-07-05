@@ -73,7 +73,7 @@ describe('orders↔bookings 嵌入必須指名 FK（防 PGRST201 歧義 500）',
   });
 
   it('db.mjs listGuidePendingApprovalsDb：orders 嵌入指名 fk_bookings_order_id', () => {
-    const src = read('src/lib/db.mjs');
+    const src = ['src/lib/db.mjs','src/lib/db-reschedule.mjs','src/lib/db-order-messages.mjs','src/lib/db-booking-approvals.mjs','src/lib/db-settlement-ops.mjs'].map(read).join('\n'); // #1613：嵌入掃描涵蓋拆出的領域檔
     assert.match(
       src,
       /orders!fk_bookings_order_id\(contact_name, total_twd\)/,

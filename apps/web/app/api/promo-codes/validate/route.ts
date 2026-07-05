@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { fail } from '../../../../src/lib/api';
 import { RateLimiter } from '../../../../src/lib/rate-limit';
 import { calculateDiscount } from '../../../../src/lib/promo-discount';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 
 // ── Rate limiter: 10 req/min per IP ───────────────────────────────────────────
@@ -43,8 +44,8 @@ export async function POST(req: NextRequest) {
   // Auth check: require Supabase session
   const { createClient } = await import('@supabase/supabase-js');
   const supabase = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    getSupabaseUrl()!,
+    getSupabaseServiceRoleKey()!
   );
 
   // Extract auth token from Authorization header or cookie

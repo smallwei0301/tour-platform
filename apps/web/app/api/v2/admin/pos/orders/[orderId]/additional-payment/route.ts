@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
 import { createClient } from '../../../../../../../../src/lib/supabase/server';
 import { getAdminOrderDetailDb } from '../../../../../../../../src/lib/db.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../../src/config/supabase-service-env.mjs';
 
 function isValidUuid(str: string): boolean {
   const uuidRegex =
@@ -71,8 +72,8 @@ export async function POST(
     // payments". Authorization stays above on the Supabase-auth client.
     const { createClient: createServiceClient } = await import('@supabase/supabase-js');
     const paymentDb = createServiceClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     const { data: order, error: orderError } = await supabase

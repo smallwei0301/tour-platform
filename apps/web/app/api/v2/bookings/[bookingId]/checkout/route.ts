@@ -24,6 +24,7 @@ import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-f
 import { canCheckout } from '../../../../../../src/lib/booking-type-flow.mjs';
 import { isPaymentExpired } from '../../../../../../src/lib/payment-deadline.mjs';
 import { selectWithOptionalColumnFallback } from '../../../../../../src/lib/optional-column-fallback.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
 
 // Validation helpers
 function isValidUuid(str: string): boolean {
@@ -108,8 +109,8 @@ export async function POST(
     // through `paymentDb` or Postgres returns "permission denied for table payments".
     const { createClient: createServiceClient } = await import('@supabase/supabase-js');
     const paymentDb = createServiceClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
     );
 
     // 1. Fetch booking and verify status

@@ -8,6 +8,7 @@
 import { ok } from '../../../../src/lib/api';
 import { hasSupabaseEnv } from '../../../../src/lib/db.mjs';
 import { selectPublicPromoCodes } from '../../../../src/lib/public-promo-codes.mjs';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 export async function GET() {
   if (!hasSupabaseEnv()) {
@@ -17,8 +18,8 @@ export async function GET() {
   try {
     const { createClient } = await import('@supabase/supabase-js');
     const supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!,
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
 

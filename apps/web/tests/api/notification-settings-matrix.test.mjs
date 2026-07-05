@@ -101,7 +101,7 @@ test('setNotificationCells：忽略不在維度內的格（不寫入垃圾）', 
 
 test('Supabase 分支：db.mjs 讀寫 notification_event_settings singleton（source-contract）', () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const dbSrc = readFileSync(join(here, '..', '..', 'src', 'lib', 'db.mjs'), 'utf8');
+  const dbSrc = readFileSync(join(here, '..', '..', 'src', 'lib', 'db-messaging-bindings.mjs'), 'utf8'); // #1613 strangler 後實作所在
   assert.match(dbSrc, /getNotificationOverridesDb/, 'db.mjs 應 export getNotificationOverridesDb');
   assert.match(dbSrc, /setNotificationCellsDb/, 'db.mjs 應 export setNotificationCellsDb');
   assert.match(dbSrc, /from\('notification_event_settings'\)/, '應讀寫 notification_event_settings 表');

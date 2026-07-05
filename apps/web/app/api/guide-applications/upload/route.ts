@@ -8,6 +8,7 @@
 // existing guide's folder.
 import { ok, fail } from '../../../../src/lib/api';
 import { RateLimiter, createRateLimitResponse } from '../../../../src/lib/rate-limit';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../src/config/supabase-service-env.mjs';
 
 const BUCKET = 'guides';
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -25,8 +26,8 @@ export async function POST(request: Request) {
   const limited = createRateLimitResponse(limit);
   if (limited) return limited;
 
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const SUPABASE_URL = getSupabaseUrl();
+  const SUPABASE_SERVICE_KEY = getSupabaseServiceRoleKey();
   if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
     return Response.json(fail('NOT_CONFIGURED', 'supabase storage not configured'), { status: 503 });
   }

@@ -11,6 +11,7 @@ import {
 import { CSRF_COOKIE_NAME, createCsrfCookie, createCsrfToken, validateCsrf } from '../../../../../src/lib/csrf.mjs';
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../src/lib/guide-auth-session-supabase';
 import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
+import { getSupabaseUrl } from '../../../../../src/config/supabase-service-env.mjs';
 
 type GuideSessionInviteProfile = {
   id: string;
@@ -84,7 +85,7 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { token, password, guideId: loginGuideId } = body as Record<string, string>;
 
-    if (!process.env.SUPABASE_URL) {
+    if (!getSupabaseUrl()) {
       return Response.json(fail('NOT_AVAILABLE', 'Auth not configured'), { status: 503 });
     }
 

@@ -79,7 +79,7 @@ test('AC2: incidents.ts exists and exports recordIncident with Sentry + Telegram
 
   // DB insert to incidents table — behavioral check (not just string presence)
   assert.match(src, /\.from\s*\(\s*['"]incidents['"]\s*\)\.insert/, 'recordIncident must write to incidents table via supabase.from("incidents").insert()');
-  assert.match(src, /SUPABASE_URL/, 'Must use server-side SUPABASE_URL env var (not NEXT_PUBLIC_*)');
+  assert.match(src, /getSupabaseUrl\(\)/, 'Must use server-side Supabase URL via config getter（#1616；非 NEXT_PUBLIC_*）');
   assert.ok(!src.includes('NEXT_PUBLIC_SUPABASE_URL'), 'Must NOT use NEXT_PUBLIC_SUPABASE_URL in server-side lib');
 
   // returns void/Promise<void>

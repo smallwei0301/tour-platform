@@ -46,6 +46,7 @@ import { selectWithOptionalColumnFallback } from './optional-column-fallback.mjs
 // #1613 strangler P1 第 0 步：Supabase client 存取抽到 supabase-env.mjs，解除 db.mjs ⇄ db-*.mjs 循環。
 // db.mjs 內部沿用同名 binding，並 re-export 讓既有 caller 與測試（__setSupabaseClientForTest）零改動。
 import { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest } from './supabase-env.mjs';
+import { getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 export { hasSupabaseEnv, getSupabase, __setSupabaseClientForTest };
 
 async function tryRefreshAvailabilitySnapshotByOrderId(orderId) {
@@ -4479,7 +4480,7 @@ export async function deleteActivityDb(id) {
 
 async function getSupabaseServiceRole() {
   // 嘗試用 service role key；不存在則 fallback 一般 client
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = getSupabaseServiceRoleKey();
   if (serviceKey) {
     const { createClient } = await import('@supabase/supabase-js');
     return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, serviceKey, {

@@ -62,7 +62,7 @@ const GOD_FILE_CEILINGS = new Map([
   ['app/admin/activities/[id]/plans/page.tsx', 1306],
   ['app/admin/guides/[guideId]/availability/page.tsx', 1221],
   ['app/guide/availability/page.tsx', 1218],
-  ['app/api/v2/bookings/draft/route.ts', 1199],
+  ['app/api/v2/bookings/draft/route.ts', 1200], // +1：#1616 env getter import 行
   ['app/booking/[activityId]/page.tsx', 1080],
   ['app/guide/profile/page.tsx', 992],
   ['src/lib/email.ts', 863],
@@ -113,12 +113,12 @@ test('app/api 直接 import @supabase/* 的檔案數不得增加', () => {
 
 // ---------------------------------------------------------------------------
 // 3) 直讀 process.env 的檔案數（src/config、src/test-support、src/fixtures 之外）。
-//    基準 159（2026-07-04）→ 160（#1613 抽 supabase-env.mjs，把 SUPABASE_URL/
-//    SERVICE_ROLE_KEY 的**既有**讀取從 db.mjs 相對搬到新檔，非新增 env 面）。
-//    P4（#1616）會把這些讀取改走 src/config 存取器，屆時新檔不再含 process.env、
-//    天花板應降回。新程式的 env 讀取一律經 src/config/*。
+//    基準 159（2026-07-04）→ 98（2026-07-05：#1616 第一批把 SUPABASE_URL／
+//    SERVICE_ROLE_KEY 直讀全數改走 src/config/supabase-service-env.mjs getter，
+//    另有 issue1616-service-role-env-guard 鎖住不回流）。後續批次繼續下修。
+//    新程式的 env 讀取一律經 src/config/*。
 // ---------------------------------------------------------------------------
-const PROCESS_ENV_FILE_CEILING = 160;
+const PROCESS_ENV_FILE_CEILING = 98;
 const ENV_EXEMPT_PREFIXES = ['src/config/', 'src/test-support/', 'src/fixtures/'];
 
 test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）', () => {

@@ -4,6 +4,7 @@
  */
 import { hasSupabaseEnv } from './db.mjs';
 import { sendRescheduleRequestNotice, sendRescheduleDecisionNotice } from './email';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supabase-service-env.mjs';
 
 type RescheduleResult = {
   id: string;
@@ -16,7 +17,7 @@ type RescheduleResult = {
 
 async function getServiceClient() {
   const { createClient } = await import('@supabase/supabase-js');
-  return createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+  return createClient(getSupabaseUrl()!, getSupabaseServiceRoleKey()!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }
