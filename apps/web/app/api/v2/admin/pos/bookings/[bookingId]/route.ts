@@ -1,4 +1,5 @@
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
 
@@ -167,7 +168,6 @@ export async function GET(_: Request, context: { params: Promise<{ bookingId: st
       timeline,
     }));
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/pos/bookings/booking' });
   }
 }

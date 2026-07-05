@@ -10,6 +10,7 @@
 
 import { NextRequest } from 'next/server';
 import { ok, fail } from '../../../../../src/lib/api';
+import { reportRouteError } from '../../../../../src/lib/route-error';
 import { verifyGuideSession } from '../../../../../src/lib/guide-auth';
 import { tripReportStatus } from '../../../../../src/lib/post-trip-eligibility.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
@@ -122,7 +123,7 @@ export async function GET(request: NextRequest) {
       tripReportsDue,
     }));
   } catch (err) {
-    console.error('trip-reports-due API error:', err);
+    await reportRouteError(err, { route: 'v2/guide/trip-reports-due' });
     return Response.json(fail('SERVER_ERROR', 'Server error'), { status: 500 });
   }
 }

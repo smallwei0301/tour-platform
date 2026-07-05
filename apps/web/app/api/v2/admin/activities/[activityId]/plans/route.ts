@@ -6,6 +6,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { getSupabase } from '../../../../../../../src/lib/db.mjs';
 import { normalizeRichPlanPayload } from '../../../../../../../src/lib/activity-plans-rich-mapper.mjs';
 import { applyWithMissingColumnFallback } from '../../../../../../../src/lib/activity-plans-insert-fallback.mjs';
@@ -62,8 +63,7 @@ export async function GET(
       plans: data || [],
     }));
   } catch (err) {
-    console.error('Activity plans API error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/activities/activity/plans' });
   }
 }
 

@@ -6,6 +6,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -41,8 +42,7 @@ export async function GET(
 
     return Response.json(successV2({ blackouts: data || [] }));
   } catch (err) {
-    console.error('Blackout dates API error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/guides/guide/blackout-dates' });
   }
 }
 

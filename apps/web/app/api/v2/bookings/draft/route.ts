@@ -20,6 +20,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../src/lib/route-error';
 import { getSupabase, hasSupabaseEnv } from '../../../../../src/lib/db.mjs';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { resolveBookingPlan } from '../../../../../src/lib/booking-plan-resolver';
@@ -1192,8 +1193,6 @@ export async function POST(request: NextRequest) {
       })
     );
   } catch (err) {
-    console.error('Booking draft API error:', err);
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    return handleRouteError(err, { route: 'v2/bookings/draft' });
   }
 }

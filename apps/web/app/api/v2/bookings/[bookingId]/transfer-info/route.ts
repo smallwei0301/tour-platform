@@ -11,6 +11,7 @@
  *   400 / 403 / 404 — 參數錯誤 / 非本人或非待付款 / 找不到
  */
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
+import { handleRouteError } from '../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../src/lib/supabase/server';
 import { getGuideTransferInfoForBookingDb } from '../../../../../../src/lib/db.mjs';
 import { isTransferPaymentEnabled } from '../../../../../../src/config/feature-flags.mjs';
@@ -70,7 +71,6 @@ export async function GET(request: Request, context: { params: Promise<{ booking
         transferNote: info.transferNote,
       });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown error';
-    return jsonError('INTERNAL_ERROR', message, 500);
+    return handleRouteError(err, { route: 'v2/bookings/transfer-info' });
   }
 }

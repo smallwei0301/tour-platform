@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../../../src/lib/api.ts';
+import { handleRouteError } from '../../../../../../../../../../src/lib/route-error.ts';
 import { getSupabase } from '../../../../../../../../../../src/lib/db.mjs';
 import {
   ACTIVITY_PLAN_SEASON_SELECT_COLUMNS,
@@ -100,8 +101,7 @@ export async function PUT(
 
     return Response.json(successV2({ season: shapeActivityPlanSeason(data) }));
   } catch (err) {
-    console.error('Activity plan season PUT error:', err);
-    return Response.json(errorV2('INTERNAL_ERROR', 'Server error'), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/activities/activity/plans/plan/seasons/season' });
   }
 }
 

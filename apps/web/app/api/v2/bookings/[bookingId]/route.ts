@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { jsonOk, jsonError } from '../../../../../src/lib/api-response';
+import { handleRouteError } from '../../../../../src/lib/route-error';
 import { createClient } from '../../../../../src/lib/supabase/server';
 
 type BookingActivity = { id: string; title: string; slug: string | null };
@@ -72,8 +73,6 @@ export async function GET(
       order: orders ? { id: orders.id, status: orders.status, paymentStatus: orders.payment_status, totalTwd: orders.total_twd } : null,
     });
   } catch (err) {
-    console.error('Booking detail API error:', err);
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return jsonError('INTERNAL_ERROR', message, 500);
+    return handleRouteError(err, { route: 'v2/bookings/detail' });
   }
 }

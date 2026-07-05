@@ -17,6 +17,7 @@
 
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { reportRouteError } from '../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../src/lib/supabase/server';
 import { createScheduleDb } from '../../../../../../../src/lib/db.mjs';
 import { resolveAdminSchedulePlan } from '../../../../../../../src/lib/availability-v2/admin-schedule-plan-resolver.mjs';
@@ -117,6 +118,7 @@ export async function POST(
         { status: 422 },
       );
     }
+    await reportRouteError(err, { route: 'v2/admin/activities/schedules', metadata: { code } });
     return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
   }
 }

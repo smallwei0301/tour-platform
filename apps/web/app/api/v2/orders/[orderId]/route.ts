@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { jsonOk, jsonError } from '../../../../../src/lib/api-response';
+import { handleRouteError } from '../../../../../src/lib/route-error';
 import { createClient } from '../../../../../src/lib/supabase/server';
 import { isOrderOwner } from '../../../../../src/lib/v2-order-authz';
 
@@ -85,8 +86,6 @@ export async function GET(
       items: items || [],
     });
   } catch (err) {
-    console.error('Order detail API error:', err);
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return jsonError('INTERNAL_ERROR', message, 500);
+    return handleRouteError(err, { route: 'v2/orders/detail' });
   }
 }

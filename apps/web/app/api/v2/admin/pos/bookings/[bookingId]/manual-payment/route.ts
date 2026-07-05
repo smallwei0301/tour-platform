@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { successV2, errorV2 } from '../../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../../src/lib/route-error';
 import { createClient } from '../../../../../../../../src/lib/supabase/server';
 import { updateAdminOrderDb } from '../../../../../../../../src/lib/db.mjs';
 import { BookingStateService } from '../../../../../../../../src/lib/booking-state';
@@ -182,8 +183,6 @@ export async function POST(
       })
     );
   } catch (err) {
-    console.error('Admin POS manual payment API error:', err);
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return Response.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/pos/bookings/manual-payment' });
   }
 }

@@ -15,6 +15,7 @@ import { NextResponse } from 'next/server';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createClient as createAnonClient } from '../../../../../../../src/lib/supabase/server';
 import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { isReviewInvitationEligible } from '../../../../../../../src/lib/post-trip-eligibility.mjs';
 import { evaluateReviewInvitationIdempotency } from '../../../../../../../src/lib/post-trip/review-invitation.mjs';
 import { sendReviewInvitation } from '../../../../../../../src/lib/email';
@@ -209,7 +210,6 @@ const SUPABASE_SERVICE_ROLE_KEY = getSupabaseServiceRoleKey();
       })
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return NextResponse.json(errorV2('INTERNAL_ERROR', message), { status: 500 });
+    return handleRouteError(err, { route: 'v2/admin/orders/send-review-invitation' });
   }
 }

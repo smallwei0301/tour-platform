@@ -113,10 +113,11 @@ test('app/api 直接 import @supabase/* 的檔案數不得增加', () => {
 // 3) 直讀 process.env 的檔案數（src/config、src/test-support、src/fixtures 之外）。
 //    基準 159（2026-07-04）→ 98（2026-07-05：#1616 第一批把 SUPABASE_URL／
 //    SERVICE_ROLE_KEY 直讀全數改走 src/config/supabase-service-env.mjs getter，
-//    另有 issue1616-service-role-env-guard 鎖住不回流）。後續批次繼續下修。
-//    新程式的 env 讀取一律經 src/config/*。
+//    另有 issue1616-service-role-env-guard 鎖住不回流）→ 99（merge origin/main：
+//    #1599 新增 rate-limit-distributed.ts 讀 UPSTASH_* env，非本分支新增）。
+//    後續批次繼續下修。新程式的 env 讀取一律經 src/config/*。
 // ---------------------------------------------------------------------------
-const PROCESS_ENV_FILE_CEILING = 98;
+const PROCESS_ENV_FILE_CEILING = 99;
 const ENV_EXEMPT_PREFIXES = ['src/config/', 'src/test-support/', 'src/fixtures/'];
 
 test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）', () => {
@@ -139,8 +140,10 @@ test('直讀 process.env 的檔案數不得增加（env 一律經 src/config）'
 //    一般新領域仍請開子資料夾（如 availability-v2/），不要往頂層堆。
 // ---------------------------------------------------------------------------
 // 2026-07-05：#1613 批次抽出 9 個 db-* 領域檔（sanctioned 拆檔）＋#1614 共用 api-response.ts
-// （與 api.ts 並列的跨 route 基礎設施）→ 167。
-const LIB_TOP_LEVEL_FILE_CEILING = 167;
+// （與 api.ts 並列的跨 route 基礎設施）→ 167 → merge origin/main 帶入 #1598
+// route-error.ts／#1599 rate-limit-distributed.ts／#1611 guide-dashboard-trend.mjs
+// （皆非本分支新增）→ 170。
+const LIB_TOP_LEVEL_FILE_CEILING = 170;
 
 test('src/lib 頂層檔案數不得增加（新領域請開子資料夾）', () => {
   const count = readdirSync(join(WEB_ROOT, 'src/lib')).filter((entry) =>
