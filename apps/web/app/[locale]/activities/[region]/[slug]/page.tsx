@@ -8,7 +8,7 @@ import { getActivityBySlugDb } from '../../../../../src/lib/db.mjs';
 import { resolveActivityReviewStats } from '../../../../../src/lib/activity-review-stats.mjs';
 import { normalizeAdditionalRegions } from '../../../../../src/lib/activity-regions.mjs';
 import { normalizeRegionForActivityPath } from '../../../../../src/lib/region-slug.mjs';
-import { normalizeSocialProofQuotes, resolveSocialProofAuthor } from '../../../../../src/lib/social-proof-quotes.mjs';
+import { normalizeSocialProofQuotes } from '../../../../../src/lib/social-proof-quotes.mjs';
 import {
   buildActivityProductJsonLd,
   resolveActivityOgImage,
@@ -20,7 +20,7 @@ import { ActivityBottomBar } from '../../../../../src/components/activity/Activi
 import { SelectedPlanProvider } from '../../../../../src/components/activity/SelectedPlanContext';
 import { SectionAnchorNav } from '../../../../../src/components/activity/SectionAnchorNav';
 import { ImageCarousel } from '../../../../../src/components/activity/ImageCarousel';
-import { ReviewPhotos } from '../../../../../src/components/activity/ReviewPhotos';
+import { ActivityReviewsPanel } from '../../../../../src/components/activity/ActivityReviewsPanel';
 import { inferPlanIdForBookingUrl, resolveBookingEntryHref, resolvePlanBookingHref } from '../../../../../src/lib/booking-entry.mjs';
 import { resolveDatePlanPresentation } from '../../../../../src/lib/date-plan-source.mjs';
 import { resolveActivityPriceUnit } from '../../../../../src/lib/activity-price-unit.mjs';
@@ -57,21 +57,6 @@ function parseActivityLookupTimeout() {
 }
 
 const RENDER_ACTIVITY_TIMEOUT_MS = parseActivityLookupTimeout();
-
-const REVIEW_STAR_MAX = 5;
-
-// 旅客評價星等：固定顯示 5 顆星，達標的顯示品牌金色、未達標的顯示灰色，
-// 讓 4 星評價也能呈現「4 金 + 1 灰」而非只畫 4 顆。
-function StarRating({ value, ariaLabel }: { value?: number | null; ariaLabel: (filled: number, max: number) => string }) {
-  const filled = Math.max(0, Math.min(REVIEW_STAR_MAX, Math.round(Number(value) || 0)));
-  const empty = REVIEW_STAR_MAX - filled;
-  return (
-    <div className="kkd-stars" role="img" aria-label={ariaLabel(filled, REVIEW_STAR_MAX)}>
-      {filled > 0 && <span className="kkd-stars-on">{'★'.repeat(filled)}</span>}
-      {empty > 0 && <span className="kkd-stars-off">{'★'.repeat(empty)}</span>}
-    </div>
-  );
-}
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
   let timeoutRef: ReturnType<typeof setTimeout> | null = null;
@@ -454,40 +439,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
                 <span className="kkd-reviews-total">{t('reviewsTotal', { count: reviewStats.count })}</span>
               </div>
 
-              <div
-                className="kkd-review-list"
-                role="region"
-                aria-label={t('sectionReviews')}
-                tabIndex={0}
-              >
-                {/* 真實旅客評論（已核准）與後台社群口碑語錄整合呈現，使用相同卡片樣式；
-                    容器為橫向 scroll-snap 卷軸，旅客可左右滑動瀏覽評價 */}
-                {actReviews.map((r: any) => (
-                  <div key={r.id} className="kkd-review-card">
-                    <div className="kkd-review-header">
-                      <strong className="kkd-reviewer">{t('reviewAuthor', { author: r.author, city: r.city || t('reviewCityFallback') })}</strong>
-                      <span className="kkd-review-date">{r.date || new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'zh-TW')}</span>
-                    </div>
-                    {r.rating && <StarRating value={r.rating} ariaLabel={(filled, max) => t('starAria', { filled, max })} />}
-                    <p className="kkd-review-text">{r.text}</p>
-                    {Array.isArray(r.photos) && r.photos.length > 0 && (
-                      <ReviewPhotos photos={r.photos} authorLabel={r.author} />
-                    )}
-                  </div>
-                ))}
-                {warmQuotes.map((q, i) => (
-                  <div key={`warm-${i}`} className="kkd-review-card">
-                    <div className="kkd-review-header">
-                      <strong className="kkd-reviewer">{resolveSocialProofAuthor(q.author)}</strong>
-                    </div>
-                    <StarRating value={q.rating} ariaLabel={(filled, max) => t('starAria', { filled, max })} />
-                    <p className="kkd-review-text">{q.text}</p>
-                    {Array.isArray(q.photos) && q.photos.length > 0 && (
-                      <ReviewPhotos photos={q.photos} authorLabel={resolveSocialProofAuthor(q.author)} />
-                    )}
-                  </div>
-                ))}
-              </div>
+              {/* #1592 真實旅客評論（已核准）＋評分分佈長條＋星等/有照片篩選＋導遊回覆；
+                  社群口碑語錄（暖場）不參與篩選、恆顯示於後。互動需 client → 抽出面板元件。 */}
+              <ActivityReviewsPanel
+                reviews={actReviews as any[]}
+                warmQuotes={warmQuotes as any[]}
+                locale={locale}
+              />
             </section>
 
             {/* SECTION 3: 商品說明 */}
