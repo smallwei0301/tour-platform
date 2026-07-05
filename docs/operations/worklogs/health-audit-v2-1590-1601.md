@@ -2,7 +2,10 @@
 > 最後更新：2026-07-05（Asia/Taipei）｜負責 session：claude-opus-4-8 / claude/repo-audit-optimization-m4s8os
 > /goal：自己評估順序，完成 #1590–#1601。**永遠以本 worklog 為準。**
 
-## 總狀態：12/12 後端交付完成
+## 總狀態：12/12 完成（全數 merge＋closed）✅
+- 2026-07-05：owner 套用 5 migration → agent 驗證 → ledger verified → PR #1624 CI 6/6 綠 → squash-merge（merge commit `944c2ca`）→ #1590 #1596 #1592 #1591 #1593 #1594 逐張 sign-off 關閉。
+- 確認：`list_issues` open 清單中 #1590–#1601 一張都不剩（全 closed）。
+- 後續增量（另案，非本 goal 範圍）：#1591/#1593/#1594/#1592 的前端 UI 與 checkout/掛點串接（各 issue sign-off 已註明）。
 
 ### A. 已獨立 merge 進 main（6 張）
 | issue | PR | 內容 |
