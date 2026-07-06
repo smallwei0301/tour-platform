@@ -22,6 +22,7 @@ import {
   type SocialProofQuoteRow,
 } from '../../../../../src/components/admin/activity-form/SocialProofQuotesEditor';
 import { FaqEditorCard } from '../../../../../src/components/admin/activity-form/FaqEditorCard';
+import { AddonsEditor } from '../../../../../src/components/activity/AddonsEditor';
 import { toEditorFaq } from '../../../../../src/components/admin/activity-form/faq-shape.mjs';
 import { buildActivityExportTemplate } from '../../../../../src/components/admin/activity-form/export-template';
 import { fieldStyle, labelStyle, sectionTitle } from '../../../../../src/components/admin/activity-form/form-styles';
@@ -715,6 +716,11 @@ export default function AdminActivityEditPage() {
 
         {/* ── FAQ Editor ── */}
         <FaqEditorCard activityId={activityId} faq={faq} setFaq={setFaq} />
+
+        {/* ── 加購項目 ── */}
+        <Card title="加購項目">
+          <AddonsEditor endpointBase={`/api/v2/admin/activities/${activityId}/addons`} />
+        </Card>
 
         {/* ── 場次管理 ── */}
         <ScheduleSection activityId={activityId} />

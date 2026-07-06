@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { csrfHeaders } from '../../../../../src/lib/csrf-client';
 import { ImageUpload } from '../../../../../src/components/admin/ImageUpload';
+import { AddonsEditor } from '../../../../../src/components/activity/AddonsEditor';
 // 四大分類下拉：與 badge／篩選同源（category-tags.mjs），三處編輯器共用不重複定義。
 import { CATEGORY_OPTIONS as CATEGORIES } from '../../../../../src/lib/category-tags.mjs';
 // 地區下拉：與後台/投稿同源（region-slugs.mjs 全 22 縣市），不再各自硬編舊 8 個。
@@ -347,6 +348,12 @@ export default function GuideActivityEditPage() {
         >
           ＋ 新增問題
         </button>
+      </section>
+
+      {/* 加購項目（即時生效，不經審核；未設定則結帳頁隱藏） */}
+      <section style={sectionStyle}>
+        <div style={sectionTitle}>加購項目</div>
+        <AddonsEditor endpointBase={`/api/v2/guide/activities/${id}/addons`} />
       </section>
 
       {/* 動作列 */}
