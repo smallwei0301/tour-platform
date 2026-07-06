@@ -57,11 +57,12 @@ test.beforeEach(async ({ page }) => {
 
 async function reachPaymentStep(page: import('@playwright/test').Page) {
   await page.goto(`/guides/${SLUG}/shop/book`);
-  await page.getByTestId('shop-plan-card').first().click();
-  await page.getByRole('button', { name: /選擇日期和時間/ }).click();
+  // mock 全店只有一個方案 → 自動預選並直接落在 step 2（日期/時段），
+  // 不再重列方案（選購流程順化；方案摘要卡可更換方案）。
+  await expect(page.getByTestId('shop-plan-summary')).toBeVisible();
   await page.getByTestId('shop-date').first().click();
   await page.getByTestId('shop-slot').first().click();
-  await page.getByRole('button', { name: /完成預約/ }).click();
+  await page.getByRole('button', { name: /確認這個時段/ }).click();
 }
 
 test('信用卡付款：走到付款步驟並送出 ecpay checkout', async ({ page }) => {

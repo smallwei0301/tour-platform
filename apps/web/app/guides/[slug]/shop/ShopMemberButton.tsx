@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { createClient } from '../../../../src/lib/supabase/client';
+import { PersonIcon } from './sib-icons';
 
 // 商店首頁右上角會員入口：
 //  - 未登入 → 「會員登入」（導向 /login，登入後回商店訂單區）
@@ -26,16 +27,8 @@ export function ShopMemberButton({ slug }: { slug: string }) {
   const href = isMember ? ordersHref : `/login?next=${encodeURIComponent(ordersHref)}`;
 
   return (
-    <Link
-      href={href}
-      data-testid="shop-member-button"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 4,
-        fontSize: 14, fontWeight: 700, padding: '8px 16px', whiteSpace: 'nowrap',
-        borderRadius: 999, background: 'var(--tp-primary)', color: '#fff',
-        textDecoration: 'none', boxShadow: '0 1px 2px rgba(0,0,0,0.12)',
-      }}
-    >
+    <Link href={href} data-testid="shop-member-button" className="sib-member-pill">
+      <PersonIcon size={17} />
       {isMember ? '會員專區' : '會員登入'}
     </Link>
   );
