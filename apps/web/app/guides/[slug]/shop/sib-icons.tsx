@@ -78,9 +78,9 @@ export function VDivider({ className, style }: { className?: string; style?: CSS
   );
 }
 // 摘要列小計旁的下拉指示 chevron（SVG）
-export function ChevronDown({ size = 18, style }: { size?: number; style?: CSSProperties }) {
+export function ChevronDown({ size = 18, style, className }: { size?: number; style?: CSSProperties; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" style={style} aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 24 24" style={style} className={className} aria-hidden>
       <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
