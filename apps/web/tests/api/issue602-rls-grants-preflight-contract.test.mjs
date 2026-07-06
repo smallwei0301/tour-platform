@@ -26,6 +26,10 @@ const REQUIRED_SENSITIVE_TABLES = [
   'guide_balances',
   'settlement_rules',
   'soft_launch_controls',
+  // PII/身分表（2026-07-06 補入，鎖死 #1563 缺口——users 當初洩了卻不在監控）
+  'users',
+  'traveler_profiles',
+  'guide_applications',
 ];
 
 const REQUIRED_FORBIDDEN_ROLES = ['anon', 'authenticated', 'public'];
