@@ -14,7 +14,8 @@
  * - 另下一顆非 HttpOnly 標記 cookie（guide_impersonation），供導遊後台顯示「管理員代入
  *   模式」橫幅與結束代入入口；此 cookie 不含機密、不參與簽章驗證。
  */
-import { successV2, errorV2 } from '../../../../../../../src/lib/api';
+import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
+import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createGuideSessionCookies } from '../../../../../../../src/lib/guide-auth';
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../../../src/lib/guide-auth-session-supabase';
 import { getSupabaseUrl } from '../../../../../../../src/config/supabase-service-env.mjs';
@@ -39,11 +40,11 @@ export async function POST(
   const { guideId } = await context.params;
 
   if (!UUID_REGEX.test(guideId)) {
-    return Response.json(errorV2('VALIDATION_ERROR', 'Invalid guideId'), { status: 422 });
+    return jsonError('VALIDATION_ERROR', 'Invalid guideId', 422);
   }
 
   if (!getSupabaseUrl()) {
-    return Response.json(errorV2('NOT_AVAILABLE', 'Auth not configured'), { status: 503 });
+    return jsonError('NOT_AVAILABLE', 'Auth not configured', 503);
   }
 
   try {
@@ -56,32 +57,28 @@ export async function POST(
       .single()) as GuideAuthSingleResult<GuideImpersonationProfile>;
 
     if (error || !guide) {
-      return Response.json(errorV2('NOT_FOUND', '找不到導遊檔案'), { status: 404 });
+      return jsonError('NOT_FOUND', '找不到導遊檔案', 404);
     }
 
     if (guide.verification_status !== 'approved') {
-      return Response.json(
-        errorV2('GUIDE_NOT_ACTIVE', '此導遊尚未上線或已停權，無法進入其後台'),
-        { status: 409 }
-      );
+      return jsonError('GUIDE_NOT_ACTIVE', '此導遊尚未上線或已停權，無法進入其後台', 409);
     }
 
     const sessionVersion = guide.guide_session_version ?? 1;
     const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
 
-    const securePart = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    // 與 guide session cookie 一致的 Secure 屬性（production 由 createGuideSessionCookies
+    // 加上 '; Secure'）；此處鏡射同一結果，避免在本檔另行直讀環境變數。
+    const securePart = cookies.some((c) => c.includes('; Secure')) ? '; Secure' : '';
     const markerCookie =
       `${IMPERSONATION_COOKIE_NAME}=1; Path=/; SameSite=Lax; Max-Age=${IMPERSONATION_MAX_AGE_SECONDS}${securePart}`;
 
-    const headers = new Headers({ 'content-type': 'application/json' });
+    const headers = new Headers();
     cookies.forEach((c) => headers.append('set-cookie', c));
     headers.append('set-cookie', markerCookie);
 
-    return new Response(
-      JSON.stringify(successV2({ guideId: guide.id, guideName: guide.display_name })),
-      { status: 200, headers }
-    );
-  } catch {
-    return Response.json(errorV2('INTERNAL_ERROR', 'Unexpected impersonation error'), { status: 500 });
+    return jsonOk({ guideId: guide.id, guideName: guide.display_name }, { headers });
+  } catch (err) {
+    return handleRouteError(err, { route: 'v2/admin/guides/impersonate' });
   }
 }
