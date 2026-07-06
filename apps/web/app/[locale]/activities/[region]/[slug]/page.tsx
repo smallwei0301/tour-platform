@@ -440,7 +440,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               </div>
 
               {/* #1592 真實旅客評論（已核准）＋評分分佈長條＋星等/有照片篩選＋導遊回覆；
-                  社群口碑語錄（暖場）不參與篩選、恆顯示於後。互動需 client → 抽出面板元件。 */}
+                  社群口碑語錄（暖場，管理者後台設定）併入分佈/篩選、真實在前暖場在後。
+                  互動需 client → 抽出面板元件。rating_avg/review_count/JSON-LD 仍僅採真實評論。 */}
               <ActivityReviewsPanel
                 reviews={actReviews as any[]}
                 warmQuotes={warmQuotes as any[]}
