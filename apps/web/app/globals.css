@@ -3980,17 +3980,16 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-back img { display: inline-block; }
 .sib-current { margin-left: auto; color: var(--sib-muted); font-size: 13px; font-weight: 400; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 
-/* 步驟指示器 1—2—3 */
-.sib-ind { display: flex; align-items: flex-start; justify-content: space-between; margin: 10px 4px 6px; position: relative; }
-.sib-ind-item { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 0 0 auto; width: 92px; text-align: center; z-index: 1; }
+/* 步驟指示器（泛化 N 點：點—連接線—點，可容 3~4 步；響應式寬度） */
+.sib-ind { display: flex; align-items: flex-start; margin: 10px 0 6px; }
+.sib-ind-item { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; width: clamp(48px, 15vw, 72px); text-align: center; }
+.sib-ind-conn { flex: 1 1 auto; height: 1.5px; min-width: 6px; background: var(--sib-gold-line); margin-top: 15px; }
+.sib-ind-conn.on { background: var(--sib-gold); }
 .sib-ind-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-family: var(--tp-serif); font-size: 16px; font-weight: 800; border: 1.5px solid var(--sib-gold); background: var(--sib-paper); color: var(--sib-gold); }
 .sib-ind-item.on .sib-ind-dot { background: var(--sib-green); color: var(--sib-gold-strong, #d9c98f); border: 1.5px solid var(--sib-gold); box-shadow: 0 0 0 1px var(--sib-paper) inset; }
-.sib-ind-lbl { font-size: 12.5px; color: var(--sib-muted); line-height: 1.3; }
+.sib-ind-lbl { font-size: clamp(10.5px, 3vw, 12.5px); color: var(--sib-muted); line-height: 1.3; }
 .sib-ind-item.on .sib-ind-lbl { color: var(--sib-ink); font-weight: 700; }
-.sib-ind-line { position: absolute; top: 15px; height: 1.5px; background: var(--sib-gold-line); z-index: 0; }
-.sib-ind-line--1 { left: 22%; right: 50%; }
-.sib-ind-line--2 { left: 50%; right: 22%; }
 
 /* 大標（book） */
 .sib-book-h1 { font-family: var(--tp-serif); font-size: clamp(22px, 6.4vw, 30px); font-weight: 700; letter-spacing: 0.08em; color: var(--sib-ink); margin: 6px 0 4px; }
@@ -4020,6 +4019,16 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-plan-line svg { width: 15px; height: 15px; color: var(--sib-gold); flex: 0 0 auto; }
 .sib-plan-tag { color: var(--sib-muted); font-size: clamp(11.5px, 3.2vw, 13px); line-height: 1.35; }
 .sib-radio-slot { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; }
+
+/* step2 選方案：純文字選項（無照片、無人數） */
+.sib-book-sub { color: var(--sib-muted); font-size: clamp(12.5px, 3.6vw, 14px); margin: 2px 0 4px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sib-plan-opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; position: relative; }
+.sib-plan-opt.on { border: 1.5px solid var(--sib-gold); box-shadow: 0 4px 14px rgba(176,141,62,0.12); }
+.sib-plan-opt-info { flex: 1; min-width: 0; padding-right: 30px; }
+.sib-plan-opt-info h3 { font-family: var(--tp-serif); font-size: clamp(15px, 4.2vw, 17px); font-weight: 700; color: var(--sib-ink);
+  margin: 0 0 6px; line-height: 1.25; letter-spacing: 0.02em; }
 
 /* 同行人數卡 / stepper */
 .sib-guests-card { display: flex; align-items: center; justify-content: space-between; background: var(--sib-card);
