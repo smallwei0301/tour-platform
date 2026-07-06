@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/admin/reviews', label: '評價管理', icon: '⭐' },
   { href: '/admin/qa', label: 'Q&A管理', icon: '💬' },
   { href: '/admin/operations-tracking', label: '操作追蹤', icon: '📈' },
+  { href: '/admin/reports', label: '月結報表', icon: '📒' },
   { href: '/admin/go-no-go', label: 'Go/No-Go', icon: '🚦' },
   { href: '/admin/soft-launch', label: '軟啟動控制', icon: '🎛️' },
   { href: '/admin/notifications', label: '通知設定', icon: '🔔' },

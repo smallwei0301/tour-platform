@@ -72,5 +72,5 @@ Owner 三問：
 
 ## 5. 附註
 
-- 本 session 開機探針顯示 `.claude` hooks **未被 wire 進工具鏈**（Edit CLAUDE.md 探針未觸發 HARNESS BLOCK）——依 harness 00_INDEX 步驟 0，本輪**未改任何生產碼**，僅產出文件與唯讀查證。
+- 開機 Edit 探針曾誤判 hooks 未武裝（本版 Claude Code 先驗 old_string 才跑 hook，探針拿不到 HARNESS BLOCK）；後續 bash-guard 實際攔截 commit 證實**防線武裝中**。稽核階段仍全程僅文件＋唯讀查證。
 - 生產 DB 全程僅 SELECT/EXPLAIN（鐵律 2）；未套用任何 migration、未寫入任何資料。
