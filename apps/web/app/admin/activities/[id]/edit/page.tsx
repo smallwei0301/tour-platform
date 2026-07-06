@@ -23,6 +23,7 @@ import {
 } from '../../../../../src/components/admin/activity-form/SocialProofQuotesEditor';
 import { FaqEditorCard } from '../../../../../src/components/admin/activity-form/FaqEditorCard';
 import { AddonsEditor } from '../../../../../src/components/activity/AddonsEditor';
+import { toEditorFaq } from '../../../../../src/components/admin/activity-form/faq-shape.mjs';
 import { buildActivityExportTemplate } from '../../../../../src/components/admin/activity-form/export-template';
 import { fieldStyle, labelStyle, sectionTitle } from '../../../../../src/components/admin/activity-form/form-styles';
 
@@ -117,7 +118,9 @@ export default function AdminActivityEditPage() {
         setSafetyNotice(d.safetyNotice || '');
         setGoodFor((d.goodFor || []).join('\n'));
         setSocialProofQuotes(normalizeSocialProofQuotes(d.socialProofQuotes));
-        setFaq(d.faq || []);
+        // 儲存層 faq 為 canonical {question, answer}；後台編輯器用 {q, a}，
+        // 載入時正規化，否則既有 FAQ 會因欄位名不符而顯示成空白（本次修復重點）。
+        setFaq(toEditorFaq(d.faq));
         setRatingAvg(d.ratingAvg != null ? String(d.ratingAvg) : '');
         setStatus(d.status || 'draft');
         setLoading(false);
@@ -186,7 +189,7 @@ export default function AdminActivityEditPage() {
     setSafetyNotice(d.safetyNotice || '');
     setGoodFor((d.goodFor || []).join('\n'));
     setSocialProofQuotes(normalizeSocialProofQuotes(d.socialProofQuotes));
-    setFaq(Array.isArray(d.faq) ? d.faq : []);
+    setFaq(toEditorFaq(d.faq));
     // V2 方案：匯入時只暫存，儲存時 insert-only 建立尚不存在的方案（不覆蓋既有）。
     setImportedPlans(Array.isArray(d.activityPlans) && d.activityPlans.length ? d.activityPlans : null);
     setSuccess('✅ 已從 JSON 匯入內容；方案將於儲存時「只新增不覆蓋」建立，後續請至「方案管理」維護');

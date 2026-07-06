@@ -12,7 +12,6 @@
       "Bash(.claude/hooks/run-checks.sh:*)"
     ],
     "deny": [
-      "mcp__Supabase__apply_migration",
       "mcp__Supabase__deploy_edge_function",
       "mcp__Supabase__create_project",
       "mcp__Supabase__pause_project",
@@ -53,7 +52,7 @@
         ]
       },
       {
-        "matcher": "mcp__Supabase__execute_sql",
+        "matcher": "mcp__Supabase__execute_sql|mcp__Supabase__apply_migration",
         "hooks": [
           {
             "type": "command",

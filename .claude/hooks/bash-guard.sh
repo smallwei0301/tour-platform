@@ -37,7 +37,9 @@ fi
 
 # ── 4. git commit 證據 gate（含 git -C 變體）──────────────────────────
 if echo "$cmd" | grep -qE '\bgit\b[^|;&]*\bcommit\b'; then
-  staged=$(git -C "${root:-.}" diff --cached --name-only 2>/dev/null)
+  # core.quotepath=false：非 ASCII 檔名（如中文 worklog）不被跳脫成 "\345..." 帶前導引號，
+  # 否則 docs 豁免的 ^(docs/|.cursor/…) 錨點比對不到 → 純文件 commit 被誤擋（lessons 有記）
+  staged=$(git -C "${root:-.}" -c core.quotepath=false diff --cached --name-only 2>/dev/null)
 
   if echo "$staged" | grep -qE '(^|/)yarn\.lock$'; then
     deny "yarn.lock 在 staged 區。先執行：git restore --staged yarn.lock && git checkout -- yarn.lock，再 commit。"

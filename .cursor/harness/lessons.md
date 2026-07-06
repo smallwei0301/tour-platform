@@ -30,6 +30,12 @@
 - Solution：**任何 Edit/Write 之後、commit 之前，養成先 `git status`／`git diff --cached --name-only` 核對「這次改的檔案都在 staged 清單裡」的習慣**，尤其是合併衝突多檔案一起處理時
 - 適用範圍：所有「編輯多個檔案後才一次 commit」的流程，尤其是 merge/rebase 期間
 
+## [2026-07-06] commit-gate-nonascii-filename-quotepath
+- Context：純 docs commit（含中文檔名 worklog，如 `harness-2026-07-建置.md`）被 bash-guard commit gate 誤要求測試證據
+- Error：`git diff --cached --name-only` 預設 `core.quotePath=true`，非 ASCII 檔名被輸出成 `"...\345\273\272..."`（帶前導引號＋八進位跳脫），docs 豁免的 `^(docs/|.cursor/…)` 錨點比對不到 → 落到證據 gate
+- Solution：hook 內 `git` 加 `-c core.quotepath=false`，讓非 ASCII 檔名照原樣輸出（已修於 bash-guard.sh）
+- 適用範圍：所有靠 `git diff --cached --name-only` 做路徑比對的 shell 邏輯；本 repo worklog 常用中文檔名故必踩
+
 ## [2026-07-03] npm-install-supabase-postinstall-403
 - Context：fresh container 依 CLAUDE.md 跑 `npm install`
 - Error：`supabase` 套件 postinstall 從 github.com/supabase/cli releases 下載執行檔被代理擋（`403 Forbidden` → `Z_DATA_ERROR`/`incorrect header check`），整個 install 失敗
@@ -63,3 +69,4 @@
 - 結論：**agent 在本環境永遠無法套 migration**，不論授權與否。唯一路徑＝owner 走 Dashboard SQL Editor／`supabase db push`／CLI 套用（migration-apply SOP option 2）。
 - Agent 能做的極限：read-only SELECT 驗證前/後 schema（`information_schema` 探測）、套用後改 ledger 為 verified、確認 CI 綠後 merge。
 - 建議：遇「需套 migration 才能 merge」的 issue，一開始就把它標為 owner-blocked，不要規劃 agent 自套的路徑。
+- **[2026-07-06 更新] 三重死結已部分解開**：owner 拍板新增 SQL-OVERRIDE 協議（01_diagnostics §4b），sql-guard 有授權通道了（第 2 層解）、apply_migration 移出 deny 併入同一閘門（第 3 層解）。第 1 層（MCP server 端唯讀設定）仍由 owner 掌握——若 server 仍唯讀，寫入會在平台層失敗，此時回報 owner 而不是重試。流程：列 SQL＋影響 → owner 回 `SQL-OVERRIDE` → 寫 `.claude/state/sql-override`（30 分鐘）→ 執行 → 刪檔＋worklog 記審計。

@@ -53,7 +53,7 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
 
       {/* 標題列 */}
       <div className="sib-toprow">
-        <h1 className="sib-h1" style={{ fontSize: 30 }}>線上預約</h1>
+        <h1 className="sib-h1">線上預約</h1>
         <ShopMemberButton slug={slug} />
       </div>
 
@@ -75,7 +75,7 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
               style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
           )}
         </div>
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div className="sib-guide-name">
             <strong>{guide.region ? `${guide.region} · ` : ''}{shortName}</strong>
             <span className="sib-guide-badge"><LeafIcon />祕島引路人</span>
