@@ -25,8 +25,8 @@
 
 **阻斷方案（已落地）：**
 1. `.claude/settings.json` → `permissions.deny` 下架**已盤點到的**生產寫入工具（migration／deploy／branch 操作／GitHub 直寫檔案／workflow 觸發）。被 deny 的工具**連試錯的機會都沒有**，錯誤循環從源頭切斷。注意：MCP server 的工具面會隨版本變動，deny 清單需在每月健檢（`05_maintenance.md` §5）對照 live 工具列表重新盤點——**deny 是補丁，資料庫/平台端的唯讀憑證與 branch protection 才是牆**（`06_manifesto.md`）。
-2. `execute_sql` 屬雙用途（查證有用），改由 PreToolUse hook `.claude/hooks/sql-guard.sh` 做語句掃描：**只放行唯讀查詢**，任何 DML/DDL 關鍵字一律 exit 2 並回吐「走 migration PR」的正確路徑。
-3. schema/資料變更唯一合法路徑：migration 檔（時間戳命名）→ PR → CI → **人工**依 `docs/operations/migration-apply-ledger-sop.md` 套用。
+2. `execute_sql`／`apply_migration` 由 PreToolUse hook `.claude/hooks/sql-guard.sh` 守門：**預設只放行唯讀查詢**，任何 DML/DDL 一律 exit 2 並回吐正確路徑；寫入需走 **SQL-OVERRIDE 協議**（§4b，2026-07-06 owner 拍板新增）——使用者當輪明確授權、30 分鐘效期、逐句審計、災難級語句（drop database/schema、alter system）連授權都不放。
+3. schema 變更合法路徑：migration 檔（時間戳命名）→ PR → CI 綠燈 → 套用（使用者親自套，或經 SQL-OVERRIDE 授權由 agent 套）→ 補 ledger（`docs/operations/migration-apply-ledger-sop.md`）。
 
 ### 痛點 2：所有紅線只存在於散文，記憶解體時無任何攔截
 **對應失敗場景：語意迷航點。**
@@ -60,7 +60,7 @@
 | 防線 | 檔案 | 攔截點 | 對應痛點 |
 |---|---|---|---|
 | 生產寫入工具下架 | `.claude/settings.json` → `permissions.deny` | 工具呼叫前（權限層） | 1 |
-| SQL 唯讀哨兵 | `.claude/hooks/sql-guard.sh` | PreToolUse: `mcp__Supabase__execute_sql` | 1 |
+| SQL 預設唯讀哨兵＋SQL-OVERRIDE 閘門 | `.claude/hooks/sql-guard.sh` | PreToolUse: `mcp__Supabase__execute_sql`｜`apply_migration` | 1 |
 | 凍結路徑守衛 | `.claude/hooks/file-guard.sh` | PreToolUse: Edit\|Write | 2 |
 | Shell 旁路守衛＋commit gate | `.claude/hooks/bash-guard.sh` | PreToolUse: Bash | 2、3 |
 | 測試證據鏈 | `.claude/hooks/run-checks.sh` → `.claude/state/last-checks.json` | commit 前主動執行 | 3 |
@@ -94,12 +94,25 @@
 4. **消耗式授權**：一張授權只服務「當次對話中使用者批准的那一件事」。該編輯完成後**立刻刪除 override 檔**，不留著給下一個任務用；換任務＝重新請示。
 5. 完成後在 worklog 記錄 override 使用紀錄（路徑＋授權原文＋起訖時間），供使用者抽查。
 
+## 4b. SQL-OVERRIDE 協議（生產 SQL 寫入授權；2026-07-06 owner 拍板新增）
+
+適用：`mcp__Supabase__execute_sql` 的寫入/DDL、`mcp__Supabase__apply_migration`。目的：owner 可以在對話中直接命令 agent 執行 SQL（免手動複製貼上 SQL Editor），同時保證 agent **永遠無法自行發起**生產寫入。
+
+1. agent 需要寫入時，**先在對話中列出**：將執行的完整 SQL、目標表、預期影響（筆數或 schema 變化）、是否可逆。不得先斬後奏。
+2. 使用者在對話中回覆一句含 `SQL-OVERRIDE` 的明確授權（使用者主動下令「幫我跑這句/套這支 migration」再確認一次亦可）。
+3. agent 把**授權原話＋時間＋目的**寫入 `.claude/state/sql-override`（**30 分鐘**內有效，過期重批）。
+4. sql-guard 在授權窗內放行寫入，但：災難級語句（`drop database`／`drop schema`／`alter system`）**連授權都不放**（請使用者親自在 Dashboard 執行）；每句放行的 SQL 自動追加到 `.claude/state/sql-audit.log`（時間戳＋工具＋語句前 400 字）。
+5. **消耗式**：該批 SQL 執行完畢立刻刪除 override 檔；執行結果（實際筆數/錯誤）與審計摘要記入 worklog。
+6. **migration 紀律不變**：schema 變更仍必須先落時間戳 migration 檔、過 PR＋CI，SQL-OVERRIDE 只是把「套用」這一步從『使用者複製貼上』換成『agent 代跑』；套完照 `migration-apply-ledger-sop.md` 補 ledger（SOP 本就涵蓋 MCP 套用情境）。臨時資料修正（DML）可不落 migration 檔，但必須在 worklog 留完整語句與影響筆數。
+7. **平台層前提**：本協議只管 harness 側。若 Supabase MCP server 端設了唯讀（或工具面未曝露 `apply_migration`），寫入仍會在 server/DB 層失敗——該開關由使用者管理；開著唯讀時，agent 應回報「平台層唯讀擋下」而不是重試。
+
 ## 5. ⚖️ 誠實條款：這套 harness 的能力極限
 
 **擋得住的**：工具層的誤觸（Edit/Write/Bash/MCP 走正門的呼叫）、無證據 commit、生產寫入、force-push。
 
 **擋不住的（已知殘洞，按風險排序）：**
-1. **P0-OVERRIDE 的最後一哩是 honor system——但實測有第二道防線**：hook 讀不到對話內容，只能驗證 override 檔存在與新鮮度。不過本 harness 建置時實測：模型在「未取得使用者明確授權」的情況下嘗試寫 override 檔，被 Claude Code 的 auto-mode 安全分類器直接攔下（辨識為 self-authorization），直到使用者在對話中明確授權後才放行。緩解疊加：分類器＋檔案格式要求引用使用者授權原文＋worklog 審計＋使用者抽查（見 `06_manifesto.md` 腐化清單）。
+1. **P0-OVERRIDE／SQL-OVERRIDE 的最後一哩是 honor system——但實測有第二道防線**：hook 讀不到對話內容，只能驗證 override 檔存在與新鮮度。不過本 harness 建置時實測：模型在「未取得使用者明確授權」的情況下嘗試寫 override 檔，被 Claude Code 的 auto-mode 安全分類器直接攔下（辨識為 self-authorization），直到使用者在對話中明確授權後才放行。緩解疊加：分類器＋檔案格式要求引用使用者授權原文＋worklog 審計＋使用者抽查（見 `06_manifesto.md` 腐化清單）。
+1b. **SQL-OVERRIDE 授權窗開啟的 30 分鐘內是全寫入放行**（僅擋災難級語句）——授權「跑這支 migration」的窗內，技術上也能跑別的 UPDATE。緩解：消耗式用畢即刪＋sql-audit.log 逐句留痕＋worklog 對帳；使用者抽查審計檔與實際下令範圍是否一致。
 2. **證據檔可被偽造**——模型可以直接手寫 `last-checks.json`。緩解：`run-checks.sh` 會寫入輸出摘要（偽造需編造測試輸出，成本高）；隔離驗收 subagent 必須**重跑**測試而非只讀證據檔；file-guard 不擋 `.claude/state/`（它是 runtime 區），這是刻意取捨。
 2b. **經 SELECT 呼叫的 volatile function 攔不全**——sql-guard 已黑名單 `setval`/`pg_terminate_backend` 等已知危險函式並強制查詢型前綴，但任意自訂函式（如 `select some_admin_rpc()`）regex 無法窮舉。**真正的牆是 Supabase MCP 掛唯讀憑證**（`06_manifesto.md` 第 1 件事）。
 3. **非常規寫檔路徑**——`python -c 'open(...).write(...)'`、node inline script 等可繞過 bash-guard 的 regex。緩解：bash-guard 已涵蓋最常見的 `sed -i`/redirect/`tee`/`rm`；殘洞靠 CI（受保護 spec 刪改會讓 e2e-smoke／ci.yml 變紅）與 PR review 兜底。
