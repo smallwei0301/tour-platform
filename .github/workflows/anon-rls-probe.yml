@@ -1,0 +1,100 @@
+name: anon-rls-probe
+
+# 行為式 RLS 外洩探測（#1563 類事故的 ground-truth 防線）。
+# 用「公開 anon key」實際去 SELECT 敏感表；讀到資料或被授權存取＝FAIL。
+#
+# 觸發：
+#   - schedule：每晚對 production 探測（偵測式，最長 24h 內抓到任何外洩）。
+#   - pull_request 觸碰 supabase/migrations/**：migration PR 的 merge gate。
+#       ⚠️ 誠實限制：本 job 探測的是「當前 production」，不是「本 PR migration 套用後」的狀態
+#       （要測 PR 套用後需 ephemeral/branch DB，屬另案）。它的把關語意＝
+#       「production 目前無外洩，才准再讓新的 schema 變更進場」。
+#   - workflow_dispatch：手動。
+#
+# 要真正「擋住」migration PR 的 merge，需 owner 兩步（本 workflow 無法代做）：
+#   1) 到 repo Settings → Secrets → Actions 新增 SUPABASE_ANON_KEY（公開 key，非 service key）。
+#   2) 到 branch protection / ruleset 把本 check（job 名 probe）設為 main 的 required status check。
+#      沒有第 2 步，紅燈只是紅燈、擋不住 merge。
+
+on:
+  schedule:
+    - cron: '0 19 * * *'  # 每日 19:00 UTC（03:00 Asia/Taipei）
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+  workflow_dispatch: {}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check required secrets
+        id: check-secrets
+        env:
+          HAS_URL: ${{ secrets.SUPABASE_URL != '' }}
+          HAS_ANON: ${{ secrets.SUPABASE_ANON_KEY != '' }}
+        run: |
+          if [ "$HAS_URL" != "true" ] || [ "$HAS_ANON" != "true" ]; then
+            echo "HOLD: SUPABASE_URL 或 SUPABASE_ANON_KEY 尚未設定 —— 探測跳過（不阻擋）。"
+            echo "  請到 repo Settings → Secrets → Actions 新增 SUPABASE_ANON_KEY（公開 anon key）。"
+            echo "## anon-rls-probe — HOLD（缺 secret，未探測）" >> "$GITHUB_STEP_SUMMARY"
+            echo "設定 \`SUPABASE_ANON_KEY\` 後本 gate 才會生效。" >> "$GITHUB_STEP_SUMMARY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        if: steps.check-secrets.outputs.skip != 'true'
+        run: npm ci
+
+      - name: Run anon RLS probe
+        if: steps.check-secrets.outputs.skip != 'true'
+        id: probe
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          mkdir -p /tmp/anon-probe
+          node scripts/security/anon-rls-probe.mjs --json --output /tmp/anon-probe/anon-rls-probe.json
+        continue-on-error: true
+
+      - name: Write step summary
+        if: steps.check-secrets.outputs.skip != 'true'
+        run: |
+          echo "## anon-rls-probe 結果" >> "$GITHUB_STEP_SUMMARY"
+          if [ -f /tmp/anon-probe/anon-rls-probe.json ]; then
+            STATUS=$(node -e "console.log(require('/tmp/anon-probe/anon-rls-probe.json').summary.overall_status)" 2>/dev/null || echo unknown)
+            echo "**Status:** $STATUS" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "_不含實際資料列，僅筆數；artifact 已上傳。_" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "**Status:** UNKNOWN — 無輸出檔" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload probe artifact
+        if: steps.check-secrets.outputs.skip != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: anon-rls-probe-${{ github.run_id }}
+          path: /tmp/anon-probe/anon-rls-probe.json
+          retention-days: 30
+
+      - name: Fail if probe found a leak
+        if: steps.check-secrets.outputs.skip != 'true' && steps.probe.outcome == 'failure'
+        run: |
+          echo "🚨 anon-rls-probe FAILED — 敏感表對 anon 外洩或被授權存取，見 artifact（不含 PII 內容）。"
+          echo "這是 #1563 類 P0 外洩的即時偵測。立刻檢查 RLS/grants，勿 merge。"
+          exit 1
