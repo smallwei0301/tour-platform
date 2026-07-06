@@ -54,6 +54,13 @@
 - 設計：預設唯讀不變；寫入/DDL/apply_migration 走 SQL-OVERRIDE（當輪授權、30 分鐘、消耗式、`.claude/state/sql-audit.log` 逐句審計、災難級語句連授權都不放）。協議全文 01_diagnostics §4b。
 - 變更：sql-guard.sh v3、settings.json（apply_migration 出 deny 入 hook matcher）、CLAUDE.md 鐵律 2、01_diagnostics §1/§4b/§5、lessons「三重死結」條目更新
 - 驗證：17 案例情境測試全綠（唯讀回歸 7＋授權窗 8＋過期 2），審計檔留痕確認
+- 附帶修復：bash-guard commit gate 對非 ASCII 檔名改用 `core.quotepath=false`（中文檔名 worklog 純 docs commit 不再被誤擋；owner P0-OVERRIDE 授權）
+- PR https://github.com/smallwei0301/tour-platform/pull/1631 已 merge（squash a47b7c1）：
+  - CI `test` conclusion=success（https://github.com/smallwei0301/tour-platform/actions/runs/28767439986/job/85294394118）、`scan` success（.../job/85294394157）
+  - merge 由 owner 於對話下令「merge」，agent 依鐵律 6 確認 CI 綠後執行、unsubscribe
+
+## SQL-OVERRIDE 待辦（owner 側，尚未確認）
+- Supabase MCP server 端若仍為 `--read-only`，agent 寫入會在平台層失敗；要真正啟用「agent 代跑寫入」，需 owner 到環境設定移除該旗標（權衡：DB 層最後一道牆隨之移除，防線剩 sql-guard＋協議＋分類器）。
 
 ## P0-OVERRIDE 使用紀錄
 - 2026-07-03 施工清單（CLAUDE.md、.cursor/harness/00–08、.claude/hooks/*、.claude/settings.json）｜使用者授權：AskUserQuestion 選項「P0-OVERRIDE：授權施工清單（推薦）」｜用畢即刪
