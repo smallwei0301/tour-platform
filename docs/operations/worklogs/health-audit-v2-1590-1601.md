@@ -60,3 +60,11 @@ owner 二選一：
 - **真瀏覽器 QA（local dev、in-memory fallback）**：注入 guide/admin session cookie，驅動真實編輯器 UI 新增 3 筆加購 → 截圖成功（`10b-guide-edit-addons-crop.png`、`11-admin-edit-addons.png`）。導遊/管理者編輯頁未登入會正確導向登入頁（非 bug）。
 - **#1592/#1594 使用者回報排查**：#1592「沒顯示」＝該活動無已核准評論（分佈/篩選只在有評論時顯示，by design）；正解 URL＝`/activities/kaohsiung/kaohsiung-chaishan-cave-experience`（已 curl 證實 review-dist 節點）。#1594「找不到頁面」＝`/me` 缺 page，已修為轉址。
 - **點數示範發放（SQL-OVERRIDE 授權寫入）**：owner 當輪回覆含 SQL-OVERRIDE → 落 `.claude/state/sql-override` → INSERT `user_points_ledger`（user 94062ffc…74e0, delta +1000, reason=adjust, expires_at=NULL）→ 用畢刪檔。首呼因 MCP permission stream 中斷未落庫，SELECT 確認後重試，最終 balance=1000／ledger_rows=1（無重複）。審計記於 `.claude/state/sql-audit.log`。
+
+## 2026-07-06（Asia/Taipei）暖場評論併入正式評論邏輯（#1592 補強）
+- **回報**：活動頁頂部顯示「4.8 共 21 則」＋暖場評論卡片，但 #1592 的評分分佈長條/星等篩選沒把暖場評論算進去（只有暖場、無正式評論時 `hasReviews=false` → 整組不顯示）。
+- **根因**：`ActivityReviewsPanel` 的 `buildRatingDistribution(reviews)`／`filterReviews(reviews)` 只吃真實評論（`activity_reviews`），暖場語錄（`activities.social_proof_quotes`）只恆顯示為卡片、不進分佈/篩選。頂部聚合（`resolveActivityReviewStats`）卻已把暖場算進「則數」，兩者不一致。
+- **修法（前端、零 migration）**：新增純函式 `toReviewDisplayList(reviews, warmQuotes)`（真實在前、暖場在後、帶 `isWarm`）；面板改用合併列餵分佈/篩選，依 `isWarm` 分流渲染（暖場無日期/導遊回覆）。
+- **紅線保留**：`rating_avg`／`review_count`／JSON-LD 仍只採真實評論（#1378 SEO；page 層另計，未動）。
+- **驗證**：`issue1592-review-distribution`（+3 案：合併排序/旗標、暖場-only→total>0、非陣列安全）＋`issue1592-reviews-panel-contract`（更新契約）＋`issue1592-guide-reply-contract` 全綠＋typecheck 綠。真瀏覽器（fixtures 模式，`dadadaocheng-walk`）截圖：分佈長條 5 列出現、「共 5 則」與分佈總數一致、5★ 篩選涵蓋暖場卡（`12-reviews-warm-distribution.png`）。
+- commit `af7f06e`（分支 `claude/repo-audit-optimization-m4s8os`，相對 main 之新變更）。
