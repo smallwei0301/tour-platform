@@ -98,3 +98,19 @@ jobs:
           echo "🚨 anon-rls-probe FAILED — 敏感表對 anon 外洩或被授權存取，見 artifact（不含 PII 內容）。"
           echo "這是 #1563 類 P0 外洩的即時偵測。立刻檢查 RLS/grants，勿 merge。"
           exit 1
+
+      # 失敗即主動推播（對齊其他 cron：settlement/ecpay-*-sweep）。缺哪個通道 secret 就
+      # 略過哪個，notify-failure.mjs 退出碼恆 0，不會讓已失敗的 job 更糟。
+      # 對「不設 merge gate、只靠排程偵測」的策略，這是收到告警的關鍵一步。
+      - name: Notify on failure (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: failure
+        run: node scripts/cron/notify-failure.mjs
