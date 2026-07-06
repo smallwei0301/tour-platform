@@ -55,6 +55,13 @@
 - 變更：sql-guard.sh v3、settings.json（apply_migration 出 deny 入 hook matcher）、CLAUDE.md 鐵律 2、01_diagnostics §1/§4b/§5、lessons「三重死結」條目更新
 - 驗證：17 案例情境測試全綠（唯讀回歸 7＋授權窗 8＋過期 2），審計檔留痕確認
 
+## 再次迭代：execute_sql 讀寫全自動＋事後審計（2026-07-06，owner 二次拍板）
+- 需求：owner 反映「所有 execute SQL 都要確認」很煩。釐清：那是 Claude Code 內建權限提示（execute_sql 未在 allow 清單），非 sql-guard；sql-guard 只硬擋寫入。
+- owner AskUserQuestion 選「讀寫全自動，改為事後審計」（知情取捨：生產寫入不再有事前人工閘）
+- 變更：settings.json allow 加 `mcp__Supabase__execute_sql`（消除逐次提示）；sql-guard 改為 execute_sql 讀寫全放行＋逐句審計，硬地板（災難級語句＋危險系統函式 pg_terminate/pg_read_file/COPY…PROGRAM）永遠擋；apply_migration 仍需 SQL-OVERRIDE。CLAUDE.md 鐵律 2、01 §4b/§5.1b 同步改寫
+- agent 新義務：每次執行寫入後必須立刻回報實際影響（rows affected/表/結果）＝「事後檢查 SQL」
+- 驗證：17 案例全綠（讀寫全自動 6＋硬地板 6＋apply_migration 授權門 4＋審計選擇性記錄 1）
+
 ## P0-OVERRIDE 使用紀錄
 - 2026-07-03 施工清單（CLAUDE.md、.cursor/harness/00–08、.claude/hooks/*、.claude/settings.json）｜使用者授權：AskUserQuestion 選項「P0-OVERRIDE：授權施工清單（推薦）」｜用畢即刪
 - 2026-07-03 00_INDEX.md（開機清單加煙霧測試）｜使用者授權原話：「好，寫進開機清單。」｜用畢即刪

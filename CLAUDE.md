@@ -5,7 +5,7 @@
 ## 🔒 十條鐵律（由 hooks 強制執行；違反任一條 = 本輪工作無效）
 
 1. **語言**：對話回覆、維運/QA 文件、commit 說明一律繁體中文；程式碼、指令、檔名、API/欄位名、錯誤碼、log 不翻譯。使用者文案以 `BRAND_BOOK.md` 為準。
-2. **生產資料庫預設唯讀**：Supabase MCP 平時只准 SELECT/EXPLAIN 查證（sql-guard 強制）。寫入/DDL/套 migration 需使用者**當輪**在對話中明確下令並回覆含 `SQL-OVERRIDE` 的授權（協議見 harness/01 §4b；30 分鐘效期、用畢即刪、逐句審計）——**agent 絕不自行發起寫入**。schema 變更仍必須先落時間戳 migration 檔 → PR → CI 綠燈，授權套用後補 ledger（`docs/operations/migration-apply-ledger-sop.md`）。
+2. **生產 SQL：`execute_sql` 讀寫全自動＋事後審計**（owner 2026-07-06 拍板）：查詢與資料寫入（DML）免確認自動執行，sql-guard 逐句寫入 `.claude/state/sql-audit.log`；**agent 執行任何寫入後必須立刻回報實際影響**（動到哪張表、幾筆、結果）。硬地板永遠擋：災難級語句（drop database/schema、alter system）＋危險系統函式（pg_terminate/pg_read_file…）。**`apply_migration`（schema 變更）例外**：仍需 `SQL-OVERRIDE` 授權，且 schema 變更必須先落時間戳 migration 檔 → PR → CI 綠燈 → 授權套用 → 補 ledger（協議見 harness/01 §4b；`docs/operations/migration-apply-ledger-sop.md`）。
 3. **凍結區不碰**（file-guard 強制）：`apps/web/app/api/{orders,payments}/**`、legacy availability 路徑、既有 `supabase/migrations/**`、受保護 e2e spec（`t0-*`…`t7-t8-*`、`funnel-*`、`deeplink-*`、`booking-flow-*`）、`apps/web/middleware.ts`、`src/config/{security-env,startup-env}.mjs`。新功能一律落 `app/api/v2/**`。
 4. **migration 只增不改**，新檔必為時間戳命名（`supabase/migrations/README.md`）。
 5. **沒有實跑證據不得宣稱完成**：commit 觸碰程式碼前必須 `.claude/hooks/run-checks.sh <targeted tests>` 綠燈（bash-guard 強制擋無證據 commit）。「應該會過」＝未完成。
