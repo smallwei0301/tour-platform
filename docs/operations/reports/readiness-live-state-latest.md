@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-07-06T07:39:06.156Z -->
+<!-- query_timestamp: 2026-07-06T13:19:35.871Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-06T07:39:06.156Z  
-**Commit SHA:** `88b06ee81abaa70542e42a5ac9e598733b4c1ee3`
+**Query timestamp:** 2026-07-06T13:19:35.871Z  
+**Commit SHA:** `55c057afd5f82f3b561929a30a3415a8d492719c`
 
 ---
 
-## Open PRs (6)
+## Open PRs (7)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1640 | [feat(security): anon-rls-probe 失敗時推播 Telegram+Email](https://github.com/smallwei0301/tour-platform/pull/1640) | `claude/code-workflow-architecture-mmm4ba` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
@@ -21,7 +22,7 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (20 total)
+## Open Issues (21 total)
 
 ### P0 (0)
 
@@ -54,10 +55,11 @@ _none_
 
 _none_
 
-### Other (7)
+### Other (8)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1637 | [[Payment][P0] 金流→結算→出帳鏈路稽核：paid→confirmed 無自動轉移＋callback RPC overload 遮蔽 auto-confirm＋導遊「已入帳」視圖缺口（每月會計報表前置）](https://github.com/smallwei0301/tour-platform/issues/1637) | — |
 | #1609 | [導遊開店第 4–6 週：導遊訂閱方案（plan tier）SaaS 化 — placeholder，待 owner 拍板定價](https://github.com/smallwei0301/tour-platform/issues/1609) | — |
 | #1608 | [導遊開店第 2–3 週：導遊後台「開店進度」新頁＋「本月商店表現」](https://github.com/smallwei0301/tour-platform/issues/1608) | — |
 | #1607 | [導遊開店第 2–3 週：商店 FAQ／政策區塊擴充＋匯款付款 beta（文案＋SOP＋flag）](https://github.com/smallwei0301/tour-platform/issues/1607) | — |
@@ -72,6 +74,9 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1639 | [security(rls): 自動稽核加固 — preflight 補 users + 行為式 anon-probe（防 #1563 復發）](https://github.com/smallwei0301/tour-platform/pull/1639) | 2026-07-06 |
+| #1638 | [feat(harness): execute_sql 改讀寫全自動＋事後審計（owner 二次拍板）](https://github.com/smallwei0301/tour-platform/pull/1638) | 2026-07-06 |
+| #1636 | [fix(reviews): 暖場評論併入評分分佈與篩選 (#1592 補強)](https://github.com/smallwei0301/tour-platform/pull/1636) | 2026-07-06 |
 | #1635 | [feat: 統一聯絡信箱為 midao2026@gmail.com，並支援管理員直接進入導遊後台](https://github.com/smallwei0301/tour-platform/pull/1635) | 2026-07-06 |
 | #1634 | [fix(shop): 商店首頁像素級對齊參考圖（新增 mock 比對頁）](https://github.com/smallwei0301/tour-platform/pull/1634) | 2026-07-06 |
 | #1633 | [feat(addons): 導遊+管理者後台加購項目編輯器＋/me 轉址 (#1591)](https://github.com/smallwei0301/tour-platform/pull/1633) | 2026-07-06 |
@@ -79,9 +84,6 @@ _none_
 | #1631 | [feat(harness): SQL-OVERRIDE 協議——owner 授權後 agent 可直接執行生產 SQL](https://github.com/smallwei0301/tour-platform/pull/1631) | 2026-07-06 |
 | #1630 | [fix(admin): 編輯行程載入時正規化 FAQ shape，既有 QA 正常顯示可編輯](https://github.com/smallwei0301/tour-platform/pull/1630) | 2026-07-06 |
 | #1629 | [style(checkout): 加購/點數 UI 依 BRAND_BOOK 八色重設計配色與排版（#1591 #1594）](https://github.com/smallwei0301/tour-platform/pull/1629) | 2026-07-06 |
-| #1628 | [feat: 安裝 fable-soul 判斷力層 skill 至專案 .claude/skills/](https://github.com/smallwei0301/tour-platform/pull/1628) | 2026-07-06 |
-| #1627 | [健檢 v2 前端串接：#1592 評論互動 · #1593 通知 · #1591 加購 · #1594 點數（UI＋checkout＋事件掛點）](https://github.com/smallwei0301/tour-platform/pull/1627) | 2026-07-05 |
-| #1626 | [架構模組化清理：db.mjs strangler、API 回應 helper、god-page 拆解、env 收斂（#1613–#1617）](https://github.com/smallwei0301/tour-platform/pull/1626) | 2026-07-05 |
 
 ---
 
