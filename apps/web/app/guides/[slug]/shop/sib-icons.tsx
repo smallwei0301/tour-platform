@@ -69,3 +69,19 @@ export function ArrowRight({ style }: { style?: CSSProperties }) {
     </svg>
   );
 }
+// 摘要列垂直分割線（依需求以 SVG 繪製，非 CSS border）
+export function VDivider({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg className={className} style={style} width="1" height="46" viewBox="0 0 1 46" preserveAspectRatio="none" aria-hidden>
+      <line x1="0.5" y1="0" x2="0.5" y2="46" stroke="currentColor" strokeWidth="1" />
+    </svg>
+  );
+}
+// 摘要列小計旁的下拉指示 chevron（SVG）
+export function ChevronDown({ size = 18, style }: { size?: number; style?: CSSProperties }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" style={style} aria-hidden>
+      <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}

@@ -9,6 +9,7 @@ import { track } from '../../../../../src/lib/track';
 import {
   ArrowRight, CtaMountain, MountainCircleLogo, PersonIcon, PeopleIcon,
   ClockIcon, TagIcon, RadioIcon, PinIcon, CalPrev, CalNext, PhoneIcon, MailIcon, BackIcon,
+  VDivider, ChevronDown,
 } from '../sib-icons';
 
 type ShopPlan = {
@@ -709,9 +710,15 @@ export default function GuideShopBookingPage() {
             <>
               {selectedPlan && (
                 <div className="sib-sumbar">
-                  <span className="thumb">{selectedActivity?.coverImageUrl && <Image src={selectedActivity.coverImageUrl} alt="" width={52} height={52} />}</span>
-                  <span className="info"><b>{selectedActivity?.title.split('｜')[0]}</b><p>#{selectedPlan.name}　·　{guests} 人</p></span>
+                  <span className="thumb">{selectedActivity?.coverImageUrl && <Image src={selectedActivity.coverImageUrl} alt="" width={56} height={56} />}</span>
+                  <span className="info">
+                    <b>{selectedActivity?.title.split('｜')[0]}</b>
+                    {selectedActivity?.title.split('｜')[1] && <span className="sub">{selectedActivity.title.split('｜')[1]}</span>}
+                    <span className="people"><PersonIcon size={13} />{guests} 人</span>
+                  </span>
+                  <VDivider className="sib-sum-div" />
                   <span className="price"><span>小計</span><b>NT${total.toLocaleString()}</b></span>
+                  <ChevronDown className="sib-sum-chev" size={18} />
                 </div>
               )}
               {!selectedPlan && <p className="sib-cta-hint">請選擇一個方案</p>}
