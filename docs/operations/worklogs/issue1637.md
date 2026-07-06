@@ -36,7 +36,10 @@
 - **新 migration**：`20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql`（DROP 4-arg overload＋唯一 6-arg：booking_type auto-confirm、order 終態隨 booking_type〔可 auto-confirm → confirmed，接上 #1554 sweep 與掃碼〕、TradeAmt≠total_twd 即 RAISE 22000；原子序不變）＋同名 rollback（還原 614 6-arg＋#195 4-arg）。契約測試 `issue1637-callback-rpc-unify-contract.test.mjs` 16 tests 綠；callback 相關 6 套件 41 tests 綠。
 - **刻意決策**：in-memory fallback（services.mjs）維持 order='paid'、不做金額驗證——legacy 模型無 booking_type（booking-type-callback-contract 已註記無 in-memory 對應）；受保護 e2e 以 JSON 打 callback 走 in-memory，行為不變。
 - **⚠️ 套用生產被平台層擋下**：Claude Code auto-mode classifier 拒絕寫 `.claude/state/sql-override`（判定 owner 授權句為「引用提案原文」非乾淨直接命令）。**未套用、未寫入任何生產資料**。已知後果：`issue1293-migration-ledger-gate` 全套測試 1 紅（新 migration 無 verified ledger record），待授權套用＋verify 後補 record 即綠。
-- **等 owner 一句乾淨授權**（例：「SQL-OVERRIDE：授權套用 20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql 到生產」）→ 寫 override 檔 → apply_migration → pg_proc SELECT 驗證（唯一 6-arg、含 booking_type 邏輯）→ 補 ledger verified record → 全套測試綠 → push。
+- ~~等 owner 一句乾淨授權~~ → **已完成（2026-07-06 20:21 Asia/Taipei）**。SQL-OVERRIDE 審計：
+  - 授權原話：「SQL-OVERRIDE：授權套用 20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql 到生產」（owner 當輪回覆）。
+  - 20:20 寫入 `.claude/state/sql-override` → 20:21:57 `apply_migration` 成功（sql-audit.log 有紀錄）→ 20:25 pg_proc SELECT 驗證：**唯一 6-arg overload**、`has_booking_type`/`has_amount_check`/`has_order_final_status` 皆 true → 隨即刪除 override 檔（消耗式）。
+  - 影響：僅函式 DDL，零資料列變動。ledger 已補 verified record；全套 npm test **4483/4483 綠**（ledger gate 復綠）。
 
 ## 下一步
 1. 等 owner 拍板 P0 修復路線（A：新 6-arg migration 納 auto-confirm＋order paid→confirmed；B：sweep/redeem 改認 paid）——套用需當輪 `SQL-OVERRIDE` 授權＋ledger 補登。
