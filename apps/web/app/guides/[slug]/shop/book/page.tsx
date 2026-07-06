@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { createClient } from '../../../../../src/lib/supabase/client';
 import { track } from '../../../../../src/lib/track';
 import {
-  ArrowRight, CtaMountain, MountainCircleLogo, PersonIcon, PeopleIcon,
+  ArrowRight, MountainCircleLogo, PersonIcon,
   ClockIcon, TagIcon, RadioIcon, PinIcon, CalPrev, CalNext, PhoneIcon, MailIcon, BackIcon,
-  VDivider, ChevronDown,
 } from '../sib-icons';
 
 type ShopPlan = {
@@ -126,7 +125,8 @@ export default function GuideShopBookingPage() {
 
   const [shop, setShop] = useState<ShopData | null>(null);
   const [loadError, setLoadError] = useState('');
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // 4 步：1 選行程（活動）→ 2 選方案 → 3 選日期+人數 → 4 付款
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // 選擇狀態
   const [selectedActivityId, setSelectedActivityId] = useState('');
@@ -210,12 +210,29 @@ export default function GuideShopBookingPage() {
   const selectedActivity = allActivities.find((a) => a.id === selectedActivityId) || null;
   const selectedPlan = selectedActivity?.plans.find((p) => p.id === selectedPlanId) || null;
 
+  // 深連結預選（同時帶 activity+plan）——直接落到日期步驟
   function selectPlan(activity: ShopActivity, plan: ShopPlan) {
     setSelectedActivityId(activity.id);
     setSelectedPlanId(plan.id);
     setGuests(Math.max(1, plan.minParticipants || 1));
     setSelectedDate('');
     setSelectedSlotStartAt('');
+  }
+  // 頁1：選行程（活動）→ 頁2 選方案
+  function selectActivity(activity: ShopActivity) {
+    setSelectedActivityId(activity.id);
+    setSelectedPlanId('');
+    setSelectedDate('');
+    setSelectedSlotStartAt('');
+    setStep(2);
+  }
+  // 頁2：選方案 → 頁3 選日期+人數（人數預設為方案下限）
+  function choosePlan(plan: ShopPlan) {
+    setSelectedPlanId(plan.id);
+    setGuests(Math.max(1, plan.minParticipants || 1));
+    setSelectedDate('');
+    setSelectedSlotStartAt('');
+    setStep(3);
   }
 
   // ── 還原精靈狀態（登入回跳）／深連結預選 ─────────────────────
@@ -245,15 +262,14 @@ export default function GuideShopBookingPage() {
             setGuests(Math.min(Math.max(min, Number(saved.guests) || min), max));
             if (saved.date) setSelectedDate(saved.date);
             if (saved.slotStartAt) setSelectedSlotStartAt(saved.slotStartAt);
-            setStep(2);
+            setStep(3);
             return;
           }
         }
       }
     } catch { /* 還原失敗 → 靜默退回從頭選 */ }
     try {
-      // 商店首頁的方案卡已完成「選方案」，深連結進來直接落在日期/時段
-      //（step 2 摘要卡可改人數、可更換方案），不再重列一次方案。
+      // 深連結同時帶 activity+plan（已完成選行程＋選方案）→ 直接落到日期步驟。
       const sp = new URLSearchParams(window.location.search);
       const qActivityId = sp.get('activityId');
       const qPlanId = sp.get('planId');
@@ -262,17 +278,12 @@ export default function GuideShopBookingPage() {
         const plan = activity?.plans.find((p) => p.id === qPlanId) || null;
         if (activity && plan) {
           selectPlan(activity, plan);
-          setStep(2);
+          setStep(3);
           return;
         }
       }
     } catch { /* 預選失敗不阻擋流程 */ }
-    // 全店只有一個方案：沒什麼好選，直接進日期/時段（小商店最常見情境）。
-    const onlyPlans = activities.flatMap((a) => a.plans.map((p) => ({ activity: a, plan: p })));
-    if (onlyPlans.length === 1) {
-      selectPlan(onlyPlans[0].activity, onlyPlans[0].plan);
-      setStep(2);
-    }
+    // 其餘一律從頁1「選行程」開始（使用者要求：先選行程，再選方案，最後選人數/日期）。
   }, [shop, restoreDone, slug]);
 
   // 存下目前選擇並前往登入（登入回跳後由上方還原 effect 接手）
@@ -288,7 +299,7 @@ export default function GuideShopBookingPage() {
 
   // ── Step2：載入可預約日期/時段 ───────────────────────────
   useEffect(() => {
-    if (step !== 2 || !selectedActivity || !selectedPlan) return;
+    if (step !== 3 || !selectedActivity || !selectedPlan) return;
     let mounted = true;
     (async () => {
       try {
@@ -334,7 +345,7 @@ export default function GuideShopBookingPage() {
 
   // 還原的日期/時段驗證：slots 載入後，選中的日期已不可約或時段被訂走 → 清掉讓使用者重選。
   useEffect(() => {
-    if (step !== 2 || slotsLoading || dates.length === 0) return;
+    if (step !== 3 || slotsLoading || dates.length === 0) return;
     if (selectedDate && !availableDateSet.has(selectedDate)) {
       setSelectedDate('');
       setSelectedSlotStartAt('');
@@ -347,7 +358,7 @@ export default function GuideShopBookingPage() {
 
   // 防衛：匿名者理論上到不了 step 3（draft 前已 gate），若真的到了就走同一登入流程。
   useEffect(() => {
-    if (step === 3 && authState === 'anon') {
+    if (step === 4 && authState === 'anon') {
       goLoginPreservingState();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -385,7 +396,7 @@ export default function GuideShopBookingPage() {
         throw new Error(j?.error?.messageZh || j?.error?.message || '此時段目前無法預約，請改選其他時間');
       }
       setCreatedBookingId(j.data.bookingId);
-      setStep(3);
+      setStep(4);
     } catch (e) {
       setError(e instanceof Error ? e.message : '建立預約失敗');
     } finally {
@@ -395,7 +406,7 @@ export default function GuideShopBookingPage() {
 
   // ── 選擇匯款時載入匯款資訊 ───────────────────────────────
   useEffect(() => {
-    if (step !== 3 || payMethod !== 'transfer' || !createdBookingId) return;
+    if (step !== 4 || payMethod !== 'transfer' || !createdBookingId) return;
     let mounted = true;
     (async () => {
       try {
@@ -465,17 +476,18 @@ export default function GuideShopBookingPage() {
 
   const total = selectedPlan ? priceOf(selectedPlan, guests) : 0;
 
-  const STEP_LABELS = ['選擇行程', '選擇日期與時間', '填寫聯絡資料'];
-  // 步驟指示器（mockup 順序：標題 → 指示器 → 內容）
+  const STEP_LABELS = ['選擇行程', '選擇方案', '選擇日期', '填寫資料'];
+  // 步驟指示器（泛化 N 點：點與點之間以連接線 flex 撐開，可容 4 步）
   const stepIndicator = (
     <div className="sib-ind">
-      <span className="sib-ind-line sib-ind-line--1" />
-      <span className="sib-ind-line sib-ind-line--2" />
       {STEP_LABELS.map((lbl, i) => (
-        <div key={lbl} className={`sib-ind-item${step >= i + 1 ? ' on' : ''}`}>
-          <span className="sib-ind-dot">{i + 1}</span>
-          <span className="sib-ind-lbl">{lbl}</span>
-        </div>
+        <Fragment key={lbl}>
+          {i > 0 && <span className={`sib-ind-conn${step >= i + 1 ? ' on' : ''}`} />}
+          <div className={`sib-ind-item${step >= i + 1 ? ' on' : ''}`}>
+            <span className="sib-ind-dot">{i + 1}</span>
+            <span className="sib-ind-lbl">{lbl}</span>
+          </div>
+        </Fragment>
       ))}
     </div>
   );
@@ -487,7 +499,7 @@ export default function GuideShopBookingPage() {
           <Link href={`/guides/${slug}/shop`} className="sib-back"
             onClick={() => { try { sessionStorage.removeItem(bookStateKey(slug)); } catch { /* noop */ } }}><BackIcon size={13} /> 取消預約</Link>
         ) : (
-          <button className="sib-back" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3)}><BackIcon size={13} /> 上一步</button>
+          <button className="sib-back" onClick={() => setStep((s) => (s - 1) as 1 | 2 | 3 | 4)}><BackIcon size={13} /> 上一步</button>
         )}
         <span className="sib-current">目前選擇：{String(shop.guide.displayName || '').replace(/[（(].*?[）)]/g, '').trim()}<PersonIcon size={16} /></span>
       </div>
@@ -498,7 +510,7 @@ export default function GuideShopBookingPage() {
         </div>
       )}
 
-      {/* ── Step1：選一條想走的徑 ── */}
+      {/* ── Step1：選行程（活動）── 點卡片直接進 step2 選方案 */}
       {step === 1 && (
         <div style={{ marginTop: 6 }}>
           <h1 className="sib-book-h1">選一條想走的徑</h1>
@@ -509,53 +521,63 @@ export default function GuideShopBookingPage() {
           {shop.activitiesByRegion.map((group) => (
             <section key={group.region}>
               <p className="sib-region"><PinIcon size={18} /> {group.region}</p>
-              {group.activities.flatMap((activity) =>
-                activity.plans.map((plan) => {
-                  const active = selectedPlanId === plan.id;
-                  const cap = plan.maxParticipants ? `${plan.minParticipants}–${plan.maxParticipants} 人` : `${plan.minParticipants} 人起`;
-                  return (
-                    <button key={plan.id} type="button" data-testid="shop-plan-card"
-                      onClick={() => selectPlan(activity, plan)}
-                      className={`sib-plan-rcard${active ? ' on' : ''}`}>
-                      <span className="sib-plan-thumb">
-                        {activity.coverImageUrl && (
-                          <Image src={activity.coverImageUrl} alt={activity.title} width={118} height={108} />
-                        )}
-                      </span>
-                      <span className="sib-plan-info">
-                        <h3>{activity.title}</h3>
-                        {plan.duration && (
-                          <span className="sib-plan-line"><ClockIcon size={15} />約 {plan.duration.replace(/^約\s*/, '')}</span>
-                        )}
-                        <span className="sib-plan-line"><TagIcon size={15} />NT${(plan.basePrice ?? 0).toLocaleString()} / {plan.priceType === 'per_group' ? '組' : '人'}</span>
-                        <span className="sib-plan-tag">#{plan.name}　·　{cap}</span>
-                      </span>
-                      <span className="sib-radio-slot" data-testid="shop-plan-radio"><RadioIcon on={active} size={24} /></span>
-                    </button>
-                  );
-                })
-              )}
+              {group.activities.map((activity) => {
+                const prices = activity.plans.map((p) => p.basePrice ?? 0).filter((n) => n > 0);
+                const fromPrice = prices.length ? Math.min(...prices) : 0;
+                const active = selectedActivityId === activity.id;
+                return (
+                  <button key={activity.id} type="button" data-testid="shop-activity-card"
+                    onClick={() => selectActivity(activity)}
+                    className={`sib-plan-rcard${active ? ' on' : ''}`}>
+                    <span className="sib-plan-thumb">
+                      {activity.coverImageUrl && (
+                        <Image src={activity.coverImageUrl} alt={activity.title} width={118} height={108} />
+                      )}
+                    </span>
+                    <span className="sib-plan-info">
+                      <h3>{activity.title}</h3>
+                      <span className="sib-plan-line"><TagIcon size={15} />NT${fromPrice.toLocaleString()} 起</span>
+                      <span className="sib-plan-tag">{activity.plans.length} 種方案可選</span>
+                    </span>
+                    <span className="sib-radio-slot"><ArrowRight style={{ width: 20, height: 20, color: 'var(--sib-gold)' }} /></span>
+                  </button>
+                );
+              })}
             </section>
           ))}
+        </div>
+      )}
 
-          {/* 同行人數 */}
-          {selectedPlan && (
-            <section className="sib-guests-card">
-              <span className="lbl"><PeopleIcon size={22} /> 同行人數</span>
-              <span className="sib-stepper">
-                <button type="button" aria-label="減少人數" disabled={guests <= (selectedPlan.minParticipants || 1)}
-                  onClick={() => setGuests((g) => Math.max(selectedPlan.minParticipants || 1, g - 1))}>−</button>
-                <span className="val" data-testid="shop-guests">{guests} 人</span>
-                <button type="button" aria-label="增加人數" disabled={selectedPlan.maxParticipants != null && guests >= selectedPlan.maxParticipants}
-                  onClick={() => setGuests((g) => (selectedPlan.maxParticipants != null ? Math.min(selectedPlan.maxParticipants, g + 1) : g + 1))}>+</button>
-              </span>
-            </section>
-          )}
+      {/* ── Step2：選方案（純文字、無照片、無人數）── 點方案直接進 step3 選日期 */}
+      {step === 2 && selectedActivity && (
+        <div style={{ marginTop: 6 }}>
+          <h1 className="sib-book-h1">選擇方案</h1>
+          <p className="sib-book-sub">{selectedActivity.title}</p>
+          {stepIndicator}
+          {selectedActivity.plans.map((plan) => {
+            const active = selectedPlanId === plan.id;
+            const cap = plan.maxParticipants ? `${plan.minParticipants}–${plan.maxParticipants} 人` : `${plan.minParticipants} 人起`;
+            return (
+              <button key={plan.id} type="button" data-testid="shop-plan-card"
+                onClick={() => choosePlan(plan)}
+                className={`sib-plan-opt${active ? ' on' : ''}`}>
+                <span className="sib-plan-opt-info">
+                  <h3>{plan.name}</h3>
+                  {plan.duration && (
+                    <span className="sib-plan-line"><ClockIcon size={15} />約 {plan.duration.replace(/^約\s*/, '')}</span>
+                  )}
+                  <span className="sib-plan-line"><TagIcon size={15} />NT${(plan.basePrice ?? 0).toLocaleString()} / {plan.priceType === 'per_group' ? '組' : '人'}</span>
+                  <span className="sib-plan-tag">{cap}</span>
+                </span>
+                <span className="sib-radio-slot" data-testid="shop-plan-radio"><RadioIcon on={active} size={24} /></span>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {/* ── Step2：選日期與時間 ── */}
-      {step === 2 && selectedPlan && (
+      {step === 3 && selectedPlan && (
         <div style={{ marginTop: 6 }}>
           {/* 標題（活動 | 方案）＋ tag；shop-plan-summary 保留（深連結直落此步的確認錨點） */}
           <section data-testid="shop-plan-summary">
@@ -564,7 +586,7 @@ export default function GuideShopBookingPage() {
             </div>
             <p className="sib-title-tag">
               #{selectedPlan.name}　·　{guests} 人
-              <button type="button" data-testid="shop-change-plan" onClick={() => setStep(1)}
+              <button type="button" data-testid="shop-change-plan" onClick={() => setStep(2)}
                 style={{ marginLeft: 10, border: 'none', background: 'transparent', color: 'var(--sib-gold)', fontWeight: 700, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
                 更換方案
               </button>
@@ -655,7 +677,7 @@ export default function GuideShopBookingPage() {
       )}
 
       {/* ── Step3：付款 ── */}
-      {step === 3 && selectedPlan && (
+      {step === 4 && selectedPlan && (
         <div style={{ marginTop: 6 }}>
           <h1 className="sib-book-h1" style={{ fontSize: 26 }}>確認與付款</h1>
           {stepIndicator}
@@ -703,57 +725,36 @@ export default function GuideShopBookingPage() {
         </div>
       )}
 
-      {/* ── 固定底部 CTA ── */}
-      <div className="sib-cta-bar-fx">
-        <div>
-          {step === 1 && (
-            <>
-              {selectedPlan && (
-                <div className="sib-sumbar">
-                  <span className="thumb">{selectedActivity?.coverImageUrl && <Image src={selectedActivity.coverImageUrl} alt="" width={56} height={56} />}</span>
-                  <span className="info">
-                    <b>{selectedActivity?.title.split('｜')[0]}</b>
-                    {selectedActivity?.title.split('｜')[1] && <span className="sub">{selectedActivity.title.split('｜')[1]}</span>}
-                    <span className="people"><PersonIcon size={13} />{guests} 人</span>
-                  </span>
-                  <VDivider className="sib-sum-div" />
-                  <span className="price"><span>小計</span><b>NT${total.toLocaleString()}</b></span>
-                  <ChevronDown className="sib-sum-chev" size={18} />
-                </div>
-              )}
-              {!selectedPlan && <p className="sib-cta-hint">請選擇一個方案</p>}
-              <button className="sib-cta" disabled={!selectedPlan} onClick={() => { setStep(2); }}
-                style={{ opacity: selectedPlan ? 1 : 0.5, fontSize: 19 }}>
-                <CtaMountain className="sib-cta-ico" />選擇日期和時間
+      {/* ── 固定底部 CTA（step1 選行程、step2 選方案皆點卡片直接前進，無底部按鈕）── */}
+      {step >= 3 && (
+        <div className="sib-cta-bar-fx">
+          <div>
+            {step === 3 && authState === 'authed' && (
+              <button className="sib-cta" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
+                style={{ opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5, fontSize: 19 }}>
+                {busy ? '處理中…' : '確認這個時段'}
                 <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
               </button>
-            </>
-          )}
-          {step === 2 && authState === 'authed' && (
-            <button className="sib-cta" disabled={!selectedSlotStartAt || busy || !contactName || !contactPhone} onClick={createDraft}
-              style={{ opacity: selectedSlotStartAt && contactName && contactPhone && !busy ? 1 : 0.5, fontSize: 19 }}>
-              {busy ? '處理中…' : '確認這個時段'}
-              <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
-            </button>
-          )}
-          {step === 2 && authState !== 'authed' && (
-            <button className="sib-cta" data-testid="shop-login-cta"
-              disabled={!selectedSlotStartAt || authState === 'checking'} onClick={goLoginPreservingState}
-              style={{ opacity: selectedSlotStartAt && authState === 'anon' ? 1 : 0.5, fontSize: 19 }}>
-              登入以完成預約
-              <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
-            </button>
-          )}
-          {step === 3 && (
-            <button className="sib-cta"
-              disabled={busy || (payMethod === 'transfer' && !transferInfo?.configured)} onClick={confirmPayment}
-              style={{ opacity: busy || (payMethod === 'transfer' && !transferInfo?.configured) ? 0.5 : 1, fontSize: 19 }}>
-              {busy ? '處理中…' : payMethod === 'transfer' ? '我已匯款，送出訂單' : `前往付款 NT$${total.toLocaleString()}`}
-              <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
-            </button>
-          )}
+            )}
+            {step === 3 && authState !== 'authed' && (
+              <button className="sib-cta" data-testid="shop-login-cta"
+                disabled={!selectedSlotStartAt || authState === 'checking'} onClick={goLoginPreservingState}
+                style={{ opacity: selectedSlotStartAt && authState === 'anon' ? 1 : 0.5, fontSize: 19 }}>
+                登入以完成預約
+                <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
+              </button>
+            )}
+            {step === 4 && (
+              <button className="sib-cta"
+                disabled={busy || (payMethod === 'transfer' && !transferInfo?.configured)} onClick={confirmPayment}
+                style={{ opacity: busy || (payMethod === 'transfer' && !transferInfo?.configured) ? 0.5 : 1, fontSize: 19 }}>
+                {busy ? '處理中…' : payMethod === 'transfer' ? '我已匯款，送出訂單' : `前往付款 NT$${total.toLocaleString()}`}
+                <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </main>
   );
 }

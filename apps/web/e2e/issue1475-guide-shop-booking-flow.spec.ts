@@ -57,8 +57,9 @@ test.beforeEach(async ({ page }) => {
 
 async function reachPaymentStep(page: import('@playwright/test').Page) {
   await page.goto(`/guides/${SLUG}/shop/book`);
-  // mock 全店只有一個方案 → 自動預選並直接落在 step 2（日期/時段），
-  // 不再重列方案（選購流程順化；方案摘要卡可更換方案）。
+  // 頁1 選行程（活動）→ 頁2 選方案 → 頁3 選日期+人數
+  await page.getByTestId('shop-activity-card').first().click();
+  await page.getByTestId('shop-plan-card').first().click();
   await expect(page.getByTestId('shop-plan-summary')).toBeVisible();
   await page.getByTestId('shop-date').first().click();
   await page.getByTestId('shop-slot').first().click();
