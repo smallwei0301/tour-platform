@@ -2436,7 +2436,7 @@ export async function getActivityBySlugDb(slug, options = {}) {
       itinerary: a.itinerary || [], goodFor: a.goodFor || [],
       // 社群口碑語錄（結構化或舊純文字皆可）—— 前台會 normalize 後與真實評論整合呈現
       socialProofQuotes: a.socialProofQuotes || [],
-      status: 'published',
+      status: 'published', plans: a.plans || null, // fallback 補齊 Supabase 分支的 plans 契約（mapActivityDetailRow）
       guide: guide ? {
         id: guide.slug, slug: guide.slug, displayName: guide.displayName,
         headline: guide.headline, bio: guide.shortBio, region: guide.region,
@@ -2974,7 +2974,7 @@ export async function getGuideShopDb(slug) {
       details.push({
         summary: {
           id: a.id, slug: a.slug, title: a.title, region: a.region,
-          regionSlug: detail?.regionSlug || a.regionSlug || null,
+          regionSlug: detail?.regionSlug || a.regionSlug || null, coverImageUrl: a.coverImageUrl || null,
           status: a.status || 'published',
         },
         plans: detail?.plans || [],
@@ -2994,7 +2994,7 @@ export async function getGuideShopDb(slug) {
     getGuideBySlugDb(slug),
     supabase
       .from('activities')
-      .select(`id, slug, title, region, region_slug, status, activity_plans(${PLAN_COLS})`)
+      .select(`id, slug, title, region, region_slug, cover_image_url, status, activity_plans(${PLAN_COLS})`)
       .eq('guide_slug', slug)
       .eq('status', 'published'),
   ]);
@@ -3007,7 +3007,7 @@ export async function getGuideShopDb(slug) {
     // Fallback：embed 失敗時退回 activities + activity_plans 兩段式。
     const a2 = await supabase
       .from('activities')
-      .select('id, slug, title, region, region_slug, status')
+      .select('id, slug, title, region, region_slug, cover_image_url, status')
       .eq('guide_slug', slug)
       .eq('status', 'published');
     acts = a2.data || [];
@@ -3028,7 +3028,7 @@ export async function getGuideShopDb(slug) {
     return {
       summary: {
         id: a.id, slug: a.slug, title: a.title, region: a.region,
-        regionSlug: a.region_slug || null, status: a.status || 'published',
+        regionSlug: a.region_slug || null, coverImageUrl: a.cover_image_url || null, status: a.status || 'published',
       },
       plans: selectPublicActivityDetailPlans({ formalPlans: formal }) || [],
     };

@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-07-05T18:26:15.557Z -->
+<!-- query_timestamp: 2026-07-06T00:45:33.602Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-05T18:26:15.557Z  
-**Commit SHA:** `36aca202b48799e94dce23f81c114ec941c723c2`
+**Query timestamp:** 2026-07-06T00:45:33.602Z  
+**Commit SHA:** `392cba952437546daf5fd68bbe59646f2984c0ec`
 
 ---
 
-## Open PRs (8)
+## Open PRs (7)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1627 | [健檢 v2 前端串接：#1592 評論互動 · #1593 通知 · #1591 加購 · #1594 點數（UI＋checkout＋事件掛點）](https://github.com/smallwei0301/tour-platform/pull/1627) | `claude/repo-audit-optimization-m4s8os` |
 | #1610 | [feat(guide-shop): 導遊開店第 1 週改版 — /for-guides landing、商店首頁方案卡、預約延後登入](https://github.com/smallwei0301/tour-platform/pull/1610) | `claude/plan-evaluation-shop-page-09krqv` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
@@ -74,6 +73,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1628 | [feat: 安裝 fable-soul 判斷力層 skill 至專案 .claude/skills/](https://github.com/smallwei0301/tour-platform/pull/1628) | 2026-07-06 |
+| #1627 | [健檢 v2 前端串接：#1592 評論互動 · #1593 通知 · #1591 加購 · #1594 點數（UI＋checkout＋事件掛點）](https://github.com/smallwei0301/tour-platform/pull/1627) | 2026-07-05 |
 | #1626 | [架構模組化清理：db.mjs strangler、API 回應 helper、god-page 拆解、env 收斂（#1613–#1617）](https://github.com/smallwei0301/tour-platform/pull/1626) | 2026-07-05 |
 | #1625 | [fix(settlement): sweep upsert onConflict 對齊 (order_id, settlement_kind) 複合冪等鍵](https://github.com/smallwei0301/tour-platform/pull/1625) | 2026-07-05 |
 | #1624 | [健檢 v2 剩餘 backlog：#1596 #1590 #1592 #1591 #1593 #1594（6 issue 後端全交付，需 owner 套 5 支 migration）](https://github.com/smallwei0301/tour-platform/pull/1624) | 2026-07-05 |
@@ -82,8 +83,6 @@ _none_
 | #1621 | [refactor(types): .mjs 核心檔 @ts-check 第一批納管 (#1597)](https://github.com/smallwei0301/tour-platform/pull/1621) | 2026-07-04 |
 | #1620 | [feat(validation): 導入 zod＋parseBody helper，redeem 首發（v2 金流輸入面）(#1600)](https://github.com/smallwei0301/tour-platform/pull/1620) | 2026-07-04 |
 | #1619 | [feat(observability): v2 routes 統一事故上報，消滅靜默失敗 (#1598)](https://github.com/smallwei0301/tour-platform/pull/1619) | 2026-07-04 |
-| #1618 | [feat(i18n): 未開站 locale（ja/ko）noindex guard＋新語系上線 checklist (#1595)](https://github.com/smallwei0301/tour-platform/pull/1618) | 2026-07-04 |
-| #1612 | [docs(worklog): 補記 issue1605 PR #1611 merge commit 資訊](https://github.com/smallwei0301/tour-platform/pull/1612) | 2026-07-04 |
 
 ---
 

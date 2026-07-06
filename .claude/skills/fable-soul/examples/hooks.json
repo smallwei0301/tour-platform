@@ -1,0 +1,16 @@
+{
+  "_comment": "Optional deterministic enforcement layer for Claude Code. Merge the hooks block into ~/.claude/settings.json (or a project .claude/settings.json). The soul's Red Flags rely on the model remembering to self-check; a Stop hook fires every turn regardless of context length. Keep the messages short — they are reminders, not rules; the rules live in soul.md.",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "printf '%s\\n' '[fable-soul] Before ending: no done-claim without a run, no promise of work you could do now, no hedge word on a checkable claim, no unconfirmed problem reported as a finding.'",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

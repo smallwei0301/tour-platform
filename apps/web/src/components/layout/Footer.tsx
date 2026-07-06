@@ -69,6 +69,7 @@ export function Footer() {
               <li><Link href="/about">{m.about}</Link></li>
               <li><Link href="/guides">{m.guides}</Link></li>
               <li><Link href="/guide/apply">{m.becomeGuide}</Link></li>
+              <li><Link href="/for-guides">{m.forGuides}</Link></li>
               <li><Link href="/guide/new-activity">{m.submitActivity}</Link></li>
               <li><Link href="/blog">{m.blog}</Link></li>
               <li><Link href="/why-choose-us">{m.whyUs}</Link></li>

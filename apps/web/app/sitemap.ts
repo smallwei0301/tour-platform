@@ -55,6 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { ...localized('/why-choose-us'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { ...localized('/about'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { url: `${baseUrl}/guide/apply`, lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${baseUrl}/for-guides`, lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { ...localized('/contact'), lastModified: now, changeFrequency: 'monthly', priority: 0.4 },
     { ...localized('/faq'), lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
     { ...localized('/legal/privacy'), lastModified: now, changeFrequency: 'monthly', priority: 0.3 },

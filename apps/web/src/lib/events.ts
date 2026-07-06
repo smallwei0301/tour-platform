@@ -20,6 +20,9 @@ export type EventName =
   | 'booking_page_view'
   | 'booking_v2_fallback_clicked'
   | 'booking_v2_line_retry_clicked'
+  | 'shop_view'
+  | 'shop_begin_booking'
+  | 'shop_share'
   | 'error';
 
 // ── 各事件 properties ────────────────────────────────────────────────────────
@@ -115,6 +118,21 @@ export interface BookingV2LineRetryClickedProperties {
   correlation_id?: string;
 }
 
+// Guide Shop（導遊個人商店）事件 — 以 guide_slug 聚合各商店的漏斗表現
+export interface ShopViewProperties {
+  guide_slug: string;
+}
+
+export interface ShopBeginBookingProperties {
+  guide_slug: string;
+  plan_preselected?: boolean; // 從商店首頁方案卡深連結進入
+}
+
+export interface ShopShareProperties {
+  guide_slug: string;
+  method: 'copy' | 'line' | 'qr';
+}
+
 export interface ErrorProperties {
   message: string;
   stack_summary?: string;
@@ -139,6 +157,9 @@ export type TrackEventPayload =
   | { event_name: 'booking_page_view'; properties: BookingPageViewProperties }
   | { event_name: 'booking_v2_fallback_clicked'; properties: BookingV2FallbackClickedProperties }
   | { event_name: 'booking_v2_line_retry_clicked'; properties: BookingV2LineRetryClickedProperties }
+  | { event_name: 'shop_view'; properties: ShopViewProperties }
+  | { event_name: 'shop_begin_booking'; properties: ShopBeginBookingProperties }
+  | { event_name: 'shop_share'; properties: ShopShareProperties }
   | { event_name: 'error'; properties: ErrorProperties; error_code?: string };
 
 // ── API request body ─────────────────────────────────────────────────────────

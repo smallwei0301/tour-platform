@@ -27,6 +27,7 @@ export function Navbar() {
     { label: m.nav.explore, href: '/activities' },
     { label: m.nav.guides, href: '/guides' },
     { label: m.nav.becomeGuide, href: '/guide/apply' },
+    { label: m.nav.forGuides, href: '/for-guides' },
     { label: m.nav.blog, href: '/blog' },
   ];
 

@@ -2,13 +2,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { getGuideBySlugDb } from '../../../../src/lib/db.mjs';
+import { getGuideBySlugDb, getGuideShopDb } from '../../../../src/lib/db.mjs';
 import { isGuideShopEnabled } from '../../../../src/config/feature-flags.mjs';
-import { GuideAvatar } from '../../../../src/components/shared/GuideAvatar';
 import { ShopMemberButton } from './ShopMemberButton';
+import { ShopViewTracker } from './ShopViewTracker';
+import {
+  MountainCircleLogo, LeafIcon, StepMountain, StepCalendar, StepClipboard,
+  CtaMountain, ArrowRight, LockIcon,
+} from './sib-icons';
 
-// 與導遊公開頁一致的 on-demand ISR（導遊存檔後 revalidatePath 失效）。
+// 與導遊公開頁一致的 on-demand ISR；另加 time-based revalidate 兜底（存檔 revalidatePath 打不到本頁）。
 export const fetchCache = 'force-cache';
+export const revalidate = 60;
 export const dynamicParams = true;
 export function generateStaticParams() {
   return [] as Array<{ slug: string }>;
@@ -21,87 +26,95 @@ export async function generateMetadata(
   const guide = await getGuideBySlugDb(slug).catch((): null => null);
   const name = guide?.displayName ?? slug;
   return {
-    title: `${name} 線上預約 | Midao 祕島`,
+    title: `${name} 的祕島預約頁 | Midao 祕島`,
     description: `向 ${name} 線上預約行程。`,
-    robots: { index: false }, // 商店頁為導購入口，不另建索引（公開導遊頁負責 SEO）
+    robots: { index: false },
   };
 }
+
+const STEPS = [
+  { n: 1, Ico: StepMountain, t: '選擇行程', d: ['瀏覽特色行程', '找到想去的祕境'] },
+  { n: 2, Ico: StepCalendar, t: '選擇日期與時間', d: ['挑選出發日期', '與理想出發時段'] },
+  { n: 3, Ico: StepClipboard, t: '填寫聯絡資料', d: ['留下聯絡方式', '完成預約申請'] },
+];
 
 export default async function GuideShopPage({ params }: { params: Promise<{ slug: string }> }) {
   if (!isGuideShopEnabled()) return notFound();
   const { slug } = await params;
-  const guide = await getGuideBySlugDb(slug).catch((): null => null);
-  if (!guide) return notFound();
+  const shop = await getGuideShopDb(slug).catch((): null => null);
+  if (!shop) return notFound();
+  const { guide } = shop;
+  const bio = String(guide.bio || '土生土長的在地人，用在地的眼睛，帶你看見祕境也看見生活。').trim();
+  const shortName = String(guide.displayName || '').replace(/[（(].*?[）)]/g, '').trim();
 
   return (
-    <main className="tp-light-page tp-container" style={{ paddingBottom: 96, maxWidth: 560 }}>
-      {/* 標題列 + 會員入口（登入／會員專區） */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 18 }}>
-        <h1 style={{ margin: 0, fontSize: 22 }}>線上預約</h1>
+    <main className="sib">
+      <ShopViewTracker slug={slug} />
+
+      {/* 標題列 */}
+      <div className="sib-toprow">
+        <h1 className="sib-h1" style={{ fontSize: 30 }}>線上預約</h1>
         <ShopMemberButton slug={slug} />
       </div>
 
-      {/* 導遊封面照（個人資料封面） */}
-      {guide.heroImageUrl && (
-        <div
-          data-testid="shop-hero"
-          style={{
-            position: 'relative', width: '100%', aspectRatio: '16 / 9',
-            marginTop: 16, borderRadius: 16, overflow: 'hidden',
-            border: '1px solid var(--tp-border)',
-          }}
-        >
-          <Image
-            src={guide.heroImageUrl}
-            alt={`${guide.displayName} 封面照`}
-            fill
-            priority
-            sizes="(max-width: 560px) 100vw, 560px"
-            style={{ objectFit: 'cover' }}
-          />
-        </div>
-      )}
+      {/* Hero：大圖＋詩句 */}
+      <section className="sib-hero" data-testid="shop-hero">
+        {guide.heroImageUrl && (
+          <Image src={guide.heroImageUrl} alt={`${guide.displayName} 封面照`} fill priority
+            sizes="(max-width: 480px) 100vw, 480px" className="sib-hero-img" />
+        )}
+        <MountainCircleLogo className="sib-hero-logo" />
+        <p className="sib-hero-poem">走進祕境，<br />讓島嶼的故事，<br />在腳下展開。</p>
+      </section>
 
-      {/* 店家卡片 */}
-      <section
-        className="tp-card"
-        style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 16, padding: 20 }}
-      >
-        <GuideAvatar photoUrl={guide.profilePhotoUrl} name={guide.displayName} size={72} showBorder />
-        <div>
-          <p style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>
-            {guide.region ? `${guide.region} · ` : ''}{guide.displayName}
-          </p>
-          <p style={{ margin: '4px 0 0', color: 'var(--tp-muted)', fontSize: 14 }}>祕島</p>
+      {/* 引路人卡 */}
+      <section className="sib-guide-card">
+        <div className="sib-guide-avatar">
+          {guide.profilePhotoUrl && (
+            <Image src={guide.profilePhotoUrl} alt={guide.displayName} width={76} height={76}
+              style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+          )}
+        </div>
+        <div style={{ flex: 1 }}>
+          <div className="sib-guide-name">
+            <strong>{guide.region ? `${guide.region} · ` : ''}{shortName}</strong>
+            <span className="sib-guide-badge"><LeafIcon />祕島引路人</span>
+          </div>
+          <p className="sib-guide-bio" style={{
+            display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+          }}>{bio}</p>
         </div>
       </section>
 
-      {/* 店家資訊 */}
-      {guide.bio && (
-        <section style={{ marginTop: 24 }}>
-          <h2 style={{ fontSize: 16, marginBottom: 8 }}>店家資訊</h2>
-          <p style={{ color: 'var(--tp-muted)', lineHeight: 1.8, whiteSpace: 'pre-line' }}>{guide.bio}</p>
-        </section>
-      )}
-
-      {/* 固定底部 CTA */}
-      <div
-        style={{
-          position: 'fixed', left: 0, right: 0, bottom: 0,
-          padding: '12px 16px', background: 'var(--tp-card-bg, #fff)',
-          borderTop: '1px solid var(--tp-border)', zIndex: 20,
-        }}
-      >
-        <div style={{ maxWidth: 560, margin: '0 auto' }}>
-          <Link
-            href={`/guides/${slug}/shop/book`}
-            className="tp-btn tp-btn-primary"
-            style={{ width: '100%', display: 'block', textAlign: 'center', padding: '14px 0', fontSize: 16 }}
-          >
-            開始預約
-          </Link>
-        </div>
+      {/* 預約三步驟 */}
+      <div className="sib-section-title">
+        <span className="sib-orn sib-orn--l" />
+        <span>預約三步驟</span>
+        <span className="sib-orn sib-orn--r" />
       </div>
+      <div className="sib-steps">
+        {STEPS.map(({ n, Ico, t, d }) => (
+          <div key={n} className="sib-step">
+            <span className="sib-step-num">{n}</span>
+            <span className="sib-step-ico"><Ico /></span>
+            <p className="sib-step-t">{t}</p>
+            <hr className="sib-step-divider" />
+            <p className="sib-step-d">{d[0]}<br />{d[1]}</p>
+          </div>
+        ))}
+        <span className="sib-step-arrow sib-step-arrow--1"><ArrowRight style={{ width: 12, height: 12, color: '#fff' }} /></span>
+        <span className="sib-step-arrow sib-step-arrow--2"><ArrowRight style={{ width: 12, height: 12, color: '#fff' }} /></span>
+      </div>
+
+      {/* 底部 CTA（in-flow，與 mockup 一致：步驟 → CTA → 保護提示） */}
+      <Link href={`/guides/${slug}/shop/book`} className="sib-cta" style={{ marginTop: 20 }}>
+        <CtaMountain className="sib-cta-ico" />
+        替我留一個位置
+        <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>
+      </Link>
+
+      {/* 保護提示 */}
+      <p className="sib-guard"><LockIcon size={14} /> 您的資料將受到妥善保護，僅用於預約聯繫</p>
     </main>
   );
 }
