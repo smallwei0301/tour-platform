@@ -28,7 +28,7 @@ export function ShopMemberButton({ slug }: { slug: string }) {
 
   return (
     <Link href={href} data-testid="shop-member-button" className="sib-member-pill">
-      <PersonIcon size={17} />
+      <PersonIcon size={13} />
       {isMember ? '會員專區' : '會員登入'}
     </Link>
   );
