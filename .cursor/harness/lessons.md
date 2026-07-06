@@ -63,3 +63,4 @@
 - 結論：**agent 在本環境永遠無法套 migration**，不論授權與否。唯一路徑＝owner 走 Dashboard SQL Editor／`supabase db push`／CLI 套用（migration-apply SOP option 2）。
 - Agent 能做的極限：read-only SELECT 驗證前/後 schema（`information_schema` 探測）、套用後改 ledger 為 verified、確認 CI 綠後 merge。
 - 建議：遇「需套 migration 才能 merge」的 issue，一開始就把它標為 owner-blocked，不要規劃 agent 自套的路徑。
+- **[2026-07-06 更新] 三重死結已部分解開**：owner 拍板新增 SQL-OVERRIDE 協議（01_diagnostics §4b），sql-guard 有授權通道了（第 2 層解）、apply_migration 移出 deny 併入同一閘門（第 3 層解）。第 1 層（MCP server 端唯讀設定）仍由 owner 掌握——若 server 仍唯讀，寫入會在平台層失敗，此時回報 owner 而不是重試。流程：列 SQL＋影響 → owner 回 `SQL-OVERRIDE` → 寫 `.claude/state/sql-override`（30 分鐘）→ 執行 → 刪檔＋worklog 記審計。

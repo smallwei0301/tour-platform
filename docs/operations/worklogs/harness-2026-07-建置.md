@@ -49,6 +49,12 @@
 - 三支 guard hooks 已通過完整模擬測試，勿因單次誤攔就弱化 regex（誤攔的標準解法在 lessons.md 第一則）
 - CLAUDE.md 舊版全文在 `CLAUDE.md.bak`，不需要從 git 歷史挖
 
+## 後續迭代：SQL-OVERRIDE 協議（2026-07-06，owner 拍板）
+- 需求：owner「我還是需要agent直接幫我執行supabase mcp的sql…而不是一直讓我手動複製貼上sql editor」
+- 設計：預設唯讀不變；寫入/DDL/apply_migration 走 SQL-OVERRIDE（當輪授權、30 分鐘、消耗式、`.claude/state/sql-audit.log` 逐句審計、災難級語句連授權都不放）。協議全文 01_diagnostics §4b。
+- 變更：sql-guard.sh v3、settings.json（apply_migration 出 deny 入 hook matcher）、CLAUDE.md 鐵律 2、01_diagnostics §1/§4b/§5、lessons「三重死結」條目更新
+- 驗證：17 案例情境測試全綠（唯讀回歸 7＋授權窗 8＋過期 2），審計檔留痕確認
+
 ## P0-OVERRIDE 使用紀錄
 - 2026-07-03 施工清單（CLAUDE.md、.cursor/harness/00–08、.claude/hooks/*、.claude/settings.json）｜使用者授權：AskUserQuestion 選項「P0-OVERRIDE：授權施工清單（推薦）」｜用畢即刪
 - 2026-07-03 00_INDEX.md（開機清單加煙霧測試）｜使用者授權原話：「好，寫進開機清單。」｜用畢即刪
