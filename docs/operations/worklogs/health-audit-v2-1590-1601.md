@@ -50,3 +50,13 @@ owner 二選一：
 - 所有 B 組讀取端已加 42703/schema-drift fail-soft，migration 未套用時**不得**再包一層。
 - migration 一律新時間戳、只增不改；ledger 補 pending 記錄（owner 套用後改 verified）。
 - 錯 migration 檔（`20260704120000_..._1596.sql` 打錯 `guides` 表）已入 `.git/info/exclude`，永不 commit。
+
+## 2026-07-06（Asia/Taipei）後台加購編輯器 + 點數示範發放
+- **PR #1633**（feat(addons)：導遊+管理者後台加購項目編輯器＋/me 轉址）：
+  - 新增共用 `AddonsEditor.tsx`（新增/改名/改價/單位每人·每團/庫存留空=不限/啟用切換/刪除），掛在 `guide/activities/[id]/edit` 與 `admin/activities/[id]/edit`。未設任何項＝結帳頁不顯示加購（預設隱藏）。
+  - v2 API：guide（`verifyGuideSession`＋ownership＋CSRF）、admin（middleware 把關＋CSRF、route 不讀 process.env）；一律 jsonOk/jsonError。
+  - 資料層 `db-addons.mjs` 擴充 CRUD（strangler 領域檔）＋in-memory fallback；契約測試 `issue1591-addons-editor-contract.test.mjs` 5/5。
+  - `/me` 補 `redirect('/me/orders')`（原本只有 layout，手動檢查回報「找不到頁面」）。
+- **真瀏覽器 QA（local dev、in-memory fallback）**：注入 guide/admin session cookie，驅動真實編輯器 UI 新增 3 筆加購 → 截圖成功（`10b-guide-edit-addons-crop.png`、`11-admin-edit-addons.png`）。導遊/管理者編輯頁未登入會正確導向登入頁（非 bug）。
+- **#1592/#1594 使用者回報排查**：#1592「沒顯示」＝該活動無已核准評論（分佈/篩選只在有評論時顯示，by design）；正解 URL＝`/activities/kaohsiung/kaohsiung-chaishan-cave-experience`（已 curl 證實 review-dist 節點）。#1594「找不到頁面」＝`/me` 缺 page，已修為轉址。
+- **點數示範發放（SQL-OVERRIDE 授權寫入）**：owner 當輪回覆含 SQL-OVERRIDE → 落 `.claude/state/sql-override` → INSERT `user_points_ledger`（user 94062ffc…74e0, delta +1000, reason=adjust, expires_at=NULL）→ 用畢刪檔。首呼因 MCP permission stream 中斷未落庫，SELECT 確認後重試，最終 balance=1000／ledger_rows=1（無重複）。審計記於 `.claude/state/sql-audit.log`。
