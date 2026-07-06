@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getGuideBySlugDb, getGuideShopDb } from '../../../../src/lib/db.mjs';
 import { isGuideShopEnabled } from '../../../../src/config/feature-flags.mjs';
+import { SHOP_MOCK_SLUG, SHOP_LANDING_MOCK } from '../../../../src/fixtures/shop-landing-mock.mjs';
 import { ShopMemberButton } from './ShopMemberButton';
 import { ShopViewTracker } from './ShopViewTracker';
 import {
@@ -41,7 +42,8 @@ const STEPS = [
 export default async function GuideShopPage({ params }: { params: Promise<{ slug: string }> }) {
   if (!isGuideShopEnabled()) return notFound();
   const { slug } = await params;
-  const shop = await getGuideShopDb(slug).catch((): null => null);
+  // 像素級比對用的固定 mock 頁（保留字 slug，脫離 DB／fixtures，內容與版面永不隨真實資料變動）。
+  const shop = slug === SHOP_MOCK_SLUG ? SHOP_LANDING_MOCK : await getGuideShopDb(slug).catch((): null => null);
   if (!shop) return notFound();
   const { guide } = shop;
   const bio = String(guide.bio || '土生土長的在地人，用在地的眼睛，帶你看見祕境也看見生活。').trim();
@@ -107,7 +109,7 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
       </div>
 
       {/* 底部 CTA（in-flow，與 mockup 一致：步驟 → CTA → 保護提示） */}
-      <Link href={`/guides/${slug}/shop/book`} className="sib-cta" style={{ marginTop: 20 }}>
+      <Link href={`/guides/${slug}/shop/book`} className="sib-cta" style={{ marginTop: 30 }}>
         <CtaMountain className="sib-cta-ico" />
         替我留一個位置
         <span className="sib-cta-arrow"><ArrowRight style={{ color: '#f6ecd9' }} /></span>

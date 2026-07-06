@@ -3865,18 +3865,18 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 /* 頂列：標題 + 會員專區 pill */
-.sib-toprow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 15px; }
+.sib-toprow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 14px; }
 .sib-member-pill {
-  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
   border: 1.5px solid var(--sib-gold); color: var(--sib-ink);
-  background: transparent; border-radius: 999px; padding: 10px 18px;
-  font-size: 15px; font-weight: 500; text-decoration: none; letter-spacing: 0.04em;
+  background: transparent; border-radius: 999px; padding: 7px 15px;
+  font-size: 13.5px; font-weight: 500; text-decoration: none; letter-spacing: 0.04em;
 }
 
 /* Hero：大圖＋詩句 overlay */
 .sib-hero {
-  position: relative; width: 100%; aspect-ratio: 1.8 / 1;
-  margin-top: 16px; border-radius: 18px; overflow: hidden;
+  position: relative; width: 100%; aspect-ratio: 1.535 / 1;
+  margin-top: 12px; border-radius: 18px; overflow: hidden;
   border: 1px solid var(--sib-gold-line);
 }
 .sib-hero-img { object-fit: cover; }
@@ -3891,9 +3891,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* 引路人卡（缺口卡） */
 .sib-guide-card {
-  position: relative; margin-top: -22px; background: var(--sib-card);
+  position: relative; margin-top: -22px; margin-bottom: 9px; background: var(--sib-card);
   border: 1px solid var(--sib-gold-line); border-radius: 16px;
-  padding: 26px 18px; display: flex; gap: 14px; align-items: flex-start;
+  padding: 20px 16px 26px; display: flex; gap: 12px; align-items: flex-start;
   box-shadow: 0 6px 20px rgba(26, 46, 31, 0.06);
 }
 .sib-guide-card::before {
@@ -3901,44 +3901,44 @@ details[open] .kkd-faq-q::before { content: '- '; }
   background: var(--sib-paper); border: 1px solid var(--sib-gold-line);
   border-top: none; border-radius: 0 0 8px 8px;
 }
-.sib-guide-avatar { flex: 0 0 auto; width: 66px; height: 66px; border-radius: 50%; overflow: hidden; border: 2px solid var(--sib-gold); }
+.sib-guide-avatar { flex: 0 0 auto; width: 68px; height: 68px; border-radius: 50%; overflow: hidden; border: 2px solid var(--sib-gold); }
 /* 名稱列：允許換行（長名稱時徽章掉到下一行，不破框） */
-.sib-guide-name { display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; min-width: 0; }
-.sib-guide-name strong { font-family: var(--tp-serif); font-size: clamp(15px, 4.2vw, 17px); font-weight: 700; letter-spacing: 0; color: var(--sib-gold);
+.sib-guide-name { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; min-width: 0; }
+.sib-guide-name strong { font-family: var(--tp-serif); font-size: clamp(13.5px, 3.6vw, 15.5px); font-weight: 700; letter-spacing: 0; color: var(--sib-gold);
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sib-guide-badge {
-  display: inline-flex; align-items: center; gap: 5px; background: var(--sib-green); flex: 0 0 auto;
-  color: #e7dcb8; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px; background: var(--sib-green); flex: 0 0 auto;
+  color: #e7dcb8; border-radius: 999px; padding: 3px 8px; font-size: 10.5px; font-weight: 600; white-space: nowrap;
 }
-.sib-guide-bio { margin: 7px 0 0; color: var(--sib-ink-soft); font-size: clamp(12.5px, 3.6vw, 14px); line-height: 1.6; }
+.sib-guide-bio { margin: 8px 0 0; color: var(--sib-ink-soft); font-size: clamp(11.5px, 3.2vw, 13px); line-height: 1.5; }
 
 /* 章節標題：◆ ─── 標題 ─── ◆ */
-.sib-section-title { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 8px 0 12px; }
-.sib-section-title span { font-family: var(--tp-serif); font-size: 24px; font-weight: 700; letter-spacing: 0.18em; color: var(--sib-ink); }
+.sib-section-title { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 6px 0 8px; }
+.sib-section-title span { font-family: var(--tp-serif); font-size: 20px; font-weight: 700; letter-spacing: 0.16em; color: var(--sib-ink); }
 .sib-orn { flex: 1; height: 1px; background: var(--sib-gold-line); max-width: 90px; position: relative; }
 .sib-orn::after { content: '◆'; position: absolute; top: -8px; color: var(--sib-gold); font-size: 9px; }
 .sib-orn--l::after { right: -4px; }
 .sib-orn--r::after { left: -4px; }
 
 /* 三步驟卡 */
-.sib-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; position: relative; }
+.sib-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; position: relative; }
 .sib-step {
   position: relative; background: var(--sib-card); border: 1px solid var(--sib-gold-line);
-  border-radius: 14px; padding: 12px 5px 9px; text-align: center;
+  border-radius: 14px; padding: 11px 5px 9px; text-align: center;
 }
 .sib-step-num {
-  position: absolute; top: -13px; left: 50%; transform: translateX(-50%);
-  width: 26px; height: 26px; border-radius: 50%; background: var(--sib-green); color: #efe6c6;
-  font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  width: 23px; height: 23px; border-radius: 50%; background: var(--sib-green); color: #efe6c6;
+  font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
 }
-.sib-step-ico { height: 30px; margin: 1px auto 5px; color: var(--sib-gold); display: flex; align-items: flex-end; justify-content: center; }
-.sib-step-ico svg { width: 28px; height: 28px; }
-.sib-step-ico img { width: auto; height: 29px; }
-.sib-step-t { font-family: var(--tp-serif); font-size: 13.5px; font-weight: 700; color: var(--sib-ink); margin: 0 0 4px; letter-spacing: 0; }
+.sib-step-ico { height: 27px; margin: 2px auto 5px; color: var(--sib-gold); display: flex; align-items: flex-end; justify-content: center; }
+.sib-step-ico svg { width: 25px; height: 25px; }
+.sib-step-ico img { width: auto; height: 26px; }
+.sib-step-t { font-family: var(--tp-serif); font-size: 12.5px; font-weight: 700; color: var(--sib-ink); margin: 0 0 4px; letter-spacing: 0; }
 .sib-step-divider { border: none; border-top: 1px dashed var(--sib-gold-line); margin: 0 0 5px; }
-.sib-step-d { font-size: 10.5px; line-height: 1.45; color: var(--sib-muted); margin: 0; }
-.sib-step-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 22px; height: 22px;
-  border-radius: 50%; background: var(--sib-gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+.sib-step-d { font-size: 10px; line-height: 1.4; color: var(--sib-muted); margin: 0; }
+.sib-step-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--sib-gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; }
 .sib-step-arrow--1 { left: calc(33.33% - 11px); }
 .sib-step-arrow--2 { left: calc(66.66% - 11px); }
 
