@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../src/components/admin/ui';
 import { paymentMethodLabels } from '../../../../src/lib/guide-payment-options.mjs';
+import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 type GuideApplicationDetail = {
   fullName: string;
@@ -60,6 +61,8 @@ export default function AdminGuideDetailPage() {
   const [guide, setGuide] = useState<GuideDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [impersonating, setImpersonating] = useState(false);
+  const [impersonateError, setImpersonateError] = useState('');
 
   useEffect(() => {
     if (!guideId) return;
@@ -78,6 +81,32 @@ export default function AdminGuideDetailPage() {
   }, [guideId]);
 
   const isSuspended = guide?.verification_status === 'suspended';
+  const canImpersonate =
+    guide?.kind !== 'application' && guide?.verification_status === 'approved';
+
+  async function handleEnterGuideBackend() {
+    if (!guide || impersonating) return;
+    setImpersonating(true);
+    setImpersonateError('');
+    try {
+      const res = await fetch(`/api/v2/admin/guides/${guide.id}/impersonate`, {
+        method: 'POST',
+        headers: csrfHeaders(),
+        cache: 'no-store',
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        setImpersonateError(json?.error?.message || '進入導遊後台失敗');
+        setImpersonating(false);
+        return;
+      }
+      // 取得導遊 session cookie 後導向導遊後台儀表板（整頁導頁確保帶上新 cookie）。
+      window.location.href = '/guide/dashboard';
+    } catch {
+      setImpersonateError('進入導遊後台失敗，請稍後再試');
+      setImpersonating(false);
+    }
+  }
 
   return (
     <div style={{ background: '#f9fafb', minHeight: '100vh' }}>
@@ -311,7 +340,7 @@ export default function AdminGuideDetailPage() {
               )}
 
               {/* Action links */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4, alignItems: 'center' }}>
                 <a
                   href={`/admin/guides/${guide.id}/availability`}
                   style={{
@@ -322,7 +351,27 @@ export default function AdminGuideDetailPage() {
                 >
                   📅 時間管理
                 </a>
+                {canImpersonate && (
+                  <button
+                    type="button"
+                    data-testid="admin-enter-guide-backend"
+                    onClick={handleEnterGuideBackend}
+                    disabled={impersonating}
+                    style={{
+                      padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
+                      background: impersonating ? '#ede9fe' : '#f5f3ff', color: '#6d28d9',
+                      fontSize: 13, fontWeight: 600, cursor: impersonating ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {impersonating ? '進入中…' : '🚪 進入導遊後台'}
+                  </button>
+                )}
               </div>
+              {impersonateError && (
+                <div role="alert" style={{ fontSize: 13, color: '#dc2626', marginTop: 2 }}>
+                  {impersonateError}
+                </div>
+              )}
             </div>
           </Card>
         )}

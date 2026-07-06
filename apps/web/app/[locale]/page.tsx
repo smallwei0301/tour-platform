@@ -57,7 +57,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         description: tSeo('orgDescription'),
         contactPoint: {
           '@type': 'ContactPoint',
-          email: 'hello@midao.tw',
+          email: 'midao2026@gmail.com',
           contactType: 'customer service',
           availableLanguage: ['zh-TW', 'en'],
         },

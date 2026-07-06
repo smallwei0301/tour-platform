@@ -1,12 +1,13 @@
 #!/bin/bash
 # sql-guard.sh — PreToolUse hook（mcp__Supabase__execute_sql｜mcp__Supabase__apply_migration）
-# 生產資料庫「預設唯讀」哨兵：
-#   - 無授權：只放行查詢，任何寫入/DDL/apply_migration 一律攔截。
-#   - SQL-OVERRIDE 授權（使用者當輪明確下令）：放行寫入與 migration 套用，
-#     仍擋災難級語句（drop database/schema、alter system），且逐句寫入審計檔。
+# 模式（2026-07-06 owner 拍板「讀寫全自動，改為事後審計」）：
+#   - execute_sql：讀＋寫全部自動放行、免確認；每句寫入/DDL 逐句寫入 sql-audit.log 供事後稽核。
+#   - 硬地板（任何情況都擋，非正常查改資料範圍）：災難級語句（drop database/schema、alter system）
+#     ＋危險系統函式（pg_terminate_backend、pg_read_file…）。這是攻擊/管理面向，不在授權範圍。
+#   - apply_migration（schema 變更）：仍需 SQL-OVERRIDE 授權——schema 走 migration 檔紀律、罕見、風險高。
 # 協議全文：.cursor/harness/01_diagnostics.md §4b。對應痛點 1。本專案 Supabase MCP 直連正式生產。
-# 已知極限（01 §5）：授權窗開啟期間為全寫入放行；經 SELECT 呼叫的任意 volatile function
-# 無法用 regex 完全攔截——最終的牆是 MCP server 端唯讀設定與資料庫端權限，由使用者掌握。
+# ⚠️ 誠實揭露（01 §5）：本模式下生產 DB 寫入「無事前人工閘」，只剩硬地板＋事後審計；agent 執行寫入後
+#    必須立刻回報實際影響（見 §4b「事後檢查」義務）。最終的牆是 MCP server 端唯讀設定，由使用者掌握。
 
 input=$(cat)
 tool=$(echo "$input" | jq -r '.tool_name // empty')
@@ -23,20 +24,6 @@ override_ok() {
   (( age <= 1800 ))   # 30 分鐘效期，過期重批
 }
 
-deny_readonly() {
-  {
-    echo "⛔ HARNESS BLOCK [sql-guard]: $1"
-    echo "生產資料庫預設唯讀（SELECT / EXPLAIN / SHOW / 唯讀 WITH）。寫入/DDL 需 SQL-OVERRIDE 授權："
-    echo "  1. 停下來，向使用者列出將執行的完整 SQL、目標表、預期影響（筆數/schema 變化）。"
-    echo "  2. 等使用者在對話中回覆含「SQL-OVERRIDE」的明確授權。"
-    echo "  3. 把授權原話＋時間＋目的寫入 .claude/state/sql-override（30 分鐘有效），再重試。"
-    echo "  4. 執行完畢立刻刪除該檔（消耗式），並把執行結果與審計記入 worklog。"
-    echo "協議見 .cursor/harness/01_diagnostics.md §4b。不得自行解鎖。schema 變更仍須先落 migration 檔"
-    echo "（PR → CI 綠燈 → 授權套用 → 補 ledger，docs/operations/migration-apply-ledger-sop.md）。"
-  } >&2
-  exit 2
-}
-
 audit() {
   [[ -n "$root" ]] || return 0
   mkdir -p "$root/.claude/state"
@@ -46,42 +33,37 @@ audit() {
 # 正規化：小寫、壓空白
 qn=$(echo "$q" | tr '[:upper:]' '[:lower:]' | tr -s '[:space:]' ' ' | sed 's/^ //')
 
-# ── 授權模式：放行寫入，僅擋災難級 ＋ 全程審計 ─────────────────────────
-if override_ok; then
-  if echo "$qn" | grep -qE '\b(drop[[:space:]]+database|drop[[:space:]]+schema|alter[[:space:]]+system)\b'; then
-    echo "⛔ HARNESS BLOCK [sql-guard]: 災難級語句（drop database/schema、alter system）即使 SQL-OVERRIDE 也不放行。此類操作請使用者親自在 Supabase Dashboard 執行。" >&2
-    exit 2
-  fi
-  audit
-  exit 0
+# ── 硬地板（execute_sql 與 apply_migration 都適用，永遠擋）────────────────
+if echo "$qn" | grep -qE '\b(drop[[:space:]]+database|drop[[:space:]]+schema|alter[[:space:]]+system)\b'; then
+  echo "⛔ HARNESS BLOCK [sql-guard]: 災難級語句（drop database/schema、alter system）任何情況都不放行。請使用者親自在 Supabase Dashboard 執行。" >&2
+  exit 2
+fi
+if echo "$qn" | grep -qE '\b(pg_terminate_backend|pg_cancel_backend|pg_reload_conf|pg_rotate_logfile|lo_import|lo_export|dblink|pg_read_file|pg_read_binary_file|pg_write_file|pg_ls_dir|pg_write_server_files|copy[[:space:]]+.*[[:space:]]+(from|to)[[:space:]]+program)\b'; then
+  echo "⛔ HARNESS BLOCK [sql-guard]: 危險系統函式（pg_terminate/pg_read_file/COPY…PROGRAM 等）不在「查改資料」授權範圍，一律擋。確有需要請使用者親自於 Dashboard 執行。" >&2
+  exit 2
 fi
 
-# ── 唯讀模式（預設）───────────────────────────────────────────────────
-# apply_migration 本質是 DDL，無授權一律擋
+# ── apply_migration：schema 變更仍需 SQL-OVERRIDE 授權 ───────────────────
 if [[ "$tool" == "mcp__Supabase__apply_migration" ]]; then
-  deny_readonly "apply_migration 需 SQL-OVERRIDE 授權（migration 檔須已進 repo 並過 CI）。"
+  if override_ok; then
+    audit
+    exit 0
+  fi
+  {
+    echo "⛔ HARNESS BLOCK [sql-guard]: apply_migration（schema 變更）仍需 SQL-OVERRIDE 授權，不在「讀寫全自動」範圍。"
+    echo "schema 變更走 migration 檔紀律：新增時間戳檔 → PR → CI 綠燈 → 授權套用 → 補 ledger。"
+    echo "若要套用：向使用者列出 migration 內容，取得含「SQL-OVERRIDE」的授權，寫入 .claude/state/sql-override（30 分鐘）後重試。"
+    echo "協議見 .cursor/harness/01_diagnostics.md §4b。"
+  } >&2
+  exit 2
 fi
 
-# 1. 前綴白名單：只有查詢型語句准進場
-if ! echo "$qn" | grep -qE '^(select|with|explain|show|table|values)\b'; then
-  deny_readonly "語句開頭不是查詢型關鍵字（select/with/explain/show/table/values）。"
-fi
-
-# 2. 去除唯讀語境的誤傷來源，再掃寫入關鍵字：
-#    - EXPLAIN 前綴（含 (analyze, buffers…) 選項與裸 analyze/verbose）
-#    - SELECT 的鎖定子句 FOR UPDATE / FOR SHARE（唯讀交易中無效果，且常見於查證）
+# ── execute_sql：讀＋寫全部自動放行；寫入/DDL 逐句審計 ────────────────────
+# 判斷是否為寫入/DDL（供審計；讀取不記，避免雜訊）。先剝除唯讀語境誤傷來源。
 qs=$(echo "$qn" \
   | sed -E 's/^explain( \([^)]*\))?(( )(analyze|verbose))*/explain/' \
   | sed -E 's/for (no key )?(update|share)( of [a-z_, ]+)?( nowait| skip locked)?//g')
-
-# 3. 寫入/DDL 關鍵字掃描（word boundary；updated_at/created_at 不會誤中）
-if echo "$qs" | grep -qE '\b(insert|update|delete|merge|upsert|drop|alter|truncate|grant|revoke|create|reindex|vacuum|cluster|copy|call|do|set role|reset role|security definer|refresh materialized|comment on|listen|notify|prepare|execute|deallocate)\b'; then
-  deny_readonly "偵測到寫入/DDL 關鍵字（若是字串常值撞關鍵字，請改寫查詢避開）。"
+if echo "$qs" | grep -qE '\b(insert|update|delete|merge|upsert|drop|alter|truncate|grant|revoke|create|reindex|vacuum|cluster|copy|call|do|set role|reset role|refresh materialized|comment on)\b'; then
+  audit   # 寫入/DDL：記審計後放行
 fi
-
-# 4. 危險函式黑名單（可經 SELECT 觸發副作用的已知函式）
-if echo "$qs" | grep -qE '\b(setval|nextval|pg_terminate_backend|pg_cancel_backend|pg_reload_conf|pg_rotate_logfile|lo_import|lo_export|dblink|pg_read_file|pg_read_binary_file|pg_write_file|pg_ls_dir|pg_sleep|set_config|pgp_sym_decrypt)\b'; then
-  deny_readonly "偵測到具副作用/敏感的函式呼叫。"
-fi
-
 exit 0

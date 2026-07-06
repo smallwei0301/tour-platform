@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-06T00:45:33.602Z -->
+<!-- query_timestamp: 2026-07-06T18:41:43.949Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-06T00:45:33.602Z  
-**Commit SHA:** `392cba952437546daf5fd68bbe59646f2984c0ec`
+**Query timestamp:** 2026-07-06T18:41:43.949Z  
+**Commit SHA:** `1cf9e58d001cb0280217fc4129f2d0e318f71e6c`
 
 ---
 
@@ -14,7 +14,7 @@
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1610 | [feat(guide-shop): 導遊開店第 1 週改版 — /for-guides landing、商店首頁方案卡、預約延後登入](https://github.com/smallwei0301/tour-platform/pull/1610) | `claude/plan-evaluation-shop-page-09krqv` |
+| #1640 | [feat(security): anon-rls-probe 失敗時推播 Telegram+Email](https://github.com/smallwei0301/tour-platform/pull/1640) | `claude/code-workflow-architecture-mmm4ba` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
 | #1469 | [導遊後台：新增 Dashboard 首頁與指標卡（免費/付費分級）](https://github.com/smallwei0301/tour-platform/pull/1469) | `codex/-dashboard` |
@@ -22,16 +22,17 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (20 total)
+## Open Issues (22 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (6)
+### P1 (7)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1641 | [[QA] Daily regression checklist for 2026-07-06 merged PR train (#1624–#1639)](https://github.com/smallwei0301/tour-platform/issues/1641) | triaged, priority:P1, qa, guide-dashboard, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, infra |
 | #1317 | [[Production Smoke] Owner-only acceptance verification gaps from recent close-gate sweep (#1306 / #1289 / #1290 OFF / #1286 UI / #1307 TZ)](https://github.com/smallwei0301/tour-platform/issues/1317) | priority:P1, type:qa, owner:human, production-smoke, post-merge |
 | #714 | [[Ops] Run real alert drill before first payment](https://github.com/smallwei0301/tour-platform/issues/714) | triaged, type:investigation, priority:P1, agent:backlog, owner:mixed, status:blocked, infra, status:awaiting-implementation, launch:first-payment-blocker |
 | #642 | [[需 Operator][Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch](https://github.com/smallwei0301/tour-platform/issues/642) | type:investigation, priority:P1, qa, agent:backlog, owner:mixed, status:ready, traveler-booking, launch:post-first-payment |
@@ -55,10 +56,11 @@ _none_
 
 _none_
 
-### Other (7)
+### Other (8)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1637 | [[Payment][P0] 金流→結算→出帳鏈路稽核：paid→confirmed 無自動轉移＋callback RPC overload 遮蔽 auto-confirm＋導遊「已入帳」視圖缺口（每月會計報表前置）](https://github.com/smallwei0301/tour-platform/issues/1637) | — |
 | #1609 | [導遊開店第 4–6 週：導遊訂閱方案（plan tier）SaaS 化 — placeholder，待 owner 拍板定價](https://github.com/smallwei0301/tour-platform/issues/1609) | — |
 | #1608 | [導遊開店第 2–3 週：導遊後台「開店進度」新頁＋「本月商店表現」](https://github.com/smallwei0301/tour-platform/issues/1608) | — |
 | #1607 | [導遊開店第 2–3 週：商店 FAQ／政策區塊擴充＋匯款付款 beta（文案＋SOP＋flag）](https://github.com/smallwei0301/tour-platform/issues/1607) | — |
@@ -73,16 +75,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1628 | [feat: 安裝 fable-soul 判斷力層 skill 至專案 .claude/skills/](https://github.com/smallwei0301/tour-platform/pull/1628) | 2026-07-06 |
-| #1627 | [健檢 v2 前端串接：#1592 評論互動 · #1593 通知 · #1591 加購 · #1594 點數（UI＋checkout＋事件掛點）](https://github.com/smallwei0301/tour-platform/pull/1627) | 2026-07-05 |
-| #1626 | [架構模組化清理：db.mjs strangler、API 回應 helper、god-page 拆解、env 收斂（#1613–#1617）](https://github.com/smallwei0301/tour-platform/pull/1626) | 2026-07-05 |
-| #1625 | [fix(settlement): sweep upsert onConflict 對齊 (order_id, settlement_kind) 複合冪等鍵](https://github.com/smallwei0301/tour-platform/pull/1625) | 2026-07-05 |
-| #1624 | [健檢 v2 剩餘 backlog：#1596 #1590 #1592 #1591 #1593 #1594（6 issue 後端全交付，需 owner 套 5 支 migration）](https://github.com/smallwei0301/tour-platform/pull/1624) | 2026-07-05 |
-| #1623 | [docs(security): CSP unsafe-inline 移除評估與決策（暫不移除，記錄不可行證據）(#1601)](https://github.com/smallwei0301/tour-platform/pull/1623) | 2026-07-04 |
-| #1622 | [feat(security): 登入限流疊加分散式（Upstash Redis）跨實例層 (#1599)](https://github.com/smallwei0301/tour-platform/pull/1622) | 2026-07-04 |
-| #1621 | [refactor(types): .mjs 核心檔 @ts-check 第一批納管 (#1597)](https://github.com/smallwei0301/tour-platform/pull/1621) | 2026-07-04 |
-| #1620 | [feat(validation): 導入 zod＋parseBody helper，redeem 首發（v2 金流輸入面）(#1600)](https://github.com/smallwei0301/tour-platform/pull/1620) | 2026-07-04 |
-| #1619 | [feat(observability): v2 routes 統一事故上報，消滅靜默失敗 (#1598)](https://github.com/smallwei0301/tour-platform/pull/1619) | 2026-07-04 |
+| #1639 | [security(rls): 自動稽核加固 — preflight 補 users + 行為式 anon-probe（防 #1563 復發）](https://github.com/smallwei0301/tour-platform/pull/1639) | 2026-07-06 |
+| #1638 | [feat(harness): execute_sql 改讀寫全自動＋事後審計（owner 二次拍板）](https://github.com/smallwei0301/tour-platform/pull/1638) | 2026-07-06 |
+| #1636 | [fix(reviews): 暖場評論併入評分分佈與篩選 (#1592 補強)](https://github.com/smallwei0301/tour-platform/pull/1636) | 2026-07-06 |
+| #1635 | [feat: 統一聯絡信箱為 midao2026@gmail.com，並支援管理員直接進入導遊後台](https://github.com/smallwei0301/tour-platform/pull/1635) | 2026-07-06 |
+| #1634 | [fix(shop): 商店首頁像素級對齊參考圖（新增 mock 比對頁）](https://github.com/smallwei0301/tour-platform/pull/1634) | 2026-07-06 |
+| #1633 | [feat(addons): 導遊+管理者後台加購項目編輯器＋/me 轉址 (#1591)](https://github.com/smallwei0301/tour-platform/pull/1633) | 2026-07-06 |
+| #1632 | [fix(shop): 商店頁響應式修復＋預約改 4 步流程（選行程→選方案→人數/日期→付款）](https://github.com/smallwei0301/tour-platform/pull/1632) | 2026-07-06 |
+| #1631 | [feat(harness): SQL-OVERRIDE 協議——owner 授權後 agent 可直接執行生產 SQL](https://github.com/smallwei0301/tour-platform/pull/1631) | 2026-07-06 |
+| #1630 | [fix(admin): 編輯行程載入時正規化 FAQ shape，既有 QA 正常顯示可編輯](https://github.com/smallwei0301/tour-platform/pull/1630) | 2026-07-06 |
+| #1629 | [style(checkout): 加購/點數 UI 依 BRAND_BOOK 八色重設計配色與排版（#1591 #1594）](https://github.com/smallwei0301/tour-platform/pull/1629) | 2026-07-06 |
 
 ---
 

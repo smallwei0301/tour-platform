@@ -16,14 +16,41 @@ const NAV_ITEMS = [
   { href: '/guide/profile', label: '公開頁面', icon: '👤' },
 ];
 
+const IMPERSONATION_COOKIE_NAME = 'guide_impersonation';
+
+function hasImpersonationCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie
+    .split(';')
+    .map((c) => c.trim())
+    .some((c) => c.startsWith(`${IMPERSONATION_COOKIE_NAME}=`) && !c.startsWith(`${IMPERSONATION_COOKIE_NAME}=;`));
+}
+
 export default function GuideLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
+    setIsImpersonating(hasImpersonationCookie());
   }, []);
+
+  // 結束「管理員代入」：清掉導遊 session 與代入標記，回到後台導遊管理。
+  async function handleEndImpersonation() {
+    try {
+      await fetch('/api/guide/auth/session', {
+        method: 'DELETE',
+        headers: csrfHeaders(),
+      });
+    } catch {
+      // 忽略登出錯誤，仍導回管理後台。
+    }
+    // 標記 cookie 非 HttpOnly，前端直接清除。
+    document.cookie = `${IMPERSONATION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
+    window.location.href = '/admin/guides';
+  }
 
   // Close the mobile dropdown whenever the route changes (back button,
   // bottom-tab tap, programmatic nav — anything that isn't an item click).
@@ -64,6 +91,45 @@ export default function GuideLayout({ children }: { children: React.ReactNode })
         ['--rt-accent-soft' as any]: '#f5f3ff',
       }}
     >
+      {/* ── 管理員代入模式橫幅 ── */}
+      {isImpersonating && (
+        <div
+          data-testid="guide-impersonation-banner"
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+            background: '#7c3aed',
+            color: '#fff',
+            padding: '8px 16px',
+            fontSize: 13,
+            fontWeight: 600,
+            textAlign: 'center',
+          }}
+        >
+          <span>🛡️ 管理員代入模式：您正以此導遊身分操作導遊後台</span>
+          <button
+            onClick={handleEndImpersonation}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.6)',
+              background: 'rgba(255,255,255,0.15)',
+              color: '#fff',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            結束代入，返回管理後台
+          </button>
+        </div>
+      )}
+
       {/* ── Desktop Top Navbar ── */}
       <nav aria-label="導遊後台主要導覽" style={{
         background: '#fff',
