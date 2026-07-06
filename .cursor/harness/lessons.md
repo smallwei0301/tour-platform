@@ -30,6 +30,13 @@
 - Solution：**任何 Edit/Write 之後、commit 之前，養成先 `git status`／`git diff --cached --name-only` 核對「這次改的檔案都在 staged 清單裡」的習慣**，尤其是合併衝突多檔案一起處理時
 - 適用範圍：所有「編輯多個檔案後才一次 commit」的流程，尤其是 merge/rebase 期間
 
+## [2026-07-06] sql-exec-confirmation-is-permission-prompt-not-hook
+- Context：owner 抱怨「所有 execute SQL 都要確認」，以為是 sql-guard 造成
+- 釐清：那個逐次「確認」是 **Claude Code 內建工具權限提示**（`execute_sql` 不在 settings.json allow 清單），對讀取也跳；sql-guard hook 對讀取是靜默放行、對寫入是硬擋（非「確認」）。兩者不同層
+- Solution：把 `mcp__Supabase__execute_sql` 加進 `permissions.allow` → 提示消失；要改「寫入是否要授權」則是改 sql-guard hook。診斷 SQL/MCP 的「每次確認」先分清是「權限 allow 清單」還是「hook 攔截」
+- 後續：owner 再拍板「讀寫全自動＋事後審計」，sql-guard 改為 execute_sql 全放行＋硬地板＋審計，apply_migration 仍需 SQL-OVERRIDE（見 01 §4b）
+- 適用範圍：任何「某 MCP 工具每次都要確認」的抱怨，先查 allow 清單
+
 ## [2026-07-06] commit-gate-nonascii-filename-quotepath
 - Context：純 docs commit（含中文檔名 worklog，如 `harness-2026-07-建置.md`）被 bash-guard commit gate 誤要求測試證據
 - Error：`git diff --cached --name-only` 預設 `core.quotePath=true`，非 ASCII 檔名被輸出成 `"...\345\273\272..."`（帶前導引號＋八進位跳脫），docs 豁免的 `^(docs/|.cursor/…)` 錨點比對不到 → 落到證據 gate
