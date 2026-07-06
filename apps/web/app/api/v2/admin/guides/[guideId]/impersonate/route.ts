@@ -22,8 +22,10 @@ import { getSupabaseUrl } from '../../../../../../../src/config/supabase-service
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** 代入標記 cookie（非 HttpOnly，供導遊後台前端顯示橫幅）。與 guide session 同壽命。 */
-export const IMPERSONATION_COOKIE_NAME = 'guide_impersonation';
+// 代入標記 cookie（非 HttpOnly，供導遊後台前端顯示橫幅）。與 guide session 同壽命。
+// 注意：Next.js App Router route 檔只允許匯出 HTTP method 與框架保留欄位，故此常數
+// 不得 export；導遊後台 layout 另有自己的同名本地常數。
+const IMPERSONATION_COOKIE_NAME = 'guide_impersonation';
 const IMPERSONATION_MAX_AGE_SECONDS = 7 * 24 * 60 * 60; // 與 guide session 一致
 
 type GuideImpersonationProfile = {
