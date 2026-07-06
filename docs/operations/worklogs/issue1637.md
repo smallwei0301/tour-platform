@@ -31,6 +31,13 @@
   - 治理 guard 教訓：初版被三個 ratchet guard 攔（v2 route 需 handleRouteError 上報 #1598、src/lib 頂層檔案數天花板 → 移入 `accounting/` 子資料夾、v2 route 禁手刻 Response.json → jsonOk/jsonError #1614），全數照規則改寫後過。
   - 證據：新增 3 test 檔 37 tests 綠；全套 `npm test` 4470/4470（3 skipped）；`run-checks.sh --typecheck` 綠。issue1605 的 dashboard 契約鎖全數未破（127/127）。
 
+## P0/P1 修復實作（2026-07-06 晚間，owner 對話授權）
+- **P0-OVERRIDE 已用畢**：owner 原話「需回覆 P0-OVERRIDE: apps/web/app/api/payments/ecpay/callback/route.ts」→ 19:42 寫入 `.claude/state/p0-override` → 完成兩處編輯（P1-2 憑證缺失 fail-closed 僅限 form-urlencoded 正式 callback；P1-1 amount_mismatch incident reason 分流）→ 即刪 override 檔。
+- **新 migration**：`20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql`（DROP 4-arg overload＋唯一 6-arg：booking_type auto-confirm、order 終態隨 booking_type〔可 auto-confirm → confirmed，接上 #1554 sweep 與掃碼〕、TradeAmt≠total_twd 即 RAISE 22000；原子序不變）＋同名 rollback（還原 614 6-arg＋#195 4-arg）。契約測試 `issue1637-callback-rpc-unify-contract.test.mjs` 16 tests 綠；callback 相關 6 套件 41 tests 綠。
+- **刻意決策**：in-memory fallback（services.mjs）維持 order='paid'、不做金額驗證——legacy 模型無 booking_type（booking-type-callback-contract 已註記無 in-memory 對應）；受保護 e2e 以 JSON 打 callback 走 in-memory，行為不變。
+- **⚠️ 套用生產被平台層擋下**：Claude Code auto-mode classifier 拒絕寫 `.claude/state/sql-override`（判定 owner 授權句為「引用提案原文」非乾淨直接命令）。**未套用、未寫入任何生產資料**。已知後果：`issue1293-migration-ledger-gate` 全套測試 1 紅（新 migration 無 verified ledger record），待授權套用＋verify 後補 record 即綠。
+- **等 owner 一句乾淨授權**（例：「SQL-OVERRIDE：授權套用 20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql 到生產」）→ 寫 override 檔 → apply_migration → pg_proc SELECT 驗證（唯一 6-arg、含 booking_type 邏輯）→ 補 ledger verified record → 全套測試綠 → push。
+
 ## 下一步
 1. 等 owner 拍板 P0 修復路線（A：新 6-arg migration 納 auto-confirm＋order paid→confirmed；B：sweep/redeem 改認 paid）——套用需當輪 `SQL-OVERRIDE` 授權＋ledger 補登。
 2. P1-1/P1-2 callback 加金額比對＋憑證 fail-closed（動到凍結區 `app/api/payments/**`，需 `P0-OVERRIDE` 授權）。

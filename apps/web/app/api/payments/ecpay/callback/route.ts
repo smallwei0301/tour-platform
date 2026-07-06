@@ -163,7 +163,26 @@ export async function POST(request: Request) {
       );
     }
   } catch (err) {
-    // If credentials are not set, log but don't block (for testing)
+    // #1637 P1-2: 正式 ECPay callback（form-urlencoded）憑證缺失一律 fail-closed——
+    // 沒憑證＝無法驗簽，放行等於任何人可偽造付款成功。回 500 讓 ECPay 重試，
+    // 環境變數補齊後自然復原。JSON／模擬付款路徑維持舊行為（本地與測試無憑證）。
+    if (isECPayCallback) {
+      void recordIncident({
+        source: 'ecpay_callback',
+        severity: 'error',
+        category: 'payment',
+        message: 'ECPay callback rejected: credentials missing, cannot verify CheckMacValue',
+        metadata: {
+          orderId,
+          reason: 'credentials_missing',
+          merchantTradeNo: mapMerchantTradeNo(payload),
+        },
+      });
+      return Response.json(
+        fail('PAYMENT_CONFIG_ERROR', 'payment credentials not configured'),
+        { status: 500 }
+      );
+    }
     console.warn('[ecpay] CheckMacValue verification skipped:', err instanceof Error ? err.message : String(err));
   }
 
@@ -445,7 +464,8 @@ export async function POST(request: Request) {
       message: 'ECPay callback DB processing failed',
       metadata: {
         orderId,
-        reason: 'db_processing_error',
+        // #1637 P1-1: RPC 金額驗證不符（TradeAmt ≠ total_twd）標記專屬 reason，供告警分流
+        reason: message.includes('payment amount mismatch') ? 'amount_mismatch' : 'db_processing_error',
         errorCode,
         status,
         merchantTradeNo: mapMerchantTradeNo(payload),
