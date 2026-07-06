@@ -16,14 +16,16 @@ const PAGE = readFileSync(
   'utf8',
 );
 
-test('T1592ui.1 — 面板接上 buildRatingDistribution 與 filterReviews 純函式', () => {
-  assert.match(PANEL, /import\s*\{[^}]*buildRatingDistribution[^}]*filterReviews[^}]*\}\s*from\s*['"][^'"]*review-distribution\.mjs['"]/);
-  assert.match(PANEL, /buildRatingDistribution\(reviews\)/);
-  assert.match(PANEL, /filterReviews\(reviews,\s*\{\s*rating:\s*ratingFilter,\s*withPhotos\s*\}/);
+test('T1592ui.1 — 面板接上 buildRatingDistribution/filterReviews 並併入暖場評論', () => {
+  assert.match(PANEL, /import\s*\{[^}]*buildRatingDistribution[^}]*filterReviews[^}]*toReviewDisplayList[^}]*\}\s*from\s*['"][^'"]*review-distribution\.mjs['"]/);
+  // 真實評論 + 暖場語錄合併後才餵給分佈/篩選（暖場進入正式評論邏輯）
+  assert.match(PANEL, /toReviewDisplayList\(reviews,\s*warmQuotes\)/);
+  assert.match(PANEL, /buildRatingDistribution\(items\)/);
+  assert.match(PANEL, /filterReviews\(items,\s*\{\s*rating:\s*ratingFilter,\s*withPhotos\s*\}/);
 });
 
 test('T1592ui.2 — 面板渲染導遊回覆（guideReply）', () => {
-  assert.match(PANEL, /r\.guideReply/);
+  assert.match(PANEL, /\.guideReply/);
   assert.match(PANEL, /reviewsGuideReplyLabel/);
   assert.match(PANEL, /kkd-review-guide-reply/);
 });

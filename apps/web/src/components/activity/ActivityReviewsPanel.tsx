@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { buildRatingDistribution, filterReviews } from '../../lib/review-distribution.mjs';
+import { buildRatingDistribution, filterReviews, toReviewDisplayList } from '../../lib/review-distribution.mjs';
 import { ReviewPhotos } from './ReviewPhotos';
 import { resolveSocialProofAuthor } from '../../lib/social-proof-quotes.mjs';
 
@@ -20,6 +20,9 @@ type Review = {
   guideReply?: GuideReply;
 };
 type WarmQuote = { author?: unknown; rating?: number; text?: string; photos?: string[] };
+type DisplayItem =
+  | (Review & { isWarm: false })
+  | { id: string; isWarm: true; author?: unknown; rating?: number; text?: string; photos?: string[] };
 
 function Stars({ value, aria }: { value?: number | null; aria: string }) {
   const filled = Math.max(0, Math.min(STAR_MAX, Math.round(Number(value) || 0)));
@@ -34,8 +37,10 @@ function Stars({ value, aria }: { value?: number | null; aria: string }) {
 
 /**
  * Issue #1592 — 活動頁評論互動：評分分佈長條 + 星等/有照片篩選 + 導遊回覆顯示。
- * 分佈與篩選皆為前端純函式（review-distribution.mjs），社群口碑語錄（warmQuotes）
- * 不參與篩選、恆顯示於真實評論之後。
+ * 分佈與篩選皆為前端純函式（review-distribution.mjs）。
+ * 補強：社群口碑語錄（warmQuotes，管理者後台設定的暖場評論）經 toReviewDisplayList
+ * 併入分佈與篩選，與真實評論同進正式評論邏輯（真實在前、暖場在後、暖場無日期/導遊回覆）。
+ * 注意：此僅影響面板視覺；rating_avg／review_count／JSON-LD 仍只採真實評論（#1378 紅線）。
  */
 export function ActivityReviewsPanel({
   reviews,
@@ -50,17 +55,19 @@ export function ActivityReviewsPanel({
   const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [withPhotos, setWithPhotos] = useState(false);
 
-  const dist = useMemo(() => buildRatingDistribution(reviews), [reviews]);
+  // 真實評論 + 暖場語錄合併成單一顯示列，兩者同進分佈/篩選（#1592 補強）。
+  const items = useMemo(() => toReviewDisplayList(reviews, warmQuotes) as DisplayItem[], [reviews, warmQuotes]);
+  const dist = useMemo(() => buildRatingDistribution(items), [items]);
   const filtered = useMemo(
-    () => filterReviews(reviews, { rating: ratingFilter, withPhotos }) as Review[],
-    [reviews, ratingFilter, withPhotos],
+    () => filterReviews(items, { rating: ratingFilter, withPhotos }) as DisplayItem[],
+    [items, ratingFilter, withPhotos],
   );
 
   const hasReviews = dist.total > 0;
 
   return (
     <div>
-      {/* 評分分佈長條（僅有真實評論時顯示） */}
+      {/* 評分分佈長條（有真實評論或暖場評論時顯示） */}
       {hasReviews && (
         <div className="kkd-review-dist" role="table" aria-label={t('reviewsDistributionAria')}>
           {[5, 4, 3, 2, 1].map((star) => {
@@ -112,50 +119,50 @@ export function ActivityReviewsPanel({
       )}
 
       <div className="kkd-review-list" role="region" aria-label={t('sectionReviews')} tabIndex={0}>
-        {filtered.map((r) => (
-          <div key={r.id} className="kkd-review-card">
-            <div className="kkd-review-header">
-              <strong className="kkd-reviewer">
-                {t('reviewAuthor', { author: r.author ?? '', city: r.city || t('reviewCityFallback') })}
-              </strong>
-              <span className="kkd-review-date">
-                {r.date || new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'zh-TW')}
-              </span>
-            </div>
-            {r.rating ? <Stars value={r.rating} aria={t('starAria', { filled: Math.round(Number(r.rating) || 0), max: STAR_MAX })} /> : null}
-            <p className="kkd-review-text">{r.text}</p>
-            {Array.isArray(r.photos) && r.photos.length > 0 && (
-              <ReviewPhotos photos={r.photos} authorLabel={r.author ?? ''} />
-            )}
-            {/* #1592 導遊回覆 */}
-            {r.guideReply && r.guideReply.text && (
-              <div className="kkd-review-guide-reply">
-                <strong className="kkd-review-guide-reply-label">
-                  <PublicReplyIcon /> {t('reviewsGuideReplyLabel')}
-                </strong>
-                <p className="kkd-review-guide-reply-text">{r.guideReply.text}</p>
+        {filtered.map((item) =>
+          item.isWarm ? (
+            /* 社群口碑語錄（暖場）— 併入分佈/篩選，無日期/導遊回覆 */
+            <div key={item.id} className="kkd-review-card">
+              <div className="kkd-review-header">
+                <strong className="kkd-reviewer">{resolveSocialProofAuthor(item.author)}</strong>
               </div>
-            )}
-          </div>
-        ))}
+              <Stars value={item.rating} aria={t('starAria', { filled: Math.round(Number(item.rating) || 0), max: STAR_MAX })} />
+              <p className="kkd-review-text">{item.text}</p>
+              {Array.isArray(item.photos) && item.photos.length > 0 && (
+                <ReviewPhotos photos={item.photos} authorLabel={resolveSocialProofAuthor(item.author)} />
+              )}
+            </div>
+          ) : (
+            <div key={item.id} className="kkd-review-card">
+              <div className="kkd-review-header">
+                <strong className="kkd-reviewer">
+                  {t('reviewAuthor', { author: item.author ?? '', city: item.city || t('reviewCityFallback') })}
+                </strong>
+                <span className="kkd-review-date">
+                  {item.date || new Date().toLocaleDateString(locale === 'en' ? 'en-US' : 'zh-TW')}
+                </span>
+              </div>
+              {item.rating ? <Stars value={item.rating} aria={t('starAria', { filled: Math.round(Number(item.rating) || 0), max: STAR_MAX })} /> : null}
+              <p className="kkd-review-text">{item.text}</p>
+              {Array.isArray(item.photos) && item.photos.length > 0 && (
+                <ReviewPhotos photos={item.photos} authorLabel={item.author ?? ''} />
+              )}
+              {/* #1592 導遊回覆 */}
+              {item.guideReply && item.guideReply.text && (
+                <div className="kkd-review-guide-reply">
+                  <strong className="kkd-review-guide-reply-label">
+                    <PublicReplyIcon /> {t('reviewsGuideReplyLabel')}
+                  </strong>
+                  <p className="kkd-review-guide-reply-text">{item.guideReply.text}</p>
+                </div>
+              )}
+            </div>
+          ),
+        )}
 
         {filtered.length === 0 && hasReviews && (
           <div className="kkd-review-empty">{t('reviewsEmptyFiltered')}</div>
         )}
-
-        {/* 社群口碑語錄（暖場）— 不參與篩選，恆顯示 */}
-        {warmQuotes.map((q, i) => (
-          <div key={`warm-${i}`} className="kkd-review-card">
-            <div className="kkd-review-header">
-              <strong className="kkd-reviewer">{resolveSocialProofAuthor(q.author)}</strong>
-            </div>
-            <Stars value={q.rating} aria={t('starAria', { filled: Math.round(Number(q.rating) || 0), max: STAR_MAX })} />
-            <p className="kkd-review-text">{q.text}</p>
-            {Array.isArray(q.photos) && q.photos.length > 0 && (
-              <ReviewPhotos photos={q.photos} authorLabel={resolveSocialProofAuthor(q.author)} />
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );

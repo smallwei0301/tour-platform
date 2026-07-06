@@ -45,6 +45,29 @@ export function buildRatingDistribution(reviews) {
 }
 
 /**
+ * Issue #1592 補強 — 合併「已核准正式評論」與「暖場社群口碑語錄」成單一顯示列，
+ * 讓評分分佈與星等/照片篩選同時涵蓋兩者（管理者後台設定的暖場評論即進入正式評論邏輯）。
+ * 真實評論在前、暖場在後；每筆帶 `isWarm` 旗標供渲染分流（暖場無日期/導遊回覆）。
+ * 只影響活動頁「評論面板」的視覺分佈/篩選；rating_avg／review_count／JSON-LD 仍由
+ * page 層另計、僅用真實評論（#1378 SEO 紅線，暖場不得污染結構化資料）。
+ * @param {Array<any>} reviews 已核准正式評論（{ id, rating, photos, guideReply, ... }）
+ * @param {Array<{ author?: unknown, rating?: number, text?: string, photos?: unknown }>} warmQuotes 已 normalizeSocialProofQuotes
+ * @returns {Array<any>} 合併後顯示列，每筆含 isWarm 旗標
+ */
+export function toReviewDisplayList(reviews, warmQuotes) {
+  const real = (Array.isArray(reviews) ? reviews : []).map((r) => ({ ...r, isWarm: false }));
+  const warm = (Array.isArray(warmQuotes) ? warmQuotes : []).map((q, i) => ({
+    id: `warm-${i}`,
+    isWarm: true,
+    author: q?.author,
+    rating: q?.rating,
+    text: q?.text,
+    photos: Array.isArray(q?.photos) ? q.photos : [],
+  }));
+  return [...real, ...warm];
+}
+
+/**
  * Issue #1592 — 評論篩選（純函式）：依星等與「只看含照片」過濾。
  * 不碰 DB；供活動頁評論區 `?rating=`／`?withPhotos=` 前端或 SSR 套用。
  *
