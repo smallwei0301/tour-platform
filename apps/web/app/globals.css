@@ -3941,26 +3941,26 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* ═══════════════ 祕島 Shop 預約流程（book step1/2/3）═══════════════ */
 .sib-book { padding-bottom: 118px; }
-.sib-topbar { display: flex; align-items: center; gap: 12px; padding-top: 16px; }
+.sib-topbar { display: flex; align-items: center; gap: 12px; padding-top: 10px; }
 .sib-back { border: none; background: transparent; color: var(--sib-ink-soft);
   padding: 4px 2px; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
 .sib-back img { display: inline-block; }
 .sib-current { margin-left: auto; color: var(--sib-muted); font-size: 13.5px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 
 /* 步驟指示器 1—2—3 */
-.sib-ind { display: flex; align-items: flex-start; justify-content: space-between; margin: 22px 4px 8px; position: relative; }
-.sib-ind-item { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 0 0 auto; width: 92px; text-align: center; z-index: 1; }
-.sib-ind-dot { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  font-family: var(--tp-serif); font-size: 17px; font-weight: 800; border: 1.5px solid var(--sib-gold); background: var(--sib-paper); color: var(--sib-gold); }
+.sib-ind { display: flex; align-items: flex-start; justify-content: space-between; margin: 10px 4px 6px; position: relative; }
+.sib-ind-item { display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 0 0 auto; width: 92px; text-align: center; z-index: 1; }
+.sib-ind-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--tp-serif); font-size: 16px; font-weight: 800; border: 1.5px solid var(--sib-gold); background: var(--sib-paper); color: var(--sib-gold); }
 .sib-ind-item.on .sib-ind-dot { background: var(--sib-green); color: var(--sib-gold-strong, #d9c98f); border: 1.5px solid var(--sib-gold); box-shadow: 0 0 0 1px var(--sib-paper) inset; }
 .sib-ind-lbl { font-size: 12.5px; color: var(--sib-muted); line-height: 1.3; }
 .sib-ind-item.on .sib-ind-lbl { color: var(--sib-ink); font-weight: 700; }
-.sib-ind-line { position: absolute; top: 17px; height: 1.5px; background: var(--sib-gold-line); z-index: 0; }
+.sib-ind-line { position: absolute; top: 15px; height: 1.5px; background: var(--sib-gold-line); z-index: 0; }
 .sib-ind-line--1 { left: 22%; right: 50%; }
 .sib-ind-line--2 { left: 50%; right: 22%; }
 
 /* 大標（book） */
-.sib-book-h1 { font-family: var(--tp-serif); font-size: 30px; font-weight: 700; letter-spacing: 0.08em; color: var(--sib-ink); margin: 10px 0 6px; }
+.sib-book-h1 { font-family: var(--tp-serif); font-size: 30px; font-weight: 700; letter-spacing: 0.08em; color: var(--sib-ink); margin: 6px 0 4px; }
 .sib-title-row { display: flex; align-items: baseline; gap: 14px; margin: 6px 0 2px; }
 .sib-title-row h1 { font-family: var(--tp-serif); font-size: 26px; font-weight: 700; letter-spacing: 0.08em; margin: 0; color: var(--sib-ink); }
 .sib-title-row .bar { width: 1px; align-self: stretch; background: var(--sib-gold); }
@@ -3972,18 +3972,18 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .sib-sec-head .t { font-family: var(--tp-serif); font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: var(--sib-ink); }
 .sib-sec-head .line { flex: 1; height: 1px; background: var(--sib-gold-line); }
 .sib-sec-head .today { color: var(--sib-gold); font-weight: 700; font-size: 14px; }
-.sib-region { display: flex; align-items: center; gap: 6px; font-family: var(--tp-serif); font-size: 19px; font-weight: 700; color: var(--sib-ink); margin: 18px 0 12px; }
+.sib-region { display: flex; align-items: center; gap: 6px; font-family: var(--tp-serif); font-size: 19px; font-weight: 700; color: var(--sib-ink); margin: 6px 0 7px; }
 
 /* 行程 radio 卡（step1） */
 .sib-plan-rcard { display: flex; gap: 14px; align-items: stretch; width: 100%; text-align: left; cursor: pointer;
-  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 16px; padding: 10px; margin-bottom: 11px; position: relative; }
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 16px; padding: 9px; margin-bottom: 7px; position: relative; }
 .sib-plan-rcard.on { border: 1.5px solid var(--sib-gold); box-shadow: 0 4px 14px rgba(176,141,62,0.12); }
-.sib-plan-thumb { flex: 0 0 104px; width: 104px; height: 96px; border-radius: 12px; overflow: hidden; background: #e6ddc6; }
+.sib-plan-thumb { flex: 0 0 114px; width: 114px; height: 94px; border-radius: 12px; overflow: hidden; background: #e6ddc6; }
 .sib-plan-thumb img { width: 100%; height: 100%; object-fit: cover; }
 .sib-plan-info { flex: 1; min-width: 0; padding-right: 26px; }
-.sib-plan-info h3 { font-family: var(--tp-serif); font-size: 15px; font-weight: 700; color: var(--sib-ink); margin: 1px 0 6px; line-height: 1.3; letter-spacing: 0.02em;
+.sib-plan-info h3 { font-family: var(--tp-serif); font-size: 15px; font-weight: 700; color: var(--sib-ink); margin: 0 0 4px; line-height: 1.25; letter-spacing: 0.02em;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.sib-plan-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sib-ink-soft); margin: 2px 0; }
+.sib-plan-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--sib-ink-soft); margin: 1px 0; }
 .sib-plan-line svg { width: 15px; height: 15px; color: var(--sib-gold); flex: 0 0 auto; }
 .sib-plan-tag { color: var(--sib-muted); font-size: 13px; }
 .sib-radio-slot { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; }

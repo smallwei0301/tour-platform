@@ -431,14 +431,15 @@ export const activities: Activity[] = [
     seoTitle: '花蓮海岸生態導覽｜潮間帶與賞鳥之旅｜林阿明',
     seoDescription: '跟著在地生態嚮導走讀花蓮東海岸潮間帶與濕地，用望遠鏡觀察候鳥，低干擾認識台灣自然生態。',
   },
-  // ── #1475 商店頁示範嚮導 吳洛晴 的 3 個短標題行程（各 1 方案，對齊 mockup 圖2）──
+  // ── #1475 商店頁示範嚮導 吳洛晴：對齊 mockup 圖2 的分組結構 ──
+  //   屏東縣（1 活動 1 方案，1 行標題）＋ 台東縣（1 活動 2 方案，2 行標題 → 2 卡）＝ 共 3 張卡片。
   {
     slug: 'taitung-dawn-ridge',
     guideSlug: 'wu-luo-ching',
-    title: '晨霧稜線健行｜清晨限定的無人山徑',
+    title: '晨霧稜線半日健行',
     category: 'outdoor',
-    region: '台東縣',
-    regionSlug: 'taitung',
+    region: '屏東縣',
+    regionSlug: 'pingtung',
     tagline: '趁晨霧未散，走上只有在地人知道的稜線。',
     shortDescription: '清晨出發，在雲霧還沒散去前走上台東近郊的稜線，看光線一點一點把山谷喚醒。由在地嚮導吳洛晴帶領，節奏放慢，適合喜歡自然的你。',
     longDescription: '晨霧是稜線最美的時刻。天還沒全亮，我們就從登山口出發，趁雲霧還掛在山谷間，慢慢走上這條在地人才熟悉的稜線。沿途我會告訴你這片山林的植物、季節與故事，走到展望點時，剛好趕上太陽把整片山谷喚醒。這不是趕路的行程，而是一段讓你把腳步放慢、把呼吸放深的晨間散步。',
@@ -516,7 +517,8 @@ export const activities: Activity[] = [
       'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
     ],
     plans: [
-      { id: 'secret-cove-snorkel', label: '海灣浮潛', duration: '約 3 小時', priceType: 'per_person', basePrice: 2200, minParticipants: 2, maxParticipants: 6, highlights: ['全套浮潛裝備', '祕境海灣', '專人戒護'], status: 'active' },
+      { id: 'secret-cove-early', label: '早鳥浮潛半日', duration: '約 3 小時', priceType: 'per_person', basePrice: 2200, minParticipants: 2, maxParticipants: 6, highlights: ['全套浮潛裝備', '祕境海灣', '專人戒護'], status: 'active' },
+      { id: 'secret-cove-explore', label: '礁岩＋海灣探索', duration: '約 3 小時', priceType: 'per_person', basePrice: 2600, minParticipants: 2, maxParticipants: 6, highlights: ['加走潮間帶礁岩', '生態解說', '活動紀錄照'], status: 'active' },
     ],
     schedules: [
       { startAt: '2026-07-12T09:00:00+08:00', endAt: '2026-07-12T12:00:00+08:00', capacity: 6, bookedCount: 3, status: 'open' },
@@ -525,53 +527,6 @@ export const activities: Activity[] = [
     transportMode: '步行',
     seoTitle: '台東祕境海灣浮潛｜退潮小海灣浮潛體驗｜吳洛晴',
     seoDescription: '走進台東退潮後才出現的祕境海灣，在清澈海水裡浮潛看珊瑚與魚群，新手也安心。',
-  },
-  {
-    slug: 'taitung-starlight-camp',
-    guideSlug: 'wu-luo-ching',
-    title: '星空草原露營｜無光害草原的過夜體驗',
-    category: 'outdoor',
-    region: '台東縣',
-    regionSlug: 'taitung',
-    tagline: '在沒有光害的草原上，睡進一整片星空。',
-    shortDescription: '傍晚上山紮營，看夕陽把草原染紅，入夜後躺在幾乎無光害的草原上數星星。帳篷與晚餐都備好，只要帶著自己來。',
-    longDescription: '台東的夜空，是很多人一輩子會記得的畫面。我們傍晚上到這片幾乎沒有光害的草原，趁天還亮時把營地紮好，看夕陽一寸一寸把草原染成金紅色。入夜後，銀河會慢慢在頭頂展開，我會帶你認幾個星座、講講在地人與這片草原的故事。帳篷、睡墊與熱騰騰的晚餐都幫你準備好，你只需要帶著自己，還有一顆想好好放空的心。',
-    price: 2800,
-    priceLabel: 'NT$2,800 / 人',
-    durationMinutes: 900,
-    durationDisplay: '傍晚至隔日清晨',
-    minParticipants: 2,
-    maxParticipants: 6,
-    meetingPoint: '台東鹿野高台停車場',
-    meetingPointMapUrl: 'https://maps.google.com/?q=%E9%B9%BF%E9%87%8E%E9%AB%98%E5%8F%B0',
-    inclusions: ['帳篷、睡墊等營地裝備', '在地風味晚餐與早餐', '星空導覽解說', '活動保險'],
-    exclusions: ['個人交通費', '個人盥洗用品', '睡袋（可另行租借）'],
-    goodFor: ['想看星空的旅客', '露營新手', '情侶與三兩好友'],
-    notGoodFor: ['需要高度盥洗設施者', '無法接受戶外過夜者'],
-    notices: ['請攜帶保暖衣物與頭燈', '山上入夜溫差大', '天候不佳將擇期改期'],
-    refundRules: ['出團 168 小時前（含）取消：100% 退款', '出團前 超過 72 小時且少於 168 小時取消：70% 退款', '出團前 72 小時內（含）取消：不退款', '不可抗力或主辦取消：100% 退款或 1 次免費改期'],
-    safetyNotice: '本活動為戶外過夜，請衡量自身狀況並攜帶足夠保暖衣物。',
-    faq: [
-      { question: '沒有露營經驗可以嗎？', answer: '完全可以，帳篷與裝備都由我搭設與提供，你只要來體驗就好。' },
-      { question: '會不會很冷？', answer: '山上入夜溫差大，請務必帶保暖外套，睡袋可事先跟我租借。' },
-    ],
-    socialProofQuotes: ['這輩子看過最多的星星', '晚餐超好吃', '躺在草原上什麼煩惱都沒了'],
-    trustPoints: ['台東在地嚮導', '野外急救認證', '完整營地裝備'],
-    imageUrl: 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80',
-    galleryUrls: [
-      'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80',
-      'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&q=80',
-    ],
-    plans: [
-      { id: 'starlight-camp-overnight', label: '過夜露營', duration: '傍晚至隔日清晨', priceType: 'per_person', basePrice: 2800, minParticipants: 2, maxParticipants: 6, highlights: ['帳篷全備', '在地晚餐', '星空導覽'], status: 'active' },
-    ],
-    schedules: [
-      { startAt: '2026-07-13T16:00:00+08:00', endAt: '2026-07-14T07:00:00+08:00', capacity: 6, bookedCount: 1, status: 'open' },
-      { startAt: '2026-07-20T16:00:00+08:00', endAt: '2026-07-21T07:00:00+08:00', capacity: 6, bookedCount: 0, status: 'open' },
-    ],
-    transportMode: '步行',
-    seoTitle: '台東星空草原露營｜無光害草原過夜體驗｜吳洛晴',
-    seoDescription: '傍晚上台東草原紮營，看夕陽入夜後躺看銀河，帳篷與晚餐全備的入門露營。',
   },
 ];
 
