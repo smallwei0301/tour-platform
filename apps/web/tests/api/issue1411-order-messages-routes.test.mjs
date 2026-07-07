@@ -12,17 +12,19 @@ import { fileURLToPath } from 'node:url';
 // cwd 無關的路徑基準（run-checks.sh 從 repo root 跑、npm test 從 apps/web 跑皆可）
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-const meSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/me/orders/[orderId]/messages/route.ts'), 'utf8');
-const guideOrderSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/guide/orders/[orderId]/messages/route.ts'), 'utf8');
-const guideListSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/guide/messages/route.ts'), 'utf8');
-const adminSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/admin/orders/[orderId]/messages/route.ts'), 'utf8');
+const meSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/v2/orders/[orderId]/messages/route.ts'), 'utf8');
+const guideOrderSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/v2/guide/orders/[orderId]/messages/route.ts'), 'utf8');
+const guideListSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/v2/guide/messages/route.ts'), 'utf8');
+const adminSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/v2/admin/orders/[orderId]/messages/route.ts'), 'utf8');
 
 test('me route: Supabase auth 在 gateway 之前；POST 順序 = auth → rate limit → create', () => {
-  assert.match(meSrc, /supabase\.auth\.getUser\(\)/);
+  // #1649：traveler v2 route 的 auth 收斂到共用 getTravelerIdentity（內部即
+  // supabase.auth.getUser()），guard 意圖不變。
+  assert.match(meSrc, /getTravelerIdentity\(\)/);
 
   const postStart = meSrc.indexOf('export async function POST');
   const postSrc = meSrc.slice(postStart);
-  const authIdx = postSrc.indexOf('auth.getUser');
+  const authIdx = postSrc.indexOf('getTravelerIdentity');
   const rateIdx = postSrc.indexOf('messageSendLimiter.check');
   const createIdx = postSrc.indexOf('createOrderMessageDb');
   assert.ok(authIdx > 0, 'POST 應驗證 Supabase auth');

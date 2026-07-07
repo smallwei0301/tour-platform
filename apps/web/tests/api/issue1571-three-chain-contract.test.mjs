@@ -21,8 +21,10 @@ delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 const { calculateRefundAmount } = await import('../../src/lib/refund-policy.ts');
 const { createOrderDb, processPaymentCallbackDb, createRefundRequestDb } = await import('../../src/lib/db.mjs');
 
-const dbSrc = readFileSync(path.resolve('src/lib/db.mjs'), 'utf8');
-const servicesSrc = readFileSync(path.resolve('src/lib/services.mjs'), 'utf8');
+// cwd 無關的路徑基準（run-checks.sh 從 repo root 跑、npm test 從 apps/web 跑皆可）
+const WEB_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../..');
+const dbSrc = readFileSync(path.join(WEB_ROOT, 'src/lib/db.mjs'), 'utf8');
+const servicesSrc = readFileSync(path.join(WEB_ROOT, 'src/lib/services.mjs'), 'utf8');
 
 // 稽核政策（168h 全退 / 72–168h 七成 / <72h 不退）
 const POLICY = {

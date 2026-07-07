@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 // extra guards are needed at the call site.
 
 const here = dirname(fileURLToPath(import.meta.url));
-const ADMIN = join(here, '..', '..', 'app', 'api', 'admin', 'orders', '[orderId]');
+const ADMIN = join(here, '..', '..', 'app', 'api', 'v2', 'admin', 'orders', '[orderId]');
 
 function read(p) {
   return readFileSync(p, 'utf8');

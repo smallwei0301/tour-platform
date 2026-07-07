@@ -1,8 +1,28 @@
 /**
- * /api/v2/admin/orders/[orderId]/messages — #1649 Phase 3 v2 命名空間接線。
- *
- * 單一實作策略（strangler）：直接 re-export legacy handler，零行為漂移——
- * auth/CSRF 由 middleware 對 /api/v2/admin/** 施加與 legacy 相同的規則，
- * envelope 與錯誤碼完全不變；legacy 路徑退役（Phase 6）時實作整體搬遷至此。
+ * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/orders/[orderId]/messages）整體搬遷至 v2 命名空間。
+ * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-export { GET } from '../../../../../admin/orders/[orderId]/messages/route';
+/**
+ * GET /api/admin/orders/[orderId]/messages — admin 唯讀留言串（#1411 第一期）
+ * 僅 GET：admin 第一期不發言（無 POST export）。admin auth 由 middleware 把關。
+ */
+import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { ok, fail } from '../../../../../../../src/lib/api';
+import { listOrderMessagesDb } from '../../../../../../../src/lib/db.mjs';
+import { orderMessageErrorToResponseParts } from '../../../../../../../src/lib/order-messages.mjs';
+
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ orderId: string }> }
+) {
+  const { orderId } = await params;
+  try {
+    const thread = await listOrderMessagesDb({ orderId });
+    return Response.json(ok(thread));
+  } catch (error) {
+    // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
+    void reportRouteError(error, { route: 'v2/admin/orders/[orderId]/messages' });
+    const parts = orderMessageErrorToResponseParts(error);
+    return Response.json(fail(parts.code, parts.message), { status: parts.status });
+  }
+}

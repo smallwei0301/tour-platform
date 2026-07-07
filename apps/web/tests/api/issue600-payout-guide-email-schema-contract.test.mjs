@@ -16,7 +16,7 @@ function readFrom(baseDir, relPath) {
 
 describe('Issue 600 payout guide email schema/query contract', () => {
   it('admin payouts route must use guide_profiles(display_name, guide_email)', () => {
-    const src = readFrom(WEB_ROOT, 'app/api/admin/payouts/route.ts');
+    const src = readFrom(WEB_ROOT, 'app/api/v2/admin/payouts/route.ts');
     assert.match(src, /guide_profiles\s*\(\s*display_name\s*,\s*guide_email\s*\)/);
     assert.doesNotMatch(src, /guide_profiles\s*\(\s*display_name\s*,\s*email\s*\)/);
   });

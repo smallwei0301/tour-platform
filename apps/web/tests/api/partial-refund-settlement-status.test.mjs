@@ -125,7 +125,7 @@ test('executeRefund ECPay AllRefund 部分退款：status 還原可結算狀態'
 
 test('route：部分退款用 partialTargetStatus（不寫死 refunded）', () => {
   const routeSrc = readFileSync(
-    join(repoRoot, 'app/api/admin/orders/[orderId]/refund-execute/route.ts'),
+    join(repoRoot, 'app/api/v2/admin/orders/[orderId]/refund-execute/route.ts'),
     'utf8',
   );
   assert.match(routeSrc, /resolvePartialRefundStatus/, 'route 應 import/呼叫 resolvePartialRefundStatus');

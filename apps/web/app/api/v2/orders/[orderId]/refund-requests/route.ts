@@ -86,7 +86,7 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
         }
       }
     } catch (snapshotErr) {
-      console.warn('[v2-refund-request][policy-snapshot] non-blocking failure', {
+      console.warn('[refund-request][policy-snapshot] non-blocking failure', {
         orderId,
         error: snapshotErr instanceof Error ? snapshotErr.message : String(snapshotErr),
       });
@@ -115,18 +115,20 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
           .single();
 
         if (fetchErr || !orderRow) {
-          console.warn('[v2-refund-auto-execute] Failed to fetch order row', { orderId });
+          console.warn('[refund-auto-execute] Failed to fetch order row', { orderId });
         } else if (!orderRow.trade_no) {
           // Guard — only credit-card orders (must have trade_no)
-          console.info('[v2-refund-auto-execute] Skipped: no trade_no (cash/ATM/CVS order)', { orderId });
+          console.info('[refund-auto-execute] Skipped: no trade_no (cash/ATM/CVS order)', { orderId });
+          // Leave as refund_pending — admin handles non-CC orders
         } else if (!policySnapshot?.eligible || !(refundableAmount !== null && refundableAmount > 0)) {
-          console.info('[v2-refund-auto-execute] Skipped: ineligible or zero amount', {
+          console.info('[refund-auto-execute] Skipped: ineligible or zero amount', {
             orderId,
             eligible: policySnapshot?.eligible,
             refundableAmount,
           });
         } else {
-          console.info('[v2-refund-auto-execute] Triggering ECPay AllRefund', { orderId, refundableAmount });
+          // Proceed with executeRefund
+          console.info('[refund-auto-execute] Triggering ECPay AllRefund', { orderId, refundableAmount });
           const execResult = await executeRefund({
             order: orderRow as Parameters<typeof executeRefund>[0]['order'],
             body: { reason },
@@ -158,11 +160,11 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
               .eq('id', created.id)
               .eq('status', 'requested'); // guard: only advance if still in initial state
           } else {
-            console.warn('[v2-refund-auto-execute] ECPay returned non-200', { orderId, status: execResult.status });
+            console.warn('[refund-auto-execute] ECPay returned non-200', { orderId, status: execResult.status });
           }
         }
       } catch (autoExecErr) {
-        console.warn('[v2-refund-auto-execute] Auto-execute failed, leaving refund_pending:', autoExecErr);
+        console.warn('[refund-auto-execute] Auto-execute failed, leaving refund_pending:', autoExecErr);
       }
     }
 
@@ -216,7 +218,7 @@ export async function POST(request: Request, context: { params: Promise<{ orderI
       } else {
         void sendRefundRequested(notifyData).then((emailResult) => {
           if (!emailResult.ok) {
-            console.warn('[v2-refund-request][email] non-blocking failure', {
+            console.warn('[refund-request][email] non-blocking failure', {
               orderId,
               code: emailResult.errorCode,
               message: emailResult.errorMessage,

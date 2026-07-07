@@ -75,6 +75,38 @@
   va.vercel-scripts.com／unsplash 外部請求，debug script 實證）。
 - QA 報告：`docs/operations/qa-reports/issue1649-v2-full-wiring-qa-20260707.md`。
 
+### Phase 5.1＋Phase 6（2026-07-08 完成，接續 owner 指令）
+- **Phase 5.1**：新增 `POST /api/v2/payments/ecpay/callback`（re-export 凍結區 legacy handler
+  ——單一實作，冪等三防線/驗簽/金額比對零分岔）；v2 checkout ReturnURL 預設切至 v2 路徑
+  （`ECPAY_CALLBACK_URL` env 覆寫保留＝部署協調 escape hatch）；legacy callback 保留相容期。
+  契約測試 `issue1649-phase51-v2-callback-contract`（3 tests）；issue1571 三鏈路基線 11/11 綠。
+- **Phase 6 退役**：
+  - `app/api/me/orders/**` 刪除（v2 為獨立實作）；`app/api/admin/{orders,refund-requests,
+    payouts}/**`（20 檔）與 `app/api/guide/{bookings,payout,messages,orders,
+    reschedule-requests}/**`（10 檔）實作**整體搬遷**至 v2 命名空間（import 深度+1、
+    guide 寫入三支殼內顯式 validateCsrf 保留）。
+  - 受保護 spec 安全性確認：`booking-flow-validation.spec.ts` 零 expect 斷言（純報告型），
+    legacy 刪除不致紅燈；funnel spec 只走頁面。
+  - 30 支搬遷 route 接上 `reportRouteError`（26 支自動注入含 return 的 catch；4 支零
+    try/catch 唯讀 GET 列 #1598 白名單附原因）。
+  - #1614 手刻樣板 guard：30 檔以「債務搬遷」註記列白名單（app/api 全域手刻總數未增；
+    envelope ok/fail 凍結至前端 envelope 遷移另案）。
+  - 測試 repoint：admin 17 檔＋guide 10 檔＋traveler 8 檔 source-contract 測試改指 v2 路徑；
+    v2 refund-requests route 補回 legacy 原註解/日誌字樣（436/auto-execute 契約）；
+    issue1571 cwd 依賴修復。
+  - 殘留守門：`issue1649-phase6-legacy-retirement-residue-guard`（5 tests：legacy 不回流＋
+    v2 在場＋非殼＋guide CSRF）。
+  - `line-order-query.mjs` 已用 `listMyOrdersDb`（與 v2 orders 同一讀取函式）——Phase 6.2
+    天然滿足；internal sweeps 不搬命名空間（§D 決策 2）。
+  - 契約 spec 同步：`10-api-spec-v2-booking-pos.md` 新增 §9 實作狀態補記（超契約端點清單、
+    order-scoped 偏差、已退役路徑、internal sweeps 決策）。
+  - `scripts/demo-smoke.sh` 改打 v2。
+- **e2e 修復（#1655，main 既有 6 失敗）**：tablist focus race 真修（use-tablist-keyboard
+  有界重試＋事件目標索引）＋退役 checkout 陳舊 specs 改寫＋login-redirect regex 修正，
+  全部實跑綠。
+- **凍結區未動（需 owner P0-OVERRIDE 才能退役）**：`app/api/payments/ecpay/{create,callback,
+  refund-callback}`、`app/api/payments/mock-confirm`——v2 對應已接線，legacy 為相容期安全網。
+
 ### 待辦（另案）
 - [ ] Phase 5.1：v2 ecpay callback＋ReturnURL 切換（P0-OVERRIDE＋部署協調，owner 決策）
 - [ ] Phase 6：legacy routes 退役＋殘留守門＋契約 spec 同步（含 order-scoped 正名）

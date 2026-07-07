@@ -1,8 +1,23 @@
 /**
- * /api/v2/admin/orders — #1649 Phase 3 v2 命名空間接線。
- *
- * 單一實作策略（strangler）：直接 re-export legacy handler，零行為漂移——
- * auth/CSRF 由 middleware 對 /api/v2/admin/** 施加與 legacy 相同的規則，
- * envelope 與錯誤碼完全不變；legacy 路徑退役（Phase 6）時實作整體搬遷至此。
+ * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/orders）整體搬遷至 v2 命名空間。
+ * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-export { GET } from '../../../admin/orders/route';
+import { reportRouteError } from '../../../../../src/lib/route-error';
+import { ok, fail } from '../../../../../src/lib/api';
+import { listAdminOrdersDb } from '../../../../../src/lib/db.mjs';
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status') || '';
+  const contactEmail = url.searchParams.get('contactEmail') || '';
+  const sourceChannel = url.searchParams.get('sourceChannel') || '';
+
+  try {
+    return Response.json(ok(await listAdminOrdersDb({ status, contactEmail, sourceChannel })));
+  } catch (err) {
+    // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
+    void reportRouteError(err, { route: 'v2/admin/orders' });
+    const message = err instanceof Error ? err.message : 'unknown error';
+    return Response.json(fail('SERVER_ERROR', message), { status: 500 });
+  }
+}

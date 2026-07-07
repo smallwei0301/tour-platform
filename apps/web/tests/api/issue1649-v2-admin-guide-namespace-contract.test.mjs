@@ -18,9 +18,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 const read = (rel) => readFile(path.join(ROOT, rel), 'utf8');
 
-// ── admin v2 殼：存在且委派 legacy handler ─────────────────────────────
+// ── admin/guide v2 routes：Phase 6 後實作本體落地 v2（殼已隨 legacy 退役淘汰） ──
 
-const ADMIN_SHELLS = [
+const ADMIN_ROUTES = [
   ['orders', 'GET'],
   ['orders/[orderId]', 'GET', 'PATCH'],
   ['orders/[orderId]/timeline', 'GET'],
@@ -43,46 +43,37 @@ const ADMIN_SHELLS = [
   ['payouts/[payoutId]/cancel', 'POST'],
 ];
 
-test('v2 admin 殼 routes：全數存在且 re-export 對應 legacy handler（單一實作）', async () => {
-  for (const [rest, ...methods] of ADMIN_SHELLS) {
+test('v2 admin routes：全數存在且為實作本體（#1649 Phase 6 搬遷完成）', async () => {
+  for (const [rest, ...methods] of ADMIN_ROUTES) {
     const src = await read(`app/api/v2/admin/${rest}/route.ts`);
     for (const m of methods) {
-      assert.match(src, new RegExp(`export \\{[^}]*${m}[^}]*\\} from '[.\\/]+admin\\/`), `v2/admin/${rest} 需 re-export ${m} 自 legacy admin route`);
+      assert.match(src, new RegExp(`export async function ${m}`), `v2/admin/${rest} 需含 ${m} 實作`);
     }
-    assert.ok(!src.includes('supabase'), `v2/admin/${rest} 殼不得自帶實作（單一實作原則）`);
+    assert.ok(!/from '[.\/]+admin\//.test(src), `v2/admin/${rest} 不得再 re-export legacy（已退役）`);
   }
 });
 
-// ── guide v2 殼：GET re-export；寫入殼顯式 CSRF 後委派 ─────────────────
-
-test('v2 guide 殼 routes：讀取 re-export；寫入殼內顯式 validateCsrf 再委派 legacy POST', async () => {
-  const getOnly = ['bookings', 'bookings/pending-approval', 'bookings/[bookingId]', 'messages', 'reschedule-requests'];
-  for (const rest of getOnly) {
+test('v2 guide routes：實作本體＋寫入路徑顯式 CSRF', async () => {
+  const routes = [
+    ['bookings', 'GET'], ['bookings/pending-approval', 'GET'], ['bookings/[bookingId]', 'GET'],
+    ['payout/monthly', 'GET'], ['payout/monthly/csv', 'GET'], ['messages', 'GET'],
+    ['reschedule-requests', 'GET'],
+  ];
+  for (const [rest, m] of routes) {
     const src = await read(`app/api/v2/guide/${rest}/route.ts`);
-    assert.match(src, /export \{ GET \} from '[.\/]+guide\//, `v2/guide/${rest} 需 re-export GET`);
+    assert.match(src, new RegExp(`export async function ${m}`), `v2/guide/${rest} 需含 ${m} 實作`);
+    assert.match(src, /verifyGuideSession/, `v2/guide/${rest} 需 guide session auth`);
   }
-
-  // payout 兩支需一併 re-export dynamic（legacy 為 force-dynamic）
+  for (const rest of ['bookings/[bookingId]/approval', 'orders/[orderId]/messages', 'reschedule-requests/[requestId]/decision']) {
+    const src = await read(`app/api/v2/guide/${rest}/route.ts`);
+    assert.match(src, /validateCsrf\(req\)/, `v2/guide/${rest} 寫入必須顯式 CSRF（middleware 不涵蓋 /api/v2/guide）`);
+    assert.match(src, /export async function POST/, `v2/guide/${rest} 需含 POST 實作`);
+  }
+  // payout 兩支維持 force-dynamic（legacy 行為）
   for (const rest of ['payout/monthly', 'payout/monthly/csv']) {
     const src = await read(`app/api/v2/guide/${rest}/route.ts`);
-    assert.match(src, /export \{ GET, dynamic \} from '[.\/]+guide\//, `v2/guide/${rest} 需 re-export GET 與 dynamic`);
+    assert.match(src, /export const dynamic = 'force-dynamic'/, `v2/guide/${rest} 需維持 force-dynamic`);
   }
-
-  const postShells = [
-    'bookings/[bookingId]/approval',
-    'orders/[orderId]/messages',
-    'reschedule-requests/[requestId]/decision',
-  ];
-  for (const rest of postShells) {
-    const src = await read(`app/api/v2/guide/${rest}/route.ts`);
-    assert.match(src, /validateCsrf\(request\)/, `v2/guide/${rest} 寫入殼必須顯式 CSRF（middleware 不涵蓋 /api/v2/guide）`);
-    assert.match(src, /import \{ POST as legacyPOST \} from '[.\/]+guide\//, `v2/guide/${rest} 需委派 legacy POST`);
-    assert.match(src, /return legacyPOST\(request, context\);/, `v2/guide/${rest} CSRF 通過後委派 legacy handler`);
-  }
-
-  // orders/[orderId]/messages 同時有 GET
-  const msgSrc = await read('app/api/v2/guide/orders/[orderId]/messages/route.ts');
-  assert.match(msgSrc, /export \{ GET \} from '[.\/]+guide\//);
 });
 
 // ── 前端零 legacy 呼叫 ───────────────────────────────────────────────

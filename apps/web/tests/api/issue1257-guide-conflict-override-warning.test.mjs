@@ -30,8 +30,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '..', '..');
 
-const LIST_ROUTE_PATH = path.resolve(ROOT, 'app/api/guide/bookings/route.ts');
-const DETAIL_ROUTE_PATH = path.resolve(ROOT, 'app/api/guide/bookings/[bookingId]/route.ts');
+const LIST_ROUTE_PATH = path.resolve(ROOT, 'app/api/v2/guide/bookings/route.ts');
+const DETAIL_ROUTE_PATH = path.resolve(ROOT, 'app/api/v2/guide/bookings/[bookingId]/route.ts');
 const PAGE_PATH = path.resolve(ROOT, 'app/guide/bookings/page.tsx');
 
 // ─── Behaviour test helpers ───────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 describe('issue #428 — refund_requests sync after REFUND_AUTO_EXECUTE success', () => {
-  const routeSrc = readFileSync('app/api/me/orders/[orderId]/refund-requests/route.ts', 'utf8')
+  const routeSrc = readFileSync('app/api/v2/orders/[orderId]/refund-requests/route.ts', 'utf8')
 
   it('route updates refund_requests on auto-execute success path', () => {
     // After autoExecuted = true, the route must update refund_requests with status 'refunded'

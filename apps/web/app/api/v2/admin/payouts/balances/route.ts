@@ -1,8 +1,42 @@
 /**
- * /api/v2/admin/payouts/balances — #1649 Phase 3 v2 命名空間接線。
- *
- * 單一實作策略（strangler）：直接 re-export legacy handler，零行為漂移——
- * auth/CSRF 由 middleware 對 /api/v2/admin/** 施加與 legacy 相同的規則，
- * envelope 與錯誤碼完全不變；legacy 路徑退役（Phase 6）時實作整體搬遷至此。
+ * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/payouts/balances）整體搬遷至 v2 命名空間。
+ * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-export { GET } from '../../../../admin/payouts/balances/route';
+/**
+ * GET /api/admin/payouts/balances
+ * Issue #1365 缺口 2 — 出款管理手動操作 fallback。
+ *
+ * List guide settlement balances (> 0, including below min-withdrawal
+ * threshold) with profile info + has_pending_payout flag, plus the active
+ * min_withdrawal_twd so the UI can mark 達門檻 / 未達門檻.
+ */
+import { reportRouteError } from '../../../../../../src/lib/route-error';
+import { NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../src/config/supabase-service-env.mjs';
+
+export async function GET() {
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
+    );
+
+    const { listGuideBalancesWithProfilesDb } = await import('../../../../../../src/lib/db.mjs');
+    const { getSettlementConfig } = await import('../../../../../../src/lib/settlement-config');
+
+    const [balances, config] = await Promise.all([
+      listGuideBalancesWithProfilesDb(supabase),
+      getSettlementConfig(supabase),
+    ]);
+
+    return NextResponse.json({
+      ok: true,
+      data: { balances, min_withdrawal_twd: config.min_withdrawal_twd },
+    });
+  } catch (e: any) {
+    // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
+    void reportRouteError(e, { route: 'v2/admin/payouts/balances' });
+    return NextResponse.json({ ok: false, error: e.message }, { status: 500 });
+  }
+}

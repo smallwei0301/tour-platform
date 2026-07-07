@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url'
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 describe('guide payout CSV route contract', () => {
-  const src = readFileSync(path.join(WEB_ROOT, 'app/api/guide/payout/monthly/csv/route.ts'), 'utf8')
+  const src = readFileSync(path.join(WEB_ROOT, 'app/api/v2/guide/payout/monthly/csv/route.ts'), 'utf8')
 
   it('only exports GET and dynamic', () => {
     assert.match(src, /export.*GET/)

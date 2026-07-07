@@ -1,8 +1,39 @@
 /**
- * /api/v2/admin/payouts/[payoutId]/confirm — #1649 Phase 3 v2 命名空間接線。
- *
- * 單一實作策略（strangler）：直接 re-export legacy handler，零行為漂移——
- * auth/CSRF 由 middleware 對 /api/v2/admin/** 施加與 legacy 相同的規則，
- * envelope 與錯誤碼完全不變；legacy 路徑退役（Phase 6）時實作整體搬遷至此。
+ * #1649 Phase 6：實作自 legacy 路徑（app/api/admin/payouts/[payoutId]/confirm）整體搬遷至 v2 命名空間。
+ * legacy 路徑已退役刪除；行為與測試契約以本檔為準。
  */
-export { POST } from '../../../../../admin/payouts/[payoutId]/confirm/route';
+/**
+ * POST /api/admin/payouts/[payoutId]/confirm
+ * Issue #448 — Confirm a pending payout: debit guide_balances + mark paid + audit log.
+ */
+import { reportRouteError } from '../../../../../../../src/lib/route-error';
+import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../../../src/config/supabase-service-env.mjs';
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ payoutId: string }> }) {
+  const { payoutId } = await params;
+
+  try {
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabase = createClient(
+      getSupabaseUrl()!,
+      getSupabaseServiceRoleKey()!
+    );
+
+    const { confirmPayoutDb } = await import('../../../../../../../src/lib/db.mjs');
+
+    const body = await req.json().catch(() => ({}));
+    const result = await confirmPayoutDb(
+      supabase,
+      payoutId,
+      body.confirmed_by ?? 'admin',
+      body.transfer_ref ?? null
+    );
+
+    return NextResponse.json({ ok: true, data: result });
+  } catch (e: any) {
+    // #1598：未預期例外上報（fire-and-forget，不改變回應行為）。
+    void reportRouteError(e, { route: 'v2/admin/payouts/[payoutId]/confirm' });
+    return NextResponse.json({ ok: false, error: e.message }, { status: 400 });
+  }
+}

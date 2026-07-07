@@ -126,7 +126,7 @@ describe('Issue 448 Payouts — generate-payouts route contract', () => {
 // AC3 — Admin GET /api/admin/payouts contract
 // ---------------------------------------------------------------------------
 describe('Issue 448 Payouts — GET /api/admin/payouts route contract', () => {
-  const ROUTE = 'app/api/admin/payouts/route.ts';
+  const ROUTE = 'app/api/v2/admin/payouts/route.ts';
 
   it('route file exists', () => {
     assert.ok(routeExists(ROUTE), `${ROUTE} must exist`);
@@ -165,7 +165,7 @@ describe('Issue 448 Payouts — GET /api/admin/payouts route contract', () => {
 // AC4 — Admin POST /api/admin/payouts/[payoutId]/confirm contract
 // ---------------------------------------------------------------------------
 describe('Issue 448 Payouts — POST confirm route contract', () => {
-  const ROUTE = 'app/api/admin/payouts/[payoutId]/confirm/route.ts';
+  const ROUTE = 'app/api/v2/admin/payouts/[payoutId]/confirm/route.ts';
 
   it('route file exists', () => {
     assert.ok(routeExists(ROUTE), `${ROUTE} must exist`);

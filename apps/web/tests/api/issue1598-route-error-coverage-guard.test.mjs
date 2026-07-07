@@ -25,6 +25,11 @@ const WHITELIST = {
   'orders/[orderId]/refund-preview/route.ts': '唯讀 GET 退款試算；無頂層 try/catch',
   'line/auth/handoff/route.ts': 'LINE handoff（redirect），無頂層 try/catch',
   'admin/guides/[guideId]/conflict-overrides/route.ts': 'follow-up：頂層 catch 僅守 body parse，下游 DB 例外待另包 try 上報',
+  // #1649 Phase 6 自 legacy 搬遷的唯讀 GET（legacy 即無頂層 try/catch，例外落 Next 預設 500）：
+  'guide/bookings/route.ts': '唯讀 GET 導遊訂單列表；無頂層 try/catch（#1649 搬遷保留 legacy 態）',
+  'guide/bookings/[bookingId]/route.ts': '唯讀 GET 訂單明細；無頂層 try/catch（#1649 搬遷保留 legacy 態）',
+  'guide/payout/monthly/route.ts': '唯讀 GET 月結估算；無頂層 try/catch（#1649 搬遷保留 legacy 態）',
+  'guide/payout/monthly/csv/route.ts': '唯讀 GET 月結 CSV；無頂層 try/catch（#1649 搬遷保留 legacy 態）',
 };
 
 function walk(dir) {
