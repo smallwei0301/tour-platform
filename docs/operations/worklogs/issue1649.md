@@ -63,13 +63,23 @@
   頁面零 legacy，4 tests 全綠）。
 - **證據**：`run-checks.sh --typecheck` 綠（14 檔測試＋tsc）。
 
-### 待辦
-- [ ] Phase 3：admin orders/refunds/payouts v2 化＋三頁 UI 切換＋POS 四支接 UI
-- [ ] Phase 4：guide bookings/payout/messages/reschedules v2 化
-- [ ] Phase 5（非凍結）：/order/pay 補付頁 v2 repay
-- [ ] QA 收尾：npm test 全綠＋Playwright 實跑＋QA 報告落 docs/operations/qa-reports/
-- [ ] 契約偏差記錄：cancel/reschedule 以 order 為主體實作（`/api/v2/orders/:id/...`），
-  與契約 bookings/:id/* 端點語意相同、主體不同——Phase 6 更新 spec 時一併對齊。
+### QA 收尾（2026-07-08 00:20 完成）
+- `run-checks.sh --typecheck --all`：4533 tests／4530 pass／0 fail／3 skipped＋tsc＋lint 綠。
+- Playwright 整合批次 27 specs／67 tests → 64 pass；3 fail 全數查證非本次回歸
+  （1 個 main 基準線同敗＝既有問題；2 個批次負載 flaky，單獨重跑綠）。
+- **main worktree 基準線交叉驗證**：6 個既有 e2e 失敗於 main（a75f21f）完全相同，
+  與 v2 遷移無關（清單見 QA 報告）。
+- #1598 guard 補「委派殼」結構性辨識；自寫 traveler routes 真接 reportRouteError。
+- 死碼測試改寫（issue826→殘留守門、issue461a AC2→改鎖詳情頁）；3 個 cwd 依賴測試修復；
+  member-pages-redesign networkidle deflake（根因：沙盒 Chromium 無 proxy 掛住
+  va.vercel-scripts.com／unsplash 外部請求，debug script 實證）。
+- QA 報告：`docs/operations/qa-reports/issue1649-v2-full-wiring-qa-20260707.md`。
+
+### 待辦（另案）
+- [ ] Phase 5.1：v2 ecpay callback＋ReturnURL 切換（P0-OVERRIDE＋部署協調，owner 決策）
+- [ ] Phase 6：legacy routes 退役＋殘留守門＋契約 spec 同步（含 order-scoped 正名）
+- [ ] main 既有 e2e 失敗 6 項另開 issue 追蹤
+- [ ] Admin POS 四支既有 v2 route 接 UI（API-first 現況維持，屬功能增項非串接切換）
 
 ## 刻意決策
 1. **order-scoped 而非 booking-scoped**：UI 全面以 orderId 操作；契約定義的

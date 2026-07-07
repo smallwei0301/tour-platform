@@ -33,7 +33,7 @@ async function stubOrders(page: Page, onRefundExecute: (body: unknown) => void) 
     if (/\/audit-logs$/.test(path)) return json(200, { ok: true, data: [] });
     if (/\/timeline$/.test(path)) return json(200, { ok: true, data: { timeline: [] } });
     if (/\/messages$/.test(path)) return json(200, { ok: true, data: { messages: [] } });
-    if (/\/api\/admin\/orders\/[^/]+$/.test(path)) return json(200, { ok: true, data: order });
+    if (/\/api\/v2\/admin\/orders\/[^/]+$/.test(path)) return json(200, { ok: true, data: order });
     return json(200, { ok: true, data: [order] });
   });
 }

@@ -7,6 +7,7 @@
  */
 import { validateCsrf } from '../../../../../../src/lib/csrf.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
+import { reportRouteError } from '../../../../../../src/lib/route-error';
 import { parseBody } from '../../../../../../src/lib/validation/parse-body';
 import { OrderMessageBodySchema } from '../../../../../../src/lib/validation/traveler-order-schemas';
 import { getTravelerIdentity } from '../../../../../../src/lib/v2/traveler-auth';
@@ -30,6 +31,8 @@ export async function GET(
     return jsonOk(thread);
   } catch (error) {
     const parts = orderMessageErrorToResponseParts(error);
+    // 業務規則錯誤（4xx）不進 incident；未預期例外（500）上報（#1598）。
+    if (parts.status >= 500) await reportRouteError(error, { route: 'v2/orders/messages/list' });
     return jsonError(parts.code, parts.message, parts.status);
   }
 }
@@ -69,6 +72,8 @@ export async function POST(
     return jsonOk(result.message, { status: 201 });
   } catch (error) {
     const parts = orderMessageErrorToResponseParts(error);
+    // 業務規則錯誤（4xx）不進 incident；未預期例外（500）上報（#1598）。
+    if (parts.status >= 500) await reportRouteError(error, { route: 'v2/orders/messages/create' });
     return jsonError(parts.code, parts.message, parts.status);
   }
 }

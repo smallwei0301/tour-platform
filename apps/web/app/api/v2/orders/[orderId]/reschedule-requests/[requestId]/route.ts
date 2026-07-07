@@ -5,6 +5,7 @@
  */
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
+import { reportRouteError } from '../../../../../../../src/lib/route-error';
 import { getTravelerIdentity } from '../../../../../../../src/lib/v2/traveler-auth';
 import { withdrawRescheduleRequestDb } from '../../../../../../../src/lib/db.mjs';
 import { rescheduleErrorToResponseParts } from '../../../../../../../src/lib/reschedule.mjs';
@@ -27,6 +28,8 @@ export async function DELETE(
     return jsonOk(result);
   } catch (error) {
     const parts = rescheduleErrorToResponseParts(error);
+    // 業務規則錯誤（4xx）不進 incident；未預期例外（500）上報（#1598）。
+    if (parts.status >= 500) await reportRouteError(error, { route: 'v2/orders/reschedule-requests/withdraw' });
     return jsonError(parts.code, parts.message, parts.status);
   }
 }

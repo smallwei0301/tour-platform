@@ -9,8 +9,8 @@
 import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { POST as legacyPOST } from '../../../../../guide/bookings/[bookingId]/approval/route';
 
-export async function POST(request: Request, context: never) {
+export async function POST(request: Request, context: { params: Promise<{ bookingId: string }> }) {
   const csrfError = validateCsrf(request);
   if (csrfError) return csrfError;
-  return legacyPOST(request, context as Parameters<typeof legacyPOST>[1]);
+  return legacyPOST(request, context);
 }

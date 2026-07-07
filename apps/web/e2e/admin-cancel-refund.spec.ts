@@ -75,7 +75,7 @@ async function stubOrders(
     }
 
     // 訂單詳情：/api/v2/admin/orders/{id}
-    if (/\/api\/admin\/orders\/[^/]+$/.test(path)) {
+    if (/\/api\/v2\/admin\/orders\/[^/]+$/.test(path)) {
       return json(200, { ok: true, data: order });
     }
 

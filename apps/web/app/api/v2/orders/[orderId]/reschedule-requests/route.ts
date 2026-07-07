@@ -6,6 +6,7 @@
  */
 import { validateCsrf } from '../../../../../../src/lib/csrf.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
+import { reportRouteError } from '../../../../../../src/lib/route-error';
 import { parseBody } from '../../../../../../src/lib/validation/parse-body';
 import { RescheduleRequestBodySchema } from '../../../../../../src/lib/validation/traveler-order-schemas';
 import { getTravelerIdentity } from '../../../../../../src/lib/v2/traveler-auth';
@@ -44,6 +45,8 @@ export async function POST(
     return jsonOk(result, { status: 201 });
   } catch (error) {
     const parts = rescheduleErrorToResponseParts(error);
+    // 業務規則錯誤（4xx）不進 incident；未預期例外（500）上報（#1598）。
+    if (parts.status >= 500) await reportRouteError(error, { route: 'v2/orders/reschedule-requests/create' });
     return jsonError(parts.code, parts.message, parts.status);
   }
 }

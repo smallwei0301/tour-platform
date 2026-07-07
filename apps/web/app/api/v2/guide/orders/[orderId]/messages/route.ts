@@ -10,8 +10,8 @@ import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { POST as legacyPOST } from '../../../../../guide/orders/[orderId]/messages/route';
 export { GET } from '../../../../../guide/orders/[orderId]/messages/route';
 
-export async function POST(request: Request, context: never) {
+export async function POST(request: Request, context: { params: Promise<{ orderId: string }> }) {
   const csrfError = validateCsrf(request);
   if (csrfError) return csrfError;
-  return legacyPOST(request, context as Parameters<typeof legacyPOST>[1]);
+  return legacyPOST(request, context);
 }

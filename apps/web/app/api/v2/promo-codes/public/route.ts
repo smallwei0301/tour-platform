@@ -5,6 +5,7 @@
  * + 未過期 + 未用罄的碼，輸出不含內部統計；任何故障 fail-open 為空清單。
  */
 import { jsonOk } from '../../../../../src/lib/api-response';
+import { reportRouteError } from '../../../../../src/lib/route-error';
 import { hasSupabaseEnv } from '../../../../../src/lib/db.mjs';
 import { selectPublicPromoCodes } from '../../../../../src/lib/public-promo-codes.mjs';
 import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../../../../src/config/supabase-service-env.mjs';
@@ -36,8 +37,9 @@ export async function GET() {
     return jsonOk(selectPublicPromoCodes(data ?? [], new Date()), {
       headers: { 'cache-control': 'public, s-maxage=60, stale-while-revalidate=300' },
     });
-  } catch {
-    // fail-open 為空清單 — 曝光是加分項，不因促銷碼故障擋住任何頁面
+  } catch (err) {
+    // fail-open 為空清單 — 曝光是加分項，不因促銷碼故障擋住任何頁面；但故障要上報（#1598）。
+    await reportRouteError(err, { route: 'v2/promo-codes/public' });
     return jsonOk([]);
   }
 }
