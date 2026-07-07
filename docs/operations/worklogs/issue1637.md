@@ -45,7 +45,14 @@
 - 導遊端 `/guide/redeem`（掃 QR＋短碼雙模式）＋`POST /api/v2/guide/redeem/by-code`（ownership 先於比對）＋db-redeem 擴充；guide 導航加「憑證核銷」。
 - `/admin/help/payments-refunds` 加「⓪ 全鏈流程總覽」（9 步自動/手動備援＋卡單排查）、修正 ② 過時步驟；ops doc 同步；訂單管理狀態說明前輪已補。
 - 證據：12 新測試綠；dev server HTTP 實測 5/5；全套 4495/4495＋typecheck 綠（commit 3124e80）。
-- 待 PR CI 綠後 merge → Vercel 部署到正式站。
+- PR #1644 CI 全綠（2026-07-07 00:17 UTC，鐵律 6 證據）：
+  - test：https://github.com/smallwei0301/tour-platform/actions/runs/28832149404/job/85508121613（success）
+  - smoke：https://github.com/smallwei0301/tour-platform/actions/runs/28832149402/job/85508121688（success）
+  - scan：https://github.com/smallwei0301/tour-platform/actions/runs/28832149420/job/85508121778（success）
+  - probe：https://github.com/smallwei0301/tour-platform/actions/runs/28832149455/job/85508121987（success）
+  - migration static＋drift detection：https://github.com/smallwei0301/tour-platform/actions/runs/28832149422（success×2）
+  - Vercel preview：Ready
+- CI 綠燈確認後 squash-merge → Vercel 自動部署 main 至正式站。
 
 ## 下一步
 1. 等 owner 拍板 P0 修復路線（A：新 6-arg migration 納 auto-confirm＋order paid→confirmed；B：sweep/redeem 改認 paid）——套用需當輪 `SQL-OVERRIDE` 授權＋ledger 補登。
