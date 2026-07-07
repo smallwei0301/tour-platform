@@ -116,7 +116,7 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
       </Link>
 
       {/* 保護提示 */}
-      <p className="sib-guard"><LockIcon size={14} /> 您的資料將受到妥善保護，僅用於預約聯繫</p>
+      <p className="sib-guard"><LockIcon size={10} /> 您的資料將受到妥善保護，僅用於預約聯繫</p>
     </main>
   );
 }
