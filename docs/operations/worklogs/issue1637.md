@@ -41,6 +41,12 @@
   - 20:20 寫入 `.claude/state/sql-override` → 20:21:57 `apply_migration` 成功（sql-audit.log 有紀錄）→ 20:25 pg_proc SELECT 驗證：**唯一 6-arg overload**、`has_booking_type`/`has_amount_check`/`has_order_final_status` 皆 true → 隨即刪除 override 檔（消耗式）。
   - 影響：僅函式 DDL，零資料列變動。ledger 已補 verified record；全套 npm test **4483/4483 綠**（ledger gate 復綠）。
 
+## 第三輪（2026-07-07）：導遊核銷頁＋help 頁全鏈流程
+- 導遊端 `/guide/redeem`（掃 QR＋短碼雙模式）＋`POST /api/v2/guide/redeem/by-code`（ownership 先於比對）＋db-redeem 擴充；guide 導航加「憑證核銷」。
+- `/admin/help/payments-refunds` 加「⓪ 全鏈流程總覽」（9 步自動/手動備援＋卡單排查）、修正 ② 過時步驟；ops doc 同步；訂單管理狀態說明前輪已補。
+- 證據：12 新測試綠；dev server HTTP 實測 5/5；全套 4495/4495＋typecheck 綠（commit 3124e80）。
+- 待 PR CI 綠後 merge → Vercel 部署到正式站。
+
 ## 下一步
 1. 等 owner 拍板 P0 修復路線（A：新 6-arg migration 納 auto-confirm＋order paid→confirmed；B：sweep/redeem 改認 paid）——套用需當輪 `SQL-OVERRIDE` 授權＋ledger 補登。
 2. P1-1/P1-2 callback 加金額比對＋憑證 fail-closed（動到凍結區 `app/api/payments/**`，需 `P0-OVERRIDE` 授權）。
