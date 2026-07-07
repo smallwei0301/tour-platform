@@ -26,7 +26,7 @@ const DB_LIB = join(__dirname, '../../src/lib/db.mjs');
 const REFUND_EXECUTE = join(__dirname, '../../src/lib/refund-execute.ts');
 const ADMIN_ROUTE = join(
   __dirname,
-  '../../app/api/admin/orders/[orderId]/refund-execute/route.ts'
+  '../../app/api/v2/admin/orders/[orderId]/refund-execute/route.ts'
 );
 
 let migrationSrc;

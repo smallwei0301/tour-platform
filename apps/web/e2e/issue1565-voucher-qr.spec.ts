@@ -6,7 +6,7 @@ import { test, expect, setTravelerSession } from './helpers';
 const ORDER_ID = 'ord_qr_1565';
 
 function mockOrderDetail(page: import('@playwright/test').Page, status: string, withVoucher: boolean) {
-  return page.route(`**/api/me/orders/${ORDER_ID}**`, async (route) => {
+  return page.route(`**/api/v2/orders/${ORDER_ID}**`, async (route) => {
     if (route.request().method() !== 'GET') return route.fallback();
     const data: Record<string, unknown> = {
       id: ORDER_ID, status, totalTwd: 4000, title: '柴山探洞體驗', peopleCount: 2,
@@ -24,7 +24,7 @@ function mockOrderDetail(page: import('@playwright/test').Page, status: string, 
 test.describe('Issue #1565 — 旅客電子憑證 QR', () => {
   test.beforeEach(async ({ page }) => {
     await setTravelerSession(page);
-    await page.route('**/api/me/orders/*/messages**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) }));
+    await page.route('**/api/v2/orders/*/messages**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) }));
   });
 
   test('T1565.1 — confirmed 訂單顯示 QR＋短碼＋出示說明', async ({ page }) => {

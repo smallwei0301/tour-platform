@@ -20,12 +20,12 @@ const DASHBOARD_ROUTE = path.join(
 
 const BOOKINGS_ROUTE = path.join(
   ROOT,
-  'app/api/guide/bookings/route.ts'
+  'app/api/v2/guide/bookings/route.ts'
 );
 
 const BOOKING_DETAIL_ROUTE = path.join(
   ROOT,
-  'app/api/guide/bookings/[bookingId]/route.ts'
+  'app/api/v2/guide/bookings/[bookingId]/route.ts'
 );
 
 test('guide dashboard route exists', () => {

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const appDir = join(here, '..', '..', 'app', 'api', 'admin', 'orders', '[orderId]');
+const appDir = join(here, '..', '..', 'app', 'api', 'v2', 'admin', 'orders', '[orderId]');
 
 function read(rel) {
   return readFileSync(join(appDir, rel), 'utf8');

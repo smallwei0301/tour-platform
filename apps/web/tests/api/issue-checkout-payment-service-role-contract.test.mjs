@@ -31,7 +31,7 @@ const APP = join(__dirname, '../../app');
 // service_role-only payment tables through a service-role client.
 const ROUTES = [
   'api/v2/bookings/[bookingId]/checkout/route.ts',
-  'api/admin/orders/[orderId]/timeline/route.ts',
+  'api/v2/admin/orders/[orderId]/timeline/route.ts',
   'api/v2/admin/pos/orders/[orderId]/additional-payment/route.ts',
   'api/v2/admin/pos/bookings/[bookingId]/route.ts',
   'api/v2/admin/pos/bookings/[bookingId]/manual-payment/route.ts',

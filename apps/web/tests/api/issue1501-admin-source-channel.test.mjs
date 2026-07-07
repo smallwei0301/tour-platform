@@ -68,7 +68,7 @@ test('source-contract：listAdminOrdersDb 查 orders.source_channel 並支援 so
 });
 
 test('source-contract：/api/admin/orders route 透傳 sourceChannel 查詢參數', () => {
-  const route = read('apps/web/app/api/admin/orders/route.ts');
+  const route = read('apps/web/app/api/v2/admin/orders/route.ts');
   assert.match(route, /searchParams\.get\(\s*['"]sourceChannel['"]\s*\)/, 'route 需讀取 sourceChannel 參數');
   assert.match(route, /listAdminOrdersDb\(\{[^}]*sourceChannel[^}]*\}\)/, 'route 需把 sourceChannel 傳入 gateway');
 });

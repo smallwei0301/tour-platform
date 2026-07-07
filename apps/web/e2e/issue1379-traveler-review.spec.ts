@@ -31,7 +31,7 @@ function orderBody(status: string) {
 test.describe('issue1379 traveler review', () => {
   test('completed 訂單：?review=1 自動展開表單 → 送出 → 顯示等候審核', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}**`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}**`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('completed')) });
     });
 
@@ -63,7 +63,7 @@ test.describe('issue1379 traveler review', () => {
 
   test('非 completed（paid）訂單：無撰寫評價入口，顯示完成後提示', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}**`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}**`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('paid')) });
     });
 

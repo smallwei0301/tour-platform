@@ -29,7 +29,7 @@ const ORDERS = [
 test.describe('my orders payment deadline (#1493)', () => {
   test('shows deadline + pay-now for unpaid, and auto-cancelled label for expired', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route('**/api/me/orders', async (route) => {
+    await page.route('**/api/v2/orders', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: ORDERS }) });
     });
 

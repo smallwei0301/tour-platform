@@ -86,7 +86,7 @@ test.describe('會員中心：問答回覆 + 個人資料區域', () => {
       if (calls >= 2) await new Promise((res) => setTimeout(res, 3000));
       await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: QA }) });
     });
-    await page.route('**/api/me/orders**', (r: Route) =>
+    await page.route('**/api/v2/orders**', (r: Route) =>
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) }),
     );
 

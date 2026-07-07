@@ -13,7 +13,7 @@ const ORDERS = [
 
 test.beforeEach(async ({ page }) => {
   await setTravelerSession(page);
-  await page.route('**/api/me/orders**', (route: Route) =>
+  await page.route('**/api/v2/orders**', (route: Route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: ORDERS }) })
   );
 });

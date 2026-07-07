@@ -56,11 +56,16 @@ describe('AC1: app/me/wishlist/page.tsx — DELETE wishlist item includes CSRF h
 });
 
 // ---------------------------------------------------------------------------
-// AC2 — src/lib/client-api.ts
+// AC2 — 旅客退款申請 POST 帶 CSRF header
+// #1649：client-api.ts 的 createRefundRequest 死碼 helper 已移除，
+// 現行唯一呼叫點是訂單詳情頁（POST /api/v2/orders/.../refund-requests），
+// 契約意圖不變：退款申請 POST 必須帶 csrfHeaders。
 // ---------------------------------------------------------------------------
-describe('AC2: src/lib/client-api.ts — POST refund-request includes CSRF header', () => {
+describe('AC2: 訂單詳情頁 — POST refund-request includes CSRF header', () => {
+  const PAGE = 'app/me/orders/[orderId]/page.tsx';
+
   it('imports csrfHeaders from csrf-client', () => {
-    const src = readFile('src/lib/client-api.ts');
+    const src = readFile(PAGE);
     assert.match(
       src,
       /import\s*\{[^}]*csrfHeaders[^}]*\}\s*from\s*['"][^'"]*csrf-client['"]/,
@@ -68,16 +73,16 @@ describe('AC2: src/lib/client-api.ts — POST refund-request includes CSRF heade
     );
   });
 
-  it('POST fetch to /api/me/orders/.../refund-requests uses csrfHeaders', () => {
-    const src = readFile('src/lib/client-api.ts');
-    const hasPostWithCsrf =
-      /method:\s*['"]POST['"][\s\S]{0,300}csrfHeaders\s*\(/m.test(src) ||
-      /csrfHeaders\s*\([\s\S]{0,300}method:\s*['"]POST['"]/m.test(src);
-    assert.ok(hasPostWithCsrf, 'POST fetch to refund-requests must use csrfHeaders(...)');
+  it('POST fetch to /api/v2/orders/.../refund-requests uses csrfHeaders', () => {
+    const src = readFile(PAGE);
+    const refundBlock = src.match(/refund-requests`,\s*\{[\s\S]{0,300}?\}\);/);
+    assert.ok(refundBlock, 'refund-requests POST fetch must exist in order detail page');
+    assert.match(refundBlock[0], /method:\s*['"]POST['"]/, 'refund-requests fetch must be POST');
+    assert.match(refundBlock[0], /csrfHeaders\s*\(/, 'POST fetch to refund-requests must use csrfHeaders(...)');
   });
 
   it('csrfHeaders wraps content-type for refund-request POST', () => {
-    const src = readFile('src/lib/client-api.ts');
+    const src = readFile(PAGE);
     assert.match(
       src,
       /csrfHeaders\s*\(\s*\{[^}]*content-type[^}]*\}\s*\)/,

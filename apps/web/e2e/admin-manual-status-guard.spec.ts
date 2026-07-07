@@ -22,13 +22,13 @@ const order: OrderFixture = {
 };
 
 async function stubOrders(page: Page) {
-  await page.route('**/api/admin/orders**', async (route) => {
+  await page.route('**/api/v2/admin/orders**', async (route) => {
     const path = new URL(route.request().url()).pathname;
     const json = (s: number, b: unknown) => route.fulfill({ status: s, contentType: 'application/json', body: JSON.stringify(b) });
     if (/\/audit-logs$/.test(path)) return json(200, { ok: true, data: [] });
     if (/\/timeline$/.test(path)) return json(200, { ok: true, data: { timeline: [] } });
     if (/\/messages$/.test(path)) return json(200, { ok: true, data: { messages: [] } });
-    if (/\/api\/admin\/orders\/[^/]+$/.test(path)) return json(200, { ok: true, data: order });
+    if (/\/api\/v2\/admin\/orders\/[^/]+$/.test(path)) return json(200, { ok: true, data: order });
     return json(200, { ok: true, data: [order] });
   });
 }
@@ -36,7 +36,7 @@ async function stubOrders(page: Page) {
 test('訂單詳情狀態下拉：取消／退款中／已退款 選項被停用，並顯示防呆提示', async ({ authedPage: page }) => {
   await stubOrders(page);
   await page.goto('/admin/orders');
-  await page.waitForResponse((r) => r.url().includes('/api/admin/orders') && r.status() === 200, { timeout: 30000 });
+  await page.waitForResponse((r) => r.url().includes('/api/v2/admin/orders') && r.status() === 200, { timeout: 30000 });
   await page.getByText(order.title).first().click();
   await expect(page.locator('[data-guide="order-detail"]')).toContainText(order.contactEmail, { timeout: 30000 });
 
@@ -52,11 +52,11 @@ test('訂單詳情狀態下拉：取消／退款中／已退款 選項被停用�
 });
 
 test('退款管理頁顯示 ECPay／現金退款流程說明，並連到完整說明頁', async ({ authedPage: page }) => {
-  await page.route('**/api/admin/refund-requests**', async (route) =>
+  await page.route('**/api/v2/admin/refund-requests**', async (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) }),
   );
   await page.goto('/admin/refunds');
-  await page.waitForResponse((r) => r.url().includes('/api/admin/refund-requests') && r.status() === 200, { timeout: 30000 });
+  await page.waitForResponse((r) => r.url().includes('/api/v2/admin/refund-requests') && r.status() === 200, { timeout: 30000 });
 
   const help = page.locator('[data-guide="refund-flow-help"]');
   await expect(help).toBeVisible();

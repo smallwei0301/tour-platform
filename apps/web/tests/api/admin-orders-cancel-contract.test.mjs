@@ -14,7 +14,7 @@ import { join, dirname } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CANCEL_ROUTE = join(
   __dirname,
-  '../../app/api/admin/orders/[orderId]/cancel/route.ts'
+  '../../app/api/v2/admin/orders/[orderId]/cancel/route.ts'
 );
 const DB_LIB = join(__dirname, '../../src/lib/db.mjs');
 

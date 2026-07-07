@@ -120,7 +120,7 @@ export default function GuideDashboardPage() {
     setPayoutLoading(true);
     setPayoutDetail(null);
     try {
-      const res = await fetch(`/api/guide/payout/monthly?month=${month}`);
+      const res = await fetch(`/api/v2/guide/payout/monthly?month=${month}`);
       const json = await res.json();
       if (json.ok) setPayoutDetail(json.data);
     } finally {
@@ -133,7 +133,7 @@ export default function GuideDashboardPage() {
     setScheduleBookings([]);
     setScheduleBookingsLoading(true);
     try {
-      const res = await fetch(`/api/guide/bookings?scheduleId=${s.id}`);
+      const res = await fetch(`/api/v2/guide/bookings?scheduleId=${s.id}`);
       const json = await res.json();
       setScheduleBookings(json?.data || []);
     } finally {
@@ -552,7 +552,7 @@ export default function GuideDashboardPage() {
           <>
             {payoutDetail && payoutDetail.orders.length > 0 && (
               <a
-                href={`/api/guide/payout/monthly/csv?month=${payoutModal}`}
+                href={`/api/v2/guide/payout/monthly/csv?month=${payoutModal}`}
                 download
                 style={{ padding:'7px 14px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:8, fontSize:12, color:'#16a34a', textDecoration:'none' }}
               >

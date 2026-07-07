@@ -48,7 +48,7 @@ describe('settlement rules alignment', () => {
   });
 
   it('guide payout JSON and CSV routes calculate from effective amount after refunds', () => {
-    for (const path of ['app/api/guide/payout/monthly/route.ts', 'app/api/guide/payout/monthly/csv/route.ts']) {
+    for (const path of ['app/api/v2/guide/payout/monthly/route.ts', 'app/api/v2/guide/payout/monthly/csv/route.ts']) {
       const route = src(path);
       assert.match(route, /refund_amount_twd/, `${path} must query refund amounts`);
       assert.match(route, /effectiveTwd/, `${path} must compute effectiveTwd`);

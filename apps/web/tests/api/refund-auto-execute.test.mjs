@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 describe('refund auto-execute', () => {
-  const routeSrc = readFileSync('app/api/me/orders/[orderId]/refund-requests/route.ts', 'utf8')
+  const routeSrc = readFileSync('app/api/v2/orders/[orderId]/refund-requests/route.ts', 'utf8')
   const execSrc = readFileSync('src/lib/refund-execute.ts', 'utf8')
 
   it('REFUND_AUTO_EXECUTE flag defaults to false (not true hardcoded)', () => {

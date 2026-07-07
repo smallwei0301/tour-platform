@@ -13,7 +13,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const routeDir = join(__dirname, '../../app/api/guide/payout/monthly');
+const routeDir = join(__dirname, '../../app/api/v2/guide/payout/monthly');
 
 const monthlySource = readFileSync(join(routeDir, 'route.ts'), 'utf8');
 const csvSource = readFileSync(join(routeDir, 'csv/route.ts'), 'utf8');
