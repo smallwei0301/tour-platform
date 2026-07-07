@@ -74,6 +74,14 @@
       "applied_at": "2026-07-05T17:56:13+08:00",
       "status": "verified",
       "note": "#1592 評論互動：activity_reviews 增 guide_reply_text / guide_reply_at（導遊回覆）。owner 套用；agent 以 information_schema 驗證兩欄 present=true。讀取端有 42703 fail-soft。rollback：同名 .rollback.sql。Refs #1592 #1293。"
+    },
+    {
+      "filename": "20260707081500_rls_preflight_scan_rpc.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「授權代跑」）套用＋驗證",
+      "applied_at": "2026-07-07T12:44:00+08:00",
+      "status": "verified",
+      "note": "新增唯讀 SECURITY DEFINER RPC public.rls_preflight_scan()（列 public 全表 RLS 狀態＋anon/authenticated/PUBLIC 寫入權），供 rls-grants-preflight 掃全表。apply_migration success；驗證 proname 存在、prosecdef=true、search_path pinned；執行回傳 66 表。掃描發現 4 表（activity_addons/order_addons/user_notifications/user_points_ledger）有 anon 寫入 grant（#1563 後新表回歸，待另案收斂）。rollback：同名 .rollback.sql（drop function）。Refs #1293。"
     }
   ]
 }

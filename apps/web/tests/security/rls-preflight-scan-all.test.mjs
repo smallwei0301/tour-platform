@@ -31,6 +31,17 @@ describe('classifyScanRow（純函式）', () => {
     assert.deepEqual(v[0].grantees, ['anon']);
   });
 
+  it('只有 authenticated 寫入權 → 無違規（Supabase 標準模型，RLS 限制；敏感表另由 checkGrants 覆蓋）', () => {
+    const v = classifyScanRow({ table_name: 'orders', rls_enabled: true, forbidden_write_grantees: ['authenticated'] });
+    assert.equal(v.length, 0);
+  });
+
+  it('anon＋authenticated → 只標 anon', () => {
+    const v = classifyScanRow({ table_name: 'order_addons', rls_enabled: true, forbidden_write_grantees: ['anon', 'authenticated'] });
+    assert.equal(v.length, 1);
+    assert.deepEqual(v[0].grantees, ['anon']);
+  });
+
   it('RLS 開啟且無 anon 寫入 → 無違規', () => {
     const v = classifyScanRow({ table_name: 'orders', rls_enabled: true, forbidden_write_grantees: [] });
     assert.equal(v.length, 0);

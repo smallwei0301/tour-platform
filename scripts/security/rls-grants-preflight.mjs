@@ -62,10 +62,15 @@ const PUBLIC_READ_TABLES = [
   'soft_launch_controls', 'soft_launch_whitelist',
 ];
 
+// scan-all 的寫入違規只認「公開角色」anon/PUBLIC——它們絕不該有任何寫入權（#1563 威脅模型）。
+// authenticated 對多數表有 write grant 是 Supabase 標準模型（真正的限制在 RLS policy），
+// 全標會變成雜訊；而敏感表的 authenticated 寫入已由 checkGrants（SENSITIVE_TABLES）覆蓋。
+const NEVER_WRITE_ROLES = ['anon', 'PUBLIC'];
+
 /**
  * 純函式（可離線單測）：把 rls_preflight_scan 回傳的一列，判成 0..N 個違規。
  *   - rls_enabled=false → rls_disabled（該表沒開 RLS，policy 檢查形同虛設）
- *   - forbidden_write_grantees 非空 → broad_write_grant（anon/authenticated/PUBLIC 有寫入權）
+ *   - anon/PUBLIC 有寫入權 → broad_write_grant（authenticated 不計，見上）
  */
 export function classifyScanRow(row) {
   const violations = [];
@@ -74,8 +79,9 @@ export function classifyScanRow(row) {
     violations.push({ table, violation: 'rls_disabled' });
   }
   const writeGrantees = Array.isArray(row?.forbidden_write_grantees) ? row.forbidden_write_grantees : [];
-  if (writeGrantees.length > 0) {
-    violations.push({ table, grantees: writeGrantees, violation: 'broad_write_grant' });
+  const publicWrite = writeGrantees.filter((g) => NEVER_WRITE_ROLES.includes(g));
+  if (publicWrite.length > 0) {
+    violations.push({ table, grantees: publicWrite, violation: 'broad_write_grant' });
   }
   return violations;
 }
