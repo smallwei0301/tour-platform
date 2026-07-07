@@ -3,7 +3,7 @@ import type { Route } from '@playwright/test';
 
 /**
  * Issue #1381 — Promo code 旅客端曝光：活動頁 banner + checkout 一鍵套用。
- * /api/promo-codes/public 與 /validate 以 page.route mock；活動資料用
+ * /api/v2/promo-codes/public 與 /validate 以 page.route mock；活動資料用
  * in-memory fixture（kaohsiung-chaishan-cave-experience，priceTwd 2000）。
  */
 
@@ -16,7 +16,7 @@ const PUBLIC_PROMOS = {
 
 test.describe('issue1381 promo exposure', () => {
   test('活動頁顯示公開促銷碼 banner（label + code）', async ({ page }) => {
-    await page.route('**/api/promo-codes/public**', async (route: Route) => {
+    await page.route('**/api/v2/promo-codes/public**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PUBLIC_PROMOS) });
     });
 
@@ -28,7 +28,7 @@ test.describe('issue1381 promo exposure', () => {
   });
 
   test('無公開碼時活動頁不渲染 banner', async ({ page }) => {
-    await page.route('**/api/promo-codes/public**', async (route: Route) => {
+    await page.route('**/api/v2/promo-codes/public**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) });
     });
 
@@ -39,7 +39,7 @@ test.describe('issue1381 promo exposure', () => {
 
   test('checkout 一鍵套用：點公開碼 → 輸入框帶入 → 折扣金額顯示', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route('**/api/promo-codes/public**', async (route: Route) => {
+    await page.route('**/api/v2/promo-codes/public**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PUBLIC_PROMOS) });
     });
 

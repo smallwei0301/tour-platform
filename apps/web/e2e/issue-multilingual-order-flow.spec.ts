@@ -3,7 +3,7 @@ import type { Route, Page } from '@playwright/test';
 
 /**
  * #multilingual — /order/success 與 /order/pay 的中英 i18n smoke（真實瀏覽器、backend mock）。
- * 兩頁皆讀 /api/me/orders/{orderId}?contactEmail=... 的 { data }；語言由 NEXT_LOCALE cookie 驅動。
+ * 兩頁皆讀 /api/v2/orders/{orderId}?contactEmail=... 的 { data }；語言由 NEXT_LOCALE cookie 驅動。
  * /order/success 是 V2 booking 送出後的 live 落地頁。
  */
 
@@ -21,7 +21,7 @@ const ORDER = {
 };
 
 async function mockOrder(page: Page, status = 'pending_payment') {
-  await page.route(`**/api/me/orders/${ORDER_ID}**`, async (route: Route) => {
+  await page.route(`**/api/v2/orders/${ORDER_ID}**`, async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { ...ORDER, status } }) });
   });
   await page.route('**/api/me/csrf', async (route: Route) => {

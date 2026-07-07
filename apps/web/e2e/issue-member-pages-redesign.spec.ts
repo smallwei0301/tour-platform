@@ -25,7 +25,7 @@ function darkText(rgb: string) {
 test.describe('會員中心 UI 重做（深綠主題一致）', () => {
   test('我的訂單：深綠主題 + serif 標題 + tp-card 卡片 + 分頁', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route('**/api/me/orders**', async (route: Route) => {
+    await page.route('**/api/v2/orders**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ORDERS }) });
     });
 
@@ -72,7 +72,7 @@ test.describe('會員中心 UI 重做（深綠主題一致）', () => {
   test('手機視窗：兩頁皆不水平溢出（不破框）', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await setTravelerSession(page);
-    await page.route('**/api/me/orders**', async (route: Route) => {
+    await page.route('**/api/v2/orders**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ORDERS }) });
     });
     await page.route('**/api/me/wishlist', async (route: Route) => {

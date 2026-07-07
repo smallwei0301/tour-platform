@@ -47,10 +47,10 @@ test.describe('issue1383 reschedule', () => {
     let orderStatus = 'paid';
     let submittedPayload: Record<string, unknown> | null = null;
 
-    await page.route(`**/api/me/orders/${ORDER_ID}/reschedule-options**`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}/reschedule-options**`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OPTIONS) });
     });
-    await page.route(`**/api/me/orders/${ORDER_ID}/reschedule-requests`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}/reschedule-requests`, async (route: Route) => {
       submittedPayload = route.request().postDataJSON();
       orderStatus = 'reschedule_requested';
       await route.fulfill({
@@ -59,7 +59,7 @@ test.describe('issue1383 reschedule', () => {
         body: JSON.stringify({ ok: true, data: { id: REQ_ID, status: 'requested', orderStatus } }),
       });
     });
-    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody(orderStatus)) });
     });
 
@@ -82,7 +82,7 @@ test.describe('issue1383 reschedule', () => {
 
   test('traveler：completed 訂單不顯示改期入口', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('completed')) });
     });
 
@@ -93,7 +93,7 @@ test.describe('issue1383 reschedule', () => {
 
   test('traveler：距活動 <168h（7 天）→ 無改期入口、顯示聯絡客服提示', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('paid', nearFutureStart)) });
     });
 

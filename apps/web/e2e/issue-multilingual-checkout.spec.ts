@@ -22,7 +22,7 @@ async function mockCheckout(page: Page) {
   await page.route(`**/api/activities/${SLUG}`, async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ACTIVITY }) });
   });
-  await page.route('**/api/promo-codes/public', async (route: Route) => {
+  await page.route('**/api/v2/promo-codes/public', async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
   });
   await page.route('**/api/me/profile', async (route: Route) => {
