@@ -211,9 +211,10 @@ describe('Issue 448 Payouts — Admin UI page contract', () => {
     assert.ok(routeExists(PAGE), `${PAGE} must exist`);
   });
 
-  it('fetches from /api/admin/payouts', () => {
+  it('fetches from /api/v2/admin/payouts', () => {
+    // #1649：admin UI 全面改走 /api/v2/admin/**（v2 route re-export legacy handler）
     const src = readRoute(PAGE);
-    assert.match(src, /\/api\/admin\/payouts/, 'Page must fetch from /api/admin/payouts');
+    assert.match(src, /\/api\/v2\/admin\/payouts/, 'Page must fetch from /api/v2/admin/payouts');
   });
 
   it('has confirm button (data-guide="payout-confirm" or confirm pattern)', () => {

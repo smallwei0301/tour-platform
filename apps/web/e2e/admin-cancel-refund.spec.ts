@@ -29,7 +29,7 @@ type OrderFixture = {
 };
 
 /**
- * 統一攔截所有 /api/admin/orders** 端點，依路徑＋method 分派。
+ * 統一攔截所有 /api/v2/admin/orders** 端點，依路徑＋method 分派。
  * cancelResponse / refundResponse 可注入成功或失敗回應。
  */
 async function stubOrders(
@@ -42,7 +42,7 @@ async function stubOrders(
 ) {
   const captured: { cancel?: string; refund?: string } = {};
 
-  await page.route('**/api/admin/orders**', async (route) => {
+  await page.route('**/api/v2/admin/orders**', async (route) => {
     const req = route.request();
     const url = new URL(req.url());
     const path = url.pathname;
@@ -74,12 +74,12 @@ async function stubOrders(
       return json(r.status, r.body);
     }
 
-    // 訂單詳情：/api/admin/orders/{id}
+    // 訂單詳情：/api/v2/admin/orders/{id}
     if (/\/api\/admin\/orders\/[^/]+$/.test(path)) {
       return json(200, { ok: true, data: order });
     }
 
-    // 清單：/api/admin/orders
+    // 清單：/api/v2/admin/orders
     return json(200, { ok: true, data: [order] });
   });
 
@@ -104,7 +104,7 @@ const baseOrder: OrderFixture = {
 
 async function openDetail(page: Page, order: OrderFixture) {
   await page.goto('/admin/orders');
-  await page.waitForResponse((r) => r.url().includes('/api/admin/orders') && r.status() === 200, { timeout: 30000 });
+  await page.waitForResponse((r) => r.url().includes('/api/v2/admin/orders') && r.status() === 200, { timeout: 30000 });
   await page.getByText(order.title).first().click();
   await expect(page.locator('[data-guide="order-detail"]')).toContainText(order.contactEmail, { timeout: 30000 });
 }

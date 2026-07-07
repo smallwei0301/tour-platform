@@ -40,6 +40,29 @@
 - **證據**：`run-checks.sh --typecheck` 綠（94 tests＋tsc）；新契約測試
   `tests/api/issue1649-v2-traveler-orders-contract.test.mjs` 14/14。
 
+### Phase 3+4+5（非凍結）— admin/guide/補付 v2 命名空間接線（本 commit）
+- **單一實作策略（strangler）**：v2 route＝殼，委派 legacy handler——零行為漂移、
+  envelope/錯誤碼全等；legacy 退役（Phase 6）時實作整體搬遷。
+  - Admin 20 殼（orders 全套 9＋refund-requests 6＋payouts 5）：純 re-export；
+    auth+CSRF 由 middleware 對 /api/v2/admin/**（matcher 已涵蓋）施加與 legacy 相同規則。
+    refund-execute（518 行、10 個測試檔鎖原始碼）因此完全不複製、不分岔。
+  - Guide 10 殼：GET re-export（payout 兩支含 dynamic）；寫入三支（approval／order
+    messages POST／reschedule decision）middleware 不涵蓋 /api/v2/guide → 殼內顯式
+    validateCsrf 再委派 legacy POST。
+  - Payments：`POST /api/v2/payments/ecpay/create` re-export 凍結區 handler
+    （只 import 不修改）；/order/pay 頁切 v2（detail＋create 兩呼叫）。
+- UI 切換：admin orders/refunds/payouts/ops-orders 四頁、guide bookings/dashboard
+  （payout+bookings 呼叫）/messages/reschedules 四頁——全域 grep 前端零 legacy 命中
+  （guide/dashboard 的 /api/guide/dashboard 與 /api/guide/qa 不在 #1649 範圍清單，保留）。
+- e2e mocks 同步：admin 8 specs＋guide 5 specs（受保護 booking-flow-validation 直打
+  legacy API、legacy 保留故不受影響，未觸碰）。
+- 測試基建修復（cwd 依賴 → WEB_ROOT）：guide-payout-csv-contract、
+  issue1411-order-messages-routes；頁面 URL 斷言更新：issue448-payouts、
+  issue1365-admin-payout-manual-fallback、guide-payout-monthly-contract。
+- 新契約測試：`issue1649-v2-admin-guide-namespace-contract.test.mjs`（殼委派＋CSRF＋
+  頁面零 legacy，4 tests 全綠）。
+- **證據**：`run-checks.sh --typecheck` 綠（14 檔測試＋tsc）。
+
 ### 待辦
 - [ ] Phase 3：admin orders/refunds/payouts v2 化＋三頁 UI 切換＋POS 四支接 UI
 - [ ] Phase 4：guide bookings/payout/messages/reschedules v2 化

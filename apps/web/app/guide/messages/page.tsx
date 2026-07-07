@@ -48,7 +48,7 @@ export default function GuideMessagesPage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch('/api/guide/messages', { cache: 'no-store' });
+      const res = await fetch('/api/v2/guide/messages', { cache: 'no-store' });
       if (res.status === 401) {
         setErr('請先登入嚮導帳號');
         return;
@@ -77,7 +77,7 @@ export default function GuideMessagesPage() {
     setReply('');
     setReplyErr(null);
     try {
-      const res = await fetch(`/api/guide/orders/${encodeURIComponent(orderId)}/messages`, { cache: 'no-store' });
+      const res = await fetch(`/api/v2/guide/orders/${encodeURIComponent(orderId)}/messages`, { cache: 'no-store' });
       const j = await res.json();
       setOpenMessages(Array.isArray(j?.data?.messages) ? j.data.messages : []);
       setOpenCanPost(Boolean(j?.data?.canPost));
@@ -92,7 +92,7 @@ export default function GuideMessagesPage() {
     setSending(true);
     setReplyErr(null);
     try {
-      const res = await fetch(`/api/guide/orders/${encodeURIComponent(openOrderId)}/messages`, {
+      const res = await fetch(`/api/v2/guide/orders/${encodeURIComponent(openOrderId)}/messages`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ body: reply.trim() }),
@@ -101,7 +101,7 @@ export default function GuideMessagesPage() {
       if (!res.ok || j.error) throw new Error(j.error?.message || '回覆失敗');
       setReply('');
       // 重新整理展開中的串與清單旗標
-      const detail = await fetch(`/api/guide/orders/${encodeURIComponent(openOrderId)}/messages`, { cache: 'no-store' });
+      const detail = await fetch(`/api/v2/guide/orders/${encodeURIComponent(openOrderId)}/messages`, { cache: 'no-store' });
       const dj = await detail.json();
       setOpenMessages(Array.isArray(dj?.data?.messages) ? dj.data.messages : []);
       await load();

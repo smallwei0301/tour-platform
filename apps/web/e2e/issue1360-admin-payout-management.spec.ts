@@ -30,7 +30,7 @@ async function installPayoutRoutes(page: Page) {
   let p1Confirmed = false;
   const confirmPosts: Array<{ body: Record<string, unknown>; headers: Record<string, string> }> = [];
 
-  await page.route('**/api/admin/payouts', async (route: Route) => {
+  await page.route('**/api/v2/admin/payouts', async (route: Route) => {
     // List endpoint — reflects P1's state after confirmation.
     const rows = [
       p1Confirmed
@@ -42,7 +42,7 @@ async function installPayoutRoutes(page: Page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: rows }) });
   });
 
-  await page.route(`**/api/admin/payouts/${P1}/confirm`, async (route: Route) => {
+  await page.route(`**/api/v2/admin/payouts/${P1}/confirm`, async (route: Route) => {
     const req = route.request();
     confirmPosts.push({ body: (req.postDataJSON() as Record<string, unknown>) ?? {}, headers: req.headers() });
     p1Confirmed = true;
@@ -90,7 +90,7 @@ test('admin 出款管理: 完整流程 — 列表渲染 → 確認出款 → 狀
 });
 
 test('admin 出款管理: 空列表顯示完成提示', async ({ authedPage: page }) => {
-  await page.route('**/api/admin/payouts', async (route: Route) => {
+  await page.route('**/api/v2/admin/payouts', async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) });
   });
 

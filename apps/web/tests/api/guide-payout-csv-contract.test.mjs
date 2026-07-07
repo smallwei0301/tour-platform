@@ -1,9 +1,14 @@
 import { readFileSync } from 'node:fs'
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+// cwd 無關的路徑基準（run-checks.sh 從 repo root 跑、npm test 從 apps/web 跑皆可）
+const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 describe('guide payout CSV route contract', () => {
-  const src = readFileSync('app/api/guide/payout/monthly/csv/route.ts', 'utf8')
+  const src = readFileSync(path.join(WEB_ROOT, 'app/api/guide/payout/monthly/csv/route.ts'), 'utf8')
 
   it('only exports GET and dynamic', () => {
     assert.match(src, /export.*GET/)
@@ -32,7 +37,7 @@ describe('guide payout CSV route contract', () => {
 })
 
 describe('page wiring', () => {
-  const page = readFileSync('app/guide/dashboard/page.tsx', 'utf8')
+  const page = readFileSync(path.join(WEB_ROOT, 'app/guide/dashboard/page.tsx'), 'utf8')
   it('page has CSV download link', () => {
     assert.match(page, /payout\/monthly\/csv/)
   })

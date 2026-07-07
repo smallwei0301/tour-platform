@@ -123,9 +123,10 @@ test('page declares payoutModal state', () => {
   assert.match(src, /payoutModal/, 'payoutModal state not found in dashboard page');
 });
 
-test('page fetches /api/guide/payout/monthly', () => {
+test('page fetches /api/v2/guide/payout/monthly', () => {
+  // #1649：guide UI 全面改走 /api/v2/guide/**（v2 route re-export legacy handler）
   const src = readFileSync(DASHBOARD_PAGE, 'utf8');
-  assert.match(src, /\/api\/guide\/payout\/monthly/, '/api/guide/payout/monthly fetch not found in page');
+  assert.match(src, /\/api\/v2\/guide\/payout\/monthly/, '/api/v2/guide/payout/monthly fetch not found in page');
 });
 
 test('page has openPayoutDetail handler', () => {

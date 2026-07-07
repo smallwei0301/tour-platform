@@ -148,7 +148,7 @@ export default function GuideBookingsPage() {
   const detailDialogOpen = selected !== null || detailLoading;
 
   useEffect(() => {
-    fetch('/api/guide/bookings')
+    fetch('/api/v2/guide/bookings')
       .then((r) => r.json())
       .then((json) => setBookings(json?.data || []))
       .finally(() => setLoading(false));
@@ -159,7 +159,7 @@ export default function GuideBookingsPage() {
     setPendingLoading(true);
     setApprovalError('');
     try {
-      const res = await fetch('/api/guide/bookings/pending-approval', { cache: 'no-store' });
+      const res = await fetch('/api/v2/guide/bookings/pending-approval', { cache: 'no-store' });
       const json = await res.json();
       setPendingApprovals(Array.isArray(json?.data) ? json.data : []);
     } catch {
@@ -178,7 +178,7 @@ export default function GuideBookingsPage() {
     setActingApproval(bookingId);
     setApprovalError('');
     try {
-      const res = await fetch(`/api/guide/bookings/${encodeURIComponent(bookingId)}/approval`, {
+      const res = await fetch(`/api/v2/guide/bookings/${encodeURIComponent(bookingId)}/approval`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ action }),
@@ -199,7 +199,7 @@ export default function GuideBookingsPage() {
     detailRequestIdRef.current = requestId;
     setDetailLoading(true);
     try {
-      const res = await fetch(`/api/guide/bookings/${id}`);
+      const res = await fetch(`/api/v2/guide/bookings/${id}`);
       const json = await res.json();
       if (detailRequestIdRef.current !== requestId) return;
       if (json?.data) setSelected(json.data);

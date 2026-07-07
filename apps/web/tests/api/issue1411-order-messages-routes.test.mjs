@@ -7,11 +7,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const meSrc = readFileSync(path.resolve('app/api/me/orders/[orderId]/messages/route.ts'), 'utf8');
-const guideOrderSrc = readFileSync(path.resolve('app/api/guide/orders/[orderId]/messages/route.ts'), 'utf8');
-const guideListSrc = readFileSync(path.resolve('app/api/guide/messages/route.ts'), 'utf8');
-const adminSrc = readFileSync(path.resolve('app/api/admin/orders/[orderId]/messages/route.ts'), 'utf8');
+// cwd 無關的路徑基準（run-checks.sh 從 repo root 跑、npm test 從 apps/web 跑皆可）
+const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
+const meSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/me/orders/[orderId]/messages/route.ts'), 'utf8');
+const guideOrderSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/guide/orders/[orderId]/messages/route.ts'), 'utf8');
+const guideListSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/guide/messages/route.ts'), 'utf8');
+const adminSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/admin/orders/[orderId]/messages/route.ts'), 'utf8');
 
 test('me route: Supabase auth 在 gateway 之前；POST 順序 = auth → rate limit → create', () => {
   assert.match(meSrc, /supabase\.auth\.getUser\(\)/);

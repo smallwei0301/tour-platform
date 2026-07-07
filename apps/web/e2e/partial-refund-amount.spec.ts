@@ -21,7 +21,7 @@ const order: OrderFixture = {
 };
 
 async function stubOrders(page: Page, onRefundExecute: (body: unknown) => void) {
-  await page.route('**/api/admin/orders**', async (route) => {
+  await page.route('**/api/v2/admin/orders**', async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname;
     const json = (s: number, b: unknown) => route.fulfill({ status: s, contentType: 'application/json', body: JSON.stringify(b) });
@@ -43,7 +43,7 @@ test('退款中訂單：執行退款區塊顯示退款金額輸入框，部分�
   await stubOrders(page, (b) => { refundBody = b; });
 
   await page.goto('/admin/orders');
-  await page.waitForResponse((r) => r.url().includes('/api/admin/orders') && r.status() === 200, { timeout: 30000 });
+  await page.waitForResponse((r) => r.url().includes('/api/v2/admin/orders') && r.status() === 200, { timeout: 30000 });
   await page.getByText(order.title).first().click();
   await expect(page.locator('[data-guide="order-detail"]')).toContainText(order.contactEmail, { timeout: 30000 });
 
@@ -66,7 +66,7 @@ test('退款金額超過訂單總額：前端即時擋下，不打 API', async (
   await stubOrders(page, () => { called = true; });
 
   await page.goto('/admin/orders');
-  await page.waitForResponse((r) => r.url().includes('/api/admin/orders') && r.status() === 200, { timeout: 30000 });
+  await page.waitForResponse((r) => r.url().includes('/api/v2/admin/orders') && r.status() === 200, { timeout: 30000 });
   await page.getByText(order.title).first().click();
   await expect(page.locator('[data-guide="order-detail"]')).toContainText(order.contactEmail, { timeout: 30000 });
 

@@ -125,7 +125,7 @@ test.describe('issue1411 order messages', () => {
     const travelerMsg = { id: 'msg-t1', orderId: ORDER_ID, senderRole: 'traveler', senderId: 'wang', body: '請問有雨備方案嗎？', createdAt: '2026-06-11T08:00:00Z' };
     const guideReply = { id: 'msg-g2', orderId: ORDER_ID, senderRole: 'guide', senderId: 'guide-1411', body: '有的，雨天改走室內路線。', createdAt: '2026-06-11T09:00:00Z' };
 
-    await page.route('**/api/guide/messages', async (route: Route) => {
+    await page.route('**/api/v2/guide/messages', async (route: Route) => {
       const last = replied ? guideReply : travelerMsg;
       await route.fulfill({
         status: 200,
@@ -146,7 +146,7 @@ test.describe('issue1411 order messages', () => {
         }),
       });
     });
-    await page.route(`**/api/guide/orders/${ORDER_ID}/messages`, async (route: Route) => {
+    await page.route(`**/api/v2/guide/orders/${ORDER_ID}/messages`, async (route: Route) => {
       if (route.request().method() === 'POST') {
         postedBody = (route.request().postDataJSON() as { body?: string })?.body ?? null;
         replied = true;
