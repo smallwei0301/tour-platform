@@ -74,6 +74,14 @@
       "applied_at": "2026-07-05T17:56:13+08:00",
       "status": "verified",
       "note": "#1592 評論互動：activity_reviews 增 guide_reply_text / guide_reply_at（導遊回覆）。owner 套用；agent 以 information_schema 驗證兩欄 present=true。讀取端有 42703 fail-soft。rollback：同名 .rollback.sql。Refs #1592 #1293。"
+    },
+    {
+      "filename": "20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) SQL-OVERRIDE + Claude Code agent",
+      "applied_at": "2026-07-06T20:21:57+08:00",
+      "status": "verified",
+      "note": "經 Supabase MCP apply_migration 套用（owner 當輪 SQL-OVERRIDE 授權，sql-audit.log 有紀錄）。內容僅函式 DDL：DROP 4-arg overload＋重建 6-arg fn_process_payment_callback_atomic（booking_type auto-confirm、order 終態隨 booking_type、TradeAmt 金額驗證），不動任何資料列。rollback: 同名 .rollback.sql（還原 614 6-arg＋#195 4-arg）。驗證: pg_proc SELECT 確認唯一 6-arg overload 且 has_booking_type/has_amount_check/has_order_final_status 皆 true（verify-migrations-applied.mjs 為 table/column 探測，function 需以 SQL 驗證，SOP §3 註記情境）。Refs #1637。"
     }
   ]
 }
