@@ -113,6 +113,15 @@
 - [ ] main 既有 e2e 失敗 6 項另開 issue 追蹤
 - [ ] Admin POS 四支既有 v2 route 接 UI（API-first 現況維持，屬功能增項非串接切換）
 
+## PR/CI/merge 紀錄（鐵律 6 證據）
+- PR #1656（Phase 1–6＋callback 接線＋#1655 修復）→ **merged 2026-07-08 01:50 Asia/Taipei**，squash → main `da0ce2b`。
+- CI check-runs（head `af0672c`，全部 conclusion=success）：
+  - test：https://github.com/smallwei0301/tour-platform/actions/runs/28886029665/job/85686315305
+  - smoke：https://github.com/smallwei0301/tour-platform/actions/runs/28886029201/job/85686314047
+  - scan：https://github.com/smallwei0301/tour-platform/actions/runs/28886029217/job/85686314184
+  - Vercel Preview：Ready（af0672c）
+- #1655 已隨 merge 自動關閉（Closes 連結）。
+
 ## 刻意決策
 1. **order-scoped 而非 booking-scoped**：UI 全面以 orderId 操作；契約定義的
    `POST /api/v2/bookings/:id/cancel`／`reschedule-request` 改實作為
