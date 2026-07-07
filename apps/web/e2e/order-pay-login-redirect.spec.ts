@@ -10,6 +10,8 @@ test.describe('Order pay login redirect continuity', () => {
 
     await page.getByRole('button', { name: '前往登入' }).click();
 
-    await expect(page).toHaveURL(new RegExp(`/login\?redirectTo=.*orderId%3D${orderId}`));
+    // 修正（#1649 QA）：template literal 的 `\?` 會被 JS 字串層吃掉反斜線，
+    // regex 變成 `login?redirectTo`（n 成為 optional、`?` 字面遺失）→ 永不匹配。
+    await expect(page).toHaveURL(new RegExp(`/login\\?redirectTo=.*orderId%3D${orderId}`));
   });
 });

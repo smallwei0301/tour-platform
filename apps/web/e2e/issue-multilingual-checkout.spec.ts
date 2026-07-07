@@ -1,37 +1,18 @@
-import { test, expect, setTravelerSession } from './helpers';
-import type { Route, Page } from '@playwright/test';
+import { test, expect } from './helpers';
+import type { Page } from '@playwright/test';
 
 /**
- * #multilingual — /checkout（legacy fallback 結帳頁）的中英 i18n smoke（真實瀏覽器、backend mock）。
- * 語言由 NEXT_LOCALE cookie 驅動（useClientLocale）。
+ * #multilingual — /checkout 入口的中英 i18n smoke（真實瀏覽器）。
+ *
+ * 產品現況（#1407 legacy checkout 退役後）：`/checkout?slug=…` 由 next.config
+ * 永久重導（308）至 V2 booking 頁 `/booking/[slug]`；未帶 plan 參數時，V2 頁
+ * 顯示「缺少或無法判定方案參數」引導文案（i18n key `missingPlanParam`）。
+ * 本 spec 原測已退役的 legacy 結帳頁 UI（聯絡人資料／建立訂單），#1649 QA 時
+ * 改寫為鎖定現行契約：redirect 保留＋引導文案雙語正確。
+ * （完整 V2 訂購流程 i18n 由 issue-multilingual-order-flow 與 booking 系列涵蓋。）
  */
 
 const SLUG = 'kaohsiung-chaishan-cave-experience';
-
-const ACTIVITY = {
-  id: 'act-e2e',
-  title: '蘭嶼夜觀生態導覽',
-  priceTwd: 1600,
-  schedules: [
-    { id: 'sch-1', startAt: '2026-12-31T02:00:00Z', endAt: '2026-12-31T05:00:00Z', capacity: 10, bookedCount: 2, status: 'open' },
-  ],
-  plans: [],
-};
-
-async function mockCheckout(page: Page) {
-  await page.route(`**/api/activities/${SLUG}`, async (route: Route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ACTIVITY }) });
-  });
-  await page.route('**/api/v2/promo-codes/public', async (route: Route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
-  });
-  await page.route('**/api/me/profile', async (route: Route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: {} }) });
-  });
-  await page.route('**/api/me/csrf', async (route: Route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
-  });
-}
 
 async function setLocale(page: Page, locale: string) {
   await page.context().addCookies([
@@ -40,24 +21,19 @@ async function setLocale(page: Page, locale: string) {
 }
 
 test.describe('@multilingual /checkout i18n', () => {
-  test('zh-Hant', async ({ page }) => {
-    await setTravelerSession(page);
+  test('zh-Hant：/checkout 重導 V2 booking，未帶 plan 顯示繁中引導', async ({ page }) => {
     await setLocale(page, 'zh-Hant');
-    await mockCheckout(page);
     await page.goto(`/checkout?slug=${SLUG}`);
-    await expect(page.getByText('聯絡人資料')).toBeVisible();
-    await expect(page.getByRole('button', { name: '建立訂單' })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/booking/${SLUG}`));
+    await expect(page.getByText('缺少或無法判定方案參數')).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: 'test-results/checkout-zh.png', fullPage: true });
   });
 
-  test('en', async ({ page }) => {
-    await setTravelerSession(page);
+  test('en：/checkout 重導 V2 booking，未帶 plan 顯示英文引導', async ({ page }) => {
     await setLocale(page, 'en');
-    await mockCheckout(page);
     await page.goto(`/checkout?slug=${SLUG}`);
-    await expect(page.getByText('Contact details')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Create order' })).toBeVisible();
-    await expect(page.getByText('Legacy checkout entry (Legacy fallback)')).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/booking/${SLUG}`));
+    await expect(page.getByText('Missing or unresolvable plan parameter')).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: 'test-results/checkout-en.png', fullPage: true });
   });
 });
