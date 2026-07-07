@@ -40,6 +40,8 @@ type DashboardData = {
   lastSettledAt: string | null;
   minWithdrawalTwd: number | null;
   pendingPayoutTwd: number | null;
+  settledPayoutTwd: number | null;
+  lastPayoutAt: string | null;
   settlementRulesVersion: string;
   pendingSettlementOrders: Array<{
     orderId: string;
@@ -293,6 +295,12 @@ export default function GuideDashboardPage() {
           {data.pendingPayoutTwd && (
             <div style={{ fontSize: 11, color: '#ea580c', marginTop: 4 }}>
               待出款：NT${data.pendingPayoutTwd.toLocaleString()}
+            </div>
+          )}
+          {data.settledPayoutTwd != null && data.settledPayoutTwd > 0 && (
+            <div data-guide="settled-payout" style={{ fontSize: 11, color: '#166534', marginTop: 4 }}>
+              已入帳累計：NT${data.settledPayoutTwd.toLocaleString()}
+              {data.lastPayoutAt && ` · 最近入帳 ${new Date(data.lastPayoutAt).toLocaleDateString('zh-TW', { timeZone: 'Asia/Taipei' })}`}
             </div>
           )}
         </div>

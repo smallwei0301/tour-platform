@@ -3,7 +3,7 @@
  */
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRatingDistribution } from '../../src/lib/review-distribution.mjs';
+import { buildRatingDistribution, toReviewDisplayList } from '../../src/lib/review-distribution.mjs';
 
 test('T1592.1 — 混合星等：counts/avg/percents 正確', () => {
   const r = buildRatingDistribution([
@@ -41,4 +41,36 @@ test('T1592.5 — 全同分：該星 100%', () => {
   const r = buildRatingDistribution([{ rating: 5 }, { rating: 5 }, { rating: 5 }]);
   assert.equal(r.percents[5], 100);
   assert.equal(r.avg, 5);
+});
+
+test('T1592.6 — toReviewDisplayList：真實在前、暖場在後、帶 isWarm 旗標', () => {
+  const merged = toReviewDisplayList(
+    [{ id: 'r1', rating: 4, guideReply: { text: '謝謝' } }],
+    [{ author: 'Grace', rating: 5, text: '很棒', photos: ['a.jpg'] }],
+  );
+  assert.equal(merged.length, 2);
+  assert.equal(merged[0].id, 'r1');
+  assert.equal(merged[0].isWarm, false);
+  assert.equal(merged[1].isWarm, true);
+  assert.equal(merged[1].id, 'warm-0'); // 穩定 key
+  assert.deepEqual(merged[1].photos, ['a.jpg']);
+});
+
+test('T1592.7 — 暖場評論併入分佈：僅暖場也能算出 total>0', () => {
+  // 只有暖場評論、無正式評論 → 過去 dist.total=0 導致長條/篩選不顯示（本次修復目標）
+  const merged = toReviewDisplayList([], [
+    { author: 'A', rating: 5, text: 'x' },
+    { author: 'B', rating: 4, text: 'y' },
+    { author: 'C', rating: 5, text: 'z' },
+  ]);
+  const dist = buildRatingDistribution(merged);
+  assert.equal(dist.total, 3);
+  assert.equal(dist.counts[5], 2);
+  assert.equal(dist.counts[4], 1);
+  assert.equal(dist.percents[5], 67); // 2/3 四捨五入
+});
+
+test('T1592.8 — toReviewDisplayList：非陣列輸入安全回空', () => {
+  assert.deepEqual(toReviewDisplayList(null, undefined), []);
+  assert.deepEqual(toReviewDisplayList(undefined, null), []);
 });

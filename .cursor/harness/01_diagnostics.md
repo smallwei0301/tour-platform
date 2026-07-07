@@ -94,17 +94,24 @@
 4. **消耗式授權**：一張授權只服務「當次對話中使用者批准的那一件事」。該編輯完成後**立刻刪除 override 檔**，不留著給下一個任務用；換任務＝重新請示。
 5. 完成後在 worklog 記錄 override 使用紀錄（路徑＋授權原文＋起訖時間），供使用者抽查。
 
-## 4b. SQL-OVERRIDE 協議（生產 SQL 寫入授權；2026-07-06 owner 拍板新增）
+## 4b. 生產 SQL 執行政策（2026-07-06 owner 拍板；歷經兩次調整）
 
-適用：`mcp__Supabase__execute_sql` 的寫入/DDL、`mcp__Supabase__apply_migration`。目的：owner 可以在對話中直接命令 agent 執行 SQL（免手動複製貼上 SQL Editor），同時保證 agent **永遠無法自行發起**生產寫入。
+**現行模式＝execute_sql 讀寫全自動＋事後審計**（owner 第二次拍板，AskUserQuestion「讀寫全自動，改為事後審計」）。演進：最初預設唯讀 → owner 要求免手動貼 SQL Editor → 先做 SQL-OVERRIDE 授權窗 → owner 嫌每次確認太煩，改為全自動＋事後查。
 
-1. agent 需要寫入時，**先在對話中列出**：將執行的完整 SQL、目標表、預期影響（筆數或 schema 變化）、是否可逆。不得先斬後奏。
-2. 使用者在對話中回覆一句含 `SQL-OVERRIDE` 的明確授權（使用者主動下令「幫我跑這句/套這支 migration」再確認一次亦可）。
-3. agent 把**授權原話＋時間＋目的**寫入 `.claude/state/sql-override`（**30 分鐘**內有效，過期重批）。
-4. sql-guard 在授權窗內放行寫入，但：災難級語句（`drop database`／`drop schema`／`alter system`）**連授權都不放**（請使用者親自在 Dashboard 執行）；每句放行的 SQL 自動追加到 `.claude/state/sql-audit.log`（時間戳＋工具＋語句前 400 字）。
-5. **消耗式**：該批 SQL 執行完畢立刻刪除 override 檔；執行結果（實際筆數/錯誤）與審計摘要記入 worklog。
-6. **migration 紀律不變**：schema 變更仍必須先落時間戳 migration 檔、過 PR＋CI，SQL-OVERRIDE 只是把「套用」這一步從『使用者複製貼上』換成『agent 代跑』；套完照 `migration-apply-ledger-sop.md` 補 ledger（SOP 本就涵蓋 MCP 套用情境）。臨時資料修正（DML）可不落 migration 檔，但必須在 worklog 留完整語句與影響筆數。
-7. **平台層前提**：本協議只管 harness 側。若 Supabase MCP server 端設了唯讀（或工具面未曝露 `apply_migration`），寫入仍會在 server/DB 層失敗——該開關由使用者管理；開著唯讀時，agent 應回報「平台層唯讀擋下」而不是重試。
+### execute_sql（查詢＋資料寫入）
+1. **免確認自動執行**：`mcp__Supabase__execute_sql` 已進 `settings.json` allow 清單（Claude Code 不再逐次跳權限提示），sql-guard 對讀取與寫入（DML/一般 DDL）一律放行。
+2. **事後審計義務（取代事前閘）**：每句寫入/DDL 由 sql-guard 逐句寫入 `.claude/state/sql-audit.log`（時間戳＋工具＋語句前 400 字）。**agent 每次執行寫入後，必須立刻在對話回報實際影響**（動到哪張表、幾筆 rows affected、成功/錯誤）——這是「事後檢查 SQL」的落實，不可省略。
+3. **硬地板（任何情況都擋，連 owner 授權都不放）**：災難級語句（`drop database`／`drop schema`／`alter system`）＋危險系統函式（`pg_terminate_backend`／`pg_read_file`／`COPY…PROGRAM` 等）。這些屬攻擊/管理面向、非「查改資料」，需要時請 owner 親自於 Dashboard 執行。
+
+### apply_migration（schema 變更）— 仍需 SQL-OVERRIDE
+schema 變更風險高、罕見、且有 migration 檔紀律，**不在「全自動」範圍**：
+1. 走 migration 檔：新增時間戳檔 → PR → CI 綠燈。
+2. 要用 MCP 套用時，agent 先在對話列出 migration 內容，owner 回覆含 `SQL-OVERRIDE` 的授權。
+3. agent 把授權原話＋時間寫入 `.claude/state/sql-override`（**30 分鐘**、消耗式用畢即刪），sql-guard 於窗內放行 apply_migration＋審計。
+4. 套完照 `migration-apply-ledger-sop.md` 補 ledger。
+
+### 平台層前提（不變）
+本政策只管 harness 側。若 Supabase MCP server 端設了 `--read-only`，寫入仍會在 server/DB 層失敗——該開關由 owner 管理。要真正啟用「agent 代跑寫入」，owner 需移除 server 端唯讀（權衡：DB 層最後一道牆隨之消失，防線剩 sql-guard 硬地板＋事後審計）。開著唯讀時 agent 應回報「平台層唯讀擋下」而非重試。
 
 ## 5. ⚖️ 誠實條款：這套 harness 的能力極限
 
@@ -112,7 +119,7 @@
 
 **擋不住的（已知殘洞，按風險排序）：**
 1. **P0-OVERRIDE／SQL-OVERRIDE 的最後一哩是 honor system——但實測有第二道防線**：hook 讀不到對話內容，只能驗證 override 檔存在與新鮮度。不過本 harness 建置時實測：模型在「未取得使用者明確授權」的情況下嘗試寫 override 檔，被 Claude Code 的 auto-mode 安全分類器直接攔下（辨識為 self-authorization），直到使用者在對話中明確授權後才放行。緩解疊加：分類器＋檔案格式要求引用使用者授權原文＋worklog 審計＋使用者抽查（見 `06_manifesto.md` 腐化清單）。
-1b. **SQL-OVERRIDE 授權窗開啟的 30 分鐘內是全寫入放行**（僅擋災難級語句）——授權「跑這支 migration」的窗內，技術上也能跑別的 UPDATE。緩解：消耗式用畢即刪＋sql-audit.log 逐句留痕＋worklog 對帳；使用者抽查審計檔與實際下令範圍是否一致。
+1b. **execute_sql 生產寫入已無事前人工閘**（owner 2026-07-06 拍板「讀寫全自動」）——這是 owner 知情下的取捨，防線降為「硬地板（災難級＋危險函式）＋事後 sql-audit.log 審計＋agent 執行後強制回報」。殘餘風險：弱模型在全自動下若寫錯 UPDATE/DELETE 的 WHERE，會即時打到生產資料，只能事後從審計檔發現。緩解：agent 對破壞性語句（無 WHERE 的 UPDATE/DELETE、大範圍）應在執行前於對話自我提示；最終的牆是 Supabase MCP server 端唯讀（見 §4b 平台層前提、`06_manifesto.md`）。apply_migration 仍保留 SQL-OVERRIDE 事前閘。
 2. **證據檔可被偽造**——模型可以直接手寫 `last-checks.json`。緩解：`run-checks.sh` 會寫入輸出摘要（偽造需編造測試輸出，成本高）；隔離驗收 subagent 必須**重跑**測試而非只讀證據檔；file-guard 不擋 `.claude/state/`（它是 runtime 區），這是刻意取捨。
 2b. **經 SELECT 呼叫的 volatile function 攔不全**——sql-guard 已黑名單 `setval`/`pg_terminate_backend` 等已知危險函式並強制查詢型前綴，但任意自訂函式（如 `select some_admin_rpc()`）regex 無法窮舉。**真正的牆是 Supabase MCP 掛唯讀憑證**（`06_manifesto.md` 第 1 件事）。
 3. **非常規寫檔路徑**——`python -c 'open(...).write(...)'`、node inline script 等可繞過 bash-guard 的 regex。緩解：bash-guard 已涵蓋最常見的 `sed -i`/redirect/`tee`/`rm`；殘洞靠 CI（受保護 spec 刪改會讓 e2e-smoke／ci.yml 變紅）與 PR review 兜底。

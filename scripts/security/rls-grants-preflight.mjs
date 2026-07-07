@@ -23,7 +23,12 @@ Exit codes:
   0  PASS — no violations found
   1  FAIL — violations found or env missing`;
 
-// Sensitive tables that must have restrictive RLS and grants.
+// Sensitive tables that must have restrictive RLS and grants (anon 應零存取).
+// ⚠️ PII/身分表（users、traveler_profiles、guide_applications）於 2026-07-06 補入：
+//    #1563 P0 外洩實測「anon 可讀 12 筆 users（含 PII）」，而 users 當時竟不在本清單，
+//    等於同類 users regression 抓不到——此為該事故後最直接的監控缺口修補。
+// 注意：公開可讀的目錄表（如 guide_profiles，#1563 白名單）不得列入，否則其合法的
+//       anon SELECT 會被誤報為 broad_role_grant。只列「anon 應完全碰不到」的表。
 const SENSITIVE_TABLES = [
   'payment_events',
   'refund_requests',
@@ -34,6 +39,9 @@ const SENSITIVE_TABLES = [
   'soft_launch_controls',
   'orders',
   'bookings',
+  'users',              // #1563 外洩主角（PII）
+  'traveler_profiles',  // 旅客個資
+  'guide_applications', // 導遊申請個資（審核前）
 ];
 
 // Roles that should NOT have broad access to sensitive tables.

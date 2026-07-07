@@ -29,6 +29,8 @@ export async function GET(req: Request) {
       lastSettledAt: null,
       minWithdrawalTwd: 5000,
       pendingPayoutTwd: null,
+      settledPayoutTwd: null,
+      lastPayoutAt: null,
       settlementRulesVersion: 'env-fallback',
       pendingSettlementOrders: [],
     }));
@@ -64,6 +66,8 @@ export async function GET(req: Request) {
       lastSettledAt: null,
       minWithdrawalTwd: settlementConfig.min_withdrawal_twd,
       pendingPayoutTwd: null,
+      settledPayoutTwd: null,
+      lastPayoutAt: null,
       settlementRulesVersion: settlementConfig.version ?? 'v1',
       pendingSettlementOrders: [],
     }));
@@ -110,6 +114,7 @@ export async function GET(req: Request) {
     latestScheduleRes,
     balanceRes,
     pendingPayoutsRes,
+    paidPayoutsRes,
     refundPendingRes,
   ] = await Promise.all([
     // 2. Monthly bookings count (current month)
@@ -162,6 +167,12 @@ export async function GET(req: Request) {
       .select('total_twd')
       .eq('guide_id', guideId)
       .eq('state', 'pending'),
+    // 9b. #1637 已入帳累計：admin 確認出款（state='paid'）的歷史總額與最近一次時間
+    supabase
+      .from('payouts')
+      .select('total_twd, confirmed_at')
+      .eq('guide_id', guideId)
+      .eq('state', 'paid'),
     // 10. Pending settlement orders (refund_pending) — 待對帳
     supabase
       .from('orders')
@@ -179,6 +190,7 @@ export async function GET(req: Request) {
   const latestScheduleRows = latestScheduleRes.data;
   const balanceRow = balanceRes.data;
   const pendingPayouts = pendingPayoutsRes.data;
+  const paidPayoutRows = paidPayoutsRes.data;
   const refundPendingOrders = refundPendingRes.data;
 
   const pendingBookings = (recentOrders || []).map((o: any) => ({
@@ -315,6 +327,14 @@ export async function GET(req: Request) {
 
   const pendingPayoutTwd = (pendingPayouts ?? []).reduce((s: number, p: any) => s + (p.total_twd ?? 0), 0);
 
+  // #1637 已入帳累計（confirm 後 payouts.state='paid'，與待出帳/餘額同源即時連動）
+  const settledPayoutTwd = (paidPayoutRows ?? []).reduce((s: number, p: any) => s + (p.total_twd ?? 0), 0);
+  const lastPayoutAt = (paidPayoutRows ?? []).reduce((latest: string | null, p: any) => {
+    const at = p.confirmed_at ?? null;
+    if (!at) return latest;
+    return !latest || new Date(at).getTime() > new Date(latest).getTime() ? at : latest;
+  }, null as string | null);
+
   const refundScheduleMap: Record<string, string> = Object.fromEntries(
     ((refundSchedulesRes.data as any[]) ?? []).map((s: any) => [s.id, s.start_at])
   );
@@ -341,6 +361,8 @@ export async function GET(req: Request) {
     lastSettledAt: balanceRow?.last_settled_at ?? null,
     minWithdrawalTwd: settlementConfig.min_withdrawal_twd,
     pendingPayoutTwd: pendingPayouts && pendingPayouts.length > 0 ? pendingPayoutTwd : null,
+    settledPayoutTwd,
+    lastPayoutAt,
     settlementRulesVersion: settlementConfig.version ?? 'v1',
     pendingSettlementOrders,
   }));
