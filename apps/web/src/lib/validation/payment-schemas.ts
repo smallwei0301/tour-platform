@@ -16,3 +16,10 @@ export const RedeemBodySchema = z.object({
   token: z.string().min(1, '缺少憑證 token'),
 });
 export type RedeemBody = z.infer<typeof RedeemBodySchema>;
+
+/** POST /api/v2/guide/redeem/by-code — 短碼核銷（#1637 導遊端核銷頁）。 */
+export const RedeemByCodeBodySchema = z.object({
+  // 旅客憑證卡上的人類可讀短碼（MID-XXXXXX；大小寫不拘、可省略 MID- 前綴）。
+  code: z.string().min(4, '缺少憑證短碼').max(32, '短碼格式不正確'),
+});
+export type RedeemByCodeBody = z.infer<typeof RedeemByCodeBodySchema>;

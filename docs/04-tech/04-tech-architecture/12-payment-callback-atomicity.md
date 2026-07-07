@@ -6,7 +6,18 @@
 
 ## 函式定義位置
 
-- **現行版本**：`supabase/migrations/20260624130000_callback_booking_type_auto_confirm.sql`
+- **現行版本**：`supabase/migrations/20260706150000_issue1637_callback_rpc_unify_auto_confirm.sql`
+  （#1637 overload 收斂：DROP 4-arg、唯一 **6-arg** 版本〔`p_merchant_trade_no`＋`p_provider`，
+  即 db.mjs 實際呼叫的簽名〕；納入 booking_type auto-confirm；**order 終態隨 booking_type**
+  〔可 auto-confirm → `confirmed`，接上 #1554 auto-complete sweep 與掃碼核銷；否則維持
+  `paid`〕；`TradeAmt` 金額驗證〔≠ `total_twd` 即 RAISE，ERRCODE 22000〕。契約測試
+  `apps/web/tests/api/issue1637-callback-rpc-unify-contract.test.mjs`。rollback 還原
+  614 6-arg＋#195 4-arg。）
+- **歷史教訓（#1637 P0-2）**：下列 20260624130000 是 **4-arg** `CREATE OR REPLACE`——在
+  Postgres 是另一個 overload，蓋不掉 6-arg 版；db.mjs 用 6 個具名參數呼叫，PostgREST 永遠
+  解析到 6-arg 版，故其 auto-confirm 從未生效（且該檔未曾套用生產）。**日後改此函式一律以
+  6-arg 簽名 CREATE OR REPLACE**。
+- **未生效版本**：`supabase/migrations/20260624130000_callback_booking_type_auto_confirm.sql`
   （三種預約模式 PR3：付款後依 `booking_type` 自動確認 booking — instant/scheduled/request
   → `draft → confirmed`；未知/NULL → `draft → pending_confirmation`。決策與純函式
   `src/lib/booking-type-flow.mjs shouldAutoConfirmOnPayment` 一致；契約測試

@@ -33,6 +33,32 @@ export default function PaymentsRefundsGuidePage() {
       <PageHeader title="金流／退款處理說明" subtitle="ECPay 與現金訂單的正常流程與異常處理（維運用）" />
 
       <div className="admin-page" style={{ maxWidth: 860 }}>
+        {/* 0. 全鏈流程總覽（#1637） */}
+        <Card style={{ padding: 20, marginBottom: 16 }}>
+          <section style={sectionStyle}>
+            <h2 style={h2Style}>⓪ 全鏈流程總覽：旅客下單 → 導遊收帳</h2>
+            <div style={{ ...noteBox('#f0fdf4', '#86efac', '#166534'), fontFamily: 'monospace', fontSize: 12, whiteSpace: 'pre-wrap', lineHeight: 2 }}>
+              {'下單 → 付款(自動;POS備援) → 已確認(自動;人工切換備援) → 已完成(sweep+掃碼;人工備援)\n→ 結算入餘額(每日自動;退款紅沖自動) → 產生出款單(自動;手動產單備援)\n→ 確認出帳(唯一純手動步驟) → 導遊已入帳(自動連動) → 月結報表(手動產出)'}
+            </div>
+            <ol style={{ margin: '0 0 10px', paddingLeft: 20 }}>
+              <Step n={1}><strong>下單</strong>：旅客送出 → <StatusBadge status="pending_payment" /> 占用名額。備援：admin POS 手動建單。逾期未付由每日 02:00（台北）排程自動取消釋放名額。</Step>
+              <Step n={2}><strong>付款</strong>：ECPay callback 驗簽＋金額比對（TradeAmt 必須等於訂單總額）後原子轉態。備援：POS 手動標記已付款；自行匯款由維運查帳後確認。</Step>
+              <Step n={3}><strong>已確認</strong>：線上付款成功的 V2 訂單<strong>付款當下自動</strong>直上 <StatusBadge status="confirmed" />（#1637）。備援：舊單／POS 單／方案未設 booking_type 者，於訂單管理人工切換。</Step>
+              <Step n={4}><strong>已完成</strong>：兩條自動路——出團後滿 48 小時由每日 02:30（台北）sweep 自動完成；或導遊掃旅客電子憑證 QR／輸短碼提前核銷。備援：訂單管理人工切 <StatusBadge status="completed" />（缺出團時間的訂單只能人工）。</Step>
+              <Step n={5}><strong>結算入餘額</strong>：每日 10:00（台北）結算 sweep——completed＋有實際收款＋出團後 T+7＋無退款/爭議 hold → 導遊餘額 +（總額−已退款）×85%。退款後自動紅沖。無手動直改餘額（刻意），修正走退款流程。</Step>
+              <Step n={6}><strong>產生出款單</strong>：結算後餘額 ≥ NT$5,000 自動建待出款單（每導遊同時一張）。備援：出款管理「手動產生出款單」（不受門檻限制）。</Step>
+              <Step n={7}><strong>確認出帳</strong>：<strong>唯一純手動步驟</strong>（對應真實銀行匯款）——出款管理填轉帳流水號＋「確認出款」。金額過期的單先「取消」再重產。</Step>
+              <Step n={8}><strong>導遊端數字</strong>：可結算餘額／待出款／已入帳累計全部即時自動連動，無需任何操作。</Step>
+              <Step n={9}><strong>月結報表</strong>：「月結報表」頁手動選月產出（收款/退款/結算/出帳/期末負債＋對帳異常清單＋CSV）。</Step>
+            </ol>
+            <div style={noteBox('#eff6ff', '#bfdbfe', '#1e40af')}>
+              卡單排查順序：停在「已付款」→ 人工切「已確認」；停在「已確認」超過出團後 48 小時 → 查是否缺出團時間（stalled）；
+              已完成卻沒入餘額 → 查是否缺付款時間（paid_at）、未過 T+7、或有退款/爭議 hold。月結報表的「對帳異常」區會自動列出前述卡單。
+              完整版流程地圖見 <span style={codeStyle}>docs/operations/order-to-payout-flow-map.md</span>。
+            </div>
+          </section>
+        </Card>
+
         {/* 1. 訂單金流類型識別 */}
         <Card style={{ padding: 20, marginBottom: 16 }}>
           <section style={sectionStyle}>
@@ -62,9 +88,9 @@ export default function PaymentsRefundsGuidePage() {
             <p style={{ ...pStyle, fontWeight: 600, color: '#111827' }}>ECPay 線上付款</p>
             <ol style={{ margin: '0 0 12px', paddingLeft: 20 }}>
               <Step n={1}>旅客送出訂單 → <StatusBadge status="pending_payment" /> 占用名額等待付款。</Step>
-              <Step n={2}>ECPay 付款成功 callback → 自動轉 <StatusBadge status="paid" />（計入 GMV、發通知）。</Step>
-              <Step n={3}>（可選）維運／導遊確認 → <StatusBadge status="confirmed" />。</Step>
-              <Step n={4}>行程結束 → <StatusBadge status="completed" />；唯一進入出帳結算的狀態，並觸發評價邀請。</Step>
+              <Step n={2}>ECPay 付款成功 callback（驗簽＋金額比對）→ <strong>自動</strong>直上 <StatusBadge status="confirmed" />（#1637 起；計入 GMV、發通知）。停在 <StatusBadge status="paid" /> 的是修復前舊單或方案未設 booking_type 者，需人工切「已確認」。</Step>
+              <Step n={3}>行程結束 → <StatusBadge status="completed" />：出團後滿 48 小時自動完成（每日 02:30 sweep），或導遊掃憑證 QR／輸短碼提前核銷；也可人工切換。</Step>
+              <Step n={4}><StatusBadge status="completed" /> 是唯一進入出帳結算的狀態（結算另要求有付款時間、過 T+7、無 hold），並觸發評價邀請。</Step>
             </ol>
 
             <p style={{ ...pStyle, fontWeight: 600, color: '#111827' }}>現金／線下付款</p>

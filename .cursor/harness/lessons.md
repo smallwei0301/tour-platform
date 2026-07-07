@@ -77,3 +77,10 @@
 - Agent 能做的極限：read-only SELECT 驗證前/後 schema（`information_schema` 探測）、套用後改 ledger 為 verified、確認 CI 綠後 merge。
 - 建議：遇「需套 migration 才能 merge」的 issue，一開始就把它標為 owner-blocked，不要規劃 agent 自套的路徑。
 - **[2026-07-06 更新] 三重死結已部分解開**：owner 拍板新增 SQL-OVERRIDE 協議（01_diagnostics §4b），sql-guard 有授權通道了（第 2 層解）、apply_migration 移出 deny 併入同一閘門（第 3 層解）。第 1 層（MCP server 端唯讀設定）仍由 owner 掌握——若 server 仍唯讀，寫入會在平台層失敗，此時回報 owner 而不是重試。流程：列 SQL＋影響 → owner 回 `SQL-OVERRIDE` → 寫 `.claude/state/sql-override`（30 分鐘）→ 執行 → 刪檔＋worklog 記審計。
+
+## [2026-07-06] edit-probe-false-negative-hooks-armed
+- Context：00_INDEX 步驟 0 的 hooks 煙霧測試——用 Edit 對 CLAUDE.md 填不存在的 old_string，預期「有攔＝武裝、string not found＝未武裝」
+- Error：本版 Claude Code 的 Edit 工具會**先驗 old_string 存在性、再跑 PreToolUse hook**，探針永遠只會拿到「String to replace not found」，即使 hooks 完全正常也一樣 → 假陰性，差點在武裝狀態下誤判為裸奔而停工
+- Solution：判斷防線以「bash-guard 是否攔 commit」等實際攔截行為為準；或探針改用 **Write 工具**寫 CLAUDE.md（Write 無 old_string 前置驗證，會真的進 hook 被 file-guard 攔）
+- 另外兩個 bash-guard 邊角：(1) commit 證據 gate 檢查的是「hook 執行當下」的 staged 區——add 與 commit 併在同一條指令會因 staged 為空而讓純文件豁免失效，**add 與 commit 要分兩條指令**；(2) heredoc/字串內容若含「git …commit」字樣也會被 commit gate 的 regex 命中——往 lessons.md 等檔案追加含 git 指令的文字時改用 Edit 工具，別用 shell heredoc
+- 適用範圍：所有 session 開機煙霧測試；純文件 commit 流程
