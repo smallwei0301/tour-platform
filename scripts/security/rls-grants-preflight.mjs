@@ -50,6 +50,70 @@ const FORBIDDEN_ROLES = ['anon', 'authenticated', 'public'];
 // Permissive USING/WITH CHECK expressions that indicate an overly open policy.
 const PERMISSIVE_EXPRS = ['true', '(true)', 'TRUE', '(TRUE)'];
 
+// 公開目錄表：RLS 應啟用、但「anon 可讀」是 by-design（#1563 白名單）。
+// 這些表 RLS-off 仍算違規（該開 RLS＋公開讀 policy），但不因「anon 有 SELECT」被標。
+// 本清單只用於未來若加入 SELECT-grant 全表掃描；目前全表掃描只查 RLS-on 與寫入權限，
+// 兩者對公開表也適用（公開表也該開 RLS、也不該給 anon 寫入），故此清單暫作文件用途。
+const PUBLIC_READ_TABLES = [
+  'activities', 'activity_plans', 'activity_plan_tiers', 'activity_plan_seasons',
+  'activity_packages', 'package_activities', 'activity_schedules', 'activity_images',
+  'activity_reviews', 'activity_qa', 'experiences', 'events', 'promo_codes',
+  'refund_policies', 'guide_profiles', 'homepage_featured_settings',
+  'soft_launch_controls', 'soft_launch_whitelist',
+];
+
+// scan-all 的寫入違規只認「公開角色」anon/PUBLIC——它們絕不該有任何寫入權（#1563 威脅模型）。
+// authenticated 對多數表有 write grant 是 Supabase 標準模型（真正的限制在 RLS policy），
+// 全標會變成雜訊；而敏感表的 authenticated 寫入已由 checkGrants（SENSITIVE_TABLES）覆蓋。
+const NEVER_WRITE_ROLES = ['anon', 'PUBLIC'];
+
+/**
+ * 純函式（可離線單測）：把 rls_preflight_scan 回傳的一列，判成 0..N 個違規。
+ *   - rls_enabled=false → rls_disabled（該表沒開 RLS，policy 檢查形同虛設）
+ *   - anon/PUBLIC 有寫入權 → broad_write_grant（authenticated 不計，見上）
+ */
+export function classifyScanRow(row) {
+  const violations = [];
+  const table = row?.table_name;
+  if (row && row.rls_enabled === false) {
+    violations.push({ table, violation: 'rls_disabled' });
+  }
+  const writeGrantees = Array.isArray(row?.forbidden_write_grantees) ? row.forbidden_write_grantees : [];
+  const publicWrite = writeGrantees.filter((g) => NEVER_WRITE_ROLES.includes(g));
+  if (publicWrite.length > 0) {
+    violations.push({ table, grantees: publicWrite, violation: 'broad_write_grant' });
+  }
+  return violations;
+}
+
+/**
+ * 全表掃描：列出 public 全部 base table，檢查 RLS 是否啟用＋是否誤發 anon 寫入權。
+ * RPC 不存在時 graceful 降級為 unknown（migration 尚未套用的情況）。
+ */
+async function checkScanAll(client) {
+  const { data, error } = await client.rpc('rls_preflight_scan');
+  if (error) {
+    return {
+      table: '(all public tables)',
+      check: 'scan_all',
+      status: 'unknown',
+      reason: `rls_preflight_scan RPC unavailable: ${error.message}. migration 20260707081500 尚未套用？`,
+      violations: [],
+    };
+  }
+  if (!Array.isArray(data)) {
+    return { table: '(all public tables)', check: 'scan_all', status: 'unknown', reason: 'RPC returned non-array', violations: [] };
+  }
+  const violations = data.flatMap((row) => classifyScanRow(row));
+  return {
+    table: '(all public tables)',
+    check: 'scan_all',
+    status: violations.length === 0 ? 'pass' : 'fail',
+    tables_scanned: data.length,
+    violations,
+  };
+}
+
 function parseArgs(argv) {
   const options = { help: false, json: false, output: null };
   for (let i = 0; i < argv.length; i += 1) {
@@ -198,6 +262,10 @@ function formatText(results, summary) {
         lines.push(`  VIOLATION: policy "${v.policy_name}" — roles [${v.roles.join(', ')}] — cmd ${v.command} — USING(${v.qual})`);
       } else if (v.violation === 'broad_role_grant') {
         lines.push(`  VIOLATION: ${v.privilege_type} granted to ${v.grantee} on ${v.table}`);
+      } else if (v.violation === 'rls_disabled') {
+        lines.push(`  VIOLATION: table "${v.table}" 未啟用 RLS（relrowsecurity=false）`);
+      } else if (v.violation === 'broad_write_grant') {
+        lines.push(`  VIOLATION: table "${v.table}" 對 [${v.grantees.join(', ')}] 開了寫入權（INSERT/UPDATE/DELETE）`);
       }
     }
   }
@@ -236,6 +304,9 @@ async function main(argv = process.argv.slice(2)) {
     ]);
     results.push(policyResult, grantsResult);
   }
+
+  // 全表掃描（RLS-on + 無 anon 寫入權）——涵蓋清單外的新表
+  results.push(await checkScanAll(client));
 
   const allViolations = results.flatMap((r) => r.violations || []);
   const passCount = results.filter((r) => r.status === 'pass').length;
@@ -278,22 +349,25 @@ async function main(argv = process.argv.slice(2)) {
   return overallStatus === 'pass' ? 0 : 1;
 }
 
-main()
-  .then((code) => process.exit(code))
-  .catch((err) => {
-    const fallback = {
-      summary: {
-        overall_status: 'fail',
-        tables_checked: 0,
-        checks_run: 0,
-        pass: 0,
-        fail: 0,
-        unknown: 0,
-        violation_count: 0,
-        timestamp: new Date().toISOString(),
-      },
-      error: { message: String(err?.message || 'unknown'), classification: 'runtime_error' },
-    };
-    console.error(sanitize(JSON.stringify(fallback, null, 2)));
-    process.exit(1);
-  });
+// 僅在直接執行時跑 main（被 import 做單測時不執行，否則會印 usage＋process.exit 殺掉測試）
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+    .then((code) => process.exit(code))
+    .catch((err) => {
+      const fallback = {
+        summary: {
+          overall_status: 'fail',
+          tables_checked: 0,
+          checks_run: 0,
+          pass: 0,
+          fail: 0,
+          unknown: 0,
+          violation_count: 0,
+          timestamp: new Date().toISOString(),
+        },
+        error: { message: String(err?.message || 'unknown'), classification: 'runtime_error' },
+      };
+      console.error(sanitize(JSON.stringify(fallback, null, 2)));
+      process.exit(1);
+    });
+}
