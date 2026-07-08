@@ -41,7 +41,7 @@ export default function OrderSuccessPage() {
 
   useEffect(() => {
     if (!orderId) { setLoading(false); return; }
-    fetch(`/api/me/orders/${encodeURIComponent(orderId)}?contactEmail=${encodeURIComponent(email)}`, { cache: 'no-store' })
+    fetch(`/api/v2/orders/${encodeURIComponent(orderId)}?contactEmail=${encodeURIComponent(email)}`, { cache: 'no-store' })
       .then(r => r.json())
       .then(j => setOrder(j.data || null))
       .catch(() => setOrder(null))

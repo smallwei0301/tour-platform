@@ -17,7 +17,7 @@ type OrderOverrides = {
 };
 
 async function mockOrder(page: import('@playwright/test').Page, o: OrderOverrides) {
-  await page.route('**/api/me/orders/**', async (route) => {
+  await page.route('**/api/v2/orders/**', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

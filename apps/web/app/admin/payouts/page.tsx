@@ -40,7 +40,7 @@ export default function AdminPayoutsPage() {
   async function loadRows() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/payouts', { cache: 'no-store' });
+      const res = await fetch('/api/v2/admin/payouts', { cache: 'no-store' });
       const json = await res.json();
       setRows(json?.data || []);
     } finally { setLoading(false); }
@@ -49,7 +49,7 @@ export default function AdminPayoutsPage() {
   async function loadBalances() {
     setBalancesLoading(true);
     try {
-      const res = await fetch('/api/admin/payouts/balances', { cache: 'no-store' });
+      const res = await fetch('/api/v2/admin/payouts/balances', { cache: 'no-store' });
       const json = await res.json();
       setBalances(json?.data?.balances || []);
       if (json?.data?.min_withdrawal_twd) setMinWithdrawal(json.data.min_withdrawal_twd);
@@ -61,7 +61,7 @@ export default function AdminPayoutsPage() {
   async function confirmPayout(id: string) {
     setBusyId(id);
     try {
-      await fetch(`/api/admin/payouts/${id}/confirm`, {
+      await fetch(`/api/v2/admin/payouts/${id}/confirm`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ confirmed_by: 'admin', transfer_ref: transferRef[id] || null }),
@@ -74,7 +74,7 @@ export default function AdminPayoutsPage() {
     setBusyId(id);
     setActionError('');
     try {
-      const res = await fetch(`/api/admin/payouts/${id}/cancel`, {
+      const res = await fetch(`/api/v2/admin/payouts/${id}/cancel`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ cancelled_by: 'admin' }),
@@ -89,7 +89,7 @@ export default function AdminPayoutsPage() {
     setBusyId(guideId);
     setActionError('');
     try {
-      const res = await fetch('/api/admin/payouts/generate', {
+      const res = await fetch('/api/v2/admin/payouts/generate', {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ guide_id: guideId, actor: 'admin' }),

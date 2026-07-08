@@ -424,9 +424,11 @@ export async function POST(
     const planName = plans?.name || '';
     const itemName = planName ? `${activityTitle} - ${planName}` : activityTitle;
 
+    // #1649 Phase 5.1：ReturnURL 預設切至 v2 callback（與 legacy 共用單一 handler，
+    // 行為等價）；ECPAY_CALLBACK_URL env 覆寫維持有效（部署協調期間可釘回 legacy）。
     const callbackUrl =
       process.env.ECPAY_CALLBACK_URL ||
-      `${process.env.NEXT_PUBLIC_SITE_URL}/api/payments/ecpay/callback`;
+      `${process.env.NEXT_PUBLIC_SITE_URL}/api/v2/payments/ecpay/callback`;
     const returnUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/bookings/${bookingId}/success`;
 
     const now = new Date();

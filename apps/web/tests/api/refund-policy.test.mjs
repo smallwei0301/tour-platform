@@ -14,7 +14,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const OVERRIDE_ROUTE = join(
   __dirname,
-  '../../app/api/admin/orders/[orderId]/refund-override/route.ts'
+  '../../app/api/v2/admin/orders/[orderId]/refund-override/route.ts'
 );
 
 let routeSrc;

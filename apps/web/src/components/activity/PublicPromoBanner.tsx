@@ -5,14 +5,14 @@ import { useTranslations } from 'next-intl';
 
 /**
  * #1381 — 活動頁公開促銷碼提示。
- * 撈 /api/promo-codes/public（過期/用罄的碼後端已排除），無可用碼時不渲染。
+ * 撈 /api/v2/promo-codes/public（過期/用罄的碼後端已排除），無可用碼時不渲染。
  */
 export function PublicPromoBanner() {
   const t = useTranslations('promoBanner');
   const [promos, setPromos] = useState<Array<{ code: string; label: string }>>([]);
 
   useEffect(() => {
-    fetch('/api/promo-codes/public')
+    fetch('/api/v2/promo-codes/public')
       .then((r) => r.json())
       .then((j) => setPromos(Array.isArray(j?.data) ? j.data : []))
       .catch(() => {});

@@ -32,7 +32,7 @@ function orderBody(status: string) {
 test.describe('旅客評價照片上傳流程', () => {
   test('選檔 → 預覽縮圖 → 送出 payload 帶 photoUrls', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}**`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}**`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('completed')) });
     });
 

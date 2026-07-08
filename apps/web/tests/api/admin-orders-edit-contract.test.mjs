@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const routeSrc = readFileSync(
-  resolve(__dirname, '../../app/api/admin/orders/[orderId]/route.ts'),
+  resolve(__dirname, '../../app/api/v2/admin/orders/[orderId]/route.ts'),
   'utf8'
 );
 

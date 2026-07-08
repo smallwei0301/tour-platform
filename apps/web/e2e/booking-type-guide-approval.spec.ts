@@ -25,17 +25,17 @@ const PENDING_ROWS = [
 
 async function installGuideRoutes(page: Page, opts: { pendingAfterDecision?: unknown[] } = {}) {
   // 既有訂單列表（其他分頁用）
-  await page.route('**/api/guide/bookings', async (route: Route) => {
+  await page.route('**/api/v2/guide/bookings', async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: [] }) });
   });
 
   let decided = false;
-  await page.route('**/api/guide/bookings/pending-approval**', async (route: Route) => {
+  await page.route('**/api/v2/guide/bookings/pending-approval**', async (route: Route) => {
     const rows = decided ? (opts.pendingAfterDecision ?? []) : PENDING_ROWS;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: rows }) });
   });
 
-  await page.route('**/api/guide/bookings/*/approval', async (route: Route) => {
+  await page.route('**/api/v2/guide/bookings/*/approval', async (route: Route) => {
     decided = true;
     await route.fulfill({
       status: 200,

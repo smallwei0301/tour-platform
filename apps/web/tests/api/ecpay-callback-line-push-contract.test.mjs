@@ -32,13 +32,13 @@ test('ecpay callback: ops notify stays gated on source_channel=line, but travele
 // 建單通知實際未派發）；V2 鏈的建單/付款通知由 ecpay callback 統一派發，V2 建單即時通知另案追蹤。
 
 test('cancel route: pushes cancellation to the traveler', async () => {
-  const src = await read('app/api/me/orders/[orderId]/route.ts');
+  const src = await read('app/api/v2/orders/[orderId]/cancel/route.ts');
   assert.match(src, /pushTravelerOrderEvent/);
   assert.match(src, /order_cancelled/);
 });
 
 test('refund-requests route: pushes refund notices to the traveler', async () => {
-  const src = await read('app/api/me/orders/[orderId]/refund-requests/route.ts');
+  const src = await read('app/api/v2/orders/[orderId]/refund-requests/route.ts');
   assert.match(src, /pushTravelerOrderEvent/);
   assert.match(src, /refund_requested|refund_executed/);
 });
@@ -46,8 +46,8 @@ test('refund-requests route: pushes refund notices to the traveler', async () =>
 test('per-guide push is wired into all order hooks (post-#1407: callback/cancel/refund)', async () => {
   const sites = [
     ['app/api/payments/ecpay/callback/route.ts', /guide_payment_received/],
-    ['app/api/me/orders/[orderId]/route.ts', /guide_order_cancelled/],
-    ['app/api/me/orders/[orderId]/refund-requests/route.ts', /guide_refund_requested|guide_refund_executed/],
+    ['app/api/v2/orders/[orderId]/cancel/route.ts', /guide_order_cancelled/],
+    ['app/api/v2/orders/[orderId]/refund-requests/route.ts', /guide_refund_requested|guide_refund_executed/],
   ];
   for (const [rel, kindRe] of sites) {
     const src = await read(rel);

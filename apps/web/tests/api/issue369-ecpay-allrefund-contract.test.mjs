@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ECPAY_LIB = join(__dirname, '../../src/lib/ecpay.ts');
 const REFUND_ROUTE = join(
   __dirname,
-  '../../app/api/admin/orders/[orderId]/refund-execute/route.ts'
+  '../../app/api/v2/admin/orders/[orderId]/refund-execute/route.ts'
 );
 const REFUND_HELPER = join(__dirname, '../../src/lib/refund-execute.ts');
 

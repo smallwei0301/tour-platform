@@ -81,7 +81,7 @@ test('dashboard：範圍內 0 訂單 → 顯示範圍語意提示（非錯誤）
 
 test('訂單列表：orders API 失敗 → 錯誤橫幅＋重試，不顯示空表', async ({ authedPage: page }) => {
   let failNext = true;
-  await page.route('**/api/admin/orders', (r: Route) => {
+  await page.route('**/api/v2/admin/orders', (r: Route) => {
     if (failNext) {
       return r.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ ok: false, error: { code: 'SERVER_ERROR', message: 'boom' } }) });
     }

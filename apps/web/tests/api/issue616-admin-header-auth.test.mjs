@@ -121,7 +121,7 @@ describe('issue #616 — admin header auth', () => {
   });
 
   it('orders/[orderId]/refund-execute/route.ts uses pickAdminCredentials', () => {
-    const src = readRoute('orders/[orderId]/refund-execute/route.ts');
+    const src = readRoute('../v2/admin/orders/[orderId]/refund-execute/route.ts');
     assert.ok(src.includes('pickAdminCredentials'), 'refund-execute/route.ts must use pickAdminCredentials');
     assert.ok(!src.includes("parseCookie(request, 'admin_token')"), "refund-execute/route.ts must not call parseCookie for admin_token");
   });

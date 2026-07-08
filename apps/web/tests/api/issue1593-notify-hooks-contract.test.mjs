@@ -32,7 +32,7 @@ test('T1593hook.3 — 嚮導回覆訊息掛點 createNotification（message_repl
 });
 
 test('T1593hook.4 — 管理員取消訂單掛點 createNotification（order_status，非凍結區）', () => {
-  const src = read('app/api/admin/orders/[orderId]/cancel/route.ts');
+  const src = read('app/api/v2/admin/orders/[orderId]/cancel/route.ts');
   assert.match(src, /createNotification/);
   assert.match(src, /type:\s*'order_status'/);
 });

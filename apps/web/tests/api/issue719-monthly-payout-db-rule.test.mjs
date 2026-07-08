@@ -11,8 +11,8 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
-const JSON_ROUTE = path.join(ROOT, 'app/api/guide/payout/monthly/route.ts');
-const CSV_ROUTE = path.join(ROOT, 'app/api/guide/payout/monthly/csv/route.ts');
+const JSON_ROUTE = path.join(ROOT, 'app/api/v2/guide/payout/monthly/route.ts');
+const CSV_ROUTE = path.join(ROOT, 'app/api/v2/guide/payout/monthly/csv/route.ts');
 const SETTLEMENT_CONFIG = path.join(ROOT, 'src/lib/settlement-config.ts');
 
 const routes = [

@@ -1,75 +1,7 @@
-import { csrfHeaders } from './csrf-client';
-
-export async function fetchExperiences() {
-  const res = await fetch('/api/experiences', { cache: 'no-store' });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to load experiences');
-  return json.data;
-}
-
-// Legacy createOrder（POST /api/orders）已隨 #1407 階段三退役刪除——
-// 建單一律走 Booking V2：POST /api/v2/bookings → /api/v2/bookings/[id]/checkout。
-
-export async function fetchMyOrders(contactEmail = '') {
-  const q = contactEmail ? `?contactEmail=${encodeURIComponent(contactEmail)}` : '';
-  const res = await fetch(`/api/me/orders${q}`, { cache: 'no-store' });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to load my orders');
-  return json.data;
-}
-
-export async function fetchMyOrderDetail(orderId: string, contactEmail = '') {
-  const q = contactEmail ? `?contactEmail=${encodeURIComponent(contactEmail)}` : '';
-  const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}${q}`, { cache: 'no-store' });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to load order detail');
-  return json.data;
-}
-
-export async function fetchRefundRequests(orderId: string) {
-  const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/refund-requests`, { cache: 'no-store' });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to load refund requests');
-  return json.data;
-}
-
-export async function createRefundRequest(payload: { orderId: string; requestId: string; reason?: string; note?: string; contactEmail?: string }) {
-  const res = await fetch(`/api/me/orders/${encodeURIComponent(payload.orderId)}/refund-requests`, {
-    method: 'POST',
-    headers: csrfHeaders({ 'content-type': 'application/json' }),
-    body: JSON.stringify({ requestId: payload.requestId, reason: payload.reason, note: payload.note, contactEmail: payload.contactEmail })
-  });
-  const json = await res.json();
-  if (!json.ok) throw new Error(json?.error?.message || 'failed to create refund request');
-  return json.data;
-}
-
-export async function submitEcpayCallback(payload: { orderId: string; tradeNo?: string }) {
-  const form = new URLSearchParams();
-  form.set('orderId', payload.orderId);
-  if (payload.tradeNo) form.set('tradeNo', payload.tradeNo);
-
-  const res = await fetch('/api/payments/ecpay/callback', {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: form.toString()
-  });
-
-  const contentType = res.headers.get('content-type') || '';
-
-  if (contentType.includes('application/json')) {
-    const json = await res.json();
-    if (!json.ok) throw new Error(json?.error?.message || 'failed to process payment callback');
-    return json.data;
-  }
-
-  const text = (await res.text()).trim();
-  if (res.ok && text === '1|OK') {
-    return { received: true, ack: text };
-  }
-
-  throw new Error(text || 'failed to process payment callback');
-}
+// #1649：五個 legacy 訂單/金流 helper（fetchExperiences/fetchMyOrders/
+// fetchMyOrderDetail/fetchRefundRequests/createRefundRequest/submitEcpayCallback）
+// 為零消費者死碼，已隨 traveler 端全面切換 /api/v2/orders/** 一併移除。
+// 訂單讀寫一律走 v2 routes；建單走 POST /api/v2/bookings → /api/v2/bookings/[id]/checkout。
 
 export async function fetchActivityBySlug(slug: string) {
   const res = await fetch(`/api/activities/${encodeURIComponent(slug)}`, { cache: 'no-store' });

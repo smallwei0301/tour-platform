@@ -27,7 +27,12 @@ export function useTablistKeyboard<T>(
 
   const onKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLButtonElement>) => {
-      const idx = values.indexOf(current);
+      // 基準索引優先取「收到按鍵的那顆 tab」的註冊索引：對 onChange 觸發 URL 導航
+      // 的 tablist（如 /admin/qa），`current` 要等 RSC 往返才會 commit——連續方向鍵
+      // 期間讀到舊值會算錯目標（#1649 QA 實測：ArrowRight→ArrowLeft 跳到最後一顆）。
+      // 事件目標永遠是「現在聚焦的 tab」，不受非同步 state 影響；找不到時退回 current。
+      const targetIdx = tabRefs.current.indexOf(e.currentTarget);
+      const idx = targetIdx >= 0 ? targetIdx : values.indexOf(current);
       if (idx < 0) return;
 
       let nextIdx: number;
@@ -53,11 +58,26 @@ export function useTablistKeyboard<T>(
       e.preventDefault();
       const next = values[nextIdx];
       onChange(next);
-      // Defer so the re-render lands before we focus the new tab. rAF is
-      // close enough — Tab + Click paths are unaffected because they don't
-      // go through this branch.
+      // Defer so the re-render lands before we focus the new tab.
+      // 單次 rAF 對「onChange 觸發 URL 導航」的 tablist（如 /admin/qa 的
+      // router.replace）不夠：RSC 往返可能讓子樹 remount、按鈕節點被替換，
+      // focus 落在已卸載的舊節點上（#1649 QA 實測）。改為有界重試：
+      // 直到 focus 成功，或使用者已把 focus 移到其他存活元素，或逾時為止。
       if (typeof window !== 'undefined') {
-        window.requestAnimationFrame(() => tabRefs.current[nextIdx]?.focus());
+        const startedAt = Date.now();
+        const tryFocus = () => {
+          const el = tabRefs.current[nextIdx];
+          if (el && el.isConnected) {
+            el.focus();
+            if (document.activeElement === el) return; // 聚焦完成
+          }
+          const active = document.activeElement;
+          const focusIsLost = !active || active === document.body || !active.isConnected;
+          if (focusIsLost && Date.now() - startedAt < 800) {
+            window.requestAnimationFrame(tryFocus);
+          }
+        };
+        window.requestAnimationFrame(tryFocus);
       }
     },
     [values, current, onChange],

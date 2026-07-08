@@ -4,7 +4,7 @@ import type { Route } from '@playwright/test';
 /**
  * #multilingual — /me/orders 列表與詳情頁的中英 i18n smoke（真實瀏覽器、backend 以 page.route mock）。
  *
- * 列表頁 `/api/me/orders` 回傳陣列；詳情頁 `/api/me/orders/[id]` 回傳 { data }。
+ * 列表頁 `/api/v2/orders` 回傳陣列；詳情頁 `/api/v2/orders/[id]` 回傳 { data }。
  * 語言由 NEXT_LOCALE cookie 驅動（MemberTabs / 訂單頁走 useClientLocale）。
  */
 
@@ -40,13 +40,13 @@ const DETAIL = {
 };
 
 async function mockOrders(page: import('@playwright/test').Page) {
-  await page.route('**/api/me/orders', async (route: Route) => {
+  await page.route('**/api/v2/orders', async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: LIST }) });
   });
-  await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+  await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: DETAIL }) });
   });
-  await page.route(`**/api/me/orders/${ORDER_ID}/messages`, async (route: Route) => {
+  await page.route(`**/api/v2/orders/${ORDER_ID}/messages`, async (route: Route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: { messages: [], readonly: false } }) });
   });
 }

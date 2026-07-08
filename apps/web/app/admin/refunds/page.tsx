@@ -19,7 +19,7 @@ export default function AdminRefundsPage() {
   async function loadRows() {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/refund-requests', { cache: 'no-store' });
+      const res = await fetch('/api/v2/admin/refund-requests', { cache: 'no-store' });
       const json = await res.json();
       setRows(json?.data || []);
     } finally { setLoading(false); }
@@ -30,7 +30,7 @@ export default function AdminRefundsPage() {
   async function doAction(id: string, action: 'approve' | 'reject' | 'process' | 'complete') {
     setBusyId(id + action);
     try {
-      await fetch(`/api/admin/refund-requests/${id}/${action}`, {
+      await fetch(`/api/v2/admin/refund-requests/${id}/${action}`, {
         method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ adminNote: `admin ${action}` }),
       });

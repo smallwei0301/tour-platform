@@ -18,8 +18,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 
 const SETTLEMENT_PATH = join(REPO_ROOT, 'src/lib/settlement-config.ts');
-const MONTHLY_ROUTE = join(REPO_ROOT, 'app/api/guide/payout/monthly/route.ts');
-const CSV_ROUTE = join(REPO_ROOT, 'app/api/guide/payout/monthly/csv/route.ts');
+const MONTHLY_ROUTE = join(REPO_ROOT, 'app/api/v2/guide/payout/monthly/route.ts');
+const CSV_ROUTE = join(REPO_ROOT, 'app/api/v2/guide/payout/monthly/csv/route.ts');
 const DASHBOARD_ROUTE = join(REPO_ROOT, 'app/api/guide/dashboard/route.ts');
 
 const CONFIG = { commission_rate: 0.15, version: 'v1' };

@@ -34,11 +34,11 @@ const ORDER_ROW = {
 
 async function mockOrdersApi(page: import('@playwright/test').Page) {
   // 清單
-  await page.route('**/api/admin/orders', (r: Route) =>
+  await page.route('**/api/v2/admin/orders', (r: Route) =>
     r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [ORDER_ROW] }) }),
   );
   // 詳情 + 子資源（audit-logs / timeline / messages）
-  await page.route('**/api/admin/orders/**', (r: Route) => {
+  await page.route('**/api/v2/admin/orders/**', (r: Route) => {
     const path = new URL(r.request().url()).pathname;
     if (path.endsWith('/audit-logs')) {
       return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: [] }) });

@@ -66,7 +66,9 @@ test('v2 order detail route contract smoke: has auth guard + ownership check', a
   const src = await readRoute('app/api/v2/orders/[orderId]/route.ts');
 
   assert.match(src, /export\s+async\s+function\s+GET\s*\(/);
-  assert.match(src, /auth\.getUser\(\)/);
+  // #1649：auth 收斂到共用 getTravelerIdentity（內部即 supabase.auth.getUser()），
+  // guard 意圖不變——route 必須解析旅客身分後才放行。
+  assert.match(src, /getTravelerIdentity\(\)/);
   assert.match(src, /UNAUTHORIZED/);
   assert.match(src, /FORBIDDEN/);
   assert.match(src, /user_id/);

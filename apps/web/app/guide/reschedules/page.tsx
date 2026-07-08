@@ -41,7 +41,7 @@ export default function GuideReschedulesPage() {
     setLoading(true);
     setErr(null);
     try {
-      const res = await fetch('/api/guide/reschedule-requests', { cache: 'no-store' });
+      const res = await fetch('/api/v2/guide/reschedule-requests', { cache: 'no-store' });
       if (res.status === 401) {
         setErr('請先登入嚮導帳號');
         return;
@@ -65,7 +65,7 @@ export default function GuideReschedulesPage() {
     setActing(id);
     setErr(null);
     try {
-      const res = await fetch(`/api/guide/reschedule-requests/${encodeURIComponent(id)}/decision`, {
+      const res = await fetch(`/api/v2/guide/reschedule-requests/${encodeURIComponent(id)}/decision`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ action }),

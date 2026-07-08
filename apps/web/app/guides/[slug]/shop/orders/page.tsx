@@ -47,7 +47,7 @@ export default function GuideShopOrdersPage() {
   const TABS: Tab[] = ['all', 'pending', 'history'];
   const { onKeyDown, registerTab } = useTablistKeyboard<Tab>(TABS, tab, setTab);
 
-  const { data, loading } = useMeResource<Order[]>('/api/me/orders', {
+  const { data, loading } = useMeResource<Order[]>('/api/v2/orders', {
     onUnauthorized: () => router.replace(`/login?next=${encodeURIComponent(`/guides/${slug}/shop/orders`)}`),
   });
 
