@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-08T12:38:14.278Z -->
+<!-- query_timestamp: 2026-07-08T18:33:20.199Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-08T12:38:14.278Z  
-**Commit SHA:** `a176aa279daf8a739bc117635aeb6add356b9f63`
+**Query timestamp:** 2026-07-08T18:33:20.199Z  
+**Commit SHA:** `a927a9d044199816ae5d75a846ff9f1183c306c5`
 
 ---
 
@@ -32,7 +32,7 @@ _none_
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1665 | [[Booking V2][RLS] Fix production available-slots 42501 on guide_availability_rules](https://github.com/smallwei0301/tour-platform/issues/1665) | triaged, type:bug, priority:P1, agent:queued, owner:ai-agent, status:needs-repro, traveler-booking, database, rls, booking-v2 |
+| #1667 | [[QA] Verify late 2026-07-08 merged PRs (#1663/#1664/#1666)](https://github.com/smallwei0301/tour-platform/issues/1667) | triaged, priority:P1, cron-followup, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, rls, booking-v2, post-merge |
 | #1661 | [[QA] Daily test checklist for recent merged PRs 2026-07-08](https://github.com/smallwei0301/tour-platform/issues/1661) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, rls, infra, post-merge |
 | #1659 | [[Security][RLS] Revoke post-#1646 anon write grants and default privileges drift](https://github.com/smallwei0301/tour-platform/issues/1659) | triaged, type:bug, priority:P1, security, owner:mixed, status:needs-decision, database, rls |
 | #1657 | [[QA] Verify post-#1656 v2 order/refund/payment full-wiring regression](https://github.com/smallwei0301/tour-platform/issues/1657) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, refund |
@@ -89,6 +89,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1669 | [fix(web): suppress anonymous points 401 noise on booking v2 public flow](https://github.com/smallwei0301/tour-platform/pull/1669) | 2026-07-08 |
+| #1666 | [fix(api): protect available-slots internal reads](https://github.com/smallwei0301/tour-platform/pull/1666) | 2026-07-08 |
 | #1664 | [security(rls): 收斂 anon 寫入權回歸（scan-all 發現的 4 表）＋preflight 接通知](https://github.com/smallwei0301/tour-platform/pull/1664) | 2026-07-08 |
 | #1663 | [fix(test): issue1212 日期碰撞 flake（main CI 今日必紅）＋#1649 追加輪 worklog/lessons](https://github.com/smallwei0301/tour-platform/pull/1663) | 2026-07-08 |
 | #1656 | [feat(#1649): 訂單／退款／金流全面串接 v2 — traveler/admin/guide/補付款＋6 個既有 e2e 修復](https://github.com/smallwei0301/tour-platform/pull/1656) | 2026-07-07 |
@@ -97,8 +99,6 @@ _none_
 | #1645 | [feat: add admin evidence sweep scanner](https://github.com/smallwei0301/tour-platform/pull/1645) | 2026-07-07 |
 | #1644 | [feat: #1637 金流全鏈修復＋月結報表＋導遊已入帳/憑證核銷頁＋金流說明全鏈流程](https://github.com/smallwei0301/tour-platform/pull/1644) | 2026-07-07 |
 | #1643 | [fix(shop): 商店首頁字級/卡片逐項重新校正對齊參考圖](https://github.com/smallwei0301/tour-platform/pull/1643) | 2026-07-07 |
-| #1640 | [feat(security): anon-rls-probe 失敗時推播 Telegram+Email](https://github.com/smallwei0301/tour-platform/pull/1640) | 2026-07-06 |
-| #1639 | [security(rls): 自動稽核加固 — preflight 補 users + 行為式 anon-probe（防 #1563 復發）](https://github.com/smallwei0301/tour-platform/pull/1639) | 2026-07-06 |
 
 ---
 
