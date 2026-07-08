@@ -41,8 +41,19 @@ const TZ = 'Asia/Taipei';
 const GUIDE_ID = 'g-1212-traveler';
 const ACTIVITY_ID = 'a-1212-traveler';
 const PLAN_ID = 'p-1212-traveler';
-const REQUEST_START = '2026-07-08T09:00:00+08:00';
-const REQUEST_END = '2026-07-08T12:00:00+08:00';
+// 測試日＝「未來（≥14 天後）的週三」動態計算——原本寫死 2026-07-08（週三），
+// 當真實日期走到當天時，評估器的「今日」判定會蓋過預期 reason state（2026-07-08 實錄：
+// blackout 案回 blocked_by_conflict、positive 案冒出 reason state，main CI 當日必紅）。
+// 動態日期保住 weekday=3 的規則語意，永不與 today 碰撞。
+function futureWednesdayTaipei(minDaysAhead = 14) {
+  const taipeiNow = new Date(Date.now() + 8 * 3600_000);
+  const d = new Date(Date.UTC(taipeiNow.getUTCFullYear(), taipeiNow.getUTCMonth(), taipeiNow.getUTCDate() + minDaysAhead));
+  while (d.getUTCDay() !== 3) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+const REQUEST_DATE = futureWednesdayTaipei();
+const REQUEST_START = `${REQUEST_DATE}T09:00:00+08:00`;
+const REQUEST_END = `${REQUEST_DATE}T12:00:00+08:00`;
 
 function weekdayRule(overrides = {}) {
   return {
@@ -99,8 +110,8 @@ function baseInput(overrides = {}) {
     planId: PLAN_ID,
     timezone: TZ,
     participants: 1,
-    dateFrom: '2026-07-08',
-    dateTo: '2026-07-08',
+    dateFrom: REQUEST_DATE,
+    dateTo: REQUEST_DATE,
     minParticipants: 1,
     rules: [weekdayRule()],
     blackouts: [],
@@ -140,8 +151,8 @@ test('evaluator exposes canonicalReasonState=blackout when selected schedule fal
         {
           id: 'b-1212',
           guide_id: GUIDE_ID,
-          starts_at: '2026-07-08T08:00:00+08:00',
-          ends_at: '2026-07-08T20:00:00+08:00',
+          starts_at: `${REQUEST_DATE}T08:00:00+08:00`,
+          ends_at: `${REQUEST_DATE}T20:00:00+08:00`,
           reason: 'leave',
           source: 'manual',
         },
@@ -192,7 +203,7 @@ test('evaluator leaves canonicalReasonState undefined when no selectedSchedule (
   // with numbers; future slice can bridge if needed).
   const out = evaluateBookingAvailability(
     baseInput({
-      rules: [weekdayRule({ weekday: 0 })], // Sunday — does not cover Wed (July 8 2026)
+      rules: [weekdayRule({ weekday: 0 })], // Sunday — does not cover REQUEST_DATE (always a Wednesday)
     }),
   );
   assert.equal(out.available, false);

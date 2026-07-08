@@ -107,6 +107,23 @@
 - **凍結區未動（需 owner P0-OVERRIDE 才能退役）**：`app/api/payments/ecpay/{create,callback,
   refund-callback}`、`app/api/payments/mock-confirm`——v2 對應已接線，legacy 為相容期安全網。
 
+### 2026-07-08 追加輪（同 session、fresh container）
+- **重複工作事故（已回收）**：本輪 container clone 早於 PR #1656 merge，開機未對齊遠端
+  → 盲目重做 Phase 1–5 非凍結範圍（7 commits）。發現後：本地重複 commits 捨棄、分支
+  重置回遠端尖端＋合併最新 main；教訓入 lessons.md（stale-clone-duplicates-merged-work）。
+  重做過程的獨立驗證結論與 #1656 QA 一致（全量 0 fail、traveler/admin/guide e2e 綠）。
+- **本輪淨增量**：
+  1. `issue1212-traveler-canonical-copy` 日期碰撞 flake 修復——fixture 寫死 2026-07-08
+     （週三）＝今天，evaluator 的 today 判定蓋過預期 reason state，**main CI 今天必紅**；
+     改為動態「未來 ≥14 天的週三」（語意不變）。
+  2. owner 指示（2026-07-08）「剩餘退役先不刪、開 follow-up」→ issue #1662
+     （凍結區 payments legacy 相容期收斂清單；已依 #1656 現況修正內容）。
+  3. Vercel 生產調查：`/api/v2/activities/.../available-slots` 7/4–7/6 15 次
+     `permission denied for table guide_availability_rules`（42501，v2 可訂時段生產壞損，
+     需另案；與 #1646 相關）；7/4 舊部署 2 次 GUIDE_SESSION_SECRET SECURITY_ENV_BLOCK
+     （最新部署未再現，建議 owner 檢查 env scope）。
+  4. lessons.md 追加 playwright-pipe-tail-fake-green＋stale-clone-duplicates-merged-work。
+
 ### 待辦（另案）
 - [ ] Phase 5.1：v2 ecpay callback＋ReturnURL 切換（P0-OVERRIDE＋部署協調，owner 決策）
 - [ ] Phase 6：legacy routes 退役＋殘留守門＋契約 spec 同步（含 order-scoped 正名）
