@@ -1,20 +1,19 @@
-<!-- query_timestamp: 2026-07-08T06:54:47.114Z -->
+<!-- query_timestamp: 2026-07-08T12:38:14.278Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-08T06:54:47.114Z  
-**Commit SHA:** `3a8a51d8807194f2fb17e4534b0e7875276a032a`
+**Query timestamp:** 2026-07-08T12:38:14.278Z  
+**Commit SHA:** `a176aa279daf8a739bc117635aeb6add356b9f63`
 
 ---
 
-## Open PRs (8)
+## Open PRs (7)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1663 | [fix(test): issue1212 日期碰撞 flake（main CI 今日必紅）＋#1649 追加輪 worklog/lessons](https://github.com/smallwei0301/tour-platform/pull/1663) | `claude/payment-order-v2-migration-vq0lau` |
 | #1651 | [docs(#1649): 訂單／退款／金流 v2 全面串接計劃書＋worklog（docs-only）](https://github.com/smallwei0301/tour-platform/pull/1651) | `claude/issue1649-v2-migration-plan` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
@@ -23,16 +22,17 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (34 total)
+## Open Issues (35 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (15)
+### P1 (16)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1665 | [[Booking V2][RLS] Fix production available-slots 42501 on guide_availability_rules](https://github.com/smallwei0301/tour-platform/issues/1665) | triaged, type:bug, priority:P1, agent:queued, owner:ai-agent, status:needs-repro, traveler-booking, database, rls, booking-v2 |
 | #1661 | [[QA] Daily test checklist for recent merged PRs 2026-07-08](https://github.com/smallwei0301/tour-platform/issues/1661) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, rls, infra, post-merge |
 | #1659 | [[Security][RLS] Revoke post-#1646 anon write grants and default privileges drift](https://github.com/smallwei0301/tour-platform/issues/1659) | triaged, type:bug, priority:P1, security, owner:mixed, status:needs-decision, database, rls |
 | #1657 | [[QA] Verify post-#1656 v2 order/refund/payment full-wiring regression](https://github.com/smallwei0301/tour-platform/issues/1657) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, refund |
@@ -89,6 +89,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1664 | [security(rls): 收斂 anon 寫入權回歸（scan-all 發現的 4 表）＋preflight 接通知](https://github.com/smallwei0301/tour-platform/pull/1664) | 2026-07-08 |
+| #1663 | [fix(test): issue1212 日期碰撞 flake（main CI 今日必紅）＋#1649 追加輪 worklog/lessons](https://github.com/smallwei0301/tour-platform/pull/1663) | 2026-07-08 |
 | #1656 | [feat(#1649): 訂單／退款／金流全面串接 v2 — traveler/admin/guide/補付款＋6 個既有 e2e 修復](https://github.com/smallwei0301/tour-platform/pull/1656) | 2026-07-07 |
 | #1650 | [test(api): add v2 admin POS auth csrf contract](https://github.com/smallwei0301/tour-platform/pull/1650) | 2026-07-07 |
 | #1646 | [security(rls): preflight 全表掃描 RPC — 掃全部 public 表＋檢查 RLS 是否啟用](https://github.com/smallwei0301/tour-platform/pull/1646) | 2026-07-07 |
@@ -97,8 +99,6 @@ _none_
 | #1643 | [fix(shop): 商店首頁字級/卡片逐項重新校正對齊參考圖](https://github.com/smallwei0301/tour-platform/pull/1643) | 2026-07-07 |
 | #1640 | [feat(security): anon-rls-probe 失敗時推播 Telegram+Email](https://github.com/smallwei0301/tour-platform/pull/1640) | 2026-07-06 |
 | #1639 | [security(rls): 自動稽核加固 — preflight 補 users + 行為式 anon-probe（防 #1563 復發）](https://github.com/smallwei0301/tour-platform/pull/1639) | 2026-07-06 |
-| #1638 | [feat(harness): execute_sql 改讀寫全自動＋事後審計（owner 二次拍板）](https://github.com/smallwei0301/tour-platform/pull/1638) | 2026-07-06 |
-| #1636 | [fix(reviews): 暖場評論併入評分分佈與篩選 (#1592 補強)](https://github.com/smallwei0301/tour-platform/pull/1636) | 2026-07-06 |
 
 ---
 
