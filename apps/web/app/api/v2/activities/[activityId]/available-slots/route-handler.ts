@@ -66,6 +66,30 @@ function isValidTimezone(tz: string): boolean {
 
 type ActivityRelation = { id: string; guide_id: string };
 
+type SupabaseReadClient = {
+  from: (table: string) => any;
+};
+
+type AvailableSlotsRouteDeps = {
+  createClient?: typeof CreateClientFn;
+  getProtectedReadClient?: () => Promise<SupabaseReadClient>;
+};
+
+async function resolveProtectedReadClient(
+  publicSupabase: SupabaseReadClient,
+  routeDeps?: AvailableSlotsRouteDeps
+): Promise<SupabaseReadClient> {
+  if (routeDeps?.getProtectedReadClient) {
+    return routeDeps.getProtectedReadClient();
+  }
+
+  if (hasSupabaseEnv()) {
+    return getSupabase();
+  }
+
+  return publicSupabase;
+}
+
 function pickActivityRelation(
   value: ActivityRelation | ActivityRelation[] | null
 ): ActivityRelation | null {
@@ -182,7 +206,7 @@ function parseAndValidateParams(
 export async function getAvailableSlots(
   request: NextRequest,
   context: { params: Promise<{ activityId: string }> },
-  routeDeps?: { createClient?: typeof CreateClientFn }
+  routeDeps?: AvailableSlotsRouteDeps
 ) {
   const { activityId: activityKey } = await context.params;
   const searchParams = request.nextUrl.searchParams;
@@ -383,10 +407,14 @@ export async function getAvailableSlots(
       });
     }
 
+    const protectedReadSupabase = await resolveProtectedReadClient(supabase, routeDeps);
+
     // Fetch availability rules for this guide (and optionally this plan)
-    const { data: rulesData, error: rulesError } = await supabase
+    const { data: rulesData, error: rulesError } = await protectedReadSupabase
       .from('guide_availability_rules')
-      .select('*')
+      .select(
+        'id, guide_id, activity_plan_id, weekday, start_time_local, end_time_local, timezone, slot_interval_minutes, buffer_before_minutes, buffer_after_minutes, effective_from, effective_to, is_active, use_dynamic_reemit'
+      )
       .eq('guide_id', guideId)
       .eq('is_active', true)
       .or(`activity_plan_id.is.null,activity_plan_id.eq.${params.planId}`);
@@ -399,9 +427,9 @@ export async function getAvailableSlots(
     }
 
     // Fetch blackout dates for this guide
-    const { data: blackoutsData, error: blackoutsError } = await supabase
+    const { data: blackoutsData, error: blackoutsError } = await protectedReadSupabase
       .from('guide_blackout_dates')
-      .select('*')
+      .select('id, guide_id, starts_at, ends_at, reason, source')
       .eq('guide_id', guideId);
 
     if (blackoutsError) {
@@ -413,7 +441,7 @@ export async function getAvailableSlots(
 
     // Fetch existing bookings for this guide (active statuses only)
     const activeStatuses = [...CAPACITY_HOLD_BOOKING_STATUSES];
-    const { data: bookingsData, error: bookingsError } = await supabase
+    const { data: bookingsData, error: bookingsError } = await protectedReadSupabase
       .from('bookings')
       .select('id, guide_id, start_at, end_at, status, participants, activity_id, activity_plan_id, order_id')
       .eq('guide_id', guideId)
@@ -427,9 +455,9 @@ export async function getAvailableSlots(
     }
 
     // #1493 讀取時過濾：逾時未付款的 draft 佔位即時釋放（不必等排程取消）。
-    const liveBookings = await dropExpiredUnpaidHolds(supabase, bookingsData || [], new Date().toISOString());
+    const liveBookings = await dropExpiredUnpaidHolds(protectedReadSupabase, bookingsData || [], new Date().toISOString());
 
-    const { data: seasonsData, error: seasonsError } = await supabase
+    const { data: seasonsData, error: seasonsError } = await protectedReadSupabase
       .from('activity_plan_seasons')
       .select('id, activity_plan_id, start_month, start_day, end_month, end_day, timezone, is_active')
       .eq('activity_plan_id', params.planId);
@@ -441,13 +469,12 @@ export async function getAvailableSlots(
       });
     }
 
-    const conflictOverrideSupabase = hasSupabaseEnv() ? await getSupabase() : supabase;
     const {
       data: conflictOverridesData,
       error: conflictOverridesError,
       schemaFallback: conflictOverridesSchemaFallback,
     } = await loadConflictOverridesWithSchemaFallback(async () =>
-      conflictOverrideSupabase
+      protectedReadSupabase
         .from('guide_slot_conflict_overrides')
         .select(
           'id, guide_id, activity_id, activity_plan_id, start_at, end_at, reason, requires_helper, helper_status, guide_note, admin_note, status, created_at, created_by_admin_email'
@@ -475,7 +502,7 @@ export async function getAvailableSlots(
     }
 
     // Transform database rows to slot generator types
-    const rules: AvailabilityRule[] = (rulesData || []).map((row) => ({
+    const rules: AvailabilityRule[] = (rulesData || []).map((row: any) => ({
       id: row.id,
       guide_id: row.guide_id,
       activity_plan_id: row.activity_plan_id,
@@ -494,7 +521,7 @@ export async function getAvailableSlots(
       use_dynamic_reemit: row.use_dynamic_reemit ?? false,
     }));
 
-    const blackouts: BlackoutWindow[] = (blackoutsData || []).map((row) => ({
+    const blackouts: BlackoutWindow[] = (blackoutsData || []).map((row: any) => ({
       id: row.id,
       guide_id: row.guide_id,
       starts_at: row.starts_at,
@@ -503,7 +530,7 @@ export async function getAvailableSlots(
       source: isManualOrSystemSource(row.source) ? row.source : 'manual',
     }));
 
-    const bookings: ExistingBooking[] = liveBookings.map((row) => ({
+    const bookings: ExistingBooking[] = liveBookings.map((row: any) => ({
       id: row.id,
       guide_id: row.guide_id,
       start_at: row.start_at,
@@ -514,7 +541,7 @@ export async function getAvailableSlots(
       activity_plan_id: row.activity_plan_id ?? null,
     }));
 
-    const seasons: ActivityPlanSeason[] = (seasonsData || []).map((row) => ({
+    const seasons: ActivityPlanSeason[] = (seasonsData || []).map((row: any) => ({
       id: row.id,
       activity_plan_id: row.activity_plan_id,
       start_month: Number(row.start_month),
@@ -567,7 +594,7 @@ export async function getAvailableSlots(
     let availability;
     if (isScheduledListing) {
       // 列出該方案在查詢區間內的所有開放固定場次，逐一驗證收集為可預約 slots。
-      const { data: planSchedules, error: planSchedulesError } = await supabase
+      const { data: planSchedules, error: planSchedulesError } = await protectedReadSupabase
         .from('activity_schedules')
         .select('id, activity_id, plan_id, start_at, end_at, capacity, booked_count, status')
         .eq('activity_id', params.activityId)
@@ -581,12 +608,12 @@ export async function getAvailableSlots(
       }
 
       const openSchedules: EvaluatorSchedule[] = (planSchedules || [])
-        .filter((s) => s.status === 'open')
-        .filter((s) => {
+        .filter((s: any) => s.status === 'open')
+        .filter((s: any) => {
           const localDate = getDateStringInTimezone(new Date(s.start_at), params.timezone);
           return localDate >= params.dateFrom && localDate <= params.dateTo;
         })
-        .sort((a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
+        .sort((a: any, b: any) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime());
 
       const scheduledResult = evaluateScheduledPlanSlots(
         {
