@@ -13,6 +13,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { maxRedeemable } from '../../lib/points-calc.mjs';
+import { useTravelerAuth } from '../../lib/use-traveler-auth';
 
 // Midao 八色系統（BRAND_BOOK §03）— 精品/會員組合
 const INK = '#2a2422';         // 礦石：主要文字
@@ -30,8 +31,14 @@ export function CheckoutPointsRedeem({
 }) {
   const [balance, setBalance] = useState<number | null>(null);
   const [use, setUse] = useState(false);
+  const { authed } = useTravelerAuth();
 
   useEffect(() => {
+    if (authed !== true) {
+      setBalance(null);
+      return;
+    }
+
     let alive = true;
     (async () => {
       try {
@@ -46,7 +53,7 @@ export function CheckoutPointsRedeem({
     return () => {
       alive = false;
     };
-  }, []);
+  }, [authed]);
 
   const cap = useMemo(() => maxRedeemable(balance || 0, orderTwd), [balance, orderTwd]);
   const redeem = use ? cap : 0;
