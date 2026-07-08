@@ -26,14 +26,14 @@ BEGIN
   END LOOP;
 END $$;
 
--- 2) default privileges：之後新建的表預設不給 anon 寫入（涵蓋常見建表角色，best-effort 冪等）
-ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLES FROM anon;
+-- 2) default privileges：之後新建的表預設不給 anon 寫入（best-effort，例外容錯）。
+--    只改「當前角色（apply 執行者，通常 postgres）」的 default privileges——這正是建表者，
+--    也是那 4 張新表回歸 anon grant 的來源。不嘗試 ALTER supabase_admin（超級角色，本連線
+--    無權改，會 42501 連累整包回滾）。權限不足時 graceful skip，不影響上面的 REVOKE 收斂。
+--    未來若仍有新表回歸，rls-preflight scan-all 每週會抓到（已接 TG+Email 通知）。
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='postgres') THEN
-    EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLES FROM anon';
-  END IF;
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='supabase_admin') THEN
-    EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLES FROM anon';
-  END IF;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLES FROM anon;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'default-priv 收斂略過（權限不足）：%', SQLERRM;
 END $$;

@@ -90,6 +90,14 @@
       "applied_at": "2026-07-07T12:44:00+08:00",
       "status": "verified",
       "note": "新增唯讀 SECURITY DEFINER RPC public.rls_preflight_scan()（列 public 全表 RLS 狀態＋anon/authenticated/PUBLIC 寫入權），供 rls-grants-preflight 掃全表。apply_migration success；驗證 proname 存在、prosecdef=true、search_path pinned；執行回傳 66 表。掃描發現 4 表（activity_addons/order_addons/user_notifications/user_points_ledger）有 anon 寫入 grant（#1563 後新表回歸，待另案收斂）。rollback：同名 .rollback.sql（drop function）。Refs #1293。"
+    },
+    {
+      "filename": "20260708005545_revoke_anon_writes_and_default_privs.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「授權代跑」）套用＋驗證",
+      "applied_at": "2026-07-08T13:18:00+08:00",
+      "status": "verified",
+      "note": "撤 anon 對 public 全表寫入權（rls-preflight scan-all 首跑發現 4 表回歸：activity_addons/order_addons/user_notifications/user_points_ledger）＋修 default privileges 防未來新表回歸。首次 apply 因 ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin 42501 回滾；修為只改當前角色＋例外容錯後 apply_migration success。驗證：anon 對 public 表寫入權 = 0、scan RPC broad_write_grant 歸零、anon 仍可讀 activities（SELECT 未動）。只改權限不動資料列。rollback：同名 .rollback.sql（發回 anon 寫入，實務不建議）。Refs #1563 #1293。"
     }
   ]
 }

@@ -5,15 +5,12 @@
 -- 還原範圍＝把 default privileges 改回「給 anon 寫入」，並對現有表重新 GRANT anon 寫入。
 --    （多數表其實不該有；還原僅為對稱性，實務上不建議執行。）
 
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE, DELETE ON TABLES TO anon;
+-- default privileges 還原（只改當前角色，例外容錯——與正檔對稱，避免 supabase_admin 42501）
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='postgres') THEN
-    EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT INSERT, UPDATE, DELETE ON TABLES TO anon';
-  END IF;
-  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='supabase_admin') THEN
-    EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT INSERT, UPDATE, DELETE ON TABLES TO anon';
-  END IF;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT INSERT, UPDATE, DELETE ON TABLES TO anon;
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'default-priv 還原略過（權限不足）：%', SQLERRM;
 END $$;
 
 DO $$
