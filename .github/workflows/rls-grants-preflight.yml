@@ -76,7 +76,7 @@ jobs:
           echo "## RLS/Grants Preflight Result" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f /tmp/rls-preflight/rls-preflight.json ]; then
-            STATUS=$(node -e "const d=require('/tmp/rls-preflight/rls-preflight.json'); console.log(d.overall_status || d.status || 'unknown')" 2>/dev/null || echo "unknown")
+            STATUS=$(node -e "const d=require('/tmp/rls-preflight/rls-preflight.json'); console.log(d.summary?.overall_status || d.overall_status || d.status || 'unknown')" 2>/dev/null || echo "unknown")
             TABLE_COUNT=$(node -e "const d=require('/tmp/rls-preflight/rls-preflight.json'); console.log((d.tables||d.results||[]).length)" 2>/dev/null || echo "?")
             echo "**Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
             echo "**Tables checked:** $TABLE_COUNT" >> $GITHUB_STEP_SUMMARY

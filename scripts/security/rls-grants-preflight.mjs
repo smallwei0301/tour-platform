@@ -21,7 +21,7 @@ Environment variables required (unless --help):
 
 Exit codes:
   0  PASS — no violations found
-  1  FAIL — violations found or env missing`;
+  1  FAIL/HOLD — violations found, runtime error, or prerequisite missing`;
 
 // Sensitive tables that must have restrictive RLS and grants (anon 應零存取).
 // ⚠️ PII/身分表（users、traveler_profiles、guide_applications）於 2026-07-06 補入：
@@ -66,6 +66,13 @@ const PUBLIC_READ_TABLES = [
 // authenticated 對多數表有 write grant 是 Supabase 標準模型（真正的限制在 RLS policy），
 // 全標會變成雜訊；而敏感表的 authenticated 寫入已由 checkGrants（SENSITIVE_TABLES）覆蓋。
 const NEVER_WRITE_ROLES = ['anon', 'PUBLIC'];
+const HELPER_RPC_MIGRATION_FILE = 'supabase/migrations/20260709103000_rls_grants_preflight_helper_rpcs.sql';
+const SCAN_RPC_MIGRATION_FILE = 'supabase/migrations/20260707081500_rls_preflight_scan_rpc.sql';
+const HELPER_RPC_NAMES = [
+  'rls_grants_preflight_check_policies',
+  'rls_grants_preflight_check_grants',
+  'rls_preflight_scan',
+];
 
 /**
  * 純函式（可離線單測）：把 rls_preflight_scan 回傳的一列，判成 0..N 個違規。
@@ -84,34 +91,6 @@ export function classifyScanRow(row) {
     violations.push({ table, grantees: publicWrite, violation: 'broad_write_grant' });
   }
   return violations;
-}
-
-/**
- * 全表掃描：列出 public 全部 base table，檢查 RLS 是否啟用＋是否誤發 anon 寫入權。
- * RPC 不存在時 graceful 降級為 unknown（migration 尚未套用的情況）。
- */
-async function checkScanAll(client) {
-  const { data, error } = await client.rpc('rls_preflight_scan');
-  if (error) {
-    return {
-      table: '(all public tables)',
-      check: 'scan_all',
-      status: 'unknown',
-      reason: `rls_preflight_scan RPC unavailable: ${error.message}. migration 20260707081500 尚未套用？`,
-      violations: [],
-    };
-  }
-  if (!Array.isArray(data)) {
-    return { table: '(all public tables)', check: 'scan_all', status: 'unknown', reason: 'RPC returned non-array', violations: [] };
-  }
-  const violations = data.flatMap((row) => classifyScanRow(row));
-  return {
-    table: '(all public tables)',
-    check: 'scan_all',
-    status: violations.length === 0 ? 'pass' : 'fail',
-    tables_scanned: data.length,
-    violations,
-  };
 }
 
 function parseArgs(argv) {
@@ -133,6 +112,108 @@ function sanitize(text) {
     .replace(/(Bearer\s+)[A-Za-z0-9._-]+/gi, '$1<redacted>');
 }
 
+function sanitizeErrorMessage(message) {
+  return sanitize(String(message || 'unknown error'));
+}
+
+function isMissingHelperRpcError(error) {
+  const message = String(error?.message || '');
+  const code = String(error?.code || '').toUpperCase();
+  return (
+    code === 'PGRST202'
+    || code === '42883'
+    || /schema cache/i.test(message)
+    || /function .* does not exist/i.test(message)
+    || HELPER_RPC_NAMES.some((name) => message.includes(name))
+  );
+}
+
+export function classifyCheckFailure({
+  table,
+  check,
+  error,
+  helperName = null,
+  migrationFile = HELPER_RPC_MIGRATION_FILE,
+  reasonCode = 'missing_helper_rpc',
+}) {
+  const detail = sanitizeErrorMessage(error?.message);
+  if (isMissingHelperRpcError(error)) {
+    return {
+      table,
+      check,
+      status: 'hold',
+      reason_code: reasonCode,
+      reason: `${helperName || 'required preflight RPC'} unavailable: ${detail}`,
+      action_code: 'apply_versioned_migration',
+      action: `apply ${migrationFile} before rerunning preflight`,
+      violations: [],
+    };
+  }
+
+  return {
+    table,
+    check,
+    status: 'fail',
+    reason_code: 'runtime_error',
+    reason: `${check} check failed: ${detail}`,
+    violations: [],
+  };
+}
+
+export function summarizeResults(results) {
+  const allViolations = results.flatMap((r) => r.violations || []);
+  const passCount = results.filter((r) => r.status === 'pass').length;
+  const failCount = results.filter((r) => r.status === 'fail').length;
+  const holdCount = results.filter((r) => r.status === 'hold').length;
+
+  return {
+    overall_status: failCount > 0 ? 'fail' : holdCount > 0 ? 'hold' : 'pass',
+    tables_checked: SENSITIVE_TABLES.length,
+    checks_run: results.length,
+    pass: passCount,
+    fail: failCount,
+    hold: holdCount,
+    violation_count: allViolations.length,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * 全表掃描：列出 public 全部 base table，檢查 RLS 是否啟用＋是否誤發 anon 寫入權。
+ * RPC 缺失時改標 HOLD（明確 prerequisite），避免 unknown 成為穩態。
+ */
+async function checkScanAll(client) {
+  const { data, error } = await client.rpc('rls_preflight_scan');
+  if (error) {
+    return classifyCheckFailure({
+      table: '(all public tables)',
+      check: 'scan_all',
+      error,
+      helperName: 'rls_preflight_scan',
+      migrationFile: SCAN_RPC_MIGRATION_FILE,
+      reasonCode: 'missing_scan_rpc',
+    });
+  }
+  if (!Array.isArray(data)) {
+    return {
+      table: '(all public tables)',
+      check: 'scan_all',
+      status: 'fail',
+      reason_code: 'runtime_error',
+      reason: 'scan_all RPC returned non-array',
+      violations: [],
+    };
+  }
+  const violations = data.flatMap((row) => classifyScanRow(row));
+  return {
+    table: '(all public tables)',
+    check: 'scan_all',
+    status: violations.length === 0 ? 'pass' : 'fail',
+    tables_scanned: data.length,
+    violations,
+  };
+}
+
 /**
  * Query pg_policies for the given table and return any overly permissive entries.
  * A policy is considered overly permissive when:
@@ -141,25 +222,26 @@ function sanitize(text) {
  */
 async function checkPolicies(client, table) {
   const violations = [];
-
-  // pg_policies is a system view accessible via PostgREST with service_role.
-  // We use rpc to run raw SQL since the pg_catalog schema is not exposed via PostgREST by default.
   const { data, error } = await client.rpc('rls_grants_preflight_check_policies', { p_table: table });
 
   if (error) {
-    // rpc may not exist — fallback: try reading from pg_policies via REST directly.
-    // PostgREST does not expose pg_catalog so we collect what we can and flag as unknown.
-    return {
+    return classifyCheckFailure({
       table,
       check: 'rls_policies',
-      status: 'unknown',
-      reason: `pg_policies RPC unavailable: ${error.message}. Run with direct psql for full RLS audit.`,
-      violations: [],
-    };
+      error,
+      helperName: 'rls_grants_preflight_check_policies',
+    });
   }
 
   if (!Array.isArray(data)) {
-    return { table, check: 'rls_policies', status: 'unknown', reason: 'RPC returned non-array', violations: [] };
+    return {
+      table,
+      check: 'rls_policies',
+      status: 'fail',
+      reason_code: 'runtime_error',
+      reason: 'rls_policies RPC returned non-array',
+      violations: [],
+    };
   }
 
   for (const row of data) {
@@ -201,21 +283,26 @@ async function checkPolicies(client, table) {
  */
 async function checkGrants(client, table) {
   const violations = [];
-
   const { data, error } = await client.rpc('rls_grants_preflight_check_grants', { p_table: table });
 
   if (error) {
-    return {
+    return classifyCheckFailure({
       table,
       check: 'role_table_grants',
-      status: 'unknown',
-      reason: `role_table_grants RPC unavailable: ${error.message}. Run with direct psql for full grants audit.`,
-      violations: [],
-    };
+      error,
+      helperName: 'rls_grants_preflight_check_grants',
+    });
   }
 
   if (!Array.isArray(data)) {
-    return { table, check: 'role_table_grants', status: 'unknown', reason: 'RPC returned non-array', violations: [] };
+    return {
+      table,
+      check: 'role_table_grants',
+      status: 'fail',
+      reason_code: 'runtime_error',
+      reason: 'role_table_grants RPC returned non-array',
+      violations: [],
+    };
   }
 
   const forbiddenPrivileges = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
@@ -249,14 +336,15 @@ function formatText(results, summary) {
   lines.push(`Overall: ${summary.overall_status.toUpperCase()}`);
   lines.push(`Tables checked: ${summary.tables_checked}`);
   lines.push(`Checks run: ${summary.checks_run}`);
-  lines.push(`Pass: ${summary.pass}  Fail: ${summary.fail}  Unknown: ${summary.unknown}`);
+  lines.push(`Pass: ${summary.pass}  Fail: ${summary.fail}  Hold: ${summary.hold}`);
   lines.push(`Timestamp: ${summary.timestamp}`);
   lines.push('');
 
   for (const r of results) {
-    const statusLabel = r.status === 'pass' ? 'PASS' : r.status === 'fail' ? 'FAIL' : 'UNKNOWN';
+    const statusLabel = r.status === 'pass' ? 'PASS' : r.status === 'fail' ? 'FAIL' : 'HOLD';
     lines.push(`[${statusLabel}] ${r.table} / ${r.check}`);
     if (r.reason) lines.push(`  Reason: ${r.reason}`);
+    if (r.action) lines.push(`  Action: ${r.action}`);
     for (const v of r.violations || []) {
       if (v.violation === 'overly_permissive_policy') {
         lines.push(`  VIOLATION: policy "${v.policy_name}" — roles [${v.roles.join(', ')}] — cmd ${v.command} — USING(${v.qual})`);
@@ -309,22 +397,8 @@ async function main(argv = process.argv.slice(2)) {
   results.push(await checkScanAll(client));
 
   const allViolations = results.flatMap((r) => r.violations || []);
-  const passCount = results.filter((r) => r.status === 'pass').length;
-  const failCount = results.filter((r) => r.status === 'fail').length;
-  const unknownCount = results.filter((r) => r.status === 'unknown').length;
-
-  const overallStatus = failCount > 0 ? 'fail' : unknownCount > 0 ? 'unknown' : 'pass';
-
-  const summary = {
-    overall_status: overallStatus,
-    tables_checked: SENSITIVE_TABLES.length,
-    checks_run: results.length,
-    pass: passCount,
-    fail: failCount,
-    unknown: unknownCount,
-    violation_count: allViolations.length,
-    timestamp: new Date().toISOString(),
-  };
+  const summary = summarizeResults(results);
+  const overallStatus = summary.overall_status;
 
   const report = {
     summary,
@@ -361,7 +435,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
           checks_run: 0,
           pass: 0,
           fail: 0,
-          unknown: 0,
+          hold: 0,
           violation_count: 0,
           timestamp: new Date().toISOString(),
         },
