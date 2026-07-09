@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-09T13:00:27.301Z -->
+<!-- query_timestamp: 2026-07-09T18:39:23.908Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-09T13:00:27.301Z  
-**Commit SHA:** `29461f1e9daf151d4a18c7253f58a62ee2d4fcf0`
+**Query timestamp:** 2026-07-09T18:39:23.908Z  
+**Commit SHA:** `6be45a293c3055411da24a99c38a8be3fae9e9ae`
 
 ---
 
@@ -22,18 +22,17 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (39 total)
+## Open Issues (38 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (18)
+### P1 (17)
 
 | # | Title | Labels |
 |---|-------|--------|
 | #1682 | [[QA] Verify post-#1676/#1677/#1679 admin trend and RLS preflight evidence](https://github.com/smallwei0301/tour-platform/issues/1682) | triaged, priority:P1, cron-followup, qa, security, agent:queued, owner:ai-agent, status:ready, type:qa, database, rls, infra, admin |
-| #1681 | [[Review][Admin Go/No-Go] Align schedule management with live GitHub Actions workflows](https://github.com/smallwei0301/tour-platform/issues/1681) | type:feature, priority:P1, agent:now, owner:ai-agent, status:needs-review, notifications, infra, admin |
 | #1673 | [[QA] Daily test checklist for recent merged PRs 2026-07-09](https://github.com/smallwei0301/tour-platform/issues/1673) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, auth |
 | #1661 | [[QA] Daily test checklist for recent merged PRs 2026-07-08](https://github.com/smallwei0301/tour-platform/issues/1661) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, rls, infra, post-merge |
 | #1659 | [[Security][RLS] Revoke post-#1646 anon write grants and default privileges drift](https://github.com/smallwei0301/tour-platform/issues/1659) | triaged, type:bug, priority:P1, security, owner:mixed, status:needs-decision, database, rls |
@@ -93,6 +92,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1683 | [feat(admin): 對齊 Go/No-Go 排程管理與 live GitHub Actions workflows](https://github.com/smallwei0301/tour-platform/pull/1683) | 2026-07-09 |
 | #1680 | [feat(tp-kanban): checkpoint multi-lane scheduler v1-v10](https://github.com/smallwei0301/tour-platform/pull/1680) | 2026-07-09 |
 | #1679 | [fix(security): 收斂 GH-1678 sensitive-table grants 與 soft-launch preflight contract](https://github.com/smallwei0301/tour-platform/pull/1679) | 2026-07-09 |
 | #1677 | [[Security][RLS] 修正 rls-grants-preflight helper RPC 缺失與 HOLD 顯示邊界](https://github.com/smallwei0301/tour-platform/pull/1677) | 2026-07-09 |
@@ -102,7 +102,6 @@ _none_
 | #1664 | [security(rls): 收斂 anon 寫入權回歸（scan-all 發現的 4 表）＋preflight 接通知](https://github.com/smallwei0301/tour-platform/pull/1664) | 2026-07-08 |
 | #1663 | [fix(test): issue1212 日期碰撞 flake（main CI 今日必紅）＋#1649 追加輪 worklog/lessons](https://github.com/smallwei0301/tour-platform/pull/1663) | 2026-07-08 |
 | #1656 | [feat(#1649): 訂單／退款／金流全面串接 v2 — traveler/admin/guide/補付款＋6 個既有 e2e 修復](https://github.com/smallwei0301/tour-platform/pull/1656) | 2026-07-07 |
-| #1650 | [test(api): add v2 admin POS auth csrf contract](https://github.com/smallwei0301/tour-platform/pull/1650) | 2026-07-07 |
 
 ---
 
