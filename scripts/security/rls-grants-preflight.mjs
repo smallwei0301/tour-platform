@@ -44,6 +44,9 @@ const SENSITIVE_TABLES = [
   'guide_applications', // 導遊申請個資（審核前）
 ];
 
+// Explicit config tables that are allowed to stay public-read-only.
+const PUBLIC_READ_CONFIG_TABLES = ['soft_launch_controls'];
+
 // Roles that should NOT have broad access to sensitive tables.
 const FORBIDDEN_ROLES = ['anon', 'authenticated', 'public'];
 
@@ -126,6 +129,21 @@ function isMissingHelperRpcError(error) {
     || /function .* does not exist/i.test(message)
     || HELPER_RPC_NAMES.some((name) => message.includes(name))
   );
+}
+
+function isAllowedPublicReadPolicy(table, row, effectiveRoles, qual, withCheck) {
+  if (!PUBLIC_READ_CONFIG_TABLES.includes(table)) return false;
+  const isSelectCommand = row.cmd === 'SELECT';
+  if (!isSelectCommand) return false;
+  if (!effectiveRoles.every((role) => FORBIDDEN_ROLES.includes(role))) return false;
+  if (!PERMISSIVE_EXPRS.includes(qual)) return false;
+  return withCheck === '' || PERMISSIVE_EXPRS.includes(withCheck);
+}
+
+function isAllowedPublicReadGrant(table, grantee, privilege) {
+  return PUBLIC_READ_CONFIG_TABLES.includes(table)
+    && privilege === 'SELECT'
+    && FORBIDDEN_ROLES.includes(grantee);
 }
 
 export function classifyCheckFailure({
@@ -256,7 +274,7 @@ async function checkPolicies(client, table) {
 
     const hasForbiddenRole = effectiveRoles.some((r) => FORBIDDEN_ROLES.includes(r));
 
-    if (hasPermissiveExpr && hasForbiddenRole) {
+    if (hasPermissiveExpr && hasForbiddenRole && !isAllowedPublicReadPolicy(table, row, effectiveRoles, qual, withCheck)) {
       violations.push({
         policy_name: row.policyname,
         table,
@@ -311,7 +329,11 @@ async function checkGrants(client, table) {
     const grantee = (row.grantee || '').trim();
     const privilege = (row.privilege_type || '').trim().toUpperCase();
 
-    if (FORBIDDEN_ROLES.includes(grantee) && forbiddenPrivileges.includes(privilege)) {
+    if (
+      FORBIDDEN_ROLES.includes(grantee)
+      && forbiddenPrivileges.includes(privilege)
+      && !isAllowedPublicReadGrant(table, grantee, privilege)
+    ) {
       violations.push({
         table,
         grantee,
