@@ -1683,20 +1683,18 @@ export async function adminDashboardSummaryDb(input = {}) {
   // 無任何範圍時維持近 7 日預設；桶數上限 90（保留最近的日子）防爆量。
   const TREND_MAX_BUCKETS = 90;
   const now = new Date();
-  let trendEnd = rangeTo
-    ? new Date(new Date(rangeTo).getTime() - 1)
-    : new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const hasCustomRange = !!(from || to);
+  let trendEnd = rangeTo ? new Date(new Date(rangeTo).getTime() - 1) : new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if (trendEnd > now) trendEnd = now;
-  let trendStart = rangeFrom
-    ? new Date(rangeFrom)
-    : new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate() - 6);
-  trendStart = new Date(trendStart.getFullYear(), trendStart.getMonth(), trendStart.getDate());
-  trendEnd = new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate());
-  const minStart = new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate() - (TREND_MAX_BUCKETS - 1));
+  let trendStart = rangeFrom ? new Date(rangeFrom) : new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate() - 6);
+  const dayStart = hasCustomRange ? (d) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate())) : (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  trendStart = dayStart(trendStart);
+  trendEnd = dayStart(trendEnd);
+  const minStart = hasCustomRange ? new Date(Date.UTC(trendEnd.getUTCFullYear(), trendEnd.getUTCMonth(), trendEnd.getUTCDate() - (TREND_MAX_BUCKETS - 1))) : new Date(trendEnd.getFullYear(), trendEnd.getMonth(), trendEnd.getDate() - (TREND_MAX_BUCKETS - 1));
   if (trendStart < minStart) trendStart = minStart;
 
   const trendMap = new Map();
-  for (let d = new Date(trendStart); d <= trendEnd; d.setDate(d.getDate() + 1)) {
+  for (let d = new Date(trendStart); d <= trendEnd; hasCustomRange ? d.setUTCDate(d.getUTCDate() + 1) : d.setDate(d.getDate() + 1)) {
     const key = d.toISOString().slice(0, 10);
     trendMap.set(key, { date: key, orders: 0, refunds: 0, guides: 0, gmv: 0 });
   }
