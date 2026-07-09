@@ -1,5 +1,5 @@
 import { ok, fail } from '../../../../src/lib/api';
-import { listCronJobsForAdmin, setGithubWorkflowEnabled } from '../../../../src/lib/go-no-go-schedules.mjs';
+import { listCronJobsForAdmin, setGithubWorkflowEnabled } from '../../../../src/lib/admin/go-no-go-schedules.mjs';
 
 export const dynamic = 'force-dynamic';
 

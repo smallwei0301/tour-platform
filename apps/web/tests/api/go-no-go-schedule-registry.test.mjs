@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(__dirname, '../..');
 const REPO_ROOT = path.resolve(APP_ROOT, '../..');
 const workflowDir = path.join(REPO_ROOT, '.github', 'workflows');
-const registryModuleUrl = new URL('../../src/lib/go-no-go-schedules.mjs', import.meta.url);
+const registryModuleUrl = new URL('../../src/lib/admin/go-no-go-schedules.mjs', import.meta.url);
 
 function parseScheduledWorkflows() {
   const files = readdirSync(workflowDir).filter((name) => name.endsWith('.yml'));
