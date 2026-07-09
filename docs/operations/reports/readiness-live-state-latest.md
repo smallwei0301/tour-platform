@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-09T00:42:43.186Z -->
+<!-- query_timestamp: 2026-07-09T07:16:30.588Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-09T00:42:43.186Z  
-**Commit SHA:** `97c55e43559b0115ba5b3397a845a84529e9557c`
+**Query timestamp:** 2026-07-09T07:16:30.588Z  
+**Commit SHA:** `c81d5c3310d337b59a5797fc5e347a477669cde7`
 
 ---
 
@@ -22,19 +22,18 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (39 total)
+## Open Issues (38 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (18)
+### P1 (17)
 
 | # | Title | Labels |
 |---|-------|--------|
-| #1674 | [[Security][RLS] 修正 rls-grants-preflight 因 helper RPC 缺失而失敗](https://github.com/smallwei0301/tour-platform/issues/1674) | triaged, type:bug, priority:P1, security, agent:queued, owner:mixed, status:ready, database, rls, infra |
+| #1678 | [[Security][RLS] 收斂 production rls-grants-preflight rerun 揭露的 sensitive-table violations](https://github.com/smallwei0301/tour-platform/issues/1678) | triaged, type:bug, priority:P1, security, owner:mixed, status:ready, database, rls |
 | #1673 | [[QA] Daily test checklist for recent merged PRs 2026-07-09](https://github.com/smallwei0301/tour-platform/issues/1673) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, auth |
-| #1672 | [[daily bug scan] tour-platform 2026-07-09](https://github.com/smallwei0301/tour-platform/issues/1672) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1661 | [[QA] Daily test checklist for recent merged PRs 2026-07-08](https://github.com/smallwei0301/tour-platform/issues/1661) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, rls, infra, post-merge |
 | #1659 | [[Security][RLS] Revoke post-#1646 anon write grants and default privileges drift](https://github.com/smallwei0301/tour-platform/issues/1659) | triaged, type:bug, priority:P1, security, owner:mixed, status:needs-decision, database, rls |
 | #1657 | [[QA] Verify post-#1656 v2 order/refund/payment full-wiring regression](https://github.com/smallwei0301/tour-platform/issues/1657) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, payments, orders, booking-v2, refund |
@@ -93,6 +92,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1677 | [[Security][RLS] 修正 rls-grants-preflight helper RPC 缺失與 HOLD 顯示邊界](https://github.com/smallwei0301/tour-platform/pull/1677) | 2026-07-09 |
+| #1676 | [修正 Admin dashboard 自訂趨勢區間日桶 off-by-one](https://github.com/smallwei0301/tour-platform/pull/1676) | 2026-07-09 |
 | #1669 | [fix(web): suppress anonymous points 401 noise on booking v2 public flow](https://github.com/smallwei0301/tour-platform/pull/1669) | 2026-07-08 |
 | #1666 | [fix(api): protect available-slots internal reads](https://github.com/smallwei0301/tour-platform/pull/1666) | 2026-07-08 |
 | #1664 | [security(rls): 收斂 anon 寫入權回歸（scan-all 發現的 4 表）＋preflight 接通知](https://github.com/smallwei0301/tour-platform/pull/1664) | 2026-07-08 |
@@ -101,8 +102,6 @@ _none_
 | #1650 | [test(api): add v2 admin POS auth csrf contract](https://github.com/smallwei0301/tour-platform/pull/1650) | 2026-07-07 |
 | #1646 | [security(rls): preflight 全表掃描 RPC — 掃全部 public 表＋檢查 RLS 是否啟用](https://github.com/smallwei0301/tour-platform/pull/1646) | 2026-07-07 |
 | #1645 | [feat: add admin evidence sweep scanner](https://github.com/smallwei0301/tour-platform/pull/1645) | 2026-07-07 |
-| #1644 | [feat: #1637 金流全鏈修復＋月結報表＋導遊已入帳/憑證核銷頁＋金流說明全鏈流程](https://github.com/smallwei0301/tour-platform/pull/1644) | 2026-07-07 |
-| #1643 | [fix(shop): 商店首頁字級/卡片逐項重新校正對齊參考圖](https://github.com/smallwei0301/tour-platform/pull/1643) | 2026-07-07 |
 
 ---
 
