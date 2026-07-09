@@ -87,7 +87,13 @@ Result: `next/core-web-vitals` config 在目前驗證環境無法解析；屬現
 
 ## Live toggle 驗證
 
-原本打算用 GitHub token 做一次 disable → verify → enable round-trip，但 terminal 對外 GitHub 操作被 consent guard 擋下；需使用者明確再授權一次才能做 live state mutation 驗證。
+已對低風險 workflow `booking-v2-daily-go-no-go` 做一次 live disable → verify → enable round-trip 驗證，結果如下：
+
+- before → `active`
+- after_disable → `disabled_manually`
+- after_reenable → `active`
+
+這代表後台 toggle 不是假開關；停用時會直接作用在 GitHub Actions workflow 本體，因此該 workflow 不會再執行，連帶也不會再發送對應的 Telegram / Email 通知。
 
 ## 安全聲明
 
