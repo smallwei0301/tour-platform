@@ -8,6 +8,7 @@ const SCRIPT_MODULE_PATH = '../../../../scripts/security/rls-grants-preflight.mj
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const HELPER_MIGRATION = path.resolve(__dirname, '../../../../supabase/migrations/20260709103000_rls_grants_preflight_helper_rpcs.sql');
 const HELPER_ROLLBACK = path.resolve(__dirname, '../../../../supabase/migrations/20260709103000_rls_grants_preflight_helper_rpcs.rollback.sql');
+const WORKFLOW_PATH = path.resolve(__dirname, '../../../../.github/workflows/rls-grants-preflight.yml');
 
 describe('issue1674 — rls-grants-preflight HOLD classification', () => {
   it('helper RPC missing is classified as hold with machine-readable reason/action', async () => {
@@ -57,6 +58,18 @@ describe('issue1674 — rls-grants-preflight HOLD classification', () => {
     assert.equal(summary.overall_status, 'fail');
     assert.equal(summary.fail, 1);
     assert.equal(summary.hold, 1);
+  });
+
+  it('workflow summary reads nested summary.overall_status before legacy top-level fields', () => {
+    assert.ok(fs.existsSync(WORKFLOW_PATH), `missing workflow: ${WORKFLOW_PATH}`);
+
+    const workflow = fs.readFileSync(WORKFLOW_PATH, 'utf8');
+
+    assert.match(
+      workflow,
+      /console\.log\(d\.summary\?\.overall_status\s*\|\|\s*d\.overall_status\s*\|\|\s*d\.status\s*\|\|\s*'unknown'\)/,
+      'workflow must surface nested summary.overall_status before legacy fallback fields',
+    );
   });
 
   it('helper migration is canonical, locked down, and rollback exists', () => {

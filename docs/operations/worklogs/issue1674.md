@@ -25,6 +25,9 @@
 - 2026-07-09 10:45 CST Commit evidence：`PATH=/tmp/tp-node22-wrapper:$PATH .claude/hooks/run-checks.sh apps/web/tests/security/issue1674-rls-grants-preflight-hold.test.mjs apps/web/tests/security/rls-preflight-scan-all.test.mjs apps/web/tests/api/issue602-rls-grants-preflight-contract.test.mjs` → `# tests 25`, `# pass 25`, `# fail 0`，且 `.claude/state/last-checks.json` 已更新。
 - 2026-07-09 10:45 CST hygiene：`git diff --check` exit 0。
 - 2026-07-09 10:56 CST finalize：僅 stage in-scope 六檔後建立 commit `0c8e628d`（`fix(security): finalize rls preflight helper rpc hold flow`），目前 branch `kanban/issue-1674-rls-grants-preflight-helper-rpcs` 已形成可 review boundary。
+- 2026-07-09 11:03 CST review-fix RED：在 `apps/web/tests/security/issue1674-rls-grants-preflight-hold.test.mjs` 新增 workflow source-contract 後，`node --test apps/web/tests/security/issue1674-rls-grants-preflight-hold.test.mjs` 失敗 1/5；失敗訊息直接指出 `.github/workflows/rls-grants-preflight.yml` 仍用 `d.overall_status || d.status || 'unknown'`，未讀取 `d.summary?.overall_status`。
+- 2026-07-09 11:04 CST review-fix GREEN：`.github/workflows/rls-grants-preflight.yml` 改為 `d.summary?.overall_status || d.overall_status || d.status || 'unknown'`，並保留 legacy fallback；同時計算樣本 `const d={summary:{overall_status:'hold'},results:[]}` 已輸出 `hold`，未把 HOLD 誤轉 PASS。
+- 2026-07-09 11:05 CST review-fix checks：`PATH=/tmp/tp-node22-wrapper:$PATH .claude/hooks/run-checks.sh apps/web/tests/security/issue1674-rls-grants-preflight-hold.test.mjs apps/web/tests/security/rls-preflight-scan-all.test.mjs apps/web/tests/api/issue602-rls-grants-preflight-contract.test.mjs` → `# tests 26`, `# pass 26`, `# fail 0`；`git diff --check` exit 0。
 
 ## 下一步
 - 交給 `tp-reviewer` 做獨立 code/security review，特別看 helper RPC SQL 權限、HOLD/FAIL 邊界、runbook 說明與 reviewer 是否接受保留 exit code 1 的 HOLD CLI 行為。
