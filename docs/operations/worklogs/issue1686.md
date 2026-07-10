@@ -259,6 +259,52 @@ Pandora spec：t_6be040e5（本卡）
 - owner: 木村哥 / Ava operator
 - unblock_condition: 先完成code與Rita審查；operator再提供只讀metadata證據並逐項核准credential、env、redeploy與低風險round-trip。
 
+## 2026-07-10 API salvage microfix evidence（t_8225db08）
+
+- Scope: 只修 `apps/web/src/lib/admin/go-no-go-schedules.mjs`、`apps/web/app/api/admin/cron-jobs/route.ts`、兩支 new focused tests；未碰 middleware policy、lockfile、node_modules、migrations。
+- Root cause 1: 指定 exact suite 起始命令在此 worktree 一開始只跑到既有 `go-no-go-schedule-registry.test.mjs`，因兩支 `issue1686-*` 測試檔尚未存在，故無法覆蓋卡片列出的三個 failure path。
+- Root cause 2: route 缺少 defense-in-depth admin auth、錯誤契約仍把 helper exception 直接包成 `SERVER_ERROR`、helper 只有單次 PUT 沒有 before/after 驗證與 audit intent gate。
+- Root cause 3: exact middleware CSRF 檢查若直接 import `middleware.ts`，測試環境會卡在 package resolution；已改成 subprocess + loader mock `next-intl/*` 的 fixture seam，避免碰 frozen middleware 與 node_modules。
+
+### Commands / exits
+
+1. Initial card start command（pre-fix）
+
+```bash
+cd apps/web && NODE_OPTIONS=--max-old-space-size=768 timeout 120s node --test --test-concurrency=1 \
+  tests/api/issue1686-go-no-go-credential-contract.test.mjs \
+  tests/api/issue1686-go-no-go-route-security.test.mjs \
+  tests/api/go-no-go-schedule-registry.test.mjs
+```
+
+- exit 0，但實際只輸出既有 registry 3 tests，暴露測試檔缺口。
+
+2. Focused exact suite（post-fix）
+
+```bash
+cd apps/web && NODE_OPTIONS=--max-old-space-size=768 timeout 120s node --test --test-concurrency=1 \
+  tests/api/issue1686-go-no-go-credential-contract.test.mjs \
+  tests/api/issue1686-go-no-go-route-security.test.mjs \
+  tests/api/go-no-go-schedule-registry.test.mjs
+```
+
+- exit 0
+- result: `tests 16 / pass 16 / fail 0`
+
+3. `git diff --check`
+
+- exit 0
+
+4. `.claude/hooks/run-checks.sh apps/web/tests/api/issue1686-go-no-go-credential-contract.test.mjs apps/web/tests/api/issue1686-go-no-go-route-security.test.mjs apps/web/tests/api/go-no-go-schedule-registry.test.mjs`
+
+- script 內實際測試輸出為 pass 16 / fail 0，但 script 仍 exit 1，原因是它以 `^# tests` grep TAP 舊格式；Node 24 目前輸出 `ℹ tests 16`，被誤判成 zero-test。此為 harness parser mismatch，不是本 slice 測試失敗。
+
+### Safe contract choice in this salvage
+
+- `audit intent` 寫入失敗 → 正規化為 HTTP 500 / `AUDIT_WRITE_FAILED`，且保證 PUT = 0。
+- GitHub credential / permission / repo / rate-limit / transient upstream 問題 → 正規化為安全的 503 family code，不回 raw GitHub body。
+- PATCH success 一律要求 `before -> PUT -> after` verified round-trip；after state 不符時 fail closed。
+
 ## P0-OVERRIDE 使用紀錄
 
 - 無。

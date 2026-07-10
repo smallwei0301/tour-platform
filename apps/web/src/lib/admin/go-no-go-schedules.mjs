@@ -1,5 +1,7 @@
 import path from 'node:path';
 
+import { appendAuditLog } from '../audit-log.mjs';
+
 const DISABLE_EFFECT_ZH = '停用後 GitHub Actions workflow 不會再執行，因此不會再發 Telegram / Email 通知。';
 
 export const SCHEDULE_REGISTRY = [
@@ -208,6 +210,84 @@ export function getGithubActionsToken() {
   return process.env.GITHUB_ACTIONS_ADMIN_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
 }
 
+const TEST_HOOKS = {
+  fetchImpl: null,
+  auditLogger: null,
+  now: null,
+};
+
+export class GithubAdminError extends Error {
+  constructor(code, status, message, details = {}) {
+    super(message);
+    this.name = 'GithubAdminError';
+    this.code = code;
+    this.status = status;
+    this.connectionStatus = details.connectionStatus || 'transient_error';
+    this.canRead = details.canRead ?? false;
+    this.canWrite = details.canWrite ?? false;
+    this.retryable = details.retryable ?? false;
+    this.operatorAction = details.operatorAction || 'retry_later';
+    this.retryAfterSeconds = details.retryAfterSeconds ?? null;
+  }
+}
+
+function createGithubConnection(overrides = {}) {
+  return {
+    status: 'ready',
+    canRead: true,
+    canWrite: true,
+    retryable: false,
+    operatorAction: 'none',
+    retryAfterSeconds: null,
+    ...overrides,
+  };
+}
+
+function githubConnectionFromError(err) {
+  if (err instanceof GithubAdminError) {
+    return createGithubConnection({
+      status: err.connectionStatus,
+      canRead: err.canRead,
+      canWrite: err.canWrite,
+      retryable: err.retryable,
+      operatorAction: err.operatorAction,
+      retryAfterSeconds: err.retryAfterSeconds,
+    });
+  }
+
+  return createGithubConnection({
+    status: 'transient_error',
+    canRead: false,
+    canWrite: false,
+    retryable: true,
+    operatorAction: 'retry_later',
+  });
+}
+
+export function __setGoNoGoTestHooks(hooks = {}) {
+  TEST_HOOKS.fetchImpl = hooks.fetchImpl || null;
+  TEST_HOOKS.auditLogger = hooks.auditLogger || null;
+  TEST_HOOKS.now = hooks.now || null;
+}
+
+export function __resetGoNoGoTestHooks() {
+  TEST_HOOKS.fetchImpl = null;
+  TEST_HOOKS.auditLogger = null;
+  TEST_HOOKS.now = null;
+}
+
+function pickFetchImpl(override) {
+  return override || TEST_HOOKS.fetchImpl || fetch;
+}
+
+function pickAuditLogger(override) {
+  return override || TEST_HOOKS.auditLogger || appendAuditLog;
+}
+
+function pickNow(override) {
+  return override || TEST_HOOKS.now || (() => new Date().toISOString());
+}
+
 function getWorkflowFileName(workflowPath) {
   return path.basename(workflowPath);
 }
@@ -222,7 +302,8 @@ function workflowStateLabelZh(state) {
   if (state === 'deleted') return '已刪除';
   if (state === 'archived') return '已封存';
   if (state === 'token_missing') return '缺 GitHub Token';
-  if (state === 'unmatched') return 'GitHub 未對上';
+  if (state === 'workflow_unmatched' || state === 'unmatched') return 'GitHub 未對上';
+  if (state === 'unknown') return 'GitHub 狀態未知';
   return state || '未知';
 }
 
@@ -236,12 +317,23 @@ function normalizeGithubWorkflow(workflow) {
   };
 }
 
-export function buildScheduleViewModels({ githubWorkflows = [], hasGithubToken = false, repoSlug = getGithubRepoSlug() } = {}) {
+export function buildScheduleViewModels({
+  githubWorkflows = [],
+  hasGithubToken = false,
+  repoSlug = getGithubRepoSlug(),
+  githubConnection = createGithubConnection({
+    status: hasGithubToken ? 'ready' : 'missing',
+    canRead: hasGithubToken,
+    canWrite: hasGithubToken,
+    operatorAction: hasGithubToken ? 'none' : 'configure_credential',
+  }),
+} = {}) {
   const liveByPath = new Map(githubWorkflows.map((item) => [item.path, normalizeGithubWorkflow(item)]));
+  const connectionReady = githubConnection.status === 'ready';
 
   return SCHEDULE_REGISTRY.map((item) => {
     const workflow = liveByPath.get(item.workflowPath);
-    const state = workflow?.state || (hasGithubToken ? 'unmatched' : 'token_missing');
+    const state = workflow?.state || (connectionReady ? 'workflow_unmatched' : hasGithubToken ? 'unknown' : 'token_missing');
     const enabled = workflow ? workflow.state === 'active' : false;
     return {
       ...item,
@@ -254,76 +346,312 @@ export function buildScheduleViewModels({ githubWorkflows = [], hasGithubToken =
         stateLabelZh: workflowStateLabelZh(state),
         enabled,
         matched: !!workflow,
-        canToggle: hasGithubToken && !!workflow,
+        canToggle: connectionReady && githubConnection.canWrite && !!workflow,
       },
     };
   });
 }
 
-async function githubApi(pathname, { method = 'GET', body } = {}) {
-  const token = getGithubActionsToken();
-  if (!token) throw new Error('GitHub Actions admin token is not configured');
-  const response = await fetch(`https://api.github.com${pathname}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-    body: body ? JSON.stringify(body) : undefined,
-    cache: 'no-store',
+function parseRetryAfterSeconds(response) {
+  const raw = response.headers.get('retry-after');
+  if (raw == null || raw === '') return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+function classifyGithubHttpError(response) {
+  const retryAfterSeconds = parseRetryAfterSeconds(response);
+  const remaining = response.headers.get('x-ratelimit-remaining');
+  const rateLimited = response.status === 429 || (response.status === 403 && (remaining === '0' || retryAfterSeconds !== null));
+
+  if (response.status === 401) {
+    return new GithubAdminError('GITHUB_CREDENTIAL_INVALID', 503, 'GitHub credential invalid or revoked', {
+      connectionStatus: 'invalid_or_revoked',
+      canRead: false,
+      canWrite: false,
+      operatorAction: 'rotate_credential',
+    });
+  }
+
+  if (rateLimited) {
+    return new GithubAdminError('GITHUB_RATE_LIMITED', 503, 'GitHub rate limited the request', {
+      connectionStatus: 'rate_limited',
+      canRead: false,
+      canWrite: false,
+      retryable: true,
+      operatorAction: 'retry_later',
+      retryAfterSeconds,
+    });
+  }
+
+  if (response.status === 403) {
+    return new GithubAdminError('GITHUB_PERMISSION_DENIED', 503, 'GitHub Actions permission denied', {
+      connectionStatus: 'insufficient_permission',
+      canRead: false,
+      canWrite: false,
+      operatorAction: 'grant_actions_write',
+    });
+  }
+
+  if (response.status === 404) {
+    return new GithubAdminError('GITHUB_REPO_MISMATCH', 503, 'GitHub repository or workflow mapping mismatch', {
+      connectionStatus: 'repo_mismatch',
+      canRead: false,
+      canWrite: false,
+      operatorAction: 'verify_repo',
+    });
+  }
+
+  return new GithubAdminError('GITHUB_TRANSIENT', 503, 'GitHub temporarily unavailable', {
+    connectionStatus: 'transient_error',
+    canRead: false,
+    canWrite: false,
+    retryable: true,
+    operatorAction: 'retry_later',
+    retryAfterSeconds,
   });
+}
+
+async function githubApi(pathname, { method = 'GET', body, fetchImpl } = {}) {
+  const token = getGithubActionsToken();
+  if (!token) {
+    throw new GithubAdminError('GITHUB_CREDENTIAL_MISSING', 503, 'GitHub Actions admin credential is not configured', {
+      connectionStatus: 'missing',
+      canRead: false,
+      canWrite: false,
+      operatorAction: 'configure_credential',
+    });
+  }
+
+  let response;
+  try {
+    response = await pickFetchImpl(fetchImpl)(`https://api.github.com${pathname}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    });
+  } catch {
+    throw new GithubAdminError('GITHUB_TRANSIENT', 503, 'GitHub temporarily unavailable', {
+      connectionStatus: 'transient_error',
+      canRead: false,
+      canWrite: false,
+      retryable: true,
+      operatorAction: 'retry_later',
+    });
+  }
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`GitHub API ${method} ${pathname} failed: ${response.status} ${detail}`);
+    throw classifyGithubHttpError(response);
   }
 
   if (response.status === 204) return null;
   return response.json();
 }
 
-export async function fetchGithubWorkflows() {
+export async function fetchGithubWorkflows(options = {}) {
   const repoSlug = getGithubRepoSlug();
-  const data = await githubApi(`/repos/${repoSlug}/actions/workflows?per_page=100`);
+  const data = await githubApi(`/repos/${repoSlug}/actions/workflows?per_page=100`, { fetchImpl: options.fetchImpl });
   return {
     repoSlug,
     workflows: (data?.workflows || []).map(normalizeGithubWorkflow),
   };
 }
 
-export async function listCronJobsForAdmin() {
+export async function listCronJobsForAdmin(options = {}) {
   const token = getGithubActionsToken();
   const repoSlug = getGithubRepoSlug();
   if (!token) {
+    const githubConnection = createGithubConnection({
+      status: 'missing',
+      canRead: false,
+      canWrite: false,
+      operatorAction: 'configure_credential',
+    });
     return {
       repoSlug,
       hasGithubToken: false,
-      jobs: buildScheduleViewModels({ hasGithubToken: false, repoSlug }),
+      githubConnection,
+      jobs: buildScheduleViewModels({ hasGithubToken: false, repoSlug, githubConnection }),
     };
   }
 
-  const { workflows } = await fetchGithubWorkflows();
-  return {
-    repoSlug,
-    hasGithubToken: true,
-    jobs: buildScheduleViewModels({ githubWorkflows: workflows, hasGithubToken: true, repoSlug }),
-  };
+  try {
+    const { workflows } = await fetchGithubWorkflows(options);
+    const githubConnection = createGithubConnection();
+    return {
+      repoSlug,
+      hasGithubToken: true,
+      githubConnection,
+      jobs: buildScheduleViewModels({ githubWorkflows: workflows, hasGithubToken: true, repoSlug, githubConnection }),
+    };
+  } catch (err) {
+    if (!(err instanceof GithubAdminError)) throw err;
+    const githubConnection = githubConnectionFromError(err);
+    return {
+      repoSlug,
+      hasGithubToken: true,
+      githubConnection,
+      jobs: buildScheduleViewModels({ hasGithubToken: true, repoSlug, githubConnection }),
+    };
+  }
 }
 
-export async function setGithubWorkflowEnabled({ jobKey, enabled }) {
+function expectedWorkflowState(enabled) {
+  return enabled ? 'active' : 'disabled_manually';
+}
+
+async function writeScheduleAudit({ auditLogger, actor, now, metadata }) {
+  return Promise.resolve(auditLogger({
+    actor,
+    action: 'admin_go_no_go_schedule_toggle',
+    metadata: {
+      ...metadata,
+      timestamp: now(),
+    },
+  }));
+}
+
+export async function setGithubWorkflowEnabled({
+  jobKey,
+  enabled,
+  actor = 'admin',
+  requestId = null,
+  fetchImpl,
+  auditLogger,
+  now,
+}) {
   const item = REGISTRY_BY_KEY.get(jobKey);
-  if (!item) throw new Error(`Unknown jobKey: ${jobKey}`);
+  if (!item) {
+    throw new GithubAdminError('BAD_REQUEST', 400, `Unknown jobKey: ${jobKey}`, {
+      connectionStatus: 'ready',
+      canRead: true,
+      canWrite: true,
+      operatorAction: 'none',
+    });
+  }
 
   const repoSlug = getGithubRepoSlug();
+  const resolvedAuditLogger = pickAuditLogger(auditLogger);
+  const resolvedNow = pickNow(now);
+  const { workflows: beforeWorkflows } = await fetchGithubWorkflows({ fetchImpl });
+  const beforeWorkflow = beforeWorkflows.find((workflow) => workflow.path === item.workflowPath);
+  if (!beforeWorkflow) {
+    throw new GithubAdminError('GITHUB_WORKFLOW_UNMATCHED', 409, 'GitHub workflow path is not matched in the registry', {
+      connectionStatus: 'ready',
+      canRead: true,
+      canWrite: true,
+      operatorAction: 'verify_repo',
+    });
+  }
+
+  const beforeState = beforeWorkflow.state;
+  try {
+    await writeScheduleAudit({
+      auditLogger: resolvedAuditLogger,
+      actor,
+      now: resolvedNow,
+      metadata: {
+        phase: 'intent',
+        outcome: 'pending',
+        errorClass: null,
+        requestId,
+        repoSlug,
+        jobKey,
+        workflowPath: item.workflowPath,
+        workflowName: item.workflowName,
+        requestedEnabled: !!enabled,
+        beforeState,
+        afterState: null,
+      },
+    });
+  } catch {
+    throw new GithubAdminError('AUDIT_WRITE_FAILED', 500, 'Failed to write Go/No-Go audit intent', {
+      connectionStatus: 'ready',
+      canRead: true,
+      canWrite: true,
+      operatorAction: 'retry_later',
+    });
+  }
+
   const workflowId = getWorkflowFileName(item.workflowPath);
   const action = enabled ? 'enable' : 'disable';
-  await githubApi(`/repos/${repoSlug}/actions/workflows/${workflowId}/${action}`, { method: 'PUT' });
+  await githubApi(`/repos/${repoSlug}/actions/workflows/${workflowId}/${action}`, { method: 'PUT', fetchImpl });
+
+  const { workflows: afterWorkflows } = await fetchGithubWorkflows({ fetchImpl });
+  const afterWorkflow = afterWorkflows.find((workflow) => workflow.path === item.workflowPath);
+  const afterState = afterWorkflow?.state || 'workflow_unmatched';
+  if (afterState !== expectedWorkflowState(enabled)) {
+    try {
+      await writeScheduleAudit({
+        auditLogger: resolvedAuditLogger,
+        actor,
+        now: resolvedNow,
+        metadata: {
+          phase: 'final',
+          outcome: 'failed',
+          errorClass: 'verification_failed',
+          requestId,
+          repoSlug,
+          jobKey,
+          workflowPath: item.workflowPath,
+          workflowName: item.workflowName,
+          requestedEnabled: !!enabled,
+          beforeState,
+          afterState,
+        },
+      });
+    } catch {
+      // Verification failure is already fail-closed; keep the original contract.
+    }
+
+    throw new GithubAdminError('GITHUB_STATE_VERIFICATION_FAILED', 503, 'GitHub workflow state verification failed', {
+      connectionStatus: 'ready',
+      canRead: true,
+      canWrite: true,
+      retryable: true,
+      operatorAction: 'retry_later',
+    });
+  }
+
+  try {
+    await writeScheduleAudit({
+      auditLogger: resolvedAuditLogger,
+      actor,
+      now: resolvedNow,
+      metadata: {
+        phase: 'final',
+        outcome: 'success',
+        errorClass: null,
+        requestId,
+        repoSlug,
+        jobKey,
+        workflowPath: item.workflowPath,
+        workflowName: item.workflowName,
+        requestedEnabled: !!enabled,
+        beforeState,
+        afterState,
+      },
+    });
+  } catch {
+    throw new GithubAdminError('AUDIT_FINALIZATION_FAILED', 500, 'Failed to finalize Go/No-Go audit record', {
+      connectionStatus: 'ready',
+      canRead: true,
+      canWrite: true,
+      operatorAction: 'retry_later',
+    });
+  }
 
   return {
     jobKey,
-    enabled: !!enabled,
+    requestedEnabled: !!enabled,
+    beforeState,
+    afterState,
     workflowPath: item.workflowPath,
     workflowName: item.workflowName,
   };
