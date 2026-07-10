@@ -67,7 +67,7 @@ export async function PATCH(request: Request) {
       jobKey,
       enabled,
       actor,
-      requestId: request.headers.get('x-request-id') || null,
+      requestId: request.headers.get('x-request-id') ?? undefined,
     });
     return Response.json(ok(result));
   } catch (err) {
