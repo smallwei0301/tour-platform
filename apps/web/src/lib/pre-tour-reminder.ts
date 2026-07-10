@@ -63,8 +63,9 @@ function formatTaipeiDate(isoString: string): string {
  * Compose a pre-tour reminder message.
  * Pure function — no side effects, no network calls.
  *
- * h24: 24h before departure — includes meeting_point, notices, safety keywords
- * h1:  1h before departure  — includes meeting_point_map_url, formatted startTime
+ * h24: 行前一日提醒 — includes meeting_point, notices, safety keywords
+ * h1:  當日出發提醒 — includes meeting_point_map_url, formatted startTime
+ *      （每日排程：當日晨間統一發送，非精準出發前 1 小時）
  */
 export function composePreTourReminder(
   order: ReminderOrder,
@@ -95,16 +96,16 @@ export function composePreTourReminder(
     ].join('\n');
   }
 
-  // kind === 'h1'
+  // kind === 'h1'（當日出發提醒）
   return [
-    `嗨 ${name}，您的行程即將在 1 小時後出發！`,
+    `嗨 ${name}，今天就是您的出遊日了！`,
     '',
     `🗺️ 行程：${activity.title}`,
-    `⏰ 出發時間：${startTime}（台北時間）`,
+    `⏰ 出發時間：${startDate} ${startTime}（台北時間）`,
     `📍 集合地點：${activity.meeting_point}`,
     `🗺️ 地圖連結：${activity.meeting_point_map_url}`,
     '',
-    '請確認您已準備完畢，提前出發前往集合地點。',
+    '請預留交通時間，提前 10 分鐘抵達集合地點。',
     '如臨時有突發狀況請立即聯絡導遊。',
     '',
     '祝您旅途愉快！🌸',

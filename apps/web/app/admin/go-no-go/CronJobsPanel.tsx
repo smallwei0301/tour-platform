@@ -16,6 +16,13 @@ interface CronJob {
   workflowUrl: string;
   scheduleZh: string;
   cron: string;
+  lastRun: {
+    startedAt: string | null;
+    status: string | null;
+    conclusion: string | null;
+    conclusionLabelZh: string;
+    url: string | null;
+  } | null;
   github: {
     id: number | null;
     name: string;
@@ -31,6 +38,28 @@ function statePillStyle(enabled: boolean) {
   return enabled
     ? { color: '#166534', background: '#dcfce7', borderColor: '#86efac' }
     : { color: '#991b1b', background: '#fee2e2', borderColor: '#fca5a5' };
+}
+
+function formatTaipei(iso: string | null): string {
+  if (!iso) return '尚無紀錄';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '尚無紀錄';
+  return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+}
+
+function runConclusionColor(conclusion: string | null, status: string | null): string {
+  if (status && status !== 'completed') return '#92400e';
+  if (conclusion === 'success') return '#166534';
+  if (conclusion === 'failure' || conclusion === 'timed_out' || conclusion === 'startup_failure') return '#991b1b';
+  return '#64748b';
 }
 
 export default function CronJobsPanel() {
@@ -114,6 +143,7 @@ export default function CronJobsPanel() {
                 <th scope="col" style={{ padding: '8px' }}>工作流</th>
                 <th scope="col" style={{ padding: '8px' }}>功能說明</th>
                 <th scope="col" style={{ padding: '8px' }}>真實 GitHub Actions 排程</th>
+                <th scope="col" style={{ padding: '8px' }}>最後執行</th>
                 <th scope="col" style={{ padding: '8px' }}>風險分級</th>
                 <th scope="col" style={{ padding: '8px' }}>目前狀態</th>
                 <th scope="col" style={{ padding: '8px' }}>開關</th>
@@ -138,6 +168,24 @@ export default function CronJobsPanel() {
                     <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <div>{job.scheduleZh}</div>
                       <code style={{ display: 'inline-block', marginTop: 4, background: '#f8fafc', padding: '2px 6px', borderRadius: 6, color: '#334155' }}>{job.cron}</code>
+                    </td>
+                    <td style={{ padding: '8px', verticalAlign: 'top' }} data-testid={`cron-last-run-${job.jobKey}`}>
+                      {job.lastRun && job.lastRun.startedAt ? (
+                        <>
+                          <div style={{ color: '#0f172a' }}>{formatTaipei(job.lastRun.startedAt)}</div>
+                          <div style={{ fontSize: 12, marginTop: 2, color: runConclusionColor(job.lastRun.conclusion, job.lastRun.status), fontWeight: 700 }}>
+                            {job.lastRun.url ? (
+                              <a href={job.lastRun.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
+                                {job.lastRun.conclusionLabelZh} ↗
+                              </a>
+                            ) : (
+                              job.lastRun.conclusionLabelZh
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>尚無紀錄</span>
+                      )}
                     </td>
                     <td style={{ padding: '8px', verticalAlign: 'top' }}>
                       <div style={{ fontWeight: 700 }}>{job.riskLevelZh}</div>

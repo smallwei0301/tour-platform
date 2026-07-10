@@ -70,21 +70,20 @@ test('AC2: pre-tour-sweep route.ts exists with 401 auth guard', () => {
   assert.match(src, /Unauthorized/, 'Must return Unauthorized message');
 });
 
-// ── AC3: Start_at window query logic ─────────────────────────────────────────
+// ── AC3: Start_at window query logic (daily cadence, 24h-wide windows) ────────
 
-test('AC3: sweep source queries correct start_at windows for h24 and h1', () => {
+test('AC3: sweep source queries correct daily start_at windows for h24 and h1', () => {
   const routePath = path.resolve(ROOT, 'app/api/internal/reminders/pre-tour-sweep/route.ts');
   assert.ok(existsSync(routePath), `Sweep route not found: ${routePath}`);
 
   const src = readFileSync(routePath, 'utf8');
 
-  // h24 window: now+23h to now+25h
-  assert.match(src, /23\s*\*\s*60\s*\*\s*60|23\s*\*\s*3600|82800/, 'Must define 23h window boundary for h24');
-  assert.match(src, /25\s*\*\s*60\s*\*\s*60|25\s*\*\s*3600|90000/, 'Must define 25h window boundary for h24');
-
-  // h1 window: now+30min to now+90min
-  assert.match(src, /30\s*\*\s*60|1800/, 'Must define 30min window boundary for h1');
-  assert.match(src, /90\s*\*\s*60|5400/, 'Must define 90min window boundary for h1');
+  // 降頻至每日：兩視窗各寬 24h、半開相接。
+  // h24（行前一日）window: [now+24h, now+48h)
+  assert.match(src, /24\s*\*\s*60\s*\*\s*60|24\s*\*\s*3600|86400/, 'Must define 24h window boundary');
+  assert.match(src, /48\s*\*\s*60\s*\*\s*60|48\s*\*\s*3600|172800/, 'Must define 48h window boundary for h24');
+  // h1（當日出發）window: [now, now+24h) — 起點即 now
+  assert.match(src, /new Date\(now\)\.toISOString\(\)/, 'Must define now as the h1 window start');
 
   // Orders status filter
   assert.match(src, /['"]paid['"]/, 'Must filter for paid orders');
@@ -191,14 +190,14 @@ test('AC8: pre-tour-reminder.ts exports sendReminder with channel parameter', ()
 
 // ── AC9: GitHub Actions workflow ──────────────────────────────────────────────
 
-test('AC9: .github/workflows/pre-tour-reminder-sweep.yml exists with cron */30 and correct endpoint', () => {
+test('AC9: .github/workflows/pre-tour-reminder-sweep.yml exists with daily cron and correct endpoint', () => {
   const workflowPath = path.resolve(ROOT, '../../.github/workflows/pre-tour-reminder-sweep.yml');
   assert.ok(existsSync(workflowPath), `Workflow file not found: ${workflowPath}`);
 
   const src = readFileSync(workflowPath, 'utf8');
 
-  // Cron schedule hourly（降頻省 GitHub 分鐘；h1 視窗 60 分鐘寬、半開相接無缺口）
-  assert.match(src, /cron:\s*'0 \* \* \* \*'/, 'Must have hourly cron: 0 * * * *');
+  // Cron schedule daily（由每小時降頻至每日；兩視窗各寬 24h 相接、每日一跑完整涵蓋）
+  assert.match(src, /cron:\s*'0 22 \* \* \*'/, 'Must have daily cron: 0 22 * * *');
 
   // Must POST to the sweep endpoint
   assert.match(src, /pre-tour-sweep/, 'Must reference pre-tour-sweep endpoint');

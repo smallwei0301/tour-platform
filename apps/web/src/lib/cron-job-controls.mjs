@@ -51,7 +51,7 @@ export const CRON_JOBS = [
     descriptionZh: '掃描近期出團訂單發送行前提醒（Email/Telegram）',
     endpoint: '/api/internal/reminders/pre-tour-sweep',
     workflowFile: 'pre-tour-reminder-sweep.yml',
-    schedule: '每小時',
+    schedule: '每日 22:00 UTC（06:00 台北）',
   },
   {
     jobKey: 'review_invitation_sweep',
@@ -72,10 +72,10 @@ export const CRON_JOBS = [
   {
     jobKey: 'ecpay_failure_sweep',
     nameZh: 'ECPay 失敗告警 sweep',
-    descriptionZh: '掃近 60 分鐘 callback 失敗，超過門檻觸發 incident 告警',
+    descriptionZh: '掃近 24 小時 callback 失敗，超過門檻觸發 incident 告警',
     endpoint: '/api/internal/alerts/ecpay-failure-sweep',
     workflowFile: 'ecpay-failure-sweep.yml',
-    schedule: '每小時（:15）',
+    schedule: '每日 03:15 UTC（11:15 台北）',
   },
   {
     jobKey: 'ecpay_reconcile',

@@ -2,19 +2,19 @@ name: ecpay-failure-sweep
 
 # Issue #1336 殘餘缺口 — internal endpoints 中最後兩支無排程載體之一。
 #
-# `alerts/ecpay-failure-sweep`（#327）掃描近 60 分鐘的 ECPay callback
+# `alerts/ecpay-failure-sweep`（#327）掃描近 24 小時的 ECPay callback
 # 失敗紀錄（audit_logs 的 payment_callback_audit / payment_callback_failed），
-# 失敗數超過門檻（3 次/60 分）即 recordIncident 觸發告警。
+# 失敗數超過門檻（>3 次/24 小時）即 recordIncident 觸發告警。
 #
-# 頻率：每小時（endpoint 回看窗固定 60 分鐘，跑得更疏會產生盲區）。
-# 成本先例：pre-tour-reminder-sweep 已是 hourly。
+# 頻率：每日（03:15 UTC／台北 11:15）。endpoint 回看窗已由 60 分鐘改為
+# 24 小時，隨每日排程完整涵蓋、無盲區；由每小時降頻至每日，告警最多延後一天。
 #
 # Auth：x-internal-token = INTERNAL_ALERT_TOKEN。Secrets 缺失時 graceful
 # skip，對齊 settlement-sweep。response 僅含計數與時間戳，可直接輸出。
 
 on:
   schedule:
-    - cron: '15 * * * *'
+    - cron: '15 3 * * *'
   workflow_dispatch: {}
 
 jobs:
