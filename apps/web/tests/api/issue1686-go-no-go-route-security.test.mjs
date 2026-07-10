@@ -19,6 +19,7 @@ const ORIGINAL_ENV = {
   ADMIN_EMAIL_ALLOWLIST: process.env.ADMIN_EMAIL_ALLOWLIST,
   GITHUB_ACTIONS_ADMIN_TOKEN: process.env.GITHUB_ACTIONS_ADMIN_TOKEN,
   GITHUB_ACTIONS_REPO: process.env.GITHUB_ACTIONS_REPO,
+  GITHUB_REPOSITORY: process.env.GITHUB_REPOSITORY,
 };
 
 function restoreEnv() {
@@ -59,6 +60,7 @@ test.beforeEach(() => {
   process.env.ADMIN_EMAIL_ALLOWLIST = 'ops@example.com';
   process.env.GITHUB_ACTIONS_ADMIN_TOKEN = 'ghs_api_secret';
   process.env.GITHUB_ACTIONS_REPO = 'smallwei0301/tour-platform';
+  delete process.env.GITHUB_REPOSITORY;
 });
 
 test.afterEach(() => {
@@ -181,6 +183,64 @@ test('unknown jobKey returns 400 and never issues GitHub requests', async () => 
   assert.equal(response.status, 400);
   assert.equal(body.error.code, 'BAD_REQUEST');
   assert.deepEqual(calls, []);
+});
+
+test('GET returns a safe non-operable repository-not-approved state without upstream calls', async () => {
+  for (const repoEnvName of ['GITHUB_ACTIONS_REPO', 'GITHUB_REPOSITORY']) {
+    delete process.env.GITHUB_ACTIONS_REPO;
+    delete process.env.GITHUB_REPOSITORY;
+    process.env[repoEnvName] = 'unapproved-owner/unapproved-repo';
+
+    const calls = [];
+    __setGoNoGoTestHooks({
+      fetchImpl: async (url, init = {}) => {
+        calls.push({ url: String(url), method: init.method || 'GET' });
+        return jsonResponse({ workflows: [] });
+      },
+    });
+
+    const response = await GET(new Request('https://example.com/api/admin/cron-jobs', {
+      headers: authHeaders(),
+    }));
+    const body = await response.json();
+
+    assert.equal(response.status, 200, `${repoEnvName} must return an actionable response`);
+    assert.equal(body.ok, true);
+    assert.equal(body.data.githubConnection.status, 'repo_not_approved');
+    assert.equal(body.data.githubConnection.canRead, false);
+    assert.equal(body.data.githubConnection.canWrite, false);
+    assert.ok(body.data.jobs.length > 0);
+    assert.ok(body.data.jobs.every((job) => job.github.canToggle === false));
+    assert.deepEqual(calls, [], `${repoEnvName} must not call GitHub`);
+  }
+});
+
+test('PATCH rejects every non-approved repository configuration before GitHub GET or PUT', async () => {
+  for (const repoEnvName of ['GITHUB_ACTIONS_REPO', 'GITHUB_REPOSITORY']) {
+    delete process.env.GITHUB_ACTIONS_REPO;
+    delete process.env.GITHUB_REPOSITORY;
+    process.env[repoEnvName] = 'unapproved-owner/unapproved-repo';
+
+    const calls = [];
+    __setGoNoGoTestHooks({
+      fetchImpl: async (url, init = {}) => {
+        calls.push({ url: String(url), method: init.method || 'GET' });
+        return jsonResponse({ workflows: [workflow('.github/workflows/refund-reconcile.yml')] });
+      },
+    });
+
+    const response = await PATCH(new Request('https://example.com/api/admin/cron-jobs', {
+      method: 'PATCH',
+      headers: authHeaders(),
+      body: JSON.stringify({ jobKey: 'refund-reconcile', enabled: false }),
+    }));
+    const body = await response.json();
+
+    assert.equal(response.status, 503, `${repoEnvName} must fail closed`);
+    assert.equal(body.error.code, 'GITHUB_REPO_NOT_APPROVED');
+    assert.equal(body.error.message, 'GitHub repository configuration is not approved');
+    assert.deepEqual(calls, [], `${repoEnvName} must not call GitHub`);
+  }
 });
 
 test('PATCH default production path writes durable audit_logs before upstream PUT', async () => {
