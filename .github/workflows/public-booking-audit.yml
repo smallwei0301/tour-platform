@@ -46,5 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: public-booking-audit-${{ github.run_number }}
-          path: docs/operations/reports/public-booking-audit-*.{md,json}
+          path: |
+            docs/operations/reports/public-booking-audit-*.md
+            docs/operations/reports/public-booking-audit-*.json
           if-no-files-found: warn
