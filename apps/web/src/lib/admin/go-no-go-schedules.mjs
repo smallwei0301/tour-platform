@@ -202,13 +202,16 @@ export const SCHEDULE_REGISTRY = [
 
 const REGISTRY_BY_KEY = new Map(SCHEDULE_REGISTRY.map((item) => [item.jobKey, item]));
 const REGISTRY_BY_PATH = new Map(SCHEDULE_REGISTRY.map((item) => [item.workflowPath, item]));
+const APPROVED_GITHUB_REPOSITORY = 'smallwei0301/tour-platform';
 
+// 回傳值僅供安全顯示；所有 upstream 操作仍必須先呼叫 assertApprovedGithubRepository。
 export function getGithubRepoSlug() {
-  return process.env.GITHUB_ACTIONS_REPO || process.env.GITHUB_REPOSITORY || 'smallwei0301/tour-platform';
+  return APPROVED_GITHUB_REPOSITORY;
 }
 
+// 僅允許 server-side 專用 credential，避免一般 GitHub token 意外取得管理權限。
 export function getGithubActionsToken() {
-  return process.env.GITHUB_ACTIONS_ADMIN_TOKEN || process.env.GH_TOKEN || process.env.GITHUB_TOKEN || '';
+  return process.env.GITHUB_ACTIONS_ADMIN_TOKEN || '';
 }
 
 const TEST_HOOKS = {
@@ -230,6 +233,24 @@ export class GithubAdminError extends Error {
     this.operatorAction = details.operatorAction || 'retry_later';
     this.retryAfterSeconds = details.retryAfterSeconds ?? null;
   }
+}
+
+function assertApprovedGithubRepository() {
+  const configuredRepositories = [
+    process.env.GITHUB_ACTIONS_REPO,
+    process.env.GITHUB_REPOSITORY,
+  ].filter(Boolean);
+
+  if (configuredRepositories.some((repo) => repo !== APPROVED_GITHUB_REPOSITORY)) {
+    throw new GithubAdminError('GITHUB_REPO_NOT_APPROVED', 503, 'GitHub repository configuration is not approved', {
+      connectionStatus: 'repo_not_approved',
+      canRead: false,
+      canWrite: false,
+      operatorAction: 'verify_repo',
+    });
+  }
+
+  return APPROVED_GITHUB_REPOSITORY;
 }
 
 function createGithubConnection(overrides = {}) {
@@ -521,7 +542,7 @@ async function githubApi(pathname, { method = 'GET', body, fetchImpl } = {}) {
 }
 
 export async function fetchGithubWorkflows(options = {}) {
-  const repoSlug = getGithubRepoSlug();
+  const repoSlug = assertApprovedGithubRepository();
   const data = await githubApi(`/repos/${repoSlug}/actions/workflows?per_page=100`, { fetchImpl: options.fetchImpl });
   return {
     repoSlug,
@@ -534,7 +555,7 @@ export async function fetchGithubWorkflows(options = {}) {
  * 供後台顯示各排程「最後執行時間」；抓取失敗僅 warn，回空陣列（不阻塞列表）。
  */
 export async function fetchGithubWorkflowRuns(options = {}) {
-  const repoSlug = getGithubRepoSlug();
+  const repoSlug = assertApprovedGithubRepository();
   try {
     const data = await githubApi(`/repos/${repoSlug}/actions/runs?per_page=100`, { fetchImpl: options.fetchImpl });
     return (data?.workflow_runs || []).map((run) => ({
@@ -555,22 +576,24 @@ export async function fetchGithubWorkflowRuns(options = {}) {
 export async function listCronJobsForAdmin(options = {}) {
   const token = getGithubActionsToken();
   const repoSlug = getGithubRepoSlug();
-  if (!token) {
-    const githubConnection = createGithubConnection({
-      status: 'missing',
-      canRead: false,
-      canWrite: false,
-      operatorAction: 'configure_credential',
-    });
-    return {
-      repoSlug,
-      hasGithubToken: false,
-      githubConnection,
-      jobs: buildScheduleViewModels({ hasGithubToken: false, repoSlug, githubConnection }),
-    };
-  }
 
   try {
+    assertApprovedGithubRepository();
+    if (!token) {
+      const githubConnection = createGithubConnection({
+        status: 'missing',
+        canRead: false,
+        canWrite: false,
+        operatorAction: 'configure_credential',
+      });
+      return {
+        repoSlug,
+        hasGithubToken: false,
+        githubConnection,
+        jobs: buildScheduleViewModels({ hasGithubToken: false, repoSlug, githubConnection }),
+      };
+    }
+
     const [{ workflows }, runs] = await Promise.all([
       fetchGithubWorkflows(options),
       fetchGithubWorkflowRuns(options),
@@ -593,9 +616,9 @@ export async function listCronJobsForAdmin(options = {}) {
     const githubConnection = githubConnectionFromError(err);
     return {
       repoSlug,
-      hasGithubToken: true,
+      hasGithubToken: !!token,
       githubConnection,
-      jobs: buildScheduleViewModels({ hasGithubToken: true, repoSlug, githubConnection }),
+      jobs: buildScheduleViewModels({ hasGithubToken: !!token, repoSlug, githubConnection }),
     };
   }
 }
@@ -637,7 +660,7 @@ export async function setGithubWorkflowEnabled({
     });
   }
 
-  const repoSlug = getGithubRepoSlug();
+  const repoSlug = assertApprovedGithubRepository();
   const resolvedAuditLogger = pickAuditLogger(auditLogger);
   const resolvedNow = pickNow(now);
   const { workflows: beforeWorkflows } = await fetchGithubWorkflows({ fetchImpl });
