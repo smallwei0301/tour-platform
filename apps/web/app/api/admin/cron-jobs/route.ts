@@ -2,18 +2,20 @@ import { ok, fail } from '../../../../src/lib/api.ts';
 import { isAdminAuthorized, pickAdminCredentials } from '../../../../src/lib/admin-auth.mjs';
 import { getAdminSecurityState, getRequiredAdminToken } from '../../../../src/lib/admin-session.mjs';
 import { GithubAdminError, listCronJobsForAdmin, setGithubWorkflowEnabled } from '../../../../src/lib/admin/go-no-go-schedules.mjs';
+import { getAdminAuthEnv } from '../../../../src/config/security-env.mjs';
 
 export const dynamic = 'force-dynamic';
 
 function checkAdminAuth(request: Request) {
   const { token, email, expiresAt, sessionVersion, requireSession } = pickAdminCredentials(request);
   const security = getAdminSecurityState();
+  const { adminAccessToken, adminEmailAllowlist } = getAdminAuthEnv();
   return isAdminAuthorized({
     token,
     email,
     expiresAt,
-    requiredToken: getRequiredAdminToken(process.env.ADMIN_ACCESS_TOKEN),
-    allowlistRaw: process.env.ADMIN_EMAIL_ALLOWLIST,
+    requiredToken: getRequiredAdminToken(adminAccessToken),
+    allowlistRaw: adminEmailAllowlist,
     expectedSessionVersion: security.sessionVersion,
     sessionVersion: Number(sessionVersion || 0),
     requireSession,
