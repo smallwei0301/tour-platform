@@ -524,6 +524,9 @@ async function writeScheduleAudit({ auditLogger, actor, now, metadata }) {
   }));
 }
 
+/**
+ * @param {{ requestId?: string | null, [key: string]: any }} options
+ */
 export async function setGithubWorkflowEnabled({
   jobKey,
   enabled,
