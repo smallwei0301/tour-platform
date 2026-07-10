@@ -1,19 +1,21 @@
-<!-- query_timestamp: 2026-07-10T00:43:12.770Z -->
+<!-- query_timestamp: 2026-07-10T06:22:01.726Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-10T00:43:12.770Z  
-**Commit SHA:** `65d2019fef39f3b6f50c314ec9f7deecff2f80ce`
+**Query timestamp:** 2026-07-10T06:22:01.726Z  
+**Commit SHA:** `95b73e2a1aa245de905c7f3b78dbddfd48fc37db`
 
 ---
 
-## Open PRs (7)
+## Open PRs (9)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
+| #1687 | [修正排程管理的持久稽核機制](https://github.com/smallwei0301/tour-platform/pull/1687) | `kanban/issue-1686-durable-audit` |
 | #1651 | [docs(#1649): 訂單／退款／金流 v2 全面串接計劃書＋worklog（docs-only）](https://github.com/smallwei0301/tour-platform/pull/1651) | `claude/issue1649-v2-migration-plan` |
 | #1602 | [feat(ui): redesign guide shop booking flow](https://github.com/smallwei0301/tour-platform/pull/1602) | `ui/midao-shop-booking-redesign` |
 | #1534 | [feat(guide): 導遊大頭照上傳支援自選裁切範圍與大小](https://github.com/smallwei0301/tour-platform/pull/1534) | `claude/guide-profile-photo-crop-2vbzrr` |
@@ -95,6 +97,8 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1689 | [security(db): 固定金流 callback 函式的 search_path（修 advisor 0011 回歸）](https://github.com/smallwei0301/tour-platform/pull/1689) | 2026-07-10 |
+| #1688 | [feat(admin): 後台排程全面降頻至每日並顯示最後執行時間](https://github.com/smallwei0301/tour-platform/pull/1688) | 2026-07-10 |
 | #1683 | [feat(admin): 對齊 Go/No-Go 排程管理與 live GitHub Actions workflows](https://github.com/smallwei0301/tour-platform/pull/1683) | 2026-07-09 |
 | #1680 | [feat(tp-kanban): checkpoint multi-lane scheduler v1-v10](https://github.com/smallwei0301/tour-platform/pull/1680) | 2026-07-09 |
 | #1679 | [fix(security): 收斂 GH-1678 sensitive-table grants 與 soft-launch preflight contract](https://github.com/smallwei0301/tour-platform/pull/1679) | 2026-07-09 |
@@ -103,8 +107,6 @@ _none_
 | #1669 | [fix(web): suppress anonymous points 401 noise on booking v2 public flow](https://github.com/smallwei0301/tour-platform/pull/1669) | 2026-07-08 |
 | #1666 | [fix(api): protect available-slots internal reads](https://github.com/smallwei0301/tour-platform/pull/1666) | 2026-07-08 |
 | #1664 | [security(rls): 收斂 anon 寫入權回歸（scan-all 發現的 4 表）＋preflight 接通知](https://github.com/smallwei0301/tour-platform/pull/1664) | 2026-07-08 |
-| #1663 | [fix(test): issue1212 日期碰撞 flake（main CI 今日必紅）＋#1649 追加輪 worklog/lessons](https://github.com/smallwei0301/tour-platform/pull/1663) | 2026-07-08 |
-| #1656 | [feat(#1649): 訂單／退款／金流全面串接 v2 — traveler/admin/guide/補付款＋6 個既有 e2e 修復](https://github.com/smallwei0301/tour-platform/pull/1656) | 2026-07-07 |
 
 ---
 
