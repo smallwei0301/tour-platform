@@ -9,6 +9,7 @@ import path from 'node:path';
 
 import { GET, PATCH } from '../../app/api/admin/cron-jobs/route.ts';
 import { __resetGoNoGoTestHooks, __setGoNoGoTestHooks } from '../../src/lib/admin/go-no-go-schedules.mjs';
+import { __setSupabaseClientForTest } from '../../src/lib/supabase-env.mjs';
 
 const execFileAsync = promisify(execFile);
 const require = createRequire(import.meta.url);
@@ -62,6 +63,7 @@ test.beforeEach(() => {
 
 test.afterEach(() => {
   __resetGoNoGoTestHooks();
+  __setSupabaseClientForTest(null);
   restoreEnv();
 });
 
@@ -181,6 +183,64 @@ test('unknown jobKey returns 400 and never issues GitHub requests', async () => 
   assert.deepEqual(calls, []);
 });
 
+test('PATCH default production path writes durable audit_logs before upstream PUT', async () => {
+  const sequence = [];
+  const upstreamCalls = [];
+  const insertedRows = [];
+  let getCount = 0;
+
+  __setSupabaseClientForTest({
+    from(table) {
+      assert.equal(table, 'audit_logs');
+      return {
+        insert: async (payload) => {
+          sequence.push(`audit:${payload.metadata.phase}`);
+          insertedRows.push(payload);
+          return { error: null };
+        },
+      };
+    },
+  });
+
+  __setGoNoGoTestHooks({
+    fetchImpl: async (url, init = {}) => {
+      const method = init.method || 'GET';
+      upstreamCalls.push({ url: String(url), method });
+      sequence.push(`github:${method}`);
+      if (method === 'PUT') return new Response(null, { status: 204 });
+      getCount += 1;
+      return jsonResponse({
+        workflows: [
+          workflow('.github/workflows/refund-reconcile.yml', getCount === 1 ? 'active' : 'disabled_manually'),
+        ],
+      });
+    },
+  });
+
+  const response = await PATCH(new Request('https://example.com/api/admin/cron-jobs', {
+    method: 'PATCH',
+    headers: authHeaders({ 'x-request-id': 'req-default-durable' }),
+    body: JSON.stringify({ jobKey: 'refund-reconcile', enabled: false }),
+  }));
+
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(insertedRows.length, 2);
+  assert.equal(insertedRows[0].action, 'admin_go_no_go_schedule_toggle');
+  assert.equal(insertedRows[0].metadata.phase, 'intent');
+  assert.equal(insertedRows[1].metadata.phase, 'final');
+  assert.equal(insertedRows[1].metadata.outcome, 'success');
+  assert.deepEqual(sequence, [
+    'github:GET',
+    'audit:intent',
+    'github:PUT',
+    'github:GET',
+    'audit:final',
+  ]);
+  assert.equal(upstreamCalls.filter((call) => call.method === 'PUT').length, 1);
+});
+
 test('PATCH performs before -> PUT -> after verified round-trip and writes redacted durable audit records', async () => {
   const upstreamCalls = [];
   const audits = [];
@@ -227,7 +287,42 @@ test('PATCH performs before -> PUT -> after verified round-trip and writes redac
   assert.doesNotMatch(JSON.stringify(audits), new RegExp(`${secretMarker}|ghs_api_secret`, 'i'));
 });
 
-test('audit intent write failure prevents PUT mutation (PUT=0) and normalizes to 500', async () => {
+test('default durable audit write failure prevents PUT mutation (PUT=0) and normalizes to 500', async () => {
+  const upstreamCalls = [];
+
+  __setSupabaseClientForTest({
+    from(table) {
+      assert.equal(table, 'audit_logs');
+      return {
+        insert: async () => ({ error: { message: 'audit unavailable' } }),
+      };
+    },
+  });
+
+  __setGoNoGoTestHooks({
+    fetchImpl: async (url, init = {}) => {
+      const method = init.method || 'GET';
+      upstreamCalls.push({ url: String(url), method });
+      return jsonResponse({
+        workflows: [workflow('.github/workflows/refund-reconcile.yml', 'active')],
+      });
+    },
+  });
+
+  const response = await PATCH(new Request('https://example.com/api/admin/cron-jobs', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ jobKey: 'refund-reconcile', enabled: false }),
+  }));
+
+  const body = await response.json();
+  assert.equal(response.status, 500);
+  assert.equal(body.error.code, 'AUDIT_WRITE_FAILED');
+  assert.equal(upstreamCalls.filter((call) => call.method === 'PUT').length, 0);
+  assert.equal(upstreamCalls.filter((call) => call.method === 'GET').length, 1);
+});
+
+test('injected auditLogger failure still prevents PUT mutation (PUT=0) and normalizes to 500', async () => {
   const upstreamCalls = [];
 
   __setGoNoGoTestHooks({

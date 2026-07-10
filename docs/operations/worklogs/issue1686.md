@@ -246,6 +246,12 @@ Pandora spec：t_6be040e5（本卡）
 - 不以舊 `admin-cron-jobs-panel.spec.ts` 的DB kill-switch fixture當現行GitHub live contract證據。
 - 不重跑未授權live toggle；PR #1683的歷史round-trip只證明路徑曾可用，不能替代本次production credential與audit驗收。
 
+## 2026-07-10 10:31 CST — tp-builder-api durable sink remediation
+
+- `apps/web/src/lib/admin/go-no-go-schedules.mjs` 已把 schedule toggle 的 default audit path 從 in-memory `appendAuditLog` 改為 `getSupabase()` + `insertAuditLogDb(...)`，保留 injected `auditLogger` seam 給既有測試/覆寫使用。
+- `apps/web/tests/api/issue1686-go-no-go-route-security.test.mjs` 新增 default production path 證據：durable `audit_logs` intent 一定先於 GitHub `PUT`，且 durable insert 失敗時維持 `AUDIT_WRITE_FAILED`、HTTP 500、`PUT=0`；另保留 injected seam failure coverage。
+- Focused node test（concurrency=1）目前 15/15 PASS；本次 diff 僅涉及允許範圍內的 2 個檔案。
+
 ## QA_EVIDENCE
 
 - automated: read-only registry/live metadata compare → registry 16、matched 16、unmatched 0、non-active 0；規格文件 trailing-whitespace/newline check與 `git diff --check`均 exit 0。

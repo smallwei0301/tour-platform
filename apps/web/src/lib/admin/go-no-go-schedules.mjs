@@ -1,6 +1,7 @@
 import path from 'node:path';
 
-import { appendAuditLog } from '../audit-log.mjs';
+import { insertAuditLogDb } from '../audit-log.mjs';
+import { getSupabase } from '../supabase-env.mjs';
 
 const DISABLE_EFFECT_ZH = '停用後 GitHub Actions workflow 不會再執行，因此不會再發 Telegram / Email 通知。';
 
@@ -280,8 +281,14 @@ function pickFetchImpl(override) {
   return override || TEST_HOOKS.fetchImpl || fetch;
 }
 
+async function writeScheduleAuditToDb(entry) {
+  const supabase = await getSupabase();
+  await insertAuditLogDb(supabase, entry);
+  return null;
+}
+
 function pickAuditLogger(override) {
-  return override || TEST_HOOKS.auditLogger || appendAuditLog;
+  return override || TEST_HOOKS.auditLogger || writeScheduleAuditToDb;
 }
 
 function pickNow(override) {
