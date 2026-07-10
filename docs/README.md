@@ -42,6 +42,7 @@
 - `security/issue-119-history-rewrite-runbook.md`
 - `security/issue-56-secret-rotation-checklist.md`
 - `security/issue-56-blocker-followup-status.md`
+- `operations/github-actions-admin-credential-runbook.md` — Issue #1686：GitHub Actions 排程管理 credential、Vercel Production、受控 round-trip 與 redacted evidence
 
 ---
 
