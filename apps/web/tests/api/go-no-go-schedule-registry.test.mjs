@@ -101,3 +101,42 @@ test('Schedule view-model merge keeps live GitHub state and exposes toggle capab
   assert.match(reminder.disableEffectZh, /Telegram|TG/);
   assert.match(reminder.disableEffectZh, /Email|mail/i);
 });
+
+test('All hourly / every-6-hour schedules have been reduced to at most daily cadence', async () => {
+  const { SCHEDULE_REGISTRY } = await import(registryModuleUrl);
+  for (const item of SCHEDULE_REGISTRY) {
+    const [minute, hour] = item.cron.split(/\s+/);
+    // hour === '*' → 每小時；hour 含 '/' (e.g. */6) → 每數小時。降頻後皆不得出現。
+    assert.notEqual(hour, '*', `${item.workflowPath} 仍是每小時排程（cron=${item.cron}），應已降為每日`);
+    assert.doesNotMatch(hour, /\//, `${item.workflowPath} 仍是每數小時排程（cron=${item.cron}），應已降為每日`);
+    // minute 也不得為萬用字元（避免每分鐘）
+    assert.notEqual(minute, '*', `${item.workflowPath} minute 欄為萬用字元（cron=${item.cron}）`);
+  }
+});
+
+test('Schedule view-model exposes lastRun from recent GitHub runs (path + id matched)', async () => {
+  const { buildScheduleViewModels } = await import(registryModuleUrl);
+
+  const viewModels = buildScheduleViewModels({
+    githubWorkflows: [
+      { id: 201, name: 'refund-reconcile', path: '.github/workflows/refund-reconcile.yml', state: 'active', html_url: 'https://github.com/example/refund' },
+    ],
+    githubRuns: [
+      // 最新一筆（path 對）— runs API 依建立時間新到舊，第一筆即最新
+      { workflow_id: 201, path: '.github/workflows/refund-reconcile.yml', status: 'completed', conclusion: 'success', run_started_at: '2026-07-10T03:00:12Z', created_at: '2026-07-10T03:00:00Z', html_url: 'https://github.com/example/run/2' },
+      // 較舊一筆同 workflow — 不應覆蓋最新
+      { workflow_id: 201, path: '.github/workflows/refund-reconcile.yml', status: 'completed', conclusion: 'failure', run_started_at: '2026-07-09T03:00:00Z', created_at: '2026-07-09T03:00:00Z', html_url: 'https://github.com/example/run/1' },
+    ],
+    hasGithubToken: true,
+  });
+
+  const refund = viewModels.find((item) => item.workflowPath === '.github/workflows/refund-reconcile.yml');
+  assert.ok(refund.lastRun, 'refund-reconcile should carry a lastRun');
+  assert.equal(refund.lastRun.startedAt, '2026-07-10T03:00:12Z', 'lastRun should be the newest run');
+  assert.equal(refund.lastRun.conclusion, 'success');
+  assert.equal(refund.lastRun.conclusionLabelZh, '成功');
+
+  // 無對應 run 的排程 → lastRun 為 null
+  const noRun = viewModels.find((item) => item.workflowPath === '.github/workflows/settlement-sweep.yml');
+  assert.equal(noRun.lastRun, null, 'schedules without a matching run should expose lastRun=null');
+});

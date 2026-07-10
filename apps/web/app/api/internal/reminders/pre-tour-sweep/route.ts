@@ -8,9 +8,9 @@
  * Authentication: `x-internal-token` header must match INTERNAL_ALERT_TOKEN env var.
  * Returns 401 when the header is absent or mismatched.
  *
- * Time windows:
- *   h24 → start_at in [now+23h, now+25h)
- *   h1  → start_at in [now+30min, now+90min)
+ * Time windows (daily cadence — 由每小時降頻至每日，兩視窗各寬 24h 相接不重不漏):
+ *   h24 → start_at in [now+24h, now+48h)  行前一日提醒
+ *   h1  → start_at in [now, now+24h)      當日出發提醒
  *
  * Idempotency: UNIQUE(order_id, reminder_kind, channel) + ON CONFLICT DO NOTHING
  *
@@ -46,15 +46,16 @@ function isAuthorized(req: NextRequest): boolean {
 // ── Window helpers ────────────────────────────────────────────────────────────
 
 function getWindowBounds(kind: ReminderKind, now: number): { from: string; to: string } {
+  // 每日排程：兩視窗各寬 24 小時、半開區間相接，一天一跑即完整涵蓋、無縫無重疊。
   if (kind === 'h24') {
-    // h24 window: [now+23h, now+25h)
-    const from = new Date(now + 23 * 60 * 60 * 1000).toISOString();
-    const to   = new Date(now + 25 * 60 * 60 * 1000).toISOString();
+    // h24（行前一日提醒）: [now+24h, now+48h)
+    const from = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+    const to   = new Date(now + 48 * 60 * 60 * 1000).toISOString();
     return { from, to };
   }
-  // h1 window: [now+30min, now+90min)
-  const from = new Date(now + 30 * 60 * 1000).toISOString();
-  const to   = new Date(now + 90 * 60 * 1000).toISOString();
+  // h1（當日出發提醒）: [now, now+24h)
+  const from = new Date(now).toISOString();
+  const to   = new Date(now + 24 * 60 * 60 * 1000).toISOString();
   return { from, to };
 }
 

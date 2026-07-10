@@ -7,48 +7,48 @@ export const SCHEDULE_REGISTRY = [
     jobKey: 'refund-reconcile',
     workflowName: 'refund-reconcile',
     workflowPath: '.github/workflows/refund-reconcile.yml',
-    cron: '0 * * * *',
-    scheduleZh: '每小時整點（UTC）／台灣時間每小時 +00',
+    cron: '0 3 * * *',
+    scheduleZh: '每日 03:00 UTC／台灣時間 11:00',
     labelZh: '退款補帳對帳',
     summaryZh: '補做退款對帳，修正 callback 漏接或退款狀態卡住。',
-    riskLevelZh: '可降頻',
-    riskReasonZh: '主路徑仍靠即時 callback；降頻只會讓補帳與告警變慢。',
+    riskLevelZh: '已降為每日',
+    riskReasonZh: '主路徑仍靠即時 callback；已由每小時降為每日，逐筆冪等，補帳延後至多一天可接受。',
     disableEffectZh: DISABLE_EFFECT_ZH,
   },
   {
     jobKey: 'pre-tour-reminder-sweep',
     workflowName: 'pre-tour-reminder-sweep',
     workflowPath: '.github/workflows/pre-tour-reminder-sweep.yml',
-    cron: '0 * * * *',
-    scheduleZh: '每小時整點（UTC）／台灣時間每小時 +00',
+    cron: '0 22 * * *',
+    scheduleZh: '每日 22:00 UTC／台灣時間隔日 06:00',
     labelZh: '行前提醒掃描',
-    summaryZh: '掃描即將出團訂單，寄送行前提醒。',
-    riskLevelZh: '不能直接降頻',
-    riskReasonZh: 'h1 / h24 提醒視窗靠每小時掃描完整覆蓋，降太多可能漏發提醒。',
+    summaryZh: '掃描即將出團訂單，寄送行前提醒（行前一日＋當日出發）。',
+    riskLevelZh: '已改邏輯降為每日',
+    riskReasonZh: '已改為每日雙視窗（行前一日 [+24h,+48h)、當日出發 [0,+24h) 各涵蓋 24 小時），相接不重不漏；提醒改為每日晨間發送。',
     disableEffectZh: DISABLE_EFFECT_ZH,
   },
   {
     jobKey: 'ecpay-failure-sweep',
     workflowName: 'ecpay-failure-sweep',
     workflowPath: '.github/workflows/ecpay-failure-sweep.yml',
-    cron: '15 * * * *',
-    scheduleZh: '每小時 15 分（UTC）／台灣時間每小時 +15',
+    cron: '15 3 * * *',
+    scheduleZh: '每日 03:15 UTC／台灣時間 11:15',
     labelZh: 'ECPay 失敗告警掃描',
-    summaryZh: '掃近 60 分鐘 ECPay callback 失敗，超門檻時建立 incident 告警。',
-    riskLevelZh: '不能直接降頻',
-    riskReasonZh: '現在只回看最近 60 分鐘；若改成更疏的排程，監控會出現盲區。',
+    summaryZh: '掃近 24 小時 ECPay callback 失敗，超門檻時建立 incident 告警。',
+    riskLevelZh: '已改邏輯降為每日',
+    riskReasonZh: '回看窗已由 60 分鐘改為 24 小時，隨每日排程完整涵蓋無盲區；告警最多延後一天。',
     disableEffectZh: DISABLE_EFFECT_ZH,
   },
   {
     jobKey: 'readiness-snapshot-refresh',
     workflowName: 'Readiness Snapshot Refresh',
     workflowPath: '.github/workflows/readiness-snapshot-refresh.yml',
-    cron: '0 */6 * * *',
-    scheduleZh: '每 6 小時（UTC）／台灣時間 02:00、08:00、14:00、20:00',
+    cron: '0 5 * * *',
+    scheduleZh: '每日 05:00 UTC／台灣時間 13:00',
     labelZh: 'Readiness 快照刷新',
     summaryZh: '自動更新 readiness live-state 報告與 freshness 檢查。',
-    riskLevelZh: '可降頻',
-    riskReasonZh: '只影響文件快照新鮮度，不影響交易正確性。',
+    riskLevelZh: '已降為每日',
+    riskReasonZh: '已由每 6 小時降為每日；只影響文件快照新鮮度，不影響交易正確性。',
     disableEffectZh: DISABLE_EFFECT_ZH,
   },
   {
@@ -236,17 +236,80 @@ function normalizeGithubWorkflow(workflow) {
   };
 }
 
-export function buildScheduleViewModels({ githubWorkflows = [], hasGithubToken = false, repoSlug = getGithubRepoSlug() } = {}) {
+function runConclusionLabelZh(run) {
+  if (!run) return '尚無紀錄';
+  if (run.status && run.status !== 'completed') {
+    if (run.status === 'in_progress') return '執行中';
+    if (run.status === 'queued') return '排隊中';
+    return '執行中';
+  }
+  switch (run.conclusion) {
+    case 'success':
+      return '成功';
+    case 'failure':
+      return '失敗';
+    case 'cancelled':
+      return '已取消';
+    case 'skipped':
+      return '略過';
+    case 'timed_out':
+      return '逾時';
+    case 'startup_failure':
+      return '啟動失敗';
+    default:
+      return run.conclusion || '未知';
+  }
+}
+
+function normalizeGithubRun(run) {
+  // 最後執行時間優先取 run_started_at（實際開跑時間），退回 created_at。
+  const startedAt = run.run_started_at || run.created_at || null;
+  return {
+    startedAt,
+    status: run.status ?? null,
+    conclusion: run.conclusion ?? null,
+    conclusionLabelZh: runConclusionLabelZh(run),
+    url: run.html_url ?? null,
+  };
+}
+
+/**
+ * 從近期 workflow runs 取「每支 workflow 最近一次」的 run。
+ * GitHub runs API 預設依建立時間新到舊排序，故每個 path 第一次出現即最新。
+ */
+export function pickLatestRunsByPath(runs = []) {
+  const latestByPath = new Map();
+  const latestById = new Map();
+  for (const run of runs) {
+    if (run.path && !latestByPath.has(run.path)) latestByPath.set(run.path, run);
+    if (run.workflow_id != null && !latestById.has(run.workflow_id)) latestById.set(run.workflow_id, run);
+  }
+  return { latestByPath, latestById };
+}
+
+export function buildScheduleViewModels({
+  githubWorkflows = [],
+  githubRuns = [],
+  hasGithubToken = false,
+  repoSlug = getGithubRepoSlug(),
+} = {}) {
   const liveByPath = new Map(githubWorkflows.map((item) => [item.path, normalizeGithubWorkflow(item)]));
+  const { latestByPath, latestById } = pickLatestRunsByPath(githubRuns);
 
   return SCHEDULE_REGISTRY.map((item) => {
     const workflow = liveByPath.get(item.workflowPath);
     const state = workflow?.state || (hasGithubToken ? 'unmatched' : 'token_missing');
     const enabled = workflow ? workflow.state === 'active' : false;
+    // 先用 path 對，退回用 workflow id 對（極少數 path 改名情境）。
+    const rawRun =
+      latestByPath.get(item.workflowPath) ||
+      (workflow?.id != null ? latestById.get(workflow.id) : null) ||
+      null;
     return {
       ...item,
       workflowFile: getWorkflowFileName(item.workflowPath),
       workflowUrl: workflow?.html_url || workflowActionsUrl(repoSlug, item.workflowPath),
+      lastRun: rawRun ? normalizeGithubRun(rawRun) : null,
       github: {
         id: workflow?.id ?? null,
         name: workflow?.name ?? item.workflowName,
@@ -293,6 +356,29 @@ export async function fetchGithubWorkflows() {
   };
 }
 
+/**
+ * 近期 workflow runs（跨全部 workflow，依建立時間新到舊）。
+ * 供後台顯示各排程「最後執行時間」；抓取失敗僅 warn，回空陣列（不阻塞列表）。
+ */
+export async function fetchGithubWorkflowRuns() {
+  const repoSlug = getGithubRepoSlug();
+  try {
+    const data = await githubApi(`/repos/${repoSlug}/actions/runs?per_page=100`);
+    return (data?.workflow_runs || []).map((run) => ({
+      workflow_id: run.workflow_id,
+      path: run.path ?? null,
+      status: run.status ?? null,
+      conclusion: run.conclusion ?? null,
+      run_started_at: run.run_started_at ?? null,
+      created_at: run.created_at ?? null,
+      html_url: run.html_url ?? null,
+    }));
+  } catch (err) {
+    console.warn('[go-no-go-schedules] fetchGithubWorkflowRuns failed:', err?.message ?? err);
+    return [];
+  }
+}
+
 export async function listCronJobsForAdmin() {
   const token = getGithubActionsToken();
   const repoSlug = getGithubRepoSlug();
@@ -304,11 +390,11 @@ export async function listCronJobsForAdmin() {
     };
   }
 
-  const { workflows } = await fetchGithubWorkflows();
+  const [{ workflows }, runs] = await Promise.all([fetchGithubWorkflows(), fetchGithubWorkflowRuns()]);
   return {
     repoSlug,
     hasGithubToken: true,
-    jobs: buildScheduleViewModels({ githubWorkflows: workflows, hasGithubToken: true, repoSlug }),
+    jobs: buildScheduleViewModels({ githubWorkflows: workflows, githubRuns: runs, hasGithubToken: true, repoSlug }),
   };
 }
 
