@@ -114,6 +114,14 @@
       "applied_at": "2026-07-09T15:56:00+08:00",
       "status": "verified",
       "note": "#1678 sensitive-table grants hardening：production 已套用 migration，撤除 9 張 service-only sensitive tables 的 broad grants，並依 owner Option A 保留 soft_launch_controls 的 public/anon 只讀邊界、撤掉 broad writes；隨後已送 pg_notify reload schema 並 rerun preflight。最新 artifact（run 29002598060）顯示 9 張 service-only tables 已收斂，僅剩 soft_launch_controls 的 public-read-only 邊界待 repo contract 合併到 main 後轉綠。rollback：同名 .rollback.sql。Refs #1678 #1293。"
+    },
+    {
+      "filename": "20260710121345_pin_payment_callback_search_path.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「先修1」）套用＋驗證",
+      "applied_at": "2026-07-10T12:20:00+08:00",
+      "status": "verified",
+      "note": "固定 fn_process_payment_callback_atomic(uuid,text,text,jsonb,text,text) 的 search_path=pg_catalog,public,pg_temp，修 advisor WARN function_search_path_mutable（0011）——#1637 重建該金流函式時漏帶、回歸 #1564 的收斂。單行 ALTER FUNCTION、行為不變。apply_migration success；驗證 proconfig=['search_path=pg_catalog, public, pg_temp']、get_advisors(security) 該 WARN 已消除（僅剩 auth_leaked_password_protection＝owner Dashboard 開關）。rollback：同名 .rollback.sql（RESET search_path）。Refs #1564 #1293。"
     }
   ]
 }
