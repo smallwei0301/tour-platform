@@ -62,6 +62,66 @@ function runConclusionColor(conclusion: string | null, status: string | null): s
   return '#64748b';
 }
 
+function LastRun({ job }: { job: CronJob }) {
+  if (!job.lastRun?.startedAt) {
+    return <span style={{ color: '#94a3b8' }}>尚無紀錄</span>;
+  }
+
+  return (
+    <>
+      <div style={{ color: '#0f172a' }}>{formatTaipei(job.lastRun.startedAt)}</div>
+      <div style={{ fontSize: 12, marginTop: 2, color: runConclusionColor(job.lastRun.conclusion, job.lastRun.status), fontWeight: 700 }}>
+        {job.lastRun.url ? (
+          <a href={job.lastRun.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
+            {job.lastRun.conclusionLabelZh} ↗
+          </a>
+        ) : (
+          job.lastRun.conclusionLabelZh
+        )}
+      </div>
+    </>
+  );
+}
+
+function CronJobToggle({
+  job,
+  pending,
+  onToggle,
+  testId,
+}: {
+  job: CronJob;
+  pending: boolean;
+  onToggle: (job: CronJob) => void;
+  testId?: string;
+}) {
+  return (
+    <>
+      <button
+        onClick={() => onToggle(job)}
+        disabled={!job.github.canToggle || pending}
+        data-testid={testId}
+        style={{
+          padding: '6px 12px',
+          borderRadius: 8,
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: !job.github.canToggle || pending ? 'not-allowed' : 'pointer',
+          border: '1px solid',
+          borderColor: job.github.enabled ? '#fca5a5' : '#86efac',
+          color: job.github.enabled ? '#991b1b' : '#166534',
+          background: job.github.enabled ? '#fee2e2' : '#dcfce7',
+          opacity: !job.github.canToggle || pending ? 0.6 : 1,
+        }}
+      >
+        {job.github.enabled ? '停用' : '開啟'}
+      </button>
+      {!job.github.canToggle && (
+        <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>缺 token 或 GitHub 尚未對上</div>
+      )}
+    </>
+  );
+}
+
 export default function CronJobsPanel() {
   const [jobs, setJobs] = useState<CronJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,114 +191,130 @@ export default function CronJobsPanel() {
         </div>
       )}
 
+      <style>{`
+        .cron-jobs-mobile { display: none; }
+        .cron-jobs-desktop { overflow-x: auto; }
+        @media (max-width: 639px) {
+          .cron-jobs-mobile { display: flex; flex-direction: column; gap: 12px; }
+          .cron-jobs-desktop { display: none; }
+        }
+        @media (min-width: 640px) {
+          .cron-jobs-mobile { display: none; }
+          .cron-jobs-desktop { display: block; }
+        }
+      `}</style>
+
       {loading ? (
         <p style={{ fontSize: 13, color: '#64748b' }}>載入中⋯</p>
       ) : error ? (
         <p style={{ fontSize: 13, color: '#991b1b' }}>{error}</p>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }} data-testid="cron-jobs-table">
-            <thead>
-              <tr style={{ textAlign: 'left', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
-                <th scope="col" style={{ padding: '8px' }}>工作流</th>
-                <th scope="col" style={{ padding: '8px' }}>功能說明</th>
-                <th scope="col" style={{ padding: '8px' }}>真實 GitHub Actions 排程</th>
-                <th scope="col" style={{ padding: '8px' }}>最後執行</th>
-                <th scope="col" style={{ padding: '8px' }}>風險分級</th>
-                <th scope="col" style={{ padding: '8px' }}>目前狀態</th>
-                <th scope="col" style={{ padding: '8px' }}>開關</th>
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => {
-                const pill = statePillStyle(job.github.enabled);
-                return (
-                  <tr key={job.jobKey} data-testid={`cron-job-row-${job.jobKey}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                      <div style={{ fontWeight: 700 }}>{job.labelZh}</div>
-                      <div style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>{job.workflowName}</div>
-                      <a href={job.workflowUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#1d4ed8' }}>
-                        GitHub Actions ↗
+        <>
+          <div className="cron-jobs-mobile" data-testid="cron-jobs-mobile">
+            {jobs.map((job) => {
+              const pill = statePillStyle(job.github.enabled);
+              return (
+                <section
+                  key={job.jobKey}
+                  data-testid={`cron-job-card-${job.jobKey}`}
+                  style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, background: '#fff', minWidth: 0 }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <h3 style={{ fontSize: 15, fontWeight: 700, margin: 0 }}>{job.labelZh}</h3>
+                      <a href={job.workflowUrl} target="_blank" rel="noreferrer" style={{ display: 'inline-block', color: '#1d4ed8', fontSize: 12, marginTop: 4, overflowWrap: 'anywhere' }}>
+                        {job.workflowName} ↗
                       </a>
-                    </td>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                      <div style={{ color: '#0f172a' }}>{job.summaryZh}</div>
-                      <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{job.disableEffectZh}</div>
-                    </td>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                      <div>{job.scheduleZh}</div>
-                      <code style={{ display: 'inline-block', marginTop: 4, background: '#f8fafc', padding: '2px 6px', borderRadius: 6, color: '#334155' }}>{job.cron}</code>
-                    </td>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }} data-testid={`cron-last-run-${job.jobKey}`}>
-                      {job.lastRun && job.lastRun.startedAt ? (
-                        <>
-                          <div style={{ color: '#0f172a' }}>{formatTaipei(job.lastRun.startedAt)}</div>
-                          <div style={{ fontSize: 12, marginTop: 2, color: runConclusionColor(job.lastRun.conclusion, job.lastRun.status), fontWeight: 700 }}>
-                            {job.lastRun.url ? (
-                              <a href={job.lastRun.url} target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>
-                                {job.lastRun.conclusionLabelZh} ↗
-                              </a>
-                            ) : (
-                              job.lastRun.conclusionLabelZh
-                            )}
-                          </div>
-                        </>
-                      ) : (
-                        <span style={{ color: '#94a3b8' }}>尚無紀錄</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                      <div style={{ fontWeight: 700 }}>{job.riskLevelZh}</div>
-                      <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{job.riskReasonZh}</div>
-                    </td>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          padding: '3px 10px',
-                          borderRadius: 999,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          border: '1px solid',
-                          ...pill,
-                        }}
-                      >
-                        {job.github.stateLabelZh}
-                      </span>
-                      {!job.github.matched && (
-                        <div style={{ color: '#9a3412', fontSize: 12, marginTop: 4 }}>GitHub workflow 未對上，請檢查 registry。</div>
-                      )}
-                    </td>
-                    <td style={{ padding: '8px', verticalAlign: 'top' }}>
-                      <button
-                        onClick={() => toggle(job)}
-                        disabled={!job.github.canToggle || pending === job.jobKey}
-                        data-testid={`cron-toggle-${job.jobKey}`}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: 8,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          cursor: !job.github.canToggle || pending === job.jobKey ? 'not-allowed' : 'pointer',
-                          border: '1px solid',
-                          borderColor: job.github.enabled ? '#fca5a5' : '#86efac',
-                          color: job.github.enabled ? '#991b1b' : '#166534',
-                          background: job.github.enabled ? '#fee2e2' : '#dcfce7',
-                          opacity: !job.github.canToggle || pending === job.jobKey ? 0.6 : 1,
-                        }}
-                      >
-                        {job.github.enabled ? '停用' : '開啟'}
-                      </button>
-                      {!job.github.canToggle && (
-                        <div style={{ color: '#64748b', fontSize: 11, marginTop: 4 }}>缺 token 或 GitHub 尚未對上</div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                    <span style={{ display: 'inline-block', flexShrink: 0, padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, border: '1px solid', ...pill }}>
+                      {job.github.stateLabelZh}
+                    </span>
+                  </div>
+
+                  <p style={{ color: '#0f172a', fontSize: 13, lineHeight: 1.5, margin: '12px 0 0' }}>{job.summaryZh}</p>
+                  <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10, margin: '14px 0 0' }}>
+                    <div>
+                      <dt style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>排程</dt>
+                      <dd style={{ color: '#0f172a', fontSize: 13, margin: '2px 0 0' }}>{job.scheduleZh}</dd>
+                      <code style={{ display: 'inline-block', maxWidth: '100%', overflowWrap: 'anywhere', marginTop: 4, background: '#f8fafc', padding: '2px 6px', borderRadius: 6, color: '#334155' }}>{job.cron}</code>
+                    </div>
+                    <div>
+                      <dt style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>最後執行</dt>
+                      <dd style={{ fontSize: 13, margin: '2px 0 0' }}><LastRun job={job} /></dd>
+                    </div>
+                    <div>
+                      <dt style={{ color: '#64748b', fontSize: 11, fontWeight: 700 }}>風險</dt>
+                      <dd style={{ color: '#0f172a', fontSize: 13, margin: '2px 0 0' }}>
+                        <strong>{job.riskLevelZh}</strong>
+                        <div style={{ color: '#64748b', fontSize: 12, lineHeight: 1.5, marginTop: 2 }}>{job.riskReasonZh}</div>
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {!job.github.matched && (
+                    <div style={{ color: '#9a3412', fontSize: 12, marginTop: 12 }}>GitHub workflow 未對上，請檢查 registry。</div>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, paddingTop: 12, borderTop: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
+                    <span style={{ color: '#475569', fontSize: 12, fontWeight: 700 }}>啟用／停用</span>
+                    <CronJobToggle job={job} pending={pending === job.jobKey} onToggle={toggle} testId={`cron-mobile-toggle-${job.jobKey}`} />
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          <div className="cron-jobs-desktop">
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }} data-testid="cron-jobs-table">
+              <thead>
+                <tr style={{ textAlign: 'left', color: '#475569', borderBottom: '1px solid #e2e8f0' }}>
+                  <th scope="col" style={{ padding: '8px' }}>工作流</th>
+                  <th scope="col" style={{ padding: '8px' }}>功能說明</th>
+                  <th scope="col" style={{ padding: '8px' }}>真實 GitHub Actions 排程</th>
+                  <th scope="col" style={{ padding: '8px' }}>最後執行</th>
+                  <th scope="col" style={{ padding: '8px' }}>風險分級</th>
+                  <th scope="col" style={{ padding: '8px' }}>目前狀態</th>
+                  <th scope="col" style={{ padding: '8px' }}>開關</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobs.map((job) => {
+                  const pill = statePillStyle(job.github.enabled);
+                  return (
+                    <tr key={job.jobKey} data-testid={`cron-job-row-${job.jobKey}`} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 700 }}>{job.labelZh}</div>
+                        <div style={{ color: '#64748b', fontSize: 12, marginTop: 2 }}>{job.workflowName}</div>
+                        <a href={job.workflowUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#1d4ed8' }}>GitHub Actions ↗</a>
+                      </td>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <div style={{ color: '#0f172a' }}>{job.summaryZh}</div>
+                        <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{job.disableEffectZh}</div>
+                      </td>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <div>{job.scheduleZh}</div>
+                        <code style={{ display: 'inline-block', marginTop: 4, background: '#f8fafc', padding: '2px 6px', borderRadius: 6, color: '#334155' }}>{job.cron}</code>
+                      </td>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }} data-testid={`cron-last-run-${job.jobKey}`}><LastRun job={job} /></td>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <div style={{ fontWeight: 700 }}>{job.riskLevelZh}</div>
+                        <div style={{ color: '#64748b', fontSize: 12, marginTop: 4 }}>{job.riskReasonZh}</div>
+                      </td>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <span style={{ display: 'inline-block', padding: '3px 10px', borderRadius: 999, fontSize: 12, fontWeight: 700, border: '1px solid', ...pill }}>
+                          {job.github.stateLabelZh}
+                        </span>
+                        {!job.github.matched && <div style={{ color: '#9a3412', fontSize: 12, marginTop: 4 }}>GitHub workflow 未對上，請檢查 registry。</div>}
+                      </td>
+                      <td style={{ padding: '8px', verticalAlign: 'top' }}>
+                        <CronJobToggle job={job} pending={pending === job.jobKey} onToggle={toggle} testId={`cron-toggle-${job.jobKey}`} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </Card>
   );
