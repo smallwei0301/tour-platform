@@ -2,15 +2,15 @@ import { test, expect } from './helpers';
 import type { Page, Route } from '@playwright/test';
 
 const publicBookingAudit = {
-  jobKey: 'public-booking-v2-audit',
+  jobKey: 'public-booking-audit',
   labelZh: '公開 Booking V2 稽核',
   summaryZh: '檢查公開 Booking V2 流程與可預約名額。',
   riskLevelZh: '高風險',
   riskReasonZh: '異常時可能影響公開訂位。',
   disableEffectZh: '停用後不再執行稽核通知。',
   workflowName: 'Public Booking V2 Audit',
-  workflowFile: 'public-booking-v2-audit.yml',
-  workflowUrl: 'https://github.com/smallwei0301/tour-platform/actions/workflows/public-booking-v2-audit.yml',
+  workflowFile: 'public-booking-audit.yml',
+  workflowUrl: 'https://github.com/smallwei0301/tour-platform/actions/workflows/public-booking-audit.yml',
   scheduleZh: '每日 09:00（台北時間）',
   cron: '0 1 * * *',
   lastRun: {
@@ -64,7 +64,7 @@ test('admin 排程管理：390px 使用完整可讀的 workflow card，不顯示
   await page.goto('/admin/go-no-go');
   await expect(page.getByRole('heading', { name: '排程管理' })).toBeVisible();
 
-  const card = page.getByTestId('cron-job-card-public-booking-v2-audit');
+  const card = page.getByTestId('cron-job-card-public-booking-audit');
   await expect(card).toBeVisible();
   await expect(card.getByRole('link', { name: /Public Booking V2 Audit/ })).toBeVisible();
   await expect(card.getByText('每日 09:00（台北時間）', { exact: true })).toBeVisible();
@@ -84,7 +84,7 @@ test('admin 排程管理：desktop 保持既有 table 與 toggle', async ({ auth
 
   await page.goto('/admin/go-no-go');
   await expect(page.getByTestId('cron-jobs-table')).toBeVisible();
-  await expect(page.getByTestId('cron-job-card-public-booking-v2-audit')).toBeHidden();
-  await expect(page.getByTestId('cron-job-row-public-booking-v2-audit')).toBeVisible();
-  await expect(page.getByTestId('cron-toggle-public-booking-v2-audit')).toBeVisible();
+  await expect(page.getByTestId('cron-job-card-public-booking-audit')).toBeHidden();
+  await expect(page.getByTestId('cron-job-row-public-booking-audit')).toBeVisible();
+  await expect(page.getByTestId('cron-toggle-public-booking-audit')).toBeVisible();
 });
