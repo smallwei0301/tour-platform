@@ -46,7 +46,7 @@ export function buildActivityPlanNotFoundResponse(reason) {
     body: {
       success: false,
       error: {
-        code: 'NOT_FOUND',
+        code: 'PLAN_NOT_FOUND',
         message: copy.en,
         messageZh: copy.zh,
       },
