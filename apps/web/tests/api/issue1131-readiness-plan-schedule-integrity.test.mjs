@@ -129,6 +129,7 @@ const activityNoLegacyPlans = {
   id: ACTIVITY_ID,
   status: 'draft',
   plans: [],
+  guide_id: 'cccccccc-0000-0000-0000-000000000003',
 };
 
 const activeFormalPlan = {

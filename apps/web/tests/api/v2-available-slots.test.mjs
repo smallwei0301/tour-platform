@@ -825,6 +825,48 @@ test('selected-plan metadata from issue-910 fixture appears in successful respon
   ]);
 });
 
+test('available-slots: resolved active formal plan without guide returns safe NOT_BOOKABLE contract', async () => {
+  const activityId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const planId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
+  const mockDb = {
+    activities: [{ id: activityId }],
+    activity_plans: [
+      {
+        id: planId,
+        activity_id: activityId,
+        duration_minutes: 60,
+        min_participants: 1,
+        max_participants: 8,
+        booking_type: 'instant',
+        status: 'active',
+        name: 'Unassigned guide plan',
+        price_type: 'per_person',
+        base_price: 20,
+        activities: { id: activityId, guide_id: null },
+      },
+    ],
+  };
+
+  const response = await getAvailableSlots(
+    {
+      nextUrl: new URL(
+        `https://example.com/api/v2/activities/${activityId}/available-slots?planId=${planId}&dateFrom=2026-05-01&dateTo=2026-05-01&timezone=Asia%2FTaipei&participants=1`,
+      ),
+    },
+    { params: Promise.resolve({ activityId }) },
+    { createClient: async () => createMockSupabaseClient(mockDb) },
+  );
+
+  assert.equal(response.status, 409);
+  const json = await response.json();
+  assert.equal(json.success, false);
+  assert.equal(json.error?.code, 'NOT_BOOKABLE');
+  assert.match(json.error?.message ?? '', /not currently available for booking/i);
+  assert.equal(json.data, undefined);
+  assert.equal(JSON.stringify(json).includes('slots'), false);
+  assert.doesNotMatch(JSON.stringify(json), /guide_id|token|secret|supabase|postgres|database/i);
+});
+
 test('GH-923 RED: selectedSchedule must not bypass overlap hold conflict from other activity/plan', async () => {
   const activityId = '57ad7d45-4fb1-4ed5-b860-72330b9afd1b';
   const planId = 'f50048b1-a10f-4539-85b1-77ca1b3d8094';
