@@ -402,8 +402,8 @@ export async function getAvailableSlots(
     const guideId = activities?.guide_id;
 
     if (!guideId) {
-      return Response.json(errorV2('INTERNAL_ERROR', 'Activity has no assigned guide'), {
-        status: 500,
+      return Response.json(errorV2('NOT_BOOKABLE', 'This activity is not currently available for booking'), {
+        status: 409,
       });
     }
 
