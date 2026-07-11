@@ -17,7 +17,9 @@ const AUDIT_DATE = process.env.AUDIT_DATE || (() => {
 })();
 const TIMEZONE = 'Asia/Taipei';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const REPORT_DIR = path.resolve(__dirname, '../docs/operations/reports');
+const REPORT_DIR = process.env.AUDIT_REPORT_DIR
+  ? path.resolve(process.env.AUDIT_REPORT_DIR)
+  : path.resolve(__dirname, '../docs/operations/reports');
 const DATE_STAMP = new Date().toISOString().slice(0, 10);
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 

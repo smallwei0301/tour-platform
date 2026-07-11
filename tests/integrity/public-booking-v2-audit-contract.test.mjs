@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -10,14 +12,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '../..');
 const auditScript = path.join(repoRoot, 'scripts/audit-public-booking-v2.mjs');
 const workflowPath = path.join(repoRoot, '.github/workflows/public-booking-audit.yml');
+const integrationReportDir = await mkdtemp(path.join(tmpdir(), 'public-booking-audit-'));
 const FORMAL_PLAN_A = '11111111-1111-4111-8111-111111111111';
 const FORMAL_PLAN_B = '22222222-2222-4222-8222-222222222222';
 
-function runAudit(baseUrl) {
+function runAudit(baseUrl, reportDir = integrationReportDir) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [auditScript], {
       cwd: repoRoot,
-      env: { ...process.env, BASE_URL: baseUrl, AUDIT_DATE: '2026-09-15' },
+      env: { ...process.env, BASE_URL: baseUrl, AUDIT_DATE: '2026-09-15', ...(reportDir ? { AUDIT_REPORT_DIR: reportDir } : {}) },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -28,6 +31,10 @@ function runAudit(baseUrl) {
     child.on('close', (code) => resolve({ code, stdout, stderr }));
   });
 }
+
+test.after(async () => {
+  await rm(integrationReportDir, { recursive: true, force: true });
+});
 
 async function withApi(handler, run) {
   const server = createServer(handler);
@@ -144,6 +151,29 @@ test('audit fails closed with explicit finding when activity detail is malformed
     assert.equal(result.code, 1);
     assert.equal(availableSlotsCalls, 0);
     assert.match(result.stdout, /FAIL_ACTIVITY_DETAIL/);
+  }
+});
+
+test('audit writes reports to AUDIT_REPORT_DIR when explicitly set', async () => {
+  const reportDir = await mkdtemp(path.join(tmpdir(), 'public-booking-audit-'));
+  try {
+    const result = await withApi((req, res) => {
+      if (req.url === '/api/activities') return json(res, 200, catalog());
+      if (req.url === '/api/activities/published-tour') {
+        return json(res, 200, { data: { plans: [{ id: FORMAL_PLAN_A, status: 'active' }] } });
+      }
+      if (req.url.includes('/available-slots')) {
+        return json(res, 200, { data: { slots: [], selectedPlan: { maxParticipants: 10 } } });
+      }
+      return json(res, 404, {});
+    }, (baseUrl) => runAudit(baseUrl, reportDir));
+
+    assert.equal(result.code, 0, result.stderr);
+    const reports = await readdir(reportDir);
+    assert.equal(reports.filter((name) => /^public-booking-audit-.*\.json$/.test(name)).length, 1);
+    assert.equal(reports.filter((name) => /^public-booking-audit-.*\.md$/.test(name)).length, 1);
+  } finally {
+    await rm(reportDir, { recursive: true, force: true });
   }
 });
 
