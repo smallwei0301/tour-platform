@@ -95,7 +95,9 @@ export default function AdminGuideDetailPage() {
         cache: 'no-store',
       });
       const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.ok) {
+      // 代入 API 是 v2 route（jsonOk），成功 envelope 為 { success: true, data }，
+      // 不是本頁其他 v1 route 的 { ok: true } —— 誤檢 json.ok 會把成功當失敗。
+      if (!res.ok || json?.success !== true) {
         setImpersonateError(json?.error?.message || '進入導遊後台失敗');
         setImpersonating(false);
         return;
