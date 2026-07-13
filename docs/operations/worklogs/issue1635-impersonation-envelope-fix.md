@@ -20,7 +20,15 @@
 - Vercel production runtime errors（近 24h）查無此 route exception——符合「非 exception、是前端誤判 200 回應」的根因。
 
 ## 下一步
-- push 至 `claude/admin-guide-backend-access-9dpv78`，開 PR → CI 綠 → merge → 生產實測按鈕可導入 `/guide/dashboard` 並顯示代入橫幅。
+- ~~push 至 `claude/admin-guide-backend-access-9dpv78`，開 PR → CI 綠 → merge~~ 已完成（見下）。
+- merge 後生產實測：管理者後台按「進入導遊後台」應導入 `/guide/dashboard` 並顯示代入橫幅。
+
+## PR / CI（鐵律 6 紀錄）
+- PR：https://github.com/smallwei0301/tour-platform/pull/1708（head `45f161f`）
+- CI check-runs（全部 conclusion=success）：
+  - ci / test：https://github.com/smallwei0301/tour-platform/actions/runs/29244139213/job/86796907094
+  - secret-scan / scan：https://github.com/smallwei0301/tour-platform/actions/runs/29244138943/job/86796889700
+  - Vercel Preview：deployment Ready（preview 綠）
 
 ## 絕不重做（Do-NOT-redo）
 - 不動代入 route 本身（安全邊界、envelope 均正確）；不把 v2 route 改回 v1 envelope（#1614 ratchet 鎖 `jsonOk/jsonError`）。
