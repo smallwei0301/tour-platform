@@ -8,7 +8,7 @@ import { SHOP_MOCK_SLUG, SHOP_LANDING_MOCK } from '../../../../src/fixtures/shop
 import { ShopMemberButton } from './ShopMemberButton';
 import { ShopViewTracker } from './ShopViewTracker';
 import {
-  MountainCircleLogo, LeafIcon, StepMountain, StepCalendar, StepClipboard,
+  LeafIcon, StepMountain, StepCalendar, StepClipboard,
   CtaMountain, ArrowRight, LockIcon,
 } from './sib-icons';
 
@@ -59,14 +59,12 @@ export default async function GuideShopPage({ params }: { params: Promise<{ slug
         <ShopMemberButton slug={slug} />
       </div>
 
-      {/* Hero：大圖＋詩句 */}
+      {/* Hero：純大圖，不疊字樣/圖樣 */}
       <section className="sib-hero" data-testid="shop-hero">
         {guide.heroImageUrl && (
           <Image src={guide.heroImageUrl} alt={`${guide.displayName} 封面照`} fill priority
             sizes="(max-width: 480px) 100vw, 480px" className="sib-hero-img" />
         )}
-        <MountainCircleLogo className="sib-hero-logo" />
-        <p className="sib-hero-poem">走進祕境，<br />讓島嶼的故事，<br />在腳下展開。</p>
       </section>
 
       {/* 引路人卡 */}
