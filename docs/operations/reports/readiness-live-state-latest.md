@@ -1,19 +1,20 @@
-<!-- query_timestamp: 2026-07-13T06:05:19.670Z -->
+<!-- query_timestamp: 2026-07-14T05:49:35.832Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-13T06:05:19.670Z  
-**Commit SHA:** `0484fed663bc5a6e000b4e365fb1aff2028c4482`
+**Query timestamp:** 2026-07-14T05:49:35.832Z  
+**Commit SHA:** `48dfaefad3f6bcf908eee439818847abcbd6bdce`
 
 ---
 
-## Open PRs (9)
+## Open PRs (10)
 
 | # | Title | Branch |
 |---|-------|--------|
+| #1711 | [fix(seo): add canonical and safe hreflang metadata](https://github.com/smallwei0301/tour-platform/pull/1711) | `feat/seo-full-optimization` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
 | #1687 | [修正排程管理的持久稽核機制](https://github.com/smallwei0301/tour-platform/pull/1687) | `kanban/issue-1686-durable-audit` |
 | #1651 | [docs(#1649): 訂單／退款／金流 v2 全面串接計劃書＋worklog（docs-only）](https://github.com/smallwei0301/tour-platform/pull/1651) | `claude/issue1649-v2-migration-plan` |
@@ -24,16 +25,18 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (44 total)
+## Open Issues (46 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (23)
+### P1 (25)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1710 | [[QA] Daily test checklist for recent merged PRs 2026-07-14](https://github.com/smallwei0301/tour-platform/issues/1710) | triaged, priority:P1, cron-followup, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, auth, infra, admin |
+| #1709 | [[daily bug scan] tour-platform 2026-07-14](https://github.com/smallwei0301/tour-platform/issues/1709) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1705 | [[daily bug scan] tour-platform 2026-07-13](https://github.com/smallwei0301/tour-platform/issues/1705) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1695 | [[QA] Daily test checklist for recent merged PRs 2026-07-11](https://github.com/smallwei0301/tour-platform/issues/1695) | triaged, priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, payments, auth, infra, admin |
 | #1694 | [[daily bug scan] tour-platform 2026-07-11](https://github.com/smallwei0301/tour-platform/issues/1694) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
@@ -100,6 +103,7 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
+| #1708 | [fix(admin): 修正「進入導遊後台」誤判 V2 envelope 導致永遠顯示進入失敗](https://github.com/smallwei0301/tour-platform/pull/1708) | 2026-07-13 |
 | #1707 | [fix(qa)：建立 canonical health-check provenance runner](https://github.com/smallwei0301/tour-platform/pull/1707) | 2026-07-12 |
 | #1702 | [[測試][Admin] 對齊 audit fixture 與 runtime registry](https://github.com/smallwei0301/tour-platform/pull/1702) | 2026-07-11 |
 | #1701 | [feat(admin)：手機版排程管理改為卡片式呈現](https://github.com/smallwei0301/tour-platform/pull/1701) | 2026-07-11 |
@@ -109,7 +113,6 @@ _none_
 | #1692 | [[Docs] 補齊 GitHub Actions 排程憑證與受控驗證 Runbook](https://github.com/smallwei0301/tour-platform/pull/1692) | 2026-07-10 |
 | #1691 | [[Admin] 強化 GitHub Actions credential 與排程切換安全](https://github.com/smallwei0301/tour-platform/pull/1691) | 2026-07-10 |
 | #1689 | [security(db): 固定金流 callback 函式的 search_path（修 advisor 0011 回歸）](https://github.com/smallwei0301/tour-platform/pull/1689) | 2026-07-10 |
-| #1688 | [feat(admin): 後台排程全面降頻至每日並顯示最後執行時間](https://github.com/smallwei0301/tour-platform/pull/1688) | 2026-07-10 |
 
 ---
 
