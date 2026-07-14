@@ -51,7 +51,7 @@ test('public canonical paths encode dynamic path segments instead of treating th
 
 test('experience metadata validates the published slug before emitting alternates', () => {
   const source = readFileSync(join(localizedAppDir, 'experiences/[slug]/page.tsx'), 'utf8');
-  assert.match(source, /listExperiencesDb/, 'metadata must use the published experience catalog');
+  assert.match(source, /listPublishedActivitiesDb/, 'metadata must use the published-only activity catalog');
   assert.match(source, /if \(!experience\) notFound\(\)/, 'unknown or unavailable experiences must not emit SEO metadata');
   assert.match(source, /buildPublicPath\('\/experiences', \[slug\]\)/, 'experience canonical must encode the slug segment');
 });
