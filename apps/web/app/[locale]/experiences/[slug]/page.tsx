@@ -4,8 +4,7 @@ import { notFound } from 'next/navigation';
 import { cache } from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { listPublishedActivitiesDb } from '../../../../src/lib/db.mjs';
-import { buildAlternates } from '../../../../src/lib/seo-alternates.ts';
-import { buildPublicPath } from '../../../../src/lib/seo-path.mjs';
+import { buildAlternates, buildPublicPath } from '../../../../src/lib/seo-alternates.ts';
 
 const getPublishedExperienceBySlug = cache(async (slug: string) => {
   try {

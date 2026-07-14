@@ -8,8 +8,7 @@ import ActivitiesContent from '../ActivitiesContent';
 import ActivitiesSkeleton from '../ActivitiesSkeleton';
 import ActivitiesFirstPaint from '../ActivitiesFirstPaint';
 import { resolveCoverSrc, buildCardImageSrcSet, CARD_IMAGE_SIZES } from '../cover-image';
-import { buildAlternates } from '../../../../src/lib/seo-alternates.ts';
-import { buildPublicPath } from '../../../../src/lib/seo-path.mjs';
+import { buildAlternates, buildPublicPath } from '../../../../src/lib/seo-alternates.ts';
 
 // Same posture as the parent /activities listing (PR #1252): let Vercel's
 // edge cache absorb anonymous region-page traffic for 60s. `revalidate`

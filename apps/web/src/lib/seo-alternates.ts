@@ -21,6 +21,15 @@ export function localizePath(path: string, locale: AppLocale): string {
   return normalized === '/' ? `/${locale}` : `/${locale}${normalized}`;
 }
 
+/** Builds a public route path with encoded dynamic segments. */
+export function buildPublicPath(basePath: string, segments: string[] = []): string {
+  const normalizedBase = `/${String(basePath).replace(/^\/+|\/+$/g, '')}`;
+  const encodedSegments = segments.map((segment) => encodeURIComponent(String(segment)));
+  return encodedSegments.length > 0
+    ? `${normalizedBase}/${encodedSegments.join('/')}`
+    : normalizedBase;
+}
+
 export type SeoAlternates = {
   canonical: string;
   languages: Record<string, string>;

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildPublicPath } from '../../src/lib/seo-path.mjs';
+import { buildPublicPath } from '../../src/lib/seo-alternates.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const localizedAppDir = resolve(__dirname, '../../app/[locale]');
