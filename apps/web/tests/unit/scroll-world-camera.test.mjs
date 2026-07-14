@@ -1,0 +1,105 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {
+  SCENE_DEPTH,
+  DEFAULT_LINGER,
+  activeSceneIndex,
+  cameraZ,
+  copyOpacity,
+  progressForScene,
+  sceneDistance,
+  sceneOpacity,
+} from '../../src/lib/scroll-world/camera.mjs';
+
+const N = 7; // /world 目前場景數（intro＋五主題＋finale）
+const D = SCENE_DEPTH;
+
+test('cameraZ 端點：p=0 → 0、p=1 → (n-1)*depth', () => {
+  assert.equal(cameraZ(0, N), 0);
+  assert.equal(cameraZ(1, N), (N - 1) * D);
+});
+
+test('cameraZ 單調不減（scroll-world 架構 A：相機只前進不回拉）', () => {
+  let prev = -Infinity;
+  for (let step = 0; step <= 2000; step += 1) {
+    const z = cameraZ(step / 2000, N);
+    assert.ok(z >= prev, `p=${step / 2000} 時 z=${z} < 前值 ${prev}`);
+    assert.ok(z >= 0 && z <= (N - 1) * D);
+    prev = z;
+  }
+});
+
+test('cameraZ 超界與非法輸入夾住', () => {
+  assert.equal(cameraZ(-1, N), 0);
+  assert.equal(cameraZ(2, N), (N - 1) * D);
+  assert.equal(cameraZ(Number.NaN, N), 0);
+});
+
+test('cameraZ 單場景（n=1）恆為 0', () => {
+  assert.equal(cameraZ(0.5, 1), 0);
+  assert.equal(cameraZ(1, 1), 0);
+});
+
+test('每景 waypoint 有 linger 平台：dwell 區段內相機 Z 恆等於 i*depth', () => {
+  const total = N * DEFAULT_LINGER + (N - 1);
+  const dwellHalfWidth = DEFAULT_LINGER / 2 / total; // dwell 半寬（progress 座標）
+  for (let i = 0; i < N; i += 1) {
+    const center = progressForScene(i, N);
+    assert.equal(cameraZ(center, N), i * D, `第 ${i} 景 dwell 中點`);
+    // dwell 區段內部（避開邊界浮點）仍停在 waypoint 上
+    for (const offset of [-0.8 * dwellHalfWidth, 0.8 * dwellHalfWidth]) {
+      const p = Math.min(1, Math.max(0, center + offset));
+      assert.equal(cameraZ(p, N), i * D, `第 ${i} 景 dwell 內 offset=${offset}`);
+    }
+  }
+});
+
+test('progressForScene：遞增且邊界夾住', () => {
+  for (let i = 1; i < N; i += 1) {
+    assert.ok(progressForScene(i, N) > progressForScene(i - 1, N));
+  }
+  assert.equal(progressForScene(-3, N), progressForScene(0, N));
+  assert.equal(progressForScene(99, N), progressForScene(N - 1, N));
+  assert.equal(progressForScene(0, 1), 0);
+});
+
+test('sceneOpacity：目前景清晰主導、下一景幽靈化、穿越後淡出、遠景隱藏，值域 [0,1]', () => {
+  assert.equal(sceneOpacity(0), 1); // 相機正在景上
+  assert.equal(sceneOpacity(0.3 * D), 1); // clear 區內仍清晰
+  const next = sceneOpacity(D); // waypoint 上看下一景：幽靈化、不搶戲
+  assert.ok(next > 0.2 && next < 0.6, `下一景應在 0.2..0.6，得 ${next}`);
+  assert.equal(sceneOpacity(-0.45 * D), 0); // 完全飛越
+  assert.equal(sceneOpacity(2.4 * D), 0); // 遠景完全隱藏
+  assert.ok(sceneOpacity(-0.2 * D) > 0 && sceneOpacity(-0.2 * D) < 1); // 穿越中
+  assert.ok(sceneOpacity(2 * D) > 0 && sceneOpacity(2 * D) < 1); // 霧化中
+  // clear 區外單調遞減
+  let prev = 1;
+  for (let d = 0.35 * D; d <= 2.5 * D; d += D / 40) {
+    const o = sceneOpacity(d);
+    assert.ok(o <= prev + 1e-9, `distance=${d} 不應回升`);
+    assert.ok(o >= 0 && o <= 1, `distance=${d} opacity=${o}`);
+    prev = o;
+  }
+});
+
+test('sceneDistance：正值在前方、負值已飛越', () => {
+  assert.equal(sceneDistance(0, 2), 2 * D);
+  assert.equal(sceneDistance(3 * D, 2), -D);
+});
+
+test('activeSceneIndex：取最近景並夾在 [0, n-1]', () => {
+  assert.equal(activeSceneIndex(0, N), 0);
+  assert.equal(activeSceneIndex(2 * D + 0.2 * D, N), 2);
+  assert.equal(activeSceneIndex(99 * D, N), N - 1);
+  assert.equal(activeSceneIndex(-D, N), 0);
+});
+
+test('copyOpacity：waypoint 上全顯、兩景中間全隱', () => {
+  for (let i = 0; i < N; i += 1) {
+    assert.equal(copyOpacity(i * D, i), 1);
+  }
+  assert.equal(copyOpacity(0.5 * D, 0), 0);
+  assert.equal(copyOpacity(0.5 * D, 1), 0);
+  const mid = copyOpacity(0.3 * D, 0);
+  assert.ok(mid > 0 && mid < 1);
+});

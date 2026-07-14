@@ -119,6 +119,13 @@ const nextConfig = {
       { source: '/checkout', destination: '/activities', permanent: true },
       { source: '/orders', destination: '/me/orders', permanent: true },
       { source: '/orders/:orderId', destination: '/me/orders/:orderId', permanent: true },
+      // /world＝3D 滾動首頁的好記別名。正式路徑落在 /theme/world（已在凍結
+      // middleware 的 matcher＋localized 清單內，soft-launch kill-switch 一併涵蓋；
+      // 未經 next-intl rewrite 的裸 /world 反而會漏出管制），redirect 先於
+      // middleware 執行，暫停站點時別名仍會被正確攔下。非 301：保留日後
+      // 經授權把正式路徑搬回 /world 的空間。
+      { source: '/world', destination: '/theme/world', permanent: false },
+      { source: '/:locale(en|ja|ko)/world', destination: '/:locale/theme/world', permanent: false },
     ];
   },
 };

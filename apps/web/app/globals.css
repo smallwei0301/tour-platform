@@ -91,6 +91,16 @@ body:has(.lp-root) .tp-navbar .tp-logo-zh,
 .tp-navbar--home .tp-logo-zh { color: var(--tp-cream); }
 body:has(.lp-root) .tp-navbar .tp-hamburger-icon,
 .tp-navbar--home .tp-hamburger-icon { width: 20px; gap: 4px; }
+/* /world 3D 滾動首頁：導覽列比照 LP 首頁透明浮起（#1428 的 body:has 純 CSS 模式）。
+   3D 舞台恆為深色且自帶暗角，直接以柔和漸層保字可讀，不需 scrolled 實心底。 */
+body:has(.sw-root) .tp-navbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(180deg, rgba(12, 20, 16, 0.55), transparent);
+  border-bottom: none;
+  box-shadow: none;
+  padding-top: 6px;
+}
 .tp-navbar-full { width: 100%; padding: 0 16px; box-sizing: border-box; }
 .tp-navbar-inner { min-height: 40px; display: grid; grid-template-columns: 200px 1fr auto; align-items: center; gap: 16px; }
 .tp-logo { font-family: var(--tp-serif); font-weight: 700; color: var(--tp-cream); letter-spacing: 0.3em; font-size: 14.5px; white-space: nowrap; }

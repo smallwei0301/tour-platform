@@ -1,0 +1,74 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { SCROLL_WORLD_SCENES } from '../../src/lib/scroll-world/scenes.mjs';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const webRoot = path.resolve(here, '../..');
+
+// BRAND_BOOK Section 03 八色系統——/world 場景 accent 只允許取自這裡
+const BRAND_COLORS = new Set([
+  '#1A2E1F', // 山墨綠
+  '#F4ECD8', // 米黃
+  '#C2542E', // 朝霞橘
+  '#5E7A4F', // 次綠
+  '#B08D3E', // 黃銅金
+  '#A8B09E', // 灰綠
+  '#EBE1C7', // 淺米
+  '#2A2422', // 深棕
+]);
+
+test('場景註冊表：id 唯一、欄位齊備', () => {
+  assert.ok(SCROLL_WORLD_SCENES.length >= 5, '至少五景才成立飛行敘事');
+  const ids = SCROLL_WORLD_SCENES.map((s) => s.id);
+  assert.equal(new Set(ids).size, ids.length, 'id 不得重複');
+  for (const scene of SCROLL_WORLD_SCENES) {
+    assert.ok(scene.id && typeof scene.id === 'string');
+    assert.ok(scene.art && typeof scene.art === 'string');
+    assert.ok(scene.href?.startsWith('/'), `${scene.id} 的 href 必須是站內路徑`);
+  }
+});
+
+test('場景 accent 一律取 BRAND_BOOK 八色系統', () => {
+  for (const scene of SCROLL_WORLD_SCENES) {
+    assert.ok(BRAND_COLORS.has(scene.accent), `${scene.id} 的 accent ${scene.accent} 不在八色系統內`);
+  }
+});
+
+test('每景 CTA 目的地都是存在的 [locale] 頁面', () => {
+  for (const scene of SCROLL_WORLD_SCENES) {
+    const pagePath = path.join(webRoot, 'app', '[locale]', ...scene.href.split('/').filter(Boolean), 'page.tsx');
+    assert.ok(fs.existsSync(pagePath), `${scene.id} 的 href ${scene.href} 找不到 ${pagePath}`);
+  }
+});
+
+test('每景 art 鍵在 SceneArt 的 ART 對照表中有實作', () => {
+  const source = fs.readFileSync(path.join(webRoot, 'src/components/scroll-world/SceneArt.tsx'), 'utf8');
+  for (const scene of SCROLL_WORLD_SCENES) {
+    assert.match(source, new RegExp(`\\b${scene.art}: \\w+`), `SceneArt 缺 art 鍵 ${scene.art}`);
+  }
+});
+
+for (const localeFile of ['zh-Hant.json', 'en.json']) {
+  test(`i18n ${localeFile}：home3d 文案齊備`, () => {
+    const messages = JSON.parse(fs.readFileSync(path.join(webRoot, 'messages', localeFile), 'utf8'));
+    const ns = messages.home3d;
+    assert.ok(ns, 'home3d namespace 存在');
+    for (const key of ['metaTitle', 'metaDescription', 'hint', 'progressLabel']) {
+      assert.ok(typeof ns[key] === 'string' && ns[key].length > 0, `缺 home3d.${key}`);
+    }
+    for (const scene of SCROLL_WORLD_SCENES) {
+      const copy = ns.scenes?.[scene.id];
+      assert.ok(copy, `缺 home3d.scenes.${scene.id}`);
+      for (const key of ['eyebrow', 'title', 'body', 'cta']) {
+        assert.ok(typeof copy[key] === 'string' && copy[key].length > 0, `缺 home3d.scenes.${scene.id}.${key}`);
+      }
+      assert.ok(Array.isArray(copy.tags) && copy.tags.length > 0, `home3d.scenes.${scene.id}.tags 需為非空陣列`);
+      for (const tag of copy.tags) {
+        assert.ok(typeof tag === 'string' && tag.length > 0);
+      }
+    }
+  });
+}
