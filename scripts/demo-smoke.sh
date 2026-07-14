@@ -23,7 +23,7 @@ curl -sS -X POST "$BASE_URL/api/payments/ecpay/callback" \
   -H 'content-type: application/json' \
   -d "{\"orderId\":\"$ORDER_ID\"}" | tee /tmp/tour-callback.json
 
-echo "[4/4] GET /api/admin/orders"
-curl -sS "$BASE_URL/api/admin/orders" | tee /tmp/tour-admin-orders.json
+echo "[4/4] GET /api/v2/admin/orders"
+curl -sS "$BASE_URL/api/v2/admin/orders" | tee /tmp/tour-admin-orders.json
 
 echo "✅ Demo smoke 完成"

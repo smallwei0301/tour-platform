@@ -46,7 +46,7 @@ export async function validateActivityBookability(activityId, options = {}) {
   // ── 1. Fetch activity ─────────────────────────────────────────────────────
   const { data: activity, error: activityError } = await supabase
     .from('activities')
-    .select('id,plans,status')
+    .select('id,plans,status,guide_id')
     .eq('id', activityId)
     .single();
 
@@ -109,6 +109,14 @@ export async function validateActivityBookability(activityId, options = {}) {
       activityId,
     });
     return { ok: false, blockers, warnings };
+  }
+
+  if (!activity.guide_id) {
+    blockers.push({
+      code: 'MISSING_GUIDE_ASSIGNMENT',
+      messageZh: '尚未指派導遊，請先指定導遊',
+      activityId,
+    });
   }
 
   // Build slug → plan map for quick lookup

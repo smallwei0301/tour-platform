@@ -16,7 +16,7 @@ const ALL = [
 
 test('admin 訂單列表顯示來源欄，並可依來源篩選', async ({ authedPage: page }) => {
   const seenUrls: string[] = [];
-  await page.route('**/api/admin/orders**', (r: Route) => {
+  await page.route('**/api/v2/admin/orders**', (r: Route) => {
     const url = new URL(r.request().url());
     seenUrls.push(url.search);
     const src = url.searchParams.get('sourceChannel') || '';

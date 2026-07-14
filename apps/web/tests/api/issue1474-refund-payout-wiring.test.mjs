@@ -27,7 +27,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, '..', '..');
 
 const routeSrc = readFileSync(
-  join(repoRoot, 'app/api/admin/orders/[orderId]/refund-execute/route.ts'),
+  join(repoRoot, 'app/api/v2/admin/orders/[orderId]/refund-execute/route.ts'),
   'utf8',
 );
 const helperSrc = readFileSync(join(repoRoot, 'src/lib/refund-execute.ts'), 'utf8');

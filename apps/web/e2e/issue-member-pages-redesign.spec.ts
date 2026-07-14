@@ -25,7 +25,7 @@ function darkText(rgb: string) {
 test.describe('會員中心 UI 重做（深綠主題一致）', () => {
   test('我的訂單：深綠主題 + serif 標題 + tp-card 卡片 + 分頁', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route('**/api/me/orders**', async (route: Route) => {
+    await page.route('**/api/v2/orders**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ORDERS }) });
     });
 
@@ -72,12 +72,20 @@ test.describe('會員中心 UI 重做（深綠主題一致）', () => {
   test('手機視窗：兩頁皆不水平溢出（不破框）', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await setTravelerSession(page);
-    await page.route('**/api/me/orders**', async (route: Route) => {
+    await page.route('**/api/v2/orders**', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ data: ORDERS }) });
     });
     await page.route('**/api/me/wishlist', async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: WISHLIST }) });
     });
+    // deflake：本測試用 networkidle，外部資源（unsplash 圖、Vercel Analytics debug
+    // scripts）在無外網／無 proxy 的環境會掛住請求導致 networkidle 永不觸發（30s 逾時）。
+    // 以 1x1 PNG 回應外部圖、abort analytics scripts——斷言的是版面不溢出，與外部內容無關。
+    const PNG_1PX = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+    await page.route('**://images.unsplash.com/**', async (route: Route) => {
+      await route.fulfill({ status: 200, contentType: 'image/png', body: PNG_1PX });
+    });
+    await page.route('**://va.vercel-scripts.com/**', (route: Route) => route.abort());
 
     for (const path of ['/me/orders', '/me/wishlist']) {
       await page.goto(path);

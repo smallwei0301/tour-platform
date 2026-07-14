@@ -51,6 +51,38 @@ const LEGACY_HANDROLLED = new Set([
   // merge origin/main 帶入：#1592 導遊評論回覆（上游功能，其開發時 api-response helper
   // 尚未存在；比照白名單同性質列入，後續可另案改走 jsonOk/jsonError）。
   'app/api/v2/guide/reviews/[reviewId]/reply/route.ts',
+  // #1649 Phase 6（2026-07-08）：legacy admin/guide 訂單金流 routes 實作「整體搬遷」進
+  // v2 命名空間——app/api 全域的手刻檔總數未增加，只是原本在 guard 掃描範圍外的債務
+  // 搬進了範圍內。envelope（ok/fail）凍結至前端 envelope 遷移另案，屆時逐檔改
+  // jsonOk/jsonError 並自本清單移除（僅能縮，不得再因搬遷以外理由追加）。
+  'app/api/v2/admin/orders/route.ts',
+  'app/api/v2/admin/orders/[orderId]/route.ts',
+  'app/api/v2/admin/orders/[orderId]/timeline/route.ts',
+  'app/api/v2/admin/orders/[orderId]/audit-logs/route.ts',
+  'app/api/v2/admin/orders/[orderId]/messages/route.ts',
+  'app/api/v2/admin/orders/[orderId]/cancel/route.ts',
+  'app/api/v2/admin/orders/[orderId]/exceptions/route.ts',
+  'app/api/v2/admin/orders/[orderId]/refund-execute/route.ts',
+  'app/api/v2/admin/orders/[orderId]/refund-override/route.ts',
+  'app/api/v2/admin/refund-requests/route.ts',
+  'app/api/v2/admin/refund-requests/[refundRequestId]/approve/route.ts',
+  'app/api/v2/admin/refund-requests/[refundRequestId]/reject/route.ts',
+  'app/api/v2/admin/refund-requests/[refundRequestId]/process/route.ts',
+  'app/api/v2/admin/refund-requests/[refundRequestId]/complete/route.ts',
+  'app/api/v2/admin/payouts/route.ts',
+  'app/api/v2/admin/payouts/balances/route.ts',
+  'app/api/v2/admin/payouts/generate/route.ts',
+  'app/api/v2/admin/payouts/[payoutId]/confirm/route.ts',
+  'app/api/v2/admin/payouts/[payoutId]/cancel/route.ts',
+  'app/api/v2/guide/bookings/route.ts',
+  'app/api/v2/guide/bookings/pending-approval/route.ts',
+  'app/api/v2/guide/bookings/[bookingId]/route.ts',
+  'app/api/v2/guide/bookings/[bookingId]/approval/route.ts',
+  'app/api/v2/guide/payout/monthly/route.ts',
+  'app/api/v2/guide/messages/route.ts',
+  'app/api/v2/guide/orders/[orderId]/messages/route.ts',
+  'app/api/v2/guide/reschedule-requests/route.ts',
+  'app/api/v2/guide/reschedule-requests/[requestId]/decision/route.ts',
 ]);
 
 const HANDROLLED_RE = /(?:^|[^A-Za-z])(?:Response|NextResponse)\.json\(/;

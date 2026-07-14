@@ -10,8 +10,8 @@ import { test, expect, setGuideSession } from './helpers';
  *     renders /guide/bookings; the real HMAC API is never hit.
  *   - page.route() mocks:
  *       GET /api/guide/auth/csrf      → token (layout fires this on mount)
- *       GET /api/guide/bookings       → one booking with hasConflictOverride
- *       GET /api/guide/bookings/:id   → detail carrying a guide-safe
+ *       GET /api/v2/guide/bookings       → one booking with hasConflictOverride
+ *       GET /api/v2/guide/bookings/:id   → detail carrying a guide-safe
  *           conflictOverride. We deliberately INJECT an `adminNote` sentinel
  *           into the override payload to prove the guide UI never renders it,
  *           even if a backend regression were to forward it.
@@ -83,7 +83,7 @@ async function stubGuideBookings(page: import('@playwright/test').Page) {
     });
   });
 
-  await page.route('**/api/guide/bookings', async (route) => {
+  await page.route('**/api/v2/guide/bookings', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -91,7 +91,7 @@ async function stubGuideBookings(page: import('@playwright/test').Page) {
     });
   });
 
-  await page.route(`**/api/guide/bookings/${BOOKING_ID}`, async (route) => {
+  await page.route(`**/api/v2/guide/bookings/${BOOKING_ID}`, async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',

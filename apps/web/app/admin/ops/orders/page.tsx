@@ -14,7 +14,7 @@ export default function AdminOrdersPage() {
   const [rows, setRows] = useState<Row[]>([]);
 
   useEffect(() => {
-    fetch('/api/admin/orders')
+    fetch('/api/v2/admin/orders')
       .then((r) => r.json())
       .then((j) => setRows(j.data || []))
       .catch(() => setRows([]));

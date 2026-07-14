@@ -36,7 +36,7 @@ test('AC2: admin orders page shows trade_no for refunded payment events', () => 
 
 // AC4 — New CSV export endpoint exists with correct headers and refund data join
 test('AC4: refund-requests CSV endpoint exists with correct response headers', () => {
-  const routePath = path.join(ROOT, 'app/api/admin/refund-requests/csv/route.ts');
+  const routePath = path.join(ROOT, 'app/api/v2/admin/refund-requests/csv/route.ts');
   const dbPath = path.join(ROOT, 'src/lib/db.mjs');
 
   const routeSrc = readFileSync(routePath, 'utf8');

@@ -89,7 +89,7 @@ test.describe('T1116 — Tablist keyboard navigation (Arrow + Home + End)', () =
   test('T1116.3 — /guide/bookings tablist responds to keyboard navigation', async ({
     authedPage: page,
   }) => {
-    await page.route('**/api/guide/bookings**', async (route) => {
+    await page.route('**/api/v2/guide/bookings**', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

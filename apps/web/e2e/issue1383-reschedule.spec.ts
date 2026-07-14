@@ -47,10 +47,10 @@ test.describe('issue1383 reschedule', () => {
     let orderStatus = 'paid';
     let submittedPayload: Record<string, unknown> | null = null;
 
-    await page.route(`**/api/me/orders/${ORDER_ID}/reschedule-options**`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}/reschedule-options**`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(OPTIONS) });
     });
-    await page.route(`**/api/me/orders/${ORDER_ID}/reschedule-requests`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}/reschedule-requests`, async (route: Route) => {
       submittedPayload = route.request().postDataJSON();
       orderStatus = 'reschedule_requested';
       await route.fulfill({
@@ -59,7 +59,7 @@ test.describe('issue1383 reschedule', () => {
         body: JSON.stringify({ ok: true, data: { id: REQ_ID, status: 'requested', orderStatus } }),
       });
     });
-    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody(orderStatus)) });
     });
 
@@ -82,7 +82,7 @@ test.describe('issue1383 reschedule', () => {
 
   test('traveler：completed 訂單不顯示改期入口', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('completed')) });
     });
 
@@ -93,7 +93,7 @@ test.describe('issue1383 reschedule', () => {
 
   test('traveler：距活動 <168h（7 天）→ 無改期入口、顯示聯絡客服提示', async ({ page }) => {
     await setTravelerSession(page);
-    await page.route(`**/api/me/orders/${ORDER_ID}`, async (route: Route) => {
+    await page.route(`**/api/v2/orders/${ORDER_ID}`, async (route: Route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orderBody('paid', nearFutureStart)) });
     });
 
@@ -108,13 +108,13 @@ test.describe('issue1383 reschedule', () => {
     await setGuideSession(page, 'guide-1383');
 
     let decided: string | null = null;
-    await page.route('**/api/guide/reschedule-requests', async (route: Route) => {
+    await page.route('**/api/v2/guide/reschedule-requests', async (route: Route) => {
       const data = decided
         ? [{ id: REQ_ID, orderId: ORDER_ID, status: 'approved', fromStartAt: '2026-07-01T09:00:00+08:00', toStartAt: '2026-07-08T09:00:00+08:00', requestedAt: '2026-06-11T00:00:00Z', activityTitle: '高雄柴山探洞體驗', order: { contactName: '改期旅客', peopleCount: 2 } }]
         : [{ id: REQ_ID, orderId: ORDER_ID, status: 'requested', fromStartAt: '2026-07-01T09:00:00+08:00', toStartAt: '2026-07-08T09:00:00+08:00', requestedAt: '2026-06-11T00:00:00Z', activityTitle: '高雄柴山探洞體驗', order: { contactName: '改期旅客', peopleCount: 2 } }];
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data }) });
     });
-    await page.route(`**/api/guide/reschedule-requests/${REQ_ID}/decision`, async (route: Route) => {
+    await page.route(`**/api/v2/guide/reschedule-requests/${REQ_ID}/decision`, async (route: Route) => {
       decided = (route.request().postDataJSON() as { action?: string })?.action ?? null;
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, data: { id: REQ_ID, status: 'approved' } }) });
     });

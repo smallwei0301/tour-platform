@@ -47,8 +47,8 @@ test('guide dashboard / payout 路由 select 的 hold 欄位都有 migration 涵
   const sql = allMigrationsSql();
   const routes = [
     'app/api/guide/dashboard/route.ts',
-    'app/api/guide/payout/monthly/route.ts',
-    'app/api/guide/payout/monthly/csv/route.ts',
+    'app/api/v2/guide/payout/monthly/route.ts',
+    'app/api/v2/guide/payout/monthly/csv/route.ts',
   ];
   // operations_tracking 既有欄位（001_mvp_core_v2.sql 建立）+ 本次新增
   const migratedColumns = new Set([

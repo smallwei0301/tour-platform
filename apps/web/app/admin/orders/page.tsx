@@ -77,7 +77,7 @@ const STATUS_LABELS: Record<string, string> = {
 // 狀態連動標記（依「後台手動切換狀態」實際觸發的真實 API 連動標註）。
 //  💬 影響 LINE／Telegram 通知發送
 //      （src/lib/admin-order-event-kind.mjs → adminStatusToTelegramKind；
-//       PATCH /api/admin/orders/[orderId] 會 fan-out 旅客＋導遊＋管理群組）
+//       PATCH /api/v2/admin/orders/[orderId] 會 fan-out 旅客＋導遊＋管理群組）
 //  💰 觸發自動推進下一步／出帳結算
 //      （src/lib/post-trip/payout-eligibility.mjs → 僅 completed 進入 settlement sweep）
 // 其他連動以圖標標註，圖例見 STATUS_MARK_LEGEND。
@@ -200,7 +200,7 @@ export default function AdminOrdersPage() {
       if (status) params.set('status', status);
       if (sourceChannel) params.set('sourceChannel', sourceChannel);
       const q = params.toString() ? `?${params.toString()}` : '';
-      const res = await fetch(`/api/admin/orders${q}`, { cache: 'no-store' });
+      const res = await fetch(`/api/v2/admin/orders${q}`, { cache: 'no-store' });
       const j = await res.json().catch(() => null);
       // 「讀取失敗」與「沒有訂單」必須可分辨：失敗時不得靜默渲染空表，
       // 否則會被誤讀為訂單全部消失。
@@ -229,13 +229,13 @@ export default function AdminOrdersPage() {
     setCancelRefundBusy(false);
     setCancelRefundError('');
     setCancelRefundDone(false);
-    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' })
+    fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' })
       .then(r => r.json()).then(j => { setDetail(j.data||null); setEditStatus(j.data?.status||''); setEditNote(j.data?.adminNote||''); }).catch(() => setDetail(null));
-    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
+    fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' })
       .then(r => r.json()).then(j => setAuditLogs(j.data||[])).catch(() => setAuditLogs([]));
-    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/timeline`, { cache: 'no-store' })
+    fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}/timeline`, { cache: 'no-store' })
       .then(r => r.json()).then(j => setTimeline(j.data?.timeline||[])).catch(() => setTimeline([]));
-    fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/messages`, { cache: 'no-store' })
+    fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}/messages`, { cache: 'no-store' })
       .then(r => r.json()).then(j => setOrderMessages(j.data?.messages||[])).catch(() => setOrderMessages([]));
   }, [selectedId]);
 
@@ -264,7 +264,7 @@ export default function AdminOrdersPage() {
     try {
       const body: Record<string, unknown> = detail?.trade_no ? {} : { reason: refundReason };
       if (parsedAmount !== undefined) body.refundAmount = parsedAmount;
-      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/refund-execute`, {
+      const res = await fetch(`/api/v2/admin/orders/${encodeURIComponent(orderId)}/refund-execute`, {
         method: 'POST',
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(body),
@@ -273,7 +273,7 @@ export default function AdminOrdersPage() {
       if (res.ok && j?.ok !== false) {
         setRefundExecuted(true);
         await load();
-        const dr = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+        const dr = await fetch(`/api/v2/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
         setDetail((await dr.json()).data || null);
       } else {
         // 防呆：顯示真正的錯誤碼／訊息，而非死的「退款執行失敗」。
@@ -290,7 +290,7 @@ export default function AdminOrdersPage() {
   }
 
   // 取消＋退款：一次完成「取消訂單→釋放名額→建立全額退款 entry（refunded）」。
-  // 對應 POST /api/admin/orders/:orderId/cancel，避免維運手動改狀態造成孤兒訂單。
+  // 對應 POST /api/v2/admin/orders/:orderId/cancel，避免維運手動改狀態造成孤兒訂單。
   async function cancelAndRefund(orderId: string) {
     if (!window.confirm('確定要「取消並全額退款」這筆訂單？\n此操作會釋放名額、建立退款記錄並把訂單設為已退款，無法復原。')) {
       return;
@@ -298,7 +298,7 @@ export default function AdminOrdersPage() {
     setCancelRefundBusy(true);
     setCancelRefundError('');
     try {
-      const res = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}/cancel`, {
+      const res = await fetch(`/api/v2/admin/orders/${encodeURIComponent(orderId)}/cancel`, {
         method: 'POST',
         headers: csrfHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ adminNote: editNote || 'admin cancel + refund' }),
@@ -307,7 +307,7 @@ export default function AdminOrdersPage() {
       if (res.ok && j?.ok !== false) {
         setCancelRefundDone(true);
         await load();
-        const dr = await fetch(`/api/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+        const dr = await fetch(`/api/v2/admin/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
         const dj = await dr.json();
         setDetail(dj.data || null);
         setEditStatus(dj.data?.status || '');
@@ -327,14 +327,14 @@ export default function AdminOrdersPage() {
     if (!selectedId) return;
     setExceptionBusy(true);
     try {
-      await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/exceptions`, {
+      await fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}/exceptions`, {
         method: 'POST', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ action: exceptionAction, targetScheduleId: targetScheduleId||undefined, newCapacity: newCapacity?Number(newCapacity):undefined, adminNote: editNote }),
       });
       await load();
       const [dr, lr] = await Promise.all([
-        fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' }),
-        fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' }),
+        fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' }),
+        fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}/audit-logs`, { cache: 'no-store' }),
       ]);
       setDetail((await dr.json()).data||null);
       setAuditLogs((await lr.json()).data||[]);
@@ -346,7 +346,7 @@ export default function AdminOrdersPage() {
     setSaving(true);
     setSaveError('');
     try {
-      const res = await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, {
+      const res = await fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}`, {
         method: 'PATCH', headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ status: editStatus, adminNote: editNote }),
       });
@@ -357,7 +357,7 @@ export default function AdminOrdersPage() {
         return;
       }
       await load();
-      const dr = await fetch(`/api/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' });
+      const dr = await fetch(`/api/v2/admin/orders/${encodeURIComponent(selectedId)}`, { cache: 'no-store' });
       const dj = await dr.json();
       setDetail(dj.data || null);
       setEditStatus(dj.data?.status || '');

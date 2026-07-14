@@ -6,11 +6,18 @@
  */
 
 import { useEffect, useState } from 'react';
+import { useTravelerAuth } from '../../lib/use-traveler-auth';
 
 export function PointsBalanceChip() {
   const [balance, setBalance] = useState<number | null>(null);
+  const { authed } = useTravelerAuth();
 
   useEffect(() => {
+    if (authed !== true) {
+      setBalance(null);
+      return;
+    }
+
     let alive = true;
     (async () => {
       try {
@@ -25,7 +32,7 @@ export function PointsBalanceChip() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [authed]);
 
   if (balance === null || balance <= 0) return null;
 

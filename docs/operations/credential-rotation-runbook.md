@@ -1,5 +1,7 @@
 # Credential Rotation Runbook
 
+> Issue #1686 的 GitHub Actions 排程管理 credential，請使用專用文件：[GitHub Actions 排程管理憑證 Runbook](./github-actions-admin-credential-runbook.md)。該文件定義最小權限、Vercel Production scope、受控 round-trip 與 redacted evidence；本文件不取代它。
+>
 > 觸發條件：issue #1121 — git history 中發現 service_role JWT × 7、sbp_ PAT × 5、admin token × 10、anon JWT × 4
 > 建立日期：2026-06-03
 > 必須在 soft-launch 前完成

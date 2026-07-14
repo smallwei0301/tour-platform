@@ -193,7 +193,7 @@ describe('#1365 AC3 — cancelPayoutDb', () => {
 
 describe('#1365 — route source contracts', () => {
   it('GET /api/admin/payouts/balances：查餘額清單 + 回傳 min_withdrawal 門檻', () => {
-    const src = read('app/api/admin/payouts/balances/route.ts');
+    const src = read('app/api/v2/admin/payouts/balances/route.ts');
     assert.match(src, /export\s+async\s+function\s+GET/);
     assert.match(src, /listGuideBalancesWithProfilesDb/);
     assert.match(src, /getSettlementConfig/, '需回傳門檻讓前端標示達標/未達標');
@@ -201,7 +201,7 @@ describe('#1365 — route source contracts', () => {
   });
 
   it('POST /api/admin/payouts/generate：呼叫 generateManualPayoutDb，skip 回 409', () => {
-    const src = read('app/api/admin/payouts/generate/route.ts');
+    const src = read('app/api/v2/admin/payouts/generate/route.ts');
     assert.match(src, /export\s+async\s+function\s+POST/);
     assert.match(src, /generateManualPayoutDb/);
     assert.match(src, /guide_id/);
@@ -209,7 +209,7 @@ describe('#1365 — route source contracts', () => {
   });
 
   it('POST /api/admin/payouts/[payoutId]/cancel：呼叫 cancelPayoutDb', () => {
-    const src = read('app/api/admin/payouts/[payoutId]/cancel/route.ts');
+    const src = read('app/api/v2/admin/payouts/[payoutId]/cancel/route.ts');
     assert.match(src, /export\s+async\s+function\s+POST/);
     assert.match(src, /cancelPayoutDb/);
     assert.match(src, /await\s+params/, 'Next.js 15 params Promise pattern');
@@ -219,9 +219,10 @@ describe('#1365 — route source contracts', () => {
 describe('#1365 — admin payouts page contract', () => {
   it('頁面載入餘額清單並提供手動產生/取消操作（皆帶 CSRF）', () => {
     const src = read('app/admin/payouts/page.tsx');
-    assert.match(src, /\/api\/admin\/payouts\/balances/, '頁面必須抓餘額清單');
+    // #1649：admin UI 全面改走 /api/v2/admin/**（v2 route re-export legacy handler）
+    assert.match(src, /\/api\/v2\/admin\/payouts\/balances/, '頁面必須抓餘額清單');
     assert.match(src, /手動產生出款單/);
-    assert.match(src, /\/api\/admin\/payouts\/generate/);
+    assert.match(src, /\/api\/v2\/admin\/payouts\/generate/);
     assert.match(src, /\/cancel/, '需有取消 pending 的呼叫');
     assert.match(src, /csrfHeaders/);
     assert.match(src, /未達門檻|達門檻/, '需標示門檻狀態');

@@ -70,7 +70,7 @@ node scripts/security/rls-grants-preflight.mjs --help
 |---|---|---|
 | `0` | `pass` | No violations found on any sensitive table. Safe to proceed with soft-launch sign-off. |
 | `1` | `fail` | One or more violations found. Do NOT sign off. Investigate and remediate before re-running. |
-| `1` | `unknown` | RPC functions are missing or env vars absent. Cannot determine status — treat as blocked. |
+| `1` | `hold` | Required helper RPCs or setup prerequisites are missing. Do not sign off; apply the named migration/setup action first. |
 
 ### PASS
 
@@ -87,35 +87,20 @@ Review the `violations` array in the JSON output. Common remediation:
 - Revoke the broad grant: `REVOKE ALL ON TABLE <table> FROM anon, authenticated, public;`
 - See `supabase/migrations/20260518_issue598_payment_events_rls_hardening.sql` for a reference pattern.
 
-### UNKNOWN
+### HOLD
 
-RPC helper functions (`rls_grants_preflight_check_policies`, `rls_grants_preflight_check_grants`) are not deployed, or environment variables are missing. Run `node scripts/security/rls-grants-preflight.mjs --help` for env var requirements.
+Helper RPCs (`rls_grants_preflight_check_policies`, `rls_grants_preflight_check_grants`) or the scan-all RPC (`rls_preflight_scan`) are missing, or another explicit setup prerequisite has not been met. Review the JSON `reason_code` / `action` fields and apply the named versioned migration before rerunning.
 
 ---
 
 ## Prerequisites
 
-The script calls two Supabase RPC functions that must be deployed to your project before the preflight can run:
+The script depends on these versioned migrations being present in the target database before the preflight can run cleanly:
 
-```sql
--- Deploy via migration or psql before running the preflight.
--- See issue #602 for full migration SQL.
-create or replace function rls_grants_preflight_check_policies(p_table text)
-  returns table (policyname text, roles text, cmd text, qual text, with_check text)
-  language sql security definer as $$
-    select policyname, roles::text, cmd::text, qual, with_check
-    from pg_policies
-    where schemaname = 'public' and tablename = p_table;
-$$;
+- `supabase/migrations/20260707081500_rls_preflight_scan_rpc.sql`
+- `supabase/migrations/20260709103000_rls_grants_preflight_helper_rpcs.sql`
 
-create or replace function rls_grants_preflight_check_grants(p_table text)
-  returns table (grantee text, privilege_type text, is_grantable text)
-  language sql security definer as $$
-    select grantee, privilege_type, is_grantable
-    from information_schema.role_table_grants
-    where table_schema = 'public' and table_name = p_table;
-$$;
-```
+Do not copy inline SQL snippets from old notes. Apply the canonical versioned migrations via the normal migration workflow so the helper RPC definitions, pinned `search_path`, and EXECUTE grants stay auditable.
 
 ---
 

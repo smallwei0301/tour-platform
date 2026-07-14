@@ -7,7 +7,7 @@
 > - Availability-driven slots
 > - 支援 Web / LINE / Admin POS 三種渠道
 > 
-> 更新日期：2026-04-09
+> 更新日期：2026-07-08（#1649 v2 全面串接後補記實作狀態，見 §9）
 
 ---
 
@@ -582,3 +582,55 @@ Response: `{ readinessOk, blockers[], warnings[], summary: { activePlansCount, f
 Guide-auth. Returns guide's past activities needing a trip report.
 Response: `{ count, tripReportsDue: [{ orderId, activityTitle, scheduleEndAt, tripReportStatus }] }`
 Note: All past activities show as 'overdue' until guide_trip_reports table is added.
+
+---
+
+## 9. 實作狀態補記（#1649 v2 全面串接，2026-07-08）
+
+> 本節記錄契約與實作的對齊狀態。實作基準：`docs/operations/worklogs/issue1649.md`。
+
+### 9.1 已實作、超出原契約的端點（實作即契約）
+
+Traveler（`/api/v2/orders/**`，登入旅客；詳情/聯絡/改期選項支援 guest `?contactEmail=`）：
+- `GET /api/v2/orders`（列表）、`GET /api/v2/orders/:orderId`（詳情，含 #1565 voucher）
+- `POST /api/v2/orders/:orderId/cancel`
+- `GET/POST /api/v2/orders/:orderId/refund-requests`
+- `GET /api/v2/orders/:orderId/reschedule-options`、`POST /api/v2/orders/:orderId/reschedule-requests`、`DELETE .../reschedule-requests/:requestId`
+- `GET/POST /api/v2/orders/:orderId/messages`、`GET /api/v2/orders/:orderId/guide-contact`
+- `GET /api/v2/promo-codes/public`
+
+Admin（`/api/v2/admin/**`，middleware auth+CSRF）：orders 全套（list/detail/PATCH/timeline/
+audit-logs/messages/cancel/exceptions/refund-execute/refund-override）、refund-requests
+四段式（approve/reject/process/complete）＋csv、payouts 五支（list/balances/generate/confirm/cancel）。
+
+Guide（`/api/v2/guide/**`，verifyGuideSession；寫入路徑 route 內顯式 CSRF）：bookings
+（list/pending-approval/detail/approval）、payout/monthly（+csv）、messages、
+orders/:orderId/messages、reschedule-requests（list/decision）。
+
+Payments：`POST /api/v2/payments/ecpay/create`（補付款）、`POST /api/v2/payments/ecpay/callback`
+（§4.1 既定；與 legacy callback 共用單一 handler，v2 checkout ReturnURL 預設已指向 v2 路徑，
+`ECPAY_CALLBACK_URL` env 可覆寫）。
+
+### 9.2 契約偏差（既定事實，以實作為準）
+
+- **cancel／reschedule 以 order 為主體**：§3.4/§3.6 定義的 `POST /api/v2/bookings/:id/cancel`
+  與 `reschedule-request` 實作為 `POST /api/v2/orders/:orderId/cancel` 與
+  `.../reschedule-requests`——UI 與資料模型均以 orderId 操作，行為與 legacy 等價。
+  bookings-scoped 端點目前無實作、無消費者。
+- `POST /api/v2/bookings/:id/confirm`／`complete`：無獨立端點——confirm 由付款 callback
+  原子 RPC 連動（#1637 auto-confirm），complete 由掃碼核銷（redeem）＋auto-complete sweep 承擔。
+- `GET /api/v2/admin/pos/orders/:orderId`（§6.3）由 `GET /api/v2/admin/pos/bookings/:bookingId`
+  ＋`GET /api/v2/admin/orders/:orderId` 組合涵蓋。
+
+### 9.3 已退役 legacy 路徑（#1649 Phase 6，殘留守門：`issue1649-phase6-legacy-retirement-residue-guard`）
+
+- `app/api/me/orders/**` → `/api/v2/orders/**`
+- `app/api/admin/{orders,refund-requests,payouts}/**` → `/api/v2/admin/**`（實作整體搬遷）
+- `app/api/guide/{bookings,payout,messages,orders,reschedule-requests}/**` → `/api/v2/guide/**`（實作整體搬遷）
+- 尚未退役（凍結區，P0-OVERRIDE 協議管轄）：`app/api/payments/ecpay/{create,callback,refund-callback}`、
+  `app/api/payments/mock-confirm`——v2 對應端點已接線，legacy 為相容期安全網。
+
+### 9.4 internal sweeps
+
+`internal/settlement|bookings|reminders|reviews` 各 sweep 為非對外 API，不搬命名空間
+（#1649 §D 決策 2）；`line-order-query` 已與 v2 orders 共用 `listMyOrdersDb` 讀取函式。

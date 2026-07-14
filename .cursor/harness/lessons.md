@@ -78,6 +78,18 @@
 - 建議：遇「需套 migration 才能 merge」的 issue，一開始就把它標為 owner-blocked，不要規劃 agent 自套的路徑。
 - **[2026-07-06 更新] 三重死結已部分解開**：owner 拍板新增 SQL-OVERRIDE 協議（01_diagnostics §4b），sql-guard 有授權通道了（第 2 層解）、apply_migration 移出 deny 併入同一閘門（第 3 層解）。第 1 層（MCP server 端唯讀設定）仍由 owner 掌握——若 server 仍唯讀，寫入會在平台層失敗，此時回報 owner 而不是重試。流程：列 SQL＋影響 → owner 回 `SQL-OVERRIDE` → 寫 `.claude/state/sql-override`（30 分鐘）→ 執行 → 刪檔＋worklog 記審計。
 
+## [2026-07-08] playwright-pipe-tail-fake-green
+- Context：#1649 QA 收尾，背景跑 e2e：`npx playwright test … | tail -15`，回報 exit 0 判為綠燈
+- Error：pipe 讓 exit code 變成 tail 的 0——實際整批因 chromium headless-shell 缺失全紅（列表輸出被 tail 截到只剩測試名，看不到 ✘ 與 failed 統計）；差點把假綠寫進 QA 報告
+- Solution：e2e 一律輸出導檔＋`echo "exit=$?"` 顯式取碼，統計行（N passed/failed）必須實際 grep 到才算數；本環境可用 `PW_EXECUTABLE_PATH=/opt/pw-browsers/chromium`（或按 2026-07-05 教訓建 symlink）
+- 適用範圍：所有背景執行的測試指令；任何「exit code 經過 pipe」的證據判讀
+
+## [2026-07-08] stale-clone-duplicates-merged-work
+- Context：/goal 重下「全面串接 v2」時，本 session 稍早輪次的 PR #1656 已 merge（含 Phase 1–6），但 fresh container 的 clone 早於該 merge，開機時 `git log`/開放 PR 清單都看不到——閉眼重做了一整輪已合併的工作
+- Error：開工只看了「開放中」的 issue/PR 與本地 main；沒有 fetch 最新 main、沒查「已關閉/已合併」的同名分支 PR、沒先讀 worklog（worklog 在遠端分支上有完整進度錨點）
+- Solution：**開工 checklist 補三步**：(1) `git fetch origin main <designated-branch>` 對齊遠端；(2) 用 `search_pull_requests`（含 closed/merged）查 designated branch 與相關 issue 的歷史 PR；(3) worklog 若不在本地，去遠端分支撈（`git show origin/<branch>:docs/operations/worklogs/...`）。鐵律 7 的「不信任自己的上下文記憶」也適用於「不信任本地 clone 的新鮮度」
+- 適用範圍：所有 fresh container／context 恢復後的開工；尤其 /goal 重複下達的任務
+
 ## [2026-07-06] edit-probe-false-negative-hooks-armed
 - Context：00_INDEX 步驟 0 的 hooks 煙霧測試——用 Edit 對 CLAUDE.md 填不存在的 old_string，預期「有攔＝武裝、string not found＝未武裝」
 - Error：本版 Claude Code 的 Edit 工具會**先驗 old_string 存在性、再跑 PreToolUse hook**，探針永遠只會拿到「String to replace not found」，即使 hooks 完全正常也一樣 → 假陰性，差點在武裝狀態下誤判為裸奔而停工

@@ -13,6 +13,13 @@ const WEAK_TOKEN_VALUES = new Set([
   'password',
 ]);
 
+export function getAdminAuthEnv(env = process.env) {
+  return {
+    adminAccessToken: env.ADMIN_ACCESS_TOKEN,
+    adminEmailAllowlist: env.ADMIN_EMAIL_ALLOWLIST,
+  };
+}
+
 function isWeakSecret(value, minLen = 24) {
   const v = String(value || '').trim();
   if (!v) return true;

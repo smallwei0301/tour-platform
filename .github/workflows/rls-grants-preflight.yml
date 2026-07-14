@@ -76,7 +76,7 @@ jobs:
           echo "## RLS/Grants Preflight Result" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           if [ -f /tmp/rls-preflight/rls-preflight.json ]; then
-            STATUS=$(node -e "const d=require('/tmp/rls-preflight/rls-preflight.json'); console.log(d.overall_status || d.status || 'unknown')" 2>/dev/null || echo "unknown")
+            STATUS=$(node -e "const d=require('/tmp/rls-preflight/rls-preflight.json'); console.log(d.summary?.overall_status || d.overall_status || d.status || 'unknown')" 2>/dev/null || echo "unknown")
             TABLE_COUNT=$(node -e "const d=require('/tmp/rls-preflight/rls-preflight.json'); console.log((d.tables||d.results||[]).length)" 2>/dev/null || echo "?")
             echo "**Status:** $STATUS" >> $GITHUB_STEP_SUMMARY
             echo "**Tables checked:** $TABLE_COUNT" >> $GITHUB_STEP_SUMMARY
@@ -99,3 +99,20 @@ jobs:
         run: |
           echo "RLS/grants preflight FAILED — review artifact for violations"
           exit 1
+
+      # 失敗即主動推播（對齊 anon-rls-probe / settlement / ecpay-*-sweep）。
+      # 補上這步前，本每週掃描抓到 RLS-off／anon 寫入權等問題時只會在 Actions 頁變紅、
+      # 不會通知——owner 靠排程偵測就收不到。notify-failure.mjs 缺通道 secret 自動略過、
+      # 退出碼恆 0，不會讓已失敗的 job 更糟。
+      - name: Notify on failure (Telegram + Email)
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          WORKFLOW_NAME: ${{ github.workflow }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: failure
+        run: node scripts/cron/notify-failure.mjs

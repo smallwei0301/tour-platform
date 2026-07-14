@@ -103,6 +103,28 @@ test('#880 AC2: slug with no matching active plan and no scheduleId → 404 PLAN
   supabase.assertAllConsumed();
 });
 
+test('available-slots: UUID planId without a formal plan returns the stable PLAN_NOT_FOUND 404 contract', async () => {
+  const missingFormalPlanId = '33333333-3333-4333-8333-333333333333';
+  const supabase = createSupabaseMock([
+    { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },
+    { terminal: 'single', table: 'activity_plans', data: null },
+  ]);
+  const response = await getAvailableSlots(
+    buildRequest(`https://example.test/api/v2/activities/${ACTIVITY}/available-slots?planId=${missingFormalPlanId}&dateFrom=2026-07-01&dateTo=2026-07-01&timezone=Asia/Taipei&participants=1`),
+    { params: Promise.resolve({ activityId: ACTIVITY }) },
+    { createClient: async () => supabase.client },
+  );
+
+  assert.equal(response.status, 404);
+  const body = await response.json();
+  assert.equal(body.success, false);
+  assert.equal(body.error.code, 'PLAN_NOT_FOUND');
+  assert.match(body.error.message, /Activity plan not found/i);
+  assert.ok(body.error.messageZh, 'traveler-safe zh-TW message is present');
+  assert.doesNotMatch(JSON.stringify(body.error), /token|secret|supabase|postgres|database/i);
+  supabase.assertAllConsumed();
+});
+
 test('#880 AC2: slug + scheduleId but legacy schedule row missing → 404 PLAN_NOT_FOUND', async () => {
   const supabase = createSupabaseMock([
     { terminal: 'maybeSingle', table: 'activities', data: { id: ACTIVITY } },

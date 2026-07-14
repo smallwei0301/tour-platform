@@ -50,8 +50,9 @@ export async function POST(req: NextRequest) {
       getSupabaseServiceRoleKey()!
     );
 
-    // Look back 60 minutes for ECPay callback failures recorded in payment_callback_audit
-    const windowMs = 60 * 60 * 1000; // 60 min
+    // Look back 24 hours for ECPay callback failures recorded in payment_callback_audit.
+    // 由每小時排程（回看 60 分）降頻至每日：回看窗改為 24 小時，隨每日排程完整涵蓋、無盲區。
+    const windowMs = 24 * 60 * 60 * 1000; // 24 h
     const since = new Date(Date.now() - windowMs).toISOString();
 
     // Query audit_logs for payment_callback_audit failure events
@@ -88,11 +89,11 @@ export async function POST(req: NextRequest) {
         source: 'ecpay_callback_sweep',
         severity: 'warn',
         category: 'payment',
-        message: `ECPay callback failure rate exceeded threshold: ${events.length} failures in last 60 minutes (threshold=${FAILURE_THRESHOLD})`,
+        message: `ECPay callback failure rate exceeded threshold: ${events.length} failures in last 24 hours (threshold=${FAILURE_THRESHOLD})`,
         metadata: {
           sweep_time: new Date(now).toISOString(),
           failure_count: events.length,
-          window_minutes: 60,
+          window_minutes: 24 * 60,
           threshold: FAILURE_THRESHOLD,
         },
       });

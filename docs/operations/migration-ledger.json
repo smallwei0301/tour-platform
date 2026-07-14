@@ -82,6 +82,46 @@
       "applied_at": "2026-07-06T20:21:57+08:00",
       "status": "verified",
       "note": "經 Supabase MCP apply_migration 套用（owner 當輪 SQL-OVERRIDE 授權，sql-audit.log 有紀錄）。內容僅函式 DDL：DROP 4-arg overload＋重建 6-arg fn_process_payment_callback_atomic（booking_type auto-confirm、order 終態隨 booking_type、TradeAmt 金額驗證），不動任何資料列。rollback: 同名 .rollback.sql（還原 614 6-arg＋#195 4-arg）。驗證: pg_proc SELECT 確認唯一 6-arg overload 且 has_booking_type/has_amount_check/has_order_final_status 皆 true（verify-migrations-applied.mjs 為 table/column 探測，function 需以 SQL 驗證，SOP §3 註記情境）。Refs #1637。"
+    },
+    {
+      "filename": "20260707081500_rls_preflight_scan_rpc.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「授權代跑」）套用＋驗證",
+      "applied_at": "2026-07-07T12:44:00+08:00",
+      "status": "verified",
+      "note": "新增唯讀 SECURITY DEFINER RPC public.rls_preflight_scan()（列 public 全表 RLS 狀態＋anon/authenticated/PUBLIC 寫入權），供 rls-grants-preflight 掃全表。apply_migration success；驗證 proname 存在、prosecdef=true、search_path pinned；執行回傳 66 表。掃描發現 4 表（activity_addons/order_addons/user_notifications/user_points_ledger）有 anon 寫入 grant（#1563 後新表回歸，待另案收斂）。rollback：同名 .rollback.sql（drop function）。Refs #1293。"
+    },
+    {
+      "filename": "20260708005545_revoke_anon_writes_and_default_privs.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「授權代跑」）套用＋驗證",
+      "applied_at": "2026-07-08T13:18:00+08:00",
+      "status": "verified",
+      "note": "撤 anon 對 public 全表寫入權（rls-preflight scan-all 首跑發現 4 表回歸：activity_addons/order_addons/user_notifications/user_points_ledger）＋修 default privileges 防未來新表回歸。首次 apply 因 ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin 42501 回滾；修為只改當前角色＋例外容錯後 apply_migration success。驗證：anon 對 public 表寫入權 = 0、scan RPC broad_write_grant 歸零、anon 仍可讀 activities（SELECT 未動）。只改權限不動資料列。rollback：同名 .rollback.sql（發回 anon 寫入，實務不建議）。Refs #1563 #1293。"
+    },
+    {
+      "filename": "20260709103000_rls_grants_preflight_helper_rpcs.sql",
+      "environment": "production",
+      "operator": "Ava/controller 代跑 + GitHub Actions rerun 驗證",
+      "applied_at": "2026-07-09T14:56:00+08:00",
+      "status": "verified",
+      "note": "#1674 helper RPC 修補：套用 helper RPC migration 後，production 重新 reload schema 並 rerun rls-grants-preflight。驗證結果：helper RPC 缺失 / ambiguous unknown 問題消失，workflow run 29000084639 產出 actionable fail artifact，後續真實 findings 另拆 GH-1678。僅新增/修補 preflight 所需 helper RPC，不動業務資料列。rollback：同名 .rollback.sql。Refs #1674 #1677 #1293。"
+    },
+    {
+      "filename": "20260709_issue1678_sensitive_table_grants_hardening.sql",
+      "environment": "production",
+      "operator": "Ava/controller（owner 已批准 production apply + rerun）",
+      "applied_at": "2026-07-09T15:56:00+08:00",
+      "status": "verified",
+      "note": "#1678 sensitive-table grants hardening：production 已套用 migration，撤除 9 張 service-only sensitive tables 的 broad grants，並依 owner Option A 保留 soft_launch_controls 的 public/anon 只讀邊界、撤掉 broad writes；隨後已送 pg_notify reload schema 並 rerun preflight。最新 artifact（run 29002598060）顯示 9 張 service-only tables 已收斂，僅剩 soft_launch_controls 的 public-read-only 邊界待 repo contract 合併到 main 後轉綠。rollback：同名 .rollback.sql。Refs #1678 #1293。"
+    },
+    {
+      "filename": "20260710121345_pin_payment_callback_search_path.sql",
+      "environment": "production",
+      "operator": "Claude Code agent（SQL-OVERRIDE 授權：使用者「先修1」）套用＋驗證",
+      "applied_at": "2026-07-10T12:20:00+08:00",
+      "status": "verified",
+      "note": "固定 fn_process_payment_callback_atomic(uuid,text,text,jsonb,text,text) 的 search_path=pg_catalog,public,pg_temp，修 advisor WARN function_search_path_mutable（0011）——#1637 重建該金流函式時漏帶、回歸 #1564 的收斂。單行 ALTER FUNCTION、行為不變。apply_migration success；驗證 proconfig=['search_path=pg_catalog, public, pg_temp']、get_advisors(security) 該 WARN 已消除（僅剩 auth_leaked_password_protection＝owner Dashboard 開關）。rollback：同名 .rollback.sql（RESET search_path）。Refs #1564 #1293。"
     }
   ]
 }

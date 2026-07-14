@@ -40,7 +40,7 @@ export default function OrderPayPage() {
 
   useEffect(() => {
     if (!orderId) { setLoading(false); return; }
-    fetch(`/api/me/orders/${encodeURIComponent(orderId)}?contactEmail=${encodeURIComponent(email)}`, { cache: 'no-store' })
+    fetch(`/api/v2/orders/${encodeURIComponent(orderId)}?contactEmail=${encodeURIComponent(email)}`, { cache: 'no-store' })
       .then(async (r) => {
         const j = await r.json().catch(() => ({}));
         if (!r.ok || j?.error) {
@@ -73,7 +73,7 @@ export default function OrderPayPage() {
 
     try {
       // 呼叫 ECPay 付款建立 API
-      const res = await fetch('/api/payments/ecpay/create', {
+      const res = await fetch('/api/v2/payments/ecpay/create', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ orderId }),

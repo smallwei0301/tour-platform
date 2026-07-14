@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 
 // Read from the canonical source location (absolute path — safe for all worktrees)
 const ROUTE_PATH = new URL(
-  '../../app/api/me/orders/[orderId]/refund-requests/route.ts',
+  '../../app/api/v2/orders/[orderId]/refund-requests/route.ts',
   import.meta.url
 ).pathname
 

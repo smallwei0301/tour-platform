@@ -9,8 +9,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { selectPublicPromoCodes } from '../../src/lib/public-promo-codes.mjs';
+
+// cwd 無關的路徑基準（run-checks.sh 從 repo root 跑、npm test 從 apps/web 跑皆可）
+const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
 const NOW = '2026-06-11T00:00:00.000Z';
 
@@ -76,7 +80,7 @@ test('label fallback：無 public_label 時以折扣內容組預設文案', () =
 // ── source-contract ─────────────────────────────────────────────────────────
 
 test('AC1: migration 新增 is_public / public_label（timestamp 命名）', () => {
-  const dir = path.resolve('../../supabase/migrations');
+  const dir = path.resolve(WEB_ROOT, '../../supabase/migrations');
   const fname = '20260611_issue1381_promo_public_exposure.sql';
   assert.ok(existsSync(path.join(dir, fname)), `${fname} 應存在`);
   const sql = readFileSync(path.join(dir, fname), 'utf8');
@@ -86,8 +90,8 @@ test('AC1: migration 新增 is_public / public_label（timestamp 命名）', () 
 });
 
 test('AC1: admin create/update route 支援 is_public 與 public_label', () => {
-  const createSrc = readFileSync(path.resolve('app/api/admin/promo-codes/route.ts'), 'utf8');
-  const updateSrc = readFileSync(path.resolve('app/api/admin/promo-codes/[id]/route.ts'), 'utf8');
+  const createSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/admin/promo-codes/route.ts'), 'utf8');
+  const updateSrc = readFileSync(path.resolve(WEB_ROOT, 'app/api/admin/promo-codes/[id]/route.ts'), 'utf8');
   assert.match(createSrc, /is_public/, 'POST 應寫入 is_public');
   assert.match(createSrc, /public_label/, 'POST 應寫入 public_label');
   assert.match(updateSrc, /is_public/, 'PATCH 應可更新 is_public');
@@ -95,7 +99,7 @@ test('AC1: admin create/update route 支援 is_public 與 public_label', () => {
 });
 
 test('AC2: public route 存在、用 helper、無 Supabase env 時回空清單', () => {
-  const routePath = path.resolve('app/api/promo-codes/public/route.ts');
+  const routePath = path.resolve(WEB_ROOT, 'app/api/promo-codes/public/route.ts');
   assert.ok(existsSync(routePath), 'GET /api/promo-codes/public route 應存在');
   const src = readFileSync(routePath, 'utf8');
   assert.match(src, /selectPublicPromoCodes/, '應用統一 helper 過濾');

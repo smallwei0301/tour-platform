@@ -58,7 +58,7 @@ test('T1596c.5 — 無 guideName → 以「導遊」代替', () => {
 });
 
 test('T1596c.6 — route source-contract：ownership＋資格外回 null、不外洩電話', () => {
-  const src = read('app/api/me/orders/[orderId]/guide-contact/route.ts');
+  const src = read('app/api/v2/orders/[orderId]/guide-contact/route.ts');
   assert.match(src, /getEligibleGuideContactDb/, 'route 應走 db 領域函式');
   assert.match(src, /guideContact/, '回應欄位為 guideContact');
   // 不得把 phone 直接從 request/order 塞回應（唯一來源是 db 函式的 gated 結果）

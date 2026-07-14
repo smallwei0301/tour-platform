@@ -1,4 +1,28 @@
-# QA Seed Scripts
+# QA Scripts
+
+## admin-evidence-sweep.mjs
+
+Produces a deterministic evidence manifest for Tour Platform admin QA review. It scans current repo paths, tests, UI callers, and GitHub issue/PR metadata, then writes:
+
+- `manifest.json` — machine-readable evidence for Rita/reviewer use
+- `report.md` — human-readable summary table
+
+This script does **not** certify product behavior; it only prepares evidence for report-quality review.
+
+### Usage
+
+```bash
+npm run qa:admin-evidence-sweep -- \
+  --surface admin-booking-v2 \
+  --output /tmp/wf_tp_admin_booking_sweep/latest/manifest.json
+```
+
+Known surfaces:
+
+- `admin-booking-v2`
+- `admin-availability-v2`
+
+Use `--no-github` for local-only scans when GitHub CLI is unavailable.
 
 ## seed-qa-test-orders.mjs
 

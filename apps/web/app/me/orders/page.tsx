@@ -78,7 +78,7 @@ export default function MyOrdersPage() {
   const dateLocale = locale === 'zh-Hant' ? 'zh-TW' : 'en-US';
   const [userName, setUserName] = useState<string>('');
   // stale-while-revalidate：切回本分頁時用快取瞬開，背景更新。401 才導登入。
-  const { data, loading, error: err } = useMeResource<Order[]>('/api/me/orders', {
+  const { data, loading, error: err } = useMeResource<Order[]>('/api/v2/orders', {
     onUnauthorized: () => router.replace(`/login?next=${encodeURIComponent('/me/orders')}`),
   });
   const orders = data ?? [];

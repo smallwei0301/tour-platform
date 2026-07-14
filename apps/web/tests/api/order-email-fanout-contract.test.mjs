@@ -12,8 +12,8 @@ const read = (rel) => fs.readFile(path.resolve(__dirname, '../..', rel), 'utf8')
 test('guide+admin order emails are dispatched from all order hooks (post-#1407)', async () => {
   const sites = [
     ['app/api/payments/ecpay/callback/route.ts', /payment_received/],
-    ['app/api/me/orders/[orderId]/route.ts', /order_cancelled/],
-    ['app/api/me/orders/[orderId]/refund-requests/route.ts', /refund_requested|refund_executed/],
+    ['app/api/v2/orders/[orderId]/cancel/route.ts', /order_cancelled/],
+    ['app/api/v2/orders/[orderId]/refund-requests/route.ts', /refund_requested|refund_executed/],
   ];
   for (const [rel, kindRe] of sites) {
     const src = await read(rel);
@@ -33,8 +33,8 @@ test('payment hook does not double-email admins (includeAdmin: false)', async ()
 test('admin Telegram order notify is dispatched from all order hooks (post-#1407)', async () => {
   const sites = [
     'app/api/payments/ecpay/callback/route.ts',
-    'app/api/me/orders/[orderId]/route.ts',
-    'app/api/me/orders/[orderId]/refund-requests/route.ts',
+    'app/api/v2/orders/[orderId]/cancel/route.ts',
+    'app/api/v2/orders/[orderId]/refund-requests/route.ts',
   ];
   for (const rel of sites) {
     const src = await read(rel);

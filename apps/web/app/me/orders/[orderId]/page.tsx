@@ -130,7 +130,7 @@ export default function OrderDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/guide-contact`, { cache: 'no-store' });
+        const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/guide-contact`, { cache: 'no-store' });
         if (!res.ok) return;
         const j = await res.json();
         if (!cancelled) setGuideContact(j?.data?.guideContact ?? null);
@@ -144,7 +144,7 @@ export default function OrderDetailPage() {
   const loadOrder = async () => {
     if (!orderId) { setLoading(false); return; }
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}`, { cache: 'no-store' });
       if (res.status === 401) {
         router.replace(`/login?next=${encodeURIComponent(`/me/orders/${orderId}`)}`);
         return;
@@ -162,7 +162,7 @@ export default function OrderDetailPage() {
   // #1411 — 留言串（canView false 時整個區塊隱藏，例如 pending_payment）
   const loadMessages = async () => {
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/messages`, { cache: 'no-store' });
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/messages`, { cache: 'no-store' });
       const j = await res.json();
       setMsgThread(j?.data ?? null);
     } catch {
@@ -176,7 +176,7 @@ export default function OrderDetailPage() {
     setSendingMsg(true);
     setMsgErr(null);
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/messages`, {
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/messages`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ body: msgInput.trim() }),
@@ -197,7 +197,7 @@ export default function OrderDetailPage() {
     setRescheduleErr(null);
     setShowRescheduleForm(true);
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/reschedule-options`, { cache: 'no-store' });
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/reschedule-options`, { cache: 'no-store' });
       const j = await res.json();
       setRescheduleOptions(Array.isArray(j?.data) ? j.data : []);
     } catch {
@@ -211,7 +211,7 @@ export default function OrderDetailPage() {
     setSubmittingReschedule(true);
     setRescheduleErr(null);
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/reschedule-requests`, {
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/reschedule-requests`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ requestId: rescheduleRequestKey, toScheduleId: rescheduleTarget }),
@@ -233,7 +233,7 @@ export default function OrderDetailPage() {
     if (!activeRescheduleId) return;
     try {
       const res = await fetch(
-        `/api/me/orders/${encodeURIComponent(orderId)}/reschedule-requests/${encodeURIComponent(activeRescheduleId)}`,
+        `/api/v2/orders/${encodeURIComponent(orderId)}/reschedule-requests/${encodeURIComponent(activeRescheduleId)}`,
         { method: 'DELETE', headers: csrfHeaders() }
       );
       const j = await res.json();
@@ -250,10 +250,9 @@ export default function OrderDetailPage() {
     setCancelling(true);
     setCancelErr(null);
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/cancel`, {
+        method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ action: 'cancel' }),
       });
       const j = await res.json();
       if (!res.ok || j.error) throw new Error(j.error?.message || m.cancelFailed);
@@ -272,7 +271,7 @@ export default function OrderDetailPage() {
     setSubmittingRefund(true);
     setRefundErr(null);
     try {
-      const res = await fetch(`/api/me/orders/${encodeURIComponent(orderId)}/refund-requests`, {
+      const res = await fetch(`/api/v2/orders/${encodeURIComponent(orderId)}/refund-requests`, {
         method: 'POST',
         headers: csrfHeaders({ 'content-type': 'application/json' }),
         body: JSON.stringify({ requestId: refundRequestId, reason: refundReason, note: refundNote }),
