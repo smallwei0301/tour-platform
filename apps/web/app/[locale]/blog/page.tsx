@@ -2,6 +2,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { buildAlternates } from '../../../src/lib/seo-alternates.ts';
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -9,6 +10,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return {
     title: t('metaTitle'),
     description: t('metaDescription'),
+    alternates: buildAlternates('/blog', locale),
     openGraph: {
       title: t('ogTitle'),
       description: t('ogDescription'),

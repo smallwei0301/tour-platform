@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { buildAlternates } from '../../../../src/lib/seo-alternates.ts';
 
 export async function generateMetadata(
   { params }: { params: Promise<{ locale: string; slug: string }> }
@@ -11,6 +12,7 @@ export async function generateMetadata(
   return {
     title: t('metaTitle', { name: readable }),
     description: t('metaDescription', { name: readable }),
+    alternates: buildAlternates(`/experiences/${slug}`, locale),
     openGraph: {
       title: t('metaTitleShort', { name: readable }),
       description: t('ogDescription'),

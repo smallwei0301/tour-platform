@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { buildAlternates } from '../../../../src/lib/seo-alternates.ts';
 
 // 文章內容（標題／分類／閱讀時間／本文）為靜態 inline 文案，已抽進 messages 的
 // blogPosts namespace 並提供英文版（#multilingual）；此處僅保留結構欄位（日期／圖片），
@@ -40,6 +41,7 @@ export async function generateMetadata(
   return {
     title,
     description,
+    alternates: buildAlternates(`/blog/${slug}`, locale),
     openGraph: {
       title,
       description,
