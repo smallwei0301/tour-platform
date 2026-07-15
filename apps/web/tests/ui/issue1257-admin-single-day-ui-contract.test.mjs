@@ -16,7 +16,7 @@ async function readSource(relPath) {
 // 規則清單卡片在 admin-sections；來源契約改讀「頁面＋其子元件」串接內容，
 // 斷言意圖不變。
 const ADMIN_PAGE_SOURCES = [
-  'app/admin/guides/[guideId]/availability/page.tsx',
+  'app/(non-locale)/admin/guides/[guideId]/availability/page.tsx',
   'src/components/availability/admin-sections.tsx',
   'src/components/availability/rule-form-fields.tsx',
 ];

@@ -2,7 +2,7 @@
  * Source-contract guards for two UX safety copies that the audit (second
  * sweep, see #1316 follow-ups + #1317) flagged as unprotected:
  *
- *   1. `app/admin/activities/[id]/edit/page.tsx:272` — the schedule guard
+ *   1. `app/(non-locale)/admin/activities/[id]/edit/page.tsx:272` — the schedule guard
  *      copy that tells admins NOT to bypass guide conflicts via
  *      activity_schedules / specific-date schedules, and instead to use
  *      the "例外開放此場" flow surfaced by #1257 slice C. PR #1262 shipped
@@ -10,7 +10,7 @@
  *      or weakens this line, admins lose the in-product instruction that
  *      keeps them on the safe-by-default override flow.
  *
- *   2. `app/guide/availability/page.tsx:584` — the dropdown empty-state
+ *   2. `app/(non-locale)/guide/availability/page.tsx:584` — the dropdown empty-state
  *      copy that tells the guide WHY their activity/plan dropdown is empty
  *      (no published active V2 plan assigned to them). PR #1241 shipped
  *      this copy as #1239 AC#4 but without a contract lock; if a future
@@ -62,7 +62,7 @@ test('admin schedule editor still tells operators NOT to bypass conflicts and to
 });
 
 test('guide availability editor still explains why the plan dropdown is empty (refs #1239 AC#4)', async () => {
-  const src = await readSrc('app/guide/availability/page.tsx');
+  const src = await readSrc('app/(non-locale)/guide/availability/page.tsx');
 
   // The empty-state branch must remain gated on `activityPlanOptions.length === 0`.
   assert.match(

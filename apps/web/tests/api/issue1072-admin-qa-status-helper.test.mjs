@@ -24,7 +24,7 @@ import { normalizeAdminQAStatusFilter } from '../../src/lib/admin-qa-status.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ADMIN_QA_ROUTE = join(__dirname, '../../app/api/admin/qa/route.ts');
-const ADMIN_QA_PAGE = join(__dirname, '../../app/admin/qa/page.tsx');
+const ADMIN_QA_PAGE = join(__dirname, '../../app/(non-locale)/admin/qa/page.tsx');
 
 // --- Cycle A1: helper behaviour --------------------------------------------
 

@@ -20,7 +20,7 @@ const APP_ROOT = join(__dirname, '..', '..');
 const DB_MJS = readFileSync(join(APP_ROOT, 'src/lib/db.mjs'), 'utf8')
   + readFileSync(join(APP_ROOT, 'src/lib/db-wishlist.mjs'), 'utf8'); // #1613：wishlist 已拆出，contract 掃兩檔
 const MY_QA = readFileSync(join(APP_ROOT, 'src/lib/my-qa.mjs'), 'utf8');
-const WISHLIST_PAGE = readFileSync(join(APP_ROOT, 'app/me/wishlist/page.tsx'), 'utf8');
+const WISHLIST_PAGE = readFileSync(join(APP_ROOT, 'app/(non-locale)/me/wishlist/page.tsx'), 'utf8');
 
 function sliceFn(src, name) {
   const start = src.indexOf(`export async function ${name}`);

@@ -23,7 +23,7 @@ async function readSource(relPath) {
 // #multilingual: 訂單詳情頁面向使用者的文案已移到 messages/zh-Hant.json 的 orderDetail namespace。
 // 文案內容契約改讀（page + 繁中 catalog）。
 async function readOrderDetailCopy() {
-  const page = await readSource('app/me/orders/[orderId]/page.tsx');
+  const page = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   const zh = await readSource('messages/zh-Hant.json');
   return page + '\n' + zh;
 }
@@ -31,37 +31,37 @@ async function readOrderDetailCopy() {
 // ─── AC1: Admin reviews page ─────────────────────────────────────────────────
 
 test('AC1: admin/reviews/page.tsx exists', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.ok(src.length > 0, 'admin reviews page must exist and be non-empty');
 });
 
 test('AC1: admin/reviews/page.tsx references /api/admin/reviews endpoint', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.match(src, /\/api\/admin\/reviews/, 'must reference /api/admin/reviews');
 });
 
 test('AC1: admin/reviews/page.tsx has approve action', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.match(src, /approved/, 'must have approve action with status approved');
 });
 
 test('AC1: admin/reviews/page.tsx has reject action', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.match(src, /rejected/, 'must have reject action with status rejected');
 });
 
 test('AC1: admin/reviews/page.tsx shows author field', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.match(src, /author/, 'must display author field');
 });
 
 test('AC1: admin/reviews/page.tsx shows rating field', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.match(src, /rating/, 'must display rating field');
 });
 
 test('AC1: admin/reviews/page.tsx shows status field', async () => {
-  const src = await readSource('app/admin/reviews/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/reviews/page.tsx');
   assert.match(src, /status/, 'must display status field');
 });
 
@@ -79,7 +79,7 @@ test('AC2: orderId page has 撰寫評價 button', async () => {
 });
 
 test('AC2: 撰寫評價 button only shown when status === completed', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(
     src,
     /status\s*===\s*['"]completed['"]/,
@@ -88,14 +88,14 @@ test('AC2: 撰寫評價 button only shown when status === completed', async () =
 });
 
 test('AC2: orderId page references /api/reviews for review submission', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /\/api\/reviews/, 'must reference /api/reviews endpoint');
 });
 
 // ─── AC3: Review form structure ───────────────────────────────────────────────
 
 test('AC3: review form has star rating input (1-5)', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   // Must have rating state and some 1-5 mechanism
   assert.match(src, /rating/, 'must have rating input');
   assert.match(
@@ -106,25 +106,25 @@ test('AC3: review form has star rating input (1-5)', async () => {
 });
 
 test('AC3: review form has review_text textarea', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /textarea/, 'must have textarea for review text');
   assert.match(src, /reviewText|review_text/, 'must have reviewText state or review_text field');
 });
 
 test('AC3: review form submit handler POSTs to /api/reviews', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /POST[\s\S]{0,100}\/api\/reviews|\/api\/reviews[\s\S]{0,100}POST/,
     'submit handler must POST to /api/reviews');
 });
 
 test('AC3: review submit includes csrfHeaders', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /csrfHeaders\(\{\s*['\"]content-type['\"]\s*:\s*['\"]application\/json['\"]/);
   assert.match(src, /\/api\/reviews[\s\S]{0,120}csrfHeaders\(/);
 });
 
 test('AC3: review POST body includes activityId, bookingId, rating, reviewText', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /activityId/, 'POST body must include activityId');
   assert.match(src, /bookingId/, 'POST body must include bookingId');
   assert.match(src, /rating/, 'POST body must include rating');

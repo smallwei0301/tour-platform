@@ -107,10 +107,10 @@ test('T1592.7 — 導遊後台評論頁與路由/導覽已接線', () => {
   const listRoute = readFileSync(path.join(ROOT, 'app/api/v2/guide/reviews/route.ts'), 'utf8');
   assert.match(listRoute, /verifyGuideSession/);
   assert.match(listRoute, /listGuideReviewsDb/);
-  const page = readFileSync(path.join(ROOT, 'app/guide/reviews/page.tsx'), 'utf8');
+  const page = readFileSync(path.join(ROOT, 'app/(non-locale)/guide/reviews/page.tsx'), 'utf8');
   assert.match(page, /\/api\/v2\/guide\/reviews/);
   assert.match(page, /\/reply/);
   assert.match(page, /csrfHeaders/);
-  const layout = readFileSync(path.join(ROOT, 'app/guide/layout.tsx'), 'utf8');
+  const layout = readFileSync(path.join(ROOT, 'app/(non-locale)/guide/layout.tsx'), 'utf8');
   assert.match(layout, /\/guide\/reviews/);
 });

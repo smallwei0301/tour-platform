@@ -10,7 +10,7 @@ const APP = join(__dirname, '../..');
 const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
 test('me/orders 顯示付款期限 banner + 前往付款 + cancelled_unpaid 色票', () => {
-  const src = read('app/me/orders/page.tsx');
+  const src = read('app/(non-locale)/me/orders/page.tsx');
   assert.match(src, /describePaymentRemaining/);
   assert.match(src, /order-payment-deadline/);
   assert.match(src, /order-resume-payment/);
@@ -20,7 +20,7 @@ test('me/orders 顯示付款期限 banner + 前往付款 + cancelled_unpaid 色�
 });
 
 test('admin/orders 詳情顯示付款期限/剩餘時間 + 逾時取消', () => {
-  const src = read('app/admin/orders/page.tsx');
+  const src = read('app/(non-locale)/admin/orders/page.tsx');
   assert.match(src, /describePaymentRemaining/);
   assert.match(src, /admin-order-payment-deadline/);
   assert.match(src, /cancelled_unpaid/);

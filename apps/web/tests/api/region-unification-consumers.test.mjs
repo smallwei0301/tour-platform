@@ -27,7 +27,7 @@ test('ActivitiesContent 側欄：改用 listSearchRegions()（不再硬編 4 個
 });
 
 test('guide 活動編輯：改用 listAllDivisions()（全 22），移除硬編 8 個與 REGION_SLUG_MAP', () => {
-  const src = read('app/guide/activities/[id]/edit/page.tsx');
+  const src = read('app/(non-locale)/guide/activities/[id]/edit/page.tsx');
   assert.match(src, /import \{ listAllDivisions \} from/);
   assert.match(src, /listAllDivisions\(\)\.map\(\(d\) => d\.dbValue\)/);
   assert.match(src, /normalizeRegionForActivityPath\(form\.region\)/);

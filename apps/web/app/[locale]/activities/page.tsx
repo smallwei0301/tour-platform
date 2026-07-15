@@ -18,19 +18,22 @@ export async function generateMetadata(
   { params }: { params: Promise<{ locale: string }> }
 ): Promise<Metadata> {
   const { locale } = await params;
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
+  const title = tSeo('activitiesCollectionName');
+  const description = tSeo('activitiesCollectionDescription');
   return {
-    title: '探索行程 | Midao 祕島',
-    description: '瀏覽台灣全島私人導遊行程。柴山探洞、大稻埕老街、花蓮溯溪等在地體驗，依地區、主題自由篩選。',
+    title,
+    description,
     alternates: buildAlternates('/activities', locale),
     openGraph: {
-      title: '探索行程 | Midao 祕島',
-      description: '台灣私人導遊行程，實名認證、透明定價、安全付款。',
-      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: '台灣在地導遊行程 | Midao 祕島' }],
+      title,
+      description,
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: '探索行程 | Midao 祕島',
-      description: '台灣私人導遊行程，實名認證、透明定價、安全付款。',
+      title,
+      description,
       images: ['/images/og-default.png'],
     },
   };

@@ -16,7 +16,7 @@ import { join, dirname } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ORDER_DETAIL_PAGE = join(
   __dirname,
-  '../../app/me/orders/[orderId]/page.tsx'
+  '../../app/(non-locale)/me/orders/[orderId]/page.tsx'
 );
 // #multilingual: 狀態描述文案已從 page 的 STATUS_DESCRIPTIONS 移到
 // messages/zh-Hant.json 的 orderDetail.statusDesc namespace。文案內容契約改讀繁中 catalog。

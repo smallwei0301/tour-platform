@@ -17,11 +17,11 @@ const planItemRouteSrc = readFileSync(
   'utf-8'
 );
 const adminPlansPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/admin/activities/[id]/plans/page.tsx'),
+  path.resolve(ROOT, 'app/(non-locale)/admin/activities/[id]/plans/page.tsx'),
   'utf-8'
 );
 const adminGuideAvailabilityPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/admin/guides/[guideId]/availability/page.tsx'),
+  path.resolve(ROOT, 'app/(non-locale)/admin/guides/[guideId]/availability/page.tsx'),
   'utf-8'
 );
 

@@ -47,7 +47,7 @@ test('listPublishedActivitiesDb：Supabase 以展開集合組多項 .or()（regi
 });
 
 test('admin 編輯頁送出 regions 並渲染複選 checkbox', () => {
-  const page = read('app/admin/activities/[id]/edit/page.tsx');
+  const page = read('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
   // 全台縣市來自 REGION_REGISTRY（單一真實來源）
   assert.match(page, /import \{ REGION_REGISTRY \} from/);
   assert.match(page, /Object\.values\(REGION_REGISTRY\)\.map\(r => r\.dbValue\)/);
@@ -59,7 +59,7 @@ test('admin 編輯頁送出 regions 並渲染複選 checkbox', () => {
 });
 
 test('guide 投稿頁地區清單擴充為全台 REGION_REGISTRY，並支援附加地區複選', () => {
-  const page = read('app/guide/new-activity/page.tsx');
+  const page = read('app/(non-locale)/guide/new-activity/page.tsx');
   assert.match(page, /import \{ REGION_REGISTRY \} from/);
   assert.match(page, /Object\.values\(REGION_REGISTRY\)\.map\(r => r\.dbValue\)/);
   // 附加地區 state、複選 UI、送出

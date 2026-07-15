@@ -7,12 +7,12 @@ import path from 'node:path';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
-const SETTLEMENTS_PAGE = path.join(ROOT, 'app/admin/settlements/page.tsx');
+const SETTLEMENTS_PAGE = path.join(ROOT, 'app/(non-locale)/admin/settlements/page.tsx');
 
 test('issue#906: /admin/settlements page file exists', async () => {
   await assert.doesNotReject(
     () => access(SETTLEMENTS_PAGE),
-    'app/admin/settlements/page.tsx must exist to register the route'
+    'app/(non-locale)/admin/settlements/page.tsx must exist to register the route'
   );
 });
 

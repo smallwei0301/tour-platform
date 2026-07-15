@@ -15,8 +15,8 @@ const REPO_WEB = path.resolve(__dirname, '../..');
 const read = (p) => readFileSync(path.join(REPO_WEB, p), 'utf8');
 
 describe('LIFF 一鍵綁定頁 /line/bind', () => {
-  const client = read('app/line/bind/LineBindClient.tsx');
-  const page = read('app/line/bind/page.tsx');
+  const client = read('app/(non-locale)/line/bind/LineBindClient.tsx');
+  const page = read('app/(non-locale)/line/bind/page.tsx');
 
   test('client 走 LIFF：init → getIDToken → POST /api/line/auth/verify', () => {
     assert.match(client, /@line\/liff/);

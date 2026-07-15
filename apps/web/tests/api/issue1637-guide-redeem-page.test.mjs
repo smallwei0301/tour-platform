@@ -89,7 +89,7 @@ describe('source contract — by-code route', () => {
 
 describe('source contract — 導遊核銷頁與導航', () => {
   it('頁面雙模式：掃 QR（token redeem）＋短碼（by-code），皆帶 CSRF', () => {
-    const src = read('app/guide/redeem/page.tsx');
+    const src = read('app/(non-locale)/guide/redeem/page.tsx');
     assert.match(src, /\/api\/v2\/guide\/orders\/\$\{orderId\}\/redeem/);
     assert.match(src, /\/api\/v2\/guide\/redeem\/by-code/);
     assert.match(src, /csrfHeaders\(/);
@@ -100,7 +100,7 @@ describe('source contract — 導遊核銷頁與導航', () => {
   });
 
   it('guide 導航有「憑證核銷」入口', () => {
-    const src = read('app/guide/layout.tsx');
+    const src = read('app/(non-locale)/guide/layout.tsx');
     assert.match(src, /\/guide\/redeem/);
     assert.match(src, /憑證核銷/);
   });
@@ -108,7 +108,7 @@ describe('source contract — 導遊核銷頁與導航', () => {
 
 describe('source contract — 金流說明頁全鏈流程（admin help 與 ops doc 兩處同步）', () => {
   it('/admin/help/payments-refunds 有全鏈流程總覽（9 步＋唯一純手動步驟）', () => {
-    const src = read('app/admin/help/payments-refunds/page.tsx');
+    const src = read('app/(non-locale)/admin/help/payments-refunds/page.tsx');
     assert.match(src, /全鏈流程總覽/);
     assert.match(src, /確認出帳\(唯一純手動步驟\)/);
     assert.match(src, /月結報表\(手動產出\)/);

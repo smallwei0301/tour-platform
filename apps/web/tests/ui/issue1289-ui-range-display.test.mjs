@@ -24,7 +24,7 @@ async function readSource(relPath) {
 //（純結構搬移、零行為變更）——GuideActivityPlanOption 型別與時段預覽卡片
 // 在 guide-sections；來源契約改讀「頁面＋其子元件」串接內容，斷言意圖不變。
 const GUIDE_AVAILABILITY_SOURCES = [
-  'app/guide/availability/page.tsx',
+  'app/(non-locale)/guide/availability/page.tsx',
   'src/components/availability/guide-sections.tsx',
   'src/components/availability/rule-form-fields.tsx',
 ];
@@ -129,7 +129,7 @@ test('GH-1289 AC3: guide preview shows buffer note when buffer_before_minutes or
 // ── AC4: Traveler booking V2 slot display range parity ───────────────────────
 
 test('GH-1289 AC4: booking V2 page imports formatSlotRangeLabel from slot-generator', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   assert.match(
     src,
     /formatSlotRangeLabel/,
@@ -138,7 +138,7 @@ test('GH-1289 AC4: booking V2 page imports formatSlotRangeLabel from slot-genera
 });
 
 test('GH-1289 AC4: booking V2 page uses formatSlotRangeLabel to show selected slot range', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   assert.match(
     src,
     /formatSlotRangeLabel\s*\(\s*selectedSlot(?:StartAt)?|formatSlotRangeLabel.*slot\.startAt|formatSlotRangeLabel.*startAt/,

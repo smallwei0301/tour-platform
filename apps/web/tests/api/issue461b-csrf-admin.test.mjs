@@ -39,10 +39,10 @@ function assertMethodHasCsrf(src, method, label) {
 }
 
 // ---------------------------------------------------------------------------
-// 1 & 2 — app/admin/activities/[id]/edit/page.tsx
+// 1 & 2 — app/(non-locale)/admin/activities/[id]/edit/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 1 & 2: app/admin/activities/[id]/edit/page.tsx', () => {
-  const FILE = 'app/admin/activities/[id]/edit/page.tsx';
+describe('Site 1 & 2: app/(non-locale)/admin/activities/[id]/edit/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/activities/[id]/edit/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -65,10 +65,10 @@ describe('Site 1 & 2: app/admin/activities/[id]/edit/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3 — app/admin/activities/[id]/plans/page.tsx
+// 3 — app/(non-locale)/admin/activities/[id]/plans/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 3: app/admin/activities/[id]/plans/page.tsx', () => {
-  const FILE = 'app/admin/activities/[id]/plans/page.tsx';
+describe('Site 3: app/(non-locale)/admin/activities/[id]/plans/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/activities/[id]/plans/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -80,10 +80,10 @@ describe('Site 3: app/admin/activities/[id]/plans/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4 — app/admin/activities/page.tsx
+// 4 — app/(non-locale)/admin/activities/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 4: app/admin/activities/page.tsx', () => {
-  const FILE = 'app/admin/activities/page.tsx';
+describe('Site 4: app/(non-locale)/admin/activities/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/activities/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -95,10 +95,10 @@ describe('Site 4: app/admin/activities/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5 & 6 — app/admin/guides/[guideId]/availability/page.tsx
+// 5 & 6 — app/(non-locale)/admin/guides/[guideId]/availability/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 5 & 6: app/admin/guides/[guideId]/availability/page.tsx', () => {
-  const FILE = 'app/admin/guides/[guideId]/availability/page.tsx';
+describe('Site 5 & 6: app/(non-locale)/admin/guides/[guideId]/availability/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/guides/[guideId]/availability/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -122,10 +122,10 @@ describe('Site 5 & 6: app/admin/guides/[guideId]/availability/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 7 — app/admin/guides/page.tsx
+// 7 — app/(non-locale)/admin/guides/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 7: app/admin/guides/page.tsx', () => {
-  const FILE = 'app/admin/guides/page.tsx';
+describe('Site 7: app/(non-locale)/admin/guides/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/guides/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -142,10 +142,10 @@ describe('Site 7: app/admin/guides/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 8 — app/admin/operations-tracking/page.tsx
+// 8 — app/(non-locale)/admin/operations-tracking/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 8: app/admin/operations-tracking/page.tsx', () => {
-  const FILE = 'app/admin/operations-tracking/page.tsx';
+describe('Site 8: app/(non-locale)/admin/operations-tracking/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/operations-tracking/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -162,10 +162,10 @@ describe('Site 8: app/admin/operations-tracking/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 9 & 10 — app/admin/settings/kpi/page.tsx
+// 9 & 10 — app/(non-locale)/admin/settings/kpi/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 9 & 10: app/admin/settings/kpi/page.tsx', () => {
-  const FILE = 'app/admin/settings/kpi/page.tsx';
+describe('Site 9 & 10: app/(non-locale)/admin/settings/kpi/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/settings/kpi/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -198,10 +198,10 @@ describe('Site 9 & 10: app/admin/settings/kpi/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 11 & 12 — app/admin/settings/security/page.tsx
+// 11 & 12 — app/(non-locale)/admin/settings/security/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 11 & 12: app/admin/settings/security/page.tsx', () => {
-  const FILE = 'app/admin/settings/security/page.tsx';
+describe('Site 11 & 12: app/(non-locale)/admin/settings/security/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/settings/security/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);
@@ -232,10 +232,10 @@ describe('Site 11 & 12: app/admin/settings/security/page.tsx', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 13 — app/admin/promo-codes/page.tsx
+// 13 — app/(non-locale)/admin/promo-codes/page.tsx
 // ---------------------------------------------------------------------------
-describe('Site 13: app/admin/promo-codes/page.tsx', () => {
-  const FILE = 'app/admin/promo-codes/page.tsx';
+describe('Site 13: app/(non-locale)/admin/promo-codes/page.tsx', () => {
+  const FILE = 'app/(non-locale)/admin/promo-codes/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     assertImportsCsrfHeaders(readFile(FILE), FILE);

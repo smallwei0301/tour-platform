@@ -8,7 +8,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(resolve(__dirname, '../../app/booking/[activityId]/page.tsx'), 'utf8');
+const source = readFileSync(resolve(__dirname, '../../app/(non-locale)/booking/[activityId]/page.tsx'), 'utf8');
 
 describe('GH-1086 — booking page a11y and SEO', () => {
   test('page has at least one h1 element', () => {

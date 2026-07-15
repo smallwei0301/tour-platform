@@ -32,7 +32,7 @@ test('guide profile GET requires session', () => {
 });
 
 test('guide profile edit page component exists', () => {
-  const src = readFileSync(resolve(ROOT, 'app/guide/profile/page.tsx'), 'utf8');
+  const src = readFileSync(resolve(ROOT, 'app/(non-locale)/guide/profile/page.tsx'), 'utf8');
   assert.match(src, /use client/, 'must be client component');
   assert.match(src, /\/api\/guide\/profile/, 'must call guide profile API');
 });

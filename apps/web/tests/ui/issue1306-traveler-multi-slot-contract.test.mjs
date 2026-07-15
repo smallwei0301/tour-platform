@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PAGE = join(__dirname, '../../app/booking/[activityId]/page.tsx');
+const PAGE = join(__dirname, '../../app/(non-locale)/booking/[activityId]/page.tsx');
 const src = readFileSync(PAGE, 'utf8');
 
 test('setSlots no longer collapses to [canonicalSelectedSlot] — preserves selectedDateSlots when non-empty', () => {

@@ -70,10 +70,10 @@ test('T1594wire.5 — /api/me/points＋餘額晶片＋checkout 折抵器＋booki
   // CheckoutPointsRedeem 由 CheckoutExtrasSection 掛載；booking 頁把 extras 送進下單 body
   const section = read('src/components/activity/CheckoutExtrasSection.tsx');
   assert.match(section, /<CheckoutPointsRedeem/);
-  const page = read('app/booking/[activityId]/page.tsx');
+  const page = read('app/(non-locale)/booking/[activityId]/page.tsx');
   assert.match(page, /<CheckoutExtrasSection/);
   assert.match(page, /redeemPoints:\s*extras\.redeemPoints\s*>\s*0/);
   assert.match(page, /payTotal/);
-  const orders = read('app/me/orders/page.tsx');
+  const orders = read('app/(non-locale)/me/orders/page.tsx');
   assert.match(orders, /<PointsBalanceChip\s*\/>/);
 });

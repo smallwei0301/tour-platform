@@ -3,7 +3,7 @@
  *
  * Static-scan tests (no live DB / network).
  *
- * AC1 — app/me/wishlist/page.tsx DELETE fetch to /api/me/wishlist/ includes csrfHeaders
+ * AC1 — app/(non-locale)/me/wishlist/page.tsx DELETE fetch to /api/me/wishlist/ includes csrfHeaders
  * AC2 — src/lib/client-api.ts POST fetch to /api/me/orders/.../refund-requests includes csrfHeaders
  */
 import { describe, it } from 'node:test';
@@ -22,11 +22,11 @@ function readFile(relPath) {
 }
 
 // ---------------------------------------------------------------------------
-// AC1 — app/me/wishlist/page.tsx
+// AC1 — app/(non-locale)/me/wishlist/page.tsx
 // ---------------------------------------------------------------------------
-describe('AC1: app/me/wishlist/page.tsx — DELETE wishlist item includes CSRF header', () => {
+describe('AC1: app/(non-locale)/me/wishlist/page.tsx — DELETE wishlist item includes CSRF header', () => {
   it('imports csrfHeaders from csrf-client', () => {
-    const src = readFile('app/me/wishlist/page.tsx');
+    const src = readFile('app/(non-locale)/me/wishlist/page.tsx');
     assert.match(
       src,
       /import\s*\{[^}]*csrfHeaders[^}]*\}\s*from\s*['"][^'"]*csrf-client['"]/,
@@ -35,7 +35,7 @@ describe('AC1: app/me/wishlist/page.tsx — DELETE wishlist item includes CSRF h
   });
 
   it('DELETE fetch to /api/me/wishlist/ includes csrfHeaders()', () => {
-    const src = readFile('app/me/wishlist/page.tsx');
+    const src = readFile('app/(non-locale)/me/wishlist/page.tsx');
     // Match DELETE call with csrfHeaders nearby (within 300 chars in either order)
     const hasDeleteWithCsrf =
       /method:\s*['"]DELETE['"][\s\S]{0,300}csrfHeaders\s*\(\s*\)/m.test(src) ||
@@ -44,7 +44,7 @@ describe('AC1: app/me/wishlist/page.tsx — DELETE wishlist item includes CSRF h
   });
 
   it('no bare DELETE to /api/me/ without x-csrf-token or csrfHeaders', () => {
-    const src = readFile('app/me/wishlist/page.tsx');
+    const src = readFile('app/(non-locale)/me/wishlist/page.tsx');
     // Check that every DELETE mention has csrfHeaders or x-csrf-token nearby
     const deleteFetches = [...src.matchAll(/fetch\s*\([^)]*\/api\/me\/[^)]*\)\s*,\s*\{[^}]*method:\s*['"]DELETE['"]/g)];
     for (const match of deleteFetches) {
@@ -62,7 +62,7 @@ describe('AC1: app/me/wishlist/page.tsx — DELETE wishlist item includes CSRF h
 // 契約意圖不變：退款申請 POST 必須帶 csrfHeaders。
 // ---------------------------------------------------------------------------
 describe('AC2: 訂單詳情頁 — POST refund-request includes CSRF header', () => {
-  const PAGE = 'app/me/orders/[orderId]/page.tsx';
+  const PAGE = 'app/(non-locale)/me/orders/[orderId]/page.tsx';
 
   it('imports csrfHeaders from csrf-client', () => {
     const src = readFile(PAGE);

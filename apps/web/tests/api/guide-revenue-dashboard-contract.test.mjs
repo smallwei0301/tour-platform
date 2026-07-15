@@ -13,7 +13,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
 const DASHBOARD_ROUTE = path.join(ROOT, 'app/api/guide/dashboard/route.ts');
-const DASHBOARD_PAGE = path.join(ROOT, 'app/guide/dashboard/page.tsx');
+const DASHBOARD_PAGE = path.join(ROOT, 'app/(non-locale)/guide/dashboard/page.tsx');
 
 // ── AC1: Response includes new GMV + trend + placeholder fields ──────────────
 

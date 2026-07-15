@@ -150,10 +150,10 @@ test('v2 promo-codes public route：fail-open 空清單 + 不外洩內部統計'
 
 test('traveler 前端頁面零 legacy 訂單 endpoint 呼叫', async () => {
   const pages = [
-    'app/me/orders/page.tsx',
-    'app/me/orders/[orderId]/page.tsx',
-    'app/order/success/page.tsx',
-    'app/guides/[slug]/shop/orders/page.tsx',
+    'app/(non-locale)/me/orders/page.tsx',
+    'app/(non-locale)/me/orders/[orderId]/page.tsx',
+    'app/(non-locale)/order/success/page.tsx',
+    'app/(non-locale)/guides/[slug]/shop/orders/page.tsx',
   ];
   for (const page of pages) {
     const src = await read(page);
@@ -161,7 +161,7 @@ test('traveler 前端頁面零 legacy 訂單 endpoint 呼叫', async () => {
     assert.match(src, /\/api\/v2\/orders/, `${page} 需改走 /api/v2/orders`);
   }
   // CSRF cookie 發放端點保留（/api/me/csrf 是 token 發放、非訂單資料面）
-  const detail = await read('app/me/orders/[orderId]/page.tsx');
+  const detail = await read('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(detail, /\/api\/me\/csrf/);
 });
 

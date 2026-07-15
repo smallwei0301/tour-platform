@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
 const editPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/admin/activities/[id]/edit/page.tsx'),
+  path.resolve(ROOT, 'app/(non-locale)/admin/activities/[id]/edit/page.tsx'),
   'utf-8',
 );
 

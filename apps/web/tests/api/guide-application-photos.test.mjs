@@ -26,9 +26,9 @@ const DB_MJS = join(APP_ROOT, 'src/lib/db.mjs');
 const UPLOAD_ROUTE = join(APP_ROOT, 'app/api/guide-applications/upload/route.ts');
 const APPLICATIONS_ROUTE = join(APP_ROOT, 'app/api/guide-applications/route.ts');
 const DETAIL_ROUTE = join(APP_ROOT, 'app/api/admin/guides/[guideId]/route.ts');
-const DETAIL_PAGE = join(APP_ROOT, 'app/admin/guides/[guideId]/page.tsx');
+const DETAIL_PAGE = join(APP_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
 const PROMOTE_ROUTE = join(APP_ROOT, 'app/api/admin/guides/promote/route.ts');
-const APPLY_PAGE = join(APP_ROOT, 'app/guide/apply/page.tsx');
+const APPLY_PAGE = join(APP_ROOT, 'app/(non-locale)/guide/apply/page.tsx');
 const MIGRATION = join(REPO_ROOT, 'supabase/migrations/20260611_guide_application_photos.sql');
 
 const SAMPLE = {

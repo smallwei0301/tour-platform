@@ -12,12 +12,12 @@ const ROOT = path.resolve(__dirname, '../..');
 // 變更），canonical 警示文案分散在頁面與其子元件；來源契約改讀「頁面＋其
 // 子元件」串接內容，斷言意圖不變（這些警示仍由該頁組裝渲染）。
 const GUIDE_PAGE_SOURCES = [
-  'app/guide/availability/page.tsx',
+  'app/(non-locale)/guide/availability/page.tsx',
   'src/components/availability/guide-sections.tsx',
   'src/components/availability/rule-form-fields.tsx',
 ].map((rel) => path.resolve(ROOT, rel));
 const ADMIN_PAGE_SOURCES = [
-  'app/admin/guides/[guideId]/availability/page.tsx',
+  'app/(non-locale)/admin/guides/[guideId]/availability/page.tsx',
   'src/components/availability/admin-sections.tsx',
   'src/components/availability/rule-form-fields.tsx',
 ].map((rel) => path.resolve(ROOT, rel));

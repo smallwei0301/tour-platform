@@ -18,9 +18,9 @@ function read(rel) {
 test('help pages exist', () => {
   for (const p of [
     'src/components/help/BookingTypesGuide.tsx',
-    'app/admin/help/booking-types/page.tsx',
-    'app/guide/help/booking-types/page.tsx',
-    'app/admin/help/conflict-override/page.tsx',
+    'app/(non-locale)/admin/help/booking-types/page.tsx',
+    'app/(non-locale)/guide/help/booking-types/page.tsx',
+    'app/(non-locale)/admin/help/conflict-override/page.tsx',
   ]) {
     assert.ok(existsSync(join(APP, p)), `missing ${p}`);
   }
@@ -37,8 +37,8 @@ test('shared booking-types guide covers all three modes', () => {
 });
 
 test('admin + guide booking-types pages render the shared guide component', () => {
-  assert.match(read('app/admin/help/booking-types/page.tsx'), /BookingTypesGuide/);
-  assert.match(read('app/guide/help/booking-types/page.tsx'), /BookingTypesGuide/);
+  assert.match(read('app/(non-locale)/admin/help/booking-types/page.tsx'), /BookingTypesGuide/);
+  assert.match(read('app/(non-locale)/guide/help/booking-types/page.tsx'), /BookingTypesGuide/);
 });
 
 test('admin plan form links to booking-types help next to the selector', () => {
@@ -52,7 +52,7 @@ test('admin plan form links to booking-types help next to the selector', () => {
 });
 
 test('guide plan form links to booking-types help', () => {
-  assert.match(read('app/guide/activities/[id]/plans/[planId]/page.tsx'), /\/guide\/help\/booking-types/);
+  assert.match(read('app/(non-locale)/guide/activities/[id]/plans/[planId]/page.tsx'), /\/guide\/help\/booking-types/);
 });
 
 test('conflict-override help is linked from the availability page (single canonical location)', () => {
@@ -69,12 +69,12 @@ test('conflict-override help is linked from the availability page (single canoni
   assert.ok(helpIdx > -1 && previewIdxs.length > 0 && nearestDist < 800, 'help link near 時段預覽');
 
   // 不應再出現在列表卡片或導遊詳情頁(避免重複入口)。
-  assert.doesNotMatch(read('app/admin/guides/page.tsx'), /\/admin\/help\/conflict-override/);
-  assert.doesNotMatch(read('app/admin/guides/[guideId]/page.tsx'), /\/admin\/help\/conflict-override/);
+  assert.doesNotMatch(read('app/(non-locale)/admin/guides/page.tsx'), /\/admin\/help\/conflict-override/);
+  assert.doesNotMatch(read('app/(non-locale)/admin/guides/[guideId]/page.tsx'), /\/admin\/help\/conflict-override/);
 });
 
 test('conflict-override help documents the key steps and limits', () => {
-  const src = read('app/admin/help/conflict-override/page.tsx');
+  const src = read('app/(non-locale)/admin/help/conflict-override/page.tsx');
   assert.match(src, /例外開放此場/);
   assert.match(src, /預覽方案篩選/);
   assert.match(src, /確認例外開放/);

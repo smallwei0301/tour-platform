@@ -218,7 +218,7 @@ describe('#1365 — route source contracts', () => {
 
 describe('#1365 — admin payouts page contract', () => {
   it('頁面載入餘額清單並提供手動產生/取消操作（皆帶 CSRF）', () => {
-    const src = read('app/admin/payouts/page.tsx');
+    const src = read('app/(non-locale)/admin/payouts/page.tsx');
     // #1649：admin UI 全面改走 /api/v2/admin/**（v2 route re-export legacy handler）
     assert.match(src, /\/api\/v2\/admin\/payouts\/balances/, '頁面必須抓餘額清單');
     assert.match(src, /手動產生出款單/);

@@ -36,7 +36,7 @@ async function readSrc(rel) {
 }
 
 test('root layout 不再有 image preload（首頁 hero 大圖不得全站洩漏）', async () => {
-  const src = await readSrc('app/layout.tsx');
+  const src = await readSrc('src/components/layout/RootDocument.tsx');
   assert.doesNotMatch(
     src,
     /rel=["']preload["'][\s\S]{0,200}?as=["']image["']/,
@@ -51,7 +51,7 @@ test('root layout 不再有 image preload（首頁 hero 大圖不得全站洩漏
 });
 
 test('root layout 保留 image CDN 的 preconnect（無害且加速 TLS 握手）', async () => {
-  const src = await readSrc('app/layout.tsx');
+  const src = await readSrc('src/components/layout/RootDocument.tsx');
   assert.match(
     src,
     /rel=["']preconnect["']\s+href=["']https:\/\/images\.unsplash\.com["']/,

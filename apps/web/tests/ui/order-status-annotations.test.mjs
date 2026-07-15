@@ -3,7 +3,7 @@
 //  💬 ↔ adminStatusToTelegramKind(status) !== null（會發 LINE／Telegram）
 //  💰 ↔ evaluatePayoutEligibility 只認 completed（會進入出帳 sweep）
 //
-// 這是 source-contract 測試：讀 app/admin/orders/page.tsx 的 STATUS_MARKS／
+// 這是 source-contract 測試：讀 app/(non-locale)/admin/orders/page.tsx 的 STATUS_MARKS／
 // STATUS_EFFECTS，逐狀態比對它們是否與 src/lib 的純函式判定相符。
 
 import test from 'node:test';
@@ -16,7 +16,7 @@ import { adminStatusToTelegramKind } from '../../src/lib/admin-order-event-kind.
 import { evaluatePayoutEligibility } from '../../src/lib/post-trip/payout-eligibility.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PAGE = resolve(__dirname, '../../app/admin/orders/page.tsx');
+const PAGE = resolve(__dirname, '../../app/(non-locale)/admin/orders/page.tsx');
 const src = readFileSync(PAGE, 'utf8');
 
 const STATUSES = [

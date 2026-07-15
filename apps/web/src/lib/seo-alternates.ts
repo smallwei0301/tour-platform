@@ -70,5 +70,27 @@ export function sitemapLanguageAlternates(
     const p = localizePath(path, l);
     languages[l] = p === '/' ? trimmedBase : `${trimmedBase}${p}`;
   }
+  const defaultPath = localizePath(path, routing.defaultLocale);
+  languages['x-default'] = defaultPath === '/' ? trimmedBase : `${trimmedBase}${defaultPath}`;
   return { languages };
+}
+
+/**
+ * Emits one sitemap URL record per visible locale while retaining reciprocal
+ * hreflang alternates on every record.
+ */
+export function localizedSitemapUrls(
+  path: string,
+  baseUrl: string
+): Array<{ url: string; alternates: { languages: Record<string, string> } }> {
+  const trimmedBase = baseUrl.replace(/\/+$/, '');
+  const alternates = sitemapLanguageAlternates(path, trimmedBase);
+
+  return VISIBLE_LOCALES.map((locale) => {
+    const localizedPath = localizePath(path, locale);
+    return {
+      url: localizedPath === '/' ? trimmedBase : `${trimmedBase}${localizedPath}`,
+      alternates,
+    };
+  });
 }
