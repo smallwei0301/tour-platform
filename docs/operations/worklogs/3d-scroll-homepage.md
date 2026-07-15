@@ -195,6 +195,14 @@
   各加一項 '/home'。授權檔寫入→編輯→即刪，全程單次使用。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
 
+## 階段 11（2026-07-15）— 後續：更換第七景（finale）影片
+- #1713 已 merge，依規範以全新變更處理：分支自 origin/main（b520d01）重置。
+- 使用者提供新 finale 影片（日出全島俯瞰下降飛入光徑，9.75s）。同管線：delogo 去右下
+  星芒 → 全長 scrub 編碼（-g 8、1152w、雙格式 mp4 2.8MB／webm 2.5MB）→ poster＝首幀
+  覆寫 finale.webp。**純素材替換**，scenes.mjs 已指向 finale.mp4，無需改碼。
+- 驗證：浮水印區抽查乾淨；實跑滾到底 finale scrub 正確（dur 9.8s、ct 9.7s、rs 4、
+  CTA→/home）；scroll-world 測試 26/26 綠燈。
+
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
 
