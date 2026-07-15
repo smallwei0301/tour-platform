@@ -168,8 +168,25 @@
   /world 307→/；完整回歸 PASS；測試 35/35、typecheck、lint 綠燈。裸 /home 自此受
   soft-launch kill-switch 與 locale 偵測管制，缺口關閉。
 
+## 階段 10（2026-07-15）— PR #1713 CI 綠燈＋合併 main
+- CI 首輪 `test` 紅：全套測試抓到 7 個首頁搬遷未同步的斷言（本地只跑目標測試漏掉）。
+  修正 5 個測試檔指向 `/home`（homepage-featured-real-activities／homepage-render-perf／
+  issue1444-followup／issue502／issue1344-no-global-hero-preload）——純對齊搬遷後現實，
+  不弱化不變量。
+- 合併 `origin/main`（#1711 SEO＋`(non-locale)` route group 重構、#1712）：3 檔衝突已解
+  （`[locale]/page.tsx` 保世界頁 body＋採 #1711 tSeo metadata；`sitemap.ts` 採新
+  `localized(path,metadata)` 簽章＋補 /home；`app/layout.tsx` 接受 main 刪除，
+  scrollRestoration 邏輯已在 main 的 `RootDocument.tsx`）。合併後全套 4735 tests、0 fail、
+  tsc 綠、lint 0 error；路由 smoke（/=世界頁、/home=經典頁、/activities 200、
+  /world 307→/）＋世界頁完整回歸 PASS。
+- **CI 綠燈證據（commit 4011155）**：
+  - test：success — https://github.com/smallwei0301/tour-platform/actions/runs/29417098879/job/87357870176
+  - scan：success — https://github.com/smallwei0301/tour-platform/actions/runs/29417099062/job/87357870676
+  - Vercel Preview：success
+  - mergeable_state：clean。
+
 ## 下一步
-- 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
+- Merge PR #1713（squash 或 merge，依 repo 慣例）。
 - Follow-up（低優先）：/home 與 / 的 title 目前相同（SEO 可再分化）。
 
 ## P0-OVERRIDE 使用紀錄
