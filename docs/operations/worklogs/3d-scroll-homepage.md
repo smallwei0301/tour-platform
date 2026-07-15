@@ -156,14 +156,28 @@
   =/home；/home 截圖正常（`home-classic.png`）。測試 35/35（含 issue1440＋localize
   revalidate）、typecheck、lint 綠燈。
 
+## 階段 9（2026-07-15）— P0-OVERRIDE：/home 補進 middleware（治理缺口收乾淨）
+- 使用者授權原文：「P0-OVERRIDE: apps/web/middleware.ts」（前一則訊息：「把它補進
+  matcher 徹底收乾淨。」）。
+- 依協議：寫入 `.claude/state/p0-override`（路徑＋原話＋時間）→ 編輯凍結檔 → **用畢
+  即刪授權檔**（單次消耗）。編輯僅兩處清單項：`isLocalizedPublicPath()` 加
+  `|| rest === '/home'`、`config.matcher` 加 `'/home'`——不觸碰 auth／CSRF／
+  kill-switch 邏輯本體。
+- 同步移除 next.config 的臨時 beforeFiles rewrite（middleware 接手後冗餘）。
+- 驗證：裸 /home 200（lp-root ✓、走 next-intl rewrite）、/ ＝世界頁、/en/home 200、
+  /world 307→/；完整回歸 PASS；測試 35/35、typecheck、lint 綠燈。裸 /home 自此受
+  soft-launch kill-switch 與 locale 偵測管制，缺口關閉。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
-- Follow-up（低優先）：/home 與 / 的 title 目前相同（SEO 可再分化）；裸 /home 補進
-  middleware matcher 需 P0-OVERRIDE。
+- Follow-up（低優先）：/home 與 / 的 title 目前相同（SEO 可再分化）。
+
+## P0-OVERRIDE 使用紀錄
+- 2026-07-15：`apps/web/middleware.ts`。授權原文「P0-OVERRIDE: apps/web/middleware.ts」
+  （上一則：「把它補進 matcher 徹底收乾淨。」）。變更＝isLocalizedPublicPath＋matcher
+  各加一項 '/home'。授權檔寫入→編輯→即刪，全程單次使用。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
 
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
 
-## P0-OVERRIDE 使用紀錄（如有）
-- 無。

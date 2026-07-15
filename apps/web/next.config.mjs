@@ -127,18 +127,6 @@ const nextConfig = {
       { source: '/:locale(en|ja|ko)/theme/world', destination: '/:locale', permanent: false },
     ];
   },
-  // 經典行銷首頁搬至 /home：裸 /home 不在凍結 middleware 的 matcher／localized
-  // 清單內（無 next-intl rewrite），以 beforeFiles rewrite 導入預設 locale 路由。
-  // /en/home 等前綴路徑由 [locale] 直接命中、且在 matcher 的 '/en/:path*' 涵蓋
-  // 之下（soft-launch kill-switch 管到前綴變體；裸 /home 的管制缺口記於 worklog，
-  // 待日後經授權補進 middleware matcher）。
-  async rewrites() {
-    return {
-      beforeFiles: [{ source: '/home', destination: '/zh-Hant/home' }],
-      afterFiles: [],
-      fallback: [],
-    };
-  },
 };
 
 // Avoid loading Sentry's build wrapper in local/dev smoke runs. A disabled
