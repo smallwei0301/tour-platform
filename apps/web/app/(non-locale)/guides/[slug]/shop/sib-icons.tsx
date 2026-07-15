@@ -56,9 +56,11 @@ export function LeafIcon() {
   );
 }
 export function CtaMountain({ className }: { className?: string }) {
+  // 山形＋蜿蜒山徑，呼應圖示庫的「山中圓徽」造型（見 logo-mountain.png），維持單色線條以貼合 CTA 橘底。
   return (
     <svg className={className} viewBox="0 0 40 30" aria-hidden>
-      <path d="M2 26l11-15 7 9 5-6 13 12z" fill="none" stroke="#e7c98a" strokeWidth={1.4} strokeLinejoin="round" />
+      <path d="M2 21l9-14 6 8 4-5 12 11" fill="none" stroke="#e7c98a" strokeWidth={1.4} strokeLinejoin="round" strokeLinecap="round" />
+      <path d="M7 27q5-4 10 0t11-1" fill="none" stroke="#e7c98a" strokeWidth={1.1} strokeLinecap="round" opacity={0.85} />
     </svg>
   );
 }

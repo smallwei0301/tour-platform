@@ -104,6 +104,19 @@ test('admin 詳情頁：以 CSRF header POST 至代入 API 後導向導遊後台
   assert.match(src, /\/guide\/dashboard/, '成功後導向導遊後台');
 });
 
+test('admin 詳情頁：以 V2 envelope（json.success）判斷代入結果，不得誤用 v1 的 json.ok', () => {
+  // 回歸鎖（2026-07-13）：代入 API 走 jsonOk → { success: true, data }；先前前端檢查
+  // json?.ok 導致成功也顯示「進入導遊後台失敗」且不導頁。
+  const src = readFileSync(ADMIN_PAGE, 'utf8');
+  const fnBody = src.slice(
+    src.indexOf('async function handleEnterGuideBackend'),
+    src.indexOf('window.location.href')
+  );
+  assert.ok(fnBody.length > 0, '需存在 handleEnterGuideBackend 且成功後導頁');
+  assert.match(fnBody, /json\?\.success\s*!==\s*true/, '需以 V2 envelope 的 success 欄位判斷');
+  assert.doesNotMatch(fnBody, /json\?\.ok/, '不得用 v1 envelope 的 ok 欄位判斷代入結果');
+});
+
 // ---------- 導遊後台代入橫幅 ----------
 
 test('導遊後台 layout：偵測代入 cookie 顯示橫幅並提供結束代入', () => {

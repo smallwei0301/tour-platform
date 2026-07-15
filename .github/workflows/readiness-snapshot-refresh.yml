@@ -2,7 +2,7 @@ name: Readiness Snapshot Refresh
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '0 5 * * *'  # 每日一次（05:00 UTC／台北 13:00）；由每 6 小時降頻至每日
   workflow_dispatch:        # Allow manual trigger
 
 jobs:

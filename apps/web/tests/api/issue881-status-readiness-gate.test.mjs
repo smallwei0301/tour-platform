@@ -91,6 +91,7 @@ const ACTIVITY_ID = 'aaaaaaaa-0000-0000-0000-000000000001';
 const validActivity = {
   id: ACTIVITY_ID,
   status: 'draft',
+  guide_id: 'guide-0000-0000-0000-000000000001',
   plans: [{ id: 'half-day', slug: 'half-day' }],
 };
 
@@ -266,6 +267,19 @@ describe('validateActivityBookability', () => {
 
     assert.equal(result.ok, true, `expected ok, got blockers: ${JSON.stringify(result.blockers)}`);
     assert.equal(result.blockers.length, 0);
+  });
+
+  it('returns MISSING_GUIDE_ASSIGNMENT when active formal plans exist but guide_id is empty', async () => {
+    const activityWithoutGuide = { ...validActivity, guide_id: null };
+    const supabase = makeMockSupabase({
+      activity: activityWithoutGuide,
+      formalPlans: [activeFormalPlan],
+      schedules: [openSchedule],
+    });
+    const result = await validateActivityBookability(ACTIVITY_ID, { supabase });
+
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.blockers.map(b => b.code), ['MISSING_GUIDE_ASSIGNMENT']);
   });
 
   it('returns ok=true for activity with no schedules (publish is not blocked)', async () => {

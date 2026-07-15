@@ -24,7 +24,7 @@ test('PLAN_NOT_FOUND returns 404 + actionable zh-TW message about re-selecting a
   const r = buildActivityPlanNotFoundResponse('PLAN_NOT_FOUND');
   assert.equal(r.status, 404);
   assert.equal(r.body.success, false);
-  assert.equal(r.body.error.code, 'NOT_FOUND');
+  assert.equal(r.body.error.code, 'PLAN_NOT_FOUND');
   assert.equal(r.body.error.message, 'Activity plan not found');
   assert.match(r.body.error.messageZh, /找不到此方案/);
   assert.match(r.body.error.messageZh, /重新選擇方案/);

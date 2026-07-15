@@ -3874,33 +3874,20 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-size: 11px; font-weight: 500; text-decoration: none; letter-spacing: 0.04em;
 }
 
-/* Hero：大圖＋詩句 overlay */
+/* Hero：純大圖，不疊字樣/圖樣 */
 .sib-hero {
   position: relative; width: 100%; aspect-ratio: 1.535 / 1;
   margin-top: 12px; border-radius: 18px; overflow: hidden;
   border: 1px solid var(--sib-gold-line);
 }
 .sib-hero-img { object-fit: cover; }
-.sib-hero-logo { position: absolute; top: 26px; left: 24px; width: 52px; height: 52px; opacity: 0.92; }
-.sib-hero-poem {
-  position: absolute; left: 26px; right: 20px; top: 24%;
-  padding-left: 16px; border-left: 2px solid var(--sib-gold);
-  font-family: var(--tp-serif); font-weight: 700; color: #f4ecd8;
-  font-size: clamp(15px, 4.6vw, 22px); line-height: 1.5; letter-spacing: 0.08em;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.45); margin: 0;
-}
 
-/* 引路人卡（缺口卡） */
+/* 引路人卡 */
 .sib-guide-card {
   position: relative; margin-top: -22px; margin-bottom: 9px; background: var(--sib-card);
   border: 1px solid var(--sib-gold-line); border-radius: 16px;
   padding: 14px 12px 16px; display: flex; gap: 8px; align-items: flex-start;
   box-shadow: 0 6px 20px rgba(26, 46, 31, 0.06);
-}
-.sib-guide-card::before {
-  content: ''; position: absolute; top: -1px; left: 26px; width: 30px; height: 12px;
-  background: var(--sib-paper); border: 1px solid var(--sib-gold-line);
-  border-top: none; border-radius: 0 0 8px 8px;
 }
 .sib-guide-avatar { flex: 0 0 auto; width: 74px; height: 74px; border-radius: 50%; overflow: hidden; border: 2px solid var(--sib-gold); }
 /* 名稱列：允許換行（長名稱時徽章掉到下一行，不破框） */
