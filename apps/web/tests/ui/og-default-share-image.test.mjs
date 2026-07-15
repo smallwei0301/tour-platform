@@ -30,7 +30,7 @@ const OLD_OG_URL = 'https://images.unsplash.com/photo-1528164344705-47542687000d
 
 // 預設分享縮圖落地的檔案（openGraph／twitter metadata）。
 const SHARE_THUMBNAIL_FILES = [
-  'app/layout.tsx',
+  'src/lib/seo/site-metadata.ts',
   'app/[locale]/page.tsx',
   'app/[locale]/about/page.tsx',
   'app/[locale]/why-choose-us/page.tsx',
@@ -40,7 +40,7 @@ const SHARE_THUMBNAIL_FILES = [
   'app/[locale]/contact/page.tsx',
   'app/[locale]/activities/page.tsx',
   'app/[locale]/experiences/[slug]/page.tsx',
-  'app/guide/apply/layout.tsx',
+  'app/(non-locale)/guide/apply/layout.tsx',
   'app/[locale]/blog/page.tsx',
 ];
 
@@ -72,7 +72,7 @@ test('各分享圖檔案改用 og-default、不殘留舊 Unsplash OG 圖', async
 });
 
 test('root layout 的 openGraph 與 twitter 分享圖皆為 og-default', async () => {
-  const src = await readSrc('app/layout.tsx');
+  const src = await readSrc('src/lib/seo/site-metadata.ts');
   // openGraph.images 物件 + twitter.images 字串陣列各一
   const refs = src.split(OG_ASSET).length - 1;
   assert.ok(refs >= 2, 'openGraph 與 twitter 都應指向 og-default');

@@ -84,7 +84,7 @@ test('derivePlanMetaFromActivityPlans tolerates null entries in plans array', ()
 
 test('Source contract: booking page imports derivePlanMetaFromActivityPlans', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/booking/[activityId]/page.tsx'),
+    join(REPO_ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx'),
     'utf8',
   );
   assert.match(
@@ -101,7 +101,7 @@ test('Source contract: booking page imports derivePlanMetaFromActivityPlans', ()
 
 test('Source contract: booking page uses fallback chain so unitPrice never reads activity.priceTwd while plan meta is available', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/booking/[activityId]/page.tsx'),
+    join(REPO_ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx'),
     'utf8',
   );
   assert.match(
@@ -118,7 +118,7 @@ test('Source contract: booking page uses fallback chain so unitPrice never reads
 
 test('Source contract: Activity.plans interface declares basePrice + priceType so first-paint derivation type-checks', () => {
   const src = readFileSync(
-    join(REPO_ROOT, 'app/booking/[activityId]/page.tsx'),
+    join(REPO_ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx'),
     'utf8',
   );
   const interfaceBlock = src.split('interface Activity')[1]?.split('interface ')[0] || '';

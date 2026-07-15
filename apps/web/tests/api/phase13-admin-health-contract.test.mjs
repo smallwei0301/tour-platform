@@ -69,7 +69,7 @@ test('AC2: health route references incidents table and returns counts/recent/dep
 // ── AC3: Admin dashboard has 系統健康 link ────────────────────────────────────
 
 test('AC3: admin/page.tsx contains a link/card to /admin/health with text 系統健康', () => {
-  const adminPagePath = path.resolve(ROOT, 'app/admin/page.tsx');
+  const adminPagePath = path.resolve(ROOT, 'app/(non-locale)/admin/page.tsx');
   assert.ok(existsSync(adminPagePath), `admin page not found: ${adminPagePath}`);
 
   const src = readFileSync(adminPagePath, 'utf8');
@@ -84,7 +84,7 @@ test('AC3: admin/page.tsx contains a link/card to /admin/health with text 系統
 // ── AC4: Health page PII guard ────────────────────────────────────────────────
 
 test('AC4: admin/health/page.tsx does NOT contain contact_email or contact_phone template literals', () => {
-  const healthPagePath = path.resolve(ROOT, 'app/admin/health/page.tsx');
+  const healthPagePath = path.resolve(ROOT, 'app/(non-locale)/admin/health/page.tsx');
   assert.ok(existsSync(healthPagePath), `health page not found: ${healthPagePath}`);
 
   const src = readFileSync(healthPagePath, 'utf8');

@@ -25,7 +25,7 @@ async function readSource(relPath) {
 // checkbox 在共用 rule-form-fields；來源契約改讀「頁面＋其子元件」串接
 // 內容，斷言意圖不變。
 const GUIDE_AVAILABILITY_SOURCES = [
-  'app/guide/availability/page.tsx',
+  'app/(non-locale)/guide/availability/page.tsx',
   'src/components/availability/guide-sections.tsx',
   'src/components/availability/rule-form-fields.tsx',
 ];
@@ -194,7 +194,7 @@ test('GH-1290 AC4: admin v2 PUT route updateData conditionally includes use_dyna
 // ── AC5: Traveler Booking V2 range display parity (Slice A + Slice B bridge) ──
 
 test('GH-1290 AC5: Booking V2 imports formatSlotRangeLabel for range display', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   assert.match(
     src,
     /formatSlotRangeLabel/,
@@ -203,7 +203,7 @@ test('GH-1290 AC5: Booking V2 imports formatSlotRangeLabel for range display', a
 });
 
 test('GH-1290 AC5: Booking V2 shows range label for selected slot', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   assert.match(
     src,
     /formatSlotRangeLabel\s*\(\s*selectedSlot/,

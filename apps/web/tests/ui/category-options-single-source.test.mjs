@@ -13,9 +13,9 @@ const repoWebRoot = join(__dirname, '..', '..');
 const read = (rel) => readFileSync(join(repoWebRoot, rel), 'utf8');
 
 const EDITORS = [
-  'app/admin/activities/[id]/edit/page.tsx',
-  'app/guide/activities/[id]/edit/page.tsx',
-  'app/guide/new-activity/page.tsx',
+  'app/(non-locale)/admin/activities/[id]/edit/page.tsx',
+  'app/(non-locale)/guide/activities/[id]/edit/page.tsx',
+  'app/(non-locale)/guide/new-activity/page.tsx',
 ];
 
 for (const rel of EDITORS) {
@@ -33,7 +33,7 @@ for (const rel of EDITORS) {
 }
 
 test('導遊申請「專長領域」選項同步為四大分類（取自 CATEGORY_OPTIONS）', () => {
-  const src = read('app/guide/apply/page.tsx');
+  const src = read('app/(non-locale)/guide/apply/page.tsx');
   assert.match(
     src,
     /import\s*\{\s*CATEGORY_OPTIONS\s*\}\s*from\s*['"][^'"]*category-tags\.mjs['"]/,

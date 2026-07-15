@@ -86,9 +86,9 @@ describe('source contract — 關鍵頁面與 sitemap wiring', () => {
     });
   }
 
-  it('sitemap.ts 每個公開 entry 帶 languages alternates', () => {
+  it('sitemap.ts explicitly emits every public visible-locale URL with reciprocal alternates', () => {
     const src = read('app/sitemap.ts');
-    assert.match(src, /sitemapLanguageAlternates\(/, 'sitemap 必須用共用 helper');
+    assert.match(src, /localizedSitemapUrls\(/, 'sitemap 必須用共用 locale URL helper');
     assert.match(src, /alternates/, 'sitemap entries 必須含 alternates');
   });
 });

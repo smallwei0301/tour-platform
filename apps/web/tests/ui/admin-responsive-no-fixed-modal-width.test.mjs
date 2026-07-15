@@ -15,7 +15,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 //   - `width: '90%'` paired with `maxWidth: <NN>0` (the legacy modal pattern)
 // ──────────────────────────────────────────────────────────────────
 
-const ADMIN_DIR = new URL('../../app/admin/', import.meta.url);
+const ADMIN_DIR = new URL('../../app/(non-locale)/admin/', import.meta.url);
 
 async function* walk(dir) {
   for (const entry of await readdir(dir, { withFileTypes: true })) {

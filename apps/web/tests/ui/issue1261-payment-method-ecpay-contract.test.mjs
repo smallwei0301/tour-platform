@@ -24,7 +24,7 @@ async function readSource(relPath) {
 }
 
 test('booking page no longer offers LINE Pay / ATM as selectable payment radios', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
 
   assert.doesNotMatch(src, /<input type="radio" name="payment" \/> LINE Pay/);
   assert.doesNotMatch(src, /<input type="radio" name="payment" \/> ATM 虛擬帳號/);
@@ -33,7 +33,7 @@ test('booking page no longer offers LINE Pay / ATM as selectable payment radios'
 });
 
 test('booking page Step 3 explains the ECPay hand-off instead of advertising unsupported methods', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
 
   // #multilingual: ECPay hand-off 文案移到 bookingFlow.ecpayTransferNotice；頁面用 m.ecpayTransferNotice 引用。
   const zh = JSON.parse(await readSource('messages/zh-Hant.json'));
@@ -46,7 +46,7 @@ test('booking page Step 3 explains the ECPay hand-off instead of advertising uns
 // #1475 起：付款方式新增「自行匯款（transfer）」選項，但以 isTransferPaymentEnabled()
 // flag 控管（預設 OFF）。flag off 時行為等同 #1261 的 ECPay-only；flag on 才顯示匯款選項。
 test('V2 checkout submit posts the selected payment method (預設 ecpay)', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   // 改為送出使用者選擇的付款方式；payMethod 預設為 'ecpay'。
   assert.match(src, /provider:\s*payMethod/);
   assert.match(src, /useState<'ecpay' \| 'transfer'>\('ecpay'\)/);

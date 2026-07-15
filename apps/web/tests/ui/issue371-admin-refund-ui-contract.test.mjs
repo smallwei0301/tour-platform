@@ -20,7 +20,7 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
-const PAGE = 'app/admin/orders/page.tsx';
+const PAGE = 'app/(non-locale)/admin/orders/page.tsx';
 
 // ─── AC1: 執行退款 button when refund_pending ─────────────────────────────────
 

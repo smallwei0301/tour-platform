@@ -12,7 +12,7 @@ async function readSource(relPath) {
 }
 
 test('guide bookings detail modal wires dialog focus management and keyboard controls', async () => {
-  const src = await readSource('app/guide/bookings/page.tsx');
+  const src = await readSource('app/(non-locale)/guide/bookings/page.tsx');
 
   assert.match(src, /const triggerRef = useRef<HTMLElement \| null>\(null\)/);
   assert.match(src, /const detailRequestIdRef = useRef\(0\)/);
@@ -39,7 +39,7 @@ test('guide bookings detail modal wires dialog focus management and keyboard con
 });
 
 test('guide bookings detail modal keeps a11y semantics and close button focus target', async () => {
-  const src = await readSource('app/guide/bookings/page.tsx');
+  const src = await readSource('app/(non-locale)/guide/bookings/page.tsx');
 
   assert.match(src, /role="dialog" aria-modal="true" aria-labelledby="booking-detail-modal-title" tabIndex=\{-1\}/);
   assert.match(src, /<button ref=\{closeButtonRef\} aria-label="關閉" onClick=\{closeDetail\}/);

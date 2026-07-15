@@ -8,7 +8,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(resolve(__dirname, '../../app/guide/dashboard/page.tsx'), 'utf8');
+const source = readFileSync(resolve(__dirname, '../../app/(non-locale)/guide/dashboard/page.tsx'), 'utf8');
 
 describe('GH-1085 — guide dashboard a11y', () => {
   test('page has exactly one h1 element', () => {

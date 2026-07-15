@@ -51,6 +51,13 @@ function countLines(relPath) {
   return readFileSync(join(WEB_ROOT, relPath), 'utf8').split('\n').length;
 }
 
+// Route groups are URL-invisible structural containers. Normalize them before
+// checking the historical route-file ceilings so moving an existing page into a
+// root-layout group cannot masquerade as a new giant file.
+function canonicalRoutePath(relPath) {
+  return relPath.replace(/^app\/\(non-locale\)\//, 'app/');
+}
+
 // ---------------------------------------------------------------------------
 // 1) 巨型檔案天花板（2026-07-04 現值）。
 //    db.mjs 不在此表 —— 它由 tests/unit/db-mjs-size-guard.test.mjs 單獨管。
@@ -81,7 +88,7 @@ test('巨型檔案不得再長大；非白名單檔案不得超過 800 行', () 
   for (const rel of files) {
     if (rel === DB_MJS) continue;
     const lines = countLines(rel);
-    const ceiling = GOD_FILE_CEILINGS.get(rel);
+    const ceiling = GOD_FILE_CEILINGS.get(canonicalRoutePath(rel));
     if (ceiling !== undefined) {
       if (lines > ceiling) violations.push(`${rel}: ${lines} 行 > 天花板 ${ceiling}`);
     } else if (lines > GENERAL_FILE_LINE_LIMIT) {

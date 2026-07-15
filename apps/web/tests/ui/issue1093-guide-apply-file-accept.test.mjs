@@ -16,7 +16,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const source = readFileSync(resolve(__dirname, '../../app/guide/apply/page.tsx'), 'utf8');
+const source = readFileSync(resolve(__dirname, '../../app/(non-locale)/guide/apply/page.tsx'), 'utf8');
 
 describe('guide/apply 證件與照片步驟（GH-1093 + 照片真上傳）', () => {
   test('所有 file input 都需綁 image MIME accept（GH-1093 本義）', () => {

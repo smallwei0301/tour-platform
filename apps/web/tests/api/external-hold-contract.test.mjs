@@ -91,7 +91,7 @@ test('GET schedules route：帶出 externalHoldCount / externalHolds 供後台�
 });
 
 test('guide schedules page：提供登記/釋放外部佔位的操作', async () => {
-  const src = await readWeb('app/guide/schedules/page.tsx');
+  const src = await readWeb('app/(non-locale)/guide/schedules/page.tsx');
   assert.match(src, /addExternalHold/);
   assert.match(src, /releaseExternalHold/);
   assert.match(src, /\/external-holds/);

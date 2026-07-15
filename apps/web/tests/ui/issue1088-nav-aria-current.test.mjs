@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const adminShell = readFileSync(resolve(__dirname, '../../src/components/admin/AdminShell.tsx'), 'utf8');
-const guideLayout = readFileSync(resolve(__dirname, '../../app/guide/layout.tsx'), 'utf8');
+const guideLayout = readFileSync(resolve(__dirname, '../../app/(non-locale)/guide/layout.tsx'), 'utf8');
 
 describe('GH-1088 — nav aria-current on active state', () => {
   test('AdminShell nav Link has aria-current', () => {

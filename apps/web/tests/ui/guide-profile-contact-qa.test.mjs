@@ -25,7 +25,7 @@ const guidePageSrc = read('../../app/[locale]/guides/[slug]/page.tsx');
 const componentSrc = read('../../src/components/guide/GuideContactQASection.tsx');
 const guideQaRouteSrc = read('../../app/api/guide/qa/route.ts');
 const guideQaIdRouteSrc = read('../../app/api/guide/qa/[id]/route.ts');
-const dashboardSrc = read('../../app/guide/dashboard/page.tsx');
+const dashboardSrc = read('../../app/(non-locale)/guide/dashboard/page.tsx');
 const activityPageSrc = read('../../app/[locale]/activities/[region]/[slug]/page.tsx');
 
 test('導遊頁不再有死的「傳訊息給導遊」按鈕', () => {

@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
 const bookingPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/booking/[activityId]/page.tsx'),
+  path.resolve(ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx'),
   'utf-8',
 );
 const resolverSrc = readFileSync(

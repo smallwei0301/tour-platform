@@ -14,7 +14,7 @@ function src(path) {
 
 describe('settlement rules alignment', () => {
   it('KPI settings page defaults guide payout rate to 85%', () => {
-    const page = src('app/admin/settings/kpi/page.tsx');
+    const page = src('app/(non-locale)/admin/settings/kpi/page.tsx');
     assert.match(page, /guidePayoutRate \?\? 0\.85/, 'admin KPI guidePayoutRate fallback must be 0.85');
     assert.doesNotMatch(page, /guidePayoutRate \?\? 0\.65/, 'admin KPI page must not fallback to stale 0.65');
   });
@@ -29,8 +29,8 @@ describe('settlement rules alignment', () => {
   });
 
   it('guide-facing copy states the full payout policy', () => {
-    const applyPage = src('app/guide/apply/page.tsx');
-    const dashboard = src('app/guide/dashboard/page.tsx');
+    const applyPage = src('app/(non-locale)/guide/apply/page.tsx');
+    const dashboard = src('app/(non-locale)/guide/dashboard/page.tsx');
     for (const text of [applyPage, dashboard]) {
       assert.match(text, /平台抽成\s*15%/);
       assert.match(text, /導遊實拿\s*85%/);
@@ -42,7 +42,7 @@ describe('settlement rules alignment', () => {
   });
 
   it('admin KPI settings explains payment fee is platform internal cost only', () => {
-    const page = src('app/admin/settings/kpi/page.tsx');
+    const page = src('app/(non-locale)/admin/settings/kpi/page.tsx');
     assert.match(page, /paymentFeeRate[^\n]*平台內部損益|平台內部損益[^\n]*paymentFeeRate/);
     assert.match(page, /不影響導遊\s*85%\s*實拿/);
   });

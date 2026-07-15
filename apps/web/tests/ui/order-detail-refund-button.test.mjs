@@ -23,7 +23,7 @@ async function readSource(relPath) {
 // #multilingual: 面向使用者的文案（按鈕標籤、成功訊息）已移到
 // messages/zh-Hant.json 的 orderDetail namespace。文案內容契約改讀（page + 繁中 catalog）。
 async function readPageAndCopy() {
-  const page = await readSource('app/me/orders/[orderId]/page.tsx');
+  const page = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   const zh = await readSource('messages/zh-Hant.json');
   return page + '\n' + zh;
 }
@@ -31,13 +31,13 @@ async function readPageAndCopy() {
 // ─── AC#1: departure-aware button visibility ──────────────────────────────────
 
 test('OrderDetail type includes scheduleStartAt for departure-date check', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /scheduleStartAt\?:\s*string\s*\|\s*null/,
     'OrderDetail type must declare scheduleStartAt field');
 });
 
 test('canRefund is false when departure has already passed', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   // Must guard departure: either canRefund directly references scheduleStartAt,
   // or an intermediate variable (e.g. departureNotPassed) references it and
   // is then used in canRefund
@@ -49,7 +49,7 @@ test('canRefund is false when departure has already passed', async () => {
 });
 
 test('canRefund is true for paid/confirmed orders with future departure', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   // Must check paid or confirmed status
   assert.match(src, /\[['"]paid['"],\s*['"]confirmed['"]\]\.includes\(status\)/,
     "canRefund must check status === 'paid' or 'confirmed'");
@@ -58,7 +58,7 @@ test('canRefund is true for paid/confirmed orders with future departure', async 
 // ─── AC#2: form has reason + note fields, shows correct success copy ──────────
 
 test('refund form has a reason select/input AND a note textarea', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   assert.match(src, /refundNote/,
     'page must have refundNote state for the note field');
   assert.match(src, /refundReason/,
@@ -79,7 +79,7 @@ test('success message is auto-execute aware (not customer-service specific)', as
 // ─── AC#3: terminal states show status copy, hide button ─────────────────────
 
 test('refund_pending status is treated as terminal (button hidden)', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   // refund_pending should be in terminal set OR canRefund guards it via status check
   assert.match(
     src,
@@ -97,7 +97,7 @@ test('申請取消/退款 is the button label', async () => {
 // ─── AC#4: POST sends a stable requestId for idempotency ─────────────────────
 
 test('refund POST uses a stable per-session requestId (stored in state)', async () => {
-  const src = await readSource('app/me/orders/[orderId]/page.tsx');
+  const src = await readSource('app/(non-locale)/me/orders/[orderId]/page.tsx');
   // requestId must be stored in useState, not generated fresh on every submit
   assert.match(src, /useState\s*\(\s*['"]{0,1}\s*['"]{0,1}\s*\)/,
     'page should use useState for requestId or another stable id');

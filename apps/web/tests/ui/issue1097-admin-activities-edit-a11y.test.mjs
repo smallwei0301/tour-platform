@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(
-  resolve(__dirname, '../../app/admin/activities/[id]/edit/page.tsx'),
+  resolve(__dirname, '../../app/(non-locale)/admin/activities/[id]/edit/page.tsx'),
   'utf8'
 );
 // #1615 拆檔：場次管理（含容量 inline 編輯）移至 ScheduleSection 元件（斷言意圖不變）
