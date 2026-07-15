@@ -1,5 +1,5 @@
 /**
- * /world 3D 滾動首頁的場景註冊表（scroll-world 的 sections config 等價物）。
+ * `/`（祕島世界 3D 滾動首頁）的場景註冊表（scroll-world 的 sections config 等價物）。
  *
  * 每景欄位：
  * - id：場景鍵，同時是 i18n `home3d.scenes.<id>` 的 key（eyebrow/title/body/tags/cta）。
@@ -25,11 +25,11 @@ export const SCROLL_WORLD_PRELUDE = {
 };
 
 export const SCROLL_WORLD_SCENES = [
-  { id: 'intro', still: '/images/world/intro.webp', clip: '/videos/world/intro.mp4', accent: '#C2542E', href: '/activities' },
+  { id: 'intro', still: '/images/world/intro.webp', clip: '/videos/world/intro.mp4', accent: '#C2542E', href: '/home' },
   { id: 'mountain', still: '/images/world/mountain.webp', clip: '/videos/world/mountain.mp4', accent: '#5E7A4F', href: '/theme/mountain-wilderness' },
   { id: 'river', still: '/images/world/river.webp', clip: '/videos/world/river.mp4', accent: '#A8B09E', href: '/theme/river-trekking' },
   { id: 'cave', still: '/images/world/cave.webp', clip: '/videos/world/cave.mp4', accent: '#B08D3E', href: '/theme/cave-exploration' },
   { id: 'culture', still: '/images/world/culture.webp', clip: '/videos/world/culture.mp4', accent: '#C2542E', href: '/theme/culture-history' },
   { id: 'ecology', still: '/images/world/ecology.webp', clip: '/videos/world/ecology.mp4', accent: '#5E7A4F', href: '/theme/ecology' },
-  { id: 'finale', still: '/images/world/finale.webp', clip: '/videos/world/finale.mp4', accent: '#B08D3E', href: '/activities' },
+  { id: 'finale', still: '/images/world/finale.webp', clip: '/videos/world/finale.mp4', accent: '#B08D3E', href: '/home' },
 ];

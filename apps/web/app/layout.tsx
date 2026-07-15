@@ -85,12 +85,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             還原時機）就把首頁的 scrollRestoration 設為 manual 並回到頂端，避免重新
             整理時自動捲回原處而觸發 scroll 事件、使導覽列載入瞬間誤判為已捲動。
             僅作用於首頁路徑，不影響其他頁的捲動還原。
-            /theme/world（3D 滾動首頁）同樣納入：滾動敘事頁重新整理若還原到頁中，
-            第一景影片會從半路開始，體驗破碎——一律從頂端重新開場。 */}
+            #1713 起 `/` 即 3D 滾動敘事首頁：重新整理若還原到頁中，第一景影片
+            會從半路開始，體驗破碎——一律從頂端重新開場（原首頁規則同樣適用）。 */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{var p=location.pathname;if(p==='/'||p==='/en'||p==='/ja'||p==='/ko'||/^(?:\\/(?:en|ja|ko))?\\/theme\\/world\\/?$/.test(p)){if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}}catch(e){}})();",
+              "(function(){try{var p=location.pathname;if(p==='/'||p==='/en'||p==='/ja'||p==='/ko'){if('scrollRestoration' in history){history.scrollRestoration='manual';}window.scrollTo(0,0);}}catch(e){}})();",
           }}
         />
         {/* Preconnect to image CDNs used by CSS background images */}

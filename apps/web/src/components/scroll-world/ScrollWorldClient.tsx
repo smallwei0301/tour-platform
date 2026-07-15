@@ -77,7 +77,7 @@ const PRELUDE_SHIFT = (() => {
 })();
 
 /**
- * /world 的滾動引擎（scroll-world scrub 引擎的全幅淡化版）。
+ * `/`（祕島世界）的滾動引擎（scroll-world scrub 引擎的全幅淡化版）。
  *
  * 滾動進度（sticky 舞台在 tall 容器內的位置）→ cameraZ()（虛擬時間軸，
  * 只前進不回拉）。場景為全幅 billboard：以對稱交叉淡化轉場（sceneOpacity，

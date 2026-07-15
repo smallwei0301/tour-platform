@@ -134,8 +134,32 @@
 - 實跑：拉近末端 translate(-16.2%, -5.7%) scale(1.86)、影片壓 0 幀等待、溶接畫面燈籠
   ↔涼亭同位重疊（`pre-fade.png`）；測試 26/26、typecheck、lint、完整回歸 PASS。
 
+## 階段 8（2026-07-15）— 世界頁升格正式首頁 `/`、經典首頁搬 /home
+- 使用者拍板：3D 世界頁成為新首頁；首（探索所有旅程）尾（預約你的旅程）CTA 與
+  Navbar 品牌 logo 連往舊版首頁。
+- **路由**：`app/[locale]/page.tsx` ＝ 世界頁（原品牌 title/desc 沿用保 SEO 連續、
+  Organization/WebSite JSON-LD 移入、preload 序章島圖）；經典首頁 git mv 至
+  `app/[locale]/home/page.tsx`（canonical /home、保留 FAQPage JSON-LD）；刪
+  `theme/world`。redirects：/world、/theme/world（含 locale 變體）→ `/`。
+- **裸 /home 治理缺口（已知、已記錄）**：middleware matcher 未涵蓋 /home，以
+  next.config beforeFiles rewrite `/home → /zh-Hant/home` 導入；`/en/home` 等前綴
+  變體在 matcher `'/en/:path*'` 之下（kill-switch 有管）。裸 /home 不受 soft-launch
+  管制＋不做 locale cookie 偵測——待日後經授權補進 middleware（P0-OVERRIDE）。
+- **連結**：scenes intro/finale href → /home；Navbar 品牌 logo href / → /home
+  （透明邏輯以 DOM `.lp-hero`/`body:has(.lp-root)` 驅動、與路徑無關，不受影響）。
+- **Revalidate 跟搬**：`activityRevalidationPaths` 與 homepage-featured PUT 的
+  `['/']` → `['/home']`（新 `/` 純靜態無行程資料）；issue1440 測試同步更新。
+- **偵察確認低風險**：凍結 e2e（t0/funnel/deeplink/booking-flow）無 goto('/')／
+  LP 元素依賴；sitemap `/` 保留 priority 1、補 /home（0.8）、移除 /theme/world。
+- 驗證：路由矩陣（/=sw-root、/home=lp-root、/world 與 /theme/world 307→/、/en、
+  /en/home 200）；完整回歸 PASS（finale CTA=/home）；navbar logo 與 intro CTA
+  =/home；/home 截圖正常（`home-classic.png`）。測試 35/35（含 issue1440＋localize
+  revalidate）、typecheck、lint 綠燈。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
+- Follow-up（低優先）：/home 與 / 的 title 目前相同（SEO 可再分化）；裸 /home 補進
+  middleware matcher 需 P0-OVERRIDE。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
 
 ## 絕不重做（Do-NOT-redo）
