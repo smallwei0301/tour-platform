@@ -17,7 +17,7 @@
 - 2026-07-15 PR #1711 檢核：未碰凍結區；`git merge-tree origin/main origin/feat/seo-full-optimization` exit 0（無衝突，GitHub `dirty` 為過期快取）；**PR head `2243c68` 無 GitHub Actions CI 紀錄（僅 Vercel）→ merge blocker**。
 
 ## 下一步
-- 本分支（claude/seo-audit-advisor-skill-9wrqpb）開 PR、CI 綠燈後 merge S2–S5。
+- **PR #1716**（本分支 → main，S2–S5＋skill＋報告）：CI 綠燈後 squash merge（使用者已指示 pr+ci+merge）。
 - 機會項（S6）：GSC 串接、blog 內容擴充、Rich Results 抽驗。
 
 ## S1b＋S2–S5 完成紀錄（2026-07-15 20:55 Asia/Taipei）
