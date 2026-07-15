@@ -58,6 +58,11 @@ export async function generateMetadata(
       images: ['/images/og-default.png'],
     },
     robots: { index: visible, follow: visible },
+    // issue1711 S6：Google Search Console 站點驗證（URL-prefix property 用 meta tag 驗證）。
+    // 未設 env 時輸出 undefined → Next 不渲染該 meta，零副作用。
+    ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+      ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+      : {}),
   };
 
   return metadata;
