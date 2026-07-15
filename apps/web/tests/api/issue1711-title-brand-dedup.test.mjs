@@ -8,15 +8,18 @@ import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
 
 const LOCALES = ['zh-Hant', 'en'];
-// 這些 key 會流入 Metadata.title（經 title.template 加品牌），不得自帶品牌
+// 這些 key 會流入 Metadata.title（經 title.template 加品牌），不得自帶「品牌後綴」。
+// 只擋後綴樣式（「… | Midao …」結尾）：品牌出現在主題位置（如「Midao World | …」）
+// 是合法命名，不會被 template 疊成兩次後綴。
 const TITLE_KEY_NAMES = new Set(['metaTitle', 'metaTitleSuffix']);
+const BRAND_SUFFIX_RE = /\|\s*Midao[^|]*$/;
 
 function collectViolations(obj, path = '') {
   const out = [];
   for (const [k, v] of Object.entries(obj)) {
     const p = path ? `${path}.${k}` : k;
     if (typeof v === 'string') {
-      if (TITLE_KEY_NAMES.has(k) && v.includes('Midao')) out.push(`${p} = ${v}`);
+      if (TITLE_KEY_NAMES.has(k) && BRAND_SUFFIX_RE.test(v)) out.push(`${p} = ${v}`);
     } else if (v && typeof v === 'object') {
       out.push(...collectViolations(v, p));
     }

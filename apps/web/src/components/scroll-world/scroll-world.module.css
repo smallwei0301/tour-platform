@@ -1,0 +1,286 @@
+/* `/`（祕島世界 3D 滾動首頁；scroll-world 概念實作）。
+   色彩取 BRAND_BOOK 八色系統；字體沿用全站 CSS 變數。 */
+
+.root {
+  color: #f4ecd8;
+  font-family: var(--tp-serif, serif);
+}
+
+/* 滾動長度容器：實際高度由元件依場景數 inline 指定 */
+.tall {
+  position: relative;
+}
+
+/* 固定舞台（場景以全幅交叉淡化轉場，不再用 3D 透視） */
+.stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 108%, rgba(176, 141, 62, 0.14), transparent 60%),
+    linear-gradient(180deg, #131f16 0%, #1a2e1f 46%, #2a2422 100%);
+}
+
+/* 場景主色暈染（JS 依當前場景 accent 換色） */
+.tint {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  transition: background-color 900ms ease;
+  pointer-events: none;
+}
+
+/* 開場序章圖層：位於場景之上、暗角之下；scale 恆 ≥1（origin 在圖內）不露邊框 */
+.prelude {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  background: radial-gradient(85% 75% at 50% 46%, transparent 58%, rgba(10, 14, 11, 0.5) 100%);
+  pointer-events: none;
+}
+
+.world {
+  position: absolute;
+  inset: 0;
+}
+
+/* 全幅場景：淡化＋恆 ≥1 的縮放漂移（transform 由引擎逐幀驅動）。
+   overflow hidden＋cover 確保縮放時邊緣永遠在視窗外，不露邊框。 */
+.scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
+/* 場景 billboard：AI 微景觀主圖／環境影片，鋪滿舞台，深色底與 stage 融為一體。
+   相機沿 Z 飛向它時放大掠過，即「飛入場景」。 */
+.still,
+.clip {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* 影片疊在 still 之上（still 當 poster），有 clip 才出現 */
+.clip {
+  z-index: 1;
+}
+
+/* ── 文案面板（scroll-world 的 pinned copy） ── */
+.copy {
+  position: absolute;
+  z-index: 5;
+  left: clamp(24px, 8vw, 120px);
+  bottom: 13vh;
+  max-width: 30rem;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 文案可讀性保護：AI 場景圖亮暗不一（尤其結尾全幅日出），左下角壓一層柔和
+   暗幕 ＋ 文字陰影，確保米色字在任何一景上都清楚。 */
+.copy::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -8vw;
+  right: -12%;
+  top: -8%;
+  bottom: -12vh;
+  background: radial-gradient(120% 100% at 12% 90%, rgba(9, 13, 10, 0.72), rgba(9, 13, 10, 0.28) 46%, transparent 72%);
+  pointer-events: none;
+}
+
+.copy :is(.copyEyebrow, .copyTitle, .copyBody) {
+  text-shadow: 0 1px 18px rgba(8, 12, 9, 0.55), 0 1px 3px rgba(8, 12, 9, 0.6);
+}
+
+.copyEyebrow {
+  display: block;
+  font-family: var(--font-inter, sans-serif);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.copyTitle {
+  margin: 0 0 14px;
+  font-size: clamp(30px, 4.6vw, 52px);
+  font-weight: 900;
+  line-height: 1.22;
+  color: #f4ecd8;
+  text-wrap: balance;
+}
+
+.copyBody {
+  margin: 0 0 18px;
+  font-family: var(--font-noto-sans-tc, sans-serif);
+  font-size: 15.5px;
+  line-height: 1.85;
+  color: rgba(244, 236, 216, 0.84);
+  max-width: 26rem;
+}
+
+.copyTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.copyTag {
+  font-family: var(--font-noto-sans-tc, sans-serif);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  color: rgba(244, 236, 216, 0.9);
+  border: 1px solid rgba(244, 236, 216, 0.35);
+  border-radius: 999px;
+  padding: 4px 12px;
+}
+
+.copyCta {
+  display: inline-block;
+  font-family: var(--font-noto-sans-tc, sans-serif);
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #f4ecd8;
+  border-radius: 999px;
+  padding: 11px 22px;
+  transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.copyCta:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+
+/* ── 進度導軌（scroll-world 的 route bar） ── */
+.rail {
+  position: absolute;
+  z-index: 6;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.railDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1px solid rgba(235, 225, 199, 0.55);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
+}
+
+.railDot:hover {
+  border-color: #ebe1c7;
+}
+
+.railDotActive {
+  background: #b08d3e;
+  border-color: #b08d3e;
+  transform: scale(1.3);
+}
+
+/* ── 滾動提示 ── */
+.hint {
+  position: absolute;
+  z-index: 6;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-noto-sans-tc, sans-serif);
+  font-size: 12.5px;
+  letter-spacing: 0.28em;
+  color: rgba(235, 225, 199, 0.78);
+  transition: opacity 0.6s ease;
+  pointer-events: none;
+}
+
+.hintChevron {
+  animation: swBob 1.8s ease-in-out infinite;
+}
+
+@keyframes swBob {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50% { transform: translateY(6px); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hintChevron { animation: none; }
+}
+
+/* ── 平面 fallback（prefers-reduced-motion） ── */
+.flatScene {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 90% at 50% 108%, rgba(176, 141, 62, 0.14), transparent 60%),
+    linear-gradient(180deg, #131f16 0%, #1a2e1f 46%, #2a2422 100%);
+}
+
+.flatArt {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+}
+
+.flatArt .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+.flatCopy {
+  position: relative;
+  z-index: 2;
+  opacity: 1;
+  pointer-events: auto;
+  padding: 0 24px 12vh clamp(24px, 8vw, 120px);
+  max-width: 34rem;
+}
+
+@media (max-width: 640px) {
+  .copy {
+    left: 20px;
+    right: 76px;
+    bottom: 9vh;
+  }
+  .copyBody { font-size: 14.5px; }
+  .rail { right: 10px; gap: 12px; }
+  .railDot { width: 9px; height: 9px; }
+  .flatCopy { padding-left: 20px; padding-right: 20px; }
+}

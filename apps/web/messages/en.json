@@ -276,6 +276,63 @@
       }
     }
   },
+  "home3d": {
+    "metaTitle": "Midao World | A 3D Scroll Journey Through Taiwan",
+    "metaDescription": "Scroll to take flight: glide through mountain ridges, wild streams, caves, old streets and forests — and meet the local guides who know the way.",
+    "hint": "Scroll into the island",
+    "progressLabel": "Scene navigation",
+    "scenes": {
+      "intro": {
+        "eyebrow": "MIDAO WORLD",
+        "title": "Deep in the island, storytellers lead the way.",
+        "body": "Scroll on and let local guides fly you over ridgelines, rivers, caves and old streets — seven scenes, one island.",
+        "tags": ["Local guides", "Deep routes", "Real encounters"],
+        "cta": "Explore all tours"
+      },
+      "mountain": {
+        "eyebrow": "Themes · Mountains",
+        "title": "Walk the ridgeline above the clouds.",
+        "body": "Go with someone who knows the mountain — off the crowded trail, never off the safe one.",
+        "tags": ["Peaks & foothills", "Certified leads", "Small groups"],
+        "cta": "See mountain tours"
+      },
+      "river": {
+        "eyebrow": "Themes · Wild Streams",
+        "title": "Trace the stream to its source.",
+        "body": "Plunge pools, waterfalls and gorge terrain — coach-led, fully geared, and home safe.",
+        "tags": ["River trekking", "Full gear", "Coach-led"],
+        "cta": "See river tours"
+      },
+      "cave": {
+        "eyebrow": "Themes · Caves",
+        "title": "Slip into the island's heart.",
+        "body": "When the headlamp clicks on, Chaishan's coral caves begin to speak. Enter the dark safely with a caving guide.",
+        "tags": ["Chaishan caving", "Headlamp gear", "Verified guides"],
+        "cta": "See cave tours"
+      },
+      "culture": {
+        "eyebrow": "Themes · Culture",
+        "title": "The old street keeps a lantern lit for you.",
+        "body": "Tea houses of Dadaocheng, temple courtyards and incense — hear the past from locals who can truly tell it.",
+        "tags": ["Dadaocheng", "Temple stories", "Walking tours"],
+        "cta": "See culture tours"
+      },
+      "ecology": {
+        "eyebrow": "Themes · Ecology",
+        "title": "In the forest, learn to be quiet.",
+        "body": "Fireflies, ferns and creatures of the night — meet the island's other residents without disturbing them.",
+        "tags": ["Night walks", "Low impact", "Naturalist guides"],
+        "cta": "See ecology tours"
+      },
+      "finale": {
+        "eyebrow": "TAIWAN. LOCAL GUIDE. REAL STORIES.",
+        "title": "The sun is up. Time to go.",
+        "body": "Verified local guides, transparent pricing and secure payment — the next story is yours to walk into.",
+        "tags": ["Verified guides", "Secure payment", "Fair pricing"],
+        "cta": "Book your journey"
+      }
+    }
+  },
   "activities": {
     "breadcrumbHome": "Home",
     "breadcrumbActivities": "Explore Routes",
