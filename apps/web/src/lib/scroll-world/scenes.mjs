@@ -13,12 +13,14 @@
  */
 /**
  * 開場序章（cold open）：載入先看到島嶼全景靜圖，滾動時向燈籠（origin）
- * 拉近（至 zoom 倍）並淡出，溶接到首景影片的第 0 幀（同為島嶼全景＋
- * 燈籠亮光，構圖近似 → 接點自然）。時長見 camera.mjs PRELUDE_UNITS。
+ * 拉近（至 zoom 倍）並平移，讓燈籠落在 target——即首景影片第 0 幀裡
+ * 發光涼亭的位置——再淡出溶接（兩畫面同一主體、同一亮點，接點自然）。
+ * 時長見 camera.mjs PRELUDE_UNITS。
  */
 export const SCROLL_WORLD_PRELUDE = {
   still: '/images/world/prelude.webp',
-  origin: '45% 75%', // 起點燈籠在圖上的位置＝拉近焦點
+  origin: '45% 75%', // 起點燈籠在島圖上的位置＝拉近焦點
+  target: '28% 69%', // 首景影片第 0 幀涼亭的位置＝燈籠拉近後要落在的螢幕座標
   zoom: 1.9,
 };
 

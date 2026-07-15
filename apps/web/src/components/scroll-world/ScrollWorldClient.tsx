@@ -68,6 +68,14 @@ type Props = {
 /** 每個「節奏單位」（linger＋travel）分配的滾動幅度（vh）。 */
 const SCROLL_PER_SCENE_VH = 150;
 
+/** 序章平移量（元素寬高 %）：讓 origin（燈籠）在拉近結束時落在 target（涼亭）。 */
+const PRELUDE_SHIFT = (() => {
+  const pct = (value: string) => value.split(' ').map((v) => parseFloat(v));
+  const [ox, oy] = pct(SCROLL_WORLD_PRELUDE.origin);
+  const [tx, ty] = pct(SCROLL_WORLD_PRELUDE.target);
+  return { x: tx - ox, y: ty - oy };
+})();
+
 /**
  * /world 的滾動引擎（scroll-world scrub 引擎的全幅淡化版）。
  *
@@ -141,8 +149,8 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
           copyEl.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
         }
       }
-      // 開場序章：島嶼全景向燈籠拉近（smoothstep 緩動）、末段淡出，
-      // 溶接到底下首景影片的第 0 幀（構圖近似 → 接點自然）。
+      // 開場序章：島嶼全景向燈籠拉近（smoothstep 緩動）＋平移，讓燈籠
+      // 落在首景影片第 0 幀涼亭的位置，末段淡出溶接（同主體同亮點接手）。
       const prelude = preludeRef.current;
       if (prelude) {
         const pp = preludeProgress(progress, n);
@@ -151,7 +159,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
         } else {
           const eased = pp * pp * (3 - 2 * pp);
           prelude.style.visibility = 'visible';
-          prelude.style.transform = `scale(${(1 + (SCROLL_WORLD_PRELUDE.zoom - 1) * eased).toFixed(4)})`;
+          prelude.style.transform = `translate(${(PRELUDE_SHIFT.x * eased).toFixed(2)}%, ${(PRELUDE_SHIFT.y * eased).toFixed(2)}%) scale(${(1 + (SCROLL_WORLD_PRELUDE.zoom - 1) * eased).toFixed(4)})`;
           prelude.style.opacity = (pp < 0.55 ? 1 : 1 - (pp - 0.55) / 0.45).toFixed(3);
         }
       }

@@ -123,6 +123,17 @@
   仍 0s → 序章隱藏後影片才前進（2.07s）；截圖 `pre-0/mid/fade.png`。測試 25/25（新增
   preludeProgress＋首景章節位移＋序章設定契約）、typecheck、lint、完整回歸 PASS。
 
+## 影片階段 7（2026-07-15）— intro 換新影片（涼亭特寫開場）＋序章 match-dissolve
+- 使用者換上新版首支影片（30dd6289，10s）：第 0 幀即「發光涼亭特寫」（約 28% 69%），
+  並要求序章拉近終點時島圖燈籠落在該涼亭位置。
+- 管線同前：delogo → 全長 scrub 編碼（-g 8、1152w 雙格式）→ poster＝首幀覆寫 intro.webp。
+- 序章升級為 **match-dissolve**：`SCROLL_WORLD_PRELUDE` 加 `target: '28% 69%'`；client
+  以 `translate(eased·(target−origin)) scale(1→1.9)` 讓燈籠沿途滑向涼亭座標後淡出——
+  兩畫面同主體同亮點重疊接手。幾何上邊界位移與縮放擴張同為 eased 線性 → e=1 檢查即
+  保證全程不露邊框（已寫成 scenes 契約測試）。
+- 實跑：拉近末端 translate(-16.2%, -5.7%) scale(1.86)、影片壓 0 幀等待、溶接畫面燈籠
+  ↔涼亭同位重疊（`pre-fade.png`）；測試 26/26、typecheck、lint、完整回歸 PASS。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。

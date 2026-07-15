@@ -45,11 +45,26 @@ test('每景 CTA 目的地都是存在的 [locale] 頁面', () => {
   }
 });
 
-test('序章設定：still 檔存在、origin 為合法百分比座標、zoom > 1', () => {
+test('序章設定：still 檔存在、origin/target 為合法百分比座標、zoom > 1', () => {
   const stillPath = path.join(webRoot, 'public', SCROLL_WORLD_PRELUDE.still.replace(/^\//, ''));
   assert.ok(fs.existsSync(stillPath), `序章圖 ${SCROLL_WORLD_PRELUDE.still} 找不到 ${stillPath}`);
   assert.match(SCROLL_WORLD_PRELUDE.origin, /^\d{1,3}% \d{1,3}%$/);
+  assert.match(SCROLL_WORLD_PRELUDE.target, /^\d{1,3}% \d{1,3}%$/);
   assert.ok(SCROLL_WORLD_PRELUDE.zoom > 1 && SCROLL_WORLD_PRELUDE.zoom <= 3);
+});
+
+test('序章平移不露邊框：拉近＋平移全程畫面覆蓋視窗', () => {
+  const pct = (s) => s.split(' ').map((v) => parseFloat(v) / 100);
+  const [ox, oy] = pct(SCROLL_WORLD_PRELUDE.origin);
+  const [tx, ty] = pct(SCROLL_WORLD_PRELUDE.target);
+  const dx = tx - ox;
+  const dy = ty - oy;
+  const grow = SCROLL_WORLD_PRELUDE.zoom - 1;
+  // 任一進度 e ∈ (0,1]：邊界位移與縮放擴張同為 e 的線性函數，檢查 e=1 即可
+  assert.ok(ox * grow + dx >= 0, '左邊界外露');
+  assert.ok((1 - ox) * grow - dx >= 0, '右邊界外露');
+  assert.ok(oy * grow + dy >= 0, '上邊界外露');
+  assert.ok((1 - oy) * grow - dy >= 0, '下邊界外露');
 });
 
 test('每景 still 圖檔實際存在於 public/', () => {
