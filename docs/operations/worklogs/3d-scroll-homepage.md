@@ -48,6 +48,22 @@
 - 引擎：`SceneMedia` 影片改雙 `<source>`（webm→mp4）；update 迴圈依場景可見度 play/pause（省 CPU＋避開部分瀏覽器 autoplay 未觸發）。**踩坑**：Playwright 內建 Chromium 不含 H.264 專利解碼器 → 純 mp4 在測試環境 `no supported sources`；補 VP9/webm 才驗得到（真實 Chrome/Safari 兩者皆可）。
 - 實跑：intro 於頁頂自動播放（readyState 4、畫面動態）；滾到底時 finale 播放、intro 已暫停（可見度控制正確）；截圖 `sw-intro-video.png`、`sw-finale-video.png`。測試 17/17、typecheck、lint 綠燈。
 
+## 影片階段 2（2026-07-15）— 前三景改用使用者 Gemini/Veo 影片
+- 使用者另以 Gemini 生成三支 10s 黏土風格飛行影片，指定用於前三景：
+  intro（破曉溪谷飛行）、mountain（稜線嚮導＋旅人）、river（瀑布溯溪）。intro 的
+  Veo 版影片與島嶼靜圖被此新影片取代。
+- **可見浮水印處理**：三支右下角有 Gemini 星芒（原圖約 x1130 y556 76×84），以
+  ffmpeg `delogo` 就地內插修補移除（保留完整構圖，殘留極淡柔化痕、billboard＋暗角下
+  不可見）。**僅移除可見標記**；未觸碰 Google 隱形 SynthID 溯源浮水印（無法且不應
+  去除），Google 方案條款可能要求保留標記，使用者自行確認。
+- 後製：delogo → 取前 6s → ping-pong 12s 無縫循環 → 降 1152 寬＋加壓（mp4 crf29／
+  webm crf37）→ 各 1.3–1.6MB；poster 靜圖＝正向首幀（poster 與影片起點一致、無跳接）
+  → 覆寫對應 webp。放 `public/videos/world/{intro,mountain,river}.{mp4,webm}`。
+- scenes.mjs：mountain／river 補 clip；intro clip 沿用（檔案已換內容）。
+- 實跑：三景滾動點各自影片播放（可見度控制正確，rs 全 4）、浮水印區乾淨；測試 17/17、
+  typecheck、lint 綠燈；截圖 `g-intro/g-mountain/g-river.png`。
+- 現況：7 景中 intro／mountain／river／finale 為影片，cave／culture／ecology 為 AI 靜圖。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。

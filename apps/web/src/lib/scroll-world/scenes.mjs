@@ -13,8 +13,8 @@
  */
 export const SCROLL_WORLD_SCENES = [
   { id: 'intro', still: '/images/world/intro.webp', clip: '/videos/world/intro.mp4', accent: '#C2542E', href: '/activities' },
-  { id: 'mountain', still: '/images/world/mountain.webp', clip: null, accent: '#5E7A4F', href: '/theme/mountain-wilderness' },
-  { id: 'river', still: '/images/world/river.webp', clip: null, accent: '#A8B09E', href: '/theme/river-trekking' },
+  { id: 'mountain', still: '/images/world/mountain.webp', clip: '/videos/world/mountain.mp4', accent: '#5E7A4F', href: '/theme/mountain-wilderness' },
+  { id: 'river', still: '/images/world/river.webp', clip: '/videos/world/river.mp4', accent: '#A8B09E', href: '/theme/river-trekking' },
   { id: 'cave', still: '/images/world/cave.webp', clip: null, accent: '#B08D3E', href: '/theme/cave-exploration' },
   { id: 'culture', still: '/images/world/culture.webp', clip: null, accent: '#C2542E', href: '/theme/culture-history' },
   { id: 'ecology', still: '/images/world/ecology.webp', clip: null, accent: '#5E7A4F', href: '/theme/ecology' },
