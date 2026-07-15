@@ -40,15 +40,17 @@ function SceneMedia({ scene }: { scene: SceneView }) {
       {scene.clip && (
         <video
           className={styles.clip}
-          src={scene.clip}
           poster={scene.still}
           muted
           loop
-          autoPlay
           playsInline
-          preload="metadata"
+          preload="auto"
           aria-hidden="true"
-        />
+        >
+          {/* VP9/WebM 給 Chrome/Firefox/Android，H.264/mp4 給 Safari/iOS */}
+          <source src={scene.clip.replace(/\.mp4$/, '.webm')} type="video/webm" />
+          <source src={scene.clip} type="video/mp4" />
+        </video>
       )}
     </>
   );
@@ -114,6 +116,15 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
           const opacity = sceneOpacity(sceneDistance(z, i));
           sceneEl.style.opacity = opacity.toFixed(3);
           sceneEl.style.visibility = opacity <= 0.001 ? 'hidden' : 'visible';
+          // 影片只在該景可見時播放（省 CPU、避開 headless autoplay 未觸發問題）
+          const video = sceneEl.querySelector('video');
+          if (video) {
+            if (opacity > 0.05) {
+              if (video.paused) video.play().catch(() => {});
+            } else if (!video.paused) {
+              video.pause();
+            }
+          }
         }
         const copyEl = copyRefs.current[i];
         if (copyEl) {
