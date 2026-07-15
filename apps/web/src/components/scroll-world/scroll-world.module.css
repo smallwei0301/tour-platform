@@ -56,23 +56,23 @@
   pointer-events: none;
 }
 
-.layer {
+/* 場景 billboard：AI 微景觀主圖／環境影片，鋪滿舞台，深色底與 stage 融為一體。
+   相機沿 Z 飛向它時放大掠過，即「飛入場景」。 */
+.still,
+.clip {
   position: absolute;
-  inset: -6%;
-  width: 112%;
-  height: 112%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.layerFar {
-  transform: translateZ(-170px);
-}
-
-.layerMid {
-  transform: translateZ(0);
-}
-
-.layerNear {
-  transform: translateZ(190px);
+/* 影片疊在 still 之上（still 當 poster），有 clip 才出現 */
+.clip {
+  z-index: 1;
 }
 
 /* ── 文案面板（scroll-world 的 pinned copy） ── */
@@ -84,6 +84,24 @@
   max-width: 30rem;
   opacity: 0;
   pointer-events: none;
+}
+
+/* 文案可讀性保護：AI 場景圖亮暗不一（尤其結尾全幅日出），左下角壓一層柔和
+   暗幕 ＋ 文字陰影，確保米色字在任何一景上都清楚。 */
+.copy::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -8vw;
+  right: -12%;
+  top: -8%;
+  bottom: -12vh;
+  background: radial-gradient(120% 100% at 12% 90%, rgba(9, 13, 10, 0.72), rgba(9, 13, 10, 0.28) 46%, transparent 72%);
+  pointer-events: none;
+}
+
+.copy :is(.copyEyebrow, .copyTitle, .copyBody) {
+  text-shadow: 0 1px 18px rgba(8, 12, 9, 0.55), 0 1px 3px rgba(8, 12, 9, 0.6);
 }
 
 .copyEyebrow {
@@ -231,12 +249,10 @@
 .flatArt {
   position: absolute;
   inset: 0;
+  opacity: 0.55;
 }
 
-.flatArt .layer { inset: 0; width: 100%; height: 100%; }
-.flatArt .layerFar,
-.flatArt .layerMid,
-.flatArt .layerNear { transform: none; }
+.flatArt .still { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 
 .flatCopy {
   position: relative;

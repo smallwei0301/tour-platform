@@ -26,7 +26,8 @@ test('場景註冊表：id 唯一、欄位齊備', () => {
   assert.equal(new Set(ids).size, ids.length, 'id 不得重複');
   for (const scene of SCROLL_WORLD_SCENES) {
     assert.ok(scene.id && typeof scene.id === 'string');
-    assert.ok(scene.art && typeof scene.art === 'string');
+    assert.ok(scene.still?.startsWith('/'), `${scene.id} 的 still 必須是站內路徑`);
+    assert.ok(scene.clip === null || typeof scene.clip === 'string', `${scene.id} 的 clip 需為 null 或路徑`);
     assert.ok(scene.href?.startsWith('/'), `${scene.id} 的 href 必須是站內路徑`);
   }
 });
@@ -44,10 +45,18 @@ test('每景 CTA 目的地都是存在的 [locale] 頁面', () => {
   }
 });
 
-test('每景 art 鍵在 SceneArt 的 ART 對照表中有實作', () => {
-  const source = fs.readFileSync(path.join(webRoot, 'src/components/scroll-world/SceneArt.tsx'), 'utf8');
+test('每景 still 圖檔實際存在於 public/', () => {
   for (const scene of SCROLL_WORLD_SCENES) {
-    assert.match(source, new RegExp(`\\b${scene.art}: \\w+`), `SceneArt 缺 art 鍵 ${scene.art}`);
+    const stillPath = path.join(webRoot, 'public', scene.still.replace(/^\//, ''));
+    assert.ok(fs.existsSync(stillPath), `${scene.id} 的 still ${scene.still} 找不到 ${stillPath}`);
+  }
+});
+
+test('有 clip 的場景其影片檔存在於 public/', () => {
+  for (const scene of SCROLL_WORLD_SCENES) {
+    if (!scene.clip) continue;
+    const clipPath = path.join(webRoot, 'public', scene.clip.replace(/^\//, ''));
+    assert.ok(fs.existsSync(clipPath), `${scene.id} 的 clip ${scene.clip} 找不到 ${clipPath}`);
   }
 });
 

@@ -1,8 +1,8 @@
 # 3d-scroll-homepage — 第二個 3D 滾動首頁（/world）
-> 最後更新：2026-07-14｜負責 session：Claude（branch `claude/3d-scroll-homepage-58zygx`）
+> 最後更新：2026-07-15｜負責 session：Claude（branch `claude/3d-scroll-homepage-58zygx`）
 
 ## 目標
-參考 [oso95/scroll-world](https://github.com/oso95/scroll-world) 的「滾動＝攝影機自場景外飛入內部、再無縫飛向下一景」概念，為 Midao 製作第二個 3D 滾動首頁。原 repo 依賴 Higgsfield AI 預渲染影片＋scrub 引擎；本環境無法生成影片素材，故改以 **CSS 3D 透視（perspective + translateZ 縱深飛行）＋分層 SVG 微景觀** 實作同等體驗，零新依賴、零外部資產。
+參考 [oso95/scroll-world](https://github.com/oso95/scroll-world) 的「滾動＝攝影機自場景外飛入內部、再無縫飛向下一景」概念，為 Midao 製作第二個 3D 滾動首頁。原 repo 依賴 Higgsfield AI 預渲染影片＋scrub 引擎；改以 **CSS 3D 透視（perspective + translateZ 縱深飛行）** 實作同等體驗，零新依賴。**第二階段（2026-07-15）**：使用者用 Higgsfield（gpt/其他影像模型）自行生成七景黏土微景觀主圖，取代第一版手繪 SVG；場景改吃 AI 主圖 billboard，並預留 `clip` 影片欄位給 intro/finale 兩景的「飛入」影片。
 
 ## 設計決策
 - 正式路由 `/[locale]/theme/world`＋`/world` redirect 別名（不動既有 `/` 首頁；「第二個首頁」＝並存的替代入口）。**為何不是裸 `/world`**：凍結的 `middleware.ts` 只對 matcher＋localized 清單內路徑做 next-intl rewrite 與 soft-launch kill-switch 管制；`/theme/:path*` 已涵蓋，裸 `/world` 需改凍結檔（P0-OVERRIDE）。故落 `/theme/world`（治理完整），並在 next.config（非凍結）加 `/world`→`/theme/world`、`/:locale(en|ja|ko)/world`→`/:locale/theme/world` 的 307 redirect 保留短網址；redirect 先於 middleware 執行，暫停站點時別名也會被正確攔下。
@@ -32,7 +32,21 @@
   - reduced-motion context：7 個 flat sections、無 sticky 舞台（`sw-4-reduced-motion.png`）；390×844 手機視窗文案／CTA／導軌正常（`sw-5-mobile.png`）。
   - 首輪發現並修正：(1) 裸 `/world` 不在凍結 middleware 清單 → 落 `/theme/world`＋redirect 別名（見設計決策）；(2) 本地 dev 缺 `NEXT_PUBLIC_SUPABASE_*` 時全站 Navbar browser client throw 進 error boundary（既有現象，與本頁無關）→ 實測以 stub env 啟動；(3) 縱深霧化曲線調整（下一景於 waypoint 幽靈化 ~0.4，避免搶戲）。
 
+## 第二階段（2026-07-15）— AI 主圖取代 SVG（0 點）
+- 使用者以 Higgsfield 自行生成七景黏土微景觀主圖（1672×941、深色底、風格一致、免去背），本 session 壓成 webp（寬 1600、q82，七張共 552KB）放 `apps/web/public/images/world/*.webp`。
+- 引擎改造：`scenes.mjs` 每景欄位由 `art`（SVG 鍵）改為 `still`（主圖路徑）＋ `clip`（可選飛入影片，暫為 null）；`ScrollWorldClient` 新增 `SceneMedia`（still `<img>` billboard＋有 clip 時疊 muted/loop `<video>`，still 當 poster/reduced-motion fallback）；刪除 `SceneArt.tsx`（SVG 微景觀退役）。CSS 以 `.still/.clip` billboard 取代三層 `.layer`。文案可讀性：`.copy::before` 左下柔和暗幕 ＋ 標題/內文/eyebrow text-shadow（保亮景如結尾日出的字清楚）。
+- GREEN：`.claude/hooks/run-checks.sh …scroll-world-camera…scroll-world-scenes… --typecheck` → 相機數學＋場景契約（still/clip 檔存在性、CTA 路由、i18n 齊備）18/18 pass；`tsc --noEmit`、`next lint` 皆綠。
+- 實跑（Playwright chromium＋dev＋stub env）：`/theme/world` 三個滾動點截圖確認 intro（全島）／cave（洞穴）／finale（日出全幅）AI 主圖正確渲染、cameraZ 0→4202.9→8400、文案切換、導軌跳景、pageerror 0；`sw-0/1/2` 截圖已附使用者。
+- Higgsfield 登入：瀏覽器 OAuth 在雲端 egress proxy 下 reset（連 example.com 都不通），改以「使用者於自身瀏覽器核准、把一次性授權碼貼回 → curl 本地 callback 完成 PKCE 交換」繞過，登入成功。餘額 10 credits（free plan）。
+
+## 影片階段（待使用者最終授權後才生成，會扣點）
+- 決策：intro＋finale 兩景做「飛入」影片（使用者已選 2026-07-15）。
+- 選型：**Veo 3.1 Lite 4s＝4 credits/段**（CP 值最高、無音軌）；共 8 credits，留 2 credits 緩衝供壞鏡頭重生。（seedance 2.0＝22.5/段、mini＝12.5/段，均超預算，排除。）
+- 素材已備妥：起始圖用 `public/images/world/{intro,finale}.webp`；提示詞見對話交付的 `midao-world-video-prompts.md`。
+- 生成後流程：ffmpeg 重編碼（可 scrub／faststart）→ 放 `public/videos/world/`（或同層）→ `scenes.mjs` 對應景填 `clip` → 實跑截圖 → commit。**尚未執行，等使用者說「生成」。**
+
 ## 下一步
+- 等使用者授權生成 intro／finale 兩段影片（8 credits）。
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
 

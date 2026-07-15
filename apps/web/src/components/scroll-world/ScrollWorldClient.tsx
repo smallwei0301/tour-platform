@@ -11,13 +11,13 @@ import {
   sceneDistance,
   sceneOpacity,
 } from '../../lib/scroll-world/camera.mjs';
-import { SceneArt } from './SceneArt';
 import styles from './scroll-world.module.css';
 
 /** 由 server page 以 i18n 解析後傳入的單景資料。 */
 export type SceneView = {
   id: string;
-  art: string;
+  still: string;
+  clip: string | null;
   accent: string;
   href: string;
   eyebrow: string;
@@ -26,6 +26,33 @@ export type SceneView = {
   tags: string[];
   cta: string;
 };
+
+/**
+ * 場景媒體：AI 生成的黏土微景觀主圖當 billboard；相機沿 Z 軸飛向它即
+ * scroll-world 的「飛入場景」。有 clip 時疊一層 muted/loop 影片（環境動態，
+ * 例如雲霧飄動、日出光影），still 當 poster 與 reduced-motion fallback。
+ */
+function SceneMedia({ scene }: { scene: SceneView }) {
+  return (
+    <>
+      {/* eslint-disable-next-line @next/next/no-img-element -- billboard 需鋪滿 3D 平面，不走 next/image 版面 */}
+      <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} />
+      {scene.clip && (
+        <video
+          className={styles.clip}
+          src={scene.clip}
+          poster={scene.still}
+          muted
+          loop
+          autoPlay
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+        />
+      )}
+    </>
+  );
+}
 
 type Props = {
   scenes: SceneView[];
@@ -136,7 +163,8 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
         {scenes.map((scene) => (
           <section key={scene.id} className={styles.flatScene} aria-label={scene.title}>
             <div className={styles.flatArt} aria-hidden="true">
-              <SceneArt art={scene.art} />
+              {/* eslint-disable-next-line @next/next/no-img-element -- 全幅背景圖，非 next/image 版面 */}
+              <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} />
             </div>
             <div className={styles.flatCopy}>
               <SceneCopy scene={scene} headingLevel={scene.id === 'intro' ? 'h1' : 'h2'} />
@@ -167,7 +195,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
                 }}
                 aria-hidden="true"
               >
-                <SceneArt art={scene.art} />
+                <SceneMedia scene={scene} />
               </div>
             ))}
           </div>
