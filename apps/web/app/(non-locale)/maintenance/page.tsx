@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: '服務維護中 | Midao 祕島',
+  title: '服務維護中',
   description: '服務暫停維護中，請稍後再試。',
   robots: { index: false },
 };

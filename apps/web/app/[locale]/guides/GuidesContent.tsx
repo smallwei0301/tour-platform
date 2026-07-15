@@ -281,7 +281,8 @@ export default function GuidesContent({ guides }: GuidesContentProps) {
           {hasFilters ? t('resultAria', { n: filtered.length }) : ''}
         </div>
         <div className="tp-result-head">
-          <h1>{t('resultCount', { n: filtered.length })}</h1>
+          {/* 頁面唯一 H1 由 server page 輸出（SSR 可見）；這裡是動態結果數，降為 h2（issue1711 S3） */}
+          <h2 className="tp-result-title">{t('resultCount', { n: filtered.length })}</h2>
           <select aria-label={t('sortAria')} value={sort} onChange={(e) => handleSort(e.target.value)}>
             <option value="recommended">{t('sortRecommended')}</option>
             <option value="rating-desc">{t('sortRatingDesc')}</option>

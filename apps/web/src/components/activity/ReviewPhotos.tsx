@@ -63,7 +63,7 @@ export function ReviewPhotos({ photos, authorLabel }: { photos: string[]; author
             aria-label={t('zoomPhoto', { author: authorLabel, n: pi + 1 })}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={src} alt={t('photoAlt', { author: authorLabel, n: pi + 1 })} loading="lazy" />
+            <img src={src} alt={t('photoAlt', { author: authorLabel, n: pi + 1 })} loading="lazy" width={400} height={300} />
           </button>
         ))}
       </div>

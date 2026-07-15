@@ -4,6 +4,10 @@ export const SITE_METADATA_BASE = new URL(
   process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'
 );
 
+// issue1711 S6：GSC「HTML 標記」驗證 token（未設定＝不輸出 meta）。
+// env 讀取集中於本檔，避免增加直讀 process.env 的檔案數（architecture-ratchet-guard）。
+export const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+
 export const siteMetadata: Metadata = {
   title: {
     template: '%s | Midao 祕島 — 台灣在地導遊',

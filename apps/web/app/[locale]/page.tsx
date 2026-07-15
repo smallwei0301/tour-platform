@@ -24,7 +24,8 @@ export async function generateMetadata(
   return {
     // #1711 SEO：homepage title/description 取 seo namespace 的正規站名文案
     // （canonical/hreflang 由 buildAlternates 提供）。
-    title,
+    // issue1711 S2：首頁主題即品牌，用 absolute 跳過 title.template，避免品牌重複。
+    title: { absolute: title },
     description,
     alternates: buildAlternates('/', locale),
     openGraph: {

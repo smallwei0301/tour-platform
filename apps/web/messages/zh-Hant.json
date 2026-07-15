@@ -73,7 +73,8 @@
     }
   },
   "guides": {
-    "metaTitle": "認識導遊 | Midao 祕島",
+    "metaTitle": "認識導遊",
+    "pageTitle": "認識導遊",
     "metaDescription": "認識 Midao 祕島平台上的在地導遊。每位導遊都經過實名認證，帶你走進台灣最有故事的地方。",
     "ogTitle": "認識導遊 | Midao 祕島",
     "ogDescription": "找到屬於你的引路人——認識台灣各地在地導遊的專長與故事。",
@@ -103,7 +104,7 @@
     "viewProfile": "查看導遊簡介 →"
   },
   "guideProfile": {
-    "metaTitle": "{name} | 導遊 | Midao 祕島",
+    "metaTitle": "{name} | 導遊",
     "metaTitleShort": "{name} | Midao 祕島",
     "metaDescFallback": "{name} 是 Midao 祕島平台上的在地導遊，提供台灣深度旅遊體驗。",
     "breadcrumbHome": "首頁",
@@ -133,7 +134,7 @@
     "defaultTitle": "Midao 祕島 — 找到懂路的人，帶你走進台灣最有故事的地方",
     "defaultDescription": "台灣在地導遊預約平台 — 發現真正在地的導遊與特色行程，直接預約、安全付款。",
     "orgDescription": "台灣在地導遊預約平台 — 連結旅客與在地導遊，提供深度文化體驗。",
-    "activitiesCollectionName": "探索行程 | Midao 祕島",
+    "activitiesCollectionName": "探索行程",
     "activitiesCollectionDescription": "瀏覽台灣全島私人導遊行程。",
     "guidesItemListName": "台灣在地導遊 | Midao 祕島",
     "blogItemListName": "旅遊指南 | Midao 祕島",
@@ -390,7 +391,7 @@
   },
   "theme": {
     "caveExploration": {
-      "metaTitle": "柴山探洞行程 | Midao 祕島",
+      "metaTitle": "柴山探洞行程",
       "metaDescription": "跟著在地導遊鑽進高雄柴山的秘密地下世界，探索億萬年石灰岩洞穴。小團深度體驗，實名認證導遊帶路。",
       "ogTitle": "柴山探洞 — 高雄秘境地下世界 | Midao 祕島",
       "ogDescription": "不一樣的高雄旅行：跟著在地人鑽進柴山洞穴，看見你在景點地圖上找不到的台灣。",
@@ -434,10 +435,11 @@
           "q": "當天要穿什麼？",
           "a": "建議防滑鞋、長褲、可活動上衣，避免拖鞋。"
         }
-      ]
+      ],
+      "experienceCta": "深入了解：高雄柴山洞穴探險體驗 →"
     },
     "cultureHistory": {
-      "metaTitle": "文化歷史行程 | Midao 祕島",
+      "metaTitle": "文化歷史行程",
       "metaDescription": "走進台灣的老街、廟埕與部落，跟著在地導遊把街區與族群背後的故事走成記憶。小團深度文化體驗，實名認證導遊帶路。",
       "ogTitle": "文化歷史 — 台灣街區與部落的故事 | Midao 祕島",
       "ogDescription": "不是走馬看花。跟著懂故事的人，認識一個活了百年的街區與它的人。",
@@ -481,10 +483,11 @@
           "q": "適合長輩與小孩一起參加嗎？",
           "a": "適合，節奏緩和、互動性高，是親子與三代同遊的好選擇。"
         }
-      ]
+      ],
+      "experienceCta": "深入了解：大稻埕漫步體驗 →"
     },
     "ecology": {
-      "metaTitle": "自然生態行程 | Midao 祕島",
+      "metaTitle": "自然生態行程",
       "metaDescription": "跟著在地生態導遊走進濕地、潮間帶與森林，認識台灣的野鳥、潮間帶生物與山林生態。小團深度導覽，懂自然的人帶你慢慢看。",
       "ogTitle": "自然生態 — 跟著在地人讀懂台灣這片土地 | Midao 祕島",
       "ogDescription": "不只看風景，還要看懂腳下這片土地。跟著懂自然的導遊，認識台灣的鳥、潮間帶與山林生態。",
@@ -531,7 +534,7 @@
       ]
     },
     "mountainWilderness": {
-      "metaTitle": "山野秘境行程 | Midao 祕島",
+      "metaTitle": "山野秘境行程",
       "metaDescription": "百岳秘徑、森林浴與稜線上的台灣壯景，跟著懂山的在地嚮導用雙腳走進山林深處。小團登山健行，安全認證帶路。",
       "ogTitle": "山野秘境 — 走進台灣的山林深處 | Midao 祕島",
       "ogDescription": "不靠纜車、不靠觀光車，靠雙腳和懂山的人，走進地圖上找不到的台灣山徑。",
@@ -578,7 +581,7 @@
       ]
     },
     "riverTrekking": {
-      "metaTitle": "野外溪流行程 | Midao 祕島",
+      "metaTitle": "野外溪流行程",
       "metaDescription": "走進台灣最純淨的野溪，感受花蓮溪谷的力量。小團深度溯溪體驗，在地導遊全程帶領。",
       "ogTitle": "野外溪流 — 花蓮秘境野溪體驗 | Midao 祕島",
       "ogDescription": "不只是戲水。跟著懂溪的導遊，走進花蓮最美的溪谷。",
@@ -668,7 +671,7 @@
     }
   },
   "about": {
-    "metaTitle": "關於我們 | Midao 祕島",
+    "metaTitle": "關於我們",
     "metaDescription": "祕島不是發明的地方。是已經在那裡，只是還沒被你看見的台灣。認識 Midao 祕島的故事與理念。",
     "ogTitle": "關於我們 | Midao 祕島",
     "ogDescription": "真正在山林裡走過的在地人，帶你走進台灣最有故事的地方。",
@@ -705,7 +708,7 @@
     "ctaExplore": "探索行程"
   },
   "whyChooseUs": {
-    "metaTitle": "為什麼選擇我們 | Midao 祕島",
+    "metaTitle": "為什麼選擇我們",
     "metaDescription": "私人在地導遊 vs 一般跟團：行程彈性、導遊認證、退款保障、深度體驗一次比較清楚。",
     "ogTitle": "為什麼選擇私人在地導遊？ | Midao 祕島",
     "ogDescription": "不跟團、不趕路。找到懂路的人，用你的節奏認識台灣。",
@@ -795,7 +798,7 @@
     "ctaButton": "立即探索行程"
   },
   "faq": {
-    "metaTitle": "常見問題 | Midao 祕島",
+    "metaTitle": "常見問題",
     "metaDescription": "關於預訂、付款、取消退款、導遊品質與安全保障的常見問題解答。",
     "ogTitle": "常見問題 | Midao 祕島",
     "ogDescription": "私人導遊行程怎麼預訂？付款安全嗎？可以取消嗎？一次解答所有疑問。",
@@ -883,7 +886,7 @@
     "footerButton": "聯絡我們"
   },
   "contact": {
-    "metaTitle": "聯絡我們 | Midao 祕島",
+    "metaTitle": "聯絡我們",
     "metaDescription": "有任何問題、合作提案或回饋？聯絡 Midao 祕島，我們會在 1-2 個工作天內回覆。",
     "ogTitle": "聯絡我們 | Midao 祕島",
     "ogDescription": "歡迎透過表單、Email 或客服熱線與我們聯繫。",
@@ -917,7 +920,7 @@
     "hoursCardLine2": "緊急問題（活動當天）：30 分鐘內"
   },
   "blog": {
-    "metaTitle": "旅遊指南 | Midao 祕島",
+    "metaTitle": "旅遊指南",
     "metaDescription": "台灣各地旅遊攻略、導遊推薦、活動體驗分享。從柴山探洞到花蓮溯溪，讓我們帶你深度認識台灣。",
     "ogTitle": "旅遊指南 | Midao 祕島",
     "ogDescription": "台灣各地旅遊攻略與在地體驗分享。",
@@ -926,13 +929,12 @@
     "breadcrumbBlog": "旅遊指南",
     "heading": "旅遊指南",
     "readTimePrefix": "閱讀約",
-    "metaTitleSuffix": "| Midao 祕島",
     "coverAltSuffix": "— 旅遊指南封面圖",
     "ctaTitle": "🗺️ 準備好出發了嗎？",
     "ctaButton": "探索行程 →"
   },
   "legalPrivacy": {
-    "metaTitle": "隱私政策 | Midao 祕島",
+    "metaTitle": "隱私政策",
     "metaDescription": "Midao 祕島平台的個人資料保護政策，說明資料蒐集範圍、使用方式與用戶權利。",
     "breadcrumbHome": "首頁",
     "breadcrumbLeaf": "隱私政策",
@@ -941,7 +943,7 @@
     "para2": "所有個資處理依台灣相關法規辦理，並提供用戶查詢與刪除申請管道。"
   },
   "legalTerms": {
-    "metaTitle": "服務條款 | Midao 祕島",
+    "metaTitle": "服務條款",
     "metaDescription": "Midao 祕島平台服務條款，說明平台性質、預約流程與旅客權利義務。",
     "breadcrumbHome": "首頁",
     "breadcrumbLeaf": "服務條款",
@@ -950,7 +952,7 @@
     "para2": "用戶預約前應確認行程內容、取消政策與風險揭露事項。"
   },
   "legalRefund": {
-    "metaTitle": "退款政策 | Midao 祕島",
+    "metaTitle": "退款政策",
     "metaDescription": "Midao 祕島退款政策說明：出團前 168 小時全額退款、72 小時以上退 70%，不可抗力免費改期。",
     "breadcrumbHome": "首頁",
     "breadcrumbLeaf": "退款政策",
@@ -962,7 +964,7 @@
     "para5": "手續費：退款時平台不另向旅客扣除手續費，相關費用由平台吸收。"
   },
   "activityDetail": {
-    "metaTitleSuffix": "{title} | Midao 祕島",
+    "metaTitleSuffix": "{title}",
     "metaDescFallback": "探索台灣在地特色秘境行程，與專業導遊一起發現不一樣的台灣。",
     "ogImageAlt": "Midao 祕島 行程",
     "breadcrumbHome": "首頁",
@@ -1229,7 +1231,7 @@
     "promoEntry": "{label}（結帳輸入 <strong>{code}</strong>）"
   },
   "experienceDetail": {
-    "metaTitle": "{name} | 體驗行程 | Midao 祕島",
+    "metaTitle": "{name} | 體驗行程",
     "metaTitleShort": "{name} | Midao 祕島",
     "metaDescription": "預約台灣在地體驗行程：{name}。實名認證導遊帶路，小團深度探索。",
     "ogDescription": "跟著懂路的在地導遊，探索台灣最有故事的地方。",

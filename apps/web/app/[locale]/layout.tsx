@@ -6,7 +6,7 @@ import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server
 import { notFound } from 'next/navigation';
 
 import { routing, VISIBLE_LOCALES, HTML_LANG } from '../../src/i18n/routing';
-import { SITE_METADATA_BASE } from '../../src/lib/seo/site-metadata';
+import { SITE_METADATA_BASE, GOOGLE_SITE_VERIFICATION } from '../../src/lib/seo/site-metadata';
 import { RootDocument } from '../../src/components/layout/RootDocument';
 
 /**
@@ -58,6 +58,9 @@ export async function generateMetadata(
       images: ['/images/og-default.png'],
     },
     robots: { index: visible, follow: visible },
+    // issue1711 S6：Google Search Console 站點驗證（URL-prefix property 用 meta tag 驗證）。
+    // 未設 env 時不渲染該 meta，零副作用。
+    ...(GOOGLE_SITE_VERIFICATION ? { verification: { google: GOOGLE_SITE_VERIFICATION } } : {}),
   };
 
   return metadata;

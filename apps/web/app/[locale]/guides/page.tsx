@@ -75,6 +75,9 @@ export default async function GuidesPage({ params }: { params: Promise<{ locale:
     <main className="tp-container tp-guides-page" style={{ paddingBottom: 40 }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(guidesJsonLd) }} />
       <div className="tp-breadcrumb"><Link href="/">{ta('breadcrumbHome')}</Link> &gt; <Link href="/guides">{t('breadcrumb')}</Link></div>
+      {/* issue1711 S3：GuidesContent 因 useSearchParams CSR bailout，SSR HTML 原本無 H1；
+          頁面唯一 H1 改由 server 輸出，列表內的動態結果數降為 h2。 */}
+      <h1 style={{ marginTop: 20, marginBottom: 4 }}>{t('pageTitle')}</h1>
       <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666' }}>{t('loading')}</div>}>
         <GuidesContent guides={guides as any[]} />
       </Suspense>

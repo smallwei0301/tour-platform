@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, region } = await params;
   const entry = getRegionBySlug(region);
   const regionName = entry?.displayName ?? region;
-  const title = `${regionName} 在地行程導覽 | Midao 祕島`;
+  const title = `${regionName} 在地行程導覽`;
   const description = `探索${regionName}最道地的秘境行程，由在地導遊帶你體驗不一樣的${regionName}。`;
   return {
     title,
