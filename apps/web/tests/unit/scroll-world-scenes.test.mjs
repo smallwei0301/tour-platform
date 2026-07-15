@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { SCROLL_WORLD_SCENES } from '../../src/lib/scroll-world/scenes.mjs';
+import { SCROLL_WORLD_PRELUDE, SCROLL_WORLD_SCENES } from '../../src/lib/scroll-world/scenes.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const webRoot = path.resolve(here, '../..');
@@ -43,6 +43,13 @@ test('每景 CTA 目的地都是存在的 [locale] 頁面', () => {
     const pagePath = path.join(webRoot, 'app', '[locale]', ...scene.href.split('/').filter(Boolean), 'page.tsx');
     assert.ok(fs.existsSync(pagePath), `${scene.id} 的 href ${scene.href} 找不到 ${pagePath}`);
   }
+});
+
+test('序章設定：still 檔存在、origin 為合法百分比座標、zoom > 1', () => {
+  const stillPath = path.join(webRoot, 'public', SCROLL_WORLD_PRELUDE.still.replace(/^\//, ''));
+  assert.ok(fs.existsSync(stillPath), `序章圖 ${SCROLL_WORLD_PRELUDE.still} 找不到 ${stillPath}`);
+  assert.match(SCROLL_WORLD_PRELUDE.origin, /^\d{1,3}% \d{1,3}%$/);
+  assert.ok(SCROLL_WORLD_PRELUDE.zoom > 1 && SCROLL_WORLD_PRELUDE.zoom <= 3);
 });
 
 test('每景 still 圖檔實際存在於 public/', () => {

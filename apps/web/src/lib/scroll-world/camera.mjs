@@ -111,6 +111,22 @@ export function progressForScene(index, sceneCount, { linger = DEFAULT_LINGER } 
 }
 
 /**
+ * 開場序章（cold open）佔用的節奏軸長度——首景 dwell（linger）的前段。
+ * 序章期間：島嶼靜圖向燈籠拉近再淡出，首景影片壓在第 0 幀等待接手。
+ */
+export const PRELUDE_UNITS = 0.3;
+
+/**
+ * 序章進度（0..1）：p=0 起、行至 PRELUDE_UNITS 完成（其後恆 1）。
+ * 驅動島嶼靜圖的拉近與淡出。
+ */
+export function preludeProgress(progress, sceneCount, { linger = DEFAULT_LINGER } = {}) {
+  const n = Math.max(1, Math.floor(sceneCount));
+  const total = n * linger + (n - 1);
+  return clamp01((clamp01(progress) * total) / PRELUDE_UNITS);
+}
+
+/**
  * 第 index 景影片的 scrub 進度（0..1）——scroll-world 的「滾動＝播放進度」。
  *
  * 章節切分在節奏軸（dwell/travel 交錯）上：第 i 景章節＝
@@ -129,7 +145,8 @@ export function clipProgress(progress, index, sceneCount, { linger = DEFAULT_LIN
   const total = n * linger + (n - 1);
   const u = clamp01(progress) * total;
   // travel i→i+1 的中點（節奏軸座標）：i*(1+l) + l + 0.5
-  const midBefore = i === 0 ? 0 : (i - 1) * (1 + linger) + linger + 0.5;
+  // 首景章節自序章結束處起算——序章淡出時影片正在第 0 幀等待接手
+  const midBefore = i === 0 ? Math.min(PRELUDE_UNITS, total) : (i - 1) * (1 + linger) + linger + 0.5;
   const midAfter = i === n - 1 ? total : i * (1 + linger) + linger + 0.5;
-  return clamp01((u - midBefore) / (midAfter - midBefore));
+  return clamp01((u - midBefore) / Math.max(1e-9, midAfter - midBefore));
 }

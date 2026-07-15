@@ -7,11 +7,13 @@ import {
   cameraZ,
   clipProgress,
   copyOpacity,
+  preludeProgress,
   progressForScene,
   sceneDistance,
   sceneOpacity,
   sceneScale,
 } from '../../lib/scroll-world/camera.mjs';
+import { SCROLL_WORLD_PRELUDE } from '../../lib/scroll-world/scenes.mjs';
 import styles from './scroll-world.module.css';
 
 /** 由 server page 以 i18n 解析後傳入的單景資料。 */
@@ -81,6 +83,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const tintRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
+  const preludeRef = useRef<HTMLDivElement>(null);
   const sceneRefs = useRef<Array<HTMLDivElement | null>>([]);
   const copyRefs = useRef<Array<HTMLDivElement | null>>([]);
   const activeIndexRef = useRef(0);
@@ -138,6 +141,21 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
           copyEl.style.pointerEvents = opacity > 0.5 ? 'auto' : 'none';
         }
       }
+      // 開場序章：島嶼全景向燈籠拉近（smoothstep 緩動）、末段淡出，
+      // 溶接到底下首景影片的第 0 幀（構圖近似 → 接點自然）。
+      const prelude = preludeRef.current;
+      if (prelude) {
+        const pp = preludeProgress(progress, n);
+        if (pp >= 1) {
+          prelude.style.visibility = 'hidden';
+        } else {
+          const eased = pp * pp * (3 - 2 * pp);
+          prelude.style.visibility = 'visible';
+          prelude.style.transform = `scale(${(1 + (SCROLL_WORLD_PRELUDE.zoom - 1) * eased).toFixed(4)})`;
+          prelude.style.opacity = (pp < 0.55 ? 1 : 1 - (pp - 0.55) / 0.45).toFixed(3);
+        }
+      }
+
       if (hintRef.current) hintRef.current.style.opacity = progress > 0.02 ? '0' : '1';
 
       const index = activeSceneIndex(z, n);
@@ -213,6 +231,15 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
                 <SceneMedia scene={scene} />
               </div>
             ))}
+          </div>
+          <div
+            ref={preludeRef}
+            className={styles.prelude}
+            style={{ transformOrigin: SCROLL_WORLD_PRELUDE.origin }}
+            aria-hidden="true"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- 全幅序章圖 */}
+            <img className={styles.still} src={SCROLL_WORLD_PRELUDE.still} alt="" draggable={false} />
           </div>
           <div className={styles.vignette} />
           {scenes.map((scene, i) => (

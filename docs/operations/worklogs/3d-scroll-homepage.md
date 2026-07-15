@@ -107,6 +107,22 @@
   問題）；浮水印區抽查乾淨；截圖 `scene-3/4/5.png`。測試 23/23、typecheck、lint、
   完整回歸 PASS。
 
+## 影片階段 6（2026-07-15）— 開場序章（cold open）：島圖拉近燈籠溶接首景影片
+- 使用者回饋：載入到第一景影片之間沒有過渡；要求「島嶼全景 → 拉近到燈籠 → 淡化，
+  終點盡量貼近首支影片的起始幀」。
+- 巧合優勢：首支影片第 0 幀本身就是島嶼全景＋燈籠亮光，與使用者原始島圖構圖近似
+  （燈籠同在約 45%/75%）→ 溶接點天然吻合。
+- 實作：
+  - `camera.mjs`：`PRELUDE_UNITS = 0.3`（佔首景 dwell 前段）＋`preludeProgress()`；
+    `clipProgress` 首景章節改自序章末起算——序章淡出全程影片壓在第 0 幀等待接手。
+  - `scenes.mjs`：`SCROLL_WORLD_PRELUDE`（still＝原始島圖 prelude.webp、origin 45% 75%
+    ＝燈籠、zoom 1.9）。
+  - client：序章圖層（z 介於場景與暗角之間）rAF 驅動——smoothstep 拉近至 1.9×（origin
+    在圖內、scale ≥1 不露邊框）、末段 45% 淡出溶接。
+- 實跑：p=0 全景 scale1／影片 0s → 中段 1.47×／影片仍 0s → 末段 1.86×＋op 0.29／影片
+  仍 0s → 序章隱藏後影片才前進（2.07s）；截圖 `pre-0/mid/fade.png`。測試 25/25（新增
+  preludeProgress＋首景章節位移＋序章設定契約）、typecheck、lint、完整回歸 PASS。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。

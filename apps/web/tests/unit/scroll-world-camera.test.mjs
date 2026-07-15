@@ -8,6 +8,8 @@ import {
   clipProgress,
   copyOpacity,
   progressForScene,
+  PRELUDE_UNITS,
+  preludeProgress,
   sceneDistance,
   sceneOpacity,
   sceneScale,
@@ -120,6 +122,26 @@ function travelMidProgress(i, n, linger = DEFAULT_LINGER) {
 test('clipProgress：端點——首景從 0 起、末景到 1 收', () => {
   assert.equal(clipProgress(0, 0, N), 0);
   assert.equal(clipProgress(1, N - 1, N), 1);
+});
+
+test('序章：preludeProgress 端點與單調；序章期間首景影片壓在第 0 幀', () => {
+  const total = N * DEFAULT_LINGER + (N - 1);
+  const preludeEnd = PRELUDE_UNITS / total; // 序章結束的全域 progress
+  assert.equal(preludeProgress(0, N), 0);
+  assert.ok(Math.abs(preludeProgress(preludeEnd, N) - 1) < 1e-9);
+  assert.equal(preludeProgress(0.5, N), 1); // 其後恆 1
+  let prev = -1;
+  for (let s = 0; s <= 100; s += 1) {
+    const v = preludeProgress((s / 100) * preludeEnd, N);
+    assert.ok(v >= prev - 1e-12 && v >= 0 && v <= 1);
+    prev = v;
+  }
+  // 序章全程首景影片維持第 0 幀，序章結束才開始前進（溶接接手點）
+  assert.equal(clipProgress(preludeEnd * 0.9, 0, N), 0);
+  assert.equal(clipProgress(preludeEnd, 0, N), 0);
+  assert.ok(clipProgress(preludeEnd + 0.01, 0, N) > 0);
+  // 序章佔首景 dwell 的前段，不可長過 dwell
+  assert.ok(PRELUDE_UNITS < DEFAULT_LINGER);
 });
 
 test('clipProgress：過場中點幀交接——出景播畢（1）、入景起播（0）', () => {

@@ -11,6 +11,17 @@
  *
  * 順序即飛行順序：品牌開場 → 五大主題 → 結尾 CTA。
  */
+/**
+ * 開場序章（cold open）：載入先看到島嶼全景靜圖，滾動時向燈籠（origin）
+ * 拉近（至 zoom 倍）並淡出，溶接到首景影片的第 0 幀（同為島嶼全景＋
+ * 燈籠亮光，構圖近似 → 接點自然）。時長見 camera.mjs PRELUDE_UNITS。
+ */
+export const SCROLL_WORLD_PRELUDE = {
+  still: '/images/world/prelude.webp',
+  origin: '45% 75%', // 起點燈籠在圖上的位置＝拉近焦點
+  zoom: 1.9,
+};
+
 export const SCROLL_WORLD_SCENES = [
   { id: 'intro', still: '/images/world/intro.webp', clip: '/videos/world/intro.mp4', accent: '#C2542E', href: '/activities' },
   { id: 'mountain', still: '/images/world/mountain.webp', clip: '/videos/world/mountain.mp4', accent: '#5E7A4F', href: '/theme/mountain-wilderness' },

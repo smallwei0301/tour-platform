@@ -32,6 +32,16 @@
   pointer-events: none;
 }
 
+/* 開場序章圖層：位於場景之上、暗角之下；scale 恆 ≥1（origin 在圖內）不露邊框 */
+.prelude {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  will-change: opacity, transform;
+  pointer-events: none;
+}
+
 .vignette {
   position: absolute;
   inset: 0;
