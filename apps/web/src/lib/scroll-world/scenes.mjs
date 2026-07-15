@@ -18,5 +18,5 @@ export const SCROLL_WORLD_SCENES = [
   { id: 'cave', still: '/images/world/cave.webp', clip: null, accent: '#B08D3E', href: '/theme/cave-exploration' },
   { id: 'culture', still: '/images/world/culture.webp', clip: null, accent: '#C2542E', href: '/theme/culture-history' },
   { id: 'ecology', still: '/images/world/ecology.webp', clip: null, accent: '#5E7A4F', href: '/theme/ecology' },
-  { id: 'finale', still: '/images/world/finale.webp', clip: null, accent: '#B08D3E', href: '/activities' },
+  { id: 'finale', still: '/images/world/finale.webp', clip: '/videos/world/finale.mp4', accent: '#B08D3E', href: '/activities' },
 ];

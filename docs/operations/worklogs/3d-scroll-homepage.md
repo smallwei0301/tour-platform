@@ -39,14 +39,16 @@
 - 實跑（Playwright chromium＋dev＋stub env）：`/theme/world` 三個滾動點截圖確認 intro（全島）／cave（洞穴）／finale（日出全幅）AI 主圖正確渲染、cameraZ 0→4202.9→8400、文案切換、導軌跳景、pageerror 0；`sw-0/1/2` 截圖已附使用者。
 - Higgsfield 登入：瀏覽器 OAuth 在雲端 egress proxy 下 reset（連 example.com 都不通），改以「使用者於自身瀏覽器核准、把一次性授權碼貼回 → curl 本地 callback 完成 PKCE 交換」繞過，登入成功。餘額 10 credits（free plan）。
 
-## 影片階段（待使用者最終授權後才生成，會扣點）
-- 決策：intro＋finale 兩景做「飛入」影片（使用者已選 2026-07-15）。
-- 選型：**Veo 3.1 Lite 4s＝4 credits/段**（CP 值最高、無音軌）；共 8 credits，留 2 credits 緩衝供壞鏡頭重生。（seedance 2.0＝22.5/段、mini＝12.5/段，均超預算，排除。）
-- 素材已備妥：起始圖用 `public/images/world/{intro,finale}.webp`；提示詞見對話交付的 `midao-world-video-prompts.md`。
-- 生成後流程：ffmpeg 重編碼（可 scrub／faststart）→ 放 `public/videos/world/`（或同層）→ `scenes.mjs` 對應景填 `clip` → 實跑截圖 → commit。**尚未執行，等使用者說「生成」。**
+## 影片階段（2026-07-15 完成，共扣 8 credits）
+- 決策：intro＋finale 兩景做「飛入」影片；選型 **Veo 3.1 Lite 4s＝4 credits/段**（CP 值最高、無音軌）。（seedance 2.0＝22.5/段、mini＝12.5/段，均超預算排除。）
+- 生成：`higgsfield generate create veo3_1_lite --start-image <still.png> --duration 4 --aspect_ratio 16:9 --generate_audio false --wait`。
+  - **free 方案 `concurrent_jobs_limit: 1`**：不可並行，intro／finale 必須序列跑（首次並行送，finale 被 `rate_limit_reached` 擋、未建立未扣點）。
+  - intro job 完成（4 credits）→ finale job 完成（4 credits）→ 餘額 10→6→2，與規劃一致。
+- 後製（ffmpeg）：每段 `reverse` 後 concat 成 **ping-pong 無縫循環**（8s），雙格式輸出——`libx264`（mp4，Safari/iOS）＋`libvpx-vp9`（webm，Chrome/Firefox/Android，開源 Chromium 可解 → 本環境 Playwright 才驗得到）；密集關鍵幀（-g 12）可 scrub、faststart。放 `public/videos/world/{intro,finale}.{mp4,webm}`。
+- 引擎：`SceneMedia` 影片改雙 `<source>`（webm→mp4）；update 迴圈依場景可見度 play/pause（省 CPU＋避開部分瀏覽器 autoplay 未觸發）。**踩坑**：Playwright 內建 Chromium 不含 H.264 專利解碼器 → 純 mp4 在測試環境 `no supported sources`；補 VP9/webm 才驗得到（真實 Chrome/Safari 兩者皆可）。
+- 實跑：intro 於頁頂自動播放（readyState 4、畫面動態）；滾到底時 finale 播放、intro 已暫停（可見度控制正確）；截圖 `sw-intro-video.png`、`sw-finale-video.png`。測試 17/17、typecheck、lint 綠燈。
 
 ## 下一步
-- 等使用者授權生成 intro／finale 兩段影片（8 credits）。
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
 
