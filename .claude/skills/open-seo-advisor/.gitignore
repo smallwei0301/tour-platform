@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+dist/
+build/
+
+# Output artifacts（seo-advisor 各模式產生的報告資料夾）
+/report/
+/seo-report/
+/seo-report-*/
+/seo-demo-report/
+/auto-report/
+/auto-demo/
+/growth-*/
+/ecommerce-*/
+/matrix-report/
+/matrix-demo/
+/content-report/
+/ads-report/
+/ads-plan/
+/ads-demo/
+/image-assets/
+/image-demo/
+/content-images/
+*.report.json
+*.report.md
+report-beginner.md
+report.md
+report.json
+
+# LocalArchiveConnector 解壓 zip 時建立的暫存目錄
+*_extracted/
+
+# Secrets
+.env
+*.pem
+*.key
+id_rsa*
+
+# OS
+.DS_Store
+Thumbs.db
+.collab-rules.md
+.coverage

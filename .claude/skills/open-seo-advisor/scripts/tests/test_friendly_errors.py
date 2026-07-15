@@ -1,0 +1,158 @@
+import httpx
+
+from seo_advisor.errors import redact_secrets, translate_exception
+from seo_advisor.url_utils import InvalidUrlError
+
+
+def test_invalid_url_error_has_actionable_next_steps():
+    friendly = translate_exception(InvalidUrlError("網址怪怪的"))
+    assert "網址" in friendly.title
+    assert len(friendly.next_steps) > 0
+
+
+def test_connect_timeout_mentions_url():
+    friendly = translate_exception(httpx.ConnectTimeout("timeout"), url="https://example.com")
+    assert "https://example.com" in friendly.title
+
+
+def test_connect_error_gives_next_steps():
+    friendly = translate_exception(httpx.ConnectError("boom"), url="https://example.com")
+    assert len(friendly.next_steps) >= 2
+
+
+def test_file_not_found_error_translated():
+    friendly = translate_exception(FileNotFoundError("no such file"))
+    assert "檔案" in friendly.title or "資料夾" in friendly.title
+
+
+def test_permission_error_translated():
+    friendly = translate_exception(PermissionError("denied"))
+    assert "權限" in friendly.title
+
+
+def test_unknown_exception_falls_back_to_generic_message():
+    friendly = translate_exception(RuntimeError("something weird"))
+    assert "--debug" in " ".join(friendly.next_steps)
+
+
+def test_render_produces_readable_text():
+    friendly = translate_exception(RuntimeError("boom"))
+    text = friendly.render()
+    assert "[問題]" in text
+    assert "建議下一步" in text
+
+
+# --- 敏感資訊遮蔽（避免錯誤訊息洩漏 token/帳密/本機路徑）---
+
+def test_redact_url_userinfo():
+    from seo_advisor.errors import redact_secrets
+
+    out = redact_secrets("connect failed https://admin:s3cret@internal.host/x")
+    assert "s3cret" not in out
+    assert "admin" not in out
+
+
+def test_redact_token_assignment():
+    from seo_advisor.errors import redact_secrets
+
+    assert "sk-abc123" not in redact_secrets("error api_key=sk-abc123def")
+    assert "xyz789" not in redact_secrets("Authorization: xyz789")
+
+
+def test_redact_home_path():
+    from seo_advisor.errors import redact_secrets
+
+    assert "digimkt" not in redact_secrets(r"open C:\Users\digimkt\file.txt")
+    assert "alice" not in redact_secrets("open /home/alice/file.txt")
+
+
+def test_friendly_error_render_redacts():
+    from seo_advisor.errors import FriendlyError
+
+    fe = FriendlyError(
+        title="failed for https://u:p@h/x",
+        reasons=["token=deadbeef leaked"],
+        next_steps=["retry"],
+    )
+    rendered = fe.render()
+    assert "deadbeef" not in rendered
+    assert "u:p@h" not in rendered
+
+
+# --- provider 例外（缺金鑰/缺選配套件）不該落入「未預期的問題」通用 fallback ---
+# 這是新手第一次沒設 API 金鑰最常見的情境，過去被系統性漏接、且教錯 Windows 指令。
+
+def test_llm_provider_error_is_recognized_not_generic_fallback():
+    from seo_advisor.writers.providers.base import LLMProviderError
+
+    friendly = translate_exception(LLMProviderError("找不到環境變數 ANTHROPIC_API_KEY"))
+    assert friendly.title == "找不到環境變數 ANTHROPIC_API_KEY"
+    assert "未預期的問題" not in friendly.title
+    assert any("mock" in step for step in friendly.next_steps)
+
+
+def test_image_provider_error_is_recognized():
+    from seo_advisor.images.providers.base import ImageProviderError
+
+    friendly = translate_exception(ImageProviderError("找不到環境變數 OPENAI_API_KEY"))
+    assert "未預期的問題" not in friendly.title
+
+
+def test_ads_provider_error_is_recognized():
+    from seo_advisor.ads.providers.base import AdsProviderError
+
+    friendly = translate_exception(AdsProviderError("找不到環境變數 META_ACCESS_TOKEN"))
+    assert "未預期的問題" not in friendly.title
+
+
+def test_analytics_provider_error_is_recognized():
+    from seo_advisor.growth.providers.base import AnalyticsProviderError
+
+    friendly = translate_exception(AnalyticsProviderError("找不到環境變數 GA4_PROPERTY_ID"))
+    assert "未預期的問題" not in friendly.title
+
+
+def test_redact_secrets_removes_private_key_pem_block():
+    text = (
+        "連線失敗：-----BEGIN OPENSSH PRIVATE KEY-----\n"
+        "b3BlbnNzaC1rZXktdjEAAAAABG5vbmU\n"
+        "-----END OPENSSH PRIVATE KEY-----"
+    )
+    redacted = redact_secrets(text)
+    assert "b3BlbnNzaC1rZXktdjEAAAAABG5vbmU" not in redacted
+    assert "[已遮蔽的私鑰內容]" in redacted
+
+
+def test_redact_secrets_removes_password_and_passphrase_fields():
+    assert "hunter2" not in redact_secrets("password=hunter2")
+    assert "s3cr3t" not in redact_secrets("passphrase: s3cr3t")
+
+
+def test_redact_secrets_removes_ssh_url_userinfo():
+    redacted = redact_secrets("ssh://deploy:hunter2@example.com/var/www")
+    assert "hunter2" not in redacted
+    assert "deploy" not in redacted
+
+
+def test_redact_secrets_removes_bearer_token():
+    redacted = redact_secrets("Authorization: Bearer super-secret-token-value")
+    assert "super-secret-token-value" not in redacted
+
+
+def test_redact_secrets_removes_env_var_style_api_token():
+    """CLOUDFLARE_API_TOKEN=xxx 這種環境變數賦值格式：既有 _TOKEN_RE 的
+    \\b word boundary 在底線前不成立，TOKEN 前面接底線時完全匹配不到，
+    需要獨立的規則涵蓋。"""
+    redacted = redact_secrets("CLOUDFLARE_API_TOKEN=cfut_abc123secretvalue")
+    assert "cfut_abc123secretvalue" not in redacted
+
+
+def test_redact_secrets_removes_env_var_style_generic_token():
+    redacted = redact_secrets("MY_SERVICE_TOKEN=another-secret-value")
+    assert "another-secret-value" not in redacted
+
+
+def test_redact_secrets_removes_cpanel_auth_header():
+    redacted = redact_secrets("Authorization: cpanel myuser:super-secret-token-value")
+    assert "super-secret-token-value" not in redacted
+    assert "myuser" not in redacted
