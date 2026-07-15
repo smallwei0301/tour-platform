@@ -9,7 +9,7 @@ import { BOOKING_V2_STEP1_CTA_REASON_ID, getBookingV2Step1CtaState } from '../..
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(__dirname, '../../');
-const guideAvailabilityPage = resolve(appRoot, 'app/guide/availability/page.tsx');
+const guideAvailabilityPage = resolve(appRoot, 'app/(non-locale)/guide/availability/page.tsx');
 
 const MISSING_CANONICAL_MESSAGE = '此行程尚未設定可預約方案，請稍後再查看。';
 
@@ -123,7 +123,7 @@ test('GH-1069: Step1 hard-block reason uses explicit red error color in booking 
   const { fileURLToPath } = await import('node:url');
   const path = await import('node:path');
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const src = await readFile(path.join(__dirname, '../../app/booking/[activityId]/page.tsx'), 'utf8');
+  const src = await readFile(path.join(__dirname, '../../app/(non-locale)/booking/[activityId]/page.tsx'), 'utf8');
 
   assert.match(src, /color: step1CtaState\.tone === 'muted' \? 'var\(--tp-muted\)' : '#b42318'/);
   assert.match(src, /role=\{step1CtaState\.role \?\? undefined\}/);

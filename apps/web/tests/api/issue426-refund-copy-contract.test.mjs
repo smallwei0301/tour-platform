@@ -6,7 +6,7 @@ import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const PAGE_PATH = path.join(ROOT, 'app/me/orders/[orderId]/page.tsx');
+const PAGE_PATH = path.join(ROOT, 'app/(non-locale)/me/orders/[orderId]/page.tsx');
 // #multilingual: 狀態描述文案已移到 messages/zh-Hant.json 的 orderDetail.statusDesc。
 // 文案內容契約改讀（page + 繁中 catalog）。
 const ZH_PATH = path.join(ROOT, 'messages/zh-Hant.json');

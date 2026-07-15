@@ -1,16 +1,31 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+import { cache } from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { listPublishedActivitiesDb } from '../../../../src/lib/db.mjs';
+import { buildAlternates, buildPublicPath } from '../../../../src/lib/seo-alternates.ts';
+
+const getPublishedExperienceBySlug = cache(async (slug: string) => {
+  try {
+    return (await listPublishedActivitiesDb()).find((experience: { slug: string }) => experience.slug === slug) ?? null;
+  } catch {
+    return null;
+  }
+});
 
 export async function generateMetadata(
   { params }: { params: Promise<{ locale: string; slug: string }> }
 ): Promise<Metadata> {
   const { locale, slug } = await params;
   const t = await getTranslations({ locale, namespace: 'experienceDetail' });
-  const readable = slug.replace(/-/g, ' ');
+  const experience = await getPublishedExperienceBySlug(slug);
+  if (!experience) notFound();
+  const readable = experience.title;
   return {
     title: t('metaTitle', { name: readable }),
     description: t('metaDescription', { name: readable }),
+    alternates: buildAlternates(buildPublicPath('/experiences', [slug]), locale),
     openGraph: {
       title: t('metaTitleShort', { name: readable }),
       description: t('ogDescription'),
@@ -39,16 +54,20 @@ type Experience = {
   ratingCount?: number;
 };
 
-function fallbackExperience(slug: string): Experience {
+function toExperience(experience: Record<string, unknown>): Experience {
   return {
-    slug,
-    title: '在地深度體驗',
-    priceTwd: 1800,
-    durationLabel: '約 4 小時',
-    locationLabel: '台灣在地路線',
-    levelLabel: '新手友善',
-    highlightBullets: ['實名在地導遊', '小團體深度體驗', '透明價格與彈性取消'],
-    description: '跟著懂路的人，走進最有故事的地方。'
+    slug: String(experience.slug),
+    title: String(experience.title),
+    priceTwd: Number(experience.priceTwd ?? experience.price_twd ?? 1800),
+    durationLabel: String(experience.durationLabel ?? experience.duration_display ?? '約 4 小時'),
+    locationLabel: String(experience.locationLabel ?? experience.region ?? '台灣在地路線'),
+    levelLabel: String(experience.levelLabel ?? '新手友善'),
+    highlightBullets: Array.isArray(experience.highlightBullets)
+      ? experience.highlightBullets.map(String)
+      : (Array.isArray(experience.highlights) ? experience.highlights.map(String) : ['實名在地導遊', '小團體深度體驗', '透明價格與彈性取消']),
+    description: String(experience.description ?? '跟著懂路的人，走進最有故事的地方。'),
+    ratingAvg: typeof experience.ratingAvg === 'number' ? experience.ratingAvg : null,
+    ratingCount: typeof experience.ratingCount === 'number' ? experience.ratingCount : 0,
   };
 }
 
@@ -58,32 +77,9 @@ export default async function ExperiencePage({ params }: { params: Promise<{ loc
   const t = await getTranslations({ locale, namespace: 'experienceDetail' });
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';
-  const response = await fetch(`${baseUrl}/api/experiences`, { cache: 'no-store' }).catch((): null => null);
-
-  let experience = fallbackExperience(slug);
-  if (response?.ok) {
-    const json = await response.json().catch((): null => null);
-    const found = json?.data?.find((x: any) => x.slug === slug);
-    if (!found) {
-      // API responded but slug not in data — 404 rather than generic fallback
-      const { notFound } = await import('next/navigation');
-      notFound();
-    }
-    if (found) {
-      experience = {
-        slug: found.slug,
-        title: found.title,
-        priceTwd: Number(found.priceTwd ?? found.price_twd ?? 1800),
-        durationLabel: found.durationLabel || found.duration_display || '約 4 小時',
-        locationLabel: found.locationLabel || found.region || '台灣在地路線',
-        levelLabel: found.levelLabel || '新手友善',
-        highlightBullets: found.highlightBullets || found.highlights || ['實名在地導遊', '小團體深度體驗', '透明價格與彈性取消'],
-        description: found.description || '跟著懂路的人，走進最有故事的地方。',
-        ratingAvg: found.ratingAvg ?? found.rating_avg ?? null,
-        ratingCount: found.ratingCount ?? found.rating_count ?? 0,
-      };
-    }
-  }
+  const publishedExperience = await getPublishedExperienceBySlug(slug);
+  if (!publishedExperience) notFound();
+  const experience = toExperience(publishedExperience);
 
   const experienceJsonLd = {
     '@context': 'https://schema.org',

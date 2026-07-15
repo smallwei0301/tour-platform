@@ -23,7 +23,7 @@ test('line auth handoff route exists and preserves line source + correlation con
 });
 
 test('booking line wrapper page exists and redirects into handoff path', async () => {
-  const src = await read('app/booking/line/page.tsx');
+  const src = await read('app/(non-locale)/booking/line/page.tsx');
 
   assert.match(src, /export\s+default\s+async\s+function\s+LineBookingEntryPage/);
   assert.match(src, /handoffParams\.set\('mode', 'redirect'\)/);
@@ -31,7 +31,7 @@ test('booking line wrapper page exists and redirects into handoff path', async (
 });
 
 test('booking v2 flow forwards correlation header and source channel from line entry', async () => {
-  const src = await read('app/booking/[activityId]/page.tsx');
+  const src = await read('app/(non-locale)/booking/[activityId]/page.tsx');
 
   assert.match(src, /const source = searchParams\.get\('source'\) \|\| searchParams\.get\('sourceChannel'\) \|\| 'web'/);
   assert.match(src, /const correlationId = searchParams\.get\('correlationId'\) \|\| ''/);
@@ -42,7 +42,7 @@ test('booking v2 flow forwards correlation header and source channel from line e
 });
 
 test('line continuation fallback is explicit and testable without silently dropping to legacy flow', async () => {
-  const src = await read('app/booking/[activityId]/page.tsx');
+  const src = await read('app/(non-locale)/booking/[activityId]/page.tsx');
 
   assert.match(src, /data-testid="booking-v2-line-fallback-state"/);
   assert.match(src, /data-testid="booking-v2-line-retry-btn"/);

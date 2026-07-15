@@ -18,20 +18,24 @@ export async function generateMetadata(
   { params }: { params: Promise<{ locale: string }> }
 ): Promise<Metadata> {
   const { locale } = await params;
+  const tSeo = await getTranslations({ locale, namespace: 'seo' });
+  const title = tSeo('defaultTitle');
+  const description = tSeo('defaultDescription');
   return {
-    title: 'Midao 祕島｜台灣在地導遊預約平台',
-    description:
-      '滾動即啟程：以 3D 飛行視角穿越山徑、野溪、洞穴、老街與森林，找到懂路的在地嚮導，走進台灣最有故事的地方。',
+    // #1711 SEO：homepage title/description 取 seo namespace 的正規站名文案
+    // （canonical/hreflang 由 buildAlternates 提供）。
+    title,
+    description,
     alternates: buildAlternates('/', locale),
     openGraph: {
-      title: 'Midao 祕島｜台灣在地導遊預約平台',
-      description: '滾動即啟程：飛入台灣祕境，找到懂路的在地嚮導。',
-      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: 'Midao 祕島｜台灣在地導遊預約平台' }],
+      title,
+      description,
+      images: [{ url: '/images/og-default.png', width: 1536, height: 1024, alt: title }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Midao 祕島｜台灣在地導遊預約平台',
-      description: '滾動即啟程：飛入台灣祕境，找到懂路的在地嚮導。',
+      title,
+      description,
       images: ['/images/og-default.png'],
     },
   };

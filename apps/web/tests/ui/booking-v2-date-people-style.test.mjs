@@ -17,7 +17,7 @@ import { readFile } from 'node:fs/promises';
 //   3. 日期 input 使用了 Legacy 同款的 border / borderRadius 樣式
 // ──────────────────────────────────────────────────────────────────
 
-const pagePath = new URL('../../app/booking/[activityId]/page.tsx', import.meta.url);
+const pagePath = new URL('../../app/(non-locale)/booking/[activityId]/page.tsx', import.meta.url);
 const zhCatalogPath = new URL('../../messages/zh-Hant.json', import.meta.url);
 
 test('V2 booking page no longer uses undefined className="tp-input"', async () => {

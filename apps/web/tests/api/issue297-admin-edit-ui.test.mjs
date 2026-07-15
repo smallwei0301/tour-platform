@@ -13,10 +13,10 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
 //  2. 編輯行程「詳細行程時間表」改為預設收合的備援區並加註解。
 //  3. 編輯行程移除活動層級「最少／最多人數」輸入（人數限制以方案為準）。
 describe('GH-297 admin edit/plans UI adjustments', () => {
-  const editSrc = read('app/admin/activities/[id]/edit/page.tsx');
+  const editSrc = read('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
   // #1615 拆檔：方案表單 Modal（含站點時間表編輯器）移至 PlanFormModal 元件，
   // 合併兩檔原始碼做等價斷言（斷言意圖不變）。
-  const plansSrc = read('app/admin/activities/[id]/plans/page.tsx') +
+  const plansSrc = read('app/(non-locale)/admin/activities/[id]/plans/page.tsx') +
     read('src/components/admin/activity-plans/PlanFormModal.tsx');
 
   it('plans station-timeline editor wraps to avoid 破框 (overflow)', () => {

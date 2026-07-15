@@ -63,7 +63,7 @@ describe('go-no-go API route', () => {
 // ── 3. admin page has toggle UI for all 4 controls ───────────────────────────
 
 describe('soft-launch admin page', () => {
-  const pageSource = read('app/admin/soft-launch/page.tsx');
+  const pageSource = read('app/(non-locale)/admin/soft-launch/page.tsx');
 
   it('has public_paused toggle', () => {
     assert.match(pageSource, /public_paused/);

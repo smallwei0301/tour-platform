@@ -13,7 +13,7 @@ const REPO_ROOT = join(__dirname, '..', '..');
 const read = (rel) => readFileSync(join(REPO_ROOT, rel), 'utf8');
 
 test('guide/profile 表單：熟悉區域顯示短名、存全名（listAllDivisions）', () => {
-  const src = read('app/guide/profile/page.tsx');
+  const src = read('app/(non-locale)/guide/profile/page.tsx');
   assert.match(src, /import \{ listAllDivisions, normalizeRegionToDbValue \} from/);
   assert.match(src, /const REGION_OPTIONS = listAllDivisions\(\)/);
   // chip 的 id 用全名 dbValue、label 用短名 displayName
@@ -23,7 +23,7 @@ test('guide/profile 表單：熟悉區域顯示短名、存全名（listAllDivis
 });
 
 test('guide/apply 表單：熟悉區域 checkbox 存全名 dbValue、顯示短名', () => {
-  const src = read('app/guide/apply/page.tsx');
+  const src = read('app/(non-locale)/guide/apply/page.tsx');
   assert.match(src, /import \{ listAllDivisions \} from/);
   assert.match(src, /const regionOptions = listAllDivisions\(\)/);
   assert.match(src, /checked=\{regions\.includes\(d\.dbValue\)\}/);

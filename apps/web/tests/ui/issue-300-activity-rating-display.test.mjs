@@ -60,19 +60,19 @@ test('AC2: detail page activity-detail-rating block references activityData.rati
 
 // AC5: admin edit form
 test('AC5: admin edit page has ratingAvg input', async () => {
-  const src = await readSource('app/admin/activities/[id]/edit/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
   assert.match(src, /ratingAvg/, 'Admin form should have ratingAvg state/input');
 });
 
 test('AC5: admin edit page ratingAvg flows into PUT body', async () => {
-  const src = await readSource('app/admin/activities/[id]/edit/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
   // The JSON.stringify body in handleSave should include ratingAvg
   assert.match(src, /JSON\.stringify\(\{[\s\S]*ratingAvg[\s\S]*\}\)/, 'PUT body should include ratingAvg');
 });
 
 // 評論整合：評論數改為「口碑語錄＋已核准評論」自動對齊，移除手動輸入欄位
 test('AC5: admin edit page 不再有手動評論數輸入（改自動對齊）', async () => {
-  const src = await readSource('app/admin/activities/[id]/edit/page.tsx');
+  const src = await readSource('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
   assert.doesNotMatch(src, /setReviewCount/, '不應再有手動 reviewCount 狀態/輸入');
   assert.match(src, /自動對齊/, '應顯示評論數自動對齊的說明');
 });
@@ -80,7 +80,7 @@ test('AC5: admin edit page 不再有手動評論數輸入（改自動對齊）',
 test('AC5: admin edit page 社群口碑語錄可編輯人名/星數/內容', async () => {
   // #1615 拆檔：口碑語錄編輯 UI 移至 SocialProofQuotesEditor 元件（state 仍在頁面層），
   // 合併兩檔原始碼做等價斷言（斷言意圖不變）。
-  const src = (await readSource('app/admin/activities/[id]/edit/page.tsx')) +
+  const src = (await readSource('app/(non-locale)/admin/activities/[id]/edit/page.tsx')) +
     (await readSource('src/components/admin/activity-form/SocialProofQuotesEditor.tsx'));
   assert.match(src, /SocialProofQuoteRow/, '應使用結構化口碑語錄型別');
   assert.match(src, /updateQuote\(/, '應有逐則編輯 helper');

@@ -3,7 +3,7 @@ import { describe, it } from 'node:test';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
-const adminAppDir = new URL('../../app/admin/', import.meta.url);
+const adminAppDir = new URL('../../app/(non-locale)/admin/', import.meta.url);
 
 function listTsxFiles(dirUrl) {
   const dir = dirUrl.pathname;

@@ -81,7 +81,7 @@ describe('route wiring', () => {
 
 describe('page wiring', () => {
   const pageSrc = readFileSync(
-    path.join(ROOT, 'app/guide/dashboard/page.tsx'),
+    path.join(ROOT, 'app/(non-locale)/guide/dashboard/page.tsx'),
     'utf8'
   )
 

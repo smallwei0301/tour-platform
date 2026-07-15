@@ -77,10 +77,10 @@ test('T1591edit.4 — admin 路由：middleware 把關＋CSRF＋jsonOk＋不讀 
 });
 
 test('T1591edit.5 — 導遊＋管理者編輯頁掛載 AddonsEditor', () => {
-  const guide = read('app/guide/activities/[id]/edit/page.tsx');
+  const guide = read('app/(non-locale)/guide/activities/[id]/edit/page.tsx');
   assert.match(guide, /<AddonsEditor/);
   assert.match(guide, /\/api\/v2\/guide\/activities\/\$\{id\}\/addons/);
-  const admin = read('app/admin/activities/[id]/edit/page.tsx');
+  const admin = read('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
   assert.match(admin, /<AddonsEditor/);
   assert.match(admin, /\/api\/v2\/admin\/activities\/\$\{activityId\}\/addons/);
   // 編輯器：未設定預設隱藏的說明

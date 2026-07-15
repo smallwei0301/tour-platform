@@ -15,7 +15,7 @@ async function readSource(relPath) {
 // Legacy 已退役（#1406 階段二＋#1407 階段三 flag 退場）：/booking 殼層一律走 Booking V2。
 // 頁面不再讀 shell flag 分支，也不再保留 BookingInnerLegacy / useLegacyFallback 降級路徑。
 test('booking page always renders the V2 shell and no longer branches into a legacy fallback', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
 
   // 只渲染 V2 shell；不得再有 legacy fallback 元件或 flag 分支
   assert.match(src, /<BookingInnerV2FlagShell \/>/, 'default export must render the V2 shell');
@@ -27,7 +27,7 @@ test('booking page always renders the V2 shell and no longer branches into a leg
 });
 
 test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead of legacy createOrder(/api/orders)', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
   const v2End = src.indexOf('// ── 外層包 Suspense');
   assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');
@@ -44,7 +44,7 @@ test('v2-primary booking shell checkout path uses v2 draft+checkout APIs instead
 });
 
 test('v2 shell posts resolved UUID activityId and planId from available-slots response into draft payload', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
   const v2End = src.indexOf('// ── 外層包 Suspense');
   assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');
@@ -58,7 +58,7 @@ test('v2 shell posts resolved UUID activityId and planId from available-slots re
 });
 
 test('v2 shell renders selected plan display name and avoids showing raw UUID in plan summary', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
   const v2FallbackBranch = src.indexOf('// ── 外層包 Suspense');
   assert.ok(v2Start >= 0 && v2FallbackBranch > v2Start, 'expected bounded V2 shell source range');
@@ -77,7 +77,7 @@ test('v2 shell renders selected plan display name and avoids showing raw UUID in
 });
 
 test('v2 shell keeps exact legacy booking presentation markers while retaining v2 mutation path', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
   const v2Start = src.indexOf('function BookingInnerV2FlagShell()');
   const v2End = src.indexOf('// ── 外層包 Suspense（useSearchParams 需要）');
   assert.ok(v2Start >= 0 && v2End > v2Start, 'expected bounded V2 shell source range');

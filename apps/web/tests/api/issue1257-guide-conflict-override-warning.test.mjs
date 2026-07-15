@@ -32,7 +32,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 
 const LIST_ROUTE_PATH = path.resolve(ROOT, 'app/api/v2/guide/bookings/route.ts');
 const DETAIL_ROUTE_PATH = path.resolve(ROOT, 'app/api/v2/guide/bookings/[bookingId]/route.ts');
-const PAGE_PATH = path.resolve(ROOT, 'app/guide/bookings/page.tsx');
+const PAGE_PATH = path.resolve(ROOT, 'app/(non-locale)/guide/bookings/page.tsx');
 
 // ─── Behaviour test helpers ───────────────────────────────────────────────────
 

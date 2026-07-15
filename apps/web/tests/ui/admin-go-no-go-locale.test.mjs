@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const pagePath = new URL('../../app/admin/go-no-go/page.tsx', import.meta.url);
+const pagePath = new URL('../../app/(non-locale)/admin/go-no-go/page.tsx', import.meta.url);
 
 test('Go/No-Go admin page primary UI copy is Traditional Chinese', async () => {
   const pageSource = await readFile(pagePath, 'utf8');

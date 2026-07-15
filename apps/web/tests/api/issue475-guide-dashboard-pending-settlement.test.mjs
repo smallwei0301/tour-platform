@@ -10,7 +10,7 @@ import { test } from 'node:test';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const routePath = join(__dirname, '../../app/api/guide/dashboard/route.ts');
-const pageSource = readFileSync(join(__dirname, '../../app/guide/dashboard/page.tsx'), 'utf8');
+const pageSource = readFileSync(join(__dirname, '../../app/(non-locale)/guide/dashboard/page.tsx'), 'utf8');
 const routeSource = readFileSync(routePath, 'utf8');
 
 test('route.ts: includes pendingSettlementOrders in final response', () => {

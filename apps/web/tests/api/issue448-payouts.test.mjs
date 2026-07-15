@@ -205,7 +205,7 @@ describe('Issue 448 Payouts — POST confirm route contract', () => {
 // AC5 — Admin UI /admin/payouts page contract
 // ---------------------------------------------------------------------------
 describe('Issue 448 Payouts — Admin UI page contract', () => {
-  const PAGE = 'app/admin/payouts/page.tsx';
+  const PAGE = 'app/(non-locale)/admin/payouts/page.tsx';
 
   it('page file exists', () => {
     assert.ok(routeExists(PAGE), `${PAGE} must exist`);

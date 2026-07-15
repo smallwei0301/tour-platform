@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = path.resolve(__dirname, '../..');
 
 async function readBookingSource() {
-  return readFile(path.join(WEB_ROOT, 'app/booking/[activityId]/page.tsx'), 'utf8');
+  return readFile(path.join(WEB_ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx'), 'utf8');
 }
 
 test('v2 shell clamps participants to effective minimum and never posts below-min draft', async () => {

@@ -28,7 +28,7 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const DETAIL_ROUTE = join(REPO_ROOT, 'app/api/admin/guides/[guideId]/route.ts');
-const DETAIL_PAGE = join(REPO_ROOT, 'app/admin/guides/[guideId]/page.tsx');
+const DETAIL_PAGE = join(REPO_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
 const PROMOTE_ROUTE = join(REPO_ROOT, 'app/api/admin/guides/promote/route.ts');
 
 // ---------- 詳情 API：雙實體 resolver ----------

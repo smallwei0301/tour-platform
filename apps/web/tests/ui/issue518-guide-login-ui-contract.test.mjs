@@ -12,7 +12,7 @@ async function readSource(relPath) {
 }
 
 test('guide login submit flow uses bounded fetch timeout and timeout-specific error copy', async () => {
-  const src = await readSource('app/guide/login/page.tsx');
+  const src = await readSource('app/(non-locale)/guide/login/page.tsx');
 
   assert.match(src, /REQUEST_TIMEOUT_MS\s*=\s*\d+/, 'should define a bounded request timeout constant');
   assert.match(src, /new AbortController\(\)/, 'should use AbortController to bound request time');
@@ -22,7 +22,7 @@ test('guide login submit flow uses bounded fetch timeout and timeout-specific er
 });
 
 test('guide login redirect sanitizer blocks path-normalization escapes and keeps safe guide routes', async () => {
-  const src = await readSource('app/guide/login/page.tsx');
+  const src = await readSource('app/(non-locale)/guide/login/page.tsx');
 
   const match = src.match(/function sanitizeGuideNext\(next: string \| null\): string \{([\s\S]*?)\n\}/);
   assert.ok(match, 'should define sanitizeGuideNext');

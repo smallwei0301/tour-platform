@@ -43,7 +43,7 @@ test('T1593ui.5 — 導覽鈴鐺＋清單頁＋分頁＋nav i18n 接線', () => 
   assert.match(bell, /unreadCount/);
   const nav = read('src/components/layout/Navbar.tsx');
   assert.match(nav, /<NotificationBell\s*\/>/);
-  const page = read('app/me/notifications/page.tsx');
+  const page = read('app/(non-locale)/me/notifications/page.tsx');
   assert.match(page, /\/api\/me\/notifications\/read/);
   assert.match(page, /csrfHeaders/);
   const tabs = read('src/components/me/MemberTabs.tsx');

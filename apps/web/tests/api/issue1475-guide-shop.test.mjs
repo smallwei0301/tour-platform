@@ -71,7 +71,7 @@ test('getGuideShopDb 委派 buildGuideShopView，找不到導遊回 null', async
 });
 
 test('全站 footer 在商店頁隱藏（FooterGate 接 usePathname）', () => {
-  const layout = readFileSync(join(webRoot, 'app/layout.tsx'), 'utf8');
+  const layout = readFileSync(join(webRoot, 'src/components/layout/RootDocument.tsx'), 'utf8');
   assert.match(layout, /<FooterGate \/>/);
   assert.doesNotMatch(layout, /<Footer \/>/);
   const gate = readFileSync(join(webRoot, 'src/components/layout/FooterGate.tsx'), 'utf8');
@@ -80,11 +80,11 @@ test('全站 footer 在商店頁隱藏（FooterGate 接 usePathname）', () => {
 });
 
 test('商店首頁：封面照 + 會員入口（登入／會員專區）', () => {
-  const page = readFileSync(join(webRoot, 'app/guides/[slug]/shop/page.tsx'), 'utf8');
+  const page = readFileSync(join(webRoot, 'app/(non-locale)/guides/[slug]/shop/page.tsx'), 'utf8');
   assert.match(page, /guide\.heroImageUrl/);
   assert.match(page, /data-testid="shop-hero"/);
   assert.match(page, /<ShopMemberButton slug=\{slug\}/);
-  const btn = readFileSync(join(webRoot, 'app/guides/[slug]/shop/ShopMemberButton.tsx'), 'utf8');
+  const btn = readFileSync(join(webRoot, 'app/(non-locale)/guides/[slug]/shop/ShopMemberButton.tsx'), 'utf8');
   assert.match(btn, /會員專區/);
   assert.match(btn, /會員登入/);
   assert.match(btn, /auth\.getUser\(\)/);
@@ -92,7 +92,7 @@ test('商店首頁：封面照 + 會員入口（登入／會員專區）', () =>
 });
 
 test('預約 wizard：切換步驟回到頁面最上方', () => {
-  const src = readFileSync(join(webRoot, 'app/guides/[slug]/shop/book/page.tsx'), 'utf8');
+  const src = readFileSync(join(webRoot, 'app/(non-locale)/guides/[slug]/shop/book/page.tsx'), 'utf8');
   assert.match(src, /window\.scrollTo\(\{ top: 0[^}]*\}\)/);
   assert.match(src, /\}, \[step\]\);/);
 });
@@ -105,7 +105,7 @@ test('shop 路由：flag off → 404；flag on → 委派 getGuideShopDb', () =>
 });
 
 test('book wizard 取可預約時段的視窗 ≤31 天（available-slots API 上限）', () => {
-  const src = readFileSync(join(webRoot, 'app/guides/[slug]/shop/book/page.tsx'), 'utf8');
+  const src = readFileSync(join(webRoot, 'app/(non-locale)/guides/[slug]/shop/book/page.tsx'), 'utf8');
   // 不可再用 60 天（會被 available-slots 的 31 天上限擋下 →「無可預約日期」）
   assert.doesNotMatch(src, /60 \* 86400000/);
   assert.match(src, /30 \* 86400000/);
@@ -130,7 +130,7 @@ test('shop 路由：成功回應加 s-maxage=60 邊緣快取', () => {
 });
 
 test('book wizard 取商店資料不帶 no-store（讓 CDN 邊緣快取生效）', () => {
-  const src = readFileSync(join(webRoot, 'app/guides/[slug]/shop/book/page.tsx'), 'utf8');
+  const src = readFileSync(join(webRoot, 'app/(non-locale)/guides/[slug]/shop/book/page.tsx'), 'utf8');
   assert.doesNotMatch(src, /\/api\/guides\/\$\{slug\}\/shop`,\s*\{\s*cache:\s*'no-store'/);
 });
 

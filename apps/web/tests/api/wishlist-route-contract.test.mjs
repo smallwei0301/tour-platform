@@ -205,14 +205,14 @@ describe('Issue 305 Wishlist — db.mjs wishlist helpers contract', () => {
 // ---------------------------------------------------------------------------
 describe('Issue 305 Wishlist — /me/wishlist page contract', () => {
   it('/me/wishlist page file exists', () => {
-    const pageExists = routeExists('app/me/wishlist/page.tsx')
+    const pageExists = routeExists('app/(non-locale)/me/wishlist/page.tsx')
       || routeExists('app/(me)/wishlist/page.tsx');
-    assert.ok(pageExists, 'Must have a /me/wishlist page at app/me/wishlist/page.tsx');
+    assert.ok(pageExists, 'Must have a /me/wishlist page at app/(non-locale)/me/wishlist/page.tsx');
   });
 
   it('/me/wishlist page references wishlist API route', () => {
-    const pagePath = routeExists('app/me/wishlist/page.tsx')
-      ? 'app/me/wishlist/page.tsx'
+    const pagePath = routeExists('app/(non-locale)/me/wishlist/page.tsx')
+      ? 'app/(non-locale)/me/wishlist/page.tsx'
       : 'app/(me)/wishlist/page.tsx';
     const src = readRoute(pagePath);
     const hasApiRef = /\/api\/me\/wishlist/.test(src)
@@ -222,8 +222,8 @@ describe('Issue 305 Wishlist — /me/wishlist page contract', () => {
   });
 
   it('wishlist page has remove button or functionality', () => {
-    const pagePath = routeExists('app/me/wishlist/page.tsx')
-      ? 'app/me/wishlist/page.tsx'
+    const pagePath = routeExists('app/(non-locale)/me/wishlist/page.tsx')
+      ? 'app/(non-locale)/me/wishlist/page.tsx'
       : 'app/(me)/wishlist/page.tsx';
     const src = readRoute(pagePath);
     const hasRemove = /remove|delete|DELETE|取消|移除/i.test(src);

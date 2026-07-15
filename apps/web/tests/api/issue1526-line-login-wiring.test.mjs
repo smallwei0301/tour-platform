@@ -42,7 +42,7 @@ test('/auth/line/callback — code 交換、驗 idToken、issueLineSession、站
 });
 
 test('登入頁 — LINE 按鈕 flag-gated，Google 登入不動', () => {
-  const src = read('login/page.tsx');
+  const src = read('(non-locale)/login/page.tsx');
   assert.match(src, /isLineLoginEnabled\(\)/, 'flag 讀取');
   assert.match(src, /lineLoginEnabled\s*&&/, 'flag OFF 時不 render LINE 按鈕');
   assert.match(src, /data-testid="line-login-btn"/);

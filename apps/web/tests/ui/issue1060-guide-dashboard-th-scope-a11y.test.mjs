@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(
-  resolve(__dirname, '../../app/guide/dashboard/page.tsx'),
+  resolve(__dirname, '../../app/(non-locale)/guide/dashboard/page.tsx'),
   'utf8'
 );
 

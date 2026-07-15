@@ -25,14 +25,18 @@ const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
 test('T1595.1 — [locale]/layout：未開站 locale 回 noindex、非法 locale notFound、只預建可見 locale', () => {
   const src = read('app/[locale]/layout.tsx');
   assert.match(src, /VISIBLE_LOCALES/, 'layout 應 import VISIBLE_LOCALES');
-  // generateMetadata 依 VISIBLE_LOCALES 決定 robots：可見回空、未開站回 noindex
+  // generateMetadata 依 VISIBLE_LOCALES 決定 robots：可見 locale 可索引，未開站 locale noindex
   assert.match(src, /export async function generateMetadata/, '應有 generateMetadata');
   assert.match(
     src,
     /VISIBLE_LOCALES[^\n]*\.includes\(locale\)/,
     'generateMetadata 應以 VISIBLE_LOCALES 判定是否可見'
   );
-  assert.match(src, /robots:\s*\{\s*index:\s*false/, '未開站 locale 應回 robots index:false');
+  assert.match(
+    src,
+    /robots:\s*\{\s*index:\s*visible,\s*follow:\s*visible\s*\}/,
+    'robots 必須直接受 visible 控制，未開站 locale 才會 index:false/follow:false'
+  );
   // 非法 locale（不在四語系）仍走真 404
   assert.match(src, /!hasLocale\(routing\.locales,\s*locale\)/, '非法 locale 應 notFound');
   assert.match(src, /notFound\(\)/, '非法 locale 應 notFound');

@@ -11,7 +11,7 @@ import { dirname, resolve } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROUTE_PATH = resolve(__dirname, '../../app/api/guide/dashboard/route.ts');
-const PAGE_PATH = resolve(__dirname, '../../app/guide/dashboard/page.tsx');
+const PAGE_PATH = resolve(__dirname, '../../app/(non-locale)/guide/dashboard/page.tsx');
 const SETTLEMENT_CONFIG_PATH = resolve(__dirname, '../../src/lib/settlement-config.ts');
 
 const routeSrc = readFileSync(ROUTE_PATH, 'utf8');

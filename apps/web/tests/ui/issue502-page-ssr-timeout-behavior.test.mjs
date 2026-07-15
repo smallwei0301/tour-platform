@@ -119,6 +119,7 @@ test('GH-502: render-path activity lookup fails fast when DB promise hangs', asy
     // #1554/健檢 v2 SEO-1：page 新增 seo-alternates import，sandbox 需 mock（.ts 無法被真 require 載入）
     '../../../../../src/lib/seo-alternates.ts': {
       buildAlternates: () => ({ canonical: '/x', languages: {} }),
+      buildPublicPath: (basePath, segments = []) => `${basePath}/${segments.map(encodeURIComponent).join('/')}`,
     },
     '../../../../../src/lib/activity-jsonld.mjs': {
       buildActivityProductJsonLd: () => ({}),

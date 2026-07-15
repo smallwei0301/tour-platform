@@ -11,7 +11,7 @@ const read = (rel) => readFileSync(join(APP, rel), 'utf8');
 
 const LIST = read('app/api/guide/conflict-overrides/route.ts');
 const PATCH = read('app/api/guide/conflict-overrides/[overrideId]/route.ts');
-const NAV = read('app/guide/layout.tsx');
+const NAV = read('app/(non-locale)/guide/layout.tsx');
 
 test('GET list: guide-auth + 只列自己 active 且需幫手待協調的 override', () => {
   assert.match(LIST, /verifyGuideSession/);

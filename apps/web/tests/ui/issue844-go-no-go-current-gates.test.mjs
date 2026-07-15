@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const routePath = new URL('../../app/api/admin/go-no-go/route.ts', import.meta.url);
-const pagePath = new URL('../../app/admin/go-no-go/page.tsx', import.meta.url);
+const pagePath = new URL('../../app/(non-locale)/admin/go-no-go/page.tsx', import.meta.url);
 
 const STALE_ITEM_IDS = [
   'evidence-real-payment',       // #402 closed

@@ -69,24 +69,24 @@ describe('issue #626 — SEO: sitemap.ts', () => {
 
 describe('issue #626 — SEO: layout.tsx metadata', () => {
   it('has metadataBase', () => {
-    const src = readFile('layout.tsx');
+    const src = readFile('../src/lib/seo/site-metadata.ts');
     assert.ok(src.includes('metadataBase'), 'layout.tsx should have metadataBase');
   });
 
   it('has openGraph with siteName', () => {
-    const src = readFile('layout.tsx');
+    const src = readFile('../src/lib/seo/site-metadata.ts');
     assert.ok(src.includes('siteName'), 'layout.tsx openGraph should include siteName');
     assert.ok(src.includes('Midao 祕島'), 'layout.tsx should reference Midao 祕島 brand name');
   });
 
   it('has twitter card metadata', () => {
-    const src = readFile('layout.tsx');
+    const src = readFile('../src/lib/seo/site-metadata.ts');
     assert.ok(src.includes('twitter'), 'layout.tsx should include twitter metadata');
     assert.ok(src.includes('summary_large_image'), 'layout.tsx twitter card should be summary_large_image');
   });
 
   it('has title template', () => {
-    const src = readFile('layout.tsx');
+    const src = readFile('../src/lib/seo/site-metadata.ts');
     assert.ok(src.includes('template'), 'layout.tsx title should use template format');
   });
 });

@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const pagePath = new URL('../../app/admin/go-no-go/page.tsx', import.meta.url);
-const panelPath = new URL('../../app/admin/go-no-go/CronJobsPanel.tsx', import.meta.url);
+const pagePath = new URL('../../app/(non-locale)/admin/go-no-go/page.tsx', import.meta.url);
+const panelPath = new URL('../../app/(non-locale)/admin/go-no-go/CronJobsPanel.tsx', import.meta.url);
 
 test('Go/No-Go page still mounts the schedule management panel', async () => {
   const src = await readFile(pagePath, 'utf8');

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-const pagePath = new URL('../../app/admin/go-no-go/page.tsx', import.meta.url);
+const pagePath = new URL('../../app/(non-locale)/admin/go-no-go/page.tsx', import.meta.url);
 const routePath = new URL('../../app/api/admin/go-no-go/route.ts', import.meta.url);
 
 function extractReadinessStatuses(routeSource) {

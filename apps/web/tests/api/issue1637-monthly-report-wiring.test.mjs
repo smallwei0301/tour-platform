@@ -103,7 +103,7 @@ describe('Admin UI 接線', () => {
   });
 
   it('報表頁有月份選擇、產出按鈕與 CSV 下載連結', () => {
-    const src = read('app/admin/reports/page.tsx');
+    const src = read('app/(non-locale)/admin/reports/page.tsx');
     assert.match(src, /type="month"/);
     assert.match(src, /\/api\/v2\/admin\/reports\/monthly\?month=/);
     assert.match(src, /\/api\/v2\/admin\/reports\/monthly\/csv\?month=/);
