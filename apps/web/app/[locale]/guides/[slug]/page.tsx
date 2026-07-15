@@ -10,7 +10,7 @@ import { GuideAvatar } from '../../../../src/components/shared/GuideAvatar';
 import { ActivityHero } from '../../../../src/components/shared/ActivityHero';
 import { GalleryImage } from '../../../../src/components/shared/GalleryImage';
 import { GuideContactQASection } from '../../../../src/components/guide/GuideContactQASection';
-import { buildAlternates } from '../../../../src/lib/seo-alternates.ts';
+import { buildAlternates, buildPublicPath } from '../../../../src/lib/seo-alternates.ts';
 
 // On-demand revalidation（非定時 ISR）：導遊在後台儲存後，
 // /api/guide/profile 會 revalidatePath(`/guides/<slug>`) 精準失效本頁，
@@ -44,7 +44,7 @@ export async function generateMetadata(
     title: t('metaTitle', { name }),
     description,
     // 健檢 v2 SEO-1：canonical/hreflang
-    alternates: buildAlternates(`/guides/${encodeURIComponent(slug)}`, locale),
+    alternates: buildAlternates(buildPublicPath('/guides', [slug]), locale),
     openGraph: {
       title: t('metaTitleShort', { name }),
       description,

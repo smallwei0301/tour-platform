@@ -24,8 +24,8 @@ test('T1407.1 — legacy 檔案已刪除且不得回歸', () => {
     'app/api/orders/route.ts',
     'app/checkout/page.tsx',
     'app/checkout/layout.tsx',
-    'app/orders/page.tsx',
-    'app/orders/[orderId]/page.tsx',
+    'app/(non-locale)/orders/page.tsx',
+    'app/(non-locale)/orders/[orderId]/page.tsx',
     'app/api/v2/feature-flags/route.ts',
   ]) {
     assert.equal(existsSync(path.join(ROOT, rel)), false, `${rel} 應已隨 #1407 刪除`);

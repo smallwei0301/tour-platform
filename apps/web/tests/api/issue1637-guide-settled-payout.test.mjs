@@ -41,7 +41,7 @@ describe('guide dashboard route — settledPayoutTwd/lastPayoutAt', () => {
 });
 
 describe('guide dashboard UI — 已入帳顯示', () => {
-  const src = read('app/guide/dashboard/page.tsx');
+  const src = read('app/(non-locale)/guide/dashboard/page.tsx');
 
   it('型別含 settledPayoutTwd/lastPayoutAt', () => {
     assert.match(src, /settledPayoutTwd: number \| null/);

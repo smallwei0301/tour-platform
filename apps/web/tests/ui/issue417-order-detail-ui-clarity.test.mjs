@@ -20,7 +20,7 @@ async function readSource(relPath) {
   return readFile(path.join(ROOT, relPath), 'utf8');
 }
 
-const PAGE = 'app/me/orders/[orderId]/page.tsx';
+const PAGE = 'app/(non-locale)/me/orders/[orderId]/page.tsx';
 
 // #multilingual: 面向使用者的文案已移到 messages/zh-Hant.json 的 orderDetail namespace；
 // 頁面改用 m.<key> 引用。內容類斷言改讀（page + 繁中 catalog），結構類斷言改 key 名定位。

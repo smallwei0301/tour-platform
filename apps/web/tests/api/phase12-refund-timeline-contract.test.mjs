@@ -9,7 +9,7 @@ const ROOT = path.resolve(__dirname, '../..');
 
 // AC1 — Admin orders page fetches and renders refund timeline events
 test('AC1: admin orders page fetches booking timeline and renders refund events', () => {
-  const filePath = path.join(ROOT, 'app/admin/orders/page.tsx');
+  const filePath = path.join(ROOT, 'app/(non-locale)/admin/orders/page.tsx');
   const src = readFileSync(filePath, 'utf8');
 
   // Must fetch the order timeline API (order-level endpoint or POS bookings endpoint)
@@ -28,7 +28,7 @@ test('AC1: admin orders page fetches booking timeline and renders refund events'
 
 // AC2 — Admin orders page renders trade_no for refunded payment events
 test('AC2: admin orders page shows trade_no for refunded payment events', () => {
-  const filePath = path.join(ROOT, 'app/admin/orders/page.tsx');
+  const filePath = path.join(ROOT, 'app/(non-locale)/admin/orders/page.tsx');
   const src = readFileSync(filePath, 'utf8');
 
   assert.match(src, /trade_no|tradeNo/, 'must render trade_no for ECPay payment events');
@@ -60,7 +60,7 @@ test('AC4: refund-requests CSV endpoint exists with correct response headers', (
 
 // AC5 — Refund action button is disabled when order status is refunded
 test('AC5: refund action button disabled when order already refunded', () => {
-  const filePath = path.join(ROOT, 'app/admin/orders/page.tsx');
+  const filePath = path.join(ROOT, 'app/(non-locale)/admin/orders/page.tsx');
   const src = readFileSync(filePath, 'utf8');
 
   assert.match(

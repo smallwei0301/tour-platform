@@ -80,10 +80,10 @@ test('v2 guide routes：實作本體＋寫入路徑顯式 CSRF', async () => {
 
 test('admin 四頁零 legacy 訂單/退款/payouts endpoint 呼叫', async () => {
   const pages = [
-    'app/admin/orders/page.tsx',
-    'app/admin/refunds/page.tsx',
-    'app/admin/payouts/page.tsx',
-    'app/admin/ops/orders/page.tsx',
+    'app/(non-locale)/admin/orders/page.tsx',
+    'app/(non-locale)/admin/refunds/page.tsx',
+    'app/(non-locale)/admin/payouts/page.tsx',
+    'app/(non-locale)/admin/ops/orders/page.tsx',
   ];
   for (const page of pages) {
     const src = await read(page);
@@ -94,10 +94,10 @@ test('admin 四頁零 legacy 訂單/退款/payouts endpoint 呼叫', async () =>
 
 test('guide 四頁零 legacy 訂單/金流 endpoint 呼叫', async () => {
   const pages = [
-    'app/guide/bookings/page.tsx',
-    'app/guide/dashboard/page.tsx',
-    'app/guide/messages/page.tsx',
-    'app/guide/reschedules/page.tsx',
+    'app/(non-locale)/guide/bookings/page.tsx',
+    'app/(non-locale)/guide/dashboard/page.tsx',
+    'app/(non-locale)/guide/messages/page.tsx',
+    'app/(non-locale)/guide/reschedules/page.tsx',
   ];
   for (const page of pages) {
     const src = await read(page);

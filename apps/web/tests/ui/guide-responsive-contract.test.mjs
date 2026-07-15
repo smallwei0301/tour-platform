@@ -6,7 +6,7 @@
 //   - each guide table/modal page actually imports from the shared
 //     components/admin/responsive module (no regression to inline tables);
 //   - no fixed-width modal pattern (position:fixed + inset:0 + maxWidth)
-//     remains anywhere under app/guide/** EXCEPT bookings, which keeps a
+//     remains anywhere under app/(non-locale)/guide/** EXCEPT bookings, which keeps a
 //     hand-rolled focus-trapped dialog to stay compatible with PR #1066's
 //     a11y suite — there we instead assert the panel sizing is RWD-friendly.
 import test from 'node:test';
@@ -31,7 +31,7 @@ test('ResponsiveTable selected-row colors are parametrized via CSS vars (--rt-ac
 });
 
 test('guide layout sets the purple accent vars + closes dropdown on route change + safe-area', async () => {
-  const src = await readSrc('app/guide/layout.tsx');
+  const src = await readSrc('app/(non-locale)/guide/layout.tsx');
   assert.match(src, /--rt-accent[\s\S]*?'#7c3aed'/);
   assert.match(src, /--rt-accent-soft[\s\S]*?'#f5f3ff'/);
   // Effect that closes the menu when pathname changes.
@@ -42,9 +42,9 @@ test('guide layout sets the purple accent vars + closes dropdown on route change
 });
 
 const GUIDE_TABLE_PAGES = [
-  'app/guide/bookings/page.tsx',
-  'app/guide/schedules/page.tsx',
-  'app/guide/dashboard/page.tsx',
+  'app/(non-locale)/guide/bookings/page.tsx',
+  'app/(non-locale)/guide/schedules/page.tsx',
+  'app/(non-locale)/guide/dashboard/page.tsx',
 ];
 for (const rel of GUIDE_TABLE_PAGES) {
   test(`${rel} imports ResponsiveTable from components/admin/responsive`, async () => {
@@ -60,8 +60,8 @@ for (const rel of GUIDE_TABLE_PAGES) {
 // would break that contract. The hand-rolled bookings panel is still RWD,
 // asserted separately below.
 const GUIDE_MODAL_PAGES = [
-  'app/guide/dashboard/page.tsx',
-  'app/guide/availability/page.tsx',
+  'app/(non-locale)/guide/dashboard/page.tsx',
+  'app/(non-locale)/guide/availability/page.tsx',
 ];
 for (const rel of GUIDE_MODAL_PAGES) {
   test(`${rel} uses ResponsiveModal (no hand-rolled fixed overlay)`, async () => {
@@ -73,16 +73,16 @@ for (const rel of GUIDE_MODAL_PAGES) {
 test('bookings hand-rolled dialog panel is RWD-friendly (width clamps to viewport)', async () => {
   // Asserts the panel width is `min(<px>, calc(100vw - <px>))` and that
   // maxHeight uses 100dvh so the modal never overflows a 375-wide phone.
-  const src = await readSrc('app/guide/bookings/page.tsx');
+  const src = await readSrc('app/(non-locale)/guide/bookings/page.tsx');
   assert.match(src, /width:\s*'min\(\d+px,\s*calc\(100vw - \d+px\)\)'/);
   assert.match(src, /maxHeight:\s*'calc\(100dvh - \d+px\)'/);
 });
 
-test('no fixed-width hand-rolled modal remains in non-bookings app/guide/** pages', async () => {
+test('no fixed-width hand-rolled modal remains in non-bookings app/(non-locale)/guide/** pages', async () => {
   // bookings/page.tsx is intentionally excluded — see the test above.
-  const guideRoot = path.join(WEB_ROOT, 'app/guide');
+  const guideRoot = path.join(WEB_ROOT, 'app/(non-locale)/guide');
   const tsxFiles = (await walkTsx(guideRoot)).filter(
-    (abs) => !abs.endsWith(path.join('app/guide/bookings/page.tsx')),
+    (abs) => !abs.endsWith(path.join('app/(non-locale)/guide/bookings/page.tsx')),
   );
   const offenders = [];
   for (const abs of tsxFiles) {

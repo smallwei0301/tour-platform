@@ -21,6 +21,15 @@ export function localizePath(path: string, locale: AppLocale): string {
   return normalized === '/' ? `/${locale}` : `/${locale}${normalized}`;
 }
 
+/** Builds a public route path with encoded dynamic segments. */
+export function buildPublicPath(basePath: string, segments: string[] = []): string {
+  const normalizedBase = `/${String(basePath).replace(/^\/+|\/+$/g, '')}`;
+  const encodedSegments = segments.map((segment) => encodeURIComponent(String(segment)));
+  return encodedSegments.length > 0
+    ? `${normalizedBase}/${encodedSegments.join('/')}`
+    : normalizedBase;
+}
+
 export type SeoAlternates = {
   canonical: string;
   languages: Record<string, string>;
@@ -61,5 +70,27 @@ export function sitemapLanguageAlternates(
     const p = localizePath(path, l);
     languages[l] = p === '/' ? trimmedBase : `${trimmedBase}${p}`;
   }
+  const defaultPath = localizePath(path, routing.defaultLocale);
+  languages['x-default'] = defaultPath === '/' ? trimmedBase : `${trimmedBase}${defaultPath}`;
   return { languages };
+}
+
+/**
+ * Emits one sitemap URL record per visible locale while retaining reciprocal
+ * hreflang alternates on every record.
+ */
+export function localizedSitemapUrls(
+  path: string,
+  baseUrl: string
+): Array<{ url: string; alternates: { languages: Record<string, string> } }> {
+  const trimmedBase = baseUrl.replace(/\/+$/, '');
+  const alternates = sitemapLanguageAlternates(path, trimmedBase);
+
+  return VISIBLE_LOCALES.map((locale) => {
+    const localizedPath = localizePath(path, locale);
+    return {
+      url: localizedPath === '/' ? trimmedBase : `${trimmedBase}${localizedPath}`,
+      alternates,
+    };
+  });
 }

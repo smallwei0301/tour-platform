@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
 
-const PAGE_PATH = path.join(ROOT, 'app/guide/dashboard/page.tsx');
+const PAGE_PATH = path.join(ROOT, 'app/(non-locale)/guide/dashboard/page.tsx');
 
 describe('Issue #458 — Guide Q&A CSRF header', () => {
   it('guide dashboard page file exists', () => {

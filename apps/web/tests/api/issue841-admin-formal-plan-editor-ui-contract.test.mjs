@@ -11,7 +11,7 @@ describe('GH-841 admin formal plan editor UI contract', () => {
   it('plans page exposes rich formal-plan fields and payload mapping', () => {
     // #1615 拆檔：方案表單 Modal 移至 PlanFormModal 元件（createDefaultForm 等純函式在
     // activity-plans/plan-types.ts，頁面保留呼叫點），合併原始碼做等價斷言（斷言意圖不變）。
-    const source = read('app/admin/activities/[id]/plans/page.tsx') +
+    const source = read('app/(non-locale)/admin/activities/[id]/plans/page.tsx') +
       read('src/components/admin/activity-plans/PlanFormModal.tsx');
     // #297 行程介紹改為站點時間表（站點分區編輯 + 每站可上傳/貼圖）
     for (const label of ['語言導覽','最早可出發日','最晚 N 天前確認','N 天前可免費取消','費用包含（每行一項）','費用不包含（每行一項）','行程介紹（站點時間表）','集合地點名稱','體驗地點名稱','購買須知（每行一項）','取消政策（每行一項）','方案最低成團人數','方案最多人數']) {
@@ -27,7 +27,7 @@ describe('GH-841 admin formal plan editor UI contract', () => {
   });
 
   it('edit page no longer mounts competing plans editor and shows migration CTA', () => {
-    const source = read('app/admin/activities/[id]/edit/page.tsx');
+    const source = read('app/(non-locale)/admin/activities/[id]/edit/page.tsx');
     assert.doesNotMatch(source, /<PlansSection\b/);
     // #admin-plan-revert 後續：legacy 方案卡改為單純導向「方案管理」的 CTA。
     assert.match(source, /前往「方案管理」/);

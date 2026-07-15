@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const shopDir = path.resolve(__dirname, '../../app/guides/[slug]/shop');
+const shopDir = path.resolve(__dirname, '../../app/(non-locale)/guides/[slug]/shop');
 
 const pageSource = readFileSync(path.join(shopDir, 'page.tsx'), 'utf8');
 const shareBarSource = readFileSync(path.join(shopDir, 'ShopShareBar.tsx'), 'utf8');

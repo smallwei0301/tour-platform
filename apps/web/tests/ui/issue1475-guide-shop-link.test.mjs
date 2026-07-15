@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PAGE = join(__dirname, '..', '..', 'app/guide/profile/page.tsx');
+const PAGE = join(__dirname, '..', '..', 'app/(non-locale)/guide/profile/page.tsx');
 const src = readFileSync(PAGE, 'utf8');
 
 test('卡片以 client-safe 旗標 + slug 控管渲染（字面量 process.env，非 env 參數間接讀取）', () => {

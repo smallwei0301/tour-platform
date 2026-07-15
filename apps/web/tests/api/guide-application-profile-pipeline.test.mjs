@@ -34,8 +34,8 @@ const DB_MJS = join(APP_ROOT, 'src/lib/db-guide-applications.mjs'); // #1613 str
 const DB_CORE_MJS = join(APP_ROOT, 'src/lib/db.mjs'); // getGuideBySlugDb 等仍在 db.mjs 本體
 const PROMOTE_ROUTE = join(APP_ROOT, 'app/api/admin/guides/promote/route.ts');
 const DETAIL_ROUTE = join(APP_ROOT, 'app/api/admin/guides/[guideId]/route.ts');
-const DETAIL_PAGE = join(APP_ROOT, 'app/admin/guides/[guideId]/page.tsx');
-const APPLY_PAGE = join(APP_ROOT, 'app/guide/apply/page.tsx');
+const DETAIL_PAGE = join(APP_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
+const APPLY_PAGE = join(APP_ROOT, 'app/(non-locale)/guide/apply/page.tsx');
 const MIGRATION = join(REPO_ROOT, 'supabase/migrations/20260610_guide_applications_profile_fields.sql');
 
 const SAMPLE = {

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../..');
-const BOOKING_PAGE_PATH = path.join(ROOT, 'app/booking/[activityId]/page.tsx');
+const BOOKING_PAGE_PATH = path.join(ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx');
 
 test('GH-860 contract: step2 creates draft before payment step and carries scheduleId source-of-truth', async () => {
   const src = await readFile(BOOKING_PAGE_PATH, 'utf8');

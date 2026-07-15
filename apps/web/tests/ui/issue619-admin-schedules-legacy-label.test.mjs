@@ -12,7 +12,7 @@ async function readSource(relPath) {
 }
 
 test('guide schedules page is explicitly legacy-only and points V2 users to /guide/availability', async () => {
-  const src = await readSource('app/guide/schedules/page.tsx');
+  const src = await readSource('app/(non-locale)/guide/schedules/page.tsx');
 
   assert.match(src, /Legacy\s*固定場次管理|舊制快照|備援流程/, 'must clearly label this page as legacy/fallback fixed-schedule management');
   assert.match(src, /activity_schedules/, 'must explicitly mention activity_schedules legacy scope');

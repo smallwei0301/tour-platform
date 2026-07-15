@@ -34,10 +34,10 @@ async function readSrc(rel) {
 }
 
 test('Noto_Sans_TC (中文字體) 用 display: optional 避免 swap-shift CLS', async () => {
-  const src = await readSrc('app/layout.tsx');
+  const src = await readSrc('src/components/layout/RootDocument.tsx');
   // Find the Noto_Sans_TC config block and check the display value.
   const match = src.match(/Noto_Sans_TC\(\s*\{([\s\S]*?)\}\)/);
-  assert.ok(match, 'expected a Noto_Sans_TC({...}) configuration block in app/layout.tsx');
+  assert.ok(match, 'expected a Noto_Sans_TC({...}) configuration block in src/components/layout/RootDocument.tsx');
   const body = match[1];
   assert.match(
     body,
@@ -47,7 +47,7 @@ test('Noto_Sans_TC (中文字體) 用 display: optional 避免 swap-shift CLS', 
 });
 
 test('Inter (Latin font) 保留 display: swap (next/font 對拉丁字體已 metric-match fallback)', async () => {
-  const src = await readSrc('app/layout.tsx');
+  const src = await readSrc('src/components/layout/RootDocument.tsx');
   const match = src.match(/Inter\(\s*\{([\s\S]*?)\}\)/);
   assert.ok(match, 'expected an Inter({...}) configuration block');
   const body = match[1];
@@ -59,7 +59,7 @@ test('Inter (Latin font) 保留 display: swap (next/font 對拉丁字體已 metr
 });
 
 test('--font-noto-sans-tc variable 保留以便 globals.css font-family 仍 work', async () => {
-  const src = await readSrc('app/layout.tsx');
+  const src = await readSrc('src/components/layout/RootDocument.tsx');
   assert.match(
     src,
     /variable:\s*['"]--font-noto-sans-tc['"]/,

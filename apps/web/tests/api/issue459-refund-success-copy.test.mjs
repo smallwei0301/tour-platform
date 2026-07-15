@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const PAGE = join(__dirname, '../../app/me/orders/[orderId]/page.tsx')
+const PAGE = join(__dirname, '../../app/(non-locale)/me/orders/[orderId]/page.tsx')
 // #multilingual: 面向使用者的退款文案已移到 messages/zh-Hant.json 的 orderDetail namespace，
 // 頁面只保留 m.refundSuccess。針對「文案內容」的契約改讀繁中 catalog。
 const ZH = join(__dirname, '../../messages/zh-Hant.json')

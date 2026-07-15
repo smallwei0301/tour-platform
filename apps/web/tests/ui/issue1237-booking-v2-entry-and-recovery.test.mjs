@@ -28,7 +28,7 @@ test('GH-1237 RED: client-api UUID fallback flow is wired through public activit
 });
 
 test('GH-1237 RED: booking page uses canonical activity lookup helper and rewrites UUID URLs to slug booking path', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
 
   assert.match(src, /fetchActivityByIdOrSlug\(/);
   assert.match(src, /window\.history\.replaceState\(/);
@@ -37,7 +37,7 @@ test('GH-1237 RED: booking page uses canonical activity lookup helper and rewrit
 });
 
 test('GH-1237 RED: booking page maps raw missing-plan English errors to traveler-safe Traditional Chinese recovery copy', async () => {
-  const src = await readSource('app/booking/[activityId]/page.tsx');
+  const src = await readSource('app/(non-locale)/booking/[activityId]/page.tsx');
 
   assert.match(src, /function\s+getBookingV2RecoveryMessage\s*\(/);
   assert.match(src, /Activity plan not found/);

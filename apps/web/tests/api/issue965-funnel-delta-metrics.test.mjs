@@ -33,7 +33,7 @@ const goNoGoSrc = readFileSync(path.join(SCRIPTS, 'booking-v2-go-no-go.mjs'), 'u
 // legacy checkout 頁的 funnel 斷言已隨 #1407 頁面刪除移除（V2 殼層見下方 describe）。
 
 const bookingPageSrc = readFileSync(
-  path.resolve(ROOT, 'app/booking/[activityId]/page.tsx'),
+  path.resolve(ROOT, 'app/(non-locale)/booking/[activityId]/page.tsx'),
   'utf8',
 );
 

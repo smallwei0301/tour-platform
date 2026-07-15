@@ -74,7 +74,7 @@ test('源碼契約：db.mjs 與 fallback 的 payload 都含 is_disputed / is_saf
 });
 
 test('源碼契約：admin operations-tracking 頁面有兩個新 hold 的 toggle', () => {
-  const pageSrc = readFileSync(join(repoRoot, 'app/admin/operations-tracking/page.tsx'), 'utf8');
+  const pageSrc = readFileSync(join(repoRoot, 'app/(non-locale)/admin/operations-tracking/page.tsx'), 'utf8');
   assert.match(pageSrc, /key:\s*'isDisputed'/, '頁面需有 isDisputed toggle');
   assert.match(pageSrc, /key:\s*'isSafetyCase'/, '頁面需有 isSafetyCase toggle');
 });

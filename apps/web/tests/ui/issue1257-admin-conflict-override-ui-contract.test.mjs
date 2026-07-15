@@ -10,7 +10,7 @@ const ROOT = path.resolve(__dirname, '../..');
 // Modal 內容移至 admin-conflict-override-modal（純結構搬移、零行為變更）；
 // 來源契約改讀「頁面＋其子元件」串接內容，斷言意圖不變。
 const GUIDE_AVAILABILITY_SOURCES = [
-  'app/admin/guides/[guideId]/availability/page.tsx',
+  'app/(non-locale)/admin/guides/[guideId]/availability/page.tsx',
   'src/components/availability/admin-sections.tsx',
   'src/components/availability/admin-conflict-override-modal.tsx',
 ].map((rel) => path.join(ROOT, rel));

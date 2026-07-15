@@ -17,8 +17,8 @@ import { dirname, join } from 'node:path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(__dirname, '..', '..');
 const ROUTE = join(REPO_ROOT, 'app/api/v2/admin/guides/[guideId]/impersonate/route.ts');
-const ADMIN_PAGE = join(REPO_ROOT, 'app/admin/guides/[guideId]/page.tsx');
-const GUIDE_LAYOUT = join(REPO_ROOT, 'app/guide/layout.tsx');
+const ADMIN_PAGE = join(REPO_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
+const GUIDE_LAYOUT = join(REPO_ROOT, 'app/(non-locale)/guide/layout.tsx');
 const MIDDLEWARE = join(REPO_ROOT, 'middleware.ts');
 
 // ---------- 代入 route ----------

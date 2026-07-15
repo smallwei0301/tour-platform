@@ -71,7 +71,7 @@ test('upload-hero and upload-gallery validate aspect ratio with sharp', async ()
 });
 
 test('guide profile edit page uses the three upload endpoints + chip inputs', async () => {
-  const src = await readSrc('app/guide/profile/page.tsx');
+  const src = await readSrc('app/(non-locale)/guide/profile/page.tsx');
   assert.match(src, /\/api\/guide\/profile\/upload-avatar/);
   assert.match(src, /\/api\/guide\/profile\/upload-hero/);
   assert.match(src, /\/api\/guide\/profile\/upload-gallery/);

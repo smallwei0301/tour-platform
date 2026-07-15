@@ -99,7 +99,7 @@ test('line auth verify route exists, verifies idToken aud, and upserts a binding
 
 test('booking line entry flag-gates LIFF and keeps legacy handoff fallback', async () => {
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const src = await fs.readFile(path.resolve(__dirname, '../../app/booking/line/page.tsx'), 'utf8');
+  const src = await fs.readFile(path.resolve(__dirname, '../../app/(non-locale)/booking/line/page.tsx'), 'utf8');
   assert.match(src, /isLineLiffEnabled/);
   // legacy fallback must remain intact for instant rollback
   assert.match(src, /handoffParams\.set\('mode', 'redirect'\)/);

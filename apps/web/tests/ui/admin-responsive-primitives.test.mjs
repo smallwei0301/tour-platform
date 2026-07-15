@@ -16,26 +16,26 @@ import { readFile } from 'node:fs/promises';
 const primitivesPath = new URL('../../src/components/admin/responsive.tsx', import.meta.url);
 
 const TABLE_PAGES = [
-  '../../app/admin/orders/page.tsx',
-  '../../app/admin/refunds/page.tsx',
-  '../../app/admin/payouts/page.tsx',
-  '../../app/admin/activities/page.tsx',
-  '../../app/admin/activities/[id]/plans/page.tsx',
-  '../../app/admin/promo-codes/page.tsx',
-  '../../app/admin/reviews/page.tsx',
-  '../../app/admin/qa/page.tsx',
-  '../../app/admin/operations-tracking/page.tsx',
-  '../../app/admin/health/page.tsx',
-  '../../app/admin/settings/kpi/page.tsx',
+  '../../app/(non-locale)/admin/orders/page.tsx',
+  '../../app/(non-locale)/admin/refunds/page.tsx',
+  '../../app/(non-locale)/admin/payouts/page.tsx',
+  '../../app/(non-locale)/admin/activities/page.tsx',
+  '../../app/(non-locale)/admin/activities/[id]/plans/page.tsx',
+  '../../app/(non-locale)/admin/promo-codes/page.tsx',
+  '../../app/(non-locale)/admin/reviews/page.tsx',
+  '../../app/(non-locale)/admin/qa/page.tsx',
+  '../../app/(non-locale)/admin/operations-tracking/page.tsx',
+  '../../app/(non-locale)/admin/health/page.tsx',
+  '../../app/(non-locale)/admin/settings/kpi/page.tsx',
 ];
 
 const MODAL_PAGES = [
-  '../../app/admin/activities/page.tsx',
+  '../../app/(non-locale)/admin/activities/page.tsx',
   // #1615 拆檔：兩頁的 modal 分別移至 ScheduleSection／PlanFormModal 元件（斷言意圖不變）
   '../../src/components/admin/activity-form/ScheduleSection.tsx',
   '../../src/components/admin/activity-plans/PlanFormModal.tsx',
-  '../../app/admin/guides/page.tsx',
-  '../../app/admin/guides/[guideId]/availability/page.tsx',
+  '../../app/(non-locale)/admin/guides/page.tsx',
+  '../../app/(non-locale)/admin/guides/[guideId]/availability/page.tsx',
 ];
 
 test('responsive primitives module exports the four named primitives', async () => {

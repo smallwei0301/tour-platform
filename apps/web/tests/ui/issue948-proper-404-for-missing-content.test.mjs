@@ -73,9 +73,16 @@ describe('issue #948 — proper 404 for unknown experience slugs', () => {
     );
   });
 
-  test('experience page preserves fallback when API fails (error tolerance)', () => {
-    // The catch() on the fetch preserves the fallback for DB errors
-    assert.ok(experienceSlugSrc.includes('fallbackExperience'), 'fallback must be preserved for API errors');
-    assert.ok(experienceSlugSrc.includes('.catch('), 'fetch must have error handling');
+  test('experience page fails closed when the published catalog is unavailable', () => {
+    assert.ok(
+      experienceSlugSrc.includes('listPublishedActivitiesDb'),
+      'must query the published-only activity catalog rather than the unfiltered experience list'
+    );
+    assert.match(
+      experienceSlugSrc,
+      /catch\s*\{[\s\S]*?return null[\s\S]*?\}[\s\S]*?if \(!experience\) notFound\(\)/,
+      'catalog failure must resolve to null and metadata must call notFound() before emitting SEO signals'
+    );
+    assert.ok(!experienceSlugSrc.includes('fallbackExperience'), 'must not render fallback content after catalog failure');
   });
 });

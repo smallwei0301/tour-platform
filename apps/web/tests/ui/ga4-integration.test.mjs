@@ -2,7 +2,7 @@
  * GA4（gtag.js）安插 source-contract 測試。
  *
  * 需求：把 Google tag（G-26EYTQJ9RC）緊接在每頁 <head> 之後，且每頁只有一份。
- * App Router 下 root layout（app/layout.tsx）是唯一包住全站的 layout，
+ * App Router 下 root layout（src/components/layout/RootDocument.tsx）是唯一包住全站的 layout，
  * 因此「掛在 root layout <head> 內一次」即等於「每頁一份、且不重複」。
  *
  * 這裡用讀原始碼 + regex 鎖定接線（import、<head> 內掛載、ID、gtag 初始化、
@@ -18,7 +18,7 @@ const componentSrc = readFileSync(
   path.resolve('src/components/analytics/GoogleAnalytics.tsx'),
   'utf8'
 );
-const layoutSrc = readFileSync(path.resolve('app/layout.tsx'), 'utf8');
+const layoutSrc = readFileSync(path.resolve('src/components/layout/RootDocument.tsx'), 'utf8');
 const configSrc = readFileSync(path.resolve('next.config.mjs'), 'utf8');
 
 test('GoogleAnalytics 元件用 next/script 載入 gtag.js 並帶正式 GA ID', () => {

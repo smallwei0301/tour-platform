@@ -21,7 +21,7 @@ const ROOT = path.resolve(__dirname, '../..');
 // ── AC1: Page renders 4 required blocks ──────────────────────────────────────
 
 test('AC1: /admin/go-no-go/page.tsx exists and references all 4 required UI blocks', () => {
-  const pagePath = path.resolve(ROOT, 'app/admin/go-no-go/page.tsx');
+  const pagePath = path.resolve(ROOT, 'app/(non-locale)/admin/go-no-go/page.tsx');
   assert.ok(existsSync(pagePath), `page not found: ${pagePath}`);
 
   const src = readFileSync(pagePath, 'utf8');

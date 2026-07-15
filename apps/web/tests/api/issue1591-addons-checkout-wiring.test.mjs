@@ -40,7 +40,7 @@ test('T1591wire.3 — 選購器讀 API＋回報選擇；金額前端只作顯示
 });
 
 test('T1591wire.4 — booking 頁掛 CheckoutExtrasSection 並把 addonSelections 送進下單 body', () => {
-  const src = read('app/booking/[activityId]/page.tsx');
+  const src = read('app/(non-locale)/booking/[activityId]/page.tsx');
   assert.match(src, /<CheckoutExtrasSection/);
   assert.match(src, /addonSelections:\s*extras\.addonSelections\.length\s*>\s*0/);
   assert.match(src, /payTotal/);

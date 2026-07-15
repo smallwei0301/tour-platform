@@ -12,7 +12,7 @@ async function readSource(relPath) {
 }
 
 test('order pay page does not expose traveler-visible mock payment CTA', async () => {
-  const src = await readSource('app/order/pay/page.tsx');
+  const src = await readSource('app/(non-locale)/order/pay/page.tsx');
 
   assert.doesNotMatch(src, /data-testid="mock-pay-btn"/, 'must not render mock pay test id on order pay page');
   assert.doesNotMatch(src, /模擬付款（測試用）/, 'must not expose mock payment copy to travelers');

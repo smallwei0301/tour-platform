@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const panelPath = new URL('../../app/admin/go-no-go/CronJobsPanel.tsx', import.meta.url);
+const panelPath = new URL('../../app/(non-locale)/admin/go-no-go/CronJobsPanel.tsx', import.meta.url);
 const e2eSpecPath = new URL('../../e2e/issue1700-admin-mobile-cron-cards.spec.ts', import.meta.url);
 
 async function panelSource() {

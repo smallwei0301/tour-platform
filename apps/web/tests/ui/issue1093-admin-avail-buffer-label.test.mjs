@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const adminPageSource = readFileSync(
-  resolve(__dirname, '../../app/admin/guides/[guideId]/availability/page.tsx'),
+  resolve(__dirname, '../../app/(non-locale)/admin/guides/[guideId]/availability/page.tsx'),
   'utf8'
 );
 const ruleFormFieldsSource = readFileSync(

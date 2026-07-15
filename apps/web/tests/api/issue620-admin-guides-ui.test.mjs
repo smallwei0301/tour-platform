@@ -24,7 +24,7 @@ test('AdminShell sidebar nav has overflowY: auto', () => {
 });
 
 test('admin/guides page has clickable guide name linking to /admin/guides/', () => {
-  const filePath = join(webRoot, 'app/admin/guides/page.tsx');
+  const filePath = join(webRoot, 'app/(non-locale)/admin/guides/page.tsx');
   assert.ok(existsSync(filePath), `admin/guides/page.tsx should exist at ${filePath}`);
   const content = readFileSync(filePath, 'utf8');
   // Should have a Link or href pointing to /admin/guides/${...}
@@ -36,7 +36,7 @@ test('admin/guides page has clickable guide name linking to /admin/guides/', () 
 });
 
 test('admin/guides/[guideId]/page.tsx exists', () => {
-  const filePath = join(webRoot, 'app/admin/guides/[guideId]/page.tsx');
+  const filePath = join(webRoot, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
   assert.ok(existsSync(filePath), `[guideId]/page.tsx should exist at ${filePath}`);
   const content = readFileSync(filePath, 'utf8');
   // Should show at least name and status

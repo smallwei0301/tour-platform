@@ -21,13 +21,13 @@ const SHARED_FORM_SOURCES = [
   'src/components/availability/shared.ts',
 ];
 const ADMIN = [
-  'app/admin/guides/[guideId]/availability/page.tsx',
+  'app/(non-locale)/admin/guides/[guideId]/availability/page.tsx',
   'src/components/availability/admin-sections.tsx',
   'src/components/availability/admin-conflict-override-modal.tsx',
   ...SHARED_FORM_SOURCES,
 ].map(read).join('\n');
 const GUIDE = [
-  'app/guide/availability/page.tsx',
+  'app/(non-locale)/guide/availability/page.tsx',
   'src/components/availability/guide-sections.tsx',
   ...SHARED_FORM_SOURCES,
 ].map(read).join('\n');

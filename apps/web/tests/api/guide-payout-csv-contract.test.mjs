@@ -37,7 +37,7 @@ describe('guide payout CSV route contract', () => {
 })
 
 describe('page wiring', () => {
-  const page = readFileSync(path.join(WEB_ROOT, 'app/guide/dashboard/page.tsx'), 'utf8')
+  const page = readFileSync(path.join(WEB_ROOT, 'app/(non-locale)/guide/dashboard/page.tsx'), 'utf8')
   it('page has CSV download link', () => {
     assert.match(page, /payout\/monthly\/csv/)
   })

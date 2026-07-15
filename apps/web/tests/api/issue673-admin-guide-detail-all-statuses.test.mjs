@@ -13,7 +13,7 @@ const routeSource = readFileSync(
 );
 
 const pageSource = readFileSync(
-  resolve(import.meta.dirname, '../../app/admin/guides/[guideId]/page.tsx'),
+  resolve(import.meta.dirname, '../../app/(non-locale)/admin/guides/[guideId]/page.tsx'),
   'utf8'
 );
 
