@@ -5,6 +5,7 @@ import {
   DEFAULT_LINGER,
   activeSceneIndex,
   cameraZ,
+  clipProgress,
   copyOpacity,
   progressForScene,
   sceneDistance,
@@ -92,6 +93,53 @@ test('activeSceneIndex：取最近景並夾在 [0, n-1]', () => {
   assert.equal(activeSceneIndex(2 * D + 0.2 * D, N), 2);
   assert.equal(activeSceneIndex(99 * D, N), N - 1);
   assert.equal(activeSceneIndex(-D, N), 0);
+});
+
+// travel i→i+1 中點對應的全域 progress（節奏軸 → 0..1）
+function travelMidProgress(i, n, linger = DEFAULT_LINGER) {
+  return (i * (1 + linger) + linger + 0.5) / (n * linger + (n - 1));
+}
+
+test('clipProgress：端點——首景從 0 起、末景到 1 收', () => {
+  assert.equal(clipProgress(0, 0, N), 0);
+  assert.equal(clipProgress(1, N - 1, N), 1);
+});
+
+test('clipProgress：過場中點幀交接——出景播畢（1）、入景起播（0）', () => {
+  for (let i = 0; i < N - 1; i += 1) {
+    const p = travelMidProgress(i, N);
+    assert.ok(Math.abs(clipProgress(p, i, N) - 1) < 1e-9, `過場 ${i}→${i + 1} 中點，第 ${i} 景影片應為 1`);
+    assert.ok(Math.abs(clipProgress(p, i + 1, N)) < 1e-9, `過場 ${i}→${i + 1} 中點，第 ${i + 1} 景影片應為 0`);
+  }
+});
+
+test('clipProgress：對 p 單調不減且值域 [0,1]', () => {
+  for (let i = 0; i < N; i += 1) {
+    let prev = -1;
+    for (let step = 0; step <= 400; step += 1) {
+      const v = clipProgress(step / 400, i, N);
+      assert.ok(v >= prev - 1e-12, `第 ${i} 景在 p=${step / 400} 回退`);
+      assert.ok(v >= 0 && v <= 1);
+      prev = v;
+    }
+  }
+});
+
+test('clipProgress：內部景 dwell 中點＝影片中點（0.5）', () => {
+  for (let i = 1; i < N - 1; i += 1) {
+    const v = clipProgress(progressForScene(i, N), i, N);
+    assert.ok(Math.abs(v - 0.5) < 1e-9, `第 ${i} 景 dwell 中點應為 0.5，得 ${v}`);
+  }
+});
+
+test('clipProgress：dwell（linger）期間影片仍前進（不凍結）', () => {
+  const i = 2;
+  const center = progressForScene(i, N);
+  const total = N * DEFAULT_LINGER + (N - 1);
+  const dwellHalf = DEFAULT_LINGER / 2 / total;
+  const before = clipProgress(center - 0.8 * dwellHalf, i, N);
+  const after = clipProgress(center + 0.8 * dwellHalf, i, N);
+  assert.ok(after > before, `dwell 內影片應持續前進（${before} → ${after}）`);
 });
 
 test('copyOpacity：waypoint 上全顯、兩景中間全隱', () => {

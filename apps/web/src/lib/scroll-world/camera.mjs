@@ -99,3 +99,27 @@ export function progressForScene(index, sceneCount, { linger = DEFAULT_LINGER } 
   const i = Math.min(Math.max(Math.floor(index), 0), n - 1);
   return (i * (1 + linger) + linger / 2) / (n * linger + (n - 1));
 }
+
+/**
+ * 第 index 景影片的 scrub 進度（0..1）——scroll-world 的「滾動＝播放進度」。
+ *
+ * 章節切分在節奏軸（dwell/travel 交錯）上：第 i 景章節＝
+ * 「travel (i-1)→i 的中點」到「travel i→(i+1) 的中點」（首尾景延伸到端點）。
+ * travel 中點正是縱深交叉淡化最深處——出景影片在此播到最後一幀（相機拉遠），
+ * 入景影片從第 0 幀（遠景）接手拉近，接縫兩側鏡頭語言連續（scroll-world
+ * Step 5 幀對接原則的 scrub 版）。dwell（linger）期間相機停在 waypoint，
+ * 但滾動仍在推進章節 → 影片持續前播，畫面不會凍結。
+ *
+ * @returns {number} 0..1；p 在章節前回 0、章節後回 1（clamp）
+ */
+export function clipProgress(progress, index, sceneCount, { linger = DEFAULT_LINGER } = {}) {
+  const n = Math.max(1, Math.floor(sceneCount));
+  if (n === 1) return clamp01(progress);
+  const i = Math.min(Math.max(Math.floor(index), 0), n - 1);
+  const total = n * linger + (n - 1);
+  const u = clamp01(progress) * total;
+  // travel i→i+1 的中點（節奏軸座標）：i*(1+l) + l + 0.5
+  const midBefore = i === 0 ? 0 : (i - 1) * (1 + linger) + linger + 0.5;
+  const midAfter = i === n - 1 ? total : i * (1 + linger) + linger + 0.5;
+  return clamp01((u - midBefore) / (midAfter - midBefore));
+}

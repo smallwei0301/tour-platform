@@ -6,6 +6,7 @@ import {
   SCENE_DEPTH,
   activeSceneIndex,
   cameraZ,
+  clipProgress,
   copyOpacity,
   progressForScene,
   sceneDistance,
@@ -29,8 +30,9 @@ export type SceneView = {
 
 /**
  * 場景媒體：AI 生成的黏土微景觀主圖當 billboard；相機沿 Z 軸飛向它即
- * scroll-world 的「飛入場景」。有 clip 時疊一層 muted/loop 影片（環境動態，
- * 例如雲霧飄動、日出光影），still 當 poster 與 reduced-motion fallback。
+ * scroll-world 的「飛入場景」。有 clip 時疊一層 muted 影片，由引擎以
+ * scrub（滾動進度＝currentTime）驅動——影片恆為 paused、不自動播放；
+ * still（＝影片第 0 幀構圖）當 poster 與 reduced-motion fallback。
  */
 function SceneMedia({ scene }: { scene: SceneView }) {
   return (
@@ -42,7 +44,6 @@ function SceneMedia({ scene }: { scene: SceneView }) {
           className={styles.clip}
           poster={scene.still}
           muted
-          loop
           playsInline
           preload="auto"
           aria-hidden="true"
@@ -116,13 +117,17 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
           const opacity = sceneOpacity(sceneDistance(z, i));
           sceneEl.style.opacity = opacity.toFixed(3);
           sceneEl.style.visibility = opacity <= 0.001 ? 'hidden' : 'visible';
-          // 影片只在該景可見時播放（省 CPU、避開 headless autoplay 未觸發問題）
+          // scroll-world scrub：滾動進度＝影片播放進度（影片恆為 paused，
+          // 以 currentTime 對齊章節進度）。章節切在過場中點——出景影片在
+          // 交叉淡化處播到最後一幀（拉遠），入景影片從第 0 幀（遠景）拉近。
+          // 不做可見度守衛：隱藏景的章節值是 clamp 常數（0 或 1），對齊一次
+          // 後 diff=0 零成本；快速跳景（導軌點擊）時出景影片才不會凍在半路。
           const video = sceneEl.querySelector('video');
           if (video) {
-            if (opacity > 0.05) {
-              if (video.paused) video.play().catch(() => {});
-            } else if (!video.paused) {
-              video.pause();
+            if (!video.paused) video.pause();
+            if (video.readyState >= 1 && Number.isFinite(video.duration)) {
+              const target = Math.min(video.duration - 0.05, clipProgress(progress, i, n) * video.duration);
+              if (Math.abs(video.currentTime - target) > 0.033) video.currentTime = target;
             }
           }
         }

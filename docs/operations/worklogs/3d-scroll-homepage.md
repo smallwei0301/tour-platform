@@ -64,6 +64,24 @@
   typecheck、lint 綠燈；截圖 `g-intro/g-mountain/g-river.png`。
 - 現況：7 景中 intro／mountain／river／finale 為影片，cave／culture／ecology 為 AI 靜圖。
 
+## 影片階段 3（2026-07-15）— 改為原 repo scrub 模式（全長影片＋章節幀交接）
+- 使用者要求：不用「截 6s＋ping-pong 倒放」，影片完整 10s 呈現；過場要照 skill／原
+  repo 方式順接（出景拉遠 → 入景從遠景拉近）。
+- **編碼**：四支影片（intro/mountain/river 10s、finale 4s）自去水印全長中間檔重新輸出，
+  無反轉無裁剪；scrub 規格照原 repo `-g 8 -keyint_min 8 -sc_threshold 0 -movflags
+  +faststart`（任意滾動位置順暢跳幀），1152w 雙格式各 1.4–2.3MB。
+- **引擎（scrub 核心）**：`camera.mjs` 新增純函式 `clipProgress(p, i, n)`——章節切分在
+  節奏軸「travel 中點 → 下一 travel 中點」（首尾景延伸至端點）。travel 中點＝縱深交叉
+  淡化最深處：出景影片在此正好播到最後一幀（拉遠）、入景影片從第 0 幀（遠景）接手，
+  即 scroll-world Step 5 幀對接原則的 scrub 版。dwell（linger）期間滾動仍推進章節 →
+  影片不凍結。`ScrollWorldClient` 影片恆 paused、以 currentTime 對齊章節進度（diff
+  >0.033 才 seek）；**不做可見度守衛**（隱藏景章節值為 clamp 常數、對齊一次即零成本；
+  守衛會讓導軌跳景時出景影片凍在半路——實測抓到後移除）。
+- 實跑（Playwright）：p=0.1038（intro↔mountain 過場中點）intro ct=9.95s（片尾）、
+  mountain ct=0.36s（片頭）幀交接正確；dwell 內 ct 持續前進；p=1 finale 3.95/4s；
+  全程 paused、pageerror 0。完整回歸（文案/導軌/CTA/截圖）PASS。測試 22/22（新增
+  clipProgress：端點/過場幀交接/單調/dwell 前進）、typecheck、lint 綠燈。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
