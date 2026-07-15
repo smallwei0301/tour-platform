@@ -202,6 +202,9 @@
   覆寫 finale.webp。**純素材替換**，scenes.mjs 已指向 finale.mp4，無需改碼。
 - 驗證：浮水印區抽查乾淨；實跑滾到底 finale scrub 正確（dur 9.8s、ct 9.7s、rs 4、
   CTA→/home）；scroll-world 測試 26/26 綠燈。
+- PR #1719（分支殘留回收 merge 免 force-push，harness/08 §3）。**CI 綠燈（644e85d）**：
+  test success — actions/runs/29459167578/job/87498848535；scan success；Vercel Preview
+  success；mergeable_state clean。squash merge 進 main。
 
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
