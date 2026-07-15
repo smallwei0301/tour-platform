@@ -206,7 +206,7 @@ export function LpFeatured({ slug = 'kaohsiung-chaishan-cave-experience', featur
         <div className="lp-feat-photo">
           <LpFeaturedCarousel images={photos} alt={title} />
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.webp" alt={t('badge')} loading="lazy" />
+          <img className="lp-feat-badge" src="/images/lp/badge-editors-pick.webp" alt={t('badge')} loading="lazy" width={132} height={241} />
         </div>
         <div className="lp-feat-right">
           <div className="lp-feat-body">
@@ -257,7 +257,7 @@ export function LpGuide() {
         <Link href="/guides/andy-lee" className="lp-guide-story">
           <div className="lp-guide-photo">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt={t('portraitAlt')} loading="lazy" />
+            <img src="/images/guides/andy-lee/portrait-hawk.webp" alt={t('portraitAlt')} loading="lazy" width={900} height={1125} />
           </div>
           <div className="lp-guide-text">
             <p className="lp-guide-label">{t('label')}</p>
@@ -341,7 +341,7 @@ export function LpTours({ slugs, tours }: { slugs?: string[]; tours?: TourView[]
           <Link key={a.slug} href={a.href} className="lp-tour-card">
             <div className="lp-tour-photo">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={a.image} alt={a.title} loading="lazy" />
+              <img src={a.image} alt={a.title} loading="lazy" width={1200} height={675} />
             </div>
             <div className="lp-tour-body">
               <h3 className="lp-tour-title">{a.title}</h3>

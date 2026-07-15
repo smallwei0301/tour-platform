@@ -6,7 +6,7 @@ import type { Metadata } from 'next';
 // 申請入口沿用既有 /guide/apply 表單頁，本頁只負責說清楚「你會得到什麼」。
 
 export const metadata: Metadata = {
-  title: '導遊開店 — 你的線上預約頁 | Midao 祕島',
+  title: '導遊開店 — 你的線上預約頁',
   description:
     '把你熟的路，變成你的預約頁。祕島替導遊處理預約、收款、訂單管理——一條連結，放進 IG bio、LINE 群組、名片。Beta 期間月費 NT$0，成交才收 15% 服務費。',
 };

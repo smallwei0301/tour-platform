@@ -23,7 +23,8 @@ export async function generateMetadata(
   const title = tSeo('defaultTitle');
   const description = tSeo('defaultDescription');
   return {
-    title,
+    // 首頁主題即品牌，用 absolute 跳過 title.template，避免品牌重複出現
+    title: { absolute: title },
     description,
     alternates: buildAlternates('/', locale),
     openGraph: {

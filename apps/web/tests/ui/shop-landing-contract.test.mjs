@@ -34,7 +34,8 @@ test('快取：revalidate = 60 兜底（revalidatePath 打不到 /shop）', () =
 
 test('標題：H1「線上預約」（對齊 Midao mockup），metadata 仍個人化', () => {
   assert.match(pageSource, /線上預約/, 'H1 應為「線上預約」（mockup 版面）');
-  assert.match(pageSource, /的祕島預約頁 \| Midao 祕島/, 'metadata title 仍個人化');
+  // 品牌後綴由 layout title.template 附加（issue1711 S2），頁面 title 不再自帶品牌
+  assert.match(pageSource, /的祕島預約頁/, 'metadata title 仍個人化');
   assert.match(pageSource, /robots: \{ index: false \}/, '商店頁維持 noindex');
 });
 

@@ -36,7 +36,8 @@ export async function generateMetadata(
   const t = await getTranslations({ locale, namespace: 'blog' });
   const tp = await getTranslations({ locale, namespace: 'blogPosts' });
   const postTitle = tp(`${slug}.title`);
-  const title = `${postTitle} ${t('metaTitleSuffix')}`;
+  // 品牌後綴交由 layout title.template 統一附加（#1711 後續 S2：避免 title 出現兩次品牌）
+  const title = postTitle;
   const description = tp(`${slug}.content`).slice(0, 120).replace(/\n/g, ' ');
   return {
     title,

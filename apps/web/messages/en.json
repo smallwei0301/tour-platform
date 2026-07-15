@@ -73,7 +73,8 @@
     }
   },
   "guides": {
-    "metaTitle": "Meet the Guides | Midao 祕島",
+    "metaTitle": "Meet the Guides",
+    "pageTitle": "Meet the Guides",
     "metaDescription": "Meet the local guides on Midao. Every guide is identity-verified and ready to take you into Taiwan's most storied places.",
     "ogTitle": "Meet the Guides | Midao 祕島",
     "ogDescription": "Find your guide — discover the specialties and stories of local guides across Taiwan.",
@@ -103,7 +104,7 @@
     "viewProfile": "View guide profile →"
   },
   "guideProfile": {
-    "metaTitle": "{name} | Guide | Midao 祕島",
+    "metaTitle": "{name} | Guide",
     "metaTitleShort": "{name} | Midao 祕島",
     "metaDescFallback": "{name} is a local guide on Midao, offering in-depth travel experiences across Taiwan.",
     "breadcrumbHome": "Home",
@@ -133,7 +134,7 @@
     "defaultTitle": "Midao — Hidden Taiwan, by those who know",
     "defaultDescription": "Book real local guides and the routes no guidebook tells you. Discover hidden Taiwan, book directly, pay securely.",
     "orgDescription": "Taiwan local-guide booking platform — connecting travelers with local guides for in-depth cultural experiences.",
-    "activitiesCollectionName": "Explore Routes | Midao 祕島",
+    "activitiesCollectionName": "Explore Routes",
     "activitiesCollectionDescription": "Browse private local-guide tours across Taiwan.",
     "guidesItemListName": "Local Guides in Taiwan | Midao 祕島",
     "blogItemListName": "Travel Guide | Midao 祕島",
@@ -333,7 +334,7 @@
   },
   "theme": {
     "caveExploration": {
-      "metaTitle": "Chaishan Caving Tours | Midao",
+      "metaTitle": "Chaishan Caving Tours",
       "metaDescription": "Follow a local guide deep into Chaishan's hidden underground world in Kaohsiung and explore limestone caves shaped over millions of years. Small-group, in-depth experiences led by ID-verified guides.",
       "ogTitle": "Chaishan Caving — Kaohsiung's Hidden Underground | Midao",
       "ogDescription": "A different side of Kaohsiung: follow a local into the Chaishan caves and see a Taiwan no map points you to.",
@@ -377,10 +378,11 @@
           "q": "What should I wear on the day?",
           "a": "We recommend non-slip shoes, long trousers and a flexible top — avoid sandals."
         }
-      ]
+      ],
+      "experienceCta": "Learn more: Kaohsiung Chaishan cave experience →"
     },
     "cultureHistory": {
-      "metaTitle": "Culture & History Tours | Midao",
+      "metaTitle": "Culture & History Tours",
       "metaDescription": "Step into Taiwan's old streets, temple plazas and indigenous communities, and let a local guide turn the stories behind a district and its people into living memories. Small-group, in-depth cultural experiences led by ID-verified guides.",
       "ogTitle": "Culture & History — Stories of Taiwan's Districts and Communities | Midao",
       "ogDescription": "Not a quick walk-through. Follow someone who knows the stories and truly get to know a district that has lived a hundred years — and its people.",
@@ -424,10 +426,11 @@
           "q": "Is it suitable for elders and children together?",
           "a": "Yes — the gentle pace and high interaction make it a great choice for families and three generations traveling together."
         }
-      ]
+      ],
+      "experienceCta": "Learn more: Dadaocheng walking experience →"
     },
     "ecology": {
-      "metaTitle": "Wildlife & Nature Tours | Midao",
+      "metaTitle": "Wildlife & Nature Tours",
       "metaDescription": "Follow a local nature guide into wetlands, tidal flats and forests to meet Taiwan's birds, intertidal life and woodland ecosystems. Small-group, in-depth walks led by someone who knows the land.",
       "ogTitle": "Wildlife & Nature — Read the Land Beneath Your Feet With a Local | Midao",
       "ogDescription": "Not just looking at scenery, but understanding the land you stand on. Follow a nature guide to meet Taiwan's birds, tidal life and woodland ecosystems.",
@@ -474,7 +477,7 @@
       ]
     },
     "mountainWilderness": {
-      "metaTitle": "Mountain Wilds Tours | Midao",
+      "metaTitle": "Mountain Wilds Tours",
       "metaDescription": "Hidden 100-peak trails, forest bathing and Taiwan's grand ridgeline views — follow a local guide who knows the mountains deep into the wilds on foot. Small-group hiking led by safety-certified guides.",
       "ogTitle": "Mountain Wilds — Deep Into Taiwan's Mountains and Forests | Midao",
       "ogDescription": "No cable cars, no tour buses — just your own feet and someone who knows the mountains, walking into mountain trails no map points you to.",
@@ -521,7 +524,7 @@
       ]
     },
     "riverTrekking": {
-      "metaTitle": "Wild River Tours | Midao",
+      "metaTitle": "Wild River Tours",
       "metaDescription": "Step into Taiwan's purest wild streams and feel the power of Hualien's valleys. Small-group, in-depth river-trekking experiences led from start to finish by local guides.",
       "ogTitle": "Wild Rivers — Hidden Wild-Stream Experiences in Hualien | Midao",
       "ogDescription": "More than splashing around. Follow a guide who knows the streams into Hualien's most beautiful valleys.",
@@ -611,7 +614,7 @@
     }
   },
   "about": {
-    "metaTitle": "About Us | Midao 祕島",
+    "metaTitle": "About Us",
     "metaDescription": "Midao isn't an invented place. It's the Taiwan that's already out there — just waiting for you to see it. Get to know the story and beliefs behind Midao 祕島.",
     "ogTitle": "About Us | Midao 祕島",
     "ogDescription": "Locals who've truly walked these mountains and forests, leading you into the most storied corners of Taiwan.",
@@ -648,7 +651,7 @@
     "ctaExplore": "Explore journeys"
   },
   "whyChooseUs": {
-    "metaTitle": "Why Choose Us | Midao 祕島",
+    "metaTitle": "Why Choose Us",
     "metaDescription": "A private local guide vs. a standard group tour: flexibility, verified guides, refund protection, and depth — compared side by side.",
     "ogTitle": "Why choose a private local guide? | Midao 祕島",
     "ogDescription": "No group tours, no rushing. Find someone who knows the way, and get to know Taiwan at your own pace.",
@@ -738,7 +741,7 @@
     "ctaButton": "Explore journeys now"
   },
   "faq": {
-    "metaTitle": "FAQ | Midao 祕島",
+    "metaTitle": "FAQ",
     "metaDescription": "Answers to common questions about booking, payment, cancellation and refunds, guide quality, and safety.",
     "ogTitle": "FAQ | Midao 祕島",
     "ogDescription": "How do you book a private guide? Is payment secure? Can you cancel? Every question, answered.",
@@ -826,7 +829,7 @@
     "footerButton": "Contact us"
   },
   "contact": {
-    "metaTitle": "Contact Us | Midao 祕島",
+    "metaTitle": "Contact Us",
     "metaDescription": "Have a question, a partnership idea, or feedback? Contact Midao 祕島 and we’ll reply within 1–2 business days.",
     "ogTitle": "Contact Us | Midao 祕島",
     "ogDescription": "Reach us via the form, email, or our support hotline.",
@@ -860,7 +863,7 @@
     "hoursCardLine2": "Urgent issues (day of activity): within 30 minutes"
   },
   "blog": {
-    "metaTitle": "Travel Guide | Midao",
+    "metaTitle": "Travel Guide",
     "metaDescription": "Travel tips, guide recommendations, and experience stories from across Taiwan. From Chaishan cave exploration to Hualien river tracing, let us help you get to know Taiwan in depth.",
     "ogTitle": "Travel Guide | Midao",
     "ogDescription": "Taiwan travel tips and local experience stories.",
@@ -869,13 +872,12 @@
     "breadcrumbBlog": "Travel Guide",
     "heading": "Travel Guide",
     "readTimePrefix": "About",
-    "metaTitleSuffix": "| Midao",
     "coverAltSuffix": "— Travel Guide cover image",
     "ctaTitle": "🗺️ Ready to set off?",
     "ctaButton": "Explore tours →"
   },
   "legalPrivacy": {
-    "metaTitle": "Privacy Policy | Midao",
+    "metaTitle": "Privacy Policy",
     "metaDescription": "Midao's personal data protection policy, explaining the scope of data collection, how it is used, and user rights.",
     "breadcrumbHome": "Home",
     "breadcrumbLeaf": "Privacy Policy",
@@ -884,7 +886,7 @@
     "para2": "All personal data is processed in accordance with relevant Taiwan regulations, and we provide channels for users to request access to and deletion of their data."
   },
   "legalTerms": {
-    "metaTitle": "Terms of Service | Midao",
+    "metaTitle": "Terms of Service",
     "metaDescription": "Midao's terms of service, explaining the nature of the platform, the booking process, and the rights and obligations of travelers.",
     "breadcrumbHome": "Home",
     "breadcrumbLeaf": "Terms of Service",
@@ -893,7 +895,7 @@
     "para2": "Before booking, users should confirm the itinerary details, cancellation policy, and risk disclosures."
   },
   "legalRefund": {
-    "metaTitle": "Refund Policy | Midao",
+    "metaTitle": "Refund Policy",
     "metaDescription": "Midao's refund policy: full refund 168 hours before departure, 70% refund with more than 72 hours' notice, and free rescheduling for force majeure.",
     "breadcrumbHome": "Home",
     "breadcrumbLeaf": "Refund Policy",
@@ -905,7 +907,7 @@
     "para5": "Processing fees: the platform does not deduct any additional processing fee from travelers on refunds; such costs are absorbed by the platform."
   },
   "activityDetail": {
-    "metaTitleSuffix": "{title} | Midao 祕島",
+    "metaTitleSuffix": "{title}",
     "metaDescFallback": "Discover Taiwan's hidden-gem local tours and see a different side of the island with an expert guide.",
     "ogImageAlt": "Midao 祕島 tour",
     "breadcrumbHome": "Home",
@@ -1172,7 +1174,7 @@
     "promoEntry": "{label} (enter <strong>{code}</strong> at checkout)"
   },
   "experienceDetail": {
-    "metaTitle": "{name} | Experience | Midao 祕島",
+    "metaTitle": "{name} | Experience",
     "metaTitleShort": "{name} | Midao 祕島",
     "metaDescription": "Book a local experience in Taiwan: {name}. Led by an identity-verified local guide, small-group and in-depth.",
     "ogDescription": "Follow a local guide who knows the way and explore Taiwan's most storied places.",

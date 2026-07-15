@@ -34,6 +34,8 @@ export function LpFeaturedCarousel({ images, alt }: { images: string[]; alt: str
           className={i === active ? 'is-active' : undefined}
           aria-hidden={i === active ? undefined : true}
           loading={i === 0 ? undefined : 'lazy'}
+          width={1200}
+          height={675}
         />
       ))}
       {count > 1 && (

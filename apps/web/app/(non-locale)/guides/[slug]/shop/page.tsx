@@ -27,7 +27,7 @@ export async function generateMetadata(
   const guide = await getGuideBySlugDb(slug).catch((): null => null);
   const name = guide?.displayName ?? slug;
   return {
-    title: `${name} 的祕島預約頁 | Midao 祕島`,
+    title: `${name} 的祕島預約頁`,
     description: `向 ${name} 線上預約行程。`,
     robots: { index: false },
   };

@@ -62,7 +62,7 @@ function CardRow({ heading, items, testId }: { heading: string; items: ActivityC
           >
             {a.coverImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- 推薦小卡，lazy 原生即可
-              <img src={a.coverImageUrl} alt={a.title} loading="lazy" className="tp-rec-card-img" />
+              <img src={a.coverImageUrl} alt={a.title} loading="lazy" className="tp-rec-card-img" width={800} height={600} />
             ) : (
               <div className="tp-rec-card-img" />
             )}

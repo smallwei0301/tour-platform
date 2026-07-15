@@ -102,6 +102,10 @@ export default async function CaveExplorationPage({ params }: { params: Promise<
               </article>
             ))}
           </div>
+          {/* issue1711 S4：/experiences 深度介紹頁原為孤兒頁（只在 sitemap、無內部連結），從對應主題頁連入 */}
+          <p style={{ marginTop: 16 }}>
+            <Link className="tp-link" href="/experiences/kaohsiung-chaishan-cave-experience">{t('experienceCta')}</Link>
+          </p>
         </div>
       </section>
 

@@ -200,7 +200,7 @@ test('GH-502 render-path isolation: module import + metadata + component render 
   // GH-502 + #1378: metadata 與頁面以 React cache() 共用同一次 lookup（仍只有一次 DB
   // 查詢），成功時 title/description/og:image 反映真實活動；lookup 失敗才 fallback
   // 回 humanized slug（見下方 timeout-behavior 測試仍鎖 fail-fast 行為）。
-  assert.equal(metadata.title, 'DB Activity Title | Midao 祕島');
+  assert.equal(metadata.title, 'DB Activity Title'); // 品牌後綴改由 layout title.template 附加（issue1711 S2）
   assert.equal(metadata.description, 'Probe short description');
 
   const element = await regionModule.default({ params: Promise.resolve({ region: 'taipei', slug: 'real-slug' }) });
