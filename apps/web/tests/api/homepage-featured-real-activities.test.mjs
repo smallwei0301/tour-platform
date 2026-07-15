@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const read = (rel) => fs.readFileSync(path.join(__dirname, rel), 'utf8');
 const routeSrc = read('../../app/api/admin/homepage-featured/route.ts');
-const pageSrc = read('../../app/[locale]/page.tsx');
+const pageSrc = read('../../app/[locale]/home/page.tsx');
 const dbSrc = read('../../src/lib/db-homepage-featured.mjs'); // #1613 strangler 後實作所在
 
 test('admin route：選單 choices 來自真實已發布行程（listPublishedActivitiesDb），不再用 fixtures', () => {

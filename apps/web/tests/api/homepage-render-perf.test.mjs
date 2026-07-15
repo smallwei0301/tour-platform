@@ -22,7 +22,7 @@ import { getActivityGalleryBySlugDb } from '../../src/lib/db.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = join(__dirname, '..', '..');
-const PAGE = readFileSync(join(APP_ROOT, 'app/[locale]/page.tsx'), 'utf8');
+const PAGE = readFileSync(join(APP_ROOT, 'app/[locale]/home/page.tsx'), 'utf8');
 const DB_MJS = readFileSync(join(APP_ROOT, 'src/lib/db.mjs'), 'utf8');
 
 test('getActivityGalleryBySlugDb：空 slug / 查無 → 空陣列（不丟錯）', async () => {
@@ -62,8 +62,8 @@ test('admin 儲存首頁精選的 PUT 會 revalidate 首頁（含各 locale，#1
   const putIdx = route.indexOf('export async function PUT');
   assert.ok(putIdx >= 0, '需有 PUT handler');
   const putBody = route.slice(putIdx);
-  // #1488：首頁在 app/[locale]/，需以 localizeRevalidationPaths(['/']) 展開各 locale 前綴。
-  assert.match(putBody, /localizeRevalidationPaths\(\s*\[\s*['"]\/['"]\s*\]\s*\)/, 'PUT 寫入後需以 localizeRevalidationPaths([\'/\']) 讓首頁各 locale 即時重生');
+  // #1488：首頁在 app/[locale]/，需以 localizeRevalidationPaths(['/home']) 展開各 locale 前綴。
+  assert.match(putBody, /localizeRevalidationPaths\(\s*\[\s*['"]\/home['"]\s*\]\s*\)/, 'PUT 寫入後需以 localizeRevalidationPaths([\'/home\']) 讓經典首頁各 locale 即時重生（#1713 搬遷）');
   assert.match(putBody, /revalidatePath\(p\)/, '需對每個 locale 版本 revalidatePath');
   // 必須在寫入（setHomepageFeaturedDb）之後才 revalidate
   assert.ok(
