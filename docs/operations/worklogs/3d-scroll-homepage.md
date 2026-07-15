@@ -97,6 +97,16 @@
   0.36s；過場截圖為全幅溶接無邊框（`fade-transition.png`）；完整回歸 PASS。測試
   23/23（sceneOpacity 改版＋sceneScale 新增）、typecheck、lint 綠燈。
 
+## 影片階段 5（2026-07-15）— 使用者補齊 cave/culture/ecology 三支影片，七景全影片
+- 使用者以 Gemini 再生成三支 10s 影片：cave（洞內頭燈行進）、culture（廟埕燈籠茶席）、
+  ecology（夜森林螢火蟲＋提燈嚮導），風格與前四支一致。
+- 同一條管線：delogo 去右下星芒（同座標）→ 全長 scrub 編碼（-g 8、1152w、雙格式各
+  ~2MB）→ poster＝首幀覆寫對應 webp → scenes.mjs 填 clip。**七景現全為影片 scrub**。
+- 實跑：七景逐一巡檢 scrub 正確（各景 dwell 時該影片居章節中段、先前景 9.9s 播畢、
+  後續景 0s 待播；巡檢數字微漂移為探針以整頁高度換算之量測誤差，引擎用容器座標無此
+  問題）；浮水印區抽查乾淨；截圖 `scene-3/4/5.png`。測試 23/23、typecheck、lint、
+  完整回歸 PASS。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
