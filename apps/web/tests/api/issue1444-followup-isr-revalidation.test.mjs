@@ -31,7 +31,7 @@ test('首頁精選路由：PUT 成功後失效首頁 ISR（含各 locale，#1488
   assert.match(src, /import \{ revalidatePath \} from ['"]next\/cache['"]/, '應 import revalidatePath');
   // #1488：首頁在 app/[locale]/，需以 localizeRevalidationPaths 展開各 locale 前綴才命中快取。
   assert.match(src, /localizeRevalidationPaths/, '應 import/使用 localizeRevalidationPaths');
-  assert.match(src, /localizeRevalidationPaths\(\s*\[\s*['"]\/['"]\s*\]\s*\)/, '首頁應以 localizeRevalidationPaths(["/"]) 展開');
+  assert.match(src, /localizeRevalidationPaths\(\s*\[\s*['"]\/home['"]\s*\]\s*\)/, '經典首頁應以 localizeRevalidationPaths(["/home"]) 展開（#1713 搬遷）');
   assert.match(src, /revalidatePath\(p\)/, '應對每個 locale 版本 revalidatePath');
   // best-effort：失敗不得擋下 admin 操作
   assert.match(src, /try\s*\{[\s\S]*localizeRevalidationPaths[\s\S]*catch/, 'revalidate 應包在 try/catch');

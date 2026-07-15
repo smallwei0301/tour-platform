@@ -51,6 +51,8 @@ function isLocalizedPublicPath(rest: string): boolean {
     || /^\/guides\/[^/]+$/.test(rest)
     // 純靜態資訊頁（單頁、無動態子路由）。
     || rest === '/about' || rest === '/why-choose-us' || rest === '/faq' || rest === '/contact'
+    // 經典行銷首頁（原 `/`，#1713 世界頁升格後搬遷）。
+    || rest === '/home'
     // blog（含 [slug]）與 legal（privacy/terms/refund）整棵子樹搬進 [locale]。
     || rest === '/blog' || rest.startsWith('/blog/')
     || rest === '/legal' || rest.startsWith('/legal/')
@@ -446,6 +448,7 @@ export const config = {
     '/api/reviews/:path*',
     // Public routes subject to public_paused soft-launch guard (issue #805).
     '/',
+    '/home',
     '/activities/:path*',
     '/theme/:path*',
     '/guides',

@@ -121,7 +121,8 @@ export function Navbar() {
     <header className={`tp-navbar${isHome ? ' tp-navbar--home' : ''}${isHome && scrolled ? ' tp-navbar--scrolled' : ''}`}>
       <div className="tp-navbar-inner tp-navbar-full">
         {/* Logo */}
-        <Link href="/" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
+        {/* 品牌 logo 連往經典行銷首頁 /home（`/` 自 #1713 起為 3D 滾動首頁） */}
+        <Link href="/home" className="tp-logo">MIDAO <span className="tp-logo-zh">祕島</span></Link>
 
         {/* Desktop: search bar */}
         <form onSubmit={handleSearch} className="tp-search-shell tp-nav-search-desktop" aria-label={m.common.search}>

@@ -115,11 +115,11 @@ export async function PUT(req: NextRequest) {
       validSlugs: choices.map((a) => a.slug),
       actor: email || 'admin',
     });
-    // 首頁（/）走 revalidate=60 的 ISR；精選大卡／輪播相片改完立即失效，
-    // 不必等 60s window（#1444 同類：mutation 後主動 revalidate）。
+    // 經典首頁（/home，原 `/`，#1713 搬遷）走長 revalidate 的 ISR；精選大卡／
+    // 輪播相片改完立即失效，不必等 window（#1444 同類：mutation 後主動 revalidate）。
     try {
-      // #1488：首頁在 app/[locale]/，需帶各 locale 前綴才命中被快取的路由。
-      for (const p of localizeRevalidationPaths(['/'])) revalidatePath(p);
+      // #1488：頁面在 app/[locale]/，需帶各 locale 前綴才命中被快取的路由。
+      for (const p of localizeRevalidationPaths(['/home'])) revalidatePath(p);
     } catch {
       // best-effort：快取刷新失敗不影響資料已寫入的結果
     }

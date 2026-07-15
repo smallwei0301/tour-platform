@@ -96,9 +96,10 @@ export function activityRevalidationPaths(activity = {}) {
   const slug = activity?.slug ? String(activity.slug).trim() : '';
   const regionSegment = resolveActivityRegionSegment(activity);
 
-  // '/'（首頁）：首頁精選大卡與自動行程清單來自已發布行程目錄，行程上下架／
-  // 編輯後需一併失效，配合首頁長 revalidate（on-demand 為主）讓變更即時反映。
-  const paths = ['/', '/activities'];
+  // '/home'（經典行銷首頁，原 `/`，#1713 搬遷）：精選大卡與自動行程清單來自
+  // 已發布行程目錄，行程上下架／編輯後需一併失效，配合長 revalidate（on-demand
+  // 為主）讓變更即時反映。新 `/`（3D 世界頁）純靜態、無行程資料，毋須失效。
+  const paths = ['/home', '/activities'];
   if (regionSegment) {
     paths.push(`/activities/${regionSegment}`);
     if (slug) paths.push(`/activities/${regionSegment}/${slug}`);

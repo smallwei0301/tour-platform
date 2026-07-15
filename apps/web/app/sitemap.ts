@@ -26,6 +26,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   return [
     ...localized('/', { lastModified: now, changeFrequency: 'weekly', priority: 1 }),
+    // 經典行銷首頁（原 `/`，#1713 起 `/` 改為 3D 世界頁）
+    ...localized('/home', { lastModified: now, changeFrequency: 'weekly', priority: 0.8 }),
     ...localized('/activities', { lastModified: now, changeFrequency: 'daily', priority: 0.9 }),
     ...localized('/guides', { lastModified: now, changeFrequency: 'weekly', priority: 0.7 }),
     ...localized('/blog', { lastModified: now, changeFrequency: 'weekly', priority: 0.6 }),

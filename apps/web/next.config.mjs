@@ -119,6 +119,12 @@ const nextConfig = {
       { source: '/checkout', destination: '/activities', permanent: true },
       { source: '/orders', destination: '/me/orders', permanent: true },
       { source: '/orders/:orderId', destination: '/me/orders/:orderId', permanent: true },
+      // 3D 滾動首頁自 #1713 起升為正式首頁 `/`；歷史路徑（/world 別名與
+      // 原 /theme/world）一律導回。非 301：保留日後調整空間。
+      { source: '/world', destination: '/', permanent: false },
+      { source: '/:locale(en|ja|ko)/world', destination: '/:locale', permanent: false },
+      { source: '/theme/world', destination: '/', permanent: false },
+      { source: '/:locale(en|ja|ko)/theme/world', destination: '/:locale', permanent: false },
     ];
   },
 };
