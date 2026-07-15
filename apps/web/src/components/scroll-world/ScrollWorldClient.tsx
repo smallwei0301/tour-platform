@@ -3,7 +3,6 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
-  SCENE_DEPTH,
   activeSceneIndex,
   cameraZ,
   clipProgress,
@@ -11,6 +10,7 @@ import {
   progressForScene,
   sceneDistance,
   sceneOpacity,
+  sceneScale,
 } from '../../lib/scroll-world/camera.mjs';
 import styles from './scroll-world.module.css';
 
@@ -67,18 +67,18 @@ type Props = {
 const SCROLL_PER_SCENE_VH = 150;
 
 /**
- * /world 的 3D 滾動引擎（scroll-world scrub 引擎的 CSS 3D 等價物）。
+ * /world 的滾動引擎（scroll-world scrub 引擎的全幅淡化版）。
  *
- * 滾動進度（sticky 舞台在 tall 容器內的位置）→ cameraZ() → world 的
- * translateZ。場景排在 Z 軸負向（第 i 景在 -i * SCENE_DEPTH），相機只
- * 前進不回拉；穿越時 near 層放大掠過鏡頭即「飛入場景內部」。
+ * 滾動進度（sticky 舞台在 tall 容器內的位置）→ cameraZ()（虛擬時間軸，
+ * 只前進不回拉）。場景為全幅 billboard：以對稱交叉淡化轉場（sceneOpacity，
+ * 相鄰兩景總和恆 1）＋恆 ≥1 的細微縮放漂移（sceneScale，絕不露出邊框）；
+ * 「飛入」感由影片本身的鏡頭運動（scrub）承擔，不再做會露邊框的 3D 縮放。
  * 每幀更新走 rAF＋直接改 style，不觸發 React re-render（僅 active index
  * 變化時 setState，驅動文案與導軌）。
  */
 export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
   const n = scenes.length;
   const rootRef = useRef<HTMLDivElement>(null);
-  const worldRef = useRef<HTMLDivElement>(null);
   const tintRef = useRef<HTMLDivElement>(null);
   const hintRef = useRef<HTMLDivElement>(null);
   const sceneRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -102,21 +102,21 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
     const update = () => {
       raf = 0;
       const root = rootRef.current;
-      const world = worldRef.current;
-      if (!root || !world) return;
+      if (!root) return;
       const rect = root.getBoundingClientRect();
       const viewport = window.innerHeight;
       const scrollable = rect.height - viewport;
       const progress = scrollable > 0 ? Math.min(1, Math.max(0, -rect.top / scrollable)) : 0;
       const z = cameraZ(progress, n);
 
-      world.style.transform = `translateZ(${z.toFixed(2)}px)`;
       for (let i = 0; i < n; i += 1) {
         const sceneEl = sceneRefs.current[i];
         if (sceneEl) {
-          const opacity = sceneOpacity(sceneDistance(z, i));
+          const distance = sceneDistance(z, i);
+          const opacity = sceneOpacity(distance);
           sceneEl.style.opacity = opacity.toFixed(3);
           sceneEl.style.visibility = opacity <= 0.001 ? 'hidden' : 'visible';
+          sceneEl.style.transform = `scale(${sceneScale(distance).toFixed(4)})`;
           // scroll-world scrub：滾動進度＝影片播放進度（影片恆為 paused，
           // 以 currentTime 對齊章節進度）。章節切在過場中點——出景影片在
           // 交叉淡化處播到最後一幀（拉遠），入景影片從第 0 幀（遠景）拉近。
@@ -196,7 +196,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
       <div ref={rootRef} className={styles.tall} style={{ height: `${n * SCROLL_PER_SCENE_VH}vh` }}>
         <div className={styles.stage}>
           <div ref={tintRef} className={styles.tint} style={{ backgroundColor: scenes[0].accent }} />
-          <div ref={worldRef} className={styles.world}>
+          <div className={styles.world}>
             {scenes.map((scene, i) => (
               <div
                 key={scene.id}
@@ -205,7 +205,6 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
                 }}
                 className={styles.scene}
                 style={{
-                  transform: `translateZ(${-i * SCENE_DEPTH}px)`,
                   opacity: i === 0 ? 1 : 0,
                   visibility: i === 0 ? 'visible' : 'hidden',
                 }}

@@ -10,6 +10,7 @@ import {
   progressForScene,
   sceneDistance,
   sceneOpacity,
+  sceneScale,
 } from '../../src/lib/scroll-world/camera.mjs';
 
 const N = 7; // /world 目前場景數（intro＋五主題＋finale）
@@ -64,23 +65,39 @@ test('progressForScene：遞增且邊界夾住', () => {
   assert.equal(progressForScene(0, 1), 0);
 });
 
-test('sceneOpacity：目前景清晰主導、下一景幽靈化、穿越後淡出、遠景隱藏，值域 [0,1]', () => {
+test('sceneOpacity：對稱交叉淡化——中心全顯、過場中點各半、0.85D 外全隱', () => {
   assert.equal(sceneOpacity(0), 1); // 相機正在景上
-  assert.equal(sceneOpacity(0.3 * D), 1); // clear 區內仍清晰
-  const next = sceneOpacity(D); // waypoint 上看下一景：幽靈化、不搶戲
-  assert.ok(next > 0.2 && next < 0.6, `下一景應在 0.2..0.6，得 ${next}`);
-  assert.equal(sceneOpacity(-0.45 * D), 0); // 完全飛越
-  assert.equal(sceneOpacity(2.4 * D), 0); // 遠景完全隱藏
-  assert.ok(sceneOpacity(-0.2 * D) > 0 && sceneOpacity(-0.2 * D) < 1); // 穿越中
-  assert.ok(sceneOpacity(2 * D) > 0 && sceneOpacity(2 * D) < 1); // 霧化中
-  // clear 區外單調遞減
+  assert.equal(sceneOpacity(0.15 * D), 1); // 全顯區邊界
+  assert.equal(sceneOpacity(-0.15 * D), 1);
+  // 過場中點（±0.5D）：相鄰兩景各 0.5、總和恆 1（純交叉淡化，無暗谷）
+  assert.ok(Math.abs(sceneOpacity(0.5 * D) - 0.5) < 1e-9);
+  assert.ok(Math.abs(sceneOpacity(-0.5 * D) - 0.5) < 1e-9);
+  assert.ok(Math.abs(sceneOpacity(0.5 * D) + sceneOpacity(-0.5 * D) - 1) < 1e-9);
+  assert.equal(sceneOpacity(0.85 * D), 0); // 淡化區外全隱
+  assert.equal(sceneOpacity(-0.85 * D), 0);
+  assert.equal(sceneOpacity(D), 0); // 下一 waypoint 上不可見（不堆疊）
+  // 對稱＋|d| 遞增時單調遞減、值域 [0,1]
   let prev = 1;
-  for (let d = 0.35 * D; d <= 2.5 * D; d += D / 40) {
+  for (let d = 0; d <= 1.2 * D; d += D / 40) {
     const o = sceneOpacity(d);
+    assert.ok(Math.abs(o - sceneOpacity(-d)) < 1e-9, `distance=±${d} 應對稱`);
     assert.ok(o <= prev + 1e-9, `distance=${d} 不應回升`);
-    assert.ok(o >= 0 && o <= 1, `distance=${d} opacity=${o}`);
+    assert.ok(o >= 0 && o <= 1);
     prev = o;
   }
+});
+
+test('sceneScale：恆 ≥ 1（不露邊框）、waypoint 上為 1、隨距離漸增有上限', () => {
+  assert.equal(sceneScale(0), 1);
+  for (let d = -1.5 * D; d <= 1.5 * D; d += D / 30) {
+    const s = sceneScale(d);
+    assert.ok(s >= 1, `distance=${d} scale=${s} 不得小於 1`);
+    assert.ok(s <= 1.07 + 1e-9, `distance=${d} scale=${s} 超過上限`);
+  }
+  assert.ok(sceneScale(0.5 * D) > sceneScale(0.2 * D)); // 入景側漸增
+  assert.ok(sceneScale(-0.5 * D) > sceneScale(-0.2 * D)); // 出景側漸增
+  assert.ok(Math.abs(sceneScale(0.85 * D) - 1.07) < 1e-9); // 入景上限
+  assert.ok(Math.abs(sceneScale(-0.85 * D) - 1.05) < 1e-9); // 出景上限
 });
 
 test('sceneDistance：正值在前方、負值已飛越', () => {

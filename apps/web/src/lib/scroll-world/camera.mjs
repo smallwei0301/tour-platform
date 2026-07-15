@@ -58,19 +58,29 @@ export function sceneDistance(camZ, index, depth = SCENE_DEPTH) {
 }
 
 /**
- * 場景不透明度：目前景完全清晰主導畫面，前方景隨縱深霧化成「幽靈」
- * 漸近（下一景於 waypoint 上約 0.4，維持世界連續感又不搶戲），
- * 相機穿越（distance < 0）時快速淡出——即「飛入場景內部」的視覺。
+ * 場景不透明度：對稱交叉淡化（全幅 billboard 模式）。
+ * |d| ≤ 0.15D 全顯；往兩側線性淡出、0.85D 外全隱。過場中點（±0.5D）
+ * 相鄰兩景各 0.5、總和恆為 1——純淡化轉場，無暗谷、無多景堆疊，
+ * 也不再有會露出邊框的縱深縮放。
  */
 export function sceneOpacity(distance, depth = SCENE_DEPTH) {
-  const fadeOut = 0.45 * depth; // 穿越後淡出距離
-  const clearUntil = 0.35 * depth; // 此距離內完全清晰
-  const fogUntil = 2.4 * depth; // 此距離外完全隱藏
-  if (distance <= -fadeOut || distance >= fogUntil) return 0;
-  if (distance < 0) return clamp01(1 + distance / fadeOut);
-  if (distance <= clearUntil) return 1;
-  // 冪次霧化：靠近時快速轉清晰、遠處長尾壓低
-  return clamp01((1 - (distance - clearUntil) / (fogUntil - clearUntil)) ** 2.5);
+  const a = Math.abs(distance);
+  const inner = 0.15 * depth;
+  const outer = 0.85 * depth;
+  if (a <= inner) return 1;
+  if (a >= outer) return 0;
+  return 1 - (a - inner) / (outer - inner);
+}
+
+/**
+ * 場景縮放：淡化期間的細微「漂移」——入景自 1.07 緩降至 1、出景緩升至
+ * 1.05。恆 ≥ 1（配合 object-fit: cover 鋪滿），畫面任何時刻都不會縮小
+ * 露出邊框。
+ */
+export function sceneScale(distance, depth = SCENE_DEPTH) {
+  const range = 0.85 * depth;
+  if (distance >= 0) return 1 + 0.07 * clamp01(distance / range);
+  return 1 + 0.05 * clamp01(-distance / range);
 }
 
 /** 目前所在（最接近）場景 index，夾在 [0, n-1]。 */

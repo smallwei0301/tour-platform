@@ -11,15 +11,13 @@
   position: relative;
 }
 
-/* 固定舞台：透視相機 */
+/* 固定舞台（場景以全幅交叉淡化轉場，不再用 3D 透視） */
 .stage {
   position: sticky;
   top: 0;
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  perspective: 1100px;
-  perspective-origin: 50% 42%;
   background:
     radial-gradient(120% 90% at 50% 108%, rgba(176, 141, 62, 0.14), transparent 60%),
     linear-gradient(180deg, #131f16 0%, #1a2e1f 46%, #2a2422 100%);
@@ -45,14 +43,16 @@
 .world {
   position: absolute;
   inset: 0;
-  transform-style: preserve-3d;
-  will-change: transform;
 }
 
+/* 全幅場景：淡化＋恆 ≥1 的縮放漂移（transform 由引擎逐幀驅動）。
+   overflow hidden＋cover 確保縮放時邊緣永遠在視窗外，不露邊框。 */
 .scene {
   position: absolute;
   inset: 0;
-  transform-style: preserve-3d;
+  overflow: hidden;
+  transform-origin: 50% 50%;
+  will-change: opacity, transform;
   pointer-events: none;
 }
 

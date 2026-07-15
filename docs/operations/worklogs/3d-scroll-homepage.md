@@ -82,6 +82,21 @@
   全程 paused、pageerror 0。完整回歸（文案/導軌/CTA/截圖）PASS。測試 22/22（新增
   clipProgress：端點/過場幀交接/單調/dwell 前進）、typecheck、lint 綠燈。
 
+## 影片階段 4（2026-07-15）— 全幅淡化轉場（使用者回饋修正）
+- 使用者回饋：(1) 第一支影片重整後不從頭開始；(2) 3D 縱深縮放會露出影片/圖片邊框、
+  很突兀；(3) 轉場改用淡化、貼合影片流動感（「拉遠拉近」構想放棄）。
+- 修正：
+  - `sceneOpacity` 改對稱交叉淡化（|d|≤0.15D 全顯、0.85D 全隱、過場中點兩景各 0.5
+    總和恆 1——純溶接、無暗谷、無多景堆疊）；新增 `sceneScale`（入景 1.07→1、出景
+    1→1.05 的細微漂移，**恆 ≥1** 配 cover 絕不露邊框）。
+  - 引擎移除 world translateZ／stage perspective（cameraZ 降為虛擬時間軸）；場景
+    改全幅 billboard、逐幀 opacity＋scale；scrub 章節與幀交接（clipProgress）不變。
+  - root layout 捲動還原 script 納入 /theme/world（含 locale 變體）：重整一律回頂，
+    第一景影片必從頭開始（滾動敘事頁還原到頁中會體驗破碎）。
+- 實跑：過場中點兩景 0.39/0.61 交叉淡化、scale 全 ≥1、幀交接 intro 9.95s↔mountain
+  0.36s；過場截圖為全幅溶接無邊框（`fade-transition.png`）；完整回歸 PASS。測試
+  23/23（sceneOpacity 改版＋sceneScale 新增）、typecheck、lint 綠燈。
+
 ## 下一步
 - 開 PR → 盯 CI 綠燈 → merge（依 harness/07 QA 流程補正式驗收報告）。
 - 待 owner 決定：是否在經典首頁放 `/world` 入口、或做 A/B 導流；若要把正式路徑搬回裸 `/world`，需 P0-OVERRIDE 修改 middleware matcher＋localized 清單。
