@@ -4,7 +4,13 @@ import { getActivitySitemapEntries } from '../src/lib/sitemap-activities.mjs';
 import { listPublishedGuidesDb } from '../src/lib/db.mjs';
 import { localizedSitemapUrls } from '../src/lib/seo-alternates.ts';
 
-const BLOG_SLUGS = ['why-private-guide', 'chaishan-cave-guide'];
+const BLOG_SLUGS = [
+  'why-private-guide',
+  'chaishan-cave-guide',
+  // #1722：blog 內容擴充第一批
+  'river-trekking-beginner-guide',
+  'dadaocheng-walking-guide',
+];
 
 // Experience detail pages — public-facing, not covered by /theme/* collection pages.
 const EXPERIENCE_SLUGS = ['kaohsiung-chaishan-cave-experience', 'dadadaocheng-walk'];

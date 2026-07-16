@@ -286,49 +286,77 @@
         "eyebrow": "MIDAO WORLD",
         "title": "Deep in the island, storytellers lead the way.",
         "body": "Scroll on and let local guides fly you over ridgelines, rivers, caves and old streets — seven scenes, one island.",
-        "tags": ["Local guides", "Deep routes", "Real encounters"],
+        "tags": [
+          "Local guides",
+          "Deep routes",
+          "Real encounters"
+        ],
         "cta": "Explore all tours"
       },
       "mountain": {
         "eyebrow": "Themes · Mountains",
         "title": "Walk the ridgeline above the clouds.",
         "body": "Go with someone who knows the mountain — off the crowded trail, never off the safe one.",
-        "tags": ["Peaks & foothills", "Certified leads", "Small groups"],
+        "tags": [
+          "Peaks & foothills",
+          "Certified leads",
+          "Small groups"
+        ],
         "cta": "See mountain tours"
       },
       "river": {
         "eyebrow": "Themes · Wild Streams",
         "title": "Trace the stream to its source.",
         "body": "Plunge pools, waterfalls and gorge terrain — coach-led, fully geared, and home safe.",
-        "tags": ["River trekking", "Full gear", "Coach-led"],
+        "tags": [
+          "River trekking",
+          "Full gear",
+          "Coach-led"
+        ],
         "cta": "See river tours"
       },
       "cave": {
         "eyebrow": "Themes · Caves",
         "title": "Slip into the island's heart.",
         "body": "When the headlamp clicks on, Chaishan's coral caves begin to speak. Enter the dark safely with a caving guide.",
-        "tags": ["Chaishan caving", "Headlamp gear", "Verified guides"],
+        "tags": [
+          "Chaishan caving",
+          "Headlamp gear",
+          "Verified guides"
+        ],
         "cta": "See cave tours"
       },
       "culture": {
         "eyebrow": "Themes · Culture",
         "title": "The old street keeps a lantern lit for you.",
         "body": "Tea houses of Dadaocheng, temple courtyards and incense — hear the past from locals who can truly tell it.",
-        "tags": ["Dadaocheng", "Temple stories", "Walking tours"],
+        "tags": [
+          "Dadaocheng",
+          "Temple stories",
+          "Walking tours"
+        ],
         "cta": "See culture tours"
       },
       "ecology": {
         "eyebrow": "Themes · Ecology",
         "title": "In the forest, learn to be quiet.",
         "body": "Fireflies, ferns and creatures of the night — meet the island's other residents without disturbing them.",
-        "tags": ["Night walks", "Low impact", "Naturalist guides"],
+        "tags": [
+          "Night walks",
+          "Low impact",
+          "Naturalist guides"
+        ],
         "cta": "See ecology tours"
       },
       "finale": {
         "eyebrow": "TAIWAN. LOCAL GUIDE. REAL STORIES.",
         "title": "The sun is up. Time to go.",
         "body": "Verified local guides, transparent pricing and secure payment — the next story is yours to walk into.",
-        "tags": ["Verified guides", "Secure payment", "Fair pricing"],
+        "tags": [
+          "Verified guides",
+          "Secure payment",
+          "Fair pricing"
+        ],
         "cta": "Book your journey"
       }
     }
@@ -1265,6 +1293,20 @@
       "category": "Outdoor Adventure",
       "readTime": "7 min",
       "content": "Chaishan (Shoushan) in Kaohsiung hides dozens of limestone caves — one of the few places in Taiwan where you can go caving right at the edge of the city. This article covers everything you need to know for your first time.\n\n## Basic gear\n\nGear you'll need for caving:\n- **Headlamp** (essential — it's pitch black inside)\n- **Helmet** (limestone cave ceilings are uneven)\n- **Gloves** (for gripping the rock walls)\n- **Non-slip or sport shoes** (it's damp inside)\n- **Long sleeves and trousers** (against insects and scrapes)\n\nIf you join Andy Lee's tour, the basic gear is all provided.\n\n## Who is it for?\n\nChaishan caving suits anyone aged 6 and up with basic fitness. No climbing experience is needed, but you should be able to crouch, bend, and occasionally squeeze sideways through narrow passages. If you have severe claustrophobia, assess carefully first.\n\n## Best season\n\nYou can cave year-round, but October to the following April is the most comfortable (cooler, fewer insects). In the rainy season (June–August) some caves may flood, and the guide will adjust the route as conditions require.\n\n## Safety notes\n\n- Never enter a cave alone — the risk of getting lost is very high\n- Follow the guide's instructions at all times\n- Don't touch the stalactites inside (they take tens of thousands of years to form and break at a touch)\n- Watch your step and your head\n\n## Recommended tour\n\nOn our platform, Andy Lee is the Chaishan caving expert — a ranger at Shoushan National Nature Park who has led hundreds of groups. The tour runs about 3–4 hours, NT$2,000 per person."
+    },
+    "river-trekking-beginner-guide": {
+      "title": "River Trekking for Beginners: Gear, Seasons and Safety",
+      "excerpt": "What shoes do you wear? Which months are best? Do you need to swim? Read this before you go.",
+      "category": "Outdoor Adventure",
+      "readTime": "6 min",
+      "content": "Taiwan's 3,000-meter drop from ridge to sea carves rivers that run fast and deep, leaving scenery you will never meet on flat ground: emerald pools, waterfalls, boulders polished round by water. River trekking means travelling up the gorge itself — half the route in the water, half over the rocks. Here are the questions first-timers ask most.\n\n## This is not a swim stop\n\nRiver trekking is a guided route with proper equipment, not wading at a picnic spot. You will cross currents, climb wet rock, sometimes swim a short stretch across a pool. That is exactly why going with a guide who knows the waterline is a different sport from wandering in on your own.\n\n## Basic gear\n\n- River trekking shoes (felt or sticky rubber soles — ordinary sneakers turn wet stone into an ice rink)\n- Helmet (for rockfall and slips alike)\n- Life jacket (mandatory on deep-pool sections)\n- Wetsuit (mountain streams stay cold all year, even in August)\n- Dry bag (phone and trail snacks)\n\nBook a trip on the platform and the guide provides all the technical gear. Bring a change of clothes and one pair of socks you are willing to sacrifice.\n\n## Best season\n\nMay through October is the main season — comfortable water, long daylight. In July and August afternoon thunderstorms are frequent, so trips run in the morning with flexible rescheduling. After a typhoon or heavy rain the river rises and guides simply cancel. The river decides; that is the rule.\n\n## Can non-swimmers join?\n\nYes. Beginner routes put everyone in life jackets on deep sections. Strictly speaking you don't need swimming technique — you need the resolve to step into 20-degree water. If you are over six and can walk a two-hour trail, you are fit enough.\n\n## Safety principles\n\n- Follow the guide's line. No wandering off, no picking your own route\n- If the sky upstream turns dark, retreat — the river rises faster than you run\n- Never jump into a pool before the guide confirms the depth, and never jump first"
+    },
+    "dadaocheng-walking-guide": {
+      "title": "A Walking Guide to Dadaocheng: Into the Stories of Dihua Street",
+      "excerpt": "Dried goods, fabric, tea, herbal medicine — Dadaocheng isn't a preserved old street. It is Taipei's commercial history, still open for business.",
+      "category": "Culture & History",
+      "readTime": "5 min",
+      "content": "When the port of Tamsui opened in 1860, tea left Taiwan from the Dadaocheng wharf, and this riverside district has been trading ever since. Walk down Dihua Street and what you see is not a set restored for tourists — the dried-goods shops still weigh out dried shrimp, the herbalists still fill prescriptions, the fabric market still cuts cloth. This old street is alive.\n\n## Suggested route\n\nStart from Beimen or Daqiaotou MRT station. The classic walk begins at Xiahai City God Temple, heads north along Dihua Street Section 1, ducks through the long shophouse arcades on both sides, and ends at Dadaocheng Wharf for sunset — about two kilometres, two to three hours at a stroll.\n\n## What to look for\n\n- The three-hall shophouse layout: storefront on the street, a lightwell courtyard in the middle, living quarters behind — the narrow shape comes from an era when tax was levied by frontage width\n- Three eras on one facade: southern-Fujian red brick, Western-style arcades, and 1920s Baroque pediments, standing side by side on the same street\n- Xiahai City God Temple: two hundred years of incense, and a permanent queue in front of the Matchmaker god\n- Yongle Fabric Market: three floors of cloth, the starting point of many costume makers and designers\n\n## What to eat\n\nThe temple plaza in front of Cisheng Temple is the locals' lunchroom — pork rib soup with braised pork rice is the standard order. On Dihua Street itself, the old almond jelly and swordfish rice-noodle shops are exactly what tired feet need.\n\n## When to go\n\nWeekday mornings show the district at work; weekends bring crowds but also events. The Lunar New Year market is the loudest week of the year — and the most crowded. If you come for the architecture, avoid it.\n\nWalk it with a local guide and you will hear ten times more: the family sagas behind the shophouses, the rise and fall of the trading firms."
     }
   },
   "memberTabs": {
