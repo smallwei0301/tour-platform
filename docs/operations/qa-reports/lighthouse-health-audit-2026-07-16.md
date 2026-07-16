@@ -97,6 +97,7 @@
   1. 使用者在本機（無 MITM 代理）對生產站跑 `npx lighthouse https://tour-platform-nine.vercel.app/ --preset=perf`；
   2. 用 PageSpeed Insights（Google 端執行，無代理問題）：https://pagespeed.web.dev/ 直接貼生產 URL；
   3. Vercel Speed Insights 後台看真實用戶 CWV（站上已裝 `@vercel/speed-insights`）。
+- **2026-07-16 補記（PSI API 嘗試）**：依使用者指示改走 PageSpeed Insights API 對生產站測試，容器直連與 WebFetch 兩條出口均回 `429 Quota exceeded ('Queries per day', consumer project_number:583797351490)`——無 API key 的 PSI 呼叫共用匿名每日配額，自本環境已用罄，非站點問題。解法：(a) 使用者在瀏覽器開 pagespeed.web.dev 手動測（走網頁版自己的 key，不受此限）；或 (b) 提供 GCP PageSpeed Insights API key（免費），agent 即可自動批測並把結果併入本報告。
 
 ## 7. 修復結果（2026-07-16 同日實作，同環境對照重測）
 
