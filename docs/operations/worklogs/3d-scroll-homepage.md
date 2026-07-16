@@ -215,6 +215,9 @@
   finale.webp。純素材替換，無需改碼。
 - 驗證：浮水印區抽查乾淨；實跑滾到底 finale scrub 正確（dur 10s、ct 9.9s、rs 4、
   CTA→/home、7 支影片）；scroll-world 測試 26/26 綠燈。
+- PR #1726（分支殘留回收 merge 免 force-push，harness/08 §3）。**CI 綠燈（cb6e7db）**：
+  test success — actions/runs/29478192547/job/87555719241；scan success；Vercel Preview
+  success；mergeable_state clean。squash merge 進 main。
 
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
