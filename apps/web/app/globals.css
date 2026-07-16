@@ -2796,7 +2796,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* ── 主題探索 ── */
 /* 手機版：與上方 hero 之間需有明確留白，避免標題緊貼洞穴主視覺（#mobile-theme-spacing）。 */
-.lp-themes { padding-top: 26px; }
+.lp-themes { padding-top: 26px; padding-bottom: 26px; }
 .lp-themes-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 0 6px; }
 .lp-theme-card {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -2819,7 +2819,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 
 /* ── 編輯精選卡 ── */
-.lp-featured { padding: 12px 11px 0; }
+.lp-featured { padding: 12px 11px 12px; }
 .lp-feat-card {
   background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
   border: 1px solid rgba(190, 178, 137, 0.3);
@@ -2915,7 +2915,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-feat-price .lp-price-unit { font-size: 10px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
 
 /* ── 融合區塊：更多行程／目的地／旅人故事／FAQ（原首頁資訊，LP 視覺語言） ── */
-.lp-tours { padding-top: 22px; }
+.lp-tours { padding-top: 22px; padding-bottom: 22px; }
 .lp-tours-list { display: flex; flex-direction: column; gap: 10px; }
 .lp-tour-card {
   display: grid; grid-template-columns: 31% 1fr;
@@ -2956,7 +2956,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 }
 .lp-more-link:hover { color: #e9e3c2; }
 
-.lp-dests { padding-top: 22px; }
+.lp-dests { padding-top: 22px; padding-bottom: 22px; }
 .lp-dests-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
 .lp-dest-card {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -2971,7 +2971,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 .lp-dest-name { font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: #e9e3c2; }
 .lp-dest-count { font-family: var(--font-inter), Inter, sans-serif; font-size: 9px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.06em; }
 
-.lp-stories { padding-top: 22px; }
+.lp-stories { padding-top: 22px; padding-bottom: 22px; }
 .lp-stories-list { display: flex; flex-direction: column; gap: 8px; }
 .lp-story-card {
   display: block;
@@ -2998,7 +2998,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-size: 11px; color: rgba(203, 194, 157, 0.75); letter-spacing: 0.04em;
 }
 
-.lp-faq { padding-top: 22px; }
+.lp-faq { padding-top: 22px; padding-bottom: 22px; }
 .lp-faq-list { border-top: 1px solid rgba(190, 178, 137, 0.25); }
 .lp-faq-item { border-bottom: 1px solid rgba(190, 178, 137, 0.25); }
 .lp-faq-item summary {
@@ -3024,7 +3024,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
 
 /* ── 在地嚮導 ── */
 /* 參考圖量測（@375）：大卡 344×96、徽章卡 59/61×31 gap5、文字起點＝卡內 28.7% */
-.lp-guide { padding-top: 12px; }
+.lp-guide { padding-top: 12px; padding-bottom: 12px; }
 .lp-guide-card {
   /* 全裝置雙欄並排；故事欄加寬（66%）讓「高雄柴山・Andy Lee」文字區更寬、
      信任徽章欄相應縮窄並縮小字級。文字以換行避免溢出 */
@@ -3118,13 +3118,13 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-btn { font-size: 18px; padding: 15px 36px; }
   .lp-section { padding: 0 24px; }
   .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
-  .lp-themes { padding-top: 56px; }
+  .lp-themes { padding-top: 56px; padding-bottom: 56px; }
   .lp-themes-grid { gap: 18px; }
   .lp-theme-card { padding: 30px 8px 24px; gap: 10px; border-radius: 14px; }
   .lp-theme-card svg { width: 42px; height: 42px; }
   .lp-theme-title { font-size: 23px; }
   .lp-theme-sub { font-size: 14px; }
-  .lp-featured { padding-top: 48px; }
+  .lp-featured { padding-top: 48px; padding-bottom: 48px; }
   /* 平板起即並排雙欄（照片左、文字右）— 避免堆疊時文字右半大片留白 */
   .lp-feat-card { border-radius: 16px; grid-template-columns: 40% 1fr; }
   .lp-feat-photo { min-height: 100%; }
@@ -3141,7 +3141,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   .lp-feat-rating .lp-rating-count { font-size: 15px; }
   .lp-feat-price { font-size: 23px; }
   .lp-feat-price .lp-price-unit { font-size: 15px; }
-  .lp-guide { padding-top: 36px; }
+  .lp-guide { padding-top: 36px; padding-bottom: 36px; }
   /* 平板起：雙欄（故事 60.5% ｜ 信任徽章 39.5%）。導遊名放大填滿文字區、
      信任徽章字級縮小以免區域空洞。 */
   .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
