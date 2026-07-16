@@ -206,6 +206,16 @@
   test success — actions/runs/29459167578/job/87498848535；scan success；Vercel Preview
   success；mergeable_state clean。squash merge 進 main。
 
+## 階段 12（2026-07-16）— 再次更換 finale 影片（破曉 match「天亮了」）
+- 依先前「重新思考 finale 提示詞」建議：讓「天亮」隨捲動發生（首幀破曉冷藍 → 尾幀金色
+  滿溢），承接前一景夜森林、扣文案「天亮了，該出發了」。使用者用該概念生成新影片
+  （10s，首幀微光破曉、鏡頭沿發光步道飛向初日、尾幀全島金光）。
+- #1719 已 merge → 分支自最新 origin/main（d676bb7）重置。同管線：delogo 去右下星芒 →
+  全長 scrub 編碼（-g 8、1152w、雙格式 mp4 2.6MB／webm 2.5MB）→ poster＝首幀覆寫
+  finale.webp。純素材替換，無需改碼。
+- 驗證：浮水印區抽查乾淨；實跑滾到底 finale scrub 正確（dur 10s、ct 9.9s、rs 4、
+  CTA→/home、7 支影片）；scroll-world 測試 26/26 綠燈。
+
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
 
