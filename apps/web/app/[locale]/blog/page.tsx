@@ -40,6 +40,19 @@ const posts = [
     imageUrl: '/images/activities/chaishan/main.jpg',
     featured: false,
   },
+  // #1722：blog 內容擴充第一批（封面沿用站內 theme 圖，不增外部依賴）
+  {
+    slug: 'river-trekking-beginner-guide',
+    date: '2026-07-16',
+    imageUrl: '/images/theme/river-trekking.webp',
+    featured: false,
+  },
+  {
+    slug: 'dadaocheng-walking-guide',
+    date: '2026-07-16',
+    imageUrl: '/images/theme/culture-history.webp',
+    featured: false,
+  },
 ];
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app';

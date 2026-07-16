@@ -53,16 +53,21 @@ export function LanguageSwitcher({ className }: { className?: string }) {
       aria-label="切換語言 / Language"
     >
       {VISIBLE_LOCALES.map((locale) => (
-        <button
+        // #1721：改用 <a href>（爬蟲需要可見的跨語系內部連結，button 對 SEO 不存在）；
+        // 點擊仍走 switchTo（cookie＋保留 query 的 client 導航），href 供爬蟲與無 JS 情境。
+        <a
           key={locale}
-          type="button"
-          onClick={() => switchTo(locale)}
+          href={pathForLocale(pathname, locale)}
+          onClick={(e) => {
+            e.preventDefault();
+            switchTo(locale);
+          }}
           aria-current={locale === active ? 'true' : undefined}
           data-testid={`lang-switch-${locale}`}
           className={`tp-lang-switch-btn${locale === active ? ' is-active' : ''}`}
         >
           {SHORT_LABELS[locale]}
-        </button>
+        </a>
       ))}
     </div>
   );

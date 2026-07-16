@@ -113,7 +113,8 @@ body:has(.sw-root) .tp-navbar {
 
 /* Language switcher (#multilingual Phase 0.5 PoC) — 精簡語言切換鈕 */
 .tp-lang-switch { display: inline-flex; align-items: center; gap: 2px; border: 1px solid rgba(244, 236, 216, 0.35); border-radius: 999px; padding: 2px; }
-.tp-lang-switch-btn { background: transparent; border: none; cursor: pointer; color: rgba(244, 236, 216, 0.82); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; line-height: 1; }
+/* #1721：切換器由 button 改 <a>，補 anchor 的底線/顯示重置，視覺不變 */
+.tp-lang-switch-btn { background: transparent; border: none; cursor: pointer; color: rgba(244, 236, 216, 0.82); font-size: 13px; font-weight: 700; padding: 4px 10px; border-radius: 999px; line-height: 1; text-decoration: none; display: inline-block; }
 .tp-lang-switch-btn:hover { color: var(--tp-brass); }
 .tp-lang-switch-btn.is-active { background: var(--tp-brass); color: #2a1c0c; }
 
