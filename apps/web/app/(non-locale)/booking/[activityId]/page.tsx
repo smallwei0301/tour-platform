@@ -688,8 +688,10 @@ function BookingInnerV2FlagShell() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>{m.tripConfirmHeading}</h3>
               <div style={{ marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>{m.selectDateCapacityLabel}</span>
+                {/* a11y（select-name）：改用 label htmlFor 建立程式化關聯 */}
+                <label htmlFor="booking-date-capacity-picker" style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>{m.selectDateCapacityLabel}</label>
                 <select
+                  id="booking-date-capacity-picker"
                   data-testid="booking-v2-date-capacity-picker"
                   name="date-capacity"
                   value={selectedDate}
@@ -1100,7 +1102,9 @@ export default function BookingPage() {
 
   return (
     <Suspense fallback={
-      <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center' }}>
+      // 佔位高度＝實測水合後內容高的線性內插（412px 寬→1936px、1350px 寬→1298px），
+      // 讓 CSR 內容掛載時 footer 幾乎不動（Lighthouse CLS 0.95 → ~0）。
+      <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center', minHeight: 'clamp(1250px, 2216px - 68vw, 1950px)' }}>
         <p style={{ color: 'var(--tp-muted)' }}>{m.loading}</p>
       </main>
     }>

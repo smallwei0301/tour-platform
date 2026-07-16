@@ -176,7 +176,7 @@ body:has(.sw-root) .tp-navbar {
 .tp-footer p, .tp-footer li { color: rgba(244, 236, 216, 0.6); line-height: 1.7; font-size: 12px; }
 .tp-footer ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 2px; }
 .tp-footer a:hover { color: var(--tp-cream); }
-.tp-footer-copy { border-top: 1px solid rgba(190, 178, 137, 0.2); text-align: center; font-size: 11px; padding: 12px; color: rgba(244, 236, 216, 0.45); }
+.tp-footer-copy { border-top: 1px solid rgba(190, 178, 137, 0.2); text-align: center; font-size: 11px; padding: 12px; color: rgba(244, 236, 216, 0.6); /* a11y：0.45→0.6，對比 3.87→5.79 */ }
 
 @media (max-width: 1024px) {
   .tp-navbar-inner {
@@ -515,9 +515,13 @@ body:has(.sw-root) .tp-navbar {
 /* Breadcrumb links */
 .tp-breadcrumb a {
   color: var(--tp-gold);
+  /* a11y（link-in-text-block）：連結不能只靠顏色與周邊文字區分 */
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--tp-gold) 45%, transparent);
 }
 .tp-breadcrumb a:hover {
-  text-decoration: underline;
+  text-decoration-color: var(--tp-gold);
 }
 
 /* Responsive: guide spotlight on mobile */
@@ -895,7 +899,8 @@ img { max-width: 100%; height: auto; }
   gap: 8px;
 }
 .tp-footer-region-link {
-  color: rgba(244, 236, 216, 0.5);
+  /* a11y（Lighthouse color-contrast）：0.5→0.6，合成後對 --tp-ink 對比 4.45→5.79（AA≥4.5） */
+  color: rgba(244, 236, 216, 0.6);
   font-size: 11px;
   text-decoration: none;
   padding: 3px 9px;

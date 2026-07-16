@@ -35,3 +35,28 @@
 ## 產出
 
 - QA 報告：`docs/operations/qa-reports/lighthouse-health-audit-2026-07-16.md`
+
+## 第二階段：修復實作（使用者回覆「開工」授權）
+
+防線狀態更新：bash-guard **實測有武裝**（曾攔截無證據 commit）；file-guard 對 Edit 未攔截（harness/00 §0 探針對凍結路徑 `middleware.ts` 無 HARNESS BLOCK）。已向使用者報告防線狀態後獲「開工」指示——本階段**人工自我執行凍結清單**，所有觸碰檔案均不在凍結區。
+
+### 修改清單（依 QA 報告 §4 順序）
+
+1. **P1 影片 preload**：`src/components/scroll-world/ScrollWorldClient.tsx` `preload="auto"`→`"metadata"`（scrub 引擎只需 readyState>=1；幀資料改 seek 時漸進抓取，poster 補位）。
+2. **P1 CLS 佔位**（Playwright 實測水合後 `#main-content` 高度，412px/1350px 兩寬）：
+   - `/login`：兩寬皆 980px → fallback `minHeight: 980`
+   - `/booking/[activityId]`：1936px/1298px → `clamp(1250px, 2216px - 68vw, 1950px)`（線性內插）
+   - `/guides`：1362px/589px → `clamp(560px, 1701px - 82vw, 1380px)`
+3. **P2/P3 a11y**：
+   - `globals.css`：`.tp-footer-region-link` alpha 0.5→0.6（對比 4.45→5.79）、`.tp-footer-copy` 0.45→0.6（3.87→5.79）；`.tp-breadcrumb a` 補 underline（link-in-text-block）
+   - `scroll-world.module.css`：railDot 觸控目標 24×24（視覺圓點移 `::before`，gap 調整維持原視覺節奏）
+   - `Footer.tsx`：App badge／FB／IG aria-label 改為包含可見文字
+   - booking page：日期 `<select>` 改 `label htmlFor` 關聯（select-name）
+   - `activities/ActivityCard.tsx`＋`ActivitiesContent.tsx`：卡片 h3→h2、篩選 h3→h2（heading-order；inline 鎖字級不動視覺）
+   - `ActivityReviewsPanel.tsx`：評分分布 `role="table"`→`role="group"`（aria-required-children）
+
+### 驗證
+
+- lint 0 errors（剩 1 個既有 warning：RootDocument no-head-element，非本次引入）；typecheck 綠燈。
+- `.claude/hooks/run-checks.sh apps/web/tests/unit/scroll-world-camera.test.mjs apps/web/tests/unit/scroll-world-scenes.test.mjs` 綠燈。
+- 修復後 Lighthouse 對照批次執行中（結果補記於下）。

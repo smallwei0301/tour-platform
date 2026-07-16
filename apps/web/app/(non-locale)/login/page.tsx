@@ -213,8 +213,10 @@ function LoginContent() {
 }
 
 export default function LoginPage() {
+  // fallback 佔位高度＝實測水合後內容高（412/1350px 寬皆 980px，固定版型），
+  // 避免 CSR bailout 內容出現時把 footer 下推（Lighthouse CLS 0.95 → ~0）。
   return (
-    <Suspense>
+    <Suspense fallback={<div style={{ minHeight: 980 }} aria-hidden="true" />}>
       <LoginContent />
     </Suspense>
   );
