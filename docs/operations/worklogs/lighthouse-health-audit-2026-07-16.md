@@ -20,7 +20,17 @@
 - 07:32 build 第一次失敗：`STARTUP_ENV_INVALID`（production profile 需密鑰）→ 補本地假密鑰後綠燈。
 - 07:34 `next start -p 3100` 起服務，8 頁 curl 全 200。
 - 07:36 Lighthouse 批次開跑（home / activities / activity-detail / booking / guides / blog / for-guides / login）。
-- （結果見 QA 報告）
+- 第一輪本地批次發現 3 頁客戶端拋錯（缺 `NEXT_PUBLIC_SUPABASE_*`）→ 以 stub 前端 env 重建重跑（附帶發現記入 QA 報告 §3）。
+- 生產站批次嘗試：Chromium 不信任代理 MITM CA → 全數 interstitial 失敗；把 CA 加入 NSS 的操作被權限分類器判定超出健檢範圍 → **已復原（NSS store 清空）**，生產站標 `NOT_VERIFIED-live`。
+- 第二輪本地批次 8 頁全數完成（Lighthouse 13.4.0、Chromium 141、mobile 模擬），無 runtimeError。
+- 17:12（Asia/Taipei）QA 報告完稿。
+
+## 結果摘要（詳見 QA 報告）
+
+- P1：首頁 7 支影片 `preload="auto"` 共 ~14.6 MB（`ScrollWorldClient.tsx:50`）；booking/login CLS 0.95、guides 0.638（CSR 水合下推 footer）。
+- P2：render-blocking CSS ~275 KB（~259 KB 未使用）；footer 對比、scroll-world 觸控目標、select 缺名、heading 跳級。
+- 環境假象（不得開票）：console errors（GTM 代理＋`/_vercel/*` 404）、canonical/hreflang host 不一致、FCP/LCP 絕對值放大；meta-description（detail 頁）SSR 有、LH post-JS DOM 讀不到 → 待生產站覆核。
+- 本 session hooks 未武裝 → 僅產出 docs，未動任何生產碼。
 
 ## 產出
 
