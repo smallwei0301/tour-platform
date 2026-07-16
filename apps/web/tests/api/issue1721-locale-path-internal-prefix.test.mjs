@@ -32,4 +32,27 @@ describe('issue1721: pathForLocale 對內部改寫路徑（顯式預設語系前
     assert.equal(detectLocale('/en/activities'), 'en');
     assert.equal(detectLocale('/activities'), 'zh-Hant');
   });
+
+  // zh-only（non-locale）路由沒有 /en 版本——切換器 href 不得產生 404 內部連結，
+  // 一律退回目標語系首頁（2026-07-16 健檢實測 17 個 /en/* 404 的回歸修復）。
+  it('zh-only 路由 → en 連結退回 /en，不產生 404 路徑', () => {
+    for (const p of [
+      '/guide/apply', '/for-guides', '/booking/dadadaocheng-walk',
+      '/me/orders', '/admin/login', '/login', '/order/success',
+      '/guides/andy-lee/shop',
+    ]) {
+      assert.equal(pathForLocale(p, 'en'), '/en', `pathForLocale(${p}, en) 應退回 /en`);
+    }
+  });
+
+  it('zh-only 路由 → zh 連結維持原路徑（頁面本身存在）', () => {
+    assert.equal(pathForLocale('/guide/apply', 'zh-Hant'), '/guide/apply');
+    assert.equal(pathForLocale('/me/orders', 'zh-Hant'), '/me/orders');
+  });
+
+  it('多語路由不受影響：/guides、/blog、/experiences 照常加前綴', () => {
+    assert.equal(pathForLocale('/guides/andy-lee', 'en'), '/en/guides/andy-lee');
+    assert.equal(pathForLocale('/blog/chaishan-cave-guide', 'en'), '/en/blog/chaishan-cave-guide');
+    assert.equal(pathForLocale('/experiences/dadadaocheng-walk', 'en'), '/en/experiences/dadadaocheng-walk');
+  });
 });

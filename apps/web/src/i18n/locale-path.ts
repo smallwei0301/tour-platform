@@ -15,6 +15,23 @@ export function detectLocale(pathname: string): AppLocale {
   return isAppLocale(seg) ? seg : routing.defaultLocale;
 }
 
+/**
+ * 住在 app/(non-locale) 的 zh-only 路由前綴（#1711 雙 root layout 結構）。
+ * 這些路徑沒有 /en 對應頁——切換器若直接加前綴會產生 404 內部連結
+ * （健檢實測 17 個 /en/guide|booking|me|admin/* 404，#1721 回歸修復）。
+ */
+const NON_LOCALE_PREFIXES = [
+  '/admin', '/booking', '/for-guides', '/guide', '/line',
+  '/login', '/maintenance', '/me', '/order', '/orders',
+];
+
+/** 路徑（無 locale 前綴）是否存在多語版本。/guides/[slug]/shop 也是 zh-only。 */
+export function isLocalizablePath(path: string): boolean {
+  if (NON_LOCALE_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`))) return false;
+  if (/^\/guides\/[^/]+\/shop(\/|$)/.test(path)) return false;
+  return true;
+}
+
 /** 把目前 pathname 換成 target locale 的對應網址（as-needed：預設不加前綴）。 */
 export function pathForLocale(pathname: string, target: AppLocale): string {
   // #1721：只要第一段是合法 locale 就剝掉——SSR 下 usePathname() 會回傳 middleware
@@ -24,6 +41,10 @@ export function pathForLocale(pathname: string, target: AppLocale): string {
   const rest = isAppLocale(seg) ? pathname.slice(`/${seg}`.length) || '/' : pathname;
   if (target === routing.defaultLocale) {
     return rest || '/';
+  }
+  // zh-only 路由沒有目標語系版本：退而連到該語系首頁，不產生 404 連結（#1721）。
+  if (!isLocalizablePath(rest)) {
+    return `/${target}`;
   }
   return rest === '/' ? `/${target}` : `/${target}${rest}`;
 }

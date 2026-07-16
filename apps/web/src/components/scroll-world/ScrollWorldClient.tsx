@@ -40,7 +40,7 @@ function SceneMedia({ scene }: { scene: SceneView }) {
   return (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element -- billboard 需鋪滿 3D 平面，不走 next/image 版面 */}
-      <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} />
+      <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} width={1600} height={900} />
       {scene.clip && (
         <video
           className={styles.clip}
@@ -206,7 +206,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
           <section key={scene.id} className={styles.flatScene} aria-label={scene.title}>
             <div className={styles.flatArt} aria-hidden="true">
               {/* eslint-disable-next-line @next/next/no-img-element -- 全幅背景圖，非 next/image 版面 */}
-              <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} />
+              <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} width={1600} height={900} />
             </div>
             <div className={styles.flatCopy}>
               <SceneCopy scene={scene} headingLevel={scene.id === 'intro' ? 'h1' : 'h2'} />
@@ -247,7 +247,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
             aria-hidden="true"
           >
             {/* eslint-disable-next-line @next/next/no-img-element -- 全幅序章圖 */}
-            <img className={styles.still} src={SCROLL_WORLD_PRELUDE.still} alt="" draggable={false} />
+            <img className={styles.still} src={SCROLL_WORLD_PRELUDE.still} alt="" draggable={false} width={1600} height={900} />
           </div>
           <div className={styles.vignette} />
           {scenes.map((scene, i) => (
