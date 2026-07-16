@@ -59,4 +59,19 @@
 
 - lint 0 errors（剩 1 個既有 warning：RootDocument no-head-element，非本次引入）；typecheck 綠燈。
 - `.claude/hooks/run-checks.sh apps/web/tests/unit/scroll-world-camera.test.mjs apps/web/tests/unit/scroll-world-scenes.test.mjs` 綠燈。
-- 修復後 Lighthouse 對照批次執行中（結果補記於下）。
+- 修復後 Lighthouse 對照（同環境、同設定重跑）：
+
+| 頁 | Performance | A11y | CLS | 總頁重 |
+|---|---|---|---|---|
+| home | 54→55 | 92→**96** | 0→0 | **18,227→4,045 KiB** |
+| activities | 55→55 | 91→**96** | 0→0 | – |
+| activity-detail | 55→55 | 85→**97** | 0→0 | – |
+| booking | 31→**55** | 83→**95** | 0.95→**0.025** | – |
+| guides | 32→**55** | 91→**95** | 0.638→**0** | – |
+| blog | 55→55 | 89→**96** | – | – |
+| login | 31→**55** | 92→**96** | 0.95→**0** | – |
+
+- booking 第一輪對照 CLS 仍 0.95：外層 Suspense fallback 只蓋水合前，`!activity`（fetch 活動資料中）的內層 loading `<main>` 仍是矮的 → 對該狀態補同款 clamp 佔位後單頁重測，CLS 0.95→0.025 ✅。
+- 視覺抽查（Playwright 412px 截圖）：首頁 hero／導軌圓點、footer 地區連結、booking step1 表單皆正常。
+- **既有問題備查（非本次引入）**：本地 seed 環境 booking 頁有「Invalid activityId」警示 banner（修改前批次截圖同樣存在），疑為 availability API 對 slug/uuid 的處理，建議另開 issue 追。
+- 測試證據：scroll-world 單元測試綠、v2-booking-draft-checkout＋v2-route-contract-smoke 綠（run-checks.sh）、lint 0 errors、typecheck 綠。

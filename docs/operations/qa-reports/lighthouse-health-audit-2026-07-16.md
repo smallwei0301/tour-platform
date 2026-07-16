@@ -98,7 +98,22 @@
   2. 用 PageSpeed Insights（Google 端執行，無代理問題）：https://pagespeed.web.dev/ 直接貼生產 URL；
   3. Vercel Speed Insights 後台看真實用戶 CWV（站上已裝 `@vercel/speed-insights`）。
 
-## 7. 治理聲明
+## 7. 修復結果（2026-07-16 同日實作，同環境對照重測）
 
-- 本 session hooks 探針（harness/00 §0）判定**防線未武裝**（Edit 探針無 `⛔ HARNESS BLOCK`）——依規定本次僅做唯讀稽核＋產出 docs（本報告＋worklog），**未改動任何生產程式碼**；上述修復建議均未實作，待有防護的 session 另案執行。
+P1/P2 中除「全域 CSS 拆分」（另案）外均已修復（commit `4de392b` 起）。對照（修復前→修復後）：
+
+| 頁 | Performance | A11y | CLS | 總頁重 |
+|---|---|---|---|---|
+| home | 54→55 | 92→**96** | 0→0 | **18,227→4,045 KiB（-78%）** |
+| booking | 31→**55** | 83→**95** | 0.95→**0.025** | – |
+| guides | 32→**55** | 91→**95** | 0.638→**0** | – |
+| login | 31→**55** | 92→**96** | 0.95→**0** | – |
+| activity-detail | 55→55 | 85→**97** | – | – |
+| activities / blog | 55 | 91/89→**96** | – | – |
+
+尚未處理：§3 #3 全域 CSS 拆分（工程量大，另開 issue）、#10 bf-cache、#11 llms.txt；環境假象各項不開票；「meta-description post-JS DOM」與「本地 seed 環境 booking 頁 Invalid activityId banner（既有，非本次引入）」待生產站／另案覆核。
+
+## 8. 治理聲明
+
+- 本 session hooks 狀態：bash-guard **實測有武裝**（曾攔截無證據 commit）；file-guard 對 Edit 未攔截（探針無 `⛔ HARNESS BLOCK`）。已向使用者報告後獲「開工」授權執行修復，期間人工自我執行凍結清單（所有觸碰檔案均不在凍結區）。
 - 原始報告（HTML/JSON 各 8 頁）在 session scratchpad，容器回收即消失；如需保存請告知，可另行附出。

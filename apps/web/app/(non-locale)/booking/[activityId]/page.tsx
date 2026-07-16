@@ -533,7 +533,9 @@ function BookingInnerV2FlagShell() {
 
   if (!activity) {
     return (
-      <main className="tp-container" style={{ padding: '40px 0' }}>
+      // 佔位高度同外層 Suspense fallback（實測水合後內容高的線性內插）：
+      // 活動資料 fetch 期間 footer 不動，修掉此頁 CLS 0.95 的主要來源。
+      <main className="tp-container" style={{ padding: '40px 0', minHeight: 'clamp(1250px, 2216px - 68vw, 1950px)' }}>
         <p style={{ color: 'var(--tp-muted)' }}>{loadError || m.loadingActivity}</p>
       </main>
     );
