@@ -2927,7 +2927,9 @@ details[open] .kkd-faq-q::before { content: '- '; }
   transition: border-color 0.15s, transform 0.15s;
 }
 .lp-tour-card:hover { border-color: rgba(190, 178, 137, 0.55); transform: translateY(-1px); }
-.lp-tour-photo { position: relative; min-height: 86px; aspect-ratio: 1 / 1; }
+/* 照片以 grid stretch 填滿整張卡片高度（右側文字較高時不留空白）；
+   min-height 當卡片極矮時的地板，object-fit: cover 維持不變形。 */
+.lp-tour-photo { position: relative; min-height: 86px; align-self: stretch; }
 .lp-tour-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .lp-tour-body { padding: 10px 13px 9px; min-width: 0; }
 .lp-tour-title {
@@ -3159,7 +3161,8 @@ details[open] .kkd-faq-q::before { content: '- '; }
   /* 更多行程：桌機兩欄卡片，照片固定 4:3 不被拉成超寬裁切 */
   .lp-tours-list { flex-direction: row; gap: 18px; }
   .lp-tour-card { flex: 1 1 0; grid-template-columns: 38% 1fr; }
-  .lp-tour-photo { aspect-ratio: 4 / 3; }
+  /* 寬螢幕維持 stretch 填滿卡片高度；不再用固定 4/3 比例（會在文字較高時留白）。 */
+  .lp-tour-photo { aspect-ratio: auto; }
   .lp-tour-body { padding: 16px 18px 14px; }
   .lp-tour-title { font-size: 17px; }
   .lp-tour-tagline { font-size: 13px; }
