@@ -7,7 +7,8 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { sendBookingApprovalRequested, __setEmailClientForTest } from '../../src/lib/email.ts';
+import { __setEmailClientForTest } from '../../src/lib/email.ts';
+import { sendBookingApprovalRequested } from '../../src/lib/booking-approval/request-email.ts';
 import { buildGuideMessage } from '../../src/lib/line-messages.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -76,6 +77,10 @@ test('wrapper 契約：雙通道（email + pushGuideOrderEvent）、best-effort�
 });
 
 test('draft route 契約：request 建單後 fire 導遊通知（requiresGuideApproval 分流）', () => {
+  // route 已達 ratchet 行數天花板 → 接線經 checkout/booking-draft-post-create-notify 扇出。
   const src = read('app/api/v2/bookings/draft/route.ts');
-  assert.match(src, /if \(requiresGuideApproval\(planData\.booking_type\)\)[\s\S]*notifyBookingApprovalRequested/);
+  assert.match(src, /fireDraftPostCreateNotifications/);
+  assert.match(src, /requiresApproval: requiresGuideApproval\(planData\.booking_type\)/);
+  const fanout = read('src/lib/checkout/booking-draft-post-create-notify.ts');
+  assert.match(fanout, /if \(input\.requiresApproval\)[\s\S]*notifyBookingApprovalRequested/);
 });

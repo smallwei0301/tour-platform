@@ -54,6 +54,7 @@ import { initialPaymentDeadlineForBookingType } from '../../../../../src/lib/pay
 import { dropExpiredUnpaidHolds } from '../../../../../src/lib/expired-hold-filter.mjs';
 import { applyWithOptionalColumnFallback } from '../../../../../src/lib/optional-column-fallback.mjs';
 import { applyOrderExtras } from '../../../../../src/lib/checkout/order-extras.mjs';
+import { fireDraftPostCreateNotifications } from '../../../../../src/lib/checkout/booking-draft-post-create-notify';
 import type { ActivityPlanSeason } from '../../../../../src/lib/availability-v2/effective-availability-resolver';
 import {
   validateDraftSlotAgainstSelectedSchedule,
@@ -1131,16 +1132,6 @@ export async function POST(request: NextRequest) {
       addonSelections: (body as any)?.addonSelections, redeemPoints: (body as any)?.redeemPoints,
     }));
 
-    // #1493 instant/scheduled：建立即起算付款期限 → 主動寄付款連結+截止時間（best-effort）。
-    if (paymentDeadlineAt) {
-      void import('../../../../../src/lib/payment-deadline-notify')
-        .then(({ notifyPaymentDeadlineSet }) =>
-          notifyPaymentDeadlineSet({ orderId: orderInsert.id, paymentDeadlineAt }))
-        .catch((err) => {
-          console.error('[payment-deadline-notify] draft fire-and-forget failed:', err);
-        });
-    }
-
     // 9. Create order_item
     const activityTitle = activities?.title ?? '行程預訂';
     const itemTitle = `${activityTitle} - ${planData.name}`;
@@ -1185,23 +1176,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // 三種預約模式：request 申請建立後主動通知導遊（email＋LINE、best-effort）——
-    // 導遊審核制的入口通知；沒有這步導遊只能自己登入後台才會發現有申請。
-    if (requiresGuideApproval(planData.booking_type)) {
-      void import('../../../../../src/lib/booking-approval-notify')
-        .then(({ notifyBookingApprovalRequested }) =>
-          notifyBookingApprovalRequested({
-            orderId: orderInsert.id,
-            activityId: data.activityId,
-            activityTitle,
-            startAt: slotStartAt.toISOString(),
-            peopleCount: data.participants,
-            totalTwd: totalAmount,
-          }))
-        .catch((err) => {
-          console.error('[booking-approval-notify] draft fire-and-forget failed:', err);
-        });
-    }
+    // #1493 付款期限信＋request 導遊審核入口通知（fire-and-forget，實作見 checkout/booking-draft-post-create-notify）。
+    fireDraftPostCreateNotifications({
+      orderId: orderInsert.id, activityId: data.activityId, activityTitle,
+      startAt: slotStartAt.toISOString(), peopleCount: data.participants, totalTwd: totalAmount,
+      paymentDeadlineAt, requiresApproval: requiresGuideApproval(planData.booking_type),
+    });
 
     // Return response per API spec
     return Response.json(

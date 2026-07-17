@@ -4,11 +4,8 @@
  * （呼叫端已 fire-and-forget）。
  */
 import { lookupOrderContext } from './reschedule-notify';
-import {
-  sendBookingApprovalApproved,
-  sendBookingApprovalRejected,
-  sendBookingApprovalRequested,
-} from './email';
+import { sendBookingApprovalApproved, sendBookingApprovalRejected } from './email';
+import { sendBookingApprovalRequested } from './booking-approval/request-email.ts';
 import { pushGuideOrderEvent } from './line-guide-push.mjs';
 
 type ApprovalResult = {

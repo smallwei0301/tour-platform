@@ -44,6 +44,16 @@
 - [x] 測試綠燈：`run-checks.sh --typecheck` — 22 pass／0 fail＋tsc 無錯（booking-approval-request-notify、line-guide-push、notification-matrix-gating、issue1493 回歸）
 - [x] commit + push
 
+## PR #1730 與 CI 紅燈修復（2026-07-17）
+
+- PR：https://github.com/smallwei0301/tour-platform/pull/1730（push 時自動建立，描述已補模板格式）。
+- 首輪 CI `test` job 紅燈：**architecture-ratchet-guard**——`draft/route.ts`（1225 > 1207）、`email.ts`（896 > 863）原本就頂滿天花板，任何加行都會爆。依 guard 指示拆模組、不放寬天花板：
+  - email 模板移至新檔 `src/lib/booking-approval/request-email.ts`（子資料夾，避開頂層 179 檔數天花板；import 帶 `.ts` 副檔名讓 node --test 可 runtime import）；email.ts 內部 `wrapEmail`／`sendEmailWithContract`／`formatSlotTime` 改 export（零淨行），回到 863。
+  - route 兩段 fire-and-forget（#1493 付款期限＋本次審核通知）合併抽成 `src/lib/checkout/booking-draft-post-create-notify.ts`（`fireDraftPostCreateNotifications`），route 淨降至 1205。
+  - 第二輪：新模板檔直讀 `process.env.NEXT_PUBLIC_SITE_URL` 又爆 env 直讀檔數天花板（100 > 99）→ 依 guard 指示在 `src/config/env.ts` 加 `getSiteBaseUrl()` getter（非凍結檔）。
+  - 同步更新 source-contract：issue1493-payment-deadline-email（route 斷言改指扇出模組）、booking-approval-request-notify。
+- 第二輪證據：`run-checks.sh --typecheck --all` → **4685 tests／0 fail（3 skipped）＋tsc 無錯**。
+
 ## 實跑證據與備註
 
 - 測試指令：`.claude/hooks/run-checks.sh --typecheck apps/web/tests/api/booking-approval-request-notify.test.mjs apps/web/tests/api/line-guide-push.test.mjs apps/web/tests/api/notification-matrix-gating.test.mjs apps/web/tests/api/issue1493-payment-deadline-email.test.mjs` → exit 0。
