@@ -106,4 +106,18 @@ CI 綠燈（head `54d0a3c`，2026-07-17 15:13 Asia/Taipei）：
 
 - **GitHub Actions secrets**：`alert-selftest.yml` 4 次 run 全 success（2026-06-30）→ `TELEGRAM_BOT_TOKEN`／`TELEGRAM_CHAT_ID`／`RESEND_API_KEY` 存在且可發送（供排程 sweep／告警 workflows）。
 - **Vercel runtime env**：Vercel MCP 無列 env 工具（get_project 不含 env；runtime log retention 1h 無行為證據）→ 無法直接證實。文件（`docs/operations/notifications-line-telegram-email.md`）記載：LINE 三推播旗標預設 0（正式環境刻意暫停）；`TELEGRAM_*_NOTIFY_ENABLED` 預設 OFF、docs 無開啟紀錄 → 生產環境目前推定只有 email 腿會實際送出，TG/LINE 腿安靜 skip。
-- 待辦（使用者決定）：Vercel Dashboard 肉眼確認，或另案加 admin-only 通道診斷端點（回報 env 存在布林值）。
+- 待辦（使用者決定）：Vercel Dashboard 肉眼確認，或另案加 admin-only 通道診斷端點（回報 env 存在布林值）。→ **使用者拍板做端點，見第四輪。**
+
+## 第四輪：admin-only 通知通道 env 診斷端點（PR #1733 merge 後，同分支重切自 main `53cf886`）
+
+- **端點**：`GET /api/v2/admin/notification-env-status`——回報 email／LINE／Telegram／Telegram 告警 bot 的旗標開關與 secrets 存在**布林值**，絕不回傳 env 值本身。admin auth 由 middleware（`/api/v2/admin/**` 前門）守護，route 免自帶驗證。
+- **env 讀取集中**：新增 `src/config/notification-env-status.mjs`（src/config 為 env 直讀 ratchet 豁免區），復用 feature-flags getters；route 檔不含 `process.env` 字面。
+- **遵循 #1614/#1598 新 route 標準骨架**：`jsonOk`＋try/catch `handleRouteError`（首輪漏接被 issue1598-route-error-coverage-guard 紅燈抓到，已補）。
+- **測試** `tests/api/notification-env-status.test.mjs`：全空 env 全 false、設值轉真、序列化不含 secret 值（防洩漏）、空白字串視為不存在、route 契約（jsonOk／不直讀 process.env）。
+- 證據：`run-checks.sh --typecheck --all` → 全套 0 fail＋tsc 無錯。
+
+PR #1738：https://github.com/smallwei0301/tour-platform/pull/1738
+CI 綠燈（head `f17a0e9`，2026-07-17 18:03 Asia/Taipei）：
+- test：https://github.com/smallwei0301/tour-platform/actions/runs/29571932389/job/87857521770 （conclusion=success）
+- scan：https://github.com/smallwei0301/tour-platform/actions/runs/29571932280/job/87857521646 （conclusion=success）
+確認綠燈後 squash merge（本補記為 docs-only commit，merge 前再驗新 head CI）。
