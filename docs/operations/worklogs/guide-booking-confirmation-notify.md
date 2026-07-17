@@ -76,3 +76,10 @@ PR #1730 已 squash merge（`00c9b3d`）；依 harness/08 §7 從最新 main 重
 
 證據：targeted 30 pass＋`--all` 全套 **4686 tests／0 fail（3 skipped）**＋tsc 無錯（run-checks.sh）。
 Push 依 harness/08 §3：驗證遠端殘留已全進 main（diff 僅剩 main 多的 #1727）→ merge 收回 → 正常 push，不 force。
+
+PR #1731：https://github.com/smallwei0301/tour-platform/pull/1731
+CI 綠燈（head `99a91dd`，2026-07-17 12:44 Asia/Taipei）：
+- test：https://github.com/smallwei0301/tour-platform/actions/runs/29555432008/job/87806396714 （conclusion=success）
+- smoke：https://github.com/smallwei0301/tour-platform/actions/runs/29555432041/job/87806396784 （conclusion=success）
+- scan：https://github.com/smallwei0301/tour-platform/actions/runs/29555432001/job/87806396596 （conclusion=success）
+確認綠燈後 squash merge（本補記為 docs-only commit，merge 前再驗新 head CI）。
