@@ -157,6 +157,31 @@ P1/P2 中除「全域 CSS 拆分」（另案）外均已修復（commit `4de392b
 | P3 | booking 頁 heading-order 1 處 h3 | heading-order | **已修（07-17 追修）**：活動名 h3→h2（inline 鎖字級），h1(sr-only)→h2→h3 序列合法 |
 | ~~觀察~~ | ~~booking 頁 console 404 ×2~~ | errors-in-console | **已排查結案＝假警報**：404 因稽核用 URL 帶了本地 seed 的 plan slug（`chaishan-cave-half-day`）；生產 plan 為 UUID，以真實 plan＋完整參數實測 `available-slots` 回 200 且有資料，生產 slots 健康 |
 
+## 9d. #1735 CSS 拆分驗收（2026-07-17，PR #1739，production `773ee65`）
+
+**實作**：globals.css 4110→1041 行，六組頁面級樣式 route-scoped 化（detail／landing／lp-apply／shop／login／admin），全套 4689 tests 0 fail，Playwright 逐頁目測零視覺回歸。
+
+**PSI 驗收（對照 §9 拆分前基準）**：
+
+| 驗收標準 | 結果 | 判定 |
+|---|---|---|
+| 內頁 unused-css-rules <50KiB | 259→**69 KiB**（殘餘全為字型 @font-face＋跨頁共用） | 大幅改善、差 19KiB（殘餘非頁面 CSS） |
+| 內頁 render-blocking 頁面 CSS | globals 由 ~30KiB gz → **9 KiB**；LH render-blocking 機會項 **0ms**（原 6.8–13.2s） | ✅ 頁面 CSS 已出清 |
+| A11y | 全站 96–98 → **100**（7/8 頁；guides 98） | ✅ 附帶達成 |
+| 內頁 Performance ≥80 | 多數仍 ~55（blog 81、activities 重測 94） | ❌ 未達——瓶頸已「換人」，見下 |
+
+**關鍵診斷：內頁低分的真兇是 next/font CJK 字型檔，不是頁面 CSS（拆分前後皆然）**
+
+- login 頁實測：**25 個 woff2 子集共 1,763 KiB＝總傳輸 2,498 KiB 的 71%**（Noto Sans TC 4 字重＋Serif 3 字重＋Inter 的 unicode-range 子集）
+- LH Lantern 模擬（1.6Mbps）下字型佔滿頻寬 → 模擬 FCP/LCP 被推到 11–14s → P≈55；**observed FCP/LCP 全站 <2.5s（真實體驗很快）**
+- 模擬呈雙峰：同部署同頁 activities 兩次 55↔94、blog 81——分數在「字型下載 vs 首繪」競態間翻轉；拆分前 §9 的內頁 sim（for-guides 11.3s、detail 10.1s）證明此現象與拆分無關
+- CrUX 尚無真實用戶數據（冷啟動），無法用 field data 佐證
+
+**結論**：#1735 的「頁面級 CSS」範圍已完成並驗證；「內頁 P≥80」需第二階段**字型瘦身**（純視覺／品牌決策，owner 拍板）：
+1. 裁字重：Sans 400/700＋Serif 700/900（現 7 字重 → 4，字型體積約 -43%）——600/500/800 將由瀏覽器就近映射，視覺微變
+2. 或自建子集（fontTools 常用字表）自托管，體積可 -70%+，工程量中
+3. 或接受現狀：真實體驗（observed <2.5s）已達標，LH 模擬分數僅作參考
+
 ## 10. 治理聲明
 
 - 本 session hooks 狀態：bash-guard **實測有武裝**（曾攔截無證據 commit）；file-guard 對 Edit 未攔截（探針無 `⛔ HARNESS BLOCK`）。已向使用者報告後獲「開工」授權執行修復，期間人工自我執行凍結清單（所有觸碰檔案均不在凍結區）。
