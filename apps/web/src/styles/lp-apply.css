@@ -1,0 +1,439 @@
+/* /guide/apply ＋ /for-guides 山墨招募 landing（lp-apply／lp-fg）——#1735 自 globals.css 拆出，由兩頁各自匯入。 */
+/* ===================== 成為導遊申請頁 · 山墨風（/guide/apply） =====================
+   沿用首頁 LP 視覺語言（山墨底、古紙米色文字、黃銅 accent、明體標題），
+   讓對外招募頁與站台首頁風格一致。 */
+.lp-apply {
+  background: #18211a;
+  color: var(--tp-cream);
+  min-height: 100vh;
+  padding-bottom: 64px;
+}
+
+/* ── Hero 招募標頭 ── */
+.lp-apply-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 36px 16px 34px;
+  text-align: center;
+  background:
+    radial-gradient(120% 150% at 50% -30%, rgba(176, 141, 62, 0.2), transparent 62%),
+    linear-gradient(180deg, #1b2a1d 0%, #18211a 100%);
+  border-bottom: 1px solid rgba(190, 178, 137, 0.18);
+}
+.lp-apply-breadcrumb {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: rgba(244, 236, 216, 0.55);
+  margin-bottom: 18px;
+}
+.lp-apply-breadcrumb a { color: #cbc29d; }
+.lp-apply-breadcrumb a:hover { color: #ded7ab; }
+.lp-apply-breadcrumb span { margin: 0 4px; color: rgba(244, 236, 216, 0.4); }
+.lp-apply-eyebrow {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #cbc29d;
+  margin: 0 0 12px;
+}
+.lp-apply-title {
+  font-family: var(--tp-serif);
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.25;
+  margin: 0 0 14px;
+  color: #f4ecd8;
+}
+.lp-apply-lead {
+  max-width: 600px;
+  margin: 0 auto 22px;
+  font-size: 15px;
+  line-height: 1.85;
+  color: rgba(244, 236, 216, 0.78);
+}
+.lp-apply-perks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.lp-apply-perk {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 150px;
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.lp-apply-perk strong {
+  font-family: var(--tp-serif);
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  color: #f0ecdc;
+}
+.lp-apply-perk span { font-size: 12px; color: rgba(244, 236, 216, 0.7); }
+
+/* ── 主體容器 ── */
+.lp-apply-body { max-width: 720px; margin: 0 auto; padding: 28px 16px 0; }
+
+/* ── 步驟指示 ── */
+.lp-apply-steps {
+  list-style: none;
+  display: flex;
+  gap: 8px;
+  padding: 0;
+  margin: 0 0 22px;
+}
+.lp-apply-steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(190, 178, 137, 0.25);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 13px;
+  color: rgba(244, 236, 216, 0.55);
+}
+.lp-apply-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid rgba(190, 178, 137, 0.4);
+  font-size: 12px;
+}
+.lp-apply-steps li.active {
+  border-color: rgba(176, 141, 62, 0.6);
+  background: rgba(176, 141, 62, 0.12);
+  color: #ded7ab;
+}
+.lp-apply-steps li.active .lp-apply-step-num {
+  background: #b08d3e;
+  border-color: #b08d3e;
+  color: #18211a;
+  font-weight: 700;
+}
+
+/* ── 卡片 ── */
+.lp-apply-card {
+  background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 14px;
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+.lp-apply-card h2 {
+  font-family: var(--tp-serif);
+  font-size: 20px;
+  letter-spacing: 0.04em;
+  margin: 0;
+  color: #f4ecd8;
+}
+
+/* ── 欄位 ── */
+.lp-apply-field { display: grid; gap: 6px; }
+.lp-apply-field > span,
+.lp-apply-group-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e7dfc6;
+}
+.lp-apply-group-label { margin: 0 0 10px; }
+.lp-apply-card input[type='text'],
+.lp-apply-card input[type='tel'],
+.lp-apply-card input[type='email'],
+.lp-apply-card input:not([type]),
+.lp-apply-inline-input,
+.lp-apply-card textarea {
+  width: 100%;
+  box-sizing: border-box;
+  background: rgba(12, 18, 12, 0.5);
+  border: 1px solid rgba(190, 178, 137, 0.28);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--tp-cream);
+  font-size: 15px;
+  font-family: inherit;
+}
+.lp-apply-inline-input { width: auto; flex: 1; min-width: 140px; padding: 9px 12px; font-size: 14px; }
+.lp-apply-card textarea { resize: vertical; }
+.lp-apply-card input::placeholder,
+.lp-apply-card textarea::placeholder { color: rgba(244, 236, 216, 0.4); }
+.lp-apply-card input:focus,
+.lp-apply-card textarea:focus {
+  outline: none;
+  border-color: rgba(176, 141, 62, 0.7);
+  box-shadow: 0 0 0 3px rgba(176, 141, 62, 0.15);
+}
+
+/* ── 多選 / 單選晶片 ── */
+.lp-apply-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lp-apply-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(190, 178, 137, 0.3);
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(244, 236, 216, 0.85);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.lp-apply-chip:hover { border-color: rgba(176, 141, 62, 0.5); }
+.lp-apply-chip input { accent-color: #b08d3e; width: 15px; height: 15px; }
+.lp-apply-chip:has(input:checked) {
+  border-color: rgba(176, 141, 62, 0.7);
+  background: rgba(176, 141, 62, 0.14);
+  color: #f4ecd8;
+}
+
+/* ── 說明 / 提示文字 ── */
+.lp-apply-hint {
+  font-size: 13px;
+  line-height: 1.75;
+  color: rgba(244, 236, 216, 0.6);
+  margin: 0 0 8px;
+}
+.lp-apply-note {
+  background: rgba(176, 141, 62, 0.1);
+  border: 1px solid rgba(190, 178, 137, 0.3);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: rgba(244, 236, 216, 0.85);
+}
+.lp-apply-note strong { color: #ded7ab; }
+
+/* ── 檔案上傳 ── */
+.lp-apply-file { color: rgba(244, 236, 216, 0.8); font-size: 14px; max-width: 100%; }
+.lp-apply-file::file-selector-button {
+  margin-right: 12px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(190, 178, 137, 0.4);
+  background: rgba(255, 255, 255, 0.04);
+  color: #e7dfc6;
+  font-size: 13px;
+  cursor: pointer;
+}
+.lp-apply-file::file-selector-button:hover { border-color: rgba(176, 141, 62, 0.6); }
+
+/* ── 動作按鈕 ── */
+.lp-apply-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+.lp-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--tp-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 11px 26px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s, border-color 0.15s, color 0.15s;
+}
+.lp-apply-btn-primary {
+  background: #a8511f;
+  color: #f6eed8;
+  border-color: rgba(244, 236, 216, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+.lp-apply-btn-primary:hover:not(:disabled) { background: #b85c28; }
+.lp-apply-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.lp-apply-btn-ghost {
+  background: transparent;
+  color: rgba(244, 236, 216, 0.8);
+  border-color: rgba(190, 178, 137, 0.4);
+}
+.lp-apply-btn-ghost:hover { border-color: rgba(176, 141, 62, 0.6); color: #f4ecd8; }
+
+/* ── 摘要列 ── */
+.lp-apply-summary { display: grid; gap: 8px; }
+.lp-apply-summary p { margin: 0; font-size: 14px; color: var(--tp-cream); }
+.lp-apply-summary-photo { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--tp-cream); }
+
+/* ── 送出成功 ── */
+.lp-apply-success { text-align: center; }
+.lp-apply-success h2 { text-align: center; }
+.lp-apply-success .lp-apply-hint { text-align: center; }
+.lp-apply-check { font-size: 44px; line-height: 1; }
+
+@media (max-width: 640px) {
+  .lp-apply-title { font-size: 26px; }
+  .lp-apply-steps { flex-direction: column; }
+  .lp-apply-actions { flex-direction: column-reverse; }
+  .lp-apply-actions .lp-apply-btn { width: 100%; }
+}
+
+/* ═══════════════ /for-guides 導遊開店 landing（lp-fg-*）═══════════════
+   沿 lp-apply 深色主題（山墨底、古紙字），朝霞 #C2542E 只用在主要 CTA。 */
+.lp-fg-hero-cta {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.lp-fg-btn-primary {
+  display: inline-block;
+  padding: 12px 26px;
+  border-radius: 999px;
+  /* a11y（color-contrast）：#c2542e→#a8431f，對 #f4ecd8 文字 3.88→5.11（AA） */
+  background: #a8431f;
+  color: #f4ecd8;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+.lp-fg-btn-primary:hover { background: #8f3618; }
+.lp-fg-btn-ghost {
+  display: inline-block;
+  padding: 12px 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(190, 178, 137, 0.45);
+  color: #cbc29d;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.lp-fg-btn-ghost:hover { color: #ded7ab; border-color: rgba(190, 178, 137, 0.7); }
+.lp-fg-section { margin-top: 40px; }
+.lp-fg-heading {
+  font-family: var(--tp-serif);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #f4ecd8;
+  margin: 0 0 16px;
+}
+.lp-fg-benefit { min-width: 200px; }
+.lp-fg-benefit span { font-size: 13px; line-height: 1.7; }
+.lp-fg-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.lp-fg-steps li {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.lp-fg-step-num {
+  font-family: var(--tp-serif);
+  font-size: 20px;
+  font-weight: 900;
+  color: #b08d3e;
+  line-height: 1.2;
+}
+.lp-fg-steps strong { color: #f0ecdc; font-size: 15px; }
+.lp-fg-steps p { margin: 4px 0 0; font-size: 13px; line-height: 1.7; color: rgba(244, 236, 216, 0.7); }
+.lp-fg-pricing {
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(176, 141, 62, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+  color: rgba(244, 236, 216, 0.85);
+}
+.lp-fg-pricing p { margin: 0 0 6px; }
+.lp-fg-price strong { font-family: var(--tp-serif); font-size: 22px; color: #f4ecd8; }
+.lp-fg-price-note { color: #cbc29d; }
+.lp-fg-preview {
+  max-width: 360px;
+  margin: 0 auto;
+  background: #f4ecd8;
+  color: #1a2e1f;
+  border-radius: 14px;
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+.lp-fg-preview-header { display: flex; align-items: center; gap: 12px; }
+.lp-fg-preview-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #5e7a4f;
+  color: #f4ecd8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.lp-fg-preview-name { margin: 0; font-weight: 700; font-size: 15px; }
+.lp-fg-preview-sub { margin: 2px 0 0; font-size: 12px; color: #4c6340; /* a11y：4.07→5.63 */ }
+.lp-fg-preview-card {
+  border: 1px solid rgba(26, 46, 31, 0.18);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: #ebe1c7;
+}
+.lp-fg-preview-title { margin: 0; font-weight: 700; font-size: 14px; }
+.lp-fg-preview-meta { margin: 3px 0 0; font-size: 12px; color: rgba(26, 46, 31, 0.75); /* a11y：4.17→5.87 */ }
+.lp-fg-preview-price { margin: 6px 0 0; font-weight: 700; font-size: 14px; }
+.lp-fg-preview-cta {
+  text-align: center;
+  background: #1a2e1f;
+  color: #f4ecd8;
+  border-radius: 999px;
+  padding: 10px 0;
+  font-weight: 700;
+  font-size: 14px;
+}
+.lp-fg-preview-caption {
+  max-width: 360px;
+  margin: 10px auto 0;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(244, 236, 216, 0.7);
+}
+.lp-fg-faq { display: grid; gap: 10px; }
+.lp-fg-faq details {
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+.lp-fg-faq summary { cursor: pointer; font-weight: 700; color: #f0ecdc; font-size: 14px; }
+.lp-fg-faq p { margin: 10px 0 0; font-size: 13px; line-height: 1.8; color: rgba(244, 236, 216, 0.75); }
+.lp-fg-closing { text-align: center; padding-bottom: 24px; }
+.lp-fg-closing-title {
+  font-family: var(--tp-serif);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #f4ecd8;
+  margin: 0 0 10px;
+}
+.lp-fg-closing p { color: rgba(244, 236, 216, 0.75); font-size: 14px; margin: 0 0 18px; }

@@ -19,7 +19,8 @@ async function readSource(relPath) {
 }
 
 const QA_COMPONENT = 'src/components/activity/ActivityQASection.tsx';
-const GLOBALS_CSS = 'app/globals.css';
+// #1735：kkd-qa-* 樣式已拆到 route-scoped activity-detail.css
+const GLOBALS_CSS = 'src/styles/activity-detail.css';
 
 test('QA 卡片改用品牌 class（kkd-qa-item），與 FAQ 卡片同樣式', async () => {
   const src = await readSource(QA_COMPONENT);
@@ -44,7 +45,7 @@ test('QA 元件不得殘留淺色 hardcode（白／淺灰底與深灰字）', as
   }
 });
 
-test('globals.css 為 QA 定義使用品牌變數的樣式（與 FAQ 同色系）', async () => {
+test('activity-detail.css 為 QA 定義使用品牌變數的樣式（與 FAQ 同色系）', async () => {
   const css = await readSource(GLOBALS_CSS);
   assert.match(css, /\.kkd-qa-item\s*\{[^}]*var\(--tp-card-bg\)/s, 'kkd-qa-item 背景必須用 --tp-card-bg');
   assert.match(css, /\.kkd-qa-item\s*\{[^}]*var\(--tp-border\)/s, 'kkd-qa-item 邊框必須用 --tp-border');
