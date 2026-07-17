@@ -19,8 +19,9 @@ import {
 // 預設全開（保留現有派送行為）；後台關閉某格 → isNotifyEnabled 該格 false。
 // 不帶 SUPABASE_URL 時走 in-memory fallback（store.mjs notificationSettings）。
 
-test('矩陣維度常數涵蓋 5 事件 × 3 對象 × 2 通道', () => {
+test('矩陣維度常數涵蓋 6 事件 × 3 對象 × 2 通道', () => {
   assert.deepEqual(NOTIFY_EVENTS, [
+    'approval_requested',
     'new_order',
     'payment_received',
     'order_cancelled',
