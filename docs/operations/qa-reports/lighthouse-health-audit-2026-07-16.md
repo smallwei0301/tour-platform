@@ -3,7 +3,7 @@
 > 產出：2026-07-16 17:12（Asia/Taipei）｜稽核 SHA：`9c25a6a`（branch `claude/lighthouse-project-audit-s21poy`，同 main HEAD）
 > 工具：Lighthouse 13.4.0＋Chromium 141（headless=new）｜**行動裝置模擬（LH 預設：Moto G Power、4x CPU throttle、slow-4G 模擬）**
 > 稽核對象：本地 `next build`＋`next start`（port 3100，in-memory seed store）｜8 個公開關鍵頁
-> 生產站（Vercel）瀏覽器實測：**NOT_VERIFIED-live**（blocker 見 §6）
+> 生產站（Vercel）瀏覽器實測：~~NOT_VERIFIED-live~~ → **已於 2026-07-17 以 PSI API 實測解除**（§9；首頁 mobile Performance 55→92）
 
 ---
 
@@ -114,7 +114,50 @@ P1/P2 中除「全域 CSS 拆分」（另案）外均已修復（commit `4de392b
 
 尚未處理：§3 #3 全域 CSS 拆分（工程量大，另開 issue）、#10 bf-cache、#11 llms.txt；環境假象各項不開票；「meta-description post-JS DOM」與「本地 seed 環境 booking 頁 Invalid activityId banner（既有，非本次引入）」待生產站／另案覆核。
 
-## 8. 治理聲明
+## 9. 生產站 PSI 實測（2026-07-17，NOT_VERIFIED-live 解除）
+
+> 工具：PageSpeed Insights API v5（使用者提供之 API key）｜量測對象：production `4e1654e`（含 PR #1727＋#1732 全部修復）｜17:0x（Asia/Taipei）｜8 頁 mobile＋首頁 desktop｜CrUX 無資料（冷啟動，正常）
+
+### 9a. 修復前後對照（首頁 mobile，同為生產站 PSI）
+
+| 指標 | 修復前（07-17 12:50，使用者實測） | 修復後（07-17 17:0x） |
+|---|---|---|
+| Performance | 55 | **92** |
+| FCP / LCP / SI | 14.3s / 17.3s / 14.3s | **1.5s / 2.4s / 5.8s** |
+| 網路資源總量 | **33,911 KiB**（7 支影片 webm＋mp4 全載） | **8,082 KiB**（影片僅 2 檔：active±1 就近掛載） |
+| A11y / BP / SEO | 96 / 100 / 100 | 96 / 100 / 100 |
+| CLS / TBT | 0 / 60ms | 0 / 40ms |
+
+§6 的環境 blocker 至此解除：本節即生產站瀏覽器實測數據。§3 環境假象判定全部獲生產站證實（BP 100、SEO 100、meta-description 正常）。
+
+### 9b. 全站分數（mobile；desktop 僅首頁）
+
+| 頁 | P | A11y | BP | SEO | LCP | CLS | 頁重 KiB |
+|---|---|---|---|---|---|---|---|
+| `/`（mobile） | **92** | 96 | 100 | 100 | 2.4s | 0 | 8,082 |
+| `/`（desktop） | 72 | 90 | 100 | 100 | 2.8s | 0.001 | 8,245 |
+| `/activities` | 59 | 96 | 100 | 100 | 8.7s | 0 | 3,530 |
+| activity-detail | 53 | 97 | 100 | 100 | 12.9s | 0 | 3,388 |
+| `/booking/*` | 64 | 95 | 96 | 66* | 12.8s | **0.063** | 2,595 |
+| `/guides` | 58 | 95 | 100 | 100 | 14.2s | 0 | 2,688 |
+| `/blog` | 55 | 96 | 100 | 100 | 14.0s | 0 | 3,154 |
+| `/for-guides` | 55 | 92 | 100 | 100 | 13.9s | 0 | 2,373 |
+| `/login` | 73 | 96 | 100 | 63* | 14.3s | 0 | 2,504 |
+
+\* noindex by-design。CLS 全站達標（booking 0.95→0.063，<0.1）。
+
+### 9c. 剩餘問題（生產實測確認）
+
+| 級別 | 問題 | 證據 | 處置 |
+|---|---|---|---|
+| P2 | **內頁 LCP 8.7–14.3s**，主因 render-blocking CSS（FCP 預估可省 6.8–13.2s）＋LCP 圖片非優先載入 | 各頁 render-blocking-resources | ＝§3 #3 全域 CSS 拆分，另開 issue（效能天花板所在） |
+| P3 | 全站 target-size 20 處＝footer 清單連結（~20px 高） | 各頁 target-size | **本輪已修**：`.tp-footer ul a` inline-block＋padding |
+| P3 | 導覽列搜尋按鈕（desktop＋mobile menu）純圖示無 accessible name | home.desktop button-name | **本輪已修**：補 `aria-label` |
+| P3 | `/for-guides` 色彩對比 4 處（lp-fg hero CTA／preview 文字） | color-contrast | 另案（頁面專屬色票） |
+| P3 | booking 頁 heading-order 1 處 h3 | heading-order | 另案（該檔行數已頂 ratchet 天花板，併下次 booking 改動） |
+| 觀察 | booking 頁 console 404 ×2：`/api/v2/activities/c0000003-…/available-slots` | errors-in-console | 生產 slots 資料面問題（V2 slots 回填中，#839/#1133 快照 fallback 脈絡），非本輪引入；記錄待查 |
+
+## 10. 治理聲明
 
 - 本 session hooks 狀態：bash-guard **實測有武裝**（曾攔截無證據 commit）；file-guard 對 Edit 未攔截（探針無 `⛔ HARNESS BLOCK`）。已向使用者報告後獲「開工」授權執行修復，期間人工自我執行凍結清單（所有觸碰檔案均不在凍結區）。
 - 原始報告（HTML/JSON 各 8 頁）在 session scratchpad，容器回收即消失；如需保存請告知，可另行附出。

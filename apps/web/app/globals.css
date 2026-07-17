@@ -175,6 +175,8 @@ body:has(.sw-root) .tp-navbar {
 .tp-footer h4 { color: var(--tp-gold); margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: 0.18em; }
 .tp-footer p, .tp-footer li { color: rgba(244, 236, 216, 0.6); line-height: 1.7; font-size: 12px; }
 .tp-footer ul { margin: 0; padding-left: 0; list-style: none; display: grid; gap: 2px; }
+/* a11y（target-size，PSI 生產實測剩餘 20 處）：清單連結 ~20px 高 → inline-block+padding 撐到 ≥24px */
+.tp-footer ul a { display: inline-block; padding: 2px 0; }
 .tp-footer a:hover { color: var(--tp-cream); }
 .tp-footer-copy { border-top: 1px solid rgba(190, 178, 137, 0.2); text-align: center; font-size: 11px; padding: 12px; color: rgba(244, 236, 216, 0.6); /* a11y：0.45→0.6，對比 3.87→5.79 */ }
 
