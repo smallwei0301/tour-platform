@@ -96,3 +96,4 @@
 - Solution：判斷防線以「bash-guard 是否攔 commit」等實際攔截行為為準；或探針改用 **Write 工具**寫 CLAUDE.md（Write 無 old_string 前置驗證，會真的進 hook 被 file-guard 攔）
 - 另外兩個 bash-guard 邊角：(1) commit 證據 gate 檢查的是「hook 執行當下」的 staged 區——add 與 commit 併在同一條指令會因 staged 為空而讓純文件豁免失效，**add 與 commit 要分兩條指令**；(2) heredoc/字串內容若含「git …commit」字樣也會被 commit gate 的 regex 命中——往 lessons.md 等檔案追加含 git 指令的文字時改用 Edit 工具，別用 shell heredoc
 - 適用範圍：所有 session 開機煙霧測試；純文件 commit 流程
+- **[2026-07-17 更新] 雲端 remote session 全程重演本假陰性**：agent 照 00_INDEX 步驟 0 的 Edit 探針判定「hooks 未武裝」、以人工遵守替代跑了整個 session（4 個 PR），收尾調查時用「Write 寫回一字不差的 CLAUDE.md」重測 → `⛔ HARNESS BLOCK [file-guard]`——**hooks 其實從頭到尾武裝**。兩個新事實：(1) **Write-identical-content 是安全的武裝探針**（有攔＝武裝；沒攔＝寫入相同內容零損害，且立刻知道真裸奔）；(2) Bash 工具裡 `printenv CLAUDE_PROJECT_DIR` 為空**不代表** hook 環境沒有——該變數只注入 hook 執行 context，別拿 Bash env 當證據。根因是開機時未先 grep 本檔就照 00_INDEX 步驟 0 行動；步驟 0 的探針方法待 owner 依 05_maintenance 提案流程修訂（本檔無權改 0*.md）。
