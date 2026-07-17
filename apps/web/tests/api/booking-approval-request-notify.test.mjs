@@ -10,6 +10,7 @@ import { dirname, join } from 'node:path';
 import { __setEmailClientForTest } from '../../src/lib/email.ts';
 import { sendBookingApprovalRequested } from '../../src/lib/booking-approval/request-email.ts';
 import { buildGuideMessage } from '../../src/lib/line-messages.ts';
+import { buildOrderEventTelegramText } from '../../src/lib/telegram-messages.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const APP = join(__dirname, '../..');
@@ -63,14 +64,23 @@ test('buildGuideMessage: guide_approval_requested 組出待審核訊息', () => 
   assert.match(msgs[0].text, /批准或婉拒/);
 });
 
+test('buildOrderEventTelegramText: approval_requested 三受眾各有專屬標題', () => {
+  const base = { orderId: 'ord12345678', activityTitle: '柴山探洞', totalTwd: 3000 };
+  assert.match(buildOrderEventTelegramText('approval_requested', base, 'guide'), /新預約申請待審核/);
+  assert.match(buildOrderEventTelegramText('approval_requested', base, 'admin'), /待導遊審核/);
+  assert.match(buildOrderEventTelegramText('approval_requested', base, 'traveler'), /申請已送出/);
+});
+
 // wrapper 內部 import 無副檔名（Next 解析），node --test 無法直接 runtime import，
 // 故比照 issue1493 慣例以 source-contract 鎖行為。
-test('wrapper 契約：雙通道（email + pushGuideOrderEvent）、best-effort、orderId guard', () => {
+test('wrapper 契約：三通道（email + LINE + Telegram）、best-effort、orderId guard', () => {
   const src = read('src/lib/booking-approval-notify.ts');
   assert.match(src, /notifyBookingApprovalRequested/);
   assert.match(src, /sendBookingApprovalRequested/);
   assert.match(src, /pushGuideOrderEvent/);
   assert.match(src, /guide_approval_requested/);
+  assert.match(src, /dispatchOrderEventTelegram/);
+  assert.match(src, /kind: 'approval_requested'/);
   assert.match(src, /lookupOrderContext/);
   assert.match(src, /if \(!input\?\.orderId\) return/);
   assert.match(src, /if \(!ctx\?\.guideEmail\) return/);

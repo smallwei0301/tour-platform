@@ -95,7 +95,7 @@ test('sendTelegramTransactional: no bot token → skipped(no_bot_token), no netw
 });
 
 test('buildOrderEventTelegramText covers all kinds and audiences', () => {
-  for (const kind of ['new_order', 'payment_received', 'order_cancelled', 'refund_requested', 'refund_executed']) {
+  for (const kind of ['approval_requested', 'new_order', 'payment_received', 'order_cancelled', 'refund_requested', 'refund_executed']) {
     for (const audience of ['traveler', 'guide', 'admin']) {
       const text = buildOrderEventTelegramText(kind, { orderId: 'ord12345678', activityTitle: '柴山', totalTwd: 4000 }, audience);
       assert.match(text, /ORD12345/);
