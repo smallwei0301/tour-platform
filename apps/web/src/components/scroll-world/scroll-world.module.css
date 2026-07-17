@@ -182,33 +182,48 @@
 .rail {
   position: absolute;
   z-index: 6;
-  right: 18px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  /* 按鈕本體已放大到 24px（見 .railDot），gap 縮小以維持原 25px 視覺節奏 */
+  gap: 1px;
 }
 
+/* a11y（Lighthouse target-size）：觸控目標本體 ≥24×24px，視覺圓點移到 ::before 維持原尺寸 */
 .railDot {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+}
+
+.railDot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 11px;
   height: 11px;
   border-radius: 50%;
   border: 1px solid rgba(235, 225, 199, 0.55);
   background: transparent;
-  padding: 0;
-  cursor: pointer;
   transition: background 0.25s ease, transform 0.25s ease, border-color 0.25s ease;
 }
 
-.railDot:hover {
+.railDot:hover::before {
   border-color: #ebe1c7;
 }
 
-.railDotActive {
+.railDotActive::before {
   background: #b08d3e;
   border-color: #b08d3e;
-  transform: scale(1.3);
+  transform: translate(-50%, -50%) scale(1.3);
 }
 
 /* ── 滾動提示 ── */
@@ -280,7 +295,7 @@
     bottom: 9vh;
   }
   .copyBody { font-size: 14.5px; }
-  .rail { right: 10px; gap: 12px; }
-  .railDot { width: 9px; height: 9px; }
+  .rail { right: 4px; gap: 0; }
+  .railDot::before { width: 9px; height: 9px; }
   .flatCopy { padding-left: 20px; padding-right: 20px; }
 }

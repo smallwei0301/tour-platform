@@ -533,7 +533,7 @@ function BookingInnerV2FlagShell() {
 
   if (!activity) {
     return (
-      <main className="tp-container" style={{ padding: '40px 0' }}>
+      <main className="tp-container" style={{ padding: '40px 0', minHeight: 'clamp(1250px, 2216px - 68vw, 1950px)' }}>
         <p style={{ color: 'var(--tp-muted)' }}>{loadError || m.loadingActivity}</p>
       </main>
     );
@@ -688,10 +688,10 @@ function BookingInnerV2FlagShell() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>{m.tripConfirmHeading}</h3>
               <div style={{ marginBottom: 12 }}>
-                <span style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>{m.selectDateCapacityLabel}</span>
+                <label htmlFor="booking-date-capacity-picker" style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>{m.selectDateCapacityLabel}</label>
                 <select
                   data-testid="booking-v2-date-capacity-picker"
-                  name="date-capacity"
+                  id="booking-date-capacity-picker" name="date-capacity"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{
@@ -1100,7 +1100,7 @@ export default function BookingPage() {
 
   return (
     <Suspense fallback={
-      <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center' }}>
+      <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center', minHeight: 'clamp(1250px, 2216px - 68vw, 1950px)' }}>
         <p style={{ color: 'var(--tp-muted)' }}>{m.loading}</p>
       </main>
     }>

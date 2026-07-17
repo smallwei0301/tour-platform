@@ -47,7 +47,10 @@ function SceneMedia({ scene }: { scene: SceneView }) {
           poster={scene.still}
           muted
           playsInline
-          preload="auto"
+          // metadata 即滿足 scrub 引擎的 readyState>=1 門檻；幀資料改為 seek 時
+          // 漸進抓取（range request），未就緒時由同構圖 poster 補位——避免
+          // preload="auto" 讓首頁一次抓滿 7 支影片（~14.6MB）。
+          preload="metadata"
           aria-hidden="true"
         >
           {/* VP9/WebM 給 Chrome/Firefox/Android，H.264/mp4 給 Safari/iOS */}

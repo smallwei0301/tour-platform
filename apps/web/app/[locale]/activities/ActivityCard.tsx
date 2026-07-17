@@ -100,7 +100,8 @@ export default function ActivityCard({ a, idx, wishlisted = false, isLoggedIn = 
           <span style={{ fontSize: 13, color: 'var(--tp-muted)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{a.guideName} <span style={{ color: 'var(--tp-brass)', display: 'inline-flex' }}><PublicIcon name="badgeCheck" size={14} /></span></span>
         </div>
       )}
-      <h3 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h3>
+      {/* a11y（heading-order）：h3→h2，跟在頁面 h1 之後不跳級；inline 字級不變 */}
+      <h2 style={{ fontSize: 15, margin: '4px 0 6px', lineHeight: 1.4 }}>{a.title}</h2>
       {(() => {
         // 與詳情頁同一真實來源（resolveActivityReviewStats）：count>0 才顯示星數/則數，
         // 否則顯示「尚無評價」，避免出現「5.0 (0則)」這種與詳情頁不一致的假數據。
