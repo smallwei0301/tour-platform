@@ -67,7 +67,7 @@ export function __setEmailClientForTest(client: EmailClient | null): void {
   _emailClientOverride = client;
 }
 
-async function sendEmailWithContract(input: {
+export async function sendEmailWithContract(input: {
   fn: string;
   to: string;
   subject: string;
@@ -129,7 +129,7 @@ export interface OrderEmailData {
 
 // ── HTML template helper ───────────────────────────────────────────────────────
 
-function wrapEmail(title: string, body: string): string {
+export function wrapEmail(title: string, body: string): string {
   return `<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
@@ -621,7 +621,7 @@ export interface RescheduleRequestNoticeData {
   toStartAt?: string | null;
 }
 
-function formatSlotTime(iso?: string | null): string {
+export function formatSlotTime(iso?: string | null): string {
   if (!iso) return '—';
   return String(iso).replace('T', ' ').slice(0, 16);
 }
