@@ -903,7 +903,8 @@ img { max-width: 100%; height: auto; }
   color: rgba(244, 236, 216, 0.6);
   font-size: 11px;
   text-decoration: none;
-  padding: 3px 9px;
+  /* a11y（target-size）：3px→5px 垂直 padding，觸控高度 ~23px→≥24px */
+  padding: 5px 10px;
   border: 1px solid rgba(190, 178, 137, 0.22);
   border-radius: 999px;
   transition: color 0.15s, border-color 0.15s;
