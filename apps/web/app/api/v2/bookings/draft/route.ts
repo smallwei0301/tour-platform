@@ -1185,6 +1185,24 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // 三種預約模式：request 申請建立後主動通知導遊（email＋LINE、best-effort）——
+    // 導遊審核制的入口通知；沒有這步導遊只能自己登入後台才會發現有申請。
+    if (requiresGuideApproval(planData.booking_type)) {
+      void import('../../../../../src/lib/booking-approval-notify')
+        .then(({ notifyBookingApprovalRequested }) =>
+          notifyBookingApprovalRequested({
+            orderId: orderInsert.id,
+            activityId: data.activityId,
+            activityTitle,
+            startAt: slotStartAt.toISOString(),
+            peopleCount: data.participants,
+            totalTwd: totalAmount,
+          }))
+        .catch((err) => {
+          console.error('[booking-approval-notify] draft fire-and-forget failed:', err);
+        });
+    }
+
     // Return response per API spec
     return Response.json(
       successV2({

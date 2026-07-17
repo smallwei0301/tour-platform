@@ -116,6 +116,7 @@ export function buildTravelerMessage(kind: TravelerEventKind, data: TravelerMess
 // ---------------------------------------------------------------------------
 
 export type GuideEventKind =
+  | 'guide_approval_requested'
   | 'guide_new_order'
   | 'guide_payment_received'
   | 'guide_order_cancelled'
@@ -131,6 +132,19 @@ export function buildGuideMessage(kind: GuideEventKind, data: TravelerMessageDat
 
   let text: string;
   switch (kind) {
+    case 'guide_approval_requested':
+      text = lines([
+        '🙋 新預約申請待審核',
+        '',
+        `🗺️ 行程：${title}`,
+        `📅 時段：${date}`,
+        `👥 人數：${people}`,
+        `💰 金額：${amount(data.totalTwd)}`,
+        `📋 訂單編號：${id}`,
+        '',
+        '請至導遊後台批准或婉拒；通過後旅客才會進入付款。',
+      ]);
+      break;
     case 'guide_new_order':
       text = lines([
         '🆕 有新的預約（待付款）',
