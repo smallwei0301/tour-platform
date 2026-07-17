@@ -3715,14 +3715,15 @@ details[open] .kkd-faq-q::before { content: '- '; }
   display: inline-block;
   padding: 12px 26px;
   border-radius: 999px;
-  background: #c2542e;
+  /* a11y（color-contrast）：#c2542e→#a8431f，對 #f4ecd8 文字 3.88→5.11（AA） */
+  background: #a8431f;
   color: #f4ecd8;
   font-weight: 700;
   font-size: 15px;
   letter-spacing: 0.04em;
   text-decoration: none;
 }
-.lp-fg-btn-primary:hover { background: #a8431f; }
+.lp-fg-btn-primary:hover { background: #8f3618; }
 .lp-fg-btn-ghost {
   display: inline-block;
   padding: 12px 26px;
@@ -3805,7 +3806,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   font-weight: 700;
 }
 .lp-fg-preview-name { margin: 0; font-weight: 700; font-size: 15px; }
-.lp-fg-preview-sub { margin: 2px 0 0; font-size: 12px; color: #5e7a4f; }
+.lp-fg-preview-sub { margin: 2px 0 0; font-size: 12px; color: #4c6340; /* a11y：4.07→5.63 */ }
 .lp-fg-preview-card {
   border: 1px solid rgba(26, 46, 31, 0.18);
   border-radius: 10px;
@@ -3813,7 +3814,7 @@ details[open] .kkd-faq-q::before { content: '- '; }
   background: #ebe1c7;
 }
 .lp-fg-preview-title { margin: 0; font-weight: 700; font-size: 14px; }
-.lp-fg-preview-meta { margin: 3px 0 0; font-size: 12px; color: rgba(26, 46, 31, 0.65); }
+.lp-fg-preview-meta { margin: 3px 0 0; font-size: 12px; color: rgba(26, 46, 31, 0.75); /* a11y：4.17→5.87 */ }
 .lp-fg-preview-price { margin: 6px 0 0; font-weight: 700; font-size: 14px; }
 .lp-fg-preview-cta {
   text-align: center;

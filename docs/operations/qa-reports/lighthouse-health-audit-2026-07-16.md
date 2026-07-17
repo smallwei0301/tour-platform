@@ -153,9 +153,9 @@ P1/P2 中除「全域 CSS 拆分」（另案）外均已修復（commit `4de392b
 | P2 | **內頁 LCP 8.7–14.3s**，主因 render-blocking CSS（FCP 預估可省 6.8–13.2s）＋LCP 圖片非優先載入 | 各頁 render-blocking-resources | ＝§3 #3 全域 CSS 拆分，另開 issue（效能天花板所在） |
 | P3 | 全站 target-size 20 處＝footer 清單連結（~20px 高） | 各頁 target-size | **本輪已修**：`.tp-footer ul a` inline-block＋padding |
 | P3 | 導覽列搜尋按鈕（desktop＋mobile menu）純圖示無 accessible name | home.desktop button-name | **本輪已修**：補 `aria-label` |
-| P3 | `/for-guides` 色彩對比 4 處（lp-fg hero CTA／preview 文字） | color-contrast | 另案（頁面專屬色票） |
-| P3 | booking 頁 heading-order 1 處 h3 | heading-order | 另案（該檔行數已頂 ratchet 天花板，併下次 booking 改動） |
-| 觀察 | booking 頁 console 404 ×2：`/api/v2/activities/c0000003-…/available-slots` | errors-in-console | 生產 slots 資料面問題（V2 slots 回填中，#839/#1133 快照 fallback 脈絡），非本輪引入；記錄待查 |
+| P3 | `/for-guides` 色彩對比 4 處（lp-fg hero CTA／preview 文字） | color-contrast | **已修（07-17 追修）**：CTA bg #c2542e→#a8431f（3.88→5.11）、preview-sub #5e7a4f→#4c6340（4.07→5.63）、preview-meta alpha 0.65→0.75（4.17→5.87） |
+| P3 | booking 頁 heading-order 1 處 h3 | heading-order | **已修（07-17 追修）**：活動名 h3→h2（inline 鎖字級），h1(sr-only)→h2→h3 序列合法 |
+| ~~觀察~~ | ~~booking 頁 console 404 ×2~~ | errors-in-console | **已排查結案＝假警報**：404 因稽核用 URL 帶了本地 seed 的 plan slug（`chaishan-cave-half-day`）；生產 plan 為 UUID，以真實 plan＋完整參數實測 `available-slots` 回 200 且有資料，生產 slots 健康 |
 
 ## 10. 治理聲明
 
