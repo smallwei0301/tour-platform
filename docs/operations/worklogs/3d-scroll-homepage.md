@@ -219,6 +219,22 @@
   test success — actions/runs/29478192547/job/87555719241；scan success；Vercel Preview
   success；mergeable_state clean。squash merge 進 main。
 
+## 階段 13（2026-07-17）— 手機 scrub 卡頓修復：seek 防塞車守衛
+- 使用者回報手機捲動卡。診斷：影片容量／規格健康（1152×648、~1.8Mbps、keyframe
+  每 0.33s、~2MB），且 #1727/#1732 已做懶載入（只掛 active±1）＋單一格式；容量非主因。
+- 根因：rAF 迴圈每幀對影片設 `currentTime`，未檢查前一次 seek 是否完成 → 手機硬體
+  解碼器 seek 慢，快速滑動時 seek 疊爆造成頓挫。
+- 修法（`ScrollWorldClient.tsx`，一行守衛）：seek 條件加 `&& !video.seeking`——影片仍
+  在尋幀時跳過本幀，rAF 每幀重抓最新 target、seek 完成下一幀補到最新位置，節流到
+  解碼器跟得上的速度、最終位置自動追上不漂掉（scroll-video 標準做法）。
+- 驗證（390px 手機視窗 Playwright）：各滾動點 scrub 對位正確（0→0、0.2→8s、1→9.95s）；
+  快速甩動壓力測試後自動收斂（seeking→false、不卡半路）、零 pageerror；測試 26/26、
+  typecheck、lint 綠燈。
+- 未做（視效果再議）：手機專用 960 寬低碼率版（工程量較大，先看守衛效果）。
+- PR #1737（分支殘留回收 merge 免 force-push，harness/08 §3）。**CI 綠燈（67c09c1）**：
+  test success — actions/runs/29571895406/job/87857399348；scan success；Vercel Preview
+  success。squash merge 進 main。
+
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
 
