@@ -231,6 +231,9 @@
   快速甩動壓力測試後自動收斂（seeking→false、不卡半路）、零 pageerror；測試 26/26、
   typecheck、lint 綠燈。
 - 未做（視效果再議）：手機專用 960 寬低碼率版（工程量較大，先看守衛效果）。
+- PR #1737（分支殘留回收 merge 免 force-push，harness/08 §3）。**CI 綠燈（67c09c1）**：
+  test success — actions/runs/29571895406/job/87857399348；scan success；Vercel Preview
+  success。squash merge 進 main。
 
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
