@@ -672,7 +672,7 @@ function BookingInnerV2FlagShell() {
                 <Image src={activity.coverImageUrl} alt={activity.title} style={{ width: 120, height: 80, objectFit: 'cover', borderRadius: 8 }} width={120} height={80} />
               )}
               <div>
-                <h3 style={{ margin: 0 }}>{activity.title}</h3>
+                <h2 style={{ margin: 0, fontSize: '1.17em' }}>{activity.title}</h2>
                 <p style={{ margin: '4px 0', color: 'var(--tp-muted)', fontSize: 14 }}>
                   📍 {activity.region} · 🕐 {activity.durationDisplay}
                   {activity.guide?.displayName ? ` · ${m.guidePrefix}${activity.guide.displayName}` : ''}
