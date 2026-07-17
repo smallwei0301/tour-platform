@@ -25,7 +25,8 @@
 
 ## 環境異常記錄
 
-- **本 session hooks 未武裝**：`00_INDEX.md` 第 0 步煙霧測試失敗（Edit 探針只回一般錯誤、無 `HARNESS BLOCK`）。已回報使用者，使用者裁示繼續。凍結區規則改由人工遵守：本次僅動 `app/api/v2/bookings/draft/route.ts`（非凍結）、`src/lib/{email.ts,line-messages.ts,booking-approval-notify.ts}`、新測試檔。
+- ~~**本 session hooks 未武裝**：`00_INDEX.md` 第 0 步煙霧測試失敗（Edit 探針只回一般錯誤、無 `HARNESS BLOCK`）。已回報使用者，使用者裁示繼續。凍結區規則改由人工遵守。~~
+  **[2026-07-17 收尾更正：誤判，hooks 全程武裝。]** Edit 探針是 lessons.md「edit-probe-false-negative-hooks-armed」（2026-07-06）記錄過的假陰性（Edit 先驗 old_string 再跑 hook）；session 收尾以「Write 寫回一字不差的 CLAUDE.md」重測，被 `⛔ HARNESS BLOCK [file-guard]` 正確攔截，證實防線一直都在。全程 commit 均附 30 分鐘內 run-checks 綠燈證據、未觸碰凍結區，故各 guard 無出手紀錄、實務無影響。教訓已追加至 lessons.md 該條目（含安全的 Write-identical 探針法）。
 - 遠端環境 `npm install --ignore-scripts` 完成，Node v22.22.2。
 
 ## 設計決策
