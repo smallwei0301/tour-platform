@@ -7,6 +7,7 @@ import { lookupOrderContext } from './reschedule-notify';
 import { sendBookingApprovalApproved, sendBookingApprovalRejected } from './email';
 import { sendBookingApprovalRequested } from './booking-approval/request-email.ts';
 import { pushGuideOrderEvent } from './line-guide-push.mjs';
+import { dispatchOrderEventTelegram } from './order-telegram-notify.mjs';
 
 type ApprovalResult = {
   bookingId: string;
@@ -71,6 +72,20 @@ export async function notifyBookingApprovalRequested(input: ApprovalRequestedInp
   }).catch(() => {});
 
   const ctx = await lookupOrderContext(input.orderId);
+
+  // Telegram 扇出（admin 群組＋導遊＋旅客三腿，各自吃 flag／矩陣／綁定 gating，永不 throw）。
+  void dispatchOrderEventTelegram({
+    kind: 'approval_requested',
+    orderId: input.orderId,
+    activityId: input.activityId ?? undefined,
+    activityTitle: input.activityTitle,
+    scheduleDate,
+    peopleCount: input.peopleCount,
+    totalTwd: input.totalTwd,
+    userId: ctx?.travelerUserId,
+    contactEmail: ctx?.contactEmail,
+  }).catch(() => {});
+
   if (!ctx?.guideEmail) return;
   await sendBookingApprovalRequested({
     to: ctx.guideEmail,

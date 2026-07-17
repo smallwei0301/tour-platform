@@ -77,9 +77,21 @@ PR #1730 已 squash merge（`00c9b3d`）；依 harness/08 §7 從最新 main 重
 證據：targeted 30 pass＋`--all` 全套 **4686 tests／0 fail（3 skipped）**＋tsc 無錯（run-checks.sh）。
 Push 依 harness/08 §3：驗證遠端殘留已全進 main（diff 僅剩 main 多的 #1727）→ merge 收回 → 正常 push，不 force。
 
-PR #1731：https://github.com/smallwei0301/tour-platform/pull/1731
+PR #1731：https://github.com/smallwei0301/tour-platform/pull/1731（已 squash merge `523e39d`）
 CI 綠燈（head `99a91dd`，2026-07-17 12:44 Asia/Taipei）：
 - test：https://github.com/smallwei0301/tour-platform/actions/runs/29555432008/job/87806396714 （conclusion=success）
 - smoke：https://github.com/smallwei0301/tour-platform/actions/runs/29555432041/job/87806396784 （conclusion=success）
 - scan：https://github.com/smallwei0301/tour-platform/actions/runs/29555432001/job/87806396596 （conclusion=success）
 確認綠燈後 squash merge（本補記為 docs-only commit，merge 前再驗新 head CI）。
+
+## 第三輪：Telegram 通道補接（使用者追問「導遊的通知 tg 有生效嗎」）
+
+核實結果：**沒有生效**——前兩輪只接 email＋LINE；`dispatchOrderEventTelegram`（admin 群組＋導遊＋旅客三腿扇出）存在但無人對 `approval_requested` 呼叫；`telegram-messages.ts` HEADLINE 也缺該事件（會 fallback 通用文案）；#1731 加的 approval_requested×telegram 矩陣格「有開關、沒電路」。本輪補接：
+
+1. `telegram-messages.ts`：`OrderEventKind` 加 `approval_requested`＋三受眾 HEADLINE（導遊「🙋 新預約申請待審核」、admin「🙋 新預約申請（待導遊審核）」、旅客「📨 預約申請已送出」）。
+2. `booking-approval-notify.ts`：wrapper 在 `lookupOrderContext` 後 fire `dispatchOrderEventTelegram`（帶 travelerUserId／contactEmail，旅客綁定時也收到確認），fire-and-forget。
+3. 測試：telegram-messaging 窮舉清單補 kind；notification-matrix-gating 加「matrix off (approval_requested/guide/telegram) → 導遊腿壓掉、admin 照送」；booking-approval-request-notify 補三受眾文案斷言＋wrapper 契約改「三通道」。
+
+生效前提（TG 腿）：`TELEGRAM_NOTIFY_ENABLED`＋`TELEGRAM_BOT_TOKEN`；導遊腿另需 `TELEGRAM_GUIDE_NOTIFY_ENABLED`＋該導遊 TG 綁定；admin 群組另需 `TELEGRAM_ORDER_CHAT_ID`。
+
+證據：targeted 綠＋`--all` 全套 **4688 tests／0 fail（3 skipped）**＋tsc 無錯（run-checks.sh）。
