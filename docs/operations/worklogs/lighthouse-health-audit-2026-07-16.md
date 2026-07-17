@@ -32,6 +32,22 @@
 - 環境假象（不得開票）：console errors（GTM 代理＋`/_vercel/*` 404）、canonical/hreflang host 不一致、FCP/LCP 絕對值放大；meta-description（detail 頁）SSR 有、LH post-JS DOM 讀不到 → 待生產站覆核。
 - 本 session hooks 未武裝 → 僅產出 docs，未動任何生產碼。
 
+## 第三階段：PSI 生產實測追修（2026-07-17，PR #1732）
+
+PR #1727 merge＋production 部署後，使用者以 PSI 實測首頁（mobile）：效能 55／A11y 96／BP 100／SEO 100、CLS 0——但「避免耗用大量網路資源」達 **33,911 KiB**，明細顯示 7 支影片 **webm＋mp4 雙格式全被抓滿**（檔案大小與 repo 逐一吻合）。「雙 `<source>`＋preload=metadata＋scrub seek」在 Chrome 上不可靠。
+
+追修（PR #1732，branch 依 harness/08 §3 merge 回收重啟，無 force-push）：
+- runtime `canPlayType` 挑單一格式（webm 優先），`<video src>` 單來源
+- 僅 active±1 場景掛 `<video>`，SSR 0 個 video 標籤（preview 實測確認）
+- footer 地區膠囊 padding 3px→5px（target-size）
+
+實證：Playwright 初載 2 支/單 webm/影片流量 ~0、捲動換掛正常；本地 LH 首頁總頁重 3,917 KiB、零影片項。
+
+**鐵律 6 CI 證據（head `0e1b8d2`，全綠）**：
+- test：https://github.com/smallwei0301/tour-platform/actions/runs/29557678928/job/87813279618（success，05:38:11Z）
+- scan：https://github.com/smallwei0301/tour-platform/actions/runs/29557678919/job/87813279506（success）
+- Vercel Preview：success（DEPLOYED）
+
 ## 產出
 
 - QA 報告：`docs/operations/qa-reports/lighthouse-health-audit-2026-07-16.md`
