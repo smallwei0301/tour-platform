@@ -1038,3 +1038,22 @@ img { max-width: 100%; height: auto; }
   .tp-blog-featured-body { padding: 18px 16px 20px; }
 }
 
+
+/* --- 全域響應式：navbar／footer 堆疊／hero 搜尋／主題卡（自 activity-detail.css 搬回，#1735 拆分誤夾帶修正） --- */
+/* Responsive: theme grid, footer */
+@media (max-width: 1024px) {
+  .tp-navbar-main { grid-template-columns: 150px 1fr; }
+  .tp-footer-main-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .tp-navbar-main { grid-template-columns: 140px 1fr; }
+  .tp-hero-search-widget {
+    flex-direction: column;
+    border-radius: 12px;
+    max-width: 100%;
+  }
+  .tp-hero-search-divider { width: 100%; height: 1px; margin: 0; }
+  .tp-hero-search-btn { border-radius: 0 0 12px 12px !important; padding: 14px 0 !important; text-align: center; }
+  .tp-theme-card { flex-basis: 80%; }
+  .tp-footer-main-grid { grid-template-columns: 1fr; }
+}
