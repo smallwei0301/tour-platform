@@ -167,22 +167,10 @@ export function Navbar() {
                 >
                   {m.nav.myTrips}
                 </Link>
+                {/* 桌機導覽列僅保留可操作項（我的行程／登出）。原本「我的行程」右方的
+                    頭像＋使用者名稱屬靜態顯示、無點擊行為，於寬螢幕造成無實質作用的視覺，
+                    故移除（名稱仍保留在手機選單的登出列）。 */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {user.user_metadata?.avatar_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.user_metadata.avatar_url}
-                      alt={displayName}
-                      width={28}
-                      height={28}
-                      style={{ borderRadius: '50%', objectFit: 'cover' }} />
-                  )}
-                  <span
-                    style={{ fontSize: 14, color: 'rgba(244,236,216,0.82)', maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                    data-testid="nav-user-name"
-                  >
-                    {displayName}
-                  </span>
                   <button
                     onClick={handleSignOut}
                     data-testid="nav-sign-out-btn"
