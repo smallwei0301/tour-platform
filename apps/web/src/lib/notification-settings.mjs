@@ -23,6 +23,7 @@ import { getSupabaseUrl, getSupabaseServiceRoleKey } from '../../src/config/supa
 
 /** Order events that fan out to notifications. */
 export const NOTIFY_EVENTS = [
+  'approval_requested',
   'new_order',
   'payment_received',
   'order_cancelled',

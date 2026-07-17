@@ -14,6 +14,7 @@ interface Dimensions {
 }
 
 const EVENT_LABELS: Record<string, string> = {
+  approval_requested: '預約申請待審核（request）',
   new_order: '新訂單建立',
   payment_received: '付款成功',
   order_cancelled: '訂單取消',

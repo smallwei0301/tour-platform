@@ -53,6 +53,10 @@
   - 第二輪：新模板檔直讀 `process.env.NEXT_PUBLIC_SITE_URL` 又爆 env 直讀檔數天花板（100 > 99）→ 依 guard 指示在 `src/config/env.ts` 加 `getSiteBaseUrl()` getter（非凍結檔）。
   - 同步更新 source-contract：issue1493-payment-deadline-email（route 斷言改指扇出模組）、booking-approval-request-notify。
 - 第二輪證據：`run-checks.sh --typecheck --all` → **4685 tests／0 fail（3 skipped）＋tsc 無錯**。
+- CI 綠燈（head `beba1b5`，2026-07-17 12:24 Asia/Taipei）：
+  - test：https://github.com/smallwei0301/tour-platform/actions/runs/29554666575/job/87804213625 （conclusion=success）
+  - scan：https://github.com/smallwei0301/tour-platform/actions/runs/29554666561/job/87804213608 （conclusion=success）
+  - 確認綠燈後 squash merge。
 
 ## 實跑證據與備註
 
@@ -60,4 +64,15 @@
 - 新 wrapper 無法被 node --test runtime import（內部相對 import 無副檔名，Next 才解析得了）——比照 issue1493 慣例以 source-contract 測試鎖行為。
 - 既有 `booking-type-callback-contract.test.mjs` 從 repo root 跑會 ENOENT（`path.resolve('../../supabase/...')` 依賴 cwd=apps/web），與本次無關，未列入證據集。
 - 未動 `notification-settings.mjs` 矩陣：`approval_requested` 屬未建模事件，isNotifyEnabled default true（模組明文設計）。後續若要讓 admin 可關，另案加 NOTIFY_EVENTS＋後台 UI。
-- 遺留建議（未做，避免 scope creep）：`/guide/bookings` 頁標題仍叫「訂單查看」，改名會牽動引用該字面的 e2e/README，另案處理。
+- 遺留建議（未做，避免 scope creep）：`/guide/bookings` 頁標題仍叫「訂單查看」，改名會牽動引用該字面的 e2e/README，另案處理。→ **已於第二輪 PR 處理，見下節。**
+
+## 第二輪（PR #1730 merge 後續，同分支重切自 main `cfa2b14`）
+
+PR #1730 已 squash merge（`00c9b3d`）；依 harness/08 §7 從最新 main 重開同名 branch，本輪三項：
+
+1. **通知矩陣擴充**：`NOTIFY_EVENTS` 加 `approval_requested`（notification-settings.mjs）＋admin 後台 `EVENT_LABELS` 補「預約申請待審核（request）」（admin/notifications/page.tsx）。UI 與 API 皆由維度常數驅動，無其他改動。管理員現在可關閉 request 入口通知的 guide×LINE 格。測試：notification-settings-matrix 維度斷言更新（5→6 事件）；notification-matrix-gating 新增「matrix off (approval_requested/guide/line) → skipped」案例。
+2. **頁標題改名**：`/guide/bookings`「訂單查看」→「訂單管理」（頁 h1＋guide/layout 側欄＋issue1273 e2e 斷言＋README）。全 repo 已無「訂單查看」引用殘留（admin/orders 的「點選左側訂單查看詳情」為不同語意，不動）。
+3. **CWD 修復**：booking-type-callback-contract.test.mjs 讀 migration 檔改以 `import.meta.url` 定位（原 `path.resolve` 相對 CWD，從 repo root 跑 node --test 會 ENOENT）。
+
+證據：targeted 30 pass＋`--all` 全套 **4686 tests／0 fail（3 skipped）**＋tsc 無錯（run-checks.sh）。
+Push 依 harness/08 §3：驗證遠端殘留已全進 main（diff 僅剩 main 多的 #1727）→ merge 收回 → 正常 push，不 force。

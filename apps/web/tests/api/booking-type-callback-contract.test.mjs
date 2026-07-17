@@ -14,11 +14,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { shouldAutoConfirmOnPayment } from '../../src/lib/booking-type-flow.mjs';
 
+// 以 import.meta.url 定位（原 path.resolve 相對 CWD，只有從 apps/web 跑才成立；
+// 從 repo root 跑 node --test 會 ENOENT）。
 const RPC_SRC = readFileSync(
-  path.resolve('../../supabase/migrations/20260624130000_callback_booking_type_auto_confirm.sql'),
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../supabase/migrations/20260624130000_callback_booking_type_auto_confirm.sql'),
   'utf8',
 );
 

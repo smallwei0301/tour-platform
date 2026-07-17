@@ -114,6 +114,21 @@ test('matrix off (guide/line) → guide LINE push skipped matrix_disabled', asyn
   });
 });
 
+test('matrix off (approval_requested/guide/line) → 導遊審核入口通知可被 admin 關閉', async () => {
+  __resetGuideLineForTest();
+  __resetNotificationSettingsForTest();
+  const { code } = await createGuideBindCode('andy-lee');
+  await redeemGuideBindCode(code, { lineUserId: 'Uguide' });
+  await setNotificationCells([{ event: 'approval_requested', recipient: 'guide', channel: 'line', enabled: false }]);
+
+  await withEnv(LINE_ON, async (calls) => {
+    const res = await pushGuideOrderEvent({ kind: 'guide_approval_requested', orderId: 'o1', activityId: 'exp_chaishan_001', activityTitle: 'X' });
+    assert.equal(res.status, 'skipped');
+    assert.equal(res.reason, 'matrix_disabled');
+    assert.equal(calls.length, 0);
+  });
+});
+
 test('matrix off (admin/telegram) → telegram admin leg suppressed, guide+traveler still send', async () => {
   __resetTelegramForTest();
   __resetNotificationSettingsForTest();

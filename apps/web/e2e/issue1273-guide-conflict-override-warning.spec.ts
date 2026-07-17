@@ -110,7 +110,7 @@ test('GH-1257 slice D: guide booking detail shows admin conflict-override warnin
   await page.waitForLoadState('domcontentloaded');
 
   // List renders with the compact conflict badge (proves we are not bounced to login).
-  await expect(page.getByRole('heading', { name: '訂單查看' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '訂單管理' })).toBeVisible();
   await expect(page.getByLabel('管理者例外開放').first()).toBeVisible();
 
   // Open the detail modal.
