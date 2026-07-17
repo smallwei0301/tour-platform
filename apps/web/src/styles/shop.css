@@ -1,0 +1,256 @@
+/* /guides/[slug]/shop/** 祕島小舖（sib-*）——#1735 自 globals.css 拆出，由 shop/layout.tsx 匯入。 */
+/* ═══════════════ 祕島 Shop 重設計（sib-*）— 對齊 Midao 手機 mockup ═══════════════
+   古紙底、山墨字、黃銅金框線、朝霞 CTA；serif 大標寬字距。三畫面共用。 */
+.sib {
+  --sib-paper: #f4ecd8;
+  --sib-ink: #1a2e1f;
+  --sib-ink-soft: #3a4a3b;
+  --sib-muted: #8a7f68;
+  --sib-gold: #b08d3e;
+  --sib-gold-line: rgba(176, 141, 62, 0.42);
+  --sib-green: #1e3123;
+  --sib-terra: #c2542e;
+  --sib-card: #f7f0dd;
+  background: var(--sib-paper);
+  color: var(--sib-ink);
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 20px 26px;
+}
+.sib * { box-sizing: border-box; }
+
+/* 大標題（serif、寬字距、山墨） */
+.sib-h1 {
+  font-family: var(--tp-serif);
+  font-weight: 700;
+  color: var(--sib-ink);
+  letter-spacing: 0.14em;
+  line-height: 1.2;
+  margin: 0;
+  /* 響應式：窄機縮小、寬機（≥480 容器）維持設計字級。字級依參考圖墨跡高度逐項量測校正（見
+     scratchpad/ink-compare-fair.mjs）：原字級偏小約 35%。 */
+  font-size: clamp(20px, 7.5vw, 29px);
+}
+
+/* 頂列：標題 + 會員專區 pill */
+.sib-toprow { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 14px; }
+.sib-member-pill {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  border: 1.5px solid var(--sib-gold); color: var(--sib-ink);
+  background: transparent; border-radius: 999px; padding: 3px 11px;
+  font-size: 11px; font-weight: 500; text-decoration: none; letter-spacing: 0.04em;
+}
+
+/* Hero：純大圖，不疊字樣/圖樣 */
+.sib-hero {
+  position: relative; width: 100%; aspect-ratio: 1.535 / 1;
+  margin-top: 12px; border-radius: 18px; overflow: hidden;
+  border: 1px solid var(--sib-gold-line);
+}
+.sib-hero-img { object-fit: cover; }
+
+/* 引路人卡 */
+.sib-guide-card {
+  position: relative; margin-top: -22px; margin-bottom: 9px; background: var(--sib-card);
+  border: 1px solid var(--sib-gold-line); border-radius: 16px;
+  padding: 14px 12px 16px; display: flex; gap: 8px; align-items: flex-start;
+  box-shadow: 0 6px 20px rgba(26, 46, 31, 0.06);
+}
+.sib-guide-avatar { flex: 0 0 auto; width: 74px; height: 74px; border-radius: 50%; overflow: hidden; border: 2px solid var(--sib-gold); }
+/* 名稱列：允許換行（長名稱時徽章掉到下一行，不破框） */
+.sib-guide-name { display: flex; align-items: center; gap: 4px 4px; flex-wrap: wrap; min-width: 0; }
+.sib-guide-name strong { font-family: var(--tp-serif); font-size: clamp(15px, 4.8vw, 19px); font-weight: 700; letter-spacing: 0; color: var(--sib-gold);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sib-guide-badge {
+  display: inline-flex; align-items: center; gap: 3px; background: var(--sib-green); flex: 0 0 auto;
+  color: #e7dcb8; border-radius: 999px; padding: 2px 6px; font-size: 9px; font-weight: 600; white-space: nowrap;
+}
+.sib-guide-bio { margin: 8px 0 0; color: var(--sib-ink-soft); font-size: clamp(9px, 2.7vw, 10.5px); line-height: 1.5; }
+
+/* 章節標題：◆ ─── 標題 ─── ◆ */
+.sib-section-title { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 6px 0 8px; }
+.sib-section-title span { font-family: var(--tp-serif); font-size: 8.5px; font-weight: 700; letter-spacing: 0.16em; color: var(--sib-ink); }
+.sib-orn { flex: 1; height: 1px; background: var(--sib-gold-line); max-width: 90px; position: relative; }
+.sib-orn::after { content: '◆'; position: absolute; top: -8px; color: var(--sib-gold); font-size: 9px; }
+.sib-orn--l::after { right: -4px; }
+.sib-orn--r::after { left: -4px; }
+
+/* 三步驟卡 */
+.sib-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; position: relative; }
+.sib-step {
+  position: relative; background: var(--sib-card); border: 1px solid var(--sib-gold-line);
+  border-radius: 14px; padding: 11px 5px 9px; text-align: center;
+}
+.sib-step-num {
+  position: absolute; top: -12px; left: 50%; transform: translateX(-50%);
+  width: 23px; height: 23px; border-radius: 50%; background: var(--sib-green); color: #efe6c6;
+  font-size: 12.5px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+}
+.sib-step-ico { height: 27px; margin: 2px auto 5px; color: var(--sib-gold); display: flex; align-items: flex-end; justify-content: center; }
+.sib-step-ico svg { width: 25px; height: 25px; }
+.sib-step-ico img { width: auto; height: 26px; }
+.sib-step-t { font-family: var(--tp-serif); font-size: 10.3px; font-weight: 700; color: var(--sib-ink); margin: 0 0 4px; letter-spacing: 0; }
+.sib-step-divider { border: none; border-top: 1px dashed var(--sib-gold-line); margin: 0 0 5px; }
+.sib-step-d { font-size: 10px; line-height: 1.4; color: var(--sib-muted); margin: 0; }
+.sib-step-arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 2; width: 20px; height: 20px;
+  border-radius: 50%; background: var(--sib-gold); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; }
+.sib-step-arrow--1 { left: calc(33.33% - 11px); }
+.sib-step-arrow--2 { left: calc(66.66% - 11px); }
+
+/* 保護提示 footer */
+.sib-guard { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 22px 0 6px; color: var(--sib-muted); font-size: 8px; letter-spacing: 0.02em; }
+.sib-guard::before, .sib-guard::after { content: '◆'; color: var(--sib-gold-line); font-size: 6px; }
+
+/* 固定底部 CTA */
+.sib-cta-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 16px 16px; background: linear-gradient(to top, var(--sib-paper) 72%, transparent); }
+.sib-cta {
+  max-width: 480px; margin: 0 auto; display: flex; align-items: center; justify-content: center; gap: 14px;
+  background: linear-gradient(180deg, #cb5a31 0%, #b8481f 100%); color: #f6ecd9;
+  border: none; border-radius: 16px; padding: 11px 22px; width: 100%;
+  font-family: var(--tp-serif); font-size: 20px; font-weight: 700; letter-spacing: 0.16em;
+  text-decoration: none; box-shadow: 0 8px 20px rgba(176, 60, 30, 0.32); position: relative;
+}
+.sib-cta-ico { position: absolute; left: 22px; width: 40px; height: 30px; opacity: 0.85; }
+.sib-cta-arrow { position: absolute; right: 22px; width: 34px; height: 34px; border: 1.5px solid rgba(246,236,217,0.7); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.sib-cta-arrow svg { width: 18px; height: 18px; }
+
+/* 商店首頁：可預約行程卡（保留方案卡功能，祕島風格） */
+.sib-plan-list { display: grid; gap: 11px; }
+.sib-plan-card {
+  display: block; text-decoration: none; color: inherit;
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 14px;
+  padding: 14px 16px; position: relative;
+}
+.sib-plan-card::after { content: '›'; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--sib-gold); font-size: 22px; }
+.sib-plan-t { font-family: var(--tp-serif); font-size: 15.5px; font-weight: 700; color: var(--sib-ink); margin: 0; padding-right: 20px; letter-spacing: 0.02em; }
+.sib-plan-meta { margin: 6px 0 0; font-size: 12.5px; color: var(--sib-muted); }
+.sib-plan-price { margin: 8px 0 0; font-family: var(--tp-serif); font-size: 16px; font-weight: 700; color: var(--sib-gold); }
+.sib-plan-region { font-size: 13px; font-weight: 700; color: var(--sib-ink-soft); margin: 4px 0 8px; display: flex; align-items: center; gap: 5px; }
+
+/* ═══════════════ 祕島 Shop 預約流程（book step1/2/3）═══════════════ */
+.sib-book { padding-bottom: 184px; }
+.sib-topbar { display: flex; align-items: center; gap: 12px; padding-top: 10px; }
+.sib-back { border: none; background: transparent; color: var(--sib-ink-soft);
+  padding: 4px 2px; font-size: 13px; font-weight: 500; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+.sib-back img { display: inline-block; }
+.sib-current { margin-left: auto; color: var(--sib-muted); font-size: 13px; font-weight: 400; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+
+/* 步驟指示器（泛化 N 點：點—連接線—點，可容 3~4 步；響應式寬度） */
+.sib-ind { display: flex; align-items: flex-start; margin: 10px 0 6px; }
+.sib-ind-item { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; width: clamp(48px, 15vw, 72px); text-align: center; }
+.sib-ind-conn { flex: 1 1 auto; height: 1.5px; min-width: 6px; background: var(--sib-gold-line); margin-top: 15px; }
+.sib-ind-conn.on { background: var(--sib-gold); }
+.sib-ind-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: var(--tp-serif); font-size: 16px; font-weight: 800; border: 1.5px solid var(--sib-gold); background: var(--sib-paper); color: var(--sib-gold); }
+.sib-ind-item.on .sib-ind-dot { background: var(--sib-green); color: var(--sib-gold-strong, #d9c98f); border: 1.5px solid var(--sib-gold); box-shadow: 0 0 0 1px var(--sib-paper) inset; }
+.sib-ind-lbl { font-size: clamp(10.5px, 3vw, 12.5px); color: var(--sib-muted); line-height: 1.3; }
+.sib-ind-item.on .sib-ind-lbl { color: var(--sib-ink); font-weight: 700; }
+
+/* 大標（book） */
+.sib-book-h1 { font-family: var(--tp-serif); font-size: clamp(22px, 6.4vw, 30px); font-weight: 700; letter-spacing: 0.08em; color: var(--sib-ink); margin: 6px 0 4px; }
+.sib-title-row { display: flex; align-items: baseline; gap: 14px; margin: 6px 0 2px; }
+.sib-title-row h1 { font-family: var(--tp-serif); font-size: 26px; font-weight: 700; letter-spacing: 0.08em; margin: 0; color: var(--sib-ink); }
+.sib-title-row .bar { width: 1px; align-self: stretch; background: var(--sib-gold); }
+.sib-title-row .sub { font-family: var(--tp-serif); font-size: 22px; font-weight: 700; color: var(--sib-ink-soft); letter-spacing: 0.06em; }
+.sib-title-tag { color: var(--sib-muted); font-size: 14px; margin: 2px 0 0; }
+
+/* 區段標頭：icon 標題 ──── 今天 */
+.sib-sec-head { display: flex; align-items: center; gap: 10px; margin: 22px 0 12px; }
+.sib-sec-head .t { font-family: var(--tp-serif); font-size: 20px; font-weight: 700; letter-spacing: 0.08em; color: var(--sib-ink); }
+.sib-sec-head .line { flex: 1; height: 1px; background: var(--sib-gold-line); }
+.sib-sec-head .today { color: var(--sib-gold); font-weight: 700; font-size: 14px; }
+.sib-region { display: flex; align-items: center; gap: 6px; font-family: var(--tp-serif); font-size: clamp(16px, 4.3vw, 19px); font-weight: 700; color: var(--sib-ink); margin: 6px 0 7px; }
+
+/* 行程 radio 卡（step1） */
+.sib-plan-rcard { display: flex; gap: 14px; align-items: stretch; width: 100%; text-align: left; cursor: pointer;
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 16px; padding: 9px; margin-bottom: 7px; position: relative; }
+.sib-plan-rcard.on { border: 1.5px solid var(--sib-gold); box-shadow: 0 4px 14px rgba(176,141,62,0.12); }
+.sib-plan-thumb { flex: 0 0 114px; width: 114px; height: 94px; border-radius: 12px; overflow: hidden; background: #e6ddc6; }
+.sib-plan-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.sib-plan-info { flex: 1; min-width: 0; padding-right: 26px; }
+.sib-plan-info h3 { font-family: var(--tp-serif); font-size: clamp(13.5px, 3.6vw, 15px); font-weight: 700; color: var(--sib-ink); margin: 0 0 4px; line-height: 1.25; letter-spacing: 0.02em;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sib-plan-line { display: flex; align-items: center; gap: 6px; font-size: clamp(12px, 3.3vw, 13px); color: var(--sib-ink-soft); margin: 1px 0; }
+.sib-plan-line svg { width: 15px; height: 15px; color: var(--sib-gold); flex: 0 0 auto; }
+.sib-plan-tag { color: var(--sib-muted); font-size: clamp(11.5px, 3.2vw, 13px); line-height: 1.35; }
+.sib-radio-slot { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; justify-content: center; }
+
+/* step2 選方案：純文字選項（無照片、無人數） */
+.sib-book-sub { color: var(--sib-muted); font-size: clamp(12.5px, 3.6vw, 14px); margin: 2px 0 4px; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sib-plan-opt { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; position: relative; }
+.sib-plan-opt.on { border: 1.5px solid var(--sib-gold); box-shadow: 0 4px 14px rgba(176,141,62,0.12); }
+.sib-plan-opt-info { flex: 1; min-width: 0; padding-right: 30px; }
+.sib-plan-opt-info h3 { font-family: var(--tp-serif); font-size: clamp(15px, 4.2vw, 17px); font-weight: 700; color: var(--sib-ink);
+  margin: 0 0 6px; line-height: 1.25; letter-spacing: 0.02em; }
+
+/* 同行人數卡 / stepper */
+.sib-guests-card { display: flex; align-items: center; justify-content: space-between; background: var(--sib-card);
+  border: 1px solid var(--sib-gold-line); border-radius: 16px; padding: 16px 18px; margin-top: 6px; }
+.sib-guests-card .lbl { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700; color: var(--sib-ink); }
+.sib-guests-card .lbl svg { width: 22px; height: 22px; color: var(--sib-ink); }
+.sib-stepper { display: inline-flex; align-items: center; gap: 22px; border: 1px solid var(--sib-gold-line); border-radius: 999px; padding: 6px 8px; }
+.sib-stepper button { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--sib-gold-line); background: var(--sib-paper);
+  color: var(--sib-gold); font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.sib-stepper button:disabled { opacity: 0.4; cursor: default; }
+.sib-stepper .val { min-width: 44px; text-align: center; font-size: 16px; font-weight: 700; color: var(--sib-ink); }
+
+/* 日曆卡 */
+.sib-cal { background: var(--sib-card); border: 1px solid var(--sib-gold-line); border-radius: 18px; padding: 16px 14px; }
+.sib-cal-head { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 14px; }
+.sib-cal-head .m { font-family: var(--tp-serif); font-size: 19px; font-weight: 700; letter-spacing: 0.06em; color: var(--sib-ink); }
+.sib-cal-nav { border: none; background: transparent; color: var(--sib-ink); font-size: 24px; line-height: 1; cursor: pointer; padding: 0 6px; }
+.sib-cal-wk { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; color: var(--sib-muted); font-size: 14px; margin-bottom: 8px; }
+.sib-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px 0; }
+.sib-cal-day { position: relative; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border: none;
+  background: transparent; font-size: 17px; font-family: var(--tp-serif); color: var(--sib-ink); cursor: default; }
+.sib-cal-day.avail { cursor: pointer; }
+.sib-cal-day.dim { color: #c9bfa4; }
+.sib-cal-day.avail::after { content: ''; position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--sib-gold); }
+.sib-cal-day.sel { color: #f4ecd8; }
+.sib-cal-day.sel::before { content: ''; position: absolute; width: 40px; height: 40px; border-radius: 50%; background: var(--sib-green); box-shadow: 0 0 0 2px var(--sib-gold); z-index: -1; }
+.sib-cal-day.sel::after { display: none; }
+
+/* 時段 */
+.sib-slot-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 9px; }
+.sib-slot { padding: 11px 0; text-align: center; font-weight: 700; font-size: 15px; border-radius: 12px; cursor: pointer;
+  background: var(--sib-card); border: 1px solid var(--sib-gold-line); color: var(--sib-ink); }
+.sib-slot.on { border: 1.5px solid var(--sib-green); background: #edf1ea; }
+
+/* 聯絡欄位 */
+.sib-field { display: flex; align-items: center; gap: 12px; background: var(--sib-card); border: 1px solid var(--sib-gold-line);
+  border-radius: 14px; padding: 12px 16px; margin-bottom: 10px; }
+.sib-field svg { width: 20px; height: 20px; color: var(--sib-gold); flex: 0 0 auto; }
+.sib-field .lbl { font-size: 15px; font-weight: 700; color: var(--sib-ink); flex: 0 0 auto; }
+.sib-field input { flex: 1; border: none; background: transparent; outline: none; font-size: 15px; color: var(--sib-ink-soft); min-width: 0; }
+
+/* 已選時段缺口卡 */
+.sib-picked { position: relative; display: flex; align-items: center; gap: 14px; background: var(--sib-card);
+  border: 1px solid var(--sib-gold); border-radius: 16px; padding: 16px 18px; margin-top: 18px; }
+.sib-picked::before { content: ''; position: absolute; top: -1px; left: 26px; width: 26px; height: 11px; background: var(--sib-paper);
+  border: 1px solid var(--sib-gold); border-top: none; border-radius: 0 0 8px 8px; }
+.sib-picked-badge { width: 44px; height: 44px; border-radius: 50%; background: var(--sib-green); color: var(--sib-gold); display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.sib-picked-badge svg { width: 26px; height: 26px; }
+.sib-picked p { margin: 0; font-size: 15px; font-weight: 700; color: var(--sib-ink); letter-spacing: 0.02em; }
+
+/* 底部 CTA bar（book，fixed） */
+.sib-cta-bar-fx { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 16px 16px; background: linear-gradient(to top, var(--sib-paper) 78%, rgba(244,236,216,0.85)); border-top: 1px solid var(--sib-gold-line); }
+.sib-cta-bar-fx > div { max-width: 480px; margin: 0 auto; }
+.sib-cta-hint { margin: 0 0 8px; font-size: 13px; color: var(--sib-muted); }
+
+/* step1 底部小計 bar */
+.sib-sumbar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.sib-sumbar .thumb { width: 56px; height: 56px; border-radius: 10px; overflow: hidden; background: #e6ddc6; flex: 0 0 auto; }
+.sib-sumbar .thumb img { width: 100%; height: 100%; object-fit: cover; }
+.sib-sumbar .info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sib-sumbar .info b { font-family: var(--tp-serif); font-size: 16px; font-weight: 700; color: var(--sib-ink); line-height: 1.15;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sib-sumbar .info .sub { font-size: 12.5px; color: var(--sib-muted); line-height: 1.15;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sib-sumbar .info .people { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--sib-muted); }
+.sib-sum-div { flex: 0 0 auto; height: 46px; color: rgba(176, 141, 62, 0.6); }
+.sib-sumbar .price { text-align: right; flex: 0 0 auto; }
+.sib-sumbar .price span { font-size: 12px; color: var(--sib-muted); }
+.sib-sumbar .price b { display: block; font-family: var(--tp-serif); font-size: 21px; font-weight: 700; color: var(--sib-ink); line-height: 1.25; }
+.sib-sum-chev { flex: 0 0 auto; color: var(--sib-muted); }

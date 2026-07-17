@@ -12,7 +12,8 @@ import path from 'node:path';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const componentPath = path.resolve(__dirname, '../../src/components/activity/DatePlanSection.tsx');
-const cssPath = path.resolve(__dirname, '../../app/globals.css');
+// #1735：kkd-plans 樣式已拆到 route-scoped activity-detail.css
+const cssPath = path.resolve(__dirname, '../../src/styles/activity-detail.css');
 
 test('DatePlanSection 全部方案都 render（不再 slice(0,2)）', () => {
   const src = readFileSync(componentPath, 'utf8');
@@ -34,7 +35,7 @@ test('DatePlanSection 切換鈕包在 .kkd-plans-more-btn-wrap（供非手機隱
   assert.match(src, /className="kkd-plans-more-btn-wrap"/, '切換鈕容器需有 kkd-plans-more-btn-wrap');
 });
 
-test('globals.css：非手機多欄 grid + 手機收合 + footer 直排 + 隱藏切換鈕', () => {
+test('activity-detail.css：非手機多欄 grid + 手機收合 + footer 直排 + 隱藏切換鈕', () => {
   const css = readFileSync(cssPath, 'utf8');
   // 非手機多欄並排
   assert.match(

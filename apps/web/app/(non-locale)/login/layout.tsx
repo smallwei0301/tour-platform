@@ -1,3 +1,4 @@
+import '../../../src/styles/login.css'; // #1735 route-scoped（拆自 globals.css）
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {

@@ -1,5 +1,6 @@
 'use client';
 
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { listAllDivisions } from '../../../../src/lib/region-slugs.mjs';
