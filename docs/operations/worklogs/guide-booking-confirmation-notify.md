@@ -95,3 +95,15 @@ CI 綠燈（head `99a91dd`，2026-07-17 12:44 Asia/Taipei）：
 生效前提（TG 腿）：`TELEGRAM_NOTIFY_ENABLED`＋`TELEGRAM_BOT_TOKEN`；導遊腿另需 `TELEGRAM_GUIDE_NOTIFY_ENABLED`＋該導遊 TG 綁定；admin 群組另需 `TELEGRAM_ORDER_CHAT_ID`。
 
 證據：targeted 綠＋`--all` 全套 **4688 tests／0 fail（3 skipped）**＋tsc 無錯（run-checks.sh）。
+
+PR #1733：https://github.com/smallwei0301/tour-platform/pull/1733
+CI 綠燈（head `54d0a3c`，2026-07-17 15:13 Asia/Taipei）：
+- test：https://github.com/smallwei0301/tour-platform/actions/runs/29562244406/job/87827021283 （conclusion=success）
+- scan：https://github.com/smallwei0301/tour-platform/actions/runs/29562244379/job/87827021152 （conclusion=success）
+確認綠燈後 squash merge（本補記為 docs-only commit，merge 前再驗新 head CI）。
+
+### 環境變數核查（使用者要求以 gh/vercel MCP 檢查）
+
+- **GitHub Actions secrets**：`alert-selftest.yml` 4 次 run 全 success（2026-06-30）→ `TELEGRAM_BOT_TOKEN`／`TELEGRAM_CHAT_ID`／`RESEND_API_KEY` 存在且可發送（供排程 sweep／告警 workflows）。
+- **Vercel runtime env**：Vercel MCP 無列 env 工具（get_project 不含 env；runtime log retention 1h 無行為證據）→ 無法直接證實。文件（`docs/operations/notifications-line-telegram-email.md`）記載：LINE 三推播旗標預設 0（正式環境刻意暫停）；`TELEGRAM_*_NOTIFY_ENABLED` 預設 OFF、docs 無開啟紀錄 → 生產環境目前推定只有 email 腿會實際送出，TG/LINE 腿安靜 skip。
+- 待辦（使用者決定）：Vercel Dashboard 肉眼確認，或另案加 admin-only 通道診斷端點（回報 env 存在布林值）。
