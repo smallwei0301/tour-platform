@@ -115,3 +115,9 @@ CI 綠燈（head `54d0a3c`，2026-07-17 15:13 Asia/Taipei）：
 - **遵循 #1614/#1598 新 route 標準骨架**：`jsonOk`＋try/catch `handleRouteError`（首輪漏接被 issue1598-route-error-coverage-guard 紅燈抓到，已補）。
 - **測試** `tests/api/notification-env-status.test.mjs`：全空 env 全 false、設值轉真、序列化不含 secret 值（防洩漏）、空白字串視為不存在、route 契約（jsonOk／不直讀 process.env）。
 - 證據：`run-checks.sh --typecheck --all` → 全套 0 fail＋tsc 無錯。
+
+PR #1738：https://github.com/smallwei0301/tour-platform/pull/1738
+CI 綠燈（head `f17a0e9`，2026-07-17 18:03 Asia/Taipei）：
+- test：https://github.com/smallwei0301/tour-platform/actions/runs/29571932389/job/87857521770 （conclusion=success）
+- scan：https://github.com/smallwei0301/tour-platform/actions/runs/29571932280/job/87857521646 （conclusion=success）
+確認綠燈後 squash merge（本補記為 docs-only commit，merge 前再驗新 head CI）。
