@@ -55,6 +55,15 @@
    - `activities/ActivityCard.tsx`＋`ActivitiesContent.tsx`：卡片 h3→h2、篩選 h3→h2（heading-order；inline 鎖字級不動視覺）
    - `ActivityReviewsPanel.tsx`：評分分布 `role="table"`→`role="group"`（aria-required-children）
 
+### PR #1727 CI 紅燈修復（2026-07-17）
+
+首輪 CI `test` job 2 fail，皆為 booking 頁修改引起：(1) issue1069 測試 regex 依賴 `<select` 後緊跟 `data-testid`，被插入的 `id` 打斷 → 屬性序還原；(2) 架構 ratchet：檔案 1117 行 > 天花板 1111 → 精簡註解回 1111 行（未放寬天花板）。修復 commit `faf3578`，本地全套件 4680 tests 0 fail。
+
+**鐵律 6 CI 證據（head `faf3578`，全綠）**：
+- test：https://github.com/smallwei0301/tour-platform/actions/runs/29554473551/job/87803656099（success，04:20:30Z）
+- scan：https://github.com/smallwei0301/tour-platform/actions/runs/29554473557/job/87803655847（success）
+- Vercel Preview：success（preview DEPLOYED）
+
 ### 驗證
 
 - lint 0 errors（剩 1 個既有 warning：RootDocument no-head-element，非本次引入）；typecheck 綠燈。
