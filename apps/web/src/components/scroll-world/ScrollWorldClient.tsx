@@ -35,28 +35,29 @@ export type SceneView = {
  * scroll-world 的「飛入場景」。有 clip 時疊一層 muted 影片，由引擎以
  * scrub（滾動進度＝currentTime）驅動——影片恆為 paused、不自動播放；
  * still（＝影片第 0 幀構圖）當 poster 與 reduced-motion fallback。
+ *
+ * clipSrc 由父層決定（單一格式、僅 active±1 場景），null＝不掛 <video>。
+ * PSI 生產實測（2026-07-17）證明「雙 <source>＋preload=metadata＋scrub seek」
+ * 會讓 Chrome 把 webm 與 mp4 兩種格式全抓滿（首頁 33.9MB）；改為 runtime
+ * canPlayType 挑一種格式、就近掛載，隱藏場景本來就 opacity:0，視覺零損失。
  */
-function SceneMedia({ scene }: { scene: SceneView }) {
+function SceneMedia({ scene, clipSrc }: { scene: SceneView; clipSrc: string | null }) {
   return (
     <>
       {/* eslint-disable-next-line @next/next/no-img-element -- billboard 需鋪滿 3D 平面，不走 next/image 版面 */}
       <img className={styles.still} src={scene.still} alt="" aria-hidden="true" draggable={false} width={1600} height={900} />
-      {scene.clip && (
+      {clipSrc && (
         <video
           className={styles.clip}
+          src={clipSrc}
           poster={scene.still}
           muted
           playsInline
-          // metadata 即滿足 scrub 引擎的 readyState>=1 門檻；幀資料改為 seek 時
-          // 漸進抓取（range request），未就緒時由同構圖 poster 補位——避免
-          // preload="auto" 讓首頁一次抓滿 7 支影片（~14.6MB）。
+          // metadata 即滿足 scrub 引擎的 readyState>=1 門檻；幀資料 seek 時漸進抓取，
+          // 未就緒時由同構圖 poster 補位。
           preload="metadata"
           aria-hidden="true"
-        >
-          {/* VP9/WebM 給 Chrome/Firefox/Android，H.264/mp4 給 Safari/iOS */}
-          <source src={scene.clip.replace(/\.mp4$/, '.webm')} type="video/webm" />
-          <source src={scene.clip} type="video/mp4" />
-        </video>
+        />
       )}
     </>
   );
@@ -100,6 +101,20 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
   const activeIndexRef = useRef(0);
   const [active, setActive] = useState(0);
   const [reducedMotion, setReducedMotion] = useState(false);
+  // VP9/WebM 給 Chrome/Firefox/Android，H.264/mp4 給 Safari/iOS——runtime 挑一種，
+  // 不用雙 <source>（見 SceneMedia 註解）。null＝尚未水合，先不掛任何 <video>。
+  const [clipExt, setClipExt] = useState<'webm' | 'mp4' | null>(null);
+
+  useEffect(() => {
+    const probe = document.createElement('video');
+    setClipExt(probe.canPlayType('video/webm; codecs="vp9"') ? 'webm' : 'mp4');
+  }, []);
+
+  /** 只有 active±1 的場景掛影片：交叉淡化只涉及相鄰兩景，其餘場景 opacity:0。 */
+  const clipSrcFor = (scene: SceneView, i: number): string | null => {
+    if (!scene.clip || !clipExt || Math.abs(i - active) > 1) return null;
+    return clipExt === 'webm' ? scene.clip.replace(/\.mp4$/, '.webm') : scene.clip;
+  };
 
   useEffect(() => {
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -239,7 +254,7 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
                 }}
                 aria-hidden="true"
               >
-                <SceneMedia scene={scene} />
+                <SceneMedia scene={scene} clipSrc={clipSrcFor(scene, i)} />
               </div>
             ))}
           </div>
