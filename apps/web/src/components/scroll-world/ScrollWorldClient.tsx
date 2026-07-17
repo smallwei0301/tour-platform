@@ -154,7 +154,11 @@ export function ScrollWorldClient({ scenes, hint, progressLabel }: Props) {
           const video = sceneEl.querySelector('video');
           if (video) {
             if (!video.paused) video.pause();
-            if (video.readyState >= 1 && Number.isFinite(video.duration)) {
+            // seek 防塞車：影片仍在 seeking（前一次尋幀未完）時跳過本幀，避免在
+            // 手機硬體解碼器上把 seek 疊爆造成頓挫。rAF 每幀重抓最新 target，
+            // seek 一完成下一幀就補到最新位置 → 節流到解碼器跟得上的速度、
+            // 最終位置仍自動追上，不會漂掉。
+            if (video.readyState >= 1 && Number.isFinite(video.duration) && !video.seeking) {
               const target = Math.min(video.duration - 0.05, clipProgress(progress, i, n) * video.duration);
               if (Math.abs(video.currentTime - target) > 0.033) video.currentTime = target;
             }
