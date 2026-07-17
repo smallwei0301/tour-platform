@@ -533,8 +533,6 @@ function BookingInnerV2FlagShell() {
 
   if (!activity) {
     return (
-      // 佔位高度同外層 Suspense fallback（實測水合後內容高的線性內插）：
-      // 活動資料 fetch 期間 footer 不動，修掉此頁 CLS 0.95 的主要來源。
       <main className="tp-container" style={{ padding: '40px 0', minHeight: 'clamp(1250px, 2216px - 68vw, 1950px)' }}>
         <p style={{ color: 'var(--tp-muted)' }}>{loadError || m.loadingActivity}</p>
       </main>
@@ -690,12 +688,10 @@ function BookingInnerV2FlagShell() {
             <div style={{ border: '1px solid var(--tp-border)', borderRadius: 12, padding: 20 }}>
               <h3 style={{ marginTop: 0 }}>{m.tripConfirmHeading}</h3>
               <div style={{ marginBottom: 12 }}>
-                {/* a11y（select-name）：改用 label htmlFor 建立程式化關聯 */}
                 <label htmlFor="booking-date-capacity-picker" style={{ fontWeight: 700, fontSize: 14, display: 'block', marginBottom: 6 }}>{m.selectDateCapacityLabel}</label>
                 <select
-                  id="booking-date-capacity-picker"
                   data-testid="booking-v2-date-capacity-picker"
-                  name="date-capacity"
+                  id="booking-date-capacity-picker" name="date-capacity"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
                   style={{
@@ -1104,8 +1100,6 @@ export default function BookingPage() {
 
   return (
     <Suspense fallback={
-      // 佔位高度＝實測水合後內容高的線性內插（412px 寬→1936px、1350px 寬→1298px），
-      // 讓 CSR 內容掛載時 footer 幾乎不動（Lighthouse CLS 0.95 → ~0）。
       <main className="tp-container" style={{ padding: '60px 0', textAlign: 'center', minHeight: 'clamp(1250px, 2216px - 68vw, 1950px)' }}>
         <p style={{ color: 'var(--tp-muted)' }}>{m.loading}</p>
       </main>
