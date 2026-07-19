@@ -1,12 +1,12 @@
-<!-- query_timestamp: 2026-07-18T05:45:03.958Z -->
+<!-- query_timestamp: 2026-07-19T05:59:46.203Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-18T05:45:03.958Z  
-**Commit SHA:** `e805f6a793436df56ffb1567aca4fd4f8fb22083`
+**Query timestamp:** 2026-07-19T05:59:46.203Z  
+**Commit SHA:** `e997cfa88ef39a15b4bc07b5fa4a4c76bad06453`
 
 ---
 
@@ -25,16 +25,17 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (53 total)
+## Open Issues (54 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (32)
+### P1 (33)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1747 | [[daily bug scan] tour-platform 2026-07-19](https://github.com/smallwei0301/tour-platform/issues/1747) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1746 | [[daily bug scan] tour-platform 2026-07-18](https://github.com/smallwei0301/tour-platform/issues/1746) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1745 | [[QA] Daily test checklist for recent merged PRs 2026-07-18](https://github.com/smallwei0301/tour-platform/issues/1745) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, notifications, admin, post-merge |
 | #1729 | [[QA] Daily test checklist for recent merged PRs 2026-07-17](https://github.com/smallwei0301/tour-platform/issues/1729) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, seo, post-merge |
