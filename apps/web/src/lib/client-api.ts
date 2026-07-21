@@ -10,7 +10,26 @@ export async function fetchActivityBySlug(slug: string) {
   return json.data;
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+
 export async function fetchActivityByIdOrSlug(activityIdOrSlug: string) {
+  if (UUID_PATTERN.test(activityIdOrSlug)) {
+    const listRes = await fetch(`/api/activities`, { cache: 'no-store' });
+    const listJson = await listRes.json();
+    const activity = Array.isArray(listJson?.data)
+      ? listJson.data.find((item: { id?: string; slug?: string }) => item?.id === activityIdOrSlug)
+      : null;
+
+    if (!listRes.ok || !listJson?.ok || !activity?.slug) {
+      throw new Error(listJson?.error?.message || 'activity not found');
+    }
+
+    return {
+      activity: await fetchActivityBySlug(activity.slug),
+      canonicalSlug: activity.slug,
+    };
+  }
+
   const res = await fetch(`/api/activities/${encodeURIComponent(activityIdOrSlug)}`, { cache: 'no-store' });
   const json = await res.json();
   if (json?.ok && json?.data) {
@@ -19,22 +38,6 @@ export async function fetchActivityByIdOrSlug(activityIdOrSlug: string) {
       canonicalSlug: json.data.slug || activityIdOrSlug,
     };
   }
-
-  const listRes = await fetch(`/api/activities`, { cache: 'no-store' });
-  const listJson = await listRes.json();
-  const activity = Array.isArray(listJson?.data)
-    ? listJson.data.find((item: { id?: string; slug?: string }) => item?.id === activityIdOrSlug || item?.slug === activityIdOrSlug)
-    : null;
-
-  if (!listRes.ok || !listJson?.ok || !activity?.slug) {
-    throw new Error(json?.error?.message || listJson?.error?.message || 'activity not found');
-  }
-
-  const canonicalSlug = activity.slug;
-  const canonicalActivity = canonicalSlug === activityIdOrSlug ? activity : await fetchActivityBySlug(canonicalSlug);
-
-  return {
-    activity: canonicalActivity,
-    canonicalSlug,
-  };
+  if (res.status === 404) throw new Error('activity not found');
+  throw new Error(json?.error?.message || 'activity not found');
 }
