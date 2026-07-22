@@ -41,10 +41,27 @@
 
 ## Review gate
 
-- Fresh-context TDD/dependency reviewer: running.
-- Fresh-context repo-path/governance reviewer: running.
-- #1756 remains `status:blocked + agent:next` until both reviewers report no unresolved FAIL.
-- #1757–#1761 remain `status:blocked + agent:queued`.
+### 2026-07-22 fresh-context review result: FAIL
+
+兩位 reviewers 讀取 master roadmap與最新 main 後判定不能直接實作。有效阻塞包含：master tasks不是逐一可執行 TDD、缺真實 Postgres RPC/RLS驗證、durable idempotency缺 schema、admin impersonation缺可信 actor、server layout guard與 legacy fake E2E session不相容，以及後續 packages的 canonical write/public/availability 接縫不完整。
+
+Reviewer 執行期間已先修正：migration timestamp單調、outbox早於 command、atomic backend-mode switch、重工作 tracked timeout、commit evidence規則。
+
+本輪後續 remediation：
+
+- Master 文件改為 roadmap，不再允許直接交給實作者。
+- 新增 #1756 專用 micro-plan：`docs/plans/2026-07-22-midao-package-01-foundation-shell.md`。
+- Foundation 新增 durable idempotency migration，並早於 atomic mode switch。
+- 因 repo migration不含 `audit_logs`，新增 service-role-only `midao_audit_events`供 command transaction直接寫入。
+- 統一 outbox欄位為 `event_name/next_attempt_at`。
+- 新增 signed admin-impersonation actor契約。
+- 新增 canonical runtime guard＋kill-switch contract。
+- 新增 local Supabase reset／Postgres RPC-RLS-rollback-concurrency gate。
+- 新增 local seed guide＋real HMAC E2E session；不使用 production bypass。
+
+#1756 仍維持 `status:blocked + agent:next`。新的 #1756 micro-plan 必須再次通過 fresh-context review；PASS 前不得開始 production code。
+
+- #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.
 
 ## Next action after reviewer PASS

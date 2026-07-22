@@ -1,6 +1,10 @@
-# Midao 新導遊後台 Implementation Plan
+# Midao 新導遊後台 Master Implementation Roadmap
 
-> **For Hermes:** Use `subagent-driven-development` skill to implement this plan task-by-task. 每個 package 由 fresh implementer 執行，再由獨立 spec reviewer 與 code-quality reviewer 驗收。
+> **Status:** 這份文件是跨 package roadmap，不能直接交給實作者逐 task 執行。每個 GitHub package issue 必須另有一份通過 fresh-context review 的 micro-plan，逐步列 RED command、預期失敗、minimal GREEN、GREEN/evidence command 與 commit boundary；未有 micro-plan 的 issue 維持 `status:blocked`。
+>
+> **First executable package plan:** `docs/plans/2026-07-22-midao-package-01-foundation-shell.md`（Issue #1756，建立中）。
+>
+> **For Hermes:** 每個 package micro-plan 使用 `subagent-driven-development`；fresh implementer 完成後，由獨立 spec reviewer 與 code-quality reviewer驗收。不得用本 roadmap 的縮寫 task 取代 micro-plan。
 
 **Goal:** 建立獨立 `/midao` 導遊後台，串接既有 Booking V2、活動方案、availability、訊息與付款能力，新增 LINE inquiry、服務直接發布、自訂問卷與全域行事曆，最後安全灰度切換。
 
@@ -109,13 +113,29 @@ git commit -m "feat: 新增 Midao 後台模式欄位"
 
 **TDD steps:**
 
-1. 寫 source-contract test，鎖定 `event_type/payload/status/attempt_count/available_at`、claim index、PII-minimal comment、RLS 與 service-role grants。
+1. 寫 source-contract test，鎖定 `event_name/payload/status/attempt_count/next_attempt_at`、claim index、PII-minimal comment、RLS 與 service-role grants。
 2. 跑 targeted test，Expected RED。
 3. 建立 additive migration；outbox payload 不存完整旅客地址或付款資料。
 4. 跑 targeted test，Expected GREEN。
 5. Commit：`feat: 建立 Midao 通知 outbox schema`。
 
-## Task 2: 讓 guide session payload 回傳已簽章 sessionVersion
+## Task 1B: 建立 durable idempotency schema
+
+**Files:**
+- Create: `apps/web/tests/api/midao-idempotency-migration.test.mjs`
+- Create: `supabase/migrations/20260723002000_midao_idempotency_records.sql`
+
+建立 service-role-only `midao_idempotency_records`，唯一鍵為 actor type/ID＋command＋idempotency key；保存 request hash 與已去敏 response snapshot。同 key 同 hash replay；不同 hash 回 409。此 task 的可執行 RED/GREEN 步驟以 #1756 micro-plan 為準。
+
+## Task 1C: 建立 transactional audit schema
+
+**Files:**
+- Create: `apps/web/tests/api/midao-audit-events-migration.test.mjs`
+- Create: `supabase/migrations/20260723002500_midao_audit_events.sql`
+
+建立 service-role-only `midao_audit_events`，保存 actor、guide、action、resource、request ID與去敏 metadata。跨表 command在同一 transaction寫 audit＋outbox；不依賴 repo migration中不存在的 `audit_logs`。完整 RED/GREEN與 local SQL驗證以 #1756 micro-plan為準。
+
+## Task 2: 讓 guide session payload回傳已簽章 sessionVersion
 
 **Objective:** 保持三段 token 格式，讓 runtime guard 能比對 DB version。
 
@@ -242,7 +262,9 @@ Assert：
 - query 未登入 401。
 - stale session 401 `SESSION_STALE`。
 - legacy mode 409 `BACKEND_MODE_MISMATCH`。
+- backend disabled 或 mutation disabled 時 fail-closed。
 - command 在 handler 前驗 CSRF。
+- admin impersonation signed actor cookie 驗證後才產生 `actorType=admin`；偽造 cookie 回 401。
 - ownership error 可映射 404。
 - response 使用 `jsonOk/jsonError`。
 
@@ -264,7 +286,7 @@ withMidaoGuideCommand(handler)
 Command context 至少含：
 
 ```ts
-{ guideId, guideName, sessionVersion, requestId, idempotencyKey }
+{ guideId, guideName, sessionVersion, actorType, actorId, requestId, idempotencyKey }
 ```
 
 **Step 4: Verify GREEN**
@@ -284,10 +306,13 @@ git commit -m "feat: 建立 Midao V2 route wrapper"
 
 **Files:**
 - Modify: `apps/web/src/lib/guide-auth-session-supabase.ts`
+- Create: `apps/web/src/lib/midao/impersonation-actor.ts`
 - Modify: `apps/web/app/api/guide/auth/session/route.ts`
 - Modify: `apps/web/app/api/v2/admin/guides/[guideId]/impersonate/route.ts`
+- Modify: `apps/web/app/(non-locale)/guide/login/page.tsx`
 - Test: `apps/web/tests/api/midao-guide-login-redirect.test.mjs`
 - Test: `apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs`
+- Test: `apps/web/tests/api/midao-impersonation-actor.test.mjs`
 
 **Step 1: Write RED tests**
 
@@ -297,7 +322,7 @@ Require queries to select `backend_mode` and responses：
 { "redirectTo": "/midao" }
 ```
 
-或 `/guide/dashboard`。Impersonation response 同樣回 redirect target。
+或 `/guide/dashboard`。Login UI 對普通登入優先採 server 回傳 `redirectTo`；`next` 只允許與該 backend mode 相容的 relative path，不能讓 legacy next 覆蓋 Midao mode。Impersonation response 同樣回 redirect target，並由已驗證 admin credentials 簽發 HttpOnly actor cookie；logout 清除 actor cookie與可見 banner cookie。
 
 **Step 2: Verify RED**
 
@@ -332,14 +357,14 @@ git commit -m "feat: 依後台模式導向導遊入口"
 **Objective:** 提供可稽核、可 rollback 的唯一 admin 切換入口，mode 與 session version 不得分段更新。
 
 **Files:**
-- Create: `supabase/migrations/20260723002000_midao_atomic_backend_mode_switch.sql`
+- Create: `supabase/migrations/20260723003000_midao_atomic_backend_mode_switch.sql`
 - Create: `apps/web/src/lib/db-midao-backend-mode.mjs`
 - Create: `apps/web/app/api/v2/admin/guides/[guideId]/backend-mode/route.ts`
 - Create: `apps/web/tests/api/midao-backend-mode-switch.test.mjs`
 
 **Step 1: Write RED tests**
 
-鎖定：admin route 使用既有 admin middleware/CSRF realm，並以 `pickAdminCredentials(request).email` 作 audit actor，禁止接受 body actor；body 只接受 `legacy|midao`＋reason；RPC `FOR UPDATE` guide profile、更新 mode、`guide_session_version + 1`、寫 `audit_logs`（`action='guide_backend_mode_switched'`）與 outbox；相同 mode 冪等但仍回 canonical version；unknown/inactive guide 有 deterministic error。
+鎖定：admin route 使用既有 admin middleware/CSRF realm，並以 `pickAdminCredentials(request).email` 作 audit actor，禁止接受 body actor；body只接受 `legacy|midao`＋reason；RPC `FOR UPDATE` guide profile、claim durable idempotency、更新 mode、`guide_session_version + 1`、寫 `midao_audit_events`（`action='guide_backend_mode_switched'`）與 outbox；相同 mode第一次執行不 bump，replay不重複 side effects；unknown/inactive guide有 deterministic error。
 
 **Step 2: Verify RED**
 
@@ -383,11 +408,15 @@ Run：
 ```bash
 .claude/hooks/run-checks.sh \
   apps/web/tests/api/midao-backend-mode-migration.test.mjs \
+  apps/web/tests/api/midao-notification-outbox-migration.test.mjs \
+  apps/web/tests/api/midao-idempotency-migration.test.mjs \
+  apps/web/tests/api/midao-audit-events-migration.test.mjs \
   apps/web/tests/api/midao-guide-session-version.test.mjs \
   apps/web/tests/api/midao-runtime-access-gateway.test.mjs \
   apps/web/tests/api/midao-guide-route-wrapper.test.mjs \
   apps/web/tests/api/midao-guide-login-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/api/midao-impersonation-actor.test.mjs \
   apps/web/tests/api/midao-backend-mode-switch.test.mjs \
   --typecheck
 ```
