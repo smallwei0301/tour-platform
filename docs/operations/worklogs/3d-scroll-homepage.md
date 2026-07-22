@@ -206,6 +206,35 @@
   test success — actions/runs/29459167578/job/87498848535；scan success；Vercel Preview
   success；mergeable_state clean。squash merge 進 main。
 
+## 階段 12（2026-07-16）— 再次更換 finale 影片（破曉 match「天亮了」）
+- 依先前「重新思考 finale 提示詞」建議：讓「天亮」隨捲動發生（首幀破曉冷藍 → 尾幀金色
+  滿溢），承接前一景夜森林、扣文案「天亮了，該出發了」。使用者用該概念生成新影片
+  （10s，首幀微光破曉、鏡頭沿發光步道飛向初日、尾幀全島金光）。
+- #1719 已 merge → 分支自最新 origin/main（d676bb7）重置。同管線：delogo 去右下星芒 →
+  全長 scrub 編碼（-g 8、1152w、雙格式 mp4 2.6MB／webm 2.5MB）→ poster＝首幀覆寫
+  finale.webp。純素材替換，無需改碼。
+- 驗證：浮水印區抽查乾淨；實跑滾到底 finale scrub 正確（dur 10s、ct 9.9s、rs 4、
+  CTA→/home、7 支影片）；scroll-world 測試 26/26 綠燈。
+- PR #1726（分支殘留回收 merge 免 force-push，harness/08 §3）。**CI 綠燈（cb6e7db）**：
+  test success — actions/runs/29478192547/job/87555719241；scan success；Vercel Preview
+  success；mergeable_state clean。squash merge 進 main。
+
+## 階段 13（2026-07-17）— 手機 scrub 卡頓修復：seek 防塞車守衛
+- 使用者回報手機捲動卡。診斷：影片容量／規格健康（1152×648、~1.8Mbps、keyframe
+  每 0.33s、~2MB），且 #1727/#1732 已做懶載入（只掛 active±1）＋單一格式；容量非主因。
+- 根因：rAF 迴圈每幀對影片設 `currentTime`，未檢查前一次 seek 是否完成 → 手機硬體
+  解碼器 seek 慢，快速滑動時 seek 疊爆造成頓挫。
+- 修法（`ScrollWorldClient.tsx`，一行守衛）：seek 條件加 `&& !video.seeking`——影片仍
+  在尋幀時跳過本幀，rAF 每幀重抓最新 target、seek 完成下一幀補到最新位置，節流到
+  解碼器跟得上的速度、最終位置自動追上不漂掉（scroll-video 標準做法）。
+- 驗證（390px 手機視窗 Playwright）：各滾動點 scrub 對位正確（0→0、0.2→8s、1→9.95s）；
+  快速甩動壓力測試後自動收斂（seeking→false、不卡半路）、零 pageerror；測試 26/26、
+  typecheck、lint 綠燈。
+- 未做（視效果再議）：手機專用 960 寬低碼率版（工程量較大，先看守衛效果）。
+- PR #1737（分支殘留回收 merge 免 force-push，harness/08 §3）。**CI 綠燈（67c09c1）**：
+  test success — actions/runs/29571895406/job/87857399348；scan success；Vercel Preview
+  success。squash merge 進 main。
+
 ## 絕不重做（Do-NOT-redo）
 - 不動凍結區；不動既有 `/` 首頁 LpSections 結構；migrations／API 無涉。
 

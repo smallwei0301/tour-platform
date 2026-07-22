@@ -6,6 +6,7 @@
  */
 
 export type OrderEventKind =
+  | 'approval_requested'
   | 'new_order'
   | 'payment_received'
   | 'order_cancelled'
@@ -33,6 +34,7 @@ function amount(totalTwd?: number): string {
 
 const HEADLINE: Record<NotifyAudience, Record<OrderEventKind, string>> = {
   traveler: {
+    approval_requested: '📨 預約申請已送出（待導遊審核）',
     new_order: '🎉 預約已建立（待付款）',
     payment_received: '✅ 付款成功，預約確認',
     order_cancelled: '❌ 您的訂單已取消',
@@ -40,6 +42,7 @@ const HEADLINE: Record<NotifyAudience, Record<OrderEventKind, string>> = {
     refund_executed: '✅ 退款已完成',
   },
   guide: {
+    approval_requested: '🙋 新預約申請待審核（通過後旅客才會付款）',
     new_order: '🆕 你有新的預約（待付款）',
     payment_received: '💰 訂單已付款確認',
     order_cancelled: '❌ 有一筆訂單被取消',
@@ -47,6 +50,7 @@ const HEADLINE: Record<NotifyAudience, Record<OrderEventKind, string>> = {
     refund_executed: '✅ 一筆退款已完成',
   },
   admin: {
+    approval_requested: '🙋 新預約申請（待導遊審核）',
     new_order: '🆕 新訂單（待付款）',
     payment_received: '💰 訂單付款確認',
     order_cancelled: '❌ 訂單取消',

@@ -230,7 +230,8 @@ export default function ActivitiesContent({ initialRegion, initialActivities }: 
         {/* 篩選側欄 */}
         <aside className="tp-filter" aria-label={t('filterAria')}>
           <div className="tp-filter-head">
-            <h3>{t('filterTitle')}</h3>
+            {/* a11y（heading-order）：h3→h2 消除 h1 前後的層級跳號；字級鎖回原 h3 視覺 */}
+            <h2 style={{ fontSize: '1.17em', margin: '1em 0' }}>{t('filterTitle')}</h2>
             {hasFilters && <button onClick={clearAll} style={{ color: 'var(--tp-accent)', fontWeight: 600, fontSize: 13 }}>{t('clearAll')}</button>}
           </div>
 

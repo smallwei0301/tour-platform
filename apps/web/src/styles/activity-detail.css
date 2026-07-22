@@ -1,0 +1,1476 @@
+/* 活動詳情頁（/activities/[region]/[slug]）專屬樣式——#1735 自 globals.css 拆出。
+   由該 route 的 page.tsx 與 loading.tsx 匯入，僅在此 route 載入。 */
+/* --- Activity Detail: Tab nav --- */
+.tp-activity-tabs-wrap {
+  margin-top: 24px;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.tp-activity-tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--tp-border);
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: transparent;
+}
+.tp-activity-tab-nav::-webkit-scrollbar { display: none; }
+.tp-activity-tab-btn {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tp-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tp-activity-tab-btn.active {
+  color: var(--tp-gold-strong);
+  border-bottom-color: var(--tp-brass);
+  background: var(--tp-bg-soft);
+}
+.tp-activity-tab-btn:hover:not(.active) {
+  color: var(--tp-text);
+}
+.tp-activity-tab-content {
+  padding: 20px;
+  background: transparent;
+}
+.tp-tab-section { margin-bottom: 8px; }
+.tp-tab-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.tp-tab-section-head h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* --- Date Picker pills --- */
+.tp-date-picker-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding-bottom: 8px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+/* Prevent date pills from causing page-level horizontal scroll */
+.kkd-date-plan-section,
+.kkd-section-date { overflow: hidden; }
+.tp-date-picker-scroll::-webkit-scrollbar { display: none; }
+.tp-date-pill {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  background: var(--tp-card-bg);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-width: 72px;
+  min-height: 72px;
+  position: relative;
+  gap: 2px;
+}
+.tp-date-pill:hover:not(.disabled) {
+  border-color: var(--tp-gold-strong);
+  background: var(--tp-tint);
+}
+.tp-date-pill.selected {
+  border-color: var(--tp-gold-strong);
+  background: var(--tp-primary);
+  color: #fff;
+}
+.tp-date-pill.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.25);
+}
+.tp-date-pill-month {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.tp-date-pill-week {
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.75;
+  line-height: 1.2;
+}
+.tp-date-pill-full {
+  font-size: 10px;
+  color: #e53e3e;
+  margin-top: 2px;
+  font-weight: 700;
+  line-height: 1;
+}
+.tp-date-pill.selected .tp-date-pill-full { color: #fbb; }
+.tp-date-pill-na {
+  font-size: 12px;
+  color: #bbb;
+  margin-top: 2px;
+  line-height: 1;
+}
+.tp-date-pill.disabled .tp-date-pill-month,
+.tp-date-pill.disabled .tp-date-pill-week {
+  color: #999;
+}
+
+/* --- Plan Card --- */
+.tp-plan-card {
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--tp-card-bg);
+}
+.tp-plan-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.tp-plan-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+.tp-plan-date-tag {
+  background: var(--tp-tint);
+  color: var(--tp-gold-strong);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.tp-plan-card-details {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.tp-plan-detail-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tp-muted);
+  line-height: 1.5;
+}
+.tp-plan-check { flex-shrink: 0; }
+.tp-plan-detail-link {
+  font-size: 13px;
+  color: var(--tp-gold-strong);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 14px;
+}
+.tp-plan-detail-link:hover { text-decoration: underline; }
+.tp-plan-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--tp-border);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+.tp-plan-price-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.tp-plan-original-price {
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 13px;
+}
+.tp-plan-price {
+  color: var(--tp-gold-strong);
+  font-size: 20px;
+  font-weight: 700;
+}
+.tp-plan-price-label {
+  color: var(--tp-muted);
+  font-size: 12px;
+}
+.tp-plan-select-btn {
+  border: 1.5px solid var(--tp-brass) !important;
+  color: var(--tp-gold-strong) !important;
+  background: transparent !important;
+  padding: 8px 24px !important;
+  font-size: 14px !important;
+  transition: background 0.15s !important;
+}
+.tp-plan-select-btn:hover {
+  background: var(--tp-primary) !important;
+  color: #fff !important;
+}
+
+/* --- Detail page: price + policy row --- */
+.tp-detail-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.tp-detail-rating {
+  font-weight: 700;
+  color: #f5a623;
+  font-size: 15px;
+}
+.tp-detail-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.tp-detail-original-price {
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 14px;
+}
+.tp-detail-price {
+  color: var(--tp-gold-strong);
+  font-size: 24px;
+  font-weight: 800;
+}
+.tp-detail-policy-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.tp-detail-policy-item {
+  font-size: 13px;
+  color: var(--tp-muted);
+  background: var(--tp-bg-soft);
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--tp-border);
+}
+
+/* --- Activity Bottom Bar (mobile sticky CTA) --- */
+.tp-activity-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #1c261c;
+  border-top: 1px solid var(--tp-border);
+  padding: 10px 16px;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.08);
+}
+.tp-activity-bottom-bar-inner {
+  max-width: 600px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tp-bottom-bar-price { display: flex; flex-direction: column; }
+.tp-bottom-bar-price-label { font-size: 11px; color: var(--tp-muted); }
+.tp-bottom-bar-price-value { font-size: 18px; font-weight: 800; color: var(--tp-gold-strong); }
+.tp-bottom-bar-actions { display: flex; align-items: center; gap: 10px; }
+.tp-bottom-bar-wishlist {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tp-border);
+  background: #243024;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.tp-bottom-bar-wishlist:hover { border-color: #e74c6d; transform: scale(1.08); }
+.tp-bottom-bar-wishlist.active { border-color: #e74c6d; }
+.tp-bottom-bar-cta { padding: 12px 32px !important; font-size: 15px !important; }
+
+/* Hide bottom bar on desktop (sidebar handles it) */
+@media (min-width: 1025px) {
+  .tp-activity-bottom-bar { display: none; }
+}
+
+/* （navbar/footer/hero-search/theme 的全域響應式規則已搬回 globals.css——#1735 拆分誤夾帶，footer 手機版曾因此在非詳情頁錯亂） */
+
+
+/* --- KKday-style Activity Detail Page --- */
+.kkd-detail-page { padding-top: 0; }
+
+/* ── Image Carousel (mobile swipeable + desktop grid) ── */
+.kkd-carousel-wrap { position: relative; width: 100%; }
+
+/* Mobile: swipeable track */
+.kkd-carousel-track {
+  display: flex;
+  overflow-x: scroll;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  border-radius: 14px;
+  margin: 12px 0 0;
+}
+.kkd-carousel-track::-webkit-scrollbar { display: none; }
+.kkd-carousel-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  height: 280px;
+}
+.kkd-carousel-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kkd-carousel-dots { display: flex; justify-content: center; gap: 6px; padding: 8px 0 4px; }
+.kkd-carousel-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(244, 236, 216, 0.3); transition: background 0.2s; }
+.kkd-carousel-dot.active { background: var(--tp-brass); width: 16px; border-radius: 3px; }
+
+/* Desktop：左側大圖 + 右側可垂直捲動縮圖列（點縮圖切成大圖）；手機維持滑動輪播。 */
+.kkd-gallery-desktop { display: none; }
+@media (min-width: 768px) {
+  .kkd-carousel-track, .kkd-carousel-dots { display: none; }
+  .kkd-gallery-desktop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 128px;
+    gap: 10px;
+    margin: 12px 0 0;
+    /* stretch：縮圖列（其內容為絕對定位、不撐高列）會被拉到與大圖同高 */
+    align-items: stretch;
+  }
+}
+/* 大圖維持素材 16:9 比例，object-fit: cover 幾乎不裁切（來源亦為 16:9）。
+   用 aspect-ratio 而非固定高度，避免在寬欄位被壓成寬扁比例而切掉上下。 */
+.kkd-gallery-main-wrap {
+  aspect-ratio: 16 / 9;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.kkd-gallery-main {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* 右側縮圖列：外層佔滿該列高度（= 大圖高度）；內層絕對定位做垂直捲動，
+   如此縮圖數量再多也不會撐高整列、大圖比例不受影響。 */
+.kkd-gallery-thumbs {
+  position: relative;
+  min-height: 0;
+}
+.kkd-gallery-thumbs-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+.kkd-gallery-thumbs-inner::-webkit-scrollbar { width: 6px; }
+.kkd-gallery-thumbs-inner::-webkit-scrollbar-thumb {
+  background: rgba(238, 230, 205, 0.25);
+  border-radius: 999px;
+}
+.kkd-gallery-thumb-btn {
+  flex: 0 0 auto;
+  height: 82px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  overflow: hidden;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+  transition: border-color 0.15s, opacity 0.15s;
+  opacity: 0.75;
+}
+.kkd-gallery-thumb-btn:hover { opacity: 1; }
+.kkd-gallery-thumb-btn.active {
+  border-color: var(--tp-brass);
+  opacity: 1;
+}
+.kkd-gallery-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Itinerary Timeline ── */
+.kkd-itinerary { display: flex; flex-direction: column; }
+.kkd-itinerary-step { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: start; position: relative; }
+.kkd-itinerary-icon { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 22px; background: #232e21; border-radius: 50%; flex-shrink: 0; z-index: 1; }
+.kkd-itinerary-content { padding: 8px 0 20px; }
+.kkd-itinerary-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.kkd-itinerary-title { font-size: 15px; font-weight: 600; }
+.kkd-itinerary-duration { font-size: 12px; color: var(--tp-muted); background: rgba(244, 236, 216, 0.1); padding: 2px 8px; border-radius: 10px; }
+.kkd-itinerary-desc { font-size: 14px; color: var(--tp-muted); margin-top: 4px; line-height: 1.6; }
+.kkd-itinerary-img { display: block; margin-top: 10px; width: 100%; max-width: 360px; height: auto; border-radius: 8px; object-fit: cover; }
+.kkd-itinerary-connector { position: absolute; left: 21px; top: 44px; width: 2px; height: calc(100% - 4px); background: rgba(190, 178, 137, 0.25); }
+
+/* Title block */
+.kkd-title-block { padding: 24px 0 0; }
+.kkd-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.kkd-badge {
+  font-size: 12px;
+  color: var(--tp-gold-strong);
+  background: var(--tp-tint);
+  border: 1px solid rgba(190, 178, 137, 0.35);
+  border-radius: 6px;
+  padding: 3px 9px;
+  font-weight: 500;
+}
+.kkd-title {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1.45;
+  margin: 0 0 16px;
+  color: var(--tp-text);
+  letter-spacing: -0.3px;
+}
+.kkd-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.kkd-rating { color: #f5a623; font-weight: 700; font-size: 15px; }
+.kkd-review-count { color: var(--tp-muted); font-weight: 400; font-size: 13px; margin-left: 3px; }
+.kkd-dot { color: var(--tp-muted); }
+.kkd-location { color: var(--tp-muted); font-size: 14px; }
+.kkd-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--tp-border);
+}
+.kkd-orig-price {
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 14px;
+}
+.kkd-price {
+  color: var(--tp-gold-strong);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.kkd-price-unit { color: var(--tp-muted); font-size: 13px; }
+/* Policy row: first 4 items = activity info, last 3 = policy info
+   Use two-row visual grouping via flex-wrap + divider pseudo trick */
+.kkd-policy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--tp-border);
+}
+.kkd-policy-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tp-text);
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.kkd-policy-item svg { flex-shrink: 0; color: var(--tp-cream); }
+/* Visual divider between activity-info items and policy items */
+.kkd-policy-divider {
+  width: 100%;
+  height: 0;
+  flex-basis: 100%;
+}
+.kkd-short-desc {
+  font-size: 15px;
+  line-height: 1.75;
+  color: rgba(238, 230, 205, 0.78);
+  margin: 0 0 0;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--tp-border);
+}
+
+/* Anchor nav */
+.kkd-anchor-wrap {
+  position: sticky;
+  top: 64px;
+  z-index: 30;
+  background: var(--tp-bg);
+  border-bottom: 1px solid var(--tp-border);
+}
+.kkd-anchor-nav {
+  display: flex;
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.kkd-anchor-nav::-webkit-scrollbar { display: none; }
+.kkd-anchor-btn {
+  flex: 0 0 auto;
+  padding: 13px 20px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tp-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s;
+}
+.kkd-anchor-btn.active {
+  color: var(--tp-gold-strong);
+  border-bottom-color: var(--tp-gold-strong);
+  font-weight: 700;
+}
+.kkd-anchor-btn:hover:not(.active) { color: var(--tp-text); }
+
+/* Scroll layout */
+.kkd-scroll-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 32px;
+  padding-top: 0;
+}
+.kkd-scroll-main { min-width: 0; }
+.kkd-scroll-section {
+  padding: 28px 0;
+  border-bottom: 1px solid var(--tp-border);
+}
+.kkd-scroll-section:last-child { border-bottom: none; }
+.kkd-section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--tp-text);
+  margin: 0 0 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--tp-brass);
+  display: inline-block;
+}
+
+/* Section label rows */
+.kkd-section-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.kkd-section-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tp-text);
+}
+.kkd-link-sm {
+  font-size: 13px;
+  color: var(--tp-gold-strong);
+  text-decoration: none;
+  font-weight: 500;
+}
+.kkd-link-sm:hover { text-decoration: underline; }
+
+/* Plan card */
+.kkd-plan-card {
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--tp-card-bg);
+  margin-top: 4px;
+  max-width: 100%;
+  overflow: hidden;
+}
+.kkd-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.kkd-plan-name {
+  font-size: 16px;
+  font-weight: 700;
+}
+.kkd-plan-date-tag {
+  background: var(--tp-tint);
+  color: var(--tp-gold-strong);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+}
+.kkd-plan-checklist {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+.kkd-plan-checklist li {
+  font-size: 13px;
+  color: var(--tp-muted);
+  line-height: 1.6;
+}
+.kkd-plan-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--tp-border);
+  padding-top: 16px;
+  margin-top: 4px;
+  gap: 12px;
+}
+.kkd-plan-price-block {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.kkd-plan-orig-price {
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 13px;
+}
+.kkd-plan-price {
+  color: var(--tp-gold-strong);
+  font-size: 22px;
+  font-weight: 800;
+}
+.kkd-plan-per { color: var(--tp-muted); font-size: 12px; }
+.kkd-plan-select-btn {
+  padding: 10px 20px !important;
+  font-size: 14px !important;
+  white-space: nowrap !important;
+  flex-shrink: 0;
+}
+/* Mobile: stack price + button vertically */
+@media (max-width: 480px) {
+  .kkd-plan-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .kkd-plan-select-btn {
+    text-align: center !important;
+    width: 100% !important;
+    padding: 12px 0 !important;
+  }
+}
+
+/* Reviews */
+.kkd-reviews-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.kkd-reviews-score {
+  font-size: 22px;
+  font-weight: 800;
+  color: #f5a623;
+}
+.kkd-reviews-total {
+  color: var(--tp-muted);
+  font-size: 14px;
+}
+.kkd-quote-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.kkd-quote-chip {
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--tp-muted);
+}
+/* 旅客評價：改為左右滑動的卡片輪播（scroll-snap），手機與桌機皆同一橫向卷軸。 */
+.kkd-review-list {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 2px;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+.kkd-review-list::-webkit-scrollbar { height: 6px; }
+.kkd-review-list::-webkit-scrollbar-thumb {
+  background: rgba(238, 230, 205, 0.25);
+  border-radius: 999px;
+}
+.kkd-review-card {
+  flex: 0 0 auto;
+  width: min(86%, 340px);
+  scroll-snap-align: start;
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.kkd-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.kkd-reviewer { font-size: 14px; }
+.kkd-review-date { color: var(--tp-muted); font-size: 12px; }
+.kkd-stars { margin-bottom: 6px; font-size: 14px; letter-spacing: 1px; }
+.kkd-stars-on { color: #f5a623; }
+.kkd-stars-off { color: rgba(238, 230, 205, 0.28); }
+.kkd-review-text {
+  font-size: 14px;
+  line-height: 1.75;
+  color: rgba(238, 230, 205, 0.85);
+  margin: 0;
+}
+/* #1592 評分分佈長條 + 星等/有照片篩選 + 導遊回覆 */
+.kkd-review-dist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.kkd-review-dist-row {
+  display: flex; align-items: center; gap: 10px;
+  background: none; border: none; padding: 4px 6px; border-radius: 8px;
+  cursor: pointer; color: inherit; text-align: left; width: 100%;
+}
+.kkd-review-dist-row:hover { background: rgba(238, 230, 205, 0.06); }
+.kkd-review-dist-row.is-active { background: rgba(245, 166, 35, 0.14); }
+.kkd-review-dist-label { flex: 0 0 auto; width: 44px; font-size: 13px; color: rgba(238, 230, 205, 0.85); }
+.kkd-review-dist-track { flex: 1 1 auto; height: 8px; border-radius: 999px; background: rgba(238, 230, 205, 0.14); overflow: hidden; }
+.kkd-review-dist-fill { display: block; height: 100%; background: #f5a623; border-radius: 999px; }
+.kkd-review-dist-count { flex: 0 0 auto; width: 32px; text-align: right; font-size: 12px; color: var(--tp-muted); }
+.kkd-review-filters { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.kkd-review-chip {
+  background: none; border: 1px solid var(--tp-border); color: rgba(238, 230, 205, 0.85);
+  border-radius: 999px; padding: 5px 14px; font-size: 13px; cursor: pointer;
+}
+.kkd-review-chip.is-active { background: #f5a623; border-color: #f5a623; color: #1a2e1f; font-weight: 600; }
+.kkd-review-empty { flex: 0 0 auto; color: var(--tp-muted); font-size: 14px; padding: 20px 4px; }
+.kkd-review-guide-reply {
+  margin-top: 10px; padding: 10px 12px; border-radius: 8px;
+  background: rgba(238, 230, 205, 0.06); border-left: 3px solid #5e7a4f;
+}
+.kkd-review-guide-reply-label {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: #9db98a; margin-bottom: 4px;
+}
+.kkd-review-guide-reply-text { margin: 0; font-size: 13px; line-height: 1.6; color: rgba(238, 230, 205, 0.82); }
+/* 旅客評價照片：多張時手機可左右滑動（scroll-snap），桌機亦同一橫向卷軸。 */
+.kkd-review-photos {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+.kkd-review-photos::-webkit-scrollbar { height: 6px; }
+.kkd-review-photos::-webkit-scrollbar-thumb {
+  background: rgba(238, 230, 205, 0.25);
+  border-radius: 999px;
+}
+.kkd-review-photo {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  display: block;
+  line-height: 0;
+  /* 由 <a> 改為 <button>（點擊彈 in-page 燈箱）：清掉按鈕預設樣式。 */
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.kkd-review-photo img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--tp-border);
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.kkd-review-photo:hover img,
+.kkd-review-photo:focus-visible img { opacity: 0.88; transform: scale(1.02); }
+.kkd-review-photo:focus-visible { outline: 2px solid var(--tp-brass, #b08d3e); outline-offset: 2px; border-radius: 8px; }
+@media (max-width: 480px) {
+  .kkd-review-photo img { width: 104px; height: 104px; }
+}
+
+/* 評價照片燈箱（in-page 放大檢視，不另開分頁；響應式 contain，手機到桌機皆不溢出） */
+.kkd-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: env(safe-area-inset-top, 0) 12px env(safe-area-inset-bottom, 0);
+  background: rgba(10, 12, 14, 0.86);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  animation: kkd-lightbox-in 0.14s ease-out;
+}
+@keyframes kkd-lightbox-in { from { opacity: 0; } to { opacity: 1; } }
+.kkd-lightbox-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 92vw;
+  max-height: 86vh;
+}
+.kkd-lightbox-figure img {
+  max-width: 92vw;
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.kkd-lightbox-counter {
+  color: rgba(238, 230, 205, 0.92);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+.kkd-lightbox-close {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top, 0));
+  right: 14px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kkd-lightbox-close:hover { background: rgba(255, 255, 255, 0.26); }
+.kkd-lightbox-nav {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kkd-lightbox-nav:hover { background: rgba(255, 255, 255, 0.26); }
+@media (max-width: 480px) {
+  .kkd-lightbox-nav {
+    position: absolute;
+    bottom: max(18px, env(safe-area-inset-bottom, 0));
+    width: 48px;
+    height: 48px;
+  }
+  .kkd-lightbox-prev { left: 18px; }
+  .kkd-lightbox-next { right: 18px; }
+  .kkd-lightbox-figure img { max-height: 74vh; }
+}
+
+/* Detail blocks */
+.kkd-detail-block { margin-bottom: 20px; }
+.kkd-detail-subtitle {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: var(--tp-text);
+}
+.kkd-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 8px;
+}
+.kkd-checklist li {
+  display: flex;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.6;
+}
+.kkd-check { flex-shrink: 0; }
+.kkd-notice-list {
+  padding-left: 18px;
+  margin: 0;
+  display: grid;
+  gap: 7px;
+}
+.kkd-notice-list li {
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.7;
+}
+.kkd-notice-text {
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.8;
+  margin: 0;
+}
+
+/* Guide card */
+.kkd-guide-card {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: var(--tp-bg-soft);
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.kkd-guide-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.kkd-guide-info { flex: 1; min-width: 0; }
+.kkd-guide-name {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 3px;
+}
+.kkd-guide-verified {
+  font-size: 12px;
+  /* 導遊認證標章採平台主配色黃金色（黃銅 #b08d3e，與 logo「祕島」同色）。 */
+  color: var(--tp-brass);
+  display: block;
+  margin-bottom: 6px;
+}
+.kkd-guide-meta {
+  font-size: 13px;
+  color: var(--tp-muted);
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+.kkd-guide-headline {
+  font-size: 13px;
+  color: var(--tp-muted);
+  font-style: italic;
+  margin: 0 0 8px;
+  line-height: 1.5;
+}
+
+/* FAQ */
+.kkd-faq-list { display: grid; gap: 8px; }
+.kkd-faq-item {
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: var(--tp-card-bg);
+}
+.kkd-faq-q {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tp-text);
+  line-height: 1.5;
+  list-style: none;
+}
+.kkd-faq-q::-webkit-details-marker { display: none; }
+.kkd-faq-q::before { content: '+ '; color: var(--tp-gold-strong); font-weight: 700; }
+details[open] .kkd-faq-q::before { content: '- '; }
+.kkd-faq-a {
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.8;
+  margin: 10px 0 0;
+}
+
+/* 旅客問答 Q&A — 沿用「常見問題」的深綠卡片＋黃銅配色與字級 */
+.kkd-qa-list { display: grid; gap: 8px; margin-bottom: 24px; }
+.kkd-qa-item {
+  border: 1px solid var(--tp-border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  background: var(--tp-card-bg);
+}
+.kkd-qa-q {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--tp-text);
+  line-height: 1.6;
+}
+.kkd-qa-a {
+  margin: 0;
+  font-size: 14px;
+  color: var(--tp-muted);
+  line-height: 1.8;
+}
+.kkd-qa-q b, .kkd-qa-a b { color: var(--tp-gold-strong); font-weight: 700; }
+.kkd-qa-empty { color: var(--tp-muted); font-size: 14px; }
+.kkd-qa-form { display: flex; flex-direction: column; gap: 10px; }
+.kkd-qa-form-label { font-size: 13px; font-weight: 600; color: var(--tp-text); }
+.kkd-qa-textarea {
+  width: 100%;
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  box-sizing: border-box;
+  resize: vertical;
+  background: var(--tp-bg-soft);
+  color: var(--tp-text);
+  font-family: inherit;
+  line-height: 1.6;
+}
+.kkd-qa-textarea::placeholder { color: var(--tp-muted); }
+.kkd-qa-textarea:focus { outline: none; border-color: var(--tp-brass); }
+.kkd-qa-submit {
+  align-self: flex-start;
+  padding: 10px 22px;
+  background: #a8511f;
+  color: #f8efdc;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.kkd-qa-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.kkd-qa-success { font-size: 14px; color: var(--tp-gold-strong); font-weight: 600; }
+.kkd-qa-error { color: #e8927c; font-size: 13px; margin: 0; }
+.kkd-qa-login { font-size: 14px; color: var(--tp-muted); }
+.kkd-qa-login a { color: var(--tp-gold-strong); font-weight: 600; }
+
+/* Booking sidebar */
+.kkd-booking-side {
+  position: sticky;
+  top: 116px;
+  height: fit-content;
+}
+.kkd-booking-card {
+  border: 1px solid var(--tp-border);
+  border-radius: 14px;
+  padding: 20px;
+  background: var(--tp-card-bg);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.kkd-booking-price-block {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--tp-border);
+  padding-bottom: 14px;
+}
+.kkd-booking-orig {
+  display: block;
+  color: var(--tp-muted);
+  text-decoration: line-through;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+.kkd-booking-price {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--tp-gold-strong);
+}
+.kkd-booking-schedules { margin-bottom: 4px; }
+.kkd-booking-schedule-title {
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+}
+.kkd-booking-schedule-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(244, 236, 216, 0.12);
+}
+.kkd-full-label { color: #e53e3e; font-weight: 600; font-size: 12px; }
+.kkd-avail-label { color: var(--tp-gold-strong); font-size: 12px; }
+.kkd-booking-trust {
+  margin-top: 14px;
+  border-top: 1px solid var(--tp-border);
+  padding-top: 12px;
+}
+.kkd-booking-trust p {
+  font-size: 12px;
+  color: var(--tp-muted);
+  margin: 0 0 5px;
+  line-height: 1.5;
+}
+
+/* Responsive: activity detail */
+@media (max-width: 1024px) {
+  .kkd-scroll-layout { grid-template-columns: 1fr; }
+  .kkd-booking-side { display: none; }
+}
+@media (max-width: 768px) {
+  /* 桌機相簿預設即 display:none（見上方基準規則）；此處不再重複，
+     以免與 min-width:768 在「剛好 768px」重疊而讓相簿兩邊都被隱藏（iPad 直立）。 */
+  .kkd-title { font-size: 18px; }
+  .kkd-price { font-size: 22px; }
+  .kkd-anchor-wrap { top: 56px; }
+  .kkd-scroll-section { padding: 22px 0; }
+}
+
+
+/* ============================================================
+   Patch 5: Calendar Modal + Plans + Policy Icons + Layout Fix
+   ============================================================ */
+
+/* --- "更多日期" button --- */
+.kkd-more-dates-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 6px 14px;
+  border: 1.5px solid var(--tp-border);
+  border-radius: 999px;
+  background: var(--tp-card-bg);
+  color: var(--tp-gold-strong);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.kkd-more-dates-btn:hover {
+  border-color: var(--tp-gold-strong);
+  background: var(--tp-tint);
+}
+
+/* --- Calendar overlay + modal --- */
+.kkd-cal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.kkd-cal-modal {
+  background: var(--tp-card-bg);
+  border-radius: 16px;
+  padding: 20px;
+  width: min(400px, 100%);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+}
+.kkd-cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.kkd-cal-title {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+  text-align: center;
+  padding: 0 8px;
+}
+.kkd-cal-nav {
+  background: none;
+  border: 1px solid var(--tp-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tp-text);
+  transition: background .15s;
+  flex-shrink: 0;
+}
+.kkd-cal-nav:hover { background: var(--tp-bg-soft); }
+.kkd-cal-close {
+  background: none;
+  border: 1px solid var(--tp-border);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+  cursor: pointer;
+  color: var(--tp-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background .15s, color .15s;
+}
+.kkd-cal-close:hover { background: rgba(244, 236, 216, 0.1); color: var(--tp-text); }
+.kkd-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.kkd-cal-weekday {
+  font-size: 12px;
+  color: var(--tp-muted);
+  font-weight: 600;
+  padding: 4px 0;
+}
+.kkd-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+.kkd-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  min-height: 44px;
+  transition: background .15s;
+}
+.kkd-cal-day.available:hover {
+  background: var(--tp-tint);
+}
+.kkd-cal-day.unavailable {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.kkd-cal-day.selected {
+  background: var(--tp-primary);
+  color: #fff;
+}
+.kkd-cal-day.sun .kkd-cal-day-num { color: #e53e3e; }
+.kkd-cal-day.sat .kkd-cal-day-num { color: #3182ce; }
+.kkd-cal-day.selected .kkd-cal-day-num,
+.kkd-cal-day.selected .kkd-cal-day-price { color: #fff !important; }
+.kkd-cal-day-num {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+}
+.kkd-cal-day-price {
+  font-size: 10px;
+  color: var(--tp-gold-strong);
+  margin-top: 2px;
+}
+.kkd-cal-day-full {
+  font-size: 9px;
+  color: #e53e3e;
+  margin-top: 2px;
+}
+.kkd-cal-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tp-border);
+  justify-content: center;
+}
+.kkd-cal-legend-item {
+  font-size: 12px;
+  color: var(--tp-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.kkd-cal-legend-item.available { color: var(--tp-gold-strong); }
+.kkd-cal-legend-item.unavailable { color: #ccc; }
+.kkd-cal-selected-summary {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tp-gold-strong);
+  background: var(--tp-tint);
+  border-radius: 8px;
+  padding: 8px 0;
+}
+
+/* --- Plans list (半日/全日) --- */
+.kkd-plans-list {
+  display: grid;
+  gap: 14px;
+}
+/* 手機（收合狀態）：只顯示前 2 個方案，其餘由「查看更多方案」展開（.show-all）。 */
+@media (max-width: 767.98px) {
+  .kkd-plans-list:not(.show-all) > .kkd-plan-card:nth-child(n+3) { display: none; }
+}
+/* 非手機：依螢幕寬度多欄並排（auto-fill），全部方案直接顯示、不需展開；
+   卡片頂端對齊（某張選取展開日曆時，同列其它卡不被拉高留白）。 */
+@media (min-width: 768px) {
+  .kkd-plans-list {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    align-items: start;
+  }
+  /* 窄欄卡片：價格與 CTA 改為上下排列、按鈕滿版，避免同列擠壓溢出。 */
+  .kkd-plans-list .kkd-plan-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .kkd-plans-list .kkd-plan-select-btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+  /* 非手機全部方案已直接顯示，隱藏「查看更多／收合」切換鈕。 */
+  .kkd-plans-more-btn-wrap { display: none; }
+}
+.kkd-plan-card {
+  border: 1.5px solid var(--tp-border);
+  border-radius: 12px;
+  padding: 18px;
+  background: var(--tp-card-bg);
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+.kkd-plan-card:hover {
+  border-color: var(--tp-gold-strong);
+}
+.kkd-plan-card.selected {
+  border-color: var(--tp-gold-strong);
+  box-shadow: 0 0 0 3px rgba(27,107,74,0.1);
+}
+.kkd-plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.kkd-plan-name {
+  font-size: 15px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 4px;
+}
+.kkd-plan-duration {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--tp-muted);
+}
+/* 方案 meta 列：時長 · 成行人數 同列對齊、可換行不黏在一起 */
+.kkd-plan-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.kkd-plan-meta-sep {
+  font-size: 12px;
+  color: var(--tp-muted);
+  opacity: 0.6;
+}
+/* 換行時隱藏多餘的分隔點（避免行首孤點） */
+.kkd-plan-meta { row-gap: 2px; }
+.kkd-plan-date-tag {
+  background: var(--tp-tint);
+  color: var(--tp-gold-strong);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+/* Plan notice list: transparent bg, pure black icon+text */
+.kkd-plan-notice-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  gap: 8px;
+}
+.kkd-plan-notice-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--tp-text);
+  background: transparent;
+}
+.kkd-plan-notice-icon {
+  flex-shrink: 0;
+  color: var(--tp-cream);
+  display: flex;
+  align-items: center;
+}
+
+.kkd-detail-page .tp-container { max-width: 1200px; margin: 0 auto; padding: 0 16px; }
+/* Gallery centering */
+.kkd-gallery { margin: 12px 0 0; }
+
+/* Title block: ensure full width left-align on mobile */
+.kkd-title-block { padding: 20px 0 0; box-sizing: border-box; }
+/* Booking sidebar: scroll text centering */
+.kkd-booking-card { text-align: left; }
+
+
+/* Tagline: 行程副標題 */
+.kkd-tagline {
+  font-size: 14px;
+  color: var(--tp-muted);
+  margin: 6px 0 0;
+  line-height: 1.5;
+}
+/* ── 行程詳情推薦小卡（○○的其他行程／你可能也喜歡／最近瀏覽） ──
+   與行程列表卡共用同一套深綠卡底＋奶油字 token，主題調整一處生效 */
+.tp-rec-card {
+  display: block;
+  border: 1px solid var(--tp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--tp-card-bg);
+  color: var(--tp-text);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.tp-rec-card:hover { transform: translateY(-2px); border-color: rgba(190, 178, 137, 0.55); }
+.tp-rec-card-img {
+  width: 100%; aspect-ratio: 4 / 3;
+  object-fit: cover; display: block;
+  background: #232e21;
+}
+.tp-rec-card-body { padding: 8px 10px; }
+.tp-rec-card-title {
+  font-size: 13px; font-weight: 600; margin: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--tp-text);
+}
+.tp-rec-card-price { font-size: 12px; color: var(--tp-muted); margin: 4px 0 0; }

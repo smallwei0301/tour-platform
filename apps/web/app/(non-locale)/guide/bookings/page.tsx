@@ -383,7 +383,7 @@ export default function GuideBookingsPage() {
 
   return (
     <div>
-      <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單查看</h1>
+      <h1 style={{ margin: '0 0 16px', fontSize: 20, fontWeight: 800 }}>📋 訂單管理</h1>
 
       {/* Filter — role=tablist/aria-selected from PR #1057 + ArrowRight/Left
           keyboard nav from #1113. */}

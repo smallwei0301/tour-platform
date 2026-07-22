@@ -5,6 +5,9 @@
  */
 import { lookupOrderContext } from './reschedule-notify';
 import { sendBookingApprovalApproved, sendBookingApprovalRejected } from './email';
+import { sendBookingApprovalRequested } from './booking-approval/request-email.ts';
+import { pushGuideOrderEvent } from './line-guide-push.mjs';
+import { dispatchOrderEventTelegram } from './order-telegram-notify.mjs';
 
 type ApprovalResult = {
   bookingId: string;
@@ -40,5 +43,57 @@ export async function notifyBookingApprovalDecided(
     activityTitle: ctx.activityTitle,
     contactName: ctx.contactName,
     orderId: result.orderId,
+  });
+}
+
+type ApprovalRequestedInput = {
+  orderId?: string | null;
+  activityId?: string | null;
+  activityTitle?: string;
+  startAt?: string | null;
+  peopleCount?: number;
+  totalTwd?: number;
+};
+
+/** 旅客建立 request 預約申請 → 通知導遊（email＋LINE push，均 best-effort、不影響建單）。 */
+export async function notifyBookingApprovalRequested(input: ApprovalRequestedInput): Promise<void> {
+  if (!input?.orderId) return;
+  const scheduleDate = input.startAt ? String(input.startAt).replace('T', ' ').slice(0, 16) : undefined;
+
+  // LINE push：line-guide-push 自行處理 flag／通知矩陣／導遊綁定三層 gating，永不 throw。
+  void pushGuideOrderEvent({
+    kind: 'guide_approval_requested',
+    orderId: input.orderId,
+    activityId: input.activityId ?? undefined,
+    activityTitle: input.activityTitle,
+    scheduleDate,
+    peopleCount: input.peopleCount,
+    totalTwd: input.totalTwd,
+  }).catch(() => {});
+
+  const ctx = await lookupOrderContext(input.orderId);
+
+  // Telegram 扇出（admin 群組＋導遊＋旅客三腿，各自吃 flag／矩陣／綁定 gating，永不 throw）。
+  void dispatchOrderEventTelegram({
+    kind: 'approval_requested',
+    orderId: input.orderId,
+    activityId: input.activityId ?? undefined,
+    activityTitle: input.activityTitle,
+    scheduleDate,
+    peopleCount: input.peopleCount,
+    totalTwd: input.totalTwd,
+    userId: ctx?.travelerUserId,
+    contactEmail: ctx?.contactEmail,
+  }).catch(() => {});
+
+  if (!ctx?.guideEmail) return;
+  await sendBookingApprovalRequested({
+    to: ctx.guideEmail,
+    activityTitle: input.activityTitle || ctx.activityTitle,
+    contactName: ctx.contactName,
+    orderId: input.orderId,
+    startAt: input.startAt,
+    peopleCount: input.peopleCount,
+    totalTwd: input.totalTwd,
   });
 }

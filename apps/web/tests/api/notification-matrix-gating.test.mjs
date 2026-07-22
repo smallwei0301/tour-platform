@@ -114,6 +114,37 @@ test('matrix off (guide/line) → guide LINE push skipped matrix_disabled', asyn
   });
 });
 
+test('matrix off (approval_requested/guide/telegram) → 導遊 TG 腿被壓掉，admin 群組照送', async () => {
+  __resetTelegramForTest();
+  __resetNotificationSettingsForTest();
+  await bindTelegram('guide', 'andy-lee', 'g-chat');
+  await setNotificationCells([{ event: 'approval_requested', recipient: 'guide', channel: 'telegram', enabled: false }]);
+
+  await withEnv(TG_ON, async (calls) => {
+    await dispatchOrderEventTelegram({
+      kind: 'approval_requested', orderId: 'o1', activityId: 'exp_chaishan_001', activityTitle: 'X',
+    });
+    const chatIds = calls.map((c) => JSON.parse(c.init.body).chat_id);
+    assert.ok(!chatIds.includes('g-chat'), '導遊腿應被矩陣壓掉');
+    assert.ok(chatIds.length >= 1, 'admin 群組腿應照送');
+  });
+});
+
+test('matrix off (approval_requested/guide/line) → 導遊審核入口通知可被 admin 關閉', async () => {
+  __resetGuideLineForTest();
+  __resetNotificationSettingsForTest();
+  const { code } = await createGuideBindCode('andy-lee');
+  await redeemGuideBindCode(code, { lineUserId: 'Uguide' });
+  await setNotificationCells([{ event: 'approval_requested', recipient: 'guide', channel: 'line', enabled: false }]);
+
+  await withEnv(LINE_ON, async (calls) => {
+    const res = await pushGuideOrderEvent({ kind: 'guide_approval_requested', orderId: 'o1', activityId: 'exp_chaishan_001', activityTitle: 'X' });
+    assert.equal(res.status, 'skipped');
+    assert.equal(res.reason, 'matrix_disabled');
+    assert.equal(calls.length, 0);
+  });
+});
+
 test('matrix off (admin/telegram) → telegram admin leg suppressed, guide+traveler still send', async () => {
   __resetTelegramForTest();
   __resetNotificationSettingsForTest();

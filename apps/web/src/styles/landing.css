@@ -1,0 +1,624 @@
+/* /home 祕島 Landing Page（lp-*）——#1735 自 globals.css 拆出，由 home/page.tsx 匯入。 */
+/* ============================================================
+   Midao Landing Page (祕島 LP) — 深綠×古紙×黃銅
+   ============================================================ */
+.lp-root { background: #18211a; color: var(--tp-cream); font-family: var(--tp-serif); }
+
+/* ── Hero ── */
+.lp-hero { position: relative; overflow: hidden; background: #0c1410; }
+.lp-hero-photo {
+  /* 全寬鋪滿：標題文字直接落在洞穴照上（左半岩壁天然深色保字） */
+  position: absolute; inset: 0;
+  /* 遠景層：山谷空拍（使用者提供）— 靜止不動，透過前景洞口看見 */
+  background-image: url('/images/lp/hero-mountains.webp');
+  background-size: cover; background-position: 60% 38%;
+}
+/* 前景層：去背洞穴（洞口為真 alpha 透明）。WAAPI 以洞口為原點推進拉遠。
+   動畫由 LpHeroMotion 以 WAAPI 驅動（CSS animation 在 Android Chrome
+   省電/移除動畫設定下會被 prefers-reduced-motion 蓋掉 → 使用者看到靜態） */
+.lp-hero-fg {
+  position: absolute; inset: 0;
+  background-image: url('/images/lp/hero-cave-fg.webp');
+  background-size: cover; background-position: 82% 50%;
+  transform-origin: 76% 43%;
+  will-change: transform;
+}
+/* 前景層下緣與頁面底色的銜接（左側不再壓深色 — 文字直接落在岩壁上） */
+.lp-hero-fg::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 80%, #0c1410 100%);
+}
+/* 曙光圖層①：暮色罩（亮暗循環由 WAAPI 控制 opacity），radial 讓洞口永遠最亮 */
+.lp-hero-dawn {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: radial-gradient(58% 52% at 76% 42%,
+    rgba(9, 14, 22, 0.04) 0%,
+    rgba(9, 14, 22, 0.38) 58%,
+    rgba(9, 14, 22, 0.62) 100%);
+}
+/* 曙光圖層②：丁達爾光束（WAAPI 擺動＋呼吸）。
+   物理正確性：光只能穿過洞口 — 光束限制在往左下的扇形（196°-257°，
+   其餘角度被洞壁遮擋），束寬與亮度不一、輕微模糊呈體積光感；
+   另疊一圈緊貼洞口的暖光暈。 */
+.lp-hero-rays {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  /* 圓心（光源本體）在前景岩壁之外 — 不畫光暈，僅畫射入的光束 */
+  background:
+    conic-gradient(from 0deg at 100% 0%,
+      transparent 0deg,
+      transparent 196deg,
+      rgba(255, 240, 200, 0.26) 200deg,
+      transparent 205deg,
+      rgba(255, 240, 200, 0.1) 209deg,
+      rgba(255, 240, 200, 0.32) 214deg,
+      transparent 219deg,
+      transparent 224deg,
+      rgba(255, 240, 200, 0.18) 228deg,
+      transparent 233deg,
+      rgba(255, 244, 210, 0.4) 240deg,
+      transparent 246deg,
+      rgba(255, 240, 200, 0.14) 251deg,
+      transparent 257deg,
+      transparent 360deg);
+  filter: blur(2px);
+  /* 近圓心淡入（光源被岩壁遮擋）→ 中段最亮 → 遠端衰減 */
+  -webkit-mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
+  mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
+  transform-origin: 100% 0%;
+}
+/* 光束＋粉塵的共同裁切容器：洞穴右半部前景岩壁遮蔽光束 —
+   光束只從洞口照入左半部（右緣 76%→92% 漸層淡出） */
+.lp-hero-raybox {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 76%, transparent 92%);
+  mask-image: linear-gradient(90deg, #000 0%, #000 76%, transparent 92%);
+}
+
+/* 曙光圖層②b：光束中的懸浮微粒 canvas（LpHeroDust）。
+   與 .lp-hero-rays 同一個 radial 遮罩 — 粒子只在光束照到的範圍可見 */
+.lp-hero-dust {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
+  mask-image: radial-gradient(120% 130% at 100% 0%, transparent 0%, rgba(0, 0, 0, 0.75) 16%, #000 32%, rgba(0, 0, 0, 0.5) 58%, transparent 84%);
+}
+
+/* 曙光圖層③：洞口飄動雲層 — cloudbox 以 mask 圈住洞口天空區並裁切，
+   內層雲帶為週期性平鋪圖樣（background-size 50% + repeat-x），
+   WAAPI translateX 一個圖樣週期即無縫循環 */
+.lp-hero-cloudbox {
+  position: absolute; inset: 0;
+  overflow: hidden; pointer-events: none;
+  -webkit-mask-image: radial-gradient(30% 52% at 77% 44%, #000 0%, rgba(0, 0, 0, 0.8) 58%, transparent 86%);
+  mask-image: radial-gradient(30% 52% at 77% 44%, #000 0%, rgba(0, 0, 0, 0.8) 58%, transparent 86%);
+}
+.lp-hero-clouds, .lp-hero-clouds2 {
+  position: absolute; left: -30%; width: 260%;
+  background-repeat: repeat-x;
+  background-size: 50% 100%;
+  filter: blur(6px);
+  will-change: transform;
+}
+.lp-hero-clouds {
+  top: 14%; height: 48%; opacity: 0.8;
+  background-image:
+    radial-gradient(20% 50% at 8% 62%, rgba(255, 253, 246, 0.88) 0%, rgba(255, 253, 246, 0.38) 38%, transparent 62%),
+    radial-gradient(16% 42% at 22% 40%, rgba(255, 248, 235, 0.72) 0%, rgba(255, 248, 235, 0.3) 40%, transparent 64%),
+    radial-gradient(24% 56% at 44% 62%, rgba(255, 253, 246, 0.66) 0%, rgba(255, 253, 246, 0.28) 40%, transparent 63%),
+    radial-gradient(14% 38% at 58% 36%, rgba(255, 248, 235, 0.78) 0%, rgba(255, 248, 235, 0.32) 38%, transparent 62%),
+    radial-gradient(19% 48% at 72% 58%, rgba(255, 253, 246, 0.68) 0%, rgba(255, 253, 246, 0.28) 40%, transparent 64%),
+    radial-gradient(15% 40% at 88% 44%, rgba(255, 253, 246, 0.74) 0%, rgba(255, 253, 246, 0.3) 38%, transparent 62%);
+  filter: blur(14px);
+}
+.lp-hero-clouds2 {
+  top: 36%; height: 38%; opacity: 0.74;
+  filter: blur(18px);
+  background-image:
+    radial-gradient(22% 52% at 14% 52%, rgba(255, 251, 240, 0.55) 0%, rgba(255, 251, 240, 0.22) 40%, transparent 64%),
+    radial-gradient(15% 40% at 34% 66%, rgba(255, 251, 240, 0.45) 0%, rgba(255, 251, 240, 0.18) 42%, transparent 65%),
+    radial-gradient(20% 50% at 54% 44%, rgba(255, 251, 240, 0.5) 0%, rgba(255, 251, 240, 0.2) 40%, transparent 64%),
+    radial-gradient(16% 42% at 74% 60%, rgba(255, 251, 240, 0.44) 0%, rgba(255, 251, 240, 0.18) 42%, transparent 64%),
+    radial-gradient(13% 36% at 90% 48%, rgba(255, 251, 240, 0.42) 0%, rgba(255, 251, 240, 0.16) 40%, transparent 62%);
+}
+.lp-hero-photo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(12, 20, 16, 0) 78%, #0c1410 100%);
+}
+.lp-hero-inner {
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 0 auto;
+  /* 導覽列透明浮在 hero 上，內距需含導覽列高度（參考圖 h1 頂 ≈ 60px） */
+  padding: 60px 20px 14px;
+}
+.lp-hero h1 {
+  margin: 0 0 6px;
+  font-family: var(--tp-serif);
+  font-weight: 700;
+  font-size: clamp(28px, 7.5vw, 32px);
+  line-height: 1.33;
+  letter-spacing: 0.08em;
+  color: var(--tp-paper);
+  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.45);
+}
+.lp-hero h1 .lp-accent { color: var(--tp-accent); }
+.lp-hero-sub {
+  margin: 0 0 7px;
+  font-size: 11px; line-height: 1.5;
+  letter-spacing: 0.14em;
+  color: rgba(244, 236, 216, 0.85);
+}
+.lp-hero-caption {
+  margin: 0 0 8px;
+  font-family: var(--tp-serif);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(228, 219, 196, 0.85);
+  white-space: nowrap;
+}
+.lp-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: #a8511f;
+  color: #f6eed8;
+  font-family: var(--tp-serif);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 9px 30px;
+  border: 1px solid rgba(244, 236, 216, 0.25);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  transition: background 0.15s;
+}
+.lp-btn:hover { background: #b85c28; }
+.lp-btn .lp-btn-arrow { font-family: Inter, sans-serif; letter-spacing: 0; margin-left: 14px; }
+.lp-hero-content { max-width: 320px; }
+.lp-hero .lp-btn {
+  min-width: 202px;
+  box-sizing: border-box;
+  justify-content: center;
+  font-size: 12px;
+  padding: 9px 20px;
+}
+.lp-hero-vert {
+  position: absolute; top: 123px; right: 19px; z-index: 1;
+  display: flex; flex-direction: column; gap: 5px;
+  text-align: right;
+  pointer-events: none;
+}
+.lp-hero-vert span {
+  font-family: var(--tp-serif);
+  font-size: 11px; line-height: 1; letter-spacing: 0.04em;
+  color: rgba(230, 212, 170, 0.92);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+}
+.lp-hero-compass {
+  position: absolute; top: 166px; right: 23px; z-index: 1;
+  color: rgba(230, 212, 170, 0.45);
+  pointer-events: none;
+}
+
+/* ── Section shell ── */
+.lp-section { max-width: 1200px; margin: 0 auto; padding: 0 14px; }
+.lp-eyebrow {
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 4px 6px;
+  font-size: 13px; line-height: 1.3;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #cbc29d;
+}
+
+/* ── 主題探索 ── */
+/* 手機版：與上方 hero 之間需有明確留白，避免標題緊貼洞穴主視覺（#mobile-theme-spacing）。 */
+.lp-themes { padding-top: 26px; padding-bottom: 26px; }
+.lp-themes-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; padding: 0 6px; }
+.lp-theme-card {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  background: linear-gradient(180deg, #232b20 0%, #1d251c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.28);
+  border-radius: 9px;
+  padding: 4px 3px 4px;
+  text-align: center;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.lp-theme-card:hover { border-color: rgba(176, 141, 62, 0.55); transform: translateY(-2px); }
+.lp-theme-card svg { display: block; color: #c9c0a4; width: 23px; height: 23px; }
+.lp-theme-title { font-size: 15px; font-weight: 700; letter-spacing: 0.18em; color: #efe9d3; line-height: 1.25; }
+.lp-theme-sub {
+  font-family: var(--font-inter), Inter, sans-serif;
+  font-size: 9px; letter-spacing: 0; line-height: 1.2;
+  color: rgba(170, 175, 158, 0.8);
+  white-space: nowrap;
+}
+
+/* ── 編輯精選卡 ── */
+.lp-featured { padding: 12px 11px 12px; }
+.lp-feat-card {
+  background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.3);
+  border-radius: 12px;
+  overflow: hidden;
+  display: grid;
+  /* 對齊參考圖：所有裝置皆左圖右文（照片由右欄內容撐高、align stretch 填滿） */
+  grid-template-columns: 38% 1fr;
+  align-items: stretch;
+  color: inherit;
+}
+.lp-feat-right { display: flex; flex-direction: column; min-width: 0; }
+.lp-feat-photo { position: relative; min-height: 100%; }
+.lp-feat-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+/* 編輯精選書籤標籤：懸掛於照片左上（蓋過卡片上邊框） */
+.lp-feat-photo .lp-feat-badge {
+  position: absolute; top: 0; left: 12px;
+  width: 34px; height: auto; inset: auto;
+  z-index: 2;
+  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.45));
+}
+/* 編輯精選輪播：行程頁內照片淡入淡出輪播（卡片本身為連結，圓點僅作視覺指示） */
+.lp-feat-carousel { position: absolute; inset: 0; overflow: hidden; }
+.lp-feat-carousel img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+  opacity: 0; transition: opacity 900ms ease;
+}
+.lp-feat-carousel img.is-active { opacity: 1; }
+.lp-feat-dots {
+  position: absolute; left: 0; right: 0; bottom: 10px; z-index: 1;
+  display: flex; justify-content: center; gap: 6px;
+}
+.lp-feat-dots i {
+  width: 6px; height: 6px; border-radius: 999px;
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  transition: width 240ms ease, background 240ms ease;
+}
+.lp-feat-dots i.is-active { width: 16px; background: #fff; }
+@media (prefers-reduced-motion: reduce) {
+  .lp-feat-carousel img { transition: none; }
+}
+.lp-feat-body { flex: 1; padding: 12px 15px 6px; min-width: 0; }
+.lp-feat-title {
+  margin: 0;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.08em; line-height: 1.25;
+  color: #e9e3c2;
+}
+.lp-feat-subtitle {
+  display: block;
+  width: fit-content;
+  margin: 2px 0 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.16em; line-height: 1.3;
+  color: #c8744d;
+  border-bottom: 1px solid rgba(198, 111, 72, 0.4);
+  padding-bottom: 3px;
+  margin-bottom: 4px;
+}
+.lp-feat-desc {
+  margin: 0 0 6px;
+  font-size: 9px; line-height: 2; letter-spacing: 0.02em;
+  color: rgba(244, 236, 216, 0.78);
+}
+.lp-feat-tags {
+  display: inline-flex; align-items: center; gap: 0;
+  /* 桌機 .lp-feat-body 為 flex column；align-self:flex-start 讓膠囊只取
+     內容寬（不被 stretch 拉滿整欄，避免「難度」後出現大片留白） */
+  align-self: flex-start;
+  font-size: 7.5px; letter-spacing: 0.01em;
+  color: rgba(244, 236, 216, 0.85);
+  white-space: nowrap;
+  border: 1px solid rgba(190, 178, 137, 0.35);
+  border-radius: 6px;
+  padding: 3px 6px;
+}
+.lp-feat-tags .lp-tag { display: inline-flex; align-items: center; gap: 4px; }
+.lp-feat-tags .lp-tag svg { color: rgba(201, 192, 164, 0.9); width: 9px; height: 9px; }
+.lp-feat-tags .lp-tag + .lp-tag { border-left: 1px solid rgba(244, 236, 216, 0.22); margin-left: 5px; padding-left: 5px; }
+.lp-dots { display: inline-flex; gap: 2px; margin-left: 2px; }
+.lp-dots i { width: 4px; height: 4px; border-radius: 50%; background: #c2542e; }
+.lp-dots i.lp-dot-off { background: transparent; border: 1px solid rgba(194, 84, 46, 0.55); box-sizing: border-box; }
+.lp-feat-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border-top: 1px solid rgba(190, 178, 137, 0.28);
+  padding: 11px 12px 12px 13px;
+}
+/* min-width:0 + overflow hidden：評價文字過長時截斷，不得壓到右側價格 */
+.lp-feat-rating { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--tp-paper); white-space: nowrap; min-width: 0; overflow: hidden; }
+.lp-feat-rating svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--tp-brass); }
+.lp-feat-rating .lp-rating-count { font-size: 9px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.02em; overflow: hidden; text-overflow: ellipsis; }
+.lp-feat-price { font-size: 13px; font-weight: 700; color: #ded7ab; letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
+.lp-feat-price .lp-price-unit { font-size: 10px; color: rgba(244, 236, 216, 0.6); margin-left: 3px; }
+
+/* ── 融合區塊：更多行程／目的地／旅人故事／FAQ（原首頁資訊，LP 視覺語言） ── */
+.lp-tours { padding-top: 22px; padding-bottom: 22px; }
+.lp-tours-list { display: flex; flex-direction: column; gap: 10px; }
+.lp-tour-card {
+  display: grid; grid-template-columns: 31% 1fr;
+  background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.3);
+  border-radius: 10px;
+  overflow: hidden;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.lp-tour-card:hover { border-color: rgba(190, 178, 137, 0.55); transform: translateY(-1px); }
+/* 照片以 grid stretch 填滿整張卡片高度（右側文字較高時不留空白）；
+   min-height 當卡片極矮時的地板，object-fit: cover 維持不變形。 */
+.lp-tour-photo { position: relative; min-height: 86px; align-self: stretch; }
+.lp-tour-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.lp-tour-body { padding: 10px 13px 9px; min-width: 0; }
+.lp-tour-title {
+  margin: 0 0 4px;
+  font-size: 14px; font-weight: 700; letter-spacing: 0.05em; line-height: 1.45;
+  color: #e9e3c2;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.lp-tour-tagline {
+  margin: 0 0 7px;
+  font-size: 10px; line-height: 1.7;
+  color: rgba(244, 236, 216, 0.72);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.lp-tour-meta {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 8px;
+  font-size: 10px; color: rgba(244, 236, 216, 0.6);
+}
+.lp-tour-price { font-size: 13px; font-weight: 700; color: #ded7ab; letter-spacing: 0.03em; }
+.lp-tour-price i { font-style: normal; font-size: 10px; color: rgba(244, 236, 216, 0.6); margin-left: 2px; }
+.lp-more-link {
+  display: block; width: fit-content;
+  margin: 10px auto 0;
+  font-size: 12px; letter-spacing: 0.14em;
+  color: #cbc29d;
+}
+.lp-more-link:hover { color: #e9e3c2; }
+
+.lp-dests { padding-top: 22px; padding-bottom: 22px; }
+.lp-dests-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.lp-dest-card {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: linear-gradient(180deg, #232b20 0%, #1d251c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.28);
+  border-radius: 9px;
+  padding: 9px 3px;
+  color: inherit;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.lp-dest-card:hover { border-color: rgba(190, 178, 137, 0.55); transform: translateY(-1px); }
+.lp-dest-name { font-size: 14px; font-weight: 700; letter-spacing: 0.2em; color: #e9e3c2; }
+.lp-dest-count { font-family: var(--font-inter), Inter, sans-serif; font-size: 9px; color: rgba(244, 236, 216, 0.55); letter-spacing: 0.06em; }
+
+.lp-stories { padding-top: 22px; padding-bottom: 22px; }
+.lp-stories-list { display: flex; flex-direction: column; gap: 8px; }
+.lp-story-card {
+  display: block;
+  background: linear-gradient(180deg, #1f2a1f 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.26);
+  border-radius: 10px;
+  padding: 11px 14px 10px;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+.lp-story-card:hover { border-color: rgba(190, 178, 137, 0.5); }
+.lp-story-quote {
+  margin: 0 0 8px;
+  font-size: 14px; line-height: 1.75;
+  color: rgba(244, 236, 216, 0.88);
+}
+.lp-story-meta {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: rgba(244, 236, 216, 0.6);
+}
+.lp-story-stars { color: var(--tp-brass); font-size: 12px; letter-spacing: 0.1em; }
+.lp-story-activity {
+  display: block; margin-top: 5px;
+  font-size: 11px; color: rgba(203, 194, 157, 0.75); letter-spacing: 0.04em;
+}
+
+.lp-faq { padding-top: 22px; padding-bottom: 22px; }
+.lp-faq-list { border-top: 1px solid rgba(190, 178, 137, 0.25); }
+.lp-faq-item { border-bottom: 1px solid rgba(190, 178, 137, 0.25); }
+.lp-faq-item summary {
+  cursor: pointer;
+  padding: 11px 4px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.06em;
+  color: #e9e3c2;
+  list-style: none;
+  position: relative;
+}
+.lp-faq-item summary::-webkit-details-marker { display: none; }
+.lp-faq-item summary::after {
+  content: '+'; position: absolute; right: 6px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--tp-brass); font-size: 13px; font-weight: 400;
+}
+.lp-faq-item[open] summary::after { content: '−'; }
+.lp-faq-item p {
+  margin: 0; padding: 0 4px 12px;
+  font-size: 11px; line-height: 1.8;
+  color: rgba(244, 236, 216, 0.72);
+}
+
+/* ── 在地嚮導 ── */
+/* 參考圖量測（@375）：大卡 344×96、徽章卡 59/61×31 gap5、文字起點＝卡內 28.7% */
+.lp-guide { padding-top: 12px; padding-bottom: 12px; }
+.lp-guide-card {
+  /* 全裝置雙欄並排；故事欄加寬（66%）讓「高雄柴山・Andy Lee」文字區更寬、
+     信任徽章欄相應縮窄並縮小字級。文字以換行避免溢出 */
+  display: grid; grid-template-columns: 66% 1fr;
+  background: linear-gradient(180deg, #1d271d 0%, #18221a 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.lp-guide-story {
+  position: relative;
+  min-height: 94px;
+  display: flex; align-items: stretch; color: inherit;
+}
+/* 照片獨立欄：固定欄寬、影像 object-fit cover 填滿。
+   用 align-self: stretch 讓照片高度「跟著卡片內容（文字）長高」，
+   而非用 aspect-ratio 固定高度去反過來壓縮文字欄造成文字破框。 */
+.lp-guide-photo { position: relative; flex: 0 0 44%; align-self: stretch; min-height: 100%; }
+.lp-guide-photo img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center 18%;
+}
+.lp-guide-photo::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, rgba(25, 35, 26, 0) 48%, rgba(25, 35, 26, 0.6) 78%, #19231a 100%);
+}
+.lp-guide-text {
+  position: relative; z-index: 2;
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 8px 8px 8px 12px;
+}
+.lp-guide-label { margin: 0 0 4px; font-size: 9px; line-height: 1.25; letter-spacing: 0.04em; color: rgba(205, 196, 165, 0.95); }
+.lp-guide-name { margin: 0 0 6px; font-size: 12px; font-weight: 900; line-height: 1.25; letter-spacing: 0.03em; color: #f0ecdc; }
+.lp-guide-quote { margin: 0 0 5px; font-size: 9px; line-height: 1.55; letter-spacing: 0; color: rgba(244, 236, 216, 0.82); }
+.lp-guide-link { font-size: 9px; line-height: 1.2; letter-spacing: 0.05em; color: rgba(205, 196, 165, 0.95); }
+.lp-trust-grid2 {
+  display: grid; grid-template-columns: 1fr 1.03fr; gap: 5px;
+  align-content: center;
+  margin: 8px 8px 8px 0;
+}
+.lp-trust-card {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  height: 30px;
+  background: linear-gradient(180deg, #232e21 0%, #1c261c 100%);
+  border: 1px solid rgba(190, 178, 137, 0.32);
+  border-radius: 7px;
+  padding: 2px 1px;
+}
+.lp-trust-card svg { flex-shrink: 0; color: #c9c0a4; width: 13px; height: 13px; }
+.lp-trust-card span { font-size: 8px; line-height: 1.35; letter-spacing: 0; color: rgba(244, 236, 216, 0.92); white-space: nowrap; }
+
+/* ── 結尾 CTA（古紙） ── */
+.lp-closing { position: relative; margin-top: 12px; background: #18211a; }
+.lp-closing-paper {
+  position: relative;
+  background-color: #e6d5bd;
+  background-image: url("/images/lp/closing-bg.webp");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 4px 20px 20px;
+}
+.lp-closing-inner { position: relative; max-width: 1200px; margin: 0 auto; text-align: center; }
+.lp-closing-title {
+  margin: 8px 0 7px;
+  font-size: 17px; font-weight: 900; letter-spacing: 0.12em; line-height: 1.35;
+  color: #20281a;
+}
+.lp-closing-desc {
+  margin: 0 auto 11px;
+  max-width: 520px;
+  font-size: 12px; letter-spacing: 0.12em; line-height: 1.65;
+  color: rgba(50, 60, 42, 0.9);
+}
+.lp-closing .lp-btn { box-shadow: 0 3px 12px rgba(90, 60, 30, 0.35); border-color: rgba(120, 70, 30, 0.25); font-size: 11.5px; padding: 7px 16px; }
+
+/* ── RWD：平板以上 ── */
+@media (min-width: 768px) {
+  .lp-hero-inner { padding: 140px 24px 110px; } /* 透明導覽列浮在上方，加大頂部內距 */
+  .lp-hero-content { max-width: 560px; }
+  .lp-hero h1 { font-size: clamp(45px, 5vw, 64px); line-height: 1.42; }
+  .lp-hero-vert { top: 200px; right: 56px; gap: 10px; }
+  .lp-hero-vert span { font-size: 18px; }
+  .lp-hero-compass { top: 320px; right: 60px; }
+  .lp-hero-compass svg { width: 64px; height: 64px; }
+  .lp-feat-photo .lp-feat-badge { width: 46px; left: 20px; }
+  .lp-hero-sub { font-size: 19px; margin-bottom: 14px; }
+  .lp-hero-caption { font-size: 14px; margin-bottom: 42px; }
+  .lp-hero-caption::after { width: 90px; }
+  .lp-btn { font-size: 18px; padding: 15px 36px; }
+  .lp-section { padding: 0 24px; }
+  .lp-eyebrow { font-size: 20px; margin: 0 0 22px; }
+  .lp-themes { padding-top: 56px; padding-bottom: 56px; }
+  .lp-themes-grid { gap: 18px; }
+  .lp-theme-card { padding: 30px 8px 24px; gap: 10px; border-radius: 14px; }
+  .lp-theme-card svg { width: 42px; height: 42px; }
+  .lp-theme-title { font-size: 23px; }
+  .lp-theme-sub { font-size: 14px; }
+  .lp-featured { padding-top: 48px; padding-bottom: 48px; }
+  /* 平板起即並排雙欄（照片左、文字右）— 避免堆疊時文字右半大片留白 */
+  .lp-feat-card { border-radius: 16px; grid-template-columns: 40% 1fr; }
+  .lp-feat-photo { min-height: 100%; }
+  /* 文字欄垂直置中：內容不再擠在頂端、footer 與本文間不留大縫 */
+  .lp-feat-body { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 26px 36px; }
+  .lp-feat-title { font-size: 32px; margin-bottom: 10px; }
+  .lp-feat-subtitle { font-size: 17px; margin-bottom: 16px; padding-bottom: 8px; }
+  .lp-feat-desc { font-size: 17px; margin-bottom: 18px; max-width: none; }
+  .lp-feat-tags { font-size: 16px; }
+  .lp-feat-tags .lp-tag + .lp-tag { margin-left: 16px; padding-left: 16px; }
+  .lp-feat-footer { padding: 16px 34px 18px; }
+  .lp-feat-rating { font-size: 18px; }
+  .lp-feat-rating svg { width: 22px; height: 22px; }
+  .lp-feat-rating .lp-rating-count { font-size: 15px; }
+  .lp-feat-price { font-size: 23px; }
+  .lp-feat-price .lp-price-unit { font-size: 15px; }
+  .lp-guide { padding-top: 36px; padding-bottom: 36px; }
+  /* 平板起：雙欄（故事 60.5% ｜ 信任徽章 39.5%）。導遊名放大填滿文字區、
+     信任徽章字級縮小以免區域空洞。 */
+  .lp-guide-card { border-radius: 16px; grid-template-columns: 60.5% 1fr; }
+  .lp-guide-story { min-height: 270px; }
+  /* 平板起：文字置中於照片與徽章之間的空間（不再靠左浮空、右半留白） */
+  .lp-guide-text { padding: 20px 20px 20px 28px; flex: 1; align-items: flex-start; text-align: left; }
+  .lp-guide-label { font-size: 13px; margin-bottom: 8px; }
+  .lp-guide-name { font-size: 23px; margin-bottom: 10px; }
+  .lp-guide-quote { font-size: 14px; margin-bottom: 8px; line-height: 1.55; }
+  .lp-guide-link { font-size: 13px; }
+  .lp-trust-grid2 { grid-template-columns: 1fr 1.03fr; gap: 9px; margin: 18px 14px 18px 0; }
+  .lp-trust-card { height: 66px; padding: 6px 6px; gap: 7px; border-radius: 11px; }
+  .lp-trust-card svg { width: 22px; height: 22px; }
+  .lp-trust-card span { font-size: 13px; line-height: 1.45; }
+  /* 更多行程：桌機兩欄卡片 */
+  .lp-tours-list { flex-direction: row; gap: 18px; }
+  .lp-tour-card { flex: 1 1 0; grid-template-columns: 38% 1fr; }
+  /* 寬螢幕維持 stretch 填滿卡片高度；不再用固定 4/3 比例（會在文字較高時留白）。 */
+  .lp-tour-photo { aspect-ratio: auto; }
+  .lp-tour-body { padding: 16px 18px 14px; }
+  .lp-tour-title { font-size: 17px; }
+  .lp-tour-tagline { font-size: 13px; }
+  .lp-tour-meta { font-size: 12px; }
+  .lp-tour-price { font-size: 16px; }
+  .lp-more-link { font-size: 14px; margin-top: 18px; }
+  /* 旅人故事：桌機三欄並排＋字級對齊精選卡內文（quote≈desc 17px） */
+  .lp-stories-list { flex-direction: row; gap: 16px; align-items: stretch; }
+  .lp-story-card { flex: 1 1 0; padding: 22px 24px 20px; display: flex; flex-direction: column; }
+  .lp-story-quote { font-size: 17px; line-height: 1.8; margin-bottom: 14px; flex: 1; }
+  .lp-story-meta { font-size: 14px; }
+  .lp-story-stars { font-size: 14px; }
+  .lp-story-activity { font-size: 13px; margin-top: 8px; }
+  .lp-closing { margin-top: 72px; }
+  .lp-closing-paper { padding: 20px 24px 76px; }
+  .lp-closing-title { font-size: 36px; margin: 14px 0 18px; }
+  .lp-closing-desc { font-size: 17px; margin-bottom: 30px; }
+}
+
+/* ── RWD：桌機（精選卡並排雙欄） ── */
+@media (min-width: 1024px) {
+  .lp-feat-card { grid-template-columns: 42% 1fr; }
+  .lp-feat-photo { min-height: 100%; }
+  .lp-feat-body { padding: 30px 48px; }
+  /* 導遊卡桌機：文字置中於照片與徽章之間。導遊名放大填滿文字區（避免太空），
+     信任徽章字級小於導遊名、維持精緻。 */
+  .lp-guide-text { padding: 24px 28px 24px 32px; flex: 1; align-items: flex-start; text-align: left; }
+  .lp-guide-label { font-size: 15px; margin-bottom: 12px; }
+  .lp-guide-name { font-size: 32px; margin-bottom: 14px; line-height: 1.2; }
+  .lp-guide-quote { font-size: 17px; margin-bottom: 12px; line-height: 1.6; }
+  .lp-guide-link { font-size: 15px; }
+  .lp-trust-grid2 { gap: 10px; margin: 22px 16px 22px 0; }
+  .lp-trust-card { height: 74px; padding: 8px 6px; gap: 8px; border-radius: 12px; }
+  .lp-trust-card svg { width: 24px; height: 24px; }
+  .lp-trust-card span { font-size: 15px; line-height: 1.45; }
+}
+
+@media (max-width: 410px) {
+  .lp-theme-title { font-size: 13.5px; letter-spacing: 0.14em; }
+  .lp-theme-sub { font-size: 8px; }
+}

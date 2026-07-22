@@ -78,7 +78,9 @@ export default async function GuidesPage({ params }: { params: Promise<{ locale:
       {/* issue1711 S3：GuidesContent 因 useSearchParams CSR bailout，SSR HTML 原本無 H1；
           頁面唯一 H1 改由 server 輸出，列表內的動態結果數降為 h2。 */}
       <h1 style={{ marginTop: 20, marginBottom: 4 }}>{t('pageTitle')}</h1>
-      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666' }}>{t('loading')}</div>}>
+      {/* 佔位高度＝實測水合後列表高的線性內插（412px 寬→1362px、1350px 寬→589px），
+          抑制 CSR 列表掛載時 footer 位移（Lighthouse CLS 0.638 → ~0）。 */}
+      <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: '#666', minHeight: 'clamp(560px, 1701px - 82vw, 1380px)' }}>{t('loading')}</div>}>
         <GuidesContent guides={guides as any[]} />
       </Suspense>
     </main>

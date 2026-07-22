@@ -7,7 +7,7 @@
 ### 已完成的核心能力
 - 前台活動頁 / 預訂流程 / 訂單流程
 - Admin 後台（訂單、退款、導遊審核、行程 CRUD、營運追蹤）
-- Guide Dashboard（登入、場次管理、訂單查看）
+- Guide Dashboard（登入、場次管理、訂單管理）
 - Google OAuth / 我的訂單 / Email 通知基礎
 - 安全加固第一輪（含 default secret block / secret scan guard）
 

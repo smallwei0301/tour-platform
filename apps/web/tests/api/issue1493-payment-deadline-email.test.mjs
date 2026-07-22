@@ -67,8 +67,11 @@ test('wrapper 只在有 orderId/email 時寄信（best-effort）', () => {
 });
 
 test('draft route 建立 instant/scheduled 訂單後 fire 付款期限通知', () => {
+  // ratchet 拆檔後接線改經 checkout/booking-draft-post-create-notify（route 已達行數天花板）。
   const src = read('app/api/v2/bookings/draft/route.ts');
-  assert.match(src, /notifyPaymentDeadlineSet/);
+  assert.match(src, /fireDraftPostCreateNotifications/);
+  const fanout = read('src/lib/checkout/booking-draft-post-create-notify.ts');
+  assert.match(fanout, /notifyPaymentDeadlineSet/);
 });
 
 test('approval 通過信帶 paymentDeadlineAt；expire gateway fire 取消通知', () => {

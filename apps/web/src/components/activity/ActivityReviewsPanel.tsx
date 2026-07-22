@@ -68,8 +68,9 @@ export function ActivityReviewsPanel({
   return (
     <div>
       {/* 評分分佈長條（有真實評論或暖場評論時顯示） */}
+      {/* a11y（aria-required-children）：子元素是篩選 button 而非 row，語意是按鈕群組非資料表 → role=group */}
       {hasReviews && (
-        <div className="kkd-review-dist" role="table" aria-label={t('reviewsDistributionAria')}>
+        <div className="kkd-review-dist" role="group" aria-label={t('reviewsDistributionAria')}>
           {[5, 4, 3, 2, 1].map((star) => {
             const s = star as 1 | 2 | 3 | 4 | 5;
             const pct = dist.percents[s];

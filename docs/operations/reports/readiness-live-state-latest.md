@@ -1,21 +1,20 @@
-<!-- query_timestamp: 2026-07-15T05:49:32.832Z -->
+<!-- query_timestamp: 2026-07-21T05:59:19.569Z -->
 <!-- freshness_rule: auto-refreshed every 6h via CI; stale threshold: 12h; never live truth — run `npm run readiness:snapshot` to refresh -->
 
 # Readiness Live-State Snapshot
 
 > This file is auto-generated. Run `npm run readiness:snapshot` to refresh.
 
-**Query timestamp:** 2026-07-15T05:49:32.832Z  
-**Commit SHA:** `ac66d47d3342486d8391340df8eabb8c6f36fb1a`
+**Query timestamp:** 2026-07-21T05:59:19.569Z  
+**Commit SHA:** `77970ecec6b013294371d45b427b7f256ad6bb60`
 
 ---
 
-## Open PRs (11)
+## Open PRs (10)
 
 | # | Title | Branch |
 |---|-------|--------|
-| #1713 | [feat(web): 新增第二個 3D 滾動首頁「祕島世界」（/theme/world，別名 /world）](https://github.com/smallwei0301/tour-platform/pull/1713) | `claude/3d-scroll-homepage-58zygx` |
-| #1711 | [fix(seo): add canonical and safe hreflang metadata](https://github.com/smallwei0301/tour-platform/pull/1711) | `feat/seo-full-optimization` |
+| #1724 | [style(home): hero 下方各 section 補上與上 padding 相同的下 padding](https://github.com/smallwei0301/tour-platform/pull/1724) | `claude/hero-section-padding-9oia9q` |
 | #1690 | [docs(security): 建立「已接受安全風險」定案清單](https://github.com/smallwei0301/tour-platform/pull/1690) | `claude/code-workflow-architecture-mmm4ba` |
 | #1687 | [修正排程管理的持久稽核機制](https://github.com/smallwei0301/tour-platform/pull/1687) | `kanban/issue-1686-durable-audit` |
 | #1651 | [docs(#1649): 訂單／退款／金流 v2 全面串接計劃書＋worklog（docs-only）](https://github.com/smallwei0301/tour-platform/pull/1651) | `claude/issue1649-v2-migration-plan` |
@@ -26,16 +25,24 @@
 | #1415 | [feat(home): hero 改版為 boomerang 影片背景的 motion hero](https://github.com/smallwei0301/tour-platform/pull/1415) | `claude/hero-section-redesign-4v9z2a` |
 | #1372 | [fix(settlement): 補正 payout_items.order_id UNIQUE 約束，修復 sweep upsert ON CONFLICT 500 (#1365)](https://github.com/smallwei0301/tour-platform/pull/1372) | `claude/post-merge-qa-verification-kgspK` |
 
-## Open Issues (48 total)
+## Open Issues (56 total)
 
 ### P0 (0)
 
 _none_
 
-### P1 (27)
+### P1 (35)
 
 | # | Title | Labels |
 |---|-------|--------|
+| #1749 | [[daily bug scan] tour-platform 2026-07-21](https://github.com/smallwei0301/tour-platform/issues/1749) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
+| #1748 | [[daily bug scan] tour-platform 2026-07-20](https://github.com/smallwei0301/tour-platform/issues/1748) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
+| #1747 | [[daily bug scan] tour-platform 2026-07-19](https://github.com/smallwei0301/tour-platform/issues/1747) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
+| #1746 | [[daily bug scan] tour-platform 2026-07-18](https://github.com/smallwei0301/tour-platform/issues/1746) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
+| #1745 | [[QA] Daily test checklist for recent merged PRs 2026-07-18](https://github.com/smallwei0301/tour-platform/issues/1745) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, auth, notifications, admin, post-merge |
+| #1729 | [[QA] Daily test checklist for recent merged PRs 2026-07-17](https://github.com/smallwei0301/tour-platform/issues/1729) | priority:P1, cron-followup, qa, agent:queued, owner:ai-agent, status:ready, type:qa, seo, post-merge |
+| #1728 | [[daily bug scan] tour-platform 2026-07-17](https://github.com/smallwei0301/tour-platform/issues/1728) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
+| #1717 | [[daily bug scan] tour-platform 2026-07-16](https://github.com/smallwei0301/tour-platform/issues/1717) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1715 | [[QA] Daily test checklist for recent merged PRs 2026-07-15](https://github.com/smallwei0301/tour-platform/issues/1715) | triaged, priority:P1, qa, agent:queued, owner:ai-agent, status:ready, type:qa, traveler-booking, post-merge |
 | #1714 | [[daily bug scan] tour-platform 2026-07-15](https://github.com/smallwei0301/tour-platform/issues/1714) | triaged, type:bug, priority:P1, priority:P2, cron-followup, qa, owner:ai-agent, status:ready, status:needs-repro, traveler-booking |
 | #1710 | [[QA] Daily test checklist for recent merged PRs 2026-07-14](https://github.com/smallwei0301/tour-platform/issues/1710) | triaged, priority:P1, cron-followup, qa, guide-dashboard, agent:queued, owner:ai-agent, status:ready, type:qa, auth, infra, admin |
@@ -106,16 +113,16 @@ _none_
 
 | # | Title | Merged |
 |---|-------|--------|
-| #1712 | [fix(shop): hero 移除字樣/圖樣、CTA 換山形 SVG、移除卡片殘留缺口](https://github.com/smallwei0301/tour-platform/pull/1712) | 2026-07-14 |
-| #1708 | [fix(admin): 修正「進入導遊後台」誤判 V2 envelope 導致永遠顯示進入失敗](https://github.com/smallwei0301/tour-platform/pull/1708) | 2026-07-13 |
-| #1707 | [fix(qa)：建立 canonical health-check provenance runner](https://github.com/smallwei0301/tour-platform/pull/1707) | 2026-07-12 |
-| #1702 | [[測試][Admin] 對齊 audit fixture 與 runtime registry](https://github.com/smallwei0301/tour-platform/pull/1702) | 2026-07-11 |
-| #1701 | [feat(admin)：手機版排程管理改為卡片式呈現](https://github.com/smallwei0301/tour-platform/pull/1701) | 2026-07-11 |
-| #1699 | [[Booking V2] 缺導遊活動改為安全不可訂並阻擋發布](https://github.com/smallwei0301/tour-platform/pull/1699) | 2026-07-11 |
-| #1697 | [fix(booking-v2): 修正公開稽核 plan mapping 與 artifact](https://github.com/smallwei0301/tour-platform/pull/1697) | 2026-07-11 |
-| #1693 | [fix(admin): 限制 GitHub Actions 排程 API 僅能操作核准 repo](https://github.com/smallwei0301/tour-platform/pull/1693) | 2026-07-10 |
-| #1692 | [[Docs] 補齊 GitHub Actions 排程憑證與受控驗證 Runbook](https://github.com/smallwei0301/tour-platform/pull/1692) | 2026-07-10 |
-| #1691 | [[Admin] 強化 GitHub Actions credential 與排程切換安全](https://github.com/smallwei0301/tour-platform/pull/1691) | 2026-07-10 |
+| #1750 | [修正 booking UUID 入口避免 slug-only API 404](https://github.com/smallwei0301/tour-platform/pull/1750) | 2026-07-21 |
+| #1744 | [fix: footer 手機版排版錯亂——#1739 拆分誤夾帶的全域響應式規則搬回 globals](https://github.com/smallwei0301/tour-platform/pull/1744) | 2026-07-17 |
+| #1743 | [docs: §9e 字重裁減驗收——@font-face CSS -43%、下載持平；建議關閉 #1735](https://github.com/smallwei0301/tour-platform/pull/1743) | 2026-07-17 |
+| #1742 | [perf: CJK 字重 7→4（Sans 400/700、Serif 700/900）——#1735 二階段字型瘦身](https://github.com/smallwei0301/tour-platform/pull/1742) | 2026-07-17 |
+| #1741 | [docs(harness+worklog): 更正「hooks 未武裝」誤判＋lessons 追加安全探針法](https://github.com/smallwei0301/tour-platform/pull/1741) | 2026-07-17 |
+| #1740 | [docs: §9d #1735 CSS 拆分 PSI 驗收——頁面 CSS 出清、真兇確診為 CJK 字型檔](https://github.com/smallwei0301/tour-platform/pull/1740) | 2026-07-17 |
+| #1739 | [perf: 全域 CSS 拆分——六組頁面級樣式移出 root layout（#1735 第一階段）](https://github.com/smallwei0301/tour-platform/pull/1739) | 2026-07-17 |
+| #1738 | [feat(web): admin-only 通知通道 env 診斷端點（只回布林、不回值）](https://github.com/smallwei0301/tour-platform/pull/1738) | 2026-07-17 |
+| #1737 | [perf(web): / 世界頁影片 scrub 加 seek 防塞車守衛（修手機捲動卡頓）](https://github.com/smallwei0301/tour-platform/pull/1737) | 2026-07-17 |
+| #1736 | [a11y+docs: for-guides 對比＋booking 標題序修復；slots 404 排查結案（假警報）](https://github.com/smallwei0301/tour-platform/pull/1736) | 2026-07-17 |
 
 ---
 

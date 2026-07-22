@@ -27,14 +27,15 @@ export function Footer() {
             <h3 className="tp-footer-logo">Midao 祕島</h3>
             <p>{m.tagline1}<br />{m.tagline2}</p>
             <div className="tp-footer-app-badges">
-              <a href="#" className="tp-footer-app-badge" aria-label="App Store">
+              {/* a11y（label-content-name-mismatch）：aria-label 必須包含可見文字 */}
+              <a href="#" className="tp-footer-app-badge" aria-label="Download on the App Store">
                 <span>🍎</span>
                 <div>
                   <small>Download on the</small>
                   <strong>App Store</strong>
                 </div>
               </a>
-              <a href="#" className="tp-footer-app-badge" aria-label="Google Play">
+              <a href="#" className="tp-footer-app-badge" aria-label="Get it on Google Play">
                 <span>▶</span>
                 <div>
                   <small>GET IT ON</small>
@@ -43,9 +44,9 @@ export function Footer() {
               </a>
             </div>
             <div className="tp-footer-social">
-              <a href="#" aria-label="Facebook">FB</a>
-              <a href="#" aria-label="Instagram">IG</a>
-              <a href="#" aria-label="Line">LINE</a>
+              <a href="#" aria-label="FB（Facebook）">FB</a>
+              <a href="#" aria-label="IG（Instagram）">IG</a>
+              <a href="#" aria-label="LINE">LINE</a>
             </div>
           </section>
 

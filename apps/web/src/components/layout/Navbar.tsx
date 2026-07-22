@@ -137,6 +137,7 @@ export function Navbar() {
             type="submit"
             className="tp-btn tp-btn-primary"
             style={{ borderRadius: '0 24px 24px 0', padding: '10px 18px' }}
+            aria-label={m.common.search}
           >
             <PublicIcon name="search" size={16} />
           </button>
@@ -237,7 +238,7 @@ export function Navbar() {
                 className="tp-search-input"
                 aria-label={m.common.searchPlaceholder}
               />
-              <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }}>
+              <button type="submit" className="tp-btn tp-btn-primary" style={{ padding: '10px 16px' }} aria-label={m.common.search}>
                 <PublicIcon name="search" size={16} />
               </button>
             </form>

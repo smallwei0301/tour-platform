@@ -4,9 +4,13 @@ export const SITE_METADATA_BASE = new URL(
   process.env.NEXT_PUBLIC_APP_URL ?? 'https://tour-platform-nine.vercel.app'
 );
 
-// issue1711 S6：GSC「HTML 標記」驗證 token（未設定＝不輸出 meta）。
+// issue1711 S6：GSC「HTML 標記」驗證 token。
+// 此值「公開 by design」——它本來就輸出在每頁 HTML 的 meta 上供 Google 讀取，
+// 不是秘密（owner 於 2026-07-16 對話提供並要求直接完成串接）；env 可覆寫。
 // env 讀取集中於本檔，避免增加直讀 process.env 的檔案數（architecture-ratchet-guard）。
-export const GOOGLE_SITE_VERIFICATION = process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION;
+export const GOOGLE_SITE_VERIFICATION =
+  process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ??
+  'kAD31f9fOJMB5x2zwteiJYKFo2252dM_J4aiKK1wffQ';
 
 export const siteMetadata: Metadata = {
   title: {

@@ -17,6 +17,15 @@ const articles: Record<string, { date: string; imageUrl: string }> = {
     date: '2026-03-15',
     imageUrl: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80',
   },
+  // #1722：blog 內容擴充第一批
+  'river-trekking-beginner-guide': {
+    date: '2026-07-16',
+    imageUrl: '/images/theme/river-trekking.webp',
+  },
+  'dadaocheng-walking-guide': {
+    date: '2026-07-16',
+    imageUrl: '/images/theme/culture-history.webp',
+  },
 };
 
 export const dynamicParams = false;
