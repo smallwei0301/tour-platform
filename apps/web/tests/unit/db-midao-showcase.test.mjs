@@ -61,10 +61,12 @@ test('精靈建立＋列表＋上下架', async () => {
 
   // 下架接案頁
   const updated = await updateMidaoServiceDb(G, created.activityId, { midaoStatus: 'draft' });
-  assert.equal(updated.showcasePublished, false);
+  assert.equal(updated.ok, true);
+  assert.equal(updated.service.showcasePublished, false);
   // 越權：其他 guide 更新不到
   const foreign = await updateMidaoServiceDb('guide-2', created.activityId, { midaoStatus: 'published' });
-  assert.equal(foreign, null);
+  assert.equal(foreign.ok, false);
+  assert.equal(foreign.code, 'NOT_FOUND');
 });
 
 test('公開接案頁：approved＋≥1 可見服務才回資料', async () => {
@@ -86,4 +88,19 @@ test('公開接案頁：approved＋≥1 可見服務才回資料', async () => {
   assert.equal(await getPublicMidaoPageDb('andy-lee'), null);
   // 不存在的 slug → null
   assert.equal(await getPublicMidaoPageDb('nope'), null);
+});
+
+test('updateMidaoServiceDb：partial 只改 minParticipants 不影響 maxParticipants', async () => {
+  const norm = normalizeServiceInput(serviceInput());
+  const created = await createMidaoServiceDb(G, norm.value, { publish: true });
+  const updated = await updateMidaoServiceDb(G, created.activityId, { minParticipants: 3 });
+  assert.equal(updated.ok, true);
+  assert.equal(updated.service.minParticipants, 3);
+  assert.equal(updated.service.maxParticipants, 6); // 不得被回填成預設 10
+});
+
+test('normalizeServiceInput：INVALID_MIDAO_STATUS 直接覆蓋', () => {
+  const r = normalizeServiceInput({ midaoStatus: 'bogus' }, true);
+  assert.equal(r.ok, false);
+  assert.equal(r.code, 'INVALID_MIDAO_STATUS');
 });

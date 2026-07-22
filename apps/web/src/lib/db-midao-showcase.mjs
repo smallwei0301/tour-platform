@@ -62,13 +62,28 @@ export function normalizeServiceInput(input, partial = false) {
     if (!Number.isFinite(d) || d < 30 || d > 1440) return { ok: false, code: 'INVALID_DURATION', message: '服務時間需為 30–1440 分鐘' };
     out.duration_minutes = d;
   }
-  if (!partial || has('minParticipants') || has('maxParticipants')) {
+  if (!partial) {
     const min = Math.trunc(Number(input?.minParticipants ?? 1));
     const max = Math.trunc(Number(input?.maxParticipants ?? 10));
     if (!Number.isFinite(min) || !Number.isFinite(max) || min < 1 || max < min || max > 99) {
       return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
     }
     out.min_participants = min; out.max_participants = max;
+  } else {
+    // partial：只驗、只寫有給的欄，缺的欄不得回填預設（避免清掉既有值）
+    if (has('minParticipants')) {
+      const min = Math.trunc(Number(input.minParticipants));
+      if (!Number.isFinite(min) || min < 1 || min > 99) return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
+      out.min_participants = min;
+    }
+    if (has('maxParticipants')) {
+      const max = Math.trunc(Number(input.maxParticipants));
+      if (!Number.isFinite(max) || max < 1 || max > 99) return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
+      out.max_participants = max;
+    }
+    if (out.min_participants !== undefined && out.max_participants !== undefined && out.max_participants < out.min_participants) {
+      return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
+    }
   }
   if (!partial || has('region')) out.region = String(input?.region ?? '').trim().slice(0, 40) || null;
   if (!partial || has('languages')) {
@@ -133,10 +148,9 @@ export async function listMidaoServicesDb(guideId) {
  */
 export async function createMidaoServiceDb(guideId, value, opts = {}) {
   const row = {
+    ...value,
     guide_id: guideId, slug: slugify(value.title), status: 'draft',
     midao_status: opts.publish ? 'published' : 'draft',
-    midao_questions: value.midao_questions ?? [], languages: value.languages ?? [],
-    ...value,
   };
   if (!hasSupabaseEnv()) {
     const created = { id: `mact_${String(++_memSeq).padStart(6, '0')}`, created_at: new Date().toISOString(), ...row };
@@ -150,23 +164,25 @@ export async function createMidaoServiceDb(guideId, value, opts = {}) {
 }
 
 /**
- * 編輯/上下架（ownership 內建：查無 = null）。patch 需先過 normalizeServiceInput(…, true)。
+ * 編輯/上下架（ownership 內建：查無/越權 = NOT_FOUND）。patch 需先過 normalizeServiceInput(…, true)。
  * @param {string} guideId @param {string} activityId @param {any} patch
+ * @returns {Promise<{ok:true, service:any}|{ok:false, code:string, message:string}>}
  */
 export async function updateMidaoServiceDb(guideId, activityId, patch) {
   const norm = normalizeServiceInput(patch, true);
-  if (!norm.ok) return norm; // route 端負責分辨 {ok:false} 與 null
+  if (!norm.ok) return norm;
   if (!hasSupabaseEnv()) {
     const row = _memActivities.find((a) => a.id === activityId && a.guide_id === guideId);
-    if (!row) return null;
+    if (!row) return { ok: false, code: 'NOT_FOUND', message: '服務不存在' };
     Object.assign(row, norm.value);
-    return serviceShape(row);
+    return { ok: true, service: serviceShape(row) };
   }
   const supabase = await getSupabase();
   const { data, error } = await supabase.from('activities').update(norm.value)
     .eq('id', activityId).eq('guide_id', guideId).select(ACT_COLS).maybeSingle();
   if (error) throw new Error(error.message);
-  return data ? serviceShape(data) : null;
+  if (!data) return { ok: false, code: 'NOT_FOUND', message: '服務不存在' };
+  return { ok: true, service: serviceShape(data) };
 }
 
 /**
