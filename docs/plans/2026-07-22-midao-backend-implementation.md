@@ -1096,9 +1096,12 @@ Capture 390 × 844 and 1440 × 1000. 逐頁以 `docs/superpowers/assets/midao-re
 Targeted package checks先完成，再依序執行四個受追蹤背景工作；每個都有明確 timeout 且必須各自 exit 0：
 
 ```bash
-timeout --signal=TERM 570s .claude/hooks/run-checks.sh --all
-timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs typecheck
+timeout --signal=TERM 570s env NODE_ENV=test \
+  GUIDE_SESSION_SECRET='midao-local-test-secret-at-least-32-bytes' \
+  NODE_OPTIONS='--experimental-strip-types' \
+  .claude/hooks/run-checks.sh --all
 timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs lint
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs typecheck
 timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs build
 ```
 

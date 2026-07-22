@@ -742,7 +742,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 - `db reset --local`真實apply全部migrations＋seed；五個foundation objects、backend default/check/index與expected columns存在。
 - 對outbox/idempotency/audit tables查 `pg_class.relacl`＋`aclexplode(COALESCE(relacl, acldefault('r', relowner)))`：PUBLIC(grantee OID 0)、anon、authenticated沒有table privileges；service_role具預期privileges。
 - `relrowsecurity=true`，且 `pg_policy`不存在適用PUBLIC/anon/authenticated的permissive policy；service-role-only tables預期零client policies。
-- 對outbox、idempotency、audit三張表逐表各開獨立transaction：owner先插入可唯一識別sentinel row，再建立無direct bypass的 `midao_rls_probe`，只暫grant schema usage＋當前單表最小INSERT/SELECT；`SET LOCAL ROLE`後SELECT該sentinel必須回0 rows（RLS silent suppression），probe INSERT則必須由RLS `WITH CHECK`以SQLSTATE 42501拒絕，最後RESET ROLE＋ROLLBACK。每張表兩種assertion都要PASS；這與「無table grant」ACL test分開，不能用permission denied冒充RLS。
+- 對outbox、idempotency、audit三張表逐表各開獨立transaction：owner先插入可唯一識別sentinel row，再建立 `midao_rls_probe NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`，只暫grant schema usage＋當前單表最小INSERT/SELECT；`SET LOCAL ROLE`後先assert `current_user='midao_rls_probe'`，SELECT該sentinel必須回0 rows（RLS silent suppression）。接著probe INSERT必須由RLS `WITH CHECK`以SQLSTATE 42501拒絕；catch只接受exact 42501，隨即直接 `ROLLBACK`，讓aborted transaction與`SET LOCAL ROLE`一併還原，禁止在rollback前執行 `RESET ROLE`或其他SQL。Unexpected code/成功INSERT/ROLLBACK failure皆FAIL；finally若connection仍在transaction才ROLLBACK。每張表兩種assertion都要PASS；這與「無table grant」ACL test分開，不能用permission denied冒充RLS。
 - 對exact `regprocedure 'public.midao_switch_guide_backend_mode(uuid,text,text,text,text,uuid,text,text)'`取得OID，再查 `pg_proc.proacl`＋`aclexplode(COALESCE(proacl, acldefault('f', proowner)))`：PUBLIC OID 0無EXECUTE；另用該OID/完整signature的 `has_function_privilege()`驗anon/authenticated=false、service_role=true。SECURITY DEFINER時 `proconfig`固定safe search_path且SQL body schema-qualified；任何額外overload不算此gate證據。
 
 ```bash
@@ -1209,7 +1209,9 @@ Expected：browser spec exit 0，Playwright實際啟動runner-owned server；cle
 
 這是C4–C6/E1–E4/F5/F7–F8完成後的post-implementation browser acceptance，不宣稱TDD RED。
 
-**Behavior:** no cookie→guide login＋safe next；legacy fake64-char signature不能通過；valid Midao HMAC通過；forged/expired actor cookie拒絕。先用existing `adminLogin()`建立local admin session，進入真 `apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx`並操作代入按鈕；不得用 `setMidaoImpersonationSession()`跳過此case，不得 `page.route()` mock impersonation API。真API response須讓browser落到 `/midao`，signed actor＋visible banner存在且banner顯示。接著結束代入，再重建signed actor、GET真CSRF並用seeded local test account走真session POST普通登入；read browser context cookies確認 `midao_impersonation_actor`與visible banner cookie都不存在，banner消失。C5/C6 Node contracts另證明後續canonical context為 `actorType=guide`；本package沒有guide business command，因此不宣稱audit row。Login UI可另以mocked成功API response驗same-realm `redirectTo` consumption，但不得mock `/midao` server auth。
+**Behavior:** no cookie→guide login＋safe next；legacy fake64-char signature不能通過；valid Midao HMAC通過；forged/expired actor cookie拒絕。先用existing `adminLogin()`建立local admin session，進入真 `apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx`並操作代入按鈕；不得用 `setMidaoImpersonationSession()`跳過此positive case，positive impersonation API不得mock。真API response須讓browser落到 `/midao`，signed actor＋visible banner存在且banner顯示。接著結束代入，再重建signed actor、GET真CSRF並用seeded local test account走真session POST普通登入；read browser context cookies確認 `midao_impersonation_actor`與visible banner cookie都不存在，banner消失。C5/C6 Node contracts另證明後續canonical context為 `actorType=guide`；本package沒有guide business command，因此不宣稱audit row。
+
+同一spec另有**必跑browser redirect matrix**，不可寫成optional：guide login用seeded account走真API/UI，safe same-realm relative `next`必須導向；admin positive仍用真API。Negative UI sanitizer cases可mock各自API response但不得mock `/midao` server auth，逐項涵蓋absolute URL、`//host`、backslash、raw `%2f`/`%5c`、double-encoded `%252f`/`%255c`、malformed `%` encoding及cross-realm `/guide`↔`/midao`。Guide hostile `next`全部落回canonical server `redirectTo`；admin hostile response全部fail closed至 `/guide/dashboard`。每case都assert browser origin始終為runner-owned localhost，無external request/navigation。
 
 ```bash
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
@@ -1217,7 +1219,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
   apps/web/e2e/midao-auth-and-impersonation.spec.ts
 ```
 
-Expected：browser spec exit 0，無auth bypass、無殘留actor/banner cookies；cleanup後 `--check-only` PASS。
+Expected：browser spec exit 0，無auth bypass、無殘留actor/banner cookies；safe redirect與全部hostile/malformed/cross-realm matrix assertions PASS，browser origin從未離開runner-owned localhost；cleanup後 `--check-only` PASS。
 
 **Commit:** `test: 驗證 Midao登入與代入邊界`。
 
@@ -1327,7 +1329,7 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 - [ ] canonical guard checks HMAC/DB display_name/version/status/mode/flags。
 - [ ] signed impersonation actor survives into route context；cross-protocol/forgery denied；普通登入與logout清cookies。
 - [ ] forward mode switch default-off且受獨立gate；rollback不受flags阻擋。
-- [ ] guide login與admin impersonation `redirectTo`都由real UI consume，unsafe relative/external paths fail closed。
+- [ ] guide login與admin impersonation `redirectTo`都由real UI consume，safe same-realm與hostile/malformed/encoded/cross-realm browser matrix必跑；unsafe paths fail closed且browser origin不離開runner-owned localhost。
 - [ ] `/midao` server layout does not depend on frozen middleware。
 - [ ] E2E uses real HMAC and seeded local DB row，no production bypass；Midao specs與unflagged legacy managed-server `t1-login.spec.ts`真browser gate都PASS。
 - [ ] five routes work on mobile/desktop with accessible shell。

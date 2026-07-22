@@ -128,7 +128,18 @@ Pinned commit `74a96708`的fresh spec reviewer PASS；quality/security reviewer 
 - Adversarial coverage加入global npmrc、npm lifecycle `npm_config_*`、PATH/locale/terminal secrets、dotenv/npmrc symlink；任何raw value進child/log/evidence皆FAIL。
 - RLS/runner另補project-scoped Supabase stop、E2 redirect sanitizer與E4 staged-count精確化。
 
-#1756仍維持 `status:blocked + agent:next`。第七版須再次fresh review PASS；PASS前不得開始production code。
+### 2026-07-23 seventh fresh review: initial dual timeout, local-only dual FAIL/HOLD
+
+Pinned commit `142cd824`首批兩位reviewers皆因慢API在600秒timeout，沒有VERDICT、不計PASS/FAIL。重派local-only reviewers後，spec與quality均FAIL：master Task62 full-suite缺micro G4固定test env；RLS expected 42501後transaction已aborted卻要求先RESET ROLE；F10 hostile redirect sanitizer仍只有Node/source contract，沒有必跑browser matrix。
+
+第七輪remediation：
+
+- Master Task62 full-suite exact同步micro G4的 `NODE_ENV=test`、local guide secret與Node strip-types env。
+- D3b probe role明列NOSUPERUSER等與NOBYPASSRLS；assert current_user。42501 catch後立即ROLLBACK，靠transaction還原SET LOCAL ROLE，不在aborted transaction執行其他SQL。
+- F10把guide/admin redirect browser matrix改為mandatory；safe same-realm、absolute/protocol-relative/backslash、single/double encoded separators、malformed encoding與cross-realm逐項驗證。
+- Positive login/impersonation仍走真API/UI；negative sanitizer可mock API response但不可mock `/midao` server auth，且每case browser origin不得離開runner-owned localhost。
+
+#1756仍維持 `status:blocked + agent:next`。第八版須再次fresh review PASS；PASS前不得開始production code。
 
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.
