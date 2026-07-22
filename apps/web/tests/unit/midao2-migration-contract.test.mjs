@@ -19,3 +19,14 @@ test('midao2 migration A：三張新表＋索引＋RLS 齊備', async () => {
   assert.match(sql, /WHERE period <> 'custom'/);
   assert.match(sql, /ALTER TABLE midao_requests\s+ENABLE ROW LEVEL SECURITY/);
 });
+
+test('midao2 migration B：activities/guide_profiles 加欄齊備', async () => {
+  const sql = await readFile(
+    path.join(MIGRATIONS, '20260722100500_midao2_activity_showcase_columns.sql'), 'utf8');
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS midao_status text/);
+  assert.match(sql, /CHECK \(midao_deal_mode IN \('instant_booking','confirm_first','line_inquiry'\)\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS midao_questions jsonb NOT NULL DEFAULT '\[\]'/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS languages jsonb/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS midao_sort_order integer/);
+  assert.match(sql, /ALTER TABLE guide_profiles ADD COLUMN IF NOT EXISTS experience_years integer/);
+});
