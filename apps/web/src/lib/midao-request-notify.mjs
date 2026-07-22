@@ -22,8 +22,8 @@ export async function notifyGuideNewMidaoRequest(input) {
     const lineUserId = await getLineUserIdForGuide(input.guideId);
     if (!lineUserId) return { status: 'skipped', reason: 'no_guide_binding' };
     const result = await pushMessage(lineUserId, [{ type: 'text', text: buildMidaoRequestPushText(input) }]);
-    return result?.status === 'sent' ? { status: 'sent' } : { status: result?.status ?? 'failed', reason: result?.reason };
-  } catch {
-    return { status: 'failed', reason: 'push_error' };
+    return result?.status === 'sent' ? { status: 'sent' } : { status: result?.status ?? 'failed', reason: result?.reason ?? result?.error };
+  } catch (err) {
+    return { status: 'failed', reason: err instanceof Error ? err.message : 'push_error' };
   }
 }
