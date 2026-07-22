@@ -106,3 +106,4 @@
   2. Chromium 啟動參數：`--proxy-server=http://127.0.0.1:33487 --disable-quic --ssl-version-max=tls1.2`（TLS1.2 ClientHello 小、無 key_share，MITM 可處理；憑證驗證仍全程開啟，未違反「不得關 TLS 驗證」）
 - 判讀技巧：`--log-net-log=/tmp/netlog.json` 再 grep `net_error`；`-202`＝信任問題、CONNECT 200 後 `SOCKET_READ_ERROR -101`＝上游吃不下 ClientHello
 - 適用範圍：所有雲端 remote session 內用真實瀏覽器打外部 HTTPS（生產 QA smoke、Lighthouse 等）；本地 dev server（localhost 在 NO_PROXY）不受影響
+- **[2026-07-22 更新] 同 session 內通道可能中途失效**：上述兩步修好後（多輪 smoke 成功約 1 小時），Chromium 突然全部 `ERR_PROXY_CONNECTION_FAILED`（連不上 33487），但 curl/openssl 同時間完全正常、代理 status 無 relay failure；試過 --no-sandbox、本機 TCP relay 轉發（改報 ERR_SOCKET_NOT_CONNECTED，代理端主動斷）、帶 Chromium UA 的 curl CONNECT（正常）皆無法定位，研判代理端對 Chromium 流量模式（多併發連線＋clients2.google.com 背景 GET）作了行為性斷線。對策：瀏覽器類 QA 證據**趁通道可用時一次收齊**；中斷後改以 curl/API 證據＋既有截圖誠實標注 BLOCKED，不要無限重試。
