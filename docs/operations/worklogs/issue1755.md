@@ -104,7 +104,19 @@ Pinned commit `b97bc92d`由fresh spec與quality reviewers審查；兩者皆FAIL�
 - 新增secret-safe build wrapper，在process內生成secrets；G4只保存wrapper argv、env names、sanitized child argv與digest。
 - Runner補multiline stopped-state regex；三張敏感表逐表RLS probe；RPC鎖exact `regprocedure`；Midao Playwright flag與legacy/NO_WEBSERVER matrix相容。
 
-#1756仍維持 `status:blocked + agent:next`。第五版須再次fresh review PASS；PASS前不得開始production code。
+### 2026-07-22 fifth fresh review: dual FAIL/HOLD
+
+Pinned commit `d5b6d578`兩位fresh reviewers皆FAIL。合併後blocking：master final gate仍direct build；pinned Supabase 2.87.2 stopped stderr其實是單行prefix；legacy Playwright只有source matrix、無真browser；build wrapper會繼承其他parent secrets；lint/typecheck沒有可執行evidence recorder。
+
+第五輪remediation：
+
+- Master Package 0明列staged/CI runners，final gate的lint/typecheck/build全部改走CI recorder。
+- D3a classifier接受並單元測試pinned 2.87.2實測exact two-line stderr sequence，wrong project/額外stderr仍fail closed。
+- E4新增固定legacy compat runner；無Midao/NO_WEBSERVER flags、CI no-reuse、3333空閒檢查，真跑existing `t1-login.spec.ts` browser flow；E4 commit與G3都納入heavy evidence。
+- A4改三模式fixed-command CI recorder；child env strict allowlist、empty temp HOME、no user npmrc，測試注入DATABASE/各類token/secret/password/private credentials皆不繼承或洩漏。
+- Lint/typecheck/build各有獨立0600 evidence與sanitized log digest；build secrets只在wrapper process內生成。
+
+#1756仍維持 `status:blocked + agent:next`。第六版須再次fresh review PASS；PASS前不得開始production code。
 
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.

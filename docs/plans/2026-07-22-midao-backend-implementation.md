@@ -60,6 +60,16 @@
 
 # Package 0 — Foundation
 
+## Task 0: 建立 staged／CI evidence runners
+
+**Files:**
+- Create: `scripts/testing/verify-staged-check-evidence.mjs`
+- Create: `apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs`
+- Create: `scripts/testing/run-midao-ci-command.mjs`
+- Create: `apps/web/tests/unit/midao-ci-command-runner.test.mjs`
+
+先以adversarial tests鎖same-tree evidence bundle、frozen harness semantic command、untracked/unstaged rejection，以及lint/typecheck/build固定mode、strict child env allowlist、secret redaction、clean HEAD/tree與per-command log digest。不得修改frozen `.claude/**`。Master下方test commands是child payload；#1756實際commit依executable micro-plan由staged orchestrator執行，final CI equivalent使用CI recorder。
+
 ## Task 1: 建立 backend mode migration contract test
 
 **Objective:** 先以測試鎖定 `guide_profiles.backend_mode` 預設 legacy、允許值與 index。
@@ -1087,12 +1097,12 @@ Targeted package checks先完成，再依序執行四個受追蹤背景工作；
 
 ```bash
 timeout --signal=TERM 570s .claude/hooks/run-checks.sh --all
-timeout --signal=TERM 570s npm run typecheck
-timeout --signal=TERM 570s npm run lint
-timeout --signal=TERM 570s npm run build
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs typecheck
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs lint
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs build
 ```
 
-以上命令一律使用 `terminal(background=true, notify_on_complete=true)`；主機資源不足時可以分開跑，但不得省略，也不得用其中一項綠燈代替全部。若單項超過 570 秒，視為異常並先診斷，不盲目放大 timeout。
+第一條保存repo harness evidence；其餘三條各保存exact wrapper argv、mode、allowlisted env names、sanitized child argv、HEAD/tree SHA、exit與sanitized log digest，不保存secret values。以上命令一律使用 `terminal(background=true, notify_on_complete=true)`；主機資源不足時可以分開跑，但不得省略，也不得用其中一項綠燈代替全部。若單項超過570秒，視為異常並先診斷，不盲目放大timeout。
 
 ## Task 63: Fresh-context spec review
 
