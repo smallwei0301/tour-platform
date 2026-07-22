@@ -141,6 +141,20 @@ Pinned commit `142cd824`首批兩位reviewers皆因慢API在600秒timeout，沒�
 
 #1756仍維持 `status:blocked + agent:next`。第八版須再次fresh review PASS；PASS前不得開始production code。
 
+### 2026-07-23 eighth fresh review: dual PASS
+
+Pinned executable-plan commit `bcb81b11`由local-only fresh spec與quality/security reviewers獨立審查，兩者皆PASS，blocking為0。
+
+Reviewer evidence：
+
+- Master Task62與micro G4四條commands逐byte一致；抽取內容SHA-256為 `0a7fcbf488934f8f71f344282e6af68af9ae637f52af454f1d211ddf64ef1b63`。
+- RLS probe role/no-bypass/current_user、SELECT 0 rows、INSERT 42501與aborted transaction直接ROLLBACK contract可執行。
+- F10 mandatory browser matrix涵蓋safe、absolute、protocol-relative、backslash、single/double encoded separators、malformed encoding與cross-realm；positive真API/UI，negative不mock Midao auth，origin固定runner-owned localhost。
+- CI isolation、legacy fixed origin、A3/E4 coverage accounting、project-scoped Supabase cleanup與redirect sanitizer重驗無blocking。
+- Review全程read-only；HEAD/index/worktree clean，`origin/main`是reviewed anchor ancestor。
+
+依routing規則，#1756可升為 `status:ready + agent:now`；下一執行者從latest `origin/main`建fresh Package 0 worktree，先執行Task 0，再按strict RED → minimal GREEN進Task 1。Reviewed plan anchor仍為 `bcb81b119228dc81fecff7a212fff4017c4a1584`。
+
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.
 
