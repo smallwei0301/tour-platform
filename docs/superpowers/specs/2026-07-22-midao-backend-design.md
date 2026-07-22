@@ -478,7 +478,7 @@ actor 必須區分 guide 與 admin impersonation。audit 保存 actor type/ID、
 ### Routes
 
 ```text
-apps/web/app/midao/
+apps/web/app/(non-locale)/midao/
   layout.tsx
   loading.tsx
   error.tsx
@@ -498,6 +498,15 @@ apps/web/app/midao/
   me/redeem/page.tsx
   me/helpers/page.tsx
   me/settings/page.tsx
+```
+
+公開頁與舊 shop 的實際 route-group 檔案：
+
+```text
+apps/web/app/[locale]/guides/[slug]/page.tsx
+apps/web/app/(non-locale)/guides/[slug]/shop/page.tsx
+apps/web/app/(non-locale)/guides/[slug]/shop/book/page.tsx
+apps/web/app/(non-locale)/guides/[slug]/shop/orders/page.tsx
 ```
 
 ### Feature components
