@@ -97,3 +97,12 @@
 - 另外兩個 bash-guard 邊角：(1) commit 證據 gate 檢查的是「hook 執行當下」的 staged 區——add 與 commit 併在同一條指令會因 staged 為空而讓純文件豁免失效，**add 與 commit 要分兩條指令**；(2) heredoc/字串內容若含「git …commit」字樣也會被 commit gate 的 regex 命中——往 lessons.md 等檔案追加含 git 指令的文字時改用 Edit 工具，別用 shell heredoc
 - 適用範圍：所有 session 開機煙霧測試；純文件 commit 流程
 - **[2026-07-17 更新] 雲端 remote session 全程重演本假陰性**：agent 照 00_INDEX 步驟 0 的 Edit 探針判定「hooks 未武裝」、以人工遵守替代跑了整個 session（4 個 PR），收尾調查時用「Write 寫回一字不差的 CLAUDE.md」重測 → `⛔ HARNESS BLOCK [file-guard]`——**hooks 其實從頭到尾武裝**。兩個新事實：(1) **Write-identical-content 是安全的武裝探針**（有攔＝武裝；沒攔＝寫入相同內容零損害，且立刻知道真裸奔）；(2) Bash 工具裡 `printenv CLAUDE_PROJECT_DIR` 為空**不代表** hook 環境沒有——該變數只注入 hook 執行 context，別拿 Bash env 當證據。根因是開機時未先 grep 本檔就照 00_INDEX 步驟 0 行動；步驟 0 的探針方法待 owner 依 05_maintenance 提案流程修訂（本檔無權改 0*.md）。
+
+## [2026-07-22] chromium-proxy-tls13-clienthello-reset
+- Context：#1751 QA 需用 Playwright 打生產 URL；Chromium 走 agent proxy（`HTTPS_PROXY=http://127.0.0.1:33487`）所有外部 HTTPS 一律 `ERR_CONNECTION_RESET`，curl/openssl 卻正常
+- 根因（netlog 證據）：兩層問題疊加——(1) Playwright Chromium 不吃 README 所稱「已設定」的 browser NSS store：`~/.pki/nssdb` 是 Chromium 自建的空 DB，MITM 憑證鏈（Anthropic Egress Gateway CA）不被信任 → `-202 ERR_CERT_AUTHORITY_INVALID`；(2) 修好信任後，上游 egress MITM 無法處理 Chromium TLS 1.3 的大型 ClientHello（~1.8KB，含 post-quantum key share），CONNECT 隧道建立後 ClientHello 一送即被 RST（os_error 104）→ `-101`；`--disable-features=PostQuantumKyber/UseMLKEM/...` 全部無效
+- Solution（兩步，缺一不可）：
+  1. `apt-get update && apt-get install -y libnss3-tools`，把 `/root/.ccr/ca-bundle.crt` 內 5 張 Anthropic CA（拆出 `O = Anthropic` 那幾張）用 `certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n ccr-N -i cert.pem` 匯入
+  2. Chromium 啟動參數：`--proxy-server=http://127.0.0.1:33487 --disable-quic --ssl-version-max=tls1.2`（TLS1.2 ClientHello 小、無 key_share，MITM 可處理；憑證驗證仍全程開啟，未違反「不得關 TLS 驗證」）
+- 判讀技巧：`--log-net-log=/tmp/netlog.json` 再 grep `net_error`；`-202`＝信任問題、CONNECT 200 後 `SOCKET_READ_ERROR -101`＝上游吃不下 ClientHello
+- 適用範圍：所有雲端 remote session 內用真實瀏覽器打外部 HTTPS（生產 QA smoke、Lighthouse 等）；本地 dev server（localhost 在 NO_PROXY）不受影響
