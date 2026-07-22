@@ -16,11 +16,15 @@ function run(command, args, cwd, options = {}) {
     cwd,
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'pipe'],
+    // npm test 的 TAP 輸出超過 spawnSync 預設 maxBuffer（1MB）會觸發 ENOBUFS、
+    // status 變 null，健康的 main 被誤判 CHECKS_FAILED（#1670）。
+    maxBuffer: 64 * 1024 * 1024,
     ...options,
   });
   return {
     command: [command, ...args].join(' '),
     exitStatus: result.status ?? 1,
+    spawnError: result.error ? String(result.error.code || result.error.message) : null,
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   };
@@ -103,14 +107,42 @@ try {
           ? invalidBaseline('canonical_guard_failed', provenance)
           : { status: 'PREFLIGHT_OK', productRegressionCandidate: false, ...provenance };
       } else {
-        const results = commands.map((command) => {
-          const [program, ...args] = command.split(' ');
-          const result = run(program, args, temporaryWorktree);
-          return { command, exitStatus: result.exitStatus };
-        });
-        const failed = results.some(({ exitStatus }) => exitStatus !== 0);
-        payload = { status: failed ? 'CHECKS_FAILED' : 'CHECKS_PASSED', productRegressionCandidate: failed, ...provenance, commands: results };
-        exitCode = failed ? 1 : 0;
+        // 臨時 worktree 沒有 node_modules；不先安裝依賴會讓 eslint/tsc 以 exit 127
+        // 誤報 CHECKS_FAILED（#1670）。NODE_ENV=production 會漏裝 devDependencies，
+        // 一併清除；--ignore-scripts 避免 postinstall 被受限網路擋下（lint/typecheck/test 不需要 postinstall）。
+        const installEnv = { ...process.env };
+        delete installEnv.NODE_ENV;
+        const installResult = run(
+          'npm',
+          ['install', '--no-audit', '--no-fund', '--ignore-scripts'],
+          temporaryWorktree,
+          { env: installEnv },
+        );
+        run('git', ['checkout', '--', 'yarn.lock'], temporaryWorktree);
+        if (installResult.exitStatus !== 0) {
+          payload = invalidBaseline('dependency_install_failed', {
+            ...provenance,
+            install: { exitStatus: installResult.exitStatus, stderrTail: installResult.stderr.slice(-2000) },
+          });
+          exitCode = 2;
+        } else {
+          const results = commands.map((command) => {
+            const [program, ...args] = command.split(' ');
+            const result = run(program, args, temporaryWorktree, { env: installEnv });
+            // 失敗時保留輸出尾段與 spawn 錯誤，否則 CHECKS_FAILED 只有 exit code、無從診斷（#1670）
+            const failureDetail =
+              result.exitStatus !== 0
+                ? {
+                    spawnError: result.spawnError,
+                    outputTail: `${result.stdout}${result.stderr}`.slice(-3000),
+                  }
+                : {};
+            return { command, exitStatus: result.exitStatus, ...failureDetail };
+          });
+          const failed = results.some(({ exitStatus }) => exitStatus !== 0);
+          payload = { status: failed ? 'CHECKS_FAILED' : 'CHECKS_PASSED', productRegressionCandidate: failed, ...provenance, commands: results };
+          exitCode = failed ? 1 : 0;
+        }
       }
     }
   }
