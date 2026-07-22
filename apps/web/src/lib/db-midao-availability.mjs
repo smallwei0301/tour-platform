@@ -7,7 +7,9 @@ import { hasSupabaseEnv, getSupabase } from './db.mjs';
 
 export const MIDAO_PERIODS = ['morning', 'afternoon', 'evening'];
 
+/** @type {any[]} */
 const _memDefaults = [];  // {guide_id, weekday, period, is_open}
+/** @type {any[]} */
 const _memOverrides = []; // {guide_id, date, period, is_open, custom_start, custom_end}
 export function __resetMemMidaoAvailability() { _memDefaults.length = 0; _memOverrides.length = 0; }
 
@@ -29,7 +31,7 @@ export function resolveEffectiveDay(defaults, overrides) {
         eff.custom.push({ start: o.custom_start, end: o.custom_end, isOpen: !!o.is_open });
       }
     } else if (MIDAO_PERIODS.includes(o.period)) {
-      eff[o.period] = !!o.is_open;
+      (/** @type {any} */ (eff))[o.period] = !!o.is_open;
     }
   }
   return eff;
@@ -52,7 +54,7 @@ export async function getWeeklyDefaultsDb(guideId) {
   return Array.from({ length: 7 }, (_, weekday) => {
     const day = { weekday, morning: false, afternoon: false, evening: false };
     for (const r of rows.filter((x) => x.weekday === weekday)) {
-      if (MIDAO_PERIODS.includes(r.period)) day[r.period] = !!r.is_open;
+      if (MIDAO_PERIODS.includes(r.period)) (/** @type {any} */ (day))[r.period] = !!r.is_open;
     }
     return day;
   });
@@ -70,7 +72,7 @@ export async function setWeeklyDefaultsDb(guideId, weekdays) {
     const weekday = Math.trunc(Number(w?.weekday));
     if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) continue;
     for (const period of MIDAO_PERIODS) {
-      rows.push({ guide_id: guideId, weekday, period, is_open: w?.[period] === true });
+      rows.push({ guide_id: guideId, weekday, period, is_open: (/** @type {any} */ (w))?.[period] === true });
     }
   }
   if (!rows.length) return;
@@ -100,8 +102,8 @@ export async function setWeeklyDefaultsDb(guideId, weekdays) {
 export async function setDayOverrideDb(guideId, date, patch) {
   const upserts = [];
   for (const period of MIDAO_PERIODS) {
-    if (typeof patch?.[period] === 'boolean') {
-      upserts.push({ guide_id: guideId, date, period, is_open: patch[period], custom_start: null, custom_end: null });
+    if (typeof (/** @type {any} */ (patch))?.[period] === 'boolean') {
+      upserts.push({ guide_id: guideId, date, period, is_open: (/** @type {any} */ (patch))[period], custom_start: null, custom_end: null });
     }
   }
   const customRows = Array.isArray(patch?.custom)
