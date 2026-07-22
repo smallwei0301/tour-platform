@@ -3,7 +3,7 @@
 > 最後更新：2026-05-30（refs #846：移除已關閉 #621/#787/#640/#641 作為當前主線；指向 live-state 快照）
 > 當前主線：**Booking V2 已上線且為預設**（#621/#787 已 CLOSED）；當前優先事項請查閱 live-state 快照
 > 即時 live state 請看：[`operations/reports/readiness-live-state-latest.md`](./operations/reports/readiness-live-state-latest.md)（執行 `npm run readiness:snapshot` 刷新）
-> Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
+> Snapshot auto-refreshed daily (05:00 UTC) by CI; treat as stale if header timestamp is >26h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
 本目錄的目的不是保存所有歷史，而是讓人快速找到：
 1. 現在專案在做什麼

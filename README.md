@@ -70,7 +70,7 @@
 > **[docs/operations/reports/readiness-live-state-latest.md](./docs/operations/reports/readiness-live-state-latest.md)**
 > Refresh with: `npm run readiness:snapshot`
 >
-> Snapshot auto-refreshed every 6h by CI; treat as stale if header timestamp is >12h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
+> Snapshot auto-refreshed daily (05:00 UTC) by CI; treat as stale if header timestamp is >26h old. Run `npm run readiness:snapshot` to refresh. Not live truth.
 
 **已結案 / 歷史參考（不再是當前 open blocker）：**
 - **#621 CLOSED** — Booking / Availability V2 已成為旅客主要流程（PR #800）
