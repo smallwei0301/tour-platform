@@ -45,3 +45,52 @@
 1. **最終整條 branch 審查**（進行中）→ 開 PR → CI 綠燈 → merge。
 2. **migration 套用生產**：需使用者 `SQL-OVERRIDE` 授權＋照 `docs/operations/migration-apply-ledger-sop.md` 補 ledger（鐵律 2）。
 3. **Plan 2（M4–M6）**：midao2 前端五頁＋三步精靈＋公開接案頁 `/g/[slug]`＋登入導向改 `/midao2`＋E2E。屆時對真實 API 撰寫。
+
+---
+
+## Plan 2 前端完成（2026-07-22，Asia/Taipei）
+
+**Plan 2（前端 M4–M6）11/11 任務全數完成**，commit 範圍 `e77b8df..1919085`（13 commits，分支 `claude/superpowers-midao-backend-x90czx`，已推送，**未開 PR、未 merge**）。
+
+### 頁面清單
+
+| 路徑 | 內容 |
+|---|---|
+| `/midao2`（layout＋首頁） | 底部五格 tab bar；client 探針打 `GET /api/v2/guide/midao/summary`（401→導轉 `/guide/login?next=/midao2`）；首頁統計卡（新需求/待回覆）、需要你處理卡（複製 LINE 回覆）、最近進度、分享接案頁 CTA |
+| `/midao2/requests` | 狀態分頁（全部/新需求/待回覆/已回覆/已完成，`?status=` 白名單校驗）＋排序（未回覆優先/最新優先）＋需求卡 |
+| `/midao2/requests/[id]` | 聯絡資訊（LINE/mail）、行程需求卡、特殊需求提示、複製需求摘要、進度 radio（開啟自動 new→pending_reply；點目前狀態不送 PATCH）、複製 LINE 回覆（自動 pending_reply→replied） |
+| `/midao2/calendar` | 月導覽＋月格點色（🟠 待確認/🟢 已確認/可接案色條）、當日明細（含站內訂單）、三時段開關（PUT 單鍵 body）、自訂時段新增/刪除、週預設 modal |
+| `/midao2/services`＋`/new`＋`/[id]/edit` | 已上架/草稿分頁、服務卡（封面/時長人數/價格/成交方式）；三步精靈（基本資料必填擋步→需求問題→預覽發布）；封面照片壓縮上傳；create 模式草稿/發布二選一、edit 模式儲存變更 |
+| `/midao2/me` | 導遊名片、QR、分享連結、年資編輯（`profile-extras` API） |
+| `/g/[slug]`（公開接案頁，RSC） | hero＋資訊列＋精選服務卡＋旅客需求表單；slug 不存在→`notFound()` |
+| 登入動線 | `/guide/login` 登入成功預設導向 `/midao2`；`next` 白名單含 `/midao2`；舊後台保留互連入口 |
+
+### 測試證據摘要
+
+- **單元/contract**（`.claude/hooks/run-checks.sh --typecheck`）：`midao-copy-templates`、`midao-calendar-grid`、`db-midao-showcase`、`midao2-layout-contract`、`midao2-pages-contract`、`v2-midao-guide-requests-contract`、`v2-midao-public-contract` 共 **32 tests 全綠**；整包 `tsc --noEmit` 乾淨。
+- **守門測試**：`db-mjs-size-guard`＋`issue1407-legacy-retirement-residue-guard` 共 **9 tests 全綠**（凍結區/strangler 天花板未破）。
+- **E2E**（`npm run test:e2e -w @tour/web -- midao2-backend-flow.spec.ts midao2-public-request.spec.ts`）：**5/5 PASS**——首頁統計卡/需要你處理/底部導覽、需求列表→詳情自動轉待回覆＋radio 更新、行事曆時段開關 PUT、服務列表與精靈第一步驗證、公開頁不存在 slug 顯示 404（soft-404，見下）。
+- **lint**：僅既有 1 個 warning（`RootDocument.tsx` 的 `no-head-element`，與本輪無關），0 新增 error。
+
+### 過程中發現並修正的真實 UI/框架 bug
+
+撰寫 `midao2-public-request.spec.ts` 時發現 `/g/[slug]` 對不存在 slug 呼叫 `notFound()` 後，本機 `next dev` 與 `next build && next start`（皆已實測）回傳的 HTTP 狀態碼恆為 **200**（非 404），但頁面內容與 `<meta name="robots" content="noindex">` 正確。追查後定位為專案既有、非本任務新增邏輯造成的框架層限制：
+
+1. **(non-locale) route group 缺 `not-found.tsx`**：Next.js「多重 root layout」規則要求每個頂層 route group 各自要有 `not-found.tsx`，否則 dev 模式下該群組其他頁面觸發 notFound() 時會噴 500（`not-found.tsx doesn't have a root layout`，已在 dev log 重現）。已新增 `apps/web/app/(non-locale)/not-found.tsx`（re-export 頂層 `app/not-found.tsx` 的內容/metadata，不重複維護文案）。
+2. **`/g/[slug]` 的 `generateMetadata` 未與頁面元件同步呼叫 `notFound()`**：導致 slug 不存在時仍以通用標題「Midao 接案頁」＋無 noindex 對外呈現（頁面元件的 notFound() 另外觸發，但 metadata 階段已算「正常」）。已補上一致的 `if (!page) notFound();`，現在正確顯示「找不到頁面 | Midao 祕島」標題＋noindex。
+3. **HTTP 狀態碼仍是 200 的部分未能在本環境修復**：確認同一 (non-locale) 群組下既有的 `/guides/[slug]/shop`（notFound 用法相同）也有同樣現象——是 Next.js 15 streaming SSR 已知限制（root layout 含 Suspense 邊界如 Analytics/SpeedInsights，一旦開始 flush shell 就無法回頭改寫狀態碼），非本任務新增邏輯所致，也非 middleware rewrite 造成的 soft-404（`/g/[slug]` 根本不在 middleware matcher 內）。E2E 已依專案既有慣例（`issue1595-hidden-locale-guard.spec.ts` 的 soft-404 驗法）改以「內容＋noindex」斷言，不依賴狀態碼；實際 Vercel 部署是否正確回傳 404 列入下方「部署驗收清單」人工複驗（Vercel 邊緣層對此已知 Next.js 議題的處理可能與本機 `next start` 不同）。
+
+以上兩項修正皆為新增/獨立檔案或最小侵入的既有檔案調整，未觸碰凍結區、未動 `middleware.ts`。
+
+---
+
+## 部署驗收清單（使用者部署測試後才進生產）
+
+以下六項需在實際部署環境（非本機 dev/prod 模擬）由使用者人工過，逐項在 QA 報告記錄證據（URL、SHA、Asia/Taipei 時間）：
+
+1. **登入導向**：以真實導遊帳號登入 `/guide/login`，確認成功後預設導向 `/midao2`（非舊後台）。
+2. **六畫面照截圖走查**：`/midao2`（首頁）、`/midao2/requests`、`/midao2/requests/[id]`、`/midao2/calendar`、`/midao2/services`（含 `/new`、`/[id]/edit`）、`/midao2/me`——逐頁對照原始設計截圖確認版面/文案/互動一致。
+3. **`/g/[slug]` 真實送單→LINE 通知→後台出現**：以真實 slug 開啟接案頁、送出旅客需求表單，確認（a）表單送出成功畫面、（b）導遊 LINE 收到推播通知、（c）`/midao2/requests` 列表與 `/midao2`首頁「需要你處理」正確出現該筆新需求。**另請一併確認 `/g/[slug]` 對不存在 slug 的 HTTP 狀態碼**（本機環境觀察到 soft-404＝200，需確認 Vercel 實際部署是否回傳真 404；若仍是 200，屬已知框架限制不阻擋上線，但需記錄供之後追蹤）。
+4. **精靈建服務＋封面上傳**：`/midao2/services/new` 走完三步精靈（含封面照片實際上傳），確認建立成功、封面顯示正確、草稿/發布狀態符合預期。
+5. **發佈到祕島送審出現在管理後台**：精靈或編輯頁選擇「發布到接案頁」／「發佈到祕島」後，確認服務出現在既有管理後台（`/admin`）的待審/服務列表中，審核流程未受影響。
+6. **維護模式下 `/g/[slug]` 行為確認**：觸發 `soft_launch_controls.public_paused`，確認 `/g/[slug]` 的行為符合預期（是否也導向 `/maintenance`，或因不在 middleware matcher 內而不受影響）——若後者，需使用者確認是否為期望行為，非期望則另開任務調整 matcher（**不可在本任務內順手修改 middleware.ts**，屬凍結區）。

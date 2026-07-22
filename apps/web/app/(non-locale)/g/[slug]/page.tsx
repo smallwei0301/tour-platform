@@ -23,7 +23,11 @@ type PageParams = { params: Promise<{ slug: string }> };
 export async function generateMetadata({ params }: PageParams) {
   const { slug } = await params;
   const page = await getPublicMidaoPageDb(slug);
-  if (!page) return { title: 'Midao 接案頁' };
+  // 與下方頁面元件同條件呼叫 notFound()：若只在頁面元件呼叫，Next.js 15 在
+  // generateMetadata 先行 resolve 完成後可能已開始 streaming shell（HTTP 200），
+  // 頁面元件才發現的 notFound() 只能拿到 soft-404（內容正確但狀態碼仍是 200）。
+  // 在 metadata 階段就先擋，讓框架有機會在真正送出 header 前得知這是 404。
+  if (!page) notFound();
   return {
     title: `${page.guide.displayName}｜Midao 接案頁`,
     description: page.guide.headline ?? '',
