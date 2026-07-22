@@ -116,7 +116,19 @@ Pinned commit `d5b6d578`兩位fresh reviewers皆FAIL。合併後blocking：maste
 - A4改三模式fixed-command CI recorder；child env strict allowlist、empty temp HOME、no user npmrc，測試注入DATABASE/各類token/secret/password/private credentials皆不繼承或洩漏。
 - Lint/typecheck/build各有獨立0600 evidence與sanitized log digest；build secrets只在wrapper process內生成。
 
-#1756仍維持 `status:blocked + agent:next`。第六版須再次fresh review PASS；PASS前不得開始production code。
+### 2026-07-22 sixth fresh review: SPEC PASS, QUALITY FAIL/HOLD
+
+Pinned commit `74a96708`的fresh spec reviewer PASS；quality/security reviewer FAIL三項：RLS SELECT錯誤期待42501、legacy lane可繼承external base URL、CI recorder仍可能讀global npmrc或複製hostile PATH/locale/terminal values。
+
+第六輪remediation：
+
+- D3b逐表以owner sentinel驗probe SELECT回0 rows；probe INSERT才要求RLS `WITH CHECK` SQLSTATE 42501，ACL仍獨立。
+- Legacy runner強制 `127.0.0.1:3333`的PORT/base/app URL，unset關閉server flags；browser baseURL、readiness URL與server env同源，hostile-parent matrix必測。
+- CI recorder固定user/global npmrc `/dev/null`、runner-owned cache、LANG/LC_ALL/TERM常數；以validated Node/npm realpath與固定system dirs重建PATH，不複製parent values。
+- Adversarial coverage加入global npmrc、npm lifecycle `npm_config_*`、PATH/locale/terminal secrets、dotenv/npmrc symlink；任何raw value進child/log/evidence皆FAIL。
+- RLS/runner另補project-scoped Supabase stop、E2 redirect sanitizer與E4 staged-count精確化。
+
+#1756仍維持 `status:blocked + agent:next`。第七版須再次fresh review PASS；PASS前不得開始production code。
 
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.

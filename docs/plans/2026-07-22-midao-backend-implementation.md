@@ -68,7 +68,7 @@
 - Create: `scripts/testing/run-midao-ci-command.mjs`
 - Create: `apps/web/tests/unit/midao-ci-command-runner.test.mjs`
 
-先以adversarial tests鎖same-tree evidence bundle、frozen harness semantic command、untracked/unstaged rejection，以及lint/typecheck/build固定mode、strict child env allowlist、secret redaction、clean HEAD/tree與per-command log digest。不得修改frozen `.claude/**`。Master下方test commands是child payload；#1756實際commit依executable micro-plan由staged orchestrator執行，final CI equivalent使用CI recorder。
+先以adversarial tests鎖same-tree evidence bundle、frozen harness semantic command、untracked/unstaged rejection，以及lint/typecheck/build固定mode、strict child env allowlist（validated absolute npm、rebuilt PATH、fixed locale、empty HOME、user/global npmrc disabled、runner-owned cache）、dotenv/npmrc fail-closed、secret redaction、clean HEAD/tree與per-command log digest。不得修改frozen `.claude/**`。Master下方test commands是child payload；#1756實際commit依executable micro-plan由staged orchestrator執行，final CI equivalent使用CI recorder。
 
 ## Task 1: 建立 backend mode migration contract test
 
