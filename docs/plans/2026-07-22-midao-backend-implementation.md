@@ -397,7 +397,7 @@ node --test --test-concurrency=1 \
 **Step 5: Commit**
 
 ```bash
-git add supabase/migrations/20260723002000_midao_atomic_backend_mode_switch.sql apps/web/src/lib/db-midao-backend-mode.mjs apps/web/app/api/v2/admin/guides/[guideId]/backend-mode/route.ts apps/web/tests/api/midao-backend-mode-switch.test.mjs
+git add supabase/migrations/20260723003000_midao_atomic_backend_mode_switch.sql apps/web/src/lib/db-midao-backend-mode.mjs apps/web/app/api/v2/admin/guides/[guideId]/backend-mode/route.ts apps/web/tests/api/midao-backend-mode-switch.test.mjs
 git commit -m "feat: 建立原子導遊後台模式切換"
 ```
 
@@ -1031,7 +1031,7 @@ Midao guide 的舊 activity/plan POST/PUT/submit 回 `409 BACKEND_MODE_MISMATCH`
 - Test: `apps/web/tests/api/midao-backend-kill-switch.test.mjs`
 - Test: `apps/web/e2e/midao-backend-routing.spec.ts`
 
-Flags：`MIDAO_BACKEND_ENABLED`、`MIDAO_BACKEND_MUTATIONS_ENABLED`。Mutation off 時 read 保留、write 503/423 明確 fail-closed。
+Flags：`MIDAO_BACKEND_ENABLED`、`MIDAO_BACKEND_MUTATIONS_ENABLED`、`MIDAO_BACKEND_MODE_SWITCH_ENABLED`。Mutation off時read保留、write明確fail-closed；forward mode rollout另受mode-switch gate，rollback不受三個flags阻擋。
 
 ## Package 6 gate
 

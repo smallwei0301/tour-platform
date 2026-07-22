@@ -414,6 +414,8 @@ UNIQUE(actor_type, actor_id, command_name, scope_type, scope_id, idempotency_key
 
 同actor/command/scope/key＋同request hash回第一次response snapshot；同scope/key＋不同hash回 `409 IDEMPOTENCY_KEY_REUSED`。不同guide/resource scope可安全重用相同client key。CHECK constraint要求state=completed時response status/body與completed_at皆非空。Response snapshot必須先去除confirmation raw token、secret、cookie與不必要PII。
 
+`midao_notification_outbox`、`midao_idempotency_records`與 `midao_audit_events`皆為service-role-only：`ENABLE/FORCE ROW LEVEL SECURITY`，明確 `REVOKE ALL FROM PUBLIC, anon, authenticated`，只grant預期最小privileges給service_role；不得建立適用PUBLIC/anon/authenticated的permissive policy。
+
 ### 7.12 Transactional command audit
 
 既有 `audit_logs` 是 order-centric schema，只有 `order_id/actor/action/metadata`，不足以完整表示 Midao actor、guide、resource與request。跨表 Midao commands改用 service-role-only `midao_audit_events`：
@@ -517,7 +519,7 @@ Publish transaction 驗證 payload、upsert canonical activity/plans/questions�
 
 ### Admin impersonation
 
-actor必須區分guide與admin impersonation。既有可見 `guide_impersonation=1` cookie只負責banner；另新增HttpOnly、HMAC-signed actor cookie，使用獨立 `midao:impersonation-actor:v1` domain，payload為normalized admin email、target guide ID、issued/expiry。Guide session簽章bytes維持legacy相容，兩種signature不得跨協議驗證。Midao guard驗證後產生admin actor；一般登入為guide actor。Invite、regular與legacy guideId三條普通登入成功都清除殘留actor/banner cookies，logout亦清除。Audit保存actor type/ID、guide ID、action、resource、request ID。
+actor必須區分guide與admin impersonation。既有可見 `guide_impersonation=1` cookie只負責banner；另新增host-only、`Path=/`、HttpOnly、HMAC-signed `midao_impersonation_actor` cookie，使用獨立 `midao:impersonation-actor:v1` domain，payload為normalized admin email、target guide ID、issued/expiry。Payload expiry與cookie Max-Age/Expires一致且不晚於guide session；clear使用相同name/path/host-only scope並同時設Max-Age=0與past Expires。Guide session簽章bytes維持legacy相容，兩種signature不得跨協議驗證。Midao guard驗證後產生admin actor；一般登入為guide actor。Invite、regular與legacy guideId三條普通登入成功都清除殘留actor/banner cookies，logout亦清除。Audit保存actor type/ID、guide ID、action、resource、request ID。
 
 ### PII
 

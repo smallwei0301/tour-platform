@@ -77,7 +77,21 @@ Reviewers實跑第一版 #1756 micro-plan，發現Node 24/production env使basel
 - Login API/UI/impersonation與shell components拆成focused tasks；responsive/auth/a11y用兩支real-HMAC Playwright驗證。
 - Final gates加入Node22 assertion、full `run-checks.sh --all`、lint、typecheck、build。
 
-#1756仍維持 `status:blocked + agent:next`。修訂版須再次fresh review PASS；PASS前不得開始production code。
+### 2026-07-22 third fresh review: dual FAIL/HOLD
+
+Pinned commit `02a5a349`由fresh spec與quality reviewers對live `origin/main af3963cb`審查；兩者皆FAIL。合併去重後blocking themes：staged verifier漏untracked/unrelated evidence；actor cookie scope/expiry/clear不精確；PUBLIC function ACL與RLS測法可假綠；fixed-port Supabase/Playwright ownership與server reuse競態；F9/F10在實作後才宣稱RED；F10要求本package不存在的guide audit observable；D3單一gate過大。
+
+第三輪remediation：
+
+- Evidence改為orchestrator：before/after `git write-tree`、exact argv、untracked/unstaged code、staged rename/delete、manifest `--check-only`；Postgres/Playwright以allowlisted `--run-heavy`直接綁child exit。
+- Actor cookie固定name、host-only、`Path=/`、payload/cookie expiry、same-scope clear＋Max-Age=0/past Expires；四條login/logout與browser context皆驗。
+- D3拆為runner、schema/ACL/RLS、RPC rollback、concurrency四個boundaries。
+- 敏感tables明確revoke PUBLIC/anon/authenticated；PUBLIC function privilege查ACL OID 0；RLS以temporary probe grant與policy catalog分開驗。
+- Local Supabase採全repo排他lock、classified status、container identity、owned cleanup、raw output redaction；Playwright dynamic port且 `reuseExistingServer:false`。
+- F9/F10改post-implementation browser acceptance，不宣稱RED；guide audit落庫延至第一個真guide command package。
+- Master roadmap同步atomic migration timestamp與mode-switch flag。
+
+#1756仍維持 `status:blocked + agent:next`。第四版須再次fresh review PASS；PASS前不得開始production code。
 
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.
