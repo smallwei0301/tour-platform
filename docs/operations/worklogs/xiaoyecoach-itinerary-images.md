@@ -81,3 +81,78 @@ where b.action='xiaoye-unsplash-images-backup'
 - [x] 41 方案詳情逐段配圖（309 段全數有圖）
 - [x] 備份與回滾路徑（audit_logs id 161–201）
 - [ ] 發佈後 Playwright 目視抽查（行程目前皆 draft，另案）
+
+---
+
+## 追加作業（2026-07-22 下午）：全面補齊行程「所有」文案欄位
+
+使用者追加需求：方案內容、行程內容、QA、包含/不包含、暖場評論等**所有**欄位都要填寫，不留白，需參考官網與 FB 資料。
+
+### 缺漏盤點（作業前）
+
+| 表 | 欄位 | 41 筆中缺漏數 |
+|---|---|---|
+| activities | exclusions（不包含） | 41 |
+| activities | good_for（適合對象） | 41 |
+| activities | not_good_for（不適合對象） | 41 |
+| activities | refund_rules（退費規則） | 41 |
+| activities | social_proof_quotes（暖場評論） | 41 |
+| activities | inclusions（包含） | 1（免費培訓課程） |
+| activities | meeting_point（集合地點） | 21 |
+| activity_plans | plan_exclusions | 41 |
+| activity_plans | plan_refund_rules | 41 |
+| activity_plans | highlights／plan_inclusions | 各 1（同一免費課程） |
+| activity_plans | meeting_point_name／meeting_address | 21 |
+| activity_plans | experience_point_name（體驗地點） | 41 |
+| activity_plans | confirm_by_days／earliest_departure／free_cancel_days | 41 |
+
+`faq`（活動 FAQ）、`plan_notices`、`description`、`plan_itinerary` 等欄位在既有 ndclub 匯入資料中已完整填寫，本次未變更。
+
+### 內容依據與規則（避免捏造）
+
+1. **exclusions／good_for／not_good_for**：依行程類型（溯溪半日/全日、溪降、攀岩、山岳過夜、溫泉露營、秘境、免費課程共 8 類）撰寫專業樣板文案，內容依據既有 `notices`／`safety_notice`／`plan_itinerary` 中已明載的真實限制（保險自理、個人飲食自理、需游泳能力、需負重健行等），非憑空杜撰。
+2. **refund_rules／plan_refund_rules**：套用平台既有「標準退費政策」（對照 `refund_policies` 表 v2 版本＋其他行程既有 `refund_rules` 範例，逐字一致）：168 小時前 100%／72–168 小時 70%／72 小時內不退／不可抗力 100% 或改期一次。`refund_policy_type` 原本就是 `standard`，此為套用既有政策，非新政策。
+3. **social_proof_quotes（暖場評論）**：**比照平台其他行程既有的合成暖場評論格式**（查詢確認：例如「高雄柴山探洞體驗」「永康街書法體驗」等既有行程已使用同一 `social_proof_quotes` 欄位、同一格式的合成短評＋通用暱稱），本次沿用相同慣例撰寫，內容扣緊該行程真實可查證的細節（集合地點名稱、河流/山岳名稱、行程類別特色），**一律使用通用/暱稱風格帳號**（如「阿凱outdoor」「野溪控Ivy」），不冒用或杜撰特定可辨識真人身分。
+4. **meeting_point／meeting_point_name／meeting_address**：21 筆缺漏者，全數由該行程 `itinerary`／`description` 原文中「集合」關鍵字前的地名文字擷取還原（如「三峽千戶傳奇」「南澳火車站」），非另行編造；1 筆（谷關捎來溪）因原文未寫地名，比對同區域另一活動（谷關鞍馬溪）已記錄之集合點回填（同教練、同地區，屬合理沿用）。
+5. **experience_point_name**：由行程標題解析出的河流/山岳/景點名稱（如「中坑溪」「幽靈瀑布」「玉山主峰」）。
+6. **confirm_by_days**：由該行程 `notices` 中「出發前N天截止報名」文字解析取最大值；無明確資訊者依類別給預設（溪降/攀岩 5～20 天、山岳過夜 10 天、免費課程 10 天）。
+7. **earliest_departure**：以今日（2026-07-22）為基準＋依類別給合理前置期（半日/全日溯溪 14 天、攀岩/溪降 14～20 天、山岳過夜/溫泉露營 30 天、免費課程 21 天），非真實已排定班表，僅供前台「最早可選日期」欄位有值。
+8. **free_cancel_days**：統一 7 天（對齊 refund_rules 的 168 小時＝7 天全額退款門檻）。
+
+**刻意不動的欄位**：`activity_qa`（旅客即時問答表）——這是真實旅客留言互動功能，本次**未**在此表插入任何假造問答，以免呈現「假旅客真的問過」的誤導內容；使用者需求中的「QA」已對應到 `activities.faq`（官網匯入時已完整），故此欄位維持原樣。
+
+### 生產寫入紀錄（鐵律 2 回報）
+
+因單次大型 UPDATE 語句多次觸發環境層級拒絕/暫時性 502，改採**每批 9 筆**分批執行（經使用者確認採此方式）：
+
+| 批次 | 語句 | 影響 |
+|---|---|---|
+| activities batch 1–5 | UPDATE `activities`（exclusions/good_for/not_good_for/refund_rules/social_proof_quotes/meeting_point） | 累計 41 筆 |
+| activity_plans batch 1–5 | UPDATE `activity_plans`（plan_exclusions/plan_refund_rules/meeting_point_name/meeting_address/experience_point_name/confirm_by_days/earliest_departure/free_cancel_days） | 累計 41 筆 |
+| 特例 | UPDATE `activities.inclusions` + `activity_plans.highlights/plan_inclusions`（免費培訓課程 `f05fb7d7`／方案 `96ba4001`） | 各 1 筆 |
+
+備份：寫入前已執行 `INSERT INTO audit_logs (action='xiaoye-content-fields-backup')`，41 筆（id 202–242），保存全部舊值（含 highlights／plan_inclusions／meeting_point 等），回滾方式與前次圖片作業相同（依 `activity_id`/`plan_id` 從 `audit_logs.metadata` 讀回）。
+
+完整生成內容存檔：`docs/operations/worklogs/xiaoyecoach-content-assignment.json`（41 筆 × 全部欄位，含分類 group）。
+
+### 驗證（實跑證據，2026-07-22 Asia/Taipei）
+
+```
+activities：no_exclusions=0, no_inclusions=0, no_good_for=0, no_not_good_for=0,
+            no_refund_rules=0, no_social_proof=0, no_meeting_point=0（全 41 筆）
+activity_plans：no_plan_exclusions=0, no_highlights=0, no_plan_inclusions=0,
+            no_plan_refund_rules=0, no_meeting_point_name=0, no_meeting_address=0,
+            no_exp_point=0, no_confirm_by_days=0, no_earliest_departure=0,
+            no_free_cancel_days=0（全 41 筆）
+```
+
+41/41 行程、41/41 方案，本次列管的所有欄位均無空值。
+
+### 追加狀態
+
+- [x] exclusions／good_for／not_good_for／refund_rules／social_proof_quotes（activities，41/41）
+- [x] plan_exclusions／plan_refund_rules／meeting_point_name／meeting_address／experience_point_name／confirm_by_days／earliest_departure／free_cancel_days（activity_plans，41/41）
+- [x] 免費培訓課程 inclusions／highlights／plan_inclusions 補齊
+- [x] 備份（audit_logs id 202–242）
+- [ ] 未變更：`activity_qa`（刻意保留真實旅客問答表，不插入假資料）
+- [ ] 未再開新 PR（本次為既有分支後續補強；如需併入 main 需使用者指示是否要開新 PR 或併入既有流程）
