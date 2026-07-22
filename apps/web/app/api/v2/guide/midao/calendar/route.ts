@@ -13,6 +13,18 @@ import { handleRouteError } from '../../../../../../src/lib/route-error';
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const OPEN_REQ = ['new', 'pending_reply', 'replied'];
 
+const TAIPEI_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+/** timestamptz ISO → Asia/Taipei 在地日期字串 YYYY-MM-DD */
+function taipeiDateOf(iso: string): string {
+  return new Date(new Date(iso).getTime() + TAIPEI_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** timestamptz ISO → Asia/Taipei 在地時刻 HH:MM */
+function taipeiTimeOf(iso: string): string {
+  return new Date(new Date(iso).getTime() + TAIPEI_OFFSET_MS).toISOString().slice(11, 16);
+}
+
 async function fetchBookingsOverlay(guideId: string, month: string) {
   // 既有站內訂單唯讀疊加；失敗回空（degrade，spec §8）
   if (!hasSupabaseEnv()) return [];
@@ -22,8 +34,8 @@ async function fetchBookingsOverlay(guideId: string, month: string) {
       .select('id, start_at, end_at, participants, status, customer_note')
       .eq('guide_id', guideId)
       .in('status', ['pending_confirmation', 'confirmed'])
-      .gte('start_at', `${month}-01T00:00:00Z`)
-      .lt('start_at', nextMonthStart(month));
+      .gte('start_at', new Date(`${month}-01T00:00:00+08:00`).toISOString())
+      .lt('start_at', new Date(`${nextMonthStart(month)}T00:00:00+08:00`).toISOString());
     return Array.isArray(data) ? data : [];
   } catch {
     return [];
@@ -34,7 +46,7 @@ function nextMonthStart(month: string): string {
   const [y, m] = month.split('-').map(Number);
   const ny = m === 12 ? y + 1 : y;
   const nm = m === 12 ? 1 : m + 1;
-  return `${ny}-${String(nm).padStart(2, '0')}-01T00:00:00Z`;
+  return `${ny}-${String(nm).padStart(2, '0')}-01`;
 }
 
 export async function GET(request: Request) {
@@ -43,6 +55,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const month = url.searchParams.get('month') ?? '';
   if (!MONTH_RE.test(month)) return jsonError('INVALID_MONTH', '月份格式需為 YYYY-MM', 400);
+  const mm = Number(month.slice(5, 7));
+  if (mm < 1 || mm > 12) return jsonError('INVALID_MONTH', '月份格式需為 YYYY-MM', 400);
   try {
     const [availability, requests, bookings] = await Promise.all([
       getMonthEffectiveDb(session.guideId, month),
@@ -51,12 +65,12 @@ export async function GET(request: Request) {
     ]);
     const days = availability.map((day) => {
       const dayRequests = requests.items.filter((r) => r.preferredDate === day.date);
-      const dayBookings = bookings.filter((b) => String(b.start_at).slice(0, 10) === day.date);
+      const dayBookings = bookings.filter((b) => taipeiDateOf(String(b.start_at)) === day.date);
       return {
         date: day.date,
         availability: { morning: day.morning, afternoon: day.afternoon, evening: day.evening, custom: day.custom },
         hasPending: dayRequests.some((r) => OPEN_REQ.includes(r.status)),
-        hasConfirmed: dayRequests.some((r) => r.status === 'closed_won') || dayBookings.length > 0,
+        hasConfirmed: dayRequests.some((r) => r.status === 'closed_won') || dayBookings.some((b) => b.status === 'confirmed'),
         items: [
           ...dayRequests.map((r) => ({
             type: 'midao_request' as const, id: r.id, travelerName: r.travelerName,
@@ -67,7 +81,7 @@ export async function GET(request: Request) {
           ...dayBookings.map((b) => ({
             type: 'booking' as const, id: b.id, travelerName: null,
             title: '站內訂單', status: b.status,
-            timeRange: `${String(b.start_at).slice(11, 16)}–${String(b.end_at).slice(11, 16)}`,
+            timeRange: `${taipeiTimeOf(String(b.start_at))}–${taipeiTimeOf(String(b.end_at))}`,
             participantsCount: b.participants,
           })),
         ],

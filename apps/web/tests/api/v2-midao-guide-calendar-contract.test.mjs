@@ -17,6 +17,9 @@ test('midao calendar route：month 驗證＋三來源聚合＋bookings degrade',
   assert.match(src, /catch \{\s*return \[\];/); // degrade 不整頁 500
   assert.match(src, /hasPending/);
   assert.match(src, /hasConfirmed/);
+  assert.match(src, /taipeiDateOf/);
+  assert.match(src, /b\.status === 'confirmed'/);
+  assert.match(src, /mm < 1 \|\| mm > 12/);
 });
 
 test('midao availability defaults route：GET/PUT＋CSRF', async () => {
