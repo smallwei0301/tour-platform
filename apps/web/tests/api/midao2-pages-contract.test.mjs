@@ -82,3 +82,16 @@ test('midao2 我的頁面：profile/公開預覽/QR/登出＋profile-extras rout
   assert.match(route, /validateCsrf/);
   assert.match(route, /updateGuideExperienceYearsDb/);
 });
+
+test('公開接案頁：RSC 直呼領域檔＋表單 honeypot/聯絡驗證/成功畫面', async () => {
+  const page = await read('app/(non-locale)/g/[slug]/page.tsx');
+  assert.match(page, /getPublicMidaoPageDb/);
+  assert.match(page, /generateMetadata/);
+  assert.match(page, /notFound\(\)/);
+  const form = await read('app/(non-locale)/g/[slug]/RequestForm.tsx');
+  assert.match(form, /website/);
+  assert.match(form, /openPeriods/);
+  assert.match(form, /requestNo/);
+  assert.match(form, /g-submit/);
+  assert.doesNotMatch(form, /csrfHeaders/); // 公開端無 CSRF
+});
