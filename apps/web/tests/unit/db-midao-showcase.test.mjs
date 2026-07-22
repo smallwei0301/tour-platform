@@ -76,6 +76,7 @@ test('公開接案頁：approved＋≥1 可見服務才回資料', async () => {
   const norm = normalizeServiceInput(serviceInput());
   await createMidaoServiceDb(G, norm.value, { publish: true });
   const page = await getPublicMidaoPageDb('andy-lee');
+  assert.equal(page.guideId, G);
   assert.equal(page.guide.displayName, 'Andy Lee');
   assert.equal(page.guide.experienceYears, 5);
   assert.equal(page.services.length, 1);

@@ -233,6 +233,7 @@ export async function getPublicMidaoPageDb(slug) {
     .sort((a, b) => (a.midao_sort_order ?? 999) - (b.midao_sort_order ?? 999));
   if (!visible.length) return null;
   return {
+    guideId: profile.id,
     guide: {
       displayName: profile.display_name, headline: profile.headline ?? null,
       bio: profile.bio ?? null,
