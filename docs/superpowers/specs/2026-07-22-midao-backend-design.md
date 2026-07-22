@@ -730,8 +730,8 @@ day segment edit → revision CAS → replace global day rules
 
 Guide HMAC token 格式保持既有 `guideId:sessionVersion:HMAC`，不新增第四段。`verifyGuideSession()` 回傳已簽章的 `sessionVersion`；`verifyCanonicalGuideSession()`／`withMidaoGuideQuery/Command`／Midao page-session helper 在同一邊界依序檢查 HMAC、DB session version、verification status、`backend_mode`、`MIDAO_BACKEND_ENABLED` 與 mutation kill switch。切 mode 時 bump session version，迫使重新登入。
 
-- Login 與 admin impersonation 查 canonical `backend_mode`，回明確 `redirectTo`。
-- Admin切換使用 `POST /api/v2/admin/guides/[guideId]/backend-mode`。RPC順序固定為validate→claim/lock durable idempotency→replay/conflict→lock profile→conditional update/version bump→audit→outbox→sanitized response snapshot＋idempotency completed→commit。Fresh-key same-mode不bump、不audit、不outbox，只保存canonical response。
+- Login與admin impersonation查canonical `backend_mode`，回明確 `redirectTo`；guide login UI與admin guide page都必須consume server response，後者只接受allowlisted same-origin `/midao/**`或`/guide/**` paths。
+- Admin切換使用 `POST /api/v2/admin/guides/[guideId]/backend-mode`；唯一RPC identity為 `public.midao_switch_guide_backend_mode(uuid,text,text,text,text,uuid,text,text)`，參數依序guide ID、target mode、reason、actor type、actor ID、request ID、idempotency key、request hash。RPC順序固定為validate→claim/lock durable idempotency→replay/conflict→lock profile→conditional update/version bump→audit→outbox→sanitized response snapshot＋idempotency completed→commit。Fresh-key same-mode不bump、不audit、不outbox，只保存canonical response。
 - Forward `legacy→midao`同時要求 `MIDAO_BACKEND_ENABLED`與 `MIDAO_BACKEND_MODE_SWITCH_ENABLED`；rollback `midao→legacy`不受backend/mutation/mode-switch flags阻擋。
 - `legacy` 登入 → `/guide/dashboard`。
 - `midao` 登入 → `/midao`。

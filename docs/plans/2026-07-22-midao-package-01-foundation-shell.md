@@ -64,7 +64,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs
 ```
 
-5. Orchestrator在child前後驗證相同 `git write-tree`，並把tree hash、精確child argv、evidence epoch/exit寫入 `.git/midao-last-verified.json`；task列出的staged test paths必須全部出現在argv，`--all`才可替代。一般 `--run`只接受repo `run-checks.sh`並核對其evidence.cmd；tracked heavy使用 `--run-heavy`，只allowlist `timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh`或 `run-midao-e2e.sh`，由orchestrator直接保存child exit/argv，不讀無關harness evidence。
+5. Orchestrator在child前後驗證相同 `git write-tree`；同一tree hash可由多次 `--run`/`--run-heavy`追加evidence bundle entries，每entry獨立保存exact spawned `childArgv`、covered test paths、derived `expectedEvidenceCmd`（heavy則保存sanitized child exit）與epoch。Tree或staged path/status/blob manifest一變就清空整包。`--check-only`要求bundle內covered paths的union涵蓋全部staged tests；`--all` entry才可宣告全覆蓋。一般 `--run`只接受repo `run-checks.sh`＋literal test paths（拒絕glob metacharacters），將paths按argv順序推導 `node --test path1 path2`，`--typecheck`時附加 ` && npm run typecheck`，`--all`則推導 `npm test`；只把derived semantic command與 `.claude/state/last-checks.json.cmd`比較。Tracked heavy只allowlist `timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh`或 `run-midao-e2e.sh`，由orchestrator直接保存child exit/argv，不讀無關harness evidence。
 6. 它同時拒絕tracked unstaged code與 `git ls-files --others --exclude-standard`列出的untracked code/test/config/script；docs-only例外不得涵蓋 `.ts/.tsx/.mjs/.sql/.sh/.json/.toml`等可執行/config paths。
 7. Commit前最後執行：
 
@@ -116,13 +116,23 @@ node --version
 npm --version
 ```
 
-若 fresh worktree缺 dependencies，以 tracked background執行：
+若fresh worktree缺dependencies，以tracked background執行repo-recorded safe path：
 
 ```bash
-timeout --signal=TERM 570s npm install
+timeout --signal=TERM 570s npm install --ignore-scripts
+git checkout -- yarn.lock
+git diff --exit-code -- package.json package-lock.json yarn.lock
 ```
 
-安裝完成後確認 `node_modules/typescript`存在。Local-only secret只用於非 production test process，不寫入 `.env`、log、worklog或commit。
+安裝完成後確認 `node_modules/typescript`存在，並驗證lockfile-pinned Supabase CLI prerequisite：
+
+```bash
+SUPABASE_PIN="$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")"
+test -n "$SUPABASE_PIN"
+test "$(npm exec --offline --yes --package="supabase@$SUPABASE_PIN" -- supabase --version)" = "$SUPABASE_PIN"
+```
+
+若lockfile-pinned package不在offline npm cache或version不符，立即HOLD並取得owner核准的固定版本CLI供應方式；不得改跑unrestricted `npm install`／postinstall，也不得下載floating `npx supabase`，因repo lesson已記錄該遠端路徑會403/損壞。Local-only secret只用於非production test process，不寫入 `.env`、log、worklog或commit。
 
 **Files:**
 - Modify: `docs/operations/worklogs/issue1755.md`
@@ -161,7 +171,7 @@ Expected：38 tests PASS。此精確命令已於 design worktree實跑 38/38 PAS
 - Create: `scripts/testing/verify-staged-check-evidence.mjs`
 - Create: `apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs`
 
-**RED:** pure validator與mocked child/git adapters覆蓋：Node非22、child/evidence exit非0、evidence cmd不等於精確child argv、evidence早於child start、>30分鐘、before/after `git write-tree`不同、staged deletion/rename、staged test未出現在argv、無關passing test、non-allowlisted `--run-heavy` child、tracked unstaged code、untracked `.ts/.tsx/.mjs/.sql/.sh/.json/.toml`、evidence後新增/修改test、stdout/stderr含secret。Docs-only untracked可列出但不能讓code-like例外。
+**RED:** pure validator與mocked child/git adapters覆蓋：Node非22、child/evidence exit非0、manifest `childArgv`不等於actual spawned argv、`evidence.cmd`不等於derived `expectedEvidenceCmd`、literal path含glob metacharacters、evidence早於child start、>30分鐘、before/after `git write-tree`不同、staged deletion/rename、tree變更後舊bundle未清、bundle covered-path union漏任一staged test、只跑無關passing test、non-allowlisted `--run-heavy` child、tracked unstaged code、untracked `.ts/.tsx/.mjs/.sql/.sh/.json/.toml`、evidence後新增/修改test、stdout/stderr含secret。Docs-only untracked可列出但不能讓code-like例外。
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs
@@ -169,7 +179,7 @@ node --test --test-concurrency=1 apps/web/tests/unit/midao-staged-evidence-verif
 
 Expected RED：module missing。
 
-**Minimal GREEN:** `--run --`模式先確認Node22與clean code state、取得 `git write-tree`和staged path/status/blob manifest，spawn exact child，再read `.claude/state/last-checks.json`驗cmd/exit/epoch，重算tree/state並寫 `.git/midao-last-verified.json`。`--check-only`只驗現有manifest/current index/evidence/drift，不可自行刷新manifest。Untracked用 `git ls-files --others --exclude-standard -z`；tracked unstaged與staged rename/delete使用NUL-safe porcelain/raw parsing。所有輸出redact token/key/password/secret，不修改frozen hook。
+**Minimal GREEN:** `--run --`模式先確認Node22與clean code state，驗證child argv只含literal tracked test paths/允許flags，再取得 `git write-tree`和staged path/status/blob manifest；先保存actual spawned `childArgv`與按frozen `run-checks.sh:16-64`規則derived的 `expectedEvidenceCmd`，spawn exact child後read `.claude/state/last-checks.json`，只拿其cmd與derived semantic command比較並驗exit/epoch；重算tree/state後依相同tree hash append entry至 `.git/midao-last-verified.json` evidence bundle。`--check-only`核對bundle schema、current index/tree、所有entries年齡與covered-path union，並以current `.claude/state/last-checks.json`重驗latest ordinary entry的semantic command/exit/epoch；較早entries已在append當下驗過且只在相同tree bundle內有效。不可自行刷新manifest或沿用不同tree entries。Untracked用 `git ls-files --others --exclude-standard -z`；tracked unstaged與staged rename/delete使用NUL-safe porcelain/raw parsing。所有輸出redact token/key/password/secret，不修改frozen hook。
 
 **GREEN/evidence:**
 
@@ -187,6 +197,33 @@ node scripts/testing/verify-staged-check-evidence.mjs --check-only
 Expected GREEN：unit/adversarial cases與exact harness child都exit 0；manifest tree hash等於current `git write-tree`，沒有raw secret輸出。
 
 **Commit:** `test: 補強 staged code evidence驗證`。
+
+## Task A4: secret-safe production build evidence wrapper
+
+**Files:**
+- Create: `scripts/testing/run-midao-production-build.mjs`
+- Create: `apps/web/tests/unit/midao-production-build-runner.test.mjs`
+
+**RED:** mocked spawn/crypto/fs/git adapters覆蓋：只接受固定child `npm run build`；wrapper process內產生兩個>=32-byte random secrets，child env設 `NODE_ENV=production`、`GUIDE_SESSION_SECRET`、`ADMIN_ACCESS_TOKEN`並刪除 `SUPABASE_SERVICE_ROLE_KEY`；任何stdout/stderr secret值都redact。`.git/midao-build-evidence.json`只保存exact wrapper argv、secret env names（不含values）、sanitized child argv、exit、HEAD SHA、`git write-tree`、log path與SHA-256 digest；build前後 `git status --porcelain`都必須空且index tree等於HEAD tree。Child非0、tree/HEAD變化、dirty/untracked source或raw secret出現在console/log/evidence都FAIL。
+
+```bash
+node --test --test-concurrency=1 apps/web/tests/unit/midao-production-build-runner.test.mjs
+```
+
+Expected RED：wrapper/test target missing。
+
+**Minimal GREEN:** 使用Node `crypto.randomBytes()`在wrapper內生成secrets，不透過shell argv；spawn fixed `npm run build`，stream輸出先redact再寫sanitized log，finally以0600寫evidence。Wrapper不得接受任意command/secret值參數。
+
+**GREEN/evidence:**
+
+```bash
+node --test --test-concurrency=1 apps/web/tests/unit/midao-production-build-runner.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh --typecheck \
+  apps/web/tests/unit/midao-production-build-runner.test.mjs
+```
+
+**Commit:** `test: 建立secret-safe production build runner`。
 
 ---
 
@@ -612,7 +649,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 **RED assertions:**
 
-- function `midao_switch_guide_backend_mode` exists；若用 `SECURITY DEFINER`，固定安全 `search_path`並schema-qualify所有objects。
+- function identity固定為 `public.midao_switch_guide_backend_mode(uuid,text,text,text,text,uuid,text,text)`，參數依序為guide ID、target mode、reason、actor type、actor ID、request ID、idempotency key、request hash，returns canonical jsonb；若用 `SECURITY DEFINER`，固定安全 `search_path`並schema-qualify所有objects。
 - `REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated`；`GRANT EXECUTE ... TO service_role`。
 - transaction順序固定：validate mode/reason/canonical actor/key/hash，設定 `scope_type='guide'`、`scope_id=targetGuideId` → claim/lock `midao_idempotency_records` → same-hash replay或different-hash deterministic conflict → `SELECT ... FOR UPDATE` guide profile → conditional mode/version update → audit → outbox →寫去敏response snapshot並把idempotency state改completed → commit。
 - mode changed：`guide_session_version`恰加一，audit/outbox各一。
@@ -671,7 +708,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 - Create: `scripts/testing/with-midao-local-supabase.mjs`
 - Create: `scripts/testing/run-midao-foundation-postgres.sh`
 
-**RED:** mocked process/fs adapters覆蓋：全repo lock競爭只有一個winner；fixed-port project已running時fail closed；`status`只有anchored `No such container: supabase_db_${expectedProjectId}`可判定not-running，其他exit 1一律abort；start成功前signal不記ownership/不stop foreign stack；expectedProjectId為canonical repo root basename（只允許CLI合法字元），start後以 `docker ps --format`核對所有Supabase container names以 `_${expectedProjectId}`結尾並capture IDs，才記ownership；cleanup前IDs/names任一變更即拒絕stop；reset failure、child failure與TERM/INT都只cleanup已確認owned stack；stdout/stderr/JSON中的anon/service-role/DB credentials全部redact。兩個concurrent runners、stale lock PID、reset failure、reused stack、keys出現在stdout/stderr都要測。
+**RED:** mocked process/fs adapters覆蓋：全repo lock競爭只有一個winner；fixed-port project已running時fail closed；`status`只在stderr任一完整行符合escaped multiline regex `^No such container: supabase_db_${escapedExpectedProjectId}\r?$`時可判定not-running；CLI warning與固定 `failed to inspect container health` prefix可共存但不得取代該exact line，其他exit 1一律abort；start成功前signal不記ownership/不stop foreign stack；expectedProjectId為canonical repo root basename（只允許CLI合法字元），start後以 `docker ps --format`核對所有Supabase container names以 `_${expectedProjectId}`結尾並capture IDs，才記ownership；cleanup前IDs/names任一變更即拒絕stop；reset failure、child failure與TERM/INT都只cleanup已確認owned stack；stdout/stderr/JSON中的anon/service-role/DB credentials全部redact。兩個concurrent runners、stale lock PID、reset failure、reused stack、keys出現在stdout/stderr都要測。
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-local-supabase-runner.test.mjs
@@ -679,7 +716,7 @@ node --test --test-concurrency=1 apps/web/tests/unit/midao-local-supabase-runner
 
 Expected RED：runner/lock module missing。
 
-**Minimal GREEN:** 因 `supabase/config.toml`固定ports，使用atomic filesystem lock `/tmp/tour-platform-local-supabase.lock`序列化所有repo local Supabase runs，lock metadata含PID、`/proc` process start ticks、repo root；只在PID不存在或start ticks不符時回收stale lock。持鎖順序為preflight→classified status→start→identity confirmation→reset→readiness→child→owned cleanup→unlock；不提供reuse mode。`status -o json`逐鍵映射local env，`pg`重試 `SELECT 1`，所有CLI raw output先redact再顯示。Shell runner將其後integration test paths交給wrapper，wrapper在local env內執行 `node --test --test-concurrency=1`；無paths時列入D3b–D3d三支integration files。Caller必須由A3 `--run-heavy`包住整個570s shell command，將DB test exit/argv與staged tree直接綁定，不得事後用無關harness evidence覆蓋。
+**Minimal GREEN:** 因 `supabase/config.toml`固定ports，使用atomic filesystem lock `/tmp/tour-platform-local-supabase.lock`序列化所有repo local Supabase runs。Wrapper每次從 `package-lock.json`解析exact Supabase version，所有CLI calls固定經 `npm exec --offline --yes --package="supabase@$SUPABASE_PIN" -- supabase`，禁止PATH上不同版本或network fallback。Lock metadata含PID、`/proc` process start ticks、repo root；只在PID不存在或start ticks不符時回收stale lock。持鎖順序為preflight→classified status→start→identity confirmation→reset→readiness→child→owned cleanup→unlock；不提供reuse mode。`status -o json`逐鍵映射local env，`pg`重試 `SELECT 1`，所有CLI raw output先redact再顯示。Shell runner將其後integration test paths交給wrapper，wrapper在local env內執行 `node --test --test-concurrency=1`；無paths時列入D3b–D3d三支integration files。Caller必須由A3 `--run-heavy`包住整個570s shell command，將DB test exit/argv與staged tree直接綁定，不得事後用無關harness evidence覆蓋。
 
 **GREEN/evidence:**
 
@@ -703,8 +740,8 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 - `db reset --local`真實apply全部migrations＋seed；五個foundation objects、backend default/check/index與expected columns存在。
 - 對outbox/idempotency/audit tables查 `pg_class.relacl`＋`aclexplode(COALESCE(relacl, acldefault('r', relowner)))`：PUBLIC(grantee OID 0)、anon、authenticated沒有table privileges；service_role具預期privileges。
 - `relrowsecurity=true`，且 `pg_policy`不存在適用PUBLIC/anon/authenticated的permissive policy；service-role-only tables預期零client policies。
-- 在transaction建立無direct bypass的 `midao_rls_probe`，只暫grant schema usage＋單表最小INSERT/SELECT，再 `SET LOCAL ROLE`實際DML；必須由RLS以SQLSTATE 42501拒絕，最後ROLLBACK。這與「無table grant」ACL test分開，不能用同一次permission denied冒充RLS。
-- 對 `midao_switch_guide_backend_mode`查 `pg_proc.proacl`＋`aclexplode(COALESCE(proacl, acldefault('f', proowner)))`：PUBLIC OID 0無EXECUTE；另用 `has_function_privilege()`驗anon/authenticated=false、service_role=true。SECURITY DEFINER時 `proconfig`固定safe search_path且SQL body schema-qualified。
+- 對outbox、idempotency、audit三張表逐表各開獨立transaction：建立無direct bypass的 `midao_rls_probe`，只暫grant schema usage＋當前單表最小INSERT/SELECT，再 `SET LOCAL ROLE`實際DML；每張都必須由RLS以SQLSTATE 42501拒絕，最後ROLLBACK。這與「無table grant」ACL test分開，不能用同一次permission denied冒充RLS。
+- 對exact `regprocedure 'public.midao_switch_guide_backend_mode(uuid,text,text,text,text,uuid,text,text)'`取得OID，再查 `pg_proc.proacl`＋`aclexplode(COALESCE(proacl, acldefault('f', proowner)))`：PUBLIC OID 0無EXECUTE；另用該OID/完整signature的 `has_function_privilege()`驗anon/authenticated=false、service_role=true。SECURITY DEFINER時 `proconfig`固定safe search_path且SQL body schema-qualified；任何額外overload不算此gate證據。
 
 ```bash
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
@@ -830,30 +867,37 @@ Browser-observable redirect在F10真實Playwright驗證。
 
 **Commit:** `feat: 由server導向導遊登入後入口`。
 
-## Task E3: admin impersonation canonical redirect
+## Task E3: admin impersonation canonical redirect＋UI consumer
 
 **Files:**
 - Modify: `apps/web/app/api/v2/admin/guides/[guideId]/impersonate/route.ts`
+- Modify: `apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx`
+- Modify: `apps/web/tests/api/admin-guide-impersonation.test.mjs`
 - Create: `apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs`
+- Create: `apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs`
 
-**RED:** approved target的canonical mode/version/display_name決定cookies與redirect；admin email normalized signed actor；legacy→guide dashboard，midao→midao root；既有admin middleware/CSRF/404/approved gate不變。
+**RED:** approved target的canonical mode/version/display_name決定cookies與redirect；admin email normalized signed actor；legacy→`/guide/dashboard`，midao→`/midao`；既有admin middleware/CSRF/404/approved gate不變。Admin page成功後必須consume `json.data.redirectTo`，只允許exact `/midao`、`/midao/**`或`/guide/**`的same-origin relative path；missing、`//host`、backslash、encoded separator或其他path都fail closed至 `/guide/dashboard`，不得形成open redirect。
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs
+node --test --test-concurrency=1 \
+  apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs
 ```
 
-Expected RED：canonical redirect/actor cookie missing。
+Expected RED：canonical API redirect/actor cookie與UI consumer尚未存在，live UI仍硬編legacy route。
 
 **GREEN/evidence:**
 
 ```bash
 node --test --test-concurrency=1 \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs \
   apps/web/tests/api/admin-guide-impersonation.test.mjs \
   apps/web/tests/api/midao-impersonation-actor.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh --typecheck \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs \
   apps/web/tests/api/admin-guide-impersonation.test.mjs \
   apps/web/tests/api/midao-impersonation-actor.test.mjs
 ```
@@ -866,6 +910,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 **Files:**
 - Modify: `supabase/seed.sql`（local-only second guide fixture）
+- Modify: `apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs`
 - Modify: `apps/web/e2e/helpers.ts`
 - Modify: `apps/web/playwright.config.ts`
 - Create: `scripts/testing/run-midao-e2e.sh`
@@ -877,16 +922,19 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 - `setMidaoGuideSession()`直接重用shared `signGuideSession()`，維持legacy guide HMAC bytes，不複製演算法，也不使用 `'a'.repeat(64)`。
 - 新增 `setMidaoImpersonationSession()`，重用actor cookie factory，建立真guide token＋真signed actor＋visible banner cookies。
-- `playwright.config.ts`的managed webServer改為 `command: 'npm run dev'`＋explicit `env`，從runner child env傳入local Supabase URL/anon/service role、同一>=32-char test secret與runner分配的非3333 port；Midao lane固定 `reuseExistingServer:false`，不得重用外部Next server，移除hardcoded fake anon key。
-- `run-midao-e2e.sh`只接受repo-root `apps/web/e2e/*.spec.ts` paths，逐項驗證後安全strip `apps/web/`再傳給workspace Playwright；透過排他 `with-midao-local-supabase.mjs`獨立start/reset/seed/map env/readiness/cleanup；取得free port後立刻啟managed server，port競爭只能fail，不能fallback/reuse。Playwright child/server及Supabase stdout/stderr先redact keys再輸出。
+- `playwright.config.ts`只在runner child顯式設 `MIDAO_E2E_LOCAL=1`時啟Midao managed webServer：`command: 'npm run dev'`＋explicit `env`，傳入local Supabase URL/anon/service role、同一>=32-char guide test secret、local-only >=32-char `ADMIN_ACCESS_TOKEN`、`ADMIN_EMAIL`＋matching `ADMIN_EMAIL_ALLOWLIST`與runner分配的非3333 port；此lane固定 `reuseExistingServer:false`。未設Midao flag時維持現有legacy config/default port行為，`PLAYWRIGHT_NO_WEBSERVER=1`仍完全關閉managed server；不得要求runner-only env或重用外部Next server，移除hardcoded fake anon key。
+- `run-midao-e2e.sh`只接受repo-root `apps/web/e2e/*.spec.ts` paths，逐項驗證後安全strip `apps/web/`再傳給workspace Playwright，child env固定設 `MIDAO_E2E_LOCAL=1`；透過排他 `with-midao-local-supabase.mjs`獨立start/reset/seed/map env/readiness/cleanup；取得free port後立刻啟managed server，port競爭只能fail，不能fallback/reuse。Playwright child/server及Supabase stdout/stderr先redact keys再輸出。
 - production config不能啟用test bypass；本方案沒有runtime bypass cookie、production key或 `page.route()` auth繞過。
-- security test round-trip helper token經 `verifyGuideSession()`成功，actor/guide cross-protocol signatures互斥；source、Playwright reporter、webServer startup error與runner stdout/stderr都不得列出local anon/service-role/DB keys。
+- security test round-trip helper token經 `verifyGuideSession()`成功，actor/guide cross-protocol signatures互斥；source、Playwright reporter、webServer startup error與runner stdout/stderr都不得列出local anon/service-role/DB keys。Config matrix另驗：Midao flag→dynamic server/no reuse；`PLAYWRIGHT_NO_WEBSERVER=1`→無server；兩旗皆無→legacy config可載入且不要求Supabase/admin runner env。
+- schema integration test在reset後read-back fixture exact user/guide IDs、slug、email、`backend_mode='midao'`、`guide_session_version=1`、`verification_status='approved'`，並用明列的non-production password通過既有password verifier；FK/duplicate/seed failure都必須使DB command非0。
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/security/midao-e2e-auth-seam.test.mjs
+timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh \
+  apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs
 ```
 
-Expected RED：helper/config/seed尚未提供真實 session。
+Expected RED：source test因helper/config/seed尚未提供真實session；DB test因exact seeded fixture尚未存在。Runner/path missing不算需求RED。
 
 **Minimal GREEN:** 保留既有 `setGuideSession()`供legacy browser tests；新增兩個Midao helpers，改managed webServer env，runner重用共用local Supabase wrapper。不得新增全域Playwright projects或production bypass。
 
@@ -900,9 +948,13 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh --typecheck \
   apps/web/tests/security/midao-e2e-auth-seam.test.mjs \
   apps/web/tests/unit/midao-local-supabase-runner.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
+  timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh \
+  apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
 ```
 
-再以 tracked background先跑 local Postgres runner，確認 seed/schema。
+Expected GREEN：Node/source contract與reset/seed/schema read-back都exit 0；evidence bundle union涵蓋三支staged tests且tree hash不變。
 
 **Commit:** `test: 建立真實 Midao E2E guide session`。
 
@@ -1150,7 +1202,7 @@ Expected：browser spec exit 0，Playwright實際啟動runner-owned server；cle
 
 這是C4–C6/E1–E4/F5/F7–F8完成後的post-implementation browser acceptance，不宣稱TDD RED。
 
-**Behavior:** no cookie→guide login＋safe next；legacy fake64-char signature不能通過；valid Midao HMAC通過；forged/expired actor cookie拒絕；`setMidaoImpersonationSession()`顯示banner並可結束。先設signed actor、GET真CSRF，再用seeded local test account走真session POST普通登入；read browser context cookies確認 `midao_impersonation_actor`與visible banner cookie都不存在，banner消失。C5/C6 Node contracts另證明後續canonical context為 `actorType=guide`；本package沒有guide business command，因此不宣稱audit row。Login UI可另以mocked成功API response驗same-realm `redirectTo` consumption，但不得mock `/midao` server auth。
+**Behavior:** no cookie→guide login＋safe next；legacy fake64-char signature不能通過；valid Midao HMAC通過；forged/expired actor cookie拒絕。先用existing `adminLogin()`建立local admin session，進入真 `apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx`並操作代入按鈕；不得用 `setMidaoImpersonationSession()`跳過此case，不得 `page.route()` mock impersonation API。真API response須讓browser落到 `/midao`，signed actor＋visible banner存在且banner顯示。接著結束代入，再重建signed actor、GET真CSRF並用seeded local test account走真session POST普通登入；read browser context cookies確認 `midao_impersonation_actor`與visible banner cookie都不存在，banner消失。C5/C6 Node contracts另證明後續canonical context為 `actorType=guide`；本package沒有guide business command，因此不宣稱audit row。Login UI可另以mocked成功API response驗same-realm `redirectTo` consumption，但不得mock `/midao` server auth。
 
 ```bash
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
@@ -1173,6 +1225,7 @@ test "$(node -p "process.versions.node.split('.')[0]")" = "22"
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh --typecheck \
   apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs \
+  apps/web/tests/unit/midao-production-build-runner.test.mjs \
   apps/web/tests/unit/midao-local-supabase-runner.test.mjs \
   apps/web/tests/api/midao-backend-mode-migration.test.mjs \
   apps/web/tests/api/midao-notification-outbox-migration.test.mjs \
@@ -1194,6 +1247,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
   apps/web/tests/ui/midao-guide-login-ui-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs \
   apps/web/tests/security/midao-e2e-auth-seam.test.mjs \
   apps/web/tests/ui/midao-brand-tokens.test.mjs \
   apps/web/tests/unit/midao-nav-items.test.mjs \
@@ -1245,14 +1299,10 @@ timeout --signal=TERM 570s env NODE_ENV=test \
   .claude/hooks/run-checks.sh --all
 timeout --signal=TERM 570s npm run lint
 timeout --signal=TERM 570s npm run typecheck
-timeout --signal=TERM 570s env -u SUPABASE_SERVICE_ROLE_KEY \
-  NODE_ENV=production \
-  GUIDE_SESSION_SECRET="$(openssl rand -hex 32)" \
-  ADMIN_ACCESS_TOKEN="$(openssl rand -hex 32)" \
-  npm run build
+timeout --signal=TERM 570s node scripts/testing/run-midao-production-build.mjs
 ```
 
-Expected：四個commands皆exit 0。每條分別記錄exact argv、exit code、HEAD SHA與artifact/log path，不能合併成單一「G4 PASS」。Build secrets只存在該process、不寫檔/console/worklog；若570秒不足，視為HOLD並診斷，不得把timeout報成PASS。
+Expected：四個commands皆exit 0。前三條分別記錄exact argv、exit code、HEAD SHA與artifact/log path；build保存exact wrapper argv、secret env names、sanitized child argv、HEAD/tree SHA、exit與sanitized log digest，絕不保存生成後secret values或含值的expanded env argv。不能合併成單一「G4 PASS」。若570秒不足，視為HOLD並診斷，不得把timeout報成PASS。
 
 ## Gate G5: independent review
 
@@ -1266,12 +1316,12 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 - [ ] canonical guard checks HMAC/DB display_name/version/status/mode/flags。
 - [ ] signed impersonation actor survives into route context；cross-protocol/forgery denied；普通登入與logout清cookies。
 - [ ] forward mode switch default-off且受獨立gate；rollback不受flags阻擋。
-- [ ] login/impersonation redirectTo consumed byUI。
+- [ ] guide login與admin impersonation `redirectTo`都由real UI consume，unsafe relative/external paths fail closed。
 - [ ] `/midao` server layout does not depend on frozen middleware。
-- [ ] E2E uses real HMAC and seeded local DB row，no production bypass。
+- [ ] E2E uses real HMAC and seeded local DB row，no production bypass；shared Playwright legacy/NO_WEBSERVER lanes不回歸。
 - [ ] five routes work on mobile/desktop with accessible shell。
-- [ ] G1–G4 actual commands exit 0，包含full suite/lint/typecheck/build。
-- [ ] Staged evidence orchestrator綁定exact child argv＋before/after tree hash，拒絕untracked/unstaged code、unrelated tests與manifest drift。
+- [ ] G1–G4 actual commands exit 0，包含full suite/lint/typecheck/secret-safe build。
+- [ ] Staged evidence orchestrator分離exact child argv與derived semantic command；同tree evidence bundle覆蓋所有staged tests，拒絕untracked/unstaged code、unrelated-only tests與manifest drift。
 - [ ] Local Supabase runner持全repo排他lock、核對owned identity、redact logs且只stop owned stack；Playwright不reuse existing server。
 - [ ] ACL catalog、RLS policy catalog與temporary probe DML三層runtime驗證PASS。
 - [ ] Independent spec＋quality reviews PASS。

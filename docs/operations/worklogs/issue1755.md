@@ -91,7 +91,20 @@ Pinned commit `02a5a349`由fresh spec與quality reviewers對live `origin/main af
 - F9/F10改post-implementation browser acceptance，不宣稱RED；guide audit落庫延至第一個真guide command package。
 - Master roadmap同步atomic migration timestamp與mode-switch flag。
 
-#1756仍維持 `status:blocked + agent:next`。第四版須再次fresh review PASS；PASS前不得開始production code。
+### 2026-07-22 fourth fresh review: dual FAIL/HOLD
+
+Pinned commit `b97bc92d`由fresh spec與quality reviewers審查；兩者皆FAIL。合併後blocking：A3把frozen `evidence.cmd`誤當exact child argv；A1 unrestricted postinstall違反repo lesson且Supabase CLI prerequisite不明；admin impersonation API有redirect但live UI仍硬編legacy route；E4 seed變更缺staged DB command；master仍留舊E2E path/runner命令；G4 exact argv與random secret不落證據互相矛盾。
+
+第四輪remediation：
+
+- A3分離exact spawned `childArgv`與derived semantic `expectedEvidenceCmd`；同tree支援mixed-runtime evidence bundle，`--check-only`驗coverage union。
+- A1改 `npm install --ignore-scripts`、lockfile drift check與offline lockfile-pinned Supabase CLI preflight；不可用即HOLD，不回退已知403 postinstall。
+- E3加入admin guide page UI consumer與safe relative-path allowlist；F10使用existing `adminLogin()`走真admin UI/API到 `/midao`。
+- E4讓schema integration test read-back exact seed/password，Node＋DB commands都綁同一staged tree；master E2E command同步repo-root path＋heavy wrapper。
+- 新增secret-safe build wrapper，在process內生成secrets；G4只保存wrapper argv、env names、sanitized child argv與digest。
+- Runner補multiline stopped-state regex；三張敏感表逐表RLS probe；RPC鎖exact `regprocedure`；Midao Playwright flag與legacy/NO_WEBSERVER matrix相容。
+
+#1756仍維持 `status:blocked + agent:next`。第五版須再次fresh review PASS；PASS前不得開始production code。
 
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.

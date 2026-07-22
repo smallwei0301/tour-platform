@@ -310,8 +310,10 @@ git commit -m "feat: 建立 Midao V2 route wrapper"
 - Modify: `apps/web/app/api/guide/auth/session/route.ts`
 - Modify: `apps/web/app/api/v2/admin/guides/[guideId]/impersonate/route.ts`
 - Modify: `apps/web/app/(non-locale)/guide/login/page.tsx`
+- Modify: `apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx`
 - Test: `apps/web/tests/api/midao-guide-login-api-redirect.test.mjs`
 - Test: `apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs`
+- Test: `apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs`
 - Test: `apps/web/tests/api/midao-impersonation-actor.test.mjs`
 
 **Step 1: Write RED tests**
@@ -322,14 +324,15 @@ Require queries to select `backend_mode` and responses：
 { "redirectTo": "/midao" }
 ```
 
-或 `/guide/dashboard`。Login UI使用server `redirectTo`，`next`只允許同realm relative path。Impersonation以normalized admin email簽actor cookie；invite/regular/legacy guideId普通登入與logout都清actor/banner cookies。
+或 `/guide/dashboard`。Login UI使用server `redirectTo`，`next`只允許同realm relative path；admin guide page亦consume impersonation response的allowlisted `/midao/**`或`/guide/**` redirect，不再硬編legacy route。Impersonation以normalized admin email簽actor cookie；invite/regular/legacy guideId普通登入與logout都清actor/banner cookies。
 
 **Step 2: Verify RED**
 
 ```bash
 node --test --test-concurrency=1 \
   apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
-  apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs
+  apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs
 ```
 
 **Step 3: Implement minimal changes**
@@ -342,13 +345,14 @@ node --test --test-concurrency=1 \
 node --test --test-concurrency=1 \
   apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
+  apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs \
   apps/web/tests/api/guide-auth-session-post-bounded.test.mjs
 ```
 
 **Step 5: Commit**
 
 ```bash
-git add apps/web/src/lib/guide-auth-session-supabase.ts apps/web/app/api/guide/auth/session/route.ts apps/web/app/api/v2/admin/guides/[guideId]/impersonate/route.ts apps/web/tests/api/midao-guide-*.test.mjs
+git add apps/web/src/lib/guide-auth-session-supabase.ts apps/web/app/api/guide/auth/session/route.ts apps/web/app/api/v2/admin/guides/[guideId]/impersonate/route.ts 'apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx' apps/web/tests/api/midao-guide-*.test.mjs apps/web/tests/ui/midao-admin-impersonation-ui-redirect.test.mjs
 git commit -m "feat: 依後台模式導向導遊入口"
 ```
 
@@ -510,14 +514,17 @@ E2E使用local seeded guide＋real HMAC/DB guard，驗五route、active nav、de
 Run：
 
 ```bash
-timeout --signal=TERM 570s bash scripts/testing/run-midao-e2e.sh e2e/midao-navigation.spec.ts
+node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
+  timeout --signal=TERM 570s bash scripts/testing/run-midao-e2e.sh \
+  apps/web/e2e/midao-navigation.spec.ts
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
 ```
 
 Commit：`feat: 建立 Midao 五頁入口`。
 
 ## Package 1 gate
 
-Targeted UI contracts + Playwright mobile 390 × 844 + desktop 1440 × 1000 + typecheck。
+Targeted UI contracts＋Playwright mobile 390×844＋desktop 1440×1000＋typecheck；runner cleanup與staged evidence `--check-only`都必須PASS。
 
 ---
 
@@ -1027,7 +1034,6 @@ Midao guide 的舊 activity/plan POST/PUT/submit 回 `409 BACKEND_MODE_MISMATCH`
 **Files:**
 - Modify: `apps/web/src/config/feature-flags.mjs`
 - Modify login UI consuming `redirectTo`
-- Modify admin guide page consuming impersonation `redirectTo`
 - Test: `apps/web/tests/api/midao-backend-kill-switch.test.mjs`
 - Test: `apps/web/e2e/midao-backend-routing.spec.ts`
 
