@@ -31,7 +31,7 @@ async function fetchBookingsOverlay(guideId: string, month: string) {
   try {
     const supabase = await getSupabase();
     const { data } = await supabase.from('bookings')
-      .select('id, start_at, end_at, participants, status, customer_note')
+      .select('id, start_at, end_at, participants, status')
       .eq('guide_id', guideId)
       .in('status', ['pending_confirmation', 'confirmed'])
       .gte('start_at', new Date(`${month}-01T00:00:00+08:00`).toISOString())

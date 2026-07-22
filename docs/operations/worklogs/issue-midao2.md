@@ -36,6 +36,9 @@
 - 送單 `submitLimiter` 為 per-instance 記憶體單例（serverless 各實例各自計數）——與既有 limiters 同慣例，非新風險；honeypot 判斷在 rate-limit 之後（機器人第 6 次起見 429），已知取捨。
 - `DATE_RE` 不驗日曆有效性（如 2026-13-45 會過格式檢查）。
 - questions label/options 超長採靜默截斷（與 title/tagline 報錯不一致）。
+- 公開端 `openPeriods` 不含 custom 時段（僅 custom 開放的日子旅客端顯示全關）——Plan 2 決定呈現方式。
+- 需求單 `startTime`/`endTime` 未驗證直通（非法字串會 22007 → 公開端 500 而非 400），與 DATE_RE 同族待補。
+- 行事曆 API 回應用 `hasPending`/`hasConfirmed` 布林（非 spec 原文的 `requestDots[]`）——Plan 2 UI 對照此欄位名。
 
 ## 下一步
 

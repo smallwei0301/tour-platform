@@ -221,7 +221,8 @@ export async function getPublicMidaoPageDb(slug) {
     profile = g ?? null;
     if (profile) {
       const { data: acts } = await supabase.from('activities').select(ACT_COLS)
-        .eq('guide_id', profile.id).neq('status', 'archived');
+        .eq('guide_id', profile.id).neq('status', 'archived')
+        .order('created_at', { ascending: false });
       activities = Array.isArray(acts) ? acts : [];
     } else {
       activities = [];
@@ -230,7 +231,8 @@ export async function getPublicMidaoPageDb(slug) {
   if (!profile || profile.verification_status !== 'approved') return null;
   const visible = activities
     .filter((a) => isShowcaseVisible({ midaoStatus: a.midao_status ?? null, status: a.status }))
-    .sort((a, b) => (a.midao_sort_order ?? 999) - (b.midao_sort_order ?? 999));
+    .sort((a, b) => ((a.midao_sort_order ?? 999) - (b.midao_sort_order ?? 999))
+      || String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')));
   if (!visible.length) return null;
   return {
     guideId: profile.id,
