@@ -20,6 +20,20 @@
 - 苔綠 `#5E7A4F`：確認、可接案與成功狀態。
 - 標題依 Brand Book 使用 Noto Serif TC；操作文字保持可讀性與一致層級。
 
+### 1.1 固定視覺參考資產
+
+七張 user-provided reference 固定保存在 repo；產品 runtime 不載入這些圖片：
+
+```text
+docs/superpowers/assets/midao-reference/01-home.jpg
+docs/superpowers/assets/midao-reference/02-requests.jpg
+docs/superpowers/assets/midao-reference/03-request-detail.jpg
+docs/superpowers/assets/midao-reference/04-calendar.jpg
+docs/superpowers/assets/midao-reference/05-services.jpg
+docs/superpowers/assets/midao-reference/06-service-wizard.jpg
+docs/superpowers/assets/midao-reference/07-public-page.jpg
+```
+
 ## 2. 已批准的產品決策
 
 1. 「旅客需求」主體沿用既有 `request` booking：旅客先選服務、日期與人數，導遊批准後旅客付款。
@@ -591,17 +605,20 @@ apps/web/src/lib/
 
 ```text
 20260723000000_midao_backend_mode.sql
-20260723010000_midao_inquiries.sql
+20260723001000_midao_notification_outbox.sql
+20260723002000_midao_atomic_backend_mode_switch.sql
+20260723010000_midao_atomic_booking_approval.sql
 20260723020000_midao_service_drafts_and_questions.sql
-20260723030000_midao_service_publication_versions.sql
-20260723040000_midao_booking_intake_pricing_and_confirmation.sql
-20260723050000_midao_global_availability_scope.sql
-20260723060000_midao_atomic_commands.sql
-20260723070000_midao_indexes_rls_and_grants.sql
-20260723080000_midao_notification_outbox.sql
+20260723021000_midao_service_publication_versions.sql
+20260723022000_midao_atomic_service_publication.sql
+20260723030000_midao_inquiries.sql
+20260723031000_midao_booking_intake_pricing_and_confirmation.sql
+20260723032000_midao_atomic_inquiry_conversion.sql
+20260723040000_midao_global_availability_scope.sql
+20260723041000_midao_atomic_day_availability.sql
 ```
 
-全部 additive，只增不改歷史 migration；schema 套用依 repo `SQL-OVERRIDE`、PR、CI 與 ledger SOP。
+全部 additive，只增不改歷史 migration；時間戳嚴格對齊 package merge 順序，禁止後續 package 補入比已 merge migration 更早的 timestamp。每張新表在所屬 migration 同步建立必要 index、RLS 與最小 grants，不把安全權限延後到另一個 package。每個 command 使用自己的時間戳 migration，後續 package 不修改已 merge 或可能已套用的 command migration。Schema 套用依 repo `SQL-OVERRIDE`、PR、CI 與 ledger SOP。
 
 ## 14. 端到端資料流
 
@@ -663,6 +680,7 @@ day segment edit → revision CAS → replace global day rules
 Guide HMAC token 格式保持既有 `guideId:sessionVersion:HMAC`，不新增第四段，避免破壞 middleware 與 E2E helper。`verifyGuideSession()` 回傳已簽章的 `sessionVersion`；`withMidaoGuideQuery/Command` 與 Midao page-session helper 讀 `guide_profiles.backend_mode + guide_session_version`，確認 token version 等於 DB version後才放行。切 mode 時 bump session version，迫使重新登入。
 
 - Login 與 admin impersonation 查 canonical `backend_mode`，回明確 `redirectTo`。
+- Admin 切換使用 `POST /api/v2/admin/guides/[guideId]/backend-mode`；內部 `midao_switch_guide_backend_mode` RPC 同一 transaction lock profile、更新 mode、bump `guide_session_version`、寫 `audit_logs`（actor 取已驗證 admin email）與 outbox，禁止分段 SQL 更新。
 - `legacy` 登入 → `/guide/dashboard`。
 - `midao` 登入 → `/midao`。
 - Midao mutation 只接受 mode=midao。
