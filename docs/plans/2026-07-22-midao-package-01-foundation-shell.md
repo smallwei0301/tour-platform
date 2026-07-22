@@ -116,13 +116,15 @@ node --version
 npm --version
 ```
 
-若fresh worktree缺dependencies，以tracked background執行repo-recorded safe path：
+若fresh worktree缺dependencies，以tracked background執行deterministic lockfile install；Node/npm環境已於上方固定，`npm ci`必須先移除既有 `node_modules`並依現有lock重建，且不得正規化或修改lockfile：
 
 ```bash
-timeout --signal=TERM 570s npm install --ignore-scripts
+timeout --signal=TERM 570s npm ci --ignore-scripts
 git checkout -- yarn.lock
 git diff --exit-code -- package.json package-lock.json yarn.lock
 ```
+
+**2026-07-23 A1 correction:** Node 22搭配host npm 11.9.0實跑 `npm install --ignore-scripts`雖完成368 packages，卻自動刪除 `package-lock.json`內一筆nested optional-peer entry，正確觸發lock drift gate。Owner明確核准改用推薦方案 `npm ci --ignore-scripts`。不得沿用該install tree後只restore lock、不得執行 `npm audit fix`；新的tracked run必須從original lock重建並以before/after SHA-256＋`git diff --exit-code`證明lock不變。
 
 安裝完成後確認 `node_modules/typescript`存在，並驗證lockfile-pinned Supabase CLI prerequisite：
 

@@ -155,6 +155,10 @@ Reviewer evidence：
 
 依routing規則，#1756可升為 `status:ready + agent:now`；下一執行者從latest `origin/main`建fresh Package 0 worktree，先執行Task 0，再按strict RED → minimal GREEN進Task 1。Reviewed plan anchor仍為 `bcb81b119228dc81fecff7a212fff4017c4a1584`。
 
+### 2026-07-23 Package 0 implementation start／A1 HOLD
+
+建立 `feat/midao-foundation-1756` isolated worktree，base `origin/main af3963cb`，包含reviewed plan anchor。A1首次tracked `npm install --ignore-scripts`完成368 packages後，npm 11.9.0自動刪除一筆nested optional-peer lock entry，before/after lock gate正確FAIL；未把安裝完成誤報為A1 PASS。Owner原文「用推薦方案」核准改採 `npm ci --ignore-scripts`。已restore original lock；更新micro-plan與`issue1756.md`後只做A1 correction focused review，PASS前不跑A2、不寫production code。
+
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.
 
