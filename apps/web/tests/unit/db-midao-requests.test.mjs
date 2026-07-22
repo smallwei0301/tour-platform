@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MIDAO_REQUEST_STATUSES, isValidRequestTransition, normalizeRequestInput,
   createMidaoRequestDb, listMidaoRequestsDb, getMidaoRequestDb,
-  updateMidaoRequestStatusDb, getMidaoSummaryDb, __resetMemMidaoRequests,
+  updateMidaoRequestStatusDb, getMidaoSummaryDb, __resetMemMidaoRequests, __seedMemMidaoRequests,
 } from '../../src/lib/db-midao-requests.mjs';
 
 const G = 'guide-1';
@@ -99,4 +99,26 @@ test('summary：counts/topRequest/recentRequests', async () => {
   assert.equal(s.topRequest.id, a.id); // 最舊的 new 優先
   assert.equal(Array.isArray(s.recentRequests), true);
   assert.equal(s.recentRequests.some((r) => r.id === a.id), false); // 不含 topRequest
+});
+
+test('normalizeRequestInput：answers 超過 10KB 擋下', () => {
+  const big = Array.from({ length: 20 }, (_, i) => ({
+    questionId: 'q'.repeat(400) + i, label: 'x'.repeat(120), answer: 'y'.repeat(300),
+  }));
+  const r = normalizeRequestInput(baseInput({ answers: big }));
+  assert.equal(r.ok, false);
+  assert.equal(r.code, 'ANSWERS_TOO_LONG');
+});
+
+test('request_no：撞號時重試遞增（in-memory 路徑）', async () => {
+  // 種一筆佔住 R20260815002：count=1 → 第一次算出 002 撞號 → 重試 +1 → 003
+  __seedMemMidaoRequests([{
+    id: 'seed1', guide_id: G, request_no: 'R20260815002', status: 'closed_done',
+    source: 'manual', traveler_name: '既有', participants_count: 1, answers: [],
+    need_pickup: false, preferred_date: '2026-08-15',
+    created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+    status_changed_at: '2026-01-01T00:00:00Z',
+  }]);
+  const a = await create();
+  assert.equal(a.requestNo, 'R20260815003');
 });

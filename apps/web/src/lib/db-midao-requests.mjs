@@ -97,7 +97,7 @@ async function nextRequestNo(preferredDate, attempt = 0) {
   const supabase = await getSupabase();
   const { count } = await supabase.from('midao_requests')
     .select('id', { count: 'exact', head: true }).like('request_no', `R${ymd}%`);
-  if (attempt >= 3) return `R${ymd}${String(Math.floor(1000 + Math.random() * 9000))}`;
+  if (attempt >= 3) return `R${ymd}${String(Math.floor(Math.random() * 1000)).padStart(3, '0')}`;
   return `R${ymd}${String((count ?? 0) + 1 + attempt).padStart(3, '0')}`;
 }
 
