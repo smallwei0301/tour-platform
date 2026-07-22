@@ -9,7 +9,7 @@ import {
   buildRequestSummaryText,
   buildLineReplyText,
   periodLabel,
-} from '../../../../../src/lib/midao-copy-templates.mjs';
+} from '../../../../../src/lib/midao/midao-copy-templates.mjs';
 
 type MidaoAnswer = { label: string; answer: string };
 

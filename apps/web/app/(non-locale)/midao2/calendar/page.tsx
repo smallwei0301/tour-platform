@@ -5,8 +5,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { C, Card, Badge, Btn, Spinner, ErrorState, apiGet, apiSend } from '../ui';
-import { buildMonthGrid } from '../../../../src/lib/midao-calendar-grid.mjs';
-import { periodLabel } from '../../../../src/lib/midao-copy-templates.mjs';
+import { buildMonthGrid } from '../../../../src/lib/midao/midao-calendar-grid.mjs';
+import { periodLabel } from '../../../../src/lib/midao/midao-copy-templates.mjs';
 import WeeklyDefaultsModal from './WeeklyDefaultsModal';
 
 type Period = 'morning' | 'afternoon' | 'evening';

@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { C, Card, Badge, Btn, Spinner, EmptyState, ErrorState, copyToClipboard, apiGet } from './ui';
-import { buildLineReplyText } from '../../../src/lib/midao-copy-templates.mjs';
+import { buildLineReplyText } from '../../../src/lib/midao/midao-copy-templates.mjs';
 
 type MidaoRequest = {
   id: string;

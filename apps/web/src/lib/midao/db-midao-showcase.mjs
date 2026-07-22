@@ -4,7 +4,7 @@
  * 接案頁可見 = midao_status='published' OR (midao_status IS NULL AND status='published')。
  * 主站可見度只看既有 status（審核流不動）。
  */
-import { hasSupabaseEnv, getSupabase } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from '../db.mjs';
 
 export const MIDAO_DEAL_MODES = ['instant_booking', 'confirm_first', 'line_inquiry'];
 const QUESTION_TYPES = ['text', 'single_choice', 'multi_choice', 'yes_no'];

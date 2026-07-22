@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMidaoRequestPushText, notifyGuideNewMidaoRequest } from '../../src/lib/midao-request-notify.mjs';
+import { buildMidaoRequestPushText, notifyGuideNewMidaoRequest } from '../../src/lib/midao/midao-request-notify.mjs';
 
 test('推播文案：含編號/稱呼/服務/日期/人數，不含聯絡資訊', () => {
   const text = buildMidaoRequestPushText({

@@ -2,8 +2,8 @@
  * GET /api/v2/public/midao/guides/[slug]/availability?month=YYYY-MM — 旅客端可選日期。
  * 無 auth；只回開放時段（openPeriods），不回需求單/訂單細節。
  */
-import { getPublicMidaoPageDb } from '../../../../../../../../src/lib/db-midao-showcase.mjs';
-import { getMonthEffectiveDb } from '../../../../../../../../src/lib/db-midao-availability.mjs';
+import { getPublicMidaoPageDb } from '../../../../../../../../src/lib/midao/db-midao-showcase.mjs';
+import { getMonthEffectiveDb } from '../../../../../../../../src/lib/midao/db-midao-availability.mjs';
 import { jsonOk, jsonError } from '../../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../../src/lib/route-error';
 

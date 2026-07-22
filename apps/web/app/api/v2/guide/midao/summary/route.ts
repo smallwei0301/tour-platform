@@ -3,7 +3,7 @@
  * Auth: guide session（HMAC cookie）。
  */
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
-import { getMidaoSummaryDb } from '../../../../../../src/lib/db-midao-requests.mjs';
+import { getMidaoSummaryDb } from '../../../../../../src/lib/midao/db-midao-requests.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../src/lib/route-error';
 

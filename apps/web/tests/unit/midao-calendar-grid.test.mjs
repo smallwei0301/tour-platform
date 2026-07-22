@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMonthGrid } from '../../src/lib/midao-calendar-grid.mjs';
+import { buildMonthGrid } from '../../src/lib/midao/midao-calendar-grid.mjs';
 
 function fakeMonth(prefix, n) {
   return Array.from({ length: n }, (_, i) => ({ date: `${prefix}-${String(i + 1).padStart(2, '0')}` }));

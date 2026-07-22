@@ -4,8 +4,8 @@
  * 點色：橘=未結案需求（new/pending_reply/replied）、綠=closed_won 或既有 confirmed 訂單。
  */
 import { verifyGuideSession } from '../../../../../../src/lib/guide-auth';
-import { getMonthEffectiveDb } from '../../../../../../src/lib/db-midao-availability.mjs';
-import { listMidaoRequestsDb } from '../../../../../../src/lib/db-midao-requests.mjs';
+import { getMonthEffectiveDb } from '../../../../../../src/lib/midao/db-midao-availability.mjs';
+import { listMidaoRequestsDb } from '../../../../../../src/lib/midao/db-midao-requests.mjs';
 import { hasSupabaseEnv, getSupabase } from '../../../../../../src/lib/db.mjs';
 import { jsonOk, jsonError } from '../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../src/lib/route-error';

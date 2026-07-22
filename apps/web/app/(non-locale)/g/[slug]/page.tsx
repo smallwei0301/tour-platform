@@ -2,7 +2,7 @@
 // RSC 直呼領域檔（Next 慣用寫法）；不引入任何 client hook。
 
 import { notFound } from 'next/navigation';
-import { getPublicMidaoPageDb } from '../../../../src/lib/db-midao-showcase.mjs';
+import { getPublicMidaoPageDb } from '../../../../src/lib/midao/db-midao-showcase.mjs';
 import RequestForm from './RequestForm';
 
 // 與 apps/web/app/(non-locale)/midao2/ui.tsx 的 C 常數同值。

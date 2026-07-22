@@ -3,7 +3,7 @@
  * midao2 可用時間（週預設＋單日覆寫；spec §4.4）。獨立輕量，不碰 availability-v2。
  * 生效邏輯：單日覆寫 > 週預設 > 預設關閉。
  */
-import { hasSupabaseEnv, getSupabase } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from '../db.mjs';
 
 export const MIDAO_PERIODS = ['morning', 'afternoon', 'evening'];
 

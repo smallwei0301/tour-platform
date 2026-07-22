@@ -4,7 +4,7 @@
  * spec: docs/superpowers/specs/2026-07-22-midao2-guide-backend-design.md §4.2/§4.3
  * 狀態機：new → pending_reply → replied → closed_won → closed_done；允許回退、不可回到 new。
  */
-import { hasSupabaseEnv, getSupabase } from './db.mjs';
+import { hasSupabaseEnv, getSupabase } from '../db.mjs';
 
 export const MIDAO_REQUEST_STATUSES = ['new', 'pending_reply', 'replied', 'closed_won', 'closed_done'];
 const PERIODS = ['morning', 'afternoon', 'evening'];

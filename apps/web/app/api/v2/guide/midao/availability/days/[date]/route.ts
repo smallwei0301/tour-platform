@@ -4,7 +4,7 @@
  */
 import { validateCsrf } from '../../../../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../../../../src/lib/guide-auth';
-import { setDayOverrideDb, getMonthEffectiveDb } from '../../../../../../../../src/lib/db-midao-availability.mjs';
+import { setDayOverrideDb, getMonthEffectiveDb } from '../../../../../../../../src/lib/midao/db-midao-availability.mjs';
 import { jsonOk, jsonError } from '../../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../../src/lib/route-error';
 

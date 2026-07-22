@@ -6,9 +6,9 @@
  */
 import { RateLimiter } from '../../../../../../../../src/lib/rate-limit';
 import { resolveTrustedClientIp } from '../../../../../../../../src/lib/trusted-ip.mjs';
-import { getPublicMidaoPageDb } from '../../../../../../../../src/lib/db-midao-showcase.mjs';
-import { createMidaoRequestDb, normalizeRequestInput } from '../../../../../../../../src/lib/db-midao-requests.mjs';
-import { notifyGuideNewMidaoRequest } from '../../../../../../../../src/lib/midao-request-notify.mjs';
+import { getPublicMidaoPageDb } from '../../../../../../../../src/lib/midao/db-midao-showcase.mjs';
+import { createMidaoRequestDb, normalizeRequestInput } from '../../../../../../../../src/lib/midao/db-midao-requests.mjs';
+import { notifyGuideNewMidaoRequest } from '../../../../../../../../src/lib/midao/midao-request-notify.mjs';
 import { jsonOk, jsonError } from '../../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../../src/lib/route-error';
 

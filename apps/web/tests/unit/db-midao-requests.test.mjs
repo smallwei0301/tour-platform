@@ -4,7 +4,7 @@ import {
   MIDAO_REQUEST_STATUSES, isValidRequestTransition, normalizeRequestInput,
   createMidaoRequestDb, listMidaoRequestsDb, getMidaoRequestDb,
   updateMidaoRequestStatusDb, getMidaoSummaryDb, __resetMemMidaoRequests, __seedMemMidaoRequests,
-} from '../../src/lib/db-midao-requests.mjs';
+} from '../../src/lib/midao/db-midao-requests.mjs';
 
 const G = 'guide-1';
 function baseInput(over = {}) {

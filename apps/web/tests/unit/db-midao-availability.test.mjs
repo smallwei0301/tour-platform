@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MIDAO_PERIODS, resolveEffectiveDay, getWeeklyDefaultsDb, setWeeklyDefaultsDb,
   setDayOverrideDb, getMonthEffectiveDb, __resetMemMidaoAvailability,
-} from '../../src/lib/db-midao-availability.mjs';
+} from '../../src/lib/midao/db-midao-availability.mjs';
 
 const G = 'guide-1';
 test.beforeEach(() => __resetMemMidaoAvailability());

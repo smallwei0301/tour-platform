@@ -4,8 +4,8 @@
  * 沿用 guide-line-binding 解析 line_user_id；fire-and-forget：永不 throw、失敗只回狀態。
  * 文案不落旅客聯絡資訊（PII 原則，spec §6）。
  */
-import { getLineUserIdForGuide } from './guide-line-binding.mjs';
-import { pushMessage } from './line-messaging.ts';
+import { getLineUserIdForGuide } from '../guide-line-binding.mjs';
+import { pushMessage } from '../line-messaging.ts';
 
 /** @param {{requestNo:string, travelerName:string, activityTitle?:string|null, preferredDate:string, participantsCount:number}} i */
 export function buildMidaoRequestPushText(i) {

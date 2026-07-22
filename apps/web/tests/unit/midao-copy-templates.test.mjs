@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRequestSummaryText, buildLineReplyText, periodLabel } from '../../src/lib/midao-copy-templates.mjs';
+import { buildRequestSummaryText, buildLineReplyText, periodLabel } from '../../src/lib/midao/midao-copy-templates.mjs';
 
 const REQ = {
   requestNo: 'R20260815001', travelerName: '王小姐', travelerLineId: 'wang123', travelerEmail: null,

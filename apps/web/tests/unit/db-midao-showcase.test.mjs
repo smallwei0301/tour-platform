@@ -5,7 +5,7 @@ import {
   listMidaoServicesDb, createMidaoServiceDb, updateMidaoServiceDb, getPublicMidaoPageDb,
   updateGuideExperienceYearsDb, getGuideExperienceYearsDb,
   __resetMemMidaoShowcase, __seedMemMidaoGuide, __seedMemMidaoActivities,
-} from '../../src/lib/db-midao-showcase.mjs';
+} from '../../src/lib/midao/db-midao-showcase.mjs';
 
 const G = 'guide-1';
 function guideProfile(over = {}) {

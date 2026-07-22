@@ -6,7 +6,7 @@ import { validateCsrf } from '../../../../../../../src/lib/csrf.mjs';
 import { verifyGuideSession } from '../../../../../../../src/lib/guide-auth';
 import {
   getMidaoRequestDb, updateMidaoRequestStatusDb, MIDAO_REQUEST_STATUSES,
-} from '../../../../../../../src/lib/db-midao-requests.mjs';
+} from '../../../../../../../src/lib/midao/db-midao-requests.mjs';
 import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../src/lib/route-error';
 
