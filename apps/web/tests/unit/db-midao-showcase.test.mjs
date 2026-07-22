@@ -104,3 +104,13 @@ test('normalizeServiceInput：INVALID_MIDAO_STATUS 直接覆蓋', () => {
   assert.equal(r.ok, false);
   assert.equal(r.code, 'INVALID_MIDAO_STATUS');
 });
+
+test('updateMidaoServiceDb：單欄 patch 不得造成 min>max（比對既有列）', async () => {
+  const norm = normalizeServiceInput(serviceInput());
+  const created = await createMidaoServiceDb(G, norm.value, { publish: true });
+  const bad = await updateMidaoServiceDb(G, created.activityId, { minParticipants: 50 });
+  assert.equal(bad.ok, false);
+  assert.equal(bad.code, 'INVALID_PARTICIPANTS');
+  const still = await listMidaoServicesDb(G);
+  assert.equal(still[0].minParticipants, 2); // 未被寫入
+});

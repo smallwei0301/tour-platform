@@ -174,10 +174,21 @@ export async function updateMidaoServiceDb(guideId, activityId, patch) {
   if (!hasSupabaseEnv()) {
     const row = _memActivities.find((a) => a.id === activityId && a.guide_id === guideId);
     if (!row) return { ok: false, code: 'NOT_FOUND', message: '服務不存在' };
+    const nextMin = norm.value.min_participants ?? row.min_participants ?? 1;
+    const nextMax = norm.value.max_participants ?? row.max_participants ?? 10;
+    if (nextMax < nextMin) return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
     Object.assign(row, norm.value);
     return { ok: true, service: serviceShape(row) };
   }
   const supabase = await getSupabase();
+  // 單欄 patch 不得造成 min>max：先讀既有列合併檢查
+  const { data: current } = await supabase.from('activities')
+    .select('min_participants, max_participants')
+    .eq('id', activityId).eq('guide_id', guideId).maybeSingle();
+  if (!current) return { ok: false, code: 'NOT_FOUND', message: '服務不存在' };
+  const nextMin = norm.value.min_participants ?? current.min_participants ?? 1;
+  const nextMax = norm.value.max_participants ?? current.max_participants ?? 10;
+  if (nextMax < nextMin) return { ok: false, code: 'INVALID_PARTICIPANTS', message: '適合人數範圍不正確' };
   const { data, error } = await supabase.from('activities').update(norm.value)
     .eq('id', activityId).eq('guide_id', guideId).select(ACT_COLS).maybeSingle();
   if (error) throw new Error(error.message);
