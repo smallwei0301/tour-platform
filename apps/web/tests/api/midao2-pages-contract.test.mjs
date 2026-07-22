@@ -24,4 +24,5 @@ test('midao2 需求列表：tab 對映＋排序＋卡片導轉', async () => {
   assert.match(src, /unreplied_first/);
   assert.match(src, /tabCounts/);
   assert.match(src, /midao2-req-sort/);
+  assert.match(src, /VALID_STATUSES|includes\(rawStatus/);
 });

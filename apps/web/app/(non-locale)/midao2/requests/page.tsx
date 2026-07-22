@@ -23,6 +23,8 @@ type TabCounts = { new: number; pendingReply: number; replied: number; closed: n
 type StatusKey = 'all' | 'new' | 'pending_reply' | 'replied' | 'closed';
 type SortKey = 'unreplied_first' | 'newest';
 
+const VALID_STATUSES: StatusKey[] = ['all', 'new', 'pending_reply', 'replied', 'closed'];
+
 const TABS: { key: StatusKey; label: string; countKey?: keyof TabCounts }[] = [
   { key: 'all', label: '全部' },
   { key: 'new', label: '新需求', countKey: 'new' },
@@ -34,7 +36,8 @@ const TABS: { key: StatusKey; label: string; countKey?: keyof TabCounts }[] = [
 function RequestsListPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialStatus = (searchParams.get('status') as StatusKey) || 'all';
+  const rawStatus = searchParams.get('status');
+  const initialStatus: StatusKey = VALID_STATUSES.includes(rawStatus as StatusKey) ? (rawStatus as StatusKey) : 'all';
 
   const [status, setStatus] = useState<StatusKey>(initialStatus);
   const [sort, setSort] = useState<SortKey>('unreplied_first');
