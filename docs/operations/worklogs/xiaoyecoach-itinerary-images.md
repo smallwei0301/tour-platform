@@ -67,6 +67,14 @@ where b.action='xiaoye-unsplash-images-backup'
 
 原 ndclub 圖檔仍留在 Supabase storage `activity-images/ndclub*`，未刪除。
 
+## PR 與 CI（鐵律 6 證據）
+
+- PR：https://github.com/smallwei0301/tour-platform/pull/1754
+- CI check-runs（head c0d5904，全數 conclusion=success，2026-07-22 15:58–16:02 Asia/Taipei）：
+  - test：https://github.com/smallwei0301/tour-platform/actions/runs/29902175362/job/88865174416
+  - scan：https://github.com/smallwei0301/tour-platform/actions/runs/29902175238/job/88865173888
+  - Vercel Preview Comments：https://github.com/smallwei0301/tour-platform/runs/88865184519
+
 ## 狀態
 
 - [x] 41 行程封面＋5 活動照（Unsplash、已驗證 200、主題相符）
