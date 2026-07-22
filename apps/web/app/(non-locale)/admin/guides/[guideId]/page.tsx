@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../../src/components/admin/ui';
 import { paymentMethodLabels } from '../../../../../src/lib/guide-payment-options.mjs';
-import { csrfHeaders } from '../../../../../src/lib/csrf-client';
+import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
 
 type GuideApplicationDetail = {
   fullName: string;
@@ -89,6 +89,9 @@ export default function AdminGuideDetailPage() {
     setImpersonating(true);
     setImpersonateError('');
     try {
+      // tp_csrf cookie 壽命僅 24h；分頁久開／行動瀏覽器還原分頁時 cookie 可能已失效，
+      // 送出前先補發，否則 middleware 回 403「CSRF token required」（2026-07-22 生產實例）。
+      await ensureCsrfToken();
       const res = await fetch(`/api/v2/admin/guides/${guide.id}/impersonate`, {
         method: 'POST',
         headers: csrfHeaders(),

@@ -104,6 +104,25 @@ test('admin 詳情頁：以 CSRF header POST 至代入 API 後導向導遊後台
   assert.match(src, /\/guide\/dashboard/, '成功後導向導遊後台');
 });
 
+test('admin 詳情頁：送出代入 POST 前先 ensureCsrfToken 補發 tp_csrf', () => {
+  // 回歸鎖（2026-07-22）：tp_csrf 壽命 24h，行動瀏覽器還原分頁不重跑 priming，
+  // cookie 失效時 csrfHeaders() 默默回空 header → middleware 403「CSRF token required」。
+  const src = readFileSync(ADMIN_PAGE, 'utf8');
+  assert.match(
+    src,
+    /import\s*\{[^}]*ensureCsrfToken[^}]*\}\s*from\s*['"][^'"]*csrf-client['"]/,
+    '需自 csrf-client 匯入 ensureCsrfToken'
+  );
+  const fnBody = src.slice(
+    src.indexOf('async function handleEnterGuideBackend'),
+    src.indexOf('window.location.href')
+  );
+  const ensureIndex = fnBody.indexOf('await ensureCsrfToken()');
+  const fetchIndex = fnBody.indexOf('/impersonate');
+  assert.ok(ensureIndex !== -1, '代入前需 await ensureCsrfToken()');
+  assert.ok(fetchIndex !== -1 && ensureIndex < fetchIndex, 'ensureCsrfToken 需在代入 fetch 之前執行');
+});
+
 test('admin 詳情頁：以 V2 envelope（json.success）判斷代入結果，不得誤用 v1 的 json.ok', () => {
   // 回歸鎖（2026-07-13）：代入 API 走 jsonOk → { success: true, data }；先前前端檢查
   // json?.ok 導致成功也顯示「進入導遊後台失敗」且不導頁。
