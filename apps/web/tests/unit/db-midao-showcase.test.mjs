@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MIDAO_DEAL_MODES, isShowcaseVisible, normalizeServiceInput,
   listMidaoServicesDb, createMidaoServiceDb, updateMidaoServiceDb, getPublicMidaoPageDb,
-  updateGuideExperienceYearsDb,
+  updateGuideExperienceYearsDb, getGuideExperienceYearsDb,
   __resetMemMidaoShowcase, __seedMemMidaoGuide, __seedMemMidaoActivities,
 } from '../../src/lib/db-midao-showcase.mjs';
 
@@ -127,4 +127,11 @@ test('updateGuideExperienceYearsDb：範圍驗證與寫入', async () => {
   assert.equal(r3.ok, false);
   const r4 = await updateGuideExperienceYearsDb(G, 3.7); // 非整數
   assert.equal(r4.ok, false);
+});
+
+test('getGuideExperienceYearsDb：讀值與缺值', async () => {
+  __resetMemMidaoShowcase();
+  __seedMemMidaoGuide({ id: G, slug: 'andy-lee', verification_status: 'approved', experience_years: 7 });
+  assert.equal(await getGuideExperienceYearsDb(G), 7);
+  assert.equal(await getGuideExperienceYearsDb('guide-nope'), null);
 });

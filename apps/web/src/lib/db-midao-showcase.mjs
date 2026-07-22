@@ -248,6 +248,18 @@ export async function getPublicMidaoPageDb(slug) {
   };
 }
 
+/** 我的頁面：讀取導覽經驗年資（不受接案頁公開條件影響）。 @param {string} guideId */
+export async function getGuideExperienceYearsDb(guideId) {
+  if (!hasSupabaseEnv()) {
+    const g = _memGuides.find((x) => x.id === guideId);
+    return g?.experience_years ?? null;
+  }
+  const supabase = await getSupabase();
+  const { data } = await supabase.from('guide_profiles')
+    .select('experience_years').eq('id', guideId).maybeSingle();
+  return data?.experience_years ?? null;
+}
+
 /**
  * 我的頁面：更新導覽經驗年資（guide_profiles.experience_years，0–60 整數）。
  * @param {string} guideId @param {any} years

@@ -42,6 +42,7 @@ export default function Midao2MePage() {
   const [editingExp, setEditingExp] = useState(false);
   const [expInput, setExpInput] = useState('0');
   const [savingExp, setSavingExp] = useState(false);
+  const [expError, setExpError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -51,16 +52,21 @@ export default function Midao2MePage() {
     fetchLegacyProfile()
       .then(async (p) => {
         setProfile(p);
+        // 年資初值：一律走 profile-extras GET，不受公開接案頁上架條件影響（公開 API 僅用於「精選服務」區塊）。
+        try {
+          const extras = await apiGet('/api/v2/guide/midao/profile-extras');
+          setExperienceYears(extras?.experienceYears ?? 0);
+        } catch {
+          setExperienceYears(0);
+        }
         if (p?.slug) {
           try {
             const pub = await apiGet(`/api/v2/public/midao/guides/${p.slug}`);
             setServices(Array.isArray(pub?.services) ? pub.services : []);
             setPublicAvailable(true);
-            setExperienceYears(pub?.guide?.experienceYears ?? 0);
           } catch {
             setServices(null);
             setPublicAvailable(false);
-            setExperienceYears(0);
           }
         } else {
           setServices(null);
@@ -85,14 +91,19 @@ export default function Midao2MePage() {
 
   async function saveExperience() {
     const n = Math.trunc(Number(expInput));
-    if (!Number.isFinite(n) || n < 0 || n > 60) return;
+    if (!Number.isFinite(n) || n < 0 || n > 60) {
+      setExpError('請輸入 0–60 的整數年');
+      return;
+    }
+    setExpError(null);
     setSavingExp(true);
     try {
       const data = await apiSend('/api/v2/guide/midao/profile-extras', 'PATCH', { experienceYears: n });
       setExperienceYears(data.experienceYears);
       setEditingExp(false);
-    } catch {
+    } catch (err: any) {
       // 存檔失敗：保留編輯狀態讓使用者重試。
+      setExpError(err?.message || '儲存失敗，請重試');
     } finally {
       setSavingExp(false);
     }
@@ -189,23 +200,30 @@ export default function Midao2MePage() {
           <span>🗺</span>
           <span style={{ fontSize: 14, color: C.MUTED }}>導覽經驗</span>
           {editingExp ? (
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                type="number"
-                min={0}
-                max={60}
-                value={expInput}
-                onChange={(e) => setExpInput(e.target.value)}
-                style={{ width: 64, height: 32, borderRadius: 8, border: `1px solid ${C.BORDER}`, padding: '0 8px' }}
-              />
-              <button
-                type="button"
-                onClick={saveExperience}
-                disabled={savingExp}
-                style={{ background: 'transparent', border: 'none', color: C.ACCENT, cursor: 'pointer', fontWeight: 700 }}
-              >
-                儲存
-              </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="number"
+                  min={0}
+                  max={60}
+                  value={expInput}
+                  onChange={(e) => { setExpInput(e.target.value); setExpError(null); }}
+                  style={{ width: 64, height: 32, borderRadius: 8, border: `1px solid ${C.BORDER}`, padding: '0 8px' }}
+                />
+                <button
+                  type="button"
+                  onClick={saveExperience}
+                  disabled={savingExp}
+                  style={{ background: 'transparent', border: 'none', color: C.ACCENT, cursor: 'pointer', fontWeight: 700 }}
+                >
+                  儲存
+                </button>
+              </div>
+              {expError && (
+                <span data-testid="midao2-me-exp-error" style={{ fontSize: 12, color: C.RED }}>
+                  {expError}
+                </span>
+              )}
             </div>
           ) : (
             <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500 }}>
@@ -214,7 +232,7 @@ export default function Midao2MePage() {
                 type="button"
                 data-testid="midao2-me-exp-edit"
                 aria-label="編輯導覽經驗"
-                onClick={() => { setExpInput(String(experienceYears)); setEditingExp(true); }}
+                onClick={() => { setExpInput(String(experienceYears)); setExpError(null); setEditingExp(true); }}
                 style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14 }}
               >
                 ✏️

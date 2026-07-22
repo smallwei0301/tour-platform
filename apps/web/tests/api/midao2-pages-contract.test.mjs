@@ -81,6 +81,8 @@ test('midao2 我的頁面：profile/公開預覽/QR/登出＋profile-extras rout
   const route = await read('app/api/v2/guide/midao/profile-extras/route.ts');
   assert.match(route, /validateCsrf/);
   assert.match(route, /updateGuideExperienceYearsDb/);
+  assert.match(route, /export\s+async\s+function\s+GET/);
+  assert.match(route, /getGuideExperienceYearsDb/);
 });
 
 test('公開接案頁：RSC 直呼領域檔＋表單 honeypot/聯絡驗證/成功畫面', async () => {
