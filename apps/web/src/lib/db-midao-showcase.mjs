@@ -10,11 +10,15 @@ export const MIDAO_DEAL_MODES = ['instant_booking', 'confirm_first', 'line_inqui
 const QUESTION_TYPES = ['text', 'single_choice', 'multi_choice', 'yes_no'];
 const ACT_COLS = 'id, guide_id, title, slug, tagline, cover_image_url, duration_minutes, min_participants, max_participants, region, languages, price_twd, midao_status, midao_deal_mode, midao_questions, midao_sort_order, status, created_at';
 
+/** @type {any[]} */
 const _memActivities = [];
+/** @type {any[]} */
 const _memGuides = [];
 let _memSeq = 0;
 export function __resetMemMidaoShowcase() { _memActivities.length = 0; _memGuides.length = 0; _memSeq = 0; }
+/** @param {any} profile */
 export function __seedMemMidaoGuide(profile) { _memGuides.push(profile); }
+/** @param {any[]} rows */
 export function __seedMemMidaoActivities(rows) { _memActivities.push(...rows); }
 
 /** 雙軌可見度矩陣（純函式）。 @param {{midaoStatus:string|null, status:string}} a */
@@ -42,6 +46,7 @@ function serviceShape(a) {
 /**
  * 精靈/編輯輸入驗證。partial=true 只驗有給的欄（PATCH 用）。
  * @param {any} input @param {boolean} [partial]
+ * @returns {{ok:true, value:any}|{ok:false, code:string, message:string}}
  */
 export function normalizeServiceInput(input, partial = false) {
   const out = /** @type {any} */ ({});
@@ -88,7 +93,7 @@ export function normalizeServiceInput(input, partial = false) {
   if (!partial || has('region')) out.region = String(input?.region ?? '').trim().slice(0, 40) || null;
   if (!partial || has('languages')) {
     out.languages = Array.isArray(input?.languages)
-      ? input.languages.map((l) => String(l).trim()).filter(Boolean).slice(0, 8) : [];
+      ? input.languages.map((/** @type {any} */ l) => String(l).trim()).filter(Boolean).slice(0, 8) : [];
   }
   if (!partial || has('priceTwd')) {
     const price = Math.trunc(Number(input?.priceTwd));
@@ -103,12 +108,12 @@ export function normalizeServiceInput(input, partial = false) {
   if (!partial || has('questions')) {
     const qs = Array.isArray(input?.questions) ? input.questions : [];
     if (qs.length > 10) return { ok: false, code: 'TOO_MANY_QUESTIONS', message: '需求問題最多 10 題' };
-    out.midao_questions = qs.map((q, i) => ({
+    out.midao_questions = qs.map((/** @type {any} */ q, /** @type {number} */ i) => ({
       id: String(q?.id ?? `q${i + 1}`), label: String(q?.label ?? '').trim().slice(0, 120),
       type: QUESTION_TYPES.includes(q?.type) ? q.type : 'text',
-      options: Array.isArray(q?.options) ? q.options.map((o) => String(o).slice(0, 60)).slice(0, 10) : [],
+      options: Array.isArray(q?.options) ? q.options.map((/** @type {any} */ o) => String(o).slice(0, 60)).slice(0, 10) : [],
       required: q?.required === true,
-    })).filter((q) => q.label);
+    })).filter((/** @type {any} */ q) => q.label);
   }
   if (has('midaoSortOrder')) out.midao_sort_order = Math.trunc(Number(input.midaoSortOrder) || 0);
   if (has('midaoStatus')) {
@@ -201,7 +206,10 @@ export async function updateMidaoServiceDb(guideId, activityId, patch) {
  * @param {string} slug
  */
 export async function getPublicMidaoPageDb(slug) {
-  let profile, activities;
+  /** @type {any} */
+  let profile;
+  /** @type {any[]} */
+  let activities;
   if (!hasSupabaseEnv()) {
     profile = _memGuides.find((g) => g.slug === slug) ?? null;
     activities = profile ? _memActivities.filter((a) => a.guide_id === profile.id) : [];
