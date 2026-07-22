@@ -1,5 +1,5 @@
 # admin-csrf-impersonate-403 — 管理後台「進入導遊後台」出現 CSRF token required
-> 最後更新：2026-07-22 12:20（Asia/Taipei）｜負責 session：claude-fable-5／2026-07-22（branch `claude/admin-coach-backend-error-dutaau`）
+> 最後更新：2026-07-22 13:25（Asia/Taipei）｜負責 session：claude-fable-5／2026-07-22（branch `claude/admin-coach-backend-error-dutaau`）
 
 ## 目標
 修復管理後台導遊詳情頁點「進入導遊後台」回 403「CSRF token required」（owner 於行動裝置生產環境截圖回報，導遊：小野教練）。
@@ -12,16 +12,19 @@
 - [x] AC1 AdminShell fetch patch 涵蓋 `/api/v2/admin/`，且 mutation 當下 cookie 失效會就地補發（`/api/admin/auth/csrf`）再附 header
 - [x] AC2 導遊詳情頁 `handleEnterGuideBackend` 送出前 `await ensureCsrfToken()`
 - [x] AC3 回歸測試鎖住上述行為；`run-checks.sh --typecheck` 綠燈
-- [ ] AC4 PR 開出、CI success、merge
+- [x] AC4 PR 開出、CI success、merge（PR #1752，squash SHA `f504fa8`）
 - [ ] AC5 生產驗證：admin 點「進入導遊後台」成功導向 `/guide/dashboard`（NOT_VERIFIED-live，需部署後由 owner 或 session 實測）
 
 ## 已完成（附證據）
 - 2026-07-22 修 `apps/web/src/components/admin/AdminShell.tsx`（patch 涵蓋 v2＋cookie 失效就地補發）、`apps/web/app/(non-locale)/admin/guides/[guideId]/page.tsx`（`ensureCsrfToken` 前置）
 - 2026-07-22 新增 `apps/web/tests/api/admin-shell-csrf-autoattach.test.mjs`；擴充 `apps/web/tests/api/admin-guide-impersonation.test.mjs`（+1 條 ensure 順序鎖）
 - 2026-07-22 `.claude/hooks/run-checks.sh --typecheck <兩測試檔>` → 19 pass / 0 fail、tsc 無錯、exit 0
+- 2026-07-22 PR #1752 CI conclusion=success 後 squash merge（SHA `f504fa8`）。check-run 連結：
+  - test：https://github.com/smallwei0301/tour-platform/actions/runs/29892682860/job/88836125621
+  - scan：https://github.com/smallwei0301/tour-platform/actions/runs/29892682770/job/88836125247
 
 ## 下一步
-- commit → push `claude/admin-coach-backend-error-dutaau` → 開 PR → 盯 CI
+- AC5 生產驗證：等 Vercel production 部署帶上 `f504fa8` 後，由 owner 在行動裝置實測「進入導遊後台」成功導向 `/guide/dashboard`
 
 ## 絕不重做（Do-NOT-redo）
 - 不要把 CSRF 檢查從 middleware 移到 route 內解決本問題——middleware 是唯一前門（凍結檔），且雙提交設計正確；問題在前端 header 附掛，已修。
