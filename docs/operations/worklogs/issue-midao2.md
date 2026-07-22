@@ -39,6 +39,7 @@
 - 公開端 `openPeriods` 不含 custom 時段（僅 custom 開放的日子旅客端顯示全關）——Plan 2 決定呈現方式。
 - 需求單 `startTime`/`endTime` 未驗證直通（非法字串會 22007 → 公開端 500 而非 400），與 DATE_RE 同族待補。
 - 行事曆 API 回應用 `hasPending`/`hasConfirmed` 布林（非 spec 原文的 `requestDots[]`）——Plan 2 UI 對照此欄位名。
+- 需求列表：已在列表頁時點底部「需求」tab 不會重置分頁（URL 與 active tab 短暫不一致）。
 
 ## 下一步
 
@@ -50,7 +51,7 @@
 
 ## Plan 2 前端完成（2026-07-22，Asia/Taipei）
 
-**Plan 2（前端 M4–M6）11/11 任務全數完成**，commit 範圍 `e77b8df..1919085`（13 commits，分支 `claude/superpowers-midao-backend-x90czx`，已推送，**未開 PR、未 merge**）。
+**Plan 2（前端 M4–M6）11/11 任務全數完成**，commit 範圍 `e77b8df..c2e764c`（15 commits，含 T11，分支 `claude/superpowers-midao-backend-x90czx`，已推送，**未開 PR、未 merge**）。
 
 ### 頁面清單
 
@@ -86,7 +87,9 @@
 
 ## 部署驗收清單（使用者部署測試後才進生產）
 
-以下六項需在實際部署環境（非本機 dev/prod 模擬）由使用者人工過，逐項在 QA 報告記錄證據（URL、SHA、Asia/Taipei 時間）：
+以下七項需在實際部署環境（非本機 dev/prod 模擬）由使用者人工過，逐項在 QA 報告記錄證據（URL、SHA、Asia/Taipei 時間）：
+
+0. **【前置】生產套用兩個 midao2 migrations**（`20260722100000_midao2_requests_availability.sql`、`20260722100500_midao2_activity_showcase_columns.sql`）——需 `SQL-OVERRIDE` 授權＋照 `docs/operations/migration-apply-ledger-sop.md` 補 ledger。未套用前所有 midao API 會失敗，以下各項無法驗收。另：驗收送單推播前，測試導遊帳號需已完成 LINE 綁定（`guide_line_mapping`），否則推播 fire-and-forget 靜默略過屬預期行為。
 
 1. **登入導向**：以真實導遊帳號登入 `/guide/login`，確認成功後預設導向 `/midao2`（非舊後台）。
 2. **六畫面照截圖走查**：`/midao2`（首頁）、`/midao2/requests`、`/midao2/requests/[id]`、`/midao2/calendar`、`/midao2/services`（含 `/new`、`/[id]/edit`）、`/midao2/me`——逐頁對照原始設計截圖確認版面/文案/互動一致。
@@ -94,3 +97,7 @@
 4. **精靈建服務＋封面上傳**：`/midao2/services/new` 走完三步精靈（含封面照片實際上傳），確認建立成功、封面顯示正確、草稿/發布狀態符合預期。
 5. **發佈到祕島送審出現在管理後台**：精靈或編輯頁選擇「發布到接案頁」／「發佈到祕島」後，確認服務出現在既有管理後台（`/admin`）的待審/服務列表中，審核流程未受影響。
 6. **維護模式下 `/g/[slug]` 行為確認**：觸發 `soft_launch_controls.public_paused`，確認 `/g/[slug]` 的行為符合預期（是否也導向 `/maintenance`，或因不在 middleware matcher 內而不受影響）——若後者，需使用者確認是否為期望行為，非期望則另開任務調整 matcher（**不可在本任務內順手修改 middleware.ts**，屬凍結區）。
+7. **登出狀態直開 `/midao2`**：未登入狀態直開 `/midao2` → 應導轉登入頁，登入後回跳 `/midao2`。
+8. **行動裝置分享**：`navigator.share` 與 QR 下載在行動裝置（HTTPS）實測；桌機分享應 fallback 複製網址。
+9. **維護模式下 `/midao2` 與 `/g/[slug]` 行為**：維護模式（`public_paused`）下確認 `/midao2` 與 `/g/[slug]` 行為（兩者皆不在 middleware matcher 內，預期不受 kill-switch 影響——確認此行為符合營運預期）。
+10. **行動 Safari 安全區域**：行動 Safari 底部 tab bar safe-area 顯示正常。

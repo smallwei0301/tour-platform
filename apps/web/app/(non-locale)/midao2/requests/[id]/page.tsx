@@ -189,7 +189,7 @@ export default function Midao2RequestDetailPage() {
                 type="button"
                 data-testid="midao2-detail-line"
                 onClick={() => {
-                  window.open(`https://line.me/R/ti/p/~${lineId}`);
+                  window.open(`https://line.me/R/ti/p/~${encodeURIComponent(lineId)}`);
                   copyToClipboard(lineId);
                 }}
                 style={{
@@ -210,7 +210,7 @@ export default function Midao2RequestDetailPage() {
             {email && (
               <a
                 data-testid="midao2-detail-mail"
-                href={`mailto:${email}`}
+                href={`mailto:${encodeURIComponent(email)}`}
                 style={{
                   width: 40,
                   height: 40,
