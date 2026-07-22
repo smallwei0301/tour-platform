@@ -14,7 +14,7 @@ export default function Midao2NewServicePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(values: ServiceValues, publish: boolean, coverFile?: File | null) {
+  async function handleSubmit(values: ServiceValues, publish: boolean | null, coverFile?: File | null) {
     setSubmitting(true);
     setError(null);
     try {
@@ -30,11 +30,12 @@ export default function Midao2NewServicePage() {
             body: fd,
           });
           const json = await res.json().catch(() => ({}));
-          if (json.ok && json.data?.url) {
-            await apiSend(`/api/v2/guide/midao/services/${service.activityId}`, 'PATCH', { coverImageUrl: json.data.url });
-          }
+          if (!json.ok || !json.data?.url) throw new Error(json?.error?.message || '上傳失敗');
+          await apiSend(`/api/v2/guide/midao/services/${service.activityId}`, 'PATCH', { coverImageUrl: json.data.url });
         } catch {
-          // 封面上傳失敗不擋建立流程，導遊可於編輯頁重新上傳。
+          // 封面上傳/儲存失敗不擋建立流程，但需提示導遊回編輯頁補上傳。
+          router.push('/midao2/services?coverError=1');
+          return;
         }
       }
       router.push('/midao2/services');

@@ -2,8 +2,8 @@
 
 // midao2 服務列表：已上架/草稿分頁 ＋ 服務卡（封面/狀態/時長人數/價格/成交方式）＋ 新增/編輯導轉。
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { C, Card, Btn, Spinner, EmptyState, ErrorState, apiGet } from '../ui';
 
 type MidaoService = {
@@ -38,12 +38,14 @@ function formatHours(durationMinutes: number | null): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1);
 }
 
-export default function Midao2ServicesPage() {
+function Midao2ServicesPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>('published');
   const [items, setItems] = useState<MidaoService[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showCoverError, setShowCoverError] = useState(searchParams.get('coverError') === '1');
 
   const load = () => {
     setLoading(true);
@@ -69,6 +71,33 @@ export default function Midao2ServicesPage() {
           ＋ 新增服務
         </Btn>
       </div>
+
+      {showCoverError && (
+        <div
+          data-testid="midao2-svc-cover-error"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            background: C.ORANGE_SOFT,
+            color: C.ORANGE,
+            borderRadius: 12,
+            padding: '10px 14px',
+            fontSize: 13,
+          }}
+        >
+          <span>服務已建立，但封面上傳失敗——請進編輯頁重新上傳封面。</span>
+          <button
+            type="button"
+            onClick={() => setShowCoverError(false)}
+            aria-label="關閉提示"
+            style={{ background: 'transparent', border: 'none', color: C.ORANGE, cursor: 'pointer', fontSize: 16, lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 20, borderBottom: `1px solid ${C.BORDER}` }}>
         {(['published', 'draft'] as TabKey[]).map((key) => {
@@ -170,5 +199,13 @@ export default function Midao2ServicesPage() {
         </>
       )}
     </div>
+  );
+}
+
+export default function Midao2ServicesPage() {
+  return (
+    <Suspense fallback={<Spinner />}>
+      <Midao2ServicesPageInner />
+    </Suspense>
   );
 }

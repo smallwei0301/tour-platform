@@ -54,10 +54,12 @@ test('midao2 服務列表＋精靈：三步/成交方式/上傳與送審串接',
   const list = await read('app/(non-locale)/midao2/services/page.tsx');
   assert.match(list, /\/api\/v2\/guide\/midao\/services/);
   assert.match(list, /showcasePublished/);
+  assert.match(list, /midao2-svc-cover-error/);
   const form = await read('app/(non-locale)/midao2/services/ServiceForm.tsx');
   for (const m of ['instant_booking', 'confirm_first', 'line_inquiry']) assert.match(form, new RegExp(m));
   assert.match(form, /maxLength=\{?60\}?/);
   assert.match(form, /midao2-form-publish/);
+  assert.match(form, /midao2-form-save-edit/);
 });
 
 test('midao2 服務編輯：上下架 toggle＋發佈到祕島', async () => {

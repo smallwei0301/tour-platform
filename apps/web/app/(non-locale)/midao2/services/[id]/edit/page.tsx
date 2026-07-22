@@ -49,14 +49,13 @@ export default function Midao2EditServicePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activityId]);
 
-  async function handleSubmit(values: ServiceValues, publish: boolean) {
+  async function handleSubmit(values: ServiceValues, publish: boolean | null) {
     setSubmitting(true);
     setFormError(null);
     try {
-      const { service: updated } = await apiSend(`/api/v2/guide/midao/services/${activityId}`, 'PATCH', {
-        ...values,
-        midaoStatus: publish ? 'published' : 'draft',
-      });
+      const body: Record<string, unknown> = { ...values };
+      if (publish !== null) body.midaoStatus = publish ? 'published' : 'draft';
+      const { service: updated } = await apiSend(`/api/v2/guide/midao/services/${activityId}`, 'PATCH', body);
       setService(updated);
       router.push('/midao2/services');
     } catch (err: any) {

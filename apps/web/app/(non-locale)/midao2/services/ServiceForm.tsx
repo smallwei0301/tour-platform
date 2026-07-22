@@ -5,7 +5,7 @@
 // edit 模式選檔後立即 compressImage→upload-image→PATCH coverImageUrl。
 
 import React, { useState } from 'react';
-import { C, Btn, Field } from '../ui';
+import { C, Btn, Field, apiSend } from '../ui';
 import { compressImage } from '../../../../src/lib/client-image-compress';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
@@ -79,7 +79,7 @@ export default function ServiceForm({
   mode,
 }: {
   initial?: ServiceFormInitial;
-  onSubmit: (values: ServiceValues, publish: boolean, coverFile?: File | null) => void;
+  onSubmit: (values: ServiceValues, publish: boolean | null, coverFile?: File | null) => void;
   submitting?: boolean;
   mode: 'create' | 'edit';
 }) {
@@ -112,6 +112,7 @@ export default function ServiceForm({
     const activityId = initial?.activityId;
     if (!activityId) return;
     setCoverUploading(true);
+    let uploadedUrl: string | null = null;
     try {
       const compressed = await compressImage(file, 'gallery');
       const fd = new FormData();
@@ -123,15 +124,18 @@ export default function ServiceForm({
       });
       const json = await res.json().catch(() => ({}));
       if (!json.ok || !json.data?.url) throw new Error(json?.error?.message || '上傳失敗');
-      set('coverImageUrl', json.data.url);
-      setCoverPreview(json.data.url);
-      await fetch(`/api/v2/guide/midao/services/${activityId}`, {
-        method: 'PATCH',
-        headers: csrfHeaders({ 'content-type': 'application/json' }),
-        body: JSON.stringify({ coverImageUrl: json.data.url }),
-      });
+      uploadedUrl = json.data.url;
     } catch (err: any) {
       setCoverError(err?.message || '封面上傳失敗');
+      setCoverUploading(false);
+      return;
+    }
+    try {
+      await apiSend(`/api/v2/guide/midao/services/${activityId}`, 'PATCH', { coverImageUrl: uploadedUrl });
+      set('coverImageUrl', uploadedUrl);
+      setCoverPreview(uploadedUrl);
+    } catch {
+      setCoverError('封面已上傳但儲存失敗，請再試一次');
     } finally {
       setCoverUploading(false);
     }
@@ -354,12 +358,20 @@ export default function ServiceForm({
             <Btn kind="secondary" onClick={() => setStep(2)}>上一步</Btn>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
-            <Btn kind="secondary" disabled={submitting} onClick={() => onSubmit(form, false, coverFile)} data-testid="midao2-form-save-draft">
-              儲存草稿
-            </Btn>
-            <Btn kind="primary" disabled={submitting} onClick={() => onSubmit(form, true, coverFile)} data-testid="midao2-form-publish">
-              發布到接案頁
-            </Btn>
+            {mode === 'edit' ? (
+              <Btn kind="primary" disabled={submitting} onClick={() => onSubmit(form, null)} data-testid="midao2-form-save-edit">
+                儲存變更
+              </Btn>
+            ) : (
+              <>
+                <Btn kind="secondary" disabled={submitting} onClick={() => onSubmit(form, false, coverFile)} data-testid="midao2-form-save-draft">
+                  儲存草稿
+                </Btn>
+                <Btn kind="primary" disabled={submitting} onClick={() => onSubmit(form, true, coverFile)} data-testid="midao2-form-publish">
+                  發布到接案頁
+                </Btn>
+              </>
+            )}
           </div>
         </div>
       )}
