@@ -49,3 +49,22 @@ test('midao2 行事曆：月格/點色/三格開關/週預設 modal', async () =
   assert.match(modal, /\[1, 2, 3, 4, 5, 6, 0\]/); // 一→日顯示序對映 weekday 0=Sun
   assert.match(modal, /ResponsiveModal/);
 });
+
+test('midao2 服務列表＋精靈：三步/成交方式/上傳與送審串接', async () => {
+  const list = await read('app/(non-locale)/midao2/services/page.tsx');
+  assert.match(list, /\/api\/v2\/guide\/midao\/services/);
+  assert.match(list, /showcasePublished/);
+  const form = await read('app/(non-locale)/midao2/services/ServiceForm.tsx');
+  for (const m of ['instant_booking', 'confirm_first', 'line_inquiry']) assert.match(form, new RegExp(m));
+  assert.match(form, /maxLength=\{?60\}?/);
+  assert.match(form, /midao2-form-publish/);
+});
+
+test('midao2 服務編輯：上下架 toggle＋發佈到祕島', async () => {
+  const edit = await read('app/(non-locale)/midao2/services/[id]/edit/page.tsx');
+  assert.match(edit, /midaoStatus/);
+  assert.match(edit, /\/api\/guide\/activities\/.*submit|submit.*activities/s);
+  assert.match(edit, /midao2-edit-toggle/);
+  const create = await read('app/(non-locale)/midao2/services/new/page.tsx');
+  assert.match(create, /compressImage|upload-image/);
+});
