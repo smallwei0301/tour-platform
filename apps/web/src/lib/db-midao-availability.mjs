@@ -35,7 +35,10 @@ export function resolveEffectiveDay(defaults, overrides) {
   return eff;
 }
 
-/** @param {string} guideId */
+/**
+ * @param {string} guideId
+ * weekday 慣例：JS getUTCDay()（0=Sun…6=Sat），與 slot-generator.ts 一致。
+ */
 export async function getWeeklyDefaultsDb(guideId) {
   let rows;
   if (!hasSupabaseEnv()) {
@@ -59,6 +62,7 @@ export async function getWeeklyDefaultsDb(guideId) {
  * 整組 upsert 週預設（只寫有給的 weekday）。
  * @param {string} guideId
  * @param {Array<{weekday:number, morning?:boolean, afternoon?:boolean, evening?:boolean}>} weekdays
+ * weekday 慣例：JS getUTCDay()（0=Sun…6=Sat），與 slot-generator.ts 一致。
  */
 export async function setWeeklyDefaultsDb(guideId, weekdays) {
   const rows = [];
@@ -70,8 +74,12 @@ export async function setWeeklyDefaultsDb(guideId, weekdays) {
     }
   }
   if (!rows.length) return;
+  // 同 (weekday, period) 重複給值時後者為準（Postgres 同批 upsert 撞同鍵會 21000）
+  const byKey = new Map();
+  for (const row of rows) byKey.set(`${row.weekday}:${row.period}`, row);
+  const deduped = [...byKey.values()];
   if (!hasSupabaseEnv()) {
-    for (const row of rows) {
+    for (const row of deduped) {
       const i = _memDefaults.findIndex((r) =>
         r.guide_id === guideId && r.weekday === row.weekday && r.period === row.period);
       if (i >= 0) _memDefaults[i] = row; else _memDefaults.push(row);
@@ -80,7 +88,7 @@ export async function setWeeklyDefaultsDb(guideId, weekdays) {
   }
   const supabase = await getSupabase();
   const { error } = await supabase.from('midao_availability_defaults')
-    .upsert(rows, { onConflict: 'guide_id,weekday,period' });
+    .upsert(deduped, { onConflict: 'guide_id,weekday,period' });
   if (error) throw new Error(error.message);
 }
 
@@ -119,8 +127,12 @@ export async function setDayOverrideDb(guideId, date, patch) {
   }
   const supabase = await getSupabase();
   if (upserts.length) {
-    const { error } = await supabase.from('midao_day_overrides')
-      .upsert(upserts, { onConflict: 'guide_id,date,period' });
+    // 表上是 partial unique index（WHERE period <> 'custom'），onConflict 推導不到 → 改先刪後插
+    const periods = upserts.map((r) => r.period);
+    const { error: delErr } = await supabase.from('midao_day_overrides').delete()
+      .eq('guide_id', guideId).eq('date', date).in('period', periods);
+    if (delErr) throw new Error(delErr.message);
+    const { error } = await supabase.from('midao_day_overrides').insert(upserts);
     if (error) throw new Error(error.message);
   }
   if (customRows) {
@@ -133,7 +145,11 @@ export async function setDayOverrideDb(guideId, date, patch) {
   }
 }
 
-/** 該月每天的生效可用時段。 @param {string} guideId @param {string} month 'YYYY-MM' */
+/**
+ * 該月每天的生效可用時段。
+ * @param {string} guideId @param {string} month 'YYYY-MM'
+ * weekday 慣例：JS getUTCDay()（0=Sun…6=Sat），與 slot-generator.ts 一致。
+ */
 export async function getMonthEffectiveDb(guideId, month) {
   const [y, m] = month.split('-').map(Number);
   const daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();

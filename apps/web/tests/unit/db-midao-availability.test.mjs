@@ -49,3 +49,12 @@ test('月生效展開：預設＋單日覆寫', async () => {
   const other = await getMonthEffectiveDb('guide-2', '2026-08');
   assert.equal(other.every((d) => !d.morning && !d.afternoon && !d.evening), true);
 });
+
+test('setWeeklyDefaultsDb：同一 weekday 重複給值時後者為準', async () => {
+  await setWeeklyDefaultsDb(G, [
+    { weekday: 2, morning: true, afternoon: false, evening: false },
+    { weekday: 2, morning: false, afternoon: true, evening: false },
+  ]);
+  const rows = await getWeeklyDefaultsDb(G);
+  assert.deepEqual(rows[2], { weekday: 2, morning: false, afternoon: true, evening: false });
+});
