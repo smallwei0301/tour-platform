@@ -16,3 +16,12 @@ test('midao2 首頁：summary 串接＋統計卡導轉＋複製回覆', async ()
   assert.match(src, /midao2-top-view/);
   assert.match(src, /midao2-share-cta/);
 });
+
+test('midao2 需求列表：tab 對映＋排序＋卡片導轉', async () => {
+  const src = await read('app/(non-locale)/midao2/requests/page.tsx');
+  assert.match(src, /\/api\/v2\/guide\/midao\/requests\?status=/);
+  for (const s of ['all', 'new', 'pending_reply', 'replied', 'closed']) assert.match(src, new RegExp(`['"]${s}['"]`));
+  assert.match(src, /unreplied_first/);
+  assert.match(src, /tabCounts/);
+  assert.match(src, /midao2-req-sort/);
+});
