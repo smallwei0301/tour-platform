@@ -1,6 +1,6 @@
 # Current Issue Priority Queue
 
-Updated: 2026-06-10 15:30 CST (GH-1265 post-#1254/#1231 close + #1121 label refresh)
+Updated: 2026-07-22 09:40 CST (GH-1658 post-#1656/#1654 drift refresh; #1301/#1336 closed; daily-scan duplicates #1684–#1748 consolidated into #1749)
 
 Repo: `smallwei0301/tour-platform`
 
@@ -12,7 +12,7 @@ Use this file to avoid obvious stale-routing mistakes, then re-check live GitHub
 
 ## Live-source requirements
 
-- Canonical auto snapshot: `docs/operations/reports/readiness-live-state-latest.md`
+- Canonical auto snapshot: `docs/operations/reports/readiness-live-state-latest.md`（daily 05:00 UTC 自動刷新；stale 門檻 26h — #1654）
 - Refresh command: `npm run readiness:snapshot`
 - Live issue query:
   ```bash
@@ -46,11 +46,11 @@ Label meanings:
 Open security issue under owner decision (NOT a launch blocker per current labels):
 
 - **#1121 — `[Security] Rotate all credentials exposed in git history ...`**
-  - Labels observed (2026-06-10): `type:bug`, `security`, `owner:mixed`, `status:needs-decision`, `launch:post-first-payment`
+  - Labels observed (2026-07-22): `type:bug`, `security`, `owner:mixed`, `status:needs-decision`, `launch:post-first-payment`
   - Routing: owner/security-controlled, awaiting human decision. **Not** currently labeled `priority:P0` and **not** `launch:first-payment-blocker` — earlier snapshots that called it P0 were stale.
   - Do not auto-run credential rotation from a generic builder card.
 
-Safe-next candidates: pull from live `gh issue list --state open --label status:ready --label owner:ai-agent` rather than hard-coding here, since they rotate quickly. Recent verified-active examples include #1301 (Booking V2 close-gate, owner smoke pending) and #1265 (this doc refresh itself).
+Safe-next candidates: pull from live `gh issue list --state open --label status:ready --label owner:ai-agent` rather than hard-coding here, since they rotate quickly. As of this snapshot the largest ready cluster is the **daily QA checklist backlog**（#1641/#1642/#1648/#1653/#1657/#1661/#1673/#1682/#1685/#1695/#1706/#1710/#1715/#1729/#1745，`agent:queued` `owner:ai-agent` `status:ready`）— newest first; older ones may be superseded by newer checklists' 去重 sections.
 
 ## Agent Routing Invariants
 
@@ -63,13 +63,12 @@ Safe-next candidates: pull from live `gh issue list --state open --label status:
 
 ## P0 / first-payment blockers
 
-> **本 snapshot 時間點：live `priority:P0` 為空。** 仍保留以下幾條 `launch:first-payment-blocker` 標籤的歷史 P1 條目，方便 routing。若 readiness snapshot P0 section 又非空，**先以 live 為準更新本區段**，並把對應 issue 移上來。
+> **本 snapshot 時間點：live `priority:P0` 為空。** 仍保留以下幾條 `launch:first-payment-blocker` 標籤的歷史 P1/P2 條目，方便 routing。若 readiness snapshot P0 section 又非空，**先以 live 為準更新本區段**，並把對應 issue 移上來。
 
 1. **#714 — [Ops] Run real alert drill before first payment** `blocked`
    - State: OPEN
-   - Labels observed after preflight: `priority:P1`, `agent:queued`, `owner:mixed`, `status:blocked`, `infra`, `launch:first-payment-blocker`
+   - Labels: `priority:P1`, `agent:backlog`, `owner:mixed`, `status:blocked`, `infra`, `launch:first-payment-blocker`
    - Routing: blocked on production provisioning/schema readiness; do not trigger live drill until production `incidents` table, soft-launch audit path, `SENTRY_DSN`, and `TELEGRAM_ALERT_*` are confirmed.
-   - Latest blocker evidence: issue comment from 2026-06-05 preflight.
 
 2. **#605 — [Launch Content] Strict Andy Lee listing content gate before public exposure** `owner-mixed`
    - State: OPEN
@@ -83,64 +82,106 @@ Safe-next candidates: pull from live `gh issue list --state open --label status:
 
 ## P1 / ready or queued product/ops work
 
-1. **#642 — [Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch** `agent:queued`
+1. **#1652 — [Booking V2][Phase 1/6] 訂單讀取面 v2 接線（#1649）** `in-progress`
    - State: OPEN
-   - Labels: `priority:P1`, `agent:queued`, `owner:ai-agent`, `status:ready`, `traveler-booking`, `launch:post-first-payment`
-   - Routing: post-first-payment observation, not a first-payment unblocker.
+   - Labels: `priority:P1`, `owner:ai-agent`, `status:in-progress`, `traveler-booking`, `booking-v2`
+   - Routing: active phase of the #1649 v2 全面串接計劃；接手前先讀 `docs/operations/worklogs/issue1649.md` 對齊進度，不可重做已 merge 的 phase。
 
-2. **#319 — [Ops] Run customer support SOP first-case drill follow-through** `agent:backlog`
+2. **#1649 — [Booking/Order/Payment][P1] 訂單／退款／金流 v2 全面串接計劃** `plan-of-record`
+   - State: OPEN
+   - Labels: `type:feature`, `priority:P1`, `owner:mixed`, `status:ready`, `payments`, `booking-v2`
+   - Routing: umbrella plan; execute via phase issues（#1652 …），不直接在本卡動工。
+
+3. **#1686 — [Admin][GitHub Actions] 修復正式環境缺少 admin token 導致排程開關不可用** `owner-mixed`
+   - State: OPEN
+   - Labels: `priority:P1`, `security`, `agent:queued`, `owner:mixed`, `status:ready`, `auth`, `admin`
+   - Routing: secrets/token provisioning 屬 owner；agent 只能做 code/doc 面（見 worklog issue1686）。
+
+4. **#1647 — [Payments] Decide and verify post-#1637 historical paid-order / payout reconciliation** `needs-decision`
+   - State: OPEN
+   - Labels: `priority:P1`, `owner:human-decision`, `status:needs-decision`, `type:decision`, `payments`, `orders`
+   - Routing: human decision required; do not auto-reconcile production payouts.
+
+5. **#1659 — [Security][RLS] Revoke post-#1646 anon write grants and default privileges drift** `needs-decision`
+   - State: OPEN
+   - Labels: `priority:P1`, `security`, `owner:mixed`, `status:needs-decision`, `database`, `rls`
+   - Routing: schema/RLS 變更需 migration + SQL-OVERRIDE 協議；等待 owner 決定。
+
+6. **#319 — [Ops] Run customer support SOP first-case drill follow-through** `agent:backlog`
    - State: OPEN
    - Labels: `priority:P1`, `agent:backlog`, `owner:mixed`, `status:ready`, `type:qa`
    - Routing: mixed ops drill; prepare evidence, but confirm owner/human pieces before completion.
 
-3. **#318 — [Ops] Run Andy Lee first-guide onboarding demo and retrospective scope** `agent:backlog`
+7. **#318 — [Ops] Run Andy Lee first-guide onboarding demo and retrospective scope** `agent:backlog`
    - State: OPEN
    - Labels: `priority:P1`, `agent:backlog`, `owner:mixed`, `status:ready`, `admin-guides`
    - Routing: owner/guide-facing demo; do not post private guide evidence publicly.
 
-4. **#1301 — [GH-1290][CloseGate] Runtime smoke does not re-emit 10:30 after migration apply** `closegate-pending`
+8. **#642 — [Traveler Booking] Monitor V2 observation window and guard legacy fallback after launch** `agent:backlog`
    - State: OPEN
-   - Labels: `priority:P1`, `type:bug`, `owner:ai-agent`, `status:ready`, `booking-v2`, `regression`
-   - Routing: all known backend fixes merged (`a6dc7f7` / `ffa2e2d` / `8b74006` / `e748ff3`) and live on `7f177fd`; remaining work is owner production close-gate smoke (build fixture → verify 10:30 → cleanup). Do not auto-mutate production data.
+   - Labels: `priority:P1`, `agent:backlog`, `owner:mixed`, `status:ready`, `traveler-booking`, `launch:post-first-payment`
+   - Routing: post-first-payment observation, not a first-payment unblocker.
+
+9. **#1317 — [Production Smoke] Owner-only acceptance verification gaps** `owner:human`
+   - State: OPEN
+   - Labels: `priority:P1`, `type:qa`, `owner:human`, `production-smoke`, `post-merge`
+   - Routing: owner-only；agent 不可代跑。
 
 ## P2 / launch support and readiness backlog
 
-1. **#926 — [Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920** `blocked`
+1. **#1670 — [Frontend Daily Check] health check failures（runner hygiene）** `status:ready`
+   - State: OPEN
+   - Labels: `priority:P2`, `qa`, `owner:ai-agent`, `status:ready`, `traveler-booking`
+   - Routing: 歷史失敗已定性為 stale-checkout 假陽性；殘留工作＝canonical runner install/maxBuffer 缺口（修補在 branch `claude/resolve-open-issues-uiv0ql`，見 worklog issue1670）。
+
+2. **#1654 — [Ops] readiness live-state snapshot stale** `fix-in-branch`
+   - State: OPEN
+   - Labels: `priority:P2`, `cron-followup`, `agent:backlog`, `owner:ai-agent`, `status:ready`, `infra`, `docs`
+   - Routing: 每日自動刷新已恢復；門檻/文案對齊修補在 branch `claude/resolve-open-issues-uiv0ql`（見 worklog issue1654）。
+
+3. **#1660 — [Ops] Reconcile stale open PR queue after #1656/#1646 main drift** `needs-decision`
+   - State: OPEN
+   - Labels: `priority:P2`, `qa`, `agent:backlog`, `owner:mixed`, `status:needs-decision`
+   - Routing: 開放 PR 佇列盤點需 owner 對逐支 PR 的去留決定。
+
+4. **#1344 — [Perf][P2] Mobile LCP regression on /activities** `owner:ai-agent`
+   - State: OPEN
+   - Labels: `type:bug`, `priority:P2`, `owner:ai-agent`, `traveler-booking`, `performance`
+   - Routing: perf 工作；與 ISR/快取策略（#1603/#1604 parked 決策）相鄰，動工前先讀該兩張的 owner 拍板。
+
+5. **#926 — [Ops] Add LINE/LIFF Messaging API rollout evidence gate after #920** `blocked`
    - State: OPEN
    - Labels: `priority:P2`, `agent:backlog`, `owner:mixed`, `status:blocked`, `auth`, `notifications`, `infra`
    - Routing: blocked by LINE/LIFF rollout state.
 
-2. **#797 — [Compliance] Internal conservative incident reporting playbook for soft launch** `awaiting-implementation`
+6. **#797 — [Compliance] Internal conservative incident reporting playbook for soft launch** `awaiting-implementation`
    - State: OPEN
    - Labels: `priority:P2`, `security`, `owner:ai-agent`, `infra`, `docs`, `status:awaiting-implementation`
    - Routing: docs/security playbook; safe only if it does not claim legal advice or expose incident details.
 
-3. **#724 — [Ops] Execute Supabase live restore drill within 7 days after soft launch** `post-first-payment`
+7. **#724 — [Ops] Execute Supabase live restore drill within 7 days after soft launch** `post-first-payment`
    - State: OPEN
    - Labels: `priority:P2`, `agent:backlog`, `owner:mixed`, `database`, `infra`, `status:awaiting-implementation`, `launch:post-first-payment`
    - Routing: read-only planning first; live restore drill needs explicit operator approval.
 
-4. **#685 — [Monitoring] Add simple outside website monitor after soft launch** `post-first-payment`
+8. **#685 — [Monitoring] Add simple outside website monitor after soft launch** `post-first-payment`
    - State: OPEN
    - Labels: `priority:P2`, `agent:backlog`, `owner:ai-agent`, `infra`, `status:awaiting-implementation`, `launch:post-first-payment`
    - Routing: post-soft-launch monitor setup; do not confuse with #714 alert drill.
 
-5. **#1336 — [Ops/Infra] 設定 INTERNAL_ALERT_TOKEN 並啟用 6 個 internal cron sweep endpoints**
-   - State: OPEN
-   - Labels: `triaged`, `priority:P2`, `infra`, `launch:post-first-payment`
-   - Routing: human ops (Vercel project env + GitHub Actions secret 寫入); 不在 AI agent 權限範圍。
-
 ## Historical/non-routing notes
 
-- #1106 — closed/verified 2026-06-10 after PR #1341 closed the payout-eligibility enforcement gap (Post-Trip Ops epic complete).
-- #1121 — open security issue, label set 2026-06-10：`security`, `owner:mixed`, `status:needs-decision`, `launch:post-first-payment`。**not** P0, **not** `first-payment-blocker`.
-- #1175 — closed/verified after PR #1282 + #1283 QA sign-off + #1336 ops follow-up.
-- #1231 — closed/verified 2026-06-05 after the previous routing-doc refresh.
-- #1237 — closed/verified after PR #1246 and owner-approved prelaunch slot seed close-gate.
-- #1238 — closed 2026-06-05; admin seasons fix merged.
-- #1249 — closed; activities performance work merged via PR #1252.
-- #1254 — closed/verified 2026-06-05 after PR #1259 (post-trip-summary FK embed fix).
-- #621, #639, #640, #641, #813 — historical closed launch-readiness entries; do not route.
+- #1751 — closed 2026-07-22：daily QA checklist（PR #1750 booking UUID 入口）GO，報告 `docs/operations/qa-reports/issue1751-daily-qa-2026-07-22.md`。
+- #1684/#1694/#1705/#1709/#1714/#1717/#1728/#1746/#1747/#1748 — closed 2026-07-22 as duplicates of #1749（stale-branch scanner 假陽性；#1749 仍 open、由 owner HOLD 中，等安全 baseline scan 與 cron 決策）。
+- #1603/#1604 — open but **parked by owner（2026-07-03 拍板）**：多 root layout 大搬遷前置；不要重複調查或重啟，除非 owner 解 park。
+- #1607/#1608/#1609 — 導遊開店 roadmap placeholder（無 labels）；#1609 明確等 owner 拍板定價。
+- #1474 — QA：PR #1473 部分退款 staging 實測（ECPay 測試卡）；需 staging 金流環境。
+- #1388 — Growth backlog 總綱（P2）；phase-12 對齊後再展開。
+- #1301 — closed（Booking V2 close-gate smoke 完成）。
+- #1336 — closed（INTERNAL_ALERT_TOKEN ops 完成）。
+- #1121 — open security issue, label set 2026-07-22：`security`, `owner:mixed`, `status:needs-decision`, `launch:post-first-payment`。**not** P0, **not** `first-payment-blocker`.
+- #1175/#1231/#1237/#1238/#1249/#1254/#1265 — closed/verified（前次 routing 刷新紀錄）。
+- #621, #639, #640, #641, #813, #1106 — historical closed launch-readiness entries; do not route.
 
 ## Stale-check protocol
 
@@ -157,7 +198,7 @@ npm run readiness:snapshot
 Then verify every issue in this snapshot that is marked routing-active or blocked:
 
 ```bash
-for n in 1121 714 605 320 642 319 318 1301 926 797 724 685 1336
+for n in 1121 714 605 320 1652 1649 1686 1647 1659 319 318 642 1317 1670 1654 1660 1344 926 797 724 685
  do
    gh issue view "$n" --repo smallwei0301/tour-platform \
      --json number,state,title,labels \
