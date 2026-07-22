@@ -11,9 +11,11 @@ const PERIODS = ['morning', 'afternoon', 'evening'];
 const SELECT_COLS = 'id, request_no, guide_id, activity_id, activity_title_snapshot, traveler_name, traveler_line_id, traveler_email, preferred_date, backup_date, preferred_period, start_time, end_time, participants_count, participants_note, language, need_pickup, special_note, answers, status, source, created_at, status_changed_at';
 
 /** in-memory fallback（測試 seam） */
+/** @type {any[]} */
 const _mem = [];
 let _memSeq = 0;
 export function __resetMemMidaoRequests() { _mem.length = 0; _memSeq = 0; }
+/** @param {any[]} rows */
 export function __seedMemMidaoRequests(rows) { _mem.push(...rows); }
 
 /** @param {string} from @param {string} to */
@@ -66,7 +68,7 @@ export function normalizeRequestInput(input) {
   const specialNote = String(input?.specialNote ?? '').trim();
   if (specialNote.length > 500) return { ok: false, code: 'NOTE_TOO_LONG', message: '特殊需求最多 500 字' };
   const participantsNote = String(input?.participantsNote ?? '').trim().slice(0, 200);
-  const answers = Array.isArray(input?.answers) ? input.answers.slice(0, 20).map((a) => ({
+  const answers = Array.isArray(input?.answers) ? input.answers.slice(0, 20).map((/** @type {any} */ a) => ({
     questionId: String(a?.questionId ?? ''), label: String(a?.label ?? '').slice(0, 120),
     answer: String(a?.answer ?? '').slice(0, 300),
   })) : [];
@@ -129,6 +131,7 @@ export async function createMidaoRequestDb({ guideId, activityId = null, activit
   throw new Error('REQUEST_NO_EXHAUSTED');
 }
 
+/** @param {string} guideId */
 async function fetchGuideRows(guideId) {
   if (!hasSupabaseEnv()) return _mem.filter((r) => r.guide_id === guideId);
   const supabase = await getSupabase();
@@ -138,6 +141,7 @@ async function fetchGuideRows(guideId) {
 }
 
 const UNREPLIED = ['new', 'pending_reply'];
+/** @type {Record<string, (r: any) => boolean>} */
 const TAB_FILTERS = {
   all: () => true,
   new: (r) => r.status === 'new',
