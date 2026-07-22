@@ -137,6 +137,7 @@ export default function Midao2RequestDetailPage() {
 
   const handleStatusClick = async (key: string) => {
     if (!request || statusSaving) return;
+    if (key === request.status) return;
     setStatusSaving(true);
     setStatusError(null);
     try {
