@@ -247,3 +247,25 @@ export async function getPublicMidaoPageDb(slug) {
     services: visible.map(serviceShape),
   };
 }
+
+/**
+ * 我的頁面：更新導覽經驗年資（guide_profiles.experience_years，0–60 整數）。
+ * @param {string} guideId @param {any} years
+ * @returns {Promise<{ok:true, experienceYears:number}|{ok:false, code:string, message:string}>}
+ */
+export async function updateGuideExperienceYearsDb(guideId, years) {
+  const n = Number(years);
+  if (!Number.isInteger(n) || n < 0 || n > 60) {
+    return { ok: false, code: 'INVALID_YEARS', message: '導覽經驗需為 0–60 的整數年' };
+  }
+  if (!hasSupabaseEnv()) {
+    const g = _memGuides.find((x) => x.id === guideId);
+    if (g) g.experience_years = n;
+    return { ok: true, experienceYears: n };
+  }
+  const supabase = await getSupabase();
+  const { error } = await supabase.from('guide_profiles')
+    .update({ experience_years: n }).eq('id', guideId);
+  if (error) throw new Error(error.message);
+  return { ok: true, experienceYears: n };
+}

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   MIDAO_DEAL_MODES, isShowcaseVisible, normalizeServiceInput,
   listMidaoServicesDb, createMidaoServiceDb, updateMidaoServiceDb, getPublicMidaoPageDb,
+  updateGuideExperienceYearsDb,
   __resetMemMidaoShowcase, __seedMemMidaoGuide, __seedMemMidaoActivities,
 } from '../../src/lib/db-midao-showcase.mjs';
 
@@ -114,4 +115,16 @@ test('updateMidaoServiceDb：單欄 patch 不得造成 min>max（比對既有列
   assert.equal(bad.code, 'INVALID_PARTICIPANTS');
   const still = await listMidaoServicesDb(G);
   assert.equal(still[0].minParticipants, 2); // 未被寫入
+});
+
+test('updateGuideExperienceYearsDb：範圍驗證與寫入', async () => {
+  __seedMemMidaoGuide(guideProfile());
+  const r1 = await updateGuideExperienceYearsDb(G, 5);
+  assert.equal(r1.ok, true); assert.equal(r1.experienceYears, 5);
+  const r2 = await updateGuideExperienceYearsDb(G, -1);
+  assert.equal(r2.ok, false); assert.equal(r2.code, 'INVALID_YEARS');
+  const r3 = await updateGuideExperienceYearsDb(G, 61);
+  assert.equal(r3.ok, false);
+  const r4 = await updateGuideExperienceYearsDb(G, 3.7); // 非整數
+  assert.equal(r4.ok, false);
 });

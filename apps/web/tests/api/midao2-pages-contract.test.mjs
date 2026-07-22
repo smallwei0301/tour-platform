@@ -70,3 +70,15 @@ test('midao2 服務編輯：上下架 toggle＋發佈到祕島', async () => {
   const create = await read('app/(non-locale)/midao2/services/new/page.tsx');
   assert.match(create, /compressImage|upload-image/);
 });
+
+test('midao2 我的頁面：profile/公開預覽/QR/登出＋profile-extras route', async () => {
+  const me = await read('app/(non-locale)/midao2/me/page.tsx');
+  assert.match(me, /\/api\/guide\/profile/);
+  assert.match(me, /QRCodeSVG/);
+  assert.match(me, /\/api\/v2\/guide\/midao\/profile-extras/);
+  assert.match(me, /midao2-me-classic/);
+  assert.match(me, /midao2-me-logout/);
+  const route = await read('app/api/v2/guide/midao/profile-extras/route.ts');
+  assert.match(route, /validateCsrf/);
+  assert.match(route, /updateGuideExperienceYearsDb/);
+});
