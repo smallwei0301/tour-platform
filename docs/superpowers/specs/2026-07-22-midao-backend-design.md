@@ -368,7 +368,7 @@ closed   → 不開放動態預約
 
 ### 7.9 Backend mode
 
-`guide_profiles.backend_mode`：`legacy | midao`，預設 `legacy`。切換時必須同步 bump guide session version。既有 `guide_token` 三段格式 `guideId:sessionVersion:HMAC` 保持不變；`verifyGuideSession()` 額外回傳 token 內的 `sessionVersion`，Midao page/API guard 再讀 DB 的 canonical `backend_mode + guide_session_version` 並逐次比對，確保舊 session 真正失效。
+`guide_profiles.backend_mode`：`legacy | midao`，預設 `legacy`。切換時必須同步 bump guide session version。既有 `guide_token`三段格式 `guideId:sessionVersion:HMAC`及其HMAC message bytes保持不變；`verifyGuideSession()`額外回傳token內的 `sessionVersion`。Midao page/API guard每次讀DB canonical `display_name + backend_mode + guide_session_version + verification_status`並比對；route/audit context的guideName只取DB display_name，不信任public `guide_name` cookie。
 
 ### 7.10 Notification outbox
 
@@ -396,22 +396,27 @@ id uuid PK
 actor_type: guide | admin | traveler | system
 actor_id text NOT NULL
 command_name text NOT NULL
+scope_type text NOT NULL
+scope_id text NOT NULL
 idempotency_key text NOT NULL
 request_hash text NOT NULL
-response_status int NOT NULL
-response_body jsonb NOT NULL
+state: processing | completed
+response_status int NULL
+response_body jsonb NULL
 resource_type text NULL
 resource_id uuid NULL
 created_at timestamptz NOT NULL
+locked_at timestamptz NOT NULL
+completed_at timestamptz NULL
 expires_at timestamptz NOT NULL
-UNIQUE(actor_type, actor_id, command_name, idempotency_key)
+UNIQUE(actor_type, actor_id, command_name, scope_type, scope_id, idempotency_key)
 ```
 
-同 key＋同 request hash 回第一次 response snapshot；同 key＋不同 hash 回 `409 IDEMPOTENCY_KEY_REUSED`。Response snapshot 必須先去除 confirmation raw token、secret、cookie 與不必要 PII。
+同actor/command/scope/key＋同request hash回第一次response snapshot；同scope/key＋不同hash回 `409 IDEMPOTENCY_KEY_REUSED`。不同guide/resource scope可安全重用相同client key。CHECK constraint要求state=completed時response status/body與completed_at皆非空。Response snapshot必須先去除confirmation raw token、secret、cookie與不必要PII。
 
 ### 7.12 Transactional command audit
 
-跨表 Midao commands 使用 service-role-only `midao_audit_events`，不可假設 production 才存在而 repo migration 缺席的 `audit_logs`：
+既有 `audit_logs` 是 order-centric schema，只有 `order_id/actor/action/metadata`，不足以完整表示 Midao actor、guide、resource與request。跨表 Midao commands改用 service-role-only `midao_audit_events`：
 
 ```text
 id uuid PK
@@ -496,7 +501,7 @@ Publish transaction 驗證 payload、upsert canonical activity/plans/questions�
 
 以下必須是單一 DB transaction：request decision、inquiry conversion、confirmation accept、service publish、day availability replace、service version restore。
 
-重大 mutation 使用 `Idempotency-Key`：同 key 同 body 回第一次結果；同 key 不同 body 回 `409 IDEMPOTENCY_KEY_REUSED`。
+重大 mutation使用 `Idempotency-Key`：同key同body回第一次結果；同key不同body回 `409 IDEMPOTENCY_KEY_REUSED`。每個command RPC明確 `REVOKE EXECUTE FROM PUBLIC, anon, authenticated`、只grant service_role；若使用SECURITY DEFINER，固定安全search_path並schema-qualify所有objects。
 
 通知只在 commit 後透過 outbox fan-out：站內、Email、已綁定 LINE；Telegram保留導遊營運通知。通知失敗不回滾業務 transaction，改標示通知重試中。
 
@@ -512,7 +517,7 @@ Publish transaction 驗證 payload、upsert canonical activity/plans/questions�
 
 ### Admin impersonation
 
-actor 必須區分 guide 與 admin impersonation。既有可見 `guide_impersonation=1` cookie 只負責 banner；另新增 HttpOnly、HMAC-signed actor cookie，payload 為 admin email、target guide ID、issued/expiry。Midao page/API guard 驗證後產生 `actorType=admin`，並把已驗證的 admin email 放入 `actorId`；一般登入為 `actorType=guide`。audit 保存 actor type/ID、guide ID、action、resource、request ID。登出必須清除兩顆 impersonation cookies，shell 永久顯示代入 banner。
+actor必須區分guide與admin impersonation。既有可見 `guide_impersonation=1` cookie只負責banner；另新增HttpOnly、HMAC-signed actor cookie，使用獨立 `midao:impersonation-actor:v1` domain，payload為normalized admin email、target guide ID、issued/expiry。Guide session簽章bytes維持legacy相容，兩種signature不得跨協議驗證。Midao guard驗證後產生admin actor；一般登入為guide actor。Invite、regular與legacy guideId三條普通登入成功都清除殘留actor/banner cookies，logout亦清除。Audit保存actor type/ID、guide ID、action、resource、request ID。
 
 ### PII
 
@@ -724,7 +729,8 @@ day segment edit → revision CAS → replace global day rules
 Guide HMAC token 格式保持既有 `guideId:sessionVersion:HMAC`，不新增第四段。`verifyGuideSession()` 回傳已簽章的 `sessionVersion`；`verifyCanonicalGuideSession()`／`withMidaoGuideQuery/Command`／Midao page-session helper 在同一邊界依序檢查 HMAC、DB session version、verification status、`backend_mode`、`MIDAO_BACKEND_ENABLED` 與 mutation kill switch。切 mode 時 bump session version，迫使重新登入。
 
 - Login 與 admin impersonation 查 canonical `backend_mode`，回明確 `redirectTo`。
-- Admin 切換使用 `POST /api/v2/admin/guides/[guideId]/backend-mode`；內部 `midao_switch_guide_backend_mode` RPC 同一 transaction lock profile、claim durable idempotency、更新 mode、bump `guide_session_version`、寫 `midao_audit_events` 與 outbox，禁止分段 SQL 更新。Actor 取已驗證 admin email。
+- Admin切換使用 `POST /api/v2/admin/guides/[guideId]/backend-mode`。RPC順序固定為validate→claim/lock durable idempotency→replay/conflict→lock profile→conditional update/version bump→audit→outbox→sanitized response snapshot＋idempotency completed→commit。Fresh-key same-mode不bump、不audit、不outbox，只保存canonical response。
+- Forward `legacy→midao`同時要求 `MIDAO_BACKEND_ENABLED`與 `MIDAO_BACKEND_MODE_SWITCH_ENABLED`；rollback `midao→legacy`不受backend/mutation/mode-switch flags阻擋。
 - `legacy` 登入 → `/guide/dashboard`。
 - `midao` 登入 → `/midao`。
 - Midao mutation 只接受 mode=midao。
@@ -736,9 +742,10 @@ Guide HMAC token 格式保持既有 `guideId:sessionVersion:HMAC`，不新增第
 ```text
 MIDAO_BACKEND_ENABLED
 MIDAO_BACKEND_MUTATIONS_ENABLED
+MIDAO_BACKEND_MODE_SWITCH_ENABLED
 ```
 
-前者控制入口，後者可緊急停寫但保留讀取。
+第一個控制入口，第二個可緊急停寫但保留讀取，第三個只控制forward mode rollout；三者default-off且互不隱含，rollback不受其阻擋。
 
 灰度順序：測試 guide → 內部／合作 guide → 全部 guide。每批對帳 requests、services、calendar slots、booking/order IDs、error rate、截圖與 admin impersonation。
 

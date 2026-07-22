@@ -125,7 +125,7 @@ git commit -m "feat: 新增 Midao 後台模式欄位"
 - Create: `apps/web/tests/api/midao-idempotency-migration.test.mjs`
 - Create: `supabase/migrations/20260723002000_midao_idempotency_records.sql`
 
-建立 service-role-only `midao_idempotency_records`，唯一鍵為 actor type/ID＋command＋idempotency key；保存 request hash 與已去敏 response snapshot。同 key 同 hash replay；不同 hash 回 409。此 task 的可執行 RED/GREEN 步驟以 #1756 micro-plan 為準。
+建立service-role-only `midao_idempotency_records`，唯一鍵為actor type/ID＋command＋scope type/ID＋idempotency key；以 `processing|completed` lifecycle保存request hash、鎖定/完成時間與已去敏response snapshot，completed才允許非空response。同scope/key同hash replay，不同hash回409；不同guide scope可重用key。
 
 ## Task 1C: 建立 transactional audit schema
 
@@ -133,7 +133,7 @@ git commit -m "feat: 新增 Midao 後台模式欄位"
 - Create: `apps/web/tests/api/midao-audit-events-migration.test.mjs`
 - Create: `supabase/migrations/20260723002500_midao_audit_events.sql`
 
-建立 service-role-only `midao_audit_events`，保存 actor、guide、action、resource、request ID與去敏 metadata。跨表 command在同一 transaction寫 audit＋outbox；不依賴 repo migration中不存在的 `audit_logs`。完整 RED/GREEN與 local SQL驗證以 #1756 micro-plan為準。
+建立 service-role-only `midao_audit_events`，保存 actor、guide、action、resource、request ID與去敏 metadata。既有 `audit_logs`為 order-centric schema，欄位不足；跨表 command在同一 transaction寫專用 audit＋outbox。完整 RED/GREEN與 local SQL驗證以 #1756 micro-plan為準。
 
 ## Task 2: 讓 guide session payload回傳已簽章 sessionVersion
 
@@ -211,7 +211,7 @@ git commit -m "feat: 暴露導遊 session version"
 - stale version → `SESSION_STALE`。
 - wrong mode → `BACKEND_MODE_MISMATCH`。
 - inactive guide → `GUIDE_NOT_ACTIVE`。
-- Supabase branch select 明列 `backend_mode, guide_session_version, verification_status`。
+- Supabase branch select明列 `display_name, backend_mode, guide_session_version, verification_status`；route context guideName只取DB display_name。
 
 **Step 2: Verify RED**
 
@@ -310,7 +310,7 @@ git commit -m "feat: 建立 Midao V2 route wrapper"
 - Modify: `apps/web/app/api/guide/auth/session/route.ts`
 - Modify: `apps/web/app/api/v2/admin/guides/[guideId]/impersonate/route.ts`
 - Modify: `apps/web/app/(non-locale)/guide/login/page.tsx`
-- Test: `apps/web/tests/api/midao-guide-login-redirect.test.mjs`
+- Test: `apps/web/tests/api/midao-guide-login-api-redirect.test.mjs`
 - Test: `apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs`
 - Test: `apps/web/tests/api/midao-impersonation-actor.test.mjs`
 
@@ -322,13 +322,13 @@ Require queries to select `backend_mode` and responses：
 { "redirectTo": "/midao" }
 ```
 
-或 `/guide/dashboard`。Login UI 對普通登入優先採 server 回傳 `redirectTo`；`next` 只允許與該 backend mode 相容的 relative path，不能讓 legacy next 覆蓋 Midao mode。Impersonation response 同樣回 redirect target，並由已驗證 admin credentials 簽發 HttpOnly actor cookie；logout 清除 actor cookie與可見 banner cookie。
+或 `/guide/dashboard`。Login UI使用server `redirectTo`，`next`只允許同realm relative path。Impersonation以normalized admin email簽actor cookie；invite/regular/legacy guideId普通登入與logout都清actor/banner cookies。
 
 **Step 2: Verify RED**
 
 ```bash
 node --test --test-concurrency=1 \
-  apps/web/tests/api/midao-guide-login-redirect.test.mjs \
+  apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs
 ```
 
@@ -340,7 +340,7 @@ node --test --test-concurrency=1 \
 
 ```bash
 node --test --test-concurrency=1 \
-  apps/web/tests/api/midao-guide-login-redirect.test.mjs \
+  apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
   apps/web/tests/api/guide-auth-session-post-bounded.test.mjs
 ```
@@ -364,7 +364,7 @@ git commit -m "feat: 依後台模式導向導遊入口"
 
 **Step 1: Write RED tests**
 
-鎖定：admin route 使用既有 admin middleware/CSRF realm，並以 `pickAdminCredentials(request).email` 作 audit actor，禁止接受 body actor；body只接受 `legacy|midao`＋reason；RPC `FOR UPDATE` guide profile、claim durable idempotency、更新 mode、`guide_session_version + 1`、寫 `midao_audit_events`（`action='guide_backend_mode_switched'`）與 outbox；相同 mode第一次執行不 bump，replay不重複 side effects；unknown/inactive guide有 deterministic error。
+鎖定：admin route使用既有admin middleware/CSRF realm，actor email normalized且禁止body actor。Forward切midao要求backend＋mode-switch flags，rollback永遠允許。RPC順序為validate→idempotency claim/replay→profile lock→conditional update→audit→outbox→response snapshot→commit；fresh same-mode不bump/audit/outbox。Function revoke PUBLIC/anon/authenticated EXECUTE，只grant service_role。
 
 **Step 2: Verify RED**
 
@@ -390,7 +390,7 @@ Route 不自行做兩段 update，只呼叫 `midao_switch_guide_backend_mode` RP
 ```bash
 node --test --test-concurrency=1 \
   apps/web/tests/api/midao-backend-mode-switch.test.mjs \
-  apps/web/tests/api/midao-guide-login-redirect.test.mjs \
+  apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs
 ```
 
@@ -414,7 +414,7 @@ Run：
   apps/web/tests/api/midao-guide-session-version.test.mjs \
   apps/web/tests/api/midao-runtime-access-gateway.test.mjs \
   apps/web/tests/api/midao-guide-route-wrapper.test.mjs \
-  apps/web/tests/api/midao-guide-login-redirect.test.mjs \
+  apps/web/tests/api/midao-guide-login-api-redirect.test.mjs \
   apps/web/tests/api/midao-guide-impersonation-redirect.test.mjs \
   apps/web/tests/api/midao-impersonation-actor.test.mjs \
   apps/web/tests/api/midao-backend-mode-switch.test.mjs \
@@ -466,7 +466,7 @@ Commit：`feat: 定義 Midao 五項主導航`。
 - Create: `apps/web/src/features/midao/shell/MidaoDesktopSidebar.tsx`
 - Create: `apps/web/src/features/midao/shell/MidaoPageHeader.tsx`
 - Create: `apps/web/src/features/midao/shell/MidaoImpersonationBanner.tsx`
-- Test: `apps/web/tests/ui/midao-shell-contract.test.mjs`
+- Test: `apps/web/tests/ui/midao-shell-composition.test.mjs`
 
 先寫 source/DOM contract：五項 nav、`aria-current`、safe-area、桌面 sidebar breakpoint、impersonation banner 由 shell render。再實作最小元件。
 
@@ -480,25 +480,20 @@ Commit：`feat: 建立 Midao 響應式 shell`。
 - Create: `apps/web/app/(non-locale)/midao/loading.tsx`
 - Create: `apps/web/app/(non-locale)/midao/error.tsx`
 - Create: `apps/web/app/(non-locale)/midao/not-found.tsx`
-- Test: `apps/web/tests/ui/midao-layout-auth-contract.test.mjs`
+- Test: `apps/web/tests/ui/midao-layout-wiring.test.mjs`
 
 Layout server-side 讀 cookie、驗 HMAC，再以 runtime access gateway 比 DB mode/version。不改 frozen middleware。未登入 redirect `/guide/login?next=/midao`；legacy mode 導回 legacy。
 
 Commit：`feat: 建立 Midao 頁面權限與錯誤骨架`。
 
-## Task 10: 建立共用 UI primitives
+## Task 10: 建立shell基本狀態元件
 
 **Files:**
-- Create: `apps/web/src/features/midao/ui/AppCard.tsx`
-- Create: `apps/web/src/features/midao/ui/StatusBadge.tsx`
-- Create: `apps/web/src/features/midao/ui/SegmentedTabs.tsx`
 - Create: `apps/web/src/features/midao/ui/LoadingSkeleton.tsx`
-- Create: `apps/web/src/features/midao/ui/EmptyState.tsx`
 - Create: `apps/web/src/features/midao/ui/InlineError.tsx`
-- Create: `apps/web/src/features/midao/ui/ConflictRecoverySheet.tsx`
-- Test: `apps/web/tests/ui/midao-ui-primitives-a11y.test.mjs`
+- Test: `apps/web/tests/ui/midao-shell-composition.test.mjs`
 
-測 role、aria、keyboard、status 不只靠顏色。Commit：`feat: 建立 Midao 共用 UI 元件`。
+只建立shell立即使用的loading/error。AppCard、StatusBadge、SegmentedTabs、EmptyState與ConflictRecoverySheet延後到第一個實際消費它們的package，以該互動的Playwright驗證。
 
 ## Task 11: 建立五個 route skeleton
 
@@ -510,12 +505,12 @@ Commit：`feat: 建立 Midao 頁面權限與錯誤骨架`。
 - Create: `apps/web/app/(non-locale)/midao/me/page.tsx`
 - Test: `apps/web/e2e/midao-navigation.spec.ts`
 
-E2E mock Midao APIs，`setGuideSession()` 保持三段 token。驗證五 route 可導航、底部 nav active、桌面 sidebar、內容不被 footer 遮住。
+E2E使用local seeded guide＋real HMAC/DB guard，驗五route、active nav、desktop/mobile layout與auth/impersonation；不得用legacy fake-signature helper或mock `/midao` server auth。
 
 Run：
 
 ```bash
-npm run test:e2e -w @tour/web -- e2e/midao-navigation.spec.ts
+timeout --signal=TERM 570s bash scripts/testing/run-midao-e2e.sh e2e/midao-navigation.spec.ts
 ```
 
 Commit：`feat: 建立 Midao 五頁入口`。
