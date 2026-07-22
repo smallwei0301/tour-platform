@@ -354,7 +354,7 @@ closed   → 不開放動態預約
 
 ### 7.9 Backend mode
 
-`guide_profiles.backend_mode`：`legacy | midao`，預設 `legacy`。切換時必須同步 bump guide session version，讓舊 HMAC session 失效。
+`guide_profiles.backend_mode`：`legacy | midao`，預設 `legacy`。切換時必須同步 bump guide session version。既有 `guide_token` 三段格式 `guideId:sessionVersion:HMAC` 保持不變；`verifyGuideSession()` 額外回傳 token 內的 `sessionVersion`，Midao page/API guard 再讀 DB 的 canonical `backend_mode + guide_session_version` 並逐次比對，確保舊 session 真正失效。
 
 ### 7.10 Notification outbox
 
@@ -651,8 +651,9 @@ day segment edit → revision CAS → replace global day rules
 
 `guide_profiles.backend_mode`：`legacy | midao`，預設 legacy。
 
-Guide HMAC session 增加 signed `backendMode` 與 `sessionVersion`。切 mode 時 bump session version，迫使重新登入。
+Guide HMAC token 格式保持既有 `guideId:sessionVersion:HMAC`，不新增第四段，避免破壞 middleware 與 E2E helper。`verifyGuideSession()` 回傳已簽章的 `sessionVersion`；`withMidaoGuideQuery/Command` 與 Midao page-session helper 讀 `guide_profiles.backend_mode + guide_session_version`，確認 token version 等於 DB version後才放行。切 mode 時 bump session version，迫使重新登入。
 
+- Login 與 admin impersonation 查 canonical `backend_mode`，回明確 `redirectTo`。
 - `legacy` 登入 → `/guide/dashboard`。
 - `midao` 登入 → `/midao`。
 - Midao mutation 只接受 mode=midao。
