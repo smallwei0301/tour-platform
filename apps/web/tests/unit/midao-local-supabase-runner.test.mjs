@@ -168,6 +168,32 @@ test('database-only workdir preserves project identity and disables service jobs
   }
 });
 
+test('database-only workdir rejects source symlinks before copying or modifying external bytes', async () => {
+  const root = await mkdtemp('/tmp/midao-db-source-link-');
+  const repoRoot = join(root, projectId);
+  const lockDir = join(root, 'lock');
+  const victim = join(root, 'victim.toml');
+  const migrationNames = [
+    '20260723000000_midao_backend_mode.sql',
+    '20260723001000_midao_notification_outbox.sql',
+    '20260723002000_midao_idempotency_records.sql',
+    '20260723002500_midao_audit_events.sql',
+    '20260723003000_midao_atomic_backend_mode_switch.sql',
+    '20260723003500_midao_service_role_acl_hardening.sql',
+  ];
+  try {
+    await mkdir(join(repoRoot, 'supabase', 'migrations'), { recursive: true });
+    await mkdir(lockDir, { mode: 0o700 });
+    await writeFile(victim, '[storage]\nenabled = true\n');
+    await symlink(victim, join(repoRoot, 'supabase', 'config.toml'));
+    for (const name of migrationNames) await writeFile(join(repoRoot, 'supabase', 'migrations', name), 'select 1;\n');
+    await assert.rejects(prepareDatabaseOnlyWorkdir({ repoRoot, lockDir }), /UNSAFE_SUPABASE_SOURCE/u);
+    assert.equal(await readFile(victim, 'utf8'), '[storage]\nenabled = true\n');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test('same-process secure FD lock rejects contention and unsafe filesystem identities', async () => {
   assert.equal(LOCK_PATH, '/tmp/tour-platform-local-supabase.lock');
   const root = await mkdtemp(join(tmpdir(), 'midao-lock-test-'));
@@ -248,10 +274,10 @@ test('cleanup ownership rejects any ID/name/label drift', () => {
   ]) assert.throws(() => assertOwnershipUnchanged(owned, current), /OWNERSHIP_DRIFT/u);
 });
 
-test('CLI invocation is pinned offline npm exec and never PATH supabase', () => {
+test('CLI invocation directly executes the pinned verified toolchain binary', () => {
   assert.deepEqual(buildSupabaseCliInvocation('2.87.2', ['status', '-o', 'json']), {
-    command: 'npm',
-    args: ['exec', '--offline', '--yes', '--package=supabase@2.87.2', '--', 'supabase', 'status', '-o', 'json'],
+    command: '/root/.hermes/toolchains/supabase/2.87.2/supabase',
+    args: ['status', '-o', 'json'],
   });
 });
 
@@ -266,6 +292,7 @@ test('actual adapter captures full immutable IDs and cleans containers, networks
     if (args[0] === 'ps') return { exitCode: 0, stdout: `full-container-id\tsupabase_db_${projectId}\t${projectId}\n`, stderr: '' };
     if (args[0] === 'network' && args[1] === 'ls') return { exitCode: 0, stdout: `full-network-id\tsupabase_network_${projectId}\t${projectId}\n`, stderr: '' };
     if (args[0] === 'volume' && args[1] === 'ls') return { exitCode: 0, stdout: `supabase_db_${projectId}\t${projectId}\n`, stderr: '' };
+    if (args[0] === 'volume' && args[1] === 'inspect') return { exitCode: 0, stdout: `supabase_db_${projectId}\t2026-07-23T00:00:00Z\tlocal\tlocal\t${projectId}\n`, stderr: '' };
     if (args[0] === 'inspect') return { exitCode: 0, stdout: 'healthy\n', stderr: '' };
     return { exitCode: 0, stdout: '', stderr: '' };
   };
@@ -277,11 +304,12 @@ test('actual adapter captures full immutable IDs and cleans containers, networks
   await adapter.waitForDatabase(containers);
   await adapter.stop(containers, assets);
   assert.deepEqual(calls, [
-    ['npm', 'exec', '--offline', '--yes', '--package=supabase@2.87.2', '--', 'supabase', 'status'],
-    ['npm', 'exec', '--offline', '--yes', '--package=supabase@2.87.2', '--', 'supabase', 'db', 'start'],
+    ['/root/.hermes/toolchains/supabase/2.87.2/supabase', 'status'],
+    ['/root/.hermes/toolchains/supabase/2.87.2/supabase', 'db', 'start'],
     ['docker', 'ps', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'network', 'ls', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'volume', 'ls', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'volume', 'inspect', '--format', '{{.Name}}\t{{.CreatedAt}}\t{{.Driver}}\t{{.Scope}}\t{{index .Labels "com.supabase.cli.project"}}', '--', `supabase_db_${projectId}`],
     ['docker', 'inspect', '--format', '{{.State.Health.Status}}', 'full-container-id'],
     ['docker', 'rm', '--force', '--', 'full-container-id'],
     ['docker', 'network', 'rm', 'full-network-id'],
@@ -290,6 +318,49 @@ test('actual adapter captures full immutable IDs and cleans containers, networks
   assert.match(paths[0], /^\/root\/\.hermes\/toolchains\/supabase\/2\.87\.2:/u);
   assert.equal(dockerApiVersions[0], '1.43');
   assert.equal(dockerApiVersions[1], '1.43');
+});
+
+test('successful start and reset reject any stderr beyond the exact controlled workdir notices', async () => {
+  const expectedWorkdir = `/tmp/lock/db-only-workdir/${projectId}`;
+  const migrationNames = [
+    '00000000000001_midao_test_bootstrap.sql',
+    '00000000000002_20260723000000_midao_backend_mode.sql',
+    '00000000000003_20260723001000_midao_notification_outbox.sql',
+    '00000000000004_20260723002000_midao_idempotency_records.sql',
+    '00000000000005_20260723002500_midao_audit_events.sql',
+    '00000000000006_20260723003000_midao_atomic_backend_mode_switch.sql',
+    '00000000000007_20260723003500_midao_service_role_acl_hardening.sql',
+  ];
+  const startLines = [`Using workdir ${expectedWorkdir}`, 'Starting database...', 'Initialising schema...', 'Seeding globals from roles.sql...'];
+  for (const [index, name] of migrationNames.entries()) {
+    startLines.push(`Applying migration ${name}...`);
+    if (index === 0) startLines.push('NOTICE (42710): extension "pgcrypto" already exists, skipping');
+  }
+  const startExact = `${startLines.join('\n')}\n`;
+  const resetLines = [`Using workdir ${expectedWorkdir}`, 'Resetting local database...', 'Recreating database...', 'Initialising schema...', 'Seeding globals from roles.sql...'];
+  for (const [index, name] of migrationNames.entries()) {
+    resetLines.push(`Applying migration ${name}...`);
+    if (index === 0) resetLines.push('NOTICE (42710): extension "pgcrypto" already exists, skipping');
+  }
+  resetLines.push('Restarting containers...', 'Finished supabase db reset on branch main.');
+  const resetExact = `${resetLines.join('\n')}\n`;
+  const commandRunner = async (_command, args) => {
+    if (args.includes('start')) return { exitCode: 0, stdout: '', stderr: startExact };
+    if (args.includes('reset')) return { exitCode: 0, stdout: '', stderr: resetExact };
+    return { exitCode: 0, stdout: '', stderr: '' };
+  };
+  const adapter = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: expectedWorkdir, commandRunner,
+  });
+  await assert.doesNotReject(adapter.start());
+  await assert.doesNotReject(adapter.reset());
+
+  const hostile = createActualAdapter({
+    repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: expectedWorkdir,
+    commandRunner: async () => ({ exitCode: 0, stdout: '', stderr: `${startExact}unexpected warning\n` }),
+  });
+  await assert.rejects(hostile.start(), /CLI_UNEXPECTED_STDERR/u);
+  await assert.rejects(hostile.reset(), /CLI_UNEXPECTED_STDERR/u);
 });
 
 test('redaction removes explicit and structured local credentials from all output', () => {
@@ -326,7 +397,7 @@ test('lifecycle never stops foreign/reused stacks and cleans only confirmed owne
     async stop() { calls.push('stop'); },
   };
   await assert.rejects(runWithLocalSupabase({ adapter, expectedProjectId: projectId, childArgs: ['test.mjs'] }), /reset failed/u);
-  assert.deepEqual(calls, ['status', 'start', 'containers', 'reset', 'containers', 'stop']);
+  assert.deepEqual(calls, ['status', 'start', 'containers', 'reset', 'containers', 'containers', 'stop']);
 
   calls.length = 0;
   adapter.status = async () => ({ exitCode: 0, stdout: '{}', stderr: '' });

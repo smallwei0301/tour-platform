@@ -13,10 +13,29 @@ before(async () => {
 });
 after(async () => { await client?.end(); });
 
+const ownerTablePrivileges = ['DELETE', 'INSERT', 'MAINTAIN', 'REFERENCES', 'SELECT', 'TRIGGER', 'TRUNCATE', 'UPDATE'];
 const protectedTables = [
-  ['midao_notification_outbox', ['DELETE', 'INSERT', 'SELECT', 'UPDATE']],
-  ['midao_idempotency_records', ['DELETE', 'INSERT', 'SELECT', 'UPDATE']],
-  ['midao_audit_events', ['INSERT', 'SELECT']],
+  {
+    table: 'midao_notification_outbox',
+    servicePrivileges: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+    columns: ['id', 'event_name', 'aggregate_type', 'aggregate_id', 'payload', 'status', 'attempt_count', 'next_attempt_at', 'last_error_code', 'created_at', 'delivered_at'],
+    constraints: ['midao_notification_outbox_attempt_count_check', 'midao_notification_outbox_pkey', 'midao_notification_outbox_status_check'],
+    indexes: ['midao_notification_outbox_claim_idx', 'midao_notification_outbox_pkey'],
+  },
+  {
+    table: 'midao_idempotency_records',
+    servicePrivileges: ['DELETE', 'INSERT', 'SELECT', 'UPDATE'],
+    columns: ['id', 'actor_type', 'actor_id', 'command_name', 'scope_type', 'scope_id', 'idempotency_key', 'request_hash', 'state', 'response_status', 'response_body', 'resource_type', 'resource_id', 'created_at', 'locked_at', 'completed_at', 'expires_at'],
+    constraints: ['midao_idempotency_records_hash_check', 'midao_idempotency_records_key_length_check', 'midao_idempotency_records_pkey', 'midao_idempotency_records_response_check', 'midao_idempotency_records_scope_key_unique', 'midao_idempotency_records_state_check'],
+    indexes: ['midao_idempotency_records_expiry_idx', 'midao_idempotency_records_pkey', 'midao_idempotency_records_scope_key_unique', 'midao_idempotency_records_stale_processing_idx'],
+  },
+  {
+    table: 'midao_audit_events',
+    servicePrivileges: ['INSERT', 'SELECT'],
+    columns: ['id', 'actor_type', 'actor_id', 'guide_id', 'action', 'resource_type', 'resource_id', 'request_id', 'reason', 'metadata', 'created_at'],
+    constraints: ['midao_audit_events_pkey'],
+    indexes: ['midao_audit_events_action_request_idx', 'midao_audit_events_guide_created_idx', 'midao_audit_events_pkey'],
+  },
 ];
 
 async function aclRows(kind, objectName) {
@@ -64,7 +83,16 @@ test('clean migrations expose the exact foundation schema, constraints, indexes 
   `);
   assert.deepEqual(backendContracts.rows[0], { has_check: true, has_index: true });
 
-  for (const [table, servicePrivileges] of protectedTables) {
+  for (const contract of protectedTables) {
+    const { table, servicePrivileges, columns, constraints, indexes } = contract;
+    const catalog = await client.query(`
+      SELECT
+        ARRAY(SELECT column_name::text FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position) AS columns,
+        ARRAY(SELECT conname::text FROM pg_catalog.pg_constraint WHERE conrelid = ('public.' || $1)::regclass ORDER BY conname) AS constraints,
+        ARRAY(SELECT indexname::text FROM pg_catalog.pg_indexes WHERE schemaname = 'public' AND tablename = $1 ORDER BY indexname) AS indexes
+    `, [table]);
+    assert.deepEqual(catalog.rows[0], { columns, constraints, indexes }, `${table} catalog contract drifted`);
+
     const relation = await client.query(`
       SELECT relrowsecurity, relforcerowsecurity
         FROM pg_catalog.pg_class
@@ -73,13 +101,11 @@ test('clean migrations expose the exact foundation schema, constraints, indexes 
     assert.deepEqual(relation.rows[0], { relrowsecurity: true, relforcerowsecurity: true });
 
     const rows = await aclRows('r', `public.${table}`);
-    for (const clientRole of ['PUBLIC', 'anon', 'authenticated']) {
-      assert.deepEqual(rows.filter((row) => row.grantee === clientRole), [], `${table} leaked ACL to ${clientRole}`);
-    }
-    assert.deepEqual(
-      rows.filter((row) => row.grantee === 'service_role').map((row) => row.privilege_type).sort(),
-      servicePrivileges,
-    );
+    const expectedAcl = [
+      ...ownerTablePrivileges.map((privilege_type) => ({ grantee: 'postgres', privilege_type })),
+      ...servicePrivileges.map((privilege_type) => ({ grantee: 'service_role', privilege_type })),
+    ].sort((left, right) => left.grantee.localeCompare(right.grantee) || left.privilege_type.localeCompare(right.privilege_type));
+    assert.deepEqual(rows, expectedAcl, `${table} has an unexpected grantee or privilege`);
 
     const policies = await client.query(`
       SELECT policyname
@@ -152,10 +178,10 @@ test('each service-only table independently proves RLS silent SELECT suppression
 test('exact RPC identity has service-role-only EXECUTE and safe SECURITY DEFINER catalog shape', async () => {
   const signature = 'public.midao_switch_guide_backend_mode(uuid,text,text,text,text,uuid,text,text)';
   const acl = await aclRows('f', signature);
-  assert.deepEqual(acl.filter((row) => row.grantee === 'PUBLIC'), []);
-  assert.deepEqual(acl.filter((row) => row.grantee === 'anon'), []);
-  assert.deepEqual(acl.filter((row) => row.grantee === 'authenticated'), []);
-  assert.deepEqual(acl.filter((row) => row.grantee === 'service_role').map((row) => row.privilege_type), ['EXECUTE']);
+  assert.deepEqual(acl, [
+    { grantee: 'postgres', privilege_type: 'EXECUTE' },
+    { grantee: 'service_role', privilege_type: 'EXECUTE' },
+  ]);
 
   const privileges = await client.query(`
     SELECT has_function_privilege('anon', $1, 'EXECUTE') AS anon,

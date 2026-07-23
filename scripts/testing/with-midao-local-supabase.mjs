@@ -88,30 +88,52 @@ export async function startLoopbackBridge({ listenPort, targetHost, targetPort }
   };
 }
 
+async function assertSafeSourceDirectory(path) {
+  const stat = await fsPromises.lstat(path);
+  if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('UNSAFE_SUPABASE_SOURCE');
+}
+
+async function readSafeSourceFile(path) {
+  const before = await fsPromises.lstat(path);
+  if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1) throw new Error('UNSAFE_SUPABASE_SOURCE');
+  let handle;
+  try {
+    handle = await fsPromises.open(path, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+    const opened = await handle.stat();
+    if (!opened.isFile() || opened.nlink !== 1 || opened.dev !== before.dev || opened.ino !== before.ino) {
+      throw new Error('UNSAFE_SUPABASE_SOURCE');
+    }
+    return await handle.readFile('utf8');
+  } finally {
+    await handle?.close();
+  }
+}
+
 export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir }) {
   const projectId = canonicalProjectId(repoRoot);
-  const parent = join(lockDir, 'db-only-workdir');
-  const workdir = join(parent, projectId);
-  await fsPromises.rm(parent, { recursive: true, force: true });
-  await fsPromises.mkdir(workdir, { recursive: true, mode: 0o700 });
-  await fsPromises.cp(resolve(repoRoot, 'supabase'), join(workdir, 'supabase'), { recursive: true, dereference: false });
-  const migrationsPath = join(workdir, 'supabase', 'migrations');
+  const sourceSupabase = resolve(repoRoot, 'supabase');
+  const sourceMigrations = join(sourceSupabase, 'migrations');
+  await assertSafeSourceDirectory(sourceSupabase);
+  await assertSafeSourceDirectory(sourceMigrations);
+  const configText = await readSafeSourceFile(join(sourceSupabase, 'config.toml'));
   const migrationContents = [];
   for (const name of FOUNDATION_MIGRATIONS) {
-    const path = join(migrationsPath, name);
-    const stat = await fsPromises.lstat(path);
-    if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1) throw new Error('UNSAFE_FOUNDATION_MIGRATION');
-    migrationContents.push([name, await fsPromises.readFile(path, 'utf8')]);
+    migrationContents.push([name, await readSafeSourceFile(join(sourceMigrations, name))]);
   }
-  await fsPromises.rm(migrationsPath, { recursive: true, force: true });
-  await fsPromises.mkdir(migrationsPath, { mode: 0o700 });
+
+  const parent = join(lockDir, 'db-only-workdir');
+  const workdir = join(parent, projectId);
+  const targetSupabase = join(workdir, 'supabase');
+  const migrationsPath = join(targetSupabase, 'migrations');
+  await fsPromises.rm(parent, { recursive: true, force: true });
+  await fsPromises.mkdir(migrationsPath, { recursive: true, mode: 0o700 });
   await fsPromises.writeFile(join(migrationsPath, '00000000000001_midao_test_bootstrap.sql'), FOUNDATION_BOOTSTRAP_SQL, { mode: 0o600 });
   for (const [index, [name, content]] of migrationContents.entries()) {
     const version = String(index + 2).padStart(14, '0');
     await fsPromises.writeFile(join(migrationsPath, `${version}_${name}`), content, { mode: 0o600 });
   }
-  const configPath = join(workdir, 'supabase', 'config.toml');
-  const lines = (await fsPromises.readFile(configPath, 'utf8')).split('\n');
+  const configPath = join(targetSupabase, 'config.toml');
+  const lines = configText.split('\n');
   for (const section of ['storage', 'auth', 'realtime', 'db.seed']) {
     let sectionIndex = lines.findIndex((line) => line.trim() === `[${section}]`);
     if (sectionIndex < 0) {
@@ -126,8 +148,7 @@ export async function prepareDatabaseOnlyWorkdir({ repoRoot, lockDir }) {
     else lines[enabledIndex] = 'enabled = false';
   }
   await fsPromises.writeFile(configPath, lines.join('\n'), { mode: 0o600 });
-  const tempPath = join(workdir, 'supabase', '.temp');
-  await fsPromises.rm(tempPath, { recursive: true, force: true });
+  const tempPath = join(targetSupabase, '.temp');
   await fsPromises.mkdir(tempPath, { mode: 0o700 });
   await fsPromises.writeFile(join(tempPath, 'cli-latest'), 'v2.87.2', { mode: 0o600 });
   return workdir;
@@ -141,6 +162,34 @@ export function canonicalProjectId(repoRoot) {
 
 function nonemptyLines(text) {
   return String(text || '').split(/\r?\n/u).filter((line) => line.length > 0);
+}
+
+export function validateSupabaseLifecycleStderr(stderr, expectedWorkdir, stage) {
+  if (!expectedWorkdir) {
+    if (stderr !== '') throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
+    return;
+  }
+  const migrationNames = [
+    '00000000000001_midao_test_bootstrap.sql',
+    ...FOUNDATION_MIGRATIONS.map((name, index) => `${String(index + 2).padStart(14, '0')}_${name}`),
+  ];
+  const common = [
+    `Using workdir ${expectedWorkdir}`,
+    ...(stage === 'start' ? ['Starting database...'] : ['Resetting local database...', 'Recreating database...']),
+    'Initialising schema...',
+    'Seeding globals from roles.sql...',
+  ];
+  const expectedLines = [
+    ...common,
+    ...migrationNames.flatMap((name, index) => [
+      `Applying migration ${name}...`,
+      ...(index === 0 ? ['NOTICE (42710): extension "pgcrypto" already exists, skipping'] : []),
+    ]),
+    ...(stage === 'reset' ? ['Restarting containers...', 'Finished supabase db reset on branch main.'] : []),
+  ];
+  const lf = `${expectedLines.join('\n')}\n`;
+  const crlf = `${expectedLines.join('\r\n')}\r\n`;
+  if (stderr !== lf && stderr !== crlf) throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
 }
 
 export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjectId) {
@@ -281,11 +330,11 @@ export function assertOwnershipUnchanged(owned, current) {
   if (left !== right) throw new Error('OWNERSHIP_DRIFT');
 }
 
-export function buildSupabaseCliInvocation(pin, args) {
-  if (!/^\d+\.\d+\.\d+$/u.test(pin)) throw new Error('INVALID_SUPABASE_PIN');
+export function buildSupabaseCliInvocation(pin, cliArgs) {
+  if (pin !== '2.87.2') throw new Error('UNEXPECTED_SUPABASE_PIN');
   return {
-    command: 'npm',
-    args: ['exec', '--offline', '--yes', `--package=supabase@${pin}`, '--', 'supabase', ...args],
+    command: SUPABASE_TOOLCHAIN_BIN,
+    args: cliArgs,
   };
 }
 
@@ -315,21 +364,40 @@ export async function runWithLocalSupabase({ adapter, expectedProjectId, childAr
       reportStage('start-failed-identity');
       const partialContainers = await adapter.containers();
       if (partialContainers.length > 0) {
-        owned = confirmProjectContainers({ expectedProjectId, containers: partialContainers });
-        ownedAssets = adapter.assets ? await adapter.assets({ allowEmpty: true }) : null;
+        const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: partialContainers });
+        const confirmedAssets = adapter.assets ? await adapter.assets({ allowEmpty: true }) : null;
+        owned = confirmedContainers;
+        ownedAssets = confirmedAssets;
       }
       throw startError;
     }
     reportStage('pre-reset-identity');
-    owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-    if (adapter.assets) ownedAssets = await adapter.assets();
+    {
+      const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+      const confirmedAssets = adapter.assets ? await adapter.assets() : null;
+      owned = confirmedContainers;
+      ownedAssets = confirmedAssets;
+    }
     reportStage('pre-reset-health');
     if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
     reportStage('reset');
-    await adapter.reset();
+    try {
+      await adapter.reset();
+    } catch (resetError) {
+      reportStage('post-reset-failed-identity');
+      const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+      const confirmedAssets = adapter.assets ? await adapter.assets() : null;
+      owned = confirmedContainers;
+      ownedAssets = confirmedAssets;
+      throw resetError;
+    }
     reportStage('post-reset-identity');
-    owned = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
-    if (adapter.assets) ownedAssets = await adapter.assets();
+    {
+      const confirmedContainers = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
+      const confirmedAssets = adapter.assets ? await adapter.assets() : null;
+      owned = confirmedContainers;
+      ownedAssets = confirmedAssets;
+    }
     reportStage('post-reset-health');
     if (adapter.waitForDatabase) await adapter.waitForDatabase(owned);
     reportStage('status-json');
@@ -443,10 +511,24 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
     }
     const projectId = canonicalProjectId(repoRoot);
     const networks = parseContainerRows(networkResult.stdout, projectId);
-    const volumes = nonemptyLines(volumeResult.stdout).map((line) => {
+    const volumeRows = nonemptyLines(volumeResult.stdout).map((line) => {
       const [name, projectLabel] = line.split('\t');
-      return { id: name, name, projectLabel };
+      return { name, projectLabel };
     });
+    const volumes = [];
+    for (const listed of volumeRows) {
+      const inspected = await commandRunner('docker', [
+        'volume', 'inspect', '--format', '{{.Name}}\t{{.CreatedAt}}\t{{.Driver}}\t{{.Scope}}\t{{index .Labels "com.supabase.cli.project"}}', '--', listed.name,
+      ], { cwd: repoRoot });
+      if (inspected.exitCode !== 0 || inspected.stderr.trim()) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
+      const rows = nonemptyLines(inspected.stdout);
+      if (rows.length !== 1) throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
+      const [name, createdAt, driver, scope, projectLabel] = rows[0].split('\t');
+      if (name !== listed.name || projectLabel !== listed.projectLabel || !createdAt || !driver || !scope) {
+        throw new Error('DOCKER_VOLUME_IDENTITY_FAILED');
+      }
+      volumes.push({ id: createdAt, name, projectLabel, driver, scope });
+    }
     return {
       networks: allowEmpty && networks.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: networks }),
       volumes: allowEmpty && volumes.length === 0 ? [] : confirmProjectContainers({ expectedProjectId: projectId, containers: volumes }),
@@ -473,13 +555,18 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
         const diagnostic = redactSupabaseOutput(result.stderr).trim();
         throw new Error(diagnostic ? `SUPABASE_START_FAILED: ${diagnostic}` : 'SUPABASE_START_FAILED');
       }
+      validateSupabaseLifecycleStderr(result.stderr, cliWorkdir, 'start');
     },
     containers,
     assets,
     waitForDatabase,
     reset: async () => {
       const result = await cli(['db', 'reset', '--local']);
-      if (result.exitCode !== 0) throw new Error('SUPABASE_RESET_FAILED');
+      if (result.exitCode !== 0) {
+        const diagnostic = redactSupabaseOutput(result.stderr).trim();
+        throw new Error(diagnostic ? `SUPABASE_RESET_FAILED: ${diagnostic}` : 'SUPABASE_RESET_FAILED');
+      }
+      validateSupabaseLifecycleStderr(result.stderr, cliWorkdir, 'reset');
     },
     statusJson: async () => {
       const result = await cli(['status', '-o', 'json']);
@@ -517,7 +604,7 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
         if (networkResult.exitCode !== 0) throw new Error('OWNED_NETWORK_CLEANUP_FAILED');
       }
       if (ownedAssets.volumes.length > 0) {
-        const volumeResult = await commandRunner('docker', ['volume', 'rm', ...ownedAssets.volumes.map((volume) => volume.id)], { cwd: repoRoot });
+        const volumeResult = await commandRunner('docker', ['volume', 'rm', ...ownedAssets.volumes.map((volume) => volume.name)], { cwd: repoRoot });
         if (volumeResult.exitCode !== 0) throw new Error('OWNED_VOLUME_CLEANUP_FAILED');
       }
     },
