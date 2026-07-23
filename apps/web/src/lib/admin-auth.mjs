@@ -54,27 +54,20 @@ export function isAdminAuthorized(input = {}) {
  * Returns the same shape as parseCookie-based calls but prefers header auth.
  */
 export function pickAdminCredentials(req) {
-  const headerToken = req.headers.get('x-admin-token');
-  const headerEmail = req.headers.get('x-admin-email');
-  if (headerToken && headerEmail) {
-    return {
-      token: headerToken,
-      email: headerEmail,
-      sessionVersion: null,
-      expiresAt: null,
-      requireSession: false, // header-auth callers skip session checks (mirrors middleware)
-    };
-  }
-  // Fall back to cookie
   function parseCookieLocal(key) {
     const cookie = req.headers.get('cookie') || '';
     const parts = cookie.split(';').map((s) => s.trim());
     const hit = parts.find((p) => p.startsWith(`${key}=`));
     return hit ? decodeURIComponent(hit.slice(key.length + 1)) : '';
   }
-  const token = parseCookieLocal('admin_token');
-  const email = parseCookieLocal('admin_email');
-  const sessionVersion = parseCookieLocal('admin_session_version');
-  const expiresAt = parseCookieLocal('admin_session_expires_at');
-  return { token, email, sessionVersion, expiresAt, requireSession: true };
+
+  // Keep this resolver exactly aligned with middleware pickToken/pickEmail:
+  // each header independently overrides its corresponding cookie. A header
+  // token alone selects the non-session automation realm.
+  const headerToken = req.headers.get('x-admin-token') || '';
+  const token = headerToken || parseCookieLocal('admin_token');
+  const email = req.headers.get('x-admin-email') || parseCookieLocal('admin_email');
+  const sessionVersion = headerToken ? null : parseCookieLocal('admin_session_version');
+  const expiresAt = headerToken ? null : parseCookieLocal('admin_session_expires_at');
+  return { token, email, sessionVersion, expiresAt, requireSession: !headerToken };
 }

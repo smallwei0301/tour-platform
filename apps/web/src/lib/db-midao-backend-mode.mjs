@@ -49,10 +49,10 @@ function validateResponse(data) {
  * modeSwitchEnabled:boolean, client?:any }} input
  */
 export async function switchGuideBackendModeDb(input) {
-  let client = input.client;
+  let client = await input.client;
   if (!client) {
     if (!hasSupabaseEnv()) throw new MidaoBackendModeDbError('DATABASE_UNAVAILABLE', 'Database unavailable', 503);
-    client = getSupabase();
+    client = await getSupabase();
   }
 
   const { data: guide, error: guideError } = await client
@@ -66,8 +66,11 @@ export async function switchGuideBackendModeDb(input) {
     throw new MidaoBackendModeDbError('INVALID_GUIDE_MODE', 'Guide mode is invalid', 500);
   }
 
-  const isForward = guide.backend_mode === 'legacy' && input.targetMode === 'midao';
-  if (isForward && (!input.backendEnabled || !input.modeSwitchEnabled)) {
+  // Fail closed by target, not by the pre-read direction: the read and RPC are
+  // separate transactions, so a concurrent rollback must never turn a stale
+  // same-mode observation into an ungated legacy → midao mutation.
+  const targetsMidao = input.targetMode === 'midao';
+  if (targetsMidao && (!input.backendEnabled || !input.modeSwitchEnabled)) {
     throw new MidaoBackendModeDbError('MIDAO_MODE_SWITCH_DISABLED', 'Midao mode switch is unavailable', 503);
   }
 

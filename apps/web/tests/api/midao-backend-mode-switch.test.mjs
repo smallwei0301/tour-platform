@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const routePath = resolve(here, '../../app/api/v2/admin/guides/[guideId]/backend-mode/route.ts');
 const { switchGuideBackendModeDb } = await import('../../src/lib/db-midao-backend-mode.mjs');
+const { pickAdminCredentials } = await import('../../src/lib/admin-auth.mjs');
 
 function fakeClient(currentMode = 'legacy', rpcResult = { data: { backendMode: 'midao', sessionVersion: 8, changed: true, redirectTo: '/midao' }, error: null }) {
   const calls = [];
@@ -100,6 +101,56 @@ test('midao to legacy rollback and fresh same-mode remain available with every f
   });
   assert.equal(sameResult.changed, false);
   assert.equal(same.calls.filter(([kind]) => kind === 'rpc').length, 1);
+});
+
+test('gateway awaits an asynchronous production-style client before canonical read', async () => {
+  const asynchronous = fakeClient('legacy');
+  const result = await switchGuideBackendModeDb({
+    ...input,
+    backendEnabled: true,
+    modeSwitchEnabled: true,
+    client: Promise.resolve(asynchronous.client),
+  });
+  assert.equal(result.backendMode, 'midao');
+  assert.equal(asynchronous.calls.some(([kind]) => kind === 'rpc'), true);
+});
+
+test('every target midao request fails closed when forward flags are off, even after stale midao pre-read', async () => {
+  const staleRead = fakeClient('midao');
+  await assert.rejects(
+    switchGuideBackendModeDb({
+      ...input,
+      targetMode: 'midao',
+      backendEnabled: false,
+      modeSwitchEnabled: false,
+      client: staleRead.client,
+    }),
+    (error) => error.code === 'MIDAO_MODE_SWITCH_DISABLED' && error.status === 503,
+  );
+  assert.equal(staleRead.calls.some(([kind]) => kind === 'rpc'), false);
+});
+
+test('admin credential resolver exactly mirrors middleware per-field precedence', () => {
+  const makeRequest = ({ headerToken = '', headerEmail = '' } = {}) => new Request('https://example.test/api/v2/admin/test', {
+    headers: {
+      cookie: 'admin_token=cookie-token; admin_email=cookie%40example.com; admin_session_version=7; admin_session_expires_at=9999999999',
+      ...(headerToken ? { 'x-admin-token': headerToken } : {}),
+      ...(headerEmail ? { 'x-admin-email': headerEmail } : {}),
+    },
+  });
+
+  assert.deepEqual(pickAdminCredentials(makeRequest({ headerToken: 'header-token', headerEmail: 'header@example.com' })), {
+    token: 'header-token', email: 'header@example.com', sessionVersion: null, expiresAt: null, requireSession: false,
+  });
+  assert.deepEqual(pickAdminCredentials(makeRequest({ headerToken: 'header-token' })), {
+    token: 'header-token', email: 'cookie@example.com', sessionVersion: null, expiresAt: null, requireSession: false,
+  });
+  assert.deepEqual(pickAdminCredentials(makeRequest({ headerEmail: 'header@example.com' })), {
+    token: 'cookie-token', email: 'header@example.com', sessionVersion: '7', expiresAt: '9999999999', requireSession: true,
+  });
+  assert.deepEqual(pickAdminCredentials(makeRequest()), {
+    token: 'cookie-token', email: 'cookie@example.com', sessionVersion: '7', expiresAt: '9999999999', requireSession: true,
+  });
 });
 
 test('gateway sends exact RPC identity/parameters and maps deterministic conflicts', async () => {
