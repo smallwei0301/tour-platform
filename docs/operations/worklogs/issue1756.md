@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 14:37 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 14:55 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -46,13 +46,14 @@
 - 2026-07-23 A4 secret-safe CI command evidence runner完成strict TDD與多輪adversarial remediation；final implementation HEAD `3c0365c81a3060530dca855e40ead84044fbe110`。Final Node22 focused suite `25/25 PASS`、frozen targeted child＋`tsc --noEmit` exit0、`--check-only` PASS；evidence tree `1f7273fe6f5680e5fde6eff8d46d1fb17e9907bd`、linked-worktree manifest mode `0600`。
 - A4 final contracts涵蓋exact lint/typecheck/build modes、validated Node22/npm11.9.0、strict reconstructed env、build secrets只存在child env、per-stream fragment/oversize redaction、repo dotenv/npmrc guards、hostile umask下HOME/cache0700與npmrc0600 FD/path identity、完整primary-first cleanup、clean HEAD/tree pre/postflight，以及cleanup成功後才發布0600 atomic evidence。
 - A4 final fresh SPEC/AC與QUALITY/SECURITY/EXECUTABILITY reviewers皆PASS，綁定同一HEAD `3c0365c8`，blocking 0；獨立重現post-rename＋rm failure＋lstat EIO攻擊，確認unlink fallback執行、target不存在且PRIMARY／SECONDARY／TERTIARY errors保留。
+- 2026-07-23 Phase B Task B1 backend_mode additive migration完成strict TDD：missing migration RED `4/4 fail`；GREEN／exact staged evidence `4/4 PASS`、`--check-only` PASS，tree `0ad47d0a16303a392388bef3ec25905a19b655c8`、manifest mode `0600`。Implementation `7878e9fb22ec4fc9283065699d781eda015b894b`；fresh focused SPEC／SQL QUALITY review PASS，blocking 0。Migration只新增legacy-default欄位、named value constraint、mode index與comment，不修改session version或既有migration。
 
 ## 下一步
-- 進入Phase B Task B1 strict TDD：先新增`midao-backend-mode-migration.test.mjs`並觀察migration missing RED，再做additive `20260723000000_midao_backend_mode.sql` minimal GREEN與exact staged evidence。
+- 進入Phase B Task B2 strict TDD：先建立notification outbox migration source contract並觀察missing migration RED，再做additive table／index／RLS／ACL minimal GREEN與exact staged evidence。
 - Phase B migrations依序完成source contract與clean local Postgres runtime gates；未經reviewed migration protocol不apply production。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4：完整plan `bcb81b11`與A4 final implementation `3c0365c8`皆已取得fresh spec＋quality/security雙PASS；下一步只進Phase B B1。
+- 不重跑或重審完整plan／A4／B1：完整plan `bcb81b11`、A4 `3c0365c8`及B1 `7878e9fb`皆已通過對應fresh reviews；下一步只進Phase B B2。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
