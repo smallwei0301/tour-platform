@@ -1,0 +1,54 @@
+import { createHmac, randomBytes } from 'node:crypto';
+import { constantTimeEquals } from './constant-time.mjs';
+
+function resolveGuideSessionSecret(): string {
+  const configured = String(process.env.GUIDE_SESSION_SECRET || '').trim();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const isNextBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+
+  if (isProduction && !isNextBuildPhase) {
+    if (!configured || configured.length < 32) {
+      throw new Error(
+        '[SECURITY_ENV_BLOCK] GUIDE_SESSION_SECRET missing/weak in production; set a strong secret (>=32 chars).',
+      );
+    }
+    return configured;
+  }
+
+  if (configured) return configured;
+  return randomBytes(32).toString('hex');
+}
+
+const guideSessionSecret = resolveGuideSessionSecret();
+
+function hmac(message: string): string {
+  return createHmac('sha256', guideSessionSecret).update(message, 'utf8').digest('hex');
+}
+
+export function signGuideSession(guideId: string, sessionVersion: number): string {
+  return hmac(`${guideId}:${sessionVersion}`);
+}
+
+export function verifyGuideSessionSignature(
+  guideId: string,
+  sessionVersion: number,
+  signature: string,
+): boolean {
+  return constantTimeEquals(signature, signGuideSession(guideId, sessionVersion));
+}
+
+function domainSeparatedMessage(domain: string, payload: string): string {
+  return `${domain}\0${Buffer.byteLength(payload, 'utf8')}:${payload}`;
+}
+
+export function signDomainSeparatedValue(domain: string, payload: string): string {
+  return hmac(domainSeparatedMessage(domain, payload));
+}
+
+export function verifyDomainSeparatedValue(
+  domain: string,
+  payload: string,
+  signature: string,
+): boolean {
+  return constantTimeEquals(signature, signDomainSeparatedValue(domain, payload));
+}
