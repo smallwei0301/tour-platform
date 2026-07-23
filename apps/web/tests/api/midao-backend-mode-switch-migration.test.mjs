@@ -92,6 +92,12 @@ test('same-mode and unknown/inactive guide paths preserve atomic no-side-effect 
   assert.match(body, /verification_status\s*<>\s*'approved'/iu);
 });
 
+test('database faults cannot be swallowed or split by transaction control inside the function', () => {
+  const body = lexPostgresSql(source()).statements[0].toLowerCase();
+  assert.doesNotMatch(body, /\bexception\s+when\b/iu, 'fault handlers could preserve partial business effects');
+  assert.doesNotMatch(body, /\b(?:commit|rollback|savepoint)\b/iu, 'function must remain in the caller statement transaction');
+});
+
 test('response/audit/outbox snapshots are canonical and exclude credentials', () => {
   const body = lexPostgresSql(source()).statements[0].toLowerCase();
   for (const field of ['backendmode', 'sessionversion', 'changed', 'redirectto']) {
