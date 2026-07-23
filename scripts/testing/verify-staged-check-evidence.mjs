@@ -22,7 +22,8 @@ export const HEAVY_PREFIXES = Object.freeze([
 ]);
 const GLOB_META = /[*?\[\]{}]/u;
 const TEST_PATH = /(?:^|\/)(?:test|tests|e2e)\/.*\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
-const SECRET_VALUE = /(?:authorization\s*:\s*bearer\s+[^\s'"]+|(?:(?:api[_-]?)?(?:token|key)|password|secret)\s*[:=]\s*['"]?[^\s'"]+)/giu;
+const DOC_PATH = /\.(?:md|mdx|txt|rst|adoc)$/iu;
+const SECRET_VALUE = /(?:authorization\s*:\s*[^\r\n]+|(?:set-)?cookie\s*:\s*[^\r\n]+|(?:(?:api[_-]?)?(?:token|key)|password|secret|database[_-]?url|db[_-]?url|connection[_-]?(?:url|string)|dsn)\s*[:=]\s*(?:"[\s\S]*?"|'[\s\S]*?'|[^\r\n]+)|[a-z][a-z0-9+.-]*:\/\/[^\s\/:@]+:[^@\s\/]+@)/giu;
 
 function fail(message) {
   throw new Error(message);
@@ -40,9 +41,13 @@ function isTestPath(file) {
   return TEST_PATH.test(file);
 }
 
+function isAllowedDocPath(file) {
+  return DOC_PATH.test(file);
+}
+
 function docsOnlyPaths(state) {
   return [...(state.untracked ?? [])]
-    .filter((file) => !isCodeLike(file) && !isTestPath(file))
+    .filter(isAllowedDocPath)
     .sort();
 }
 
@@ -61,13 +66,26 @@ function assertFresh(epoch, now) {
   }
 }
 
-function assertNoSecrets(value, label) {
+function assertNoSecrets(value, label, knownSecrets = []) {
+  const text = String(value ?? '');
   SECRET_VALUE.lastIndex = 0;
-  if (SECRET_VALUE.test(String(value ?? ''))) fail(`${label} contains a secret`);
+  if (SECRET_VALUE.test(text)) fail(`${label} contains a secret`);
+  if (knownSecrets.some((secret) => secret.length >= 4 && text.includes(secret))) fail(`${label} contains a secret`);
 }
 
-export function redact(value) {
-  return String(value).replace(SECRET_VALUE, (match) => match.replace(/[^:=\s]+$/u, '[REDACTED]'));
+export function redact(value, knownSecrets = []) {
+  let sanitized = String(value).replace(SECRET_VALUE, '[REDACTED]');
+  for (const secret of knownSecrets) {
+    if (secret.length >= 4) sanitized = sanitized.split(secret).join('[REDACTED]');
+  }
+  return sanitized;
+}
+
+function sensitiveEnvironmentValues(environment) {
+  const sensitiveName = /(?:secret|token|password|passphrase|credential|private|api[_-]?key|authorization|cookie|database[_-]?url|db[_-]?url|connection[_-]?(?:url|string)|dsn)/iu;
+  return Object.entries(environment ?? {})
+    .filter(([name, value]) => sensitiveName.test(name) && typeof value === 'string' && value.length >= 4)
+    .map(([, value]) => value);
 }
 
 export function parsePorcelainV1Z(text) {
@@ -128,10 +146,17 @@ function assertSafeState(state, label) {
     if (String(item.status).startsWith('D')) fail('staged deletion is forbidden');
     if (String(item.status).startsWith('R')) fail('staged rename is forbidden');
   }
-  const dirty = (state.trackedUnstaged ?? []).filter((file) => isCodeLike(file) || isTestPath(file));
-  if (dirty.length) fail(`tracked unstaged code is forbidden: ${dirty.join(', ')}`);
-  const untrackedCode = (state.untracked ?? []).filter((file) => isCodeLike(file) || isTestPath(file));
-  if (untrackedCode.length) fail(`untracked code is forbidden: ${untrackedCode.join(', ')}`);
+  const dirty = (state.trackedUnstaged ?? []).filter((file) => !isAllowedDocPath(file));
+  if (dirty.length) fail(`tracked unstaged code/config is forbidden: ${dirty.join(', ')}`);
+  const untrackedUnsafe = (state.untracked ?? []).filter((file) => !isAllowedDocPath(file));
+  if (untrackedUnsafe.length) fail(`untracked non-docs/config is forbidden: ${untrackedUnsafe.join(', ')}`);
+  if (!Array.isArray(state.untrackedMeta) || !same(state.untrackedMeta.map((item) => item.path), state.untracked ?? [])) {
+    fail(`${label} untracked metadata is invalid`);
+  }
+  for (const item of state.untrackedMeta) {
+    assertExactKeys(item, ['path', 'kind', 'executable'], `${label} untracked metadata item`);
+    if (item.kind !== 'file' || item.executable !== false) fail(`${label} untracked docs must be regular non-executable files`);
+  }
 }
 
 function assertOrdinaryChildPaths(paths, staged) {
@@ -146,7 +171,7 @@ export function validateRun(input) {
   const {
     nodeVersion, now, childStartedAt, childArgv, actualChildArgv, childExitCode,
     evidence, before, after, stdout = '', stderr = '', existingBundle = null,
-    runMode = 'ordinary',
+    runMode = 'ordinary', knownSecrets = [],
   } = input;
   if (!/^v?22(?:\.|$)/u.test(String(nodeVersion))) fail('Node 22 is required');
   if (!same(childArgv, actualChildArgv)) fail('manifest childArgv does not equal actual spawned argv');
@@ -161,10 +186,13 @@ export function validateRun(input) {
   const expectedEvidenceCmd = deriveExpectedEvidenceCmd(childArgv, classifyOptions);
   if (before.tree !== after.tree) fail('git write-tree changed while child ran');
   if (!same(before.staged, after.staged)) fail('staged state changed (status/path/blob mismatch)');
+  if (!same([...(before.trackedUnstaged ?? [])].sort(), [...(after.trackedUnstaged ?? [])].sort())) fail('tracked unstaged state changed while child ran');
+  if (!same([...(before.tracked ?? [])].sort(), [...(after.tracked ?? [])].sort())) fail('tracked file state changed while child ran');
   if (!same([...(before.untracked ?? [])].sort(), [...(after.untracked ?? [])].sort())) fail('untracked state changed while child ran');
+  if (!same(before.untrackedMeta, after.untrackedMeta)) fail('untracked metadata changed while child ran');
   if (existingBundle && existingBundle.tree !== before.tree) fail('old bundle from a different tree was not cleared');
-  assertNoSecrets(stdout, 'stdout');
-  assertNoSecrets(stderr, 'stderr');
+  assertNoSecrets(stdout, 'stdout', knownSecrets);
+  assertNoSecrets(stderr, 'stderr', knownSecrets);
 
   const stagedTests = new Set(before.staged.filter((item) => isTestPath(item.path)).map((item) => item.path));
   const entry = {
@@ -292,6 +320,7 @@ function defaultAdapters() {
   return {
     now: () => Math.floor(Date.now() / 1000),
     nodeVersion: () => process.version,
+    environment: () => ({ ...process.env }),
     git,
     readFile: (file) => fs.readFileSync(file, 'utf8'),
     writeFile: (file, data) => fs.writeFileSync(file, data, { mode: 0o600 }),
@@ -299,6 +328,11 @@ function defaultAdapters() {
     mode: (file) => fs.statSync(file).mode & 0o777,
     exists: (file) => fs.existsSync(file),
     remove: (file) => fs.rmSync(file, { force: true }),
+    pathInfo: (file, relativePath) => {
+      const stat = fs.lstatSync(file);
+      const kind = stat.isSymbolicLink() ? 'symlink' : stat.isFile() ? 'file' : stat.isDirectory() ? 'directory' : 'other';
+      return { path: relativePath, kind, executable: Boolean(stat.mode & 0o111) };
+    },
     spawn: (command, args, options) => spawnSync(command, args, options),
     stdout: (message) => process.stdout.write(redact(message)),
     stderr: (message) => process.stderr.write(redact(message)),
@@ -333,8 +367,9 @@ function getSnapshot(adapters, root) {
   staged.sort((a, b) => a.path.localeCompare(b.path));
   trackedUnstaged.sort();
   const untracked = String(adapters.git(['ls-files', '--others', '--exclude-standard', '-z'], { cwd: root })).split('\0').filter(Boolean).sort();
+  const untrackedMeta = untracked.map((file) => adapters.pathInfo(path.join(root, file), file));
   const tracked = String(adapters.git(['ls-files', '-z'], { cwd: root })).split('\0').filter(Boolean).sort();
-  return { tree, staged, trackedUnstaged, untracked, tracked };
+  return { tree, staged, trackedUnstaged, untracked, untrackedMeta, tracked };
 }
 
 export function parseCli(argv) {
@@ -382,17 +417,22 @@ export function createVerifier(overrides = {}) {
       const childStartedAt = adapters.now();
       const [command, ...args] = parsed.childArgv;
       const actualChildArgv = [command, ...args];
-      const result = adapters.spawn(command, args, { cwd: root, encoding: 'utf8', env: process.env, shell: false });
-      if (result.stdout) adapters.stdout(redact(result.stdout));
-      if (result.stderr) adapters.stderr(redact(result.stderr));
+      const environment = adapters.environment();
+      const knownSecrets = sensitiveEnvironmentValues(environment);
+      const result = adapters.spawn(command, args, {
+        cwd: root, env: environment, shell: false, stdio: ['ignore', 'ignore', 'ignore'],
+      });
+      if (result?.error) fail('child process failed to execute');
+      if (result?.signal) fail(`child process terminated by signal ${result.signal}`);
+      if (!Number.isInteger(result?.status)) fail('child process did not return an exit status');
       const evidence = runMode === 'ordinary' ? readJson(adapters, evidencePath) : undefined;
       const after = getSnapshot(adapters, root);
       const entry = validateRun({
         nodeVersion: adapters.nodeVersion(), now: adapters.now(), childStartedAt,
         childArgv: parsed.childArgv, actualChildArgv,
-        childExitCode: result.status ?? 1, evidence, before: current, after,
+        childExitCode: result.status, evidence, before: current, after,
         stdout: result.stdout ?? '', stderr: result.stderr ?? '',
-        existingBundle, runMode,
+        existingBundle, runMode, knownSecrets,
       });
       const bundle = existingBundle ?? { schemaVersion: 1, tree: current.tree, entries: [] };
       bundle.entries.push(entry);
@@ -410,7 +450,10 @@ export function runCli(argv = process.argv.slice(2), overrides = {}) {
     createVerifier(overrides).run(argv);
     return 0;
   } catch (error) {
-    (overrides.error ?? ((message) => console.error(redact(message))))(`staged evidence rejected: ${error.message}`);
+    const environment = overrides.environment?.() ?? process.env;
+    const knownSecrets = sensitiveEnvironmentValues(environment);
+    const message = `staged evidence rejected: ${redact(error instanceof Error ? error.message : String(error), knownSecrets)}`;
+    (overrides.error ?? ((text) => console.error(text)))(message);
     return 1;
   }
 }

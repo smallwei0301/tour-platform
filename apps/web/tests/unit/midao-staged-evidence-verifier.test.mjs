@@ -21,11 +21,13 @@ const CMD = `node --test ${TEST} && npm run typecheck`;
 const HEAVY = [...HEAVY_PREFIXES[0]];
 
 function snapshot(overrides = {}) {
+  const untracked = overrides.untracked ?? [];
   return {
     tree: 'tree-a',
     staged: [{ status: 'A', path: TEST, blob: 'abc123' }],
     trackedUnstaged: [],
-    untracked: [],
+    untracked,
+    untrackedMeta: overrides.untrackedMeta ?? untracked.map((path) => ({ path, kind: 'file', executable: false })),
     tracked: [TEST, ...HEAVY_PREFIXES.map((prefix) => prefix.at(-1))],
     ...overrides,
   };
@@ -102,7 +104,7 @@ test('rejects dirty tracked code and code-like untracked files but lists docs-on
   rejects({ before: snapshot({ trackedUnstaged: ['scripts/testing/dirty.mjs'] }), after: snapshot({ trackedUnstaged: ['scripts/testing/dirty.mjs'] }) }, /tracked unstaged/i);
   for (const ext of CODE_LIKE_UNTRACKED) {
     const path = `scratch/file${ext}`;
-    rejects({ before: snapshot({ untracked: [path] }), after: snapshot({ untracked: [path] }) }, /untracked code/i);
+    rejects({ before: snapshot({ untracked: [path] }), after: snapshot({ untracked: [path] }) }, /untracked.*(?:code|config|non-docs)/i);
   }
   const entry = validateRun(validRun({ before: snapshot({ untracked: ['notes/readme.md'] }), after: snapshot({ untracked: ['notes/readme.md'] }) }));
   assert.deepEqual(entry.docsOnlyUntracked, ['notes/readme.md']);
@@ -257,6 +259,7 @@ function verifierAdapters({ existingBundle = null, spawnResult = { status: 0, st
   ]);
   const modes = new Map([[manifestPath, manifestMode]]);
   const output = [];
+  const spawnCalls = [];
   const git = (args) => {
     const key = args.join(' ');
     if (key === 'rev-parse --show-toplevel') return '/repo\n';
@@ -269,7 +272,7 @@ function verifierAdapters({ existingBundle = null, spawnResult = { status: 0, st
     throw new Error(`unexpected git call: ${key}`);
   };
   return {
-    output, files, modes, manifestPath,
+    output, files, modes, manifestPath, spawnCalls,
     overrides: {
       git, now: () => NOW, nodeVersion: () => 'v22.17.0',
       exists: (file) => existingBundle !== null && files.has(file),
@@ -278,18 +281,22 @@ function verifierAdapters({ existingBundle = null, spawnResult = { status: 0, st
       chmod: (file, mode) => modes.set(file, mode),
       mode: (file) => modes.get(file),
       remove: (file) => files.delete(file),
-      spawn: () => spawnResult, stdout: (text) => output.push(['stdout', text]), stderr: (text) => output.push(['stderr', text]),
+      pathInfo: (file) => ({ path: file.replace('/repo/', ''), kind: 'file', executable: false }),
+      spawn: (command, args, options) => {
+        spawnCalls.push({ command, args, options });
+        return spawnResult;
+      },
+      stdout: (text) => output.push(['stdout', text]), stderr: (text) => output.push(['stderr', text]),
       log: (text) => output.push(['log', text]), error: (text) => output.push(['error', text]),
     },
   };
 }
 
-test('CLI redacts child output before console adapters receive it', () => {
+test('CLI suppresses child output before console adapters receive it', () => {
   const mocks = verifierAdapters({ spawnResult: { status: 0, stdout: 'hello token=raw-token-value', stderr: 'password=raw-password-value' } });
   assert.throws(() => createVerifier(mocks.overrides).run(['--run', '--', ...CHILD]), /secret/i);
   const consoleText = JSON.stringify(mocks.output);
-  assert.match(consoleText, /hello/);
-  assert.doesNotMatch(consoleText, /raw-token-value|raw-password-value/);
+  assert.doesNotMatch(consoleText, /hello|raw-token-value|raw-password-value/);
 });
 
 test('heavy CLI uses tracked NUL snapshot and does not read harness evidence', () => {
@@ -353,7 +360,7 @@ test('writes manifest as 0600 and check-only rejects mode tampering', () => {
 test('rejects tracked and untracked YAML configuration drift', () => {
   for (const file of ['config/ci.yaml', '.github/workflows/ci.yml']) {
     rejects({ before: snapshot({ trackedUnstaged: [file] }), after: snapshot({ trackedUnstaged: [file] }) }, /tracked unstaged/i);
-    rejects({ before: snapshot({ untracked: [file] }), after: snapshot({ untracked: [file] }) }, /untracked code/i);
+    rejects({ before: snapshot({ untracked: [file] }), after: snapshot({ untracked: [file] }) }, /untracked.*(?:code|config|non-docs)/i);
   }
 });
 
@@ -373,4 +380,46 @@ test('check-only binds docs-only snapshot to current untracked files', () => {
     () => validateBundle({ bundle, current: snapshot({ untracked: ['notes/password=hunter2.md'] }), evidence: validRun().evidence, now: NOW }),
     /secret/i,
   );
+});
+
+test('explicit docs allowlist rejects dotfiles, extensionless config, and tracked config drift', () => {
+  for (const file of ['.env.local', 'scripts/bootstrap', 'Dockerfile', 'Makefile']) {
+    rejects({ before: snapshot({ untracked: [file] }), after: snapshot({ untracked: [file] }) }, /untracked|docs-only|config/i);
+  }
+  rejects({ before: snapshot({ trackedUnstaged: ['.npmrc'] }), after: snapshot({ trackedUnstaged: ['.npmrc'] }) }, /tracked unstaged/i);
+  rejects({ before: snapshot({ trackedUnstaged: ['README.md'] }), after: snapshot() }, /tracked.*changed|state changed/i);
+});
+
+test('docs-only untracked files must be regular and non-executable', () => {
+  for (const meta of [
+    { path: 'notes/readme.md', kind: 'symlink', executable: false },
+    { path: 'notes/readme.md', kind: 'file', executable: true },
+  ]) {
+    const state = snapshot({ untracked: [meta.path], untrackedMeta: [meta] });
+    rejects({ before: state, after: state }, /symlink|executable|unsafe|regular/i);
+  }
+});
+
+test('rejects database URLs, all authorization schemes, cookies, and known ambient values', () => {
+  for (const stdout of [
+    'DATABASE_URL=postgres://user:pass@db.example/app',
+    'Authorization: Basic dXNlcjpwYXNz',
+    'Cookie: session=abc123',
+    'postgres://user:pass@db.example/app',
+  ]) rejects({ stdout }, /secret/i);
+  assert.throws(() => validateRun(validRun({ stdout: 'prefix AMBIENT_SENTINEL suffix', knownSecrets: ['AMBIENT_SENTINEL'] })), /secret/i);
+});
+
+test('CLI never captures child streams and handles spawn errors or signals explicitly', () => {
+  const ignoredMocks = verifierAdapters({ spawnResult: { status: 0, stdout: null, stderr: null } });
+  createVerifier(ignoredMocks.overrides).run(['--run-heavy', '--', ...HEAVY, TEST]);
+  assert.deepEqual(ignoredMocks.spawnCalls[0].options.stdio, ['ignore', 'ignore', 'ignore']);
+  assert.equal(Object.hasOwn(ignoredMocks.spawnCalls[0].options, 'maxBuffer'), false);
+  assert.equal(ignoredMocks.output.some(([kind]) => kind === 'stdout' || kind === 'stderr'), false);
+
+  const signalMocks = verifierAdapters({ spawnResult: { status: null, signal: 'SIGTERM', stdout: null, stderr: null } });
+  assert.throws(() => createVerifier(signalMocks.overrides).run(['--run-heavy', '--', ...HEAVY, TEST]), /signal|terminated/i);
+  const errorMocks = verifierAdapters({ spawnResult: { status: null, error: new Error('DATABASE_URL=postgres://user:pass@db'), stdout: '', stderr: '' } });
+  assert.throws(() => createVerifier(errorMocks.overrides).run(['--run-heavy', '--', ...HEAVY, TEST]), /execute|spawn|child/i);
+  assert.doesNotMatch(JSON.stringify(errorMocks.output), /postgres:\/\/user:pass/);
 });
