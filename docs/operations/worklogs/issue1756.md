@@ -40,6 +40,7 @@
 - 2026-07-23 A4 prerequisite probe以Node `22.23.1`／npm `11.9.0`、isolated HOME實跑，當`npm_config_userconfig`與`npm_config_globalconfig`同指`/dev/null`時exit 1：npm在config resolution前拒絕double-loading。同一路徑plan seam不可執行；已修micro/master為runner-owned兩個不同0600 empty npmrc，A4實作暫HOLD至focused correction雙PASS。
 - A4 correction首輪fresh focused SPEC與QUALITY/SECURITY reviewers皆FAIL：worklog scope stale、tests未鎖all-outcome cleanup；hostile umask可讓`open(...,0600)`實際mode000，且缺FD/path identity、partial setup／cleanup failure與success evidence sequencing。v2 contract加入exclusive FD create、`fchmod/fstat/lstat` dev/inode readback、restrictive umask與replacement probes、`mkdtemp`後立即try/finally、cleanup failure nonzero及cleanup成功後才atomic發布evidence。
 - A4 correction v2 focused SPEC PASS；QUALITY/SECURITY仍FAIL一項：hostile umask也會讓`mkdtemp` HOME mode000，cache同樣缺exact mode readback，setup fail-closed可能被誤算probe通過。v3要求HOME/cache皆透過directory FD `fchmod/fstat`＋path `lstat` same dev/inode達exact0700，restrictive-umask case必須完成全setup並讓strict local npm11 no-network probe成功。
+- A4 correction v3 focused SPEC PASS；QUALITY/SECURITY以non-root probe證實umask0777產生的mode000 HOME無法先open directory FD（EACCES）。v4在`mkdtemp`前暫設umask0077並於成功／失敗都恢復原值；若HOME已建立，restore/setup任何失敗仍進cleanup；hostile0777測試須驗原umask恢復且完整npm11 probe成功。
 
 ## 下一步
 - 對A4 distinct npmrc executable correction做fresh focused SPEC與QUALITY/SECURITY review；雙PASS後才執行A4 strict TDD。
