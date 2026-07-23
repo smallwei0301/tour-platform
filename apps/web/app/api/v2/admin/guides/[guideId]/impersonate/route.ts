@@ -17,6 +17,8 @@
 import { jsonOk, jsonError } from '../../../../../../../src/lib/api-response';
 import { handleRouteError } from '../../../../../../../src/lib/route-error';
 import { createGuideSessionCookies } from '../../../../../../../src/lib/guide-auth';
+import { pickAdminCredentials } from '../../../../../../../src/lib/admin-auth.mjs';
+import { createImpersonationActorCookie } from '../../../../../../../src/lib/midao/impersonation-actor';
 import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../../../../../../src/lib/guide-auth-session-supabase';
 import { getSupabaseUrl } from '../../../../../../../src/config/supabase-service-env.mjs';
 
@@ -36,7 +38,7 @@ type GuideImpersonationProfile = {
 };
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ guideId: string }> }
 ) {
   const { guideId } = await context.params;
@@ -47,6 +49,11 @@ export async function POST(
 
   if (!getSupabaseUrl()) {
     return jsonError('NOT_AVAILABLE', 'Auth not configured', 503);
+  }
+
+  const adminEmail = String(pickAdminCredentials(request).email || '').trim().toLowerCase();
+  if (!adminEmail) {
+    return jsonError('ADMIN_ACTOR_REQUIRED', 'Admin email is required', 401);
   }
 
   try {
@@ -68,6 +75,10 @@ export async function POST(
 
     const sessionVersion = guide.guide_session_version ?? 1;
     const cookies = createGuideSessionCookies(guide.id, guide.display_name, sessionVersion, false);
+    const actorCookie = createImpersonationActorCookie({
+      adminEmail,
+      targetGuideId: guide.id,
+    });
 
     // 與 guide session cookie 一致的 Secure 屬性（production 由 createGuideSessionCookies
     // 加上 '; Secure'）；此處鏡射同一結果，避免在本檔另行直讀環境變數。
@@ -77,6 +88,7 @@ export async function POST(
 
     const headers = new Headers();
     cookies.forEach((c) => headers.append('set-cookie', c));
+    headers.append('set-cookie', actorCookie);
     headers.append('set-cookie', markerCookie);
 
     return jsonOk({ guideId: guide.id, guideName: guide.display_name }, { headers });
