@@ -50,6 +50,7 @@ test('function validates inputs then claims scoped idempotency before locking ca
   assert.ok(claim >= 0 && idempotencyLock > claim && guideLock > idempotencyLock, 'claim/lock idempotency must precede guide FOR UPDATE');
   assert.match(body.slice(idempotencyLock, guideLock), /for\s+update/u);
   assert.match(body.slice(guideLock), /for\s+update/u);
+  assert.doesNotMatch(body, /for\s+update\s+(?:nowait|skip\s+locked)/iu, 'concurrent replays must wait for canonical rows');
   assert.match(body, /scope_type,\s*scope_id,\s*command_name,\s*idempotency_key/iu);
   assert.match(body, /on\s+conflict\s*\(scope_type,\s*scope_id,\s*command_name,\s*idempotency_key\)\s*do\s+nothing/iu);
 });
