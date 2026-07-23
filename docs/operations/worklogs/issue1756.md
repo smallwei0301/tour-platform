@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 18:33 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 19:03 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -71,12 +71,14 @@
 - C6 query固定canonical guard→handler；command固定guard→CSRF V2化→mutation gate→strict printable-ASCII 1–128-byte key→canonical JSON SHA-256→handler。Context只含canonical DB/session actor與server request metadata；known errors V2 deterministic，unexpected sanitized並上報。
 - 2026-07-23 Phase D Task D1 atomic backend-mode switch RPC完成strict TDD；final HEAD `5afb138e0c7f4bdb941479d0be934589d918bf18`。Source-contract `6/6 PASS`、`--check-only` PASS，tree `d261e6f0c38f58b4aa177467b89ea90ba6897da3`、manifest mode `0600`；fresh PostgreSQL correctness/security review PASS，blocking 0。
 - D1 function為SECURITY DEFINER＋`search_path=pg_catalog`＋全schema-qualified objects；exact ACL只允許service_role。Idempotency claim/lock→guide row lock→same-mode no side effects或mode/version+1→audit→outbox→completed snapshot均在單一transaction；本階段未apply DB，真實catalog/concurrency由D3 gates驗證。
+- 2026-07-23 Phase D Task D2 admin mode-switch gateway/API完成strict TDD remediation；final HEAD `0006353a8f3a0b741ef2675aadf7ebb2472e5cf6`。Initial implementation `fbb667a0` review FAIL blocking 3；async Supabase client、direction TOCTOU與mixed admin credential provenance均新增真RED後修復。Final exact D2/typecheck/check-only PASS，tree `a49643cc76af4252f9ce9cae1ec8367a2ea0ac6e`、manifest `0600`；focused/admin/C4A regressions `29/29 PASS`；fresh static re-review PASS，blocking 0。
+- D2 actor逐欄完全mirror middleware header→cookie precedence；target=midao一律要求backend＋mode-switch flags，避免stale pre-read forward bypass；target=legacy rollback/same-mode不依賴任何flags。Gateway await production client，route strict UUID/body/reason/key/hash且無直接DB。
 
 ## 下一步
-- 進入Phase D Task D2：admin mode-switch gateway/API，鎖verified actor、strict body/key與forward-only flags／rollback-always-available方向政策。
+- 進入Phase D Task D3a：建立exclusive、identity-verified、credential-redacted local Supabase runner與unit tests。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／Phase C／D1：對應anchors均已有fresh PASS；D1 final為`5afb138e`。下一步只進D2。
+- 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D2：對應anchors均已有fresh PASS；D2 final為`0006353a`。下一步只進D3a。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
