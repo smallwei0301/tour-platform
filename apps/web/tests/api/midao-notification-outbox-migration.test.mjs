@@ -40,12 +40,18 @@ function assertClaimIndex(sql) {
 }
 
 function assertSecurity(sql) {
-  assert.match(sql, /ALTER\s+TABLE\s+public\.midao_notification_outbox\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/iu);
-  assert.match(sql, /ALTER\s+TABLE\s+public\.midao_notification_outbox\s+FORCE\s+ROW\s+LEVEL\s+SECURITY/iu);
-  assert.match(sql, /REVOKE\s+ALL\s+ON\s+TABLE\s+public\.midao_notification_outbox\s+FROM\s+PUBLIC\s*,\s*anon\s*,\s*authenticated/iu);
-  assert.match(sql, /GRANT\s+SELECT\s*,\s*INSERT\s*,\s*UPDATE\s*,\s*DELETE\s+ON\s+TABLE\s+public\.midao_notification_outbox\s+TO\s+service_role/iu);
+  const statements = sql
+    .split(';')
+    .map((statement) => statement.replace(/\s+/gu, ' ').trim().toUpperCase())
+    .filter(Boolean);
+  assert.ok(statements.includes('ALTER TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX ENABLE ROW LEVEL SECURITY'));
+  assert.ok(statements.includes('ALTER TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX FORCE ROW LEVEL SECURITY'));
+  const aclStatements = statements.filter((statement) => /^(?:GRANT|REVOKE)\s/u.test(statement));
+  assert.deepEqual(aclStatements, [
+    'REVOKE ALL ON TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX FROM PUBLIC, ANON, AUTHENTICATED',
+    'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX TO SERVICE_ROLE',
+  ]);
   assert.doesNotMatch(sql, /CREATE\s+POLICY/iu);
-  assert.doesNotMatch(sql, /GRANT[\s\S]*?TO\s+(?:PUBLIC|anon|authenticated)/iu);
 }
 
 function assertPayloadComment(sql) {
@@ -66,19 +72,36 @@ test('notification outbox migration satisfies the exact durable and security con
   assertFullContract(migrationSql());
 });
 
-test('notification outbox source contract rejects meaningful mutations', () => {
+test('notification outbox source contract rejects every named contract mutation', () => {
   const sql = migrationSql();
   const mutations = [
-    sql.replace('event_name TEXT NOT NULL', 'event_name TEXT'),
-    sql.replace('payload JSONB NOT NULL', 'payload TEXT NOT NULL'),
-    sql.replace("DEFAULT 'pending'", "DEFAULT 'failed'"),
-    sql.replace('CHECK (attempt_count >= 0)', 'CHECK (attempt_count >= -1)'),
-    sql.replace(', created_at, id)', ', created_at)'),
-    sql.replace("WHERE status IN ('pending', 'failed')", ''),
-    `${sql}\nCREATE POLICY accidental_public_policy ON public.midao_notification_outbox USING (true);`,
-    sql.replace('must not contain complete PII or payment secrets', 'may contain complete PII or payment secrets'),
+    ['id type', sql.replace('id UUID PRIMARY KEY', 'id TEXT PRIMARY KEY')],
+    ['id default', sql.replace('DEFAULT gen_random_uuid()', 'DEFAULT NULL')],
+    ['event_name nullability', sql.replace('event_name TEXT NOT NULL', 'event_name TEXT')],
+    ['aggregate_type type', sql.replace('aggregate_type TEXT NOT NULL', 'aggregate_type UUID NOT NULL')],
+    ['aggregate_id nullability', sql.replace('aggregate_id TEXT NOT NULL', 'aggregate_id TEXT')],
+    ['payload type', sql.replace('payload JSONB NOT NULL', 'payload TEXT NOT NULL')],
+    ['status default', sql.replace("DEFAULT 'pending'", "DEFAULT 'failed'")],
+    ['attempt_count default', sql.replace('attempt_count INTEGER NOT NULL DEFAULT 0', 'attempt_count INTEGER NOT NULL DEFAULT 1')],
+    ['next_attempt_at default', sql.replace('next_attempt_at TIMESTAMPTZ NOT NULL DEFAULT now()', 'next_attempt_at TIMESTAMPTZ NOT NULL')],
+    ['last_error_code type', sql.replace('last_error_code TEXT,', 'last_error_code JSONB,')],
+    ['created_at nullability', sql.replace('created_at TIMESTAMPTZ NOT NULL DEFAULT now()', 'created_at TIMESTAMPTZ DEFAULT now()')],
+    ['delivered_at type', sql.replace('delivered_at TIMESTAMPTZ,', 'delivered_at TEXT,')],
+    ['status constraint', sql.replace("'processing', ", '')],
+    ['attempt constraint', sql.replace('CHECK (attempt_count >= 0)', 'CHECK (attempt_count >= -1)')],
+    ['claim index tie breaker', sql.replace(', created_at, id)', ', created_at)')],
+    ['claim index predicate', sql.replace("WHERE status IN ('pending', 'failed')", '')],
+    ['enable RLS', sql.replace('ENABLE ROW LEVEL SECURITY', 'DISABLE ROW LEVEL SECURITY')],
+    ['force RLS', sql.replace('FORCE ROW LEVEL SECURITY', 'NO FORCE ROW LEVEL SECURITY')],
+    ['revoke roles', sql.replace('FROM PUBLIC, anon, authenticated', 'FROM PUBLIC, anon')],
+    ['grant privileges', sql.replace('GRANT SELECT, INSERT, UPDATE, DELETE', 'GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE')],
+    ['grant role', sql.replace('TO service_role;', 'TO authenticated;')],
+    ['extra service role grant', `${sql}\nGRANT TRUNCATE ON TABLE public.midao_notification_outbox TO service_role;`],
+    ['permissive policy', `${sql}\nCREATE POLICY accidental_public_policy ON public.midao_notification_outbox USING (true);`],
+    ['payload sensitivity', sql.replace('must not contain complete PII or payment secrets', 'may contain complete PII or payment secrets')],
   ];
-  for (const [index, mutant] of mutations.entries()) {
-    assert.throws(() => assertFullContract(mutant), `mutation ${index + 1} must fail the source contract`);
+  for (const [name, mutant] of mutations) {
+    assert.notEqual(mutant, sql, `${name} mutation must alter SQL`);
+    assert.throws(() => assertFullContract(mutant), `${name} mutation must fail the source contract`);
   }
 });
