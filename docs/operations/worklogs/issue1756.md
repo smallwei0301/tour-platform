@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 09:03 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 12:49 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -34,10 +34,13 @@
 - 2026-07-23 v6 fresh focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，blocking 0（anchor `ff3cec9b`）。Adversarial injections涵蓋executable/npmrc symlink、writable mode、git status fail/dirty、npm exit 42、Yarn regular/symlink/directory及restore failure，全部nonzero且無資料遺失；`bash -n`／diff check／clean PASS。
 - 2026-07-23 exact reviewed A1 runtime在tracked process `proc_61f1911da71b` exit 0：Node `22.23.1`、npm `11.9.0`、`npm ci`完成661 packages；package-lock SHA `dccba04bc6aacc67936f437c79f2b18a30b285b2cc898acffcf15566a4142cbf`、Yarn SHA `b05a422f35e6d76e4e8b8a6f24ca712373bd513c43317482a607c1bf9039814e`、Supabase `2.87.2`，final status clean。A1 PASS。
 - 2026-07-23 A2 exact Node22 auth/flag/impersonation baseline四檔exit 0：`# tests 38`、pass 38、fail 0、skipped 0、duration 1612.64ms。
+- 2026-07-23 A3 staged evidence verifier完成strict TDD與多輪adversarial remediation；final HEAD `14901eac133c2a0c0d76f5f4e3c6b6d31b9b0f5e`。Final Node22 focused suite `36/36 PASS`、frozen targeted child＋`tsc --noEmit` exit 0、`--check-only` PASS；evidence tree `8409b5c735b4adefa73e91f9f833bb4725878f97`、linked-worktree manifest mode `0600`、secret read-back PASS。
+- A3 final contracts涵蓋exact ordinary targeted/`--typecheck`/`--all` semantics、truthful npm-test coverage、三個bounded heavy prefixes、tree/path/status/blob與docs metadata snapshots、exact schema、0600、Node22、spawn error/signal、no child-output replay、credential/ambient-secret rejection。`npm test` coverage只承認shell實際選取的非hidden `apps/web/tests/<一層>/*.test.mjs`；root/deep/E2E/hidden tests需targeted或heavy entry補齊union。
+- A3 final fresh SPEC/AC與QUALITY/SECURITY/EXECUTABILITY reviewers皆PASS，綁定同一HEAD `14901eac`，blocking 0；frozen `.claude/hooks/run-checks.sh`未修改。
 
 ## 下一步
-- A2已PASS；派fresh implementer執行A3 strict TDD：先觀察module-missing RED，再minimal GREEN、exact staged evidence與commit。
-- A3完成後依序fresh spec review，再fresh quality/security review；雙PASS前不進A4。
+- 執行A4 strict TDD：建立三模式secret-safe CI command evidence runner；先取得runner missing／contract RED，再minimal GREEN、exact staged evidence與commit。
+- A4完成後同樣依序fresh SPEC與QUALITY/SECURITY review；雙PASS前不進Phase B migrations。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan：`bcb81b11`已取得fresh spec＋quality/security雙PASS；本次只聚焦A1 install command correction。

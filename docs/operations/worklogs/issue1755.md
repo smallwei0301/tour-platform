@@ -169,7 +169,13 @@ Reviewer evidence：
 3. Restore #1756 `status:ready` only after A1 actually exits 0; then execute A2 exact 38-test baseline.
 4. A2 PASS後才進A3 strict RED → minimal GREEN；不得重建另一個implementation worktree。
 
-第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD；第三輪在 `43975818`雙PASS，但exact runtime因npm 11 Arborist改寫既有`yarn.lock`而FAIL。v4/v5/v6逐步關閉Yarn quarantine與Bash fail-open。v6 `ff3cec9b`雙PASS後，exact A1 process `proc_61f1911da71b` exit 0；A1完成。A2 exact四檔baseline隨後38/38 PASS、exit 0；下一步A3 strict TDD staged-evidence verifier。
+第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD；第三輪在 `43975818`雙PASS，但exact runtime因npm 11 Arborist改寫既有`yarn.lock`而FAIL。v4/v5/v6逐步關閉Yarn quarantine與Bash fail-open。v6 `ff3cec9b`雙PASS後，exact A1 process `proc_61f1911da71b` exit 0；A1完成。A2 exact四檔baseline隨後38/38 PASS、exit 0。
+
+### 2026-07-23 Package 0 A3 completed
+
+A3 staged evidence verifier在final HEAD `14901eac133c2a0c0d76f5f4e3c6b6d31b9b0f5e`完成。Node22 final focused suite 36/36 PASS；frozen targeted runner＋typecheck與orchestrator `--check-only`均exit 0，evidence tree `8409b5c735b4adefa73e91f9f833bb4725878f97`、manifest mode0600。Final fresh SPEC與QUALITY/SECURITY/EXECUTABILITY reviews同SHA雙PASS、blocking 0。Evidence已truthful區分npm-test、targeted與heavy coverage，並關閉dirty snapshot、secret output、spawn buffer、dotenv/npmrc、symlink/executable docs及hidden glob假覆蓋。
+
+下一步A4 secret-safe CI command evidence runner；A4雙PASS前不進Phase B。
 
 ## Safety anchors
 
