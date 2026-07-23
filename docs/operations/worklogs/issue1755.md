@@ -169,7 +169,7 @@ Reviewer evidence：
 3. Restore #1756 `status:ready` only after A1 actually exits 0; then execute A2 exact 38-test baseline.
 4. A2 PASS後才進A3 strict RED → minimal GREEN；不得重建另一個implementation worktree。
 
-第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD；第三輪在 `43975818`雙PASS，但exact runtime因npm 11 Arborist改寫既有`yarn.lock`而FAIL。v4/v5/v6逐步關閉Yarn quarantine與Bash fail-open。v6 `ff3cec9b`取得fresh focused雙PASS後，exact reviewed A1 process `proc_61f1911da71b` exit 0；Node/npm、661 packages、三檔SHA、TypeScript、fixed Supabase與final clean全部PASS。A1完成，下一步A2 exact 38-test baseline。
+第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD；第三輪在 `43975818`雙PASS，但exact runtime因npm 11 Arborist改寫既有`yarn.lock`而FAIL。v4/v5/v6逐步關閉Yarn quarantine與Bash fail-open。v6 `ff3cec9b`雙PASS後，exact A1 process `proc_61f1911da71b` exit 0；A1完成。A2 exact四檔baseline隨後38/38 PASS、exit 0；下一步A3 strict TDD staged-evidence verifier。
 
 ## Safety anchors
 

@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 09:00 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 09:03 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -33,10 +33,11 @@
 - 2026-07-23 v5 focused SPEC PASS、QUALITY/SECURITY/EXECUTABILITY FAIL/HOLD：另有executable/mode/npmrc `&&` lists可受errexit例外假綠，且`test -z "$(git status ...)"`可吞git command failure。v6將A1所有`&&`清零，各gate獨立simple command；git status先以assignment capture（保留command exit）再驗空。
 - 2026-07-23 v6 fresh focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，blocking 0（anchor `ff3cec9b`）。Adversarial injections涵蓋executable/npmrc symlink、writable mode、git status fail/dirty、npm exit 42、Yarn regular/symlink/directory及restore failure，全部nonzero且無資料遺失；`bash -n`／diff check／clean PASS。
 - 2026-07-23 exact reviewed A1 runtime在tracked process `proc_61f1911da71b` exit 0：Node `22.23.1`、npm `11.9.0`、`npm ci`完成661 packages；package-lock SHA `dccba04bc6aacc67936f437c79f2b18a30b285b2cc898acffcf15566a4142cbf`、Yarn SHA `b05a422f35e6d76e4e8b8a6f24ca712373bd513c43317482a607c1bf9039814e`、Supabase `2.87.2`，final status clean。A1 PASS。
+- 2026-07-23 A2 exact Node22 auth/flag/impersonation baseline四檔exit 0：`# tests 38`、pass 38、fail 0、skipped 0、duration 1612.64ms。
 
 ## 下一步
-- A1已PASS；執行A2 exact 38-test auth baseline，任何既有紅燈立即HOLD且不混入本package。
-- A2 PASS後才進A3 strict RED → minimal GREEN。
+- A2已PASS；派fresh implementer執行A3 strict TDD：先觀察module-missing RED，再minimal GREEN、exact staged evidence與commit。
+- A3完成後依序fresh spec review，再fresh quality/security review；雙PASS前不進A4。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan：`bcb81b11`已取得fresh spec＋quality/security雙PASS；本次只聚焦A1 install command correction。
