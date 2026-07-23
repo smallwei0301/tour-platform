@@ -10,9 +10,11 @@ import {
   createSecureTempEnvironment,
   parseCliArgs,
   redactText,
+  resolveNodeExecutable,
   resolveNpmExecutable,
   runCiCommand,
   validateRepoConfig,
+  writeAtomic0600,
 } from '../../../../scripts/testing/run-midao-ci-command.mjs';
 
 const NODE22 = '/root/.hermes/home/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node';
@@ -38,7 +40,7 @@ function baseAdapters(overrides = {}) {
   };
   return {
     calls,
-    runtimeVersion: () => '22.23.1',
+    runtimeVersion: () => { calls.push('runtime'); return '22.23.1'; },
     processExecPath: () => NODE22,
     parentEnvironment: () => ({
       PATH: SECRET,
@@ -49,6 +51,7 @@ function baseAdapters(overrides = {}) {
     }),
     repoRoot: () => '/repo',
     validateRepoConfig: () => calls.push('repo-config'),
+    resolveNode: (execPath) => execPath,
     resolveNpm: () => '/usr/local/lib/node_modules/npm/bin/npm-cli.js',
     readState: () => state(),
     removeEvidence: () => calls.push('remove-evidence'),
@@ -63,6 +66,7 @@ function baseAdapters(overrides = {}) {
       const hostileLine = `Authorization: Basic ${SECRET}\n`;
       const split = hostileLine.indexOf(SECRET) + 9;
       onOutput('stdout', 'safe output\n' + hostileLine.slice(0, split));
+      onOutput('stderr', 'independent safe line\n');
       onOutput('stdout', hostileLine.slice(split));
       return { status: 0, signal: null, error: null };
     },
@@ -140,6 +144,18 @@ test('npm resolver accepts only allowlisted executable real regular targets', ()
   assert.throws(() => resolveNpmExecutable({ execPath: NODE22, fsAdapter: mockFs }), /writable|npm/i);
 });
 
+test('Node executable is realpath-resolved, regular, executable, and non-writable', () => {
+  const mockFs = {
+    realpathSync: () => '/tool/node-real',
+    lstatSync: () => ({ isFile: () => true, isSymbolicLink: () => false, mode: 0o100755 }),
+    accessSync: () => {},
+    constants: fs.constants,
+  };
+  assert.equal(resolveNodeExecutable({ execPath: '/tool/node-link', fsAdapter: mockFs }), '/tool/node-real');
+  mockFs.lstatSync = () => ({ isFile: () => true, isSymbolicLink: () => false, mode: 0o100775 });
+  assert.throws(() => resolveNodeExecutable({ execPath: '/tool/node', fsAdapter: mockFs }), /writable|Node/i);
+});
+
 test('secure temp setup survives hostile umask, verifies exact modes, restores umask, and cleans', () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-parent-'));
   const original = process.umask(0o777);
@@ -166,7 +182,7 @@ test('secure temp setup survives hostile umask, verifies exact modes, restores u
 });
 
 test('partial secure setup failures restore hostile umask and remove every created HOME', () => {
-  for (const hookName of ['afterHomeCreated', 'afterCacheCreated', 'afterUserConfigCreated']) {
+  for (const hookName of ['afterHomeCreated', 'afterCacheCreated', 'afterUserConfigCreated', 'afterGlobalConfigCreated']) {
     const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-fault-'));
     const original = process.umask(0o777);
     try {
@@ -221,6 +237,59 @@ test('mkdtemp failure restores original hostile umask', () => {
   }
 });
 
+test('each synchronous filesystem verification fault restores umask and cleans HOME', () => {
+  for (const method of ['mkdirSync', 'openSync', 'fchmodSync', 'fstatSync', 'lstatSync']) {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-fs-fault-'));
+    const original = process.umask(0o777);
+    let injected = false;
+    const fsAdapter = new Proxy(fs, {
+      get(source, property) {
+        const value = Reflect.get(source, property);
+        if (property === method) {
+          return (...args) => {
+            if (!injected) { injected = true; throw new Error(`${method} fault`); }
+            return value.apply(source, args);
+          };
+        }
+        return typeof value === 'function' ? value.bind(source) : value;
+      },
+    });
+    try {
+      assert.throws(() => createSecureTempEnvironment({ parentDirectory: parent, fsAdapter }), new RegExp(`${method} fault`));
+      assert.equal(process.umask(), 0o777);
+      assert.deepEqual(fs.readdirSync(parent), []);
+    } finally {
+      process.umask(original);
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  }
+});
+
+test('repeated umask restore failure does not mask the primary setup error and HOME is cleaned', () => {
+  const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-umask-fault-'));
+  let calls = 0;
+  const processAdapter = {
+    umask() {
+      calls += 1;
+      if (calls === 1) return 0o777;
+      throw new Error('restore fault');
+    },
+  };
+  try {
+    assert.throws(
+      () => createSecureTempEnvironment({
+        parentDirectory: parent,
+        processAdapter,
+        hooks: { afterHomeCreated: () => { throw new Error('primary setup fault'); } },
+      }),
+      /primary setup fault/,
+    );
+    assert.deepEqual(fs.readdirSync(parent), []);
+  } finally {
+    fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
 test('strict temp env runs pinned local npm without network under hostile umask', () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-npm-'));
   const original = process.umask(0o777);
@@ -237,6 +306,29 @@ test('strict temp env runs pinned local npm without network under hostile umask'
     isolated?.cleanup();
     process.umask(original);
     fs.rmSync(parent, { recursive: true, force: true });
+  }
+});
+
+test('atomic writer removes a target when rename reports failure after replacement', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-atomic-'));
+  const target = path.join(directory, 'evidence.json');
+  const fsAdapter = new Proxy(fs, {
+    get(source, property) {
+      if (property === 'renameSync') {
+        return (from, to) => {
+          fs.renameSync(from, to);
+          throw new Error('post-rename fault');
+        };
+      }
+      const value = Reflect.get(source, property);
+      return typeof value === 'function' ? value.bind(source) : value;
+    },
+  });
+  try {
+    assert.throws(() => writeAtomic0600(target, '{}\n', { fsAdapter, randomBytes: () => Buffer.alloc(8, 1) }), /post-rename fault/);
+    assert.equal(fs.existsSync(target), false);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
   }
 });
 
@@ -271,6 +363,8 @@ test('successful run cleans before publishing exact secret-free evidence', async
   const log = adapters.calls.find((call) => Array.isArray(call) && call[0] === 'log')[1];
   const evidence = adapters.calls.find((call) => Array.isArray(call) && call[0] === 'publish')[1];
   assert.doesNotMatch(log + JSON.stringify(evidence), new RegExp(SECRET));
+  assert.equal(log.includes(SECRET.slice(0, 9)), false);
+  assert.equal(log.includes(SECRET.slice(9)), false);
   assert.deepEqual(evidence.childArgv, ['/usr/local/lib/node_modules/npm/bin/npm-cli.js', 'run', 'lint']);
   assert.equal(evidence.exitCode, 0);
 });
@@ -305,10 +399,43 @@ test('child throw, signal, nonzero, dirty postflight, and cleanup failure never 
   }
 });
 
+test('frozen primary errors retain priority when cleanup also fails', async () => {
+  const primary = Object.freeze(new Error('primary spawn failure'));
+  const adapters = baseAdapters({
+    spawnChild: async () => { throw primary; },
+    cleanupTempEnvironment: () => { throw new Error('secondary cleanup failure'); },
+  });
+  await assert.rejects(
+    () => runCiCommand({ argv: ['lint'], adapters }),
+    (error) => {
+      assert.match(error.message, /primary spawn failure/);
+      if (error instanceof AggregateError) assert.match(error.errors[0].message, /primary spawn failure/);
+      return true;
+    },
+  );
+  assert.equal(adapters.calls.some((call) => Array.isArray(call) && call[0] === 'publish'), false);
+});
+
+test('old success evidence is removed before every fallible preflight', async () => {
+  const failures = [
+    { runtimeVersion: () => '24.14.0' },
+    { validateRepoConfig: () => { throw new Error('dotenv blocked'); } },
+    { resolveNode: () => { throw new Error('node invalid'); } },
+    { resolveNpm: () => { throw new Error('npm invalid'); } },
+    { readState: () => state({ status: '?? bad.ts' }) },
+    { readState: () => state({ headTree: 'c'.repeat(40) }) },
+  ];
+  for (const overrides of failures) {
+    const adapters = baseAdapters(overrides);
+    await assert.rejects(() => runCiCommand({ argv: ['lint'], adapters }));
+    assert.equal(adapters.calls[0], 'remove-evidence');
+  }
+});
+
 test('runtime must be exact Node 22.23.1', async () => {
   const adapters = baseAdapters({ runtimeVersion: () => '24.14.0' });
   await assert.rejects(() => runCiCommand({ argv: ['lint'], adapters }), /Node 22\.23\.1/i);
-  assert.deepEqual(adapters.calls, []);
+  assert.deepEqual(adapters.calls, ['remove-evidence']);
 });
 
 test('dirty preflight or index tree not equal HEAD tree fails before child', async () => {

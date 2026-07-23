@@ -15,6 +15,16 @@ function fail(message) {
   throw new Error(`midao CI command rejected: ${message}`);
 }
 
+function asError(value) {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
+function combineErrors(primary, secondary, label) {
+  const first = asError(primary);
+  const second = asError(secondary);
+  return new AggregateError([first, second], first.message, { cause: first, errorsLabel: label });
+}
+
 export function parseCliArgs(argv) {
   if (!Array.isArray(argv) || argv.length !== 1 || !MODES.has(argv[0])) {
     fail('exactly one allowlisted mode argument is required');
@@ -75,57 +85,85 @@ export function createSecureTempEnvironment({
 } = {}) {
   const originalUmask = processAdapter.umask(0o077);
   let home;
-  let restored = false;
+  let cache;
+  let userConfig;
+  let globalConfig;
+  let primaryError = null;
+  let restoreFailed = false;
   try {
     home = fsAdapter.mkdtempSync(path.join(parentDirectory, 'midao-ci-'));
     hooks.afterHomeCreated?.({ home, fsAdapter });
     verifyDirectoryIdentity(home, fsAdapter, hooks.beforeHomePathValidation);
-    const cache = path.join(home, 'npm-cache');
+    cache = path.join(home, 'npm-cache');
     fsAdapter.mkdirSync(cache, { recursive: false, mode: 0o700 });
     hooks.afterCacheCreated?.({ home, cache, fsAdapter });
     verifyDirectoryIdentity(cache, fsAdapter, hooks.beforeCachePathValidation);
-    const userConfig = path.join(home, 'user.npmrc');
-    const globalConfig = path.join(home, 'global.npmrc');
+    userConfig = path.join(home, 'user.npmrc');
+    globalConfig = path.join(home, 'global.npmrc');
     if (userConfig === globalConfig || userConfig === '/dev/null' || globalConfig === '/dev/null') fail('npm config paths must be distinct runner files');
     createAndVerifyEmptyFile(userConfig, fsAdapter, hooks.beforeUserConfigPathValidation);
     hooks.afterUserConfigCreated?.({ home, cache, userConfig, globalConfig, fsAdapter });
     createAndVerifyEmptyFile(globalConfig, fsAdapter, hooks.beforeGlobalConfigPathValidation);
     hooks.afterGlobalConfigCreated?.({ home, cache, userConfig, globalConfig, fsAdapter });
-    processAdapter.umask(originalUmask);
-    restored = true;
-    let cleaned = false;
-    return {
-      home,
-      cache,
-      userConfig,
-      globalConfig,
-      cleanup() {
-        if (cleaned) return;
-        fsAdapter.rmSync(home, { recursive: true, force: true });
-        cleaned = true;
-      },
-    };
   } catch (error) {
-    let cleanupError;
-    if (!restored) {
-      try {
-        processAdapter.umask(originalUmask);
-        restored = true;
-      } catch (restoreError) {
-        cleanupError = restoreError;
-      }
-    }
+    primaryError = asError(error);
+  }
+
+  try {
+    processAdapter.umask(originalUmask);
+  } catch (restoreError) {
+    restoreFailed = true;
+    primaryError = primaryError ? combineErrors(primaryError, restoreError, 'umask restore') : asError(restoreError);
+  }
+
+  if (primaryError) {
     if (home) {
       try {
         fsAdapter.rmSync(home, { recursive: true, force: true });
-      } catch (removeError) {
-        cleanupError ??= removeError;
+      } catch (cleanupError) {
+        primaryError = combineErrors(primaryError, cleanupError, 'temp cleanup');
       }
     }
-    if (cleanupError) error.cleanupError = cleanupError;
-    throw error;
-  } finally {
-    if (!restored) processAdapter.umask(originalUmask);
+    if (restoreFailed) {
+      try {
+        processAdapter.umask(originalUmask);
+      } catch (retryError) {
+        primaryError = combineErrors(primaryError, retryError, 'umask restore retry');
+      }
+    }
+    throw primaryError;
+  }
+
+  let cleaned = false;
+  return {
+    home,
+    cache,
+    userConfig,
+    globalConfig,
+    cleanup() {
+      if (cleaned) return;
+      fsAdapter.rmSync(home, { recursive: true, force: true });
+      cleaned = true;
+    },
+  };
+}
+
+function validateExecutableTarget(target, label, fsAdapter = fs) {
+  const resolved = fsAdapter.realpathSync(target);
+  const stat = fsAdapter.lstatSync(resolved);
+  if (!stat.isFile() || stat.isSymbolicLink?.()) fail(`${label} target is not a regular file`);
+  if ((stat.mode & 0o022) !== 0) fail(`${label} executable is group/world writable`);
+  if ((stat.mode & 0o111) === 0) fail(`${label} target is not executable`);
+  fsAdapter.accessSync(resolved, fsAdapter.constants.X_OK);
+  return resolved;
+}
+
+export function resolveNodeExecutable({ execPath = process.execPath, fsAdapter = fs } = {}) {
+  try {
+    return validateExecutableTarget(execPath, 'Node', fsAdapter);
+  } catch (error) {
+    if (/midao CI command rejected/u.test(error.message)) throw error;
+    fail('Node executable could not be validated');
   }
 }
 
@@ -137,16 +175,10 @@ export function resolveNpmExecutable({ execPath = process.execPath, fsAdapter = 
   ];
   for (const candidate of candidates) {
     try {
-      const resolved = fsAdapter.realpathSync(candidate);
-      const stat = fsAdapter.lstatSync(resolved);
-      if (!stat.isFile() || stat.isSymbolicLink?.()) continue;
-      if ((stat.mode & 0o022) !== 0) fail('npm executable is group/world writable');
-      if ((stat.mode & 0o111) === 0) fail('npm target is not executable');
-      fsAdapter.accessSync(resolved, fsAdapter.constants.X_OK);
-      return resolved;
+      return validateExecutableTarget(candidate, 'npm', fsAdapter);
     } catch (error) {
-      if (/writable|not executable/u.test(error.message)) throw error;
-      if (!['ENOENT', 'EACCES'].includes(error.code)) continue;
+      if (/group\/world writable|not executable/u.test(error.message)) throw error;
+      if (!['ENOENT', 'EACCES'].includes(error.code) && !/could not be validated/u.test(error.message)) continue;
     }
   }
   fail('no validated npm executable found');
@@ -209,26 +241,46 @@ function assertCleanState(current, expected = null) {
   if (expected && (current.head !== expected.head || current.tree !== expected.tree || current.headTree !== expected.headTree)) fail('git HEAD/tree state changed');
 }
 
+function containsKnownSecretFragment(value, knownSecrets) {
+  for (const secret of knownSecrets) {
+    const maximum = Math.min(secret.length - 1, 64);
+    for (let length = 4; length <= maximum; length += 1) {
+      if (value.includes(secret.slice(0, length)) || value.includes(secret.slice(secret.length - length))) return true;
+    }
+  }
+  return false;
+}
+
+function safeOutputLine(value, knownSecrets) {
+  const raw = String(value);
+  if (containsKnownSecretFragment(raw, knownSecrets)) return '[REDACTED LINE]\n';
+  return redactText(raw, knownSecrets);
+}
+
 function createOutputCollector(knownSecrets) {
-  let carry = '';
+  const carries = new Map([['stdout', ''], ['stderr', '']]);
   const lines = [];
   return {
     push(stream, chunk) {
-      carry += String(chunk ?? '');
+      const key = stream === 'stderr' ? 'stderr' : 'stdout';
+      let carry = carries.get(key) + String(chunk ?? '');
       while (true) {
         const newline = carry.indexOf('\n');
         if (newline < 0) break;
         const line = carry.slice(0, newline + 1);
         carry = carry.slice(newline + 1);
-        lines.push(`[${stream}] ${redactText(line, knownSecrets)}`);
+        lines.push(`[${key}] ${safeOutputLine(line, knownSecrets)}`);
       }
       if (carry.length > 65_536) {
-        lines.push(`[${stream}] [REDACTED OVERSIZE LINE]\n`);
+        lines.push(`[${key}] [REDACTED OVERSIZE LINE]\n`);
         carry = '';
       }
+      carries.set(key, carry);
     },
     finish() {
-      if (carry) lines.push(`[output] ${redactText(carry, knownSecrets)}\n`);
+      for (const [stream, carry] of carries) {
+        if (carry) lines.push(`[${stream}] ${safeOutputLine(carry, knownSecrets)}\n`);
+      }
       return lines.join('');
     },
   };
@@ -247,15 +299,15 @@ function exactEvidence(value) {
 
 export async function runCiCommand({ argv, adapters }) {
   const { mode, childArgs } = parseCliArgs(argv);
+  adapters.removeEvidence({ mode });
   if (adapters.runtimeVersion() !== '22.23.1') fail('Node 22.23.1 is required');
-  const execPath = adapters.processExecPath();
+  const execPath = adapters.resolveNode(adapters.processExecPath());
   const parent = adapters.parentEnvironment();
   const repoRoot = adapters.repoRoot();
   adapters.validateRepoConfig(repoRoot);
   const npmPath = adapters.resolveNpm(execPath);
   const before = adapters.readState();
   assertCleanState(before);
-  adapters.removeEvidence({ mode });
 
   let temp;
   let pending;
@@ -297,8 +349,9 @@ export async function runCiCommand({ argv, adapters }) {
     try {
       adapters.cleanupTempEnvironment(temp);
     } catch (cleanupError) {
-      if (primaryError) primaryError.cleanupError = cleanupError;
-      else primaryError = cleanupError;
+      primaryError = primaryError
+        ? combineErrors(primaryError, cleanupError, 'run cleanup')
+        : asError(cleanupError);
     }
   }
   if (primaryError) throw primaryError;
@@ -313,22 +366,28 @@ function gitOutput(args, cwd) {
   return result.stdout.trim();
 }
 
-function writeAtomic0600(target, content) {
-  fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
-  const temporary = `${target}.tmp-${process.pid}-${crypto.randomBytes(8).toString('hex')}`;
+export function writeAtomic0600(target, content, { fsAdapter = fs, randomBytes = crypto.randomBytes } = {}) {
+  fsAdapter.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 });
+  const temporary = `${target}.tmp-${process.pid}-${randomBytes(8).toString('hex')}`;
   let descriptor;
+  let renameAttempted = false;
   try {
-    descriptor = fs.openSync(temporary, 'wx', 0o600);
-    fs.writeFileSync(descriptor, content, { encoding: 'utf8' });
-    fs.fsyncSync(descriptor);
-    fs.fchmodSync(descriptor, 0o600);
-    fs.closeSync(descriptor);
+    descriptor = fsAdapter.openSync(temporary, 'wx', 0o600);
+    fsAdapter.writeFileSync(descriptor, content, { encoding: 'utf8' });
+    fsAdapter.fsyncSync(descriptor);
+    fsAdapter.fchmodSync(descriptor, 0o600);
+    fsAdapter.closeSync(descriptor);
     descriptor = undefined;
-    fs.renameSync(temporary, target);
-    fs.chmodSync(target, 0o600);
+    renameAttempted = true;
+    fsAdapter.renameSync(temporary, target);
   } catch (error) {
-    if (descriptor !== undefined) fs.closeSync(descriptor);
-    fs.rmSync(temporary, { force: true });
+    if (descriptor !== undefined) {
+      try { fsAdapter.closeSync(descriptor); } catch {}
+    }
+    try { fsAdapter.rmSync(temporary, { force: true }); } catch {}
+    if (renameAttempted) {
+      try { fsAdapter.rmSync(target, { force: true }); } catch {}
+    }
     throw error;
   }
 }
@@ -353,6 +412,7 @@ function defaultAdapters() {
     parentEnvironment: () => ({ ...process.env }),
     repoRoot: () => repoRoot,
     validateRepoConfig,
+    resolveNode: (execPath) => resolveNodeExecutable({ execPath }),
     resolveNpm: (execPath) => resolveNpmExecutable({ execPath }),
     readState: () => ({
       status: gitOutput(['status', '--porcelain=v1'], repoRoot),
