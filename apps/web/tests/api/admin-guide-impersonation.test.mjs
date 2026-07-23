@@ -19,6 +19,7 @@ const REPO_ROOT = join(__dirname, '..', '..');
 const ROUTE = join(REPO_ROOT, 'app/api/v2/admin/guides/[guideId]/impersonate/route.ts');
 const ADMIN_PAGE = join(REPO_ROOT, 'app/(non-locale)/admin/guides/[guideId]/page.tsx');
 const GUIDE_LAYOUT = join(REPO_ROOT, 'app/(non-locale)/guide/layout.tsx');
+const IMPERSONATION_BANNER = join(REPO_ROOT, 'src/components/midao/ImpersonationBanner.tsx');
 const MIDDLEWARE = join(REPO_ROOT, 'middleware.ts');
 
 // ---------- 代入 route ----------
@@ -138,11 +139,12 @@ test('admin 詳情頁：以 V2 envelope（json.success）判斷代入結果，�
 
 // ---------- 導遊後台代入橫幅 ----------
 
-test('導遊後台 layout：偵測代入 cookie 顯示橫幅並提供結束代入', () => {
-  const src = readFileSync(GUIDE_LAYOUT, 'utf8');
-  assert.match(src, /guide_impersonation/, '需偵測代入標記 cookie');
-  assert.match(src, /guide-impersonation-banner/, '需顯示代入橫幅');
-  assert.match(src, /handleEndImpersonation/, '需提供結束代入處理');
-  assert.match(src, /\/guide\/auth\/session/, '結束代入需登出導遊 session');
-  assert.match(src, /\/admin\/guides/, '結束後導回管理後台');
+test('導遊後台 layout：使用共用代入橫幅與dedicated結束代入endpoint', () => {
+  const layout = readFileSync(GUIDE_LAYOUT, 'utf8');
+  const banner = readFileSync(IMPERSONATION_BANNER, 'utf8');
+  assert.match(layout, /ImpersonationBanner/, '需掛載共用代入橫幅');
+  assert.match(banner, /guide_impersonation/, '需偵測代入標記 cookie');
+  assert.match(banner, /guide-impersonation-banner/, '需顯示代入橫幅');
+  assert.match(banner, /\/api\/guide\/impersonation/, '結束代入需使用dedicated lifecycle endpoint');
+  assert.match(banner, /\/admin\/guides/, '成功結束後導回管理後台');
 });
