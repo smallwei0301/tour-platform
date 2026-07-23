@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 17:12 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 17:17 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -57,12 +57,14 @@
 - C1精確保持guide HMAC bytes `${guideId}:${sessionVersion}`與三段cookie token，抽離production/build/dev secret lifecycle且不export raw secret；新增domain＋NUL＋UTF-8 payload byteLength framing供impersonation actor，guide與actor signature不可跨protocol驗證。
 - 2026-07-23 Phase C Task C2 signed session version完成strict TDD；final HEAD `73977a6efbf990c1c7f76af6af8095311c61edd6`。Valid version=7的RED為`undefined !== 7`且tamper path原已GREEN；final focused regressions `20/20 PASS`、typecheck與`--check-only` PASS，tree `5bfd010b5d07b537222c5771d521f8094d05deed`、manifest mode `0600`；fresh SPEC／security review PASS，blocking 0。
 - C2只在guide ID、三段token、number parse及HMAC驗證全部成功後暴露`sessionVersion`，version/signature tamper回`null`，token格式與既有API保持相容。
+- 2026-07-23 Phase C Task C3 Midao kill switches完成strict TDD；final HEAD `769879fa877bfe59cd2c25a14223c59cf8d49410`。Exports missing RED `3/3 fail`；final focused `3/3 PASS`、`--check-only` PASS，tree `b703eb646e7dd4e6975704ffbb5b084e1cd7ba03`、manifest mode `0600`；fresh SPEC／quality review PASS，blocking 0。
+- C3新增server-only backend、mutations、mode-switch三個default-off independent readers，完全沿用既有`1|true|yes|on` truthy contract；C3只暴露gates，directional enforcement按計畫留在D2 production boundary。
 
 ## 下一步
-- 進入Phase C Task C3：三個Midao backend flags default-off、只接受existing truthy contract、互不隱含；forward mode-switch與rollback gate語意以單元測試鎖定。
+- 進入Phase C Task C4：signed impersonation actor codec/cookie strict TDD；固定cookie scope、expiry上限、domain-separated signature、target/tamper/expiry拒絕與clear semantics。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／C1–C2：對應anchors均已有fresh PASS；C2 final為`73977a6e`。下一步只進C3。
+- 不重跑或重審完整plan／A4／Phase B／C1–C3：對應anchors均已有fresh PASS；C3 final為`769879fa`。下一步只進C4。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
