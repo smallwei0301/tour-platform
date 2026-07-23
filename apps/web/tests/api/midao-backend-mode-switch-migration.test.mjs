@@ -99,6 +99,24 @@ test('database faults cannot be swallowed or split by transaction control inside
   assert.doesNotMatch(body, /\b(?:commit|rollback|savepoint)\b/iu, 'function must remain in the caller statement transaction');
 });
 
+test('both completion branches persist full canonical idempotency metadata', () => {
+  const body = lexPostgresSql(source()).statements[0].toLowerCase();
+  const updates = [...body.matchAll(/update\s+public\.midao_idempotency_records([\s\S]*?)where\s+id\s*=\s*v_idempotency\.id/giu)]
+    .map((match) => match[1]);
+  assert.equal(updates.length, 2, 'same-mode and changed-mode branches must each complete one claim');
+  for (const update of updates) {
+    for (const fragment of [
+      "state = 'completed'",
+      'response_status = 200',
+      'response_body = v_response',
+      "resource_type = 'guide_backend_mode'",
+      'resource_id = p_guide_id::text',
+      'completed_at = pg_catalog.now()',
+      'locked_at = pg_catalog.now()',
+    ]) assert.ok(update.includes(fragment), `missing completed snapshot metadata: ${fragment}`);
+  }
+});
+
 test('response/audit/outbox snapshots are canonical and exclude credentials', () => {
   const body = lexPostgresSql(source()).statements[0].toLowerCase();
   for (const field of ['backendmode', 'sessionversion', 'changed', 'redirectto']) {

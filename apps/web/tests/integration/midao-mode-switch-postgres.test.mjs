@@ -7,6 +7,7 @@ const databaseUrl = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
 assert.ok(databaseUrl, 'local Supabase runner must provide SUPABASE_DB_URL or DATABASE_URL');
 
 const activeGuideId = randomUUID();
+const rollbackGuideId = randomUUID();
 const inactiveGuideId = randomUUID();
 const missingGuideId = randomUUID();
 const actorId = 'admin@example.com';
@@ -20,8 +21,11 @@ before(async () => {
   await client.connect();
   await client.query(`
     INSERT INTO public.guide_profiles(id, verification_status, guide_session_version, backend_mode)
-    VALUES ($1, 'approved', 7, 'legacy'), ($2, 'pending', 3, 'legacy')
-  `, [activeGuideId, inactiveGuideId]);
+    VALUES
+      ($1, 'approved', 7, 'legacy'),
+      ($2, 'approved', 11, 'legacy'),
+      ($3, 'pending', 3, 'legacy')
+  `, [activeGuideId, rollbackGuideId, inactiveGuideId]);
 });
 
 after(async () => {
@@ -125,12 +129,14 @@ test('legacy to midao increments once and atomically records sanitized audit, ou
 });
 
 test('fresh-key same-mode completes replay without version, audit or outbox side effects', async () => {
+  const key = 'd3c-same-mode';
+  const hash = 'b'.repeat(64);
   const response = await callSwitch({
     guideId: activeGuideId,
     targetMode: 'midao',
     reason: 'D3c same-mode verification',
-    key: 'd3c-same-mode',
-    hash: 'b'.repeat(64),
+    key,
+    hash,
   });
   assert.deepEqual(response, {
     backendMode: 'midao',
@@ -140,6 +146,19 @@ test('fresh-key same-mode completes replay without version, audit or outbox side
   });
   assert.deepEqual(await guideState(activeGuideId), { backend_mode: 'midao', guide_session_version: 8 });
   assert.deepEqual(await effectCounts(activeGuideId), { audit: 1, outbox: 1, idempotency: 2, processing: 0 });
+  const replay = await client.query(`
+    SELECT state, request_hash, response_status, response_body, resource_type, resource_id
+      FROM public.midao_idempotency_records
+     WHERE scope_type = 'guide' AND scope_id = $1 AND command_name = 'switch_backend_mode' AND idempotency_key = $2
+  `, [activeGuideId, key]);
+  assert.deepEqual(replay.rows, [{
+    state: 'completed',
+    request_hash: hash,
+    response_status: 200,
+    response_body: response,
+    resource_type: 'guide_backend_mode',
+    resource_id: activeGuideId,
+  }]);
 });
 
 test('unknown, inactive and invalid reason errors are deterministic and leave no processing claims', async () => {
@@ -169,8 +188,8 @@ test('unknown, inactive and invalid reason errors are deterministic and leave no
 });
 
 test('outbox failure rolls back profile, audit, outbox and idempotency together', async () => {
-  const beforeState = await guideState(activeGuideId);
-  const beforeCounts = await effectCounts(activeGuideId);
+  const beforeState = await guideState(rollbackGuideId);
+  const beforeCounts = await effectCounts(rollbackGuideId);
   const key = 'd3c-fault-rollback';
   let triggerCreated = false;
   try {
@@ -189,8 +208,8 @@ test('outbox failure rolls back profile, audit, outbox and idempotency together'
     `);
     triggerCreated = true;
     await expectRpcError('MIDAO_TEST_OUTBOX_FAILURE', () => callSwitch({
-      guideId: activeGuideId,
-      targetMode: 'legacy',
+      guideId: rollbackGuideId,
+      targetMode: 'midao',
       reason: 'D3c atomic rollback verification',
       key,
       hash: 'f'.repeat(64),
@@ -200,8 +219,8 @@ test('outbox failure rolls back profile, audit, outbox and idempotency together'
     await client.query(`DROP FUNCTION IF EXISTS ${faultFunction}()`);
   }
 
-  assert.deepEqual(await guideState(activeGuideId), beforeState);
-  assert.deepEqual(await effectCounts(activeGuideId), beforeCounts);
+  assert.deepEqual(await guideState(rollbackGuideId), beforeState);
+  assert.deepEqual(await effectCounts(rollbackGuideId), beforeCounts);
   const faultClaim = await client.query('SELECT state FROM public.midao_idempotency_records WHERE idempotency_key = $1', [key]);
   assert.equal(faultClaim.rowCount, 0);
 });
