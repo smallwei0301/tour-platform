@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { C, Card, Badge, Btn, Spinner, ErrorState, apiGet, apiSend } from '../ui';
+import { C, Card, Badge, Btn, Spinner, ErrorState, apiGet, apiSend, Icon } from '../ui';
 import { buildMonthGrid } from '../../../../src/lib/midao/midao-calendar-grid.mjs';
 import { periodLabel } from '../../../../src/lib/midao/midao-copy-templates.mjs';
 import WeeklyDefaultsModal from './WeeklyDefaultsModal';
@@ -158,16 +158,25 @@ export default function Midao2CalendarPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>行事曆</h1>
-        <Btn kind="secondary" onClick={() => setShowDefaults(true)} data-testid="midao2-cal-defaults-btn">⏱ 設定可用時間</Btn>
+        <Btn kind="secondary" onClick={() => setShowDefaults(true)} data-testid="midao2-cal-defaults-btn">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="availability-settings" size={18} />
+            設定可用時間
+          </span>
+        </Btn>
       </div>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button type="button" data-testid="midao2-cal-prev" onClick={goPrev}
-            style={{ background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer', color: C.TEXT }}>‹</button>
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.TEXT, display: 'flex' }}>
+            <Icon name="chevron-left" size={20} />
+          </button>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{month.slice(0, 4)} 年 {Number(month.slice(5, 7))} 月</div>
           <button type="button" data-testid="midao2-cal-next" onClick={goNext}
-            style={{ background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer', color: C.TEXT }}>›</button>
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.TEXT, display: 'flex' }}>
+            <Icon name="chevron-right" size={20} />
+          </button>
         </div>
         <button type="button" data-testid="midao2-cal-today" onClick={goToday}
           style={{ alignSelf: 'center', border: `1px solid ${C.BORDER}`, background: C.CARD, borderRadius: 999, padding: '4px 14px', fontSize: 13, cursor: 'pointer', color: C.TEXT }}>
@@ -264,7 +273,10 @@ export default function Midao2CalendarPage() {
                     padding: '10px 4px', fontSize: 13, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {periodLabel(period)} {open ? '✓' : '✕'}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {periodLabel(period)}
+                    <Icon name={open ? 'check' : 'close'} size={open ? 16 : 14} />
+                  </span>
                 </button>
               );
             })}
@@ -275,7 +287,9 @@ export default function Midao2CalendarPage() {
             <div key={`${c.start}-${c.end}-${idx}`} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
               <span>{c.start}–{c.end}</span>
               <button type="button" onClick={() => removeCustom(idx)} disabled={saving}
-                style={{ background: 'transparent', border: 'none', color: C.RED, cursor: 'pointer', fontSize: 13 }}>✕</button>
+                style={{ background: 'transparent', border: 'none', color: C.RED, cursor: 'pointer', display: 'flex' }}>
+                <Icon name="close" size={14} />
+              </button>
             </div>
           ))}
 
@@ -299,9 +313,10 @@ export default function Midao2CalendarPage() {
               type="button" data-testid="midao2-cal-custom-add"
               onClick={() => { setCustomAdding(true); setCustomError(null); }}
               disabled={!selectedDay}
-              style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: C.ACCENT, cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0 }}
+              style={{ alignSelf: 'flex-start', background: 'transparent', border: 'none', color: C.ACCENT, cursor: 'pointer', fontSize: 13, fontWeight: 700, padding: 0, display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
-              ＋ 自訂時段
+              <Icon name="plus" size={14} />
+              自訂時段
             </button>
           )}
         </div>

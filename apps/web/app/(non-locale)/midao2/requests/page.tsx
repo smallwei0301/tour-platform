@@ -4,7 +4,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { C, Card, Badge, Spinner, EmptyState, ErrorState, apiGet } from '../ui';
+import { C, Card, Badge, Spinner, EmptyState, ErrorState, apiGet, Icon } from '../ui';
 
 type MidaoRequest = {
   id: string;
@@ -162,7 +162,9 @@ function RequestsListPageInner() {
                     {item.preferredDate} ・ {item.participantsCount} 人 ・ {item.language ?? '—'}
                   </div>
                 </div>
-                <span style={{ color: C.MUTED }}>›</span>
+                <span style={{ color: C.MUTED, display: 'flex' }}>
+                  <Icon name="chevron-right" size={18} />
+                </span>
               </div>
             </Card>
           ))}

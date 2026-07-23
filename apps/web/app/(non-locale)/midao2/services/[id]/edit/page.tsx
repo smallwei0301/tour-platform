@@ -5,7 +5,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { C, Card, Btn, Spinner, ErrorState, apiGet, apiSend } from '../../../ui';
+import { C, Card, Btn, Spinner, ErrorState, apiGet, apiSend, Icon } from '../../../ui';
 import { csrfHeaders } from '../../../../../../src/lib/csrf-client';
 import ServiceForm, { type ServiceValues } from '../../ServiceForm';
 
@@ -136,7 +136,10 @@ export default function Midao2EditServicePage() {
           <span style={{ color: C.MUTED, fontSize: 13, fontWeight: 700 }}>已送審</span>
         ) : (
           <Btn kind="secondary" onClick={handleSubmitReview} disabled={reviewSubmitting} data-testid="midao2-edit-submit-review">
-            🏝 發佈到祕島（送管理員審核）
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="map" size={16} />
+              發佈到祕島（送管理員審核）
+            </span>
           </Btn>
         )}
       </Card>

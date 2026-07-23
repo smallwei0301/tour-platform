@@ -33,6 +33,23 @@ export const STATUS_META: Record<MidaoRequestStatus, { label: string; bg: string
   closed_done: { label: '已完成', bg: C.BORDER, fg: C.MUTED },
 };
 
+// ── Icon（官方 icon sprite，stroke 繼承 currentColor）───────
+export function Icon({
+  name,
+  size = 24,
+  style,
+}: {
+  name: string;
+  size?: number;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <svg width={size} height={size} style={{ display: 'block', flexShrink: 0, ...style }} aria-hidden="true">
+      <use href={`/midao2/sprite.svg#icon-${name}`} />
+    </svg>
+  );
+}
+
 // ── Card ──────────────────────────────────────────────────
 export function Card({
   children,

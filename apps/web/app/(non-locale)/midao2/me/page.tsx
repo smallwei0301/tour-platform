@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { C, Card, Btn, Spinner, ErrorState, copyToClipboard, apiGet, apiSend } from '../ui';
+import { C, Card, Btn, Spinner, ErrorState, copyToClipboard, apiGet, apiSend, Icon } from '../ui';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
 type LegacyProfile = {
@@ -167,7 +167,7 @@ export default function Midao2MePage() {
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.profile_photo_url} alt={profile.display_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           ) : (
-            <span style={{ fontSize: 32 }}>👤</span>
+            <Icon name="profile" size={32} style={{ color: C.MUTED }} />
           )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -192,12 +192,12 @@ export default function Midao2MePage() {
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>📍</span>
+          <Icon name="location" size={18} />
           <span style={{ fontSize: 14, color: C.MUTED }}>服務區域</span>
           <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 500 }}>{regions.length ? regions.join('・') : '—'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>🗺</span>
+          <Icon name="map" size={18} />
           <span style={{ fontSize: 14, color: C.MUTED }}>導覽經驗</span>
           {editingExp ? (
             <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
@@ -233,9 +233,9 @@ export default function Midao2MePage() {
                 data-testid="midao2-me-exp-edit"
                 aria-label="編輯導覽經驗"
                 onClick={() => { setExpInput(String(experienceYears)); setExpError(null); setEditingExp(true); }}
-                style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 14 }}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}
               >
-                ✏️
+                <Icon name="edit" size={14} />
               </button>
             </span>
           )}
@@ -278,17 +278,33 @@ export default function Midao2MePage() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
         <Btn kind="primary" onClick={handleShare} data-testid="midao2-me-share">
-          🔗 分享接案頁
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="share" size={16} />
+            分享接案頁
+          </span>
         </Btn>
         <div style={{ display: 'flex', gap: 8 }}>
           <Btn kind="secondary" onClick={() => window.open('/g/' + slug)}>
-            👁 預覽接案頁
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="eye" size={16} />
+              預覽接案頁
+            </span>
           </Btn>
           <Btn kind="secondary" onClick={handleCopy} data-testid="midao2-me-copy-url">
-            {copied ? '✓ 已複製' : '🔗 複製網址'}
+            {copied ? (
+              '✓ 已複製'
+            ) : (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <Icon name="link" size={16} />
+                複製網址
+              </span>
+            )}
           </Btn>
           <Btn kind="secondary" onClick={handleDownloadQr} data-testid="midao2-me-qr">
-            ⬇ 下載 QR Code
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Icon name="qr-code" size={16} />
+              下載 QR Code
+            </span>
           </Btn>
         </div>
         <div ref={qrRef} style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}>
@@ -297,8 +313,13 @@ export default function Midao2MePage() {
       </div>
 
       <div style={{ borderTop: `1px solid ${C.BORDER}`, paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <a href="/guide/dashboard" data-testid="midao2-me-classic" style={{ fontSize: 14, color: C.TEXT, textDecoration: 'none' }}>
-          ↩ 切回傳統後台
+        <a
+          href="/guide/dashboard"
+          data-testid="midao2-me-classic"
+          style={{ fontSize: 14, color: C.TEXT, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+        >
+          <Icon name="back" size={16} />
+          切回傳統後台
         </a>
         <button
           type="button"

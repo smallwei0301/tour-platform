@@ -5,7 +5,7 @@
 // edit 模式選檔後立即 compressImage→upload-image→PATCH coverImageUrl。
 
 import React, { useState } from 'react';
-import { C, Btn, Field, apiSend } from '../ui';
+import { C, Btn, Field, apiSend, Icon } from '../ui';
 import { compressImage } from '../../../../src/lib/client-image-compress';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
 
@@ -187,7 +187,7 @@ export default function ServiceForm({
                   background: step === s.key ? C.ACCENT : step > s.key ? C.GREEN : C.BORDER,
                 }}
               >
-                {step > s.key ? '✓' : s.key}
+                {step > s.key ? <Icon name="check" size={14} style={{ color: '#ffffff' }} /> : s.key}
               </span>
               <span style={{ fontSize: 13, color: step === s.key ? C.TEXT : C.MUTED, fontWeight: step === s.key ? 700 : 500 }}>{s.label}</span>
             </div>
@@ -223,7 +223,7 @@ export default function ServiceForm({
                 <img src={coverPreview} alt="封面預覽" style={{ width: '100%', maxHeight: 140, objectFit: 'cover', borderRadius: 8 }} />
               ) : (
                 <>
-                  <span style={{ fontSize: 28 }}>🏞</span>
+                  <Icon name="image-upload" size={28} style={{ color: C.MUTED }} />
                   <span>{coverUploading ? '上傳中…' : '新增封面照片'}</span>
                 </>
               )}
@@ -342,7 +342,7 @@ export default function ServiceForm({
               {coverPreview ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={coverPreview} alt={form.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              ) : <span style={{ fontSize: 32 }}>🏞</span>}
+              ) : <Icon name="image-upload" size={32} style={{ color: C.MUTED }} />}
             </div>
             <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>{form.title || '（尚未命名）'}</div>

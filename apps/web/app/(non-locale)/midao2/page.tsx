@@ -4,7 +4,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { C, Card, Badge, Btn, Spinner, EmptyState, ErrorState, copyToClipboard, apiGet } from './ui';
+import { C, Card, Badge, Btn, Spinner, EmptyState, ErrorState, copyToClipboard, apiGet, Icon } from './ui';
 import { buildLineReplyText } from '../../../src/lib/midao/midao-copy-templates.mjs';
 
 type MidaoRequest = {
@@ -92,7 +92,9 @@ export default function Midao2HomePage() {
           onClick={() => router.push('/midao2/requests?status=new')}
           data-testid="midao2-stat-new"
         >
-          <div style={{ fontSize: 22, marginBottom: 4 }}>📄</div>
+          <div style={{ marginBottom: 4 }}>
+            <Icon name="file-text" size={22} />
+          </div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{counts.newRequests}</div>
           <div style={{ fontSize: 13, color: C.MUTED }}>筆新需求</div>
         </Card>
@@ -101,7 +103,9 @@ export default function Midao2HomePage() {
           onClick={() => router.push('/midao2/requests?status=pending_reply')}
           data-testid="midao2-stat-pending"
         >
-          <div style={{ fontSize: 22, marginBottom: 4 }}>💬</div>
+          <div style={{ marginBottom: 4 }}>
+            <Icon name="message" size={22} />
+          </div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{counts.pendingReply}</div>
           <div style={{ fontSize: 13, color: C.MUTED }}>筆待回覆</div>
         </Card>
@@ -118,8 +122,31 @@ export default function Midao2HomePage() {
             {topRequest.activityTitle && (
               <div style={{ fontSize: 14, color: C.TEXT, marginTop: 4 }}>{topRequest.activityTitle}</div>
             )}
-            <div style={{ fontSize: 13, color: C.MUTED, marginTop: 8 }}>
-              📅 {topRequest.preferredDate}・👤 {topRequest.participantsCount} 人・🌐 {topRequest.language ?? '—'}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 4,
+                fontSize: 13,
+                color: C.MUTED,
+                marginTop: 8,
+              }}
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="date" size={14} />
+                {topRequest.preferredDate}
+              </span>
+              <span>・</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="people" size={14} />
+                {topRequest.participantsCount} 人
+              </span>
+              <span>・</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Icon name="language" size={14} />
+                {topRequest.language ?? '—'}
+              </span>
             </div>
             <div style={{ fontSize: 12, color: C.MUTED, marginTop: 4 }}>{relativeTime(topRequest.createdAt)} 收到</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
@@ -170,11 +197,13 @@ export default function Midao2HomePage() {
                     flexShrink: 0,
                   }}
                 >
-                  👤
+                  <Icon name="profile" size={18} style={{ color: C.MUTED }} />
                 </div>
                 <div style={{ flex: 1, fontSize: 14, fontWeight: 500 }}>{r.travelerName}</div>
                 <Badge status={r.status} />
-                <span style={{ color: C.MUTED }}>›</span>
+                <span style={{ color: C.MUTED, display: 'flex' }}>
+                  <Icon name="chevron-right" size={16} />
+                </span>
               </div>
             ))
           )}
@@ -186,12 +215,14 @@ export default function Midao2HomePage() {
         onClick={() => router.push('/midao2/me')}
         data-testid="midao2-share-cta"
       >
-        <div style={{ fontSize: 22 }}>📤</div>
+        <Icon name="share" size={22} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 700 }}>分享接案頁</div>
           <div style={{ fontSize: 13, color: C.MUTED }}>讓旅客直接送出需求</div>
         </div>
-        <span style={{ color: C.MUTED }}>›</span>
+        <span style={{ color: C.MUTED, display: 'flex' }}>
+          <Icon name="chevron-right" size={18} />
+        </span>
       </Card>
     </div>
   );

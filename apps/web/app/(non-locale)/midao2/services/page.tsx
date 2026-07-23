@@ -4,7 +4,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { C, Card, Btn, Spinner, EmptyState, ErrorState, apiGet } from '../ui';
+import { C, Card, Btn, Spinner, EmptyState, ErrorState, apiGet, Icon } from '../ui';
 
 type MidaoService = {
   activityId: string;
@@ -68,7 +68,10 @@ function Midao2ServicesPageInner() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>我的服務</h1>
         <Btn kind="primary" onClick={() => router.push('/midao2/services/new')} data-testid="midao2-svc-new">
-          ＋ 新增服務
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="plus" size={16} />
+            新增服務
+          </span>
         </Btn>
       </div>
 
@@ -157,7 +160,7 @@ function Midao2ServicesPageInner() {
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={svc.coverImageUrl} alt={svc.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     ) : (
-                      <span style={{ fontSize: 28 }}>🏞</span>
+                      <Icon name="image-upload" size={28} style={{ color: C.MUTED }} />
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -175,10 +178,10 @@ function Midao2ServicesPageInner() {
                         type="button"
                         onClick={() => router.push(`/midao2/services/${svc.activityId}/edit`)}
                         data-testid={`midao2-svc-edit-${svc.activityId}`}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 16 }}
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex' }}
                         aria-label="編輯服務"
                       >
-                        ✏️
+                        <Icon name="edit" size={18} />
                       </button>
                     </div>
                     <div style={{ fontSize: 18, fontWeight: 700 }}>{svc.title}</div>

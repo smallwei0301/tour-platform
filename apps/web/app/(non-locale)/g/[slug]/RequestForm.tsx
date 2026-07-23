@@ -4,7 +4,7 @@
 // 聯絡方式 → 特殊需求 → honeypot → 送出。公開端無 CSRF，plain fetch。
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { C, Card, Btn } from '../../midao2/ui';
+import { C, Card, Btn, Icon } from '../../midao2/ui';
 
 type QuestionType = 'text' | 'single_choice' | 'multi_choice' | 'yes_no';
 
@@ -255,7 +255,9 @@ export default function RequestForm({
   if (step === 'done') {
     return (
       <Card data-testid="g-done" style={{ textAlign: 'center', padding: '40px 20px' }}>
-        <div style={{ fontSize: 44, color: C.GREEN, lineHeight: 1 }}>✓</div>
+        <div style={{ color: C.GREEN, display: 'flex', justifyContent: 'center' }}>
+          <Icon name="check-circle" size={48} />
+        </div>
         <div style={{ fontSize: 20, fontWeight: 700, marginTop: 14 }}>需求已送出</div>
         <div style={{ fontSize: 14, color: C.MUTED, marginTop: 6, fontFamily: 'monospace' }}>編號 #{requestNo}</div>
         <div style={{ fontSize: 14, color: C.TEXT, marginTop: 16 }}>
@@ -307,7 +309,7 @@ export default function RequestForm({
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   ) : (
-                    <span style={{ fontSize: 32 }}>🏞</span>
+                    <Icon name="image-upload" size={32} style={{ color: C.MUTED }} />
                   )}
                 </div>
                 <div style={{ fontSize: 17, fontWeight: 700 }}>{svc.title}</div>

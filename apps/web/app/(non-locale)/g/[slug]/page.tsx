@@ -4,6 +4,7 @@
 import { notFound } from 'next/navigation';
 import { getPublicMidaoPageDb } from '../../../../src/lib/midao/db-midao-showcase.mjs';
 import RequestForm from './RequestForm';
+import { Icon } from '../../midao2/ui';
 
 // 與 apps/web/app/(non-locale)/midao2/ui.tsx 的 C 常數同值。
 // 該檔標記 'use client'：server component 若直接 import 會踩 RSC client-reference 邊界
@@ -126,8 +127,18 @@ export default async function GuidePublicPage({ params }: PageParams) {
                 color: C.MUTED,
               }}
             >
-              {guide.regions.length > 0 && <span>📍 {guide.regions.join('・')}</span>}
-              {guide.experienceYears != null && <span>🗺 導覽經驗 {guide.experienceYears} 年</span>}
+              {guide.regions.length > 0 && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="location" size={14} />
+                  {guide.regions.join('・')}
+                </span>
+              )}
+              {guide.experienceYears != null && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Icon name="map" size={14} />
+                  導覽經驗 {guide.experienceYears} 年
+                </span>
+              )}
             </div>
           )}
         </div>

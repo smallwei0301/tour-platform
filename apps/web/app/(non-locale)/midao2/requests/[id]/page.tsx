@@ -4,7 +4,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { C, Card, Badge, Btn, Spinner, ErrorState, copyToClipboard, apiGet, apiSend } from '../../ui';
+import { C, Card, Badge, Btn, Spinner, ErrorState, copyToClipboard, apiGet, apiSend, Icon } from '../../ui';
 import {
   buildRequestSummaryText,
   buildLineReplyText,
@@ -168,9 +168,9 @@ export default function Midao2RequestDetailPage() {
           type="button"
           onClick={() => router.back()}
           aria-label="返回"
-          style={{ background: 'transparent', border: 'none', fontSize: 20, cursor: 'pointer', color: C.TEXT, padding: 0 }}
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: C.TEXT, padding: 0, display: 'flex' }}
         >
-          ←
+          <Icon name="back" size={20} />
         </button>
         <h1 style={{ textAlign: 'center', fontSize: 18, fontWeight: 700, margin: 0 }}>需求詳情</h1>
         <div />
@@ -199,12 +199,13 @@ export default function Midao2RequestDetailPage() {
                   border: 'none',
                   background: C.GREEN,
                   color: '#ffffff',
-                  fontSize: 11,
-                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   cursor: 'pointer',
                 }}
               >
-                LINE
+                <Icon name="line" size={20} style={{ color: '#ffffff' }} />
               </button>
             )}
             {email && (
@@ -221,10 +222,9 @@ export default function Midao2RequestDetailPage() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   textDecoration: 'none',
-                  fontSize: 16,
                 }}
               >
-                ✉
+                <Icon name="email" size={18} />
               </a>
             )}
           </div>
@@ -232,7 +232,19 @@ export default function Midao2RequestDetailPage() {
       </div>
 
       <Card>
-        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>📅 行程需求</div>
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            marginBottom: 12,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <Icon name="itinerary" size={18} />
+          行程需求
+        </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>
           {request.activityTitle && (
             <div>
@@ -270,13 +282,20 @@ export default function Midao2RequestDetailPage() {
 
       {request.specialNote && (
         <Card style={{ background: C.ORANGE_SOFT, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 18 }}>♿</div>
+          <Icon name="walking" size={18} />
           <div style={{ fontSize: 14, color: C.TEXT }}>{request.specialNote}</div>
         </Card>
       )}
 
       <Btn kind="secondary" onClick={handleCopySummary} data-testid="midao2-detail-copy-summary">
-        {copiedSummary ? '已複製 ✓' : '📄 複製需求摘要'}
+        {copiedSummary ? (
+          '已複製 ✓'
+        ) : (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="copy" size={16} />
+            複製需求摘要
+          </span>
+        )}
       </Btn>
 
       <div>
@@ -301,9 +320,13 @@ export default function Midao2RequestDetailPage() {
                   fontSize: 13,
                   fontWeight: 700,
                   cursor: statusSaving ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
                 }}
               >
-                {selected ? '✓ ' : ''}
+                {selected && <Icon name="check-circle" size={16} />}
                 {opt.label}
               </button>
             );
@@ -313,7 +336,14 @@ export default function Midao2RequestDetailPage() {
       </div>
 
       <Btn kind="primary" onClick={handleCopyReply} data-testid="midao2-detail-copy-reply">
-        {copiedReply ? '已複製 ✓' : '📄 複製 LINE 回覆'}
+        {copiedReply ? (
+          '已複製 ✓'
+        ) : (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Icon name="copy" size={16} />
+            複製 LINE 回覆
+          </span>
+        )}
       </Btn>
     </div>
   );

@@ -6,14 +6,14 @@
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect } from 'react';
-import { C } from './ui';
+import { C, Icon } from './ui';
 
 const TABS = [
-  { href: '/midao2', label: '首頁', icon: '🏠' },
-  { href: '/midao2/requests', label: '需求', icon: '📋' },
-  { href: '/midao2/calendar', label: '行事曆', icon: '📅' },
-  { href: '/midao2/services', label: '服務', icon: '🧭' },
-  { href: '/midao2/me', label: '我的頁面', icon: '👤' },
+  { href: '/midao2', label: '首頁', icon: 'home' },
+  { href: '/midao2/requests', label: '需求', icon: 'requests' },
+  { href: '/midao2/calendar', label: '行事曆', icon: 'calendar' },
+  { href: '/midao2/services', label: '服務', icon: 'services' },
+  { href: '/midao2/me', label: '我的頁面', icon: 'profile' },
 ];
 
 export default function Midao2Layout({ children }: { children: React.ReactNode }) {
@@ -82,7 +82,7 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
                 color: isActive ? C.ACCENT : C.MUTED,
               }}
             >
-              <span style={{ fontSize: 20 }}>{tab.icon}</span>
+              <Icon name={tab.icon} size={22} />
               <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 500 }}>{tab.label}</span>
             </Link>
           );
