@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 13:20 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 14:37 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -43,13 +43,16 @@
 - A4 correction v3 focused SPEC PASS；QUALITY/SECURITY以non-root probe證實umask0777產生的mode000 HOME無法先open directory FD（EACCES）。v4在`mkdtemp`前暫設umask0077並於成功／失敗都恢復原值；若HOME已建立，restore/setup任何失敗仍進cleanup；hostile0777測試須驗原umask恢復且完整npm11 probe成功。
 - A4 correction v4 focused SPEC PASS；QUALITY/SECURITY證實恢復hostile umask後才mkdir cache仍會產生mode000／EACCES。v5讓umask0077涵蓋全部純同步HOME/cache/npmrc setup與FD/path驗證，禁止期間await/spawn；每個成功／失敗點均先恢復原umask，再進child或外層cleanup。
 - A4 executable correction v5 final fresh focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，綁定`633083083830e6260d5235bddcbe37d9b6f500e0`，blocking 0。Reviewer以UID65534 hostile umask0777等價probe驗HOME/cache0700、兩npmrc0600、原umask恢復、strict isolated local npm `11.9.0` exit0且temp HOME已清除。
+- 2026-07-23 A4 secret-safe CI command evidence runner完成strict TDD與多輪adversarial remediation；final implementation HEAD `3c0365c81a3060530dca855e40ead84044fbe110`。Final Node22 focused suite `25/25 PASS`、frozen targeted child＋`tsc --noEmit` exit0、`--check-only` PASS；evidence tree `1f7273fe6f5680e5fde6eff8d46d1fb17e9907bd`、linked-worktree manifest mode `0600`。
+- A4 final contracts涵蓋exact lint/typecheck/build modes、validated Node22/npm11.9.0、strict reconstructed env、build secrets只存在child env、per-stream fragment/oversize redaction、repo dotenv/npmrc guards、hostile umask下HOME/cache0700與npmrc0600 FD/path identity、完整primary-first cleanup、clean HEAD/tree pre/postflight，以及cleanup成功後才發布0600 atomic evidence。
+- A4 final fresh SPEC/AC與QUALITY/SECURITY/EXECUTABILITY reviewers皆PASS，綁定同一HEAD `3c0365c8`，blocking 0；獨立重現post-rename＋rm failure＋lstat EIO攻擊，確認unlink fallback執行、target不存在且PRIMARY／SECONDARY／TERTIARY errors保留。
 
 ## 下一步
-- 執行A4 strict TDD：先新增完整adversarial unit tests並觀察runner module missing／contract RED，再做minimal GREEN、exact staged evidence與commit。
-- A4完成後同樣依序fresh SPEC與QUALITY/SECURITY review；雙PASS前不進Phase B migrations。
+- 進入Phase B Task B1 strict TDD：先新增`midao-backend-mode-migration.test.mjs`並觀察migration missing RED，再做additive `20260723000000_midao_backend_mode.sql` minimal GREEN與exact staged evidence。
+- Phase B migrations依序完成source contract與clean local Postgres runtime gates；未經reviewed migration protocol不apply production。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan：`bcb81b11`已取得fresh spec＋quality/security雙PASS；本次只聚焦A4 distinct npmrc executable correction。
+- 不重跑或重審完整plan／A4：完整plan `bcb81b11`與A4 final implementation `3c0365c8`皆已取得fresh spec＋quality/security雙PASS；下一步只進Phase B B1。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
