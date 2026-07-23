@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 17:56 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 18:03 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -63,12 +63,14 @@
 - C4固定`midao_impersonation_actor` host-only HttpOnly SameSite=Lax cookie，production Secure；payload只允許exact六鍵且無token，target/tamper/future/expiry/cross-protocol皆fail closed。Issued/expiry正規化至epoch-second，同組signed timestamps驅動Max-Age/Expires並clamp至guide-session expiry；clear helper同scope＋Max-Age=0＋past Expires。
 - 2026-07-23 Phase C Task C4A admin impersonation route canonical actor完成strict TDD；final HEAD `ff77d9ccedabac9d8f5ceeb60f3a733a4b59b0cb`。Route＋existing admin＋actor regressions `26/26 PASS`、typecheck與`--check-only` PASS，tree `fd83e808c69c6218bcc44ccc8ed8666f89e4c095`、manifest mode `0600`；首次review timeout為INCONCLUSIVE，窄化純static re-review PASS，blocking 0。
 - C4A actor email只取`pickAdminCredentials(request).email`後trim/lower，缺少即401；禁止body actor/token。Signed actor target取DB `guide.id`，guide session version/display name保持DB canonical；既有admin middleware/CSRF、UUID/config preflight、approved gate與visible banner均不弱化。
+- 2026-07-23 Phase C Task C4B ordinary login/logout clears impersonation完成strict TDD；final HEAD `0419e4345e1c9c6ef9679c5a5497788483b6d645`。Focused `14/14 PASS`、typecheck與`--check-only` PASS，tree `bd87139d02a643ff4211ba9f59ac9da33638fcfa`、manifest mode `0600`；fresh flow／security review PASS，blocking 0。
+- C4B單一helper同時清signed actor與visible banner；invite、email/password、legacy guideId三條成功登入在新session headers後清除，DELETE成功在guide/CSRF clear後清除。所有CSRF、credential、suspension、timeout/error paths不誤清。
 
 ## 下一步
-- 進入Phase C Task C4B：invite、email/password、legacy guideId三條普通成功登入與DELETE logout都清除signed actor＋visible banner；error paths不誤清。
+- 進入Phase C Task C5：canonical guide runtime DB projection、signed session version/approved/flag/mode gates與verified impersonation actor。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／C1–C4A：對應anchors均已有fresh PASS；C4A final為`ff77d9cc`。下一步只進C4B。
+- 不重跑或重審完整plan／A4／Phase B／C1–C4B：對應anchors均已有fresh PASS；C4B final為`0419e434`。下一步只進C5。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
