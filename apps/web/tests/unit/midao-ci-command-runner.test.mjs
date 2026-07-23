@@ -61,6 +61,10 @@ function baseAdapters(overrides = {}) {
     },
     cleanupTempEnvironment: () => calls.push('cleanup'),
     randomBytes: () => Buffer.from('r'.repeat(48)),
+    probeNpmVersion: async ({ env }) => {
+      calls.push(['npm-version', env]);
+      return { status: 0, signal: null, error: null, stdout: '11.9.0\n' };
+    },
     spawnChild: async ({ env, onOutput }) => {
       calls.push(['spawn', env]);
       const hostileLine = `Authorization: Basic ${SECRET}\n`;
@@ -355,15 +359,25 @@ test('strict temp env runs pinned local npm without network under hostile umask'
   }
 });
 
-test('atomic writer removes a target when rename reports failure after replacement', () => {
+test('atomic writer aggregates post-rename cleanup errors and invalidates the target', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-atomic-'));
   const target = path.join(directory, 'evidence.json');
+  let targetRemoveFailed = false;
   const fsAdapter = new Proxy(fs, {
     get(source, property) {
       if (property === 'renameSync') {
         return (from, to) => {
           fs.renameSync(from, to);
-          throw new Error('post-rename fault');
+          throw new Error('PRIMARY post-rename fault');
+        };
+      }
+      if (property === 'rmSync') {
+        return (candidate, options) => {
+          if (candidate === target && !targetRemoveFailed) {
+            targetRemoveFailed = true;
+            throw new Error('SECONDARY target remove fault');
+          }
+          return fs.rmSync(candidate, options);
         };
       }
       const value = Reflect.get(source, property);
@@ -371,7 +385,15 @@ test('atomic writer removes a target when rename reports failure after replaceme
     },
   });
   try {
-    assert.throws(() => writeAtomic0600(target, '{}\n', { fsAdapter, randomBytes: () => Buffer.alloc(8, 1) }), /post-rename fault/);
+    assert.throws(
+      () => writeAtomic0600(target, '{}\n', { fsAdapter, randomBytes: () => Buffer.alloc(8, 1) }),
+      (error) => {
+        assert.match(error.message, /PRIMARY post-rename fault/);
+        assert.equal(error instanceof AggregateError, true);
+        assert.match(error.errors[1].message, /SECONDARY target remove fault/);
+        return true;
+      },
+    );
     assert.equal(fs.existsSync(target), false);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });
@@ -428,6 +450,44 @@ test('build secrets exist only in child env, not wrapper argv, log, or evidence'
   assert.doesNotMatch(serialized, new RegExp(captured.GUIDE_SESSION_SECRET));
   assert.doesNotMatch(serialized, new RegExp(captured.ADMIN_ACCESS_TOKEN));
   assert.deepEqual(result.wrapperArgv, [NODE22, 'scripts/testing/run-midao-ci-command.mjs', 'build']);
+});
+
+test('npm version probe requires exact 11.9.0 newline and fails closed on every outcome', async () => {
+  const outcomes = [
+    { status: 0, signal: null, error: null, stdout: '0.0.0\n' },
+    { status: 0, signal: null, error: null, stdout: '11.9.0' },
+    { status: 0, signal: null, error: null, stdout: '11.9.0 \n' },
+    { status: 7, signal: null, error: null, stdout: '11.9.0\n' },
+    { status: null, signal: 'SIGTERM', error: null, stdout: '' },
+    { status: null, signal: null, error: null, stdout: '' },
+    { status: null, signal: null, error: new Error('version spawn fault'), stdout: '' },
+  ];
+  for (const outcome of outcomes) {
+    const adapters = baseAdapters({ probeNpmVersion: async () => outcome });
+    await assert.rejects(() => runCiCommand({ argv: ['lint'], adapters }), /npm 11\.9\.0|version probe/i);
+    assert.equal(adapters.calls.includes('cleanup'), true);
+    assert.equal(adapters.calls.some((call) => Array.isArray(call) && call[0] === 'spawn'), false);
+    assert.equal(adapters.calls.some((call) => Array.isArray(call) && call[0] === 'publish'), false);
+  }
+});
+
+test('terminated and cross-chunk oversized lines are replaced by markers', async () => {
+  for (const chunks of [
+    ['X'.repeat(65_537) + '\n'],
+    ['X'.repeat(40_000), 'X'.repeat(25_537) + '\n'],
+  ]) {
+    const adapters = baseAdapters({
+      spawnChild: async ({ onOutput }) => {
+        for (const chunk of chunks) onOutput('stdout', chunk);
+        onOutput('stderr', 'safe\n');
+        return { status: 0, signal: null, error: null };
+      },
+    });
+    await runCiCommand({ argv: ['lint'], adapters });
+    const log = adapters.calls.find((call) => Array.isArray(call) && call[0] === 'log')[1];
+    assert.match(log, /REDACTED OVERSIZE LINE/);
+    assert.equal(log.includes('X'.repeat(1024)), false);
+  }
 });
 
 test('child throw, signal, nonzero, dirty postflight, and cleanup failure never publish', async () => {

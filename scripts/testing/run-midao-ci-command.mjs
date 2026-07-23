@@ -291,9 +291,10 @@ function createOutputCollector(knownSecrets) {
         if (newline < 0) break;
         const line = carry.slice(0, newline + 1);
         carry = carry.slice(newline + 1);
-        lines.push(`[${key}] ${safeOutputLine(line, knownSecrets)}`);
+        if (Buffer.byteLength(line, 'utf8') > 65_536) lines.push(`[${key}] [REDACTED OVERSIZE LINE]\n`);
+        else lines.push(`[${key}] ${safeOutputLine(line, knownSecrets)}`);
       }
-      if (carry.length > 65_536) {
+      if (Buffer.byteLength(carry, 'utf8') > 65_536) {
         lines.push(`[${key}] [REDACTED OVERSIZE LINE]\n`);
         carry = '';
       }
@@ -336,11 +337,30 @@ export async function runCiCommand({ argv, adapters }) {
   let primaryError;
   try {
     temp = adapters.createTempEnvironment();
-    const env = buildChildEnvironment({ mode, nodePath: execPath, npmPath, temp, parent, randomBytes: adapters.randomBytes });
-    const knownSecrets = [...sensitiveParentValues(parent), env.GUIDE_SESSION_SECRET, env.ADMIN_ACCESS_TOKEN].filter(Boolean);
+    const probeEnvironment = buildChildEnvironment({
+      mode: 'lint',
+      npmPath,
+      nodePath: execPath,
+      temp,
+      randomBytes: adapters.randomBytes,
+    });
+    const versionResult = await adapters.probeNpmVersion({
+      command: npmPath,
+      args: ['--version'],
+      env: probeEnvironment,
+      cwd: repoRoot,
+    });
+    if (versionResult.error || versionResult.signal || versionResult.status !== 0 || versionResult.stdout !== '11.9.0\n') {
+      fail('npm 11.9.0 version probe failed');
+    }
+    const childEnvironment = mode === 'build'
+      ? buildChildEnvironment({ mode, npmPath, nodePath: execPath, temp, randomBytes: adapters.randomBytes })
+      : probeEnvironment;
+    const generatedSecrets = mode === 'build' ? [childEnvironment.GUIDE_SESSION_SECRET, childEnvironment.ADMIN_ACCESS_TOKEN] : [];
+    const knownSecrets = [...sensitiveParentValues(parent), ...generatedSecrets].filter(Boolean);
     const collector = createOutputCollector(knownSecrets);
     const childArgv = [npmPath, ...childArgs];
-    const child = await adapters.spawnChild({ command: npmPath, args: childArgs, env, cwd: repoRoot, shell: false, onOutput: (stream, chunk) => collector.push(stream, chunk) });
+    const child = await adapters.spawnChild({ command: npmPath, args: childArgs, env: childEnvironment, cwd: repoRoot, shell: false, onOutput: (stream, chunk) => collector.push(stream, chunk) });
     if (child?.error) throw child.error;
     if (child?.signal) fail(`child terminated by signal ${child.signal}`);
     if (!Number.isInteger(child?.status)) fail('child exit status is missing');
@@ -353,7 +373,7 @@ export async function runCiCommand({ argv, adapters }) {
       mode,
       wrapperArgv: adapters.wrapperArgv(),
       childArgv,
-      envNames: Object.keys(env).sort(),
+      envNames: Object.keys(childEnvironment).sort(),
       exitCode: child.status,
       head: before.head,
       tree: before.tree,
@@ -403,15 +423,79 @@ export function writeAtomic0600(target, content, { fsAdapter = fs, randomBytes =
     renameAttempted = true;
     fsAdapter.renameSync(temporary, target);
   } catch (error) {
+    let primaryError = asError(error);
     if (descriptor !== undefined) {
-      try { fsAdapter.closeSync(descriptor); } catch {}
+      try {
+        fsAdapter.closeSync(descriptor);
+      } catch (closeError) {
+        primaryError = combineErrors(primaryError, closeError, 'atomic FD close');
+      }
     }
-    try { fsAdapter.rmSync(temporary, { force: true }); } catch {}
+    try {
+      fsAdapter.rmSync(temporary, { force: true });
+    } catch (removeError) {
+      primaryError = combineErrors(primaryError, removeError, 'atomic temp remove');
+      try {
+        fsAdapter.unlinkSync(temporary);
+      } catch (unlinkError) {
+        if (unlinkError.code !== 'ENOENT') primaryError = combineErrors(primaryError, unlinkError, 'atomic temp unlink fallback');
+      }
+    }
     if (renameAttempted) {
-      try { fsAdapter.rmSync(target, { force: true }); } catch {}
+      try {
+        fsAdapter.rmSync(target, { force: true });
+      } catch (removeError) {
+        primaryError = combineErrors(primaryError, removeError, 'atomic target remove');
+      }
+      let targetRemains = false;
+      try {
+        fsAdapter.lstatSync(target);
+        targetRemains = true;
+      } catch (statError) {
+        if (statError.code !== 'ENOENT') primaryError = combineErrors(primaryError, statError, 'atomic target verification');
+      }
+      if (targetRemains) {
+        try {
+          fsAdapter.unlinkSync(target);
+          targetRemains = false;
+        } catch (unlinkError) {
+          primaryError = combineErrors(primaryError, unlinkError, 'atomic target unlink fallback');
+        }
+      }
+      if (targetRemains) primaryError = combineErrors(primaryError, new Error('success evidence artifact remains'), 'atomic fail-closed verification');
     }
-    throw error;
+    throw primaryError;
   }
+}
+
+function defaultProbeNpmVersion({ command, args, env, cwd }) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(command, args, { cwd, env, shell: false, stdio: ['ignore', 'pipe', 'ignore'] });
+    } catch (error) {
+      resolve({ status: null, signal: null, error, stdout: '' });
+      return;
+    }
+    let output = '';
+    let oversized = false;
+    let spawnError = null;
+    child.stdout.on('data', (chunk) => {
+      if (oversized) return;
+      output += String(chunk);
+      if (Buffer.byteLength(output, 'utf8') > 64) {
+        output = '';
+        oversized = true;
+      }
+    });
+    child.on('error', (error) => { spawnError = error; });
+    child.on('close', (status, signal) => resolve({
+      status,
+      signal,
+      error: spawnError,
+      stdout: oversized ? '' : output,
+    }));
+  });
 }
 
 function defaultSpawnChild({ command, args, env, cwd, onOutput }) {
@@ -446,6 +530,7 @@ function defaultAdapters() {
     createTempEnvironment: () => createSecureTempEnvironment(),
     cleanupTempEnvironment: (temp) => temp.cleanup(),
     randomBytes: crypto.randomBytes,
+    probeNpmVersion: defaultProbeNpmVersion,
     spawnChild: defaultSpawnChild,
     writeLog: (content, { mode }) => {
       const target = gitPath(`midao-ci-${mode}.log`);
