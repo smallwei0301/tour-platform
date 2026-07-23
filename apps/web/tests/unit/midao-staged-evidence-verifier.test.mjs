@@ -349,3 +349,28 @@ test('writes manifest as 0600 and check-only rejects mode tampering', () => {
   const checkMocks = verifierAdapters({ existingBundle: bundle, manifestMode: 0o644 });
   assert.throws(() => createVerifier(checkMocks.overrides).run(['--check-only']), /0600|mode|permission/i);
 });
+
+test('rejects tracked and untracked YAML configuration drift', () => {
+  for (const file of ['config/ci.yaml', '.github/workflows/ci.yml']) {
+    rejects({ before: snapshot({ trackedUnstaged: [file] }), after: snapshot({ trackedUnstaged: [file] }) }, /tracked unstaged/i);
+    rejects({ before: snapshot({ untracked: [file] }), after: snapshot({ untracked: [file] }) }, /untracked code/i);
+  }
+});
+
+test('rejects docs-only untracked changes while child runs', () => {
+  rejects({ after: snapshot({ untracked: ['notes/new.md'] }) }, /untracked.*changed|state changed/i);
+  rejects({ after: snapshot({ untracked: ['notes/password=hunter2.md'] }) }, /secret|untracked.*changed/i);
+});
+
+test('check-only binds docs-only snapshot to current untracked files', () => {
+  const entry = validateRun(validRun());
+  const bundle = { schemaVersion: 1, tree: 'tree-a', entries: [entry] };
+  assert.throws(
+    () => validateBundle({ bundle, current: snapshot({ untracked: ['notes/new.md'] }), evidence: validRun().evidence, now: NOW }),
+    /docs-only|untracked|snapshot/i,
+  );
+  assert.throws(
+    () => validateBundle({ bundle, current: snapshot({ untracked: ['notes/password=hunter2.md'] }), evidence: validRun().evidence, now: NOW }),
+    /secret/i,
+  );
+});

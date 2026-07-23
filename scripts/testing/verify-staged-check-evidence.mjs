@@ -8,7 +8,8 @@ import { pathToFileURL } from 'node:url';
 
 export const CODE_LIKE_UNTRACKED = Object.freeze([
   '.js', '.jsx', '.cjs', '.mjs', '.ts', '.tsx', '.cts', '.mts',
-  '.sql', '.sh', '.bash', '.json', '.toml', '.css', '.scss', '.sass', '.less',
+  '.sql', '.sh', '.bash', '.json', '.toml', '.yaml', '.yml',
+  '.css', '.scss', '.sass', '.less',
   '.html', '.vue', '.svelte', '.py', '.rb', '.go', '.rs', '.java', '.kt', '.kts', '.php',
 ]);
 
@@ -37,6 +38,21 @@ function isCodeLike(file) {
 
 function isTestPath(file) {
   return TEST_PATH.test(file);
+}
+
+function docsOnlyPaths(state) {
+  return [...(state.untracked ?? [])]
+    .filter((file) => !isCodeLike(file) && !isTestPath(file))
+    .sort();
+}
+
+function snapshotPaths(state) {
+  return [
+    ...(state.staged ?? []).flatMap((item) => [item.path, item.oldPath].filter(Boolean)),
+    ...(state.trackedUnstaged ?? []),
+    ...(state.untracked ?? []),
+    ...(state.tracked ?? []),
+  ];
 }
 
 function assertFresh(epoch, now) {
@@ -107,6 +123,7 @@ export function deriveExpectedEvidenceCmd(childArgv, options = {}) {
 
 function assertSafeState(state, label) {
   if (!state || typeof state.tree !== 'string' || !Array.isArray(state.staged)) fail(`${label} state is invalid`);
+  assertNoSecrets(snapshotPaths(state).join('\n'), `${label} snapshot paths`);
   for (const item of state.staged) {
     if (String(item.status).startsWith('D')) fail('staged deletion is forbidden');
     if (String(item.status).startsWith('R')) fail('staged rename is forbidden');
@@ -144,6 +161,7 @@ export function validateRun(input) {
   const expectedEvidenceCmd = deriveExpectedEvidenceCmd(childArgv, classifyOptions);
   if (before.tree !== after.tree) fail('git write-tree changed while child ran');
   if (!same(before.staged, after.staged)) fail('staged state changed (status/path/blob mismatch)');
+  if (!same([...(before.untracked ?? [])].sort(), [...(after.untracked ?? [])].sort())) fail('untracked state changed while child ran');
   if (existingBundle && existingBundle.tree !== before.tree) fail('old bundle from a different tree was not cleared');
   assertNoSecrets(stdout, 'stdout');
   assertNoSecrets(stderr, 'stderr');
@@ -159,7 +177,7 @@ export function validateRun(input) {
     expectedEvidenceCmd,
     stagedManifest: before.staged.map((item) => ({ ...item })),
     coveredPaths: child.paths.filter((file) => stagedTests.has(file)),
-    docsOnlyUntracked: (before.untracked ?? []).filter((file) => !isCodeLike(file)),
+    docsOnlyUntracked: docsOnlyPaths(before),
   };
   if (child.kind === 'heavy') {
     entry.childExitCode = childExitCode;
@@ -208,6 +226,7 @@ function validateEntryShape(entry, current, now) {
   validateStagedManifest(entry.stagedManifest);
   if (!Array.isArray(entry.coveredPaths) || entry.coveredPaths.some((item) => typeof item !== 'string')) fail('bundle covered paths schema is invalid');
   if (!Array.isArray(entry.docsOnlyUntracked) || entry.docsOnlyUntracked.some((item) => typeof item !== 'string')) fail('bundle docs-only paths schema is invalid');
+  if (!same(entry.docsOnlyUntracked, docsOnlyPaths(current))) fail('bundle docs-only untracked snapshot does not match current state');
   if (typeof entry.expectedEvidenceCmd !== 'string') fail('bundle expected command schema is invalid');
   if (!same(entry.stagedManifest, current.staged)) fail('bundle entry staged manifest does not match current state');
   assertFresh(entry.verifiedAt, now);
