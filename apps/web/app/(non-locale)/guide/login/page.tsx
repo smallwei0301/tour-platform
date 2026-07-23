@@ -2,29 +2,10 @@
 
 import { Suspense, useMemo, useState } from 'react';
 import { csrfHeaders } from '../../../../src/lib/csrf-client';
+import { resolveGuideLoginRedirect } from '../../../../src/lib/midao/login-redirect';
 
 const REQUEST_TIMEOUT_MS = 10000;
 const AUTH_REQUEST_TIMEOUT = 'AUTH_REQUEST_TIMEOUT';
-
-function sanitizeGuideNext(next: string | null): string {
-  const fallback = '/guide/dashboard';
-  if (!next) return fallback;
-  if (next.startsWith('//')) return fallback;
-  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(next)) return fallback;
-
-  try {
-    const base = 'https://guide.local';
-    const parsed = new URL(next, base);
-    if (parsed.origin !== base) return fallback;
-
-    const normalizedPath = parsed.pathname;
-    if (normalizedPath !== '/guide' && !normalizedPath.startsWith('/guide/')) return fallback;
-
-    return `${normalizedPath}${parsed.search}${parsed.hash}`;
-  } catch {
-    return fallback;
-  }
-}
 
 async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit) {
   const controller = new AbortController();
@@ -53,7 +34,7 @@ function GuideLoginForm() {
     return new URLSearchParams(window.location.search);
   }, []);
   const token = params.get('token') || '';
-  const safeNext = sanitizeGuideNext(params.get('next'));
+  const requestedNext = params.get('next');
   const router = useMemo(
     () => ({
       push: (nextPath: string) => {
@@ -97,9 +78,7 @@ function GuideLoginForm() {
       const json = await res.json();
 
       if (json?.data?.created) {
-        // 首次（驗證碼）登入：先導向公開頁編輯，引導導遊調整資料並自行
-        // 發佈（預設未公開）。後續登入照常依 next 參數。
-        router.push(isFirstTime ? '/guide/profile' : safeNext);
+        router.push(resolveGuideLoginRedirect(json.data.redirectTo, requestedNext));
       } else {
         const code = json?.error?.code || '';
         if (code === 'TOKEN_EXPIRED') setError('邀請碼已過期，請聯絡管理員重新產生');
