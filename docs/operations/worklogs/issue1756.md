@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 12:49 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 13:20 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -42,9 +42,10 @@
 - A4 correction v2 focused SPEC PASS；QUALITY/SECURITY仍FAIL一項：hostile umask也會讓`mkdtemp` HOME mode000，cache同樣缺exact mode readback，setup fail-closed可能被誤算probe通過。v3要求HOME/cache皆透過directory FD `fchmod/fstat`＋path `lstat` same dev/inode達exact0700，restrictive-umask case必須完成全setup並讓strict local npm11 no-network probe成功。
 - A4 correction v3 focused SPEC PASS；QUALITY/SECURITY以non-root probe證實umask0777產生的mode000 HOME無法先open directory FD（EACCES）。v4在`mkdtemp`前暫設umask0077並於成功／失敗都恢復原值；若HOME已建立，restore/setup任何失敗仍進cleanup；hostile0777測試須驗原umask恢復且完整npm11 probe成功。
 - A4 correction v4 focused SPEC PASS；QUALITY/SECURITY證實恢復hostile umask後才mkdir cache仍會產生mode000／EACCES。v5讓umask0077涵蓋全部純同步HOME/cache/npmrc setup與FD/path驗證，禁止期間await/spawn；每個成功／失敗點均先恢復原umask，再進child或外層cleanup。
+- A4 executable correction v5 final fresh focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，綁定`633083083830e6260d5235bddcbe37d9b6f500e0`，blocking 0。Reviewer以UID65534 hostile umask0777等價probe驗HOME/cache0700、兩npmrc0600、原umask恢復、strict isolated local npm `11.9.0` exit0且temp HOME已清除。
 
 ## 下一步
-- 對A4 distinct npmrc executable correction做fresh focused SPEC與QUALITY/SECURITY review；雙PASS後才執行A4 strict TDD。
+- 執行A4 strict TDD：先新增完整adversarial unit tests並觀察runner module missing／contract RED，再做minimal GREEN、exact staged evidence與commit。
 - A4完成後同樣依序fresh SPEC與QUALITY/SECURITY review；雙PASS前不進Phase B migrations。
 
 ## 絕不重做（Do-NOT-redo）
