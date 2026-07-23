@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS public.midao_notification_outbox (
 );
 
 CREATE INDEX IF NOT EXISTS midao_notification_outbox_claim_idx
-  ON public.midao_notification_outbox (status, next_attempt_at, created_at)
+  ON public.midao_notification_outbox (status, next_attempt_at, created_at, id)
   WHERE status IN ('pending', 'failed');
 
 ALTER TABLE public.midao_notification_outbox ENABLE ROW LEVEL SECURITY;
