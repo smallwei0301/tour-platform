@@ -109,6 +109,7 @@ export function Btn({
   disabled,
   'data-testid': testId,
   type = 'button',
+  style,
 }: {
   kind?: 'primary' | 'secondary' | 'ghost';
   children: React.ReactNode;
@@ -116,6 +117,7 @@ export function Btn({
   disabled?: boolean;
   'data-testid'?: string;
   type?: 'button' | 'submit' | 'reset';
+  style?: React.CSSProperties;
 }) {
   const base: React.CSSProperties = {
     height: 48,
@@ -143,7 +145,7 @@ export function Btn({
       onClick={onClick}
       disabled={disabled}
       data-testid={testId}
-      style={{ ...base, ...byKind }}
+      style={{ ...base, ...byKind, ...style }}
     >
       {children}
     </button>

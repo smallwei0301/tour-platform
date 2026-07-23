@@ -67,7 +67,12 @@ function Midao2ServicesPageInner() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>我的服務</h1>
-        <Btn kind="primary" onClick={() => router.push('/midao2/services/new')} data-testid="midao2-svc-new">
+        <Btn
+          kind="primary"
+          onClick={() => router.push('/midao2/services/new')}
+          data-testid="midao2-svc-new"
+          style={{ width: 'auto', height: 40, borderRadius: 999, fontSize: 14, padding: '0 16px', flexShrink: 0 }}
+        >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <Icon name="plus" size={16} />
             新增服務
@@ -117,8 +122,8 @@ function Midao2ServicesPageInner() {
                 borderBottom: active ? `2px solid ${C.ACCENT}` : '2px solid transparent',
                 color: active ? C.ACCENT : C.MUTED,
                 fontWeight: active ? 700 : 500,
-                fontSize: 14,
-                padding: '8px 2px',
+                fontSize: 16,
+                padding: '10px 2px',
                 cursor: 'pointer',
               }}
             >
