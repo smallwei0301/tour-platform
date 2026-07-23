@@ -24,6 +24,7 @@ type GuideSessionInviteProfile = {
   invite_token: string | null;
   invite_token_expires_at: string | null;
   guide_session_version: number | null;
+  backend_mode: 'legacy' | 'midao';
 };
 
 type GuideSessionLoginProfile = {
@@ -32,6 +33,7 @@ type GuideSessionLoginProfile = {
   guide_password_hash: string | null;
   guide_session_version: number | null;
   verification_status: string;
+  backend_mode: 'legacy' | 'midao';
 };
 
 type SupabaseSingleResult<T> = GuideAuthSingleResult<T>;
@@ -56,6 +58,11 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_QUERY_TIMEO
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+function canonicalGuideRedirect(backendMode: 'legacy' | 'midao', isNew: boolean): '/midao' | '/guide/profile' | '/guide/dashboard' {
+  if (backendMode === 'midao') return '/midao';
+  return isNew ? '/guide/profile' : '/guide/dashboard';
 }
 
 function appendClearImpersonationCookies(headers: Headers): void {
@@ -119,7 +126,7 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionInviteProfile>>(
         supabase
           .from('guide_profiles')
-          .select<GuideSessionInviteProfile>('id, display_name, invite_token, invite_token_expires_at, guide_session_version')
+          .select<GuideSessionInviteProfile>('id, display_name, invite_token, invite_token_expires_at, guide_session_version, backend_mode')
           .eq('invite_token', token)
           .single()
       );
@@ -154,7 +161,7 @@ export async function POST(req: Request) {
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
       appendClearImpersonationCookies(headers);
 
-      return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+      return new Response(JSON.stringify(ok({ created: true, redirectTo: canonicalGuideRedirect(guide.backend_mode, true) })), { status: 200, headers });
     }
 
     // ── Regular password login (email + password) ─────────────────────────────
@@ -163,7 +170,7 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
-          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status')
+          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status, backend_mode')
           .eq('guide_email', loginEmail)
           .single()
       );
@@ -203,7 +210,7 @@ export async function POST(req: Request) {
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
       appendClearImpersonationCookies(headers);
 
-      return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+      return new Response(JSON.stringify(ok({ created: true, redirectTo: canonicalGuideRedirect(guide.backend_mode, false) })), { status: 200, headers });
     }
 
     // ── Legacy: guideId + password (backward compat) ───────────────────────────
@@ -211,7 +218,7 @@ export async function POST(req: Request) {
       const { data: guide, error } = await withTimeout<SupabaseSingleResult<GuideSessionLoginProfile>>(
         supabase
           .from('guide_profiles')
-          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status')
+          .select<GuideSessionLoginProfile>('id, display_name, guide_password_hash, guide_session_version, verification_status, backend_mode')
           .eq('id', loginGuideId)
           .single()
       );
@@ -251,7 +258,7 @@ export async function POST(req: Request) {
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
       appendClearImpersonationCookies(headers);
 
-      return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
+      return new Response(JSON.stringify(ok({ created: true, redirectTo: canonicalGuideRedirect(guide.backend_mode, false) })), { status: 200, headers });
     }
 
     return Response.json(fail('BAD_REQUEST', '請提供登入憑證'), { status: 400 });
