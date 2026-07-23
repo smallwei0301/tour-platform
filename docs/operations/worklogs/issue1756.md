@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 17:00 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 17:12 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -55,13 +55,14 @@
 - B4建立專用append-only `midao_audit_events`，含actor/guide/action/resource/request/reason/metadata/timestamp、兩組stable indexes、ENABLE/FORCE RLS、零policy及service-role-only SELECT/INSERT；不委託`audit_logs`。Shared SQL lexer補上E-string backslash semantics，八句top-level exact allowlist拒絕extra GRANT與DO/dynamic inverse RLS。
 - 2026-07-23 Phase C Task C1 shared guide-session crypto完成strict TDD；final HEAD `e2fd257d5e487b0785bd9083e8f44a83df61501a`。Missing module RED時existing guide-auth `14 PASS`；final focused compatibility `28/28 PASS`、staged integration `6/6 PASS`、typecheck與`--check-only` PASS，tree `48a3d3530374aa19a554a7166417624aa1d4bfee`、manifest mode `0600`；fresh SPEC／security／legacy compatibility review PASS，blocking 0。
 - C1精確保持guide HMAC bytes `${guideId}:${sessionVersion}`與三段cookie token，抽離production/build/dev secret lifecycle且不export raw secret；新增domain＋NUL＋UTF-8 payload byteLength framing供impersonation actor，guide與actor signature不可跨protocol驗證。
+- 2026-07-23 Phase C Task C2 signed session version完成strict TDD；final HEAD `73977a6efbf990c1c7f76af6af8095311c61edd6`。Valid version=7的RED為`undefined !== 7`且tamper path原已GREEN；final focused regressions `20/20 PASS`、typecheck與`--check-only` PASS，tree `5bfd010b5d07b537222c5771d521f8094d05deed`、manifest mode `0600`；fresh SPEC／security review PASS，blocking 0。
+- C2只在guide ID、三段token、number parse及HMAC驗證全部成功後暴露`sessionVersion`，version/signature tamper回`null`，token格式與既有API保持相容。
 
 ## 下一步
-- 進入Phase C Task C2：先以新test鎖定valid version=7回傳`signed sessionVersion`與tamper/null行為，再minimal擴充`GuideSessionPayload`，保持三段token格式。
-- C1 authoritative multi-test evidence命令與frozen verifier「只允許staged test path」衝突；既有tests已獨立28/28實跑，新staged integration test直接覆蓋guide-auth refactor，exact evidence採staged test＋typecheck並通過。
+- 進入Phase C Task C3：三個Midao backend flags default-off、只接受existing truthy contract、互不隱含；forward mode-switch與rollback gate語意以單元測試鎖定。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／C1：對應anchors均已有fresh PASS；C1 final為`e2fd257d`。下一步只進C2。
+- 不重跑或重審完整plan／A4／Phase B／C1–C2：對應anchors均已有fresh PASS；C2 final為`73977a6e`。下一步只進C3。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
