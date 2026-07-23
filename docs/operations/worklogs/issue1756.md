@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 15:21 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 16:21 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -49,13 +49,15 @@
 - 2026-07-23 Phase B Task B1 backend_mode additive migration完成strict TDD：missing migration RED `4/4 fail`；GREEN／exact staged evidence `4/4 PASS`、`--check-only` PASS，tree `0ad47d0a16303a392388bef3ec25905a19b655c8`、manifest mode `0600`。Implementation `7878e9fb22ec4fc9283065699d781eda015b894b`；fresh focused SPEC／SQL QUALITY review PASS，blocking 0。Migration只新增legacy-default欄位、named value constraint、mode index與comment，不修改session version或既有migration。
 - 2026-07-23 Phase B Task B2 notification outbox migration完成strict TDD及三輪security test remediation；final HEAD `1078f5c4fe93989b0eaa3f26d355f1d4e6bd9b57`。Final focused suite `2/2 PASS`、exact staged `--check-only` PASS，tree `475b65374dbc8d485a3ae1d3a14b63a0c4e8574c`、manifest mode `0600`；fresh SPEC／SQL QUALITY／SECURITY review PASS，blocking 0。
 - B2 exact source contract與28個具名mutation／hostile cases鎖定完整欄位type/null/default、status/attempt constraints、stable claim index `(status,next_attempt_at,created_at,id)`及partial predicate、ENABLE/FORCE RLS、零policy、exact revoke＋service-role DML ACL，以及payload禁止完整PII/payment secrets。Trailing DISABLE／NO FORCE與comment-prefixed hidden GRANT皆實測拒絕。
+- 2026-07-23 Phase B Task B3 durable idempotency migration完成strict TDD與SQL tokenizer remediation；final HEAD `acd58f618abcd06285b9dd4b12f3e2271e5abad5`。Final focused suite `3/3 PASS`、exact staged `--check-only` PASS，tree `51ae364bdeec463ccd3c4fb6d76654716a6f7e56`、manifest mode `0600`；fresh SPEC／SQL QUALITY／SECURITY review PASS，blocking 0。
+- B3 schema鎖定actor/command/guide-scope key、SHA-256 request hash、processing/completed response invariant、scope-aware uniqueness、expiry/stale-processing indexes、exact RLS/ACL與去敏snapshot comments；不同guide可重用key，processing replay必須wait/retry且不得讀placeholder。Source test的PostgreSQL-aware lexer正確處理single/double/dollar quotes、nested comments及normal-state separators，quoted comment marker後active grant與comment-only必要clause均實測拒絕。
 
 ## 下一步
-- 進入Phase B Task B3 durable idempotency migration strict TDD：先建立完整source contract並觀察missing migration RED，再做additive schema／scoped unique key／stale-processing indexes／RLS ACL minimal GREEN。
+- 進入Phase B Task B4 transactional audit migration strict TDD：先建立actor/guide/action/resource/request/reason/metadata source contract並觀察missing migration RED，再做service-role-only additive schema minimal GREEN。
 - Phase B migrations依序完成source contract與clean local Postgres runtime gates；未經reviewed migration protocol不apply production。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／B1／B2：對應anchors均已有fresh PASS；B2 final為`1078f5c4`。下一步只進Phase B B3。
+- 不重跑或重審完整plan／A4／B1–B3：對應anchors均已有fresh PASS；B3 final為`acd58f61`。下一步只進Phase B B4。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
