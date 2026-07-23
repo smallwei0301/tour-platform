@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 const runner = await import('../../../../scripts/testing/with-midao-local-supabase.mjs');
@@ -7,12 +10,13 @@ const {
   parseSupabasePin,
   canonicalProjectId,
   classifySupabaseStatus,
-  acquireRunnerLock,
   confirmProjectContainers,
   assertOwnershipUnchanged,
   redactSupabaseOutput,
   buildSupabaseCliInvocation,
-  buildFlockInvocation,
+  acquireKernelRunnerLock,
+  releaseKernelRunnerLock,
+  createActualAdapter,
   runWithLocalSupabase,
 } = runner;
 
@@ -52,20 +56,36 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
   assert.equal(classifySupabaseStatus({ exitCode: 0, stdout: '{"DB_URL":"postgres://local"}', stderr: '', expectedProjectId: projectId }), 'running');
 });
 
-test('filesystem metadata is written only while kernel advisory lock is held', async () => {
+test('same-process secure FD lock rejects contention and unsafe filesystem identities', async () => {
   assert.equal(LOCK_PATH, '/tmp/tour-platform-local-supabase.lock');
-  let text = '';
-  const fs = {
-    async writeFile(_path, value) { text = value; },
-    async readFile() { return text; },
-  };
-  const metadata = { pid: 10, processStartTicks: '100', repoRoot: '/repo' };
-  await assert.rejects(acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata }), /KERNEL_LOCK_REQUIRED/u);
-  await acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata, kernelLockHeld: true });
-  assert.deepEqual(JSON.parse(text), metadata);
-  await assert.rejects(runner.releaseRunnerLock({ fs, lockPath: LOCK_PATH, metadata }), /KERNEL_LOCK_REQUIRED/u);
-  await runner.releaseRunnerLock({ fs, lockPath: LOCK_PATH, metadata, kernelLockHeld: true });
-  assert.equal(JSON.parse(text).released, true);
+  const root = await mkdtemp(join(tmpdir(), 'midao-lock-test-'));
+  try {
+    const lockDir = join(root, 'lock');
+    const first = await acquireKernelRunnerLock({ lockDir });
+    await assert.rejects(acquireKernelRunnerLock({ lockDir }), /LOCK_HELD/u);
+    await releaseKernelRunnerLock(first);
+    const afterRelease = await acquireKernelRunnerLock({ lockDir });
+    await releaseKernelRunnerLock(afterRelease);
+
+    const symlinkTarget = join(root, 'target');
+    await mkdir(symlinkTarget, { mode: 0o700 });
+    await symlink(symlinkTarget, join(root, 'symlink-lock'));
+    await assert.rejects(acquireKernelRunnerLock({ lockDir: join(root, 'symlink-lock') }), /UNSAFE_LOCK/u);
+
+    const wrongMode = join(root, 'wrong-mode');
+    await mkdir(wrongMode, { mode: 0o755 });
+    await assert.rejects(acquireKernelRunnerLock({ lockDir: wrongMode }), /UNSAFE_LOCK/u);
+
+    const hardlinkDir = join(root, 'hardlink-lock');
+    await mkdir(hardlinkDir, { mode: 0o700 });
+    const victim = join(root, 'victim');
+    await writeFile(victim, 'unchanged', { mode: 0o600 });
+    await link(victim, join(hardlinkDir, 'runner.lock'));
+    await assert.rejects(acquireKernelRunnerLock({ lockDir: hardlinkDir }), /UNSAFE_LOCK/u);
+    assert.equal(await readFile(victim, 'utf8'), 'unchanged');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('project-scoped docker identity requires exact label and name suffix and captures IDs', () => {
@@ -106,11 +126,27 @@ test('CLI invocation is pinned offline npm exec and never PATH supabase', () => 
   });
 });
 
-test('kernel flock invocation is the only lifecycle entry and is nonblocking', () => {
-  assert.deepEqual(buildFlockInvocation('/node22', '/repo/scripts/testing/with-midao-local-supabase.mjs', ['a.test.mjs']), {
-    command: 'flock',
-    args: ['--exclusive', '--nonblock', LOCK_PATH, '/node22', '/repo/scripts/testing/with-midao-local-supabase.mjs', 'a.test.mjs'],
-  });
+test('actual adapter captures full immutable IDs and cleans containers, networks, volumes in order', async () => {
+  const calls = [];
+  const commandRunner = async (command, args) => {
+    calls.push([command, ...args]);
+    if (args[0] === 'ps') return { exitCode: 0, stdout: `full-container-id\tsupabase_db_${projectId}\t${projectId}\n`, stderr: '' };
+    if (args[0] === 'network' && args[1] === 'ls') return { exitCode: 0, stdout: `full-network-id\tsupabase_network_${projectId}\t${projectId}\n`, stderr: '' };
+    if (args[0] === 'volume' && args[1] === 'ls') return { exitCode: 0, stdout: `supabase_db_${projectId}\t${projectId}\n`, stderr: '' };
+    return { exitCode: 0, stdout: '', stderr: '' };
+  };
+  const adapter = createActualAdapter({ repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', commandRunner });
+  const containers = await adapter.containers();
+  const assets = await adapter.assets();
+  await adapter.stop(containers, assets);
+  assert.deepEqual(calls, [
+    ['docker', 'ps', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'network', 'ls', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'volume', 'ls', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'rm', '--force', '--', 'full-container-id'],
+    ['docker', 'network', 'rm', 'full-network-id'],
+    ['docker', 'volume', 'rm', 'supabase_db_midao-backend-design'],
+  ]);
 });
 
 test('redaction removes explicit and structured local credentials from all output', () => {
