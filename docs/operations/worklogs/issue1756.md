@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 08:50 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 08:56 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -31,9 +31,10 @@
 - 2026-07-23 第一次exact A1 `npm ci` runtime完成661 packages後仍exit 1：package/package-lock未變、sentinel absent、TypeScript與Supabase PASS，唯一drift為npm 11 Arborist重寫`yarn.lock` 205 additions/12 deletions（diff SHA-256 `4e12b9d08811e8a1308ad025ac795650d95b52e0ff45749472f2170dcdcf23d1`）。npm source證實會load/save既有Yarn lock；已restore original SHA `b05a422f35e6d76e4e8b8a6f24ca712373bd513c43317482a607c1bf9039814e`，worktree clean，A1仍未PASS。
 - 2026-07-23 v4 focused review雙FAIL/HOLD：`test A && test B`受Bash errexit例外可讓unexpected Yarn regular file被覆寫後假綠；cleanup restore失敗仍刪temp HOME會遺失唯一backup。v5拆分simple tests，使用`mv -fT`，且backup仍存在時保留temp HOME並非0退出。Scratch probes：normal failure、unexpected regular皆rc1且original restored；unexpected directory rc1且backup preserved。
 - 2026-07-23 v5 focused SPEC PASS、QUALITY/SECURITY/EXECUTABILITY FAIL/HOLD：另有executable/mode/npmrc `&&` lists可受errexit例外假綠，且`test -z "$(git status ...)"`可吞git command failure。v6將A1所有`&&`清零，各gate獨立simple command；git status先以assignment capture（保留command exit）再驗空。
+- 2026-07-23 v6 fresh focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，blocking 0（anchor `ff3cec9b`）。Adversarial injections涵蓋executable/npmrc symlink、writable mode、git status fail/dirty、npm exit 42、Yarn regular/symlink/directory及restore failure，全部nonzero且無資料遺失；`bash -n`／diff check／clean PASS。
 
 ## 下一步
-- v5 focused SPEC PASS／QUALITY FAIL；v6已清除A1所有`&&` errexit例外，並將兩處git status改為先capture command exit再驗空。新的focused雙PASS後才可重跑；A1 runtime exit 0前仍HOLD。
+- v6 focused雙PASS；以tracked background重跑exact reviewed A1 block，只有runtime exit 0與全部postflight gates通過才可標A1 PASS。
 - A1綠後才執行A2 exact 38-test auth baseline；紅燈立即HOLD，不混入本package。
 
 ## 絕不重做（Do-NOT-redo）
