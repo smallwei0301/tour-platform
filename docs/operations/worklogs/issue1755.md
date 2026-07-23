@@ -169,6 +169,8 @@ Reviewer evidence：
 3. Restore #1756 `status:ready` only after A1 actually exits 0; then execute A2 exact 38-test baseline.
 4. A2 PASS後才進A3 strict RED → minimal GREEN；不得重建另一個implementation worktree。
 
+第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD：A1兩個blocks缺fail-fast，且npm 11.9.0不能將user/global config同設 `/dev/null`。已將完整A1合併為單一 `set -euo pipefail` block，temporary HOME內建立不同0600 user/global npmrc；新的focused review PASS前維持HOLD。
+
 ## Safety anchors
 
 - Existing migrations are immutable; new timestamps only move forward across package merges.

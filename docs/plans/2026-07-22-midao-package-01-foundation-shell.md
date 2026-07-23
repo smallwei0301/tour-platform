@@ -103,9 +103,10 @@ git rev-parse HEAD
 git merge-base --is-ancestor origin/main HEAD
 ```
 
-**Node/dependency/test-env preflight（每個新 shell session重跑；不得假設 nvm、ambient PATH或parent npm config可信）：**
+**Node/dependency/test-env preflight（每個新 shell session重跑；不得假設 nvm、ambient PATH或parent npm config可信）：** A1無條件從original lock重建dependencies；不得因 `node_modules`或單一dependency已存在而跳過。先要求完整tracked/untracked worktree clean，禁止repo/app `.npmrc` regular file或symlink，保存三個manifest/lock SHA；stale sentinel必須被 `npm ci`移除。`env -i`不繼承parent PATH、HOME、npm config、credentials或proxy；只傳固定allowlist。Cache位於runner-owned git metadata，registry與install flags固定。整個preflight/install/postflight是同一個fail-fast shell block：
 
 ```bash
+set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 NODE22_BIN='/root/.hermes/home/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node'
 NPM_ENTRY='/usr/local/lib/node_modules/npm/bin/npm-cli.js'
@@ -129,11 +130,7 @@ export GUIDE_SESSION_SECRET='midao-local-test-secret-at-least-32-bytes'
 export NODE_OPTIONS='--experimental-strip-types'
 node --version
 npm --version
-```
 
-A1無條件從original lock重建dependencies；不得因 `node_modules`或單一dependency已存在而跳過。先要求完整tracked/untracked worktree clean，禁止repo/app `.npmrc` regular file或symlink，保存三個manifest/lock SHA；stale sentinel必須被 `npm ci`移除。`env -i`不繼承parent PATH、HOME、npm config、credentials或proxy；只傳固定allowlist。Cache位於runner-owned git metadata，registry與install flags固定：
-
-```bash
 test -z "$(git status --porcelain)"
 for npmrc in "$REPO_ROOT/.npmrc" "$REPO_ROOT/apps/web/.npmrc"; do
   test ! -e "$npmrc" && test ! -L "$npmrc"
@@ -146,6 +143,11 @@ mkdir -p node_modules
 touch node_modules/.midao-a1-stale-sentinel
 A1_HOME="$(mktemp -d)"
 chmod 0700 "$A1_HOME"
+USER_NPMRC="$A1_HOME/user.npmrc"
+GLOBAL_NPMRC="$A1_HOME/global.npmrc"
+: > "$USER_NPMRC"
+: > "$GLOBAL_NPMRC"
+chmod 0600 "$USER_NPMRC" "$GLOBAL_NPMRC"
 trap 'rm -rf -- "$A1_HOME"' EXIT
 
 mkdir -p "$A1_CACHE"
@@ -153,8 +155,8 @@ timeout --signal=TERM 570s env -i \
   HOME="$A1_HOME" \
   PATH="$MIN_PATH" \
   LANG='C.UTF-8' LC_ALL='C.UTF-8' TERM='dumb' NO_COLOR='1' CI='1' NODE_ENV='test' \
-  npm_config_userconfig='/dev/null' \
-  npm_config_globalconfig='/dev/null' \
+  npm_config_userconfig="$USER_NPMRC" \
+  npm_config_globalconfig="$GLOBAL_NPMRC" \
   npm_config_cache="$A1_CACHE" \
   npm_config_registry='https://registry.npmjs.org/' \
   npm_config_package_lock='true' \
@@ -169,11 +171,10 @@ test "$(sha256sum package.json | cut -d' ' -f1)" = "$PACKAGE_SHA_BEFORE"
 test "$(sha256sum package-lock.json | cut -d' ' -f1)" = "$LOCK_SHA_BEFORE"
 test "$(sha256sum yarn.lock | cut -d' ' -f1)" = "$YARN_SHA_BEFORE"
 git diff --exit-code -- package.json package-lock.json yarn.lock
-test -z "$(git status --porcelain)"
 test -d node_modules/typescript
-
 test "$(sha256sum "$SUPABASE_BIN" | cut -d' ' -f1)" = "$SUPABASE_SHA256"
 test "$($SUPABASE_BIN --version 2>/dev/null)" = '2.87.2'
+test -z "$(git status --porcelain)"
 ```
 
 **2026-07-23 A1 correction:** Node 22搭配host npm 11.9.0實跑 `npm install --ignore-scripts`雖完成368 packages，卻自動刪除 `package-lock.json`內一筆nested optional-peer entry，正確觸發lock drift gate。Owner明確核准改用推薦方案 `npm ci --ignore-scripts`。Focused review進一步確認npm package的Supabase 2.87.2只靠postinstall下載binary，因此禁止後續 `npm exec` seam；已由既有verified cache供應固定standalone artifact至 `$SUPABASE_BIN`，其version、regular/executable/non-writable mode與SHA-256必須逐次重驗。若任一固定toolchain path、version、digest、mode、clean-state或install gate不符，立即HOLD；不得沿用舊tree後restore lock、不得執行 `npm audit fix`、不得下載floating CLI。Local-only secret只用於非production test process，不寫入 `.env`、log、worklog或commit。
