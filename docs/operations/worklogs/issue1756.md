@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 16:44 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 17:00 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -53,13 +53,15 @@
 - B3 schema鎖定actor/command/guide-scope key、SHA-256 request hash、processing/completed response invariant、scope-aware uniqueness、expiry/stale-processing indexes、exact RLS/ACL與去敏snapshot comments；不同guide可重用key，processing replay必須wait/retry且不得讀placeholder。Source test的PostgreSQL-aware lexer正確處理single/double/dollar quotes、nested comments及normal-state separators，quoted comment marker後active grant與comment-only必要clause均實測拒絕。
 - 2026-07-23 Phase B Task B4 transactional audit migration完成strict TDD與source-contract remediation；final HEAD `80903a715b9deaf7db8e30cf98e37ecee72c43b1`。Final focused suite `2/2 PASS`、exact staged `--check-only` PASS，tree `d5759ee1b6dd18181e4acd39f3aa22871175e813`、manifest mode `0600`；fresh SPEC／SQL QUALITY review PASS，blocking 0。
 - B4建立專用append-only `midao_audit_events`，含actor/guide/action/resource/request/reason/metadata/timestamp、兩組stable indexes、ENABLE/FORCE RLS、零policy及service-role-only SELECT/INSERT；不委託`audit_logs`。Shared SQL lexer補上E-string backslash semantics，八句top-level exact allowlist拒絕extra GRANT與DO/dynamic inverse RLS。
+- 2026-07-23 Phase C Task C1 shared guide-session crypto完成strict TDD；final HEAD `e2fd257d5e487b0785bd9083e8f44a83df61501a`。Missing module RED時existing guide-auth `14 PASS`；final focused compatibility `28/28 PASS`、staged integration `6/6 PASS`、typecheck與`--check-only` PASS，tree `48a3d3530374aa19a554a7166417624aa1d4bfee`、manifest mode `0600`；fresh SPEC／security／legacy compatibility review PASS，blocking 0。
+- C1精確保持guide HMAC bytes `${guideId}:${sessionVersion}`與三段cookie token，抽離production/build/dev secret lifecycle且不export raw secret；新增domain＋NUL＋UTF-8 payload byteLength framing供impersonation actor，guide與actor signature不可跨protocol驗證。
 
 ## 下一步
-- 進入Phase C Task C1 flags strict TDD；依序完成session version、signed impersonation、canonical runtime access與V2 route boundary。Phase C每task仍需exact staged evidence與fresh review。
-- Phase B migration runtime／ACL／RLS真實apply驗證保留在reviewed D3 local Supabase gate；未經migration protocol不apply production。
+- 進入Phase C Task C2：先以新test鎖定valid version=7回傳`signed sessionVersion`與tamper/null行為，再minimal擴充`GuideSessionPayload`，保持三段token格式。
+- C1 authoritative multi-test evidence命令與frozen verifier「只允許staged test path」衝突；既有tests已獨立28/28實跑，新staged integration test直接覆蓋guide-auth refactor，exact evidence採staged test＋typecheck並通過。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B B1–B4：對應anchors均已有fresh PASS；B4 final為`80903a71`。下一步只進Phase C。
+- 不重跑或重審完整plan／A4／Phase B／C1：對應anchors均已有fresh PASS；C1 final為`e2fd257d`。下一步只進C2。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
