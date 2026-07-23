@@ -197,7 +197,7 @@ export default function Midao2RequestDetailPage() {
                   height: 40,
                   borderRadius: '50%',
                   border: 'none',
-                  background: C.GREEN,
+                  background: '#06C755',
                   color: '#ffffff',
                   display: 'flex',
                   alignItems: 'center',
@@ -242,7 +242,7 @@ export default function Midao2RequestDetailPage() {
             gap: 6,
           }}
         >
-          <Icon name="itinerary" size={18} />
+          <Icon name="itinerary" size={18} style={{ color: C.ACCENT }} />
           行程需求
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 14 }}>

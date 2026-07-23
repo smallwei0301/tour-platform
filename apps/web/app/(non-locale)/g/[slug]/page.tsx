@@ -129,13 +129,13 @@ export default async function GuidePublicPage({ params }: PageParams) {
             >
               {guide.regions.length > 0 && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Icon name="location" size={14} />
+                  <Icon name="location" size={14} style={{ color: '#4F8062' }} />
                   {guide.regions.join('・')}
                 </span>
               )}
               {guide.experienceYears != null && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Icon name="map" size={14} />
+                  <Icon name="map" size={14} style={{ color: '#4F8062' }} />
                   導覽經驗 {guide.experienceYears} 年
                 </span>
               )}

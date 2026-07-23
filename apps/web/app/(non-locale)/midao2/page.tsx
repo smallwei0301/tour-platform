@@ -92,7 +92,7 @@ export default function Midao2HomePage() {
           onClick={() => router.push('/midao2/requests?status=new')}
           data-testid="midao2-stat-new"
         >
-          <div style={{ marginBottom: 4 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 999, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: C.ACCENT }}>
             <Icon name="file-text" size={22} />
           </div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{counts.newRequests}</div>
@@ -103,7 +103,7 @@ export default function Midao2HomePage() {
           onClick={() => router.push('/midao2/requests?status=pending_reply')}
           data-testid="midao2-stat-pending"
         >
-          <div style={{ marginBottom: 4 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 999, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8, color: C.ORANGE }}>
             <Icon name="message" size={22} />
           </div>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{counts.pendingReply}</div>

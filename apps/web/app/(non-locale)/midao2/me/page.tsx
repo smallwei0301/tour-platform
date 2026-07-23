@@ -192,12 +192,12 @@ export default function Midao2MePage() {
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon name="location" size={18} />
+          <Icon name="location" size={18} style={{ color: '#4F8062' }} />
           <span style={{ fontSize: 14, color: C.MUTED }}>服務區域</span>
           <span style={{ marginLeft: 'auto', fontSize: 14, fontWeight: 500 }}>{regions.length ? regions.join('・') : '—'}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon name="map" size={18} />
+          <Icon name="map" size={18} style={{ color: '#4F8062' }} />
           <span style={{ fontSize: 14, color: C.MUTED }}>導覽經驗</span>
           {editingExp ? (
             <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>

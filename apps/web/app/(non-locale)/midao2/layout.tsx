@@ -79,7 +79,7 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
                 justifyContent: 'center',
                 gap: 2,
                 textDecoration: 'none',
-                color: isActive ? C.ACCENT : C.MUTED,
+                color: isActive ? C.ACCENT : '#9ca3af',
               }}
             >
               <Icon name={tab.icon} size={22} />
