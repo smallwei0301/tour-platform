@@ -131,14 +131,18 @@ test('ordinary --all derives npm test and covers only tests selected by npm test
   const selected = 'apps/web/tests/api/other.test.mjs';
   const rootTest = 'apps/web/tests/slot-generator.test.mjs';
   const playwright = 'apps/web/e2e/t1-login.spec.ts';
+  const hiddenDirectory = 'apps/web/tests/.hidden/ghost.test.mjs';
+  const hiddenFile = 'apps/web/tests/unit/.ghost.test.mjs';
   const state = snapshot({
     staged: [
       ...snapshot().staged,
       { status: 'A', path: selected, blob: 'def456' },
       { status: 'A', path: rootTest, blob: 'abc789' },
       { status: 'A', path: playwright, blob: 'fed321' },
+      { status: 'A', path: hiddenDirectory, blob: '123abc' },
+      { status: 'A', path: hiddenFile, blob: '456def' },
     ],
-    tracked: [...snapshot().tracked, selected, rootTest, playwright],
+    tracked: [...snapshot().tracked, selected, rootTest, playwright, hiddenDirectory, hiddenFile],
   });
   const childArgv = ['.claude/hooks/run-checks.sh', '--all'];
   const input = validRun({
@@ -150,6 +154,37 @@ test('ordinary --all derives npm test and covers only tests selected by npm test
   });
   assert.equal(deriveExpectedEvidenceCmd(childArgv), 'npm test');
   assert.deepEqual(validateRun(input).coveredPaths, [TEST, selected]);
+});
+
+test('hidden tests require literal targeted entries in the coverage union', () => {
+  const hiddenDirectory = 'apps/web/tests/.hidden/ghost.test.mjs';
+  const hiddenFile = 'apps/web/tests/unit/.ghost.test.mjs';
+  const state = snapshot({
+    staged: [
+      ...snapshot().staged,
+      { status: 'A', path: hiddenDirectory, blob: '123abc' },
+      { status: 'A', path: hiddenFile, blob: '456def' },
+    ],
+    tracked: [...snapshot().tracked, hiddenDirectory, hiddenFile],
+  });
+  const allArgv = ['.claude/hooks/run-checks.sh', '--all'];
+  const allEntry = validateRun(validRun({
+    childArgv: allArgv, actualChildArgv: allArgv, before: state, after: state,
+    evidence: { cmd: 'npm test', exit_code: 0, epoch: NOW - 2 },
+  }));
+  assert.throws(
+    () => validateBundle({ bundle: { schemaVersion: 1, tree: 'tree-a', entries: [allEntry] }, current: state, evidence: allEntry.evidence, now: NOW }),
+    /cover every staged test/i,
+  );
+  const targetedArgv = ['.claude/hooks/run-checks.sh', hiddenDirectory, hiddenFile];
+  const targetedEvidence = { cmd: `node --test ${hiddenDirectory} ${hiddenFile}`, exit_code: 0, epoch: NOW - 1 };
+  const targetedEntry = validateRun(validRun({
+    childArgv: targetedArgv, actualChildArgv: targetedArgv, before: state, after: state, evidence: targetedEvidence,
+  }));
+  assert.doesNotThrow(() => validateBundle({
+    bundle: { schemaVersion: 1, tree: 'tree-a', entries: [allEntry, targetedEntry] },
+    current: state, evidence: targetedEvidence, now: NOW,
+  }));
 });
 
 test('allows only explicitly bounded --run-heavy runners', () => {

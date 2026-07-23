@@ -22,7 +22,7 @@ export const HEAVY_PREFIXES = Object.freeze([
 ]);
 const GLOB_META = /[*?\[\]{}]/u;
 const TEST_PATH = /(?:^|\/)(?:test|tests|e2e)\/.*\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
-const NPM_TEST_PATH = /^apps\/web\/tests\/[^/]+\/[^/]+\.test\.mjs$/u;
+const NPM_TEST_PATH = /^apps\/web\/tests\/(?!\.)[^/]+\/(?!\.)[^/]+\.test\.mjs$/u;
 const DOC_PATH = /\.(?:md|mdx|txt|rst|adoc)$/iu;
 const SECRET_VALUE = /(?:authorization\s*:\s*[^\r\n]+|(?:set-)?cookie\s*:\s*[^\r\n]+|(?:(?:api[_-]?)?(?:token|key)|password|secret|database[_-]?url|db[_-]?url|connection[_-]?(?:url|string)|dsn)\s*[:=]\s*(?:"[\s\S]*?"|'[\s\S]*?'|[^\r\n]+)|[a-z][a-z0-9+.-]*:\/\/[^\s\/:@]+:[^@\s\/]+@)/giu;
 
