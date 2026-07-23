@@ -2,6 +2,24 @@ import { ok } from '../../../../src/lib/api';
 import { validateCsrf } from '../../../../src/lib/csrf.mjs';
 import { clearGuideSessionCookies } from '../../../../src/lib/guide-auth';
 import { clearImpersonationActorCookie } from '../../../../src/lib/midao/impersonation-actor';
+import { verifyCanonicalGuideSession } from '../../../../src/lib/midao/canonical-guide-session';
+
+export async function GET(request: Request) {
+  try {
+    // Status is shared by legacy and Midao realms; feature-mode gating is irrelevant here,
+    // while guide HMAC, DB version/status and signed actor target remain mandatory.
+    const session = await verifyCanonicalGuideSession(request, {
+      requireMode: false,
+      flags: { backendEnabled: true },
+    });
+    return Response.json(ok({
+      active: session.actorType === 'admin',
+      guideName: session.guideName,
+    }));
+  } catch {
+    return Response.json(ok({ active: false }));
+  }
+}
 
 export async function DELETE(request: Request) {
   const csrfError = validateCsrf(request);

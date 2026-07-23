@@ -3,24 +3,23 @@
 import { useEffect, useState } from 'react';
 import { csrfHeaders } from '../../lib/csrf-client';
 
-const MARKER_COOKIE = 'guide_impersonation';
-
-function hasMarkerCookie(): boolean {
-  if (typeof document === 'undefined') return false;
-  return document.cookie
-    .split(';')
-    .map((cookie) => cookie.trim())
-    .some((cookie) => cookie.startsWith(`${MARKER_COOKIE}=`) && !cookie.startsWith(`${MARKER_COOKIE}=;`));
-}
+type VerifiedImpersonation = { active: boolean; guideName: string };
 
 export function ImpersonationBanner() {
-  const [visible, setVisible] = useState(false);
+  const [impersonation, setImpersonation] = useState<VerifiedImpersonation | null>(null);
   const [ending, setEnding] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
-    setVisible(hasMarkerCookie());
+    void fetch('/api/guide/impersonation', { method: 'GET', cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((json) => {
+        if (json?.data?.active === true && typeof json?.data?.guideName === 'string') {
+          setImpersonation({ active: true, guideName: json.data.guideName });
+        }
+      })
+      .catch(() => undefined);
   }, []);
 
   async function endImpersonation() {
@@ -34,7 +33,6 @@ export function ImpersonationBanner() {
         cache: 'no-store',
       });
       if (!response.ok) throw new Error('END_IMPERSONATION_FAILED');
-      document.cookie = `${MARKER_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
       window.location.href = '/admin/guides';
     } catch {
       setError('結束代入失敗，請再試一次');
@@ -42,7 +40,7 @@ export function ImpersonationBanner() {
     }
   }
 
-  if (!visible) return null;
+  if (!impersonation?.active) return null;
   return (
     <div
       data-testid="guide-impersonation-banner"
@@ -53,7 +51,7 @@ export function ImpersonationBanner() {
         fontSize: 13, fontWeight: 600, textAlign: 'center',
       }}
     >
-      <span>🛡️ 管理員代入模式：您正以此導遊身分操作導遊後台</span>
+      <span>🛡️ 管理員代入模式：正以「{impersonation.guideName}」身分操作導遊後台</span>
       <button
         type="button"
         onClick={endImpersonation}
