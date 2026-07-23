@@ -103,12 +103,27 @@ git rev-parse HEAD
 git merge-base --is-ancestor origin/main HEAD
 ```
 
-**Node/dependency/test-env preflight（每個新 shell session重跑；不得假設 nvm存在）：**
+**Node/dependency/test-env preflight（每個新 shell session重跑；不得假設 nvm、ambient PATH或parent npm config可信）：**
 
 ```bash
-NODE22_BIN="$(npx --yes node@22 -p 'process.execPath')"
-export PATH="$(dirname "$NODE22_BIN"):$PATH"
-test "$(node -p "process.versions.node.split('.')[0]")" = "22"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+NODE22_BIN='/root/.hermes/home/.npm/_npx/52027bd8fc0022aa/node_modules/node/bin/node'
+NPM_ENTRY='/usr/local/lib/node_modules/npm/bin/npm-cli.js'
+SUPABASE_BIN='/root/.hermes/toolchains/supabase/2.87.2/supabase'
+SUPABASE_SHA256='e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59'
+MIN_PATH="$(dirname "$NODE22_BIN"):/usr/local/bin:/usr/bin:/bin"
+
+for executable in "$NODE22_BIN" "$NPM_ENTRY" "$SUPABASE_BIN"; do
+  test -f "$executable" && test ! -L "$executable" && test -x "$executable"
+  EXEC_MODE="$(stat -c '%A' "$executable")"
+  test "${EXEC_MODE:5:1}" != 'w' && test "${EXEC_MODE:8:1}" != 'w'
+done
+test "$($NODE22_BIN -p "process.versions.node")" = '22.23.1'
+test "$(PATH="$MIN_PATH" "$NPM_ENTRY" --version)" = '11.9.0'
+test "$(sha256sum "$SUPABASE_BIN" | cut -d' ' -f1)" = "$SUPABASE_SHA256"
+test "$($SUPABASE_BIN --version 2>/dev/null)" = '2.87.2'
+
+export PATH="$MIN_PATH"
 export NODE_ENV=test
 export GUIDE_SESSION_SECRET='midao-local-test-secret-at-least-32-bytes'
 export NODE_OPTIONS='--experimental-strip-types'
@@ -116,25 +131,52 @@ node --version
 npm --version
 ```
 
-若fresh worktree缺dependencies，以tracked background執行deterministic lockfile install；Node/npm環境已於上方固定，`npm ci`必須先移除既有 `node_modules`並依現有lock重建，且不得正規化或修改lockfile：
+A1無條件從original lock重建dependencies；不得因 `node_modules`或單一dependency已存在而跳過。先要求完整tracked/untracked worktree clean，禁止repo/app `.npmrc` regular file或symlink，保存三個manifest/lock SHA；stale sentinel必須被 `npm ci`移除。`env -i`不繼承parent PATH、HOME、npm config、credentials或proxy；只傳固定allowlist。Cache位於runner-owned git metadata，registry與install flags固定：
 
 ```bash
-timeout --signal=TERM 570s npm ci --ignore-scripts
-git checkout -- yarn.lock
+test -z "$(git status --porcelain)"
+for npmrc in "$REPO_ROOT/.npmrc" "$REPO_ROOT/apps/web/.npmrc"; do
+  test ! -e "$npmrc" && test ! -L "$npmrc"
+done
+PACKAGE_SHA_BEFORE="$(sha256sum package.json | cut -d' ' -f1)"
+LOCK_SHA_BEFORE="$(sha256sum package-lock.json | cut -d' ' -f1)"
+YARN_SHA_BEFORE="$(sha256sum yarn.lock | cut -d' ' -f1)"
+A1_CACHE="$(git rev-parse --git-path midao-npm-cache)"
+mkdir -p node_modules
+touch node_modules/.midao-a1-stale-sentinel
+A1_HOME="$(mktemp -d)"
+chmod 0700 "$A1_HOME"
+trap 'rm -rf -- "$A1_HOME"' EXIT
+
+mkdir -p "$A1_CACHE"
+timeout --signal=TERM 570s env -i \
+  HOME="$A1_HOME" \
+  PATH="$MIN_PATH" \
+  LANG='C.UTF-8' LC_ALL='C.UTF-8' TERM='dumb' NO_COLOR='1' CI='1' NODE_ENV='test' \
+  npm_config_userconfig='/dev/null' \
+  npm_config_globalconfig='/dev/null' \
+  npm_config_cache="$A1_CACHE" \
+  npm_config_registry='https://registry.npmjs.org/' \
+  npm_config_package_lock='true' \
+  npm_config_ignore_scripts='true' \
+  npm_config_update_notifier='false' \
+  npm_config_fund='false' \
+  npm_config_audit='false' \
+  "$NPM_ENTRY" ci --ignore-scripts --include=dev --package-lock=true --fund=false --audit=false
+
+test ! -e node_modules/.midao-a1-stale-sentinel
+test "$(sha256sum package.json | cut -d' ' -f1)" = "$PACKAGE_SHA_BEFORE"
+test "$(sha256sum package-lock.json | cut -d' ' -f1)" = "$LOCK_SHA_BEFORE"
+test "$(sha256sum yarn.lock | cut -d' ' -f1)" = "$YARN_SHA_BEFORE"
 git diff --exit-code -- package.json package-lock.json yarn.lock
+test -z "$(git status --porcelain)"
+test -d node_modules/typescript
+
+test "$(sha256sum "$SUPABASE_BIN" | cut -d' ' -f1)" = "$SUPABASE_SHA256"
+test "$($SUPABASE_BIN --version 2>/dev/null)" = '2.87.2'
 ```
 
-**2026-07-23 A1 correction:** Node 22搭配host npm 11.9.0實跑 `npm install --ignore-scripts`雖完成368 packages，卻自動刪除 `package-lock.json`內一筆nested optional-peer entry，正確觸發lock drift gate。Owner明確核准改用推薦方案 `npm ci --ignore-scripts`。不得沿用該install tree後只restore lock、不得執行 `npm audit fix`；新的tracked run必須從original lock重建並以before/after SHA-256＋`git diff --exit-code`證明lock不變。
-
-安裝完成後確認 `node_modules/typescript`存在，並驗證lockfile-pinned Supabase CLI prerequisite：
-
-```bash
-SUPABASE_PIN="$(node -p "require('./package-lock.json').packages['node_modules/supabase'].version")"
-test -n "$SUPABASE_PIN"
-test "$(npm exec --offline --yes --package="supabase@$SUPABASE_PIN" -- supabase --version)" = "$SUPABASE_PIN"
-```
-
-若lockfile-pinned package不在offline npm cache或version不符，立即HOLD並取得owner核准的固定版本CLI供應方式；不得改跑unrestricted `npm install`／postinstall，也不得下載floating `npx supabase`，因repo lesson已記錄該遠端路徑會403/損壞。Local-only secret只用於非production test process，不寫入 `.env`、log、worklog或commit。
+**2026-07-23 A1 correction:** Node 22搭配host npm 11.9.0實跑 `npm install --ignore-scripts`雖完成368 packages，卻自動刪除 `package-lock.json`內一筆nested optional-peer entry，正確觸發lock drift gate。Owner明確核准改用推薦方案 `npm ci --ignore-scripts`。Focused review進一步確認npm package的Supabase 2.87.2只靠postinstall下載binary，因此禁止後續 `npm exec` seam；已由既有verified cache供應固定standalone artifact至 `$SUPABASE_BIN`，其version、regular/executable/non-writable mode與SHA-256必須逐次重驗。若任一固定toolchain path、version、digest、mode、clean-state或install gate不符，立即HOLD；不得沿用舊tree後restore lock、不得執行 `npm audit fix`、不得下載floating CLI。Local-only secret只用於非production test process，不寫入 `.env`、log、worklog或commit。
 
 **Files:**
 - Modify: `docs/operations/worklogs/issue1755.md`

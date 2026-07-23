@@ -162,13 +162,12 @@ Reviewer evidence：
 - #1757–#1761 remain `status:blocked + agent:queued`，各自需要獨立 micro-plan review。
 - No product code, migration implementation, push, PR, deploy, production SQL, or backend-mode switch has been performed.
 
-## Next action after reviewer PASS
+## Current next action after A1 correction review
 
-1. Apply and commit any valid plan/spec corrections.
-2. Change #1756 to `status:ready + agent:now`; remove `status:blocked + agent:next`.
-3. Add an `Agent priority routing update` comment with prerequisites and safety boundaries.
-4. Create a fresh Package 0 implementation worktree from the latest `origin/main`.
-5. Execute Task 1 in strict RED → minimal GREEN order.
+1. Commit the fail-closed A1 executable sequence and rerun two local-only focused reviewers.
+2. Only after dual PASS, execute the exact tracked `npm ci --ignore-scripts` block from original lock and verify manifest SHA、stale sentinel、TypeScript、fixed Supabase digest/version and final clean state.
+3. Restore #1756 `status:ready` only after A1 actually exits 0; then execute A2 exact 38-test baseline.
+4. A2 PASS後才進A3 strict RED → minimal GREEN；不得重建另一個implementation worktree。
 
 ## Safety anchors
 
