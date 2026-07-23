@@ -12,13 +12,116 @@ function migrationSql() {
   return fs.readFileSync(migrationPath, 'utf8');
 }
 
-function normalizedStatements(sql) {
-  return sql
-    .replace(/\/\*[\s\S]*?\*\//gu, ' ')
-    .replace(/--[^\r\n]*/gu, ' ')
-    .split(';')
-    .map((statement) => statement.replace(/\s+/gu, ' ').trim().toUpperCase())
-    .filter(Boolean);
+function lexSql(sql) {
+  const statements = [];
+  let executable = '';
+  let current = '';
+  let state = 'normal';
+  let dollarTag = '';
+  let blockDepth = 0;
+
+  const append = (text) => {
+    executable += text;
+    current += text;
+  };
+  const finishStatement = () => {
+    const normalized = current.replace(/\s+/gu, ' ').trim().toUpperCase();
+    if (normalized) statements.push(normalized);
+    current = '';
+    executable += ';';
+  };
+
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    const next = sql[index + 1];
+
+    if (state === 'line-comment') {
+      if (char === '\n' || char === '\r') {
+        append(char);
+        state = 'normal';
+      }
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (char === '/' && next === '*') {
+        blockDepth += 1;
+        index += 1;
+      } else if (char === '*' && next === '/') {
+        blockDepth -= 1;
+        index += 1;
+        if (blockDepth === 0) state = 'normal';
+      } else if (char === '\n' || char === '\r') {
+        append(char);
+      }
+      continue;
+    }
+    if (state === 'single-quote') {
+      append(char);
+      if (char === "'" && next === "'") {
+        append(next);
+        index += 1;
+      } else if (char === "'") {
+        state = 'normal';
+      }
+      continue;
+    }
+    if (state === 'double-quote') {
+      append(char);
+      if (char === '"' && next === '"') {
+        append(next);
+        index += 1;
+      } else if (char === '"') {
+        state = 'normal';
+      }
+      continue;
+    }
+    if (state === 'dollar-quote') {
+      if (sql.startsWith(dollarTag, index)) {
+        append(dollarTag);
+        index += dollarTag.length - 1;
+        state = 'normal';
+      } else {
+        append(char);
+      }
+      continue;
+    }
+
+    if (char === '-' && next === '-') {
+      append(' ');
+      state = 'line-comment';
+      index += 1;
+    } else if (char === '/' && next === '*') {
+      append(' ');
+      state = 'block-comment';
+      blockDepth = 1;
+      index += 1;
+    } else if (char === "'") {
+      append(char);
+      state = 'single-quote';
+    } else if (char === '"') {
+      append(char);
+      state = 'double-quote';
+    } else if (char === '$') {
+      const match = sql.slice(index).match(/^\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/u);
+      if (match) {
+        dollarTag = match[0];
+        append(dollarTag);
+        index += dollarTag.length - 1;
+        state = 'dollar-quote';
+      } else {
+        append(char);
+      }
+    } else if (char === ';') {
+      finishStatement();
+    } else {
+      append(char);
+    }
+  }
+
+  assert.ok(state === 'normal' || state === 'line-comment', `unterminated SQL ${state}`);
+  const normalized = current.replace(/\s+/gu, ' ').trim().toUpperCase();
+  if (normalized) statements.push(normalized);
+  return { executable, statements };
 }
 
 function assertColumns(sql) {
@@ -58,8 +161,7 @@ function assertIndexes(sql) {
   assert.match(sql, /CREATE\s+INDEX\s+IF\s+NOT\s+EXISTS\s+midao_idempotency_records_stale_processing_idx\s+ON\s+public\.midao_idempotency_records\s*\(\s*locked_at\s*,\s*id\s*\)\s+WHERE\s+state\s*=\s*'processing'/iu);
 }
 
-function assertSecurity(sql) {
-  const statements = normalizedStatements(sql);
+function assertSecurity(statements) {
   const rls = statements.filter((statement) => /^ALTER TABLE PUBLIC\.MIDAO_IDEMPOTENCY_RECORDS (?:ENABLE|DISABLE|FORCE|NO FORCE) ROW LEVEL SECURITY$/u.test(statement));
   assert.deepEqual(rls, [
     'ALTER TABLE PUBLIC.MIDAO_IDEMPOTENCY_RECORDS ENABLE ROW LEVEL SECURITY',
@@ -70,7 +172,7 @@ function assertSecurity(sql) {
     'REVOKE ALL ON TABLE PUBLIC.MIDAO_IDEMPOTENCY_RECORDS FROM PUBLIC, ANON, AUTHENTICATED',
     'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE PUBLIC.MIDAO_IDEMPOTENCY_RECORDS TO SERVICE_ROLE',
   ]);
-  assert.doesNotMatch(normalizedStatements(sql).join('; '), /CREATE\s+POLICY/iu);
+  assert.doesNotMatch(statements.join('; '), /CREATE\s+POLICY/iu);
 }
 
 function assertComments(sql) {
@@ -83,11 +185,12 @@ function assertComments(sql) {
 }
 
 function assertFullContract(sql) {
-  assertColumns(sql);
-  assertConstraints(sql);
-  assertIndexes(sql);
-  assertSecurity(sql);
-  assertComments(sql);
+  const { executable, statements } = lexSql(sql);
+  assertColumns(executable);
+  assertConstraints(executable);
+  assertIndexes(executable);
+  assertSecurity(statements);
+  assertComments(executable);
 }
 
 test('durable idempotency migration satisfies the exact schema and security contract', () => {
@@ -106,6 +209,8 @@ test('durable idempotency source contract rejects critical mutations', () => {
     ['expiry tie breaker removed', sql.replace('(expires_at, id)', '(expires_at)')],
     ['disable RLS appended', `${sql}\nALTER TABLE public.midao_idempotency_records DISABLE ROW LEVEL SECURITY;`],
     ['extra grant hidden by comment', `${sql}\n-- hidden privilege\nGRANT TRUNCATE ON TABLE public.midao_idempotency_records TO service_role;`],
+    ['quoted dash comment before active grant', `${sql}\nCOMMENT ON TABLE public.midao_idempotency_records IS 'safe -- text'; GRANT TRUNCATE ON TABLE public.midao_idempotency_records TO service_role;`],
+    ['required field hidden in block comment', sql.replace('actor_type TEXT NOT NULL,', 'actor_type TEXT,\n/*\nactor_type TEXT NOT NULL,\n*/')],
     ['response snapshot becomes sensitive', sql.replace('must not contain raw confirmation tokens, cookies, secrets, or unnecessary PII', 'may contain raw confirmation tokens, cookies, secrets, or unnecessary PII')],
     ['replay reads placeholder', sql.replace('replays must wait', 'replays may read immediately')],
   ];
@@ -113,4 +218,18 @@ test('durable idempotency source contract rejects critical mutations', () => {
     assert.notEqual(mutant, sql, `${name} mutation must alter SQL`);
     assert.throws(() => assertFullContract(mutant), `${name} mutation must fail`);
   }
+});
+
+test('SQL lexer rejects active statements after quoted markers and preserves benign controls', () => {
+  const sql = migrationSql();
+  const hostile = `${sql}\nCOMMENT ON TABLE public.midao_idempotency_records IS 'safe -- text'; GRANT TRUNCATE ON TABLE public.midao_idempotency_records TO service_role;`;
+  assert.throws(() => assertFullContract(hostile));
+
+  const benign = `${sql}
+-- ALTER TABLE public.midao_idempotency_records DISABLE ROW LEVEL SECURITY;
+/* GRANT TRUNCATE ON TABLE public.midao_idempotency_records TO service_role; */
+COMMENT ON TABLE public.midao_idempotency_records IS 'quoted ''value'' -- and /* markers; are inert */';
+COMMENT ON TABLE public."quoted--identifier" IS 'double quote marker is inert';
+COMMENT ON TABLE public.midao_idempotency_records IS $safe$dollar -- and /* markers; are inert */$safe$;`;
+  assert.doesNotThrow(() => assertFullContract(benign));
 });
