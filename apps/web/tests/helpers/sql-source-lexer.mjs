@@ -7,6 +7,7 @@ export function lexPostgresSql(sql) {
   let state = 'normal';
   let dollarTag = '';
   let blockDepth = 0;
+  let escapeString = false;
 
   const append = (text) => {
     executable += text;
@@ -44,11 +45,15 @@ export function lexPostgresSql(sql) {
     }
     if (state === 'single-quote') {
       append(char);
-      if (char === "'" && next === "'") {
+      if (escapeString && char === '\\' && next !== undefined) {
+        append(next);
+        index += 1;
+      } else if (char === "'" && next === "'") {
         append(next);
         index += 1;
       } else if (char === "'") {
         state = 'normal';
+        escapeString = false;
       }
       continue;
     }
@@ -83,6 +88,9 @@ export function lexPostgresSql(sql) {
       blockDepth = 1;
       index += 1;
     } else if (char === "'") {
+      const prefix = sql[index - 1];
+      const beforePrefix = sql[index - 2];
+      escapeString = (prefix === 'E' || prefix === 'e') && (beforePrefix === undefined || !/[A-Za-z0-9_$]/u.test(beforePrefix));
       append(char);
       state = 'single-quote';
     } else if (char === '"') {

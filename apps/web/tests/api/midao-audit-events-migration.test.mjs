@@ -15,6 +15,19 @@ function migrationSql() {
 
 function assertFullContract(rawSql) {
   const { executable: sql, statements } = lexPostgresSql(rawSql);
+  const statementAllowlist = [
+    /^CREATE TABLE IF NOT EXISTS PUBLIC\.MIDAO_AUDIT_EVENTS \(/u,
+    /^CREATE INDEX IF NOT EXISTS MIDAO_AUDIT_EVENTS_ACTION_REQUEST_IDX ON PUBLIC\.MIDAO_AUDIT_EVENTS \(ACTION, REQUEST_ID, ID\)$/u,
+    /^CREATE INDEX IF NOT EXISTS MIDAO_AUDIT_EVENTS_GUIDE_CREATED_IDX ON PUBLIC\.MIDAO_AUDIT_EVENTS \(GUIDE_ID, CREATED_AT, ID\)$/u,
+    /^ALTER TABLE PUBLIC\.MIDAO_AUDIT_EVENTS ENABLE ROW LEVEL SECURITY$/u,
+    /^ALTER TABLE PUBLIC\.MIDAO_AUDIT_EVENTS FORCE ROW LEVEL SECURITY$/u,
+    /^REVOKE ALL ON TABLE PUBLIC\.MIDAO_AUDIT_EVENTS FROM PUBLIC, ANON, AUTHENTICATED$/u,
+    /^GRANT SELECT, INSERT ON TABLE PUBLIC\.MIDAO_AUDIT_EVENTS TO SERVICE_ROLE$/u,
+    /^COMMENT ON COLUMN PUBLIC\.MIDAO_AUDIT_EVENTS\.METADATA IS '/u,
+  ];
+  assert.equal(statements.length, statementAllowlist.length, 'B4 migration must contain exactly eight top-level statements');
+  for (const [index, pattern] of statementAllowlist.entries()) assert.match(statements[index], pattern);
+
   assert.match(sql, /CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS\s+public\.midao_audit_events/iu);
   for (const pattern of [
     /^\s*id\s+UUID\s+PRIMARY\s+KEY\s+DEFAULT\s+gen_random_uuid\(\)\s*,\s*$/imu,
@@ -67,6 +80,8 @@ test('transactional audit source contract rejects critical mutations', () => {
     ['disable RLS appended', `${sql}\nALTER TABLE public.midao_audit_events DISABLE ROW LEVEL SECURITY;`],
     ['extra update grant', `${sql}\nGRANT UPDATE ON TABLE public.midao_audit_events TO service_role;`],
     ['hidden public grant', `${sql}\nCOMMENT ON TABLE public.midao_audit_events IS 'safe -- text'; GRANT SELECT ON TABLE public.midao_audit_events TO PUBLIC;`],
+    ['escape string hidden grant', `${sql}\nCOMMENT ON TABLE public.midao_audit_events IS E'safe \\' -- text'; GRANT UPDATE ON TABLE public.midao_audit_events TO authenticated;`],
+    ['dynamic disable RLS', `${sql}\nDO $x$ BEGIN EXECUTE 'ALTER TABLE public.midao_audit_events DISABLE ROW LEVEL SECURITY'; END $x$;`],
     ['legacy audit delegation', `${sql}\nINSERT INTO public.audit_logs DEFAULT VALUES;`],
     ['sensitive metadata', sql.replace('must not contain tokens, cookies, payment secrets, or complete traveler PII', 'may contain tokens, cookies, payment secrets, or complete traveler PII')],
   ];
