@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 17:17 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 17:32 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -59,12 +59,14 @@
 - C2只在guide ID、三段token、number parse及HMAC驗證全部成功後暴露`sessionVersion`，version/signature tamper回`null`，token格式與既有API保持相容。
 - 2026-07-23 Phase C Task C3 Midao kill switches完成strict TDD；final HEAD `769879fa877bfe59cd2c25a14223c59cf8d49410`。Exports missing RED `3/3 fail`；final focused `3/3 PASS`、`--check-only` PASS，tree `b703eb646e7dd4e6975704ffbb5b084e1cd7ba03`、manifest mode `0600`；fresh SPEC／quality review PASS，blocking 0。
 - C3新增server-only backend、mutations、mode-switch三個default-off independent readers，完全沿用既有`1|true|yes|on` truthy contract；C3只暴露gates，directional enforcement按計畫留在D2 production boundary。
+- 2026-07-23 Phase C Task C4 signed impersonation actor codec/cookie完成strict TDD與兩項security remediation；final HEAD `427ab312858161829042a38c0c864d7eead75f85`。Final actor＋shared crypto `13/13 PASS`、typecheck與`--check-only` PASS，tree `6092642328c602bad114d21ebe71399ac6528f33`、manifest mode `0600`；fresh final SPEC／security／cookie review PASS，blocking 0。
+- C4固定`midao_impersonation_actor` host-only HttpOnly SameSite=Lax cookie，production Secure；payload只允許exact六鍵且無token，target/tamper/future/expiry/cross-protocol皆fail closed。Issued/expiry正規化至epoch-second，同組signed timestamps驅動Max-Age/Expires並clamp至guide-session expiry；clear helper同scope＋Max-Age=0＋past Expires。
 
 ## 下一步
-- 進入Phase C Task C4：signed impersonation actor codec/cookie strict TDD；固定cookie scope、expiry上限、domain-separated signature、target/tamper/expiry拒絕與clear semantics。
+- 進入Phase C Task C4A：admin impersonation route actor只取`pickAdminCredentials(request).email` canonical化，禁止body actor；成功同時簽發actor與既有visible banner cookie，target/version仍以DB canonical profile為準。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／C1–C3：對應anchors均已有fresh PASS；C3 final為`769879fa`。下一步只進C4。
+- 不重跑或重審完整plan／A4／Phase B／C1–C4：對應anchors均已有fresh PASS；C4 final為`427ab312`。下一步只進C4A。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
