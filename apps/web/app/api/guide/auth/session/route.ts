@@ -13,6 +13,7 @@ import { getGuideAuthSupabaseClient, type GuideAuthSingleResult } from '../../..
 import { guideLoginLimiter, RateLimiter, createLoginRateLimitResponse } from '../../../../../src/lib/rate-limit';
 import { peekDistributed, recordDistributed } from '../../../../../src/lib/rate-limit-distributed';
 import { getSupabaseUrl } from '../../../../../src/config/supabase-service-env.mjs';
+import { clearImpersonationActorCookie } from '../../../../../src/lib/midao/impersonation-actor';
 
 // #1599：登入限流跨實例層（記憶體版擋單實例、分散式版 provision 後擋跨實例）。皆 fail-open。
 const LOGIN_RATE_CFG = { maxRequests: 10, windowMs: 60 * 1000 };
@@ -55,6 +56,15 @@ async function withTimeout<T>(promise: PromiseLike<T>, ms = SUPABASE_QUERY_TIMEO
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+function appendClearImpersonationCookies(headers: Headers): void {
+  headers.append('set-cookie', clearImpersonationActorCookie());
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  headers.append(
+    'set-cookie',
+    `guide_impersonation=; Path=/; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secure}`,
+  );
 }
 
 /** GET — check current guide session */
@@ -142,6 +152,7 @@ export async function POST(req: Request) {
       const headers = new Headers({ 'content-type': 'application/json' });
       cookies.forEach((c) => headers.append('set-cookie', c));
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
+      appendClearImpersonationCookies(headers);
 
       return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
     }
@@ -190,6 +201,7 @@ export async function POST(req: Request) {
       const headers = new Headers({ 'content-type': 'application/json' });
       cookies.forEach((c) => headers.append('set-cookie', c));
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
+      appendClearImpersonationCookies(headers);
 
       return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
     }
@@ -237,6 +249,7 @@ export async function POST(req: Request) {
       const headers = new Headers({ 'content-type': 'application/json' });
       cookies.forEach((c) => headers.append('set-cookie', c));
       headers.append('set-cookie', createCsrfCookie(createCsrfToken()));
+      appendClearImpersonationCookies(headers);
 
       return new Response(JSON.stringify(ok({ created: true })), { status: 200, headers });
     }
@@ -260,5 +273,6 @@ export async function DELETE(request: Request) {
   const headers = new Headers({ 'content-type': 'application/json' });
   clearGuideSessionCookies().forEach((c) => headers.append('set-cookie', c));
   headers.append('set-cookie', `${CSRF_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`);
+  appendClearImpersonationCookies(headers);
   return new Response(JSON.stringify(ok({ deleted: true })), { status: 200, headers });
 }
