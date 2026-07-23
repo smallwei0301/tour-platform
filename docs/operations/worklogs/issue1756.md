@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 18:03 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 18:13 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -65,12 +65,14 @@
 - C4A actor email只取`pickAdminCredentials(request).email`後trim/lower，缺少即401；禁止body actor/token。Signed actor target取DB `guide.id`，guide session version/display name保持DB canonical；既有admin middleware/CSRF、UUID/config preflight、approved gate與visible banner均不弱化。
 - 2026-07-23 Phase C Task C4B ordinary login/logout clears impersonation完成strict TDD；final HEAD `0419e4345e1c9c6ef9679c5a5497788483b6d645`。Focused `14/14 PASS`、typecheck與`--check-only` PASS，tree `bd87139d02a643ff4211ba9f59ac9da33638fcfa`、manifest mode `0600`；fresh flow／security review PASS，blocking 0。
 - C4B單一helper同時清signed actor與visible banner；invite、email/password、legacy guideId三條成功登入在新session headers後清除，DELETE成功在guide/CSRF clear後清除。所有CSRF、credential、suspension、timeout/error paths不誤清。
+- 2026-07-23 Phase C Task C5 canonical guide runtime access gateway完成strict TDD；final HEAD `ab7d7147dac1594818e53a93b39dd7873e780b14`。C5 focused `6/6 PASS`、combined session/actor `15/15 PASS`、typecheck與`--check-only` PASS，tree `e38bd1cfa0b72ce80c11cc2bc507aa07cce7de89`、manifest mode `0600`；fresh DB/session/security review PASS，blocking 0。
+- C5 exact DB projection只讀id/display_name/backend_mode/version/status；canonical guard固定HMAC→identity/version→approved→backend flag→mode→impersonation，forged actor不降級，context name/version/mode只取DB。非阻擋hardening：日後分開DB error/not-found並拒絕malformed/null canonical row。
 
 ## 下一步
-- 進入Phase C Task C5：canonical guide runtime DB projection、signed session version/approved/flag/mode gates與verified impersonation actor。
+- 進入Phase C Task C6：Midao V2 query/command wrappers、CSRF/mutation gate、strict Idempotency-Key與canonical request hash/context。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／C1–C4B：對應anchors均已有fresh PASS；C4B final為`0419e434`。下一步只進C5。
+- 不重跑或重審完整plan／A4／Phase B／C1–C5：對應anchors均已有fresh PASS；C5 final為`ab7d7147`。下一步只進C6。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
