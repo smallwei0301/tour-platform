@@ -12,6 +12,7 @@ const {
   assertOwnershipUnchanged,
   redactSupabaseOutput,
   buildSupabaseCliInvocation,
+  buildFlockInvocation,
   runWithLocalSupabase,
 } = runner;
 
@@ -38,6 +39,10 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
   }
   for (const candidate of [
     { exitCode: 1, stdout: 'noise', stderr: `${missingLine}\n${helpLine}\n` },
+    { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}` },
+    { exitCode: 1, stdout: '', stderr: `\n${missingLine}\n${helpLine}\n` },
+    { exitCode: 1, stdout: '', stderr: `${missingLine}\n\n${helpLine}\n` },
+    { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n\n` },
     { exitCode: 1, stdout: '', stderr: `${missingLine}\n` },
     { exitCode: 1, stdout: '', stderr: `${helpLine}\n${missingLine}\n` },
     { exitCode: 1, stdout: '', stderr: `${missingLine}-suffix\n${helpLine}\n` },
@@ -47,24 +52,20 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
   assert.equal(classifySupabaseStatus({ exitCode: 0, stdout: '{"DB_URL":"postgres://local"}', stderr: '', expectedProjectId: projectId }), 'running');
 });
 
-test('filesystem lock is globally fixed, atomic, and only reclaims stale PID/start-ticks identity', async () => {
+test('filesystem metadata is written only while kernel advisory lock is held', async () => {
   assert.equal(LOCK_PATH, '/tmp/tour-platform-local-supabase.lock');
-  const state = { exists: false, metadata: null, removed: 0 };
+  let text = '';
   const fs = {
-    async mkdir() { if (state.exists) { const error = new Error('exists'); error.code = 'EEXIST'; throw error; } state.exists = true; },
-    async writeFile(_path, text) { state.metadata = JSON.parse(text); },
-    async readFile() { return JSON.stringify(state.metadata); },
-    async rm() { state.exists = false; state.removed += 1; },
+    async writeFile(_path, value) { text = value; },
+    async readFile() { return text; },
   };
   const metadata = { pid: 10, processStartTicks: '100', repoRoot: '/repo' };
-  await acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata, processInspector: { exists: () => false, startTicks: () => null } });
-  await assert.rejects(
-    acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata: { ...metadata, pid: 20 }, processInspector: { exists: () => true, startTicks: () => '100' } }),
-    /LOCK_HELD/u,
-  );
-  assert.equal(state.removed, 0);
-  await acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata: { ...metadata, pid: 30 }, processInspector: { exists: () => true, startTicks: () => 'different' } });
-  assert.equal(state.removed, 1);
+  await assert.rejects(acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata }), /KERNEL_LOCK_REQUIRED/u);
+  await acquireRunnerLock({ fs, lockPath: LOCK_PATH, metadata, kernelLockHeld: true });
+  assert.deepEqual(JSON.parse(text), metadata);
+  await assert.rejects(runner.releaseRunnerLock({ fs, lockPath: LOCK_PATH, metadata }), /KERNEL_LOCK_REQUIRED/u);
+  await runner.releaseRunnerLock({ fs, lockPath: LOCK_PATH, metadata, kernelLockHeld: true });
+  assert.equal(JSON.parse(text).released, true);
 });
 
 test('project-scoped docker identity requires exact label and name suffix and captures IDs', () => {
@@ -102,6 +103,13 @@ test('CLI invocation is pinned offline npm exec and never PATH supabase', () => 
   assert.deepEqual(buildSupabaseCliInvocation('2.87.2', ['status', '-o', 'json']), {
     command: 'npm',
     args: ['exec', '--offline', '--yes', '--package=supabase@2.87.2', '--', 'supabase', 'status', '-o', 'json'],
+  });
+});
+
+test('kernel flock invocation is the only lifecycle entry and is nonblocking', () => {
+  assert.deepEqual(buildFlockInvocation('/node22', '/repo/scripts/testing/with-midao-local-supabase.mjs', ['a.test.mjs']), {
+    command: 'flock',
+    args: ['--exclusive', '--nonblock', LOCK_PATH, '/node22', '/repo/scripts/testing/with-midao-local-supabase.mjs', 'a.test.mjs'],
   });
 });
 
@@ -180,4 +188,43 @@ test('cleanup identity drift holds foreign stack and never calls stop', async ()
     },
   }), /OWNERSHIP_DRIFT/u);
   assert.deepEqual(calls, []);
+});
+
+test('cleanup passes exact captured IDs to destructive stop, never project rediscovery', async () => {
+  const owned = [
+    { id: 'owned-a', name: `supabase_db_${projectId}`, projectLabel: projectId },
+    { id: 'owned-b', name: `supabase_kong_${projectId}`, projectLabel: projectId },
+  ];
+  let stopped;
+  await runWithLocalSupabase({
+    expectedProjectId: projectId,
+    childArgs: [],
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() {},
+      async containers() { return structuredClone(owned); },
+      async reset() {},
+      async stop(identity) { stopped = identity; },
+    },
+  });
+  assert.deepEqual(stopped, owned);
+});
+
+test('signal received during cleanup completes stop but runner rejects', async () => {
+  const controller = new AbortController();
+  const calls = [];
+  const owned = [{ id: '1', name: `supabase_db_${projectId}`, projectLabel: projectId }];
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId,
+    childArgs: [],
+    signal: controller.signal,
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() {},
+      async containers() { return structuredClone(owned); },
+      async reset() {},
+      async stop() { calls.push('stop'); controller.abort(new Error('signal')); },
+    },
+  }), /RUNNER_SIGNALLED/u);
+  assert.deepEqual(calls, ['stop']);
 });

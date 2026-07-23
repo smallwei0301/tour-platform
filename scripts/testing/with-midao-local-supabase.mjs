@@ -1,13 +1,11 @@
 #!/usr/bin/env node
 import { spawn } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import * as fsPromises from 'node:fs/promises';
 import { basename, resolve } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 export const LOCK_PATH = '/tmp/tour-platform-local-supabase.lock';
-const LOCK_METADATA = 'owner.json';
 const HELP_LINE = 'Try rerunning the command with --debug to troubleshoot the error.';
 
 export function parseSupabasePin(lockText) {
@@ -34,47 +32,27 @@ export function classifySupabaseStatus({ exitCode, stdout, stderr, expectedProje
     return 'running';
   }
   if (exitCode !== 1 || String(stdout || '').length !== 0) throw new Error('STATUS_UNCLASSIFIED');
-  const escaped = expectedProjectId.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
-  const exact = new RegExp(`^failed to inspect container health: Error response from daemon: No such container: supabase_db_${escaped}$`, 'u');
-  const lines = nonemptyLines(stderr);
-  if (lines.length !== 2 || !exact.test(lines[0]) || lines[1] !== HELP_LINE) throw new Error('STATUS_UNCLASSIFIED');
+  const exactLine = `failed to inspect container health: Error response from daemon: No such container: supabase_db_${expectedProjectId}`;
+  const lf = `${exactLine}\n${HELP_LINE}\n`;
+  const crlf = `${exactLine}\r\n${HELP_LINE}\r\n`;
+  if (stderr !== lf && stderr !== crlf) throw new Error('STATUS_UNCLASSIFIED');
   return 'not-running';
 }
 
-export async function acquireRunnerLock({ fs = fsPromises, lockPath = LOCK_PATH, metadata, processInspector }) {
-  const create = async () => {
-    await fs.mkdir(lockPath, { mode: 0o700 });
-    try {
-      await fs.writeFile(resolve(lockPath, LOCK_METADATA), `${JSON.stringify(metadata)}\n`, { mode: 0o600, flag: 'wx' });
-    } catch (error) {
-      await fs.rm(lockPath, { recursive: true, force: true });
-      throw error;
-    }
-  };
-  try {
-    await create();
-    return metadata;
-  } catch (error) {
-    if (error?.code !== 'EEXIST') throw error;
-  }
-
-  let owner;
-  try { owner = JSON.parse(await fs.readFile(resolve(lockPath, LOCK_METADATA), 'utf8')); } catch { throw new Error('LOCK_HELD_UNREADABLE'); }
-  const live = processInspector.exists(owner.pid);
-  const sameProcess = live && String(processInspector.startTicks(owner.pid)) === String(owner.processStartTicks);
-  if (sameProcess) throw new Error('LOCK_HELD');
-  await fs.rm(lockPath, { recursive: true, force: true });
-  await create();
+export async function acquireRunnerLock({ fs = fsPromises, lockPath = LOCK_PATH, metadata, kernelLockHeld = false }) {
+  if (!kernelLockHeld) throw new Error('KERNEL_LOCK_REQUIRED');
+  await fs.writeFile(lockPath, `${JSON.stringify(metadata)}\n`, { mode: 0o600 });
   return metadata;
 }
 
-export async function releaseRunnerLock({ fs = fsPromises, lockPath = LOCK_PATH, metadata }) {
+export async function releaseRunnerLock({ fs = fsPromises, lockPath = LOCK_PATH, metadata, kernelLockHeld = false }) {
+  if (!kernelLockHeld) throw new Error('KERNEL_LOCK_REQUIRED');
   let owner;
-  try { owner = JSON.parse(await fs.readFile(resolve(lockPath, LOCK_METADATA), 'utf8')); } catch { throw new Error('LOCK_RELEASE_IDENTITY_MISSING'); }
+  try { owner = JSON.parse(await fs.readFile(lockPath, 'utf8')); } catch { throw new Error('LOCK_RELEASE_IDENTITY_MISSING'); }
   if (owner.pid !== metadata.pid || String(owner.processStartTicks) !== String(metadata.processStartTicks) || owner.repoRoot !== metadata.repoRoot) {
     throw new Error('LOCK_RELEASE_IDENTITY_DRIFT');
   }
-  await fs.rm(lockPath, { recursive: true, force: true });
+  await fs.writeFile(lockPath, `${JSON.stringify({ ...metadata, released: true })}\n`, { mode: 0o600 });
 }
 
 export function confirmProjectContainers({ expectedProjectId, containers }) {
@@ -110,6 +88,13 @@ export function buildSupabaseCliInvocation(pin, args) {
   };
 }
 
+export function buildFlockInvocation(nodeBin, scriptPath, args) {
+  return {
+    command: 'flock',
+    args: ['--exclusive', '--nonblock', LOCK_PATH, nodeBin, scriptPath, ...args],
+  };
+}
+
 export function redactSupabaseOutput(text, secrets = []) {
   let redacted = String(text ?? '');
   for (const secret of secrets.filter((item) => typeof item === 'string' && item.length > 0).sort((a, b) => b.length - a.length)) {
@@ -121,7 +106,7 @@ export function redactSupabaseOutput(text, secrets = []) {
   return redacted;
 }
 
-export async function runWithLocalSupabase({ adapter, expectedProjectId, childArgs }) {
+export async function runWithLocalSupabase({ adapter, expectedProjectId, childArgs, signal }) {
   let owned = null;
   try {
     const status = await adapter.status();
@@ -141,8 +126,9 @@ export async function runWithLocalSupabase({ adapter, expectedProjectId, childAr
     if (owned) {
       const current = confirmProjectContainers({ expectedProjectId, containers: await adapter.containers() });
       assertOwnershipUnchanged(owned, current);
-      await adapter.stop(expectedProjectId);
+      await adapter.stop(owned);
     }
+    if (signal?.aborted) throw new Error('RUNNER_SIGNALLED');
   }
 }
 
@@ -231,15 +217,29 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal }) {
       if (result.stderr) process.stderr.write(redactSupabaseOutput(result.stderr, secrets));
       return result;
     },
-    stop: async (expectedProjectId) => {
-      const result = await cli(['stop', '--project-id', expectedProjectId], { cleanup: true });
-      if (result.exitCode !== 0) throw new Error('SUPABASE_STOP_FAILED');
+    stop: async (owned) => {
+      const ids = owned.map((container) => container.id);
+      const result = await runCommand('docker', ['rm', '--force', '--', ...ids], { cwd: repoRoot });
+      if (result.exitCode !== 0) throw new Error('OWNED_CONTAINER_CLEANUP_FAILED');
     },
   };
 }
 
 async function main() {
   const repoRoot = process.cwd();
+  const scriptPath = fileURLToPath(import.meta.url);
+  if (process.env.MIDAO_KERNEL_LOCK_HELD !== '1') {
+    const invocation = buildFlockInvocation(process.execPath, scriptPath, process.argv.slice(2));
+    const result = await runCommand(invocation.command, invocation.args, {
+      cwd: repoRoot,
+      env: { ...process.env, MIDAO_KERNEL_LOCK_HELD: '1' },
+    });
+    if (result.stdout) process.stdout.write(redactSupabaseOutput(result.stdout));
+    if (result.stderr) process.stderr.write(redactSupabaseOutput(result.stderr));
+    if (result.exitCode !== 0) throw new Error(result.exitCode === 1 ? 'LOCK_HELD' : `FLOCK_CHILD_FAILED_${result.exitCode}`);
+    return;
+  }
+
   const projectId = canonicalProjectId(repoRoot);
   const packageLock = await fsPromises.readFile(resolve(repoRoot, 'package-lock.json'), 'utf8');
   const pin = parseSupabasePin(packageLock);
@@ -247,36 +247,31 @@ async function main() {
   const stat = await fsPromises.readFile(`/proc/${process.pid}/stat`, 'utf8');
   const close = stat.lastIndexOf(')');
   const metadata = { pid: process.pid, processStartTicks: stat.slice(close + 2).split(/\s+/u)[19], repoRoot };
-  const inspector = {
-    exists(pid) { try { process.kill(Number(pid), 0); return true; } catch { return false; } },
-    startTicks(pid) {
-      try {
-        const value = readFileSync(`/proc/${Number(pid)}/stat`, 'utf8');
-        const end = value.lastIndexOf(')');
-        return value.slice(end + 2).split(/\s+/u)[19];
-      } catch { return null; }
-    },
-  };
-
   const controller = new AbortController();
   const abort = () => controller.abort(new Error('RUNNER_SIGNALLED'));
-  process.once('SIGTERM', abort);
-  process.once('SIGINT', abort);
+  process.on('SIGTERM', abort);
+  process.on('SIGINT', abort);
 
   let acquired = false;
   try {
-    await acquireRunnerLock({ fs: fsPromises, lockPath: LOCK_PATH, metadata, processInspector: inspector });
+    await acquireRunnerLock({ fs: fsPromises, lockPath: LOCK_PATH, metadata, kernelLockHeld: true });
     acquired = true;
     const childArgs = process.argv.slice(2);
+    if (childArgs.length === 0) childArgs.push(
+      'apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs',
+      'apps/web/tests/integration/midao-mode-switch-postgres.test.mjs',
+      'apps/web/tests/integration/midao-mode-switch-concurrency-postgres.test.mjs',
+    );
     await runWithLocalSupabase({
       adapter: createActualAdapter({ repoRoot, pin, nodeBin, signal: controller.signal }),
       expectedProjectId: projectId,
       childArgs,
+      signal: controller.signal,
     });
   } finally {
     process.removeListener('SIGTERM', abort);
     process.removeListener('SIGINT', abort);
-    if (acquired) await releaseRunnerLock({ fs: fsPromises, lockPath: LOCK_PATH, metadata });
+    if (acquired) await releaseRunnerLock({ fs: fsPromises, lockPath: LOCK_PATH, metadata, kernelLockHeld: true });
   }
 }
 
