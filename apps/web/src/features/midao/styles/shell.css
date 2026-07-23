@@ -1,0 +1,28 @@
+.midao-theme {
+  min-height: 100dvh;
+  background: var(--midao-color-page);
+  color: var(--midao-color-ink);
+  font-family: var(--midao-font-body);
+  padding-left: var(--midao-safe-area-left);
+  padding-right: var(--midao-safe-area-right);
+}
+
+.midao-theme :where(button, a, input, select, textarea) {
+  min-height: var(--midao-target-min);
+}
+
+.midao-theme :where(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--midao-color-alert);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .midao-theme *,
+  .midao-theme *::before,
+  .midao-theme *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
