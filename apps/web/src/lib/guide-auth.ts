@@ -93,6 +93,7 @@ export function verifyPassword(plain: string, stored: string): boolean {
 export interface GuideSessionPayload {
   guideId: string;
   guideName: string;
+  sessionVersion: number;
   isNew?: boolean;
 }
 
@@ -169,7 +170,7 @@ export function verifyGuideSession(req: Request): GuideSessionPayload | null {
 
   if (!verifyGuideSessionSignature(guideId, version, sig)) return null;
 
-  return { guideId, guideName, isNew };
+  return { guideId, guideName, sessionVersion: version, isNew };
 }
 
 /** Mask email: john@example.com → j***@example.com */
