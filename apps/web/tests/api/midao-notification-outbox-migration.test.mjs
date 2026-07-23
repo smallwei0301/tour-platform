@@ -40,18 +40,24 @@ function assertClaimIndex(sql) {
 }
 
 function assertSecurity(sql) {
-  const statements = sql
+  const executableSql = sql
+    .replace(/\/\*[\s\S]*?\*\//gu, ' ')
+    .replace(/--[^\r\n]*/gu, ' ');
+  const statements = executableSql
     .split(';')
     .map((statement) => statement.replace(/\s+/gu, ' ').trim().toUpperCase())
     .filter(Boolean);
-  assert.ok(statements.includes('ALTER TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX ENABLE ROW LEVEL SECURITY'));
-  assert.ok(statements.includes('ALTER TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX FORCE ROW LEVEL SECURITY'));
+  const rlsStatements = statements.filter((statement) => /^ALTER TABLE PUBLIC\.MIDAO_NOTIFICATION_OUTBOX (?:ENABLE|DISABLE|FORCE|NO FORCE) ROW LEVEL SECURITY$/u.test(statement));
+  assert.deepEqual(rlsStatements, [
+    'ALTER TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX ENABLE ROW LEVEL SECURITY',
+    'ALTER TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX FORCE ROW LEVEL SECURITY',
+  ]);
   const aclStatements = statements.filter((statement) => /^(?:GRANT|REVOKE)\s/u.test(statement));
   assert.deepEqual(aclStatements, [
     'REVOKE ALL ON TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX FROM PUBLIC, ANON, AUTHENTICATED',
     'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE PUBLIC.MIDAO_NOTIFICATION_OUTBOX TO SERVICE_ROLE',
   ]);
-  assert.doesNotMatch(sql, /CREATE\s+POLICY/iu);
+  assert.doesNotMatch(executableSql, /CREATE\s+POLICY/iu);
 }
 
 function assertPayloadComment(sql) {
@@ -97,6 +103,10 @@ test('notification outbox source contract rejects every named contract mutation'
     ['grant privileges', sql.replace('GRANT SELECT, INSERT, UPDATE, DELETE', 'GRANT SELECT, INSERT, UPDATE, DELETE, TRUNCATE')],
     ['grant role', sql.replace('TO service_role;', 'TO authenticated;')],
     ['extra service role grant', `${sql}\nGRANT TRUNCATE ON TABLE public.midao_notification_outbox TO service_role;`],
+    ['trailing disable RLS', `${sql}\nALTER TABLE public.midao_notification_outbox DISABLE ROW LEVEL SECURITY;`],
+    ['trailing no-force RLS', `${sql}\nALTER TABLE public.midao_notification_outbox NO FORCE ROW LEVEL SECURITY;`],
+    ['line-comment-prefixed service grant', `${sql}\n-- hidden extra privilege\nGRANT TRUNCATE ON TABLE public.midao_notification_outbox TO service_role;`],
+    ['block-comment-prefixed public grant', `${sql}\n/* hidden public privilege */ GRANT SELECT ON TABLE public.midao_notification_outbox TO PUBLIC;`],
     ['permissive policy', `${sql}\nCREATE POLICY accidental_public_policy ON public.midao_notification_outbox USING (true);`],
     ['payload sensitivity', sql.replace('must not contain complete PII or payment secrets', 'may contain complete PII or payment secrets')],
   ];
