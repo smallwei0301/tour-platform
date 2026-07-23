@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 17:32 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 17:56 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -61,12 +61,14 @@
 - C3新增server-only backend、mutations、mode-switch三個default-off independent readers，完全沿用既有`1|true|yes|on` truthy contract；C3只暴露gates，directional enforcement按計畫留在D2 production boundary。
 - 2026-07-23 Phase C Task C4 signed impersonation actor codec/cookie完成strict TDD與兩項security remediation；final HEAD `427ab312858161829042a38c0c864d7eead75f85`。Final actor＋shared crypto `13/13 PASS`、typecheck與`--check-only` PASS，tree `6092642328c602bad114d21ebe71399ac6528f33`、manifest mode `0600`；fresh final SPEC／security／cookie review PASS，blocking 0。
 - C4固定`midao_impersonation_actor` host-only HttpOnly SameSite=Lax cookie，production Secure；payload只允許exact六鍵且無token，target/tamper/future/expiry/cross-protocol皆fail closed。Issued/expiry正規化至epoch-second，同組signed timestamps驅動Max-Age/Expires並clamp至guide-session expiry；clear helper同scope＋Max-Age=0＋past Expires。
+- 2026-07-23 Phase C Task C4A admin impersonation route canonical actor完成strict TDD；final HEAD `ff77d9ccedabac9d8f5ceeb60f3a733a4b59b0cb`。Route＋existing admin＋actor regressions `26/26 PASS`、typecheck與`--check-only` PASS，tree `fd83e808c69c6218bcc44ccc8ed8666f89e4c095`、manifest mode `0600`；首次review timeout為INCONCLUSIVE，窄化純static re-review PASS，blocking 0。
+- C4A actor email只取`pickAdminCredentials(request).email`後trim/lower，缺少即401；禁止body actor/token。Signed actor target取DB `guide.id`，guide session version/display name保持DB canonical；既有admin middleware/CSRF、UUID/config preflight、approved gate與visible banner均不弱化。
 
 ## 下一步
-- 進入Phase C Task C4A：admin impersonation route actor只取`pickAdminCredentials(request).email` canonical化，禁止body actor；成功同時簽發actor與既有visible banner cookie，target/version仍以DB canonical profile為準。
+- 進入Phase C Task C4B：invite、email/password、legacy guideId三條普通成功登入與DELETE logout都清除signed actor＋visible banner；error paths不誤清。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／C1–C4：對應anchors均已有fresh PASS；C4 final為`427ab312`。下一步只進C4A。
+- 不重跑或重審完整plan／A4／Phase B／C1–C4A：對應anchors均已有fresh PASS；C4A final為`ff77d9cc`。下一步只進C4B。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
