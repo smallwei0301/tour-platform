@@ -115,9 +115,12 @@ SUPABASE_SHA256='e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c5
 MIN_PATH="$(dirname "$NODE22_BIN"):/usr/local/bin:/usr/bin:/bin"
 
 for executable in "$NODE22_BIN" "$NPM_ENTRY" "$SUPABASE_BIN"; do
-  test -f "$executable" && test ! -L "$executable" && test -x "$executable"
+  test -f "$executable"
+  test ! -L "$executable"
+  test -x "$executable"
   EXEC_MODE="$(stat -c '%A' "$executable")"
-  test "${EXEC_MODE:5:1}" != 'w' && test "${EXEC_MODE:8:1}" != 'w'
+  test "${EXEC_MODE:5:1}" != 'w'
+  test "${EXEC_MODE:8:1}" != 'w'
 done
 test "$($NODE22_BIN -p "process.versions.node")" = '22.23.1'
 test "$(PATH="$MIN_PATH" "$NPM_ENTRY" --version)" = '11.9.0'
@@ -131,9 +134,11 @@ export NODE_OPTIONS='--experimental-strip-types'
 node --version
 npm --version
 
-test -z "$(git status --porcelain)"
+GIT_STATUS_BEFORE="$(git status --porcelain)"
+test -z "$GIT_STATUS_BEFORE"
 for npmrc in "$REPO_ROOT/.npmrc" "$REPO_ROOT/apps/web/.npmrc"; do
-  test ! -e "$npmrc" && test ! -L "$npmrc"
+  test ! -e "$npmrc"
+  test ! -L "$npmrc"
 done
 PACKAGE_SHA_BEFORE="$(sha256sum package.json | cut -d' ' -f1)"
 LOCK_SHA_BEFORE="$(sha256sum package-lock.json | cut -d' ' -f1)"
@@ -193,7 +198,8 @@ git diff --exit-code -- package.json package-lock.json yarn.lock
 test -d node_modules/typescript
 test "$(sha256sum "$SUPABASE_BIN" | cut -d' ' -f1)" = "$SUPABASE_SHA256"
 test "$($SUPABASE_BIN --version 2>/dev/null)" = '2.87.2'
-test -z "$(git status --porcelain)"
+GIT_STATUS_AFTER="$(git status --porcelain)"
+test -z "$GIT_STATUS_AFTER"
 ```
 
 **2026-07-23 A1 corrections:** Node 22搭配host npm 11.9.0實跑 `npm install --ignore-scripts`雖完成368 packages，卻自動刪除 `package-lock.json`內一筆nested optional-peer entry，正確觸發lock drift gate；owner明確核准改用推薦方案 `npm ci --ignore-scripts`。Focused review確認npm package的Supabase 2.87.2只靠postinstall下載binary，因此禁止後續 `npm exec` seam；已由既有verified cache供應固定standalone artifact至 `$SUPABASE_BIN`。第一次exact `npm ci` runtime完成661 packages後，package/package-lock、sentinel、TypeScript與Supabase gates皆PASS，但npm 11 Arborist因既有 `yarn.lock`而重寫205 additions/12 deletions（drift SHA-256 `4e12b9d08811e8a1308ad025ac795650d95b52e0ff45749472f2170dcdcf23d1`），A1正確FAIL。npm source `shrinkwrap.js:369-381,1175-1176`證實其會載入並重寫Yarn lock；因此install期間由0700 temp HOME quarantine original Yarn lock，先設EXIT trap保證normal failure/timeout恢復，再要求npm未新建Yarn lock並原樣移回。若任一固定toolchain path/version/digest/mode、clean-state、quarantine restore或install gate不符，立即HOLD；不得沿用舊tree後restore lock假綠、不得執行 `npm audit fix`、不得下載floating CLI。Local-only secret只用於非production test process，不寫入 `.env`、log、worklog或commit。

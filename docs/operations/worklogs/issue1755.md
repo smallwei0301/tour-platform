@@ -169,7 +169,7 @@ Reviewer evidence：
 3. Restore #1756 `status:ready` only after A1 actually exits 0; then execute A2 exact 38-test baseline.
 4. A2 PASS後才進A3 strict RED → minimal GREEN；不得重建另一個implementation worktree。
 
-第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD：A1兩個blocks缺fail-fast，且npm 11.9.0不能將user/global config同設 `/dev/null`。完整A1已合併為單一 `set -euo pipefail` block，temporary HOME內建立不同0600 user/global npmrc。第三輪review在 `43975818`雙PASS；第一次exact runtime因npm 11 Arborist改寫既有`yarn.lock`而FAIL。v4 review再發現errexit `&&`假綠與restore-failure backup deletion；v5拆分simple tests、使用`mv -fT`並在backup仍存在時保留temp HOME。新的focused雙PASS＋runtime exit 0前仍HOLD。
+第二輪focused correction review在 `fedeb38a`仍FAIL/HOLD；第三輪在 `43975818`雙PASS，但exact runtime因npm 11 Arborist改寫既有`yarn.lock`而FAIL。v4/v5 review依序抓出Yarn quarantine trap與Bash errexit假綠：restore失敗資料保留已修；v6再清除A1所有`&&`，git status改為獨立capture。新的focused雙PASS＋runtime exit 0前仍HOLD。
 
 ## Safety anchors
 
