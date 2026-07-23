@@ -97,11 +97,11 @@ test('admin 詳情頁：提供「進入導遊後台」按鈕，且僅對 approve
   assert.match(src, /kind\s*!==\s*['"]application['"]/, '申請中實體不可代入');
 });
 
-test('admin 詳情頁：以 CSRF header POST 至代入 API 後導向導遊後台', () => {
+test('admin 詳情頁：以 CSRF header POST，並經fail-closed sanitizer使用API canonical redirect', () => {
   const src = readFileSync(ADMIN_PAGE, 'utf8');
   assert.match(src, /\/api\/v2\/admin\/guides\/\$\{guide\.id\}\/impersonate/, '需打代入 API');
   assert.match(src, /csrfHeaders\(\)/, 'v2 admin POST 需手動帶 CSRF header');
-  assert.match(src, /\/guide\/dashboard/, '成功後導向導遊後台');
+  assert.match(src, /sanitizeGuideRealmRedirect\(json\.data\.redirectTo\)/, '成功後需安全使用API canonical redirect');
 });
 
 test('admin 詳情頁：送出代入 POST 前先 ensureCsrfToken 補發 tp_csrf', () => {

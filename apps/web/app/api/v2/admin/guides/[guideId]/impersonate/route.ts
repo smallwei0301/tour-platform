@@ -35,6 +35,7 @@ type GuideImpersonationProfile = {
   display_name: string;
   guide_session_version: number | null;
   verification_status: string;
+  backend_mode: 'legacy' | 'midao';
 };
 
 export async function POST(
@@ -61,7 +62,7 @@ export async function POST(
 
     const { data: guide, error } = (await supabase
       .from('guide_profiles')
-      .select<GuideImpersonationProfile>('id, display_name, guide_session_version, verification_status')
+      .select<GuideImpersonationProfile>('id, display_name, guide_session_version, verification_status, backend_mode')
       .eq('id', guideId)
       .single()) as GuideAuthSingleResult<GuideImpersonationProfile>;
 
@@ -91,7 +92,8 @@ export async function POST(
     headers.append('set-cookie', actorCookie);
     headers.append('set-cookie', markerCookie);
 
-    return jsonOk({ guideId: guide.id, guideName: guide.display_name }, { headers });
+    const redirectTo = guide.backend_mode === 'midao' ? '/midao' : '/guide/dashboard';
+    return jsonOk({ guideId: guide.id, guideName: guide.display_name, redirectTo }, { headers });
   } catch (err) {
     return handleRouteError(err, { route: 'v2/admin/guides/impersonate' });
   }

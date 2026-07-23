@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Card, PageHeader } from '../../../../../src/components/admin/ui';
 import { paymentMethodLabels } from '../../../../../src/lib/guide-payment-options.mjs';
 import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
+import { sanitizeGuideRealmRedirect } from '../../../../../src/lib/midao/login-redirect';
 
 type GuideApplicationDetail = {
   fullName: string;
@@ -105,8 +106,8 @@ export default function AdminGuideDetailPage() {
         setImpersonating(false);
         return;
       }
-      // 取得導遊 session cookie 後導向導遊後台儀表板（整頁導頁確保帶上新 cookie）。
-      window.location.href = '/guide/dashboard';
+      // 取得導遊session cookie後使用API決定的canonical realm；本地sanitizer負責fail closed。
+      window.location.href = sanitizeGuideRealmRedirect(json.data.redirectTo);
     } catch {
       setImpersonateError('進入導遊後台失敗，請稍後再試');
       setImpersonating(false);

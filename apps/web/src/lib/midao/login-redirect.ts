@@ -29,6 +29,10 @@ function parseSameOriginRelative(value: string): { path: string; realm: GuideRea
   }
 }
 
+export function sanitizeGuideRealmRedirect(value: unknown): string {
+  return typeof value === 'string' ? (parseSameOriginRelative(value)?.path ?? FALLBACK) : FALLBACK;
+}
+
 export function resolveGuideLoginRedirect(serverRedirect: unknown, requestedNext: string | null): string {
   const server = typeof serverRedirect === 'string' ? parseSameOriginRelative(serverRedirect) : null;
   const authoritative = server ?? { path: FALLBACK, realm: 'guide' as const };
