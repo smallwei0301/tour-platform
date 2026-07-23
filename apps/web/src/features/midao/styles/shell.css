@@ -16,6 +16,56 @@
   outline-offset: 3px;
 }
 
+.midao-bottom-nav {
+  position: fixed;
+  z-index: 60;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 2px;
+  padding-top: 6px;
+  padding-right: var(--midao-safe-area-right);
+  padding-bottom: var(--midao-safe-area-bottom);
+  padding-left: var(--midao-safe-area-left);
+  border-top: 1px solid var(--midao-color-border);
+  background: color-mix(in srgb, var(--midao-color-white) 94%, transparent);
+  box-shadow: 0 -8px 24px rgb(26 46 31 / 8%);
+  backdrop-filter: blur(14px);
+}
+
+.midao-bottom-nav__item {
+  min-height: var(--midao-target-min);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 12px;
+  color: var(--midao-color-muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.midao-bottom-nav__item[aria-current='page'] {
+  background: var(--midao-color-surface);
+  color: var(--midao-color-ink);
+}
+
+.midao-bottom-nav__icon {
+  font-family: var(--midao-font-body);
+  font-size: 21px;
+  line-height: 1;
+}
+
+@media (min-width: 768px) {
+  .midao-bottom-nav {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .midao-theme *,
   .midao-theme *::before,
