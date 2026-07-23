@@ -153,9 +153,13 @@ cleanup_a1() {
   cleanup_status=$?
   set +e
   if test -f "$YARN_BACKUP"; then
-    mv -f -- "$YARN_BACKUP" "$REPO_ROOT/yarn.lock" || cleanup_status=1
+    mv -fT -- "$YARN_BACKUP" "$REPO_ROOT/yarn.lock" || cleanup_status=1
   fi
-  rm -rf -- "$A1_HOME" || cleanup_status=1
+  if test -e "$YARN_BACKUP" || test -L "$YARN_BACKUP"; then
+    cleanup_status=1
+  else
+    rm -rf -- "$A1_HOME" || cleanup_status=1
+  fi
   return "$cleanup_status"
 }
 trap cleanup_a1 EXIT
@@ -177,8 +181,9 @@ timeout --signal=TERM 570s env -i \
   npm_config_audit='false' \
   "$NPM_ENTRY" ci --ignore-scripts --include=dev --package-lock=true --fund=false --audit=false
 
-test ! -e yarn.lock && test ! -L yarn.lock
-mv -- "$YARN_BACKUP" yarn.lock
+test ! -e yarn.lock
+test ! -L yarn.lock
+mv -T -- "$YARN_BACKUP" yarn.lock
 test ! -e "$YARN_BACKUP"
 test ! -e node_modules/.midao-a1-stale-sentinel
 test "$(sha256sum package.json | cut -d' ' -f1)" = "$PACKAGE_SHA_BEFORE"

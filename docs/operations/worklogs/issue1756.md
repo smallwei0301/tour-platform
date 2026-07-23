@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 08:30 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 08:44 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -29,9 +29,10 @@
 - 2026-07-23 第二輪focused correction review雙FAIL/HOLD：A1分開blocks且缺fail-fast，前置/install/postflight失敗可能被最後成功命令掩蓋；npm 11.9.0拒絕user/global config同指向`/dev/null`。已合併為單一`set -euo pipefail` block，temp HOME內建立兩個不同0600空npmrc，final clean-state為最後一項gate。
 - 2026-07-23 第三輪local-only focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，blocking 0（anchor `43975818`）；`bash -n`、fail injection/trap、npm 11 distinct config、linked-worktree cache、SHA/sentinel/TypeScript/fixed Supabase gates皆重驗通過。
 - 2026-07-23 第一次exact A1 `npm ci` runtime完成661 packages後仍exit 1：package/package-lock未變、sentinel absent、TypeScript與Supabase PASS，唯一drift為npm 11 Arborist重寫`yarn.lock` 205 additions/12 deletions（diff SHA-256 `4e12b9d08811e8a1308ad025ac795650d95b52e0ff45749472f2170dcdcf23d1`）。npm source證實會load/save既有Yarn lock；已restore original SHA `b05a422f35e6d76e4e8b8a6f24ca712373bd513c43317482a607c1bf9039814e`，worktree clean，A1仍未PASS。
+- 2026-07-23 v4 focused review雙FAIL/HOLD：`test A && test B`受Bash errexit例外可讓unexpected Yarn regular file被覆寫後假綠；cleanup restore失敗仍刪temp HOME會遺失唯一backup。v5拆分simple tests，使用`mv -fT`，且backup仍存在時保留temp HOME並非0退出。Scratch probes：normal failure、unexpected regular皆rc1且original restored；unexpected directory rc1且backup preserved。
 
 ## 下一步
-- Exact A1 runtime發現npm 11 Arborist必然讀寫既有`yarn.lock`；correction改為先設fail-safe EXIT trap，再把original Yarn lock quarantine至0700 temp HOME。聚焦複驗PASS後才可重跑；A1 runtime exit 0前仍HOLD。
+- v4 review發現Bash errexit `&&`假綠與restore-failure backup deletion；v5已拆simple tests並在restore未完成時保留temp HOME/backup。新的focused雙PASS後才可重跑；A1 runtime exit 0前仍HOLD。
 - A1綠後才執行A2 exact 38-test auth baseline；紅燈立即HOLD，不混入本package。
 
 ## 絕不重做（Do-NOT-redo）
