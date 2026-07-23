@@ -265,6 +265,52 @@ test('each synchronous filesystem verification fault restores umask and cleans H
   }
 });
 
+test('directory and npmrc helpers preserve frozen primary errors when close also fails', () => {
+  for (const targetCall of [1, 3]) {
+    const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-close-fault-'));
+    const original = process.umask(0o777);
+    const primary = Object.freeze(new Error(`PRIMARY fstat fault ${targetCall}`));
+    let fstatCalls = 0;
+    let closeCalls = 0;
+    const fsAdapter = new Proxy(fs, {
+      get(source, property) {
+        const value = Reflect.get(source, property);
+        if (property === 'fstatSync') {
+          return (...args) => {
+            fstatCalls += 1;
+            if (fstatCalls === targetCall) throw primary;
+            return value.apply(source, args);
+          };
+        }
+        if (property === 'closeSync') {
+          return (...args) => {
+            closeCalls += 1;
+            const result = value.apply(source, args);
+            if (closeCalls === targetCall) throw new Error(`SECONDARY close fault ${targetCall}`);
+            return result;
+          };
+        }
+        return typeof value === 'function' ? value.bind(source) : value;
+      },
+    });
+    try {
+      assert.throws(
+        () => createSecureTempEnvironment({ parentDirectory: parent, fsAdapter }),
+        (error) => {
+          assert.match(error.message, new RegExp(`PRIMARY fstat fault ${targetCall}`));
+          if (error instanceof AggregateError) assert.match(error.errors[0].message, /PRIMARY fstat fault/);
+          return true;
+        },
+      );
+      assert.equal(process.umask(), 0o777);
+      assert.deepEqual(fs.readdirSync(parent), []);
+    } finally {
+      process.umask(original);
+      fs.rmSync(parent, { recursive: true, force: true });
+    }
+  }
+});
+
 test('repeated umask restore failure does not mask the primary setup error and HOME is cleaned', () => {
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-umask-fault-'));
   let calls = 0;

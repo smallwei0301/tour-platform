@@ -46,6 +46,7 @@ function modeOf(stat) {
 
 function verifyDirectoryIdentity(target, fsAdapter = fs, beforePathValidation = null) {
   let descriptor;
+  let primaryError = null;
   try {
     descriptor = fsAdapter.openSync(target, 'r');
     fsAdapter.fchmodSync(descriptor, 0o700);
@@ -55,13 +56,24 @@ function verifyDirectoryIdentity(target, fsAdapter = fs, beforePathValidation = 
     if (!fdStat.isDirectory() || !pathStat.isDirectory() || pathStat.isSymbolicLink?.()) fail('temp directory is not a regular directory');
     if (modeOf(fdStat) !== 0o700 || modeOf(pathStat) !== 0o700) fail('temp directory mode is not 0700');
     if (fdStat.dev !== pathStat.dev || fdStat.ino !== pathStat.ino) fail('temp directory path identity changed');
-  } finally {
-    if (descriptor !== undefined) fsAdapter.closeSync(descriptor);
+  } catch (error) {
+    primaryError = asError(error);
   }
+  if (descriptor !== undefined) {
+    try {
+      fsAdapter.closeSync(descriptor);
+    } catch (closeError) {
+      primaryError = primaryError
+        ? combineErrors(primaryError, closeError, 'directory FD close')
+        : asError(closeError);
+    }
+  }
+  if (primaryError) throw primaryError;
 }
 
 function createAndVerifyEmptyFile(target, fsAdapter = fs, beforePathValidation = null) {
   let descriptor;
+  let primaryError = null;
   try {
     descriptor = fsAdapter.openSync(target, 'wx', 0o600);
     fsAdapter.fchmodSync(descriptor, 0o600);
@@ -72,9 +84,19 @@ function createAndVerifyEmptyFile(target, fsAdapter = fs, beforePathValidation =
     if (fdStat.size !== 0 || pathStat.size !== 0) fail('npm config is not empty');
     if (modeOf(fdStat) !== 0o600 || modeOf(pathStat) !== 0o600) fail('npm config mode is not 0600');
     if (fdStat.dev !== pathStat.dev || fdStat.ino !== pathStat.ino) fail('npm config path identity changed');
-  } finally {
-    if (descriptor !== undefined) fsAdapter.closeSync(descriptor);
+  } catch (error) {
+    primaryError = asError(error);
   }
+  if (descriptor !== undefined) {
+    try {
+      fsAdapter.closeSync(descriptor);
+    } catch (closeError) {
+      primaryError = primaryError
+        ? combineErrors(primaryError, closeError, 'npmrc FD close')
+        : asError(closeError);
+    }
+  }
+  if (primaryError) throw primaryError;
 }
 
 export function createSecureTempEnvironment({
