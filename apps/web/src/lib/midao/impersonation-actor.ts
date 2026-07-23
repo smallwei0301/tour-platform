@@ -65,12 +65,13 @@ function parseCookie(cookieHeader: string, name: string): string {
 }
 
 export function createImpersonationActorCookie(input: CreateActorCookieInput): string {
-  const issuedAt = input.issuedAt ?? Date.now();
-  const guideSessionExpiresAt = input.guideSessionExpiresAt ?? (issuedAt + GUIDE_SESSION_MAX_AGE_MS);
-  if (!Number.isSafeInteger(issuedAt) || !Number.isSafeInteger(guideSessionExpiresAt)) {
+  const requestedIssuedAt = input.issuedAt ?? Date.now();
+  const guideSessionExpiresAt = input.guideSessionExpiresAt ?? (requestedIssuedAt + GUIDE_SESSION_MAX_AGE_MS);
+  if (!Number.isSafeInteger(requestedIssuedAt) || !Number.isSafeInteger(guideSessionExpiresAt)) {
     throw new Error('actor cookie timestamps must be safe integer milliseconds');
   }
-  const expiresAt = Math.min(issuedAt + ACTOR_MAX_AGE_MS, guideSessionExpiresAt);
+  const issuedAt = Math.floor(requestedIssuedAt / 1_000) * 1_000;
+  const expiresAt = Math.floor(Math.min(issuedAt + ACTOR_MAX_AGE_MS, guideSessionExpiresAt) / 1_000) * 1_000;
   if (expiresAt <= issuedAt) throw new Error('guide session must outlive actor cookie issuance');
 
   const payload: SignedActorPayload = {
@@ -108,6 +109,11 @@ export function verifyImpersonationActorCookie(
     return null;
   }
   if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null;
+  const expectedKeys = ['actorId', 'actorType', 'expiresAt', 'issuedAt', 'targetGuideId', 'version'];
+  const actualKeys = Object.keys(payload).sort();
+  if (actualKeys.length !== expectedKeys.length || actualKeys.some((key, index) => key !== expectedKeys[index])) {
+    return null;
+  }
   const candidate = payload as Partial<SignedActorPayload>;
   const targetGuideId = normalizeTargetGuideId(options.targetGuideId);
   const now = options.now ?? Date.now();

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  signDomainSeparatedValue,
   signGuideSession,
   verifyDomainSeparatedValue,
 } from '../../src/lib/guide-session-crypto.ts';
@@ -121,6 +122,36 @@ test('actor and guide signatures cannot validate across protocols', () => {
     now: issuedAt + 1_000,
   }), null);
   assert.equal(signature.length, 64);
+});
+
+test('subsecond input is normalized to one cookie-representable signed deadline', () => {
+  const subsecondIssuedAt = issuedAt + 250;
+  const subsecondGuideExpiry = subsecondIssuedAt + 1_500;
+  const cookie = createCookie({
+    issuedAt: subsecondIssuedAt,
+    guideSessionExpiresAt: subsecondGuideExpiry,
+  });
+  const { payload } = decodeValue(cookie);
+  const maxAge = Number(cookie.match(/; Max-Age=(\d+)/)?.[1]);
+  const expires = Date.parse(cookie.match(/; Expires=([^;]+)/)?.[1]);
+  assert.equal(payload.issuedAt % 1_000, 0);
+  assert.equal(payload.expiresAt % 1_000, 0);
+  assert.equal(expires, payload.expiresAt);
+  assert.equal(maxAge * 1_000, payload.expiresAt - payload.issuedAt);
+  assert.ok(payload.expiresAt <= subsecondGuideExpiry);
+});
+
+test('valid signatures with extra payload keys are rejected', () => {
+  const original = decodeValue(createCookie()).payload;
+  for (const extra of [{ adminToken: 'must-not-survive' }, { unknown: true }]) {
+    const encoded = Buffer.from(JSON.stringify({ ...original, ...extra }), 'utf8').toString('base64url');
+    const signature = signDomainSeparatedValue('midao:impersonation-actor:v1', encoded);
+    const cookie = `${MIDAO_IMPERSONATION_ACTOR_COOKIE_NAME}=${encoded}.${signature}`;
+    assert.equal(verifyImpersonationActorCookie(cookie, {
+      targetGuideId: 'guide-target-123',
+      now: issuedAt + 1_000,
+    }), null);
+  }
 });
 
 test('clear cookie uses the exact host-only scope and immediate expiry', () => {
