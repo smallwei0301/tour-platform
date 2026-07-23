@@ -37,9 +37,10 @@
 - 2026-07-23 A3 staged evidence verifier完成strict TDD與多輪adversarial remediation；final HEAD `14901eac133c2a0c0d76f5f4e3c6b6d31b9b0f5e`。Final Node22 focused suite `36/36 PASS`、frozen targeted child＋`tsc --noEmit` exit 0、`--check-only` PASS；evidence tree `8409b5c735b4adefa73e91f9f833bb4725878f97`、linked-worktree manifest mode `0600`、secret read-back PASS。
 - A3 final contracts涵蓋exact ordinary targeted/`--typecheck`/`--all` semantics、truthful npm-test coverage、三個bounded heavy prefixes、tree/path/status/blob與docs metadata snapshots、exact schema、0600、Node22、spawn error/signal、no child-output replay、credential/ambient-secret rejection。`npm test` coverage只承認shell實際選取的非hidden `apps/web/tests/<一層>/*.test.mjs`；root/deep/E2E/hidden tests需targeted或heavy entry補齊union。
 - A3 final fresh SPEC/AC與QUALITY/SECURITY/EXECUTABILITY reviewers皆PASS，綁定同一HEAD `14901eac`，blocking 0；frozen `.claude/hooks/run-checks.sh`未修改。
+- 2026-07-23 A4 prerequisite probe以Node `22.23.1`／npm `11.9.0`、isolated HOME實跑，當`npm_config_userconfig`與`npm_config_globalconfig`同指`/dev/null`時exit 1：npm在config resolution前拒絕double-loading。同一路徑plan seam不可執行；已修micro/master為runner-owned兩個不同0600 empty npmrc，A4實作暫HOLD至focused correction雙PASS。
 
 ## 下一步
-- 執行A4 strict TDD：建立三模式secret-safe CI command evidence runner；先取得runner missing／contract RED，再minimal GREEN、exact staged evidence與commit。
+- 對A4 distinct npmrc executable correction做fresh focused SPEC與QUALITY/SECURITY review；雙PASS後才執行A4 strict TDD。
 - A4完成後同樣依序fresh SPEC與QUALITY/SECURITY review；雙PASS前不進Phase B migrations。
 
 ## 絕不重做（Do-NOT-redo）

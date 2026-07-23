@@ -175,7 +175,7 @@ Reviewer evidence：
 
 A3 staged evidence verifier在final HEAD `14901eac133c2a0c0d76f5f4e3c6b6d31b9b0f5e`完成。Node22 final focused suite 36/36 PASS；frozen targeted runner＋typecheck與orchestrator `--check-only`均exit 0，evidence tree `8409b5c735b4adefa73e91f9f833bb4725878f97`、manifest mode0600。Final fresh SPEC與QUALITY/SECURITY/EXECUTABILITY reviews同SHA雙PASS、blocking 0。Evidence已truthful區分npm-test、targeted與heavy coverage，並關閉dirty snapshot、secret output、spawn buffer、dotenv/npmrc、symlink/executable docs及hidden glob假覆蓋。
 
-下一步A4 secret-safe CI command evidence runner；A4雙PASS前不進Phase B。
+下一步A4 secret-safe CI command evidence runner。A4 prerequisite exact npm11 probe證實user/global config同指`/dev/null`會在config resolution前exit 1；micro/master已改為0700 temp HOME內兩個不同0600 empty npmrc。Focused correction雙PASS前A4實作HOLD，A4雙PASS前不進Phase B。
 
 ## Safety anchors
 
