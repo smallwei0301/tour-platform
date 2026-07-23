@@ -251,7 +251,10 @@ export default function Midao2MePage() {
                 key={s.activityId}
                 style={{
                   position: 'relative', height: 140, borderRadius: 16, overflow: 'hidden',
-                  background: s.coverImageUrl ? `center/cover no-repeat url(${s.coverImageUrl})` : C.BG,
+                  // 無封面時用深色漸層底，維持白色標題可讀性
+                  background: s.coverImageUrl
+                    ? `center/cover no-repeat url(${s.coverImageUrl})`
+                    : 'linear-gradient(135deg, #334155, #1e293b)',
                   display: 'flex', alignItems: 'flex-end', padding: 12,
                 }}
               >
