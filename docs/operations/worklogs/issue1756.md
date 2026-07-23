@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 18:20 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 18:33 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -69,12 +69,14 @@
 - C5 exact DB projection只讀id/display_name/backend_mode/version/status；canonical guard固定HMAC→identity/version→approved→backend flag→mode→impersonation，forged actor不降級，context name/version/mode只取DB。非阻擋hardening：日後分開DB error/not-found並拒絕malformed/null canonical row。
 - 2026-07-23 Phase C Task C6 Midao V2 query/command wrappers完成strict TDD；final HEAD `d8069c57b596555ea881d4b8bc0f6857cabe2fec`。Focused `6/6 PASS`、typecheck與`--check-only` PASS，tree `d85d6192400430daaa6a02ea4c42d7f3ac22f690`、manifest mode `0600`；fresh boundary/idempotency/security review PASS，blocking 0。
 - C6 query固定canonical guard→handler；command固定guard→CSRF V2化→mutation gate→strict printable-ASCII 1–128-byte key→canonical JSON SHA-256→handler。Context只含canonical DB/session actor與server request metadata；known errors V2 deterministic，unexpected sanitized並上報。
+- 2026-07-23 Phase D Task D1 atomic backend-mode switch RPC完成strict TDD；final HEAD `5afb138e0c7f4bdb941479d0be934589d918bf18`。Source-contract `6/6 PASS`、`--check-only` PASS，tree `d261e6f0c38f58b4aa177467b89ea90ba6897da3`、manifest mode `0600`；fresh PostgreSQL correctness/security review PASS，blocking 0。
+- D1 function為SECURITY DEFINER＋`search_path=pg_catalog`＋全schema-qualified objects；exact ACL只允許service_role。Idempotency claim/lock→guide row lock→same-mode no side effects或mode/version+1→audit→outbox→completed snapshot均在單一transaction；本階段未apply DB，真實catalog/concurrency由D3 gates驗證。
 
 ## 下一步
-- 進入Phase D Task D1：atomic backend-mode switch RPC migration source contract與additive SQL，固定ACL/search_path/transaction/idempotency/audit/outbox順序。
+- 進入Phase D Task D2：admin mode-switch gateway/API，鎖verified actor、strict body/key與forward-only flags／rollback-always-available方向政策。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／Phase C：對應anchors均已有fresh PASS；C6 final為`d8069c57`。下一步只進D1。
+- 不重跑或重審完整plan／A4／Phase B／Phase C／D1：對應anchors均已有fresh PASS；D1 final為`5afb138e`。下一步只進D2。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
