@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 08:17 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 08:23 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -27,10 +27,10 @@
 - 2026-07-23 第一輪focused correction review雙FAIL/HOLD：executable block漏SHA/TypeScript、過期umbrella next-action、npm exec Supabase postinstall seam、hostile npm/PATH/npmrc與舊node_modules/dirty-state隔離不足。
 - 2026-07-23 從既有verified 2.87.2 cache供應固定standalone Supabase artifact：`/root/.hermes/toolchains/supabase/2.87.2/supabase`；read-back version `2.87.2`、SHA-256 `e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59`、mode `0755` regular root-owned、96,334,008 bytes。未下載floating CLI。
 - 2026-07-23 第二輪focused correction review雙FAIL/HOLD：A1分開blocks且缺fail-fast，前置/install/postflight失敗可能被最後成功命令掩蓋；npm 11.9.0拒絕user/global config同指向`/dev/null`。已合併為單一`set -euo pipefail` block，temp HOME內建立兩個不同0600空npmrc，final clean-state為最後一項gate。
+- 2026-07-23 第三輪local-only focused SPEC與QUALITY/SECURITY/EXECUTABILITY reviewers雙PASS，blocking 0（anchor `43975818`）；`bash -n`、fail injection/trap、npm 11 distinct config、linked-worktree cache、SHA/sentinel/TypeScript/fixed Supabase gates皆重驗通過。
 
 ## 下一步
-- 提交fail-closed A1 executable sequence後再跑兩位local-only focused reviewers；雙PASS後才以570秒tracked background無條件從original lock重建dependencies。
-- A1實跑必須驗validated absolute Node/npm、strict `env -i`、fixed npmrc/registry/cache、三檔before/after SHA、stale sentinel、TypeScript、fixed Supabase digest/version與final clean state。
+- 第三輪A1 focused correction已雙PASS；以570秒tracked background執行reviewed exact A1 block，只有runtime exit 0＋所有postflight gates通過才可標A1 PASS。
 - A1綠後才執行A2 exact 38-test auth baseline；紅燈立即HOLD，不混入本package。
 
 ## 絕不重做（Do-NOT-redo）
