@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { link, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { createServer, connect } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -10,6 +11,8 @@ const {
   parseSupabasePin,
   canonicalProjectId,
   classifySupabaseStatus,
+  validateCliWorkdirNotice,
+  mapStatusEnvironment,
   confirmProjectContainers,
   assertOwnershipUnchanged,
   redactSupabaseOutput,
@@ -17,6 +20,10 @@ const {
   acquireKernelRunnerLock,
   releaseKernelRunnerLock,
   createActualAdapter,
+  runCommand,
+  parseDockerHostGateway,
+  startLoopbackBridge,
+  prepareDatabaseOnlyWorkdir,
   runWithLocalSupabase,
 } = runner;
 
@@ -41,6 +48,13 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
       exitCode: 1, stdout: '', stderr: `${missingLine}${separator}${helpLine}${separator}`, expectedProjectId: projectId,
     }), 'not-running');
   }
+  const expectedWorkdir = `/tmp/lock/db-only-workdir/${projectId}`;
+  assert.equal(classifySupabaseStatus({
+    exitCode: 1, stdout: '', stderr: `Using workdir ${expectedWorkdir}\n${missingLine}\n${helpLine}\n`, expectedProjectId: projectId, expectedWorkdir,
+  }), 'not-running');
+  assert.throws(() => classifySupabaseStatus({
+    exitCode: 1, stdout: '', stderr: `Using workdir /tmp/foreign/${projectId}\n${missingLine}\n${helpLine}\n`, expectedProjectId: projectId, expectedWorkdir,
+  }), /STATUS_UNCLASSIFIED/u);
   for (const candidate of [
     { exitCode: 1, stdout: 'noise', stderr: `${missingLine}\n${helpLine}\n` },
     { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}` },
@@ -54,6 +68,104 @@ test('status classifier accepts only pinned exact two-line CRLF-aware missing fi
     { exitCode: 2, stdout: '', stderr: `${missingLine}\n${helpLine}\n` },
   ]) assert.throws(() => classifySupabaseStatus({ ...candidate, expectedProjectId: projectId }));
   assert.equal(classifySupabaseStatus({ exitCode: 0, stdout: '{"DB_URL":"postgres://local"}', stderr: '', expectedProjectId: projectId }), 'running');
+});
+
+test('CLI workdir notice accepts only the exact controlled path', () => {
+  const expectedWorkdir = `/tmp/lock/${projectId}`;
+  assert.doesNotThrow(() => validateCliWorkdirNotice('', undefined));
+  assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n`, expectedWorkdir));
+  assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\r\n`, expectedWorkdir));
+  const stopped = `Stopped services: [${['kong', 'auth', 'inbucket', 'realtime', 'rest', 'storage', 'imgproxy', 'pg_meta', 'studio', 'edge_runtime', 'analytics', 'vector', 'pooler'].map((service) => `supabase_${service}_${projectId}`).join(' ')}]`;
+  assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${stopped}\n`, expectedWorkdir, projectId));
+  assert.throws(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${stopped.replace('supabase_kong', 'supabase_wrong')}\n`, expectedWorkdir, projectId), /CLI_UNEXPECTED_STDERR/u);
+  assert.throws(() => validateCliWorkdirNotice(`Using workdir /tmp/foreign/${projectId}\n`, expectedWorkdir), /CLI_UNEXPECTED_STDERR/u);
+});
+
+test('status JSON requires DB URL and maps optional API credentials only when complete', () => {
+  assert.deepEqual(mapStatusEnvironment(JSON.stringify({ DB_URL: 'postgres://local' })), {
+    DATABASE_URL: 'postgres://local',
+    SUPABASE_DB_URL: 'postgres://local',
+  });
+  assert.throws(() => mapStatusEnvironment('{}'), /STATUS_JSON_MISSING_DB_URL/u);
+  assert.deepEqual(mapStatusEnvironment(JSON.stringify({
+    DB_URL: 'postgres://local', API_URL: 'http://local', ANON_KEY: 'anon', SERVICE_ROLE_KEY: 'service',
+  })), {
+    DATABASE_URL: 'postgres://local', SUPABASE_DB_URL: 'postgres://local',
+    SUPABASE_URL: 'http://local', NEXT_PUBLIC_SUPABASE_URL: 'http://local',
+    SUPABASE_ANON_KEY: 'anon', NEXT_PUBLIC_SUPABASE_ANON_KEY: 'anon', SUPABASE_SERVICE_ROLE_KEY: 'service',
+  });
+});
+
+test('Docker-container gateway parsing and loopback-only TCP bridge are exact', async () => {
+  const route = 'Iface\tDestination\tGateway\tFlags\neth0\t00000000\t010014AC\t0003\n';
+  assert.equal(parseDockerHostGateway(route, '0::/docker/abc'), '172.20.0.1');
+  assert.equal(parseDockerHostGateway(route, '0::/user.slice'), null);
+
+  const upstream = createServer((socket) => socket.pipe(socket));
+  await new Promise((resolveListen, reject) => {
+    upstream.once('error', reject);
+    upstream.listen(0, '127.0.0.1', resolveListen);
+  });
+  const upstreamPort = upstream.address().port;
+  const bridge = await startLoopbackBridge({ listenPort: 0, targetHost: '127.0.0.1', targetPort: upstreamPort });
+  try {
+    const reply = await new Promise((resolveReply, reject) => {
+      const socket = connect({ host: '127.0.0.1', port: bridge.port });
+      socket.once('error', reject);
+      socket.once('connect', () => socket.write('ping'));
+      socket.once('data', (chunk) => { resolveReply(chunk.toString('utf8')); socket.end(); });
+    });
+    assert.equal(reply, 'ping');
+    assert.equal(bridge.host, '127.0.0.1');
+  } finally {
+    await bridge.close();
+    await new Promise((resolveClose) => upstream.close(resolveClose));
+  }
+});
+
+test('database-only workdir preserves project identity and disables service jobs only in the copy', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'midao-db-only-'));
+  const repoRoot = join(root, projectId);
+  const lockDir = join(root, 'lock');
+  const sourceConfig = '[db]\nport = 54322\n[storage]\nenabled = true\n[auth]\nenabled = true\n';
+  try {
+    await mkdir(join(repoRoot, 'supabase', 'migrations'), { recursive: true });
+    await mkdir(lockDir, { mode: 0o700 });
+    await writeFile(join(repoRoot, 'supabase', 'config.toml'), sourceConfig);
+    await writeFile(join(repoRoot, 'supabase', 'migrations', '001.sql'), 'select 1;\n');
+    await writeFile(join(repoRoot, 'supabase', 'migrations', '001_v2.sql'), 'select 2;\n');
+    await writeFile(join(repoRoot, 'supabase', 'migrations', '001.rollback.sql'), 'select 0;\n');
+    const midaoMigrations = [
+      '20260723000000_midao_backend_mode.sql',
+      '20260723001000_midao_notification_outbox.sql',
+      '20260723002000_midao_idempotency_records.sql',
+      '20260723002500_midao_audit_events.sql',
+      '20260723003000_midao_atomic_backend_mode_switch.sql',
+      '20260723003500_midao_service_role_acl_hardening.sql',
+    ];
+    for (const [index, name] of midaoMigrations.entries()) {
+      await writeFile(join(repoRoot, 'supabase', 'migrations', name), `select ${index + 10};\n`);
+    }
+    const workdir = await prepareDatabaseOnlyWorkdir({ repoRoot, lockDir });
+    assert.equal(workdir.split('/').at(-1), projectId);
+    assert.equal(await readFile(join(repoRoot, 'supabase', 'config.toml'), 'utf8'), sourceConfig);
+    const copied = await readFile(join(workdir, 'supabase', 'config.toml'), 'utf8');
+    for (const section of ['storage', 'auth', 'realtime', 'db.seed']) {
+      assert.match(copied, new RegExp(`\\[${section}\\]\\nenabled = false`, 'u'));
+    }
+    assert.equal(await readFile(join(workdir, 'supabase', '.temp', 'cli-latest'), 'utf8'), 'v2.87.2');
+    const migrationNames = await readdir(join(workdir, 'supabase', 'migrations'));
+    assert.deepEqual(migrationNames.sort(), [
+      '00000000000001_midao_test_bootstrap.sql',
+      ...midaoMigrations.map((name, index) => `${String(index + 2).padStart(14, '0')}_${name}`),
+    ]);
+    assert.match(await readFile(join(workdir, 'supabase', 'migrations', migrationNames[0]), 'utf8'), /CREATE TABLE public\.guide_profiles/u);
+    assert.equal(await readFile(join(workdir, 'supabase', 'migrations', migrationNames[1]), 'utf8'), 'select 10;\n');
+    assert.equal(await readFile(join(repoRoot, 'supabase', 'migrations', '001.sql'), 'utf8'), 'select 1;\n');
+    assert.equal(await readFile(join(repoRoot, 'supabase', 'migrations', '001.rollback.sql'), 'utf8'), 'select 0;\n');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('same-process secure FD lock rejects contention and unsafe filesystem identities', async () => {
@@ -145,25 +257,39 @@ test('CLI invocation is pinned offline npm exec and never PATH supabase', () => 
 
 test('actual adapter captures full immutable IDs and cleans containers, networks, volumes in order', async () => {
   const calls = [];
-  const commandRunner = async (command, args) => {
+  const paths = [];
+  const dockerApiVersions = [];
+  const commandRunner = async (command, args, options = {}) => {
     calls.push([command, ...args]);
+    paths.push(options.env?.PATH);
+    dockerApiVersions.push(options.env?.DOCKER_API_VERSION);
     if (args[0] === 'ps') return { exitCode: 0, stdout: `full-container-id\tsupabase_db_${projectId}\t${projectId}\n`, stderr: '' };
     if (args[0] === 'network' && args[1] === 'ls') return { exitCode: 0, stdout: `full-network-id\tsupabase_network_${projectId}\t${projectId}\n`, stderr: '' };
     if (args[0] === 'volume' && args[1] === 'ls') return { exitCode: 0, stdout: `supabase_db_${projectId}\t${projectId}\n`, stderr: '' };
+    if (args[0] === 'inspect') return { exitCode: 0, stdout: 'healthy\n', stderr: '' };
     return { exitCode: 0, stdout: '', stderr: '' };
   };
   const adapter = createActualAdapter({ repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', commandRunner });
+  await adapter.status();
+  await adapter.start();
   const containers = await adapter.containers();
   const assets = await adapter.assets();
+  await adapter.waitForDatabase(containers);
   await adapter.stop(containers, assets);
   assert.deepEqual(calls, [
+    ['npm', 'exec', '--offline', '--yes', '--package=supabase@2.87.2', '--', 'supabase', 'status'],
+    ['npm', 'exec', '--offline', '--yes', '--package=supabase@2.87.2', '--', 'supabase', 'db', 'start'],
     ['docker', 'ps', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Names}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'network', 'ls', '--no-trunc', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.ID}}\t{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
     ['docker', 'volume', 'ls', '--filter', `label=com.supabase.cli.project=${projectId}`, '--format', '{{.Name}}\t{{.Label "com.supabase.cli.project"}}'],
+    ['docker', 'inspect', '--format', '{{.State.Health.Status}}', 'full-container-id'],
     ['docker', 'rm', '--force', '--', 'full-container-id'],
     ['docker', 'network', 'rm', 'full-network-id'],
     ['docker', 'volume', 'rm', 'supabase_db_midao-backend-design'],
   ]);
+  assert.match(paths[0], /^\/root\/\.hermes\/toolchains\/supabase\/2\.87\.2:/u);
+  assert.equal(dockerApiVersions[0], '1.43');
+  assert.equal(dockerApiVersions[1], '1.43');
 });
 
 test('redaction removes explicit and structured local credentials from all output', () => {
@@ -171,6 +297,23 @@ test('redaction removes explicit and structured local credentials from all outpu
   const redacted = redactSupabaseOutput(raw, ['anon-secret', 'service-secret', 'db-secret']);
   for (const secret of ['anon-secret', 'service-secret', 'db-secret']) assert.equal(redacted.includes(secret), false);
   assert.match(redacted, /\[REDACTED\]/u);
+});
+
+test('abort terminates the complete spawned CLI process group without orphan descendants', async () => {
+  const controller = new AbortController();
+  const pending = runCommand('sh', ['-c', 'sleep 30 & child=$!; printf "%s\\n" "$child"; wait'], { signal: controller.signal });
+  setTimeout(() => controller.abort(new Error('test abort')), 100);
+  const result = await pending;
+  const descendantPid = Number(result.stdout.trim());
+  assert.notEqual(result.exitCode, 0);
+  await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
+  try {
+    process.kill(descendantPid, 0);
+    process.kill(descendantPid, 'SIGKILL');
+    assert.fail(`orphan descendant still alive: ${descendantPid}`);
+  } catch (error) {
+    assert.equal(error.code, 'ESRCH');
+  }
 });
 
 test('lifecycle never stops foreign/reused stacks and cleans only confirmed owned stack on failures', async () => {
@@ -204,7 +347,25 @@ test('start failure before identity confirmation never stops and child failure c
       async stop() { startCalls.push('stop'); },
     },
   }), /start failed/u);
-  assert.deepEqual(startCalls, ['start']);
+  assert.deepEqual(startCalls, ['start', 'containers']);
+
+  const partialCalls = [];
+  const partialOwned = [{ id: 'partial-id', name: `supabase_db_${projectId}`, projectLabel: projectId }];
+  await assert.rejects(runWithLocalSupabase({
+    expectedProjectId: projectId,
+    childArgs: [],
+    adapter: {
+      async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+      async start() { partialCalls.push('start'); throw new Error('start interrupted'); },
+      async containers() { partialCalls.push('containers'); return structuredClone(partialOwned); },
+      async assets() { partialCalls.push('assets'); return { networks: [], volumes: [] }; },
+      async stop(identity, assets) { partialCalls.push(['stop', identity, assets]); },
+    },
+  }), /start interrupted/u);
+  assert.deepEqual(partialCalls, [
+    'start', 'containers', 'assets', 'containers', 'assets',
+    ['stop', partialOwned, { networks: [], volumes: [] }],
+  ]);
 
   const childCalls = [];
   const owned = [{ id: '1', name: `supabase_db_${projectId}`, projectLabel: projectId }];
@@ -220,7 +381,7 @@ test('start failure before identity confirmation never stops and child failure c
       async stop() { childCalls.push('stop'); },
     },
   }), /CHILD_FAILED_9/u);
-  assert.deepEqual(childCalls, ['start', 'containers', 'reset', 'child', 'containers', 'stop']);
+  assert.deepEqual(childCalls, ['start', 'containers', 'reset', 'containers', 'child', 'containers', 'stop']);
 });
 
 test('cleanup identity drift holds foreign stack and never calls stop', async () => {
@@ -234,7 +395,8 @@ test('cleanup identity drift holds foreign stack and never calls stop', async ()
       async start() {},
       async containers() {
         reads += 1;
-        return [{ id: reads === 1 ? 'owned-id' : 'replacement-id', name: `supabase_db_${projectId}`, projectLabel: projectId }];
+        const ids = ['pre-reset-id', 'post-reset-id', 'replacement-id'];
+        return [{ id: ids[Math.min(reads - 1, ids.length - 1)], name: `supabase_db_${projectId}`, projectLabel: projectId }];
       },
       async reset() {},
       async stop() { calls.push('stop'); },
