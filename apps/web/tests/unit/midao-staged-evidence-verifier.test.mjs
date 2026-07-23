@@ -116,9 +116,36 @@ test('rejects test files added or modified after evidence', () => {
 });
 
 test('rejects arbitrary flags, command injection, and non-allowlisted heavy runners', () => {
-  rejects({ childArgv: ['.claude/hooks/run-checks.sh', '--all'], actualChildArgv: ['.claude/hooks/run-checks.sh', '--all'] }, /allow|--all/i);
+  for (const childArgv of [
+    ['.claude/hooks/run-checks.sh', '--all', TEST],
+    ['.claude/hooks/run-checks.sh', '--all', '--typecheck'],
+    ['.claude/hooks/run-checks.sh', '--all', '--all'],
+    ['.claude/hooks/run-checks.sh', '--typecheck', '--typecheck', TEST],
+    ['.claude/hooks/run-checks.sh', '--unknown', TEST],
+  ]) rejects({ childArgv, actualChildArgv: childArgv }, /allow|--all|flag/i);
   rejects({ childArgv: ['sh', '-c', 'true'], actualChildArgv: ['sh', '-c', 'true'] }, /runner/i);
   rejects({ childArgv: ['scripts/heavy.sh', '--run-heavy'], actualChildArgv: ['scripts/heavy.sh', '--run-heavy'] }, /heavy|allowlist/i);
+});
+
+test('ordinary --all derives npm test and covers every staged test', () => {
+  const other = 'apps/web/tests/api/other.spec.mjs';
+  const state = snapshot({
+    staged: [
+      ...snapshot().staged,
+      { status: 'A', path: other, blob: 'def456' },
+    ],
+    tracked: [...snapshot().tracked, other],
+  });
+  const childArgv = ['.claude/hooks/run-checks.sh', '--all'];
+  const input = validRun({
+    childArgv,
+    actualChildArgv: childArgv,
+    before: state,
+    after: state,
+    evidence: { cmd: 'npm test', exit_code: 0, epoch: NOW - 1 },
+  });
+  assert.equal(deriveExpectedEvidenceCmd(childArgv), 'npm test');
+  assert.deepEqual(validateRun(input).coveredPaths, [TEST, other]);
 });
 
 test('allows only explicitly bounded --run-heavy runners', () => {

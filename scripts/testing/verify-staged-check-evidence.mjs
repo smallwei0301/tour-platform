@@ -113,11 +113,13 @@ export function classifyChild(childArgv, options = {}) {
   if (runMode === 'ordinary') {
     if (childArgv[0] !== ORDINARY_RUNNER || childArgv.length < 2) fail('child runner is not allowlisted');
     const args = childArgv.slice(1);
+    if (args.length === 1 && args[0] === '--all') return { kind: 'ordinary', paths: [], prefix: [ORDINARY_RUNNER], all: true };
+    if (args.includes('--all')) fail('--all must be the only runner argument');
     const flags = args.filter((arg) => arg.startsWith('--'));
-    if (flags.some((flag) => flag !== '--typecheck') || args.includes('--all')) fail('runner flag is not allowlisted');
+    if (flags.some((flag) => flag !== '--typecheck') || flags.filter((flag) => flag === '--typecheck').length > 1) fail('runner flag is not allowlisted');
     const paths = args.filter((arg) => !arg.startsWith('--'));
     if (paths.length === 0) fail('runner requires a tracked staged test path');
-    return { kind: 'ordinary', paths, prefix: [ORDINARY_RUNNER] };
+    return { kind: 'ordinary', paths, prefix: [ORDINARY_RUNNER], all: false };
   }
   if (runMode !== 'heavy') fail('run mode is invalid');
   const prefix = HEAVY_PREFIXES.find((candidate) => candidate.every((part, index) => childArgv[index] === part));
@@ -135,6 +137,7 @@ export function classifyChild(childArgv, options = {}) {
 export function deriveExpectedEvidenceCmd(childArgv, options = {}) {
   const child = classifyChild(childArgv, options);
   if (child.kind === 'heavy') return childArgv.join(' ');
+  if (child.all) return 'npm test';
   const doTypecheck = childArgv.includes('--typecheck');
   return `node --test ${child.paths.join(' ')}${doTypecheck ? ' && npm run typecheck' : ''}`;
 }
@@ -204,7 +207,7 @@ export function validateRun(input) {
     childArgv: [...childArgv],
     expectedEvidenceCmd,
     stagedManifest: before.staged.map((item) => ({ ...item })),
-    coveredPaths: child.paths.filter((file) => stagedTests.has(file)),
+    coveredPaths: child.all ? [...stagedTests] : child.paths.filter((file) => stagedTests.has(file)),
     docsOnlyUntracked: docsOnlyPaths(before),
   };
   if (child.kind === 'heavy') {
@@ -266,7 +269,7 @@ function validateEntryShape(entry, current, now) {
   const expected = deriveExpectedEvidenceCmd(entry.childArgv, options);
   if (entry.expectedEvidenceCmd !== expected) fail('bundle expected command is invalid');
   const stagedTests = new Set(current.staged.filter((item) => isTestPath(item.path)).map((item) => item.path));
-  const expectedCovered = child.paths.filter((file) => stagedTests.has(file));
+  const expectedCovered = child.all ? [...stagedTests] : child.paths.filter((file) => stagedTests.has(file));
   if (!same(entry.coveredPaths, expectedCovered)) fail('bundle covered paths do not match staged child paths');
   if (runMode === 'heavy') {
     if (Object.hasOwn(entry, 'evidence')) fail('heavy entry must not contain harness evidence');
