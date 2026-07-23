@@ -249,11 +249,13 @@ test('check-only structurally rejects tampering in every entry', () => {
   assert.throws(() => validateBundle({ bundle: { ...bundle, entries: [{ ...heavy, epoch: heavy.childStartedAt - 1 }, ordinary] }, ...args }), /heavy.*epoch|child start/i);
 });
 
-function verifierAdapters({ existingBundle = null, spawnResult = { status: 0, stdout: '', stderr: '' } } = {}) {
+function verifierAdapters({ existingBundle = null, spawnResult = { status: 0, stdout: '', stderr: '' }, manifestMode = 0o600 } = {}) {
+  const manifestPath = '/repo/.git/midao-last-verified.json';
   const files = new Map([
-    ['/repo/.git/midao-last-verified.json', JSON.stringify(existingBundle)],
+    [manifestPath, JSON.stringify(existingBundle)],
     ['/repo/.claude/state/last-checks.json', JSON.stringify(validRun().evidence)],
   ]);
+  const modes = new Map([[manifestPath, manifestMode]]);
   const output = [];
   const git = (args) => {
     const key = args.join(' ');
@@ -267,11 +269,15 @@ function verifierAdapters({ existingBundle = null, spawnResult = { status: 0, st
     throw new Error(`unexpected git call: ${key}`);
   };
   return {
-    output, files,
+    output, files, modes, manifestPath,
     overrides: {
       git, now: () => NOW, nodeVersion: () => 'v22.17.0',
       exists: (file) => existingBundle !== null && files.has(file),
-      readFile: (file) => files.get(file), writeFile: (file, data) => files.set(file, data), remove: (file) => files.delete(file),
+      readFile: (file) => files.get(file),
+      writeFile: (file, data) => files.set(file, data),
+      chmod: (file, mode) => modes.set(file, mode),
+      mode: (file) => modes.get(file),
+      remove: (file) => files.delete(file),
       spawn: () => spawnResult, stdout: (text) => output.push(['stdout', text]), stderr: (text) => output.push(['stderr', text]),
       log: (text) => output.push(['log', text]), error: (text) => output.push(['error', text]),
     },
@@ -301,4 +307,45 @@ test('same-tree existing bundle is revalidated before append', () => {
   const mocks = verifierAdapters({ existingBundle: tampered });
   assert.throws(() => createVerifier(mocks.overrides).run(['--run', '--', ...CHILD]), /command|cmd|tamper/i);
   assert.equal(JSON.parse(mocks.files.get('/repo/.git/midao-last-verified.json')).entries.length, 1);
+});
+
+test('rejects broad tracked code drift and post-evidence test/spec drift', () => {
+  rejects({ before: snapshot({ trackedUnstaged: ['src/dirty.js'] }), after: snapshot({ trackedUnstaged: ['src/dirty.js'] }) }, /tracked unstaged/i);
+  rejects({ before: snapshot({ untracked: ['apps/web/tests/unit/new.test.js'] }), after: snapshot({ untracked: ['apps/web/tests/unit/new.test.js'] }) }, /untracked|test.*drift/i);
+});
+
+test('heavy suffix must be a strict tracked .test/.spec path', () => {
+  const helper = 'apps/web/tests/unit/helper.mjs';
+  assert.throws(
+    () => classifyChild([...HEAVY, helper], { runMode: 'heavy', tracked: [...snapshot().tracked, helper] }),
+    /test|spec|suffix/i,
+  );
+});
+
+test('rejects secret-bearing docs filenames and exact-schema unknown fields', () => {
+  rejects({
+    before: snapshot({ untracked: ['notes/password=hunter2.md'] }),
+    after: snapshot({ untracked: ['notes/password=hunter2.md'] }),
+  }, /secret/i);
+  const entry = validateRun(validRun());
+  const args = { current: snapshot(), evidence: validRun().evidence, now: NOW };
+  assert.throws(
+    () => validateBundle({ bundle: { schemaVersion: 1, tree: 'tree-a', entries: [{ ...entry, stdout: 'clean' }] }, ...args }),
+    /schema|unknown|field/i,
+  );
+  assert.throws(
+    () => validateBundle({ bundle: { schemaVersion: 1, tree: 'tree-a', entries: [{ ...entry, stdout: 'password=hunter2' }] }, ...args }),
+    /secret/i,
+  );
+});
+
+test('writes manifest as 0600 and check-only rejects mode tampering', () => {
+  const writeMocks = verifierAdapters({ manifestMode: 0o644 });
+  createVerifier(writeMocks.overrides).run(['--run-heavy', '--', ...HEAVY, TEST]);
+  assert.equal(writeMocks.modes.get(writeMocks.manifestPath), 0o600);
+
+  const entry = validateRun(validRun());
+  const bundle = { schemaVersion: 1, tree: 'tree-a', entries: [entry] };
+  const checkMocks = verifierAdapters({ existingBundle: bundle, manifestMode: 0o644 });
+  assert.throws(() => createVerifier(checkMocks.overrides).run(['--check-only']), /0600|mode|permission/i);
 });

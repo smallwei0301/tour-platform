@@ -7,7 +7,9 @@ import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 export const CODE_LIKE_UNTRACKED = Object.freeze([
-  '.ts', '.tsx', '.mjs', '.sql', '.sh', '.json', '.toml',
+  '.js', '.jsx', '.cjs', '.mjs', '.ts', '.tsx', '.cts', '.mts',
+  '.sql', '.sh', '.bash', '.json', '.toml', '.css', '.scss', '.sass', '.less',
+  '.html', '.vue', '.svelte', '.py', '.rb', '.go', '.rs', '.java', '.kt', '.kts', '.php',
 ]);
 
 const MAX_AGE_SECONDS = 30 * 60;
@@ -18,7 +20,7 @@ export const HEAVY_PREFIXES = Object.freeze([
   Object.freeze(['timeout', '--signal=TERM', '570s', 'bash', 'scripts/testing/run-midao-legacy-e2e-compat.sh']),
 ]);
 const GLOB_META = /[*?\[\]{}]/u;
-const TEST_PATH = /(?:^|\/)tests?\/.*\.(?:[cm]?[jt]sx?|sql|sh)$/u;
+const TEST_PATH = /(?:^|\/)(?:test|tests|e2e)\/.*\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
 const SECRET_VALUE = /(?:authorization\s*:\s*bearer\s+[^\s'"]+|(?:(?:api[_-]?)?(?:token|key)|password|secret)\s*[:=]\s*['"]?[^\s'"]+)/giu;
 
 function fail(message) {
@@ -109,9 +111,9 @@ function assertSafeState(state, label) {
     if (String(item.status).startsWith('D')) fail('staged deletion is forbidden');
     if (String(item.status).startsWith('R')) fail('staged rename is forbidden');
   }
-  const dirty = (state.trackedUnstaged ?? []).filter(isCodeLike);
+  const dirty = (state.trackedUnstaged ?? []).filter((file) => isCodeLike(file) || isTestPath(file));
   if (dirty.length) fail(`tracked unstaged code is forbidden: ${dirty.join(', ')}`);
-  const untrackedCode = (state.untracked ?? []).filter(isCodeLike);
+  const untrackedCode = (state.untracked ?? []).filter((file) => isCodeLike(file) || isTestPath(file));
   if (untrackedCode.length) fail(`untracked code is forbidden: ${untrackedCode.join(', ')}`);
 }
 
@@ -169,18 +171,49 @@ export function validateRun(input) {
     assertFresh(evidence.epoch, now);
     entry.evidence = { cmd: evidence.cmd, exit_code: evidence.exit_code, epoch: evidence.epoch };
   }
+  assertNoSecrets(JSON.stringify(entry), 'manifest');
   return entry;
 }
 
+function assertExactKeys(value, expected, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) fail(`${label} schema is invalid`);
+  const actual = Object.keys(value).sort();
+  const wanted = [...expected].sort();
+  if (!same(actual, wanted)) fail(`${label} has unknown or missing fields`);
+}
+
+function validateStagedManifest(items) {
+  if (!Array.isArray(items)) fail('bundle staged manifest schema is invalid');
+  for (const item of items) {
+    const keys = ['status', 'path', 'blob', ...(Object.hasOwn(item ?? {}, 'oldPath') ? ['oldPath'] : [])];
+    assertExactKeys(item, keys, 'bundle staged manifest item');
+    if (typeof item.status !== 'string' || typeof item.path !== 'string' || typeof item.blob !== 'string') {
+      fail('bundle staged manifest item values are invalid');
+    }
+    if (Object.hasOwn(item, 'oldPath') && typeof item.oldPath !== 'string') fail('bundle staged oldPath is invalid');
+  }
+}
+
 function validateEntryShape(entry, current, now) {
-  if (!entry || entry.schemaVersion !== 1 || entry.tree !== current.tree || !Array.isArray(entry.coveredPaths)) fail('bundle entry schema/tree is invalid');
-  if (!Array.isArray(entry.childArgv) || !Array.isArray(entry.stagedManifest)) fail('bundle entry argv/manifest schema is invalid');
+  assertNoSecrets(JSON.stringify(entry), 'bundle entry');
+  const commonKeys = [
+    'schemaVersion', 'kind', 'tree', 'verifiedAt', 'childStartedAt', 'childArgv',
+    'expectedEvidenceCmd', 'stagedManifest', 'coveredPaths', 'docsOnlyUntracked',
+  ];
+  if (entry?.kind === 'ordinary') assertExactKeys(entry, [...commonKeys, 'evidence'], 'ordinary bundle entry');
+  else if (entry?.kind === 'heavy') assertExactKeys(entry, [...commonKeys, 'childExitCode', 'epoch'], 'heavy bundle entry');
+  else fail('bundle entry kind is invalid');
+  if (entry.schemaVersion !== 1 || entry.tree !== current.tree) fail('bundle entry schema/tree is invalid');
+  if (!Array.isArray(entry.childArgv) || entry.childArgv.some((item) => typeof item !== 'string')) fail('bundle entry argv schema is invalid');
+  validateStagedManifest(entry.stagedManifest);
+  if (!Array.isArray(entry.coveredPaths) || entry.coveredPaths.some((item) => typeof item !== 'string')) fail('bundle covered paths schema is invalid');
+  if (!Array.isArray(entry.docsOnlyUntracked) || entry.docsOnlyUntracked.some((item) => typeof item !== 'string')) fail('bundle docs-only paths schema is invalid');
+  if (typeof entry.expectedEvidenceCmd !== 'string') fail('bundle expected command schema is invalid');
   if (!same(entry.stagedManifest, current.staged)) fail('bundle entry staged manifest does not match current state');
   assertFresh(entry.verifiedAt, now);
   if (!Number.isInteger(entry.childStartedAt) || entry.childStartedAt > entry.verifiedAt) fail('bundle child start epoch is invalid');
   assertFresh(entry.childStartedAt, now);
-  const runMode = entry.kind === 'heavy' ? 'heavy' : entry.kind === 'ordinary' ? 'ordinary' : null;
-  if (!runMode) fail('bundle entry kind is invalid');
+  const runMode = entry.kind === 'heavy' ? 'heavy' : 'ordinary';
   const options = { runMode, tracked: current.tracked ?? [] };
   const child = classifyChild(entry.childArgv, options);
   const expected = deriveExpectedEvidenceCmd(entry.childArgv, options);
@@ -194,7 +227,9 @@ function validateEntryShape(entry, current, now) {
     if (!Number.isInteger(entry.epoch) || entry.epoch < entry.childStartedAt) fail('heavy epoch predates child start');
     assertFresh(entry.epoch, now);
   } else {
-    if (!entry.evidence || entry.evidence.exit_code !== 0) fail('bundle evidence exit must be zero');
+    assertExactKeys(entry.evidence, ['cmd', 'exit_code', 'epoch'], 'bundle evidence');
+    if (typeof entry.evidence.cmd !== 'string' || !Number.isInteger(entry.evidence.exit_code)) fail('bundle evidence values are invalid');
+    if (entry.evidence.exit_code !== 0) fail('bundle evidence exit must be zero');
     if (entry.evidence.cmd !== expected) fail('bundle evidence cmd is invalid');
     if (!Number.isInteger(entry.evidence.epoch) || entry.evidence.epoch < entry.childStartedAt) fail('bundle evidence epoch is invalid');
     assertFresh(entry.evidence.epoch, now);
@@ -202,7 +237,9 @@ function validateEntryShape(entry, current, now) {
 }
 
 function validateExistingBundle(bundle, current, now) {
-  if (!bundle || bundle.schemaVersion !== 1 || bundle.tree !== current.tree || !Array.isArray(bundle.entries)) fail('bundle does not match current index tree');
+  assertNoSecrets(JSON.stringify(bundle), 'bundle');
+  assertExactKeys(bundle, ['schemaVersion', 'tree', 'entries'], 'bundle');
+  if (bundle.schemaVersion !== 1 || bundle.tree !== current.tree || !Array.isArray(bundle.entries)) fail('bundle does not match current index tree');
   for (const entry of bundle.entries) validateEntryShape(entry, current, now);
   return bundle;
 }
@@ -239,6 +276,8 @@ function defaultAdapters() {
     git,
     readFile: (file) => fs.readFileSync(file, 'utf8'),
     writeFile: (file, data) => fs.writeFileSync(file, data, { mode: 0o600 }),
+    chmod: (file, mode) => fs.chmodSync(file, mode),
+    mode: (file) => fs.statSync(file).mode & 0o777,
     exists: (file) => fs.existsSync(file),
     remove: (file) => fs.rmSync(file, { force: true }),
     spawn: (command, args, options) => spawnSync(command, args, options),
@@ -299,6 +338,7 @@ export function createVerifier(overrides = {}) {
       const current = getSnapshot(adapters, root);
 
       if (parsed.mode === 'check-only') {
+        if (adapters.mode(absoluteManifestPath) !== 0o600) fail('evidence manifest mode must be 0600');
         const bundle = readJson(adapters, absoluteManifestPath);
         const evidence = readJson(adapters, evidencePath);
         validateBundle({ bundle, current, evidence, now });
@@ -338,6 +378,8 @@ export function createVerifier(overrides = {}) {
       const bundle = existingBundle ?? { schemaVersion: 1, tree: current.tree, entries: [] };
       bundle.entries.push(entry);
       adapters.writeFile(absoluteManifestPath, `${JSON.stringify(bundle, null, 2)}\n`);
+      adapters.chmod(absoluteManifestPath, 0o600);
+      if (adapters.mode(absoluteManifestPath) !== 0o600) fail('evidence manifest mode must be 0600');
       adapters.log(`staged evidence recorded: ${current.tree}`);
       return bundle;
     },
