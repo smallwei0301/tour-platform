@@ -68,7 +68,7 @@
 - Create: `scripts/testing/run-midao-ci-command.mjs`
 - Create: `apps/web/tests/unit/midao-ci-command-runner.test.mjs`
 
-先以adversarial tests鎖same-tree evidence bundle、frozen harness semantic command、untracked/unstaged rejection，以及lint/typecheck/build固定mode、strict child env allowlist（validated absolute npm、rebuilt PATH、fixed locale、0700 isolated HOME、兩個不同0600 empty user/global npmrc、runner-owned cache）、dotenv/npmrc fail-closed、secret redaction、clean HEAD/tree與per-command log digest。npm 11會拒絕user/global config同指 `/dev/null`，故兩個config path不得相同；不得修改frozen `.claude/**`。Master下方test commands是child payload；#1756實際commit依executable micro-plan由staged orchestrator執行，final CI equivalent使用CI recorder。
+先以adversarial tests鎖same-tree evidence bundle、frozen harness semantic command、untracked/unstaged rejection，以及lint/typecheck/build固定mode、strict child env allowlist（validated absolute npm、rebuilt PATH、fixed locale、0700 isolated HOME、兩個不同的FD-verified empty0600 user/global npmrc、runner-owned cache）、dotenv/npmrc fail-closed、secret redaction、clean HEAD/tree與per-command log digest。npm 11會拒絕user/global config同指 `/dev/null`，故兩個config path不得相同；hostile umask下仍須以FD `fchmod/fstat`與path `lstat` identity證明exact0600。Temp HOME建立後所有setup/spawn/postflight success/failure paths都必須finally cleanup；cleanup失敗final nonzero且不得發布success evidence，success evidence只可在cleanup成功後atomic commit。不得修改frozen `.claude/**`。Master下方test commands是child payload；#1756實際commit依executable micro-plan由staged orchestrator執行，final CI equivalent使用CI recorder。
 
 ## Task 1: 建立 backend mode migration contract test
 

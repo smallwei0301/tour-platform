@@ -38,13 +38,14 @@
 - A3 final contracts涵蓋exact ordinary targeted/`--typecheck`/`--all` semantics、truthful npm-test coverage、三個bounded heavy prefixes、tree/path/status/blob與docs metadata snapshots、exact schema、0600、Node22、spawn error/signal、no child-output replay、credential/ambient-secret rejection。`npm test` coverage只承認shell實際選取的非hidden `apps/web/tests/<一層>/*.test.mjs`；root/deep/E2E/hidden tests需targeted或heavy entry補齊union。
 - A3 final fresh SPEC/AC與QUALITY/SECURITY/EXECUTABILITY reviewers皆PASS，綁定同一HEAD `14901eac`，blocking 0；frozen `.claude/hooks/run-checks.sh`未修改。
 - 2026-07-23 A4 prerequisite probe以Node `22.23.1`／npm `11.9.0`、isolated HOME實跑，當`npm_config_userconfig`與`npm_config_globalconfig`同指`/dev/null`時exit 1：npm在config resolution前拒絕double-loading。同一路徑plan seam不可執行；已修micro/master為runner-owned兩個不同0600 empty npmrc，A4實作暫HOLD至focused correction雙PASS。
+- A4 correction首輪fresh focused SPEC與QUALITY/SECURITY reviewers皆FAIL：worklog scope stale、tests未鎖all-outcome cleanup；hostile umask可讓`open(...,0600)`實際mode000，且缺FD/path identity、partial setup／cleanup failure與success evidence sequencing。v2 contract加入exclusive FD create、`fchmod/fstat/lstat` dev/inode readback、restrictive umask與replacement probes、`mkdtemp`後立即try/finally、cleanup failure nonzero及cleanup成功後才atomic發布evidence。
 
 ## 下一步
 - 對A4 distinct npmrc executable correction做fresh focused SPEC與QUALITY/SECURITY review；雙PASS後才執行A4 strict TDD。
 - A4完成後同樣依序fresh SPEC與QUALITY/SECURITY review；雙PASS前不進Phase B migrations。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan：`bcb81b11`已取得fresh spec＋quality/security雙PASS；本次只聚焦A1 install command correction。
+- 不重跑或重審完整plan：`bcb81b11`已取得fresh spec＋quality/security雙PASS；本次只聚焦A4 distinct npmrc executable correction。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
