@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 19:03 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-23 19:53 CST｜負責 session：Canary／2026-07-23
 
 ## 目標
 依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -73,12 +73,14 @@
 - D1 function為SECURITY DEFINER＋`search_path=pg_catalog`＋全schema-qualified objects；exact ACL只允許service_role。Idempotency claim/lock→guide row lock→same-mode no side effects或mode/version+1→audit→outbox→completed snapshot均在單一transaction；本階段未apply DB，真實catalog/concurrency由D3 gates驗證。
 - 2026-07-23 Phase D Task D2 admin mode-switch gateway/API完成strict TDD remediation；final HEAD `0006353a8f3a0b741ef2675aadf7ebb2472e5cf6`。Initial implementation `fbb667a0` review FAIL blocking 3；async Supabase client、direction TOCTOU與mixed admin credential provenance均新增真RED後修復。Final exact D2/typecheck/check-only PASS，tree `a49643cc76af4252f9ce9cae1ec8367a2ea0ac6e`、manifest `0600`；focused/admin/C4A regressions `29/29 PASS`；fresh static re-review PASS，blocking 0。
 - D2 actor逐欄完全mirror middleware header→cookie precedence；target=midao一律要求backend＋mode-switch flags，避免stale pre-read forward bypass；target=legacy rollback/same-mode不依賴任何flags。Gateway await production client，route strict UUID/body/reason/key/hash且無直接DB。
+- 2026-07-23 Phase D Task D3a exclusive local Supabase runner完成多輪hostile remediation；final HEAD `8a70f79e096b5cdf92df8fb61111ebbe6910544e`。Unit `14/14 PASS`、typecheck/check-only PASS，tree `cbbec2325fb4de23550cbeffa0efdbd7b2e75699`、manifest `0600`；final fresh lifecycle/security review PASS，blocking 0。
+- D3a同一Node持有owner-only directory＋`O_NOFOLLOW` regular/nlink1/uid/mode600 FD flock；exact LF/CRLF status、full container/network IDs與volume identifiers、pre-cleanup identity recheck、exact-ID cleanup、signal teardown、credential redaction及position-0 partial-write-safe metadata release均fail closed。尚未在D3a啟動Docker或apply DB。
 
 ## 下一步
-- 進入Phase D Task D3a：建立exclusive、identity-verified、credential-redacted local Supabase runner與unit tests。
+- 進入Phase D Task D3b：由exclusive runner真實`db reset --local`並驗證foundation catalog、ACL、RLS與exact RPC ACL。
 
 ## 絕不重做（Do-NOT-redo）
-- 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D2：對應anchors均已有fresh PASS；D2 final為`0006353a`。下一步只進D3a。
+- 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。
 - 不沿用首次`npm install`後再restore lock假裝deterministic；必須由`npm ci`重新建立。
 - 不執行`npm audit fix`，避免未review dependency/lock drift。
 - 不修改frozen middleware、legacy orders/payments、既有migrations、protected E2E、`CLAUDE.md`或`.claude/**`。
