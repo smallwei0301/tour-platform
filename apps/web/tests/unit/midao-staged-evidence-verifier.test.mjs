@@ -127,14 +127,18 @@ test('rejects arbitrary flags, command injection, and non-allowlisted heavy runn
   rejects({ childArgv: ['scripts/heavy.sh', '--run-heavy'], actualChildArgv: ['scripts/heavy.sh', '--run-heavy'] }, /heavy|allowlist/i);
 });
 
-test('ordinary --all derives npm test and covers every staged test', () => {
-  const other = 'apps/web/tests/api/other.spec.mjs';
+test('ordinary --all derives npm test and covers only tests selected by npm test', () => {
+  const selected = 'apps/web/tests/api/other.test.mjs';
+  const rootTest = 'apps/web/tests/slot-generator.test.mjs';
+  const playwright = 'apps/web/e2e/t1-login.spec.ts';
   const state = snapshot({
     staged: [
       ...snapshot().staged,
-      { status: 'A', path: other, blob: 'def456' },
+      { status: 'A', path: selected, blob: 'def456' },
+      { status: 'A', path: rootTest, blob: 'abc789' },
+      { status: 'A', path: playwright, blob: 'fed321' },
     ],
-    tracked: [...snapshot().tracked, other],
+    tracked: [...snapshot().tracked, selected, rootTest, playwright],
   });
   const childArgv = ['.claude/hooks/run-checks.sh', '--all'];
   const input = validRun({
@@ -145,7 +149,7 @@ test('ordinary --all derives npm test and covers every staged test', () => {
     evidence: { cmd: 'npm test', exit_code: 0, epoch: NOW - 1 },
   });
   assert.equal(deriveExpectedEvidenceCmd(childArgv), 'npm test');
-  assert.deepEqual(validateRun(input).coveredPaths, [TEST, other]);
+  assert.deepEqual(validateRun(input).coveredPaths, [TEST, selected]);
 });
 
 test('allows only explicitly bounded --run-heavy runners', () => {

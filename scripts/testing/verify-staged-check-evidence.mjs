@@ -22,6 +22,7 @@ export const HEAVY_PREFIXES = Object.freeze([
 ]);
 const GLOB_META = /[*?\[\]{}]/u;
 const TEST_PATH = /(?:^|\/)(?:test|tests|e2e)\/.*\.(?:test|spec)\.(?:[cm]?[jt]sx?)$/u;
+const NPM_TEST_PATH = /^apps\/web\/tests\/[^/]+\/[^/]+\.test\.mjs$/u;
 const DOC_PATH = /\.(?:md|mdx|txt|rst|adoc)$/iu;
 const SECRET_VALUE = /(?:authorization\s*:\s*[^\r\n]+|(?:set-)?cookie\s*:\s*[^\r\n]+|(?:(?:api[_-]?)?(?:token|key)|password|secret|database[_-]?url|db[_-]?url|connection[_-]?(?:url|string)|dsn)\s*[:=]\s*(?:"[\s\S]*?"|'[\s\S]*?'|[^\r\n]+)|[a-z][a-z0-9+.-]*:\/\/[^\s\/:@]+:[^@\s\/]+@)/giu;
 
@@ -207,7 +208,7 @@ export function validateRun(input) {
     childArgv: [...childArgv],
     expectedEvidenceCmd,
     stagedManifest: before.staged.map((item) => ({ ...item })),
-    coveredPaths: child.all ? [...stagedTests] : child.paths.filter((file) => stagedTests.has(file)),
+    coveredPaths: child.all ? [...stagedTests].filter((file) => NPM_TEST_PATH.test(file)) : child.paths.filter((file) => stagedTests.has(file)),
     docsOnlyUntracked: docsOnlyPaths(before),
   };
   if (child.kind === 'heavy') {
@@ -269,7 +270,7 @@ function validateEntryShape(entry, current, now) {
   const expected = deriveExpectedEvidenceCmd(entry.childArgv, options);
   if (entry.expectedEvidenceCmd !== expected) fail('bundle expected command is invalid');
   const stagedTests = new Set(current.staged.filter((item) => isTestPath(item.path)).map((item) => item.path));
-  const expectedCovered = child.all ? [...stagedTests] : child.paths.filter((file) => stagedTests.has(file));
+  const expectedCovered = child.all ? [...stagedTests].filter((file) => NPM_TEST_PATH.test(file)) : child.paths.filter((file) => stagedTests.has(file));
   if (!same(entry.coveredPaths, expectedCovered)) fail('bundle covered paths do not match staged child paths');
   if (runMode === 'heavy') {
     if (Object.hasOwn(entry, 'evidence')) fail('heavy entry must not contain harness evidence');
