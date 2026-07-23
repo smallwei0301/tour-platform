@@ -363,6 +363,8 @@ test('atomic writer aggregates post-rename cleanup errors and invalidates the ta
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'midao-ci-atomic-'));
   const target = path.join(directory, 'evidence.json');
   let targetRemoveFailed = false;
+  let targetStatFailed = false;
+  let targetUnlinkCalls = 0;
   const fsAdapter = new Proxy(fs, {
     get(source, property) {
       if (property === 'renameSync') {
@@ -380,6 +382,23 @@ test('atomic writer aggregates post-rename cleanup errors and invalidates the ta
           return fs.rmSync(candidate, options);
         };
       }
+      if (property === 'lstatSync') {
+        return (candidate) => {
+          if (candidate === target && !targetStatFailed) {
+            targetStatFailed = true;
+            const error = new Error('TERTIARY target lstat EIO');
+            error.code = 'EIO';
+            throw error;
+          }
+          return fs.lstatSync(candidate);
+        };
+      }
+      if (property === 'unlinkSync') {
+        return (candidate) => {
+          if (candidate === target) targetUnlinkCalls += 1;
+          return fs.unlinkSync(candidate);
+        };
+      }
       const value = Reflect.get(source, property);
       return typeof value === 'function' ? value.bind(source) : value;
     },
@@ -390,10 +409,18 @@ test('atomic writer aggregates post-rename cleanup errors and invalidates the ta
       (error) => {
         assert.match(error.message, /PRIMARY post-rename fault/);
         assert.equal(error instanceof AggregateError, true);
-        assert.match(error.errors[1].message, /SECONDARY target remove fault/);
+        const messages = [];
+        const visit = (value) => {
+          messages.push(value.message);
+          if (value instanceof AggregateError) for (const nested of value.errors) visit(nested);
+        };
+        visit(error);
+        assert.equal(messages.some((message) => /SECONDARY target remove fault/.test(message)), true);
+        assert.equal(messages.some((message) => /TERTIARY target lstat EIO/.test(message)), true);
         return true;
       },
     );
+    assert.equal(targetUnlinkCalls > 0, true);
     assert.equal(fs.existsSync(target), false);
   } finally {
     fs.rmSync(directory, { recursive: true, force: true });

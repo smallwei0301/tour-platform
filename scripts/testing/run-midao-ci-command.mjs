@@ -446,6 +446,11 @@ export function writeAtomic0600(target, content, { fsAdapter = fs, randomBytes =
         fsAdapter.rmSync(target, { force: true });
       } catch (removeError) {
         primaryError = combineErrors(primaryError, removeError, 'atomic target remove');
+        try {
+          fsAdapter.unlinkSync(target);
+        } catch (unlinkError) {
+          if (unlinkError.code !== 'ENOENT') primaryError = combineErrors(primaryError, unlinkError, 'atomic target unlink fallback');
+        }
       }
       let targetRemains = false;
       try {
