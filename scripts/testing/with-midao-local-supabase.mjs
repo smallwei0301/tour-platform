@@ -56,6 +56,18 @@ function safeMode(stat) {
   return stat.mode & 0o777;
 }
 
+async function writeJsonAtStart(handle, value) {
+  const bytes = Buffer.from(`${JSON.stringify(value)}\n`, 'utf8');
+  await handle.truncate(0);
+  let offset = 0;
+  while (offset < bytes.length) {
+    const result = await handle.write(bytes, offset, bytes.length - offset, offset);
+    if (!result || result.bytesWritten <= 0) throw new Error('LOCK_METADATA_SHORT_WRITE');
+    offset += result.bytesWritten;
+  }
+  await handle.sync();
+}
+
 export async function acquireKernelRunnerLock({ lockDir = LOCK_PATH, metadata = {} } = {}) {
   const ownerUid = typeof process.getuid === 'function' ? process.getuid() : null;
   try {
@@ -79,9 +91,7 @@ export async function acquireKernelRunnerLock({ lockDir = LOCK_PATH, metadata = 
     const locked = await flockFileDescriptor(handle.fd);
     if (locked.exitCode !== 0) throw new Error('LOCK_HELD');
     const record = { pid: process.pid, ...metadata };
-    await handle.truncate(0);
-    await handle.writeFile(`${JSON.stringify(record)}\n`, 'utf8');
-    await handle.sync();
+    await writeJsonAtStart(handle, record);
     return { handle, lockFile, record };
   } catch (error) {
     await handle?.close().catch(() => {});
@@ -94,10 +104,18 @@ export async function acquireKernelRunnerLock({ lockDir = LOCK_PATH, metadata = 
 
 export async function releaseKernelRunnerLock(lock) {
   if (!lock?.handle) throw new Error('LOCK_RELEASE_IDENTITY_MISSING');
-  await lock.handle.truncate(0);
-  await lock.handle.writeFile(`${JSON.stringify({ ...lock.record, released: true })}\n`, 'utf8');
-  await lock.handle.sync();
-  await lock.handle.close();
+  let failure;
+  try {
+    await writeJsonAtStart(lock.handle, { ...lock.record, released: true });
+  } catch (error) {
+    failure = error;
+  }
+  try {
+    await lock.handle.close();
+  } catch (error) {
+    if (!failure) failure = error;
+  }
+  if (failure) throw failure;
 }
 
 export function confirmProjectContainers({ expectedProjectId, containers }) {

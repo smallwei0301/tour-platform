@@ -64,6 +64,8 @@ test('same-process secure FD lock rejects contention and unsafe filesystem ident
     const first = await acquireKernelRunnerLock({ lockDir });
     await assert.rejects(acquireKernelRunnerLock({ lockDir }), /LOCK_HELD/u);
     await releaseKernelRunnerLock(first);
+    const released = JSON.parse(await readFile(join(lockDir, 'runner.lock'), 'utf8'));
+    assert.equal(released.released, true);
     const afterRelease = await acquireKernelRunnerLock({ lockDir });
     await releaseKernelRunnerLock(afterRelease);
 
@@ -86,6 +88,21 @@ test('same-process secure FD lock rejects contention and unsafe filesystem ident
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test('lock release always closes the FD and preserves the primary write error', async () => {
+  const calls = [];
+  const primary = new Error('metadata write failed');
+  await assert.rejects(releaseKernelRunnerLock({
+    record: { pid: 1 },
+    handle: {
+      async truncate() { calls.push('truncate'); },
+      async write() { calls.push('write'); throw primary; },
+      async sync() { calls.push('sync'); },
+      async close() { calls.push('close'); },
+    },
+  }), (error) => error === primary);
+  assert.deepEqual(calls, ['truncate', 'write', 'close']);
 });
 
 test('project-scoped docker identity requires exact label and name suffix and captures IDs', () => {
