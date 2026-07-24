@@ -108,7 +108,7 @@ supabase/baselines/v1/toolchain-lock.json
 - expected architecture；
 - lock schema version。
 
-禁止ambient PATH client或mutable tag。每次child前重新驗binary／container identity；local stack啟動後read-back實際container image ID。缺image時HOLD並先取得owner對必要下載／資源使用同意，不可偷偷pull floating image。
+禁止ambient PATH client或mutable tag。每次child前重新驗binary／container identity；local stack啟動後read-back實際container image ID。若image缺失，先以registry metadata將每個required tag解析成immutable `repository@sha256:digest`並發布`toolchain-supply-request.json`，列出architecture、local-present及estimated bytes；向owner展示完整digest清單與下載量。只有owner批准後，acquirer才可依request逐項執行digest-qualified pull；禁止tag、額外image或request drift。下載後重新read-back image ID／architecture／PG17 binary paths/version，再生成toolchain lock；未批准或任一identity不符即HOLD。
 
 ## 9. Production credential與唯讀邊界
 
@@ -158,12 +158,14 @@ supabase/baselines/v1/
   managed-overlays.sql
   capture-manifest.json
   manifest.json
+  toolchain-supply-request.json
   toolchain-lock.json
   catalog.cutoff.normalized.json
   catalog.expected-terminal.normalized.json
   toc.normalized.json
   use-list.txt
   toc-ownership-map.json
+  dependency-closure.json
   role-map.json
   ownership-boundary.json
   exclusions.json
@@ -183,8 +185,8 @@ supabase/baselines/v1/
 - cutoff identity；
 - exact 134 frozen filenames＋digests；
 - exact post-cutoff filenames／versions／digests／order；
-- toolchain lock digest與全部artifact digests；
-- TOC completeness counts與ownership classes；
+- toolchain lock digest與全部artifact digests，明確包含normalized TOC、selected use-list、TOC ownership map及`dependency-closure.json`；
+- `dependency-closure.json`逐selected TOC entry列出direct/transitive dependencies、render destination、A/B digest與missing/extra/unknown/duplicate結果；
 - one synthetic baseline marker identity；
 - expected exact fresh history set；
 - lane prohibitions；

@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-24 15:34 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-24 16:05 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -90,9 +90,12 @@
 - Exact HEAD `30c0b6f9` fresh reviews均FAIL：SPEC blocking 3、QUALITY/SECURITY blocking 7、EXECUTABILITY blocking 11。合併去重為17類blocking；未把review timeout或partial summary當PASS，也未開始baseline實作／production capture。
 - 主要blocking：cutoff與terminal catalog混用、overlay會多history row、唯讀未封鎖`.psqlrc/PG*`、existing rehearsal可能誤連remote、PG17/images未鎖digest、TOC/use-list/ownership證據未發布、known ACL drift可能被稱security PASS、credential temp-file矛盾、Task順序/RED/staging/evidence coverage及PR/release callers不可執行。
 - 2026-07-24已重寫baseline design／implementation v2：分離`catalog.cutoff`與`catalog.expected-terminal`；baseline＋overlay合成單一marker；memory-only bounded credential pipe＋`psql -X`／empty HOME／strict env／read-only PGOPTIONS；toolchain/image content lock；published TOC/use-list/map；drift status分離；local-only runners；15個具RED、exact stage、ordinary＋heavy evidence與caller wiring的Tasks。
+- v2 commit `d18042f287e596b3e583931b518f4d65fceb9850`、tree `83339b96f88789978ca771ca538fd6a46c8f04c6`；docs靜態自審PASS、worktree clean、GitHub #1756 body＋comment讀回PASS。
+- 首輪v2三路review因600秒工具timeout均INCONCLUSIVE；縮窄成local read-only review後取得有效verdict：SPEC PASS blocking 0；QUALITY/SECURITY FAIL blocking 1；EXECUTABILITY FAIL blocking 3。
+- v3最小修正處理4項：發布並digest-bound `dependency-closure.json`；Task 1新增registry metadata resolver、owner-approved immutable digest request與digest-only acquisition/read-back；Tasks 8/10明確producer、ledger、多target guarded publication/rollback與manual acceptance test；Tasks 11/12補heavy allowlist exact RED command。
 
 ## 下一步
-- 對v2 docs做structural self-review、commit及fresh SPEC／QUALITY-SECURITY／EXECUTABILITY re-review；三路均PASS、blocking 0後才從Task 1 toolchain lock開始。
+- 對v3 docs做靜態自審、docs commit及窄化fresh SECURITY／EXECUTABILITY re-review；SPEC已PASS，不重跑。兩路均PASS、blocking 0後才從Task 1開始。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。

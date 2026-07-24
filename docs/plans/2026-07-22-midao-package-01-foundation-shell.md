@@ -839,6 +839,10 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 **Managed-schema contract:** Supabase platform bootstrap擁有`auth/storage`內部物件；App自有跨schema policy／trigger／grant由object-level overlay管理。Unknown ownership、missing catalog section、unexpected diff或credential residue一律HOLD。
 
+**Publication evidence:** versioned artifacts必含normalized TOC、selected use-list、TOC ownership map與`dependency-closure.json`；closure逐selected entry記direct/transitive dependencies、destination、A/B digest及missing/extra/unknown/duplicate結果，全部綁manifest digest。
+
+**Toolchain supply:** required images先以registry metadata解析成immutable digest request；缺local image時向owner展示完整digest清單與估計下載量，批准後只允許digest-qualified acquisition，下載後read-back identity再產生lock。
+
 **Files:**
 - Create: `supabase/baselines/v1/**`
 - Create: `scripts/database-baseline/**`
@@ -1440,7 +1444,7 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 ## Definition of Done for #1756
 
 - [ ] 134支historical migrations SHA-256 manifest PASS；stash內8支frozen修改未恢復、未提交。
-- [ ] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；artifact無business rows／credentials，ownership manifest零unknown objects。
+- [ ] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；published `dependency-closure.json`逐selected entry完整且missing/extra/unknown/duplicate皆零；artifact無business rows／credentials，ownership manifest零unknown objects。
 - [ ] Fresh lane成功套platform→單一baseline marker（含managed overlay）→6支post-cutoff→seed；fresh與existing各自對expected-terminal exact compare，existing upgrade baseline execution count為零。
 - [ ] PR source gate與production release verified gate分離；baseline ledger不冒充production apply ledger。
 - [ ] Six post-cutoff foundation migrations source-contract＋local runtime PASS。
