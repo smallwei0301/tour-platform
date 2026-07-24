@@ -4,6 +4,7 @@ import { errorV2, ok } from '../../../../../src/lib/api';
 // 健檢 v2 S1：收斂本地複製的 SHA-256 hashPassword → 共用 guide-auth 的 scrypt 實作
 import { hashPassword } from '../../../../../src/lib/guide-auth';
 import { classifyGuideAccountUpdateError } from '../../../../../src/lib/guide-account-error.mjs';
+import { getAdminGuideProfileDb } from '../../../../../src/lib/db-admin-guide-profile.mjs';
 import {
   deleteGuideProfileDb,
   deleteGuideApplicationDb,
@@ -43,31 +44,7 @@ export async function GET(
     const isMissingColumn = (e: { code?: string; message?: string } | null) =>
       !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
 
-    // guide_profiles：rich select 含 bio/specialties；若欄位漂移則先退回含
-    // backend_mode 的 base select。尚未套用 Midao foundation migration 的舊環境再退回
-    // legacy select，讓管理頁仍可讀取導遊且 UI 預設顯示舊後台。
-    const profileRichSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, bio, specialties, backend_mode, created_at';
-    const profileBaseSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, backend_mode, created_at';
-    const profileLegacySelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, created_at';
-    let { data: profile, error: profileError } = await supabase
-      .from('guide_profiles')
-      .select(profileRichSelect)
-      .eq('id', guideId)
-      .maybeSingle();
-    if (isMissingColumn(profileError)) {
-      ({ data: profile, error: profileError } = await supabase
-        .from('guide_profiles')
-        .select(profileBaseSelect)
-        .eq('id', guideId)
-        .maybeSingle());
-    }
-    if (isMissingColumn(profileError)) {
-      ({ data: profile, error: profileError } = await supabase
-        .from('guide_profiles')
-        .select(profileLegacySelect)
-        .eq('id', guideId)
-        .maybeSingle());
-    }
+    const profile = await getAdminGuideProfileDb(supabase, guideId);
     if (profile) {
       return NextResponse.json({ ok: true, data: { kind: 'profile', ...profile } });
     }

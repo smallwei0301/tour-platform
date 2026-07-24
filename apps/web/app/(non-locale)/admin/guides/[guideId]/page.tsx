@@ -6,6 +6,11 @@ import { Card, PageHeader } from '../../../../../src/components/admin/ui';
 import { paymentMethodLabels } from '../../../../../src/lib/guide-payment-options.mjs';
 import { csrfHeaders, ensureCsrfToken } from '../../../../../src/lib/csrf-client';
 import { sanitizeGuideRealmRedirect } from '../../../../../src/lib/midao/login-redirect';
+import {
+  canSwitchAdminGuideBackendMode,
+  executeAdminBackendModeSwitch,
+  normalizeAdminBackendModeReason,
+} from '../../../../../src/lib/midao/admin-backend-mode-switch.mjs';
 
 type GuideApplicationDetail = {
   fullName: string;
@@ -118,41 +123,37 @@ export default function AdminGuideDetailPage() {
   }
 
   async function handleSwitchBackendMode() {
-    if (!guide || !canImpersonate || switchingMode) return;
+    if (!guide || !canSwitchAdminGuideBackendMode(guide, switchingMode)) return;
 
     const targetMode: 'legacy' | 'midao' = guide.backend_mode === 'midao' ? 'legacy' : 'midao';
+    setModeSwitchError('');
     const reasonInput = window.prompt(
       targetMode === 'midao' ? '請輸入切換到新後台的原因' : '請輸入切回舊後台的原因'
     );
-    if (reasonInput === null) return;
-
-    const reason = reasonInput.trim();
-    if (!reason || reason.length > 500) {
-      setModeSwitchError('切換原因必填，且不可超過 500 字');
+    const normalized = normalizeAdminBackendModeReason(reasonInput);
+    if (!normalized.ok) {
+      if (!normalized.cancelled) setModeSwitchError(normalized.message ?? '切換導遊後台模式失敗');
       return;
     }
 
     setSwitchingMode(true);
-    setModeSwitchError('');
     try {
-      await ensureCsrfToken();
-      const res = await fetch(`/api/v2/admin/guides/${guide.id}/backend-mode`, {
-        method: 'POST',
-        headers: {
-          ...csrfHeaders(),
-          'Content-Type': 'application/json',
-          'Idempotency-Key': crypto.randomUUID(),
-        },
-        cache: 'no-store',
-        body: JSON.stringify({ backendMode: targetMode, reason }),
+      const result = await executeAdminBackendModeSwitch({
+        guideId: guide.id,
+        currentMode: guide.backend_mode ?? 'legacy',
+        reason: normalized.reason,
+      }, {
+        ensureCsrfToken,
+        csrfHeaders,
+        randomUUID: () => crypto.randomUUID(),
+        fetchImpl: fetch,
       });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || json?.success !== true) {
-        setModeSwitchError(json?.error?.message || '切換導遊後台模式失敗');
+      if (!result.ok) {
+        setModeSwitchError(result.message ?? '切換導遊後台模式失敗');
         return;
       }
       setGuide(current => current
-        ? { ...current, backend_mode: json.data.backendMode }
+        ? { ...current, backend_mode: result.backendMode }
         : current);
     } catch {
       setModeSwitchError('切換導遊後台模式失敗，請稍後再試');
