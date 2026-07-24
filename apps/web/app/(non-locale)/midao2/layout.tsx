@@ -59,7 +59,7 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
       // 忽略登出錯誤，仍導回管理後台。
     }
     // 標記 cookie 非 HttpOnly，前端直接清除。
-    document.cookie = `${IMPERSONATION_COOKIE_NAME}=; Path=/; Max-Age=0`;
+    document.cookie = `${IMPERSONATION_COOKIE_NAME}=; Path=/; Max-Age=0; SameSite=Lax`;
     window.location.href = '/admin/guides';
   }
 

@@ -84,7 +84,7 @@ export default function AdminGuideDetailPage() {
   const canImpersonate =
     guide?.kind !== 'application' && guide?.verification_status === 'approved';
 
-  async function enterGuideBackend(target: string) {
+  async function handleEnterGuideBackend(target: string = '/guide/dashboard') {
     if (!guide || impersonating) return;
     setImpersonating(true);
     setImpersonateError('');
@@ -111,14 +111,6 @@ export default function AdminGuideDetailPage() {
       setImpersonateError('進入導遊後台失敗，請稍後再試');
       setImpersonating(false);
     }
-  }
-
-  function handleEnterGuideBackend() {
-    return enterGuideBackend('/guide/dashboard');
-  }
-
-  function handleEnterMidao2Backend() {
-    return enterGuideBackend('/midao2');
   }
 
   return (
@@ -368,7 +360,7 @@ export default function AdminGuideDetailPage() {
                   <button
                     type="button"
                     data-testid="admin-enter-guide-backend"
-                    onClick={handleEnterGuideBackend}
+                    onClick={() => handleEnterGuideBackend()}
                     disabled={impersonating}
                     style={{
                       padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
@@ -383,7 +375,7 @@ export default function AdminGuideDetailPage() {
                   <button
                     type="button"
                     data-testid="admin-enter-midao2"
-                    onClick={handleEnterMidao2Backend}
+                    onClick={() => handleEnterGuideBackend('/midao2')}
                     disabled={impersonating}
                     style={{
                       padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
