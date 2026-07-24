@@ -30,3 +30,10 @@ test('midao2 migration B：activities/guide_profiles 加欄齊備', async () => 
   assert.match(sql, /ADD COLUMN IF NOT EXISTS midao_sort_order integer/);
   assert.match(sql, /ALTER TABLE guide_profiles ADD COLUMN IF NOT EXISTS experience_years integer/);
 });
+
+test('midao2 migration C：midao_requests 方案欄位齊備', async () => {
+  const sql = await readFile(
+    path.join(MIGRATIONS, '20260723090000_midao2_request_plan_columns.sql'), 'utf8');
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS plan_id uuid REFERENCES activity_plans\(id\)/);
+  assert.match(sql, /ADD COLUMN IF NOT EXISTS plan_title_snapshot text/);
+});
