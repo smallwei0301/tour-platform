@@ -36,6 +36,7 @@ type GuideDetail = {
   display_name: string;
   slug: string;
   verification_status: string;
+  backend_mode?: 'legacy' | 'midao';
   headline?: string | null;
   region?: string | null;
   rating_avg?: number | null;
@@ -64,6 +65,8 @@ export default function AdminGuideDetailPage() {
   const [error, setError] = useState('');
   const [impersonating, setImpersonating] = useState(false);
   const [impersonateError, setImpersonateError] = useState('');
+  const [switchingMode, setSwitchingMode] = useState(false);
+  const [modeSwitchError, setModeSwitchError] = useState('');
 
   useEffect(() => {
     if (!guideId) return;
@@ -111,6 +114,50 @@ export default function AdminGuideDetailPage() {
     } catch {
       setImpersonateError('進入導遊後台失敗，請稍後再試');
       setImpersonating(false);
+    }
+  }
+
+  async function handleSwitchBackendMode() {
+    if (!guide || !canImpersonate || switchingMode) return;
+
+    const targetMode: 'legacy' | 'midao' = guide.backend_mode === 'midao' ? 'legacy' : 'midao';
+    const reasonInput = window.prompt(
+      targetMode === 'midao' ? '請輸入切換到新後台的原因' : '請輸入切回舊後台的原因'
+    );
+    if (reasonInput === null) return;
+
+    const reason = reasonInput.trim();
+    if (!reason || reason.length > 500) {
+      setModeSwitchError('切換原因必填，且不可超過 500 字');
+      return;
+    }
+
+    setSwitchingMode(true);
+    setModeSwitchError('');
+    try {
+      await ensureCsrfToken();
+      const res = await fetch(`/api/v2/admin/guides/${guide.id}/backend-mode`, {
+        method: 'POST',
+        headers: {
+          ...csrfHeaders(),
+          'Content-Type': 'application/json',
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        cache: 'no-store',
+        body: JSON.stringify({ backendMode: targetMode, reason }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || json?.success !== true) {
+        setModeSwitchError(json?.error?.message || '切換導遊後台模式失敗');
+        return;
+      }
+      setGuide(current => current
+        ? { ...current, backend_mode: json.data.backendMode }
+        : current);
+    } catch {
+      setModeSwitchError('切換導遊後台模式失敗，請稍後再試');
+    } finally {
+      setSwitchingMode(false);
     }
   }
 
@@ -358,6 +405,36 @@ export default function AdminGuideDetailPage() {
                   📅 時間管理
                 </a>
                 {canImpersonate && (
+                  <>
+                    <span
+                      data-testid="admin-guide-backend-mode-badge"
+                      aria-live="polite"
+                      style={{
+                        padding: '5px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                        background: guide.backend_mode === 'midao' ? '#ede9fe' : '#f3f4f6',
+                        color: guide.backend_mode === 'midao' ? '#6d28d9' : '#4b5563',
+                      }}
+                    >
+                      後台模式：{guide.backend_mode === 'midao' ? '新後台' : '舊後台'}
+                    </span>
+                    <button
+                      type="button"
+                      data-testid="admin-guide-backend-mode-switch"
+                      onClick={handleSwitchBackendMode}
+                      disabled={switchingMode}
+                      style={{
+                        padding: '9px 16px', borderRadius: 8, border: '1px solid #c2542e',
+                        background: switchingMode ? '#f4ecd8' : '#fff7ed', color: '#9a3412',
+                        fontSize: 13, fontWeight: 600, cursor: switchingMode ? 'wait' : 'pointer',
+                      }}
+                    >
+                      {switchingMode
+                        ? '切換中…'
+                        : guide.backend_mode === 'midao' ? '切回舊後台' : '切換到新後台'}
+                    </button>
+                  </>
+                )}
+                {canImpersonate && (
                   <button
                     type="button"
                     data-testid="admin-enter-guide-backend"
@@ -373,6 +450,11 @@ export default function AdminGuideDetailPage() {
                   </button>
                 )}
               </div>
+              {modeSwitchError && (
+                <div role="alert" style={{ fontSize: 13, color: '#dc2626', marginTop: 2 }}>
+                  {modeSwitchError}
+                </div>
+              )}
               {impersonateError && (
                 <div role="alert" style={{ fontSize: 13, color: '#dc2626', marginTop: 2 }}>
                   {impersonateError}

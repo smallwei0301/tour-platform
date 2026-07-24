@@ -43,20 +43,28 @@ export async function GET(
     const isMissingColumn = (e: { code?: string; message?: string } | null) =>
       !!e && (e.code === '42703' || /column .*does not exist/i.test(e.message || ''));
 
-    // guide_profiles：rich select 含 bio/specialties；若欄位漂移則退回 base select，
-    // 避免整筆查詢因單一缺欄而失敗、被誤判成「找不到導遊」而 404。
-    // （#fix：原本 select 了不存在的單數 `specialty`，導致所有已上線導遊詳情頁 404。）
-    const profileRichSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, bio, specialties, created_at';
-    const profileBaseSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, created_at';
+    // guide_profiles：rich select 含 bio/specialties；若欄位漂移則先退回含
+    // backend_mode 的 base select。尚未套用 Midao foundation migration 的舊環境再退回
+    // legacy select，讓管理頁仍可讀取導遊且 UI 預設顯示舊後台。
+    const profileRichSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, bio, specialties, backend_mode, created_at';
+    const profileBaseSelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, backend_mode, created_at';
+    const profileLegacySelect = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, created_at';
     let { data: profile, error: profileError } = await supabase
       .from('guide_profiles')
       .select(profileRichSelect)
       .eq('id', guideId)
       .maybeSingle();
     if (isMissingColumn(profileError)) {
-      ({ data: profile } = await supabase
+      ({ data: profile, error: profileError } = await supabase
         .from('guide_profiles')
         .select(profileBaseSelect)
+        .eq('id', guideId)
+        .maybeSingle());
+    }
+    if (isMissingColumn(profileError)) {
+      ({ data: profile, error: profileError } = await supabase
+        .from('guide_profiles')
+        .select(profileLegacySelect)
         .eq('id', guideId)
         .maybeSingle());
     }
