@@ -19,19 +19,24 @@ export function normalizeRoutineBody(definition) {
   return definition.replace(/\r\n?/gu, '\n');
 }
 
-const SET_VALUED_ARRAY_FIELDS = new Set(['configuration', 'options', 'foreignOptions', 'roles']);
+const SET_VALUED_ARRAY_PATHS = new Set([
+  'routines.configuration',
+  'relations.options',
+  'relations.foreignOptions',
+  'policies.roles',
+]);
 
-function sanitize(value, fieldName = null) {
+function sanitize(value, section, path = []) {
   if (Array.isArray(value)) {
-    const sanitized = value.map((item) => sanitize(item));
-    return SET_VALUED_ARRAY_FIELDS.has(fieldName)
+    const sanitized = value.map((item) => sanitize(item, section, [...path, '*']));
+    return SET_VALUED_ARRAY_PATHS.has(`${section}.${path.join('.')}`)
       ? sanitized.sort((left, right) => compareCodeUnits(JSON.stringify(left), JSON.stringify(right)))
       : sanitized;
   }
   if (value && typeof value === 'object') {
     const output = {};
     for (const key of Object.keys(value).sort(compareCodeUnits)) {
-      if (!UNSTABLE_KEYS.has(key)) output[key] = sanitize(value[key], key);
+      if (!UNSTABLE_KEYS.has(key)) output[key] = sanitize(value[key], section, [...path, key]);
     }
     return output;
   }
@@ -40,13 +45,13 @@ function sanitize(value, fieldName = null) {
 
 function normalizeEntry(section, entry) {
   const routineLike = section === 'routines' || (section === 'managedSchemaOverlays' && entry.overlayKind === 'routine');
-  const output = sanitize(entry);
+  const output = sanitize(entry, section);
   if (routineLike) {
     const body = normalizeRoutineBody(entry.definition);
     delete output.definition;
     output.bodySha256 = createHash('sha256').update(body).digest('hex');
   }
-  return sanitize(output);
+  return sanitize(output, section);
 }
 
 export function normalizeCatalog(rawCatalog) {

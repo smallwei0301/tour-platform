@@ -84,6 +84,16 @@ test('known set-valued arrays are canonicalized without reordering semantic arra
   right.sections.policies.push({ ...policy, roles: [...policy.roles].reverse() });
   assert.equal(normalizeCatalog(left), normalizeCatalog(right));
 
+  const sameNameLeft = structuredClone(left);
+  const sameNameRight = structuredClone(left);
+  sameNameLeft.sections.relations[0].metadata = { options: ['second', 'first'] };
+  sameNameRight.sections.relations[0].metadata = { options: ['first', 'second'] };
+  assert.notEqual(
+    normalizeCatalog(sameNameLeft),
+    normalizeCatalog(sameNameRight),
+    'same-named arrays outside an allowlisted section/root path remain ordered',
+  );
+
   const orderedLeft = structuredClone(left);
   const orderedRight = structuredClone(left);
   orderedLeft.sections.types.push({ canonicalKey: ['type', 'public', 'mood'], enumLabels: ['sad', 'ok', 'happy'] });
