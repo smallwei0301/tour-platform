@@ -2,7 +2,11 @@
 
 > **Status:** 這份文件是跨 package roadmap，不能直接交給實作者逐 task 執行。每個 GitHub package issue 必須另有一份通過 fresh-context review 的 micro-plan，逐步列 RED command、預期失敗、minimal GREEN、GREEN/evidence command 與 commit boundary；未有 micro-plan 的 issue 維持 `status:blocked`。
 >
-> **First executable package plan:** `docs/plans/2026-07-22-midao-package-01-foundation-shell.md`（Issue #1756，建立中）。
+> **First executable package plan:** `docs/plans/2026-07-22-midao-package-01-foundation-shell.md`（Issue #1756，active）。
+>
+> **Database baseline design:** `docs/plans/2026-07-24-as-built-database-baseline-design.md`
+>
+> **Database baseline implementation:** `docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
 >
 > **For Hermes:** 每個 package micro-plan 使用 `subagent-driven-development`；fresh implementer 完成後，由獨立 spec reviewer 與 code-quality reviewer驗收。不得用本 roadmap 的縮寫 task 取代 micro-plan。
 
@@ -33,6 +37,7 @@
 7. 不修改 frozen `apps/web/app/api/{orders,payments}/**` legacy 凍結區；checkout gate 修改的是可修改的 `apps/web/app/api/v2/bookings/[bookingId]/checkout/route.ts`。
 8. 所有 Playwright、build、完整 test suite、migration broad scan 都使用 `terminal(background=true, notify_on_complete=true)`，底層命令加 `timeout --signal=TERM 570s`；單一快速 `node --test` 可前景執行。
 9. RED 階段可直接對本 task 明列的真實測試檔執行 `node --test --test-concurrency=1`；任何 code commit 前的最終 GREEN 必須改以 `.claude/hooks/run-checks.sh`（需要時加 `--typecheck`）執行本 commit 相關的真實 node test 路徑，讓 commit gate 取得 30 分鐘內證據。E2E-only task 仍須在 commit 前跑該 package 最接近的 node contract tests＋`--typecheck`，Playwright PASS 不能代替 commit evidence。
+10. Database fresh install固定走catalog-verified baseline lane；134支歷史migration byte-for-byte凍結，不再從空DB全量重播或修舊檔。Existing production只套baseline cutoff之後的additive migrations；兩lane均須用同一catalog comparator驗terminal state。
 
 ### 縮寫 task 的固定 TDD 模板
 

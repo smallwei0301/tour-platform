@@ -1,19 +1,23 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-23 19:53 CST｜負責 session：Canary／2026-07-23
+> 最後更新：2026-07-24 14:59 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
-依reviewed executable micro-plan建立Midao runtime foundation與第一個responsive shell，所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
+建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
 
 ## 執行錨點
 - Issue：https://github.com/smallwei0301/tour-platform/issues/1756
 - Branch：`feat/midao-foundation-1756`
 - Worktree：`/root/.hermes/worktrees/tour-platform/midao-foundation-1756`
 - Base：`origin/main af3963cb48afdf246035bbf746694c7de18cc2ed`
-- Reviewed plan anchor：`bcb81b119228dc81fecff7a212fff4017c4a1584`
-- Plan：`docs/plans/2026-07-22-midao-package-01-foundation-shell.md`
+- Reviewed plan anchor：`bcb81b119228dc81fecff7a212fff4017c4a1584`（原package plan）
+- Package plan：`docs/plans/2026-07-22-midao-package-01-foundation-shell.md`
+- Baseline design：`docs/plans/2026-07-24-as-built-database-baseline-design.md`
+- Baseline implementation：`docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
 
 ## AC 清單
-- [ ] 五個additive foundation migrations以RED → minimal GREEN完成，clean local Postgres apply/runtime PASS。
+- [ ] 134支歷史migration bytes凍結；baseline v1兩次production唯讀capture一致且無data／secret。
+- [ ] Fresh platform→baseline marker→6支post-cutoff→seed成功；existing rehearsal不執行baseline，terminal catalogs exact equivalent。
+- [ ] 五個additive foundation objects與atomic RPC以RED → minimal GREEN完成，catalog／ACL／RLS runtime PASS。
 - [ ] Durable idempotency、atomic mode switch、audit/outbox與exact RPC ACL/RLS contracts通過。
 - [ ] Canonical guide guard、signed impersonation actor、login/logout cookie cleanup與safe redirect contracts通過。
 - [ ] `/midao`五route responsive shell與Brand Book tokens完成。
@@ -75,9 +79,17 @@
 - D2 actor逐欄完全mirror middleware header→cookie precedence；target=midao一律要求backend＋mode-switch flags，避免stale pre-read forward bypass；target=legacy rollback/same-mode不依賴任何flags。Gateway await production client，route strict UUID/body/reason/key/hash且無直接DB。
 - 2026-07-23 Phase D Task D3a exclusive local Supabase runner完成多輪hostile remediation；final HEAD `8a70f79e096b5cdf92df8fb61111ebbe6910544e`。Unit `14/14 PASS`、typecheck/check-only PASS，tree `cbbec2325fb4de23550cbeffa0efdbd7b2e75699`、manifest `0600`；final fresh lifecycle/security review PASS，blocking 0。
 - D3a同一Node持有owner-only directory＋`O_NOFOLLOW` regular/nlink1/uid/mode600 FD flock；exact LF/CRLF status、full container/network IDs與volume identifiers、pre-cleanup identity recheck、exact-ID cleanup、signal teardown、credential redaction及position-0 partial-write-safe metadata release均fail closed。尚未在D3a啟動Docker或apply DB。
+- 2026-07-24 D3c/D3d remediation完成：real PostgreSQL `8/8 PASS`、commit `e095b602`、exact tree `ec634734c9ce231f80e6ad20c32caf59645cf269`；fresh review PASS、blocking 0。
+- 2026-07-24 Midao responsive shell／page session boundary／五頁入口完成：commits `02639254`、`b2f04b9b`、`66c4b379`；focused regressions分別`6/6`、`10/10`、`9/9 PASS`，各自typecheck exact staged evidence PASS。
+- 2026-07-24 full historical replay推進至第69／134支後熔斷；曾為調查建立的8支frozen migration修改全部隔離在`wip-d3b-full-migration-replay-remediation-20260724` stash，未恢復、未提交。Owner決定停止所有frozen migration修改，主線改採catalog-verified as-built baseline；並行只做schema-neutral UI。
+- 2026-07-24 owner批准active production project `pyoderxmpeyqjwkeliiu`只讀catalog metadata；Vercel與Supabase CLI登入均驗證成功。Production probe：73張public tables全部RLS enabled、114 policies；3張Midao domain tables零policy而預設全拒絕；59張tables仍有authenticated broad grants，記為known security drift，不宣稱已修復。
+- 6支`2026072300*` Midao foundation effects經PostgREST OpenAPI＋`limit=0` metadata probe確認production不存在；`guide_profiles`新欄位回SQLSTATE`42703`，因此全部列為post-cutoff。
+- Supabase CLI 2.87.2 schema dump受570秒timeout後exit `124`，partial SQL缺complete marker且有函式／enum斷裂；已刪除臨時dump，不作baseline。`db dump --dry-run`證實可用安全短期連線env供direct PG17 extractor，credential未輸出或保存。
+- Owner已批准：逐物件managed-schema boundary、目前production cutoff、fresh只記baseline marker＋post-cutoff history、PR source/release verified雙gate、CLI2.87.2＋PG17版本契約與整合設計。
+- 已建立baseline design／implementation docs，並修訂本package plan D3b／G2／DoD；尚待fresh plan review後才實作。
 
 ## 下一步
-- 進入Phase D Task D3b：由exclusive runner真實`db reset --local`並驗證foundation catalog、ACL、RLS與exact RPC ACL。
+- 對`docs/plans/2026-07-24-as-built-database-baseline-design.md`與`docs/plans/2026-07-24-as-built-database-baseline-implementation.md`做structural self-review、exact docs evidence與fresh SPEC/QUALITY/SECURITY review；blocking歸零後從Task 1 frozen-history manifest開始。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。

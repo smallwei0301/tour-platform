@@ -1,12 +1,16 @@
 # Issue #1756 — Midao Foundation + Shell TDD Micro-plan
 
-> **Status:** Draft for fresh-context review. Do not implement until review PASS and issue #1756 is changed to `status:ready + agent:now`.
+> **Status:** Active；2026-07-24依owner決策修訂D3b fresh-install架構。Frozen migration replay路線已停止，改採catalog-verified as-built baseline。
 >
 > **Execution skill:** `subagent-driven-development`; one fresh implementer per task, then independent spec and quality review.
 >
 > **Parent:** Epic #1755
 >
-> **Design:** `docs/superpowers/specs/2026-07-22-midao-backend-design.md`
+> **Product design:** `docs/superpowers/specs/2026-07-22-midao-backend-design.md`
+>
+> **As-built baseline design:** `docs/plans/2026-07-24-as-built-database-baseline-design.md`
+>
+> **As-built baseline implementation plan:** `docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
 >
 > **Master roadmap:** `docs/plans/2026-07-22-midao-backend-implementation.md`
 
@@ -26,7 +30,9 @@
 
 ## Architecture
 
-新 `/midao` UI 位於 non-locale route group，page/layout只組裝feature screen；所有安全判斷集中於canonical guide-session boundary，所有新API經V2 query/command wrappers。Shared schema依序建立outbox、scoped durable idempotency與transactional audit，再由單一service-role RPC原子切換backend mode。Local Postgres與Playwright共用self-owned Supabase runner，禁止依賴production或前一個gate殘留狀態。
+新 `/midao` UI 位於 non-locale route group，page/layout只組裝feature screen；所有安全判斷集中於canonical guide-session boundary，所有新API經V2 query/command wrappers。Shared schema依序建立outbox、scoped durable idempotency與transactional audit，再由單一service-role RPC原子切換backend mode。
+
+Database fresh-install採雙軌：existing production只套cutoff後additive migrations；fresh環境由Supabase platform bootstrap套`supabase/baselines/v1`、再套6支Midao及未來post-cutoff migrations。兩軌使用同一catalog extractor/comparator驗terminal schema；baseline永遠不進production migration discovery。Local Postgres與Playwright共用self-owned Supabase runner，禁止依賴production或前一個gate殘留狀態。
 
 ## Tech Stack
 
@@ -50,6 +56,7 @@ Next.js 15 App Router、React 19、TypeScript、Node 22 `node:test`、Supabase/P
   - `20260723002000_midao_idempotency_records.sql`
   - `20260723002500_midao_audit_events.sql`
   - `20260723003000_midao_atomic_backend_mode_switch.sql`
+  - `20260723003500_midao_service_role_acl_hardening.sql`
 
 ## TDD/evidence protocol for every code commit
 
@@ -808,36 +815,49 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 **Commit:** `test: 建立排他的local Supabase runner`。
 
-## Gate D3b: clean migration, ACL and real RLS verification
+## Gate D3b: catalog-verified as-built baseline＋foundation schema verification
+
+> **2026-07-24 owner decision:** 舊的「從空DB重播全部134支historical migrations＋seed」路線已停止。既有migration byte-for-byte凍結；不得恢復D3b stash內8支歷史修改。完整設計與執行順序以：
+>
+> - `docs/plans/2026-07-24-as-built-database-baseline-design.md`
+> - `docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
+>
+> 為權威。若本文其餘命令仍暗示全歷史重播，以新baseline plan為準並修正文檔後再執行。
+
+**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；6支`2026072300*` Midao migrations全部post-cutoff。Fresh history只記`baseline_v1` marker＋post-cutoff history，不偽造134筆舊紀錄。
+
+**Managed-schema contract:** Supabase platform bootstrap擁有`auth/storage`內部物件；App自有跨schema policy／trigger／grant由object-level overlay管理。Unknown ownership、missing catalog section、unexpected diff或credential residue一律HOLD。
 
 **Files:**
-- Create: `apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs`
+- Create: `supabase/baselines/v1/**`
+- Create: `scripts/database-baseline/**`
+- Create: `apps/web/tests/unit/midao-baseline-*.test.mjs`
+- Create: `apps/web/tests/unit/midao-catalog-*.test.mjs`
+- Create: `apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs`
+- Create: `apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs`
+- Retain: `apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs`
 
-這是B1–B4/D1完成後的post-implementation verification，不宣稱TDD RED。Integration test建立local-only probe role/fixture；所有temporary grants/roles在transaction/finally清理。
+**Required sequence:**
 
-**Exact assertions:**
+1. 凍結134支historical migration hashes。
+2. 建secret-safe production catalog capture、normalizer、ownership validator與exact comparator，通過fresh security review。
+3. 以唯讀production capture兩次取得byte-identical catalog；raw dump不直接當真相。
+4. Materialize pinned Supabase/Postgres empty stack：platform→baseline marker→overlay→6支Midao→seed。
+5. Fresh terminal catalog exact compare；另跑existing-lane rehearsal，證明baseline execution count為零且terminal catalog等價。
+6. 再跑foundation ACL/RLS/exact function identity、D3c rollback與D3d concurrency。
 
-- `db reset --local`真實apply全部migrations＋seed；五個foundation objects、backend default/check/index與expected columns存在。
-- 對outbox/idempotency/audit tables查 `pg_class.relacl`＋`aclexplode(COALESCE(relacl, acldefault('r', relowner)))`：PUBLIC(grantee OID 0)、anon、authenticated沒有table privileges；service_role具預期privileges。
-- `relrowsecurity=true`，且 `pg_policy`不存在適用PUBLIC/anon/authenticated的permissive policy；service-role-only tables預期零client policies。
-- 對outbox、idempotency、audit三張表逐表各開獨立transaction：owner先插入可唯一識別sentinel row，再建立 `midao_rls_probe NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS`，只暫grant schema usage＋當前單表最小INSERT/SELECT；`SET LOCAL ROLE`後先assert `current_user='midao_rls_probe'`，SELECT該sentinel必須回0 rows（RLS silent suppression）。接著probe INSERT必須由RLS `WITH CHECK`以SQLSTATE 42501拒絕；catch只接受exact 42501，隨即直接 `ROLLBACK`，讓aborted transaction與`SET LOCAL ROLE`一併還原，禁止在rollback前執行 `RESET ROLE`或其他SQL。Unexpected code/成功INSERT/ROLLBACK failure皆FAIL；finally若connection仍在transaction才ROLLBACK。每張表兩種assertion都要PASS；這與「無table grant」ACL test分開，不能用permission denied冒充RLS。
-- 對exact `regprocedure 'public.midao_switch_guide_backend_mode(uuid,text,text,text,text,uuid,text,text)'`取得OID，再查 `pg_proc.proacl`＋`aclexplode(COALESCE(proacl, acldefault('f', proowner)))`：PUBLIC OID 0無EXECUTE；另用該OID/完整signature的 `has_function_privilege()`驗anon/authenticated=false、service_role=true。SECURITY DEFINER時 `proconfig`固定safe search_path且SQL body schema-qualified；任何額外overload不算此gate證據。
+**Heavy evidence入口：**
 
 ```bash
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
-  timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh \
-  apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs
-```
-
-Expected：exit 0；若migration/ACL/RLS/function contract錯，回對應B/D task修正。不得把missing runner/test path當有效RED。
-
-**Commit evidence:** 上述tracked command已由 `--run-heavy`直接綁定local DB child exit/argv與staged tree；cleanup後再跑：
-
-```bash
+  timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs \
+  --test apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --check-only
 ```
 
-**Commit:** `test: 驗證 Midao foundation schema與ACL`。
+Expected：baseline＋post-cutoff＋seed exit 0、fresh/existing terminal catalog exact、ACL/RLS/RPC gates PASS、ownership-safe cleanup PASS。普通全歷史`db reset`成功或失敗均不得冒充此gate證據。
+
+**Commit:** `test: 驗證 catalog-verified baseline與 Midao foundation schema`。
 
 ## Gate D3c: RPC success, same-mode and fault rollback
 
@@ -1348,19 +1368,26 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 Expected：exit 0、tests > 0、typecheck exit 0、evidence timestamp fresh。
 
-## Gate G2: local Postgres runtime
+## Gate G2: catalog-verified local Postgres runtime
 
-Tracked background：
+Tracked background，分開保存fresh、existing與foundation evidence：
 
 ```bash
+node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
+  timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs \
+  --test apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
+  timeout --signal=TERM 570s node scripts/database-baseline/run-existing-upgrade-rehearsal.mjs \
+  --test apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
   timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh \
   apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs \
   apps/web/tests/integration/midao-mode-switch-postgres.test.mjs \
   apps/web/tests/integration/midao-mode-switch-concurrency-postgres.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
 ```
 
-Expected：reset/migration compile/ACL/RLS/RPC/rollback/concurrency全部PASS，cleanup後 `--check-only` PASS。
+Expected：baseline＋post-cutoff＋seed、fresh/existing terminal catalog exact、ACL/RLS/RPC/rollback/concurrency全部PASS；baseline在existing lane execution count為零；ownership-safe cleanup PASS。普通134支historical replay不屬於此gate。
 
 ## Gate G3: real-auth Playwright
 
@@ -1401,7 +1428,11 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 
 ## Definition of Done for #1756
 
-- [ ] Five foundation migrations source-contract＋local runtime PASS。
+- [ ] 134支historical migrations SHA-256 manifest PASS；stash內8支frozen修改未恢復、未提交。
+- [ ] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；artifact無business rows／credentials，ownership manifest零unknown objects。
+- [ ] Fresh lane成功套platform→baseline marker→managed overlay→6支post-cutoff→seed；existing rehearsal baseline execution count為零，兩者terminal catalog exact equivalent。
+- [ ] PR source gate與production release verified gate分離；baseline ledger不冒充production apply ledger。
+- [ ] Six post-cutoff foundation migrations source-contract＋local runtime PASS。
 - [ ] backend mode switch atomically updates mode/version/audit/outbox；fresh same-mode無business side effect；function只授權service_role。
 - [ ] durable idempotency schema exists and is service-role-only。
 - [ ] canonical guard checks HMAC/DB display_name/version/status/mode/flags。
