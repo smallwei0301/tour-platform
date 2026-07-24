@@ -178,6 +178,8 @@ supabase/baselines/v1/
 
 `capture-manifest.json`只封存production cutoff capture／TOC／ownership／rendered SQL／security drift provenance；它不能宣告fresh terminal完成。`manifest.json`在expected-terminal發布後才建立，引用capture-manifest digest並封存兩個catalog truths、exact history與lane contract。
 
+跨`supabase/baselines/v1`與`docs/operations`的多檔發布不宣稱單一POSIX syscall可提供瞬時全域atomic snapshot。可執行契約是transaction-aware publication：每個target以同目錄exclusive temp＋fsync/read-back＋rename原子替換；`capture-manifest.json`倒數第二、ledger最後發布，兩者必須持有同一`transactionId`與完整digest set，ledger是唯一commit marker。Publisher使用linked-worktree-specific persistent journal及singleton lock；ledger前失敗依captured identity回滾，ledger後視為committed並只清理identity-matched leftovers。所有reader/verifier必須拒絕manifest／ledger transaction不一致、集合不完整或未完成journal；不支援此驗證的普通讀者不構成本契約下的atomic consumer。
+
 `manifest.json`至少包含：
 
 - schema／extractor／normalizer／publisher versions；

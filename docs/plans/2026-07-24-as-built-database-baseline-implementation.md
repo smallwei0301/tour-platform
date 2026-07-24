@@ -290,14 +290,15 @@ node --test --test-concurrency=1 \
 
 Expected：FAIL，capture／renderer／publisher missing。Tests必須涵蓋：
 
-- dry-run stdout bounded memory pipe，禁止named secret temp file；Buffer lifecycle、max bytes、timeout、shape injection、cross-chunk redaction；
+- dry-run stdout bounded memory pipe，禁止named secret temp file；Buffer lifecycle、max bytes、timeout、shape injection、cross-chunk redaction；fixture grammar須由pinned Supabase CLI v2.87.2 embedded `pkg/migration/scripts/dump_schema.sh`與`noExec` source產生，僅使用synthetic credential values，禁止猜測或保存production output；
 - remote strict read-only child env與locked PG17 image；
 - schema-only custom archive；structured TOC；
 - A/B orchestrator同一in-memory unpredictable restrict key，exact `pg_restore --restrict-key` argv；
 - exact framing parser只移除same-key首尾`\restrict/\unrestrict`，內部SQL bytes不變；
-- TOC→ownership exactly once＋`dependency-closure.json`逐entry direct/transitive closure、missing/extra/unknown/duplicate與A/B digest；
-- publisher A/B equality、handoff path/dev/inode/owner/mode recheck與symlink-swap拒絕、full output set＋ledger producer、exclusive temps、fsync/read-back、multi-target atomic promotion、second-target rename failure rollback與partial cleanup；
-- manifest strict schema、digests、secret/restrict-key/raw argv拒絕。
+- 每個expected TOC ID exactly once；同一catalog object可對應多個TOC，明確允許的embedded catalog sections可無獨立TOC；`dependency-closure.json`逐entry direct/transitive closure、missing/extra/unknown/duplicate與A/B digest；
+- publisher A/B equality、handoff path/dev/inode/owner/mode recheck與symlink-swap拒絕、full output set＋ledger producer、exclusive temps、fsync/read-back；跨目錄publication採transaction-aware contract：固定promotion order、manifest倒數第二、同`transactionId` ledger最後作commit marker、persistent journal＋singleton lock、second-target rename failure identity-safe rollback、crash recovery與partial cleanup；禁止宣稱跨兩目錄多檔為單一syscall瞬時atomic；
+- manifest strict schema、digests、secret/restrict-key/raw argv拒絕，verifier必須拒絕manifest／ledger transaction不一致、集合不完整與未完成journal；
+- `validate-ownership-boundary.mjs --candidate-handoff` Task 8 caller integration須在本Task以mock handoff RED→GREEN鎖定，不得只保留`--input` CLI。
 
 **Fresh security review gate**
 
