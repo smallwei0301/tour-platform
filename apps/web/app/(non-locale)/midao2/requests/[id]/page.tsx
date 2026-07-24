@@ -20,6 +20,7 @@ type MidaoRequestDetail = {
   travelerLineId: string | null;
   travelerEmail: string | null;
   activityTitle: string | null;
+  planTitle: string | null;
   preferredDate: string;
   backupDate: string | null;
   preferredPeriod: string | null;
@@ -249,7 +250,7 @@ export default function Midao2RequestDetailPage() {
           {request.activityTitle && (
             <div>
               <span style={{ color: C.MUTED }}>服務：</span>
-              {request.activityTitle}
+              {request.planTitle ? `${request.activityTitle}（${request.planTitle}）` : request.activityTitle}
             </div>
           )}
           <div>

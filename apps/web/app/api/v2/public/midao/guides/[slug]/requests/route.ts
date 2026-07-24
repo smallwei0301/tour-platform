@@ -32,6 +32,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const activityId = String(body.activityId ?? '');
     const service = page.services.find((s) => s.activityId === activityId);
     if (!service) return jsonError('INVALID_ACTIVITY', '請選擇有效的服務', 400);
+    const planId = typeof body.planId === 'string' ? body.planId.trim() : '';
+    if (planId) {
+      const matched = service.planOptions.find((p) => p.planId === planId);
+      if (!matched) return jsonError('INVALID_PLAN', '請選擇有效的方案', 400);
+      // 不信任 client 傳的 planTitle，一律以 server 端方案名為準。
+      body.planTitle = matched.name;
+    } else {
+      delete body.planId;
+      delete body.planTitle;
+    }
     const norm = normalizeRequestInput(body);
     if (!norm.ok) return jsonError(norm.code, norm.message, 400);
     const created = await createMidaoRequestDb({

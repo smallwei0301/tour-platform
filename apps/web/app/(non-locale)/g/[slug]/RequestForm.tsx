@@ -16,6 +16,14 @@ type Question = {
   required: boolean;
 };
 
+type PlanOption = {
+  planId: string;
+  name: string;
+  basePrice: number;
+  priceType: 'per_person' | 'per_group';
+  durationMinutes: number | null;
+};
+
 type Service = {
   activityId: string;
   title: string;
@@ -25,6 +33,8 @@ type Service = {
   minParticipants: number;
   maxParticipants: number;
   priceTwd: number;
+  priceFromTwd: number;
+  planOptions: PlanOption[];
   dealMode: 'instant_booking' | 'confirm_first' | 'line_inquiry';
   questions: Question[];
 };
@@ -88,6 +98,7 @@ export default function RequestForm({
 }) {
   const [step, setStep] = useState<'form' | 'done'>('form');
   const [selectedActivityId, setSelectedActivityId] = useState<string>(services[0]?.activityId ?? '');
+  const [selectedPlanId, setSelectedPlanId] = useState<string>('');
   const [travelerName, setTravelerName] = useState('');
   const [lineId, setLineId] = useState('');
   const [email, setEmail] = useState('');
@@ -115,6 +126,7 @@ export default function RequestForm({
 
   function selectService(activityId: string) {
     setSelectedActivityId(activityId);
+    setSelectedPlanId('');
     setAnswersMap({});
     requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -166,6 +178,7 @@ export default function RequestForm({
   function resetForm() {
     setStep('form');
     setSelectedActivityId(services[0]?.activityId ?? '');
+    setSelectedPlanId('');
     setTravelerName('');
     setLineId('');
     setEmail('');
@@ -222,6 +235,7 @@ export default function RequestForm({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           activityId: selectedActivityId,
+          ...(selectedPlanId ? { planId: selectedPlanId } : {}),
           travelerName: travelerName.trim(),
           travelerLineId: lineId.trim(),
           travelerEmail: email.trim(),
@@ -318,7 +332,7 @@ export default function RequestForm({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ fontSize: 20, fontWeight: 700, color: C.GREEN }}>
-                    NT${svc.priceTwd.toLocaleString()} 起
+                    NT${svc.priceFromTwd.toLocaleString()} 起
                   </span>
                   <span style={{ fontSize: 12, color: C.MUTED }}>{DEAL_MODE_LABEL[svc.dealMode] || svc.dealMode}</span>
                 </div>
@@ -333,6 +347,57 @@ export default function RequestForm({
             );
           })}
         </div>
+
+        {/* 選擇方案：選定服務有方案時才顯示，可不選 */}
+        {selectedService && selectedService.planOptions.length > 0 && (
+          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 14, color: C.MUTED }}>選擇方案</span>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setSelectedPlanId('')}
+                data-testid="g-plan-none"
+                style={{
+                  borderRadius: 999,
+                  border: `1px solid ${selectedPlanId === '' ? C.ACCENT : C.BORDER}`,
+                  background: selectedPlanId === '' ? C.ACCENT_SOFT : C.CARD,
+                  color: selectedPlanId === '' ? C.ACCENT : C.TEXT,
+                  padding: '8px 14px',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                先不指定
+              </button>
+              {selectedService.planOptions.map((plan) => {
+                const on = selectedPlanId === plan.planId;
+                return (
+                  <button
+                    key={plan.planId}
+                    type="button"
+                    onClick={() => setSelectedPlanId(plan.planId)}
+                    data-testid={`g-plan-${plan.planId}`}
+                    style={{
+                      borderRadius: 999,
+                      border: `1px solid ${on ? C.ACCENT : C.BORDER}`,
+                      background: on ? C.ACCENT_SOFT : C.CARD,
+                      color: on ? C.ACCENT : C.TEXT,
+                      padding: '8px 14px',
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {plan.name}・NT${plan.basePrice.toLocaleString()}
+                    {plan.priceType === 'per_group' ? '／每團' : '／每人'}
+                    {plan.durationMinutes ? `・約${formatHours(plan.durationMinutes)}小時` : ''}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 需求表單 */}

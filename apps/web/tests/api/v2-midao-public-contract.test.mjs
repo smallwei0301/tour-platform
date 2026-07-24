@@ -33,3 +33,11 @@ test('公開送單 route：rate-limit＋honeypot＋activity 歸屬＋LINE fire-a
   assert.match(src, /notifyGuideNewMidaoRequest\(/);
   assert.match(src, /\.catch\(\(\) => \{\}\)/);             // fire-and-forget
 });
+
+test('公開送單 route：planId 選填驗證＋不信任 client 傳的方案名稱', async () => {
+  const src = await read('app/api/v2/public/midao/guides/[slug]/requests/route.ts');
+  assert.match(src, /planOptions/);
+  assert.match(src, /jsonError\('INVALID_PLAN', '請選擇有效的方案', 400\)/); // planId 給了但不在 planOptions → INVALID_PLAN
+  assert.match(src, /matched\.name/);                       // server 端方案名為準，不信任 client title
+  assert.match(src, /body\.planTitle = matched\.name/);
+});
