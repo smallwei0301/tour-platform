@@ -16,7 +16,7 @@
     "policies": [],
     "rls": [{"forced":false,"enabled":true,"relation":"alpha","schema":"public","canonicalKey":["rls","public","alpha"]}],
     "triggers": [],
-    "routines": [{"objectAddress":"9999:9","definition":"CREATE FUNCTION public.answer() RETURNS integer\r\nLANGUAGE sql   \r\nAS $$ SELECT 42 $$;\r\n","name":"answer","schema":"public","canonicalKey":["routine","public","answer",""]}],
+    "routines": [{"objectAddress":"9999:9","definition":"CREATE FUNCTION public.answer() RETURNS integer\r\nLANGUAGE sql\r\nAS $$ SELECT 42 $$;\r\n","name":"answer","schema":"public","canonicalKey":["routine","public","answer",""]}],
     "indexes": [],
     "constraints": [],
     "types": [],

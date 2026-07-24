@@ -16,10 +16,7 @@ function compareCodeUnits(left, right) {
 
 export function normalizeRoutineBody(definition) {
   if (typeof definition !== 'string' || definition.length === 0) throw new Error('routine definition missing');
-  const lines = definition.replace(/\r\n?/gu, '\n').split('\n').map((line) => line.trimEnd());
-  while (lines.length && lines[0] === '') lines.shift();
-  while (lines.length && lines.at(-1) === '') lines.pop();
-  return `${lines.join('\n')}\n`;
+  return definition.replace(/\r\n?/gu, '\n');
 }
 
 function sanitize(value) {

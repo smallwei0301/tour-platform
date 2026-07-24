@@ -76,6 +76,15 @@ test('meaningful function body drift changes digest and malformed section contra
     JSON.parse(normalizeCatalog(raw)).sections.routines[0].bodySha256,
     JSON.parse(normalizeCatalog(changed)).sections.routines[0].bodySha256,
   );
+  const nestedA = structuredClone(raw);
+  nestedA.sections.routines[0].definition = 'CREATE FUNCTION public.answer() RETURNS text\nLANGUAGE sql\nAS $fn$\nSELECT $payload$line   \n$payload$;\n$fn$;\n';
+  const nestedB = structuredClone(nestedA);
+  nestedB.sections.routines[0].definition = nestedB.sections.routines[0].definition.replace('line   \n', 'line  \n');
+  assert.notEqual(
+    JSON.parse(normalizeCatalog(nestedA)).sections.routines[0].bodySha256,
+    JSON.parse(normalizeCatalog(nestedB)).sections.routines[0].bodySha256,
+    'dollar-quoted literal trailing spaces are meaningful and must not collide',
+  );
   const missing = structuredClone(raw);
   delete missing.sections.policies;
   assert.throws(() => normalizeCatalog(missing), /missing section.*policies/iu);
