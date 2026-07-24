@@ -256,11 +256,12 @@ Existing rehearsal先以fixture-builder建立local cutoff-shaped occupied DB，�
 ## 16. Ledger與callers
 
 - `docs/operations/migration-ledger.json`：production apply事實。
-- `docs/operations/baseline-ledger.json`：capture／publication provenance，不冒充production apply。
+- `docs/operations/baseline-ledger.json`：immutable cutoff capture／publication commit marker，不冒充production apply。
+- `docs/operations/expected-terminal-ledger.json`：獨立expected-terminal publication commit marker，引用但不得修改capture marker。
+- Supabase history、production ledger、capture ledger與expected-terminal ledger不可互相替代或覆寫。
 - PR與local preflight明確呼叫source gate。
 - Scheduled/manual drift或post-apply release流程明確呼叫verified gate。
 - `.github/workflows/migration-drift-detect.yml`與`scripts/preflight-check.sh`必須實際接線；CI path filters包含baseline scripts/manifests/tests。
-- Supabase history、production ledger與baseline ledger不可互相替代。
 
 ## 17. Evidence與TDD規則
 
