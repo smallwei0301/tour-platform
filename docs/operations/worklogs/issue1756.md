@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-24 16:05 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-25 00:56 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -99,10 +99,15 @@
 - 2026-07-24 Baseline Task 1 immutable toolchain lock完成strict TDD；initial commit `4298dafe1fc24d5d40e35e0002dd197819b6938f` fresh review FAIL（S1–S4）。Remediation commit `47a674247cd180990900e5c7c2b9b17a4d20c71f`、tree `46a356bb631e1873f3907dc68520dc693e235f45`：canonical inventory重推、exact missing classifier、live CLI/Docker preflight、tag/digest ID binding、tracked signal lifecycle與owned PG probe cleanup。Focused `19/19 PASS`；真resolver/verifier stderr 0、request/lock digests不變、owned probe containers 0；final fresh SPEC／SECURITY／EXECUTABILITY review全部PASS、blocking 0。GitHub milestone：`issuecomment-5071666847`。
 - 2026-07-24 Task 2 exact frozen cutoff manifest完成strict TDD；commit `5573e27d5280f3588be962fafe73494acbc477bc`、tree `1d182ab72b2c77acc76cfc2cd3437b822343a327`。Producer與acceptance `8/8 PASS`；128/128 `sha256sum -c`、manifest digest `5f2b1494c07d94014f894d418596705dfefaee168054945d5a699d1c83cfde47`；fresh SPEC／SECURITY／QUALITY review全部PASS、blocking 0。GitHub checkpoint：`issuecomment-5071465024`。
 - 2026-07-24 Task 2前read-only inventory audit發現原plan把current forward總量134誤寫為cutoff frozen集合。Live partition為128支pre-cutoff＋6支Midao post-cutoff＝134；ledger applied/covered union亦為128且missing exact六支Midao。Docs修正commit `2d627fa6cc305b1d61558b309a037e0c80658863`、tree `0caa8f1c67d729cd4adaebff6716d3cdb5c235a3`；targeted SPEC／SECURITY／EXECUTABILITY review全部PASS、blocking 0。GitHub milestone：`issuecomment-5070729487`。
+- 2026-07-25 Baseline Task 3 PostgreSQL 17 catalog extractor完成strict TDD與多輪remediation；final commit `68ab5b85ff02fbe46b87e61d93b8705387ecd0b3`、tree `8af2e5ea11193d2836746e05e0aabf6d6d089527`。PUBLIC、aggregate、domain constraint、managed RLS、collision-free JSON identities、sequence definition、extension membership、duplicate JSON keys、repeatable-read與sequence effective ACL均鎖定；focused `6/6 PASS`，final SPEC／SECURITY／EXECUTABILITY review全部PASS、blocking 0。GitHub milestone：`issuecomment-5072258478`。
+- 2026-07-25 Baseline Task 4 catalog normalizer完成strict TDD與三輪remediation；final commit `48af0406f73894a96fb5694f63d5572065ad3c69`、tree `80893d814a628dd1d9784ab8add137711eee38b6`。Routine body只正規化line endings且保留語意空白；set arrays只在四個exact section/root paths排序，nested同名與ordered arrays保序。Final SPEC／QUALITY／SECURITY review全部PASS、blocking 0。
+- 2026-07-25 Baseline Task 5 ownership contract完成strict TDD與security remediation；final commit `5e248f71511c2505098f94ced184cd095bfd0500`、tree `d1f8ea8b42ca5b53199a7e5dee197e037aee9cfc`。五份Draft 2020-12 schemas、template-only contract、object／expected TOC exactly-once、dependency／role／platform prerequisite／approved exclusion gates，以及catalog-anchored trusted platform anti-laundering均完成；final SPEC／SECURITY／EXECUTABILITY review全部PASS、blocking 0。
+- 2026-07-25 Baseline Task 6 exact comparator initial＋identity/schema remediation commits `a74c5b13`、`a2d10e1115d9b28913969980a241ee20ced41fd5`；Task 3–6 regression `25/25 PASS`。NaN／Infinity／negative-zero identity collision與fixed 19-section independent contract已修；final narrow review進行中。
 
 ## 下一步
-- Task 1實作已完成，等待fresh combined review；若有blocking先remediate至0。
-- 128／6／134 partition gate已清零；Task 1 fresh review放行後開始Task 2 exact 128支pre-cutoff SHA manifest。
+- Task 6 final narrow review若blocking 0即正式放行；若有blocking先remediate。
+- 接續Task 7 secret-safe capture、TOC renderer、manifest與multi-target atomic publisher strict TDD；Task 7本身不連production。
+- 未取得Task 7 exact HEAD fresh SECURITY PASS、blocking 0前，不開始Task 8 production唯讀A/B capture。
 - 缺image時只發布immutable digest supply request，未經owner批准不下載。
 
 ## 絕不重做（Do-NOT-redo）
