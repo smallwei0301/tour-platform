@@ -14,12 +14,16 @@ const ACT_COLS = 'id, guide_id, title, slug, tagline, cover_image_url, duration_
 const _memActivities = [];
 /** @type {any[]} */
 const _memGuides = [];
+/** @type {any[]} */
+const _memPlans = [];
 let _memSeq = 0;
-export function __resetMemMidaoShowcase() { _memActivities.length = 0; _memGuides.length = 0; _memSeq = 0; }
+export function __resetMemMidaoShowcase() { _memActivities.length = 0; _memGuides.length = 0; _memPlans.length = 0; _memSeq = 0; }
 /** @param {any} profile */
 export function __seedMemMidaoGuide(profile) { _memGuides.push(profile); }
 /** @param {any[]} rows */
 export function __seedMemMidaoActivities(rows) { _memActivities.push(...rows); }
+/** @param {any[]} rows */
+export function __seedMemMidaoPlans(rows) { _memPlans.push(...rows); }
 
 /** 雙軌可見度矩陣（純函式）。 @param {{midaoStatus:string|null, status:string}} a */
 export function isShowcaseVisible({ midaoStatus, status }) {
@@ -28,19 +32,47 @@ export function isShowcaseVisible({ midaoStatus, status }) {
   return status === 'published'; // NULL＝跟隨主站
 }
 
-/** @param {any} a */
-function serviceShape(a) {
+/** @param {any} a @param {any[]} [plans] */
+function serviceShape(a, plans = []) {
+  const activePlans = plans
+    .filter((p) => p.activity_id === a.id)
+    .filter((p) => !p.status || p.status === 'active');
+  const planOptions = activePlans.map((p) => ({
+    planId: p.id, name: p.name, basePrice: p.base_price,
+    priceType: p.price_type, durationMinutes: p.duration_minutes ?? null,
+  }));
+  const positivePrices = activePlans
+    .map((p) => Number(p.base_price))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  const priceFromTwd = positivePrices.length ? Math.min(...positivePrices) : (a.price_twd ?? 0);
   return {
     activityId: a.id, title: a.title, tagline: a.tagline ?? null,
     coverImageUrl: a.cover_image_url ?? null, durationMinutes: a.duration_minutes ?? null,
     minParticipants: a.min_participants ?? 1, maxParticipants: a.max_participants ?? 10,
     region: a.region ?? null, languages: Array.isArray(a.languages) ? a.languages : [],
     priceTwd: a.price_twd ?? 0,
+    planOptions, priceFromTwd,
     dealMode: a.midao_deal_mode ?? 'confirm_first',
     questions: Array.isArray(a.midao_questions) ? a.midao_questions : [],
     showcasePublished: isShowcaseVisible({ midaoStatus: a.midao_status ?? null, status: a.status }),
     mainSiteStatus: a.status, midaoSortOrder: a.midao_sort_order ?? null,
   };
+}
+
+/**
+ * 該批 activity ids 的非封存方案（in-memory／Supabase 皆先濾 archived，active 判定在 serviceShape）。
+ * @param {string[]} ids
+ */
+async function fetchPlansByActivityIds(ids) {
+  if (!ids.length) return [];
+  if (!hasSupabaseEnv()) {
+    return _memPlans.filter((p) => ids.includes(p.activity_id) && p.status !== 'archived');
+  }
+  const supabase = await getSupabase();
+  const { data } = await supabase.from('activity_plans')
+    .select('id, activity_id, name, base_price, price_type, duration_minutes, status')
+    .in('activity_id', ids).neq('status', 'archived');
+  return Array.isArray(data) ? data : [];
 }
 
 /**
@@ -144,7 +176,8 @@ export async function listMidaoServicesDb(guideId) {
       .order('created_at', { ascending: false });
     rows = Array.isArray(data) ? data : [];
   }
-  return rows.map(serviceShape);
+  const plans = await fetchPlansByActivityIds(rows.map((a) => a.id));
+  return rows.map((a) => serviceShape(a, plans));
 }
 
 /**
@@ -234,6 +267,7 @@ export async function getPublicMidaoPageDb(slug) {
     .sort((a, b) => ((a.midao_sort_order ?? 999) - (b.midao_sort_order ?? 999))
       || String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')));
   if (!visible.length) return null;
+  const plans = await fetchPlansByActivityIds(visible.map((a) => a.id));
   return {
     guideId: profile.id,
     guide: {
@@ -244,7 +278,7 @@ export async function getPublicMidaoPageDb(slug) {
       experienceYears: profile.experience_years ?? null,
       photoUrl: profile.profile_photo_url ?? null, heroUrl: profile.hero_image_url ?? null,
     },
-    services: visible.map(serviceShape),
+    services: visible.map((a) => serviceShape(a, plans)),
   };
 }
 

@@ -38,3 +38,13 @@ test('LINE 回覆：含稱呼/導遊名/服務/日期，無禁用詞、驚嘆號
   for (const banned of ['療癒', '絕美', '夢幻', '網美', '打卡', '敬請']) assert.ok(!t.includes(banned), banned);
   assert.ok((t.match(/[！!]/g) ?? []).length <= 1);
 });
+
+test('需求摘要：帶 planTitle 時服務行顯示「服務名（方案名）」', () => {
+  const t = buildRequestSummaryText({ ...REQ, planTitle: '半日方案' });
+  assert.ok(t.includes('柴山私人秘境導覽（半日方案）'));
+});
+
+test('LINE 回覆：帶 planTitle 時服務段落顯示「服務名（方案名）」', () => {
+  const t = buildLineReplyText({ ...REQ, planTitle: '半日方案' }, 'Andy');
+  assert.ok(t.includes('柴山私人秘境導覽（半日方案）'));
+});

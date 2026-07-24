@@ -8,7 +8,7 @@ import { hasSupabaseEnv, getSupabase } from '../db.mjs';
 
 export const MIDAO_REQUEST_STATUSES = ['new', 'pending_reply', 'replied', 'closed_won', 'closed_done'];
 const PERIODS = ['morning', 'afternoon', 'evening'];
-const SELECT_COLS = 'id, request_no, guide_id, activity_id, activity_title_snapshot, traveler_name, traveler_line_id, traveler_email, preferred_date, backup_date, preferred_period, start_time, end_time, participants_count, participants_note, language, need_pickup, special_note, answers, status, source, created_at, status_changed_at';
+const SELECT_COLS = 'id, request_no, guide_id, activity_id, activity_title_snapshot, plan_id, plan_title_snapshot, traveler_name, traveler_line_id, traveler_email, preferred_date, backup_date, preferred_period, start_time, end_time, participants_count, participants_note, language, need_pickup, special_note, answers, status, source, created_at, status_changed_at';
 
 /** in-memory fallback（測試 seam） */
 /** @type {any[]} */
@@ -31,6 +31,7 @@ function shape(r) {
     id: r.id, requestNo: r.request_no,
     travelerName: r.traveler_name, travelerLineId: r.traveler_line_id ?? null, travelerEmail: r.traveler_email ?? null,
     activityId: r.activity_id ?? null, activityTitle: r.activity_title_snapshot ?? null,
+    planId: r.plan_id ?? null, planTitle: r.plan_title_snapshot ?? null,
     preferredDate: r.preferred_date, backupDate: r.backup_date ?? null,
     preferredPeriod: r.preferred_period ?? null, startTime: r.start_time ?? null, endTime: r.end_time ?? null,
     participantsCount: r.participants_count, participantsNote: r.participants_note ?? null,
@@ -73,6 +74,9 @@ export function normalizeRequestInput(input) {
     answer: String(a?.answer ?? '').slice(0, 300),
   })) : [];
   if (JSON.stringify(answers).length > 10240) return { ok: false, code: 'ANSWERS_TOO_LONG', message: '回答內容過長' };
+  const planId = String(input?.planId ?? '').trim().slice(0, 64);
+  let planTitle = String(input?.planTitle ?? '').trim();
+  if (planTitle.length > 80) planTitle = planTitle.slice(0, 80); // 快照容錯優先：截斷不報錯
   return {
     ok: true,
     value: {
@@ -84,6 +88,7 @@ export function normalizeRequestInput(input) {
       language: String(input?.language ?? '').trim().slice(0, 40) || null,
       need_pickup: input?.needPickup === true, special_note: specialNote || null,
       answers,
+      plan_id: planId || null, plan_title_snapshot: planTitle || null,
     },
   };
 }

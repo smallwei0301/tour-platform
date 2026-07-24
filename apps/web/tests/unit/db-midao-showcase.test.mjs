@@ -4,7 +4,7 @@ import {
   MIDAO_DEAL_MODES, isShowcaseVisible, normalizeServiceInput,
   listMidaoServicesDb, createMidaoServiceDb, updateMidaoServiceDb, getPublicMidaoPageDb,
   updateGuideExperienceYearsDb, getGuideExperienceYearsDb,
-  __resetMemMidaoShowcase, __seedMemMidaoGuide, __seedMemMidaoActivities,
+  __resetMemMidaoShowcase, __seedMemMidaoGuide, __seedMemMidaoActivities, __seedMemMidaoPlans,
 } from '../../src/lib/midao/db-midao-showcase.mjs';
 
 const G = 'guide-1';
@@ -134,4 +134,27 @@ test('getGuideExperienceYearsDb：讀值與缺值', async () => {
   __seedMemMidaoGuide({ id: G, slug: 'andy-lee', verification_status: 'approved', experience_years: 7 });
   assert.equal(await getGuideExperienceYearsDb(G), 7);
   assert.equal(await getGuideExperienceYearsDb('guide-nope'), null);
+});
+
+test('serviceShape：planOptions／priceFromTwd 只取 active 方案的最低價，archived 排除', async () => {
+  const norm = normalizeServiceInput(serviceInput());
+  const created = await createMidaoServiceDb(G, norm.value, { publish: true });
+  __seedMemMidaoPlans([
+    { id: 'plan-1', activity_id: created.activityId, name: '半日方案', base_price: 4800, price_type: 'per_group', duration_minutes: 240, status: 'active' },
+    { id: 'plan-2', activity_id: created.activityId, name: '全日方案', base_price: 3200, price_type: 'per_group', duration_minutes: 480, status: 'active' },
+    { id: 'plan-3', activity_id: created.activityId, name: '封存方案', base_price: 9999, price_type: 'per_group', duration_minutes: 60, status: 'archived' },
+  ]);
+  const items = await listMidaoServicesDb(G);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].planOptions.length, 2);
+  assert.equal(items[0].priceFromTwd, 3200);
+  assert.ok(!items[0].planOptions.some((p) => p.name === '封存方案'));
+});
+
+test('serviceShape：無方案時 priceFromTwd fallback priceTwd', async () => {
+  const norm = normalizeServiceInput(serviceInput());
+  const created = await createMidaoServiceDb(G, norm.value, { publish: true });
+  const items = await listMidaoServicesDb(G);
+  assert.equal(items[0].planOptions.length, 0);
+  assert.equal(items[0].priceFromTwd, items[0].priceTwd);
 });

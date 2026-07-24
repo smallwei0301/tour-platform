@@ -110,6 +110,28 @@ test('normalizeRequestInput：answers 超過 10KB 擋下', () => {
   assert.equal(r.code, 'ANSWERS_TOO_LONG');
 });
 
+test('normalizeRequestInput：planId/planTitle 快照與回讀', async () => {
+  const norm = normalizeRequestInput(baseInput({ planId: 'plan-1', planTitle: '半日方案' }));
+  assert.equal(norm.ok, true);
+  assert.equal(norm.value.plan_id, 'plan-1');
+  assert.equal(norm.value.plan_title_snapshot, '半日方案');
+  const created = await createMidaoRequestDb({
+    guideId: G, activityId: 'act-1', activityTitle: '柴山私人秘境導覽',
+    value: norm.value, source: 'public_page',
+  });
+  assert.equal(created.planId, 'plan-1');
+  assert.equal(created.planTitle, '半日方案');
+  const fetched = await getMidaoRequestDb(G, created.id);
+  assert.equal(fetched.planTitle, '半日方案');
+});
+
+test('normalizeRequestInput：planId 空字串→null，planTitle 超過 80 字直接截斷', () => {
+  const norm = normalizeRequestInput(baseInput({ planId: '', planTitle: 'x'.repeat(81) }));
+  assert.equal(norm.ok, true);
+  assert.equal(norm.value.plan_id, null);
+  assert.equal(norm.value.plan_title_snapshot.length, 80);
+});
+
 test('request_no：撞號時重試遞增（in-memory 路徑）', async () => {
   // 種一筆佔住 R20260815002：count=1 → 第一次算出 002 撞號 → 重試 +1 → 003
   __seedMemMidaoRequests([{

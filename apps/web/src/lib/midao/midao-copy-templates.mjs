@@ -8,7 +8,9 @@ export function periodLabel(p) { return PERIODS[/** @type {'morning'} */ (p)] ??
 /** @param {any} r */
 export function buildRequestSummaryText(r) {
   const lines = [`【需求摘要】#${r.requestNo}`, `稱呼：${r.travelerName}`];
-  if (r.activityTitle) lines.push(`服務：${r.activityTitle}`);
+  if (r.activityTitle) {
+    lines.push(r.planTitle ? `服務：${r.activityTitle}（${r.planTitle}）` : `服務：${r.activityTitle}`);
+  }
   let dateLine = `日期：${r.preferredDate}`;
   if (r.backupDate) dateLine += `（備用 ${r.backupDate}）`;
   if (r.preferredPeriod) dateLine += `・${periodLabel(r.preferredPeriod)}`;
@@ -30,7 +32,8 @@ export function buildRequestSummaryText(r) {
 /** @param {any} r @param {string} guideName */
 export function buildLineReplyText(r, guideName) {
   const date = r.preferredPeriod ? `${r.preferredDate} ${periodLabel(r.preferredPeriod)}` : r.preferredDate;
-  const service = r.activityTitle ? `「${r.activityTitle}」` : '行程';
+  const serviceName = r.planTitle ? `${r.activityTitle}（${r.planTitle}）` : r.activityTitle;
+  const service = r.activityTitle ? `「${serviceName}」` : '行程';
   return [
     `${r.travelerName} 您好，我是導遊 ${guideName}。`,
     `已收到您的需求（#${r.requestNo}）：${service}，${date}，${r.participantsCount} 位。`,
