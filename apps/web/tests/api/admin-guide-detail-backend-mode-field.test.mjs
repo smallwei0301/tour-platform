@@ -79,6 +79,14 @@ test('runtime profile resolver stops immediately on non-column database error', 
   assert.equal(client.selects.length, 1);
 });
 
+test('runtime profile resolver stops immediately when a non-42703 error mimics missing-column text', async () => {
+  const { getAdminGuideProfileDb } = await loadHelper();
+  const spoofed = { code: '42501', message: 'column backend_mode does not exist' };
+  const client = fakeClient([{ data: null, error: spoofed }]);
+  await assert.rejects(() => getAdminGuideProfileDb(client, 'guide-1'), (error) => error === spoofed);
+  assert.equal(client.selects.length, 1);
+});
+
 test('runtime profile resolver propagates the final legacy fallback error', async () => {
   const { getAdminGuideProfileDb } = await loadHelper();
   const missing = { data: null, error: { code: '42703', message: 'column does not exist' } };

@@ -3,7 +3,7 @@ const PROFILE_BASE_SELECT = 'id, display_name, slug, verification_status, headli
 const PROFILE_LEGACY_SELECT = 'id, display_name, slug, verification_status, headline, region, rating_avg, guide_email, profile_photo_url, created_at';
 
 function isMissingColumn(error) {
-  return !!error && (error.code === '42703' || /column .*does not exist/i.test(error.message || ''));
+  return error?.code === '42703';
 }
 
 async function queryProfile(client, guideId, columns) {
