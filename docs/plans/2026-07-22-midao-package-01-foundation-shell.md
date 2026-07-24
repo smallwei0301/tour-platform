@@ -831,7 +831,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 >
 > 為權威。若本文其餘命令仍暗示全歷史重播，以新baseline plan為準並修正文檔後再執行。
 
-**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；6支`2026072300*` Midao migrations全部post-cutoff。Fresh history exact set只記一支`baseline_v1` synthetic marker＋post-cutoff history；`baseline.sql`與`managed-overlays.sql`必須組成同一支synthetic migration，禁止額外overlay row或134筆fake history。
+**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；128支pre-cutoff migrations凍結，6支`2026072300*` Midao migrations全部post-cutoff（目前forward inventory為128＋6＝134）。Fresh history exact set只記一支`baseline_v1` synthetic marker＋post-cutoff history；`baseline.sql`與`managed-overlays.sql`必須組成同一支synthetic migration，禁止額外overlay row或128筆fake cutoff history。
 
 **Catalog truth contract:** `catalog.cutoff.normalized.json`只描述production cutoff；`catalog.expected-terminal.normalized.json`描述baseline＋6支Midao後的reviewed terminal truth。Fresh與existing rehearsal各自獨立exact compare expected-terminal，另彼此等價，不能拿cutoff catalog當terminal右側或只讓兩lane互比。
 
@@ -854,7 +854,7 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 
 **Required sequence:**
 
-1. 凍結134支historical migration hashes。
+1. 凍結128支pre-cutoff migration hashes；明確排除6支Midao post-cutoff。
 2. 建secret-safe production catalog capture、normalizer、ownership validator與exact comparator，通過fresh security review。
 3. 以唯讀production capture兩次取得byte-identical catalog；raw dump不直接當真相。
 4. Materialize pinned Supabase/Postgres empty stack：platform→baseline marker→overlay→6支Midao→seed。
@@ -1443,7 +1443,7 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 
 ## Definition of Done for #1756
 
-- [ ] 134支historical migrations SHA-256 manifest PASS；stash內8支frozen修改未恢復、未提交。
+- [ ] 128支pre-cutoff migrations SHA-256 manifest PASS，且6支Midao只存在post-cutoff集合；stash內8支frozen修改未恢復、未提交。
 - [ ] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；published `dependency-closure.json`逐selected entry完整且missing/extra/unknown/duplicate皆零；artifact無business rows／credentials，ownership manifest零unknown objects。
 - [ ] Fresh lane成功套platform→單一baseline marker（含managed overlay）→6支post-cutoff→seed；fresh與existing各自對expected-terminal exact compare，existing upgrade baseline execution count為零。
 - [ ] PR source gate與production release verified gate分離；baseline ledger不冒充production apply ledger。

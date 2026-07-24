@@ -88,9 +88,9 @@ git diff --cached --check
 
 **Commit:** `feat: 鎖定 baseline PostgreSQL toolchain`。
 
-## Task 2：凍結cutoff時134支forward migration bytes
+## Task 2：凍結cutoff的128支pre-cutoff forward migration bytes
 
-**Objective:** 固定exact 134 filenames＋SHA，不因repo tree或合法future extra migration失效。
+**Objective:** 固定exact 128 pre-cutoff filenames＋SHA；6支Midao post-cutoff不在此集合，且不因repo tree或合法future extra migration失效。
 
 **Files:**
 - Create: `scripts/database-baseline/build-frozen-migration-manifest.mjs`
@@ -103,7 +103,7 @@ git diff --cached --check
 node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-frozen-history.test.mjs
 ```
 
-Expected：FAIL，builder missing。Tests要求：exact 134條完整filename＋digest、rollback排除、missing/drift/symlink/duplicate拒絕；集合外合法新post-cutoff檔不在本checker FAIL，由source gate處理。Manifest不得綁full repo tree。
+Expected：FAIL，builder missing。Tests要求：exact 128條pre-cutoff完整filename＋digest、rollback與6支Midao post-cutoff排除、missing/drift/symlink/duplicate拒絕；集合外合法新post-cutoff檔不在本checker FAIL，由source gate處理。Manifest不得綁full repo tree。
 
 **GREEN/stage/evidence**
 
@@ -440,7 +440,7 @@ node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-materializer
 Expected：FAIL，materializer missing。Tests鎖：
 
 - single synthetic baseline file內固定boundary前後包含兩個artifacts；
-- one baseline history marker only；overlay marker／134 fake rows／extra row拒絕；
+- one baseline history marker only；overlay marker／128 fake cutoff rows／extra row拒絕；
 - 6支post-cutoff exact filename/digest/order；future manifest selection；
 - symlink/hardlink/path replacement、rollback排除、seed分離、cleanup ownership。
 

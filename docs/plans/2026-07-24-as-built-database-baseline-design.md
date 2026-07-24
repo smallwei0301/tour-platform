@@ -11,18 +11,18 @@
 ## 2. 已批准、不再重開的決策
 
 1. **主線**：現況竣工圖baseline；不再要求134支forward migrations從空DB完整重播。
-2. **凍結集合**：capture cutoff時已存在repo的134支forward migration以完整filename＋SHA-256凍結；D3b stash內8支frozen修改不得恢復或提交。未來新增post-cutoff migration不屬於這134支集合，不會因集合外多檔而誤FAIL。
+2. **凍結集合**：production cutoff對應的128支pre-cutoff forward migration以完整filename＋SHA-256凍結；D3b stash內8支frozen修改不得恢復或提交。6支Midao與未來新增migration屬post-cutoff，不在這128支集合，不會因集合外合法多檔而誤FAIL。
 3. **Reference**：active Supabase production project `pyoderxmpeyqjwkeliiu`；production只允許唯讀metadata，不讀business rows，不執行DDL/DML。
 4. **Managed-schema邊界**：逐物件ownership；Supabase擁有`auth/storage`內部物件，App自有跨schema policy／trigger／grant由overlay管理，unknown ownership一律HOLD。
 5. **Cutoff**：baseline v1代表2026-07-24 capture時production狀態；6支`2026072300*` Midao migrations全部屬post-cutoff。
-6. **Fresh history**：exact history set只能是單一`baseline_v1` synthetic marker＋6支Midao與未來post-cutoff migrations；不偽造134筆舊history，也不建立獨立overlay history row。
+6. **Fresh history**：exact history set只能是單一`baseline_v1` synthetic marker＋6支Midao與未來post-cutoff migrations；不偽造128筆cutoff舊history，也不建立獨立overlay history row。
 7. **Ledger gate**：PR/source gate與production release/verified gate分離，且必須接到實際workflow／preflight callers。
 8. **版本契約**：Supabase CLI `2.87.2`、PostgreSQL server/client major `17`；所有實際binaries與container images另以content digest鎖定。升級需重新capture、render、compare與review。
 9. **並行UI**：只做不依賴未確認column／payload的shell、loading、empty、error與view-model skeleton。
 
 ## 3. 已取得的唯讀證據
 
-- Repo inventory：134支forward migrations、53支rollback migrations、其中6支Midao為post-cutoff。
+- Repo inventory：134支forward migrations、53支rollback migrations；forward exact partition為128支pre-cutoff frozen＋6支Midao post-cutoff。
 - Production `public`：73張ordinary tables，73/73啟用RLS，114條policies。
 - `midao_availability_defaults`、`midao_day_overrides`、`midao_requests`啟用RLS但無policy，一般角色預設全拒絕。
 - 59張tables對`authenticated`仍有廣泛底層write grants。RLS仍是資料列閘門，因此不等於已證實越權；但此狀態違反「App writes走service role」目標，必須以machine-readable known security drift保存，不得用exclusion隱藏或稱為security PASS。
@@ -87,7 +87,7 @@ pinned Supabase platform bootstrap
 ```
 
 - `baseline.sql`與`managed-overlays.sql`是兩個可review artifacts，但materializer必須按固定順序組成**同一支**synthetic `baseline_v1` migration。
-- Exact history set assertion拒絕獨立overlay marker、第二支synthetic migration、134筆fake history或任何未在manifest的row。
+- Exact history set assertion拒絕獨立overlay marker、第二支synthetic migration、128筆fake cutoff history或任何未在manifest的row。
 - Fresh runner偵測occupied application schema即FAIL。
 - Future fresh環境仍走lane-aware runner；普通全歷史reset不是受支持入口。
 
@@ -183,7 +183,7 @@ supabase/baselines/v1/
 - schema／extractor／normalizer／publisher versions；
 - source project ref與capture timestamps；
 - cutoff identity；
-- exact 134 frozen filenames＋digests；
+- exact 128 pre-cutoff frozen filenames＋digests；
 - exact post-cutoff filenames／versions／digests／order；
 - toolchain lock digest與全部artifact digests，明確包含normalized TOC、selected use-list、TOC ownership map及`dependency-closure.json`；
 - `dependency-closure.json`逐selected TOC entry列出direct/transitive dependencies、render destination、A/B digest與missing/extra/unknown/duplicate結果；
@@ -264,7 +264,7 @@ Existing rehearsal先以fixture-builder建立local cutoff-shaped occupied DB，�
 
 ## 18. 最低驗收矩陣
 
-1. Exact 134 frozen filenames/digests：missing/drift FAIL，合法future post-cutoff extra files交source gate。
+1. Exact 128 pre-cutoff frozen filenames/digests：missing/drift FAIL，6支Midao與合法future post-cutoff extra files交source gate。
 2. Toolchain binaries與all service images digest／identity PASS。
 3. Hostile rc/env/credential tests PASS；production capture不落credential檔。
 4. A/B normalized catalog／TOC／use-list／ownership map／rendered SQL byte-identical。
@@ -290,6 +290,6 @@ Baseline v1只有在以下全部成立時才完成：
 - fresh／existing exact comparison與lane-confusion tests PASS；
 - source／release gates實際接線；
 - artifacts無business rows／credentials；
-- 134 frozen migrations無byte drift；
+- 128 pre-cutoff frozen migrations無byte drift；
 - known security drift沒有被隱藏或稱為security PASS；
 - 未經另行授權沒有production schema mutation。

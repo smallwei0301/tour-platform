@@ -37,7 +37,7 @@
 7. 不修改 frozen `apps/web/app/api/{orders,payments}/**` legacy 凍結區；checkout gate 修改的是可修改的 `apps/web/app/api/v2/bookings/[bookingId]/checkout/route.ts`。
 8. 所有 Playwright、build、完整 test suite、migration broad scan 都使用 `terminal(background=true, notify_on_complete=true)`，底層命令加 `timeout --signal=TERM 570s`；單一快速 `node --test` 可前景執行。
 9. RED 階段可直接對本 task 明列的真實測試檔執行 `node --test --test-concurrency=1`；任何 code commit 前的最終 GREEN 必須改以 `.claude/hooks/run-checks.sh`（需要時加 `--typecheck`）執行本 commit 相關的真實 node test 路徑，讓 commit gate 取得 30 分鐘內證據。E2E-only task 仍須在 commit 前跑該 package 最接近的 node contract tests＋`--typecheck`，Playwright PASS 不能代替 commit evidence。
-10. Database fresh install固定走catalog-verified baseline lane；134支cutoff forward migrations以exact filename＋digest凍結，不再從空DB全量重播或修舊檔。Fresh將`baseline.sql`＋managed overlay組成單一`baseline_v1` marker，再套post-cutoff；existing production只套cutoff後additive migrations。`catalog.cutoff`與`catalog.expected-terminal`分離，fresh/existing各自對expected-terminal exact compare。
+10. Database fresh install固定走catalog-verified baseline lane；128支pre-cutoff forward migrations以exact filename＋digest凍結，6支Midao保留為post-cutoff（目前forward inventory為128＋6＝134），不再從空DB全量重播或修舊檔。Fresh將`baseline.sql`＋managed overlay組成單一`baseline_v1` marker，再套post-cutoff；existing production只套cutoff後additive migrations。`catalog.cutoff`與`catalog.expected-terminal`分離，fresh/existing各自對expected-terminal exact compare。
 
 ### 縮寫 task 的固定 TDD 模板
 

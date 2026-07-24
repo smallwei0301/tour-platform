@@ -15,7 +15,7 @@
 - Baseline implementation：`docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
 
 ## AC 清單
-- [ ] 134支歷史migration bytes凍結；baseline v1兩次production唯讀capture一致且無data／secret。
+- [ ] 128支pre-cutoff migration bytes凍結且6支Midao只屬post-cutoff；baseline v1兩次production唯讀capture一致且無data／secret。
 - [ ] Fresh platform→baseline marker→6支post-cutoff→seed成功；existing rehearsal不執行baseline，terminal catalogs exact equivalent。
 - [ ] 五個additive foundation objects與atomic RPC以RED → minimal GREEN完成，catalog／ACL／RLS runtime PASS。
 - [ ] Durable idempotency、atomic mode switch、audit/outbox與exact RPC ACL/RLS contracts通過。
@@ -95,11 +95,15 @@
 - v3最小修正處理4項：發布並digest-bound `dependency-closure.json`；Task 1新增registry metadata resolver、owner-approved immutable digest request與digest-only acquisition/read-back；Tasks 8/10明確producer、ledger、多target guarded publication/rollback與manual acceptance test；Tasks 11/12補heavy allowlist exact RED command。
 - 2026-07-24 v3 commit `6568ee12752c578290c4519fe6901eb8150d7878`、tree `a80bb8580f23f4f97e3a2c0e316b492bc0cb4e52`；docs static/diff checks PASS，worktree clean。
 - Exact v3 targeted fresh reviews全部放行：既有SPEC PASS blocking 0；QUALITY/SECURITY dependency-closure re-review PASS blocking 0；EXECUTABILITY toolchain/publication/heavy-RED re-review PASS blocking 0。GitHub里程碑：`issuecomment-5069595817`。
-- 2026-07-24 Admin導遊詳情新增方向性後台模式入口：GET projection含`backend_mode`並保留legacy-schema fallback；approved profile可提供reason後以CSRF＋Idempotency-Key呼叫既有atomic API，成功只依v2 response更新local state。RED後focused `13/13 PASS`、typecheck PASS、same-tree evidence PASS；commit `8437bdd02b9beb0e100194f4cdf0c66b38668fd2`、tree `46c9912b2b0ffbaba1056f78acceda0928257019`。Fresh review進行中。
+- 2026-07-24 Admin導遊詳情新增方向性後台模式入口：GET projection含`backend_mode`並保留legacy-schema fallback；approved profile可提供reason後以CSRF＋Idempotency-Key呼叫既有atomic API，成功只依v2 response更新local state。Initial commit `8437bdd0` fresh review FAIL blocking 2；新增fail-closed DB resolver與runtime command tests後commit `a0e69e83`，再以exact SQLSTATE `42703`修正message spoof fallback並commit `d588b152355a1116754072b556695cfe022213bb`、tree `d27e7ab302a98e42f7b4cd3aca8fa2f998f9030e`。Final focused/runtime/regression `18/18 PASS`、typecheck PASS；final narrow fresh review進行中。
+- 2026-07-24 Baseline Task 1 immutable toolchain lock完成strict TDD；commit `4298dafe1fc24d5d40e35e0002dd197819b6938f`、tree `58420dfcd343f05c634159bb0e0f958030df7ac4`。Focused `15/15 PASS`；12項required images全部local present、missing bytes 0、未pull；PG client三工具皆為17.10；request／lock二次生成byte-identical且secret scan PASS。Fresh combined review進行中。
+- 2026-07-24 Task 2前read-only inventory audit發現原plan把current forward總量134誤寫為cutoff frozen集合。Live partition為128支pre-cutoff＋6支Midao post-cutoff＝134；ledger applied/covered union亦為128且missing exact六支Midao。Task 2維持HOLD，已修正design／implementation／package／master／worklog，待targeted SPEC／SECURITY／EXECUTABILITY review blocking 0。
 
 ## 下一步
-- Baseline implementation gate已清零；從Task 1供應鏈與PG17 toolchain lock開始，以strict TDD依序執行15個Tasks。缺image時只發布immutable digest supply request，未經owner批准不下載。
-- Schema-neutral Admin mode-switch UI可並行施工，但同一worktree一次只允許一個writer，避免Git index互相污染。
+- Task 1實作已完成，等待fresh combined review；若有blocking先remediate至0。
+- Task 2在128／6／134文件targeted reviews清零前維持HOLD；放行後才建立128支pre-cutoff SHA manifest。
+- Admin mode-switch final narrow fresh review清零後雙寫GitHub milestone。
+- 缺image時只發布immutable digest supply request，未經owner批准不下載。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。
