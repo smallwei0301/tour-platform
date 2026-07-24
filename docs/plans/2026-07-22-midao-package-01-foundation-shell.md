@@ -71,7 +71,14 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs
 ```
 
-5. Orchestrator在child前後驗證相同 `git write-tree`；同一tree hash可由多次 `--run`/`--run-heavy`追加evidence bundle entries，每entry獨立保存exact spawned `childArgv`、covered test paths、derived `expectedEvidenceCmd`（heavy則保存sanitized child exit）與epoch。Tree或staged path/status/blob manifest一變就清空整包。`--check-only`要求bundle內covered paths的union涵蓋全部staged tests；`--all` entry才可宣告全覆蓋。一般 `--run`只接受repo `run-checks.sh`＋literal test paths（拒絕glob metacharacters），將paths按argv順序推導 `node --test path1 path2`，`--typecheck`時附加 ` && npm run typecheck`，`--all`則推導 `npm test`；只把derived semantic command與 `.claude/state/last-checks.json.cmd`比較。Tracked heavy只allowlist三個exact command prefixes：`timeout --signal=TERM 570s bash scripts/testing/run-midao-foundation-postgres.sh`、`timeout --signal=TERM 570s bash scripts/testing/run-midao-e2e.sh`、或 `timeout --signal=TERM 570s bash scripts/testing/run-midao-legacy-e2e-compat.sh`；由orchestrator直接保存child exit/argv，不讀無關harness evidence。
+5. Orchestrator在child前後驗證相同 `git write-tree`；同一tree hash可由多次 `--run`/`--run-heavy`追加evidence bundle entries，每entry獨立保存exact spawned `childArgv`、covered test paths、derived `expectedEvidenceCmd`（heavy則保存sanitized child exit）與epoch。Tree或staged path/status/blob manifest一變就清空整包。`--check-only`要求bundle內covered paths的union涵蓋全部staged tests；每個bundle至少有一個ordinary entry，heavy不能取代ordinary。一般 `--run`只接受repo `run-checks.sh`＋literal staged test paths；regression/full suite與commit staged evidence分開。
+
+Tracked heavy只允許五個完整literal commands：三個既有Bash runners，以及下列兩個Node runners：
+
+- `timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs --test apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs`
+- `timeout --signal=TERM 570s node scripts/database-baseline/run-existing-upgrade-rehearsal.mjs --test apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs`
+
+Node prefixes只能帶上述唯一`--test`與exact path；拒絕env prefix、alternate node、extra flags、其他test path、path traversal與其他`database-baseline/*.mjs`。在Tasks 11／12以ordinary staged verifier tests先完成對應allowlist code change後，才可使用各Node heavy command。
 6. 它同時拒絕tracked unstaged code與 `git ls-files --others --exclude-standard`列出的untracked code/test/config/script；docs-only例外不得涵蓋 `.ts/.tsx/.mjs/.sql/.sh/.json/.toml`等可執行/config paths。
 7. Commit前最後執行：
 
@@ -824,7 +831,11 @@ node scripts/testing/verify-staged-check-evidence.mjs --run -- \
 >
 > 為權威。若本文其餘命令仍暗示全歷史重播，以新baseline plan為準並修正文檔後再執行。
 
-**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；6支`2026072300*` Midao migrations全部post-cutoff。Fresh history只記`baseline_v1` marker＋post-cutoff history，不偽造134筆舊紀錄。
+**Cutoff contract:** baseline v1代表active production project `pyoderxmpeyqjwkeliiu`於capture當下的catalog；6支`2026072300*` Midao migrations全部post-cutoff。Fresh history exact set只記一支`baseline_v1` synthetic marker＋post-cutoff history；`baseline.sql`與`managed-overlays.sql`必須組成同一支synthetic migration，禁止額外overlay row或134筆fake history。
+
+**Catalog truth contract:** `catalog.cutoff.normalized.json`只描述production cutoff；`catalog.expected-terminal.normalized.json`描述baseline＋6支Midao後的reviewed terminal truth。Fresh與existing rehearsal各自獨立exact compare expected-terminal，另彼此等價，不能拿cutoff catalog當terminal右側或只讓兩lane互比。
+
+**Runner identity:** fresh／expected-terminal／existing rehearsal全部走D3a self-owned local wrapper，只接受loopback與owned container/project/port/database identity；拒絕production ref、`--linked`、remote URL及ambient DB env。Existing upgrade階段baseline execution count必為0。
 
 **Managed-schema contract:** Supabase platform bootstrap擁有`auth/storage`內部物件；App自有跨schema policy／trigger／grant由object-level overlay管理。Unknown ownership、missing catalog section、unexpected diff或credential residue一律HOLD。
 
@@ -1430,7 +1441,7 @@ Fresh spec reviewer逐條核對#1756 AC、read-back migration/runtime guard/acto
 
 - [ ] 134支historical migrations SHA-256 manifest PASS；stash內8支frozen修改未恢復、未提交。
 - [ ] Baseline v1由兩次production read-only capture建立，normalized catalog／TOC／rendered SQL byte-identical；artifact無business rows／credentials，ownership manifest零unknown objects。
-- [ ] Fresh lane成功套platform→baseline marker→managed overlay→6支post-cutoff→seed；existing rehearsal baseline execution count為零，兩者terminal catalog exact equivalent。
+- [ ] Fresh lane成功套platform→單一baseline marker（含managed overlay）→6支post-cutoff→seed；fresh與existing各自對expected-terminal exact compare，existing upgrade baseline execution count為零。
 - [ ] PR source gate與production release verified gate分離；baseline ledger不冒充production apply ledger。
 - [ ] Six post-cutoff foundation migrations source-contract＋local runtime PASS。
 - [ ] backend mode switch atomically updates mode/version/audit/outbox；fresh same-mode無business side effect；function只授權service_role。

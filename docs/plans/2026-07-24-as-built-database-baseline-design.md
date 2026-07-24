@@ -1,242 +1,293 @@
-# Tour Platform 現況竣工圖 Database Baseline Design
+# Tour Platform 現況竣工圖 Database Baseline Design v2
 
-> 狀態：2026-07-24 owner 已批准整合設計。本文是 `#1756` D3b fresh-install 路線的新權威設計；既有 frozen migration replay 路線停止。
+> 狀態：2026-07-24 owner已批准as-built baseline方向；v2納入exact HEAD `30c0b6f9` fresh SPEC／SECURITY／EXECUTABILITY review的全部blocking修正。未取得v2 fresh review PASS前不得實作或capture production。
 
 ## 1. 目標
 
-建立一份經 PostgreSQL catalog 逐項驗證的 `baseline v1`，供全新本機、CI、staging 與災難復原環境使用，同時保證既有 production 永遠不會套用 baseline。
+建立一份經PostgreSQL catalog逐項驗證的`baseline v1`，供全新local、CI、staging與災難復原環境使用，同時保證existing production永遠不會套用baseline。
 
-這是「依目前房屋實測繪製竣工圖」，不是拆除或重建 production。
+這是「依目前房屋實測繪製竣工圖」，不是拆除或重建production。
 
-## 2. 已批准決策
+## 2. 已批准、不再重開的決策
 
-1. **主線**：現況竣工圖 baseline；不再要求 134 支歷史 migration 從空資料庫完整重播。
-2. **凍結歷史**：`supabase/migrations/` 既有檔案 byte-for-byte 凍結；D3b stash 內 8 支 frozen migration 修改不得恢復或提交。
-3. **並行 UI**：只做不依賴未確認 table column／API payload 的 shell、loading、empty、error 與 view-model skeleton。
-4. **Reference**：active Supabase production project `pyoderxmpeyqjwkeliiu`；只允許唯讀 catalog metadata，不讀 business rows，不執行 production DDL/DML。
-5. **Managed-schema 邊界**：逐物件 ownership；Supabase 管理 `auth`／`storage` 內部物件，App 自有跨 schema policy／trigger／grant 以 overlay 管理，unknown ownership 一律 HOLD。
-6. **Cutoff**：baseline v1 代表 2026-07-24 capture 時的 production 狀態；6 支 `2026072300*` Midao foundation migrations 全部屬 post-cutoff。
-7. **Fresh history**：只記 `baseline_v1` marker 與 post-cutoff migration history，不偽造 134 筆舊 history。
-8. **Ledger gate**：PR/source gate 與 production release/verified gate分離。
-9. **版本契約**：Supabase CLI `2.87.2`、PostgreSQL `17`；升級需重新 capture、compare 與 review。
+1. **主線**：現況竣工圖baseline；不再要求134支forward migrations從空DB完整重播。
+2. **凍結集合**：capture cutoff時已存在repo的134支forward migration以完整filename＋SHA-256凍結；D3b stash內8支frozen修改不得恢復或提交。未來新增post-cutoff migration不屬於這134支集合，不會因集合外多檔而誤FAIL。
+3. **Reference**：active Supabase production project `pyoderxmpeyqjwkeliiu`；production只允許唯讀metadata，不讀business rows，不執行DDL/DML。
+4. **Managed-schema邊界**：逐物件ownership；Supabase擁有`auth/storage`內部物件，App自有跨schema policy／trigger／grant由overlay管理，unknown ownership一律HOLD。
+5. **Cutoff**：baseline v1代表2026-07-24 capture時production狀態；6支`2026072300*` Midao migrations全部屬post-cutoff。
+6. **Fresh history**：exact history set只能是單一`baseline_v1` synthetic marker＋6支Midao與未來post-cutoff migrations；不偽造134筆舊history，也不建立獨立overlay history row。
+7. **Ledger gate**：PR/source gate與production release/verified gate分離，且必須接到實際workflow／preflight callers。
+8. **版本契約**：Supabase CLI `2.87.2`、PostgreSQL server/client major `17`；所有實際binaries與container images另以content digest鎖定。升級需重新capture、render、compare與review。
+9. **並行UI**：只做不依賴未確認column／payload的shell、loading、empty、error與view-model skeleton。
 
 ## 3. 已取得的唯讀證據
 
-- production `public`：73 張 ordinary tables，73/73 啟用 RLS，114 條 policies。
-- `midao_availability_defaults`、`midao_day_overrides`、`midao_requests` 啟用 RLS但目前無 policy，一般角色預設全拒絕。
-- 59 張 tables 對 `authenticated` 仍有廣泛底層 write grants。RLS仍是資料列閘門，因此此發現不等於已證實越權寫入；但它違反「app writes走service role」的目標，必須保留為 known security drift，不得在baseline中悄悄合理化。
-- 6 支 Midao foundation effects 均未在 production 生效：三張foundation tables、atomic RPC與 `guide_profiles.backend_mode`／`guide_session_version` 均不存在；欄位 probe 回 SQLSTATE `42703`。
-- Supabase CLI `db dump --linked --schema public` 在570秒後 exit `124`；留下的147,279-byte SQL無 dump-complete marker且函式／enum片段缺行。該檔已刪除，不得作baseline來源。
+- Repo inventory：134支forward migrations、53支rollback migrations、其中6支Midao為post-cutoff。
+- Production `public`：73張ordinary tables，73/73啟用RLS，114條policies。
+- `midao_availability_defaults`、`midao_day_overrides`、`midao_requests`啟用RLS但無policy，一般角色預設全拒絕。
+- 59張tables對`authenticated`仍有廣泛底層write grants。RLS仍是資料列閘門，因此不等於已證實越權；但此狀態違反「App writes走service role」目標，必須以machine-readable known security drift保存，不得用exclusion隱藏或稱為security PASS。
+- 6支Midao foundation effects均未在production生效：3張foundation tables、atomic RPC及`guide_profiles.backend_mode`／`guide_session_version`不存在；欄位probe回SQLSTATE `42703`。
+- Supabase CLI 2.87.2 plain schema dump於570秒後exit `124`，partial SQL缺complete marker且函式／enum斷裂；已刪除，不得作baseline來源。
 
 ## 4. 非目標
 
-- 不把 production data、PII、password hash、token、connection string或storage objects匯入repo。
-- 不修改任何 frozen migration。
-- 不對 production 套用 baseline、Midao migrations或security remediation。
-- 不讓普通 `supabase db reset`／`db push`自行猜 lane。
-- 不把目前 production grant drift宣告為理想權限模型。
+- 不把production data、PII、password hash、token、connection string、storage objects或sequence current values匯入repo。
+- 不修改任何既有migration。
+- 不對production套用baseline、Midao migrations或security remediation。
+- 不讓普通`supabase db reset`／`db push`自行猜lane。
+- 不把catalog equivalence當成security approval。
 - 不在本設計內升級Supabase CLI／PostgreSQL。
 
-## 5. 架構
+## 5. 兩個catalog truth artifacts
 
-### 5.1 Lane A：existing production
+Cutoff與terminal不能共用同一artifact：
+
+### 5.1 `catalog.cutoff.normalized.json`
+
+- 來源：production唯讀capture。
+- 語意：目前production竣工狀態，尚未包含6支Midao post-cutoff effects。
+- 用途：生成／驗證baseline v1與existing rehearsal起始狀態。
+
+### 5.2 `catalog.expected-terminal.normalized.json`
+
+- 來源：在pinned self-owned local stack上，以已review的cutoff baseline＋digest-checked 6支post-cutoff migrations materialize，重新extract、人工review後atomic發布。
+- 語意：fresh與existing兩lane完成post-cutoff後共同的不可變右側真相。
+- Fresh terminal與existing terminal必須**各自獨立**對此artifact exact compare；另保留fresh↔existing等價檢查，不能只讓兩個可能同錯的lane互比。
+
+兩份artifact各自有digest，manifest不可混用。
+
+## 6. Lane A：existing production
 
 ```text
 live catalog + live migration history
 → verify existing-lane identity and cutoff manifest
 → select strictly post-cutoff additive migrations
-→ authorized apply exactly once
-→ recapture catalog
-→ update production apply ledger as verified
+→ owner-authorized apply exactly once
+→ recapture terminal catalog
+→ exact compare expected-terminal
+→ update production ledger verified
 ```
 
-- Baseline SQL永遠不出現在 ordinary production migration discovery path。
-- Existing runner若看到 `baseline_v1` marker即fail closed。
-- Empty DB執行existing lane即fail closed。
-- 未經production schema apply授權，不執行任何步驟中的apply。
+- Baseline SQL永遠不出現在ordinary production migration discovery path。
+- Existing runner看到`baseline_v1` marker即FAIL。
+- Empty DB執行existing lane即FAIL。
+- 未取得production apply明確授權時，流程停在唯讀preflight。
 
-### 5.2 Lane B：fresh install
+## 7. Lane B：fresh install
 
 ```text
-pinned Supabase/Postgres platform bootstrap
-→ materialize runner-owned temporary workdir
-→ baseline_v1 synthetic migration
-→ managed-schema app overlays
+pinned Supabase platform bootstrap
+→ materialize one synthetic baseline_v1 migration
+   [baseline.sql bytes + exact boundary + managed-overlays.sql bytes]
 → six Midao post-cutoff migrations
 → later post-cutoff migrations
 → deterministic non-secret seed
-→ extract normalized terminal catalog
-→ exact compare against expected terminal catalog
+→ extract terminal catalog
+→ exact compare expected-terminal
 ```
 
-- Temporary workdir只含baseline marker與manifest選出的post-cutoff migrations。
-- Fresh runner若偵測到occupied application schema即拒絕。
-- 不回填134支舊history。
-- Future environments仍需走lane-aware runner；普通全歷史reset不是受支持入口。
+- `baseline.sql`與`managed-overlays.sql`是兩個可review artifacts，但materializer必須按固定順序組成**同一支**synthetic `baseline_v1` migration。
+- Exact history set assertion拒絕獨立overlay marker、第二支synthetic migration、134筆fake history或任何未在manifest的row。
+- Fresh runner偵測occupied application schema即FAIL。
+- Future fresh環境仍走lane-aware runner；普通全歷史reset不是受支持入口。
 
-## 6. Capture與credential邊界
+## 8. Supply-chain與toolchain lock
 
-1. 使用固定binary `/root/.hermes/toolchains/supabase/2.87.2/supabase`，先驗SHA-256、owner、mode與regular-file identity。
-2. `supabase db dump --linked --dry-run`只寫入runner-owned `0600` FD-backed temporary file；parser只接受reviewed exact shape。
-3. 解析到的 `PGPASSWORD`／host／user只存在於父程序記憶體與受控child env；禁止argv、log、manifest與repo artifact保存。
-4. 使用PostgreSQL 17 client執行：
-   - `pg_dump --schema-only --format=custom`建立runner-owned臨時archive；archive只作metadata source，不直接提交；
-   - `pg_restore --list`取得結構化TOC，與ownership manifest逐項對應；
-   - `pg_restore --use-list --file`只render已批准的application entries與application-overlay entries，明確排除既存platform schema creation／platform objects；禁止用regex或line filter裁切SQL statement；
-   - allowlisted `pg_catalog` extractor輸出canonical JSON，作為object完整性與terminal comparison真相。
-5. Custom archive、TOC與rendered SQL必須綁digest；TOC missing/extra/unknown identity、同一object多重分類或rendered SQL不完整均HOLD。
-6. Captured secret FD、temp files與child processes必須在success、error、signal、timeout全部清除；cleanup failure使整次capture non-zero。
-7. Catalog query固定 `BEGIN READ ONLY`／`SET TRANSACTION READ ONLY`，只允許一個reviewed SQL檔；不得接受caller supplied SQL。
-8. Published artifact只能包含schema metadata；rendered SQL須做credential-pattern、COPY/business INSERT與syntax scans。Custom archive不進repo，完成baseline發布及digest read-back後安全刪除。
+在任何production credential取得前，先建立並review：
 
-## 7. Baseline artifact
+```text
+supabase/baselines/v1/toolchain-lock.json
+```
+
+至少固定：
+
+- Supabase CLI absolute realpath、version、SHA-256、uid/gid、mode、nlink；
+- 執行`psql`、`pg_dump`、`pg_restore`的PG17 toolchain container repo digest／image ID；
+- container內三個binary absolute path、exact version；
+- local Supabase所有service images的immutable repo digest／image ID；
+- expected architecture；
+- lock schema version。
+
+禁止ambient PATH client或mutable tag。每次child前重新驗binary／container identity；local stack啟動後read-back實際container image ID。缺image時HOLD並先取得owner對必要下載／資源使用同意，不可偷偷pull floating image。
+
+## 9. Production credential與唯讀邊界
+
+1. 固定CLI binary先通過toolchain lock。
+2. `supabase db dump --linked --dry-run` stdout只經bounded pipe進父程序memory buffer；禁止named temp pathname。限制最大bytes、timeout與exact output shape；解析後覆寫Buffer，child退出後刪除env reference。
+3. Credential只能短暫存在父程序memory與受控child env；不得進argv、log、manifest、evidence或repo。
+4. Remote `psql`固定：
+   - runner-owned empty `HOME`；
+   - strict child-env allowlist，清除所有ambient `PG*`／`DATABASE_URL`／service variables；
+   - `psql -X --set=ON_ERROR_STOP=1`；
+   - `PGOPTIONS='-c default_transaction_read_only=on'`，從連線建立即read-only；
+   - reviewed SQL內再執行`BEGIN READ ONLY`並read-back `transaction_read_only=on`；
+   - 禁止caller-supplied SQL。
+5. Remote `pg_dump`同樣使用strict env、empty HOME與`PGOPTIONS` read-only；只允許schema-only custom archive。
+6. Hostile `.psqlrc`、`PGOPTIONS`、`PGSERVICE*`、`PGPASSFILE`、`DATABASE_URL`、PATH replacement與dry-run injection均須先有RED tests。
+7. SIGKILL無法保證process memory抹除，因此文件不宣稱物理secure erase；安全目標是「不落盤、最短生命週期、無輸出／artifact殘留」。
+
+## 10. Capture、TOC與render
+
+```text
+production read-only custom archive A/B
+→ pg_restore --list
+→ normalized TOC
+→ catalog extractor
+→ complete ownership classification
+→ selected use-list + dependency closure
+→ pg_restore --restrict-key=<same in-memory session key> --use-list
+→ exact framing parser removes only generated psql \restrict/\unrestrict envelope
+→ baseline.sql / managed-overlays.sql
+→ artifact publisher
+```
+
+規則：
+
+- Raw custom archives只在runner-owned temporary storage，mode/identity受控，不提交repo；發布成功及digest read-back後刪除。
+- A/B orchestrator同一程序產生一個不可預測restrict key，只存memory，兩次render用同一key；key不得進manifest/log。
+- 不以regex或line filter裁切SQL statement。唯一允許的轉換是exact byte-boundary parser驗證並移除PG17生成的首尾`\restrict <same-key>`／`\unrestrict <same-key>` framing；內部SQL bytes與digest必須不變。
+- A/B必須在normalized catalog、normalized TOC、selected use-list、TOC ownership map、baseline SQL與overlay SQL全部byte-identical；custom archive binary本身不要求相同。
+- 每個TOC entry exactly once分類，dependency closure完整；missing／extra／unknown／duplicate均FAIL。
+- Published SQL零COPY、零business INSERT、零credential pattern並通過pinned local syntax/materialization preflight。
+
+## 11. Versioned artifacts
 
 ```text
 supabase/baselines/v1/
   baseline.sql
   managed-overlays.sql
+  capture-manifest.json
   manifest.json
-  catalog.normalized.json
+  toolchain-lock.json
+  catalog.cutoff.normalized.json
+  catalog.expected-terminal.normalized.json
+  toc.normalized.json
+  use-list.txt
+  toc-ownership-map.json
   role-map.json
   ownership-boundary.json
   exclusions.json
   platform-prerequisites.json
   frozen-migrations.sha256
-  catalog.sha256
+  security-drift.json
+  catalog-cutoff.sha256
+  catalog-expected-terminal.sha256
 ```
 
-### 7.1 `manifest.json`
+`capture-manifest.json`只封存production cutoff capture／TOC／ownership／rendered SQL／security drift provenance；它不能宣告fresh terminal完成。`manifest.json`在expected-terminal發布後才建立，引用capture-manifest digest並封存兩個catalog truths、exact history與lane contract。
 
-至少包含：
+`manifest.json`至少包含：
 
-- schema version與extractor version；
-- source project ref、capture timestamp（Asia/Taipei與UTC）；
-- cutoff filename/version與每支post-cutoff filename/version/SHA-256；
-- raw capture digest與normalized catalog digest；
-- CLI binary version/SHA-256；
-- PostgreSQL server/client major version；
-- required platform image identity；
-- role-map、ownership-boundary、exclusions與SQL artifacts digest；
-- fresh marker identity；
-- prohibited lane combinations。
+- schema／extractor／normalizer／publisher versions；
+- source project ref與capture timestamps；
+- cutoff identity；
+- exact 134 frozen filenames＋digests；
+- exact post-cutoff filenames／versions／digests／order；
+- toolchain lock digest與全部artifact digests；
+- TOC completeness counts與ownership classes；
+- one synthetic baseline marker identity；
+- expected exact fresh history set；
+- lane prohibitions；
+- `catalog_equivalent=true|false`；
+- `security_policy_status=known_drift|approved`。
 
-不得包含connection string、password、service key或raw command output。
+不得包含connection string、password、service key、restrict key或raw command output。
 
-### 7.2 `ownership-boundary.json`
+## 12. Ownership lifecycle
 
-每個object必須唯一分類：
+在production capture前只能建立：validator、JSON schemas、empty templates與fixtures；不得假裝已知完整object inventory。
 
-- `application`：baseline.sql建立與擁有；
-- `platform`：Supabase bootstrap提供，只驗prerequisite；
-- `application_overlay`：App在platform relation建立的policy／trigger／grant；
-- `extension`：extension-owned，只驗extension與版本；
-- `excluded_environmental`：只允許具理由且owner批准的環境差異。
+Capture A/B後才生成actual：
 
-重疊、missing或unknown分類均fail closed。
+- `ownership-boundary.json`
+- `role-map.json`
+- `exclusions.json`
+- `platform-prerequisites.json`
+- `toc-ownership-map.json`
 
-## 8. Catalog正規化契約
+每個object唯一分類：
 
-必須比較：
+- `application`
+- `platform`
+- `application_overlay`
+- `extension`
+- `excluded_environmental`
 
-- schemas、tables、partitioned tables、views、materialized views、sequences；
-- columns順序、type、collation、nullability、default、identity、generated；
-- enum/domain/composite types；
-- PK、UK、FK、check、exclusion constraints與validated state；
-- indexes method、keys/order、include、expression、predicate、uniqueness；
-- functions/procedures exact identity、arguments、return、language、volatility、parallel、leakproof、security-definer、search path與body digest；
-- triggers及enabled state；
-- RLS enabled/forced與完整policy roles/cmd/permissive/qual/with-check；
-- schema/table/sequence/function grants，包含PUBLIC；
-- ownership role class與default privileges；
-- extensions與允許版本；
-- app-owned `auth`／`storage` overlays；
-- publication/realtime membership（若app contract依賴）。
+重疊、missing、unknown或沒有owner批准理由的exclusion全部FAIL。
 
-排除：OID、object address、statistics、row counts、sequence current values、timestamps與ephemeral runtime state。
+## 13. Catalog comparison contract
 
-任一section缺失、duplicate canonical key、unknown object kind、extractor version mismatch或unexpected diff即non-zero。
+比較：schemas、relations、columns、types、constraints、indexes、functions/procedures exact identity與body digest、triggers、RLS enabled/forced、policies、ACL、owners、default privileges、extensions、publication membership及App-owned managed-schema overlays。
 
-## 9. Known security drift處理
+排除：OID、object address、statistics、row counts、sequence current values、timestamps與runtime state。
 
-- Production現況與理想security policy分開表示。
-- `catalog.normalized.json`如實記錄production effective grants。
-- Security policy gate另行指出59張table的`authenticated` broad grants，不得以exclusion隱藏。
-- 若owner批准修復，必須新增一支post-cutoff additive migration，先在fresh與existing rehearsal證明，再依production apply SOP授權套用。
-- Baseline建立本身不改production，也不把既有drift稱為PASS。
+任一section缺失、duplicate canonical key、extractor version mismatch或unexpected diff即FAIL。
 
-## 10. Ledger與history
+## 14. Known security drift
 
-- `docs/operations/migration-ledger.json`維持production apply事實來源。
-- 新增`docs/operations/baseline-ledger.json`記錄capture provenance、review、digests與baseline版本；不得冒充production apply。
-- PR/source gate驗證：歷史hash、命名、source contract、post-cutoff manifest與測試。
-- Release/apply gate驗證：實際production history、已授權apply、post-apply catalog與production ledger verified record。
-- Supabase history、production ledger、baseline ledger三者不可互相替代。
+- `security-drift.json`必須與cutoff catalog digest綁定，列出完整59-table ACL集合、grantee、privilege及RLS分離說明。
+- Drift artifact與security-policy gate在baseline首次發布交易內完成，不能延後到「baseline已看似PASS」之後。
+- Catalog equivalence PASS不等於security PASS；manifest必須保留`security_policy_status=known_drift`。
+- Fresh重現production ACL只能稱「catalog equivalent with known drift」。
+- 若owner批准修復，另新增post-cutoff additive migration與獨立review／production apply流程；不得修改baseline或歷史檔。
 
-## 11. Fail-closed lifecycle
+## 15. Local-only runner identity
 
-- 全repo lock序列化local Supabase、capture與fresh runs。
-- Fixed ports、project ID、containers、volumes與image identity全部驗證ownership。
-- Captured IDs／names／labels在cleanup前重新核對；identity drift時不得刪foreign resource。
-- Timeout與signal必須終止owned child，清temp credential/workdir；不刪Docker images。
-- Partial output、cleanup failure、manifest rename failure或secret scan failure都使primary result non-zero。
+Fresh、expected-terminal builder與existing rehearsal都必須內部使用D3a self-owned local Supabase wrapper：
 
-## 12. 最低驗收矩陣
+- 連線host只能是literal loopback；
+- port、database、project ID、container IDs、labels、volumes與image IDs全部由owned stack capture並在每次apply前read-back；
+- 明確拒絕project ref `pyoderxmpeyqjwkeliiu`、`--linked`、remote URL、ambient `DATABASE_URL`與任何外來PG env；
+- runner不接受caller DB URL；
+- identity drift時不apply、不cleanup foreign resource。
 
-1. 134支frozen migrations hash drift即FAIL。
-2. Extractor同一DB連跑兩次byte-identical。
-3. Raw capture與normalized artifacts無data rows／secrets。
-4. 空DB成功：platform→baseline→overlay→post-cutoff→seed。
-5. Fresh terminal catalog與expected exact match。
-6. Production-shaped existing rehearsal只跑post-cutoff，baseline execution count為零。
-7. Fresh／existing terminal catalog等價。
-8. Occupied→fresh、empty→existing、baseline marker→existing全部拒絕。
-9. ACL與RLS分開驗；函式exact regprocedure、PUBLIC/anon/authenticated execute與safe search path完整驗證。
-10. D3b schema、D3c rollback、D3d concurrency/idempotency保持真PostgreSQL PASS。
-11. Managed-schema／extension／version drift全部HOLD。
-12. PR source gate與release verified gate各自有hostile tests。
+Existing rehearsal先以fixture-builder建立local cutoff-shaped occupied DB，再啟動existing upgrade runner；「baseline execution count=0」只計upgrade runner階段，fixture prep不得冒充production apply。
 
-## 13. 端到端操作例
+## 16. Ledger與callers
 
-### Fresh CI
+- `docs/operations/migration-ledger.json`：production apply事實。
+- `docs/operations/baseline-ledger.json`：capture／publication provenance，不冒充production apply。
+- PR與local preflight明確呼叫source gate。
+- Scheduled/manual drift或post-apply release流程明確呼叫verified gate。
+- `.github/workflows/migration-drift-detect.yml`與`scripts/preflight-check.sh`必須實際接線；CI path filters包含baseline scripts/manifests/tests。
+- Supabase history、production ledger與baseline ledger不可互相替代。
 
-```text
-CI取得clean checkout
-→ 驗134支hash
-→ 建runner-owned local Supabase
-→ 確認empty lane
-→ 套baseline_v1 marker
-→ 套managed overlay
-→ 套6支Midao migration
-→ 套local seed
-→ 擷取terminal catalog
-→ exact compare
-→ 跑ACL/RLS/RPC/concurrency與Playwright
-→ ownership-safe cleanup
-```
+## 17. Evidence與TDD規則
 
-### Existing production release
+- 每個behavior先有真RED：exact command、預期assertion failure，不接受missing path、syntax error或0 tests。
+- GREEN後先`git add -- <該Task exact files>`，再跑staged verifier。
+- 每個含staged tests的commit至少有一個ordinary evidence entry覆蓋所有staged tests；heavy entries只能追加，不能取代ordinary entry。
+- Regression/final suite與commit staged evidence分開陳述，禁止拿大量已commit tests冒充staged test coverage。
+- Package全域heavy allowlist同步只增加兩個完整literal Node prefixes，含唯一允許`--test`與exact path；拒絕其他flags/env/path。
 
-```text
-取得owner production apply授權
-→ 唯讀驗project/cutoff/live history
-→ 確認無baseline marker
-→ 只套尚未套用的post-cutoff migration
-→ 唯讀recapture與功能驗證
-→ 寫production ledger verified record
-```
+## 18. 最低驗收矩陣
 
-沒有授權時，流程停在唯讀preflight。
+1. Exact 134 frozen filenames/digests：missing/drift FAIL，合法future post-cutoff extra files交source gate。
+2. Toolchain binaries與all service images digest／identity PASS。
+3. Hostile rc/env/credential tests PASS；production capture不落credential檔。
+4. A/B normalized catalog／TOC／use-list／ownership map／rendered SQL byte-identical。
+5. TOC entry exactly once分類與dependency closure PASS。
+6. Single synthetic baseline marker；overlay額外history row FAIL。
+7. Empty fresh成功；occupied→fresh、empty→existing、baseline marker→existing全部FAIL。
+8. Expected-terminal artifact經review發布。
+9. Fresh與existing各自exact compare expected-terminal，另彼此等價。
+10. Existing upgrade runner baseline execution count=0且local-only identity PASS。
+11. ACL／RLS／function exact identity／trigger／constraint／extension逐項比較。
+12. Known drift artifact與security status分離PASS。
+13. PR source caller與release verified caller hostile tests PASS。
+14. D3 schema／rollback／concurrency/idempotency與真Playwright PASS。
+15. Cleanup identity、timeout、signal、partial publish與secret scan hostile tests PASS。
 
-## 14. 完成定義
+## 19. 完成定義
 
-Baseline v1只有在以下全部成立時才算完成：
+Baseline v1只有在以下全部成立時才完成：
 
-- spec與implementation plan fresh review無blocking；
-- full authoritative production catalog成功capture；
-- baseline SQL可在empty pinned stack materialize；
-- normalized exact comparison PASS；
-- fresh／existing lanes與混線拒絕PASS；
-- D3／E2E／full regression gates完成；
-- artifacts無secrets／business rows；
-- 未修改任何frozen migration；
+- v2 spec與implementation plan fresh SPEC／SECURITY／EXECUTABILITY review均PASS、blocking 0；
+- authoritative production catalog唯讀capture成功；
+- versioned artifacts與digests完整；
+- fresh／existing exact comparison與lane-confusion tests PASS；
+- source／release gates實際接線；
+- artifacts無business rows／credentials；
+- 134 frozen migrations無byte drift；
+- known security drift沒有被隱藏或稱為security PASS；
 - 未經另行授權沒有production schema mutation。

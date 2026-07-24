@@ -1,67 +1,102 @@
-# As-built Database Baseline Implementation Plan
+# As-built Database Baseline Implementation Plan v2
 
-> **For Hermes:** Use subagent-driven-development skill to implement this plan task-by-task.
+> **For Hermes:** Use `subagent-driven-development` task-by-task. Exact HEAD `30c0b6f9` v1 plan fresh reviews were FAIL；v2已吸收全部blocking。未取得v2三路fresh review PASS前不得執行Task 1。
 
-**Goal:** 建立經production catalog逐項驗證的baseline v1，讓fresh Supabase環境從baseline＋post-cutoff migrations重建，同時保證existing production永遠不執行baseline。
+**Goal:** 建立production as-built baseline v1，讓fresh Supabase從單一baseline marker＋post-cutoff migrations重建；existing production永遠不執行baseline。
 
-**Architecture:** 既有 `supabase/migrations/` 是production additive lane且全歷史凍結；`supabase/baselines/v1/` 是fresh-only as-built lane。固定PostgreSQL 17 catalog extractor產出canonical JSON，以ownership manifest分類application/platform/overlay/extension objects，fresh與existing rehearsal最後都由同一comparator驗terminal catalog。
-
-**Tech Stack:** Node.js 22 built-in test runner、PostgreSQL 17 `psql/pg_dump`、Supabase CLI 2.87.2、Docker、JSON manifests、Bash tracked heavy runners。
+**Architecture:** `supabase/migrations/`是existing additive lane；`supabase/baselines/v1/`是fresh-only lane。Production cutoff catalog與post-cutoff expected-terminal catalog分離。所有DB terminal state由同一PG17 extractor正規化並對不可變artifact exact compare。
 
 **Authoritative design:** `docs/plans/2026-07-24-as-built-database-baseline-design.md`
 
 ---
 
-## 全域規則
+## 全域執行規則
 
-- 不恢復 `wip-d3b-full-migration-replay-remediation-20260724` stash。
-- 不修改任何既有 `supabase/migrations/*.sql`；只允許新增post-cutoff timestamp migration。
-- Production只允許catalog read；任何schema apply另需owner明確授權。
-- Capture command不得接受caller SQL或connection string argv。
-- 所有heavy commands用tracked background，底層固定 `timeout --signal=TERM 570s`。
-- 每個commit前使用exact staged evidence；manifest mode `0600`。
+1. 不恢復`wip-d3b-full-migration-replay-remediation-20260724`；不修改任何既有migration。
+2. Production只允許metadata read；任何schema apply另需owner明確授權。
+3. Heavy local stack／Docker／capture commands使用tracked background，底層`timeout --signal=TERM 570s`。
+4. 每個新behavior先跑exact RED；missing path、syntax error、0 tests不算RED。
+5. GREEN後、staged verifier前，必須執行該Task明列的exact `git add -- ...`。若Files ownership與實際stage不一致即HOLD。
+6. 每個含staged test的commit必須先有ordinary evidence覆蓋全部staged tests；heavy entry只能追加。最後跑`--check-only`與`git diff --cached --check`。
+7. Regression／full suite是acceptance evidence，不冒充staged test evidence。
+8. Actual artifacts發布採exclusive temp＋fsync/read-back digest＋atomic rename；partial publish、cleanup failure或secret scan failure皆non-zero。
+9. PG17 toolchain或image缺失時HOLD並先取得owner對下載／資源使用同意。
 
-## Task 1：凍結歷史migration bytes
+## Task 1：供應鏈與PG17 toolchain lock
 
-**Objective:** 建立134支forward migration的canonical SHA-256 manifest與drift guard。
+**Objective:** 在production credential取得前固定CLI、PG17 clients與local Supabase service images。
+
+**Files:**
+- Create: `scripts/database-baseline/verify-toolchain-lock.mjs`
+- Create: `apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs`
+- Create: `supabase/baselines/v1/toolchain-lock.json`
+- Create: `scripts/database-baseline/schemas/toolchain-lock.schema.json`
+
+**RED**
+
+```bash
+node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs
+```
+
+Expected：FAIL，verifier／lock missing；不是import error。Tests涵蓋CLI absolute realpath/version/SHA/uid/gid/mode/nlink、PG17 container immutable repo digest/image ID、container內`psql/pg_dump/pg_restore`absolute path/exact version、all local service image digests、architecture，以及PATH/tag/image substitution。
+
+**GREEN**
+
+- 只接受固定CLI `/root/.hermes/toolchains/supabase/2.87.2/supabase`與既有reviewed SHA。
+- 以bounded local-only probe取得PG17及service image identities；缺image不pull，HOLD並報需下載項目。
+- 每次使用前read-back identity。
+
+**Stage/evidence**
+
+```bash
+git add -- \
+  scripts/database-baseline/verify-toolchain-lock.mjs \
+  scripts/database-baseline/schemas/toolchain-lock.schema.json \
+  apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs \
+  supabase/baselines/v1/toolchain-lock.json
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
+```
+
+**Commit:** `feat: 鎖定 baseline PostgreSQL toolchain`。
+
+## Task 2：凍結cutoff時134支forward migration bytes
+
+**Objective:** 固定exact 134 filenames＋SHA，不因repo tree或合法future extra migration失效。
 
 **Files:**
 - Create: `scripts/database-baseline/build-frozen-migration-manifest.mjs`
 - Create: `apps/web/tests/unit/midao-baseline-frozen-history.test.mjs`
 - Create: `supabase/baselines/v1/frozen-migrations.sha256`
 
-**Step 1 — RED**
-
-測試要求：排除`.rollback.sql`、排序穩定、完整filename＋digest、symlink/non-regular/duplicate version明確報告、任一byte drift non-zero，且8支stash修改不得出現在工作樹輸入。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-frozen-history.test.mjs
 ```
 
-Expected：FAIL，builder與manifest missing。
+Expected：FAIL，builder missing。Tests要求：exact 134條完整filename＋digest、rollback排除、missing/drift/symlink/duplicate拒絕；集合外合法新post-cutoff檔不在本checker FAIL，由source gate處理。Manifest不得綁full repo tree。
 
-**Step 2 — Minimal GREEN**
-
-Builder以directory FD列舉、`lstat/fstat`驗regular/nlink/uid/path identity，輸出到exclusive `0600` temp後atomic rename。Manifest header固定format/version、repo tree與forward count；不把rollback列入。
-
-**Step 3 — GREEN/evidence**
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-frozen-history.test.mjs
-node scripts/database-baseline/build-frozen-migration-manifest.mjs --check
+git add -- \
+  scripts/database-baseline/build-frozen-migration-manifest.mjs \
+  apps/web/tests/unit/midao-baseline-frozen-history.test.mjs \
+  supabase/baselines/v1/frozen-migrations.sha256
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-frozen-history.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-**Step 4 — Commit**
+**Commit:** `test: 凍結cutoff migration bytes`。
 
-```bash
-git commit -m "test: 凍結歷史 migration bytes"
-```
+## Task 3：唯讀catalog extractor
 
-## Task 2：定義catalog extractor schema與唯讀SQL
-
-**Objective:** 以單一allowlisted SQL查詢完整catalog，拒絕data tables與動態caller SQL。
+**Objective:** 以固定SQL完整擷取catalog，從連線建立時即read-only。
 
 **Files:**
 - Create: `scripts/database-baseline/catalog-queries.sql`
@@ -69,37 +104,37 @@ git commit -m "test: 凍結歷史 migration bytes"
 - Create: `apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs`
 - Create: `apps/web/tests/fixtures/database-baseline/catalog-minimal.json`
 
-**Step 1 — RED**
-
-Source/runtime tests鎖定design §8全部sections；SQL第一句明確read-only transaction，查詢只可引用`pg_catalog`、`information_schema`與allowlisted Supabase metadata，禁止application table row scan、COPY、INSERT、UPDATE、DELETE、DDL與caller supplied SQL。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs
 ```
 
-Expected：FAIL，SQL/extractor missing。
+Expected：FAIL，extractor missing。Tests鎖：
 
-**Step 2 — Minimal GREEN**
+- strict env allowlist；empty runner-owned HOME；清除ambient `PG*`／`DATABASE_URL`；
+- absolute locked PG17 client；`psql -X --set=ON_ERROR_STOP=1`；
+- `PGOPTIONS=-c default_transaction_read_only=on`；SQL內`BEGIN READ ONLY`及read-back；
+- hostile `.psqlrc`、`PGOPTIONS`、`PGSERVICE*`、`PGPASSFILE`、PATH、caller SQL拒絕；
+- design catalog matrix全部sections、duplicate／unknown／missing拒絕。
 
-Extractor只接受`--connection-env-fd`、`--output`與固定project metadata；spawn fixed PostgreSQL 17 `psql`，透過stdin送reviewed SQL；stdout只能是exact JSON document，stderr先redact。任何missing section、duplicate canonical identity、unknown kind、server major非17或transaction read-only未證明即FAIL。
-
-**Step 3 — GREEN/evidence**
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs
+git add -- \
+  scripts/database-baseline/catalog-queries.sql \
+  scripts/database-baseline/extract-catalog.mjs \
+  apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs \
+  apps/web/tests/fixtures/database-baseline/catalog-minimal.json
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-**Step 4 — Commit**
+**Commit:** `feat: 建立唯讀 PostgreSQL catalog extractor`。
 
-```bash
-git commit -m "feat: 建立唯讀 PostgreSQL catalog extractor"
-```
-
-## Task 3：catalog normalizer
-
-**Objective:** 將raw catalog轉成byte-stable canonical JSON，不隱藏security差異。
+## Task 4：catalog normalizer
 
 **Files:**
 - Create: `scripts/database-baseline/normalize-catalog.mjs`
@@ -107,423 +142,566 @@ git commit -m "feat: 建立唯讀 PostgreSQL catalog extractor"
 - Create: `apps/web/tests/fixtures/database-baseline/catalog-unstable-a.json`
 - Create: `apps/web/tests/fixtures/database-baseline/catalog-unstable-b.json`
 
-**Step 1 — RED**
-
-覆蓋排序、OID/統計值排除、expression whitespace規則、role-class map、完整ACL/RLS/default privileges保留、function body digest、duplicate/unknown/missing拒絕，以及同義輸入byte-identical。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-catalog-normalizer.test.mjs
 ```
 
-Expected：FAIL，normalizer missing。
+Expected：FAIL，normalizer missing。鎖排序、OID/runtime排除、ACL/RLS/default privileges保留、function body digest、fixed JSON keys/LF/terminal newline及同義輸入byte-identical。
 
-**Step 2 — Minimal GREEN**
-
-不用regex解析SQL body；只正規化extractor已分欄的catalog values。JSON使用固定key order、UTF-8、LF與terminal newline；任何不能安全正規化的expression保持原文並產生stable digest。
-
-**Step 3 — GREEN/evidence**
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-catalog-normalizer.test.mjs
+git add -- \
+  scripts/database-baseline/normalize-catalog.mjs \
+  apps/web/tests/unit/midao-catalog-normalizer.test.mjs \
+  apps/web/tests/fixtures/database-baseline/catalog-unstable-a.json \
+  apps/web/tests/fixtures/database-baseline/catalog-unstable-b.json
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh apps/web/tests/unit/midao-catalog-normalizer.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-**Step 4 — Commit**
+**Commit:** `feat: 正規化 database catalog`。
 
-```bash
-git commit -m "feat: 正規化 database catalog"
-```
+## Task 5：ownership schema、template與validator
 
-## Task 4：逐物件ownership boundary
-
-**Objective:** 對application/platform/overlay/extension/excluded objects做唯一、完整分類。
+**Objective:** capture前只建立規則與fixtures，不假裝已知production inventory。
 
 **Files:**
 - Create: `scripts/database-baseline/validate-ownership-boundary.mjs`
+- Create: `scripts/database-baseline/schemas/ownership-boundary.schema.json`
+- Create: `scripts/database-baseline/schemas/role-map.schema.json`
+- Create: `scripts/database-baseline/schemas/exclusions.schema.json`
+- Create: `scripts/database-baseline/schemas/platform-prerequisites.schema.json`
+- Create: `scripts/database-baseline/schemas/toc-ownership-map.schema.json`
 - Create: `apps/web/tests/unit/midao-baseline-ownership.test.mjs`
-- Create: `supabase/baselines/v1/ownership-boundary.json`
-- Create: `supabase/baselines/v1/role-map.json`
-- Create: `supabase/baselines/v1/exclusions.json`
-- Create: `supabase/baselines/v1/platform-prerequisites.json`
+- Create: `apps/web/tests/fixtures/database-baseline/ownership-template.json`
 
-**Step 1 — RED**
-
-測試涵蓋overlap、missing object、unknown object、glob過寬、platform object被baseline建立、app overlay被整體排除、extension object誤歸application、未批准exclusion與版本不符。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-ownership.test.mjs
 ```
 
-Expected：FAIL，validator/manifests missing。
+Expected：FAIL，validator missing。Tests涵蓋每個catalog object與TOC ID exactly once、dependency closure、overlap/missing/unknown、platform object誤建、app overlay整體排除、未批准exclusion。
 
-**Step 2 — Minimal GREEN**
-
-Manifest只允許exact canonical identity或reviewed prefix class；`auth/storage`不是自動排除條件。Platform prerequisite固定CLI 2.87.2、PG17、required roles/extensions與local stack service contract。
-
-**Step 3 — GREEN/evidence**
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-ownership.test.mjs
+git add -- \
+  scripts/database-baseline/validate-ownership-boundary.mjs \
+  scripts/database-baseline/schemas/ownership-boundary.schema.json \
+  scripts/database-baseline/schemas/role-map.schema.json \
+  scripts/database-baseline/schemas/exclusions.schema.json \
+  scripts/database-baseline/schemas/platform-prerequisites.schema.json \
+  scripts/database-baseline/schemas/toc-ownership-map.schema.json \
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs \
+  apps/web/tests/fixtures/database-baseline/ownership-template.json
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-ownership.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-**Step 4 — Commit**
+**Commit:** `feat: 定義 baseline object ownership contract`。
 
-```bash
-git commit -m "feat: 定義 baseline object ownership"
-```
-
-## Task 5：catalog comparator
-
-**Objective:** 產出machine-readable exact diff，unknown difference fail closed。
+## Task 6：catalog exact comparator
 
 **Files:**
 - Create: `scripts/database-baseline/compare-catalog.mjs`
 - Create: `apps/web/tests/unit/midao-catalog-comparator.test.mjs`
 
-**Step 1 — RED**
-
-逐section加入missing/extra/changed案例；ACL、policy、function identity/body、trigger state、index predicate、constraint validated、extension/version與default privileges不得被通用exclusion吞掉。輸出不得含business data或secret。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-catalog-comparator.test.mjs
 ```
 
-Expected：FAIL，comparator missing。
+Expected：FAIL，comparator missing。ACL、policy、function、trigger、index、constraint、extension、default privileges均逐identity比較；exclusion須exact identity＋field＋reason＋approval。
 
-**Step 2 — Minimal GREEN**
-
-Comparator先驗兩側schema/extractor version與digest，再逐canonical identity比較；exclusion需exact identity＋field＋reason＋approval，未命中即FAIL。
-
-**Step 3 — GREEN/evidence**
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-catalog-comparator.test.mjs
+git add -- \
+  scripts/database-baseline/compare-catalog.mjs \
+  apps/web/tests/unit/midao-catalog-comparator.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh apps/web/tests/unit/midao-catalog-comparator.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-**Step 4 — Commit**
+**Commit:** `feat: 建立 database catalog exact comparator`。
 
-```bash
-git commit -m "feat: 建立 database catalog exact comparator"
-```
+## Task 7：secret-safe capture、TOC renderer與atomic publisher
 
-## Task 6：secret-safe production capture wrapper
-
-**Objective:** 從linked production取得direct PG17 schema/catalog metadata，credential只在memory/child env。
+**Objective:** 完成production capture工具，但此Task不連production。
 
 **Files:**
 - Create: `scripts/database-baseline/capture-production-catalog.mjs`
+- Create: `scripts/database-baseline/render-baseline-from-archive.mjs`
+- Create: `scripts/database-baseline/publish-baseline.mjs`
 - Create: `scripts/database-baseline/verify-manifest.mjs`
+- Create: `scripts/database-baseline/schemas/capture-manifest.schema.json`
+- Create: `scripts/database-baseline/schemas/baseline-manifest.schema.json`
 - Create: `apps/web/tests/unit/midao-production-catalog-capture.test.mjs`
+- Create: `apps/web/tests/unit/midao-baseline-publisher.test.mjs`
 - Create: `apps/web/tests/unit/midao-baseline-manifest.test.mjs`
 - Create: `apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt`
+- Create: `apps/web/tests/fixtures/database-baseline/pg17-toc.txt`
 
-**Step 1 — RED**
-
-Mocked adapters涵蓋：pinned CLI binary bytes、exact project ref、dry-run fixture parser、unexpected line/duplicate password/URI/command injection拒絕、secret fragment跨chunk redaction、FD/path replacement、hostile umask、timeout/signal、child/cleanup errors、no argv secret、no raw output persistence。Archive/TOC tests鎖定schema-only custom format、structured TOC identity、ownership-complete `--use-list`、platform schema creation排除、禁止regex/line-based SQL stripping。Manifest測試另鎖required fields/digests、禁止credential/raw argv、unknown field與partial publish拒絕。
-
-```bash
-node --test --test-concurrency=1 \
-  apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
-  apps/web/tests/unit/midao-baseline-manifest.test.mjs
-```
-
-Expected：FAIL，capture wrapper missing。
-
-**Step 2 — Minimal GREEN**
-
-Wrapper固定：
-
-```text
-verify CLI bytes
-→ repo-wide exclusive lock
-→ supabase db dump --linked --dry-run to 0600 FD
-→ exact parse into child env
-→ direct PG17 schema-only custom archive
-→ pg_restore structured TOC
-→ fixed catalog extractor
-→ ownership-complete TOC allowlist
-→ pg_restore --use-list render baseline/overlay SQL
-→ credential/business-row scans＋syntax preflight
-→ normalized output＋digests
-→ owned cleanup
-```
-
-禁止`--db-url`、caller SQL、ambient PATH binary與raw child output進manifest。Custom archive不得提交；`pg_restore --list`必須成功且TOC逐項分類，`--use-list`不得包含platform schema creation或unknown object。Rendered SQL必須零COPY、零business INSERT、無credential pattern並通過syntax preflight；禁止以regex或line filter刪SQL statement。`verify-manifest.mjs`先實作strict artifact schema、archive/TOC/rendered/catalog digests與credential exclusion；cutoff/lane規則於Task8擴充。
-
-**Step 3 — GREEN/evidence**
+**RED**
 
 ```bash
 node --test --test-concurrency=1 \
   apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
+  apps/web/tests/unit/midao-baseline-publisher.test.mjs \
   apps/web/tests/unit/midao-baseline-manifest.test.mjs
+```
+
+Expected：FAIL，capture／renderer／publisher missing。Tests必須涵蓋：
+
+- dry-run stdout bounded memory pipe，禁止named secret temp file；Buffer lifecycle、max bytes、timeout、shape injection、cross-chunk redaction；
+- remote strict read-only child env與locked PG17 image；
+- schema-only custom archive；structured TOC；
+- A/B orchestrator同一in-memory unpredictable restrict key，exact `pg_restore --restrict-key` argv；
+- exact framing parser只移除same-key首尾`\restrict/\unrestrict`，內部SQL bytes不變；
+- TOC→ownership exactly once＋dependency closure；
+- publisher A/B equality、exclusive temp、fsync/read-back、atomic rename、partial failure cleanup；
+- manifest strict schema、digests、secret/restrict-key/raw argv拒絕。
+
+**Fresh security review gate**
+
+本Task code在任何production capture前需fresh SECURITY review PASS、blocking 0。
+
+**GREEN/stage/evidence**
+
+```bash
+git add -- \
+  scripts/database-baseline/capture-production-catalog.mjs \
+  scripts/database-baseline/render-baseline-from-archive.mjs \
+  scripts/database-baseline/publish-baseline.mjs \
+  scripts/database-baseline/verify-manifest.mjs \
+  scripts/database-baseline/schemas/capture-manifest.schema.json \
+  scripts/database-baseline/schemas/baseline-manifest.schema.json \
+  apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
+  apps/web/tests/unit/midao-baseline-publisher.test.mjs \
+  apps/web/tests/unit/midao-baseline-manifest.test.mjs \
+  apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt \
+  apps/web/tests/fixtures/database-baseline/pg17-toc.txt
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh \
   apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
+  apps/web/tests/unit/midao-baseline-publisher.test.mjs \
   apps/web/tests/unit/midao-baseline-manifest.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-**Step 4 — Fresh security review**
+**Commit:** `feat: 建立安全的 baseline capture與publisher`。
 
-Review exact HEAD；blocking非零不得執行production capture。
+## Task 8：兩次唯讀production capture與cutoff publication
 
-**Step 5 — Commit**
+**Objective:** 取得production cutoff truth、actual ownership、rendered baseline與known drift。本Task不執行production write。
 
-```bash
-git commit -m "feat: 建立安全的 production catalog capture"
-```
-
-## Task 7：執行兩次唯讀production capture
-
-**Objective:** 取得byte-identical authoritative snapshot並發布baseline候選，不執行production write。
-
-**Files:**
-- Create: `supabase/baselines/v1/catalog.normalized.json`
-- Create: `supabase/baselines/v1/catalog.sha256`
+**Files created by atomic publisher:**
 - Create: `supabase/baselines/v1/baseline.sql`
 - Create: `supabase/baselines/v1/managed-overlays.sql`
-- Create: `supabase/baselines/v1/manifest.json`
+- Create: `supabase/baselines/v1/capture-manifest.json`
+- Create: `supabase/baselines/v1/catalog.cutoff.normalized.json`
+- Create: `supabase/baselines/v1/toc.normalized.json`
+- Create: `supabase/baselines/v1/use-list.txt`
+- Create: `supabase/baselines/v1/toc-ownership-map.json`
+- Create: `supabase/baselines/v1/role-map.json`
+- Create: `supabase/baselines/v1/ownership-boundary.json`
+- Create: `supabase/baselines/v1/exclusions.json`
+- Create: `supabase/baselines/v1/platform-prerequisites.json`
+- Create: `supabase/baselines/v1/security-drift.json`
+- Create: `supabase/baselines/v1/catalog-cutoff.sha256`
 - Create: `docs/operations/baseline-ledger.json`
+- Create: `apps/web/tests/unit/midao-baseline-cutoff-artifact.test.mjs`
 
-**Step 1 — Read-only capture A/B**
+**Preflight**
 
-以tracked background各跑一次，輸出到兩個runner-owned temp dirs：
+- Task 7 exact HEAD SECURITY review PASS。
+- Toolchain lock read-back PASS。
+- Worktree clean、兩個stash identities read-back、frozen bytes PASS。
+
+**Tracked read-only A/B capture**
+
+以background執行exact command，`<owned-temp>`由capture wrapper exclusive建立並回傳identity：
 
 ```bash
 timeout --signal=TERM 570s node scripts/database-baseline/capture-production-catalog.mjs \
-  --project-ref pyoderxmpeyqjwkeliiu --output-dir <temp-A>
-timeout --signal=TERM 570s node scripts/database-baseline/capture-production-catalog.mjs \
-  --project-ref pyoderxmpeyqjwkeliiu --output-dir <temp-B>
+  --project-ref pyoderxmpeyqjwkeliiu \
+  --captures 2 \
+  --output-candidate <owned-temp>
 ```
 
-Expected：兩次normalized catalog bytes、normalized TOC bytes與rendered baseline/overlay SQL bytes一致；custom archive各自記digest但不要求binary bytes相同。若capture期間catalog改變，HOLD並重新取同一穩定窗口。
+Expected：exit 0；normalized cutoff catalog／TOC A/B byte-identical；raw archives與metadata candidate留在owned temp供review，credential從未落盤；production write count zero。
 
-**Step 2 — Review artifacts**
+**Ownership review與atomic publish**
 
-- baseline SQL只含schema，無COPY/business INSERT/secret。
-- ownership manifest涵蓋全部objects。
-- `managed-overlays.sql`只含approved app overlay。
-- 59-table authenticated broad grants寫入known security drift，不列exclusion。
-- Cutoff綁production project、timestamp、live history、catalog digest與最後verified filename。
-
-**Step 3 — Publish artifacts**
-
-使用exclusive create＋mode readback；baseline ledger記provenance/review，不冒充production apply。
-
-**Step 4 — Exact docs/artifact evidence與commit**
+1. 逐物件review candidate `ownership-boundary`、role map、exclusions、platform prerequisites與TOC map；unknown／missing為HOLD。
+2. 執行：
 
 ```bash
-node scripts/database-baseline/verify-manifest.mjs --baseline supabase/baselines/v1
+node scripts/database-baseline/validate-ownership-boundary.mjs \
+  --catalog <owned-temp>/catalog.cutoff.normalized.json \
+  --toc <owned-temp>/toc.normalized.json \
+  --boundary <owned-temp>/ownership-boundary.json \
+  --toc-map <owned-temp>/toc-ownership-map.json
+node scripts/database-baseline/publish-baseline.mjs \
+  --candidate <owned-temp> \
+  --output supabase/baselines/v1
+```
+
+3. Publisher才使用reviewed use-list render A/B SQL並要求byte-identical，完成secret/data/syntax scans、fsync/read-back與atomic promotion；成功後刪除raw archives與owned temp。
+
+**Post-implementation artifact acceptance**
+
+Task 7已對publisher行為完成RED→GREEN；本Task的真production artifacts無法在capture前存在，因此不偽造TDD RED。Capture／publish成功後建立read-back acceptance test，要求actual complete set、59-table drift digest、`catalog_equivalent=true`與`security_policy_status=known_drift`分離、baseline ledger不冒充apply。測試失敗即拒絕artifact commit。
+
+**Stage/evidence**
+
+```bash
+git add -- \
+  supabase/baselines/v1/baseline.sql \
+  supabase/baselines/v1/managed-overlays.sql \
+  supabase/baselines/v1/capture-manifest.json \
+  supabase/baselines/v1/catalog.cutoff.normalized.json \
+  supabase/baselines/v1/toc.normalized.json \
+  supabase/baselines/v1/use-list.txt \
+  supabase/baselines/v1/toc-ownership-map.json \
+  supabase/baselines/v1/role-map.json \
+  supabase/baselines/v1/ownership-boundary.json \
+  supabase/baselines/v1/exclusions.json \
+  supabase/baselines/v1/platform-prerequisites.json \
+  supabase/baselines/v1/security-drift.json \
+  supabase/baselines/v1/catalog-cutoff.sha256 \
+  docs/operations/baseline-ledger.json \
+  apps/web/tests/unit/midao-baseline-cutoff-artifact.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
-  .claude/hooks/run-checks.sh \
-  apps/web/tests/unit/midao-baseline-frozen-history.test.mjs \
-  apps/web/tests/unit/midao-baseline-ownership.test.mjs
-
-git commit -m "feat: 建立 production as-built baseline v1"
+  .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-cutoff-artifact.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-## Task 8：baseline manifest與lane identity verifier
+**Commit:** `feat: 發布 production cutoff baseline artifacts`。
 
-**Objective:** 將cutoff、marker、post-cutoff selection與lane confusion fail-closed。
+## Task 9：single-marker fresh materializer
 
-**Files:**
-- Modify: `scripts/database-baseline/verify-manifest.mjs`
-- Modify: `apps/web/tests/unit/midao-baseline-manifest.test.mjs`
-
-**Step 1 — RED**
-
-涵蓋marker identity、6支Midao exact filename/version/hash/order、future timestamp selection、duplicate version、missing/extra/reordered/hash drift、baseline出現在production discovery、occupied/empty lane inversion。
-
-```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-manifest.test.mjs
-```
-
-Expected：FAIL，verifier missing。
-
-**Step 2 — Minimal GREEN**
-
-Selection完全由manifest完整filename＋digest決定；version只作Supabase history identity，不取代filename。Fresh marker採唯一synthetic version，不與既有版本重疊。
-
-**Step 3 — GREEN/evidence/commit**
-
-```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-manifest.test.mjs
-node scripts/testing/verify-staged-check-evidence.mjs --run -- \
-  .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-manifest.test.mjs
-git commit -m "feat: 驗證 baseline cutoff與lane identity"
-```
-
-## Task 9：fresh workdir materializer
-
-**Objective:** 建立只含baseline marker＋post-cutoff migrations的runner-owned Supabase workdir。
+**Objective:** `baseline.sql`＋overlay組成單一synthetic migration，exact history無額外overlay row。
 
 **Files:**
 - Create: `scripts/database-baseline/materialize-fresh-workdir.mjs`
 - Create: `apps/web/tests/unit/midao-baseline-materializer.test.mjs`
 
-**Step 1 — RED**
-
-測copied config identity、symlink/hardlink/replacement、baseline first、overlay order、6支post-cutoff完整、rollback排除、seed分離、cleanup ownership、foreign workdir拒絕。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-materializer.test.mjs
 ```
 
-Expected：FAIL，materializer missing。
+Expected：FAIL，materializer missing。Tests鎖：
 
-**Step 2 — Minimal GREEN**
+- single synthetic baseline file內固定boundary前後包含兩個artifacts；
+- one baseline history marker only；overlay marker／134 fake rows／extra row拒絕；
+- 6支post-cutoff exact filename/digest/order；future manifest selection；
+- symlink/hardlink/path replacement、rollback排除、seed分離、cleanup ownership。
 
-Materializer從validated artifacts組裝temporary `supabase/migrations/`；baseline synthetic migration最先、overlay其後、post-cutoff依manifest；seed使用明確local fixture，不複製production data。
-
-**Step 3 — GREEN/evidence/commit**
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 apps/web/tests/unit/midao-baseline-materializer.test.mjs
+git add -- \
+  scripts/database-baseline/materialize-fresh-workdir.mjs \
+  apps/web/tests/unit/midao-baseline-materializer.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-materializer.test.mjs
-git commit -m "feat: 建立 fresh baseline workdir"
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-## Task 10：fresh-install真PostgreSQL gate
+**Commit:** `feat: 建立single-marker fresh baseline workdir`。
 
-**Objective:** empty PG17成功materialize baseline＋6支Midao＋seed並exact compare。
+## Task 10：建立expected-terminal truth artifact
+
+**Objective:** 在self-owned pinned local stack將cutoff baseline＋6支Midao materialize，兩次extract後發布terminal右側真相。
+
+**Files:**
+- Create: `scripts/database-baseline/build-expected-terminal.mjs`
+- Create: `apps/web/tests/unit/midao-expected-terminal-builder.test.mjs`
+- Create after local publication: `apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs`
+- Create: `supabase/baselines/v1/catalog.expected-terminal.normalized.json`
+- Create: `supabase/baselines/v1/catalog-expected-terminal.sha256`
+- Create: `supabase/baselines/v1/manifest.json`
+- Modify: `docs/operations/baseline-ledger.json`
+
+**RED**
+
+```bash
+node --test --test-concurrency=1 apps/web/tests/unit/midao-expected-terminal-builder.test.mjs
+```
+
+Expected：FAIL，builder missing。Mock tests要求D3a local wrapper、loopback only、拒絕production ref/linked/remote/ambient DB env、每次apply identity recheck、兩個clean local runs terminal bytes一致、final manifest strict digests與exact history set。
+
+**Code commit stage/evidence**
+
+```bash
+git add -- \
+  scripts/database-baseline/build-expected-terminal.mjs \
+  apps/web/tests/unit/midao-expected-terminal-builder.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh apps/web/tests/unit/midao-expected-terminal-builder.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
+git commit -m "feat: 建立 expected terminal builder"
+```
+
+**Heavy local publication**
+
+```bash
+timeout --signal=TERM 570s node scripts/database-baseline/build-expected-terminal.mjs \
+  --runs 2 \
+  --baseline supabase/baselines/v1 \
+  --publish supabase/baselines/v1/catalog.expected-terminal.normalized.json
+```
+
+Expected：兩個clean local runs terminal catalog byte-identical，history exact，cleanup PASS。
+
+**Artifact acceptance stage/evidence**
+
+Builder behavior已在前一commit完成RED→GREEN；actual two-run artifact屬post-implementation acceptance，不偽造RED。Publication完成後建立read-back test，驗terminal digest、capture-manifest reference、exact history set與security status。
+
+```bash
+git add -- \
+  supabase/baselines/v1/catalog.expected-terminal.normalized.json \
+  supabase/baselines/v1/catalog-expected-terminal.sha256 \
+  supabase/baselines/v1/manifest.json \
+  docs/operations/baseline-ledger.json \
+  apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
+```
+
+**Commit:** `feat: 發布 expected terminal catalog`。
+
+## Task 11：fresh-install runner與tracked heavy prefix
 
 **Files:**
 - Create: `scripts/database-baseline/run-fresh-install.mjs`
+- Create: `apps/web/tests/unit/midao-fresh-runner-contract.test.mjs`
 - Create: `apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs`
-- Modify: `scripts/testing/run-midao-foundation-postgres.sh`
 - Modify: `scripts/testing/verify-staged-check-evidence.mjs`
 - Modify: `apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs`
+- Modify: `docs/plans/2026-07-22-midao-package-01-foundation-shell.md`
 
-**Step 1 — Tracked-heavy allowlist RED/GREEN**
+**RED 1 — runner lifecycle**
 
-先新增hostile tests：只允許literal prefixes
-
-```text
-timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs
-timeout --signal=TERM 570s node scripts/database-baseline/run-existing-upgrade-rehearsal.mjs
+```bash
+node --test --test-concurrency=1 apps/web/tests/unit/midao-fresh-runner-contract.test.mjs
 ```
 
-拒絕alternate node、extra env/shell、path traversal、timeout變更、argument injection與任意`database-baseline/*.mjs`。Focused verifier suite GREEN後才可使用新heavy prefixes。
+Expected：FAIL，runner missing。Tests鎖D3a wrapper、empty-only、loopback/identity、single marker、exact history、expected-terminal compare、cleanup。
 
-**Step 2 — Post-implementation acceptance test**
+**RED 2 — heavy allowlist**
 
-本gate不冒充TDD RED；unit tasks已分別保留RED。Integration assert：empty identity、baseline history marker、6支history exact once、seed readback、terminal catalog exact、ACL/RLS/RPC與cleanup。
+擴充verifier test，先見FAIL，再只加入完整literal prefix：
 
-**Step 3 — Heavy evidence**
+```text
+timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs --test apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs
+```
+
+拒絕env prefix、alternate node、extra flags、path traversal或其他test path；package全域allowlist同commit同步。
+
+**Stage/ordinary evidence**
+
+```bash
+git add -- \
+  scripts/database-baseline/run-fresh-install.mjs \
+  apps/web/tests/unit/midao-fresh-runner-contract.test.mjs \
+  apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs \
+  scripts/testing/verify-staged-check-evidence.mjs \
+  apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs \
+  docs/plans/2026-07-22-midao-package-01-foundation-shell.md
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh \
+  apps/web/tests/unit/midao-fresh-runner-contract.test.mjs \
+  apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs
+```
+
+**Heavy acceptance＋check-only**
 
 ```bash
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
   timeout --signal=TERM 570s node scripts/database-baseline/run-fresh-install.mjs \
   --test apps/web/tests/integration/midao-baseline-fresh-postgres.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-Expected：exit 0；任一catalog diff、history mismatch或cleanup failure為FAIL。
+Expected：fresh terminal exact compare expected-terminal；overlay extra history不存在；cleanup PASS。
 
-**Step 4 — Commit**
+**Commit:** `test: 驗證 baseline fresh install`。
 
-```bash
-git commit -m "test: 驗證 baseline fresh install"
-```
-
-## Task 11：existing-lane upgrade rehearsal
-
-**Objective:** production-shaped cutoff clone只執行post-cutoff，結果與fresh terminal catalog一致。
+## Task 12：existing-lane local-only rehearsal
 
 **Files:**
 - Create: `scripts/database-baseline/run-existing-upgrade-rehearsal.mjs`
+- Create: `apps/web/tests/unit/midao-existing-runner-contract.test.mjs`
 - Create: `apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs`
+- Modify: `scripts/testing/verify-staged-check-evidence.mjs`
+- Modify: `apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs`
+- Modify: `docs/plans/2026-07-22-midao-package-01-foundation-shell.md`
 
-**Step 1 — RED source/lifecycle contract**
-
-先以mock adapter測existing marker判定、baseline execution count必為零、empty DB拒絕、post-cutoff exact once、failure rollback與cleanup。
-
-**Step 2 — Real rehearsal**
-
-從baseline cutoff state clone建立occupied fixture，不含baseline marker；套6支Midao後extract terminal catalog，與fresh結果比較。
+**RED 1 — local-only lifecycle**
 
 ```bash
+node --test --test-concurrency=1 apps/web/tests/unit/midao-existing-runner-contract.test.mjs
+```
+
+Expected：FAIL，runner missing。Tests要求fixture builder建立occupied cutoff-shaped local DB；upgrade runner baseline execution count=0；拒絕empty、baseline marker、production ref、linked、remote host、ambient DB env；每次apply前owned identity read-back。
+
+**RED 2 — exact heavy prefix**
+
+只加入：
+
+```text
+timeout --signal=TERM 570s node scripts/database-baseline/run-existing-upgrade-rehearsal.mjs --test apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs
+```
+
+**Stage/ordinary/heavy evidence**
+
+```bash
+git add -- \
+  scripts/database-baseline/run-existing-upgrade-rehearsal.mjs \
+  apps/web/tests/unit/midao-existing-runner-contract.test.mjs \
+  apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs \
+  scripts/testing/verify-staged-check-evidence.mjs \
+  apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs \
+  docs/plans/2026-07-22-midao-package-01-foundation-shell.md
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh \
+  apps/web/tests/unit/midao-existing-runner-contract.test.mjs \
+  apps/web/tests/unit/midao-staged-evidence-verifier.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
   timeout --signal=TERM 570s node scripts/database-baseline/run-existing-upgrade-rehearsal.mjs \
   --test apps/web/tests/integration/midao-baseline-existing-postgres.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-Expected：exit 0，baseline從未執行，terminal catalogs exact equivalent。
+Expected：existing terminal獨立exact compare expected-terminal；fresh↔existing exact；upgrade階段baseline execution count=0。
 
-**Step 3 — Commit**
+**Commit:** `test: 驗證existing post-cutoff upgrade`。
 
-```bash
-git commit -m "test: 驗證 existing database post-cutoff upgrade"
-```
-
-## Task 12：拆分PR source gate與release verified gate
-
-**Objective:** 解開「先CI綠／先production verified」死結，不弱化release證據。
+## Task 13：拆分並接線source／release gates
 
 **Files:**
 - Modify: `scripts/check-migration-ledger.mjs`
-- Modify: `apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs`
 - Create: `scripts/check-migration-source-gate.mjs`
+- Modify: `scripts/preflight-check.sh`
+- Modify: `.github/workflows/migration-drift-detect.yml`
+- Modify: `.github/workflows/ci.yml`
+- Modify: `apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs`
 - Create: `apps/web/tests/unit/migration-source-gate.test.mjs`
+- Create: `apps/web/tests/unit/migration-gate-callers.test.mjs`
 - Modify: `docs/operations/migration-apply-ledger-sop.md`
 
-**Step 1 — RED**
-
-PR mode允許new post-cutoff migration尚未verified，但要求timestamp/hash/source tests/manifest；既有歷史byte drift仍FAIL。Release mode要求live history＋ledger verified，pending/missing仍HOLD。假verified、baseline ledger冒充production ledger與已apply未驗證均拒絕。
+**RED**
 
 ```bash
 node --test --test-concurrency=1 \
   apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs \
-  apps/web/tests/unit/migration-source-gate.test.mjs
+  apps/web/tests/unit/migration-source-gate.test.mjs \
+  apps/web/tests/unit/migration-gate-callers.test.mjs
 ```
 
-Expected：新source gate missing／現有單gate語意不符。
+Expected：FAIL，source gate/caller wiring missing。Tests要求：
 
-**Step 2 — GREEN/evidence/commit**
+- PR與local preflight明確source mode；
+- scheduled/manual drift及post-apply明確verified mode；
+- workflow path filters包含baseline scripts/artifacts/tests；
+- source mode允許new unverified post-cutoff但要求hash/order/source tests；
+- verified mode對missing/pending/fake verified FAIL；
+- baseline ledger不得冒充production ledger。
+
+**GREEN/stage/evidence**
 
 ```bash
-node --test --test-concurrency=1 \
+git add -- \
+  scripts/check-migration-ledger.mjs \
+  scripts/check-migration-source-gate.mjs \
+  scripts/preflight-check.sh \
+  .github/workflows/migration-drift-detect.yml \
+  .github/workflows/ci.yml \
   apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs \
-  apps/web/tests/unit/migration-source-gate.test.mjs
+  apps/web/tests/unit/migration-source-gate.test.mjs \
+  apps/web/tests/unit/migration-gate-callers.test.mjs \
+  docs/operations/migration-apply-ledger-sop.md
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh \
   apps/web/tests/api/issue1293-migration-ledger-gate.test.mjs \
-  apps/web/tests/unit/migration-source-gate.test.mjs
-git commit -m "fix: 分離 migration source與release gates"
+  apps/web/tests/unit/migration-source-gate.test.mjs \
+  apps/web/tests/unit/migration-gate-callers.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-## Task 13：重新接回D3b–D3d與E4/F9/F10
+**Commit:** `fix: 接線migration source與release gates`。
 
-**Objective:** D3與真browser lane建立在fresh baseline，不使用歷史replay或假session。
+## Task 14：接回D3與E4真實驗證
 
 **Files:**
 - Modify: `scripts/testing/with-midao-local-supabase.mjs`
 - Modify: `apps/web/tests/unit/midao-local-supabase-runner.test.mjs`
-- Create: `scripts/testing/run-midao-e2e.sh`
-- Create: `scripts/testing/run-midao-legacy-e2e-compat.sh`
-- Modify after selectively restoring E4 WIP only: `apps/web/e2e/helpers.ts`
-- Modify after selectively restoring E4 WIP only: `apps/web/playwright.config.ts`
-- Modify after selectively restoring E4 WIP only: `supabase/seed.sql`
-- Create: `apps/web/tests/security/midao-e2e-auth-seam.test.mjs`
+- Create from E4 stash path-scoped restore: `scripts/testing/run-midao-e2e.sh`
+- Create from E4 stash path-scoped restore: `scripts/testing/run-midao-legacy-e2e-compat.sh`
+- Modify from E4 stash only: `apps/web/e2e/helpers.ts`
+- Modify from E4 stash only: `apps/web/playwright.config.ts`
+- Modify from E4 stash only: `supabase/seed.sql`
+- Create from E4 stash: `apps/web/tests/security/midao-e2e-auth-seam.test.mjs`
 - Create: `apps/web/e2e/midao-navigation.spec.ts`
 - Create: `apps/web/e2e/midao-auth-and-impersonation.spec.ts`
 
-禁止apply／pop D3b frozen-remediation stash；E4 paths以path-scoped restore取回並重新跑RED/GREEN，不把舊focused PASS冒充baseline後證據。
+禁止apply/pop D3b stash；E4只path-scoped restore。
 
-**Step 1 — Runner RED**
+**RED**
 
-要求D3/E2E runner呼叫fresh materializer，禁止synthetic guide_profiles bootstrap、hard-coded 6-file subset、disabled seed與ordinary 134-file replay。
+```bash
+node --test --test-concurrency=1 \
+  apps/web/tests/unit/midao-local-supabase-runner.test.mjs \
+  apps/web/tests/security/midao-e2e-auth-seam.test.mjs
+```
 
-**Step 2 — Minimal GREEN**
+Expected：runner仍synthetic 6-file／seed disabled或E2E seam未接baseline；為真assertion failure。
 
-保留D3a lock/container ownership；替換DB preparation seam為baseline fresh lane。E4使用真HMAC/session actor與deterministic local seed；server-owned fixed port、`reuseExistingServer=false`。
+**GREEN/stage/ordinary evidence**
 
-**Step 3 — Heavy gates**
+```bash
+git add -- \
+  scripts/testing/with-midao-local-supabase.mjs \
+  apps/web/tests/unit/midao-local-supabase-runner.test.mjs \
+  scripts/testing/run-midao-e2e.sh \
+  scripts/testing/run-midao-legacy-e2e-compat.sh \
+  apps/web/e2e/helpers.ts \
+  apps/web/playwright.config.ts \
+  supabase/seed.sql \
+  apps/web/tests/security/midao-e2e-auth-seam.test.mjs \
+  apps/web/e2e/midao-navigation.spec.ts \
+  apps/web/e2e/midao-auth-and-impersonation.spec.ts
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh --typecheck \
+  apps/web/tests/unit/midao-local-supabase-runner.test.mjs \
+  apps/web/tests/security/midao-e2e-auth-seam.test.mjs
+```
+
+**Heavy acceptance**
 
 ```bash
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
@@ -531,81 +709,102 @@ node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
   apps/web/tests/integration/midao-foundation-schema-postgres.test.mjs \
   apps/web/tests/integration/midao-mode-switch-postgres.test.mjs \
   apps/web/tests/integration/midao-mode-switch-concurrency-postgres.test.mjs
-
 node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
   timeout --signal=TERM 570s bash scripts/testing/run-midao-e2e.sh \
   apps/web/e2e/midao-navigation.spec.ts \
   apps/web/e2e/midao-auth-and-impersonation.spec.ts
+node scripts/testing/verify-staged-check-evidence.mjs --run-heavy -- \
+  timeout --signal=TERM 570s bash scripts/testing/run-midao-legacy-e2e-compat.sh \
+  apps/web/e2e/t1-login.spec.ts
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
 ```
 
-Expected：D3 catalog/ACL/RLS/RPC/concurrency與real-auth browser全部PASS。
+**Commit:** `test: 以baseline驗證Midao Postgres與E2E`。
 
-**Step 4 — Commit**
-
-```bash
-git commit -m "test: 以 baseline 驗證 Midao Postgres與E2E"
-```
-
-## Task 14：known security drift report
-
-**Objective:** 讓59-table broad grants保持可見，不在baseline中被誤判為理想PASS。
+## Task 15：Final regression、review與雙寫
 
 **Files:**
-- Create: `docs/operations/qa-reports/2026-07-24-production-grant-drift.md`
-- Create: `apps/web/tests/security/midao-baseline-security-drift.test.mjs`
-
-**Step 1 — RED**
-
-測report與catalog digest綁定、table/grantee/privilege完整、RLS與ACL結論分離、禁止exclusion吞掉drift、禁止宣稱已修復。
-
-**Step 2 — GREEN/evidence**
-
-```bash
-node --test --test-concurrency=1 apps/web/tests/security/midao-baseline-security-drift.test.mjs
-```
-
-本task只報告；如owner另批准修復，新增post-cutoff migration與獨立issue，不修改baseline或歷史。
-
-**Step 3 — Commit**
-
-```bash
-git commit -m "docs: 記錄 production grant drift"
-```
-
-## Task 15：Final gates與雙寫
-
-**Objective:** 完整驗證、fresh review、worklog/GitHub milestone同步。
-
-**Files:**
+- Create: `apps/web/tests/unit/midao-baseline-final-gate.test.mjs`
 - Modify: `docs/operations/worklogs/issue1756.md`
 - Modify: `docs/plans/2026-07-22-midao-package-01-foundation-shell.md`
 
-**Step 1 — Focused union/typecheck**
+### G1 focused baseline union（regression，不冒充staged evidence）
 
-執行authoritative plan G1更新後的exact Node22 list。
+固定Node22執行：
 
-**Step 2 — Heavy partitions**
+```bash
+node --test --test-concurrency=1 \
+  apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs \
+  apps/web/tests/unit/midao-baseline-frozen-history.test.mjs \
+  apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs \
+  apps/web/tests/unit/midao-catalog-normalizer.test.mjs \
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs \
+  apps/web/tests/unit/midao-catalog-comparator.test.mjs \
+  apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
+  apps/web/tests/unit/midao-baseline-publisher.test.mjs \
+  apps/web/tests/unit/midao-baseline-cutoff-artifact.test.mjs \
+  apps/web/tests/unit/midao-baseline-manifest.test.mjs \
+  apps/web/tests/unit/midao-baseline-materializer.test.mjs \
+  apps/web/tests/unit/midao-expected-terminal-builder.test.mjs \
+  apps/web/tests/unit/midao-expected-terminal-artifact.test.mjs \
+  apps/web/tests/unit/midao-fresh-runner-contract.test.mjs \
+  apps/web/tests/unit/midao-existing-runner-contract.test.mjs \
+  apps/web/tests/unit/migration-source-gate.test.mjs \
+  apps/web/tests/unit/migration-gate-callers.test.mjs \
+  apps/web/tests/security/midao-e2e-auth-seam.test.mjs
+npm run typecheck
+```
 
-分別tracked background執行：
+Expected：全部exit 0，test counts > 0。
 
-- baseline fresh/existing gates；
-- D3 PostgreSQL；
-- Midao/legacy Playwright；
-- full tests；
-- lint；
-- typecheck；
-- production build。
+### G2/G3 heavy
 
-每個底層都用570秒timeout；不能合併partial runs成假綠。
+重跑Tasks 11、12、14的fresh／existing／D3／Midao E2E／legacy E2E exact commands，各自保存exit與counts。
 
-**Step 3 — Fresh reviews**
+### G4 full gates
 
-對exact HEAD執行SPEC、QUALITY/SECURITY與baseline architecture review；timeout/tool failure為INCONCLUSIVE。
+各自tracked background＋570秒：
 
-**Step 4 — Milestone雙寫**
+```bash
+timeout --signal=TERM 570s env NODE_ENV=test \
+  GUIDE_SESSION_SECRET='midao-local-test-secret-at-least-32-bytes' \
+  NODE_OPTIONS='--experimental-strip-types' \
+  .claude/hooks/run-checks.sh --all
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs lint
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs typecheck
+timeout --signal=TERM 570s node scripts/testing/run-midao-ci-command.mjs build
+```
 
-Worklog記：exact argv、Node/CLI/PG版本、tree/SHA、exit/test counts、catalog digests、review blocking count與remaining production apply HOLD。GitHub只在network授權範圍留言；不push／PR／merge除非owner另行授權。
+Integration DB tests不得由ordinary full suite誤當local DB PASS；其權威證據只來自G2專用runner。
 
-**Step 5 — Completion condition**
+### Final staged evidence
 
-只有design §14全部成立，才可將`#1756`標為implementation complete；production Midao migration apply仍為獨立授權步驟。
+先寫`midao-baseline-final-gate.test.mjs`，assert worklog／package plan列出actual digests、commands、exits、counts、review anchors及remaining production apply HOLD；先跑RED，再更新docs至GREEN。
+
+```bash
+git add -- \
+  apps/web/tests/unit/midao-baseline-final-gate.test.mjs \
+  docs/operations/worklogs/issue1756.md \
+  docs/plans/2026-07-22-midao-package-01-foundation-shell.md
+node scripts/testing/verify-staged-check-evidence.mjs --run -- \
+  .claude/hooks/run-checks.sh apps/web/tests/unit/midao-baseline-final-gate.test.mjs
+node scripts/testing/verify-staged-check-evidence.mjs --check-only
+git diff --cached --check
+```
+
+### Fresh reviews
+
+對同一exact HEAD執行SPEC、QUALITY/SECURITY與EXECUTABILITY／baseline architecture review；timeout為INCONCLUSIVE，blocking非零回修。
+
+### 雙寫
+
+- Worklog：exact argv、Node/CLI/PG versions、tree/SHA、exit/count、cutoff/terminal digests、security drift status、review blocking count。
+- GitHub issue：同一里程碑摘要與remaining HOLD。
+- 不push／PR／merge／deploy／production apply，除非owner另行授權。
+
+**Commit:** `docs: 完成baseline驗收證據`。
+
+## Definition of Done
+
+只有design v2 §19全部成立，才能宣告baseline v1完成。Production Midao migration apply仍是獨立授權步驟。
