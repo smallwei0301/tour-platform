@@ -95,6 +95,7 @@
 - v3最小修正處理4項：發布並digest-bound `dependency-closure.json`；Task 1新增registry metadata resolver、owner-approved immutable digest request與digest-only acquisition/read-back；Tasks 8/10明確producer、ledger、多target guarded publication/rollback與manual acceptance test；Tasks 11/12補heavy allowlist exact RED command。
 - 2026-07-24 v3 commit `6568ee12752c578290c4519fe6901eb8150d7878`、tree `a80bb8580f23f4f97e3a2c0e316b492bc0cb4e52`；docs static/diff checks PASS，worktree clean。
 - Exact v3 targeted fresh reviews全部放行：既有SPEC PASS blocking 0；QUALITY/SECURITY dependency-closure re-review PASS blocking 0；EXECUTABILITY toolchain/publication/heavy-RED re-review PASS blocking 0。GitHub里程碑：`issuecomment-5069595817`。
+- 2026-07-24 Admin導遊詳情新增方向性後台模式入口：GET projection含`backend_mode`並保留legacy-schema fallback；approved profile可提供reason後以CSRF＋Idempotency-Key呼叫既有atomic API，成功只依v2 response更新local state。RED後focused `13/13 PASS`、typecheck PASS、same-tree evidence PASS；commit `8437bdd02b9beb0e100194f4cdf0c66b38668fd2`、tree `46c9912b2b0ffbaba1056f78acceda0928257019`。Fresh review進行中。
 
 ## 下一步
 - Baseline implementation gate已清零；從Task 1供應鏈與PG17 toolchain lock開始，以strict TDD依序執行15個Tasks。缺image時只發布immutable digest supply request，未經owner批准不下載。
