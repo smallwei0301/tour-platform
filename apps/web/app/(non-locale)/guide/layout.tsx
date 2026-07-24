@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/guide/messages', label: '旅客訊息', icon: '💬' },
   { href: '/guide/reviews', label: '評論回覆', icon: '⭐' },
   { href: '/guide/profile', label: '公開頁面', icon: '👤' },
+  { href: '/midao2', label: 'midao2 後台', icon: '✨' },
 ];
 
 const IMPERSONATION_COOKIE_NAME = 'guide_impersonation';

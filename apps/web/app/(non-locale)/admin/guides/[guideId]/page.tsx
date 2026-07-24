@@ -84,7 +84,7 @@ export default function AdminGuideDetailPage() {
   const canImpersonate =
     guide?.kind !== 'application' && guide?.verification_status === 'approved';
 
-  async function handleEnterGuideBackend() {
+  async function handleEnterGuideBackend(target: string = '/guide/dashboard') {
     if (!guide || impersonating) return;
     setImpersonating(true);
     setImpersonateError('');
@@ -105,8 +105,8 @@ export default function AdminGuideDetailPage() {
         setImpersonating(false);
         return;
       }
-      // 取得導遊 session cookie 後導向導遊後台儀表板（整頁導頁確保帶上新 cookie）。
-      window.location.href = '/guide/dashboard';
+      // 取得導遊 session cookie 後導向目標後台（整頁導頁確保帶上新 cookie）。
+      window.location.href = target;
     } catch {
       setImpersonateError('進入導遊後台失敗，請稍後再試');
       setImpersonating(false);
@@ -360,7 +360,7 @@ export default function AdminGuideDetailPage() {
                   <button
                     type="button"
                     data-testid="admin-enter-guide-backend"
-                    onClick={handleEnterGuideBackend}
+                    onClick={() => handleEnterGuideBackend()}
                     disabled={impersonating}
                     style={{
                       padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
@@ -369,6 +369,21 @@ export default function AdminGuideDetailPage() {
                     }}
                   >
                     {impersonating ? '進入中…' : '🚪 進入導遊後台'}
+                  </button>
+                )}
+                {canImpersonate && (
+                  <button
+                    type="button"
+                    data-testid="admin-enter-midao2"
+                    onClick={() => handleEnterGuideBackend('/midao2')}
+                    disabled={impersonating}
+                    style={{
+                      padding: '9px 16px', borderRadius: 8, border: '1px solid #7c3aed',
+                      background: impersonating ? '#ede9fe' : '#f5f3ff', color: '#6d28d9',
+                      fontSize: 13, fontWeight: 600, cursor: impersonating ? 'wait' : 'pointer',
+                    }}
+                  >
+                    {impersonating ? '進入中…' : '✨ 進入 midao2 後台'}
                   </button>
                 )}
               </div>

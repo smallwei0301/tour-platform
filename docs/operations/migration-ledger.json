@@ -122,6 +122,30 @@
       "applied_at": "2026-07-10T12:20:00+08:00",
       "status": "verified",
       "note": "固定 fn_process_payment_callback_atomic(uuid,text,text,jsonb,text,text) 的 search_path=pg_catalog,public,pg_temp，修 advisor WARN function_search_path_mutable（0011）——#1637 重建該金流函式時漏帶、回歸 #1564 的收斂。單行 ALTER FUNCTION、行為不變。apply_migration success；驗證 proconfig=['search_path=pg_catalog, public, pg_temp']、get_advisors(security) 該 WARN 已消除（僅剩 auth_leaked_password_protection＝owner Dashboard 開關）。rollback：同名 .rollback.sql（RESET search_path）。Refs #1564 #1293。"
+    },
+    {
+      "filename": "20260722100000_midao2_requests_availability.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) + Claude Code agent",
+      "applied_at": "2026-07-22T21:40:00+08:00",
+      "status": "verified",
+      "note": "經 Supabase MCP apply_migration 套用（SQL-OVERRIDE 使用者於對話授權）；additive-only＋IF NOT EXISTS 冪等；backup: Supabase 每日自動備份（Dashboard 由 owner 複驗）；rollback: 同名 .rollback.sql；驗證: information_schema/pg_indexes/pg_class 查詢＝3 表/4 索引/RLS×3 全就位（midao2 後台，worklog issue-midao2）。"
+    },
+    {
+      "filename": "20260722100500_midao2_activity_showcase_columns.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) + Claude Code agent",
+      "applied_at": "2026-07-22T21:41:00+08:00",
+      "status": "verified",
+      "note": "經 Supabase MCP apply_migration 套用（同上授權）；ADD COLUMN IF NOT EXISTS ×6 冪等；backup: 同上；rollback: 同名 .rollback.sql；驗證: information_schema 查詢＝activities 5 欄+guide_profiles.experience_years 全就位（midao2 後台，worklog issue-midao2）。"
+    },
+    {
+      "filename": "20260723090000_midao2_request_plan_columns.sql",
+      "environment": "production",
+      "operator": "owner (smallwei0301) + Claude Code agent",
+      "applied_at": "2026-07-24T08:35:00+08:00",
+      "status": "verified",
+      "note": "經 Supabase MCP apply_migration 套用（SQL-OVERRIDE 使用者於對話授權）；ADD COLUMN IF NOT EXISTS ×2 冪等、皆可空、零資料列變動；backup: Supabase 每日自動備份；rollback: 同名 .rollback.sql；驗證: information_schema 查詢＝2 欄就位（midao2 Plan 3，worklog issue-midao2）。"
     }
   ]
 }
