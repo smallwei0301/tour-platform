@@ -117,6 +117,30 @@ test('overlap missing unknown object and duplicate TOC IDs fail closed', async (
   assert.throws(() => validateOwnershipBoundary(duplicateToc), /duplicate TOC ID/iu);
 });
 
+test('TOC IDs are each classified once while one object may own many TOC entries and embedded sections may own none', async () => {
+  const { validateOwnershipBoundary } = await subject();
+  const input = await validInput();
+  const first = input.tocOwnershipMap.entries[0];
+  const additionalTocId = Math.max(...input.tocOwnershipMap.expectedTocIds) + 1;
+  input.tocOwnershipMap.expectedTocIds.push(additionalTocId);
+  input.tocOwnershipMap.entries.push({ tocId: additionalTocId, objectKey: structuredClone(first.objectKey), ownerDomain: first.ownerDomain });
+  assert.equal(validateOwnershipBoundary(input).tocCount, input.tocOwnershipMap.expectedTocIds.length);
+
+  const embeddedOnly = await validInput();
+  const optionalAssignment = embeddedOnly.ownershipBoundary.assignments.find((entry) => entry.section === 'columns');
+  const optionalIndex = embeddedOnly.tocOwnershipMap.entries.findIndex((entry) => keyId(entry.objectKey) === keyId(optionalAssignment.objectKey));
+  const [removedOptional] = embeddedOnly.tocOwnershipMap.entries.splice(optionalIndex, 1);
+  embeddedOnly.tocOwnershipMap.expectedTocIds = embeddedOnly.tocOwnershipMap.expectedTocIds.filter((id) => id !== removedOptional.tocId);
+  assert.doesNotThrow(() => validateOwnershipBoundary(embeddedOnly));
+
+  const requiredMissing = await validInput();
+  const relationAssignment = requiredMissing.ownershipBoundary.assignments.find((entry) => entry.section === 'relations');
+  const relationIndex = requiredMissing.tocOwnershipMap.entries.findIndex((entry) => keyId(entry.objectKey) === keyId(relationAssignment.objectKey));
+  const [removedRequired] = requiredMissing.tocOwnershipMap.entries.splice(relationIndex, 1);
+  requiredMissing.tocOwnershipMap.expectedTocIds = requiredMissing.tocOwnershipMap.expectedTocIds.filter((id) => id !== removedRequired.tocId);
+  assert.throws(() => validateOwnershipBoundary(requiredMissing), /required catalog object missing TOC mapping/iu);
+});
+
 test('dependency closure and exact TOC ownership are enforced', async () => {
   const { validateOwnershipBoundary } = await subject();
   const unknownDependency = await validInput();

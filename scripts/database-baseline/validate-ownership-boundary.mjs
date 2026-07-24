@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { validateRawCatalog } from './extract-catalog.mjs';
 
 const OWNER_DOMAINS = new Set(['application', 'platform', 'extension']);
+const TOC_OPTIONAL_SECTIONS = new Set(['columns', 'rls', 'owners', 'managedSchemaInventory', 'managedSchemaOverlays']);
 const DUPLICATE_METADATA_SECTIONS = new Set(['managedSchemaInventory', 'managedSchemaOverlays']);
 
 function keyId(key) {
@@ -177,7 +178,6 @@ function validateToc(document, assignments) {
     assertKey(entry.objectKey, 'TOC objectKey');
     assertOwnerDomain(entry.ownerDomain, 'TOC entry');
     const id = keyId(entry.objectKey);
-    if (mappedObjects.has(id)) throw new Error(`duplicate TOC object mapping: ${id}`);
     const assignment = assignments.get(id);
     if (!assignment) throw new Error(`TOC unknown object: ${id}`);
     if (assignment.ownerDomain !== entry.ownerDomain) throw new Error(`TOC owner mismatch: ${id}`);
@@ -186,8 +186,10 @@ function validateToc(document, assignments) {
   for (const tocId of expectedTocIds) {
     if (!tocIds.has(tocId)) throw new Error(`expected TOC ID missing mapping: ${tocId}`);
   }
-  for (const id of assignments.keys()) {
-    if (!mappedObjects.has(id)) throw new Error(`missing TOC object mapping: ${id}`);
+  for (const [id, assignment] of assignments) {
+    if (!TOC_OPTIONAL_SECTIONS.has(assignment.section) && !mappedObjects.has(id)) {
+      throw new Error(`required catalog object missing TOC mapping: ${id}`);
+    }
   }
   return expectedTocIds.size;
 }
