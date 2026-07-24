@@ -33,8 +33,8 @@ type Service = {
   minParticipants: number;
   maxParticipants: number;
   priceTwd: number;
-  priceFromTwd: number;
-  planOptions: PlanOption[];
+  priceFromTwd?: number | null;
+  planOptions?: PlanOption[] | null;
   dealMode: 'instant_booking' | 'confirm_first' | 'line_inquiry';
   questions: Question[];
 };
@@ -332,7 +332,7 @@ export default function RequestForm({
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                   <span style={{ fontSize: 20, fontWeight: 700, color: C.GREEN }}>
-                    NT${svc.priceFromTwd.toLocaleString()} 起
+                    NT${(svc.priceFromTwd ?? svc.priceTwd).toLocaleString()} 起
                   </span>
                   <span style={{ fontSize: 12, color: C.MUTED }}>{DEAL_MODE_LABEL[svc.dealMode] || svc.dealMode}</span>
                 </div>
@@ -349,7 +349,7 @@ export default function RequestForm({
         </div>
 
         {/* 選擇方案：選定服務有方案時才顯示，可不選 */}
-        {selectedService && selectedService.planOptions.length > 0 && (
+        {selectedService && (selectedService.planOptions?.length ?? 0) > 0 && (
           <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={{ fontSize: 14, color: C.MUTED }}>選擇方案</span>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -370,7 +370,7 @@ export default function RequestForm({
               >
                 先不指定
               </button>
-              {selectedService.planOptions.map((plan) => {
+              {(selectedService.planOptions ?? []).map((plan) => {
                 const on = selectedPlanId === plan.planId;
                 return (
                   <button

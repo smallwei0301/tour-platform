@@ -17,7 +17,7 @@ type MidaoService = {
   region: string | null;
   languages: string[];
   priceTwd: number;
-  priceFromTwd: number;
+  priceFromTwd?: number | null;
   dealMode: 'instant_booking' | 'confirm_first' | 'line_inquiry';
   questions: unknown[];
   showcasePublished: boolean;
@@ -196,7 +196,7 @@ function Midao2ServicesPageInner() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
                       <span style={{ fontSize: 20, fontWeight: 700, color: C.GREEN }}>
-                        NT${svc.priceFromTwd.toLocaleString()} 起
+                        NT${(svc.priceFromTwd ?? svc.priceTwd).toLocaleString()} 起
                       </span>
                     </div>
                     <div style={{ fontSize: 12, color: C.MUTED }}>{DEAL_MODE_LABEL[svc.dealMode] || svc.dealMode}</div>
