@@ -1,62 +1,29 @@
 #!/usr/bin/env node
-import { createHash } from 'node:crypto';
-import { chmod, lstat, mkdtemp, open, readFile, realpath, rename, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { createHash, randomUUID } from 'node:crypto';
+import { lstat, open, readFile, realpath, rename, rm } from 'node:fs/promises';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   FIXED_DOCKER,
   stableJson,
+  strictSpawn,
   validateSupplyRequest,
+  verifyToolchainPreflight,
 } from './resolve-toolchain-supply.mjs';
 
 const IMAGE_ID = /^sha256:[0-9a-f]{64}$/;
 const ARCHITECTURES = new Map([['x86_64', 'amd64'], ['aarch64', 'arm64'], ['amd64', 'amd64'], ['arm64', 'arm64']]);
 
 async function strictDocker(args, timeoutMs = 60_000) {
-  const home = await mkdtemp(path.join(tmpdir(), 'midao-docker-'));
-  await chmod(home, 0o700);
-  try {
-    return await new Promise((resolve, reject) => {
-      const child = spawn(FIXED_DOCKER, args, {
-        env: {
-          HOME: home,
-          PATH: '/usr/bin:/bin',
-          LANG: 'C',
-          LC_ALL: 'C',
-          DOCKER_HOST: 'unix:///var/run/docker.sock',
-        },
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      const stdout = [];
-      const stderr = [];
-      let bytes = 0;
-      const collect = (target) => (chunk) => {
-        bytes += chunk.length;
-        if (bytes > 16 * 1024 * 1024) child.kill('SIGTERM');
-        else target.push(chunk);
-      };
-      child.stdout.on('data', collect(stdout));
-      child.stderr.on('data', collect(stderr));
-      let killTimer;
-      const timer = setTimeout(() => {
-        child.kill('SIGTERM');
-        killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000);
-      }, timeoutMs);
-      child.once('error', reject);
-      child.once('close', (code, signal) => {
-        clearTimeout(timer);
-        if (killTimer) clearTimeout(killTimer);
-        const out = Buffer.concat(stdout).toString('utf8');
-        const err = Buffer.concat(stderr).toString('utf8');
-        if (code === 0) resolve(out);
-        else reject(new Error(`docker ${args.slice(0, 2).join(' ')} failed (${signal ?? code}): ${err.trim()}`));
-      });
-    });
-  } finally {
-    await rm(home, { recursive: true });
-  }
+  return (await strictSpawn(FIXED_DOCKER, args, { timeoutMs })).stdout;
+}
+
+async function cleanupOwnedContainer(name) {
+  const result = await strictSpawn(FIXED_DOCKER, ['rm', '-f', name], { timeoutMs: 30_000, allowFailure: true });
+  if (result.code === 0) return;
+  const missing = `Error response from daemon: No such container: ${name}`;
+  if (result.code === 1 && result.signal === null && result.stderr.trim() === missing) return;
+  throw new Error(`owned container cleanup failed: ${name}`);
 }
 
 export async function verifyDockerIdentity(dockerPath) {
@@ -80,16 +47,35 @@ export async function verifyDockerIdentity(dockerPath) {
   return { path: dockerPath, realpath: target, endpoint, architecture };
 }
 
-export async function verifyPg17Binaries(repoDigest, runDocker = (args) => strictDocker(args)) {
+export async function verifyPg17Binaries(repoDigest, {
+  runDocker = (args) => strictDocker(args),
+  cleanupContainer = cleanupOwnedContainer,
+  nameFactory = () => `midao-pg17-probe-${randomUUID()}`,
+} = {}) {
   if (!/@sha256:[0-9a-f]{64}$/.test(repoDigest)) throw new Error('PG17 image must use an immutable digest');
   const binaries = {};
   for (const name of ['psql', 'pg_dump', 'pg_restore']) {
     const executable = `/usr/bin/${name}`;
-    const version = String(await runDocker(['run', '--rm', '--network', 'none', repoDigest, executable, '--version'])).trim();
-    if (!new RegExp(`^${name.replace('_', '_')} \\(PostgreSQL\\) 17(?:\\.|$)`).test(version)) {
-      throw new Error(`${name} must be exact PostgreSQL major 17`);
+    const containerName = nameFactory();
+    if (!/^midao-[a-z0-9-]{1,100}$/.test(containerName)) throw new Error('owned probe container name invalid');
+    let primaryError;
+    try {
+      const version = String(await runDocker(['run', '--name', containerName, '--rm', '--network', 'none', repoDigest, executable, '--version'])).trim();
+      if (!new RegExp(`^${name} \\(PostgreSQL\\) 17(?:\\.|$)`).test(version)) {
+        throw new Error(`${name} must be exact PostgreSQL major 17`);
+      }
+      binaries[name] = { path: executable, version };
+    } catch (error) {
+      primaryError = error;
+      throw error;
+    } finally {
+      try {
+        await cleanupContainer(containerName);
+      } catch (cleanupError) {
+        if (primaryError) throw new AggregateError([primaryError, cleanupError], 'PG17 probe and owned cleanup failed');
+        throw cleanupError;
+      }
     }
-    binaries[name] = { path: executable, version };
   }
   return binaries;
 }
@@ -110,9 +96,10 @@ function parseInspection(output, image) {
 export async function buildToolchainLock(request, {
   inspectImage = async (repoDigest) => strictDocker(['image', 'inspect', repoDigest]),
   pgVersions,
-  dockerIdentity = request.docker,
+  preflight = verifyToolchainPreflight,
 } = {}) {
   validateSupplyRequest(request);
+  const live = await preflight(request);
   const images = [];
   for (const image of request.images) {
     const inspection = parseInspection(await inspectImage(image.repoDigest), image);
@@ -134,8 +121,8 @@ export async function buildToolchainLock(request, {
   return {
     schemaVersion: 1,
     architecture: request.architecture,
-    cli: request.cli,
-    docker: dockerIdentity,
+    cli: live.cli,
+    docker: live.docker,
     images,
     pg17: {
       image: pgImage.repoDigest,
@@ -198,13 +185,12 @@ async function main(args) {
   if (!requestPath || !output || dockerPath !== FIXED_DOCKER) throw new Error(usage().trim());
   const requestBytes = await readFile(requestPath);
   const request = validateSupplyRequest(JSON.parse(requestBytes.toString('utf8')));
+  const live = await verifyToolchainPreflight(request);
   if (request.images.some((image) => !image.localPresent)) throw new Error('cannot publish lock while required images are missing');
-  const docker = await verifyDockerIdentity(dockerPath);
-  if (stableJson(docker) !== stableJson(request.docker)) throw new Error('Docker identity drift');
   const pgImage = request.images.find((image) => image.role === 'pg17-client');
   if (!pgImage) throw new Error('PG17 client image missing');
   const pgVersions = await verifyPg17Binaries(pgImage.repoDigest);
-  const lock = await buildToolchainLock(request, { pgVersions, dockerIdentity: docker });
+  const lock = await buildToolchainLock(request, { pgVersions, preflight: async () => live });
   lock.requestSha256 = createHash('sha256').update(requestBytes).digest('hex');
   await atomicWriteLock(output, lock);
 }

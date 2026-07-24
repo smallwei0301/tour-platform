@@ -13,6 +13,32 @@ const DIGEST = /^sha256:[0-9a-f]{64}$/;
 const IMAGE_ID = /^sha256:[0-9a-f]{64}$/;
 const EMBEDDED_START = '# Exposed for updates';
 const EMBEDDED_END = '# Append to JobImages when adding new dependencies below';
+const ACTIVE_SIGNAL_HANDLERS = new Set();
+let signalDispatcherInstalled = false;
+
+function dispatchSignal(signal) {
+  for (const handler of [...ACTIVE_SIGNAL_HANDLERS]) handler(signal);
+}
+
+const dispatchSigint = () => dispatchSignal('SIGINT');
+const dispatchSigterm = () => dispatchSignal('SIGTERM');
+
+function registerSignalHandler(handler) {
+  ACTIVE_SIGNAL_HANDLERS.add(handler);
+  if (!signalDispatcherInstalled) {
+    process.on('SIGINT', dispatchSigint);
+    process.on('SIGTERM', dispatchSigterm);
+    signalDispatcherInstalled = true;
+  }
+  return () => {
+    ACTIVE_SIGNAL_HANDLERS.delete(handler);
+    if (ACTIVE_SIGNAL_HANDLERS.size === 0 && signalDispatcherInstalled) {
+      process.removeListener('SIGINT', dispatchSigint);
+      process.removeListener('SIGTERM', dispatchSigterm);
+      signalDispatcherInstalled = false;
+    }
+  };
+}
 
 function sorted(value) {
   if (Array.isArray(value)) return value.map(sorted);
@@ -36,25 +62,63 @@ export async function strictSpawn(executable, args, { timeoutMs = 30_000, allowF
       const stdout = [];
       const stderr = [];
       let bytes = 0;
+      let timedOut = false;
+      let overflow = false;
+      let forwardedSignal = null;
+      let killTimer;
+      let timer;
+      let settled = false;
+
+      const terminate = () => {
+        if (child.exitCode !== null || child.signalCode !== null) return;
+        child.kill('SIGTERM');
+        if (!killTimer) killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000);
+      };
+      const onSignal = (signal) => { forwardedSignal = signal; terminate(); };
+      const unregisterSignalHandler = registerSignalHandler(onSignal);
+      const cleanupLifecycle = () => {
+        if (timer) clearTimeout(timer);
+        if (killTimer) clearTimeout(killTimer);
+        unregisterSignalHandler();
+      };
       const collect = (chunks) => (chunk) => {
         bytes += chunk.length;
-        if (bytes > 16 * 1024 * 1024) child.kill('SIGTERM');
-        else chunks.push(chunk);
+        if (bytes > 16 * 1024 * 1024) {
+          overflow = true;
+          terminate();
+        } else chunks.push(chunk);
       };
       child.stdout.on('data', collect(stdout));
       child.stderr.on('data', collect(stderr));
-      let killTimer;
-      const timer = setTimeout(() => {
-        child.kill('SIGTERM');
-        killTimer = setTimeout(() => child.kill('SIGKILL'), 2_000);
+      timer = setTimeout(() => {
+        timedOut = true;
+        terminate();
       }, timeoutMs);
-      child.once('error', reject);
+      child.once('error', (error) => {
+        if (settled) return;
+        settled = true;
+        cleanupLifecycle();
+        reject(error);
+      });
       child.once('close', (code, signal) => {
-        clearTimeout(timer);
-        if (killTimer) clearTimeout(killTimer);
-        const result = { code, signal, stdout: Buffer.concat(stdout).toString('utf8'), stderr: Buffer.concat(stderr).toString('utf8') };
-        if (code === 0 || allowFailure) resolve(result);
-        else reject(new Error(`${path.basename(executable)} ${args.slice(0, 2).join(' ')} failed (${signal ?? code}): ${result.stderr.trim()}`));
+        if (settled) return;
+        settled = true;
+        cleanupLifecycle();
+        const result = {
+          code,
+          signal,
+          timedOut,
+          overflow,
+          forwardedSignal,
+          stdout: Buffer.concat(stdout).toString('utf8'),
+          stderr: Buffer.concat(stderr).toString('utf8'),
+        };
+        const label = `${path.basename(executable)} ${args.slice(0, 2).join(' ')}`;
+        if (forwardedSignal) reject(new Error(`${label} interrupted by ${forwardedSignal}`));
+        else if (timedOut) reject(new Error(`${label} timeout after ${timeoutMs}ms`));
+        else if (overflow) reject(new Error(`${label} output overflow`));
+        else if (code === 0 || allowFailure) resolve(result);
+        else reject(new Error(`${label} failed (${signal ?? code}): ${result.stderr.trim()}`));
       });
     });
   } finally {
@@ -143,7 +207,7 @@ export function parseLocalTaggedMetadata(output, repository, architecture) {
   if (matches.length !== 1) throw new Error('local tagged image must expose exactly one repository digest');
   const digest = matches[0].slice(prefix.length);
   if (!DIGEST.test(digest)) throw new Error('local tagged image immutable digest invalid');
-  return { digest, platform: `linux/${architecture}`, estimatedBytes: 0 };
+  return { digest, imageId: inspection.Id, platform: `linux/${architecture}`, estimatedBytes: 0 };
 }
 
 function exactKeys(object, keys, label) {
@@ -169,11 +233,15 @@ export function validateSupplyRequest(request) {
     throw new Error('Docker identity invalid');
   }
   if (!['pending', 'approved', 'not-required'].includes(request.approval.status) || !Array.isArray(request.approval.approvedDigests)) throw new Error('approval invalid');
+  if (!Array.isArray(request.images) || request.images.length === 0) throw new Error('required image inventory must not be empty');
   const seenDigests = new Set();
-  for (const image of request.images ?? []) {
+  const seenRoles = new Set();
+  for (const image of request.images) {
     exactKeys(image, ['role', 'repository', 'tag', 'repoDigest', 'platform', 'architecture', 'localPresent', 'localImageId', 'estimatedMissingBytes'], 'image');
     if (seenDigests.has(image.repoDigest)) throw new Error('duplicate image');
+    if (seenRoles.has(image.role)) throw new Error('duplicate role in required image inventory');
     seenDigests.add(image.repoDigest);
+    seenRoles.add(image.role);
     if (image.repoDigest !== `${image.repository}@${image.repoDigest.split('@').at(-1)}` || !DIGEST.test(image.repoDigest.split('@').at(-1) ?? '')) throw new Error('image immutable repo digest invalid');
     if (image.architecture !== request.architecture || image.platform !== `linux/${request.architecture}`) throw new Error('image architecture mismatch');
     if (typeof image.localPresent !== 'boolean' || (image.localPresent && !IMAGE_ID.test(image.localImageId ?? '')) || (!image.localPresent && image.localImageId !== null)) throw new Error('local image identity invalid');
@@ -182,9 +250,55 @@ export function validateSupplyRequest(request) {
   return request;
 }
 
+export async function verifyCanonicalInventory(request, {
+  verifyCli = verifyCliIdentity,
+  readCliBytes = () => readFile(FIXED_CLI),
+  readConfig = () => readFile('supabase/config.toml', 'utf8'),
+} = {}) {
+  validateSupplyRequest(request);
+  const [cli, cliBytes, config] = await Promise.all([
+    verifyCli(FIXED_CLI),
+    readCliBytes(),
+    readConfig(),
+  ]);
+  if (stableJson(cli) !== stableJson(request.cli)) throw new Error('CLI identity drift');
+  const required = parseRequiredImages(cliBytes, config);
+  const roles = request.images.map((image) => image.role);
+  if (new Set(roles).size !== roles.length) throw new Error('duplicate role in required image inventory');
+  const actual = request.images.map(({ role, repository, tag }) => ({ role, repository, tag }));
+  if (stableJson(actual) !== stableJson(required)) throw new Error('required image inventory mismatch');
+  return cli;
+}
+
+export async function verifyToolchainPreflight(request, {
+  verifyInventory = verifyCanonicalInventory,
+  verifyDocker,
+} = {}) {
+  validateSupplyRequest(request);
+  const dockerVerifier = verifyDocker ?? (await import('./verify-toolchain-lock.mjs')).verifyDockerIdentity;
+  const [cli, docker] = await Promise.all([
+    verifyInventory(request),
+    dockerVerifier(FIXED_DOCKER),
+  ]);
+  if (stableJson(cli) !== stableJson(request.cli)) throw new Error('CLI identity drift');
+  if (stableJson(docker) !== stableJson(request.docker)) throw new Error('Docker identity drift');
+  return { cli, docker };
+}
+
+export function isExactMissingImageResult(result, requestedRef) {
+  if (!result || result.code !== 1 || result.signal !== null || result.timedOut || result.overflow || result.forwardedSignal) return false;
+  const stderr = String(result.stderr ?? '').trim();
+  return stderr === `Error response from daemon: No such image: ${requestedRef}`
+    || stderr === `Error: No such image: ${requestedRef}`
+    || stderr === `Error: No such object: ${requestedRef}`;
+}
+
 export async function inspectExactImage(dockerPath, repoDigest, architecture, { allowMissing = false } = {}) {
   const result = await strictSpawn(dockerPath, ['image', 'inspect', repoDigest], { allowFailure: allowMissing });
-  if (result.code !== 0) return null;
+  if (result.code !== 0) {
+    if (allowMissing && isExactMissingImageResult(result, repoDigest)) return null;
+    throw new Error(`local image inspect failed closed: ${repoDigest}`);
+  }
   const [inspection] = JSON.parse(result.stdout);
   if (!inspection || !IMAGE_ID.test(inspection.Id ?? '') || inspection.Architecture !== architecture || !inspection.RepoDigests?.includes(repoDigest)) throw new Error(`local image read-back mismatch: ${repoDigest}`);
   return { imageId: inspection.Id, architecture: inspection.Architecture };
@@ -222,15 +336,21 @@ export async function resolveSupply({ cliPath, dockerPath = FIXED_DOCKER, config
   const images = await Promise.all(required.map(async (image) => {
     const tagged = `${image.repository}:${image.tag}`;
     const localTag = await strictSpawn(dockerPath, ['image', 'inspect', tagged], { allowFailure: true });
-    const metadata = localTag.code === 0
-      ? parseLocalTaggedMetadata(localTag.stdout, image.repository, docker.architecture)
-      : parseManifestMetadata((await strictSpawn(
+    let metadata;
+    if (localTag.code === 0) {
+      metadata = parseLocalTaggedMetadata(localTag.stdout, image.repository, docker.architecture);
+    } else if (isExactMissingImageResult(localTag, tagged)) {
+      metadata = parseManifestMetadata((await strictSpawn(
         dockerPath,
         ['manifest', 'inspect', '--verbose', tagged],
         { timeoutMs: 45_000 },
       )).stdout, docker.architecture);
+    } else {
+      throw new Error(`tagged image inspect failed closed: ${tagged}`);
+    }
     const repoDigest = `${image.repository}@${metadata.digest}`;
-    const local = await inspectExactImage(dockerPath, repoDigest, docker.architecture, { allowMissing: true });
+    const local = await inspectExactImage(dockerPath, repoDigest, docker.architecture, { allowMissing: !metadata.imageId });
+    if (metadata.imageId && local?.imageId !== metadata.imageId) throw new Error(`tagged/digest image ID mismatch: ${tagged}`);
     return { ...image, repoDigest, platform: metadata.platform, architecture: docker.architecture, localPresent: Boolean(local), localImageId: local?.imageId ?? null, estimatedMissingBytes: local ? 0 : metadata.estimatedBytes };
   }));
   const missing = images.filter((image) => !image.localPresent);

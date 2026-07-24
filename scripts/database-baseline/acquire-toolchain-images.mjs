@@ -6,6 +6,7 @@ import {
   FIXED_DOCKER,
   strictSpawn,
   validateSupplyRequest,
+  verifyToolchainPreflight,
 } from './resolve-toolchain-supply.mjs';
 
 const IMAGE_ID = /^sha256:[0-9a-f]{64}$/;
@@ -33,8 +34,10 @@ function inspectExact(output, image) {
 
 export async function acquireImages(request, {
   runDocker = async (args) => (await strictSpawn(FIXED_DOCKER, args, { timeoutMs: 570_000 })).stdout,
+  preflight = verifyToolchainPreflight,
 } = {}) {
   validateSupplyRequest(request);
+  await preflight(request);
   const missing = request.images.filter((image) => !image.localPresent);
   const missingRefs = missing.map((image) => image.repoDigest);
 

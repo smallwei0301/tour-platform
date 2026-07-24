@@ -35,7 +35,7 @@ function fakeRequest(images, approval = { status: 'not-required', approvedDigest
 }
 
 function fakeImage(repository, tag, digest, localPresent = true) {
-  return { role: 'service', repository, tag, repoDigest: `${repository}@${digest}`, platform: 'linux/amd64', architecture: 'amd64', localPresent, localImageId: localPresent ? `sha256:${'c'.repeat(64)}` : null, estimatedMissingBytes: localPresent ? 0 : 1234 };
+  return { role: `service-${repository.replace(/[^a-z0-9]+/gi, '-')}`, repository, tag, repoDigest: `${repository}@${digest}`, platform: 'linux/amd64', architecture: 'amd64', localPresent, localImageId: localPresent ? `sha256:${'c'.repeat(64)}` : null, estimatedMissingBytes: localPresent ? 0 : 1234 };
 }
 
 test('resolver command exists and publishes usage instead of an import or syntax failure', () => {
@@ -93,10 +93,75 @@ test('local tagged image read-back resolves one immutable repository digest with
   }]);
   assert.deepEqual(parseLocalTaggedMetadata(output, 'repo/name', 'amd64'), {
     digest: digestA,
+    imageId: `sha256:${'c'.repeat(64)}`,
     platform: 'linux/amd64',
     estimatedBytes: 0,
   });
   assert.throws(() => parseLocalTaggedMetadata(output, 'repo/name', 'arm64'), /architecture/);
+});
+
+test('canonical inventory re-derivation rejects partial extra duplicate-role tag-only and repository-only mutation', async () => {
+  const [{ parseRequiredImages, verifyCanonicalInventory }] = await modules();
+  const required = parseRequiredImages(Buffer.from(`prefix\0${embeddedDockerfile}\0suffix`), config);
+  const images = required.map((item, index) => ({
+    ...item,
+    repoDigest: `${item.repository}@sha256:${String(index + 1).padStart(64, '0')}`,
+    platform: 'linux/amd64',
+    architecture: 'amd64',
+    localPresent: true,
+    localImageId: `sha256:${String(index + 101).padStart(64, '0')}`,
+    estimatedMissingBytes: 0,
+  }));
+  const request = fakeRequest(images);
+  const dependencies = {
+    verifyCli: async () => request.cli,
+    readCliBytes: async () => Buffer.from(`prefix\0${embeddedDockerfile}\0suffix`),
+    readConfig: async () => config,
+  };
+  await verifyCanonicalInventory(request, dependencies);
+  await assert.rejects(() => verifyCanonicalInventory(fakeRequest(images.slice(0, -1)), dependencies), /inventory/iu);
+  await assert.rejects(() => verifyCanonicalInventory(fakeRequest([...images, { ...images[0], role: 'extra', repoDigest: `extra/repo@${digestA}`, repository: 'extra/repo' }]), dependencies), /inventory/iu);
+  await assert.rejects(() => verifyCanonicalInventory(fakeRequest(images.map((image, i) => i === 1 ? { ...image, role: images[0].role } : image)), dependencies), /duplicate role|inventory/iu);
+  await assert.rejects(() => verifyCanonicalInventory(fakeRequest(images.map((image, i) => i === 1 ? { ...image, tag: 'mutated-only' } : image)), dependencies), /inventory/iu);
+  await assert.rejects(() => verifyCanonicalInventory(fakeRequest(images.map((image, i) => i === 1 ? { ...image, repository: 'mutated/repo', repoDigest: `mutated/repo@${digestB}` } : image)), dependencies), /inventory/iu);
+});
+
+test('only exact requested No-such-image is classified as missing', async () => {
+  const [{ isExactMissingImageResult }] = await modules();
+  const ref = 'repo/name:v1';
+  assert.equal(isExactMissingImageResult({ code: 1, signal: null, timedOut: false, overflow: false, stderr: `Error response from daemon: No such image: ${ref}\n` }, ref), true);
+  assert.equal(isExactMissingImageResult({ code: 1, signal: null, timedOut: false, overflow: false, stderr: 'permission denied\n' }, ref), false);
+  assert.equal(isExactMissingImageResult({ code: null, signal: 'SIGTERM', timedOut: true, overflow: false, stderr: `No such image: ${ref}` }, ref), false);
+  assert.equal(isExactMissingImageResult({ code: 1, signal: null, timedOut: false, overflow: false, stderr: 'Error response from daemon: No such image: other/ref:v1\n' }, ref), false);
+});
+
+test('live toolchain preflight re-verifies canonical CLI inventory and Docker identity', async () => {
+  const [{ verifyToolchainPreflight }] = await modules();
+  const image = fakeImage('repo/name', 'v1', digestA);
+  const request = fakeRequest([image]);
+  const calls = [];
+  const result = await verifyToolchainPreflight(request, {
+    verifyInventory: async () => { calls.push('inventory'); return request.cli; },
+    verifyDocker: async () => { calls.push('docker'); return request.docker; },
+  });
+  assert.deepEqual(calls, ['inventory', 'docker']);
+  assert.deepEqual(result, { cli: request.cli, docker: request.docker });
+  await assert.rejects(() => verifyToolchainPreflight(request, {
+    verifyInventory: async () => ({ ...request.cli, sha256: '0'.repeat(64) }),
+    verifyDocker: async () => request.docker,
+  }), /CLI identity drift/iu);
+  await assert.rejects(() => verifyToolchainPreflight(request, {
+    verifyInventory: async () => request.cli,
+    verifyDocker: async () => ({ ...request.docker, endpoint: 'tcp://host:2375' }),
+  }), /Docker identity drift/iu);
+});
+
+test('strict child timeout is a distinct failure and escalates bounded TERM to KILL', async () => {
+  const [{ strictSpawn }] = await modules();
+  await assert.rejects(
+    () => strictSpawn(process.execPath, ['-e', "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"], { timeoutMs: 20 }),
+    /timeout/iu
+  );
 });
 
 test('request validation rejects mutable refs, secrets, image duplicates and architecture drift', async () => {
@@ -113,9 +178,9 @@ test('acquirer refuses missing images without exact owner approval and never par
   const [, { acquireImages }] = await modules();
   const images = [fakeImage('repo/a', 'v1', digestA, false), fakeImage('repo/b', 'v2', digestB, false)];
   const calls = [];
-  await assert.rejects(() => acquireImages(fakeRequest(images, { status: 'pending', approvedDigests: [] }), { runDocker: async (args) => calls.push(args) }), /owner approval/);
+  await assert.rejects(() => acquireImages(fakeRequest(images, { status: 'pending', approvedDigests: [] }), { preflight: async () => {}, runDocker: async (args) => calls.push(args) }), /owner approval/);
   assert.deepEqual(calls, []);
-  await assert.rejects(() => acquireImages(fakeRequest(images, { status: 'approved', approvedDigests: [images[0].repoDigest] }), { runDocker: async (args) => calls.push(args) }), /exact digest set/);
+  await assert.rejects(() => acquireImages(fakeRequest(images, { status: 'approved', approvedDigests: [images[0].repoDigest] }), { preflight: async () => {}, runDocker: async (args) => calls.push(args) }), /exact digest set/);
   assert.deepEqual(calls, []);
 });
 
@@ -124,7 +189,7 @@ test('acquirer uses digest-only pulls after exact approval and fails on partial 
   const images = [fakeImage('repo/a', 'v1', digestA, false), fakeImage('repo/b', 'v2', digestB, false)];
   const request = fakeRequest(images, { status: 'approved', approvedDigests: images.map((x) => x.repoDigest) });
   const calls = [];
-  await assert.rejects(() => acquireImages(request, { runDocker: async (args) => { calls.push(args); return args[0] === 'pull' ? '' : JSON.stringify([{ Id: `sha256:${'c'.repeat(64)}`, Architecture: 'amd64', RepoDigests: args.at(-1).includes('repo/a') ? [images[0].repoDigest] : [] }]); } }), /read-back mismatch/);
+  await assert.rejects(() => acquireImages(request, { preflight: async () => {}, runDocker: async (args) => { calls.push(args); return args[0] === 'pull' ? '' : JSON.stringify([{ Id: `sha256:${'c'.repeat(64)}`, Architecture: 'amd64', RepoDigests: args.at(-1).includes('repo/a') ? [images[0].repoDigest] : [] }]); } }), /read-back mismatch/);
   assert.deepEqual(calls.filter((args) => args[0] === 'pull').map((args) => args[1]), images.map((x) => x.repoDigest));
   assert.equal(calls.some((args) => args.some((arg) => /:v[12]$/.test(arg))), false);
 });
@@ -133,7 +198,7 @@ test('all-present acquisition skips pulls but re-verifies every exact repo diges
   const [, { acquireImages }] = await modules();
   const images = [fakeImage('repo/a', 'v1', digestA), fakeImage('repo/b', 'v2', digestB)];
   const calls = [];
-  await acquireImages(fakeRequest(images), { runDocker: async (args) => { calls.push(args); const ref = args.at(-1); return JSON.stringify([{ Id: `sha256:${'c'.repeat(64)}`, Architecture: 'amd64', RepoDigests: [ref] }]); } });
+  await acquireImages(fakeRequest(images), { preflight: async () => {}, runDocker: async (args) => { calls.push(args); const ref = args.at(-1); return JSON.stringify([{ Id: `sha256:${'c'.repeat(64)}`, Architecture: 'amd64', RepoDigests: [ref] }]); } });
   assert.equal(calls.some((args) => args[0] === 'pull'), false);
   assert.equal(calls.filter((args) => args[0] === 'image' && args[1] === 'inspect').length, 2);
 });
@@ -148,29 +213,43 @@ test('lock verifier pins docker absolute identity/endpoint and rejects PATH or d
   await assert.rejects(() => verifyDockerIdentity('/bin/true'), /Docker path substitution/);
 });
 
-test('PG17 image verification locks absolute psql/pg_dump/pg_restore and exact major/full versions', async () => {
+test('PG17 image verification locks absolute binaries and cleans every owned probe container', async () => {
   const [, , { verifyPg17Binaries }] = await modules();
   const calls = [];
-  const versions = await verifyPg17Binaries(`postgres@${digestA}`, async (args) => {
-    calls.push(args);
-    const executable = args.at(-2);
-    if (executable === '/usr/bin/psql') return 'psql (PostgreSQL) 17.6 (Debian 17.6-1.pgdg120+1)\n';
-    if (executable === '/usr/bin/pg_dump') return 'pg_dump (PostgreSQL) 17.6 (Debian 17.6-1.pgdg120+1)\n';
-    return 'pg_restore (PostgreSQL) 17.6 (Debian 17.6-1.pgdg120+1)\n';
+  const cleaned = [];
+  let sequence = 0;
+  const versions = await verifyPg17Binaries(`postgres@${digestA}`, {
+    nameFactory: () => `midao-pg-probe-${++sequence}`,
+    runDocker: async (args) => {
+      calls.push(args);
+      const executable = args.at(-2);
+      if (executable === '/usr/bin/psql') return 'psql (PostgreSQL) 17.6 (Debian 17.6-1.pgdg120+1)\n';
+      if (executable === '/usr/bin/pg_dump') return 'pg_dump (PostgreSQL) 17.6 (Debian 17.6-1.pgdg120+1)\n';
+      return 'pg_restore (PostgreSQL) 17.6 (Debian 17.6-1.pgdg120+1)\n';
+    },
+    cleanupContainer: async (name) => cleaned.push(name),
   });
   assert.deepEqual(Object.keys(versions), ['psql', 'pg_dump', 'pg_restore']);
   assert.deepEqual(calls.map((args) => args.at(-2)), ['/usr/bin/psql', '/usr/bin/pg_dump', '/usr/bin/pg_restore']);
-  await assert.rejects(() => verifyPg17Binaries(`postgres@${digestA}`, async () => 'psql (PostgreSQL) 16.9\n'), /major 17/);
+  assert.deepEqual(calls.map((args) => args[args.indexOf('--name') + 1]), ['midao-pg-probe-1', 'midao-pg-probe-2', 'midao-pg-probe-3']);
+  assert.deepEqual(cleaned, ['midao-pg-probe-1', 'midao-pg-probe-2', 'midao-pg-probe-3']);
+  await assert.rejects(() => verifyPg17Binaries(`postgres@${digestA}`, {
+    nameFactory: () => 'midao-pg-probe-invalid',
+    runDocker: async () => 'psql (PostgreSQL) 16.9\n',
+    cleanupContainer: async (name) => cleaned.push(name),
+  }), /major 17/);
+  assert.equal(cleaned.at(-1), 'midao-pg-probe-invalid');
 });
 
 test('lock generation rejects image ID/repo digest/architecture/tag substitutions', async () => {
   const [, , { buildToolchainLock }] = await modules();
   const image = fakeImage('repo/name', 'v1', digestA);
   const request = fakeRequest([image]);
+  const preflight = async () => ({ cli: request.cli, docker: request.docker });
   const good = async () => JSON.stringify([{ Id: image.localImageId, Architecture: 'amd64', RepoDigests: [image.repoDigest] }]);
-  const lock = await buildToolchainLock(request, { inspectImage: good, pgVersions: { psql: { path: '/usr/bin/psql', version: 'psql (PostgreSQL) 17.6' }, pg_dump: { path: '/usr/bin/pg_dump', version: 'pg_dump (PostgreSQL) 17.6' }, pg_restore: { path: '/usr/bin/pg_restore', version: 'pg_restore (PostgreSQL) 17.6' } } });
+  const lock = await buildToolchainLock(request, { preflight, inspectImage: good, pgVersions: { psql: { path: '/usr/bin/psql', version: 'psql (PostgreSQL) 17.6' }, pg_dump: { path: '/usr/bin/pg_dump', version: 'pg_dump (PostgreSQL) 17.6' }, pg_restore: { path: '/usr/bin/pg_restore', version: 'pg_restore (PostgreSQL) 17.6' } } });
   assert.equal(lock.images[0].repoDigest, image.repoDigest);
-  await assert.rejects(() => buildToolchainLock(request, { inspectImage: async () => JSON.stringify([{ Id: `sha256:${'d'.repeat(64)}`, Architecture: 'arm64', RepoDigests: ['repo/name@' + digestB] }]), pgVersions: lock.pg17.binaries }), /mismatch/);
+  await assert.rejects(() => buildToolchainLock(request, { preflight, inspectImage: async () => JSON.stringify([{ Id: `sha256:${'d'.repeat(64)}`, Architecture: 'arm64', RepoDigests: ['repo/name@' + digestB] }]), pgVersions: lock.pg17.binaries }), /mismatch/);
 });
 
 test('schemas are strict and generated JSON is deterministic with no credential material', async () => {
