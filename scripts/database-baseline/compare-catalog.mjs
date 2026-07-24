@@ -2,6 +2,14 @@ import { isDeepStrictEqual } from 'node:util';
 import { CATALOG_SECTIONS } from './extract-catalog.mjs';
 
 const ENVELOPE_KEYS = ['schemaVersion', 'normalizerVersion', 'extractorVersion', 'serverMajorVersion', 'ownershipOverlayStatus', 'sections'];
+export const COMPARATOR_SECTIONS = Object.freeze([
+  'schemas', 'relations', 'sequences', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
+  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions', 'extensionMemberships',
+  'publicationMembership', 'managedSchemaInventory', 'managedSchemaOverlays',
+]);
+if (!isDeepStrictEqual(CATALOG_SECTIONS, COMPARATOR_SECTIONS)) {
+  throw new Error('extractor/comparator section schema drift requires an explicit comparator version update');
+}
 
 function keyId(key) {
   return JSON.stringify(key);
@@ -28,8 +36,12 @@ function exactKeys(value, expected, label) {
 
 function assertCanonicalKey(key, label) {
   if (!Array.isArray(key) || key.length === 0
-    || key.some((component) => component !== null && !['string', 'number', 'boolean'].includes(typeof component))) {
-    throw new Error(`${label} canonical key invalid`);
+    || key.some((component) => {
+      if (component === null) return false;
+      if (typeof component === 'number') return !Number.isFinite(component) || Object.is(component, -0);
+      return !['string', 'boolean'].includes(typeof component);
+    })) {
+    throw new Error(`${label} canonical key must contain only JSON-safe scalars with finite numbers and no negative zero`);
   }
 }
 
@@ -43,22 +55,23 @@ function validateNormalizedCatalog(catalog, label) {
   assertObject(catalog.sections, `${label} sections`);
   const sectionKeys = Object.keys(catalog.sections);
   for (const section of sectionKeys) {
-    if (!CATALOG_SECTIONS.includes(section)) throw new Error(`${label} unknown section: ${section}`);
+    if (!COMPARATOR_SECTIONS.includes(section)) throw new Error(`${label} unknown section: ${section}`);
   }
-  for (const section of CATALOG_SECTIONS) {
+  for (const section of COMPARATOR_SECTIONS) {
     if (!Object.hasOwn(catalog.sections, section)) throw new Error(`${label} missing section: ${section}`);
   }
-  if (!isDeepStrictEqual(sectionKeys, CATALOG_SECTIONS)) throw new Error(`${label} section canonical order invalid`);
+  if (!isDeepStrictEqual(sectionKeys, COMPARATOR_SECTIONS)) throw new Error(`${label} section canonical order invalid`);
 
   const globalObjects = new Map();
   const sectionMaps = new Map();
-  for (const section of CATALOG_SECTIONS) {
+  for (const section of COMPARATOR_SECTIONS) {
     const rows = catalog.sections[section];
     if (!Array.isArray(rows)) throw new Error(`${label} section ${section} must be an array`);
     const map = new Map();
     let previous = null;
     for (const row of rows) {
       assertObject(row, `${label} ${section} entry`);
+      if (!Object.hasOwn(row, 'canonicalKey')) throw new Error(`${label} ${section} entry must own canonicalKey`);
       assertCanonicalKey(row.canonicalKey, `${label} ${section}`);
       const id = keyId(row.canonicalKey);
       if (map.has(id)) throw new Error(`${label} duplicate canonical key in ${section}: ${id}`);
@@ -132,7 +145,7 @@ export function compareCatalogs(input) {
     }
   }
 
-  for (const section of CATALOG_SECTIONS) {
+  for (const section of COMPARATOR_SECTIONS) {
     const expectedMap = expected.sectionMaps.get(section);
     const actualMap = actual.sectionMaps.get(section);
     const ids = [...new Set([...expectedMap.keys(), ...actualMap.keys()])].sort(compareCodeUnits);

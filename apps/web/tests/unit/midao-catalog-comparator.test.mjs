@@ -10,6 +10,11 @@ const root = path.resolve(here, '../../../..');
 const comparatorPath = path.join(root, 'scripts/database-baseline/compare-catalog.mjs');
 const normalizerPath = path.join(root, 'scripts/database-baseline/normalize-catalog.mjs');
 const fixturePath = path.join(here, '../fixtures/database-baseline/catalog-unstable-a.json');
+const fixedSections = [
+  'schemas', 'relations', 'sequences', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
+  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions', 'extensionMemberships',
+  'publicationMembership', 'managedSchemaInventory', 'managedSchemaOverlays',
+];
 
 async function subject() {
   assert.ok(existsSync(comparatorPath), 'catalog comparator missing');
@@ -117,6 +122,27 @@ test('field exclusions cannot hide object deletion while approved whole-object e
   });
   assert.equal(result.equal, true);
   assert.equal(result.excludedDifferences[0].field, '$object');
+});
+
+test('canonical identities reject non-JSON-safe numbers and comparator owns the fixed section schema', async () => {
+  const { compareCatalogs, COMPARATOR_SECTIONS } = await subject();
+  assert.deepEqual(COMPARATOR_SECTIONS, fixedSections);
+  assert.equal(Object.isFrozen(COMPARATOR_SECTIONS), true);
+
+  const nanExpected = await catalog();
+  const nanActual = structuredClone(nanExpected);
+  nanExpected.sections.schemas[0].canonicalKey = ['schema', Number.NaN];
+  nanActual.sections.schemas[0].canonicalKey = ['schema', null];
+  assert.throws(() => compareCatalogs({ expected: nanExpected, actual: nanActual, exclusions: [] }), /finite|JSON-safe/iu);
+
+  for (const unsafe of [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -0]) {
+    const expected = await catalog();
+    expected.sections.schemas[0].canonicalKey = ['schema', unsafe];
+    assert.throws(() => compareCatalogs({ expected, actual: structuredClone(expected), exclusions: [] }), /finite|negative zero|JSON-safe/iu);
+  }
+  const missingOwnKey = await catalog();
+  delete missingOwnKey.sections.schemas[0].canonicalKey;
+  assert.throws(() => compareCatalogs({ expected: missingOwnKey, actual: structuredClone(missingOwnKey), exclusions: [] }), /own canonicalKey/iu);
 });
 
 test('normalized envelope, section set, canonical ordering and exclusion unknown keys fail closed', async () => {
