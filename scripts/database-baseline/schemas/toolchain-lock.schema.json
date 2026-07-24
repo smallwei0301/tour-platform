@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/toolchain-lock.schema.json",
+  "title": "Midao baseline toolchain lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "requestSha256", "architecture", "cli", "docker", "images", "pg17"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "requestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "architecture": { "enum": ["amd64", "arm64"] },
+    "cli": { "$ref": "toolchain-supply-request.schema.json#/properties/cli" },
+    "docker": { "$ref": "toolchain-supply-request.schema.json#/properties/docker" },
+    "images": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "repository", "tag", "repoDigest", "imageId", "platform", "architecture"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "repository": { "type": "string", "minLength": 1 },
+          "tag": { "type": "string", "minLength": 1 },
+          "repoDigest": { "type": "string", "pattern": "^[^@]+@sha256:[0-9a-f]{64}$" },
+          "imageId": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "platform": { "enum": ["linux/amd64", "linux/arm64"] },
+          "architecture": { "enum": ["amd64", "arm64"] }
+        }
+      }
+    },
+    "pg17": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["image", "majorVersion", "binaries"],
+      "properties": {
+        "image": { "type": "string", "pattern": "^[^@]+@sha256:[0-9a-f]{64}$" },
+        "majorVersion": { "const": 17 },
+        "binaries": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["psql", "pg_dump", "pg_restore"],
+          "properties": {
+            "psql": { "$ref": "#/$defs/binary" },
+            "pg_dump": { "$ref": "#/$defs/binary" },
+            "pg_restore": { "$ref": "#/$defs/binary" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "binary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "version"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^/usr/bin/(psql|pg_dump|pg_restore)$" },
+        "version": { "type": "string", "pattern": "PostgreSQL\\) 17(\\.|$)" }
+      }
+    }
+  }
+}

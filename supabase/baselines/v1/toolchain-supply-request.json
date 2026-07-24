@@ -1,0 +1,158 @@
+{
+  "approval": {
+    "approvedDigests": [],
+    "status": "not-required"
+  },
+  "architecture": "amd64",
+  "cli": {
+    "gid": 0,
+    "mode": "0755",
+    "nlink": 1,
+    "path": "/root/.hermes/toolchains/supabase/2.87.2/supabase",
+    "realpath": "/root/.hermes/toolchains/supabase/2.87.2/supabase",
+    "sha256": "e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59",
+    "uid": 0,
+    "version": "2.87.2"
+  },
+  "docker": {
+    "architecture": "amd64",
+    "endpoint": "unix:///var/run/docker.sock",
+    "path": "/usr/bin/docker",
+    "realpath": "/usr/bin/docker"
+  },
+  "images": [
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:a931c7282521d013c72fa2194b6b48dfa53382401ce529e1b3b80bea89af0f48",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "postgres@sha256:0027bef26712baaee437a4ea48fdf3d2d2e2bc5f0d81615374408ca320f3c7e3",
+      "repository": "postgres",
+      "role": "pg17-client",
+      "tag": "17"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:d469ea2b78bc7dfabf656ef6a46752569bda59b73d37612bcddaad4fc313b7ce",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/postgres@sha256:5deba92e50cd17bfacf8603834d317cdf3bfc1c016ec8293991997fa3b55fa3d",
+      "repository": "public.ecr.aws/supabase/postgres",
+      "role": "db",
+      "tag": "17.6.1.104"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:3cefb958bcd694597b65adc00053a762b1f9a6df3c6031af528d052d75a64e1a",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/kong@sha256:1b53405d8680a09d6f44494b7990bf7da2ea43f84a258c59717d4539abf09f6d",
+      "repository": "public.ecr.aws/supabase/kong",
+      "role": "gateway",
+      "tag": "2.8.1"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:41670316396c1c80d06d51da446f0c07104d9ad321b0b3c07ca99e03e9ce1642",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/postgrest@sha256:4173b72e0be29cf15349dc827798c3e464c5f2cc7f9c1697022f9cd1874b4c36",
+      "repository": "public.ecr.aws/supabase/postgrest",
+      "role": "api",
+      "tag": "v14.8"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:b061f1fa636f31bc01de0a791986352e82772760cce8e1d55bbec6f552930a1e",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/gotrue@sha256:87db8c737af49a64236c461882ed3925f8b1e5c2c47176c64694dedc65153573",
+      "repository": "public.ecr.aws/supabase/gotrue",
+      "role": "auth",
+      "tag": "v2.188.1"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:3f56e44ddc1a5655b8f288a2aa812db567b2f5f0b8bc18ef3da63b94a95608d5",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/mailpit@sha256:f7f7c31de4de59540ad6515a0ca057a77525bca2069b6e747d873ca66c10fe08",
+      "repository": "public.ecr.aws/supabase/mailpit",
+      "role": "mailpit",
+      "tag": "v1.22.3"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:9bed43a1967a9bae0ee7e09ebefab36263d67c98e7f9d31af6fe5360bd9ae265",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/realtime@sha256:9cde93c7606f195e345a75cbf223a847bba32984977f0e1a964e21e5f6da50fd",
+      "repository": "public.ecr.aws/supabase/realtime",
+      "role": "realtime",
+      "tag": "v2.80.12"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:dbf838205c0294aaee0fac4c4b8c15ac0489852c62818cdbacb636485110adc4",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/storage-api@sha256:7ce6443130c18ad415f4ac7c9053de8a424c50412bfbce5800d4cf79202e332d",
+      "repository": "public.ecr.aws/supabase/storage-api",
+      "role": "storage",
+      "tag": "v1.48.21"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:25d21ff36e2b7b66f8202e390b1919c5d03aab47fa98d33a47a3d33a7b89b4bd",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/imgproxy@sha256:0facd355d50f3be665ebe674486f2b2e9cdaebd3f74404acd9b7fece2f661435",
+      "repository": "public.ecr.aws/supabase/imgproxy",
+      "role": "imgproxy",
+      "tag": "v3.8.0"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:1727fcd80d4fa242df8378661466f1ce3a44e6b82bfee41b5df0df4e4e4091c2",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/edge-runtime@sha256:281a012452f0b8938843ec2866ccc5067d32efad9b6f325b20d26062a9733584",
+      "repository": "public.ecr.aws/supabase/edge-runtime",
+      "role": "edge-runtime",
+      "tag": "v1.73.3"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:8f072553168d8e77730dc1661d3f4a1549b32ee13375b6c62705ece6d34013e0",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/studio@sha256:8ddbc266209ee5345b4ffeffd3c4094218dd572b2234bac087d652c3e81268c9",
+      "repository": "public.ecr.aws/supabase/studio",
+      "role": "studio",
+      "tag": "2026.04.06-sha-b9e83b2"
+    },
+    {
+      "architecture": "amd64",
+      "estimatedMissingBytes": 0,
+      "localImageId": "sha256:c028260dc6ac085379981dd6278121033d06184b83cb727238d54f61412a2b6f",
+      "localPresent": true,
+      "platform": "linux/amd64",
+      "repoDigest": "public.ecr.aws/supabase/postgres-meta@sha256:4ed8f7c5d3b2e25aa4aa29794605b49799b66da4b36a3c70894cd5241af63f97",
+      "repository": "public.ecr.aws/supabase/postgres-meta",
+      "role": "postgres-meta",
+      "tag": "v0.96.2"
+    }
+  ],
+  "schemaVersion": 1
+}
