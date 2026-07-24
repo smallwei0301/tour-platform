@@ -218,6 +218,35 @@ export async function updateMidaoRequestStatusDb(guideId, id, status) {
   return data ? { ok: true, request: shape(data) } : { ok: false, code: 'NOT_FOUND', message: '需求單不存在' };
 }
 
+/**
+ * 跨導遊需求單列表（唯讀，僅供 admin route 使用；無 guide ownership 過濾）。
+ * Supabase 路徑以 nested select 帶出導遊顯示名；in-memory 路徑無 guide_profiles 可 join，
+ * 以 guide_id 代替顯示名（測試 seam，非正式文案）。
+ * @param {{status?:string, limit?:number}} [opts]
+ */
+export async function listAllMidaoRequestsDb({ status = 'all', limit = 100 } = {}) {
+  const filter = TAB_FILTERS[status] ?? TAB_FILTERS.all;
+  if (!hasSupabaseEnv()) {
+    const items = _mem.filter(filter)
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
+      .slice(0, limit);
+    return { items: items.map((r) => ({ ...shape(r), guideName: r.guide_id })) };
+  }
+  const supabase = await getSupabase();
+  let query = supabase.from('midao_requests').select(`${SELECT_COLS}, guide_profiles(display_name)`);
+  if (status !== 'all') {
+    query = status === 'closed'
+      ? query.in('status', ['closed_won', 'closed_done'])
+      : query.eq('status', status);
+  }
+  const { data, error } = await query.order('created_at', { ascending: false }).limit(limit);
+  if (error) throw new Error(error.message);
+  const rows = Array.isArray(data) ? data : [];
+  return {
+    items: rows.map((r) => ({ ...shape(r), guideName: r.guide_profiles?.display_name ?? r.guide_id })),
+  };
+}
+
 /** 首頁摘要。 @param {string} guideId */
 export async function getMidaoSummaryDb(guideId) {
   const rows = await fetchGuideRows(guideId);

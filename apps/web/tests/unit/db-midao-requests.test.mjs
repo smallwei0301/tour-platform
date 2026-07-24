@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {
   MIDAO_REQUEST_STATUSES, isValidRequestTransition, normalizeRequestInput,
   createMidaoRequestDb, listMidaoRequestsDb, getMidaoRequestDb,
-  updateMidaoRequestStatusDb, getMidaoSummaryDb, __resetMemMidaoRequests, __seedMemMidaoRequests,
+  updateMidaoRequestStatusDb, getMidaoSummaryDb, listAllMidaoRequestsDb,
+  __resetMemMidaoRequests, __seedMemMidaoRequests,
 } from '../../src/lib/midao/db-midao-requests.mjs';
 
 const G = 'guide-1';
@@ -130,6 +131,31 @@ test('normalizeRequestInput：planId 空字串→null，planTitle 超過 80 字�
   assert.equal(norm.ok, true);
   assert.equal(norm.value.plan_id, null);
   assert.equal(norm.value.plan_title_snapshot.length, 80);
+});
+
+test('listAllMidaoRequestsDb：跨導遊彙整＋created_at desc＋guideName＋狀態篩選', async () => {
+  __seedMemMidaoRequests([
+    {
+      id: 'r1', guide_id: 'guide-1', request_no: 'R20260701001', status: 'new',
+      source: 'public_page', traveler_name: '王小姐', participants_count: 2, answers: [],
+      need_pickup: false, preferred_date: '2026-08-01',
+      created_at: '2026-07-01T00:00:00Z', updated_at: '2026-07-01T00:00:00Z', status_changed_at: '2026-07-01T00:00:00Z',
+    },
+    {
+      id: 'r2', guide_id: 'guide-2', request_no: 'R20260702001', status: 'pending_reply',
+      source: 'public_page', traveler_name: '陳先生', participants_count: 3, answers: [],
+      need_pickup: false, preferred_date: '2026-08-02',
+      created_at: '2026-07-02T00:00:00Z', updated_at: '2026-07-02T00:00:00Z', status_changed_at: '2026-07-02T00:00:00Z',
+    },
+  ]);
+  const all = await listAllMidaoRequestsDb();
+  assert.equal(all.items.length, 2);
+  assert.deepEqual(all.items.map((r) => r.id), ['r2', 'r1']); // created_at desc
+  assert.deepEqual(all.items.map((r) => r.guideName), ['guide-2', 'guide-1']); // in-memory：guideName=guide_id
+  const pending = await listAllMidaoRequestsDb({ status: 'pending_reply' });
+  assert.deepEqual(pending.items.map((r) => r.id), ['r2']);
+  const closed = await listAllMidaoRequestsDb({ status: 'closed' });
+  assert.equal(closed.items.length, 0);
 });
 
 test('request_no：撞號時重試遞增（in-memory 路徑）', async () => {
