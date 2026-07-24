@@ -255,7 +255,7 @@ acl_source AS (
   UNION ALL
   SELECT CASE WHEN c.relkind = 'S' THEN 'sequence' ELSE 'relation' END,
          n.nspname, c.relname, c.relowner, c.relacl,
-         CASE WHEN c.relkind = 'S' THEN 'S'::"char" ELSE 'r'::"char" END
+         CASE WHEN c.relkind = 'S' THEN 's'::"char" ELSE 'r'::"char" END
   FROM pg_catalog.pg_class AS c
   JOIN eligible_namespaces AS n ON n.oid = c.relnamespace
   WHERE c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
