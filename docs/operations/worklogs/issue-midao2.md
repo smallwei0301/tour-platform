@@ -85,11 +85,24 @@
 
 ---
 
+## Plan 3：方案輕量入接案頁＋行程單一來源＋管理員打通（2026-07-23／24）
+
+計畫檔：`docs/superpowers/plans/2026-07-23-midao2-plans-admin.md`。六個任務全數完成並逐一經審查者核可（進度細節見 `.superpowers/sdd/progress.md`）：
+
+1. **Migration C**（`20260723090000_midao2_request_plan_columns.sql`）：`midao_requests` 加 `plan_id`（FK→`activity_plans`，ON DELETE SET NULL）＋`plan_title_snapshot`。**已於 2026-07-24 經使用者 SQL-OVERRIDE 授權套用生產**（information_schema 驗證兩欄存在），ledger verified 記錄已入 `docs/operations/migration-ledger.json`（commit c9ad840），CI migration gate 綠燈。三個 midao2 migrations 至此全數套用生產。
+2. **方案輕量入接案頁**：`planOptions`（active 方案：null/'active' 視為啟用、archived 排除）與 `priceFromTwd`（active 方案最低 basePrice>0，無方案 fallback `price_twd`）進服務形；公開表單「選擇方案」radio 膠囊（可不選）；route 驗證 planId 歸屬（`INVALID_PLAN`）並以伺服器端方案名快照入單；需求詳情與複製文案顯示 `服務：{行程}（{方案}）`。
+3. **行程單一來源（行為驗證，非新碼)**：管理後台編輯的行程與 midao2 共用同一張 `activities` 表，`midao_status IS NULL` 時跟隨主站 `status`——管理端改動自動反映到 midao2 商店；導遊自建行程 `midao_status` 獨立控制、保留「發佈到祕島」送審通道。此行為由既有雙軌可見度測試鎖定。
+4. **管理員代入 midao2**：admin 導遊詳情頁新增「進入 midao2 後台」（同一支 impersonate API），midao2 端讀 `guide_impersonation` cookie 顯示紫色橫幅＋「結束代入」（DELETE session→清 cookie→回 `/admin/guides`）。既有「進入導遊後台」行為零改動（regression-lock 測試 16/16）。
+5. **管理員跨導遊需求單唯讀視圖**：`/admin/midao-requests`（AdminShell 導覽「midao2 需求單」）＋`GET /api/v2/admin/midao/requests?status=`（auth 由 middleware `/api/v2/admin/:path*` 統一把關，route 零 auth 碼，比照既有 v2 admin 前例）；狀態下拉五檔（closed 合併已成交/已完成，卡片狀態章仍分色）。**假設：唯讀即可**（不提供 admin 改狀態），如需操作另開任務。已知限制：limit=100 無分頁、滿百筆無截斷提示（冷啟動可接受）。
+6. **全面驗證**：midao 全套 14 測試檔＋守門測試 106/106、`tsc --noEmit` 乾淨、lint 0 errors、E2E `midao2-backend-flow` 4/4＋`midao2-public-request` 1/1。E2E 曾揭露 mock 缺 `priceFromTwd` 令服務列表崩潰——依計畫修 UI 防禦（`priceFromTwd ?? priceTwd` fallback、`planOptions ?? []`），commit c44bced。
+
+---
+
 ## 部署驗收清單（使用者部署測試後才進生產）
 
 以下七項需在實際部署環境（非本機 dev/prod 模擬）由使用者人工過，逐項在 QA 報告記錄證據（URL、SHA、Asia/Taipei 時間）：
 
-0. **【前置】生產套用兩個 midao2 migrations**（`20260722100000_midao2_requests_availability.sql`、`20260722100500_midao2_activity_showcase_columns.sql`）——需 `SQL-OVERRIDE` 授權＋照 `docs/operations/migration-apply-ledger-sop.md` 補 ledger。未套用前所有 midao API 會失敗，以下各項無法驗收。另：驗收送單推播前，測試導遊帳號需已完成 LINE 綁定（`guide_line_mapping`），否則推播 fire-and-forget 靜默略過屬預期行為。
+0. **【前置・已完成】生產套用三個 midao2 migrations**（`20260722100000_midao2_requests_availability.sql`、`20260722100500_midao2_activity_showcase_columns.sql`、`20260723090000_midao2_request_plan_columns.sql`）——均已經 `SQL-OVERRIDE` 授權套用生產並補 ledger verified 記錄，前置條件已滿足。另：驗收送單推播前，測試導遊帳號需已完成 LINE 綁定（`guide_line_mapping`），否則推播 fire-and-forget 靜默略過屬預期行為。
 
 1. **登入導向**：以真實導遊帳號登入 `/guide/login`，確認成功後預設導向 `/midao2`（非舊後台）。
 2. **六畫面照截圖走查**：`/midao2`（首頁）、`/midao2/requests`、`/midao2/requests/[id]`、`/midao2/calendar`、`/midao2/services`（含 `/new`、`/[id]/edit`）、`/midao2/me`——逐頁對照原始設計截圖確認版面/文案/互動一致。
@@ -101,3 +114,6 @@
 8. **行動裝置分享**：`navigator.share` 與 QR 下載在行動裝置（HTTPS）實測；桌機分享應 fallback 複製網址。
 9. **維護模式下 `/midao2` 與 `/g/[slug]` 行為**：維護模式（`public_paused`）下確認 `/midao2` 與 `/g/[slug]` 行為（兩者皆不在 middleware matcher 內，預期不受 kill-switch 影響——確認此行為符合營運預期）。
 10. **行動 Safari 安全區域**：行動 Safari 底部 tab bar safe-area 顯示正常。
+11. **【Plan 3】選方案送單**：在有 active 方案的服務上開 `/g/[slug]`，確認（a）服務卡價格顯示「NT$方案最低價 起」、（b）表單出現「選擇方案」膠囊列（含「先不指定」）、（c）選定方案送單後 `/midao2/requests/[id]` 與複製文案顯示 `服務：{行程}（{方案}）`、（d）帶偽造 planId 的請求被 400 `INVALID_PLAN` 拒絕。
+12. **【Plan 3】管理員代入 midao2**：管理後台導遊詳情頁點「進入 midao2 後台」→ 進入該導遊 `/midao2` 且頂端出現紫色「代入中」橫幅；點「結束代入」→ 導遊 session 清除、回到 `/admin/guides`，且再開 `/midao2` 會被導去登入。
+13. **【Plan 3】管理員需求單視圖**：`/admin/midao-requests`（導覽「midao2 需求單」）列出跨導遊需求單（含導遊名、服務含方案、狀態章），狀態下拉切換過濾正常；確認頁面純唯讀（無操作按鈕）。
