@@ -19,14 +19,23 @@ export function normalizeRoutineBody(definition) {
   return definition.replace(/\r\n?/gu, '\n');
 }
 
-function sanitize(value) {
-  if (Array.isArray(value)) return value.map(sanitize);
-  if (!value || typeof value !== 'object') return value;
-  const output = {};
-  for (const key of Object.keys(value).sort(compareCodeUnits)) {
-    if (!UNSTABLE_KEYS.has(key)) output[key] = sanitize(value[key]);
+const SET_VALUED_ARRAY_FIELDS = new Set(['configuration', 'options', 'foreignOptions', 'roles']);
+
+function sanitize(value, fieldName = null) {
+  if (Array.isArray(value)) {
+    const sanitized = value.map((item) => sanitize(item));
+    return SET_VALUED_ARRAY_FIELDS.has(fieldName)
+      ? sanitized.sort((left, right) => compareCodeUnits(JSON.stringify(left), JSON.stringify(right)))
+      : sanitized;
   }
-  return output;
+  if (value && typeof value === 'object') {
+    const output = {};
+    for (const key of Object.keys(value).sort(compareCodeUnits)) {
+      if (!UNSTABLE_KEYS.has(key)) output[key] = sanitize(value[key], key);
+    }
+    return output;
+  }
+  return value;
 }
 
 function normalizeEntry(section, entry) {

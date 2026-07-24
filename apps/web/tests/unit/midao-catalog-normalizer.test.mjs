@@ -67,6 +67,30 @@ test('routine definition is replaced by a stable SHA-256 while ACL RLS owner and
   assert.deepEqual(parsed.sections.defaultPrivileges, raw.sections.defaultPrivileges);
 });
 
+test('known set-valued arrays are canonicalized without reordering semantic arrays', async () => {
+  const { normalizeCatalog } = await moduleUnderTest();
+  const left = await fixture(fixtureAPath);
+  const right = structuredClone(left);
+  left.sections.routines[0].configuration = ['search_path=public', 'statement_timeout=5s'];
+  right.sections.routines[0].configuration = [...left.sections.routines[0].configuration].reverse();
+  left.sections.relations[0].options = ['fillfactor=80', 'autovacuum_enabled=false'];
+  right.sections.relations[0].options = [...left.sections.relations[0].options].reverse();
+  left.sections.relations[0].foreignOptions = ['schema_name=remote', 'table_name=zeta'];
+  right.sections.relations[0].foreignOptions = [...left.sections.relations[0].foreignOptions].reverse();
+  const policy = {
+    canonicalKey: ['policy', 'public', 'alpha', 'reader'], schema: 'public', relation: 'alpha', name: 'reader', roles: ['reader', 'PUBLIC'],
+  };
+  left.sections.policies.push(policy);
+  right.sections.policies.push({ ...policy, roles: [...policy.roles].reverse() });
+  assert.equal(normalizeCatalog(left), normalizeCatalog(right));
+
+  const orderedLeft = structuredClone(left);
+  const orderedRight = structuredClone(left);
+  orderedLeft.sections.types.push({ canonicalKey: ['type', 'public', 'mood'], enumLabels: ['sad', 'ok', 'happy'] });
+  orderedRight.sections.types.push({ canonicalKey: ['type', 'public', 'mood'], enumLabels: ['happy', 'ok', 'sad'] });
+  assert.notEqual(normalizeCatalog(orderedLeft), normalizeCatalog(orderedRight), 'enum label order is semantic');
+});
+
 test('meaningful function body drift changes digest and malformed section contracts fail closed', async () => {
   const { normalizeCatalog } = await moduleUnderTest();
   const raw = await fixture(fixtureAPath);
