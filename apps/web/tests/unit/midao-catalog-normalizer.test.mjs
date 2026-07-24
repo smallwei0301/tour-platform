@@ -12,9 +12,9 @@ const normalizerPath = path.join(repoRoot, 'scripts/database-baseline/normalize-
 const fixtureAPath = path.join(here, '../fixtures/database-baseline/catalog-unstable-a.json');
 const fixtureBPath = path.join(here, '../fixtures/database-baseline/catalog-unstable-b.json');
 const sections = [
-  'schemas', 'relations', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
-  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions',
-  'publicationMembership', 'managedSchemaOverlays',
+  'schemas', 'relations', 'sequences', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
+  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions', 'extensionMemberships',
+  'publicationMembership', 'managedSchemaInventory', 'managedSchemaOverlays',
 ];
 
 async function moduleUnderTest() {
@@ -40,10 +40,10 @@ test('normalized document has fixed keys, section order, canonical entry order a
   const { normalizeCatalog } = await moduleUnderTest();
   const output = normalizeCatalog(await fixture(fixtureAPath));
   const parsed = JSON.parse(output);
-  assert.deepEqual(Object.keys(parsed), ['schemaVersion', 'normalizerVersion', 'extractorVersion', 'serverMajorVersion', 'sections']);
+  assert.deepEqual(Object.keys(parsed), ['schemaVersion', 'normalizerVersion', 'extractorVersion', 'serverMajorVersion', 'ownershipOverlayStatus', 'sections']);
   assert.deepEqual(Object.keys(parsed.sections), sections);
   assert.deepEqual(parsed.sections.relations.map((entry) => entry.canonicalKey), [
-    'relation:public.alpha', 'relation:public.zeta',
+    ['relation', 'public', 'alpha'], ['relation', 'public', 'zeta'],
   ]);
   for (const forbidden of ['oid', 'objectAddress', 'statistics', 'rowCount', 'sequenceValue', 'timestamp', 'capturedAt', 'runtimeState']) {
     assert.equal(output.includes(`"${forbidden}"`), false, `unstable key leaked: ${forbidden}`);

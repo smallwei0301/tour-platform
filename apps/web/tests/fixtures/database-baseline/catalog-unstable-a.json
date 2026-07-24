@@ -3,25 +3,29 @@
   "extractorVersion": 1,
   "serverVersionNum": 170010,
   "transactionReadOnly": true,
+  "ownershipOverlayStatus": "pending",
   "sections": {
-    "schemas": [{"canonicalKey":"schema:public","name":"public","oid":2200}],
+    "schemas": [{"canonicalKey":["schema","public"],"name":"public","oid":2200}],
     "relations": [
-      {"canonicalKey":"relation:public.zeta","schema":"public","name":"zeta","rowCount":99},
-      {"canonicalKey":"relation:public.alpha","schema":"public","name":"alpha","runtimeState":{"cache":"a"}}
+      {"canonicalKey":["relation","public","zeta"],"schema":"public","name":"zeta","rowCount":99},
+      {"canonicalKey":["relation","public","alpha"],"schema":"public","name":"alpha","runtimeState":{"cache":"a"}}
     ],
+    "sequences": [{"canonicalKey":["sequence","public","alpha_id_seq"],"start":1,"sequenceValue":44}],
     "columns": [],
     "types": [],
     "constraints": [],
     "indexes": [],
-    "routines": [{"canonicalKey":"routine:public.answer()","schema":"public","name":"answer","definition":"CREATE FUNCTION public.answer() RETURNS integer\nLANGUAGE sql\nAS $$ SELECT 42 $$;\n","objectAddress":"1255:1"}],
+    "routines": [{"canonicalKey":["routine","public","answer",""],"schema":"public","name":"answer","definition":"CREATE FUNCTION public.answer() RETURNS integer\nLANGUAGE sql\nAS $$ SELECT 42 $$;\n","objectAddress":"1255:1"}],
     "triggers": [],
-    "rls": [{"canonicalKey":"rls:public.alpha","schema":"public","relation":"alpha","enabled":true,"forced":false}],
+    "rls": [{"canonicalKey":["rls","public","alpha"],"schema":"public","relation":"alpha","enabled":true,"forced":false}],
     "policies": [],
-    "acl": [{"canonicalKey":"acl:relation:public.alpha:postgres:authenticated:SELECT:false","objectType":"relation","schema":"public","object":"alpha","grantor":"postgres","grantee":"authenticated","privilege":"SELECT","grantable":false}],
-    "owners": [{"canonicalKey":"owner:relation:public.alpha","objectType":"relation","schema":"public","object":"alpha","owner":"postgres"}],
-    "defaultPrivileges": [{"canonicalKey":"default-privilege:postgres:public:r:postgres:authenticated:SELECT:false","owner":"postgres","schema":"public","objectType":"r","grantor":"postgres","grantee":"authenticated","privilege":"SELECT","grantable":false}],
-    "extensions": [{"canonicalKey":"extension:pgcrypto","name":"pgcrypto","version":"1.3","capturedAt":"2026-07-24T00:00:00Z"}],
+    "acl": [{"canonicalKey":["acl","relation","public","alpha","postgres","PUBLIC","SELECT",false],"objectType":"relation","schema":"public","object":"alpha","grantor":"postgres","grantee":"PUBLIC","privilege":"SELECT","grantable":false}],
+    "owners": [{"canonicalKey":["owner","relation","public","alpha"],"objectType":"relation","schema":"public","object":"alpha","owner":"postgres"}],
+    "defaultPrivileges": [{"canonicalKey":["default_privilege","postgres","public","r","postgres","PUBLIC","SELECT",false],"owner":"postgres","schema":"public","objectType":"r","grantor":"postgres","grantee":"PUBLIC","privilege":"SELECT","grantable":false}],
+    "extensions": [{"canonicalKey":["extension","pgcrypto"],"name":"pgcrypto","version":"1.3","capturedAt":"2026-07-24T00:00:00Z"}],
+    "extensionMemberships": [{"canonicalKey":["extension_member","pgcrypto","function",null,"digest(text,text)"],"extension":"pgcrypto"}],
     "publicationMembership": [],
+    "managedSchemaInventory": [{"canonicalKey":["managed_schema_inventory","targets_managed_relation","rls","rls","auth","users"],"reason":"targets_managed_relation","objectKey":["rls","auth","users"],"managedSchema":"auth","classification":"unclassified"}],
     "managedSchemaOverlays": []
   }
 }

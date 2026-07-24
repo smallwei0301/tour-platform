@@ -49,13 +49,14 @@ export function normalizeCatalog(rawCatalog) {
   for (const section of CATALOG_SECTIONS) {
     normalizedSections[section] = raw.sections[section]
       .map((entry) => normalizeEntry(section, entry))
-      .sort((left, right) => compareCodeUnits(left.canonicalKey, right.canonicalKey));
+      .sort((left, right) => compareCodeUnits(JSON.stringify(left.canonicalKey), JSON.stringify(right.canonicalKey)));
   }
   const normalized = {
     schemaVersion: 1,
     normalizerVersion: 1,
     extractorVersion: raw.extractorVersion,
     serverMajorVersion: Math.trunc(raw.serverVersionNum / 10_000),
+    ownershipOverlayStatus: raw.ownershipOverlayStatus,
     sections: normalizedSections,
   };
   return `${JSON.stringify(normalized, null, 2)}\n`;
