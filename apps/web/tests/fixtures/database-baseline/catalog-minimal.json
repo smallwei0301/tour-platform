@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "extractorVersion": 1,
+  "serverVersionNum": 170010,
+  "transactionReadOnly": true,
+  "sections": {
+    "schemas": [{ "canonicalKey": "schema:public" }],
+    "relations": [{ "canonicalKey": "relation:public.example" }],
+    "columns": [{ "canonicalKey": "column:public.example.id" }],
+    "types": [{ "canonicalKey": "type:public.example" }],
+    "constraints": [{ "canonicalKey": "constraint:public.example.example_pkey" }],
+    "indexes": [{ "canonicalKey": "index:public.example.example_pkey" }],
+    "routines": [{ "canonicalKey": "routine:public.example()" }],
+    "triggers": [{ "canonicalKey": "trigger:public.example.example_trigger" }],
+    "rls": [{ "canonicalKey": "rls:public.example" }],
+    "policies": [{ "canonicalKey": "policy:public.example.example_policy" }],
+    "acl": [{ "canonicalKey": "acl:relation:public.example:authenticated:SELECT" }],
+    "owners": [{ "canonicalKey": "owner:relation:public.example" }],
+    "defaultPrivileges": [{ "canonicalKey": "default-privilege:postgres:public:r:authenticated:SELECT" }],
+    "extensions": [{ "canonicalKey": "extension:pgcrypto" }],
+    "publicationMembership": [{ "canonicalKey": "publication:supabase_realtime:public.example" }],
+    "managedSchemaOverlays": [{ "canonicalKey": "overlay:policy:auth.example.app_policy" }]
+  }
+}
