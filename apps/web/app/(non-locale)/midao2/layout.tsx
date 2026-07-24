@@ -5,7 +5,8 @@
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { csrfHeaders } from '../../../src/lib/csrf-client';
 import { C, Icon } from './ui';
 
 const TABS = [
@@ -16,12 +17,24 @@ const TABS = [
   { href: '/midao2/me', label: '我的頁面', icon: 'profile' },
 ];
 
+const IMPERSONATION_COOKIE_NAME = 'guide_impersonation';
+
+function hasImpersonationCookie(): boolean {
+  if (typeof document === 'undefined') return false;
+  return document.cookie
+    .split(';')
+    .map((c) => c.trim())
+    .some((c) => c.startsWith(`${IMPERSONATION_COOKIE_NAME}=`) && !c.startsWith(`${IMPERSONATION_COOKIE_NAME}=;`));
+}
+
 export default function Midao2Layout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   useEffect(() => {
     // 預熱 CSRF cookie，供各頁 apiSend 使用。
     void fetch('/api/guide/auth/csrf', { cache: 'no-store' });
+    setIsImpersonating(hasImpersonationCookie());
 
     // auth 探針：只管導轉，不存結果——各頁自行抓資料。
     fetch('/api/v2/guide/midao/summary')
@@ -35,6 +48,21 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
       });
   }, []);
 
+  // 結束「管理員代入」：清掉導遊 session 與代入標記，回到後台導遊管理。
+  async function handleEndImpersonation() {
+    try {
+      await fetch('/api/guide/auth/session', {
+        method: 'DELETE',
+        headers: csrfHeaders(),
+      });
+    } catch {
+      // 忽略登出錯誤，仍導回管理後台。
+    }
+    // 標記 cookie 非 HttpOnly，前端直接清除。
+    document.cookie = `${IMPERSONATION_COOKIE_NAME}=; Path=/; Max-Age=0`;
+    window.location.href = '/admin/guides';
+  }
+
   return (
     <div style={{ minHeight: '100dvh', background: C.BG, color: C.TEXT }}>
       <main
@@ -44,6 +72,44 @@ export default function Midao2Layout({ children }: { children: React.ReactNode }
           padding: '16px 16px calc(84px + env(safe-area-inset-bottom))',
         }}
       >
+        {isImpersonating && (
+          <div
+            data-testid="midao2-impersonation-banner"
+            role="status"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
+              background: '#7c3aed',
+              color: '#fff',
+              borderRadius: 12,
+              padding: '10px 14px',
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          >
+            <span>目前以導遊身分代入操作中</span>
+            <button
+              type="button"
+              data-testid="midao2-impersonation-end"
+              onClick={handleEndImpersonation}
+              style={{
+                padding: '4px 10px',
+                borderRadius: 8,
+                border: 'none',
+                background: '#fff',
+                color: '#7c3aed',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              結束代入
+            </button>
+          </div>
+        )}
         {children}
       </main>
 

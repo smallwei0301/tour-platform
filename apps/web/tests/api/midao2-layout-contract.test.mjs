@@ -15,6 +15,9 @@ test('midao2 layout：CSRF 預熱＋401 導 login＋五格 tab', async () => {
   assert.match(src, /\/guide\/login\?next=\/midao2/);
   assert.match(src, /env\(safe-area-inset-bottom\)/);
   for (const label of ['首頁', '需求', '行事曆', '服務', '我的頁面']) assert.match(src, new RegExp(label));
+  assert.match(src, /guide_impersonation/);
+  assert.match(src, /midao2-impersonation-banner/);
+  assert.match(src, /midao2-impersonation-end/);
 });
 
 test('midao2 ui：envelope 處理＋401 導轉＋STATUS_META 五態', async () => {
