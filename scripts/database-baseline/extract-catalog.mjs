@@ -9,15 +9,15 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 export const FIXED_PSQL = '/usr/bin/psql';
 export const FIXED_SQL = path.join(scriptDirectory, 'catalog-queries.sql');
 export const CATALOG_SECTIONS = Object.freeze([
-  'schemas', 'relations', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
-  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions',
-  'publicationMembership', 'managedSchemaOverlays',
+  'schemas', 'relations', 'sequences', 'columns', 'types', 'constraints', 'indexes', 'routines', 'triggers',
+  'rls', 'policies', 'acl', 'owners', 'defaultPrivileges', 'extensions', 'extensionMemberships',
+  'publicationMembership', 'managedSchemaInventory', 'managedSchemaOverlays',
 ]);
 const ALLOWED_CONNECTION_ENV = new Set([
   'PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGSSLMODE', 'PGSSLROOTCERT',
 ]);
 const REQUIRED_CONNECTION_ENV = ['PGHOST', 'PGPORT', 'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGSSLMODE'];
-const TOP_LEVEL_KEYS = ['schemaVersion', 'extractorVersion', 'serverVersionNum', 'transactionReadOnly', 'sections'];
+const TOP_LEVEL_KEYS = ['schemaVersion', 'extractorVersion', 'serverVersionNum', 'transactionReadOnly', 'ownershipOverlayStatus', 'sections'];
 const OUTPUT_LIMIT = 16 * 1024 * 1024;
 
 function exactKeys(value, expected, label) {
@@ -73,6 +73,7 @@ export function validateRawCatalog(catalog) {
     throw new Error('catalog requires PostgreSQL major 17');
   }
   if (catalog.transactionReadOnly !== true) throw new Error('catalog connection was not read-only');
+  if (catalog.ownershipOverlayStatus !== 'pending') throw new Error('ownership overlay status must remain pending before reviewed ownership publication');
   if (!catalog.sections || typeof catalog.sections !== 'object' || Array.isArray(catalog.sections)) throw new Error('catalog sections invalid');
   for (const section of Object.keys(catalog.sections)) {
     if (!CATALOG_SECTIONS.includes(section)) throw new Error(`unknown section: ${section}`);
@@ -84,12 +85,78 @@ export function validateRawCatalog(catalog) {
     const seen = new Set();
     for (const entry of entries) {
       if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw new Error(`section ${section} entry invalid`);
-      if (typeof entry.canonicalKey !== 'string' || entry.canonicalKey.length === 0) throw new Error(`section ${section} canonical key invalid`);
-      if (seen.has(entry.canonicalKey)) throw new Error(`duplicate canonical key in ${section}: ${entry.canonicalKey}`);
-      seen.add(entry.canonicalKey);
+      if (!Array.isArray(entry.canonicalKey) || entry.canonicalKey.length === 0
+        || entry.canonicalKey.some((component) => component !== null && !['string', 'number', 'boolean'].includes(typeof component))) {
+        throw new Error(`section ${section} canonical key must be a non-empty JSON scalar array`);
+      }
+      const canonicalKey = JSON.stringify(entry.canonicalKey);
+      if (seen.has(canonicalKey)) throw new Error(`duplicate canonical key in ${section}: ${canonicalKey}`);
+      seen.add(canonicalKey);
     }
   }
+  if (catalog.sections.managedSchemaOverlays.length !== 0) throw new Error('managed schema overlays must remain empty while ownership is pending');
   return catalog;
+}
+
+export function assertNoDuplicateJsonKeys(text) {
+  let index = 0;
+  const skipWhitespace = () => { while (/\s/u.test(text[index] ?? '')) index += 1; };
+  const parseString = () => {
+    if (text[index] !== '"') throw new Error('catalog JSON string expected');
+    const start = index++;
+    while (index < text.length) {
+      if (text[index] === '\\') { index += 2; continue; }
+      if (text[index] === '"') {
+        index += 1;
+        return JSON.parse(text.slice(start, index));
+      }
+      index += 1;
+    }
+    throw new Error('catalog JSON string unterminated');
+  };
+  const parseValue = () => {
+    skipWhitespace();
+    if (text[index] === '{') {
+      index += 1;
+      skipWhitespace();
+      const keys = new Set();
+      if (text[index] === '}') { index += 1; return; }
+      while (index < text.length) {
+        const key = parseString();
+        if (keys.has(key)) throw new Error(`duplicate JSON key: ${key}`);
+        keys.add(key);
+        skipWhitespace();
+        if (text[index++] !== ':') throw new Error('catalog JSON colon expected');
+        parseValue();
+        skipWhitespace();
+        const delimiter = text[index++];
+        if (delimiter === '}') return;
+        if (delimiter !== ',') throw new Error('catalog JSON object delimiter expected');
+        skipWhitespace();
+      }
+      throw new Error('catalog JSON object unterminated');
+    }
+    if (text[index] === '[') {
+      index += 1;
+      skipWhitespace();
+      if (text[index] === ']') { index += 1; return; }
+      while (index < text.length) {
+        parseValue();
+        skipWhitespace();
+        const delimiter = text[index++];
+        if (delimiter === ']') return;
+        if (delimiter !== ',') throw new Error('catalog JSON array delimiter expected');
+      }
+      throw new Error('catalog JSON array unterminated');
+    }
+    if (text[index] === '"') { parseString(); return; }
+    const match = text.slice(index).match(/^(?:-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?|true|false|null)/u);
+    if (!match) throw new Error('catalog JSON value invalid');
+    index += match[0].length;
+  };
+  parseValue();
+  skipWhitespace();
+  if (index !== text.length) throw new Error('catalog must contain exactly one JSON document');
 }
 
 async function defaultRunChild(invocation, { timeoutMs = 60_000 } = {}) {
@@ -145,10 +212,15 @@ export async function extractCatalog({
     if (!result || result.code !== 0 || result.signal !== null) throw new Error('catalog psql child failed');
     if (typeof result.stdout !== 'string' || Buffer.byteLength(result.stdout) > OUTPUT_LIMIT) throw new Error('catalog extractor output exceeded limit');
     if (typeof result.stderr !== 'string' || result.stderr.length !== 0) throw new Error('catalog psql emitted unexpected stderr');
+    if (!result.stdout.endsWith('\n') || result.stdout.endsWith('\n\n')) throw new Error('catalog must end with exactly one terminal LF');
+    const document = result.stdout.slice(0, -1);
+    if (!document.startsWith('{') || !document.endsWith('}')) throw new Error('catalog must contain exactly one JSON document');
     let parsed;
     try {
-      parsed = JSON.parse(result.stdout.trim());
-    } catch {
+      assertNoDuplicateJsonKeys(document);
+      parsed = JSON.parse(document);
+    } catch (error) {
+      if (/duplicate JSON key/iu.test(error.message)) throw error;
       throw new Error('catalog must contain exactly one JSON document');
     }
     return validateRawCatalog(parsed);
