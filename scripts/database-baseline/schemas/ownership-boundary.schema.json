@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midao.local/schemas/ownership-boundary.schema.json",
+  "title": "Midao database baseline ownership boundary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "assignments"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "enum": ["template", "reviewed"] },
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["objectKey", "section", "ownerDomain", "role", "dependsOn", "rationale"],
+        "properties": {
+          "objectKey": { "$ref": "#/$defs/key" },
+          "section": { "type": "string", "minLength": 1 },
+          "ownerDomain": { "enum": ["application", "platform", "extension"] },
+          "role": { "type": "string", "minLength": 1 },
+          "dependsOn": { "type": "array", "items": { "$ref": "#/$defs/key" } },
+          "rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "key": { "type": "array", "minItems": 1, "items": { "type": ["string", "number", "boolean", "null"] } }
+  }
+}
