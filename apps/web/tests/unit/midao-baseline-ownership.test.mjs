@@ -78,6 +78,9 @@ test('ownership validator schemas and non-production template exist', async () =
     assert.equal(schema.$schema, 'https://json-schema.org/draft/2020-12/schema');
     assert.equal(schema.additionalProperties, false);
   }
+  const tocSchema = await json(path.join(schemaDirectory, 'toc-ownership-map.schema.json'));
+  assert.equal(tocSchema.properties.expectedTocIds.items.maximum, Number.MAX_SAFE_INTEGER);
+  assert.equal(tocSchema.properties.entries.items.properties.tocId.maximum, Number.MAX_SAFE_INTEGER);
   const template = await json(path.join(fixtureDirectory, 'ownership-template.json'));
   assert.equal(template.templateOnly, true);
   assert.equal(template.ownershipBoundary.status, 'template');
@@ -128,6 +131,11 @@ test('dependency closure and exact TOC ownership are enforced', async () => {
   extraExpectedToc.tocOwnershipMap.expectedTocIds.push(999_999);
   assert.throws(() => validateOwnershipBoundary(extraExpectedToc), /expected TOC.*missing|TOC.*999999/iu);
 
+  const unsafeToc = await validInput();
+  unsafeToc.tocOwnershipMap.expectedTocIds[0] = Number.MAX_SAFE_INTEGER + 1;
+  unsafeToc.tocOwnershipMap.entries[0].tocId = Number.MAX_SAFE_INTEGER + 1;
+  assert.throws(() => validateOwnershipBoundary(unsafeToc), /safe integer/iu);
+
   const mismatchedToc = await validInput();
   mismatchedToc.tocOwnershipMap.entries[0].ownerDomain = 'platform';
   assert.throws(() => validateOwnershipBoundary(mismatchedToc), /TOC.*owner/iu);
@@ -148,6 +156,16 @@ test('role ownership and platform prerequisite boundaries reject platform object
   const app = appAsPlatform.ownershipBoundary.assignments.find((entry) => entry.ownerDomain === 'application');
   appAsPlatform.platformPrerequisites.objects.push({ objectKey: app.objectKey, provisionedBy: 'wrong', required: true });
   assert.throws(() => validateOwnershipBoundary(appAsPlatform), /non-platform.*prerequisite/iu);
+
+  const laundered = await validInput();
+  const extensionAssignment = laundered.ownershipBoundary.assignments.find((entry) => entry.section === 'extensions');
+  extensionAssignment.ownerDomain = 'application';
+  extensionAssignment.role = 'application-owner';
+  laundered.tocOwnershipMap.entries.find((entry) => keyId(entry.objectKey) === keyId(extensionAssignment.objectKey)).ownerDomain = 'application';
+  laundered.platformPrerequisites.objects = laundered.platformPrerequisites.objects
+    .filter((entry) => keyId(entry.objectKey) !== keyId(extensionAssignment.objectKey));
+  laundered.catalog.sections.managedSchemaInventory[0].objectKey = structuredClone(extensionAssignment.objectKey);
+  assert.throws(() => validateOwnershipBoundary(laundered), /trusted platform|platform classification/iu);
 });
 
 test('whole application-object exclusions and unapproved or unknown-field exclusions fail closed', async () => {

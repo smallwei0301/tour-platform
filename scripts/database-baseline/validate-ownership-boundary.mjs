@@ -56,6 +56,17 @@ function catalogObjects(catalog) {
   return objects;
 }
 
+function isTrustedPlatformObject(section, key) {
+  if (section === 'extensions' || section === 'extensionMemberships') return true;
+  return section === 'publicationMembership' && key[1] === 'supabase_realtime';
+}
+
+function trustedPlatformObjects(objects) {
+  return new Set(
+    [...objects].filter(([, object]) => isTrustedPlatformObject(object.section, object.row.canonicalKey)).map(([id]) => id),
+  );
+}
+
 function validateRoleMap(roleMap) {
   exactKeys(roleMap, ['schemaVersion', 'roles'], ['schemaVersion', 'roles'], 'roleMap');
   assertVersion(roleMap.schemaVersion, 'roleMap');
@@ -71,7 +82,7 @@ function validateRoleMap(roleMap) {
   return roles;
 }
 
-function validateAssignments(boundary, objects, roles, requireComplete) {
+function validateAssignments(boundary, objects, roles, trustedPlatformIds, requireComplete) {
   exactKeys(boundary, ['schemaVersion', 'status', 'assignments'], ['schemaVersion', 'status', 'assignments'], 'ownershipBoundary');
   assertVersion(boundary.schemaVersion, 'ownershipBoundary');
   if (!['template', 'reviewed'].includes(boundary.status)) throw new Error('ownershipBoundary status invalid');
@@ -95,6 +106,9 @@ function validateAssignments(boundary, objects, roles, requireComplete) {
     const object = objects.get(id);
     if (!object) throw new Error(`unknown catalog object in assignment: ${id}`);
     if (object.section !== assignment.section) throw new Error(`assignment section mismatch: ${id}`);
+    if (trustedPlatformIds.has(id) && assignment.ownerDomain !== 'platform') {
+      throw new Error(`trusted platform classification cannot be overridden: ${id}`);
+    }
     const roleDomain = roles.get(assignment.role);
     if (!roleDomain) throw new Error(`assignment uses unknown role: ${assignment.role}`);
     if (roleDomain !== assignment.ownerDomain) throw new Error(`role owner mismatch for ${id}`);
@@ -116,7 +130,7 @@ function validateAssignments(boundary, objects, roles, requireComplete) {
   return assignments;
 }
 
-function validatePlatformPrerequisites(document, assignments) {
+function validatePlatformPrerequisites(document, assignments, trustedPlatformIds) {
   exactKeys(document, ['schemaVersion', 'objects'], ['schemaVersion', 'objects'], 'platformPrerequisites');
   assertVersion(document.schemaVersion, 'platformPrerequisites');
   if (!Array.isArray(document.objects)) throw new Error('platform prerequisite objects must be an array');
@@ -132,6 +146,9 @@ function validatePlatformPrerequisites(document, assignments) {
     if (!assignment) throw new Error(`platform prerequisite unknown object: ${id}`);
     if (assignment.ownerDomain !== 'platform') throw new Error(`non-platform object listed as prerequisite: ${id}`);
     prerequisites.add(id);
+  }
+  for (const id of trustedPlatformIds) {
+    if (assignments.has(id) && !prerequisites.has(id)) throw new Error(`trusted platform prerequisite missing: ${id}`);
   }
   for (const [id, assignment] of assignments) {
     if (assignment.ownerDomain === 'platform' && !prerequisites.has(id)) throw new Error(`platform prerequisite missing: ${id}`);
@@ -213,14 +230,15 @@ export function validateOwnershipBoundary(input) {
   if (typeof input.templateOnly !== 'boolean') throw new Error('templateOnly must be boolean');
   const catalog = validateRawCatalog(input.catalog);
   const objects = catalogObjects(catalog);
+  const trustedPlatformIds = trustedPlatformObjects(objects);
   const roles = validateRoleMap(input.roleMap);
-  const assignments = validateAssignments(input.ownershipBoundary, objects, roles, !input.templateOnly);
+  const assignments = validateAssignments(input.ownershipBoundary, objects, roles, trustedPlatformIds, !input.templateOnly);
   if (input.templateOnly) {
     if (input.ownershipBoundary.status !== 'template' || assignments.size !== 0) throw new Error('template cannot contain reviewed assignments');
   } else if (input.ownershipBoundary.status !== 'reviewed') {
     throw new Error('non-template ownership boundary must be reviewed');
   }
-  validatePlatformPrerequisites(input.platformPrerequisites, assignments);
+  validatePlatformPrerequisites(input.platformPrerequisites, assignments, trustedPlatformIds);
   const tocCount = validateToc(input.tocOwnershipMap, assignments);
   validateExclusions(input.exclusions, assignments, objects);
 
@@ -229,7 +247,7 @@ export function validateOwnershipBoundary(input) {
     if (!objects.has(id)) throw new Error(`managed inventory references unknown object: ${id}`);
   }
   const applicationOverlayKeys = [...assignments]
-    .filter(([id, assignment]) => assignment.ownerDomain === 'application' && managedKeys.has(id))
+    .filter(([id, assignment]) => assignment.ownerDomain === 'application' && managedKeys.has(id) && !trustedPlatformIds.has(id))
     .map(([, assignment]) => assignment.objectKey);
   return Object.freeze({ catalogObjectCount: objects.size, tocCount, applicationOverlayKeys });
 }
