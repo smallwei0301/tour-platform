@@ -178,7 +178,13 @@ supabase/baselines/v1/
 
 `capture-manifest.json`只封存production cutoff capture／TOC／ownership／rendered SQL／security drift provenance；它不能宣告fresh terminal完成。`manifest.json`在expected-terminal發布後才建立，引用capture-manifest digest並封存兩個catalog truths、exact history與lane contract。
 
-跨`supabase/baselines/v1`與`docs/operations`的多檔發布不宣稱單一POSIX syscall可提供瞬時全域atomic snapshot。可執行契約是transaction-aware publication：每個target以同目錄exclusive temp＋fsync/read-back＋rename原子替換；`capture-manifest.json`倒數第二、ledger最後發布，兩者必須持有同一`transactionId`與完整digest set，ledger是唯一commit marker。Publisher使用linked-worktree-specific persistent journal及singleton lock；ledger前失敗依captured identity回滾，ledger後視為committed並只清理identity-matched leftovers。所有reader/verifier必須拒絕manifest／ledger transaction不一致、集合不完整或未完成journal；不支援此驗證的普通讀者不構成本契約下的atomic consumer。
+跨`supabase/baselines/v1`與`docs/operations`的多檔發布不宣稱單一POSIX syscall可提供瞬時全域atomic snapshot。可執行契約是transaction-aware publication：每個target以同目錄exclusive temp＋fsync/read-back＋rename原子替換；`capture-manifest.json`倒數第二、ledger最後發布，兩者必須持有同一`transactionId`，ledger是唯一commit marker。
+
+兩者共享的`payloadDigests`是固定13-path canonical map，只允許：`baseline.sql`、`managed-overlays.sql`、`catalog.cutoff.normalized.json`、`toc.normalized.json`、`use-list.txt`、`toc-ownership-map.json`、`dependency-closure.json`、`role-map.json`、`ownership-boundary.json`、`exclusions.json`、`platform-prerequisites.json`、`security-drift.json`、`catalog-cutoff.sha256`；明確排除`capture-manifest.json`與`docs/operations/baseline-ledger.json`，missing／extra path均FAIL。Ledger另含`captureManifestSha256`；manifest不得自含digest，ledger不得含self-digest，避免self／mutual recursion。
+
+Publisher先取得linked-worktree exact singleton lock，再檢查／recover journal。Lock與journal paths由固定`git rev-parse --git-path` namespace導出，exclusive、no-follow、0600、current-owner、nlink1及FD/path identity均須驗證。首次mutation前，所有pre-existing targets先建立同目錄identity-bound durable rollback copies；所有temps、rollback copies、journal file及其parent directory均fsync。Journal只允許`PREPARED → PROMOTING → COMMITTED → CLEANED`，每次state與每次rename後都fsync file及containing directory，ledger rename後再次fsync ledger parent。Recovery在每個rename／fsync boundary必須idempotent：只有磁碟上ledger exact匹配transactionId、`captureManifestSha256`及13-path `payloadDigests`才視為`COMMITTED`並清理identity-matched leftovers；任何其他state一律依journal記錄的prepared／pre-existing identity回滾，foreign replacement則HOLD且不得刪除。
+
+所有Task 8及後續讀取baseline artifacts的scripts、acceptance tests與materializers，在讀任何payload前都必須呼叫transaction verifier；verifier拒絕manifest／ledger transaction不一致、13-path集合不完整、unfinished journal或identity/digest mismatch。不經此gate的普通讀者不構成本契約下的有效consumer。
 
 `manifest.json`至少包含：
 

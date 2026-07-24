@@ -262,7 +262,7 @@ git diff --cached --check
 
 **Commit:** `feat: 建立 database catalog exact comparator`。
 
-## Task 7：secret-safe capture、TOC renderer與atomic publisher
+## Task 7：secret-safe capture、TOC renderer與transactional publisher
 
 **Objective:** 完成production capture工具，但此Task不連production。
 
@@ -278,6 +278,8 @@ git diff --cached --check
 - Create: `apps/web/tests/unit/midao-baseline-manifest.test.mjs`
 - Create: `apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt`
 - Create: `apps/web/tests/fixtures/database-baseline/pg17-toc.txt`
+- Modify: `scripts/database-baseline/validate-ownership-boundary.mjs`
+- Modify: `apps/web/tests/unit/midao-baseline-ownership.test.mjs`
 
 **RED**
 
@@ -285,7 +287,8 @@ git diff --cached --check
 node --test --test-concurrency=1 \
   apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
   apps/web/tests/unit/midao-baseline-publisher.test.mjs \
-  apps/web/tests/unit/midao-baseline-manifest.test.mjs
+  apps/web/tests/unit/midao-baseline-manifest.test.mjs \
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs
 ```
 
 Expected：FAIL，capture／renderer／publisher missing。Tests必須涵蓋：
@@ -296,8 +299,9 @@ Expected：FAIL，capture／renderer／publisher missing。Tests必須涵蓋：
 - A/B orchestrator同一in-memory unpredictable restrict key，exact `pg_restore --restrict-key` argv；
 - exact framing parser只移除same-key首尾`\restrict/\unrestrict`，內部SQL bytes不變；
 - 每個expected TOC ID exactly once；同一catalog object可對應多個TOC，明確允許的embedded catalog sections可無獨立TOC；`dependency-closure.json`逐entry direct/transitive closure、missing/extra/unknown/duplicate與A/B digest；
-- publisher A/B equality、handoff path/dev/inode/owner/mode recheck與symlink-swap拒絕、full output set＋ledger producer、exclusive temps、fsync/read-back；跨目錄publication採transaction-aware contract：固定promotion order、manifest倒數第二、同`transactionId` ledger最後作commit marker、persistent journal＋singleton lock、second-target rename failure identity-safe rollback、crash recovery與partial cleanup；禁止宣稱跨兩目錄多檔為單一syscall瞬時atomic；
-- manifest strict schema、digests、secret/restrict-key/raw argv拒絕，verifier必須拒絕manifest／ledger transaction不一致、集合不完整與未完成journal；
+- publisher A/B equality、handoff path/dev/inode/owner/mode recheck與symlink-swap拒絕、full output set＋ledger producer、exclusive temps、fsync/read-back；跨目錄publication採transaction-aware contract：固定13-path `payloadDigests`（排除manifest／ledger）、manifest倒數第二、ledger另含`captureManifestSha256`且最後作同`transactionId` commit marker；明確禁止manifest self-digest、ledger self-digest、missing／extra payload path；
+- publication先取得exact worktree-scoped singleton lock再recover journal；lock／journal exclusive no-follow 0600 current-owner nlink1及FD/path identity；pre-existing targets先做同目錄durable rollback copies；temp／backup／journal及各parent directory在首次mutation前fsync；journal exact `PREPARED/PROMOTING/COMMITTED/CLEANED`，每次rename/state及ledger後parent fsync；每個rename／fsync boundary crash皆idempotent recovery，只有exact ledger commit marker視為committed，否則identity-safe rollback，foreign replacement HOLD；second-target rename failure與partial cleanup保留完整error chain；
+- manifest strict schema、digests、secret/restrict-key/raw argv拒絕；transaction verifier拒絕manifest／ledger transaction不一致、13-path集合不完整、unfinished journal與identity/digest mismatch；Task 8＋後續所有consumer在讀payload前必須通過此gate；
 - `validate-ownership-boundary.mjs --candidate-handoff` Task 8 caller integration須在本Task以mock handoff RED→GREEN鎖定，不得只保留`--input` CLI。
 
 **Fresh security review gate**
@@ -318,12 +322,15 @@ git add -- \
   apps/web/tests/unit/midao-baseline-publisher.test.mjs \
   apps/web/tests/unit/midao-baseline-manifest.test.mjs \
   apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt \
-  apps/web/tests/fixtures/database-baseline/pg17-toc.txt
+  apps/web/tests/fixtures/database-baseline/pg17-toc.txt \
+  scripts/database-baseline/validate-ownership-boundary.mjs \
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh \
   apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
   apps/web/tests/unit/midao-baseline-publisher.test.mjs \
-  apps/web/tests/unit/midao-baseline-manifest.test.mjs
+  apps/web/tests/unit/midao-baseline-manifest.test.mjs \
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --check-only
 git diff --cached --check
 ```
