@@ -1,5 +1,5 @@
 # issue1756 — Midao runtime foundation and responsive shell
-> 最後更新：2026-07-25 01:16 CST｜負責 session：Canary／2026-07-24
+> 最後更新：2026-07-25 01:50 CST｜負責 session：Canary／2026-07-24
 
 ## 目標
 建立Midao runtime foundation、responsive shell與catalog-verified as-built database baseline。既有production只走post-cutoff additive migrations；fresh環境走platform→baseline→post-cutoff→seed→catalog exact comparison。所有backend/data變更採strict TDD、staged evidence與local Postgres／Playwright真實驗證。
@@ -103,9 +103,11 @@
 - 2026-07-25 Baseline Task 4 catalog normalizer完成strict TDD與三輪remediation；final commit `48af0406f73894a96fb5694f63d5572065ad3c69`、tree `80893d814a628dd1d9784ab8add137711eee38b6`。Routine body只正規化line endings且保留語意空白；set arrays只在四個exact section/root paths排序，nested同名與ordered arrays保序。Final SPEC／QUALITY／SECURITY review全部PASS、blocking 0。
 - 2026-07-25 Baseline Task 5 ownership contract完成strict TDD與security remediation；final commit `5e248f71511c2505098f94ced184cd095bfd0500`、tree `d1f8ea8b42ca5b53199a7e5dee197e037aee9cfc`。五份Draft 2020-12 schemas、template-only contract、object／expected TOC exactly-once、dependency／role／platform prerequisite／approved exclusion gates，以及catalog-anchored trusted platform anti-laundering均完成；final SPEC／SECURITY／EXECUTABILITY review全部PASS、blocking 0。
 - 2026-07-25 Baseline Task 6 exact comparator initial＋identity/schema remediation commits `a74c5b13`、`a2d10e1115d9b28913969980a241ee20ced41fd5`、tree `be0deaae393d910e8827c9ce7628aa41b64ab070`；Task 3–6 regression `25/25 PASS`。NaN／Infinity／negative-zero identity collision、own canonical key與fixed 19-section independent contract均已修；首次final review timeout記為INCONCLUSIVE，窄化替代review兩項PASS、blocking 0。GitHub milestone：`issuecomment-5072535660`。
+- 2026-07-25 Task 5 TOC cardinality correction commit `317aa0d579fbe850080fa007f6d05be24f9968ba`、tree `f5944e600ce387d12a6e106bcd21e559aa96ad1d`：expected TOC IDs維持exact/unique、同object可多TOC、五個embedded sections可無獨立TOC，unknown／owner／ID gates不弱化；ownership `8/8`、combined `15/15 PASS`，fresh SPEC／SECURITY／EXECUTABILITY review blocking 0。GitHub milestone：`issuecomment-5072719266`。
+- 2026-07-25 Task 7 transactional publication plan經三輪修正後final docs commit `45c295bd22cdb7ec8c6c1f2d6562449a72b200ce`、tree `be1e7ad6717d2fb39dcca3902d9b3e282aad341f`。Exact payload digest sets、file＋directory fsync、durable rollback、journal recovery、immutable capture ledger＋獨立expected-terminal ledger，以及Tasks 8–15 verifier-first open-spy assertions均完成；fresh SPEC／SECURITY／EXECUTABILITY review blocking 0。此為plan gate，Task 7 code仍進行中。GitHub milestone：`issuecomment-5072839267`。
 
 ## 下一步
-- Task 7 secret-safe capture、TOC renderer、manifest與multi-target atomic publisher strict TDD進行中；Task 7本身不連production。
+- Task 7 secret-safe capture、TOC renderer、manifest與transaction-aware publisher strict TDD進行中；Task 7本身不連production。
 - 未取得Task 7 exact HEAD fresh SECURITY PASS、blocking 0前，不開始Task 8 production唯讀A/B capture。
 - 缺image時只發布immutable digest supply request，未經owner批准不下載。
 
