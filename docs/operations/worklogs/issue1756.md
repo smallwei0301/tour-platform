@@ -93,9 +93,12 @@
 - v2 commit `d18042f287e596b3e583931b518f4d65fceb9850`、tree `83339b96f88789978ca771ca538fd6a46c8f04c6`；docs靜態自審PASS、worktree clean、GitHub #1756 body＋comment讀回PASS。
 - 首輪v2三路review因600秒工具timeout均INCONCLUSIVE；縮窄成local read-only review後取得有效verdict：SPEC PASS blocking 0；QUALITY/SECURITY FAIL blocking 1；EXECUTABILITY FAIL blocking 3。
 - v3最小修正處理4項：發布並digest-bound `dependency-closure.json`；Task 1新增registry metadata resolver、owner-approved immutable digest request與digest-only acquisition/read-back；Tasks 8/10明確producer、ledger、多target guarded publication/rollback與manual acceptance test；Tasks 11/12補heavy allowlist exact RED command。
+- 2026-07-24 v3 commit `6568ee12752c578290c4519fe6901eb8150d7878`、tree `a80bb8580f23f4f97e3a2c0e316b492bc0cb4e52`；docs static/diff checks PASS，worktree clean。
+- Exact v3 targeted fresh reviews全部放行：既有SPEC PASS blocking 0；QUALITY/SECURITY dependency-closure re-review PASS blocking 0；EXECUTABILITY toolchain/publication/heavy-RED re-review PASS blocking 0。GitHub里程碑：`issuecomment-5069595817`。
 
 ## 下一步
-- 對v3 docs做靜態自審、docs commit及窄化fresh SECURITY／EXECUTABILITY re-review；SPEC已PASS，不重跑。兩路均PASS、blocking 0後才從Task 1開始。
+- Baseline implementation gate已清零；從Task 1供應鏈與PG17 toolchain lock開始，以strict TDD依序執行15個Tasks。缺image時只發布immutable digest supply request，未經owner批准不下載。
+- Schema-neutral Admin mode-switch UI可並行施工，但同一worktree一次只允許一個writer，避免Git index互相污染。
 
 ## 絕不重做（Do-NOT-redo）
 - 不重跑或重審完整plan／A4／Phase B／Phase C／D1–D3a：對應anchors均已有fresh PASS；D3a final為`8a70f79e`。下一步只進D3b。
