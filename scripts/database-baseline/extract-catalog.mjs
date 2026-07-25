@@ -197,6 +197,37 @@ async function defaultRunChild(invocation, { timeoutMs = 60_000 } = {}) {
   });
 }
 
+function childOutputText(value, label) {
+  if (Buffer.isBuffer(value)) {
+    if (value.length > OUTPUT_LIMIT) throw new Error('catalog extractor output exceeded limit');
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(value); }
+    catch (error) { throw new Error(`${label} must be valid UTF-8`, { cause: error }); }
+  }
+  if (typeof value !== 'string' || Buffer.byteLength(value) > OUTPUT_LIMIT) {
+    throw new Error('catalog extractor output exceeded limit');
+  }
+  return value;
+}
+
+export function parseCatalogChildResult(result) {
+  if (!result || result.code !== 0 || result.signal !== null) throw new Error('catalog psql child failed');
+  const stdout = childOutputText(result.stdout, 'catalog stdout');
+  const stderr = childOutputText(result.stderr, 'catalog stderr');
+  if (stderr.length !== 0) throw new Error('catalog psql emitted unexpected stderr');
+  if (!stdout.endsWith('\n') || stdout.endsWith('\n\n')) throw new Error('catalog must end with exactly one terminal LF');
+  const document = stdout.slice(0, -1);
+  if (!document.startsWith('{') || !document.endsWith('}')) throw new Error('catalog must contain exactly one JSON document');
+  let parsed;
+  try {
+    assertNoDuplicateJsonKeys(document);
+    parsed = JSON.parse(document);
+  } catch (error) {
+    if (/duplicate JSON key/iu.test(error.message)) throw error;
+    throw new Error('catalog must contain exactly one JSON document');
+  }
+  return validateRawCatalog(parsed);
+}
+
 export async function extractCatalog({
   psqlPath = FIXED_PSQL,
   sqlPath = FIXED_SQL,
@@ -209,21 +240,7 @@ export async function extractCatalog({
   try {
     const invocation = buildPsqlInvocation({ psqlPath, sqlPath, home, connectionEnv });
     const result = await runChild(invocation, { timeoutMs });
-    if (!result || result.code !== 0 || result.signal !== null) throw new Error('catalog psql child failed');
-    if (typeof result.stdout !== 'string' || Buffer.byteLength(result.stdout) > OUTPUT_LIMIT) throw new Error('catalog extractor output exceeded limit');
-    if (typeof result.stderr !== 'string' || result.stderr.length !== 0) throw new Error('catalog psql emitted unexpected stderr');
-    if (!result.stdout.endsWith('\n') || result.stdout.endsWith('\n\n')) throw new Error('catalog must end with exactly one terminal LF');
-    const document = result.stdout.slice(0, -1);
-    if (!document.startsWith('{') || !document.endsWith('}')) throw new Error('catalog must contain exactly one JSON document');
-    let parsed;
-    try {
-      assertNoDuplicateJsonKeys(document);
-      parsed = JSON.parse(document);
-    } catch (error) {
-      if (/duplicate JSON key/iu.test(error.message)) throw error;
-      throw new Error('catalog must contain exactly one JSON document');
-    }
-    return validateRawCatalog(parsed);
+    return parseCatalogChildResult(result);
   } finally {
     await rm(home, { recursive: true, force: true });
   }

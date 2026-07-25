@@ -15,7 +15,7 @@
         "required": ["name", "ownerDomain"],
         "properties": {
           "name": { "type": "string", "minLength": 1 },
-          "ownerDomain": { "enum": ["application", "platform", "extension"] }
+          "ownerDomain": { "enum": ["application", "platform", "application_overlay", "extension", "excluded_environmental"] }
         }
       }
     }

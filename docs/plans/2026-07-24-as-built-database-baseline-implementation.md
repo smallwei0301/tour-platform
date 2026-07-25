@@ -267,19 +267,36 @@ git diff --cached --check
 **Objective:** 完成production capture工具，但此Task不連production。
 
 **Files:**
+- Create: `.gitattributes`（只為source-derived dry-run fixture保留協議所需的final blank framing）
 - Create: `scripts/database-baseline/capture-production-catalog.mjs`
 - Create: `scripts/database-baseline/render-baseline-from-archive.mjs`
 - Create: `scripts/database-baseline/publish-baseline.mjs`
 - Create: `scripts/database-baseline/verify-manifest.mjs`
+- Create: `scripts/database-baseline/prepare-capture-publication.mjs`
+- Create: `scripts/database-baseline/validate-normalized-catalog.mjs`
 - Create: `scripts/database-baseline/schemas/capture-manifest.schema.json`
 - Create: `scripts/database-baseline/schemas/baseline-manifest.schema.json`
+- Create: `scripts/database-baseline/schemas/baseline-ledger.schema.json`
+- Create: `apps/web/tests/integration/midao-baseline-publication.integration.test.mjs`
 - Create: `apps/web/tests/unit/midao-production-catalog-capture.test.mjs`
 - Create: `apps/web/tests/unit/midao-baseline-publisher.test.mjs`
 - Create: `apps/web/tests/unit/midao-baseline-manifest.test.mjs`
 - Create: `apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt`
 - Create: `apps/web/tests/fixtures/database-baseline/pg17-toc.txt`
 - Modify: `scripts/database-baseline/validate-ownership-boundary.mjs`
+- Modify: `scripts/database-baseline/extract-catalog.mjs`
+- Modify: `scripts/database-baseline/verify-toolchain-lock.mjs`
+- Modify: `scripts/database-baseline/schemas/toolchain-lock.schema.json`
+- Modify: `supabase/baselines/v1/toolchain-lock.json`
+- Modify: `docs/plans/2026-07-24-as-built-database-baseline-design.md`
+- Modify: `scripts/database-baseline/schemas/ownership-boundary.schema.json`
+- Modify: `scripts/database-baseline/schemas/role-map.schema.json`
+- Modify: `scripts/database-baseline/schemas/toc-ownership-map.schema.json`
 - Modify: `apps/web/tests/unit/midao-baseline-ownership.test.mjs`
+- Modify: `apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs`
+- Modify: `apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs`
+- Modify: `apps/web/tests/fixtures/database-baseline/ownership-template.json`
+- Modify: `docs/plans/2026-07-24-as-built-database-baseline-implementation.md`
 
 **RED**
 
@@ -294,14 +311,14 @@ node --test --test-concurrency=1 \
 Expected：FAIL，capture／renderer／publisher missing。Tests必須涵蓋：
 
 - dry-run stdout bounded memory pipe，禁止named secret temp file；Buffer lifecycle、max bytes、timeout、shape injection、cross-chunk redaction；fixture grammar須由pinned Supabase CLI v2.87.2 embedded `pkg/migration/scripts/dump_schema.sh`與`noExec` source產生，僅使用synthetic credential values，禁止猜測或保存production output；
-- remote strict read-only child env與locked PG17 image；
+- remote strict read-only child env與locked PG17 image；所有`docker run`固定`--pull=never`，image消失只可fail closed，不得在identity check後隱式acquire；
 - schema-only custom archive；structured TOC；
-- A/B orchestrator同一in-memory unpredictable restrict key，exact `pg_restore --restrict-key` argv；
+- A/B orchestrator同一in-memory unpredictable restrict key，exact `pg_restore --restrict-key` argv；random source回傳的任何Buffer在成功、型別或長度錯誤路徑均清零；
 - exact framing parser只移除same-key首尾`\restrict/\unrestrict`，內部SQL bytes不變；
-- 每個expected TOC ID exactly once；同一catalog object可對應多個TOC，明確允許的embedded catalog sections可無獨立TOC；`dependency-closure.json`逐entry direct/transitive closure、missing/extra/unknown/duplicate與A/B digest；
+- 每個expected TOC ID exactly once；同一catalog object可對應多個TOC，明確允許的embedded catalog sections可無獨立TOC；`dependency-closure.json`逐entry direct/transitive closure、missing/extra/unknown/duplicate與A/B digest，並由composer衍生、consumer獨立重算`tocEntrySha256`、實際destination SQL digest及aggregate render binding；
 - publisher A/B equality、handoff path/dev/inode/owner/mode recheck與symlink-swap拒絕、full output set＋ledger producer、exclusive temps、fsync/read-back；跨目錄publication採transaction-aware contract：固定13-path `payloadDigests`（排除manifest／ledger）、manifest倒數第二、ledger另含`captureManifestSha256`且最後作同`transactionId` commit marker；明確禁止manifest self-digest、ledger self-digest、missing／extra payload path；
-- publication先取得exact worktree-scoped singleton lock再recover journal；lock／journal exclusive no-follow 0600 current-owner nlink1及FD/path identity；pre-existing targets先做同目錄durable rollback copies；temp／backup／journal及各parent directory在首次mutation前fsync；journal exact `PREPARED/PROMOTING/COMMITTED/CLEANED`，每次rename/state及ledger後parent fsync；每個rename／fsync boundary crash皆idempotent recovery，只有exact ledger commit marker視為committed，否則identity-safe rollback，foreign replacement HOLD；second-target rename failure與partial cleanup保留完整error chain；
-- manifest strict schema、digests、secret/restrict-key/raw argv拒絕；transaction verifier拒絕manifest／ledger transaction不一致、13-path集合不完整、unfinished journal與identity/digest mismatch；Task 8＋後續所有consumer在讀payload前必須通過此gate；
+- publication先取得repo-common singleton lock再recover journal；lock authority為已驗證git-common directory inode的FD-backed `flock`，不建立／信任／刪除可替換lock pathname，跨worktree與lock-path replacement競爭者仍命中同directory inode；journal採exclusive no-follow 0600 current-owner nlink1 stable inode append-only checksummed records，禁止`.next` rename replacement；截斷尾record回復最後完整record，完整checksum錯誤HOLD，每次append前後核FD/path identity，foreign replacement不覆寫；publisher unit全部在disposable Git repo＋雙worktree執行，禁止讀寫真repo common state；publisher限可信任專用operator／CI UID，惡意same-UID程序明定out of scope，但意外非合作pathname occupation仍fail closed；pre-existing targets以`RENAME_NOREPLACE`直接detach至同目錄durable rollback inode，temp promotion與rollback restore同樣只用NOREPLACE，任何目的pathname占用都不得覆蓋並HOLD；temp／backup／journal及各parent directory在首次mutation前fsync；journal exact `PREPARED/PROMOTING/COMMITTED/CLEANED`，每個record／rename／fsync boundary crash皆idempotent recovery；promotion、normal read-back與COMMITTED recovery逐target綁temp/promoted inode identity再驗digest/semantic，same-content foreign inode仍HOLD；只有exact ledger commit marker加13-payload digest/semantic重驗視為committed，否則identity-safe rollback；ledger basename固定`baseline-ledger.json`並在side effect前拒絕；second-target rename failure、recovery內second crash與partial cleanup保留完整error chain；
+- manifest strict schema、digests、secret/restrict-key/raw argv拒絕；SQL statement-state scan拒絕top-level、data-modifying CTE及`EXPLAIN`包裝的COPY/INSERT/UPDATE/DELETE/MERGE，同時不誤拒GRANT UPDATE與FK ON DELETE；transaction verifier拒絕manifest／ledger transaction不一致、13-path集合不完整、unfinished journal與identity/digest mismatch；Task 8＋後續所有consumer在讀payload前必須通過此gate；
 - `validate-ownership-boundary.mjs --candidate-handoff` Task 8 caller integration須在本Task以mock handoff RED→GREEN鎖定，不得只保留`--input` CLI。
 
 **Fresh security review gate**
@@ -312,25 +329,45 @@ Expected：FAIL，capture／renderer／publisher missing。Tests必須涵蓋：
 
 ```bash
 git add -- \
+  .gitattributes \
   scripts/database-baseline/capture-production-catalog.mjs \
   scripts/database-baseline/render-baseline-from-archive.mjs \
   scripts/database-baseline/publish-baseline.mjs \
   scripts/database-baseline/verify-manifest.mjs \
+  scripts/database-baseline/prepare-capture-publication.mjs \
+  scripts/database-baseline/validate-normalized-catalog.mjs \
+  scripts/database-baseline/extract-catalog.mjs \
+  scripts/database-baseline/verify-toolchain-lock.mjs \
+  scripts/database-baseline/schemas/toolchain-lock.schema.json \
+  supabase/baselines/v1/toolchain-lock.json \
+  docs/plans/2026-07-24-as-built-database-baseline-design.md \
   scripts/database-baseline/schemas/capture-manifest.schema.json \
   scripts/database-baseline/schemas/baseline-manifest.schema.json \
+  scripts/database-baseline/schemas/baseline-ledger.schema.json \
+  scripts/database-baseline/schemas/ownership-boundary.schema.json \
+  scripts/database-baseline/schemas/role-map.schema.json \
+  scripts/database-baseline/schemas/toc-ownership-map.schema.json \
+  apps/web/tests/integration/midao-baseline-publication.integration.test.mjs \
   apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
   apps/web/tests/unit/midao-baseline-publisher.test.mjs \
   apps/web/tests/unit/midao-baseline-manifest.test.mjs \
   apps/web/tests/fixtures/database-baseline/supabase-dump-dry-run-redacted.txt \
   apps/web/tests/fixtures/database-baseline/pg17-toc.txt \
   scripts/database-baseline/validate-ownership-boundary.mjs \
-  apps/web/tests/unit/midao-baseline-ownership.test.mjs
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs \
+  apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs \
+  apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs \
+  apps/web/tests/fixtures/database-baseline/ownership-template.json \
+  docs/plans/2026-07-24-as-built-database-baseline-implementation.md
 node scripts/testing/verify-staged-check-evidence.mjs --run -- \
   .claude/hooks/run-checks.sh \
   apps/web/tests/unit/midao-production-catalog-capture.test.mjs \
   apps/web/tests/unit/midao-baseline-publisher.test.mjs \
   apps/web/tests/unit/midao-baseline-manifest.test.mjs \
-  apps/web/tests/unit/midao-baseline-ownership.test.mjs
+  apps/web/tests/unit/midao-baseline-ownership.test.mjs \
+  apps/web/tests/unit/midao-baseline-toolchain-lock.test.mjs \
+  apps/web/tests/unit/midao-catalog-extractor-contract.test.mjs \
+  apps/web/tests/integration/midao-baseline-publication.integration.test.mjs
 node scripts/testing/verify-staged-check-evidence.mjs --check-only
 git diff --cached --check
 ```

@@ -178,7 +178,9 @@ supabase/baselines/v1/
 
 `capture-manifest.json`只封存production cutoff capture／TOC／ownership／rendered SQL／security drift provenance；它不能宣告fresh terminal完成。`manifest.json`在expected-terminal發布後才建立，引用capture-manifest digest並封存兩個catalog truths、exact history與lane contract。
 
-跨`supabase/baselines/v1`與`docs/operations`的多檔發布不宣稱單一POSIX syscall可提供瞬時全域atomic snapshot。可執行契約是transaction-aware publication：每個target以同目錄exclusive temp＋fsync/read-back＋rename原子替換；`capture-manifest.json`倒數第二、ledger最後發布，兩者必須持有同一`transactionId`，ledger是唯一commit marker。
+跨`supabase/baselines/v1`與`docs/operations`的多檔發布不宣稱單一POSIX syscall可提供瞬時全域atomic snapshot。可執行契約是transaction-aware publication：每個target以同目錄exclusive temp＋fsync/read-back＋`RENAME_NOREPLACE`原子搬移；若pathname被非合作程序占用即fail closed、保留兩側inode與journal並HOLD，不得覆蓋。既有target先以同樣NOREPLACE直接detach至transaction backup，rollback亦只可NOREPLACE恢復；`capture-manifest.json`倒數第二、ledger最後發布，兩者必須持有同一`transactionId`，ledger是唯一commit marker。
+
+Publisher只在可信任的專用operator／CI effective UID下執行；repo workspace、toolchain與該UID內程序屬同一trust domain。惡意same-UID程序可ptrace、終止程序或修改可執行workspace，明定不在transaction threat model；該邊界不得用來弱化對意外競爭、合作publisher、crash、foreign pathname occupation或durable-state tamper的fail-closed要求。
 
 兩者共享的`payloadDigests`是固定13-path canonical map，只允許：`baseline.sql`、`managed-overlays.sql`、`catalog.cutoff.normalized.json`、`toc.normalized.json`、`use-list.txt`、`toc-ownership-map.json`、`dependency-closure.json`、`role-map.json`、`ownership-boundary.json`、`exclusions.json`、`platform-prerequisites.json`、`security-drift.json`、`catalog-cutoff.sha256`；明確排除`capture-manifest.json`與`docs/operations/baseline-ledger.json`，missing／extra path均FAIL。Ledger另含`captureManifestSha256`；manifest不得自含digest，ledger不得含self-digest，避免self／mutual recursion。
 

@@ -17,7 +17,7 @@
         "properties": {
           "objectKey": { "$ref": "#/$defs/key" },
           "section": { "type": "string", "minLength": 1 },
-          "ownerDomain": { "enum": ["application", "platform", "extension"] },
+          "ownerDomain": { "enum": ["application", "platform", "application_overlay", "extension", "excluded_environmental"] },
           "role": { "type": "string", "minLength": 1 },
           "dependsOn": { "type": "array", "items": { "$ref": "#/$defs/key" } },
           "rationale": { "type": "string", "minLength": 1 }

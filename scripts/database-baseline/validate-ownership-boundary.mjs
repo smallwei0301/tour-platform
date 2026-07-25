@@ -1,11 +1,18 @@
 #!/usr/bin/env node
-import { readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { lstat, open, readFile, realpath } from 'node:fs/promises';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { validateRawCatalog } from './extract-catalog.mjs';
+import { validateNormalizedCatalog } from './validate-normalized-catalog.mjs';
 
-const OWNER_DOMAINS = new Set(['application', 'platform', 'extension']);
+const OWNER_DOMAINS = new Set(['application', 'platform', 'application_overlay', 'extension', 'excluded_environmental']);
 const TOC_OPTIONAL_SECTIONS = new Set(['columns', 'rls', 'owners', 'managedSchemaInventory', 'managedSchemaOverlays']);
 const DUPLICATE_METADATA_SECTIONS = new Set(['managedSchemaInventory', 'managedSchemaOverlays']);
+
+function validateOwnershipCatalog(catalog) {
+  return Object.hasOwn(catalog ?? {}, 'normalizerVersion') ? validateNormalizedCatalog(catalog) : validateRawCatalog(catalog);
+}
 
 function keyId(key) {
   return JSON.stringify(key);
@@ -180,6 +187,7 @@ function validateToc(document, assignments) {
     const id = keyId(entry.objectKey);
     const assignment = assignments.get(id);
     if (!assignment) throw new Error(`TOC unknown object: ${id}`);
+    if (assignment.ownerDomain === 'excluded_environmental') throw new Error(`excluded environmental object cannot be selected in TOC: ${id}`);
     if (assignment.ownerDomain !== entry.ownerDomain) throw new Error(`TOC owner mismatch: ${id}`);
     mappedObjects.add(id);
   }
@@ -187,7 +195,8 @@ function validateToc(document, assignments) {
     if (!tocIds.has(tocId)) throw new Error(`expected TOC ID missing mapping: ${tocId}`);
   }
   for (const [id, assignment] of assignments) {
-    if (!TOC_OPTIONAL_SECTIONS.has(assignment.section) && !mappedObjects.has(id)) {
+    if (['application', 'application_overlay', 'extension'].includes(assignment.ownerDomain)
+      && !TOC_OPTIONAL_SECTIONS.has(assignment.section) && !mappedObjects.has(id)) {
       throw new Error(`required catalog object missing TOC mapping: ${id}`);
     }
   }
@@ -212,7 +221,9 @@ function validateExclusions(document, assignments, objects) {
     const assignment = assignments.get(id);
     const object = objects.get(id);
     if (!assignment || !object) throw new Error(`exclusion references unknown object: ${id}`);
-    if (exclusion.field === '*' && assignment.ownerDomain === 'application') throw new Error(`whole application object exclusion forbidden: ${id}`);
+    if (exclusion.field === '*' && ['application', 'application_overlay'].includes(assignment.ownerDomain)) {
+      throw new Error(`whole application object exclusion forbidden: ${id}`);
+    }
     if (exclusion.field === 'canonicalKey' || (exclusion.field !== '*' && !Object.hasOwn(object.row, exclusion.field))) {
       throw new Error(`unknown exclusion field for ${id}: ${exclusion.field}`);
     }
@@ -220,6 +231,7 @@ function validateExclusions(document, assignments, objects) {
     if (seen.has(exclusionId)) throw new Error(`duplicate exclusion: ${exclusionId}`);
     seen.add(exclusionId);
   }
+  return seen;
 }
 
 export function validateOwnershipBoundary(input) {
@@ -230,7 +242,7 @@ export function validateOwnershipBoundary(input) {
     'ownership bundle',
   );
   if (typeof input.templateOnly !== 'boolean') throw new Error('templateOnly must be boolean');
-  const catalog = validateRawCatalog(input.catalog);
+  const catalog = validateOwnershipCatalog(input.catalog);
   const objects = catalogObjects(catalog);
   const trustedPlatformIds = trustedPlatformObjects(objects);
   const roles = validateRoleMap(input.roleMap);
@@ -242,22 +254,168 @@ export function validateOwnershipBoundary(input) {
   }
   validatePlatformPrerequisites(input.platformPrerequisites, assignments, trustedPlatformIds);
   const tocCount = validateToc(input.tocOwnershipMap, assignments);
-  validateExclusions(input.exclusions, assignments, objects);
+  const approvedExclusions = validateExclusions(input.exclusions, assignments, objects);
 
-  const managedKeys = new Set(catalog.sections.managedSchemaInventory.map((entry) => keyId(entry.objectKey)));
+  const managedKeys = new Set(input.catalog.sections.managedSchemaInventory.map((entry) => keyId(entry.objectKey)));
   for (const id of managedKeys) {
     if (!objects.has(id)) throw new Error(`managed inventory references unknown object: ${id}`);
   }
+  for (const [id, assignment] of assignments) {
+    if (assignment.ownerDomain === 'application_overlay' && !managedKeys.has(id)) {
+      throw new Error(`application overlay must be listed in managed inventory: ${id}`);
+    }
+    if (assignment.ownerDomain === 'excluded_environmental' && !approvedExclusions.has(`${id}\u0000*`)) {
+      throw new Error(`excluded environmental object requires approved whole-object exclusion: ${id}`);
+    }
+  }
   const applicationOverlayKeys = [...assignments]
-    .filter(([id, assignment]) => assignment.ownerDomain === 'application' && managedKeys.has(id) && !trustedPlatformIds.has(id))
+    .filter(([, assignment]) => assignment.ownerDomain === 'application_overlay')
     .map(([, assignment]) => assignment.objectKey);
   return Object.freeze({ catalogObjectCount: objects.size, tocCount, applicationOverlayKeys });
 }
 
+const HANDOFF_MAX_BYTES = 16 * 1024;
+const OWNERSHIP_INPUT_MAX_BYTES = 16 * 1024 * 1024;
+const OWNERSHIP_INPUT_NAME = 'ownership-validation-input.json';
+
+function sameIdentity(left, right) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function fileMode(stat) {
+  return Number(stat.mode & 0o7777n);
+}
+
+function assertSecureStat(stat, { directory, mode, label }) {
+  const expectedUid = BigInt(process.geteuid());
+  if ((directory ? !stat.isDirectory() : !stat.isFile()) || stat.uid !== expectedUid || fileMode(stat) !== mode
+    || (!directory && stat.nlink !== 1n)) throw new Error(`${label} identity or permissions invalid`);
+}
+
+function parseCanonicalJson(bytes, maxBytes, label) {
+  if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > maxBytes || bytes.includes(0) || bytes.includes(13)) {
+    throw new Error(`${label} bytes invalid`);
+  }
+  let text;
+  try {
+    text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch (error) {
+    throw new Error(`${label} UTF-8 invalid`, { cause: error });
+  }
+  if (!text.endsWith('\n')) throw new Error(`${label} canonical framing invalid`);
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error(`${label} JSON invalid`, { cause: error });
+  }
+  if (`${JSON.stringify(parsed)}\n` !== text) throw new Error(`${label} must be canonical JSON`);
+  return parsed;
+}
+
+async function closeHandles(handles) {
+  await Promise.allSettled(handles.filter(Boolean).map((handle) => handle.close()));
+}
+
+export function parseValidatorCli(args) {
+  if (!Array.isArray(args) || args.length !== 2 || !['--input', '--candidate-handoff'].includes(args[0])
+    || typeof args[1] !== 'string' || args[1].length === 0 || args[1].includes('\0')) {
+    throw new Error('Usage: validate-ownership-boundary.mjs (--input <bundle.json> | --candidate-handoff <handoff.json>)');
+  }
+  return Object.freeze({ mode: args[0] === '--input' ? 'input' : 'candidate-handoff', path: args[1] });
+}
+
+export async function inspectCandidateHandoff(handoffPath, { candidateRoot = path.resolve('.hermes/tmp') } = {}) {
+  if (typeof handoffPath !== 'string' || handoffPath.includes('\0') || typeof candidateRoot !== 'string') {
+    throw new Error('candidate handoff path invalid');
+  }
+  const rootPath = path.resolve(candidateRoot);
+  const resolvedHandoff = path.resolve(handoffPath);
+  if (path.dirname(resolvedHandoff) !== rootPath || path.basename(resolvedHandoff) !== resolvedHandoff.slice(rootPath.length + 1)) {
+    throw new Error('candidate handoff must be a direct child of candidate root');
+  }
+  let rootHandle;
+  let handoffHandle;
+  let candidateHandle;
+  let inputHandle;
+  try {
+    if (await realpath(rootPath) !== rootPath) throw new Error('candidate root symlink refused');
+    rootHandle = await open(rootPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const rootFdStat = await rootHandle.stat({ bigint: true });
+    const rootPathStat = await lstat(rootPath, { bigint: true });
+    assertSecureStat(rootFdStat, { directory: true, mode: 0o700, label: 'candidate root' });
+    if (!sameIdentity(rootFdStat, rootPathStat)) throw new Error('candidate root identity changed');
+
+    const handoffFdPath = `/proc/self/fd/${rootHandle.fd}/${path.basename(resolvedHandoff)}`;
+    handoffHandle = await open(handoffFdPath, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const handoffFdStat = await handoffHandle.stat({ bigint: true });
+    const handoffPathStat = await lstat(resolvedHandoff, { bigint: true });
+    assertSecureStat(handoffFdStat, { directory: false, mode: 0o600, label: 'candidate handoff' });
+    if (!sameIdentity(handoffFdStat, handoffPathStat) || handoffFdStat.size > BigInt(HANDOFF_MAX_BYTES)) {
+      throw new Error('candidate handoff identity or size invalid');
+    }
+    const handoff = parseCanonicalJson(await handoffHandle.readFile(), HANDOFF_MAX_BYTES, 'candidate handoff');
+    exactKeys(handoff, ['schemaVersion', 'candidatePath', 'candidateIdentity'], ['schemaVersion', 'candidatePath', 'candidateIdentity'], 'candidate handoff');
+    if (handoff.schemaVersion !== 1 || typeof handoff.candidatePath !== 'string') throw new Error('candidate handoff schema invalid');
+    exactKeys(handoff.candidateIdentity, ['dev', 'ino', 'uid', 'mode'], ['dev', 'ino', 'uid', 'mode'], 'candidate identity');
+    const identity = handoff.candidateIdentity;
+    if (!/^(?:0|[1-9][0-9]*)$/u.test(identity.dev) || !/^(?:0|[1-9][0-9]*)$/u.test(identity.ino)
+      || identity.uid !== process.geteuid() || identity.mode !== '0700') throw new Error('candidate identity schema invalid');
+
+    const candidatePath = path.resolve(handoff.candidatePath);
+    if (path.dirname(candidatePath) !== rootPath || !/^candidate-[A-Za-z0-9_-]+$/u.test(path.basename(candidatePath))) {
+      throw new Error('candidate path outside root or malformed');
+    }
+    candidateHandle = await open(`/proc/self/fd/${rootHandle.fd}/${path.basename(candidatePath)}`, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const candidateFdStat = await candidateHandle.stat({ bigint: true });
+    const candidatePathStat = await lstat(candidatePath, { bigint: true });
+    assertSecureStat(candidateFdStat, { directory: true, mode: 0o700, label: 'candidate directory' });
+    if (!sameIdentity(candidateFdStat, candidatePathStat) || String(candidateFdStat.dev) !== identity.dev
+      || String(candidateFdStat.ino) !== identity.ino || Number(candidateFdStat.uid) !== identity.uid) {
+      throw new Error('candidate directory identity or inode mismatch');
+    }
+
+    const inputPath = path.join(candidatePath, OWNERSHIP_INPUT_NAME);
+    inputHandle = await open(`/proc/self/fd/${candidateHandle.fd}/${OWNERSHIP_INPUT_NAME}`, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const inputFdStat = await inputHandle.stat({ bigint: true });
+    const inputPathStat = await lstat(inputPath, { bigint: true });
+    assertSecureStat(inputFdStat, { directory: false, mode: 0o600, label: 'ownership input' });
+    if (!sameIdentity(inputFdStat, inputPathStat) || inputFdStat.size > BigInt(OWNERSHIP_INPUT_MAX_BYTES)) {
+      throw new Error('ownership input identity or size invalid');
+    }
+    const input = parseCanonicalJson(await inputHandle.readFile(), OWNERSHIP_INPUT_MAX_BYTES, 'ownership input');
+
+    const [rootAfter, candidateAfter, inputAfter] = await Promise.all([
+      lstat(rootPath, { bigint: true }), lstat(candidatePath, { bigint: true }), lstat(inputPath, { bigint: true }),
+    ]);
+    if (!sameIdentity(rootFdStat, rootAfter) || !sameIdentity(candidateFdStat, candidateAfter) || !sameIdentity(inputFdStat, inputAfter)) {
+      throw new Error('candidate path identity changed during read');
+    }
+    return Object.freeze({
+      rootPath,
+      rootIdentity: Object.freeze({ dev: String(rootFdStat.dev), ino: String(rootFdStat.ino) }),
+      handoffPath: resolvedHandoff,
+      handoffIdentity: Object.freeze({ dev: String(handoffFdStat.dev), ino: String(handoffFdStat.ino) }),
+      candidatePath,
+      candidateIdentity: Object.freeze({ dev: identity.dev, ino: identity.ino, uid: identity.uid, mode: identity.mode }),
+      input,
+    });
+  } catch (error) {
+    throw new Error('candidate handoff rejected', { cause: error });
+  } finally {
+    await closeHandles([inputHandle, candidateHandle, handoffHandle, rootHandle]);
+  }
+}
+
+export async function loadCandidateHandoff(handoffPath, options) {
+  return (await inspectCandidateHandoff(handoffPath, options)).input;
+}
+
 async function main() {
-  const args = process.argv.slice(2);
-  if (args.length !== 2 || args[0] !== '--input') throw new Error('Usage: validate-ownership-boundary.mjs --input <bundle.json>');
-  const input = JSON.parse(await readFile(args[1], 'utf8'));
+  const cli = parseValidatorCli(process.argv.slice(2));
+  const input = cli.mode === 'input'
+    ? JSON.parse(await readFile(cli.path, 'utf8'))
+    : await loadCandidateHandoff(cli.path);
   process.stdout.write(`${JSON.stringify(validateOwnershipBoundary(input))}\n`);
 }
 

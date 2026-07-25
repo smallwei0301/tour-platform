@@ -1,0 +1,11 @@
+;
+; Archive created at 2026-07-25 00:00:00 UTC
+;     dbname: synthetic
+;     TOC Entries: 6
+;
+10; 2615 2200 SCHEMA - public postgres
+11; 1259 100 TABLE public widgets postgres
+12; 2606 101 CONSTRAINT public widgets widgets_pkey postgres
+13; 2620 102 TRIGGER public widgets widgets_touch postgres
+14; 3256 103 POLICY public widgets widgets_select postgres
+15; 0 0 ACL public TABLE widgets postgres

@@ -144,6 +144,20 @@
     "image": "postgres@sha256:0027bef26712baaee437a4ea48fdf3d2d2e2bc5f0d81615374408ca320f3c7e3",
     "majorVersion": 17
   },
+  "renameNoReplace": {
+    "architecture": "amd64",
+    "flag": 1,
+    "gid": 0,
+    "mode": "0755",
+    "nlink": 2,
+    "path": "/usr/bin/perl",
+    "platform": "linux",
+    "realpath": "/usr/bin/perl",
+    "sha256": "f01fa7776dc21c9e4b5f60b2d231ca4d96dab958b8d06aff611cb1c16f871574",
+    "syscall": 316,
+    "uid": 0,
+    "version": "v5.36.0"
+  },
   "requestSha256": "9dcadfa1b37b3598bec4fc615b39ad2da4d065a5bb061d7c6599d30f21d33674",
   "schemaVersion": 1
 }

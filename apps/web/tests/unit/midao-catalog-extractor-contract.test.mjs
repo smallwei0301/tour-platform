@@ -135,8 +135,12 @@ test('fixed SQL starts and reads back read-only mode and covers the full pg_cata
 });
 
 test('extractor accepts one JSON document, bounds output, and always removes runner HOME', async () => {
-  const { extractCatalog } = await moduleUnderTest();
+  const { extractCatalog, parseCatalogChildResult } = await moduleUnderTest();
   const text = await readFile(fixturePath, 'utf8');
+  const parsedFromContainer = parseCatalogChildResult({
+    code: 0, signal: null, stdout: Buffer.from(`${text.trim()}\n`), stderr: Buffer.alloc(0),
+  });
+  assert.deepEqual(parsedFromContainer.sections.schemas[0].canonicalKey, ['schema', 'public']);
   let captured;
   let home;
   const result = await extractCatalog({

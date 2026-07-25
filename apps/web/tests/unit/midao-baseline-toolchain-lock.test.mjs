@@ -13,6 +13,11 @@ const verifierPath = path.join(root, 'scripts/database-baseline/verify-toolchain
 const cliPath = '/root/.hermes/toolchains/supabase/2.87.2/supabase';
 const dockerPath = '/usr/bin/docker';
 const expectedCliSha = 'e325dd50b274e88fd1416f93b9e063902827ae326d356ab7f9dc604c3eba5c59';
+const expectedRenameRuntime = {
+  path: '/usr/bin/perl', realpath: '/usr/bin/perl', version: 'v5.36.0',
+  sha256: 'f01fa7776dc21c9e4b5f60b2d231ca4d96dab958b8d06aff611cb1c16f871574',
+  uid: 0, gid: 0, mode: '0755', nlink: 2, platform: 'linux', architecture: 'amd64', syscall: 316, flag: 1,
+};
 const digestA = `sha256:${'a'.repeat(64)}`;
 const digestB = `sha256:${'b'.repeat(64)}`;
 
@@ -49,6 +54,13 @@ test('fixed CLI identity is exact absolute realpath/version/SHA/uid/gid/mode/nli
   const identity = await verifyCliIdentity(cliPath);
   assert.deepEqual(identity, { path: cliPath, realpath: cliPath, version: '2.87.2', sha256: expectedCliSha, uid: 0, gid: 0, mode: '0755', nlink: 1 });
   await assert.rejects(() => verifyCliIdentity('/bin/true'), /CLI path substitution/);
+});
+
+test('locked rename noreplace runtime has exact binary identity and syscall contract', async () => {
+  const [, , { verifyRenameNoReplaceRuntime }] = await modules();
+  assert.deepEqual(await verifyRenameNoReplaceRuntime(expectedRenameRuntime), expectedRenameRuntime);
+  await assert.rejects(() => verifyRenameNoReplaceRuntime({ ...expectedRenameRuntime, sha256: '0'.repeat(64) }), /digest mismatch/iu);
+  await assert.rejects(() => verifyRenameNoReplaceRuntime({ ...expectedRenameRuntime, syscall: 315 }), /contract invalid/iu);
 });
 
 test('embedded CLI contract and config select every enabled local service image and exclude analytics/pooler', async () => {
@@ -231,6 +243,7 @@ test('PG17 image verification locks absolute binaries and cleans every owned pro
   });
   assert.deepEqual(Object.keys(versions), ['psql', 'pg_dump', 'pg_restore']);
   assert.deepEqual(calls.map((args) => args.at(-2)), ['/usr/bin/psql', '/usr/bin/pg_dump', '/usr/bin/pg_restore']);
+  assert.equal(calls.every((args) => args.filter((value) => value === '--pull=never').length === 1), true);
   assert.deepEqual(calls.map((args) => args[args.indexOf('--name') + 1]), ['midao-pg-probe-1', 'midao-pg-probe-2', 'midao-pg-probe-3']);
   assert.deepEqual(cleaned, ['midao-pg-probe-1', 'midao-pg-probe-2', 'midao-pg-probe-3']);
   await assert.rejects(() => verifyPg17Binaries(`postgres@${digestA}`, {
@@ -241,13 +254,52 @@ test('PG17 image verification locks absolute binaries and cleans every owned pro
   assert.equal(cleaned.at(-1), 'midao-pg-probe-invalid');
 });
 
+test('capture runtime re-verifies local PG17 image identity and exact binary versions without a pull path', async () => {
+  const [, , { verifyLockedPg17Runtime }] = await modules();
+  const image = {
+    role: 'pg17-client', repository: 'postgres', tag: '17', repoDigest: `postgres@${digestA}`,
+    imageId: `sha256:${'c'.repeat(64)}`, platform: 'linux/amd64', architecture: 'amd64',
+  };
+  const binaries = {
+    psql: { path: '/usr/bin/psql', version: 'psql (PostgreSQL) 17.6' },
+    pg_dump: { path: '/usr/bin/pg_dump', version: 'pg_dump (PostgreSQL) 17.6' },
+    pg_restore: { path: '/usr/bin/pg_restore', version: 'pg_restore (PostgreSQL) 17.6' },
+  };
+  const lock = {
+    schemaVersion: 1, architecture: 'amd64', images: [image],
+    docker: { path: dockerPath }, renameNoReplace: expectedRenameRuntime,
+    pg17: { image: image.repoDigest, majorVersion: 17, binaries },
+  };
+  const calls = [];
+  const dependencies = {
+    verifyRenameRuntime: async (value) => { calls.push(['rename', value.path]); return value; },
+    verifyDocker: async (value) => { calls.push(['docker', value]); return { architecture: 'amd64' }; },
+    inspectImage: async (value) => {
+      calls.push(['inspect', value]);
+      return JSON.stringify([{ Id: image.imageId, Architecture: 'amd64', RepoDigests: [image.repoDigest] }]);
+    },
+    verifyBinaries: async (value) => { calls.push(['binaries', value]); return structuredClone(binaries); },
+  };
+  await verifyLockedPg17Runtime(lock, dependencies);
+  assert.deepEqual(calls, [['rename', '/usr/bin/perl'], ['docker', dockerPath], ['inspect', image.repoDigest], ['binaries', image.repoDigest]]);
+
+  await assert.rejects(
+    () => verifyLockedPg17Runtime(lock, { ...dependencies, inspectImage: async () => JSON.stringify([{ Id: `sha256:${'d'.repeat(64)}`, Architecture: 'amd64', RepoDigests: [image.repoDigest] }]) }),
+    /image ID mismatch/iu,
+  );
+  await assert.rejects(
+    () => verifyLockedPg17Runtime(lock, { ...dependencies, verifyBinaries: async () => ({ ...binaries, pg_restore: { ...binaries.pg_restore, version: 'pg_restore (PostgreSQL) 17.7' } }) }),
+    /pg_restore runtime mismatch/iu,
+  );
+});
+
 test('lock generation rejects image ID/repo digest/architecture/tag substitutions', async () => {
   const [, , { buildToolchainLock }] = await modules();
   const image = fakeImage('repo/name', 'v1', digestA);
   const request = fakeRequest([image]);
   const preflight = async () => ({ cli: request.cli, docker: request.docker });
   const good = async () => JSON.stringify([{ Id: image.localImageId, Architecture: 'amd64', RepoDigests: [image.repoDigest] }]);
-  const lock = await buildToolchainLock(request, { preflight, inspectImage: good, pgVersions: { psql: { path: '/usr/bin/psql', version: 'psql (PostgreSQL) 17.6' }, pg_dump: { path: '/usr/bin/pg_dump', version: 'pg_dump (PostgreSQL) 17.6' }, pg_restore: { path: '/usr/bin/pg_restore', version: 'pg_restore (PostgreSQL) 17.6' } } });
+  const lock = await buildToolchainLock(request, { preflight, inspectImage: good, renameRuntime: async () => expectedRenameRuntime, pgVersions: { psql: { path: '/usr/bin/psql', version: 'psql (PostgreSQL) 17.6' }, pg_dump: { path: '/usr/bin/pg_dump', version: 'pg_dump (PostgreSQL) 17.6' }, pg_restore: { path: '/usr/bin/pg_restore', version: 'pg_restore (PostgreSQL) 17.6' } } });
   assert.equal(lock.images[0].repoDigest, image.repoDigest);
   await assert.rejects(() => buildToolchainLock(request, { preflight, inspectImage: async () => JSON.stringify([{ Id: `sha256:${'d'.repeat(64)}`, Architecture: 'arm64', RepoDigests: ['repo/name@' + digestB] }]), pgVersions: lock.pg17.binaries }), /mismatch/);
 });
