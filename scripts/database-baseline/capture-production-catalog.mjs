@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { createHash, randomBytes as cryptoRandomBytes } from 'node:crypto';
-import { constants } from 'node:fs';
+import { constants, mkdirSync } from 'node:fs';
 import { chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rmdir, rm, unlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -144,7 +144,31 @@ export async function verifyLinkedProjectRef(projectRef) {
   }
 }
 
-export function buildDryRunInvocation({ projectRef, home, cliPath = FIXED_SUPABASE_CLI, workdir = FIXED_PROJECT_ROOT }) {
+const FIXED_ACCESS_TOKEN = '/root/.supabase/access-token';
+
+export function loadSupabaseDbPassword(env = process.env) {
+  const value = env?.SUPABASE_DB_PASSWORD;
+  if (value === undefined) return null;
+  if (typeof value !== 'string' || value === '' || Buffer.byteLength(value, 'utf8') > 1024 || /[\0\r\n]/u.test(value)) {
+    throw new Error('Supabase DB password environment invalid');
+  }
+  return Buffer.from(value);
+}
+
+export async function loadSupabaseAccessToken(tokenPath = FIXED_ACCESS_TOKEN) {
+  if (path.resolve(tokenPath) !== FIXED_ACCESS_TOKEN) throw new Error('Supabase access token path substitution refused');
+  const bytes = await readIdentityBoundFile(tokenPath, {
+    expectedPath: FIXED_ACCESS_TOKEN, maxBytes: 128, label: 'Supabase access token', allowedModes: [0o600],
+  });
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  if (!/^sbp_(?:oauth_)?[a-f0-9]{40}$/u.test(text)) {
+    bytes.fill(0);
+    throw new Error('Supabase access token format invalid');
+  }
+  return bytes;
+}
+
+export function buildDryRunInvocation({ projectRef, home, accessToken = null, dbPassword = null, cliPath = FIXED_SUPABASE_CLI, workdir = FIXED_PROJECT_ROOT }) {
   if (typeof projectRef !== 'string' || !/^[a-z]{20}$/u.test(projectRef)) throw new Error('project ref invalid');
   assertAbsoluteOwnedHome(home);
   const privatePrefix = `${home}${path.sep}`;
@@ -153,10 +177,22 @@ export function buildDryRunInvocation({ projectRef, home, cliPath = FIXED_SUPABA
     || (workdir !== FIXED_PROJECT_ROOT && !workdir.startsWith(privatePrefix))) {
     throw new Error('dry-run runtime path invalid');
   }
+  const tokenPresent = accessToken !== null;
+  const passwordPresent = dbPassword !== null;
+  if (tokenPresent === passwordPresent) throw new Error('exactly one Supabase dry-run credential required');
+  const tokenValid = Buffer.isBuffer(accessToken) && /^sbp_(?:oauth_)?[a-f0-9]{40}$/u.test(accessToken.toString('utf8'));
+  const passwordValid = Buffer.isBuffer(dbPassword) && dbPassword.length > 0 && dbPassword.length <= 1024
+    && !dbPassword.includes(0) && !dbPassword.includes(10) && !dbPassword.includes(13);
+  if ((tokenPresent && !tokenValid) || (passwordPresent && !passwordValid)) {
+    throw new Error('Supabase dry-run credential invalid');
+  }
+  const credentialEnv = passwordValid
+    ? { SUPABASE_DB_PASSWORD: dbPassword.toString('utf8') }
+    : { SUPABASE_ACCESS_TOKEN: accessToken.toString('utf8') };
   return Object.freeze({
     executable: cliPath,
     args: Object.freeze(['db', 'dump', '--linked', '--dry-run', '--workdir', workdir]),
-    env: Object.freeze({ HOME: home, LANG: 'C', LC_ALL: 'C' }),
+    env: Object.freeze({ HOME: home, LANG: 'C', LC_ALL: 'C', ...credentialEnv }),
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
@@ -165,9 +201,14 @@ export function buildDryRunInvocation({ projectRef, home, cliPath = FIXED_SUPABA
 }
 
 const LINKED_METADATA_FILES = Object.freeze([
-  'cli-latest', 'gotrue-version', 'linked-project.json', 'pooler-url', 'postgres-version',
+  'gotrue-version', 'linked-project.json', 'pooler-url', 'postgres-version',
   'project-ref', 'rest-version', 'storage-migration', 'storage-version',
 ]);
+
+export function pinnedCliLatestBytes(lock) {
+  if (lock?.cli?.version !== '2.87.2') throw new Error('locked Supabase CLI version mismatch');
+  return Buffer.from(`v${lock.cli.version}`);
+}
 
 async function writeAll(handle, bytes) {
   let offset = 0;
@@ -180,16 +221,28 @@ async function writeAll(handle, bytes) {
 
 async function writePrivateFile(filePath, bytes, mode) {
   let handle;
+  let readback;
   try {
-    handle = await open(filePath, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, mode);
+    handle = await open(filePath, constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, mode);
     await writeAll(handle, bytes);
     await handle.sync();
     const stat = await handle.stat({ bigint: true });
+    const pathStat = await lstat(filePath, { bigint: true });
     if (!stat.isFile() || stat.uid !== BigInt(process.geteuid()) || stat.nlink !== 1n
-      || Number(stat.mode & 0o7777n) !== mode || stat.size !== BigInt(bytes.length)) {
+      || Number(stat.mode & 0o7777n) !== mode || stat.size !== BigInt(bytes.length)
+      || !matchesIdentity(pathStat, fsIdentity(stat))) {
       throw new Error('private runtime file identity invalid');
     }
+    readback = Buffer.alloc(bytes.length);
+    let offset = 0;
+    while (offset < readback.length) {
+      const { bytesRead } = await handle.read(readback, offset, readback.length - offset, offset);
+      if (bytesRead < 1) throw new Error('private runtime file read-back short');
+      offset += bytesRead;
+    }
+    if (!readback.equals(bytes)) throw new Error('private runtime file read-back mismatch');
   } finally {
+    readback?.fill(0);
     await handle?.close();
   }
 }
@@ -254,6 +307,10 @@ export async function preparePinnedCaptureRuntime({ lock, projectRef, home }) {
   });
   try { await writePrivateFile(path.join(supabaseDir, 'config.toml'), config, 0o600); }
   finally { config.fill(0); }
+
+  const cliLatest = pinnedCliLatestBytes(lock);
+  try { await writePrivateFile(path.join(tempDir, 'cli-latest'), cliLatest, 0o600); }
+  finally { cliLatest.fill(0); }
 
   for (const name of LINKED_METADATA_FILES) {
     const sourcePath = path.join(FIXED_PROJECT_ROOT, 'supabase/.temp', name);
@@ -526,9 +583,9 @@ async function legacyBindMountRenderAdapter({ toolchain, archivePaths, scratchDi
         home,
         restrictKey,
       });
-      output = assertSuccessfulChild(await runChild(
-        invocation, { maxBytes: 64 * 1024 * 1024, timeoutMs: CHILD_TIMEOUT_MS },
-      ), `${destination} render`);
+      output = await runSuccessfulChild(runChild, invocation,
+        { maxBytes: 64 * 1024 * 1024, timeoutMs: CHILD_TIMEOUT_MS },
+        `${destination} render`);
       const postStagedArchive = await lstat(archive.stagedPath, { bigint: true });
       const postUseList = await lstat(usePath, { bigint: true });
       if (!matchesIdentity(postStagedArchive, archive.stagedIdentity) || !matchesIdentity(postUseList, useIdentity)) {
@@ -683,7 +740,9 @@ export async function createLockedRenderAdapter({ toolchain, archivePaths, home,
     try {
       archiveBytes = await readPinnedFile(entry, `archive ${archiveIndex}`);
       const invocation = buildPg17RenderInvocation({ toolchain, useList, home, restrictKey });
-      output = assertSuccessfulChild(await runChild(invocation, { stdinBuffer: archiveBytes, maxBytes: MAX_ARCHIVE_BYTES, timeoutMs: CHILD_TIMEOUT_MS }), `${destination} render`);
+      output = await runSuccessfulChild(runChild, invocation,
+        { stdinBuffer: archiveBytes, maxBytes: MAX_ARCHIVE_BYTES, timeoutMs: CHILD_TIMEOUT_MS },
+        `${destination} render`);
       await verifyPinnedFile(entry, `archive ${archiveIndex}`);
       return output;
     } catch (error) {
@@ -724,6 +783,72 @@ function fsIdentity(stat) {
 
 function matchesIdentity(stat, expected) {
   return String(stat.dev) === expected?.dev && String(stat.ino) === expected?.ino;
+}
+
+export async function ensureCandidateRoot(candidateRoot) {
+  if (typeof candidateRoot !== 'string' || candidateRoot.includes('\0')) throw new Error('candidate root invalid');
+  const rootPath = path.resolve(candidateRoot);
+  const parentPath = path.dirname(rootPath);
+  if (path.basename(parentPath) !== '.hermes' || path.basename(rootPath) !== 'tmp') throw new Error('candidate root namespace invalid');
+  let parentHandle;
+  let rootHandle;
+  let parentCreated = false;
+  let rootCreated = false;
+  let parentIdentity;
+  let rootIdentity;
+  try {
+    const parentUmask = process.umask(0o077);
+    try {
+      try { mkdirSync(parentPath, { mode: 0o700 }); parentCreated = true; }
+      catch (error) { if (error?.code !== 'EEXIST') throw error; }
+    } finally {
+      process.umask(parentUmask);
+    }
+    parentHandle = await open(parentPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const parentFdStat = await parentHandle.stat({ bigint: true });
+    parentIdentity = fsIdentity(parentFdStat);
+    const parentPathStat = await lstat(parentPath, { bigint: true });
+    if (!parentFdStat.isDirectory() || parentFdStat.uid !== BigInt(process.geteuid())
+      || Number(parentFdStat.mode & 0o7777n) !== 0o700 || !matchesIdentity(parentPathStat, parentIdentity)) {
+      throw new Error('candidate root parent identity or mode invalid');
+    }
+    const rootUmask = process.umask(0o077);
+    try {
+      try { mkdirSync(`/proc/self/fd/${parentHandle.fd}/${path.basename(rootPath)}`, { mode: 0o700 }); rootCreated = true; }
+      catch (error) { if (error?.code !== 'EEXIST') throw error; }
+    } finally {
+      process.umask(rootUmask);
+    }
+    if (rootCreated) await parentHandle.sync();
+    rootHandle = await open(rootPath, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW);
+    const rootFdStat = await rootHandle.stat({ bigint: true });
+    const rootPathStat = await lstat(rootPath, { bigint: true });
+    if (!rootFdStat.isDirectory() || rootFdStat.uid !== BigInt(process.geteuid())
+      || Number(rootFdStat.mode & 0o7777n) !== 0o700 || !matchesIdentity(rootPathStat, fsIdentity(rootFdStat))) {
+      throw new Error('candidate root identity or mode invalid');
+    }
+    rootIdentity = fsIdentity(rootFdStat);
+    return Object.freeze({ path: rootPath, identity: Object.freeze({ ...rootIdentity }) });
+  } catch (error) {
+    if (rootHandle) await rootHandle.close().catch(() => {});
+    rootHandle = null;
+    if (rootCreated && parentHandle && rootIdentity === undefined) {
+      const stat = await lstat(rootPath, { bigint: true }).catch(() => null);
+      if (stat?.isDirectory() && stat.uid === BigInt(process.geteuid())) {
+        await rmdir(`/proc/self/fd/${parentHandle.fd}/${path.basename(rootPath)}`).catch(() => {});
+      }
+    }
+    if (parentCreated && parentIdentity && parentHandle) {
+      await parentHandle.close().catch(() => {});
+      parentHandle = null;
+      const stat = await lstat(parentPath, { bigint: true }).catch(() => null);
+      if (stat && matchesIdentity(stat, parentIdentity)) await rmdir(parentPath).catch(() => {});
+    }
+    throw new Error('candidate root bootstrap failed', { cause: error });
+  } finally {
+    if (rootHandle) await rootHandle.close().catch(() => {});
+    if (parentHandle) await parentHandle.close().catch(() => {});
+  }
 }
 
 export async function initializeCandidateWorkspace({ candidateRoot, handoffPath, randomBytes = cryptoRandomBytes }) {
@@ -1011,17 +1136,42 @@ async function cleanupCandidateWorkspace(workspace) {
   }
 }
 
-function assertSuccessfulChild(result, label) {
+const SUPABASE_DRY_RUN_STDERR = Buffer.from(
+  'DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n',
+  'utf8',
+);
+
+function assertSuccessfulChild(result, label, expectedStderr = Buffer.alloc(0)) {
   if (!result || result.code !== 0 || result.signal !== null || !Buffer.isBuffer(result.stdout) || !Buffer.isBuffer(result.stderr)) {
+    result?.stdout?.fill?.(0);
+    result?.stderr?.fill?.(0);
     throw new Error(`${label} child failed`);
   }
-  if (result.stderr.length !== 0) {
+  if (!Buffer.isBuffer(expectedStderr) || !result.stderr.equals(expectedStderr)) {
     result.stdout.fill(0);
     result.stderr.fill(0);
-    throw new Error(`${label} child emitted stderr`);
+    throw new Error(`${label} child emitted unexpected stderr`);
   }
   result.stderr.fill(0);
   return result.stdout;
+}
+
+export async function runSuccessfulChild(runChild, invocation, options, label, expectedStderr = Buffer.alloc(0)) {
+  try {
+    return assertSuccessfulChild(await runChild(invocation, options), label, expectedStderr);
+  } catch (error) {
+    const fixedReasons = new Map([
+      [`${label} child emitted unexpected stderr`, 'emitted unexpected stderr'],
+      [`${label} child failed`, 'returned an invalid result'],
+      ['bounded child exited unsuccessfully', 'exited unsuccessfully'],
+      ['bounded child timeout', 'timed out'],
+      ['bounded child output limit exceeded', 'exceeded output limit'],
+      ['bounded child stdin failed', 'stdin failed'],
+      ['bounded child spawn failed', 'spawn failed'],
+    ]);
+    const reason = fixedReasons.get(error?.message);
+    throw new Error(reason ? `${label} ${reason}` : `${label} failed`);
+  }
 }
 
 export async function runProductionCaptureCandidate({
@@ -1032,15 +1182,20 @@ export async function runProductionCaptureCandidate({
   verifyProjectRef = verifyLinkedProjectRef,
   verifyRuntime = verifyLockedPg17Runtime,
   prepareRuntime = preparePinnedCaptureRuntime,
+  loadDbPassword = loadSupabaseDbPassword,
+  loadAccessToken = loadSupabaseAccessToken,
   randomBytes = cryptoRandomBytes,
   runChild = runBoundedChild,
 } = {}) {
   if (captures !== 2 || typeof verifyProjectRef !== 'function' || typeof verifyRuntime !== 'function'
-    || typeof prepareRuntime !== 'function' || typeof runChild !== 'function') {
+    || typeof prepareRuntime !== 'function' || typeof loadDbPassword !== 'function'
+    || typeof loadAccessToken !== 'function' || typeof runChild !== 'function') {
     throw new Error('capture workflow arguments invalid');
   }
   let workspace;
   let home;
+  let dbPassword;
+  let accessToken;
   let credential;
   try {
     await verifyProjectRef(projectRef);
@@ -1056,29 +1211,41 @@ export async function runProductionCaptureCandidate({
       throw new Error('private capture runtime invalid');
     }
 
-    const dryRun = assertSuccessfulChild(await runChild(
-      buildDryRunInvocation({ projectRef, home, cliPath: captureRuntime.cliPath, workdir: captureRuntime.workdir }),
-      { maxBytes: DRY_RUN_MAX_BYTES, timeoutMs: CHILD_TIMEOUT_MS },
-    ), 'Supabase dry-run');
+    dbPassword = loadDbPassword();
+    if (dbPassword !== null && !Buffer.isBuffer(dbPassword)) throw new Error('Supabase DB password loader invalid');
+    if (dbPassword === null) accessToken = await loadAccessToken();
+    let dryRun;
+    try {
+      dryRun = await runSuccessfulChild(runChild,
+        buildDryRunInvocation({ projectRef, home, accessToken, dbPassword, cliPath: captureRuntime.cliPath, workdir: captureRuntime.workdir }),
+        { maxBytes: DRY_RUN_MAX_BYTES, timeoutMs: CHILD_TIMEOUT_MS },
+        'Supabase dry-run',
+        SUPABASE_DRY_RUN_STDERR);
+    } finally {
+      dbPassword?.fill(0);
+      dbPassword = null;
+      accessToken?.fill(0);
+      accessToken = null;
+    }
     credential = parseDumpDryRunEnvelope(dryRun);
 
     const runs = [];
     for (const label of ['a', 'b']) {
       let archive;
       try {
-      archive = assertSuccessfulChild(await runChild(
+      archive = await runSuccessfulChild(runChild,
         buildPg17DumpInvocation({ toolchain, home, connectionEnv: credential }),
         { maxBytes: 64 * 1024 * 1024, timeoutMs: CHILD_TIMEOUT_MS },
-      ), `capture ${label} archive`);
+        `capture ${label} archive`);
       await writeCandidateFile(workspace, `capture-${label}.dump`, archive);
 
       const catalogSql = await readIdentityBoundFile(FIXED_SQL, { expectedPath: FIXED_SQL, maxBytes: 1024 * 1024, label: 'catalog SQL', allowedModes: [0o644] });
       let catalogBytes;
       try {
-        catalogBytes = assertSuccessfulChild(await runChild(
+        catalogBytes = await runSuccessfulChild(runChild,
           buildPg17CatalogInvocation({ toolchain, home, connectionEnv: credential }),
           { stdinBuffer: catalogSql, maxBytes: 16 * 1024 * 1024, timeoutMs: CHILD_TIMEOUT_MS },
-        ), `capture ${label} catalog`);
+          `capture ${label} catalog`);
       } finally {
         catalogSql.fill(0);
       }
@@ -1094,10 +1261,10 @@ export async function runProductionCaptureCandidate({
         rawCatalog.fill(0);
       }
 
-      const tocBytes = assertSuccessfulChild(await runChild(
+      const tocBytes = await runSuccessfulChild(runChild,
         buildPg17RestoreListInvocation({ toolchain, home }),
         { stdinBuffer: archive, maxBytes: 4 * 1024 * 1024, timeoutMs: CHILD_TIMEOUT_MS },
-      ), `capture ${label} TOC`);
+        `capture ${label} TOC`);
       const toc = parsePg17Toc(tocBytes);
       const normalizedToc = canonicalJson(toc);
       try {
@@ -1147,6 +1314,10 @@ export async function runProductionCaptureCandidate({
     if (errors.length > 1) throw new AggregateError(errors, 'capture failed and cleanup failed');
     throw error;
   } finally {
+    dbPassword?.fill(0);
+    dbPassword = null;
+    accessToken?.fill(0);
+    accessToken = null;
     credential = null;
     if (home) await rm(home, { recursive: true, force: true });
   }
@@ -1154,10 +1325,12 @@ export async function runProductionCaptureCandidate({
 
 async function main() {
   const cli = parseCaptureCli(process.argv.slice(2));
+  const candidateRoot = path.resolve(cli.candidateRoot);
+  await ensureCandidateRoot(candidateRoot);
   const result = await runProductionCaptureCandidate({
     projectRef: cli.projectRef,
     captures: cli.captures,
-    candidateRoot: path.resolve(cli.candidateRoot),
+    candidateRoot,
     handoffPath: path.resolve(cli.handoffPath),
   });
   process.stdout.write(`${JSON.stringify(result)}\n`);

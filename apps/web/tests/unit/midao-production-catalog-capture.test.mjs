@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -76,17 +76,33 @@ test('dry-run parser fails closed on framing and shape injection and still wipes
 
 test('capture child invocations and environment are exact and ignore ambient secrets', async () => {
   const {
-    buildDryRunInvocation, buildStrictPgEnvironment, validateLockedPg17, verifyLinkedProjectRef,
+    buildDryRunInvocation, buildStrictPgEnvironment, loadSupabaseDbPassword, validateLockedPg17, verifyLinkedProjectRef,
     FIXED_PROJECT_ROOT, FIXED_SUPABASE_CLI,
   } = await subject();
-  const invocation = buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home' });
+  const syntheticAccessToken = Buffer.from(`sbp_${'a'.repeat(40)}`);
+  const invocation = buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', accessToken: syntheticAccessToken });
   assert.equal(FIXED_SUPABASE_CLI, '/root/.hermes/toolchains/supabase/2.87.2/supabase');
   assert.deepEqual(invocation, {
     executable: FIXED_SUPABASE_CLI,
     args: ['db', 'dump', '--linked', '--dry-run', '--workdir', FIXED_PROJECT_ROOT],
-    env: { HOME: '/owned/empty-home', LANG: 'C', LC_ALL: 'C' },
+    env: { HOME: '/owned/empty-home', LANG: 'C', LC_ALL: 'C', SUPABASE_ACCESS_TOKEN: syntheticAccessToken.toString('utf8') },
     stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', projectRef: 'abcdefghijklmnopqrst',
   });
+  assert.doesNotMatch(JSON.stringify(invocation.args), /sbp_/u);
+  assert.throws(() => buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', accessToken: Buffer.from('invalid') }), /credential invalid/iu);
+  const syntheticPassword = loadSupabaseDbPassword({ SUPABASE_DB_PASSWORD: 'synthetic-db-password' });
+  const passwordInvocation = buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', dbPassword: syntheticPassword });
+  assert.equal(passwordInvocation.env.SUPABASE_DB_PASSWORD, 'synthetic-db-password');
+  assert.equal('SUPABASE_ACCESS_TOKEN' in passwordInvocation.env, false);
+  assert.doesNotMatch(JSON.stringify(passwordInvocation.args), /synthetic-db-password/u);
+  assert.equal(loadSupabaseDbPassword({}), null);
+  for (const invalid of ['', 'bad\0value', 'bad\rvalue', 'bad\nvalue', '界'.repeat(342)]) {
+    assert.throws(() => loadSupabaseDbPassword({ SUPABASE_DB_PASSWORD: invalid }), /environment invalid/iu);
+  }
+  assert.throws(() => buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', accessToken: syntheticAccessToken, dbPassword: syntheticPassword }), /exactly one/iu);
+  assert.throws(() => buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', accessToken: syntheticAccessToken, dbPassword: Buffer.from('bad\nvalue') }), /exactly one/iu);
+  assert.throws(() => buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', dbPassword: Buffer.alloc(0) }), /credential invalid/iu);
+  syntheticPassword.fill(0);
   assert.equal(await verifyLinkedProjectRef('pyoderxmpeyqjwkeliiu'), true);
   await assert.rejects(() => verifyLinkedProjectRef('abcdefghijklmnopqrst'), /mismatch/iu);
   const credential = { PGHOST: 'db.synthetic.invalid', PGPORT: '5432', PGUSER: 'postgres', PGPASSWORD: 'fixture-value', PGDATABASE: 'postgres', PGSSLMODE: 'require' };
@@ -195,6 +211,40 @@ test('capture CLI is exact and secure candidate workspace publishes canonical id
   }
 });
 
+test('capture CLI securely bootstraps an absent candidate root and refuses symlink or permissive roots', async () => {
+  const { ensureCandidateRoot } = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-candidate-bootstrap-'));
+  try {
+    await chmod(parent, 0o700);
+    const candidateRoot = path.join(parent, '.hermes', 'tmp');
+    const inheritedUmask = process.umask(0o777);
+    let bootstrap;
+    try {
+      bootstrap = ensureCandidateRoot(candidateRoot);
+      assert.equal(process.umask(inheritedUmask), 0o777);
+    } catch (error) {
+      process.umask(inheritedUmask);
+      throw error;
+    }
+    const root = await bootstrap;
+    assert.equal(root.path, candidateRoot);
+    assert.equal(Number((await lstat(path.join(parent, '.hermes'), { bigint: true })).mode & 0o777n), 0o700);
+    assert.equal(Number((await lstat(candidateRoot, { bigint: true })).mode & 0o777n), 0o700);
+    await ensureCandidateRoot(candidateRoot);
+    await chmod(candidateRoot, 0o755);
+    await assert.rejects(ensureCandidateRoot(candidateRoot), /candidate root|mode|identity/iu);
+
+    const hostile = path.join(parent, 'hostile');
+    const outside = path.join(parent, 'outside');
+    await mkdir(hostile, { mode: 0o700 });
+    await mkdir(outside, { mode: 0o700 });
+    await symlink(outside, path.join(hostile, '.hermes'));
+    await assert.rejects(ensureCandidateRoot(path.join(hostile, '.hermes', 'tmp')), /symlink|candidate root|identity/iu);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
 test('A/B capture workflow leaves reviewable raw candidates but no credential bytes and requires normalized equality', async () => {
   const { runProductionCaptureCandidate } = await subject();
   const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-capture-workflow-'));
@@ -203,6 +253,10 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
   await mkdir(candidateRoot, { mode: 0o700 });
   await chmod(candidateRoot, 0o700);
   const dryRun = await fixture('workflow-password-never-on-disk');
+  const exactDryRunStderrBytes = Buffer.from(
+    'DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n',
+  );
+  let workflowDryRunStderr;
   const catalogFixture = JSON.parse(await readFile(catalogFixturePath, 'utf8'));
   catalogFixture.sections.routines[0].definition = 'CREATE FUNCTION public.example() RETURNS void LANGUAGE sql AS $$ SELECT $$;';
   const catalogText = JSON.stringify(catalogFixture);
@@ -213,6 +267,7 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
   const restoreInputs = [];
   let privateCli;
   let privateWorkdir;
+  let loadedDbPassword;
   let preparedRuntime = false;
   try {
     const result = await runProductionCaptureCandidate({
@@ -228,6 +283,11 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
         preparedRuntime = true;
         return { cliPath: privateCli, workdir: privateWorkdir };
       },
+      loadDbPassword: () => {
+        loadedDbPassword = Buffer.from('synthetic-workflow-db-password');
+        return loadedDbPassword;
+      },
+      loadAccessToken: async () => { throw new Error('token loader must not run when DB password exists'); },
       randomBytes: () => Buffer.alloc(16, 0x4c),
       runChild: async (invocation, options = {}) => {
         calls.push(invocation);
@@ -236,7 +296,11 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
         }
         if (invocation.executable === privateCli) {
           assert.deepEqual(invocation.args.slice(-2), ['--workdir', privateWorkdir]);
-          return { code: 0, signal: null, stdout: Buffer.from(dryRun), stderr: Buffer.alloc(0) };
+          assert.equal(invocation.env.SUPABASE_DB_PASSWORD, 'synthetic-workflow-db-password');
+          assert.equal('SUPABASE_ACCESS_TOKEN' in invocation.env, false);
+          assert.doesNotMatch(JSON.stringify(invocation.args), /synthetic-workflow-db-password/u);
+          workflowDryRunStderr = Buffer.from(exactDryRunStderrBytes);
+          return { code: 0, signal: null, stdout: Buffer.from(dryRun), stderr: workflowDryRunStderr };
         }
         if (invocation.args.includes('/usr/bin/pg_dump')) {
           dumps += 1;
@@ -255,6 +319,8 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
     });
     assert.equal(result.captureCount, 2);
     assert.equal(preparedRuntime, true);
+    assert.equal(loadedDbPassword.every((byte) => byte === 0), true);
+    assert.equal(workflowDryRunStderr.every((byte) => byte === 0), true);
     const names = (await readdir(result.candidatePath)).sort();
     for (const name of [
       'capture-a.dump', 'capture-b.dump', 'catalog-a.raw.json', 'catalog-b.raw.json',
@@ -277,6 +343,101 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
   } finally {
     dryRun.fill(0);
     await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test('dry-run stderr mismatch wipes DB password and child streams before workflow cleanup', async () => {
+  const { runProductionCaptureCandidate } = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-capture-dryrun-failure-'));
+  const candidateRoot = path.join(parent, 'root');
+  const handoffPath = path.join(candidateRoot, 'baseline-capture-handoff.json');
+  await mkdir(candidateRoot, { mode: 0o700 });
+  await chmod(candidateRoot, 0o700);
+  const password = Buffer.from('synthetic-failure-db-password');
+  const stdout = Buffer.from(await fixture('synthetic-failure-db-password'));
+  const stderr = Buffer.from('DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\nextra\n');
+  try {
+    await assert.rejects(runProductionCaptureCandidate({
+      projectRef: 'pyoderxmpeyqjwkeliiu', captures: 2, candidateRoot, handoffPath,
+      verifyProjectRef: async () => true,
+      verifyRuntime: async () => true,
+      prepareRuntime: async ({ home }) => ({ cliPath: path.join(home, 'supabase'), workdir: path.join(home, 'workdir') }),
+      loadDbPassword: () => password,
+      loadAccessToken: async () => { throw new Error('token loader must not run'); },
+      randomBytes: () => Buffer.alloc(16, 0x5d),
+      runChild: async () => ({ code: 0, signal: null, stdout, stderr }),
+    }), /Supabase dry-run emitted unexpected stderr/iu);
+    assert.equal(password.every((byte) => byte === 0), true);
+    assert.equal(stdout.every((byte) => byte === 0), true);
+    assert.equal(stderr.every((byte) => byte === 0), true);
+    assert.equal(existsSync(handoffPath), false);
+  } finally {
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
+test('private pinned CLI update cache is generated from the lock version instead of mutable linked metadata', async () => {
+  const { pinnedCliLatestBytes } = await subject();
+  const locked = { cli: { version: '2.87.2' } };
+  const first = pinnedCliLatestBytes(locked);
+  assert.equal(first.toString('utf8'), 'v2.87.2');
+  first.fill(0);
+  assert.equal(pinnedCliLatestBytes(locked).toString('utf8'), 'v2.87.2');
+  assert.throws(() => pinnedCliLatestBytes({ cli: { version: '9.9.9' } }), /locked Supabase CLI version mismatch/u);
+  const source = await readFile(capturePath, 'utf8');
+  assert.match(source, /writePrivateFile\(path\.join\(tempDir, 'cli-latest'\), cliLatest, 0o600\)/u);
+  assert.match(source, /constants\.O_RDWR[\s\S]{0,900}matchesIdentity\(pathStat, fsIdentity\(stat\)\)[\s\S]{0,900}readback\.equals\(bytes\)/u);
+  assert.doesNotMatch(source, /LINKED_METADATA_FILES[\s\S]{0,120}'cli-latest'/u);
+});
+
+test('child stage wrapper reports a fixed label without retaining hostile child error bytes', async () => {
+  const { runSuccessfulChild } = await subject();
+  const secretLike = 'postgresql://operator:credential@example.invalid/database';
+  await assert.rejects(
+    runSuccessfulChild(async () => { throw new Error(secretLike); }, {}, {}, 'Supabase dry-run'),
+    (error) => {
+      assert.equal(error.message, 'Supabase dry-run failed');
+      assert.doesNotMatch(JSON.stringify(error), /credential|postgresql/iu);
+      assert.equal(error.cause, undefined);
+      return true;
+    },
+  );
+  for (const [inner, outer] of [
+    ['bounded child exited unsuccessfully', 'Supabase dry-run exited unsuccessfully'],
+    ['bounded child timeout', 'Supabase dry-run timed out'],
+    ['bounded child output limit exceeded', 'Supabase dry-run exceeded output limit'],
+    ['Supabase dry-run child emitted unexpected stderr', 'Supabase dry-run emitted unexpected stderr'],
+  ]) {
+    await assert.rejects(runSuccessfulChild(async () => { throw new Error(inner); }, {}, {}, 'Supabase dry-run'),
+      (error) => error.message === outer && error.cause === undefined);
+  }
+});
+
+test('Supabase dry-run accepts only exact pinned stderr bytes and wipes accepted or rejected streams', async () => {
+  const { runSuccessfulChild } = await subject();
+  const expected = Buffer.from('DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n');
+  const successStderr = Buffer.from(expected);
+  const successStdout = Buffer.from('dry-run-script');
+  const returned = await runSuccessfulChild(
+    async () => ({ code: 0, signal: null, stdout: successStdout, stderr: successStderr }), {}, {}, 'Supabase dry-run', expected,
+  );
+  assert.equal(returned, successStdout);
+  assert.equal(successStderr.every((byte) => byte === 0), true);
+  returned.fill(0);
+
+  for (const mutation of [
+    expected.subarray(0, expected.length - 1 - 'Dumping schemas from remote database...\n'.length),
+    Buffer.concat([expected, Buffer.from('extra\n')]),
+    Buffer.from(expected.toString('utf8').replaceAll('\n', '\r\n')),
+  ]) {
+    const stderr = Buffer.from(mutation);
+    const stdout = Buffer.from('secret-output');
+    await assert.rejects(
+      runSuccessfulChild(async () => ({ code: 0, signal: null, stdout, stderr }), {}, {}, 'Supabase dry-run', expected),
+      /emitted unexpected stderr/iu,
+    );
+    assert.equal(stderr.every((byte) => byte === 0), true);
+    assert.equal(stdout.every((byte) => byte === 0), true);
   }
 });
 
