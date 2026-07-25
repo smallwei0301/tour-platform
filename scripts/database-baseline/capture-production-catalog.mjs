@@ -1136,10 +1136,15 @@ async function cleanupCandidateWorkspace(workspace) {
   }
 }
 
-const SUPABASE_DRY_RUN_STDERR = Buffer.from(
-  'DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n',
-  'utf8',
-);
+export function buildExpectedSupabaseDryRunStderr(workdir) {
+  if (typeof workdir !== 'string' || !path.isAbsolute(workdir) || /[\0\r\n]/u.test(workdir)) {
+    throw new Error('Supabase dry-run workdir invalid');
+  }
+  return Buffer.from(
+    `Using workdir ${workdir}\nDRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n`,
+    'utf8',
+  );
+}
 
 function assertSuccessfulChild(result, label, expectedStderr = Buffer.alloc(0)) {
   if (!result || result.code !== 0 || result.signal !== null || !Buffer.isBuffer(result.stdout) || !Buffer.isBuffer(result.stderr)) {
@@ -1220,7 +1225,7 @@ export async function runProductionCaptureCandidate({
         buildDryRunInvocation({ projectRef, home, accessToken, dbPassword, cliPath: captureRuntime.cliPath, workdir: captureRuntime.workdir }),
         { maxBytes: DRY_RUN_MAX_BYTES, timeoutMs: CHILD_TIMEOUT_MS },
         'Supabase dry-run',
-        SUPABASE_DRY_RUN_STDERR);
+        buildExpectedSupabaseDryRunStderr(captureRuntime.workdir));
     } finally {
       dbPassword?.fill(0);
       dbPassword = null;

@@ -76,7 +76,7 @@ test('dry-run parser fails closed on framing and shape injection and still wipes
 
 test('capture child invocations and environment are exact and ignore ambient secrets', async () => {
   const {
-    buildDryRunInvocation, buildStrictPgEnvironment, loadSupabaseDbPassword, validateLockedPg17, verifyLinkedProjectRef,
+    buildDryRunInvocation, buildExpectedSupabaseDryRunStderr, buildStrictPgEnvironment, loadSupabaseDbPassword, validateLockedPg17, verifyLinkedProjectRef,
     FIXED_PROJECT_ROOT, FIXED_SUPABASE_CLI,
   } = await subject();
   const syntheticAccessToken = Buffer.from(`sbp_${'a'.repeat(40)}`);
@@ -89,6 +89,11 @@ test('capture child invocations and environment are exact and ignore ambient sec
     stdin: 'ignore', stdout: 'pipe', stderr: 'pipe', projectRef: 'abcdefghijklmnopqrst',
   });
   assert.doesNotMatch(JSON.stringify(invocation.args), /sbp_/u);
+  assert.equal(buildExpectedSupabaseDryRunStderr('/owned/empty-home/workdir').toString('utf8'),
+    'Using workdir /owned/empty-home/workdir\nDRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n');
+  for (const invalidWorkdir of ['relative', '/owned/bad\npath', '/owned/bad\rpath', '/owned/bad\0path']) {
+    assert.throws(() => buildExpectedSupabaseDryRunStderr(invalidWorkdir), /workdir invalid/iu);
+  }
   assert.throws(() => buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', accessToken: Buffer.from('invalid') }), /credential invalid/iu);
   const syntheticPassword = loadSupabaseDbPassword({ SUPABASE_DB_PASSWORD: 'synthetic-db-password' });
   const passwordInvocation = buildDryRunInvocation({ projectRef: 'abcdefghijklmnopqrst', home: '/owned/empty-home', dbPassword: syntheticPassword });
@@ -253,9 +258,6 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
   await mkdir(candidateRoot, { mode: 0o700 });
   await chmod(candidateRoot, 0o700);
   const dryRun = await fixture('workflow-password-never-on-disk');
-  const exactDryRunStderrBytes = Buffer.from(
-    'DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n',
-  );
   let workflowDryRunStderr;
   const catalogFixture = JSON.parse(await readFile(catalogFixturePath, 'utf8'));
   catalogFixture.sections.routines[0].definition = 'CREATE FUNCTION public.example() RETURNS void LANGUAGE sql AS $$ SELECT $$;';
@@ -299,7 +301,9 @@ test('A/B capture workflow leaves reviewable raw candidates but no credential by
           assert.equal(invocation.env.SUPABASE_DB_PASSWORD, 'synthetic-workflow-db-password');
           assert.equal('SUPABASE_ACCESS_TOKEN' in invocation.env, false);
           assert.doesNotMatch(JSON.stringify(invocation.args), /synthetic-workflow-db-password/u);
-          workflowDryRunStderr = Buffer.from(exactDryRunStderrBytes);
+          workflowDryRunStderr = Buffer.from(
+            `Using workdir ${privateWorkdir}\nDRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n`,
+          );
           return { code: 0, signal: null, stdout: Buffer.from(dryRun), stderr: workflowDryRunStderr };
         }
         if (invocation.args.includes('/usr/bin/pg_dump')) {
@@ -415,7 +419,8 @@ test('child stage wrapper reports a fixed label without retaining hostile child 
 
 test('Supabase dry-run accepts only exact pinned stderr bytes and wipes accepted or rejected streams', async () => {
   const { runSuccessfulChild } = await subject();
-  const expected = Buffer.from('DRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n');
+  const workdir = '/owned/private/workdir';
+  const expected = Buffer.from(`Using workdir ${workdir}\nDRY RUN: *only* printing the pg_dump script to console.\nDumping schemas from remote database...\n`);
   const successStderr = Buffer.from(expected);
   const successStdout = Buffer.from('dry-run-script');
   const returned = await runSuccessfulChild(
@@ -428,6 +433,7 @@ test('Supabase dry-run accepts only exact pinned stderr bytes and wipes accepted
   for (const mutation of [
     expected.subarray(0, expected.length - 1 - 'Dumping schemas from remote database...\n'.length),
     Buffer.concat([expected, Buffer.from('extra\n')]),
+    Buffer.from(expected.toString('utf8').replace(workdir, '/owned/foreign/workdir')),
     Buffer.from(expected.toString('utf8').replaceAll('\n', '\r\n')),
   ]) {
     const stderr = Buffer.from(mutation);
