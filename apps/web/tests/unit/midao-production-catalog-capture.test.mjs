@@ -613,21 +613,28 @@ test('restrict-key renderer uses only the locked PG17 container and preserves ar
 });
 
 test('A/B render core compares normalized TOC, destination use-lists, combined SQL and per-entry digests', async () => {
-  const { renderArchivePair } = await import(`${pathToFileURL(rendererPath).href}?t=${Date.now()}`);
+  const { buildSelectedUseList, renderArchivePair } = await import(`${pathToFileURL(rendererPath).href}?t=${Date.now()}`);
   const toc = await readFile(tocFixturePath);
   const relation = ['relation', 'public', 'widgets'];
+  const constraint = ['constraint', 'relation', 'public', 'widgets', 'widgets_pkey'];
+  const trigger = ['trigger', 'public', 'widgets', 'widgets_touch'];
   const policy = ['policy', 'public', 'widgets', 'widgets_select'];
   const input = {
     tocBuffers: [Buffer.from(toc), Buffer.from(toc)],
     assignments: [
       { objectKey: relation, dependsOn: [] },
+      { objectKey: constraint, dependsOn: [relation] },
+      { objectKey: trigger, dependsOn: [relation] },
       { objectKey: policy, dependsOn: [relation] },
     ],
     tocOwnershipMap: {
-      expectedTocIds: [11, 14],
+      expectedTocIds: [11, 12, 13, 14, 15],
       entries: [
         { tocId: 11, objectKey: relation, ownerDomain: 'application' },
+        { tocId: 12, objectKey: constraint, ownerDomain: 'application' },
+        { tocId: 13, objectKey: trigger, ownerDomain: 'application' },
         { tocId: 14, objectKey: policy, ownerDomain: 'application_overlay' },
+        { tocId: 15, objectKey: relation, ownerDomain: 'application' },
       ],
     },
   };
@@ -656,17 +663,13 @@ test('A/B render core compares normalized TOC, destination use-lists, combined S
     render,
   });
   assert.equal(randomCalls, 1);
-  assert.equal(calls.length, 8, 'two archives x two destinations plus two archives x two entries');
+  assert.equal(calls.length, 14, 'two archives x two destinations plus two archives x five entries');
   assert.equal(maxActiveRenders > 1, true, 'rendering must use bounded concurrency');
-  assert.equal(maxActiveRenders <= 8, true, 'render concurrency must remain bounded');
+  assert.equal(maxActiveRenders <= 4, true, 'render concurrency must remain bounded for constrained operators');
   assert.match(result.baselineSql.toString('utf8'), /11; 1259 100 TABLE/);
   assert.match(result.managedOverlaysSql.toString('utf8'), /14; 3256 103 POLICY/);
-  assert.equal(result.useList.toString('utf8'), [
-    '11; 1259 100 TABLE public widgets postgres',
-    '14; 3256 103 POLICY public widgets widgets_select postgres',
-    '',
-  ].join('\n'));
-  assert.equal(result.dependencyClosure.length, 2);
+  assert.equal(result.useList.toString('utf8'), buildSelectedUseList(toc, [11, 12, 13, 14, 15]).toString('utf8'));
+  assert.equal(result.dependencyClosure.length, 5);
   for (const entry of result.dependencyClosure) {
     assert.match(entry.captureASha256, /^[0-9a-f]{64}$/u);
     assert.equal(entry.captureASha256, entry.captureBSha256);

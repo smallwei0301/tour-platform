@@ -14,7 +14,7 @@ const DESCRIPTORS = [
 ].sort((left, right) => right.length - left.length);
 const DESTINATIONS = new Set(['baseline.sql', 'managed-overlays.sql']);
 const OWNERLESS_DESCRIPTORS = new Set(['COMMENT', 'EXTENSION']);
-const ENTRY_RENDER_CONCURRENCY = 4;
+const ENTRY_RENDER_CONCURRENCY = 2;
 
 function safeInteger(raw, label, { positive = false } = {}) {
   if (!/^(?:0|[1-9][0-9]*)$/u.test(raw)) throw new Error(`TOC ${label} invalid`);
