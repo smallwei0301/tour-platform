@@ -7,7 +7,7 @@ import { validateRawCatalog } from './extract-catalog.mjs';
 import { validateNormalizedCatalog } from './validate-normalized-catalog.mjs';
 
 const OWNER_DOMAINS = new Set(['application', 'platform', 'application_overlay', 'extension', 'excluded_environmental']);
-const TOC_OPTIONAL_SECTIONS = new Set(['columns', 'rls', 'owners', 'managedSchemaInventory', 'managedSchemaOverlays']);
+const TOC_OPTIONAL_SECTIONS = new Set(['columns', 'constraints', 'indexes', 'rls', 'owners', 'acl', 'defaultPrivileges', 'managedSchemaInventory', 'managedSchemaOverlays']);
 const DUPLICATE_METADATA_SECTIONS = new Set(['managedSchemaInventory', 'managedSchemaOverlays']);
 
 function validateOwnershipCatalog(catalog) {
@@ -195,8 +195,11 @@ function validateToc(document, assignments) {
     if (!tocIds.has(tocId)) throw new Error(`expected TOC ID missing mapping: ${tocId}`);
   }
   for (const [id, assignment] of assignments) {
+    const relationKey = assignment.objectKey;
+    const isSequenceRelation = assignment.section === 'relations' && relationKey.length === 3
+      && assignments.has(keyId(['sequence', relationKey[1], relationKey[2]]));
     if (['application', 'application_overlay', 'extension'].includes(assignment.ownerDomain)
-      && !TOC_OPTIONAL_SECTIONS.has(assignment.section) && !mappedObjects.has(id)) {
+      && !TOC_OPTIONAL_SECTIONS.has(assignment.section) && !isSequenceRelation && !mappedObjects.has(id)) {
       throw new Error(`required catalog object missing TOC mapping: ${id}`);
     }
   }

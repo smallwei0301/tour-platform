@@ -176,7 +176,7 @@ test('overlap missing unknown object and duplicate TOC IDs fail closed', async (
   assert.throws(() => validateOwnershipBoundary(duplicateToc), /duplicate TOC ID/iu);
 });
 
-test('TOC IDs are each classified once while one object may own many TOC entries and embedded sections may own none', async () => {
+test('TOC IDs are each classified once while one object may own many TOC entries and embedded or bundled sections may own none', async () => {
   const { validateOwnershipBoundary } = await subject();
   const input = await validInput();
   const first = input.tocOwnershipMap.entries[0];
@@ -191,6 +191,28 @@ test('TOC IDs are each classified once while one object may own many TOC entries
   const [removedOptional] = embeddedOnly.tocOwnershipMap.entries.splice(optionalIndex, 1);
   embeddedOnly.tocOwnershipMap.expectedTocIds = embeddedOnly.tocOwnershipMap.expectedTocIds.filter((id) => id !== removedOptional.tocId);
   assert.doesNotThrow(() => validateOwnershipBoundary(embeddedOnly));
+
+  const bundledPrivileges = await validInput();
+  const bundledKeys = new Set(bundledPrivileges.ownershipBoundary.assignments
+    .filter((assignment) => ['acl', 'constraints', 'defaultPrivileges', 'indexes'].includes(assignment.section))
+    .map((assignment) => keyId(assignment.objectKey)));
+  assert.equal(bundledKeys.size > 1, true);
+  const removedBundledTocIds = new Set(bundledPrivileges.tocOwnershipMap.entries
+    .filter((entry) => bundledKeys.has(keyId(entry.objectKey)))
+    .map((entry) => entry.tocId));
+  bundledPrivileges.tocOwnershipMap.entries = bundledPrivileges.tocOwnershipMap.entries
+    .filter((entry) => !removedBundledTocIds.has(entry.tocId));
+  bundledPrivileges.tocOwnershipMap.expectedTocIds = bundledPrivileges.tocOwnershipMap.expectedTocIds
+    .filter((tocId) => !removedBundledTocIds.has(tocId));
+  assert.doesNotThrow(() => validateOwnershipBoundary(bundledPrivileges));
+
+  const sequenceRelation = await validInput();
+  sequenceRelation.catalog.sections.relations.push({ canonicalKey: ['relation', 'public', 'example_id_seq'] });
+  sequenceRelation.ownershipBoundary.assignments.push({
+    objectKey: ['relation', 'public', 'example_id_seq'], section: 'relations', ownerDomain: 'application',
+    role: 'application-owner', dependsOn: [], rationale: 'synthetic sequence relation catalog companion',
+  });
+  assert.doesNotThrow(() => validateOwnershipBoundary(sequenceRelation));
 
   const requiredMissing = await validInput();
   const relationAssignment = requiredMissing.ownershipBoundary.assignments.find((entry) => entry.section === 'relations');
