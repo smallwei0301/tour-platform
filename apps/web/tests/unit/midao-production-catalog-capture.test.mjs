@@ -633,13 +633,22 @@ test('A/B render core compares normalized TOC, destination use-lists, combined S
   };
   let randomCalls = 0;
   const calls = [];
+  let activeRenders = 0;
+  let maxActiveRenders = 0;
   const render = async ({ archiveIndex, destination, useList, restrictKey }) => {
-    calls.push({ archiveIndex, destination, useList: useList.toString('utf8'), restrictKey });
-    const payload = Buffer.from(`SQL:${destination}\n${useList.toString('utf8')}`);
-    return Buffer.concat([
-      PG17_DUMP_HEADER, Buffer.from(`\\restrict ${restrictKey}\n`), payload,
-      Buffer.from(`\\unrestrict ${restrictKey}\n\n`),
-    ]);
+    activeRenders += 1;
+    maxActiveRenders = Math.max(maxActiveRenders, activeRenders);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      calls.push({ archiveIndex, destination, useList: useList.toString('utf8'), restrictKey });
+      const payload = Buffer.from(`SQL:${destination}\n${useList.toString('utf8')}`);
+      return Buffer.concat([
+        PG17_DUMP_HEADER, Buffer.from(`\\restrict ${restrictKey}\n`), payload,
+        Buffer.from(`\\unrestrict ${restrictKey}\n\n`),
+      ]);
+    } finally {
+      activeRenders -= 1;
+    }
   };
   const result = await renderArchivePair({
     ...input,
@@ -648,6 +657,8 @@ test('A/B render core compares normalized TOC, destination use-lists, combined S
   });
   assert.equal(randomCalls, 1);
   assert.equal(calls.length, 8, 'two archives x two destinations plus two archives x two entries');
+  assert.equal(maxActiveRenders > 1, true, 'rendering must use bounded concurrency');
+  assert.equal(maxActiveRenders <= 8, true, 'render concurrency must remain bounded');
   assert.match(result.baselineSql.toString('utf8'), /11; 1259 100 TABLE/);
   assert.match(result.managedOverlaysSql.toString('utf8'), /14; 3256 103 POLICY/);
   assert.equal(result.useList.toString('utf8'), [

@@ -14,6 +14,7 @@ const DESCRIPTORS = [
 ].sort((left, right) => right.length - left.length);
 const DESTINATIONS = new Set(['baseline.sql', 'managed-overlays.sql']);
 const OWNERLESS_DESCRIPTORS = new Set(['COMMENT', 'EXTENSION']);
+const ENTRY_RENDER_CONCURRENCY = 4;
 
 function safeInteger(raw, label, { positive = false } = {}) {
   if (!/^(?:0|[1-9][0-9]*)$/u.test(raw)) throw new Error(`TOC ${label} invalid`);
@@ -184,6 +185,16 @@ export async function renderArchivePair({ tocBuffers, assignments, tocOwnershipM
     }
   }
 
+  async function invokePair(destination, useLists) {
+    const settled = await Promise.allSettled([
+      invoke(0, destination, useLists[0]),
+      invoke(1, destination, useLists[1]),
+    ]);
+    const rejected = settled.find((entry) => entry.status === 'rejected');
+    if (rejected) throw rejected.reason;
+    return settled.map((entry) => entry.value);
+  }
+
   const rendered = {};
   for (const destination of ['baseline.sql', 'managed-overlays.sql']) {
     const ids = selectedIds.filter((tocId) => destinations[tocId] === destination);
@@ -193,28 +204,30 @@ export async function renderArchivePair({ tocBuffers, assignments, tocOwnershipM
       rendered[destination] = track(Buffer.alloc(0));
       continue;
     }
-    const pair = [
-      await invoke(0, destination, useLists[0]),
-      await invoke(1, destination, useLists[1]),
-    ];
+    const pair = await invokePair(destination, useLists);
     assertPairEqual(pair[0], pair[1], destination);
     rendered[destination] = pair[0];
     pair[1].fill(0);
   }
 
   const entryDigests = new Map();
-  for (const tocId of selectedIds) {
+  async function renderEntry(tocId) {
     const destination = destinations[tocId];
     const useLists = tocBuffers.map((buffer) => track(buildSelectedUseList(buffer, [tocId])));
     assertPairEqual(useLists[0], useLists[1], `TOC ${tocId} use-list`);
-    const pair = [
-      await invoke(0, destination, useLists[0]),
-      await invoke(1, destination, useLists[1]),
-    ];
+    const pair = await invokePair(destination, useLists);
     assertPairEqual(pair[0], pair[1], `TOC ${tocId}`);
-    entryDigests.set(tocId, { captureASha256: sha256(pair[0]), captureBSha256: sha256(pair[1]) });
+    const digests = { captureASha256: sha256(pair[0]), captureBSha256: sha256(pair[1]) };
     pair[0].fill(0);
     pair[1].fill(0);
+    return { tocId, digests };
+  }
+  for (let offset = 0; offset < selectedIds.length; offset += ENTRY_RENDER_CONCURRENCY) {
+    const chunk = selectedIds.slice(offset, offset + ENTRY_RENDER_CONCURRENCY);
+    const settled = await Promise.allSettled(chunk.map((tocId) => renderEntry(tocId)));
+    const rejected = settled.find((entry) => entry.status === 'rejected');
+    if (rejected) throw rejected.reason;
+    for (const entry of settled) entryDigests.set(entry.value.tocId, entry.value.digests);
   }
   const dependencyClosure = computeDependencyClosure({ assignments, tocOwnershipMap, destinations })
     .map((entry) => Object.freeze({ ...entry, ...entryDigests.get(entry.tocId) }));
