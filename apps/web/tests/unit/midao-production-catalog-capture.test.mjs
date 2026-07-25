@@ -154,6 +154,8 @@ test('PG17 catalog invocation is digest-pinned read-only and never embeds creden
   assert.ok(dump.args.includes('/usr/bin/pg_dump'));
   assert.ok(dump.args.includes('--format=custom'));
   assert.ok(dump.args.includes('--schema-only'));
+  assert.equal(dump.args.some((value) => value === '--file' || value === '-f' || value.startsWith('--file=')), false);
+  assert.equal(dump.stdout, 'pipe');
   assert.equal(dump.args.filter((value) => value === '--pull=never').length, 1);
   assert.doesNotMatch(JSON.stringify(dump.args), /fixture-password-never-in-argv/u);
   const restoreList = buildPg17RestoreListInvocation({

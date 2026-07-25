@@ -423,7 +423,7 @@ export function buildPg17DumpInvocation({ toolchain, home, connectionEnv }) {
       'run', '--pull=never', '--rm', `--name=${containerName}`, '--network=bridge', '--read-only', '--security-opt=no-new-privileges', '--cap-drop=ALL',
       '--tmpfs=/tmp:rw,noexec,nosuid,nodev,size=16m', ...envFlags,
       toolchain.image, toolchain.pgDumpPath,
-      '--format=custom', '--schema-only', '--no-password', '--file=-',
+      '--format=custom', '--schema-only', '--no-password',
     ]),
     env,
     stdin: 'ignore', stdout: 'pipe', stderr: 'pipe',
