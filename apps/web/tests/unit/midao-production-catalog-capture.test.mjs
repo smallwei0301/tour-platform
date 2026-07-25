@@ -520,6 +520,20 @@ test('PG17 TOC parser produces exact structured entries and rejects data or malf
     { tocId: 14, descriptor: 'POLICY', schema: 'public', identity: 'widgets widgets_select', owner: 'postgres' },
     { tocId: 15, descriptor: 'ACL', schema: 'public', identity: 'TABLE widgets', owner: 'postgres' },
   ]);
+  const pg17MetadataShapes = parsePg17Toc(Buffer.from([
+    '20; 3079 1 EXTENSION - pg_example ',
+    '21; 0 0 COMMENT - EXTENSION pg_example ',
+    '22; 2606 2 CHECK CONSTRAINT public widgets widgets_check postgres',
+    '23; 2604 3 DEFAULT public widgets created_at postgres',
+    '',
+  ].join('\n')));
+  assert.deepEqual(pg17MetadataShapes.map(({ descriptor, schema, identity, owner }) => ({ descriptor, schema, identity, owner })), [
+    { descriptor: 'EXTENSION', schema: '-', identity: 'pg_example', owner: null },
+    { descriptor: 'COMMENT', schema: '-', identity: 'EXTENSION pg_example', owner: null },
+    { descriptor: 'CHECK CONSTRAINT', schema: 'public', identity: 'widgets widgets_check', owner: 'postgres' },
+    { descriptor: 'DEFAULT', schema: 'public', identity: 'widgets created_at', owner: 'postgres' },
+  ]);
+  assert.throws(() => parsePg17Toc(Buffer.from('24; 1259 4 TABLE public widgets \n')), /identity (?:shape|missing)|owner/iu);
   for (const mutation of [
     bytes.toString('utf8').replace('11; 1259', '10; 1259'),
     `${bytes.toString('utf8')}16; 0 0 TABLE DATA public widgets postgres\n`,

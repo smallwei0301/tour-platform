@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 const MAX_TOC_BYTES = 4 * 1024 * 1024;
 const DATA_DESCRIPTORS = ['MATERIALIZED VIEW DATA', 'TABLE DATA', 'SEQUENCE SET', 'BLOB', 'BLOBS', 'LARGE OBJECT', 'LARGE OBJECTS'];
 const DESCRIPTORS = [
-  'MATERIALIZED VIEW DATA', 'MATERIALIZED VIEW', 'FOREIGN TABLE', 'FK CONSTRAINT', 'DEFAULT ACL',
+  'MATERIALIZED VIEW DATA', 'MATERIALIZED VIEW', 'FOREIGN TABLE', 'FK CONSTRAINT', 'CHECK CONSTRAINT', 'DEFAULT ACL', 'DEFAULT',
   'TABLE ATTACH', 'SEQUENCE OWNED BY', 'SEQUENCE SET', 'TEXT SEARCH CONFIGURATION', 'TEXT SEARCH DICTIONARY',
   'TEXT SEARCH PARSER', 'TEXT SEARCH TEMPLATE', 'PUBLICATION TABLE', 'PUBLICATION TABLES IN SCHEMA',
   'ROW SECURITY', 'TABLE', 'VIEW', 'SEQUENCE', 'SCHEMA', 'TYPE', 'DOMAIN', 'CONSTRAINT', 'INDEX',
@@ -13,6 +13,7 @@ const DESCRIPTORS = [
   'OPERATOR FAMILY', 'LANGUAGE', 'EVENT TRIGGER', 'SERVER', 'USER MAPPING', 'FOREIGN DATA WRAPPER',
 ].sort((left, right) => right.length - left.length);
 const DESTINATIONS = new Set(['baseline.sql', 'managed-overlays.sql']);
+const OWNERLESS_DESCRIPTORS = new Set(['COMMENT', 'EXTENSION']);
 
 function safeInteger(raw, label, { positive = false } = {}) {
   if (!/^(?:0|[1-9][0-9]*)$/u.test(raw)) throw new Error(`TOC ${label} invalid`);
@@ -48,11 +49,12 @@ export function parsePg17Toc(buffer) {
     const descriptor = DESCRIPTORS.find((candidate) => remainder.startsWith(`${candidate} `));
     if (!descriptor) throw new Error('TOC descriptor unknown');
     const fields = remainder.slice(descriptor.length + 1).split(' ');
-    if (fields.length < 3 || fields.some((field) => field.length === 0)) throw new Error('TOC identity shape invalid');
+    if (fields.length < 3 || fields.slice(0, -1).some((field) => field.length === 0)) throw new Error('TOC identity shape invalid');
     const schema = fields.shift();
-    const owner = fields.pop();
+    const rawOwner = fields.pop();
+    const owner = rawOwner === '' && OWNERLESS_DESCRIPTORS.has(descriptor) ? null : rawOwner;
     const identity = fields.join(' ');
-    if (!schema || !owner || !identity) throw new Error('TOC identity missing');
+    if (!schema || !identity || (rawOwner === '' && owner !== null)) throw new Error('TOC identity missing');
     entries.push(Object.freeze({ tocId, catalogOid, objectOid, descriptor, schema, identity, owner }));
   }
   if (entries.length === 0) throw new Error('TOC has no entries');
