@@ -128,6 +128,12 @@ test('fixed SQL starts and reads back read-only mode and covers the full pg_cata
   assert.match(sql, /CASE\s+WHEN\s+(?:role_id|a\.grantee)\s*=\s*0\s+THEN\s+'PUBLIC'/iu);
   assert.match(sql, /p\.prokind\s+IN\s*\(\s*'f'\s*,\s*'p'\s*,\s*'w'\s*\)/iu);
   assert.match(sql, /CASE\s+WHEN\s+c\.relkind\s*=\s*'S'\s+THEN\s+'s'::"char"\s+ELSE\s+'r'::"char"\s+END/u, 'acldefault sequence code must be lowercase s, not default-ACL uppercase S');
+  const aclSource = sql.match(/acl_source\s+AS\s*\(([\s\S]*?)\),\s*acl_rows\s+AS/u)?.[1];
+  assert.ok(aclSource, 'acl_source CTE missing');
+  assert.match(aclSource, /n\.nspname::text\s+AS\s+schema_name\s*,\s*n\.nspname::text\s+AS\s+object_name/iu);
+  assert.match(aclSource, /n\.nspname::text\s*,\s*c\.relname::text\s*,\s*c\.relowner/iu);
+  assert.match(aclSource, /n\.nspname::text\s*,\s*p\.proname::text\s*\|\|\s*'\('/iu);
+  assert.match(aclSource, /n\.nspname::text\s*,\s*t\.typname::text\s*,\s*t\.typowner/iu);
   assert.match(sql, /con\.contypid/iu);
   assert.match(sql, /UNION\s+ALL\s+SELECT\s+'rls'\s*,\s*item\s+FROM\s+rls_rows/iu);
   assert.match(sql, /'managedSchemaOverlays'\s*,\s*'\[\]'::jsonb/iu);

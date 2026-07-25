@@ -249,25 +249,25 @@ policy_rows AS (
   JOIN eligible_namespaces AS n ON n.oid = c.relnamespace
 ),
 acl_source AS (
-  SELECT 'schema'::text AS object_type, n.nspname AS schema_name, n.nspname AS object_name,
+  SELECT 'schema'::text AS object_type, n.nspname::text AS schema_name, n.nspname::text AS object_name,
          n.nspowner AS owner_id, n.nspacl AS acl, 'n'::"char" AS default_type
   FROM eligible_namespaces AS n
   UNION ALL
   SELECT CASE WHEN c.relkind = 'S' THEN 'sequence' ELSE 'relation' END,
-         n.nspname, c.relname, c.relowner, c.relacl,
+         n.nspname::text, c.relname::text, c.relowner, c.relacl,
          CASE WHEN c.relkind = 'S' THEN 's'::"char" ELSE 'r'::"char" END
   FROM pg_catalog.pg_class AS c
   JOIN eligible_namespaces AS n ON n.oid = c.relnamespace
   WHERE c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f')
   UNION ALL
-  SELECT 'routine', n.nspname,
-         p.proname || '(' || pg_catalog.pg_get_function_identity_arguments(p.oid) || ')',
+  SELECT 'routine', n.nspname::text,
+         p.proname::text || '(' || pg_catalog.pg_get_function_identity_arguments(p.oid) || ')',
          p.proowner, p.proacl, 'f'::"char"
   FROM pg_catalog.pg_proc AS p
   JOIN eligible_namespaces AS n ON n.oid = p.pronamespace
   WHERE p.prokind IN ('f', 'p', 'w')
   UNION ALL
-  SELECT 'type', n.nspname, t.typname, t.typowner, t.typacl, 'T'::"char"
+  SELECT 'type', n.nspname::text, t.typname::text, t.typowner, t.typacl, 'T'::"char"
   FROM pg_catalog.pg_type AS t
   JOIN eligible_namespaces AS n ON n.oid = t.typnamespace
   LEFT JOIN pg_catalog.pg_class AS tc ON tc.oid = t.typrelid
