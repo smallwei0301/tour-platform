@@ -168,6 +168,24 @@ async function setup() {
   };
 }
 
+test('publication SQL scanner permits CR only inside dollar-quoted routine bodies', async () => {
+  const { validatePublicationSqlPayloads } = await import(`${pathToFileURL(preparerPath).href}?cr=${Date.now()}`);
+  const overlay = Buffer.alloc(0);
+  const valid = Buffer.from('CREATE FUNCTION public.synthetic() RETURNS void AS $$\r\nBEGIN\r\n  RETURN;\r\nEND\r\n$$ LANGUAGE plpgsql;\n');
+  assert.equal(validatePublicationSqlPayloads(new Map([['baseline.sql', valid], ['managed-overlays.sql', overlay]])), true);
+  for (const hostile of [
+    'SELECT 1;\r\n',
+    '-- comment\r\nSELECT 1;\n',
+    "SELECT 'literal\rvalue';\n",
+    'CREATE TABLE "bad\rname" (id integer);\n',
+  ]) {
+    assert.throws(
+      () => validatePublicationSqlPayloads(new Map([['baseline.sql', Buffer.from(hostile)], ['managed-overlays.sql', overlay]])),
+      /framing/iu,
+    );
+  }
+});
+
 test('production publisher module does not export prepared engine, recovery, or callback lock scope', async () => {
   const source = await readFile(publisherPath, 'utf8');
   assert.doesNotMatch(source, /export\s+async\s+function\s+(?:publishPreparedCaptureTransaction|recoverCapturePublication|withRepositoryPublicationLock)/u);

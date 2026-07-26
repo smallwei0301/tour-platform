@@ -134,6 +134,7 @@ function assertNoActiveSqlDataOrPsql(text, label) {
   for (let index = 0; index < text.length;) {
     const char = text[index];
     const next = text[index + 1];
+    if (char === '\r' && state !== 'dollar-quote') throw new Error(`${label} SQL lexical framing invalid`);
     if (state === 'line-comment') {
       if (char === '\n') { state = 'normal'; lineStart = true; }
       index += 1;
@@ -202,7 +203,7 @@ function assertNoActiveSqlDataOrPsql(text, label) {
 }
 
 function assertSql(bytes, label, { allowEmpty = false } = {}) {
-  if (!Buffer.isBuffer(bytes) || (!allowEmpty && bytes.length === 0) || bytes.includes(0) || bytes.includes(13)
+  if (!Buffer.isBuffer(bytes) || (!allowEmpty && bytes.length === 0) || bytes.includes(0)
     || (bytes.length > 0 && bytes.at(-1) !== 10)) throw new Error(`${label} SQL framing invalid`);
   let text;
   try { text = new TextDecoder('utf-8', { fatal: true }).decode(bytes); }
