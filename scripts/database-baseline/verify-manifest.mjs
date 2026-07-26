@@ -21,6 +21,7 @@ const MAX_METADATA_BYTES = 2 * 1024 * 1024;
 const MAX_PAYLOAD_BYTES = 32 * 1024 * 1024;
 const MAX_SNAPSHOT_BYTES = 64 * 1024 * 1024;
 const CAPTURE_MANIFEST_NAME = 'capture-manifest.json';
+const OWNERLESS_TOC_DESCRIPTORS = new Set(['COMMENT', 'EXTENSION']);
 
 function sha256(bytes) {
   return createHash('sha256').update(bytes).digest('hex');
@@ -129,7 +130,7 @@ function semanticJson(payloads, name, maxBytes = MAX_METADATA_BYTES, indent = nu
   return parseCanonicalJson(bytes, name, maxBytes, indent);
 }
 
-function validateNormalizedToc(entries) {
+export function validateNormalizedToc(entries) {
   if (!Array.isArray(entries) || entries.length === 0) throw new Error('normalized TOC must be a non-empty array');
   const ids = new Set();
   for (const [index, entry] of entries.entries()) {
@@ -139,7 +140,9 @@ function validateNormalizedToc(entries) {
     if (!Number.isSafeInteger(entry.tocId) || entry.tocId < 1 || ids.has(entry.tocId)
       || !Number.isSafeInteger(entry.catalogOid) || entry.catalogOid < 0
       || !Number.isSafeInteger(entry.objectOid) || entry.objectOid < 0
-      || [entry.descriptor, entry.schema, entry.identity, entry.owner].some((value) => typeof value !== 'string' || value.length === 0 || /[\0\r\n]/u.test(value))) {
+      || [entry.descriptor, entry.schema, entry.identity].some((value) => typeof value !== 'string' || value.length === 0 || /[\0\r\n]/u.test(value))
+      || !((typeof entry.owner === 'string' && entry.owner.length > 0 && !/[\0\r\n]/u.test(entry.owner))
+        || (entry.owner === null && OWNERLESS_TOC_DESCRIPTORS.has(entry.descriptor)))) {
       throw new Error(`normalized TOC entry invalid: ${index}`);
     }
     ids.add(entry.tocId);

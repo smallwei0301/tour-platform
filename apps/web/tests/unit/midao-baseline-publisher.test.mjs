@@ -168,6 +168,20 @@ async function setup() {
   };
 }
 
+test('normalized TOC verifier permits null owner only for PG17 ownerless descriptors', async () => {
+  const { validateNormalizedToc } = await import(`${pathToFileURL(verifierPath).href}?ownerless=${Date.now()}`);
+  const base = { catalogOid: 3079, objectOid: 16393, schema: '-', identity: 'pg_stat_statements' };
+  assert.deepEqual([...validateNormalizedToc([
+    { ...base, tocId: 2, descriptor: 'EXTENSION', owner: null },
+    { ...base, tocId: 3, catalogOid: 0, objectOid: 0, descriptor: 'COMMENT', identity: 'EXTENSION pg_stat_statements', owner: null },
+  ])], [2, 3]);
+  for (const entry of [
+    { ...base, tocId: 4, descriptor: 'SCHEMA', owner: null },
+    { ...base, tocId: 5, descriptor: 'TABLE', schema: 'public', owner: null },
+    { ...base, tocId: 6, descriptor: 'EXTENSION', owner: '' },
+  ]) assert.throws(() => validateNormalizedToc([entry]), /normalized TOC entry invalid/iu);
+});
+
 test('publication SQL scanner permits CR only inside dollar-quoted routine bodies', async () => {
   const { validatePublicationSqlPayloads } = await import(`${pathToFileURL(preparerPath).href}?cr=${Date.now()}`);
   const overlay = Buffer.alloc(0);
