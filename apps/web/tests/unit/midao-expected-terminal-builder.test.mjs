@@ -108,6 +108,43 @@ test('local extract path normalizes PG17 catalog and reads exact migration histo
   } finally { result.terminalBytes.fill(0); }
 });
 
+test('exact replay uses supabase_admin simple-query psql and replaces bootstrap with exact history', async () => {
+  const api = await subject();
+  const versions = ['00000000000000']; const calls = [];
+  const schemaRows = [
+    { column_name: 'version', data_type: 'text', udt_name: 'text', is_nullable: 'NO' },
+    { column_name: 'statements', data_type: 'ARRAY', udt_name: '_text', is_nullable: 'YES' },
+    { column_name: 'name', data_type: 'text', udt_name: 'text', is_nullable: 'YES' },
+  ];
+  class FakeClient {
+    constructor(options) { assert.match(options.connectionString, /^postgresql:\/\/supabase_admin:/u); }
+    async connect() { calls.push('connect'); }
+    async query(sql, values) {
+      if (sql.includes('information_schema.columns')) return { rows: schemaRows };
+      if (sql.startsWith('SELECT version')) return { rows: versions.slice().sort().map((version) => ({ version })) };
+      if (sql.startsWith('DELETE FROM')) { versions.splice(0, versions.length); return { rows: [], rowCount: 1 }; }
+      if (sql.startsWith('INSERT INTO')) { versions.push(values[0]); return { rows: [] }; }
+      throw new Error(`unexpected SQL: ${sql}`);
+    }
+    async end() { calls.push('end'); }
+  }
+  const history = ['00000000000001_baseline_v1.sql', ...exactMigrations.map(([name]) => name)];
+  await api.__internal.replayExactMigrations({
+    databaseUrl: 'postgresql://postgres:***@127.0.0.1:54322/postgres',
+    pendingMigrationsDir: '/tmp/exact-pending', history,
+    ClientClass: FakeClient,
+    commandRunner: async (command, args, options) => {
+      assert.equal(command, '/usr/bin/psql');
+      assert.deepEqual(args.slice(0, 4), ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file']);
+      assert.equal(options.env.PGUSER, 'supabase_admin');
+      calls.push(path.basename(args[4]));
+      return { exitCode: 0, signal: null, stdout: '', stderr: '' };
+    },
+  });
+  assert.deepEqual(versions, historyVersions);
+  assert.deepEqual(calls.filter((entry) => entry.endsWith?.('.sql')), history);
+});
+
 test('builder locks exact terminal transaction paths, history and source migrations', async () => {
   const api = await subject();
   assert.deepEqual(api.EXPECTED_TERMINAL_PAYLOAD_PATHS, [terminalName, digestName]);

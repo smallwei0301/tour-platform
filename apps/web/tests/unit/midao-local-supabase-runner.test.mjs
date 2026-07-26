@@ -734,6 +734,19 @@ test('custom lifecycle contract accepts only exact Task9 marker and six original
   assert.doesNotThrow(() => validateSupabaseLifecycleStderr(stderr, {
     expectedWorkdir, stage: 'start', migrationNames, noticesByMigration: {},
   }));
+  const updateNotice = 'A new version of Supabase CLI is available: v2.109.1 (currently installed v2.87.2)\nWe recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli\n';
+  assert.doesNotThrow(() => validateSupabaseLifecycleStderr(`${stderr}${updateNotice}`, {
+    expectedWorkdir, stage: 'start', migrationNames, noticesByMigration: {},
+  }));
+  for (const hostileNotice of [
+    updateNotice.replace('v2.87.2', 'v2.87.3'),
+    updateNotice.replace('v2.109.1', 'latest'),
+    `${updateNotice}foreign\n`,
+  ]) assert.throws(() => validateSupabaseLifecycleStderr(`${stderr}${hostileNotice}`, {
+    expectedWorkdir, stage: 'start', migrationNames, noticesByMigration: {},
+  }), /CLI_UNEXPECTED_STDERR/u);
+  assert.doesNotThrow(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${updateNotice}`, expectedWorkdir));
+  assert.throws(() => validateCliWorkdirNotice(`Using workdir ${expectedWorkdir}\n${updateNotice}foreign\n`, expectedWorkdir), /CLI_UNEXPECTED_STDERR/u);
   const adapter = createActualAdapter({
     repoRoot: `/tmp/${projectId}`, pin: '2.87.2', nodeBin: '/node22', cliWorkdir: expectedWorkdir,
     lifecycleContract: { migrationNames, noticesByMigration: {} },

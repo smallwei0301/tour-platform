@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { constants } from 'node:fs';
 import {
-  chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, rm,
+  chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, rename, rm, rmdir, unlink,
 } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -227,6 +227,37 @@ async function assertExactNames(directory, expected, label) {
   if (JSON.stringify(actual) !== JSON.stringify([...expected].sort())) throw new Error(`cleanup HOLD: ${label} inventory changed`);
 }
 
+async function removeCliMetadata(workdir) {
+  const supabase = path.join(workdir, 'supabase');
+  const specifications = [
+    ['.temp', 'cli-latest', (value) => /^v\d{1,4}\.\d{1,4}\.\d{1,4}$/u.test(value)],
+    ['.branches', '_current_branch', (value) => value === 'main'],
+  ];
+  const allowed = ['config.toml', 'migrations', 'seed.sql', ...specifications.map(([directory]) => directory)];
+  const inventory = await readdir(supabase);
+  if (inventory.some((name) => !allowed.includes(name))) throw new Error('cleanup HOLD: supabase CLI metadata inventory changed');
+  for (const [directoryName, fileName, validate] of specifications) {
+    const directory = path.join(supabase, directoryName);
+    let identity;
+    try { identity = await lstat(directory); } catch (error) {
+      if (error?.code === 'ENOENT') continue;
+      throw error;
+    }
+    assertOwnedDirectory(identity, `Supabase CLI metadata ${directoryName}`);
+    await assertExactNames(directory, [fileName], `Supabase CLI metadata ${directoryName}`);
+    const file = path.join(directory, fileName);
+    const bytes = await readIdentityBound(file, `Supabase CLI metadata ${fileName}`);
+    try {
+      if (!validate(bytes.toString('utf8'))) throw new Error(`Supabase CLI metadata ${fileName} content invalid`);
+    } finally { bytes.fill(0); }
+    const current = await lstat(directory);
+    if (!sameIdentity(current, identity)) throw new Error(`Supabase CLI metadata ${directoryName} identity changed`);
+    await unlink(file);
+    await rmdir(directory);
+  }
+  await assertExactNames(supabase, ['config.toml', 'migrations', 'seed.sql'], 'supabase after CLI metadata cleanup');
+}
+
 async function removeOwnedWorkdir(workdir, identity, expectedMigrationNames) {
   let current;
   try { current = await lstat(workdir); } catch (error) {
@@ -323,6 +354,10 @@ async function materializeWithPaths(options = {}) {
     if (JSON.stringify(actualNames) !== JSON.stringify(expectedNames)) throw new Error('materialized migration inventory mismatch');
 
     let cleaned = false;
+    let replayActive = false;
+    const bootstrapName = '00000000000000_midao_history_bootstrap.sql';
+    const pendingMigrationsDir = `${outputMigrations}.midao-pending`;
+    const migrationsIdentity = await lstat(outputMigrations);
     return {
       workdir,
       migrationsDir: outputMigrations,
@@ -331,7 +366,50 @@ async function materializeWithPaths(options = {}) {
       transactionId: verified.transactionId,
       history: [SYNTHETIC_BASELINE_FILENAME, ...selected.map(({ filename }) => filename)],
       historyVersions: [SYNTHETIC_BASELINE_FILENAME.slice(0, 14), ...selected.map(({ filename }) => filename.slice(0, 14))],
+      async stageCliReplay() {
+        if (cleaned || replayActive) throw new Error('materialized replay staging state invalid');
+        await assertExactNames(outputMigrations, expectedNames, 'migrations before replay staging');
+        try { await lstat(pendingMigrationsDir); throw new Error('materialized replay pending path exists'); }
+        catch (error) { if (error?.code !== 'ENOENT') throw error; }
+        await rename(outputMigrations, pendingMigrationsDir);
+        const pendingIdentity = await lstat(pendingMigrationsDir);
+        if (!sameIdentity(pendingIdentity, migrationsIdentity)) throw new Error('materialized replay pending identity changed');
+        await mkdir(outputMigrations, { mode: 0o700 });
+        const bootstrapIdentity = await enforceDirectoryMode(outputMigrations);
+        const bootstrapBytes = Buffer.from('SELECT 1;\n');
+        try { await writeExclusive(path.join(outputMigrations, bootstrapName), bootstrapBytes); }
+        finally { bootstrapBytes.fill(0); }
+        await syncDirectory(outputMigrations);
+        await syncDirectory(path.dirname(outputMigrations));
+        replayActive = true;
+        let restored = false;
+        return {
+          pendingMigrationsDir,
+          bootstrapName,
+          async restore() {
+            if (restored || !replayActive) throw new Error('materialized replay restore state invalid');
+            const currentBootstrap = await lstat(outputMigrations);
+            if (!sameIdentity(currentBootstrap, bootstrapIdentity)) throw new Error('materialized replay bootstrap identity changed');
+            await assertExactNames(outputMigrations, [bootstrapName], 'bootstrap migrations');
+            await assertExactNames(pendingMigrationsDir, expectedNames, 'pending migrations');
+            const currentPending = await lstat(pendingMigrationsDir);
+            if (!sameIdentity(currentPending, migrationsIdentity)) throw new Error('materialized replay pending identity changed');
+            await unlink(path.join(outputMigrations, bootstrapName));
+            await rmdir(outputMigrations);
+            await rename(pendingMigrationsDir, outputMigrations);
+            const restoredIdentity = await lstat(outputMigrations);
+            if (!sameIdentity(restoredIdentity, migrationsIdentity)) throw new Error('materialized replay restored identity changed');
+            await syncDirectory(path.dirname(outputMigrations));
+            replayActive = false; restored = true;
+          },
+        };
+      },
+      async cleanupCliMetadata() {
+        if (cleaned || replayActive) throw new Error('materialized CLI metadata cleanup state invalid');
+        await removeCliMetadata(workdir);
+      },
       async cleanup() {
+        if (replayActive) throw new Error('materialized replay must restore before cleanup');
         if (cleaned) return;
         await removeOwnedWorkdir(workdir, workdirIdentity, expectedNames);
         cleaned = true;

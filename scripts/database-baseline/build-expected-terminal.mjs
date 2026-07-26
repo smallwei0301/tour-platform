@@ -16,7 +16,7 @@ import { validateCaptureLedger, validateCaptureManifest, verifyCaptureTransactio
 import {
   LOCK_PATH, acquireKernelRunnerLock, canonicalProjectId, createActualAdapter,
   parseDockerHostGateway, parseSupabasePin, redactSupabaseOutput, releaseKernelRunnerLock,
-  runWithLocalSupabase, startLoopbackBridge, verifyPinnedSupabaseBinary,
+  runCommand, runWithLocalSupabase, startLoopbackBridge, verifyPinnedSupabaseBinary,
 } from '../testing/with-midao-local-supabase.mjs';
 
 export { POST_CUTOFF_MIGRATIONS };
@@ -109,6 +109,71 @@ async function extractLocalTerminalAndHistory({ databaseUrl, extractCatalogAdapt
     throw new Error('actual migration history mismatch');
   }
   return { terminalBytes, historyVersions };
+}
+
+async function replayExactMigrations({
+  databaseUrl, pendingMigrationsDir, history, signal,
+  ClientClass, commandRunner = runCommand,
+} = {}) {
+  const expectedHistory = [
+    '00000000000001_baseline_v1.sql', ...POST_CUTOFF_MIGRATIONS.map(({ filename }) => filename),
+  ];
+  if (!Array.isArray(history) || JSON.stringify(history) !== JSON.stringify(expectedHistory)
+    || typeof pendingMigrationsDir !== 'string' || !path.isAbsolute(pendingMigrationsDir)) {
+    throw new Error('exact migration replay contract invalid');
+  }
+  parseLocalConnectionEnv(databaseUrl);
+  const adminUrl = new URL(databaseUrl); adminUrl.username = 'supabase_admin';
+  const adminConnection = adminUrl.toString();
+  const connectionEnv = parseLocalConnectionEnv(adminConnection);
+  let EffectiveClient = ClientClass;
+  if (!EffectiveClient) {
+    const { default: pg } = await import('pg'); EffectiveClient = pg.Client;
+  }
+  const useClient = async (operation) => {
+    const client = new EffectiveClient({ connectionString: adminConnection });
+    let value; let primaryError;
+    try { await client.connect(); value = await operation(client); } catch (error) { primaryError = error; }
+    let closeError;
+    try { await client.end(); } catch (error) { closeError = error; }
+    if (primaryError && closeError) throw new AggregateError([primaryError, closeError], 'migration replay query and close failed');
+    if (primaryError || closeError) throw primaryError ?? closeError;
+    return value;
+  };
+  const expectedSchema = [
+    { column_name: 'version', data_type: 'text', udt_name: 'text', is_nullable: 'NO' },
+    { column_name: 'statements', data_type: 'ARRAY', udt_name: '_text', is_nullable: 'YES' },
+    { column_name: 'name', data_type: 'text', udt_name: 'text', is_nullable: 'YES' },
+  ];
+  await useClient(async (client) => {
+    const schema = await client.query("SELECT column_name, data_type, udt_name, is_nullable FROM information_schema.columns WHERE table_schema='supabase_migrations' AND table_name='schema_migrations' ORDER BY ordinal_position");
+    if (JSON.stringify(schema.rows) !== JSON.stringify(expectedSchema)) throw new Error('migration history schema invalid');
+    const existing = await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version');
+    if (JSON.stringify(existing.rows) !== JSON.stringify([{ version: '00000000000000' }])) throw new Error('bootstrap migration history invalid');
+    const deleted = await client.query("DELETE FROM supabase_migrations.schema_migrations WHERE version = '00000000000000'");
+    if (deleted.rowCount !== 1) throw new Error('bootstrap migration history delete invalid');
+  });
+  for (const name of history) {
+    const file = path.join(pendingMigrationsDir, name);
+    if (path.dirname(file) !== pendingMigrationsDir) throw new Error('migration replay path invalid');
+    const result = await commandRunner('/usr/bin/psql', ['-X', '--set=ON_ERROR_STOP=1', '--quiet', '--file', file], {
+      cwd: pendingMigrationsDir, env: connectionEnv, signal,
+    });
+    if (result.exitCode !== 0 || result.signal !== null) {
+      const diagnostic = redactSupabaseOutput(result.stderr).slice(-4000).trim();
+      throw new Error(diagnostic ? `exact migration replay failed: ${diagnostic}` : 'exact migration replay failed');
+    }
+    const version = name.slice(0, 14); const migrationName = name.slice(15, -4);
+    await useClient((client) => client.query(
+      'INSERT INTO supabase_migrations.schema_migrations(version, statements, name) VALUES ($1, $2::text[], $3)',
+      [version, [], migrationName],
+    ));
+  }
+  const versions = await useClient(async (client) => {
+    const { rows } = await client.query('SELECT version FROM supabase_migrations.schema_migrations ORDER BY version');
+    return rows.map(({ version }) => version);
+  });
+  if (JSON.stringify(versions) !== JSON.stringify(EXPECTED_HISTORY_VERSIONS)) throw new Error('exact migration replay history mismatch');
 }
 
 function sha256(bytes) {
@@ -336,20 +401,43 @@ export async function buildExpectedTerminalPrepared({
           },
         };
       },
-      runLocal: async ({ materialized }) => runWithLocalSupabase({
-        adapter: createActualAdapter({
-          repoRoot: canonicalRoot, pin, nodeBin: process.execPath, signal,
-          cliWorkdir: materialized.workdir,
-          lifecycleContract: {
-            migrationNames: ['00000000000001_baseline_v1.sql', ...POST_CUTOFF_MIGRATIONS.map(({ filename }) => filename)],
-            noticesByMigration: {},
-          },
-        }),
-        expectedProjectId: projectId,
-        initialize: 'start-only',
-        onReady: async ({ localEnv }) => extractLocalTerminalAndHistory({ databaseUrl: localEnv.DATABASE_URL }),
-        signal,
-      }),
+      runLocal: async ({ materialized }) => {
+        const replay = await materialized.stageCliReplay();
+        let local; let primaryError;
+        try {
+          local = await runWithLocalSupabase({
+            adapter: createActualAdapter({
+              repoRoot: canonicalRoot, pin, nodeBin: process.execPath, signal,
+              cliWorkdir: materialized.workdir,
+              lifecycleContract: {
+                migrationNames: [replay.bootstrapName],
+                noticesByMigration: {},
+              },
+            }),
+            expectedProjectId: projectId,
+            initialize: 'start-only',
+            onReady: async ({ localEnv }) => {
+              await replayExactMigrations({
+                databaseUrl: localEnv.DATABASE_URL,
+                pendingMigrationsDir: replay.pendingMigrationsDir,
+                history: materialized.history,
+                signal,
+              });
+              return extractLocalTerminalAndHistory({ databaseUrl: localEnv.DATABASE_URL });
+            },
+            signal,
+          });
+        } catch (error) { primaryError = error; }
+        const cleanupErrors = [];
+        try { await replay.restore(); } catch (error) { cleanupErrors.push(error); }
+        if (cleanupErrors.length === 0) {
+          try { await materialized.cleanupCliMetadata(); } catch (error) { cleanupErrors.push(error); }
+        }
+        const errors = [primaryError, ...cleanupErrors].filter(Boolean);
+        if (errors.length > 1) throw new AggregateError(errors, 'local replay and materialized restoration failed');
+        if (errors.length === 1) throw errors[0];
+        return local;
+      },
       extractTerminal: async ({ local }) => local.value,
     });
   } catch (error) { primaryError = error; }
@@ -369,7 +457,7 @@ function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino && left.uid === right.uid && left.nlink === right.nlink;
 }
 
-export const __internal = Object.freeze({ buildWithAdapters, extractLocalTerminalAndHistory });
+export const __internal = Object.freeze({ buildWithAdapters, extractLocalTerminalAndHistory, replayExactMigrations });
 
 async function main() {
   const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');

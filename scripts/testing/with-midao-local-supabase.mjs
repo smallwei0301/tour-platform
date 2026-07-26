@@ -164,6 +164,13 @@ function nonemptyLines(text) {
   return String(text || '').split(/\r?\n/u).filter((line) => line.length > 0);
 }
 
+function stripPinnedUpdateNotice(value) {
+  return String(value ?? '').replace(
+    /A new version of Supabase CLI is available: v\d{1,4}\.\d{1,4}\.\d{1,4} \(currently installed v2\.87\.2\)\r?\nWe recommend updating regularly for new features and bug fixes: https:\/\/supabase\.com\/docs\/guides\/cli\/getting-started#updating-the-supabase-cli\r?\n$/u,
+    '',
+  );
+}
+
 export function validateSupabaseLifecycleStderr(stderr, expectedWorkdirOrContract, legacyStage) {
   let expectedWorkdir;
   let stage;
@@ -211,11 +218,12 @@ export function validateSupabaseLifecycleStderr(stderr, expectedWorkdirOrContrac
   ];
   const lf = `${expectedLines.join('\n')}\n`;
   const crlf = `${expectedLines.join('\r\n')}\r\n`;
-  if (stderr !== lf && stderr !== crlf) throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
+  const normalized = stripPinnedUpdateNotice(stderr);
+  if (normalized !== lf && normalized !== crlf) throw new Error(`CLI_UNEXPECTED_STDERR: ${redactSupabaseOutput(stderr).trim()}`);
 }
 
 export function validateCliWorkdirNotice(stderr, expectedWorkdir, expectedProjectId) {
-  const value = String(stderr ?? '');
+  const value = stripPinnedUpdateNotice(stderr);
   if (!expectedWorkdir) {
     if (value !== '') throw new Error('CLI_UNEXPECTED_STDERR');
     return;
@@ -594,7 +602,13 @@ export function createActualAdapter({ repoRoot, pin, nodeBin, signal, cliWorkdir
     return commandRunner(invocation.command, invocation.args, {
       cwd: repoRoot,
       signal: cleanup ? undefined : signal,
-      env: { ...process.env, PATH: `${SUPABASE_TOOLCHAIN_DIR}:${process.env.PATH ?? ''}`, DOCKER_API_VERSION: '1.43' },
+      env: {
+        ...process.env,
+        PATH: `${SUPABASE_TOOLCHAIN_DIR}:${process.env.PATH ?? ''}`,
+        DOCKER_API_VERSION: '1.43',
+        DO_NOT_TRACK: '1',
+        SUPABASE_TELEMETRY_DISABLED: '1',
+      },
     });
   };
   const containers = async () => {

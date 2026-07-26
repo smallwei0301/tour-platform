@@ -88,6 +88,34 @@ test('fresh materialized config disables optional service jobs without mutating 
   }
 });
 
+test('materializer exposes identity-bound bootstrap staging and restores exact migration inventory', async () => {
+  const api = await subject();
+  const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-replay-'));
+  let result;
+  try {
+    result = await api.materializeFreshWorkdir({ outputParent: parent, projectId: 'midao-terminal-replay' });
+    const original = (await readdir(result.migrationsDir)).sort();
+    const replay = await result.stageCliReplay();
+    assert.deepEqual(await readdir(result.migrationsDir), ['00000000000000_midao_history_bootstrap.sql']);
+    assert.deepEqual((await readdir(replay.pendingMigrationsDir)).sort(), original);
+    await assert.rejects(result.cleanup(), /replay|staged|restore/iu);
+    await replay.restore();
+    assert.deepEqual((await readdir(result.migrationsDir)).sort(), original);
+    const supabaseDir = path.dirname(result.migrationsDir);
+    await mkdir(path.join(supabaseDir, '.temp'), { mode: 0o755 });
+    await writeFile(path.join(supabaseDir, '.temp/cli-latest'), 'v2.109.1', { mode: 0o644, flag: 'wx' });
+    await mkdir(path.join(supabaseDir, '.branches'), { mode: 0o755 });
+    await writeFile(path.join(supabaseDir, '.branches/_current_branch'), 'main', { mode: 0o644, flag: 'wx' });
+    await result.cleanupCliMetadata();
+    assert.deepEqual((await readdir(supabaseDir)).sort(), ['config.toml', 'migrations', 'seed.sql']);
+    await result.cleanup(); result = null;
+  } finally {
+    await result?.stageCliReplay?.().then((replay) => replay.restore()).catch(() => {});
+    await result?.cleanup?.().catch(() => {});
+    await rm(parent, { recursive: true, force: true });
+  }
+});
+
 test('materializer verifies capture transaction then emits one marker, six migrations and separate seed', async () => {
   const api = await subject();
   const parent = await mkdtemp(path.join(os.tmpdir(), 'midao-materializer-green-'));
