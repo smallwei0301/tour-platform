@@ -203,7 +203,7 @@ async function truncateJournalTail(state, expectedIdentity, completeOffset, faul
   finally { await closeHandlePreserving(handle, primary, 'publication journal tail truncate'); }
 }
 
-async function appendJournal(state, journal, expectedIdentity = null, fault = () => {}) {
+async function appendJournal(state, journal, expectedIdentity = null, fault = () => {}, onDurable = () => {}) {
   const journalPath = path.join(state.path, JOURNAL_NAME); const frame = journalFrame(journal);
   let handle; let primary;
   try {
@@ -221,6 +221,7 @@ async function appendJournal(state, journal, expectedIdentity = null, fault = ()
     if (expectedIdentity && !sameInode(opened, expectedIdentity)) throw new Error('foreign journal replacement HOLD');
     if (Number(opened.size) + frame.length > MAX_JOURNAL_BYTES) throw new Error('publication journal too large');
     await handle.writeFile(frame); await handle.sync();
+    onDurable();
     if (!sameInode(await lstat(journalPath, { bigint: true }), inode(opened))) throw new Error('foreign journal replacement HOLD');
     if (!expectedIdentity) await state.handle.sync();
     await fault('after-journal-record-sync');
@@ -622,8 +623,10 @@ async function publishLocked(input, scope) {
       if (capturePinned.identity.dev !== inode(captureStat).dev || capturePinned.identity.ino !== inode(captureStat).ino
         || !capturePinned.bytes.equals(captureBytes)) throw new Error('capture ledger mutated during publication HOLD');
     } finally { capturePinned.bytes.fill(0); }
-    journal.state = 'COMMITTED'; journal.journalIdentity = await appendJournal(state, serializable(journal), journal.journalIdentity, input.fault);
-    durableCommitted = true;
+    journal.state = 'COMMITTED'; journal.journalIdentity = await appendJournal(
+      state, serializable(journal), journal.journalIdentity, input.fault,
+      () => { durableCommitted = true; },
+    );
     await input.fault('after-commit-journal');
     await cleanupCommitted(journal, parents, input.fault);
     journal.state = 'CLEANED'; journal.journalIdentity = await appendJournal(state, serializable(journal), journal.journalIdentity, input.fault);

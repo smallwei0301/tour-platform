@@ -476,6 +476,67 @@ test('lifecycle preserves start/reset primary with identity probe failures and c
   assert.deepEqual(calls, ['start', 'containers', 'assets', 'containers', 'assets', ['stop', [], safeAssets]]);
 });
 
+test('pre-reset and post-reset probes preserve independently confirmed resource classes through cleanup', async () => {
+  const flattenError = (error, seen = new Set()) => {
+    if (!error || seen.has(error)) return [];
+    seen.add(error);
+    return [String(error), ...flattenError(error.cause, seen), ...(Array.isArray(error.errors) ? error.errors.flatMap((entry) => flattenError(entry, seen)) : [])];
+  };
+  const resource = (kind, phase) => ({ id: `${kind}-${phase}-identity`, name: `supabase_${kind}_${projectId}`, projectLabel: projectId });
+
+  {
+    const calls = []; let networkReads = 0; let observed;
+    const container = resource('db', 'pre'); const volume = resource('volume', 'pre');
+    await assert.rejects(runWithLocalSupabase({
+      expectedProjectId: projectId, childArgs: [], initialize: 'start-then-reset',
+      adapter: {
+        async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async start() { calls.push('start'); },
+        async reset() { calls.push('reset'); },
+        async containers() { calls.push('containers'); return [container]; },
+        async networks() { networkReads += 1; calls.push(`networks-${networkReads}`); throw new Error(networkReads === 1 ? 'PRE_RESET_NETWORK_PROBE' : 'PRE_RESET_NETWORK_CLEANUP_PROBE'); },
+        async volumes() { calls.push('volumes'); return [volume]; },
+        async stop(containers, assets) { calls.push(['stop', containers, assets]); throw new Error('PRE_RESET_STOP_FAILURE'); },
+      },
+    }), (error) => { observed = error; return true; });
+    assert.deepEqual(calls, [
+      'start', 'containers', 'networks-1', 'volumes',
+      'containers', 'networks-2', 'volumes',
+      ['stop', [container], { networks: [], volumes: [volume] }],
+    ]);
+    const messages = flattenError(observed).join('\n');
+    for (const marker of ['PRE_RESET_NETWORK_PROBE', 'PRE_RESET_NETWORK_CLEANUP_PROBE', 'PRE_RESET_STOP_FAILURE']) assert.match(messages, new RegExp(marker, 'u'));
+    assert.equal(calls.includes('reset'), false);
+  }
+
+  {
+    const calls = []; let containerReads = 0; let networkReads = 0; let volumeReads = 0; let observed;
+    const containerPre = resource('db', 'before-reset'); const containerPost = resource('db', 'after-reset');
+    const networkPre = resource('network', 'before-reset'); const networkPost = resource('network', 'after-reset');
+    const volumePre = resource('volume', 'before-reset'); const volumePost = resource('volume', 'after-reset');
+    await assert.rejects(runWithLocalSupabase({
+      expectedProjectId: projectId, childArgs: [], initialize: 'start-then-reset',
+      adapter: {
+        async status() { return { exitCode: 1, stdout: '', stderr: `${missingLine}\n${helpLine}\n` }; },
+        async start() { calls.push('start'); },
+        async reset() { calls.push('reset'); },
+        async containers() { containerReads += 1; calls.push(`containers-${containerReads}`); return [containerReads === 1 ? containerPre : containerPost]; },
+        async networks() { networkReads += 1; calls.push(`networks-${networkReads}`); return [networkReads === 1 ? networkPre : networkPost]; },
+        async volumes() { volumeReads += 1; calls.push(`volumes-${volumeReads}`); if (volumeReads === 2) throw new Error('POST_RESET_VOLUME_PROBE'); return [volumeReads === 1 ? volumePre : volumePost]; },
+        async stop(containers, assets) { calls.push(['stop', containers, assets]); throw new Error('POST_RESET_STOP_FAILURE'); },
+      },
+    }), (error) => { observed = error; return true; });
+    assert.deepEqual(calls, [
+      'start', 'containers-1', 'networks-1', 'volumes-1', 'reset',
+      'containers-2', 'networks-2', 'volumes-2',
+      'containers-3', 'networks-3', 'volumes-3',
+      ['stop', [containerPost], { networks: [networkPost], volumes: [] }],
+    ]);
+    const messages = flattenError(observed).join('\n');
+    for (const marker of ['POST_RESET_VOLUME_PROBE', 'OWNERSHIP_DRIFT', 'POST_RESET_STOP_FAILURE']) assert.match(messages, new RegExp(marker, 'u'));
+  }
+});
+
 test('partial ownership probes clean each confirmed resource class and preserve every failure', async () => {
   const flattenError = (error, seen = new Set()) => {
     if (!error || seen.has(error)) return [];

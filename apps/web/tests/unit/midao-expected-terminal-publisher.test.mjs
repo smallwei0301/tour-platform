@@ -142,13 +142,26 @@ test('all four temps are prepared and read back before any existing target is de
   const mod = await api(); const fx = await fixture(); const targetPaths = [
     ...names.slice(0, 3).map((name) => path.join(fx.publishDir, name)), fx.ledgerPath,
   ];
+  const expectedTemps = [
+    fx.prepared.payloads.get(names[0]), fx.prepared.payloads.get(names[1]),
+    fx.prepared.manifestBytes, fx.prepared.ledgerBytes,
+  ];
   for (const [index, target] of targetPaths.entries()) await writeFile(target, `prepare-original-${index}\n`, { mode: 0o600, flag: 'wx' });
   const crash = new Error('PREPARE_PHASE_CRASH'); crash[mod.SIMULATED_PROCESS_CRASH] = true;
   let snapshot;
   try {
-    await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) {
-      if (point === `after-temp-write:${names[1]}`) {
+    await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, async fault(point) {
+      if (point === `before-backup-detach:${names[0]}`) {
+        const temps = [];
+        for (const [index, target] of targetPaths.entries()) {
+          const parent = path.dirname(target); const base = path.basename(target);
+          const matches = (await readdir(parent)).filter((name) => name.startsWith(`${base}.midao-temp-`));
+          assert.equal(matches.length, 1, `exactly one temp for ${base}`);
+          const tempPath = path.join(parent, matches[0]); const identity = await lstat(tempPath, { bigint: true });
+          temps.push({ mode: Number(identity.mode & 0o7777n), regular: identity.isFile(), nlink: Number(identity.nlink), bytes: await readFile(tempPath), expected: expectedTemps[index] });
+        }
         snapshot = {
+          temps,
           targets: targetPaths.map((target) => existsSync(target)),
           backups: [...readdirSync(fx.publishDir), ...readdirSync(path.dirname(fx.ledgerPath))]
             .filter((name) => name.includes('.midao-backup-')),
@@ -156,6 +169,11 @@ test('all four temps are prepared and read back before any existing target is de
         throw crash;
       }
     } }), /PREPARE_PHASE_CRASH/u);
+    assert.equal(snapshot?.temps.length, 4);
+    for (const temp of snapshot.temps) {
+      assert.equal(temp.mode, 0o600); assert.equal(temp.regular, true); assert.equal(temp.nlink, 1);
+      assert.deepEqual(temp.bytes, temp.expected);
+    }
     assert.deepEqual(snapshot?.targets, [true, true, true, true]);
     assert.deepEqual(snapshot?.backups, []);
   } finally { await cleanup(fx, mod); }
@@ -377,6 +395,34 @@ test('rollback recovery survives a crash immediately after promoted target detac
     await mod.__internal.recoverExpectedTerminalPublication(fx);
     for (const [target, bytes] of originals) assert.deepEqual(await readFile(target), bytes);
     assert.equal(existsSync(paths.journalPath), false);
+  } finally { await cleanup(fx, mod); }
+});
+
+test('ordinary in-process error after durable COMMITTED sync never rolls back committed targets', async () => {
+  const mod = await api(); const fx = await fixture(); const paths = internalPublicationPaths(fx.repositoryRoot);
+  const targetPaths = [...names.slice(0, 3).map((name) => path.join(fx.publishDir, name)), fx.ledgerPath];
+  const expectedNew = [fx.prepared.payloads.get(names[0]), fx.prepared.payloads.get(names[1]), fx.prepared.manifestBytes, fx.prepared.ledgerBytes];
+  let records = 0; let observed;
+  try {
+    for (const [index, target] of targetPaths.entries()) await writeFile(target, `ordinary-commit-original-${index}\n`, { mode: 0o600, flag: 'wx' });
+    await assert.rejects(mod.__internal.publishExpectedTerminalTransaction({ ...fx, fault(point) {
+      if (point === 'after-journal-record-sync' && ++records === 11) throw new Error('ORDINARY_POST_COMMIT_SYNC_ERROR');
+    } }), (error) => { observed = error; return true; });
+    const collect = (error, seen = new Set()) => {
+      if (!error || seen.has(error)) return [];
+      seen.add(error);
+      return [String(error), ...collect(error.cause, seen), ...(Array.isArray(error.errors) ? error.errors.flatMap((entry) => collect(entry, seen)) : [])];
+    };
+    assert.match(collect(observed).join('\n'), /ORDINARY_POST_COMMIT_SYNC_ERROR/u);
+    assert.ok(records >= 11);
+    for (let index = 0; index < targetPaths.length; index += 1) assert.deepEqual(await readFile(targetPaths[index]), expectedNew[index]);
+    assert.equal(existsSync(paths.journalPath), true);
+    await mod.__internal.recoverExpectedTerminalPublication(fx);
+    for (let index = 0; index < targetPaths.length; index += 1) assert.deepEqual(await readFile(targetPaths[index]), expectedNew[index]);
+    assert.equal(existsSync(paths.journalPath), false);
+    const residue = [...await readdir(fx.publishDir), ...await readdir(path.dirname(fx.ledgerPath))]
+      .filter((name) => /midao-(?:temp|backup)-/u.test(name));
+    assert.deepEqual(residue, []);
   } finally { await cleanup(fx, mod); }
 });
 
